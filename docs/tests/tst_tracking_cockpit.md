@@ -119,31 +119,34 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions.
 
-### TST-TRK-005: **GPS Speed Inactivity Watchdog, Progressive Decay & Recovery Verification** [Speed decays smoothly to 0.0 m/s after 5 seconds of location silence; pace sensor cleanly nullifies without division-by-zero; fresh location immediately resumes active speed calculation; zero phantom distance accumulated; 100% test pass rate.]
+### TST-TRK-005: **GPS Speed Inactivity Watchdog, Progressive Decay & Recovery Verification** [Verified - Speed decays smoothly to 0.0 m/s after 10 seconds of location silence; pace sensor cleanly nullifies without division-by-zero; multi-second 7-8s fix cadences do not trigger premature decay; fresh location recovers without averaging against decayed watchdog artifacts; zero phantom distance accumulated; 100% test pass rate.]
 - **Requirement(s)**: `REQ-TRK-013`
 - **Component**: **GPS Speed Inactivity Watchdog, Progressive Decay & Recovery Verification**
-- **Jira**: ``ATT-2616``
+- **Jira**: ``ATT-2616``, ``ATT-4802``
 - **Test Description**:
   1. *Continuous Fix Speed Stability Unit Test (`SpeedAndLocationDeviceDecayTest.kt`)*:
   • Initialize `SpeedAndLocationDevice` and emit continuous valid location fixes at 1.0-second intervals.
   • Verify active speed (`mSpeed`) and `mSpeedSensor` remain stable and watchdog does not trigger decay.
   2. *Inactivity Timeout & Progressive Decay Test (`SpeedAndLocationDeviceDecayTest.kt`)*:
   • Emit a location fix with speed 10.0 m/s.
-  • Advance virtual time by 5.0 seconds (timeout threshold).
-  • Verify decay begins: tick 1 (at 5.0s) halves speed to 5.0 m/s; tick 2 (at 6.0s) halves speed to 2.5 m/s; tick 3 (at 7.0s) halves speed to 1.25 m/s; tick 4 (at 8.0s) halves speed to 0.625 m/s.
+  • Advance virtual time by 10.0 seconds (timeout threshold).
+  • Verify decay begins: tick 1 (at 10.0s) halves speed to 5.0 m/s; tick 2 (at 11.0s) halves speed to 2.5 m/s; tick 3 (at 12.0s) halves speed to 1.25 m/s; tick 4 (at 13.0s) halves speed to 0.625 m/s.
   • Verify subsequent ticks continue until speed drops below 0.1 m/s, where it is clamped strictly to 0.0 m/s.
-  3. *Pace Sensor Nullification & Zero-Division Safety Test (`SpeedAndLocationDeviceDecayTest.kt`)*:
+  3. *Multi-Second Cadence (7–8s) Immunity Test (`SpeedAndLocationDeviceDecayTest.kt`)*:
+  • Emit valid location fixes arriving at 7.0 to 8.0 second intervals with active displacement ($\Delta d > 0$).
+  • Verify that watchdog does not fire premature decay ticks between fixes and speed does not drop toward zero.
+  4. *Decoupled Recovery on Fresh Location Fix Test (`SpeedAndLocationDeviceDecayTest.kt`)*:
+  • Following speed decay ticks, emit a fresh valid location fix with speed 6.0 m/s.
+  • Verify speed recovers directly to 6.0 m/s without averaging with the decayed artifact, pending decay ticks are cancelled, and pace sensor resumes emitting valid numeric pace.
+  5. *Pace Sensor Nullification & Zero-Division Safety Test (`SpeedAndLocationDeviceDecayTest.kt`)*:
   • When speed decays to 0.0 m/s, verify `mPaceSensor.getValue()` is strictly `null` (no `Double.POSITIVE_INFINITY` or NaN emitted).
   • Verify cockpit pace display displays fallback dashes (`--:--`).
-  4. *Immediate Recovery on Fresh Location Fix Test (`SpeedAndLocationDeviceDecayTest.kt`)*:
-  • Following complete speed decay to 0.0 m/s, emit a new valid location fix with speed 6.0 m/s.
-  • Verify speed recovers immediately to 3.0 m/s (smoothed) or appropriate formula, pending decay ticks are cancelled, and pace sensor resumes emitting valid numeric pace.
-  5. *Distance Invariant Verification (`SpeedAndLocationDeviceDecayTest.kt`)*:
+  6. *Distance Invariant Verification (`SpeedAndLocationDeviceDecayTest.kt`)*:
   • Verify that throughout the inactivity timeout and decay ticks, `mDistanceSensor` and `mLapDistanceSensor` accumulate zero phantom distance.
-  6. *Clean Teardown & Lifecycle Verification (`SpeedAndLocationDeviceDecayTest.kt`)*:
+  7. *Clean Teardown & Lifecycle Verification (`SpeedAndLocationDeviceDecayTest.kt`)*:
   • Trigger `device.shutDown()` during an active decay state.
   • Verify all watchdog callbacks/tasks are cancelled and no memory leaks or post-termination callbacks occur.
-  7. *Clean-Room Full Suite Regression Execution*:
+  8. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions.
 
 ### TST-TRK-006: **Successive Geodesic Location Delta Fallback for Missing GPS Bearing & Speed Verification** [`SpeedAndLocationDevice` reliably calculates forward bearing and speed from location deltas when hardware/test provider fixes omit them; stationary fixes retain compass heading without snapping to North; hardware non-zero metrics take precedence; 100% unit test pass rate.]

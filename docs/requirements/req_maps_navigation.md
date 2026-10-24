@@ -1754,17 +1754,22 @@
 
 **Invariants**: Backward compatibility for stateless callers (`null`), pure Kotlin JVM decoupling, thread safety, 100% clean-room test pass rate.
 
-### REQ-MAP-056: Line-Density Polyline Heatmap Tile Provider & 256-Entry Thermal Color LUT [Verified]
+### REQ-MAP-056: Line-Density Polyline Heatmap Tile Provider & 256-Entry Sequential Blue Color LUT [Verified]
 - **Tests**: `PolylineHeatmapTileProvider.kt`, `MapUtils.kt`, `MapContentScope.kt`, `PolylineHeatmapTileProviderTest.kt`
-- **Implementation**: Replace Google Maps Gaussian point-cloud HeatmapTileProvider with custom Web Mercator line-density PolylineHeatmapTileProvider and 256-entry thermal color lookup table (LUT).
-- **Rationale**: The system SHALL replace Gaussian point-cloud heatmap tile rendering with a true line-density tile provider (`PolylineHeatmapTileProvider`) and thermal color LUT across all map views (ATT-4480, Parent Epic ATT-4474, Status: Verified, refining `REQ-MAP-002` and `REQ-MAP-016`):
+- **Implementation**: Replace Google Maps Gaussian point-cloud HeatmapTileProvider with custom Web Mercator line-density PolylineHeatmapTileProvider and 256-entry sequential blue color lookup table (LUT).
+- **Rationale**: The system SHALL replace Gaussian point-cloud heatmap tile rendering with a true line-density tile provider (`PolylineHeatmapTileProvider`) and 3-stop sequential blue color LUT across all map views (ATT-4480, refined by ATT-4769, Parent Epic ATT-4474, refining `REQ-MAP-002` and `REQ-MAP-016`):
 1. *Web Mercator Line-Raster TileProvider (`PolylineHeatmapTileProvider.kt`, `REQ-MAP-056.1`)*:
 • `PolylineHeatmapTileProvider` SHALL implement `com.google.android.gms.maps.model.TileProvider`.
 • For each requested tile $(x, y, \text{zoom})$, candidate polylines SHALL be filtered in $O(1)$ time using bounding-box intersection against the tile's geographic coordinates $[lat_{\min}, lon_{\min}, lat_{\max}, lon_{\max}]$ with a stroke margin.
 • If no paths intersect the tile bounding box, `getTile` SHALL return `TileProvider.NO_TILE` immediately without allocating bitmaps.
 • Intersecting polylines SHALL be projected into Web Mercator tile pixel coordinates ($256 \times 256$) and rasterized using `android.graphics.Canvas`, `Path`, and additive blending (`PorterDuff.Mode.ADD`) to accumulate 1D line density without vertex spacing or speed bias.
-2. *256-Entry Thermal Color Lookup Table & Dynamic Range (`REQ-MAP-056.2`)*:
-• Accumulated single-channel intensity values SHALL be mapped to 32-bit ARGB pixels using a precomputed 256-entry thermal Color LUT spanning from cool electric blue/violet (1 pass) through magenta/crimson (moderate) and fiery orange/amber to incandescent yellow/white-hot (maximum passes).
+2. *256-Entry Sequential Blue Color Lookup Table & Translucent Alpha Scaling (`REQ-MAP-056.2`)*:
+• Accumulated single-channel intensity values SHALL be mapped to 32-bit ARGB pixels using a precomputed 256-entry Color LUT interpolating the canonical 3-stop sequential blue palette from `MapUtils.kt` (`REQ-MAP-002` / `ATT-504`):
+  - Low density (0.0): Light Cyan `#00E5FF` (`R=0, G=229, B=255`, base alpha ~20% / `51`)
+  - Medium density (0.5): Pure Blue `#0000FF` (`R=0, G=0, B=255`, base alpha ~30% / `77`)
+  - High density (1.0): Deep Indigo `#311B92` (`R=49, G=27, B=146`, base alpha ~70% / `180`)
+• Index 0 SHALL remain fully transparent (`0x00000000`).
+• Alpha values for indices 1..255 SHALL interpolate between base alphas and scale proportionally by `opacity`.
 • The provider SHALL calibrate intensity scaling ($\Delta I$) based on dataset size and zoom level to ensure full dynamic range utilization across both small and large workout collections.
 3. *Thread Safety & Memory Headroom (`REQ-MAP-056.3`)*:
 • `getTile(x, y, zoom)` SHALL be completely thread-safe across concurrent tile fetch worker threads.
@@ -1775,12 +1780,18 @@
 • Clean-room full test suite pass rate under `./gradlew testDebugUnitTest` SHALL remain 100%.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: `REQ-MAP-002` (*Training heatmaps (Cyan -> Indigo gradient)*) and `REQ-MAP-016` (*Heatmap DSL Support*) under Epic `ATT-4474`, targeting `MapUtils.kt`, `MapContentScope.kt`, and `PolylineHeatmapTileProvider.kt`.
-2. *Historical Origin & Commit Trace*: Sprint 2026-40.16 (ATT-500, ATT-504) and Sprint 2026-43.9 (commit `06990c88`, ATT-4594).
-3. *Root Reason for Existing Formulation*: Google Maps `HeatmapTileProvider` was originally adopted as an off-the-shelf component to provide density visualization without writing custom Web Mercator rasterization shaders. Because it evaluated 2D Gaussian point-cloud KDE, it generated artificial heat blobs on slow climbs and corners while requiring synthetic point densification.
-4. *Preservation of Core Invariants*: Standard Google Maps `TileProvider` interface compatibility, zoom-adaptive rendering, non-blocking asynchronous tile delivery, and legible underlying map labels/terrain remain 100% strictly preserved.
+1. *Original Requirement ID & Target*: `REQ-MAP-056.2` (realigning with `REQ-MAP-002` *Training heatmaps (Cyan -> Indigo gradient)* and `REQ-MAP-016` *Heatmap DSL Support*) under Epic `ATT-4474`, targeting `ThermalColorLut.kt` and `PolylineHeatmapTileProvider.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-40.16 (ATT-500, ATT-504) and Sprint 2026-43.9 (commit `06990c88`, ATT-4594 / ATT-4480).
+3. *Root Reason for Existing Formulation*: A 5-stop fiery thermal gradient (Electric Blue -> Magenta -> Fiery Orange -> Yellow -> White) was introduced in `ThermalColorLut.kt` during initial line-density rasterizer prototyping to maximize contrast. Sprint 2026-43.9 user feedback established that this fiery scheme visually clashes with underlying maps and brand styling.
+4. *Preservation of Core Invariants*: Reverting color stops to Light Cyan -> Pure Blue -> Deep Indigo restores brand harmony and subtle route readability without altering the underlying line-density accumulation raster engine, O(1) tile lookup, thread safety, or database integrity.
 
 **Acceptance Criteria (Given-When-Then)**:
+• *Given* `ThermalColorLut` with default opacity,
+• *When* looking up color at index 0,
+• *Then* ARGB value is `0` (fully transparent).
+• *Given* `ThermalColorLut`,
+• *When* looking up low (index 10), mid (index 128), and high (index 255) intensity values,
+• *Then* green component decreases from low to high while blue and deep indigo dominate.
 • *Given* a workout polyline traversed at varying speeds (fast descent vs. slow climb),
 • *When* rendered by `PolylineHeatmapTileProvider`,
 • *Then* the rendered intensity along the path SHALL remain uniform regardless of GPS point density or instantaneous speed.
@@ -1789,6 +1800,7 @@
 • *Then* the provider SHALL return `TileProvider.NO_TILE` immediately without allocating bitmaps.
 • *Given* overlapping paths traversed 1 time, 5 times, and 20+ times,
 • *When* the heatmap tile is generated,
-• *Then* the thermal color LUT SHALL map each traversal level to visually distinct hues from cool electric blue to incandescent yellow-white.
+• *Then* the Color LUT SHALL map each traversal level to the 3-stop sequential blue gradient (#00E5FF -> #0000FF -> #311B92) with calibrated translucent alpha.
 
-**Invariants**: Zero changes to SQLite databases, thread-safe concurrent execution, zero main-thread jank, and 100% clean-room unit test pass rate.
+**Invariants**: Zero runtime allocations during lookup, thread-safe concurrent execution, zero SQLite alterations, zero main-thread jank, and 100% clean-room test pass rate.
+

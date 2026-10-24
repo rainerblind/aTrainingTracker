@@ -22,9 +22,9 @@ import android.graphics.Color
 import kotlin.math.roundToInt
 
 /**
- * Precomputed 256-entry thermal color lookup table (LUT) for line-density heatmaps.
- * Maps 8-bit accumulated pass intensity to a smooth thermal gradient:
- * Electric Blue -> Magenta/Crimson -> Fiery Orange -> Incandescent Yellow/White.
+ * Precomputed 256-entry color lookup table (LUT) for line-density heatmaps.
+ * Maps 8-bit accumulated pass intensity to the canonical 3-stop sequential blue gradient:
+ * Light Cyan (#00E5FF) -> Pure Blue (#0000FF) -> Deep Indigo (#311B92) (ATT-4769 / REQ-MAP-056.2).
  *
  * @param opacity The global layer opacity scaling (0.0 to 1.0).
  */
@@ -36,13 +36,12 @@ class ThermalColorLut(
     init {
         table[0] = 0 // Index 0 is fully transparent
 
-        // Color stops: (position 0.0..1.0, R, G, B)
+        // Color stops: (position 0.0..1.0, intArrayOf(R, G, B, baseAlpha))
+        // Aligned with MapUtils.kt / ATT-500 / ATT-504 sequential blue heatmap palette
         val stops = arrayOf(
-            Pair(0.00f, intArrayOf(61, 90, 254)),   // Electric Blue (#3D5AFE)
-            Pair(0.30f, intArrayOf(213, 0, 143)),  // Vivid Magenta (#D5008F)
-            Pair(0.65f, intArrayOf(255, 109, 0)),  // Fiery Orange (#FF6D00)
-            Pair(0.88f, intArrayOf(255, 235, 59)), // Bright Yellow (#FFEB3B)
-            Pair(1.00f, intArrayOf(255, 255, 255)) // White-hot (#FFFFFF)
+            Pair(0.00f, intArrayOf(0, 229, 255, 51)),   // Light Cyan (#00E5FF, ~20% base alpha)
+            Pair(0.50f, intArrayOf(0, 0, 255, 77)),     // Pure Blue (#0000FF, ~30% base alpha)
+            Pair(1.00f, intArrayOf(49, 27, 146, 180))   // Deep Indigo (#311B92, ~70% base alpha)
         )
 
         for (i in 1..255) {
@@ -63,7 +62,8 @@ class ThermalColorLut(
             val r = (lower.second[0] + frac * (upper.second[0] - lower.second[0])).roundToInt().coerceIn(0, 255)
             val g = (lower.second[1] + frac * (upper.second[1] - lower.second[1])).roundToInt().coerceIn(0, 255)
             val b = (lower.second[2] + frac * (upper.second[2] - lower.second[2])).roundToInt().coerceIn(0, 255)
-            val a = (opacity * (160 + 95 * t)).roundToInt().coerceIn(0, 255)
+            val baseAlpha = (lower.second[3] + frac * (upper.second[3] - lower.second[3])).roundToInt().coerceIn(0, 255)
+            val a = (baseAlpha * opacity).roundToInt().coerceIn(0, 255)
 
             table[i] = ((a and 0xFF) shl 24) or ((r and 0xFF) shl 16) or ((g and 0xFF) shl 8) or (b and 0xFF)
         }

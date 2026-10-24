@@ -2160,4 +2160,8 @@
     <string name="tip_data_backup_subtitle">Pieno controllo senza obbligo di account cloud</string>
     <string name="tip_data_backup_desc">Tutti i dati di telemetria, le tracce GPS e le registrazioni dei sensori rimangono sul tuo dispositivo in SQLite e file FIT/TCX. Crea backup completi o sincronizza facoltativamente.</string>
     <string name="tip_data_backup_action">Backup e ripristino</string>
+    <string name="tip_sport_types_title">Tipi di sport personalizzati e sotto-sport</string>
+    <string name="tip_sport_types_subtitle">Soglie di velocità, attrezzatura predefinita e profili di esportazione</string>
+    <string name="tip_sport_types_desc">Definisci sport personalizzati (es. bici da corsa, gravel, MTB, trail running). Configura le soglie di rilevamento automatico basate sulla velocità, associa l\'attrezzatura predefinita e personalizza le esportazioni Strava, TCX e GoldenCheetah.</string>
+    <string name="tip_sport_types_action">Gestisci tipi di sport</string>
 </resources>

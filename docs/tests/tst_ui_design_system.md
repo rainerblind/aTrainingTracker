@@ -6762,10 +6762,10 @@
   6. *Clean-Room Full Suite Regression Execution (`TST-UI-396.6`)*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate across the full project test suite.
 
-### TST-UI-397: **In-App Feature Discovery & Tips Guide, Navigation Drawer Integration & 9-Language Parity Verification Suite** [In-app feature discovery destination 'tips_guide' hosted in single-activity architecture, drawer integration under collapsible Settings group (23 total destinations, 9 non-collapsible default visible rows, advanced tuning terminal position preserved), 7 curated tips with deep-link navigation actions, zero raster asset bloat, 100% 9-language localization parity across all 32 string resources, and clean-room unit test pass rate.]
+### TST-UI-397: **In-App Feature Discovery & Tips Guide, Navigation Drawer Integration & 9-Language Parity Verification Suite** [In-app feature discovery destination 'tips_guide' hosted in single-activity architecture, drawer integration under collapsible Settings group (23 total destinations, 9 non-collapsible default visible rows, advanced tuning terminal position preserved), 8 curated tips with deep-link navigation actions, zero raster asset bloat, 100% 9-language localization parity across all 36 string resources, and clean-room unit test pass rate.]
 - **Requirement(s)**: `REQ-UI-432`
 - **Component**: **In-App Feature Discovery & Tips Guide Verification Suite**
-- **Jira**: ``ATT-2276``
+- **Jira**: ``ATT-2276``, ``ATT-4775``
 - **Test Description**:
   1. *NavRoutes Route and Drawer ID Bidirectional Mapping Unit Test (`TST-UI-397.1`, `SingleActivityNavigationTest.kt`)*:
   • Verify `NavRoutes.TIPS_GUIDE == "tips_guide"`.
@@ -6779,12 +6779,56 @@
   • Verify default visible count across non-collapsible groups strictly remains 9.
   • Verify `drawer_tips_guide` icon is `R.drawable.ic_tips_and_updates` and title is `R.string.drawer_tips_guide`.
   3. *TipsGuideScreen Model, Expandable State & Deep-Link Dispatch Unit/Contract Test (`TST-UI-397.3`, `TipsGuideScreenContractTest.kt`)*:
-  • Verify data model defines exactly 7 curated tips with respective title, subtitle, description, icon, and route targets.
-  • Verify all 7 deep-link action callbacks (`onNavigateToLocations`, `onNavigateToSensors`, `onNavigateToDisplays`, `onNavigateToSegments`, `onNavigateToEquipment`, `onNavigateToZones`, `onNavigateToBackup`) dispatch cleanly when triggered.
+  • Verify data model defines exactly 8 curated tips with respective title, subtitle, description, icon, and route targets.
+  • Verify `cockpit_customization` uses `R.drawable.ic_table_edit` and `NavRoutes.TRACKING_LAYOUTS`.
+  • Verify `sport_types` uses `R.drawable.ic_sports_combined` and `NavRoutes.SPORT_TYPES`.
+  • Verify all 8 deep-link action callbacks (`onNavigateToLocations`, `onNavigateToSensors`, `onNavigateToCockpitLayouts`, `onNavigateToSegments`, `onNavigateToEquipment`, `onNavigateToZones`, `onNavigateToBackup`, `onNavigateToSportTypes`) dispatch cleanly when triggered.
   4. *9-Language Localization & Format Specifier Parity Test (`TST-UI-397.4`, `TranslationParityTest.kt`)*:
-  • Verify all 32 string resources are defined across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+  • Verify all 36 string resources are defined across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
   • Verify 100% translation coverage, matching positional format specifiers, and literal `\n` linebreaks.
   5. *Clean-Room Full Suite Regression Execution (`TST-UI-397.5`)*:
-  • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.navigation.*" --tests "com.atrainingtracker.trainingtracker.localization.*"` and verify 100% pass rate.
+  • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.navigation.*" --tests "com.atrainingtracker.trainingtracker.localization.*" --tests "com.atrainingtracker.trainingtracker.ui.help.*"` and verify 100% pass rate.
+
+### TST-UI-398: **WorkoutDetailTabbedContent Vertical Space Reclamation, Collapsing Header, Single-Line Landscape Header, Inline Zoom Controls, and 72% Plot Alignment Verification Suite** [Collapsing NestedScrollConnection in WorkoutDetailTabbedContent; single-line compact WorkoutHeader in landscape; zero-row inline/floating zoom controls in MapDetailLayout; 72% horizontal plot alignment and double-padding elimination across stacked charts in landscape; portrait invariants preserved; 100% clean-room test pass rate.]
+- **Requirement(s)**: `REQ-UI-433`, `REQ-UI-408`, `REQ-UI-431`, `REQ-UI-225`
+- **Component**: **WorkoutDetailTabbedContent Vertical Space Reclamation Verification Suite**
+- **Jira**: ``ATT-4774``
+- **Test Description**:
+  1. *Collapsing Header NestedScroll Contract Test (`TST-UI-398.1`, `WorkoutDetailTabbedContentTest.kt`)*:
+  • Verify `WorkoutDetailTabbedContent` integrates `CollapsingAppBarNestedScrollConnection`.
+  • Verify that downward vertical scroll offsets translate the header container upwards up to `appBarMaxHeight`.
+  • Verify quick-return behavior on upward scroll and verify landscape collapses both header and tab row.
+  2. *Landscape Single-Line Compact WorkoutHeader Layout Test (`TST-UI-398.2`, `WorkoutHeaderLandscapeTest.kt`)*:
+  • Verify that under `Configuration.ORIENTATION_LANDSCAPE`, `WorkoutHeader` renders in a single horizontal `Row` of maximum 44dp height.
+  • Verify title, cluster pill, sport name, date/time, and action buttons are present in the single row without text truncation.
+  • Verify that under `Configuration.ORIENTATION_PORTRAIT`, `WorkoutHeader` maintains its multi-row vertical layout.
+  3. *Zero-Extra-Row Inline / Floating Zoom Controls Contract Test (`TST-UI-398.3`, `MapDetailLayoutZoomOverlayTest.kt`)*:
+  • Verify `MapDetailLayout` does not allocate a dedicated full-width 36dp vertical row for `GlobalTelemetryZoomToolbar`.
+  • Verify zoom controls are positioned as a compact overlay or inlined, leaving vertical space to charts.
+  4. *Landscape Stacked Charts 72% Plot Width & Double-Padding Elimination Contract Test (`TST-UI-398.4`, `TelemetryMetricGraphLandscapeAlignmentTest.kt`)*:
+  • Verify `ElevationProfile`, `Speed/Pace`, and `W_PRIME_BAL` charts in landscape mode align their right plot boundary to the 72% horizontal boundary when stacked with HR/Power graphs.
+  • Verify `TelemetryMetricGraph` with marginal zone distribution sets `endPaddingPx = 0.dp` within its 72% plot area, eliminating double padding.
+  • Verify vertical scrubbing cursor and X-axis ticks align 1:1 across all stacked charts.
+  5. *Clean-Room Full Suite Regression Execution (`TST-UI-398.5`)*:
+  • Execute targeted unit tests and verify 100% pass rate with zero regressions.
+
+### TST-UI-399: **TrackingTabsScreen Landscape Vertical Space Optimization, Center Status Bar Sensor Icons, and Auto-Hiding Floating Tab Row Suite** [Center status bar sensor icons in landscape; auto-hiding floating PrimaryScrollableTabRow with 2.5-3s timer; portrait and configuration mode invariants preserved; 100% clean-room test pass rate.]
+- **Requirement(s)**: `REQ-UI-434`, `REQ-UI-163`, `REQ-UI-410`, `REQ-UI-412`
+- **Component**: **TrackingTabsScreen Landscape Vertical Space Optimization Suite**
+- **Jira**: ``ATT-4773``
+- **Test Description**:
+  1. *Landscape Center Status Bar Sensor Icons Contract Test (`TST-UI-399.1`, `TrackingTabsLandscapeLayoutTest.kt`)*:
+  • Verify that under `Configuration.ORIENTATION_LANDSCAPE` during `ScreenMode.TRACKING`, `SensorStatus` availability icons render centered within the status bar strip without redundant vertical `statusBarsPadding()`.
+  • Verify that the drawer button does not collide with system insets.
+  2. *Auto-Hiding Floating Tab Row Overlay Contract Test (`TST-UI-399.2`, `TrackingTabsLandscapeLayoutTest.kt`)*:
+  • Verify `PrimaryScrollableTabRow` is rendered as a floating overlay with `zIndex(1f)` over `HorizontalPager` without taking permanent layout height.
+  • Verify visibility is triggered by `pagerState.isScrollInProgress`, page change, or Page 0 (`ControlTab`), and auto-dismisses after a 2.5–3.0 second timer.
+  3. *Portrait & Configuration Mode Invariants Contract Test (`TST-UI-399.3`, `TrackingTabsLandscapeLayoutTest.kt`)*:
+  • Verify that in portrait orientation, `statusBarsPadding()`, `SensorStatus`, and `PrimaryScrollableTabRow` remain persistently stacked.
+  • Verify that in `ScreenMode.CONFIGURATION` and `ScreenMode.PREVIEW`, configuration and preview headers remain persistently visible.
+  4. *Clean-Room Full Suite Regression Execution (`TST-UI-399.4`)*:
+  • Execute targeted unit tests and verify 100% pass rate with zero regressions.
+
+
 
 

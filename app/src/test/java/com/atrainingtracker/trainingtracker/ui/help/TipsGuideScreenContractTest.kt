@@ -37,10 +37,10 @@ class TipsGuideScreenContractTest {
     @Test
     fun testTipsCountAndIntegrity() {
         val tips = TipsGuideData.TIPS
-        assertEquals("Tips guide must contain exactly 7 curated power tips", 7, tips.size)
+        assertEquals("Tips guide must contain exactly 8 curated power tips", 8, tips.size)
 
         val uniqueIds = tips.map { it.id }.toSet()
-        assertEquals("All 7 tips must have distinct identifiers", 7, uniqueIds.size)
+        assertEquals("All 8 tips must have distinct identifiers", 8, uniqueIds.size)
 
         tips.forEach { tip ->
             assertNotNull("Tip id cannot be null", tip.id)
@@ -77,15 +77,15 @@ class TipsGuideScreenContractTest {
         assertEquals(R.drawable.ic_my_paired_devices, tipSensors?.iconRes)
         assertEquals(NavRoutes.SENSORS, tipSensors?.targetRoute)
 
-        // Tip 3: Cockpit Displays & Bike Bell -> NavRoutes.SPORT_TYPES
+        // Tip 3: Cockpit Displays & Bike Bell -> NavRoutes.TRACKING_LAYOUTS
         val tipCockpit = tipsMap["cockpit_customization"]
         assertNotNull(tipCockpit)
         assertEquals(R.string.tip_cockpit_customization_title, tipCockpit?.titleRes)
         assertEquals(R.string.tip_cockpit_customization_subtitle, tipCockpit?.subtitleRes)
         assertEquals(R.string.tip_cockpit_customization_desc, tipCockpit?.descriptionRes)
         assertEquals(R.string.tip_cockpit_customization_action, tipCockpit?.actionRes)
-        assertEquals(R.drawable.ic_display_settings, tipCockpit?.iconRes)
-        assertEquals(NavRoutes.SPORT_TYPES, tipCockpit?.targetRoute)
+        assertEquals(R.drawable.ic_table_edit, tipCockpit?.iconRes)
+        assertEquals(NavRoutes.TRACKING_LAYOUTS, tipCockpit?.targetRoute)
 
         // Tip 4: Strava Live Segments -> NavRoutes.SEGMENTS
         val tipSegments = tipsMap["live_segments"]
@@ -126,6 +126,16 @@ class TipsGuideScreenContractTest {
         assertEquals(R.string.tip_data_backup_action, tipBackup?.actionRes)
         assertEquals(R.drawable.ic_save_to_disc, tipBackup?.iconRes)
         assertEquals(NavRoutes.BACKUP_RESTORE, tipBackup?.targetRoute)
+
+        // Tip 8: Custom Sport Types -> NavRoutes.SPORT_TYPES
+        val tipSportTypes = tipsMap["sport_types"]
+        assertNotNull(tipSportTypes)
+        assertEquals(R.string.tip_sport_types_title, tipSportTypes?.titleRes)
+        assertEquals(R.string.tip_sport_types_subtitle, tipSportTypes?.subtitleRes)
+        assertEquals(R.string.tip_sport_types_desc, tipSportTypes?.descriptionRes)
+        assertEquals(R.string.tip_sport_types_action, tipSportTypes?.actionRes)
+        assertEquals(R.drawable.ic_sports_combined, tipSportTypes?.iconRes)
+        assertEquals(NavRoutes.SPORT_TYPES, tipSportTypes?.targetRoute)
     }
 
     @Test
@@ -137,16 +147,17 @@ class TipsGuideScreenContractTest {
             onNavigate(tip.targetRoute)
         }
 
-        assertEquals(7, dispatchedRoutes.size)
+        assertEquals(8, dispatchedRoutes.size)
         assertEquals(
             listOf(
                 NavRoutes.LOCATIONS,
                 NavRoutes.SENSORS,
-                NavRoutes.SPORT_TYPES,
+                NavRoutes.TRACKING_LAYOUTS,
                 NavRoutes.SEGMENTS,
                 NavRoutes.EQUIPMENT,
                 NavRoutes.trainingZones(),
-                NavRoutes.BACKUP_RESTORE
+                NavRoutes.BACKUP_RESTORE,
+                NavRoutes.SPORT_TYPES
             ),
             dispatchedRoutes
         )
@@ -165,11 +176,12 @@ class TipsGuideScreenContractTest {
         val expectedVectorNames = listOf(
             "ic_favorite_route.xml",
             "ic_my_paired_devices.xml",
-            "ic_display_settings.xml",
+            "ic_table_edit.xml",
             "ic_segment.xml",
             "ic_equipment_combined.xml",
             "ic_cardiology.xml",
             "ic_save_to_disc.xml",
+            "ic_sports_combined.xml",
             "ic_tips_and_updates.xml"
         )
 

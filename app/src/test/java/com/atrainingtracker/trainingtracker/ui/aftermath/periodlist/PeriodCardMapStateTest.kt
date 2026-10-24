@@ -185,4 +185,94 @@ class PeriodCardMapStateTest {
         assertTrue("Malformed state must not throw and report ready", malformedState.isReady)
         assertTrue("Primary paths must be empty after dropping malformed strings", malformedState.primaryPaths.isEmpty())
     }
+
+    @Test
+    fun testTstPer025_7a_AdaptiveSuppressionForOverThirtyWorkoutsWithHeatmap() {
+        // Create 31 distinct workout polylines (> MAX_PERIOD_VECTOR_TRACKS = 30)
+        val workoutMap = (1L..31L).associateWith { id ->
+            createTestPolyline(48.0 + id * 0.001, 9.0 + id * 0.001)
+        }
+        val monthSummary = createMockSummary(
+            periodType = PeriodType.MONTH,
+            polylinesMap = workoutMap
+        )
+
+        val state = prepareCardMapPreviewSync(monthSummary)
+
+        assertTrue("State must be ready", state.isReady)
+        assertEquals("Must ingest all 31 routes", 31, state.primaryRegionPathsCount)
+        assertNotNull("Heatmap provider must be present for Month", state.visuals?.heatmapProvider)
+        assertFalse(
+            "Vector polylines must be suppressed when workouts > 30 and heatmap is active",
+            state.renderVectorPolylines
+        )
+    }
+
+    @Test
+    fun testTstPer025_7b_VectorPolylineRetentionForThirtyOrFewerWorkoutsAndDayCards() {
+        // Boundary case: exactly 30 workouts on Month card (boundary <= 30 must retain polylines)
+        val thirtyWorkoutMap = (1L..30L).associateWith { id ->
+            createTestPolyline(48.0 + id * 0.001, 9.0 + id * 0.001)
+        }
+        val monthSummary30 = createMockSummary(
+            periodType = PeriodType.MONTH,
+            polylinesMap = thirtyWorkoutMap
+        )
+        val state30 = prepareCardMapPreviewSync(monthSummary30)
+        assertTrue(state30.isReady)
+        assertNotNull("Heatmap present for Month", state30.visuals?.heatmapProvider)
+        assertTrue(
+            "Vector polylines must be retained for exactly 30 workouts",
+            state30.renderVectorPolylines
+        )
+
+        // Small period: 5 workouts on Week card
+        val fiveWorkoutMap = (1L..5L).associateWith { id ->
+            createTestPolyline(48.0 + id * 0.001, 9.0 + id * 0.001)
+        }
+        val weekSummary5 = createMockSummary(
+            periodType = PeriodType.WEEK,
+            polylinesMap = fiveWorkoutMap
+        )
+        val state5 = prepareCardMapPreviewSync(weekSummary5)
+        assertTrue(state5.isReady)
+        assertTrue(
+            "Vector polylines must be retained for 5 workouts",
+            state5.renderVectorPolylines
+        )
+
+        // Day card with 35 workouts: heatmap is null, so vector polylines must always be retained
+        val dayWorkoutMap = (1L..35L).associateWith { id ->
+            createTestPolyline(48.0 + id * 0.001, 9.0 + id * 0.001)
+        }
+        val daySummary35 = createMockSummary(
+            periodType = PeriodType.DAY,
+            polylinesMap = dayWorkoutMap
+        )
+        val dayState35 = prepareCardMapPreviewSync(daySummary35)
+        assertTrue(dayState35.isReady)
+        assertNull("Heatmap must be null for Day card", dayState35.visuals?.heatmapProvider)
+        assertTrue(
+            "Vector polylines must be retained on Day cards regardless of count",
+            dayState35.renderVectorPolylines
+        )
+    }
+
+    @Test
+    fun testTstPer025_7c_SummaryPolylinesSourcePrioritization() {
+        val polyA = createTestPolyline(48.0, 9.0, count = 5) // Stuttgart
+        val polyB = createTestPolyline(52.0, 13.0, count = 5) // Berlin
+
+        val summary = createMockSummary(
+            periodType = PeriodType.MONTH,
+            rawPolylines = listOf(polyA),
+            polylinesMap = mapOf(1L to polyB)
+        )
+
+        val state = prepareCardMapPreviewSync(summary)
+        assertTrue(state.isReady)
+        assertEquals("Must decode exactly 1 path from summary.polylines", 1, state.primaryPaths.size)
+        // Verify coordinates correspond to polyA (~48.0), not polyB (~52.0)
+        assertEquals(48.0, state.primaryPaths[0][0].latitude, 0.01)
+    }
 }

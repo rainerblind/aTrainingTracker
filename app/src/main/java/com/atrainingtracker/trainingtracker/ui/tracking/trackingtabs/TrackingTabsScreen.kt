@@ -23,11 +23,18 @@ import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -549,114 +556,171 @@ fun TrackingTabsScreen(
                 trackingViews.getOrNull(pagerState.currentPage - 1)
             } else null
 
+            val configuration = LocalConfiguration.current
+            val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+            val isLandscapeTracking = isLandscape && screenMode == ScreenMode.TRACKING
+            val isControlTab = screenMode == ScreenMode.TRACKING && pagerState.currentPage == 0
+
+            var showFloatingTabRow by remember { mutableStateOf(false) }
+            var topTapTrigger by remember { mutableStateOf(0L) }
+
+            LaunchedEffect(pagerState.isScrollInProgress, pagerState.currentPage, topTapTrigger) {
+                if (isLandscapeTracking) {
+                    if (isControlTab || pagerState.isScrollInProgress) {
+                        showFloatingTabRow = true
+                    } else {
+                        showFloatingTabRow = true
+                        delay(2500)
+                        showFloatingTabRow = false
+                    }
+                }
+            }
+
+            val isFloatingTabRowVisible = isControlTab || showFloatingTabRow
+
+            val tabRowContent: @Composable () -> Unit = {
+                PrimaryScrollableTabRow(
+                    selectedTabIndex = pagerState.currentPage,
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    edgePadding = 8.dp,
+                    divider = {}
+                ) {
+                    if (screenMode == ScreenMode.TRACKING) {
+                        val isSelected = pagerState.currentPage == 0
+                        Tab(
+                            selected = isSelected,
+                            onClick = { scope.launch { pagerState.animateScrollToPage(0) } },
+                            selectedContentColor = MaterialTheme.colorScheme.primary,
+                            unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            text = {
+                                // Dynamic Title for Control Tab (Tracking/Paused/Start)
+                                Text(
+                                    text = getControlTabTitle(trackingMode),
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        )
+                    }
+                    trackingViews.forEachIndexed { index, view ->
+                        val targetPage =
+                            if (screenMode == ScreenMode.TRACKING) index + 1 else index
+                        val isSelected = pagerState.currentPage == targetPage
+                        Tab(
+                            selected = isSelected,
+                            onClick = {
+                                scope.launch {
+                                    pagerState.animateScrollToPage(
+                                        targetPage
+                                    )
+                                }
+                            },
+                            selectedContentColor = MaterialTheme.colorScheme.primary,
+                            unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            text = {
+                                Text(
+                                    text = view.name,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        )
+                    }
+                }
+            }
+
             Column {
 
-                Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer
-                ) {
-                    Column(
+                if (isLandscapeTracking) {
+                    // Landscape ScreenMode.TRACKING: compact status bar strip with centered sensor icons and zero permanent tab row (REQ-UI-434.1, REQ-UI-434.2)
+                    val activeSensors by trackingTabsViewModel.activeSensors.collectAsState()
+                    val sensorSourceMapping by trackingTabsViewModel.sensorSourceMapping.collectAsState()
+                    val allTelemetry by trackingTabsViewModel.allTelemetry.collectAsState()
+                    val allDevices by trackingTabsViewModel.allDevices.collectAsState()
+
+                    Surface(
+                        color = MaterialTheme.colorScheme.primaryContainer,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .statusBarsPadding() // Pushes the header below the status bar
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { topTapTrigger = System.currentTimeMillis() }
                     ) {
-
-                        // TAB HEADER
-                        when (screenMode) {
-                            ScreenMode.TRACKING -> {
-                                // Collect source info
-                                val activeSensors by trackingTabsViewModel.activeSensors.collectAsState()
-                                val sensorSourceMapping by trackingTabsViewModel.sensorSourceMapping.collectAsState()
-                                val allTelemetry by trackingTabsViewModel.allTelemetry.collectAsState()
-                                val allDevices by trackingTabsViewModel.allDevices.collectAsState()
-
-                                // Show the available Sensors
-                                Surface(
-                                    modifier = Modifier.padding(4.dp),
-                                    color = Color.Transparent
-                                ) {
-                                    SensorStatus(
-                                        activeSensors = activeSensors,
-                                        sourceMapping = sensorSourceMapping,
-                                        allTelemetry = allTelemetry,
-                                        allDevices = allDevices,
-                                        onDeviceClick = { trackingTabsViewModel.onEditDevice(it) },
-                                        onMenuClick = {
-                                            (activity as? MainActivityWithNavigation)?.openDrawer()
-                                        }
-                                    )
-                                }
-                            }
-
-                            ScreenMode.CONFIGURATION -> {
-                                // -- The full configuration screen for editing the name of the tab, checkboxes for lap button, map, and live segments, as well as the add/delete buttons
-                                if (currentViewInfo != null) {
-                                    TrackingTabConfigHeader(
-                                        viewInfo = currentViewInfo,
-                                        onUpdateTabName = { id, name -> trackingTabsViewModel.onUpdateTabName(id, name) },
-                                        onAddTabRelative = { id, after -> trackingTabsViewModel.onAddTabRelative(id, after) },
-                                        onDeleteTab = { id -> trackingTabsViewModel.onDeleteTab(id) },
-                                        onToggleMode = { trackingTabsViewModel.toggleScreenMode() }
-                                    )
-                                }
-                            }
-
-                            ScreenMode.PREVIEW -> {
-                                if (currentViewInfo != null) {
-                                    TrackingTabPreviewHeader(
-                                        viewInfo = currentViewInfo,
-                                        onToggleMode = { trackingTabsViewModel.toggleScreenMode() },
-                                        onExitConfig = { trackingTabsViewModel.exitConfiguration() }
-                                    )
-                                }
-                            }
-                        }
-
-                        // TAB ROW
-                        PrimaryScrollableTabRow(
-                            selectedTabIndex = pagerState.currentPage,
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                            edgePadding = 8.dp,
-                            divider = {}
+                        SensorStatus(
+                            activeSensors = activeSensors,
+                            sourceMapping = sensorSourceMapping,
+                            allTelemetry = allTelemetry,
+                            allDevices = allDevices,
+                            onDeviceClick = { trackingTabsViewModel.onEditDevice(it) },
+                            onMenuClick = {
+                                (activity as? MainActivityWithNavigation)?.openDrawer()
+                            },
+                            isCompactLandscape = true
+                        )
+                    }
+                } else {
+                    // Portrait Mode or Non-Tracking Modes: preserved statusBarsPadding and stacked headers (REQ-UI-434.3)
+                    Surface(
+                        color = MaterialTheme.colorScheme.primaryContainer
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .statusBarsPadding() // Pushes the header below the status bar
                         ) {
-                            if (screenMode == ScreenMode.TRACKING) {
-                                val isSelected = pagerState.currentPage == 0
-                                Tab(
-                                    selected = isSelected,
-                                    onClick = { scope.launch { pagerState.animateScrollToPage(0) } },
-                                    selectedContentColor = MaterialTheme.colorScheme.primary,
-                                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    text = {
-                                        // Dynamic Title for Control Tab (Tracking/Paused/Start)
-                                        Text(
-                                            text = getControlTabTitle(trackingMode),
-                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+
+                            // TAB HEADER
+                            when (screenMode) {
+                                ScreenMode.TRACKING -> {
+                                    // Collect source info
+                                    val activeSensors by trackingTabsViewModel.activeSensors.collectAsState()
+                                    val sensorSourceMapping by trackingTabsViewModel.sensorSourceMapping.collectAsState()
+                                    val allTelemetry by trackingTabsViewModel.allTelemetry.collectAsState()
+                                    val allDevices by trackingTabsViewModel.allDevices.collectAsState()
+
+                                    // Show the available Sensors
+                                    Surface(
+                                        modifier = Modifier.padding(4.dp),
+                                        color = Color.Transparent
+                                    ) {
+                                        SensorStatus(
+                                            activeSensors = activeSensors,
+                                            sourceMapping = sensorSourceMapping,
+                                            allTelemetry = allTelemetry,
+                                            allDevices = allDevices,
+                                            onDeviceClick = { trackingTabsViewModel.onEditDevice(it) },
+                                            onMenuClick = {
+                                                (activity as? MainActivityWithNavigation)?.openDrawer()
+                                            }
                                         )
                                     }
-                                )
-                            }
-                            trackingViews.forEachIndexed { index, view ->
-                                val targetPage =
-                                    if (screenMode == ScreenMode.TRACKING) index + 1 else index
-                                val isSelected = pagerState.currentPage == targetPage
-                                Tab(
-                                    selected = isSelected,
-                                    onClick = {
-                                        scope.launch {
-                                            pagerState.animateScrollToPage(
-                                                targetPage
-                                            )
-                                        }
-                                    },
-                                    selectedContentColor = MaterialTheme.colorScheme.primary,
-                                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    text = {
-                                        Text(
-                                            text = view.name,
-                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                }
+
+                                ScreenMode.CONFIGURATION -> {
+                                    // -- The full configuration screen for editing the name of the tab, checkboxes for lap button, map, and live segments, as well as the add/delete buttons
+                                    if (currentViewInfo != null) {
+                                        TrackingTabConfigHeader(
+                                            viewInfo = currentViewInfo,
+                                            onUpdateTabName = { id, name -> trackingTabsViewModel.onUpdateTabName(id, name) },
+                                            onAddTabRelative = { id, after -> trackingTabsViewModel.onAddTabRelative(id, after) },
+                                            onDeleteTab = { id -> trackingTabsViewModel.onDeleteTab(id) },
+                                            onToggleMode = { trackingTabsViewModel.toggleScreenMode() }
                                         )
                                     }
-                                )
+                                }
+
+                                ScreenMode.PREVIEW -> {
+                                    if (currentViewInfo != null) {
+                                        TrackingTabPreviewHeader(
+                                            viewInfo = currentViewInfo,
+                                            onToggleMode = { trackingTabsViewModel.toggleScreenMode() },
+                                            onExitConfig = { trackingTabsViewModel.exitConfiguration() }
+                                        )
+                                    }
+                                }
                             }
+
+                            // TAB ROW
+                            tabRowContent()
                         }
                     }
                 }
@@ -821,6 +885,25 @@ fun TrackingTabsScreen(
                         }
                     }
 
+                    if (isLandscapeTracking) {
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = isFloatingTabRowVisible,
+                            enter = fadeIn(animationSpec = tween(200)) + slideInVertically(animationSpec = tween(200)) { -it },
+                            exit = fadeOut(animationSpec = tween(300)) + slideOutVertically(animationSpec = tween(300)) { -it },
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .zIndex(1f)
+                        ) {
+                            Surface(
+                                color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.95f),
+                                shape = RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp),
+                                shadowElevation = 4.dp
+                            ) {
+                                tabRowContent()
+                            }
+                        }
+                    }
+
                     androidx.compose.animation.AnimatedVisibility(
                         visible = showStopTrackingCoachmark,
                         modifier = Modifier
@@ -852,8 +935,6 @@ fun TrackingTabsScreen(
             val shouldShowLapButton = currentViewInfo?.showLapButton == true && screenMode != ScreenMode.CONFIGURATION
             val shouldShowBikeBell = currentViewInfo?.showBikeBell == true && screenMode != ScreenMode.CONFIGURATION
             if (shouldShowLapButton || shouldShowBikeBell) {
-                val configuration = LocalConfiguration.current
-                val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
                 val isLandscapeWithMap = isLandscape && currentViewInfo?.showMap == true
                 val buttonAlignment = if (isLandscapeWithMap) Alignment.BottomStart else Alignment.BottomCenter
                 Box(

@@ -109,8 +109,8 @@ object TipsGuideData {
             subtitleRes = R.string.tip_cockpit_customization_subtitle,
             descriptionRes = R.string.tip_cockpit_customization_desc,
             actionRes = R.string.tip_cockpit_customization_action,
-            iconRes = R.drawable.ic_display_settings,
-            targetRoute = NavRoutes.SPORT_TYPES
+            iconRes = R.drawable.ic_table_edit,
+            targetRoute = NavRoutes.TRACKING_LAYOUTS
         ),
         TipItemConfig(
             id = "live_segments",
@@ -147,6 +147,15 @@ object TipsGuideData {
             actionRes = R.string.tip_data_backup_action,
             iconRes = R.drawable.ic_save_to_disc,
             targetRoute = NavRoutes.BACKUP_RESTORE
+        ),
+        TipItemConfig(
+            id = "sport_types",
+            titleRes = R.string.tip_sport_types_title,
+            subtitleRes = R.string.tip_sport_types_subtitle,
+            descriptionRes = R.string.tip_sport_types_desc,
+            actionRes = R.string.tip_sport_types_action,
+            iconRes = R.drawable.ic_sports_combined,
+            targetRoute = NavRoutes.SPORT_TYPES
         )
     )
 }

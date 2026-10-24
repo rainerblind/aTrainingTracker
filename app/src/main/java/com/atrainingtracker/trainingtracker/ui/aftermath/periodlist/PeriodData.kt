@@ -69,6 +69,7 @@ data class PeriodSummary(
 
     val polylines: List<String> = emptyList(), // List of encoded polylines for the map
     val workoutIdToPolylineMap: Map<Long, String> = emptyMap(), // ID -> Encoded Polyline
+    val workoutIdToAllPolylinesMap: Map<Long, String> = emptyMap(), // ID -> Encoded Polyline for all workouts (ATT-4770)
     val workoutIdToPathMap: Map<Long, List<com.google.android.gms.maps.model.LatLng>> = emptyMap(), // ID -> Rich Path
     val workoutIdToSportMap: Map<Long, BSportType> = emptyMap(),
     val extremaMarkers: List<PeriodPeakMarker> = emptyList(),

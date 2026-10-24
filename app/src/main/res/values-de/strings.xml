@@ -2245,4 +2245,8 @@
     <string name="tip_data_backup_subtitle">Volle Kontrolle ohne Cloud-Konto-Zwang</string>
     <string name="tip_data_backup_desc">Alle Trainingsdaten, GPS-Tracks und Sensorwerte bleiben sicher auf deinem Gerät in SQLite sowie standardisierten FIT/TCX-Dateien. Erstelle jederzeit vollständige Backups oder nutze optionalen Cloud-Sync.</string>
     <string name="tip_data_backup_action">Sichern &amp; Wiederherstellen</string>
+    <string name="tip_sport_types_title">Eigene Sportarten &amp; Unter-Sportarten</string>
+    <string name="tip_sport_types_subtitle">Geschwindigkeitsschwellen, Standardausrüstung &amp; Export-Profile</string>
+    <string name="tip_sport_types_desc">Erstelle eigene Sportarten (z. B. Rennrad, Gravel, MTB, Trailrun). Konfiguriere geschwindigkeitsbasierte automatische Sportarterkennung, verknüpfe Standardausrüstung und passe Strava-, TCX- sowie GoldenCheetah-Exporttypen an.</string>
+    <string name="tip_sport_types_action">Sportarten verwalten</string>
 </resources>

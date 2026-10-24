@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Requirements**: 21
+**Total Requirements**: 23
 
 ---
 
@@ -306,23 +306,33 @@
 3. *Background Region Clustering & Viewport Framing (`REQ-PER-019.3`)*:
 • When a period spans multiple distinct geographic regions ($> 75\text{ km}$ geodesic span), `SpatialRegionEngine.detectRegionsFromPaths` SHALL partition the simplified paths on `Dispatchers.Default` and select the primary region for initial camera framing (`bounds`).
 • The multi-region indicator badge (`REQ-PER-013`) SHALL display the count of distinct regions and primary region paths count when `regionCount > 1`.
-4. *Complete Regional Route Network Heatmap Integration (`REQ-PER-019.4`)*:
+4. *Complete Regional Route Network Heatmap Integration & Adaptive Vector Polyline Suppression (`REQ-PER-019.4`)*:
 • For `WEEK`, `MONTH`, and `YEAR` cards, `PeriodCardMapState` SHALL feed all simplified regional paths into `PolylineHeatmapTileProvider` (`REQ-PER-017`), rendering the full route density network. For `DAY` cards, `heatmapProvider` SHALL evaluate to `null` and render crisp vector polylines.
+• In `PeriodSummaryCard` (`PeriodMultiWorkoutMap`), when a period has $> 30$ workouts (`activePaths.size > MAX_PERIOD_VECTOR_TRACKS`) and an active heatmap (`visuals.heatmapProvider != null`), individual vector `Polyline` composables SHALL be suppressed in favor of the raster heatmap overlay to prevent JNI allocation overhead and visual gradient washout (ATT-4772).
+• For periods with $\le 30$ workouts or where `heatmapProvider == null`, individual vector `Polyline` composables SHALL be retained.
+• `PeriodCardMapState` SHALL expose `val renderVectorPolylines: Boolean = true`, evaluated as `visuals?.heatmapProvider == null || activePaths.size <= MAX_PERIOD_VECTOR_TRACKS`.
+• `prepareCardMapPreviewSync` SHALL prioritize `summary.polylines` over `summary.workoutIdToPolylineMap` when populating preview paths.
 5. *System Invariants & Graceful Degradation (`REQ-PER-019.5`)*:
 • When a period contains empty or invalid GPS data, the background pipeline SHALL emit a ready state with empty paths and null bounds, rendering the localized "No GPS data" fallback without throwing exceptions.
 • Zero mutations to `PeriodSummaries.db` schema.
 • 100% clean-room test pass rate under `./gradlew testDebugUnitTest`.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: `REQ-PER-012` (*Period Map Scalability, Memory Budget & Adaptive Layering Invariant*), targeting `PeriodSummaryCard.kt` and `PeriodsRepository.kt`.
-2. *Historical Origin & Commit Trace*: Sprint 2026-41.2 (commit `1c89f50e` / ATT-1151 / `MAX_SUMMARY_THUMBNAIL_TRACKS = 8`).
-3. *Root Reason for Existing Formulation*: Imposed an 8-track hard cap as a temporary mitigation against UI-thread ANRs and OOM crashes when Google Maps `MapView` and `HeatmapTileProvider` decoded and rendered unsimplified vector polylines synchronously inside Compose `remember` blocks during list scrolling.
-4. *Preservation of Core Invariants*: Memory safety without OOMs, multi-region indicator badge (`REQ-PER-013`), single-region camera framing, `DarkMapAntiFlashOverlay`, and non-blocking 60 fps `LazyColumn` scrolling remain 100% strictly preserved.
+1. *Original Requirement ID & Target*: Amends `REQ-PER-012` (*Period Map Scalability, Memory Budget & Adaptive Layering Invariant*) and `REQ-PER-019.4` (*Regional Route Network Heatmap Integration*). Targets `PeriodSummaryCard.kt`, `PeriodMapUtils.kt`, and `PeriodCardMapStateTest.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-41.2 (commit `1c89f50e` / ATT-1151 / `MAX_SUMMARY_THUMBNAIL_TRACKS = 8`), commit `7e2151ec` (ATT-1107, established `MAX_PERIOD_VECTOR_TRACKS = 30`), commit `da70647f` (ATT-4477, added `PeriodCardMapState`), and `ATT-4772`.
+3. *Root Reason for Existing Formulation*: ATT-4477 enabled full-period route ingestion and offloaded polyline decoding to background dispatchers, but `PeriodMultiWorkoutMap` retained unconditional `Polyline` composable drawing underneath `TileOverlay`, causing hundreds of redundant JNI objects on large periods and washing out the translucent heatmap.
+4. *Preservation of Core Invariants*: Memory safety without OOMs, multi-region indicator badge (`REQ-PER-013`), single-region camera framing, `DarkMapAntiFlashOverlay`, `DAY` card vector polyline crispness, and non-blocking 60 fps `LazyColumn` scrolling remain 100% strictly preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* a Month or Year period with 30+ workouts,
 • *When* `PeriodSummaryCard` is composed in `LazyColumn`,
 • *Then* all member workout polylines are decoded and Douglas-Peucker simplified on `Dispatchers.Default`, and all primary region paths are rendered in `PolylineHeatmapTileProvider` rather than truncating to 8 tracks.
+• *Given* a Month or Year period with $> 30$ workouts and an active heatmap,
+• *When* `PeriodSummaryCard` (`PeriodMultiWorkoutMap`) renders,
+• *Then* individual vector `Polyline` composables are suppressed (`renderVectorPolylines == false`) and only the `TileOverlay` heatmap is rendered.
+• *Given* a period with $\le 30$ workouts or a Day period (`heatmapProvider == null`),
+• *When* `PeriodSummaryCard` renders,
+• *Then* individual vector `Polyline` composables are retained (`renderVectorPolylines == true`).
 • *Given* a period with empty or malformed GPS polylines,
 • *When* `PeriodCardMapState` evaluates on `Dispatchers.Default`,
 • *Then* `isReady` is set to true with empty `primaryPaths` and null `bounds`, displaying the no-GPS fallback without throwing exceptions.
@@ -414,5 +424,107 @@
 
 **Invariants**: Zero changes to `PeriodSummaries.db`, memory safety without OOMs, and 100% clean-room test pass rate.
 
+### REQ-PER-022: Periods Sport Type Header Filtering & Multi-Sport Projections [Verified]
+- **Tests**: `TST-PER-028`
+- **Implementation**: `PeriodsTabsScreen.kt`, `PeriodsViewModel.kt`, `PeriodData.kt`, `PeriodsRepository.kt`
+- **Rationale**: The system SHALL provide toggleable sport filter icon buttons in the Periods header row to allow athletes to isolate specific disciplines (`Bike`, `Run`, `Other`) across the entire Periods view (Day, Week, Month, Year), dynamically filtering `PeriodBarGraph`, `PeriodSummaryCard`, and map previews while preserving non-empty filter invariants and database integrity (ATT-4770, refining `REQ-PER-018` and `REQ-PER-019`):
+1. *Canonical Sport Type Icon Buttons & Placement (`REQ-PER-022.1`)*:
+• In `PeriodsTabsScreen.kt`, the `primaryContainer` header row SHALL display 3 compact toggleable sport icon buttons on the right side opposite the "Periods" title.
+• The buttons SHALL be rendered in canonical order `[BSportType.BIKE, BSportType.RUN, BSportType.UNKNOWN]` (Rule 57: `Other` always on the far right).
+• Icons SHALL use `bSportType.iconResId` (`ic_bike`, `ic_run`, `ic_other` via `BSportType`) with content descriptions from `bSportType.stringResId` (`R.string.sport_type_bike`, `R.string.sport_type_run`, `R.string.sport_type_other`).
+• Active/selected sport icons SHALL be rendered with full opacity (`MaterialTheme.colorScheme.onPrimaryContainer`); inactive/deselected icons SHALL be rendered dimmed (`MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = TTAlpha.Disabled)`).
+2. *Default Filter Set & Non-Empty Selection Guard (`REQ-PER-022.2`)*:
+• In `PeriodsViewModel`, `selectedSports` StateFlow SHALL be initialized by default to `setOf(BSportType.BIKE, BSportType.RUN)`.
+• Toggling a sport filter via `toggleSportFilter(sport: BSportType)` SHALL prevent deselecting the final remaining active sport, guaranteeing `selectedSports.isNotEmpty()` at all times to prevent blank/unusable UI states.
+3. *Reactive Multi-Sport In-Memory Projection (`REQ-PER-022.3`)*:
+• `PeriodSummary` in `PeriodData.kt` SHALL include `val workoutIdToAllPolylinesMap: Map<Long, String> = emptyMap()`, populated during `enrich()` in `PeriodsRepository.kt` from `allPolylineMap`.
+• `PeriodsViewModel` SHALL project `groupedPeriods` reactively into `filteredGroupedPeriods: StateFlow<Map<PeriodType, List<PeriodSummary>>>` based on `selectedSports`.
+• For each `PeriodSummary`:
+  - `sportStats` SHALL retain only entries matching `selectedSports`.
+  - Aggregated metrics (`totalWorkouts`, `totalDurationSec`, `totalDistance`) SHALL be recomputed strictly from the filtered `sportStats` values.
+  - Periods with 0 filtered workouts (`totalWorkouts == 0`) SHALL be excluded from the filtered list in `filteredGroupedPeriods`.
+  - Map preview paths (`polylines` and `workoutIdToPolylineMap`) SHALL be filtered using `summary.workoutIdToAllPolylinesMap.filterKeys { id -> summary.workoutIdToSportMap[id] in selectedSports }` (or fallback to retaining `summary.polylines` if `workoutIdToAllPolylinesMap` is empty).
+  - Spatial `extremaMarkers` SHALL retain only markers whose `workoutId` matches a workout of a selected sport type (`summary.workoutIdToSportMap[marker.workoutId] in selectedSports`).
+4. *Bar Graph, Summary Card, and Map Dynamic Synchronization (`REQ-PER-022.4`)*:
+• `PeriodsTabsScreen.kt` and its child composables (`PeriodBarGraph`, `PeriodList`, `PeriodSummaryCard`) SHALL observe and render `filteredGroupedPeriods`.
+• Bar heights, sport segment colors, summary cards, and map preview routes SHALL instantaneously update when sport filters are toggled without requiring database re-queries or screen re-navigation.
+5. *Preservation of System Invariants (`REQ-PER-022.5`)*:
+• Zero alterations or migrations to `PeriodSummaries.db` (schema remains on v27).
+• 60 fps `LazyColumn` scrolling smoothness and Douglas-Peucker simplification pipelines (`REQ-PER-019`) remain strictly preserved.
+• 9-language localization parity maintained for all sport strings.
+• 100% clean-room test suite pass rate under `./gradlew testDebugUnitTest`.
 
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-PER-022` (*Periods Sport Type Header Filtering & Multi-Sport Projections*), refining `REQ-PER-018` (*Timeline Continuity & Bar Graph Visualization*) and `REQ-PER-019` (*Full-Period Asynchronous Mini-Map Preview*). Targets `PeriodsTabsScreen.kt`, `PeriodsViewModel.kt`, `PeriodData.kt`, `PeriodsRepository.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-43.9 Review (`ATT-4478`), Sprint 2026-43.2 (Rule 57, commit `d5a81e3a` / `ATT-4372`), and `PeriodMapScreen.kt:133-157` (`ATT-440`).
+3. *Root Reason for Existing Formulation*: Prior to ATT-4770, `PeriodsTabsScreen.kt` displayed all sports unconditionally; sport filtering was only available within the full-screen `PeriodMapScreen`. The Periods header had unused horizontal whitespace, while athletes requested a high-level toggle to isolate Bike and Run from other activities without clunky modal dialogs.
+4. *Preservation of Core Invariants*: In-memory StateFlow projection avoids SQLite v28 migrations, keeps `PeriodSummaries.db` read-only during filtering, preserves timeline bar graph gap interpolation (`REQ-PER-018`), and maintains 100% clean-room test pass rate.
 
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the athlete opens `PeriodsTabsScreen`,
+• *When* the top header row renders,
+• *Then* 3 sport filter icon buttons `[Bike, Run, Other]` are displayed on the right side of the `primaryContainer` row in canonical order (Other on far right), with Bike and Run active (full opacity) and Other dimmed.
+• *Given* `selectedSports` contains `setOf(BSportType.BIKE, BSportType.RUN)`,
+• *When* the athlete taps the Run icon button,
+• *Then* `selectedSports` becomes `setOf(BSportType.BIKE)`, Run icon is dimmed, and all period cards, bar graphs, and map previews update to show Bike-only metrics.
+• *Given* `selectedSports` contains only `setOf(BSportType.BIKE)`,
+• *When* the athlete taps the Bike icon button,
+• *Then* the tap is ignored (non-empty guard), preserving `selectedSports = setOf(BSportType.BIKE)`.
+• *Given* a period containing only "Other" workouts,
+• *When* default filters (`Bike + Run`) are active,
+• *Then* that period has 0 filtered workouts and is omitted from `filteredGroupedPeriods`.
+• *When* the athlete toggles "Other" on,
+• *Then* the period dynamically appears in the list and bar graph.
+
+**Invariants**: Zero SQLite schema changes, non-blocking UI thread, crash prevention on empty/edge data, and 100% clean-room test pass rate.
+
+### REQ-PER-023: PeriodBarGraph Full Distance & Imperial Unit Parity [Verified]
+- **Tests**: `TST-PER-029`
+- **Implementation**: `PeriodBarGraph.kt`
+- **Rationale**: The system SHALL display standard SI distance units (`km`, `m`) and imperial distance/ascent units (`mi`, `ft`) in top value labels of `PeriodBarGraph` according to the athlete's configured unit system (`MyUnits`), replacing non-standard `"k"` shorthand while expanding bar and spacing geometry to prevent visual label collision (ATT-4771, refining `REQ-PER-018.2`):
+1. *Standard Metric Distance Formatting (`REQ-PER-023.1`)*:
+• When `unit == MyUnits.METRIC` (or default):
+  - Values $< 1000\text{ m}$ SHALL format as `"${m}m"` (e.g., `500m`).
+  - Values $< 10\text{ km}$ ($1000\text{ m} \le \text{value} < 10000\text{ m}$) SHALL format with 1 decimal place as `String.format(Locale.US, "%.1fkm", km)` (e.g., `8.5km`).
+  - Values $\ge 10\text{ km}$ ($\ge 10000\text{ m}$) SHALL format as `"${km.roundToInt()}km"` (e.g., `42km`, `125km`).
+2. *Imperial Distance Formatting (`REQ-PER-023.2`)*:
+• When `unit == MyUnits.IMPERIAL`:
+  - Values $< 0.1\text{ mi}$ ($< 160.9344\text{ m}$) SHALL format as `"<0.1mi"`.
+  - Values $< 10\text{ mi}$ ($0.1\text{ mi} \le \text{mi} < 10\text{ mi}$) SHALL format with 1 decimal place as `String.format(Locale.US, "%.1fmi", mi)` (e.g., `5.3mi`).
+  - Values $\ge 10\text{ mi}$ SHALL format as `"${mi.roundToInt()}mi"` (e.g., `26mi`, `100mi`).
+  - Miles conversion SHALL use `BANALService.METER_PER_MILE = 1609.344`.
+3. *Ascent Unit Parity (`REQ-PER-023.3`)*:
+• In `PeriodBarMetric.ASCENT` mode:
+  - Metric SHALL format as `"${m}m"`.
+  - Imperial SHALL format as `"${ft}ft"`, converting meters using `BANALService.METER_PER_FOOT = 0.3048`.
+4. *Geometry Adjustments for Non-Overlap Invariant (`REQ-PER-023.4`)*:
+• `barWidth` for `PeriodType.DAY` SHALL expand from `18.dp` to `24.dp`.
+• `barWidth` for `PeriodType.WEEK` SHALL expand from `28.dp` to `32.dp`.
+• `spacing` between bars in `LazyRow` SHALL increase from `4.dp` to `6.dp` (yielding $\ge 30\text{ dp}$ horizontal pitch for Day bars).
+• Labels SHALL remain centered above each bar, strictly preventing visual collision between adjacent bars.
+5. *Preservation of System Invariants (`REQ-PER-023.5`)*:
+• Duration formatting (`<1m`, `${m}m`, `${h}h`) in `REQ-PER-018.2` remains untouched.
+• Zero changes to `PeriodSummaries.db`.
+• 100% clean-room unit test pass rate under `./gradlew testDebugUnitTest`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-PER-023` (*PeriodBarGraph Full Distance & Imperial Unit Parity*), refining `REQ-PER-018.2` (*Sub-Hour Duration & Value Formatting*). Targets `PeriodBarGraph.kt` and `PeriodBarGraphTest.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-43.9 Review (`ATT-4478`), where initial `PeriodBarGraph` was introduced with tight `18.dp` Day bars and shorthand `"k"` suffixes.
+3. *Root Reason for Existing Formulation*: `"k"` was used as a single-character shorthand to avoid label truncation on narrow `18.dp` Day bars, while Imperial unit conversion was omitted in the initial MVP commit.
+4. *Preservation of Core Invariants*: Expanding Day bars to `24.dp` and pitch to `30.dp` provides ample horizontal clearance for `"km"` and `"mi"` labels without collision, while maintaining unit system parity (Rule 36) and zero SQLite schema alterations.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* metric unit system (`MyUnits.METRIC`),
+• *When* formatting distance values in `PeriodBarGraph`,
+• *Then* values $< 1000\text{m}$ render with `"m"`, $< 10\text{km}$ render with 1 decimal and `"km"`, and $\ge 10\text{km}$ render as integer `"km"`.
+• *Given* imperial unit system (`MyUnits.IMPERIAL`),
+• *When* formatting distance values in `PeriodBarGraph`,
+• *Then* values $< 0.1\text{mi}$ render as `"<0.1mi"`, $< 10\text{mi}$ render with 1 decimal and `"mi"`, and $\ge 10\text{mi}$ render as integer `"mi"`.
+• *Given* imperial unit system (`MyUnits.IMPERIAL`),
+• *When* formatting ascent values in `PeriodBarGraph`,
+• *Then* elevation renders as integer feet with `"ft"`.
+• *Given* Day period bar graph,
+• *When* rendering consecutive active days with `"42km"` or `"26.2mi"`,
+• *Then* adjacent labels do not overlap or truncate.
+
+**Invariants**: Zero changes to `PeriodSummaries.db`, memory safety, Rule 36 unit parity, and 100% clean-room test pass rate.

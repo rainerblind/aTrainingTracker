@@ -2159,4 +2159,8 @@
     <string name="tip_data_backup_subtitle">Contrôle total sans compte cloud obligatoire</string>
     <string name="tip_data_backup_desc">Toutes vos données d\'entraînement, traces GPS et relevés de capteurs restent stockés sur votre appareil en SQLite et fichiers FIT/TCX. Créez des sauvegardes complètes à tout moment.</string>
     <string name="tip_data_backup_action">Sauvegarde et restauration</string>
+    <string name="tip_sport_types_title">Types de sport personnalisés et sous-sports</string>
+    <string name="tip_sport_types_subtitle">Seuils de vitesse, équipement par défaut et mappage d\'export</string>
+    <string name="tip_sport_types_desc">Définissez des sports personnalisés (vélo de route, gravel, VTT, trail). Configurez des seuils de détection automatique basés sur la vitesse, associez un équipement par défaut et ajustez les correspondances d\'export Strava, TCX et GoldenCheetah.</string>
+    <string name="tip_sport_types_action">Gérer les sports</string>
 </resources>

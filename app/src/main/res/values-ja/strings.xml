@@ -2139,4 +2139,8 @@
     <string name="tip_data_backup_subtitle">クラウド登録不要、すべてのデータを手元で保持</string>
     <string name="tip_data_backup_desc">すべてのトレーニングデータやGPS記録は、端末内のSQLiteや標準FIT/TCXファイルに安全に保管されます。完全なオフラインバックアップや、Google Drive/Dropbox同期も利用可能です。</string>
     <string name="tip_data_backup_action">バックアップと復元</string>
+    <string name="tip_sport_types_title">カスタムスポーツ種目とサブ種目</string>
+    <string name="tip_sport_types_subtitle">速度しきい値、デフォルト装備、エクスポート対応</string>
+    <string name="tip_sport_types_desc">ロードバイク、グラベル、MTB、トレイルランなど独自のスポーツ種目を定義できます。速度に基づく自動種目判定のしきい値設定、デフォルト装備の連携、Strava・TCX・GoldenCheetah向けのエクスポート種別設定が可能です。</string>
+    <string name="tip_sport_types_action">スポーツ種目を管理</string>
 </resources>

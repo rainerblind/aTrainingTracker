@@ -2158,4 +2158,8 @@
     <string name="tip_data_backup_subtitle">Controle total sem necessidade de contas na nuvem</string>
     <string name="tip_data_backup_desc">Todos os treinos, trajetos GPS e registros de sensores ficam protegidos no seu aparelho em SQLite e arquivos FIT/TCX. Crie backups completos ou sincronize opcionalmente com a nuvem.</string>
     <string name="tip_data_backup_action">Backup e restauração</string>
+    <string name="tip_sport_types_title">Tipos de esporte personalizados e subesportes</string>
+    <string name="tip_sport_types_subtitle">Limiares de velocidade, equipamento padrão e mapeamentos de exportação</string>
+    <string name="tip_sport_types_desc">Defina esportes personalizados (ex.: bike de estrada, gravel, MTB, corrida de trilha). Configure limiares de detecção automática por velocidade, vincule equipamentos padrão e personalize o mapeamento de exportação para Strava, TCX e GoldenCheetah.</string>
+    <string name="tip_sport_types_action">Gerenciar esportes</string>
 </resources>

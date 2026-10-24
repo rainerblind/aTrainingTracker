@@ -72,6 +72,7 @@ Ensure that every ticket committed to the active sprint has clear, unambiguous a
 4. **Handoff to Autonomous Execution (Phase 2)**:
    Once all regular sprint tickets are in status `Analysis` (with the `Review & Retro` ticket retained for in-sprint anomaly logging and Ceremony 2 retrospective documentation), Phase 1 concludes. The implementation agents (`agent1`, `agent2`) take over Phase 2:
    * **Continuous Unattended Execution & Full-Sprint Mandate**: The sprint pipeline runs continuously and autonomously across the entire sprint backlog without stopping the console, pausing between tickets, or asking whether to continue (`"Again, I was asked if we should continue. → Agents should do the entire Sprint."`).
+   * **Automatic Realization of Mid-Sprint Added Tickets (`Rule 65` — `ATT-4776`, `"When a new ticket is added to the sprint when the sprint is already started. Please realize this ticket."`)**: Because only the human user assigns backlog tickets to sprints, any ticket added by the human user to an already-started sprint during Phase 2 (`status = 'Zu erledigen'`, excluding `Review & Retro`) carries implicit human approval. Before concluding Phase 2, always re-query the active sprint for any newly added `Zu erledigen` tickets (`python3 tools/jira_util.py search "project = ATT AND sprint = <SPRINT_ID> AND status = 'Zu erledigen' ORDER BY rank ASC"`), automatically move them to `Analysis` (`python3 tools/jira_util.py move <KEY> "analysis"`), and execute Stages 1–5 on `sprint/<SPRINT_NAME>` without stopping or asking for confirmation.
    * **Synchronous Parent Stage Progression (Rule 3 / Rule 45)**: Whenever a stage subtask (`[Analysis]`, `[Req & Test Spec]`, `[Impl-Plan]`, `[Implementation]`, `[Test]`) transitions to `Erledigt` via `freigabe`, the parent ticket immediately advances to the next workflow column (`Test Spec` $\rightarrow$ `Implementation Plan` $\rightarrow$ `Implementation` $\rightarrow$ `Test` $\rightarrow$ `Final Review (Human)`), enforced automatically by `tools/jira_util.py move <SUBTASK_KEY> freigabe`.
    * **In-Sprint Human Escalation Protocol**: If an agent encounters a blocker, design decision, or requirement ambiguity that strictly requires human guidance, the agent MUST NOT halt or prompt the console. Instead:
      1. Post a clarifying question/decision comment on the subtask: `python3 tools/jira_util.py comment <SUBTASK_KEY> "Question for Human: ..."`
@@ -92,15 +93,15 @@ Ensure that every ticket committed to the active sprint has clear, unambiguous a
 Jointly review all completed sprint tickets with the human user against expectations on the integrated sprint build, authorize release, handle rejected items, and cleanly close the sprint into `develop`.
 
 ### Step-by-Step Procedure
-1. **Mandatory Device Build, Deployment & Background Tier 2 Unit Test Launch ('Install & Test at Review Start' — Rule 62)**:
+1. **Mandatory Device Build, Deployment & Background Tier 2 Unit Test Launch ('Install & Test at Review Start' — Rules 62 & 65)**:
    At the very start of the Sprint Review session (before commencing ticket inspection with the human user), the agent MUST:
    1. Compile and deploy the latest integrated sprint APK from `sprint/<SPRINT_NAME>` to the attached physical device (e.g. Google Pixel 10), and launch `com.atrainingtracker.debug` (`"Sprint Review session must start with installing the latest sprint version on the phone."`):
       ```bash
       ./gradlew installDebug && adb shell am start -n com.atrainingtracker.debug/com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
       ```
-   2. Immediately launch the **Tier 2 Sprint Integration Gate** (`./gradlew testDebugUnitTest && python3 tools/verify_requirement_governance.py`) **in the background** (`WaitMsBeforeAsync` $\le 1000$) right at the start of the review (`"We should start the full set of unit tests right at the start of the review in the background. Then, I don't have to wait for the results (and we might even get active during the review)."` — Retro 2026-43.6, `ATT-4596`):
+   2. Immediately launch the **Tier 2 Sprint Integration Gate** (`./gradlew testDebugUnitTest --max-workers=2 && python3 tools/verify_requirement_governance.py`) **in the background** (`WaitMsBeforeAsync` $\le 1000$) right at the start of the review (`"We should start the full set of unit tests right at the start of the review in the background. Then, I don't have to wait for the results (and we might even get active during the review)."` — Retro 2026-43.6, `ATT-4596`; `--max-workers=2` prevents Robolectric fork `EOFException` — `ATT-4776`):
       ```bash
-      ./gradlew testDebugUnitTest && python3 tools/verify_requirement_governance.py
+      ./gradlew testDebugUnitTest --max-workers=2 && python3 tools/verify_requirement_governance.py
       ```
 
 2. **Query Tickets Ready for Review in Rank Order**:

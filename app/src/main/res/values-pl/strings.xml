@@ -2161,4 +2161,8 @@
     <string name="tip_data_backup_subtitle">Pełna kontrola bez wymogu kont w chmurze</string>
     <string name="tip_data_backup_desc">Wszystkie dane telemetryczne, ślady GPS i zapisy czujników pozostają bezpiecznie na urządzeniu w formacie SQLite oraz standardowych plikach FIT/TCX. Twórz pełne kopie zapasowe w dowolnym momencie.</string>
     <string name="tip_data_backup_action">Kopia zapasowa i przywracanie</string>
+    <string name="tip_sport_types_title">Własne dyscypliny i poddyscypliny</string>
+    <string name="tip_sport_types_subtitle">Progi prędkości, domyślny sprzęt i profile eksportu</string>
+    <string name="tip_sport_types_desc">Definiuj własne sporty (np. szosa, gravel, MTB, bieg górski). Skonfiguruj progi prędkości do automatycznego wykrywania sportu, przypisz domyślny sprzęt i dostosuj mapowanie eksportu do Strava, TCX oraz GoldenCheetah.</string>
+    <string name="tip_sport_types_action">Zarządzaj dyscyplinami</string>
 </resources>

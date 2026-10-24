@@ -2159,4 +2159,8 @@
     <string name="tip_data_backup_subtitle">Volledige controle zonder verplichte cloudaccounts</string>
     <string name="tip_data_backup_desc">Alle trainingsgegevens, gps-sporen en sensorwaarden blijven veilig op je apparaat in SQLite en standaard FIT/TCX-bestanden. Maak op elk moment back-ups of gebruik optionele cloud-synchronisatie.</string>
     <string name="tip_data_backup_action">Back-up &amp; herstel</string>
+    <string name="tip_sport_types_title">Aangepaste sporttypes &amp; subsporten</string>
+    <string name="tip_sport_types_subtitle">Snelheidsdrempels, standaard uitrusting &amp; exporttoewijzing</string>
+    <string name="tip_sport_types_desc">Definieer aangepaste sporten (bijv. racefiets, gravel, MTB, trailrunning). Configureer automatische sportdetectiedrempels op basis van snelheid, koppel standaard uitrusting en pas Strava-, TCX- en GoldenCheetah-exporttypen aan.</string>
+    <string name="tip_sport_types_action">Sporttypes beheren</string>
 </resources>

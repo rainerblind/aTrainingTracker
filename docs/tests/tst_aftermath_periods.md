@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Tests**: 28
+**Total Tests**: 30
 
 ---
 
@@ -270,6 +270,11 @@
   • Verify that malformed encoded strings are skipped safely without crashing the background worker.
   6. *Clean-Room Regression Suite Execution (`TST-PER-025.6`)*:
   • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"` verifying 100% pass rate.
+  7. *Adaptive Vector Polyline Suppression & Source Priority Tests (`TST-PER-025.7`, `PeriodCardMapStateTest.kt`)*:
+  • Given a summary with $> 30$ workouts and a non-null heatmap provider, verify that `PeriodCardMapState.renderVectorPolylines` evaluates to `false`.
+  • Given a summary with $\le 30$ workouts (e.g. 1, 5, 20, 30 workouts) and a non-null heatmap provider, verify that `PeriodCardMapState.renderVectorPolylines` evaluates to `true`.
+  • Given a Day summary (`PeriodType.DAY`) with any number of workouts (null heatmap provider), verify that `PeriodCardMapState.renderVectorPolylines` evaluates to `true`.
+  • Given a summary with both `summary.polylines` and `summary.workoutIdToPolylineMap` populated, verify that `prepareCardMapPreviewSync` prioritizes `summary.polylines`.
 
 ### TST-PER-026: **Self-Contained Period Persistence, Zero-N+1 Batch Loading & Bidirectional Sync Healing Verification Suite** [getPeriodsByType executes strictly 3 batch queries without tempId loop; PeriodSportStats persists complete LongestWorkout metadata with DB_VERSION 27 and onCreate/onUpgrade parity; checkIntegrityAndSync heals out-of-band deletions (!=); legacy DB file checks execute strictly once; 100% clean-room unit test pass rate.]
 - **Requirement(s)**: `REQ-PER-020`, `REQ-MIG-026`, `REQ-PER-011`
@@ -311,5 +316,62 @@
   5. *Clean-Room Regression Suite Execution (`TST-PER-027.5`)*:
   • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"` verifying 100% pass rate.
 
+### TST-PER-028: **Periods Sport Type Header Filtering & Multi-Sport Projections Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PER-022`, `REQ-PER-018`, `REQ-PER-019`
+- **Component**: **Periods Header Sport Filter & ViewModel Projection**
+- **Jira**: `ATT-4770`
+- **Test Description**:
+  1. *Default Filter Set & Empty Guard Tests (`TST-PER-028.1`, `PeriodsViewModelTest.kt`)*:
+  • Assert initial `selectedSports` contains `setOf(BSportType.BIKE, BSportType.RUN)`.
+  • Toggle `BSportType.RUN`: verify `selectedSports` becomes `setOf(BSportType.BIKE)`.
+  • Toggle `BSportType.BIKE`: verify toggle is ignored and `selectedSports` remains `setOf(BSportType.BIKE)` (empty set prevention).
+  • Toggle `BSportType.UNKNOWN`: verify `selectedSports` becomes `setOf(BSportType.BIKE, BSportType.UNKNOWN)`.
+  2. *Reactive In-Memory Period Projection Tests (`TST-PER-028.2`, `PeriodsViewModelTest.kt`)*:
+  • Given a period with 2 Bike workouts (1h, 20km), 1 Run workout (30m, 5km), and 1 Other workout (45m, 0km).
+  • Under default `[Bike, Run]`: assert period has `totalWorkouts = 3`, `totalDurationSec = 5400L`, `totalDistance = 25000.0`, and `sportStats` contains only BIKE and RUN.
+  • Under `[Bike]`: assert period has `totalWorkouts = 2`, `totalDurationSec = 3600L`, `totalDistance = 20000.0`.
+  • Given a period with only "Other" workouts: assert it is omitted from `filteredGroupedPeriods` when `UNKNOWN` is deselected.
+  • Toggle `UNKNOWN` on: assert the period appears in `filteredGroupedPeriods`.
+  3. *Map Preview & Polylines Filtering Tests (`TST-PER-028.3`, `PeriodsViewModelTest.kt`)*:
+  • Given a period with `workoutIdToAllPolylinesMap` containing tracks for Bike (ID 1), Run (ID 2), and Other (ID 3).
+  • Under `[Bike]`: assert projected `polylines` and `workoutIdToPolylineMap` retain only ID 1.
+  • Assert projected `extremaMarkers` retain only markers matching selected sports.
+  4. *Header UI Layout & Canonical Sport Ordering Tests (`TST-PER-028.4`, `PeriodsTabsScreenTest.kt`)*:
+  • Verify 3 sport toggle buttons render in canonical order `[BSportType.BIKE, BSportType.RUN, BSportType.UNKNOWN]` (Rule 57: `Other` on far right).
+  • Verify selected buttons render in `onPrimaryContainer` and deselected buttons render in `onPrimaryContainer.copy(alpha = TTAlpha.Disabled)`.
+  • Verify content descriptions match localized sport strings (`R.string.sport_type_bike`, `R.string.sport_type_run`, `R.string.sport_type_other`).
+  5. *Clean-Room Regression Suite Execution (`TST-PER-028.5`)*:
+  • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"` verifying 100% pass rate.
 
-
+### TST-PER-029: **PeriodBarGraph Distance & Imperial Unit Parity Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PER-023`, `REQ-PER-018`
+- **Component**: **PeriodBarGraph Unit Parity & Formatting**
+- **Jira**: `ATT-4771`
+- **Test Description**:
+  1. *Metric Distance Formatting Unit Tests (`TST-PER-029.1`, `PeriodBarGraphTest.kt`)*:
+  • Given `unit = MyUnits.METRIC`:
+    - Value `500.0` (500m) formats as `"500m"`.
+    - Value `999.0` (999m) formats as `"999m"`.
+    - Value `1000.0` (1km) formats as `"1.0km"`.
+    - Value `8500.0` (8.5km) formats as `"8.5km"`.
+    - Value `9949.0` (9.9km) formats as `"9.9km"`.
+    - Value `10000.0` (10km) formats as `"10km"`.
+    - Value `42195.0` (42.195km) formats as `"42km"`.
+  2. *Imperial Distance Formatting Unit Tests (`TST-PER-029.2`, `PeriodBarGraphTest.kt`)*:
+  • Given `unit = MyUnits.IMPERIAL`:
+    - Value `100.0` (~0.062mi) formats as `"<0.1mi"`.
+    - Value `1609.344` (1.0mi) formats as `"1.0mi"`.
+    - Value `8530.0` (~5.3mi) formats as `"5.3mi"`.
+    - Value `16093.44` (10.0mi) formats as `"10mi"`.
+    - Value `42195.0` (~26.2mi) formats as `"26mi"`.
+  3. *Ascent Unit Parity Unit Tests (`TST-PER-029.3`, `PeriodBarGraphTest.kt`)*:
+  • For `PeriodBarMetric.ASCENT`:
+    - Given `unit = MyUnits.METRIC`: value `250.0` formats as `"250m"`.
+    - Given `unit = MyUnits.IMPERIAL`: value `250.0` (~820ft) formats as `"820ft"`.
+  4. *Application Preference Fallback Tests (`TST-PER-029.4`, `PeriodBarGraphTest.kt`)*:
+  • Verify that when `unit` parameter is defaulted, `formatMetricValue` queries `TrainingApplication.getUnit()`.
+  • Verify `TrainingApplication.setUnitForTesting(MyUnits.IMPERIAL)` switches output format without explicit parameter.
+  5. *Geometry & Bar Layout Integrity Tests (`TST-PER-029.5`, `PeriodBarGraphTest.kt`)*:
+  • Verify `barWidth` for `DAY` is `24.dp`, `WEEK` is `32.dp`, and spacing is `6.dp`.
+  6. *Clean-Room Full Suite Regression Execution (`TST-PER-029.6`)*:
+  • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"` verifying 100% test pass rate with zero regressions.
