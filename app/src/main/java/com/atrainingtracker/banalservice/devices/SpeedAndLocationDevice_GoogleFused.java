@@ -68,6 +68,7 @@ public class SpeedAndLocationDevice_GoogleFused extends SpeedAndLocationDevice
         mLocationRequest = LocationRequest.create();
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
         mLocationRequest.setInterval(SAMPLING_TIME);
+        mLocationRequest.setFastestInterval(SAMPLING_TIME);
 
         // Connect the client.
         mGoogleApiClient.connect();

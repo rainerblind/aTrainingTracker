@@ -344,34 +344,47 @@
 
 **Invariants**: Cluster naming priority, user rename immutability, hardware sport inference, single-thread DB serialization, and 9-language translation parity MUST NOT be broken.
 
-### REQ-TRK-013: GPS Speed Inactivity Watchdog, Gradual Speed Decay & Pace Nullification Architecture [`TST-TRK-005`]
-- **Tests**: `SpeedAndLocationDevice.java`
-- **Implementation**: Prevent frozen cockpit speed and pace metrics when athletes come to a complete stop or enter GPS shadow by decaying speed to zero after 5 seconds of location silence.
-- **Rationale**: The system SHALL monitor elapsed time since the last valid `Location` fix during active tracking and execute deterministic speed decay when location updates cease (ATT-2616):
-1. *Location Inactivity Watchdog ($T_{\text{timeout}} = 5.0\text{ s}$)*:
-• In `SpeedAndLocationDevice.java`, the system SHALL maintain an elapsed realtime timestamp (`mLastLocationTimestampMs`) tracking the most recent location update satisfying the GPS accuracy threshold.
-• If elapsed time since the last valid location update reaches or exceeds 5.0 seconds ($5000\text{ ms}$), the system SHALL initiate periodic speed decay.
+### REQ-TRK-013: GPS Speed Inactivity Watchdog, Gradual Speed Decay & Pace Nullification Architecture [Verified]
+- **Tests**: `SpeedAndLocationDevice.java`, `SpeedAndLocationDevice_GoogleFused.java`, `tools/replay_workout.py`
+- **Implementation**: Prevent frozen cockpit speed and pace metrics when athletes come to a complete stop or enter GPS shadow by decaying speed to zero after location silence, while tolerating multi-second update intervals without premature false-positive decay or corrupted smoothing (ATT-2616, ATT-4802).
+- **Rationale**: The system SHALL monitor elapsed time since the last valid `Location` fix during active tracking and execute deterministic speed decay when location updates cease:
+1. *Location Inactivity Watchdog ($T_{\text{timeout}} = 10.0\text{ s}$)*:
+• In `SpeedAndLocationDevice.java`, the system SHALL maintain an inactivity timeout of 10.0 seconds ($10000\text{ ms}$, `INACTIVITY_TIMEOUT_MS`).
+• If elapsed time since the last valid location update reaches or exceeds 10.0 seconds ($10000\text{ ms}$), the system SHALL initiate periodic speed decay and mark `mIsDecaying = true`.
 2. *Periodic Speed Decay ($1.0\text{ s}$ intervals)*:
-• Every 1.0 second ($1000\text{ ms}$) following the 5-second timeout where location updates remain absent, the system SHALL decay active speed by 50% ($mSpeed = mSpeed \times 0.5$).
+• Every 1.0 second ($1000\text{ ms}$) following the 10-second timeout where location updates remain absent, the system SHALL decay active speed by 50% ($mSpeed = mSpeed \times 0.5$).
 • When decayed speed drops below $0.1\text{ m/s}$ (or reaches 0.0), the system SHALL clamp active speed strictly to $0.0\text{ m/s}$ and publish $0.0$ to `mSpeedSensor`.
 3. *Pace Resolution & Division-by-Zero Protection*:
 • Whenever active speed is clamped to $0.0\text{ m/s}$ or is $< 0.1\text{ m/s}$, `mPaceSensor` SHALL emit `null` (rendering as `'--:--'` in cockpit tiles).
 • Division-by-zero ($1.0 / 0.0$) SHALL NEVER be passed into `mPaceSensor`.
-4. *Immediate Speed Recovery on Fresh Fix*:
-• Upon receiving a valid new `Location` update, the watchdog timer SHALL reset, pending decay ticks SHALL be cancelled, and live speed evaluation ($mSpeed = (mSpeed + \text{speed}) / 2$) SHALL resume immediately.
-5. *Lifecycle Cleanliness*:
+4. *Decoupled Speed Recovery on Fresh Fix*:
+• Upon receiving a valid new `Location` update, pending decay ticks SHALL be cancelled, the watchdog timer SHALL reset, and `mIsDecaying` SHALL be cleared.
+• If `mIsDecaying` was active prior to the fix, or if `mPrevLocation == null`, or if elapsed time $\Delta t \ge 3000\text{ ms}$, the system SHALL assign `mSpeed = speed` directly rather than averaging with an artificially decayed or stale speed value. Standard exponential smoothing $mSpeed = (mSpeed + \text{speed}) / 2$ SHALL strictly apply only to continuous fixes arriving within nominal intervals ($\Delta t < 3000\text{ ms}$) without prior decay.
+5. *Provider Cadence & Tooling Synchronization*:
+• In `SpeedAndLocationDevice_GoogleFused.java`, the location request SHALL explicitly configure fastest interval via `mLocationRequest.setFastestInterval(SAMPLING_TIME)` (1000 ms) in addition to `setInterval(SAMPLING_TIME)` to prevent OS throttling.
+• In `tools/replay_workout.py`, `ReplayEngine.step()` SHALL suppress dispatching new location updates upon reaching EOF, and mock location provider cleanup in `MockGpsManager.release_providers()` SHALL be thread-safe with worker loop processing to prevent test providers from lingering on test devices.
+6. *Lifecycle Cleanliness*:
 • In `SpeedAndLocationDevice.shutDown()`, all scheduled watchdog timers/handlers SHALL be cleanly removed and released without memory leaks.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: `REQ-TRK-013` (GPS Speed Inactivity Watchdog, Gradual Speed Decay & Pace Nullification Architecture [`TST-TRK-005`]).
+2. *Historical Origin & Commit Trace*: Introduced in `ATT-2616` (commit `de8f92c4`, sprint `sprint/2026-41.3`); amended in `ATT-4802` (`sprint/2026-43.10`).
+3. *Root Reason for Existing Formulation*: A 5.0-second timeout was originally selected assuming continuous 1-Hz GPS updates, where 5 missing samples reliably signaled an athlete stop or tunnel entry, preventing speed from remaining frozen indefinitely.
+4. *Preservation of Core Invariants*: Stationary athletes still decay to 0.0 m/s and nullify pace without division-by-zero; distance accumulators never accumulate phantom distance; genuine GPS fixes take precedence. Extending timeout to 10.0s and bypassing smoothing after decay avoids false-positive speed collapse on 7-8s multi-second location cadences.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete tracking speed via GPS at 25 km/h who stops at a traffic light or enters GPS shadow,
-• *When* 5.0 seconds elapse without receiving a valid location fix,
+• *When* 10.0 seconds elapse without receiving a valid location fix,
 • *Then* speed SHALL begin halving every 1.0 second until clamped to 0.0 m/s.
+• *Given* an athlete riding with location fixes arriving at 7–8 second intervals,
+• *When* consecutive fixes arrive,
+• *Then* the 10.0-second watchdog SHALL NOT trigger premature speed decay between fixes.
+• *Given* an inactive decaying speed state,
+• *When* a new valid location fix is received,
+• *Then* live speed evaluation SHALL immediately resume from the incoming fix without averaging against the decayed watchdog value.
 • *Given* a decaying speed reaching 0.0 m/s,
 • *When* inspected in `mSpeedSensor` and `mPaceSensor`,
 • *Then* `mSpeedSensor` SHALL equal 0.0 m/s and `mPaceSensor` SHALL equal `null`.
-• *Given* an inactive decaying speed state,
-• *When* a new valid location fix is received,
-• *Then* live speed evaluation SHALL immediately resume from the new fix without delay.
 
 **Invariants**: Distance accumulator sensors (`mDistanceSensor`, `mLapDistanceSensor`) MUST NOT accumulate phantom distance during decay; start location and line distance MUST NOT be altered by decay ticks; broadcast intents (`NEW_LOCATION_INTENT`) MUST NOT be emitted by watchdog ticks.
 

@@ -116,7 +116,12 @@ class SpeedAndLocationDeviceDecayTest {
         }
     }
 
-    private fun createMockLocation(speed: Float, accuracy: Float = 5.0f, distanceDelta: Float = 0.0f): Location {
+    private fun createMockLocation(
+        speed: Float,
+        accuracy: Float = 5.0f,
+        distanceDelta: Float = 0.0f,
+        timeMs: Long = 0L
+    ): Location {
         val loc = mockk<Location>(relaxed = true)
         every { loc.speed } returns speed
         every { loc.accuracy } returns accuracy
@@ -126,6 +131,7 @@ class SpeedAndLocationDeviceDecayTest {
         every { loc.altitude } returns 520.0
         every { loc.provider } returns "gps"
         every { loc.distanceTo(any()) } returns distanceDelta
+        every { loc.time } returns timeMs
         return loc
     }
 
@@ -134,28 +140,29 @@ class SpeedAndLocationDeviceDecayTest {
         assertEquals(0.0, device.speed, 0.001)
         assertEquals(0.0, device.getSpeedSensor().value ?: -1.0, 0.001)
         assertNull(device.getPaceSensor().value)
+        assertFalse(device.isDecaying)
     }
 
     @Test
     fun testContinuousFixes_calculateSmoothedSpeedAndPace() {
-        val loc1 = createMockLocation(speed = 10.0f)
+        val loc1 = createMockLocation(speed = 10.0f, timeMs = 1000L)
         device.onNewLocation(loc1)
 
-        // Initial speed was 0.0, smoothed: (0 + 10) / 2 = 5.0 m/s
-        assertEquals(5.0, device.speed, 0.001)
-        assertEquals(5.0, device.getSpeedSensor().value ?: 0.0, 0.001)
-        // Pace = 1 / 5.0 = 0.2 s/m
-        assertEquals(0.2, device.getPaceSensor().value ?: 0.0, 0.001)
+        // First fix initializes speed directly: 10.0 m/s
+        assertEquals(10.0, device.speed, 0.001)
+        assertEquals(10.0, device.getSpeedSensor().value ?: 0.0, 0.001)
+        // Pace = 1 / 10.0 = 0.1 s/m
+        assertEquals(0.1, device.getPaceSensor().value ?: 0.0, 0.001)
 
-        val loc2 = createMockLocation(speed = 10.0f)
+        val loc2 = createMockLocation(speed = 6.0f, timeMs = 2000L)
         device.onNewLocation(loc2)
 
-        // Smoothed: (5.0 + 10.0) / 2 = 7.5 m/s
-        assertEquals(7.5, device.speed, 0.001)
-        assertEquals(7.5, device.getSpeedSensor().value ?: 0.0, 0.001)
-        assertEquals(1.0 / 7.5, device.getPaceSensor().value ?: 0.0, 0.001)
+        // Continuous 1-Hz fix smoothed: (10.0 + 6.0) / 2 = 8.0 m/s
+        assertEquals(8.0, device.speed, 0.001)
+        assertEquals(8.0, device.getSpeedSensor().value ?: 0.0, 0.001)
+        assertEquals(1.0 / 8.0, device.getPaceSensor().value ?: 0.0, 0.001)
 
-        // Verify watchdog was rescheduled with 5000ms delay
+        // Verify watchdog was rescheduled with 10000ms delay
         verify { mockHandler.postDelayed(any(), SpeedAndLocationDevice.INACTIVITY_TIMEOUT_MS) }
     }
 
@@ -165,36 +172,43 @@ class SpeedAndLocationDeviceDecayTest {
         val loc = createMockLocation(speed = 8.0f)
         device.onNewLocation(loc)
         val initialSpeed = device.speed
-        assertEquals(4.0, initialSpeed, 0.001)
+        assertEquals(8.0, initialSpeed, 0.001)
 
         // Trigger inactivity timeout -> first decay tick
         device.triggerInactivityTimeoutForTesting()
-        // Speed halved: 4.0 * 0.5 = 2.0 m/s
+        assertTrue(device.isDecaying)
+        // Speed halved: 8.0 * 0.5 = 4.0 m/s
+        assertEquals(4.0, device.speed, 0.001)
+        assertEquals(4.0, device.getSpeedSensor().value ?: 0.0, 0.001)
+        assertEquals(0.25, device.getPaceSensor().value ?: 0.0, 0.001)
+
+        // Tick 2: 4.0 * 0.5 = 2.0 m/s
+        device.triggerDecayTickForTesting()
         assertEquals(2.0, device.speed, 0.001)
         assertEquals(2.0, device.getSpeedSensor().value ?: 0.0, 0.001)
         assertEquals(0.5, device.getPaceSensor().value ?: 0.0, 0.001)
 
-        // Tick 2: 2.0 * 0.5 = 1.0 m/s
+        // Tick 3: 2.0 * 0.5 = 1.0 m/s
         device.triggerDecayTickForTesting()
         assertEquals(1.0, device.speed, 0.001)
         assertEquals(1.0, device.getSpeedSensor().value ?: 0.0, 0.001)
         assertEquals(1.0, device.getPaceSensor().value ?: 0.0, 0.001)
 
-        // Tick 3: 1.0 * 0.5 = 0.5 m/s
+        // Tick 4: 1.0 * 0.5 = 0.5 m/s
         device.triggerDecayTickForTesting()
         assertEquals(0.5, device.speed, 0.001)
         assertEquals(0.5, device.getSpeedSensor().value ?: 0.0, 0.001)
         assertEquals(2.0, device.getPaceSensor().value ?: 0.0, 0.001)
 
-        // Tick 4: 0.5 * 0.5 = 0.25 m/s
+        // Tick 5: 0.5 * 0.5 = 0.25 m/s
         device.triggerDecayTickForTesting()
         assertEquals(0.25, device.speed, 0.001)
 
-        // Tick 5: 0.25 * 0.5 = 0.125 m/s
+        // Tick 6: 0.25 * 0.5 = 0.125 m/s
         device.triggerDecayTickForTesting()
         assertEquals(0.125, device.speed, 0.001)
 
-        // Tick 6: 0.125 * 0.5 = 0.0625 m/s <= 0.1 -> clamps strictly to 0.0
+        // Tick 7: 0.125 * 0.5 = 0.0625 m/s <= 0.1 -> clamps strictly to 0.0
         device.triggerDecayTickForTesting()
         assertEquals(0.0, device.speed, 0.0001)
         assertEquals(0.0, device.getSpeedSensor().value ?: -1.0, 0.0001)
@@ -251,27 +265,30 @@ class SpeedAndLocationDeviceDecayTest {
         }
         assertEquals(0.0, device.speed, 0.0001)
         assertNull(device.getPaceSensor().value)
+        assertTrue(device.isDecaying)
 
         // Fresh fix arrives with speed 6.0 m/s
         val locFresh = createMockLocation(speed = 6.0f)
         device.onNewLocation(locFresh)
 
-        // Speed recovers: (0 + 6) / 2 = 3.0 m/s
-        assertEquals(3.0, device.speed, 0.001)
-        assertEquals(3.0, device.getSpeedSensor().value ?: 0.0, 0.001)
-        assertEquals(1.0 / 3.0, device.getPaceSensor().value ?: 0.0, 0.001)
+        // Speed recovers decoupled without averaging against decayed zero: 6.0 m/s
+        assertEquals(6.0, device.speed, 0.001)
+        assertEquals(6.0, device.getSpeedSensor().value ?: 0.0, 0.001)
+        assertEquals(1.0 / 6.0, device.getPaceSensor().value ?: 0.0, 0.001)
+        assertFalse(device.isDecaying)
     }
 
     @Test
     fun testLocationUnavailable_decaysSpeedImmediately() {
         val loc = createMockLocation(speed = 10.0f)
         device.onNewLocation(loc)
-        assertEquals(5.0, device.speed, 0.001)
+        assertEquals(10.0, device.speed, 0.001)
 
         device.callLocationUnavailable()
 
-        // Speed decayed immediately by 1 tick upon becoming unavailable
-        assertEquals(2.5, device.speed, 0.001)
+        // Speed decayed immediately by 1 tick upon becoming unavailable: 10.0 * 0.5 = 5.0 m/s
+        assertEquals(5.0, device.speed, 0.001)
+        assertTrue(device.isDecaying)
     }
 
     @Test
@@ -360,5 +377,67 @@ class SpeedAndLocationDeviceDecayTest {
         // Initial speed was 0.0, calculated 10.0 m/s -> smoothed = (0 + 10) / 2 = 5.0 m/s
         assertEquals(5.0, device.speed, 0.001)
         assertEquals(5.0, device.getSpeedSensor().value ?: -1.0, 0.001)
+    }
+
+    @Test
+    fun testMultiSecondCadence_7to8Seconds_doesNotTriggerWatchdogOrSawtoothDecay() {
+        // Fix 1 at t = 10.0s (initial fix)
+        val loc1 = createMockLocation(speed = 0.0f, distanceDelta = 0.0f, timeMs = 10000L)
+        device.onNewLocation(loc1)
+
+        // Fix 2 at t = 17.0s (7 seconds later), delta distance = 35m -> 5.0 m/s
+        val loc2 = createMockLocation(speed = 0.0f, distanceDelta = 0.0f, timeMs = 17000L)
+        every { loc1.distanceTo(loc2) } returns 35.0f
+        device.onNewLocation(loc2)
+
+        // Watchdog timeout is 10s, so it has not fired
+        assertFalse(device.isDecaying)
+        // Multi-second interval (>= 3s) sets speed directly from calcSpeed without drag
+        assertEquals(5.0, device.speed, 0.001)
+        assertEquals(5.0, device.getSpeedSensor().value ?: 0.0, 0.001)
+
+        // Fix 3 at t = 25.0s (8 seconds later), delta distance = 40m -> 5.0 m/s
+        val loc3 = createMockLocation(speed = 0.0f, distanceDelta = 0.0f, timeMs = 25000L)
+        every { loc2.distanceTo(loc3) } returns 40.0f
+        device.onNewLocation(loc3)
+
+        assertFalse(device.isDecaying)
+        assertEquals(5.0, device.speed, 0.001)
+        assertEquals(5.0, device.getSpeedSensor().value ?: 0.0, 0.001)
+    }
+
+    @Test
+    fun testDecoupledSpeedRecovery_afterWatchdogDecay_doesNotAverageWithDecayedSpeed() {
+        val loc1 = createMockLocation(speed = 10.0f, timeMs = 1000L)
+        device.onNewLocation(loc1)
+        assertEquals(10.0, device.speed, 0.001)
+
+        // 1 watchdog tick decays speed to 5.0 m/s
+        device.triggerDecayTickForTesting()
+        assertEquals(5.0, device.speed, 0.001)
+        assertTrue(device.isDecaying)
+
+        // Fresh fix arrives with speed 10.0 m/s
+        val locFresh = createMockLocation(speed = 10.0f, timeMs = 12000L)
+        device.onNewLocation(locFresh)
+
+        // Speed recovers directly to 10.0 m/s (NOT averaged with decayed 5.0 -> 7.5 m/s)
+        assertEquals(10.0, device.speed, 0.001)
+        assertEquals(10.0, device.getSpeedSensor().value ?: 0.0, 0.001)
+        assertFalse(device.isDecaying)
+    }
+
+    @Test
+    fun testMultiSecondInterval_3000msOrGreater_bypassesSmoothing() {
+        val loc1 = createMockLocation(speed = 4.0f, timeMs = 1000L)
+        device.onNewLocation(loc1)
+        assertEquals(4.0, device.speed, 0.001)
+
+        // Fix 2 arrives 3.5s later with speed 12.0 m/s (dt >= 3000ms)
+        val loc2 = createMockLocation(speed = 12.0f, timeMs = 4500L)
+        device.onNewLocation(loc2)
+
+        // Bypasses (4.0 + 12.0) / 2 = 8.0 m/s
+        assertEquals(12.0, device.speed, 0.001)
     }
 }

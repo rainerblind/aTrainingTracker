@@ -35,7 +35,7 @@ import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
 
 public abstract class SpeedAndLocationDevice extends MyDevice {
     public static final double ACCURACY_THRESHOLD = 200;
-    public static final long INACTIVITY_TIMEOUT_MS = 5000L;
+    public static final long INACTIVITY_TIMEOUT_MS = 10000L;
     public static final long DECAY_INTERVAL_MS = 1000L;
     public static final double DECAY_FACTOR = 0.5;
     public static final double SPEED_ZERO_THRESHOLD = 0.1;
@@ -57,6 +57,7 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
     protected MyDoubleAccumulatorSensor mLapDistanceSensor;
     protected Location mPrevLocation, mStartLocation = null;
     double mDistance, mSpeed;
+    protected boolean mIsDecaying = false;
 
     protected Handler mWatchdogHandler;
     private final Runnable mInactivityRunnable = new Runnable() {
@@ -134,6 +135,7 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
     }
 
     protected synchronized void triggerDecayTick() {
+        mIsDecaying = true;
         mSpeed = mSpeed * DECAY_FACTOR;
         if (mSpeed <= SPEED_ZERO_THRESHOLD) {
             mSpeed = 0.0;
@@ -173,6 +175,10 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
 
     public synchronized double getSpeed() {
         return mSpeed;
+    }
+
+    public synchronized boolean isDecaying() {
+        return mIsDecaying;
     }
 
     protected void LocationAvailable() {
@@ -238,6 +244,7 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
     protected synchronized void onAccumulatorsReset() {
         resetStartLocation();
         cancelWatchdog();
+        mIsDecaying = false;
         mSpeed = 0.0;
         if (mSpeedSensor != null) {
             mSpeedSensor.newValue(0.0);
@@ -251,6 +258,7 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
     public synchronized void shutDown() {
         if (DEBUG) Log.i(TAG, "shutDown()");
         cancelWatchdog();
+        mIsDecaying = false;
         super.shutDown();
     }
 
@@ -302,9 +310,12 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
                 mBearingSensor.newValue((bearing + 360.0) % 360.0);
 
                 double speed = location.getSpeed();
+                long dt_ms = 0;
+                if (mPrevLocation != null) {
+                    dt_ms = location.getTime() - mPrevLocation.getTime();
+                }
                 if (speed == 0.0 && mPrevLocation != null) {
                     if (delta_distance > 0.1) {
-                        long dt_ms = location.getTime() - mPrevLocation.getTime();
                         if (dt_ms > 0 && dt_ms < 30000) {
                             double calcSpeed = delta_distance / (dt_ms / 1000.0);
                             if (calcSpeed <= 70.0) { // Plausible speed limit (<= 252 km/h)
@@ -313,7 +324,12 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
                         }
                     }
                 }
-                mSpeed = (mSpeed + speed) / 2;
+                if (mIsDecaying || mPrevLocation == null || dt_ms >= 3000) {
+                    mSpeed = speed;
+                } else {
+                    mSpeed = (mSpeed + speed) / 2;
+                }
+                mIsDecaying = false;
                 mSpeedSensor.newValue(mSpeed);
                 if (mSpeed > SPEED_ZERO_THRESHOLD) {
                     mPaceSensor.newValue(1.0 / mSpeed);
