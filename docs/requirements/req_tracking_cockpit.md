@@ -2004,3 +2004,39 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Zero regression in portrait mode layout, `forcePortrait` lock, gesture and callback contracts (Rule 34), and 100% clean-room test pass rate.
 
+### REQ-TRK-041: Geodesic Displacement Plausibility Gating for Distance Accumulation & Canonical Multi-Sensor Summary Filtering [Verified]
+- **Tests**: `TST-TRK-041` | **Tickets**: `ATT-4843`
+- **Implementation**: `SpeedAndLocationDevice.java`, `TrackerService.java`
+- **Rationale**: The tracking subsystem SHALL prevent multi-kilometer teleportation / cellular triangulation multipath spikes from accumulating into distance metrics and SHALL guarantee that secondary multi-sensor telemetry streams do not overwrite canonical summary distance and speed metrics in `WorkoutSummaries` (ATT-4843):
+1. *Geodesic Displacement Plausibility Clamping in `SpeedAndLocationDevice` (`REQ-TRK-041.1`)*:
+• In `SpeedAndLocationDevice.onNewLocation()`, before incrementing distance accumulators (`mDistanceSensor`, `mLapDistanceSensor`), the system SHALL evaluate displacement velocity against physical plausibility:
+  - If `mPrevLocation != null` and elapsed time `dt_ms = location.getTime() - mPrevLocation.getTime()` satisfies `dt_ms > 0 && dt_ms < 30000`:
+    * The system SHALL compute displacement speed `calcSpeed = delta_distance / (dt_ms / 1000.0)`.
+    * If `calcSpeed > 70.0\text{ m/s}` ($252\text{ km/h}$, matching the speed plausibility ceiling in `REQ-TRK-014`), the displacement SHALL be classified as an impossible multipath / cell-tower triangulation jump: `delta_distance` SHALL be clamped to `0.0` for distance accumulators, suppressing increments to `mDistanceSensor` and `mLapDistanceSensor`.
+  - Legitimate human velocities ($\le 70.0\text{ m/s}$) SHALL continue to accumulate distance without attenuation.
+2. *Canonical Multi-Sensor Summary Filtering in `TrackerService` (`REQ-TRK-041.2`)*:
+• In `TrackerService.sampleAndWriteToDb()`, when capturing multi-sensor telemetry across `banalService.getAllSensorData()`, updating `summaryValues` and internal accumulators (`mDistanceTotal_m`, `mTimeTotal_s`, `mTimeActive_s`, `CALORIES`, `LAPS`, `ASCENDING`, `DESCENDING`) SHALL strictly require `sensorData.getDeviceName() == null` (the canonical/primary proxy sensor).
+• Secondary, device-qualified sensor streams (`sensorData.getDeviceName() != null`, such as `"Google Fused"` or `"GPS"`) SHALL continue logging to raw `samplingValues` table columns (e.g. `"DISTANCE_m (Google Fused)"`), but SHALL NEVER overwrite `WorkoutSummaries.DISTANCE_TOTAL_m` or `mDistanceTotal_m`.
+3. *Authoritative Average Speed Consistency (`REQ-TRK-041.3`)*:
+• `WorkoutSummaries.SPEED_AVERAGE_mps` SHALL be calculated strictly from canonical `mDistanceTotal_m / mTimeActive_s`, harmonizing summary cards, elevation profile X-axis, and lap tables.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-041` complementing `REQ-TRK-008` (*Align session averages with core summary metrics*) and `REQ-TRK-014` (*Location Delta Fallback for Missing GPS Bearing and Speed*). Targets `SpeedAndLocationDevice.java` and `TrackerService.java`.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-4843`, Sprint `2026-44.1`. Rooted in forensic analysis of workout 434 where indoor cell-tower triangulation during a pause added 8.5 km to `Google Fused` distance, which then overwrote canonical GPS summary distance in `TrackerService`.
+3. *Root Reason for Existing Formulation*: `REQ-TRK-014` introduced 70 m/s plausibility clamping for instantaneous speed, but omitted distance accumulator increments. `REQ-TRK-008` aligned summary averages with session metrics, but iterating `getAllSensorData()` in `TrackerService` without `deviceName == null` filtering allowed the last enumerated hardware device to overwrite proxy totals.
+4. *Preservation of Core Invariants*: Full multi-sensor logging in `WorkoutSamples.db` remains intact. Legitimate cycling/running movements ($\le 70\text{ m/s}$) accumulate full distance. Single-thread database serialization on `mDbExecutor` is preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an active location device receiving consecutive location fixes with $\Delta t = 1000\text{ ms}$ and $\Delta s = 4,245.6\text{ m}$ ($v = 4,245.6\text{ m/s} > 70.0\text{ m/s}$),
+• *When* `onNewLocation` processes the jump,
+• *Then* `mDistanceSensor` and `mLapDistanceSensor` SHALL NOT increment by $4,245.6\text{ m}$ (`delta_distance` clamped to `0.0`).
+• *Given* an active tracking session with canonical `ProxySensor` (`DISTANCE_m = 4370.0 m`, `deviceName == null`) and secondary `Google Fused` (`DISTANCE_m = 13377.3 m`, `deviceName == "Google Fused"`),
+• *When* `sampleAndWriteToDb()` executes,
+• *Then* `summaryValues.getAsDouble(DISTANCE_TOTAL_m)` SHALL equal `4370.0 m`, and `samplingValues` SHALL record both `DISTANCE_m` (`4370.0 m`) and `"DISTANCE_m (Google Fused)"` (`13377.3 m`).
+• *Given* an athlete running or cycling at $15\text{ m/s}$ ($\le 70\text{ m/s}$),
+• *When* fixes arrive at 1-second intervals with $\Delta s = 15\text{ m}$,
+• *Then* `mDistanceSensor` SHALL increment by the full $15\text{ m}$.
+
+**Invariants**: Secondary multi-sensor logging in `WorkoutSamples.db` MUST NOT be dropped; legitimate speeds ($\le 70.0\text{ m/s}$) MUST accumulate distance accurately; single-thread serialization on `mDbExecutor` MUST be maintained.
+
+

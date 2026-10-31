@@ -2126,46 +2126,65 @@ public class TrackerService extends Service {
         }
 
         // 2. Capture multi-sensor telemetry for raw samples database and session accumulators
-        for (SensorData<Number> sensorData : banalService.getAllSensorData()) {
-            if (sensorData == null || sensorData.getValue() == null) continue;
-
-            SensorType sensorType = sensorData.getSensorType();
-
-            String sensorName = sensorType.name();
-            String deviceName = sensorData.getDeviceName();
-            if (deviceName != null) {
-                if (deviceName.equals("gps") || deviceName.equals("network") || deviceName.equals("google_fused")) {
-                    sensorName += "_" + deviceName;
-                } else {
-                    sensorName = quoteSqlColumnIdentifier(sensorName + " (" + deviceName + ")");
+        List<SensorData> allSensorDataList = banalService.getAllSensorData();
+        Set<SensorType> canonicalSensorTypes = new HashSet<>();
+        if (allSensorDataList != null) {
+            for (SensorData<?> data : allSensorDataList) {
+                if (data != null && data.getValue() != null && data.getDeviceName() == null) {
+                    canonicalSensorTypes.add(data.getSensorType());
                 }
             }
-            SensorValueType type = sensorType.getSensorValueType();
-            sensorName2Type.put(sensorName, type);
+        }
 
-            switch (type) {
-                case INTEGER -> samplingValues.put(sensorName, sensorData.getValue().intValue());
-                case DOUBLE -> samplingValues.put(sensorName, sensorData.getValue().doubleValue());
-                default -> samplingValues.put(sensorName, sensorData.getStringValue());
-            }
+        if (allSensorDataList != null) {
+            for (SensorData sensorDataObj : allSensorDataList) {
+                SensorData<Number> sensorData = (SensorData<Number>) sensorDataObj;
+                if (sensorData == null || sensorData.getValue() == null) continue;
 
-            switch (sensorType) {
-                case TIME_TOTAL -> {
-                    mTimeTotal_s = sensorData.getValue().intValue();
-                    summaryValues.put(WorkoutSummaries.TIME_TOTAL_s, mTimeTotal_s);
+                SensorType sensorType = sensorData.getSensorType();
+
+                String sensorName = sensorType.name();
+                String deviceName = sensorData.getDeviceName();
+                if (deviceName != null) {
+                    if (deviceName.equals("gps") || deviceName.equals("network") || deviceName.equals("google_fused")) {
+                        sensorName += "_" + deviceName;
+                    } else {
+                        sensorName = quoteSqlColumnIdentifier(sensorName + " (" + deviceName + ")");
+                    }
                 }
-                case TIME_ACTIVE -> {
-                    mTimeActive_s = sensorData.getValue().intValue();
-                    summaryValues.put(WorkoutSummaries.TIME_ACTIVE_s, mTimeActive_s);
+                SensorValueType type = sensorType.getSensorValueType();
+                sensorName2Type.put(sensorName, type);
+
+                switch (type) {
+                    case INTEGER -> samplingValues.put(sensorName, sensorData.getValue().intValue());
+                    case DOUBLE -> samplingValues.put(sensorName, sensorData.getValue().doubleValue());
+                    default -> samplingValues.put(sensorName, sensorData.getStringValue());
                 }
-                case DISTANCE_m -> {
-                    mDistanceTotal_m = sensorData.getValue().doubleValue();
-                    summaryValues.put(WorkoutSummaries.DISTANCE_TOTAL_m, mDistanceTotal_m);
+
+                // REQ-TRK-041.2: Restrict session totals and summary updates to canonical proxy sensor (deviceName == null),
+                // while permitting fallback if telemetry provides only a single named source for a sensor type
+                boolean isCanonical = (deviceName == null) || !canonicalSensorTypes.contains(sensorType);
+                if (isCanonical) {
+                    switch (sensorType) {
+                        case TIME_TOTAL -> {
+                            mTimeTotal_s = sensorData.getValue().intValue();
+                            summaryValues.put(WorkoutSummaries.TIME_TOTAL_s, mTimeTotal_s);
+                        }
+                        case TIME_ACTIVE -> {
+                            mTimeActive_s = sensorData.getValue().intValue();
+                            summaryValues.put(WorkoutSummaries.TIME_ACTIVE_s, mTimeActive_s);
+                        }
+                        case DISTANCE_m -> {
+                            mDistanceTotal_m = sensorData.getValue().doubleValue();
+                            summaryValues.put(WorkoutSummaries.DISTANCE_TOTAL_m, mDistanceTotal_m);
+                        }
+                        case CALORIES -> summaryValues.put(WorkoutSummaries.CALORIES, sensorData.getValue().intValue());
+                        case LAP_NR -> summaryValues.put(WorkoutSummaries.LAPS, sensorData.getValue().intValue());
+                        case ASCENT -> summaryValues.put(WorkoutSummaries.ASCENDING, sensorData.getValue().doubleValue());
+                        case DESCENT -> summaryValues.put(WorkoutSummaries.DESCENDING, sensorData.getValue().doubleValue());
+                    }
+                    canonicalSensorTypes.add(sensorType);
                 }
-                case CALORIES -> summaryValues.put(WorkoutSummaries.CALORIES, sensorData.getValue().intValue());
-                case LAP_NR -> summaryValues.put(WorkoutSummaries.LAPS, sensorData.getValue().intValue());
-                case ASCENT -> summaryValues.put(WorkoutSummaries.ASCENDING, sensorData.getValue().doubleValue());
-                case DESCENT -> summaryValues.put(WorkoutSummaries.DESCENDING, sensorData.getValue().doubleValue());
             }
         }
 

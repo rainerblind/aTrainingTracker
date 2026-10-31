@@ -1151,3 +1151,18 @@
   • Gesture contract test verifying that in `ScreenMode.CONFIGURATION`, sensor field editing (`onEditField`), deletion (`onDeleteField`), add row/col, and pick-and-place reordering callbacks remain fully dispatched and interactive in landscape mode.
   6. *Targeted & Full Regression Suite Execution (`TST-TRK-040.6`)*:
   • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.tracking.*"` and full clean-room suite verifying 100% pass rate.
+
+### TST-TRK-041: **Distance Increment Plausibility Clamping & Multi-Sensor Summary Isolation Test Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-041`
+- **Component**: `SpeedAndLocationDeviceTest.kt`, `TrackerServiceTest.java`
+- **Jira**: `ATT-4843`
+- **Test Description**:
+  1. *SpeedAndLocationDevice Displacement Plausibility Clamping (`TST-TRK-041.1`)*:
+  • Unit test verifying that when consecutive location fixes arrive with displacement velocity exceeding 70.0 m/s (e.g. 4,245.6 m in 1000 ms), `delta_distance` is clamped to 0.0, and `mDistanceSensor` / `mLapDistanceSensor` values remain unchanged.
+  • Unit test verifying that when consecutive location fixes arrive with normal human velocity (e.g. 15.0 m in 1000 ms = 15 m/s), distance accumulators increment by the full displacement.
+  2. *TrackerService Canonical Sensor Summary Filtering (`TST-TRK-041.2`)*:
+  • Unit test verifying that when `sampleAndWriteToDb()` is called with both canonical `ProxySensor` (`deviceName == null`, distance = 4,370 m) and a secondary device sensor (`deviceName == "Google Fused"`, distance = 13,377 m), `WorkoutSummaries.DISTANCE_TOTAL_m` and `mDistanceTotal_m` equal 4,370 m.
+  • Verify that `samplingValues` table row retains both `DISTANCE_m` (4,370 m) and `"DISTANCE_m (Google Fused)"` (13,377 m).
+  3. *Targeted & Clean-Room Regression Verification (`TST-TRK-041.3`)*:
+  • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.*" --tests "com.atrainingtracker.trainingtracker.tracker.*"` verifying 100% pass rate.
+
