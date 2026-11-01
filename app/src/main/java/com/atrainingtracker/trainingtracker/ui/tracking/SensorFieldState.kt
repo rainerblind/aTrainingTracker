@@ -70,7 +70,10 @@ data class SensorFieldState(
 
     // Per-field element display configuration (REQ-TRK-046, ATT-4841)
     val showValue: Boolean = true,
-    val showBar: Boolean = false
+    val showBar: Boolean = false,
+
+    // Proportional horizontal width weight (REQ-UI-437, ATT-4861)
+    val colWeight: Float = 1.0f
 )
 
 /**

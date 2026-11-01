@@ -2380,6 +2380,11 @@
     <string name="sensor_field_show_value">Value</string>
     <string name="sensor_field_show_bar">Bar</string>
 
+    <!-- Sensor Field Width & Row Split (ATT-4861, REQ-UI-437) -->
+    <string name="sensor_field_width_title">Width Ratio</string>
+    <string name="sensor_field_row_split_presets">Row Split Presets</string>
+    <string name="sensor_field_relative_weight">Relative Weight</string>
+
     <!-- Zone History (ATT-4844, REQ-SET-082) -->
     <string name="zone_history_title">Zone History</string>
     <string name="zone_history_action_history">History</string>

@@ -497,8 +497,118 @@ class EditSensorFieldViewModelTest {
                 newFilterType = any(),
                 newFilterConstant = any(),
                 showValue = false,
-                showBar = true
+                showBar = true,
+                colWeight = any()
             )
+        }
+    }
+
+    /**
+     * TST-UI-437.3: Individual relative width weight updates uiState and persists on save.
+     */
+    @Test
+    fun testColWeight_individualWeightSelection_updatesStateAndPersists() = runTest {
+        val viewModel = createViewModel(sensorFieldId = -1L)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(1.0f, viewModel.uiState.value.colWeight, 0.001f)
+
+        viewModel.onColWeightChanged(2.0f)
+        assertEquals(2.0f, viewModel.uiState.value.colWeight, 0.001f)
+
+        viewModel.onColWeightChanged(3.0f)
+        assertEquals(3.0f, viewModel.uiState.value.colWeight, 0.001f)
+
+        // Invalid weight <= 0 is safely clamped to 1.0f
+        viewModel.onColWeightChanged(0f)
+        assertEquals(1.0f, viewModel.uiState.value.colWeight, 0.001f)
+
+        viewModel.onColWeightChanged(3.0f)
+        viewModel.saveChanges()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify {
+            trackingViewsRepo.insertSensorFieldConfig(
+                tabViewId = 1L,
+                rowNr = 0,
+                colNr = 0,
+                newSensorType = any(),
+                newViewSize = any(),
+                newSourceDeviceId = any(),
+                newSourceDeviceName = any(),
+                newFilterType = any(),
+                newFilterConstant = any(),
+                showValue = any(),
+                showBar = any(),
+                colWeight = 3.0f
+            )
+        }
+    }
+
+    /**
+     * TST-UI-437.3: Quick row split presets update complementary weights on both fields sharing a row.
+     */
+    @Test
+    fun testRowSplit_twoFieldRow_presetsUpdateComplementaryWeights() = runTest {
+        val field1 = SensorFieldConfig(
+            sensorFieldId = 10L,
+            rowNr = 1,
+            colNr = 1,
+            viewSize = ViewSize.NORMAL,
+            sensorType = SensorType.POWER,
+            filterType = FilterType.INSTANTANEOUS,
+            filterConstant = 1.0,
+            sourceDeviceId = -1,
+            colWeight = 1.0f
+        )
+        val field2 = SensorFieldConfig(
+            sensorFieldId = 11L,
+            rowNr = 1,
+            colNr = 2,
+            viewSize = ViewSize.NORMAL,
+            sensorType = SensorType.CADENCE,
+            filterType = FilterType.INSTANTANEOUS,
+            filterConstant = 1.0,
+            sourceDeviceId = -1,
+            colWeight = 1.0f
+        )
+        every { trackingViewsRepo.getSensorFieldConfig(10L) } returns flowOf(field1)
+        every { trackingViewsRepo.getSensorFieldConfigsForView(1L) } returns flowOf(listOf(field1, field2))
+
+        val viewModel = createViewModel(sensorFieldId = 10L)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue("Must detect two-field row", viewModel.uiState.value.isTwoFieldRow)
+        assertTrue("Field 10 is left field", viewModel.uiState.value.isLeftField)
+        assertEquals(11L, viewModel.uiState.value.siblingFieldId)
+
+        // Select 3/4 : 1/4 split (Left 3f, Right 1f)
+        viewModel.onRowSplitSelected(3.0f, 1.0f)
+        assertEquals(3.0f, viewModel.uiState.value.colWeight, 0.001f)
+        assertEquals(1.0f, viewModel.uiState.value.siblingColWeight ?: 0f, 0.001f)
+
+        // Select 1/3 : 2/3 split (Left 1f, Right 2f)
+        viewModel.onRowSplitSelected(1.0f, 2.0f)
+        assertEquals(1.0f, viewModel.uiState.value.colWeight, 0.001f)
+        assertEquals(2.0f, viewModel.uiState.value.siblingColWeight ?: 0f, 0.001f)
+
+        viewModel.saveChanges()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify {
+            trackingViewsRepo.updateSensorFieldConfig(
+                sensorFieldId = 10L,
+                newSensorType = any(),
+                newViewSize = any(),
+                newSourceDeviceId = any(),
+                newSourceDeviceName = any(),
+                newFilterType = any(),
+                newFilterConstant = any(),
+                showValue = any(),
+                showBar = any(),
+                colWeight = 1.0f
+            )
+            trackingViewsRepo.updateColWeight(11L, 2.0f)
         }
     }
 }

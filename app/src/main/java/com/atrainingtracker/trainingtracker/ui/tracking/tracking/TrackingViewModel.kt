@@ -564,7 +564,8 @@ class TrackingViewModel @JvmOverloads constructor(
                             wPrimeBatteryState = initialWPrimeState,
                             sensorType = config.sensorType,
                             showValue = config.showValue,
-                            showBar = config.showBar
+                            showBar = config.showBar,
+                            colWeight = config.colWeight
                         )
                     }
                     cachedConfigs = configs

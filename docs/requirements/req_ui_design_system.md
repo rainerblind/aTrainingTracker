@@ -12611,6 +12611,47 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 **Invariants**: Zero regression in stale/null handling, True-Black AMOLED compliance, and 100% clean-room test pass rate.
 
 
+### REQ-UI-437: User-Configurable Horizontal Width Ratios & Split Presets in Cockpit Sensor Grid [Verified]
+- **Tests**: `TST-UI-437` | **Tickets**: `ATT-4861`
+- **Implementation**: `TrackingViewsDatabaseManager.java`, `DatabaseSchemaRegistry.kt`, `TrackingViewsRepository.kt`, `SensorFieldState.kt`, `SensorGridScreen.kt`, `EditSensorFieldDialog.kt`, `EditSensorFieldViewModel.kt`
+- **Rationale**: In multi-column cockpit rows, side-by-side sensor fields have historically been forced to equal width (`1/2 : 1/2` or `1/3 : 1/3 : 1/3`) via hardcoded `Modifier.weight(1f)`. Asymmetric layouts—such as a wide `3/4` Power Zone Bar paired with a compact `1/4` numeric value readout—require user-configurable horizontal width ratios, backward-compatible persistence, and proportional Compose rendering (ATT-4861, Parent Epic ATT-355, extending `REQ-UI-200` and `REQ-TRK-046`):
+1. *SQLite Schema v17 & DTO Weight Persistence (`REQ-UI-437.1`)*:
+• In `TrackingViewsDatabaseManager.java`, `LayoutRowsTable` SHALL include a `ColWeight real DEFAULT 1.0` column, bumping `DB_VERSION` to 17.
+• Database upgrade from v16 to v17 SHALL add `ColWeight` and backfill `ColWeight = 1.0` for all existing records.
+• `DatabaseSchemaRegistry.kt` SHALL register version 17 for `TrackingViews.db` and `FlexibleGenericView.db`.
+• `SensorFieldConfig` and `SensorFieldState` SHALL include `colWeight: Float = 1.0f`, mapped symmetrically across all cursor mapping pathways.
+2. *Proportional Weight Cockpit Rendering (`REQ-UI-437.2`)*:
+• In `SensorGridScreen.kt`, multi-column rows in `SensorGridContent`, landscape row packing, and configuration mode SHALL apply `Modifier.weight(effectiveWeight)`.
+• Runtime layout code SHALL guard `effectiveWeight = if (fieldState.colWeight > 0f) fieldState.colWeight else 1.0f`, preventing `IllegalArgumentException` from zero or negative weights.
+• Single-field rows SHALL span full row width.
+3. *User Configuration UI in Edit Dialog (`REQ-UI-437.3`)*:
+• In `EditSensorFieldDialog.kt` / `EditSensorFieldViewModel.kt`, when editing a field sharing a row with exactly one other field, the UI SHALL provide quick 2-field row split presets: `3/4 : 1/4`, `2/3 : 1/3`, `1/2 : 1/2`, `1/3 : 2/3`, `1/4 : 3/4`.
+• Selecting a row split preset SHALL set the corresponding weights on both the current field and its sibling in the row, and persist both to `TrackingViews.db`.
+• The dialog SHALL also support individual relative weight selection (e.g. 1x, 2x, 3x).
+4. *9-Language Localization Parity (`REQ-UI-437.4`)*:
+• String resources for width ratio section titles and presets SHALL maintain complete parity across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-437`, extending `REQ-UI-200` (Grid Normalization & Editing) and `REQ-TRK-046` (Per-Field Element Display). Targets `TrackingViewsDatabaseManager.java`, `DatabaseSchemaRegistry.kt`, `TrackingViewsRepository.kt`, `SensorFieldState.kt`, `SensorGridScreen.kt`, `EditSensorFieldDialog.kt`, and `EditSensorFieldViewModel.kt`.
+2. *Historical Origin & Commit Trace*: Commit `a6920388` introduced Jetpack Compose sensor grid with hardcoded `Modifier.weight(1f)`.
+3. *Root Reason for Existing Formulation*: Equal horizontal width distribution was sufficient for uniform numeric readouts prior to the introduction of graphical zone bars and gauges.
+4. *Preservation of Core Invariants*: Defaulting `ColWeight = 1.0` preserves 100% backward compatibility for existing 1:1 and 1:1:1 grid layouts without visual regression.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* two sensor fields placed side by side in the same cockpit row,
+• *When* the user configures the row to preset `3/4 : 1/4`,
+• *Then* the left field renders across 75% and the right field across 25% of row width in both configuration and tracking modes, persisted across app restarts.
+• *Given* an existing database upgraded from schema v16 to v17,
+• *When* rows are loaded,
+• *Then* `ColWeight` defaults to 1.0f and existing equal-width layouts remain unchanged.
+• *Given* a sensor field with an invalid or zero weight ($\le 0f$),
+• *When* rendered in Compose,
+• *Then* the layout engine safely clamps to 1.0f without crashing.
+
+**Invariants**: Backward compatibility for existing layouts, zero Compose runtime crash risk ($weight > 0f$), 9-language localization parity, and 100% clean-room test pass rate.
+
+
+
 
 
 

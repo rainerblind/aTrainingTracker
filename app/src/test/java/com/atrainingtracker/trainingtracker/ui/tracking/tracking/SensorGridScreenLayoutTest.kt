@@ -258,5 +258,21 @@ class SensorGridScreenLayoutTest {
             content.contains("HorizontalRule")
         )
     }
+
+    @Test
+    fun testSensorGrid_appliesProportionalColWeightWithNonZeroSafetyClamp() {
+        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
+        val content = file.readText()
+
+        // REQ-UI-437.2 / TST-UI-437.4: SensorGridContent & Config mode must use Modifier.weight(effectiveWeight) with non-zero clamp
+        assertTrue(
+            "Sensor grid fields must compute effectiveWeight with colWeight > 0f clamp (TST-UI-437.4)",
+            content.contains("val effectiveWeight = if (fieldState.colWeight > 0f) fieldState.colWeight else 1.0f")
+        )
+        assertTrue(
+            "Sensor grid fields Box must apply Modifier.weight(effectiveWeight) (TST-UI-437.4)",
+            content.contains("Box(modifier = Modifier.weight(effectiveWeight))")
+        )
+    }
 }
 

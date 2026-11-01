@@ -565,11 +565,11 @@ class TrackingViewsRealSqliteMigrationTest {
 
         // Verify DatabaseSchemaRegistry versions
         assertEquals(
-            16,
+            17,
             com.atrainingtracker.trainingtracker.migration.DatabaseSchemaRegistry.getMaxSupportedVersion("FlexibleGenericView.db")
         )
         assertEquals(
-            16,
+            17,
             com.atrainingtracker.trainingtracker.migration.DatabaseSchemaRegistry.getMaxSupportedVersion("TrackingViews.db")
         )
     }
@@ -645,5 +645,74 @@ class TrackingViewsRealSqliteMigrationTest {
 
         // Verify idempotency
         helper.onUpgrade(database, 15, 16)
+    }
+
+    /**
+     * TST-UI-437.1: Database migration v16 -> v17 adds ColWeight column and backfills default 1.0.
+     */
+    @Test
+    fun testTrackingViewsDbHelper_v16ToV17Migration_addsColWeightAndBackfillsDefaults() {
+        val database = checkNotNull(db)
+        database.execSQL(TrackingViewsDbHelper.CREATE_VIEWS_TABLE_V15)
+        database.execSQL(TrackingViewsDbHelper.CREATE_LAYOUTS_TABLE_V16)
+        database.execSQL(TrackingViewsDbHelper.CREATE_SECTION_DIVIDERS_TABLE_V14)
+        database.version = 16
+
+        val field1 = ContentValues().apply {
+            put(TrackingViewsDbHelper.VIEW_ID, 1)
+            put(TrackingViewsDbHelper.ROW_NR, 1)
+            put(TrackingViewsDbHelper.COL_NR, 1)
+            put(TrackingViewsDbHelper.SENSOR_TYPE, "POWER")
+            put(TrackingViewsDbHelper.VIEW_SIZE, "LARGE")
+            put(TrackingViewsDbHelper.SHOW_VALUE, 1)
+            put(TrackingViewsDbHelper.SHOW_BAR, 1)
+        }
+        val field2 = ContentValues().apply {
+            put(TrackingViewsDbHelper.VIEW_ID, 1)
+            put(TrackingViewsDbHelper.ROW_NR, 1)
+            put(TrackingViewsDbHelper.COL_NR, 2)
+            put(TrackingViewsDbHelper.SENSOR_TYPE, "CADENCE")
+            put(TrackingViewsDbHelper.VIEW_SIZE, "NORMAL")
+            put(TrackingViewsDbHelper.SHOW_VALUE, 1)
+            put(TrackingViewsDbHelper.SHOW_BAR, 0)
+        }
+        val id1 = database.insertOrThrow(TrackingViewsDbHelper.ROWS_TABLE, null, field1)
+        val id2 = database.insertOrThrow(TrackingViewsDbHelper.ROWS_TABLE, null, field2)
+
+        // Execute upgrade v16 -> v17
+        helper.onUpgrade(database, 16, 17)
+        database.version = 17
+
+        // Verify column exists
+        assertTrue(
+            "Column COL_WEIGHT must exist",
+            RealSqliteTestHelper.hasColumn(database, TrackingViewsDbHelper.ROWS_TABLE, TrackingViewsDbHelper.COL_WEIGHT)
+        )
+
+        // Verify default = 1.0 backfilled for existing rows
+        database.query(
+            TrackingViewsDbHelper.ROWS_TABLE,
+            arrayOf(TrackingViewsDbHelper.COL_WEIGHT),
+            "${TrackingViewsDbHelper.ROW_ID} = ?",
+            arrayOf(id1.toString()),
+            null, null, null
+        ).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("Field 1 ColWeight must default to 1.0", 1.0, cursor.getDouble(0), 0.001)
+        }
+
+        database.query(
+            TrackingViewsDbHelper.ROWS_TABLE,
+            arrayOf(TrackingViewsDbHelper.COL_WEIGHT),
+            "${TrackingViewsDbHelper.ROW_ID} = ?",
+            arrayOf(id2.toString()),
+            null, null, null
+        ).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("Field 2 ColWeight must default to 1.0", 1.0, cursor.getDouble(0), 0.001)
+        }
+
+        // Verify idempotency
+        helper.onUpgrade(database, 16, 17)
     }
 }

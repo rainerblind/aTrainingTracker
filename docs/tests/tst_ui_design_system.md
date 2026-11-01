@@ -6873,6 +6873,34 @@
   • Execute targeted unit tests and verify 100% pass rate with zero regressions.
 
 
+### TST-UI-437: **User-Configurable Horizontal Width Ratios & Split Presets in Cockpit Sensor Grid Test Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-437`
+- **Component**: `TrackingViewsDatabaseManagerTest.kt`, `TrackingViewsRepositoryTest.kt`, `EditSensorFieldViewModelTest.kt`, `SensorGridScreenLayoutTest.kt`, `SensorGridLocalizationTest.kt`
+- **Jira**: `ATT-4861`
+- **Test Description**:
+  1. *SQLite Migration v16 -> v17 & Default Weight Backfill Test (`TST-UI-437.1`)*:
+  • Unit test in `TrackingViewsRealSqliteMigrationTest.kt` / `TrackingViewsDatabaseManagerTest.kt` verifying database upgrade from schema version 16 to 17:
+    - Adds `ColWeight real DEFAULT 1.0` to `LayoutRowsTable`.
+    - Backfills `ColWeight = 1.0` for all existing records.
+    - Confirms `DatabaseSchemaRegistry.isVersionSupported("TrackingViews.db", 17)` returns `true`.
+  2. *SensorFieldConfig & Cursor Mapping Symmetry Test (`TST-UI-437.2`)*:
+  • Unit test in `TrackingViewsRepositoryTest.kt` verifying `colWeight` mapping:
+    - Verifies symmetric mapping in single and batch cursor extraction paths (Rule 20).
+    - Verifies custom weights (e.g. `3.0f`, `2.0f`, `1.0f`) are preserved and mapped correctly into `SensorFieldConfig` and `SensorFieldState`.
+  3. *Edit Dialog Relative Weight & Row Split Presets Test (`TST-UI-437.3`)*:
+  • Unit test in `EditSensorFieldViewModelTest.kt` verifying:
+    - Selection of quick row split presets (`3/4 : 1/4`, `2/3 : 1/3`, `1/2 : 1/2`, `1/3 : 2/3`, `1/4 : 3/4`) sets correct complementary weights on both fields sharing a row.
+    - Individual relative weight selection (1x, 2x, 3x) updates state correctly.
+  4. *Compose Layout Proportional Width Rendering Test (`TST-UI-437.4`)*:
+  • Unit test in `SensorGridScreenLayoutTest.kt` verifying:
+    - `Modifier.weight(effectiveWeight)` is applied to multi-column rows in `SensorGridContent` and configuration mode.
+    - Non-zero safety clamp: invalid weights ($\le 0f$) safely fallback to `1.0f`.
+    - Single-column rows naturally take 100% width.
+  5. *9-Language Localization Parity Audit (`TST-UI-437.5`)*:
+  • Audit in `TranslationParityTest` verifying all newly added string keys exist across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) with zero missing translations.
+
+
+
 
 
 

@@ -2180,6 +2180,11 @@
     <string name="sensor_field_show_value">Valore</string>
     <string name="sensor_field_show_bar">Barra</string>
 
+    <!-- Sensor Field Width & Row Split (ATT-4861, REQ-UI-437) -->
+    <string name="sensor_field_width_title">Rapporto di larghezza</string>
+    <string name="sensor_field_row_split_presets">Preimpostazioni di divisione riga</string>
+    <string name="sensor_field_relative_weight">Larghezza relativa</string>
+
     <!-- Zone History (ATT-4844, REQ-SET-082) -->
     <string name="zone_history_title">Cronologia zone</string>
     <string name="zone_history_action_history">Cronologia</string>
