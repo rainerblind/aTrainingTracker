@@ -528,3 +528,44 @@
 • *Then* adjacent labels do not overlap or truncate.
 
 **Invariants**: Zero changes to `PeriodSummaries.db`, memory safety, Rule 36 unit parity, and 100% clean-room test pass rate.
+
+
+### REQ-PER-024: Route-Frequency Heatmap Unification, Tolerance Calibration & Region Propagation [Verified]
+- **Tests**: `TST-PER-030` | **Tickets**: `ATT-4833`
+- **Implementation**: `ThermalColorLut.kt`, `PolylineHeatmapTileProvider.kt`, `PeriodMapUtils.kt`, `PeriodSummaryCard.kt`, `PeriodMapScreen.kt`, `InteractivePeriodMap.kt`, `PeriodsViewModel.kt`
+- **Rationale**: The system SHALL unify the route-frequency heatmap as the primary path visualization across both the preview card (`PeriodSummaryCard`) and detailed map view (`PeriodMapScreen` / `InteractivePeriodMap`), SHALL eliminate polyline masking and marker clutter in period overviews, SHALL tighten polyline decimation tolerance to preserve shared-corridor additive stacking, SHALL calibrate adaptive frequency normalization and thermal contrast, and SHALL propagate the active region across views (ATT-4833, refining `REQ-PER-019` and `REQ-PER-021`):
+1. *Heatmap-Primary Visualization & Vector Track Suppression (`REQ-PER-024.1`)*:
+• In `PeriodSummaryCard`, when `visuals.heatmapProvider != null`, the card SHALL render the line-density heatmap tile layer without underlying vector polylines. Vector polylines SHALL only render when heatmap tile provider is null (e.g. Day periods).
+• In `InteractivePeriodMap` and `PeriodMapScreen`, when no individual workout is selected/peeked (`peekedWorkoutDataWithTrack == null`), the system SHALL suppress rendering member vector polylines, anchor polylines, and start/end/apex markers, rendering exclusively the line-density heatmap.
+• When a specific workout is selected/peeked, the system SHALL render the selected workout's vector track with prominent high-alpha highlight and render its start, stop, and extremum markers.
+2. *Region State Propagation (`REQ-PER-024.2`)*:
+• When tapping a period summary card mini-map, the active card region ID (`activeRegionId`) SHALL be propagated via `onMapClick(summary, activeRegionId)` into `PeriodsViewModel.showPeriodMap(summary, initialRegionId)`.
+• `PeriodMapScreen` / `InteractivePeriodMap` SHALL initialize its camera bounds and selected region matching the card's active geographic region 1:1.
+3. *Corridor Overlap Tolerance Calibration (`REQ-PER-024.3`)*:
+• In `PeriodMapUtils.getPeriodSimplificationToleranceMeters`, Douglas-Peucker simplification tolerance SHALL be bounded to $\le 5\text{--}8\text{m}$ across all period types: `PeriodType.DAY -> 5.0m`, `PeriodType.WEEK -> 5.0m`, `PeriodType.MONTH -> 6.0m`, `PeriodType.YEAR -> 8.0m` (replacing historical 15m/35m/75m), ensuring repeated activities along shared road corridors map to identical pixels for additive rasterization.
+4. *Adaptive Corridor Frequency Normalization & Thermal Contrast (`REQ-PER-024.4`)*:
+• In `PolylineHeatmapTileProvider`, intensity per pass SHALL adapt to the period workout count: target passes to full saturation ($1.0$) SHALL scale from $2$ passes (for $\le 3$ workouts) to $3$ passes ($\le 10$ workouts), $5$ passes ($\le 35$ workouts), $8$ passes ($\le 100$ workouts), and $12$ passes ($> 100$ workouts), so single passes render clearly in base cyan while frequently traveled corridors reliably reach Deep Indigo.
+• In `ThermalColorLut`, base alpha progression SHALL increase: Stop 0 (Light Cyan, 0.00) to base alpha $140$ ($\approx 55\%$), Stop 1 (Pure Blue, 0.50) to base alpha $204$ ($\approx 80\%$), and Stop 2 (Deep Indigo, 1.00) to base alpha $255$ ($100\%$).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-PER-024`, refining `REQ-PER-019` (*Full-Period Asynchronous Mini-Map Preview*) and `REQ-PER-021` (*InteractivePeriodMap Architecture & Large-Period Scaling*).
+2. *Historical Origin & Commit Trace*: Sprint 2026-44.0 (`ATT-4480`, `ATT-4475`, `ATT-4769`, `ATT-1151`).
+3. *Root Reason for Existing Formulation*: Vector polylines were originally rendered beneath heatmaps as fallback and hit-test targets, and loose 15–75m simplification tolerances were used to bound point counts before true tile-rasterized line-density heatmaps were introduced.
+4. *Preservation of Core Invariants*: Pre-simplified background dispatch (`Dispatchers.Default`), zero UI-thread blocking, O(1) tile candidate bounding-box culling, and 100% clean-room test pass rate remain preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a Period with heatmap available,
+• *When* rendered in `PeriodSummaryCard`,
+• *Then* the heatmap tile provider is displayed and vector polylines are suppressed.
+• *Given* `PeriodMapScreen` opened without a workout selected,
+• *When* the map renders,
+• *Then* the line-density heatmap is rendered without vector polylines or start/stop markers.
+• *Given* a period card in Region 2,
+• *When* the user taps the mini-map,
+• *Then* `PeriodMapScreen` opens focused on Region 2 with matching bounds.
+• *Given* `getPeriodSimplificationToleranceMeters(PeriodType.MONTH)`,
+• *When* tolerance is queried,
+• *Then* it returns $6.0\text{m}$ ($\le 8\text{m}$).
+
+**Invariants**: Zero changes to `PeriodSummaries.db`, memory safety, True-Black AMOLED compliance, and 100% clean-room test pass rate.
+

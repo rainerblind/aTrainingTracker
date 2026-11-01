@@ -148,10 +148,40 @@ class PolylineHeatmapTileProviderTest {
         assertEquals("High intensity green should match Deep Indigo (27)", 27, highGreen)
         assertEquals("High intensity blue should match Deep Indigo (146)", 146, highBlue)
 
-        // 4. Alpha progression: base alpha scales from low (~51) to mid (~77) to high (180)
+        // 4. Alpha progression: base alpha scales from low (~140 / 55%) to mid (~204 / 80%) to high (255 / 100%)
         assertTrue("Alpha should increase from low to mid", lowAlpha < midAlpha)
         assertTrue("Alpha should increase from mid to high", midAlpha < highAlpha)
-        assertEquals("High intensity alpha at opacity 1.0 should be 180", 180, highAlpha)
+        assertEquals("High intensity alpha at opacity 1.0 should be 255", 255, highAlpha)
+        assertTrue("Low intensity alpha must be >= 135 for clear single-pass legibility", lowAlpha >= 135)
+    }
+
+    /**
+     * TST-PER-030.2: Adaptive Corridor Frequency Normalization Test (REQ-PER-024.4).
+     */
+    @Test
+    fun testAdaptiveCorridorFrequencyNormalization() {
+        // <= 3 workouts: 2 passes to saturation (fraction = 0.5f -> 128)
+        assertEquals(128, PolylineHeatmapTileProvider.calculateStepIntensity(1))
+        assertEquals(128, PolylineHeatmapTileProvider.calculateStepIntensity(3))
+
+        // <= 10 workouts (Week): 3 passes to saturation (fraction = 1/3 -> 85)
+        assertEquals(85, PolylineHeatmapTileProvider.calculateStepIntensity(5))
+        assertEquals(85, PolylineHeatmapTileProvider.calculateStepIntensity(10))
+
+        // <= 35 workouts (Month): 5 passes to saturation (fraction = 1/5 -> 51)
+        assertEquals(51, PolylineHeatmapTileProvider.calculateStepIntensity(20))
+        assertEquals(51, PolylineHeatmapTileProvider.calculateStepIntensity(35))
+
+        // <= 100 workouts: 8 passes to saturation (fraction = 1/8 -> 32)
+        assertEquals(32, PolylineHeatmapTileProvider.calculateStepIntensity(50))
+        assertEquals(32, PolylineHeatmapTileProvider.calculateStepIntensity(100))
+
+        // > 100 workouts (Year): 12 passes to saturation (fraction = 1/12 -> 21)
+        assertEquals(21, PolylineHeatmapTileProvider.calculateStepIntensity(150))
+        assertEquals(21, PolylineHeatmapTileProvider.calculateStepIntensity(300))
+
+        // Explicit override preservation
+        assertEquals(64, PolylineHeatmapTileProvider.calculateStepIntensity(300, intensityPerPass = 0.25f))
     }
 
     @Test

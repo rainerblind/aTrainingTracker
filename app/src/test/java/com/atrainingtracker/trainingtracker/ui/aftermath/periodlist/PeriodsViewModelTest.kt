@@ -298,4 +298,23 @@ class PeriodsViewModelTest {
         val daysWithUnknown = viewModel.filteredGroupedPeriods.value[0]
         assertEquals(2, daysWithUnknown.size)
     }
+
+    /**
+     * TST-PER-030.5: Region State Propagation Test (REQ-PER-024.2).
+     */
+    @Test
+    fun testShowPeriodMap_withInitialRegionId_setsSelectedRegionId() = runTest {
+        coEvery { mockPeriodsRepo.getWorkoutsForRange(any(), any()) } returns emptyList()
+
+        val viewModel = PeriodsViewModel(mockApplication)
+        val summary = createPeriodSummary("Test Period", emptyMap())
+
+        viewModel.showPeriodMap(summary, initialRegionId = "region_custom_42")
+        // Immediate loading state has selectedRegionId set
+        assertEquals("region_custom_42", viewModel.mapState.value.selectedRegionId)
+
+        testScheduler.advanceUntilIdle()
+        // After background processing finishes
+        assertEquals("region_custom_42", viewModel.mapState.value.selectedRegionId)
+    }
 }

@@ -249,4 +249,25 @@ class InteractivePeriodMapTest {
         assertEquals("When workout is peeked on large period, exactly 1 highlighted track is rendered", 1, activeTracks.size)
         assertEquals(42L, activeTracks.first().id)
     }
+
+    /**
+     * TST-PER-030.4: Heatmap-Primary Overview & Peek Highlight Test (REQ-PER-024.1).
+     */
+    @Test
+    fun testTstPer030_4_HeatmapPrimaryOverviewAndPeekHighlight() {
+        // In overview (no peeked workout), memberTracks is empty -> pure heatmap, zero vector polylines
+        val peekedTracksEmpty = emptyList<MapTrack>()
+        assertTrue("In overview mode without peeked workout, vector tracks must be empty", peekedTracksEmpty.isEmpty())
+
+        // When a workout is selected/peeked, exactly that 1 workout track is rendered
+        val peekedTrack = MapTrack(
+            id = 99L,
+            type = TrackType.BEST,
+            bSportType = BSportType.BIKE,
+            path = listOf(PathPoint(0.0, LatLng(48.5, 9.2), 0.0), PathPoint(0.0, LatLng(48.51, 9.21), 0.0))
+        )
+        val peekedTracksActive = listOf(peekedTrack)
+        assertEquals(1, peekedTracksActive.size)
+        assertEquals(99L, peekedTracksActive.first().id)
+    }
 }

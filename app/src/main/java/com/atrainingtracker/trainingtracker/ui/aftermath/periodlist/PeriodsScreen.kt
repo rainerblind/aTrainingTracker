@@ -137,7 +137,7 @@ fun PeriodsScreen(
                 pagerState = pagerState,
                 listStates = listStates,
                 onHeaderClick = { summary -> handleStartWorkoutList(summary, null, null) },
-                onMapClick = { summary -> viewModel.showPeriodMap(summary) },
+                onMapClick = { summary, regionId -> viewModel.showPeriodMap(summary, regionId) },
                 onSportClick = { summary, bSportType -> handleStartWorkoutList(summary, bSportType, null) },
                 onLongestWorkoutClick = { summary, bSportType, workoutId ->
                     handleStartWorkoutList(summary, bSportType, workoutId)
