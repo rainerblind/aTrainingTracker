@@ -6852,6 +6852,23 @@
   • Unit test verifying `lastKnownPage` is preserved and clamped within valid page bounds when mode is unchanged.
 
 
+### TST-UI-436: **Active Training Zone Segment Height Emphasis & Bar-Only Sizing Test Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-436`
+- **Component**: `SensorFieldZoneGaugeTest.kt`, `ZoneGaugeBar.kt`, `SensorFieldView.kt`
+- **Jira**: `ATT-4860`
+- **Test Description**:
+  1. *Active Segment Height Elevation & Inactive Uniformity Test (`TST-UI-436.1`)*:
+  • Unit test in `SensorFieldZoneGaugeTest.kt` verifying active segment height calculation ($1.6\times$ `trackHeight`) and inactive segment base height (`trackHeight`).
+  • Verify that when `activeZoneIndex == null` (stale/disconnected), all segments render at base `trackHeight` with `0.35f` opacity.
+  2. *Dynamic Height Scaling in Bar-Only Mode Test (`TST-UI-436.2`)*:
+  • Unit test in `SensorFieldZoneGaugeTest.kt` verifying track height resolution across `ViewSize.SMALL`, `NORMAL`, `LARGE`, `EXTRA_LARGE` for `ZoneGaugeBar`, `PedalPowerBalanceBar`, and `WPrimeBatteryGaugeBar` when `!fieldState.showValue && fieldState.showBar`.
+  3. *Needle Span Overlay Geometry Contract Test (`TST-UI-436.3`)*:
+  • Verify `ZoneGaugeBar` needle container height accommodates elevated active segment (`activeTrackHeight + 4.dp`) and needle indicator spans vertically across the active segment.
+  4. *Clean-Room Full Suite Regression Execution (`TST-UI-436.4`)*:
+  • Execute targeted unit tests and verify 100% pass rate with zero regressions.
+
+
+
 
 
 

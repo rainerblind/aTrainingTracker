@@ -69,13 +69,15 @@ val W_PRIME_BATTERY_CORNER_RADIUS: Dp = 3.dp
  * @param modifier Composable modifier for outer positioning.
  * @param viewSize Active tile ViewSize, used to toggle percentage text badge display.
  * @param showBadge Explicit override to display or hide the text badge. Defaults to viewSize >= ViewSize.NORMAL.
+ * @param barHeight Height of the battery gauge bar container. Defaults to [W_PRIME_BATTERY_GAUGE_HEIGHT] (14.dp).
  */
 @Composable
 fun WPrimeBatteryGaugeBar(
     state: WPrimeBatteryState,
     modifier: Modifier = Modifier,
     viewSize: ViewSize = ViewSize.NORMAL,
-    showBadge: Boolean = (viewSize >= ViewSize.NORMAL)
+    showBadge: Boolean = (viewSize >= ViewSize.NORMAL),
+    barHeight: Dp = W_PRIME_BATTERY_GAUGE_HEIGHT
 ) {
     val isStale = state.isStale || state.batteryFraction == null
     val trackAlpha = if (isStale) 0.35f else 1.0f
@@ -93,7 +95,7 @@ fun WPrimeBatteryGaugeBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(W_PRIME_BATTERY_GAUGE_HEIGHT)
+            .height(barHeight) // .height(W_PRIME_BATTERY_GAUGE_HEIGHT)
             .testTag("w_prime_battery_container"),
         verticalAlignment = Alignment.CenterVertically
     ) {

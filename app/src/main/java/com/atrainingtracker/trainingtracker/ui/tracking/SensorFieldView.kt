@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.tracking
 import android.content.Context
 import androidx.compose.foundation.BorderStroke
 import com.atrainingtracker.trainingtracker.ui.components.WPrimeBatteryGaugeBar
+import com.atrainingtracker.trainingtracker.ui.components.W_PRIME_BATTERY_GAUGE_HEIGHT
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -65,6 +66,7 @@ import androidx.compose.material3.Typography
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
@@ -142,6 +144,52 @@ fun getSensorUnitTextStyle(
     }
     return if (fontFamily != null) baseStyle.copy(fontFamily = fontFamily) else baseStyle
 }
+
+/**
+ * Resolves the ZoneGaugeBar track height dynamically based on tile [ViewSize] and display mode (REQ-UI-436).
+ * In bar-only mode (!showValue && showBar), expands track height to fill vertical tile space cleanly.
+ */
+fun resolveZoneGaugeTrackHeight(viewSize: ViewSize, isBarOnly: Boolean): Dp =
+    if (isBarOnly) {
+        when {
+            viewSize <= ViewSize.SMALL -> 10.dp
+            viewSize == ViewSize.NORMAL -> 14.dp
+            viewSize == ViewSize.LARGE -> 18.dp
+            else -> 22.dp
+        }
+    } else {
+        6.dp
+    }
+
+/**
+ * Resolves the PedalPowerBalanceBar track height dynamically based on tile [ViewSize] and display mode (REQ-UI-436).
+ */
+fun resolvePedalBalanceTrackHeight(viewSize: ViewSize, isBarOnly: Boolean): Dp =
+    if (isBarOnly) {
+        when {
+            viewSize <= ViewSize.SMALL -> 12.dp
+            viewSize == ViewSize.NORMAL -> 16.dp
+            viewSize == ViewSize.LARGE -> 20.dp
+            else -> 24.dp
+        }
+    } else {
+        8.dp
+    }
+
+/**
+ * Resolves the WPrimeBatteryGaugeBar height dynamically based on tile [ViewSize] and display mode (REQ-UI-436).
+ */
+fun resolveWPrimeBatteryHeight(viewSize: ViewSize, isBarOnly: Boolean): Dp =
+    if (isBarOnly) {
+        when {
+            viewSize <= ViewSize.SMALL -> 14.dp
+            viewSize == ViewSize.NORMAL -> 20.dp
+            viewSize == ViewSize.LARGE -> 26.dp
+            else -> 32.dp
+        }
+    } else {
+        W_PRIME_BATTERY_GAUGE_HEIGHT
+    }
 
 /**
  * A Composable that displays a single sensor field.
@@ -304,7 +352,7 @@ fun SensorFieldView(
                     }
                 }
 
-                // Optional Zone Gauge Bar (REQ-UI-376, REQ-TRK-046)
+                // Optional Zone Gauge Bar (REQ-UI-376, REQ-TRK-046, REQ-UI-436)
                 if (fieldState.showBar && fieldState.zoneGaugeState != null) {
                     Spacer(modifier = Modifier.height(4.dp))
                     ZoneGaugeBar(
@@ -312,27 +360,30 @@ fun SensorFieldView(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 4.dp),
+                        trackHeight = resolveZoneGaugeTrackHeight(fieldState.viewSize, isBarOnly = !fieldState.showValue),
                         showBadge = (fieldState.viewSize >= ViewSize.NORMAL)
                     )
                 }
 
-                // Optional Pedal Power Balance Bar (REQ-UI-377, REQ-TRK-046)
+                // Optional Pedal Power Balance Bar (REQ-UI-377, REQ-TRK-046, REQ-UI-436)
                 if (fieldState.showBar && fieldState.pedalBalanceState != null) {
                     Spacer(modifier = Modifier.height(4.dp))
                     PedalPowerBalanceBar(
                         state = fieldState.pedalBalanceState,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 4.dp)
+                            .padding(horizontal = 4.dp),
+                        trackHeight = resolvePedalBalanceTrackHeight(fieldState.viewSize, isBarOnly = !fieldState.showValue)
                     )
                 }
 
-                // Optional W' Anaerobic Battery Gauge Bar (REQ-UI-416, REQ-TRK-046)
+                // Optional W' Anaerobic Battery Gauge Bar (REQ-UI-416, REQ-TRK-046, REQ-UI-436)
                 if (fieldState.showBar && fieldState.wPrimeBatteryState != null) {
                     Spacer(modifier = Modifier.height(4.dp))
                     WPrimeBatteryGaugeBar(
                         state = fieldState.wPrimeBatteryState,
                         viewSize = fieldState.viewSize,
+                        barHeight = resolveWPrimeBatteryHeight(fieldState.viewSize, isBarOnly = !fieldState.showValue),
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 4.dp)
