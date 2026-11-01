@@ -7998,37 +7998,43 @@ c. Span distance consistency: $
 
 **Invariants**: Telemetry stationarity, semi-transparency, touch pass-through, and 100% unit test pass rate MUST NOT be broken.
 
-### REQ-UI-322: General Map Layer Visibility Controls & Dynamic Decluttering Menu [`TST-UI-282`]
-- **Tests**: `MapScreenWithTrack.kt`, `MapFragmentWithTrackViewModel.kt`, `GeneralMapLayer.kt`
-- **Implementation**: Dynamic visibility controls for general map spatial layers via floating Layers button and dropdown menu, conditional ATrainingTrackerMap layer composition, and preference persistence.
-- **Rationale**: The system SHALL provide dynamic visibility controls for general map spatial layers via a floating Layers button and Material 3 dropdown menu in `MapScreenWithTrack.kt`, conditional layer composition in `ATrainingTrackerMap`, and preference persistence in `MapFragmentWithTrackViewModel` (ATT-2931, amending and complementing `REQ-UI-180` and `REQ-UI-308`):
+### REQ-UI-322: General Map Layer Visibility Controls & Dynamic Decluttering Menu [`TST-UI-282`] [Verified]
+- **Tests**: `MapScreenWithTrack.kt`, `MapFragmentWithTrackViewModel.kt`, `GeneralMapLayer.kt`, `TrackingViewModel.kt`, `SensorGridScreen.kt`
+- **Implementation**: Dynamic visibility controls for general map spatial layers via floating Layers button and dropdown menu, conditional ATrainingTrackerMap layer composition, preference persistence, and Cockpit tracking map integration.
+- **Rationale**: The system SHALL provide dynamic visibility controls for general map spatial layers via a floating Layers button and Material 3 dropdown menu in `MapScreenWithTrack.kt`, conditional layer composition in `ATrainingTrackerMap`, preference persistence in `MapFragmentWithTrackViewModel`, and Lieblingsstrecken rendering on the Cockpit map in `SensorGridScreen.kt` (ATT-2931, ATT-4847, amending and complementing `REQ-UI-180`, `REQ-UI-308`, and `REQ-MAP-051`):
 1. *Layer Model (`GeneralMapLayer`)*:
-• The system SHALL define `enum class GeneralMapLayer` in `com.atrainingtracker.trainingtracker.ui.map` declaring exactly four layer types: `ROUTES`, `SEGMENTS`, `KNOWN_LOCATIONS`, and `TRACK`.
+• The system SHALL define `enum class GeneralMapLayer` in `com.atrainingtracker.trainingtracker.ui.map` declaring five layer types: `ROUTES`, `SEGMENTS`, `KNOWN_LOCATIONS`, `TRACK`, and `CLUSTERS`.
 2. *ViewModel State & Persistence (`MapFragmentWithTrackViewModel.kt`)*:
 • `MapFragmentWithTrackViewModel` SHALL expose `val enabledLayers: StateFlow<Set<GeneralMapLayer>>`.
 • On initial instantiation, `MapFragmentWithTrackViewModel` SHALL restore enabled layers from `SharedPreferences` (`PREF_GENERAL_MAP_ENABLED_LAYERS`).
 • If no preferences are stored, the system SHALL default to enabling all layers (`GeneralMapLayer.entries.toSet()`).
 • `MapFragmentWithTrackViewModel` SHALL provide `fun toggleLayer(layer: GeneralMapLayer)`.
 • Toggling a layer SHALL immediately emit the updated set in `enabledLayers` and commit the updated string set to `SharedPreferences`.
+• `MapFragmentWithTrackViewModel` SHALL subscribe to `WorkoutClusterRepository.allClusters`, decode and memoize representative polylines into `MapCluster` instances with referential stability, and expose them via `MapFragmentUIState.clusters`.
 3. *Ergonomic Floating Layers Button & Dropdown Menu (`MapScreenWithTrack.kt`)*:
 • `MapScreenWithTrack.kt` SHALL wrap `ATrainingTrackerMap` in a `Box(modifier = Modifier.fillMaxSize())` inside the `BottomSheetScaffold` body.
 • `MapScreenWithTrack.kt` SHALL render a floating circular button at `Alignment.TopEnd` with `.statusBarsPadding().padding(top = 16.dp, end = 16.dp)`.
 • The button SHALL be a `Surface` with `size = 44.dp`, `shape = CircleShape`, `color = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay)`, `shadowElevation = 6.dp`, and `tonalElevation = 2.dp`.
 • The button SHALL contain an `Icon` with `Icons.Default.Layers` (`size = 22.dp`), whose tint dynamically resolves to `MaterialTheme.colorScheme.primary` when any layer is disabled (`enabledLayers.size < GeneralMapLayer.entries.size`) or `MaterialTheme.colorScheme.onSurface` when all layers are enabled.
 • Clicking the button SHALL open a Material 3 `DropdownMenu` styled consistently with `TrackOnMapScreen.kt` and `RouteOnMapScreen.kt`.
-• The dropdown menu SHALL render four `DropdownMenuItem` entries with checkbox, color legend swatch (`12.dp`, `RoundedCornerShape(2.dp)`: Routes = `TTColor.RouteSelected`, Segments = `TTColor.StravaOrange`, Locations = `MaterialTheme.colorScheme.tertiary`, Track = `TrackType.BEST.color`), and localized text label.
+• The dropdown menu SHALL render five `DropdownMenuItem` entries with checkbox, color legend swatch (`12.dp`, `RoundedCornerShape(2.dp)`: Routes = `TTColor.RouteSelected`, Segments = `TTColor.StravaOrange`, Locations = `MaterialTheme.colorScheme.tertiary`, Track = `TrackType.BEST.color`, Clusters = `TTColor.Cluster`), and localized text label.
 4. *Conditional Map Canvas Layer Composition*:
-• In `ATrainingTrackerMap`'s content scope: `knownLocations()`, `segments()`, `routes()`, and `markers()` + `liveTrack()` SHALL only be composed when their corresponding `GeneralMapLayer` is present in `enabledLayers`.
-5. *100% 9-Language Localization Parity*:
-• String resources `map_layers`, `map_layer_routes`, `map_layer_segments`, `map_layer_locations`, `map_layer_track` SHALL be externalized and translated across all 9 supported application locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).
-6. *Preservation of System Invariants*:
+• In `ATrainingTrackerMap`'s content scope: `knownLocations()`, `segments()`, `routes()`, `clusters()`, and `markers()` + `liveTrack()` SHALL only be composed when their corresponding `GeneralMapLayer` is present in `enabledLayers`.
+• Tapping a cluster path SHALL open `ClusterOnMapSheet` displaying cluster summary (name, sport, distance, hit count).
+5. *Cockpit Live Tracking Map Integration (`TrackingViewModel.kt`, `SensorGridScreen.kt`)*:
+• `TrackingMapState` SHALL expose `val mapClusters: List<MapCluster> = emptyList()`.
+• `TrackingViewModel` SHALL integrate `WorkoutClusterRepository.allClusters` into `staticMapLayerFlow` via `distinctUntilChanged()`, decoupled from 1-Hz GPS and telemetry emissions to strictly prevent polyline reallocations.
+• `TrackingMapContainer` in `SensorGridScreen.kt` SHALL render `clusters(mapState.mapClusters)` on `ATrainingTrackerMap`.
+6. *100% 9-Language Localization Parity*:
+• String resources `map_layers`, `map_layer_routes`, `map_layer_segments`, `map_layer_locations`, `map_layer_track`, and `map_layer_clusters` SHALL be externalized and translated across all 9 supported application locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).
+7. *Preservation of System Invariants*:
 • Entity selection bottom sheets, background GPS tracking, start marker detection, and 100% test pass rate MUST be strictly preserved.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement (`REQ-UI-322`), amending and complementing `REQ-UI-180` (*Display Favorite Locations on Central Navigation Map*) and `REQ-UI-308` (*Route Map Overlay Layer Visibility Controls*).
-2. *Historical Origin & Commit Trace*: Ticket `ATT-1449` (Sprint 2026-40.4) and Ticket `ATT-2763` (Sprint 2026-41.4).
-3. *Root Reason for Existing Formulation*: Spatial layers were previously composed unconditionally on the general map. As routes, segments, and favorite locations accumulated, the map canvas suffered from severe visual crowding.
-4. *Preservation of Core Invariants*: Full touch target compliance (>= 48dp), entity detail sheet inspection, live track recording, and 100% test pass rate remain strictly preserved.
+1. *Original Requirement ID & Target*: Net-new requirement (`REQ-UI-322`), amending and complementing `REQ-UI-180` (*Display Favorite Locations on Central Navigation Map*) and `REQ-UI-308` (*Route Map Overlay Layer Visibility Controls*). Amended under `ATT-4847` to include `CLUSTERS` layer and Cockpit live tracking map integration.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-1449` (Sprint 2026-40.4), Ticket `ATT-2763` (Sprint 2026-41.4), and Ticket `ATT-4847` (Sprint 2026-44.2).
+3. *Root Reason for Existing Formulation*: Spatial layers were previously composed unconditionally on the general map. As routes, segments, and favorite locations accumulated, the map canvas suffered from severe visual crowding. Clusters were originally omitted because favorite route clusters (`ATT-176`) were only visible in post-workout cluster views.
+4. *Preservation of Core Invariants*: Full touch target compliance (>= 48dp), entity detail sheet inspection, live track recording, referential polyline stability per `REQ-MAP-051`, and 100% test pass rate remain strictly preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* the athlete viewing `MapScreenWithTrack`,
@@ -8036,15 +8042,18 @@ c. Span distance consistency: $
 • *Then* a floating layers button (`Icons.Default.Layers`) is visible at `Alignment.TopEnd` with `statusBarsPadding().padding(top = 16.dp, end = 16.dp)`.
 • *Given* the athlete taps the layers button,
 • *When* the dropdown menu opens,
-• *Then* checkboxes for Routes, Segments, Favorite Locations, and Recorded Track are displayed with color legend swatches and localized labels.
+• *Then* checkboxes for Routes, Segments, Favorite Locations, Favorite Tracks / Clusters, and Recorded Track are displayed with color legend swatches and localized labels.
 • *Given* an unchecked layer in the dropdown menu,
 • *When* observing the map canvas,
 • *Then* that layer's elements are immediately hidden without disturbing other active layers or background tracking.
 • *Given* modified layer visibility preferences,
 • *When* restarting the application or returning to the map,
 • *Then* the layer selection state is restored from `SharedPreferences`.
+• *Given* the athlete viewing the Cockpit map during preview or live tracking,
+• *When* favorite route clusters exist in `WorkoutClusterRepository`,
+• *Then* their representative polylines are rendered on `ATrainingTrackerMap` without 1-Hz reallocation.
 
-**Invariants**: Detail sheet inspection, live GPS tracking, start marker detection, and 100% test pass rate MUST NOT be broken.
+**Invariants**: Detail sheet inspection, live GPS tracking, start marker detection, referential polyline stability (`REQ-MAP-051`), and 100% test pass rate MUST NOT be broken.
 
 ### REQ-UI-323: Material 3 Compose Migration for ANT Missing Adapter and Missing Dependency Alerts with Direct ANT+ Status Sheet Integration [TST-UI-283]
 - **Tests**: AntAlertDialogs.kt, MainActivityWithNavigation.kt, ATrainingTrackerApp.kt

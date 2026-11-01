@@ -63,6 +63,7 @@ class TrackingMapIsolationContractTest {
         assertTrue(state.mapTracks.isEmpty())
         assertTrue(state.mapSegments.isEmpty())
         assertTrue(state.mapRoutes.isEmpty())
+        assertTrue(state.mapClusters.isEmpty())
         assertTrue(state.mapMarkers.isEmpty())
     }
 
@@ -80,6 +81,7 @@ class TrackingMapIsolationContractTest {
         assertEquals(screenState.currentTrack, screenState.mapState.currentTrack)
         assertEquals(screenState.mapTracks, screenState.mapTracks)
         assertEquals(screenState.mapRoutes, screenState.mapRoutes)
+        assertEquals(screenState.mapClusters, screenState.mapClusters)
     }
 
     @Test

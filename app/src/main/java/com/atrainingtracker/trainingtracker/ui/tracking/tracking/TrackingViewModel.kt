@@ -42,11 +42,14 @@ import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.settings.ZoneDisplayOptions
 import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
+import com.atrainingtracker.trainingtracker.ui.map.MapCluster
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
 import com.atrainingtracker.trainingtracker.ui.map.MapRoute
 import com.atrainingtracker.trainingtracker.ui.map.MapTrack
 import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
+import com.atrainingtracker.trainingtracker.ui.map.toMapCluster
 import com.atrainingtracker.trainingtracker.ui.map.toMapRoute
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.google.android.gms.maps.model.LatLng
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.ElevationProfileScope
@@ -105,6 +108,7 @@ data class TrackingScreenState(
     val mapSegments: List<MapSegment> = mapState.mapSegments,
     val activeLiveSegmentIds: Set<Long> = mapState.activeLiveSegmentIds,
     val mapRoutes: List<MapRoute> = mapState.mapRoutes,
+    val mapClusters: List<MapCluster> = mapState.mapClusters,
     val mapMarkers: List<LocationMarker> = mapState.mapMarkers
 )
 
@@ -113,13 +117,14 @@ data class TrackingScreenState(
  * It is responsible for fetching the configuration for its viewId, subscribing to live sensor data,
  * and mapping that data into a UI-ready state for the composables to render.
  */
-class TrackingViewModel(
+class TrackingViewModel @JvmOverloads constructor(
     private val application: Application,
     val trackingViewsRepository: TrackingViewsRepository,
     val banalServiceRepository: BANALServiceRepository,
     val liveSegmentsRepository: LiveSegmentsRepository,
     val routesRepository: RoutesRepository,
-    private val viewId: Long
+    private val viewId: Long,
+    val workoutClusterRepository: WorkoutClusterRepository = WorkoutClusterRepository.getInstance(application)
 ) : ViewModel() {
 
     // --- The StateFlow to hold and expose the UI state ---
@@ -360,7 +365,8 @@ class TrackingViewModel(
     private data class StaticMapLayerData(
         val mapSegments: List<MapSegment>,
         val activeLiveSegmentIds: Set<Long>,
-        val mapRoutes: List<MapRoute>
+        val mapRoutes: List<MapRoute>,
+        val mapClusters: List<MapCluster>
     )
 
     private data class LiveTelemetryTuple(
@@ -401,15 +407,21 @@ class TrackingViewModel(
                 allRoutes.map { it.toMapRoute(isActiveNavigation = (it.summary.id == activeNavigatedRouteId)) }
             }.distinctUntilChanged()
 
+            val mapClustersFlow = workoutClusterRepository.allClusters
+                .map { list -> list.mapNotNull { it.toMapCluster() } }
+                .distinctUntilChanged()
+
             val staticMapLayerFlow = combine(
                 staticMapSegmentsFlow,
                 activeLiveSegmentIdsFlow,
-                mapRoutesFlow
-            ) { mapSegments, activeIds, mapRoutes ->
+                mapRoutesFlow,
+                mapClustersFlow
+            ) { mapSegments, activeIds, mapRoutes, mapClusters ->
                 StaticMapLayerData(
                     mapSegments = mapSegments,
                     activeLiveSegmentIds = activeIds,
-                    mapRoutes = mapRoutes
+                    mapRoutes = mapRoutes,
+                    mapClusters = mapClusters
                 )
             }
 
@@ -458,6 +470,7 @@ class TrackingViewModel(
                     mapSegments = staticLayers.mapSegments,
                     mapRoutes = staticLayers.mapRoutes,
                     activeLiveSegmentIds = staticLayers.activeLiveSegmentIds,
+                    mapClusters = staticLayers.mapClusters,
                     mapMarkers = markerList
                 )
             }.collect { newMapState ->

@@ -38,7 +38,8 @@ class GeneralMapLayersLocalizationTest {
         "map_layer_routes",
         "map_layer_segments",
         "map_layer_locations",
-        "map_layer_track"
+        "map_layer_track",
+        "map_layer_clusters"
     )
 
     @Test

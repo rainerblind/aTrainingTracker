@@ -1919,6 +1919,7 @@
     <string name="map_layer_segments">Segmente</string>
     <string name="map_layer_locations">Lieblingsorte</string>
     <string name="map_layer_track">Aufzeichnung</string>
+    <string name="map_layer_clusters">Lieblingsstrecken</string>
     <string name="ant_dialog_view_status">ANT+ Status anzeigen</string>
     <string name="ant_dialog_dismiss">Verstanden</string>
 

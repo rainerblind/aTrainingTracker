@@ -26,5 +26,6 @@ enum class GeneralMapLayer {
     ROUTES,
     SEGMENTS,
     KNOWN_LOCATIONS,
-    TRACK
+    TRACK,
+    CLUSTERS
 }

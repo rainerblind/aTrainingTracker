@@ -1830,6 +1830,7 @@
     <string name="map_layer_segments">Segmentos</string>
     <string name="map_layer_locations">Locais favoritos</string>
     <string name="map_layer_track">Trilha gravada</string>
+    <string name="map_layer_clusters">Trajetos favoritos</string>
     <string name="ant_dialog_view_status">Ver estado do ANT+</string>
     <string name="ant_dialog_dismiss">Entendido</string>
 

@@ -27,6 +27,7 @@ import com.atrainingtracker.util.safeEnumValueOfOrNull
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.elevation.ElevationSource
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository
@@ -39,6 +40,7 @@ import kotlinx.coroutines.launch
 data class MapFragmentUIState(
     val segments: List<MapSegment> = emptyList(),
     val routes: List<MapRoute> = emptyList(),
+    val clusters: List<MapCluster> = emptyList(),
     val knownLocations: List<KnownLocationItem> = emptyList(),
     val markers: List<LocationMarker> = emptyList(),
     val currentTrack: List<LatLng> = emptyList(),
@@ -51,12 +53,14 @@ class MapFragmentWithTrackViewModel @JvmOverloads constructor(
     banalRepo: BANALServiceRepository? = null,
     segmentsRepo: SegmentsRepository? = null,
     routesRepo: RoutesRepository? = null,
+    workoutClusterRepo: WorkoutClusterRepository? = null,
     prefs: SharedPreferences? = null
 ) : AndroidViewModel(application) {
 
     private val banalRepository = banalRepo ?: BANALServiceRepository.getInstance(application)
     private val segmentsRepository = segmentsRepo ?: SegmentsRepository.getInstance(application)
     private val routesRepository = routesRepo ?: RoutesRepository.getInstance(application)
+    private val workoutClusterRepository = workoutClusterRepo ?: WorkoutClusterRepository.getInstance(application)
     private val sharedPreferences = prefs ?: PreferenceManager.getDefaultSharedPreferences(application)
 
     private val _enabledLayers = MutableStateFlow(loadEnabledLayers())
@@ -83,6 +87,7 @@ class MapFragmentWithTrackViewModel @JvmOverloads constructor(
     val allRoutes = routesRepository.allRoutes
     val activeNavigatedRouteId = routesRepository.activeNavigatedRouteId
     val knownLocations = knownLocationsRepository.locationsFlow
+    val allClusters = workoutClusterRepository.allClusters
 
     private val mapRoutesFlow = combine(
         routesRepository.allRoutes,
@@ -91,13 +96,44 @@ class MapFragmentWithTrackViewModel @JvmOverloads constructor(
         allRoutes.map { it.toMapRoute(isActiveNavigation = (it.summary.id == activeRouteId)) }
     }
 
+    private val mapClustersFlow = workoutClusterRepository.allClusters.map { clusterList ->
+        clusterList.mapNotNull { it.toMapCluster() }
+    }.distinctUntilChanged()
+
+    private data class StaticMapLayers(
+        val segments: List<MapSegment>,
+        val routes: List<MapRoute>,
+        val clusters: List<MapCluster>,
+        val knownLocations: List<KnownLocationItem>
+    )
+
+    private val staticMapLayersFlow = combine(
+        segmentsRepository.allSegmentsWithPath,
+        mapRoutesFlow,
+        mapClustersFlow,
+        knownLocationsRepository.locationsFlow
+    ) { segments, routes, clusters, knownLocations ->
+        StaticMapLayers(
+            segments = segments.map { liveSegment ->
+                MapSegment(
+                    stravaId = liveSegment.summary.stravaId,
+                    name = liveSegment.summary.name,
+                    bSportType = liveSegment.summary.bSportType,
+                    path = liveSegment.path,
+                    showStartAndFinishText = true
+                )
+            },
+            routes = routes,
+            clusters = clusters,
+            knownLocations = knownLocations
+        )
+    }
+
     val uiState: StateFlow<MapFragmentUIState> = combine(
         banalRepository.bSportType,
         banalRepository.currentTrack,
-        segmentsRepository.allSegmentsWithPath,
-        mapRoutesFlow,
-        knownLocationsRepository.locationsFlow
-    ) { bSportType, currentTrack, liveSegments, routes, knownLocations ->
+        staticMapLayersFlow
+    ) { bSportType, currentTrack, staticLayers ->
 
         // Logic for Start Marker
         val markers = if (currentTrack.isNotEmpty()) {
@@ -113,17 +149,10 @@ class MapFragmentWithTrackViewModel @JvmOverloads constructor(
         }
 
         MapFragmentUIState(
-            segments = liveSegments.map { liveSegment ->
-                MapSegment(
-                    stravaId = liveSegment.summary.stravaId,
-                    name = liveSegment.summary.name,
-                    bSportType = liveSegment.summary.bSportType,
-                    path = liveSegment.path,
-                    showStartAndFinishText = true
-                )
-            },
-            routes = routes,
-            knownLocations = knownLocations,
+            segments = staticLayers.segments,
+            routes = staticLayers.routes,
+            clusters = staticLayers.clusters,
+            knownLocations = staticLayers.knownLocations,
             bSportType = bSportType,
             currentTrack = currentTrack,
             markers = markers

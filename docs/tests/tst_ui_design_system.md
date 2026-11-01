@@ -4399,26 +4399,31 @@
   3. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-282: **General Map Layer Visibility Controls & Preference Persistence Verification** [General map Layers menu toggles routes, segments, favorite locations, and live track; user layer visibility preferences persisted across sessions in SharedPreferences; 100% 9-language localization parity; 100% unit test pass rate.]
+### TST-UI-282: **General Map Layer Visibility Controls & Preference Persistence Verification** [General map Layers menu toggles routes, segments, favorite locations, favorite tracks / clusters, and live track; user layer visibility preferences persisted across sessions in SharedPreferences; Cockpit map renders clusters; 100% 9-language localization parity; 100% unit test pass rate.] [Verified]
 - **Requirement(s)**: `REQ-UI-322`
 - **Component**: **General Map Layer Visibility Controls & Preference Persistence Verification**
-- **Jira**: ``ATT-2931``
+- **Jira**: `ATT-2931`, `ATT-4847`
 - **Test Description**:
   1. *GeneralMapLayer Enum & Default State Contract (`GeneralMapLayersContractTest.kt`)*:
-  • Verify `GeneralMapLayer` enum declares `ROUTES`, `SEGMENTS`, `KNOWN_LOCATIONS`, `TRACK`.
-  • Verify default state enables all layers.
+  • Verify `GeneralMapLayer` enum declares `ROUTES`, `SEGMENTS`, `KNOWN_LOCATIONS`, `TRACK`, and `CLUSTERS` (exactly 5 entries).
+  • Verify default state enables all 5 layers.
   2. *MapFragmentWithTrackViewModel Layer Toggling & Persistence Contract (`GeneralMapLayersContractTest.kt`)*:
-  • Verify initial state loads from `SharedPreferences` or defaults to all layers.
+  • Verify initial state loads from `SharedPreferences` or defaults to all 5 layers.
   • Verify `toggleLayer(layer)` removes layer if present, adds if absent.
   • Verify toggling updates `_enabledLayers` and persists serialized set to `SharedPreferences`.
+  • Verify `MapFragmentWithTrackViewModel` subscribes to `WorkoutClusterRepository.allClusters` and exposes memoized `clusters: List<MapCluster>` in `uiState`.
   3. *MapScreenWithTrack UI Structure & Conditional Layer Delegation (`GeneralMapLayersContractTest.kt`)*:
   • Verify `MapScreenWithTrack.kt` includes `Icons.Default.Layers` button.
   • Verify floating surface at `Alignment.TopEnd` with `statusBarsPadding().padding(top = 16.dp, end = 16.dp)`.
-  • Verify dropdown menu includes checkboxes and swatches for all 4 layers.
-  • Verify conditional rendering of `knownLocations()`, `segments()`, `routes()`, and `markers()` + `liveTrack()`.
-  4. *9-Language Localization Parity Audit (`GeneralMapLayersLocalizationTest.kt`)*:
-  • Verify string resources `map_layers`, `map_layer_routes`, `map_layer_segments`, `map_layer_locations`, `map_layer_track` exist and are non-empty across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
-  5. *Full Clean-Room Regression Suite*:
+  • Verify dropdown menu includes checkboxes and swatches for all 5 layers.
+  • Verify conditional rendering of `knownLocations()`, `segments()`, `routes()`, `clusters()`, and `markers()` + `liveTrack()`.
+  4. *Cockpit Map Cluster Integration & Decoupling Contract (`TrackingViewModelTest.kt`, `SensorGridScreenTest.kt`)*:
+  • Verify `TrackingMapState` exposes `mapClusters`.
+  • Verify `TrackingViewModel` integrates `WorkoutClusterRepository.allClusters` into `staticMapLayerFlow` via `distinctUntilChanged()`, decoupled from 1-Hz telemetry.
+  • Verify `TrackingMapContainer` passes `clusters(mapState.mapClusters)` to `MapContentScope`.
+  5. *9-Language Localization Parity Audit (`GeneralMapLayersLocalizationTest.kt`)*:
+  • Verify string resources `map_layers`, `map_layer_routes`, `map_layer_segments`, `map_layer_locations`, `map_layer_track`, `map_layer_clusters` exist and are non-empty across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+  6. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
 ### TST-UI-283: **Material 3 Compose ANT Missing Adapter & Dependency Alerts Verification** [Missing adapter and missing dependency alerts modernized to Material 3 Compose with official untinted ANT+ logo; direct shortcut to AntServicesStatusSheet; German typo corrected; 100% 9-language translation parity; 100% unit test pass rate.]

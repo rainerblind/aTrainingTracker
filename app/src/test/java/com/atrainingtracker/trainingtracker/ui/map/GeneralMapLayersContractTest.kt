@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.map
 import android.app.Application
 import android.content.SharedPreferences
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
@@ -57,6 +58,7 @@ class GeneralMapLayersContractTest {
     private lateinit var mockBanalRepository: BANALServiceRepository
     private lateinit var mockSegmentsRepository: SegmentsRepository
     private lateinit var mockRoutesRepository: RoutesRepository
+    private lateinit var mockWorkoutClusterRepository: WorkoutClusterRepository
     private lateinit var mockPrefs: SharedPreferences
     private lateinit var mockEditor: SharedPreferences.Editor
 
@@ -68,6 +70,7 @@ class GeneralMapLayersContractTest {
         mockBanalRepository = mockk(relaxed = true)
         mockSegmentsRepository = mockk(relaxed = true)
         mockRoutesRepository = mockk(relaxed = true)
+        mockWorkoutClusterRepository = mockk(relaxed = true)
         mockPrefs = mockk(relaxed = true)
         mockEditor = mockk(relaxed = true)
 
@@ -77,6 +80,7 @@ class GeneralMapLayersContractTest {
         every { mockBanalRepository.currentLocation } returns MutableStateFlow(null)
         every { mockSegmentsRepository.allSegmentsWithPath } returns MutableStateFlow(emptyList())
         every { mockRoutesRepository.allRoutes } returns MutableStateFlow(emptyList())
+        every { mockWorkoutClusterRepository.allClusters } returns MutableStateFlow(emptyList())
 
         every { mockPrefs.edit() } returns mockEditor
         every { mockEditor.putStringSet(any(), any()) } returns mockEditor
@@ -95,6 +99,7 @@ class GeneralMapLayersContractTest {
             banalRepo = mockBanalRepository,
             segmentsRepo = mockSegmentsRepository,
             routesRepo = mockRoutesRepository,
+            workoutClusterRepo = mockWorkoutClusterRepository,
             prefs = prefs
         )
     }
@@ -102,11 +107,12 @@ class GeneralMapLayersContractTest {
     @Test
     fun testGeneralMapLayer_enumEntries() {
         val entries = GeneralMapLayer.entries
-        assertEquals("GeneralMapLayer must have exactly 4 entries", 4, entries.size)
+        assertEquals("GeneralMapLayer must have exactly 5 entries", 5, entries.size)
         assertTrue(entries.contains(GeneralMapLayer.ROUTES))
         assertTrue(entries.contains(GeneralMapLayer.SEGMENTS))
         assertTrue(entries.contains(GeneralMapLayer.KNOWN_LOCATIONS))
         assertTrue(entries.contains(GeneralMapLayer.TRACK))
+        assertTrue(entries.contains(GeneralMapLayer.CLUSTERS))
     }
 
     @Test
@@ -132,7 +138,7 @@ class GeneralMapLayersContractTest {
         verify {
             mockEditor.putStringSet(
                 MapFragmentWithTrackViewModel.PREF_GENERAL_MAP_ENABLED_LAYERS,
-                match { set -> !set.contains("ROUTES") && set.contains("SEGMENTS") && set.contains("TRACK") && set.contains("KNOWN_LOCATIONS") }
+                match { set -> !set.contains("ROUTES") && set.contains("SEGMENTS") && set.contains("TRACK") && set.contains("KNOWN_LOCATIONS") && set.contains("CLUSTERS") }
             )
             mockEditor.apply()
         }
@@ -143,9 +149,32 @@ class GeneralMapLayersContractTest {
         verify {
             mockEditor.putStringSet(
                 MapFragmentWithTrackViewModel.PREF_GENERAL_MAP_ENABLED_LAYERS,
-                match { set -> set.contains("ROUTES") && set.contains("SEGMENTS") && set.contains("TRACK") && set.contains("KNOWN_LOCATIONS") }
+                match { set -> set.contains("ROUTES") && set.contains("SEGMENTS") && set.contains("TRACK") && set.contains("KNOWN_LOCATIONS") && set.contains("CLUSTERS") }
             )
         }
+    }
+
+    @Test
+    fun testToggleClusterLayer_persistsAndUpdatesFlow() = runTest {
+        every { mockPrefs.getStringSet(MapFragmentWithTrackViewModel.PREF_GENERAL_MAP_ENABLED_LAYERS, null) } returns null
+
+        val viewModel = createViewModel()
+        assertTrue("Initially CLUSTERS is enabled", GeneralMapLayer.CLUSTERS in viewModel.enabledLayers.value)
+
+        // Toggle CLUSTERS off
+        viewModel.toggleLayer(GeneralMapLayer.CLUSTERS)
+        assertFalse("CLUSTERS must be disabled after toggle", GeneralMapLayer.CLUSTERS in viewModel.enabledLayers.value)
+        verify {
+            mockEditor.putStringSet(
+                MapFragmentWithTrackViewModel.PREF_GENERAL_MAP_ENABLED_LAYERS,
+                match { set -> !set.contains("CLUSTERS") && set.contains("ROUTES") && set.contains("SEGMENTS") && set.contains("TRACK") && set.contains("KNOWN_LOCATIONS") }
+            )
+            mockEditor.apply()
+        }
+
+        // Toggle CLUSTERS back on
+        viewModel.toggleLayer(GeneralMapLayer.CLUSTERS)
+        assertTrue("CLUSTERS must be re-enabled after toggle", GeneralMapLayer.CLUSTERS in viewModel.enabledLayers.value)
     }
 
     @Test
@@ -201,6 +230,10 @@ class GeneralMapLayersContractTest {
         assertTrue(
             "Must gate track with GeneralMapLayer.TRACK in enabledLayers",
             content.contains("GeneralMapLayer.TRACK in enabledLayers")
+        )
+        assertTrue(
+            "Must gate clusters with GeneralMapLayer.CLUSTERS in enabledLayers",
+            content.contains("GeneralMapLayer.CLUSTERS in enabledLayers")
         )
     }
 

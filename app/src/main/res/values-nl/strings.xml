@@ -1830,6 +1830,7 @@
     <string name="map_layer_segments">Segmenten</string>
     <string name="map_layer_locations">Favoriete locaties</string>
     <string name="map_layer_track">Opgenomen track</string>
+    <string name="map_layer_clusters">Favoriete tracks</string>
     <string name="ant_dialog_view_status">ANT+ status weergeven</string>
     <string name="ant_dialog_dismiss">Begrepen</string>
 

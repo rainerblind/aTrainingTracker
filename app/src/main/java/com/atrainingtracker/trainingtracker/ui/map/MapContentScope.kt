@@ -66,6 +66,11 @@ interface MapContentScope {
      * Renders planned routes with standardized selected/unselected styling.
      */
     fun routes(routes: List<MapRoute>, onRouteClick: (Long) -> Unit = {})
+
+    /**
+     * Renders favorite route clusters (Lieblingsstrecken) with distinct styling and optional click callback.
+     */
+    fun clusters(clusters: List<MapCluster>, onClusterClick: (Long) -> Unit = {})
     
     /**
      * Renders background context paths (e.g., other routes in the area) using tiered alpha.
@@ -155,11 +160,13 @@ internal class MapContentScopeImpl(
     private val trackData = mutableStateListOf<PathData>()
     private val segmentData = mutableStateListOf<PathData>()
     private val routeData = mutableStateListOf<PathData>()
+    private val clusterData = mutableStateListOf<PathData>()
 
     // Exposed for Bounds Controller
     val tracks: List<MapTrack> get() = trackData.map { it.path as MapTrack }
     val segments: List<MapSegment> get() = segmentData.map { it.path as MapSegment }
     val routes: List<MapRoute> get() = routeData.map { it.path as MapRoute }
+    val clusters: List<MapCluster> get() = clusterData.map { it.path as MapCluster }
     
     val markers = mutableStateListOf<LocationMarker>()
     val currentTracks = mutableStateListOf<List<LatLng>>()
@@ -194,6 +201,7 @@ internal class MapContentScopeImpl(
         trackData.clear()
         segmentData.clear()
         routeData.clear()
+        clusterData.clear()
         markers.clear()
         currentTracks.clear()
         heatmaps.clear()
@@ -328,6 +336,20 @@ internal class MapContentScopeImpl(
             }
         }
 
+        // 4b. Clusters (Lieblingsstrecken)
+        clusterData.forEach { data ->
+            androidx.compose.runtime.key(data.path.id) {
+                MappablePathLayer(
+                    path = data.path,
+                    alpha = data.alpha,
+                    currentZoom = currentZoom,
+                    context = context,
+                    directionIcons = directionIcons,
+                    onPathClick = data.onClick
+                )
+            }
+        }
+
         // 5. Markers
         if (markers.isNotEmpty()) {
             // ATT-342 Refinement: Dynamically adjust member marker visibility
@@ -405,6 +427,7 @@ internal class MapContentScopeImpl(
             is MapTrack -> trackData.add(data)
             is MapSegment -> segmentData.add(data)
             is MapRoute -> routeData.add(data)
+            is MapCluster -> clusterData.add(data)
             else -> {}
         }
     }
@@ -429,6 +452,12 @@ internal class MapContentScopeImpl(
     override fun routes(routes: List<MapRoute>, onRouteClick: (Long) -> Unit) {
         routes.forEach { route ->
             this.routeData.add(PathData(route, 1.0f, onRouteClick))
+        }
+    }
+
+    override fun clusters(clusters: List<MapCluster>, onClusterClick: (Long) -> Unit) {
+        clusters.forEach { cluster ->
+            this.clusterData.add(PathData(cluster, 1.0f, onClusterClick))
         }
     }
 
