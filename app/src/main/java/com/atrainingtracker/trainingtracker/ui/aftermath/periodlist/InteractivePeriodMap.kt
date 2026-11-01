@@ -180,7 +180,7 @@ fun InteractivePeriodMap(
 
             // 4. Render full heatmap as it becomes ready in the background (REQ-PER-024.1)
             if (heatmapPaths.isNotEmpty()) {
-                heatmap(heatmapPaths, opacity = 1.0, colorLut = ThermalColorLut.HOT)
+                heatmap(heatmapPaths, opacity = 1.0, colorLut = ThermalColorLut.HOT, normalizeCorridors = true)
             }
         }
     )

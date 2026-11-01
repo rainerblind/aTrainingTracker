@@ -23,6 +23,7 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.TileProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -499,5 +500,66 @@ class PolylineHeatmapTileProviderTest {
         assertEquals(5.0f, legacyProvider.calculateEffectiveStrokeWidth(10), 0.01f)
         assertEquals(5.0f, legacyProvider.calculateEffectiveStrokeWidth(16), 0.01f)
         assertSame("Color LUT must be ThermalColorLut.BLUE", ThermalColorLut.BLUE, legacyProvider.colorLut)
+    }
+
+    /**
+     * TST-MAP-060.2: Classic Step Intensity Strategy (ATT-4931 / REQ-MAP-058.2).
+     * Asserts that classic step intensity evaluates thresholds at 5, 20, 60, and 150 paths.
+     */
+    @Test
+    fun testClassicStepIntensityThresholds_TST_MAP_060_2() {
+        // <= 5 paths: 0.25f -> round(255 * 0.25) = 64
+        assertEquals(64, PolylineHeatmapTileProvider.calculateClassicStepIntensity(1))
+        assertEquals(64, PolylineHeatmapTileProvider.calculateClassicStepIntensity(5))
+
+        // <= 20 paths: 0.15f -> round(255 * 0.15) = 38
+        assertEquals(38, PolylineHeatmapTileProvider.calculateClassicStepIntensity(6))
+        assertEquals(38, PolylineHeatmapTileProvider.calculateClassicStepIntensity(20))
+
+        // <= 60 paths: 0.08f -> round(255 * 0.08) = 20
+        assertEquals(20, PolylineHeatmapTileProvider.calculateClassicStepIntensity(21))
+        assertEquals(20, PolylineHeatmapTileProvider.calculateClassicStepIntensity(60))
+
+        // <= 150 paths: 0.05f -> round(255 * 0.05) = 13
+        assertEquals(13, PolylineHeatmapTileProvider.calculateClassicStepIntensity(61))
+        assertEquals(13, PolylineHeatmapTileProvider.calculateClassicStepIntensity(150))
+
+        // > 150 paths: 0.035f -> round(255 * 0.035) = 9
+        assertEquals(9, PolylineHeatmapTileProvider.calculateClassicStepIntensity(151))
+        assertEquals(9, PolylineHeatmapTileProvider.calculateClassicStepIntensity(500))
+
+        // Explicit override
+        assertEquals(51, PolylineHeatmapTileProvider.calculateClassicStepIntensity(100, intensityPerPass = 0.20f))
+    }
+
+    /**
+     * TST-MAP-060.3: Workout Clusters Provider with Classic Intensity and CLASSIC_BLUE LUT (ATT-4931 / REQ-MAP-058.3).
+     * Asserts that tile provider operates without logarithmic compression when maxCorridorPassCount is null.
+     */
+    @Test
+    fun testClusterProviderWithClassicIntensityAndClassicBlue_TST_MAP_060_3() {
+        val clusterProvider = PolylineHeatmapTileProvider(
+            allPaths = listOf(sampleRoute1),
+            colorLut = ThermalColorLut.CLASSIC_BLUE,
+            useClassicStepIntensity = true,
+            maxCorridorPassCount = null
+        )
+
+        assertSame(ThermalColorLut.CLASSIC_BLUE, clusterProvider.colorLut)
+        assertTrue(clusterProvider.useClassicStepIntensity)
+        assertNull(clusterProvider.maxCorridorPassCount)
+
+        // Tile generation for intersecting tile (48.5°N, 9.0°E at zoom 12)
+        val zoom = 12
+        val nTiles = 1 shl zoom
+        val x = ((9.0 + 180.0) / 360.0 * nTiles).toInt()
+        val latRad = Math.toRadians(48.5)
+        val y = ((1.0 - Math.log(Math.tan(Math.PI / 4 + latRad / 2)) / Math.PI) / 2.0 * nTiles).toInt()
+
+        val tile = clusterProvider.getTile(x, y, zoom)
+        assertNotNull("Tile must be generated for sample route", tile)
+        val tileData = tile?.data
+        assertNotNull("Tile data must not be null", tileData)
+        assertTrue("Tile bytes must be non-empty", tileData!!.isNotEmpty())
     }
 }

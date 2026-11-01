@@ -111,6 +111,46 @@ class ThermalColorLutTest {
     }
 
     @Test
+    fun testClassicBlueLutAlphaStopsAndOpacity_TST_MAP_060_1() {
+        val classicLut = ThermalColorLut.CLASSIC_BLUE
+        assertEquals("CLASSIC_BLUE default opacity must be 0.8", 0.8, classicLut.opacity, 0.001)
+
+        // Index 0 must be fully transparent
+        assertEquals(0, classicLut.getColor(0))
+
+        // Index 1 (low density / cyan): base alpha 51 * 0.8 = 41
+        val lowColor = classicLut.getColor(1)
+        val lowAlpha = (lowColor shr 24) and 0xFF
+        val lowGreen = (lowColor shr 8) and 0xFF
+        val lowBlue = lowColor and 0xFF
+        assertEquals(41, lowAlpha)
+        assertTrue("Low intensity green should be prominent in cyan", lowGreen > 200)
+        assertEquals("Low intensity blue should be 255", 255, lowBlue)
+
+        // Index 128 (mid density / pure blue): base alpha 77 * 0.8 = 62
+        val midColor = classicLut.getColor(128)
+        val midAlpha = (midColor shr 24) and 0xFF
+        val midBlue = midColor and 0xFF
+        assertEquals(62, midAlpha)
+        assertEquals("Mid intensity blue should be 255", 255, midBlue)
+
+        // Index 255 (high density / deep indigo): base alpha 180 * 0.8 = 144
+        val highColor = classicLut.getColor(255)
+        val highAlpha = (highColor shr 24) and 0xFF
+        val highRed = (highColor shr 16) and 0xFF
+        val highBlue = highColor and 0xFF
+        assertEquals(144, highAlpha)
+        assertEquals(49, highRed)
+        assertEquals(146, highBlue)
+
+        // Verify that CLASSIC_BLUE has lower alpha than the boosted BLUE_STOPS (55%/80%/100%), proving pre-ATT-4833 look
+        val periodBlueLut = ThermalColorLut.BLUE
+        val periodHighAlpha = (periodBlueLut.getColor(255) shr 24) and 0xFF
+        assertEquals("BLUE has 100% alpha (255) in Periods", 255, periodHighAlpha)
+        assertTrue("CLASSIC_BLUE alpha (144) must be significantly lower than Periods BLUE (255)", highAlpha < periodHighAlpha)
+    }
+
+    @Test
     fun testCustomStopsConstructor() {
         val customStops = arrayOf(
             Pair(0.0f, intArrayOf(10, 20, 30, 100)),

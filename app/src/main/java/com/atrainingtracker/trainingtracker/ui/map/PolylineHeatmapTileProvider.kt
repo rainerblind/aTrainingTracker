@@ -66,7 +66,8 @@ class PolylineHeatmapTileProvider(
     val tileSize: Int = 256,
     val maxCorridorPassCount: Int? = null,
     val isMiniMap: Boolean = false,
-    val dynamicStrokeScaling: Boolean = true
+    val dynamicStrokeScaling: Boolean = true,
+    val useClassicStepIntensity: Boolean = false
 ) : TileProvider {
 
     /**
@@ -104,9 +105,28 @@ class PolylineHeatmapTileProvider(
         }
     }
 
-    private val stepIntensity: Int = calculateStepIntensity(allPaths.size, intensityPerPass)
+    private val stepIntensity: Int = if (useClassicStepIntensity) {
+        calculateClassicStepIntensity(allPaths.size, intensityPerPass)
+    } else {
+        calculateStepIntensity(allPaths.size, intensityPerPass)
+    }
 
     companion object {
+        /**
+         * Calculates classic linear pass intensity [1..255] based on aggregate workout count (pre-ATT-4833 / REQ-MAP-058.2).
+         * Saturates after 4..29 passes: <=5: 0.25f, <=20: 0.15f, <=60: 0.08f, <=150: 0.05f, >150: 0.035f.
+         */
+        fun calculateClassicStepIntensity(pathCount: Int, intensityPerPass: Float? = null): Int {
+            val fraction = intensityPerPass ?: when {
+                pathCount <= 5 -> 0.25f
+                pathCount <= 20 -> 0.15f
+                pathCount <= 60 -> 0.08f
+                pathCount <= 150 -> 0.05f
+                else -> 0.035f
+            }
+            return (255 * fraction).roundToInt().coerceIn(1, 255)
+        }
+
         /**
          * Calculates the adaptive pass intensity [1..255] based on aggregate workout count (REQ-PER-024.4).
          */

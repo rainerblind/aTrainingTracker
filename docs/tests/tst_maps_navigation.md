@@ -995,3 +995,22 @@
   • Verify that supplying default or blue palette retains previous rasterization behavior, decoupling Workout Clusters (`ATT-4931`).
   5. *Targeted Regression Verification (`TST-MAP-059.5`)*:
   • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.map.*" --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"` to verify 100% clean-room test pass rate.
+
+
+
+### TST-MAP-060: **Workout Clusters Heatmap Decoupling & Pre-ATT-4833 Visual Restoration Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-MAP-058` (`REQ-MAP-058.1`..`REQ-MAP-058.5`)
+- **Component**: `ThermalColorLutTest.kt`, `PolylineHeatmapTileProviderTest.kt`, `MapContentScopeTest.kt`, `WorkoutClusterHeatmapTest.kt`
+- **Jira**: `ATT-4931`
+- **Test Description**:
+  1. *Classic Blue Color Palette Preset & Alpha Stops Verification (`TST-MAP-060.1`, `ThermalColorLutTest.kt`)*:
+  • Verify `ThermalColorLut.CLASSIC_BLUE` maps index 0 to transparent (`0x00000000`).
+  • Verify base alphas (51, 77, 180) scaled by opacity 0.8 yield effective alphas ~41, ~62, and ~144 across low, mid, and high intensities, restoring pre-ATT-4833 look.
+  2. *Classic Pass-Intensity Strategy Verification (`TST-MAP-060.2`, `PolylineHeatmapTileProviderTest.kt`)*:
+  • Verify `calculateClassicStepIntensity` returns exact step intensity factors (0.25f, 0.15f, 0.08f, 0.05f, 0.035f) across dataset size partitions (<=5, <=20, <=60, <=150, >150).
+  3. *Corridor Normalization Opt-In Gating Verification (`TST-MAP-060.3`, `MapContentScopeTest.kt`)*:
+  • Verify `MapContentScope.heatmap` with `normalizeCorridors = false` does not calculate corridor maximums and retains uncompressed step accumulation.
+  4. *Workout Clusters Decoupling Call Site Verification (`TST-MAP-060.4`)*:
+  • Verify `WorkoutClusterHeatmapScreen.kt` configures `CLASSIC_BLUE` and `normalizeCorridors = false`, ensuring Periods changes do not impact Workout Clusters.
+  5. *Targeted Regression Verification Suite (`TST-MAP-060.5`)*:
+  • Execute targeted tests across `ui.map.*`, `ui.clusters.*`, and `ui.aftermath.periodlist.*` verifying 100% clean-room test pass rate.

@@ -1893,3 +1893,49 @@
 • *Then* default palette/stroke parameters are preserved without visual regression.
 
 **Invariants**: Zero database changes, thread safety on `Dispatchers.Default`, compliance with `TTColor` theme centralization, and 100% clean-room test pass rate.
+
+
+
+### REQ-MAP-058: Decouple Workout Clusters Heatmap from Periods Styling & Restore Pre-ATT-4833 Visual Appearance [Verified]
+- **Tests**: `TST-MAP-060` | **Tickets**: `ATT-4931`
+- **Implementation**: `ThermalColorLut.kt`, `PolylineHeatmapTileProvider.kt`, `MapContentScope.kt`, `WorkoutClusterHeatmapScreen.kt`
+- **Rationale**: The system SHALL decouple Workout Clusters heatmap styling from Periods shared components and restore the exact pre-ATT-4833 visual appearance (alpha stops 20% / 30% / 70%, opacity 0.8, classic linear step intensity) while keeping Periods heatmap configuration (ThermalColorLut.HOT, zoom-adaptive stroke scaling, and logarithmic corridor normalization) fully intact (ATT-4931, Parent Epic ATT-4474, refining REQ-MAP-056 and REQ-MAP-057):
+1. *Classic Sequential Blue Color Palette Preset (`ThermalColorLut.CLASSIC_BLUE`, `REQ-MAP-058.1`)*:
+• The system SHALL provide a dedicated `CLASSIC_BLUE` preset in `ThermalColorLut` with base alpha stops at 20% (51), 30% (77), and 70% (180), and global layer opacity 0.8:
+  - Low density (0.0): Light Cyan `#00E5FF` (base alpha 51, effective ~41)
+  - Medium density (0.5): Pure Blue `#0000FF` (base alpha 77, effective ~62)
+  - High density (1.0): Deep Indigo `#311B92` (base alpha 180, effective ~144)
+• Index 0 SHALL remain fully transparent (`0x00000000`).
+2. *Classic Pass-Intensity Strategy (`REQ-MAP-058.2`)*:
+• `PolylineHeatmapTileProvider` SHALL provide a classic step intensity calculation strategy (`calculateClassicStepIntensity`) saturating after 4..29 passes:
+  - $\le 5$ workouts: $0.25f$ (saturates in 4 passes)
+  - $\le 20$ workouts: $0.15f$ (saturates in 7 passes)
+  - $\le 60$ workouts: $0.08f$ (saturates in 13 passes)
+  - $\le 150$ workouts: $0.05f$ (saturates in 20 passes)
+  - $> 150$ workouts: $0.035f$ (saturates in 29 passes)
+3. *Opt-In Corridor Normalization (`MapContentScope.heatmap`, `REQ-MAP-058.3`)*:
+• `MapContentScope.heatmap` SHALL accept `normalizeCorridors: Boolean = false`. When false, automatic `estimateMaxCorridorPassCount` estimation SHALL NOT be executed, preserving linear step accumulation for cluster maps.
+4. *Explicit Workout Clusters Heatmap Configuration (`REQ-MAP-058.4`)*:
+• `WorkoutClusterHeatmapScreen.kt` SHALL explicitly configure its heatmap with `colorLut = ThermalColorLut.CLASSIC_BLUE`, classic step intensity, and `normalizeCorridors = false`, preventing unintentional inheritance of Periods styling.
+5. *Preservation of System Invariants (`REQ-MAP-058.5`)*:
+• Periods heatmap styling (`ThermalColorLut.HOT`, dynamic stroke scaling, logarithmic corridor normalization) SHALL remain 100% preserved with zero regressions.
+• All tile rendering SHALL remain off the UI thread on `Dispatchers.Default`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: `REQ-MAP-056.2` (*256-Entry Sequential Blue Color LUT*) and `REQ-MAP-057.4` (*Modular Decoupling & Parameterization*).
+2. *Historical Origin & Commit Trace*: Sprint 2026-40.16 (`ATT-504`), Sprint 2026-43.9 (commit `06990c88`, `ATT-4594` / `ATT-4480`), and Sprint Review 2026-44.1 of `ATT-4833` and `ATT-4929`.
+3. *Root Reason for Existing Formulation*: Shared components were mutated in-place during Periods improvements without providing decoupled presets, inadvertently altering the appearance of Workout Clusters.
+4. *Preservation of Core Invariants*: Full backward compatibility for Workout Clusters is restored while preserving all Periods 2.0 heatmap capabilities.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the Workout Clusters heatmap rendered in `WorkoutClusterHeatmapScreen`,
+• *When* heatmap tiles are generated,
+• *Then* `ThermalColorLut.CLASSIC_BLUE` with opacity 0.8 and classic step intensity is applied, restoring pre-ATT-4833 appearance.
+• *Given* `MapContentScope.heatmap` with `normalizeCorridors = false`,
+• *When* the heatmap tile provider is initialized,
+• *Then* corridor overlap count is not logarithmically normalized.
+• *Given* Periods heatmap screens (`PeriodSummaryCard`, `InteractivePeriodMap`, `PeriodMapScreen`),
+• *When* tiles are generated,
+• *Then* `ThermalColorLut.HOT` with zoom-adaptive stroke scaling and logarithmic corridor normalization continues to render without visual regression.
+
+**Invariants**: Zero database changes, thread safety on `Dispatchers.Default`, compliance with theme tokens, and 100% clean-room test pass rate.

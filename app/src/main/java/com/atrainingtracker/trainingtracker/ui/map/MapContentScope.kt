@@ -132,7 +132,9 @@ interface MapContentScope {
         maxPoints: Int? = null,
         maxCorridorPassCount: Int? = null,
         colorLut: ThermalColorLut = ThermalColorLut.DEFAULT,
-        isMiniMap: Boolean = false
+        isMiniMap: Boolean = false,
+        normalizeCorridors: Boolean = false,
+        useClassicStepIntensity: Boolean = false
     )
 
     /**
@@ -182,7 +184,9 @@ internal class MapContentScopeImpl(
         val maxPoints: Int?,
         val maxCorridorPassCount: Int? = null,
         val colorLut: ThermalColorLut = ThermalColorLut.DEFAULT,
-        val isMiniMap: Boolean = false
+        val isMiniMap: Boolean = false,
+        val normalizeCorridors: Boolean = false,
+        val useClassicStepIntensity: Boolean = false
     )
     private val heatmaps = mutableStateListOf<HeatmapData>()
 
@@ -259,21 +263,33 @@ internal class MapContentScopeImpl(
                 steppedZoom,
                 data.maxCorridorPassCount,
                 data.colorLut,
-                data.isMiniMap
+                data.isMiniMap,
+                data.normalizeCorridors,
+                data.useClassicStepIntensity
             ) {
                 value = withContext(Dispatchers.Default) {
                     if (data.allPaths.isEmpty()) null
                     else {
                         val strokeWidth = (4f + (steppedZoom - 10f).coerceAtLeast(0f) * 0.5f).coerceIn(3.5f, 7.5f)
-                        val maxPasses = data.maxCorridorPassCount
-                            ?: PolylineHeatmapTileProvider.estimateMaxCorridorPassCount(data.allPaths)
+                        val maxPasses = when {
+                            data.maxCorridorPassCount != null -> data.maxCorridorPassCount
+                            data.normalizeCorridors -> PolylineHeatmapTileProvider.estimateMaxCorridorPassCount(data.allPaths)
+                            else -> null
+                        }
+                        val effectiveLut = if (data.colorLut === ThermalColorLut.CLASSIC_BLUE && data.opacity != 0.8) {
+                            ThermalColorLut(opacity = data.opacity, stops = ThermalColorLut.CLASSIC_BLUE_STOPS)
+                        } else {
+                            data.colorLut
+                        }
+                        val useClassic = data.useClassicStepIntensity || (data.colorLut === ThermalColorLut.CLASSIC_BLUE)
                         PolylineHeatmapTileProvider(
                             allPaths = data.allPaths,
                             opacity = data.opacity,
                             strokeWidthPx = strokeWidth,
-                            colorLut = data.colorLut,
+                            colorLut = effectiveLut,
                             maxCorridorPassCount = maxPasses,
-                            isMiniMap = data.isMiniMap
+                            isMiniMap = data.isMiniMap,
+                            useClassicStepIntensity = useClassic
                         )
                     }
                 }
@@ -502,9 +518,24 @@ internal class MapContentScopeImpl(
         maxPoints: Int?,
         maxCorridorPassCount: Int?,
         colorLut: ThermalColorLut,
-        isMiniMap: Boolean
+        isMiniMap: Boolean,
+        normalizeCorridors: Boolean,
+        useClassicStepIntensity: Boolean
     ) {
-        this.heatmaps.add(HeatmapData(allPaths, opacity, radius, densifyInterval, maxPoints, maxCorridorPassCount, colorLut, isMiniMap))
+        this.heatmaps.add(
+            HeatmapData(
+                allPaths,
+                opacity,
+                radius,
+                densifyInterval,
+                maxPoints,
+                maxCorridorPassCount,
+                colorLut,
+                isMiniMap,
+                normalizeCorridors,
+                useClassicStepIntensity
+            )
+        )
     }
 
     override fun knownLocations(locations: List<KnownLocationItem>, onLocationClick: (Long) -> Unit) {

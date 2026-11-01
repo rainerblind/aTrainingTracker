@@ -74,6 +74,16 @@ class ThermalColorLut(
 
     companion object {
         /**
+         * Classic 3-stop sequential blue gradient stops (pre-ATT-4833 / REQ-MAP-058.1).
+         * Single-pass paths remain subtle (~20% base alpha), with moderate corridor overlap at ~30% and frequent corridors reaching ~70% base alpha.
+         */
+        val CLASSIC_BLUE_STOPS: Array<Pair<Float, IntArray>> = arrayOf(
+            Pair(0.00f, intArrayOf(0, 229, 255, 51)),   // Light Cyan (#00E5FF, ~20% base alpha)
+            Pair(0.50f, intArrayOf(0, 0, 255, 77)),     // Pure Blue (#0000FF, ~30% base alpha)
+            Pair(1.00f, intArrayOf(49, 27, 146, 180))   // Deep Indigo (#311B92, ~70% base alpha)
+        )
+
+        /**
          * Canonical 3-stop sequential blue gradient stops (ATT-504 / REQ-MAP-056.2).
          * Single-pass paths remain clearly legible (~55% alpha), while frequently traveled corridors reach ~85-100% alpha (REQ-PER-024.4).
          */
@@ -97,5 +107,6 @@ class ThermalColorLut(
         val DEFAULT = ThermalColorLut(opacity = 1.0, stops = BLUE_STOPS)
         val BLUE = DEFAULT
         val HOT = ThermalColorLut(opacity = 1.0, stops = HOT_STOPS)
+        val CLASSIC_BLUE = ThermalColorLut(opacity = 0.8, stops = CLASSIC_BLUE_STOPS)
     }
 }
