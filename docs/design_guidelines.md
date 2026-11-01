@@ -201,7 +201,9 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 ### 5.1 Reuse Existing UI Components & Visual Patterns (Visual Baseline)
 * Before designing a new screen, card, sheet, HUD element or button, find the **closest existing equivalent** in the app and copy its structure, shapes, spacing and colors.
 * Prefer shared components from `ui/components/` (e.g. `MetricItem`, `MetricBadge`, `DropdownSelector`, `EmptyStatePlaceholder`, `DeleteConfirmationDialog`, `BottomSheetUtils`, `MappableListItem`) and `ui/common/`.
-* Tabbed screens follow the existing tabbed layout pattern (`RouteTabbedScreen`, `EquipmentTabsScreen`): collapsing header with `LayoutConstants.HEADER_TITLE_ROW_HEIGHT` title row + standard Material 3 tab row. Do not invent alternative tab/segment visuals for top-level navigation.
+* Tabbed screens follow the existing tabbed layout pattern: `LayoutConstants.HEADER_TITLE_ROW_HEIGHT` title row + standard Material 3 tab row. Do not invent alternative tab/segment visuals for top-level navigation.
+  * **Long, scrollable list / browse screens** (Workouts, Segments, Routes, Equipment, Periods — `RouteTabbedScreen`, `EquipmentTabsScreen`): collapsing quick-return header (`CollapsingAppBarNestedScrollConnection`) to gain vertical space.
+  * **Settings / form screens** (e.g. Auto-Pause, Sport Types, short configuration pages): **fixed header** — title row, header actions (reset, …) and the tab row stay visible at all times; do **not** use `CollapsingAppBarNestedScrollConnection` (Rule 66 — ATT-4836 / ATT-4924: the collapsing header made the sport tabs and the reset action disappear on a short settings form).
 * New one-off styles (custom shapes, colors, fonts, icon sets, branding) are only allowed with an explicit justification in the Stage 3 plan (Section "UI Consistency").
 
 ### 5.2 Spacing Scale

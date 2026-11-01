@@ -30,8 +30,9 @@ Reuse the ticket's two persistent `TypeName: "self"` subagents via `send_message
        ```
      - Run `python3 tools/verify_requirement_governance.py` when existing requirements are modified.
      - **Exception (High-Risk Core Infrastructure)**: Run the full `./gradlew testDebugUnitTest` suite per-ticket *only* for High-Risk cross-cutting changes touching core shared infrastructure (`TrainingApplication`, `TrackerService`, `BANALService`, or SQLite database schema migrations).
-   - **Tier 2 — Sprint Integration Gate (Once per Sprint in `Review & Retro`, ~4m)**:
-     - The full clean-room regression suite (`./gradlew testDebugUnitTest` — 3,660+ tests) is executed once during the Sprint `Review & Retro` ticket before merging `sprint/<SPRINT_NAME>` into `develop`.
+   - **Tier 2 — Sprint Integration Gate (Once per Sprint at the End of Phase 2, ~8m)** (Rule 66 — `ATT-4864`):
+     - After the **last** sprint ticket is squashed onto `sprint/<SPRINT_NAME>`, the Coordinator runs the full suite `./gradlew testDebugUnitTest --max-workers=2 && python3 tools/verify_requirement_governance.py` and fixes every failure (stale tests of earlier tickets, cross-test leaks) as separate attributed commits **before** Ceremony 2. The background run at the start of the Sprint Review is a confirmation only.
+   - **Explicit Test Scope in the Walkthrough**: State exactly what was run (`Tier 1 targeted: <packages/classes>` or `full suite`). Never write "100% PASS" / "zero regressions" for a targeted subset without naming the scope.
 2. **Conditional On-Device / Physical Verification (Rules 60 & 62 — `ATT-4465`, `ATT-4596`)**:
    - **UI / Compose / Resource / Navigation / Foreground Service Tickets**: Deploy debug APK to Pixel 10 (`./gradlew installDebug`), explicitly launch the **Debug** package (`adb shell am start -n com.atrainingtracker.debug/com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation` — never `com.atrainingtracker`, which opens the unpatched Release package), navigate on-device to **every single screen/route** whose `ViewModel`, `Fragment`, or composable was modified, and verify `adb logcat -b crash -d` is clean. Capture on-device screenshots (`adb exec-out screencap -p > docs/engineering/walkthroughs/img/<KEY>_<name>.png`) of the new/changed UI and reference screen, and compare against `docs/design_guidelines.md` Section 5.
    - **Non-UI Backend / Algorithm / DB Query / Dead-Code Cleanup Tickets**: Skip physical APK deployment in Stage 5 and rely on targeted unit/contract tests + `./gradlew processDebugResources` compilation verification.
@@ -47,16 +48,17 @@ Reuse the ticket's two persistent `TypeName: "self"` subagents via `send_message
 ## Gate 5 Independent Review Checklist (`subagent_pro` as `agent2` — `pro`)
 Message the ticket's persistent `subagent_pro` (`send_message`) to audit the Stage 5 walkthrough and repository state against this checklist and record the verdict via `--as agent2 gate-verdict`:
 1. **Regression & Governance Verification**: Verify Tier 1 targeted/contract unit tests (or full suite for High-Risk tickets), `TranslationParityTest` (if strings changed), and `verify_requirement_governance.py` passed with 100% success (0 failures, 0 regressions).
-2. **Living Documentation Parity**: Confirm living documentation in `docs/requirements/` and `docs/tests/` status fields are updated to `Verified`.
-3. **Mandatory Lösungsversion (Fix Version/s) Governance Audit**:
-   - In accordance with Core Rule 8 ("FixVersion set only upon completion" and sub-tasks never having `fixVersions`), active in-sprint tickets legitimately have Parent `Lösungsversion` as `None` until final acceptance during Joint Review or release. Verify that the deliverable references the target release version (e.g. `V4.9.40`) and that sub-tasks have no fix version assigned.
-4. **Gate Verdict (`gate-verdict`) & Parent Handover (Core Rule 3)**:
+2. **Evidence Integrity (Rule 66 — `ATT-4864`)**: Screenshots referenced in the walkthrough must show what they claim. Before/after or on/off image pairs MUST differ (`md5sum docs/engineering/walkthroughs/img/<KEY>_*.png` — identical hashes → `REVISION`; Sprint 2026-44.1: `ATT-4840_autopause_on.png` and `_off.png` were byte-identical). Re-check the Gate 4 AC-by-AC table against the final state.
+3. **Living Documentation Parity**: Confirm living documentation in `docs/requirements/` and `docs/tests/` status fields are updated to `Verified`.
+4. **Mandatory Lösungsversion (Fix Version/s) Governance Audit**:
+   - In accordance with Core Rule 8 ("FixVersion set only upon completion" and sub-tasks never having `fixVersions`), active in-sprint tickets legitimately have Parent `Lösungsversion` as `None` until final acceptance during Joint Review or release. Verify that every Stage 1–5 deliverable references the target release version that `python3 tools/jira_util.py versions` reports as `ACTIVE/UNRELEASED` (never a free-text or invented version — Rule 66, `ATT-4864`) and that sub-tasks have no fix version assigned.
+5. **Gate Verdict (`gate-verdict`) & Parent Handover (Core Rule 3)**:
    - Record the verdict in a single composite CLI call (which closes the `[Test]` sub-task to `Erledigt`, automatically advances the parent ticket to `Final Review (Human)`, and assigns it to `human`):
      ```bash
      python3 tools/jira_util.py --as agent2 gate-verdict <TEST_SUBTASK_KEY> PASS "<Audit Report>"
      ```
    - Note: AI agents are strictly forbidden from transitioning parent tickets to `Erledigt`.
-5. **Single Atomic Commit per Ticket & Continuous Sprint Branch Integration (Core Rule 8)**:
+6. **Single Atomic Commit per Ticket & Continuous Sprint Branch Integration (Core Rule 8)**:
    - Each ticket MUST result in **strictly one atomic commit** on `sprint/<SPRINT_NAME>` containing the complete Stage 1–5 deliverables (`analysis`, `test_spec`, `plan`, `walkthrough`), living documentation (`docs/requirements.md`, `docs/tests.md`), production code, and unit tests:
      ```bash
      git add -A

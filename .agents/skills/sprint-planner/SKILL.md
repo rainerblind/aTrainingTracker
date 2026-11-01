@@ -83,6 +83,8 @@ Ensure that every ticket committed to the active sprint has clear, unambiguous a
    * **Mandatory Rules & Skills Refresh ("Obey the Rules")**: At the start of handling each ticket, the agent MUST explicitly re-read `.agents/rules/aspice_governance.md` and the skill for the active stage using `view_file` to reload constraints into active working memory and prevent context drift across compactions.
    * **One Commit per Ticket (Rule 44)**: Upon completing Stage 5 verification, the ticket is integrated back into `sprint/<SPRINT_NAME>` as a **single atomic commit** (`git merge --squash feature/<KEY> && git commit -m "feat(<KEY>): <Summary>"`).
    * **Pre-Build Debug APK at Very End of Phase 2 (`Rule 64` — `ATT-4718`, `"Build debug APK at very end of phase 2."`)**: Immediately after the final sprint ticket is squashed onto `sprint/<SPRINT_NAME>` at the end of Phase 2, run `./gradlew assembleDebug` (or `./gradlew installDebug` if the test device is connected) so the integrated sprint debug APK is already compiled and verified before Ceremony 2 begins.
+   * **Tier 2 Sprint Integration Gate at the Very End of Phase 2 (`Rule 66` — `ATT-4864`, `"Maybe, the agents should do this before the sprint review."`)**: Before the APK pre-build, run `./gradlew testDebugUnitTest --max-workers=2 && python3 tools/verify_requirement_governance.py` on `sprint/<SPRINT_NAME>` and fix all failures as separate attributed commits, so Ceremony 2 starts from a green suite (Sprint 2026-44.1: 4 failures from stale tests and a cross-test coroutine leak surfaced only in the human review).
+   * **Lost-Wakeup Watchdog (`Rule 66` — `ATT-4864`)**: After every subagent dispatch, set one `schedule` watchdog (`DurationSeconds=1200`, `TimerCondition=<subagent id>`); if it fires, re-derive the state from Jira/git and continue. Never end a Phase 2 Coordinator turn with only a status report while tickets remain, and never let a subagent take over the Coordinator role (see `aspice_governance.md` Core Rule 7).
    * *In-Sprint Anomaly Logging*: Any process hiccups, tool issues, or user corrections during execution are immediately logged as comments in the sprint's `Review & Retro` ticket.
 
 ---
@@ -103,6 +105,7 @@ Jointly review all completed sprint tickets with the human user against expectat
       ```bash
       ./gradlew testDebugUnitTest --max-workers=2 && python3 tools/verify_requirement_governance.py
       ```
+      Since Rule 66 this run is a **confirmation** of the green Tier 2 gate executed at the end of Phase 2; any failure here is itself a retro anomaly.
 
 2. **Query Tickets Ready for Review in Rank Order**:
    Find all sprint tickets in status `Final Review (Human)` sorted strictly by backlog rank for the exact active sprint ID or name:
