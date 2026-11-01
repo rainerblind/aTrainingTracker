@@ -6830,5 +6830,28 @@
   • Execute targeted unit tests and verify 100% pass rate with zero regressions.
 
 
+### TST-UI-435: **Tracking Tabs Mode Transition Initial Page Resolution Test Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-435`
+- **Component**: `TrackingTabsPageResolverTest.kt`, `TrackingTabsScreen.kt`
+- **Jira**: `ATT-4838`
+- **Test Description**:
+  1. *Drawer Configuration Entry Resolution (`TST-UI-435.1`)*:
+  • Unit test in `TrackingTabsPageResolverTest` verifying `resolveInitialPage`:
+    - Returns `0` when transitioning from `ScreenMode.TRACKING` to `ScreenMode.CONFIGURATION` regardless of `lastKnownPage` (`lastKnownPage = 1` or `lastKnownPage = 2`).
+    - Returns `0` when `activityTypeChanged = true` in `ScreenMode.CONFIGURATION`.
+  2. *Editor-Preview Round-Trip Resolution (`TST-UI-435.2`)*:
+  • Unit test in `TrackingTabsPageResolverTest` verifying `resolveInitialPage`:
+    - Returns `lastKnownPage` when transitioning `ScreenMode.CONFIGURATION -> ScreenMode.PREVIEW`.
+    - Returns `lastKnownPage` when transitioning `ScreenMode.PREVIEW -> ScreenMode.CONFIGURATION`.
+    - Clamps to valid bounds `0 until tabCount`.
+  3. *Preview Exit to Tracking Resolution (`TST-UI-435.3`)*:
+  • Unit test in `TrackingTabsPageResolverTest` verifying `resolveInitialPage`:
+    - Returns `lastKnownPage + 1` when transitioning `ScreenMode.PREVIEW -> ScreenMode.TRACKING` with `tabCount > 0`.
+    - Returns `0` when `tabCount <= 0`.
+  4. *Same-Mode Tab Addition/Deletion Stability (`TST-UI-435.4`)*:
+  • Unit test verifying `lastKnownPage` is preserved and clamped within valid page bounds when mode is unchanged.
+
+
+
 
 
