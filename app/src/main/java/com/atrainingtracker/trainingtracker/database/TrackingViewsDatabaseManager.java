@@ -31,6 +31,7 @@ import androidx.annotation.Nullable;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.ActivityType;
+import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.banalservice.filters.DefaultFilterConfig;
@@ -39,6 +40,8 @@ import com.atrainingtracker.banalservice.filters.FilterType;
 import com.atrainingtracker.banalservice.filters.SensorFilterDefaults;
 import com.atrainingtracker.banalservice.helpers.HavePressureSensor;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore;
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper;
 import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize;
 import com.atrainingtracker.util.CursorUtils;
 import com.atrainingtracker.util.EnumUtils;
@@ -902,7 +905,8 @@ public class TrackingViewsDatabaseManager {
         // public static final int DB_VERSION = 13; // upgraded to version 13 at 13.10.2026: Adding Elevation Profile Scope & Lookahead (ATT-3317)
         // public static final int DB_VERSION = 14; // upgraded to version 14 at 18.10.2026: Adding Section Dividers Table (ATT-4055)
         // public static final int DB_VERSION = 16; // upgraded to version 16 at 01.11.2026: Adding ShowValue and ShowBar columns to LayoutRowsTable (ATT-4841)
-        public static final int DB_VERSION = 17; // upgraded to version 17 at 01.11.2026: Adding ColWeight column to LayoutRowsTable (ATT-4861)
+        // public static final int DB_VERSION = 17; // upgraded to version 17 at 01.11.2026: Adding ColWeight column to LayoutRowsTable (ATT-4861)
+        public static final int DB_VERSION = 18; // upgraded to version 18 at 01.11.2026: Sport-dependent bar gating & upgrade migration (ATT-4927)
         public static final String VIEWS_TABLE = "ViewsTable";                // the table for the different 'tabs'
         public static final String ROWS_TABLE = "LayoutRowsTable";            // the table for the sensor fields within each tab
         public static final String SECTION_DIVIDERS_TABLE = "SectionDividersTable"; // new in version 14 (ATT-4055)
@@ -1162,6 +1166,8 @@ public class TrackingViewsDatabaseManager {
                 + SHOW_BAR + " int DEFAULT 0, "
                 + COL_WEIGHT + " real DEFAULT 1.0)";
 
+        protected static final String CREATE_LAYOUTS_TABLE_V18 = CREATE_LAYOUTS_TABLE_V17;
+
         protected static final String CREATE_SECTION_DIVIDERS_TABLE_V14 = "CREATE TABLE IF NOT EXISTS "
                 + SECTION_DIVIDERS_TABLE + " ("
                 + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -1189,11 +1195,11 @@ public class TrackingViewsDatabaseManager {
         @Override
         public void onCreate(@NonNull SQLiteDatabase db) {
             db.execSQL(CREATE_VIEWS_TABLE_V15);
-            db.execSQL(CREATE_LAYOUTS_TABLE_V17);
+            db.execSQL(CREATE_LAYOUTS_TABLE_V18);
             db.execSQL(CREATE_SECTION_DIVIDERS_TABLE_V14);
 
             if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_VIEWS_TABLE_V15);
-            if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_LAYOUTS_TABLE_V17);
+            if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_LAYOUTS_TABLE_V18);
             if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_SECTION_DIVIDERS_TABLE_V14);
 
 
@@ -1369,7 +1375,7 @@ public class TrackingViewsDatabaseManager {
                 values.put(FILTER_TYPE, filterConfig.getFilterType().name());
                 values.put(FILTER_CONSTANT, filterConfig.getFilterConstant());
                 values.put(SHOW_VALUE, 1);
-                values.put(SHOW_BAR, isBarSupportedSensorType(rowData.sensorType) ? 1 : 0);
+                values.put(SHOW_BAR, isBarSupported(rowData.sensorType, activityType) ? 1 : 0);
                 values.put(COL_WEIGHT, rowData.colWeight());
                 db.insert(ROWS_TABLE, null, values);
             }
@@ -1645,6 +1651,152 @@ public class TrackingViewsDatabaseManager {
                     }
                 }
             }
+
+            if (oldVersion < 18 && (newVersion >= 18 || newVersion == 0)) {
+                Log.i(TAG, "Upgrading database to version 18: Sport-dependent bar support, empty tile fallback, and legacy showGauge migration (ATT-4927)");
+                boolean hasRowsTable = false;
+                try (Cursor cursor = db.rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND name=?", new String[]{ROWS_TABLE})) {
+                    if (cursor != null && cursor.moveToFirst()) {
+                        hasRowsTable = true;
+                    }
+                }
+                if (hasRowsTable) {
+                    db.beginTransaction();
+                    try {
+                        boolean hasShowValue = false;
+                        boolean hasShowBar = false;
+                        try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + ROWS_TABLE + ")", null)) {
+                            if (cursor != null) {
+                                int nameIndex = cursor.getColumnIndex("name");
+                                while (cursor.moveToNext()) {
+                                    String colName = cursor.getString(nameIndex);
+                                    if (SHOW_VALUE.equalsIgnoreCase(colName)) hasShowValue = true;
+                                    if (SHOW_BAR.equalsIgnoreCase(colName)) hasShowBar = true;
+                                }
+                            }
+                        }
+                        if (!hasShowValue) {
+                            addColumn(db, ROWS_TABLE, SHOW_VALUE, "int DEFAULT 1");
+                        }
+                        if (!hasShowBar) {
+                            addColumn(db, ROWS_TABLE, SHOW_BAR, "int DEFAULT 0");
+                        }
+
+                        boolean hrRunShowGauge = false;
+                        boolean hrBikeShowGauge = false;
+                        boolean pwrBikeShowGauge = false;
+                        if (mContext != null) {
+                            try {
+                                hrRunShowGauge = SettingsDataStoreJavaHelper.getZoneDisplayOptions(mContext, SettingsDataStore.ZoneType.HR_RUN).getShowGauge();
+                            } catch (Exception e) {
+                                Log.w(TAG, "Failed to load HR_RUN zone display options during migration", e);
+                            }
+                            try {
+                                hrBikeShowGauge = SettingsDataStoreJavaHelper.getZoneDisplayOptions(mContext, SettingsDataStore.ZoneType.HR_BIKE).getShowGauge();
+                            } catch (Exception e) {
+                                Log.w(TAG, "Failed to load HR_BIKE zone display options during migration", e);
+                            }
+                            try {
+                                pwrBikeShowGauge = SettingsDataStoreJavaHelper.getZoneDisplayOptions(mContext, SettingsDataStore.ZoneType.PWR_BIKE).getShowGauge();
+                            } catch (Exception e) {
+                                Log.w(TAG, "Failed to load PWR_BIKE zone display options during migration", e);
+                            }
+                        }
+
+                        String joinSql = "SELECT r." + ROW_ID + ", r." + SENSOR_TYPE + ", r." + SHOW_VALUE + ", r." + SHOW_BAR + ", v." + ACTIVITY_TYPE
+                                + " FROM " + ROWS_TABLE + " r LEFT JOIN " + VIEWS_TABLE + " v ON r." + VIEW_ID + " = v." + C_ID;
+
+                        ContentValues updateValues = new ContentValues();
+                        try (Cursor cursor = db.rawQuery(joinSql, null)) {
+                            if (cursor != null) {
+                                int rowIdIdx = cursor.getColumnIndex(ROW_ID);
+                                int sensorTypeIdx = cursor.getColumnIndex(SENSOR_TYPE);
+                                int showValueIdx = cursor.getColumnIndex(SHOW_VALUE);
+                                int showBarIdx = cursor.getColumnIndex(SHOW_BAR);
+                                int activityTypeIdx = cursor.getColumnIndex(ACTIVITY_TYPE);
+
+                                while (cursor.moveToNext()) {
+                                    long rowId = cursor.getLong(rowIdIdx);
+                                    String sensorTypeStr = cursor.getString(sensorTypeIdx);
+                                    String activityTypeStr = activityTypeIdx != -1 ? cursor.getString(activityTypeIdx) : null;
+
+                                    SensorType sensorType = null;
+                                    try {
+                                        if (sensorTypeStr != null) {
+                                            sensorType = SensorType.valueOf(sensorTypeStr);
+                                        }
+                                    } catch (IllegalArgumentException ignored) {}
+
+                                    ActivityType activityType = null;
+                                    try {
+                                        if (activityTypeStr != null) {
+                                            activityType = ActivityType.valueOf(activityTypeStr);
+                                        }
+                                    } catch (IllegalArgumentException ignored) {}
+
+                                    BSportType sportType = activityType != null ? activityType.getSportType() : null;
+
+                                    int targetShowBar = 0;
+                                    if (sensorType == SensorType.HR) {
+                                        if (sportType == BSportType.RUN) {
+                                            targetShowBar = hrRunShowGauge ? 1 : 0;
+                                        } else if (sportType == BSportType.BIKE) {
+                                            targetShowBar = hrBikeShowGauge ? 1 : 0;
+                                        } else {
+                                            targetShowBar = 0;
+                                        }
+                                    } else if (sensorType == SensorType.POWER) {
+                                        if (sportType == BSportType.BIKE) {
+                                            targetShowBar = pwrBikeShowGauge ? 1 : 0;
+                                        } else {
+                                            targetShowBar = 0;
+                                        }
+                                    } else if (sensorType == SensorType.PEDAL_POWER_BALANCE || sensorType == SensorType.W_PRIME_BAL) {
+                                        if (sportType == BSportType.BIKE) {
+                                            targetShowBar = 1;
+                                        } else {
+                                            targetShowBar = 0;
+                                        }
+                                    } else {
+                                        targetShowBar = 0;
+                                    }
+
+                                    int currentShowValue = (showValueIdx != -1 && !cursor.isNull(showValueIdx)) ? cursor.getInt(showValueIdx) : 1;
+                                    int targetShowValue = currentShowValue;
+                                    if (targetShowBar == 0) {
+                                        targetShowValue = 1;
+                                    }
+
+                                    updateValues.clear();
+                                    updateValues.put(SHOW_BAR, targetShowBar);
+                                    updateValues.put(SHOW_VALUE, targetShowValue);
+                                    db.update(ROWS_TABLE, updateValues, ROW_ID + "=?", new String[]{String.valueOf(rowId)});
+                                }
+                            }
+                        }
+
+                        db.setTransactionSuccessful();
+                    } finally {
+                        db.endTransaction();
+                    }
+                }
+            }
+        }
+
+        public static boolean isBarSupported(@Nullable SensorType sensorType, @Nullable BSportType sportType) {
+            if (sensorType == null || sportType == null) return false;
+            if (sensorType == SensorType.HR) {
+                return sportType == BSportType.RUN || sportType == BSportType.BIKE;
+            }
+            if (sensorType == SensorType.POWER || sensorType == SensorType.PEDAL_POWER_BALANCE || sensorType == SensorType.W_PRIME_BAL) {
+                return sportType == BSportType.BIKE;
+            }
+            return false;
+        }
+
+        public static boolean isBarSupported(@Nullable SensorType sensorType, @Nullable ActivityType activityType) {
+            if (sensorType == null || activityType == null) return false;
+            return isBarSupported(sensorType, activityType.getSportType());
         }
 
         public static boolean isBarSupportedSensorType(SensorType sensorType) {

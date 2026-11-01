@@ -91,12 +91,15 @@ class EditSensorFieldViewModelTest {
         unmockkStatic(Log::class)
     }
 
-    private fun createViewModel(sensorFieldId: Long = -1L): EditSensorFieldViewModel {
+    private fun createViewModel(
+        sensorFieldId: Long = -1L,
+        activityType: ActivityType = ActivityType.BIKE_POWER
+    ): EditSensorFieldViewModel {
         return EditSensorFieldViewModel(
             application = application,
             trackingViewsRepository = trackingViewsRepo,
             banalServiceRepository = banalServiceRepo,
-            activityType = ActivityType.BIKE_POWER,
+            activityType = activityType,
             sensorFieldId = sensorFieldId,
             tabViewId = 1L,
             rowNr = 0,
@@ -499,6 +502,76 @@ class EditSensorFieldViewModelTest {
                 showValue = false,
                 showBar = true,
                 colWeight = any()
+            )
+        }
+    }
+
+    /**
+     * TST-TRK-046.3: Sport-dependent bar support in EditDialogUiState:
+     * HR supports bar in RUN and BIKE, but not GENERIC.
+     * POWER, BALANCE, and W'BAL support bar only in BIKE, not RUN.
+     */
+    @Test
+    fun testDisplayElements_sportDependentBarFeasibility() = runTest {
+        // Run layout
+        val runViewModel = createViewModel(activityType = ActivityType.RUN_SPEED_AND_CADENCE)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        runViewModel.onSensorTypeChanged(SensorType.HR)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue("HR in RUN must support bar", runViewModel.uiState.value.isBarSupported)
+
+        runViewModel.onSensorTypeChanged(SensorType.POWER)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertFalse("POWER in RUN must NOT support bar", runViewModel.uiState.value.isBarSupported)
+        assertTrue("showValue must default to true when bar unsupported", runViewModel.uiState.value.showValue)
+        assertFalse("showBar must default to false when bar unsupported", runViewModel.uiState.value.showBar)
+
+        runViewModel.onSensorTypeChanged(SensorType.PEDAL_POWER_BALANCE)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertFalse("PEDAL_POWER_BALANCE in RUN must NOT support bar", runViewModel.uiState.value.isBarSupported)
+
+        runViewModel.onSensorTypeChanged(SensorType.W_PRIME_BAL)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertFalse("W_PRIME_BAL in RUN must NOT support bar", runViewModel.uiState.value.isBarSupported)
+
+        // Generic layout
+        val genericViewModel = createViewModel(activityType = ActivityType.GENERIC_HR)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        genericViewModel.onSensorTypeChanged(SensorType.HR)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertFalse("HR in GENERIC must NOT support bar", genericViewModel.uiState.value.isBarSupported)
+    }
+
+    /**
+     * TST-TRK-046.3: Saving unsupported bar sensor enforces showValue = true, showBar = false.
+     */
+    @Test
+    fun testDisplayElements_saveChanges_unsupportedBarEnforcesShowValueTrueAndShowBarFalse() = runTest {
+        val runViewModel = createViewModel(activityType = ActivityType.RUN_SPEED_AND_CADENCE)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        runViewModel.onSensorTypeChanged(SensorType.POWER)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        runViewModel.saveChanges()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify {
+            trackingViewsRepo.insertSensorFieldConfig(
+                tabViewId = 1L,
+                rowNr = 0,
+                colNr = 0,
+                newSensorType = SensorType.POWER,
+                newViewSize = ViewSize.NORMAL,
+                newSourceDeviceId = null,
+                newSourceDeviceName = null,
+                newFilterType = any(),
+                newFilterConstant = any(),
+                showValue = true,
+                showBar = false,
+                colWeight = 1.0f
             )
         }
     }

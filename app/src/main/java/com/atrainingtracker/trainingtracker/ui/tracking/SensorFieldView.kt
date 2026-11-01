@@ -330,14 +330,20 @@ fun SensorFieldView(
                 }
 
                 // Centered telemetry content column (REQ-UI-438.3)
+                val hasActiveBar = fieldState.showBar && (
+                    fieldState.zoneGaugeState != null ||
+                    fieldState.pedalBalanceState != null ||
+                    fieldState.wPrimeBatteryState != null
+                )
+
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f),
                     verticalArrangement = Arrangement.Center
                 ) {
-                    // Value and Unit Row, centered (REQ-TRK-046)
-                    if (fieldState.showValue) {
+                    // Value and Unit Row, centered (REQ-TRK-046, REQ-TRK-046.3 empty-tile fallback)
+                    if (fieldState.showValue || !hasActiveBar) {
                         Row(
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.Bottom,

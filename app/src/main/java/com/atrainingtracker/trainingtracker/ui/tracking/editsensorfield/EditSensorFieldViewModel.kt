@@ -27,6 +27,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ActivityType
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.filters.FilterData
 import com.atrainingtracker.banalservice.filters.FilterType
 import com.atrainingtracker.banalservice.filters.SensorFilterDefaults
@@ -113,6 +114,7 @@ fun resolveFilterPreset(
 // This class will hold all the state for our dialog
 data class EditDialogUiState(
     val selectedSensorType: SensorType? = null,
+    val sportType: BSportType = BSportType.UNKNOWN,
     val availableSensorTypesForCurrentActivityType: List<SensorType> = emptyList(),
     val selectedDeviceId: Long = -1,
     val selectedDeviceName: String? = null,
@@ -134,7 +136,7 @@ data class EditDialogUiState(
     val isLeftField: Boolean = true
 ) {
     val isBarSupported: Boolean
-        get() = TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupportedSensorType(selectedSensorType)
+        get() = TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(selectedSensorType, sportType)
 
     val activePreset: FilterPreset
         get() = if (isCustomFilterExpanded && resolveFilterPreset(selectedFilterType, filterConstant, movingAverageUnit) != FilterPreset.CUSTOM) {
@@ -222,13 +224,14 @@ class EditSensorFieldViewModel(
 
     private fun setupDefaultState() {
         val context = getApplication<Application>().applicationContext
+        val sportType = activityType.sportType
         // Use a default sensor type (e.g., first available)
         val defaultSensor = SensorType.SPEED_mps
         val defaultFilterConfig = SensorFilterDefaults.getDefaultFilterConfig(defaultSensor)
         val defaultFilterType = defaultFilterConfig.filterType
         val defaultConstant = defaultFilterConfig.filterConstant
 
-        val isBarSupported = TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupportedSensorType(defaultSensor)
+        val isBarSupported = TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(defaultSensor, sportType)
 
         // Create a MOCK initialConfig for the "Add" scenario.
         // This ensures that functions like onFilterConfigDismissed don't crash.
@@ -249,6 +252,7 @@ class EditSensorFieldViewModel(
         _uiState.update {
             it.copy(
                 selectedSensorType = defaultSensor,
+                sportType = sportType,
                 availableSensorTypesForCurrentActivityType = getFilteredSensorTypes(context, defaultSensor),
                 selectedDeviceId = -1,
                 selectedDeviceName = context.getString(R.string.bestSensor),
@@ -295,8 +299,14 @@ class EditSensorFieldViewModel(
             val sibling = if (isTwo) fieldsInRow.find { it.sensorFieldId != initialConfig.sensorFieldId } else null
             val isLeft = fieldsInRow.firstOrNull()?.sensorFieldId == initialConfig.sensorFieldId
 
+            val sportType = activityType.sportType
+            val isBarSupported = TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(initialConfig.sensorType, sportType)
+            val showValue = if (isBarSupported) initialConfig.showValue else true
+            val showBar = if (isBarSupported) initialConfig.showBar else false
+
             _uiState.value = EditDialogUiState(
                 selectedSensorType = initialConfig.sensorType,
+                sportType = sportType,
                 availableSensorTypesForCurrentActivityType = getFilteredSensorTypes(context, initialConfig.sensorType),
                 selectedDeviceId = initialConfig.sourceDeviceId,
                 selectedDeviceName = initialConfig.sourceDeviceName,
@@ -307,8 +317,8 @@ class EditSensorFieldViewModel(
                 filterConstant = displayConstant,
                 movingAverageUnit = initialUnit,
                 isCustomFilterExpanded = (initialPreset == FilterPreset.CUSTOM),
-                showValue = initialConfig.showValue,
-                showBar = initialConfig.showBar,
+                showValue = showValue,
+                showBar = showBar,
                 colWeight = initialConfig.colWeight,
                 isTwoFieldRow = isTwo,
                 siblingFieldId = sibling?.sensorFieldId,
@@ -340,12 +350,14 @@ class EditSensorFieldViewModel(
             val defaultFilterType = defaultFilterConfig.filterType
             val defaultConstant = defaultFilterConfig.filterConstant
             val isCustom = resolveFilterPreset(defaultFilterType, defaultConstant, defaultFilterConfig.unit) == FilterPreset.CUSTOM
-            val isBarSupported = TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupportedSensorType(newSensorType)
+            val sportType = activityType.sportType
+            val isBarSupported = TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(newSensorType, sportType)
 
             _uiState.update {
                 it.copy(
                     // update the selected sensor type
                     selectedSensorType = newSensorType,
+                    sportType = sportType,
                     // but also:
                     // set 'Best' device as source
                     selectedDeviceId = -1,
@@ -638,7 +650,7 @@ class EditSensorFieldViewModel(
         val filterData = FilterData(newSourceDeviceName, newSensorType, newFilterType, newFilterConstant)
         banalServiceRepository.createFilter(filterData)
 
-        val showValue = currentState.showValue
+        val showValue = if (currentState.isBarSupported) currentState.showValue else true
         val showBar = if (currentState.isBarSupported) currentState.showBar else false
         val colWeight = currentState.colWeight
 

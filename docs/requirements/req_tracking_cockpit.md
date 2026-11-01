@@ -2194,44 +2194,53 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 **Invariants**: Live telemetry updates, zero hue shift in training zones, and 100% clean-room test pass rate MUST NOT be broken.
 
 
-### REQ-TRK-046: Per-Sensor-Field Display Elements Configuration: Value and Bar Gating [Planned]
-- **Tests**: `TST-TRK-046` | **Tickets**: `ATT-4841`
-- **Implementation**: `TrackingViewsDatabaseManager.java`, `TrackingViewsRepository.kt`, `SensorFieldConfig`, `SensorFieldState.kt`, `EditSensorFieldViewModel.kt`, `EditSensorFieldDialog.kt`, `SensorFieldView.kt`, `ZonesSettingsActivity.kt`
-- **Rationale**: Cockpit sensor fields SHALL support granular, per-field configuration of which visual elements are rendered (numeric Value + Unit row vs. horizontal Bar), allowing athletes to customize tiles (e.g. bar-only, value-only, or both) independently for instantaneous vs. average metrics (ATT-4841, Parent Epic ATT-355, extending `REQ-UI-376`, `REQ-UI-377`, `REQ-UI-416`):
-1. *SQLite Schema v16 & Model Persistence (`REQ-TRK-046.1`)*:
-• `TrackingViewsDbHelper.ROWS_TABLE` SHALL be upgraded to `DB_VERSION = 16`, adding non-destructive columns `ShowValue INT DEFAULT 1` and `ShowBar INT DEFAULT 0`.
-• On database upgrade to v16, `ShowValue` SHALL be backfilled to `1` across all existing rows; `ShowBar` SHALL be backfilled to `1` for bar-capable sensor types (`HR`, `POWER`, `PEDAL_POWER_BALANCE`, `W_PRIME_BAL`), and `0` for all other sensor types.
-• `SensorFieldConfig`, `SensorFieldState`, and `TrackingViewsRepository` (`fetchSensorFieldConfigs`, `fetchSingleSensorFieldConfig`, `updateSensorFieldConfig`, `insertSensorFieldConfig`) SHALL expose and persist `showValue: Boolean` and `showBar: Boolean`.
-2. *Edit Sensor Field UI & Selection Constraints (`REQ-TRK-046.2`)*:
-• When the selected `SensorType` supports a bar (`HR`, `POWER`, `PEDAL_POWER_BALANCE`, `W_PRIME_BAL`), `EditSensorFieldDialog` SHALL display selectable element toggles/chips for *Value* (`showValue`) and *Bar* (`showBar`).
+### REQ-TRK-046: Per-Sensor-Field Display Elements Configuration: Value and Bar Gating [Verified]
+- **Tests**: `TST-TRK-046` | **Tickets**: `ATT-4841`, `ATT-4927`
+- **Implementation**: `TrackingViewsDatabaseManager.java`, `TrackingViewsRepository.kt`, `SensorFieldConfig`, `SensorFieldState.kt`, `EditSensorFieldViewModel.kt`, `EditSensorFieldDialog.kt`, `SensorFieldView.kt`, `TrackingViewModel.kt`, `DatabaseSchemaRegistry.kt`
+- **Rationale**: Cockpit sensor fields SHALL support granular, per-field configuration of which visual elements are rendered (numeric Value + Unit row vs. horizontal Bar), allowing athletes to customize tiles (e.g. bar-only, value-only, or both) independently for instantaneous vs. average metrics (ATT-4841, Parent Epic ATT-355, extending `REQ-UI-376`, `REQ-UI-377`, `REQ-UI-416`). Bar availability SHALL depend on both sensor type and layout sport type, tiles configured as bar-only SHALL gracefully fall back to displaying the numeric value if no bar can be drawn, and database migrations SHALL carry over the athlete's previous global `showGauge` setting per zone profile rather than forcing bars on existing fields (ATT-4927):
+1. *SQLite Schema v18 & Migration Parity (`REQ-TRK-046.1`)*:
+• `TrackingViewsDbHelper.ROWS_TABLE` SHALL be upgraded to `DB_VERSION = 18`.
+• On database upgrade to v18, rows SHALL be joined with `VIEWS_TABLE` to evaluate `ActivityType` -> `BSportType`:
+  - For `HR` and `POWER`, `ShowBar` SHALL be set based on the athlete's previous global preference (`SettingsDataStoreJavaHelper.getZoneDisplayOptions(context, zoneType).showGauge`) if the sport type supports zones (`HR` in `RUN`/`BIKE`, `POWER` in `BIKE`), and `0` otherwise.
+  - For `PEDAL_POWER_BALANCE` and `W_PRIME_BAL`, `ShowBar` SHALL be set to `1` for `BSportType.BIKE`, and `0` otherwise.
+  - For all other sensor types, `ShowBar` SHALL be set to `0`.
+  - Whenever `ShowBar == 0`, `ShowValue` SHALL be enforced as `1`.
+• `DatabaseSchemaRegistry.kt` SHALL reference `TrackingViewsDatabaseManager.TrackingViewsDbHelper.DB_VERSION` directly (Rule 62).
+2. *Unified Sport-Dependent Bar Support & Dialog Constraints (`REQ-TRK-046.2`)*:
+• `TrackingViewsDatabaseManager` SHALL provide a canonical predicate `isBarSupported(SensorType, BSportType)`:
+  - `HR`: returns `true` for `BSportType.RUN` and `BSportType.BIKE`.
+  - `POWER`, `PEDAL_POWER_BALANCE`, `W_PRIME_BAL`: returns `true` strictly for `BSportType.BIKE`.
+  - All other combinations: return `false`.
+• In `EditSensorFieldDialog` and `EditSensorFieldViewModel`, bar support SHALL be evaluated via `isBarSupported(selectedSensorType, activityType.sportType)`. If false, element toggles (Value/Bar) SHALL be hidden, and the field SHALL be saved as `showValue = true, showBar = false`.
 • The system SHALL enforce that at least one visual element remains selected at all times (preventing simultaneous deselection of both Value and Bar).
-• When selecting a sensor type that does not support a bar, `showBar` SHALL be `false` and `showValue` SHALL be `true`.
-3. *Cockpit Sensor Field Conditional Rendering (`REQ-TRK-046.3`)*:
-• In `SensorFieldView.kt`, the numeric Value + Unit row SHALL be rendered if and only if `fieldState.showValue == true`.
-• The corresponding horizontal bar (`ZoneGaugeBar`, `PedalPowerBalanceBar`, `WPrimeBatteryGaugeBar`) SHALL be rendered if and only if `fieldState.showBar == true`.
+3. *Cockpit Empty Tile Fallback (`REQ-TRK-046.3`)*:
+• In `SensorFieldView.kt`, the numeric Value + Unit row SHALL be rendered if `fieldState.showValue == true || !hasActiveBar` (where `hasActiveBar = fieldState.showBar && (zoneGaugeState != null || pedalBalanceState != null || wPrimeBatteryState != null)`).
+• Under no circumstances SHALL a cockpit sensor card render completely empty.
 4. *Single Source of Truth & Global Toggle Deprecation (`REQ-TRK-046.4`)*:
 • The global `showGauge` toggle row SHALL be removed from `ZonesSettingsActivity.kt`, making per-field `showBar` the single source of truth for cockpit gauge bars.
 5. *9-Language Localization Parity (`REQ-TRK-046.5`)*:
 • All new UI strings (`sensor_field_display_elements_title`, `sensor_field_show_value`, `sensor_field_show_bar`) SHALL maintain complete translation parity across all 9 supported languages.
+6. *Sport-Gated Telemetry Flow Publishing (`REQ-TRK-046.6`)*:
+• `TrackingViewModel` SHALL restrict `pedalBalanceState` and `wPrimeBatteryState` publishing strictly to `BSportType.BIKE`.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-046`, extending `REQ-UI-376` (Zone Gauge Bar), `REQ-UI-377` (Pedal Balance Bar), and `REQ-UI-416` (W' Battery Gauge). Targets `SensorFieldView.kt` and `TrackingViewsRepository.kt`.
-2. *Historical Origin & Commit Trace*: `ATT-3574` (introduced `showGauge` in `ZoneDisplayOptions`), `ATT-4097` (added W' battery bar), `ATT-3660` (pedal balance indicator).
-3. *Root Reason for Existing Formulation*: Originally, zone gauge display was treated as a sport profile property. As cockpit customization matured, users required granular control per sensor card.
-4. *Preservation of Core Invariants*: Existing tab layouts, zone cutoff color calculations, and sensor streaming pipelines are 100% preserved.
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-046`, extending `REQ-UI-376` (Zone Gauge Bar), `REQ-UI-377` (Pedal Balance Bar), and `REQ-UI-416` (W' Battery Gauge). Refined in `ATT-4927` for sport-dependent bar support, empty-tile fallback, and v18 upgrade parity.
+2. *Historical Origin & Commit Trace*: `ATT-3574` (`showGauge` in `ZoneDisplayOptions`), `ATT-4841` (commit `050f1437`), `ATT-4861` (commit `e3713601`).
+3. *Root Reason for Existing Formulation*: `ATT-4841` introduced per-field `ShowValue`/`ShowBar` in `v16`, but assumed sensor type alone determined bar capability and defaulted `ShowBar = 1` for all HR/Power fields, ignoring legacy `showGauge` and sport validity.
+4. *Preservation of Core Invariants*: Mutual exclusion, layout stability, AMOLED compliance, zero empty tiles, and user settings preservation are 100% preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
-• *Given* an existing database at version 15 with HR, Power, and Speed sensor fields,
-• *When* the database upgrades to version 16,
-• *Then* `ShowValue` is `1` for all fields, and `ShowBar` is `1` for HR and Power, and `0` for Speed.
-• *Given* an athlete editing a Power sensor field in `EditSensorFieldDialog`,
-• *When* the athlete toggles *Value* off and *Bar* on,
-• *Then* the sensor field in the cockpit renders the zone gauge bar without the numeric value row.
-• *Given* an athlete with only *Value* selected,
-• *When* the athlete attempts to toggle *Value* off,
-• *Then* the selection is rejected and *Value* remains enabled.
+• *Given* an existing user database upgrading to version 18 where legacy `showGauge` was `false` for `HR_BIKE`,
+• *When* the database migration executes,
+• *Then* `ShowBar` evaluates to `0` and `ShowValue` evaluates to `1` on existing HR fields in Bike layouts.
+• *Given* an athlete configuring an HR sensor field in an "Other" / Generic sport layout,
+• *When* `EditSensorFieldDialog` opens,
+• *Then* Value and Bar toggles are hidden, and saving preserves `showValue = true, showBar = false`.
+• *Given* a sensor field configured as bar-only (`showValue = false, showBar = true`),
+• *When* the sport is not yet resolved or no bar state is available,
+• *Then* `SensorFieldView` falls back to rendering the numeric value row, preventing an empty tile.
 
-**Invariants**: Non-destructive SQLite migration, true zone color preservation, and 100% clean-room test pass rate.
+**Invariants**: Non-destructive SQLite migration, zero empty tiles, true zone color preservation, and 100% clean-room test pass rate.
 
 
 ### REQ-TRK-047: Cockpit Manual Altitude Calibration with Permanent Known Location Persistence and Retroactive Piecewise-Linear Drift Correction [Verified]

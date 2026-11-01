@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.tracking
 
 import androidx.compose.ui.graphics.Color
 import com.atrainingtracker.trainingtracker.settings.ZoneDisplayOptions
+import io.mockk.mockk
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -141,5 +142,61 @@ class SensorFieldZoneDisplayTest {
             "Zone 6 (#8B5A2B) vs Zone 7 (#000000) contrast ratio ($contrastRatio) must be >= 3.0:1",
             contrastRatio >= 3.0
         )
+    }
+
+    /**
+     * TST-TRK-046.4: Empty-Tile Fallback Logic in SensorFieldView:
+     * When showValue == false, but no active bar can be rendered (!hasActiveBar),
+     * value row MUST render as a fallback so the sensor tile is never empty.
+     */
+    @Test
+    fun sensorFieldState_emptyTileFallbackLogic() {
+        fun shouldRenderValue(state: SensorFieldState): Boolean {
+            val hasActiveBar = state.showBar && (
+                state.zoneGaugeState != null ||
+                state.pedalBalanceState != null ||
+                state.wPrimeBatteryState != null
+            )
+            return state.showValue || !hasActiveBar
+        }
+
+        val baseState = SensorFieldState(
+            configHash = 1,
+            sensorFieldId = 10,
+            rowNr = 0,
+            colNr = 0,
+            viewSize = ViewSize.NORMAL,
+            label = "Power",
+            filterDescription = "",
+            value = "250",
+            units = "W",
+            zoneColor = Color.Green
+        )
+
+        // Case 1: Standard tile (showValue = true, showBar = false) -> renders value
+        assertTrue(shouldRenderValue(baseState.copy(showValue = true, showBar = false)))
+
+        // Case 2: Both active (showValue = true, showBar = true with active gauge) -> renders value
+        val mockGauge = mockk<ZoneGaugeState>()
+        assertTrue(shouldRenderValue(baseState.copy(showValue = true, showBar = true, zoneGaugeState = mockGauge)))
+
+        // Case 3: Bar-only tile with active gauge (showValue = false, showBar = true, zoneGaugeState != null) -> bar only, no value
+        assertFalse(shouldRenderValue(baseState.copy(showValue = false, showBar = true, zoneGaugeState = mockGauge)))
+
+        // Case 4: Bar-only tile with NO active gauge (e.g. unconfigured zones or unsupported sport) -> falls back to value!
+        assertTrue("Tile without active bar must fall back to rendering value",
+            shouldRenderValue(baseState.copy(showValue = false, showBar = true, zoneGaugeState = null)))
+
+        // Case 5: Both toggled false (defensive against corrupt db) -> falls back to value!
+        assertTrue("Tile with both flags false must fall back to rendering value",
+            shouldRenderValue(baseState.copy(showValue = false, showBar = false)))
+
+        // Case 6: Bar-only with active pedal balance -> bar only, no value
+        val mockBalance = mockk<PedalBalanceState>()
+        assertFalse(shouldRenderValue(baseState.copy(showValue = false, showBar = true, pedalBalanceState = mockBalance)))
+
+        // Case 7: Bar-only with active W' battery -> bar only, no value
+        val mockWPrime = mockk<WPrimeBatteryState>()
+        assertFalse(shouldRenderValue(baseState.copy(showValue = false, showBar = true, wPrimeBatteryState = mockWPrime)))
     }
 }

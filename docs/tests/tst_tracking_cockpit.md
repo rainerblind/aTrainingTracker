@@ -1237,29 +1237,35 @@
   • Verification via `ThemeColorCentralizationAuditTest` ensuring `SensorGridScreen.kt` uses centralized tokens (`DarkWarningContainer`, `LightWarningContainer`, etc.) without hardcoded colors.
 
 
-### TST-TRK-046: **Per-Sensor-Field Display Elements Configuration Test Suite** [Planned]
+### TST-TRK-046: **Per-Sensor-Field Display Elements Configuration Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-046`
-- **Component**: `TrackingViewsDatabaseManagerTest.kt`, `TrackingViewsRepositoryTest.kt`, `EditSensorFieldViewModelTest.kt`, `TranslationParityTest.kt`, `ThemeColorCentralizationAuditTest.kt`
-- **Jira**: `ATT-4841`
+- **Component**: `TrackingViewsDatabaseManagerTest.kt`, `TrackingViewsRepositoryTest.kt`, `EditSensorFieldViewModelTest.kt`, `SensorFieldView.kt`, `TranslationParityTest.kt`, `ThemeColorCentralizationAuditTest.kt`
+- **Jira**: `ATT-4841`, `ATT-4927`
 - **Test Description**:
-  1. *Database Schema v16 Migration & Backfill (`TST-TRK-046.1`)*:
+  1. *Database Schema v18 Migration & Legacy Settings Carryover (`TST-TRK-046.1`)*:
   • Unit test in `TrackingViewsDatabaseManagerTest` verifying:
-    - Upgrading from v15 to v16 adds `ShowValue` and `ShowBar` to `ROWS_TABLE`.
-    - Backfills `ShowValue = 1` for all rows.
-    - Backfills `ShowBar = 1` for `HR`, `POWER`, `PEDAL_POWER_BALANCE`, `W_PRIME_BAL`, and `0` for others.
-    - Pre-existing user layouts and tab configurations are completely preserved.
+    - Upgrading to schema v18 evaluates `VIEWS_TABLE.ActivityType` to determine `sportType`.
+    - HR and Power rows inherit `ShowBar` from legacy `ZoneDisplayOptions.showGauge` (e.g. `false` -> `0`, `true` -> `1`) for supported sports (`HR` in `RUN`/`BIKE`, `POWER` in `BIKE`).
+    - Bike power balance and W' battery bars receive `ShowBar = 1` for `BIKE`, and `0` for other sports.
+    - Fields with `ShowBar == 0` enforce `ShowValue = 1`.
+    - Fixes stale mock setup in `TrackingViewsDatabaseManagerTest`.
+    - `DatabaseSchemaRegistry.isVersionSupported("TrackingViews.db", 18)` returns `true`.
   2. *Repository Model & Flow Projection (`TST-TRK-046.2`)*:
   • Unit test in `TrackingViewsRepositoryTest` verifying:
     - `fetchSensorFieldConfigs` and `fetchSingleSensorFieldConfig` populate `showValue` and `showBar` correctly.
     - `updateSensorFieldConfig` and `insertSensorFieldConfig` persist `showValue` and `showBar` to the database.
-  3. *Edit Dialog ViewModel Selection Constraint (`TST-TRK-046.3`)*:
+  3. *Sport-Dependent Bar Support in Edit Dialog (`TST-TRK-046.3`)*:
   • Unit test in `EditSensorFieldViewModelTest` verifying:
-    - `isBarSupported` evaluates to `true` for `HR`, `POWER`, `PEDAL_POWER_BALANCE`, `W_PRIME_BAL`, and `false` for others.
-    - Deselecting `showValue` when `showBar == false` is blocked (at least one element must remain active).
-    - Deselecting `showBar` when `showValue == false` is blocked.
-    - Toggling `showValue` or `showBar` when both are selected succeeds.
-  4. *9-Language Localization Parity (`TST-TRK-046.4`)*:
+    - Canonical `isBarSupported(sensorType, sportType)` returns `true` for HR in Run/Bike and Power/Balance/W'Bal in Bike; returns `false` for all other combinations.
+    - When `isBarSupported == false`, Value/Bar switches are hidden and state enforces `showValue = true, showBar = false`.
+    - When `isBarSupported == true`, mutual exclusion constraint (at least one active) is enforced.
+  4. *Empty-Tile Fallback in Cockpit Sensor Field (`TST-TRK-046.4`)*:
+  • Unit test in `SensorFieldZoneDisplayTest` / `SensorFieldView` verifying:
+    - When a field has `showValue = false, showBar = true`, but no active bar can be drawn (`zoneGaugeState == null` or unsupported sport), the numeric value row renders as a fallback so the card is never blank.
+  5. *9-Language Localization Parity (`TST-TRK-046.5`)*:
   • Verification in `TranslationParityTest` for `sensor_field_display_elements_title`, `sensor_field_show_value`, `sensor_field_show_bar` across all 9 locales.
+  6. *Clean-Room Full Suite Regression Execution (`TST-TRK-046.6`)*:
+  • Execute targeted unit tests and verify 100% pass rate with zero regressions.
 
 
 ### TST-TRK-047: **Manual Altitude Calibration with Known Location Persistence & Drift Correction Test Suite** [Verified]

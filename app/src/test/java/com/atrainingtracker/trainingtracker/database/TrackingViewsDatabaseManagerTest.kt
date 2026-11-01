@@ -533,8 +533,30 @@ class TrackingViewsDatabaseManagerTest {
     }
 
     @Test
-    fun testDatabaseVersionIs17() {
-        assertEquals(17, TrackingViewsDatabaseManager.TrackingViewsDbHelper.DB_VERSION)
+    fun testDatabaseVersionIs18() {
+        assertEquals(18, TrackingViewsDatabaseManager.TrackingViewsDbHelper.DB_VERSION)
+    }
+
+    @Test
+    fun testIsBarSupported_sportDependentFeasibility() {
+        // HR: Run and Bike only
+        assertTrue(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(SensorType.HR, com.atrainingtracker.banalservice.BSportType.RUN))
+        assertTrue(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(SensorType.HR, com.atrainingtracker.banalservice.BSportType.BIKE))
+        assertFalse(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(SensorType.HR, com.atrainingtracker.banalservice.BSportType.UNKNOWN))
+
+        // Power, Pedal Balance, W'Bal: Bike only
+        assertTrue(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(SensorType.POWER, com.atrainingtracker.banalservice.BSportType.BIKE))
+        assertFalse(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(SensorType.POWER, com.atrainingtracker.banalservice.BSportType.RUN))
+
+        assertTrue(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(SensorType.PEDAL_POWER_BALANCE, com.atrainingtracker.banalservice.BSportType.BIKE))
+        assertFalse(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(SensorType.PEDAL_POWER_BALANCE, com.atrainingtracker.banalservice.BSportType.RUN))
+
+        assertTrue(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(SensorType.W_PRIME_BAL, com.atrainingtracker.banalservice.BSportType.BIKE))
+        assertFalse(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(SensorType.W_PRIME_BAL, com.atrainingtracker.banalservice.BSportType.RUN))
+
+        // Others: false
+        assertFalse(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(SensorType.SPEED_mps, com.atrainingtracker.banalservice.BSportType.BIKE))
+        assertFalse(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(null as SensorType?, com.atrainingtracker.banalservice.BSportType.BIKE))
     }
 
     @Test

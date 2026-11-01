@@ -27,6 +27,11 @@ import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.banalservice.filters.FilterType
 import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager.TrackingViewsDbHelper
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
+import com.atrainingtracker.trainingtracker.settings.ZoneDisplayOptions
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -565,11 +570,11 @@ class TrackingViewsRealSqliteMigrationTest {
 
         // Verify DatabaseSchemaRegistry versions
         assertEquals(
-            17,
+            TrackingViewsDbHelper.DB_VERSION,
             com.atrainingtracker.trainingtracker.migration.DatabaseSchemaRegistry.getMaxSupportedVersion("FlexibleGenericView.db")
         )
         assertEquals(
-            17,
+            TrackingViewsDbHelper.DB_VERSION,
             com.atrainingtracker.trainingtracker.migration.DatabaseSchemaRegistry.getMaxSupportedVersion("TrackingViews.db")
         )
     }
@@ -714,5 +719,218 @@ class TrackingViewsRealSqliteMigrationTest {
 
         // Verify idempotency
         helper.onUpgrade(database, 16, 17)
+    }
+
+    /**
+     * TST-TRK-046.1: Database migration v17 -> v18 evaluates sport types, re-applies legacy showGauge per profile,
+     * restricts Balance/W'Bal to Bike, and enforces ShowValue = 1 when ShowBar == 0.
+     */
+    @Test
+    fun testTrackingViewsDbHelper_v17ToV18Migration_sportDependentBarsAndLegacyGaugeParity() {
+        val database = checkNotNull(db)
+        database.execSQL(TrackingViewsDbHelper.CREATE_VIEWS_TABLE_V15)
+        database.execSQL(TrackingViewsDbHelper.CREATE_LAYOUTS_TABLE_V17)
+        database.execSQL(TrackingViewsDbHelper.CREATE_SECTION_DIVIDERS_TABLE_V14)
+        database.version = 17
+
+        // Configure legacy zone display options: HR_RUN showGauge = true, PWR_BIKE showGauge = false
+        val dataStore = SettingsDataStore.getInstance(context)
+        runBlocking {
+            dataStore.saveZoneDisplayOptions(SettingsDataStore.ZoneType.HR_RUN, ZoneDisplayOptions(showGauge = true))
+            dataStore.saveZoneDisplayOptions(SettingsDataStore.ZoneType.PWR_BIKE, ZoneDisplayOptions(showGauge = false))
+            dataStore.snapshotStateFlow.filter { it.hrRunDisplayOptions.showGauge }.first()
+        }
+
+        // 1. Insert views for different sports
+        val bikeViewId = database.insertOrThrow(TrackingViewsDbHelper.VIEWS_TABLE, null, ContentValues().apply {
+            put(TrackingViewsDbHelper.NAME, "Bike Cockpit")
+            put(TrackingViewsDbHelper.ACTIVITY_TYPE, com.atrainingtracker.banalservice.ActivityType.BIKE_POWER.name)
+            put(TrackingViewsDbHelper.LAYOUT_NR, 1)
+        })
+        val runViewId = database.insertOrThrow(TrackingViewsDbHelper.VIEWS_TABLE, null, ContentValues().apply {
+            put(TrackingViewsDbHelper.NAME, "Run Cockpit")
+            put(TrackingViewsDbHelper.ACTIVITY_TYPE, com.atrainingtracker.banalservice.ActivityType.RUN_SPEED_AND_CADENCE.name)
+            put(TrackingViewsDbHelper.LAYOUT_NR, 2)
+        })
+        val genericViewId = database.insertOrThrow(TrackingViewsDbHelper.VIEWS_TABLE, null, ContentValues().apply {
+            put(TrackingViewsDbHelper.NAME, "Other Cockpit")
+            put(TrackingViewsDbHelper.ACTIVITY_TYPE, com.atrainingtracker.banalservice.ActivityType.GENERIC_HR.name)
+            put(TrackingViewsDbHelper.LAYOUT_NR, 3)
+        })
+
+        // 2. Insert test rows
+        // Bike Power: ShowBar originally 1, but PWR_BIKE showGauge == false -> should become 0, ShowValue 1
+        val rowBikePower = database.insertOrThrow(TrackingViewsDbHelper.ROWS_TABLE, null, ContentValues().apply {
+            put(TrackingViewsDbHelper.VIEW_ID, bikeViewId)
+            put(TrackingViewsDbHelper.ROW_NR, 1)
+            put(TrackingViewsDbHelper.COL_NR, 1)
+            put(TrackingViewsDbHelper.SENSOR_TYPE, "POWER")
+            put(TrackingViewsDbHelper.VIEW_SIZE, "NORMAL")
+            put(TrackingViewsDbHelper.SHOW_VALUE, 1)
+            put(TrackingViewsDbHelper.SHOW_BAR, 1)
+        })
+
+        // Bike Balance: Should receive ShowBar = 1
+        val rowBikeBalance = database.insertOrThrow(TrackingViewsDbHelper.ROWS_TABLE, null, ContentValues().apply {
+            put(TrackingViewsDbHelper.VIEW_ID, bikeViewId)
+            put(TrackingViewsDbHelper.ROW_NR, 2)
+            put(TrackingViewsDbHelper.COL_NR, 1)
+            put(TrackingViewsDbHelper.SENSOR_TYPE, "PEDAL_POWER_BALANCE")
+            put(TrackingViewsDbHelper.VIEW_SIZE, "NORMAL")
+            put(TrackingViewsDbHelper.SHOW_VALUE, 1)
+            put(TrackingViewsDbHelper.SHOW_BAR, 0)
+        })
+
+        // Bike W'Bal: Should receive ShowBar = 1
+        val rowBikeWPrime = database.insertOrThrow(TrackingViewsDbHelper.ROWS_TABLE, null, ContentValues().apply {
+            put(TrackingViewsDbHelper.VIEW_ID, bikeViewId)
+            put(TrackingViewsDbHelper.ROW_NR, 3)
+            put(TrackingViewsDbHelper.COL_NR, 1)
+            put(TrackingViewsDbHelper.SENSOR_TYPE, "W_PRIME_BAL")
+            put(TrackingViewsDbHelper.VIEW_SIZE, "NORMAL")
+            put(TrackingViewsDbHelper.SHOW_VALUE, 1)
+            put(TrackingViewsDbHelper.SHOW_BAR, 0)
+        })
+
+        // Run HR: HR_RUN showGauge == true -> should receive ShowBar = 1
+        val rowRunHr = database.insertOrThrow(TrackingViewsDbHelper.ROWS_TABLE, null, ContentValues().apply {
+            put(TrackingViewsDbHelper.VIEW_ID, runViewId)
+            put(TrackingViewsDbHelper.ROW_NR, 1)
+            put(TrackingViewsDbHelper.COL_NR, 1)
+            put(TrackingViewsDbHelper.SENSOR_TYPE, "HR")
+            put(TrackingViewsDbHelper.VIEW_SIZE, "NORMAL")
+            put(TrackingViewsDbHelper.SHOW_VALUE, 1)
+            put(TrackingViewsDbHelper.SHOW_BAR, 0)
+        })
+
+        // Run Power: Not supported on Run -> should become ShowBar = 0, ShowValue = 1
+        val rowRunPower = database.insertOrThrow(TrackingViewsDbHelper.ROWS_TABLE, null, ContentValues().apply {
+            put(TrackingViewsDbHelper.VIEW_ID, runViewId)
+            put(TrackingViewsDbHelper.ROW_NR, 2)
+            put(TrackingViewsDbHelper.COL_NR, 1)
+            put(TrackingViewsDbHelper.SENSOR_TYPE, "POWER")
+            put(TrackingViewsDbHelper.VIEW_SIZE, "NORMAL")
+            put(TrackingViewsDbHelper.SHOW_VALUE, 1)
+            put(TrackingViewsDbHelper.SHOW_BAR, 1)
+        })
+
+        // Run Balance: Not supported on Run -> should become ShowBar = 0, ShowValue = 1
+        val rowRunBalance = database.insertOrThrow(TrackingViewsDbHelper.ROWS_TABLE, null, ContentValues().apply {
+            put(TrackingViewsDbHelper.VIEW_ID, runViewId)
+            put(TrackingViewsDbHelper.ROW_NR, 3)
+            put(TrackingViewsDbHelper.COL_NR, 1)
+            put(TrackingViewsDbHelper.SENSOR_TYPE, "PEDAL_POWER_BALANCE")
+            put(TrackingViewsDbHelper.VIEW_SIZE, "NORMAL")
+            put(TrackingViewsDbHelper.SHOW_VALUE, 1)
+            put(TrackingViewsDbHelper.SHOW_BAR, 1)
+        })
+
+        // Generic HR: Not supported on Generic -> should become ShowBar = 0, ShowValue = 1
+        val rowGenericHr = database.insertOrThrow(TrackingViewsDbHelper.ROWS_TABLE, null, ContentValues().apply {
+            put(TrackingViewsDbHelper.VIEW_ID, genericViewId)
+            put(TrackingViewsDbHelper.ROW_NR, 1)
+            put(TrackingViewsDbHelper.COL_NR, 1)
+            put(TrackingViewsDbHelper.SENSOR_TYPE, "HR")
+            put(TrackingViewsDbHelper.VIEW_SIZE, "NORMAL")
+            put(TrackingViewsDbHelper.SHOW_VALUE, 1)
+            put(TrackingViewsDbHelper.SHOW_BAR, 1)
+        })
+
+        // Bike Speed: Unsupported bar sensor -> should become ShowBar = 0, ShowValue = 1
+        val rowBikeSpeed = database.insertOrThrow(TrackingViewsDbHelper.ROWS_TABLE, null, ContentValues().apply {
+            put(TrackingViewsDbHelper.VIEW_ID, bikeViewId)
+            put(TrackingViewsDbHelper.ROW_NR, 4)
+            put(TrackingViewsDbHelper.COL_NR, 1)
+            put(TrackingViewsDbHelper.SENSOR_TYPE, "SPEED_mps")
+            put(TrackingViewsDbHelper.VIEW_SIZE, "NORMAL")
+            put(TrackingViewsDbHelper.SHOW_VALUE, 1)
+            put(TrackingViewsDbHelper.SHOW_BAR, 1)
+        })
+
+        // Row with ShowValue = 0, ShowBar = 0 (Empty tile invariant violation) -> ShowValue MUST be repaired to 1
+        val rowEmptyTile = database.insertOrThrow(TrackingViewsDbHelper.ROWS_TABLE, null, ContentValues().apply {
+            put(TrackingViewsDbHelper.VIEW_ID, bikeViewId)
+            put(TrackingViewsDbHelper.ROW_NR, 5)
+            put(TrackingViewsDbHelper.COL_NR, 1)
+            put(TrackingViewsDbHelper.SENSOR_TYPE, "CADENCE")
+            put(TrackingViewsDbHelper.VIEW_SIZE, "NORMAL")
+            put(TrackingViewsDbHelper.SHOW_VALUE, 0)
+            put(TrackingViewsDbHelper.SHOW_BAR, 0)
+        })
+
+        // Execute upgrade v17 -> v18
+        helper.onUpgrade(database, 17, 18)
+        database.version = 18
+
+        fun queryRow(rowId: Long): Pair<Int, Int> {
+            return database.query(
+                TrackingViewsDbHelper.ROWS_TABLE,
+                arrayOf(TrackingViewsDbHelper.SHOW_VALUE, TrackingViewsDbHelper.SHOW_BAR),
+                "${TrackingViewsDbHelper.ROW_ID} = ?",
+                arrayOf(rowId.toString()),
+                null, null, null
+            ).use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                Pair(cursor.getInt(0), cursor.getInt(1))
+            }
+        }
+
+        // Verify Bike Power: ShowBar = 0, ShowValue = 1 (legacy PWR_BIKE showGauge was false)
+        val (pwrVal, pwrBar) = queryRow(rowBikePower)
+        assertEquals("Bike Power ShowValue must be 1", 1, pwrVal)
+        assertEquals("Bike Power ShowBar must be 0", 0, pwrBar)
+
+        // Verify Bike Balance: ShowBar = 1, ShowValue = 1
+        val (balVal, balBar) = queryRow(rowBikeBalance)
+        assertEquals("Bike Balance ShowValue must be 1", 1, balVal)
+        assertEquals("Bike Balance ShowBar must be 1", 1, balBar)
+
+        // Verify Bike W'Bal: ShowBar = 1, ShowValue = 1
+        val (wVal, wBar) = queryRow(rowBikeWPrime)
+        assertEquals("Bike W'Bal ShowValue must be 1", 1, wVal)
+        assertEquals("Bike W'Bal ShowBar must be 1", 1, wBar)
+
+        // Verify Run HR: ShowBar = 1, ShowValue = 1 (legacy HR_RUN showGauge was true)
+        val (hrVal, hrBar) = queryRow(rowRunHr)
+        assertEquals("Run HR ShowValue must be 1", 1, hrVal)
+        assertEquals("Run HR ShowBar must be 1", 1, hrBar)
+
+        // Verify Run Power: ShowBar = 0, ShowValue = 1
+        val (rPwrVal, rPwrBar) = queryRow(rowRunPower)
+        assertEquals("Run Power ShowValue must be 1", 1, rPwrVal)
+        assertEquals("Run Power ShowBar must be 0", 0, rPwrBar)
+
+        // Verify Run Balance: ShowBar = 0, ShowValue = 1
+        val (rBalVal, rBalBar) = queryRow(rowRunBalance)
+        assertEquals("Run Balance ShowValue must be 1", 1, rBalVal)
+        assertEquals("Run Balance ShowBar must be 0", 0, rBalBar)
+
+        // Verify Generic HR: ShowBar = 0, ShowValue = 1
+        val (gHrVal, gHrBar) = queryRow(rowGenericHr)
+        assertEquals("Generic HR ShowValue must be 1", 1, gHrVal)
+        assertEquals("Generic HR ShowBar must be 0", 0, gHrBar)
+
+        // Verify Bike Speed: ShowBar = 0, ShowValue = 1
+        val (spdVal, spdBar) = queryRow(rowBikeSpeed)
+        assertEquals("Bike Speed ShowValue must be 1", 1, spdVal)
+        assertEquals("Bike Speed ShowBar must be 0", 0, spdBar)
+
+        // Verify Empty Tile repair: ShowBar = 0 -> ShowValue must be repaired to 1
+        val (emptyVal, emptyBar) = queryRow(rowEmptyTile)
+        assertEquals("Empty tile must be repaired to ShowValue = 1", 1, emptyVal)
+        assertEquals("Empty tile ShowBar must be 0", 0, emptyBar)
+
+        // Verify DatabaseSchemaRegistry parity (Rule 62)
+        assertTrue(
+            "TrackingViews.db version 18 must be supported",
+            com.atrainingtracker.trainingtracker.migration.DatabaseSchemaRegistry.isVersionSupported("TrackingViews.db", 18)
+        )
+        assertEquals(
+            18,
+            com.atrainingtracker.trainingtracker.migration.DatabaseSchemaRegistry.getMaxSupportedVersion("TrackingViews.db")
+        )
+
+        // Verify idempotency
+        helper.onUpgrade(database, 17, 18)
     }
 }

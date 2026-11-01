@@ -527,8 +527,9 @@ class TrackingViewModel @JvmOverloads constructor(
                         val zoneType = getZoneType(config.sensorType, currentActivity.sportType)
                         val displayOptions = zoneType?.let { zoneDisplayOptionsMap[it] } ?: ZoneDisplayOptions()
 
+                        val isBike = (currentActivity.sportType == BSportType.BIKE)
                         val isPedalBalance = (config.sensorType == SensorType.PEDAL_POWER_BALANCE)
-                        val initialPedalBalanceState = if (isPedalBalance) {
+                        val initialPedalBalanceState = if (isPedalBalance && isBike) {
                             PedalPowerBalanceMath.calculateBalanceState(null)
                         } else null
                         val initialValue = if (isPedalBalance && initialPedalBalanceState != null) {
@@ -538,8 +539,8 @@ class TrackingViewModel @JvmOverloads constructor(
                         }
 
                         val initialZoneGauge = if (config.showBar) calculateZoneGaugeState(zoneType, null) else null
-                        val initialPedalBalance = if (config.showBar) initialPedalBalanceState else null
-                        val initialWPrimeState = if (config.showBar && config.sensorType == SensorType.W_PRIME_BAL) {
+                        val initialPedalBalance = if (config.showBar && isBike) initialPedalBalanceState else null
+                        val initialWPrimeState = if (config.showBar && isBike && config.sensorType == SensorType.W_PRIME_BAL) {
                             WPrimeBatteryMath.calculateBatteryState(
                                 remainingKj = null,
                                 totalKj = currentEffectiveWPrimeKj,
@@ -663,10 +664,11 @@ class TrackingViewModel @JvmOverloads constructor(
                 } else null
 
                 // 3. Iterate through every field that needs this update.
+                val isBike = (activityType.sportType == BSportType.BIKE)
                 for (fieldToUpdate in fieldsToUpdate) {
                     val fieldZoneGaugeState = if (fieldToUpdate.showBar) rawZoneGaugeState else null
-                    val fieldPedalBalanceState = if (fieldToUpdate.showBar) newPedalBalanceState else null
-                    val fieldWPrimeBatteryState = if (fieldToUpdate.showBar && isWPrimeBal) newWPrimeBatteryState else null
+                    val fieldPedalBalanceState = if (fieldToUpdate.showBar && isBike) newPedalBalanceState else null
+                    val fieldWPrimeBatteryState = if (fieldToUpdate.showBar && isBike && isWPrimeBal) newWPrimeBatteryState else null
 
                     // Check if this specific instance needs an update to avoid unnecessary changes.
                     if (fieldToUpdate.value != newFormattedValue ||
