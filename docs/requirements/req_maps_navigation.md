@@ -1844,3 +1844,52 @@
 
 **Invariants**: Zero runtime allocations during lookup, thread-safe concurrent execution, zero SQLite alterations, zero main-thread jank, and 100% clean-room test pass rate.
 
+
+
+### REQ-MAP-057: Zoom-Adaptive Line-Density Heatmap Stroke Scaling, Warm Sequential Palette & Muted Base Map Styling [Verified]
+- **Tests**: `TST-MAP-059` | **Tickets**: `ATT-4933`
+- **Implementation**: `PolylineHeatmapTileProvider.kt`, `ThermalColorLut.kt`, `TTColor.kt`, `PeriodMapUtils.kt`, `PeriodSummaryCard.kt`, `InteractivePeriodMap.kt`, `PeriodMapScreen.kt`
+- **Rationale**: The system SHALL provide dynamic zoom-adaptive and container-scaled stroke width evaluation, a warm contrasting sequential "hot" palette, and muted base map styling across Periods heatmap views, eliminating corridor merging in dense street networks and visual camouflage against terrain hydrology while keeping Workout Clusters decoupled (ATT-4933, Parent Epic ATT-4474, refining `REQ-MAP-056` and `REQ-PER-024`):
+1. *Zoom- and Container-Adaptive Stroke Scaling (`REQ-MAP-057.1`)*:
+• In `PolylineHeatmapTileProvider`, line rasterization stroke width SHALL scale dynamically based on tile zoom level ($z$):
+  - At low zoom levels ($z \le 11$), stroke width SHALL scale down to $1.8\text{--}2.5\text{px}$ to prevent dense urban corridors from coalescing into solid unreadable blocks.
+  - At intermediate zoom levels ($12 \le z \le 14$), stroke width SHALL interpolate smoothly ($2.5\text{--}4.0\text{px}$).
+  - At high zoom levels ($z \ge 15$), stroke width SHALL expand to $4.5\text{--}6.0\text{px}$ to ensure high visibility of individual road corridors.
+• In card mini-map previews (`PeriodSummaryCard`), the provider SHALL apply a mini-map dampening factor ($\approx 0.65\times$ or clamped to $\le 2.2\text{px}$) to preserve street grid legibility within compact card bounds.
+2. *Warm Sequential "Hot" Color Palette (`ThermalColorLut.HOT`, `REQ-MAP-057.2`)*:
+• The system SHALL introduce a 4-stop warm sequential "hot" color palette (`ThermalColorLut.HOT`) constructed via semantic `TTColor` design tokens:
+  - Stop 0 (Low density / 0.0): Light Yellow (`#FFF176` / `HeatmapHotYellow`)
+  - Stop 1 (Moderate density / ~0.35): Vibrant Orange (`#FF9800` / `HeatmapHotOrange`)
+  - Stop 2 (High density / ~0.70): Warm Red (`#E53935` / `HeatmapHotRed`)
+  - Stop 3 (Maximum saturation / 1.0): Deep Dark Red (`#880E4F` / `HeatmapHotDarkRed`)
+• Index 0 SHALL remain fully transparent (`0x00000000`).
+• All color constants SHALL be registered in `TTColor.kt` under light and dark theme semantics, verified by `ThemeColorCentralizationAuditTest`.
+3. *Muted / Desaturated Base Map Style for Heatmap Views (`REQ-MAP-057.3`)*:
+• Periods map views rendering heatmaps (`PeriodSummaryCard`, `InteractivePeriodMap`, and `PeriodMapScreen`) SHALL support a muted/desaturated base map style JSON that suppresses bright terrain green and water blue contrast, allowing the warm heatmap overlay to dominate visual hierarchy.
+4. *Modular Decoupling & Parameterization (`REQ-MAP-057.4`)*:
+• `PolylineHeatmapTileProvider` and `MapContentScope` SHALL accept configurable `colorLut` and stroke scaler parameters, preserving default configuration and backwards compatibility for Workout Clusters (`ATT-4931`).
+5. *Preservation of System Invariants (`REQ-MAP-057.5`)*:
+• Single-workout mask accumulation (`ATT-4932`) and logarithmic corridor normalization (`ATT-4929`) SHALL remain fully active with zero regressions.
+• Tile generation SHALL remain strictly thread-safe on `Dispatchers.Default`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: `REQ-MAP-056.1` / `REQ-MAP-056.2` (*Line-Density Polyline Heatmap Tile Provider & 256-Entry Sequential Blue Color LUT*) and `REQ-PER-024.4` (*Corridor Frequency & Intensity Scaling*).
+2. *Historical Origin & Commit Trace*: Sprint 2026-40.16 (`ATT-504`), Sprint 2026-43.9 (commit `06990c88`, `ATT-4594` / `ATT-4480`), and Sprint Review 2026-44.1 of `ATT-4833`.
+3. *Root Reason for Existing Formulation*: Initial prototype adopted a static 5px stroke width and hardcoded 3-stop blue gradient (Cyan `#00E5FF` -> Blue `#0000FF` -> Indigo `#311B92`) for proof-of-concept tile rasterization without considering zoom scale or base map water/stream color collision.
+4. *Preservation of Core Invariants*: Zero main-thread tile rasterization (`Dispatchers.Default`), single-workout coverage mask accumulation (`ATT-4932`), logarithmic corridor normalization (`ATT-4929`), and decoupling/backward compatibility for Workout Clusters (`ATT-4931`) remain strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a high-workout period rendered in `PeriodSummaryCard` (mini-map) at zoom 11,
+• *When* the tile is generated,
+• *Then* stroke width is dampened to $\le 2.2\text{px}$, keeping urban street networks distinct without solid merging.
+• *Given* a detailed period map in `PeriodMapScreen` zoomed into zoom 16,
+• *When* the tile is generated,
+• *Then* stroke width expands to $\ge 4.5\text{px}$ for glanceable corridor emphasis.
+• *Given* accumulated corridor counts mapped through `ThermalColorLut.HOT`,
+• *When* rendered on a muted base map,
+• *Then* single-pass corridors appear in light yellow and high-frequency corridors progress to dark red, with zero camouflage against water bodies or terrain.
+• *Given* Workout Clusters map rendering (`ATT-4931`),
+• *When* no custom palette is configured,
+• *Then* default palette/stroke parameters are preserved without visual regression.
+
+**Invariants**: Zero database changes, thread safety on `Dispatchers.Default`, compliance with `TTColor` theme centralization, and 100% clean-room test pass rate.

@@ -603,8 +603,12 @@ private fun PeriodMultiWorkoutMap(
 
     val context = LocalContext.current
     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-    val mapProperties = remember(isDark, context) {
-        DarkMapStyle.resolveMapProperties(isDark, context)
+    val mapProperties = remember(isDark, context, precomputedVisuals) {
+        if (precomputedVisuals?.heatmapProvider != null) {
+            DarkMapStyle.resolveHeatmapMapProperties(isDark, context)
+        } else {
+            DarkMapStyle.resolveMapProperties(isDark, context)
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize().background(if (isDark) TTColor.DarkMapCanvas else Color.White)) {

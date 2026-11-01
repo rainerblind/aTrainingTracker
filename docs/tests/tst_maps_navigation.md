@@ -976,3 +976,22 @@
   11. *Coarse Spatial Grid Estimator Verification (`TST-MAP-058.11`)*: Verify `estimateMaxCorridorPassCount` accurately detects maximum overlap across synthetic crossing and parallel corridors in $< 10\text{ ms}$ on `Dispatchers.Default` without main-thread blocking.
   12. *Unified Card Mini-Map & Detailed Map Heatmap Normalization (`TST-MAP-058.12`)*: Verify `PeriodMapVisuals` propagates identical `maxCorridorPassCount` to both `PeriodSummaryCard` and `InteractivePeriodMap` / `PeriodMapScreen` for a given period.
 
+
+
+### TST-MAP-059: **Zoom-Adaptive Heatmap Stroke, Warm Contrasting Palette & Muted Base Map Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-MAP-057` (`REQ-MAP-057.1`..`REQ-MAP-057.5`)
+- **Component**: `PolylineHeatmapTileProviderTest.kt`, `ThermalColorLutTest.kt`, `PeriodMapVisualsTest.kt`, `PeriodSummaryCardTest.kt`, `PeriodMapScreenTest.kt`
+- **Jira**: `ATT-4933`
+- **Test Description**:
+  1. *Dynamic Zoom & Container Stroke Scaling Test (`TST-MAP-059.1`, `PolylineHeatmapTileProviderTest.kt`)*:
+  • Verify that stroke width increases monotonically with zoom: $\text{width}(10) < \text{width}(13) < \text{width}(16)$.
+  • Verify that mini-map mode dampens stroke width at all zoom levels ($\text{width}_{\text{mini}}(z) < \text{width}_{\text{detail}}(z)$).
+  2. *Warm Sequential "Hot" Color Palette LUT Verification (`TST-MAP-059.2`, `ThermalColorLutTest.kt` / `PolylineHeatmapTileProviderTest.kt`)*:
+  • Verify `ThermalColorLut.HOT` maps index 0 to fully transparent (`0x00000000`).
+  • Verify indices interpolate through Light Yellow (`#FFF176`) -> Orange (`#FF9800`) -> Red (`#E53935`) -> Dark Red (`#880E4F`) with red dominant across medium-to-high saturation.
+  3. *Muted Base Map JSON Styling Verification (`TST-MAP-059.3`, `PeriodMapScreenTest.kt` / `PeriodSummaryCardTest.kt`)*:
+  • Verify that Periods heatmap views load and apply the muted map style configuration.
+  4. *Workout Clusters Decoupling & Parameterized Backward Compatibility (`TST-MAP-059.4`, `PolylineHeatmapTileProviderTest.kt`)*:
+  • Verify that supplying default or blue palette retains previous rasterization behavior, decoupling Workout Clusters (`ATT-4931`).
+  5. *Targeted Regression Verification (`TST-MAP-059.5`)*:
+  • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.map.*" --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"` to verify 100% clean-room test pass rate.

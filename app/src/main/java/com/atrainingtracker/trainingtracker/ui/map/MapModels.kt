@@ -101,7 +101,8 @@ data class MapStyle(
     val climbZIndex: Float = 28f,
     val clusterWidth: Float = 10f,
     val clusterZIndex: Float = 12f,
-    val isDark: Boolean = false
+    val isDark: Boolean = false,
+    val useMutedStyle: Boolean = false
 )
 
 val LocalMapStyle = androidx.compose.runtime.staticCompositionLocalOf { MapStyle() }

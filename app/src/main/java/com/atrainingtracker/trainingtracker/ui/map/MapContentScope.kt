@@ -130,7 +130,9 @@ interface MapContentScope {
         radius: Int? = null,
         densifyInterval: Double? = null,
         maxPoints: Int? = null,
-        maxCorridorPassCount: Int? = null
+        maxCorridorPassCount: Int? = null,
+        colorLut: ThermalColorLut = ThermalColorLut.DEFAULT,
+        isMiniMap: Boolean = false
     )
 
     /**
@@ -178,7 +180,9 @@ internal class MapContentScopeImpl(
         val radius: Int?,
         val densifyInterval: Double?,
         val maxPoints: Int?,
-        val maxCorridorPassCount: Int? = null
+        val maxCorridorPassCount: Int? = null,
+        val colorLut: ThermalColorLut = ThermalColorLut.DEFAULT,
+        val isMiniMap: Boolean = false
     )
     private val heatmaps = mutableStateListOf<HeatmapData>()
 
@@ -253,7 +257,9 @@ internal class MapContentScopeImpl(
                 data.allPaths, 
                 data.opacity, 
                 steppedZoom,
-                data.maxCorridorPassCount
+                data.maxCorridorPassCount,
+                data.colorLut,
+                data.isMiniMap
             ) {
                 value = withContext(Dispatchers.Default) {
                     if (data.allPaths.isEmpty()) null
@@ -265,7 +271,9 @@ internal class MapContentScopeImpl(
                             allPaths = data.allPaths,
                             opacity = data.opacity,
                             strokeWidthPx = strokeWidth,
-                            maxCorridorPassCount = maxPasses
+                            colorLut = data.colorLut,
+                            maxCorridorPassCount = maxPasses,
+                            isMiniMap = data.isMiniMap
                         )
                     }
                 }
@@ -492,9 +500,11 @@ internal class MapContentScopeImpl(
         radius: Int?, 
         densifyInterval: Double?, 
         maxPoints: Int?,
-        maxCorridorPassCount: Int?
+        maxCorridorPassCount: Int?,
+        colorLut: ThermalColorLut,
+        isMiniMap: Boolean
     ) {
-        this.heatmaps.add(HeatmapData(allPaths, opacity, radius, densifyInterval, maxPoints, maxCorridorPassCount))
+        this.heatmaps.add(HeatmapData(allPaths, opacity, radius, densifyInterval, maxPoints, maxCorridorPassCount, colorLut, isMiniMap))
     }
 
     override fun knownLocations(locations: List<KnownLocationItem>, onLocationClick: (Long) -> Unit) {

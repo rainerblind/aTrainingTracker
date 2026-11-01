@@ -20,11 +20,12 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
 import android.content.Context
 import com.atrainingtracker.trainingtracker.location.RegionNameResolver
+import com.atrainingtracker.trainingtracker.ui.map.PolylineHeatmapTileProvider
+import com.atrainingtracker.trainingtracker.ui.map.ThermalColorLut
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.TileProvider
 import com.google.maps.android.PolyUtil
-import com.atrainingtracker.trainingtracker.ui.map.PolylineHeatmapTileProvider
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -79,7 +80,9 @@ fun getPeriodMapVisuals(
     allPaths: List<List<LatLng>>,
     isInteractive: Boolean = false,
     zoom: Float? = null,
-    maxCorridorPassCount: Int? = null
+    maxCorridorPassCount: Int? = null,
+    isMiniMap: Boolean = !isInteractive,
+    colorLut: ThermalColorLut = ThermalColorLut.HOT
 ): PeriodMapVisuals {
     val maxPasses = if (allPaths.isEmpty() || periodType == PeriodType.DAY) null
     else maxCorridorPassCount ?: PolylineHeatmapTileProvider.estimateMaxCorridorPassCount(allPaths)
@@ -107,7 +110,9 @@ fun getPeriodMapVisuals(
                 allPaths = allPaths,
                 opacity = opacity,
                 strokeWidthPx = strokeWidth,
-                maxCorridorPassCount = maxPasses
+                colorLut = colorLut,
+                maxCorridorPassCount = maxPasses,
+                isMiniMap = isMiniMap
             )
         }
     }

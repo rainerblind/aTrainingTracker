@@ -332,4 +332,10 @@ object TTColor {
     val BikeSportBarColor = Color(0xFF1E88E5)
     val RunSportBarColor = Color(0xFFFF7043)
     val OtherSportBarColor = Color(0xFF26A69A)
+
+    // Warm Heatmap "Hot" Sequential Palette (REQ-MAP-057.2, ATT-4933)
+    val HeatmapHotYellow = Color(0xFFFFF176)
+    val HeatmapHotOrange = Color(0xFFFF9800)
+    val HeatmapHotRed = Color(0xFFE53935)
+    val HeatmapHotDarkRed = Color(0xFF880E4F)
 }

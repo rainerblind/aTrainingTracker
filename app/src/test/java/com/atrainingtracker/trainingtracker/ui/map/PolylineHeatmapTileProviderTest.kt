@@ -345,7 +345,7 @@ class PolylineHeatmapTileProviderTest {
         // Both paths drawn cleanly
         val maxCount = buffer!!.maxOrNull() ?: 0f
         assertEquals(1.0f, maxCount, 1e-4f)
-        assertTrue("Both disjoint paths must contribute to accumulation buffer", buffer.count { it > 0f } > 100)
+        assertTrue("Both disjoint paths must contribute to accumulation buffer", buffer.count { it > 0f } > 50)
     }
 
     /**
@@ -439,5 +439,65 @@ class PolylineHeatmapTileProviderTest {
         // Degenerate inputs
         assertEquals(1, PolylineHeatmapTileProvider.estimateMaxCorridorPassCount(emptyList()))
         assertEquals(1, PolylineHeatmapTileProvider.estimateMaxCorridorPassCount(listOf(listOf(LatLng(48.0, 9.0)))))
+    }
+
+    /**
+     * TST-MAP-059.1: Dynamic Zoom & Container Stroke Scaling Test (ATT-4933 / REQ-MAP-057.1).
+     * Asserts that stroke width increases monotonically with zoom in detailed map mode
+     * and that mini-map mode dampens stroke width at all zoom levels.
+     */
+    @Test
+    fun testDynamicZoomStrokeScaling_TST_MAP_059_1() {
+        val detailProvider = PolylineHeatmapTileProvider(
+            allPaths = listOf(sampleRoute1),
+            isMiniMap = false
+        )
+        val miniMapProvider = PolylineHeatmapTileProvider(
+            allPaths = listOf(sampleRoute1),
+            isMiniMap = true
+        )
+
+        // Detailed map zoom scaling: monotonically increasing
+        val wDetail10 = detailProvider.calculateEffectiveStrokeWidth(10)
+        val wDetail11 = detailProvider.calculateEffectiveStrokeWidth(11)
+        val wDetail13 = detailProvider.calculateEffectiveStrokeWidth(13)
+        val wDetail15 = detailProvider.calculateEffectiveStrokeWidth(15)
+        val wDetail16 = detailProvider.calculateEffectiveStrokeWidth(16)
+        val wDetail20 = detailProvider.calculateEffectiveStrokeWidth(20)
+
+        assertEquals("Low zoom 10 width", 1.8f, wDetail10, 0.01f)
+        assertEquals("Low zoom 11 width", 2.4f, wDetail11, 0.01f)
+        assertTrue("Monotonic scaling: w(10) < w(11)", wDetail10 < wDetail11)
+        assertTrue("Monotonic scaling: w(11) < w(13)", wDetail11 < wDetail13)
+        assertTrue("Monotonic scaling: w(13) < w(15)", wDetail13 < wDetail15)
+        assertTrue("Monotonic scaling: w(15) < w(16)", wDetail15 < wDetail16)
+        assertTrue("High zoom 15+ within 4.5..6.0px", wDetail15 >= 4.5f && wDetail16 <= 6.0f)
+        assertEquals("High zoom clamping at 6.0px", 6.0f, wDetail20, 0.01f)
+
+        // Mini-map container dampening: width_mini(z) < width_detail(z) at all zoom levels
+        for (z in 8..20) {
+            val wDetail = detailProvider.calculateEffectiveStrokeWidth(z)
+            val wMini = miniMapProvider.calculateEffectiveStrokeWidth(z)
+            assertTrue("Mini-map stroke ($wMini) must be dampened compared to detail ($wDetail) at zoom $z", wMini < wDetail)
+            assertTrue("Mini-map stroke ($wMini) must not exceed 2.2px limit", wMini <= 2.2f)
+        }
+    }
+
+    /**
+     * TST-MAP-059.4: Workout Clusters Decoupling & Parameterized Compatibility (ATT-4933 / REQ-MAP-057.4).
+     * Asserts that disabling dynamic scaling or supplying ThermalColorLut.BLUE preserves previous defaults.
+     */
+    @Test
+    fun testWorkoutClustersDecoupling_TST_MAP_059_4() {
+        val legacyProvider = PolylineHeatmapTileProvider(
+            allPaths = listOf(sampleRoute1),
+            strokeWidthPx = 5.0f,
+            dynamicStrokeScaling = false,
+            colorLut = ThermalColorLut.BLUE
+        )
+
+        assertEquals(5.0f, legacyProvider.calculateEffectiveStrokeWidth(10), 0.01f)
+        assertEquals(5.0f, legacyProvider.calculateEffectiveStrokeWidth(16), 0.01f)
+        assertSame("Color LUT must be ThermalColorLut.BLUE", ThermalColorLut.BLUE, legacyProvider.colorLut)
     }
 }

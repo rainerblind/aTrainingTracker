@@ -19,10 +19,13 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
 import com.atrainingtracker.trainingtracker.ui.map.PolylineHeatmapTileProvider
+import com.atrainingtracker.trainingtracker.ui.map.ThermalColorLut
 import com.google.android.gms.maps.model.LatLng
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -91,5 +94,32 @@ class PeriodMapVisualsTest {
         // When omitted, estimateMaxCorridorPassCount is automatically calibrated
         val visualsAuto = getPeriodMapVisuals(PeriodType.MONTH, listOf(samplePath, samplePath, samplePath))
         assertEquals(3, visualsAuto.maxCorridorPassCount)
+    }
+
+    /**
+     * TST-MAP-059.4: Parameterized Warm Hot Palette and Container Dampening Propagation (ATT-4933 / REQ-MAP-057.4).
+     */
+    @Test
+    fun testWarmHotPaletteAndMiniMapPropagation_TST_MAP_059_4() {
+        // Default call for non-interactive card map should use isMiniMap = true and colorLut = ThermalColorLut.HOT
+        val miniMapVisuals = getPeriodMapVisuals(PeriodType.MONTH, listOf(samplePath), isInteractive = false)
+        val miniProvider = miniMapVisuals.heatmapProvider as PolylineHeatmapTileProvider
+        assertTrue("Card mini-map must set isMiniMap = true", miniProvider.isMiniMap)
+        assertSame("Card mini-map must default to ThermalColorLut.HOT", ThermalColorLut.HOT, miniProvider.colorLut)
+
+        // Interactive detail map should set isMiniMap = false
+        val detailVisuals = getPeriodMapVisuals(PeriodType.MONTH, listOf(samplePath), isInteractive = true)
+        val detailProvider = detailVisuals.heatmapProvider as PolylineHeatmapTileProvider
+        assertFalse("Interactive detail map must set isMiniMap = false", detailProvider.isMiniMap)
+        assertSame("Interactive detail map must default to ThermalColorLut.HOT", ThermalColorLut.HOT, detailProvider.colorLut)
+
+        // Custom palette can still be passed for decoupling
+        val customVisuals = getPeriodMapVisuals(
+            PeriodType.MONTH,
+            listOf(samplePath),
+            colorLut = ThermalColorLut.BLUE
+        )
+        val customProvider = customVisuals.heatmapProvider as PolylineHeatmapTileProvider
+        assertSame("Custom LUT must be retained", ThermalColorLut.BLUE, customProvider.colorLut)
     }
 }

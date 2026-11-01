@@ -54,6 +54,8 @@ internal data class PolylineBoundingBox(
  * @param colorLut The 256-entry thermal color lookup table.
  * @param tileSize The output tile dimensions (standard: 256).
  * @param maxCorridorPassCount The period-wide maximum corridor overlap count for logarithmic normalization (ATT-4929 / REQ-MAP-056.6).
+ * @param isMiniMap True if rendering within a compact card preview container, applying scale dampening (ATT-4933 / REQ-MAP-057.1).
+ * @param dynamicStrokeScaling True to adapt stroke width to tile zoom level (ATT-4933 / REQ-MAP-057.1).
  */
 class PolylineHeatmapTileProvider(
     allPaths: List<List<LatLng>>,
@@ -62,8 +64,28 @@ class PolylineHeatmapTileProvider(
     intensityPerPass: Float? = null,
     val colorLut: ThermalColorLut = ThermalColorLut(opacity),
     val tileSize: Int = 256,
-    val maxCorridorPassCount: Int? = null
+    val maxCorridorPassCount: Int? = null,
+    val isMiniMap: Boolean = false,
+    val dynamicStrokeScaling: Boolean = true
 ) : TileProvider {
+
+    /**
+     * Evaluates the effective pixel stroke width for a given tile zoom level (REQ-MAP-057.1).
+     *
+     * In standard view: scales from 1.8px at zoom <= 10 up to 5.4px at zoom 16 (clamped 1.8..6.0px).
+     * In mini-map view: applies a dampening scale factor (0.65x, clamped 1.2..2.2px) to preserve street grid readability.
+     */
+    fun calculateEffectiveStrokeWidth(zoom: Int): Float {
+        if (!dynamicStrokeScaling) {
+            return strokeWidthPx
+        }
+        val baseWidth = (1.8f + (zoom - 10).coerceAtLeast(0) * 0.6f).coerceIn(1.8f, 6.0f)
+        return if (isMiniMap) {
+            (baseWidth * 0.65f).coerceIn(1.2f, 2.2f)
+        } else {
+            baseWidth
+        }
+    }
 
     private val pathBounds: List<PolylineBoundingBox> = allPaths.mapNotNull { path ->
         if (path.size < 2) null
@@ -288,8 +310,9 @@ class PolylineHeatmapTileProvider(
         val nSouth = Math.PI - 2.0 * Math.PI * (y + 1) / nTiles
         val latSouth = Math.toDegrees(Math.atan(Math.sinh(nSouth)))
 
-        val radius = strokeWidthPx / 2.0f
-        val strokeMarginPx = strokeWidthPx * 2.0
+        val effectiveStrokeWidth = calculateEffectiveStrokeWidth(zoom)
+        val radius = effectiveStrokeWidth / 2.0f
+        val strokeMarginPx = effectiveStrokeWidth * 2.0
         val lonMargin = (strokeMarginPx / (tileSize * nTiles)) * 360.0
         val latMargin = lonMargin
 
