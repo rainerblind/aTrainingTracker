@@ -303,4 +303,22 @@ class PeriodCardMapStateTest {
         assertNotNull("activeRegionId must be non-null for multi-region summary", state.activeRegionId)
         assertTrue("activeRegionId must be populated", state.activeRegionId!!.isNotEmpty())
     }
+
+    /**
+     * TST-MAP-058.12: CardMapState maxCorridorPassCount propagation (ATT-4929 / REQ-MAP-056.6).
+     */
+    @Test
+    fun testTstMap058_12_CardMapStateMaxCorridorPassCount() {
+        val tracks = (1L..5L).associateWith { createTestPolyline(48.78, 9.18) }
+        val summary = createMockSummary(
+            periodType = PeriodType.MONTH,
+            polylinesMap = tracks
+        )
+
+        val state = prepareCardMapPreviewSync(summary)
+        assertTrue(state.isReady)
+        assertNotNull(state.visuals)
+        assertEquals(5, state.maxCorridorPassCount)
+        assertEquals(5, state.visuals?.maxCorridorPassCount)
+    }
 }

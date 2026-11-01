@@ -961,7 +961,7 @@
 ### TST-MAP-058: **Line-Density PolylineHeatmapTileProvider, Web Mercator Projection & Sequential Blue Color LUT Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-MAP-056`
 - **Component**: **Map Tile Heatmap**
-- **Jira**: `ATT-4480`, `ATT-4769`, `ATT-4932`
+- **Jira**: `ATT-4480`, `ATT-4769`, `ATT-4932`, `ATT-4929`
 - **Test Description**:
   1. Verify in `PolylineHeatmapTileProviderTest` that requesting a tile disjoint from all input polylines returns `TileProvider.NO_TILE` immediately without allocating bitmaps.
   2. Verify that intersecting polylines produce a valid 256x256 PNG tile byte array.
@@ -972,4 +972,7 @@
   7. *Standstill Jitter Single-Count Masking Test (`TST-MAP-058.7`)*: Verify 20 clustered GPS jitter points within a small radius yield an accumulated count of at most 1 for that workout.
   8. *Identical Path Multi-Workout Accumulation Test (`TST-MAP-058.8`)*: Verify two identical coincident paths accumulate to count = 2 everywhere along the line without intermediate clamping.
   9. *Bounded Scratch Buffer & Dirty-Rect Clearing Test (`TST-MAP-058.9`)*: Verify scratch buffer is allocated at most once per tile call and cleared via dirty-rect boundaries without full-array zeroing overhead.
+  10. *Per-Period Maximum Corridor Frequency Normalization & Non-Linear Logarithmic Curve (`TST-MAP-058.10`)*: Verify synthetic periods with 1x, 13x, and 150x overlap corridors yield distinct, strictly monotonic intensities ($I(1) = 85 < I(13) < I(150) = 255$) with saturation only at the maximum corridor.
+  11. *Coarse Spatial Grid Estimator Verification (`TST-MAP-058.11`)*: Verify `estimateMaxCorridorPassCount` accurately detects maximum overlap across synthetic crossing and parallel corridors in $< 10\text{ ms}$ on `Dispatchers.Default` without main-thread blocking.
+  12. *Unified Card Mini-Map & Detailed Map Heatmap Normalization (`TST-MAP-058.12`)*: Verify `PeriodMapVisuals` propagates identical `maxCorridorPassCount` to both `PeriodSummaryCard` and `InteractivePeriodMap` / `PeriodMapScreen` for a given period.
 

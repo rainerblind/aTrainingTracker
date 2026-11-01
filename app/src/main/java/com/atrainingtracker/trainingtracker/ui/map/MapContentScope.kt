@@ -129,7 +129,8 @@ interface MapContentScope {
         opacity: Double = 0.8, 
         radius: Int? = null,
         densifyInterval: Double? = null,
-        maxPoints: Int? = null
+        maxPoints: Int? = null,
+        maxCorridorPassCount: Int? = null
     )
 
     /**
@@ -176,7 +177,8 @@ internal class MapContentScopeImpl(
         val opacity: Double, 
         val radius: Int?,
         val densifyInterval: Double?,
-        val maxPoints: Int?
+        val maxPoints: Int?,
+        val maxCorridorPassCount: Int? = null
     )
     private val heatmaps = mutableStateListOf<HeatmapData>()
 
@@ -250,16 +252,20 @@ internal class MapContentScopeImpl(
                 initialValue = null, 
                 data.allPaths, 
                 data.opacity, 
-                steppedZoom
+                steppedZoom,
+                data.maxCorridorPassCount
             ) {
                 value = withContext(Dispatchers.Default) {
                     if (data.allPaths.isEmpty()) null
                     else {
                         val strokeWidth = (4f + (steppedZoom - 10f).coerceAtLeast(0f) * 0.5f).coerceIn(3.5f, 7.5f)
+                        val maxPasses = data.maxCorridorPassCount
+                            ?: PolylineHeatmapTileProvider.estimateMaxCorridorPassCount(data.allPaths)
                         PolylineHeatmapTileProvider(
                             allPaths = data.allPaths,
                             opacity = data.opacity,
-                            strokeWidthPx = strokeWidth
+                            strokeWidthPx = strokeWidth,
+                            maxCorridorPassCount = maxPasses
                         )
                     }
                 }
@@ -480,8 +486,15 @@ internal class MapContentScopeImpl(
         this.currentTracks.add(path)
     }
 
-    override fun heatmap(allPaths: List<List<LatLng>>, opacity: Double, radius: Int?, densifyInterval: Double?, maxPoints: Int?) {
-        this.heatmaps.add(HeatmapData(allPaths, opacity, radius, densifyInterval, maxPoints))
+    override fun heatmap(
+        allPaths: List<List<LatLng>>, 
+        opacity: Double, 
+        radius: Int?, 
+        densifyInterval: Double?, 
+        maxPoints: Int?,
+        maxCorridorPassCount: Int?
+    ) {
+        this.heatmaps.add(HeatmapData(allPaths, opacity, radius, densifyInterval, maxPoints, maxCorridorPassCount))
     }
 
     override fun knownLocations(locations: List<KnownLocationItem>, onLocationClick: (Long) -> Unit) {

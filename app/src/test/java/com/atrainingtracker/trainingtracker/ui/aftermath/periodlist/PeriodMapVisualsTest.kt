@@ -76,4 +76,20 @@ class PeriodMapVisualsTest {
         assertEquals(0.6f, visuals.polylineAlpha, 0.001f)
         assertEquals(5f, visuals.polylineWidth, 0.001f)
     }
+
+    /**
+     * TST-MAP-058.12: Unified Corridor Pass Count Calibration (ATT-4929 / REQ-PER-024.4 / REQ-MAP-056.6).
+     */
+    @Test
+    fun testUnifiedCorridorPassCountCalibration_TST_MAP_058_12() {
+        // When maxCorridorPassCount is explicitly passed, it is retained and propagated
+        val visualsWithExplicit = getPeriodMapVisuals(PeriodType.MONTH, listOf(samplePath), maxCorridorPassCount = 42)
+        assertEquals(42, visualsWithExplicit.maxCorridorPassCount)
+        val provider = visualsWithExplicit.heatmapProvider as PolylineHeatmapTileProvider
+        assertEquals(42, provider.maxCorridorPassCount)
+
+        // When omitted, estimateMaxCorridorPassCount is automatically calibrated
+        val visualsAuto = getPeriodMapVisuals(PeriodType.MONTH, listOf(samplePath, samplePath, samplePath))
+        assertEquals(3, visualsAuto.maxCorridorPassCount)
+    }
 }

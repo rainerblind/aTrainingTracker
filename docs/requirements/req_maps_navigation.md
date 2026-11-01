@@ -1757,7 +1757,7 @@
 ### REQ-MAP-056: Line-Density Polyline Heatmap Tile Provider & 256-Entry Sequential Blue Color LUT [Verified]
 - **Tests**: `PolylineHeatmapTileProvider.kt`, `MapUtils.kt`, `MapContentScope.kt`, `PolylineHeatmapTileProviderTest.kt`
 - **Implementation**: Replace Google Maps Gaussian point-cloud HeatmapTileProvider with custom Web Mercator line-density PolylineHeatmapTileProvider and 256-entry sequential blue color lookup table (LUT).
-- **Rationale**: The system SHALL replace Gaussian point-cloud heatmap tile rendering with a true line-density tile provider (`PolylineHeatmapTileProvider`) and 3-stop sequential blue color LUT across all map views (ATT-4480, refined by ATT-4769 and ATT-4932, Parent Epic ATT-4474, refining `REQ-MAP-002` and `REQ-MAP-016`):
+- **Rationale**: The system SHALL replace Gaussian point-cloud heatmap tile rendering with a true line-density tile provider (`PolylineHeatmapTileProvider`) and 3-stop sequential blue color LUT across all map views (ATT-4480, refined by ATT-4769, ATT-4932, and ATT-4929, Parent Epic ATT-4474, refining `REQ-MAP-002` and `REQ-MAP-016`):
 1. *Web Mercator Line-Raster TileProvider (`PolylineHeatmapTileProvider.kt`, `REQ-MAP-056.1`)*:
 • `PolylineHeatmapTileProvider` SHALL implement `com.google.android.gms.maps.model.TileProvider`.
 • For each requested tile $(x, y, \text{zoom})$, candidate polylines SHALL be filtered in $O(1)$ time using bounding-box intersection against the tile's geographic coordinates $[lat_{\min}, lon_{\min}, lat_{\max}, lon_{\max}]$ with a stroke margin.
@@ -1783,6 +1783,13 @@
 • Per-workout coverage masks SHALL be accumulated into an integer count buffer without intermediate clamping (`minOf(255, ...)`), counting distinct workouts per pixel and eliminating vertex bead and standstill blob artifacts.
 • To bound tile rendering performance, the per-workout mask SHALL be allocated as a single reusable per-tile scratch buffer, and only the dirty bounding rectangle $[minX, minY, maxX, maxY]$ SHALL be cleared between paths ($O(\text{dirty pixels})$).
 • Accumulated counts SHALL be mapped through `ThermalColorLut` at tile completion.
+6. *Per-Period Maximum Corridor Frequency Normalization & Logarithmic Transfer Curve (`ATT-4929`, `REQ-MAP-056.6`)*:
+• The provider SHALL accept an optional `maxCorridorPassCount: Int? = null`.
+• When `maxCorridorPassCount` ($M > 1$) is supplied, pixel intensity for accumulated workout count $c \in [1, M]$ SHALL follow a non-linear concave logarithmic transfer curve:
+  $$I(c) = \text{round}\left(I_{\text{base}} + (255 - I_{\text{base}}) \cdot \frac{\ln(c)}{\ln(M)}\right)$$
+  with base cyan intensity $I_{\text{base}} = 85$ for single passes ($c=1$), ensuring intermediate frequencies ($1 < c < M$) remain strictly distinguishable and full Deep Indigo saturation ($I=255$) occurs strictly at $c \ge M$.
+• When $M \le 1$ or unprovided, single passes SHALL render at base cyan intensity ($I_{\text{base}} = 85$).
+• Global maximum corridor overlap $M$ SHALL be estimated once per period/region off the main thread via `estimateMaxCorridorPassCount(allPaths: List<List<LatLng>>): Int` using a coarse spatial grid in $O(N)$ time on `Dispatchers.Default`, ensuring identical normalization across all tiles and zoom levels for both `PeriodSummaryCard` and `InteractivePeriodMap` / `PeriodMapScreen`.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
 1. *Original Requirement ID & Target*: `REQ-MAP-056.2` (realigning with `REQ-MAP-002` *Training heatmaps (Cyan -> Indigo gradient)* and `REQ-MAP-016` *Heatmap DSL Support*) under Epic `ATT-4474`, targeting `ThermalColorLut.kt` and `PolylineHeatmapTileProvider.kt`.
@@ -1794,6 +1801,11 @@
 • Historical Origin & Commit Trace: Sprint 2026-44.0 (commit `548f3995`, `ATT-4480`) and Sprint 2026-44.1 (commit `2bea16b7`, `ATT-4833`).
 • Root Reason for Existing Formulation: Per-segment additive accumulation directly into `intensityBuffer` was implemented as a fast prototype, but overlapping segment end-caps at vertices and standstill jitter clusters caused bead/blob artifacts and premature saturation.
 • Preservation of Core Invariants: Web Mercator projection, $O(1)$ candidate culling, thread-safety, zero heap churn, and 100% clean-room test pass rate are strictly preserved.
+6. *ATT-4929 Refinement (REQ-MAP-056.6 / REQ-PER-024.4)*:
+• Original Requirement ID & Target: `REQ-PER-024.4` (*Corridor Frequency & Intensity Scaling*) and `REQ-MAP-056.2` (*256-Entry Sequential Blue Color Lookup Table*).
+• Historical Origin & Commit Trace: Sprint 2026-44.0 (commit `548f3995`, `ATT-4480`) and Sprint 2026-44.1 (commit `2bea16b7`, `ATT-4833`).
+• Root Reason for Existing Formulation: Static bracketed lookup on period workout count (`pathCount`) was adopted before per-pixel workout counting (`ATT-4932`) was established, causing premature saturation at 12 passes in large periods and failing to distinguish 13x vs. 150x corridors.
+• Preservation of Core Invariants: Coarse grid computation off-thread preserves 60 fps main-thread performance; logarithmic transfer curve guarantees strict monotonicity and base cyan visibility ($I_{\text{base}} = 85$) for single passes.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* `ThermalColorLut` with default opacity,
@@ -1814,6 +1826,15 @@
 • *Given* two identical coincident workout paths,
 • *When* rendered by `PolylineHeatmapTileProvider`,
 • *Then* the accumulated count is exactly 2 everywhere along the path without clamping.
+• *Given* synthetic period paths with known overlap corridors of 1x, 13x, and 150x passes and $M = 150$,
+• *When* rendered by `PolylineHeatmapTileProvider`,
+• *Then* pixel intensities are strictly monotonic ($I(1) = 85 < I(13) \approx 172 < I(150) = 255$) and only the 150x corridor reaches full saturation.
+• *Given* a period with candidate paths across multiple tiles,
+• *When* `estimateMaxCorridorPassCount` executes on `Dispatchers.Default`,
+• *Then* maximum corridor overlap $M$ is estimated in $< 10\text{ ms}$ and applied uniformly across all tiles.
+• *Given* `PeriodMapVisuals` for a period,
+• *When* rendered in both `PeriodSummaryCard` and `InteractivePeriodMap`,
+• *Then* both views share identical `maxCorridorPassCount` and render identical corridor intensities.
 • *Given* a requested tile coordinate $(x, y, zoom)$ with no intersecting workout paths,
 • *When* `getTile` executes,
 • *Then* the provider SHALL return `TileProvider.NO_TILE` immediately without allocating bitmaps.

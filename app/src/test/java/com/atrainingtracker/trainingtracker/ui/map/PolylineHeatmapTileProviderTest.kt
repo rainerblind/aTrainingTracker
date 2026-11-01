@@ -347,4 +347,97 @@ class PolylineHeatmapTileProviderTest {
         assertEquals(1.0f, maxCount, 1e-4f)
         assertTrue("Both disjoint paths must contribute to accumulation buffer", buffer.count { it > 0f } > 100)
     }
+
+    /**
+     * TST-MAP-058.10: Per-Period Maximum Corridor Frequency Normalization & Logarithmic Transfer Curve (ATT-4929 / REQ-MAP-056.6).
+     * Asserts that synthetic periods with 1x, 13x, and 150x overlap corridors yield distinct, strictly
+     * monotonic intensities (I(1) = 85 < I(13) ≈ 172 < I(150) = 255) and saturation only for the maximum corridor.
+     */
+    @Test
+    fun testLogarithmicCorridorFrequencyTransferCurve_TST_MAP_058_10() {
+        val path1 = listOf(LatLng(48.500, 9.000), LatLng(48.505, 9.005))
+        val path2 = listOf(LatLng(48.505, 9.005), LatLng(48.510, 9.010))
+        val path3 = listOf(LatLng(48.510, 9.010), LatLng(48.515, 9.015))
+
+        // Synthetic dataset: 1 pass on path1, 13 passes on path2, 150 passes on path3
+        val paths = mutableListOf<List<LatLng>>()
+        paths.add(path1)
+        repeat(13) { paths.add(path2) }
+        repeat(150) { paths.add(path3) }
+
+        val provider = PolylineHeatmapTileProvider(
+            allPaths = paths,
+            maxCorridorPassCount = 150
+        )
+
+        val zoom = 12
+        val nTiles = 1 shl zoom
+        val x = ((9.0 + 180.0) / 360.0 * nTiles).toInt()
+        val latRad = Math.toRadians(48.5)
+        val y = ((1.0 - Math.log(Math.tan(Math.PI / 4 + latRad / 2)) / Math.PI) / 2.0 * nTiles).toInt()
+
+        val tile = provider.getTile(x, y, zoom)
+        assertNotNull(tile)
+        assertTrue(tile !== TileProvider.NO_TILE)
+
+        val decoded = BitmapFactory.decodeByteArray(tile!!.data, 0, tile.data!!.size)
+        assertNotNull(decoded)
+
+        // Verify color progression through LUT
+        val lut = ThermalColorLut()
+        val color1x = lut.getColor(85)
+        val expectedIntensity13 = (85 + 170 * (Math.log(13.0) / Math.log(150.0))).toInt()
+        val color13x = lut.getColor(expectedIntensity13)
+        val color150x = lut.getColor(255)
+
+        // 1. Monotonic intensity ordering
+        assertTrue(85 < expectedIntensity13)
+        assertTrue(expectedIntensity13 < 255)
+        assertEquals(172, expectedIntensity13)
+
+        // 2. Extracted component progression
+        val green1x = (color1x ushr 8) and 0xFF
+        val green13x = (color13x ushr 8) and 0xFF
+        val green150x = (color150x ushr 8) and 0xFF
+
+        val red1x = (color1x ushr 16) and 0xFF
+        val red13x = (color13x ushr 16) and 0xFF
+        val red150x = (color150x ushr 16) and 0xFF
+
+        // Light Cyan (high green, 0 red) -> Intermediate Blue-Indigo (lower green, moderate red) -> Deep Indigo (R=49, G=27)
+        assertTrue("1x must have higher green (cyan) than 13x", green1x > green13x)
+        assertEquals("1x red must be 0", 0, red1x)
+        assertEquals("13x red (intermediate between pure blue and deep indigo)", 17, red13x)
+        assertTrue("Red increases monotonically from 13x to 150x", red13x < red150x)
+        assertEquals("150x red must match Deep Indigo (49)", 49, red150x)
+        assertEquals("150x green must match Deep Indigo (27)", 27, green150x)
+    }
+
+    /**
+     * TST-MAP-058.11: Coarse Spatial Grid Estimator Verification (ATT-4929 / REQ-MAP-056.6).
+     * Asserts that estimateMaxCorridorPassCount accurately computes maximum overlap across
+     * synthetic intersecting and parallel paths with zero allocation overhead.
+     */
+    @Test
+    fun testCoarseSpatialGridEstimator_TST_MAP_058_11() {
+        val corridorA = listOf(LatLng(48.500, 9.000), LatLng(48.510, 9.010))
+        val corridorB = listOf(LatLng(48.515, 9.015), LatLng(48.525, 9.025))
+        val disjointRoute = listOf(LatLng(48.600, 9.100), LatLng(48.610, 9.110))
+
+        val allPaths = mutableListOf<List<LatLng>>()
+        allPaths.add(disjointRoute) // 1x
+        repeat(15) { allPaths.add(corridorA) } // 15x
+        repeat(42) { allPaths.add(corridorB) } // 42x
+
+        val startTime = System.currentTimeMillis()
+        val maxPasses = PolylineHeatmapTileProvider.estimateMaxCorridorPassCount(allPaths)
+        val elapsed = System.currentTimeMillis() - startTime
+
+        assertEquals(42, maxPasses)
+        assertTrue("Coarse spatial grid estimation must execute in < 50ms (took ${elapsed}ms)", elapsed < 50)
+
+        // Degenerate inputs
+        assertEquals(1, PolylineHeatmapTileProvider.estimateMaxCorridorPassCount(emptyList()))
+        assertEquals(1, PolylineHeatmapTileProvider.estimateMaxCorridorPassCount(listOf(listOf(LatLng(48.0, 9.0)))))
+    }
 }

@@ -53,6 +53,7 @@ internal data class PolylineBoundingBox(
  * @param intensityPerPass Fractional intensity added per traversal pass (0.0 to 1.0). If null, automatically calibrated to path count.
  * @param colorLut The 256-entry thermal color lookup table.
  * @param tileSize The output tile dimensions (standard: 256).
+ * @param maxCorridorPassCount The period-wide maximum corridor overlap count for logarithmic normalization (ATT-4929 / REQ-MAP-056.6).
  */
 class PolylineHeatmapTileProvider(
     allPaths: List<List<LatLng>>,
@@ -60,7 +61,8 @@ class PolylineHeatmapTileProvider(
     val strokeWidthPx: Float = 5.0f,
     intensityPerPass: Float? = null,
     val colorLut: ThermalColorLut = ThermalColorLut(opacity),
-    val tileSize: Int = 256
+    val tileSize: Int = 256,
+    val maxCorridorPassCount: Int? = null
 ) : TileProvider {
 
     private val pathBounds: List<PolylineBoundingBox> = allPaths.mapNotNull { path ->
@@ -99,6 +101,111 @@ class PolylineHeatmapTileProvider(
             }
             return (255 * fraction).roundToInt().coerceIn(1, 255)
         }
+
+        /**
+         * Estimates the maximum corridor overlap (pass count) across a collection of workout paths
+         * by rasterizing candidate polylines onto a lightweight 2D coarse grid (ATT-4929 / REQ-MAP-056.6).
+         * Runs in O(N) time with zero allocation churn, suitable for Dispatchers.Default background execution.
+         *
+         * @param allPaths The collection of geographic polylines to evaluate.
+         * @param coarseGridSize The dimension of the coarse spatial grid (default: 128).
+         * @return The estimated maximum corridor pass count (>= 1).
+         */
+        fun estimateMaxCorridorPassCount(
+            allPaths: List<List<LatLng>>,
+            coarseGridSize: Int = 128
+        ): Int {
+            if (allPaths.isEmpty()) return 1
+
+            var minLat = Double.MAX_VALUE
+            var maxLat = -Double.MAX_VALUE
+            var minLng = Double.MAX_VALUE
+            var maxLng = -Double.MAX_VALUE
+            var validPathCount = 0
+
+            for (path in allPaths) {
+                if (path.size < 2) continue
+                validPathCount++
+                for (pt in path) {
+                    if (pt.latitude < minLat) minLat = pt.latitude
+                    if (pt.latitude > maxLat) maxLat = pt.latitude
+                    if (pt.longitude < minLng) minLng = pt.longitude
+                    if (pt.longitude > maxLng) maxLng = pt.longitude
+                }
+            }
+
+            if (validPathCount == 0) return 1
+
+            val spanLat = maxLat - minLat
+            val spanLng = maxLng - minLng
+
+            if (spanLat <= 0.0 && spanLng <= 0.0) {
+                return validPathCount.coerceAtLeast(1)
+            }
+
+            val grid = IntArray(coarseGridSize * coarseGridSize)
+            val visited = IntArray(coarseGridSize * coarseGridSize)
+
+            for (pIndex in allPaths.indices) {
+                val path = allPaths[pIndex]
+                if (path.size < 2) continue
+                val marker = pIndex + 1
+
+                for (i in 0 until path.size - 1) {
+                    val pt1 = path[i]
+                    val pt2 = path[i + 1]
+
+                    val gx1 = if (spanLng > 0.0) {
+                        (((pt1.longitude - minLng) / spanLng) * (coarseGridSize - 1)).toInt().coerceIn(0, coarseGridSize - 1)
+                    } else 0
+                    val gy1 = if (spanLat > 0.0) {
+                        (((pt1.latitude - minLat) / spanLat) * (coarseGridSize - 1)).toInt().coerceIn(0, coarseGridSize - 1)
+                    } else 0
+
+                    val gx2 = if (spanLng > 0.0) {
+                        (((pt2.longitude - minLng) / spanLng) * (coarseGridSize - 1)).toInt().coerceIn(0, coarseGridSize - 1)
+                    } else 0
+                    val gy2 = if (spanLat > 0.0) {
+                        (((pt2.latitude - minLat) / spanLat) * (coarseGridSize - 1)).toInt().coerceIn(0, coarseGridSize - 1)
+                    } else 0
+
+                    // Bresenham line traversal on coarse grid
+                    var cx = gx1
+                    var cy = gy1
+                    val dx = kotlin.math.abs(gx2 - gx1)
+                    val dy = kotlin.math.abs(gy2 - gy1)
+                    val sx = if (gx1 < gx2) 1 else -1
+                    val sy = if (gy1 < gy2) 1 else -1
+                    var err = dx - dy
+
+                    while (true) {
+                        val cellIdx = cy * coarseGridSize + cx
+                        if (visited[cellIdx] != marker) {
+                            visited[cellIdx] = marker
+                            grid[cellIdx]++
+                        }
+                        if (cx == gx2 && cy == gy2) break
+                        val e2 = 2 * err
+                        if (e2 > -dy) {
+                            err -= dy
+                            cx += sx
+                        }
+                        if (e2 < dx) {
+                            err += dx
+                            cy += sy
+                        }
+                    }
+                }
+            }
+
+            var maxPasses = 1
+            for (count in grid) {
+                if (count > maxPasses) {
+                    maxPasses = count
+                }
+            }
+            return maxPasses
+        }
     }
 
     override fun getTile(x: Int, y: Int, zoom: Int): Tile? {
@@ -108,10 +215,34 @@ class PolylineHeatmapTileProvider(
         val pixels = IntArray(tileSize * tileSize)
         var hasVisiblePixel = false
 
+        val maxPasses = maxCorridorPassCount
+        val baseCyanIntensity = 85
+
         for (i in accumulationBuffer.indices) {
             val count = accumulationBuffer[i]
             if (count > 0f) {
-                val intensity = (count * stepIntensity).roundToInt().coerceIn(0, 255)
+                val intensity = if (maxPasses != null && maxPasses > 1) {
+                    // Logarithmic transfer curve (ATT-4929 / REQ-MAP-056.6):
+                    // c = 1.0 maps to base cyan intensity (85)
+                    // c = maxPasses maps to full Deep Indigo saturation (255)
+                    // Anti-aliased edge pixels (0.0 < c < 1.0) linearly scale up to base cyan.
+                    if (count < 1.0f) {
+                        (count * baseCyanIntensity).roundToInt().coerceIn(0, baseCyanIntensity)
+                    } else {
+                        val ratio = (Math.log(count.toDouble()) / Math.log(maxPasses.toDouble())).coerceIn(0.0, 1.0)
+                        (baseCyanIntensity + (255 - baseCyanIntensity) * ratio).roundToInt().coerceIn(baseCyanIntensity, 255)
+                    }
+                } else if (maxPasses != null && maxPasses <= 1) {
+                    if (count < 1.0f) {
+                        (count * baseCyanIntensity).roundToInt().coerceIn(0, baseCyanIntensity)
+                    } else {
+                        baseCyanIntensity
+                    }
+                } else {
+                    // Fallback to legacy stepIntensity lookup if maxCorridorPassCount not provided
+                    (count * stepIntensity).roundToInt().coerceIn(0, 255)
+                }
+
                 if (intensity > 0) {
                     pixels[i] = colorLut.getColor(intensity)
                     hasVisiblePixel = true

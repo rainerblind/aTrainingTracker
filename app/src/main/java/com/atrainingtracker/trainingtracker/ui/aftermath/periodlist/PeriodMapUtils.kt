@@ -33,7 +33,8 @@ import kotlinx.coroutines.withContext
 data class PeriodMapVisuals(
     val heatmapProvider: TileProvider?,
     val polylineAlpha: Float,
-    val polylineWidth: Float
+    val polylineWidth: Float,
+    val maxCorridorPassCount: Int? = null
 )
 
 /**
@@ -49,7 +50,8 @@ data class PeriodCardMapState(
     val primaryRegionPathsCount: Int = 0,
     val isReady: Boolean = false,
     val renderVectorPolylines: Boolean = true,
-    val activeRegionId: String? = null
+    val activeRegionId: String? = null,
+    val maxCorridorPassCount: Int? = null
 )
 
 /**
@@ -67,13 +69,18 @@ fun getPeriodSimplificationToleranceMeters(periodType: PeriodType): Double = whe
  * Centralized logic to determine how workouts are visualized based on the period level.
  * Transitions from clear polylines (Day) to prominent line-density heatmaps (Year).
  * @param zoom The current map zoom level. If null, a default summary radius is used.
+ * @param maxCorridorPassCount The calibrated maximum corridor overlap count for logarithmic normalization (ATT-4929 / REQ-MAP-056.6).
  */
 fun getPeriodMapVisuals(
     periodType: PeriodType,
     allPaths: List<List<LatLng>>,
     isInteractive: Boolean = false,
-    zoom: Float? = null
+    zoom: Float? = null,
+    maxCorridorPassCount: Int? = null
 ): PeriodMapVisuals {
+    val maxPasses = if (allPaths.isEmpty() || periodType == PeriodType.DAY) null
+    else maxCorridorPassCount ?: PolylineHeatmapTileProvider.estimateMaxCorridorPassCount(allPaths)
+
     val heatmapProvider = run {
         if (allPaths.isEmpty() || periodType == PeriodType.DAY) {
             null
@@ -96,7 +103,8 @@ fun getPeriodMapVisuals(
             PolylineHeatmapTileProvider(
                 allPaths = allPaths,
                 opacity = opacity,
-                strokeWidthPx = strokeWidth
+                strokeWidthPx = strokeWidth,
+                maxCorridorPassCount = maxPasses
             )
         }
     }
@@ -115,7 +123,7 @@ fun getPeriodMapVisuals(
         PeriodType.YEAR -> 5f
     }
 
-    return PeriodMapVisuals(heatmapProvider, polylineAlpha, polylineWidth)
+    return PeriodMapVisuals(heatmapProvider, polylineAlpha, polylineWidth, maxPasses)
 }
 
 /**
@@ -230,7 +238,8 @@ fun prepareCardMapPreviewSync(summary: PeriodSummary): PeriodCardMapState {
         primaryRegionPathsCount = activePaths.size,
         isReady = true,
         renderVectorPolylines = renderVectorPolylines,
-        activeRegionId = primaryPathRegion?.region?.id
+        activeRegionId = primaryPathRegion?.region?.id,
+        maxCorridorPassCount = visuals.maxCorridorPassCount
     )
 }
 
