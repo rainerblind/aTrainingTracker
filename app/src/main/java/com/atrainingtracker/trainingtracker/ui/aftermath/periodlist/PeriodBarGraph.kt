@@ -329,11 +329,14 @@ fun PeriodBarGraph(
     periods: List<PeriodSummary>,
     currentScrollState: LazyListState,
     onBarClick: (Int) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    selectedMetric: PeriodBarMetric? = null,
+    onMetricSelect: ((PeriodBarMetric) -> Unit)? = null
 ) {
     if (periods.isEmpty()) return
 
-    var selectedMetric by rememberSaveable { mutableStateOf(PeriodBarMetric.DURATION) }
+    var localMetric by rememberSaveable { mutableStateOf(PeriodBarMetric.DURATION) }
+    val activeMetric = selectedMetric ?: localMetric
     val graphItems = remember(periods) { interpolateTimelineGaps(periods) }
     if (graphItems.isEmpty()) return
 
@@ -349,9 +352,9 @@ fun PeriodBarGraph(
         }
     }
 
-    val maxMetricValue = remember(graphItems, selectedMetric) {
+    val maxMetricValue = remember(graphItems, activeMetric) {
         graphItems.maxOfOrNull { item ->
-            when (selectedMetric) {
+            when (activeMetric) {
                 PeriodBarMetric.DURATION -> item.durationSec.toDouble()
                 PeriodBarMetric.DISTANCE -> item.distanceMeters
                 PeriodBarMetric.ASCENT -> item.ascentMeters.toDouble()
@@ -388,8 +391,11 @@ fun PeriodBarGraph(
                     PeriodBarMetric.ASCENT -> stringResource(R.string.stats_ascent)
                 }
                 SegmentedButton(
-                    selected = selectedMetric == metric,
-                    onClick = { selectedMetric = metric },
+                    selected = activeMetric == metric,
+                    onClick = {
+                        localMetric = metric
+                        onMetricSelect?.invoke(metric)
+                    },
                     shape = SegmentedButtonDefaults.itemShape(index = index, count = 3),
                     icon = {},
                     contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)
@@ -397,7 +403,7 @@ fun PeriodBarGraph(
                     Text(
                         text = label,
                         style = MaterialTheme.typography.labelSmall,
-                        fontWeight = if (selectedMetric == metric) FontWeight.Bold else FontWeight.Medium,
+                        fontWeight = if (activeMetric == metric) FontWeight.Bold else FontWeight.Medium,
                         maxLines = 1,
                         softWrap = false,
                         overflow = TextOverflow.Ellipsis
@@ -420,15 +426,15 @@ fun PeriodBarGraph(
         ) {
             itemsIndexed(graphItems) { _, item ->
                 val isSelected = item.originalIndex != null && item.originalIndex == firstVisibleIndex
-                val metricValue = when (selectedMetric) {
+                val metricValue = when (activeMetric) {
                     PeriodBarMetric.DURATION -> item.durationSec.toDouble()
                     PeriodBarMetric.DISTANCE -> item.distanceMeters
                     PeriodBarMetric.ASCENT -> item.ascentMeters.toDouble()
                 }
                 val heightFraction = (metricValue / maxMetricValue).toFloat().coerceIn(0.0f, 1.0f)
-                val valueString = formatMetricValue(metricValue, selectedMetric, item.periodType, userUnit)
-                val sportSegments = remember(item, selectedMetric) {
-                    if (!item.isRest) calculateSportSegments(item.summary, selectedMetric) else emptyList()
+                val valueString = formatMetricValue(metricValue, activeMetric, item.periodType, userUnit)
+                val sportSegments = remember(item, activeMetric) {
+                    if (!item.isRest) calculateSportSegments(item.summary, activeMetric) else emptyList()
                 }
 
                 Column(

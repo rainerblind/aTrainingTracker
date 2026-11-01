@@ -1037,6 +1037,8 @@
     <string name="workout_periods__migration_reading">Lese Training %1$d von %2$d…</string>
     <string name="workout_periods__migration_syncing">Synchronisiere %1$s…</string>
     <string name="workout_periods__migration_finalizing">Berechne Jahreswerte…</string>
+    <string name="workout_periods__yearly_activity_grid">Jahresaktivität</string>
+    <string name="workout_periods__no_activity">Keine Aktivität</string>
 
     <!-- share screenshots -->
     <string name="share">Teilen</string>

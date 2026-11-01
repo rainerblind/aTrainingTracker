@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Tests**: 30
+**Total Tests**: 32
 
 ---
 
@@ -395,4 +395,24 @@
   • Verify `showPeriodMap(summary, initialRegionId)` initializes `selectedRegionId` with `initialRegionId`.
   6. *Clean-Room Full Suite Regression Execution (`TST-PER-030.6`)*:
   • Execute targeted unit tests verifying 100% test pass rate with zero regressions.
+
+### TST-PER-031: **Yearly Activity Contribution Grids Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PER-025`
+- **Component**: `YearlyContributionGridTest.kt`, `PeriodsViewModelTest.kt`, `PeriodSummaryCardTest.kt`, `YearlyContributionLocalizationTest.kt`
+- **Jira**: `ATT-4849`
+- **Test Description**:
+  1. *Daily Aggregation & Calendar Matrix Mapping Test (`TST-PER-031.1`, `YearlyContributionGridTest.kt`)*:
+  • Verify that daily workout totals for a given calendar year map deterministically to a 7-row (Mon–Sun) by 53-column (ISO weeks 1..53) calendar day matrix for both standard (365-day) and leap (366-day) years.
+  2. *Quartile Calculation & Level Assignment Test (`TST-PER-031.2`, `YearlyContributionGridTest.kt`)*:
+  • Verify that positive volume values are partitioned into quartiles $Q_1, Q_2, Q_3, Q_4$, yielding levels 1..4 (with level 0 for zero/rest days) across all supported metrics (`DURATION`, `DISTANCE`, `ASCENT`).
+  3. *Multi-Sport Separation & Canonical Order Test (`TST-PER-031.3`, `YearlyContributionGridTest.kt`)*:
+  • Verify that distinct contribution grids are instantiated per active `BSportType` with sport-specific color ramps (`TTColor.BikeSportBarColor`, `RunSportBarColor`, `OtherSportBarColor`), ordered according to Rule 57 (`[Bike, Run, Other]`).
+  4. *Master Selector Slaving & Filter Reactivity Test (`TST-PER-031.4`, `PeriodsViewModelTest.kt`)*:
+  • Verify that `PeriodsViewModel` exposes `selectedMetric: StateFlow<PeriodBarMetric>` slaving both `PeriodBarGraph` and contribution grids; verify that toggling `selectedSports` reactively shows/hides the respective sport contribution grids.
+  5. *Interactive Day Cell Selection & Drill-Down Contract Test (`TST-PER-031.5`, `YearlyContributionGridTest.kt`)*:
+  • Verify that tapping an active day cell emits that day's start/end epoch second timestamps, sport type, and workout metadata for drill-down into `WorkoutSummariesListFragment`.
+  6. *9-Language Localization Parity Audit (`TST-PER-031.6`, `YearlyContributionLocalizationTest.kt`)*:
+  • Verify that all added string resources (`workout_periods__yearly_activity_grid`, `workout_periods__no_activity`) exist with matching keys across all 9 supported locales.
+  7. *Targeted Regression Verification (`TST-PER-031.7`)*:
+  • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"` to verify 100% clean-room test pass rate.
 

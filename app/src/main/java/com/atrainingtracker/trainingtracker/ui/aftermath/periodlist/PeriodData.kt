@@ -20,6 +20,34 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.util.MigrationStatus
+import java.time.LocalDate
+
+/**
+ * Daily activity aggregation for a single calendar day and sport type.
+ */
+data class DailySportActivity(
+    val date: LocalDate,
+    val bSportType: BSportType,
+    val count: Int,
+    val durationSec: Long,
+    val distanceMeters: Double,
+    val ascentMeters: Long,
+    val workoutIds: List<Long> = emptyList(),
+    val workoutNames: List<String> = emptyList()
+)
+
+/**
+ * Yearly activity contributions for a single sport type across a calendar year.
+ * Encapsulates daily activities and max daily metric values for calibrated quartile shading.
+ */
+data class YearlySportContribution(
+    val sportType: BSportType,
+    val year: Int,
+    val dailyActivities: Map<LocalDate, DailySportActivity> = emptyMap(),
+    val maxDailyDurationSec: Long = 0L,
+    val maxDailyDistanceMeters: Double = 0.0,
+    val maxDailyAscentMeters: Long = 0L
+)
 
 /**
  * Safety threshold for rendering detailed vector tracks and markers in Period Maps.
@@ -73,6 +101,7 @@ data class PeriodSummary(
     val workoutIdToPathMap: Map<Long, List<com.google.android.gms.maps.model.LatLng>> = emptyMap(), // ID -> Rich Path
     val workoutIdToSportMap: Map<Long, BSportType> = emptyMap(),
     val extremaMarkers: List<PeriodPeakMarker> = emptyList(),
+    val yearlySportContributions: Map<BSportType, YearlySportContribution> = emptyMap(),
     val sortKey: String // Used for sorting
 )
 

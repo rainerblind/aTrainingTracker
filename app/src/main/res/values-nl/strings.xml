@@ -963,6 +963,8 @@
     <string name="workout_periods__migration_reading">Training %1$d van %2$d lezen…</string>
     <string name="workout_periods__migration_syncing">Synchroniseren %1$s…</string>
     <string name="workout_periods__migration_finalizing">Jaartotalen afronden…</string>
+    <string name="workout_periods__yearly_activity_grid">Jaarlijkse activiteit</string>
+    <string name="workout_periods__no_activity">Geen activiteit</string>
 
     <!-- share screenshots -->
     <string name="share">Delen</string>

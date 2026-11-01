@@ -1179,6 +1179,8 @@
     <string name="workout_periods__migration_reading">Reading workout %1$d of %2$d…</string>
     <string name="workout_periods__migration_syncing">Syncing %1$s…</string>
     <string name="workout_periods__migration_finalizing">Finalizing yearly totals…</string>
+    <string name="workout_periods__yearly_activity_grid">Yearly Activity</string>
+    <string name="workout_periods__no_activity">No activity</string>
 
     <!-- share screenshots -->
     <string name="share">Share</string>

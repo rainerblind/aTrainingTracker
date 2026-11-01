@@ -63,6 +63,13 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
     private val periodsRepo = PeriodsRepository.getInstance(application)
     private val prefManager = com.atrainingtracker.trainingtracker.MyPreferenceManager(application)
 
+    private val _selectedMetric = MutableStateFlow(PeriodBarMetric.DURATION)
+    val selectedMetric: StateFlow<PeriodBarMetric> = _selectedMetric.asStateFlow()
+
+    fun selectMetric(metric: PeriodBarMetric) {
+        _selectedMetric.value = metric
+    }
+
     val groups = listOf(
         application.getString(R.string.workout_periods__days),
         application.getString(R.string.workout_periods__weeks),
@@ -269,6 +276,8 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
             summary.extremaMarkers
         }
 
+        val filteredContributions = summary.yearlySportContributions.filterKeys { it in sports }
+
         return summary.copy(
             totalWorkouts = totalWorkouts,
             totalDurationSec = totalDurationSec,
@@ -276,7 +285,8 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
             sportStats = filteredStats,
             polylines = filteredPolylines,
             workoutIdToPolylineMap = filteredPolylineMap,
-            extremaMarkers = filteredMarkers
+            extremaMarkers = filteredMarkers,
+            yearlySportContributions = filteredContributions
         )
     }
 

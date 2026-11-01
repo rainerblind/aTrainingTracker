@@ -91,7 +91,9 @@ fun PeriodSummaryCard(
     onMapClick: (PeriodSummary) -> Unit,
     onSportClick: (PeriodSummary, BSportType) -> Unit,
     onLongestWorkoutClick: (PeriodSummary, BSportType, Long) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    activeMetric: PeriodBarMetric = PeriodBarMetric.DURATION,
+    onDayCellClick: ((PeriodSummary, BSportType, java.time.LocalDate, DailySportActivity?) -> Unit)? = null
 ) {
     PeriodSummaryCard(
         summary = summary,
@@ -100,7 +102,9 @@ fun PeriodSummaryCard(
         onMapClick = { s, _ -> onMapClick(s) },
         onSportClick = onSportClick,
         onLongestWorkoutClick = onLongestWorkoutClick,
-        modifier = modifier
+        modifier = modifier,
+        activeMetric = activeMetric,
+        onDayCellClick = onDayCellClick
     )
 }
 
@@ -112,7 +116,9 @@ fun PeriodSummaryCard(
     onMapClick: (PeriodSummary, String?) -> Unit,
     onSportClick: (PeriodSummary, BSportType) -> Unit,
     onLongestWorkoutClick: (PeriodSummary, BSportType, Long) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    activeMetric: PeriodBarMetric = PeriodBarMetric.DURATION,
+    onDayCellClick: ((PeriodSummary, BSportType, java.time.LocalDate, DailySportActivity?) -> Unit)? = null
 ) {
     val df = DistanceFormatter()
     val tf = TimeFormatter()
@@ -211,6 +217,38 @@ fun PeriodSummaryCard(
                     )
                     if (index < summary.sportStats.size - 1) {
                         Spacer(modifier = Modifier.height(12.dp))
+                    }
+                }
+
+                // --- YEARLY ACTIVITY CONTRIBUTION GRIDS (REQ-PER-025, ATT-4849) ---
+                if (summary.periodType == PeriodType.YEAR && summary.yearlySportContributions.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = stringResource(R.string.workout_periods__yearly_activity_grid),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    val canonicalOrder = listOf(BSportType.BIKE, BSportType.RUN)
+                    val sortedSports = (canonicalOrder + summary.yearlySportContributions.keys.filter { it != BSportType.BIKE && it != BSportType.RUN && it != BSportType.UNKNOWN } + listOf(BSportType.UNKNOWN))
+                        .distinct()
+                        .filter { it in summary.yearlySportContributions }
+
+                    sortedSports.forEachIndexed { index, sport ->
+                        val contribution = summary.yearlySportContributions[sport] ?: return@forEachIndexed
+                        YearlyContributionGrid(
+                            contribution = contribution,
+                            activeMetric = activeMetric,
+                            onDayClick = { date, dayActivity ->
+                                onDayCellClick?.invoke(summary, sport, date, dayActivity)
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        if (index < sortedSports.size - 1) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
                     }
                 }
             }

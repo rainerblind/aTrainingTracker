@@ -317,4 +317,66 @@ class PeriodsViewModelTest {
         // After background processing finishes
         assertEquals("region_custom_42", viewModel.mapState.value.selectedRegionId)
     }
+
+    /**
+     * TST-PER-031.4: Master Metric Selector Hoisting & Reactivity Test (REQ-PER-025.2).
+     */
+    @Test
+    fun testSelectedMetric_defaultAndHoisting() {
+        val viewModel = PeriodsViewModel(mockApplication)
+        assertEquals(PeriodBarMetric.DURATION, viewModel.selectedMetric.value)
+
+        viewModel.selectMetric(PeriodBarMetric.DISTANCE)
+        assertEquals(PeriodBarMetric.DISTANCE, viewModel.selectedMetric.value)
+
+        viewModel.selectMetric(PeriodBarMetric.ASCENT)
+        assertEquals(PeriodBarMetric.ASCENT, viewModel.selectedMetric.value)
+    }
+
+    /**
+     * TST-PER-031.4: Filter Yearly Sport Contributions by Selected Sports Test (REQ-PER-025.2, REQ-PER-025.4).
+     */
+    @Test
+    fun testFilterPeriodSummary_filtersYearlySportContributions() {
+        val viewModel = PeriodsViewModel(mockApplication)
+
+        val bikeContribution = YearlySportContribution(sportType = BSportType.BIKE, year = 2026)
+        val runContribution = YearlySportContribution(sportType = BSportType.RUN, year = 2026)
+        val otherContribution = YearlySportContribution(sportType = BSportType.UNKNOWN, year = 2026)
+
+        val bikeStats = SportStats(count = 1, totalDurationSec = 3600L, totalDistanceMeters = 20000.0, totalAscentMeters = 200L, detailedSportStats = emptyMap(), longestWorkout = null)
+        val runStats = SportStats(count = 1, totalDurationSec = 1800L, totalDistanceMeters = 5000.0, totalAscentMeters = 50L, detailedSportStats = emptyMap(), longestWorkout = null)
+        val otherStats = SportStats(count = 1, totalDurationSec = 2700L, totalDistanceMeters = 0.0, totalAscentMeters = 0L, detailedSportStats = emptyMap(), longestWorkout = null)
+
+        val base = createPeriodSummary(
+            label = "Year 2026",
+            sportStats = mapOf(
+                BSportType.BIKE to bikeStats,
+                BSportType.RUN to runStats,
+                BSportType.UNKNOWN to otherStats
+            )
+        ).copy(
+            periodType = PeriodType.YEAR,
+            yearlySportContributions = mapOf(
+                BSportType.BIKE to bikeContribution,
+                BSportType.RUN to runContribution,
+                BSportType.UNKNOWN to otherContribution
+            )
+        )
+
+        // Filter for BIKE only
+        val bikeOnly = viewModel.filterPeriodSummary(base, setOf(BSportType.BIKE))
+        assertNotNull(bikeOnly)
+        assertEquals(setOf(BSportType.BIKE), bikeOnly!!.yearlySportContributions.keys)
+
+        // Filter for BIKE and RUN
+        val bikeAndRun = viewModel.filterPeriodSummary(base, setOf(BSportType.BIKE, BSportType.RUN))
+        assertNotNull(bikeAndRun)
+        assertEquals(setOf(BSportType.BIKE, BSportType.RUN), bikeAndRun!!.yearlySportContributions.keys)
+
+        // Filter for UNKNOWN only
+        val otherOnly = viewModel.filterPeriodSummary(base, setOf(BSportType.UNKNOWN))
+        assertNotNull(otherOnly)
+        assertEquals(setOf(BSportType.UNKNOWN), otherOnly!!.yearlySportContributions.keys)
+    }
 }
