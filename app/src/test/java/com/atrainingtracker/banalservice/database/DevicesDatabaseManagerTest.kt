@@ -282,4 +282,90 @@ class DevicesDatabaseManagerTest {
         assertEquals(true, captured.getAsBoolean(DevicesDatabaseManager.DevicesDbHelper.PAIRED))
         assertEquals("Stages Power", captured.getAsString(DevicesDatabaseManager.DevicesDbHelper.NAME))
     }
+
+    @Test
+    fun testGetBaselineCircumference_returnsStoredValue() {
+        val cursor = MockCursorFactory.create(
+            columns = listOf(DevicesDatabaseManager.DevicesDbHelper.BASELINE_CIRCUMFERENCE),
+            rows = listOf(listOf(2.095))
+        )
+        every {
+            mockDb.query(
+                DevicesDatabaseManager.DevicesDbHelper.DEVICES,
+                arrayOf(DevicesDatabaseManager.DevicesDbHelper.BASELINE_CIRCUMFERENCE),
+                "${DevicesDatabaseManager.DevicesDbHelper.C_ID}=?",
+                arrayOf("42"),
+                null,
+                null,
+                null
+            )
+        } returns cursor
+
+        val manager = object : DevicesDatabaseManager(mockContext) {
+            override fun getDatabase(): SQLiteDatabase = mockDb
+        }
+
+        val baseline = manager.getBaselineCircumference(42L)
+        assertEquals(2.095, baseline, 0.0001)
+    }
+
+    @Test
+    fun testSetBaselineCircumference_updatesDatabase() {
+        val valuesSlot = slot<android.content.ContentValues>()
+        val whereArgsSlot = slot<Array<String>>()
+        every {
+            mockDb.update(
+                DevicesDatabaseManager.DevicesDbHelper.DEVICES,
+                capture(valuesSlot),
+                eq("${DevicesDatabaseManager.DevicesDbHelper.C_ID}=?"),
+                capture(whereArgsSlot)
+            )
+        } returns 1
+
+        val manager = object : DevicesDatabaseManager(mockContext) {
+            override fun getDatabase(): SQLiteDatabase = mockDb
+        }
+
+        manager.setBaselineCircumference(42L, 2.105)
+
+        assertTrue(valuesSlot.isCaptured)
+        assertEquals("42", whereArgsSlot.captured[0])
+    }
+
+    @Test
+    fun testResetBaselineCircumference_copiesCalibrationFactor() {
+        val cursor = MockCursorFactory.create(
+            columns = listOf(DevicesDatabaseManager.DevicesDbHelper.CALIBRATION_FACTOR),
+            rows = listOf(listOf(2.115))
+        )
+        every {
+            mockDb.query(
+                DevicesDatabaseManager.DevicesDbHelper.DEVICES,
+                arrayOf(DevicesDatabaseManager.DevicesDbHelper.CALIBRATION_FACTOR),
+                "${DevicesDatabaseManager.DevicesDbHelper.C_ID}=?",
+                arrayOf("42"),
+                null,
+                null,
+                null
+            )
+        } returns cursor
+
+        val valuesSlot = slot<android.content.ContentValues>()
+        every {
+            mockDb.update(
+                DevicesDatabaseManager.DevicesDbHelper.DEVICES,
+                capture(valuesSlot),
+                eq("${DevicesDatabaseManager.DevicesDbHelper.C_ID}=?"),
+                arrayOf("42")
+            )
+        } returns 1
+
+        val manager = object : DevicesDatabaseManager(mockContext) {
+            override fun getDatabase(): SQLiteDatabase = mockDb
+        }
+
+        manager.resetBaselineCircumference(42L)
+
+        assertTrue(valuesSlot.isCaptured)
+    }
 }

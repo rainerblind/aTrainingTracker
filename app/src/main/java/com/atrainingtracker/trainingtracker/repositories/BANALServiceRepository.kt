@@ -35,13 +35,17 @@ import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.devices.MyRemoteDevice
 import com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice
 import com.atrainingtracker.banalservice.devices.MyDevice
 import com.atrainingtracker.banalservice.filters.FilterData
 import com.atrainingtracker.banalservice.filters.FilteredSensorData
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.banalservice.tpms.IndirectTpmsEstimator
+import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents
 import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.CoroutineScope
@@ -148,6 +152,8 @@ class BANALServiceRepository private constructor(context: Context) {
     // Total distance accumulated in current workout
     private val _currentDistance = MutableStateFlow<Double?>(null)
     val currentDistance: StateFlow<Double?> = _currentDistance.asStateFlow()
+
+    val itpmsEstimator = IndirectTpmsEstimator()
 
     // Current movement bearing
     private val _currentBearing = MutableStateFlow<Double?>(null)
@@ -460,6 +466,59 @@ class BANALServiceRepository private constructor(context: Context) {
                             }
                         }
 
+                        // REQ-TRK-050: Indirect Tire Pressure Monitoring (iTPMS)
+                        if (TrainingApplication.getTrackingMode() == TrackingMode.TRACKING && location != null) {
+                            val activeDevices = binder.activeDevicesIncludingSpeedAndLocationDevices
+                            val wheelDevice = activeDevices?.firstOrNull {
+                                it.deviceType == DeviceType.BIKE_SPEED || it.deviceType == DeviceType.BIKE_SPEED_AND_CADENCE
+                            }
+                            if (wheelDevice != null) {
+                                val wheelDist = (wheelDevice.getSensor(SensorType.DISTANCE_m)?.value as? Number)?.toDouble()
+                                val calib = (wheelDevice as? MyRemoteDevice)?.calibrationFactor ?: 2.100
+                                val acc = (binder.getBestSensorData(SensorType.ACCURACY)?.value as? Number)?.toDouble() ?: 5.0
+
+                                if (wheelDist != null) {
+                                    val alert = itpmsEstimator.processTelemetry(
+                                        lat = location.latitude,
+                                        lon = location.longitude,
+                                        bearingDeg = _currentBearing.value ?: 0.0,
+                                        accuracyMeters = acc,
+                                        speedMps = currentSpeed ?: 0.0,
+                                        elevationMeters = currentAltitude,
+                                        wheelDistanceMeters = wheelDist,
+                                        calibrationFactorMeters = calib
+                                    )
+                                    if (alert != null) {
+                                        val (titleRes, msgRes, severity) = when (alert) {
+                                            is IndirectTpmsEstimator.TpmsAlertResult.LowPressure -> {
+                                                Triple(
+                                                    R.string.itpms_low_pressure_reminder_title,
+                                                    R.string.itpms_low_pressure_reminder_message,
+                                                    WorkoutNavigationEvents.TpmsAlertSeverity.WARNING
+                                                )
+                                            }
+                                            is IndirectTpmsEstimator.TpmsAlertResult.SlowPuncture -> {
+                                                Triple(
+                                                    R.string.itpms_slow_puncture_alert_title,
+                                                    R.string.itpms_slow_puncture_alert_message,
+                                                    WorkoutNavigationEvents.TpmsAlertSeverity.CRITICAL
+                                                )
+                                            }
+                                        }
+                                        val dropStr = String.format(java.util.Locale.US, "%.1f%%", alert.dropPercentage)
+                                        WorkoutNavigationEvents.triggerTpmsAlert(
+                                            WorkoutNavigationEvents.TpmsAlert(
+                                                title = appContext.getString(titleRes),
+                                                message = appContext.getString(msgRes, dropStr),
+                                                severity = severity,
+                                                dropPercentage = alert.dropPercentage
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
                         if (DEBUG) Log.i(TAG, "BANALService update loop - binder=$binder")
 
                         delay(1000) // Pulse every second
@@ -475,6 +534,7 @@ class BANALServiceRepository private constructor(context: Context) {
         if (DEBUG) Log.i(TAG, "clearBreadcrumbs()")
         _currentTrack.value = emptyList()
         _currentPathPoints.value = emptyList()
+        itpmsEstimator.resetSession()
     }
 
     /**

@@ -2189,4 +2189,11 @@
     <string name="device_type_short_altitude_from_position">高度 (DEM)</string>
     <string name="devices_altitude_from_position">地形標高 (DEM)</string>
     <string name="devices_altitude_from_position_description">GPS位置、キャッシュされたルート、オンラインDEMデータから算出される標高。</string>
+
+    <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
+    <string name="itpms_slow_puncture_alert_title">スローパンクを検出</string>
+    <string name="itpms_slow_puncture_alert_message">タイヤ有効周長が %1$s 低下しました。直ちに空気圧を確認してください。</string>
+    <string name="itpms_low_pressure_reminder_title">タイヤ空気圧低下</string>
+    <string name="itpms_low_pressure_reminder_message">タイヤ周長が基準値より %1$s 低下しています。空気を補充してください。</string>
+    <string name="itpms_alert_dismiss">閉じる</string>
 </resources>

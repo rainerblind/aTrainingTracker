@@ -64,6 +64,10 @@ public abstract class MyRemoteDevice extends MyDevice {
     }
 
 
+    public double getCalibrationFactor() {
+        return mCalibrationFactor;
+    }
+
     abstract public Protocol getProtocol();
 
 

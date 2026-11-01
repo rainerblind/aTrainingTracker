@@ -2209,4 +2209,11 @@
     <string name="device_type_short_altitude_from_position">hoogte (DEM)</string>
     <string name="devices_altitude_from_position">Topografische hoogte (DEM)</string>
     <string name="devices_altitude_from_position_description">Continue hoogte berekend op basis van GPS-positie, opgeslagen routes en online DEM-gegevens.</string>
+
+    <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
+    <string name="itpms_slow_puncture_alert_title">Langzaam leeglopende band gedetecteerd</string>
+    <string name="itpms_slow_puncture_alert_message">Effectieve wielomtrek met %1$s gedaald. Controleer onmiddellijk de bandenspanning.</string>
+    <string name="itpms_low_pressure_reminder_title">Lage bandenspanning</string>
+    <string name="itpms_low_pressure_reminder_message">Wielomtrek ligt %1$s onder de basiswaarde. Pomp de banden op.</string>
+    <string name="itpms_alert_dismiss">Sluiten</string>
 </resources>

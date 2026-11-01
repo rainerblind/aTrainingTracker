@@ -100,4 +100,7 @@
     <string name="devices_dialog_delete_device_title">Supprimer ?</string>
     <string name="devices_dialog_delete_device_message">Voulez-vous supprimer le capteur \'%1$s\' ?</string>
 
+    <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
+    <string name="devices_reset_tire_pressure_baseline">Réinitialiser la pression de base (pneus fraîchement gonflés)</string>
+
 </resources>

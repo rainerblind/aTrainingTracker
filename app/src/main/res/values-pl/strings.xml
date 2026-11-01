@@ -2211,4 +2211,11 @@
     <string name="device_type_short_altitude_from_position">wys. (DEM)</string>
     <string name="devices_altitude_from_position">Wysokość topograficzna (DEM)</string>
     <string name="devices_altitude_from_position_description">Ciągła wysokość wyznaczana z pozycji GPS, tras w pamięci podręcznej i danych DEM online.</string>
+
+    <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
+    <string name="itpms_slow_puncture_alert_title">Wykryto powolny spadek ciśnienia</string>
+    <string name="itpms_slow_puncture_alert_message">Efektywny obwód koła spadł o %1$s. Natychmiast sprawdź ciśnienie w oponach.</string>
+    <string name="itpms_low_pressure_reminder_title">Niskie ciśnienie w oponach</string>
+    <string name="itpms_low_pressure_reminder_message">Obwód koła jest o %1$s poniżej wartości bazowej. Rozważ napompowanie opon.</string>
+    <string name="itpms_alert_dismiss">Odrzuć</string>
 </resources>

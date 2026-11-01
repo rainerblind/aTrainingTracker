@@ -100,4 +100,7 @@
     <string name="devices_dialog_delete_device_message">Wilt u de sensor \'%1$s\' echt verwijderen?</string>
 
     <string name="devices_equipment_none">- geen -</string>
+
+    <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
+    <string name="devices_reset_tire_pressure_baseline">Bandenspanning-basiswaarde resetten (net opgepompt)</string>
 </resources>

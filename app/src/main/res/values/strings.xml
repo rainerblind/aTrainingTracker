@@ -2410,4 +2410,11 @@
     <string name="device_type_short_altitude_from_position">alt. (DEM)</string>
     <string name="devices_altitude_from_position">Topographic Elevation (DEM)</string>
     <string name="devices_altitude_from_position_description">Continuous elevation resolved from GPS position, cached routes, and online DEM data.</string>
+
+    <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
+    <string name="itpms_slow_puncture_alert_title">Slow Puncture Detected</string>
+    <string name="itpms_slow_puncture_alert_message">Effective wheel circumference dropped by %1$s. Check tire pressure immediately.</string>
+    <string name="itpms_low_pressure_reminder_title">Low Tire Pressure</string>
+    <string name="itpms_low_pressure_reminder_message">Wheel circumference is %1$s below pumped baseline. Consider pumping your tires.</string>
+    <string name="itpms_alert_dismiss">Dismiss</string>
 </resources>

@@ -2392,5 +2392,47 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 **Invariants**: Unaffected active tracking and auto-pause, continuous pre-start live rolling sensor display (HR, power, cadence), and 100% clean-room test pass rate.
 
 
+### REQ-TRK-050: Indirect Tire Pressure Monitoring (iTPMS) via GPS vs. Wheel Circumference Drift [Verified]
+- **Tests**: `TST-TRK-050` | **Tickets**: `ATT-4880`
+- **Implementation**: `IndirectTpmsEstimator.kt`, `DevicesDatabaseManager.java`, `DeviceData.kt`, `EditDeviceViewModel.kt`, `SensorGridScreen.kt`
+- **Rationale**: When riding with a paired ANT+/BLE wheel speed sensor alongside GNSS, comparing 3D ground distance with wheel revolutions yields the effective rolling circumference $C_{\text{eff}} = \Delta s_{3D} / \Delta N_{\text{wheel}}$. Air deflation increases vertical tire deflection under load, reducing $C_{\text{eff}}$ by $1.0\%\text{--}2.2\%$. Tracking $C_{\text{eff}}$ across straight-line, good-GPS segments enables early warnings for slow punctures and reminders for multi-day low tire pressure without requiring valve-stem hardware sensors (ATT-4880, Parent Epic ATT-166, complementing `REQ-CON-009`, `REQ-TRK-024`, and `REQ-TRK-048`):
+1. *Straight-Line, 3D-Slope & GNSS Quality Gating (`REQ-TRK-050.1`)*:
+• `IndirectTpmsEstimator` SHALL accumulate $(\Delta s_{3D}, \Delta N_{\text{wheel}})$ sample windows ONLY when:
+  a. $|\Delta\text{bearing}/\Delta t| < 3.0^\circ/\text{s}$ (straight-line riding; rejects corner-cutting and lean-angle distortion).
+  b. Horizontal GNSS accuracy $\le 6.0\text{ m}$ and speed $\ge 4.0\text{ m/s}$ ($14.4\text{ km/h}$; rejects stationary wander and stop-and-go noise).
+  c. 3D ground distance correction $\Delta s_{3D} = \sqrt{\Delta s_{2D}^2 + \Delta h^2}$ is applied using barometric/fused elevation $\Delta h$.
+2. *Ride-Start Baseline Calibration & Multi-Day Low Pressure Reminder (`REQ-TRK-050.2`)*:
+• `IndirectTpmsEstimator` SHALL lock the ride-start baseline circumference $C_{\text{start}}$ after accumulating between $1.5\text{--}2.5\text{ km}$ ($2.0\text{ km}$ target) of gated straight-line riding.
+• If a stored freshly-pumped reference baseline $C_{\text{baseline}} > 0$ exists and $C_{\text{start}} / C_{\text{baseline}} \le 1 - 0.006$ ($-0.6\%$), the system SHALL surface a low tire pressure reminder.
+3. *Real-Time Sliding-Window CUSUM Slow Puncture Detection (`REQ-TRK-050.3`)*:
+• `IndirectTpmsEstimator` SHALL compute a rolling effective circumference $C_{\text{short}}(t)$ over an exponentially weighted / sliding $2.0\text{ km}$ window of gated riding, and execute a one-sided CUSUM change-point detector against $C_{\text{start}}$.
+• When cumulative negative drift reaches $C_{\text{short}} / C_{\text{start}} \le 1 - 0.010$ ($-1.0\%$), the system SHALL trigger an in-ride slow puncture warning.
+4. *Persistent Fresh-Pump Baseline & Device Configuration Action (`REQ-TRK-050.4`)*:
+• `DevicesDatabaseManager` SHALL store `baselineCircumference REAL DEFAULT 0.0` in `Devices.db` (migrated to `DB_VERSION = 8`).
+• `EditDeviceDialog` / `EditDeviceViewModel` SHALL provide an action "Reset Tire Pressure Baseline (Just Pumped Tires)" that updates $C_{\text{baseline}}$ to the current wheel circumference calibration value.
+5. *Design System Semantic Alert Containers & 9-Language Parity (`REQ-TRK-050.5`)*:
+• The UI SHALL render low pressure reminders using amber warning containers (`LightWarningContainer` / `DarkWarningContainer`) and in-ride slow puncture warnings using error red containers (`MaterialTheme.colorScheme.errorContainer`), localized symmetrically across all 9 supported application locales.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-050`, extending `REQ-CON-009` (Per-Device Wheel Circumference), `REQ-TRK-024` (Speed & Distance Priority), and `REQ-TRK-048` (Stationary Pinning). Targets `IndirectTpmsEstimator.kt`, `DevicesDatabaseManager.java`, `DeviceData.kt`, `EditDeviceViewModel.kt`, and `SensorGridScreen.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-44.2 (`ATT-4880`). Epic `ATT-166` (High-Value Pillar 2: ANT+/BLE Wheel Sensor + GPS Auto-Calibration).
+3. *Root Reason for Existing Formulation*: Prior to ATT-4880, GNSS distance and wheel revolutions operated in isolated silos without dynamic effective rolling circumference estimation or puncture detection.
+4. *Preservation of Core Invariants*: Manual wheel circumference calibration factor (`CALIBRATION_FACTOR`), hardware wheel distance accumulation (`mDistanceSensor.accumulate(...)`), and sensor priority rankings remain 100% unaltered.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an active cycling workout with paired ANT+/BLE wheel speed sensor and GPS where $C_{\text{start}}$ calibrates to $2128\text{ mm}$,
+• *When* $C_{\text{short}}(t)$ on straight, good-GPS segments drops progressively by $\ge 1.0\%$ ($\le 2106\text{ mm}$) over $2\text{--}3\text{ km}$,
+• *Then* the in-ride slow puncture warning triggers, whereas tight switchbacks ($|\Delta\text{bearing}/\Delta t| \ge 3^\circ/\text{s}$) or degraded GPS ($\text{accuracy} > 6\text{ m}$) are gated out and do not trigger false alarms.
+• *Given* a stored freshly-pumped reference baseline $C_{\text{baseline}} = 2130\text{ mm}$,
+• *When* a new ride's initial calibrated circumference $C_{\text{start}}$ stabilizes at $\le 2115\text{ mm}$ ($-0.7\%$),
+• *Then* the app surfaces a non-intrusive low tire pressure reminder.
+• *Given* an athlete in the Wheel Sensor configuration dialog,
+• *When* tapping "Reset Tire Pressure Baseline (Just Pumped Tires)",
+• *Then* $C_{\text{baseline}}$ is saved to `Devices.db` matching the current wheel circumference.
+
+**Invariants**: Zero mutation of raw wheel speed and distance accumulators, fresh install (`onCreate`) vs upgrade (`onUpgrade`) schema parity in `Devices.db`, zero cornering false positives, and 100% clean-room test pass rate.
+
+
+
 
 

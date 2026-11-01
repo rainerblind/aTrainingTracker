@@ -533,6 +533,29 @@ public class DevicesDatabaseManager {
         return calibrationFactor;
     }
 
+    public double getBaselineCircumference(long deviceID) {
+        double baseline = 0.0;
+        SQLiteDatabase db = getDatabase();
+        try (Cursor cursor = getCursor(db, deviceID, DevicesDbHelper.BASELINE_CIRCUMFERENCE)) {
+            if (cursor != null && cursor.moveToFirst() && !cursor.isNull(0)) {
+                baseline = cursor.getDouble(0);
+            }
+        }
+        return baseline;
+    }
+
+    public void setBaselineCircumference(long deviceID, double baselineCircumference) {
+        SQLiteDatabase db = getDatabase();
+        ContentValues values = new ContentValues();
+        values.put(DevicesDbHelper.BASELINE_CIRCUMFERENCE, baselineCircumference);
+        db.update(DevicesDbHelper.DEVICES, values, DevicesDbHelper.C_ID + "=?", new String[]{String.valueOf(deviceID)});
+    }
+
+    public void resetBaselineCircumference(long deviceID) {
+        double calib = getCalibrationFactor(deviceID);
+        setBaselineCircumference(deviceID, calib);
+    }
+
     public boolean isPaired(long deviceID) {
         boolean result = false;
 
@@ -975,11 +998,13 @@ public class DevicesDatabaseManager {
         public static final String BIKE_POWER_SENSOR_FLAGS_TABLE = "bikePowerSensorFlagsTable";
         public static final String DEVICE_ID = "deviceId";
         public static final String BIKE_POWER_SENSOR_FLAGS = "bikePowerSensorFlags";
-        static final String DB_NAME = "Devices.db";
+        public static final String BASELINE_CIRCUMFERENCE = "baselineCircumference";
+        public static final String DB_NAME = "Devices.db";
         // static final int DB_VERSION = 4;
         // static final int DB_VERSION = 5;    // upgraded at 30.12.2016 to support storing of BT features
         // static final int DB_VERSION = 6;    // upgraded at 30.01.2018 to replace storing of BT features (for Bike Power) to all Bike Power Devices
-        static final int DB_VERSION = 7;    // upgraded at 20.03.2018: added the location devices to this database
+        // static final int DB_VERSION = 7;    // upgraded at 20.03.2018: added the location devices to this database
+        public static final int DB_VERSION = 8;    // upgraded at 01.11.2026: added baselineCircumference for iTPMS
         private static final String TAG = "DeviceDbHelper";
         private static final boolean DEBUG = BANALService.getDebug(false);
         private static final String DEVICES_V3 = "Devices";               // in version 3, the table was simply called Devices
@@ -998,6 +1023,19 @@ public class DevicesDatabaseManager {
                 + CALIBRATION_FACTOR + " real,"
                 + LAST_ACTIVE + " text,"
                 + LAST_BATTERY_PERCENTAGE + " int)";
+        private static final String CREATE_DEVICE_DB_8 = "create table " + DEVICES + " ("
+                + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + PROTOCOL + " text, "
+                + ANT_DEVICE_NUMBER + " int, "
+                + BT_ADDRESS + " text, "
+                + DEVICE_TYPE + " text, "
+                + PAIRED + " int, "
+                + NAME + " text, "
+                + MANUFACTURER_NAME + " text, "
+                + CALIBRATION_FACTOR + " real,"
+                + LAST_ACTIVE + " text,"
+                + LAST_BATTERY_PERCENTAGE + " int,"
+                + BASELINE_CIRCUMFERENCE + " real DEFAULT 0.0)";
         @Deprecated
         private static final String CREATE_BT_SPECIFIC_5 = "create table " + TABLE_BT_SPECIFIC + " ("
                 + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -1065,6 +1103,15 @@ public class DevicesDatabaseManager {
                 case 7:
                     db.execSQL(CREATE_DEVICE_DB_4);
                     if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_DEVICE_DB_4);
+                    db.execSQL(CREATE_BIKE_POWER_SENSORS_TABLE_6);
+                    if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_BIKE_POWER_SENSORS_TABLE_6);
+
+                    addLocationDevicesToDb(db);
+                    break;
+
+                case 8:
+                    db.execSQL(CREATE_DEVICE_DB_8);
+                    if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_DEVICE_DB_8);
                     db.execSQL(CREATE_BIKE_POWER_SENSORS_TABLE_6);
                     if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_BIKE_POWER_SENSORS_TABLE_6);
 
@@ -1188,6 +1235,11 @@ public class DevicesDatabaseManager {
 
             if (oldVersion <= 6) {
                 addLocationDevicesToDb(db);
+            }
+
+            if (oldVersion <= 7) {
+                if (DEBUG) Log.i(TAG, "onUpgrade: upgrading from Version 7 to 8 (adding baselineCircumference)");
+                db.execSQL("ALTER TABLE " + DEVICES + " ADD COLUMN " + BASELINE_CIRCUMFERENCE + " real DEFAULT 0.0");
             }
         }
 

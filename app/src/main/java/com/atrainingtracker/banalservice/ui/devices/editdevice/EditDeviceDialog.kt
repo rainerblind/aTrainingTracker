@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -358,6 +359,32 @@ private fun WheelCircumferenceSelector(data: DeviceUiData, viewModel: EditDevice
                     tint = MaterialTheme.colorScheme.primary
                 )
             }
+        }
+
+        val baselineMm = data.baselineCircumference?.let { (it * 1000).toInt() }
+        if (baselineMm != null && baselineMm > 0) {
+            Text(
+                text = "Baseline: $baselineMm mm",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        OutlinedButton(
+            onClick = { viewModel.resetTirePressureBaseline() },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Refresh,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = stringResource(R.string.devices_reset_tire_pressure_baseline),
+                style = MaterialTheme.typography.labelMedium
+            )
         }
     }
 

@@ -141,4 +141,7 @@
     <string name="devices_dialog_delete_device_title">Really delete?</string>
     <string name="devices_dialog_delete_device_message">Do your really want to delete the \'%1$s\' sensor?</string>
 
+    <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
+    <string name="devices_reset_tire_pressure_baseline">Reset Tire Pressure Baseline (Just Pumped Tires)</string>
+
 </resources>

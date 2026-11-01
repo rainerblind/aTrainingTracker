@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `STP`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 54
+**Total Tests**: 55
 
 ---
 
@@ -1349,6 +1349,37 @@
   • Unit test in `MyAccumulatorSensorTrackingGateTest` verifying that in `TrackingMode.READY`, ticks to `MyAccumulatorSensor.increment()` with `mRespectPause = true` do not increment value when `!TrainingApplication.isTracking()`.
   4. *Reset Notification & InstantaneousFilter Reset (`TST-TRK-049.4`)*:
   • Unit test verifying `MyAccumulatorSensor.reset()` notifies listeners with `mZeroValue`, and `InstantaneousFilter.reset()` clears cached values.
+
+
+### TST-TRK-050: **Indirect Tire Pressure Monitoring (iTPMS) Gated Estimator, CUSUM Detector & Baseline Verification** [Verified]
+- **Requirement(s)**: `REQ-TRK-050`
+- **Component**: `IndirectTpmsEstimatorTest.kt`, `DevicesDatabaseManagerMigrationTest.kt`, `EditDeviceViewModelTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-4880`
+- **Test Description**:
+  1. *Gated Circumference Estimator & Straight-Line/3D-Slope Filtering (`TST-TRK-050.1`)*:
+  • Unit test feeding synthetic GPS fixes and wheel sensor revolution events:
+    - Verifies samples with $|\Delta\text{bearing}/\Delta t| \ge 3.0^\circ/\text{s}$ are rejected from circumference accumulation.
+    - Verifies samples with $\text{accuracy} > 6.0\text{ m}$ or $\text{speed} < 4.0\text{ m/s}$ are rejected.
+    - Verifies 3D slope correction $\sqrt{\Delta s_{2D}^2 + \Delta h^2}$ matches analytical geometry on 8% and 12% grades.
+  2. *Ride-Start Baseline Calibration & Multi-Day Low Pressure Reminder (`TST-TRK-050.2`)*:
+  • Unit test verifying:
+    - Ride-start baseline $C_{\text{start}}$ locks only after $2.0\text{ km}$ of gated samples have accumulated.
+    - When $C_{\text{baseline}} = 2130\text{ mm}$ and $C_{\text{start}} \le 2115\text{ mm}$ ($-0.7\%$), low tire pressure reminder event is emitted.
+    - When $C_{\text{start}} = 2125\text{ mm}$ ($-0.2\%$), no reminder is emitted.
+  3. *CUSUM Slow Puncture In-Ride Detection & Cornering Immunity (`TST-TRK-050.3`)*:
+  • Unit test feeding a gradual tire deflation profile:
+    - After $C_{\text{start}}$ locks at $2128\text{ mm}$, rolling window $C_{\text{short}}(t)$ drops to $2105\text{ mm}$ ($-1.08\%$) over $2.5\text{ km}$.
+    - Verifies one-sided CUSUM detector triggers slow puncture alert.
+    - Verifies a sharp hairpin cornering sequence ($180^\circ$ turn at $8^\circ/\text{s}$) does not corrupt the rolling estimator or trigger a false alarm.
+  4. *`Devices.db` v8 Migration, Schema Registry Parity & Baseline Reset Action (`TST-TRK-050.4`)*:
+  • Contract unit test verifying:
+    - Upgrading `Devices.db` from v7 to v8 executes `ALTER TABLE devices ADD COLUMN baselineCircumference REAL DEFAULT 0.0`.
+    - `onCreate()` and `onUpgrade()` yield identical schemas.
+    - `DatabaseSchemaRegistry` reflects `DevicesDbHelper.DB_VERSION = 8`.
+    - `EditDeviceViewModel.resetTirePressureBaseline(deviceId)` saves current circumference to `baselineCircumference`.
+  5. *9-Language Localization Parity Audit (`TST-TRK-050.5`)*:
+  • Automated assertion in `TranslationParityTest` verifying all iTPMS strings (`devices_reset_tire_pressure_baseline`, `itpms_slow_puncture_alert_title`, `itpms_slow_puncture_alert_message`, `itpms_low_pressure_reminder_title`, `itpms_low_pressure_reminder_message`) exist across all 9 locales with valid positional specifiers (`%1$s`).
+
 
 
 

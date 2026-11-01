@@ -112,4 +112,7 @@
     <string name="devices_dialog_delete_device_title">Wirklich löschen?</string>
     <string name="devices_dialog_delete_device_message">Willst Du den Sensor \'%1$s\' wirklich löschen?</string>
 
+    <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
+    <string name="devices_reset_tire_pressure_baseline">Reifendruck-Basiswert zurücksetzen (Frisch aufgepumpt)</string>
+
 </resources>

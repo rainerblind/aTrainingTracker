@@ -2210,4 +2210,11 @@
     <string name="device_type_short_altitude_from_position">alt. (DEM)</string>
     <string name="devices_altitude_from_position">Altitud topográfica (DEM)</string>
     <string name="devices_altitude_from_position_description">Altitud continua obtenida de la posición GPS, rutas en caché y datos DEM en línea.</string>
+
+    <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
+    <string name="itpms_slow_puncture_alert_title">Pinchazo lento detectado</string>
+    <string name="itpms_slow_puncture_alert_message">La circunferencia efectiva cayó un %1$s. Revise la presión de los neumáticos de inmediato.</string>
+    <string name="itpms_low_pressure_reminder_title">Presión baja de neumáticos</string>
+    <string name="itpms_low_pressure_reminder_message">La circunferencia está un %1$s por debajo de la base. Considere inflar los neumáticos.</string>
+    <string name="itpms_alert_dismiss">Descartar</string>
 </resources>
