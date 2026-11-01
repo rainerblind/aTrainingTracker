@@ -133,6 +133,13 @@ class BANALServiceRepository private constructor(context: Context) {
     private val _activeSensors = MutableStateFlow<Set<SensorType>>(emptySet())
     val activeSensors: StateFlow<Set<SensorType>> = _activeSensors.asStateFlow()
 
+    /**
+     * Whether a speed source (SPEED_mps) is currently registered or available in BANALService (REQ-TRK-044, ATT-4925).
+     */
+    val hasSpeedSource: Boolean
+        get() = _serviceBinder.value?.availableSensorTypeSet?.contains(SensorType.SPEED_mps)
+            ?: _activeSensors.value.contains(SensorType.SPEED_mps)
+
     // Mapping from SensorType to the ID of the device currently providing the "best" value
     private val _sensorSourceDeviceIds = MutableStateFlow<Map<SensorType, Long>>(emptyMap())
     val sensorSourceDeviceIds: StateFlow<Map<SensorType, Long>> = _sensorSourceDeviceIds.asStateFlow()

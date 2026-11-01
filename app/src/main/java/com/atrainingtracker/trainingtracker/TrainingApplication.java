@@ -1681,6 +1681,7 @@ public class TrainingApplication extends Application {
             BANALServiceRepository banalRepo = BANALServiceRepository.Companion.getInstance(this);
             BSportType sportType = BSportType.UNKNOWN;
             Double speedMps = null;
+            boolean hasSpeedSource = false;
             if (banalRepo != null) {
                 try {
                     Object sportVal = banalRepo.getBSportType() != null ? banalRepo.getBSportType().getValue() : null;
@@ -1698,9 +1699,14 @@ public class TrainingApplication extends Application {
                 } catch (Exception e) {
                     Log.w(TAG, "Could not resolve initial speed: " + e.getMessage());
                 }
+                try {
+                    hasSpeedSource = banalRepo.getHasSpeedSource();
+                } catch (Exception e) {
+                    Log.w(TAG, "Could not resolve hasSpeedSource: " + e.getMessage());
+                }
             }
 
-            if (AutoPauseManager.shouldStartInAutoPause(autoPauseConfig, sportType, speedMps)) {
+            if (AutoPauseManager.shouldStartInAutoPause(autoPauseConfig, sportType, speedMps, hasSpeedSource)) {
                 pauseTracking(true);
             } else {
                 cTrackingMode = TrackingMode.TRACKING;

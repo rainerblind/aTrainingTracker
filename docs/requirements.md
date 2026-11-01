@@ -7,7 +7,7 @@ Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Statu
 
 | Domain Shard | Scope & Functional Areas | Prefixes | Total | Verified | Planned / Open |
 | :--- | :--- | :--- | :---: | :---: | :---: |
-| [Tracking & Live Sensor Cockpit](requirements/req_tracking_cockpit.md) | Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle. | `CON`, `FIL`, `FUSION`, `SEN`, `STP`, `TRK`, `WEA` | 85 | 32 | 53 |
+| [Tracking & Live Sensor Cockpit](requirements/req_tracking_cockpit.md) | Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle. | `CON`, `FIL`, `FUSION`, `SEN`, `STP`, `TRK`, `WEA` | 85 | 33 | 52 |
 | [Post-Workout Analytics & Periods](requirements/req_aftermath_periods.md) | Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers. | `PER`, `PERF` | 26 | 19 | 7 |
 | [Maps, Polylines & Navigation](requirements/req_maps_navigation.md) | Map rendering, polylines, navigation overlays, GPX track follow-me, and routing. | `GEO`, `MAP`, `NAV`, `ROU` | 59 | 19 | 40 |
 | [Persistence, Migration & Cloud Export](requirements/req_data_migration_export.md) | Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export. | `DAT`, `EXP`, `EXT`, `MIG` | 119 | 44 | 75 |

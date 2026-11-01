@@ -7,7 +7,7 @@ Living test specifications use multi-line Markdown headings (`### TST-XXX: Title
 
 | Domain Shard | Scope & Functional Areas | Prefixes | Total | Verified | Planned / Open |
 | :--- | :--- | :--- | :---: | :---: | :---: |
-| [Tracking & Live Sensor Cockpit](tests/tst_tracking_cockpit.md) | Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle. | `CON`, `FIL`, `FUSION`, `SEN`, `STP`, `TRK`, `WEA` | 59 | 31 | 28 |
+| [Tracking & Live Sensor Cockpit](tests/tst_tracking_cockpit.md) | Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle. | `CON`, `FIL`, `FUSION`, `SEN`, `STP`, `TRK`, `WEA` | 59 | 32 | 27 |
 | [Post-Workout Analytics & Periods](tests/tst_aftermath_periods.md) | Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers. | `PER`, `PERF` | 34 | 15 | 19 |
 | [Maps, Polylines & Navigation](tests/tst_maps_navigation.md) | Map rendering, polylines, navigation overlays, GPX track follow-me, and routing. | `GEO`, `MAP`, `NAV`, `ROU` | 54 | 7 | 47 |
 | [Persistence, Migration & Cloud Export](tests/tst_data_migration_export.md) | Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export. | `DAT`, `EXP`, `EXT`, `MIG` | 106 | 28 | 78 |

@@ -671,7 +671,8 @@ public class TrackerService extends Service {
                     AutoPauseConfig config = getAutoPauseConfig();
                     SensorData<Number> speedData = mBanalService.getBestSensorData(SensorType.SPEED_mps);
                     Double speedMps = (speedData != null && speedData.getValue() != null) ? speedData.getValue().doubleValue() : null;
-                    if (AutoPauseManager.shouldStartInAutoPause(config, sportType, speedMps)) {
+                    boolean hasSpeedSource = (speedData != null);
+                    if (AutoPauseManager.shouldStartInAutoPause(config, sportType, speedMps, hasSpeedSource)) {
                         mAutoPauseManager.setState(AutoPauseState.AUTO_PAUSED);
                         mAutoPauseManager.resetDebounceCounter();
                         mTrainingApplication.pauseTracking(true);
