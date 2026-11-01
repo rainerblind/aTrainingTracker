@@ -2388,4 +2388,12 @@
     <string name="zone_history_date_label">Effective Date</string>
     <string name="zone_history_save_snapshot">Save Snapshot</string>
     <string name="zone_history_error_monotonic">Thresholds must be strictly increasing (%1$s)</string>
+
+    <!-- Manual Altitude Calibration (ATT-4845, REQ-TRK-047) -->
+    <string name="altitude_calibration_title">Calibrate Altitude</string>
+    <string name="altitude_calibration_reference_label">Reference Altitude</string>
+    <string name="altitude_calibration_location_name">Location Name (optional)</string>
+    <string name="altitude_calibration_save_location">Save as Known Location</string>
+    <string name="altitude_calibration_action">Calibrate</string>
+    <string name="altitude_calibrated_success">Altitude calibrated to %1$s</string>
 </resources>

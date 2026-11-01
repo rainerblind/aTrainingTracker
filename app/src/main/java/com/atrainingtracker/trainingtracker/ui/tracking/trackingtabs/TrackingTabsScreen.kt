@@ -643,6 +643,7 @@ fun TrackingTabsScreen(
                     val sensorSourceMapping by trackingTabsViewModel.sensorSourceMapping.collectAsState()
                     val allTelemetry by trackingTabsViewModel.allTelemetry.collectAsState()
                     val allDevices by trackingTabsViewModel.allDevices.collectAsState()
+                    val currentAltitude by trackingTabsViewModel.currentAltitude.collectAsState()
 
                     Surface(
                         color = MaterialTheme.colorScheme.primaryContainer,
@@ -658,7 +659,11 @@ fun TrackingTabsScreen(
                             sourceMapping = sensorSourceMapping,
                             allTelemetry = allTelemetry,
                             allDevices = allDevices,
+                            currentAltitude = currentAltitude,
                             onDeviceClick = { trackingTabsViewModel.onEditDevice(it) },
+                            onCalibrateAltitude = { alt, name, save ->
+                                trackingTabsViewModel.calibrateAltitude(alt, name, save)
+                            },
                             onMenuClick = {
                                 (activity as? MainActivityWithNavigation)?.openDrawer()
                             },
@@ -684,6 +689,7 @@ fun TrackingTabsScreen(
                                     val sensorSourceMapping by trackingTabsViewModel.sensorSourceMapping.collectAsState()
                                     val allTelemetry by trackingTabsViewModel.allTelemetry.collectAsState()
                                     val allDevices by trackingTabsViewModel.allDevices.collectAsState()
+                                    val currentAltitude by trackingTabsViewModel.currentAltitude.collectAsState()
 
                                     // Show the available Sensors
                                     Surface(
@@ -695,7 +701,11 @@ fun TrackingTabsScreen(
                                             sourceMapping = sensorSourceMapping,
                                             allTelemetry = allTelemetry,
                                             allDevices = allDevices,
+                                            currentAltitude = currentAltitude,
                                             onDeviceClick = { trackingTabsViewModel.onEditDevice(it) },
+                                            onCalibrateAltitude = { alt, name, save ->
+                                                trackingTabsViewModel.calibrateAltitude(alt, name, save)
+                                            },
                                             onMenuClick = {
                                                 (activity as? MainActivityWithNavigation)?.openDrawer()
                                             }

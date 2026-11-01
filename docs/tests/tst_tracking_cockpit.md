@@ -1262,3 +1262,31 @@
   • Verification in `TranslationParityTest` for `sensor_field_display_elements_title`, `sensor_field_show_value`, `sensor_field_show_bar` across all 9 locales.
 
 
+### TST-TRK-047: **Manual Altitude Calibration with Known Location Persistence & Drift Correction Test Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-047`
+- **Component**: `SensorSourceDialogTest.kt`, `KnownLocationsDatabaseManagerTest.kt`, `TrackerServiceAltitudeTest.kt`, `LiveWorkoutSessionTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-4845`
+- **Test Description**:
+  1. *Header Dialog Manual Calibration & State Binding (`TST-TRK-047.1`)*:
+  • Unit test in `SensorSourceDialogTest` verifying:
+    - `SensorSourceDialog` renders the calibration section when `sensorType == SensorType.ALTITUDE`.
+    - Reference altitude input is pre-filled with the current altitude reading formatted via canonical `AltitudeFormatter`.
+    - Confirming calibration invokes `onCalibrate(altitudeMeters, locationName, saveAsKnownLocation)` and dispatches calibration to altimeter.
+  2. *Known Location Geofence Upsert with Manual Provenance (`TST-TRK-047.2`)*:
+  • Unit test in `KnownLocationsDatabaseManagerTest` verifying:
+    - `upsertLocationByGeofence` stores `(latLng, altitude, name)` with `ElevationSource.MANUAL_USER` and `isLocked = true`.
+    - Subsequent queries via `getMyLocation(latLng)` return the stored ground-truth altitude and name.
+  3. *Case A: Retroactive Uniform Altitude Shift on Uncalibrated Workouts (`TST-TRK-047.3`)*:
+  • Unit test in `TrackerServiceAltitudeTest` and `LiveWorkoutSessionTest` verifying:
+    - When a workout starts with $t_0 = \text{none}$ and calibration offset $\Delta h = +35.0\text{ m}$ is applied at $t_1$, all existing samples in `samplesTable`, `sampledAltitudes`, `RunningStats` (min/max/sum), and `_currentPathPoints` are shifted by $+35.0\text{ m}$.
+    - $t_0$ is updated to $t_1$.
+  4. *Case B: Piecewise-Linear Drift Interpolation Between Calibrations (`TST-TRK-047.4`)*:
+  • Unit test in `TrackerServiceAltitudeTest` and `LiveWorkoutSessionTest` verifying:
+    - When previously calibrated at $t_0$ and recalibrated at $t_1 > t_0$ with drift $\Delta h = -18.0\text{ m}$, samples in $t \in [t_0, t_1]$ receive correction $\Delta h \cdot \frac{t - t_0}{t_1 - t_0}$.
+    - Sample at $t_0$ has zero change, sample at $t_1$ has $-18.0\text{ m}$ change, and intermediate samples scale strictly monotonically.
+    - Running ascent and descent metrics are recomputed without false vertical spikes.
+  5. *9-Language Localization Parity (`TST-TRK-047.5`)*:
+  • Verification in `TranslationParityTest` for `altitude_calibration_title`, `altitude_calibration_reference_label`, `altitude_calibration_location_name`, `altitude_calibration_save_location`, `altitude_calibration_action`, and `altitude_calibrated_success` across all 9 locales.
+
+
+

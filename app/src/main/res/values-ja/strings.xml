@@ -2167,4 +2167,12 @@
     <string name="zone_history_date_label">有効日</string>
     <string name="zone_history_save_snapshot">スナップショットを保存</string>
     <string name="zone_history_error_monotonic">しきい値は厳密に増加する必要があります (%1$s)</string>
+
+    <!-- Manual Altitude Calibration (ATT-4845, REQ-TRK-047) -->
+    <string name="altitude_calibration_title">高度を校正</string>
+    <string name="altitude_calibration_reference_label">基準高度</string>
+    <string name="altitude_calibration_location_name">場所名（省略可）</string>
+    <string name="altitude_calibration_save_location">登録地点として保存</string>
+    <string name="altitude_calibration_action">校正</string>
+    <string name="altitude_calibrated_success">高度を%1$sに校正しました</string>
 </resources>

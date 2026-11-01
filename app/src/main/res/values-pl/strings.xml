@@ -2189,4 +2189,12 @@
     <string name="zone_history_date_label">Data obowiązywania</string>
     <string name="zone_history_save_snapshot">Zapisz migawkę</string>
     <string name="zone_history_error_monotonic">Wartości progowe muszą ściśle rosnąć (%1$s)</string>
+
+    <!-- Manual Altitude Calibration (ATT-4845, REQ-TRK-047) -->
+    <string name="altitude_calibration_title">Kalibruj wysokość</string>
+    <string name="altitude_calibration_reference_label">Wysokość odniesienia</string>
+    <string name="altitude_calibration_location_name">Nazwa lokalizacji (opcjonalnie)</string>
+    <string name="altitude_calibration_save_location">Zapisz jako ulubione miejsce</string>
+    <string name="altitude_calibration_action">Kalibruj</string>
+    <string name="altitude_calibrated_success">Skalibrowano wysokość do %1$s</string>
 </resources>

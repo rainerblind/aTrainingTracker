@@ -2188,4 +2188,12 @@
     <string name="zone_history_date_label">Fecha de vigencia</string>
     <string name="zone_history_save_snapshot">Guardar instantánea</string>
     <string name="zone_history_error_monotonic">Los umbrales deben ser estrictamente crecientes (%1$s)</string>
+
+    <!-- Manual Altitude Calibration (ATT-4845, REQ-TRK-047) -->
+    <string name="altitude_calibration_title">Calibrar altitud</string>
+    <string name="altitude_calibration_reference_label">Altitud de referencia</string>
+    <string name="altitude_calibration_location_name">Nombre de ubicación (opcional)</string>
+    <string name="altitude_calibration_save_location">Guardar como lugar favorito</string>
+    <string name="altitude_calibration_action">Calibrar</string>
+    <string name="altitude_calibrated_success">Altitud calibrada a %1$s</string>
 </resources>

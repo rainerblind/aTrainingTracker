@@ -49,7 +49,9 @@ fun SensorStatus(
     sourceMapping: Map<SensorType, Long> = emptyMap(),
     allTelemetry: List<DeviceTelemetry> = emptyList(),
     allDevices: List<DeviceUiData> = emptyList(),
+    currentAltitude: Double? = null,
     onDeviceClick: (Long) -> Unit = {},
+    onCalibrateAltitude: ((referenceAltitudeMeters: Double, locationName: String?, saveAsKnownLocation: Boolean) -> Unit)? = null,
     onMenuClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     isCompactLandscape: Boolean = false
@@ -177,7 +179,9 @@ fun SensorStatus(
             sourceDevice = sourceDevice,
             allTelemetry = allTelemetry,
             allDevices = allDevices,
+            currentAltitude = currentAltitude,
             onDeviceClick = onDeviceClick,
+            onCalibrateAltitude = onCalibrateAltitude,
             onDismiss = { selectedSensor = null }
         )
     }

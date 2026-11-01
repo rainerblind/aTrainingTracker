@@ -2273,4 +2273,12 @@
     <string name="zone_history_date_label">Gültig ab</string>
     <string name="zone_history_save_snapshot">Snapshot speichern</string>
     <string name="zone_history_error_monotonic">Schwellenwerte müssen streng aufsteigend sein (%1$s)</string>
+
+    <!-- Manual Altitude Calibration (ATT-4845, REQ-TRK-047) -->
+    <string name="altitude_calibration_title">Höhe kalibrieren</string>
+    <string name="altitude_calibration_reference_label">Referenzhöhe</string>
+    <string name="altitude_calibration_location_name">Standortname (optional)</string>
+    <string name="altitude_calibration_save_location">Als Lieblingsort speichern</string>
+    <string name="altitude_calibration_action">Kalibrieren</string>
+    <string name="altitude_calibrated_success">Höhe auf %1$s kalibriert</string>
 </resources>

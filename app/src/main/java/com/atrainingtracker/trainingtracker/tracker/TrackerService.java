@@ -518,13 +518,16 @@ public class TrackerService extends Service {
                 return;
             }
 
+            long prevCalTimeMs = intent.getLongExtra(AltitudeFromPressureDevice.PREV_CALIBRATION_TIME_MS_EXTRA, -1L);
+            long currentCalTimeMs = intent.getLongExtra(AltitudeFromPressureDevice.CALIBRATION_TIME_MS_EXTRA, System.currentTimeMillis());
+
             if (DEBUG)
-                Log.i(TAG, "Triggering atomic altitude correction by " + altitudeCorrection);
+                Log.i(TAG, "Triggering atomic altitude correction by " + altitudeCorrection + " m (prevCal=" + prevCalTimeMs + ", currentCal=" + currentCalTimeMs + ")");
 
             // 1. Live Session Update
             LiveWorkoutSession session = mLiveSession;
             if (session != null) {
-                session.applyAltitudeCorrection(altitudeCorrection);
+                session.applyRetroactiveAltitudeCorrection(altitudeCorrection, prevCalTimeMs, currentCalTimeMs);
             }
 
             // 2. Database Synchronization (offloaded to DB executor via non-blocking barrier)
@@ -541,20 +544,11 @@ public class TrackerService extends Service {
                 WorkoutSamplesDatabaseManager samplesManager = WorkoutSamplesDatabaseManager.getInstance(TrackerService.this);
                 WorkoutSummariesDatabaseManager summariesManager = WorkoutSummariesDatabaseManager.getInstance(TrackerService.this);
 
-                // 2a. Raw Samples shift in explicit atomic SQLite transaction (REQ-CON-017)
-                android.database.sqlite.SQLiteDatabase db = samplesManager.getDatabase();
-                db.beginTransaction();
-                try {
-                    String operator = altitudeCorrection >= 0 ? " + " : " - ";
-                    db.execSQL("UPDATE " + samplesTable
-                            + " set " + SensorType.ALTITUDE.name() + " = " + SensorType.ALTITUDE.name() + operator + Math.abs(altitudeCorrection));
-                    db.setTransactionSuccessful();
-                } finally {
-                    db.endTransaction();
-                }
+                // 2a. Raw Samples drift/shift correction in explicit atomic SQLite transaction (REQ-CON-017, REQ-TRK-047.2)
+                samplesManager.applyAltitudeDriftCorrection(samplesTable, altitudeCorrection, prevCalTimeMs, currentCalTimeMs);
 
-                // 2b. Summary Extrema and Elevation Stream shift (ATT-38)
-                summariesManager.shiftAltitudeData(workoutId, altitudeCorrection);
+                // 2b. Summary Extrema and Elevation Stream shift / interpolation (ATT-38, REQ-TRK-047.2)
+                summariesManager.shiftAltitudeData(workoutId, altitudeCorrection, prevCalTimeMs, currentCalTimeMs);
 
                 // 3. Notify UI/Repository to refresh from DB
                 LocalBroadcastManager.getInstance(TrackerService.this).sendBroadcast(new Intent(WORKOUT_UPDATED_INTENT).putExtra(WORKOUT_ID, workoutId));

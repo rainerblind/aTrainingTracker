@@ -117,11 +117,15 @@ def parse_diff_requirements(diff_text):
         if line.startswith("@@"):
             m_hunk = re.search(r"REQ-([A-Z0-9_-]+)", line)
             current_req = f"REQ-{m_hunk.group(1)}" if m_hunk else None
+            if current_req == "REQ-XXX":
+                current_req = None
             continue
         if line.startswith(" "):
             m_ctx = re.search(r"#{2,4}\s*REQ-([A-Z0-9_-]+)", line)
             if m_ctx:
                 current_req = f"REQ-{m_ctx.group(1)}"
+                if current_req == "REQ-XXX":
+                    current_req = None
             continue
 
         if line.startswith("+"):
@@ -132,9 +136,12 @@ def parse_diff_requirements(diff_text):
                 m = re.search(r"\*\*REQ-([A-Z0-9_-]+)\.\d+\*\*", line)
             if m:
                 req_id = f"REQ-{m.group(1)}"
-                added_ids.add(req_id)
-                current_req = req_id
-            elif current_req:
+                if req_id != "REQ-XXX":
+                    added_ids.add(req_id)
+                    current_req = req_id
+                else:
+                    current_req = None
+            elif current_req and current_req != "REQ-XXX":
                 added_ids.add(current_req)
         elif line.startswith("-"):
             m = re.search(r"\|\s*\*\*REQ-([A-Z0-9_-]+)\*\*", line)
@@ -144,9 +151,12 @@ def parse_diff_requirements(diff_text):
                 m = re.search(r"\*\*REQ-([A-Z0-9_-]+)\.\d+\*\*", line)
             if m:
                 req_id = f"REQ-{m.group(1)}"
-                deleted_ids.add(req_id)
-                current_req = req_id
-            elif current_req:
+                if req_id != "REQ-XXX":
+                    deleted_ids.add(req_id)
+                    current_req = req_id
+                else:
+                    current_req = None
+            elif current_req and current_req != "REQ-XXX":
                 deleted_ids.add(current_req)
 
     # Modified requirements appear in both added and deleted sets

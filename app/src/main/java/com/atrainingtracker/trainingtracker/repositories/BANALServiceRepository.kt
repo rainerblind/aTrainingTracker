@@ -151,6 +151,10 @@ class BANALServiceRepository private constructor(context: Context) {
     private val _currentBearing = MutableStateFlow<Double?>(null)
     val currentBearing: StateFlow<Double?> = _currentBearing.asStateFlow()
 
+    // Current altitude in meters (REQ-TRK-047)
+    private val _currentAltitude = MutableStateFlow<Double?>(null)
+    val currentAltitude: StateFlow<Double?> = _currentAltitude.asStateFlow()
+
     // --- Current Track (Breadcrumbs for the Map Polyline) ---
     private val _currentTrack = MutableStateFlow<List<LatLng>>(emptyList())
     val currentTrack: StateFlow<List<LatLng>> = _currentTrack.asStateFlow()
@@ -213,6 +217,20 @@ class BANALServiceRepository private constructor(context: Context) {
         _lapEvent.value = null
     }
 
+    // Listens for barometric altitude correction broadcasts to adjust live path points (REQ-TRK-047.2)
+    private val altitudeCorrectionReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            intent?.let {
+                val delta = it.getDoubleExtra(com.atrainingtracker.banalservice.devices.AltitudeFromPressureDevice.ALTITUDE_CORRECTION_VALUE, 0.0)
+                if (Math.abs(delta) >= 0.1 && Math.abs(delta) <= 500.0) {
+                    val t0 = it.getLongExtra(com.atrainingtracker.banalservice.devices.AltitudeFromPressureDevice.PREV_CALIBRATION_TIME_MS_EXTRA, -1L)
+                    val t1 = it.getLongExtra(com.atrainingtracker.banalservice.devices.AltitudeFromPressureDevice.CALIBRATION_TIME_MS_EXTRA, System.currentTimeMillis())
+                    applyRetroactiveAltitudeCorrection(delta, t0, t1)
+                }
+            }
+        }
+    }
+
 
     init {
         _wasAutoPaused.value = TrainingApplication.wasAutoPaused()
@@ -227,7 +245,14 @@ class BANALServiceRepository private constructor(context: Context) {
         appContext.registerReceiver(
             lapSummaryReceiver,
             IntentFilter(BANALService.LAP_SUMMARY),
-            Context.RECEIVER_NOT_EXPORTED)
+            Context.RECEIVER_NOT_EXPORTED
+        )
+
+        appContext.registerReceiver(
+            altitudeCorrectionReceiver,
+            IntentFilter(com.atrainingtracker.banalservice.devices.AltitudeFromPressureDevice.ALTITUDE_CORRECTION_INTENT),
+            Context.RECEIVER_NOT_EXPORTED
+        )
 
         // Start the long-lived observation loop that reacts to the binder state.
         // It will automatically start/stop based on whether we are connected to the service.
@@ -361,6 +386,7 @@ class BANALServiceRepository private constructor(context: Context) {
                         val distanceChanged = (currentDistance != null && currentDistance != _currentDistance.value)
 
                         _currentSpeed.value = currentSpeed
+                        _currentAltitude.value = currentAltitude
                         _currentBearing.value = binder.getBestSensorData(SensorType.BEARING)?.value as? Double
                         _currentDistance.value = currentDistance
                         _isAltimeterCalibrated.value = binder.isAltimeterCalibrated()
@@ -391,6 +417,34 @@ class BANALServiceRepository private constructor(context: Context) {
         if (DEBUG) Log.i(TAG, "clearBreadcrumbs()")
         _currentTrack.value = emptyList()
         _currentPathPoints.value = emptyList()
+    }
+
+    /**
+     * REQ-TRK-047.2: Retroactively adjusts recorded path points for the live cockpit elevation profile.
+     * When t0Ms <= 0, applies uniform shift (Case A).
+     * When t0Ms > 0, applies piecewise-linear drift interpolation across [t0, t1] (Case B).
+     */
+    fun applyRetroactiveAltitudeCorrection(deltaOffset: Double, t0Ms: Long = -1L, t1Ms: Long = -1L) {
+        if (Math.abs(deltaOffset) < 0.001) return
+        val currentPoints = _currentPathPoints.value
+        if (currentPoints.isEmpty()) return
+
+        val count = currentPoints.size
+        val updatedPoints = if (t0Ms <= 0L || t1Ms <= t0Ms) {
+            // Case A: Uniform shift
+            currentPoints.map { point ->
+                val alt = point.altitude?.let { it + deltaOffset }
+                point.copy(altitude = alt)
+            }
+        } else {
+            // Case B: Piecewise-linear drift across path points
+            currentPoints.mapIndexed { index, point ->
+                val fraction = if (count > 1) index.toDouble() / (count - 1) else 1.0
+                val alt = point.altitude?.let { it + deltaOffset * fraction }
+                point.copy(altitude = alt)
+            }
+        }
+        _currentPathPoints.value = updatedPoints
     }
 
     // --- Helper methods to communicate with BANALService via Binder ---

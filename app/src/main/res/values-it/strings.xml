@@ -2188,4 +2188,12 @@
     <string name="zone_history_date_label">Data di validità</string>
     <string name="zone_history_save_snapshot">Salva istantanea</string>
     <string name="zone_history_error_monotonic">Le soglie devono essere strettamente crescenti (%1$s)</string>
+
+    <!-- Manual Altitude Calibration (ATT-4845, REQ-TRK-047) -->
+    <string name="altitude_calibration_title">Calibra altitudine</string>
+    <string name="altitude_calibration_reference_label">Altitudine di riferimento</string>
+    <string name="altitude_calibration_location_name">Nome posizione (facoltativo)</string>
+    <string name="altitude_calibration_save_location">Salva come posizione nota</string>
+    <string name="altitude_calibration_action">Calibra</string>
+    <string name="altitude_calibrated_success">Altitudine calibrata a %1$s</string>
 </resources>

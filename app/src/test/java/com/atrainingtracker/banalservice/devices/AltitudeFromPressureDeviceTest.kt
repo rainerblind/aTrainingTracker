@@ -86,8 +86,15 @@ class AltitudeFromPressureDeviceTest {
             intentExtras[firstArg()] = secondArg<Double>()
             self as Intent
         }
+        every { anyConstructed<Intent>().putExtra(any<String>(), any<Long>()) } answers {
+            intentExtras[firstArg()] = secondArg<Long>()
+            self as Intent
+        }
         every { anyConstructed<Intent>().getDoubleExtra(any<String>(), any<Double>()) } answers {
             (intentExtras[firstArg()] as? Double) ?: secondArg()
+        }
+        every { anyConstructed<Intent>().getLongExtra(any<String>(), any<Long>()) } answers {
+            (intentExtras[firstArg()] as? Long) ?: secondArg()
         }
         every { anyConstructed<Intent>().action } answers { AltitudeFromPressureDevice.ALTITUDE_CORRECTION_INTENT }
 

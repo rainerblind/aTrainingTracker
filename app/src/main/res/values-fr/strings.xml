@@ -2187,4 +2187,12 @@
     <string name="zone_history_date_label">Date d\'effet</string>
     <string name="zone_history_save_snapshot">Enregistrer l\'instantané</string>
     <string name="zone_history_error_monotonic">Les seuils doivent être strictement croissants (%1$s)</string>
+
+    <!-- Manual Altitude Calibration (ATT-4845, REQ-TRK-047) -->
+    <string name="altitude_calibration_title">Étalonner l\'altitude</string>
+    <string name="altitude_calibration_reference_label">Altitude de référence</string>
+    <string name="altitude_calibration_location_name">Nom du lieu (facultatif)</string>
+    <string name="altitude_calibration_save_location">Enregistrer comme lieu favori</string>
+    <string name="altitude_calibration_action">Étalonner</string>
+    <string name="altitude_calibrated_success">Altitude étalonnée à %1$s</string>
 </resources>

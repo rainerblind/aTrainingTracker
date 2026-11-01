@@ -511,13 +511,12 @@ public class KnownLocationsDatabaseManager {
             try {
                 MyLocation existing = getMyLocation(latLng);
                 if (existing != null) {
-                    if (!existing.isLocked) {
+                    if (!existing.isLocked || source == ElevationSource.MANUAL_USER) {
                         ContentValues values = new ContentValues();
                         values.put(KnownLocationsDbHelper.ALTITUDE, altitude);
                         values.put(KnownLocationsDbHelper.SOURCE, source.name());
                         values.put(KnownLocationsDbHelper.IS_LOCKED, isLocked ? 1 : 0);
-                        if (com.atrainingtracker.trainingtracker.location.LocationNameResolver.isPlaceholderName(existing.name)
-                                && !com.atrainingtracker.trainingtracker.location.LocationNameResolver.isPlaceholderName(name)) {
+                        if (!name.isEmpty() && (!existing.isLocked || !com.atrainingtracker.trainingtracker.location.LocationNameResolver.isPlaceholderName(name))) {
                             values.put(KnownLocationsDbHelper.NAME, name);
                         }
                         updateId(existing.id, values);

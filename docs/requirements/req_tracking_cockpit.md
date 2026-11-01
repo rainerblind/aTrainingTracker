@@ -2233,3 +2233,50 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Non-destructive SQLite migration, true zone color preservation, and 100% clean-room test pass rate.
 
+
+### REQ-TRK-047: Cockpit Manual Altitude Calibration with Permanent Known Location Persistence and Retroactive Piecewise-Linear Drift Correction [Verified]
+- **Tests**: `TST-TRK-047` | **Tickets**: `ATT-4845`
+- **Implementation**: `SensorSourceDialog.kt`, `SensorStatus.kt`, `AltitudeFromPressureDevice.java`, `TrackerService.java`, `LiveWorkoutSession.java`, `WorkoutSamplesDatabaseManager.java`, `WorkoutSummariesDatabaseManager.java`, `BANALServiceRepository.kt`, `KnownLocationsDatabaseManager.java`
+- **Rationale**: When passing a landmark with known altitude during outdoor workouts, athletes SHALL be able to trigger manual altimeter calibration from the tracking cockpit altitude icon, permanently persist the landmark to Known Locations (`KnownLocations.db`), and apply retroactive elevation history correction without step discontinuities or false ascent/descent spikes (ATT-4845, Parent Epic ATT-166, extending `REQ-UI-199` and `REQ-CON-017`):
+1. *Cockpit Header Manual Altitude Calibration & Geofence Persistence (`REQ-TRK-047.1`)*:
+• When tapping the `SensorType.ALTITUDE` sensor icon in the tracking header (`SensorStatus`), `SensorSourceDialog.kt` SHALL render a dedicated "Calibrate Altitude" input section.
+• The reference altitude input SHALL pre-fill with the current altitude reading formatted in the athlete's configured unit (`m` or `ft`) via canonical `AltitudeFormatter` per Rule 36.
+• The dialog SHALL provide an optional location name field (defaulting to reverse-geocoded or coordinate label) and a toggle to save to Known Locations.
+• When confirmed with save enabled, the system SHALL persist `(current LatLng, referenceAltitudeMeters, name)` to `KnownLocationsDatabaseManager` with `ElevationSource.MANUAL_USER` and `isLocked = true` so subsequent passes auto-calibrate automatically.
+• The system SHALL dispatch immediate calibration to `AltitudeFromPressureDevice.calibrate(referenceAltitudeMeters)` via `BANALServiceRepository.calibrateAltimeter`.
+2. *Retroactive Workout History Elevation Correction (`REQ-TRK-047.2`)*:
+• Let $t_1$ be the current calibration timestamp, $h_{\text{ref}}$ the target reference elevation, $h_{\text{baro}}(t_1)$ the pre-calibration altitude reading, and $\Delta h = h_{\text{ref}} - h_{\text{baro}}(t_1)$.
+• *Case A — Previously Uncalibrated in This Workout ($t_0 = \text{none}$)*:
+  - The system SHALL shift all already-recorded altitude samples in $t \in [t_{\text{start}}, t_1]$ across `WorkoutSamples.db` (or SQLite `samplesTable`), `LiveWorkoutSession` (`sampledAltitudes`, `RunningStats`), and `BANALServiceRepository._currentPathPoints` uniformly by $+\Delta h$:
+    $$h_{\text{corr}}(t) = h(t) + \Delta h$$
+• *Case B — Previously Calibrated at Timestamp $t_0 < t_1$*:
+  - The system SHALL apply a linear interpolation of $\Delta h$ over time across all recorded samples in $t \in [t_0, t_1]$:
+    $$h_{\text{corr}}(t) = h(t) + \Delta h \cdot \frac{t - t_0}{t_1 - t_0}$$
+    so the correction is $0$ at previous calibration point $t_0$ and reaches $+\Delta h$ at $t_1$, eliminating barometric weather drift without step discontinuities or false ascent/descent spikes.
+• After applying either Case A or Case B, the system SHALL update $t_0 \leftarrow t_1$ and recompute running `ASCENDING` / `DESCENDING` and min-max altitude extrema over the corrected interval.
+3. *IPC Contract & Drift Protection (`REQ-TRK-047.3`)*:
+• `ALTITUDE_CORRECTION_INTENT` SHALL carry `ALTITUDE_CORRECTION_VALUE = deltaOffset` and timestamp $t_1$ (or `TrackerService` captures $t_1$ atomically upon receipt), enforcing $|\Delta h| \le 500\text{ m}$ guard pursuant to `REQ-CON-017`.
+• `_currentPathPoints` in `BANALServiceRepository` SHALL update existing `PathPoint` elevations accordingly to ensure live elevation profile continuity.
+4. *9-Language Localization Parity (`REQ-TRK-047.4`)*:
+• All manual altitude calibration strings (`altitude_calibration_title`, `altitude_calibration_reference_label`, `altitude_calibration_location_name`, `altitude_calibration_save_location`, `altitude_calibration_action`, `altitude_calibrated_success`) SHALL maintain 100% translation parity across all 9 supported application locales.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-047`, extending `REQ-UI-199` (Cockpit Calibration Badge & Altimeter Dispatch) and `REQ-CON-017` (Barometric Calibration Limiting & IPC). Targets `SensorSourceDialog.kt`, `SensorStatus.kt`, `AltitudeFromPressureDevice.java`, `TrackerService.java`, `LiveWorkoutSession.java`, `WorkoutSamplesDatabaseManager.java`, and `BANALServiceRepository.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-44.2 (`ATT-4845`). Builds upon `ATT-1617` (geofence auto-calibration), `ATT-1810` (delta offset IPC contract), and `ATT-3990` (500m sanity limit).
+3. *Root Reason for Existing Formulation*: Prior implementations only supported automatic calibration at pre-saved favorite locations or applied uniform sample shifts across the entire workout, distorting calibrated starting elevations and failing to correct gradual atmospheric pressure drift.
+4. *Preservation of Core Invariants*: Preservation of `LocationCalibrationBadge` placement, 9-language localization, imperial/metric unit formatting, single-thread SQLite concurrency in `mDbExecutor`, and `ALTITUDE_CORRECTION_INTENT` $|\Delta h| \le 500\text{ m}$ guard.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an active tracking session with a valid GPS fix,
+• *When* the athlete taps the ALTITUDE icon in the header and submits a reference altitude (e.g. 1215 m) with save enabled,
+• *Then* the barometric altimeter immediately calibrates to 1215 m and the location is permanently stored in `KnownLocations.db` with `ElevationSource.MANUAL_USER`.
+• *Given* a workout that started uncalibrated and recorded samples for 20 minutes before the athlete calibrates with offset $\Delta h = +35\text{ m}$,
+• *When* the calibration is applied,
+• *Then* all past altitude samples in `WorkoutSamples.db`, `LiveWorkoutSession`, and `_currentPathPoints` are shifted by $+35\text{ m}$.
+• *Given* a workout previously calibrated at $t_0$ and recalibrated at $t_1 > t_0$ with accumulated drift $\Delta h = -18\text{ m}$,
+• *When* the second calibration is applied at $t_1$,
+• *Then* recorded samples between $t_0$ and $t_1$ are adjusted linearly by $\Delta h \cdot \frac{t - t_0}{t_1 - t_0}$, with $0\text{ m}$ change at $t_0$ and $-18\text{ m}$ at $t_1$.
+
+**Invariants**: $C^0$ continuity (zero vertical step discontinuities), Rule 36 unit parity, single-thread SQLite transaction execution, and 100% clean-room test pass rate.
+
+
