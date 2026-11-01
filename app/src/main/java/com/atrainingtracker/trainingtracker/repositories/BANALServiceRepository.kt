@@ -22,6 +22,7 @@ import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.location.Location
 import com.atrainingtracker.util.safeStartService
 import android.content.IntentFilter
 import android.content.ServiceConnection
@@ -34,6 +35,7 @@ import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice
 import com.atrainingtracker.banalservice.devices.MyDevice
 import com.atrainingtracker.banalservice.filters.FilterData
 import com.atrainingtracker.banalservice.filters.FilteredSensorData
@@ -372,9 +374,6 @@ class BANALServiceRepository private constructor(context: Context) {
                             if (_currentLocation.value != newLocation) {
                                 _currentLocation.value = newLocation
                                 locationChanged = true
-                                if (TrainingApplication.getTrackingMode() == TrackingMode.TRACKING) {
-                                    _currentTrack.value = currentTrack.value + newLocation
-                                }
                             }
                         }
 
@@ -391,15 +390,53 @@ class BANALServiceRepository private constructor(context: Context) {
                         _currentDistance.value = currentDistance
                         _isAltimeterCalibrated.value = binder.isAltimeterCalibrated()
 
-                        // REQ-TRK-042.1: Only append PathPoint when location is valid and location or distance has advanced
+                        // REQ-TRK-048.5: Suppress appending redundant track breadcrumbs when stationary and within deadband (3.0m)
                         val location = _currentLocation.value
+                        val isStationary = (currentSpeed ?: 0.0) <= SpeedAndLocationDevice.SPEED_ZERO_THRESHOLD
+                        if (location != null && locationChanged) {
+                            val lastTrackPoint = _currentTrack.value.lastOrNull()
+                            var isSpiderJitter = false
+                            if (isStationary && lastTrackPoint != null) {
+                                val distanceResults = FloatArray(1)
+                                Location.distanceBetween(
+                                    lastTrackPoint.latitude, lastTrackPoint.longitude,
+                                    location.latitude, location.longitude,
+                                    distanceResults
+                                )
+                                if (distanceResults[0] <= 3.0f) {
+                                    isSpiderJitter = true
+                                }
+                            }
+
+                            if (!isSpiderJitter && TrainingApplication.getTrackingMode() == TrackingMode.TRACKING) {
+                                _currentTrack.value = currentTrack.value + location
+                            }
+                        }
+
+                        // REQ-TRK-042.1 & REQ-TRK-048.5: Only append PathPoint when location is valid and not stationary spider jitter
                         if (TrainingApplication.getTrackingMode() == TrackingMode.TRACKING && location != null && (locationChanged || distanceChanged)) {
-                            val newPathPoint = com.atrainingtracker.trainingtracker.ui.map.PathPoint(
-                                distance = currentDistance ?: 0.0,
-                                latLng = location,
-                                altitude = currentAltitude ?: 0.0
-                            )
-                            _currentPathPoints.value = _currentPathPoints.value + newPathPoint
+                            val lastPathPoint = _currentPathPoints.value.lastOrNull()?.latLng
+                            var isPathJitter = false
+                            if (isStationary && !distanceChanged && lastPathPoint != null) {
+                                val distanceResults = FloatArray(1)
+                                Location.distanceBetween(
+                                    lastPathPoint.latitude, lastPathPoint.longitude,
+                                    location.latitude, location.longitude,
+                                    distanceResults
+                                )
+                                if (distanceResults[0] <= 3.0f) {
+                                    isPathJitter = true
+                                }
+                            }
+
+                            if (!isPathJitter) {
+                                val newPathPoint = com.atrainingtracker.trainingtracker.ui.map.PathPoint(
+                                    distance = currentDistance ?: 0.0,
+                                    latLng = location,
+                                    altitude = currentAltitude ?: 0.0
+                                )
+                                _currentPathPoints.value = _currentPathPoints.value + newPathPoint
+                            }
                         }
 
                         if (DEBUG) Log.i(TAG, "BANALService update loop - binder=$binder")

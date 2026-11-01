@@ -59,6 +59,12 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
     double mDistance, mSpeed;
     protected boolean mIsDecaying = false;
 
+    // REQ-TRK-048.2 & REQ-TRK-048.3: Stationary anchor coordinates and pinning state
+    protected Location mStationaryAnchor = null;
+    protected boolean mIsStationaryPinned = false;
+    protected double mFilteredLatitude = Double.NaN;
+    protected double mFilteredLongitude = Double.NaN;
+
     protected Handler mWatchdogHandler;
     private final Runnable mInactivityRunnable = new Runnable() {
         @Override
@@ -259,15 +265,36 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
         if (DEBUG) Log.i(TAG, "shutDown()");
         cancelWatchdog();
         mIsDecaying = false;
+        mStationaryAnchor = null;
+        mIsStationaryPinned = false;
+        mFilteredLatitude = Double.NaN;
+        mFilteredLongitude = Double.NaN;
         super.shutDown();
     }
 
-    public void resetStartLocation() {
+    public synchronized void resetStartLocation() {
         if (DEBUG) Log.i(TAG, "resetStartLocation()");
         mStartLocation = null;
         mPrevLocation = null;
+        mStationaryAnchor = null;
+        mIsStationaryPinned = false;
+        mFilteredLatitude = Double.NaN;
+        mFilteredLongitude = Double.NaN;
     }
 
+    /**
+     * REQ-TRK-048.2: Returns true if the device is currently pinned to a stationary GPS anchor coordinate.
+     */
+    public synchronized boolean isStationaryPinned() {
+        return mIsStationaryPinned;
+    }
+
+    /**
+     * REQ-TRK-048.2: Returns the currently pinned stationary GPS anchor location, or null if unpinned.
+     */
+    public synchronized Location getStationaryAnchor() {
+        return mStationaryAnchor;
+    }
 
     public void onNewLocation(Location location) {
         if (DEBUG) Log.i(TAG, "onNewLocation()");
@@ -285,52 +312,126 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
                     mStartLocation = location;
                 }
 
-                mLongitudeSensor.newValue(location.getLongitude());
-                mLatitudeSensor.newValue(location.getLatitude());
-                mAccuracySensor.newValue(location.getAccuracy() + 0.0);
-                mAltitudeSensor.newValue(location.getAltitude());
-                mLineDistanceSensor.newValue(location.distanceTo(mStartLocation) + 0.0);
+                // REQ-TRK-048.2: Dynamic accuracy-scaled deadband radius R = max(3.0m, 0.6 * accuracy)
+                double deadbandRadius = Math.max(3.0, 0.6 * location.getAccuracy());
+                boolean wasPinned = mIsStationaryPinned;
+                boolean hasSpeed = location.hasSpeed() || location.getSpeed() > 0.0f;
+                float rawSpeed = hasSpeed ? location.getSpeed() : -1.0f;
+                boolean isDopplerStationary = hasSpeed && (rawSpeed <= SPEED_ZERO_THRESHOLD);
 
                 double delta_distance = 0.0;
                 long dt_ms = 0;
                 if (mPrevLocation != null) {
-                    delta_distance = mPrevLocation.distanceTo(location);
                     dt_ms = location.getTime() - mPrevLocation.getTime();
+                }
 
-                    // REQ-TRK-041.1: Guard against implausible multipath teleportation spikes (speed > 70.0 m/s = 252 km/h)
-                    if (dt_ms > 0 && dt_ms < 30000) {
-                        double calcSpeed = delta_distance / (dt_ms / 1000.0);
-                        if (calcSpeed > 70.0) {
-                            delta_distance = 0.0;
+                double speed = 0.0;
+
+                // REQ-TRK-048.1, REQ-TRK-048.2, REQ-TRK-048.4: Anchor pinning, deadband gating, and Doppler zero preservation
+                if (mIsStationaryPinned && mStationaryAnchor != null) {
+                    float distFromAnchor = mStationaryAnchor.distanceTo(location);
+                    double escapeRadius = Math.max(3.0, 1.5 * location.getAccuracy());
+                    boolean shouldUnpin = false;
+                    if (distFromAnchor > deadbandRadius) {
+                        // Unpin if Doppler reports motion, provider lacks Doppler, OR displacement escapes accuracy noise floor
+                        if (!hasSpeed || rawSpeed > SPEED_ZERO_THRESHOLD || distFromAnchor > escapeRadius) {
+                            shouldUnpin = true;
                         }
                     }
 
+                    if (shouldUnpin) {
+                        mIsStationaryPinned = false;
+                        delta_distance = distFromAnchor;
+                        mStationaryAnchor = null;
+
+                        // REQ-TRK-041.1: Guard against implausible multipath teleportation spikes (speed > 70.0 m/s = 252 km/h)
+                        if (dt_ms > 0 && dt_ms < 30000) {
+                            double calcSpeed = delta_distance / (dt_ms / 1000.0);
+                            if (calcSpeed > 70.0) {
+                                delta_distance = 0.0;
+                            }
+                        }
+
+                        if (hasSpeed && rawSpeed > SPEED_ZERO_THRESHOLD) {
+                            speed = rawSpeed;
+                        } else {
+                            if (dt_ms > 0 && dt_ms < 30000) {
+                                double calcSpeed = delta_distance / (dt_ms / 1000.0);
+                                if (calcSpeed <= 70.0) {
+                                    speed = calcSpeed;
+                                }
+                            }
+                        }
+                    } else {
+                        // Suppress distance creep and zero speed while pinned
+                        delta_distance = 0.0;
+                        speed = 0.0;
+                    }
+                } else {
+                    double rawDelta = (mPrevLocation != null) ? mPrevLocation.distanceTo(location) : 0.0;
+
+                    if (isDopplerStationary) {
+                        // REQ-TRK-048.1 & REQ-TRK-048.2: Doppler reports zero speed; pin anchor immediately
+                        mStationaryAnchor = location;
+                        mIsStationaryPinned = true;
+                        delta_distance = 0.0;
+                        speed = 0.0;
+                    } else if (!hasSpeed && (mPrevLocation == null || (rawDelta <= deadbandRadius && mSpeed <= SPEED_ZERO_THRESHOLD))) {
+                        // REQ-TRK-048.4: Non-Doppler provider stationary; pin anchor
+                        mStationaryAnchor = location;
+                        mIsStationaryPinned = true;
+                        delta_distance = 0.0;
+                        speed = 0.0;
+                    } else {
+                        // Legitimate movement
+                        delta_distance = rawDelta;
+
+                        // REQ-TRK-041.1: Guard against implausible multipath teleportation spikes (speed > 70.0 m/s = 252 km/h)
+                        if (dt_ms > 0 && dt_ms < 30000) {
+                            double calcSpeed = delta_distance / (dt_ms / 1000.0);
+                            if (calcSpeed > 70.0) {
+                                delta_distance = 0.0;
+                            }
+                        }
+
+                        if (hasSpeed) {
+                            speed = rawSpeed;
+                        } else {
+                            if (dt_ms > 0 && dt_ms < 30000) {
+                                double calcSpeed = delta_distance / (dt_ms / 1000.0);
+                                if (calcSpeed <= 70.0) {
+                                    speed = calcSpeed;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (delta_distance > 0.0) {
                     mDistanceSensor.increment(delta_distance);
                     mLapDistanceSensor.increment(delta_distance);
                 }
 
+                // REQ-TRK-048.3: Stationary bearing lock
                 double bearing = location.getBearing();
                 if (bearing == 0.0f) {
-                    if (mPrevLocation != null && delta_distance > 0.5) {
+                    if (!mIsStationaryPinned && mPrevLocation != null && delta_distance > 0.5) {
                         bearing = (mPrevLocation.bearingTo(location) + 360.0) % 360.0;
                     } else if (mBearingSensor.getValue() != null) {
+                        bearing = mBearingSensor.getValue();
+                    }
+                } else {
+                    if (mIsStationaryPinned && wasPinned && mBearingSensor.getValue() != null) {
+                        // While continuously pinned, lock bearing to prevent jitter noise from spinning the compass
                         bearing = mBearingSensor.getValue();
                     }
                 }
                 mBearingSensor.newValue((bearing + 360.0) % 360.0);
 
-                double speed = location.getSpeed();
-                if (speed == 0.0 && mPrevLocation != null) {
-                    if (delta_distance > 0.1) {
-                        if (dt_ms > 0 && dt_ms < 30000) {
-                            double calcSpeed = delta_distance / (dt_ms / 1000.0);
-                            if (calcSpeed <= 70.0) { // Plausible speed limit (<= 252 km/h)
-                                speed = calcSpeed;
-                            }
-                        }
-                    }
-                }
-                if (mIsDecaying || mPrevLocation == null || dt_ms >= 3000) {
+                // Speed smoothing & pace
+                if (mIsStationaryPinned) {
+                    mSpeed = 0.0;
+                } else if (mIsDecaying || mPrevLocation == null || dt_ms >= 3000) {
                     mSpeed = speed;
                 } else {
                     mSpeed = (mSpeed + speed) / 2;
@@ -343,13 +444,47 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
                     mPaceSensor.newValue(null);
                 }
 
+                // REQ-TRK-048.2 & REQ-TRK-048.3: Coordinate stabilization & anchor emission
+                double latToPublish;
+                double lonToPublish;
+                if (mIsStationaryPinned && mStationaryAnchor != null) {
+                    latToPublish = mStationaryAnchor.getLatitude();
+                    lonToPublish = mStationaryAnchor.getLongitude();
+                    mFilteredLatitude = latToPublish;
+                    mFilteredLongitude = lonToPublish;
+                } else {
+                    double rawLat = location.getLatitude();
+                    double rawLon = location.getLongitude();
+                    if (Double.isNaN(mFilteredLatitude) || Double.isNaN(mFilteredLongitude)) {
+                        mFilteredLatitude = rawLat;
+                        mFilteredLongitude = rawLon;
+                    } else {
+                        double alpha = Math.min(1.0, Math.max(0.2, mSpeed / 3.0));
+                        mFilteredLatitude = mFilteredLatitude + alpha * (rawLat - mFilteredLatitude);
+                        mFilteredLongitude = mFilteredLongitude + alpha * (rawLon - mFilteredLongitude);
+                    }
+                    latToPublish = mFilteredLatitude;
+                    lonToPublish = mFilteredLongitude;
+                }
+
+                mLongitudeSensor.newValue(lonToPublish);
+                mLatitudeSensor.newValue(latToPublish);
+                mAccuracySensor.newValue(location.getAccuracy() + 0.0);
+                mAltitudeSensor.newValue(location.getAltitude());
+
+                if (mIsStationaryPinned && mStationaryAnchor != null) {
+                    mLineDistanceSensor.newValue(mStationaryAnchor.distanceTo(mStartLocation) + 0.0);
+                } else {
+                    mLineDistanceSensor.newValue(location.distanceTo(mStartLocation) + 0.0);
+                }
+
                 // finally, save the location
                 mPrevLocation = location;
 
                 // also broadcast that we have a new location
                 Intent intent = new Intent(BANALService.NEW_LOCATION_INTENT)
-                        .putExtra(BANALService.LATITUDE, location.getLatitude())
-                        .putExtra(BANALService.LONGITUDE, location.getLongitude())
+                        .putExtra(BANALService.LATITUDE, latToPublish)
+                        .putExtra(BANALService.LONGITUDE, lonToPublish)
                         .putExtra(BANALService.LOCATION_PROVIDER, location.getProvider())
                         .setPackage(mContext.getPackageName());
                 mContext.sendBroadcast(intent);

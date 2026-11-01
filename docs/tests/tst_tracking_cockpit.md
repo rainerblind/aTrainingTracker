@@ -1316,5 +1316,26 @@
   • Verification in `TranslationParityTest` for `device_type_altitude_from_position`, `device_type_short_altitude_from_position`, `devices_altitude_from_position`, and `devices_altitude_from_position_description` across all 9 locales.
 
 
+### TST-TRK-048: **Stationary GPS Jitter Suppression, Doppler Zero Preservation & Anchor Pinning Test Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-048`
+- **Component**: `SpeedAndLocationDeviceStationaryJitterTest.kt`, `SpeedAndLocationDeviceResilienceTest.kt`, `BANALServiceRepositoryTest.kt`
+- **Jira**: `ATT-4850`
+- **Test Description**:
+  1. *Stationary GNSS Jitter Zero Speed & Zero Distance Increment (`TST-TRK-048.1`)*:
+  • Unit test in `SpeedAndLocationDeviceStationaryJitterTest` feeding consecutive 1-Hz synthetic GPS fixes with `hasSpeed() == true`, `getSpeed() == 0.0f`, `accuracy = 5.0m`, and coordinates jittering randomly within $1.5\text{--}3.0\text{ m}$.
+  • Verifies that `SPEED_mps` remains clamped to 0.0, `DISTANCE_m` does not increment, `BEARING` remains stable, and published coordinates match the stationary anchor.
+  2. *Stationary Anchor Unpinning on True Movement (`TST-TRK-048.2`)*:
+  • Unit test in `SpeedAndLocationDeviceStationaryJitterTest` transitioning from stationary jitter to true forward motion with displacement exceeding $\max(3.0\text{ m},\, 0.6 \cdot \text{accuracy})$.
+  • Verifies that the anchor unpins, speed transitions smoothly, distance accumulation resumes, and bearing updates along the direction of motion.
+  3. *Provider Without Doppler Velocity Fallback (`TST-TRK-048.3`)*:
+  • Unit test in `SpeedAndLocationDeviceStationaryJitterTest` feeding fixes with `hasSpeed() == false`.
+  • Verifies that jitter within the deadband produces 0.0 speed and zero distance increment, while sustained movement beyond the deadband accurately computes geometric speed `delta_distance / dt` and accumulates distance.
+  4. *Spider-Map Breadcrumb Suppression in Repository (`TST-TRK-048.4`)*:
+  • Unit test in `BANALServiceRepositoryTest` verifying that stationary jitter fixes do not generate or append spiderweb line segments to `_currentTrack`.
+  5. *Existing Invariant Parity - Speed Decay Watchdog & Teleportation Spike Gating (`TST-TRK-048.5`)*:
+  • Regression verification confirming that sensor inactivity continues to trigger watchdog speed decay (`REQ-TRK-013`) and multipath teleportation spikes ($> 70\text{ m/s}$) are rejected (`REQ-TRK-041.1`).
+
+
+
 
 

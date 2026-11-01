@@ -2320,4 +2320,41 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 **Invariants**: Zero mutation of `KnownLocations.db`, non-blocking I/O (`Dispatchers.IO`), Rule 62 schema registry integration, and 100% clean-room test pass rate.
 
 
+### REQ-TRK-048: Stationary GPS Jitter Suppression, Doppler Zero Preservation & Anchor Pinning [Verified]
+- **Tests**: `TST-TRK-048` | **Tickets**: `ATT-4850`
+- **Implementation**: `SpeedAndLocationDevice.java`, `BANALServiceRepository.kt`
+- **Rationale**: When an athlete stops at traffic lights, cafés, or rests indoors, GNSS multipath reflections cause horizontal coordinates to wander 1–4 m per second. Overriding GNSS Doppler zero speed with geometric displacement creates phantom 5–14 km/h speed readings, prevents or breaks Auto-Pause, accumulates creeping distance, spins compass bearing, and records dense spiderweb track artifacts (ATT-4850, Parent Epic ATT-166):
+1. *Doppler Zero Velocity Preservation (`REQ-TRK-048.1`)*:
+• When a location fix provides speed (`location.hasSpeed() == true`) and `location.getSpeed() <= SPEED_ZERO_THRESHOLD` (0.05 m/s), `SpeedAndLocationDevice` SHALL clamp speed to 0.0 m/s and SHALL NOT calculate or substitute geometric speed `delta_distance / dt` from GPS multipath jitter.
+2. *Stationary Anchor Pinning & Distance Gating (`REQ-TRK-048.2`)*:
+• When stationary (`speed <= SPEED_ZERO_THRESHOLD`), `SpeedAndLocationDevice` SHALL establish and maintain a stationary anchor coordinate.
+• While stationary, `SpeedAndLocationDevice` SHALL NOT increment `mDistanceSensor` (`DISTANCE_m`) or `mLapDistanceSensor` (`DISTANCE_m_LAP`) until displacement from the anchor exceeds the dynamic accuracy deadband radius $R = \max(3.0\text{ m},\, 0.6 \cdot \text{accuracy})$.
+3. *Stationary Bearing Lock & Coordinate Stabilization (`REQ-TRK-048.3`)*:
+• While pinned within the stationary deadband radius, `SpeedAndLocationDevice` SHALL maintain the last valid bearing without angular drift or spinning, and SHALL publish the stabilized anchor coordinates.
+4. *Provider Without Doppler Velocity Fallback (`REQ-TRK-048.4`)*:
+• For location providers without Doppler velocity (`!location.hasSpeed()`), `SpeedAndLocationDevice` SHALL compute geometric speed `delta_distance / dt` and accumulate distance if and only if displacement exceeds the accuracy deadband radius $R = \max(3.0\text{ m},\, 0.6 \cdot \text{accuracy})$.
+5. *Spider-Map Breadcrumb Suppression (`REQ-TRK-048.5`)*:
+• `BANALServiceRepository` SHALL suppress appending coordinate breadcrumbs to `_currentTrack` when the athlete is stationary and displacement remains within the stationary deadband radius.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-048`, extending `REQ-TRK-013` (Speed Decay Watchdog), `REQ-TRK-024` (Speed & Distance Priority), and `REQ-TRK-041.1` (Teleportation Spike Gating). Targets `SpeedAndLocationDevice.java` and `BANALServiceRepository.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-44.2 (`ATT-4850`). Addresses longstanding issue from Epic `ATT-166` (High-Value Pillar 1: Stationary Pinning / Zero-Velocity Update).
+3. *Root Reason for Existing Formulation*: `SpeedAndLocationDevice` previously used a simplistic `speed == 0.0 && delta_distance > 0.1` condition that mistook GPS multipath noise for motion, designed prior to modern GNSS Doppler baseband firmware.
+4. *Preservation of Core Invariants*: Preservation of speed decay watchdog timeout (`REQ-TRK-013`), plausible teleportation speed limits $\le 70\text{ m/s}$ (`REQ-TRK-041.1`), and high-speed cornering responsiveness without lag.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* consecutive 1-Hz GPS fixes with `hasSpeed() == true`, `getSpeed() == 0.0f`, and horizontal coordinates jittering by 1–4 m within reported accuracy,
+• *When* `SpeedAndLocationDevice.onNewLocation()` processes the fixes,
+• *Then* published `SPEED_mps` remains 0.0, `DISTANCE_m` does not increment, `BEARING` does not spin, and published coordinates remain pinned to the anchor without drawing a spider-map.
+• *Given* location fixes from a provider without Doppler speed (`hasSpeed() == false`) advancing steadily along a route beyond the deadband radius,
+• *When* `SpeedAndLocationDevice.onNewLocation()` processes the fixes,
+• *Then* geometric speed `delta_distance / dt` and distance increments are computed accurately.
+• *Given* an athlete stationary at an intersection resuming movement,
+• *When* displacement from the anchor exceeds $\max(3.0\text{ m},\, 0.6 \cdot \text{accuracy})$ with non-zero speed,
+• *Then* the anchor unpins immediately, distance accumulation resumes, and bearing updates along the direction of motion.
+
+**Invariants**: Zero distance creep while stationary, valid non-Doppler geometric fallback, preservation of speed decay watchdog and teleportation spike gating, 100% clean-room test pass rate.
+
+
+
 
