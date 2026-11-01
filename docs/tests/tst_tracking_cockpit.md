@@ -1336,6 +1336,21 @@
   • Regression verification confirming that sensor inactivity continues to trigger watchdog speed decay (`REQ-TRK-013`) and multipath teleportation spikes ($> 70\text{ m/s}$) are rejected (`REQ-TRK-041.1`).
 
 
+### TST-TRK-049: **Post-Workout State Cleansing, Breadcrumb Purge & Idle Service Dormancy Test Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-049`
+- **Component**: `BANALServiceRepositoryTest.kt`, `BANALServiceBindingLifecycleTest.kt`, `MyAccumulatorSensorTrackingGateTest.kt`, `AccumulatorResetNotificationTest.kt`
+- **Jira**: `ATT-4926`
+- **Test Description**:
+  1. *Breadcrumb & Elevation Path Cleansing on Session End (`TST-TRK-049.1`)*:
+  • Unit test in `BANALServiceRepositoryTest` verifying that invoking `clearBreadcrumbs()`, receiving `TrackingMode.READY`, and completing a workout empties `_currentTrack` and `_currentPathPoints`.
+  2. *Idle Service Disconnect & Unbind Lifecycle (`TST-TRK-049.2`)*:
+  • Unit test verifying `MainActivityWithNavigation` and `disconnectFromBANALService()` unbind logic: confirms `bindReferenceCount` drops to 0, `unbindService` is called, and `BANALService` stops without leaking timers.
+  3. *Idle Accumulator Gating (`TST-TRK-049.3`)*:
+  • Unit test in `MyAccumulatorSensorTrackingGateTest` verifying that in `TrackingMode.READY`, ticks to `MyAccumulatorSensor.increment()` with `mRespectPause = true` do not increment value when `!TrainingApplication.isTracking()`.
+  4. *Reset Notification & InstantaneousFilter Reset (`TST-TRK-049.4`)*:
+  • Unit test verifying `MyAccumulatorSensor.reset()` notifies listeners with `mZeroValue`, and `InstantaneousFilter.reset()` clears cached values.
+
+
 
 
 

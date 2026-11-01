@@ -1051,7 +1051,7 @@ class MainActivityWithNavigation :
 
         if (!TrainingApplication.isTracking()) {
             if (DEBUG) Log.i(TAG, "Stopping BANALService process (not tracking)")
-            BANALServiceRepository.getInstance(this).unbindFromBANALService()
+            BANALServiceRepository.getInstance(this).forceUnbindFromBANALService()
             stopService(Intent(this, BANALService::class.java))
         }
     }

@@ -61,7 +61,7 @@ public abstract class MyAccumulatorSensor<N extends Number> extends MySensor<N> 
 
 
     public void increment(N incrementBy) {
-        if (mRespectPause && (TrainingApplication.isPaused() || TrainingApplication.isAutoPaused())) {
+        if (mRespectPause && (!TrainingApplication.isTracking() || TrainingApplication.isPaused() || TrainingApplication.isAutoPaused())) {
             // do nothing
         } else {
             N currentTotal = null;
@@ -109,7 +109,17 @@ public abstract class MyAccumulatorSensor<N extends Number> extends MySensor<N> 
         mInitialValue = value;
     }
 
-    public final synchronized void reset() {
-        setInitialValue(sub(mZeroValue, mValue));
+    public final void reset() {
+        boolean active;
+        synchronized (this) {
+            setInitialValue(sub(mZeroValue, mValue));
+            mLastAbsoluteValue = null;
+            active = mActivated;
+        }
+        if (active) {
+            for (SensorListener sensorListener : mSensorListeners) {
+                sensorListener.newValue(mZeroValue);
+            }
+        }
     }
 }

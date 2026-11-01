@@ -2356,5 +2356,41 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 **Invariants**: Zero distance creep while stationary, valid non-Doppler geometric fallback, preservation of speed decay watchdog and teleportation spike gating, 100% clean-room test pass rate.
 
 
+### REQ-TRK-049: Post-Workout State Cleansing, Breadcrumb Purge & Idle Service Dormancy [Verified]
+- **Tests**: `TST-TRK-049` | **Tickets**: `ATT-4926`
+- **Implementation**: `TrainingApplication.java`, `BANALServiceRepository.kt`, `MainActivityWithNavigation.kt`, `MyAccumulatorSensor.java`, `InstantaneousFilter.java`
+- **Rationale**: When an athlete completes or stops a workout and re-enters the app in `TrackingMode.READY`, lingering historical polylines, elevation profiles, and accumulator values create a confusing UI and cause phantom metric accumulation during idle periods. Clearing breadcrumbs on workout stop/abort, normalizing the service binding lifecycle, gating accumulator sensors to active tracking, and dispatching zero-value resets ensures a clean slate for upcoming sessions (ATT-4926, Parent Epic ATT-355, extending `REQ-TRK-001`, `REQ-TRK-002`, and refining `REQ-FIL-013`):
+1. *Map & Elevation Breadcrumb Cleansing (`REQ-TRK-049.1`)*:
+• `TrainingApplication` SHALL invoke `BANALServiceRepository.clearBreadcrumbs()` in `stopTracking()`, `trackingStopped()`, and `onTrackingAborted()`.
+• `BANALServiceRepository` SHALL clear `_currentTrack` and `_currentPathPoints` upon entering `TrackingMode.READY`.
+2. *Idle Service Binding Lifecycle Normalization (`REQ-TRK-049.2`)*:
+• In `MainActivityWithNavigation.kt`, `bindToBANALService()` on resume SHALL be paired with unbind handling, or `disconnectFromBANALService()` SHALL force unbinding when `bindReferenceCount > 0`, ensuring `BANALService` stops cleanly when idle without lingering background timers.
+3. *Idle Accumulator Gating (`REQ-TRK-049.3`)*:
+• In `MyAccumulatorSensor.increment()`, when `mRespectPause` is true, the sensor SHALL accumulate only if `TrainingApplication.isTracking() && !isPaused() && !isAutoPaused()`.
+• Timer and distance sensors SHALL NOT increment while in `TrackingMode.READY`.
+4. *Reset Notification & Filter Cache Invalidation (`REQ-TRK-049.4`)*:
+• `MyAccumulatorSensor.reset()` SHALL notify all registered `mSensorListeners` with `mZeroValue`.
+• `InstantaneousFilter.java` SHALL override `reset()` to invalidate cached telemetry on `FilterManager.resetAllFilters()`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-049`, extending `REQ-TRK-001` (Start/Stop Lifecycle), `REQ-TRK-002` (Lap Lifecycle), and refining `REQ-FIL-013` (Session Reset Isolation). Targets `TrainingApplication.java`, `BANALServiceRepository.kt`, `MainActivityWithNavigation.kt`, `MyAccumulatorSensor.java`, and `InstantaneousFilter.java`.
+2. *Historical Origin & Commit Trace*: Commit `d937073c` and `ATT-3222` introduced filter reset protocol but omitted `InstantaneousFilter`. Commit `a6920388` introduced Compose tracking tabs where repeated `onResume()` binds bypassed the single-bind assumption.
+3. *Root Reason for Existing Formulation*: Breadcrumb clearing was originally deferred to `startTracking()` to preserve visual map context immediately after stopping; however, with modern multi-tab navigation, this causes stale paths and non-zero readouts when reopening the app.
+4. *Preservation of Core Invariants*: Active workout tracking, auto-pause behavior, and pre-start live rolling sensor readouts (HR, cadence, instantaneous power) are preserved per `REQ-FIL-013`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an active workout with map breadcrumbs and elevation points,
+• *When* the workout is stopped or aborted, or when the app enters `TrackingMode.READY`,
+• *Then* `_currentTrack` and `_currentPathPoints` are cleared to empty lists.
+• *Given* the app running in `TrackingMode.READY`,
+• *When* background timer ticks or location updates arrive,
+• *Then* accumulator sensors do not increment.
+• *Given* accumulator sensors with non-zero historical totals,
+• *When* session reset is triggered,
+• *Then* zero values are published to listeners and filter caches are cleared.
+
+**Invariants**: Unaffected active tracking and auto-pause, continuous pre-start live rolling sensor display (HR, power, cadence), and 100% clean-room test pass rate.
+
+
 
 

@@ -1790,6 +1790,7 @@ public class TrainingApplication extends Application {
 
         cTrackingMode = TrackingMode.READY;
         sActiveWorkoutId = -1;
+        BANALServiceRepository.Companion.getInstance(this).clearBreadcrumbs();
         notifyTrackingStateChanged();
     }
 
@@ -1807,6 +1808,10 @@ public class TrainingApplication extends Application {
         setAutoPaused(false, cAppContext);
         cTrackingMode = TrackingMode.READY;
         sActiveWorkoutId = -1;
+        if (cAppContext != null) {
+            cAppContext.sendBroadcast(new Intent(BANALService.RESET_ACCUMULATORS_INTENT).setPackage(cAppContext.getPackageName()));
+            BANALServiceRepository.Companion.getInstance(cAppContext).clearBreadcrumbs();
+        }
     }
 
     /**
@@ -1831,12 +1836,16 @@ public class TrainingApplication extends Application {
             mNotificationManager.cancel(TRACKING_NOTIFICATION_ID);
         }
 
+        sendBroadcast(new Intent(BANALService.RESET_ACCUMULATORS_INTENT).setPackage(getPackageName()));
+        BANALServiceRepository.Companion.getInstance(this).clearBreadcrumbs();
+
         notifyTrackingStateChanged();
     }
 
     protected void trackingStopped() {
         // send broadcast to reset the accumulators
         sendBroadcast(new Intent(BANALService.RESET_ACCUMULATORS_INTENT).setPackage(getPackageName()));
+        BANALServiceRepository.Companion.getInstance(this).clearBreadcrumbs();
 
         // start EditWorkoutActivity
         // startEditWorkoutActivity(mWorkoutID, true); // here, the EditWorkoutActivity shall show the details, extrema values and the map.

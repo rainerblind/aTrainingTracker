@@ -188,6 +188,9 @@ class BANALServiceRepository private constructor(context: Context) {
             if (_trackingMode.value != newTrackingMode) {
                 _trackingMode.postValue(newTrackingMode)
             }
+            if (newTrackingMode == TrackingMode.READY) {
+                clearBreadcrumbs()
+            }
         }
     }
 
@@ -302,6 +305,24 @@ class BANALServiceRepository private constructor(context: Context) {
         if (DEBUG) Log.i(TAG, "unbindFromBANALService() - count=$bindReferenceCount")
         
         if (bindReferenceCount == 0 && isBoundToBanalService) {
+            try {
+                _serviceBinder.value = null
+                appContext.unbindService(banalServiceConnection)
+                isBoundToBanalService = false
+            } catch (e: IllegalArgumentException) {
+                Log.e(TAG, "Service not registered or already unbound: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Forcibly unbinds the repository from BANALService, resetting bindReferenceCount to 0
+     * and releasing the service connection when idle (REQ-TRK-049.2).
+     */
+    fun forceUnbindFromBANALService() {
+        if (DEBUG) Log.i(TAG, "forceUnbindFromBANALService() - resetting count=$bindReferenceCount, isBound=$isBoundToBanalService")
+        bindReferenceCount = 0
+        if (isBoundToBanalService) {
             try {
                 _serviceBinder.value = null
                 appContext.unbindService(banalServiceConnection)
