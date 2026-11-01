@@ -2079,3 +2079,40 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 
 
+### REQ-TRK-043: Sport-Specific Auto-Pause Resume Debounce & Symmetric Single-Threshold Evaluation [Planned]
+- **Tests**: `TST-TRK-043` | **Tickets**: `ATT-4839`
+- **Implementation**: `AutoPauseManager.kt`, `TuningConfig.kt`, `TuningPreferencesDataStore.kt`, `AutoPauseTabsScreen.kt`, `AutoPauseViewModel.kt`
+- **Rationale**: The auto-pause engine SHALL replace immediate single-tick resumption and asymmetric `+0.5` speed hysteresis deadbands with configurable sport-specific resume debounce timers evaluated against the exact configured sport speed threshold, eliminating false resume triggers from transient GPS jitter spikes (ATT-4839, extending `REQ-TRK-018` and `REQ-SET-080`):
+1. *Configurable Sport-Specific Resume Debounce Window (`REQ-TRK-043.1`)*:
+• `TuningConfig`, `TuningPreferencesDataStore`, and `AutoPauseConfig` SHALL persist independent resume debounce times in whole seconds:
+  - **Cycling (`BSportType.BIKE`)**: Range $1 \dots 20\text{ s}$, default $2\text{ s}$.
+  - **Running (`BSportType.RUN`)**: Range $1 \dots 20\text{ s}$, default $5\text{ s}$.
+  - **Other Sports (`BSportType.UNKNOWN`)**: Range $1 \dots 60\text{ s}$, default $10\text{ s}$.
+2. *Symmetric Single-Threshold Speed Evaluation (`REQ-TRK-043.2`)*:
+• `AutoPauseManager` SHALL compare both entering Auto-Pause ($v < v_{\text{threshold}}$) and leaving Auto-Pause ($v \ge v_{\text{threshold}}$) against the exact configured sport speed threshold, eliminating the hidden `+0.5` speed hysteresis offset deadband.
+3. *Consecutive-Tick Resume Confirmation & Counter Reset (`REQ-TRK-043.3`)*:
+• While in `AutoPauseState.AUTO_PAUSED`, transitioning back to `AutoPauseState.TRACKING` and emitting `SoundCue.AUTO_RESUME` SHALL require `resumeDebounceSec` consecutive 1-Hz ticks of fresh, valid speed $\ge v_{\text{threshold}}$.
+• Any tick with speed $< v_{\text{threshold}}$, stale packet timestamp ($> 5000\text{ ms}$), or corrupt numerical reading SHALL reset the resume counter to 0 and maintain `AUTO_PAUSED`.
+4. *Settings UI Resume Detection Time Sliders (`REQ-TRK-043.4`)*:
+• In `AutoPauseTabsScreen.kt`, each sport tab (*Bike*, *Run*, *Other*) SHALL provide a *Resume Detection Time* slider component (`TuningSliderItem`) with immediate asynchronous persistence and reset support via `TuningPreferencesDataStore.resetAutoPausePreferences(sportType)`.
+5. *Localization Parity (`REQ-TRK-043.5`)*:
+• String resources for the resume detection time title, description, and default hints SHALL maintain full parity across all 9 supported languages (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-043`, refining `REQ-TRK-018` (`ATT-45` / `ATT-3677`) and `REQ-SET-080` (`ATT-4836`). Targets `AutoPauseManager.kt`, `TuningPreferencesDataStore.kt`, `AutoPauseTabsScreen.kt`, and `AutoPauseViewModel.kt`.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-4839`, Sprint `2026-44.1`. Follows `ATT-45` (which added the `+0.5` speed offset as a proxy for debounce) and `ATT-4836` (which established the dedicated Auto-Pause settings screen).
+3. *Root Reason for Existing Formulation*: The legacy `+0.5` speed offset deadband was created because `AUTO_PAUSED` lacked an independent time confirmation counter. However, a single 1-Hz GPS spike above the deadband immediately resumed tracking. Replacing the speed offset with time-based multi-tick debounce provides physical stability without distorting threshold values.
+4. *Preservation of Core Invariants*: Manual user pause lock precedence (`mManualPauseLock`), 2-tick `SENSOR_LOST` recovery hysteresis, synchronous sensor gating, and 100% test pass rate strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an active cycling session in `AUTO_PAUSED` with default settings (threshold 3 km/h, resume debounce 2s),
+• *When* a single GPS jitter spike of 5 km/h arrives for 1 second followed by 0 km/h,
+• *Then* `AutoPauseManager` increments resume counter to 1, resets counter to 0 on the stationary tick, and remains in `AUTO_PAUSED` with zero resume cues emitted.
+• *Given* an active cycling session in `AUTO_PAUSED` with threshold 3 km/h and resume debounce 2s,
+• *When* fresh speed readings of 3.5 km/h arrive continuously for 2 consecutive seconds,
+• *Then* `AutoPauseManager` transitions to `TRACKING` and emits `SoundCue.AUTO_RESUME` on the 2nd second.
+• *Given* an active running session in `AUTO_PAUSED` with threshold 2 km/h and resume debounce 5s,
+• *When* speed $\ge 2\text{ km/h}$ is maintained for 4 seconds and drops below 2 km/h on second 5,
+• *Then* `AutoPauseManager` resets resume counter to 0 and remains `AUTO_PAUSED`.
+
+**Invariants**: Manual pause lock precedence, sensor lost state recovery, moving average calculations, and 100% clean-room test pass rate MUST NOT be broken.

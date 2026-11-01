@@ -1182,3 +1182,18 @@
   • Execute targeted package tests and verify zero regressions.
 
 
+### TST-TRK-043: **Sport-Specific Auto-Pause Resume Debounce & Symmetric Single-Threshold Test Suite** [Planned]
+- **Requirement(s)**: `REQ-TRK-043`
+- **Component**: `AutoPauseManagerTest.kt`, `AutoPauseViewModelTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-4839`
+- **Test Description**:
+  1. *Sport-Specific Multi-Tick Resume Debounce (`TST-TRK-043.1`)*:
+  • Unit test in `AutoPauseManagerTest` verifying that in `AUTO_PAUSED` state, moving at speed $\ge$ threshold requires strictly $N$ consecutive 1-Hz ticks (Bike=2, Run=5, Other=10) before transitioning to `TRACKING` and emitting `SoundCue.AUTO_RESUME`.
+  2. *GPS Jitter Spike Rejection & Counter Reset (`TST-TRK-043.2`)*:
+  • Unit test verifying that a transient speed spike $\ge$ threshold lasting fewer than $N$ ticks followed by a stationary tick ($< v_{\text{threshold}}$) or stale packet ($> 5000\text{ ms}$) resets `resumeDebounceCounter` to 0 and maintains `AUTO_PAUSED` state without emitting audio tones.
+  3. *Single-Threshold Evaluation without Hysteresis Offset (`TST-TRK-043.3`)*:
+  • Unit test verifying that speed $\ge v_{\text{threshold}}$ (without $+0.5$ offset) counts toward resume debounce, and speeds $< v_{\text{threshold}}$ maintain pause.
+  4. *ViewModel & DataStore Preferences Persistence (`TST-TRK-043.4`)*:
+  • Unit test in `AutoPauseViewModelTest` asserting that updating `autoPauseBikeResumeDebounceSec`, `autoPauseRunResumeDebounceSec`, and `autoPauseOtherResumeDebounceSec` immediately updates `tuningConfig` StateFlow, and `resetAutoPausePreferences(sportType)` resets resume debounce values to defaults.
+  5. *9-Language Localization Parity (`TST-TRK-043.5`)*:
+  • Test in `TranslationParityTest` verifying all resume detection time title, description, and default strings exist in all 9 translation sets.

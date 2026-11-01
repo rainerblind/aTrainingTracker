@@ -2004,6 +2004,8 @@
     <string name="tuning_auto_pause_speed_threshold_desc">Geschwindigkeit, unter der die Aufzeichnung pausiert wird</string>
     <string name="tuning_auto_pause_debounce_title">Verzögerung bis zur Pause</string>
     <string name="tuning_auto_pause_debounce_desc">Dauer unterhalb der Schwelle, bevor pausiert wird</string>
+    <string name="tuning_auto_pause_resume_debounce_title">Verzögerung bis zur Fortsetzung</string>
+    <string name="tuning_auto_pause_resume_debounce_desc">Dauer oberhalb der Schwelle, bevor fortgesetzt wird</string>
     <string name="tuning_speed_value_format">%1$d %2$s</string>
     <string name="tuning_seconds_value_format">%1$d s</string>
     <string name="cockpit_auto_pause_badge">Auto-Pause</string>

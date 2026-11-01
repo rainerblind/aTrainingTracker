@@ -102,6 +102,10 @@ class AutoPauseViewModelTest {
         viewModel.updateAutoPauseBikeDebounceSec(12)
         testScheduler.advanceUntilIdle()
         coVerify(exactly = 1) { mockDataStore.updateAutoPauseBikeDebounceSec(12) }
+
+        viewModel.updateAutoPauseBikeResumeDebounceSec(6)
+        testScheduler.advanceUntilIdle()
+        coVerify(exactly = 1) { mockDataStore.updateAutoPauseBikeResumeDebounceSec(6) }
     }
 
     @Test
@@ -119,6 +123,10 @@ class AutoPauseViewModelTest {
         viewModel.updateAutoPauseRunDebounceSec(8)
         testScheduler.advanceUntilIdle()
         coVerify(exactly = 1) { mockDataStore.updateAutoPauseRunDebounceSec(8) }
+
+        viewModel.updateAutoPauseRunResumeDebounceSec(7)
+        testScheduler.advanceUntilIdle()
+        coVerify(exactly = 1) { mockDataStore.updateAutoPauseRunResumeDebounceSec(7) }
     }
 
     @Test
@@ -136,6 +144,10 @@ class AutoPauseViewModelTest {
         viewModel.updateAutoPauseOtherDebounceSec(25)
         testScheduler.advanceUntilIdle()
         coVerify(exactly = 1) { mockDataStore.updateAutoPauseOtherDebounceSec(25) }
+
+        viewModel.updateAutoPauseOtherResumeDebounceSec(15)
+        testScheduler.advanceUntilIdle()
+        coVerify(exactly = 1) { mockDataStore.updateAutoPauseOtherResumeDebounceSec(15) }
     }
 
     @Test

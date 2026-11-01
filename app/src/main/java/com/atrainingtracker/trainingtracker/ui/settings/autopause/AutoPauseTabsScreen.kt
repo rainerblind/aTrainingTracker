@@ -143,10 +143,13 @@ fun AutoPauseTabsScreen(
                             onSpeedThresholdChange = { viewModel.updateAutoPauseBikeSpeedThreshold(it) },
                             debounceSec = tuningConfig.autoPauseBikeDebounceSec,
                             onDebounceSecChange = { viewModel.updateAutoPauseBikeDebounceSec(it) },
+                            resumeDebounceSec = tuningConfig.autoPauseBikeResumeDebounceSec,
+                            onResumeDebounceSecChange = { viewModel.updateAutoPauseBikeResumeDebounceSec(it) },
                             minDebounce = TuningPreferencesDefaults.MIN_AUTO_PAUSE_BIKE_DEBOUNCE_SEC,
                             maxDebounce = TuningPreferencesDefaults.MAX_AUTO_PAUSE_BIKE_DEBOUNCE_SEC,
                             debounceSteps = 18,
                             defaultDebounce = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_DEBOUNCE_SEC,
+                            defaultResumeDebounce = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_RESUME_DEBOUNCE_SEC,
                             contentPadding = contentPadding
                         )
                     }
@@ -160,10 +163,13 @@ fun AutoPauseTabsScreen(
                             onSpeedThresholdChange = { viewModel.updateAutoPauseRunSpeedThreshold(it) },
                             debounceSec = tuningConfig.autoPauseRunDebounceSec,
                             onDebounceSecChange = { viewModel.updateAutoPauseRunDebounceSec(it) },
+                            resumeDebounceSec = tuningConfig.autoPauseRunResumeDebounceSec,
+                            onResumeDebounceSecChange = { viewModel.updateAutoPauseRunResumeDebounceSec(it) },
                             minDebounce = TuningPreferencesDefaults.MIN_AUTO_PAUSE_RUN_DEBOUNCE_SEC,
                             maxDebounce = TuningPreferencesDefaults.MAX_AUTO_PAUSE_RUN_DEBOUNCE_SEC,
                             debounceSteps = 18,
                             defaultDebounce = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_DEBOUNCE_SEC,
+                            defaultResumeDebounce = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_RESUME_DEBOUNCE_SEC,
                             contentPadding = contentPadding
                         )
                     }
@@ -177,10 +183,13 @@ fun AutoPauseTabsScreen(
                             onSpeedThresholdChange = { viewModel.updateAutoPauseOtherSpeedThreshold(it) },
                             debounceSec = tuningConfig.autoPauseOtherDebounceSec,
                             onDebounceSecChange = { viewModel.updateAutoPauseOtherDebounceSec(it) },
+                            resumeDebounceSec = tuningConfig.autoPauseOtherResumeDebounceSec,
+                            onResumeDebounceSecChange = { viewModel.updateAutoPauseOtherResumeDebounceSec(it) },
                             minDebounce = TuningPreferencesDefaults.MIN_AUTO_PAUSE_OTHER_DEBOUNCE_SEC,
                             maxDebounce = TuningPreferencesDefaults.MAX_AUTO_PAUSE_OTHER_DEBOUNCE_SEC,
                             debounceSteps = 58,
                             defaultDebounce = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_DEBOUNCE_SEC,
+                            defaultResumeDebounce = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_RESUME_DEBOUNCE_SEC,
                             contentPadding = contentPadding
                         )
                     }
@@ -265,10 +274,13 @@ private fun AutoPauseSportTabContent(
     onSpeedThresholdChange: (Int) -> Unit,
     debounceSec: Int,
     onDebounceSecChange: (Int) -> Unit,
+    resumeDebounceSec: Int,
+    onResumeDebounceSecChange: (Int) -> Unit,
     minDebounce: Int,
     maxDebounce: Int,
     debounceSteps: Int,
     defaultDebounce: Int,
+    defaultResumeDebounce: Int,
     contentPadding: PaddingValues
 ) {
     val speedUnit = stringResource(MyHelper.getShortUnitsId(SensorType.SPEED_mps))
@@ -339,6 +351,20 @@ private fun AutoPauseSportTabContent(
                             valueRange = minDebounce.toFloat()..maxDebounce.toFloat(),
                             steps = debounceSteps
                         )
+
+                        TuningSliderItem(
+                            title = stringResource(R.string.tuning_auto_pause_resume_debounce_title),
+                            valueText = stringResource(R.string.tuning_seconds_value_format, resumeDebounceSec),
+                            helperText = stringResource(R.string.tuning_auto_pause_resume_debounce_desc),
+                            defaultText = stringResource(
+                                R.string.tuning_default_format,
+                                stringResource(R.string.tuning_seconds_value_format, defaultResumeDebounce)
+                            ),
+                            value = resumeDebounceSec.toFloat(),
+                            onValueChange = { onResumeDebounceSecChange(it.roundToInt()) },
+                            valueRange = minDebounce.toFloat()..maxDebounce.toFloat(),
+                            steps = debounceSteps
+                        )
                     }
                 }
             }
@@ -360,10 +386,13 @@ private fun PreviewAutoPauseTabsScreenLight() {
                 onSpeedThresholdChange = {},
                 debounceSec = 5,
                 onDebounceSecChange = {},
+                resumeDebounceSec = 2,
+                onResumeDebounceSecChange = {},
                 minDebounce = 1,
                 maxDebounce = 20,
                 debounceSteps = 18,
                 defaultDebounce = 5,
+                defaultResumeDebounce = 2,
                 contentPadding = PaddingValues(16.dp)
             )
         }
@@ -384,10 +413,13 @@ private fun PreviewAutoPauseTabsScreenDark() {
                 onSpeedThresholdChange = {},
                 debounceSec = 5,
                 onDebounceSecChange = {},
+                resumeDebounceSec = 2,
+                onResumeDebounceSecChange = {},
                 minDebounce = 1,
                 maxDebounce = 20,
                 debounceSteps = 18,
                 defaultDebounce = 5,
+                defaultResumeDebounce = 2,
                 contentPadding = PaddingValues(16.dp)
             )
         }

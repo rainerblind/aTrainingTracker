@@ -57,6 +57,12 @@ class AutoPauseViewModel @JvmOverloads constructor(
         }
     }
 
+    fun updateAutoPauseBikeResumeDebounceSec(debounceSec: Int) {
+        viewModelScope.launch {
+            dataStore.updateAutoPauseBikeResumeDebounceSec(debounceSec)
+        }
+    }
+
     fun updateAutoPauseRunEnabled(enabled: Boolean) {
         viewModelScope.launch {
             dataStore.updateAutoPauseRunEnabled(enabled)
@@ -75,6 +81,12 @@ class AutoPauseViewModel @JvmOverloads constructor(
         }
     }
 
+    fun updateAutoPauseRunResumeDebounceSec(debounceSec: Int) {
+        viewModelScope.launch {
+            dataStore.updateAutoPauseRunResumeDebounceSec(debounceSec)
+        }
+    }
+
     fun updateAutoPauseOtherEnabled(enabled: Boolean) {
         viewModelScope.launch {
             dataStore.updateAutoPauseOtherEnabled(enabled)
@@ -90,6 +102,12 @@ class AutoPauseViewModel @JvmOverloads constructor(
     fun updateAutoPauseOtherDebounceSec(debounceSec: Int) {
         viewModelScope.launch {
             dataStore.updateAutoPauseOtherDebounceSec(debounceSec)
+        }
+    }
+
+    fun updateAutoPauseOtherResumeDebounceSec(debounceSec: Int) {
+        viewModelScope.launch {
+            dataStore.updateAutoPauseOtherResumeDebounceSec(debounceSec)
         }
     }
 

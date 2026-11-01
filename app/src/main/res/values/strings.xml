@@ -2119,6 +2119,8 @@
     <string name="tuning_auto_pause_speed_threshold_desc">Speed below which recording is paused</string>
     <string name="tuning_auto_pause_debounce_title">Pause Debounce Delay</string>
     <string name="tuning_auto_pause_debounce_desc">Duration below threshold before pausing</string>
+    <string name="tuning_auto_pause_resume_debounce_title">Resume Debounce Delay</string>
+    <string name="tuning_auto_pause_resume_debounce_desc">Duration above threshold before resuming</string>
     <string name="tuning_speed_value_format">%1$d %2$s</string>
     <string name="tuning_seconds_value_format">%1$d s</string>
     <string name="cockpit_auto_pause_badge">Auto-Pause</string>
