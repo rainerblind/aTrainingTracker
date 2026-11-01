@@ -1908,13 +1908,16 @@ class WorkoutRepository private constructor(private val application: Application
             // 2. Trigger export with the new data
             exportManager.exportWorkout(userEditedWorkout)
 
-            // --- LEARNING LOOP (SCRUM-44) ---
-            if (userEditedWorkout.startLatLng != null && userEditedWorkout.endLatLng != null && userEditedWorkout.maxDisplacementLatLng != null) {
+            // --- LEARNING LOOP (SCRUM-44 / ATT-4862, REQ-SET-081) ---
+            // Only update cluster learning (centroids / sport) if the workout is already assigned to a cluster (clusterId > 0).
+            // Unclustered workouts ('Offen', clusterId <= 0) strictly remain unclustered regardless of custom workout name edits.
+            // Cluster creation and assignment occur exclusively via explicit user actions in EditWorkoutClusterDialog.
+            if (userEditedWorkout.clusterId > 0 && userEditedWorkout.startLatLng != null && userEditedWorkout.endLatLng != null && userEditedWorkout.maxDisplacementLatLng != null) {
                 val finalName = userEditedWorkout.workoutName.replace(Regex(" #\\d+$"), "").trim()
                 // Only learn names that aren't the default timestamp
                 if (finalName.isNotEmpty() && finalName != userEditedWorkout.fileBaseName) {
                     val engine = com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.getInstance(application)
-                    val learnedId = engine.learnFromWorkout(
+                    engine.learnFromWorkout(
                         userEditedWorkout.startLatLng,
                         userEditedWorkout.endLatLng,
                         userEditedWorkout.maxDisplacementLatLng,
@@ -1923,16 +1926,6 @@ class WorkoutRepository private constructor(private val application: Application
                         userEditedWorkout.sportId,
                         userEditedWorkout.clusterId
                     )
-                    
-                    // persist link and increment count if it's a new or changed association (SCRUM-228)
-                    if (userEditedWorkout.clusterId != learnedId) {
-                        engine.assignClusterToWorkout(application, workoutId, learnedId)
-
-                        // reload from DB to ensure memory and UI are in sync with inferred identity (SCRUM-254)
-                        reloadWorkoutData(workoutId)
-                        saveFinishedEvent.postValue(Pair(workoutId, true))
-                        return@launch
-                    }
                 }
             }
 
@@ -1949,6 +1942,8 @@ class WorkoutRepository private constructor(private val application: Application
                             bSportType = userEditedWorkout.bSportType,
                             equipmentId = userEditedWorkout.equipmentId,
                             equipmentName = userEditedWorkout.equipmentName,
+                            clusterId = userEditedWorkout.clusterId,
+                            clusterName = userEditedWorkout.clusterName,
                             description = userEditedWorkout.description,
                             goal = userEditedWorkout.goal,
                             method = userEditedWorkout.method,

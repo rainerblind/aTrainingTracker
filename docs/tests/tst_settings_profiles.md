@@ -788,3 +788,28 @@
   • Verify `auto_pause_title` exists across all 9 canonical locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
   5. *Clean-Room Regression Execution (`TST-SET-080.5`)*:
   • Execute targeted unit tests and AAPT2 resources with 100% success.
+
+
+---
+
+### TST-SET-081: **Preservation of Unclustered Status on Workout Edits & Explicit Cluster Management Verification Suite** [Unclustered workouts strictly remain unclustered on metadata edits; automatic cluster creation and assignment in saveWorkout() removed; cluster creation/assignment gated to explicit dialog actions; centroid updates for clustered workouts preserved.]
+- **Requirement(s)**: `REQ-SET-081`
+- **Component**: **WorkoutRepository / EditWorkoutClustering / WorkoutClusterEngine**
+- **Jira**: ``ATT-4862``
+- **Test Description**:
+  1. *Unclustered Workout Name Edit Test (`TST-SET-081.1`, `EditWorkoutClusteringTest.kt`)*:
+  • Given an unclustered workout (`clusterId == -1L`, "Offen"),
+  • When the workout name is updated to a custom non-empty string and `saveWorkout()` is called,
+  • Verify `clusterEngine.learnFromWorkout()` is NOT called, no cluster is created in `WorkoutClusters.db`, and `clusterEngine.assignClusterToWorkout()` is NOT called.
+  • Verify the saved workout in memory and SQLite preserves `clusterId == -1L`.
+  2. *Unclustered Selection ("Offen") Persistence Test (`TST-SET-081.2`, `EditWorkoutClusteringTest.kt`)*:
+  • Given a previously clustered workout (`clusterId > 0`),
+  • When the user unassigns the cluster via `unassignCluster()` (selecting "Offen") and subsequently edits the workout name and saves,
+  • Verify the workout strictly remains unclustered (`clusterId == -1L`) and `saveWorkout()` does not reassign or create any cluster.
+  3. *Clustered Workout Centroid Update Test (`TST-SET-081.3`, `EditWorkoutClusteringTest.kt`)*:
+  • Given a clustered workout (`clusterId == 10L`),
+  • When saving a name or sport edit via `saveWorkout()`,
+  • Verify `clusterEngine.learnFromWorkout(..., clusterIdOverride = 10L)` is invoked to update the cluster's centroids and sport.
+  • Verify `assignClusterToWorkout()` is NOT called to override cluster assignment.
+  4. *Clean-Room Regression Execution (`TST-SET-081.4`)*:
+  • Execute targeted unit tests in `EditWorkoutClusteringTest`, `EditWorkoutClusterTest`, and `ThemeColorCentralizationAuditTest` with 100% pass rate.

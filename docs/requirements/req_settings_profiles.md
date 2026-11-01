@@ -1261,3 +1261,30 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • *Then* no duplicate auto-pause controls are present.
 
 **Invariants**: Backward compatibility of `TuningPreferencesDataStore` keys and default values, `TrackerService` auto-pause calculation integrity, 100% 9-language translation parity.
+
+
+### REQ-SET-081: Strict Preservation of Unclustered Status on Workout Edits & Explicit Cluster Management Gating [`TST-SET-081`]
+- **Tests**: `WorkoutRepository.kt`, `EditWorkoutViewModel.kt`, `WorkoutClusterEngine.kt`, `EditWorkoutClusteringTest.kt`
+- **Implementation**: Eliminate implicit cluster creation and assignment in `WorkoutRepository.saveWorkout()`.
+- **Rationale**: The system SHALL ensure that unclustered workouts ('Offen', `clusterId <= 0`) strictly remain unclustered when saving metadata edits, and that cluster creation or assignment occurs exclusively through explicit user actions:
+1. *Strict Preservation of Unclustered Status (`REQ-SET-081.1`)*:
+• When saving workout metadata via `WorkoutRepository.saveWorkout(userEditedWorkout)`, if `userEditedWorkout.clusterId <= 0` (or `clusterId == -1L`), the system SHALL bypass the route clustering learning loop entirely.
+• The system MUST NOT create a new `WorkoutCluster` or assign any cluster to an unclustered workout when the user edits workout properties (such as workout name, sport, equipment, notes, or flags).
+2. *Gating of Automatic Cluster Assignment (`REQ-SET-081.2`)*:
+• `WorkoutRepository.saveWorkout()` SHALL NOT execute `engine.assignClusterToWorkout(...)` or override the user's cluster selection under any circumstances.
+• Creating a new cluster or associating a workout with an existing cluster SHALL occur exclusively through explicit user choices in `EditWorkoutClusterDialog` (`createNewCluster` or `applyClusterIdentity`).
+3. *Centroid and Sport Learning for Clustered Workouts (`REQ-SET-081.3`)*:
+• If `userEditedWorkout.clusterId > 0` and the workout has valid spatial coordinates (`startLatLng`, `endLatLng`, `maxDisplacementLatLng`), `saveWorkout()` SHALL invoke `engine.learnFromWorkout(..., clusterIdOverride = userEditedWorkout.clusterId)` to update the existing cluster's running centroids, distance, and probable sport without mutating cluster assignment.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an unclustered workout (`clusterId == -1L`, "Offen"),
+• *When* the athlete edits the workout name to a custom title and saves the workout via `EditWorkoutScreen`,
+• *Then* `WorkoutRepository.saveWorkout()` SHALL persist the name change without creating a new `WorkoutCluster` in SQLite and the workout SHALL remain unclustered (`clusterId == -1L`).
+• *Given* a workout assigned to cluster A (`clusterId > 0`),
+• *When* the athlete opens `EditWorkoutScreen`, selects "Offen" (`unassignCluster`), and saves the workout with a custom name,
+• *Then* the workout SHALL strictly remain unclustered (`clusterId == -1L`) and no new cluster SHALL be created.
+• *Given* a workout assigned to cluster A (`clusterId == 10L`),
+• *When* the athlete edits the workout name or sport and saves without changing the cluster,
+• *Then* `learnFromWorkout` SHALL update cluster 10's running centroids and sport, preserving `clusterId == 10L`.
+
+**Invariants**: Explicit cluster creation and selection in `EditWorkoutClusterDialog` (`createNewCluster`, `applyClusterIdentity`, `unassignCluster`) remain fully functional; SQLite database schemas remain unchanged.
