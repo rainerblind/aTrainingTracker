@@ -1197,3 +1197,20 @@
   • Unit test in `AutoPauseViewModelTest` asserting that updating `autoPauseBikeResumeDebounceSec`, `autoPauseRunResumeDebounceSec`, and `autoPauseOtherResumeDebounceSec` immediately updates `tuningConfig` StateFlow, and `resetAutoPausePreferences(sportType)` resets resume debounce values to defaults.
   5. *9-Language Localization Parity (`TST-TRK-043.5`)*:
   • Test in `TranslationParityTest` verifying all resume detection time title, description, and default strings exist in all 9 translation sets.
+
+
+### TST-TRK-044: **Optional Automatic Stationary Auto-Pause at Workout Start Test Suite** [Planned]
+- **Requirement(s)**: `REQ-TRK-044`
+- **Component**: `AutoPauseManagerTest.kt`, `TrackerServiceTest.kt`, `AutoPauseViewModelTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-4840`
+- **Test Description**:
+  1. *Domain Startup Predicate Evaluation (`TST-TRK-044.1`)*:
+  • Unit test in `AutoPauseManagerTest` verifying `shouldStartInAutoPause` returns `true` when `startInAutoPauseEnabled` is `true`, sport auto-pause is enabled, and speed is null, 0.0 m/s, or below the sport pause threshold.
+  • Verify it returns `false` when `startInAutoPauseEnabled` is `false`, sport auto-pause is disabled, or speed is $\ge$ threshold.
+  2. *Workout Start Transition Integration (`TST-TRK-044.2`)*:
+  • Unit test in `TrackerServiceTest` / `TrackerService` asserting that when starting a new workout (`START_NORMAL`) with stationary speed and `startInAutoPauseEnabled == true`, state initializes directly to `AUTO_PAUSED` and `TrackingMode.PAUSED` (`isAutoPaused = true`).
+  3. *ViewModel & DataStore Toggle Mutation (`TST-TRK-044.3`)*:
+  • Unit test in `AutoPauseViewModelTest` asserting that `updateStartInAutoPauseEnabled(true/false)` dispatches to DataStore and reactively updates `tuningConfig` StateFlow.
+  4. *9-Language Localization Parity (`TST-TRK-044.4`)*:
+  • Test in `TranslationParityTest` verifying `tuning_auto_pause_start_in_auto_pause_title` and `tuning_auto_pause_start_in_auto_pause_desc` exist in all 9 supported locales.
+

@@ -1075,6 +1075,56 @@ class AutoPauseManagerTest {
         assertEquals(AutoPauseState.TRACKING, tick2.newState)
         assertTrue(tick2.triggerResume)
     }
+
+    @Test
+    fun `TST-TRK-044_1 shouldStartInAutoPause contract`() {
+        val disabledConfig = AutoPauseConfig(
+            bikeEnabled = true,
+            startInAutoPauseEnabled = false
+        )
+        assertFalse(
+            "Disabled globally -> must return false",
+            AutoPauseManager.shouldStartInAutoPause(disabledConfig, BSportType.BIKE, 0.0)
+        )
+
+        val enabledConfig = AutoPauseConfig(
+            bikeEnabled = true,
+            runEnabled = false,
+            otherEnabled = true,
+            startInAutoPauseEnabled = true,
+            bikeSpeedThreshold = 3,
+            isMetric = true
+        )
+
+        assertFalse(
+            "Sport disabled -> must return false",
+            AutoPauseManager.shouldStartInAutoPause(enabledConfig, BSportType.RUN, 0.0)
+        )
+
+        assertTrue(
+            "Speed null -> stationary -> true",
+            AutoPauseManager.shouldStartInAutoPause(enabledConfig, BSportType.BIKE, null)
+        )
+
+        assertTrue(
+            "Speed 0.0 -> stationary -> true",
+            AutoPauseManager.shouldStartInAutoPause(enabledConfig, BSportType.BIKE, 0.0)
+        )
+
+        assertTrue(
+            "Speed below threshold -> stationary -> true",
+            AutoPauseManager.shouldStartInAutoPause(enabledConfig, BSportType.BIKE, 1.0 / 3.6)
+        )
+
+        assertFalse(
+            "Speed equal to threshold -> moving -> false",
+            AutoPauseManager.shouldStartInAutoPause(enabledConfig, BSportType.BIKE, 3.0 / 3.6)
+        )
+        assertFalse(
+            "Speed above threshold -> moving -> false",
+            AutoPauseManager.shouldStartInAutoPause(enabledConfig, BSportType.BIKE, 10.0 / 3.6)
+        )
+    }
 }
 
 

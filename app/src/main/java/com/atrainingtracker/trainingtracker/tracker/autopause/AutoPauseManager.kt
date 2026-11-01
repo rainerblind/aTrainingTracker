@@ -36,6 +36,7 @@ data class AutoPauseConfig(
     val bikeEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_ENABLED,
     val runEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_ENABLED,
     val otherEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_ENABLED,
+    val startInAutoPauseEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_START_IN_AUTO_PAUSE_ENABLED,
     val bikeSpeedThreshold: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_SPEED_THRESHOLD_METRIC,
     val bikeDebounceSec: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_DEBOUNCE_SEC,
     val bikeResumeDebounceSec: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_RESUME_DEBOUNCE_SEC,
@@ -203,6 +204,29 @@ class AutoPauseManager(
         @JvmStatic
         fun isSpeedFiniteAndValid(speedMps: Double?): Boolean {
             return speedMps != null && !speedMps.isNaN() && !speedMps.isInfinite() && speedMps >= 0.0
+        }
+
+        /**
+         * Evaluates whether a workout should start directly in [AutoPauseState.AUTO_PAUSED]
+         * (REQ-TRK-044, ATT-4840).
+         *
+         * Returns true if and only if [AutoPauseConfig.startInAutoPauseEnabled] is true,
+         * auto-pause is enabled for [sportType], and [currentSpeedMps] is below the sport's
+         * configured pause speed threshold (or null/invalid/0.0 m/s stationary).
+         */
+        @JvmStatic
+        fun shouldStartInAutoPause(
+            config: AutoPauseConfig,
+            sportType: BSportType,
+            currentSpeedMps: Double?
+        ): Boolean {
+            if (!config.startInAutoPauseEnabled) return false
+            if (!config.isEnabledForSport(sportType)) return false
+            val threshold = config.getSpeedThresholdForSport(sportType)
+            val unit = if (config.isMetric) MyUnits.METRIC else MyUnits.IMPERIAL
+            val thresholdMps = MyHelper.UserUnit2mps(threshold, unit)
+            val speed = if (isSpeedFiniteAndValid(currentSpeedMps)) currentSpeedMps!! else 0.0
+            return speed < thresholdMps
         }
     }
 

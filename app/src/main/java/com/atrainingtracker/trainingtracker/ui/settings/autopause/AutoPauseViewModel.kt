@@ -39,6 +39,12 @@ class AutoPauseViewModel @JvmOverloads constructor(
 
     val tuningConfig: StateFlow<TuningConfig> = dataStore.tuningConfigStateFlow
 
+    fun updateStartInAutoPauseEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            dataStore.updateStartInAutoPauseEnabled(enabled)
+        }
+    }
+
     fun updateAutoPauseBikeEnabled(enabled: Boolean) {
         viewModelScope.launch {
             dataStore.updateAutoPauseBikeEnabled(enabled)

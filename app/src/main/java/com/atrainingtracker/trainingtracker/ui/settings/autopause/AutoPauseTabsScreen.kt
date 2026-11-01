@@ -137,6 +137,8 @@ fun AutoPauseTabsScreen(
                         AutoPauseSportTabContent(
                             sportType = BSportType.BIKE,
                             sportTitle = stringResource(tab.titleRes),
+                            startInAutoPauseEnabled = tuningConfig.startInAutoPauseEnabled,
+                            onStartInAutoPauseChange = { viewModel.updateStartInAutoPauseEnabled(it) },
                             enabled = tuningConfig.autoPauseBikeEnabled,
                             onEnabledChange = { viewModel.updateAutoPauseBikeEnabled(it) },
                             speedThreshold = tuningConfig.autoPauseBikeSpeedThreshold,
@@ -157,6 +159,8 @@ fun AutoPauseTabsScreen(
                         AutoPauseSportTabContent(
                             sportType = BSportType.RUN,
                             sportTitle = stringResource(tab.titleRes),
+                            startInAutoPauseEnabled = tuningConfig.startInAutoPauseEnabled,
+                            onStartInAutoPauseChange = { viewModel.updateStartInAutoPauseEnabled(it) },
                             enabled = tuningConfig.autoPauseRunEnabled,
                             onEnabledChange = { viewModel.updateAutoPauseRunEnabled(it) },
                             speedThreshold = tuningConfig.autoPauseRunSpeedThreshold,
@@ -177,6 +181,8 @@ fun AutoPauseTabsScreen(
                         AutoPauseSportTabContent(
                             sportType = BSportType.UNKNOWN,
                             sportTitle = stringResource(tab.titleRes),
+                            startInAutoPauseEnabled = tuningConfig.startInAutoPauseEnabled,
+                            onStartInAutoPauseChange = { viewModel.updateStartInAutoPauseEnabled(it) },
                             enabled = tuningConfig.autoPauseOtherEnabled,
                             onEnabledChange = { viewModel.updateAutoPauseOtherEnabled(it) },
                             speedThreshold = tuningConfig.autoPauseOtherSpeedThreshold,
@@ -268,6 +274,8 @@ fun AutoPauseTabsScreen(
 private fun AutoPauseSportTabContent(
     sportType: BSportType,
     sportTitle: String,
+    startInAutoPauseEnabled: Boolean,
+    onStartInAutoPauseChange: (Boolean) -> Unit,
     enabled: Boolean,
     onEnabledChange: (Boolean) -> Unit,
     speedThreshold: Int,
@@ -303,6 +311,28 @@ private fun AutoPauseSportTabContent(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    TuningToggleItem(
+                        title = stringResource(R.string.tuning_auto_pause_start_in_auto_pause_title),
+                        isChecked = startInAutoPauseEnabled,
+                        onCheckedChange = onStartInAutoPauseChange,
+                        summary = stringResource(R.string.tuning_auto_pause_start_in_auto_pause_desc)
+                    )
+                }
+            }
         }
 
         item {
@@ -380,6 +410,8 @@ private fun PreviewAutoPauseTabsScreenLight() {
             AutoPauseSportTabContent(
                 sportType = BSportType.BIKE,
                 sportTitle = "Cycling",
+                startInAutoPauseEnabled = false,
+                onStartInAutoPauseChange = {},
                 enabled = true,
                 onEnabledChange = {},
                 speedThreshold = 3,
@@ -407,6 +439,8 @@ private fun PreviewAutoPauseTabsScreenDark() {
             AutoPauseSportTabContent(
                 sportType = BSportType.BIKE,
                 sportTitle = "Cycling",
+                startInAutoPauseEnabled = true,
+                onStartInAutoPauseChange = {},
                 enabled = true,
                 onEnabledChange = {},
                 speedThreshold = 3,

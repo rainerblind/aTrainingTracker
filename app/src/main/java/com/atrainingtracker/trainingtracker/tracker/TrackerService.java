@@ -664,6 +664,26 @@ public class TrackerService extends Service {
             if (!BANALService.isSearching()) {
                 onSearchingFinished();
             }
+
+            if (mStartType == StartType.START_NORMAL && mAutoPauseManager.getCurrentState() == AutoPauseState.TRACKING) {
+                if (TrainingApplication.isAutoPaused()) {
+                    mAutoPauseManager.setState(AutoPauseState.AUTO_PAUSED);
+                    mAutoPauseManager.resetDebounceCounter();
+                } else {
+                    BSportType sportType = mBanalService.getBSportType();
+                    if (sportType == null) {
+                        sportType = BSportType.UNKNOWN;
+                    }
+                    AutoPauseConfig config = getAutoPauseConfig();
+                    SensorData<Number> speedData = mBanalService.getBestSensorData(SensorType.SPEED_mps);
+                    Double speedMps = (speedData != null && speedData.getValue() != null) ? speedData.getValue().doubleValue() : null;
+                    if (AutoPauseManager.shouldStartInAutoPause(config, sportType, speedMps)) {
+                        mAutoPauseManager.setState(AutoPauseState.AUTO_PAUSED);
+                        mAutoPauseManager.resetDebounceCounter();
+                        mTrainingApplication.pauseTracking(true);
+                    }
+                }
+            }
         }
 
         public void onServiceDisconnected(ComponentName name) {
@@ -807,6 +827,10 @@ public class TrackerService extends Service {
         switch (startType) {
             case START_NORMAL:
                 if (DEBUG) Log.d(TAG, "starting a new workout");
+                if (TrainingApplication.isAutoPaused()) {
+                    mAutoPauseManager.setState(AutoPauseState.AUTO_PAUSED);
+                    mAutoPauseManager.resetDebounceCounter();
+                }
                 // The workout name is just the date+time
                 mBaseFileName = (new SimpleDateFormat("yyyy-MM-dd_HHmmss", Locale.US)).format(new Date());
                 mSamplesTableName = WorkoutSamplesDatabaseManager.getTableName(mBaseFileName);

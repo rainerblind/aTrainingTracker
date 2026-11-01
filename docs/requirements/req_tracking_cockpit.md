@@ -2116,3 +2116,39 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Then* `AutoPauseManager` resets resume counter to 0 and remains `AUTO_PAUSED`.
 
 **Invariants**: Manual pause lock precedence, sensor lost state recovery, moving average calculations, and 100% clean-room test pass rate MUST NOT be broken.
+
+
+
+### REQ-TRK-044: Optional Automatic Stationary Auto-Pause at Workout Start [Planned]
+- **Tests**: `TST-TRK-044` | **Tickets**: `ATT-4840`
+- **Implementation**: `AutoPauseManager.kt`, `TuningConfig.kt`, `TuningPreferencesDataStore.kt`, `AutoPauseTabsScreen.kt`, `AutoPauseViewModel.kt`, `TrainingApplication.java`, `TrackerService.java`
+- **Rationale**: When starting a workout while stationary, the tracker SHALL optionally transition directly into `AUTO_PAUSED` without waiting for the pause debounce timer to elapse (ATT-4840, extending `REQ-TRK-018`, `REQ-SET-080`, and `REQ-TRK-043`):
+1. *Global Start in Auto-Paused Preference (`REQ-TRK-044.1`)*:
+• `TuningConfig`, `TuningPreferencesDataStore`, and `AutoPauseConfig` SHALL persist a global boolean preference `startInAutoPauseEnabled` (default `false`).
+2. *Settings UI Global Toggle (`REQ-TRK-044.2`)*:
+• `AutoPauseTabsScreen.kt` SHALL render a global *Start in Auto-Paused* toggle (`TuningToggleItem`) at the top of the Auto-Pause settings screen with reactive updates via `AutoPauseViewModel.updateStartInAutoPauseEnabled()`.
+3. *Domain Startup Predicate (`REQ-TRK-044.3`)*:
+• `AutoPauseManager` SHALL expose a static pure function `shouldStartInAutoPause(config, sportType, currentSpeedMps)` evaluating whether all startup conditions are satisfied: `config.startInAutoPauseEnabled == true`, auto-pause is enabled for `sportType`, and `currentSpeedMps` is below the configured sport speed threshold (or null/0.0/corrupt).
+4. *Direct Workout Start Transition (`REQ-TRK-044.4`)*:
+• When the user starts tracking with `startInAutoPauseEnabled == true` and `shouldStartInAutoPause` evaluates to `true`, tracking SHALL initialize directly in `TrackingMode.PAUSED` (`isAutoPaused = true`) and `AutoPauseState.AUTO_PAUSED` without accumulating debounce ticks.
+5. *Localization Parity (`REQ-TRK-044.5`)*:
+• String resources for the toggle title and description SHALL maintain full parity across all 9 supported languages.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-044`, refining `REQ-TRK-018` (`ATT-45` / `ATT-3677`) and `REQ-SET-080` (`ATT-4836`). Targets `AutoPauseManager.kt`, `TuningPreferencesDataStore.kt`, `AutoPauseTabsScreen.kt`, `TrainingApplication.java`, and `TrackerService.java`.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-4840`, Sprint `2026-44.1`. Follows `ATT-4839` (which introduced configurable resume debounce) and addresses user complaints of stationary duration polluting moving time during equipment setup.
+3. *Root Reason for Existing Formulation*: Tracking historically always started in `TRACKING` because the debounce timer was designed to detect deceleration from active motion. When starting from complete rest, waiting for the debounce delay is unnecessary when the user explicitly opts into immediate auto-pause.
+4. *Preservation of Core Invariants*: Moving average speed calculations, manual pause precedence, and resume debounce confirmation (`REQ-TRK-043`) are 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `startInAutoPauseEnabled` is `true`, bike auto-pause is enabled, and phone is stationary (speed 0.0 m/s),
+• *When* the user starts a cycling workout,
+• *Then* tracking initializes directly in `TrackingMode.PAUSED` (`isAutoPaused = true`) and `AutoPauseState.AUTO_PAUSED`.
+• *Given* `startInAutoPauseEnabled` is `true`, but run auto-pause is disabled,
+• *When* the user starts a running workout while stationary,
+• *Then* tracking initializes in `TrackingMode.TRACKING`.
+• *Given* `startInAutoPauseEnabled` is `false`,
+• *When* the user starts a workout while stationary,
+• *Then* tracking initializes in `TrackingMode.TRACKING` and waits for normal debounce.
+
+**Invariants**: Manual pause lock precedence, sensor lost recovery, and 100% clean-room test pass rate MUST NOT be broken.

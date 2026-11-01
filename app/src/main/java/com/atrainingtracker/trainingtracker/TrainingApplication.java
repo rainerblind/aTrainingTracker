@@ -58,7 +58,11 @@ import android.widget.Toast;
 import com.atrainingtracker.BuildConfig;
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
+import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.sensor.SensorData;
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper;
+import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseConfig;
+import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManager;
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
@@ -1673,8 +1677,20 @@ public class TrainingApplication extends Application {
             ContextCompat.startForegroundService(this, intent);
             startPebbleWatchapp();
 
-            cTrackingMode = TrackingMode.TRACKING;
-            notifyTrackingStateChanged();
+            AutoPauseConfig autoPauseConfig = SettingsDataStoreJavaHelper.getAutoPauseConfig(this);
+            BANALServiceRepository banalRepo = BANALServiceRepository.Companion.getInstance(this);
+            BSportType sportType = banalRepo.getBSportType().getValue();
+            if (sportType == null) {
+                sportType = BSportType.UNKNOWN;
+            }
+            Double speedMps = banalRepo.getCurrentSpeed().getValue();
+
+            if (AutoPauseManager.shouldStartInAutoPause(autoPauseConfig, sportType, speedMps)) {
+                pauseTracking(true);
+            } else {
+                cTrackingMode = TrackingMode.TRACKING;
+                notifyTrackingStateChanged();
+            }
         } catch (IllegalStateException | SecurityException e) {
             Log.e(TAG, "Failed to start TrackerService: app in background or permission denied: " + e.getMessage(), e);
             cTrackingMode = TrackingMode.READY;

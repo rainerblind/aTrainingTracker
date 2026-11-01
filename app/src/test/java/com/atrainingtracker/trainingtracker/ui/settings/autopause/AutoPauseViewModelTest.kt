@@ -162,4 +162,17 @@ class AutoPauseViewModelTest {
         testScheduler.advanceUntilIdle()
         coVerify(exactly = 1) { mockDataStore.resetAutoPausePreferences(null) }
     }
+
+    @Test
+    fun testUpdateStartInAutoPauseEnabled() = runTest(testDispatcher) {
+        val viewModel = AutoPauseViewModel(mockApplication, mockDataStore)
+
+        viewModel.updateStartInAutoPauseEnabled(true)
+        testScheduler.advanceUntilIdle()
+        coVerify(exactly = 1) { mockDataStore.updateStartInAutoPauseEnabled(true) }
+
+        viewModel.updateStartInAutoPauseEnabled(false)
+        testScheduler.advanceUntilIdle()
+        coVerify(exactly = 1) { mockDataStore.updateStartInAutoPauseEnabled(false) }
+    }
 }

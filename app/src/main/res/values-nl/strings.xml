@@ -1920,6 +1920,8 @@
     <string name="tuning_auto_pause_debounce_desc">Duur onder drempelwaarde alvorens te pauzeren</string>
     <string name="tuning_auto_pause_resume_debounce_title">Hervattingsvertraging</string>
     <string name="tuning_auto_pause_resume_debounce_desc">Duur boven drempelwaarde alvorens te hervatten</string>
+    <string name="tuning_auto_pause_start_in_auto_pause_title">Starten in automatische pauze</string>
+    <string name="tuning_auto_pause_start_in_auto_pause_desc">Bij het starten van een training in stilstand direct beginnen in automatische pauze totdat beweging wordt gedetecteerd</string>
     <string name="tuning_speed_value_format">%1$d %2$s</string>
     <string name="tuning_seconds_value_format">%1$d s</string>
     <string name="cockpit_auto_pause_badge">Automatisch pauzeren</string>

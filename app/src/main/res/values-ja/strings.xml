@@ -1900,6 +1900,8 @@
     <string name="tuning_auto_pause_debounce_desc">一時停止するまでのしきい値以下の継続時間</string>
     <string name="tuning_auto_pause_resume_debounce_title">再開遅延時間</string>
     <string name="tuning_auto_pause_resume_debounce_desc">再開するまでのしきい値以上の継続時間</string>
+    <string name="tuning_auto_pause_start_in_auto_pause_title">自動一時停止で開始</string>
+    <string name="tuning_auto_pause_start_in_auto_pause_desc">静止状態でワークアウトを開始した際、動きが検出されるまで自動一時停止状態で開始します</string>
     <string name="tuning_speed_value_format">%1$d %2$s</string>
     <string name="tuning_seconds_value_format">%1$d s</string>
     <string name="cockpit_auto_pause_badge">オートポーズ</string>

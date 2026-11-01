@@ -1922,6 +1922,8 @@
     <string name="tuning_auto_pause_debounce_desc">Czas poniżej progu przed wstrzymaniem</string>
     <string name="tuning_auto_pause_resume_debounce_title">Opóźnienie wznowienia</string>
     <string name="tuning_auto_pause_resume_debounce_desc">Czas powyżej progu przed wznowieniem</string>
+    <string name="tuning_auto_pause_start_in_auto_pause_title">Rozpocznij w automatycznej pauzie</string>
+    <string name="tuning_auto_pause_start_in_auto_pause_desc">Podczas rozpoczynania treningu w miejscu natychmiast przejdź do automatycznej pauzy do momentu wykrycia ruchu</string>
     <string name="tuning_speed_value_format">%1$d %2$s</string>
     <string name="tuning_seconds_value_format">%1$d s</string>
     <string name="cockpit_auto_pause_badge">Autopauza</string>
