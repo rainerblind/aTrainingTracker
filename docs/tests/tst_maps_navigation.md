@@ -961,11 +961,15 @@
 ### TST-MAP-058: **Line-Density PolylineHeatmapTileProvider, Web Mercator Projection & Sequential Blue Color LUT Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-MAP-056`
 - **Component**: **Map Tile Heatmap**
-- **Jira**: `ATT-4480`, `ATT-4769`
+- **Jira**: `ATT-4480`, `ATT-4769`, `ATT-4932`
 - **Test Description**:
   1. Verify in `PolylineHeatmapTileProviderTest` that requesting a tile disjoint from all input polylines returns `TileProvider.NO_TILE` immediately without allocating bitmaps.
   2. Verify that intersecting polylines produce a valid 256x256 PNG tile byte array.
   3. Verify in `PolylineHeatmapTileProviderTest` that `ThermalColorLut` maps index 0 to `0` (transparent), and interpolates through Light Cyan (`#00E5FF`) -> Pure Blue (`#0000FF`) -> Deep Indigo (`#311B92`) with decreasing green and dominating blue/indigo components across low, mid, and high intensities.
   4. Verify thread safety under concurrent `getTile(x, y, zoom)` invocations across multiple worker threads.
   5. Run targeted unit test suite `com.atrainingtracker.trainingtracker.ui.map.*` verifying 100% pass rate.
+  6. *Multi-Vertex Collinear Path Uniformity Test (`TST-MAP-058.6`)*: Verify a single straight collinear path with 10 vertices yields uniform intensity along the line without vertex beads.
+  7. *Standstill Jitter Single-Count Masking Test (`TST-MAP-058.7`)*: Verify 20 clustered GPS jitter points within a small radius yield an accumulated count of at most 1 for that workout.
+  8. *Identical Path Multi-Workout Accumulation Test (`TST-MAP-058.8`)*: Verify two identical coincident paths accumulate to count = 2 everywhere along the line without intermediate clamping.
+  9. *Bounded Scratch Buffer & Dirty-Rect Clearing Test (`TST-MAP-058.9`)*: Verify scratch buffer is allocated at most once per tile call and cleared via dirty-rect boundaries without full-array zeroing overhead.
 

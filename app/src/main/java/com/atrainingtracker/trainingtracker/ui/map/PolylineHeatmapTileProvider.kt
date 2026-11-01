@@ -41,11 +41,11 @@ internal data class PolylineBoundingBox(
 
 /**
  * True line-density [TileProvider] that rasterizes continuous GPS workout polylines
- * into Web Mercator map tiles using additive distance-to-segment line accumulation and
- * maps accumulated traversal intensity to a 256-entry [ThermalColorLut].
+ * into Web Mercator map tiles using per-workout coverage masks (blended via max) and
+ * unclamped additive accumulation across workouts, mapping final traversal counts to a 256-entry [ThermalColorLut].
  *
- * Replaces Gaussian point-cloud [com.google.maps.android.heatmaps.HeatmapTileProvider]
- * to eliminate vertex-density speed bias and synthetic point densification overhead (ATT-4480).
+ * Eliminates synthetic point densification overhead (ATT-4480) and eliminates vertex bead
+ * and standstill blob artifacts by counting each distinct workout once per pixel (ATT-4932 / REQ-MAP-056.5).
  *
  * @param allPaths The collection of geographic workout polylines to rasterize.
  * @param opacity Layer-wide opacity scaling (0.0 to 1.0).
@@ -102,10 +102,51 @@ class PolylineHeatmapTileProvider(
     }
 
     override fun getTile(x: Int, y: Int, zoom: Int): Tile? {
-        if (pathBounds.isEmpty() || zoom < 0 || zoom > 22) return TileProvider.NO_TILE
+        val accumulationBuffer = computeAccumulationBuffer(x, y, zoom) ?: return TileProvider.NO_TILE
+
+        // Map accumulated workout counts through 256-entry ThermalColorLut
+        val pixels = IntArray(tileSize * tileSize)
+        var hasVisiblePixel = false
+
+        for (i in accumulationBuffer.indices) {
+            val count = accumulationBuffer[i]
+            if (count > 0f) {
+                val intensity = (count * stepIntensity).roundToInt().coerceIn(0, 255)
+                if (intensity > 0) {
+                    pixels[i] = colorLut.getColor(intensity)
+                    hasVisiblePixel = true
+                } else {
+                    pixels[i] = 0
+                }
+            } else {
+                pixels[i] = 0
+            }
+        }
+
+        if (!hasVisiblePixel) {
+            return TileProvider.NO_TILE
+        }
+
+        val bitmap = Bitmap.createBitmap(pixels, tileSize, tileSize, Bitmap.Config.ARGB_8888)
+        val stream = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+        bitmap.recycle()
+
+        return Tile(tileSize, tileSize, stream.toByteArray())
+    }
+
+    /**
+     * Projects candidate workout paths intersecting tile (x, y, zoom) and accumulates
+     * per-workout coverage masks (blended via max) into an unclamped [FloatArray]
+     * where each covered pixel represents the number of distinct workouts passing through it (ATT-4932).
+     *
+     * @return FloatArray of size tileSize * tileSize containing accumulated workout counts, or null if no paths draw.
+     */
+    internal fun computeAccumulationBuffer(x: Int, y: Int, zoom: Int): FloatArray? {
+        if (pathBounds.isEmpty() || zoom < 0 || zoom > 22) return null
 
         val nTiles = 1 shl zoom
-        if (x < 0 || x >= nTiles || y < 0 || y >= nTiles) return TileProvider.NO_TILE
+        if (x < 0 || x >= nTiles || y < 0 || y >= nTiles) return null
 
         val lonWest = x.toDouble() / nTiles * 360.0 - 180.0
         val lonEast = (x + 1).toDouble() / nTiles * 360.0 - 180.0
@@ -133,15 +174,22 @@ class PolylineHeatmapTileProvider(
         }
 
         if (candidates.isEmpty()) {
-            return TileProvider.NO_TILE
+            return null
         }
 
-        // Thread-safe intensity buffer allocation (256x256 int array)
-        val intensityBuffer = IntArray(tileSize * tileSize)
+        // Thread-safe / call-local accumulation & scratch mask allocation
+        val accumulationBuffer = FloatArray(tileSize * tileSize)
+        val scratchMask = FloatArray(tileSize * tileSize)
+        val dirtyBounds = IntArray(4)
         var anyDrawn = false
 
         for (candidate in candidates) {
             val path = candidate.path
+            dirtyBounds[0] = tileSize
+            dirtyBounds[1] = tileSize
+            dirtyBounds[2] = -1
+            dirtyBounds[3] = -1
+
             for (i in 0 until path.size - 1) {
                 val pt1 = path[i]
                 val pt2 = path[i + 1]
@@ -151,40 +199,32 @@ class PolylineHeatmapTileProvider(
                 val x2 = projectLonToTileX(pt2.longitude, x, nTiles, tileSize)
                 val y2 = projectLatToTileY(pt2.latitude, y, nTiles, tileSize)
 
-                if (rasterizeSegment(x1, y1, x2, y2, radius, stepIntensity, intensityBuffer)) {
-                    anyDrawn = true
+                rasterizeSegment(x1, y1, x2, y2, radius, scratchMask, dirtyBounds)
+            }
+
+            // If any segment of this candidate path drew to scratchMask, accumulate and reset dirty bounds
+            if (dirtyBounds[2] >= dirtyBounds[0] && dirtyBounds[3] >= dirtyBounds[1]) {
+                val minX = dirtyBounds[0]
+                val minY = dirtyBounds[1]
+                val maxX = dirtyBounds[2]
+                val maxY = dirtyBounds[3]
+
+                for (py in minY..maxY) {
+                    val rowOffset = py * tileSize
+                    for (px in minX..maxX) {
+                        val idx = rowOffset + px
+                        val maskVal = scratchMask[idx]
+                        if (maskVal > 0f) {
+                            accumulationBuffer[idx] += maskVal
+                            scratchMask[idx] = 0f
+                            anyDrawn = true
+                        }
+                    }
                 }
             }
         }
 
-        if (!anyDrawn) {
-            return TileProvider.NO_TILE
-        }
-
-        // Map accumulated intensity through 256-entry ThermalColorLut
-        val pixels = IntArray(tileSize * tileSize)
-        var hasVisiblePixel = false
-
-        for (i in intensityBuffer.indices) {
-            val intensity = intensityBuffer[i]
-            if (intensity > 0) {
-                pixels[i] = colorLut.getColor(intensity)
-                hasVisiblePixel = true
-            } else {
-                pixels[i] = 0
-            }
-        }
-
-        if (!hasVisiblePixel) {
-            return TileProvider.NO_TILE
-        }
-
-        val bitmap = Bitmap.createBitmap(pixels, tileSize, tileSize, Bitmap.Config.ARGB_8888)
-        val stream = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
-        bitmap.recycle()
-
-        return Tile(tileSize, tileSize, stream.toByteArray())
+        return if (anyDrawn) accumulationBuffer else null
     }
 
     private fun rasterizeSegment(
@@ -193,13 +233,9 @@ class PolylineHeatmapTileProvider(
         x2: Float,
         y2: Float,
         radius: Float,
-        intensity: Int,
-        buffer: IntArray
+        scratchMask: FloatArray,
+        dirtyBounds: IntArray
     ): Boolean {
-        val vx = x2 - x1
-        val vy = y2 - y1
-        val l2 = vx * vx + vy * vy
-
         val minX = max(0, (min(x1, x2) - radius).toInt())
         val maxX = min(tileSize - 1, (max(x1, x2) + radius).toInt())
         val minY = max(0, (min(y1, y2) - radius).toInt())
@@ -209,6 +245,9 @@ class PolylineHeatmapTileProvider(
             return false
         }
 
+        val vx = x2 - x1
+        val vy = y2 - y1
+        val l2 = vx * vx + vy * vy
         val r2 = radius * radius
         var segmentDrawn = false
 
@@ -236,14 +275,22 @@ class PolylineHeatmapTileProvider(
                     } else {
                         ((radius - dist) / 0.75f).coerceIn(0f, 1f)
                     }
-                    val addedVal = (weight * intensity).roundToInt()
-                    if (addedVal > 0) {
+                    if (weight > 0f) {
                         val idx = rowOffset + px
-                        buffer[idx] = minOf(255, buffer[idx] + addedVal)
-                        segmentDrawn = true
+                        if (weight > scratchMask[idx]) {
+                            scratchMask[idx] = weight
+                            segmentDrawn = true
+                        }
                     }
                 }
             }
+        }
+
+        if (segmentDrawn) {
+            if (minX < dirtyBounds[0]) dirtyBounds[0] = minX
+            if (minY < dirtyBounds[1]) dirtyBounds[1] = minY
+            if (maxX > dirtyBounds[2]) dirtyBounds[2] = maxX
+            if (maxY > dirtyBounds[3]) dirtyBounds[3] = maxY
         }
 
         return segmentDrawn

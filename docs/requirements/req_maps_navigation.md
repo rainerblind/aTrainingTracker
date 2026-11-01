@@ -1757,12 +1757,12 @@
 ### REQ-MAP-056: Line-Density Polyline Heatmap Tile Provider & 256-Entry Sequential Blue Color LUT [Verified]
 - **Tests**: `PolylineHeatmapTileProvider.kt`, `MapUtils.kt`, `MapContentScope.kt`, `PolylineHeatmapTileProviderTest.kt`
 - **Implementation**: Replace Google Maps Gaussian point-cloud HeatmapTileProvider with custom Web Mercator line-density PolylineHeatmapTileProvider and 256-entry sequential blue color lookup table (LUT).
-- **Rationale**: The system SHALL replace Gaussian point-cloud heatmap tile rendering with a true line-density tile provider (`PolylineHeatmapTileProvider`) and 3-stop sequential blue color LUT across all map views (ATT-4480, refined by ATT-4769, Parent Epic ATT-4474, refining `REQ-MAP-002` and `REQ-MAP-016`):
+- **Rationale**: The system SHALL replace Gaussian point-cloud heatmap tile rendering with a true line-density tile provider (`PolylineHeatmapTileProvider`) and 3-stop sequential blue color LUT across all map views (ATT-4480, refined by ATT-4769 and ATT-4932, Parent Epic ATT-4474, refining `REQ-MAP-002` and `REQ-MAP-016`):
 1. *Web Mercator Line-Raster TileProvider (`PolylineHeatmapTileProvider.kt`, `REQ-MAP-056.1`)*:
 • `PolylineHeatmapTileProvider` SHALL implement `com.google.android.gms.maps.model.TileProvider`.
 • For each requested tile $(x, y, \text{zoom})$, candidate polylines SHALL be filtered in $O(1)$ time using bounding-box intersection against the tile's geographic coordinates $[lat_{\min}, lon_{\min}, lat_{\max}, lon_{\max}]$ with a stroke margin.
 • If no paths intersect the tile bounding box, `getTile` SHALL return `TileProvider.NO_TILE` immediately without allocating bitmaps.
-• Intersecting polylines SHALL be projected into Web Mercator tile pixel coordinates ($256 \times 256$) and rasterized using `android.graphics.Canvas`, `Path`, and additive blending (`PorterDuff.Mode.ADD`) to accumulate 1D line density without vertex spacing or speed bias.
+• Intersecting polylines SHALL be projected into Web Mercator tile pixel coordinates ($256 \times 256$) and rasterized using distance-to-segment line accumulation without vertex spacing or speed bias.
 2. *256-Entry Sequential Blue Color Lookup Table & Translucent Alpha Scaling (`REQ-MAP-056.2`)*:
 • Accumulated single-channel intensity values SHALL be mapped to 32-bit ARGB pixels using a precomputed 256-entry Color LUT interpolating the canonical 3-stop sequential blue palette from `MapUtils.kt` (`REQ-MAP-002` / `ATT-504`):
   - Low density (0.0): Light Cyan `#00E5FF` (`R=0, G=229, B=255`, base alpha ~20% / `51`)
@@ -1778,12 +1778,22 @@
 • Zero alterations to database schemas or workout telemetry recording.
 • Compatibility with standard Google Maps `TileOverlay` composable across Light, Dark, and AMOLED map themes.
 • Clean-room full test suite pass rate under `./gradlew testDebugUnitTest` SHALL remain 100%.
+5. *Per-Workout Coverage Mask & Unclamped Accumulation (`ATT-4932`, `REQ-MAP-056.5`)*:
+• For each candidate path, the provider SHALL rasterize all path segments into a per-workout coverage mask utilizing `max` (not sum) blending across segment capsule footprints, bounding each workout's contribution to at most 1.0 (with anti-aliased edge falloff) per covered pixel.
+• Per-workout coverage masks SHALL be accumulated into an integer count buffer without intermediate clamping (`minOf(255, ...)`), counting distinct workouts per pixel and eliminating vertex bead and standstill blob artifacts.
+• To bound tile rendering performance, the per-workout mask SHALL be allocated as a single reusable per-tile scratch buffer, and only the dirty bounding rectangle $[minX, minY, maxX, maxY]$ SHALL be cleared between paths ($O(\text{dirty pixels})$).
+• Accumulated counts SHALL be mapped through `ThermalColorLut` at tile completion.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
 1. *Original Requirement ID & Target*: `REQ-MAP-056.2` (realigning with `REQ-MAP-002` *Training heatmaps (Cyan -> Indigo gradient)* and `REQ-MAP-016` *Heatmap DSL Support*) under Epic `ATT-4474`, targeting `ThermalColorLut.kt` and `PolylineHeatmapTileProvider.kt`.
 2. *Historical Origin & Commit Trace*: Sprint 2026-40.16 (ATT-500, ATT-504) and Sprint 2026-43.9 (commit `06990c88`, ATT-4594 / ATT-4480).
 3. *Root Reason for Existing Formulation*: A 5-stop fiery thermal gradient (Electric Blue -> Magenta -> Fiery Orange -> Yellow -> White) was introduced in `ThermalColorLut.kt` during initial line-density rasterizer prototyping to maximize contrast. Sprint 2026-43.9 user feedback established that this fiery scheme visually clashes with underlying maps and brand styling.
 4. *Preservation of Core Invariants*: Reverting color stops to Light Cyan -> Pure Blue -> Deep Indigo restores brand harmony and subtle route readability without altering the underlying line-density accumulation raster engine, O(1) tile lookup, thread safety, or database integrity.
+5. *ATT-4932 Refinement (REQ-MAP-056.1 / REQ-MAP-056.5)*:
+• Original Requirement ID & Target: `REQ-MAP-056.1` (*Web Mercator Line-Raster TileProvider*) and `REQ-PER-024.4` (*Corridor Frequency & Intensity Scaling*).
+• Historical Origin & Commit Trace: Sprint 2026-44.0 (commit `548f3995`, `ATT-4480`) and Sprint 2026-44.1 (commit `2bea16b7`, `ATT-4833`).
+• Root Reason for Existing Formulation: Per-segment additive accumulation directly into `intensityBuffer` was implemented as a fast prototype, but overlapping segment end-caps at vertices and standstill jitter clusters caused bead/blob artifacts and premature saturation.
+• Preservation of Core Invariants: Web Mercator projection, $O(1)$ candidate culling, thread-safety, zero heap churn, and 100% clean-room test pass rate are strictly preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* `ThermalColorLut` with default opacity,
@@ -1795,6 +1805,15 @@
 • *Given* a workout polyline traversed at varying speeds (fast descent vs. slow climb),
 • *When* rendered by `PolylineHeatmapTileProvider`,
 • *Then* the rendered intensity along the path SHALL remain uniform regardless of GPS point density or instantaneous speed.
+• *Given* a single collinear polyline with $N \ge 5$ vertices,
+• *When* rendered by `PolylineHeatmapTileProvider`,
+• *Then* interior line pixels exhibit uniform intensity matching a 2-point segment with zero intensity peaks at vertices.
+• *Given* a workout polyline with clustered standstill jitter points,
+• *When* rendered into the tile buffer,
+• *Then* the maximum accumulated count in the cluster region is exactly 1 (no blob oversaturation).
+• *Given* two identical coincident workout paths,
+• *When* rendered by `PolylineHeatmapTileProvider`,
+• *Then* the accumulated count is exactly 2 everywhere along the path without clamping.
 • *Given* a requested tile coordinate $(x, y, zoom)$ with no intersecting workout paths,
 • *When* `getTile` executes,
 • *Then* the provider SHALL return `TileProvider.NO_TILE` immediately without allocating bitmaps.

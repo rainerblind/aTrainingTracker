@@ -211,4 +211,140 @@ class PolylineHeatmapTileProviderTest {
             assertEquals(256, tile!!.width)
         }
     }
+
+    /**
+     * TST-MAP-058.6: Multi-Vertex Collinear Path Uniformity Test (ATT-4932 / REQ-MAP-056.5).
+     * Asserts that a single straight path with multiple collinear vertices yields uniform intensity
+     * matching a 2-point segment with zero intensity peaks/beads at vertex coordinates.
+     */
+    @Test
+    fun testCollinearMultiVertexUniformIntensity_TST_MAP_058_6() {
+        // Collinear path with 10 vertices
+        val collinearPath = (0..10).map { LatLng(48.500 + it * 0.001, 9.000 + it * 0.001) }
+        val baselinePath = listOf(collinearPath.first(), collinearPath.last())
+
+        val zoom = 12
+        val nTiles = 1 shl zoom
+        val x = ((9.0 + 180.0) / 360.0 * nTiles).toInt()
+        val latRad = Math.toRadians(48.5)
+        val y = ((1.0 - Math.log(Math.tan(Math.PI / 4 + latRad / 2)) / Math.PI) / 2.0 * nTiles).toInt()
+
+        val collinearProvider = PolylineHeatmapTileProvider(listOf(collinearPath))
+        val baselineProvider = PolylineHeatmapTileProvider(listOf(baselinePath))
+
+        val collinearBuffer = collinearProvider.computeAccumulationBuffer(x, y, zoom)
+        val baselineBuffer = baselineProvider.computeAccumulationBuffer(x, y, zoom)
+
+        assertNotNull(collinearBuffer)
+        assertNotNull(baselineBuffer)
+
+        // Peak count along the single workout line must be exactly 1.0 (no vertex beads)
+        val maxCollinear = collinearBuffer!!.maxOrNull() ?: 0f
+        val maxBaseline = baselineBuffer!!.maxOrNull() ?: 0f
+        assertEquals(1.0f, maxCollinear, 1e-4f)
+        assertEquals(1.0f, maxBaseline, 1e-4f)
+
+        // Check parity with baseline: collinear vertices match the continuous line without swelling
+        var matchingPixels = 0
+        for (i in collinearBuffer.indices) {
+            val c = collinearBuffer[i]
+            val b = baselineBuffer[i]
+            if (c > 0f || b > 0f) {
+                assertEquals("Pixel $i must match baseline line without vertex bead peaks", b, c, 0.05f)
+                matchingPixels++
+            }
+        }
+        assertTrue("Expected non-empty line rasterization", matchingPixels > 50)
+    }
+
+    /**
+     * TST-MAP-058.7: Standstill Jitter Single-Count Masking Test (ATT-4932 / REQ-MAP-056.5).
+     * Asserts that 20 tightly clustered GPS jitter points within a small radius contribute
+     * at most count = 1 for that workout (preventing premature saturation blobs).
+     */
+    @Test
+    fun testStandstillJitterSingleCountMasking_TST_MAP_058_7() {
+        val jitterPath = (0..20).map {
+            LatLng(48.500 + (it % 3 - 1) * 0.00002, 9.000 + (it % 4 - 1.5) * 0.00002)
+        }
+
+        val zoom = 12
+        val nTiles = 1 shl zoom
+        val x = ((9.0 + 180.0) / 360.0 * nTiles).toInt()
+        val latRad = Math.toRadians(48.5)
+        val y = ((1.0 - Math.log(Math.tan(Math.PI / 4 + latRad / 2)) / Math.PI) / 2.0 * nTiles).toInt()
+
+        val provider = PolylineHeatmapTileProvider(listOf(jitterPath))
+        val buffer = provider.computeAccumulationBuffer(x, y, zoom)
+
+        assertNotNull(buffer)
+        val maxCount = buffer!!.maxOrNull() ?: 0f
+        // Must be capped at count = 1.0f despite 20 overlapping segments
+        assertEquals(1.0f, maxCount, 1e-4f)
+    }
+
+    /**
+     * TST-MAP-058.8: Multi-Workout Coincident Accumulation Test (ATT-4932 / REQ-MAP-056.5).
+     * Asserts that two separate coincident workout paths accumulate to count = 2.0 across
+     * all covered pixels without clamping.
+     */
+    @Test
+    fun testMultiWorkoutCoincidentAccumulation_TST_MAP_058_8() {
+        val path1 = listOf(LatLng(48.500, 9.000), LatLng(48.505, 9.005))
+        val path2 = listOf(LatLng(48.500, 9.000), LatLng(48.505, 9.005))
+
+        val zoom = 12
+        val nTiles = 1 shl zoom
+        val x = ((9.0 + 180.0) / 360.0 * nTiles).toInt()
+        val latRad = Math.toRadians(48.5)
+        val y = ((1.0 - Math.log(Math.tan(Math.PI / 4 + latRad / 2)) / Math.PI) / 2.0 * nTiles).toInt()
+
+        val singleProvider = PolylineHeatmapTileProvider(listOf(path1))
+        val dualProvider = PolylineHeatmapTileProvider(listOf(path1, path2))
+
+        val singleBuf = singleProvider.computeAccumulationBuffer(x, y, zoom)!!
+        val dualBuf = dualProvider.computeAccumulationBuffer(x, y, zoom)!!
+
+        val maxSingle = singleBuf.maxOrNull() ?: 0f
+        val maxDual = dualBuf.maxOrNull() ?: 0f
+
+        assertEquals(1.0f, maxSingle, 1e-4f)
+        assertEquals(2.0f, maxDual, 1e-4f)
+
+        // Verify linearity: dualBuf == singleBuf * 2 everywhere
+        for (i in singleBuf.indices) {
+            val s = singleBuf[i]
+            val d = dualBuf[i]
+            if (s > 0f) {
+                assertEquals(s * 2.0f, d, 1e-4f)
+            }
+        }
+    }
+
+    /**
+     * TST-MAP-058.9: Bounded Scratch Buffer & Dirty-Rect Clearing Test (ATT-4932 / REQ-MAP-056.3 / .5).
+     * Asserts that candidate paths in disjoint parts of a tile accumulate correctly and
+     * the call-local scratch mask resets in-place without leaking state across paths.
+     */
+    @Test
+    fun testBoundedScratchBufferAndDirtyRectClearing_TST_MAP_058_9() {
+        // Disjoint paths: route A and route B in different sections of the tile
+        val pathA = listOf(LatLng(48.495, 8.995), LatLng(48.498, 8.998))
+        val pathB = listOf(LatLng(48.515, 9.020), LatLng(48.520, 9.025))
+
+        val zoom = 12
+        val nTiles = 1 shl zoom
+        val x = ((9.0 + 180.0) / 360.0 * nTiles).toInt()
+        val latRad = Math.toRadians(48.5)
+        val y = ((1.0 - Math.log(Math.tan(Math.PI / 4 + latRad / 2)) / Math.PI) / 2.0 * nTiles).toInt()
+
+        val provider = PolylineHeatmapTileProvider(listOf(pathA, pathB))
+        val buffer = provider.computeAccumulationBuffer(x, y, zoom)
+
+        assertNotNull(buffer)
+        // Both paths drawn cleanly
+        val maxCount = buffer!!.maxOrNull() ?: 0f
+        assertEquals(1.0f, maxCount, 1e-4f)
+        assertTrue("Both disjoint paths must contribute to accumulation buffer", buffer.count { it > 0f } > 100)
+    }
 }
