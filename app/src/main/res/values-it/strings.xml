@@ -2176,4 +2176,16 @@
     <string name="sensor_field_display_elements_title">Elementi di visualizzazione</string>
     <string name="sensor_field_show_value">Valore</string>
     <string name="sensor_field_show_bar">Barra</string>
+
+    <!-- Zone History (ATT-4844, REQ-SET-082) -->
+    <string name="zone_history_title">Cronologia zone</string>
+    <string name="zone_history_action_history">Cronologia</string>
+    <string name="zone_history_add_snapshot">Aggiungi istantanea storica</string>
+    <string name="zone_history_edit_snapshot">Modifica istantanea zone</string>
+    <string name="zone_history_delete_title">Eliminare l\'istantanea delle zone?</string>
+    <string name="zone_history_delete_message">Eliminare l\'istantanea delle zone del %1$s?</string>
+    <string name="zone_history_empty">Nessuna istantanea delle zone ancora registrata.</string>
+    <string name="zone_history_date_label">Data di validità</string>
+    <string name="zone_history_save_snapshot">Salva istantanea</string>
+    <string name="zone_history_error_monotonic">Le soglie devono essere strettamente crescenti (%1$s)</string>
 </resources>

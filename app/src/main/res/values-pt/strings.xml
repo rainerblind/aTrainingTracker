@@ -2174,4 +2174,16 @@
     <string name="sensor_field_display_elements_title">Elementos de exibição</string>
     <string name="sensor_field_show_value">Valor</string>
     <string name="sensor_field_show_bar">Barra</string>
+
+    <!-- Zone History (ATT-4844, REQ-SET-082) -->
+    <string name="zone_history_title">Histórico de zonas</string>
+    <string name="zone_history_action_history">Histórico</string>
+    <string name="zone_history_add_snapshot">Adicionar instantâneo histórico</string>
+    <string name="zone_history_edit_snapshot">Editar instantâneo de zonas</string>
+    <string name="zone_history_delete_title">Excluir instantâneo de zonas?</string>
+    <string name="zone_history_delete_message">Excluir instantâneo de zonas de %1$s?</string>
+    <string name="zone_history_empty">Nenhum instantâneo histórico de zonas registrado ainda.</string>
+    <string name="zone_history_date_label">Data de vigência</string>
+    <string name="zone_history_save_snapshot">Salvar instantâneo</string>
+    <string name="zone_history_error_monotonic">Os limites devem ser estritamente crescentes (%1$s)</string>
 </resources>

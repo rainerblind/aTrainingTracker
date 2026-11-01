@@ -709,6 +709,42 @@ class SettingsDataStore(
     }
 
     /**
+     * Applies the latest zone boundary cutoffs to DataStore preferences without altering display options (REQ-SET-082.2).
+     */
+    suspend fun applyLatestZoneBoundaries(zoneType: ZoneType, boundaries: List<Int>) {
+        if (boundaries.size != zoneType.boundaryCount) return
+        val customizedKey = getCustomizedKey(zoneType)
+        dataStore.edit { prefs ->
+            prefs[customizedKey] = true
+            when (zoneType) {
+                ZoneType.PWR_BIKE -> {
+                    prefs[KEY_IS_PWR_ZONES_CONFIGURED] = true
+                    prefs[PWR_BIKE_ZONE1_MAX] = boundaries[0]
+                    prefs[PWR_BIKE_ZONE2_MAX] = boundaries[1]
+                    prefs[PWR_BIKE_ZONE3_MAX] = boundaries[2]
+                    prefs[PWR_BIKE_ZONE4_MAX] = boundaries[3]
+                    prefs[PWR_BIKE_ZONE5_MAX] = boundaries[4]
+                    prefs[PWR_BIKE_ZONE6_MAX] = boundaries[5]
+                }
+                ZoneType.HR_BIKE -> {
+                    prefs[KEY_IS_HR_ZONES_CONFIGURED] = true
+                    prefs[HR_BIKE_ZONE1_MAX] = boundaries[0]
+                    prefs[HR_BIKE_ZONE2_MAX] = boundaries[1]
+                    prefs[HR_BIKE_ZONE3_MAX] = boundaries[2]
+                    prefs[HR_BIKE_ZONE4_MAX] = boundaries[3]
+                }
+                ZoneType.HR_RUN -> {
+                    prefs[KEY_IS_HR_ZONES_CONFIGURED] = true
+                    prefs[HR_RUN_ZONE1_MAX] = boundaries[0]
+                    prefs[HR_RUN_ZONE2_MAX] = boundaries[1]
+                    prefs[HR_RUN_ZONE3_MAX] = boundaries[2]
+                    prefs[HR_RUN_ZONE4_MAX] = boundaries[3]
+                }
+            }
+        }
+    }
+
+    /**
      * Loads the complete zone profile state for a given ZoneType, ensuring
      * power zone migrations are checked idempotently (REQ-UI-428.3).
      */

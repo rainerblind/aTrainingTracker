@@ -2176,4 +2176,16 @@
     <string name="sensor_field_display_elements_title">Elementos de visualización</string>
     <string name="sensor_field_show_value">Valor</string>
     <string name="sensor_field_show_bar">Barra</string>
+
+    <!-- Zone History (ATT-4844, REQ-SET-082) -->
+    <string name="zone_history_title">Historial de zonas</string>
+    <string name="zone_history_action_history">Historial</string>
+    <string name="zone_history_add_snapshot">Añadir instantánea histórica</string>
+    <string name="zone_history_edit_snapshot">Editar instantánea de zonas</string>
+    <string name="zone_history_delete_title">¿Eliminar instantánea de zonas?</string>
+    <string name="zone_history_delete_message">¿Eliminar la instantánea de zonas del %1$s?</string>
+    <string name="zone_history_empty">Aún no hay instantáneas de zonas registradas.</string>
+    <string name="zone_history_date_label">Fecha de vigencia</string>
+    <string name="zone_history_save_snapshot">Guardar instantánea</string>
+    <string name="zone_history_error_monotonic">Los umbrales deben ser estrictamente crecientes (%1$s)</string>
 </resources>

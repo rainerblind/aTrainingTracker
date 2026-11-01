@@ -1288,3 +1288,38 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • *Then* `learnFromWorkout` SHALL update cluster 10's running centroids and sport, preserving `clusterId == 10L`.
 
 **Invariants**: Explicit cluster creation and selection in `EditWorkoutClusterDialog` (`createNewCluster`, `applyClusterIdentity`, `unassignCluster`) remain fully functional; SQLite database schemas remain unchanged.
+
+### REQ-SET-082: Timestamped Zone Boundary Snapshots per ZoneType & Historical Workout Zone Resolution [Verified] [`TST-SET-082`]
+- **Tests**: `AthleteMetricsDatabaseManager.kt`, `AthleteMetricsRepository.kt`, `SettingsDataStore.kt`, `WorkoutRepository.kt`, `TelemetryMetricGraph.kt`, `ZonesSettingsViewModel.kt`, `ZoneProfileTabContent.kt`
+- **Implementation**: Persist atomic zone boundary snapshots in `AthleteMetrics.db` (`zone_history` table, `DB_VERSION = 2`), maintain unidirectional projection to `SettingsDataStore`, resolve historical workouts at `workoutStartTimeMs`, and provide history/backdating UI.
+- **Rationale**: Currently, training zone boundaries (`HR_RUN`, `HR_BIKE`, `PWR_BIKE`) are stored only as single un-timestamped preferences in `SettingsDataStore`. When an athlete updates zone boundaries, past workouts in Workout Summaries, Workout Details, and Telemetry Graphs retroactively re-evaluate against modern boundaries, distorting training history. Extending timestamped persistence to zone configurations ensures historical workout fidelity and preserves full temporal integrity:
+1. *Atomic Timestamped Zone Snapshot Persistence (`REQ-SET-082.1`)*:
+• The system SHALL persist training zone boundary vectors as atomic snapshots in `AthleteMetrics.db` (`zone_history` table) with columns `_id` (INTEGER PRIMARY KEY AUTOINCREMENT), `timestamp_ms` (INTEGER NOT NULL), `zone_type` (TEXT NOT NULL), and `boundaries` (TEXT NOT NULL, holding comma-separated integer thresholds).
+• The database schema SHALL define index `idx_zone_history_type_time` on `(zone_type, timestamp_ms DESC, _id DESC)`.
+• `AthleteMetricsDbHelper.DB_VERSION` SHALL be incremented to `2`, referenced directly in `DatabaseSchemaRegistry.kt` pursuant to Rule 62, and verified with `onCreate`/`onUpgrade` schema parity pursuant to Rule 64.
+• Boundary vectors SHALL strictly enforce ascending monotonicity ($Z_1 < Z_2 < \dots < Z_n$) where `HR_RUN` and `HR_BIKE` require exactly 4 cutoffs and `PWR_BIKE` requires exactly 6 cutoffs. Invalid or non-monotonic vectors MUST be rejected.
+• On database upgrade to `v2` or fresh install, initial baseline snapshots SHALL be seeded from existing `SettingsDataStore` values inside a single SQLite transaction so existing users experience zero data loss.
+2. *Unidirectional Projection to SettingsDataStore (`REQ-SET-082.2`)*:
+• Whenever a zone snapshot is inserted, updated, or deleted, the system SHALL update `SettingsDataStore` with the chronologically latest snapshot (`max(timestamp_ms)`) for that `ZoneType`.
+• Background sensor loops, HUD tiles, and live-tracking cockpits SHALL continue reading `SettingsDataStore` for zero-latency, lock-free $O(1)$ in-memory telemetry evaluation.
+3. *Historical Workout Zone Resolution (`REQ-SET-082.3`)*:
+• The system SHALL provide `getEffectiveZoneBoundaries(zoneType: ZoneType, workoutStartTimeMs: Long): List<Int>` querying `zone_history` for the latest snapshot satisfying `zone_type = ? AND timestamp_ms <= workoutStartTimeMs ORDER BY timestamp_ms DESC, _id DESC LIMIT 1`.
+• If no snapshot exists with `timestamp_ms <= workoutStartTimeMs`, the query SHALL fall back to the earliest recorded snapshot for that `zoneType`, and if no snapshots exist in `zone_history`, to `SettingsDataStore` defaults.
+4. *Aftermath Analytics & Visualizations Integration (`REQ-SET-082.4`)*:
+• In `WorkoutRepository.kt`, `getHeartRateZoneDistribution(workoutId, bSportType)` and `getPowerZoneDistribution(workoutId)` SHALL resolve the workout's start timestamp from `WorkoutSummaries` and compute zone distributions using `getEffectiveZoneBoundaries`.
+• In `WorkoutDetailTabbedContent.kt`, `MapDetailLayout.kt`, and `TelemetryMetricGraph.kt`, zone band coloring, horizontal dashed threshold lines, scrubbing badges, and marginal zone distribution bars SHALL evaluate against the effective zone thresholds valid at `workoutStartTimeMs`.
+5. *Profile & Zones Management UI & Backdating (`REQ-SET-082.5`)*:
+• In `Profile & Zones` (`ZoneProfileTabContent.kt`, `ZonesSettingsViewModel.kt`), normal zone edits via sliders or the Zone Calculator SHALL save a new snapshot with `timestamp_ms = System.currentTimeMillis()`.
+• The UI SHALL provide a dedicated "History" action launching a historical snapshots dialog allowing athletes to view past snapshots, add a backdated snapshot for a previous date, or edit/delete past snapshots with date selection and monotonicity validation.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a zone snapshot $S_1$ recorded at $t_1 = \text{2025-01-01}$ with bike power threshold $Z_4 = 250\text{ W}$, a workout $W_1$ recorded at $t_2 = \text{2025-06-01}$, and a newer snapshot $S_2$ recorded at $t_3 = \text{2026-01-01}$ with $Z_4 = 284\text{ W}$,
+• *When* the user views $W_1$ in Workout Summaries, Workout Details, or Telemetry Graphs,
+• *Then* the Power Zone distribution, telemetry band colors, and scrubbing badges SHALL calculate against $S_1$ ($250\text{ W}$), whereas workouts recorded after $t_3$ calculate against $S_2$ ($284\text{ W}$).
+• *Given* an athlete in `Profile & Zones` who enters new zone cutoffs for a past date,
+• *When* the athlete saves the historical snapshot,
+• *Then* the snapshot SHALL be persisted in `AthleteMetrics.db` with the selected past timestamp, and workouts recorded after that date SHALL dynamically resolve against it.
+• *Given* an attempt to save non-monotonic cutoffs (e.g. $Z_2 \le Z_1$),
+• *Then* persistence SHALL fail with an `IllegalArgumentException` and the UI SHALL surface a localized validation error.
+
+**Invariants**: Monotonicity ($Z_1 < Z_2 < \dots < Z_n$) is strictly enforced; `SettingsDataStore` remains synchronized with the latest snapshot; live cockpit $O(1)$ latency is preserved; `AthleteMetrics.db` migration maintains `onCreate`/`onUpgrade` parity.

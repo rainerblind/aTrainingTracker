@@ -813,3 +813,25 @@
   • Verify `assignClusterToWorkout()` is NOT called to override cluster assignment.
   4. *Clean-Room Regression Execution (`TST-SET-081.4`)*:
   • Execute targeted unit tests in `EditWorkoutClusteringTest`, `EditWorkoutClusterTest`, and `ThemeColorCentralizationAuditTest` with 100% pass rate.
+
+### TST-SET-082: **Timestamped Zone Boundary Snapshots & Historical Workout Resolution Verification Suite** [Atomic zone boundary persistence in AthleteMetrics.db; DB_VERSION=2 migration and schema parity; unidirectional SettingsDataStore projection; effective-at-workout-time zone resolution in WorkoutRepository and TelemetryMetricGraph; Profile & Zones history dialog and backdating; 9-language localization parity.]
+- **Requirement(s)**: `REQ-SET-082`
+- **Component**: **AthleteMetricsDatabaseManager / AthleteMetricsRepository / WorkoutRepository / TelemetryMetricGraph / ZonesSettingsViewModel**
+- **Jira**: ``ATT-4844``
+- **Test Description**:
+  1. *SQLite Schema Migration, Parity & Registry Contract Test (`TST-SET-082.1`, `AthleteMetricsRealSqliteMigrationTest.kt`)*:
+  • Verify `AthleteMetricsDbHelper` upgrades from `DB_VERSION = 1` to `2` by creating the `zone_history` table and `idx_zone_history_type_time` index.
+  • Verify `onCreate` vs incremental `onUpgrade` produce 100% identical schemas (Rule 64).
+  • Verify `DatabaseSchemaRegistry.getMaxSupportedVersion("AthleteMetrics.db")` matches `AthleteMetricsDbHelper.DB_VERSION` (Rule 62).
+  2. *Zone Snapshot CRUD, Monotonicity & Symmetric DTO Mapping Test (`TST-SET-082.2`, `AthleteMetricsZoneSnapshotTest.kt`)*:
+  • Verify insertion, retrieval of effective snapshot at given timestamp, update, and deletion of snapshots for `HR_RUN`, `HR_BIKE`, and `PWR_BIKE`.
+  • Verify validation rejects non-monotonic cutoffs ($Z_{i+1} \le Z_i$) and invalid boundary counts (must be 4 for HR, 6 for Power).
+  • Verify single-row `fromCursor` and batch `fromCursorBatch` symmetric mapping (Rule 20).
+  3. *Unidirectional SettingsDataStore Projection Test (`TST-SET-082.3`, `AthleteMetricsRepositorySyncTest.kt`)*:
+  • Verify that inserting a new latest snapshot automatically updates `SettingsDataStore` zone preference keys.
+  • Verify that deleting the latest snapshot rolls back `SettingsDataStore` to the next most recent historical snapshot.
+  4. *Historical Workout Zone Distribution & Telemetry Graph Resolution Test (`TST-SET-082.4`, `WorkoutRepositoryHistoricalZoneTest.kt`)*:
+  • Given historical workouts with different start times, verify `getHeartRateZoneDistribution` and `getPowerZoneDistribution` resolve against the snapshot valid at workout start time rather than current preferences.
+  • Verify `TelemetryMetricGraph` and `MapDetailLayout` receive effective historical thresholds.
+  5. *9-Language Localization & Format Specifier Parity Test (`TST-SET-082.5`, `TranslationParityTest.kt`)*:
+  • Verify all zone history UI strings are present in all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with matching positional specifiers (`%1$s`).

@@ -306,6 +306,8 @@ fun WorkoutSummariesTabbedScreen(
                     onEditWorkout = { id -> selectedWorkoutIdForEdit = id },
                     hrZoneDistribution = aftermathUIState.hrZoneDistribution,
                     powerZoneDistribution = aftermathUIState.powerZoneDistribution,
+                    hrZoneThresholds = aftermathUIState.hrThresholds,
+                    powerZoneThresholds = aftermathUIState.powerThresholds,
                     telemetryPath = aftermathUIState.telemetryPath,
                     modifier = Modifier
                 )

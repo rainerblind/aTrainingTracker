@@ -2261,4 +2261,16 @@
     <string name="sensor_field_display_elements_title">Anzeigeelemente</string>
     <string name="sensor_field_show_value">Wert</string>
     <string name="sensor_field_show_bar">Balken</string>
+
+    <!-- Zone History (ATT-4844, REQ-SET-082) -->
+    <string name="zone_history_title">Zonenhistorie</string>
+    <string name="zone_history_action_history">Historie</string>
+    <string name="zone_history_add_snapshot">Historischen Snapshot hinzufügen</string>
+    <string name="zone_history_edit_snapshot">Zonen-Snapshot bearbeiten</string>
+    <string name="zone_history_delete_title">Zonen-Snapshot löschen?</string>
+    <string name="zone_history_delete_message">Zonen-Snapshot vom %1$s löschen?</string>
+    <string name="zone_history_empty">Noch keine historischen Zonen-Snapshots vorhanden.</string>
+    <string name="zone_history_date_label">Gültig ab</string>
+    <string name="zone_history_save_snapshot">Snapshot speichern</string>
+    <string name="zone_history_error_monotonic">Schwellenwerte müssen streng aufsteigend sein (%1$s)</string>
 </resources>

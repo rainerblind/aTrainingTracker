@@ -40,7 +40,7 @@ object DatabaseSchemaRegistry {
         "StravaUpload.db" to 6,
         "Equipment.db" to 2,
         "Pebble.db" to 3,
-        "AthleteMetrics.db" to 1,
+        "AthleteMetrics.db" to com.atrainingtracker.trainingtracker.database.AthleteMetricsDbHelper.DB_VERSION,
         "ActiveDevices.db" to 1,
         "ExportStatus.db" to 1,
         com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodSummariesDatabaseManager.DATABASE_NAME to

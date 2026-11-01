@@ -2155,4 +2155,16 @@
     <string name="sensor_field_display_elements_title">表示要素</string>
     <string name="sensor_field_show_value">値</string>
     <string name="sensor_field_show_bar">バー</string>
+
+    <!-- Zone History (ATT-4844, REQ-SET-082) -->
+    <string name="zone_history_title">ゾーン履歴</string>
+    <string name="zone_history_action_history">履歴</string>
+    <string name="zone_history_add_snapshot">過去のスナップショットを追加</string>
+    <string name="zone_history_edit_snapshot">ゾーンスナップショットの編集</string>
+    <string name="zone_history_delete_title">ゾーンスナップショットを削除しますか？</string>
+    <string name="zone_history_delete_message">%1$sのゾーンスナップショットを削除しますか？</string>
+    <string name="zone_history_empty">登録されたゾーンスナップショットの履歴はありません。</string>
+    <string name="zone_history_date_label">有効日</string>
+    <string name="zone_history_save_snapshot">スナップショットを保存</string>
+    <string name="zone_history_error_monotonic">しきい値は厳密に増加する必要があります (%1$s)</string>
 </resources>

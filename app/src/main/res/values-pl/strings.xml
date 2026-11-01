@@ -2177,4 +2177,16 @@
     <string name="sensor_field_display_elements_title">Elementy wyświetlania</string>
     <string name="sensor_field_show_value">Wartość</string>
     <string name="sensor_field_show_bar">Pasek</string>
+
+    <!-- Zone History (ATT-4844, REQ-SET-082) -->
+    <string name="zone_history_title">Historia stref</string>
+    <string name="zone_history_action_history">Historia</string>
+    <string name="zone_history_add_snapshot">Dodaj migawkę historyczną</string>
+    <string name="zone_history_edit_snapshot">Edytuj migawkę stref</string>
+    <string name="zone_history_delete_title">Usunąć migawkę stref?</string>
+    <string name="zone_history_delete_message">Usunąć migawkę stref z dnia %1$s?</string>
+    <string name="zone_history_empty">Brak zarejestrowanych historycznych migawek stref.</string>
+    <string name="zone_history_date_label">Data obowiązywania</string>
+    <string name="zone_history_save_snapshot">Zapisz migawkę</string>
+    <string name="zone_history_error_monotonic">Wartości progowe muszą ściśle rosnąć (%1$s)</string>
 </resources>
