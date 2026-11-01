@@ -66,7 +66,11 @@ data class SensorFieldState(
     val wPrimeBatteryState: WPrimeBatteryState? = null,
 
     // The canonical sensor type for dynamic tuning visibility gating (REQ-UI-409.3).
-    val sensorType: SensorType? = null
+    val sensorType: SensorType? = null,
+
+    // Per-field element display configuration (REQ-TRK-046, ATT-4841)
+    val showValue: Boolean = true,
+    val showBar: Boolean = false
 )
 
 /**

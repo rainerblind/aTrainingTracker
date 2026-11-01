@@ -1236,3 +1236,29 @@
   4. *Theme Token Centralization Audit (`TST-TRK-045.4`)*:
   • Verification via `ThemeColorCentralizationAuditTest` ensuring `SensorGridScreen.kt` uses centralized tokens (`DarkWarningContainer`, `LightWarningContainer`, etc.) without hardcoded colors.
 
+
+### TST-TRK-046: **Per-Sensor-Field Display Elements Configuration Test Suite** [Planned]
+- **Requirement(s)**: `REQ-TRK-046`
+- **Component**: `TrackingViewsDatabaseManagerTest.kt`, `TrackingViewsRepositoryTest.kt`, `EditSensorFieldViewModelTest.kt`, `TranslationParityTest.kt`, `ThemeColorCentralizationAuditTest.kt`
+- **Jira**: `ATT-4841`
+- **Test Description**:
+  1. *Database Schema v16 Migration & Backfill (`TST-TRK-046.1`)*:
+  • Unit test in `TrackingViewsDatabaseManagerTest` verifying:
+    - Upgrading from v15 to v16 adds `ShowValue` and `ShowBar` to `ROWS_TABLE`.
+    - Backfills `ShowValue = 1` for all rows.
+    - Backfills `ShowBar = 1` for `HR`, `POWER`, `PEDAL_POWER_BALANCE`, `W_PRIME_BAL`, and `0` for others.
+    - Pre-existing user layouts and tab configurations are completely preserved.
+  2. *Repository Model & Flow Projection (`TST-TRK-046.2`)*:
+  • Unit test in `TrackingViewsRepositoryTest` verifying:
+    - `fetchSensorFieldConfigs` and `fetchSingleSensorFieldConfig` populate `showValue` and `showBar` correctly.
+    - `updateSensorFieldConfig` and `insertSensorFieldConfig` persist `showValue` and `showBar` to the database.
+  3. *Edit Dialog ViewModel Selection Constraint (`TST-TRK-046.3`)*:
+  • Unit test in `EditSensorFieldViewModelTest` verifying:
+    - `isBarSupported` evaluates to `true` for `HR`, `POWER`, `PEDAL_POWER_BALANCE`, `W_PRIME_BAL`, and `false` for others.
+    - Deselecting `showValue` when `showBar == false` is blocked (at least one element must remain active).
+    - Deselecting `showBar` when `showValue == false` is blocked.
+    - Toggling `showValue` or `showBar` when both are selected succeeds.
+  4. *9-Language Localization Parity (`TST-TRK-046.4`)*:
+  • Verification in `TranslationParityTest` for `sensor_field_display_elements_title`, `sensor_field_show_value`, `sensor_field_show_bar` across all 9 locales.
+
+

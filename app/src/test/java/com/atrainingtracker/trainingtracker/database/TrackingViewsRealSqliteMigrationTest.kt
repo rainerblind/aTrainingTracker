@@ -565,12 +565,85 @@ class TrackingViewsRealSqliteMigrationTest {
 
         // Verify DatabaseSchemaRegistry versions
         assertEquals(
-            15,
+            16,
             com.atrainingtracker.trainingtracker.migration.DatabaseSchemaRegistry.getMaxSupportedVersion("FlexibleGenericView.db")
         )
         assertEquals(
-            15,
+            16,
             com.atrainingtracker.trainingtracker.migration.DatabaseSchemaRegistry.getMaxSupportedVersion("TrackingViews.db")
         )
+    }
+
+    /**
+     * TST-TRK-046.5: Database migration v15 -> v16 adds ShowValue and ShowBar columns and backfills defaults.
+     */
+    @Test
+    fun testTrackingViewsDbHelper_v15ToV16Migration_addsShowValueAndShowBar() {
+        val database = checkNotNull(db)
+        database.execSQL(TrackingViewsDbHelper.CREATE_VIEWS_TABLE_V15)
+        database.execSQL(TrackingViewsDbHelper.CREATE_LAYOUTS_TABLE_V8)
+        database.execSQL(TrackingViewsDbHelper.CREATE_SECTION_DIVIDERS_TABLE_V14)
+        database.version = 15
+
+        // Insert rows with different sensor types
+        val hrRow = ContentValues().apply {
+            put(TrackingViewsDbHelper.VIEW_ID, 1)
+            put(TrackingViewsDbHelper.ROW_NR, 1)
+            put(TrackingViewsDbHelper.COL_NR, 1)
+            put(TrackingViewsDbHelper.SENSOR_TYPE, "HR")
+            put(TrackingViewsDbHelper.VIEW_SIZE, "NORMAL")
+        }
+        val speedRow = ContentValues().apply {
+            put(TrackingViewsDbHelper.VIEW_ID, 1)
+            put(TrackingViewsDbHelper.ROW_NR, 2)
+            put(TrackingViewsDbHelper.COL_NR, 1)
+            put(TrackingViewsDbHelper.SENSOR_TYPE, "SPEED_mps")
+            put(TrackingViewsDbHelper.VIEW_SIZE, "NORMAL")
+        }
+        val hrId = database.insertOrThrow(TrackingViewsDbHelper.ROWS_TABLE, null, hrRow)
+        val speedId = database.insertOrThrow(TrackingViewsDbHelper.ROWS_TABLE, null, speedRow)
+
+        // Execute upgrade v15 -> v16
+        helper.onUpgrade(database, 15, 16)
+        database.version = 16
+
+        // Verify columns exist
+        assertTrue(
+            "Column SHOW_VALUE must exist",
+            RealSqliteTestHelper.hasColumn(database, TrackingViewsDbHelper.ROWS_TABLE, TrackingViewsDbHelper.SHOW_VALUE)
+        )
+        assertTrue(
+            "Column SHOW_BAR must exist",
+            RealSqliteTestHelper.hasColumn(database, TrackingViewsDbHelper.ROWS_TABLE, TrackingViewsDbHelper.SHOW_BAR)
+        )
+
+        // Verify HR defaults: ShowValue = 1, ShowBar = 1
+        database.query(
+            TrackingViewsDbHelper.ROWS_TABLE,
+            arrayOf(TrackingViewsDbHelper.SHOW_VALUE, TrackingViewsDbHelper.SHOW_BAR),
+            "${TrackingViewsDbHelper.ROW_ID} = ?",
+            arrayOf(hrId.toString()),
+            null, null, null
+        ).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("HR ShowValue must default to 1", 1, cursor.getInt(0))
+            assertEquals("HR ShowBar must default to 1", 1, cursor.getInt(1))
+        }
+
+        // Verify SPEED_mps defaults: ShowValue = 1, ShowBar = 0
+        database.query(
+            TrackingViewsDbHelper.ROWS_TABLE,
+            arrayOf(TrackingViewsDbHelper.SHOW_VALUE, TrackingViewsDbHelper.SHOW_BAR),
+            "${TrackingViewsDbHelper.ROW_ID} = ?",
+            arrayOf(speedId.toString()),
+            null, null, null
+        ).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("SPEED_mps ShowValue must default to 1", 1, cursor.getInt(0))
+            assertEquals("SPEED_mps ShowBar must default to 0", 0, cursor.getInt(1))
+        }
+
+        // Verify idempotency
+        helper.onUpgrade(database, 15, 16)
     }
 }

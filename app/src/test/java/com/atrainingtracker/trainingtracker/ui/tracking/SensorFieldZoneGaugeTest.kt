@@ -225,4 +225,33 @@ class SensorFieldZoneGaugeTest {
             source.contains("color = MaterialTheme.colorScheme.onSurface")
         )
     }
+
+    /**
+     * TST-TRK-046.4: SensorFieldState supports showValue and showBar properties (REQ-TRK-046).
+     */
+    @Test
+    fun sensorFieldState_showValueAndShowBar_defaultsAndCopy() {
+        val defaultState = SensorFieldState(
+            configHash = 1,
+            sensorFieldId = 10,
+            rowNr = 0,
+            colNr = 0,
+            viewSize = ViewSize.NORMAL,
+            label = "Heart Rate",
+            filterDescription = "",
+            value = "145",
+            units = "bpm",
+            zoneColor = Color(0xFF008000)
+        )
+        assertTrue("showValue must default to true", defaultState.showValue)
+        assertFalse("showBar must default to false", defaultState.showBar)
+
+        val barOnly = defaultState.copy(showValue = false, showBar = true)
+        assertFalse("showValue must be false in bar-only configuration", barOnly.showValue)
+        assertTrue("showBar must be true in bar-only configuration", barOnly.showBar)
+
+        val valueOnly = defaultState.copy(showValue = true, showBar = false)
+        assertTrue("showValue must be true in value-only configuration", valueOnly.showValue)
+        assertFalse("showBar must be false in value-only configuration", valueOnly.showBar)
+    }
 }

@@ -524,6 +524,16 @@ class TrackingViewModel(
                             "--"
                         }
 
+                        val initialZoneGauge = if (config.showBar) calculateZoneGaugeState(zoneType, null) else null
+                        val initialPedalBalance = if (config.showBar) initialPedalBalanceState else null
+                        val initialWPrimeState = if (config.showBar && config.sensorType == SensorType.W_PRIME_BAL) {
+                            WPrimeBatteryMath.calculateBatteryState(
+                                remainingKj = null,
+                                totalKj = currentEffectiveWPrimeKj,
+                                timestampMs = 0L
+                            )
+                        } else null
+
                         SensorFieldState(
                             configHash = uniqueHash,
                             sensorFieldId = config.sensorFieldId,
@@ -536,16 +546,12 @@ class TrackingViewModel(
                             units = application.getString(MyHelper.getShortUnitsId(config.sensorType)),
                             zoneColor = defaultZoneColor,
                             zoneDisplayOptions = displayOptions,
-                            zoneGaugeState = calculateZoneGaugeState(zoneType, displayOptions, null),
-                            pedalBalanceState = initialPedalBalanceState,
-                            wPrimeBatteryState = if (config.sensorType == SensorType.W_PRIME_BAL) {
-                                WPrimeBatteryMath.calculateBatteryState(
-                                    remainingKj = null,
-                                    totalKj = currentEffectiveWPrimeKj,
-                                    timestampMs = 0L
-                                )
-                            } else null,
-                            sensorType = config.sensorType
+                            zoneGaugeState = initialZoneGauge,
+                            pedalBalanceState = initialPedalBalance,
+                            wPrimeBatteryState = initialWPrimeState,
+                            sensorType = config.sensorType,
+                            showValue = config.showValue,
+                            showBar = config.showBar
                         )
                     }
                     cachedConfigs = configs
@@ -624,7 +630,7 @@ class TrackingViewModel(
                 val zoneType = getZoneType(sensorData.sensorType, activityType.sportType)
                 val displayOptions = zoneType?.let { zoneDisplayOptionsMap[it] } ?: ZoneDisplayOptions()
                 val numericValue = (sensorData.value as? Number)?.toDouble()
-                val newZoneGaugeState = calculateZoneGaugeState(zoneType, displayOptions, numericValue)
+                val rawZoneGaugeState = calculateZoneGaugeState(zoneType, numericValue)
 
                 val isWPrimeBal = (sensorData.sensorType == SensorType.W_PRIME_BAL)
                 val newWPrimeBatteryState = if (isWPrimeBal) {
@@ -644,22 +650,26 @@ class TrackingViewModel(
 
                 // 3. Iterate through every field that needs this update.
                 for (fieldToUpdate in fieldsToUpdate) {
+                    val fieldZoneGaugeState = if (fieldToUpdate.showBar) rawZoneGaugeState else null
+                    val fieldPedalBalanceState = if (fieldToUpdate.showBar) newPedalBalanceState else null
+                    val fieldWPrimeBatteryState = if (fieldToUpdate.showBar && isWPrimeBal) newWPrimeBatteryState else null
+
                     // Check if this specific instance needs an update to avoid unnecessary changes.
                     if (fieldToUpdate.value != newFormattedValue ||
                         fieldToUpdate.zoneColor != newZoneColor ||
                         fieldToUpdate.zoneDisplayOptions != displayOptions ||
-                        fieldToUpdate.zoneGaugeState != newZoneGaugeState ||
-                        fieldToUpdate.pedalBalanceState != newPedalBalanceState ||
-                        (isWPrimeBal && fieldToUpdate.wPrimeBatteryState != newWPrimeBatteryState)) {
+                        fieldToUpdate.zoneGaugeState != fieldZoneGaugeState ||
+                        fieldToUpdate.pedalBalanceState != fieldPedalBalanceState ||
+                        (isWPrimeBal && fieldToUpdate.wPrimeBatteryState != fieldWPrimeBatteryState)) {
                         val index = updatedFields.indexOf(fieldToUpdate)
                         if (index != -1) {
                             updatedFields[index] = fieldToUpdate.copy(
                                 value = newFormattedValue,
                                 zoneColor = newZoneColor,
                                 zoneDisplayOptions = displayOptions,
-                                zoneGaugeState = newZoneGaugeState,
-                                pedalBalanceState = newPedalBalanceState,
-                                wPrimeBatteryState = if (isWPrimeBal) newWPrimeBatteryState else fieldToUpdate.wPrimeBatteryState
+                                zoneGaugeState = fieldZoneGaugeState,
+                                pedalBalanceState = fieldPedalBalanceState,
+                                wPrimeBatteryState = if (isWPrimeBal) fieldWPrimeBatteryState else fieldToUpdate.wPrimeBatteryState
                             )
                             hasChanged = true
                         }
@@ -700,10 +710,9 @@ class TrackingViewModel(
 
     private fun calculateZoneGaugeState(
         zoneType: SettingsDataStore.ZoneType?,
-        displayOptions: ZoneDisplayOptions,
         numericValue: Double?
     ): ZoneGaugeState? {
-        if (!displayOptions.showGauge || zoneType == null) return null
+        if (zoneType == null) return null
 
         val cutoffs = zoneCutoffsMap[zoneType] ?: when (zoneType) {
             SettingsDataStore.ZoneType.PWR_BIKE -> listOf(149, 203, 243, 284, 324, 405)

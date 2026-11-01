@@ -2171,4 +2171,9 @@
     <string name="tip_sport_types_subtitle">Soglie di velocità, attrezzatura predefinita e profili di esportazione</string>
     <string name="tip_sport_types_desc">Definisci sport personalizzati (es. bici da corsa, gravel, MTB, trail running). Configura le soglie di rilevamento automatico basate sulla velocità, associa l\'attrezzatura predefinita e personalizza le esportazioni Strava, TCX e GoldenCheetah.</string>
     <string name="tip_sport_types_action">Gestisci tipi di sport</string>
+
+    <!-- Sensor Field Display Elements (ATT-4841, REQ-TRK-046) -->
+    <string name="sensor_field_display_elements_title">Elementi di visualizzazione</string>
+    <string name="sensor_field_show_value">Valore</string>
+    <string name="sensor_field_show_bar">Barra</string>
 </resources>

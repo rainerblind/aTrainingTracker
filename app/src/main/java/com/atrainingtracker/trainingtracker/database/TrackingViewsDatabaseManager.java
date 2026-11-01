@@ -120,6 +120,28 @@ public class TrackingViewsDatabaseManager {
             FilterType filterType,
             double filterConstant
     ) {
+        updateSensorView(
+                sensorFieldId,
+                sensorType,
+                viewSize,
+                sourceDeviceId,
+                filterType,
+                filterConstant,
+                true,
+                TrackingViewsDbHelper.isBarSupportedSensorType(sensorType)
+        );
+    }
+
+    public void updateSensorView(
+            long sensorFieldId,
+            SensorType sensorType,
+            ViewSize viewSize,
+            @Nullable Long sourceDeviceId,
+            FilterType filterType,
+            double filterConstant,
+            boolean showValue,
+            boolean showBar
+    ) {
         ContentValues values = new ContentValues();
         values.put(TrackingViewsDbHelper.SENSOR_TYPE, sensorType.name());
         values.put(TrackingViewsDbHelper.VIEW_SIZE, viewSize.name());
@@ -130,11 +152,29 @@ public class TrackingViewsDatabaseManager {
         }
         values.put(TrackingViewsDbHelper.FILTER_TYPE, filterType.name());
         values.put(TrackingViewsDbHelper.FILTER_CONSTANT, filterConstant);
+        if (hasShowColumns(getDatabase())) {
+            values.put(TrackingViewsDbHelper.SHOW_VALUE, showValue ? 1 : 0);
+            values.put(TrackingViewsDbHelper.SHOW_BAR, showBar ? 1 : 0);
+        }
 
         getDatabase().update(TrackingViewsDbHelper.ROWS_TABLE,
                 values,
                 TrackingViewsDbHelper.ROW_ID + "=?",
                 new String[]{sensorFieldId + ""});
+    }
+
+    private boolean hasShowColumns(SQLiteDatabase db) {
+        try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + TrackingViewsDbHelper.ROWS_TABLE + ")", null)) {
+            if (cursor != null) {
+                int nameIdx = cursor.getColumnIndex("name");
+                while (cursor.moveToNext()) {
+                    if (TrackingViewsDbHelper.SHOW_VALUE.equalsIgnoreCase(cursor.getString(nameIdx))) {
+                        return true;
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+        return false;
     }
 
     public void insertSensorFieldAt(
@@ -146,6 +186,31 @@ public class TrackingViewsDatabaseManager {
             @Nullable Long sourceDeviceId,    // null means none = best
             FilterType filterType,
             double filterConstant) {
+        insertSensorFieldAt(
+                tabViewId,
+                rowNr,
+                colNr,
+                sensorType,
+                viewSize,
+                sourceDeviceId,
+                filterType,
+                filterConstant,
+                true,
+                TrackingViewsDbHelper.isBarSupportedSensorType(sensorType)
+        );
+    }
+
+    public void insertSensorFieldAt(
+            long tabViewId,
+            int rowNr,
+            int colNr,                        // -1 means new row
+            SensorType sensorType,
+            ViewSize viewSize,
+            @Nullable Long sourceDeviceId,    // null means none = best
+            FilterType filterType,
+            double filterConstant,
+            boolean showValue,
+            boolean showBar) {
 
         if (tabViewId <= 0 || rowNr < 1) {
             Log.w(TAG, "Invalid parameters for insertSensorFieldAt: tabViewId=" + tabViewId + ", rowNr=" + rowNr);
@@ -193,6 +258,10 @@ public class TrackingViewsDatabaseManager {
             }
             values.put(TrackingViewsDbHelper.FILTER_TYPE, filterType.name());
             values.put(TrackingViewsDbHelper.FILTER_CONSTANT, filterConstant);
+            if (hasShowColumns(db)) {
+                values.put(TrackingViewsDbHelper.SHOW_VALUE, showValue ? 1 : 0);
+                values.put(TrackingViewsDbHelper.SHOW_BAR, showBar ? 1 : 0);
+            }
 
             db.insertOrThrow(TrackingViewsDbHelper.ROWS_TABLE, null, values);
 
@@ -731,7 +800,7 @@ public class TrackingViewsDatabaseManager {
         // public static final int DB_VERSION = 12; // upgraded to version 12 at 06.10.2026: Adding Live Climbs & Navigation Hints (ATT-2360)
         // public static final int DB_VERSION = 13; // upgraded to version 13 at 13.10.2026: Adding Elevation Profile Scope & Lookahead (ATT-3317)
         // public static final int DB_VERSION = 14; // upgraded to version 14 at 18.10.2026: Adding Section Dividers Table (ATT-4055)
-        public static final int DB_VERSION = 15; // upgraded to version 15 at 19.10.2026: Adding ShowBikeBell column (ATT-4281)
+        public static final int DB_VERSION = 16; // upgraded to version 16 at 01.11.2026: Adding ShowValue and ShowBar columns to LayoutRowsTable (ATT-4841)
         public static final String VIEWS_TABLE = "ViewsTable";                // the table for the different 'tabs'
         public static final String ROWS_TABLE = "LayoutRowsTable";            // the table for the sensor fields within each tab
         public static final String SECTION_DIVIDERS_TABLE = "SectionDividersTable"; // new in version 14 (ATT-4055)
@@ -758,6 +827,8 @@ public class TrackingViewsDatabaseManager {
         public static final String SOURCE_DEVICE_ID = "SourceDeviceId";  // new in version 5
         public static final String FILTER_TYPE = "FilterType";      // new in version 6
         public static final String FILTER_CONSTANT = "FilterConstant";  // new in version 6  // TODO: add and use these
+        public static final String SHOW_VALUE = "ShowValue";      // new in version 16 (ATT-4841)
+        public static final String SHOW_BAR = "ShowBar";          // new in version 16 (ATT-4841)
         // protected static final int SMALL = 20;                 removed in version 8
         // protected static final int MEDIUM = 25;                removed in version 8
         // protected static final int LARGE = 30;                 removed in version 8
@@ -959,6 +1030,20 @@ public class TrackingViewsDatabaseManager {
                 + FILTER_TYPE + " text, "
                 + FILTER_CONSTANT + " real)";
 
+        protected static final String CREATE_LAYOUTS_TABLE_V16 = "create table " + ROWS_TABLE + " ("
+                + ROW_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + VIEW_ID + " int, "
+                + ROW_NR + " int, "
+                + COL_NR + " int, "
+                + SENSOR_TYPE + " text, "
+                + TEXT_SIZE + " int, "
+                + VIEW_SIZE + " text, "
+                + SOURCE_DEVICE_ID + " int, "
+                + FILTER_TYPE + " text, "
+                + FILTER_CONSTANT + " real, "
+                + SHOW_VALUE + " int DEFAULT 1, "
+                + SHOW_BAR + " int DEFAULT 0)";
+
         protected static final String CREATE_SECTION_DIVIDERS_TABLE_V14 = "CREATE TABLE IF NOT EXISTS "
                 + SECTION_DIVIDERS_TABLE + " ("
                 + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -986,11 +1071,11 @@ public class TrackingViewsDatabaseManager {
         @Override
         public void onCreate(@NonNull SQLiteDatabase db) {
             db.execSQL(CREATE_VIEWS_TABLE_V15);
-            db.execSQL(CREATE_LAYOUTS_TABLE_V8);
+            db.execSQL(CREATE_LAYOUTS_TABLE_V16);
             db.execSQL(CREATE_SECTION_DIVIDERS_TABLE_V14);
 
             if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_VIEWS_TABLE_V15);
-            if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_LAYOUTS_TABLE_V8);
+            if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_LAYOUTS_TABLE_V16);
             if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_SECTION_DIVIDERS_TABLE_V14);
 
 
@@ -1165,6 +1250,8 @@ public class TrackingViewsDatabaseManager {
                 DefaultFilterConfig filterConfig = SensorFilterDefaults.getDefaultFilterConfig(rowData.sensorType);
                 values.put(FILTER_TYPE, filterConfig.getFilterType().name());
                 values.put(FILTER_CONSTANT, filterConfig.getFilterConstant());
+                values.put(SHOW_VALUE, 1);
+                values.put(SHOW_BAR, isBarSupportedSensorType(rowData.sensorType) ? 1 : 0);
                 db.insert(ROWS_TABLE, null, values);
             }
 
@@ -1363,6 +1450,57 @@ public class TrackingViewsDatabaseManager {
                     db.endTransaction();
                 }
             }
+
+            if (oldVersion < 16 && (newVersion >= 16 || newVersion == 0)) {
+                Log.i(TAG, "Upgrading database to version 16: Adding ShowValue and ShowBar columns to LayoutRowsTable (ATT-4841)");
+                boolean hasRowsTable = false;
+                try (Cursor cursor = db.rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND name=?", new String[]{ROWS_TABLE})) {
+                    if (cursor != null && cursor.moveToFirst()) {
+                        hasRowsTable = true;
+                    }
+                }
+                if (hasRowsTable) {
+                    db.beginTransaction();
+                    try {
+                        boolean hasShowValue = false;
+                        boolean hasShowBar = false;
+                        try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + ROWS_TABLE + ")", null)) {
+                            if (cursor != null) {
+                                int nameIndex = cursor.getColumnIndex("name");
+                                while (cursor.moveToNext()) {
+                                    String colName = cursor.getString(nameIndex);
+                                    if (SHOW_VALUE.equalsIgnoreCase(colName)) hasShowValue = true;
+                                    if (SHOW_BAR.equalsIgnoreCase(colName)) hasShowBar = true;
+                                }
+                            }
+                        }
+                        if (!hasShowValue) {
+                            addColumn(db, ROWS_TABLE, SHOW_VALUE, "int DEFAULT 1");
+                        }
+                        if (!hasShowBar) {
+                            addColumn(db, ROWS_TABLE, SHOW_BAR, "int DEFAULT 0");
+                        }
+                        // Backfill defaults: ShowValue = 1 across all rows
+                        db.execSQL("UPDATE " + ROWS_TABLE + " SET " + SHOW_VALUE + " = 1 WHERE " + SHOW_VALUE + " IS NULL;");
+                        // ShowBar = 1 for bar-capable sensor types, 0 for others
+                        db.execSQL("UPDATE " + ROWS_TABLE + " SET " + SHOW_BAR + " = 1 WHERE "
+                                + SENSOR_TYPE + " IN ('" + SensorType.HR.name() + "', '" + SensorType.POWER.name() + "', '"
+                                + SensorType.PEDAL_POWER_BALANCE.name() + "', '" + SensorType.W_PRIME_BAL.name() + "');");
+                        db.execSQL("UPDATE " + ROWS_TABLE + " SET " + SHOW_BAR + " = 0 WHERE " + SHOW_BAR + " IS NULL;");
+                        db.setTransactionSuccessful();
+                    } finally {
+                        db.endTransaction();
+                    }
+                }
+            }
+        }
+
+        public static boolean isBarSupportedSensorType(SensorType sensorType) {
+            if (sensorType == null) return false;
+            return sensorType == SensorType.HR ||
+                    sensorType == SensorType.POWER ||
+                    sensorType == SensorType.PEDAL_POWER_BALANCE ||
+                    sensorType == SensorType.W_PRIME_BAL;
         }
 
         /*******************************************************************************************

@@ -2371,4 +2371,9 @@
     <string name="tip_sport_types_subtitle">Speed thresholds, gear defaults &amp; export mappings</string>
     <string name="tip_sport_types_desc">Define custom sports (e.g. Road Bike, Gravel, MTB, Trail Run). Configure speed-based automatic sport detection thresholds, bind default equipment, and customize Strava, TCX, and GoldenCheetah export type mappings.</string>
     <string name="tip_sport_types_action">Manage Sport Types</string>
+
+    <!-- Sensor Field Display Elements (ATT-4841, REQ-TRK-046) -->
+    <string name="sensor_field_display_elements_title">Display Elements</string>
+    <string name="sensor_field_show_value">Value</string>
+    <string name="sensor_field_show_bar">Bar</string>
 </resources>

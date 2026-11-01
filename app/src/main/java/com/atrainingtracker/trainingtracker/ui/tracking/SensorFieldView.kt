@@ -279,31 +279,33 @@ fun SensorFieldView(
                     )
                 }
 
-                // Value and Unit Row, centered
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.Bottom,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = fieldState.value,
-                        style = valueStyle,
-                        color = if (fieldState.zoneColor != Color.Transparent && fieldState.zoneDisplayOptions.showTextColor) {
-                            fieldState.zoneColor
-                        } else {
-                            MaterialTheme.colorScheme.onSurface
-                        }
-                    )
-                    Text(
-                        text = fieldState.units,
-                        style = unitStyle,
-                        modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                // Value and Unit Row, centered (REQ-TRK-046)
+                if (fieldState.showValue) {
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.Bottom,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = fieldState.value,
+                            style = valueStyle,
+                            color = if (fieldState.zoneColor != Color.Transparent && fieldState.zoneDisplayOptions.showTextColor) {
+                                fieldState.zoneColor
+                            } else {
+                                MaterialTheme.colorScheme.onSurface
+                            }
+                        )
+                        Text(
+                            text = fieldState.units,
+                            style = unitStyle,
+                            modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
 
-                // Optional Zone Gauge Bar (REQ-UI-376)
-                if (fieldState.zoneDisplayOptions.showGauge && fieldState.zoneGaugeState != null) {
+                // Optional Zone Gauge Bar (REQ-UI-376, REQ-TRK-046)
+                if (fieldState.showBar && fieldState.zoneGaugeState != null) {
                     Spacer(modifier = Modifier.height(4.dp))
                     ZoneGaugeBar(
                         state = fieldState.zoneGaugeState,
@@ -314,8 +316,8 @@ fun SensorFieldView(
                     )
                 }
 
-                // Optional Pedal Power Balance Bar (REQ-UI-377)
-                if (fieldState.pedalBalanceState != null) {
+                // Optional Pedal Power Balance Bar (REQ-UI-377, REQ-TRK-046)
+                if (fieldState.showBar && fieldState.pedalBalanceState != null) {
                     Spacer(modifier = Modifier.height(4.dp))
                     PedalPowerBalanceBar(
                         state = fieldState.pedalBalanceState,
@@ -325,8 +327,8 @@ fun SensorFieldView(
                     )
                 }
 
-                // Optional W' Anaerobic Battery Gauge Bar (REQ-UI-416)
-                if (fieldState.wPrimeBatteryState != null) {
+                // Optional W' Anaerobic Battery Gauge Bar (REQ-UI-416, REQ-TRK-046)
+                if (fieldState.showBar && fieldState.wPrimeBatteryState != null) {
                     Spacer(modifier = Modifier.height(4.dp))
                     WPrimeBatteryGaugeBar(
                         state = fieldState.wPrimeBatteryState,

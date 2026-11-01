@@ -398,7 +398,106 @@ class EditSensorFieldViewModelTest {
                 newSourceDeviceId = 123L,
                 newSourceDeviceName = "Stages Power",
                 newFilterType = any(),
-                newFilterConstant = any()
+                newFilterConstant = any(),
+                showValue = any(),
+                showBar = any()
+            )
+        }
+    }
+
+    /**
+     * TST-TRK-046.1: Bar-supported sensors (HR, POWER, PEDAL_POWER_BALANCE, W_PRIME_BAL)
+     * default to showValue = true and showBar = true, and enforce mutual exclusion
+     * so athlete cannot deselect both simultaneously (REQ-TRK-046).
+     */
+    @Test
+    fun testDisplayElements_barSupportedSensors_defaultsAndMutualExclusion() = runTest {
+        val viewModel = createViewModel(sensorFieldId = -1L)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.onSensorTypeChanged(SensorType.POWER)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue("POWER must support horizontal bar", state.isBarSupported)
+        assertTrue("POWER must default showValue = true", state.showValue)
+        assertTrue("POWER must default showBar = true", state.showBar)
+
+        // Deselect value -> bar remains active, showValue becomes false
+        viewModel.onShowValueChanged(false)
+        assertFalse("showValue must become false", viewModel.uiState.value.showValue)
+        assertTrue("showBar must remain true", viewModel.uiState.value.showBar)
+
+        // Try to deselect bar while value is inactive -> invariant prevents both false
+        viewModel.onShowBarChanged(false)
+        assertFalse("showValue must remain false", viewModel.uiState.value.showValue)
+        assertTrue("showBar must stay true due to mutual exclusion", viewModel.uiState.value.showBar)
+
+        // Re-enable value
+        viewModel.onShowValueChanged(true)
+        assertTrue("showValue must become true", viewModel.uiState.value.showValue)
+
+        // Deselect bar -> showBar becomes false
+        viewModel.onShowBarChanged(false)
+        assertTrue("showValue must remain true", viewModel.uiState.value.showValue)
+        assertFalse("showBar must become false", viewModel.uiState.value.showBar)
+
+        // Try to deselect value while bar is inactive -> invariant prevents both false
+        viewModel.onShowValueChanged(false)
+        assertTrue("showValue must stay true due to mutual exclusion", viewModel.uiState.value.showValue)
+        assertFalse("showBar must remain false", viewModel.uiState.value.showBar)
+    }
+
+    /**
+     * TST-TRK-046.2: Non-bar sensors (e.g. SPEED_mps) do not support bar and cannot disable value.
+     */
+    @Test
+    fun testDisplayElements_unsupportedSensor_barDisabled() = runTest {
+        val viewModel = createViewModel(sensorFieldId = -1L)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.onSensorTypeChanged(SensorType.SPEED_mps)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse("SPEED_mps must not support bar", state.isBarSupported)
+        assertTrue("SPEED_mps must default showValue = true", state.showValue)
+        assertFalse("SPEED_mps must default showBar = false", state.showBar)
+
+        // Athlete cannot deselect value when bar is unsupported
+        viewModel.onShowValueChanged(false)
+        assertTrue("showValue must remain true for non-bar sensors", viewModel.uiState.value.showValue)
+    }
+
+    /**
+     * TST-TRK-046.3: saveChanges persists showValue and showBar flags into repository.
+     */
+    @Test
+    fun testDisplayElements_saveChanges_persistsFlags() = runTest {
+        val viewModel = createViewModel(sensorFieldId = -1L)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.onSensorTypeChanged(SensorType.HR)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Configure bar-only tile: showValue = false, showBar = true
+        viewModel.onShowValueChanged(false)
+        viewModel.saveChanges()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify {
+            trackingViewsRepo.insertSensorFieldConfig(
+                tabViewId = 1L,
+                rowNr = 0,
+                colNr = 0,
+                newSensorType = SensorType.HR,
+                newViewSize = ViewSize.NORMAL,
+                newSourceDeviceId = null,
+                newSourceDeviceName = null,
+                newFilterType = any(),
+                newFilterConstant = any(),
+                showValue = false,
+                showBar = true
             )
         }
     }

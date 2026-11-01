@@ -2170,4 +2170,9 @@
     <string name="tip_sport_types_subtitle">Seuils de vitesse, équipement par défaut et mappage d\'export</string>
     <string name="tip_sport_types_desc">Définissez des sports personnalisés (vélo de route, gravel, VTT, trail). Configurez des seuils de détection automatique basés sur la vitesse, associez un équipement par défaut et ajustez les correspondances d\'export Strava, TCX et GoldenCheetah.</string>
     <string name="tip_sport_types_action">Gérer les sports</string>
+
+    <!-- Sensor Field Display Elements (ATT-4841, REQ-TRK-046) -->
+    <string name="sensor_field_display_elements_title">Éléments d\'affichage</string>
+    <string name="sensor_field_show_value">Valeur</string>
+    <string name="sensor_field_show_bar">Barre</string>
 </resources>

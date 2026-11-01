@@ -2150,4 +2150,9 @@
     <string name="tip_sport_types_subtitle">速度しきい値、デフォルト装備、エクスポート対応</string>
     <string name="tip_sport_types_desc">ロードバイク、グラベル、MTB、トレイルランなど独自のスポーツ種目を定義できます。速度に基づく自動種目判定のしきい値設定、デフォルト装備の連携、Strava・TCX・GoldenCheetah向けのエクスポート種別設定が可能です。</string>
     <string name="tip_sport_types_action">スポーツ種目を管理</string>
+
+    <!-- Sensor Field Display Elements (ATT-4841, REQ-TRK-046) -->
+    <string name="sensor_field_display_elements_title">表示要素</string>
+    <string name="sensor_field_show_value">値</string>
+    <string name="sensor_field_show_bar">バー</string>
 </resources>

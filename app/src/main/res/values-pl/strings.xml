@@ -2172,4 +2172,9 @@
     <string name="tip_sport_types_subtitle">Progi prędkości, domyślny sprzęt i profile eksportu</string>
     <string name="tip_sport_types_desc">Definiuj własne sporty (np. szosa, gravel, MTB, bieg górski). Skonfiguruj progi prędkości do automatycznego wykrywania sportu, przypisz domyślny sprzęt i dostosuj mapowanie eksportu do Strava, TCX oraz GoldenCheetah.</string>
     <string name="tip_sport_types_action">Zarządzaj dyscyplinami</string>
+
+    <!-- Sensor Field Display Elements (ATT-4841, REQ-TRK-046) -->
+    <string name="sensor_field_display_elements_title">Elementy wyświetlania</string>
+    <string name="sensor_field_show_value">Wartość</string>
+    <string name="sensor_field_show_bar">Pasek</string>
 </resources>
