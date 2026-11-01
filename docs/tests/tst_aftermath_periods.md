@@ -416,3 +416,20 @@
   7. *Targeted Regression Verification (`TST-PER-031.7`)*:
   • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"` to verify 100% clean-room test pass rate.
 
+### TST-PER-032: **Master Sport Filter Heatmap & Region Clustering Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PER-024` (`REQ-PER-024.5`)
+- **Component**: `PeriodsViewModelTest.kt`, `PeriodCardMapStateTest.kt`, `InteractivePeriodMapTest.kt`
+- **Jira**: `ATT-4935`
+- **Test Description**:
+  1. *Symmetric DTO Polyline Sport Filtering Unit Test (`TST-PER-032.1`, `PeriodsViewModelTest.kt`)*:
+  • Verify that `filterPeriodSummary()` filters `workoutIdToAllPolylinesMap` and `workoutIdToPathMap` symmetrically alongside `workoutIdToPolylineMap` according to `selectedSports`, preventing route leaking into card previews.
+  2. *PeriodMapScreen / InteractivePeriodMap Sport-Filtered Track & Heatmap Decoupling Test (`TST-PER-032.2`, `PeriodsViewModelTest.kt` / `InteractivePeriodMapTest.kt`)*:
+  • Verify that `selectPeriodForMap()` filters workouts using `selectedSports.value` prior to spatial clustering and heatmap path map generation, ensuring excluded sports never appear in the map's route collection.
+  3. *Spatial Region Clustering Sport Sensitivity & Workout Count Accuracy Test (`TST-PER-032.3`, `PeriodsViewModelTest.kt`)*:
+  • Verify that region detection (`detectRegions`) and resulting `Hauptregion` / region chips reflect the sport-filtered subset, matching the selected sport's geographic distribution and workout counts.
+  4. *Corridor Frequency Calibration on Sport-Filtered Path Set Test (`TST-PER-032.4`, `PeriodCardMapStateTest.kt`)*:
+  • Verify that `estimateMaxCorridorPassCount` and `PolylineHeatmapTileProvider` intensity normalization (`ATT-4929` / `ATT-4932`) compute strictly on the filtered routes without skew from hidden sports.
+  5. *Clean-Room Targeted Regression Execution (`TST-PER-032.5`)*:
+  • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*" --tests "com.atrainingtracker.trainingtracker.ui.map.*"` to verify 100% test pass rate with zero regressions.
+
+

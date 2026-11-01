@@ -258,8 +258,8 @@ fun PeriodSummaryCard(
                 val mapState by produceState(
                     initialValue = PeriodCardMapState(isReady = false),
                     key1 = summary.sortKey,
-                    key2 = summary.workoutIdToPolylineMap.size,
-                    key3 = summary.polylines.size
+                    key2 = summary.workoutIdToPolylineMap.hashCode(),
+                    key3 = summary.polylines.hashCode()
                 ) {
                     value = prepareCardMapPreview(summary)
                 }
