@@ -167,9 +167,17 @@ class PeriodsViewModel @JvmOverloads constructor(
                 val activeRegionId = initialRegionId ?: primaryRegion?.id
 
                 // Decode polyline paths once for both heatmap and lightweight vector tracks
-                val heatmapPathMap = filteredWorkouts.associate { w ->
+                val rawDecodedPathMap = filteredWorkouts.associate { w ->
                     w.id to if (w.mapPolyline.isNotEmpty()) PolyUtil.decode(w.mapPolyline) else emptyList()
                 }.filterValues { it.isNotEmpty() }
+
+                // Enforce detailed map vertex budget (MAX_DETAILED_MAP_VERTICES = 8_000) (REQ-PER-019.2 / ATT-4930)
+                val baseTolerance = getPeriodSimplificationToleranceMeters(summary.periodType)
+                val heatmapPathMap = simplifyPathMapToBudget(
+                    pathMap = rawDecodedPathMap,
+                    maxVertices = MAX_DETAILED_MAP_VERTICES,
+                    baseTolerance = baseTolerance
+                )
                 
                 val isLargePeriod = filteredWorkouts.size > MAX_PERIOD_VECTOR_TRACKS
 

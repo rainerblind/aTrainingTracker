@@ -454,5 +454,22 @@
   7. *Clean-Room Targeted Regression Execution (`TST-PER-033.7`)*:
   • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*" --tests "com.atrainingtracker.trainingtracker.location.*"` to verify 100% test pass rate with zero regressions.
 
+### TST-PER-034: **Dual Vertex Budget Enforcement & Adaptive Decimation Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PER-019` (`REQ-PER-019.2`), `REQ-PER-024` (`REQ-PER-024.3`)
+- **Component**: `PeriodMapUtilsTest.kt`, `PeriodCardMapStateTest.kt`, `PeriodsViewModelTest.kt`
+- **Jira**: `ATT-4930`
+- **Test Description**:
+  1. *Card Mini-Map Hard Vertex Budget Test (`TST-PER-034.1`, `PeriodMapUtilsTest.kt`)*:
+  • Given a synthetic Year period with 300 workouts (each containing 200 GPS vertices, totaling 60,000 raw coordinates), verify that `simplifyPathsToBudget` or `prepareCardMapPreviewSync` bounds total vertices to $\le 2,000$ points (`MAX_CARD_MINI_MAP_VERTICES`).
+  2. *Detailed Map Hard Vertex Budget Test (`TST-PER-034.2`, `PeriodMapUtilsTest.kt`)*:
+  • Given a synthetic Year period with 300 workouts, verify that detailed map simplification bounds total vertices to $\le 8,000$ points (`MAX_DETAILED_MAP_VERTICES`).
+  3. *Base Tolerance Preservation Under Moderate Volume Test (`TST-PER-034.3`, `PeriodMapUtilsTest.kt`)*:
+  • Given a period where total vertices at base tolerance (5.0m Day/Week, 6.0m Month, 8.0m Year) are below budget, verify that base tolerances are preserved without unnecessary coarsening, maintaining 100% shared-corridor pixel overlap.
+  4. *Adaptive Escalation Convergence Test (`TST-PER-034.4`, `PeriodMapUtilsTest.kt`)*:
+  • Given pathological GPS paths with extreme point density, verify that the adaptive decimation algorithm converges within finite passes and never returns an empty path or throws an exception.
+  5. *Clean-Room Targeted Regression Execution (`TST-PER-034.5`)*:
+  • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"` verifying 100% test pass rate with zero regressions.
+
+
 
 

@@ -61,12 +61,97 @@ data class PeriodCardMapState(
 /**
  * Returns Douglas-Peucker simplification tolerance in meters for the given [PeriodType].
  * Calibrated to <= 5-8m across all levels to preserve shared-corridor additive stacking (REQ-PER-024.3).
+ * Scales tolerance proportionally with period duration to bound aggregate vertices (REQ-PER-019.2 / ATT-4930).
  */
 fun getPeriodSimplificationToleranceMeters(periodType: PeriodType): Double = when (periodType) {
     PeriodType.DAY -> 5.0
     PeriodType.WEEK -> 5.0
     PeriodType.MONTH -> 6.0
     PeriodType.YEAR -> 8.0
+}
+
+/**
+ * Simplifies a map of workout paths to guarantee that the total aggregate vertex count
+ * across all entries does not exceed [maxVertices] (REQ-PER-019.2 / ATT-4930), preserving map keys.
+ *
+ * Starts with [baseTolerance] (typically 5-8m, REQ-PER-024.3) to preserve high-fidelity shared-corridor pixel alignment.
+ * If total vertices across all simplified paths exceed [maxVertices], tolerance is dynamically escalated:
+ *   tau = (baseTolerance * sqrt(totalVertices / maxVertices)).coerceIn(baseTolerance, 80.0)
+ * and paths are re-simplified.
+ */
+fun <K> simplifyPathMapToBudget(
+    pathMap: Map<K, List<LatLng>>,
+    maxVertices: Int,
+    baseTolerance: Double
+): Map<K, List<LatLng>> {
+    if (pathMap.isEmpty() || maxVertices <= 0) return emptyMap()
+
+    // Pass 1: Ensure baseline simplification
+    val pass1 = if (baseTolerance > 0.0) {
+        pathMap.mapValues { PolyUtil.simplify(it.value, baseTolerance) }.filterValues { it.isNotEmpty() }
+    } else {
+        pathMap.filterValues { it.isNotEmpty() }
+    }
+
+    val totalVerticesPass1 = pass1.values.sumOf { it.size }
+    if (totalVerticesPass1 <= maxVertices) {
+        return pass1
+    }
+
+    // Pass 2: Adaptive tolerance escalation based on excess ratio
+    val ratio = totalVerticesPass1.toDouble() / maxVertices
+    val escalatedTolerance = (baseTolerance * Math.sqrt(ratio)).coerceIn(baseTolerance, 80.0)
+
+    val pass2 = pass1.mapValues { PolyUtil.simplify(it.value, escalatedTolerance) }.filterValues { it.isNotEmpty() }
+    val totalVerticesPass2 = pass2.values.sumOf { it.size }
+    if (totalVerticesPass2 <= maxVertices) {
+        return pass2
+    }
+
+    // Pass 3: Maximum tolerance clamp
+    val maxClampedTolerance = 120.0
+    val pass3 = pass2.mapValues { PolyUtil.simplify(it.value, maxClampedTolerance) }.filterValues { it.isNotEmpty() }
+    if (pass3.values.sumOf { it.size } <= maxVertices) {
+        return pass3
+    }
+
+    // Final safety: Subsample points between start and end if still exceeding budget
+    var current = pass3
+    var step = 2
+    while (current.values.sumOf { it.size } > maxVertices && step <= 10) {
+        current = current.mapValues { (_, path) ->
+            if (path.size <= 2) path
+            else {
+                val sampled = ArrayList<LatLng>(path.size / step + 2)
+                sampled.add(path.first())
+                for (i in 1 until path.size - 1) {
+                    if (i % step == 0) sampled.add(path[i])
+                }
+                sampled.add(path.last())
+                sampled
+            }
+        }.filterValues { it.isNotEmpty() }
+        step++
+    }
+    return current
+}
+
+/**
+ * Simplifies a collection of LatLng paths to guarantee that the total aggregate vertex count
+ * does not exceed [maxVertices] (REQ-PER-019.2 / ATT-4930).
+ *
+ * @param paths LatLng paths to simplify.
+ * @param maxVertices Aggregate vertex limit ([MAX_CARD_MINI_MAP_VERTICES] or [MAX_DETAILED_MAP_VERTICES]).
+ * @param baseTolerance Base tolerance in meters.
+ */
+fun simplifyPathsToBudget(
+    paths: List<List<LatLng>>,
+    maxVertices: Int,
+    baseTolerance: Double
+): List<List<LatLng>> {
+    if (paths.isEmpty() || maxVertices <= 0) return emptyList()
+    val indexedMap = paths.indices.associateWith { paths[it] }
+    return simplifyPathMapToBudget(indexedMap, maxVertices, baseTolerance).values.toList()
 }
 
 /**
@@ -180,15 +265,26 @@ fun prepareCardMapPreviewSync(
         return PeriodCardMapState(isReady = true)
     }
 
+    // Enforce hard vertex budget for card mini-maps (REQ-PER-019.2 / ATT-4930)
+    val budgetEnforcedPaths = simplifyPathsToBudget(
+        paths = decodedAndSimplified,
+        maxVertices = MAX_CARD_MINI_MAP_VERTICES,
+        baseTolerance = tolerance
+    )
+
+    if (budgetEnforcedPaths.isEmpty()) {
+        return PeriodCardMapState(isReady = true)
+    }
+
     val pathRegions = if (summary.minLat < 90.0 && summary.maxLat > -90.0) {
         val diagonal = SpatialRegionEngine.distanceBetween(
             LatLng(summary.minLat, summary.minLng),
             LatLng(summary.maxLat, summary.maxLng)
         )
         if (diagonal >= SpatialRegionConfig.SINGLE_REGION_ENVELOPE_METERS) {
-            SpatialRegionEngine.detectRegionsFromPaths(decodedAndSimplified)
+            SpatialRegionEngine.detectRegionsFromPaths(budgetEnforcedPaths)
         } else {
-            val allPoints = decodedAndSimplified.flatten()
+            val allPoints = budgetEnforcedPaths.flatten()
             val bounds = if (allPoints.isNotEmpty()) {
                 SpatialRegionEngine.buildNormalizedBounds(allPoints)
             } else {
@@ -201,17 +297,17 @@ fun prepareCardMapPreviewSync(
                         label = "Region 1",
                         bounds = bounds,
                         center = LatLng((summary.minLat + summary.maxLat) / 2.0, (summary.minLng + summary.maxLng) / 2.0),
-                        workoutCount = decodedAndSimplified.size,
+                        workoutCount = budgetEnforcedPaths.size,
                         totalDistanceMeters = 0.0,
                         mostRecentTimestampS = 0L,
                         isPrimary = true
                     ),
-                    paths = decodedAndSimplified
+                    paths = budgetEnforcedPaths
                 )
             )
         }
     } else {
-        val allPoints = decodedAndSimplified.flatten()
+        val allPoints = budgetEnforcedPaths.flatten()
         val bounds = if (allPoints.isNotEmpty()) SpatialRegionEngine.buildNormalizedBounds(allPoints) else null
         if (bounds != null) {
             listOf(
@@ -221,19 +317,19 @@ fun prepareCardMapPreviewSync(
                         label = "Region 1",
                         bounds = bounds,
                         center = LatLng(0.0, 0.0),
-                        workoutCount = decodedAndSimplified.size,
+                        workoutCount = budgetEnforcedPaths.size,
                         totalDistanceMeters = 0.0,
                         mostRecentTimestampS = 0L,
                         isPrimary = true
                     ),
-                    paths = decodedAndSimplified
+                    paths = budgetEnforcedPaths
                 )
             )
         } else emptyList()
     }
 
     val primaryPathRegion = pathRegions.firstOrNull { it.region.isPrimary } ?: pathRegions.firstOrNull()
-    val activePaths = primaryPathRegion?.paths ?: decodedAndSimplified
+    val activePaths = primaryPathRegion?.paths ?: budgetEnforcedPaths
     val activeBounds = primaryPathRegion?.region?.bounds ?: run {
         val allPoints = activePaths.flatten()
         if (allPoints.isNotEmpty()) SpatialRegionEngine.buildNormalizedBounds(allPoints) else null

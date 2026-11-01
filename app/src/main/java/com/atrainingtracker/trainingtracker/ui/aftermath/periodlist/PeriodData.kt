@@ -58,6 +58,18 @@ data class YearlySportContribution(
 const val MAX_PERIOD_VECTOR_TRACKS = 30
 
 /**
+ * Hard vertex budget for period summary card mini-map previews (REQ-PER-019.2 / ATT-4930).
+ * Bounds aggregate memory consumption and avoids LazyColumn scroll jank across cards.
+ */
+const val MAX_CARD_MINI_MAP_VERTICES = 2_000
+
+/**
+ * Hard vertex budget for detailed interactive period map screens (REQ-PER-019.2 / ATT-4930).
+ * Bounds aggregate memory consumption when viewing high-volume periods (e.g. Year tab).
+ */
+const val MAX_DETAILED_MAP_VERTICES = 8_000
+
+/**
  * Maximum number of workout vector tracks hydrated for summary card thumbnail previews.
  * Balances rich route visualization against memory consumption in LazyColumn.
  * (ATT-1151 / REQ-PER-012)

@@ -293,16 +293,20 @@
 **Invariants**: Zero database schema migrations, non-blocking UI thread, crash prevention on empty lists, and 100% clean-room test pass rate.
  
 ### REQ-PER-019: Full-Period Asynchronous Mini-Map Preview & Background Simplification Pipeline [Verified]
-- **Tests**: `TST-PER-025`
+- **Tests**: `TST-PER-025`, `TST-PER-034`
 - **Implementation**: `PeriodSummaryCard.kt`, `PeriodCardMapState.kt`, `PeriodsRepository.kt`
 - **Rationale**: The system SHALL provide complete route coverage and smooth 60 fps `LazyColumn` scrolling for Day, Week, Month, and Year summary cards by offloading polyline decoding, simplification, and GIS region clustering to background dispatchers (ATT-4477, Parent Epic ATT-4474, refining `REQ-PER-012`):
 1. *Full-Period Route Coverage & Background Offload (`REQ-PER-019.1`)*:
 • Period summary cards SHALL NOT truncate route previews to an 8-track compromise (`MAX_SUMMARY_THUMBNAIL_TRACKS = 8`). All available workout polylines for the period (`summary.workoutIdToPolylineMap` or `summary.polylines`) SHALL be processed into the preview.
 • Polyline decoding (`PolyUtil.decode`), Douglas-Peucker simplification, region detection (`SpatialRegionEngine.detectRegionsFromPaths`), and `PolylineHeatmapTileProvider` creation SHALL execute exclusively on worker threads (`Dispatchers.Default`) via `produceState<PeriodCardMapState>`.
 • The Android main thread SHALL perform zero synchronous polyline decoding or GIS clustering during card composition or `LazyColumn` scrolling.
-2. *Douglas-Peucker Adaptive Decimation & Point Budgeting (`REQ-PER-019.2`)*:
-• The background pipeline SHALL adaptively simplify member workout polylines using Douglas-Peucker decimation (`PolyUtil.simplify`) scaled by period type: `DAY` tolerance = 5.0m, `WEEK` tolerance = 15.0m, `MONTH` tolerance = 35.0m, and `YEAR` tolerance = 75.0m.
-• The simplification pipeline MUST bound total aggregate vertices per card ($\le 2,000$ points) to prevent GPU memory pressure and eliminate UI jank.
+2. *Douglas-Peucker Adaptive Decimation & Dual Vertex Budget Enforcement (`REQ-PER-019.2`)*:
+• The background simplification pipeline SHALL adaptively decimate member workout polylines using Douglas-Peucker simplification (`PolyUtil.simplify`) starting from base tolerances calibrated by period type: `DAY` (5.0m), `WEEK` (5.0m), `MONTH` (6.0m), and `YEAR` (8.0m) (REQ-PER-024.3).
+• The pipeline MUST enforce hard aggregate vertex budgets across member paths:
+  - For period summary card mini-map previews (`PeriodSummaryCard` / `PeriodCardMapState`), total aggregate vertices SHALL NOT exceed `MAX_CARD_MINI_MAP_VERTICES = 2_000` points.
+  - For detailed interactive maps (`PeriodMapScreen` / `InteractivePeriodMap` / `PeriodsViewModel`), total aggregate vertices SHALL NOT exceed `MAX_DETAILED_MAP_VERTICES = 8_000` points.
+• When total vertices at base tolerance exceed the respective budget, the system SHALL adaptively escalate decimation tolerance to strictly bound aggregate points while preserving shared-corridor alignment and road network topology.
+• Synthetic high-volume periods (e.g. 300 workouts in a Year period) MUST stay strictly within the vertex budget without memory exhaustion or UI scrolling jank.
 3. *Background Region Clustering & Viewport Framing (`REQ-PER-019.3`)*:
 • When a period spans multiple distinct geographic regions ($> 75\text{ km}$ geodesic span), `SpatialRegionEngine.detectRegionsFromPaths` SHALL partition the simplified paths on `Dispatchers.Default` and select the primary region for initial camera framing (`bounds`).
 • The multi-region indicator badge (`REQ-PER-013`) SHALL display the count of distinct regions and primary region paths count when `regionCount > 1`.
@@ -322,6 +326,11 @@
 2. *Historical Origin & Commit Trace*: Sprint 2026-41.2 (commit `1c89f50e` / ATT-1151 / `MAX_SUMMARY_THUMBNAIL_TRACKS = 8`), commit `7e2151ec` (ATT-1107, established `MAX_PERIOD_VECTOR_TRACKS = 30`), commit `da70647f` (ATT-4477, added `PeriodCardMapState`), and `ATT-4772`.
 3. *Root Reason for Existing Formulation*: ATT-4477 enabled full-period route ingestion and offloaded polyline decoding to background dispatchers, but `PeriodMultiWorkoutMap` retained unconditional `Polyline` composable drawing underneath `TileOverlay`, causing hundreds of redundant JNI objects on large periods and washing out the translucent heatmap.
 4. *Preservation of Core Invariants*: Memory safety without OOMs, multi-region indicator badge (`REQ-PER-013`), single-region camera framing, `DarkMapAntiFlashOverlay`, `DAY` card vector polyline crispness, and non-blocking 60 fps `LazyColumn` scrolling remain 100% strictly preserved.
+5. *ATT-4930 Refinement (REQ-PER-019.2 Dual Vertex Budget)*:
+• Original Requirement ID & Target: `REQ-PER-019.2` (*Douglas-Peucker Adaptive Decimation & Point Budgeting*). Targets `PeriodMapUtils.kt`, `PeriodData.kt`, `PeriodSummaryCard.kt`, `PeriodsViewModel.kt`.
+• Historical Origin & Commit Trace: Commit `da70647f` (`ATT-4477`, established <= 2,000 pts bound with 15/35/75m tolerances), commit `2bea16b7` (`ATT-4833`, lowered tolerances to 5-8m for corridor alignment, removing the point budget guarantee), and `ATT-4930`.
+• Root Reason for Existing Formulation: ATT-4833 lowered tolerances to 5-8m to ensure repeated passes align on identical pixels for additive heatmap stacking, but omitted an aggregate vertex ceiling, leading to memory pressure on Year cards with 200-500 workouts.
+• Preservation of Core Invariants: Shared-corridor alignment on typical workloads, 60 fps LazyColumn scrolling, thread safety on Dispatchers.Default, and memory safety without OOMs remain 100% preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* a Month or Year period with 30+ workouts,
@@ -339,6 +348,12 @@
 • *Given* `LazyColumn` scrolling through `PeriodSummaryCard` items,
 • *When* cards compose and recycle,
 • *Then* zero `PolyUtil.decode`, `PolyUtil.simplify`, or `SpatialRegionEngine` clustering executions occur on the Android main thread.
+• *Given* a high-volume period (e.g. 300 workouts in a Year period),
+• *When* `prepareCardMapPreviewSync()` computes `PeriodCardMapState`,
+• *Then* the aggregate vertex count across all decoded and simplified paths is $\le 2,000$ points (`MAX_CARD_MINI_MAP_VERTICES`).
+• *Given* a high-volume period loaded in `PeriodsViewModel` / `InteractivePeriodMap`,
+• *When* heatmap paths are prepared,
+• *Then* the aggregate vertex count across all paths is $\le 8,000$ points (`MAX_DETAILED_MAP_VERTICES`).
 
 **Invariants**: Zero database schema mutations, memory safety without OOMs, non-blocking UI thread, and 100% clean-room test pass rate.
 
