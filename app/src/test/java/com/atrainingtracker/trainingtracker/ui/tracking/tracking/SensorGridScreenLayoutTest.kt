@@ -126,7 +126,8 @@ class SensorGridScreenLayoutTest {
         // REQ-UI-358.2 / TST-UI-319.1: Asymmetric weight allocation
         assertTrue(
             "Sensor grid must branch on state.mapState.showMap to assign bounded height vs fill=false weight (TST-UI-319.1)",
-            content.contains("val sensorGridModifier = if (state.mapState.showMap)")
+            // ATT-4856 wraps the branch in parentheses to append .alpha(gridAlpha) (REQ-TRK-045)
+            Regex("""val sensorGridModifier = \(?if \(state\.mapState\.showMap\)""").containsMatchIn(content)
         )
         assertTrue(
             "When map is visible, sensor grid must clamp to max 50% available height with vertical scroll (TST-UI-319.1)",

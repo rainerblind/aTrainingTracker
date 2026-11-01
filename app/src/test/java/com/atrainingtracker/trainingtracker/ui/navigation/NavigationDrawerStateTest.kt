@@ -122,7 +122,7 @@ class NavigationDrawerStateTest {
         assertEquals(R.drawable.ic_equipment_combined, equipmentItem.iconRes)
         assertEquals(R.string.equipment_management_title, equipmentItem.titleRes)
 
-        // Verify Settings ordering: Units, Display, Tracking Layouts, Sport Types, Backup & Restore, Tips & Tricks, Privacy Policy, Advanced Tuning (REQ-UI-422.2, REQ-UI-432)
+        // Verify Settings ordering: Units, Display, Tracking Layouts, Sport Types, Auto-Pause, Backup & Restore, Tips & Tricks, Privacy Policy, Advanced Tuning (REQ-UI-422.2, REQ-UI-432, REQ-SET-080.1 / ATT-4836)
         val settingsIds = settingsGroup.items.map { it.id }
         assertEquals(
             listOf(
@@ -130,6 +130,7 @@ class NavigationDrawerStateTest {
                 R.id.drawer_display_settings,
                 R.id.drawer_tracking_layouts,
                 R.id.drawer_sport_types,
+                R.id.drawer_auto_pause,
                 R.id.drawer_backup_restore,
                 R.id.drawer_tips_guide,
                 R.id.drawer_privacy_policy,
@@ -152,8 +153,9 @@ class NavigationDrawerStateTest {
         assertEquals("Default visible destination items when secondary groups are collapsed must be 9", 9, defaultVisibleCount)
 
         val allItems = groups.flatMap { it.items.map { item -> item.id } }
-        assertEquals("Navigation drawer must contain 23 total items across 5 groups", 23, allItems.size)
-        assertEquals("All 23 navigation items must have distinct IDs", 23, allItems.toSet().size)
+        // 24 items since ATT-4836 added drawer_auto_pause to the Settings group
+        assertEquals("Navigation drawer must contain 24 total items across 5 groups", 24, allItems.size)
+        assertEquals("All 24 navigation items must have distinct IDs", 24, allItems.toSet().size)
         org.junit.Assert.assertFalse(
             "drawer_search_settings must be removed from drawer destinations",
             allItems.contains(R.id.drawer_search_settings)

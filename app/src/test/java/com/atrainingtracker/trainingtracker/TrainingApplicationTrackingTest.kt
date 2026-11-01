@@ -103,6 +103,15 @@ class TrainingApplicationTrackingTest {
         every { mockRepo.currentSpeed } returns mockSpeedFlow
         every { com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.Companion.getInstance(any()) } returns mockRepo
 
+        // startTracking() evaluates "Start in Auto-Paused" (ATT-4840). Without this stub, the real
+        // TuningPreferencesDataStore initializes on Dispatchers.Default with a non-mocked Context
+        // (getFilesDir), and the resulting uncaught coroutine exception leaks into whichever
+        // runTest-based test runs next in the same JVM (e.g. BatterySaverControllerTest).
+        mockkStatic(com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper::class)
+        every {
+            com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getAutoPauseConfig(any())
+        } returns com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseConfig()
+
         intentExtras.clear()
         intentAction = null
         mockkConstructor(Intent::class)

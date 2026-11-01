@@ -542,6 +542,10 @@ class TrackingViewsDatabaseManagerTest {
         val mockCursor = mockk<Cursor>(relaxed = true)
         every { mockDb.rawQuery(match { it.contains("PRAGMA table_info") }, any()) } returns mockCursor
         every { mockCursor.moveToNext() } returns false
+        // The v16 upgrade first checks that LayoutRowsTable exists via sqlite_master (ATT-4841)
+        val tableExistsCursor = mockk<Cursor>(relaxed = true)
+        every { mockDb.rawQuery(match { it.contains("sqlite_master") }, any()) } returns tableExistsCursor
+        every { tableExistsCursor.moveToFirst() } returns true
 
         dbHelper.onUpgrade(mockDb, 15, 16)
 
