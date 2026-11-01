@@ -1214,3 +1214,25 @@
   4. *9-Language Localization Parity (`TST-TRK-044.4`)*:
   • Test in `TranslationParityTest` verifying `tuning_auto_pause_start_in_auto_pause_title` and `tuning_auto_pause_start_in_auto_pause_desc` exist in all 9 supported locales.
 
+
+### TST-TRK-045: **Non-Recording Status Resolution, UI Banner, and Grid Dimming Test Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-045`
+- **Component**: `SensorGridStatusTest.kt`, `SensorGridScreen.kt`, `TranslationParityTest.kt`, `ThemeColorCentralizationAuditTest.kt`
+- **Jira**: `ATT-4856`
+- **Test Description**:
+  1. *Status Resolution Logic (`TST-TRK-045.1`)*:
+  • Unit test in `SensorGridStatusTest` verifying `resolveCockpitStatus`:
+    - Returns `CockpitStatus.NOT_STARTED` when `screenMode == ScreenMode.TRACKING` and `trackingMode == TrackingMode.READY`.
+    - Returns `CockpitStatus.PAUSED` when `screenMode == ScreenMode.TRACKING` and `trackingMode == TrackingMode.PAUSED` with `isAutoPaused == false`.
+    - Returns `CockpitStatus.AUTO_PAUSED` when `screenMode == ScreenMode.TRACKING` and `trackingMode == TrackingMode.PAUSED` with `isAutoPaused == true`.
+    - Returns `null` when `trackingMode == TrackingMode.TRACKING` or `screenMode != ScreenMode.TRACKING`.
+  2. *Sensor Grid Dimming Alpha Resolution (`TST-TRK-045.2`)*:
+  • Unit test in `SensorGridStatusTest` verifying `resolveGridAlpha`:
+    - Returns `0.6f` when `screenMode == ScreenMode.TRACKING` and `trackingMode != TrackingMode.TRACKING` (`READY`, `PAUSED`).
+    - Returns `1.0f` when `screenMode == ScreenMode.TRACKING` and `trackingMode == TrackingMode.TRACKING`.
+    - Returns `1.0f` when `screenMode == ScreenMode.CONFIGURATION` or `ScreenMode.PREVIEW` regardless of `trackingMode`.
+  3. *9-Language Localization Parity (`TST-TRK-045.3`)*:
+  • Test in `TranslationParityTest` verifying `cockpit_status_not_started` and `cockpit_status_paused` exist in all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+  4. *Theme Token Centralization Audit (`TST-TRK-045.4`)*:
+  • Verification via `ThemeColorCentralizationAuditTest` ensuring `SensorGridScreen.kt` uses centralized tokens (`DarkWarningContainer`, `LightWarningContainer`, etc.) without hardcoded colors.
+

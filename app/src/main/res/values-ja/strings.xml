@@ -1906,6 +1906,8 @@
     <string name="tuning_seconds_value_format">%1$d s</string>
     <string name="cockpit_auto_pause_badge">オートポーズ</string>
     <string name="cockpit_auto_pause_resume">今すぐ再開</string>
+    <string name="cockpit_status_not_started">未開始</string>
+    <string name="cockpit_status_paused">一時停止中</string>
     <string name="cockpit_speed_sensor_lost">スピードセンサー喪失</string>
 
     <!-- Athlete Baselines & W/kg Metric (ATT-1289, REQ-TRK-019) -->

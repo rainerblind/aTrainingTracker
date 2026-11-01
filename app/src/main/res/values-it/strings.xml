@@ -1927,6 +1927,8 @@
     <string name="tuning_seconds_value_format">%1$d s</string>
     <string name="cockpit_auto_pause_badge">Pausa automatica</string>
     <string name="cockpit_auto_pause_resume">Riprendi ora</string>
+    <string name="cockpit_status_not_started">Non avviato</string>
+    <string name="cockpit_status_paused">In pausa</string>
     <string name="cockpit_speed_sensor_lost">Sensore di velocità perso</string>
 
     <!-- Athlete Baselines & W/kg Metric (ATT-1289, REQ-TRK-019) -->

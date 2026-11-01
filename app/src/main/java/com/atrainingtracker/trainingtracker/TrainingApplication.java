@@ -1679,11 +1679,26 @@ public class TrainingApplication extends Application {
 
             AutoPauseConfig autoPauseConfig = SettingsDataStoreJavaHelper.getAutoPauseConfig(this);
             BANALServiceRepository banalRepo = BANALServiceRepository.Companion.getInstance(this);
-            BSportType sportType = banalRepo.getBSportType().getValue();
-            if (sportType == null) {
-                sportType = BSportType.UNKNOWN;
+            BSportType sportType = BSportType.UNKNOWN;
+            Double speedMps = null;
+            if (banalRepo != null) {
+                try {
+                    Object sportVal = banalRepo.getBSportType() != null ? banalRepo.getBSportType().getValue() : null;
+                    if (sportVal instanceof BSportType) {
+                        sportType = (BSportType) sportVal;
+                    }
+                } catch (Exception e) {
+                    Log.w(TAG, "Could not resolve initial sport type: " + e.getMessage());
+                }
+                try {
+                    Object speedVal = banalRepo.getCurrentSpeed() != null ? banalRepo.getCurrentSpeed().getValue() : null;
+                    if (speedVal instanceof Number) {
+                        speedMps = ((Number) speedVal).doubleValue();
+                    }
+                } catch (Exception e) {
+                    Log.w(TAG, "Could not resolve initial speed: " + e.getMessage());
+                }
             }
-            Double speedMps = banalRepo.getCurrentSpeed().getValue();
 
             if (AutoPauseManager.shouldStartInAutoPause(autoPauseConfig, sportType, speedMps)) {
                 pauseTracking(true);

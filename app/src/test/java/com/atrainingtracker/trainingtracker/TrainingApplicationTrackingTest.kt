@@ -24,8 +24,10 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.util.Log
 import androidx.core.content.ContextCompat
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.tracker.TrackerService
 import io.mockk.*
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -95,6 +97,10 @@ class TrainingApplicationTrackingTest {
 
         mockkObject(com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.Companion)
         val mockRepo = mockk<com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository>(relaxed = true)
+        val mockSportFlow = MutableStateFlow(BSportType.UNKNOWN)
+        val mockSpeedFlow = MutableStateFlow<Double?>(null)
+        every { mockRepo.bSportType } returns mockSportFlow
+        every { mockRepo.currentSpeed } returns mockSpeedFlow
         every { com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.Companion.getInstance(any()) } returns mockRepo
 
         intentExtras.clear()
