@@ -92,6 +92,7 @@ public class DeviceManager {
     protected volatile BatteryDevice mBatteryDevice;
     protected volatile SpeedAndLocationDevice mSpeedAndLocationDevice_GPS, mSpeedAndLocationDevice_GoogleFused, mSpeedAndLocationDevice_Network;
     protected volatile AltitudeFromPressureDevice mAltitudeFromPressureDevice;
+    protected volatile AltitudeFromPositionDevice mAltitudeFromPositionDevice;
     protected volatile VerticalSpeedAndSlopeDevice mVerticalSpeedAndSlopeDevice;
     protected volatile CyclingPowerMetricsDevice mCyclingPowerMetricsDevice;
     protected boolean mHavePressureSensor = false;
@@ -338,6 +339,16 @@ public class DeviceManager {
         long altitudePressureId = mDevicesDatabaseManager.getSmartphoneDeviceId(DeviceType.ALTITUDE_FROM_PRESSURE);
         if (mHavePressureSensor && mDevicesDatabaseManager.isPaired(altitudePressureId)) {
             mAltitudeFromPressureDevice = new AltitudeFromPressureDevice(mContext, mSensorManager);
+        }
+
+        mDevicesDatabaseManager.ensureSmartphoneDeviceExists(
+                DeviceType.ALTITUDE_FROM_POSITION,
+                mContext.getString(R.string.devices_altitude_from_position),
+                false
+        );
+        long altitudePositionId = mDevicesDatabaseManager.getSmartphoneDeviceId(DeviceType.ALTITUDE_FROM_POSITION);
+        if (mDevicesDatabaseManager.isPaired(altitudePositionId)) {
+            mAltitudeFromPositionDevice = new AltitudeFromPositionDevice(mContext, mSensorManager);
         }
 
         // create the location devices when they are paired.
@@ -587,6 +598,17 @@ public class DeviceManager {
             return;
         }
 
+        long altitudePositionId = devicesDatabaseManager.getSmartphoneDeviceId(DeviceType.ALTITUDE_FROM_POSITION);
+        if (deviceId == altitudePositionId) {
+            if (paired && mAltitudeFromPositionDevice == null) {
+                mAltitudeFromPositionDevice = new AltitudeFromPositionDevice(mContext, mSensorManager);
+            } else if (!paired && mAltitudeFromPositionDevice != null) {
+                mAltitudeFromPositionDevice.shutDown();
+                mAltitudeFromPositionDevice = null;
+            }
+            return;
+        }
+
 
         if (mMyRemoteDevices.containsKey(deviceId)) {
             if (paired) {  // mMyRemoteDevices should contain only paired devices, so this should never ever happen!
@@ -776,8 +798,20 @@ public class DeviceManager {
         if (altDevice != null) {
             result.add(altDevice);
         }
+        AltitudeFromPositionDevice altPosDevice = mAltitudeFromPositionDevice;
+        if (altPosDevice != null) {
+            result.add(altPosDevice);
+        }
 
         return result;
+    }
+
+    public AltitudeFromPositionDevice getAltitudeFromPositionDevice() {
+        return mAltitudeFromPositionDevice;
+    }
+
+    public AltitudeFromPressureDevice getAltitudeFromPressureDevice() {
+        return mAltitudeFromPressureDevice;
     }
 
     public boolean calibrateAltimeter(double referenceAltitude) {
@@ -849,6 +883,10 @@ public class DeviceManager {
         AltitudeFromPressureDevice altDevice = mAltitudeFromPressureDevice;
         if (altDevice != null) {
             myDeviceList.add(altDevice);
+        }
+        AltitudeFromPositionDevice altPosDevice = mAltitudeFromPositionDevice;
+        if (altPosDevice != null) {
+            myDeviceList.add(altPosDevice);
         }
         VerticalSpeedAndSlopeDevice vSpeedDevice = mVerticalSpeedAndSlopeDevice;
         if (vSpeedDevice != null) {

@@ -2175,4 +2175,10 @@
     <string name="altitude_calibration_save_location">登録地点として保存</string>
     <string name="altitude_calibration_action">校正</string>
     <string name="altitude_calibrated_success">高度を%1$sに校正しました</string>
+
+    <!-- Altitude From Position DEM (ATT-4859, REQ-SEN-025) -->
+    <string name="device_type_altitude_from_position">位置情報からの高度 (DEM)</string>
+    <string name="device_type_short_altitude_from_position">高度 (DEM)</string>
+    <string name="devices_altitude_from_position">地形標高 (DEM)</string>
+    <string name="devices_altitude_from_position_description">GPS位置、キャッシュされたルート、オンラインDEMデータから算出される標高。</string>
 </resources>

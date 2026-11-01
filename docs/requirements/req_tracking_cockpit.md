@@ -2280,3 +2280,44 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 **Invariants**: $C^0$ continuity (zero vertical step discontinuities), Rule 36 unit parity, single-thread SQLite transaction execution, and 100% clean-room test pass rate.
 
 
+### REQ-SEN-025: Pairable Position-Based Elevation Sensor & Dedicated Spatial DEM Cache [Verified]
+- **Tests**: `TST-SEN-025` | **Tickets**: `ATT-4859`
+- **Implementation**: `AltitudeFromPositionDevice.java`, `DeviceType.java`, `ElevationCacheDatabaseManager.kt`, `DeviceManager.java`, `DevicesDatabaseManager.java`, `SensorSourceDialog.kt`, `MySensorManager.java`, `DatabaseSchemaRegistry.kt`
+- **Rationale**: Currently, `SensorType.ALTITUDE` is supplied either by internal barometric pressure (`AltitudeFromPressureDevice`) or raw GNSS altitude ($\pm 20\text{--}50\text{ m}$ vertical GPS multipath noise). Introducing a pairable `AltitudeFromPositionDevice` (`DeviceType.ALTITUDE_FROM_POSITION`, `Protocol.SMARTPHONE`) backed by a dedicated spatial cache (`ElevationCache.db`) provides continuous topographic/DEM altitude based on GPS coordinates, seeded from route elevations (`Routes.db`) and Open-Meteo DEM queries (`ElevationService`), strictly separated from *Lieblingsorte* (`KnownLocations.db`) (ATT-4859, Parent Epic ATT-166):
+1. *Device Registration & Smartphone Pairing Lifecycle (`REQ-SEN-025.1`)*:
+• The system SHALL register `DeviceType.ALTITUDE_FROM_POSITION` under `Protocol.SMARTPHONE` with main sensor type `SensorType.ALTITUDE`.
+• The system SHALL manage pairing via `DevicesDatabaseManager` and instantiate/destroy `AltitudeFromPositionDevice` dynamically in `DeviceManager` based on pairing state.
+• The system SHALL support selecting `ALTITUDE_FROM_POSITION` in `SensorSourceDialog` for `SensorType.ALTITUDE`.
+2. *Dedicated Spatial Elevation Cache Database (`REQ-SEN-025.2`)*:
+• The system SHALL persist elevation points in a dedicated SQLite database `ElevationCache.db` managed by `ElevationCacheDatabaseManager` (`DB_VERSION = 1`), registered with `DatabaseSchemaRegistry` per Rule 62.
+• Table `elevation_cache` SHALL store quantized coordinates `(lat_e5 INT, lon_e5 INT, altitude REAL, source TEXT, updated_at INT)` with unique compound index on `(lat_e5, lon_e5)` for $O(\log N)$ spatial queries.
+• Queries SHALL support nearest-neighbor matching within spatial tolerance ($\approx 20\text{ m}$, $\Delta\text{E5} \le 2$).
+3. *Background Route Seeding & Asynchronous Internet DEM Caching (`REQ-SEN-025.3`)*:
+• The system SHALL asynchronously seed `ElevationCache.db` with valid trackpoint elevations from stored routes (`Routes.db`) without network overhead.
+• When a location fix misses the local cache, `AltitudeFromPositionDevice` SHALL asynchronously query `ElevationService.getInstance().fetchElevation(lat, lon)` (Open-Meteo DEM), cache the result in `ElevationCache.db`, and emit the resolved altitude to `mAltitudeSensor`.
+4. *Strict Decoupling from Known Locations (*Lieblingsorte*) (`REQ-SEN-025.4`)*:
+• Background position tracking and DEM queries SHALL NEVER insert, alter, or reconcile entries in `KnownLocations.db` (`KnownLocationsDatabaseManager`), preserving athlete favorite landmarks and manual calibrations.
+5. *9-Language Localization Parity (`REQ-SEN-025.5`)*:
+• All `ALTITUDE_FROM_POSITION` device strings (`device_type_altitude_from_position`, `device_type_short_altitude_from_position`, `devices_altitude_from_position`, `devices_altitude_from_position_description`) SHALL maintain 100% translation parity across all 9 supported locales.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-SEN-025`, extending `REQ-DAT-014` (Open-Meteo DEM Integration) and `REQ-UI-199` (Altimeter Calibration Dispatch). Targets `AltitudeFromPositionDevice.java`, `DeviceType.java`, `ElevationCacheDatabaseManager.kt`, `DeviceManager.java`, and `DevicesDatabaseManager.java`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-44.2 (`ATT-4859`). Builds upon `ATT-1366` (DEM resolution) and `ATT-166` (sensor fusion epic).
+3. *Root Reason for Existing Formulation*: Prior implementations only queried DEM for workout start points and wrote directly to `KnownLocations.db`, leaving in-ride position-based altitude unavailable without barometer hardware.
+4. *Preservation of Core Invariants*: Preservation of `KnownLocations.db` geofence integrity, non-blocking background I/O on `Dispatchers.IO`, and Rule 62 schema registry conformance.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the Smartphone devices list in Settings/Devices,
+• *When* the user pairs `AltitudeFromPositionDevice`,
+• *Then* `AltitudeFromPositionDevice` initializes and emits continuous topographic elevation derived from `ElevationCache.db` or `ElevationService`.
+• *Given* stored routes with elevation points in `Routes.db`,
+• *When* the cache indexer executes,
+• *Then* route trackpoints are indexed into `ElevationCache.db` and queryable offline without network calls.
+• *Given* continuous position tracking across a novel workout route,
+• *When* `ElevationCache.db` is queried and updated,
+• *Then* zero records are inserted into or modified within `KnownLocations.db`.
+
+**Invariants**: Zero mutation of `KnownLocations.db`, non-blocking I/O (`Dispatchers.IO`), Rule 62 schema registry integration, and 100% clean-room test pass rate.
+
+
+

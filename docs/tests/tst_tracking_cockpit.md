@@ -1289,4 +1289,32 @@
   • Verification in `TranslationParityTest` for `altitude_calibration_title`, `altitude_calibration_reference_label`, `altitude_calibration_location_name`, `altitude_calibration_save_location`, `altitude_calibration_action`, and `altitude_calibrated_success` across all 9 locales.
 
 
+### TST-SEN-025: **Position-Based Elevation Sensor & Dedicated Spatial DEM Cache Test Suite** [Verified]
+- **Requirement(s)**: `REQ-SEN-025`
+- **Component**: `ElevationCacheDatabaseManagerTest.kt`, `AltitudeFromPositionDeviceTest.kt`, `DeviceTypeTest.kt`, `SensorSourceDialogPriorityTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-4859`
+- **Test Description**:
+  1. *Spatial Elevation Cache CRUD & Nearest-Neighbor Interpolation (`TST-SEN-025.1`)*:
+  • Unit test in `ElevationCacheDatabaseManagerTest` verifying:
+    - Inserting quantized coordinates `(latE5, lonE5, altitude, source)` persists rows to `elevation_cache`.
+    - Querying exact quantized coordinates returns cached elevation.
+    - Querying coordinates within spatial tolerance ($\Delta\text{E5} \le 2$) resolves nearest neighbor.
+    - Querying distant coordinates (> tolerance) returns null (cache miss).
+  2. *Background Route Elevation Seeding (`TST-SEN-025.2`)*:
+  • Unit test in `ElevationCacheDatabaseManagerTest` verifying:
+    - Seeding from mock `RoutesDatabaseManager` inserts all non-null trackpoint altitudes into `ElevationCache.db`.
+    - Duplicate trackpoints are deduplicated or updated gracefully without constraint violations.
+  3. *Device Lifecycle, Pairing Toggle & Unfiltered Altitude Emission (`TST-SEN-025.3`)*:
+  • Unit test in `AltitudeFromPositionDeviceTest` and `DeviceManagerTest` verifying:
+    - `AltitudeFromPositionDevice` initializes with `DeviceType.ALTITUDE_FROM_POSITION` under `Protocol.SMARTPHONE`.
+    - Pairing toggle in `DevicesDatabaseManager` dynamically starts and shuts down the device.
+    - Incoming `(latitude, longitude)` updates resolve altitude from cache/mock DEM and publish to `mAltitudeSensor`.
+  4. *Zero Contamination of Known Locations (*Lieblingsorte*) (`TST-SEN-025.4`)*:
+  • Architectural isolation test verifying:
+    - Continuous position tracking and cache insertion in `ElevationCache.db` execute with zero calls or writes to `KnownLocationsDatabaseManager`.
+  5. *9-Language Localization Parity (`TST-SEN-025.5`)*:
+  • Verification in `TranslationParityTest` for `device_type_altitude_from_position`, `device_type_short_altitude_from_position`, `devices_altitude_from_position`, and `devices_altitude_from_position_description` across all 9 locales.
+
+
+
 

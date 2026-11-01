@@ -90,7 +90,10 @@ class DeviceManagerTeardownTest {
 
     @After
     fun tearDown() {
-        unmockkAll()
+        try {
+            unmockkAll()
+        } catch (_: Throwable) {
+        }
     }
 
     /**

@@ -859,6 +859,14 @@ public class DevicesDatabaseManager {
         return getSmartphoneDeviceId(DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED);
     }
 
+    public long getAltitudeFromPositionDeviceId() {
+        return getSmartphoneDeviceId(DeviceType.ALTITUDE_FROM_POSITION);
+    }
+
+    public long getAltitudeFromPressureDeviceId() {
+        return getSmartphoneDeviceId(DeviceType.ALTITUDE_FROM_PRESSURE);
+    }
+
     public long getSmartphoneDeviceId(DeviceType deviceType) {
         try (Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
                 new String[]{DevicesDbHelper.C_ID},
@@ -879,12 +887,16 @@ public class DevicesDatabaseManager {
      * Surgically inserts the record if missing, without duplicates.
      */
     public void ensureSmartphoneDeviceExists(DeviceType type, String name) {
+        ensureSmartphoneDeviceExists(type, name, true);
+    }
+
+    public void ensureSmartphoneDeviceExists(DeviceType type, String name, boolean defaultPaired) {
         if (getSmartphoneDeviceId(type) != -1L) return;
 
         ContentValues contentValues = new ContentValues();
         contentValues.put(DevicesDbHelper.PROTOCOL, Protocol.SMARTPHONE.name());
         contentValues.put(DevicesDbHelper.DEVICE_TYPE, type.name());
-        contentValues.put(DevicesDbHelper.PAIRED, 1); // Default to paired
+        contentValues.put(DevicesDbHelper.PAIRED, defaultPaired ? 1 : 0);
         contentValues.put(DevicesDbHelper.NAME, name);
         contentValues.put(DevicesDbHelper.MANUFACTURER_NAME, android.os.Build.BRAND);
         getDatabase().insert(DevicesDbHelper.DEVICES, null, contentValues);
@@ -1231,6 +1243,14 @@ public class DevicesDatabaseManager {
             contentValues.put(DEVICE_TYPE, DeviceType.SPEED_AND_LOCATION_NETWORK.name());
             contentValues.put(PAIRED, false);
             contentValues.put(NAME, mContext.getString(R.string.devices_location_Network));
+            contentValues.put(MANUFACTURER_NAME, Build.BRAND);
+            db.insert(DEVICES, null, contentValues);
+
+            contentValues = new ContentValues();
+            contentValues.put(PROTOCOL, Protocol.SMARTPHONE.name());
+            contentValues.put(DEVICE_TYPE, DeviceType.ALTITUDE_FROM_POSITION.name());
+            contentValues.put(PAIRED, false);
+            contentValues.put(NAME, mContext.getString(R.string.devices_altitude_from_position));
             contentValues.put(MANUFACTURER_NAME, Build.BRAND);
             db.insert(DEVICES, null, contentValues);
 

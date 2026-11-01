@@ -43,6 +43,8 @@ object DatabaseSchemaRegistry {
         "AthleteMetrics.db" to com.atrainingtracker.trainingtracker.database.AthleteMetricsDbHelper.DB_VERSION,
         "ActiveDevices.db" to 1,
         "ExportStatus.db" to 1,
+        com.atrainingtracker.trainingtracker.database.ElevationCacheDbHelper.DB_NAME to
+                com.atrainingtracker.trainingtracker.database.ElevationCacheDbHelper.DB_VERSION,
         com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodSummariesDatabaseManager.DATABASE_NAME to
                 com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodSummariesDatabaseManager.DB_VERSION
     )

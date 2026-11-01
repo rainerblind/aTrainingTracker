@@ -237,6 +237,53 @@ class MySensorManagerPriorityTest {
     }
 
     /**
+     * `TST-SEN-025.1`: Verifies that [SensorType.ALTITUDE] dynamic priority correctly switches across
+     * Pressure > Position > GPS > Google Fused > Network.
+     */
+    @Test
+    fun altitudePriority_upgradesAndFallsBackAcrossPressurePositionAndGps() {
+        val netDevice = mockDevice(DeviceType.SPEED_AND_LOCATION_NETWORK)
+        val fusedDevice = mockDevice(DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED)
+        val gpsDevice = mockDevice(DeviceType.SPEED_AND_LOCATION_GPS)
+        val posDevice = mockDevice(DeviceType.ALTITUDE_FROM_POSITION)
+        val pressureDevice = mockDevice(DeviceType.ALTITUDE_FROM_PRESSURE)
+
+        val netAlt = MySensor<Double>(netDevice, SensorType.ALTITUDE).apply { newValue(300.0) }
+        val fusedAlt = MySensor<Double>(fusedDevice, SensorType.ALTITUDE).apply { newValue(310.0) }
+        val gpsAlt = MySensor<Double>(gpsDevice, SensorType.ALTITUDE).apply { newValue(320.0) }
+        val posAlt = MySensor<Double>(posDevice, SensorType.ALTITUDE).apply { newValue(330.0) }
+        val pressureAlt = MySensor<Double>(pressureDevice, SensorType.ALTITUDE).apply { newValue(340.0) }
+
+        // 1. Network registered
+        sensorManager.registerSensor(netAlt)
+        assertSame(netAlt, sensorManager.getBestSensor(SensorType.ALTITUDE))
+
+        // 2. Google Fused registered -> upgrades
+        sensorManager.registerSensor(fusedAlt)
+        assertSame(fusedAlt, sensorManager.getBestSensor(SensorType.ALTITUDE))
+
+        // 3. GPS registered -> upgrades
+        sensorManager.registerSensor(gpsAlt)
+        assertSame(gpsAlt, sensorManager.getBestSensor(SensorType.ALTITUDE))
+
+        // 4. Altitude From Position registered -> upgrades over GPS
+        sensorManager.registerSensor(posAlt)
+        assertSame(posAlt, sensorManager.getBestSensor(SensorType.ALTITUDE))
+
+        // 5. Altitude From Pressure registered -> upgrades over Position
+        sensorManager.registerSensor(pressureAlt)
+        assertSame(pressureAlt, sensorManager.getBestSensor(SensorType.ALTITUDE))
+
+        // 6. Unregister Pressure -> falls back to Position
+        sensorManager.unregisterSensor(pressureAlt)
+        assertSame(posAlt, sensorManager.getBestSensor(SensorType.ALTITUDE))
+
+        // 7. Unregister Position -> falls back to GPS
+        sensorManager.unregisterSensor(posAlt)
+        assertSame(gpsAlt, sensorManager.getBestSensor(SensorType.ALTITUDE))
+    }
+
+    /**
      * `TST-TRK-016.3`: Verifies that [MySensorManager.getPriorityRank] returns canonical 0-based priority
      * indices across all sensor types (location, speed, altitude, cadence), handles unmapped device types
      * with fallback rank (1000 + ordinal), and returns [Integer.MAX_VALUE] for null device types.
@@ -276,11 +323,12 @@ class MySensorManagerPriorityTest {
             assertEquals(6, MySensorManager.getPriorityRank(sensor, DeviceType.SPEED_AND_LOCATION_NETWORK))
         }
 
-        // Altitude: ALTITUDE_FROM_PRESSURE (0) -> GPS (1) -> GOOGLE_FUSED (2) -> NETWORK (3)
+        // Altitude: ALTITUDE_FROM_PRESSURE (0) -> ALTITUDE_FROM_POSITION (1) -> GPS (2) -> GOOGLE_FUSED (3) -> NETWORK (4)
         assertEquals(0, MySensorManager.getPriorityRank(SensorType.ALTITUDE, DeviceType.ALTITUDE_FROM_PRESSURE))
-        assertEquals(1, MySensorManager.getPriorityRank(SensorType.ALTITUDE, DeviceType.SPEED_AND_LOCATION_GPS))
-        assertEquals(2, MySensorManager.getPriorityRank(SensorType.ALTITUDE, DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED))
-        assertEquals(3, MySensorManager.getPriorityRank(SensorType.ALTITUDE, DeviceType.SPEED_AND_LOCATION_NETWORK))
+        assertEquals(1, MySensorManager.getPriorityRank(SensorType.ALTITUDE, DeviceType.ALTITUDE_FROM_POSITION))
+        assertEquals(2, MySensorManager.getPriorityRank(SensorType.ALTITUDE, DeviceType.SPEED_AND_LOCATION_GPS))
+        assertEquals(3, MySensorManager.getPriorityRank(SensorType.ALTITUDE, DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED))
+        assertEquals(4, MySensorManager.getPriorityRank(SensorType.ALTITUDE, DeviceType.SPEED_AND_LOCATION_NETWORK))
 
         // Cadence: RUN_SPEED (0) -> BIKE_CADENCE (1) -> BIKE_SPEED_AND_CADENCE (2) -> BIKE_POWER (3)
         // Note: CADENCE_PRIORITY in MySensorManager starts with RUN_SPEED (Gate 3 advisory).

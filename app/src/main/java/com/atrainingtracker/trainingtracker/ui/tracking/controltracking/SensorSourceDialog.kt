@@ -309,7 +309,8 @@ fun SensorSourceDialog(
                         it == DeviceType.CLOCK || 
                         it == DeviceType.VERTICAL_SPEED_AND_SLOPE || 
                         it.name.startsWith("SPEED_AND_LOCATION") || 
-                        it == DeviceType.ALTITUDE_FROM_PRESSURE 
+                        it == DeviceType.ALTITUDE_FROM_PRESSURE || 
+                        it == DeviceType.ALTITUDE_FROM_POSITION 
                     }
                 }
                 if (isInternalPossible) {

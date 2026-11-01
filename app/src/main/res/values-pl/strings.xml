@@ -2197,4 +2197,10 @@
     <string name="altitude_calibration_save_location">Zapisz jako ulubione miejsce</string>
     <string name="altitude_calibration_action">Kalibruj</string>
     <string name="altitude_calibrated_success">Skalibrowano wysokość do %1$s</string>
+
+    <!-- Altitude From Position DEM (ATT-4859, REQ-SEN-025) -->
+    <string name="device_type_altitude_from_position">wysokość z pozycji (DEM)</string>
+    <string name="device_type_short_altitude_from_position">wys. (DEM)</string>
+    <string name="devices_altitude_from_position">Wysokość topograficzna (DEM)</string>
+    <string name="devices_altitude_from_position_description">Ciągła wysokość wyznaczana z pozycji GPS, tras w pamięci podręcznej i danych DEM online.</string>
 </resources>

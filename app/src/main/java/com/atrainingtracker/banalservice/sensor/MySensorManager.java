@@ -66,6 +66,7 @@ public class MySensorManager extends MyDevice {
     protected static final DeviceType[] ALTITUDE_PRIORITY
             = new DeviceType[]{
             DeviceType.ALTITUDE_FROM_PRESSURE,
+            DeviceType.ALTITUDE_FROM_POSITION,
             DeviceType.SPEED_AND_LOCATION_GPS,
             DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED,
             DeviceType.SPEED_AND_LOCATION_NETWORK

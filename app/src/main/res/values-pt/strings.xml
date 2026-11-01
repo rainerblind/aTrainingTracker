@@ -2194,4 +2194,10 @@
     <string name="altitude_calibration_save_location">Salvar como local conhecido</string>
     <string name="altitude_calibration_action">Calibrar</string>
     <string name="altitude_calibrated_success">Altitude calibrada para %1$s</string>
+
+    <!-- Altitude From Position DEM (ATT-4859, REQ-SEN-025) -->
+    <string name="device_type_altitude_from_position">altitude da posição (DEM)</string>
+    <string name="device_type_short_altitude_from_position">alt. (DEM)</string>
+    <string name="devices_altitude_from_position">Altitude topográfica (DEM)</string>
+    <string name="devices_altitude_from_position_description">Altitude contínua obtida da posição GPS, rotas em cache e dados DEM online.</string>
 </resources>
