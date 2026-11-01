@@ -255,13 +255,14 @@ fun PeriodSummaryCard(
 
             // --- 2. THE MAP SECTION ---
             if (isPlayServiceAvailable && (summary.polylines.isNotEmpty() || summary.workoutIdToPolylineMap.isNotEmpty())) {
+                val context = LocalContext.current
                 val mapState by produceState(
                     initialValue = PeriodCardMapState(isReady = false),
                     key1 = summary.sortKey,
                     key2 = summary.workoutIdToPolylineMap.hashCode(),
                     key3 = summary.polylines.hashCode()
                 ) {
-                    value = prepareCardMapPreview(summary)
+                    value = prepareCardMapPreview(summary, context)
                 }
 
                 Box(
@@ -286,7 +287,7 @@ fun PeriodSummaryCard(
                                 color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
                                 contentColor = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier
-                                    .padding(start = 12.dp, top = 12.dp)
+                                    .padding(start = 12.dp, top = 12.dp, end = 12.dp)
                                     .align(Alignment.TopStart),
                                 shadowElevation = 2.dp
                             ) {
@@ -301,14 +302,25 @@ fun PeriodSummaryCard(
                                         modifier = Modifier.size(14.dp),
                                         tint = MaterialTheme.colorScheme.primary
                                     )
-                                    Text(
-                                        text = stringResource(
+                                    val regionText = if (!mapState.primaryRegionName.isNullOrBlank()) {
+                                        stringResource(
+                                            R.string.workout_periods__primary_named_region_format,
+                                            mapState.primaryRegionName ?: "",
+                                            mapState.primaryRegionPathsCount.coerceAtLeast(1)
+                                        )
+                                    } else {
+                                        stringResource(
                                             R.string.workout_periods__primary_region_format,
                                             1,
                                             mapState.primaryRegionPathsCount.coerceAtLeast(1)
-                                        ),
+                                        )
+                                    }
+                                    Text(
+                                        text = regionText,
                                         style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.SemiBold
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
                             }

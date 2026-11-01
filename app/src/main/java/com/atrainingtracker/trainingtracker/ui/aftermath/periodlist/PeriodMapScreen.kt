@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -386,22 +387,45 @@ fun PeriodMapScreen(
                         mapState.regions.forEachIndexed { index, region ->
                             val isSelected = mapState.selectedRegionId == region.id
                             val label = if (region.isPrimary) {
-                                stringResource(
-                                    R.string.workout_periods__primary_region_format,
-                                    index + 1,
-                                    region.workoutCount
-                                )
+                                if (!region.placeName.isNullOrBlank()) {
+                                    stringResource(
+                                        R.string.workout_periods__primary_named_region_format,
+                                        region.placeName,
+                                        region.workoutCount
+                                    )
+                                } else {
+                                    stringResource(
+                                        R.string.workout_periods__primary_region_format,
+                                        index + 1,
+                                        region.workoutCount
+                                    )
+                                }
                             } else {
-                                stringResource(
-                                    R.string.workout_periods__region_format,
-                                    index + 1,
-                                    region.workoutCount
-                                )
+                                if (!region.placeName.isNullOrBlank()) {
+                                    stringResource(
+                                        R.string.workout_periods__named_region_format,
+                                        region.placeName,
+                                        region.workoutCount
+                                    )
+                                } else {
+                                    stringResource(
+                                        R.string.workout_periods__region_format,
+                                        index + 1,
+                                        region.workoutCount
+                                    )
+                                }
                             }
                             FilterChip(
                                 selected = isSelected,
                                 onClick = { onSelectRegion?.invoke(region.id) },
-                                label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+                                label = {
+                                    Text(
+                                        text = label,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                },
                                 colors = FilterChipDefaults.filterChipColors(
                                     containerColor = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay),
                                     selectedContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = TTAlpha.Overlay),
@@ -418,11 +442,13 @@ fun PeriodMapScreen(
                             onClick = { onSelectRegion?.invoke(null) },
                             label = {
                                 Text(
-                                    stringResource(
+                                    text = stringResource(
                                         R.string.workout_periods__all_regions_format,
                                         totalPeriodWorkouts
                                     ),
-                                    style = MaterialTheme.typography.labelSmall
+                                    style = MaterialTheme.typography.labelSmall,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             },
                             colors = FilterChipDefaults.filterChipColors(

@@ -432,4 +432,27 @@
   5. *Clean-Room Targeted Regression Execution (`TST-PER-032.5`)*:
   • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*" --tests "com.atrainingtracker.trainingtracker.ui.map.*"` to verify 100% test pass rate with zero regressions.
 
+### TST-PER-033: **Region Place Name Resolution, Hierarchy Fallback, Caching & Chip Ellipsis Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PER-026` (`REQ-PER-026.1`..`REQ-PER-026.5`)
+- **Component**: `RegionNameResolverTest.kt`, `PeriodsViewModelTest.kt`, `PeriodCardMapStateTest.kt`, `PeriodMapScreenTest.kt`
+- **Jira**: `ATT-4934`
+- **Test Description**:
+  1. *Priority 1 Known Location Resolution Test (`TST-PER-033.1`, `RegionNameResolverTest.kt`)*:
+  • Verify that when a non-placeholder `MyLocation` exists within 10 km of the region center, its name is returned immediately without querying `Geocoder`.
+  • Verify that placeholder names (e.g. "Startort", "Auto-learned") are ignored.
+  2. *Priority 2 Geocoder Macro-Locality Resolution Test (`TST-PER-033.2`, `RegionNameResolverTest.kt`)*:
+  • Verify that when no known location exists within 10 km, `Geocoder` macro-locality (`locality ?: subLocality ?: subAdminArea`) is resolved and returned.
+  3. *Priority 3 Localized Fallback Test (`TST-PER-033.3`, `RegionNameResolverTest.kt`)*:
+  • Verify that when both known location and Geocoder fail or are offline, the resolver returns the localized fallback `"Region n"`.
+  4. *Two-Tier Cache Hit & Offline Retention Test (`TST-PER-033.4`, `RegionNameResolverTest.kt`)*:
+  • Verify that a resolved name is persisted to both memory and `SharedPreferences` cache and returned on subsequent lookups without triggering `Geocoder`.
+  5. *Hauptregion Semantics & Long Name Ellipsis Test (`TST-PER-033.5`, `PeriodMapScreenTest.kt` / `PeriodSummaryCardTest.kt`)*:
+  • Verify that primary region chips format with "Hauptregion: ..." / "Primary: ..." and secondary chips format with place name and workout count.
+  • Verify that long place names enforce single-line layout (`maxLines = 1`) and `TextOverflow.Ellipsis`.
+  6. *9-Language Localization Parity Audit (`TST-PER-033.6`, `TranslationParityTest.kt`)*:
+  • Verify that `workout_periods__named_region_format` and `workout_periods__primary_named_region_format` exist with valid `%1$s` and `%2$d` tokens across all 9 locales.
+  7. *Clean-Room Targeted Regression Execution (`TST-PER-033.7`)*:
+  • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*" --tests "com.atrainingtracker.trainingtracker.location.*"` to verify 100% test pass rate with zero regressions.
+
+
 

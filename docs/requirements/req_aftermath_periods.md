@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Requirements**: 25
+**Total Requirements**: 26
 
 ---
 
@@ -620,4 +620,51 @@
 • *Then* the cell is highlighted with formatted daily metrics and navigation to that day's workouts is triggered.
 
 **Invariants**: Zero changes to `PeriodSummaries.db` (v27), 60 fps `LazyColumn` scrolling, Rule 36 unit parity, Rule 57 sport order, and 100% clean-room test pass rate.
+
+### REQ-PER-026: Periods Map Region Place Name Resolution, Fallback Hierarchy & Persistent Caching [Verified]
+- **Tests**: `TST-PER-033` | **Tickets**: `ATT-4934`
+- **Implementation**: `RegionNameResolver.kt`, `SpatialRegionEngine.kt`, `PeriodMapScreen.kt`, `PeriodSummaryCard.kt`, `PeriodsViewModel.kt`, `PeriodMapUtils.kt`
+- **Rationale**: Region chips on `PeriodSummaryCard` and `PeriodMapScreen` historically displayed generic labels such as "Hauptregion: Region 1 (30)" and "Region 2 (1)", giving the athlete zero geographical context without inspecting the map canvas. The system SHALL resolve and display human-readable place names (e.g. "Schönaich (30)") derived from the region center using a deterministic 3-tier fallback hierarchy, asynchronous background execution, and persistent quantized grid caching (ATT-4934):
+1. *3-Tier Region Place Name Resolution Hierarchy (`REQ-PER-026.1`)*: When resolving the display name for a detected `SpatialRegion`'s geographical center (`region.center`), the system SHALL evaluate:
+   - **Priority 1 (Nearest Known Location)**: Query `KnownLocationsDatabaseManager.getAllLocations()` for the closest location within $\le 10\text{ km}$ ($10,000\text{ m}$) that has a non-placeholder name (`!LocationNameResolver.isPlaceholderName(name)`). If found, its name SHALL be selected.
+   - **Priority 2 (Android Geocoder Macro-Locality)**: If no known location matches within $10\text{ km}$, the system SHALL reverse-geocode via Android `Geocoder` and extract the macro-locality (`locality ?: subLocality ?: subAdminArea`).
+   - **Priority 3 (Localized Generic Fallback)**: If Geocoder returns null, throws an exception (offline/network unavailable), or yields a blank result, the system SHALL fall back to the localized generic label `"Region n"` (where $n = \text{index} + 1$).
+2. *Asynchronous Background Execution (`REQ-PER-026.2`)*: Region place name resolution SHALL execute exclusively on background worker threads (`Dispatchers.IO`) in `PeriodsViewModel.showPeriodMap()` and `PeriodMapUtils.prepareCardMapPreview()`. Zero network, disk I/O, or geocoding calls SHALL execute on the main UI thread.
+3. *Two-Tier Persistent Caching (`REQ-PER-026.3`)*: To prevent repeated geocoding on list scrolling and guarantee offline availability after first resolution, resolved place names SHALL be cached in:
+   - Level 1: In-memory cache (`ConcurrentHashMap`) keyed by quantized coordinate cell.
+   - Level 2: Persistent `SharedPreferences` cache (`period_region_names`) keyed by quantized coordinate cell (`lat_cell_lng_cell`, $\approx 0.04^\circ$ step $\approx 4\text{ km}$).
+4. *UI Chip Label Formatting, Hauptregion Semantics & Ellipsis Guard (`REQ-PER-026.4`)*: In `PeriodMapScreen` and `PeriodSummaryCard`:
+   - Primary region chips SHALL retain `"Hauptregion"` / `"Primary"` prefix semantics:
+     - Named: `R.string.workout_periods__primary_named_region_format` (`"Hauptregion: %1$s (%2$d)"` / `"Primary: %1$s (%2$d)"`).
+     - Generic: `R.string.workout_periods__primary_region_format` (`"Hauptregion: Region %1$d (%2$d)"` / `"Primary: Region %1$d (%2$d)"`).
+   - Secondary region chips SHALL use:
+     - Named: `R.string.workout_periods__named_region_format` (`"%1$s (%2$d)"`).
+     - Generic: `R.string.workout_periods__region_format` (`"Region %1$d (%2$d)"`).
+   - All region chip labels SHALL enforce single-line layout (`maxLines = 1, overflow = TextOverflow.Ellipsis`) to prevent multi-line wrapping and layout truncation on narrow screens across all 9 supported locales.
+5. *9-Language Localization Parity (`REQ-PER-026.5`)*: Added string resources (`workout_periods__named_region_format`, `workout_periods__primary_named_region_format`) SHALL maintain 100% localization parity across all 9 supported application locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-PER-026` (*Periods Map Region Place Name Resolution, Fallback Hierarchy & Persistent Caching*), refining `REQ-PER-013.5` (*Interactive Region Navigation & Labels*) and `REQ-UI-165` (*Location Name Resolution*). Targets `SpatialRegionEngine.kt`, `PeriodMapScreen.kt`, `PeriodSummaryCard.kt`, `PeriodsViewModel.kt`, and `PeriodMapUtils.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-44.2 (`ATT-4934`), refining Sprint Review 2026-44.1 finding from `ATT-4833`.
+3. *Root Reason for Existing Formulation*: `SpatialRegionEngine` was originally implemented as pure JVM mathematical clustering without access to Android Context or geocoding services, hardcoding generic `"Region ${index + 1}"` labels to prevent blocking clustering loops.
+4. *Preservation of Core Invariants*: `SpatialRegionEngine` remains pure JVM math without Android framework mocks; resolution is decoupled into `RegionNameResolver` on `Dispatchers.IO`; main-thread 60 fps `LazyColumn` scrolling and offline operation are guaranteed by two-tier caching.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a region whose center is within 10 km of a known location "Schönaich",
+• *When* the region name is resolved,
+• *Then* Priority 1 succeeds and the region name is "Schönaich".
+• *Given* a region with no known location within 10 km, but online Geocoder returns locality "Böblingen",
+• *When* the region name is resolved,
+• *Then* Priority 2 succeeds and the region name is "Böblingen".
+• *Given* an offline device with no known location and no cache entry,
+• *When* the region name is resolved,
+• *Then* Priority 3 fallback executes and the region label is "Region 1".
+• *Given* a resolved region name,
+• *When* scrolling the period summary list or reopening the period map offline,
+• *Then* the cached name is loaded immediately without invoking Geocoder.
+• *Given* a primary region with place name "Herrenberg" and 25 workouts,
+• *When* rendered in German locale,
+• *Then* the chip displays "Hauptregion: Herrenberg (25)" with single-line ellipsis on narrow screens.
+
+**Invariants**: Zero changes to `PeriodSummaries.db` (v27) schema, zero network/disk I/O on UI thread, 9-language localization parity, and 100% clean-room test pass rate.
 

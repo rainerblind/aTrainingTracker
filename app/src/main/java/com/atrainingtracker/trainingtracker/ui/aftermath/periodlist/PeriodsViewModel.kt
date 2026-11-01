@@ -23,6 +23,7 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataWithTrack
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.util.MigrationStatus
+import com.atrainingtracker.trainingtracker.location.RegionNameResolver
 import com.atrainingtracker.trainingtracker.ui.map.*
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
@@ -153,7 +154,15 @@ class PeriodsViewModel @JvmOverloads constructor(
                 }
 
                 // Partition workouts into geographic activity regions
-                val detectedRegions = SpatialRegionEngine.detectRegions(filteredWorkouts)
+                val rawRegions = SpatialRegionEngine.detectRegions(filteredWorkouts)
+                val detectedRegions = rawRegions.map { region ->
+                    val place = RegionNameResolver.resolvePlaceName(getApplication(), region.center, dispatcher = ioDispatcher)
+                    if (place != null) {
+                        region.copy(placeName = place)
+                    } else {
+                        region
+                    }
+                }
                 val primaryRegion = detectedRegions.firstOrNull { it.isPrimary } ?: detectedRegions.firstOrNull()
                 val activeRegionId = initialRegionId ?: primaryRegion?.id
 

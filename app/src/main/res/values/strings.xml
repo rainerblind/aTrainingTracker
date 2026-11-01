@@ -1173,6 +1173,8 @@
     <string name="workout_periods__longest_workout">Longest Workout</string>
     <string name="workout_periods__region_format">Region %1$d (%2$d)</string>
     <string name="workout_periods__primary_region_format">Primary: Region %1$d (%2$d)</string>
+    <string name="workout_periods__named_region_format">%1$s (%2$d)</string>
+    <string name="workout_periods__primary_named_region_format">Primary: %1$s (%2$d)</string>
     <string name="workout_periods__all_regions_format">All Regions (%1$d)</string>
     <string name="workout_periods__migration_title">Optimizing training history database…</string>
     <string name="workout_periods__migration_querying">Querying training history…</string>

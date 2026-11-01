@@ -18,6 +18,8 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
+import android.content.Context
+import com.atrainingtracker.trainingtracker.location.RegionNameResolver
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.TileProvider
@@ -51,7 +53,8 @@ data class PeriodCardMapState(
     val isReady: Boolean = false,
     val renderVectorPolylines: Boolean = true,
     val activeRegionId: String? = null,
-    val maxCorridorPassCount: Int? = null
+    val maxCorridorPassCount: Int? = null,
+    val primaryRegionName: String? = null
 )
 
 /**
@@ -132,7 +135,10 @@ fun getPeriodMapVisuals(
  * and builds the appropriate line-density heatmap tile provider.
  * (REQ-PER-019)
  */
-fun prepareCardMapPreviewSync(summary: PeriodSummary): PeriodCardMapState {
+fun prepareCardMapPreviewSync(
+    summary: PeriodSummary,
+    context: Context? = null
+): PeriodCardMapState {
     val rawPolylines: Collection<String> = when {
         summary.polylines.isNotEmpty() -> summary.polylines
         summary.workoutIdToPolylineMap.isNotEmpty() -> summary.workoutIdToPolylineMap.values
@@ -230,6 +236,10 @@ fun prepareCardMapPreviewSync(summary: PeriodSummary): PeriodCardMapState {
     val visuals = getPeriodMapVisuals(summary.periodType, activePaths, isInteractive = false)
     val renderVectorPolylines = visuals.heatmapProvider == null || activePaths.size <= MAX_PERIOD_VECTOR_TRACKS
 
+    val primaryRegionName = if (context != null && primaryPathRegion != null) {
+        RegionNameResolver.findNearestKnownLocationName(context, primaryPathRegion.region.center)
+    } else null
+
     return PeriodCardMapState(
         primaryPaths = activePaths,
         bounds = activeBounds,
@@ -239,7 +249,8 @@ fun prepareCardMapPreviewSync(summary: PeriodSummary): PeriodCardMapState {
         isReady = true,
         renderVectorPolylines = renderVectorPolylines,
         activeRegionId = primaryPathRegion?.region?.id,
-        maxCorridorPassCount = visuals.maxCorridorPassCount
+        maxCorridorPassCount = visuals.maxCorridorPassCount,
+        primaryRegionName = primaryRegionName
     )
 }
 
@@ -249,9 +260,21 @@ fun prepareCardMapPreviewSync(summary: PeriodSummary): PeriodCardMapState {
  */
 suspend fun prepareCardMapPreview(
     summary: PeriodSummary,
+    context: Context? = null,
     dispatcher: CoroutineDispatcher = Dispatchers.Default
 ): PeriodCardMapState = withContext(dispatcher) {
-    prepareCardMapPreviewSync(summary)
+    var state = prepareCardMapPreviewSync(summary, context)
+    if (context != null && state.primaryRegionName == null && state.bounds != null) {
+        val center = LatLng(
+            (state.bounds.southwest.latitude + state.bounds.northeast.latitude) / 2.0,
+            (state.bounds.southwest.longitude + state.bounds.northeast.longitude) / 2.0
+        )
+        val place = RegionNameResolver.resolvePlaceName(context, center)
+        if (place != null) {
+            state = state.copy(primaryRegionName = place)
+        }
+    }
+    state
 }
 
 /**
