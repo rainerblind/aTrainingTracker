@@ -1888,6 +1888,7 @@
     <string name="zone_onboarding_action_later">後で</string>
 
     <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
+    <string name="auto_pause_title">オートポーズ</string>
     <string name="tuning_auto_pause_title">オートポーズ</string>
     <string name="tuning_auto_pause_desc">停止時に記録を自動的に一時停止します</string>
     <string name="tuning_auto_pause_bike_title">サイクリング</string>

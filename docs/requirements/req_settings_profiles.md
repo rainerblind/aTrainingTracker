@@ -1220,3 +1220,44 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • *Then* all tests pass with 100% success.
 
 **Invariants**: 100% translation parity, Android resource fallback integrity, 100% clean-room test pass rate.
+
+---
+
+### REQ-SET-080: Dedicated Auto-Pause Settings Cockpit & Navigation Drawer Entry [`TST-SET-080`]
+- **Rationale**: The system SHALL provide a dedicated, first-class Auto-Pause configuration cockpit in the Navigation Drawer's Settings section with sport-specific tabs, retiring scattered controls from Advanced Tuning to ensure high discoverability, intuitive customization, and an extensible foundation for upcoming auto-pause enhancements (ATT-4836):
+1. *Navigation Drawer Entry & Route Resolution (`REQ-SET-080.1`)*:
+• An *Auto-Pause* item (`drawer_auto_pause`) SHALL be included in the Navigation Drawer within the Settings group directly below *Sport Types* (`AppNavigationDrawer.kt`, `ids.xml`).
+• `NavRoutes.toRoute(R.id.drawer_auto_pause)` SHALL resolve to `NavRoutes.AUTO_PAUSE`, and `NavRoutes.toDrawerItemId(NavRoutes.AUTO_PAUSE)` SHALL resolve to `R.id.drawer_auto_pause`.
+2. *Full-Screen Tabbed Auto-Pause Settings Cockpit (`AutoPauseTabsScreen.kt`, `AutoPauseViewModel.kt`, `REQ-SET-080.2`)*:
+• The system SHALL render a full-screen Material 3 settings interface composed of 3 sport tabs: *Cycling* (`BSportType.BIKE`), *Running* (`BSportType.RUN`), and *Other Sports* (`BSportType.UNKNOWN`), following the established tabbed settings convention (`SportTypesTabsScreen`).
+• The screen SHALL include a collapsing top app bar with navigation drawer hamburger button (`MainActivityWithNavigation.openDrawer()`) and a sport-scoped *Reset to Defaults* action (`R.string.reset_to_defaults`).
+3. *Sport-Specific Controls & Immediate Persistence (`REQ-SET-080.3`)*:
+• Each sport tab SHALL provide:
+  - An Enable Auto-Pause toggle (`TuningToggleItem`) controlling `autoPauseBikeEnabled` / `autoPauseRunEnabled` / `autoPauseOtherEnabled`.
+  - A Pause Speed Threshold slider (`TuningSliderItem`) controlling `autoPauseBikeSpeedThreshold` / `autoPauseRunSpeedThreshold` / `autoPauseOtherSpeedThreshold`, rendered conditionally when enabled, displaying speed in athlete's configured speed unit (`km/h` or `mph`).
+  - A Pause Debounce Delay slider (`TuningSliderItem`) controlling `autoPauseBikeDebounceSec` / `autoPauseRunDebounceSec` / `autoPauseOtherDebounceSec`, rendered conditionally when enabled, displaying seconds.
+• All modifications SHALL persist immediately to `TuningPreferencesDataStore` without requiring an explicit save button.
+• Triggering *Reset to Defaults* on a tab SHALL restore that sport's auto-pause preferences to factory defaults.
+4. *Single Canonical Configuration Surface (`REQ-SET-080.4`)*:
+• In accordance with Design Guidelines Section 3.2, Auto-Pause controls SHALL be excised from `SensorsGpsFilterSection.kt`, `AdvancedTuningScreen.kt`, and `AdvancedTuningDialog.kt` so that Auto-Pause maintains a single unambiguous configuration home.
+5. *9-Language Localization Parity (`REQ-SET-080.5`)*:
+• All new drawer and screen string resources SHALL be localized with 100% parity across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the athlete opens the navigation drawer,
+• *When* inspecting the Settings group,
+• *Then* an *Auto-Pause* item is visible immediately below *Sport Types*.
+• *Given* the athlete taps the *Auto-Pause* drawer item,
+• *When* the screen opens,
+• *Then* a tabbed cockpit with *Cycling*, *Running*, and *Other Sports* tabs is displayed with immediate reactive state from `TuningPreferencesDataStore`.
+• *Given* an active sport tab,
+• *When* the athlete toggles auto-pause or adjusts speed/debounce sliders,
+• *Then* the values persist immediately to `TuningPreferencesDataStore` and update the live tracking state.
+• *Given* the athlete triggers *Reset to Defaults*,
+• *When* confirmed,
+• *Then* the active sport's auto-pause settings revert to default values.
+• *Given* the Advanced Tuning screen,
+• *When* inspecting the *Sensors & GPS* section,
+• *Then* no duplicate auto-pause controls are present.
+
+**Invariants**: Backward compatibility of `TuningPreferencesDataStore` keys and default values, `TrackerService` auto-pause calculation integrity, 100% 9-language translation parity.

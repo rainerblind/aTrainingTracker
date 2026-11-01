@@ -1907,6 +1907,7 @@
     <string name="zone_onboarding_action_configure">Configurar zonas</string>
     <string name="zone_onboarding_action_later">Agora não</string>
     <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
+    <string name="auto_pause_title">Pausa automática</string>
     <string name="tuning_auto_pause_title">Pausa automática</string>
     <string name="tuning_auto_pause_desc">Pausar gravação automaticamente quando parado</string>
     <string name="tuning_auto_pause_bike_title">Ciclismo</string>

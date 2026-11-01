@@ -56,6 +56,7 @@ object NavRoutes {
     const val BIKES = "bikes"
     const val SHOES = "shoes"
     const val SPORT_TYPES = "sport_types"
+    const val AUTO_PAUSE = "auto_pause"
     const val TRAINING_ZONES = "training_zones"
     const val TRAINING_ZONES_PATTERN = "training_zones?initialTab={initialTab}&promptReason={promptReason}"
     const val ARG_INITIAL_TAB = "initialTab"
@@ -107,6 +108,7 @@ object NavRoutes {
         R.id.drawer_bikes -> BIKES
         R.id.drawer_shoes -> SHOES
         R.id.drawer_sport_types -> SPORT_TYPES
+        R.id.drawer_auto_pause -> AUTO_PAUSE
         R.id.drawer_training_zones -> TRAINING_ZONES
         R.id.drawer_athlete_profile -> ATHLETE_PROFILE
         R.id.drawer_backup_restore -> BACKUP_RESTORE
@@ -132,6 +134,7 @@ object NavRoutes {
         BIKES -> R.id.drawer_bikes
         SHOES -> R.id.drawer_shoes
         SPORT_TYPES -> R.id.drawer_sport_types
+        AUTO_PAUSE -> R.id.drawer_auto_pause
         TRAINING_ZONES -> R.id.drawer_training_zones
         ATHLETE_PROFILE -> R.id.drawer_athlete_profile
         BACKUP_RESTORE -> R.id.drawer_backup_restore

@@ -1908,6 +1908,7 @@
     <string name="zone_onboarding_action_later">Plus tard</string>
 
     <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
+    <string name="auto_pause_title">Pause automatique</string>
     <string name="tuning_auto_pause_title">Pause automatique</string>
     <string name="tuning_auto_pause_desc">Mettre automatiquement l\'enregistrement en pause à l\'arrêt</string>
     <string name="tuning_auto_pause_bike_title">Cyclisme</string>

@@ -1910,6 +1910,7 @@
     <string name="zone_onboarding_action_configure">Konfiguruj strefy</string>
     <string name="zone_onboarding_action_later">Nie teraz</string>
     <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
+    <string name="auto_pause_title">Autopauza</string>
     <string name="tuning_auto_pause_title">Autopauza</string>
     <string name="tuning_auto_pause_desc">Automatyczne wstrzymywanie nagrywania podczas postoju</string>
     <string name="tuning_auto_pause_bike_title">Jazda na rowerze</string>

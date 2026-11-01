@@ -1908,6 +1908,7 @@
     <string name="zone_onboarding_action_later">Niet nu</string>
 
     <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
+    <string name="auto_pause_title">Automatisch pauzeren</string>
     <string name="tuning_auto_pause_title">Automatisch pauzeren</string>
     <string name="tuning_auto_pause_desc">Opname automatisch pauzeren bij stilstand</string>
     <string name="tuning_auto_pause_bike_title">Fietsen</string>

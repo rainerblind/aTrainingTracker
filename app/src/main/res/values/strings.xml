@@ -2109,6 +2109,7 @@
     <string name="zone_onboarding_action_later">Not Now</string>
 
     <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
+    <string name="auto_pause_title">Auto-Pause</string>
     <string name="tuning_auto_pause_title">Auto-Pause</string>
     <string name="tuning_auto_pause_desc">Automatically pause recording when stationary</string>
     <string name="tuning_auto_pause_bike_title">Cycling</string>

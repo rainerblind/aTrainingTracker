@@ -38,6 +38,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.tracker.TrackerService
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontFamily
@@ -1359,6 +1360,44 @@ data class AutoPausePreferences(
         )
         context.dataStore.edit { prefs ->
             prefs[KEY_AUTO_PAUSE_OTHER_DEBOUNCE_SEC] = clamped
+        }
+        TrackerService.invalidateAutoPauseCache()
+    }
+
+    suspend fun resetAutoPausePreferences(sportType: BSportType? = null) {
+        context.dataStore.edit { prefs ->
+            when (sportType) {
+                BSportType.BIKE -> {
+                    prefs.remove(KEY_AUTO_PAUSE_BIKE_ENABLED)
+                    prefs.remove(KEY_AUTO_PAUSE_BIKE_SPEED_THRESHOLD)
+                    prefs.remove(KEY_AUTO_PAUSE_BIKE_DEBOUNCE_SEC)
+                    prefs.remove(KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH)
+                    prefs.remove(KEY_AUTO_PAUSE_DEBOUNCE_SEC)
+                }
+                BSportType.RUN -> {
+                    prefs.remove(KEY_AUTO_PAUSE_RUN_ENABLED)
+                    prefs.remove(KEY_AUTO_PAUSE_RUN_SPEED_THRESHOLD)
+                    prefs.remove(KEY_AUTO_PAUSE_RUN_DEBOUNCE_SEC)
+                }
+                BSportType.UNKNOWN, BSportType.CONFLICT -> {
+                    prefs.remove(KEY_AUTO_PAUSE_OTHER_ENABLED)
+                    prefs.remove(KEY_AUTO_PAUSE_OTHER_SPEED_THRESHOLD)
+                    prefs.remove(KEY_AUTO_PAUSE_OTHER_DEBOUNCE_SEC)
+                }
+                null -> {
+                    prefs.remove(KEY_AUTO_PAUSE_BIKE_ENABLED)
+                    prefs.remove(KEY_AUTO_PAUSE_BIKE_SPEED_THRESHOLD)
+                    prefs.remove(KEY_AUTO_PAUSE_BIKE_DEBOUNCE_SEC)
+                    prefs.remove(KEY_AUTO_PAUSE_RUN_ENABLED)
+                    prefs.remove(KEY_AUTO_PAUSE_RUN_SPEED_THRESHOLD)
+                    prefs.remove(KEY_AUTO_PAUSE_RUN_DEBOUNCE_SEC)
+                    prefs.remove(KEY_AUTO_PAUSE_OTHER_ENABLED)
+                    prefs.remove(KEY_AUTO_PAUSE_OTHER_SPEED_THRESHOLD)
+                    prefs.remove(KEY_AUTO_PAUSE_OTHER_DEBOUNCE_SEC)
+                    prefs.remove(KEY_AUTO_PAUSE_SPEED_THRESHOLD_KMH)
+                    prefs.remove(KEY_AUTO_PAUSE_DEBOUNCE_SEC)
+                }
+            }
         }
         TrackerService.invalidateAutoPauseCache()
     }
