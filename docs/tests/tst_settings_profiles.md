@@ -768,10 +768,10 @@
 
 ---
 
-### TST-SET-080: **Dedicated Auto-Pause Settings Cockpit & Navigation Drawer Entry Verification Suite** [Navigation drawer item and route mapping verified; AutoPauseTabsScreen and ViewModel reactive persistence and reset verified; single canonical configuration surface retirement verified; 100% 9-language localization parity; full regression pass.]
+### TST-SET-080: **Dedicated Auto-Pause Settings Cockpit & Navigation Drawer Entry Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-080`
 - **Component**: **Dedicated Auto-Pause Settings Cockpit & Navigation Drawer Entry Verification Suite**
-- **Jira**: ``ATT-4836``
+- **Jira**: `ATT-4836`, `ATT-4924`
 - **Test Description**:
   1. *Navigation Drawer & Route Resolution Contract Test (`TST-SET-080.1`, `AutoPauseNavigationTest.kt`)*:
   • Verify `NavRoutes.toRoute(R.id.drawer_auto_pause)` returns `NavRoutes.AUTO_PAUSE`.
@@ -784,9 +784,13 @@
   3. *Single Canonical Configuration Surface Retirement Contract Test (`TST-SET-080.3`, `AutoPauseRetirementContractTest.kt`)*:
   • Verify `SensorsGpsFilterSection.kt` no longer binds `autoPause*` parameters.
   • Verify `AdvancedTuningScreen.kt` and `AdvancedTuningDialog.kt` no longer render auto-pause toggles or sliders.
-  4. *9-Language Localization Parity (`TST-SET-080.4`, `TranslationParityTest.kt`)*:
-  • Verify `auto_pause_title` exists across all 9 canonical locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
-  5. *Clean-Room Regression Execution (`TST-SET-080.5`)*:
+  4. *Fixed Header & Global Card UI Contract Test (`TST-SET-080.4`, `AutoPauseTabsScreenContractTest.kt`)*:
+  • Verify `AutoPauseTabsScreen.kt` source contract: zero references to `CollapsingAppBarNestedScrollConnection` or `appBarOffset`.
+  • Verify single global `startInAutoPauseEnabled` card placed above the tab row.
+  • Verify main switch uses `tuning_auto_pause_enable_title`.
+  5. *9-Language Localization Parity (`TST-SET-080.5`, `TranslationParityTest.kt`)*:
+  • Verify `tuning_auto_pause_enable_title`, updated `tuning_auto_pause_speed_threshold_title`, `tuning_auto_pause_speed_threshold_desc`, and `tuning_auto_pause_start_in_auto_pause_desc` exist across all 9 canonical locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+  6. *Clean-Room Regression Execution (`TST-SET-080.6`)*:
   • Execute targeted unit tests and AAPT2 resources with 100% success.
 
 
