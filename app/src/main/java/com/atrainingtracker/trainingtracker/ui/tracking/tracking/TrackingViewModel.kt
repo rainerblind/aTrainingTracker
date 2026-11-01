@@ -51,6 +51,7 @@ import com.google.android.gms.maps.model.LatLng
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.ElevationProfileScope
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
+import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldConfig
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
 import com.atrainingtracker.trainingtracker.ui.tracking.PedalBalanceState
 import com.atrainingtracker.trainingtracker.ui.tracking.PedalPowerBalanceMath
@@ -483,6 +484,10 @@ class TrackingViewModel(
 
     private fun loadSensorFieldStates() {
         viewModelScope.launch {
+            var cachedConfigs: List<SensorFieldConfig>? = null
+            var cachedActivityType: ActivityType? = null
+            var cachedBaseFields: List<SensorFieldState> = emptyList()
+
             combine(
                 trackingViewsRepository.getSensorFieldConfigsForView(viewId),
                 banalServiceRepository.allFilteredSensorData,
@@ -490,55 +495,63 @@ class TrackingViewModel(
                 banalServiceRepository.currentPathPoints,
                 trackingViewsRepository.getSectionDividersFlow(viewId)
             ) { configs, allSensorData, viewInfo, livePathPoints, sectionDividers ->
-                // --- Step 1: Create the base state from the latest configurations ---
+                // --- Step 1: Create or reuse the base state from the latest configurations ---
                 val currentActivity = banalServiceRepository.activityType.value
-                val baseFields = configs.map { config ->
-                    val uniqueHash = Objects.hash(config.sensorType, config.filterType, config.filterConstant, config.sourceDeviceName)
-                    var filterDescription = config.filterType.getShortSummary(application, config.filterConstant)
-                    if (config.sourceDeviceName != null) {
-                        filterDescription = if (filterDescription.isNotEmpty()) {
-                            "${config.sourceDeviceName}: $filterDescription"
-                        } else {
-                            config.sourceDeviceName
+                val baseFields = if (configs == cachedConfigs && currentActivity == cachedActivityType && cachedBaseFields.isNotEmpty()) {
+                    cachedBaseFields
+                } else {
+                    val newBaseFields = configs.map { config ->
+                        val uniqueHash = Objects.hash(config.sensorType, config.filterType, config.filterConstant, config.sourceDeviceName)
+                        var filterDescription = config.filterType.getShortSummary(application, config.filterConstant)
+                        if (config.sourceDeviceName != null) {
+                            filterDescription = if (filterDescription.isNotEmpty()) {
+                                "${config.sourceDeviceName}: $filterDescription"
+                            } else {
+                                config.sourceDeviceName
+                            }
                         }
+
+                        val zoneType = getZoneType(config.sensorType, currentActivity.sportType)
+                        val displayOptions = zoneType?.let { zoneDisplayOptionsMap[it] } ?: ZoneDisplayOptions()
+
+                        val isPedalBalance = (config.sensorType == SensorType.PEDAL_POWER_BALANCE)
+                        val initialPedalBalanceState = if (isPedalBalance) {
+                            PedalPowerBalanceMath.calculateBalanceState(null)
+                        } else null
+                        val initialValue = if (isPedalBalance && initialPedalBalanceState != null) {
+                            PedalPowerBalanceMath.formatBalanceString(initialPedalBalanceState)
+                        } else {
+                            "--"
+                        }
+
+                        SensorFieldState(
+                            configHash = uniqueHash,
+                            sensorFieldId = config.sensorFieldId,
+                            rowNr = config.rowNr,
+                            colNr = config.colNr,
+                            viewSize = config.viewSize,
+                            label = application.getString(config.sensorType.shortNameId),
+                            filterDescription = filterDescription,
+                            value = initialValue,
+                            units = application.getString(MyHelper.getShortUnitsId(config.sensorType)),
+                            zoneColor = defaultZoneColor,
+                            zoneDisplayOptions = displayOptions,
+                            zoneGaugeState = calculateZoneGaugeState(zoneType, displayOptions, null),
+                            pedalBalanceState = initialPedalBalanceState,
+                            wPrimeBatteryState = if (config.sensorType == SensorType.W_PRIME_BAL) {
+                                WPrimeBatteryMath.calculateBatteryState(
+                                    remainingKj = null,
+                                    totalKj = currentEffectiveWPrimeKj,
+                                    timestampMs = 0L
+                                )
+                            } else null,
+                            sensorType = config.sensorType
+                        )
                     }
-
-                    val zoneType = getZoneType(config.sensorType, currentActivity.sportType)
-                    val displayOptions = zoneType?.let { zoneDisplayOptionsMap[it] } ?: ZoneDisplayOptions()
-
-                    val isPedalBalance = (config.sensorType == SensorType.PEDAL_POWER_BALANCE)
-                    val initialPedalBalanceState = if (isPedalBalance) {
-                        PedalPowerBalanceMath.calculateBalanceState(null)
-                    } else null
-                    val initialValue = if (isPedalBalance && initialPedalBalanceState != null) {
-                        PedalPowerBalanceMath.formatBalanceString(initialPedalBalanceState)
-                    } else {
-                        "--"
-                    }
-
-                    SensorFieldState(
-                        configHash = uniqueHash,
-                        sensorFieldId = config.sensorFieldId,
-                        rowNr = config.rowNr,
-                        colNr = config.colNr,
-                        viewSize = config.viewSize,
-                        label = application.getString(config.sensorType.shortNameId),
-                        filterDescription = filterDescription,
-                        value = initialValue,
-                        units = application.getString(MyHelper.getShortUnitsId(config.sensorType)),
-                        zoneColor = defaultZoneColor,
-                        zoneDisplayOptions = displayOptions,
-                        zoneGaugeState = calculateZoneGaugeState(zoneType, displayOptions, null),
-                        pedalBalanceState = initialPedalBalanceState,
-                        wPrimeBatteryState = if (config.sensorType == SensorType.W_PRIME_BAL) {
-                            WPrimeBatteryMath.calculateBatteryState(
-                                remainingKj = null,
-                                totalKj = currentEffectiveWPrimeKj,
-                                timestampMs = 0L
-                            )
-                        } else null,
-                        sensorType = config.sensorType
-                    )
+                    cachedConfigs = configs
+                    cachedActivityType = currentActivity
+                    cachedBaseFields = newBaseFields
+                    newBaseFields
                 }
 
                 // --- Step 2: Apply live sensor data to the base state ---
@@ -546,20 +559,21 @@ class TrackingViewModel(
 
                 // --- Step 3: Package into TrackingScreenState reusing the decoupled mapState ---
                 val currentMap = _mapState.value
+                val showElevation = viewInfo?.showElevationProfile ?: false
                 TrackingScreenState(
                     fields = finalFields,
                     sectionDividers = sectionDividers,
                     tuningConfig = _tuningConfig.value,
                     showMap = viewInfo?.showMap ?: false,
                     showLiveSegments = viewInfo?.showLiveSegments ?: false,
-                    showElevationProfile = viewInfo?.showElevationProfile ?: false,
+                    showElevationProfile = showElevation,
                     showLiveClimbs = viewInfo?.showLiveClimbs ?: true,
                     showNavigationHints = viewInfo?.showNavigationHints ?: true,
                     showLapButton = viewInfo?.showLapButton ?: true,
                     showBikeBell = viewInfo?.showBikeBell ?: false,
                     elevationProfileScope = viewInfo?.elevationProfileScope ?: ElevationProfileScope.FULL_ROUTE,
                     elevationProfileLookahead = viewInfo?.elevationProfileLookahead ?: 2000,
-                    pathPoints = livePathPoints,
+                    pathPoints = if (showElevation) livePathPoints else emptyList(),
                     mapState = currentMap,
                     zoomFocus = currentMap.zoomFocus,
                     userSpeed = currentMap.userSpeed,

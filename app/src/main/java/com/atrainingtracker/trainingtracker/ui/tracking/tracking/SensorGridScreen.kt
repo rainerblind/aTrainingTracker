@@ -201,6 +201,8 @@ interface TabToggleActions {
     }
 }
 
+private class SegmentIndexHolder(var index: Int? = null)
+
 /**
  * A generic screen that displays a grid of sensor fields for either tracking or configuration.
  * It adapts its UI and behavior based on the provided [screenMode].
@@ -361,24 +363,29 @@ fun SensorGridScreen(
     }
 
     val activeNavigatedRoute = state.mapRoutes.firstOrNull { it.isActiveNavigation }
-    var lastRouteSegmentIndex by remember(activeNavigatedRoute?.id) { mutableStateOf<Int?>(null) }
+    val segmentIndexHolder = remember(activeNavigatedRoute?.id) { SegmentIndexHolder() }
     val resolvedProfile = remember(
+        state.showElevationProfile,
         activeNavigatedRoute,
-        state.pathPoints,
-        currentLocation,
+        if (state.showElevationProfile) state.pathPoints else null,
+        if (state.showElevationProfile) currentLocation else null,
         state.elevationProfileScope,
         state.elevationProfileLookahead
     ) {
-        val res = TrackingElevationProfileResolver.resolve(
-            activeNavigatedRoute = activeNavigatedRoute,
-            recordedPathPoints = state.pathPoints,
-            currentLocation = currentLocation,
-            scope = state.elevationProfileScope,
-            lookaheadDistanceMeters = state.elevationProfileLookahead,
-            lastSegmentIndex = lastRouteSegmentIndex
-        )
-        lastRouteSegmentIndex = res.segmentIndex
-        res
+        if (!state.showElevationProfile) {
+            ResolvedElevationProfileData(emptyList(), emptyList(), null, false, null)
+        } else {
+            val res = TrackingElevationProfileResolver.resolve(
+                activeNavigatedRoute = activeNavigatedRoute,
+                recordedPathPoints = state.pathPoints,
+                currentLocation = currentLocation,
+                scope = state.elevationProfileScope,
+                lookaheadDistanceMeters = state.elevationProfileLookahead,
+                lastSegmentIndex = segmentIndexHolder.index
+            )
+            segmentIndexHolder.index = res.segmentIndex
+            res
+        }
     }
 
     val sheetContentLambda: @Composable ColumnScope.() -> Unit = {

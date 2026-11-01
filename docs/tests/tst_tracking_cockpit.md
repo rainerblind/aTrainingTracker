@@ -1166,3 +1166,19 @@
   3. *Targeted & Clean-Room Regression Verification (`TST-TRK-041.3`)*:
   • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.*" --tests "com.atrainingtracker.trainingtracker.tracker.*"` verifying 100% pass rate.
 
+### TST-TRK-042: **1-Hz Live-Tracking Memory, Decoupling & Recomposition Optimization Test Suite** [Planned]
+- **Requirement(s)**: `REQ-TRK-042`
+- **Component**: `BANALServiceRepositoryTest.kt`, `LiveTrackDecimationTest.kt`, `TrackingViewModelTest.kt`
+- **Jira**: `ATT-4863`
+- **Test Description**:
+  1. *Stationary PathPoint Deduplication & DeviceTelemetry Value Equality (`TST-TRK-042.1`)*:
+  • Unit test verifying that stationary ticks do not append duplicate `PathPoint`s to `currentPathPoints`.
+  • Unit test verifying that `DeviceTelemetry` without `System.nanoTime()` satisfies structural equality when fields are unchanged.
+  2. *Live Track Decimation & Tail Preservation (`TST-TRK-042.2`)*:
+  • Unit test verifying that tracks exceeding the threshold preserve the last $M$ points unsimplified while simplifying older collinear points.
+  3. *Base Field Memoization (`TST-TRK-042.3`)*:
+  • Unit test verifying that `TrackingViewModel` retains memoized `baseFields` when only 1-Hz sensor values change.
+  4. *Targeted & Clean-Room Regression Verification (`TST-TRK-042.4`)*:
+  • Execute targeted package tests and verify zero regressions.
+
+

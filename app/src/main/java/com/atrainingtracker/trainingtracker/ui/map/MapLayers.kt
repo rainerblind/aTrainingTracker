@@ -41,6 +41,7 @@ import com.google.android.gms.maps.model.Gap
 import com.google.android.gms.maps.model.JointType
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.PatternItem
+import com.google.maps.android.PolyUtil
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.Polyline
@@ -252,6 +253,23 @@ fun resolveLiveTrackColor(isDark: Boolean): Color {
 }
 
 /**
+ * Bounds and downsamples a live tracking path to protect Maps Compose IPC serialization
+ * and GPU vertex buffers from OOM memory exhaustion during multi-hour sessions (REQ-TRK-042.2, ATT-4863).
+ *
+ * Preserves the most recent 200 points (~3–5 minutes of active movement) at 100% full-resolution
+ * so immediate turns, forks, and chevrons remain crisp, while simplifying older history with
+ * PolyUtil.simplify at a 3.0-meter tolerance threshold.
+ */
+fun decimateLiveTrack(path: List<LatLng>): List<LatLng> {
+    if (path.size <= 300) return path
+    val tailCount = 200
+    val head = path.dropLast(tailCount)
+    val tail = path.takeLast(tailCount)
+    val simplifiedHead = PolyUtil.simplify(head, 3.0)
+    return simplifiedHead + tail
+}
+
+/**
  * Renders the live session track as it is being recorded.
  */
 @Composable
@@ -260,9 +278,10 @@ fun LiveTrackLayer(path: List<LatLng>) {
     val style = LocalMapStyle.current
     val trackColor = resolveLiveTrackColor(style.isDark)
     val livePattern = remember(style.trackDotGap) { listOf(Dot(), Gap(style.trackDotGap)) }
-    
+    val displayPath = remember(path.size) { decimateLiveTrack(path) }
+
     XRayPolyline(
-        points = path,
+        points = displayPath,
         color = trackColor,
         width = style.trackWidth,
         baseZIndex = style.trackBaseZIndex,
