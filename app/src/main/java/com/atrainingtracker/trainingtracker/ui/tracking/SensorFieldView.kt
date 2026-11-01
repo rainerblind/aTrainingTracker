@@ -264,6 +264,7 @@ fun SensorFieldView(
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .fillMaxHeight()
             .combinedClickable(
                 // Implement correct click behavior based on screen mode
                 onClick = {
@@ -290,7 +291,7 @@ fun SensorFieldView(
         ),
         border = effectiveBorder
     ) {
-        Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+        Row(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
             // 1. Left Indicator Strip
             if (fieldState.zoneColor != Color.Transparent && fieldState.zoneDisplayOptions.showLeftBar) {
                 Spacer(
@@ -303,6 +304,7 @@ fun SensorFieldView(
             Column(
                 modifier = Modifier
                     .weight(1f)
+                    .fillMaxHeight()
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
                 // Top row for Label and Filter information
@@ -327,67 +329,75 @@ fun SensorFieldView(
                     )
                 }
 
-                // Value and Unit Row, centered (REQ-TRK-046)
-                if (fieldState.showValue) {
-                    Row(
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.Bottom,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = fieldState.value,
-                            style = valueStyle,
-                            color = if (fieldState.zoneColor != Color.Transparent && fieldState.zoneDisplayOptions.showTextColor) {
-                                fieldState.zoneColor
-                            } else {
-                                MaterialTheme.colorScheme.onSurface
-                            }
-                        )
-                        Text(
-                            text = fieldState.units,
-                            style = unitStyle,
-                            modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                // Centered telemetry content column (REQ-UI-438.3)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    // Value and Unit Row, centered (REQ-TRK-046)
+                    if (fieldState.showValue) {
+                        Row(
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.Bottom,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = fieldState.value,
+                                style = valueStyle,
+                                color = if (fieldState.zoneColor != Color.Transparent && fieldState.zoneDisplayOptions.showTextColor) {
+                                    fieldState.zoneColor
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                }
+                            )
+                            Text(
+                                text = fieldState.units,
+                                style = unitStyle,
+                                modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    // Optional Zone Gauge Bar (REQ-UI-376, REQ-TRK-046, REQ-UI-436)
+                    if (fieldState.showBar && fieldState.zoneGaugeState != null) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        ZoneGaugeBar(
+                            state = fieldState.zoneGaugeState,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp),
+                            trackHeight = resolveZoneGaugeTrackHeight(fieldState.viewSize, isBarOnly = !fieldState.showValue),
+                            showBadge = (fieldState.viewSize >= ViewSize.NORMAL)
                         )
                     }
-                }
 
-                // Optional Zone Gauge Bar (REQ-UI-376, REQ-TRK-046, REQ-UI-436)
-                if (fieldState.showBar && fieldState.zoneGaugeState != null) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    ZoneGaugeBar(
-                        state = fieldState.zoneGaugeState,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 4.dp),
-                        trackHeight = resolveZoneGaugeTrackHeight(fieldState.viewSize, isBarOnly = !fieldState.showValue),
-                        showBadge = (fieldState.viewSize >= ViewSize.NORMAL)
-                    )
-                }
+                    // Optional Pedal Power Balance Bar (REQ-UI-377, REQ-TRK-046, REQ-UI-436)
+                    if (fieldState.showBar && fieldState.pedalBalanceState != null) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        PedalPowerBalanceBar(
+                            state = fieldState.pedalBalanceState,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp),
+                            trackHeight = resolvePedalBalanceTrackHeight(fieldState.viewSize, isBarOnly = !fieldState.showValue)
+                        )
+                    }
 
-                // Optional Pedal Power Balance Bar (REQ-UI-377, REQ-TRK-046, REQ-UI-436)
-                if (fieldState.showBar && fieldState.pedalBalanceState != null) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    PedalPowerBalanceBar(
-                        state = fieldState.pedalBalanceState,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 4.dp),
-                        trackHeight = resolvePedalBalanceTrackHeight(fieldState.viewSize, isBarOnly = !fieldState.showValue)
-                    )
-                }
-
-                // Optional W' Anaerobic Battery Gauge Bar (REQ-UI-416, REQ-TRK-046, REQ-UI-436)
-                if (fieldState.showBar && fieldState.wPrimeBatteryState != null) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    WPrimeBatteryGaugeBar(
-                        state = fieldState.wPrimeBatteryState,
-                        viewSize = fieldState.viewSize,
-                        barHeight = resolveWPrimeBatteryHeight(fieldState.viewSize, isBarOnly = !fieldState.showValue),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 4.dp)
-                    )
+                    // Optional W' Anaerobic Battery Gauge Bar (REQ-UI-416, REQ-TRK-046, REQ-UI-436)
+                    if (fieldState.showBar && fieldState.wPrimeBatteryState != null) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        WPrimeBatteryGaugeBar(
+                            state = fieldState.wPrimeBatteryState,
+                            viewSize = fieldState.viewSize,
+                            barHeight = resolveWPrimeBatteryHeight(fieldState.viewSize, isBarOnly = !fieldState.showValue),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp)
+                        )
+                    }
                 }
 
                 // Conditionally add the action buttons at the bottom in configuration mode

@@ -6900,6 +6900,30 @@
   • Audit in `TranslationParityTest` verifying all newly added string keys exist across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) with zero missing translations.
 
 
+### TST-UI-438: **Vertical Card Height and Border Stretching in Cockpit Sensor Grid Test Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-438`
+- **Component**: `SensorGridScreenLayoutTest.kt`, `SensorFieldViewLayoutTest.kt`, `SensorGridLocalizationTest.kt`
+- **Jira**: `ATT-4878`
+- **Test Description**:
+  1. *Multi-Column Row Height Propagation Test (`TST-UI-438.1`)*:
+  • Unit/layout test verifying that in `SensorGridScreen.kt`, for multi-column rows in `SensorGridContent`, landscape packing, and configuration mode:
+    - Per-cell `Box` applies `Modifier.weight(effectiveWeight).fillMaxHeight()`.
+    - `SensorFieldView` receives `modifier = Modifier.fillMaxHeight()`.
+    - Shorter cards stretch to the measured height of the tallest card in the row.
+  2. *Card & Indicator Full-Height Border Alignment Test (`TST-UI-438.2`)*:
+  • Unit/layout test in `SensorFieldViewLayoutTest.kt` verifying:
+    - `Card` applies `modifier.fillMaxWidth().fillMaxHeight()`.
+    - Inner layout `Row` applies `.fillMaxHeight()`.
+    - Indicator strips (`Spacer`) and borders span 100% of the stretched card height.
+  3. *Vertical Centering & Layout Docking Test (`TST-UI-438.3`)*:
+  • Unit/layout test in `SensorFieldViewLayoutTest.kt` verifying:
+    - Label and filter description `Row` remains anchored to top.
+    - Configuration `IconButton`s remain anchored to bottom.
+    - Value and gauge elements are vertically centered in the body space.
+  4. *Localization Parity and Visual Regression Guard (`TST-UI-438.4`)*:
+  • Test verifying localization parity across all 9 locales and confirming single-field or uniform-size rows preserve existing dimensions and styling.
+
+
 
 
 

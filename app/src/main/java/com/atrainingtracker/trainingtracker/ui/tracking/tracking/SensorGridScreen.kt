@@ -738,10 +738,11 @@ fun SensorGridScreen(
                                 })
                                 maxColNr = fieldState.colNr
                                 val effectiveWeight = if (fieldState.colWeight > 0f) fieldState.colWeight else 1.0f
-                                Box(modifier = Modifier.weight(effectiveWeight)) {
+                                Box(modifier = Modifier.weight(effectiveWeight).fillMaxHeight()) {
                                     val isSelected = selectedFieldForMove?.sensorFieldId == fieldState.sensorFieldId
                                     SensorFieldView(
                                         fieldState = fieldState,
+                                        modifier = Modifier.fillMaxHeight(),
                                         screenMode = screenMode,
                                         isSelectedForMove = isSelected,
                                         shape = effectiveShape,
@@ -1057,9 +1058,10 @@ private fun SensorGridContent(
             ) {
                 fieldsInThisRow.forEach { fieldState ->
                     val effectiveWeight = if (fieldState.colWeight > 0f) fieldState.colWeight else 1.0f
-                    Box(modifier = Modifier.weight(effectiveWeight)) {
+                    Box(modifier = Modifier.weight(effectiveWeight).fillMaxHeight()) {
                         SensorFieldView(
                             fieldState = fieldState,
+                            modifier = Modifier.fillMaxHeight(),
                             screenMode = screenMode,
                             isSelectedForMove = false,
                             shape = effectiveShape,

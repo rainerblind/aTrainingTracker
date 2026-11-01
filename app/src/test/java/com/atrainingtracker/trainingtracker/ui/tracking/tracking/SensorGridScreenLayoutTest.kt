@@ -271,7 +271,23 @@ class SensorGridScreenLayoutTest {
         )
         assertTrue(
             "Sensor grid fields Box must apply Modifier.weight(effectiveWeight) (TST-UI-437.4)",
-            content.contains("Box(modifier = Modifier.weight(effectiveWeight))")
+            content.contains("Modifier.weight(effectiveWeight)")
+        )
+    }
+
+    @Test
+    fun testSensorGrid_appliesFillMaxHeightPropagationInRow() {
+        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
+        val content = file.readText()
+
+        // REQ-UI-438.1 / TST-UI-438.1: SensorGridContent & Config mode must propagate fillMaxHeight to Box and SensorFieldView
+        assertTrue(
+            "Multi-column cell Box must apply .weight(effectiveWeight).fillMaxHeight() (TST-UI-438.1)",
+            content.contains("Box(modifier = Modifier.weight(effectiveWeight).fillMaxHeight())")
+        )
+        assertTrue(
+            "SensorFieldView must receive modifier = Modifier.fillMaxHeight() (TST-UI-438.1)",
+            content.contains("modifier = Modifier.fillMaxHeight()")
         )
     }
 }

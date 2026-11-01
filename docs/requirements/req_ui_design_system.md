@@ -12651,6 +12651,45 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 **Invariants**: Backward compatibility for existing layouts, zero Compose runtime crash risk ($weight > 0f$), 9-language localization parity, and 100% clean-room test pass rate.
 
 
+### REQ-UI-438: Vertical Card Height and Border Stretching in Cockpit Sensor Grid [Verified]
+- **Tests**: `TST-UI-438` | **Tickets**: `ATT-4878`
+- **Implementation**: `SensorGridScreen.kt`, `SensorFieldView.kt`
+- **Rationale**: In multi-column cockpit rows, fields of different sizes (e.g. `SMALL` and `LARGE`) or differing layouts (numeric readout next to a zone gauge bar) share a row wrapped in `Row(modifier = Modifier.height(IntrinsicSize.Min))`. Currently, intermediate `Box` wrappers and `SensorFieldView` `Card` omit `.fillMaxHeight()`, and the inner card `Row` hardcodes `.height(IntrinsicSize.Min)`. This leaves shorter cards floating at their intrinsic minimum height with disjointed borders and misaligned indicator strips. Stretching the card height, extending borders, and vertically centering content ensures a unified, professional head-unit cockpit UI (ATT-4878, Parent Epic ATT-355, extending `REQ-UI-200` and `REQ-UI-437`):
+1. *Row Height Propagation & Container Expansion (`REQ-UI-438.1`)*:
+• In `SensorGridScreen.kt`, within multi-column sensor rows in `SensorGridContent`, landscape packing, and configuration mode, the per-cell `Box` SHALL apply `Modifier.weight(effectiveWeight).fillMaxHeight()`.
+• `SensorFieldView` SHALL receive and apply `modifier = Modifier.fillMaxHeight()` to fill the cell container height.
+2. *Full-Height Card and Border Rendering (`REQ-UI-438.2`)*:
+• In `SensorFieldView.kt`, `Card` SHALL apply `modifier.fillMaxWidth().fillMaxHeight()`.
+• The inner card layout `Row` SHALL apply `Modifier.fillMaxWidth().fillMaxHeight()` instead of `.height(IntrinsicSize.Min)`.
+• Card borders and left/right zone indicator strips (`Spacer`) SHALL span 100% of the stretched height flush with the tallest card in the row.
+3. *Vertical Content Centering with Anchored Header & Actions (`REQ-UI-438.3`)*:
+• In `SensorFieldView.kt`, the content `Column` SHALL apply `.fillMaxHeight()`, anchoring the field label and filter description `Row` to the top.
+• The sensor numeric readout, unit label, and any graphical bars/gauges (Zone Gauge, Pedal Balance, W' Anaerobic Battery) SHALL be vertically centered within the remaining card height.
+• Configuration mode action icon buttons (`IconButton`) SHALL remain docked at the bottom of the card.
+4. *Visual Parity & Clean-Room Invariants (`REQ-UI-438.4`)*:
+• Cockpit rows with identical `ViewSize` cards and single-field rows SHALL preserve existing layout geometry with zero visual regression.
+• Localization and accessibility labels SHALL maintain full parity across all 9 supported locales.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-438`, extending `REQ-UI-200` (Sensor Grid Normalization & Layout) and `REQ-UI-437` (Horizontal Width Ratios). Targets `SensorGridScreen.kt` and `SensorFieldView.kt`.
+2. *Historical Origin & Commit Trace*: Commit `a6920388` introduced initial Jetpack Compose sensor grid layout with unconstrained child card heights.
+3. *Root Reason for Existing Formulation*: Basic cell layout was designed for homogeneous numeric fields before heterogeneous sizes and graphical gauge bars were placed side by side.
+4. *Preservation of Core Invariants*: `Row(modifier = Modifier.height(IntrinsicSize.Min))` strictly preserves finite row height governed by the tallest child; `.fillMaxHeight()` only propagates this measured height to shorter siblings without expanding the parent row.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* two sensor fields of different intrinsic heights placed in the same cockpit row,
+• *When* rendered in tracking, preview, or configuration modes,
+• *Then* both cards stretch to equal height matching the tallest field in the row, with flush continuous borders and indicator strips.
+• *Given* a stretched sensor card with extra vertical space,
+• *When* laid out,
+• *Then* the header label is anchored at the top, configuration buttons are docked at the bottom, and the telemetry value/gauge is centered vertically.
+• *Given* a row of uniform-size cards or a single-column row,
+• *When* rendered,
+• *Then* the visual presentation is identical to pre-modification behavior.
+
+**Invariants**: Zero infinite height expansion, strict preservation of `IntrinsicSize.Min` on parent `Row`, vertical telemetry centering, and 100% clean-room test pass rate.
+
+
 
 
 
