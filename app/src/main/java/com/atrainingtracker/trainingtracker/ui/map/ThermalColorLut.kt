@@ -29,7 +29,7 @@ import kotlin.math.roundToInt
  * @param opacity The global layer opacity scaling (0.0 to 1.0).
  */
 class ThermalColorLut(
-    val opacity: Double = 0.8
+    val opacity: Double = 1.0
 ) {
     val table: IntArray = IntArray(256)
 
@@ -38,10 +38,11 @@ class ThermalColorLut(
 
         // Color stops: (position 0.0..1.0, intArrayOf(R, G, B, baseAlpha))
         // Aligned with MapUtils.kt / ATT-500 / ATT-504 sequential blue heatmap palette
+        // Single-pass paths remain clearly legible (~55% alpha), while frequently traveled corridors reach ~85-100% alpha (REQ-PER-024.4)
         val stops = arrayOf(
-            Pair(0.00f, intArrayOf(0, 229, 255, 51)),   // Light Cyan (#00E5FF, ~20% base alpha)
-            Pair(0.50f, intArrayOf(0, 0, 255, 77)),     // Pure Blue (#0000FF, ~30% base alpha)
-            Pair(1.00f, intArrayOf(49, 27, 146, 180))   // Deep Indigo (#311B92, ~70% base alpha)
+            Pair(0.00f, intArrayOf(0, 229, 255, 140)),   // Light Cyan (#00E5FF, ~55% base alpha)
+            Pair(0.50f, intArrayOf(0, 0, 255, 204)),     // Pure Blue (#0000FF, ~80% base alpha)
+            Pair(1.00f, intArrayOf(49, 27, 146, 255))   // Deep Indigo (#311B92, 100% base alpha)
         )
 
         for (i in 1..255) {
@@ -78,6 +79,6 @@ class ThermalColorLut(
     }
 
     companion object {
-        val DEFAULT = ThermalColorLut(opacity = 0.8)
+        val DEFAULT = ThermalColorLut(opacity = 1.0)
     }
 }

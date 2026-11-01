@@ -532,8 +532,30 @@ class TrackingViewsDatabaseManagerTest {
     }
 
     @Test
-    fun testDatabaseVersionIs15() {
-        assertEquals(15, TrackingViewsDatabaseManager.TrackingViewsDbHelper.DB_VERSION)
+    fun testDatabaseVersionIs16() {
+        assertEquals(16, TrackingViewsDatabaseManager.TrackingViewsDbHelper.DB_VERSION)
+    }
+
+    @Test
+    fun testOnUpgrade_from15To16_addsShowValueAndShowBar() {
+        val dbHelper = TrackingViewsDatabaseManager.TrackingViewsDbHelper(mockContext)
+        val mockCursor = mockk<Cursor>(relaxed = true)
+        every { mockDb.rawQuery(match { it.contains("PRAGMA table_info") }, any()) } returns mockCursor
+        every { mockCursor.moveToNext() } returns false
+        // The v16 upgrade first checks that LayoutRowsTable exists via sqlite_master (ATT-4841)
+        val tableExistsCursor = mockk<Cursor>(relaxed = true)
+        every { mockDb.rawQuery(match { it.contains("sqlite_master") }, any()) } returns tableExistsCursor
+        every { tableExistsCursor.moveToFirst() } returns true
+
+        dbHelper.onUpgrade(mockDb, 15, 16)
+
+        verify(atLeast = 1) {
+            mockDb.execSQL(match { it.contains("ALTER TABLE LayoutRowsTable ADD COLUMN ShowValue int DEFAULT 1;") })
+            mockDb.execSQL(match { it.contains("ALTER TABLE LayoutRowsTable ADD COLUMN ShowBar int DEFAULT 0;") })
+            mockDb.execSQL(match { it.contains("UPDATE LayoutRowsTable SET ShowValue = 1 WHERE ShowValue IS NULL;") })
+            mockDb.execSQL(match { it.contains("UPDATE LayoutRowsTable SET ShowBar = 1 WHERE SensorType IN") })
+            mockDb.execSQL(match { it.contains("UPDATE LayoutRowsTable SET ShowBar = 0 WHERE ShowBar IS NULL;") })
+        }
     }
 
     @Test

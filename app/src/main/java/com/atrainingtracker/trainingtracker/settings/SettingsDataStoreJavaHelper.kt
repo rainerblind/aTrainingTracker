@@ -144,12 +144,16 @@ object SettingsDataStoreJavaHelper {
             bikeEnabled = tuningConfig.autoPauseBikeEnabled,
             runEnabled = tuningConfig.autoPauseRunEnabled,
             otherEnabled = tuningConfig.autoPauseOtherEnabled,
+            startInAutoPauseEnabled = tuningConfig.startInAutoPauseEnabled,
             bikeSpeedThreshold = tuningConfig.autoPauseBikeSpeedThreshold,
             bikeDebounceSec = tuningConfig.autoPauseBikeDebounceSec,
+            bikeResumeDebounceSec = tuningConfig.autoPauseBikeResumeDebounceSec,
             runSpeedThreshold = tuningConfig.autoPauseRunSpeedThreshold,
             runDebounceSec = tuningConfig.autoPauseRunDebounceSec,
+            runResumeDebounceSec = tuningConfig.autoPauseRunResumeDebounceSec,
             otherSpeedThreshold = tuningConfig.autoPauseOtherSpeedThreshold,
             otherDebounceSec = tuningConfig.autoPauseOtherDebounceSec,
+            otherResumeDebounceSec = tuningConfig.autoPauseOtherResumeDebounceSec,
             isMetric = isMetric
         )
     }

@@ -12532,5 +12532,77 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 **Invariants**: Zero regression in portrait mode, gesture slop and touch event routing preserved, and human decision gate enforced.
 
 
+### REQ-UI-435: Tracking Tabs Mode Transition Initial Page Resolution [Verified]
+- **Tests**: `TST-UI-435` | **Tickets**: `ATT-4838`
+- **Implementation**: `TrackingTabsPageResolver.kt`, `TrackingTabsScreen.kt`, `MainActivityWithNavigation.kt`
+- **Rationale**: When navigating between `ScreenMode.TRACKING`, `ScreenMode.CONFIGURATION`, and `ScreenMode.PREVIEW`, `TrackingTabsScreen` SHALL resolve the initial pager page index correctly, preventing off-by-one tab jumps caused by the presence of the Control Tab at index 0 in `ScreenMode.TRACKING` (ATT-4838, Parent Epic ATT-355, extending `REQ-UI-163` and `REQ-UI-412`):
+1. *Drawer Configuration Entry (`REQ-UI-435.1`)*:
+• When transitioning into `ScreenMode.CONFIGURATION` from `ScreenMode.TRACKING` or via `MainActivityWithNavigation.onActivityTypeSelected(activityType)`, the initial pager page index SHALL be resolved to `0` (the first configured sensor tab), and `lastKnownPage` SHALL be reset to `0`.
+2. *Editor-Preview Round-Trip (`REQ-UI-435.2`)*:
+• Switching between `ScreenMode.CONFIGURATION` and `ScreenMode.PREVIEW` SHALL preserve the active sensor tab index ($p \leftrightarrow p$), coerced within `0 until tabCount`.
+3. *Preview Exit to Tracking (`REQ-UI-435.3`)*:
+• Exiting from `ScreenMode.PREVIEW` (or `ScreenMode.CONFIGURATION`) back to `ScreenMode.TRACKING` SHALL map sensor tab index $p$ to tracking page index $p + 1$ (accounting for the Control Tab at page 0), or `0` if `tabCount <= 0`.
+4. *Sport Type Switching within Configuration (`REQ-UI-435.4`)*:
+• When `activityType` changes while in `ScreenMode.CONFIGURATION` or `ScreenMode.PREVIEW`, the pager state SHALL be recreated via `key(activityType, trackingViews.size, screenMode)` and initial page SHALL reset to `0`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-435`, extending `REQ-UI-163` (Tracking Tabs Screen Navigation) and `REQ-UI-412` (Tracking Screen Mode Switching).
+2. *Historical Origin & Commit Trace*: `ATT-1340` (commit `e253c312`), `ATT-1456` (commit `c457fa91`), `ATT-4000` (commit `de1c2965`).
+3. *Root Reason for Existing Formulation*: `lastKnownPage` was originally designed to prevent pager recreation from snapping to page 0 when sensor tabs were added, deleted, or reordered. It treated the pager index as a raw scalar across all screen modes, overlooking that `ScreenMode.TRACKING` has an extra Control Tab at page 0 whereas `CONFIGURATION` and `PREVIEW` do not.
+4. *Preservation of Core Invariants*: Pager state persistence during tab additions/deletions, timeout-safe event routing, and gesture slop are 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete on Sensor Tab 0 in `ScreenMode.TRACKING` (`lastKnownPage = 1`),
+• *When* the athlete navigates to *Settings -> Configure Displays* and selects an `ActivityType`,
+• *Then* `TrackingTabsScreen` enters `ScreenMode.CONFIGURATION` with initial page `0` (the first configured tab).
+• *Given* an athlete editing Sensor Tab 1 (`page = 1`) in `ScreenMode.CONFIGURATION`,
+• *When* the athlete toggles to `ScreenMode.PREVIEW` (or back to `CONFIGURATION`),
+• *Then* the pager remains on Sensor Tab 1 (`page = 1`).
+• *Given* an athlete previewing Sensor Tab 1 (`page = 1`) in `ScreenMode.PREVIEW`,
+• *When* the athlete exits preview back to `ScreenMode.TRACKING`,
+• *Then* the tracking cockpit opens on Sensor Tab 1 (`page = 2`, accounting for the Control Tab).
+
+**Invariants**: Pager stability during tab mutations, zero regressions in existing navigation and timeout suites, and 100% clean-room test pass rate.
+
+
+### REQ-UI-436: Active Training Zone Segment Height Emphasis & Bar-Only Sizing [Verified]
+- **Tests**: `TST-UI-436` | **Tickets**: `ATT-4860`
+- **Implementation**: `ZoneGaugeBar.kt`, `SensorFieldView.kt`, `PedalPowerBalanceBar.kt`, `WPrimeBatteryGaugeBar.kt`
+- **Rationale**: In glance-based peripheral vision during athletic workouts, the active training zone segment in `ZoneGaugeBar` SHALL be visually prominent by elevating its vertical height relative to inactive segments, and when a sensor field is configured in bar-only mode (`showValue = false, showBar = true`), bars SHALL dynamically scale their height according to tile `ViewSize` to cleanly fill available vertical card space (ATT-4860, Parent Epic ATT-355, extending `REQ-UI-376`, `REQ-UI-390`, and `REQ-TRK-046`):
+1. *Active Zone Height & Geometry Emphasis (`REQ-UI-436.1`)*:
+• In `ZoneGaugeBar.kt`, when a valid zone is active (`state.activeZoneIndex != null` and in `1..segmentColors.size`), the active zone segment (`index == state.activeZoneIndex - 1`) SHALL be rendered vertically elevated with height equal to $1.6\times$ `trackHeight` (`activeTrackHeight = trackHeight * 1.6f`), centered vertically within the track container, with rounded corner radius (`CornerRadius(activeTrackHeight / 4)`).
+2. *Inactive & Stale Segment Behavior (`REQ-UI-436.2`)*:
+• Inactive zone segments SHALL be rendered with standard un-elevated `trackHeight`.
+• When telemetry is stale or null (`state.activeZoneIndex == null`), all segments SHALL be rendered at uniform base `trackHeight` with `0.35f` dimmed alpha.
+3. *Needle Span Synchronization (`REQ-UI-436.3`)*:
+• The Primary Blue needle overlay and its contrasting halo outline SHALL span the full container height (`activeTrackHeight + 4.dp`), ensuring it cleanly covers and extends 2dp above and below the elevated active segment.
+4. *Dynamic Height Scaling in Bar-Only Mode (`REQ-UI-436.4`)*:
+• In `SensorFieldView.kt`, when a sensor field is in bar-only mode (`!fieldState.showValue && fieldState.showBar`), horizontal telemetry bars SHALL scale their heights with `fieldState.viewSize`:
+  - `ZoneGaugeBar`: `SMALL = 10.dp`, `NORMAL = 14.dp`, `LARGE = 18.dp`, `EXTRA_LARGE = 22.dp` (vs standard `4.dp`, `6.dp`, `8.dp`, `10.dp`).
+  - `PedalPowerBalanceBar`: `SMALL = 12.dp`, `NORMAL = 16.dp`, `LARGE = 20.dp`, `EXTRA_LARGE = 24.dp` (vs standard `6.dp`, `8.dp`, `10.dp`, `12.dp`).
+  - `WPrimeBatteryGaugeBar`: `SMALL = 14.dp`, `NORMAL = 20.dp`, `LARGE = 26.dp`, `EXTRA_LARGE = 32.dp` (vs standard `16.dp`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-436`, extending `REQ-UI-376` (Zone Gauge Bar), `REQ-UI-390` (Proportional Zone Track Scaling), and `REQ-TRK-046` (Per-Field Element Display Configuration).
+2. *Historical Origin & Commit Trace*: `ATT-1293` (commit `3e78df12`), `ATT-3708` (commit `69df2531`), `ATT-4841` (commit `0ea00b1d`).
+3. *Root Reason for Existing Formulation*: `ZoneGaugeBar` originally clipped all segments inside a single uniform outer `Box(height = trackHeight)`. Introducing active zone emphasis requires per-segment height differentiation while preserving outer proportional horizontal weights.
+4. *Preservation of Core Invariants*: Proportional segment weights (`state.segmentWeights`), needle interpolation math (`ZoneGaugeMath`), 0.35 stale alpha, and bottom `"Z1"`..`"Z7"` badges remain 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `ZoneGaugeBar` rendering an active workout in Zone 3 (`activeZoneIndex = 3`),
+• *When* the track segments are drawn,
+• *Then* segment index 2 renders with height $1.6\times$ `trackHeight` and rounded corners, while segments 0, 1, 3, and 4 render at `trackHeight`.
+• *Given* `ZoneGaugeBar` with stale or null telemetry (`activeZoneIndex = null`),
+• *When* the track is drawn,
+• *Then* all segments render with uniform `trackHeight` and `0.35f` opacity.
+• *Given* a sensor field with `showValue = false` and `showBar = true` in `ViewSize.NORMAL`,
+• *When* `SensorFieldView` renders the card,
+• *Then* the gauge track height is scaled to 14.dp instead of 6.dp.
+
+**Invariants**: Zero regression in stale/null handling, True-Black AMOLED compliance, and 100% clean-room test pass rate.
+
+
+
+
 
 

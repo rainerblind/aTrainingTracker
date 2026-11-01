@@ -375,3 +375,24 @@
   • Verify `barWidth` for `DAY` is `24.dp`, `WEEK` is `32.dp`, and spacing is `6.dp`.
   6. *Clean-Room Full Suite Regression Execution (`TST-PER-029.6`)*:
   • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"` verifying 100% test pass rate with zero regressions.
+
+
+### TST-PER-030: **Route-Frequency Heatmap Unification, Tolerance Calibration & Region Propagation Test Suite** [Verified]
+- **Requirement(s)**: `REQ-PER-024`
+- **Component**: `PolylineHeatmapTileProviderTest.kt`, `PeriodCardMapStateTest.kt`, `InteractivePeriodMapTest.kt`, `PeriodsViewModelTest.kt`
+- **Jira**: `ATT-4833`
+- **Test Description**:
+  1. *ThermalColorLut High-Contrast Progression Test (`TST-PER-030.1`, `PolylineHeatmapTileProviderTest.kt`)*:
+  • Verify `ThermalColorLut` progression: Stop 0 base alpha is ~140 (~55%), Stop 1 base alpha is ~204 (~80%), and Stop 2 high intensity alpha at opacity 1.0 is 255 (100%).
+  2. *Adaptive Corridor Frequency Normalization Test (`TST-PER-030.2`, `PolylineHeatmapTileProviderTest.kt`)*:
+  • Verify `PolylineHeatmapTileProvider` dynamically calculates `stepIntensity` based on workout count: 2 passes to saturation for $\le 3$ workouts, 3 passes for $\le 10$ workouts, 5 passes for $\le 35$ workouts, 8 passes for $\le 100$ workouts, and 12 passes for $> 100$ workouts.
+  3. *Corridor Overlap Tolerance Calibration Test (`TST-PER-030.3`, `PeriodCardMapStateTest.kt`)*:
+  • Verify `getPeriodSimplificationToleranceMeters` returns $5.0\text{m}$ for Day, $5.0\text{m}$ for Week, $6.0\text{m}$ for Month, and $8.0\text{m}$ for Year.
+  4. *Heatmap-Primary Visualization & Track Suppression Test (`TST-PER-030.4`, `InteractivePeriodMapTest.kt`)*:
+  • Verify that when `peekedTracks` is empty (no workout selected), `InteractivePeriodMap` and `PeriodMapScreen` suppress vector polylines, anchor lines, and start/stop markers.
+  • Verify that when a workout is peeked, only the peeked track is rendered with high alpha and markers.
+  5. *Region State Propagation Test (`TST-PER-030.5`, `PeriodsViewModelTest.kt`)*:
+  • Verify `showPeriodMap(summary, initialRegionId)` initializes `selectedRegionId` with `initialRegionId`.
+  6. *Clean-Room Full Suite Regression Execution (`TST-PER-030.6`)*:
+  • Execute targeted unit tests verifying 100% test pass rate with zero regressions.
+

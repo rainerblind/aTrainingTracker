@@ -42,10 +42,16 @@ Reuse the ticket's two persistent `TypeName: "self"` subagents via `send_message
 Message the ticket's reviewing persistent subagent (`send_message` to `subagent_pro` for Standard tickets, `subagent_flash` for High-Risk tickets authored by `pro`) to audit the `git diff` against this checklist and record the verdict via `--as agent2 gate-verdict`:
 1. **Diff Scrutiny**: Inspect `git diff` against the approved Stage 3 implementation plan. Confirm zero unapproved files or unintended modifications.
 2. **Side-Effect Audit**: Verify adjacent callers, interfaces, and non-target metrics/features were NOT altered or broken.
-3. **Quality & Compliance**:
+3. **Acceptance-Criteria & Robustness Audit (Rule 66 — `ATT-4864`)**: Plan conformance alone is not sufficient (Sprint 2026-44.1: all gates passed, yet the review found AC gaps and edge-case defects in ATT-4840, ATT-4841, ATT-4833, ATT-4863). Include in the audit report:
+   - **AC-by-AC table**: every acceptance criterion of the parent ticket with verdict `met` / `partially met` / `not met` and evidence (file:line or test). Any `partially` / `not met` → `REVISION`, or an explicit, justified deviation documented in the ticket.
+   - **Upgrade path**: for DB schema, migrations, persisted settings or removed settings — what exactly changes for an *existing* user after the update (previous preferences carried over? visible behaviour change?).
+   - **Missing / invalid input**: for state machines, sensors and resolvers — behaviour with no source, `null`, stale data, `UNKNOWN` sport type, empty lists. A state must never become a dead end (e.g. stuck in `AUTO_PAUSED`) or render empty UI.
+   - **Shared-component blast radius**: when a shared class/default is changed (e.g. `ThermalColorLut`, `PolylineHeatmapTileProvider`), list all other consumers (`grep -rn`) and confirm they are intended to change.
+   - **Compose state hygiene**: no `MutableState` writes inside `remember {}` calculations or during composition (`docs/coding_standards.md` Sec 1.10).
+4. **Quality & Compliance**:
    - Verify class/method headers comply with self-documenting standards (KDoc/JavaDoc).
    - Verify 9-language localization parity across all user-facing strings (`EN, DE, ES, FR, IT, JA, NL, PL, PT`).
-4. **Gate Verdict (`gate-verdict`)**:
+5. **Gate Verdict (`gate-verdict`)**:
    - Record the verdict in a single composite CLI call (which closes the sub-task to `Erledigt`, advances the parent ticket to `Test`, and automatically injects `stage5-verification/SKILL.md` into stdout):
      ```bash
      python3 tools/jira_util.py --as agent2 gate-verdict <IMPL_SUBTASK_KEY> PASS "<Audit Report>"

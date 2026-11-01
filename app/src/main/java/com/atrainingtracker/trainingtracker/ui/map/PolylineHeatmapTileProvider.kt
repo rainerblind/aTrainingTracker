@@ -56,7 +56,7 @@ internal data class PolylineBoundingBox(
  */
 class PolylineHeatmapTileProvider(
     allPaths: List<List<LatLng>>,
-    val opacity: Double = 0.8,
+    val opacity: Double = 1.0,
     val strokeWidthPx: Float = 5.0f,
     intensityPerPass: Float? = null,
     val colorLut: ThermalColorLut = ThermalColorLut(opacity),
@@ -80,15 +80,25 @@ class PolylineHeatmapTileProvider(
         }
     }
 
-    private val stepIntensity: Int = run {
-        val fraction = intensityPerPass ?: when {
-            allPaths.size <= 5 -> 0.25f
-            allPaths.size <= 20 -> 0.15f
-            allPaths.size <= 60 -> 0.08f
-            allPaths.size <= 150 -> 0.05f
-            else -> 0.035f
+    private val stepIntensity: Int = calculateStepIntensity(allPaths.size, intensityPerPass)
+
+    companion object {
+        /**
+         * Calculates the adaptive pass intensity [1..255] based on aggregate workout count (REQ-PER-024.4).
+         */
+        fun calculateStepIntensity(pathCount: Int, intensityPerPass: Float? = null): Int {
+            val fraction = intensityPerPass ?: run {
+                val targetPasses = when {
+                    pathCount <= 3 -> 2f
+                    pathCount <= 10 -> 3f
+                    pathCount <= 35 -> 5f
+                    pathCount <= 100 -> 8f
+                    else -> 12f
+                }
+                1.0f / targetPasses
+            }
+            return (255 * fraction).roundToInt().coerceIn(1, 255)
         }
-        (255 * fraction).roundToInt().coerceIn(1, 255)
     }
 
     override fun getTile(x: Int, y: Int, zoom: Int): Tile? {

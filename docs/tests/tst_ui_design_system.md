@@ -6830,5 +6830,45 @@
   • Execute targeted unit tests and verify 100% pass rate with zero regressions.
 
 
+### TST-UI-435: **Tracking Tabs Mode Transition Initial Page Resolution Test Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-435`
+- **Component**: `TrackingTabsPageResolverTest.kt`, `TrackingTabsScreen.kt`
+- **Jira**: `ATT-4838`
+- **Test Description**:
+  1. *Drawer Configuration Entry Resolution (`TST-UI-435.1`)*:
+  • Unit test in `TrackingTabsPageResolverTest` verifying `resolveInitialPage`:
+    - Returns `0` when transitioning from `ScreenMode.TRACKING` to `ScreenMode.CONFIGURATION` regardless of `lastKnownPage` (`lastKnownPage = 1` or `lastKnownPage = 2`).
+    - Returns `0` when `activityTypeChanged = true` in `ScreenMode.CONFIGURATION`.
+  2. *Editor-Preview Round-Trip Resolution (`TST-UI-435.2`)*:
+  • Unit test in `TrackingTabsPageResolverTest` verifying `resolveInitialPage`:
+    - Returns `lastKnownPage` when transitioning `ScreenMode.CONFIGURATION -> ScreenMode.PREVIEW`.
+    - Returns `lastKnownPage` when transitioning `ScreenMode.PREVIEW -> ScreenMode.CONFIGURATION`.
+    - Clamps to valid bounds `0 until tabCount`.
+  3. *Preview Exit to Tracking Resolution (`TST-UI-435.3`)*:
+  • Unit test in `TrackingTabsPageResolverTest` verifying `resolveInitialPage`:
+    - Returns `lastKnownPage + 1` when transitioning `ScreenMode.PREVIEW -> ScreenMode.TRACKING` with `tabCount > 0`.
+    - Returns `0` when `tabCount <= 0`.
+  4. *Same-Mode Tab Addition/Deletion Stability (`TST-UI-435.4`)*:
+  • Unit test verifying `lastKnownPage` is preserved and clamped within valid page bounds when mode is unchanged.
+
+
+### TST-UI-436: **Active Training Zone Segment Height Emphasis & Bar-Only Sizing Test Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-436`
+- **Component**: `SensorFieldZoneGaugeTest.kt`, `ZoneGaugeBar.kt`, `SensorFieldView.kt`
+- **Jira**: `ATT-4860`
+- **Test Description**:
+  1. *Active Segment Height Elevation & Inactive Uniformity Test (`TST-UI-436.1`)*:
+  • Unit test in `SensorFieldZoneGaugeTest.kt` verifying active segment height calculation ($1.6\times$ `trackHeight`) and inactive segment base height (`trackHeight`).
+  • Verify that when `activeZoneIndex == null` (stale/disconnected), all segments render at base `trackHeight` with `0.35f` opacity.
+  2. *Dynamic Height Scaling in Bar-Only Mode Test (`TST-UI-436.2`)*:
+  • Unit test in `SensorFieldZoneGaugeTest.kt` verifying track height resolution across `ViewSize.SMALL`, `NORMAL`, `LARGE`, `EXTRA_LARGE` for `ZoneGaugeBar`, `PedalPowerBalanceBar`, and `WPrimeBatteryGaugeBar` when `!fieldState.showValue && fieldState.showBar`.
+  3. *Needle Span Overlay Geometry Contract Test (`TST-UI-436.3`)*:
+  • Verify `ZoneGaugeBar` needle container height accommodates elevated active segment (`activeTrackHeight + 4.dp`) and needle indicator spans vertically across the active segment.
+  4. *Clean-Room Full Suite Regression Execution (`TST-UI-436.4`)*:
+  • Execute targeted unit tests and verify 100% pass rate with zero regressions.
+
+
+
+
 
 

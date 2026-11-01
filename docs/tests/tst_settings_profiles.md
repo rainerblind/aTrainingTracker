@@ -765,3 +765,51 @@
   • Verify zero literal `"+ "` prefixes.
   6. *Clean-Room Full Suite Regression Execution (`TST-PRI-006.6`)*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate across the full project test suite.
+
+---
+
+### TST-SET-080: **Dedicated Auto-Pause Settings Cockpit & Navigation Drawer Entry Verification Suite** [Navigation drawer item and route mapping verified; AutoPauseTabsScreen and ViewModel reactive persistence and reset verified; single canonical configuration surface retirement verified; 100% 9-language localization parity; full regression pass.]
+- **Requirement(s)**: `REQ-SET-080`
+- **Component**: **Dedicated Auto-Pause Settings Cockpit & Navigation Drawer Entry Verification Suite**
+- **Jira**: ``ATT-4836``
+- **Test Description**:
+  1. *Navigation Drawer & Route Resolution Contract Test (`TST-SET-080.1`, `AutoPauseNavigationTest.kt`)*:
+  • Verify `NavRoutes.toRoute(R.id.drawer_auto_pause)` returns `NavRoutes.AUTO_PAUSE`.
+  • Verify `NavRoutes.toDrawerItemId(NavRoutes.AUTO_PAUSE)` returns `R.id.drawer_auto_pause`.
+  • Verify `AppNavigationDrawer.kt` includes `DrawerItemConfig(R.id.drawer_auto_pause, R.drawable.ic_pause_circle, R.string.auto_pause_title)` in the Settings group directly below `drawer_sport_types`.
+  2. *AutoPauseViewModel State & Persistence Contract Test (`TST-SET-080.2`, `AutoPauseViewModelTest.kt`)*:
+  • Verify `AutoPauseViewModel` exposes reactive `tuningConfig: StateFlow<TuningConfig>`.
+  • Verify updating bike, run, and other sport toggles and sliders persists values to `TuningPreferencesDataStore`.
+  • Verify resetting preferences for a sport restores default thresholds and debounces.
+  3. *Single Canonical Configuration Surface Retirement Contract Test (`TST-SET-080.3`, `AutoPauseRetirementContractTest.kt`)*:
+  • Verify `SensorsGpsFilterSection.kt` no longer binds `autoPause*` parameters.
+  • Verify `AdvancedTuningScreen.kt` and `AdvancedTuningDialog.kt` no longer render auto-pause toggles or sliders.
+  4. *9-Language Localization Parity (`TST-SET-080.4`, `TranslationParityTest.kt`)*:
+  • Verify `auto_pause_title` exists across all 9 canonical locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+  5. *Clean-Room Regression Execution (`TST-SET-080.5`)*:
+  • Execute targeted unit tests and AAPT2 resources with 100% success.
+
+
+---
+
+### TST-SET-081: **Preservation of Unclustered Status on Workout Edits & Explicit Cluster Management Verification Suite** [Unclustered workouts strictly remain unclustered on metadata edits; automatic cluster creation and assignment in saveWorkout() removed; cluster creation/assignment gated to explicit dialog actions; centroid updates for clustered workouts preserved.]
+- **Requirement(s)**: `REQ-SET-081`
+- **Component**: **WorkoutRepository / EditWorkoutClustering / WorkoutClusterEngine**
+- **Jira**: ``ATT-4862``
+- **Test Description**:
+  1. *Unclustered Workout Name Edit Test (`TST-SET-081.1`, `EditWorkoutClusteringTest.kt`)*:
+  • Given an unclustered workout (`clusterId == -1L`, "Offen"),
+  • When the workout name is updated to a custom non-empty string and `saveWorkout()` is called,
+  • Verify `clusterEngine.learnFromWorkout()` is NOT called, no cluster is created in `WorkoutClusters.db`, and `clusterEngine.assignClusterToWorkout()` is NOT called.
+  • Verify the saved workout in memory and SQLite preserves `clusterId == -1L`.
+  2. *Unclustered Selection ("Offen") Persistence Test (`TST-SET-081.2`, `EditWorkoutClusteringTest.kt`)*:
+  • Given a previously clustered workout (`clusterId > 0`),
+  • When the user unassigns the cluster via `unassignCluster()` (selecting "Offen") and subsequently edits the workout name and saves,
+  • Verify the workout strictly remains unclustered (`clusterId == -1L`) and `saveWorkout()` does not reassign or create any cluster.
+  3. *Clustered Workout Centroid Update Test (`TST-SET-081.3`, `EditWorkoutClusteringTest.kt`)*:
+  • Given a clustered workout (`clusterId == 10L`),
+  • When saving a name or sport edit via `saveWorkout()`,
+  • Verify `clusterEngine.learnFromWorkout(..., clusterIdOverride = 10L)` is invoked to update the cluster's centroids and sport.
+  • Verify `assignClusterToWorkout()` is NOT called to override cluster assignment.
+  4. *Clean-Room Regression Execution (`TST-SET-081.4`)*:
+  • Execute targeted unit tests in `EditWorkoutClusteringTest`, `EditWorkoutClusterTest`, and `ThemeColorCentralizationAuditTest` with 100% pass rate.

@@ -2109,6 +2109,7 @@
     <string name="zone_onboarding_action_later">Not Now</string>
 
     <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
+    <string name="auto_pause_title">Auto-Pause</string>
     <string name="tuning_auto_pause_title">Auto-Pause</string>
     <string name="tuning_auto_pause_desc">Automatically pause recording when stationary</string>
     <string name="tuning_auto_pause_bike_title">Cycling</string>
@@ -2118,10 +2119,16 @@
     <string name="tuning_auto_pause_speed_threshold_desc">Speed below which recording is paused</string>
     <string name="tuning_auto_pause_debounce_title">Pause Debounce Delay</string>
     <string name="tuning_auto_pause_debounce_desc">Duration below threshold before pausing</string>
+    <string name="tuning_auto_pause_resume_debounce_title">Resume Debounce Delay</string>
+    <string name="tuning_auto_pause_resume_debounce_desc">Duration above threshold before resuming</string>
+    <string name="tuning_auto_pause_start_in_auto_pause_title">Start in Auto-Paused</string>
+    <string name="tuning_auto_pause_start_in_auto_pause_desc">When starting a workout while stationary, immediately begin in Auto-Paused until movement is detected</string>
     <string name="tuning_speed_value_format">%1$d %2$s</string>
     <string name="tuning_seconds_value_format">%1$d s</string>
     <string name="cockpit_auto_pause_badge">Auto-Pause</string>
     <string name="cockpit_auto_pause_resume">Resume Now</string>
+    <string name="cockpit_status_not_started">Not Started</string>
+    <string name="cockpit_status_paused">Paused</string>
     <string name="cockpit_speed_sensor_lost">Speed Sensor Lost</string>
 
     <!-- Athlete Baselines & W/kg Metric (ATT-1289, REQ-TRK-019) -->
@@ -2364,4 +2371,9 @@
     <string name="tip_sport_types_subtitle">Speed thresholds, gear defaults &amp; export mappings</string>
     <string name="tip_sport_types_desc">Define custom sports (e.g. Road Bike, Gravel, MTB, Trail Run). Configure speed-based automatic sport detection thresholds, bind default equipment, and customize Strava, TCX, and GoldenCheetah export type mappings.</string>
     <string name="tip_sport_types_action">Manage Sport Types</string>
+
+    <!-- Sensor Field Display Elements (ATT-4841, REQ-TRK-046) -->
+    <string name="sensor_field_display_elements_title">Display Elements</string>
+    <string name="sensor_field_show_value">Value</string>
+    <string name="sensor_field_show_bar">Bar</string>
 </resources>

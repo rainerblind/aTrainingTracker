@@ -113,13 +113,12 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
      *
      * @param summary The period to analyze.
      */
-    fun showPeriodMap(summary: PeriodSummary) {
+    fun showPeriodMap(summary: PeriodSummary, initialRegionId: String? = null) {
         selectionJob?.cancel()
         _selectedPeriod.value = summary
+        _mapState.value = PeriodMapState(isLoading = true, selectedRegionId = initialRegionId)
         
         selectionJob = viewModelScope.launch {
-            _mapState.value = PeriodMapState(isLoading = true)
-            
             // ATT-440: Adoption of Cluster loading algorithm
             // 1. Fetch Source of Truth for the range (Guaranteed completeness)
             val workouts = withContext(Dispatchers.IO) {
@@ -131,6 +130,7 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
                 // Partition workouts into geographic activity regions
                 val detectedRegions = SpatialRegionEngine.detectRegions(workouts)
                 val primaryRegion = detectedRegions.firstOrNull { it.isPrimary } ?: detectedRegions.firstOrNull()
+                val activeRegionId = initialRegionId ?: primaryRegion?.id
 
                 // Decode polyline paths once for both heatmap and lightweight vector tracks
                 val heatmapPathMap = workouts.associate { w ->
@@ -188,7 +188,7 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
                     workoutIdToSportMap = workouts.associate { it.id to it.bSportType },
                     memberMarkers = markers,
                     regions = detectedRegions,
-                    selectedRegionId = primaryRegion?.id,
+                    selectedRegionId = activeRegionId,
                     isLoading = false
                 )
             }

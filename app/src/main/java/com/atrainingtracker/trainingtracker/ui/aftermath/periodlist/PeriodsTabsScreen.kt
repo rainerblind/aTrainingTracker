@@ -66,6 +66,38 @@ fun PeriodsTabsScreen(
     selectedSports: Set<BSportType> = setOf(BSportType.BIKE, BSportType.RUN),
     onToggleSportFilter: (BSportType) -> Unit = {}
 ) {
+    PeriodsTabsScreen(
+        groupedPeriods = groupedPeriods,
+        tabs = tabs,
+        pagerState = pagerState,
+        listStates = listStates,
+        isPlayServiceAvailable = isPlayServiceAvailable,
+        onHeaderClick = onHeaderClick,
+        onMapClick = { s, _ -> onMapClick(s) },
+        onSportClick = onSportClick,
+        onLongestWorkoutClick = onLongestWorkoutClick,
+        migrationStatus = migrationStatus,
+        selectedSports = selectedSports,
+        onToggleSportFilter = onToggleSportFilter
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PeriodsTabsScreen(
+    groupedPeriods: List<List<PeriodSummary>>,
+    tabs: List<String>,
+    pagerState: PagerState,
+    listStates: List<LazyListState>,
+    isPlayServiceAvailable: Boolean,
+    onHeaderClick: (PeriodSummary) -> Unit,
+    onMapClick: (PeriodSummary, String?) -> Unit,
+    onSportClick: (PeriodSummary, BSportType) -> Unit,
+    onLongestWorkoutClick: (PeriodSummary, BSportType, Long) -> Unit,
+    migrationStatus: MigrationStatus? = null,
+    selectedSports: Set<BSportType> = setOf(BSportType.BIKE, BSportType.RUN),
+    onToggleSportFilter: (BSportType) -> Unit = {}
+) {
 
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current

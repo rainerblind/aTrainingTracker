@@ -93,6 +93,27 @@ fun PeriodSummaryCard(
     onLongestWorkoutClick: (PeriodSummary, BSportType, Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    PeriodSummaryCard(
+        summary = summary,
+        isPlayServiceAvailable = isPlayServiceAvailable,
+        onHeaderClick = onHeaderClick,
+        onMapClick = { s, _ -> onMapClick(s) },
+        onSportClick = onSportClick,
+        onLongestWorkoutClick = onLongestWorkoutClick,
+        modifier = modifier
+    )
+}
+
+@Composable
+fun PeriodSummaryCard(
+    summary: PeriodSummary,
+    isPlayServiceAvailable: Boolean,
+    onHeaderClick: (PeriodSummary) -> Unit,
+    onMapClick: (PeriodSummary, String?) -> Unit,
+    onSportClick: (PeriodSummary, BSportType) -> Unit,
+    onLongestWorkoutClick: (PeriodSummary, BSportType, Long) -> Unit,
+    modifier: Modifier = Modifier
+) {
     val df = DistanceFormatter()
     val tf = TimeFormatter()
     val af = AltitudeFormatter()
@@ -214,7 +235,7 @@ fun PeriodSummaryCard(
                         PeriodMultiWorkoutMap(
                             summary = summary,
                             paths = mapState.primaryPaths,
-                            onMapClick = { onMapClick(summary) },
+                            onMapClick = { onMapClick(summary, mapState.activeRegionId) },
                             bounds = mapState.bounds,
                             precomputedVisuals = mapState.visuals,
                             renderVectorPolylines = mapState.renderVectorPolylines
@@ -550,7 +571,7 @@ private fun PeriodMultiWorkoutMap(
             ),
             onMapClick = { onMapClick() }
         ) {
-            val shouldRenderPolylines = renderVectorPolylines && (visuals.heatmapProvider == null || allPaths.size <= MAX_PERIOD_VECTOR_TRACKS)
+            val shouldRenderPolylines = renderVectorPolylines && (visuals.heatmapProvider == null)
             if (shouldRenderPolylines) {
                 allPaths.forEach { path ->
                     Polyline(

@@ -74,8 +74,7 @@ data class DeviceTelemetry(
     val deviceId: Long,
     val mainValue: com.atrainingtracker.banalservice.devices.SimpleSensorData?,
     val allValues: List<com.atrainingtracker.banalservice.devices.SimpleSensorData>,
-    val batteryPercentage: Int = -1,
-    val version: Long = System.nanoTime() // Guaranteed uniqueness for StateFlow
+    val batteryPercentage: Int = -1
 )
 
 
@@ -334,8 +333,7 @@ class BANALServiceRepository private constructor(context: Context) {
                                 deviceId = device.deviceId,
                                 mainValue = device.mainSensorData,
                                 allValues = device.allSensorData ?: emptyList(),
-                                batteryPercentage = device.batteryPercentage,
-                                version = System.nanoTime()
+                                batteryPercentage = device.batteryPercentage
                             )
                         } ?: emptyList()
 
@@ -343,10 +341,12 @@ class BANALServiceRepository private constructor(context: Context) {
                         val latData = binder.getBestSensorData(SensorType.LATITUDE)
                         val lonData = binder.getBestSensorData(SensorType.LONGITUDE)
 
+                        var locationChanged = false
                         if (latData?.value is Double && lonData?.value is Double) {
                             val newLocation = LatLng(latData.value as Double, lonData.value as Double)
                             if (_currentLocation.value != newLocation) {
                                 _currentLocation.value = newLocation
+                                locationChanged = true
                                 if (TrainingApplication.getTrackingMode() == TrackingMode.TRACKING) {
                                     _currentTrack.value = currentTrack.value + newLocation
                                 }
@@ -354,19 +354,23 @@ class BANALServiceRepository private constructor(context: Context) {
                         }
 
                         // --- PRIMARY METRICS ---
-                        val currentSpeed = binder.getBestSensorData(SensorType.SPEED_mps)?.value as Double?
-                        val currentAltitude = binder.getBestSensorData(SensorType.ALTITUDE)?.value as Double?
-                        val currentDistance = binder.getBestSensorData(SensorType.DISTANCE_m)?.value as Double?
+                        val currentSpeed = binder.getBestSensorData(SensorType.SPEED_mps)?.value as? Double
+                        val currentAltitude = binder.getBestSensorData(SensorType.ALTITUDE)?.value as? Double
+                        val currentDistance = binder.getBestSensorData(SensorType.DISTANCE_m)?.value as? Double
+
+                        val distanceChanged = (currentDistance != null && currentDistance != _currentDistance.value)
 
                         _currentSpeed.value = currentSpeed
-                        _currentBearing.value = binder.getBestSensorData(SensorType.BEARING)?.value as Double?
+                        _currentBearing.value = binder.getBestSensorData(SensorType.BEARING)?.value as? Double
                         _currentDistance.value = currentDistance
                         _isAltimeterCalibrated.value = binder.isAltimeterCalibrated()
 
-                        if (TrainingApplication.getTrackingMode() == TrackingMode.TRACKING) {
+                        // REQ-TRK-042.1: Only append PathPoint when location is valid and location or distance has advanced
+                        val location = _currentLocation.value
+                        if (TrainingApplication.getTrackingMode() == TrackingMode.TRACKING && location != null && (locationChanged || distanceChanged)) {
                             val newPathPoint = com.atrainingtracker.trainingtracker.ui.map.PathPoint(
                                 distance = currentDistance ?: 0.0,
-                                latLng = _currentLocation.value ?: LatLng(0.0, 0.0),
+                                latLng = location,
                                 altitude = currentAltitude ?: 0.0
                             )
                             _currentPathPoints.value = _currentPathPoints.value + newPathPoint

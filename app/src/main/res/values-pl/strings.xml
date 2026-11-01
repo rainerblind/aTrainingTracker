@@ -1910,6 +1910,7 @@
     <string name="zone_onboarding_action_configure">Konfiguruj strefy</string>
     <string name="zone_onboarding_action_later">Nie teraz</string>
     <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
+    <string name="auto_pause_title">Autopauza</string>
     <string name="tuning_auto_pause_title">Autopauza</string>
     <string name="tuning_auto_pause_desc">Automatyczne wstrzymywanie nagrywania podczas postoju</string>
     <string name="tuning_auto_pause_bike_title">Jazda na rowerze</string>
@@ -1919,10 +1920,16 @@
     <string name="tuning_auto_pause_speed_threshold_desc">Prędkość, poniżej której rejestracja jest wstrzymywana</string>
     <string name="tuning_auto_pause_debounce_title">Opóźnienie pauzy</string>
     <string name="tuning_auto_pause_debounce_desc">Czas poniżej progu przed wstrzymaniem</string>
+    <string name="tuning_auto_pause_resume_debounce_title">Opóźnienie wznowienia</string>
+    <string name="tuning_auto_pause_resume_debounce_desc">Czas powyżej progu przed wznowieniem</string>
+    <string name="tuning_auto_pause_start_in_auto_pause_title">Rozpocznij w automatycznej pauzie</string>
+    <string name="tuning_auto_pause_start_in_auto_pause_desc">Podczas rozpoczynania treningu w miejscu natychmiast przejdź do automatycznej pauzy do momentu wykrycia ruchu</string>
     <string name="tuning_speed_value_format">%1$d %2$s</string>
     <string name="tuning_seconds_value_format">%1$d s</string>
     <string name="cockpit_auto_pause_badge">Autopauza</string>
     <string name="cockpit_auto_pause_resume">Wznów teraz</string>
+    <string name="cockpit_status_not_started">Nie rozpoczęto</string>
+    <string name="cockpit_status_paused">Wstrzymano</string>
     <string name="cockpit_speed_sensor_lost">Utracono czujnik prędkości</string>
 
     <!-- Athlete Baselines & W/kg Metric (ATT-1289, REQ-TRK-019) -->
@@ -2165,4 +2172,9 @@
     <string name="tip_sport_types_subtitle">Progi prędkości, domyślny sprzęt i profile eksportu</string>
     <string name="tip_sport_types_desc">Definiuj własne sporty (np. szosa, gravel, MTB, bieg górski). Skonfiguruj progi prędkości do automatycznego wykrywania sportu, przypisz domyślny sprzęt i dostosuj mapowanie eksportu do Strava, TCX oraz GoldenCheetah.</string>
     <string name="tip_sport_types_action">Zarządzaj dyscyplinami</string>
+
+    <!-- Sensor Field Display Elements (ATT-4841, REQ-TRK-046) -->
+    <string name="sensor_field_display_elements_title">Elementy wyświetlania</string>
+    <string name="sensor_field_show_value">Wartość</string>
+    <string name="sensor_field_show_bar">Pasek</string>
 </resources>

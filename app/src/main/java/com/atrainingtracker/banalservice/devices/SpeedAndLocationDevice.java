@@ -292,8 +292,18 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
                 mLineDistanceSensor.newValue(location.distanceTo(mStartLocation) + 0.0);
 
                 double delta_distance = 0.0;
+                long dt_ms = 0;
                 if (mPrevLocation != null) {
                     delta_distance = mPrevLocation.distanceTo(location);
+                    dt_ms = location.getTime() - mPrevLocation.getTime();
+
+                    // REQ-TRK-041.1: Guard against implausible multipath teleportation spikes (speed > 70.0 m/s = 252 km/h)
+                    if (dt_ms > 0 && dt_ms < 30000) {
+                        double calcSpeed = delta_distance / (dt_ms / 1000.0);
+                        if (calcSpeed > 70.0) {
+                            delta_distance = 0.0;
+                        }
+                    }
 
                     mDistanceSensor.increment(delta_distance);
                     mLapDistanceSensor.increment(delta_distance);
@@ -310,10 +320,6 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
                 mBearingSensor.newValue((bearing + 360.0) % 360.0);
 
                 double speed = location.getSpeed();
-                long dt_ms = 0;
-                if (mPrevLocation != null) {
-                    dt_ms = location.getTime() - mPrevLocation.getTime();
-                }
                 if (speed == 0.0 && mPrevLocation != null) {
                     if (delta_distance > 0.1) {
                         if (dt_ms > 0 && dt_ms < 30000) {

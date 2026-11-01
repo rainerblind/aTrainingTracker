@@ -2004,3 +2004,232 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Zero regression in portrait mode layout, `forcePortrait` lock, gesture and callback contracts (Rule 34), and 100% clean-room test pass rate.
 
+### REQ-TRK-041: Geodesic Displacement Plausibility Gating for Distance Accumulation & Canonical Multi-Sensor Summary Filtering [Verified]
+- **Tests**: `TST-TRK-041` | **Tickets**: `ATT-4843`
+- **Implementation**: `SpeedAndLocationDevice.java`, `TrackerService.java`
+- **Rationale**: The tracking subsystem SHALL prevent multi-kilometer teleportation / cellular triangulation multipath spikes from accumulating into distance metrics and SHALL guarantee that secondary multi-sensor telemetry streams do not overwrite canonical summary distance and speed metrics in `WorkoutSummaries` (ATT-4843):
+1. *Geodesic Displacement Plausibility Clamping in `SpeedAndLocationDevice` (`REQ-TRK-041.1`)*:
+• In `SpeedAndLocationDevice.onNewLocation()`, before incrementing distance accumulators (`mDistanceSensor`, `mLapDistanceSensor`), the system SHALL evaluate displacement velocity against physical plausibility:
+  - If `mPrevLocation != null` and elapsed time `dt_ms = location.getTime() - mPrevLocation.getTime()` satisfies `dt_ms > 0 && dt_ms < 30000`:
+    * The system SHALL compute displacement speed `calcSpeed = delta_distance / (dt_ms / 1000.0)`.
+    * If `calcSpeed > 70.0\text{ m/s}` ($252\text{ km/h}$, matching the speed plausibility ceiling in `REQ-TRK-014`), the displacement SHALL be classified as an impossible multipath / cell-tower triangulation jump: `delta_distance` SHALL be clamped to `0.0` for distance accumulators, suppressing increments to `mDistanceSensor` and `mLapDistanceSensor`.
+  - Legitimate human velocities ($\le 70.0\text{ m/s}$) SHALL continue to accumulate distance without attenuation.
+2. *Canonical Multi-Sensor Summary Filtering in `TrackerService` (`REQ-TRK-041.2`)*:
+• In `TrackerService.sampleAndWriteToDb()`, when capturing multi-sensor telemetry across `banalService.getAllSensorData()`, updating `summaryValues` and internal accumulators (`mDistanceTotal_m`, `mTimeTotal_s`, `mTimeActive_s`, `CALORIES`, `LAPS`, `ASCENDING`, `DESCENDING`) SHALL strictly require `sensorData.getDeviceName() == null` (the canonical/primary proxy sensor).
+• Secondary, device-qualified sensor streams (`sensorData.getDeviceName() != null`, such as `"Google Fused"` or `"GPS"`) SHALL continue logging to raw `samplingValues` table columns (e.g. `"DISTANCE_m (Google Fused)"`), but SHALL NEVER overwrite `WorkoutSummaries.DISTANCE_TOTAL_m` or `mDistanceTotal_m`.
+3. *Authoritative Average Speed Consistency (`REQ-TRK-041.3`)*:
+• `WorkoutSummaries.SPEED_AVERAGE_mps` SHALL be calculated strictly from canonical `mDistanceTotal_m / mTimeActive_s`, harmonizing summary cards, elevation profile X-axis, and lap tables.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-041` complementing `REQ-TRK-008` (*Align session averages with core summary metrics*) and `REQ-TRK-014` (*Location Delta Fallback for Missing GPS Bearing and Speed*). Targets `SpeedAndLocationDevice.java` and `TrackerService.java`.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-4843`, Sprint `2026-44.1`. Rooted in forensic analysis of workout 434 where indoor cell-tower triangulation during a pause added 8.5 km to `Google Fused` distance, which then overwrote canonical GPS summary distance in `TrackerService`.
+3. *Root Reason for Existing Formulation*: `REQ-TRK-014` introduced 70 m/s plausibility clamping for instantaneous speed, but omitted distance accumulator increments. `REQ-TRK-008` aligned summary averages with session metrics, but iterating `getAllSensorData()` in `TrackerService` without `deviceName == null` filtering allowed the last enumerated hardware device to overwrite proxy totals.
+4. *Preservation of Core Invariants*: Full multi-sensor logging in `WorkoutSamples.db` remains intact. Legitimate cycling/running movements ($\le 70\text{ m/s}$) accumulate full distance. Single-thread database serialization on `mDbExecutor` is preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an active location device receiving consecutive location fixes with $\Delta t = 1000\text{ ms}$ and $\Delta s = 4,245.6\text{ m}$ ($v = 4,245.6\text{ m/s} > 70.0\text{ m/s}$),
+• *When* `onNewLocation` processes the jump,
+• *Then* `mDistanceSensor` and `mLapDistanceSensor` SHALL NOT increment by $4,245.6\text{ m}$ (`delta_distance` clamped to `0.0`).
+• *Given* an active tracking session with canonical `ProxySensor` (`DISTANCE_m = 4370.0 m`, `deviceName == null`) and secondary `Google Fused` (`DISTANCE_m = 13377.3 m`, `deviceName == "Google Fused"`),
+• *When* `sampleAndWriteToDb()` executes,
+• *Then* `summaryValues.getAsDouble(DISTANCE_TOTAL_m)` SHALL equal `4370.0 m`, and `samplingValues` SHALL record both `DISTANCE_m` (`4370.0 m`) and `"DISTANCE_m (Google Fused)"` (`13377.3 m`).
+• *Given* an athlete running or cycling at $15\text{ m/s}$ ($\le 70\text{ m/s}$),
+• *When* fixes arrive at 1-second intervals with $\Delta s = 15\text{ m}$,
+• *Then* `mDistanceSensor` SHALL increment by the full $15\text{ m}$.
+
+**Invariants**: Secondary multi-sensor logging in `WorkoutSamples.db` MUST NOT be dropped; legitimate speeds ($\le 70.0\text{ m/s}$) MUST accumulate distance accurately; single-thread serialization on `mDbExecutor` MUST be maintained.
+
+### REQ-TRK-042: 1-Hz Live-Tracking Allocation Hotspot Elimination, Recomposition Decoupling & Bounded Polyline Serialization [Planned]
+- **Tests**: `TST-TRK-042` | **Tickets**: `ATT-4863`
+- **Implementation**: `BANALServiceRepository.kt`, `MapLayers.kt`, `SensorGridScreen.kt`, `TrackingViewModel.kt`
+- **Rationale**: The live-tracking subsystem SHALL eliminate high-frequency object allocations, O(N^2) list copies, Compose snapshot invalidations during composition, and unbounded Binder IPC transfers during 1-Hz tracking to protect JVM heap stability and prevent `OutOfMemoryError` on long-running workouts (ATT-4863):
+1. *Deduplicated & Gated Live Track & PathPoint Appending (`REQ-TRK-042.1`)*:
+• In `BANALServiceRepository.kt`, `_currentPathPoints` SHALL strictly append new `PathPoint` objects only when `_currentLocation.value` is non-null AND either geographical position (`newLocation != _currentLocation.value`) or cumulative distance (`newDistance != _currentDistance.value`) has advanced. When stationary or paused, redundant identical allocations SHALL be suppressed.
+2. *Bounded Live Track Rendering via Historical Decimation (`REQ-TRK-042.2`)*:
+• In `MapLayers.kt` (`LiveTrackLayer`), when active GPS track points exceed 300 points, the polyline passed to `XRayPolyline` and Google Maps SDK `Polyline.setPoints(...)` SHALL preserve the most recent 200 points at full 1-Hz resolution while downsampling older historical points using `PolyUtil.simplify(head, 3.0)` to bound the total list size sent across Binder to Maps IPC.
+3. *Non-State Index Caching & Elevation Profile Composition Gating (`REQ-TRK-042.3`)*:
+• In `SensorGridScreen.kt`, the last route segment index SHALL be cached inside a non-state holder (`SegmentIndexHolder`) rather than a `MutableState`, preventing Compose snapshot writes inside `remember` during composition.
+• `TrackingElevationProfileResolver.resolve(...)` SHALL be evaluated strictly when `state.showElevationProfile == true`. When hidden, resolution and recomposition on 1-Hz path updates SHALL be bypassed.
+4. *Memoized Base Sensor Fields & Decoupled Grid Telemetry (`REQ-TRK-042.4`)*:
+• In `TrackingViewModel.kt:loadSensorFieldStates()`, `baseFields` (`configs.map { SensorFieldState(...) }`) SHALL be precomputed and memoized when view configurations, activity type, or zone options change, so 1-Hz `allFilteredSensorData` updates only execute `applySensorData(...)` without reallocating base field descriptors.
+5. *Structural Value Equality for Device Telemetry (`REQ-TRK-042.5`)*:
+• In `BANALServiceRepository.kt`, `DeviceTelemetry` SHALL NOT contain synthetic non-deterministic fields such as `version = System.nanoTime()`, restoring data class structural equality so `_allActiveDevicesTelemetry` only emits downstream when device status or sensor values genuinely change.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-042`.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-4863`, Sprint `2026-44.1`. Follows Crashlytics issue `16e0317dd5b3aa5a53b9248f50f05822` in release `4.9.38.5 (269)`.
+3. *Root Reason for Existing Formulation*: `version = System.nanoTime()` was added in early refactorings under the assumption that `StateFlow` required unique timestamps. Unbounded `_currentPathPoints` and dual polyline updates were implemented before multi-hour heap profiles were captured.
+4. *Preservation of Core Invariants*: 1-Hz live telemetry updates, visual track sharpness, map follow-me behavior, and 100% test pass rate are strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an active tracking session remaining stationary for 60 seconds,
+• *When* the 1-Hz observation loop executes,
+• *Then* `_currentPathPoints` SHALL NOT accumulate 60 duplicate points.
+• *Given* a long workout track with 3,000 recorded points,
+• *When* `LiveTrackLayer` renders,
+• *Then* `XRayPolyline` receives a simplified historical path plus full-resolution tail with significantly fewer points than 3,000, preventing multi-megabyte Binder IPC spikes.
+• *Given* a tracking cockpit tab with `showElevationProfile == false`,
+• *When* 1-Hz path points update,
+• *Then* `TrackingElevationProfileResolver.resolve` is bypassed and zero Compose snapshot writes occur during composition.
+• *Given* consecutive 1-Hz ticks where device telemetry is identical,
+• *When* `DeviceTelemetry` objects are compared,
+• *Then* `_allActiveDevicesTelemetry` suppresses duplicate downstream emissions.
+
+**Invariants**: Visual smoothness and accuracy of live map traces and elevation profiles are preserved; raw sample storage in `WorkoutSamples.db` remains 100% uncompromised; 100% clean-room test pass rate.
+
+
+
+### REQ-TRK-043: Sport-Specific Auto-Pause Resume Debounce & Symmetric Single-Threshold Evaluation [Planned]
+- **Tests**: `TST-TRK-043` | **Tickets**: `ATT-4839`
+- **Implementation**: `AutoPauseManager.kt`, `TuningConfig.kt`, `TuningPreferencesDataStore.kt`, `AutoPauseTabsScreen.kt`, `AutoPauseViewModel.kt`
+- **Rationale**: The auto-pause engine SHALL replace immediate single-tick resumption and asymmetric `+0.5` speed hysteresis deadbands with configurable sport-specific resume debounce timers evaluated against the exact configured sport speed threshold, eliminating false resume triggers from transient GPS jitter spikes (ATT-4839, extending `REQ-TRK-018` and `REQ-SET-080`):
+1. *Configurable Sport-Specific Resume Debounce Window (`REQ-TRK-043.1`)*:
+• `TuningConfig`, `TuningPreferencesDataStore`, and `AutoPauseConfig` SHALL persist independent resume debounce times in whole seconds:
+  - **Cycling (`BSportType.BIKE`)**: Range $1 \dots 20\text{ s}$, default $2\text{ s}$.
+  - **Running (`BSportType.RUN`)**: Range $1 \dots 20\text{ s}$, default $5\text{ s}$.
+  - **Other Sports (`BSportType.UNKNOWN`)**: Range $1 \dots 60\text{ s}$, default $10\text{ s}$.
+2. *Symmetric Single-Threshold Speed Evaluation (`REQ-TRK-043.2`)*:
+• `AutoPauseManager` SHALL compare both entering Auto-Pause ($v < v_{\text{threshold}}$) and leaving Auto-Pause ($v \ge v_{\text{threshold}}$) against the exact configured sport speed threshold, eliminating the hidden `+0.5` speed hysteresis offset deadband.
+3. *Consecutive-Tick Resume Confirmation & Counter Reset (`REQ-TRK-043.3`)*:
+• While in `AutoPauseState.AUTO_PAUSED`, transitioning back to `AutoPauseState.TRACKING` and emitting `SoundCue.AUTO_RESUME` SHALL require `resumeDebounceSec` consecutive 1-Hz ticks of fresh, valid speed $\ge v_{\text{threshold}}$.
+• Any tick with speed $< v_{\text{threshold}}$, stale packet timestamp ($> 5000\text{ ms}$), or corrupt numerical reading SHALL reset the resume counter to 0 and maintain `AUTO_PAUSED`.
+4. *Settings UI Resume Detection Time Sliders (`REQ-TRK-043.4`)*:
+• In `AutoPauseTabsScreen.kt`, each sport tab (*Bike*, *Run*, *Other*) SHALL provide a *Resume Detection Time* slider component (`TuningSliderItem`) with immediate asynchronous persistence and reset support via `TuningPreferencesDataStore.resetAutoPausePreferences(sportType)`.
+5. *Localization Parity (`REQ-TRK-043.5`)*:
+• String resources for the resume detection time title, description, and default hints SHALL maintain full parity across all 9 supported languages (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-043`, refining `REQ-TRK-018` (`ATT-45` / `ATT-3677`) and `REQ-SET-080` (`ATT-4836`). Targets `AutoPauseManager.kt`, `TuningPreferencesDataStore.kt`, `AutoPauseTabsScreen.kt`, and `AutoPauseViewModel.kt`.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-4839`, Sprint `2026-44.1`. Follows `ATT-45` (which added the `+0.5` speed offset as a proxy for debounce) and `ATT-4836` (which established the dedicated Auto-Pause settings screen).
+3. *Root Reason for Existing Formulation*: The legacy `+0.5` speed offset deadband was created because `AUTO_PAUSED` lacked an independent time confirmation counter. However, a single 1-Hz GPS spike above the deadband immediately resumed tracking. Replacing the speed offset with time-based multi-tick debounce provides physical stability without distorting threshold values.
+4. *Preservation of Core Invariants*: Manual user pause lock precedence (`mManualPauseLock`), 2-tick `SENSOR_LOST` recovery hysteresis, synchronous sensor gating, and 100% test pass rate strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an active cycling session in `AUTO_PAUSED` with default settings (threshold 3 km/h, resume debounce 2s),
+• *When* a single GPS jitter spike of 5 km/h arrives for 1 second followed by 0 km/h,
+• *Then* `AutoPauseManager` increments resume counter to 1, resets counter to 0 on the stationary tick, and remains in `AUTO_PAUSED` with zero resume cues emitted.
+• *Given* an active cycling session in `AUTO_PAUSED` with threshold 3 km/h and resume debounce 2s,
+• *When* fresh speed readings of 3.5 km/h arrive continuously for 2 consecutive seconds,
+• *Then* `AutoPauseManager` transitions to `TRACKING` and emits `SoundCue.AUTO_RESUME` on the 2nd second.
+• *Given* an active running session in `AUTO_PAUSED` with threshold 2 km/h and resume debounce 5s,
+• *When* speed $\ge 2\text{ km/h}$ is maintained for 4 seconds and drops below 2 km/h on second 5,
+• *Then* `AutoPauseManager` resets resume counter to 0 and remains `AUTO_PAUSED`.
+
+**Invariants**: Manual pause lock precedence, sensor lost state recovery, moving average calculations, and 100% clean-room test pass rate MUST NOT be broken.
+
+
+
+### REQ-TRK-044: Optional Automatic Stationary Auto-Pause at Workout Start [Planned]
+- **Tests**: `TST-TRK-044` | **Tickets**: `ATT-4840`
+- **Implementation**: `AutoPauseManager.kt`, `TuningConfig.kt`, `TuningPreferencesDataStore.kt`, `AutoPauseTabsScreen.kt`, `AutoPauseViewModel.kt`, `TrainingApplication.java`, `TrackerService.java`
+- **Rationale**: When starting a workout while stationary, the tracker SHALL optionally transition directly into `AUTO_PAUSED` without waiting for the pause debounce timer to elapse (ATT-4840, extending `REQ-TRK-018`, `REQ-SET-080`, and `REQ-TRK-043`):
+1. *Global Start in Auto-Paused Preference (`REQ-TRK-044.1`)*:
+• `TuningConfig`, `TuningPreferencesDataStore`, and `AutoPauseConfig` SHALL persist a global boolean preference `startInAutoPauseEnabled` (default `false`).
+2. *Settings UI Global Toggle (`REQ-TRK-044.2`)*:
+• `AutoPauseTabsScreen.kt` SHALL render a global *Start in Auto-Paused* toggle (`TuningToggleItem`) at the top of the Auto-Pause settings screen with reactive updates via `AutoPauseViewModel.updateStartInAutoPauseEnabled()`.
+3. *Domain Startup Predicate (`REQ-TRK-044.3`)*:
+• `AutoPauseManager` SHALL expose a static pure function `shouldStartInAutoPause(config, sportType, currentSpeedMps)` evaluating whether all startup conditions are satisfied: `config.startInAutoPauseEnabled == true`, auto-pause is enabled for `sportType`, and `currentSpeedMps` is below the configured sport speed threshold (or null/0.0/corrupt).
+4. *Direct Workout Start Transition (`REQ-TRK-044.4`)*:
+• When the user starts tracking with `startInAutoPauseEnabled == true` and `shouldStartInAutoPause` evaluates to `true`, tracking SHALL initialize directly in `TrackingMode.PAUSED` (`isAutoPaused = true`) and `AutoPauseState.AUTO_PAUSED` without accumulating debounce ticks.
+5. *Localization Parity (`REQ-TRK-044.5`)*:
+• String resources for the toggle title and description SHALL maintain full parity across all 9 supported languages.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-044`, refining `REQ-TRK-018` (`ATT-45` / `ATT-3677`) and `REQ-SET-080` (`ATT-4836`). Targets `AutoPauseManager.kt`, `TuningPreferencesDataStore.kt`, `AutoPauseTabsScreen.kt`, `TrainingApplication.java`, and `TrackerService.java`.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-4840`, Sprint `2026-44.1`. Follows `ATT-4839` (which introduced configurable resume debounce) and addresses user complaints of stationary duration polluting moving time during equipment setup.
+3. *Root Reason for Existing Formulation*: Tracking historically always started in `TRACKING` because the debounce timer was designed to detect deceleration from active motion. When starting from complete rest, waiting for the debounce delay is unnecessary when the user explicitly opts into immediate auto-pause.
+4. *Preservation of Core Invariants*: Moving average speed calculations, manual pause precedence, and resume debounce confirmation (`REQ-TRK-043`) are 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `startInAutoPauseEnabled` is `true`, bike auto-pause is enabled, and phone is stationary (speed 0.0 m/s),
+• *When* the user starts a cycling workout,
+• *Then* tracking initializes directly in `TrackingMode.PAUSED` (`isAutoPaused = true`) and `AutoPauseState.AUTO_PAUSED`.
+• *Given* `startInAutoPauseEnabled` is `true`, but run auto-pause is disabled,
+• *When* the user starts a running workout while stationary,
+• *Then* tracking initializes in `TrackingMode.TRACKING`.
+• *Given* `startInAutoPauseEnabled` is `false`,
+• *When* the user starts a workout while stationary,
+• *Then* tracking initializes in `TrackingMode.TRACKING` and waits for normal debounce.
+
+**Invariants**: Manual pause lock precedence, sensor lost recovery, and 100% clean-room test pass rate MUST NOT be broken.
+
+
+### REQ-TRK-045: Clear Non-Recording Status Indication: Unified HUD Banner and Grid Dimming [Verified]
+- **Tests**: `TST-TRK-045` | **Tickets**: `ATT-4856`
+- **Implementation**: `SensorGridScreen.kt`, `Color.kt`, `strings.xml`
+- **Rationale**: When viewing live sensor tabs in `ScreenMode.TRACKING`, athletes SHALL have immediate, unambiguous visual clarity when workout recording is not active (ATT-4856, extending `REQ-TRK-018`):
+1. *Unified Non-Recording Top HUD Banner (`REQ-TRK-045.1`)*:
+• In `ScreenMode.TRACKING`, when workout recording is not active (`trackingMode != TrackingMode.TRACKING`), `SensorGridScreen` SHALL display an enlarged top HUD status banner with high-contrast amber warning styling (`DarkWarningContainer` / `LightWarningContainer`, `DarkOnWarningContainer` / `LightOnWarningContainer`, `DarkWarningAction` / `LightWarningAction`).
+• When `trackingMode == TrackingMode.READY`, the banner SHALL display "Not Started" (`cockpit_status_not_started`), icon `Icons.Default.PlayCircle`, and action button "Start" (`Start`), dispatching `REQUEST_START_TRACKING`.
+• When `trackingMode == TrackingMode.PAUSED` and `!isAutoPaused`, the banner SHALL display "Paused" (`cockpit_status_paused`), icon `Icons.Default.PauseCircle`, and action button "Resume Now" (`cockpit_auto_pause_resume`), dispatching `REQUEST_RESUME_FROM_PAUSED`.
+• When `trackingMode == TrackingMode.PAUSED` and `isAutoPaused`, the banner SHALL display "Auto-Paused" (`cockpit_auto_pause_badge`), icon `Icons.Default.PauseCircle`, and action button "Resume Now" (`cockpit_auto_pause_resume`), dispatching `REQUEST_RESUME_FROM_PAUSED`.
+2. *Sensor Grid Opacity Dimming (`REQ-TRK-045.2`)*:
+• In `ScreenMode.TRACKING`, whenever `trackingMode != TrackingMode.TRACKING` (`READY`, `PAUSED`, `AUTO_PAUSED`), the sensor grid content SHALL be rendered with `alpha = 0.6f` via compositing graphics layer, while the top status banner remains at full `1.0f` brightness.
+• In `ScreenMode.CONFIGURATION` and `ScreenMode.PREVIEW`, sensor grid content SHALL remain undimmed (`alpha = 1.0f`).
+3. *Reactive Tracking State Tracking (`REQ-TRK-045.3`)*:
+• `SensorGridScreen` SHALL register a broadcast receiver for `TrainingApplication.TRACKING_STATE_CHANGED`, updating both `trackingMode` and `isAutoPaused` synchronously.
+4. *Localization Parity (`REQ-TRK-045.4`)*:
+• All new string resources (`cockpit_status_not_started`, `cockpit_status_paused`) SHALL maintain complete translation parity across all 9 supported languages.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-045`, extending `REQ-TRK-018` (AutoPauseHudBanner). Targets `SensorGridScreen.kt`.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-4856`, Sprint `2026-44.1`. Follows `ATT-45` which added the small amber auto-pause pill.
+3. *Root Reason for Existing Formulation*: Originally, only auto-pause displayed a HUD pill because manual pause was controlled via a separate screen or navigation drawer. However, live sensor telemetry streams continuously on sensor tabs, leading athletes to believe recording is underway when it is actually paused or unstarted.
+4. *Preservation of Core Invariants*: Live sensor streaming, sensor field interaction (tap/long-press/double-tap), bottom sheet expansion, and navigation overlays are 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the sensor grid tab is displayed in `ScreenMode.TRACKING` and tracking is `READY`,
+• *When* the screen renders,
+• *Then* the top HUD banner displays "Not Started" with a "Start" action button, and the grid is dimmed to `alpha = 0.6f`.
+• *Given* the sensor grid tab is displayed in `ScreenMode.TRACKING` and tracking is manually `PAUSED`,
+• *When* the screen renders,
+• *Then* the top HUD banner displays "Paused" with a "Resume Now" action button, and the grid is dimmed to `alpha = 0.6f`.
+• *Given* the sensor grid tab is displayed in `ScreenMode.TRACKING` and tracking is `TRACKING`,
+• *When* the screen renders,
+• *Then* no top HUD banner is displayed and the grid is at `alpha = 1.0f`.
+• *Given* the screen is in `ScreenMode.CONFIGURATION` or `ScreenMode.PREVIEW`,
+• *When* tracking is `READY` or `PAUSED`,
+• *Then* no top HUD banner is displayed and the grid is at `alpha = 1.0f`.
+
+**Invariants**: Live telemetry updates, zero hue shift in training zones, and 100% clean-room test pass rate MUST NOT be broken.
+
+
+### REQ-TRK-046: Per-Sensor-Field Display Elements Configuration: Value and Bar Gating [Planned]
+- **Tests**: `TST-TRK-046` | **Tickets**: `ATT-4841`
+- **Implementation**: `TrackingViewsDatabaseManager.java`, `TrackingViewsRepository.kt`, `SensorFieldConfig`, `SensorFieldState.kt`, `EditSensorFieldViewModel.kt`, `EditSensorFieldDialog.kt`, `SensorFieldView.kt`, `ZonesSettingsActivity.kt`
+- **Rationale**: Cockpit sensor fields SHALL support granular, per-field configuration of which visual elements are rendered (numeric Value + Unit row vs. horizontal Bar), allowing athletes to customize tiles (e.g. bar-only, value-only, or both) independently for instantaneous vs. average metrics (ATT-4841, Parent Epic ATT-355, extending `REQ-UI-376`, `REQ-UI-377`, `REQ-UI-416`):
+1. *SQLite Schema v16 & Model Persistence (`REQ-TRK-046.1`)*:
+• `TrackingViewsDbHelper.ROWS_TABLE` SHALL be upgraded to `DB_VERSION = 16`, adding non-destructive columns `ShowValue INT DEFAULT 1` and `ShowBar INT DEFAULT 0`.
+• On database upgrade to v16, `ShowValue` SHALL be backfilled to `1` across all existing rows; `ShowBar` SHALL be backfilled to `1` for bar-capable sensor types (`HR`, `POWER`, `PEDAL_POWER_BALANCE`, `W_PRIME_BAL`), and `0` for all other sensor types.
+• `SensorFieldConfig`, `SensorFieldState`, and `TrackingViewsRepository` (`fetchSensorFieldConfigs`, `fetchSingleSensorFieldConfig`, `updateSensorFieldConfig`, `insertSensorFieldConfig`) SHALL expose and persist `showValue: Boolean` and `showBar: Boolean`.
+2. *Edit Sensor Field UI & Selection Constraints (`REQ-TRK-046.2`)*:
+• When the selected `SensorType` supports a bar (`HR`, `POWER`, `PEDAL_POWER_BALANCE`, `W_PRIME_BAL`), `EditSensorFieldDialog` SHALL display selectable element toggles/chips for *Value* (`showValue`) and *Bar* (`showBar`).
+• The system SHALL enforce that at least one visual element remains selected at all times (preventing simultaneous deselection of both Value and Bar).
+• When selecting a sensor type that does not support a bar, `showBar` SHALL be `false` and `showValue` SHALL be `true`.
+3. *Cockpit Sensor Field Conditional Rendering (`REQ-TRK-046.3`)*:
+• In `SensorFieldView.kt`, the numeric Value + Unit row SHALL be rendered if and only if `fieldState.showValue == true`.
+• The corresponding horizontal bar (`ZoneGaugeBar`, `PedalPowerBalanceBar`, `WPrimeBatteryGaugeBar`) SHALL be rendered if and only if `fieldState.showBar == true`.
+4. *Single Source of Truth & Global Toggle Deprecation (`REQ-TRK-046.4`)*:
+• The global `showGauge` toggle row SHALL be removed from `ZonesSettingsActivity.kt`, making per-field `showBar` the single source of truth for cockpit gauge bars.
+5. *9-Language Localization Parity (`REQ-TRK-046.5`)*:
+• All new UI strings (`sensor_field_display_elements_title`, `sensor_field_show_value`, `sensor_field_show_bar`) SHALL maintain complete translation parity across all 9 supported languages.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-046`, extending `REQ-UI-376` (Zone Gauge Bar), `REQ-UI-377` (Pedal Balance Bar), and `REQ-UI-416` (W' Battery Gauge). Targets `SensorFieldView.kt` and `TrackingViewsRepository.kt`.
+2. *Historical Origin & Commit Trace*: `ATT-3574` (introduced `showGauge` in `ZoneDisplayOptions`), `ATT-4097` (added W' battery bar), `ATT-3660` (pedal balance indicator).
+3. *Root Reason for Existing Formulation*: Originally, zone gauge display was treated as a sport profile property. As cockpit customization matured, users required granular control per sensor card.
+4. *Preservation of Core Invariants*: Existing tab layouts, zone cutoff color calculations, and sensor streaming pipelines are 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an existing database at version 15 with HR, Power, and Speed sensor fields,
+• *When* the database upgrades to version 16,
+• *Then* `ShowValue` is `1` for all fields, and `ShowBar` is `1` for HR and Power, and `0` for Speed.
+• *Given* an athlete editing a Power sensor field in `EditSensorFieldDialog`,
+• *When* the athlete toggles *Value* off and *Bar* on,
+• *Then* the sensor field in the cockpit renders the zone gauge bar without the numeric value row.
+• *Given* an athlete with only *Value* selected,
+• *When* the athlete attempts to toggle *Value* off,
+• *Then* the selection is rejected and *Value* remains enabled.
+
+**Invariants**: Non-destructive SQLite migration, true zone color preservation, and 100% clean-room test pass rate.
+

@@ -94,9 +94,15 @@ class PeriodCardMapStateTest {
     @Test
     fun testTstPer025_2_AdaptiveSimplificationToleranceScaling() {
         assertEquals(5.0, getPeriodSimplificationToleranceMeters(PeriodType.DAY), 0.001)
-        assertEquals(15.0, getPeriodSimplificationToleranceMeters(PeriodType.WEEK), 0.001)
-        assertEquals(35.0, getPeriodSimplificationToleranceMeters(PeriodType.MONTH), 0.001)
-        assertEquals(75.0, getPeriodSimplificationToleranceMeters(PeriodType.YEAR), 0.001)
+        assertEquals(5.0, getPeriodSimplificationToleranceMeters(PeriodType.WEEK), 0.001)
+        assertEquals(6.0, getPeriodSimplificationToleranceMeters(PeriodType.MONTH), 0.001)
+        assertEquals(8.0, getPeriodSimplificationToleranceMeters(PeriodType.YEAR), 0.001)
+
+        // Verify all tolerances are strictly <= 8.0 meters to ensure shared-corridor pixel overlap (REQ-PER-024.3)
+        PeriodType.entries.forEach { periodType ->
+            val tol = getPeriodSimplificationToleranceMeters(periodType)
+            assertTrue("Tolerance for $periodType must be <= 8.0m but was $tol", tol <= 8.0)
+        }
 
         // Verify that decimation reduces points on dense collinear tracks
         val densePoints = (0..100).map { i -> LatLng(48.0 + i * 0.0001, 9.0 + i * 0.0001) }
@@ -274,5 +280,27 @@ class PeriodCardMapStateTest {
         assertEquals("Must decode exactly 1 path from summary.polylines", 1, state.primaryPaths.size)
         // Verify coordinates correspond to polyA (~48.0), not polyB (~52.0)
         assertEquals(48.0, state.primaryPaths[0][0].latitude, 0.01)
+    }
+
+    /**
+     * TST-PER-030.5: Verify activeRegionId is populated in PeriodCardMapState (REQ-PER-024.2).
+     */
+    @Test
+    fun testTstPer030_RegionIdExtraction() {
+        val stuttgartTracks = (1L..5L).associateWith { createTestPolyline(48.78, 9.18) }
+        val munichTracks = (6L..7L).associateWith { createTestPolyline(48.13, 11.58) }
+        val multiRegionSummary = createMockSummary(
+            periodType = PeriodType.MONTH,
+            polylinesMap = stuttgartTracks + munichTracks,
+            minLat = 48.13,
+            maxLat = 48.78,
+            minLng = 9.18,
+            maxLng = 11.58
+        )
+
+        val state = prepareCardMapPreviewSync(multiRegionSummary)
+        assertTrue(state.isReady)
+        assertNotNull("activeRegionId must be non-null for multi-region summary", state.activeRegionId)
+        assertTrue("activeRegionId must be populated", state.activeRegionId!!.isNotEmpty())
     }
 }

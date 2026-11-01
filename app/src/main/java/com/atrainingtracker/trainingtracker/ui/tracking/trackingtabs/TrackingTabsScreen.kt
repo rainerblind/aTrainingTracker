@@ -402,18 +402,26 @@ fun TrackingTabsScreen(
     }
     // Keep track of the current page as a simple variable to survive the PagerState recreation
     var lastKnownPage by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    var previousScreenMode by remember { androidx.compose.runtime.mutableStateOf(screenMode) }
+    var previousActivityType by remember { androidx.compose.runtime.mutableStateOf(activityType) }
 
-    // Calculate the initial page for the NEW state
-    val initialPage = remember(trackingViews.size, screenMode) {
-        // Use the tracked 'lastKnownPage' instead of the pagerState reference
-        lastKnownPage.coerceIn(
-            0,
-            (if (screenMode == ScreenMode.TRACKING) trackingViews.size else trackingViews.size - 1).coerceAtLeast(0)
+    // Calculate the initial page for the NEW state (REQ-UI-435, TST-UI-435, ATT-4838)
+    val initialPage = remember(activityType, trackingViews.size, screenMode) {
+        val resolved = TrackingTabsPageResolver.resolveInitialPage(
+            previousMode = previousScreenMode,
+            newMode = screenMode,
+            lastKnownPage = lastKnownPage,
+            tabCount = trackingViews.size,
+            activityTypeChanged = activityType != previousActivityType
         )
+        previousScreenMode = screenMode
+        previousActivityType = activityType
+        lastKnownPage = resolved
+        resolved
     }
 
     // Recreate the PagerState using the preserved initialPage
-    val pagerState = key(trackingViews.size, screenMode) {
+    val pagerState = key(activityType, trackingViews.size, screenMode) {
         rememberPagerState(
             initialPage = initialPage,
             pageCount = { pageCount }

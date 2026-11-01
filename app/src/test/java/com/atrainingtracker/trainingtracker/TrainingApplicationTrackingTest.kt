@@ -24,8 +24,10 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.util.Log
 import androidx.core.content.ContextCompat
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.tracker.TrackerService
 import io.mockk.*
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -95,7 +97,20 @@ class TrainingApplicationTrackingTest {
 
         mockkObject(com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.Companion)
         val mockRepo = mockk<com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository>(relaxed = true)
+        val mockSportFlow = MutableStateFlow(BSportType.UNKNOWN)
+        val mockSpeedFlow = MutableStateFlow<Double?>(null)
+        every { mockRepo.bSportType } returns mockSportFlow
+        every { mockRepo.currentSpeed } returns mockSpeedFlow
         every { com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.Companion.getInstance(any()) } returns mockRepo
+
+        // startTracking() evaluates "Start in Auto-Paused" (ATT-4840). Without this stub, the real
+        // TuningPreferencesDataStore initializes on Dispatchers.Default with a non-mocked Context
+        // (getFilesDir), and the resulting uncaught coroutine exception leaks into whichever
+        // runTest-based test runs next in the same JVM (e.g. BatterySaverControllerTest).
+        mockkStatic(com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper::class)
+        every {
+            com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getAutoPauseConfig(any())
+        } returns com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseConfig()
 
         intentExtras.clear()
         intentAction = null

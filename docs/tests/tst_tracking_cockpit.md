@@ -1151,3 +1151,114 @@
   • Gesture contract test verifying that in `ScreenMode.CONFIGURATION`, sensor field editing (`onEditField`), deletion (`onDeleteField`), add row/col, and pick-and-place reordering callbacks remain fully dispatched and interactive in landscape mode.
   6. *Targeted & Full Regression Suite Execution (`TST-TRK-040.6`)*:
   • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.tracking.*"` and full clean-room suite verifying 100% pass rate.
+
+### TST-TRK-041: **Distance Increment Plausibility Clamping & Multi-Sensor Summary Isolation Test Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-041`
+- **Component**: `SpeedAndLocationDeviceTest.kt`, `TrackerServiceTest.java`
+- **Jira**: `ATT-4843`
+- **Test Description**:
+  1. *SpeedAndLocationDevice Displacement Plausibility Clamping (`TST-TRK-041.1`)*:
+  • Unit test verifying that when consecutive location fixes arrive with displacement velocity exceeding 70.0 m/s (e.g. 4,245.6 m in 1000 ms), `delta_distance` is clamped to 0.0, and `mDistanceSensor` / `mLapDistanceSensor` values remain unchanged.
+  • Unit test verifying that when consecutive location fixes arrive with normal human velocity (e.g. 15.0 m in 1000 ms = 15 m/s), distance accumulators increment by the full displacement.
+  2. *TrackerService Canonical Sensor Summary Filtering (`TST-TRK-041.2`)*:
+  • Unit test verifying that when `sampleAndWriteToDb()` is called with both canonical `ProxySensor` (`deviceName == null`, distance = 4,370 m) and a secondary device sensor (`deviceName == "Google Fused"`, distance = 13,377 m), `WorkoutSummaries.DISTANCE_TOTAL_m` and `mDistanceTotal_m` equal 4,370 m.
+  • Verify that `samplingValues` table row retains both `DISTANCE_m` (4,370 m) and `"DISTANCE_m (Google Fused)"` (13,377 m).
+  3. *Targeted & Clean-Room Regression Verification (`TST-TRK-041.3`)*:
+  • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.*" --tests "com.atrainingtracker.trainingtracker.tracker.*"` verifying 100% pass rate.
+
+### TST-TRK-042: **1-Hz Live-Tracking Memory, Decoupling & Recomposition Optimization Test Suite** [Planned]
+- **Requirement(s)**: `REQ-TRK-042`
+- **Component**: `BANALServiceRepositoryTest.kt`, `LiveTrackDecimationTest.kt`, `TrackingViewModelTest.kt`
+- **Jira**: `ATT-4863`
+- **Test Description**:
+  1. *Stationary PathPoint Deduplication & DeviceTelemetry Value Equality (`TST-TRK-042.1`)*:
+  • Unit test verifying that stationary ticks do not append duplicate `PathPoint`s to `currentPathPoints`.
+  • Unit test verifying that `DeviceTelemetry` without `System.nanoTime()` satisfies structural equality when fields are unchanged.
+  2. *Live Track Decimation & Tail Preservation (`TST-TRK-042.2`)*:
+  • Unit test verifying that tracks exceeding the threshold preserve the last $M$ points unsimplified while simplifying older collinear points.
+  3. *Base Field Memoization (`TST-TRK-042.3`)*:
+  • Unit test verifying that `TrackingViewModel` retains memoized `baseFields` when only 1-Hz sensor values change.
+  4. *Targeted & Clean-Room Regression Verification (`TST-TRK-042.4`)*:
+  • Execute targeted package tests and verify zero regressions.
+
+
+### TST-TRK-043: **Sport-Specific Auto-Pause Resume Debounce & Symmetric Single-Threshold Test Suite** [Planned]
+- **Requirement(s)**: `REQ-TRK-043`
+- **Component**: `AutoPauseManagerTest.kt`, `AutoPauseViewModelTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-4839`
+- **Test Description**:
+  1. *Sport-Specific Multi-Tick Resume Debounce (`TST-TRK-043.1`)*:
+  • Unit test in `AutoPauseManagerTest` verifying that in `AUTO_PAUSED` state, moving at speed $\ge$ threshold requires strictly $N$ consecutive 1-Hz ticks (Bike=2, Run=5, Other=10) before transitioning to `TRACKING` and emitting `SoundCue.AUTO_RESUME`.
+  2. *GPS Jitter Spike Rejection & Counter Reset (`TST-TRK-043.2`)*:
+  • Unit test verifying that a transient speed spike $\ge$ threshold lasting fewer than $N$ ticks followed by a stationary tick ($< v_{\text{threshold}}$) or stale packet ($> 5000\text{ ms}$) resets `resumeDebounceCounter` to 0 and maintains `AUTO_PAUSED` state without emitting audio tones.
+  3. *Single-Threshold Evaluation without Hysteresis Offset (`TST-TRK-043.3`)*:
+  • Unit test verifying that speed $\ge v_{\text{threshold}}$ (without $+0.5$ offset) counts toward resume debounce, and speeds $< v_{\text{threshold}}$ maintain pause.
+  4. *ViewModel & DataStore Preferences Persistence (`TST-TRK-043.4`)*:
+  • Unit test in `AutoPauseViewModelTest` asserting that updating `autoPauseBikeResumeDebounceSec`, `autoPauseRunResumeDebounceSec`, and `autoPauseOtherResumeDebounceSec` immediately updates `tuningConfig` StateFlow, and `resetAutoPausePreferences(sportType)` resets resume debounce values to defaults.
+  5. *9-Language Localization Parity (`TST-TRK-043.5`)*:
+  • Test in `TranslationParityTest` verifying all resume detection time title, description, and default strings exist in all 9 translation sets.
+
+
+### TST-TRK-044: **Optional Automatic Stationary Auto-Pause at Workout Start Test Suite** [Planned]
+- **Requirement(s)**: `REQ-TRK-044`
+- **Component**: `AutoPauseManagerTest.kt`, `TrackerServiceTest.kt`, `AutoPauseViewModelTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-4840`
+- **Test Description**:
+  1. *Domain Startup Predicate Evaluation (`TST-TRK-044.1`)*:
+  • Unit test in `AutoPauseManagerTest` verifying `shouldStartInAutoPause` returns `true` when `startInAutoPauseEnabled` is `true`, sport auto-pause is enabled, and speed is null, 0.0 m/s, or below the sport pause threshold.
+  • Verify it returns `false` when `startInAutoPauseEnabled` is `false`, sport auto-pause is disabled, or speed is $\ge$ threshold.
+  2. *Workout Start Transition Integration (`TST-TRK-044.2`)*:
+  • Unit test in `TrackerServiceTest` / `TrackerService` asserting that when starting a new workout (`START_NORMAL`) with stationary speed and `startInAutoPauseEnabled == true`, state initializes directly to `AUTO_PAUSED` and `TrackingMode.PAUSED` (`isAutoPaused = true`).
+  3. *ViewModel & DataStore Toggle Mutation (`TST-TRK-044.3`)*:
+  • Unit test in `AutoPauseViewModelTest` asserting that `updateStartInAutoPauseEnabled(true/false)` dispatches to DataStore and reactively updates `tuningConfig` StateFlow.
+  4. *9-Language Localization Parity (`TST-TRK-044.4`)*:
+  • Test in `TranslationParityTest` verifying `tuning_auto_pause_start_in_auto_pause_title` and `tuning_auto_pause_start_in_auto_pause_desc` exist in all 9 supported locales.
+
+
+### TST-TRK-045: **Non-Recording Status Resolution, UI Banner, and Grid Dimming Test Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-045`
+- **Component**: `SensorGridStatusTest.kt`, `SensorGridScreen.kt`, `TranslationParityTest.kt`, `ThemeColorCentralizationAuditTest.kt`
+- **Jira**: `ATT-4856`
+- **Test Description**:
+  1. *Status Resolution Logic (`TST-TRK-045.1`)*:
+  • Unit test in `SensorGridStatusTest` verifying `resolveCockpitStatus`:
+    - Returns `CockpitStatus.NOT_STARTED` when `screenMode == ScreenMode.TRACKING` and `trackingMode == TrackingMode.READY`.
+    - Returns `CockpitStatus.PAUSED` when `screenMode == ScreenMode.TRACKING` and `trackingMode == TrackingMode.PAUSED` with `isAutoPaused == false`.
+    - Returns `CockpitStatus.AUTO_PAUSED` when `screenMode == ScreenMode.TRACKING` and `trackingMode == TrackingMode.PAUSED` with `isAutoPaused == true`.
+    - Returns `null` when `trackingMode == TrackingMode.TRACKING` or `screenMode != ScreenMode.TRACKING`.
+  2. *Sensor Grid Dimming Alpha Resolution (`TST-TRK-045.2`)*:
+  • Unit test in `SensorGridStatusTest` verifying `resolveGridAlpha`:
+    - Returns `0.6f` when `screenMode == ScreenMode.TRACKING` and `trackingMode != TrackingMode.TRACKING` (`READY`, `PAUSED`).
+    - Returns `1.0f` when `screenMode == ScreenMode.TRACKING` and `trackingMode == TrackingMode.TRACKING`.
+    - Returns `1.0f` when `screenMode == ScreenMode.CONFIGURATION` or `ScreenMode.PREVIEW` regardless of `trackingMode`.
+  3. *9-Language Localization Parity (`TST-TRK-045.3`)*:
+  • Test in `TranslationParityTest` verifying `cockpit_status_not_started` and `cockpit_status_paused` exist in all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+  4. *Theme Token Centralization Audit (`TST-TRK-045.4`)*:
+  • Verification via `ThemeColorCentralizationAuditTest` ensuring `SensorGridScreen.kt` uses centralized tokens (`DarkWarningContainer`, `LightWarningContainer`, etc.) without hardcoded colors.
+
+
+### TST-TRK-046: **Per-Sensor-Field Display Elements Configuration Test Suite** [Planned]
+- **Requirement(s)**: `REQ-TRK-046`
+- **Component**: `TrackingViewsDatabaseManagerTest.kt`, `TrackingViewsRepositoryTest.kt`, `EditSensorFieldViewModelTest.kt`, `TranslationParityTest.kt`, `ThemeColorCentralizationAuditTest.kt`
+- **Jira**: `ATT-4841`
+- **Test Description**:
+  1. *Database Schema v16 Migration & Backfill (`TST-TRK-046.1`)*:
+  • Unit test in `TrackingViewsDatabaseManagerTest` verifying:
+    - Upgrading from v15 to v16 adds `ShowValue` and `ShowBar` to `ROWS_TABLE`.
+    - Backfills `ShowValue = 1` for all rows.
+    - Backfills `ShowBar = 1` for `HR`, `POWER`, `PEDAL_POWER_BALANCE`, `W_PRIME_BAL`, and `0` for others.
+    - Pre-existing user layouts and tab configurations are completely preserved.
+  2. *Repository Model & Flow Projection (`TST-TRK-046.2`)*:
+  • Unit test in `TrackingViewsRepositoryTest` verifying:
+    - `fetchSensorFieldConfigs` and `fetchSingleSensorFieldConfig` populate `showValue` and `showBar` correctly.
+    - `updateSensorFieldConfig` and `insertSensorFieldConfig` persist `showValue` and `showBar` to the database.
+  3. *Edit Dialog ViewModel Selection Constraint (`TST-TRK-046.3`)*:
+  • Unit test in `EditSensorFieldViewModelTest` verifying:
+    - `isBarSupported` evaluates to `true` for `HR`, `POWER`, `PEDAL_POWER_BALANCE`, `W_PRIME_BAL`, and `false` for others.
+    - Deselecting `showValue` when `showBar == false` is blocked (at least one element must remain active).
+    - Deselecting `showBar` when `showValue == false` is blocked.
+    - Toggling `showValue` or `showBar` when both are selected succeeds.
+  4. *9-Language Localization Parity (`TST-TRK-046.4`)*:
+  • Verification in `TranslationParityTest` for `sensor_field_display_elements_title`, `sensor_field_show_value`, `sensor_field_show_bar` across all 9 locales.
+
+

@@ -58,7 +58,11 @@ import android.widget.Toast;
 import com.atrainingtracker.BuildConfig;
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
+import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.sensor.SensorData;
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper;
+import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseConfig;
+import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManager;
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
@@ -1673,8 +1677,35 @@ public class TrainingApplication extends Application {
             ContextCompat.startForegroundService(this, intent);
             startPebbleWatchapp();
 
-            cTrackingMode = TrackingMode.TRACKING;
-            notifyTrackingStateChanged();
+            AutoPauseConfig autoPauseConfig = SettingsDataStoreJavaHelper.getAutoPauseConfig(this);
+            BANALServiceRepository banalRepo = BANALServiceRepository.Companion.getInstance(this);
+            BSportType sportType = BSportType.UNKNOWN;
+            Double speedMps = null;
+            if (banalRepo != null) {
+                try {
+                    Object sportVal = banalRepo.getBSportType() != null ? banalRepo.getBSportType().getValue() : null;
+                    if (sportVal instanceof BSportType) {
+                        sportType = (BSportType) sportVal;
+                    }
+                } catch (Exception e) {
+                    Log.w(TAG, "Could not resolve initial sport type: " + e.getMessage());
+                }
+                try {
+                    Object speedVal = banalRepo.getCurrentSpeed() != null ? banalRepo.getCurrentSpeed().getValue() : null;
+                    if (speedVal instanceof Number) {
+                        speedMps = ((Number) speedVal).doubleValue();
+                    }
+                } catch (Exception e) {
+                    Log.w(TAG, "Could not resolve initial speed: " + e.getMessage());
+                }
+            }
+
+            if (AutoPauseManager.shouldStartInAutoPause(autoPauseConfig, sportType, speedMps)) {
+                pauseTracking(true);
+            } else {
+                cTrackingMode = TrackingMode.TRACKING;
+                notifyTrackingStateChanged();
+            }
         } catch (IllegalStateException | SecurityException e) {
             Log.e(TAG, "Failed to start TrackerService: app in background or permission denied: " + e.getMessage(), e);
             cTrackingMode = TrackingMode.READY;

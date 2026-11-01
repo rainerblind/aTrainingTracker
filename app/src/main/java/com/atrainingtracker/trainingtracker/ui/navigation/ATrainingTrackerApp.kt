@@ -517,6 +517,14 @@ fun ATrainingTrackerApp(
                     )
                 }
 
+                composable(NavRoutes.AUTO_PAUSE) {
+                    val autoPauseViewModel: com.atrainingtracker.trainingtracker.ui.settings.autopause.AutoPauseViewModel = viewModel(activity)
+                    com.atrainingtracker.trainingtracker.ui.settings.autopause.AutoPauseTabsScreen(
+                        viewModel = autoPauseViewModel,
+                        onOpenDrawer = { activity.openDrawer() }
+                    )
+                }
+
                 composable(
                     route = NavRoutes.TRAINING_ZONES_PATTERN,
                     arguments = listOf(

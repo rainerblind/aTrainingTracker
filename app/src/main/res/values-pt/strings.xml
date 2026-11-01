@@ -1907,6 +1907,7 @@
     <string name="zone_onboarding_action_configure">Configurar zonas</string>
     <string name="zone_onboarding_action_later">Agora não</string>
     <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
+    <string name="auto_pause_title">Pausa automática</string>
     <string name="tuning_auto_pause_title">Pausa automática</string>
     <string name="tuning_auto_pause_desc">Pausar gravação automaticamente quando parado</string>
     <string name="tuning_auto_pause_bike_title">Ciclismo</string>
@@ -1916,10 +1917,16 @@
     <string name="tuning_auto_pause_speed_threshold_desc">Velocidade abaixo da qual a gravação é pausada</string>
     <string name="tuning_auto_pause_debounce_title">Atraso para pausa</string>
     <string name="tuning_auto_pause_debounce_desc">Duração abaixo do limite antes de pausar</string>
+    <string name="tuning_auto_pause_resume_debounce_title">Atraso para retomar</string>
+    <string name="tuning_auto_pause_resume_debounce_desc">Duração acima do limite antes de retomar</string>
+    <string name="tuning_auto_pause_start_in_auto_pause_title">Iniciar em pausa automática</string>
+    <string name="tuning_auto_pause_start_in_auto_pause_desc">Ao iniciar um treino parado, começa imediatamente em pausa automática até que o movimento seja detectado</string>
     <string name="tuning_speed_value_format">%1$d %2$s</string>
     <string name="tuning_seconds_value_format">%1$d s</string>
     <string name="cockpit_auto_pause_badge">Pausa automática</string>
     <string name="cockpit_auto_pause_resume">Retomar agora</string>
+    <string name="cockpit_status_not_started">Não iniciado</string>
+    <string name="cockpit_status_paused">Pausado</string>
     <string name="cockpit_speed_sensor_lost">Sensor de velocidade perdido</string>
 
     <!-- Athlete Baselines & W/kg Metric (ATT-1289, REQ-TRK-019) -->
@@ -2162,4 +2169,9 @@
     <string name="tip_sport_types_subtitle">Limiares de velocidade, equipamento padrão e mapeamentos de exportação</string>
     <string name="tip_sport_types_desc">Defina esportes personalizados (ex.: bike de estrada, gravel, MTB, corrida de trilha). Configure limiares de detecção automática por velocidade, vincule equipamentos padrão e personalize o mapeamento de exportação para Strava, TCX e GoldenCheetah.</string>
     <string name="tip_sport_types_action">Gerenciar esportes</string>
+
+    <!-- Sensor Field Display Elements (ATT-4841, REQ-TRK-046) -->
+    <string name="sensor_field_display_elements_title">Elementos de exibição</string>
+    <string name="sensor_field_show_value">Valor</string>
+    <string name="sensor_field_show_bar">Barra</string>
 </resources>

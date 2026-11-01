@@ -126,37 +126,40 @@ fun InteractivePeriodMap(
         onSnapshotReady = onSnapshotReady,
         content = {
             // 1. Render Anchor Tracks (North/South/East/West/Longest) instantly during loading only (REQ-PER-021.2)
-            if (mapState.isLoading) {
+            // In period overview, suppress anchor tracks in favor of the pure line-density heatmap (REQ-PER-024.1)
+            if (mapState.isLoading && memberTracks.isNotEmpty()) {
                 anchorTracks.forEach { track ->
                     path(track, alpha = 0.5f, onPathClick = { onWorkoutClick(it) })
                 }
             }
 
-            // 2. Extrema Markers (Markers for anchors are already in summary.extremaMarkers)
-            val markersList = summary.extremaMarkers.map { marker ->
-                val color = when (marker.markerType) {
-                    PeriodMarkerType.START -> TTColor.StartPoint
-                    PeriodMarkerType.END -> TTColor.EndPoint
-                    PeriodMarkerType.DISTANCE -> TTColor.ApexPoint
-                    else -> fallbackColor
+            // 2. Extrema Markers (Rendered only when a workout is peeked/selected - REQ-PER-024.1)
+            if (memberTracks.isNotEmpty() && summary.extremaMarkers.isNotEmpty()) {
+                val markersList = summary.extremaMarkers.map { marker ->
+                    val color = when (marker.markerType) {
+                        PeriodMarkerType.START -> TTColor.StartPoint
+                        PeriodMarkerType.END -> TTColor.EndPoint
+                        PeriodMarkerType.DISTANCE -> TTColor.ApexPoint
+                        else -> fallbackColor
+                    }
+                    LocationMarker(
+                        position = marker.pos, iconResId = marker.iconResId, title = marker.title,
+                        iconDescriptor = createSensorMarker(context, marker.iconResId, color, Color.White),
+                        alpha = 0.9f,
+                        onClick = { onWorkoutClick(marker.workoutId); true }
+                    )
                 }
-                LocationMarker(
-                    position = marker.pos, iconResId = marker.iconResId, title = marker.title,
-                    iconDescriptor = createSensorMarker(context, marker.iconResId, color, Color.White),
-                    alpha = 0.5f, // ATT-440: Align alpha with member markers for consistent zoom blending
-                    onClick = { onWorkoutClick(marker.workoutId); true }
-                )
+                markers(markersList)
             }
-            markers(markersList)
             
-            // 3. Render Additional Detail from MapState (ATT-440 Cluster algorithm)
-            if (!mapState.isLoading) {
-                // Add filtered member traces (high-alpha when displaying single peeked workout track)
+            // 3. Render Detail for selected workout track (ATT-440 Cluster algorithm / REQ-PER-024.1)
+            if (!mapState.isLoading && memberTracks.isNotEmpty()) {
+                // High-alpha prominent highlight for the peeked workout track
                 memberTracks.forEach { track ->
-                    path(track, alpha = if (memberTracks.size == 1) 0.9f else 0.3f, onPathClick = { onWorkoutClick(it) })
+                    path(track, alpha = 0.95f, onPathClick = { onWorkoutClick(it) })
                 }
                 
-                // Add filtered member markers
+                // Add filtered member markers for peeked workout
                 val memberMarkersList = memberMarkers.map { marker ->
                     val color = when (marker.markerType) {
                         PeriodMarkerType.START -> TTColor.StartPoint
@@ -167,16 +170,16 @@ fun InteractivePeriodMap(
                     LocationMarker(
                         position = marker.pos, iconResId = marker.iconResId, title = marker.title,
                         iconDescriptor = createSensorMarker(context, marker.iconResId, color, Color.White),
-                        alpha = 0.5f,
+                        alpha = 0.9f,
                         onClick = { onWorkoutClick(marker.workoutId); true }
                     )
                 }
                 markers(memberMarkersList)
             }
 
-            // 4. Render full heatmap as it becomes ready in the background
+            // 4. Render full heatmap as it becomes ready in the background (REQ-PER-024.1)
             if (heatmapPaths.isNotEmpty()) {
-                heatmap(heatmapPaths, opacity = 0.8)
+                heatmap(heatmapPaths, opacity = 1.0)
             }
         }
     )

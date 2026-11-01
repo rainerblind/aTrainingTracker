@@ -62,6 +62,30 @@ fun PeriodList(
     onLongestWorkoutClick: (PeriodSummary, BSportType, Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    PeriodList(
+        scrollState = scrollState,
+        periods = periods,
+        isPlayServiceAvailable = isPlayServiceAvailable,
+        onHeaderClick = onHeaderClick,
+        onMapClick = { s, _ -> onMapClick(s) },
+        onSportClick = onSportClick,
+        onLongestWorkoutClick = onLongestWorkoutClick,
+        modifier = modifier
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PeriodList(
+    scrollState: LazyListState,
+    periods: List<PeriodSummary>,
+    isPlayServiceAvailable: Boolean,
+    onHeaderClick: (PeriodSummary) -> Unit,
+    onMapClick: (PeriodSummary, String?) -> Unit,
+    onSportClick: (PeriodSummary, BSportType) -> Unit,
+    onLongestWorkoutClick: (PeriodSummary, BSportType, Long) -> Unit,
+    modifier: Modifier = Modifier
+) {
     val bottomPadding = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
     if (periods.isEmpty()) {
@@ -96,7 +120,7 @@ fun PeriodList(
                         summary = periodSummary,
                         isPlayServiceAvailable = isPlayServiceAvailable,
                         onHeaderClick = onHeaderClick,
-                        onMapClick = { onMapClick(periodSummary) },
+                        onMapClick = onMapClick,
                         onSportClick = onSportClick,
                         onLongestWorkoutClick = onLongestWorkoutClick
                     )

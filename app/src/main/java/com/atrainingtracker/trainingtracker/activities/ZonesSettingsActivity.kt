@@ -531,14 +531,6 @@ fun SettingsScreenContent(
                     checked = displayOptions.showTextColor,
                     onCheckedChange = { onUpdateDisplayOptions(displayOptions.copy(showTextColor = it)) }
                 )
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-                // Toggle: Zone gauge bar (REQ-UI-376)
-                ZoneDisplayToggleRow(
-                    label = stringResource(R.string.zone_display_gauge),
-                    checked = displayOptions.showGauge,
-                    onCheckedChange = { onUpdateDisplayOptions(displayOptions.copy(showGauge = it)) }
-                )
             }
         }
 
@@ -599,13 +591,11 @@ fun SettingsScreenContent(
         } else {
             listOf(z1Max, z2Max, z3Max, z4Max)
         }
-        val previewGaugeState = if (displayOptions.showGauge) {
-            ZoneGaugeMath.calculateZoneGaugeState(
-                value = previewValue.toDoubleOrNull(),
-                zoneType = zoneType,
-                cutoffs = previewCutoffs
-            )
-        } else null
+        val previewGaugeState = ZoneGaugeMath.calculateZoneGaugeState(
+            value = previewValue.toDoubleOrNull(),
+            zoneType = zoneType,
+            cutoffs = previewCutoffs
+        )
 
         val previewFieldState = SensorFieldState(
             configHash = 0,
@@ -619,7 +609,9 @@ fun SettingsScreenContent(
             units = previewUnits,
             zoneColor = previewZoneColor,
             zoneDisplayOptions = displayOptions,
-            zoneGaugeState = previewGaugeState
+            zoneGaugeState = previewGaugeState,
+            showValue = true,
+            showBar = true
         )
 
         val isSystemDark = isSystemInDarkTheme()

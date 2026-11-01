@@ -85,7 +85,9 @@ data class SensorFieldConfig(
     val filterType: FilterType,
     val filterConstant: Double,
     val sourceDeviceId: Long,
-    val sourceDeviceName: String? = null
+    val sourceDeviceName: String? = null,
+    val showValue: Boolean = true,
+    val showBar: Boolean = false
 )
 
 enum class ScreenMode {
@@ -291,6 +293,8 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                 val filterConstantIndex = c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.FILTER_CONSTANT)
                 val viewSizeIndex = c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEW_SIZE)
                 val deviceIdIndex = c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SOURCE_DEVICE_ID)
+                val showValueIndex = c.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_VALUE)
+                val showBarIndex = c.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_BAR)
 
                 do {
                     val viewSize = safeEnumValueOf(c.getString(viewSizeIndex), ViewSize.NORMAL)
@@ -305,6 +309,12 @@ class TrackingViewsRepository private constructor(private val context: Context) 
 
                     val sensorType = safeEnumValueOf(c.getString(sensorTypeIndex), SensorType.TIME_ACTIVE)
                     val filterType = safeEnumValueOf(c.getString(filterTypeIndex), FilterType.INSTANTANEOUS)
+                    val showValue = if (showValueIndex != -1 && !c.isNull(showValueIndex)) c.getInt(showValueIndex) == 1 else true
+                    val showBar = if (showBarIndex != -1 && !c.isNull(showBarIndex)) {
+                        c.getInt(showBarIndex) == 1
+                    } else {
+                        TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupportedSensorType(sensorType)
+                    }
 
                     fieldList.add(
                         SensorFieldConfig(
@@ -316,7 +326,9 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                             filterType = filterType,
                             filterConstant = c.getDouble(filterConstantIndex),
                             sourceDeviceId = sourceDeviceId,
-                            sourceDeviceName = deviceName
+                            sourceDeviceName = deviceName,
+                            showValue = showValue,
+                            showBar = showBar
                         )
                     )
                 } while (c.moveToNext())
@@ -352,6 +364,15 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                     val sensorType = safeEnumValueOf(sensorTypeString, SensorType.TIME_ACTIVE)
                     val filterTypeString = c.getString(c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.FILTER_TYPE))
                     val filterType = safeEnumValueOf(filterTypeString, FilterType.INSTANTANEOUS)
+                    val showValueIndex = c.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_VALUE)
+                    val showBarIndex = c.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_BAR)
+                    val showValue = if (showValueIndex != -1 && !c.isNull(showValueIndex)) c.getInt(showValueIndex) == 1 else true
+                    val showBar = if (showBarIndex != -1 && !c.isNull(showBarIndex)) {
+                        c.getInt(showBarIndex) == 1
+                    } else {
+                        TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupportedSensorType(sensorType)
+                    }
+
                     return@withContext SensorFieldConfig(
                         sensorFieldId = sensorFieldId,
                         rowNr = c.getInt(c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.ROW_NR)),
@@ -361,7 +382,9 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                         filterType = filterType,
                         filterConstant = c.getDouble(c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.FILTER_CONSTANT)),
                         sourceDeviceId = sourceDeviceId,
-                        sourceDeviceName = deviceName
+                        sourceDeviceName = deviceName,
+                        showValue = showValue,
+                        showBar = showBar
                     )
                 } else {
                     return@withContext null // Return null if not found
@@ -394,7 +417,9 @@ class TrackingViewsRepository private constructor(private val context: Context) 
         newSourceDeviceId: Long?,
         newSourceDeviceName: String?,
         newFilterType: FilterType,
-        newFilterConstant: Double
+        newFilterConstant: Double,
+        showValue: Boolean = true,
+        showBar: Boolean = false
     ) {
         withContext(Dispatchers.IO) {
 
@@ -405,7 +430,9 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                 newViewSize,
                 newSourceDeviceId,
                 newFilterType,
-                newFilterConstant
+                newFilterConstant,
+                showValue,
+                showBar
             )
         }
 
@@ -424,7 +451,9 @@ class TrackingViewsRepository private constructor(private val context: Context) 
         newSourceDeviceId: Long?,
         newSourceDeviceName: String?,
         newFilterType: FilterType,
-        newFilterConstant: Double
+        newFilterConstant: Double,
+        showValue: Boolean = true,
+        showBar: Boolean = false
     ) {
         Log.i("TrackingRepository", "insertSensorFieldConfig: $tabViewId, $rowNr, $colNr")
 
@@ -437,7 +466,10 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                 newViewSize,
                 newSourceDeviceId,
                 newFilterType,
-                newFilterConstant)
+                newFilterConstant,
+                showValue,
+                showBar
+            )
         }
 
         // trigger recreation of UI

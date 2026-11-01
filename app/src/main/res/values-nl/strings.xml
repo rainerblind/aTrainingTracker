@@ -1908,6 +1908,7 @@
     <string name="zone_onboarding_action_later">Niet nu</string>
 
     <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
+    <string name="auto_pause_title">Automatisch pauzeren</string>
     <string name="tuning_auto_pause_title">Automatisch pauzeren</string>
     <string name="tuning_auto_pause_desc">Opname automatisch pauzeren bij stilstand</string>
     <string name="tuning_auto_pause_bike_title">Fietsen</string>
@@ -1917,10 +1918,16 @@
     <string name="tuning_auto_pause_speed_threshold_desc">Snelheid waaronder de opname wordt gepauzeerd</string>
     <string name="tuning_auto_pause_debounce_title">Pauzevertraging</string>
     <string name="tuning_auto_pause_debounce_desc">Duur onder drempelwaarde alvorens te pauzeren</string>
+    <string name="tuning_auto_pause_resume_debounce_title">Hervattingsvertraging</string>
+    <string name="tuning_auto_pause_resume_debounce_desc">Duur boven drempelwaarde alvorens te hervatten</string>
+    <string name="tuning_auto_pause_start_in_auto_pause_title">Starten in automatische pauze</string>
+    <string name="tuning_auto_pause_start_in_auto_pause_desc">Bij het starten van een training in stilstand direct beginnen in automatische pauze totdat beweging wordt gedetecteerd</string>
     <string name="tuning_speed_value_format">%1$d %2$s</string>
     <string name="tuning_seconds_value_format">%1$d s</string>
     <string name="cockpit_auto_pause_badge">Automatisch pauzeren</string>
     <string name="cockpit_auto_pause_resume">Nu hervatten</string>
+    <string name="cockpit_status_not_started">Niet gestart</string>
+    <string name="cockpit_status_paused">Gepauzeerd</string>
     <string name="cockpit_speed_sensor_lost">Snelheidssensor verloren</string>
 
     <!-- Athlete Baselines & W/kg Metric (ATT-1289, REQ-TRK-019) -->
@@ -2163,4 +2170,9 @@
     <string name="tip_sport_types_subtitle">Snelheidsdrempels, standaard uitrusting &amp; exporttoewijzing</string>
     <string name="tip_sport_types_desc">Definieer aangepaste sporten (bijv. racefiets, gravel, MTB, trailrunning). Configureer automatische sportdetectiedrempels op basis van snelheid, koppel standaard uitrusting en pas Strava-, TCX- en GoldenCheetah-exporttypen aan.</string>
     <string name="tip_sport_types_action">Sporttypes beheren</string>
+
+    <!-- Sensor Field Display Elements (ATT-4841, REQ-TRK-046) -->
+    <string name="sensor_field_display_elements_title">Weergave-elementen</string>
+    <string name="sensor_field_show_value">Waarde</string>
+    <string name="sensor_field_show_bar">Balk</string>
 </resources>

@@ -100,10 +100,6 @@ fun AdvancedTuningScreen(
     var clusterTolEndpoints by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_TOL_ENDPOINTS) }; var clusterTolApex by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_TOL_APEX) }
     var clusterTolDistance by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_TOL_DISTANCE) }; var clusterTolAltitudePos by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_TOL_ALTITUDE_POS) }
     var clusterUseSportType by remember { mutableStateOf(TuningPreferencesDefaults.CLUSTER_USE_SPORT_TYPE) }; var clusterUseAltitudePos by remember { mutableStateOf(TuningPreferencesDefaults.CLUSTER_USE_ALTITUDE_POS) }
-    var autoPauseBikeEnabled by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_ENABLED) }; var autoPauseRunEnabled by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_ENABLED) }; var autoPauseOtherEnabled by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_ENABLED) }
-    var autoPauseBikeSpeedThreshold by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_SPEED_THRESHOLD_METRIC) }; var autoPauseBikeDebounceSec by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_DEBOUNCE_SEC) }
-    var autoPauseRunSpeedThreshold by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_SPEED_THRESHOLD_METRIC) }; var autoPauseRunDebounceSec by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_DEBOUNCE_SEC) }
-    var autoPauseOtherSpeedThreshold by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_SPEED_THRESHOLD_METRIC) }; var autoPauseOtherDebounceSec by remember { mutableIntStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_DEBOUNCE_SEC) }
     var enableCogganPowerMetrics by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_COGGAN_POWER_METRICS) }; var showCogganPowerInWorkoutSummary by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_SHOW_COGGAN_POWER_IN_WORKOUT_SUMMARY) }; var enablePmcModel by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_PMC_MODEL) }
     var enableAerobicEfficiencyModel by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_AEROBIC_EFFICIENCY_MODEL) }; var showAerobicEfficiencyInWorkoutSummary by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY) }
     var enableCriticalPowerModel by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL) }; var showCriticalPowerInWorkoutSummary by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY) }
@@ -149,10 +145,6 @@ fun AdvancedTuningScreen(
         clusterTolEndpoints = config.clusterTolEndpoints; clusterTolApex = config.clusterTolApex
         clusterTolDistance = config.clusterTolDistance; clusterTolAltitudePos = config.clusterTolAltitudePos
         clusterUseSportType = config.clusterUseSportType; clusterUseAltitudePos = config.clusterUseAltitudePos
-        autoPauseBikeEnabled = config.autoPauseBikeEnabled; autoPauseRunEnabled = config.autoPauseRunEnabled; autoPauseOtherEnabled = config.autoPauseOtherEnabled
-        autoPauseBikeSpeedThreshold = config.autoPauseBikeSpeedThreshold; autoPauseBikeDebounceSec = config.autoPauseBikeDebounceSec
-        autoPauseRunSpeedThreshold = config.autoPauseRunSpeedThreshold; autoPauseRunDebounceSec = config.autoPauseRunDebounceSec
-        autoPauseOtherSpeedThreshold = config.autoPauseOtherSpeedThreshold; autoPauseOtherDebounceSec = config.autoPauseOtherDebounceSec
         enablePmcModel = config.enablePmcModel
         enableCogganPowerMetrics = config.enableCogganPowerMetrics; showCogganPowerInWorkoutSummary = config.showCogganPowerInWorkoutSummary
         enableAerobicEfficiencyModel = config.enableAerobicEfficiencyModel; showAerobicEfficiencyInWorkoutSummary = config.showAerobicEfficiencyInWorkoutSummary
@@ -174,7 +166,7 @@ fun AdvancedTuningScreen(
     }
 
     fun onSaveSettings() {
-        val newConfig = TuningConfig(
+        val newConfig = persistedConfig.copy(
             elevationXAxisDomain = elevationXAxisDomain, telemetryXAxisDomain = telemetryXAxisDomain,
             cockpitFontFamily = cockpitFontFamily, cockpitFontWeight = cockpitFontWeight,
             sensorFieldVariant = sensorFieldVariant, sensorFieldCornerRadius = sensorFieldCornerRadius,
@@ -191,10 +183,6 @@ fun AdvancedTuningScreen(
             clusterTolEndpoints = clusterTolEndpoints, clusterTolApex = clusterTolApex,
             clusterTolDistance = clusterTolDistance, clusterTolAltitudePos = clusterTolAltitudePos,
             clusterUseSportType = clusterUseSportType, clusterUseAltitudePos = clusterUseAltitudePos,
-            autoPauseBikeEnabled = autoPauseBikeEnabled, autoPauseRunEnabled = autoPauseRunEnabled, autoPauseOtherEnabled = autoPauseOtherEnabled,
-            autoPauseBikeSpeedThreshold = autoPauseBikeSpeedThreshold, autoPauseBikeDebounceSec = autoPauseBikeDebounceSec,
-            autoPauseRunSpeedThreshold = autoPauseRunSpeedThreshold, autoPauseRunDebounceSec = autoPauseRunDebounceSec,
-            autoPauseOtherSpeedThreshold = autoPauseOtherSpeedThreshold, autoPauseOtherDebounceSec = autoPauseOtherDebounceSec,
             enableCogganPowerMetrics = enableCogganPowerMetrics, showCogganPowerInWorkoutSummary = showCogganPowerInWorkoutSummary, enablePmcModel = enablePmcModel,
             enableAerobicEfficiencyModel = enableAerobicEfficiencyModel, showAerobicEfficiencyInWorkoutSummary = showAerobicEfficiencyInWorkoutSummary,
             enableCriticalPowerModel = enableCriticalPowerModel, showCriticalPowerInWorkoutSummary = showCriticalPowerInWorkoutSummary
@@ -288,14 +276,12 @@ fun AdvancedTuningScreen(
                 isExpanded = isSectionExpanded(TuningSection.SENSORS_GPS), onToggle = { toggleSection(TuningSection.SENSORS_GPS) }
             ) {
                 SensorsGpsFilterSection(
-                    gpsAccuracy = gpsAccuracy, onGpsAccuracyChange = { gpsAccuracy = it }, altitudeWindowSec = altitudeWindowSec, onAltitudeWindowChange = { altitudeWindowSec = it },
-                    slopeMinSpeed = slopeMinSpeed, onSlopeMinSpeedChange = { slopeMinSpeed = it },
-                    autoPauseBikeEnabled = autoPauseBikeEnabled, onAutoPauseBikeEnabledChange = { autoPauseBikeEnabled = it },
-                    autoPauseBikeSpeedThreshold = autoPauseBikeSpeedThreshold, onAutoPauseBikeSpeedThresholdChange = { autoPauseBikeSpeedThreshold = it }, autoPauseBikeDebounceSec = autoPauseBikeDebounceSec, onAutoPauseBikeDebounceSecChange = { autoPauseBikeDebounceSec = it },
-                    autoPauseRunEnabled = autoPauseRunEnabled, onAutoPauseRunEnabledChange = { autoPauseRunEnabled = it },
-                    autoPauseRunSpeedThreshold = autoPauseRunSpeedThreshold, onAutoPauseRunSpeedThresholdChange = { autoPauseRunSpeedThreshold = it }, autoPauseRunDebounceSec = autoPauseRunDebounceSec, onAutoPauseRunDebounceSecChange = { autoPauseRunDebounceSec = it },
-                    autoPauseOtherEnabled = autoPauseOtherEnabled, onAutoPauseOtherEnabledChange = { autoPauseOtherEnabled = it },
-                    autoPauseOtherSpeedThreshold = autoPauseOtherSpeedThreshold, onAutoPauseOtherSpeedThresholdChange = { autoPauseOtherSpeedThreshold = it }, autoPauseOtherDebounceSec = autoPauseOtherDebounceSec, onAutoPauseOtherDebounceSecChange = { autoPauseOtherDebounceSec = it }
+                    gpsAccuracy = gpsAccuracy,
+                    onGpsAccuracyChange = { gpsAccuracy = it },
+                    altitudeWindowSec = altitudeWindowSec,
+                    onAltitudeWindowChange = { altitudeWindowSec = it },
+                    slopeMinSpeed = slopeMinSpeed,
+                    onSlopeMinSpeedChange = { slopeMinSpeed = it }
                 )
             }
 

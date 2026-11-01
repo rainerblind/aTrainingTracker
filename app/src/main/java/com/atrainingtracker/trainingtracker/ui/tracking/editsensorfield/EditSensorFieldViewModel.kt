@@ -32,6 +32,7 @@ import com.atrainingtracker.banalservice.filters.FilterType
 import com.atrainingtracker.banalservice.filters.SensorFilterDefaults
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
@@ -123,8 +124,13 @@ data class EditDialogUiState(
     val selectedFilterType: FilterType = FilterType.INSTANTANEOUS,
     val filterConstant: Double = 1.0,
     val movingAverageUnit: String = "sec", // "sec", "min", or "samples"
-    val isCustomFilterExpanded: Boolean = false
+    val isCustomFilterExpanded: Boolean = false,
+    val showValue: Boolean = true,
+    val showBar: Boolean = false
 ) {
+    val isBarSupported: Boolean
+        get() = TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupportedSensorType(selectedSensorType)
+
     val activePreset: FilterPreset
         get() = if (isCustomFilterExpanded && resolveFilterPreset(selectedFilterType, filterConstant, movingAverageUnit) != FilterPreset.CUSTOM) {
             FilterPreset.CUSTOM
@@ -217,6 +223,8 @@ class EditSensorFieldViewModel(
         val defaultFilterType = defaultFilterConfig.filterType
         val defaultConstant = defaultFilterConfig.filterConstant
 
+        val isBarSupported = TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupportedSensorType(defaultSensor)
+
         // Create a MOCK initialConfig for the "Add" scenario.
         // This ensures that functions like onFilterConfigDismissed don't crash.
         initialConfig = SensorFieldConfig(
@@ -228,7 +236,9 @@ class EditSensorFieldViewModel(
             sourceDeviceName = context.getString(R.string.bestSensor),
             viewSize = ViewSize.NORMAL,
             filterType = defaultFilterType,
-            filterConstant = defaultConstant
+            filterConstant = defaultConstant,
+            showValue = true,
+            showBar = isBarSupported
         )
 
         _uiState.update {
@@ -243,7 +253,9 @@ class EditSensorFieldViewModel(
                 filterConstant = defaultConstant,
                 movingAverageUnit = "sec",
                 filterSummary = defaultFilterType.getSummary(context, defaultConstant),
-                isCustomFilterExpanded = false
+                isCustomFilterExpanded = false,
+                showValue = true,
+                showBar = isBarSupported
             )
         }
     }
@@ -283,7 +295,9 @@ class EditSensorFieldViewModel(
                 selectedFilterType = initialConfig.filterType,
                 filterConstant = displayConstant,
                 movingAverageUnit = initialUnit,
-                isCustomFilterExpanded = (initialPreset == FilterPreset.CUSTOM)
+                isCustomFilterExpanded = (initialPreset == FilterPreset.CUSTOM),
+                showValue = initialConfig.showValue,
+                showBar = initialConfig.showBar
             )
         }
     }
@@ -295,6 +309,7 @@ class EditSensorFieldViewModel(
             val defaultFilterType = defaultFilterConfig.filterType
             val defaultConstant = defaultFilterConfig.filterConstant
             val isCustom = resolveFilterPreset(defaultFilterType, defaultConstant, defaultFilterConfig.unit) == FilterPreset.CUSTOM
+            val isBarSupported = TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupportedSensorType(newSensorType)
 
             _uiState.update {
                 it.copy(
@@ -310,8 +325,32 @@ class EditSensorFieldViewModel(
                     selectedFilterType = defaultFilterType,
                     filterConstant = defaultConstant,
                     movingAverageUnit = defaultFilterConfig.unit,
-                    isCustomFilterExpanded = isCustom
+                    isCustomFilterExpanded = isCustom,
+                    showValue = true,
+                    showBar = isBarSupported
                 )
+            }
+        }
+    }
+
+    fun onShowValueChanged(enabled: Boolean) {
+        _uiState.update { state ->
+            // Mutual exclusion invariant: athlete cannot deselect both Value and Bar simultaneously
+            if (!enabled && (!state.isBarSupported || !state.showBar)) {
+                state
+            } else {
+                state.copy(showValue = enabled)
+            }
+        }
+    }
+
+    fun onShowBarChanged(enabled: Boolean) {
+        _uiState.update { state ->
+            // Mutual exclusion invariant: athlete cannot deselect both Value and Bar simultaneously
+            if (!enabled && !state.showValue) {
+                state
+            } else {
+                state.copy(showBar = enabled)
             }
         }
     }
@@ -568,6 +607,9 @@ class EditSensorFieldViewModel(
         val filterData = FilterData(newSourceDeviceName, newSensorType, newFilterType, newFilterConstant)
         banalServiceRepository.createFilter(filterData)
 
+        val showValue = currentState.showValue
+        val showBar = if (currentState.isBarSupported) currentState.showBar else false
+
         viewModelScope.launch {
             if (isNewField) {
                 trackingViewsRepository.insertSensorFieldConfig(
@@ -579,7 +621,9 @@ class EditSensorFieldViewModel(
                     newSourceDeviceId = newSourceDeviceId,
                     newSourceDeviceName = newSourceDeviceName,
                     newFilterType = newFilterType,
-                    newFilterConstant = newFilterConstant
+                    newFilterConstant = newFilterConstant,
+                    showValue = showValue,
+                    showBar = showBar
                 )
             } else {
                 trackingViewsRepository.updateSensorFieldConfig(
@@ -589,7 +633,9 @@ class EditSensorFieldViewModel(
                     newSourceDeviceId = newSourceDeviceId,
                     newSourceDeviceName = newSourceDeviceName,
                     newFilterType = newFilterType,
-                    newFilterConstant = newFilterConstant
+                    newFilterConstant = newFilterConstant,
+                    showValue = showValue,
+                    showBar = showBar
                 )
             }
         }

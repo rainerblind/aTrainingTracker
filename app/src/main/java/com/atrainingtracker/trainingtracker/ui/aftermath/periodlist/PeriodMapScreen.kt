@@ -399,15 +399,19 @@ fun PeriodMapScreen(
                     summary = summary.copy(
                         workoutIdToPolylineMap = filteredContent.workouts,
                         workoutIdToPathMap = filteredContent.paths,
-                        extremaMarkers = filteredContent.anchorMarkers
+                        extremaMarkers = if (peekedWorkoutDataWithTrack != null) {
+                            filteredContent.anchorMarkers.filter { it.workoutId == peekedWorkoutDataWithTrack.workoutData?.id }
+                        } else {
+                            emptyList()
+                        }
                     ),
                     mapState = mapState,
-                    memberMarkers = filteredContent.memberMarkers,
-                    memberTracks = if (filteredContent.memberTracks.isNotEmpty()) {
-                        filteredContent.memberTracks
+                    memberMarkers = if (peekedWorkoutDataWithTrack != null) {
+                        filteredContent.memberMarkers.filter { it.workoutId == peekedWorkoutDataWithTrack.workoutData?.id }
                     } else {
-                        peekedTracks
+                        emptyList()
                     },
+                    memberTracks = peekedTracks,
                     heatmapPaths = filteredContent.heatmapPaths,
                     onWorkoutClick = onWorkoutClick,
                     modifier = Modifier.fillMaxSize(),

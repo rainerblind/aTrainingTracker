@@ -122,11 +122,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.segments.LiveSegment
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
@@ -201,6 +203,8 @@ interface TabToggleActions {
     }
 }
 
+private class SegmentIndexHolder(var index: Int? = null)
+
 /**
  * A generic screen that displays a grid of sensor fields for either tracking or configuration.
  * It adapts its UI and behavior based on the provided [screenMode].
@@ -225,10 +229,12 @@ fun SensorGridScreen(
     val tuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(
         initial = TuningConfig()
     )
+    var trackingMode by remember { mutableStateOf(TrainingApplication.getTrackingMode()) }
     var isAutoPaused by remember { mutableStateOf(TrainingApplication.isAutoPaused()) }
     DisposableEffect(context) {
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(c: Context?, intent: Intent?) {
+                trackingMode = TrainingApplication.getTrackingMode()
                 isAutoPaused = TrainingApplication.isAutoPaused()
             }
         }
@@ -237,6 +243,18 @@ fun SensorGridScreen(
         onDispose {
             context.safeUnregisterReceiver(receiver, "SensorGridScreen")
         }
+    }
+    val cockpitStatus = remember(screenMode, trackingMode, isAutoPaused) {
+        SensorGridStatusResolver.resolveCockpitStatus(screenMode, trackingMode, isAutoPaused)
+    }
+    val gridAlpha = remember(screenMode, trackingMode) {
+        SensorGridStatusResolver.resolveGridAlpha(screenMode, trackingMode)
+    }
+    val onBannerAction: (CockpitStatus) -> Unit = { status ->
+        val intent = Intent(status.intentAction).apply {
+            `package` = context.packageName
+        }
+        context.sendBroadcast(intent)
     }
     val activeVariantStyle = remember(tuningConfig.sensorFieldVariant) {
         SensorFieldStyle.forVariant(tuningConfig.sensorFieldVariant)
@@ -361,24 +379,29 @@ fun SensorGridScreen(
     }
 
     val activeNavigatedRoute = state.mapRoutes.firstOrNull { it.isActiveNavigation }
-    var lastRouteSegmentIndex by remember(activeNavigatedRoute?.id) { mutableStateOf<Int?>(null) }
+    val segmentIndexHolder = remember(activeNavigatedRoute?.id) { SegmentIndexHolder() }
     val resolvedProfile = remember(
+        state.showElevationProfile,
         activeNavigatedRoute,
-        state.pathPoints,
-        currentLocation,
+        if (state.showElevationProfile) state.pathPoints else null,
+        if (state.showElevationProfile) currentLocation else null,
         state.elevationProfileScope,
         state.elevationProfileLookahead
     ) {
-        val res = TrackingElevationProfileResolver.resolve(
-            activeNavigatedRoute = activeNavigatedRoute,
-            recordedPathPoints = state.pathPoints,
-            currentLocation = currentLocation,
-            scope = state.elevationProfileScope,
-            lookaheadDistanceMeters = state.elevationProfileLookahead,
-            lastSegmentIndex = lastRouteSegmentIndex
-        )
-        lastRouteSegmentIndex = res.segmentIndex
-        res
+        if (!state.showElevationProfile) {
+            ResolvedElevationProfileData(emptyList(), emptyList(), null, false, null)
+        } else {
+            val res = TrackingElevationProfileResolver.resolve(
+                activeNavigatedRoute = activeNavigatedRoute,
+                recordedPathPoints = state.pathPoints,
+                currentLocation = currentLocation,
+                scope = state.elevationProfileScope,
+                lookaheadDistanceMeters = state.elevationProfileLookahead,
+                lastSegmentIndex = segmentIndexHolder.index
+            )
+            segmentIndexHolder.index = res.segmentIndex
+            res
+        }
     }
 
     val sheetContentLambda: @Composable ColumnScope.() -> Unit = {
@@ -436,6 +459,7 @@ fun SensorGridScreen(
                             gridActions = gridActions,
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .alpha(gridAlpha)
                                 .verticalScroll(rememberScrollState())
                         )
                     }
@@ -537,15 +561,11 @@ fun SensorGridScreen(
                     )
                 }
 
-                // Auto-Pause HUD Banner (REQ-TRK-018 / ATT-45)
-                if (isAutoPaused) {
-                    AutoPauseHudBanner(
-                        onManualResume = {
-                            val intent = Intent(TrainingApplication.REQUEST_RESUME_FROM_PAUSED).apply {
-                                `package` = context.packageName
-                            }
-                            context.sendBroadcast(intent)
-                        },
+                // Non-Recording HUD Status Banner (REQ-TRK-045 / ATT-4856)
+                if (cockpitStatus != null) {
+                    NonRecordingStatusBanner(
+                        status = cockpitStatus,
+                        onAction = { onBannerAction(cockpitStatus) },
                         modifier = Modifier
                             .align(Alignment.TopCenter)
                             .padding(top = if (state.showNavigationHints) 64.dp else 8.dp)
@@ -870,7 +890,7 @@ fun SensorGridScreen(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     // 1. The Sensor Grid (Scrollable, capped at 50% available height when map visible, or unweighted when map hidden; REQ-UI-358 / REQ-UI-409.3 / REQ-TRK-040.4)
-                    val sensorGridModifier = if (state.mapState.showMap) {
+                    val sensorGridModifier = (if (state.mapState.showMap) {
                         Modifier
                             .fillMaxWidth()
                             .defaultMinSize(minHeight = 48.dp)
@@ -882,7 +902,7 @@ fun SensorGridScreen(
                             .defaultMinSize(minHeight = 48.dp)
                             .verticalScroll(rememberScrollState())
                             .weight(1f, fill = false)
-                    }
+                    }).alpha(gridAlpha)
 
                     SensorGridContent(
                         packedRows = packedRows,
@@ -948,15 +968,11 @@ fun SensorGridScreen(
                     )
                 }
 
-                // Auto-Pause HUD Banner (REQ-TRK-018 / ATT-45)
-                if (isAutoPaused) {
-                    AutoPauseHudBanner(
-                        onManualResume = {
-                            val intent = Intent(TrainingApplication.REQUEST_RESUME_FROM_PAUSED).apply {
-                                `package` = context.packageName
-                            }
-                            context.sendBroadcast(intent)
-                        },
+                // Non-Recording HUD Status Banner (REQ-TRK-045 / ATT-4856)
+                if (cockpitStatus != null) {
+                    NonRecordingStatusBanner(
+                        status = cockpitStatus,
+                        onAction = { onBannerAction(cockpitStatus) },
                         modifier = Modifier
                             .align(Alignment.TopCenter)
                             .padding(top = if (state.showNavigationHints) 64.dp else 8.dp)
@@ -1059,12 +1075,13 @@ private fun SensorGridContent(
 }
 
 /**
- * Ambient amber pill HUD banner displayed when tracking is auto-paused (REQ-TRK-018 / ATT-45).
- * Features high-contrast amber styling and a "Resume Now" manual override button.
+ * High-visibility cockpit status HUD banner displayed when tracking is not recording
+ * (READY, MANUAL_PAUSED, AUTO_PAUSED) (REQ-TRK-045, ATT-4856).
  */
 @Composable
-fun AutoPauseHudBanner(
-    onManualResume: () -> Unit,
+fun NonRecordingStatusBanner(
+    status: CockpitStatus,
+    onAction: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
@@ -1078,45 +1095,61 @@ fun AutoPauseHudBanner(
         color = containerColor,
         contentColor = contentColor,
         border = BorderStroke(1.5.dp, borderColor),
-        tonalElevation = 4.dp,
+        tonalElevation = 6.dp,
         modifier = modifier
             .padding(horizontal = 16.dp, vertical = 6.dp)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Icon(
-                imageVector = Icons.Default.PauseCircle,
+                imageVector = status.icon,
                 contentDescription = null,
                 tint = contentColor,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(24.dp)
             )
             Text(
-                text = stringResource(R.string.cockpit_auto_pause_badge),
-                style = MaterialTheme.typography.labelLarge,
+                text = stringResource(status.titleRes),
+                style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = contentColor
             )
             FilledTonalButton(
-                onClick = onManualResume,
+                onClick = onAction,
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.filledTonalButtonColors(
                     containerColor = actionColor,
                     contentColor = if (isDark) Color.Black else Color.White
                 ),
-                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                modifier = Modifier.height(32.dp)
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                modifier = Modifier.height(36.dp)
             ) {
                 Text(
-                    text = stringResource(R.string.cockpit_auto_pause_resume),
-                    style = MaterialTheme.typography.labelMedium,
+                    text = stringResource(status.actionRes),
+                    style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold
                 )
             }
         }
     }
+}
+
+/**
+ * Legacy delegate for backwards compatibility (REQ-TRK-018 / ATT-45).
+ */
+@Deprecated("Use NonRecordingStatusBanner instead", ReplaceWith("NonRecordingStatusBanner(CockpitStatus.AUTO_PAUSED, onManualResume, modifier)"))
+@Composable
+fun AutoPauseHudBanner(
+    onManualResume: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    NonRecordingStatusBanner(
+        status = CockpitStatus.AUTO_PAUSED,
+        onAction = onManualResume,
+        modifier = modifier
+    )
 }
 
 /**

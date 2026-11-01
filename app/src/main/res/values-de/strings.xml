@@ -1994,6 +1994,7 @@
     <string name="zone_onboarding_action_later">Nicht jetzt</string>
 
     <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
+    <string name="auto_pause_title">Auto-Pause</string>
     <string name="tuning_auto_pause_title">Auto-Pause</string>
     <string name="tuning_auto_pause_desc">Aufzeichnung bei Stillstand automatisch pausieren</string>
     <string name="tuning_auto_pause_bike_title">Radfahren</string>
@@ -2003,10 +2004,16 @@
     <string name="tuning_auto_pause_speed_threshold_desc">Geschwindigkeit, unter der die Aufzeichnung pausiert wird</string>
     <string name="tuning_auto_pause_debounce_title">Verzögerung bis zur Pause</string>
     <string name="tuning_auto_pause_debounce_desc">Dauer unterhalb der Schwelle, bevor pausiert wird</string>
+    <string name="tuning_auto_pause_resume_debounce_title">Verzögerung bis zur Fortsetzung</string>
+    <string name="tuning_auto_pause_resume_debounce_desc">Dauer oberhalb der Schwelle, bevor fortgesetzt wird</string>
+    <string name="tuning_auto_pause_start_in_auto_pause_title">Im Auto-Pause-Modus starten</string>
+    <string name="tuning_auto_pause_start_in_auto_pause_desc">Beginnt beim Starten einer Aufzeichnung im Stillstand direkt in der Auto-Pause, bis Bewegung erkannt wird</string>
     <string name="tuning_speed_value_format">%1$d %2$s</string>
     <string name="tuning_seconds_value_format">%1$d s</string>
     <string name="cockpit_auto_pause_badge">Auto-Pause</string>
     <string name="cockpit_auto_pause_resume">Jetzt fortsetzen</string>
+    <string name="cockpit_status_not_started">Nicht gestartet</string>
+    <string name="cockpit_status_paused">Pausiert</string>
     <string name="cockpit_speed_sensor_lost">Geschwindigkeitssensor verloren</string>
 
     <!-- Athlete Baselines & W/kg Metric (ATT-1289, REQ-TRK-019) -->
@@ -2249,4 +2256,9 @@
     <string name="tip_sport_types_subtitle">Geschwindigkeitsschwellen, Standardausrüstung &amp; Export-Profile</string>
     <string name="tip_sport_types_desc">Erstelle eigene Sportarten (z. B. Rennrad, Gravel, MTB, Trailrun). Konfiguriere geschwindigkeitsbasierte automatische Sportarterkennung, verknüpfe Standardausrüstung und passe Strava-, TCX- sowie GoldenCheetah-Exporttypen an.</string>
     <string name="tip_sport_types_action">Sportarten verwalten</string>
+
+    <!-- Sensor Field Display Elements (ATT-4841, REQ-TRK-046) -->
+    <string name="sensor_field_display_elements_title">Anzeigeelemente</string>
+    <string name="sensor_field_show_value">Wert</string>
+    <string name="sensor_field_show_bar">Balken</string>
 </resources>

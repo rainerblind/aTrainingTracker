@@ -1888,6 +1888,7 @@
     <string name="zone_onboarding_action_later">後で</string>
 
     <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
+    <string name="auto_pause_title">オートポーズ</string>
     <string name="tuning_auto_pause_title">オートポーズ</string>
     <string name="tuning_auto_pause_desc">停止時に記録を自動的に一時停止します</string>
     <string name="tuning_auto_pause_bike_title">サイクリング</string>
@@ -1897,10 +1898,16 @@
     <string name="tuning_auto_pause_speed_threshold_desc">記録が一時停止される速度のしきい値</string>
     <string name="tuning_auto_pause_debounce_title">一時停止遅延時間</string>
     <string name="tuning_auto_pause_debounce_desc">一時停止するまでのしきい値以下の継続時間</string>
+    <string name="tuning_auto_pause_resume_debounce_title">再開遅延時間</string>
+    <string name="tuning_auto_pause_resume_debounce_desc">再開するまでのしきい値以上の継続時間</string>
+    <string name="tuning_auto_pause_start_in_auto_pause_title">自動一時停止で開始</string>
+    <string name="tuning_auto_pause_start_in_auto_pause_desc">静止状態でワークアウトを開始した際、動きが検出されるまで自動一時停止状態で開始します</string>
     <string name="tuning_speed_value_format">%1$d %2$s</string>
     <string name="tuning_seconds_value_format">%1$d s</string>
     <string name="cockpit_auto_pause_badge">オートポーズ</string>
     <string name="cockpit_auto_pause_resume">今すぐ再開</string>
+    <string name="cockpit_status_not_started">未開始</string>
+    <string name="cockpit_status_paused">一時停止中</string>
     <string name="cockpit_speed_sensor_lost">スピードセンサー喪失</string>
 
     <!-- Athlete Baselines & W/kg Metric (ATT-1289, REQ-TRK-019) -->
@@ -2143,4 +2150,9 @@
     <string name="tip_sport_types_subtitle">速度しきい値、デフォルト装備、エクスポート対応</string>
     <string name="tip_sport_types_desc">ロードバイク、グラベル、MTB、トレイルランなど独自のスポーツ種目を定義できます。速度に基づく自動種目判定のしきい値設定、デフォルト装備の連携、Strava・TCX・GoldenCheetah向けのエクスポート種別設定が可能です。</string>
     <string name="tip_sport_types_action">スポーツ種目を管理</string>
+
+    <!-- Sensor Field Display Elements (ATT-4841, REQ-TRK-046) -->
+    <string name="sensor_field_display_elements_title">表示要素</string>
+    <string name="sensor_field_show_value">値</string>
+    <string name="sensor_field_show_bar">バー</string>
 </resources>

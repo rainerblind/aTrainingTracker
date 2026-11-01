@@ -1909,6 +1909,7 @@
     <string name="zone_onboarding_action_later">Ahora no</string>
 
     <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
+    <string name="auto_pause_title">Pausa automática</string>
     <string name="tuning_auto_pause_title">Pausa automática</string>
     <string name="tuning_auto_pause_desc">Pausar automáticamente la grabación al detenerse</string>
     <string name="tuning_auto_pause_bike_title">Ciclismo</string>
@@ -1918,10 +1919,16 @@
     <string name="tuning_auto_pause_speed_threshold_desc">Velocidad por debajo de la cual se pausa la grabación</string>
     <string name="tuning_auto_pause_debounce_title">Retardo para pausar</string>
     <string name="tuning_auto_pause_debounce_desc">Duración por debajo del umbral antes de pausar</string>
+    <string name="tuning_auto_pause_resume_debounce_title">Retardo para reanudar</string>
+    <string name="tuning_auto_pause_resume_debounce_desc">Duración por encima del umbral antes de reanudar</string>
+    <string name="tuning_auto_pause_start_in_auto_pause_title">Iniciar en pausa automática</string>
+    <string name="tuning_auto_pause_start_in_auto_pause_desc">Al iniciar un entrenamiento estando parado, comienza directamente en pausa automática hasta detectar movimiento</string>
     <string name="tuning_speed_value_format">%1$d %2$s</string>
     <string name="tuning_seconds_value_format">%1$d s</string>
     <string name="cockpit_auto_pause_badge">Pausa automática</string>
     <string name="cockpit_auto_pause_resume">Reanudar ahora</string>
+    <string name="cockpit_status_not_started">No iniciado</string>
+    <string name="cockpit_status_paused">Pausado</string>
     <string name="cockpit_speed_sensor_lost">Sensor de velocidad perdido</string>
 
     <!-- Athlete Baselines & W/kg Metric (ATT-1289, REQ-TRK-019) -->
@@ -2164,4 +2171,9 @@
     <string name="tip_sport_types_subtitle">Umbrales de velocidad, equipamiento y asignación de exportación</string>
     <string name="tip_sport_types_desc">Define deportes personalizados (p. ej., bicicleta de carretera, gravel, MTB, trail running). Configura umbrales de detección automática por velocidad, vincula equipamiento predeterminado y ajusta la exportación a Strava, TCX y GoldenCheetah.</string>
     <string name="tip_sport_types_action">Gestionar deportes</string>
+
+    <!-- Sensor Field Display Elements (ATT-4841, REQ-TRK-046) -->
+    <string name="sensor_field_display_elements_title">Elementos de visualización</string>
+    <string name="sensor_field_show_value">Valor</string>
+    <string name="sensor_field_show_bar">Barra</string>
 </resources>

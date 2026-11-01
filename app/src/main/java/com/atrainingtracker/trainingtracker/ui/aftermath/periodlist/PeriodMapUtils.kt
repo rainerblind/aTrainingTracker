@@ -48,19 +48,19 @@ data class PeriodCardMapState(
     val regionCount: Int = 0,
     val primaryRegionPathsCount: Int = 0,
     val isReady: Boolean = false,
-    val renderVectorPolylines: Boolean = true
+    val renderVectorPolylines: Boolean = true,
+    val activeRegionId: String? = null
 )
 
 /**
  * Returns Douglas-Peucker simplification tolerance in meters for the given [PeriodType].
- * Scales tolerance proportionally with period duration to bound aggregate vertices (<= 2,000 pts).
- * (REQ-PER-019.2)
+ * Calibrated to <= 5-8m across all levels to preserve shared-corridor additive stacking (REQ-PER-024.3).
  */
 fun getPeriodSimplificationToleranceMeters(periodType: PeriodType): Double = when (periodType) {
     PeriodType.DAY -> 5.0
-    PeriodType.WEEK -> 15.0
-    PeriodType.MONTH -> 35.0
-    PeriodType.YEAR -> 75.0
+    PeriodType.WEEK -> 5.0
+    PeriodType.MONTH -> 6.0
+    PeriodType.YEAR -> 8.0
 }
 
 /**
@@ -79,10 +79,10 @@ fun getPeriodMapVisuals(
             null
         } else {
             val opacity = when (periodType) {
-                PeriodType.WEEK -> 0.4
-                PeriodType.MONTH -> 0.5
-                PeriodType.YEAR -> 0.6
-                PeriodType.DAY -> 0.5
+                PeriodType.WEEK -> 0.8
+                PeriodType.MONTH -> 0.9
+                PeriodType.YEAR -> 1.0
+                PeriodType.DAY -> 0.8
             }
 
             val strokeWidth = when {
@@ -229,7 +229,8 @@ fun prepareCardMapPreviewSync(summary: PeriodSummary): PeriodCardMapState {
         regionCount = pathRegions.size,
         primaryRegionPathsCount = activePaths.size,
         isReady = true,
-        renderVectorPolylines = renderVectorPolylines
+        renderVectorPolylines = renderVectorPolylines,
+        activeRegionId = primaryPathRegion?.region?.id
     )
 }
 
