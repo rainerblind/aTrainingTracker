@@ -3,7 +3,7 @@
 **Ticket**: [ATT-4863](https://rainerblind.atlassian.net/browse/ATT-4863)  
 **Sub-task**: Pending (`[Analysis]`)  
 **Parent Epic**: [ATT-235](https://rainerblind.atlassian.net/browse/ATT-235) (*No crashs*)  
-**Target Release**: `V4.9.44`  
+**Target Release**: `V4.9.41`  
 **Active Sprint**: `2026-44.1`  
 **Branch**: `feature/ATT-4863`  
 **Author**: AI Agent 1 (Implementer)  

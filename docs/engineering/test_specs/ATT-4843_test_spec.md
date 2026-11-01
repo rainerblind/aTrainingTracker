@@ -3,7 +3,7 @@
 **Ticket**: [ATT-4843](https://rainerblind.atlassian.net/browse/ATT-4843)  
 **Sub-task**: Pending (`[Req & Test Spec]`)  
 **Parent Epic**: [ATT-166](https://rainerblind.atlassian.net/browse/ATT-166) (*Filtering to improve sensor values*)  
-**Target Release**: `V4.9.44` | **Active Sprint**: `2026-44.1` | **Branch**: `feature/ATT-4843`  
+**Target Release**: `V4.9.41` | **Active Sprint**: `2026-44.1` | **Branch**: `feature/ATT-4843`  
 **Requirement Mapping**: `REQ-TRK-041` (*Geodesic Displacement Plausibility Gating & Canonical Summary Filtering*)  
 **Test Spec ID**: `TST-TRK-041` | **Author**: AI Agent 1 (Implementer) | **Date**: 2026-11-01  
 

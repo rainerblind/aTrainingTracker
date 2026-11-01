@@ -2,7 +2,7 @@
 
 **Ticket**: [ATT-4836](https://rainerblind.atlassian.net/browse/ATT-4836)  
 **Parent Epic**: [ATT-754](https://rainerblind.atlassian.net/browse/ATT-754) (*Filtering*)  
-**Target Release**: `V4.9.44`  
+**Target Release**: `V4.9.41`  
 **Active Sprint**: `2026-44.1`  
 **Requirement Mapping**: `REQ-SET-080`  
 **Test Mapping**: `TST-SET-080`  

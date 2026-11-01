@@ -3,7 +3,7 @@
 **Ticket**: [ATT-4843](https://rainerblind.atlassian.net/browse/ATT-4843)  
 **Sub-task**: Pending (`[Test]`)  
 **Parent Epic**: [ATT-166](https://rainerblind.atlassian.net/browse/ATT-166) (*Filtering to improve sensor values*)  
-**Target Release**: `V4.9.44`  
+**Target Release**: `V4.9.41`  
 **Active Sprint**: `2026-44.1`  
 **Requirement Mapping**: `REQ-TRK-041`  
 **Test Mapping**: `TST-TRK-041`  

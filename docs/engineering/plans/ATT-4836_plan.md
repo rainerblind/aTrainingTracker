@@ -3,7 +3,7 @@
 **Ticket**: [ATT-4836](https://rainerblind.atlassian.net/browse/ATT-4836)  
 **Parent Epic**: [ATT-754](https://rainerblind.atlassian.net/browse/ATT-754) (*Filtering*)  
 **Active Sprint**: `2026-44.1`  
-**Target Release**: `V4.9.44`  
+**Target Release**: `V4.9.41`  
 **Author**: AI Agent 1 (Software Architect)  
 **Date**: 2026-11-01  
 
