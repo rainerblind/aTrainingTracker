@@ -6859,18 +6859,23 @@
 
 ### TST-UI-436: **Active Training Zone Segment Height Emphasis & Bar-Only Sizing Test Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-436`
-- **Component**: `SensorFieldZoneGaugeTest.kt`, `ZoneGaugeBar.kt`, `SensorFieldView.kt`
-- **Jira**: `ATT-4860`
+- **Component**: `SensorFieldZoneGaugeTest.kt`, `ZoneGaugeBar.kt`, `SensorFieldView.kt`, `WPrimeBatteryGaugeBarLayoutTest.kt`
+- **Jira**: `ATT-4860`, `ATT-4928`
 - **Test Description**:
   1. *Active Segment Height Elevation & Inactive Uniformity Test (`TST-UI-436.1`)*:
-  • Unit test in `SensorFieldZoneGaugeTest.kt` verifying active segment height calculation ($1.6\times$ `trackHeight`) and inactive segment base height (`trackHeight`).
-  • Verify that when `activeZoneIndex == null` (stale/disconnected), all segments render at base `trackHeight` with `0.35f` opacity.
+  • Unit test in `SensorFieldZoneGaugeTest.kt` verifying reserved active segment height calculation (`calculateReservedActiveTrackHeight(trackHeight) = trackHeight * 1.6f`).
+  • Verify that outer container height `totalBarHeight` is 100% identical between live (`needleFraction != null`, `activeZoneIndex != null`) and stale/null (`needleFraction == null`, `activeZoneIndex == null`) telemetry across `trackHeight` values (`6.dp`, `10.dp`, `14.dp`, `18.dp`, `22.dp`) (ATT-4928).
+  • Verify that when `activeZoneIndex == null` or `isStale == true`, all segments render at base `trackHeight` with `0.35f` opacity without changing outer container height.
   2. *Dynamic Height Scaling in Bar-Only Mode Test (`TST-UI-436.2`)*:
   • Unit test in `SensorFieldZoneGaugeTest.kt` verifying track height resolution across `ViewSize.SMALL`, `NORMAL`, `LARGE`, `EXTRA_LARGE` for `ZoneGaugeBar`, `PedalPowerBalanceBar`, and `WPrimeBatteryGaugeBar` when `!fieldState.showValue && fieldState.showBar`.
-  3. *Needle Span Overlay Geometry Contract Test (`TST-UI-436.3`)*:
-  • Verify `ZoneGaugeBar` needle container height accommodates elevated active segment (`activeTrackHeight + 4.dp`) and needle indicator spans vertically across the active segment.
+  3. *Needle Span Overlay Geometry & Sibling Height Contract Test (`TST-UI-436.3`)*:
+  • Verify `ZoneGaugeBar` needle container height accommodates elevated active segment (`calculateReservedActiveTrackHeight(trackHeight) + 4.dp`) in both live and stale states.
+  • Verify `PedalPowerBalanceBar` and `WPrimeBatteryGaugeBar` maintain invariant container heights across live and stale states.
   4. *Clean-Room Full Suite Regression Execution (`TST-UI-436.4`)*:
   • Execute targeted unit tests and verify 100% pass rate with zero regressions.
+  5. *Code & Test Hygiene Verification (`TST-UI-436.5`)*:
+  • Verify removal of unused `calculateActiveTrackHeight(baseTrackHeight: Dp, isActive: Boolean)` overload in `ZoneGaugeBar.kt`.
+  • Verify `WPrimeBatteryGaugeBarLayoutTest.kt` asserts `.height(barHeight)` without relying on commented-out code.
 
 
 ### TST-UI-437: **User-Configurable Horizontal Width Ratios & Split Presets in Cockpit Sensor Grid Test Suite** [Verified]

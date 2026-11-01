@@ -257,19 +257,28 @@ class SensorFieldZoneGaugeTest {
     }
 
     /**
-     * TST-UI-436.1: Active segment height elevation (1.6x base height) and inactive uniformity (REQ-UI-436).
+     * TST-UI-436.1: Active segment height elevation (1.6x base height), reserved container height,
+     * and layout height invariance across live and stale states (REQ-UI-436, ATT-4928).
      */
     @Test
     fun testCalculateActiveTrackHeight_elevatesActiveZone_andKeepsInactiveUniform() {
         val baseHeight = 6.dp
-        assertEquals(9.6.dp, calculateActiveTrackHeight(baseHeight, isActive = true))
-        assertEquals(6.dp, calculateActiveTrackHeight(baseHeight, isActive = false))
+        assertEquals(9.6.dp, calculateReservedActiveTrackHeight(baseHeight))
 
         val staleHeight = calculateActiveTrackHeight(trackHeight = baseHeight, activeZoneIndex = null, isStale = true)
         assertEquals(6.dp, staleHeight)
 
         val activeHeight = calculateActiveTrackHeight(trackHeight = baseHeight, activeZoneIndex = 3, isStale = false)
         assertEquals(9.6.dp, activeHeight)
+
+        // ATT-4928: Container height must unconditionally reserve elevated track height + needle overhang (4.dp)
+        val trackHeights = listOf(6.dp, 10.dp, 14.dp, 18.dp, 22.dp)
+        for (th in trackHeights) {
+            val reservedActive = calculateReservedActiveTrackHeight(th)
+            val containerHeight = reservedActive + 4.dp
+            assertEquals(th * 1.6f, reservedActive)
+            assertEquals(th * 1.6f + 4.dp, containerHeight)
+        }
     }
 
     /**
@@ -300,7 +309,7 @@ class SensorFieldZoneGaugeTest {
     }
 
     /**
-     * TST-UI-436.3: Contract verification of activeTrackHeight, container height, and active segment pill in ZoneGaugeBar.
+     * TST-UI-436.3: Contract verification of reservedActiveTrackHeight, container height, and active segment pill in ZoneGaugeBar.
      */
     @Test
     fun testZoneGaugeBar_sourceContainsActiveZoneElevationAndContainerHeight() {
@@ -311,16 +320,20 @@ class SensorFieldZoneGaugeTest {
         val source = barFile.readText()
 
         assertTrue(
-            "ZoneGaugeBar must calculate activeTrackHeight using 1.6f multiplier",
+            "ZoneGaugeBar must calculate reserved track height using 1.6f multiplier",
             source.contains("trackHeight * 1.6f")
         )
         assertTrue(
-            "ZoneGaugeBar totalBarHeight must accommodate activeTrackHeight + 4.dp",
-            source.contains("activeTrackHeight + 4.dp")
+            "ZoneGaugeBar totalBarHeight must reserve reservedActiveTrackHeight + 4.dp",
+            source.contains("reservedActiveTrackHeight + 4.dp")
         )
         assertTrue(
             "ZoneGaugeBar must render active segment elevation with RoundedCornerShape",
-            source.contains("RoundedCornerShape(activeTrackHeight / 4)")
+            source.contains("RoundedCornerShape(reservedActiveTrackHeight / 4)")
+        )
+        assertFalse(
+            "ZoneGaugeBar must not contain obsolete 2-parameter calculateActiveTrackHeight overload",
+            source.contains("fun calculateActiveTrackHeight(baseTrackHeight: Dp, isActive: Boolean)")
         )
     }
 }

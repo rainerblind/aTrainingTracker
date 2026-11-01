@@ -12575,40 +12575,45 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 
 ### REQ-UI-436: Active Training Zone Segment Height Emphasis & Bar-Only Sizing [Verified]
-- **Tests**: `TST-UI-436` | **Tickets**: `ATT-4860`
+- **Tests**: `TST-UI-436` | **Tickets**: `ATT-4860`, `ATT-4928`
 - **Implementation**: `ZoneGaugeBar.kt`, `SensorFieldView.kt`, `PedalPowerBalanceBar.kt`, `WPrimeBatteryGaugeBar.kt`
-- **Rationale**: In glance-based peripheral vision during athletic workouts, the active training zone segment in `ZoneGaugeBar` SHALL be visually prominent by elevating its vertical height relative to inactive segments, and when a sensor field is configured in bar-only mode (`showValue = false, showBar = true`), bars SHALL dynamically scale their height according to tile `ViewSize` to cleanly fill available vertical card space (ATT-4860, Parent Epic ATT-355, extending `REQ-UI-376`, `REQ-UI-390`, and `REQ-TRK-046`):
+- **Rationale**: In glance-based peripheral vision during athletic workouts, the active training zone segment in `ZoneGaugeBar` SHALL be visually prominent by elevating its vertical height relative to inactive segments, and when a sensor field is configured in bar-only mode (`showValue = false, showBar = true`), bars SHALL dynamically scale their height according to tile `ViewSize` to cleanly fill available vertical card space (ATT-4860, Parent Epic ATT-355, extending `REQ-UI-376`, `REQ-UI-390`, and `REQ-TRK-046`). Furthermore, outer container heights SHALL remain strictly constant across live vs. stale/null telemetry states to prevent cockpit tile and grid height jumps (ATT-4928):
 1. *Active Zone Height & Geometry Emphasis (`REQ-UI-436.1`)*:
-• In `ZoneGaugeBar.kt`, when a valid zone is active (`state.activeZoneIndex != null` and in `1..segmentColors.size`), the active zone segment (`index == state.activeZoneIndex - 1`) SHALL be rendered vertically elevated with height equal to $1.6\times$ `trackHeight` (`activeTrackHeight = trackHeight * 1.6f`), centered vertically within the track container, with rounded corner radius (`CornerRadius(activeTrackHeight / 4)`).
+• In `ZoneGaugeBar.kt`, the outer container height (`totalBarHeight`) SHALL unconditionally reserve the elevated track height plus needle overhang (`calculateReservedActiveTrackHeight(trackHeight) + 4.dp`, where `calculateReservedActiveTrackHeight(trackHeight) = trackHeight * 1.6f`), strictly invariant of telemetry staleness or active zone state (ATT-4928).
+• The horizontal base track (`height = trackHeight`) SHALL be centered vertically within the reserved container.
+• When a valid zone is active (`state.activeZoneIndex != null` and in `1..segmentColors.size`) and telemetry is live (`!isStale`), the active zone segment (`index == state.activeZoneIndex - 1`) SHALL be rendered vertically elevated with height equal to $1.6\times$ `trackHeight` (`activeTrackHeight = calculateReservedActiveTrackHeight(trackHeight)`), centered vertically within the track container, with rounded corner radius (`CornerRadius(activeTrackHeight / 4)`).
 2. *Inactive & Stale Segment Behavior (`REQ-UI-436.2`)*:
 • Inactive zone segments SHALL be rendered with standard un-elevated `trackHeight`.
-• When telemetry is stale or null (`state.activeZoneIndex == null`), all segments SHALL be rendered at uniform base `trackHeight` with `0.35f` dimmed alpha.
+• When telemetry is stale or null (`state.needleFraction == null` or `state.activeZoneIndex == null`), all segments SHALL be rendered at uniform base `trackHeight` with `0.35f` dimmed alpha without changing outer container height `totalBarHeight`.
 3. *Needle Span Synchronization (`REQ-UI-436.3`)*:
-• The Primary Blue needle overlay and its contrasting halo outline SHALL span the full container height (`activeTrackHeight + 4.dp`), ensuring it cleanly covers and extends 2dp above and below the elevated active segment.
+• The Primary Blue needle overlay and its contrasting halo outline SHALL span the full reserved container height (`calculateReservedActiveTrackHeight(trackHeight) + 4.dp`), ensuring it cleanly covers and extends 2dp above and below the elevated active segment.
 4. *Dynamic Height Scaling in Bar-Only Mode (`REQ-UI-436.4`)*:
 • In `SensorFieldView.kt`, when a sensor field is in bar-only mode (`!fieldState.showValue && fieldState.showBar`), horizontal telemetry bars SHALL scale their heights with `fieldState.viewSize`:
   - `ZoneGaugeBar`: `SMALL = 10.dp`, `NORMAL = 14.dp`, `LARGE = 18.dp`, `EXTRA_LARGE = 22.dp` (vs standard `4.dp`, `6.dp`, `8.dp`, `10.dp`).
   - `PedalPowerBalanceBar`: `SMALL = 12.dp`, `NORMAL = 16.dp`, `LARGE = 20.dp`, `EXTRA_LARGE = 24.dp` (vs standard `6.dp`, `8.dp`, `10.dp`, `12.dp`).
   - `WPrimeBatteryGaugeBar`: `SMALL = 14.dp`, `NORMAL = 20.dp`, `LARGE = 26.dp`, `EXTRA_LARGE = 32.dp` (vs standard `16.dp`).
+5. *Component Height Invariance & Leftover Hygiene (`REQ-UI-436.5`)*:
+• `PedalPowerBalanceBar` and `WPrimeBatteryGaugeBar` SHALL maintain strictly constant vertical heights across live vs stale/null states.
+• Obsolete overloads (`calculateActiveTrackHeight(baseTrackHeight: Dp, isActive: Boolean)`) in `ZoneGaugeBar.kt` and commented-out height overrides (`// .height(W_PRIME_BATTERY_GAUGE_HEIGHT)`) in `WPrimeBatteryGaugeBar.kt` SHALL be removed (ATT-4928).
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-436`, extending `REQ-UI-376` (Zone Gauge Bar), `REQ-UI-390` (Proportional Zone Track Scaling), and `REQ-TRK-046` (Per-Field Element Display Configuration).
-2. *Historical Origin & Commit Trace*: `ATT-1293` (commit `3e78df12`), `ATT-3708` (commit `69df2531`), `ATT-4841` (commit `0ea00b1d`).
-3. *Root Reason for Existing Formulation*: `ZoneGaugeBar` originally clipped all segments inside a single uniform outer `Box(height = trackHeight)`. Introducing active zone emphasis requires per-segment height differentiation while preserving outer proportional horizontal weights.
-4. *Preservation of Core Invariants*: Proportional segment weights (`state.segmentWeights`), needle interpolation math (`ZoneGaugeMath`), 0.35 stale alpha, and bottom `"Z1"`..`"Z7"` badges remain 100% preserved.
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-436`, extending `REQ-UI-376` (Zone Gauge Bar), `REQ-UI-390` (Proportional Zone Track Scaling), and `REQ-TRK-046` (Per-Field Element Display Configuration). Refined in `ATT-4928` for container height invariance across live and stale states.
+2. *Historical Origin & Commit Trace*: `ATT-1293` (commit `3e78df12`), `ATT-3708` (commit `69df2531`), `ATT-4841` (commit `0ea00b1d`), `ATT-4860` (commit `9d5fd7ff`).
+3. *Root Reason for Existing Formulation*: `ZoneGaugeBar` originally clipped all segments inside a single uniform outer `Box(height = trackHeight)`. Introducing active zone emphasis required per-segment height differentiation, but `ATT-4860` conditionally shrank `totalBarHeight` to `trackHeight + 4.dp` when stale, causing sensor card height jumps.
+4. *Preservation of Core Invariants*: Proportional segment weights (`state.segmentWeights`), needle interpolation math (`ZoneGaugeMath`), 0.35 stale alpha, visual 1.6x active elevation when live, and bottom `"Z1"`..`"Z7"` badges remain 100% preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* `ZoneGaugeBar` rendering an active workout in Zone 3 (`activeZoneIndex = 3`),
 • *When* the track segments are drawn,
-• *Then* segment index 2 renders with height $1.6\times$ `trackHeight` and rounded corners, while segments 0, 1, 3, and 4 render at `trackHeight`.
-• *Given* `ZoneGaugeBar` with stale or null telemetry (`activeZoneIndex = null`),
-• *When* the track is drawn,
-• *Then* all segments render with uniform `trackHeight` and `0.35f` opacity.
+• *Then* segment index 2 renders with height $1.6\times$ `trackHeight` and rounded corners, while segments 0, 1, 3, and 4 render at `trackHeight`, within reserved container height $1.6\times \text{trackHeight} + 4\text{dp}$.
+• *Given* `ZoneGaugeBar` transitioning from live telemetry to stale or null telemetry (`needleFraction == null`),
+• *When* the component recomposes,
+• *Then* the measured outer container height remains 100% invariant ($1.6\times \text{trackHeight} + 4\text{dp}$) and all segments render with uniform `trackHeight` and `0.35f` opacity.
 • *Given* a sensor field with `showValue = false` and `showBar = true` in `ViewSize.NORMAL`,
 • *When* `SensorFieldView` renders the card,
 • *Then* the gauge track height is scaled to 14.dp instead of 6.dp.
 
-**Invariants**: Zero regression in stale/null handling, True-Black AMOLED compliance, and 100% clean-room test pass rate.
+**Invariants**: Zero layout jump when switching between live and stale telemetry, zero regression in stale/null handling, True-Black AMOLED compliance, and 100% clean-room test pass rate.
 
 
 ### REQ-UI-437: User-Configurable Horizontal Width Ratios & Split Presets in Cockpit Sensor Grid [Verified]

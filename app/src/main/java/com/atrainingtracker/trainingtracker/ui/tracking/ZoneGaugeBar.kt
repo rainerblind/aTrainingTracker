@@ -65,6 +65,8 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTColor
  * (`"Z1"`..`"Z7"`) directly beneath the active zone segment using `MaterialTheme.colorScheme.onSurface`.
  * The currently active zone segment is rendered vertically elevated (1.6x track height) with rounded corners
  * for glance-based peripheral vision legibility (REQ-UI-436).
+ * The outer container height unconditionally reserves the elevated active track height (1.6x track height + needle overhang)
+ * to guarantee layout height invariance across live and stale states (ATT-4928).
  * When telemetry is stale or null, dims track opacity to 0.35 alpha, hides the needle, and keeps segments uniform.
  *
  * Adheres strictly to True-Black AMOLED contrast guidelines (REQ-UI-190, REQ-UI-220, Rule 23).
@@ -85,13 +87,13 @@ fun ZoneGaugeBar(
 
     val isStale = (state.needleFraction == null)
     val trackAlpha = if (isStale) 0.35f else 1.0f
-    val activeTrackHeight = calculateActiveTrackHeight(trackHeight, state.activeZoneIndex, isStale)
+    val reservedActiveTrackHeight = calculateReservedActiveTrackHeight(trackHeight)
     val barShape = RoundedCornerShape(trackHeight / 2)
     val outlineBorder = BorderStroke(
         width = 0.5.dp,
         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
     )
-    val totalBarHeight = activeTrackHeight + 4.dp // 2dp needle overhang top & bottom
+    val totalBarHeight = reservedActiveTrackHeight + 4.dp // 2dp needle overhang top & bottom
     val primaryNeedleColor = MaterialTheme.colorScheme.primary
 
     Column(
@@ -143,17 +145,17 @@ fun ZoneGaugeBar(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(activeTrackHeight),
+                        .height(reservedActiveTrackHeight),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     state.segmentColors.forEachIndexed { index, color ->
                         val segmentWeight = state.segmentWeights.getOrElse(index) { 1f }.coerceAtLeast(0.001f)
                         if (index == state.activeZoneIndex - 1) {
-                            val activeShape = RoundedCornerShape(activeTrackHeight / 4)
+                            val activeShape = RoundedCornerShape(reservedActiveTrackHeight / 4)
                             Box(
                                 modifier = Modifier
                                     .weight(segmentWeight)
-                                    .height(activeTrackHeight)
+                                    .height(reservedActiveTrackHeight)
                                     .clip(activeShape)
                                     .border(outlineBorder, activeShape)
                                     .background(color)
@@ -243,16 +245,15 @@ fun ZoneGaugeBar(
 }
 
 /**
- * Computes the elevated active zone segment height given a base track height and whether the segment is active (REQ-UI-436).
+ * Computes the reserved elevated active zone track height (1.6x track height) for outer container sizing (REQ-UI-436, ATT-4928).
  */
-fun calculateActiveTrackHeight(baseTrackHeight: Dp, isActive: Boolean): Dp =
-    if (isActive) baseTrackHeight * 1.6f else baseTrackHeight
+fun calculateReservedActiveTrackHeight(trackHeight: Dp): Dp = trackHeight * 1.6f
 
 /**
  * Computes the elevated active zone segment height given base track height, activeZoneIndex, and stale flag (REQ-UI-436).
  */
 fun calculateActiveTrackHeight(trackHeight: Dp, activeZoneIndex: Int?, isStale: Boolean): Dp =
-    if (!isStale && activeZoneIndex != null) trackHeight * 1.6f else trackHeight
+    if (!isStale && activeZoneIndex != null) calculateReservedActiveTrackHeight(trackHeight) else trackHeight
 
 // ==========================================
 // Previews

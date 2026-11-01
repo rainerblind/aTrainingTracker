@@ -95,7 +95,7 @@ fun WPrimeBatteryGaugeBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(barHeight) // .height(W_PRIME_BATTERY_GAUGE_HEIGHT)
+            .height(barHeight)
             .testTag("w_prime_battery_container"),
         verticalAlignment = Alignment.CenterVertically
     ) {
