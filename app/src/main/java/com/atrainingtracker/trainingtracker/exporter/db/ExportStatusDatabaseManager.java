@@ -302,6 +302,53 @@ public class ExportStatusDatabaseManager {
         }
     }
 
+    /**
+     * Recovers export rows of the given export type that failed with a credential error
+     * by transitioning their status back to WAITING and resetting their answer,
+     * returning the list of distinct recovered fileBaseNames.
+     */
+    public List<String> recoverStuckCredentialExports(@NonNull ExportType exportType, @NonNull String answerPattern) {
+        SQLiteDatabase db = mDbHelper.getWritableDatabase();
+        List<String> recovered = new ArrayList<>();
+        if (db == null) return recovered;
+
+        try {
+            db.beginTransaction();
+            String selection = TYPE + "=? AND " + EXPORT_STATUS + "=? AND " + ANSWER + " LIKE ?";
+            String[] selectionArgs = new String[]{exportType.name(), ExportStatus.FINISHED_FAILED.name(), "%" + answerPattern + "%"};
+
+            try (Cursor cursor = db.query(true, ExportStatusDbHelper.TABLE,
+                    new String[]{WorkoutSummaries.FILE_BASE_NAME},
+                    selection, selectionArgs, null, null, null, null)) {
+                while (cursor.moveToNext()) {
+                    String baseName = cursor.getString(0);
+                    if (isValidFileBaseName(baseName)) {
+                        recovered.add(baseName);
+                    }
+                }
+            }
+
+            if (!recovered.isEmpty()) {
+                ContentValues values = new ContentValues();
+                values.put(EXPORT_STATUS, ExportStatus.WAITING.name());
+                values.put(ANSWER, "");
+                values.put(RUN_ATTEMPT_COUNT, 0);
+                values.put(LAST_UPDATED, System.currentTimeMillis());
+
+                int count = db.update(ExportStatusDbHelper.TABLE, values, selection, selectionArgs);
+                Log.i(TAG, "Recovered " + count + " stuck credential export rows for " + exportType);
+            }
+            db.setTransactionSuccessful();
+        } catch (Throwable t) {
+            Log.e(TAG, "Failed recovering stuck credential exports for " + exportType, t);
+        } finally {
+            if (db.inTransaction()) {
+                db.endTransaction();
+            }
+        }
+        return recovered;
+    }
+
 
 
     private static class StaleCandidate {

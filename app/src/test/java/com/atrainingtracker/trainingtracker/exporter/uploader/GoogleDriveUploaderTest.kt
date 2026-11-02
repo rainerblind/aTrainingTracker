@@ -22,6 +22,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveAuthManager
 import com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveClient
 import com.atrainingtracker.trainingtracker.exporter.ExportInfo
 import com.atrainingtracker.trainingtracker.exporter.ExportType
@@ -34,6 +35,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
+import java.io.IOException
 import java.lang.reflect.Field
 
 /**
@@ -257,5 +259,105 @@ class GoogleDriveUploaderTest {
         verify { mockClient.evictFolder("stale_folder_id") }
         verify(exactly = 2) { mockClient.ensureFolderHierarchy(listOf("aTrainingTracker", "FIT")) }
         verify { mockClient.uploadOrOverwriteFile("recreated_folder_id", "workout.fit", any(), any()) }
+    }
+
+    @Test
+    fun testDoExport_nullCachedToken_attemptsSilentRefresh_andSucceeds() {
+        val fitDir = File(tempFolder.root, "FIT").apply { mkdirs() }
+        File(fitDir, "workout.fit").apply { writeText("data") }
+        val exportInfo = ExportInfo("workout", FileFormat.FIT, ExportType.GOOGLE_DRIVE)
+
+        every { mockPrefs.getBoolean(TrainingApplication.SP_UPLOAD_TO_GOOGLE_DRIVE, false) } returns true
+        every { mockPrefs.getString(TrainingApplication.SP_GOOGLE_DRIVE_AUTH_TOKEN, null) } returns null andThen "refreshed_token"
+
+        mockkObject(GoogleDriveAuthManager)
+        every { GoogleDriveAuthManager.refreshTokenSync(any()) } returns Result.success("refreshed_token")
+
+        every { mockClient.ensureFolderHierarchy(any()) } returns "fit_folder_id"
+        every { mockClient.uploadOrOverwriteFile("fit_folder_id", "workout.fit", any(), any()) } returns true
+
+        val uploader = createTestUploader(tempFolder.root)
+        val result = uploader.doExport(exportInfo)
+
+        assertTrue(result.success())
+        verify { GoogleDriveAuthManager.refreshTokenSync(any()) }
+    }
+
+    @Test
+    fun testDoExport_transientHttp503_returnsShallRetryTrue() {
+        val fitDir = File(tempFolder.root, "FIT").apply { mkdirs() }
+        File(fitDir, "workout.fit").apply { writeText("data") }
+        val exportInfo = ExportInfo("workout", FileFormat.FIT, ExportType.GOOGLE_DRIVE)
+
+        every { mockPrefs.getString(TrainingApplication.SP_GOOGLE_DRIVE_AUTH_TOKEN, null) } returns "valid_token"
+        every { mockPrefs.getBoolean(TrainingApplication.SP_UPLOAD_TO_GOOGLE_DRIVE, false) } returns true
+
+        every { mockClient.ensureFolderHierarchy(any()) } returns null
+        every { mockClient.lastHttpCode } returns 503
+        every { mockContext.getString(com.atrainingtracker.R.string.google_drive_error_folder_hierarchy) } returns "Failed to resolve Google Drive folder hierarchy"
+
+        val uploader = createTestUploader(tempFolder.root)
+        val result = uploader.doExport(exportInfo)
+
+        assertFalse(result.success())
+        assertTrue("HTTP 503 should set shallRetry = true", result.shallRetry())
+    }
+
+    @Test
+    fun testDoExport_transientHttp429_returnsShallRetryTrue() {
+        val fitDir = File(tempFolder.root, "FIT").apply { mkdirs() }
+        File(fitDir, "workout.fit").apply { writeText("data") }
+        val exportInfo = ExportInfo("workout", FileFormat.FIT, ExportType.GOOGLE_DRIVE)
+
+        every { mockPrefs.getString(TrainingApplication.SP_GOOGLE_DRIVE_AUTH_TOKEN, null) } returns "valid_token"
+        every { mockPrefs.getBoolean(TrainingApplication.SP_UPLOAD_TO_GOOGLE_DRIVE, false) } returns true
+
+        every { mockClient.ensureFolderHierarchy(any()) } returns "fit_folder_id"
+        every { mockClient.uploadOrOverwriteFile("fit_folder_id", "workout.fit", any(), any()) } returns false
+        every { mockClient.lastHttpCode } returns 429
+
+        val uploader = createTestUploader(tempFolder.root)
+        val result = uploader.doExport(exportInfo)
+
+        assertFalse(result.success())
+        assertTrue("HTTP 429 should set shallRetry = true", result.shallRetry())
+    }
+
+    @Test
+    fun testDoExport_ioException_returnsShallRetryTrue() {
+        val fitDir = File(tempFolder.root, "FIT").apply { mkdirs() }
+        File(fitDir, "workout.fit").apply { writeText("data") }
+        val exportInfo = ExportInfo("workout", FileFormat.FIT, ExportType.GOOGLE_DRIVE)
+
+        every { mockPrefs.getString(TrainingApplication.SP_GOOGLE_DRIVE_AUTH_TOKEN, null) } returns "valid_token"
+        every { mockPrefs.getBoolean(TrainingApplication.SP_UPLOAD_TO_GOOGLE_DRIVE, false) } returns true
+
+        every { mockClient.ensureFolderHierarchy(any()) } throws IOException("Connection reset by peer")
+
+        val uploader = createTestUploader(tempFolder.root)
+        val result = uploader.doExport(exportInfo)
+
+        assertFalse(result.success())
+        assertTrue("IOException should set shallRetry = true", result.shallRetry())
+    }
+
+    @Test
+    fun testDoExport_nonTransient401_returnsShallRetryFalse() {
+        val fitDir = File(tempFolder.root, "FIT").apply { mkdirs() }
+        File(fitDir, "workout.fit").apply { writeText("data") }
+        val exportInfo = ExportInfo("workout", FileFormat.FIT, ExportType.GOOGLE_DRIVE)
+
+        every { mockPrefs.getString(TrainingApplication.SP_GOOGLE_DRIVE_AUTH_TOKEN, null) } returns "expired_token"
+        every { mockPrefs.getBoolean(TrainingApplication.SP_UPLOAD_TO_GOOGLE_DRIVE, false) } returns true
+
+        every { mockClient.ensureFolderHierarchy(any()) } returns null
+        every { mockClient.lastHttpCode } returns 401
+        every { mockContext.getString(com.atrainingtracker.R.string.google_drive_error_auth_expired) } returns "Expired"
+
+        val uploader = createTestUploader(tempFolder.root)
+        val result = uploader.doExport(exportInfo)
+
+        assertFalse(result.success())
+        assertFalse("HTTP 401 should set shallRetry = false", result.shallRetry())
     }
 }

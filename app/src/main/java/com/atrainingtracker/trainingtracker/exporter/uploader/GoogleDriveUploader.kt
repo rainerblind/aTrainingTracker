@@ -23,6 +23,7 @@ import com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveAuthMan
 import com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveClient
 import com.atrainingtracker.trainingtracker.exporter.BaseExporter
 import com.atrainingtracker.trainingtracker.exporter.ExportInfo
+import com.atrainingtracker.trainingtracker.exporter.ExportManager
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import java.io.File
 import java.io.IOException
@@ -58,8 +59,22 @@ open class GoogleDriveUploader(context: Context) : BaseExporter(context) {
             return ExportResult(false, false, "Google Drive file does not exist: $file")
         }
 
-        val token = TrainingApplication.getGoogleDriveAuthToken()
-        if (token.isNullOrBlank() || !TrainingApplication.uploadToGoogleDrive()) {
+        if (!TrainingApplication.uploadToGoogleDrive()) {
+            return ExportResult(false, false, "Google Drive credential is null or not linked")
+        }
+
+        var token = TrainingApplication.getGoogleDriveAuthToken()
+        if (token.isNullOrBlank()) {
+            token = GoogleDriveAuthManager.refreshTokenSync(mContext).getOrNull()
+            if (!token.isNullOrBlank()) {
+                try {
+                    ExportManager.recoverStuckGoogleDriveExports(mContext)
+                } catch (t: Throwable) {
+                    Log.w(TAG, "Error recovering stuck Google Drive exports after refresh", t)
+                }
+            }
+        }
+        if (token.isNullOrBlank()) {
             return ExportResult(false, false, "Google Drive credential is null or not linked")
         }
 
@@ -79,7 +94,8 @@ open class GoogleDriveUploader(context: Context) : BaseExporter(context) {
                         mContext.getString(R.string.google_drive_error_folder_hierarchy) + httpSuffix
                     }
                 }
-                return ExportResult(false, false, errorMsg)
+                val isTransient = isTransientHttpCode(client.lastHttpCode)
+                return ExportResult(false, isTransient, errorMsg)
             }
 
             val driveFileName = exportInfo.fileName
@@ -107,15 +123,21 @@ open class GoogleDriveUploader(context: Context) : BaseExporter(context) {
                 TrainingApplication.setGoogleDriveLastSyncStatus("FAILED")
                 Log.e(TAG, "Failed to upload $driveFileName to Google Drive (HTTP ${client.lastHttpCode}: ${client.lastErrorMessage})")
                 val httpSuffix = client.lastHttpCode?.let { " (HTTP $it)" } ?: ""
-                ExportResult(false, false, "Failed to upload $driveFileName to Google Drive$httpSuffix")
+                val isTransient = isTransientHttpCode(client.lastHttpCode)
+                ExportResult(false, isTransient, "Failed to upload $driveFileName to Google Drive$httpSuffix")
             }
         } catch (e: IOException) {
             Log.e(TAG, "IOException uploading to Google Drive: ${e.message}", e)
-            return ExportResult(false, false, "IOException: ${e.message}")
+            return ExportResult(false, true, "IOException: ${e.message}")
         } catch (e: Exception) {
             Log.e(TAG, "Exception uploading to Google Drive: ${e.message}", e)
             return ExportResult(false, false, "Exception: ${e.message}")
         }
+    }
+
+    private fun isTransientHttpCode(httpCode: Int?): Boolean {
+        if (httpCode == null) return true
+        return httpCode == 408 || httpCode == 429 || (httpCode in 500..599)
     }
 
     private fun resolveMimeType(format: FileFormat): String {

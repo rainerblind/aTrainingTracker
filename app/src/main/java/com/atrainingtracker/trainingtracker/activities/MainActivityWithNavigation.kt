@@ -607,6 +607,19 @@ class MainActivityWithNavigation :
             TrainingApplication.setUploadToDropbox(false)
         }
 
+        if (TrainingApplication.uploadToGoogleDrive()) {
+            val token = TrainingApplication.getGoogleDriveAuthToken()
+            val account = try {
+                com.google.android.gms.auth.api.signin.GoogleSignIn.getLastSignedInAccount(this)
+            } catch (_: Throwable) {
+                null
+            }
+            if (token.isNullOrBlank() && account == null) {
+                Log.i(TAG, "Google Drive enabled but credentials missing; resetting uploadToGoogleDrive to false")
+                TrainingApplication.setUploadToGoogleDrive(false)
+            }
+        }
+
         if (TrainingApplication.uploadToStrava() && TrainingApplication.getStravaTokenExpiresAt() == 0) {
             Log.i(TAG, "migrating to new Strava OAuth")
             StravaHelper.requestAccessToken(this)

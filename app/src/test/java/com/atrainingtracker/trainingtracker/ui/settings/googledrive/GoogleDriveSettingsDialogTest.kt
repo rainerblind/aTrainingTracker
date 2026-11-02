@@ -110,4 +110,17 @@ class GoogleDriveSettingsDialogTest {
         prefs.edit().putLong("last_backup_timestamp", testTs).apply()
         assertEquals(testTs, prefs.getLong("last_backup_timestamp", 0L))
     }
+
+    @Test
+    fun testGoogleDriveSettingsDialog_disconnectedStateWhenNoCredentials() {
+        val appContext = ApplicationProvider.getApplicationContext<Context>()
+        TrainingApplication.setUploadToGoogleDrive(true)
+        TrainingApplication.deleteGoogleDriveCredential()
+
+        val isConnected = TrainingApplication.uploadToGoogleDrive() &&
+            (!TrainingApplication.getGoogleDriveAuthToken().isNullOrBlank() ||
+             com.google.android.gms.auth.api.signin.GoogleSignIn.getLastSignedInAccount(appContext) != null)
+
+        assertFalse("Should evaluate to disconnected when uploadToGoogleDrive is true but credentials/account are missing", isConnected)
+    }
 }
