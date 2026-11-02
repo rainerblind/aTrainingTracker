@@ -1134,7 +1134,7 @@ fun ScrubbingTelemetryBadge(
                             withStyle(SpanStyle(color = MaterialTheme.colorScheme.onSurface)) {
                                 append("${point.power} W")
                             }
-                            if (powerZone != null && powerZone in 1..5) {
+                            if (powerZone != null && powerZone in 1..TelemetryZoneMath.ZONE_COLORS.size) {
                                 withStyle(
                                     SpanStyle(
                                         color = TelemetryZoneMath.ZONE_COLORS[powerZone - 1],

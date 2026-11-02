@@ -2957,7 +2957,7 @@
   1. *Structural & Zone Styling Contract Tests (`ScrubbingBadgeZoneColorContractTest.kt`)*:
   • Verify `ElevationProfile.kt` utilizes `buildAnnotatedString` for HR and Power telemetry badges.
   • Verify base metric value (e.g. `${point.hr} bpm`, `${point.power} W`) is styled with `MaterialTheme.colorScheme.onSurface`.
-  • Verify active zone suffix (` • Z$hrZone`, ` • Z$powerZone`) is styled with `TelemetryZoneMath.ZONE_COLORS[zone - 1]` and `FontWeight.Bold`.
+  • Verify active zone suffix (` • Z$hrZone`, ` • Z$powerZone`) is styled with `TelemetryZoneMath.ZONE_COLORS[zone - 1]` and `FontWeight.Bold` across HR zones 1..5 and all 7 Coggan power zones 1..7 (`TelemetryZoneMath.ZONE_COLORS.size`).
   • Verify fallback branch renders plain base metric value in `MaterialTheme.colorScheme.onSurface` without delimiter or zone suffix when zone is null.
   2. *Existing Invariant Tests*:
   • Verify `ElevationProfileLayoutTest.kt` passes 100%.

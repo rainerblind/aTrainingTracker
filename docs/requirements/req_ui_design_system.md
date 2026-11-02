@@ -4930,32 +4930,32 @@ Specifically:
 
 **Invariants**: Directional gesture disambiguation (`REQ-UI-226`), horizontal padding parity (50dp/25dp), lockstep multi-chart synchrony, and 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-242: Aftermath/Scrubbing: Render Training Zone Badge Suffix in Active Zone Color in Scrubbing Telemetry Badge [`TST-UI-201`]
-- **Tests**: `ElevationProfile.kt`
-- **Implementation**: Render instantaneous training zone suffixes in their active zone color within ScrubbingTelemetryBadge while keeping base values in neutral high-contrast color.
-- **Rationale**: The system SHALL render instantaneous training zone suffixes in their active zone color within `ScrubbingTelemetryBadge` (`ElevationProfile.kt`) (ATT-2015):
+### REQ-UI-242: Aftermath/Scrubbing: Render Training Zone Badge Suffix in Active Zone Color in Scrubbing Telemetry Badge [Verified]
+- **Tests**: `ElevationProfile.kt`, `ScrubbingBadgeZoneColorContractTest.kt`
+- **Implementation**: Render instantaneous training zone suffixes in their active zone color within ScrubbingTelemetryBadge while keeping base values in neutral high-contrast color across HR zones 1..5 and Coggan power zones 1..7.
+- **Rationale**: The system SHALL render instantaneous training zone suffixes in their active zone color within `ScrubbingTelemetryBadge` (`ElevationProfile.kt`) across HR zones 1..5 and all 7 Coggan power zones 1..7 (`TelemetryZoneMath.ZONE_COLORS.size`) (ATT-2015, amended by ATT-5070):
 1. *Separated Metric Value & Dynamic Zone Suffix*:
 • In `ScrubbingTelemetryBadge` (`ElevationProfile.kt`), when Heart Rate (`hasHr`) or Cycling Power (`hasPower`) is displayed:
 - The base numeric value and unit (e.g. `${point.hr} bpm`, `${point.power} W`) SHALL be rendered in high-contrast neutral text color (`MaterialTheme.colorScheme.onSurface`).
-- When an active zone (`hrZone`, `powerZone` in `1..5`) is resolved from thresholds via `TelemetryZoneMath`, the zone suffix (` • Z$hrZone`, ` • Z$powerZone`) SHALL be rendered directly in that zone's color using `TelemetryZoneMath.ZONE_COLORS[zone - 1]`: Zone 1: `TTColor.Zone1`, Zone 2: `TTColor.Zone2`, Zone 3: `TTColor.Zone3`, Zone 4: `TTColor.Zone4`, Zone 5: `TTColor.Zone5`.
+- When an active zone (`hrZone in 1..5`, `powerZone in 1..7` / `1..TelemetryZoneMath.ZONE_COLORS.size`) is resolved from thresholds via `TelemetryZoneMath`, the zone suffix (` • Z$hrZone`, ` • Z$powerZone`) SHALL be rendered directly in that zone's color using `TelemetryZoneMath.ZONE_COLORS[zone - 1]`: Zone 1: `TTColor.Zone1` .. Zone 7: `TTColor.Zone7`.
 - The zone suffix text SHALL be styled with `FontWeight.Bold` for optimal readability.
 2. *Inline Annotated String Representation*:
 • The base metric and zone suffix SHALL be combined within an `AnnotatedString` (`buildAnnotatedString`), ensuring single-line inline layout without baseline jitter, multi-line wrapping, or unexpected layout reflows during continuous scrubbing.
 3. *Neutral Graceful Fallback*:
-• If zone thresholds are not configured or zone resolution evaluates to `null` (or outside `1..5`), the composable SHALL render only the base metric value (e.g. `145 bpm`, `220 W`) in `MaterialTheme.colorScheme.onSurface` without trailing delimiters (`•`) or dangling characters.
+• If zone thresholds are not configured or zone resolution evaluates to `null` (or outside `1..5` for HR or `1..7` for Power), the composable SHALL render only the base metric value (e.g. `145 bpm`, `220 W`) in `MaterialTheme.colorScheme.onSurface` without trailing delimiters (`•`) or dangling characters.
 4. *Preservation of Core Invariants*:
 • Speed/Pace metric styling (`MaterialTheme.colorScheme.primary`) SHALL remain unchanged.
 • `ScrubbingTelemetryBadge` public signature, parameters (`hrZoneThresholds: HeartRateZoneThresholds? = null`, `powerZoneThresholds: PowerZoneThresholds? = null`), and placement invariants SHALL remain 100% backward compatible.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement (`REQ-UI-242`), refining `REQ-UI-201`, `REQ-UI-206`, `REQ-UI-230`, and `REQ-UI-241` under Epic `ATT-111` (*Compact Post-Workout Visual Analytics & Graphs*).
-2. *Historical Origin & Commit Trace*: Sprint 2026-40.5 (Commit `e7a6a273`, `ATT-1391`), Sprint 2026-40.7 (Commit `d71b4028`, `ATT-1876`), and Sprint 2026-40.12 (Commit `0064fba1`, `ATT-2016`).
-3. *Root Reason for Existing Formulation*: In `ATT-1876`, when heart rate and power metrics were added to `ScrubbingTelemetryBadge`, the entire text string was hardcoded to static colors (`TTColor.Zone4` for HR, `TTColor.Zone5` for Power) to differentiate them visually from speed/pace. However, this caused lower training zones (Z1 recovery, Z2 aerobic) to render in alarming orange/red tones.
-4. *Preservation of Core Invariants*: Single-line inline layout, touch transparency, contrast accessibility, existing zone math contracts (`TelemetryZoneMath`), and multi-chart scrubbing synchrony are 100% strictly preserved.
+1. *Original Requirement ID & Target*: Net-new requirement (`REQ-UI-242`), refining `REQ-UI-201`, `REQ-UI-206`, `REQ-UI-230`, and `REQ-UI-241` under Epic `ATT-111` (*Compact Post-Workout Visual Analytics & Graphs*). Amends `ElevationProfile.kt` (`ScrubbingTelemetryBadge`).
+2. *Historical Origin & Commit Trace*: Sprint 2026-40.5 (Commit `e7a6a273`, `ATT-1391`), Sprint 2026-40.7 (Commit `d71b4028`, `ATT-1876`), and Sprint 2026-40.12 (Commit `0064fba1`, `ATT-2016`). Refined in Sprint 2026-45.1 (`ATT-5070`).
+3. *Root Reason for Existing Formulation*: In `ATT-2015`, when heart rate and power metrics were added to `ScrubbingTelemetryBadge`, the 5-zone range `in 1..5` was copied from Heart Rate to Power, inadvertently suppressing zone suffixes for Coggan power zones 6 and 7 (`Z6` and `Z7`).
+4. *Preservation of Core Invariants*: Neutral base text styling, dynamic zone coloring via `TelemetryZoneMath.ZONE_COLORS`, single-line layout, and 9-language localization parity are 100% strictly preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete viewing a workout with heart rate or power telemetry and configured zone thresholds,
-• *When* scrubbing across points in Zone 1, 2, 3, 4, or 5,
+• *When* scrubbing across points in HR Zones 1..5 or Power Zones 1..7,
 • *Then* the `• Z<n>` suffix SHALL be rendered in the corresponding `TTColor.Zone<n>` color (`TelemetryZoneMath.ZONE_COLORS[n - 1]`) in bold.
 • *Given* any scrubbed telemetry point with HR or Power,
 • *When* rendered in `ScrubbingTelemetryBadge`,

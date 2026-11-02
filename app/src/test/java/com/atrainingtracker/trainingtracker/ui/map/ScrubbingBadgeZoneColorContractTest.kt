@@ -130,4 +130,23 @@ class ScrubbingBadgeZoneColorContractTest {
             content.contains("color = TTColor.Zone5")
         )
     }
+
+    @Test
+    fun testScrubbingTelemetryBadge_supportsAll7CogganPowerZones() {
+        // [TST-UI-201.1] / REQ-UI-242 / ATT-5070
+        assertTrue("ElevationProfile.kt must exist", elevationProfileFile.exists())
+        val content = elevationProfileFile.readText()
+
+        // Verify powerZone is NOT clamped to 1..5
+        assertFalse(
+            "ElevationProfile.kt must not clamp powerZone to 'in 1..5'",
+            content.contains("powerZone in 1..5")
+        )
+
+        // Verify powerZone uses TelemetryZoneMath.ZONE_COLORS.size to support all 7 Coggan zones
+        assertTrue(
+            "ElevationProfile.kt must allow powerZone across all 7 Coggan zones via TelemetryZoneMath.ZONE_COLORS.size",
+            content.contains("powerZone in 1..TelemetryZoneMath.ZONE_COLORS.size")
+        )
+    }
 }
