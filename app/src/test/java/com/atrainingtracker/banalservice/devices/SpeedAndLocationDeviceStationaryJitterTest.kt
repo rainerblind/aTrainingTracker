@@ -96,6 +96,7 @@ class SpeedAndLocationDeviceStationaryJitterTest {
         every { SettingsDataStoreJavaHelper.getGpsAccuracyThreshold(any()) } returns 200.0f
 
         mockkStatic(TrainingApplication::class)
+        every { TrainingApplication.isTracking() } returns true
         every { TrainingApplication.isPaused() } returns false
 
         mockContext = mockk(relaxed = true)

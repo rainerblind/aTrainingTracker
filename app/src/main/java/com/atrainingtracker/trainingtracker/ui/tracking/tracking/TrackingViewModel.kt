@@ -65,6 +65,7 @@ import com.atrainingtracker.trainingtracker.ui.tracking.WPrimeBatteryState
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.SectionDividerInfo
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -73,6 +74,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -243,6 +246,7 @@ class TrackingViewModel @JvmOverloads constructor(
         observeMapState()
         // Load both the main UI state and the activity type
         loadSensorFieldStates()
+        observeElevationPathPoints()
         loadActivityType()
     }
 
@@ -505,9 +509,8 @@ class TrackingViewModel @JvmOverloads constructor(
                 trackingViewsRepository.getSensorFieldConfigsForView(viewId),
                 banalServiceRepository.allFilteredSensorData,
                 trackingViewsRepository.getTrackingViewInfoFlow(viewId),
-                banalServiceRepository.currentPathPoints,
                 trackingViewsRepository.getSectionDividersFlow(viewId)
-            ) { configs, allSensorData, viewInfo, livePathPoints, sectionDividers ->
+            ) { configs, allSensorData, viewInfo, sectionDividers ->
                 // --- Step 1: Create or reuse the base state from the latest configurations ---
                 val currentActivity = banalServiceRepository.activityType.value
                 val baseFields = if (configs == cachedConfigs && currentActivity == cachedActivityType && cachedBaseFields.isNotEmpty()) {
@@ -581,6 +584,7 @@ class TrackingViewModel @JvmOverloads constructor(
                 // --- Step 3: Package into TrackingScreenState reusing the decoupled mapState ---
                 val currentMap = _mapState.value
                 val showElevation = viewInfo?.showElevationProfile ?: false
+                val currentPoints = if (showElevation) _uiState.value.pathPoints else emptyList()
                 TrackingScreenState(
                     fields = finalFields,
                     sectionDividers = sectionDividers,
@@ -594,7 +598,7 @@ class TrackingViewModel @JvmOverloads constructor(
                     showBikeBell = viewInfo?.showBikeBell ?: false,
                     elevationProfileScope = viewInfo?.elevationProfileScope ?: ElevationProfileScope.FULL_ROUTE,
                     elevationProfileLookahead = viewInfo?.elevationProfileLookahead ?: 2000,
-                    pathPoints = if (showElevation) livePathPoints else emptyList(),
+                    pathPoints = currentPoints,
                     mapState = currentMap,
                     zoomFocus = currentMap.zoomFocus,
                     userSpeed = currentMap.userSpeed,
@@ -610,6 +614,35 @@ class TrackingViewModel @JvmOverloads constructor(
             }.collect { newState ->
                 _uiState.value = newState
             }
+        }
+    }
+
+    /**
+     * Decouples live [BANALServiceRepository.currentPathPoints] from [loadSensorFieldStates],
+     * observing path points strictly when the elevation profile is active (REQ-TRK-042.4, ATT-4923).
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun observeElevationPathPoints() {
+        viewModelScope.launch {
+            trackingViewsRepository.getTrackingViewInfoFlow(viewId)
+                .map { it?.showElevationProfile ?: false }
+                .distinctUntilChanged()
+                .flatMapLatest { showElevation ->
+                    if (showElevation) {
+                        banalServiceRepository.currentPathPoints
+                    } else {
+                        flowOf(emptyList())
+                    }
+                }
+                .collect { points ->
+                    _uiState.update { current ->
+                        if (current.pathPoints != points) {
+                            current.copy(pathPoints = points)
+                        } else {
+                            current
+                        }
+                    }
+                }
         }
     }
 

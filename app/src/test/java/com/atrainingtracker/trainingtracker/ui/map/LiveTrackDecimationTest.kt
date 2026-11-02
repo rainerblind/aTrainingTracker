@@ -76,4 +76,43 @@ class LiveTrackDecimationTest {
         val singlePoint = listOf(LatLng(48.0, 11.0))
         assertEquals(singlePoint, decimateLiveTrack(singlePoint))
     }
+
+    @Test
+    fun testIncrementalTrackDecimator_historicalVerticesAreStrictlyStableAcrossTicks() {
+        val decimator = IncrementalTrackDecimator(tailCount = 200, chunkSize = 200, toleranceMeters = 3.0)
+        val fullPath = (0 until 600).map { i -> LatLng(48.0 + (i * 0.0001), 11.0) }
+
+        val result450 = decimator.decimate(fullPath.take(450))
+        val result451 = decimator.decimate(fullPath.take(451))
+
+        assertEquals(result450.first(), result451.first())
+        val headSize = result450.size - 249
+        assertEquals(result450.take(headSize), result451.take(headSize))
+    }
+
+    @Test
+    fun testIncrementalTrackDecimator_preservesUnsimplifiedTail() {
+        val decimator = IncrementalTrackDecimator(tailCount = 200, chunkSize = 200, toleranceMeters = 3.0)
+        val fullPath = (0 until 500).map { i -> LatLng(48.0 + (i * 0.0001), 11.0) }
+        val result = decimator.decimate(fullPath)
+
+        val expectedTail = fullPath.takeLast(200)
+        val actualTail = result.takeLast(200)
+        assertEquals(expectedTail, actualTail)
+    }
+
+    @Test
+    fun testIncrementalTrackDecimator_synthetic15000PointsBenchmark() {
+        val decimator = IncrementalTrackDecimator(tailCount = 200, chunkSize = 200, toleranceMeters = 3.0)
+        val fullPath = (0 until 15_000).map { i -> LatLng(48.0 + (i * 0.0001), 11.0) }
+
+        val startNanos = System.nanoTime()
+        val result = decimator.decimate(fullPath)
+        val elapsedMillis = (System.nanoTime() - startNanos) / 1_000_000
+
+        assertTrue("Decimation for 15,000 points should complete quickly ($elapsedMillis ms)", elapsedMillis < 500)
+        assertTrue("Simplified result should have far fewer vertices than 15,000 (actual: ${result.size})", result.size < 500)
+        assertEquals(fullPath.first().latitude, result.first().latitude, 1e-6)
+        assertEquals(fullPath.last().latitude, result.last().latitude, 1e-6)
+    }
 }

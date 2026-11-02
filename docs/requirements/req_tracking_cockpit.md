@@ -2039,38 +2039,42 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Secondary multi-sensor logging in `WorkoutSamples.db` MUST NOT be dropped; legitimate speeds ($\le 70.0\text{ m/s}$) MUST accumulate distance accurately; single-thread serialization on `mDbExecutor` MUST be maintained.
 
-### REQ-TRK-042: 1-Hz Live-Tracking Allocation Hotspot Elimination, Recomposition Decoupling & Bounded Polyline Serialization [Planned]
-- **Tests**: `TST-TRK-042` | **Tickets**: `ATT-4863`
+### REQ-TRK-042: 1-Hz Live-Tracking Allocation Hotspot Elimination, Recomposition Decoupling & Bounded Polyline Serialization [Verified]
+- **Tests**: `TST-TRK-042` | **Tickets**: `ATT-4863`, `ATT-4923`
 - **Implementation**: `BANALServiceRepository.kt`, `MapLayers.kt`, `SensorGridScreen.kt`, `TrackingViewModel.kt`
-- **Rationale**: The live-tracking subsystem SHALL eliminate high-frequency object allocations, O(N^2) list copies, Compose snapshot invalidations during composition, and unbounded Binder IPC transfers during 1-Hz tracking to protect JVM heap stability and prevent `OutOfMemoryError` on long-running workouts (ATT-4863):
-1. *Deduplicated & Gated Live Track & PathPoint Appending (`REQ-TRK-042.1`)*:
-• In `BANALServiceRepository.kt`, `_currentPathPoints` SHALL strictly append new `PathPoint` objects only when `_currentLocation.value` is non-null AND either geographical position (`newLocation != _currentLocation.value`) or cumulative distance (`newDistance != _currentDistance.value`) has advanced. When stationary or paused, redundant identical allocations SHALL be suppressed.
-2. *Bounded Live Track Rendering via Historical Decimation (`REQ-TRK-042.2`)*:
-• In `MapLayers.kt` (`LiveTrackLayer`), when active GPS track points exceed 300 points, the polyline passed to `XRayPolyline` and Google Maps SDK `Polyline.setPoints(...)` SHALL preserve the most recent 200 points at full 1-Hz resolution while downsampling older historical points using `PolyUtil.simplify(head, 3.0)` to bound the total list size sent across Binder to Maps IPC.
+- **Rationale**: The live-tracking subsystem SHALL eliminate high-frequency object allocations, O(N^2) list copies, Compose snapshot invalidations during composition, and unbounded Binder IPC transfers during 1-Hz tracking to protect JVM heap stability and prevent `OutOfMemoryError` on long-running workouts (ATT-4863, ATT-4923):
+1. *Amortized O(1) Snapshot Append & Deduplicated PathPoint Invariants (`REQ-TRK-042.1`)*:
+• In `BANALServiceRepository.kt`, `_currentTrack` and `_currentPathPoints` SHALL use an amortized $O(1)$ append snapshot structure (`SnapshotChunkedList<T>`), eliminating full-list copying upon each moving coordinate or distance advancement while preserving standard `List<T>` random-access read fidelity. Appending SHALL strictly occur only when `_currentLocation.value` is non-null AND either geographical position (`newLocation != _currentLocation.value`) or cumulative distance (`newDistance != _currentDistance.value`) has advanced outside the stationary deadband.
+2. *Incremental Chunked Live Track Decimation (`REQ-TRK-042.2`)*:
+• In `MapLayers.kt` (`LiveTrackLayer`), track decimation SHALL operate incrementally via `IncrementalTrackDecimator` (a plain holder object adhering to Rule 66 without Compose `MutableState` mutation in composition). Historical points exceeding the unsimplified tail ($M = 200$) SHALL be simplified in fixed frozen chunks ($C = 200$) using `PolyUtil.simplify(chunk, 3.0)` once upon chunk boundary completion and permanently cached, preventing re-simplification of older history and eliminating coordinate flutter across 1-Hz ticks.
 3. *Non-State Index Caching & Elevation Profile Composition Gating (`REQ-TRK-042.3`)*:
 • In `SensorGridScreen.kt`, the last route segment index SHALL be cached inside a non-state holder (`SegmentIndexHolder`) rather than a `MutableState`, preventing Compose snapshot writes inside `remember` during composition.
 • `TrackingElevationProfileResolver.resolve(...)` SHALL be evaluated strictly when `state.showElevationProfile == true`. When hidden, resolution and recomposition on 1-Hz path updates SHALL be bypassed.
-4. *Memoized Base Sensor Fields & Decoupled Grid Telemetry (`REQ-TRK-042.4`)*:
+4. *Memoized Base Sensor Fields & Combine Decoupling (`REQ-TRK-042.4`)*:
 • In `TrackingViewModel.kt:loadSensorFieldStates()`, `baseFields` (`configs.map { SensorFieldState(...) }`) SHALL be precomputed and memoized when view configurations, activity type, or zone options change, so 1-Hz `allFilteredSensorData` updates only execute `applySensorData(...)` without reallocating base field descriptors.
+• `currentPathPoints` SHALL be decoupled from `loadSensorFieldStates()` combine and observed strictly when `showElevationProfile == true`, ensuring sensor field states evaluate at most once per sensor tick.
 5. *Structural Value Equality for Device Telemetry (`REQ-TRK-042.5`)*:
 • In `BANALServiceRepository.kt`, `DeviceTelemetry` SHALL NOT contain synthetic non-deterministic fields such as `version = System.nanoTime()`, restoring data class structural equality so `_allActiveDevicesTelemetry` only emits downstream when device status or sensor values genuinely change.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-042`.
-2. *Historical Origin & Commit Trace*: Ticket `ATT-4863`, Sprint `2026-44.1`. Follows Crashlytics issue `16e0317dd5b3aa5a53b9248f50f05822` in release `4.9.38.5 (269)`.
-3. *Root Reason for Existing Formulation*: `version = System.nanoTime()` was added in early refactorings under the assumption that `StateFlow` required unique timestamps. Unbounded `_currentPathPoints` and dual polyline updates were implemented before multi-hour heap profiles were captured.
-4. *Preservation of Core Invariants*: 1-Hz live telemetry updates, visual track sharpness, map follow-me behavior, and 100% test pass rate are strictly preserved.
+1. *Original Requirement ID & Target*: `REQ-TRK-042` (*1-Hz Live-Tracking Allocation Hotspot Elimination, Recomposition Decoupling & Bounded Polyline Serialization*).
+2. *Historical Origin & Commit Trace*: Ticket `ATT-4863` (commit `06195f2a`) and follow-up `ATT-4923`. Follows Crashlytics issue `16e0317dd5b3aa5a53b9248f50f05822` in release `4.9.38.5 (269)`.
+3. *Root Reason for Existing Formulation*: `ATT-4863` stopped allocations on stationary ticks and memoized base fields, leaving $O(N)$ copy-on-append and full re-decimation active during movement. `ATT-4923` introduces $O(1)$ amortized snapshot appending, incremental chunked decimation, and combine decoupling.
+4. *Preservation of Core Invariants*: Visual smoothness of live map traces and elevation profiles, 200-point full-fidelity tail, thread-safe snapshot reading, and 100% test pass rate are strictly preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an active tracking session remaining stationary for 60 seconds,
 • *When* the 1-Hz observation loop executes,
 • *Then* `_currentPathPoints` SHALL NOT accumulate 60 duplicate points.
-• *Given* a long workout track with 3,000 recorded points,
+• *Given* a long workout track with 15,000 recorded points,
+• *When* appending new points during live movement,
+• *Then* `SnapshotChunkedList` appends in amortized $O(1)$ time and memory without copying the prior 15,000 points.
+• *Given* a growing workout track exceeding 400 points,
 • *When* `LiveTrackLayer` renders,
-• *Then* `XRayPolyline` receives a simplified historical path plus full-resolution tail with significantly fewer points than 3,000, preventing multi-megabyte Binder IPC spikes.
+• *Then* `IncrementalTrackDecimator` permanently freezes simplified historical chunks, preserving historical vertex stability and keeping the unsimplified tail at 200 points without full re-simplification.
 • *Given* a tracking cockpit tab with `showElevationProfile == false`,
 • *When* 1-Hz path points update,
-• *Then* `TrackingElevationProfileResolver.resolve` is bypassed and zero Compose snapshot writes occur during composition.
+• *Then* `TrackingElevationProfileResolver.resolve` is bypassed and `loadSensorFieldStates()` emits at most once per sensor tick.
 • *Given* consecutive 1-Hz ticks where device telemetry is identical,
 • *When* `DeviceTelemetry` objects are compared,
 • *Then* `_allActiveDevicesTelemetry` suppresses duplicate downstream emissions.

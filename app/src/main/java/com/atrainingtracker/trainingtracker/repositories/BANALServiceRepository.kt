@@ -47,6 +47,7 @@ import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents
 import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
+import com.atrainingtracker.trainingtracker.util.SnapshotChunkedList
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -171,11 +172,11 @@ class BANALServiceRepository private constructor(context: Context) {
     val currentAltitude: StateFlow<Double?> = _currentAltitude.asStateFlow()
 
     // --- Current Track (Breadcrumbs for the Map Polyline) ---
-    private val _currentTrack = MutableStateFlow<List<LatLng>>(emptyList())
+    private val _currentTrack = MutableStateFlow<List<LatLng>>(SnapshotChunkedList.empty())
     val currentTrack: StateFlow<List<LatLng>> = _currentTrack.asStateFlow()
 
     // --- Current Path Points (Distance + LatLng + Altitude) for Elevation Profile ---
-    private val _currentPathPoints = MutableStateFlow<List<com.atrainingtracker.trainingtracker.ui.map.PathPoint>>(emptyList())
+    private val _currentPathPoints = MutableStateFlow<List<com.atrainingtracker.trainingtracker.ui.map.PathPoint>>(SnapshotChunkedList.empty())
     val currentPathPoints: StateFlow<List<com.atrainingtracker.trainingtracker.ui.map.PathPoint>> = _currentPathPoints.asStateFlow()
 
     // Altimeter calibration status (REQ-UI-199)
@@ -443,7 +444,7 @@ class BANALServiceRepository private constructor(context: Context) {
                             }
 
                             if (!isSpiderJitter && TrainingApplication.getTrackingMode() == TrackingMode.TRACKING) {
-                                _currentTrack.value = currentTrack.value + location
+                                _currentTrack.value = appendToTrack(_currentTrack.value, location)
                             }
                         }
 
@@ -469,7 +470,7 @@ class BANALServiceRepository private constructor(context: Context) {
                                     latLng = location,
                                     altitude = currentAltitude ?: 0.0
                                 )
-                                _currentPathPoints.value = _currentPathPoints.value + newPathPoint
+                                _currentPathPoints.value = appendToTrack(_currentPathPoints.value, newPathPoint)
                             }
                         }
 
@@ -569,7 +570,15 @@ class BANALServiceRepository private constructor(context: Context) {
                 point.copy(altitude = alt)
             }
         }
-        _currentPathPoints.value = updatedPoints
+        _currentPathPoints.value = SnapshotChunkedList.from(updatedPoints)
+    }
+
+    private fun <T> appendToTrack(current: List<T>, element: T): SnapshotChunkedList<T> {
+        return if (current is SnapshotChunkedList<T>) {
+            current.append(element)
+        } else {
+            SnapshotChunkedList.from(current).append(element)
+        }
     }
 
     // --- Helper methods to communicate with BANALService via Binder ---

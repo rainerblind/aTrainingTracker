@@ -1166,20 +1166,20 @@
   3. *Targeted & Clean-Room Regression Verification (`TST-TRK-041.3`)*:
   • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.*" --tests "com.atrainingtracker.trainingtracker.tracker.*"` verifying 100% pass rate.
 
-### TST-TRK-042: **1-Hz Live-Tracking Memory, Decoupling & Recomposition Optimization Test Suite** [Planned]
+### TST-TRK-042: **1-Hz Live-Tracking Memory, Decoupling & Recomposition Optimization Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-042`
-- **Component**: `BANALServiceRepositoryTest.kt`, `LiveTrackDecimationTest.kt`, `TrackingViewModelTest.kt`
-- **Jira**: `ATT-4863`
+- **Component**: `BANALServiceRepositoryMemoryTest.kt`, `LiveTrackDecimationTest.kt`, `TrackingViewModelMapStateTest.kt`, `TrackingElevationProfileResolutionTest.kt`
+- **Jira**: `ATT-4863`, `ATT-4923`
 - **Test Description**:
-  1. *Stationary PathPoint Deduplication & DeviceTelemetry Value Equality (`TST-TRK-042.1`)*:
-  • Unit test verifying that stationary ticks do not append duplicate `PathPoint`s to `currentPathPoints`.
-  • Unit test verifying that `DeviceTelemetry` without `System.nanoTime()` satisfies structural equality when fields are unchanged.
-  2. *Live Track Decimation & Tail Preservation (`TST-TRK-042.2`)*:
-  • Unit test verifying that tracks exceeding the threshold preserve the last $M$ points unsimplified while simplifying older collinear points.
-  3. *Base Field Memoization (`TST-TRK-042.3`)*:
-  • Unit test verifying that `TrackingViewModel` retains memoized `baseFields` when only 1-Hz sensor values change.
-  4. *Targeted & Clean-Room Regression Verification (`TST-TRK-042.4`)*:
-  • Execute targeted package tests and verify zero regressions.
+  1. *Amortized O(1) Snapshot Append & Deduplication (`TST-TRK-042.1`)*:
+  • Unit test in `BANALServiceRepositoryMemoryTest` asserting `SnapshotChunkedList` provides $O(1)$ amortized appends and bounded allocation with 15,000 synthetic points without copying prior list elements.
+  • Unit test verifying stationary ticks suppress duplicate `PathPoint` allocations and `DeviceTelemetry` structural equality.
+  2. *Incremental Chunked Decimation & Polyline Stability (`TST-TRK-042.2`)*:
+  • Unit test in `LiveTrackDecimationTest` asserting `IncrementalTrackDecimator` simplifies historical chunks once, permanently freezes them, preserves 200-point unsimplified tail, and maintains strict historical vertex stability across 1-Hz ticks.
+  3. *Sensor Field Combine Decoupling & Elevation Gating (`TST-TRK-042.3`)*:
+  • Unit test in `TrackingViewModelMapStateTest` / `TrackingElevationProfileResolutionTest` verifying `loadSensorFieldStates()` combines sensor data independently of `currentPathPoints`, emitting at most once per sensor tick.
+  4. *Clean-Room Package Regression (`TST-TRK-042.4`)*:
+  • Execute targeted tests across `BANALServiceRepository`, `MapLayers`, and `TrackingViewModel` suites verifying 100% pass rate.
 
 
 ### TST-TRK-043: **Sport-Specific Auto-Pause Resume Debounce & Symmetric Single-Threshold Test Suite** [Planned]

@@ -103,6 +103,7 @@ class TrackingViewModelMapStateTest {
     private val allRoutesFlow = MutableStateFlow(emptyList<RouteWithPath>())
     private val activeNavigatedRouteIdFlow = MutableStateFlow<Long?>(null)
     private val allClustersFlow = MutableStateFlow(emptyList<WorkoutCluster>())
+    private val currentPathPointsFlow = MutableStateFlow(emptyList<PathPoint>())
 
     @Before
     fun setUp() {
@@ -132,7 +133,7 @@ class TrackingViewModelMapStateTest {
         every { mockBanalRepo.currentSpeed } returns currentSpeedFlow
         every { mockBanalRepo.currentBearing } returns currentBearingFlow
         every { mockBanalRepo.allFilteredSensorData } returns MutableStateFlow(emptyList<FilteredSensorData<*>>())
-        every { mockBanalRepo.currentPathPoints } returns MutableStateFlow(emptyList<PathPoint>())
+        every { mockBanalRepo.currentPathPoints } returns currentPathPointsFlow
         every { mockRoutesRepo.allRoutes } returns allRoutesFlow
         every { mockRoutesRepo.activeNavigatedRouteId } returns activeNavigatedRouteIdFlow
         every { mockWorkoutClusterRepo.allClusters } returns allClustersFlow
@@ -415,5 +416,25 @@ class TrackingViewModelMapStateTest {
         val clustersAfterBearing = viewModel.mapState.value.mapClusters
         assertSame("Clusters must preserve referential identity across 1-Hz bearing emissions (REQ-MAP-051.1)",
             clustersInitial, clustersAfterBearing)
+    }
+
+    @Test
+    fun testCurrentPathPoints_decoupledFromSensorFieldsCombine() {
+        val pathPoint1 = PathPoint(distance = 100.0, latLng = LatLng(48.1, 11.5), altitude = 500.0)
+        val pathPoint2 = PathPoint(distance = 200.0, latLng = LatLng(48.2, 11.6), altitude = 520.0)
+
+        val viewModel = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // When showElevationProfile is false (default in TrackingViewInfo in setUp)
+        assertFalse(viewModel.uiState.value.showElevationProfile)
+        assertTrue(viewModel.uiState.value.pathPoints.isEmpty())
+
+        // Emitting path points when profile is disabled does not update uiState.pathPoints
+        currentPathPointsFlow.value = listOf(pathPoint1, pathPoint2)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue("Path points must remain empty when elevation profile is disabled (REQ-TRK-042.4)",
+            viewModel.uiState.value.pathPoints.isEmpty())
     }
 }
