@@ -970,16 +970,17 @@
 - **Component**: **CyclingPowerMetricsDevice Constructor Seeding, Sensor-Presence Gating (Rule 52), Stationary/Paused W/kg Alignment, and Workout Summary Presentation Defense Verification Suite**
 - **Jira**: ``ATT-4368``
 - **Test Description**:
-  1. *Sensor-Presence Gating on Constructor & Suspended State Test (`TST-TRK-031.1`, `CyclingPowerMetricsDeviceTest.kt`)*:
-  • Mock `sensorManager.getSensor(SensorType.POWER)` returning `null` (Rule 52).
+  1. *Sensor-Presence & Active Telemetry Gating on Constructor & Suspended State Test (`TST-TRK-031.1`, `CyclingPowerMetricsDeviceTest.kt`)*:
+  • Mock `sensorManager.getSensor(SensorType.POWER)` returning `null` or an inactive power sensor with `powerSensorData.value == null` (Rule 52).
   • Instantiate `CyclingPowerMetricsDevice` with CP = 250W and W' = 20.0 kJ.
-  • Assert `wPrimeBalSensor.sensorData.value == null` immediately upon instantiation.
-  • Invoke `calculateMetrics()` with `isSuspended = true`: assert `wPrimeBalSensor.sensorData.value == null` (preventing phantom SQLite extrema).
-  2. *Constructor Baseline W' Capacity Seeding with Power Sensor Present Test (`TST-TRK-031.2`, `CyclingPowerMetricsDeviceTest.kt`)*:
+  • Assert `wPrimeBalSensor.sensorData.value == null` immediately upon instantiation (Rule 52).
+  • Invoke `calculateMetrics()` with `isSuspended = true` and `isSuspended = false`: assert `wPrimeBalSensor.sensorData.value == null` (preventing phantom SQLite extrema before real power arrives).
+  2. *Active Power Sample Telemetry-Activated W'bal Emission Test (`TST-TRK-031.2`, `CyclingPowerMetricsDeviceTest.kt`)*:
   • Mock `sensorManager.getSensor(SensorType.POWER)` returning active power sensor.
   • Instantiate `CyclingPowerMetricsDevice` with CP = 280W (and with FTP fallback 250W) and W' = 20.0 kJ.
-  • Assert `wPrimeBalSensor.sensorData.value == 20.0` (Double, delta 0.001) immediately upon instantiation without invoking `calculateMetrics()` or `resetSession()` (Rule 51).
-  • Instantiate with W' = 0.0f: assert `wPrimeBalSensor.sensorData.value == null` (Double, delta 0.001).
+  • Assert `wPrimeBalSensor.sensorData.value == null` initially (preventing unearned emissions before power packets).
+  • Inject first active power sample (e.g. 250W) and invoke `calculateMetrics()`: assert `wPrimeBalSensor.sensorData.value` emits full/stepped capacity ($\approx 20.0\text{ kJ}$).
+  • Instantiate with W' = 0.0f: assert `wPrimeBalSensor.sensorData.value == null`.
   3. *Stationary and Paused W/kg Telemetry Emission Test (`TST-TRK-031.3`, `CyclingPowerMetricsDeviceTest.kt`)*:
   • Configure `isSuspended = true` and `athleteWeightKg = 75.0f` and power sensor present.
   • Set `power = 0.0W`: invoke `calculateMetrics()`, assert `powerToWeightSensor.sensorData.value == 0.0` (not starved / not null), preventing `TimedMovingAverageFilter` from expiring to null.
@@ -1007,6 +1008,9 @@
   • Confirm zero new string resources required and 100% localization parity.
   9. *Clean-Room Regression Suite Execution (`TST-TRK-031.9`)*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% pass rate with zero regressions across the full test suite.
+  10. *TelemetryMetricUtils W'bal Chart Power Gating Test (`TST-TRK-031.10`, `TelemetryMetricUtilsTest.kt`)*:
+  • Evaluate `TelemetryMetricUtils.hasWPrimeBalData(path)` with points having `wPrimeBalKj >= 0.0` but `power == null || power <= 0`: assert returns `false`.
+  • Evaluate with points having valid `power > 0` and `wPrimeBalKj >= 0.0`: assert returns `true`.
 
 ### TST-FIL-014: **Backend Filter Key Normalization, Runtime 'Best Sensor' Field Registration & Post-Trim Rolling Filter NaN Guard Verification Suite** [Runtime sensor field creation and updating with "Best Sensor" normalizes deviceName and deviceId to null, resolving proxy filters immediately; TimedMovingAverageFilter returns null instead of Double.NaN when window samples expire; specific device selection is preserved; 9-language localization parity confirmed; clean-room test suite passes with zero regressions.]
 - **Requirement(s)**: `REQ-FIL-014`, `REQ-FIL-011`, `REQ-UI-167`

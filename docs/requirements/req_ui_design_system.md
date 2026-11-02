@@ -11073,7 +11073,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 3. *Aftermath Summaries, Interactive Telemetry Chart & Import Recalculation (`REQ-UI-399.3`)*:
 • `TrackerService.finalizeLiveSession()` and `LegacyImportEngine.recalculateStats()` SHALL persist `SensorType.W_PRIME_BAL` (`MIN`, `AVG`, `END`) extrema.
 • `WorkoutData` and `WorkoutDataMapper` SHALL expose `minWPrimeBalKj: Double?`, `minWPrimeBalPct: Double?`, and `isEmptyTankWarning: Boolean` ($\min W'_{\text{bal},\%} < 10.0\%$), displayed in `WorkoutSummary.kt` and `TrackOnMapScreen.kt` when available.
-• `PathPoint` (`MapModels.kt`), `WorkoutRepository.loadTrackPoints()`, and `TelemetryMetricGraph.kt` (`TelemetryMetricType.W_PRIME_BAL`) SHALL support interactive $W'_{\text{bal}}$ (`kJ`) curve inspection.
+• `PathPoint` (`MapModels.kt`), `WorkoutRepository.loadTrackPoints()`, and `TelemetryMetricGraph.kt` (`TelemetryMetricType.W_PRIME_BAL`) SHALL support interactive $W'_{\text{bal}}$ (`kJ`) curve inspection, gated on valid recorded power telemetry (`TelemetryMetricUtils.hasWPrimeBalData(path)` requiring `hasPowerData(path)`) to suppress phantom flat-line curves on power-less activities.
 4. *9-Language Localization Parity (`REQ-UI-399.4`)*:
 • All new string resources (`w_prime_bal`, `w_prime_bal_short`, `athlete_profile_metric_cp`, `athlete_profile_metric_w_prime`, `athlete_profile_cp_estimator_*`, `workout_w_prime_bal_min_format`, `workout_w_prime_empty_tank`) SHALL exist across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
 

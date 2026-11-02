@@ -279,17 +279,13 @@ public class CyclingPowerMetricsDevice extends MyDevice {
         }
         Integer cp = resolveEffectiveCpWatts();
         float wPrimeKj = mWPrimeKjProvider.getWPrimeKj(mContext);
-        boolean hasPowerSensor = (mMySensorManager != null && mMySensorManager.getSensor(SensorType.POWER) != null);
         if (cp != null && cp > 0 && wPrimeKj > 0.0f) {
             mCurrentWPrimeBalJoules = wPrimeKj * 1000.0;
-            if (mWPrimeBalSensor != null) {
-                mWPrimeBalSensor.newValue(hasPowerSensor ? (double) wPrimeKj : null);
-            }
         } else {
             mCurrentWPrimeBalJoules = null;
-            if (mWPrimeBalSensor != null) {
-                mWPrimeBalSensor.newValue(null);
-            }
+        }
+        if (mWPrimeBalSensor != null) {
+            mWPrimeBalSensor.newValue(null);
         }
     }
 
@@ -345,8 +341,7 @@ public class CyclingPowerMetricsDevice extends MyDevice {
                 mPowerToWeightSensor.newValue(wPerKg);
             }
 
-            boolean hasPowerSensor = (mMySensorManager != null && mMySensorManager.getSensor(SensorType.POWER) != null);
-            if (hasPowerSensor && mCurrentWPrimeBalJoules != null) {
+            if (mActivePowerDurationSec > 0L && mCurrentWPrimeBalJoules != null) {
                 Integer cp = resolveEffectiveCpWatts();
                 float wPrimeKj = mWPrimeKjProvider.getWPrimeKj(mContext);
                 if (cp != null && cp > 0 && wPrimeKj > 0.0f) {
