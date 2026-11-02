@@ -4399,10 +4399,10 @@
   3. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-282: **General Map Layer Visibility Controls & Preference Persistence Verification** [General map Layers menu toggles routes, segments, favorite locations, favorite tracks / clusters, and live track; user layer visibility preferences persisted across sessions in SharedPreferences; Cockpit map renders clusters; 100% 9-language localization parity; 100% unit test pass rate.] [Verified]
+### TST-UI-282: **General Map Layer Visibility Controls & Preference Persistence Verification** [General map Layers menu toggles routes, segments, favorite locations, favorite tracks / clusters, and live track; user layer visibility preferences persisted across sessions in SharedPreferences; Cockpit map renders clusters; harmonized ClusterOnMapSheet look and stats enrichment without purple text tinting; 100% 9-language localization parity; 100% unit test pass rate.] [Verified]
 - **Requirement(s)**: `REQ-UI-322`
 - **Component**: **General Map Layer Visibility Controls & Preference Persistence Verification**
-- **Jira**: `ATT-2931`, `ATT-4847`
+- **Jira**: `ATT-2931`, `ATT-4847`, `ATT-5075`
 - **Test Description**:
   1. *GeneralMapLayer Enum & Default State Contract (`GeneralMapLayersContractTest.kt`)*:
   • Verify `GeneralMapLayer` enum declares `ROUTES`, `SEGMENTS`, `KNOWN_LOCATIONS`, `TRACK`, and `CLUSTERS` (exactly 5 entries).
@@ -4421,9 +4421,18 @@
   • Verify `TrackingMapState` exposes `mapClusters`.
   • Verify `TrackingViewModel` integrates `WorkoutClusterRepository.allClusters` into `staticMapLayerFlow` via `distinctUntilChanged()`, decoupled from 1-Hz telemetry.
   • Verify `TrackingMapContainer` passes `clusters(mapState.mapClusters)` to `MapContentScope`.
-  5. *9-Language Localization Parity Audit (`GeneralMapLayersLocalizationTest.kt`)*:
+  5. *ClusterOnMapSheet Harmonized UI & Non-Purple Styling Contract Tests (`GeneralMapLayersContractTest.kt`)*:
+  • Verify `ClusterOnMapSheet` renders 32dp sport icon with `Color.Unspecified`.
+  • Verify `ClusterOnMapSheet` does NOT apply `tint = TTColor.Cluster` or hardcoded purple colors to text or icons.
+  • Verify `ClusterOnMapSheet` displays cluster name, sport subtitle, distance, elevation gain, PR trophy (`TTColor.Gold`), hit count (`primary`), and relative recency.
+  • Verify cluster peek height in `MapScreenWithTrack.kt` uses `BottomSheetDesign.PeekHeightWorkout + navBarHeight`.
+  6. *MapCluster & MapFragmentWithTrackViewModel Stats Enrichment Contract Tests (`MapModelsTest.kt`, `MapFragmentWithTrackViewModelTest.kt`)*:
+  • Verify `MapCluster` includes `stats: WorkoutClusterStats? = null`.
+  • Verify `MapFragmentWithTrackViewModel` combines `workoutClusterRepository.clusterStats` into `mapClustersFlow`, populating `stats` on `MapCluster`.
+  • Verify `WorkoutCluster.toMapCluster()` populates `stats` while preserving referential stability of decoded coordinates (`latLngs`).
+  7. *9-Language Localization Parity Audit (`GeneralMapLayersLocalizationTest.kt`)*:
   • Verify string resources `map_layers`, `map_layer_routes`, `map_layer_segments`, `map_layer_locations`, `map_layer_track`, `map_layer_clusters` exist and are non-empty across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
-  6. *Full Clean-Room Regression Suite*:
+  8. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
 ### TST-UI-283: **Material 3 Compose ANT Missing Adapter & Dependency Alerts Verification** [Missing adapter and missing dependency alerts modernized to Material 3 Compose with official untinted ANT+ logo; direct shortcut to AntServicesStatusSheet; German typo corrected; 100% 9-language translation parity; 100% unit test pass rate.]

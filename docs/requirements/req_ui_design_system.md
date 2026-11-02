@@ -8010,7 +8010,7 @@ c. Span distance consistency: $
 • If no preferences are stored, the system SHALL default to enabling all layers (`GeneralMapLayer.entries.toSet()`).
 • `MapFragmentWithTrackViewModel` SHALL provide `fun toggleLayer(layer: GeneralMapLayer)`.
 • Toggling a layer SHALL immediately emit the updated set in `enabledLayers` and commit the updated string set to `SharedPreferences`.
-• `MapFragmentWithTrackViewModel` SHALL subscribe to `WorkoutClusterRepository.allClusters`, decode and memoize representative polylines into `MapCluster` instances with referential stability, and expose them via `MapFragmentUIState.clusters`.
+• `MapFragmentWithTrackViewModel` SHALL combine `WorkoutClusterRepository.allClusters` and `WorkoutClusterRepository.clusterStats`, decode and memoize representative polylines into `MapCluster` instances with referential stability and populated `stats: WorkoutClusterStats?`, and expose them via `MapFragmentUIState.clusters`.
 3. *Ergonomic Floating Layers Button & Dropdown Menu (`MapScreenWithTrack.kt`)*:
 • `MapScreenWithTrack.kt` SHALL wrap `ATrainingTrackerMap` in a `Box(modifier = Modifier.fillMaxSize())` inside the `BottomSheetScaffold` body.
 • `MapScreenWithTrack.kt` SHALL render a floating circular button at `Alignment.TopEnd` with `.statusBarsPadding().padding(top = 16.dp, end = 16.dp)`.
@@ -8018,9 +8018,15 @@ c. Span distance consistency: $
 • The button SHALL contain an `Icon` with `Icons.Default.Layers` (`size = 22.dp`), whose tint dynamically resolves to `MaterialTheme.colorScheme.primary` when any layer is disabled (`enabledLayers.size < GeneralMapLayer.entries.size`) or `MaterialTheme.colorScheme.onSurface` when all layers are enabled.
 • Clicking the button SHALL open a Material 3 `DropdownMenu` styled consistently with `TrackOnMapScreen.kt` and `RouteOnMapScreen.kt`.
 • The dropdown menu SHALL render five `DropdownMenuItem` entries with checkbox, color legend swatch (`12.dp`, `RoundedCornerShape(2.dp)`: Routes = `TTColor.RouteSelected`, Segments = `TTColor.StravaOrange`, Locations = `MaterialTheme.colorScheme.tertiary`, Track = `TrackType.BEST.color`, Clusters = `TTColor.Cluster`), and localized text label.
-4. *Conditional Map Canvas Layer Composition*:
+4. *Conditional Map Canvas Layer Composition & Harmonized Cluster Bottom Sheet*:
 • In `ATrainingTrackerMap`'s content scope: `knownLocations()`, `segments()`, `routes()`, `clusters()`, and `markers()` + `liveTrack()` SHALL only be composed when their corresponding `GeneralMapLayer` is present in `enabledLayers`.
-• Tapping a cluster path SHALL open `ClusterOnMapSheet` displaying cluster summary (name, sport, distance, hit count).
+• Tapping a cluster path SHALL open `ClusterOnMapSheet` styled consistently with `WorkoutClusterComponents.kt` list items, displaying 3 structured rows:
+  - Row 1 (Identity): 32.dp sport icon (`Color.Unspecified`, preserving multi-color vector assets), cluster title (`titleMedium`, `onSurface`), and sport subtitle (`bodySmall`, `onSurfaceVariant`).
+  - Row 2 (Metrics): Distance (`bodyMedium`, `onSurfaceVariant`), average elevation gain (when $> 0\text{m}$, `bodyMedium`, `onSurfaceVariant`), and PR / best time (when present, `Icons.Filled.EmojiEvents` in `TTColor.Gold` trophy, `bodySmall`, `onSurface`).
+  - Row 3 (Summary): Recording count in `primary` (bold `bodyMedium`), bullet separator, and localized relative recency text (`WorkoutClusterStats.formatRelativeRecency(context, timestampS)`, `bodySmall`, `onSurfaceVariant`).
+• `ClusterOnMapSheet` SHALL NOT tint text or sport/distance icons with `TTColor.Cluster` (purple/lila); all popup typography and metric icons SHALL resolve via standard Material 3 color tokens (`onSurface`, `onSurfaceVariant`, `primary`) and `TTColor.Gold` for PR trophy.
+• The cluster path polyline stroke color rendered on `ATrainingTrackerMap` canvas SHALL strictly remain `TTColor.Cluster` with zIndex `12f`.
+• Sheet peek height for `selectedClusterId != null` SHALL use `BottomSheetDesign.PeekHeightWorkout + navBarHeight` (~140dp) to prevent vertical clipping.
 5. *Cockpit Live Tracking Map Integration (`TrackingViewModel.kt`, `SensorGridScreen.kt`)*:
 • `TrackingMapState` SHALL expose `val mapClusters: List<MapCluster> = emptyList()`.
 • `TrackingViewModel` SHALL integrate `WorkoutClusterRepository.allClusters` into `staticMapLayerFlow` via `distinctUntilChanged()`, decoupled from 1-Hz GPS and telemetry emissions to strictly prevent polyline reallocations.
@@ -8031,10 +8037,10 @@ c. Span distance consistency: $
 • Entity selection bottom sheets, background GPS tracking, start marker detection, and 100% test pass rate MUST be strictly preserved.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement (`REQ-UI-322`), amending and complementing `REQ-UI-180` (*Display Favorite Locations on Central Navigation Map*) and `REQ-UI-308` (*Route Map Overlay Layer Visibility Controls*). Amended under `ATT-4847` to include `CLUSTERS` layer and Cockpit live tracking map integration.
-2. *Historical Origin & Commit Trace*: Ticket `ATT-1449` (Sprint 2026-40.4), Ticket `ATT-2763` (Sprint 2026-41.4), and Ticket `ATT-4847` (Sprint 2026-44.2).
-3. *Root Reason for Existing Formulation*: Spatial layers were previously composed unconditionally on the general map. As routes, segments, and favorite locations accumulated, the map canvas suffered from severe visual crowding. Clusters were originally omitted because favorite route clusters (`ATT-176`) were only visible in post-workout cluster views.
-4. *Preservation of Core Invariants*: Full touch target compliance (>= 48dp), entity detail sheet inspection, live track recording, referential polyline stability per `REQ-MAP-051`, and 100% test pass rate remain strictly preserved.
+1. *Original Requirement ID & Target*: Net-new requirement (`REQ-UI-322`), amending and complementing `REQ-UI-180` (*Display Favorite Locations on Central Navigation Map*) and `REQ-UI-308` (*Route Map Overlay Layer Visibility Controls*). Amended under `ATT-4847` to include `CLUSTERS` layer and Cockpit live tracking map integration. Refined under `ATT-5075` (Sprint 2026-45.1) to harmonize `ClusterOnMapSheet` popup look and information density with `WorkoutClusterComponents` list items, enrich `MapCluster` with `WorkoutClusterStats`, and eliminate purple text tinting.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-1449` (Sprint 2026-40.4), Ticket `ATT-2763` (Sprint 2026-41.4), Ticket `ATT-4847` (Sprint 2026-44.2), and Ticket `ATT-5075` (Sprint 2026-45.1).
+3. *Root Reason for Existing Formulation*: Spatial layers were previously composed unconditionally on the general map. As routes, segments, and favorite locations accumulated, the map canvas suffered from severe visual crowding. In ATT-4847, `ClusterOnMapSheet` was hastily introduced with an ad-hoc layout and purple (`TTColor.Cluster`) text/icon tinting to reflect the polyline layer color, omitting vital cluster statistics (sport subtitle, elevation, PR trophy/time, relative recency) and creating an inconsistent visual language compared to `WorkoutClusterComponents`.
+4. *Preservation of Core Invariants*: Full touch target compliance (>= 48dp), entity detail sheet inspection, live track recording, polyline map canvas stroke color (`TTColor.Cluster`) and zIndex (`12f`), referential polyline stability per `REQ-MAP-051`, and 100% test pass rate remain strictly preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* the athlete viewing `MapScreenWithTrack`,
@@ -8052,6 +8058,10 @@ c. Span distance consistency: $
 • *Given* the athlete viewing the Cockpit map during preview or live tracking,
 • *When* favorite route clusters exist in `WorkoutClusterRepository`,
 • *Then* their representative polylines are rendered on `ATrainingTrackerMap` without 1-Hz reallocation.
+• *Given* the athlete viewing `MapScreenWithTrack`,
+• *When* tapping a favorite route cluster (Lieblingsstrecke) polyline,
+• *Then* `ClusterOnMapSheet` is presented at peek height (`PeekHeightWorkout + navBarHeight`),
+• *And* the sheet displays a 32dp multi-color sport icon (`Color.Unspecified`), cluster title, sport subtitle, reference distance, elevation gain, PR trophy with best time, hit count in `primary`, and relative recency without any purple text tinting.
 
 **Invariants**: Detail sheet inspection, live GPS tracking, start marker detection, referential polyline stability (`REQ-MAP-051`), and 100% test pass rate MUST NOT be broken.
 

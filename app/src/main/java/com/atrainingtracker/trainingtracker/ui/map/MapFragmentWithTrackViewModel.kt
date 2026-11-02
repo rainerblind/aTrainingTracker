@@ -96,8 +96,13 @@ class MapFragmentWithTrackViewModel @JvmOverloads constructor(
         allRoutes.map { it.toMapRoute(isActiveNavigation = (it.summary.id == activeRouteId)) }
     }
 
-    private val mapClustersFlow = workoutClusterRepository.allClusters.map { clusterList ->
-        clusterList.mapNotNull { it.toMapCluster() }
+    private val mapClustersFlow = combine(
+        workoutClusterRepository.allClusters,
+        workoutClusterRepository.clusterStats
+    ) { clusterList, statsMap ->
+        clusterList.mapNotNull { cluster ->
+            cluster.toMapCluster(stats = statsMap[cluster.id])
+        }
     }.distinctUntilChanged()
 
     private data class StaticMapLayers(

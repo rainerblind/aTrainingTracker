@@ -81,6 +81,7 @@ class GeneralMapLayersContractTest {
         every { mockSegmentsRepository.allSegmentsWithPath } returns MutableStateFlow(emptyList())
         every { mockRoutesRepository.allRoutes } returns MutableStateFlow(emptyList())
         every { mockWorkoutClusterRepository.allClusters } returns MutableStateFlow(emptyList())
+        every { mockWorkoutClusterRepository.clusterStats } returns MutableStateFlow(emptyMap())
 
         every { mockPrefs.edit() } returns mockEditor
         every { mockEditor.putStringSet(any(), any()) } returns mockEditor
@@ -235,6 +236,39 @@ class GeneralMapLayersContractTest {
             "Must gate clusters with GeneralMapLayer.CLUSTERS in enabledLayers",
             content.contains("GeneralMapLayer.CLUSTERS in enabledLayers")
         )
+    }
+
+    @Test
+    fun testClusterOnMapSheet_harmonizedLayoutAndColorTokens_TST_UI_282_5() {
+        val file = findSourceFile("ui/map/MapScreenWithTrack.kt")
+        assertTrue("MapScreenWithTrack.kt must exist", file.exists())
+        val content = file.readText()
+
+        // Peek height calibration for cluster
+        assertTrue(
+            "Cluster peek height must use BottomSheetDesign.PeekHeightWorkout + navBarHeight",
+            content.contains("selectedClusterId != null -> BottomSheetDesign.PeekHeightWorkout + navBarHeight")
+        )
+
+        // ClusterOnMapSheet composable contract
+        val sheetDefIndex = content.indexOf("fun ClusterOnMapSheet(")
+        assertTrue("ClusterOnMapSheet composable must be defined", sheetDefIndex > 0)
+        val sheetContent = content.substring(sheetDefIndex)
+
+        // Must render 32dp sport icon with Color.Unspecified (preserving multi-color vector asset colors)
+        assertTrue("Sport icon must have size 32.dp", sheetContent.contains("modifier = Modifier.size(32.dp)"))
+        assertTrue("Sport icon must have tint = Color.Unspecified", sheetContent.contains("tint = Color.Unspecified"))
+
+        // Must eliminate TTColor.Cluster text and icon tinting
+        assertFalse("ClusterOnMapSheet must not use TTColor.Cluster", sheetContent.contains("TTColor.Cluster"))
+
+        // Must render standard tokens
+        assertTrue("Must render PR trophy in TTColor.Gold", sheetContent.contains("tint = TTColor.Gold"))
+        assertTrue("Must render Icons.Filled.EmojiEvents for best time", sheetContent.contains("Icons.Filled.EmojiEvents"))
+        assertTrue("Must render MetricItem for distance", sheetContent.contains("R.drawable.ic_distance"))
+        assertTrue("Must render MetricItem for ascent", sheetContent.contains("R.drawable.ic_ascent"))
+        assertTrue("Must render hit count in primary", sheetContent.contains("color = MaterialTheme.colorScheme.primary"))
+        assertTrue("Must format relative recency", sheetContent.contains("WorkoutClusterStats.formatRelativeRecency"))
     }
 
     private fun findSourceFile(relativePath: String): File {
