@@ -120,6 +120,8 @@ fun YearlyContributionGrid(
     contribution: YearlySportContribution,
     activeMetric: PeriodBarMetric,
     onDayClick: (date: LocalDate, dayActivity: DailySportActivity?) -> Unit,
+    showCard: Boolean = true,
+    showSportHeader: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val year = contribution.year
@@ -165,39 +167,35 @@ fun YearlyContributionGrid(
         }
     }
 
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        )
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+    val gridContent = @Composable {
+        Column(modifier = if (showCard) Modifier.padding(12.dp) else Modifier) {
             // Header Row: Sport Identity + GitHub-Style Legend
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = if (showSportHeader) Arrangement.SpaceBetween else Arrangement.End
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(id = contribution.sportType.iconResId),
-                        contentDescription = stringResource(id = contribution.sportType.stringResId),
-                        tint = when (contribution.sportType) {
-                            BSportType.BIKE -> TTColor.BikeSportBarColor
-                            BSportType.RUN -> TTColor.RunSportBarColor
-                            else -> TTColor.OtherSportBarColor
-                        },
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Text(
-                        text = stringResource(id = contribution.sportType.stringResId),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold
-                    )
+                if (showSportHeader) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(id = contribution.sportType.iconResId),
+                            contentDescription = stringResource(id = contribution.sportType.stringResId),
+                            tint = when (contribution.sportType) {
+                                BSportType.BIKE -> TTColor.BikeSportBarColor
+                                BSportType.RUN -> TTColor.RunSportBarColor
+                                else -> TTColor.OtherSportBarColor
+                            },
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = stringResource(id = contribution.sportType.stringResId),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
 
                 // Legend: Less [0, 1, 2, 3, 4] More
@@ -421,6 +419,22 @@ fun YearlyContributionGrid(
                     }
                 }
             }
+        }
+    }
+
+    if (showCard) {
+        Card(
+            modifier = modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            )
+        ) {
+            gridContent()
+        }
+    } else {
+        Box(modifier = modifier.fillMaxWidth()) {
+            gridContent()
         }
     }
 }

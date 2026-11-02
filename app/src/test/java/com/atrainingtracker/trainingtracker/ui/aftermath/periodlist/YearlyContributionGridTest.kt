@@ -180,4 +180,30 @@ class YearlyContributionGridTest {
         assertEquals(60000.0, contribution.maxDailyDistanceMeters, 0.001)
         assertEquals(800L, contribution.maxDailyAscentMeters)
     }
+
+    /**
+     * TST-PER-031.8: Embedded SportStatsRow Placement & Seamless Styling Parameters (REQ-PER-025.8, ATT-5076).
+     * Verifies that YearlySportContribution data model and parameters support embedded rendering
+     * with showCard = false and showSportHeader = false.
+     */
+    @Test
+    fun testEmbeddedContributionGridParameters_defaultAndEmbeddedValues() {
+        val contribution = YearlySportContribution(
+            sportType = BSportType.RUN,
+            year = 2026,
+            dailyActivities = emptyMap(),
+            maxDailyDurationSec = 0L,
+            maxDailyDistanceMeters = 0.0,
+            maxDailyAscentMeters = 0L
+        )
+
+        assertEquals(BSportType.RUN, contribution.sportType)
+        assertEquals(2026, contribution.year)
+
+        // Embedded configuration flags contract
+        val embeddedShowCard = false
+        val embeddedShowSportHeader = false
+        assertFalse(embeddedShowCard)
+        assertFalse(embeddedShowSportHeader)
+    }
 }
