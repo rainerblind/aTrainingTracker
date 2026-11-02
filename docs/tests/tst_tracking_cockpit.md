@@ -1397,6 +1397,24 @@
   • Automated assertion in `TranslationParityTest` verifying all iTPMS strings (`devices_reset_tire_pressure_baseline`, `itpms_slow_puncture_alert_title`, `itpms_slow_puncture_alert_message`, `itpms_low_pressure_reminder_title`, `itpms_low_pressure_reminder_message`) exist across all 9 locales with valid positional specifiers (`%1$s`).
 
 
+### TST-SEN-026: **Specialized Altitude Devices Naming Parity, Idempotent SQLite Migration & Educational Details Verification** [Verified]
+- **Requirement(s)**: `REQ-SEN-026`
+- **Component**: `AltitudeFromPressureDeviceTest.kt`, `DevicesDatabaseManagerTest.java`, `EditDeviceDialogTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-5073`
+- **Test Description**:
+  1. *String Resource Naming Parity Across 9 Locales (`TST-SEN-026.1`)*:
+  • Verification that `devices_altitude_from_pressure` resolves to "Höhe aus Luftdruck" (DE), "Altitude from Pressure" (EN), "Altitud por presión" (ES), "Altitude par pression" (FR), "Altitudine da pressione" (IT), "気圧からの高度" (JA), "Hoogte uit luchtdruk" (NL), "Wysokość z ciśnienia" (PL), and "Altitude por pressão" (PT).
+  2. *Idempotent SQLite Name Migration (`TST-SEN-026.2`)*:
+  • Unit test in `DevicesDatabaseManagerTest` verifying that opening an existing `Devices.db` database containing `ALTITUDE_FROM_PRESSURE` with any legacy default name updates the row to `devices_altitude_from_pressure`, whereas custom user-defined names are strictly preserved without modification.
+  3. *Educational Operation Card in EditDeviceDialog (`TST-SEN-026.3`)*:
+  • Compose UI test or layout test in `EditDeviceDialogTest` verifying that viewing details for `ALTITUDE_FROM_PRESSURE` or `ALTITUDE_FROM_POSITION` renders the educational info card (`OutlinedCard`) with structured "How it works" and "Pros & Cons" sections, while other sensor types omit this section.
+  4. *9-Language Translation Parity for Educational Strings (`TST-SEN-026.4`)*:
+  • Verification in `TranslationParityTest` for all altitude explanation string keys (`device_altitude_explanation_title`, `device_altitude_how_it_works_header`, `device_altitude_pros_cons_header`, `device_altitude_pressure_how_it_works`, `device_altitude_pressure_pros_cons`, `device_altitude_position_how_it_works`, `device_altitude_position_pros_cons`) across all 9 supported locales.
+  5. *Clean-Room Regression Verification (`TST-SEN-026.5`)*:
+  • Full regression pass over sensor, device management, and dialog test suites confirming zero regressions in device pairing, sensor data delivery, and calibration workflows.
+
+
+
 
 
 

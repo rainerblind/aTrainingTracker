@@ -2469,6 +2469,41 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 **Invariants**: Zero mutation of raw wheel speed and distance accumulators, fresh install (`onCreate`) vs upgrade (`onUpgrade`) schema parity in `Devices.db`, zero cornering false positives, and 100% clean-room test pass rate.
 
 
+### REQ-SEN-026: Specialized Altitude Devices: Barometric Altimeter Naming Parity, Idempotent SQLite Migration & Educational Operation Details [Verified]
+- **Tests**: `TST-SEN-026` | **Tickets**: `ATT-5073`
+- **Implementation**: `strings_devices.xml` (all 9 locales), `strings.xml` (all 9 locales), `DevicesDatabaseManager.java`, `EditDeviceDialog.kt`
+- **Rationale**: Following the introduction of `ALTITUDE_FROM_POSITION` ("Topografische Höhe (DEM)"), the internal barometric altimeter (`ALTITUDE_FROM_PRESSURE`) remained named simply "Luftdruck" ("Air Pressure") via `R.string.devices_altitude_from_pressure`, creating a naming asymmetry and confusing athletes about what the sensor produces. Furthermore, athletes in the device details bottom sheet (`EditDeviceDialog.kt`) have no visibility into how specialized altitude devices work or their respective advantages and disadvantages (e.g. barometer smooth relative ascent vs. weather drift; DEM weather immunity vs. grid resolution) (ATT-5073, Parent Epic ATT-166, complementing `REQ-SEN-025` and `REQ-UI-149`):
+1. *Barometric Altimeter Naming Parity Across 9 Locales (`REQ-SEN-026.1`)*:
+• The system SHALL rename `devices_altitude_from_pressure` across all 9 supported application locales to reflect its functional role as an altitude sensor ("Höhe aus Luftdruck" in DE, "Altitude from Pressure" in EN, and equivalents in ES, FR, IT, JA, NL, PL, PT).
+2. *Idempotent SQLite Default Name Migration (`REQ-SEN-026.2`)*:
+• In `DevicesDatabaseManager`, the system SHALL execute an idempotent migration updating existing `ALTITUDE_FROM_PRESSURE` records in `Devices.db` whose name matches any known legacy default name ("Luftdruck", "Air Pressure", etc.) to the new localized string resource.
+• Any custom user-edited device name MUST NOT be overwritten or modified.
+3. *Educational Operation & Trade-Offs Details in EditDeviceDialog (`REQ-SEN-026.3`)*:
+• When viewing `EditDeviceDialog.kt` for `DeviceType.ALTITUDE_FROM_PRESSURE` or `DeviceType.ALTITUDE_FROM_POSITION`, the dialog SHALL display an educational `OutlinedCard` detailing:
+  a. "How it works" (`device_altitude_how_it_works_header`): Explanation of barometric formula + calibration vs. GPS position + DEM topographic grid matching.
+  b. "Pros & Cons" (`device_altitude_pros_cons_header`): Unbiased trade-offs (+ smooth relative response, zero vertical GPS jitter / - weather drift for barometer; + weather immunity, absolute height / - GPS accuracy dependency, bridge/cliff stepped response for DEM).
+4. *100% 9-Language Parity & M3 Typography (`REQ-SEN-026.4`)*:
+• All explanation strings SHALL maintain 100% translation parity across all 9 locales with literal `\n` linebreaks.
+• The card SHALL use Material 3 semantic color tokens (`surfaceVariant`, `onSurfaceVariant`) with accessible contrast.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-SEN-026`, extending `REQ-SEN-025` (*Pairable Position-Based Elevation Sensor*) and `REQ-UI-149` (*Modernized Modal Bottom Sheet Dialogs & Selection Flows*). Targets `strings_devices.xml`, `strings.xml`, `DevicesDatabaseManager.java`, and `EditDeviceDialog.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-45.1 (`ATT-5073`). Builds on `ATT-4859` (`REQ-SEN-025`, Sprint 2026-44.2).
+3. *Root Reason for Existing Formulation*: "Luftdruck" was inherited from the initial ANT+/BLE sensor stack. `EditDeviceDialog.kt` focused solely on hardware sensors with calibration parameters (wheel circumference), omitting educational guidance for virtual/internal sensors.
+4. *Preservation of Core Invariants*: Custom device names in `Devices.db` strictly preserved; sensor data delivery, calibration dispatch, and 100% test pass rate across all 9 locales remain invariant.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an existing user upgrade with default-named `ALTITUDE_FROM_PRESSURE` in `Devices.db`,
+• *When* the database is opened,
+• *Then* the device name updates to "Höhe aus Luftdruck" (or language equivalent), while custom user renames remain unmodified.
+• *Given* an athlete opening `EditDeviceDialog` for `ALTITUDE_FROM_PRESSURE` or `ALTITUDE_FROM_POSITION`,
+• *When* the dialog renders,
+• *Then* an educational card displays "How it works" and "Pros & Cons" explaining the sensor's measurement mechanism and trade-offs.
+
+**Invariants**: Custom device names preserved, sensor data delivery unchanged, 100% 9-language translation parity, zero crash on null device data.
+
+
+
 
 
 

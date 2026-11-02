@@ -92,7 +92,16 @@
     <string name="devices_location_GPS">端末 GPS (衛星)</string>
     <string name="devices_location_Network">端末位置情報 (ネットワーク/WiFi)</string>
     <string name="devices_location_GoogleFused">Google 位置情報 (Fused)</string>
-    <string name="devices_altitude_from_pressure">気圧</string>
+    <string name="devices_altitude_from_pressure">気圧からの高度</string>
+
+    <!-- Specialized Altitude Devices Explanations (ATT-5073, REQ-SEN-026) -->
+    <string name="device_altitude_explanation_title">このセンサーについて</string>
+    <string name="device_altitude_how_it_works_header">仕組み</string>
+    <string name="device_altitude_pros_cons_header">メリットとデメリット</string>
+    <string name="device_altitude_pressure_how_it_works">内蔵気圧計で大気圧を測定します。気圧計算式で相対的な高度変化を算出し、お気に入りの場所や手動で校正されます。</string>
+    <string name="device_altitude_pressure_pros_cons">+ 非常に高精度で滑らか、GPSの垂直ノイズなし、トンネル内でも機能。\n- 天候変化により時間経過で高度のドリフトが生じることがあります。</string>
+    <string name="device_altitude_position_how_it_works">GPS位置を保存されたルートのキャッシュまたはOpen-Meteoの標高モデル(DEM)と照合します。</string>
+    <string name="device_altitude_position_pros_cons">+ 天候や気圧ドリフトに影響されず、校正不要で正確な絶対標高を提供。\n- GPS精度に依存し、橋や急崖などでは段差や誤差が生じる場合があります。</string>
 
     <string name="devices_live_sensor_data_header">センサーデータ</string>
 
