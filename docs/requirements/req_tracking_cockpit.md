@@ -2385,9 +2385,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 
 ### REQ-TRK-049: Post-Workout State Cleansing, Breadcrumb Purge & Idle Service Dormancy [Verified]
-- **Tests**: `TST-TRK-049` | **Tickets**: `ATT-4926`
-- **Implementation**: `TrainingApplication.java`, `BANALServiceRepository.kt`, `MainActivityWithNavigation.kt`, `MyAccumulatorSensor.java`, `InstantaneousFilter.java`
-- **Rationale**: When an athlete completes or stops a workout and re-enters the app in `TrackingMode.READY`, lingering historical polylines, elevation profiles, and accumulator values create a confusing UI and cause phantom metric accumulation during idle periods. Clearing breadcrumbs on workout stop/abort, normalizing the service binding lifecycle, gating accumulator sensors to active tracking, and dispatching zero-value resets ensures a clean slate for upcoming sessions (ATT-4926, Parent Epic ATT-355, extending `REQ-TRK-001`, `REQ-TRK-002`, and refining `REQ-FIL-013`):
+- **Tests**: `TST-TRK-049` | **Tickets**: `ATT-4926`, `ATT-5080`
+- **Implementation**: `TrainingApplication.java`, `BANALServiceRepository.kt`, `MainActivityWithNavigation.kt`, `MyAccumulatorSensor.java`, `InstantaneousFilter.java`, `FilterManager.java`, `DefaultStringFormatter.java`, `SensorData.java`, `TrackingViewModel.kt`
+- **Rationale**: When an athlete completes or stops a workout and re-enters the app in `TrackingMode.READY`, lingering historical polylines, elevation profiles, and accumulator values create a confusing UI and cause phantom metric accumulation during idle periods. Clearing breadcrumbs on workout stop/abort, normalizing the service binding lifecycle, gating accumulator sensors to active tracking, dispatching zero-value resets, re-seeding accumulator filters from baseline values, and guarding against null formatted strings ensures a clean, crash-free slate for upcoming sessions (ATT-4926, ATT-5080, Parent Epic ATT-355, extending `REQ-TRK-001`, `REQ-TRK-002`, and refining `REQ-FIL-013`):
 1. *Map & Elevation Breadcrumb Cleansing (`REQ-TRK-049.1`)*:
 • `TrainingApplication` SHALL invoke `BANALServiceRepository.clearBreadcrumbs()` in `stopTracking()`, `trackingStopped()`, and `onTrackingAborted()`.
 • `BANALServiceRepository` SHALL clear `_currentTrack` and `_currentPathPoints` upon entering `TrackingMode.READY`.
@@ -2399,12 +2399,17 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 4. *Reset Notification & Filter Cache Invalidation (`REQ-TRK-049.4`)*:
 • `MyAccumulatorSensor.reset()` SHALL notify all registered `mSensorListeners` with `mZeroValue`.
 • `InstantaneousFilter.java` SHALL override `reset()` to invalidate cached telemetry on `FilterManager.resetAllFilters()`.
+• In `FilterManager.resetAllFilters()`, the system SHALL re-seed filters mapped to `MyAccumulatorSensor` with `sensor.getValue()` (`mZeroValue`, e.g. `0` -> `0:00:00`, `0.00`, etc.), ensuring accumulator fields retain their baseline zero values instead of displaying `--:--:--` on workout stop (ATT-5080).
+5. *Non-Null Formatter Fallback & Null-Safety Defenses (`REQ-TRK-049.5`)*:
+• `DefaultStringFormatter.format(String value)` SHALL return `"--"` instead of `null` when `value == null`, aligning with numeric formatters.
+• In `SensorData.java`, `getStringValue()` SHALL return `"--"` when `mStringValue` is null.
+• In `TrackingViewModel.applySensorData()`, `newFormattedValue` SHALL guard against Java nulls (`sensorData.stringValue ?: "--"`), preventing fatal `NullPointerException` crashes during Compose state updates (ATT-5080).
 
-**Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-049`, extending `REQ-TRK-001` (Start/Stop Lifecycle), `REQ-TRK-002` (Lap Lifecycle), and refining `REQ-FIL-013` (Session Reset Isolation). Targets `TrainingApplication.java`, `BANALServiceRepository.kt`, `MainActivityWithNavigation.kt`, `MyAccumulatorSensor.java`, and `InstantaneousFilter.java`.
-2. *Historical Origin & Commit Trace*: Commit `d937073c` and `ATT-3222` introduced filter reset protocol but omitted `InstantaneousFilter`. Commit `a6920388` introduced Compose tracking tabs where repeated `onResume()` binds bypassed the single-bind assumption.
-3. *Root Reason for Existing Formulation*: Breadcrumb clearing was originally deferred to `startTracking()` to preserve visual map context immediately after stopping; however, with modern multi-tab navigation, this causes stale paths and non-zero readouts when reopening the app.
-4. *Preservation of Core Invariants*: Active workout tracking, auto-pause behavior, and pre-start live rolling sensor readouts (HR, cadence, instantaneous power) are preserved per `REQ-FIL-013`.
+### Requirement Archaeology & Chesterton's Fence Audit
+1. *Original Requirement ID & Target*: Amends `REQ-TRK-049.4` (*Reset Notification & Filter Cache Invalidation*) and `REQ-FIL-013` (*Session Reset Isolation*), Parent Epic `ATT-355`. Targets `FilterManager.java`, `DefaultStringFormatter.java`, `SensorData.java`, and `TrackingViewModel.kt`.
+2. *Historical Origin & Commit Trace*: Traced to `080d68c3` (ATT-4926, Sprint 2026-44.2), which introduced `InstantaneousFilter.reset() { mValue = null; }` to eliminate stale workout readouts, but inadvertently wiped accumulator zero values and exposed `DefaultStringFormatter`'s null return.
+3. *Root Reason for Existing Formulation*: ATT-4926 intended to clear lingering historical metrics upon workout completion, but did not distinguish between stateless live metrics (which should clear to null/dash) and cumulative metrics (which have a defined baseline `mZeroValue`).
+4. *Preservation of Core Invariants*: Stale live telemetry from disconnected sensors continues to clear to `--`; accumulators reliably display baseline zeroes (`0:00:00`, `0.00 km`, `1`) in `READY` mode; zero NPE crashes on Compose state updates.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an active workout with map breadcrumbs and elevation points,
@@ -2413,9 +2418,12 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Given* the app running in `TrackingMode.READY`,
 • *When* background timer ticks or location updates arrive,
 • *Then* accumulator sensors do not increment.
-• *Given* accumulator sensors with non-zero historical totals,
-• *When* session reset is triggered,
-• *Then* zero values are published to listeners and filter caches are cleared.
+• *Given* an active workout with accumulator sensors running,
+• *When* the workout is stopped and `resetAllFilters()` executes,
+• *Then* accumulator fields display baseline zero values (`0:00:00`, `0.00 km`, `1`) in `TrackingMode.READY` instead of `--:--:--`.
+• *Given* string-valued sensor data with null value during filter reset,
+• *When* `applySensorData()` processes the update in `TrackingViewModel`,
+• *Then* `newFormattedValue` falls back to `"--"` and Compose state updates proceed without `NullPointerException`.
 
 **Invariants**: Unaffected active tracking and auto-pause, continuous pre-start live rolling sensor display (HR, power, cadence), and 100% clean-room test pass rate.
 

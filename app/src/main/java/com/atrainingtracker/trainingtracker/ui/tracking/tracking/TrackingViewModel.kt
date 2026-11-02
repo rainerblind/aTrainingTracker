@@ -672,7 +672,7 @@ class TrackingViewModel @JvmOverloads constructor(
                 val newFormattedValue = if (isPedalBalance && newPedalBalanceState != null) {
                     PedalPowerBalanceMath.formatBalanceString(newPedalBalanceState)
                 } else {
-                    sensorData.stringValue
+                    sensorData.stringValue ?: "--"
                 }
                 val newZoneColor = calculateZoneColor(sensorData, activityType)
                 val zoneType = getZoneType(sensorData.sensorType, activityType.sportType)

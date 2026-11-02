@@ -53,7 +53,7 @@ public class SensorData<T> {
     }
 
     public String getStringValue() {
-        return mStringValue;
+        return mStringValue != null ? mStringValue : "--";
     }
 
     public String getDeviceName() {

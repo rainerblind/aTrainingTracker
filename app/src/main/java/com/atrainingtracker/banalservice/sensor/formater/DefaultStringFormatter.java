@@ -23,7 +23,7 @@ package com.atrainingtracker.banalservice.sensor.formater;
 public class DefaultStringFormatter implements MyFormatter<String> {
     @Override
     public String format(String value) {
-        return value;
+        return value != null ? value : "--";
     }
 
 }

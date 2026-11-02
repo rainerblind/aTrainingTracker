@@ -1351,8 +1351,8 @@
 
 ### TST-TRK-049: **Post-Workout State Cleansing, Breadcrumb Purge & Idle Service Dormancy Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-049`
-- **Component**: `BANALServiceRepositoryTest.kt`, `BANALServiceBindingLifecycleTest.kt`, `MyAccumulatorSensorTrackingGateTest.kt`, `AccumulatorResetNotificationTest.kt`
-- **Jira**: `ATT-4926`
+- **Component**: `BANALServiceRepositoryTest.kt`, `BANALServiceBindingLifecycleTest.kt`, `MyAccumulatorSensorTrackingGateTest.kt`, `AccumulatorResetNotificationTest.kt`, `FilterManagerAccumulatorResetTest.kt`, `TrackingViewModelSensorNullSafetyTest.kt`
+- **Jira**: `ATT-4926`, `ATT-5080`
 - **Test Description**:
   1. *Breadcrumb & Elevation Path Cleansing on Session End (`TST-TRK-049.1`)*:
   • Unit test in `BANALServiceRepositoryTest` verifying that invoking `clearBreadcrumbs()`, receiving `TrackingMode.READY`, and completing a workout empties `_currentTrack` and `_currentPathPoints`.
@@ -1362,6 +1362,9 @@
   • Unit test in `MyAccumulatorSensorTrackingGateTest` verifying that in `TrackingMode.READY`, ticks to `MyAccumulatorSensor.increment()` with `mRespectPause = true` do not increment value when `!TrainingApplication.isTracking()`.
   4. *Reset Notification & InstantaneousFilter Reset (`TST-TRK-049.4`)*:
   • Unit test verifying `MyAccumulatorSensor.reset()` notifies listeners with `mZeroValue`, and `InstantaneousFilter.reset()` clears cached values.
+  5. *Accumulator Reset Baseline Preservation & Null String Safety (`TST-TRK-049.5`)*:
+  • Unit test in `FilterManagerTest` verifying that calling `FilterManager.resetAllFilters()` causes filters attached to `MyAccumulatorSensor` to retain/re-seed `mZeroValue` (e.g. `0` -> formatted `0:00:00`), while non-accumulator filters reset to `null` (`--`).
+  • Unit test in `TrackingViewModelSensorNullSafetyTest` verifying that `DefaultStringFormatter.format(null)` returns `"--"`, and `TrackingViewModel.applySensorData()` handles null or empty sensor string values without throwing `NullPointerException`.
 
 
 ### TST-TRK-050: **Indirect Tire Pressure Monitoring (iTPMS) Gated Estimator, CUSUM Detector & Baseline Verification** [Verified]
