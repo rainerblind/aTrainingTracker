@@ -2207,6 +2207,7 @@
     <string name="altitude_calibration_reference_label">Altitude de referência</string>
     <string name="altitude_calibration_location_name">Nome do local (opcional)</string>
     <string name="altitude_calibration_save_location">Salvar como local conhecido</string>
+    <string name="altitude_calibration_matched_location">Local conhecido reconhecido: %1$s</string>
     <string name="altitude_calibration_action">Calibrar</string>
     <string name="altitude_calibrated_success">Altitude calibrada para %1$s</string>
 

@@ -550,7 +550,20 @@ class TrackingTabsViewModel(
         locationName: String? = null,
         saveAsKnownLocation: Boolean = false
     ) {
-        if (saveAsKnownLocation) {
+        val matched = locationCalibrationStatus.value
+        if (matched != null) {
+            viewModelScope.launch(Dispatchers.IO) {
+                val db = KnownLocationsDatabaseManager.getInstance(getApplication())
+                db.updateLocation(
+                    matched.locationId,
+                    matched.locationName,
+                    referenceAltitudeMeters,
+                    ElevationSource.MANUAL_USER,
+                    true
+                )
+                knownLocationsRepo?.loadLocations()
+            }
+        } else if (saveAsKnownLocation) {
             val location = banalServiceRepository.currentLocation.value
             if (location != null) {
                 viewModelScope.launch(Dispatchers.IO) {

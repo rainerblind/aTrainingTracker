@@ -2210,6 +2210,7 @@
     <string name="altitude_calibration_reference_label">Wysokość odniesienia</string>
     <string name="altitude_calibration_location_name">Nazwa lokalizacji (opcjonalnie)</string>
     <string name="altitude_calibration_save_location">Zapisz jako ulubione miejsce</string>
+    <string name="altitude_calibration_matched_location">Rozpoznane ulubione miejsce: %1$s</string>
     <string name="altitude_calibration_action">Kalibruj</string>
     <string name="altitude_calibrated_success">Skalibrowano wysokość do %1$s</string>
 

@@ -1277,8 +1277,8 @@
 
 ### TST-TRK-047: **Manual Altitude Calibration with Known Location Persistence & Drift Correction Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-047`
-- **Component**: `SensorSourceDialogTest.kt`, `KnownLocationsDatabaseManagerTest.kt`, `TrackerServiceAltitudeTest.kt`, `LiveWorkoutSessionTest.kt`, `TranslationParityTest.kt`
-- **Jira**: `ATT-4845`
+- **Component**: `SensorSourceDialogAltitudeCalibrationTest.kt`, `KnownLocationsDatabaseManagerTest.kt`, `TrackingTabsViewModelLocationTest.kt`, `TrackerServiceAltitudeTest.kt`, `LiveWorkoutSessionTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-4845`, `ATT-5072`
 - **Test Description**:
   1. *Header Dialog Manual Calibration & State Binding (`TST-TRK-047.1`)*:
   • Unit test in `SensorSourceDialogTest` verifying:
@@ -1300,6 +1300,10 @@
     - Running ascent and descent metrics are recomputed without false vertical spikes.
   5. *9-Language Localization Parity (`TST-TRK-047.5`)*:
   • Verification in `TranslationParityTest` for `altitude_calibration_title`, `altitude_calibration_reference_label`, `altitude_calibration_location_name`, `altitude_calibration_save_location`, `altitude_calibration_action`, and `altitude_calibrated_success` across all 9 locales.
+  6. *Save as Known Location Unchecked by Default & Conditional Name Input (`TST-TRK-047.6`)*:
+  • Unit test in `SensorSourceDialogAltitudeCalibrationTest` verifying that when `matchedLocation == null`, the "Save as Known Location" checkbox defaults to unchecked (`false`), and the location name input field is hidden until explicitly checked (ATT-5072).
+  7. *Matched Known Location Recognition, Pre-fill & Elevation Update (`TST-TRK-047.7`)*:
+  • Unit test in `SensorSourceDialogAltitudeCalibrationTest` and `TrackingTabsViewModelTest` verifying that when `matchedLocation != null`, the dialog displays the matched location name, hides the redundant save checkbox, pre-fills reference altitude from the stored location, and calibration updates the existing `KnownLocations.db` record with `ElevationSource.MANUAL_USER` (ATT-5072).
 
 
 ### TST-SEN-025: **Position-Based Elevation Sensor & Dedicated Spatial DEM Cache Test Suite** [Verified]

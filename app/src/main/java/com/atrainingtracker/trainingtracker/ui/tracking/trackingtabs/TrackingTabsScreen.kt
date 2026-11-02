@@ -663,6 +663,7 @@ fun TrackingTabsScreen(
                             allTelemetry = allTelemetry,
                             allDevices = allDevices,
                             currentAltitude = currentAltitude,
+                            matchedLocation = locationCalibrationStatus,
                             onDeviceClick = { trackingTabsViewModel.onEditDevice(it) },
                             onCalibrateAltitude = { alt, name, save ->
                                 trackingTabsViewModel.calibrateAltitude(alt, name, save)
@@ -705,6 +706,7 @@ fun TrackingTabsScreen(
                                             allTelemetry = allTelemetry,
                                             allDevices = allDevices,
                                             currentAltitude = currentAltitude,
+                                            matchedLocation = locationCalibrationStatus,
                                             onDeviceClick = { trackingTabsViewModel.onEditDevice(it) },
                                             onCalibrateAltitude = { alt, name, save ->
                                                 trackingTabsViewModel.calibrateAltitude(alt, name, save)

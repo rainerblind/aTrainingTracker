@@ -28,6 +28,7 @@ import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager
 import com.atrainingtracker.trainingtracker.elevation.ElevationSource
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
@@ -61,6 +62,7 @@ class TrackingTabsViewModelLocationTest {
     private val mockBanalRepo = mockk<BANALServiceRepository>(relaxed = true)
     private val mockDevicesRepo = mockk<DeviceDataRepository>(relaxed = true)
     private val mockKnownLocationsRepo = mockk<KnownLocationsRepository>(relaxed = true)
+    private val mockKnownLocationsDbManager = mockk<KnownLocationsDatabaseManager>(relaxed = true)
 
     private val trackingModeLiveData = MutableLiveData<TrackingMode>()
     private val activityTypeFlow = MutableStateFlow(ActivityType.getDefaultActivityType())
@@ -95,6 +97,9 @@ class TrackingTabsViewModelLocationTest {
         every { TrainingApplication.removeDisplaySettingsChangeListener(any()) } answers {
             registeredDisplaySettingsListener = null
         }
+
+        mockkStatic(KnownLocationsDatabaseManager::class)
+        every { KnownLocationsDatabaseManager.getInstance(any()) } returns mockKnownLocationsDbManager
 
         mockkStatic(Location::class)
         every { Location.distanceBetween(any(), any(), any(), any(), any()) } answers {
@@ -415,5 +420,71 @@ class TrackingTabsViewModelLocationTest {
         verify(exactly = 2) { mockBanalRepo.calibrateAltimeter(507.0) }
 
         job.cancel()
+    }
+
+    /**
+     * TST-TRK-047.7: When inside a matched known location, calibrateAltitude updates the existing
+     * database record with ElevationSource.MANUAL_USER and isLocked = true, reloads locations,
+     * and dispatches altimeter calibration.
+     */
+    @Test
+    fun testCalibrateAltitude_withMatchedLocation_updatesExistingRecordAndCalibrates() = runTest {
+        val homeLocation = KnownLocationItem(
+            id = 42L,
+            name = "Gipfel",
+            altitude = 1200.0,
+            radius = 100,
+            latLng = LatLng(47.5, 11.0),
+            hitCount = 5,
+            isLocked = false,
+            source = ElevationSource.INTERNET_DEM
+        )
+        knownLocationsFlow.value = listOf(homeLocation)
+        currentLocationFlow.value = LatLng(47.5, 11.0)
+
+        val viewModel = createViewModel()
+        val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.locationCalibrationStatus.collect {}
+        }
+        testScheduler.advanceUntilIdle()
+
+        assertNotNull(viewModel.locationCalibrationStatus.value)
+        assertEquals(42L, viewModel.locationCalibrationStatus.value?.locationId)
+
+        // User calibrates to 1215.0 meters at the matched location
+        viewModel.calibrateAltitude(referenceAltitudeMeters = 1215.0)
+        testScheduler.advanceUntilIdle()
+
+        // Verify database update on existing ID
+        verify(exactly = 1) {
+            mockKnownLocationsDbManager.updateLocation(
+                42L,
+                "Gipfel",
+                1215.0,
+                ElevationSource.MANUAL_USER,
+                true
+            )
+        }
+        coVerify(atLeast = 1) { mockKnownLocationsRepo.loadLocations() }
+        verify { mockBanalRepo.calibrateAltimeter(1215.0) }
+
+        job.cancel()
+    }
+
+    /**
+     * TST-TRK-047.6: When no matched location exists and saveAsKnownLocation is false,
+     * calibrateAltitude only calibrates the altimeter without touching the database.
+     */
+    @Test
+    fun testCalibrateAltitude_withoutMatchedLocation_calibratesDirectly() = runTest {
+        currentLocationFlow.value = null
+        val viewModel = createViewModel()
+
+        viewModel.calibrateAltitude(referenceAltitudeMeters = 650.0, saveAsKnownLocation = false)
+        testScheduler.advanceUntilIdle()
+
+        verify(exactly = 0) { mockKnownLocationsDbManager.updateLocation(any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { mockKnownLocationsDbManager.upsertLocationByGeofence(any(), any(), any(), any(), any(), any()) }
+        verify { mockBanalRepo.calibrateAltimeter(650.0) }
     }
 }

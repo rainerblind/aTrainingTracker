@@ -2263,14 +2263,22 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 
 ### REQ-TRK-047: Cockpit Manual Altitude Calibration with Permanent Known Location Persistence and Retroactive Piecewise-Linear Drift Correction [Verified]
-- **Tests**: `TST-TRK-047` | **Tickets**: `ATT-4845`
+- **Tests**: `TST-TRK-047` | **Tickets**: `ATT-4845`, `ATT-5072`
 - **Implementation**: `SensorSourceDialog.kt`, `SensorStatus.kt`, `AltitudeFromPressureDevice.java`, `TrackerService.java`, `LiveWorkoutSession.java`, `WorkoutSamplesDatabaseManager.java`, `WorkoutSummariesDatabaseManager.java`, `BANALServiceRepository.kt`, `KnownLocationsDatabaseManager.java`
 - **Rationale**: When passing a landmark with known altitude during outdoor workouts, athletes SHALL be able to trigger manual altimeter calibration from the tracking cockpit altitude icon, permanently persist the landmark to Known Locations (`KnownLocations.db`), and apply retroactive elevation history correction without step discontinuities or false ascent/descent spikes (ATT-4845, Parent Epic ATT-166, extending `REQ-UI-199` and `REQ-CON-017`):
 1. *Cockpit Header Manual Altitude Calibration & Geofence Persistence (`REQ-TRK-047.1`)*:
 • When tapping the `SensorType.ALTITUDE` sensor icon in the tracking header (`SensorStatus`), `SensorSourceDialog.kt` SHALL render a dedicated "Calibrate Altitude" input section.
 • The reference altitude input SHALL pre-fill with the current altitude reading formatted in the athlete's configured unit (`m` or `ft`) via canonical `AltitudeFormatter` per Rule 36.
-• The dialog SHALL provide an optional location name field (defaulting to reverse-geocoded or coordinate label) and a toggle to save to Known Locations.
-• When confirmed with save enabled, the system SHALL persist `(current LatLng, referenceAltitudeMeters, name)` to `KnownLocationsDatabaseManager` with `ElevationSource.MANUAL_USER` and `isLocked = true` so subsequent passes auto-calibrate automatically.
+• When not at a matched known location (`matchedKnownLocation == null`):
+  - The "Als Lieblingsort speichern" (*Save as Known Location*) checkbox SHALL be unchecked (`false`) by default (ATT-5072).
+  - The location name text input field SHALL be conditionally displayed and enabled only when the "Save as Known Location" checkbox is checked (`true`).
+  - When confirmed with save unchecked, the system SHALL dispatch altimeter calibration directly without persisting to `KnownLocations.db`.
+  - When confirmed with save checked, the system SHALL persist `(current LatLng, referenceAltitudeMeters, name)` to `KnownLocationsDatabaseManager` with `ElevationSource.MANUAL_USER` and `isLocked = true`.
+• When at a matched known location (`matchedKnownLocation != null`):
+  - The dialog SHALL display the matched location name.
+  - The redundant "Save as Known Location" checkbox and new location name input field SHALL be hidden.
+  - The reference altitude input SHALL pre-fill with the matched location's stored reference altitude.
+  - When confirmed, the system SHALL update the existing `KnownLocations.db` record with the calibrated elevation (`ElevationSource.MANUAL_USER`, `isLocked = true`) and dispatch altimeter calibration.
 • The system SHALL dispatch immediate calibration to `AltitudeFromPressureDevice.calibrate(referenceAltitudeMeters)` via `BANALServiceRepository.calibrateAltimeter`.
 2. *Retroactive Workout History Elevation Correction (`REQ-TRK-047.2`)*:
 • Let $t_1$ be the current calibration timestamp, $h_{\text{ref}}$ the target reference elevation, $h_{\text{baro}}(t_1)$ the pre-calibration altitude reading, and $\Delta h = h_{\text{ref}} - h_{\text{baro}}(t_1)$.

@@ -61,6 +61,7 @@ import com.atrainingtracker.trainingtracker.ui.components.MetricLayout
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
+import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.LocationCalibrationStatus
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,6 +71,7 @@ fun SensorSourceDialog(
     allTelemetry: List<DeviceTelemetry>,  // telemetry of all active devices
     allDevices: List<DeviceUiData>,       // all devices found in the database
     currentAltitude: Double? = null,
+    matchedLocation: LocationCalibrationStatus? = null,
     onDeviceClick: (Long) -> Unit,
     onCalibrateAltitude: ((referenceAltitudeMeters: Double, locationName: String?, saveAsKnownLocation: Boolean) -> Unit)? = null,
     onDismiss: () -> Unit
@@ -126,16 +128,17 @@ fun SensorSourceDialog(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 0. Manual Altitude Calibration Section (ATT-4845 / REQ-TRK-047)
+            // 0. Manual Altitude Calibration Section (ATT-4845, ATT-5072 / REQ-TRK-047)
             if (sensorType == SensorType.ALTITUDE && onCalibrateAltitude != null) {
-                var altitudeInput by remember(currentAltitude) {
-                    val initialFormatted = if (currentAltitude != null && java.lang.Double.isFinite(currentAltitude)) {
-                        AltitudeFormatter().format(currentAltitude)
+                var altitudeInput by remember(currentAltitude, matchedLocation) {
+                    val initialAltitude = matchedLocation?.referenceAltitude ?: currentAltitude
+                    val initialFormatted = if (initialAltitude != null && java.lang.Double.isFinite(initialAltitude)) {
+                        AltitudeFormatter().format(initialAltitude)
                     } else ""
                     mutableStateOf(initialFormatted)
                 }
                 var locationNameInput by remember { mutableStateOf("") }
-                var saveLocation by remember { mutableStateOf(true) }
+                var saveLocation by remember { mutableStateOf(false) }
 
                 Card(
                     colors = CardDefaults.cardColors(
@@ -157,6 +160,17 @@ fun SensorSourceDialog(
                             color = MaterialTheme.colorScheme.primary
                         )
 
+                        if (matchedLocation != null) {
+                            Text(
+                                text = stringResource(
+                                    id = R.string.altitude_calibration_matched_location,
+                                    matchedLocation.locationName
+                                ),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
                         OutlinedTextField(
                             value = altitudeInput,
                             onValueChange = { altitudeInput = it },
@@ -176,29 +190,33 @@ fun SensorSourceDialog(
                             modifier = Modifier.fillMaxWidth()
                         )
 
-                        OutlinedTextField(
-                            value = locationNameInput,
-                            onValueChange = { locationNameInput = it },
-                            label = { Text(stringResource(id = R.string.altitude_calibration_location_name)) },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                        if (matchedLocation == null) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { saveLocation = !saveLocation }
+                            ) {
+                                Checkbox(
+                                    checked = saveLocation,
+                                    onCheckedChange = { saveLocation = it }
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    text = stringResource(id = R.string.altitude_calibration_save_location),
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
 
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { saveLocation = !saveLocation }
-                        ) {
-                            Checkbox(
-                                checked = saveLocation,
-                                onCheckedChange = { saveLocation = it }
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                text = stringResource(id = R.string.altitude_calibration_save_location),
-                                style = MaterialTheme.typography.bodyMedium
-                            )
+                            if (saveLocation) {
+                                OutlinedTextField(
+                                    value = locationNameInput,
+                                    onValueChange = { locationNameInput = it },
+                                    label = { Text(stringResource(id = R.string.altitude_calibration_location_name)) },
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
                         }
 
                         Button(
@@ -213,7 +231,7 @@ fun SensorSourceDialog(
                                     onCalibrateAltitude(
                                         altitudeMeters,
                                         locationNameInput.takeIf { it.isNotBlank() },
-                                        saveLocation
+                                        saveLocation && matchedLocation == null
                                     )
                                     onDismiss()
                                 }

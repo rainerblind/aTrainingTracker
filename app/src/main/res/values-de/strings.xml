@@ -2294,6 +2294,7 @@
     <string name="altitude_calibration_reference_label">Referenzhöhe</string>
     <string name="altitude_calibration_location_name">Standortname (optional)</string>
     <string name="altitude_calibration_save_location">Als Lieblingsort speichern</string>
+    <string name="altitude_calibration_matched_location">Erkannter Lieblingsort: %1$s</string>
     <string name="altitude_calibration_action">Kalibrieren</string>
     <string name="altitude_calibrated_success">Höhe auf %1$s kalibriert</string>
 
