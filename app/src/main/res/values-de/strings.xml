@@ -2275,7 +2275,6 @@
 
     <!-- Sensor Field Width & Row Split (ATT-4861, REQ-UI-437) -->
     <string name="sensor_field_width_title">Breitenverhältnis</string>
-    <string name="sensor_field_row_split_presets">Zeilenaufteilung</string>
     <string name="sensor_field_relative_weight">Relative Breite</string>
 
     <!-- Zone History (ATT-4844, REQ-SET-082) -->

@@ -2190,7 +2190,6 @@
 
     <!-- Sensor Field Width & Row Split (ATT-4861, REQ-UI-437) -->
     <string name="sensor_field_width_title">Proporción de ancho</string>
-    <string name="sensor_field_row_split_presets">Preajustes de división de fila</string>
     <string name="sensor_field_relative_weight">Ancho relativo</string>
 
     <!-- Zone History (ATT-4844, REQ-SET-082) -->

@@ -2188,7 +2188,6 @@
 
     <!-- Sensor Field Width & Row Split (ATT-4861, REQ-UI-437) -->
     <string name="sensor_field_width_title">Proporção de largura</string>
-    <string name="sensor_field_row_split_presets">Predefinições de divisão de linha</string>
     <string name="sensor_field_relative_weight">Largura relativa</string>
 
     <!-- Zone History (ATT-4844, REQ-SET-082) -->

@@ -619,10 +619,10 @@ class EditSensorFieldViewModelTest {
     }
 
     /**
-     * TST-UI-437.3: Quick row split presets update complementary weights on both fields sharing a row.
+     * TST-UI-437.3: Editing existing field updates relative colWeight and persists without sibling update (ATT-5077).
      */
     @Test
-    fun testRowSplit_twoFieldRow_presetsUpdateComplementaryWeights() = runTest {
+    fun testColWeight_editField_updatesColWeightAndPersistsWithoutSiblingUpdate() = runTest {
         val field1 = SensorFieldConfig(
             sensorFieldId = 10L,
             rowNr = 1,
@@ -634,36 +634,16 @@ class EditSensorFieldViewModelTest {
             sourceDeviceId = -1,
             colWeight = 1.0f
         )
-        val field2 = SensorFieldConfig(
-            sensorFieldId = 11L,
-            rowNr = 1,
-            colNr = 2,
-            viewSize = ViewSize.NORMAL,
-            sensorType = SensorType.CADENCE,
-            filterType = FilterType.INSTANTANEOUS,
-            filterConstant = 1.0,
-            sourceDeviceId = -1,
-            colWeight = 1.0f
-        )
         every { trackingViewsRepo.getSensorFieldConfig(10L) } returns flowOf(field1)
-        every { trackingViewsRepo.getSensorFieldConfigsForView(1L) } returns flowOf(listOf(field1, field2))
 
         val viewModel = createViewModel(sensorFieldId = 10L)
         testDispatcher.scheduler.advanceUntilIdle()
 
-        assertTrue("Must detect two-field row", viewModel.uiState.value.isTwoFieldRow)
-        assertTrue("Field 10 is left field", viewModel.uiState.value.isLeftField)
-        assertEquals(11L, viewModel.uiState.value.siblingFieldId)
-
-        // Select 3/4 : 1/4 split (Left 3f, Right 1f)
-        viewModel.onRowSplitSelected(3.0f, 1.0f)
-        assertEquals(3.0f, viewModel.uiState.value.colWeight, 0.001f)
-        assertEquals(1.0f, viewModel.uiState.value.siblingColWeight ?: 0f, 0.001f)
-
-        // Select 1/3 : 2/3 split (Left 1f, Right 2f)
-        viewModel.onRowSplitSelected(1.0f, 2.0f)
         assertEquals(1.0f, viewModel.uiState.value.colWeight, 0.001f)
-        assertEquals(2.0f, viewModel.uiState.value.siblingColWeight ?: 0f, 0.001f)
+
+        // Select 2x relative weight
+        viewModel.onColWeightChanged(2.0f)
+        assertEquals(2.0f, viewModel.uiState.value.colWeight, 0.001f)
 
         viewModel.saveChanges()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -679,9 +659,11 @@ class EditSensorFieldViewModelTest {
                 newFilterConstant = any(),
                 showValue = any(),
                 showBar = any(),
-                colWeight = 1.0f
+                colWeight = 2.0f
             )
-            trackingViewsRepo.updateColWeight(11L, 2.0f)
+        }
+        coVerify(exactly = 0) {
+            trackingViewsRepo.updateColWeight(any(), any())
         }
     }
 }

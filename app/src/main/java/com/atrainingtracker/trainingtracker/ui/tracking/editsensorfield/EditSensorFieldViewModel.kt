@@ -129,11 +129,7 @@ data class EditDialogUiState(
     val isCustomFilterExpanded: Boolean = false,
     val showValue: Boolean = true,
     val showBar: Boolean = false,
-    val colWeight: Float = 1.0f,
-    val isTwoFieldRow: Boolean = false,
-    val siblingFieldId: Long? = null,
-    val siblingColWeight: Float? = null,
-    val isLeftField: Boolean = true
+    val colWeight: Float = 1.0f
 ) {
     val isBarSupported: Boolean
         get() = TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(selectedSensorType, sportType)
@@ -293,12 +289,6 @@ class EditSensorFieldViewModel(
 
             val initialPreset = resolveFilterPreset(initialConfig.filterType, displayConstant, initialUnit)
 
-            val allConfigs = trackingViewsRepository.getSensorFieldConfigsForView(tabViewId).firstOrNull() ?: emptyList()
-            val fieldsInRow = allConfigs.filter { it.rowNr == initialConfig.rowNr }.sortedBy { it.colNr }
-            val isTwo = fieldsInRow.size == 2
-            val sibling = if (isTwo) fieldsInRow.find { it.sensorFieldId != initialConfig.sensorFieldId } else null
-            val isLeft = fieldsInRow.firstOrNull()?.sensorFieldId == initialConfig.sensorFieldId
-
             val sportType = activityType.sportType
             val isBarSupported = TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(initialConfig.sensorType, sportType)
             val showValue = if (isBarSupported) initialConfig.showValue else true
@@ -319,28 +309,13 @@ class EditSensorFieldViewModel(
                 isCustomFilterExpanded = (initialPreset == FilterPreset.CUSTOM),
                 showValue = showValue,
                 showBar = showBar,
-                colWeight = initialConfig.colWeight,
-                isTwoFieldRow = isTwo,
-                siblingFieldId = sibling?.sensorFieldId,
-                siblingColWeight = sibling?.colWeight,
-                isLeftField = isLeft
+                colWeight = initialConfig.colWeight
             )
         }
     }
 
     fun onColWeightChanged(weight: Float) {
         _uiState.update { it.copy(colWeight = if (weight > 0f) weight else 1.0f) }
-    }
-
-    fun onRowSplitSelected(leftWeight: Float, rightWeight: Float) {
-        val myWeight = if (_uiState.value.isLeftField) leftWeight else rightWeight
-        val siblingWeight = if (_uiState.value.isLeftField) rightWeight else leftWeight
-        _uiState.update {
-            it.copy(
-                colWeight = myWeight,
-                siblingColWeight = siblingWeight
-            )
-        }
     }
 
     fun onSensorTypeChanged(newSensorType: SensorType) {
@@ -683,9 +658,6 @@ class EditSensorFieldViewModel(
                     showBar = showBar,
                     colWeight = colWeight
                 )
-                if (currentState.isTwoFieldRow && currentState.siblingFieldId != null && currentState.siblingColWeight != null) {
-                    trackingViewsRepository.updateColWeight(currentState.siblingFieldId, currentState.siblingColWeight)
-                }
             }
         }
     }
