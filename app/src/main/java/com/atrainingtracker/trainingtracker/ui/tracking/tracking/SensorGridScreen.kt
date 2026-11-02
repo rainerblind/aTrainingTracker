@@ -63,6 +63,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Warning
+import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents
 import androidx.compose.material.icons.filled.DirectionsRun
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Navigation
@@ -247,6 +249,7 @@ fun SensorGridScreen(
     val cockpitStatus = remember(screenMode, trackingMode, isAutoPaused) {
         SensorGridStatusResolver.resolveCockpitStatus(screenMode, trackingMode, isAutoPaused)
     }
+    val activeTpmsAlert by WorkoutNavigationEvents.tpmsAlert.collectAsState(initial = null)
     val gridAlpha = remember(screenMode, trackingMode) {
         SensorGridStatusResolver.resolveGridAlpha(screenMode, trackingMode)
     }
@@ -571,6 +574,17 @@ fun SensorGridScreen(
                             .padding(top = if (state.showNavigationHints) 64.dp else 8.dp)
                     )
                 }
+
+                // Indirect Tire Pressure Monitoring (iTPMS) Alert Banner (REQ-TRK-050 / ATT-4880)
+                if (activeTpmsAlert != null) {
+                    TpmsAlertBanner(
+                        alert = activeTpmsAlert!!,
+                        onDismiss = { WorkoutNavigationEvents.consumeTpmsAlert() },
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = if (state.showNavigationHints || cockpitStatus != null) 72.dp else 8.dp)
+                    )
+                }
             }
         } else {
         BottomSheetScaffold(
@@ -737,10 +751,12 @@ fun SensorGridScreen(
                                     }
                                 })
                                 maxColNr = fieldState.colNr
-                                Box(modifier = Modifier.weight(1f)) {
+                                val effectiveWeight = if (fieldState.colWeight > 0f) fieldState.colWeight else 1.0f
+                                Box(modifier = Modifier.weight(effectiveWeight).fillMaxHeight()) {
                                     val isSelected = selectedFieldForMove?.sensorFieldId == fieldState.sensorFieldId
                                     SensorFieldView(
                                         fieldState = fieldState,
+                                        modifier = Modifier.fillMaxHeight(),
                                         screenMode = screenMode,
                                         isSelectedForMove = isSelected,
                                         shape = effectiveShape,
@@ -979,6 +995,17 @@ fun SensorGridScreen(
                     )
                 }
 
+                // Indirect Tire Pressure Monitoring (iTPMS) Alert Banner (REQ-TRK-050 / ATT-4880)
+                if (activeTpmsAlert != null) {
+                    TpmsAlertBanner(
+                        alert = activeTpmsAlert!!,
+                        onDismiss = { WorkoutNavigationEvents.consumeTpmsAlert() },
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = if (state.showNavigationHints || cockpitStatus != null) 72.dp else 8.dp)
+                    )
+                }
+
                 // Bottom swipe-up gesture detector & tap-to-expand strip (REQ-UI-359 / ATT-3341)
                 if (shouldShowBottomSheet && scaffoldState.bottomSheetState.currentValue != SheetValue.Expanded) {
                     var totalDragY by remember { mutableFloatStateOf(0f) }
@@ -1055,9 +1082,11 @@ private fun SensorGridContent(
                 horizontalArrangement = if (effectiveSpacing > 0.dp) Arrangement.spacedBy(effectiveSpacing) else Arrangement.Start
             ) {
                 fieldsInThisRow.forEach { fieldState ->
-                    Box(modifier = Modifier.weight(1f)) {
+                    val effectiveWeight = if (fieldState.colWeight > 0f) fieldState.colWeight else 1.0f
+                    Box(modifier = Modifier.weight(effectiveWeight).fillMaxHeight()) {
                         SensorFieldView(
                             fieldState = fieldState,
+                            modifier = Modifier.fillMaxHeight(),
                             screenMode = screenMode,
                             isSelectedForMove = false,
                             shape = effectiveShape,
@@ -1153,6 +1182,83 @@ fun AutoPauseHudBanner(
 }
 
 /**
+ * Banner displaying indirect tire pressure monitoring (iTPMS) alerts (REQ-TRK-050, ATT-4880).
+ */
+@Composable
+fun TpmsAlertBanner(
+    alert: WorkoutNavigationEvents.TpmsAlert,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val (containerColor, contentColor, borderColor) = when (alert.severity) {
+        WorkoutNavigationEvents.TpmsAlertSeverity.CRITICAL -> {
+            Triple(
+                MaterialTheme.colorScheme.errorContainer,
+                MaterialTheme.colorScheme.onErrorContainer,
+                MaterialTheme.colorScheme.error
+            )
+        }
+        WorkoutNavigationEvents.TpmsAlertSeverity.WARNING -> {
+            Triple(
+                if (isDark) DarkWarningContainer else LightWarningContainer,
+                if (isDark) DarkOnWarningContainer else LightOnWarningContainer,
+                if (isDark) DarkWarning else LightWarningBorder
+            )
+        }
+    }
+
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = containerColor,
+        contentColor = contentColor,
+        border = BorderStroke(1.5.dp, borderColor),
+        tonalElevation = 6.dp,
+        modifier = modifier
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Warning,
+                contentDescription = null,
+                tint = contentColor,
+                modifier = Modifier.size(24.dp)
+            )
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = alert.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = contentColor
+                )
+                Text(
+                    text = alert.message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = contentColor
+                )
+            }
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = stringResource(R.string.itpms_alert_dismiss),
+                    tint = contentColor,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+    }
+}
+
+/**
  * Ambient navigation overlay displaying turn prompts, return navigation HUD, and fork decisions (REQ-UI-348 / ATT-3170).
  * Anchored at the top of the tracking tab across all views regardless of map presence.
  */
@@ -1210,6 +1316,7 @@ fun TrackingMapContainer(
             mapState.mapSegments,
             mapState.activeLiveSegmentIds,
             mapState.mapRoutes,
+            mapState.mapClusters,
             mapState.mapMarkers,
             mapState.currentTrack
         ) {
@@ -1217,6 +1324,7 @@ fun TrackingMapContainer(
                 tracks(mapState.mapTracks)
                 segments(mapState.mapSegments, mapState.activeLiveSegmentIds)
                 routes(mapState.mapRoutes)
+                clusters(mapState.mapClusters)
                 markers(mapState.mapMarkers)
                 liveTrack(mapState.currentTrack)
             }

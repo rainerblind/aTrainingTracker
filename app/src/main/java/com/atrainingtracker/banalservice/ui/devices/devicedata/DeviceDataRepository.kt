@@ -289,6 +289,17 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
                 put(DevicesDatabaseManager.DevicesDbHelper.CALIBRATION_FACTOR, finalCalib)
             }
 
+            if (original.baselineCircumference != final.baselineCircumference) {
+                put(DevicesDatabaseManager.DevicesDbHelper.BASELINE_CIRCUMFERENCE, final.baselineCircumference ?: 0.0)
+            }
+
+        }
+    }
+
+    suspend fun resetTirePressureBaseline(deviceId: Long) {
+        withContext(ioDispatcher) {
+            devicesDatabaseManager.resetBaselineCircumference(deviceId)
+            refreshDeviceFromDb(deviceId)
         }
     }
 

@@ -27,6 +27,7 @@ import androidx.preference.PreferenceManager
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveAuthManager
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
@@ -378,8 +379,17 @@ class BackupRestoreViewModel @JvmOverloads constructor(
 
     fun uploadToGoogleDrive(context: Context) {
         viewModelScope.launch {
-            val token = TrainingApplication.getGoogleDriveAuthToken()
-            if (token.isNullOrBlank() || !TrainingApplication.uploadToGoogleDrive()) {
+            if (!TrainingApplication.uploadToGoogleDrive()) {
+                _uiState.value = UiState.Error(context.getString(R.string.google_drive_disconnected_status))
+                return@launch
+            }
+            var token = TrainingApplication.getGoogleDriveAuthToken()
+            if (token.isNullOrBlank()) {
+                token = withContext(Dispatchers.IO) {
+                    GoogleDriveAuthManager.refreshTokenSync(context.applicationContext ?: context).getOrNull()
+                }
+            }
+            if (token.isNullOrBlank()) {
                 _uiState.value = UiState.Error(context.getString(R.string.google_drive_disconnected_status))
                 return@launch
             }
@@ -407,8 +417,17 @@ class BackupRestoreViewModel @JvmOverloads constructor(
 
     fun restoreFromGoogleDrive(context: Context) {
         viewModelScope.launch {
-            val token = TrainingApplication.getGoogleDriveAuthToken()
-            if (token.isNullOrBlank() || !TrainingApplication.uploadToGoogleDrive()) {
+            if (!TrainingApplication.uploadToGoogleDrive()) {
+                _uiState.value = UiState.Error(context.getString(R.string.google_drive_disconnected_status))
+                return@launch
+            }
+            var token = TrainingApplication.getGoogleDriveAuthToken()
+            if (token.isNullOrBlank()) {
+                token = withContext(Dispatchers.IO) {
+                    GoogleDriveAuthManager.refreshTokenSync(context.applicationContext ?: context).getOrNull()
+                }
+            }
+            if (token.isNullOrBlank()) {
                 _uiState.value = UiState.Error(context.getString(R.string.google_drive_disconnected_status))
                 return@launch
             }
@@ -763,8 +782,15 @@ class BackupRestoreViewModel @JvmOverloads constructor(
     ): kotlinx.coroutines.Job {
         saveClusteringTolerances()
         return viewModelScope.launch(dispatcher) {
-            val token = TrainingApplication.getGoogleDriveAuthToken()
-            if (token.isNullOrBlank() || !TrainingApplication.uploadToGoogleDrive()) {
+            if (!TrainingApplication.uploadToGoogleDrive()) {
+                _uiState.value = UiState.Error(context.getString(R.string.google_drive_disconnected_status))
+                return@launch
+            }
+            var token = TrainingApplication.getGoogleDriveAuthToken()
+            if (token.isNullOrBlank()) {
+                token = GoogleDriveAuthManager.refreshTokenSync(context.applicationContext ?: context).getOrNull()
+            }
+            if (token.isNullOrBlank()) {
                 _uiState.value = UiState.Error(context.getString(R.string.google_drive_disconnected_status))
                 return@launch
             }

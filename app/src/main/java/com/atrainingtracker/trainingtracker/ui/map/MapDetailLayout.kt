@@ -107,7 +107,9 @@ fun MapDetailLayout(
     hrZoneDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.FIVE_ZONES,
     powerZoneDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.FIVE_ZONES,
     climbs: List<Climb> = emptyList(),
-    externalScrubDistance: Double? = null
+    externalScrubDistance: Double? = null,
+    hrZoneThresholds: HeartRateZoneThresholds? = null,
+    powerZoneThresholds: PowerZoneThresholds? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -159,11 +161,11 @@ fun MapDetailLayout(
     var headerHeightPx by remember { mutableIntStateOf(0) }
 
     val hrThresholds = remember(bSportType, context) {
-        TelemetryZoneMath.loadHeartRateThresholds(context, bSportType)
+        hrZoneThresholds ?: TelemetryZoneMath.loadHeartRateThresholds(context, bSportType)
     }
 
     val powerThresholds = remember(context) {
-        TelemetryZoneMath.loadPowerThresholds(context)
+        powerZoneThresholds ?: TelemetryZoneMath.loadPowerThresholds(context)
     }
 
     val activeScrubPoint = remember(selectedDistance, activeScrubPath, isTrackless) {

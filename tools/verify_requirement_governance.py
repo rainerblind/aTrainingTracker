@@ -117,11 +117,15 @@ def parse_diff_requirements(diff_text):
         if line.startswith("@@"):
             m_hunk = re.search(r"REQ-([A-Z0-9_-]+)", line)
             current_req = f"REQ-{m_hunk.group(1)}" if m_hunk else None
+            if current_req == "REQ-XXX":
+                current_req = None
             continue
         if line.startswith(" "):
             m_ctx = re.search(r"#{2,4}\s*REQ-([A-Z0-9_-]+)", line)
             if m_ctx:
                 current_req = f"REQ-{m_ctx.group(1)}"
+                if current_req == "REQ-XXX":
+                    current_req = None
             continue
 
         if line.startswith("+"):
@@ -132,9 +136,12 @@ def parse_diff_requirements(diff_text):
                 m = re.search(r"\*\*REQ-([A-Z0-9_-]+)\.\d+\*\*", line)
             if m:
                 req_id = f"REQ-{m.group(1)}"
-                added_ids.add(req_id)
-                current_req = req_id
-            elif current_req:
+                if req_id != "REQ-XXX":
+                    added_ids.add(req_id)
+                    current_req = req_id
+                else:
+                    current_req = None
+            elif current_req and current_req != "REQ-XXX":
                 added_ids.add(current_req)
         elif line.startswith("-"):
             m = re.search(r"\|\s*\*\*REQ-([A-Z0-9_-]+)\*\*", line)
@@ -144,9 +151,12 @@ def parse_diff_requirements(diff_text):
                 m = re.search(r"\*\*REQ-([A-Z0-9_-]+)\.\d+\*\*", line)
             if m:
                 req_id = f"REQ-{m.group(1)}"
-                deleted_ids.add(req_id)
-                current_req = req_id
-            elif current_req:
+                if req_id != "REQ-XXX":
+                    deleted_ids.add(req_id)
+                    current_req = req_id
+                else:
+                    current_req = None
+            elif current_req and current_req != "REQ-XXX":
                 deleted_ids.add(current_req)
 
     # Modified requirements appear in both added and deleted sets
@@ -210,6 +220,34 @@ def validate_archaeology_section(text):
     return len(errors) == 0, errors
 
 
+ALLOWED_ENGINEERING_ENTRIES = {
+    "analysis",
+    "plans",
+    "retros",
+    "test_specs",
+    "walkthroughs",
+    "test_results",
+    "rule_history_archive.md",
+    "workflow_overview.html",
+}
+
+
+def verify_engineering_directory_structure(eng_dir="docs/engineering"):
+    """
+    Verifies that docs/engineering/ contains only canonical ASPICE directories and approved files
+    (no stray folders like summaries/, impl_plans/, test_reports/, implementation/, or stray symlinks).
+    """
+    if not os.path.isdir(eng_dir):
+        return True, []
+    unexpected = sorted(set(os.listdir(eng_dir)) - ALLOWED_ENGINEERING_ENTRIES)
+    if unexpected:
+        return False, [
+            f"ERROR: Non-canonical entries found in {eng_dir}/: {', '.join(unexpected)}. "
+            f"Allowed entries: {', '.join(sorted(ALLOWED_ENGINEERING_ENTRIES))}."
+        ]
+    return True, []
+
+
 def verify_governance(deliverable_text=None, diff_text=None, base_ref="develop"):
     """
     Main governance validation entrypoint.
@@ -219,6 +257,11 @@ def verify_governance(deliverable_text=None, diff_text=None, base_ref="develop")
     Returns (success: bool, diagnostics: list[str]).
     """
     diagnostics = []
+
+    dir_ok, dir_errors = verify_engineering_directory_structure()
+    if not dir_ok:
+        diagnostics.extend(dir_errors)
+        return False, diagnostics
 
     if diff_text is None:
         diff_text = get_git_diff(base_ref=base_ref)

@@ -105,7 +105,7 @@ Jointly review all completed sprint tickets with the human user against expectat
       ```bash
       ./gradlew testDebugUnitTest --max-workers=2 && python3 tools/verify_requirement_governance.py
       ```
-      Since Rule 66 this run is a **confirmation** of the green Tier 2 gate executed at the end of Phase 2; any failure here is itself a retro anomaly.
+      Since Rule 66 this run is a **confirmation** of the green Tier 2 gate executed at the end of Phase 2 and ensures `docs/engineering/test_results/index.html` (`app/build/reports/tests/testDebugUnitTest/index.html`) displays the complete HTML report of all unit tests (Rule 67 — `ATT-4936`); any failure here is itself a retro anomaly.
 
 2. **Query Tickets Ready for Review in Rank Order**:
    Find all sprint tickets in status `Final Review (Human)` sorted strictly by backlog rank for the exact active sprint ID or name:
@@ -152,7 +152,7 @@ Jointly review all completed sprint tickets with the human user against expectat
 4. **Sprint Retrospective, Tier 2 Sprint Integration Gate & Process Hardening ("Retro Before Merge")**:
    * **Mandate**: Conduct the Retrospective, run the Tier 2 Sprint Integration Gate (`./gradlew testDebugUnitTest` if not already verified on the head of `sprint/<SPRINT_NAME>`), and update governance documents on `sprint/<SPRINT_NAME>` **BEFORE** merging into `develop`.
    * Synthesize real-time comments logged during the sprint in the `Review & Retro` ticket into actionable root cause analyses.
-   * Document insights in `docs/engineering/Sprint_Review_and_Retro_<KEY>.md`.
+   * Document insights in `docs/engineering/retros/Sprint_Review_and_Retro_<KEY>.md`.
    * Update `.agents/rules/aspice_governance.md`, relevant skills, `docs/coding_standards.md`, `docs/design_guidelines.md`, and `docs/engineering/rule_history_archive.md` with permanent countermeasures.
    * Commit retrospective deliverables to `sprint/<SPRINT_NAME>`.
 5. **Sprint Closure & Merge to `develop`**:

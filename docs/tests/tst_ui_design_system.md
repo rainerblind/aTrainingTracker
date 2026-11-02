@@ -4399,26 +4399,31 @@
   3. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-282: **General Map Layer Visibility Controls & Preference Persistence Verification** [General map Layers menu toggles routes, segments, favorite locations, and live track; user layer visibility preferences persisted across sessions in SharedPreferences; 100% 9-language localization parity; 100% unit test pass rate.]
+### TST-UI-282: **General Map Layer Visibility Controls & Preference Persistence Verification** [General map Layers menu toggles routes, segments, favorite locations, favorite tracks / clusters, and live track; user layer visibility preferences persisted across sessions in SharedPreferences; Cockpit map renders clusters; 100% 9-language localization parity; 100% unit test pass rate.] [Verified]
 - **Requirement(s)**: `REQ-UI-322`
 - **Component**: **General Map Layer Visibility Controls & Preference Persistence Verification**
-- **Jira**: ``ATT-2931``
+- **Jira**: `ATT-2931`, `ATT-4847`
 - **Test Description**:
   1. *GeneralMapLayer Enum & Default State Contract (`GeneralMapLayersContractTest.kt`)*:
-  • Verify `GeneralMapLayer` enum declares `ROUTES`, `SEGMENTS`, `KNOWN_LOCATIONS`, `TRACK`.
-  • Verify default state enables all layers.
+  • Verify `GeneralMapLayer` enum declares `ROUTES`, `SEGMENTS`, `KNOWN_LOCATIONS`, `TRACK`, and `CLUSTERS` (exactly 5 entries).
+  • Verify default state enables all 5 layers.
   2. *MapFragmentWithTrackViewModel Layer Toggling & Persistence Contract (`GeneralMapLayersContractTest.kt`)*:
-  • Verify initial state loads from `SharedPreferences` or defaults to all layers.
+  • Verify initial state loads from `SharedPreferences` or defaults to all 5 layers.
   • Verify `toggleLayer(layer)` removes layer if present, adds if absent.
   • Verify toggling updates `_enabledLayers` and persists serialized set to `SharedPreferences`.
+  • Verify `MapFragmentWithTrackViewModel` subscribes to `WorkoutClusterRepository.allClusters` and exposes memoized `clusters: List<MapCluster>` in `uiState`.
   3. *MapScreenWithTrack UI Structure & Conditional Layer Delegation (`GeneralMapLayersContractTest.kt`)*:
   • Verify `MapScreenWithTrack.kt` includes `Icons.Default.Layers` button.
   • Verify floating surface at `Alignment.TopEnd` with `statusBarsPadding().padding(top = 16.dp, end = 16.dp)`.
-  • Verify dropdown menu includes checkboxes and swatches for all 4 layers.
-  • Verify conditional rendering of `knownLocations()`, `segments()`, `routes()`, and `markers()` + `liveTrack()`.
-  4. *9-Language Localization Parity Audit (`GeneralMapLayersLocalizationTest.kt`)*:
-  • Verify string resources `map_layers`, `map_layer_routes`, `map_layer_segments`, `map_layer_locations`, `map_layer_track` exist and are non-empty across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
-  5. *Full Clean-Room Regression Suite*:
+  • Verify dropdown menu includes checkboxes and swatches for all 5 layers.
+  • Verify conditional rendering of `knownLocations()`, `segments()`, `routes()`, `clusters()`, and `markers()` + `liveTrack()`.
+  4. *Cockpit Map Cluster Integration & Decoupling Contract (`TrackingViewModelTest.kt`, `SensorGridScreenTest.kt`)*:
+  • Verify `TrackingMapState` exposes `mapClusters`.
+  • Verify `TrackingViewModel` integrates `WorkoutClusterRepository.allClusters` into `staticMapLayerFlow` via `distinctUntilChanged()`, decoupled from 1-Hz telemetry.
+  • Verify `TrackingMapContainer` passes `clusters(mapState.mapClusters)` to `MapContentScope`.
+  5. *9-Language Localization Parity Audit (`GeneralMapLayersLocalizationTest.kt`)*:
+  • Verify string resources `map_layers`, `map_layer_routes`, `map_layer_segments`, `map_layer_locations`, `map_layer_track`, `map_layer_clusters` exist and are non-empty across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+  6. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
 ### TST-UI-283: **Material 3 Compose ANT Missing Adapter & Dependency Alerts Verification** [Missing adapter and missing dependency alerts modernized to Material 3 Compose with official untinted ANT+ logo; direct shortcut to AntServicesStatusSheet; German typo corrected; 100% 9-language translation parity; 100% unit test pass rate.]
@@ -6854,18 +6859,75 @@
 
 ### TST-UI-436: **Active Training Zone Segment Height Emphasis & Bar-Only Sizing Test Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-436`
-- **Component**: `SensorFieldZoneGaugeTest.kt`, `ZoneGaugeBar.kt`, `SensorFieldView.kt`
-- **Jira**: `ATT-4860`
+- **Component**: `SensorFieldZoneGaugeTest.kt`, `ZoneGaugeBar.kt`, `SensorFieldView.kt`, `WPrimeBatteryGaugeBarLayoutTest.kt`
+- **Jira**: `ATT-4860`, `ATT-4928`
 - **Test Description**:
   1. *Active Segment Height Elevation & Inactive Uniformity Test (`TST-UI-436.1`)*:
-  • Unit test in `SensorFieldZoneGaugeTest.kt` verifying active segment height calculation ($1.6\times$ `trackHeight`) and inactive segment base height (`trackHeight`).
-  • Verify that when `activeZoneIndex == null` (stale/disconnected), all segments render at base `trackHeight` with `0.35f` opacity.
+  • Unit test in `SensorFieldZoneGaugeTest.kt` verifying reserved active segment height calculation (`calculateReservedActiveTrackHeight(trackHeight) = trackHeight * 1.6f`).
+  • Verify that outer container height `totalBarHeight` is 100% identical between live (`needleFraction != null`, `activeZoneIndex != null`) and stale/null (`needleFraction == null`, `activeZoneIndex == null`) telemetry across `trackHeight` values (`6.dp`, `10.dp`, `14.dp`, `18.dp`, `22.dp`) (ATT-4928).
+  • Verify that when `activeZoneIndex == null` or `isStale == true`, all segments render at base `trackHeight` with `0.35f` opacity without changing outer container height.
   2. *Dynamic Height Scaling in Bar-Only Mode Test (`TST-UI-436.2`)*:
   • Unit test in `SensorFieldZoneGaugeTest.kt` verifying track height resolution across `ViewSize.SMALL`, `NORMAL`, `LARGE`, `EXTRA_LARGE` for `ZoneGaugeBar`, `PedalPowerBalanceBar`, and `WPrimeBatteryGaugeBar` when `!fieldState.showValue && fieldState.showBar`.
-  3. *Needle Span Overlay Geometry Contract Test (`TST-UI-436.3`)*:
-  • Verify `ZoneGaugeBar` needle container height accommodates elevated active segment (`activeTrackHeight + 4.dp`) and needle indicator spans vertically across the active segment.
+  3. *Needle Span Overlay Geometry & Sibling Height Contract Test (`TST-UI-436.3`)*:
+  • Verify `ZoneGaugeBar` needle container height accommodates elevated active segment (`calculateReservedActiveTrackHeight(trackHeight) + 4.dp`) in both live and stale states.
+  • Verify `PedalPowerBalanceBar` and `WPrimeBatteryGaugeBar` maintain invariant container heights across live and stale states.
   4. *Clean-Room Full Suite Regression Execution (`TST-UI-436.4`)*:
   • Execute targeted unit tests and verify 100% pass rate with zero regressions.
+  5. *Code & Test Hygiene Verification (`TST-UI-436.5`)*:
+  • Verify removal of unused `calculateActiveTrackHeight(baseTrackHeight: Dp, isActive: Boolean)` overload in `ZoneGaugeBar.kt`.
+  • Verify `WPrimeBatteryGaugeBarLayoutTest.kt` asserts `.height(barHeight)` without relying on commented-out code.
+
+
+### TST-UI-437: **User-Configurable Horizontal Width Ratios & Split Presets in Cockpit Sensor Grid Test Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-437`
+- **Component**: `TrackingViewsDatabaseManagerTest.kt`, `TrackingViewsRepositoryTest.kt`, `EditSensorFieldViewModelTest.kt`, `SensorGridScreenLayoutTest.kt`, `SensorGridLocalizationTest.kt`
+- **Jira**: `ATT-4861`
+- **Test Description**:
+  1. *SQLite Migration v16 -> v17 & Default Weight Backfill Test (`TST-UI-437.1`)*:
+  • Unit test in `TrackingViewsRealSqliteMigrationTest.kt` / `TrackingViewsDatabaseManagerTest.kt` verifying database upgrade from schema version 16 to 17:
+    - Adds `ColWeight real DEFAULT 1.0` to `LayoutRowsTable`.
+    - Backfills `ColWeight = 1.0` for all existing records.
+    - Confirms `DatabaseSchemaRegistry.isVersionSupported("TrackingViews.db", 17)` returns `true`.
+  2. *SensorFieldConfig & Cursor Mapping Symmetry Test (`TST-UI-437.2`)*:
+  • Unit test in `TrackingViewsRepositoryTest.kt` verifying `colWeight` mapping:
+    - Verifies symmetric mapping in single and batch cursor extraction paths (Rule 20).
+    - Verifies custom weights (e.g. `3.0f`, `2.0f`, `1.0f`) are preserved and mapped correctly into `SensorFieldConfig` and `SensorFieldState`.
+  3. *Edit Dialog Relative Weight & Row Split Presets Test (`TST-UI-437.3`)*:
+  • Unit test in `EditSensorFieldViewModelTest.kt` verifying:
+    - Selection of quick row split presets (`3/4 : 1/4`, `2/3 : 1/3`, `1/2 : 1/2`, `1/3 : 2/3`, `1/4 : 3/4`) sets correct complementary weights on both fields sharing a row.
+    - Individual relative weight selection (1x, 2x, 3x) updates state correctly.
+  4. *Compose Layout Proportional Width Rendering Test (`TST-UI-437.4`)*:
+  • Unit test in `SensorGridScreenLayoutTest.kt` verifying:
+    - `Modifier.weight(effectiveWeight)` is applied to multi-column rows in `SensorGridContent` and configuration mode.
+    - Non-zero safety clamp: invalid weights ($\le 0f$) safely fallback to `1.0f`.
+    - Single-column rows naturally take 100% width.
+  5. *9-Language Localization Parity Audit (`TST-UI-437.5`)*:
+  • Audit in `TranslationParityTest` verifying all newly added string keys exist across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) with zero missing translations.
+
+
+### TST-UI-438: **Vertical Card Height and Border Stretching in Cockpit Sensor Grid Test Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-438`
+- **Component**: `SensorGridScreenLayoutTest.kt`, `SensorFieldViewLayoutTest.kt`, `SensorGridLocalizationTest.kt`
+- **Jira**: `ATT-4878`
+- **Test Description**:
+  1. *Multi-Column Row Height Propagation Test (`TST-UI-438.1`)*:
+  • Unit/layout test verifying that in `SensorGridScreen.kt`, for multi-column rows in `SensorGridContent`, landscape packing, and configuration mode:
+    - Per-cell `Box` applies `Modifier.weight(effectiveWeight).fillMaxHeight()`.
+    - `SensorFieldView` receives `modifier = Modifier.fillMaxHeight()`.
+    - Shorter cards stretch to the measured height of the tallest card in the row.
+  2. *Card & Indicator Full-Height Border Alignment Test (`TST-UI-438.2`)*:
+  • Unit/layout test in `SensorFieldViewLayoutTest.kt` verifying:
+    - `Card` applies `modifier.fillMaxWidth().fillMaxHeight()`.
+    - Inner layout `Row` applies `.fillMaxHeight()`.
+    - Indicator strips (`Spacer`) and borders span 100% of the stretched card height.
+  3. *Vertical Centering & Layout Docking Test (`TST-UI-438.3`)*:
+  • Unit/layout test in `SensorFieldViewLayoutTest.kt` verifying:
+    - Label and filter description `Row` remains anchored to top.
+    - Configuration `IconButton`s remain anchored to bottom.
+    - Value and gauge elements are vertically centered in the body space.
+  4. *Localization Parity and Visual Regression Guard (`TST-UI-438.4`)*:
+  • Test verifying localization parity across all 9 locales and confirming single-field or uniform-size rows preserve existing dimensions and styling.
+
 
 
 

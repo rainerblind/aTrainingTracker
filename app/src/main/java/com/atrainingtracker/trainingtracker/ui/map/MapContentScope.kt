@@ -66,6 +66,11 @@ interface MapContentScope {
      * Renders planned routes with standardized selected/unselected styling.
      */
     fun routes(routes: List<MapRoute>, onRouteClick: (Long) -> Unit = {})
+
+    /**
+     * Renders favorite route clusters (Lieblingsstrecken) with distinct styling and optional click callback.
+     */
+    fun clusters(clusters: List<MapCluster>, onClusterClick: (Long) -> Unit = {})
     
     /**
      * Renders background context paths (e.g., other routes in the area) using tiered alpha.
@@ -124,7 +129,12 @@ interface MapContentScope {
         opacity: Double = 0.8, 
         radius: Int? = null,
         densifyInterval: Double? = null,
-        maxPoints: Int? = null
+        maxPoints: Int? = null,
+        maxCorridorPassCount: Int? = null,
+        colorLut: ThermalColorLut = ThermalColorLut.DEFAULT,
+        isMiniMap: Boolean = false,
+        normalizeCorridors: Boolean = false,
+        useClassicStepIntensity: Boolean = false
     )
 
     /**
@@ -155,11 +165,13 @@ internal class MapContentScopeImpl(
     private val trackData = mutableStateListOf<PathData>()
     private val segmentData = mutableStateListOf<PathData>()
     private val routeData = mutableStateListOf<PathData>()
+    private val clusterData = mutableStateListOf<PathData>()
 
     // Exposed for Bounds Controller
     val tracks: List<MapTrack> get() = trackData.map { it.path as MapTrack }
     val segments: List<MapSegment> get() = segmentData.map { it.path as MapSegment }
     val routes: List<MapRoute> get() = routeData.map { it.path as MapRoute }
+    val clusters: List<MapCluster> get() = clusterData.map { it.path as MapCluster }
     
     val markers = mutableStateListOf<LocationMarker>()
     val currentTracks = mutableStateListOf<List<LatLng>>()
@@ -169,7 +181,12 @@ internal class MapContentScopeImpl(
         val opacity: Double, 
         val radius: Int?,
         val densifyInterval: Double?,
-        val maxPoints: Int?
+        val maxPoints: Int?,
+        val maxCorridorPassCount: Int? = null,
+        val colorLut: ThermalColorLut = ThermalColorLut.DEFAULT,
+        val isMiniMap: Boolean = false,
+        val normalizeCorridors: Boolean = false,
+        val useClassicStepIntensity: Boolean = false
     )
     private val heatmaps = mutableStateListOf<HeatmapData>()
 
@@ -194,6 +211,7 @@ internal class MapContentScopeImpl(
         trackData.clear()
         segmentData.clear()
         routeData.clear()
+        clusterData.clear()
         markers.clear()
         currentTracks.clear()
         heatmaps.clear()
@@ -242,16 +260,36 @@ internal class MapContentScopeImpl(
                 initialValue = null, 
                 data.allPaths, 
                 data.opacity, 
-                steppedZoom
+                steppedZoom,
+                data.maxCorridorPassCount,
+                data.colorLut,
+                data.isMiniMap,
+                data.normalizeCorridors,
+                data.useClassicStepIntensity
             ) {
                 value = withContext(Dispatchers.Default) {
                     if (data.allPaths.isEmpty()) null
                     else {
                         val strokeWidth = (4f + (steppedZoom - 10f).coerceAtLeast(0f) * 0.5f).coerceIn(3.5f, 7.5f)
+                        val maxPasses = when {
+                            data.maxCorridorPassCount != null -> data.maxCorridorPassCount
+                            data.normalizeCorridors -> PolylineHeatmapTileProvider.estimateMaxCorridorPassCount(data.allPaths)
+                            else -> null
+                        }
+                        val effectiveLut = if (data.colorLut === ThermalColorLut.CLASSIC_BLUE && data.opacity != 0.8) {
+                            ThermalColorLut(opacity = data.opacity, stops = ThermalColorLut.CLASSIC_BLUE_STOPS)
+                        } else {
+                            data.colorLut
+                        }
+                        val useClassic = data.useClassicStepIntensity || (data.colorLut === ThermalColorLut.CLASSIC_BLUE)
                         PolylineHeatmapTileProvider(
                             allPaths = data.allPaths,
                             opacity = data.opacity,
-                            strokeWidthPx = strokeWidth
+                            strokeWidthPx = strokeWidth,
+                            colorLut = effectiveLut,
+                            maxCorridorPassCount = maxPasses,
+                            isMiniMap = data.isMiniMap,
+                            useClassicStepIntensity = useClassic
                         )
                     }
                 }
@@ -320,6 +358,20 @@ internal class MapContentScopeImpl(
                 MappablePathLayer(
                     path = data.path,
                     alpha = effectiveAlpha,
+                    currentZoom = currentZoom,
+                    context = context,
+                    directionIcons = directionIcons,
+                    onPathClick = data.onClick
+                )
+            }
+        }
+
+        // 4b. Clusters (Lieblingsstrecken)
+        clusterData.forEach { data ->
+            androidx.compose.runtime.key(data.path.id) {
+                MappablePathLayer(
+                    path = data.path,
+                    alpha = data.alpha,
                     currentZoom = currentZoom,
                     context = context,
                     directionIcons = directionIcons,
@@ -405,6 +457,7 @@ internal class MapContentScopeImpl(
             is MapTrack -> trackData.add(data)
             is MapSegment -> segmentData.add(data)
             is MapRoute -> routeData.add(data)
+            is MapCluster -> clusterData.add(data)
             else -> {}
         }
     }
@@ -432,6 +485,12 @@ internal class MapContentScopeImpl(
         }
     }
 
+    override fun clusters(clusters: List<MapCluster>, onClusterClick: (Long) -> Unit) {
+        clusters.forEach { cluster ->
+            this.clusterData.add(PathData(cluster, 1.0f, onClusterClick))
+        }
+    }
+
     override fun contextualPaths(
         paths: List<MappablePath>,
         sameSportAlpha: Float,
@@ -451,8 +510,32 @@ internal class MapContentScopeImpl(
         this.currentTracks.add(path)
     }
 
-    override fun heatmap(allPaths: List<List<LatLng>>, opacity: Double, radius: Int?, densifyInterval: Double?, maxPoints: Int?) {
-        this.heatmaps.add(HeatmapData(allPaths, opacity, radius, densifyInterval, maxPoints))
+    override fun heatmap(
+        allPaths: List<List<LatLng>>, 
+        opacity: Double, 
+        radius: Int?, 
+        densifyInterval: Double?, 
+        maxPoints: Int?,
+        maxCorridorPassCount: Int?,
+        colorLut: ThermalColorLut,
+        isMiniMap: Boolean,
+        normalizeCorridors: Boolean,
+        useClassicStepIntensity: Boolean
+    ) {
+        this.heatmaps.add(
+            HeatmapData(
+                allPaths,
+                opacity,
+                radius,
+                densifyInterval,
+                maxPoints,
+                maxCorridorPassCount,
+                colorLut,
+                isMiniMap,
+                normalizeCorridors,
+                useClassicStepIntensity
+            )
+        )
     }
 
     override fun knownLocations(locations: List<KnownLocationItem>, onLocationClick: (Long) -> Unit) {

@@ -124,4 +124,16 @@ class ThemeColorCentralizationAuditTest {
             !content.contains("grade < 3.0 ->")
         )
     }
+
+    /**
+     * TST-MAP-059.2: Asserts that warm sequential "hot" palette color tokens exist in TTColor (ATT-4933 / REQ-MAP-057.2)
+     * with valid ARGB values contrasting with base map hydrology and terrain.
+     */
+    @Test
+    fun verifyHeatmapHotPaletteTokensInTTColor() {
+        assertEquals(androidx.compose.ui.graphics.Color(0xFFFFF176), TTColor.HeatmapHotYellow)
+        assertEquals(androidx.compose.ui.graphics.Color(0xFFFF9800), TTColor.HeatmapHotOrange)
+        assertEquals(androidx.compose.ui.graphics.Color(0xFFE53935), TTColor.HeatmapHotRed)
+        assertEquals(androidx.compose.ui.graphics.Color(0xFF880E4F), TTColor.HeatmapHotDarkRed)
+    }
 }

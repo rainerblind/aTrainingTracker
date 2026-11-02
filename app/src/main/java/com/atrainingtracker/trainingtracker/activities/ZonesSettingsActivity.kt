@@ -52,6 +52,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.History
+import com.atrainingtracker.trainingtracker.ui.settings.ZoneHistoryDialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
@@ -162,6 +164,8 @@ fun ZoneSettingsScreen(
     val storedHrMethod by dataStore.hrCalcMethodFlow.collectAsState(initial = null)
 
     var showCalculatorDialog by remember { mutableStateOf(false) }
+    var showHistoryDialog by rememberSaveable { mutableStateOf(false) }
+    val zoneHistoryMap by viewModel.zoneHistoryFlow.collectAsState()
     var bannerVisible by rememberSaveable { mutableStateOf(promptReason != null) }
 
     Surface(modifier = Modifier.fillMaxSize()) {
@@ -203,6 +207,15 @@ fun ZoneSettingsScreen(
                                 Icon(
                                     imageVector = Icons.Default.Calculate,
                                     contentDescription = stringResource(R.string.zone_calc_button),
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                            IconButton(
+                                onClick = { showHistoryDialog = true }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.History,
+                                    contentDescription = stringResource(R.string.zone_history_action_history),
                                     tint = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                             }
@@ -337,6 +350,24 @@ fun ZoneSettingsScreen(
                             }
                         }
                     }
+                }
+            )
+        }
+
+        if (showHistoryDialog) {
+            val historyForCurrentType = zoneHistoryMap[currentType] ?: emptyList()
+            ZoneHistoryDialog(
+                zoneType = currentType,
+                history = historyForCurrentType,
+                onDismiss = { showHistoryDialog = false },
+                onSaveSnapshot = { timestampMs, boundaries ->
+                    viewModel.saveBackdatedSnapshot(currentType, boundaries, timestampMs)
+                },
+                onUpdateSnapshot = { id, timestampMs, boundaries ->
+                    viewModel.updateHistoricalSnapshot(id, currentType, boundaries, timestampMs)
+                },
+                onDeleteSnapshot = { id ->
+                    viewModel.deleteHistoricalSnapshot(id, currentType)
                 }
             )
         }

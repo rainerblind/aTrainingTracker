@@ -1173,12 +1173,16 @@
     <string name="workout_periods__longest_workout">Longest Workout</string>
     <string name="workout_periods__region_format">Region %1$d (%2$d)</string>
     <string name="workout_periods__primary_region_format">Primary: Region %1$d (%2$d)</string>
+    <string name="workout_periods__named_region_format">%1$s (%2$d)</string>
+    <string name="workout_periods__primary_named_region_format">Primary: %1$s (%2$d)</string>
     <string name="workout_periods__all_regions_format">All Regions (%1$d)</string>
     <string name="workout_periods__migration_title">Optimizing training history database…</string>
     <string name="workout_periods__migration_querying">Querying training history…</string>
     <string name="workout_periods__migration_reading">Reading workout %1$d of %2$d…</string>
     <string name="workout_periods__migration_syncing">Syncing %1$s…</string>
     <string name="workout_periods__migration_finalizing">Finalizing yearly totals…</string>
+    <string name="workout_periods__yearly_activity_grid">Yearly Activity</string>
+    <string name="workout_periods__no_activity">No activity</string>
 
     <!-- share screenshots -->
     <string name="share">Share</string>
@@ -2034,6 +2038,7 @@
     <string name="map_layer_segments">Segments</string>
     <string name="map_layer_locations">Favorite Locations</string>
     <string name="map_layer_track">Recorded Track</string>
+    <string name="map_layer_clusters">Favorite Tracks</string>
     <string name="ant_dialog_view_status">View ANT+ Status</string>
     <string name="ant_dialog_dismiss">Got it</string>
 
@@ -2112,17 +2117,18 @@
     <string name="auto_pause_title">Auto-Pause</string>
     <string name="tuning_auto_pause_title">Auto-Pause</string>
     <string name="tuning_auto_pause_desc">Automatically pause recording when stationary</string>
+    <string name="tuning_auto_pause_enable_title">Enable Auto-Pause</string>
     <string name="tuning_auto_pause_bike_title">Cycling</string>
     <string name="tuning_auto_pause_run_title">Running</string>
     <string name="tuning_auto_pause_other_title">Other Sports</string>
-    <string name="tuning_auto_pause_speed_threshold_title">Pause Speed Threshold</string>
-    <string name="tuning_auto_pause_speed_threshold_desc">Speed below which recording is paused</string>
+    <string name="tuning_auto_pause_speed_threshold_title">Speed Threshold</string>
+    <string name="tuning_auto_pause_speed_threshold_desc">Pause below this speed, resume above</string>
     <string name="tuning_auto_pause_debounce_title">Pause Debounce Delay</string>
     <string name="tuning_auto_pause_debounce_desc">Duration below threshold before pausing</string>
     <string name="tuning_auto_pause_resume_debounce_title">Resume Debounce Delay</string>
     <string name="tuning_auto_pause_resume_debounce_desc">Duration above threshold before resuming</string>
     <string name="tuning_auto_pause_start_in_auto_pause_title">Start in Auto-Paused</string>
-    <string name="tuning_auto_pause_start_in_auto_pause_desc">When starting a workout while stationary, immediately begin in Auto-Paused until movement is detected</string>
+    <string name="tuning_auto_pause_start_in_auto_pause_desc">When starting a workout while stationary, immediately begin in Auto-Paused until movement is detected. Applies to all sports.</string>
     <string name="tuning_speed_value_format">%1$d %2$s</string>
     <string name="tuning_seconds_value_format">%1$d s</string>
     <string name="cockpit_auto_pause_badge">Auto-Pause</string>
@@ -2376,4 +2382,42 @@
     <string name="sensor_field_display_elements_title">Display Elements</string>
     <string name="sensor_field_show_value">Value</string>
     <string name="sensor_field_show_bar">Bar</string>
+
+    <!-- Sensor Field Width & Row Split (ATT-4861, REQ-UI-437) -->
+    <string name="sensor_field_width_title">Width Ratio</string>
+    <string name="sensor_field_row_split_presets">Row Split Presets</string>
+    <string name="sensor_field_relative_weight">Relative Weight</string>
+
+    <!-- Zone History (ATT-4844, REQ-SET-082) -->
+    <string name="zone_history_title">Zone History</string>
+    <string name="zone_history_action_history">History</string>
+    <string name="zone_history_add_snapshot">Add Historical Snapshot</string>
+    <string name="zone_history_edit_snapshot">Edit Zone Snapshot</string>
+    <string name="zone_history_delete_title">Delete zone snapshot?</string>
+    <string name="zone_history_delete_message">Delete zone snapshot from %1$s?</string>
+    <string name="zone_history_empty">No historical zone snapshots recorded yet.</string>
+    <string name="zone_history_date_label">Effective Date</string>
+    <string name="zone_history_save_snapshot">Save Snapshot</string>
+    <string name="zone_history_error_monotonic">Thresholds must be strictly increasing (%1$s)</string>
+
+    <!-- Manual Altitude Calibration (ATT-4845, REQ-TRK-047) -->
+    <string name="altitude_calibration_title">Calibrate Altitude</string>
+    <string name="altitude_calibration_reference_label">Reference Altitude</string>
+    <string name="altitude_calibration_location_name">Location Name (optional)</string>
+    <string name="altitude_calibration_save_location">Save as Known Location</string>
+    <string name="altitude_calibration_action">Calibrate</string>
+    <string name="altitude_calibrated_success">Altitude calibrated to %1$s</string>
+
+    <!-- Altitude From Position DEM (ATT-4859, REQ-SEN-025) -->
+    <string name="device_type_altitude_from_position">altitude from position (DEM)</string>
+    <string name="device_type_short_altitude_from_position">alt. (DEM)</string>
+    <string name="devices_altitude_from_position">Topographic Elevation (DEM)</string>
+    <string name="devices_altitude_from_position_description">Continuous elevation resolved from GPS position, cached routes, and online DEM data.</string>
+
+    <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
+    <string name="itpms_slow_puncture_alert_title">Slow Puncture Detected</string>
+    <string name="itpms_slow_puncture_alert_message">Effective wheel circumference dropped by %1$s. Check tire pressure immediately.</string>
+    <string name="itpms_low_pressure_reminder_title">Low Tire Pressure</string>
+    <string name="itpms_low_pressure_reminder_message">Wheel circumference is %1$s below pumped baseline. Consider pumping your tires.</string>
+    <string name="itpms_alert_dismiss">Dismiss</string>
 </resources>

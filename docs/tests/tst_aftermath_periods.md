@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Tests**: 30
+**Total Tests**: 32
 
 ---
 
@@ -395,4 +395,81 @@
   • Verify `showPeriodMap(summary, initialRegionId)` initializes `selectedRegionId` with `initialRegionId`.
   6. *Clean-Room Full Suite Regression Execution (`TST-PER-030.6`)*:
   • Execute targeted unit tests verifying 100% test pass rate with zero regressions.
+
+### TST-PER-031: **Yearly Activity Contribution Grids Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PER-025`
+- **Component**: `YearlyContributionGridTest.kt`, `PeriodsViewModelTest.kt`, `PeriodSummaryCardTest.kt`, `YearlyContributionLocalizationTest.kt`
+- **Jira**: `ATT-4849`
+- **Test Description**:
+  1. *Daily Aggregation & Calendar Matrix Mapping Test (`TST-PER-031.1`, `YearlyContributionGridTest.kt`)*:
+  • Verify that daily workout totals for a given calendar year map deterministically to a 7-row (Mon–Sun) by 53-column (ISO weeks 1..53) calendar day matrix for both standard (365-day) and leap (366-day) years.
+  2. *Quartile Calculation & Level Assignment Test (`TST-PER-031.2`, `YearlyContributionGridTest.kt`)*:
+  • Verify that positive volume values are partitioned into quartiles $Q_1, Q_2, Q_3, Q_4$, yielding levels 1..4 (with level 0 for zero/rest days) across all supported metrics (`DURATION`, `DISTANCE`, `ASCENT`).
+  3. *Multi-Sport Separation & Canonical Order Test (`TST-PER-031.3`, `YearlyContributionGridTest.kt`)*:
+  • Verify that distinct contribution grids are instantiated per active `BSportType` with sport-specific color ramps (`TTColor.BikeSportBarColor`, `RunSportBarColor`, `OtherSportBarColor`), ordered according to Rule 57 (`[Bike, Run, Other]`).
+  4. *Master Selector Slaving & Filter Reactivity Test (`TST-PER-031.4`, `PeriodsViewModelTest.kt`)*:
+  • Verify that `PeriodsViewModel` exposes `selectedMetric: StateFlow<PeriodBarMetric>` slaving both `PeriodBarGraph` and contribution grids; verify that toggling `selectedSports` reactively shows/hides the respective sport contribution grids.
+  5. *Interactive Day Cell Selection & Drill-Down Contract Test (`TST-PER-031.5`, `YearlyContributionGridTest.kt`)*:
+  • Verify that tapping an active day cell emits that day's start/end epoch second timestamps, sport type, and workout metadata for drill-down into `WorkoutSummariesListFragment`.
+  6. *9-Language Localization Parity Audit (`TST-PER-031.6`, `YearlyContributionLocalizationTest.kt`)*:
+  • Verify that all added string resources (`workout_periods__yearly_activity_grid`, `workout_periods__no_activity`) exist with matching keys across all 9 supported locales.
+  7. *Targeted Regression Verification (`TST-PER-031.7`)*:
+  • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"` to verify 100% clean-room test pass rate.
+
+### TST-PER-032: **Master Sport Filter Heatmap & Region Clustering Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PER-024` (`REQ-PER-024.5`)
+- **Component**: `PeriodsViewModelTest.kt`, `PeriodCardMapStateTest.kt`, `InteractivePeriodMapTest.kt`
+- **Jira**: `ATT-4935`
+- **Test Description**:
+  1. *Symmetric DTO Polyline Sport Filtering Unit Test (`TST-PER-032.1`, `PeriodsViewModelTest.kt`)*:
+  • Verify that `filterPeriodSummary()` filters `workoutIdToAllPolylinesMap` and `workoutIdToPathMap` symmetrically alongside `workoutIdToPolylineMap` according to `selectedSports`, preventing route leaking into card previews.
+  2. *PeriodMapScreen / InteractivePeriodMap Sport-Filtered Track & Heatmap Decoupling Test (`TST-PER-032.2`, `PeriodsViewModelTest.kt` / `InteractivePeriodMapTest.kt`)*:
+  • Verify that `selectPeriodForMap()` filters workouts using `selectedSports.value` prior to spatial clustering and heatmap path map generation, ensuring excluded sports never appear in the map's route collection.
+  3. *Spatial Region Clustering Sport Sensitivity & Workout Count Accuracy Test (`TST-PER-032.3`, `PeriodsViewModelTest.kt`)*:
+  • Verify that region detection (`detectRegions`) and resulting `Hauptregion` / region chips reflect the sport-filtered subset, matching the selected sport's geographic distribution and workout counts.
+  4. *Corridor Frequency Calibration on Sport-Filtered Path Set Test (`TST-PER-032.4`, `PeriodCardMapStateTest.kt`)*:
+  • Verify that `estimateMaxCorridorPassCount` and `PolylineHeatmapTileProvider` intensity normalization (`ATT-4929` / `ATT-4932`) compute strictly on the filtered routes without skew from hidden sports.
+  5. *Clean-Room Targeted Regression Execution (`TST-PER-032.5`)*:
+  • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*" --tests "com.atrainingtracker.trainingtracker.ui.map.*"` to verify 100% test pass rate with zero regressions.
+
+### TST-PER-033: **Region Place Name Resolution, Hierarchy Fallback, Caching & Chip Ellipsis Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PER-026` (`REQ-PER-026.1`..`REQ-PER-026.5`)
+- **Component**: `RegionNameResolverTest.kt`, `PeriodsViewModelTest.kt`, `PeriodCardMapStateTest.kt`, `PeriodMapScreenTest.kt`
+- **Jira**: `ATT-4934`
+- **Test Description**:
+  1. *Priority 1 Known Location Resolution Test (`TST-PER-033.1`, `RegionNameResolverTest.kt`)*:
+  • Verify that when a non-placeholder `MyLocation` exists within 10 km of the region center, its name is returned immediately without querying `Geocoder`.
+  • Verify that placeholder names (e.g. "Startort", "Auto-learned") are ignored.
+  2. *Priority 2 Geocoder Macro-Locality Resolution Test (`TST-PER-033.2`, `RegionNameResolverTest.kt`)*:
+  • Verify that when no known location exists within 10 km, `Geocoder` macro-locality (`locality ?: subLocality ?: subAdminArea`) is resolved and returned.
+  3. *Priority 3 Localized Fallback Test (`TST-PER-033.3`, `RegionNameResolverTest.kt`)*:
+  • Verify that when both known location and Geocoder fail or are offline, the resolver returns the localized fallback `"Region n"`.
+  4. *Two-Tier Cache Hit & Offline Retention Test (`TST-PER-033.4`, `RegionNameResolverTest.kt`)*:
+  • Verify that a resolved name is persisted to both memory and `SharedPreferences` cache and returned on subsequent lookups without triggering `Geocoder`.
+  5. *Hauptregion Semantics & Long Name Ellipsis Test (`TST-PER-033.5`, `PeriodMapScreenTest.kt` / `PeriodSummaryCardTest.kt`)*:
+  • Verify that primary region chips format with "Hauptregion: ..." / "Primary: ..." and secondary chips format with place name and workout count.
+  • Verify that long place names enforce single-line layout (`maxLines = 1`) and `TextOverflow.Ellipsis`.
+  6. *9-Language Localization Parity Audit (`TST-PER-033.6`, `TranslationParityTest.kt`)*:
+  • Verify that `workout_periods__named_region_format` and `workout_periods__primary_named_region_format` exist with valid `%1$s` and `%2$d` tokens across all 9 locales.
+  7. *Clean-Room Targeted Regression Execution (`TST-PER-033.7`)*:
+  • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*" --tests "com.atrainingtracker.trainingtracker.location.*"` to verify 100% test pass rate with zero regressions.
+
+### TST-PER-034: **Dual Vertex Budget Enforcement & Adaptive Decimation Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PER-019` (`REQ-PER-019.2`), `REQ-PER-024` (`REQ-PER-024.3`)
+- **Component**: `PeriodMapUtilsTest.kt`, `PeriodCardMapStateTest.kt`, `PeriodsViewModelTest.kt`
+- **Jira**: `ATT-4930`
+- **Test Description**:
+  1. *Card Mini-Map Hard Vertex Budget Test (`TST-PER-034.1`, `PeriodMapUtilsTest.kt`)*:
+  • Given a synthetic Year period with 300 workouts (each containing 200 GPS vertices, totaling 60,000 raw coordinates), verify that `simplifyPathsToBudget` or `prepareCardMapPreviewSync` bounds total vertices to $\le 2,000$ points (`MAX_CARD_MINI_MAP_VERTICES`).
+  2. *Detailed Map Hard Vertex Budget Test (`TST-PER-034.2`, `PeriodMapUtilsTest.kt`)*:
+  • Given a synthetic Year period with 300 workouts, verify that detailed map simplification bounds total vertices to $\le 8,000$ points (`MAX_DETAILED_MAP_VERTICES`).
+  3. *Base Tolerance Preservation Under Moderate Volume Test (`TST-PER-034.3`, `PeriodMapUtilsTest.kt`)*:
+  • Given a period where total vertices at base tolerance (5.0m Day/Week, 6.0m Month, 8.0m Year) are below budget, verify that base tolerances are preserved without unnecessary coarsening, maintaining 100% shared-corridor pixel overlap.
+  4. *Adaptive Escalation Convergence Test (`TST-PER-034.4`, `PeriodMapUtilsTest.kt`)*:
+  • Given pathological GPS paths with extreme point density, verify that the adaptive decimation algorithm converges within finite passes and never returns an empty path or throws an exception.
+  5. *Clean-Room Targeted Regression Execution (`TST-PER-034.5`)*:
+  • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"` verifying 100% test pass rate with zero regressions.
+
+
+
 

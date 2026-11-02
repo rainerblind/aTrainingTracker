@@ -129,6 +129,27 @@ object AuthCredentialsStore {
         } catch (e: Throwable) {
             Log.w(TAG, "Clearing credentials bypassed or failed: ${e.message}")
         }
+
+        // Eliminate zombie connected states: if no active Google account exists on device,
+        // reset uploadToGoogleDrive to false; reset uploadToDropbox to false as credentials were wiped.
+        try {
+            val defaultPrefs = getDefaultPrefs(context)
+            if (defaultPrefs != null) {
+                val editor = defaultPrefs.edit()
+                val hasGoogleAccount = try {
+                    com.google.android.gms.auth.api.signin.GoogleSignIn.getLastSignedInAccount(context) != null
+                } catch (_: Throwable) {
+                    false
+                }
+                if (!hasGoogleAccount) {
+                    editor.putBoolean("uploadToGoogleDrive", false)
+                }
+                editor.putBoolean("uploadToDropbox", false)
+                editor.commit()
+            }
+        } catch (e: Throwable) {
+            Log.w(TAG, "Resetting cloud upload preferences post-restore failed: ${e.message}")
+        }
     }
 
     /**

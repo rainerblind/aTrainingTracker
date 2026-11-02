@@ -49,7 +49,8 @@ data class SpatialRegion(
     val totalDistanceMeters: Double,
     val mostRecentTimestampS: Long,
     val isPrimary: Boolean = false,
-    val workoutIds: Set<Long> = emptySet()
+    val workoutIds: Set<Long> = emptySet(),
+    val placeName: String? = null
 )
 
 /**

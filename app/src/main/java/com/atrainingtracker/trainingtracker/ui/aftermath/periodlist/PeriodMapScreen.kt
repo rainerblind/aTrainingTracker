@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -129,31 +130,14 @@ fun PeriodMapScreen(
         val heatmapPaths: List<List<LatLng>>
     )
 
-    // Track multiple selected sports
-    var selectedSports by rememberSaveable { mutableStateOf(setOf<BSportType>()) }
-    val filteredContent = remember(summary, mapState.memberMarkers, mapState.tracks, mapState.workoutIdToHeatmapPathMap, selectedSports, enabledMarkerTypes) {
-        val workouts = if (selectedSports.isEmpty()) {
-            summary.workoutIdToPolylineMap
-        } else {
-            summary.workoutIdToPolylineMap.filter { (id, _) ->
-                val sport = summary.workoutIdToSportMap[id]
-                selectedSports.contains(sport)
-            }
-        }
-
-        val paths = if (selectedSports.isEmpty()) {
-            summary.workoutIdToPathMap
-        } else {
-            summary.workoutIdToPathMap.filter { (id, _) ->
-                val sport = summary.workoutIdToSportMap[id]
-                selectedSports.contains(sport)
-            }
-        }
+    // Master Sport Filter Authority (ATT-4935 / REQ-PER-024.5e):
+    // summary and mapState are slaved to PeriodsViewModel.selectedSports.
+    val filteredContent = remember(summary, mapState.memberMarkers, mapState.tracks, mapState.workoutIdToHeatmapPathMap, enabledMarkerTypes) {
+        val workouts = summary.workoutIdToPolylineMap
+        val paths = summary.workoutIdToPathMap
 
         val anchorMarkers = summary.extremaMarkers.filter { marker ->
-            val sportMatch = selectedSports.isEmpty() || selectedSports.contains(summary.workoutIdToSportMap[marker.workoutId])
-            val typeMatch = enabledMarkerTypes.contains(marker.markerType)
-            sportMatch && typeMatch
+            enabledMarkerTypes.contains(marker.markerType)
         }
 
         // REQ-PER-012 / REQ-PER-021: Adaptive Layering Invariant
@@ -166,9 +150,7 @@ fun PeriodMapScreen(
             emptyList()
         } else {
             mapState.memberMarkers.filter { marker ->
-                val sportMatch = selectedSports.isEmpty() || selectedSports.contains(summary.workoutIdToSportMap[marker.workoutId])
-                val typeMatch = enabledMarkerTypes.contains(marker.markerType)
-                sportMatch && typeMatch
+                enabledMarkerTypes.contains(marker.markerType)
             }
         }
 
@@ -176,13 +158,7 @@ fun PeriodMapScreen(
             emptyList()
         } else {
             if (mapState.tracks.isNotEmpty()) {
-                if (selectedSports.isEmpty()) {
-                    mapState.tracks
-                } else {
-                    mapState.tracks.filter { track ->
-                        selectedSports.contains(track.bSportType)
-                    }
-                }
+                mapState.tracks
             } else {
                 // Adaptive on-the-fly generation when filtered count <= MAX_PERIOD_VECTOR_TRACKS
                 workouts.keys.mapNotNull { id ->
@@ -199,14 +175,7 @@ fun PeriodMapScreen(
             }
         }
 
-        val heatmapPaths = if (selectedSports.isEmpty()) {
-            mapState.workoutIdToHeatmapPathMap.values.toList()
-        } else {
-            mapState.workoutIdToHeatmapPathMap.filterKeys { id ->
-                val sport = summary.workoutIdToSportMap[id]
-                selectedSports.contains(sport)
-            }.values.toList()
-        }
+        val heatmapPaths = mapState.workoutIdToHeatmapPathMap.values.toList()
         
         FilteredMapContent(workouts, paths, anchorMarkers, memberMarkers, memberTracks, heatmapPaths)
     }
@@ -352,36 +321,12 @@ fun PeriodMapScreen(
                     // SPORT SPECIFIC BREAKDOWN
                     summary.sportStats.entries.forEachIndexed { index, entry ->
                         val (sport, stats) = entry
-                        val isSelected = selectedSports.contains(sport)
-                        // Logic: If nothing is selected, everything is 1f.
-                        // If something is selected, dim everything except the selected ones.
-                        val rowAlpha = if (selectedSports.isEmpty() || isSelected) TTAlpha.High else TTAlpha.SemiTransparent
-
-                        Box(modifier = Modifier.alpha(rowAlpha)) {
+                        Box {
                             SportStatsRow(
                                 bSportType = sport,
                                 stats = stats,
                                 df = df, tf = tf, af = af,
-                                onClick = {
-                                    // Multi-select toggle logic
-                                    selectedSports = if (isSelected) {
-                                        selectedSports - sport // Remove if already there
-                                    } else {
-                                        selectedSports + sport // Add if not there
-                                    }
-
-                                    // Close peek if a filter change makes the peeked workout disappear
-                                    if (peekedWorkoutDataWithTrack != null) {
-                                        val peekedSport =
-                                            peekedWorkoutDataWithTrack.workoutData?.bSportType
-                                        if (selectedSports.isNotEmpty() && !selectedSports.contains(
-                                                peekedSport
-                                            )
-                                        ) {
-                                            clearPeekSelection()
-                                        }
-                                    }
-                                },
+                                onClick = {},
                                 onLongestWorkoutClick = { onWorkoutClick(it) }
                             )
                         }
@@ -442,22 +387,45 @@ fun PeriodMapScreen(
                         mapState.regions.forEachIndexed { index, region ->
                             val isSelected = mapState.selectedRegionId == region.id
                             val label = if (region.isPrimary) {
-                                stringResource(
-                                    R.string.workout_periods__primary_region_format,
-                                    index + 1,
-                                    region.workoutCount
-                                )
+                                if (!region.placeName.isNullOrBlank()) {
+                                    stringResource(
+                                        R.string.workout_periods__primary_named_region_format,
+                                        region.placeName,
+                                        region.workoutCount
+                                    )
+                                } else {
+                                    stringResource(
+                                        R.string.workout_periods__primary_region_format,
+                                        index + 1,
+                                        region.workoutCount
+                                    )
+                                }
                             } else {
-                                stringResource(
-                                    R.string.workout_periods__region_format,
-                                    index + 1,
-                                    region.workoutCount
-                                )
+                                if (!region.placeName.isNullOrBlank()) {
+                                    stringResource(
+                                        R.string.workout_periods__named_region_format,
+                                        region.placeName,
+                                        region.workoutCount
+                                    )
+                                } else {
+                                    stringResource(
+                                        R.string.workout_periods__region_format,
+                                        index + 1,
+                                        region.workoutCount
+                                    )
+                                }
                             }
                             FilterChip(
                                 selected = isSelected,
                                 onClick = { onSelectRegion?.invoke(region.id) },
-                                label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+                                label = {
+                                    Text(
+                                        text = label,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                },
                                 colors = FilterChipDefaults.filterChipColors(
                                     containerColor = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay),
                                     selectedContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = TTAlpha.Overlay),
@@ -474,11 +442,13 @@ fun PeriodMapScreen(
                             onClick = { onSelectRegion?.invoke(null) },
                             label = {
                                 Text(
-                                    stringResource(
+                                    text = stringResource(
                                         R.string.workout_periods__all_regions_format,
                                         totalPeriodWorkouts
                                     ),
-                                    style = MaterialTheme.typography.labelSmall
+                                    style = MaterialTheme.typography.labelSmall,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             },
                             colors = FilterChipDefaults.filterChipColors(

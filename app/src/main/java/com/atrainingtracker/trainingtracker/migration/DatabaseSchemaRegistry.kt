@@ -32,17 +32,19 @@ object DatabaseSchemaRegistry {
         "Laps.db" to 2,
         "Routes.db" to 10,
         "KnownLocations.db" to 6,
-        "TrackingViews.db" to 16,
-        "FlexibleGenericView.db" to 16,
-        "Devices.db" to 7,
+        "TrackingViews.db" to com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager.TrackingViewsDbHelper.DB_VERSION,
+        "FlexibleGenericView.db" to com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager.TrackingViewsDbHelper.DB_VERSION,
+        "Devices.db" to com.atrainingtracker.banalservice.database.DevicesDatabaseManager.DevicesDbHelper.DB_VERSION,
         "SportType.db" to 3,
         "Segments.db" to 9,
         "StravaUpload.db" to 6,
         "Equipment.db" to 2,
         "Pebble.db" to 3,
-        "AthleteMetrics.db" to 1,
+        "AthleteMetrics.db" to com.atrainingtracker.trainingtracker.database.AthleteMetricsDbHelper.DB_VERSION,
         "ActiveDevices.db" to 1,
         "ExportStatus.db" to 1,
+        com.atrainingtracker.trainingtracker.database.ElevationCacheDbHelper.DB_NAME to
+                com.atrainingtracker.trainingtracker.database.ElevationCacheDbHelper.DB_VERSION,
         com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodSummariesDatabaseManager.DATABASE_NAME to
                 com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodSummariesDatabaseManager.DB_VERSION
     )

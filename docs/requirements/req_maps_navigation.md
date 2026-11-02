@@ -1757,12 +1757,12 @@
 ### REQ-MAP-056: Line-Density Polyline Heatmap Tile Provider & 256-Entry Sequential Blue Color LUT [Verified]
 - **Tests**: `PolylineHeatmapTileProvider.kt`, `MapUtils.kt`, `MapContentScope.kt`, `PolylineHeatmapTileProviderTest.kt`
 - **Implementation**: Replace Google Maps Gaussian point-cloud HeatmapTileProvider with custom Web Mercator line-density PolylineHeatmapTileProvider and 256-entry sequential blue color lookup table (LUT).
-- **Rationale**: The system SHALL replace Gaussian point-cloud heatmap tile rendering with a true line-density tile provider (`PolylineHeatmapTileProvider`) and 3-stop sequential blue color LUT across all map views (ATT-4480, refined by ATT-4769, Parent Epic ATT-4474, refining `REQ-MAP-002` and `REQ-MAP-016`):
+- **Rationale**: The system SHALL replace Gaussian point-cloud heatmap tile rendering with a true line-density tile provider (`PolylineHeatmapTileProvider`) and 3-stop sequential blue color LUT across all map views (ATT-4480, refined by ATT-4769, ATT-4932, and ATT-4929, Parent Epic ATT-4474, refining `REQ-MAP-002` and `REQ-MAP-016`):
 1. *Web Mercator Line-Raster TileProvider (`PolylineHeatmapTileProvider.kt`, `REQ-MAP-056.1`)*:
 • `PolylineHeatmapTileProvider` SHALL implement `com.google.android.gms.maps.model.TileProvider`.
 • For each requested tile $(x, y, \text{zoom})$, candidate polylines SHALL be filtered in $O(1)$ time using bounding-box intersection against the tile's geographic coordinates $[lat_{\min}, lon_{\min}, lat_{\max}, lon_{\max}]$ with a stroke margin.
 • If no paths intersect the tile bounding box, `getTile` SHALL return `TileProvider.NO_TILE` immediately without allocating bitmaps.
-• Intersecting polylines SHALL be projected into Web Mercator tile pixel coordinates ($256 \times 256$) and rasterized using `android.graphics.Canvas`, `Path`, and additive blending (`PorterDuff.Mode.ADD`) to accumulate 1D line density without vertex spacing or speed bias.
+• Intersecting polylines SHALL be projected into Web Mercator tile pixel coordinates ($256 \times 256$) and rasterized using distance-to-segment line accumulation without vertex spacing or speed bias.
 2. *256-Entry Sequential Blue Color Lookup Table & Translucent Alpha Scaling (`REQ-MAP-056.2`)*:
 • Accumulated single-channel intensity values SHALL be mapped to 32-bit ARGB pixels using a precomputed 256-entry Color LUT interpolating the canonical 3-stop sequential blue palette from `MapUtils.kt` (`REQ-MAP-002` / `ATT-504`):
   - Low density (0.0): Light Cyan `#00E5FF` (`R=0, G=229, B=255`, base alpha ~20% / `51`)
@@ -1778,12 +1778,34 @@
 • Zero alterations to database schemas or workout telemetry recording.
 • Compatibility with standard Google Maps `TileOverlay` composable across Light, Dark, and AMOLED map themes.
 • Clean-room full test suite pass rate under `./gradlew testDebugUnitTest` SHALL remain 100%.
+5. *Per-Workout Coverage Mask & Unclamped Accumulation (`ATT-4932`, `REQ-MAP-056.5`)*:
+• For each candidate path, the provider SHALL rasterize all path segments into a per-workout coverage mask utilizing `max` (not sum) blending across segment capsule footprints, bounding each workout's contribution to at most 1.0 (with anti-aliased edge falloff) per covered pixel.
+• Per-workout coverage masks SHALL be accumulated into an integer count buffer without intermediate clamping (`minOf(255, ...)`), counting distinct workouts per pixel and eliminating vertex bead and standstill blob artifacts.
+• To bound tile rendering performance, the per-workout mask SHALL be allocated as a single reusable per-tile scratch buffer, and only the dirty bounding rectangle $[minX, minY, maxX, maxY]$ SHALL be cleared between paths ($O(\text{dirty pixels})$).
+• Accumulated counts SHALL be mapped through `ThermalColorLut` at tile completion.
+6. *Per-Period Maximum Corridor Frequency Normalization & Logarithmic Transfer Curve (`ATT-4929`, `REQ-MAP-056.6`)*:
+• The provider SHALL accept an optional `maxCorridorPassCount: Int? = null`.
+• When `maxCorridorPassCount` ($M > 1$) is supplied, pixel intensity for accumulated workout count $c \in [1, M]$ SHALL follow a non-linear concave logarithmic transfer curve:
+  $$I(c) = \text{round}\left(I_{\text{base}} + (255 - I_{\text{base}}) \cdot \frac{\ln(c)}{\ln(M)}\right)$$
+  with base cyan intensity $I_{\text{base}} = 85$ for single passes ($c=1$), ensuring intermediate frequencies ($1 < c < M$) remain strictly distinguishable and full Deep Indigo saturation ($I=255$) occurs strictly at $c \ge M$.
+• When $M \le 1$ or unprovided, single passes SHALL render at base cyan intensity ($I_{\text{base}} = 85$).
+• Global maximum corridor overlap $M$ SHALL be estimated once per period/region off the main thread via `estimateMaxCorridorPassCount(allPaths: List<List<LatLng>>): Int` using a coarse spatial grid in $O(N)$ time on `Dispatchers.Default`, ensuring identical normalization across all tiles and zoom levels for both `PeriodSummaryCard` and `InteractivePeriodMap` / `PeriodMapScreen`.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
 1. *Original Requirement ID & Target*: `REQ-MAP-056.2` (realigning with `REQ-MAP-002` *Training heatmaps (Cyan -> Indigo gradient)* and `REQ-MAP-016` *Heatmap DSL Support*) under Epic `ATT-4474`, targeting `ThermalColorLut.kt` and `PolylineHeatmapTileProvider.kt`.
 2. *Historical Origin & Commit Trace*: Sprint 2026-40.16 (ATT-500, ATT-504) and Sprint 2026-43.9 (commit `06990c88`, ATT-4594 / ATT-4480).
 3. *Root Reason for Existing Formulation*: A 5-stop fiery thermal gradient (Electric Blue -> Magenta -> Fiery Orange -> Yellow -> White) was introduced in `ThermalColorLut.kt` during initial line-density rasterizer prototyping to maximize contrast. Sprint 2026-43.9 user feedback established that this fiery scheme visually clashes with underlying maps and brand styling.
 4. *Preservation of Core Invariants*: Reverting color stops to Light Cyan -> Pure Blue -> Deep Indigo restores brand harmony and subtle route readability without altering the underlying line-density accumulation raster engine, O(1) tile lookup, thread safety, or database integrity.
+5. *ATT-4932 Refinement (REQ-MAP-056.1 / REQ-MAP-056.5)*:
+• Original Requirement ID & Target: `REQ-MAP-056.1` (*Web Mercator Line-Raster TileProvider*) and `REQ-PER-024.4` (*Corridor Frequency & Intensity Scaling*).
+• Historical Origin & Commit Trace: Sprint 2026-44.0 (commit `548f3995`, `ATT-4480`) and Sprint 2026-44.1 (commit `2bea16b7`, `ATT-4833`).
+• Root Reason for Existing Formulation: Per-segment additive accumulation directly into `intensityBuffer` was implemented as a fast prototype, but overlapping segment end-caps at vertices and standstill jitter clusters caused bead/blob artifacts and premature saturation.
+• Preservation of Core Invariants: Web Mercator projection, $O(1)$ candidate culling, thread-safety, zero heap churn, and 100% clean-room test pass rate are strictly preserved.
+6. *ATT-4929 Refinement (REQ-MAP-056.6 / REQ-PER-024.4)*:
+• Original Requirement ID & Target: `REQ-PER-024.4` (*Corridor Frequency & Intensity Scaling*) and `REQ-MAP-056.2` (*256-Entry Sequential Blue Color Lookup Table*).
+• Historical Origin & Commit Trace: Sprint 2026-44.0 (commit `548f3995`, `ATT-4480`) and Sprint 2026-44.1 (commit `2bea16b7`, `ATT-4833`).
+• Root Reason for Existing Formulation: Static bracketed lookup on period workout count (`pathCount`) was adopted before per-pixel workout counting (`ATT-4932`) was established, causing premature saturation at 12 passes in large periods and failing to distinguish 13x vs. 150x corridors.
+• Preservation of Core Invariants: Coarse grid computation off-thread preserves 60 fps main-thread performance; logarithmic transfer curve guarantees strict monotonicity and base cyan visibility ($I_{\text{base}} = 85$) for single passes.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* `ThermalColorLut` with default opacity,
@@ -1795,6 +1817,24 @@
 • *Given* a workout polyline traversed at varying speeds (fast descent vs. slow climb),
 • *When* rendered by `PolylineHeatmapTileProvider`,
 • *Then* the rendered intensity along the path SHALL remain uniform regardless of GPS point density or instantaneous speed.
+• *Given* a single collinear polyline with $N \ge 5$ vertices,
+• *When* rendered by `PolylineHeatmapTileProvider`,
+• *Then* interior line pixels exhibit uniform intensity matching a 2-point segment with zero intensity peaks at vertices.
+• *Given* a workout polyline with clustered standstill jitter points,
+• *When* rendered into the tile buffer,
+• *Then* the maximum accumulated count in the cluster region is exactly 1 (no blob oversaturation).
+• *Given* two identical coincident workout paths,
+• *When* rendered by `PolylineHeatmapTileProvider`,
+• *Then* the accumulated count is exactly 2 everywhere along the path without clamping.
+• *Given* synthetic period paths with known overlap corridors of 1x, 13x, and 150x passes and $M = 150$,
+• *When* rendered by `PolylineHeatmapTileProvider`,
+• *Then* pixel intensities are strictly monotonic ($I(1) = 85 < I(13) \approx 172 < I(150) = 255$) and only the 150x corridor reaches full saturation.
+• *Given* a period with candidate paths across multiple tiles,
+• *When* `estimateMaxCorridorPassCount` executes on `Dispatchers.Default`,
+• *Then* maximum corridor overlap $M$ is estimated in $< 10\text{ ms}$ and applied uniformly across all tiles.
+• *Given* `PeriodMapVisuals` for a period,
+• *When* rendered in both `PeriodSummaryCard` and `InteractivePeriodMap`,
+• *Then* both views share identical `maxCorridorPassCount` and render identical corridor intensities.
 • *Given* a requested tile coordinate $(x, y, zoom)$ with no intersecting workout paths,
 • *When* `getTile` executes,
 • *Then* the provider SHALL return `TileProvider.NO_TILE` immediately without allocating bitmaps.
@@ -1804,3 +1844,98 @@
 
 **Invariants**: Zero runtime allocations during lookup, thread-safe concurrent execution, zero SQLite alterations, zero main-thread jank, and 100% clean-room test pass rate.
 
+
+
+### REQ-MAP-057: Zoom-Adaptive Line-Density Heatmap Stroke Scaling, Warm Sequential Palette & Muted Base Map Styling [Verified]
+- **Tests**: `TST-MAP-059` | **Tickets**: `ATT-4933`
+- **Implementation**: `PolylineHeatmapTileProvider.kt`, `ThermalColorLut.kt`, `TTColor.kt`, `PeriodMapUtils.kt`, `PeriodSummaryCard.kt`, `InteractivePeriodMap.kt`, `PeriodMapScreen.kt`
+- **Rationale**: The system SHALL provide dynamic zoom-adaptive and container-scaled stroke width evaluation, a warm contrasting sequential "hot" palette, and muted base map styling across Periods heatmap views, eliminating corridor merging in dense street networks and visual camouflage against terrain hydrology while keeping Workout Clusters decoupled (ATT-4933, Parent Epic ATT-4474, refining `REQ-MAP-056` and `REQ-PER-024`):
+1. *Zoom- and Container-Adaptive Stroke Scaling (`REQ-MAP-057.1`)*:
+• In `PolylineHeatmapTileProvider`, line rasterization stroke width SHALL scale dynamically based on tile zoom level ($z$):
+  - At low zoom levels ($z \le 11$), stroke width SHALL scale down to $1.8\text{--}2.5\text{px}$ to prevent dense urban corridors from coalescing into solid unreadable blocks.
+  - At intermediate zoom levels ($12 \le z \le 14$), stroke width SHALL interpolate smoothly ($2.5\text{--}4.0\text{px}$).
+  - At high zoom levels ($z \ge 15$), stroke width SHALL expand to $4.5\text{--}6.0\text{px}$ to ensure high visibility of individual road corridors.
+• In card mini-map previews (`PeriodSummaryCard`), the provider SHALL apply a mini-map dampening factor ($\approx 0.65\times$ or clamped to $\le 2.2\text{px}$) to preserve street grid legibility within compact card bounds.
+2. *Warm Sequential "Hot" Color Palette (`ThermalColorLut.HOT`, `REQ-MAP-057.2`)*:
+• The system SHALL introduce a 4-stop warm sequential "hot" color palette (`ThermalColorLut.HOT`) constructed via semantic `TTColor` design tokens:
+  - Stop 0 (Low density / 0.0): Light Yellow (`#FFF176` / `HeatmapHotYellow`)
+  - Stop 1 (Moderate density / ~0.35): Vibrant Orange (`#FF9800` / `HeatmapHotOrange`)
+  - Stop 2 (High density / ~0.70): Warm Red (`#E53935` / `HeatmapHotRed`)
+  - Stop 3 (Maximum saturation / 1.0): Deep Dark Red (`#880E4F` / `HeatmapHotDarkRed`)
+• Index 0 SHALL remain fully transparent (`0x00000000`).
+• All color constants SHALL be registered in `TTColor.kt` under light and dark theme semantics, verified by `ThemeColorCentralizationAuditTest`.
+3. *Muted / Desaturated Base Map Style for Heatmap Views (`REQ-MAP-057.3`)*:
+• Periods map views rendering heatmaps (`PeriodSummaryCard`, `InteractivePeriodMap`, and `PeriodMapScreen`) SHALL support a muted/desaturated base map style JSON that suppresses bright terrain green and water blue contrast, allowing the warm heatmap overlay to dominate visual hierarchy.
+4. *Modular Decoupling & Parameterization (`REQ-MAP-057.4`)*:
+• `PolylineHeatmapTileProvider` and `MapContentScope` SHALL accept configurable `colorLut` and stroke scaler parameters, preserving default configuration and backwards compatibility for Workout Clusters (`ATT-4931`).
+5. *Preservation of System Invariants (`REQ-MAP-057.5`)*:
+• Single-workout mask accumulation (`ATT-4932`) and logarithmic corridor normalization (`ATT-4929`) SHALL remain fully active with zero regressions.
+• Tile generation SHALL remain strictly thread-safe on `Dispatchers.Default`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: `REQ-MAP-056.1` / `REQ-MAP-056.2` (*Line-Density Polyline Heatmap Tile Provider & 256-Entry Sequential Blue Color LUT*) and `REQ-PER-024.4` (*Corridor Frequency & Intensity Scaling*).
+2. *Historical Origin & Commit Trace*: Sprint 2026-40.16 (`ATT-504`), Sprint 2026-43.9 (commit `06990c88`, `ATT-4594` / `ATT-4480`), and Sprint Review 2026-44.1 of `ATT-4833`.
+3. *Root Reason for Existing Formulation*: Initial prototype adopted a static 5px stroke width and hardcoded 3-stop blue gradient (Cyan `#00E5FF` -> Blue `#0000FF` -> Indigo `#311B92`) for proof-of-concept tile rasterization without considering zoom scale or base map water/stream color collision.
+4. *Preservation of Core Invariants*: Zero main-thread tile rasterization (`Dispatchers.Default`), single-workout coverage mask accumulation (`ATT-4932`), logarithmic corridor normalization (`ATT-4929`), and decoupling/backward compatibility for Workout Clusters (`ATT-4931`) remain strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a high-workout period rendered in `PeriodSummaryCard` (mini-map) at zoom 11,
+• *When* the tile is generated,
+• *Then* stroke width is dampened to $\le 2.2\text{px}$, keeping urban street networks distinct without solid merging.
+• *Given* a detailed period map in `PeriodMapScreen` zoomed into zoom 16,
+• *When* the tile is generated,
+• *Then* stroke width expands to $\ge 4.5\text{px}$ for glanceable corridor emphasis.
+• *Given* accumulated corridor counts mapped through `ThermalColorLut.HOT`,
+• *When* rendered on a muted base map,
+• *Then* single-pass corridors appear in light yellow and high-frequency corridors progress to dark red, with zero camouflage against water bodies or terrain.
+• *Given* Workout Clusters map rendering (`ATT-4931`),
+• *When* no custom palette is configured,
+• *Then* default palette/stroke parameters are preserved without visual regression.
+
+**Invariants**: Zero database changes, thread safety on `Dispatchers.Default`, compliance with `TTColor` theme centralization, and 100% clean-room test pass rate.
+
+
+
+### REQ-MAP-058: Decouple Workout Clusters Heatmap from Periods Styling & Restore Pre-ATT-4833 Visual Appearance [Verified]
+- **Tests**: `TST-MAP-060` | **Tickets**: `ATT-4931`
+- **Implementation**: `ThermalColorLut.kt`, `PolylineHeatmapTileProvider.kt`, `MapContentScope.kt`, `WorkoutClusterHeatmapScreen.kt`
+- **Rationale**: The system SHALL decouple Workout Clusters heatmap styling from Periods shared components and restore the exact pre-ATT-4833 visual appearance (alpha stops 20% / 30% / 70%, opacity 0.8, classic linear step intensity) while keeping Periods heatmap configuration (ThermalColorLut.HOT, zoom-adaptive stroke scaling, and logarithmic corridor normalization) fully intact (ATT-4931, Parent Epic ATT-4474, refining REQ-MAP-056 and REQ-MAP-057):
+1. *Classic Sequential Blue Color Palette Preset (`ThermalColorLut.CLASSIC_BLUE`, `REQ-MAP-058.1`)*:
+• The system SHALL provide a dedicated `CLASSIC_BLUE` preset in `ThermalColorLut` with base alpha stops at 20% (51), 30% (77), and 70% (180), and global layer opacity 0.8:
+  - Low density (0.0): Light Cyan `#00E5FF` (base alpha 51, effective ~41)
+  - Medium density (0.5): Pure Blue `#0000FF` (base alpha 77, effective ~62)
+  - High density (1.0): Deep Indigo `#311B92` (base alpha 180, effective ~144)
+• Index 0 SHALL remain fully transparent (`0x00000000`).
+2. *Classic Pass-Intensity Strategy (`REQ-MAP-058.2`)*:
+• `PolylineHeatmapTileProvider` SHALL provide a classic step intensity calculation strategy (`calculateClassicStepIntensity`) saturating after 4..29 passes:
+  - $\le 5$ workouts: $0.25f$ (saturates in 4 passes)
+  - $\le 20$ workouts: $0.15f$ (saturates in 7 passes)
+  - $\le 60$ workouts: $0.08f$ (saturates in 13 passes)
+  - $\le 150$ workouts: $0.05f$ (saturates in 20 passes)
+  - $> 150$ workouts: $0.035f$ (saturates in 29 passes)
+3. *Opt-In Corridor Normalization (`MapContentScope.heatmap`, `REQ-MAP-058.3`)*:
+• `MapContentScope.heatmap` SHALL accept `normalizeCorridors: Boolean = false`. When false, automatic `estimateMaxCorridorPassCount` estimation SHALL NOT be executed, preserving linear step accumulation for cluster maps.
+4. *Explicit Workout Clusters Heatmap Configuration (`REQ-MAP-058.4`)*:
+• `WorkoutClusterHeatmapScreen.kt` SHALL explicitly configure its heatmap with `colorLut = ThermalColorLut.CLASSIC_BLUE`, classic step intensity, and `normalizeCorridors = false`, preventing unintentional inheritance of Periods styling.
+5. *Preservation of System Invariants (`REQ-MAP-058.5`)*:
+• Periods heatmap styling (`ThermalColorLut.HOT`, dynamic stroke scaling, logarithmic corridor normalization) SHALL remain 100% preserved with zero regressions.
+• All tile rendering SHALL remain off the UI thread on `Dispatchers.Default`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: `REQ-MAP-056.2` (*256-Entry Sequential Blue Color LUT*) and `REQ-MAP-057.4` (*Modular Decoupling & Parameterization*).
+2. *Historical Origin & Commit Trace*: Sprint 2026-40.16 (`ATT-504`), Sprint 2026-43.9 (commit `06990c88`, `ATT-4594` / `ATT-4480`), and Sprint Review 2026-44.1 of `ATT-4833` and `ATT-4929`.
+3. *Root Reason for Existing Formulation*: Shared components were mutated in-place during Periods improvements without providing decoupled presets, inadvertently altering the appearance of Workout Clusters.
+4. *Preservation of Core Invariants*: Full backward compatibility for Workout Clusters is restored while preserving all Periods 2.0 heatmap capabilities.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the Workout Clusters heatmap rendered in `WorkoutClusterHeatmapScreen`,
+• *When* heatmap tiles are generated,
+• *Then* `ThermalColorLut.CLASSIC_BLUE` with opacity 0.8 and classic step intensity is applied, restoring pre-ATT-4833 appearance.
+• *Given* `MapContentScope.heatmap` with `normalizeCorridors = false`,
+• *When* the heatmap tile provider is initialized,
+• *Then* corridor overlap count is not logarithmically normalized.
+• *Given* Periods heatmap screens (`PeriodSummaryCard`, `InteractivePeriodMap`, `PeriodMapScreen`),
+• *When* tiles are generated,
+• *Then* `ThermalColorLut.HOT` with zoom-adaptive stroke scaling and logarithmic corridor normalization continues to render without visual regression.
+
+**Invariants**: Zero database changes, thread safety on `Dispatchers.Default`, compliance with theme tokens, and 100% clean-room test pass rate.

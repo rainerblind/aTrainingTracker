@@ -20,18 +20,13 @@ package com.atrainingtracker.trainingtracker.ui.settings.autopause
 
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.pager.HorizontalPager
@@ -56,12 +51,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atrainingtracker.R
@@ -70,13 +62,11 @@ import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.TrainingApplication
-import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSliderItem
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningToggleItem
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
-import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -87,7 +77,7 @@ private data class AutoPauseTabItem(
 
 /**
  * Dedicated tabbed full-screen settings cockpit for sport-specific Auto-Pause configuration
- * (REQ-SET-080, TST-SET-080, ATT-4836).
+ * (REQ-SET-080, TST-SET-080, ATT-4836, ATT-4924).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -109,102 +99,10 @@ fun AutoPauseTabsScreen(
 
     val pagerState = rememberPagerState(pageCount = { tabs.size })
 
-    val density = LocalDensity.current
-    val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val appBarMaxHeightPx = with(density) { (statusBarHeight + LayoutConstants.COMPACT_HEADER_CONTENT_HEIGHT).roundToPx() }
-
-    val connection = remember(appBarMaxHeightPx) {
-        CollapsingAppBarNestedScrollConnection(appBarMaxHeightPx)
-    }
-
     Surface(modifier = Modifier.fillMaxSize()) {
-        Box(Modifier.nestedScroll(connection)) {
-            // 1. Content Pager
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier.fillMaxSize()
-            ) { page ->
-                val tab = tabs[page]
-                val contentPadding = PaddingValues(
-                    top = with(density) { appBarMaxHeightPx.toDp() } + 16.dp,
-                    bottom = 32.dp,
-                    start = 16.dp,
-                    end = 16.dp
-                )
-
-                when (tab.sportType) {
-                    BSportType.BIKE -> {
-                        AutoPauseSportTabContent(
-                            sportType = BSportType.BIKE,
-                            sportTitle = stringResource(tab.titleRes),
-                            startInAutoPauseEnabled = tuningConfig.startInAutoPauseEnabled,
-                            onStartInAutoPauseChange = { viewModel.updateStartInAutoPauseEnabled(it) },
-                            enabled = tuningConfig.autoPauseBikeEnabled,
-                            onEnabledChange = { viewModel.updateAutoPauseBikeEnabled(it) },
-                            speedThreshold = tuningConfig.autoPauseBikeSpeedThreshold,
-                            onSpeedThresholdChange = { viewModel.updateAutoPauseBikeSpeedThreshold(it) },
-                            debounceSec = tuningConfig.autoPauseBikeDebounceSec,
-                            onDebounceSecChange = { viewModel.updateAutoPauseBikeDebounceSec(it) },
-                            resumeDebounceSec = tuningConfig.autoPauseBikeResumeDebounceSec,
-                            onResumeDebounceSecChange = { viewModel.updateAutoPauseBikeResumeDebounceSec(it) },
-                            minDebounce = TuningPreferencesDefaults.MIN_AUTO_PAUSE_BIKE_DEBOUNCE_SEC,
-                            maxDebounce = TuningPreferencesDefaults.MAX_AUTO_PAUSE_BIKE_DEBOUNCE_SEC,
-                            debounceSteps = 18,
-                            defaultDebounce = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_DEBOUNCE_SEC,
-                            defaultResumeDebounce = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_RESUME_DEBOUNCE_SEC,
-                            contentPadding = contentPadding
-                        )
-                    }
-                    BSportType.RUN -> {
-                        AutoPauseSportTabContent(
-                            sportType = BSportType.RUN,
-                            sportTitle = stringResource(tab.titleRes),
-                            startInAutoPauseEnabled = tuningConfig.startInAutoPauseEnabled,
-                            onStartInAutoPauseChange = { viewModel.updateStartInAutoPauseEnabled(it) },
-                            enabled = tuningConfig.autoPauseRunEnabled,
-                            onEnabledChange = { viewModel.updateAutoPauseRunEnabled(it) },
-                            speedThreshold = tuningConfig.autoPauseRunSpeedThreshold,
-                            onSpeedThresholdChange = { viewModel.updateAutoPauseRunSpeedThreshold(it) },
-                            debounceSec = tuningConfig.autoPauseRunDebounceSec,
-                            onDebounceSecChange = { viewModel.updateAutoPauseRunDebounceSec(it) },
-                            resumeDebounceSec = tuningConfig.autoPauseRunResumeDebounceSec,
-                            onResumeDebounceSecChange = { viewModel.updateAutoPauseRunResumeDebounceSec(it) },
-                            minDebounce = TuningPreferencesDefaults.MIN_AUTO_PAUSE_RUN_DEBOUNCE_SEC,
-                            maxDebounce = TuningPreferencesDefaults.MAX_AUTO_PAUSE_RUN_DEBOUNCE_SEC,
-                            debounceSteps = 18,
-                            defaultDebounce = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_DEBOUNCE_SEC,
-                            defaultResumeDebounce = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_RESUME_DEBOUNCE_SEC,
-                            contentPadding = contentPadding
-                        )
-                    }
-                    else -> {
-                        AutoPauseSportTabContent(
-                            sportType = BSportType.UNKNOWN,
-                            sportTitle = stringResource(tab.titleRes),
-                            startInAutoPauseEnabled = tuningConfig.startInAutoPauseEnabled,
-                            onStartInAutoPauseChange = { viewModel.updateStartInAutoPauseEnabled(it) },
-                            enabled = tuningConfig.autoPauseOtherEnabled,
-                            onEnabledChange = { viewModel.updateAutoPauseOtherEnabled(it) },
-                            speedThreshold = tuningConfig.autoPauseOtherSpeedThreshold,
-                            onSpeedThresholdChange = { viewModel.updateAutoPauseOtherSpeedThreshold(it) },
-                            debounceSec = tuningConfig.autoPauseOtherDebounceSec,
-                            onDebounceSecChange = { viewModel.updateAutoPauseOtherDebounceSec(it) },
-                            resumeDebounceSec = tuningConfig.autoPauseOtherResumeDebounceSec,
-                            onResumeDebounceSecChange = { viewModel.updateAutoPauseOtherResumeDebounceSec(it) },
-                            minDebounce = TuningPreferencesDefaults.MIN_AUTO_PAUSE_OTHER_DEBOUNCE_SEC,
-                            maxDebounce = TuningPreferencesDefaults.MAX_AUTO_PAUSE_OTHER_DEBOUNCE_SEC,
-                            debounceSteps = 58,
-                            defaultDebounce = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_DEBOUNCE_SEC,
-                            defaultResumeDebounce = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_RESUME_DEBOUNCE_SEC,
-                            contentPadding = contentPadding
-                        )
-                    }
-                }
-            }
-
-            // 2. Collapsing Header with Tabs
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Fixed top header surface (title row + global card + sport tabs)
             Surface(
-                modifier = Modifier.offset { IntOffset(0, connection.appBarOffset) },
                 color = MaterialTheme.colorScheme.primaryContainer
             ) {
                 Column(modifier = Modifier.statusBarsPadding()) {
@@ -249,6 +147,28 @@ fun AutoPauseTabsScreen(
                         }
                     }
 
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            TuningToggleItem(
+                                title = stringResource(R.string.tuning_auto_pause_start_in_auto_pause_title),
+                                isChecked = tuningConfig.startInAutoPauseEnabled,
+                                onCheckedChange = { viewModel.updateStartInAutoPauseEnabled(it) },
+                                summary = stringResource(R.string.tuning_auto_pause_start_in_auto_pause_desc)
+                            )
+                        }
+                    }
+
                     PrimaryScrollableTabRow(
                         selectedTabIndex = pagerState.currentPage,
                         containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
@@ -266,6 +186,77 @@ fun AutoPauseTabsScreen(
                     }
                 }
             }
+
+            // Content Pager
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            ) { page ->
+                val tab = tabs[page]
+                val contentPadding = PaddingValues(16.dp)
+
+                when (tab.sportType) {
+                    BSportType.BIKE -> {
+                        AutoPauseSportTabContent(
+                            sportType = BSportType.BIKE,
+                            enabled = tuningConfig.autoPauseBikeEnabled,
+                            onEnabledChange = { viewModel.updateAutoPauseBikeEnabled(it) },
+                            speedThreshold = tuningConfig.autoPauseBikeSpeedThreshold,
+                            onSpeedThresholdChange = { viewModel.updateAutoPauseBikeSpeedThreshold(it) },
+                            debounceSec = tuningConfig.autoPauseBikeDebounceSec,
+                            onDebounceSecChange = { viewModel.updateAutoPauseBikeDebounceSec(it) },
+                            resumeDebounceSec = tuningConfig.autoPauseBikeResumeDebounceSec,
+                            onResumeDebounceSecChange = { viewModel.updateAutoPauseBikeResumeDebounceSec(it) },
+                            minDebounce = TuningPreferencesDefaults.MIN_AUTO_PAUSE_BIKE_DEBOUNCE_SEC,
+                            maxDebounce = TuningPreferencesDefaults.MAX_AUTO_PAUSE_BIKE_DEBOUNCE_SEC,
+                            debounceSteps = 18,
+                            defaultDebounce = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_DEBOUNCE_SEC,
+                            defaultResumeDebounce = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_RESUME_DEBOUNCE_SEC,
+                            contentPadding = contentPadding
+                        )
+                    }
+                    BSportType.RUN -> {
+                        AutoPauseSportTabContent(
+                            sportType = BSportType.RUN,
+                            enabled = tuningConfig.autoPauseRunEnabled,
+                            onEnabledChange = { viewModel.updateAutoPauseRunEnabled(it) },
+                            speedThreshold = tuningConfig.autoPauseRunSpeedThreshold,
+                            onSpeedThresholdChange = { viewModel.updateAutoPauseRunSpeedThreshold(it) },
+                            debounceSec = tuningConfig.autoPauseRunDebounceSec,
+                            onDebounceSecChange = { viewModel.updateAutoPauseRunDebounceSec(it) },
+                            resumeDebounceSec = tuningConfig.autoPauseRunResumeDebounceSec,
+                            onResumeDebounceSecChange = { viewModel.updateAutoPauseRunResumeDebounceSec(it) },
+                            minDebounce = TuningPreferencesDefaults.MIN_AUTO_PAUSE_RUN_DEBOUNCE_SEC,
+                            maxDebounce = TuningPreferencesDefaults.MAX_AUTO_PAUSE_RUN_DEBOUNCE_SEC,
+                            debounceSteps = 18,
+                            defaultDebounce = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_DEBOUNCE_SEC,
+                            defaultResumeDebounce = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_RESUME_DEBOUNCE_SEC,
+                            contentPadding = contentPadding
+                        )
+                    }
+                    else -> {
+                        AutoPauseSportTabContent(
+                            sportType = BSportType.UNKNOWN,
+                            enabled = tuningConfig.autoPauseOtherEnabled,
+                            onEnabledChange = { viewModel.updateAutoPauseOtherEnabled(it) },
+                            speedThreshold = tuningConfig.autoPauseOtherSpeedThreshold,
+                            onSpeedThresholdChange = { viewModel.updateAutoPauseOtherSpeedThreshold(it) },
+                            debounceSec = tuningConfig.autoPauseOtherDebounceSec,
+                            onDebounceSecChange = { viewModel.updateAutoPauseOtherDebounceSec(it) },
+                            resumeDebounceSec = tuningConfig.autoPauseOtherResumeDebounceSec,
+                            onResumeDebounceSecChange = { viewModel.updateAutoPauseOtherResumeDebounceSec(it) },
+                            minDebounce = TuningPreferencesDefaults.MIN_AUTO_PAUSE_OTHER_DEBOUNCE_SEC,
+                            maxDebounce = TuningPreferencesDefaults.MAX_AUTO_PAUSE_OTHER_DEBOUNCE_SEC,
+                            debounceSteps = 58,
+                            defaultDebounce = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_DEBOUNCE_SEC,
+                            defaultResumeDebounce = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_RESUME_DEBOUNCE_SEC,
+                            contentPadding = contentPadding
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -273,9 +264,6 @@ fun AutoPauseTabsScreen(
 @Composable
 private fun AutoPauseSportTabContent(
     sportType: BSportType,
-    sportTitle: String,
-    startInAutoPauseEnabled: Boolean,
-    onStartInAutoPauseChange: (Boolean) -> Unit,
     enabled: Boolean,
     onEnabledChange: (Boolean) -> Unit,
     speedThreshold: Int,
@@ -323,32 +311,10 @@ private fun AutoPauseSportTabContent(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    TuningToggleItem(
-                        title = stringResource(R.string.tuning_auto_pause_start_in_auto_pause_title),
-                        isChecked = startInAutoPauseEnabled,
-                        onCheckedChange = onStartInAutoPauseChange,
-                        summary = stringResource(R.string.tuning_auto_pause_start_in_auto_pause_desc)
-                    )
-                }
-            }
-        }
-
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     TuningToggleItem(
-                        title = sportTitle,
+                        title = stringResource(R.string.tuning_auto_pause_enable_title),
                         isChecked = enabled,
                         onCheckedChange = onEnabledChange
                     )
@@ -409,9 +375,6 @@ private fun PreviewAutoPauseTabsScreenLight() {
         Surface {
             AutoPauseSportTabContent(
                 sportType = BSportType.BIKE,
-                sportTitle = "Cycling",
-                startInAutoPauseEnabled = false,
-                onStartInAutoPauseChange = {},
                 enabled = true,
                 onEnabledChange = {},
                 speedThreshold = 3,
@@ -438,9 +401,6 @@ private fun PreviewAutoPauseTabsScreenDark() {
         Surface {
             AutoPauseSportTabContent(
                 sportType = BSportType.BIKE,
-                sportTitle = "Cycling",
-                startInAutoPauseEnabled = true,
-                onStartInAutoPauseChange = {},
                 enabled = true,
                 onEnabledChange = {},
                 speedThreshold = 3,

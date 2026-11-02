@@ -46,4 +46,9 @@ public class InstantaneousFilter<T> extends MyFilter<T> {
     public synchronized T getFilteredValue() {
         return mValue;
     }
+
+    @Override
+    public synchronized void reset() {
+        mValue = null;
+    }
 }

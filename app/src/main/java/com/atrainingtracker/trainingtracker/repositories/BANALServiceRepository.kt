@@ -22,6 +22,7 @@ import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.location.Location
 import com.atrainingtracker.util.safeStartService
 import android.content.IntentFilter
 import android.content.ServiceConnection
@@ -34,13 +35,19 @@ import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.devices.MyRemoteDevice
+import com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice
 import com.atrainingtracker.banalservice.devices.MyDevice
 import com.atrainingtracker.banalservice.filters.FilterData
 import com.atrainingtracker.banalservice.filters.FilteredSensorData
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.banalservice.tpms.IndirectTpmsEstimator
+import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents
 import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
+import com.atrainingtracker.trainingtracker.util.SnapshotChunkedList
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -127,6 +134,13 @@ class BANALServiceRepository private constructor(context: Context) {
     private val _activeSensors = MutableStateFlow<Set<SensorType>>(emptySet())
     val activeSensors: StateFlow<Set<SensorType>> = _activeSensors.asStateFlow()
 
+    /**
+     * Whether a speed source (SPEED_mps) is currently registered or available in BANALService (REQ-TRK-044, ATT-4925).
+     */
+    val hasSpeedSource: Boolean
+        get() = _serviceBinder.value?.availableSensorTypeSet?.contains(SensorType.SPEED_mps)
+            ?: _activeSensors.value.contains(SensorType.SPEED_mps)
+
     // Mapping from SensorType to the ID of the device currently providing the "best" value
     private val _sensorSourceDeviceIds = MutableStateFlow<Map<SensorType, Long>>(emptyMap())
     val sensorSourceDeviceIds: StateFlow<Map<SensorType, Long>> = _sensorSourceDeviceIds.asStateFlow()
@@ -147,16 +161,22 @@ class BANALServiceRepository private constructor(context: Context) {
     private val _currentDistance = MutableStateFlow<Double?>(null)
     val currentDistance: StateFlow<Double?> = _currentDistance.asStateFlow()
 
+    val itpmsEstimator = IndirectTpmsEstimator()
+
     // Current movement bearing
     private val _currentBearing = MutableStateFlow<Double?>(null)
     val currentBearing: StateFlow<Double?> = _currentBearing.asStateFlow()
 
+    // Current altitude in meters (REQ-TRK-047)
+    private val _currentAltitude = MutableStateFlow<Double?>(null)
+    val currentAltitude: StateFlow<Double?> = _currentAltitude.asStateFlow()
+
     // --- Current Track (Breadcrumbs for the Map Polyline) ---
-    private val _currentTrack = MutableStateFlow<List<LatLng>>(emptyList())
+    private val _currentTrack = MutableStateFlow<List<LatLng>>(SnapshotChunkedList.empty())
     val currentTrack: StateFlow<List<LatLng>> = _currentTrack.asStateFlow()
 
     // --- Current Path Points (Distance + LatLng + Altitude) for Elevation Profile ---
-    private val _currentPathPoints = MutableStateFlow<List<com.atrainingtracker.trainingtracker.ui.map.PathPoint>>(emptyList())
+    private val _currentPathPoints = MutableStateFlow<List<com.atrainingtracker.trainingtracker.ui.map.PathPoint>>(SnapshotChunkedList.empty())
     val currentPathPoints: StateFlow<List<com.atrainingtracker.trainingtracker.ui.map.PathPoint>> = _currentPathPoints.asStateFlow()
 
     // Altimeter calibration status (REQ-UI-199)
@@ -181,6 +201,9 @@ class BANALServiceRepository private constructor(context: Context) {
             val newTrackingMode = TrainingApplication.getTrackingMode()
             if (_trackingMode.value != newTrackingMode) {
                 _trackingMode.postValue(newTrackingMode)
+            }
+            if (newTrackingMode == TrackingMode.READY) {
+                clearBreadcrumbs()
             }
         }
     }
@@ -213,6 +236,20 @@ class BANALServiceRepository private constructor(context: Context) {
         _lapEvent.value = null
     }
 
+    // Listens for barometric altitude correction broadcasts to adjust live path points (REQ-TRK-047.2)
+    private val altitudeCorrectionReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            intent?.let {
+                val delta = it.getDoubleExtra(com.atrainingtracker.banalservice.devices.AltitudeFromPressureDevice.ALTITUDE_CORRECTION_VALUE, 0.0)
+                if (Math.abs(delta) >= 0.1 && Math.abs(delta) <= 500.0) {
+                    val t0 = it.getLongExtra(com.atrainingtracker.banalservice.devices.AltitudeFromPressureDevice.PREV_CALIBRATION_TIME_MS_EXTRA, -1L)
+                    val t1 = it.getLongExtra(com.atrainingtracker.banalservice.devices.AltitudeFromPressureDevice.CALIBRATION_TIME_MS_EXTRA, System.currentTimeMillis())
+                    applyRetroactiveAltitudeCorrection(delta, t0, t1)
+                }
+            }
+        }
+    }
+
 
     init {
         _wasAutoPaused.value = TrainingApplication.wasAutoPaused()
@@ -227,7 +264,14 @@ class BANALServiceRepository private constructor(context: Context) {
         appContext.registerReceiver(
             lapSummaryReceiver,
             IntentFilter(BANALService.LAP_SUMMARY),
-            Context.RECEIVER_NOT_EXPORTED)
+            Context.RECEIVER_NOT_EXPORTED
+        )
+
+        appContext.registerReceiver(
+            altitudeCorrectionReceiver,
+            IntentFilter(com.atrainingtracker.banalservice.devices.AltitudeFromPressureDevice.ALTITUDE_CORRECTION_INTENT),
+            Context.RECEIVER_NOT_EXPORTED
+        )
 
         // Start the long-lived observation loop that reacts to the binder state.
         // It will automatically start/stop based on whether we are connected to the service.
@@ -275,6 +319,24 @@ class BANALServiceRepository private constructor(context: Context) {
         if (DEBUG) Log.i(TAG, "unbindFromBANALService() - count=$bindReferenceCount")
         
         if (bindReferenceCount == 0 && isBoundToBanalService) {
+            try {
+                _serviceBinder.value = null
+                appContext.unbindService(banalServiceConnection)
+                isBoundToBanalService = false
+            } catch (e: IllegalArgumentException) {
+                Log.e(TAG, "Service not registered or already unbound: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Forcibly unbinds the repository from BANALService, resetting bindReferenceCount to 0
+     * and releasing the service connection when idle (REQ-TRK-049.2).
+     */
+    fun forceUnbindFromBANALService() {
+        if (DEBUG) Log.i(TAG, "forceUnbindFromBANALService() - resetting count=$bindReferenceCount, isBound=$isBoundToBanalService")
+        bindReferenceCount = 0
+        if (isBoundToBanalService) {
             try {
                 _serviceBinder.value = null
                 appContext.unbindService(banalServiceConnection)
@@ -347,9 +409,6 @@ class BANALServiceRepository private constructor(context: Context) {
                             if (_currentLocation.value != newLocation) {
                                 _currentLocation.value = newLocation
                                 locationChanged = true
-                                if (TrainingApplication.getTrackingMode() == TrackingMode.TRACKING) {
-                                    _currentTrack.value = currentTrack.value + newLocation
-                                }
                             }
                         }
 
@@ -361,19 +420,111 @@ class BANALServiceRepository private constructor(context: Context) {
                         val distanceChanged = (currentDistance != null && currentDistance != _currentDistance.value)
 
                         _currentSpeed.value = currentSpeed
+                        _currentAltitude.value = currentAltitude
                         _currentBearing.value = binder.getBestSensorData(SensorType.BEARING)?.value as? Double
                         _currentDistance.value = currentDistance
                         _isAltimeterCalibrated.value = binder.isAltimeterCalibrated()
 
-                        // REQ-TRK-042.1: Only append PathPoint when location is valid and location or distance has advanced
+                        // REQ-TRK-048.5: Suppress appending redundant track breadcrumbs when stationary and within deadband (3.0m)
                         val location = _currentLocation.value
+                        val isStationary = (currentSpeed ?: 0.0) <= SpeedAndLocationDevice.SPEED_ZERO_THRESHOLD
+                        if (location != null && locationChanged) {
+                            val lastTrackPoint = _currentTrack.value.lastOrNull()
+                            var isSpiderJitter = false
+                            if (isStationary && lastTrackPoint != null) {
+                                val distanceResults = FloatArray(1)
+                                Location.distanceBetween(
+                                    lastTrackPoint.latitude, lastTrackPoint.longitude,
+                                    location.latitude, location.longitude,
+                                    distanceResults
+                                )
+                                if (distanceResults[0] <= 3.0f) {
+                                    isSpiderJitter = true
+                                }
+                            }
+
+                            if (!isSpiderJitter && TrainingApplication.getTrackingMode() == TrackingMode.TRACKING) {
+                                _currentTrack.value = appendToTrack(_currentTrack.value, location)
+                            }
+                        }
+
+                        // REQ-TRK-042.1 & REQ-TRK-048.5: Only append PathPoint when location is valid and not stationary spider jitter
                         if (TrainingApplication.getTrackingMode() == TrackingMode.TRACKING && location != null && (locationChanged || distanceChanged)) {
-                            val newPathPoint = com.atrainingtracker.trainingtracker.ui.map.PathPoint(
-                                distance = currentDistance ?: 0.0,
-                                latLng = location,
-                                altitude = currentAltitude ?: 0.0
-                            )
-                            _currentPathPoints.value = _currentPathPoints.value + newPathPoint
+                            val lastPathPoint = _currentPathPoints.value.lastOrNull()?.latLng
+                            var isPathJitter = false
+                            if (isStationary && !distanceChanged && lastPathPoint != null) {
+                                val distanceResults = FloatArray(1)
+                                Location.distanceBetween(
+                                    lastPathPoint.latitude, lastPathPoint.longitude,
+                                    location.latitude, location.longitude,
+                                    distanceResults
+                                )
+                                if (distanceResults[0] <= 3.0f) {
+                                    isPathJitter = true
+                                }
+                            }
+
+                            if (!isPathJitter) {
+                                val newPathPoint = com.atrainingtracker.trainingtracker.ui.map.PathPoint(
+                                    distance = currentDistance ?: 0.0,
+                                    latLng = location,
+                                    altitude = currentAltitude ?: 0.0
+                                )
+                                _currentPathPoints.value = appendToTrack(_currentPathPoints.value, newPathPoint)
+                            }
+                        }
+
+                        // REQ-TRK-050: Indirect Tire Pressure Monitoring (iTPMS)
+                        if (TrainingApplication.getTrackingMode() == TrackingMode.TRACKING && location != null) {
+                            val activeDevices = binder.activeDevicesIncludingSpeedAndLocationDevices
+                            val wheelDevice = activeDevices?.firstOrNull {
+                                it.deviceType == DeviceType.BIKE_SPEED || it.deviceType == DeviceType.BIKE_SPEED_AND_CADENCE
+                            }
+                            if (wheelDevice != null) {
+                                val wheelDist = (wheelDevice.getSensor(SensorType.DISTANCE_m)?.value as? Number)?.toDouble()
+                                val calib = (wheelDevice as? MyRemoteDevice)?.calibrationFactor ?: 2.100
+                                val acc = (binder.getBestSensorData(SensorType.ACCURACY)?.value as? Number)?.toDouble() ?: 5.0
+
+                                if (wheelDist != null) {
+                                    val alert = itpmsEstimator.processTelemetry(
+                                        lat = location.latitude,
+                                        lon = location.longitude,
+                                        bearingDeg = _currentBearing.value ?: 0.0,
+                                        accuracyMeters = acc,
+                                        speedMps = currentSpeed ?: 0.0,
+                                        elevationMeters = currentAltitude,
+                                        wheelDistanceMeters = wheelDist,
+                                        calibrationFactorMeters = calib
+                                    )
+                                    if (alert != null) {
+                                        val (titleRes, msgRes, severity) = when (alert) {
+                                            is IndirectTpmsEstimator.TpmsAlertResult.LowPressure -> {
+                                                Triple(
+                                                    R.string.itpms_low_pressure_reminder_title,
+                                                    R.string.itpms_low_pressure_reminder_message,
+                                                    WorkoutNavigationEvents.TpmsAlertSeverity.WARNING
+                                                )
+                                            }
+                                            is IndirectTpmsEstimator.TpmsAlertResult.SlowPuncture -> {
+                                                Triple(
+                                                    R.string.itpms_slow_puncture_alert_title,
+                                                    R.string.itpms_slow_puncture_alert_message,
+                                                    WorkoutNavigationEvents.TpmsAlertSeverity.CRITICAL
+                                                )
+                                            }
+                                        }
+                                        val dropStr = String.format(java.util.Locale.US, "%.1f%%", alert.dropPercentage)
+                                        WorkoutNavigationEvents.triggerTpmsAlert(
+                                            WorkoutNavigationEvents.TpmsAlert(
+                                                title = appContext.getString(titleRes),
+                                                message = appContext.getString(msgRes, dropStr),
+                                                severity = severity,
+                                                dropPercentage = alert.dropPercentage
+                                            )
+                                        )
+                                    }
+                                }
+                            }
                         }
 
                         if (DEBUG) Log.i(TAG, "BANALService update loop - binder=$binder")
@@ -391,6 +542,43 @@ class BANALServiceRepository private constructor(context: Context) {
         if (DEBUG) Log.i(TAG, "clearBreadcrumbs()")
         _currentTrack.value = emptyList()
         _currentPathPoints.value = emptyList()
+        itpmsEstimator.resetSession()
+    }
+
+    /**
+     * REQ-TRK-047.2: Retroactively adjusts recorded path points for the live cockpit elevation profile.
+     * When t0Ms <= 0, applies uniform shift (Case A).
+     * When t0Ms > 0, applies piecewise-linear drift interpolation across [t0, t1] (Case B).
+     */
+    fun applyRetroactiveAltitudeCorrection(deltaOffset: Double, t0Ms: Long = -1L, t1Ms: Long = -1L) {
+        if (Math.abs(deltaOffset) < 0.001) return
+        val currentPoints = _currentPathPoints.value
+        if (currentPoints.isEmpty()) return
+
+        val count = currentPoints.size
+        val updatedPoints = if (t0Ms <= 0L || t1Ms <= t0Ms) {
+            // Case A: Uniform shift
+            currentPoints.map { point ->
+                val alt = point.altitude?.let { it + deltaOffset }
+                point.copy(altitude = alt)
+            }
+        } else {
+            // Case B: Piecewise-linear drift across path points
+            currentPoints.mapIndexed { index, point ->
+                val fraction = if (count > 1) index.toDouble() / (count - 1) else 1.0
+                val alt = point.altitude?.let { it + deltaOffset * fraction }
+                point.copy(altitude = alt)
+            }
+        }
+        _currentPathPoints.value = SnapshotChunkedList.from(updatedPoints)
+    }
+
+    private fun <T> appendToTrack(current: List<T>, element: T): SnapshotChunkedList<T> {
+        return if (current is SnapshotChunkedList<T>) {
+            current.append(element)
+        } else {
+            SnapshotChunkedList.from(current).append(element)
+        }
     }
 
     // --- Helper methods to communicate with BANALService via Binder ---

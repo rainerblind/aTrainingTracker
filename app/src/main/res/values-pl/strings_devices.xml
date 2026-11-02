@@ -100,4 +100,7 @@
     <string name="devices_dialog_delete_device_message">Czy na pewno chcesz usunąć czujnik \'%1$s\'?</string>
 
     <string name="devices_equipment_none">- brak -</string>
+
+    <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
+    <string name="devices_reset_tire_pressure_baseline">Zresetuj ciśnienie bazowe opon (świeżo napompowane)</string>
 </resources>

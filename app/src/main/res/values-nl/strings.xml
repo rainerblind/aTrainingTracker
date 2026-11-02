@@ -958,11 +958,15 @@
     <string name="workout_periods__longest_workout">Langste training</string>
     <string name="workout_periods__region_format">Regio %1$d (%2$d)</string>
     <string name="workout_periods__primary_region_format">Hoofdregio: Regio %1$d (%2$d)</string>
+    <string name="workout_periods__named_region_format">%1$s (%2$d)</string>
+    <string name="workout_periods__primary_named_region_format">Hoofdregio: %1$s (%2$d)</string>
     <string name="workout_periods__all_regions_format">Alle regio\'s (%1$d)</string>
     <string name="workout_periods__migration_querying">Trainingsgeschiedenis laden…</string>
     <string name="workout_periods__migration_reading">Training %1$d van %2$d lezen…</string>
     <string name="workout_periods__migration_syncing">Synchroniseren %1$s…</string>
     <string name="workout_periods__migration_finalizing">Jaartotalen afronden…</string>
+    <string name="workout_periods__yearly_activity_grid">Jaarlijkse activiteit</string>
+    <string name="workout_periods__no_activity">Geen activiteit</string>
 
     <!-- share screenshots -->
     <string name="share">Delen</string>
@@ -1830,6 +1834,7 @@
     <string name="map_layer_segments">Segmenten</string>
     <string name="map_layer_locations">Favoriete locaties</string>
     <string name="map_layer_track">Opgenomen track</string>
+    <string name="map_layer_clusters">Favoriete tracks</string>
     <string name="ant_dialog_view_status">ANT+ status weergeven</string>
     <string name="ant_dialog_dismiss">Begrepen</string>
 
@@ -1911,17 +1916,18 @@
     <string name="auto_pause_title">Automatisch pauzeren</string>
     <string name="tuning_auto_pause_title">Automatisch pauzeren</string>
     <string name="tuning_auto_pause_desc">Opname automatisch pauzeren bij stilstand</string>
+    <string name="tuning_auto_pause_enable_title">Automatisch pauzeren inschakelen</string>
     <string name="tuning_auto_pause_bike_title">Fietsen</string>
     <string name="tuning_auto_pause_run_title">Hardlopen</string>
     <string name="tuning_auto_pause_other_title">Overige sporten</string>
-    <string name="tuning_auto_pause_speed_threshold_title">Snelheidsdrempel voor pauzeren</string>
-    <string name="tuning_auto_pause_speed_threshold_desc">Snelheid waaronder de opname wordt gepauzeerd</string>
+    <string name="tuning_auto_pause_speed_threshold_title">Snelheidsdrempel</string>
+    <string name="tuning_auto_pause_speed_threshold_desc">Pauzeren onder deze snelheid, hervatten erboven</string>
     <string name="tuning_auto_pause_debounce_title">Pauzevertraging</string>
     <string name="tuning_auto_pause_debounce_desc">Duur onder drempelwaarde alvorens te pauzeren</string>
     <string name="tuning_auto_pause_resume_debounce_title">Hervattingsvertraging</string>
     <string name="tuning_auto_pause_resume_debounce_desc">Duur boven drempelwaarde alvorens te hervatten</string>
     <string name="tuning_auto_pause_start_in_auto_pause_title">Starten in automatische pauze</string>
-    <string name="tuning_auto_pause_start_in_auto_pause_desc">Bij het starten van een training in stilstand direct beginnen in automatische pauze totdat beweging wordt gedetecteerd</string>
+    <string name="tuning_auto_pause_start_in_auto_pause_desc">Bij het starten van een training in stilstand direct beginnen in automatische pauze totdat beweging wordt gedetecteerd. Geldt voor alle sporten.</string>
     <string name="tuning_speed_value_format">%1$d %2$s</string>
     <string name="tuning_seconds_value_format">%1$d s</string>
     <string name="cockpit_auto_pause_badge">Automatisch pauzeren</string>
@@ -2175,4 +2181,42 @@
     <string name="sensor_field_display_elements_title">Weergave-elementen</string>
     <string name="sensor_field_show_value">Waarde</string>
     <string name="sensor_field_show_bar">Balk</string>
+
+    <!-- Sensor Field Width & Row Split (ATT-4861, REQ-UI-437) -->
+    <string name="sensor_field_width_title">Breedteverhouding</string>
+    <string name="sensor_field_row_split_presets">Rijverdeling voorinstellingen</string>
+    <string name="sensor_field_relative_weight">Relatieve breedte</string>
+
+    <!-- Zone History (ATT-4844, REQ-SET-082) -->
+    <string name="zone_history_title">Zonegeschiedenis</string>
+    <string name="zone_history_action_history">Geschiedenis</string>
+    <string name="zone_history_add_snapshot">Historische momentopname toevoegen</string>
+    <string name="zone_history_edit_snapshot">Zonemomentopname bewerken</string>
+    <string name="zone_history_delete_title">Zonemomentopname verwijderen?</string>
+    <string name="zone_history_delete_message">Zonemomentopname van %1$s verwijderen?</string>
+    <string name="zone_history_empty">Nog geen historische zonemomentopnamen vastgelegd.</string>
+    <string name="zone_history_date_label">Ingangsdatum</string>
+    <string name="zone_history_save_snapshot">Momentopname opslaan</string>
+    <string name="zone_history_error_monotonic">Drempelwaarden moeten strikt oplopend zijn (%1$s)</string>
+
+    <!-- Manual Altitude Calibration (ATT-4845, REQ-TRK-047) -->
+    <string name="altitude_calibration_title">Hoogte kalibreren</string>
+    <string name="altitude_calibration_reference_label">Referentiehoogte</string>
+    <string name="altitude_calibration_location_name">Locatienaam (optioneel)</string>
+    <string name="altitude_calibration_save_location">Opslaan als bekende locatie</string>
+    <string name="altitude_calibration_action">Kalibreren</string>
+    <string name="altitude_calibrated_success">Hoogte gekalibreerd naar %1$s</string>
+
+    <!-- Altitude From Position DEM (ATT-4859, REQ-SEN-025) -->
+    <string name="device_type_altitude_from_position">hoogte van positie (DEM)</string>
+    <string name="device_type_short_altitude_from_position">hoogte (DEM)</string>
+    <string name="devices_altitude_from_position">Topografische hoogte (DEM)</string>
+    <string name="devices_altitude_from_position_description">Continue hoogte berekend op basis van GPS-positie, opgeslagen routes en online DEM-gegevens.</string>
+
+    <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
+    <string name="itpms_slow_puncture_alert_title">Langzaam leeglopende band gedetecteerd</string>
+    <string name="itpms_slow_puncture_alert_message">Effectieve wielomtrek met %1$s gedaald. Controleer onmiddellijk de bandenspanning.</string>
+    <string name="itpms_low_pressure_reminder_title">Lage bandenspanning</string>
+    <string name="itpms_low_pressure_reminder_message">Wielomtrek ligt %1$s onder de basiswaarde. Pomp de banden op.</string>
+    <string name="itpms_alert_dismiss">Sluiten</string>
 </resources>

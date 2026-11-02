@@ -1084,7 +1084,7 @@ class AutoPauseManagerTest {
         )
         assertFalse(
             "Disabled globally -> must return false",
-            AutoPauseManager.shouldStartInAutoPause(disabledConfig, BSportType.BIKE, 0.0)
+            AutoPauseManager.shouldStartInAutoPause(disabledConfig, BSportType.BIKE, 0.0, hasSpeedSource = true)
         )
 
         val enabledConfig = AutoPauseConfig(
@@ -1097,33 +1097,90 @@ class AutoPauseManagerTest {
         )
 
         assertFalse(
-            "Sport disabled -> must return false",
-            AutoPauseManager.shouldStartInAutoPause(enabledConfig, BSportType.RUN, 0.0)
+            "hasSpeedSource false -> must return false immediately (indoor HR-only)",
+            AutoPauseManager.shouldStartInAutoPause(enabledConfig, BSportType.BIKE, null, hasSpeedSource = false)
         )
-
-        assertTrue(
-            "Speed null -> stationary -> true",
-            AutoPauseManager.shouldStartInAutoPause(enabledConfig, BSportType.BIKE, null)
+        assertFalse(
+            "hasSpeedSource false with 0.0 -> must return false immediately",
+            AutoPauseManager.shouldStartInAutoPause(enabledConfig, BSportType.BIKE, 0.0, hasSpeedSource = false)
         )
-
-        assertTrue(
-            "Speed 0.0 -> stationary -> true",
+        assertFalse(
+            "hasSpeedSource default false -> must return false",
             AutoPauseManager.shouldStartInAutoPause(enabledConfig, BSportType.BIKE, 0.0)
         )
 
+        assertFalse(
+            "Sport disabled -> must return false",
+            AutoPauseManager.shouldStartInAutoPause(enabledConfig, BSportType.RUN, 0.0, hasSpeedSource = true)
+        )
+
         assertTrue(
-            "Speed below threshold -> stationary -> true",
-            AutoPauseManager.shouldStartInAutoPause(enabledConfig, BSportType.BIKE, 1.0 / 3.6)
+            "hasSpeedSource true with Speed null -> stationary GPS acquiring -> true",
+            AutoPauseManager.shouldStartInAutoPause(enabledConfig, BSportType.BIKE, null, hasSpeedSource = true)
+        )
+
+        assertTrue(
+            "hasSpeedSource true with Speed 0.0 -> stationary -> true",
+            AutoPauseManager.shouldStartInAutoPause(enabledConfig, BSportType.BIKE, 0.0, hasSpeedSource = true)
+        )
+
+        assertTrue(
+            "hasSpeedSource true with Speed below threshold -> stationary -> true",
+            AutoPauseManager.shouldStartInAutoPause(enabledConfig, BSportType.BIKE, 1.0 / 3.6, hasSpeedSource = true)
         )
 
         assertFalse(
-            "Speed equal to threshold -> moving -> false",
-            AutoPauseManager.shouldStartInAutoPause(enabledConfig, BSportType.BIKE, 3.0 / 3.6)
+            "hasSpeedSource true with Speed equal to threshold -> moving -> false",
+            AutoPauseManager.shouldStartInAutoPause(enabledConfig, BSportType.BIKE, 3.0 / 3.6, hasSpeedSource = true)
         )
         assertFalse(
-            "Speed above threshold -> moving -> false",
-            AutoPauseManager.shouldStartInAutoPause(enabledConfig, BSportType.BIKE, 10.0 / 3.6)
+            "hasSpeedSource true with Speed above threshold -> moving -> false",
+            AutoPauseManager.shouldStartInAutoPause(enabledConfig, BSportType.BIKE, 10.0 / 3.6, hasSpeedSource = true)
         )
+    }
+
+    @Test
+    fun `TST-TRK-044_3 mid-workout speed source removal transitions out of AUTO_PAUSED to SENSOR_LOST`() {
+        val config = AutoPauseConfig(
+            bikeEnabled = true,
+            bikeSpeedThreshold = 3,
+            isMetric = true
+        )
+        autoPauseManager.setState(AutoPauseState.AUTO_PAUSED)
+        val now = 200000L
+
+        // Tick with hasSpeedSource = false (speed sensor unpaired/disconnected)
+        val transition = autoPauseManager.evaluateTick(
+            currentSpeedMps = null,
+            packetTimestampMs = 0L,
+            currentTimestampMs = now,
+            sportType = BSportType.BIKE,
+            config = config,
+            manualPauseLocked = false,
+            hasSpeedSource = false
+        )
+
+        assertEquals(AutoPauseState.AUTO_PAUSED, transition.previousState)
+        assertEquals(AutoPauseState.SENSOR_LOST, transition.newState)
+        assertTrue("Must trigger resume to recover tracking recording", transition.triggerResume)
+        assertEquals("SENSOR_LOST_SPEED_SOURCE_REMOVED", transition.auditLogEvent)
+        assertEquals(0, autoPauseManager.debounceCounter)
+        assertEquals(0, autoPauseManager.resumeDebounceCounter)
+
+        // Contrast with corrupt speed while hasSpeedSource = true (should remain AUTO_PAUSED)
+        autoPauseManager.setState(AutoPauseState.AUTO_PAUSED)
+        val corruptTransition = autoPauseManager.evaluateTick(
+            currentSpeedMps = Double.NaN,
+            packetTimestampMs = now,
+            currentTimestampMs = now,
+            sportType = BSportType.BIKE,
+            config = config,
+            manualPauseLocked = false,
+            hasSpeedSource = true
+        )
+        assertEquals(AutoPauseState.AUTO_PAUSED, corruptTransition.previousState)
+        assertEquals(AutoPauseState.AUTO_PAUSED, corruptTransition.newState)
+        assertFalse(corruptTransition.triggerResume)
     }
 }
 

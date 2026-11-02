@@ -42,11 +42,14 @@ import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.settings.ZoneDisplayOptions
 import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
+import com.atrainingtracker.trainingtracker.ui.map.MapCluster
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
 import com.atrainingtracker.trainingtracker.ui.map.MapRoute
 import com.atrainingtracker.trainingtracker.ui.map.MapTrack
 import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
+import com.atrainingtracker.trainingtracker.ui.map.toMapCluster
 import com.atrainingtracker.trainingtracker.ui.map.toMapRoute
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.google.android.gms.maps.model.LatLng
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.ElevationProfileScope
@@ -62,6 +65,7 @@ import com.atrainingtracker.trainingtracker.ui.tracking.WPrimeBatteryState
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.SectionDividerInfo
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -70,6 +74,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -105,6 +111,7 @@ data class TrackingScreenState(
     val mapSegments: List<MapSegment> = mapState.mapSegments,
     val activeLiveSegmentIds: Set<Long> = mapState.activeLiveSegmentIds,
     val mapRoutes: List<MapRoute> = mapState.mapRoutes,
+    val mapClusters: List<MapCluster> = mapState.mapClusters,
     val mapMarkers: List<LocationMarker> = mapState.mapMarkers
 )
 
@@ -113,13 +120,14 @@ data class TrackingScreenState(
  * It is responsible for fetching the configuration for its viewId, subscribing to live sensor data,
  * and mapping that data into a UI-ready state for the composables to render.
  */
-class TrackingViewModel(
+class TrackingViewModel @JvmOverloads constructor(
     private val application: Application,
     val trackingViewsRepository: TrackingViewsRepository,
     val banalServiceRepository: BANALServiceRepository,
     val liveSegmentsRepository: LiveSegmentsRepository,
     val routesRepository: RoutesRepository,
-    private val viewId: Long
+    private val viewId: Long,
+    val workoutClusterRepository: WorkoutClusterRepository = WorkoutClusterRepository.getInstance(application)
 ) : ViewModel() {
 
     // --- The StateFlow to hold and expose the UI state ---
@@ -238,6 +246,7 @@ class TrackingViewModel(
         observeMapState()
         // Load both the main UI state and the activity type
         loadSensorFieldStates()
+        observeElevationPathPoints()
         loadActivityType()
     }
 
@@ -360,7 +369,8 @@ class TrackingViewModel(
     private data class StaticMapLayerData(
         val mapSegments: List<MapSegment>,
         val activeLiveSegmentIds: Set<Long>,
-        val mapRoutes: List<MapRoute>
+        val mapRoutes: List<MapRoute>,
+        val mapClusters: List<MapCluster>
     )
 
     private data class LiveTelemetryTuple(
@@ -401,15 +411,21 @@ class TrackingViewModel(
                 allRoutes.map { it.toMapRoute(isActiveNavigation = (it.summary.id == activeNavigatedRouteId)) }
             }.distinctUntilChanged()
 
+            val mapClustersFlow = workoutClusterRepository.allClusters
+                .map { list -> list.mapNotNull { it.toMapCluster() } }
+                .distinctUntilChanged()
+
             val staticMapLayerFlow = combine(
                 staticMapSegmentsFlow,
                 activeLiveSegmentIdsFlow,
-                mapRoutesFlow
-            ) { mapSegments, activeIds, mapRoutes ->
+                mapRoutesFlow,
+                mapClustersFlow
+            ) { mapSegments, activeIds, mapRoutes, mapClusters ->
                 StaticMapLayerData(
                     mapSegments = mapSegments,
                     activeLiveSegmentIds = activeIds,
-                    mapRoutes = mapRoutes
+                    mapRoutes = mapRoutes,
+                    mapClusters = mapClusters
                 )
             }
 
@@ -458,6 +474,7 @@ class TrackingViewModel(
                     mapSegments = staticLayers.mapSegments,
                     mapRoutes = staticLayers.mapRoutes,
                     activeLiveSegmentIds = staticLayers.activeLiveSegmentIds,
+                    mapClusters = staticLayers.mapClusters,
                     mapMarkers = markerList
                 )
             }.collect { newMapState ->
@@ -492,9 +509,8 @@ class TrackingViewModel(
                 trackingViewsRepository.getSensorFieldConfigsForView(viewId),
                 banalServiceRepository.allFilteredSensorData,
                 trackingViewsRepository.getTrackingViewInfoFlow(viewId),
-                banalServiceRepository.currentPathPoints,
                 trackingViewsRepository.getSectionDividersFlow(viewId)
-            ) { configs, allSensorData, viewInfo, livePathPoints, sectionDividers ->
+            ) { configs, allSensorData, viewInfo, sectionDividers ->
                 // --- Step 1: Create or reuse the base state from the latest configurations ---
                 val currentActivity = banalServiceRepository.activityType.value
                 val baseFields = if (configs == cachedConfigs && currentActivity == cachedActivityType && cachedBaseFields.isNotEmpty()) {
@@ -514,8 +530,9 @@ class TrackingViewModel(
                         val zoneType = getZoneType(config.sensorType, currentActivity.sportType)
                         val displayOptions = zoneType?.let { zoneDisplayOptionsMap[it] } ?: ZoneDisplayOptions()
 
+                        val isBike = (currentActivity.sportType == BSportType.BIKE)
                         val isPedalBalance = (config.sensorType == SensorType.PEDAL_POWER_BALANCE)
-                        val initialPedalBalanceState = if (isPedalBalance) {
+                        val initialPedalBalanceState = if (isPedalBalance && isBike) {
                             PedalPowerBalanceMath.calculateBalanceState(null)
                         } else null
                         val initialValue = if (isPedalBalance && initialPedalBalanceState != null) {
@@ -525,8 +542,8 @@ class TrackingViewModel(
                         }
 
                         val initialZoneGauge = if (config.showBar) calculateZoneGaugeState(zoneType, null) else null
-                        val initialPedalBalance = if (config.showBar) initialPedalBalanceState else null
-                        val initialWPrimeState = if (config.showBar && config.sensorType == SensorType.W_PRIME_BAL) {
+                        val initialPedalBalance = if (config.showBar && isBike) initialPedalBalanceState else null
+                        val initialWPrimeState = if (config.showBar && isBike && config.sensorType == SensorType.W_PRIME_BAL) {
                             WPrimeBatteryMath.calculateBatteryState(
                                 remainingKj = null,
                                 totalKj = currentEffectiveWPrimeKj,
@@ -551,7 +568,8 @@ class TrackingViewModel(
                             wPrimeBatteryState = initialWPrimeState,
                             sensorType = config.sensorType,
                             showValue = config.showValue,
-                            showBar = config.showBar
+                            showBar = config.showBar,
+                            colWeight = config.colWeight
                         )
                     }
                     cachedConfigs = configs
@@ -566,6 +584,7 @@ class TrackingViewModel(
                 // --- Step 3: Package into TrackingScreenState reusing the decoupled mapState ---
                 val currentMap = _mapState.value
                 val showElevation = viewInfo?.showElevationProfile ?: false
+                val currentPoints = if (showElevation) _uiState.value.pathPoints else emptyList()
                 TrackingScreenState(
                     fields = finalFields,
                     sectionDividers = sectionDividers,
@@ -579,7 +598,7 @@ class TrackingViewModel(
                     showBikeBell = viewInfo?.showBikeBell ?: false,
                     elevationProfileScope = viewInfo?.elevationProfileScope ?: ElevationProfileScope.FULL_ROUTE,
                     elevationProfileLookahead = viewInfo?.elevationProfileLookahead ?: 2000,
-                    pathPoints = if (showElevation) livePathPoints else emptyList(),
+                    pathPoints = currentPoints,
                     mapState = currentMap,
                     zoomFocus = currentMap.zoomFocus,
                     userSpeed = currentMap.userSpeed,
@@ -595,6 +614,35 @@ class TrackingViewModel(
             }.collect { newState ->
                 _uiState.value = newState
             }
+        }
+    }
+
+    /**
+     * Decouples live [BANALServiceRepository.currentPathPoints] from [loadSensorFieldStates],
+     * observing path points strictly when the elevation profile is active (REQ-TRK-042.4, ATT-4923).
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun observeElevationPathPoints() {
+        viewModelScope.launch {
+            trackingViewsRepository.getTrackingViewInfoFlow(viewId)
+                .map { it?.showElevationProfile ?: false }
+                .distinctUntilChanged()
+                .flatMapLatest { showElevation ->
+                    if (showElevation) {
+                        banalServiceRepository.currentPathPoints
+                    } else {
+                        flowOf(emptyList())
+                    }
+                }
+                .collect { points ->
+                    _uiState.update { current ->
+                        if (current.pathPoints != points) {
+                            current.copy(pathPoints = points)
+                        } else {
+                            current
+                        }
+                    }
+                }
         }
     }
 
@@ -649,10 +697,11 @@ class TrackingViewModel(
                 } else null
 
                 // 3. Iterate through every field that needs this update.
+                val isBike = (activityType.sportType == BSportType.BIKE)
                 for (fieldToUpdate in fieldsToUpdate) {
                     val fieldZoneGaugeState = if (fieldToUpdate.showBar) rawZoneGaugeState else null
-                    val fieldPedalBalanceState = if (fieldToUpdate.showBar) newPedalBalanceState else null
-                    val fieldWPrimeBatteryState = if (fieldToUpdate.showBar && isWPrimeBal) newWPrimeBatteryState else null
+                    val fieldPedalBalanceState = if (fieldToUpdate.showBar && isBike) newPedalBalanceState else null
+                    val fieldWPrimeBatteryState = if (fieldToUpdate.showBar && isBike && isWPrimeBal) newWPrimeBatteryState else null
 
                     // Check if this specific instance needs an update to avoid unnecessary changes.
                     if (fieldToUpdate.value != newFormattedValue ||

@@ -67,6 +67,7 @@ class ClockDeviceResilienceTest {
         every { BANALService.getDebug(any()) } returns false
 
         mockkStatic(TrainingApplication::class)
+        every { TrainingApplication.isTracking() } returns true
         every { TrainingApplication.isPaused() } returns false
         every { TrainingApplication.isAutoPaused() } returns false
 

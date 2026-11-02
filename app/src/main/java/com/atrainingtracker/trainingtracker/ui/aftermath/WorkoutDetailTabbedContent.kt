@@ -50,7 +50,9 @@ import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.ui.aftermath.splits.LapSplitChartData
 import com.atrainingtracker.trainingtracker.ui.aftermath.splits.LapSplitVisualizerCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneDistributionCard
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneDistributionCard
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneCardDisplayMode
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionData
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatus
@@ -93,6 +95,8 @@ fun WorkoutDetailTabbedContent(
     effectivePowerZoneDisplayMode: ZoneCardDisplayMode,
     onHrZoneDisplayModeChange: (ZoneCardDisplayMode) -> Unit,
     onPowerZoneDisplayModeChange: (ZoneCardDisplayMode) -> Unit,
+    hrZoneThresholds: HeartRateZoneThresholds? = null,
+    powerZoneThresholds: PowerZoneThresholds? = null,
     useStatusBarsPadding: Boolean,
     onClusterClick: ((Long) -> Unit)?,
     onEditWorkout: ((Long) -> Unit)?,
@@ -234,6 +238,8 @@ fun WorkoutDetailTabbedContent(
                                 powerZoneDistribution = powerZoneDistribution,
                                 hrZoneDisplayMode = effectiveHrZoneDisplayMode,
                                 powerZoneDisplayMode = effectivePowerZoneDisplayMode,
+                                hrZoneThresholds = hrZoneThresholds,
+                                powerZoneThresholds = powerZoneThresholds,
                                 header = {},
                                 mapContent = mapContent,
                                 overlay = mapOverlay,
@@ -272,6 +278,8 @@ fun WorkoutDetailTabbedContent(
                                 powerZoneDistribution = powerZoneDistribution,
                                 hrZoneDisplayMode = effectiveHrZoneDisplayMode,
                                 powerZoneDisplayMode = effectivePowerZoneDisplayMode,
+                                hrZoneThresholds = hrZoneThresholds,
+                                powerZoneThresholds = powerZoneThresholds,
                                 header = {},
                                 mapContent = mapContent,
                                 overlay = mapOverlay,
@@ -343,6 +351,8 @@ fun WorkoutDetailTabbedContent(
                                     powerZoneDistribution = powerZoneDistribution,
                                     hrZoneDisplayMode = effectiveHrZoneDisplayMode,
                                     powerZoneDisplayMode = effectivePowerZoneDisplayMode,
+                                    hrZoneThresholds = hrZoneThresholds,
+                                    powerZoneThresholds = powerZoneThresholds,
                                     header = {},
                                     metadataContent = null,
                                     analyticsContent = if (nonMapNonGraphSections.isNotEmpty()) {

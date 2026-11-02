@@ -22,6 +22,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.atrainingtracker.trainingtracker.database.AthleteMetricEntry
 import com.atrainingtracker.trainingtracker.database.AthleteMetricType
+import com.atrainingtracker.trainingtracker.database.ZoneSnapshotEntry
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -79,6 +80,54 @@ private class FakeAthleteMetricsDataSource : AthleteMetricsDataSource {
             if (!c.metricType.isValidMetricValue(c.value)) continue
             if (getLatestEntry(c.metricType) == null) {
                 insertEntry(c.timestampMs, c.metricType, c.value)
+            }
+        }
+    }
+
+    private var nextZoneId = 1L
+    private val zoneRows = mutableListOf<ZoneSnapshotEntry>()
+    var seedZoneTransactionCallCount = 0
+
+    override fun getAllZoneSnapshots(): List<ZoneSnapshotEntry> =
+        zoneRows.sortedWith(compareByDescending<ZoneSnapshotEntry> { it.timestampMs }.thenByDescending { it.id })
+
+    override fun getZoneHistory(zoneType: SettingsDataStore.ZoneType): List<ZoneSnapshotEntry> =
+        zoneRows.filter { it.zoneType == zoneType }
+            .sortedWith(compareByDescending<ZoneSnapshotEntry> { it.timestampMs }.thenByDescending { it.id })
+
+    override fun getEffectiveZoneSnapshot(zoneType: SettingsDataStore.ZoneType, timestampMs: Long): ZoneSnapshotEntry? =
+        zoneRows.filter { it.zoneType == zoneType && it.timestampMs <= timestampMs }
+            .maxWithOrNull(compareBy<ZoneSnapshotEntry> { it.timestampMs }.thenBy { it.id })
+
+    override fun getLatestZoneSnapshot(zoneType: SettingsDataStore.ZoneType): ZoneSnapshotEntry? =
+        zoneRows.filter { it.zoneType == zoneType }
+            .maxWithOrNull(compareBy<ZoneSnapshotEntry> { it.timestampMs }.thenBy { it.id })
+
+    override fun insertZoneSnapshot(timestampMs: Long, zoneType: SettingsDataStore.ZoneType, boundaries: List<Int>): Long {
+        require(boundaries.size == zoneType.boundaryCount)
+        val id = nextZoneId++
+        zoneRows.add(ZoneSnapshotEntry(id = id, timestampMs = timestampMs, zoneType = zoneType, boundaries = boundaries))
+        return id
+    }
+
+    override fun updateZoneSnapshot(id: Long, timestampMs: Long, zoneType: SettingsDataStore.ZoneType, boundaries: List<Int>): Int {
+        require(boundaries.size == zoneType.boundaryCount)
+        val idx = zoneRows.indexOfFirst { it.id == id }
+        if (idx < 0) return 0
+        zoneRows[idx] = ZoneSnapshotEntry(id = id, timestampMs = timestampMs, zoneType = zoneType, boundaries = boundaries)
+        return 1
+    }
+
+    override fun deleteZoneSnapshot(id: Long): Int {
+        val removed = zoneRows.removeIf { it.id == id }
+        return if (removed) 1 else 0
+    }
+
+    override fun seedZoneSnapshotsInTransaction(seedCandidates: List<ZoneSnapshotEntry>) {
+        seedZoneTransactionCallCount++
+        for (c in seedCandidates) {
+            if (getLatestZoneSnapshot(c.zoneType) == null) {
+                insertZoneSnapshot(c.timestampMs, c.zoneType, c.boundaries)
             }
         }
     }
@@ -199,5 +248,53 @@ class AthleteMetricsRepositorySyncTest {
         assertEquals(21.6f, settingsDataStore.wPrimeKjFlow.first()!!, 1e-3f)
         repository.deleteEntry(wPrimeId, AthleteMetricType.W_PRIME_KJ)
         assertNull(settingsDataStore.wPrimeKjFlow.first())
+    }
+
+    @Test
+    fun `zone snapshot sync projects latest to DataStore and respects historical backdating`() = runTest {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val dataStoreScope = TestScope(testDispatcher + Job())
+        val testDataStore = PreferenceDataStoreFactory.create(
+            scope = dataStoreScope,
+            produceFile = { tmpFolder.newFile("zone_sync_state_machine.preferences_pb") }
+        )
+        val settingsDataStore = SettingsDataStore(mockk<Context>(relaxed = true), testDataStore)
+        val fakeDb = FakeAthleteMetricsDataSource()
+        val repository = AthleteMetricsRepository(fakeDb, settingsDataStore, testDispatcher)
+
+        val t0 = 1_600_000_000_000L
+        val t1 = 1_700_000_000_000L
+        val t2 = 1_700_100_000_000L
+        val tBackdated = 1_699_900_000_000L
+
+        // 1. Initial seeding
+        repository.ensureZoneHistorySeeded(t0)
+        assertEquals(1, fakeDb.seedZoneTransactionCallCount)
+        assertEquals(3, fakeDb.getAllZoneSnapshots().size)
+
+        // 2. Save snapshot at t1
+        val hrRunZones1 = listOf(130, 145, 160, 175)
+        val id1 = repository.saveZoneSnapshot(SettingsDataStore.ZoneType.HR_RUN, hrRunZones1, t1)
+        assertEquals(hrRunZones1, repository.getEffectiveZoneBoundaries(SettingsDataStore.ZoneType.HR_RUN, t1))
+        assertEquals(130, settingsDataStore.getZone1MaxFlow(SettingsDataStore.ZoneType.HR_RUN).first())
+
+        // 3. Save newer snapshot at t2
+        val hrRunZones2 = listOf(135, 150, 165, 180)
+        val id2 = repository.saveZoneSnapshot(SettingsDataStore.ZoneType.HR_RUN, hrRunZones2, t2)
+        assertEquals(135, settingsDataStore.getZone1MaxFlow(SettingsDataStore.ZoneType.HR_RUN).first())
+
+        // 4. Backdated snapshot at tBackdated (< t2) must NOT overwrite latest DataStore boundaries
+        val hrRunBackdated = listOf(125, 140, 155, 170)
+        val idBackdated = repository.saveZoneSnapshot(SettingsDataStore.ZoneType.HR_RUN, hrRunBackdated, tBackdated)
+        assertEquals(135, settingsDataStore.getZone1MaxFlow(SettingsDataStore.ZoneType.HR_RUN).first())
+
+        // 5. Querying effective zones at different timestamps returns exact historical boundaries
+        assertEquals(hrRunBackdated, repository.getEffectiveZoneBoundaries(SettingsDataStore.ZoneType.HR_RUN, tBackdated + 1000L))
+        assertEquals(hrRunZones1, repository.getEffectiveZoneBoundaries(SettingsDataStore.ZoneType.HR_RUN, t1 + 1000L))
+        assertEquals(hrRunZones2, repository.getEffectiveZoneBoundaries(SettingsDataStore.ZoneType.HR_RUN, t2 + 1000L))
+
+        // 6. Delete latest snapshot (id2) -> DataStore projection reverts to next latest (id1)
+        repository.deleteZoneSnapshot(id2, SettingsDataStore.ZoneType.HR_RUN)
+        assertEquals(130, settingsDataStore.getZone1MaxFlow(SettingsDataStore.ZoneType.HR_RUN).first())
     }
 }

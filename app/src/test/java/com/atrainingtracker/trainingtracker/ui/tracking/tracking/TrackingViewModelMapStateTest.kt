@@ -31,6 +31,8 @@ import com.atrainingtracker.banalservice.filters.FilteredSensorData
 import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
+import com.atrainingtracker.trainingtracker.database.WorkoutCluster
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.segments.LiveSegment
@@ -90,6 +92,7 @@ class TrackingViewModelMapStateTest {
     private val mockBanalRepo = mockk<BANALServiceRepository>(relaxed = true)
     private val mockLiveSegmentsRepo = mockk<LiveSegmentsRepository>(relaxed = true)
     private val mockRoutesRepo = mockk<RoutesRepository>(relaxed = true)
+    private val mockWorkoutClusterRepo = mockk<WorkoutClusterRepository>(relaxed = true)
     private val mockPrefs = mockk<SharedPreferences>(relaxed = true)
 
     private val liveSegmentsFlow = MutableStateFlow(emptyList<LiveSegment>())
@@ -99,6 +102,8 @@ class TrackingViewModelMapStateTest {
     private val currentBearingFlow = MutableStateFlow<Double?>(null)
     private val allRoutesFlow = MutableStateFlow(emptyList<RouteWithPath>())
     private val activeNavigatedRouteIdFlow = MutableStateFlow<Long?>(null)
+    private val allClustersFlow = MutableStateFlow(emptyList<WorkoutCluster>())
+    private val currentPathPointsFlow = MutableStateFlow(emptyList<PathPoint>())
 
     @Before
     fun setUp() {
@@ -128,9 +133,10 @@ class TrackingViewModelMapStateTest {
         every { mockBanalRepo.currentSpeed } returns currentSpeedFlow
         every { mockBanalRepo.currentBearing } returns currentBearingFlow
         every { mockBanalRepo.allFilteredSensorData } returns MutableStateFlow(emptyList<FilteredSensorData<*>>())
-        every { mockBanalRepo.currentPathPoints } returns MutableStateFlow(emptyList<PathPoint>())
+        every { mockBanalRepo.currentPathPoints } returns currentPathPointsFlow
         every { mockRoutesRepo.allRoutes } returns allRoutesFlow
         every { mockRoutesRepo.activeNavigatedRouteId } returns activeNavigatedRouteIdFlow
+        every { mockWorkoutClusterRepo.allClusters } returns allClustersFlow
         coEvery { mockTrackingViewsRepo.getActivityTypeForView(any()) } returns ActivityType.getDefaultActivityType()
         every {
             mockTrackingViewsRepo.getTrackingViewInfoFlow(any())
@@ -166,7 +172,8 @@ class TrackingViewModelMapStateTest {
             banalServiceRepository = mockBanalRepo,
             liveSegmentsRepository = mockLiveSegmentsRepo,
             routesRepository = mockRoutesRepo,
-            viewId = 1L
+            viewId = 1L,
+            workoutClusterRepository = mockWorkoutClusterRepo
         ).also { createdViewModels.add(it) }
     }
 
@@ -364,5 +371,70 @@ class TrackingViewModelMapStateTest {
             "followMeController must loop until step.isConverged",
             mapBehaviorsSource.contains("while (!step.isConverged)")
         )
+    }
+
+    @Test
+    fun testObserveMapState_incorporatesClustersDecoupledFromTelemetry() = runTest {
+        val cluster = WorkoutCluster(
+            id = 77L,
+            name = "Lakeside Sprint",
+            probableSportId = 1L,
+            startLat = 48.1,
+            startLng = 11.5,
+            endLat = 48.2,
+            endLng = 11.6,
+            maxDispLat = 48.2,
+            maxDispLng = 11.6,
+            refDistance = 4200.0,
+            hitCount = 6,
+            bSportType = BSportType.BIKE,
+            routePolyline = com.google.maps.android.PolyUtil.encode(listOf(LatLng(48.1, 11.5), LatLng(48.2, 11.6)))
+        )
+        allClustersFlow.value = listOf(cluster)
+
+        val viewModel = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Verify clusters are in mapState
+        val clustersInitial = viewModel.mapState.value.mapClusters
+        assertEquals(1, clustersInitial.size)
+        assertEquals(77L, clustersInitial[0].id)
+        assertEquals("Lakeside Sprint", clustersInitial[0].name)
+
+        // 1-Hz speed update occurs
+        currentSpeedFlow.value = 8.5
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val clustersAfterSpeed = viewModel.mapState.value.mapClusters
+        assertSame("Clusters must preserve referential identity across 1-Hz speed emissions (REQ-MAP-051.1)",
+            clustersInitial, clustersAfterSpeed)
+
+        // 1-Hz bearing update occurs
+        currentBearingFlow.value = 180.0
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val clustersAfterBearing = viewModel.mapState.value.mapClusters
+        assertSame("Clusters must preserve referential identity across 1-Hz bearing emissions (REQ-MAP-051.1)",
+            clustersInitial, clustersAfterBearing)
+    }
+
+    @Test
+    fun testCurrentPathPoints_decoupledFromSensorFieldsCombine() {
+        val pathPoint1 = PathPoint(distance = 100.0, latLng = LatLng(48.1, 11.5), altitude = 500.0)
+        val pathPoint2 = PathPoint(distance = 200.0, latLng = LatLng(48.2, 11.6), altitude = 520.0)
+
+        val viewModel = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // When showElevationProfile is false (default in TrackingViewInfo in setUp)
+        assertFalse(viewModel.uiState.value.showElevationProfile)
+        assertTrue(viewModel.uiState.value.pathPoints.isEmpty())
+
+        // Emitting path points when profile is disabled does not update uiState.pathPoints
+        currentPathPointsFlow.value = listOf(pathPoint1, pathPoint2)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue("Path points must remain empty when elevation profile is disabled (REQ-TRK-042.4)",
+            viewModel.uiState.value.pathPoints.isEmpty())
     }
 }

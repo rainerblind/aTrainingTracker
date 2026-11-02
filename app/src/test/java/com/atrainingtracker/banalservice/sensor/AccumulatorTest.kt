@@ -36,6 +36,8 @@ class AccumulatorTest {
         mockkStatic(Log::class)
         every { Log.i(any(), any()) } returns 0
         every { Log.d(any(), any()) } returns 0
+        every { TrainingApplication.isTracking() } returns true
+        every { TrainingApplication.isAutoPaused() } returns false
     }
 
     @After
@@ -97,5 +99,38 @@ class AccumulatorTest {
         every { TrainingApplication.isPaused() } returns true
         sensor.increment(5.0)
         assertEquals("Direct increment should be blocked during pause if respectPause is true", 10.0, sensor.value, 0.001)
+    }
+
+    @Test
+    fun testNotTrackingDiscardLogic() {
+        val sensor = MyDoubleAccumulatorSensor(null, SensorType.DISTANCE_m, true)
+
+        // When not tracking, increments must be blocked (REQ-TRK-049.3 / TST-TRK-049.3)
+        every { TrainingApplication.isTracking() } returns false
+        every { TrainingApplication.isPaused() } returns false
+        sensor.increment(10.0)
+        assertEquals("When not tracking, increment should be blocked", 0.0, sensor.value, 0.001)
+
+        // When tracking resumes, increments are accepted
+        every { TrainingApplication.isTracking() } returns true
+        sensor.increment(10.0)
+        assertEquals("When tracking, increment should succeed", 10.0, sensor.value, 0.001)
+    }
+
+    @Test
+    fun testResetNotifiesListenersWithZero() {
+        val sensor = MyDoubleAccumulatorSensor(null, SensorType.DISTANCE_m, true)
+        every { TrainingApplication.isTracking() } returns true
+        every { TrainingApplication.isPaused() } returns false
+        sensor.increment(50.0)
+        assertEquals(50.0, sensor.value, 0.001)
+
+        var notifiedValue: Any? = null
+        sensor.addSensorListener { notifiedValue = it }
+
+        // Reset should immediately notify listener with zero value (REQ-TRK-049.4 / TST-TRK-049.4)
+        sensor.reset()
+        assertEquals(0.0, sensor.value, 0.001)
+        assertEquals(0.0, (notifiedValue as? Double) ?: -1.0, 0.001)
     }
 }

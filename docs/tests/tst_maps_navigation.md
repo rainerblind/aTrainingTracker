@@ -961,11 +961,56 @@
 ### TST-MAP-058: **Line-Density PolylineHeatmapTileProvider, Web Mercator Projection & Sequential Blue Color LUT Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-MAP-056`
 - **Component**: **Map Tile Heatmap**
-- **Jira**: `ATT-4480`, `ATT-4769`
+- **Jira**: `ATT-4480`, `ATT-4769`, `ATT-4932`, `ATT-4929`
 - **Test Description**:
   1. Verify in `PolylineHeatmapTileProviderTest` that requesting a tile disjoint from all input polylines returns `TileProvider.NO_TILE` immediately without allocating bitmaps.
   2. Verify that intersecting polylines produce a valid 256x256 PNG tile byte array.
   3. Verify in `PolylineHeatmapTileProviderTest` that `ThermalColorLut` maps index 0 to `0` (transparent), and interpolates through Light Cyan (`#00E5FF`) -> Pure Blue (`#0000FF`) -> Deep Indigo (`#311B92`) with decreasing green and dominating blue/indigo components across low, mid, and high intensities.
   4. Verify thread safety under concurrent `getTile(x, y, zoom)` invocations across multiple worker threads.
   5. Run targeted unit test suite `com.atrainingtracker.trainingtracker.ui.map.*` verifying 100% pass rate.
+  6. *Multi-Vertex Collinear Path Uniformity Test (`TST-MAP-058.6`)*: Verify a single straight collinear path with 10 vertices yields uniform intensity along the line without vertex beads.
+  7. *Standstill Jitter Single-Count Masking Test (`TST-MAP-058.7`)*: Verify 20 clustered GPS jitter points within a small radius yield an accumulated count of at most 1 for that workout.
+  8. *Identical Path Multi-Workout Accumulation Test (`TST-MAP-058.8`)*: Verify two identical coincident paths accumulate to count = 2 everywhere along the line without intermediate clamping.
+  9. *Bounded Scratch Buffer & Dirty-Rect Clearing Test (`TST-MAP-058.9`)*: Verify scratch buffer is allocated at most once per tile call and cleared via dirty-rect boundaries without full-array zeroing overhead.
+  10. *Per-Period Maximum Corridor Frequency Normalization & Non-Linear Logarithmic Curve (`TST-MAP-058.10`)*: Verify synthetic periods with 1x, 13x, and 150x overlap corridors yield distinct, strictly monotonic intensities ($I(1) = 85 < I(13) < I(150) = 255$) with saturation only at the maximum corridor.
+  11. *Coarse Spatial Grid Estimator Verification (`TST-MAP-058.11`)*: Verify `estimateMaxCorridorPassCount` accurately detects maximum overlap across synthetic crossing and parallel corridors in $< 10\text{ ms}$ on `Dispatchers.Default` without main-thread blocking.
+  12. *Unified Card Mini-Map & Detailed Map Heatmap Normalization (`TST-MAP-058.12`)*: Verify `PeriodMapVisuals` propagates identical `maxCorridorPassCount` to both `PeriodSummaryCard` and `InteractivePeriodMap` / `PeriodMapScreen` for a given period.
 
+
+
+### TST-MAP-059: **Zoom-Adaptive Heatmap Stroke, Warm Contrasting Palette & Muted Base Map Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-MAP-057` (`REQ-MAP-057.1`..`REQ-MAP-057.5`)
+- **Component**: `PolylineHeatmapTileProviderTest.kt`, `ThermalColorLutTest.kt`, `PeriodMapVisualsTest.kt`, `PeriodSummaryCardTest.kt`, `PeriodMapScreenTest.kt`
+- **Jira**: `ATT-4933`
+- **Test Description**:
+  1. *Dynamic Zoom & Container Stroke Scaling Test (`TST-MAP-059.1`, `PolylineHeatmapTileProviderTest.kt`)*:
+  • Verify that stroke width increases monotonically with zoom: $\text{width}(10) < \text{width}(13) < \text{width}(16)$.
+  • Verify that mini-map mode dampens stroke width at all zoom levels ($\text{width}_{\text{mini}}(z) < \text{width}_{\text{detail}}(z)$).
+  2. *Warm Sequential "Hot" Color Palette LUT Verification (`TST-MAP-059.2`, `ThermalColorLutTest.kt` / `PolylineHeatmapTileProviderTest.kt`)*:
+  • Verify `ThermalColorLut.HOT` maps index 0 to fully transparent (`0x00000000`).
+  • Verify indices interpolate through Light Yellow (`#FFF176`) -> Orange (`#FF9800`) -> Red (`#E53935`) -> Dark Red (`#880E4F`) with red dominant across medium-to-high saturation.
+  3. *Muted Base Map JSON Styling Verification (`TST-MAP-059.3`, `PeriodMapScreenTest.kt` / `PeriodSummaryCardTest.kt`)*:
+  • Verify that Periods heatmap views load and apply the muted map style configuration.
+  4. *Workout Clusters Decoupling & Parameterized Backward Compatibility (`TST-MAP-059.4`, `PolylineHeatmapTileProviderTest.kt`)*:
+  • Verify that supplying default or blue palette retains previous rasterization behavior, decoupling Workout Clusters (`ATT-4931`).
+  5. *Targeted Regression Verification (`TST-MAP-059.5`)*:
+  • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.map.*" --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"` to verify 100% clean-room test pass rate.
+
+
+
+### TST-MAP-060: **Workout Clusters Heatmap Decoupling & Pre-ATT-4833 Visual Restoration Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-MAP-058` (`REQ-MAP-058.1`..`REQ-MAP-058.5`)
+- **Component**: `ThermalColorLutTest.kt`, `PolylineHeatmapTileProviderTest.kt`, `MapContentScopeTest.kt`, `WorkoutClusterHeatmapTest.kt`
+- **Jira**: `ATT-4931`
+- **Test Description**:
+  1. *Classic Blue Color Palette Preset & Alpha Stops Verification (`TST-MAP-060.1`, `ThermalColorLutTest.kt`)*:
+  • Verify `ThermalColorLut.CLASSIC_BLUE` maps index 0 to transparent (`0x00000000`).
+  • Verify base alphas (51, 77, 180) scaled by opacity 0.8 yield effective alphas ~41, ~62, and ~144 across low, mid, and high intensities, restoring pre-ATT-4833 look.
+  2. *Classic Pass-Intensity Strategy Verification (`TST-MAP-060.2`, `PolylineHeatmapTileProviderTest.kt`)*:
+  • Verify `calculateClassicStepIntensity` returns exact step intensity factors (0.25f, 0.15f, 0.08f, 0.05f, 0.035f) across dataset size partitions (<=5, <=20, <=60, <=150, >150).
+  3. *Corridor Normalization Opt-In Gating Verification (`TST-MAP-060.3`, `MapContentScopeTest.kt`)*:
+  • Verify `MapContentScope.heatmap` with `normalizeCorridors = false` does not calculate corridor maximums and retains uncompressed step accumulation.
+  4. *Workout Clusters Decoupling Call Site Verification (`TST-MAP-060.4`)*:
+  • Verify `WorkoutClusterHeatmapScreen.kt` configures `CLASSIC_BLUE` and `normalizeCorridors = false`, ensuring Periods changes do not impact Workout Clusters.
+  5. *Targeted Regression Verification Suite (`TST-MAP-060.5`)*:
+  • Execute targeted tests across `ui.map.*`, `ui.clusters.*`, and `ui.aftermath.periodlist.*` verifying 100% clean-room test pass rate.

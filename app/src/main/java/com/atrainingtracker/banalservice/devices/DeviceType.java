@@ -47,6 +47,7 @@ public enum DeviceType {
     SPEED_AND_LOCATION_NETWORK(SensorType.SPEED_mps, BSportType.UNKNOWN, 1),
 
     ALTITUDE_FROM_PRESSURE(SensorType.ALTITUDE, BSportType.UNKNOWN, 1),
+    ALTITUDE_FROM_POSITION(SensorType.ALTITUDE, BSportType.UNKNOWN, 1),
 
 
     SENSOR_MANAGER(SensorType.SENSORS, BSportType.UNKNOWN, 1),
@@ -154,6 +155,7 @@ public enum DeviceType {
             // either from pressure of from location
             case ALTITUDE:
                 deviceTypes.add(DeviceType.ALTITUDE_FROM_PRESSURE);
+                deviceTypes.add(DeviceType.ALTITUDE_FROM_POSITION);
                 deviceTypes.add(DeviceType.ENVIRONMENT);
                 deviceTypes.add(DeviceType.SPEED_AND_LOCATION_GPS);
                 deviceTypes.add(DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED);

@@ -20,6 +20,34 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.util.MigrationStatus
+import java.time.LocalDate
+
+/**
+ * Daily activity aggregation for a single calendar day and sport type.
+ */
+data class DailySportActivity(
+    val date: LocalDate,
+    val bSportType: BSportType,
+    val count: Int,
+    val durationSec: Long,
+    val distanceMeters: Double,
+    val ascentMeters: Long,
+    val workoutIds: List<Long> = emptyList(),
+    val workoutNames: List<String> = emptyList()
+)
+
+/**
+ * Yearly activity contributions for a single sport type across a calendar year.
+ * Encapsulates daily activities and max daily metric values for calibrated quartile shading.
+ */
+data class YearlySportContribution(
+    val sportType: BSportType,
+    val year: Int,
+    val dailyActivities: Map<LocalDate, DailySportActivity> = emptyMap(),
+    val maxDailyDurationSec: Long = 0L,
+    val maxDailyDistanceMeters: Double = 0.0,
+    val maxDailyAscentMeters: Long = 0L
+)
 
 /**
  * Safety threshold for rendering detailed vector tracks and markers in Period Maps.
@@ -28,6 +56,18 @@ import com.atrainingtracker.trainingtracker.ui.util.MigrationStatus
  * (REQ-PER-012)
  */
 const val MAX_PERIOD_VECTOR_TRACKS = 30
+
+/**
+ * Hard vertex budget for period summary card mini-map previews (REQ-PER-019.2 / ATT-4930).
+ * Bounds aggregate memory consumption and avoids LazyColumn scroll jank across cards.
+ */
+const val MAX_CARD_MINI_MAP_VERTICES = 2_000
+
+/**
+ * Hard vertex budget for detailed interactive period map screens (REQ-PER-019.2 / ATT-4930).
+ * Bounds aggregate memory consumption when viewing high-volume periods (e.g. Year tab).
+ */
+const val MAX_DETAILED_MAP_VERTICES = 8_000
 
 /**
  * Maximum number of workout vector tracks hydrated for summary card thumbnail previews.
@@ -73,6 +113,7 @@ data class PeriodSummary(
     val workoutIdToPathMap: Map<Long, List<com.google.android.gms.maps.model.LatLng>> = emptyMap(), // ID -> Rich Path
     val workoutIdToSportMap: Map<Long, BSportType> = emptyMap(),
     val extremaMarkers: List<PeriodPeakMarker> = emptyList(),
+    val yearlySportContributions: Map<BSportType, YearlySportContribution> = emptyMap(),
     val sortKey: String // Used for sorting
 )
 

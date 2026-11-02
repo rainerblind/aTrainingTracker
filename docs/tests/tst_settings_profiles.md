@@ -768,10 +768,10 @@
 
 ---
 
-### TST-SET-080: **Dedicated Auto-Pause Settings Cockpit & Navigation Drawer Entry Verification Suite** [Navigation drawer item and route mapping verified; AutoPauseTabsScreen and ViewModel reactive persistence and reset verified; single canonical configuration surface retirement verified; 100% 9-language localization parity; full regression pass.]
+### TST-SET-080: **Dedicated Auto-Pause Settings Cockpit & Navigation Drawer Entry Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-080`
 - **Component**: **Dedicated Auto-Pause Settings Cockpit & Navigation Drawer Entry Verification Suite**
-- **Jira**: ``ATT-4836``
+- **Jira**: `ATT-4836`, `ATT-4924`
 - **Test Description**:
   1. *Navigation Drawer & Route Resolution Contract Test (`TST-SET-080.1`, `AutoPauseNavigationTest.kt`)*:
   • Verify `NavRoutes.toRoute(R.id.drawer_auto_pause)` returns `NavRoutes.AUTO_PAUSE`.
@@ -784,9 +784,13 @@
   3. *Single Canonical Configuration Surface Retirement Contract Test (`TST-SET-080.3`, `AutoPauseRetirementContractTest.kt`)*:
   • Verify `SensorsGpsFilterSection.kt` no longer binds `autoPause*` parameters.
   • Verify `AdvancedTuningScreen.kt` and `AdvancedTuningDialog.kt` no longer render auto-pause toggles or sliders.
-  4. *9-Language Localization Parity (`TST-SET-080.4`, `TranslationParityTest.kt`)*:
-  • Verify `auto_pause_title` exists across all 9 canonical locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
-  5. *Clean-Room Regression Execution (`TST-SET-080.5`)*:
+  4. *Fixed Header & Global Card UI Contract Test (`TST-SET-080.4`, `AutoPauseTabsScreenContractTest.kt`)*:
+  • Verify `AutoPauseTabsScreen.kt` source contract: zero references to `CollapsingAppBarNestedScrollConnection` or `appBarOffset`.
+  • Verify single global `startInAutoPauseEnabled` card placed above the tab row.
+  • Verify main switch uses `tuning_auto_pause_enable_title`.
+  5. *9-Language Localization Parity (`TST-SET-080.5`, `TranslationParityTest.kt`)*:
+  • Verify `tuning_auto_pause_enable_title`, updated `tuning_auto_pause_speed_threshold_title`, `tuning_auto_pause_speed_threshold_desc`, and `tuning_auto_pause_start_in_auto_pause_desc` exist across all 9 canonical locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+  6. *Clean-Room Regression Execution (`TST-SET-080.6`)*:
   • Execute targeted unit tests and AAPT2 resources with 100% success.
 
 
@@ -813,3 +817,25 @@
   • Verify `assignClusterToWorkout()` is NOT called to override cluster assignment.
   4. *Clean-Room Regression Execution (`TST-SET-081.4`)*:
   • Execute targeted unit tests in `EditWorkoutClusteringTest`, `EditWorkoutClusterTest`, and `ThemeColorCentralizationAuditTest` with 100% pass rate.
+
+### TST-SET-082: **Timestamped Zone Boundary Snapshots & Historical Workout Resolution Verification Suite** [Atomic zone boundary persistence in AthleteMetrics.db; DB_VERSION=2 migration and schema parity; unidirectional SettingsDataStore projection; effective-at-workout-time zone resolution in WorkoutRepository and TelemetryMetricGraph; Profile & Zones history dialog and backdating; 9-language localization parity.]
+- **Requirement(s)**: `REQ-SET-082`
+- **Component**: **AthleteMetricsDatabaseManager / AthleteMetricsRepository / WorkoutRepository / TelemetryMetricGraph / ZonesSettingsViewModel**
+- **Jira**: ``ATT-4844``
+- **Test Description**:
+  1. *SQLite Schema Migration, Parity & Registry Contract Test (`TST-SET-082.1`, `AthleteMetricsRealSqliteMigrationTest.kt`)*:
+  • Verify `AthleteMetricsDbHelper` upgrades from `DB_VERSION = 1` to `2` by creating the `zone_history` table and `idx_zone_history_type_time` index.
+  • Verify `onCreate` vs incremental `onUpgrade` produce 100% identical schemas (Rule 64).
+  • Verify `DatabaseSchemaRegistry.getMaxSupportedVersion("AthleteMetrics.db")` matches `AthleteMetricsDbHelper.DB_VERSION` (Rule 62).
+  2. *Zone Snapshot CRUD, Monotonicity & Symmetric DTO Mapping Test (`TST-SET-082.2`, `AthleteMetricsZoneSnapshotTest.kt`)*:
+  • Verify insertion, retrieval of effective snapshot at given timestamp, update, and deletion of snapshots for `HR_RUN`, `HR_BIKE`, and `PWR_BIKE`.
+  • Verify validation rejects non-monotonic cutoffs ($Z_{i+1} \le Z_i$) and invalid boundary counts (must be 4 for HR, 6 for Power).
+  • Verify single-row `fromCursor` and batch `fromCursorBatch` symmetric mapping (Rule 20).
+  3. *Unidirectional SettingsDataStore Projection Test (`TST-SET-082.3`, `AthleteMetricsRepositorySyncTest.kt`)*:
+  • Verify that inserting a new latest snapshot automatically updates `SettingsDataStore` zone preference keys.
+  • Verify that deleting the latest snapshot rolls back `SettingsDataStore` to the next most recent historical snapshot.
+  4. *Historical Workout Zone Distribution & Telemetry Graph Resolution Test (`TST-SET-082.4`, `WorkoutRepositoryHistoricalZoneTest.kt`)*:
+  • Given historical workouts with different start times, verify `getHeartRateZoneDistribution` and `getPowerZoneDistribution` resolve against the snapshot valid at workout start time rather than current preferences.
+  • Verify `TelemetryMetricGraph` and `MapDetailLayout` receive effective historical thresholds.
+  5. *9-Language Localization & Format Specifier Parity Test (`TST-SET-082.5`, `TranslationParityTest.kt`)*:
+  • Verify all zone history UI strings are present in all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with matching positional specifiers (`%1$s`).

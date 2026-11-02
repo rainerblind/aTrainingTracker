@@ -96,6 +96,8 @@ public class UIHelper {
                 return R.string.device_type_all;
             case ALTITUDE_FROM_PRESSURE:
                 return R.string.device_type_altitude_from_pressure;
+            case ALTITUDE_FROM_POSITION:
+                return R.string.device_type_altitude_from_position;
             case BIKE_CADENCE:
                 return R.string.device_type_bike_cadence;
             case BIKE_POWER:
@@ -130,6 +132,8 @@ public class UIHelper {
                 return R.string.device_type_short_all;
             case ALTITUDE_FROM_PRESSURE:
                 return R.string.device_type_short_altitude_from_pressure;
+            case ALTITUDE_FROM_POSITION:
+                return R.string.device_type_short_altitude_from_position;
             case BIKE_CADENCE:
                 return R.string.device_type_short_bike_cadence;
             case BIKE_POWER:

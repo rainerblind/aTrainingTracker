@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.repositories
 
 import android.content.Context
+import android.location.Location
 import android.util.Log
 import androidx.arch.core.executor.ArchTaskExecutor
 import androidx.arch.core.executor.TaskExecutor
@@ -71,6 +72,18 @@ class BANALServiceRepositoryMemoryTest {
         every { Log.w(any<String>(), any<String>()) } returns 0
         every { Log.e(any<String>(), any<String>()) } returns 0
         every { Log.e(any<String>(), any<String>(), any<Throwable>()) } returns 0
+
+        mockkStatic(Location::class)
+        every { Location.distanceBetween(any(), any(), any(), any(), any()) } answers {
+            val startLat = arg<Double>(0)
+            val startLng = arg<Double>(1)
+            val endLat = arg<Double>(2)
+            val endLng = arg<Double>(3)
+            val results = arg<FloatArray>(4)
+            val latDiff = (endLat - startLat) * 111139.0
+            val lngDiff = (endLng - startLng) * 111139.0 * Math.cos(Math.toRadians(startLat))
+            results[0] = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff).toFloat()
+        }
 
         mockContext = mockk(relaxed = true)
         every { mockContext.applicationContext } returns mockContext
@@ -208,5 +221,60 @@ class BANALServiceRepositoryMemoryTest {
 
         // When mode is PAUSED, no points should be appended
         assertEquals(0, repository.currentPathPoints.value.size)
+    }
+
+    /**
+     * REQ-TRK-048.5, TST-TRK-048.4: Verify spider-map breadcrumbs are suppressed when stationary within deadband.
+     */
+    @Test
+    fun testTrackBreadcrumbs_stationaryJitterSuppressesSpiderwebPoints() {
+        setTrackingMode(TrackingMode.TRACKING)
+        val repository = BANALServiceRepository.getInstance(mockContext)
+
+        val mockBinder = mockk<BANALService.BANALServiceComm>(relaxed = true)
+        every { mockBinder.getBestSensorData(any()) } returns null
+
+        val latData1 = FilteredSensorData(SensorType.LATITUDE, 48.137000, "48.137000", "GPS", FilterType.INSTANTANEOUS, 0.0)
+        val lonData1 = FilteredSensorData(SensorType.LONGITUDE, 11.575000, "11.575000", "GPS", FilterType.INSTANTANEOUS, 0.0)
+        val speedZero = FilteredSensorData(SensorType.SPEED_mps, 0.0, "0.0", "GPS", FilterType.INSTANTANEOUS, 0.0)
+        val distData = FilteredSensorData(SensorType.DISTANCE_m, 500.0, "500", "GPS", FilterType.INSTANTANEOUS, 0.0)
+
+        every { mockBinder.getBestSensorData(SensorType.LATITUDE) } returns latData1
+        every { mockBinder.getBestSensorData(SensorType.LONGITUDE) } returns lonData1
+        every { mockBinder.getBestSensorData(SensorType.SPEED_mps) } returns speedZero
+        every { mockBinder.getBestSensorData(SensorType.DISTANCE_m) } returns distData
+
+        setServiceBinder(repository, mockBinder)
+        testDispatcher.scheduler.runCurrent()
+
+        // First point recorded in currentTrack
+        assertEquals(1, repository.currentTrack.value.size)
+
+        // Simulate 1.6m jitter while stationary (lat 48.137015 is ~1.6m north)
+        val latDataJitter = FilteredSensorData(SensorType.LATITUDE, 48.137015, "48.137015", "GPS", FilterType.INSTANTANEOUS, 0.0)
+        val lonDataJitter = FilteredSensorData(SensorType.LONGITUDE, 11.575000, "11.575000", "GPS", FilterType.INSTANTANEOUS, 0.0)
+        every { mockBinder.getBestSensorData(SensorType.LATITUDE) } returns latDataJitter
+        every { mockBinder.getBestSensorData(SensorType.LONGITUDE) } returns lonDataJitter
+
+        testDispatcher.scheduler.advanceTimeBy(1000)
+        testDispatcher.scheduler.runCurrent()
+
+        // Stationary jitter within 3m must NOT append to _currentTrack
+        assertEquals("Stationary jitter <= 3m must not append spiderweb breadcrumbs", 1, repository.currentTrack.value.size)
+
+        // Now simulate genuine movement: 25m away with positive speed
+        val latDataMove = FilteredSensorData(SensorType.LATITUDE, 48.137250, "48.137250", "GPS", FilterType.INSTANTANEOUS, 0.0)
+        val lonDataMove = FilteredSensorData(SensorType.LONGITUDE, 11.575250, "11.575250", "GPS", FilterType.INSTANTANEOUS, 0.0)
+        val speedMoving = FilteredSensorData(SensorType.SPEED_mps, 5.0, "5.0", "GPS", FilterType.INSTANTANEOUS, 0.0)
+        val distAdvanced = FilteredSensorData(SensorType.DISTANCE_m, 525.0, "525", "GPS", FilterType.INSTANTANEOUS, 0.0)
+        every { mockBinder.getBestSensorData(SensorType.LATITUDE) } returns latDataMove
+        every { mockBinder.getBestSensorData(SensorType.LONGITUDE) } returns lonDataMove
+        every { mockBinder.getBestSensorData(SensorType.SPEED_mps) } returns speedMoving
+        every { mockBinder.getBestSensorData(SensorType.DISTANCE_m) } returns distAdvanced
+
+        testDispatcher.scheduler.advanceTimeBy(1000)
+        testDispatcher.scheduler.runCurrent()
+
+        assertEquals("True movement must append new track breadcrumb", 2, repository.currentTrack.value.size)
     }
 }

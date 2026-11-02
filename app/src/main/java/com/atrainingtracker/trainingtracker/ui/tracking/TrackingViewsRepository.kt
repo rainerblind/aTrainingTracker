@@ -87,7 +87,8 @@ data class SensorFieldConfig(
     val sourceDeviceId: Long,
     val sourceDeviceName: String? = null,
     val showValue: Boolean = true,
-    val showBar: Boolean = false
+    val showBar: Boolean = false,
+    val colWeight: Float = 1.0f
 )
 
 enum class ScreenMode {
@@ -295,6 +296,7 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                 val deviceIdIndex = c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SOURCE_DEVICE_ID)
                 val showValueIndex = c.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_VALUE)
                 val showBarIndex = c.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_BAR)
+                val colWeightIndex = c.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.COL_WEIGHT)
 
                 do {
                     val viewSize = safeEnumValueOf(c.getString(viewSizeIndex), ViewSize.NORMAL)
@@ -315,6 +317,12 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                     } else {
                         TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupportedSensorType(sensorType)
                     }
+                    val colWeight = if (colWeightIndex != -1 && !c.isNull(colWeightIndex)) {
+                        val w = c.getFloat(colWeightIndex)
+                        if (w > 0f) w else 1.0f
+                    } else {
+                        1.0f
+                    }
 
                     fieldList.add(
                         SensorFieldConfig(
@@ -328,7 +336,8 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                             sourceDeviceId = sourceDeviceId,
                             sourceDeviceName = deviceName,
                             showValue = showValue,
-                            showBar = showBar
+                            showBar = showBar,
+                            colWeight = colWeight
                         )
                     )
                 } while (c.moveToNext())
@@ -366,11 +375,18 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                     val filterType = safeEnumValueOf(filterTypeString, FilterType.INSTANTANEOUS)
                     val showValueIndex = c.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_VALUE)
                     val showBarIndex = c.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_BAR)
+                    val colWeightIndex = c.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.COL_WEIGHT)
                     val showValue = if (showValueIndex != -1 && !c.isNull(showValueIndex)) c.getInt(showValueIndex) == 1 else true
                     val showBar = if (showBarIndex != -1 && !c.isNull(showBarIndex)) {
                         c.getInt(showBarIndex) == 1
                     } else {
                         TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupportedSensorType(sensorType)
+                    }
+                    val colWeight = if (colWeightIndex != -1 && !c.isNull(colWeightIndex)) {
+                        val w = c.getFloat(colWeightIndex)
+                        if (w > 0f) w else 1.0f
+                    } else {
+                        1.0f
                     }
 
                     return@withContext SensorFieldConfig(
@@ -384,7 +400,8 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                         sourceDeviceId = sourceDeviceId,
                         sourceDeviceName = deviceName,
                         showValue = showValue,
-                        showBar = showBar
+                        showBar = showBar,
+                        colWeight = colWeight
                     )
                 } else {
                     return@withContext null // Return null if not found
@@ -419,7 +436,8 @@ class TrackingViewsRepository private constructor(private val context: Context) 
         newFilterType: FilterType,
         newFilterConstant: Double,
         showValue: Boolean = true,
-        showBar: Boolean = false
+        showBar: Boolean = false,
+        colWeight: Float = 1.0f
     ) {
         withContext(Dispatchers.IO) {
 
@@ -432,7 +450,8 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                 newFilterType,
                 newFilterConstant,
                 showValue,
-                showBar
+                showBar,
+                colWeight
             )
         }
 
@@ -453,7 +472,8 @@ class TrackingViewsRepository private constructor(private val context: Context) 
         newFilterType: FilterType,
         newFilterConstant: Double,
         showValue: Boolean = true,
-        showBar: Boolean = false
+        showBar: Boolean = false,
+        colWeight: Float = 1.0f
     ) {
         Log.i("TrackingRepository", "insertSensorFieldConfig: $tabViewId, $rowNr, $colNr")
 
@@ -468,11 +488,30 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                 newFilterType,
                 newFilterConstant,
                 showValue,
-                showBar
+                showBar,
+                colWeight
             )
         }
 
         // trigger recreation of UI
+        withContext(Dispatchers.Main) {
+            configUpdateTrigger.value++
+        }
+    }
+
+    suspend fun updateColWeight(sensorFieldId: Long, colWeight: Float) {
+        withContext(Dispatchers.IO) {
+            viewsDbManager.updateColWeight(sensorFieldId, colWeight)
+        }
+        withContext(Dispatchers.Main) {
+            configUpdateTrigger.value++
+        }
+    }
+
+    suspend fun updateRowSplit(tabViewId: Long, rowNr: Int, leftWeight: Float, rightWeight: Float) {
+        withContext(Dispatchers.IO) {
+            viewsDbManager.updateRowSplit(tabViewId, rowNr, leftWeight, rightWeight)
+        }
         withContext(Dispatchers.Main) {
             configUpdateTrigger.value++
         }

@@ -57,8 +57,15 @@ object GoogleDriveBackupManager {
     }
 
     suspend fun uploadBackup(context: Context, backupFile: File): Boolean = withContext(Dispatchers.IO) {
-        val token = TrainingApplication.getGoogleDriveAuthToken()
-        if (token.isNullOrBlank() || !TrainingApplication.uploadToGoogleDrive()) {
+        if (!TrainingApplication.uploadToGoogleDrive()) {
+            Log.e(TAG, "No Google Drive credentials found or Google Drive disabled")
+            return@withContext false
+        }
+        var token = TrainingApplication.getGoogleDriveAuthToken()
+        if (token.isNullOrBlank()) {
+            token = GoogleDriveAuthManager.refreshTokenSync(context.applicationContext ?: context).getOrNull()
+        }
+        if (token.isNullOrBlank()) {
             Log.e(TAG, "No Google Drive credentials found or Google Drive disabled")
             return@withContext false
         }
@@ -119,8 +126,15 @@ object GoogleDriveBackupManager {
     }
 
     suspend fun downloadBackup(context: Context, destinationFile: File): Boolean = withContext(Dispatchers.IO) {
-        val token = TrainingApplication.getGoogleDriveAuthToken()
-        if (token.isNullOrBlank() || !TrainingApplication.uploadToGoogleDrive()) {
+        if (!TrainingApplication.uploadToGoogleDrive()) {
+            Log.e(TAG, "No Google Drive credentials found or Google Drive disabled")
+            return@withContext false
+        }
+        var token = TrainingApplication.getGoogleDriveAuthToken()
+        if (token.isNullOrBlank()) {
+            token = GoogleDriveAuthManager.refreshTokenSync(context.applicationContext ?: context).getOrNull()
+        }
+        if (token.isNullOrBlank()) {
             Log.e(TAG, "No Google Drive credentials found or Google Drive disabled")
             return@withContext false
         }

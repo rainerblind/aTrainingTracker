@@ -114,6 +114,7 @@ fun InteractivePeriodMap(
         initialBounds = periodBounds,
         boundsFocusTrigger = mapState.focusEpochMs,
         currentLocationFlow = noLocation,
+        style = MapStyle(useMutedStyle = true),
         modifier = modifier,
         onMapClick = { latLng ->
             val zoom = cameraPositionState.position.zoom
@@ -179,7 +180,7 @@ fun InteractivePeriodMap(
 
             // 4. Render full heatmap as it becomes ready in the background (REQ-PER-024.1)
             if (heatmapPaths.isNotEmpty()) {
-                heatmap(heatmapPaths, opacity = 1.0)
+                heatmap(heatmapPaths, opacity = 1.0, colorLut = ThermalColorLut.HOT, normalizeCorridors = true)
             }
         }
     )

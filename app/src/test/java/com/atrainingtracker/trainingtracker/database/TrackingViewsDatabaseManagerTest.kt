@@ -63,6 +63,7 @@ class TrackingViewsDatabaseManagerTest {
         every { anyConstructed<ContentValues>().put(any<String>(), any<Long>()) } returns Unit
         every { anyConstructed<ContentValues>().put(any<String>(), any<Int>()) } returns Unit
         every { anyConstructed<ContentValues>().put(any<String>(), any<Double>()) } returns Unit
+        every { anyConstructed<ContentValues>().put(any<String>(), any<Float>()) } returns Unit
         every { anyConstructed<ContentValues>().clear() } returns Unit
     }
 
@@ -532,8 +533,48 @@ class TrackingViewsDatabaseManagerTest {
     }
 
     @Test
-    fun testDatabaseVersionIs16() {
-        assertEquals(16, TrackingViewsDatabaseManager.TrackingViewsDbHelper.DB_VERSION)
+    fun testDatabaseVersionIs18() {
+        assertEquals(18, TrackingViewsDatabaseManager.TrackingViewsDbHelper.DB_VERSION)
+    }
+
+    @Test
+    fun testIsBarSupported_sportDependentFeasibility() {
+        // HR: Run and Bike only
+        assertTrue(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(SensorType.HR, com.atrainingtracker.banalservice.BSportType.RUN))
+        assertTrue(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(SensorType.HR, com.atrainingtracker.banalservice.BSportType.BIKE))
+        assertFalse(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(SensorType.HR, com.atrainingtracker.banalservice.BSportType.UNKNOWN))
+
+        // Power, Pedal Balance, W'Bal: Bike only
+        assertTrue(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(SensorType.POWER, com.atrainingtracker.banalservice.BSportType.BIKE))
+        assertFalse(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(SensorType.POWER, com.atrainingtracker.banalservice.BSportType.RUN))
+
+        assertTrue(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(SensorType.PEDAL_POWER_BALANCE, com.atrainingtracker.banalservice.BSportType.BIKE))
+        assertFalse(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(SensorType.PEDAL_POWER_BALANCE, com.atrainingtracker.banalservice.BSportType.RUN))
+
+        assertTrue(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(SensorType.W_PRIME_BAL, com.atrainingtracker.banalservice.BSportType.BIKE))
+        assertFalse(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(SensorType.W_PRIME_BAL, com.atrainingtracker.banalservice.BSportType.RUN))
+
+        // Others: false
+        assertFalse(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(SensorType.SPEED_mps, com.atrainingtracker.banalservice.BSportType.BIKE))
+        assertFalse(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(null as SensorType?, com.atrainingtracker.banalservice.BSportType.BIKE))
+    }
+
+    @Test
+    fun testOnUpgrade_from16To17_addsColWeight() {
+        val dbHelper = TrackingViewsDatabaseManager.TrackingViewsDbHelper(mockContext)
+        val mockCursor = mockk<Cursor>(relaxed = true)
+        every { mockDb.rawQuery(match { it.contains("PRAGMA table_info") }, any()) } returns mockCursor
+        every { mockCursor.moveToNext() } returns false
+        val tableExistsCursor = mockk<Cursor>(relaxed = true)
+        every { mockDb.rawQuery(match { it.contains("sqlite_master") }, any()) } returns tableExistsCursor
+        every { tableExistsCursor.moveToFirst() } returns true
+
+        dbHelper.onUpgrade(mockDb, 16, 17)
+
+        verify(atLeast = 1) {
+            mockDb.execSQL(match { it.contains("ALTER TABLE LayoutRowsTable ADD COLUMN ColWeight real DEFAULT 1.0;") })
+            mockDb.execSQL(match { it.contains("UPDATE LayoutRowsTable SET ColWeight = 1.0 WHERE ColWeight IS NULL;") })
+        }
     }
 
     @Test

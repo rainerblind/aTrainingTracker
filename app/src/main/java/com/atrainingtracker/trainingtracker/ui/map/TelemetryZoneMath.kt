@@ -218,17 +218,30 @@ object TelemetryZoneMath {
      * Validates that thresholds are strictly ascending and positive (z1 > 0 && z2 > z1 && z3 > z2 && z4 > z3).
      * Returns null if unconfigured or invalid.
      */
-    fun loadHeartRateThresholds(context: Context, bSportType: BSportType): HeartRateZoneThresholds? {
+    /**
+     * Standardized factory method to load heart rate zone thresholds for a sport type
+     * (REQ-UI-260 / ATT-2031 / REQ-UI-370), resolving effective historical boundaries
+     * at [workoutStartTimeMs] when provided (REQ-SET-082.3).
+     *
+     * Validates that thresholds are strictly ascending and positive:
+     * (z1 > 0 && z2 > z1 && z3 > z2 && z4 > z3). Returns null if unconfigured or invalid.
+     */
+    fun loadHeartRateThresholds(
+        context: Context,
+        bSportType: BSportType,
+        workoutStartTimeMs: Long = 0L
+    ): HeartRateZoneThresholds? {
         return runCatching {
             val zoneType = if (bSportType == BSportType.BIKE) {
                 SettingsDataStore.ZoneType.HR_BIKE
             } else {
                 SettingsDataStore.ZoneType.HR_RUN
             }
-            val z1 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
-            val z2 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
-            val z3 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
-            val z4 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
+            val bounds = SettingsDataStoreJavaHelper.getEffectiveZoneBoundaries(context, zoneType, workoutStartTimeMs)
+            val z1 = bounds.getOrElse(0) { 0 }
+            val z2 = bounds.getOrElse(1) { 0 }
+            val z3 = bounds.getOrElse(2) { 0 }
+            val z4 = bounds.getOrElse(3) { 0 }
             if (z1 > 0 && z2 > z1 && z3 > z2 && z4 > z3) {
                 HeartRateZoneThresholds(z1, z2, z3, z4)
             } else null
@@ -237,21 +250,26 @@ object TelemetryZoneMath {
 
     /**
      * Standardized factory method to load cycling power zone thresholds from user preferences
-     * (REQ-UI-260 / ATT-2031 / REQ-UI-370).
+     * (REQ-UI-260 / ATT-2031 / REQ-UI-370), resolving effective historical boundaries
+     * at [workoutStartTimeMs] when provided (REQ-SET-082.3).
      *
      * Validates that thresholds are strictly ascending and positive:
      * (z1 > 0 && z2 > z1 && z3 > z2 && z4 > z3 && z5 > z4 && z6 > z5).
      * Returns null if unconfigured or invalid.
      */
-    fun loadPowerThresholds(context: Context): PowerZoneThresholds? {
+    fun loadPowerThresholds(
+        context: Context,
+        workoutStartTimeMs: Long = 0L
+    ): PowerZoneThresholds? {
         return runCatching {
             val zoneType = SettingsDataStore.ZoneType.PWR_BIKE
-            val z1 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 1)
-            val z2 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 2)
-            val z3 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 3)
-            val z4 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 4)
-            val z5 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 5)
-            val z6 = SettingsDataStoreJavaHelper.getZoneMax(context, zoneType, 6)
+            val bounds = SettingsDataStoreJavaHelper.getEffectiveZoneBoundaries(context, zoneType, workoutStartTimeMs)
+            val z1 = bounds.getOrElse(0) { 0 }
+            val z2 = bounds.getOrElse(1) { 0 }
+            val z3 = bounds.getOrElse(2) { 0 }
+            val z4 = bounds.getOrElse(3) { 0 }
+            val z5 = bounds.getOrElse(4) { 0 }
+            val z6 = bounds.getOrElse(5) { 0 }
             if (z1 > 0 && z2 > z1 && z3 > z2 && z4 > z3 && z5 > z4 && z6 > z5) {
                 PowerZoneThresholds(z1, z2, z3, z4, z5, z6)
             } else null

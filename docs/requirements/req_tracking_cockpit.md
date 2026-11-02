@@ -2039,38 +2039,42 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Secondary multi-sensor logging in `WorkoutSamples.db` MUST NOT be dropped; legitimate speeds ($\le 70.0\text{ m/s}$) MUST accumulate distance accurately; single-thread serialization on `mDbExecutor` MUST be maintained.
 
-### REQ-TRK-042: 1-Hz Live-Tracking Allocation Hotspot Elimination, Recomposition Decoupling & Bounded Polyline Serialization [Planned]
-- **Tests**: `TST-TRK-042` | **Tickets**: `ATT-4863`
+### REQ-TRK-042: 1-Hz Live-Tracking Allocation Hotspot Elimination, Recomposition Decoupling & Bounded Polyline Serialization [Verified]
+- **Tests**: `TST-TRK-042` | **Tickets**: `ATT-4863`, `ATT-4923`
 - **Implementation**: `BANALServiceRepository.kt`, `MapLayers.kt`, `SensorGridScreen.kt`, `TrackingViewModel.kt`
-- **Rationale**: The live-tracking subsystem SHALL eliminate high-frequency object allocations, O(N^2) list copies, Compose snapshot invalidations during composition, and unbounded Binder IPC transfers during 1-Hz tracking to protect JVM heap stability and prevent `OutOfMemoryError` on long-running workouts (ATT-4863):
-1. *Deduplicated & Gated Live Track & PathPoint Appending (`REQ-TRK-042.1`)*:
-• In `BANALServiceRepository.kt`, `_currentPathPoints` SHALL strictly append new `PathPoint` objects only when `_currentLocation.value` is non-null AND either geographical position (`newLocation != _currentLocation.value`) or cumulative distance (`newDistance != _currentDistance.value`) has advanced. When stationary or paused, redundant identical allocations SHALL be suppressed.
-2. *Bounded Live Track Rendering via Historical Decimation (`REQ-TRK-042.2`)*:
-• In `MapLayers.kt` (`LiveTrackLayer`), when active GPS track points exceed 300 points, the polyline passed to `XRayPolyline` and Google Maps SDK `Polyline.setPoints(...)` SHALL preserve the most recent 200 points at full 1-Hz resolution while downsampling older historical points using `PolyUtil.simplify(head, 3.0)` to bound the total list size sent across Binder to Maps IPC.
+- **Rationale**: The live-tracking subsystem SHALL eliminate high-frequency object allocations, O(N^2) list copies, Compose snapshot invalidations during composition, and unbounded Binder IPC transfers during 1-Hz tracking to protect JVM heap stability and prevent `OutOfMemoryError` on long-running workouts (ATT-4863, ATT-4923):
+1. *Amortized O(1) Snapshot Append & Deduplicated PathPoint Invariants (`REQ-TRK-042.1`)*:
+• In `BANALServiceRepository.kt`, `_currentTrack` and `_currentPathPoints` SHALL use an amortized $O(1)$ append snapshot structure (`SnapshotChunkedList<T>`), eliminating full-list copying upon each moving coordinate or distance advancement while preserving standard `List<T>` random-access read fidelity. Appending SHALL strictly occur only when `_currentLocation.value` is non-null AND either geographical position (`newLocation != _currentLocation.value`) or cumulative distance (`newDistance != _currentDistance.value`) has advanced outside the stationary deadband.
+2. *Incremental Chunked Live Track Decimation (`REQ-TRK-042.2`)*:
+• In `MapLayers.kt` (`LiveTrackLayer`), track decimation SHALL operate incrementally via `IncrementalTrackDecimator` (a plain holder object adhering to Rule 66 without Compose `MutableState` mutation in composition). Historical points exceeding the unsimplified tail ($M = 200$) SHALL be simplified in fixed frozen chunks ($C = 200$) using `PolyUtil.simplify(chunk, 3.0)` once upon chunk boundary completion and permanently cached, preventing re-simplification of older history and eliminating coordinate flutter across 1-Hz ticks.
 3. *Non-State Index Caching & Elevation Profile Composition Gating (`REQ-TRK-042.3`)*:
 • In `SensorGridScreen.kt`, the last route segment index SHALL be cached inside a non-state holder (`SegmentIndexHolder`) rather than a `MutableState`, preventing Compose snapshot writes inside `remember` during composition.
 • `TrackingElevationProfileResolver.resolve(...)` SHALL be evaluated strictly when `state.showElevationProfile == true`. When hidden, resolution and recomposition on 1-Hz path updates SHALL be bypassed.
-4. *Memoized Base Sensor Fields & Decoupled Grid Telemetry (`REQ-TRK-042.4`)*:
+4. *Memoized Base Sensor Fields & Combine Decoupling (`REQ-TRK-042.4`)*:
 • In `TrackingViewModel.kt:loadSensorFieldStates()`, `baseFields` (`configs.map { SensorFieldState(...) }`) SHALL be precomputed and memoized when view configurations, activity type, or zone options change, so 1-Hz `allFilteredSensorData` updates only execute `applySensorData(...)` without reallocating base field descriptors.
+• `currentPathPoints` SHALL be decoupled from `loadSensorFieldStates()` combine and observed strictly when `showElevationProfile == true`, ensuring sensor field states evaluate at most once per sensor tick.
 5. *Structural Value Equality for Device Telemetry (`REQ-TRK-042.5`)*:
 • In `BANALServiceRepository.kt`, `DeviceTelemetry` SHALL NOT contain synthetic non-deterministic fields such as `version = System.nanoTime()`, restoring data class structural equality so `_allActiveDevicesTelemetry` only emits downstream when device status or sensor values genuinely change.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-042`.
-2. *Historical Origin & Commit Trace*: Ticket `ATT-4863`, Sprint `2026-44.1`. Follows Crashlytics issue `16e0317dd5b3aa5a53b9248f50f05822` in release `4.9.38.5 (269)`.
-3. *Root Reason for Existing Formulation*: `version = System.nanoTime()` was added in early refactorings under the assumption that `StateFlow` required unique timestamps. Unbounded `_currentPathPoints` and dual polyline updates were implemented before multi-hour heap profiles were captured.
-4. *Preservation of Core Invariants*: 1-Hz live telemetry updates, visual track sharpness, map follow-me behavior, and 100% test pass rate are strictly preserved.
+1. *Original Requirement ID & Target*: `REQ-TRK-042` (*1-Hz Live-Tracking Allocation Hotspot Elimination, Recomposition Decoupling & Bounded Polyline Serialization*).
+2. *Historical Origin & Commit Trace*: Ticket `ATT-4863` (commit `06195f2a`) and follow-up `ATT-4923`. Follows Crashlytics issue `16e0317dd5b3aa5a53b9248f50f05822` in release `4.9.38.5 (269)`.
+3. *Root Reason for Existing Formulation*: `ATT-4863` stopped allocations on stationary ticks and memoized base fields, leaving $O(N)$ copy-on-append and full re-decimation active during movement. `ATT-4923` introduces $O(1)$ amortized snapshot appending, incremental chunked decimation, and combine decoupling.
+4. *Preservation of Core Invariants*: Visual smoothness of live map traces and elevation profiles, 200-point full-fidelity tail, thread-safe snapshot reading, and 100% test pass rate are strictly preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an active tracking session remaining stationary for 60 seconds,
 • *When* the 1-Hz observation loop executes,
 • *Then* `_currentPathPoints` SHALL NOT accumulate 60 duplicate points.
-• *Given* a long workout track with 3,000 recorded points,
+• *Given* a long workout track with 15,000 recorded points,
+• *When* appending new points during live movement,
+• *Then* `SnapshotChunkedList` appends in amortized $O(1)$ time and memory without copying the prior 15,000 points.
+• *Given* a growing workout track exceeding 400 points,
 • *When* `LiveTrackLayer` renders,
-• *Then* `XRayPolyline` receives a simplified historical path plus full-resolution tail with significantly fewer points than 3,000, preventing multi-megabyte Binder IPC spikes.
+• *Then* `IncrementalTrackDecimator` permanently freezes simplified historical chunks, preserving historical vertex stability and keeping the unsimplified tail at 200 points without full re-simplification.
 • *Given* a tracking cockpit tab with `showElevationProfile == false`,
 • *When* 1-Hz path points update,
-• *Then* `TrackingElevationProfileResolver.resolve` is bypassed and zero Compose snapshot writes occur during composition.
+• *Then* `TrackingElevationProfileResolver.resolve` is bypassed and `loadSensorFieldStates()` emits at most once per sensor tick.
 • *Given* consecutive 1-Hz ticks where device telemetry is identical,
 • *When* `DeviceTelemetry` objects are compared,
 • *Then* `_allActiveDevicesTelemetry` suppresses duplicate downstream emissions.
@@ -2119,31 +2123,38 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 
 
-### REQ-TRK-044: Optional Automatic Stationary Auto-Pause at Workout Start [Planned]
-- **Tests**: `TST-TRK-044` | **Tickets**: `ATT-4840`
-- **Implementation**: `AutoPauseManager.kt`, `TuningConfig.kt`, `TuningPreferencesDataStore.kt`, `AutoPauseTabsScreen.kt`, `AutoPauseViewModel.kt`, `TrainingApplication.java`, `TrackerService.java`
+### REQ-TRK-044: Optional Automatic Stationary Auto-Pause at Workout Start [Verified]
+- **Tests**: `TST-TRK-044` | **Tickets**: `ATT-4840`, `ATT-4925`
+- **Implementation**: `AutoPauseManager.kt`, `TuningConfig.kt`, `TuningPreferencesDataStore.kt`, `AutoPauseTabsScreen.kt`, `AutoPauseViewModel.kt`, `TrainingApplication.java`, `TrackerService.java`, `BANALServiceRepository.kt`
 - **Rationale**: When starting a workout while stationary, the tracker SHALL optionally transition directly into `AUTO_PAUSED` without waiting for the pause debounce timer to elapse (ATT-4840, extending `REQ-TRK-018`, `REQ-SET-080`, and `REQ-TRK-043`):
 1. *Global Start in Auto-Paused Preference (`REQ-TRK-044.1`)*:
 • `TuningConfig`, `TuningPreferencesDataStore`, and `AutoPauseConfig` SHALL persist a global boolean preference `startInAutoPauseEnabled` (default `false`).
 2. *Settings UI Global Toggle (`REQ-TRK-044.2`)*:
 • `AutoPauseTabsScreen.kt` SHALL render a global *Start in Auto-Paused* toggle (`TuningToggleItem`) at the top of the Auto-Pause settings screen with reactive updates via `AutoPauseViewModel.updateStartInAutoPauseEnabled()`.
 3. *Domain Startup Predicate (`REQ-TRK-044.3`)*:
-• `AutoPauseManager` SHALL expose a static pure function `shouldStartInAutoPause(config, sportType, currentSpeedMps)` evaluating whether all startup conditions are satisfied: `config.startInAutoPauseEnabled == true`, auto-pause is enabled for `sportType`, and `currentSpeedMps` is below the configured sport speed threshold (or null/0.0/corrupt).
-4. *Direct Workout Start Transition (`REQ-TRK-044.4`)*:
-• When the user starts tracking with `startInAutoPauseEnabled == true` and `shouldStartInAutoPause` evaluates to `true`, tracking SHALL initialize directly in `TrackingMode.PAUSED` (`isAutoPaused = true`) and `AutoPauseState.AUTO_PAUSED` without accumulating debounce ticks.
+• `AutoPauseManager` SHALL expose a static pure function `shouldStartInAutoPause(config, sportType, currentSpeedMps, hasSpeedSource)` evaluating whether all startup conditions are satisfied: `hasSpeedSource == true`, `config.startInAutoPauseEnabled == true`, auto-pause is enabled for `sportType`, and `currentSpeedMps` is below the configured sport speed threshold (or null/0.0/corrupt). If `hasSpeedSource` is `false`, it SHALL return `false` immediately.
+4. *Direct Workout Start Transition & Speed Source Removal (`REQ-TRK-044.4`)*:
+• When the user starts tracking with `startInAutoPauseEnabled == true` and `shouldStartInAutoPause` evaluates to `true`, tracking SHALL initialize directly in `TrackingMode.PAUSED` (`isAutoPaused = true`) and `AutoPauseState.AUTO_PAUSED` without accumulating debounce ticks. If `hasSpeedSource` is `false` (e.g. indoor workout without speed sensors), tracking SHALL initialize directly in `TrackingMode.TRACKING`.
+• Mid-Workout Speed Source Removal: In `evaluateTick`, when `currentState == AutoPauseState.AUTO_PAUSED` and all speed sources are removed or unavailable (`hasSpeedSource == false`), `AutoPauseManager` SHALL transition to `AutoPauseState.SENSOR_LOST` with `triggerResume = true`, preventing the workout from remaining auto-paused indefinitely while preserving tunnel dropout protections when `hasSpeedSource == true`.
 5. *Localization Parity (`REQ-TRK-044.5`)*:
 • String resources for the toggle title and description SHALL maintain full parity across all 9 supported languages.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-044`, refining `REQ-TRK-018` (`ATT-45` / `ATT-3677`) and `REQ-SET-080` (`ATT-4836`). Targets `AutoPauseManager.kt`, `TuningPreferencesDataStore.kt`, `AutoPauseTabsScreen.kt`, `TrainingApplication.java`, and `TrackerService.java`.
-2. *Historical Origin & Commit Trace*: Ticket `ATT-4840`, Sprint `2026-44.1`. Follows `ATT-4839` (which introduced configurable resume debounce) and addresses user complaints of stationary duration polluting moving time during equipment setup.
-3. *Root Reason for Existing Formulation*: Tracking historically always started in `TRACKING` because the debounce timer was designed to detect deceleration from active motion. When starting from complete rest, waiting for the debounce delay is unnecessary when the user explicitly opts into immediate auto-pause.
-4. *Preservation of Core Invariants*: Moving average speed calculations, manual pause precedence, and resume debounce confirmation (`REQ-TRK-043`) are 100% preserved.
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-044`, refining `REQ-TRK-018` (`ATT-45` / `ATT-3677`), `REQ-TRK-037` (`ATT-4094`), and `REQ-SET-080` (`ATT-4836`). Targets `AutoPauseManager.kt`, `TuningPreferencesDataStore.kt`, `AutoPauseTabsScreen.kt`, `TrainingApplication.java`, and `TrackerService.java`.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-4840`, Sprint `2026-44.1` (commit `e64ff057`) and `ATT-4925`, Sprint `2026-44.2`. Follows `ATT-4839` (which introduced configurable resume debounce) and addresses user complaints of stationary duration polluting moving time during equipment setup, as well as deadlocks when no speed source is available.
+3. *Root Reason for Existing Formulation*: Tracking historically always started in `TRACKING` because the debounce timer was designed to detect deceleration from active motion. When starting from complete rest, waiting for the debounce delay is unnecessary when the user explicitly opts into immediate auto-pause. However, treating null speed without a speed source as stationary caused indoor workouts without speed sensors to stay paused forever.
+4. *Preservation of Core Invariants*: Moving average speed calculations, manual pause precedence, resume debounce confirmation (`REQ-TRK-043`), GPS fix acquisition waiting, and tunnel dropout protection (`REQ-TRK-037`) are 100% preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
-• *Given* `startInAutoPauseEnabled` is `true`, bike auto-pause is enabled, and phone is stationary (speed 0.0 m/s),
+• *Given* `startInAutoPauseEnabled` is `true`, bike auto-pause is enabled, `hasSpeedSource` is `true`, and phone is stationary (speed 0.0 m/s or null GPS acquiring),
 • *When* the user starts a cycling workout,
 • *Then* tracking initializes directly in `TrackingMode.PAUSED` (`isAutoPaused = true`) and `AutoPauseState.AUTO_PAUSED`.
+• *Given* `startInAutoPauseEnabled` is `true`, but `hasSpeedSource` is `false` (indoor HR-only workout),
+• *When* the user starts a workout,
+• *Then* tracking initializes in `TrackingMode.TRACKING`.
+• *Given* the workout is currently in `AutoPauseState.AUTO_PAUSED` and all speed sources are removed or disconnected (`hasSpeedSource == false`),
+• *When* `evaluateTick` executes,
+• *Then* `AutoPauseManager` transitions to `AutoPauseState.SENSOR_LOST` with `triggerResume = true`.
 • *Given* `startInAutoPauseEnabled` is `true`, but run auto-pause is disabled,
 • *When* the user starts a running workout while stationary,
 • *Then* tracking initializes in `TrackingMode.TRACKING`.
@@ -2151,7 +2162,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *When* the user starts a workout while stationary,
 • *Then* tracking initializes in `TrackingMode.TRACKING` and waits for normal debounce.
 
-**Invariants**: Manual pause lock precedence, sensor lost recovery, and 100% clean-room test pass rate MUST NOT be broken.
+**Invariants**: Manual pause lock precedence, sensor lost recovery, tunnel dropout protection, and 100% clean-room test pass rate MUST NOT be broken.
 
 
 ### REQ-TRK-045: Clear Non-Recording Status Indication: Unified HUD Banner and Grid Dimming [Verified]
@@ -2194,42 +2205,254 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 **Invariants**: Live telemetry updates, zero hue shift in training zones, and 100% clean-room test pass rate MUST NOT be broken.
 
 
-### REQ-TRK-046: Per-Sensor-Field Display Elements Configuration: Value and Bar Gating [Planned]
-- **Tests**: `TST-TRK-046` | **Tickets**: `ATT-4841`
-- **Implementation**: `TrackingViewsDatabaseManager.java`, `TrackingViewsRepository.kt`, `SensorFieldConfig`, `SensorFieldState.kt`, `EditSensorFieldViewModel.kt`, `EditSensorFieldDialog.kt`, `SensorFieldView.kt`, `ZonesSettingsActivity.kt`
-- **Rationale**: Cockpit sensor fields SHALL support granular, per-field configuration of which visual elements are rendered (numeric Value + Unit row vs. horizontal Bar), allowing athletes to customize tiles (e.g. bar-only, value-only, or both) independently for instantaneous vs. average metrics (ATT-4841, Parent Epic ATT-355, extending `REQ-UI-376`, `REQ-UI-377`, `REQ-UI-416`):
-1. *SQLite Schema v16 & Model Persistence (`REQ-TRK-046.1`)*:
-• `TrackingViewsDbHelper.ROWS_TABLE` SHALL be upgraded to `DB_VERSION = 16`, adding non-destructive columns `ShowValue INT DEFAULT 1` and `ShowBar INT DEFAULT 0`.
-• On database upgrade to v16, `ShowValue` SHALL be backfilled to `1` across all existing rows; `ShowBar` SHALL be backfilled to `1` for bar-capable sensor types (`HR`, `POWER`, `PEDAL_POWER_BALANCE`, `W_PRIME_BAL`), and `0` for all other sensor types.
-• `SensorFieldConfig`, `SensorFieldState`, and `TrackingViewsRepository` (`fetchSensorFieldConfigs`, `fetchSingleSensorFieldConfig`, `updateSensorFieldConfig`, `insertSensorFieldConfig`) SHALL expose and persist `showValue: Boolean` and `showBar: Boolean`.
-2. *Edit Sensor Field UI & Selection Constraints (`REQ-TRK-046.2`)*:
-• When the selected `SensorType` supports a bar (`HR`, `POWER`, `PEDAL_POWER_BALANCE`, `W_PRIME_BAL`), `EditSensorFieldDialog` SHALL display selectable element toggles/chips for *Value* (`showValue`) and *Bar* (`showBar`).
+### REQ-TRK-046: Per-Sensor-Field Display Elements Configuration: Value and Bar Gating [Verified]
+- **Tests**: `TST-TRK-046` | **Tickets**: `ATT-4841`, `ATT-4927`
+- **Implementation**: `TrackingViewsDatabaseManager.java`, `TrackingViewsRepository.kt`, `SensorFieldConfig`, `SensorFieldState.kt`, `EditSensorFieldViewModel.kt`, `EditSensorFieldDialog.kt`, `SensorFieldView.kt`, `TrackingViewModel.kt`, `DatabaseSchemaRegistry.kt`
+- **Rationale**: Cockpit sensor fields SHALL support granular, per-field configuration of which visual elements are rendered (numeric Value + Unit row vs. horizontal Bar), allowing athletes to customize tiles (e.g. bar-only, value-only, or both) independently for instantaneous vs. average metrics (ATT-4841, Parent Epic ATT-355, extending `REQ-UI-376`, `REQ-UI-377`, `REQ-UI-416`). Bar availability SHALL depend on both sensor type and layout sport type, tiles configured as bar-only SHALL gracefully fall back to displaying the numeric value if no bar can be drawn, and database migrations SHALL carry over the athlete's previous global `showGauge` setting per zone profile rather than forcing bars on existing fields (ATT-4927):
+1. *SQLite Schema v18 & Migration Parity (`REQ-TRK-046.1`)*:
+• `TrackingViewsDbHelper.ROWS_TABLE` SHALL be upgraded to `DB_VERSION = 18`.
+• On database upgrade to v18, rows SHALL be joined with `VIEWS_TABLE` to evaluate `ActivityType` -> `BSportType`:
+  - For `HR` and `POWER`, `ShowBar` SHALL be set based on the athlete's previous global preference (`SettingsDataStoreJavaHelper.getZoneDisplayOptions(context, zoneType).showGauge`) if the sport type supports zones (`HR` in `RUN`/`BIKE`, `POWER` in `BIKE`), and `0` otherwise.
+  - For `PEDAL_POWER_BALANCE` and `W_PRIME_BAL`, `ShowBar` SHALL be set to `1` for `BSportType.BIKE`, and `0` otherwise.
+  - For all other sensor types, `ShowBar` SHALL be set to `0`.
+  - Whenever `ShowBar == 0`, `ShowValue` SHALL be enforced as `1`.
+• `DatabaseSchemaRegistry.kt` SHALL reference `TrackingViewsDatabaseManager.TrackingViewsDbHelper.DB_VERSION` directly (Rule 62).
+2. *Unified Sport-Dependent Bar Support & Dialog Constraints (`REQ-TRK-046.2`)*:
+• `TrackingViewsDatabaseManager` SHALL provide a canonical predicate `isBarSupported(SensorType, BSportType)`:
+  - `HR`: returns `true` for `BSportType.RUN` and `BSportType.BIKE`.
+  - `POWER`, `PEDAL_POWER_BALANCE`, `W_PRIME_BAL`: returns `true` strictly for `BSportType.BIKE`.
+  - All other combinations: return `false`.
+• In `EditSensorFieldDialog` and `EditSensorFieldViewModel`, bar support SHALL be evaluated via `isBarSupported(selectedSensorType, activityType.sportType)`. If false, element toggles (Value/Bar) SHALL be hidden, and the field SHALL be saved as `showValue = true, showBar = false`.
 • The system SHALL enforce that at least one visual element remains selected at all times (preventing simultaneous deselection of both Value and Bar).
-• When selecting a sensor type that does not support a bar, `showBar` SHALL be `false` and `showValue` SHALL be `true`.
-3. *Cockpit Sensor Field Conditional Rendering (`REQ-TRK-046.3`)*:
-• In `SensorFieldView.kt`, the numeric Value + Unit row SHALL be rendered if and only if `fieldState.showValue == true`.
-• The corresponding horizontal bar (`ZoneGaugeBar`, `PedalPowerBalanceBar`, `WPrimeBatteryGaugeBar`) SHALL be rendered if and only if `fieldState.showBar == true`.
+3. *Cockpit Empty Tile Fallback (`REQ-TRK-046.3`)*:
+• In `SensorFieldView.kt`, the numeric Value + Unit row SHALL be rendered if `fieldState.showValue == true || !hasActiveBar` (where `hasActiveBar = fieldState.showBar && (zoneGaugeState != null || pedalBalanceState != null || wPrimeBatteryState != null)`).
+• Under no circumstances SHALL a cockpit sensor card render completely empty.
 4. *Single Source of Truth & Global Toggle Deprecation (`REQ-TRK-046.4`)*:
 • The global `showGauge` toggle row SHALL be removed from `ZonesSettingsActivity.kt`, making per-field `showBar` the single source of truth for cockpit gauge bars.
 5. *9-Language Localization Parity (`REQ-TRK-046.5`)*:
 • All new UI strings (`sensor_field_display_elements_title`, `sensor_field_show_value`, `sensor_field_show_bar`) SHALL maintain complete translation parity across all 9 supported languages.
+6. *Sport-Gated Telemetry Flow Publishing (`REQ-TRK-046.6`)*:
+• `TrackingViewModel` SHALL restrict `pedalBalanceState` and `wPrimeBatteryState` publishing strictly to `BSportType.BIKE`.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-046`, extending `REQ-UI-376` (Zone Gauge Bar), `REQ-UI-377` (Pedal Balance Bar), and `REQ-UI-416` (W' Battery Gauge). Targets `SensorFieldView.kt` and `TrackingViewsRepository.kt`.
-2. *Historical Origin & Commit Trace*: `ATT-3574` (introduced `showGauge` in `ZoneDisplayOptions`), `ATT-4097` (added W' battery bar), `ATT-3660` (pedal balance indicator).
-3. *Root Reason for Existing Formulation*: Originally, zone gauge display was treated as a sport profile property. As cockpit customization matured, users required granular control per sensor card.
-4. *Preservation of Core Invariants*: Existing tab layouts, zone cutoff color calculations, and sensor streaming pipelines are 100% preserved.
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-046`, extending `REQ-UI-376` (Zone Gauge Bar), `REQ-UI-377` (Pedal Balance Bar), and `REQ-UI-416` (W' Battery Gauge). Refined in `ATT-4927` for sport-dependent bar support, empty-tile fallback, and v18 upgrade parity.
+2. *Historical Origin & Commit Trace*: `ATT-3574` (`showGauge` in `ZoneDisplayOptions`), `ATT-4841` (commit `050f1437`), `ATT-4861` (commit `e3713601`).
+3. *Root Reason for Existing Formulation*: `ATT-4841` introduced per-field `ShowValue`/`ShowBar` in `v16`, but assumed sensor type alone determined bar capability and defaulted `ShowBar = 1` for all HR/Power fields, ignoring legacy `showGauge` and sport validity.
+4. *Preservation of Core Invariants*: Mutual exclusion, layout stability, AMOLED compliance, zero empty tiles, and user settings preservation are 100% preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
-• *Given* an existing database at version 15 with HR, Power, and Speed sensor fields,
-• *When* the database upgrades to version 16,
-• *Then* `ShowValue` is `1` for all fields, and `ShowBar` is `1` for HR and Power, and `0` for Speed.
-• *Given* an athlete editing a Power sensor field in `EditSensorFieldDialog`,
-• *When* the athlete toggles *Value* off and *Bar* on,
-• *Then* the sensor field in the cockpit renders the zone gauge bar without the numeric value row.
-• *Given* an athlete with only *Value* selected,
-• *When* the athlete attempts to toggle *Value* off,
-• *Then* the selection is rejected and *Value* remains enabled.
+• *Given* an existing user database upgrading to version 18 where legacy `showGauge` was `false` for `HR_BIKE`,
+• *When* the database migration executes,
+• *Then* `ShowBar` evaluates to `0` and `ShowValue` evaluates to `1` on existing HR fields in Bike layouts.
+• *Given* an athlete configuring an HR sensor field in an "Other" / Generic sport layout,
+• *When* `EditSensorFieldDialog` opens,
+• *Then* Value and Bar toggles are hidden, and saving preserves `showValue = true, showBar = false`.
+• *Given* a sensor field configured as bar-only (`showValue = false, showBar = true`),
+• *When* the sport is not yet resolved or no bar state is available,
+• *Then* `SensorFieldView` falls back to rendering the numeric value row, preventing an empty tile.
 
-**Invariants**: Non-destructive SQLite migration, true zone color preservation, and 100% clean-room test pass rate.
+**Invariants**: Non-destructive SQLite migration, zero empty tiles, true zone color preservation, and 100% clean-room test pass rate.
+
+
+### REQ-TRK-047: Cockpit Manual Altitude Calibration with Permanent Known Location Persistence and Retroactive Piecewise-Linear Drift Correction [Verified]
+- **Tests**: `TST-TRK-047` | **Tickets**: `ATT-4845`
+- **Implementation**: `SensorSourceDialog.kt`, `SensorStatus.kt`, `AltitudeFromPressureDevice.java`, `TrackerService.java`, `LiveWorkoutSession.java`, `WorkoutSamplesDatabaseManager.java`, `WorkoutSummariesDatabaseManager.java`, `BANALServiceRepository.kt`, `KnownLocationsDatabaseManager.java`
+- **Rationale**: When passing a landmark with known altitude during outdoor workouts, athletes SHALL be able to trigger manual altimeter calibration from the tracking cockpit altitude icon, permanently persist the landmark to Known Locations (`KnownLocations.db`), and apply retroactive elevation history correction without step discontinuities or false ascent/descent spikes (ATT-4845, Parent Epic ATT-166, extending `REQ-UI-199` and `REQ-CON-017`):
+1. *Cockpit Header Manual Altitude Calibration & Geofence Persistence (`REQ-TRK-047.1`)*:
+• When tapping the `SensorType.ALTITUDE` sensor icon in the tracking header (`SensorStatus`), `SensorSourceDialog.kt` SHALL render a dedicated "Calibrate Altitude" input section.
+• The reference altitude input SHALL pre-fill with the current altitude reading formatted in the athlete's configured unit (`m` or `ft`) via canonical `AltitudeFormatter` per Rule 36.
+• The dialog SHALL provide an optional location name field (defaulting to reverse-geocoded or coordinate label) and a toggle to save to Known Locations.
+• When confirmed with save enabled, the system SHALL persist `(current LatLng, referenceAltitudeMeters, name)` to `KnownLocationsDatabaseManager` with `ElevationSource.MANUAL_USER` and `isLocked = true` so subsequent passes auto-calibrate automatically.
+• The system SHALL dispatch immediate calibration to `AltitudeFromPressureDevice.calibrate(referenceAltitudeMeters)` via `BANALServiceRepository.calibrateAltimeter`.
+2. *Retroactive Workout History Elevation Correction (`REQ-TRK-047.2`)*:
+• Let $t_1$ be the current calibration timestamp, $h_{\text{ref}}$ the target reference elevation, $h_{\text{baro}}(t_1)$ the pre-calibration altitude reading, and $\Delta h = h_{\text{ref}} - h_{\text{baro}}(t_1)$.
+• *Case A — Previously Uncalibrated in This Workout ($t_0 = \text{none}$)*:
+  - The system SHALL shift all already-recorded altitude samples in $t \in [t_{\text{start}}, t_1]$ across `WorkoutSamples.db` (or SQLite `samplesTable`), `LiveWorkoutSession` (`sampledAltitudes`, `RunningStats`), and `BANALServiceRepository._currentPathPoints` uniformly by $+\Delta h$:
+    $$h_{\text{corr}}(t) = h(t) + \Delta h$$
+• *Case B — Previously Calibrated at Timestamp $t_0 < t_1$*:
+  - The system SHALL apply a linear interpolation of $\Delta h$ over time across all recorded samples in $t \in [t_0, t_1]$:
+    $$h_{\text{corr}}(t) = h(t) + \Delta h \cdot \frac{t - t_0}{t_1 - t_0}$$
+    so the correction is $0$ at previous calibration point $t_0$ and reaches $+\Delta h$ at $t_1$, eliminating barometric weather drift without step discontinuities or false ascent/descent spikes.
+• After applying either Case A or Case B, the system SHALL update $t_0 \leftarrow t_1$ and recompute running `ASCENDING` / `DESCENDING` and min-max altitude extrema over the corrected interval.
+3. *IPC Contract & Drift Protection (`REQ-TRK-047.3`)*:
+• `ALTITUDE_CORRECTION_INTENT` SHALL carry `ALTITUDE_CORRECTION_VALUE = deltaOffset` and timestamp $t_1$ (or `TrackerService` captures $t_1$ atomically upon receipt), enforcing $|\Delta h| \le 500\text{ m}$ guard pursuant to `REQ-CON-017`.
+• `_currentPathPoints` in `BANALServiceRepository` SHALL update existing `PathPoint` elevations accordingly to ensure live elevation profile continuity.
+4. *9-Language Localization Parity (`REQ-TRK-047.4`)*:
+• All manual altitude calibration strings (`altitude_calibration_title`, `altitude_calibration_reference_label`, `altitude_calibration_location_name`, `altitude_calibration_save_location`, `altitude_calibration_action`, `altitude_calibrated_success`) SHALL maintain 100% translation parity across all 9 supported application locales.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-047`, extending `REQ-UI-199` (Cockpit Calibration Badge & Altimeter Dispatch) and `REQ-CON-017` (Barometric Calibration Limiting & IPC). Targets `SensorSourceDialog.kt`, `SensorStatus.kt`, `AltitudeFromPressureDevice.java`, `TrackerService.java`, `LiveWorkoutSession.java`, `WorkoutSamplesDatabaseManager.java`, and `BANALServiceRepository.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-44.2 (`ATT-4845`). Builds upon `ATT-1617` (geofence auto-calibration), `ATT-1810` (delta offset IPC contract), and `ATT-3990` (500m sanity limit).
+3. *Root Reason for Existing Formulation*: Prior implementations only supported automatic calibration at pre-saved favorite locations or applied uniform sample shifts across the entire workout, distorting calibrated starting elevations and failing to correct gradual atmospheric pressure drift.
+4. *Preservation of Core Invariants*: Preservation of `LocationCalibrationBadge` placement, 9-language localization, imperial/metric unit formatting, single-thread SQLite concurrency in `mDbExecutor`, and `ALTITUDE_CORRECTION_INTENT` $|\Delta h| \le 500\text{ m}$ guard.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an active tracking session with a valid GPS fix,
+• *When* the athlete taps the ALTITUDE icon in the header and submits a reference altitude (e.g. 1215 m) with save enabled,
+• *Then* the barometric altimeter immediately calibrates to 1215 m and the location is permanently stored in `KnownLocations.db` with `ElevationSource.MANUAL_USER`.
+• *Given* a workout that started uncalibrated and recorded samples for 20 minutes before the athlete calibrates with offset $\Delta h = +35\text{ m}$,
+• *When* the calibration is applied,
+• *Then* all past altitude samples in `WorkoutSamples.db`, `LiveWorkoutSession`, and `_currentPathPoints` are shifted by $+35\text{ m}$.
+• *Given* a workout previously calibrated at $t_0$ and recalibrated at $t_1 > t_0$ with accumulated drift $\Delta h = -18\text{ m}$,
+• *When* the second calibration is applied at $t_1$,
+• *Then* recorded samples between $t_0$ and $t_1$ are adjusted linearly by $\Delta h \cdot \frac{t - t_0}{t_1 - t_0}$, with $0\text{ m}$ change at $t_0$ and $-18\text{ m}$ at $t_1$.
+
+**Invariants**: $C^0$ continuity (zero vertical step discontinuities), Rule 36 unit parity, single-thread SQLite transaction execution, and 100% clean-room test pass rate.
+
+
+### REQ-SEN-025: Pairable Position-Based Elevation Sensor & Dedicated Spatial DEM Cache [Verified]
+- **Tests**: `TST-SEN-025` | **Tickets**: `ATT-4859`
+- **Implementation**: `AltitudeFromPositionDevice.java`, `DeviceType.java`, `ElevationCacheDatabaseManager.kt`, `DeviceManager.java`, `DevicesDatabaseManager.java`, `SensorSourceDialog.kt`, `MySensorManager.java`, `DatabaseSchemaRegistry.kt`
+- **Rationale**: Currently, `SensorType.ALTITUDE` is supplied either by internal barometric pressure (`AltitudeFromPressureDevice`) or raw GNSS altitude ($\pm 20\text{--}50\text{ m}$ vertical GPS multipath noise). Introducing a pairable `AltitudeFromPositionDevice` (`DeviceType.ALTITUDE_FROM_POSITION`, `Protocol.SMARTPHONE`) backed by a dedicated spatial cache (`ElevationCache.db`) provides continuous topographic/DEM altitude based on GPS coordinates, seeded from route elevations (`Routes.db`) and Open-Meteo DEM queries (`ElevationService`), strictly separated from *Lieblingsorte* (`KnownLocations.db`) (ATT-4859, Parent Epic ATT-166):
+1. *Device Registration & Smartphone Pairing Lifecycle (`REQ-SEN-025.1`)*:
+• The system SHALL register `DeviceType.ALTITUDE_FROM_POSITION` under `Protocol.SMARTPHONE` with main sensor type `SensorType.ALTITUDE`.
+• The system SHALL manage pairing via `DevicesDatabaseManager` and instantiate/destroy `AltitudeFromPositionDevice` dynamically in `DeviceManager` based on pairing state.
+• The system SHALL support selecting `ALTITUDE_FROM_POSITION` in `SensorSourceDialog` for `SensorType.ALTITUDE`.
+2. *Dedicated Spatial Elevation Cache Database (`REQ-SEN-025.2`)*:
+• The system SHALL persist elevation points in a dedicated SQLite database `ElevationCache.db` managed by `ElevationCacheDatabaseManager` (`DB_VERSION = 1`), registered with `DatabaseSchemaRegistry` per Rule 62.
+• Table `elevation_cache` SHALL store quantized coordinates `(lat_e5 INT, lon_e5 INT, altitude REAL, source TEXT, updated_at INT)` with unique compound index on `(lat_e5, lon_e5)` for $O(\log N)$ spatial queries.
+• Queries SHALL support nearest-neighbor matching within spatial tolerance ($\approx 20\text{ m}$, $\Delta\text{E5} \le 2$).
+3. *Background Route Seeding & Asynchronous Internet DEM Caching (`REQ-SEN-025.3`)*:
+• The system SHALL asynchronously seed `ElevationCache.db` with valid trackpoint elevations from stored routes (`Routes.db`) without network overhead.
+• When a location fix misses the local cache, `AltitudeFromPositionDevice` SHALL asynchronously query `ElevationService.getInstance().fetchElevation(lat, lon)` (Open-Meteo DEM), cache the result in `ElevationCache.db`, and emit the resolved altitude to `mAltitudeSensor`.
+4. *Strict Decoupling from Known Locations (*Lieblingsorte*) (`REQ-SEN-025.4`)*:
+• Background position tracking and DEM queries SHALL NEVER insert, alter, or reconcile entries in `KnownLocations.db` (`KnownLocationsDatabaseManager`), preserving athlete favorite landmarks and manual calibrations.
+5. *9-Language Localization Parity (`REQ-SEN-025.5`)*:
+• All `ALTITUDE_FROM_POSITION` device strings (`device_type_altitude_from_position`, `device_type_short_altitude_from_position`, `devices_altitude_from_position`, `devices_altitude_from_position_description`) SHALL maintain 100% translation parity across all 9 supported locales.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-SEN-025`, extending `REQ-DAT-014` (Open-Meteo DEM Integration) and `REQ-UI-199` (Altimeter Calibration Dispatch). Targets `AltitudeFromPositionDevice.java`, `DeviceType.java`, `ElevationCacheDatabaseManager.kt`, `DeviceManager.java`, and `DevicesDatabaseManager.java`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-44.2 (`ATT-4859`). Builds upon `ATT-1366` (DEM resolution) and `ATT-166` (sensor fusion epic).
+3. *Root Reason for Existing Formulation*: Prior implementations only queried DEM for workout start points and wrote directly to `KnownLocations.db`, leaving in-ride position-based altitude unavailable without barometer hardware.
+4. *Preservation of Core Invariants*: Preservation of `KnownLocations.db` geofence integrity, non-blocking background I/O on `Dispatchers.IO`, and Rule 62 schema registry conformance.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the Smartphone devices list in Settings/Devices,
+• *When* the user pairs `AltitudeFromPositionDevice`,
+• *Then* `AltitudeFromPositionDevice` initializes and emits continuous topographic elevation derived from `ElevationCache.db` or `ElevationService`.
+• *Given* stored routes with elevation points in `Routes.db`,
+• *When* the cache indexer executes,
+• *Then* route trackpoints are indexed into `ElevationCache.db` and queryable offline without network calls.
+• *Given* continuous position tracking across a novel workout route,
+• *When* `ElevationCache.db` is queried and updated,
+• *Then* zero records are inserted into or modified within `KnownLocations.db`.
+
+**Invariants**: Zero mutation of `KnownLocations.db`, non-blocking I/O (`Dispatchers.IO`), Rule 62 schema registry integration, and 100% clean-room test pass rate.
+
+
+### REQ-TRK-048: Stationary GPS Jitter Suppression, Doppler Zero Preservation & Anchor Pinning [Verified]
+- **Tests**: `TST-TRK-048` | **Tickets**: `ATT-4850`
+- **Implementation**: `SpeedAndLocationDevice.java`, `BANALServiceRepository.kt`
+- **Rationale**: When an athlete stops at traffic lights, cafés, or rests indoors, GNSS multipath reflections cause horizontal coordinates to wander 1–4 m per second. Overriding GNSS Doppler zero speed with geometric displacement creates phantom 5–14 km/h speed readings, prevents or breaks Auto-Pause, accumulates creeping distance, spins compass bearing, and records dense spiderweb track artifacts (ATT-4850, Parent Epic ATT-166):
+1. *Doppler Zero Velocity Preservation (`REQ-TRK-048.1`)*:
+• When a location fix provides speed (`location.hasSpeed() == true`) and `location.getSpeed() <= SPEED_ZERO_THRESHOLD` (0.05 m/s), `SpeedAndLocationDevice` SHALL clamp speed to 0.0 m/s and SHALL NOT calculate or substitute geometric speed `delta_distance / dt` from GPS multipath jitter.
+2. *Stationary Anchor Pinning & Distance Gating (`REQ-TRK-048.2`)*:
+• When stationary (`speed <= SPEED_ZERO_THRESHOLD`), `SpeedAndLocationDevice` SHALL establish and maintain a stationary anchor coordinate.
+• While stationary, `SpeedAndLocationDevice` SHALL NOT increment `mDistanceSensor` (`DISTANCE_m`) or `mLapDistanceSensor` (`DISTANCE_m_LAP`) until displacement from the anchor exceeds the dynamic accuracy deadband radius $R = \max(3.0\text{ m},\, 0.6 \cdot \text{accuracy})$.
+3. *Stationary Bearing Lock & Coordinate Stabilization (`REQ-TRK-048.3`)*:
+• While pinned within the stationary deadband radius, `SpeedAndLocationDevice` SHALL maintain the last valid bearing without angular drift or spinning, and SHALL publish the stabilized anchor coordinates.
+4. *Provider Without Doppler Velocity Fallback (`REQ-TRK-048.4`)*:
+• For location providers without Doppler velocity (`!location.hasSpeed()`), `SpeedAndLocationDevice` SHALL compute geometric speed `delta_distance / dt` and accumulate distance if and only if displacement exceeds the accuracy deadband radius $R = \max(3.0\text{ m},\, 0.6 \cdot \text{accuracy})$.
+5. *Spider-Map Breadcrumb Suppression (`REQ-TRK-048.5`)*:
+• `BANALServiceRepository` SHALL suppress appending coordinate breadcrumbs to `_currentTrack` when the athlete is stationary and displacement remains within the stationary deadband radius.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-048`, extending `REQ-TRK-013` (Speed Decay Watchdog), `REQ-TRK-024` (Speed & Distance Priority), and `REQ-TRK-041.1` (Teleportation Spike Gating). Targets `SpeedAndLocationDevice.java` and `BANALServiceRepository.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-44.2 (`ATT-4850`). Addresses longstanding issue from Epic `ATT-166` (High-Value Pillar 1: Stationary Pinning / Zero-Velocity Update).
+3. *Root Reason for Existing Formulation*: `SpeedAndLocationDevice` previously used a simplistic `speed == 0.0 && delta_distance > 0.1` condition that mistook GPS multipath noise for motion, designed prior to modern GNSS Doppler baseband firmware.
+4. *Preservation of Core Invariants*: Preservation of speed decay watchdog timeout (`REQ-TRK-013`), plausible teleportation speed limits $\le 70\text{ m/s}$ (`REQ-TRK-041.1`), and high-speed cornering responsiveness without lag.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* consecutive 1-Hz GPS fixes with `hasSpeed() == true`, `getSpeed() == 0.0f`, and horizontal coordinates jittering by 1–4 m within reported accuracy,
+• *When* `SpeedAndLocationDevice.onNewLocation()` processes the fixes,
+• *Then* published `SPEED_mps` remains 0.0, `DISTANCE_m` does not increment, `BEARING` does not spin, and published coordinates remain pinned to the anchor without drawing a spider-map.
+• *Given* location fixes from a provider without Doppler speed (`hasSpeed() == false`) advancing steadily along a route beyond the deadband radius,
+• *When* `SpeedAndLocationDevice.onNewLocation()` processes the fixes,
+• *Then* geometric speed `delta_distance / dt` and distance increments are computed accurately.
+• *Given* an athlete stationary at an intersection resuming movement,
+• *When* displacement from the anchor exceeds $\max(3.0\text{ m},\, 0.6 \cdot \text{accuracy})$ with non-zero speed,
+• *Then* the anchor unpins immediately, distance accumulation resumes, and bearing updates along the direction of motion.
+
+**Invariants**: Zero distance creep while stationary, valid non-Doppler geometric fallback, preservation of speed decay watchdog and teleportation spike gating, 100% clean-room test pass rate.
+
+
+### REQ-TRK-049: Post-Workout State Cleansing, Breadcrumb Purge & Idle Service Dormancy [Verified]
+- **Tests**: `TST-TRK-049` | **Tickets**: `ATT-4926`
+- **Implementation**: `TrainingApplication.java`, `BANALServiceRepository.kt`, `MainActivityWithNavigation.kt`, `MyAccumulatorSensor.java`, `InstantaneousFilter.java`
+- **Rationale**: When an athlete completes or stops a workout and re-enters the app in `TrackingMode.READY`, lingering historical polylines, elevation profiles, and accumulator values create a confusing UI and cause phantom metric accumulation during idle periods. Clearing breadcrumbs on workout stop/abort, normalizing the service binding lifecycle, gating accumulator sensors to active tracking, and dispatching zero-value resets ensures a clean slate for upcoming sessions (ATT-4926, Parent Epic ATT-355, extending `REQ-TRK-001`, `REQ-TRK-002`, and refining `REQ-FIL-013`):
+1. *Map & Elevation Breadcrumb Cleansing (`REQ-TRK-049.1`)*:
+• `TrainingApplication` SHALL invoke `BANALServiceRepository.clearBreadcrumbs()` in `stopTracking()`, `trackingStopped()`, and `onTrackingAborted()`.
+• `BANALServiceRepository` SHALL clear `_currentTrack` and `_currentPathPoints` upon entering `TrackingMode.READY`.
+2. *Idle Service Binding Lifecycle Normalization (`REQ-TRK-049.2`)*:
+• In `MainActivityWithNavigation.kt`, `bindToBANALService()` on resume SHALL be paired with unbind handling, or `disconnectFromBANALService()` SHALL force unbinding when `bindReferenceCount > 0`, ensuring `BANALService` stops cleanly when idle without lingering background timers.
+3. *Idle Accumulator Gating (`REQ-TRK-049.3`)*:
+• In `MyAccumulatorSensor.increment()`, when `mRespectPause` is true, the sensor SHALL accumulate only if `TrainingApplication.isTracking() && !isPaused() && !isAutoPaused()`.
+• Timer and distance sensors SHALL NOT increment while in `TrackingMode.READY`.
+4. *Reset Notification & Filter Cache Invalidation (`REQ-TRK-049.4`)*:
+• `MyAccumulatorSensor.reset()` SHALL notify all registered `mSensorListeners` with `mZeroValue`.
+• `InstantaneousFilter.java` SHALL override `reset()` to invalidate cached telemetry on `FilterManager.resetAllFilters()`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-049`, extending `REQ-TRK-001` (Start/Stop Lifecycle), `REQ-TRK-002` (Lap Lifecycle), and refining `REQ-FIL-013` (Session Reset Isolation). Targets `TrainingApplication.java`, `BANALServiceRepository.kt`, `MainActivityWithNavigation.kt`, `MyAccumulatorSensor.java`, and `InstantaneousFilter.java`.
+2. *Historical Origin & Commit Trace*: Commit `d937073c` and `ATT-3222` introduced filter reset protocol but omitted `InstantaneousFilter`. Commit `a6920388` introduced Compose tracking tabs where repeated `onResume()` binds bypassed the single-bind assumption.
+3. *Root Reason for Existing Formulation*: Breadcrumb clearing was originally deferred to `startTracking()` to preserve visual map context immediately after stopping; however, with modern multi-tab navigation, this causes stale paths and non-zero readouts when reopening the app.
+4. *Preservation of Core Invariants*: Active workout tracking, auto-pause behavior, and pre-start live rolling sensor readouts (HR, cadence, instantaneous power) are preserved per `REQ-FIL-013`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an active workout with map breadcrumbs and elevation points,
+• *When* the workout is stopped or aborted, or when the app enters `TrackingMode.READY`,
+• *Then* `_currentTrack` and `_currentPathPoints` are cleared to empty lists.
+• *Given* the app running in `TrackingMode.READY`,
+• *When* background timer ticks or location updates arrive,
+• *Then* accumulator sensors do not increment.
+• *Given* accumulator sensors with non-zero historical totals,
+• *When* session reset is triggered,
+• *Then* zero values are published to listeners and filter caches are cleared.
+
+**Invariants**: Unaffected active tracking and auto-pause, continuous pre-start live rolling sensor display (HR, power, cadence), and 100% clean-room test pass rate.
+
+
+### REQ-TRK-050: Indirect Tire Pressure Monitoring (iTPMS) via GPS vs. Wheel Circumference Drift [Verified]
+- **Tests**: `TST-TRK-050` | **Tickets**: `ATT-4880`
+- **Implementation**: `IndirectTpmsEstimator.kt`, `DevicesDatabaseManager.java`, `DeviceData.kt`, `EditDeviceViewModel.kt`, `SensorGridScreen.kt`
+- **Rationale**: When riding with a paired ANT+/BLE wheel speed sensor alongside GNSS, comparing 3D ground distance with wheel revolutions yields the effective rolling circumference $C_{\text{eff}} = \Delta s_{3D} / \Delta N_{\text{wheel}}$. Air deflation increases vertical tire deflection under load, reducing $C_{\text{eff}}$ by $1.0\%\text{--}2.2\%$. Tracking $C_{\text{eff}}$ across straight-line, good-GPS segments enables early warnings for slow punctures and reminders for multi-day low tire pressure without requiring valve-stem hardware sensors (ATT-4880, Parent Epic ATT-166, complementing `REQ-CON-009`, `REQ-TRK-024`, and `REQ-TRK-048`):
+1. *Straight-Line, 3D-Slope & GNSS Quality Gating (`REQ-TRK-050.1`)*:
+• `IndirectTpmsEstimator` SHALL accumulate $(\Delta s_{3D}, \Delta N_{\text{wheel}})$ sample windows ONLY when:
+  a. $|\Delta\text{bearing}/\Delta t| < 3.0^\circ/\text{s}$ (straight-line riding; rejects corner-cutting and lean-angle distortion).
+  b. Horizontal GNSS accuracy $\le 6.0\text{ m}$ and speed $\ge 4.0\text{ m/s}$ ($14.4\text{ km/h}$; rejects stationary wander and stop-and-go noise).
+  c. 3D ground distance correction $\Delta s_{3D} = \sqrt{\Delta s_{2D}^2 + \Delta h^2}$ is applied using barometric/fused elevation $\Delta h$.
+2. *Ride-Start Baseline Calibration & Multi-Day Low Pressure Reminder (`REQ-TRK-050.2`)*:
+• `IndirectTpmsEstimator` SHALL lock the ride-start baseline circumference $C_{\text{start}}$ after accumulating between $1.5\text{--}2.5\text{ km}$ ($2.0\text{ km}$ target) of gated straight-line riding.
+• If a stored freshly-pumped reference baseline $C_{\text{baseline}} > 0$ exists and $C_{\text{start}} / C_{\text{baseline}} \le 1 - 0.006$ ($-0.6\%$), the system SHALL surface a low tire pressure reminder.
+3. *Real-Time Sliding-Window CUSUM Slow Puncture Detection (`REQ-TRK-050.3`)*:
+• `IndirectTpmsEstimator` SHALL compute a rolling effective circumference $C_{\text{short}}(t)$ over an exponentially weighted / sliding $2.0\text{ km}$ window of gated riding, and execute a one-sided CUSUM change-point detector against $C_{\text{start}}$.
+• When cumulative negative drift reaches $C_{\text{short}} / C_{\text{start}} \le 1 - 0.010$ ($-1.0\%$), the system SHALL trigger an in-ride slow puncture warning.
+4. *Persistent Fresh-Pump Baseline & Device Configuration Action (`REQ-TRK-050.4`)*:
+• `DevicesDatabaseManager` SHALL store `baselineCircumference REAL DEFAULT 0.0` in `Devices.db` (migrated to `DB_VERSION = 8`).
+• `EditDeviceDialog` / `EditDeviceViewModel` SHALL provide an action "Reset Tire Pressure Baseline (Just Pumped Tires)" that updates $C_{\text{baseline}}$ to the current wheel circumference calibration value.
+5. *Design System Semantic Alert Containers & 9-Language Parity (`REQ-TRK-050.5`)*:
+• The UI SHALL render low pressure reminders using amber warning containers (`LightWarningContainer` / `DarkWarningContainer`) and in-ride slow puncture warnings using error red containers (`MaterialTheme.colorScheme.errorContainer`), localized symmetrically across all 9 supported application locales.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-050`, extending `REQ-CON-009` (Per-Device Wheel Circumference), `REQ-TRK-024` (Speed & Distance Priority), and `REQ-TRK-048` (Stationary Pinning). Targets `IndirectTpmsEstimator.kt`, `DevicesDatabaseManager.java`, `DeviceData.kt`, `EditDeviceViewModel.kt`, and `SensorGridScreen.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-44.2 (`ATT-4880`). Epic `ATT-166` (High-Value Pillar 2: ANT+/BLE Wheel Sensor + GPS Auto-Calibration).
+3. *Root Reason for Existing Formulation*: Prior to ATT-4880, GNSS distance and wheel revolutions operated in isolated silos without dynamic effective rolling circumference estimation or puncture detection.
+4. *Preservation of Core Invariants*: Manual wheel circumference calibration factor (`CALIBRATION_FACTOR`), hardware wheel distance accumulation (`mDistanceSensor.accumulate(...)`), and sensor priority rankings remain 100% unaltered.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an active cycling workout with paired ANT+/BLE wheel speed sensor and GPS where $C_{\text{start}}$ calibrates to $2128\text{ mm}$,
+• *When* $C_{\text{short}}(t)$ on straight, good-GPS segments drops progressively by $\ge 1.0\%$ ($\le 2106\text{ mm}$) over $2\text{--}3\text{ km}$,
+• *Then* the in-ride slow puncture warning triggers, whereas tight switchbacks ($|\Delta\text{bearing}/\Delta t| \ge 3^\circ/\text{s}$) or degraded GPS ($\text{accuracy} > 6\text{ m}$) are gated out and do not trigger false alarms.
+• *Given* a stored freshly-pumped reference baseline $C_{\text{baseline}} = 2130\text{ mm}$,
+• *When* a new ride's initial calibrated circumference $C_{\text{start}}$ stabilizes at $\le 2115\text{ mm}$ ($-0.7\%$),
+• *Then* the app surfaces a non-intrusive low tire pressure reminder.
+• *Given* an athlete in the Wheel Sensor configuration dialog,
+• *When* tapping "Reset Tire Pressure Baseline (Just Pumped Tires)",
+• *Then* $C_{\text{baseline}}$ is saved to `Devices.db` matching the current wheel circumference.
+
+**Invariants**: Zero mutation of raw wheel speed and distance accumulators, fresh install (`onCreate`) vs upgrade (`onUpgrade`) schema parity in `Devices.db`, zero cornering false positives, and 100% clean-room test pass rate.
+
+
+
+
 

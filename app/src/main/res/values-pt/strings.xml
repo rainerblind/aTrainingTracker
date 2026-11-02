@@ -958,11 +958,15 @@
     <string name="workout_periods__longest_workout">Treino mais longo</string>
     <string name="workout_periods__region_format">Região %1$d (%2$d)</string>
     <string name="workout_periods__primary_region_format">Região principal: Região %1$d (%2$d)</string>
+    <string name="workout_periods__named_region_format">%1$s (%2$d)</string>
+    <string name="workout_periods__primary_named_region_format">Região principal: %1$s (%2$d)</string>
     <string name="workout_periods__all_regions_format">Todas as regiões (%1$d)</string>
     <string name="workout_periods__migration_querying">Carregando histórico de treino…</string>
     <string name="workout_periods__migration_reading">Lendo treino %1$d de %2$d…</string>
     <string name="workout_periods__migration_syncing">Sincronizando %1$s…</string>
     <string name="workout_periods__migration_finalizing">Finalizando totais anuais…</string>
+    <string name="workout_periods__yearly_activity_grid">Atividade anual</string>
+    <string name="workout_periods__no_activity">Nenhuma atividade</string>
 
     <!-- share screenshots -->
     <string name="share">Partilhar</string>
@@ -1830,6 +1834,7 @@
     <string name="map_layer_segments">Segmentos</string>
     <string name="map_layer_locations">Locais favoritos</string>
     <string name="map_layer_track">Trilha gravada</string>
+    <string name="map_layer_clusters">Trajetos favoritos</string>
     <string name="ant_dialog_view_status">Ver estado do ANT+</string>
     <string name="ant_dialog_dismiss">Entendido</string>
 
@@ -1910,17 +1915,18 @@
     <string name="auto_pause_title">Pausa automática</string>
     <string name="tuning_auto_pause_title">Pausa automática</string>
     <string name="tuning_auto_pause_desc">Pausar gravação automaticamente quando parado</string>
+    <string name="tuning_auto_pause_enable_title">Ativar pausa automática</string>
     <string name="tuning_auto_pause_bike_title">Ciclismo</string>
     <string name="tuning_auto_pause_run_title">Corrida</string>
     <string name="tuning_auto_pause_other_title">Outros esportes</string>
-    <string name="tuning_auto_pause_speed_threshold_title">Limite de velocidade para pausa</string>
-    <string name="tuning_auto_pause_speed_threshold_desc">Velocidade abaixo da qual a gravação é pausada</string>
+    <string name="tuning_auto_pause_speed_threshold_title">Limite de velocidade</string>
+    <string name="tuning_auto_pause_speed_threshold_desc">Pausar abaixo desta velocidade, retomar acima</string>
     <string name="tuning_auto_pause_debounce_title">Atraso para pausa</string>
     <string name="tuning_auto_pause_debounce_desc">Duração abaixo do limite antes de pausar</string>
     <string name="tuning_auto_pause_resume_debounce_title">Atraso para retomar</string>
     <string name="tuning_auto_pause_resume_debounce_desc">Duração acima do limite antes de retomar</string>
     <string name="tuning_auto_pause_start_in_auto_pause_title">Iniciar em pausa automática</string>
-    <string name="tuning_auto_pause_start_in_auto_pause_desc">Ao iniciar um treino parado, começa imediatamente em pausa automática até que o movimento seja detectado</string>
+    <string name="tuning_auto_pause_start_in_auto_pause_desc">Ao iniciar um treino parado, começa imediatamente em pausa automática até que o movimento seja detectado. Aplica-se a todos os esportes.</string>
     <string name="tuning_speed_value_format">%1$d %2$s</string>
     <string name="tuning_seconds_value_format">%1$d s</string>
     <string name="cockpit_auto_pause_badge">Pausa automática</string>
@@ -2174,4 +2180,42 @@
     <string name="sensor_field_display_elements_title">Elementos de exibição</string>
     <string name="sensor_field_show_value">Valor</string>
     <string name="sensor_field_show_bar">Barra</string>
+
+    <!-- Sensor Field Width & Row Split (ATT-4861, REQ-UI-437) -->
+    <string name="sensor_field_width_title">Proporção de largura</string>
+    <string name="sensor_field_row_split_presets">Predefinições de divisão de linha</string>
+    <string name="sensor_field_relative_weight">Largura relativa</string>
+
+    <!-- Zone History (ATT-4844, REQ-SET-082) -->
+    <string name="zone_history_title">Histórico de zonas</string>
+    <string name="zone_history_action_history">Histórico</string>
+    <string name="zone_history_add_snapshot">Adicionar instantâneo histórico</string>
+    <string name="zone_history_edit_snapshot">Editar instantâneo de zonas</string>
+    <string name="zone_history_delete_title">Excluir instantâneo de zonas?</string>
+    <string name="zone_history_delete_message">Excluir instantâneo de zonas de %1$s?</string>
+    <string name="zone_history_empty">Nenhum instantâneo histórico de zonas registrado ainda.</string>
+    <string name="zone_history_date_label">Data de vigência</string>
+    <string name="zone_history_save_snapshot">Salvar instantâneo</string>
+    <string name="zone_history_error_monotonic">Os limites devem ser estritamente crescentes (%1$s)</string>
+
+    <!-- Manual Altitude Calibration (ATT-4845, REQ-TRK-047) -->
+    <string name="altitude_calibration_title">Calibrar altitude</string>
+    <string name="altitude_calibration_reference_label">Altitude de referência</string>
+    <string name="altitude_calibration_location_name">Nome do local (opcional)</string>
+    <string name="altitude_calibration_save_location">Salvar como local conhecido</string>
+    <string name="altitude_calibration_action">Calibrar</string>
+    <string name="altitude_calibrated_success">Altitude calibrada para %1$s</string>
+
+    <!-- Altitude From Position DEM (ATT-4859, REQ-SEN-025) -->
+    <string name="device_type_altitude_from_position">altitude da posição (DEM)</string>
+    <string name="device_type_short_altitude_from_position">alt. (DEM)</string>
+    <string name="devices_altitude_from_position">Altitude topográfica (DEM)</string>
+    <string name="devices_altitude_from_position_description">Altitude contínua obtida da posição GPS, rotas em cache e dados DEM online.</string>
+
+    <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
+    <string name="itpms_slow_puncture_alert_title">Furo lento detetado</string>
+    <string name="itpms_slow_puncture_alert_message">A circunferência efetiva da roda caiu %1$s. Verifique a pressão dos pneus imediatamente.</string>
+    <string name="itpms_low_pressure_reminder_title">Pressão baixa dos pneus</string>
+    <string name="itpms_low_pressure_reminder_message">A circunferência da roda está %1$s abaixo da base. Considere encher os pneus.</string>
+    <string name="itpms_alert_dismiss">Dispensar</string>
 </resources>

@@ -361,6 +361,10 @@ Row(
 * **Verbose Locale (`de`) Segmented Button Width Check**:
   * Avoid squeezing long multi-word labels (`"Auf alle anwenden"`) into a 2-button `SingleChoiceSegmentedButtonRow` inside a narrow `AlertDialog` where labels truncate mid-word (`"Auf alle anwen"`). Prefer concise localized labels, stacked radio/card rows, or a full-width `AppModalBottomSheet`.
 
+### 5.14 Shared Composable Height Constraints Across Bounded vs. Scrollable Callers (Rule 67 — ATT-4878 / ATT-4936)
+* **Guard `.fillMaxHeight()` & Vertical `.weight(1f)` Against Unbounded Scroll Containers (`ATT-4878` $\rightarrow$ `ATT-5071`)**:
+  * When adding `.fillMaxHeight()` or vertical `Modifier.weight(1f)` inside a shared composable (e.g. `SensorFieldView`) to equalize row heights inside a bounded `Row(Modifier.height(IntrinsicSize.Min))` caller (`SensorGridScreen`), audit **every call site** (`grep -rn "<ComposableName>(" app/src/main/`)—especially standalone previews embedded directly inside a `verticalScroll` `Column` or `LazyColumn` (`AthleteProfileScreen`), where max height is `Constraints.Infinity` unless `Modifier.height(IntrinsicSize.Min)` is preserved on an enclosing container. Verify every call site on-device during Stage 5.
+
 ---
 
 ## 6. Map Viewport & Camera Guidelines

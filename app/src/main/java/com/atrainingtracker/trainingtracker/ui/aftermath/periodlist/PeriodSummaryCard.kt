@@ -91,7 +91,9 @@ fun PeriodSummaryCard(
     onMapClick: (PeriodSummary) -> Unit,
     onSportClick: (PeriodSummary, BSportType) -> Unit,
     onLongestWorkoutClick: (PeriodSummary, BSportType, Long) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    activeMetric: PeriodBarMetric = PeriodBarMetric.DURATION,
+    onDayCellClick: ((PeriodSummary, BSportType, java.time.LocalDate, DailySportActivity?) -> Unit)? = null
 ) {
     PeriodSummaryCard(
         summary = summary,
@@ -100,7 +102,9 @@ fun PeriodSummaryCard(
         onMapClick = { s, _ -> onMapClick(s) },
         onSportClick = onSportClick,
         onLongestWorkoutClick = onLongestWorkoutClick,
-        modifier = modifier
+        modifier = modifier,
+        activeMetric = activeMetric,
+        onDayCellClick = onDayCellClick
     )
 }
 
@@ -112,7 +116,9 @@ fun PeriodSummaryCard(
     onMapClick: (PeriodSummary, String?) -> Unit,
     onSportClick: (PeriodSummary, BSportType) -> Unit,
     onLongestWorkoutClick: (PeriodSummary, BSportType, Long) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    activeMetric: PeriodBarMetric = PeriodBarMetric.DURATION,
+    onDayCellClick: ((PeriodSummary, BSportType, java.time.LocalDate, DailySportActivity?) -> Unit)? = null
 ) {
     val df = DistanceFormatter()
     val tf = TimeFormatter()
@@ -213,17 +219,50 @@ fun PeriodSummaryCard(
                         Spacer(modifier = Modifier.height(12.dp))
                     }
                 }
+
+                // --- YEARLY ACTIVITY CONTRIBUTION GRIDS (REQ-PER-025, ATT-4849) ---
+                if (summary.periodType == PeriodType.YEAR && summary.yearlySportContributions.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = stringResource(R.string.workout_periods__yearly_activity_grid),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    val canonicalOrder = listOf(BSportType.BIKE, BSportType.RUN)
+                    val sortedSports = (canonicalOrder + summary.yearlySportContributions.keys.filter { it != BSportType.BIKE && it != BSportType.RUN && it != BSportType.UNKNOWN } + listOf(BSportType.UNKNOWN))
+                        .distinct()
+                        .filter { it in summary.yearlySportContributions }
+
+                    sortedSports.forEachIndexed { index, sport ->
+                        val contribution = summary.yearlySportContributions[sport] ?: return@forEachIndexed
+                        YearlyContributionGrid(
+                            contribution = contribution,
+                            activeMetric = activeMetric,
+                            onDayClick = { date, dayActivity ->
+                                onDayCellClick?.invoke(summary, sport, date, dayActivity)
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        if (index < sortedSports.size - 1) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+                    }
+                }
             }
 
             // --- 2. THE MAP SECTION ---
             if (isPlayServiceAvailable && (summary.polylines.isNotEmpty() || summary.workoutIdToPolylineMap.isNotEmpty())) {
+                val context = LocalContext.current
                 val mapState by produceState(
                     initialValue = PeriodCardMapState(isReady = false),
                     key1 = summary.sortKey,
-                    key2 = summary.workoutIdToPolylineMap.size,
-                    key3 = summary.polylines.size
+                    key2 = summary.workoutIdToPolylineMap.hashCode(),
+                    key3 = summary.polylines.hashCode()
                 ) {
-                    value = prepareCardMapPreview(summary)
+                    value = prepareCardMapPreview(summary, context)
                 }
 
                 Box(
@@ -248,7 +287,7 @@ fun PeriodSummaryCard(
                                 color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
                                 contentColor = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier
-                                    .padding(start = 12.dp, top = 12.dp)
+                                    .padding(start = 12.dp, top = 12.dp, end = 12.dp)
                                     .align(Alignment.TopStart),
                                 shadowElevation = 2.dp
                             ) {
@@ -263,14 +302,25 @@ fun PeriodSummaryCard(
                                         modifier = Modifier.size(14.dp),
                                         tint = MaterialTheme.colorScheme.primary
                                     )
-                                    Text(
-                                        text = stringResource(
+                                    val regionText = if (!mapState.primaryRegionName.isNullOrBlank()) {
+                                        stringResource(
+                                            R.string.workout_periods__primary_named_region_format,
+                                            mapState.primaryRegionName ?: "",
+                                            mapState.primaryRegionPathsCount.coerceAtLeast(1)
+                                        )
+                                    } else {
+                                        stringResource(
                                             R.string.workout_periods__primary_region_format,
                                             1,
                                             mapState.primaryRegionPathsCount.coerceAtLeast(1)
-                                        ),
+                                        )
+                                    }
+                                    Text(
+                                        text = regionText,
                                         style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.SemiBold
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
                             }
@@ -553,8 +603,12 @@ private fun PeriodMultiWorkoutMap(
 
     val context = LocalContext.current
     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-    val mapProperties = remember(isDark, context) {
-        DarkMapStyle.resolveMapProperties(isDark, context)
+    val mapProperties = remember(isDark, context, precomputedVisuals) {
+        if (precomputedVisuals?.heatmapProvider != null) {
+            DarkMapStyle.resolveHeatmapMapProperties(isDark, context)
+        } else {
+            DarkMapStyle.resolveMapProperties(isDark, context)
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize().background(if (isDark) TTColor.DarkMapCanvas else Color.White)) {

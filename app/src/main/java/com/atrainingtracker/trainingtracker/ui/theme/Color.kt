@@ -251,6 +251,7 @@ object TTColor {
     val RouteUnselected = Color(0xFF90CAF9) // Material Blue 200 (Soft Steel Blue)
     val RouteActiveNavigation = Color(0xFF1E88E5) // Material Blue 600 (Vibrant Sapphire Blue for actively navigated routes)
     val RouteActiveNavigationOverlay = Color(0xFF0D47A1) // Material Blue 900 (Deep Midnight Navy for active route dashed overlay)
+    val Cluster = Color(0xFF8E24AA) // Material Purple 600 (Favorite Tracks / Workout Clusters)
 
     // Spatial Signature Points
     val StartPoint = Color(0xFF2E7D32) // Material Green 800
@@ -331,4 +332,10 @@ object TTColor {
     val BikeSportBarColor = Color(0xFF1E88E5)
     val RunSportBarColor = Color(0xFFFF7043)
     val OtherSportBarColor = Color(0xFF26A69A)
+
+    // Warm Heatmap "Hot" Sequential Palette (REQ-MAP-057.2, ATT-4933)
+    val HeatmapHotYellow = Color(0xFFFFF176)
+    val HeatmapHotOrange = Color(0xFFFF9800)
+    val HeatmapHotRed = Color(0xFFE53935)
+    val HeatmapHotDarkRed = Color(0xFF880E4F)
 }

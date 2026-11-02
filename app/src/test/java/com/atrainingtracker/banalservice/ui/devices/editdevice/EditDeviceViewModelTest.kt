@@ -114,4 +114,16 @@ class EditDeviceViewModelTest {
         // Method exists and takes BikePowerFeatures
         assertEquals(BikePowerFeatures::class.java, declaredMethod.parameterTypes[0])
     }
+
+    /**
+     * REQ-TRK-050 / TST-TRK-050: Verify EditDeviceViewModel exposes baseline reset action for iTPMS.
+     */
+    @Test
+    fun testEditDeviceViewModel_hasResetTirePressureBaselineMethod() {
+        val methodNames = EditDeviceViewModel::class.java.declaredMethods.map { it.name }
+        assertTrue(
+            "resetTirePressureBaseline must be exposed on EditDeviceViewModel",
+            methodNames.contains("resetTirePressureBaseline")
+        )
+    }
 }

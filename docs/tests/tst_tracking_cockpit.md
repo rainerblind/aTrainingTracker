@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `STP`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 54
+**Total Tests**: 55
 
 ---
 
@@ -1166,20 +1166,20 @@
   3. *Targeted & Clean-Room Regression Verification (`TST-TRK-041.3`)*:
   • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.*" --tests "com.atrainingtracker.trainingtracker.tracker.*"` verifying 100% pass rate.
 
-### TST-TRK-042: **1-Hz Live-Tracking Memory, Decoupling & Recomposition Optimization Test Suite** [Planned]
+### TST-TRK-042: **1-Hz Live-Tracking Memory, Decoupling & Recomposition Optimization Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-042`
-- **Component**: `BANALServiceRepositoryTest.kt`, `LiveTrackDecimationTest.kt`, `TrackingViewModelTest.kt`
-- **Jira**: `ATT-4863`
+- **Component**: `BANALServiceRepositoryMemoryTest.kt`, `LiveTrackDecimationTest.kt`, `TrackingViewModelMapStateTest.kt`, `TrackingElevationProfileResolutionTest.kt`
+- **Jira**: `ATT-4863`, `ATT-4923`
 - **Test Description**:
-  1. *Stationary PathPoint Deduplication & DeviceTelemetry Value Equality (`TST-TRK-042.1`)*:
-  • Unit test verifying that stationary ticks do not append duplicate `PathPoint`s to `currentPathPoints`.
-  • Unit test verifying that `DeviceTelemetry` without `System.nanoTime()` satisfies structural equality when fields are unchanged.
-  2. *Live Track Decimation & Tail Preservation (`TST-TRK-042.2`)*:
-  • Unit test verifying that tracks exceeding the threshold preserve the last $M$ points unsimplified while simplifying older collinear points.
-  3. *Base Field Memoization (`TST-TRK-042.3`)*:
-  • Unit test verifying that `TrackingViewModel` retains memoized `baseFields` when only 1-Hz sensor values change.
-  4. *Targeted & Clean-Room Regression Verification (`TST-TRK-042.4`)*:
-  • Execute targeted package tests and verify zero regressions.
+  1. *Amortized O(1) Snapshot Append & Deduplication (`TST-TRK-042.1`)*:
+  • Unit test in `BANALServiceRepositoryMemoryTest` asserting `SnapshotChunkedList` provides $O(1)$ amortized appends and bounded allocation with 15,000 synthetic points without copying prior list elements.
+  • Unit test verifying stationary ticks suppress duplicate `PathPoint` allocations and `DeviceTelemetry` structural equality.
+  2. *Incremental Chunked Decimation & Polyline Stability (`TST-TRK-042.2`)*:
+  • Unit test in `LiveTrackDecimationTest` asserting `IncrementalTrackDecimator` simplifies historical chunks once, permanently freezes them, preserves 200-point unsimplified tail, and maintains strict historical vertex stability across 1-Hz ticks.
+  3. *Sensor Field Combine Decoupling & Elevation Gating (`TST-TRK-042.3`)*:
+  • Unit test in `TrackingViewModelMapStateTest` / `TrackingElevationProfileResolutionTest` verifying `loadSensorFieldStates()` combines sensor data independently of `currentPathPoints`, emitting at most once per sensor tick.
+  4. *Clean-Room Package Regression (`TST-TRK-042.4`)*:
+  • Execute targeted tests across `BANALServiceRepository`, `MapLayers`, and `TrackingViewModel` suites verifying 100% pass rate.
 
 
 ### TST-TRK-043: **Sport-Specific Auto-Pause Resume Debounce & Symmetric Single-Threshold Test Suite** [Planned]
@@ -1199,19 +1199,22 @@
   • Test in `TranslationParityTest` verifying all resume detection time title, description, and default strings exist in all 9 translation sets.
 
 
-### TST-TRK-044: **Optional Automatic Stationary Auto-Pause at Workout Start Test Suite** [Planned]
+### TST-TRK-044: **Optional Automatic Stationary Auto-Pause at Workout Start Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-044`
 - **Component**: `AutoPauseManagerTest.kt`, `TrackerServiceTest.kt`, `AutoPauseViewModelTest.kt`, `TranslationParityTest.kt`
-- **Jira**: `ATT-4840`
+- **Jira**: `ATT-4840`, `ATT-4925`
 - **Test Description**:
   1. *Domain Startup Predicate Evaluation (`TST-TRK-044.1`)*:
-  • Unit test in `AutoPauseManagerTest` verifying `shouldStartInAutoPause` returns `true` when `startInAutoPauseEnabled` is `true`, sport auto-pause is enabled, and speed is null, 0.0 m/s, or below the sport pause threshold.
-  • Verify it returns `false` when `startInAutoPauseEnabled` is `false`, sport auto-pause is disabled, or speed is $\ge$ threshold.
+  • Unit test in `AutoPauseManagerTest` verifying `shouldStartInAutoPause` returns `true` when `hasSpeedSource` is `true`, `startInAutoPauseEnabled` is `true`, sport auto-pause is enabled, and speed is null, 0.0 m/s, or below the sport pause threshold.
+  • Verify it returns `false` when `hasSpeedSource` is `false`, `startInAutoPauseEnabled` is `false`, sport auto-pause is disabled, or speed is $\ge$ threshold.
   2. *Workout Start Transition Integration (`TST-TRK-044.2`)*:
-  • Unit test in `TrackerServiceTest` / `TrackerService` asserting that when starting a new workout (`START_NORMAL`) with stationary speed and `startInAutoPauseEnabled == true`, state initializes directly to `AUTO_PAUSED` and `TrackingMode.PAUSED` (`isAutoPaused = true`).
-  3. *ViewModel & DataStore Toggle Mutation (`TST-TRK-044.3`)*:
+  • Unit test in `TrackerServiceTest` / `TrackerService` asserting that when starting a new workout (`START_NORMAL`) with stationary speed, `hasSpeedSource == true`, and `startInAutoPauseEnabled == true`, state initializes directly to `AUTO_PAUSED` and `TrackingMode.PAUSED` (`isAutoPaused = true`).
+  • Unit test verifying that when starting a new workout with `hasSpeedSource == false` (e.g. indoor HR-only), state initializes to `TRACKING` even if `startInAutoPauseEnabled == true`.
+  3. *Mid-Workout Speed Source Removal from AUTO_PAUSED (`TST-TRK-044.3`)*:
+  • Unit test in `AutoPauseManagerTest` verifying that when in `AUTO_PAUSED` and `hasSpeedSource` becomes `false`, `evaluateTick` transitions to `SENSOR_LOST` with `triggerResume = true`.
+  4. *ViewModel & DataStore Toggle Mutation (`TST-TRK-044.4`)*:
   • Unit test in `AutoPauseViewModelTest` asserting that `updateStartInAutoPauseEnabled(true/false)` dispatches to DataStore and reactively updates `tuningConfig` StateFlow.
-  4. *9-Language Localization Parity (`TST-TRK-044.4`)*:
+  5. *9-Language Localization Parity (`TST-TRK-044.5`)*:
   • Test in `TranslationParityTest` verifying `tuning_auto_pause_start_in_auto_pause_title` and `tuning_auto_pause_start_in_auto_pause_desc` exist in all 9 supported locales.
 
 
@@ -1237,28 +1240,157 @@
   • Verification via `ThemeColorCentralizationAuditTest` ensuring `SensorGridScreen.kt` uses centralized tokens (`DarkWarningContainer`, `LightWarningContainer`, etc.) without hardcoded colors.
 
 
-### TST-TRK-046: **Per-Sensor-Field Display Elements Configuration Test Suite** [Planned]
+### TST-TRK-046: **Per-Sensor-Field Display Elements Configuration Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-046`
-- **Component**: `TrackingViewsDatabaseManagerTest.kt`, `TrackingViewsRepositoryTest.kt`, `EditSensorFieldViewModelTest.kt`, `TranslationParityTest.kt`, `ThemeColorCentralizationAuditTest.kt`
-- **Jira**: `ATT-4841`
+- **Component**: `TrackingViewsDatabaseManagerTest.kt`, `TrackingViewsRepositoryTest.kt`, `EditSensorFieldViewModelTest.kt`, `SensorFieldView.kt`, `TranslationParityTest.kt`, `ThemeColorCentralizationAuditTest.kt`
+- **Jira**: `ATT-4841`, `ATT-4927`
 - **Test Description**:
-  1. *Database Schema v16 Migration & Backfill (`TST-TRK-046.1`)*:
+  1. *Database Schema v18 Migration & Legacy Settings Carryover (`TST-TRK-046.1`)*:
   • Unit test in `TrackingViewsDatabaseManagerTest` verifying:
-    - Upgrading from v15 to v16 adds `ShowValue` and `ShowBar` to `ROWS_TABLE`.
-    - Backfills `ShowValue = 1` for all rows.
-    - Backfills `ShowBar = 1` for `HR`, `POWER`, `PEDAL_POWER_BALANCE`, `W_PRIME_BAL`, and `0` for others.
-    - Pre-existing user layouts and tab configurations are completely preserved.
+    - Upgrading to schema v18 evaluates `VIEWS_TABLE.ActivityType` to determine `sportType`.
+    - HR and Power rows inherit `ShowBar` from legacy `ZoneDisplayOptions.showGauge` (e.g. `false` -> `0`, `true` -> `1`) for supported sports (`HR` in `RUN`/`BIKE`, `POWER` in `BIKE`).
+    - Bike power balance and W' battery bars receive `ShowBar = 1` for `BIKE`, and `0` for other sports.
+    - Fields with `ShowBar == 0` enforce `ShowValue = 1`.
+    - Fixes stale mock setup in `TrackingViewsDatabaseManagerTest`.
+    - `DatabaseSchemaRegistry.isVersionSupported("TrackingViews.db", 18)` returns `true`.
   2. *Repository Model & Flow Projection (`TST-TRK-046.2`)*:
   • Unit test in `TrackingViewsRepositoryTest` verifying:
     - `fetchSensorFieldConfigs` and `fetchSingleSensorFieldConfig` populate `showValue` and `showBar` correctly.
     - `updateSensorFieldConfig` and `insertSensorFieldConfig` persist `showValue` and `showBar` to the database.
-  3. *Edit Dialog ViewModel Selection Constraint (`TST-TRK-046.3`)*:
+  3. *Sport-Dependent Bar Support in Edit Dialog (`TST-TRK-046.3`)*:
   • Unit test in `EditSensorFieldViewModelTest` verifying:
-    - `isBarSupported` evaluates to `true` for `HR`, `POWER`, `PEDAL_POWER_BALANCE`, `W_PRIME_BAL`, and `false` for others.
-    - Deselecting `showValue` when `showBar == false` is blocked (at least one element must remain active).
-    - Deselecting `showBar` when `showValue == false` is blocked.
-    - Toggling `showValue` or `showBar` when both are selected succeeds.
-  4. *9-Language Localization Parity (`TST-TRK-046.4`)*:
+    - Canonical `isBarSupported(sensorType, sportType)` returns `true` for HR in Run/Bike and Power/Balance/W'Bal in Bike; returns `false` for all other combinations.
+    - When `isBarSupported == false`, Value/Bar switches are hidden and state enforces `showValue = true, showBar = false`.
+    - When `isBarSupported == true`, mutual exclusion constraint (at least one active) is enforced.
+  4. *Empty-Tile Fallback in Cockpit Sensor Field (`TST-TRK-046.4`)*:
+  • Unit test in `SensorFieldZoneDisplayTest` / `SensorFieldView` verifying:
+    - When a field has `showValue = false, showBar = true`, but no active bar can be drawn (`zoneGaugeState == null` or unsupported sport), the numeric value row renders as a fallback so the card is never blank.
+  5. *9-Language Localization Parity (`TST-TRK-046.5`)*:
   • Verification in `TranslationParityTest` for `sensor_field_display_elements_title`, `sensor_field_show_value`, `sensor_field_show_bar` across all 9 locales.
+  6. *Clean-Room Full Suite Regression Execution (`TST-TRK-046.6`)*:
+  • Execute targeted unit tests and verify 100% pass rate with zero regressions.
+
+
+### TST-TRK-047: **Manual Altitude Calibration with Known Location Persistence & Drift Correction Test Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-047`
+- **Component**: `SensorSourceDialogTest.kt`, `KnownLocationsDatabaseManagerTest.kt`, `TrackerServiceAltitudeTest.kt`, `LiveWorkoutSessionTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-4845`
+- **Test Description**:
+  1. *Header Dialog Manual Calibration & State Binding (`TST-TRK-047.1`)*:
+  • Unit test in `SensorSourceDialogTest` verifying:
+    - `SensorSourceDialog` renders the calibration section when `sensorType == SensorType.ALTITUDE`.
+    - Reference altitude input is pre-filled with the current altitude reading formatted via canonical `AltitudeFormatter`.
+    - Confirming calibration invokes `onCalibrate(altitudeMeters, locationName, saveAsKnownLocation)` and dispatches calibration to altimeter.
+  2. *Known Location Geofence Upsert with Manual Provenance (`TST-TRK-047.2`)*:
+  • Unit test in `KnownLocationsDatabaseManagerTest` verifying:
+    - `upsertLocationByGeofence` stores `(latLng, altitude, name)` with `ElevationSource.MANUAL_USER` and `isLocked = true`.
+    - Subsequent queries via `getMyLocation(latLng)` return the stored ground-truth altitude and name.
+  3. *Case A: Retroactive Uniform Altitude Shift on Uncalibrated Workouts (`TST-TRK-047.3`)*:
+  • Unit test in `TrackerServiceAltitudeTest` and `LiveWorkoutSessionTest` verifying:
+    - When a workout starts with $t_0 = \text{none}$ and calibration offset $\Delta h = +35.0\text{ m}$ is applied at $t_1$, all existing samples in `samplesTable`, `sampledAltitudes`, `RunningStats` (min/max/sum), and `_currentPathPoints` are shifted by $+35.0\text{ m}$.
+    - $t_0$ is updated to $t_1$.
+  4. *Case B: Piecewise-Linear Drift Interpolation Between Calibrations (`TST-TRK-047.4`)*:
+  • Unit test in `TrackerServiceAltitudeTest` and `LiveWorkoutSessionTest` verifying:
+    - When previously calibrated at $t_0$ and recalibrated at $t_1 > t_0$ with drift $\Delta h = -18.0\text{ m}$, samples in $t \in [t_0, t_1]$ receive correction $\Delta h \cdot \frac{t - t_0}{t_1 - t_0}$.
+    - Sample at $t_0$ has zero change, sample at $t_1$ has $-18.0\text{ m}$ change, and intermediate samples scale strictly monotonically.
+    - Running ascent and descent metrics are recomputed without false vertical spikes.
+  5. *9-Language Localization Parity (`TST-TRK-047.5`)*:
+  • Verification in `TranslationParityTest` for `altitude_calibration_title`, `altitude_calibration_reference_label`, `altitude_calibration_location_name`, `altitude_calibration_save_location`, `altitude_calibration_action`, and `altitude_calibrated_success` across all 9 locales.
+
+
+### TST-SEN-025: **Position-Based Elevation Sensor & Dedicated Spatial DEM Cache Test Suite** [Verified]
+- **Requirement(s)**: `REQ-SEN-025`
+- **Component**: `ElevationCacheDatabaseManagerTest.kt`, `AltitudeFromPositionDeviceTest.kt`, `DeviceTypeTest.kt`, `SensorSourceDialogPriorityTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-4859`
+- **Test Description**:
+  1. *Spatial Elevation Cache CRUD & Nearest-Neighbor Interpolation (`TST-SEN-025.1`)*:
+  • Unit test in `ElevationCacheDatabaseManagerTest` verifying:
+    - Inserting quantized coordinates `(latE5, lonE5, altitude, source)` persists rows to `elevation_cache`.
+    - Querying exact quantized coordinates returns cached elevation.
+    - Querying coordinates within spatial tolerance ($\Delta\text{E5} \le 2$) resolves nearest neighbor.
+    - Querying distant coordinates (> tolerance) returns null (cache miss).
+  2. *Background Route Elevation Seeding (`TST-SEN-025.2`)*:
+  • Unit test in `ElevationCacheDatabaseManagerTest` verifying:
+    - Seeding from mock `RoutesDatabaseManager` inserts all non-null trackpoint altitudes into `ElevationCache.db`.
+    - Duplicate trackpoints are deduplicated or updated gracefully without constraint violations.
+  3. *Device Lifecycle, Pairing Toggle & Unfiltered Altitude Emission (`TST-SEN-025.3`)*:
+  • Unit test in `AltitudeFromPositionDeviceTest` and `DeviceManagerTest` verifying:
+    - `AltitudeFromPositionDevice` initializes with `DeviceType.ALTITUDE_FROM_POSITION` under `Protocol.SMARTPHONE`.
+    - Pairing toggle in `DevicesDatabaseManager` dynamically starts and shuts down the device.
+    - Incoming `(latitude, longitude)` updates resolve altitude from cache/mock DEM and publish to `mAltitudeSensor`.
+  4. *Zero Contamination of Known Locations (*Lieblingsorte*) (`TST-SEN-025.4`)*:
+  • Architectural isolation test verifying:
+    - Continuous position tracking and cache insertion in `ElevationCache.db` execute with zero calls or writes to `KnownLocationsDatabaseManager`.
+  5. *9-Language Localization Parity (`TST-SEN-025.5`)*:
+  • Verification in `TranslationParityTest` for `device_type_altitude_from_position`, `device_type_short_altitude_from_position`, `devices_altitude_from_position`, and `devices_altitude_from_position_description` across all 9 locales.
+
+
+### TST-TRK-048: **Stationary GPS Jitter Suppression, Doppler Zero Preservation & Anchor Pinning Test Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-048`
+- **Component**: `SpeedAndLocationDeviceStationaryJitterTest.kt`, `SpeedAndLocationDeviceResilienceTest.kt`, `BANALServiceRepositoryTest.kt`
+- **Jira**: `ATT-4850`
+- **Test Description**:
+  1. *Stationary GNSS Jitter Zero Speed & Zero Distance Increment (`TST-TRK-048.1`)*:
+  • Unit test in `SpeedAndLocationDeviceStationaryJitterTest` feeding consecutive 1-Hz synthetic GPS fixes with `hasSpeed() == true`, `getSpeed() == 0.0f`, `accuracy = 5.0m`, and coordinates jittering randomly within $1.5\text{--}3.0\text{ m}$.
+  • Verifies that `SPEED_mps` remains clamped to 0.0, `DISTANCE_m` does not increment, `BEARING` remains stable, and published coordinates match the stationary anchor.
+  2. *Stationary Anchor Unpinning on True Movement (`TST-TRK-048.2`)*:
+  • Unit test in `SpeedAndLocationDeviceStationaryJitterTest` transitioning from stationary jitter to true forward motion with displacement exceeding $\max(3.0\text{ m},\, 0.6 \cdot \text{accuracy})$.
+  • Verifies that the anchor unpins, speed transitions smoothly, distance accumulation resumes, and bearing updates along the direction of motion.
+  3. *Provider Without Doppler Velocity Fallback (`TST-TRK-048.3`)*:
+  • Unit test in `SpeedAndLocationDeviceStationaryJitterTest` feeding fixes with `hasSpeed() == false`.
+  • Verifies that jitter within the deadband produces 0.0 speed and zero distance increment, while sustained movement beyond the deadband accurately computes geometric speed `delta_distance / dt` and accumulates distance.
+  4. *Spider-Map Breadcrumb Suppression in Repository (`TST-TRK-048.4`)*:
+  • Unit test in `BANALServiceRepositoryTest` verifying that stationary jitter fixes do not generate or append spiderweb line segments to `_currentTrack`.
+  5. *Existing Invariant Parity - Speed Decay Watchdog & Teleportation Spike Gating (`TST-TRK-048.5`)*:
+  • Regression verification confirming that sensor inactivity continues to trigger watchdog speed decay (`REQ-TRK-013`) and multipath teleportation spikes ($> 70\text{ m/s}$) are rejected (`REQ-TRK-041.1`).
+
+
+### TST-TRK-049: **Post-Workout State Cleansing, Breadcrumb Purge & Idle Service Dormancy Test Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-049`
+- **Component**: `BANALServiceRepositoryTest.kt`, `BANALServiceBindingLifecycleTest.kt`, `MyAccumulatorSensorTrackingGateTest.kt`, `AccumulatorResetNotificationTest.kt`
+- **Jira**: `ATT-4926`
+- **Test Description**:
+  1. *Breadcrumb & Elevation Path Cleansing on Session End (`TST-TRK-049.1`)*:
+  • Unit test in `BANALServiceRepositoryTest` verifying that invoking `clearBreadcrumbs()`, receiving `TrackingMode.READY`, and completing a workout empties `_currentTrack` and `_currentPathPoints`.
+  2. *Idle Service Disconnect & Unbind Lifecycle (`TST-TRK-049.2`)*:
+  • Unit test verifying `MainActivityWithNavigation` and `disconnectFromBANALService()` unbind logic: confirms `bindReferenceCount` drops to 0, `unbindService` is called, and `BANALService` stops without leaking timers.
+  3. *Idle Accumulator Gating (`TST-TRK-049.3`)*:
+  • Unit test in `MyAccumulatorSensorTrackingGateTest` verifying that in `TrackingMode.READY`, ticks to `MyAccumulatorSensor.increment()` with `mRespectPause = true` do not increment value when `!TrainingApplication.isTracking()`.
+  4. *Reset Notification & InstantaneousFilter Reset (`TST-TRK-049.4`)*:
+  • Unit test verifying `MyAccumulatorSensor.reset()` notifies listeners with `mZeroValue`, and `InstantaneousFilter.reset()` clears cached values.
+
+
+### TST-TRK-050: **Indirect Tire Pressure Monitoring (iTPMS) Gated Estimator, CUSUM Detector & Baseline Verification** [Verified]
+- **Requirement(s)**: `REQ-TRK-050`
+- **Component**: `IndirectTpmsEstimatorTest.kt`, `DevicesDatabaseManagerMigrationTest.kt`, `EditDeviceViewModelTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-4880`
+- **Test Description**:
+  1. *Gated Circumference Estimator & Straight-Line/3D-Slope Filtering (`TST-TRK-050.1`)*:
+  • Unit test feeding synthetic GPS fixes and wheel sensor revolution events:
+    - Verifies samples with $|\Delta\text{bearing}/\Delta t| \ge 3.0^\circ/\text{s}$ are rejected from circumference accumulation.
+    - Verifies samples with $\text{accuracy} > 6.0\text{ m}$ or $\text{speed} < 4.0\text{ m/s}$ are rejected.
+    - Verifies 3D slope correction $\sqrt{\Delta s_{2D}^2 + \Delta h^2}$ matches analytical geometry on 8% and 12% grades.
+  2. *Ride-Start Baseline Calibration & Multi-Day Low Pressure Reminder (`TST-TRK-050.2`)*:
+  • Unit test verifying:
+    - Ride-start baseline $C_{\text{start}}$ locks only after $2.0\text{ km}$ of gated samples have accumulated.
+    - When $C_{\text{baseline}} = 2130\text{ mm}$ and $C_{\text{start}} \le 2115\text{ mm}$ ($-0.7\%$), low tire pressure reminder event is emitted.
+    - When $C_{\text{start}} = 2125\text{ mm}$ ($-0.2\%$), no reminder is emitted.
+  3. *CUSUM Slow Puncture In-Ride Detection & Cornering Immunity (`TST-TRK-050.3`)*:
+  • Unit test feeding a gradual tire deflation profile:
+    - After $C_{\text{start}}$ locks at $2128\text{ mm}$, rolling window $C_{\text{short}}(t)$ drops to $2105\text{ mm}$ ($-1.08\%$) over $2.5\text{ km}$.
+    - Verifies one-sided CUSUM detector triggers slow puncture alert.
+    - Verifies a sharp hairpin cornering sequence ($180^\circ$ turn at $8^\circ/\text{s}$) does not corrupt the rolling estimator or trigger a false alarm.
+  4. *`Devices.db` v8 Migration, Schema Registry Parity & Baseline Reset Action (`TST-TRK-050.4`)*:
+  • Contract unit test verifying:
+    - Upgrading `Devices.db` from v7 to v8 executes `ALTER TABLE devices ADD COLUMN baselineCircumference REAL DEFAULT 0.0`.
+    - `onCreate()` and `onUpgrade()` yield identical schemas.
+    - `DatabaseSchemaRegistry` reflects `DevicesDbHelper.DB_VERSION = 8`.
+    - `EditDeviceViewModel.resetTirePressureBaseline(deviceId)` saves current circumference to `baselineCircumference`.
+  5. *9-Language Localization Parity Audit (`TST-TRK-050.5`)*:
+  • Automated assertion in `TranslationParityTest` verifying all iTPMS strings (`devices_reset_tire_pressure_baseline`, `itpms_slow_puncture_alert_title`, `itpms_slow_puncture_alert_message`, `itpms_low_pressure_reminder_title`, `itpms_low_pressure_reminder_message`) exist across all 9 locales with valid positional specifiers (`%1$s`).
+
+
+
+
 
 

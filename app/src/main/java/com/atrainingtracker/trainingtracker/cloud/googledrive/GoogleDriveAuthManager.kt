@@ -104,12 +104,29 @@ object GoogleDriveAuthManager {
             val newToken = GoogleAuthUtil.getToken(context, accountObj, scope)
             val email = account.email ?: accountObj.name ?: "Google Drive User"
             TrainingApplication.storeGoogleDriveCredential(email, newToken)
-            Log.i(TAG, "Successfully refreshed Google Drive Bearer token for $email")
+            try {
+                Log.i(TAG, "Successfully refreshed Google Drive Bearer token for $email")
+            } catch (_: Throwable) { }
             Result.success(newToken)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to refresh Google Drive Bearer token", e)
+            try {
+                Log.e(TAG, "Failed to refresh Google Drive Bearer token", e)
+            } catch (_: Throwable) { }
             Result.failure(e)
         }
+    }
+
+    /**
+     * Returns the cached Bearer token if present, or attempts silent synchronization
+     * via Google Play Services ([refreshTokenSync]) if an active signed-in Google account exists.
+     */
+    @JvmStatic
+    fun getOrRefreshTokenSync(context: Context): String? {
+        val cached = TrainingApplication.getGoogleDriveAuthToken()
+        if (!cached.isNullOrBlank()) {
+            return cached
+        }
+        return refreshTokenSync(context).getOrNull()
     }
 
     /**

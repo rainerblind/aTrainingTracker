@@ -29,6 +29,7 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.climbs.Climb
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
+import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.routes.RouteWaypoint
 import com.atrainingtracker.trainingtracker.segments.SegmentWithPath
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
@@ -98,7 +99,10 @@ data class MapStyle(
     val segmentUnselectedAlpha: Float = 0.3f,
     val climbWidth: Float = 10f,
     val climbZIndex: Float = 28f,
-    val isDark: Boolean = false
+    val clusterWidth: Float = 10f,
+    val clusterZIndex: Float = 12f,
+    val isDark: Boolean = false,
+    val useMutedStyle: Boolean = false
 )
 
 val LocalMapStyle = androidx.compose.runtime.staticCompositionLocalOf { MapStyle() }
@@ -131,6 +135,8 @@ object MapVisualization {
     const val SEGMENT_UNSELECTED_ALPHA = TTAlpha.Disabled
     const val CLIMB_WIDTH = 10f
     const val CLIMB_Z_INDEX = 28.0f
+    const val CLUSTER_WIDTH = 10f
+    const val CLUSTER_Z_INDEX = 12.0f
 
     val TRACK_BEST_PATTERN: List<com.google.android.gms.maps.model.PatternItem> = listOf(
         com.google.android.gms.maps.model.Dot(),
@@ -309,6 +315,66 @@ data class MapRoute(
         } else {
             MapVisualization.ROUTE_DASH_PATTERN
         }
+}
+
+/**
+ * Encapsulates a recurring favorite route cluster (Lieblingsstrecke) polyline with its metadata.
+ * Implements [MappablePath] with referential latLngs memoization (REQ-UI-322, REQ-MAP-051).
+ */
+@Immutable
+data class MapCluster(
+    override val id: Long,
+    val name: String,
+    override val bSportType: BSportType,
+    val hitCount: Int,
+    val refDistance: Double,
+    override val path: List<PathPoint> = emptyList(),
+    override val minLat: Double? = null,
+    override val minLng: Double? = null,
+    override val maxLat: Double? = null,
+    override val maxLng: Double? = null,
+    override val onClick: ((Long) -> Unit)? = null,
+    override val latLngs: List<LatLng> = emptyList()
+) : MappablePath {
+    override val color: Color get() = TTColor.Cluster
+    override val width: Float get() = MapVisualization.CLUSTER_WIDTH
+    override val zIndex: Float get() = MapVisualization.CLUSTER_Z_INDEX
+    override val overlayZIndex: Float? get() = null
+    override val pattern: List<com.google.android.gms.maps.model.PatternItem>? get() = null
+}
+
+private val sClusterLatLngCache = java.util.concurrent.ConcurrentHashMap<String, List<LatLng>>()
+
+/**
+ * Extension function to convert a [WorkoutCluster] into a Map-ready Cluster ([MapCluster]).
+ * Decodes the representative polyline (authoritative routePolyline or first previewPath)
+ * with referential coordinate memoization per REQ-MAP-051.2.
+ */
+fun WorkoutCluster.toMapCluster(
+    cache: java.util.concurrent.ConcurrentMap<String, List<LatLng>> = sClusterLatLngCache
+): MapCluster? {
+    val repPolyline = this.routePolyline?.takeIf { it.isNotEmpty() } ?: this.previewPaths.firstOrNull() ?: return null
+    val latLngList = cache.computeIfAbsent(repPolyline) { poly ->
+        try {
+            PolyUtil.decode(poly)
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+    if (latLngList.isEmpty()) return null
+
+    return MapCluster(
+        id = this.id,
+        name = this.name,
+        bSportType = this.bSportType,
+        hitCount = this.hitCount,
+        refDistance = this.refDistance,
+        minLat = this.minLat,
+        minLng = this.minLng,
+        maxLat = this.maxLat,
+        maxLng = this.maxLng,
+        latLngs = latLngList
+    )
 }
 /**
  * Extension function to convert a Database Route (RouteWithPath)

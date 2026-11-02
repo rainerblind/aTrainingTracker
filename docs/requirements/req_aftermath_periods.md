@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Requirements**: 23
+**Total Requirements**: 26
 
 ---
 
@@ -293,16 +293,20 @@
 **Invariants**: Zero database schema migrations, non-blocking UI thread, crash prevention on empty lists, and 100% clean-room test pass rate.
  
 ### REQ-PER-019: Full-Period Asynchronous Mini-Map Preview & Background Simplification Pipeline [Verified]
-- **Tests**: `TST-PER-025`
+- **Tests**: `TST-PER-025`, `TST-PER-034`
 - **Implementation**: `PeriodSummaryCard.kt`, `PeriodCardMapState.kt`, `PeriodsRepository.kt`
 - **Rationale**: The system SHALL provide complete route coverage and smooth 60 fps `LazyColumn` scrolling for Day, Week, Month, and Year summary cards by offloading polyline decoding, simplification, and GIS region clustering to background dispatchers (ATT-4477, Parent Epic ATT-4474, refining `REQ-PER-012`):
 1. *Full-Period Route Coverage & Background Offload (`REQ-PER-019.1`)*:
 • Period summary cards SHALL NOT truncate route previews to an 8-track compromise (`MAX_SUMMARY_THUMBNAIL_TRACKS = 8`). All available workout polylines for the period (`summary.workoutIdToPolylineMap` or `summary.polylines`) SHALL be processed into the preview.
 • Polyline decoding (`PolyUtil.decode`), Douglas-Peucker simplification, region detection (`SpatialRegionEngine.detectRegionsFromPaths`), and `PolylineHeatmapTileProvider` creation SHALL execute exclusively on worker threads (`Dispatchers.Default`) via `produceState<PeriodCardMapState>`.
 • The Android main thread SHALL perform zero synchronous polyline decoding or GIS clustering during card composition or `LazyColumn` scrolling.
-2. *Douglas-Peucker Adaptive Decimation & Point Budgeting (`REQ-PER-019.2`)*:
-• The background pipeline SHALL adaptively simplify member workout polylines using Douglas-Peucker decimation (`PolyUtil.simplify`) scaled by period type: `DAY` tolerance = 5.0m, `WEEK` tolerance = 15.0m, `MONTH` tolerance = 35.0m, and `YEAR` tolerance = 75.0m.
-• The simplification pipeline MUST bound total aggregate vertices per card ($\le 2,000$ points) to prevent GPU memory pressure and eliminate UI jank.
+2. *Douglas-Peucker Adaptive Decimation & Dual Vertex Budget Enforcement (`REQ-PER-019.2`)*:
+• The background simplification pipeline SHALL adaptively decimate member workout polylines using Douglas-Peucker simplification (`PolyUtil.simplify`) starting from base tolerances calibrated by period type: `DAY` (5.0m), `WEEK` (5.0m), `MONTH` (6.0m), and `YEAR` (8.0m) (REQ-PER-024.3).
+• The pipeline MUST enforce hard aggregate vertex budgets across member paths:
+  - For period summary card mini-map previews (`PeriodSummaryCard` / `PeriodCardMapState`), total aggregate vertices SHALL NOT exceed `MAX_CARD_MINI_MAP_VERTICES = 2_000` points.
+  - For detailed interactive maps (`PeriodMapScreen` / `InteractivePeriodMap` / `PeriodsViewModel`), total aggregate vertices SHALL NOT exceed `MAX_DETAILED_MAP_VERTICES = 8_000` points.
+• When total vertices at base tolerance exceed the respective budget, the system SHALL adaptively escalate decimation tolerance to strictly bound aggregate points while preserving shared-corridor alignment and road network topology.
+• Synthetic high-volume periods (e.g. 300 workouts in a Year period) MUST stay strictly within the vertex budget without memory exhaustion or UI scrolling jank.
 3. *Background Region Clustering & Viewport Framing (`REQ-PER-019.3`)*:
 • When a period spans multiple distinct geographic regions ($> 75\text{ km}$ geodesic span), `SpatialRegionEngine.detectRegionsFromPaths` SHALL partition the simplified paths on `Dispatchers.Default` and select the primary region for initial camera framing (`bounds`).
 • The multi-region indicator badge (`REQ-PER-013`) SHALL display the count of distinct regions and primary region paths count when `regionCount > 1`.
@@ -322,6 +326,11 @@
 2. *Historical Origin & Commit Trace*: Sprint 2026-41.2 (commit `1c89f50e` / ATT-1151 / `MAX_SUMMARY_THUMBNAIL_TRACKS = 8`), commit `7e2151ec` (ATT-1107, established `MAX_PERIOD_VECTOR_TRACKS = 30`), commit `da70647f` (ATT-4477, added `PeriodCardMapState`), and `ATT-4772`.
 3. *Root Reason for Existing Formulation*: ATT-4477 enabled full-period route ingestion and offloaded polyline decoding to background dispatchers, but `PeriodMultiWorkoutMap` retained unconditional `Polyline` composable drawing underneath `TileOverlay`, causing hundreds of redundant JNI objects on large periods and washing out the translucent heatmap.
 4. *Preservation of Core Invariants*: Memory safety without OOMs, multi-region indicator badge (`REQ-PER-013`), single-region camera framing, `DarkMapAntiFlashOverlay`, `DAY` card vector polyline crispness, and non-blocking 60 fps `LazyColumn` scrolling remain 100% strictly preserved.
+5. *ATT-4930 Refinement (REQ-PER-019.2 Dual Vertex Budget)*:
+• Original Requirement ID & Target: `REQ-PER-019.2` (*Douglas-Peucker Adaptive Decimation & Point Budgeting*). Targets `PeriodMapUtils.kt`, `PeriodData.kt`, `PeriodSummaryCard.kt`, `PeriodsViewModel.kt`.
+• Historical Origin & Commit Trace: Commit `da70647f` (`ATT-4477`, established <= 2,000 pts bound with 15/35/75m tolerances), commit `2bea16b7` (`ATT-4833`, lowered tolerances to 5-8m for corridor alignment, removing the point budget guarantee), and `ATT-4930`.
+• Root Reason for Existing Formulation: ATT-4833 lowered tolerances to 5-8m to ensure repeated passes align on identical pixels for additive heatmap stacking, but omitted an aggregate vertex ceiling, leading to memory pressure on Year cards with 200-500 workouts.
+• Preservation of Core Invariants: Shared-corridor alignment on typical workloads, 60 fps LazyColumn scrolling, thread safety on Dispatchers.Default, and memory safety without OOMs remain 100% preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* a Month or Year period with 30+ workouts,
@@ -339,6 +348,12 @@
 • *Given* `LazyColumn` scrolling through `PeriodSummaryCard` items,
 • *When* cards compose and recycle,
 • *Then* zero `PolyUtil.decode`, `PolyUtil.simplify`, or `SpatialRegionEngine` clustering executions occur on the Android main thread.
+• *Given* a high-volume period (e.g. 300 workouts in a Year period),
+• *When* `prepareCardMapPreviewSync()` computes `PeriodCardMapState`,
+• *Then* the aggregate vertex count across all decoded and simplified paths is $\le 2,000$ points (`MAX_CARD_MINI_MAP_VERTICES`).
+• *Given* a high-volume period loaded in `PeriodsViewModel` / `InteractivePeriodMap`,
+• *When* heatmap paths are prepared,
+• *Then* the aggregate vertex count across all paths is $\le 8,000$ points (`MAX_DETAILED_MAP_VERTICES`).
 
 **Invariants**: Zero database schema mutations, memory safety without OOMs, non-blocking UI thread, and 100% clean-room test pass rate.
 
@@ -531,9 +546,9 @@
 
 
 ### REQ-PER-024: Route-Frequency Heatmap Unification, Tolerance Calibration & Region Propagation [Verified]
-- **Tests**: `TST-PER-030` | **Tickets**: `ATT-4833`
+- **Tests**: `TST-PER-030`, `TST-PER-032` | **Tickets**: `ATT-4833`, `ATT-4935`
 - **Implementation**: `ThermalColorLut.kt`, `PolylineHeatmapTileProvider.kt`, `PeriodMapUtils.kt`, `PeriodSummaryCard.kt`, `PeriodMapScreen.kt`, `InteractivePeriodMap.kt`, `PeriodsViewModel.kt`
-- **Rationale**: The system SHALL unify the route-frequency heatmap as the primary path visualization across both the preview card (`PeriodSummaryCard`) and detailed map view (`PeriodMapScreen` / `InteractivePeriodMap`), SHALL eliminate polyline masking and marker clutter in period overviews, SHALL tighten polyline decimation tolerance to preserve shared-corridor additive stacking, SHALL calibrate adaptive frequency normalization and thermal contrast, and SHALL propagate the active region across views (ATT-4833, refining `REQ-PER-019` and `REQ-PER-021`):
+- **Rationale**: The system SHALL unify the route-frequency heatmap as the primary path visualization across both the preview card (`PeriodSummaryCard`) and detailed map view (`PeriodMapScreen` / `InteractivePeriodMap`), SHALL eliminate polyline masking and marker clutter in period overviews, SHALL tighten polyline decimation tolerance to preserve shared-corridor additive stacking, SHALL calibrate adaptive frequency normalization and thermal contrast, SHALL propagate the active region across views, and SHALL slave heatmap path rendering and spatial region clustering to the master sport filter (ATT-4833, refined by ATT-4935, refining `REQ-PER-019` and `REQ-PER-021`):
 1. *Heatmap-Primary Visualization & Vector Track Suppression (`REQ-PER-024.1`)*:
 • In `PeriodSummaryCard`, when `visuals.heatmapProvider != null`, the card SHALL render the line-density heatmap tile layer without underlying vector polylines. Vector polylines SHALL only render when heatmap tile provider is null (e.g. Day periods).
 • In `InteractivePeriodMap` and `PeriodMapScreen`, when no individual workout is selected/peeked (`peekedWorkoutDataWithTrack == null`), the system SHALL suppress rendering member vector polylines, anchor polylines, and start/end/apex markers, rendering exclusively the line-density heatmap.
@@ -546,12 +561,24 @@
 4. *Adaptive Corridor Frequency Normalization & Thermal Contrast (`REQ-PER-024.4`)*:
 • In `PolylineHeatmapTileProvider`, intensity per pass SHALL adapt to the period workout count: target passes to full saturation ($1.0$) SHALL scale from $2$ passes (for $\le 3$ workouts) to $3$ passes ($\le 10$ workouts), $5$ passes ($\le 35$ workouts), $8$ passes ($\le 100$ workouts), and $12$ passes ($> 100$ workouts), so single passes render clearly in base cyan while frequently traveled corridors reliably reach Deep Indigo.
 • In `ThermalColorLut`, base alpha progression SHALL increase: Stop 0 (Light Cyan, 0.00) to base alpha $140$ ($\approx 55\%$), Stop 1 (Pure Blue, 0.50) to base alpha $204$ ($\approx 80\%$), and Stop 2 (Deep Indigo, 1.00) to base alpha $255$ ($100\%$).
+5. *Master Sport Filter Propagation & Unified Region Clustering (`ATT-4935`, `REQ-PER-024.5`)*:
+• The Periods header sport filter (`selectedSports: StateFlow<Set<BSportType>>`) SHALL act as the authoritative Master Sport Filter across both card mini-maps (`PeriodSummaryCard`) and detailed full-screen maps (`PeriodMapScreen` / `InteractivePeriodMap`).
+• In `filterPeriodSummary()`, the system SHALL filter all polyline collections symmetrically: `polylines`, `workoutIdToPolylineMap`, `workoutIdToAllPolylinesMap`, and `workoutIdToPathMap` SHALL only contain workouts whose sport is included in `selectedSports`.
+• In `selectPeriodForMap()`, workouts loaded for the period date range SHALL be filtered by `selectedSports` before invoking `SpatialRegionEngine.detectRegions()` and generating `heatmapPathMap`.
+• Spatial region detection and region chips (`Hauptregion` and secondary regions) SHALL reflect exclusively the geographic clusters and workout counts of the selected sports.
+• Local detached sport selection state SHALL be removed from `PeriodMapScreen`, slaving full-screen map rendering directly to the master filter.
+• Heatmap per-workout pixel counting (`ATT-4932`) and maximum corridor frequency normalization (`ATT-4929`) SHALL compute strictly on the sport-filtered path set.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
 1. *Original Requirement ID & Target*: Net-new requirement `REQ-PER-024`, refining `REQ-PER-019` (*Full-Period Asynchronous Mini-Map Preview*) and `REQ-PER-021` (*InteractivePeriodMap Architecture & Large-Period Scaling*).
 2. *Historical Origin & Commit Trace*: Sprint 2026-44.0 (`ATT-4480`, `ATT-4475`, `ATT-4769`, `ATT-1151`).
 3. *Root Reason for Existing Formulation*: Vector polylines were originally rendered beneath heatmaps as fallback and hit-test targets, and loose 15–75m simplification tolerances were used to bound point counts before true tile-rasterized line-density heatmaps were introduced.
 4. *Preservation of Core Invariants*: Pre-simplified background dispatch (`Dispatchers.Default`), zero UI-thread blocking, O(1) tile candidate bounding-box culling, and 100% clean-room test pass rate remain preserved.
+5. *ATT-4935 Refinement (REQ-PER-024.1 / REQ-PER-024.5 / REQ-PER-013)*:
+• Original Requirement ID & Target: `REQ-PER-024.1` (*Line-Density Heatmap Visuals & Adaptive Filtering*) and `REQ-PER-013` (*Spatial Region Partitioning*).
+• Historical Origin & Commit Trace: Commit `548f3995` (`ATT-4480`) and commit `2bea16b7` (`ATT-4833`).
+• Root Reason for Existing Formulation: `PeriodMapScreen` originally had its own sport chips during initial prototyping before the master header filter in `PeriodsTabsScreen` was established.
+• Preservation of Core Invariants: 60 fps main-thread performance, thread-safe asynchronous tile generation on `Dispatchers.Default`, and fallback to all sports when no chips are selected remain preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* a Period with heatmap available,
@@ -566,6 +593,93 @@
 • *Given* `getPeriodSimplificationToleranceMeters(PeriodType.MONTH)`,
 • *When* tolerance is queried,
 • *Then* it returns $6.0\text{m}$ ($\le 8\text{m}$).
+• *Given* a Period with mixed bike and run workouts,
+• *When* the user filters by bike in the Periods header,
+• *Then* `PeriodSummaryCard` mini-map displays exclusively bike routes in its heatmap preview.
+• *Given* a Period opened in `PeriodMapScreen` with bike filter active,
+• *When* `selectPeriodForMap` initializes,
+• *Then* `heatmapPathMap` and spatial region clusters contain only bike workouts and region counts match bike workouts.
+• *Given* `filterPeriodSummary`,
+• *When* filtered by a sport subset,
+• *Then* `workoutIdToAllPolylinesMap` and `workoutIdToPathMap` contain strictly IDs matching the selected sports.
 
 **Invariants**: Zero changes to `PeriodSummaries.db`, memory safety, True-Black AMOLED compliance, and 100% clean-room test pass rate.
+
+### REQ-PER-025: GitHub-Style Yearly Activity Contribution Grids per BSportType in Periods (Years) [Verified]
+- **Tests**: `TST-PER-031` | **Tickets**: `ATT-4849`
+- **Implementation**: `YearlyContributionGrid.kt`, `PeriodSummaryCard.kt`, `PeriodsTabsScreen.kt`, `PeriodsViewModel.kt`, `PeriodBarGraph.kt`
+- **Rationale**: In `Periods` (`PeriodType.YEAR`), the system SHALL render a compact GitHub-style $7 \times 53$ activity contribution grid for each active `BSportType`, slaved directly to the master sport filter and active metric selector, enabling athletes to visualize seasonal consistency, volume distributions, rest periods, and training blocks across the 12 months without redundant UI controls (ATT-4849):
+1. *PeriodType.YEAR Scope (`REQ-PER-025.1`)*: The contribution grid SHALL be rendered exclusively on `PeriodSummaryCard` when `periodType == PeriodType.YEAR`.
+2. *Master Selectors Authority & Hoisting (`REQ-PER-025.2`)*: The active metric for cell volume and color intensity SHALL be slaved to the master metric selector (`PeriodBarMetric`: `DURATION`, `DISTANCE`, `ASCENT`), hoisted to `PeriodsViewModel`. Active sport grids SHALL be slaved to the master sport filter (`selectedSports: Set<BSportType>`).
+3. *Matrix Dimensions & Calendar Mapping (`REQ-PER-025.3`)*: Each grid SHALL render a $7 \times 53$ calendar day matrix (rows: Monday to Sunday, index 0..6; columns: ISO weeks 1..53). Column header labels SHALL render month markers (`Jan..Dec`) based on ISO week dates.
+4. *Multi-Sport Separation & Canonical Order (`REQ-PER-025.4`)*: One dedicated grid SHALL be rendered per active `BSportType` that has $\ge 1$ workout in that calendar year and is enabled in `selectedSports`, ordered by Rule 57 canonical order (`[Bike, Run, Other]`).
+5. *Quartile Shading & Sport Color Ramps (`REQ-PER-025.5`)*: Each grid cell SHALL be shaded using the sport's semantic palette (`TTColor.BikeSportBarColor`, `RunSportBarColor`, `OtherSportBarColor`) with 5 intensity levels: Level 0 (no activity, muted cell surface), Levels 1..4 (positive quartiles $Q_1, Q_2, Q_3, Q_4$ calibrated per sport's positive daily volumes in that year).
+6. *Interactive Day Tap Drill-Down (`REQ-PER-025.6`)*: Tapping an active day cell SHALL highlight the cell, display the daily metric total formatted via Rule 36 canonical formatters (`DistanceFormatter`, `TimeFormatter`, `AltitudeFormatter`), and allow navigating to that day's workouts via `onStartWorkoutList(dayStartS, dayEndS, sport, workoutId)`.
+7. *Localization & Persistence Invariants (`REQ-PER-025.7`)*: All added UI strings SHALL maintain 100% 9-language localization parity. Storing daily contribution structures SHALL be in-memory in `PeriodSummary` without altering `PeriodSummaries.db` (v27) schema.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-PER-025` (*GitHub-Style Yearly Activity Contribution Grids per BSportType in Periods (Years)*), refining `REQ-PER-018` (*PeriodBarGraph*) and `REQ-PER-022` (*Sport Filtering*). Targets `YearlyContributionGrid.kt`, `PeriodSummaryCard.kt`, `PeriodsTabsScreen.kt`, `PeriodsViewModel.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-44.2 (`ATT-4849`).
+3. *Root Reason for Existing Formulation*: Year period cards historically displayed only high-level cumulative numbers and mini-maps, leaving athletes without seasonal consistency, volume distribution, or streak insights.
+4. *Preservation of Core Invariants*: In-memory aggregation on `Dispatchers.Default`, zero SQLite schema alterations (DB_VERSION 27 preserved), Rule 36 canonical formatting, Rule 57 sport ordering `[Bike, Run, Other]`, and 100% clean-room test pass rate remain preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a Year period summary with Bike and Run workouts,
+• *When* rendered in `Periods` with Distance metric selected,
+• *Then* dedicated Bike and Run $7 \times 53$ contribution grids render with distance-based quartile intensities.
+• *Given* the sport filter header toggles Bike off,
+• *When* observing the Year card,
+• *Then* the Bike contribution grid is hidden reactively while the Run grid remains visible.
+• *Given* an active day cell is tapped,
+• *When* interacting with the grid,
+• *Then* the cell is highlighted with formatted daily metrics and navigation to that day's workouts is triggered.
+
+**Invariants**: Zero changes to `PeriodSummaries.db` (v27), 60 fps `LazyColumn` scrolling, Rule 36 unit parity, Rule 57 sport order, and 100% clean-room test pass rate.
+
+### REQ-PER-026: Periods Map Region Place Name Resolution, Fallback Hierarchy & Persistent Caching [Verified]
+- **Tests**: `TST-PER-033` | **Tickets**: `ATT-4934`
+- **Implementation**: `RegionNameResolver.kt`, `SpatialRegionEngine.kt`, `PeriodMapScreen.kt`, `PeriodSummaryCard.kt`, `PeriodsViewModel.kt`, `PeriodMapUtils.kt`
+- **Rationale**: Region chips on `PeriodSummaryCard` and `PeriodMapScreen` historically displayed generic labels such as "Hauptregion: Region 1 (30)" and "Region 2 (1)", giving the athlete zero geographical context without inspecting the map canvas. The system SHALL resolve and display human-readable place names (e.g. "Schönaich (30)") derived from the region center using a deterministic 3-tier fallback hierarchy, asynchronous background execution, and persistent quantized grid caching (ATT-4934):
+1. *3-Tier Region Place Name Resolution Hierarchy (`REQ-PER-026.1`)*: When resolving the display name for a detected `SpatialRegion`'s geographical center (`region.center`), the system SHALL evaluate:
+   - **Priority 1 (Nearest Known Location)**: Query `KnownLocationsDatabaseManager.getAllLocations()` for the closest location within $\le 10\text{ km}$ ($10,000\text{ m}$) that has a non-placeholder name (`!LocationNameResolver.isPlaceholderName(name)`). If found, its name SHALL be selected.
+   - **Priority 2 (Android Geocoder Macro-Locality)**: If no known location matches within $10\text{ km}$, the system SHALL reverse-geocode via Android `Geocoder` and extract the macro-locality (`locality ?: subLocality ?: subAdminArea`).
+   - **Priority 3 (Localized Generic Fallback)**: If Geocoder returns null, throws an exception (offline/network unavailable), or yields a blank result, the system SHALL fall back to the localized generic label `"Region n"` (where $n = \text{index} + 1$).
+2. *Asynchronous Background Execution (`REQ-PER-026.2`)*: Region place name resolution SHALL execute exclusively on background worker threads (`Dispatchers.IO`) in `PeriodsViewModel.showPeriodMap()` and `PeriodMapUtils.prepareCardMapPreview()`. Zero network, disk I/O, or geocoding calls SHALL execute on the main UI thread.
+3. *Two-Tier Persistent Caching (`REQ-PER-026.3`)*: To prevent repeated geocoding on list scrolling and guarantee offline availability after first resolution, resolved place names SHALL be cached in:
+   - Level 1: In-memory cache (`ConcurrentHashMap`) keyed by quantized coordinate cell.
+   - Level 2: Persistent `SharedPreferences` cache (`period_region_names`) keyed by quantized coordinate cell (`lat_cell_lng_cell`, $\approx 0.04^\circ$ step $\approx 4\text{ km}$).
+4. *UI Chip Label Formatting, Hauptregion Semantics & Ellipsis Guard (`REQ-PER-026.4`)*: In `PeriodMapScreen` and `PeriodSummaryCard`:
+   - Primary region chips SHALL retain `"Hauptregion"` / `"Primary"` prefix semantics:
+     - Named: `R.string.workout_periods__primary_named_region_format` (`"Hauptregion: %1$s (%2$d)"` / `"Primary: %1$s (%2$d)"`).
+     - Generic: `R.string.workout_periods__primary_region_format` (`"Hauptregion: Region %1$d (%2$d)"` / `"Primary: Region %1$d (%2$d)"`).
+   - Secondary region chips SHALL use:
+     - Named: `R.string.workout_periods__named_region_format` (`"%1$s (%2$d)"`).
+     - Generic: `R.string.workout_periods__region_format` (`"Region %1$d (%2$d)"`).
+   - All region chip labels SHALL enforce single-line layout (`maxLines = 1, overflow = TextOverflow.Ellipsis`) to prevent multi-line wrapping and layout truncation on narrow screens across all 9 supported locales.
+5. *9-Language Localization Parity (`REQ-PER-026.5`)*: Added string resources (`workout_periods__named_region_format`, `workout_periods__primary_named_region_format`) SHALL maintain 100% localization parity across all 9 supported application locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-PER-026` (*Periods Map Region Place Name Resolution, Fallback Hierarchy & Persistent Caching*), refining `REQ-PER-013.5` (*Interactive Region Navigation & Labels*) and `REQ-UI-165` (*Location Name Resolution*). Targets `SpatialRegionEngine.kt`, `PeriodMapScreen.kt`, `PeriodSummaryCard.kt`, `PeriodsViewModel.kt`, and `PeriodMapUtils.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-44.2 (`ATT-4934`), refining Sprint Review 2026-44.1 finding from `ATT-4833`.
+3. *Root Reason for Existing Formulation*: `SpatialRegionEngine` was originally implemented as pure JVM mathematical clustering without access to Android Context or geocoding services, hardcoding generic `"Region ${index + 1}"` labels to prevent blocking clustering loops.
+4. *Preservation of Core Invariants*: `SpatialRegionEngine` remains pure JVM math without Android framework mocks; resolution is decoupled into `RegionNameResolver` on `Dispatchers.IO`; main-thread 60 fps `LazyColumn` scrolling and offline operation are guaranteed by two-tier caching.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a region whose center is within 10 km of a known location "Schönaich",
+• *When* the region name is resolved,
+• *Then* Priority 1 succeeds and the region name is "Schönaich".
+• *Given* a region with no known location within 10 km, but online Geocoder returns locality "Böblingen",
+• *When* the region name is resolved,
+• *Then* Priority 2 succeeds and the region name is "Böblingen".
+• *Given* an offline device with no known location and no cache entry,
+• *When* the region name is resolved,
+• *Then* Priority 3 fallback executes and the region label is "Region 1".
+• *Given* a resolved region name,
+• *When* scrolling the period summary list or reopening the period map offline,
+• *Then* the cached name is loaded immediately without invoking Geocoder.
+• *Given* a primary region with place name "Herrenberg" and 25 workouts,
+• *When* rendered in German locale,
+• *Then* the chip displays "Hauptregion: Herrenberg (25)" with single-line ellipsis on narrow screens.
+
+**Invariants**: Zero changes to `PeriodSummaries.db` (v27) schema, zero network/disk I/O on UI thread, 9-language localization parity, and 100% clean-room test pass rate.
 

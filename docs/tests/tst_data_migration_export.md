@@ -1935,3 +1935,34 @@
   • Verify explicit rule requiring safe `DEFAULT` values for new `NOT NULL` columns during `ALTER TABLE` upgrades.
   3. *Automated Migration Unit Test Requirement*:
   • Verify mandated automated schema equivalence unit tests asserting fresh `onCreate()` vs upgraded `onUpgrade()` schema identity.
+
+### TST-DAT-033: **Resilient Google Drive Background Upload Retry, Post-Restore Re-Auth Parity & Stuck Export Recovery Verification Suite** [Verified - Silent token acquisition fallback, post-restore zombie-connected elimination, transient error retry classification in GoogleDriveUploader and DropboxUploader, and stuck credential failure recovery verified across test suite.]
+- **Requirement(s)**: `REQ-DAT-037`
+- **Component**: **Resilient Google Drive Background Upload Retry, Post-Restore Re-Auth Parity & Stuck Export Recovery Verification Suite**
+- **Jira**: ``ATT-4922``
+- **Test Description**:
+  1. *Silent Token Refresh Fallback on Null Cached Token (`TST-DAT-033.1`, `GoogleDriveUploaderTest.kt`, `GoogleDriveBackupManagerTest.kt`)*:
+  • Configure `uploadToGoogleDrive = true` and `getGoogleDriveAuthToken() = null` with mocked `GoogleDriveAuthManager.refreshTokenSync()` returning a valid token.
+  • Execute `GoogleDriveUploader.doExport()` and `GoogleDriveBackupManager.uploadBackup()`.
+  • Verify `refreshTokenSync` is called, the fresh token is stored and used, and the export/backup succeeds.
+  2. *Post-Restore Preference Sanitization & Connected State Evaluation (`TST-DAT-033.2`, `AuthCredentialsStoreTest.kt`, `GoogleDriveSettingsDialogTest.kt`)*:
+  • Populate default preferences with `uploadToGoogleDrive = true` and `uploadToDropbox = true` with empty `auth_credentials_prefs.xml` and no Google Sign-In account.
+  • Execute `AuthCredentialsStore.sanitizeAfterRestore(context)`.
+  • Verify `uploadToGoogleDrive` and `uploadToDropbox` are set to `false`.
+  • Verify `GoogleDriveSettingsDialog` computes `isConnected == false` when token is null and no Google account is signed in.
+  3. *Transient Error Classification & Retry Contract in Cloud Uploaders (`TST-DAT-033.3`, `GoogleDriveUploaderTest.kt`, `DropboxUploaderTest.kt`)*:
+  • In `GoogleDriveUploaderTest`, mock `IOException`, HTTP 408, HTTP 429, and HTTP 500/503 during folder resolution and file upload.
+  • Verify `doExport` returns `ExportResult(false, true, ...)`.
+  • In `DropboxUploaderTest`, mock `IOException`, `NetworkIOException`, `RetryException`, and `ServerException`.
+  • Verify `doExport` returns `ExportResult(false, true, ...)`.
+  4. *Stuck Credential Failure Export Recovery & Re-Queueing (`TST-DAT-033.4`, `ExportManagerTest.kt`, `ExportStatusDatabaseManagerTest.kt`)*:
+  • Insert export rows in `ExportStatus.db` with `FINISHED_FAILED` and answer `"Google Drive credential is null or not linked"`.
+  • Invoke stuck export recovery on re-authentication.
+  • Verify status of matching rows transitions to `WAITING` with answer cleared, ready for WorkManager re-queueing.
+  5. *Invariant & Non-Retryable Failure Preservation (`TST-DAT-033.5`, `GoogleDriveUploaderTest.kt`, `DropboxUploaderTest.kt`)*:
+  • Simulate non-retryable failures: missing local file (`!file.exists()`), permanent unrecoverable HTTP 401/403 authorization failure, unlinked account without recovery.
+  • Verify `doExport` returns `shallRetry = false`, preventing unbounded WorkManager retry loops.
+  6. *9-Language Localization Audit (`TST-DAT-033.6`, `TranslationParityTest.kt`)*:
+  • Verify 100% parity across all 9 application locales with zero missing string entries.
+  7. *Clean-Room Regression Suite Execution (`TST-DAT-033.7`)*:
+  • Run targeted package unit tests (`exporter.*`, `cloud.*`, `migration.*`, `security.*`) and verify 100% pass rate.

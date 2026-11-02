@@ -23,9 +23,11 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataWithTrack
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.util.MigrationStatus
+import com.atrainingtracker.trainingtracker.location.RegionNameResolver
 import com.atrainingtracker.trainingtracker.ui.map.*
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
@@ -57,11 +59,22 @@ data class PeriodMapState(
  *
  * Architectural Role: Presentation layer for historical analytical trends.
  */
-class PeriodsViewModel(application: Application) : AndroidViewModel(application) {
+class PeriodsViewModel @JvmOverloads constructor(
+    application: Application,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default
+) : AndroidViewModel(application) {
 
     private val workoutRepo = WorkoutRepository.getInstance(application)
     private val periodsRepo = PeriodsRepository.getInstance(application)
     private val prefManager = com.atrainingtracker.trainingtracker.MyPreferenceManager(application)
+
+    private val _selectedMetric = MutableStateFlow(PeriodBarMetric.DURATION)
+    val selectedMetric: StateFlow<PeriodBarMetric> = _selectedMetric.asStateFlow()
+
+    fun selectMetric(metric: PeriodBarMetric) {
+        _selectedMetric.value = metric
+    }
 
     val groups = listOf(
         application.getString(R.string.workout_periods__days),
@@ -115,36 +128,65 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
      */
     fun showPeriodMap(summary: PeriodSummary, initialRegionId: String? = null) {
         selectionJob?.cancel()
-        _selectedPeriod.value = summary
+        val activeSports = _selectedSports.value
+        val effectiveSummary = if (activeSports.isNotEmpty()) {
+            filterPeriodSummary(summary, activeSports) ?: summary
+        } else {
+            summary
+        }
+        _selectedPeriod.value = effectiveSummary
         _mapState.value = PeriodMapState(isLoading = true, selectedRegionId = initialRegionId)
         
         selectionJob = viewModelScope.launch {
             // ATT-440: Adoption of Cluster loading algorithm
             // 1. Fetch Source of Truth for the range (Guaranteed completeness)
-            val workouts = withContext(Dispatchers.IO) {
+            val workouts = withContext(ioDispatcher) {
                 periodsRepo.getWorkoutsForRange(summary.startTimestampS, summary.endTimestampS)
             }
             
-            // 2. Background Processing on Dispatchers.Default (REQ-PER-013)
-            withContext(Dispatchers.Default) {
+            // 2. Background Processing on defaultDispatcher (REQ-PER-013)
+            withContext(defaultDispatcher) {
+                // Filter workouts by active master sport filter (ATT-4935 / REQ-PER-024.5)
+                val filteredWorkouts = if (activeSports.isNotEmpty()) {
+                    workouts.filter { it.bSportType in activeSports }
+                } else {
+                    workouts
+                }
+
                 // Partition workouts into geographic activity regions
-                val detectedRegions = SpatialRegionEngine.detectRegions(workouts)
+                val rawRegions = SpatialRegionEngine.detectRegions(filteredWorkouts)
+                val detectedRegions = rawRegions.map { region ->
+                    val place = RegionNameResolver.resolvePlaceName(getApplication(), region.center, dispatcher = ioDispatcher)
+                    if (place != null) {
+                        region.copy(placeName = place)
+                    } else {
+                        region
+                    }
+                }
                 val primaryRegion = detectedRegions.firstOrNull { it.isPrimary } ?: detectedRegions.firstOrNull()
                 val activeRegionId = initialRegionId ?: primaryRegion?.id
 
                 // Decode polyline paths once for both heatmap and lightweight vector tracks
-                val heatmapPathMap = workouts.associate { w ->
+                val rawDecodedPathMap = filteredWorkouts.associate { w ->
                     w.id to if (w.mapPolyline.isNotEmpty()) PolyUtil.decode(w.mapPolyline) else emptyList()
                 }.filterValues { it.isNotEmpty() }
+
+                // Enforce detailed map vertex budget (MAX_DETAILED_MAP_VERTICES = 8_000) (REQ-PER-019.2 / ATT-4930)
+                val baseTolerance = getPeriodSimplificationToleranceMeters(summary.periodType)
+                val heatmapPathMap = simplifyPathMapToBudget(
+                    pathMap = rawDecodedPathMap,
+                    maxVertices = MAX_DETAILED_MAP_VERTICES,
+                    baseTolerance = baseTolerance
+                )
                 
-                val isLargePeriod = workouts.size > MAX_PERIOD_VECTOR_TRACKS
+                val isLargePeriod = filteredWorkouts.size > MAX_PERIOD_VECTOR_TRACKS
 
                 // REQ-PER-012: In high-volume periods (> MAX_PERIOD_VECTOR_TRACKS), suppress
                 // instantiating hundreds of vector MapTrack and PeriodPeakMarker objects to prevent OOM.
                 val tracks = if (isLargePeriod) {
                     emptyList()
                 } else {
-                    workouts.mapNotNull { w ->
+                    filteredWorkouts.mapNotNull { w ->
                         val points = heatmapPathMap[w.id] ?: return@mapNotNull null
                         MapTrack(
                             id = w.id,
@@ -164,7 +206,7 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
                 val markers = if (isLargePeriod) {
                     emptyList()
                 } else {
-                    workouts.flatMap { w ->
+                    filteredWorkouts.flatMap { w ->
                         val list = mutableListOf<PeriodPeakMarker>()
                         w.startLatLng?.let { 
                             list.add(PeriodPeakMarker(w.id, it, R.drawable.control_start, "${w.workoutName}: Start", PeriodMarkerType.START)) 
@@ -185,7 +227,7 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
                 _mapState.value = PeriodMapState(
                     tracks = tracks,
                     workoutIdToHeatmapPathMap = heatmapPathMap,
-                    workoutIdToSportMap = workouts.associate { it.id to it.bSportType },
+                    workoutIdToSportMap = filteredWorkouts.associate { it.id to it.bSportType },
                     memberMarkers = markers,
                     regions = detectedRegions,
                     selectedRegionId = activeRegionId,
@@ -228,9 +270,10 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
     }
 
     /**
-     * Filters a PeriodSummary to include only the specified sport types (ATT-4770, REQ-PER-022.3).
-     * Recalculates totalWorkouts, totalDurationSec, totalDistance, filters sportStats, polylines,
-     * workoutIdToPolylineMap, and extremaMarkers. Returns null if totalWorkouts == 0.
+     * Filters a PeriodSummary to include only the specified sport types (ATT-4770, ATT-4935, REQ-PER-024.5b).
+     * Recalculates totalWorkouts, totalDurationSec, totalDistance, and symmetrically filters sportStats,
+     * polylines, workoutIdToPolylineMap, workoutIdToAllPolylinesMap, workoutIdToPathMap, workoutIdToSportMap,
+     * and extremaMarkers. Returns null if totalWorkouts == 0.
      */
     fun filterPeriodSummary(summary: PeriodSummary, sports: Set<BSportType>): PeriodSummary? {
         val filteredStats = summary.sportStats.filterKeys { it in sports }
@@ -240,8 +283,15 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
         val totalDurationSec = filteredStats.values.sumOf { it.totalDurationSec }
         val totalDistance = filteredStats.values.sumOf { it.totalDistanceMeters }
 
-        // Determine polylines and map tracks for selected sports
-        val polylineSource = if (summary.workoutIdToAllPolylinesMap.isNotEmpty()) {
+        // Symmetrically filter all polyline and path collections (REQ-PER-024.5b)
+        // Bidirectional fallback ensures full backward compatibility when input contains only one polyline map
+        val polylineSource = if (summary.workoutIdToPolylineMap.isNotEmpty()) {
+            summary.workoutIdToPolylineMap
+        } else {
+            summary.workoutIdToAllPolylinesMap
+        }
+
+        val allPolylineSource = if (summary.workoutIdToAllPolylinesMap.isNotEmpty()) {
             summary.workoutIdToAllPolylinesMap
         } else {
             summary.workoutIdToPolylineMap
@@ -253,12 +303,30 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
             polylineSource
         }
 
-        val filteredPolylines = if (summary.workoutIdToAllPolylinesMap.isNotEmpty() && summary.workoutIdToSportMap.isNotEmpty()) {
-            summary.workoutIdToAllPolylinesMap.filterKeys { id -> summary.workoutIdToSportMap[id] in sports }.values.toList()
-        } else if (summary.workoutIdToPolylineMap.isNotEmpty() && summary.workoutIdToSportMap.isNotEmpty()) {
-            summary.workoutIdToPolylineMap.filterKeys { id -> summary.workoutIdToSportMap[id] in sports }.values.toList()
+        val filteredAllPolylinesMap = if (allPolylineSource.isNotEmpty() && summary.workoutIdToSportMap.isNotEmpty()) {
+            allPolylineSource.filterKeys { id -> summary.workoutIdToSportMap[id] in sports }
+        } else {
+            allPolylineSource
+        }
+
+        val filteredPathMap = if (summary.workoutIdToPathMap.isNotEmpty() && summary.workoutIdToSportMap.isNotEmpty()) {
+            summary.workoutIdToPathMap.filterKeys { id -> summary.workoutIdToSportMap[id] in sports }
+        } else {
+            summary.workoutIdToPathMap
+        }
+
+        val filteredPolylines = if (filteredAllPolylinesMap.isNotEmpty()) {
+            filteredAllPolylinesMap.values.toList()
+        } else if (filteredPolylineMap.isNotEmpty()) {
+            filteredPolylineMap.values.toList()
         } else {
             if (summary.sportStats.keys.any { it in sports }) summary.polylines else emptyList()
+        }
+
+        val filteredSportMap = if (summary.workoutIdToSportMap.isNotEmpty()) {
+            summary.workoutIdToSportMap.filterValues { it in sports }
+        } else {
+            summary.workoutIdToSportMap
         }
 
         val filteredMarkers = if (summary.workoutIdToSportMap.isNotEmpty()) {
@@ -269,6 +337,8 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
             summary.extremaMarkers
         }
 
+        val filteredContributions = summary.yearlySportContributions.filterKeys { it in sports }
+
         return summary.copy(
             totalWorkouts = totalWorkouts,
             totalDurationSec = totalDurationSec,
@@ -276,7 +346,11 @@ class PeriodsViewModel(application: Application) : AndroidViewModel(application)
             sportStats = filteredStats,
             polylines = filteredPolylines,
             workoutIdToPolylineMap = filteredPolylineMap,
-            extremaMarkers = filteredMarkers
+            workoutIdToAllPolylinesMap = filteredAllPolylinesMap,
+            workoutIdToPathMap = filteredPathMap,
+            workoutIdToSportMap = filteredSportMap,
+            extremaMarkers = filteredMarkers,
+            yearlySportContributions = filteredContributions
         )
     }
 

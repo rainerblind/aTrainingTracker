@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.map
 
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
 import com.google.android.gms.maps.model.LatLng
@@ -26,6 +27,7 @@ import com.google.maps.android.PolyUtil
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDateTime
@@ -205,5 +207,124 @@ class MapModelsTest {
         assertNotNull(track)
         assertEquals(42L, track.id)
         assertNotNull(track.path)
+    }
+
+    @Test
+    fun toMapCluster_withValidRoutePolyline_decodesSuccessfullyAndPopulatesFields() {
+        val latLngs = listOf(
+            LatLng(48.137, 11.575),
+            LatLng(48.138, 11.576)
+        )
+        val encoded = PolyUtil.encode(latLngs)
+        val cluster = WorkoutCluster(
+            id = 101L,
+            name = "Isar Trail",
+            probableSportId = 1L,
+            startLat = 48.137,
+            startLng = 11.575,
+            endLat = 48.138,
+            endLng = 11.576,
+            maxDispLat = 48.138,
+            maxDispLng = 11.576,
+            refDistance = 1200.0,
+            hitCount = 5,
+            bSportType = BSportType.RUN,
+            routePolyline = encoded
+        )
+
+        val mapCluster = cluster.toMapCluster()
+
+        assertNotNull(mapCluster)
+        assertEquals(101L, mapCluster!!.id)
+        assertEquals("Isar Trail", mapCluster.name)
+        assertEquals(BSportType.RUN, mapCluster.bSportType)
+        assertEquals(5, mapCluster.hitCount)
+        assertEquals(1200.0, mapCluster.refDistance, 0.01)
+        assertEquals(2, mapCluster.latLngs.size)
+        assertEquals(48.137, mapCluster.latLngs[0].latitude, 0.001)
+    }
+
+    @Test
+    fun toMapCluster_withPreviewPathsFallback_decodesSuccessfully() {
+        val latLngs = listOf(
+            LatLng(48.0, 11.0),
+            LatLng(48.1, 11.1)
+        )
+        val encoded = PolyUtil.encode(latLngs)
+        val cluster = WorkoutCluster(
+            id = 102L,
+            name = "Preview Cluster",
+            probableSportId = 2L,
+            startLat = 48.0,
+            startLng = 11.0,
+            endLat = 48.1,
+            endLng = 11.1,
+            maxDispLat = 48.1,
+            maxDispLng = 11.1,
+            refDistance = 5000.0,
+            hitCount = 2,
+            bSportType = BSportType.BIKE,
+            routePolyline = null,
+            previewPaths = listOf(encoded)
+        )
+
+        val mapCluster = cluster.toMapCluster()
+
+        assertNotNull(mapCluster)
+        assertEquals(102L, mapCluster!!.id)
+        assertEquals(2, mapCluster.latLngs.size)
+    }
+
+    @Test
+    fun toMapCluster_emptyPolylineAndEmptyPreviewPaths_returnsNull() {
+        val cluster = WorkoutCluster(
+            id = 103L,
+            name = "Empty Cluster",
+            probableSportId = 1L,
+            startLat = 0.0,
+            startLng = 0.0,
+            endLat = 0.0,
+            endLng = 0.0,
+            maxDispLat = 0.0,
+            maxDispLng = 0.0,
+            refDistance = 0.0,
+            hitCount = 0,
+            routePolyline = null,
+            previewPaths = emptyList()
+        )
+
+        assertNull(cluster.toMapCluster())
+    }
+
+    @Test
+    fun toMapCluster_preservesReferentialIdentityAcrossMultipleCalls_REQ_MAP_051() {
+        val latLngs = listOf(
+            LatLng(48.137, 11.575),
+            LatLng(48.138, 11.576)
+        )
+        val encoded = PolyUtil.encode(latLngs)
+        val cluster1 = WorkoutCluster(
+            id = 104L,
+            name = "Cluster A",
+            probableSportId = 1L,
+            startLat = 48.137,
+            startLng = 11.575,
+            endLat = 48.138,
+            endLng = 11.576,
+            maxDispLat = 48.138,
+            maxDispLng = 11.576,
+            refDistance = 1200.0,
+            hitCount = 1,
+            routePolyline = encoded
+        )
+        val cluster2 = cluster1.copy(hitCount = 2)
+
+        val mapCluster1 = cluster1.toMapCluster()
+        val mapCluster2 = cluster2.toMapCluster()
+
+        assertNotNull(mapCluster1)
+        assertNotNull(mapCluster2)
+        assertSame("Decoded coordinate list reference must be identical (===) per REQ-MAP-051.2",
+            mapCluster1!!.latLngs, mapCluster2!!.latLngs)
     }
 }

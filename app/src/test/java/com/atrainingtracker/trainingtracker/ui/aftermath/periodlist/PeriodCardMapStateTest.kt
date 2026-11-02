@@ -303,4 +303,58 @@ class PeriodCardMapStateTest {
         assertNotNull("activeRegionId must be non-null for multi-region summary", state.activeRegionId)
         assertTrue("activeRegionId must be populated", state.activeRegionId!!.isNotEmpty())
     }
+
+    /**
+     * TST-MAP-058.12: CardMapState maxCorridorPassCount propagation (ATT-4929 / REQ-MAP-056.6).
+     */
+    @Test
+    fun testTstMap058_12_CardMapStateMaxCorridorPassCount() {
+        val tracks = (1L..5L).associateWith { createTestPolyline(48.78, 9.18) }
+        val summary = createMockSummary(
+            periodType = PeriodType.MONTH,
+            polylinesMap = tracks
+        )
+
+        val state = prepareCardMapPreviewSync(summary)
+        assertTrue(state.isReady)
+        assertNotNull(state.visuals)
+        assertEquals(5, state.maxCorridorPassCount)
+        assertEquals(5, state.visuals?.maxCorridorPassCount)
+    }
+
+    /**
+     * TST-PER-032.4: Corridor Frequency Calibration on Sport-Filtered Path Set (ATT-4935 / REQ-PER-024.5f).
+     * Asserts that maxCorridorPassCount adapts strictly to the sport-filtered path set,
+     * ensuring corridor overlap normalization is computed without skew from excluded sports.
+     */
+    @Test
+    fun testTstPer032_4_CorridorFrequencyCalibrationOnSportFilteredPathSet() {
+        // 7 coincident bike paths along corridor A
+        val bikeCorridor = createTestPolyline(48.50, 9.00)
+        val bikeTracks = (1L..7L).associateWith { bikeCorridor }
+
+        // 25 coincident run paths along corridor B
+        val runCorridor = createTestPolyline(48.60, 9.10)
+        val runTracks = (8L..32L).associateWith { runCorridor }
+
+        // 1. Sport-filtered summary (BIKE only): 7 passes
+        val bikeOnlySummary = createMockSummary(
+            periodType = PeriodType.MONTH,
+            polylinesMap = bikeTracks
+        )
+        val bikeState = prepareCardMapPreviewSync(bikeOnlySummary)
+        assertTrue(bikeState.isReady)
+        assertEquals("Bike-filtered corridor max must be 7", 7, bikeState.maxCorridorPassCount)
+        assertEquals(7, bikeState.visuals?.maxCorridorPassCount)
+
+        // 2. Unfiltered / combined summary: 25 passes (dominant run corridor)
+        val combinedSummary = createMockSummary(
+            periodType = PeriodType.MONTH,
+            polylinesMap = bikeTracks + runTracks
+        )
+        val combinedState = prepareCardMapPreviewSync(combinedSummary)
+        assertTrue(combinedState.isReady)
+        assertEquals("Combined corridor max must be 25", 25, combinedState.maxCorridorPassCount)
+        assertEquals(25, combinedState.visuals?.maxCorridorPassCount)
+    }
 }

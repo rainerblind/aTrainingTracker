@@ -1047,6 +1047,53 @@ class PeriodsRepository private constructor(private val application: Application
             }
         }
 
+        // 5. Aggregate yearly sport contributions for PeriodType.YEAR (REQ-PER-025, ATT-4849)
+        val yearlyContributions = if (summary.periodType == PeriodType.YEAR && groupWorkouts.isNotEmpty()) {
+            val calendarYear = java.time.OffsetDateTime.ofInstant(
+                java.time.Instant.ofEpochSecond(summary.startTimestampS),
+                java.time.ZoneId.systemDefault()
+            ).year
+
+            val sportsInGroup = groupWorkouts.map { it.bSportType }.distinct()
+            sportsInGroup.associateWith { sport ->
+                val sportWorkouts = groupWorkouts.filter { it.bSportType == sport }
+                val dailyMap = mutableMapOf<java.time.LocalDate, DailySportActivity>()
+
+                val byDate = sportWorkouts.groupBy { it.localDateTime.toLocalDate() }
+                for ((date, dayWorkouts) in byDate) {
+                    val count = dayWorkouts.size
+                    val totalDuration = dayWorkouts.sumOf { it.activeTimeSec }
+                    val totalDistance = dayWorkouts.sumOf { it.totalDistance }
+                    val totalAscent = dayWorkouts.sumOf { it.ascentMeters }
+                    val ids = dayWorkouts.map { it.id }
+                    val names = dayWorkouts.map { it.workoutName }
+                    dailyMap[date] = DailySportActivity(
+                        date = date,
+                        bSportType = sport,
+                        count = count,
+                        durationSec = totalDuration,
+                        distanceMeters = totalDistance,
+                        ascentMeters = totalAscent,
+                        workoutIds = ids,
+                        workoutNames = names
+                    )
+                }
+
+                val maxDuration = dailyMap.values.maxOfOrNull { it.durationSec } ?: 0L
+                val maxDistance = dailyMap.values.maxOfOrNull { it.distanceMeters } ?: 0.0
+                val maxAscent = dailyMap.values.maxOfOrNull { it.ascentMeters } ?: 0L
+
+                YearlySportContribution(
+                    sportType = sport,
+                    year = calendarYear,
+                    dailyActivities = dailyMap,
+                    maxDailyDurationSec = maxDuration,
+                    maxDailyDistanceMeters = maxDistance,
+                    maxDailyAscentMeters = maxAscent
+                )
+            }
+        } else summary.yearlySportContributions
+
         return summary.copy(
             sportStats = enrichedSportStats,
             polylines = if (allPolylineMap.isNotEmpty()) {
@@ -1058,6 +1105,7 @@ class PeriodsRepository private constructor(private val application: Application
             workoutIdToAllPolylinesMap = allPolylineMap,
             workoutIdToPathMap = anchorPathMap,
             workoutIdToSportMap = if (groupWorkouts.isNotEmpty()) groupWorkouts.associate { it.id to it.bSportType } else summary.workoutIdToSportMap,
+            yearlySportContributions = yearlyContributions,
             extremaMarkers = anchorWorkouts.flatMap { workout ->
                 val markers = mutableListOf<PeriodPeakMarker>()
                 workout.startLatLng?.let { markers.add(PeriodPeakMarker(workout.id, it, R.drawable.control_start, "${workout.workoutName}: Start", PeriodMarkerType.START)) }

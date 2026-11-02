@@ -51,6 +51,10 @@ import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.History
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.atrainingtracker.trainingtracker.activities.ZonesSettingsViewModel
+import com.atrainingtracker.trainingtracker.ui.settings.ZoneHistoryDialog
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -162,6 +166,7 @@ fun AthleteProfileContent(
     var editingEntry by remember { mutableStateOf<AthleteMetricEntry?>(null) }
     var deletingEntry by remember { mutableStateOf<AthleteMetricEntry?>(null) }
     var showZoneCalculatorDialog by remember { mutableStateOf(false) }
+    var showZoneHistoryDialog by remember { mutableStateOf(false) }
     val navBarBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
     val tabTitleResIds = remember {
@@ -225,14 +230,25 @@ fun AthleteProfileContent(
                                 )
                             }
                         } else {
-                            IconButton(
-                                onClick = { showZoneCalculatorDialog = true }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Calculate,
-                                    contentDescription = stringResource(R.string.zone_calc_button),
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(
+                                    onClick = { showZoneCalculatorDialog = true }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Calculate,
+                                        contentDescription = stringResource(R.string.zone_calc_button),
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                                IconButton(
+                                    onClick = { showZoneHistoryDialog = true }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.History,
+                                        contentDescription = stringResource(R.string.zone_history_action_history),
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
                             }
                         }
                     }
@@ -647,6 +663,32 @@ fun AthleteProfileContent(
                 deletingEntry = null
             },
             onDismiss = { deletingEntry = null }
+        )
+    }
+
+    if (showZoneHistoryDialog && pagerState.currentPage in 1..3) {
+        val currentZoneType = when (pagerState.currentPage) {
+            1 -> ZoneType.HR_RUN
+            2 -> ZoneType.HR_BIKE
+            else -> ZoneType.PWR_BIKE
+        }
+        val zonesViewModel: ZonesSettingsViewModel = viewModel()
+        val zoneHistoryMap by zonesViewModel.zoneHistoryFlow.collectAsState()
+        val historyForCurrentType = zoneHistoryMap[currentZoneType] ?: emptyList()
+
+        ZoneHistoryDialog(
+            zoneType = currentZoneType,
+            history = historyForCurrentType,
+            onDismiss = { showZoneHistoryDialog = false },
+            onSaveSnapshot = { timestampMs, boundaries ->
+                zonesViewModel.saveBackdatedSnapshot(currentZoneType, boundaries, timestampMs)
+            },
+            onUpdateSnapshot = { id, timestampMs, boundaries ->
+                zonesViewModel.updateHistoricalSnapshot(id, currentZoneType, boundaries, timestampMs)
+            },
+            onDeleteSnapshot = { id ->
+                zonesViewModel.deleteHistoricalSnapshot(id, currentZoneType)
+            }
         )
     }
 }

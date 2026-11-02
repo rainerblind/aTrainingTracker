@@ -104,9 +104,10 @@ fun MapScreenWithTrack(
     val allRoutes by viewModel.allRoutes.collectAsStateWithLifecycle()
     val enabledLayers by viewModel.enabledLayers.collectAsStateWithLifecycle()
 
-    // The ID of the segment/route/location currently being "peeked"
+    // The ID of the segment/route/location/cluster currently being "peeked"
     var selectedSegmentId by rememberSaveable { mutableStateOf<Long?>(null) }
     var selectedRouteId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var selectedClusterId by rememberSaveable { mutableStateOf<Long?>(null) }
     var selectedLocationId by rememberSaveable { mutableStateOf<Long?>(targetLocationId) }
     var editingLocation by remember { mutableStateOf<KnownLocationItem?>(null) }
     var previewRadius by remember { mutableStateOf<Int?>(null) }
@@ -118,6 +119,7 @@ fun MapScreenWithTrack(
         if (targetLocationId != null && targetLocationId > 0) {
             selectedSegmentId = null
             selectedRouteId = null
+            selectedClusterId = null
             selectedLocationId = targetLocationId
         }
     }
@@ -135,9 +137,9 @@ fun MapScreenWithTrack(
         )
     )
 
-    // Effect: When a user clicks a new segment/route/location, ensure the sheet is at least "Partially Expanded" (Peeked)
-    LaunchedEffect(selectedSegmentId, selectedRouteId, selectedLocationId) {
-        if (selectedSegmentId != null || selectedRouteId != null || selectedLocationId != null) {
+    // Effect: When a user clicks a new segment/route/location/cluster, ensure the sheet is at least "Partially Expanded" (Peeked)
+    LaunchedEffect(selectedSegmentId, selectedRouteId, selectedLocationId, selectedClusterId) {
+        if (selectedSegmentId != null || selectedRouteId != null || selectedLocationId != null || selectedClusterId != null) {
             scaffoldState.bottomSheetState.partialExpand()
         } else {
             scaffoldState.bottomSheetState.hide()
@@ -208,13 +210,25 @@ fun MapScreenWithTrack(
                     base + navBarHeight
                 }
                 selectedLocationId != null -> BottomSheetDesign.PeekHeightKnownLocation + navBarHeight
+                selectedClusterId != null -> BottomSheetDesign.PeekHeightKnownLocation + navBarHeight
                 else -> 0.dp
             },
             sheetDragHandle = null,
             sheetContent = {
-                if (selectedSegmentId != null || selectedRouteId != null || selectedLocationId != null) {
+                if (selectedSegmentId != null || selectedRouteId != null || selectedLocationId != null || selectedClusterId != null) {
                     Box(modifier = Modifier.fillMaxWidth().height(maxSheetHeight)) {
                         when {
+                            selectedClusterId != null -> {
+                                val selectedCluster =
+                                    uiState.clusters.find { it.id == selectedClusterId }
+
+                                if (selectedCluster != null) {
+                                    ClusterOnMapSheet(
+                                        cluster = selectedCluster,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+                            }
                             selectedLocationId != null -> {
                                 val selectedLocation =
                                     uiState.knownLocations.find { it.id == selectedLocationId }
@@ -274,6 +288,7 @@ fun MapScreenWithTrack(
                         selectedSegmentId = null
                         selectedRouteId = null
                         selectedLocationId = null
+                        selectedClusterId = null
                     },
                     modifier = Modifier.fillMaxSize()
                 ) {
@@ -281,6 +296,7 @@ fun MapScreenWithTrack(
                         knownLocations(displayLocations, onLocationClick = { id ->
                             selectedSegmentId = null
                             selectedRouteId = null
+                            selectedClusterId = null
                             selectedLocationId = id
                         })
                     }
@@ -288,6 +304,7 @@ fun MapScreenWithTrack(
                         segments(uiState.segments, onSegmentClick = { id ->
                             selectedRouteId = null
                             selectedLocationId = null
+                            selectedClusterId = null
                             selectedSegmentId = id
                         })
                     }
@@ -295,7 +312,16 @@ fun MapScreenWithTrack(
                         routes(uiState.routes, onRouteClick = { id ->
                             selectedSegmentId = null
                             selectedLocationId = null
+                            selectedClusterId = null
                             selectedRouteId = id
+                        })
+                    }
+                    if (GeneralMapLayer.CLUSTERS in enabledLayers) {
+                        clusters(uiState.clusters, onClusterClick = { id ->
+                            selectedSegmentId = null
+                            selectedRouteId = null
+                            selectedLocationId = null
+                            selectedClusterId = id
                         })
                     }
                     if (GeneralMapLayer.TRACK in enabledLayers) {
@@ -354,6 +380,10 @@ fun MapScreenWithTrack(
                                     stringResource(R.string.map_layer_track),
                                     TrackType.BEST.color
                                 )
+                                GeneralMapLayer.CLUSTERS -> Pair(
+                                    stringResource(R.string.map_layer_clusters),
+                                    TTColor.Cluster
+                                )
                             }
 
                             DropdownMenuItem(
@@ -411,10 +441,11 @@ fun MapScreenWithTrack(
     }
 
     // Handle system back button to close the peek
-    BackHandler(enabled = selectedSegmentId != null || selectedRouteId != null || selectedLocationId != null) {
+    BackHandler(enabled = selectedSegmentId != null || selectedRouteId != null || selectedLocationId != null || selectedClusterId != null) {
         selectedSegmentId = null
         selectedRouteId = null
         selectedLocationId = null
+        selectedClusterId = null
     }
 }
 
@@ -496,6 +527,84 @@ fun KnownLocationOnMapSheet(
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Bottom sheet peek layout for favorite route clusters (Lieblingsstrecken) on the central map (REQ-UI-322).
+ */
+@Composable
+fun ClusterOnMapSheet(
+    cluster: MapCluster,
+    modifier: Modifier = Modifier
+) {
+    val distanceFormatter = remember { com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter() }
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = cluster.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+
+                Icon(
+                    painter = painterResource(cluster.bSportType.iconResId),
+                    contentDescription = stringResource(cluster.bSportType.stringResId),
+                    modifier = Modifier.size(24.dp),
+                    tint = TTColor.Cluster
+                )
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Formatted distance
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_distance),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = TTColor.Cluster
+                    )
+                    Text(
+                        text = distanceFormatter.format_with_units(cluster.refDistance),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = TTColor.Cluster
+                    )
+                }
+
+                // Number of Workouts (Hit Count)
+                Text(
+                    text = pluralStringResource(R.plurals.cluster_recordings, cluster.hitCount, cluster.hitCount),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = TTColor.Cluster
                 )
             }
         }

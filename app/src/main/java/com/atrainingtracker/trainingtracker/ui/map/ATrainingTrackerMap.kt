@@ -190,9 +190,13 @@ fun ATrainingTrackerMap(
 
     // 4. THE MAP
     val isDark = darkTheme ?: (MaterialTheme.colorScheme.surface.luminance() < 0.5f)
-    val mapProperties = remember(isDark, context) {
-        val darkOptions = if (isDark) DarkMapStyle.getMapStyleOptions(context) else null
-        resolveMapProperties(isDark, darkOptions)
+    val mapProperties = remember(isDark, context, style.useMutedStyle) {
+        if (style.useMutedStyle) {
+            DarkMapStyle.resolveHeatmapMapProperties(isDark, context)
+        } else {
+            val darkOptions = if (isDark) DarkMapStyle.getMapStyleOptions(context) else null
+            resolveMapProperties(isDark, darkOptions)
+        }
     }
 
     val tuningDataStore = remember { TuningPreferencesDataStore(context) }

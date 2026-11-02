@@ -36,7 +36,9 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeader
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneDistributionCard
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneDistributionCard
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneCardDisplayMode
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionData
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -76,6 +78,8 @@ fun TrackOnMapScreen(
     headerActions: @Composable RowScope.() -> Unit = {},
     hrZoneDistribution: ZoneDistributionData? = null,
     powerZoneDistribution: ZoneDistributionData? = null,
+    hrZoneThresholds: HeartRateZoneThresholds? = null,
+    powerZoneThresholds: PowerZoneThresholds? = null,
     analyticsContent: (@Composable ColumnScope.() -> Unit)? = null,
     metadataContent: (@Composable ColumnScope.() -> Unit)? = null,
     telemetryPath: List<PathPoint> = emptyList(),
@@ -259,6 +263,8 @@ fun TrackOnMapScreen(
             effectivePowerZoneDisplayMode = effectivePowerZoneDisplayMode,
             onHrZoneDisplayModeChange = { hrZoneDisplayMode = it },
             onPowerZoneDisplayModeChange = { powerZoneDisplayMode = it },
+            hrZoneThresholds = hrZoneThresholds,
+            powerZoneThresholds = powerZoneThresholds,
             useStatusBarsPadding = useStatusBarsPadding,
             onClusterClick = onClusterClick,
             onEditWorkout = onEditWorkout,
@@ -361,6 +367,8 @@ fun TrackOnMapScreen(
         powerZoneDistribution = powerZoneDistribution,
         hrZoneDisplayMode = effectiveHrZoneDisplayMode,
         powerZoneDisplayMode = effectivePowerZoneDisplayMode,
+        hrZoneThresholds = hrZoneThresholds,
+        powerZoneThresholds = powerZoneThresholds,
         header = {
             WorkoutHeader(
                 modifier = Modifier.fillMaxWidth(),
@@ -587,6 +595,7 @@ fun TrackOnMapScreen(
                                         enableGestures = false,
                                         zoneDistribution = hrZoneDistribution,
                                         zoneDisplayMode = effectiveHrZoneDisplayMode,
+                                        hrZoneThresholds = hrZoneThresholds,
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                 }
@@ -607,6 +616,7 @@ fun TrackOnMapScreen(
                                         enableGestures = false,
                                         zoneDistribution = powerZoneDistribution,
                                         zoneDisplayMode = effectivePowerZoneDisplayMode,
+                                        powerZoneThresholds = powerZoneThresholds,
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                 }

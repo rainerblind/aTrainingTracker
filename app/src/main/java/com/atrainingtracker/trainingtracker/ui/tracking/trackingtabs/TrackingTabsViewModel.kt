@@ -37,6 +37,7 @@ import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewInfo
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,6 +49,10 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.atrainingtracker.trainingtracker.elevation.ElevationSource
+import com.atrainingtracker.trainingtracker.database.ExtremaType
+import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager
+import com.atrainingtracker.trainingtracker.location.LocationNameResolver
 
 // helper class to navigate the fragment container after adding or deletion of a tab
 sealed class TabNavigationEvent {
@@ -98,6 +103,7 @@ class TrackingTabsViewModel(
     val allTelemetry = banalServiceRepository.allActiveDevicesTelemetry
     val allFilteredSensorData = banalServiceRepository.allFilteredSensorData
     val allDevices = devicesRepository.allDevices
+    val currentAltitude: StateFlow<Double?> = banalServiceRepository.currentAltitude
     val liveSegments: StateFlow<List<com.atrainingtracker.trainingtracker.segments.LiveSegment>> = liveSegmentsRepository?.liveSegments
         ?: try {
             com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepository.getInstance(application).liveSegments
@@ -496,6 +502,44 @@ class TrackingTabsViewModel(
         viewModelScope.launch {
             trackingViewsRepository.updateShowBikeBell(tabViewId, show)
         }
+    }
+
+    /**
+     * Calibrates altimeter reading manually from tracking cockpit (REQ-TRK-047).
+     * Optionally saves/updates landmark to Known Locations with ElevationSource.MANUAL_USER.
+     */
+    fun calibrateAltitude(
+        referenceAltitudeMeters: Double,
+        locationName: String? = null,
+        saveAsKnownLocation: Boolean = false
+    ) {
+        if (saveAsKnownLocation) {
+            val location = banalServiceRepository.currentLocation.value
+            if (location != null) {
+                viewModelScope.launch(Dispatchers.IO) {
+                    val finalName = if (!locationName.isNullOrBlank()) {
+                        locationName
+                    } else {
+                        LocationNameResolver.resolveLocationName(
+                            getApplication(),
+                            location.latitude,
+                            location.longitude
+                        )
+                    }
+                    val db = KnownLocationsDatabaseManager.getInstance(getApplication())
+                    db.upsertLocationByGeofence(
+                        location,
+                        referenceAltitudeMeters,
+                        finalName,
+                        ExtremaType.START,
+                        ElevationSource.MANUAL_USER,
+                        true
+                    )
+                    knownLocationsRepo?.loadLocations()
+                }
+            }
+        }
+        banalServiceRepository.calibrateAltimeter(referenceAltitudeMeters)
     }
 }
 

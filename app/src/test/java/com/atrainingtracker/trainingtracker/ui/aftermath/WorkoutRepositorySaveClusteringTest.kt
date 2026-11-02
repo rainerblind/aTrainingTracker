@@ -18,6 +18,8 @@ package com.atrainingtracker.trainingtracker.ui.aftermath
 import android.app.Application
 import android.content.IntentFilter
 import android.util.Log
+import androidx.arch.core.executor.ArchTaskExecutor
+import androidx.arch.core.executor.TaskExecutor
 import androidx.core.content.ContextCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.atrainingtracker.banalservice.BSportType
@@ -53,6 +55,12 @@ class WorkoutRepositorySaveClusteringTest {
 
     @Before
     fun setUp() {
+        ArchTaskExecutor.getInstance().setDelegate(object : TaskExecutor() {
+            override fun executeOnDiskIO(runnable: Runnable) = runnable.run()
+            override fun postToMainThread(runnable: Runnable) = runnable.run()
+            override fun isMainThread(): Boolean = true
+        })
+
         mockkStatic(Log::class)
         every { Log.d(any<String>(), any<String>()) } returns 0
         every { Log.i(any<String>(), any<String>()) } returns 0
@@ -86,6 +94,7 @@ class WorkoutRepositorySaveClusteringTest {
 
     @After
     fun tearDown() {
+        ArchTaskExecutor.getInstance().setDelegate(null)
         WorkoutRepository.resetForTesting(null)
         WorkoutClusterEngine.resetForTesting(null)
         unmockkAll()

@@ -1031,12 +1031,16 @@
     <string name="workout_periods__longest_workout">Längste Einheit</string>
     <string name="workout_periods__region_format">Region %1$d (%2$d)</string>
     <string name="workout_periods__primary_region_format">Hauptregion: Region %1$d (%2$d)</string>
+    <string name="workout_periods__named_region_format">%1$s (%2$d)</string>
+    <string name="workout_periods__primary_named_region_format">Hauptregion: %1$s (%2$d)</string>
     <string name="workout_periods__all_regions_format">Alle Regionen (%1$d)</string>
     <string name="workout_periods__migration_title">Optimiere Verlaufs-Datenbank…</string>
     <string name="workout_periods__migration_querying">Lade Trainingsverlauf…</string>
     <string name="workout_periods__migration_reading">Lese Training %1$d von %2$d…</string>
     <string name="workout_periods__migration_syncing">Synchronisiere %1$s…</string>
     <string name="workout_periods__migration_finalizing">Berechne Jahreswerte…</string>
+    <string name="workout_periods__yearly_activity_grid">Jahresaktivität</string>
+    <string name="workout_periods__no_activity">Keine Aktivität</string>
 
     <!-- share screenshots -->
     <string name="share">Teilen</string>
@@ -1919,6 +1923,7 @@
     <string name="map_layer_segments">Segmente</string>
     <string name="map_layer_locations">Lieblingsorte</string>
     <string name="map_layer_track">Aufzeichnung</string>
+    <string name="map_layer_clusters">Lieblingsstrecken</string>
     <string name="ant_dialog_view_status">ANT+ Status anzeigen</string>
     <string name="ant_dialog_dismiss">Verstanden</string>
 
@@ -1997,17 +2002,18 @@
     <string name="auto_pause_title">Auto-Pause</string>
     <string name="tuning_auto_pause_title">Auto-Pause</string>
     <string name="tuning_auto_pause_desc">Aufzeichnung bei Stillstand automatisch pausieren</string>
+    <string name="tuning_auto_pause_enable_title">Auto-Pause aktivieren</string>
     <string name="tuning_auto_pause_bike_title">Radfahren</string>
     <string name="tuning_auto_pause_run_title">Laufen</string>
     <string name="tuning_auto_pause_other_title">Andere Sportarten</string>
-    <string name="tuning_auto_pause_speed_threshold_title">Mindestgeschwindigkeit für Pause</string>
-    <string name="tuning_auto_pause_speed_threshold_desc">Geschwindigkeit, unter der die Aufzeichnung pausiert wird</string>
+    <string name="tuning_auto_pause_speed_threshold_title">Geschwindigkeitsschwelle</string>
+    <string name="tuning_auto_pause_speed_threshold_desc">Unterhalb wird pausiert, oberhalb wird fortgesetzt</string>
     <string name="tuning_auto_pause_debounce_title">Verzögerung bis zur Pause</string>
     <string name="tuning_auto_pause_debounce_desc">Dauer unterhalb der Schwelle, bevor pausiert wird</string>
     <string name="tuning_auto_pause_resume_debounce_title">Verzögerung bis zur Fortsetzung</string>
     <string name="tuning_auto_pause_resume_debounce_desc">Dauer oberhalb der Schwelle, bevor fortgesetzt wird</string>
     <string name="tuning_auto_pause_start_in_auto_pause_title">Im Auto-Pause-Modus starten</string>
-    <string name="tuning_auto_pause_start_in_auto_pause_desc">Beginnt beim Starten einer Aufzeichnung im Stillstand direkt in der Auto-Pause, bis Bewegung erkannt wird</string>
+    <string name="tuning_auto_pause_start_in_auto_pause_desc">Beginnt beim Starten einer Aufzeichnung im Stillstand direkt in der Auto-Pause, bis Bewegung erkannt wird. Gilt für alle Sportarten.</string>
     <string name="tuning_speed_value_format">%1$d %2$s</string>
     <string name="tuning_seconds_value_format">%1$d s</string>
     <string name="cockpit_auto_pause_badge">Auto-Pause</string>
@@ -2261,4 +2267,42 @@
     <string name="sensor_field_display_elements_title">Anzeigeelemente</string>
     <string name="sensor_field_show_value">Wert</string>
     <string name="sensor_field_show_bar">Balken</string>
+
+    <!-- Sensor Field Width & Row Split (ATT-4861, REQ-UI-437) -->
+    <string name="sensor_field_width_title">Breitenverhältnis</string>
+    <string name="sensor_field_row_split_presets">Zeilenaufteilung</string>
+    <string name="sensor_field_relative_weight">Relative Breite</string>
+
+    <!-- Zone History (ATT-4844, REQ-SET-082) -->
+    <string name="zone_history_title">Zonenhistorie</string>
+    <string name="zone_history_action_history">Historie</string>
+    <string name="zone_history_add_snapshot">Historischen Snapshot hinzufügen</string>
+    <string name="zone_history_edit_snapshot">Zonen-Snapshot bearbeiten</string>
+    <string name="zone_history_delete_title">Zonen-Snapshot löschen?</string>
+    <string name="zone_history_delete_message">Zonen-Snapshot vom %1$s löschen?</string>
+    <string name="zone_history_empty">Noch keine historischen Zonen-Snapshots vorhanden.</string>
+    <string name="zone_history_date_label">Gültig ab</string>
+    <string name="zone_history_save_snapshot">Snapshot speichern</string>
+    <string name="zone_history_error_monotonic">Schwellenwerte müssen streng aufsteigend sein (%1$s)</string>
+
+    <!-- Manual Altitude Calibration (ATT-4845, REQ-TRK-047) -->
+    <string name="altitude_calibration_title">Höhe kalibrieren</string>
+    <string name="altitude_calibration_reference_label">Referenzhöhe</string>
+    <string name="altitude_calibration_location_name">Standortname (optional)</string>
+    <string name="altitude_calibration_save_location">Als Lieblingsort speichern</string>
+    <string name="altitude_calibration_action">Kalibrieren</string>
+    <string name="altitude_calibrated_success">Höhe auf %1$s kalibriert</string>
+
+    <!-- Altitude From Position DEM (ATT-4859, REQ-SEN-025) -->
+    <string name="device_type_altitude_from_position">Höhe aus Position (DEM)</string>
+    <string name="device_type_short_altitude_from_position">Höhe (DEM)</string>
+    <string name="devices_altitude_from_position">Topografische Höhe (DEM)</string>
+    <string name="devices_altitude_from_position_description">Kontinuierliche Höhe aus GPS-Position, zwischengespeicherten Strecken und Online-DEM-Daten.</string>
+
+    <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
+    <string name="itpms_slow_puncture_alert_title">Schleichender Plattfuß erkannt</string>
+    <string name="itpms_slow_puncture_alert_message">Effektiver Radumfang um %1$s gesunken. Reifendruck sofort prüfen.</string>
+    <string name="itpms_low_pressure_reminder_title">Niedriger Reifendruck</string>
+    <string name="itpms_low_pressure_reminder_message">Radumfang liegt %1$s unter dem Basiswert. Bitte Reifen aufpumpen.</string>
+    <string name="itpms_alert_dismiss">Verwerfen</string>
 </resources>

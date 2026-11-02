@@ -208,18 +208,22 @@ class AutoPauseManager(
 
         /**
          * Evaluates whether a workout should start directly in [AutoPauseState.AUTO_PAUSED]
-         * (REQ-TRK-044, ATT-4840).
+         * (REQ-TRK-044, ATT-4840, ATT-4925).
          *
-         * Returns true if and only if [AutoPauseConfig.startInAutoPauseEnabled] is true,
+         * Returns true if and only if [hasSpeedSource] is true, [AutoPauseConfig.startInAutoPauseEnabled] is true,
          * auto-pause is enabled for [sportType], and [currentSpeedMps] is below the sport's
-         * configured pause speed threshold (or null/invalid/0.0 m/s stationary).
+         * configured pause speed threshold (or null/invalid/0.0 m/s stationary while speed source is registered).
+         * When [hasSpeedSource] is false (e.g. indoor workout without speed sensors), returns false immediately.
          */
         @JvmStatic
+        @JvmOverloads
         fun shouldStartInAutoPause(
             config: AutoPauseConfig,
             sportType: BSportType,
-            currentSpeedMps: Double?
+            currentSpeedMps: Double?,
+            hasSpeedSource: Boolean = false
         ): Boolean {
+            if (!hasSpeedSource) return false
             if (!config.startInAutoPauseEnabled) return false
             if (!config.isEnabledForSport(sportType)) return false
             val threshold = config.getSpeedThresholdForSport(sportType)
@@ -397,11 +401,21 @@ class AutoPauseManager(
                     newState = AutoPauseState.SENSOR_LOST,
                     auditLogEvent = "SENSOR_LOST_STALE_TTL_EXCEEDED"
                 )
+            } else if (currentState == AutoPauseState.AUTO_PAUSED && !hasSpeedSource) {
+                currentState = AutoPauseState.SENSOR_LOST
+                debounceCounter = 0
+                sensorLostRecoveryTicks = 0
+                return AutoPauseTransition(
+                    previousState = prevState,
+                    newState = AutoPauseState.SENSOR_LOST,
+                    triggerResume = true,
+                    auditLogEvent = "SENSOR_LOST_SPEED_SOURCE_REMOVED"
+                )
             } else if (currentState == AutoPauseState.SENSOR_LOST) {
                 sensorLostRecoveryTicks = 0
                 return AutoPauseTransition(previousState = prevState, newState = AutoPauseState.SENSOR_LOST)
             }
-            // If already AUTO_PAUSED, remain AUTO_PAUSED
+            // If already AUTO_PAUSED and hasSpeedSource is true (corrupt numeric reading), remain AUTO_PAUSED
             return AutoPauseTransition(previousState = prevState, newState = currentState)
         }
 

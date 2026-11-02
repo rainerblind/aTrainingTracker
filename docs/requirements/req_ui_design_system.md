@@ -7998,37 +7998,43 @@ c. Span distance consistency: $
 
 **Invariants**: Telemetry stationarity, semi-transparency, touch pass-through, and 100% unit test pass rate MUST NOT be broken.
 
-### REQ-UI-322: General Map Layer Visibility Controls & Dynamic Decluttering Menu [`TST-UI-282`]
-- **Tests**: `MapScreenWithTrack.kt`, `MapFragmentWithTrackViewModel.kt`, `GeneralMapLayer.kt`
-- **Implementation**: Dynamic visibility controls for general map spatial layers via floating Layers button and dropdown menu, conditional ATrainingTrackerMap layer composition, and preference persistence.
-- **Rationale**: The system SHALL provide dynamic visibility controls for general map spatial layers via a floating Layers button and Material 3 dropdown menu in `MapScreenWithTrack.kt`, conditional layer composition in `ATrainingTrackerMap`, and preference persistence in `MapFragmentWithTrackViewModel` (ATT-2931, amending and complementing `REQ-UI-180` and `REQ-UI-308`):
+### REQ-UI-322: General Map Layer Visibility Controls & Dynamic Decluttering Menu [`TST-UI-282`] [Verified]
+- **Tests**: `MapScreenWithTrack.kt`, `MapFragmentWithTrackViewModel.kt`, `GeneralMapLayer.kt`, `TrackingViewModel.kt`, `SensorGridScreen.kt`
+- **Implementation**: Dynamic visibility controls for general map spatial layers via floating Layers button and dropdown menu, conditional ATrainingTrackerMap layer composition, preference persistence, and Cockpit tracking map integration.
+- **Rationale**: The system SHALL provide dynamic visibility controls for general map spatial layers via a floating Layers button and Material 3 dropdown menu in `MapScreenWithTrack.kt`, conditional layer composition in `ATrainingTrackerMap`, preference persistence in `MapFragmentWithTrackViewModel`, and Lieblingsstrecken rendering on the Cockpit map in `SensorGridScreen.kt` (ATT-2931, ATT-4847, amending and complementing `REQ-UI-180`, `REQ-UI-308`, and `REQ-MAP-051`):
 1. *Layer Model (`GeneralMapLayer`)*:
-• The system SHALL define `enum class GeneralMapLayer` in `com.atrainingtracker.trainingtracker.ui.map` declaring exactly four layer types: `ROUTES`, `SEGMENTS`, `KNOWN_LOCATIONS`, and `TRACK`.
+• The system SHALL define `enum class GeneralMapLayer` in `com.atrainingtracker.trainingtracker.ui.map` declaring five layer types: `ROUTES`, `SEGMENTS`, `KNOWN_LOCATIONS`, `TRACK`, and `CLUSTERS`.
 2. *ViewModel State & Persistence (`MapFragmentWithTrackViewModel.kt`)*:
 • `MapFragmentWithTrackViewModel` SHALL expose `val enabledLayers: StateFlow<Set<GeneralMapLayer>>`.
 • On initial instantiation, `MapFragmentWithTrackViewModel` SHALL restore enabled layers from `SharedPreferences` (`PREF_GENERAL_MAP_ENABLED_LAYERS`).
 • If no preferences are stored, the system SHALL default to enabling all layers (`GeneralMapLayer.entries.toSet()`).
 • `MapFragmentWithTrackViewModel` SHALL provide `fun toggleLayer(layer: GeneralMapLayer)`.
 • Toggling a layer SHALL immediately emit the updated set in `enabledLayers` and commit the updated string set to `SharedPreferences`.
+• `MapFragmentWithTrackViewModel` SHALL subscribe to `WorkoutClusterRepository.allClusters`, decode and memoize representative polylines into `MapCluster` instances with referential stability, and expose them via `MapFragmentUIState.clusters`.
 3. *Ergonomic Floating Layers Button & Dropdown Menu (`MapScreenWithTrack.kt`)*:
 • `MapScreenWithTrack.kt` SHALL wrap `ATrainingTrackerMap` in a `Box(modifier = Modifier.fillMaxSize())` inside the `BottomSheetScaffold` body.
 • `MapScreenWithTrack.kt` SHALL render a floating circular button at `Alignment.TopEnd` with `.statusBarsPadding().padding(top = 16.dp, end = 16.dp)`.
 • The button SHALL be a `Surface` with `size = 44.dp`, `shape = CircleShape`, `color = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay)`, `shadowElevation = 6.dp`, and `tonalElevation = 2.dp`.
 • The button SHALL contain an `Icon` with `Icons.Default.Layers` (`size = 22.dp`), whose tint dynamically resolves to `MaterialTheme.colorScheme.primary` when any layer is disabled (`enabledLayers.size < GeneralMapLayer.entries.size`) or `MaterialTheme.colorScheme.onSurface` when all layers are enabled.
 • Clicking the button SHALL open a Material 3 `DropdownMenu` styled consistently with `TrackOnMapScreen.kt` and `RouteOnMapScreen.kt`.
-• The dropdown menu SHALL render four `DropdownMenuItem` entries with checkbox, color legend swatch (`12.dp`, `RoundedCornerShape(2.dp)`: Routes = `TTColor.RouteSelected`, Segments = `TTColor.StravaOrange`, Locations = `MaterialTheme.colorScheme.tertiary`, Track = `TrackType.BEST.color`), and localized text label.
+• The dropdown menu SHALL render five `DropdownMenuItem` entries with checkbox, color legend swatch (`12.dp`, `RoundedCornerShape(2.dp)`: Routes = `TTColor.RouteSelected`, Segments = `TTColor.StravaOrange`, Locations = `MaterialTheme.colorScheme.tertiary`, Track = `TrackType.BEST.color`, Clusters = `TTColor.Cluster`), and localized text label.
 4. *Conditional Map Canvas Layer Composition*:
-• In `ATrainingTrackerMap`'s content scope: `knownLocations()`, `segments()`, `routes()`, and `markers()` + `liveTrack()` SHALL only be composed when their corresponding `GeneralMapLayer` is present in `enabledLayers`.
-5. *100% 9-Language Localization Parity*:
-• String resources `map_layers`, `map_layer_routes`, `map_layer_segments`, `map_layer_locations`, `map_layer_track` SHALL be externalized and translated across all 9 supported application locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).
-6. *Preservation of System Invariants*:
+• In `ATrainingTrackerMap`'s content scope: `knownLocations()`, `segments()`, `routes()`, `clusters()`, and `markers()` + `liveTrack()` SHALL only be composed when their corresponding `GeneralMapLayer` is present in `enabledLayers`.
+• Tapping a cluster path SHALL open `ClusterOnMapSheet` displaying cluster summary (name, sport, distance, hit count).
+5. *Cockpit Live Tracking Map Integration (`TrackingViewModel.kt`, `SensorGridScreen.kt`)*:
+• `TrackingMapState` SHALL expose `val mapClusters: List<MapCluster> = emptyList()`.
+• `TrackingViewModel` SHALL integrate `WorkoutClusterRepository.allClusters` into `staticMapLayerFlow` via `distinctUntilChanged()`, decoupled from 1-Hz GPS and telemetry emissions to strictly prevent polyline reallocations.
+• `TrackingMapContainer` in `SensorGridScreen.kt` SHALL render `clusters(mapState.mapClusters)` on `ATrainingTrackerMap`.
+6. *100% 9-Language Localization Parity*:
+• String resources `map_layers`, `map_layer_routes`, `map_layer_segments`, `map_layer_locations`, `map_layer_track`, and `map_layer_clusters` SHALL be externalized and translated across all 9 supported application locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).
+7. *Preservation of System Invariants*:
 • Entity selection bottom sheets, background GPS tracking, start marker detection, and 100% test pass rate MUST be strictly preserved.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement (`REQ-UI-322`), amending and complementing `REQ-UI-180` (*Display Favorite Locations on Central Navigation Map*) and `REQ-UI-308` (*Route Map Overlay Layer Visibility Controls*).
-2. *Historical Origin & Commit Trace*: Ticket `ATT-1449` (Sprint 2026-40.4) and Ticket `ATT-2763` (Sprint 2026-41.4).
-3. *Root Reason for Existing Formulation*: Spatial layers were previously composed unconditionally on the general map. As routes, segments, and favorite locations accumulated, the map canvas suffered from severe visual crowding.
-4. *Preservation of Core Invariants*: Full touch target compliance (>= 48dp), entity detail sheet inspection, live track recording, and 100% test pass rate remain strictly preserved.
+1. *Original Requirement ID & Target*: Net-new requirement (`REQ-UI-322`), amending and complementing `REQ-UI-180` (*Display Favorite Locations on Central Navigation Map*) and `REQ-UI-308` (*Route Map Overlay Layer Visibility Controls*). Amended under `ATT-4847` to include `CLUSTERS` layer and Cockpit live tracking map integration.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-1449` (Sprint 2026-40.4), Ticket `ATT-2763` (Sprint 2026-41.4), and Ticket `ATT-4847` (Sprint 2026-44.2).
+3. *Root Reason for Existing Formulation*: Spatial layers were previously composed unconditionally on the general map. As routes, segments, and favorite locations accumulated, the map canvas suffered from severe visual crowding. Clusters were originally omitted because favorite route clusters (`ATT-176`) were only visible in post-workout cluster views.
+4. *Preservation of Core Invariants*: Full touch target compliance (>= 48dp), entity detail sheet inspection, live track recording, referential polyline stability per `REQ-MAP-051`, and 100% test pass rate remain strictly preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* the athlete viewing `MapScreenWithTrack`,
@@ -8036,15 +8042,18 @@ c. Span distance consistency: $
 • *Then* a floating layers button (`Icons.Default.Layers`) is visible at `Alignment.TopEnd` with `statusBarsPadding().padding(top = 16.dp, end = 16.dp)`.
 • *Given* the athlete taps the layers button,
 • *When* the dropdown menu opens,
-• *Then* checkboxes for Routes, Segments, Favorite Locations, and Recorded Track are displayed with color legend swatches and localized labels.
+• *Then* checkboxes for Routes, Segments, Favorite Locations, Favorite Tracks / Clusters, and Recorded Track are displayed with color legend swatches and localized labels.
 • *Given* an unchecked layer in the dropdown menu,
 • *When* observing the map canvas,
 • *Then* that layer's elements are immediately hidden without disturbing other active layers or background tracking.
 • *Given* modified layer visibility preferences,
 • *When* restarting the application or returning to the map,
 • *Then* the layer selection state is restored from `SharedPreferences`.
+• *Given* the athlete viewing the Cockpit map during preview or live tracking,
+• *When* favorite route clusters exist in `WorkoutClusterRepository`,
+• *Then* their representative polylines are rendered on `ATrainingTrackerMap` without 1-Hz reallocation.
 
-**Invariants**: Detail sheet inspection, live GPS tracking, start marker detection, and 100% test pass rate MUST NOT be broken.
+**Invariants**: Detail sheet inspection, live GPS tracking, start marker detection, referential polyline stability (`REQ-MAP-051`), and 100% test pass rate MUST NOT be broken.
 
 ### REQ-UI-323: Material 3 Compose Migration for ANT Missing Adapter and Missing Dependency Alerts with Direct ANT+ Status Sheet Integration [TST-UI-283]
 - **Tests**: AntAlertDialogs.kt, MainActivityWithNavigation.kt, ATrainingTrackerApp.kt
@@ -12566,40 +12575,125 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 
 ### REQ-UI-436: Active Training Zone Segment Height Emphasis & Bar-Only Sizing [Verified]
-- **Tests**: `TST-UI-436` | **Tickets**: `ATT-4860`
+- **Tests**: `TST-UI-436` | **Tickets**: `ATT-4860`, `ATT-4928`
 - **Implementation**: `ZoneGaugeBar.kt`, `SensorFieldView.kt`, `PedalPowerBalanceBar.kt`, `WPrimeBatteryGaugeBar.kt`
-- **Rationale**: In glance-based peripheral vision during athletic workouts, the active training zone segment in `ZoneGaugeBar` SHALL be visually prominent by elevating its vertical height relative to inactive segments, and when a sensor field is configured in bar-only mode (`showValue = false, showBar = true`), bars SHALL dynamically scale their height according to tile `ViewSize` to cleanly fill available vertical card space (ATT-4860, Parent Epic ATT-355, extending `REQ-UI-376`, `REQ-UI-390`, and `REQ-TRK-046`):
+- **Rationale**: In glance-based peripheral vision during athletic workouts, the active training zone segment in `ZoneGaugeBar` SHALL be visually prominent by elevating its vertical height relative to inactive segments, and when a sensor field is configured in bar-only mode (`showValue = false, showBar = true`), bars SHALL dynamically scale their height according to tile `ViewSize` to cleanly fill available vertical card space (ATT-4860, Parent Epic ATT-355, extending `REQ-UI-376`, `REQ-UI-390`, and `REQ-TRK-046`). Furthermore, outer container heights SHALL remain strictly constant across live vs. stale/null telemetry states to prevent cockpit tile and grid height jumps (ATT-4928):
 1. *Active Zone Height & Geometry Emphasis (`REQ-UI-436.1`)*:
-• In `ZoneGaugeBar.kt`, when a valid zone is active (`state.activeZoneIndex != null` and in `1..segmentColors.size`), the active zone segment (`index == state.activeZoneIndex - 1`) SHALL be rendered vertically elevated with height equal to $1.6\times$ `trackHeight` (`activeTrackHeight = trackHeight * 1.6f`), centered vertically within the track container, with rounded corner radius (`CornerRadius(activeTrackHeight / 4)`).
+• In `ZoneGaugeBar.kt`, the outer container height (`totalBarHeight`) SHALL unconditionally reserve the elevated track height plus needle overhang (`calculateReservedActiveTrackHeight(trackHeight) + 4.dp`, where `calculateReservedActiveTrackHeight(trackHeight) = trackHeight * 1.6f`), strictly invariant of telemetry staleness or active zone state (ATT-4928).
+• The horizontal base track (`height = trackHeight`) SHALL be centered vertically within the reserved container.
+• When a valid zone is active (`state.activeZoneIndex != null` and in `1..segmentColors.size`) and telemetry is live (`!isStale`), the active zone segment (`index == state.activeZoneIndex - 1`) SHALL be rendered vertically elevated with height equal to $1.6\times$ `trackHeight` (`activeTrackHeight = calculateReservedActiveTrackHeight(trackHeight)`), centered vertically within the track container, with rounded corner radius (`CornerRadius(activeTrackHeight / 4)`).
 2. *Inactive & Stale Segment Behavior (`REQ-UI-436.2`)*:
 • Inactive zone segments SHALL be rendered with standard un-elevated `trackHeight`.
-• When telemetry is stale or null (`state.activeZoneIndex == null`), all segments SHALL be rendered at uniform base `trackHeight` with `0.35f` dimmed alpha.
+• When telemetry is stale or null (`state.needleFraction == null` or `state.activeZoneIndex == null`), all segments SHALL be rendered at uniform base `trackHeight` with `0.35f` dimmed alpha without changing outer container height `totalBarHeight`.
 3. *Needle Span Synchronization (`REQ-UI-436.3`)*:
-• The Primary Blue needle overlay and its contrasting halo outline SHALL span the full container height (`activeTrackHeight + 4.dp`), ensuring it cleanly covers and extends 2dp above and below the elevated active segment.
+• The Primary Blue needle overlay and its contrasting halo outline SHALL span the full reserved container height (`calculateReservedActiveTrackHeight(trackHeight) + 4.dp`), ensuring it cleanly covers and extends 2dp above and below the elevated active segment.
 4. *Dynamic Height Scaling in Bar-Only Mode (`REQ-UI-436.4`)*:
 • In `SensorFieldView.kt`, when a sensor field is in bar-only mode (`!fieldState.showValue && fieldState.showBar`), horizontal telemetry bars SHALL scale their heights with `fieldState.viewSize`:
   - `ZoneGaugeBar`: `SMALL = 10.dp`, `NORMAL = 14.dp`, `LARGE = 18.dp`, `EXTRA_LARGE = 22.dp` (vs standard `4.dp`, `6.dp`, `8.dp`, `10.dp`).
   - `PedalPowerBalanceBar`: `SMALL = 12.dp`, `NORMAL = 16.dp`, `LARGE = 20.dp`, `EXTRA_LARGE = 24.dp` (vs standard `6.dp`, `8.dp`, `10.dp`, `12.dp`).
   - `WPrimeBatteryGaugeBar`: `SMALL = 14.dp`, `NORMAL = 20.dp`, `LARGE = 26.dp`, `EXTRA_LARGE = 32.dp` (vs standard `16.dp`).
+5. *Component Height Invariance & Leftover Hygiene (`REQ-UI-436.5`)*:
+• `PedalPowerBalanceBar` and `WPrimeBatteryGaugeBar` SHALL maintain strictly constant vertical heights across live vs stale/null states.
+• Obsolete overloads (`calculateActiveTrackHeight(baseTrackHeight: Dp, isActive: Boolean)`) in `ZoneGaugeBar.kt` and commented-out height overrides (`// .height(W_PRIME_BATTERY_GAUGE_HEIGHT)`) in `WPrimeBatteryGaugeBar.kt` SHALL be removed (ATT-4928).
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-436`, extending `REQ-UI-376` (Zone Gauge Bar), `REQ-UI-390` (Proportional Zone Track Scaling), and `REQ-TRK-046` (Per-Field Element Display Configuration).
-2. *Historical Origin & Commit Trace*: `ATT-1293` (commit `3e78df12`), `ATT-3708` (commit `69df2531`), `ATT-4841` (commit `0ea00b1d`).
-3. *Root Reason for Existing Formulation*: `ZoneGaugeBar` originally clipped all segments inside a single uniform outer `Box(height = trackHeight)`. Introducing active zone emphasis requires per-segment height differentiation while preserving outer proportional horizontal weights.
-4. *Preservation of Core Invariants*: Proportional segment weights (`state.segmentWeights`), needle interpolation math (`ZoneGaugeMath`), 0.35 stale alpha, and bottom `"Z1"`..`"Z7"` badges remain 100% preserved.
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-436`, extending `REQ-UI-376` (Zone Gauge Bar), `REQ-UI-390` (Proportional Zone Track Scaling), and `REQ-TRK-046` (Per-Field Element Display Configuration). Refined in `ATT-4928` for container height invariance across live and stale states.
+2. *Historical Origin & Commit Trace*: `ATT-1293` (commit `3e78df12`), `ATT-3708` (commit `69df2531`), `ATT-4841` (commit `0ea00b1d`), `ATT-4860` (commit `9d5fd7ff`).
+3. *Root Reason for Existing Formulation*: `ZoneGaugeBar` originally clipped all segments inside a single uniform outer `Box(height = trackHeight)`. Introducing active zone emphasis required per-segment height differentiation, but `ATT-4860` conditionally shrank `totalBarHeight` to `trackHeight + 4.dp` when stale, causing sensor card height jumps.
+4. *Preservation of Core Invariants*: Proportional segment weights (`state.segmentWeights`), needle interpolation math (`ZoneGaugeMath`), 0.35 stale alpha, visual 1.6x active elevation when live, and bottom `"Z1"`..`"Z7"` badges remain 100% preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* `ZoneGaugeBar` rendering an active workout in Zone 3 (`activeZoneIndex = 3`),
 • *When* the track segments are drawn,
-• *Then* segment index 2 renders with height $1.6\times$ `trackHeight` and rounded corners, while segments 0, 1, 3, and 4 render at `trackHeight`.
-• *Given* `ZoneGaugeBar` with stale or null telemetry (`activeZoneIndex = null`),
-• *When* the track is drawn,
-• *Then* all segments render with uniform `trackHeight` and `0.35f` opacity.
+• *Then* segment index 2 renders with height $1.6\times$ `trackHeight` and rounded corners, while segments 0, 1, 3, and 4 render at `trackHeight`, within reserved container height $1.6\times \text{trackHeight} + 4\text{dp}$.
+• *Given* `ZoneGaugeBar` transitioning from live telemetry to stale or null telemetry (`needleFraction == null`),
+• *When* the component recomposes,
+• *Then* the measured outer container height remains 100% invariant ($1.6\times \text{trackHeight} + 4\text{dp}$) and all segments render with uniform `trackHeight` and `0.35f` opacity.
 • *Given* a sensor field with `showValue = false` and `showBar = true` in `ViewSize.NORMAL`,
 • *When* `SensorFieldView` renders the card,
 • *Then* the gauge track height is scaled to 14.dp instead of 6.dp.
 
-**Invariants**: Zero regression in stale/null handling, True-Black AMOLED compliance, and 100% clean-room test pass rate.
+**Invariants**: Zero layout jump when switching between live and stale telemetry, zero regression in stale/null handling, True-Black AMOLED compliance, and 100% clean-room test pass rate.
+
+
+### REQ-UI-437: User-Configurable Horizontal Width Ratios & Split Presets in Cockpit Sensor Grid [Verified]
+- **Tests**: `TST-UI-437` | **Tickets**: `ATT-4861`
+- **Implementation**: `TrackingViewsDatabaseManager.java`, `DatabaseSchemaRegistry.kt`, `TrackingViewsRepository.kt`, `SensorFieldState.kt`, `SensorGridScreen.kt`, `EditSensorFieldDialog.kt`, `EditSensorFieldViewModel.kt`
+- **Rationale**: In multi-column cockpit rows, side-by-side sensor fields have historically been forced to equal width (`1/2 : 1/2` or `1/3 : 1/3 : 1/3`) via hardcoded `Modifier.weight(1f)`. Asymmetric layouts—such as a wide `3/4` Power Zone Bar paired with a compact `1/4` numeric value readout—require user-configurable horizontal width ratios, backward-compatible persistence, and proportional Compose rendering (ATT-4861, Parent Epic ATT-355, extending `REQ-UI-200` and `REQ-TRK-046`):
+1. *SQLite Schema v17 & DTO Weight Persistence (`REQ-UI-437.1`)*:
+• In `TrackingViewsDatabaseManager.java`, `LayoutRowsTable` SHALL include a `ColWeight real DEFAULT 1.0` column, bumping `DB_VERSION` to 17.
+• Database upgrade from v16 to v17 SHALL add `ColWeight` and backfill `ColWeight = 1.0` for all existing records.
+• `DatabaseSchemaRegistry.kt` SHALL register version 17 for `TrackingViews.db` and `FlexibleGenericView.db`.
+• `SensorFieldConfig` and `SensorFieldState` SHALL include `colWeight: Float = 1.0f`, mapped symmetrically across all cursor mapping pathways.
+2. *Proportional Weight Cockpit Rendering (`REQ-UI-437.2`)*:
+• In `SensorGridScreen.kt`, multi-column rows in `SensorGridContent`, landscape row packing, and configuration mode SHALL apply `Modifier.weight(effectiveWeight)`.
+• Runtime layout code SHALL guard `effectiveWeight = if (fieldState.colWeight > 0f) fieldState.colWeight else 1.0f`, preventing `IllegalArgumentException` from zero or negative weights.
+• Single-field rows SHALL span full row width.
+3. *User Configuration UI in Edit Dialog (`REQ-UI-437.3`)*:
+• In `EditSensorFieldDialog.kt` / `EditSensorFieldViewModel.kt`, when editing a field sharing a row with exactly one other field, the UI SHALL provide quick 2-field row split presets: `3/4 : 1/4`, `2/3 : 1/3`, `1/2 : 1/2`, `1/3 : 2/3`, `1/4 : 3/4`.
+• Selecting a row split preset SHALL set the corresponding weights on both the current field and its sibling in the row, and persist both to `TrackingViews.db`.
+• The dialog SHALL also support individual relative weight selection (e.g. 1x, 2x, 3x).
+4. *9-Language Localization Parity (`REQ-UI-437.4`)*:
+• String resources for width ratio section titles and presets SHALL maintain complete parity across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-437`, extending `REQ-UI-200` (Grid Normalization & Editing) and `REQ-TRK-046` (Per-Field Element Display). Targets `TrackingViewsDatabaseManager.java`, `DatabaseSchemaRegistry.kt`, `TrackingViewsRepository.kt`, `SensorFieldState.kt`, `SensorGridScreen.kt`, `EditSensorFieldDialog.kt`, and `EditSensorFieldViewModel.kt`.
+2. *Historical Origin & Commit Trace*: Commit `a6920388` introduced Jetpack Compose sensor grid with hardcoded `Modifier.weight(1f)`.
+3. *Root Reason for Existing Formulation*: Equal horizontal width distribution was sufficient for uniform numeric readouts prior to the introduction of graphical zone bars and gauges.
+4. *Preservation of Core Invariants*: Defaulting `ColWeight = 1.0` preserves 100% backward compatibility for existing 1:1 and 1:1:1 grid layouts without visual regression.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* two sensor fields placed side by side in the same cockpit row,
+• *When* the user configures the row to preset `3/4 : 1/4`,
+• *Then* the left field renders across 75% and the right field across 25% of row width in both configuration and tracking modes, persisted across app restarts.
+• *Given* an existing database upgraded from schema v16 to v17,
+• *When* rows are loaded,
+• *Then* `ColWeight` defaults to 1.0f and existing equal-width layouts remain unchanged.
+• *Given* a sensor field with an invalid or zero weight ($\le 0f$),
+• *When* rendered in Compose,
+• *Then* the layout engine safely clamps to 1.0f without crashing.
+
+**Invariants**: Backward compatibility for existing layouts, zero Compose runtime crash risk ($weight > 0f$), 9-language localization parity, and 100% clean-room test pass rate.
+
+
+### REQ-UI-438: Vertical Card Height and Border Stretching in Cockpit Sensor Grid [Verified]
+- **Tests**: `TST-UI-438` | **Tickets**: `ATT-4878`
+- **Implementation**: `SensorGridScreen.kt`, `SensorFieldView.kt`
+- **Rationale**: In multi-column cockpit rows, fields of different sizes (e.g. `SMALL` and `LARGE`) or differing layouts (numeric readout next to a zone gauge bar) share a row wrapped in `Row(modifier = Modifier.height(IntrinsicSize.Min))`. Currently, intermediate `Box` wrappers and `SensorFieldView` `Card` omit `.fillMaxHeight()`, and the inner card `Row` hardcodes `.height(IntrinsicSize.Min)`. This leaves shorter cards floating at their intrinsic minimum height with disjointed borders and misaligned indicator strips. Stretching the card height, extending borders, and vertically centering content ensures a unified, professional head-unit cockpit UI (ATT-4878, Parent Epic ATT-355, extending `REQ-UI-200` and `REQ-UI-437`):
+1. *Row Height Propagation & Container Expansion (`REQ-UI-438.1`)*:
+• In `SensorGridScreen.kt`, within multi-column sensor rows in `SensorGridContent`, landscape packing, and configuration mode, the per-cell `Box` SHALL apply `Modifier.weight(effectiveWeight).fillMaxHeight()`.
+• `SensorFieldView` SHALL receive and apply `modifier = Modifier.fillMaxHeight()` to fill the cell container height.
+2. *Full-Height Card and Border Rendering (`REQ-UI-438.2`)*:
+• In `SensorFieldView.kt`, `Card` SHALL apply `modifier.fillMaxWidth().fillMaxHeight()`.
+• The inner card layout `Row` SHALL apply `Modifier.fillMaxWidth().fillMaxHeight()` instead of `.height(IntrinsicSize.Min)`.
+• Card borders and left/right zone indicator strips (`Spacer`) SHALL span 100% of the stretched height flush with the tallest card in the row.
+3. *Vertical Content Centering with Anchored Header & Actions (`REQ-UI-438.3`)*:
+• In `SensorFieldView.kt`, the content `Column` SHALL apply `.fillMaxHeight()`, anchoring the field label and filter description `Row` to the top.
+• The sensor numeric readout, unit label, and any graphical bars/gauges (Zone Gauge, Pedal Balance, W' Anaerobic Battery) SHALL be vertically centered within the remaining card height.
+• Configuration mode action icon buttons (`IconButton`) SHALL remain docked at the bottom of the card.
+4. *Visual Parity & Clean-Room Invariants (`REQ-UI-438.4`)*:
+• Cockpit rows with identical `ViewSize` cards and single-field rows SHALL preserve existing layout geometry with zero visual regression.
+• Localization and accessibility labels SHALL maintain full parity across all 9 supported locales.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-438`, extending `REQ-UI-200` (Sensor Grid Normalization & Layout) and `REQ-UI-437` (Horizontal Width Ratios). Targets `SensorGridScreen.kt` and `SensorFieldView.kt`.
+2. *Historical Origin & Commit Trace*: Commit `a6920388` introduced initial Jetpack Compose sensor grid layout with unconstrained child card heights.
+3. *Root Reason for Existing Formulation*: Basic cell layout was designed for homogeneous numeric fields before heterogeneous sizes and graphical gauge bars were placed side by side.
+4. *Preservation of Core Invariants*: `Row(modifier = Modifier.height(IntrinsicSize.Min))` strictly preserves finite row height governed by the tallest child; `.fillMaxHeight()` only propagates this measured height to shorter siblings without expanding the parent row.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* two sensor fields of different intrinsic heights placed in the same cockpit row,
+• *When* rendered in tracking, preview, or configuration modes,
+• *Then* both cards stretch to equal height matching the tallest field in the row, with flush continuous borders and indicator strips.
+• *Given* a stretched sensor card with extra vertical space,
+• *When* laid out,
+• *Then* the header label is anchored at the top, configuration buttons are docked at the bottom, and the telemetry value/gauge is centered vertically.
+• *Given* a row of uniform-size cards or a single-column row,
+• *When* rendered,
+• *Then* the visual presentation is identical to pre-modification behavior.
+
+**Invariants**: Zero infinite height expansion, strict preservation of `IntrinsicSize.Min` on parent `Row`, vertical telemetry centering, and 100% clean-room test pass rate.
+
 
 
 

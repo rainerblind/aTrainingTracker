@@ -537,4 +537,39 @@ class ExportStatusDatabaseManagerTest {
             mockDb.delete(any(), any(), any())
         }
     }
+
+    @Test
+    fun testRecoverStuckCredentialExports_updatesMatchingRowsToWaiting() {
+        val mockCursor = mockk<android.database.Cursor>(relaxed = true)
+        every { mockCursor.moveToNext() } returns true andThen false
+        every { mockCursor.getString(0) } returns "workout_2026_01"
+
+        every {
+            mockDb.query(
+                true,
+                ExportStatusDatabaseManager.ExportStatusDbHelper.TABLE,
+                arrayOf(WorkoutSummaries.FILE_BASE_NAME),
+                any(), any(), null, null, null, null
+            )
+        } returns mockCursor
+
+        every { mockDb.inTransaction() } returns true
+        every { mockDb.update(any(), any(), any(), any()) } returns 1
+
+        val recovered = dbManager.recoverStuckCredentialExports(
+            ExportType.GOOGLE_DRIVE, "Google Drive credential is null or not linked"
+        )
+
+        assertEquals(listOf("workout_2026_01"), recovered)
+        val updatedValues = slot<ContentValues>()
+        verify(exactly = 1) {
+            mockDb.update(
+                ExportStatusDatabaseManager.ExportStatusDbHelper.TABLE,
+                capture(updatedValues),
+                any(), any()
+            )
+        }
+        assertEquals(ExportStatus.WAITING.name, contentValueStores[updatedValues.captured]?.get(ExportStatusDatabaseManager.EXPORT_STATUS))
+        assertEquals("", contentValueStores[updatedValues.captured]?.get(ExportStatusDatabaseManager.ANSWER))
+    }
 }

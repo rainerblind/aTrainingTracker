@@ -64,7 +64,10 @@ fun PeriodsTabsScreen(
     onLongestWorkoutClick: (PeriodSummary, BSportType, Long) -> Unit,
     migrationStatus: MigrationStatus? = null,
     selectedSports: Set<BSportType> = setOf(BSportType.BIKE, BSportType.RUN),
-    onToggleSportFilter: (BSportType) -> Unit = {}
+    onToggleSportFilter: (BSportType) -> Unit = {},
+    selectedMetric: PeriodBarMetric = PeriodBarMetric.DURATION,
+    onSelectMetric: (PeriodBarMetric) -> Unit = {},
+    onDayCellClick: ((PeriodSummary, BSportType, java.time.LocalDate, DailySportActivity?) -> Unit)? = null
 ) {
     PeriodsTabsScreen(
         groupedPeriods = groupedPeriods,
@@ -78,7 +81,10 @@ fun PeriodsTabsScreen(
         onLongestWorkoutClick = onLongestWorkoutClick,
         migrationStatus = migrationStatus,
         selectedSports = selectedSports,
-        onToggleSportFilter = onToggleSportFilter
+        onToggleSportFilter = onToggleSportFilter,
+        selectedMetric = selectedMetric,
+        onSelectMetric = onSelectMetric,
+        onDayCellClick = onDayCellClick
     )
 }
 
@@ -96,7 +102,10 @@ fun PeriodsTabsScreen(
     onLongestWorkoutClick: (PeriodSummary, BSportType, Long) -> Unit,
     migrationStatus: MigrationStatus? = null,
     selectedSports: Set<BSportType> = setOf(BSportType.BIKE, BSportType.RUN),
-    onToggleSportFilter: (BSportType) -> Unit = {}
+    onToggleSportFilter: (BSportType) -> Unit = {},
+    selectedMetric: PeriodBarMetric = PeriodBarMetric.DURATION,
+    onSelectMetric: (PeriodBarMetric) -> Unit = {},
+    onDayCellClick: ((PeriodSummary, BSportType, java.time.LocalDate, DailySportActivity?) -> Unit)? = null
 ) {
 
     val scope = rememberCoroutineScope()
@@ -178,6 +187,8 @@ fun PeriodsTabsScreen(
                             periods = periods,
                             currentScrollState = scrollState,
                             onBarClick = { index -> scope.launch { scrollState.animateScrollToItem(index) } },
+                            selectedMetric = selectedMetric,
+                            onMetricSelect = onSelectMetric,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 4.dp)
@@ -191,6 +202,8 @@ fun PeriodsTabsScreen(
                             onMapClick = onMapClick,
                             onSportClick = onSportClick,
                             onLongestWorkoutClick = onLongestWorkoutClick,
+                            activeMetric = selectedMetric,
+                            onDayCellClick = onDayCellClick,
                             modifier = Modifier.fillMaxWidth().weight(1f)
                         )
                     }

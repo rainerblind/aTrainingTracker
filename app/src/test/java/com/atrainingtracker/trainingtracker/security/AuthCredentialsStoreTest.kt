@@ -264,4 +264,18 @@ class AuthCredentialsStoreTest {
         assertNull(AuthCredentialsStore.readDropboxCredential(context))
         assertNull(AuthCredentialsStore.getDropboxAccountEmail(context))
     }
+
+    @Test
+    fun testSanitizeAfterRestore_resetsCloudUploadFlagsWhenNoGoogleAccount() {
+        val defaultPrefs = PreferenceManager.getDefaultSharedPreferences(context)
+        defaultPrefs.edit()
+            .putBoolean("uploadToGoogleDrive", true)
+            .putBoolean("uploadToDropbox", true)
+            .commit()
+
+        AuthCredentialsStore.sanitizeAfterRestore(context)
+
+        assertFalse("uploadToGoogleDrive should be reset to false post-restore", defaultPrefs.getBoolean("uploadToGoogleDrive", true))
+        assertFalse("uploadToDropbox should be reset to false post-restore", defaultPrefs.getBoolean("uploadToDropbox", true))
+    }
 }

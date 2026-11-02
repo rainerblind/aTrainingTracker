@@ -100,4 +100,7 @@
     <string name="devices_dialog_delete_device_message">センサー \'%1$s\' を本当に削除しますか？</string>
 
     <string name="devices_equipment_none">- なし -</string>
+
+    <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
+    <string name="devices_reset_tire_pressure_baseline">タイヤ空気圧基準値をリセット（空気補充直後）</string>
 </resources>
