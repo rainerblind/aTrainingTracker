@@ -220,3 +220,11 @@ This document serves as the authoritative living source of truth for software en
 
 ### 5.6 Upgrade-Path Behaviour for Persisted Data & Removed Settings (Rule 66 — ATT-4841 / ATT-4864)
 * When a DB migration back-fills new columns or a setting is removed/replaced, the back-fill MUST reproduce the user's **previous effective behaviour** (carry over the old preference), not the new default for fresh installs. Document "what changes for an existing user after the update" in the Stage 3 plan; Gate 4 verifies it (Sprint 2026-44.1: removing the global `showGauge` (default `false`) and back-filling `ShowBar = 1` forced zone bars onto all existing layouts — ATT-4927).
+
+### 5.7 Broadcast Receiver Ordering, Java-to-Kotlin Nullability & Startup Self-Healing (Rule 67 — ATT-4926, ATT-4922 / ATT-4936)
+* **End-to-End Broadcast Listener Sequence Verification (`ATT-4926` $\rightarrow$ `ATT-5080`)**:
+  * Multiple components register `BroadcastReceiver`s for the same lifecycle intent (e.g., `ClockDevice` and `FilterManager` both listen for `RESET_ACCUMULATORS_INTENT`). When modifying a broadcast receiver or `reset()` method, verify the **end-to-end execution order across all registered listeners** (in `ATT-4926`, `ClockDevice` reset `TIME_ACTIVE` to `0` (`0:00:00`) first, and `FilterManager.resetAllFilters()` ran second and overwrote `InstantaneousFilter.mValue` with `null` (`--:--:--`)).
+* **Java Platform-Type Nullability Guard (`ATT-4926` $\rightarrow$ `ATT-5080`)**:
+  * Any Java method returning a formatted display string (`SensorData.getStringValue()`, `MyFormatter.format()`) **MUST** return a non-null fallback (`"--"`) when its underlying value is `null` or be explicitly annotated `@Nullable` so Kotlin callers cannot crash with a `NullPointerException` (`Parameter specified as non-null is null`).
+* **Startup Self-Healing for Terminal Database States (`ATT-4922` $\rightarrow$ `ATT-5081`)**:
+  * When adding recovery logic for records stuck in a terminal DB state (`FINISHED_FAILED`) from previous app versions, always wire an automatic background trigger on app startup (`MainActivityWithNavigation` / `Application.onCreate`) in addition to interactive settings dialog triggers so recovery happens without requiring manual user reconnection.

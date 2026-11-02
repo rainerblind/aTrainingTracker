@@ -1264,7 +1264,7 @@ def ensure_retro_ticket(role="agent1"):
         if itype.lower() in ("sub-task", "subtask"):
             continue
         summary = issue.get("fields", {}).get("summary", "")
-        if "retro" in summary.lower():
+        if re.search(r'\bretro(?:spective)?\b', summary, re.IGNORECASE):
             status = issue.get("fields", {}).get("status", {}).get("name", "Unknown")
             print(f"Review & Retro ticket already exists in {display_sprint} (id {sprint_id}): {issue['key']} — {summary} [{status}]")
             return issue["key"]
@@ -1289,7 +1289,7 @@ def ensure_retro_ticket(role="agent1"):
     add_to_active_sprint(new_key, role=role)
     final_desc = (
         f"h2. Sprint Review & Retrospective - {display_sprint}\n"
-        f"*Deliverable*: docs/engineering/Sprint_Review_and_Retro_{new_key}.md\n"
+        f"*Deliverable*: docs/engineering/retros/Sprint_Review_and_Retro_{new_key}.md\n"
         f"*Branch*: sprint/{sprint_short_id} -> develop\n"
     )
     update_issue_description(new_key, final_desc, role=role)

@@ -220,6 +220,34 @@ def validate_archaeology_section(text):
     return len(errors) == 0, errors
 
 
+ALLOWED_ENGINEERING_ENTRIES = {
+    "analysis",
+    "plans",
+    "retros",
+    "test_specs",
+    "walkthroughs",
+    "test_results",
+    "rule_history_archive.md",
+    "workflow_overview.html",
+}
+
+
+def verify_engineering_directory_structure(eng_dir="docs/engineering"):
+    """
+    Verifies that docs/engineering/ contains only canonical ASPICE directories and approved files
+    (no stray folders like summaries/, impl_plans/, test_reports/, implementation/, or stray symlinks).
+    """
+    if not os.path.isdir(eng_dir):
+        return True, []
+    unexpected = sorted(set(os.listdir(eng_dir)) - ALLOWED_ENGINEERING_ENTRIES)
+    if unexpected:
+        return False, [
+            f"ERROR: Non-canonical entries found in {eng_dir}/: {', '.join(unexpected)}. "
+            f"Allowed entries: {', '.join(sorted(ALLOWED_ENGINEERING_ENTRIES))}."
+        ]
+    return True, []
+
+
 def verify_governance(deliverable_text=None, diff_text=None, base_ref="develop"):
     """
     Main governance validation entrypoint.
@@ -229,6 +257,11 @@ def verify_governance(deliverable_text=None, diff_text=None, base_ref="develop")
     Returns (success: bool, diagnostics: list[str]).
     """
     diagnostics = []
+
+    dir_ok, dir_errors = verify_engineering_directory_structure()
+    if not dir_ok:
+        diagnostics.extend(dir_errors)
+        return False, diagnostics
 
     if diff_text is None:
         diff_text = get_git_diff(base_ref=base_ref)
