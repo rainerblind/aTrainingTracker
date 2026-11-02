@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.map
 
 import android.app.Application
+import android.content.SharedPreferences
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
@@ -108,14 +109,16 @@ class MapFragmentWithTrackViewModelTest {
         clearAllMocks()
     }
 
-    private fun createViewModel(): MapFragmentWithTrackViewModel {
+    private fun createViewModel(prefs: SharedPreferences? = null): MapFragmentWithTrackViewModel {
         return MapFragmentWithTrackViewModel(
             application = mockApplication,
             knownLocationsRepository = mockKnownLocationsRepository,
             banalRepo = mockBanalRepository,
             segmentsRepo = mockSegmentsRepository,
             routesRepo = mockRoutesRepository,
-            workoutClusterRepo = mockWorkoutClusterRepository
+            workoutClusterRepo = mockWorkoutClusterRepository,
+            prefs = prefs,
+            defaultDispatcher = testDispatcher
         )
     }
 
@@ -277,6 +280,13 @@ class MapFragmentWithTrackViewModelTest {
             viewModel.uiState.collect()
         }
 
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // By default, clusters are disabled (ATT-5074)
+        assertEquals("Clusters must be empty when layer is disabled by default", 0, viewModel.uiState.value.clusters.size)
+
+        // Toggle clusters on
+        viewModel.toggleLayer(GeneralMapLayer.CLUSTERS)
         testDispatcher.scheduler.advanceUntilIdle()
 
         val clusters = viewModel.uiState.value.clusters

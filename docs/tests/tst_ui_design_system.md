@@ -4399,19 +4399,21 @@
   3. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-282: **General Map Layer Visibility Controls & Preference Persistence Verification** [General map Layers menu toggles routes, segments, favorite locations, favorite tracks / clusters, and live track; user layer visibility preferences persisted across sessions in SharedPreferences; Cockpit map renders clusters; harmonized ClusterOnMapSheet look and stats enrichment without purple text tinting; 100% 9-language localization parity; 100% unit test pass rate.] [Verified]
+### TST-UI-282: **General Map Layer Visibility Controls & Preference Persistence Verification** [General map Layers menu toggles routes, segments, favorite locations, favorite tracks / clusters, and live track; user layer visibility preferences persisted across sessions in SharedPreferences; CLUSTERS layer disabled by default in DEFAULT_ENABLED; Cockpit map renders clusters only when enabled; fast asynchronous cluster hydration and off-Main polyline decoding; harmonized ClusterOnMapSheet look and stats enrichment without purple text tinting; 100% 9-language localization parity; 100% unit test pass rate.] [Verified]
 - **Requirement(s)**: `REQ-UI-322`
 - **Component**: **General Map Layer Visibility Controls & Preference Persistence Verification**
-- **Jira**: `ATT-2931`, `ATT-4847`, `ATT-5075`
+- **Jira**: `ATT-2931`, `ATT-4847`, `ATT-5075`, `ATT-5074`
 - **Test Description**:
   1. *GeneralMapLayer Enum & Default State Contract (`GeneralMapLayersContractTest.kt`)*:
   • Verify `GeneralMapLayer` enum declares `ROUTES`, `SEGMENTS`, `KNOWN_LOCATIONS`, `TRACK`, and `CLUSTERS` (exactly 5 entries).
-  • Verify default state enables all 5 layers.
+  • Verify `GeneralMapLayer.DEFAULT_ENABLED` contains `ROUTES`, `SEGMENTS`, `KNOWN_LOCATIONS`, and `TRACK` (4 entries), strictly excluding `CLUSTERS`.
+  • Verify default state in `MapFragmentWithTrackViewModel` loads `DEFAULT_ENABLED` (favorite route clusters disabled by default) when `SharedPreferences` has no stored preference.
   2. *MapFragmentWithTrackViewModel Layer Toggling & Persistence Contract (`GeneralMapLayersContractTest.kt`)*:
-  • Verify initial state loads from `SharedPreferences` or defaults to all 5 layers.
+  • Verify initial state loads from `SharedPreferences` or defaults to `DEFAULT_ENABLED`.
   • Verify `toggleLayer(layer)` removes layer if present, adds if absent.
   • Verify toggling updates `_enabledLayers` and persists serialized set to `SharedPreferences`.
-  • Verify `MapFragmentWithTrackViewModel` subscribes to `WorkoutClusterRepository.allClusters` and exposes memoized `clusters: List<MapCluster>` in `uiState`.
+  • Verify `MapFragmentWithTrackViewModel` conditionally gates `mapClustersFlow` on `GeneralMapLayer.CLUSTERS in enabledLayers`, emitting `emptyList()` immediately when disabled.
+  • Verify `MapFragmentWithTrackViewModel` subscribes to `WorkoutClusterRepository.allClusters` and exposes memoized `clusters: List<MapCluster>` in `uiState` only when `CLUSTERS` is enabled.
   3. *MapScreenWithTrack UI Structure & Conditional Layer Delegation (`GeneralMapLayersContractTest.kt`)*:
   • Verify `MapScreenWithTrack.kt` includes `Icons.Default.Layers` button.
   • Verify floating surface at `Alignment.TopEnd` with `statusBarsPadding().padding(top = 16.dp, end = 16.dp)`.
@@ -4419,6 +4421,7 @@
   • Verify conditional rendering of `knownLocations()`, `segments()`, `routes()`, `clusters()`, and `markers()` + `liveTrack()`.
   4. *Cockpit Map Cluster Integration & Decoupling Contract (`TrackingViewModelTest.kt`, `SensorGridScreenTest.kt`)*:
   • Verify `TrackingMapState` exposes `mapClusters`.
+  • Verify `TrackingViewModel` evaluates enabled map layers (`DEFAULT_ENABLED` by default), emitting `emptyList()` when `CLUSTERS` is disabled.
   • Verify `TrackingViewModel` integrates `WorkoutClusterRepository.allClusters` into `staticMapLayerFlow` via `distinctUntilChanged()`, decoupled from 1-Hz telemetry.
   • Verify `TrackingMapContainer` passes `clusters(mapState.mapClusters)` to `MapContentScope`.
   5. *ClusterOnMapSheet Harmonized UI & Non-Purple Styling Contract Tests (`GeneralMapLayersContractTest.kt`)*:
@@ -4430,9 +4433,12 @@
   • Verify `MapCluster` includes `stats: WorkoutClusterStats? = null`.
   • Verify `MapFragmentWithTrackViewModel` combines `workoutClusterRepository.clusterStats` into `mapClustersFlow`, populating `stats` on `MapCluster`.
   • Verify `WorkoutCluster.toMapCluster()` populates `stats` while preserving referential stability of decoded coordinates (`latLngs`).
-  7. *9-Language Localization Parity Audit (`GeneralMapLayersLocalizationTest.kt`)*:
+  7. *Fast Asynchronous Hydration & Off-Main Decoding Contract Tests (`WorkoutClusterRepositoryTest.kt`, `MapFragmentWithTrackViewModelTest.kt`)*:
+  • Verify `WorkoutClusterRepository` provides fast asynchronous loading from the `RouteClusters` table on `Dispatchers.IO` without requiring `clusterStats` aggregation.
+  • Verify `mapClustersFlow` offloads polyline decoding to `Dispatchers.Default` (`flowOn(Dispatchers.Default)`).
+  8. *9-Language Localization Parity Audit (`GeneralMapLayersLocalizationTest.kt`)*:
   • Verify string resources `map_layers`, `map_layer_routes`, `map_layer_segments`, `map_layer_locations`, `map_layer_track`, `map_layer_clusters` exist and are non-empty across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
-  8. *Full Clean-Room Regression Suite*:
+  9. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
 ### TST-UI-283: **Material 3 Compose ANT Missing Adapter & Dependency Alerts Verification** [Missing adapter and missing dependency alerts modernized to Material 3 Compose with official untinted ANT+ logo; direct shortcut to AntServicesStatusSheet; German typo corrected; 100% 9-language translation parity; 100% unit test pass rate.]

@@ -71,6 +71,36 @@ class WorkoutClusterRepository internal constructor(
     private val _clusterStats = MutableStateFlow<Map<Long, WorkoutClusterStats>>(emptyMap())
     val clusterStats: StateFlow<Map<Long, WorkoutClusterStats>> = _clusterStats.asStateFlow()
 
+    init {
+        // Fast, non-blocking asynchronous hydration directly from RouteClusters table (ATT-5074 / REQ-UI-322.5).
+        // Populates _allClusters without blocking on heavy WorkoutSummaries aggregation or member hydration.
+        repositoryScope.launch(Dispatchers.IO) {
+            try {
+                if (_allClusters.value.isEmpty()) {
+                    loadAllClustersLightweight()
+                }
+            } catch (t: Throwable) {
+                if (DEBUG) android.util.Log.w("WorkoutClusterRepo", "Failed initial lightweight clusters load: ${t.message}")
+            }
+        }
+    }
+
+    /**
+     * Fast, lightweight loading pathway from the SQLite RouteClusters table (REQ-UI-322.5, ATT-5074).
+     * Populates [_allClusters] directly without blocking on heavy WorkoutSummaries aggregation (clusterStats)
+     * or member workout hydration.
+     */
+    suspend fun loadAllClustersLightweight(): List<WorkoutCluster> = withContext(Dispatchers.IO) {
+        val cached = clusterDb.getAllClusters()
+        if (cached.isNotEmpty()) {
+            val sorted = cached.sortedByDescending { it.hitCount }
+            _allClusters.value = sorted
+            sorted
+        } else {
+            emptyList()
+        }
+    }
+
     companion object {
         private const val SP_KEY_LAST_BOUNDS_REPAIR = "last_cluster_bounds_repair_v5"
         @Volatile

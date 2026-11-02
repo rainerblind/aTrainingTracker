@@ -8004,13 +8004,15 @@ c. Span distance consistency: $
 - **Rationale**: The system SHALL provide dynamic visibility controls for general map spatial layers via a floating Layers button and Material 3 dropdown menu in `MapScreenWithTrack.kt`, conditional layer composition in `ATrainingTrackerMap`, preference persistence in `MapFragmentWithTrackViewModel`, and Lieblingsstrecken rendering on the Cockpit map in `SensorGridScreen.kt` (ATT-2931, ATT-4847, amending and complementing `REQ-UI-180`, `REQ-UI-308`, and `REQ-MAP-051`):
 1. *Layer Model (`GeneralMapLayer`)*:
 • The system SHALL define `enum class GeneralMapLayer` in `com.atrainingtracker.trainingtracker.ui.map` declaring five layer types: `ROUTES`, `SEGMENTS`, `KNOWN_LOCATIONS`, `TRACK`, and `CLUSTERS`.
+• `GeneralMapLayer` SHALL define `DEFAULT_ENABLED = setOf(ROUTES, SEGMENTS, KNOWN_LOCATIONS, TRACK)`, excluding `CLUSTERS` so favorite route clusters are hidden by default.
 2. *ViewModel State & Persistence (`MapFragmentWithTrackViewModel.kt`)*:
 • `MapFragmentWithTrackViewModel` SHALL expose `val enabledLayers: StateFlow<Set<GeneralMapLayer>>`.
 • On initial instantiation, `MapFragmentWithTrackViewModel` SHALL restore enabled layers from `SharedPreferences` (`PREF_GENERAL_MAP_ENABLED_LAYERS`).
-• If no preferences are stored, the system SHALL default to enabling all layers (`GeneralMapLayer.entries.toSet()`).
+• If no preferences are stored, the system SHALL default to enabling the standard primary layers (`GeneralMapLayer.DEFAULT_ENABLED`), strictly excluding `CLUSTERS`.
 • `MapFragmentWithTrackViewModel` SHALL provide `fun toggleLayer(layer: GeneralMapLayer)`.
 • Toggling a layer SHALL immediately emit the updated set in `enabledLayers` and commit the updated string set to `SharedPreferences`.
-• `MapFragmentWithTrackViewModel` SHALL combine `WorkoutClusterRepository.allClusters` and `WorkoutClusterRepository.clusterStats`, decode and memoize representative polylines into `MapCluster` instances with referential stability and populated `stats: WorkoutClusterStats?`, and expose them via `MapFragmentUIState.clusters`.
+• `MapFragmentWithTrackViewModel` SHALL conditionally gate `mapClustersFlow` on `GeneralMapLayer.CLUSTERS in enabledLayers`: when disabled, `mapClustersFlow` SHALL emit `emptyList()` immediately without executing polyline decoding.
+• When `GeneralMapLayer.CLUSTERS` is enabled, `MapFragmentWithTrackViewModel` SHALL combine `WorkoutClusterRepository.allClusters` and `WorkoutClusterRepository.clusterStats`, decode and memoize representative polylines into `MapCluster` instances on `Dispatchers.Default` with referential stability and populated `stats: WorkoutClusterStats?`, and expose them via `MapFragmentUIState.clusters`.
 3. *Ergonomic Floating Layers Button & Dropdown Menu (`MapScreenWithTrack.kt`)*:
 • `MapScreenWithTrack.kt` SHALL wrap `ATrainingTrackerMap` in a `Box(modifier = Modifier.fillMaxSize())` inside the `BottomSheetScaffold` body.
 • `MapScreenWithTrack.kt` SHALL render a floating circular button at `Alignment.TopEnd` with `.statusBarsPadding().padding(top = 16.dp, end = 16.dp)`.
@@ -8027,9 +8029,11 @@ c. Span distance consistency: $
 • `ClusterOnMapSheet` SHALL NOT tint text or sport/distance icons with `TTColor.Cluster` (purple/lila); all popup typography and metric icons SHALL resolve via standard Material 3 color tokens (`onSurface`, `onSurfaceVariant`, `primary`) and `TTColor.Gold` for PR trophy.
 • The cluster path polyline stroke color rendered on `ATrainingTrackerMap` canvas SHALL strictly remain `TTColor.Cluster` with zIndex `12f`.
 • Sheet peek height for `selectedClusterId != null` SHALL use `BottomSheetDesign.PeekHeightWorkout + navBarHeight` (~140dp) to prevent vertical clipping.
-5. *Cockpit Live Tracking Map Integration (`TrackingViewModel.kt`, `SensorGridScreen.kt`)*:
+5. *Cockpit Live Tracking Map Integration & Fast Asynchronous Loading (`TrackingViewModel.kt`, `SensorGridScreen.kt`, `WorkoutClusterRepository.kt`)*:
 • `TrackingMapState` SHALL expose `val mapClusters: List<MapCluster> = emptyList()`.
-• `TrackingViewModel` SHALL integrate `WorkoutClusterRepository.allClusters` into `staticMapLayerFlow` via `distinctUntilChanged()`, decoupled from 1-Hz GPS and telemetry emissions to strictly prevent polyline reallocations.
+• `TrackingViewModel` SHALL evaluate enabled map layers (reading `PREF_GENERAL_MAP_ENABLED_LAYERS` and defaulting to `GeneralMapLayer.DEFAULT_ENABLED`), strictly gating cluster polyline emissions so that when `CLUSTERS !in enabledLayers`, `mapClusters` emits `emptyList()`.
+• `WorkoutClusterRepository` SHALL provide a fast, non-blocking asynchronous loading pathway from the SQLite `RouteClusters` table on `Dispatchers.IO` to seed `_allClusters` without blocking on heavy `WorkoutSummaries` aggregation (`clusterStats`) or member workout hydration.
+• Decoding of representative cluster polylines (`PolyUtil.decode`) SHALL execute off the Main/UI thread (on `Dispatchers.Default`) with coordinate memoization per `REQ-MAP-051.2`.
 • `TrackingMapContainer` in `SensorGridScreen.kt` SHALL render `clusters(mapState.mapClusters)` on `ATrainingTrackerMap`.
 6. *100% 9-Language Localization Parity*:
 • String resources `map_layers`, `map_layer_routes`, `map_layer_segments`, `map_layer_locations`, `map_layer_track`, and `map_layer_clusters` SHALL be externalized and translated across all 9 supported application locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).
@@ -8037,12 +8041,15 @@ c. Span distance consistency: $
 • Entity selection bottom sheets, background GPS tracking, start marker detection, and 100% test pass rate MUST be strictly preserved.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement (`REQ-UI-322`), amending and complementing `REQ-UI-180` (*Display Favorite Locations on Central Navigation Map*) and `REQ-UI-308` (*Route Map Overlay Layer Visibility Controls*). Amended under `ATT-4847` to include `CLUSTERS` layer and Cockpit live tracking map integration. Refined under `ATT-5075` (Sprint 2026-45.1) to harmonize `ClusterOnMapSheet` popup look and information density with `WorkoutClusterComponents` list items, enrich `MapCluster` with `WorkoutClusterStats`, and eliminate purple text tinting.
-2. *Historical Origin & Commit Trace*: Ticket `ATT-1449` (Sprint 2026-40.4), Ticket `ATT-2763` (Sprint 2026-41.4), Ticket `ATT-4847` (Sprint 2026-44.2), and Ticket `ATT-5075` (Sprint 2026-45.1).
-3. *Root Reason for Existing Formulation*: Spatial layers were previously composed unconditionally on the general map. As routes, segments, and favorite locations accumulated, the map canvas suffered from severe visual crowding. In ATT-4847, `ClusterOnMapSheet` was hastily introduced with an ad-hoc layout and purple (`TTColor.Cluster`) text/icon tinting to reflect the polyline layer color, omitting vital cluster statistics (sport subtitle, elevation, PR trophy/time, relative recency) and creating an inconsistent visual language compared to `WorkoutClusterComponents`.
-4. *Preservation of Core Invariants*: Full touch target compliance (>= 48dp), entity detail sheet inspection, live track recording, polyline map canvas stroke color (`TTColor.Cluster`) and zIndex (`12f`), referential polyline stability per `REQ-MAP-051`, and 100% test pass rate remain strictly preserved.
+1. *Original Requirement ID & Target*: Net-new requirement (`REQ-UI-322`), amending and complementing `REQ-UI-180` (*Display Favorite Locations on Central Navigation Map*) and `REQ-UI-308` (*Route Map Overlay Layer Visibility Controls*). Amended under `ATT-4847` to include `CLUSTERS` layer and Cockpit live tracking map integration. Refined under `ATT-5075` (Sprint 2026-45.1) to harmonize `ClusterOnMapSheet` popup look and information density with `WorkoutClusterComponents` list items, enrich `MapCluster` with `WorkoutClusterStats`, and eliminate purple text tinting. Refined under `ATT-5074` (Sprint 2026-45.1) to disable `GeneralMapLayer.CLUSTERS` by default (`DEFAULT_ENABLED`), gate ViewModel polyline decoding, offload decoding to `Dispatchers.Default`, and decouple map cluster loading from heavy analytical aggregation in `WorkoutClusterRepository`.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-1449` (Sprint 2026-40.4), Ticket `ATT-2763` (Sprint 2026-41.4), Ticket `ATT-4847` (Sprint 2026-44.2), Ticket `ATT-5075` (Sprint 2026-45.1), and Ticket `ATT-5074` (Sprint 2026-45.1).
+3. *Root Reason for Existing Formulation*: Spatial layers were previously composed unconditionally on the general map. As routes, segments, and favorite locations accumulated, the map canvas suffered from severe visual crowding. In ATT-2931, `entries.toSet()` enabled all 4 original primary layers. In ATT-4847, `CLUSTERS` was added as the 5th layer without defining an explicit default set, inadvertently enabling it on all maps. Furthermore, polyline retrieval was coupled to heavy `clusterStats` aggregation queries and decoded on the main dispatcher, causing substantial map loading latency.
+4. *Preservation of Core Invariants*: Primary layers (`ROUTES`, `SEGMENTS`, `KNOWN_LOCATIONS`, `TRACK`) remain default-enabled; existing custom user preferences in `SharedPreferences` are preserved; stroke colors (`TTColor.Cluster`) and z-indexes (`12f`) remain intact; zero 1-Hz allocations.
 
 **Acceptance Criteria (Given-When-Then)**:
+• *Given* a fresh install or unconfigured map layer preferences,
+• *When* viewing `MapScreenWithTrack` or the Cockpit live tracking map,
+• *Then* `GeneralMapLayer.CLUSTERS` SHALL be disabled by default (`GeneralMapLayer.DEFAULT_ENABLED`), and favorite route cluster polylines SHALL NOT be displayed on the map canvas until explicitly toggled on by the user.
 • *Given* the athlete viewing `MapScreenWithTrack`,
 • *When* inspecting the top map overlay,
 • *Then* a floating layers button (`Icons.Default.Layers`) is visible at `Alignment.TopEnd` with `statusBarsPadding().padding(top = 16.dp, end = 16.dp)`.
@@ -8055,9 +8062,10 @@ c. Span distance consistency: $
 • *Given* modified layer visibility preferences,
 • *When* restarting the application or returning to the map,
 • *Then* the layer selection state is restored from `SharedPreferences`.
-• *Given* the athlete viewing the Cockpit map during preview or live tracking,
-• *When* favorite route clusters exist in `WorkoutClusterRepository`,
-• *Then* their representative polylines are rendered on `ATrainingTrackerMap` without 1-Hz reallocation.
+• *Given* `GeneralMapLayer.CLUSTERS` is toggled on in the layers menu,
+• *When* loading clusters,
+• *Then* cluster data SHALL load asynchronously from the SQLite `RouteClusters` table without blocking on heavy `clusterStats` aggregation,
+• *And* representative polylines SHALL decode on `Dispatchers.Default` with referential coordinate memoization, eliminating Main-thread UI stalling.
 • *Given* the athlete viewing `MapScreenWithTrack`,
 • *When* tapping a favorite route cluster (Lieblingsstrecke) polyline,
 • *Then* `ClusterOnMapSheet` is presented at peek height (`PeekHeightWorkout + navBarHeight`),

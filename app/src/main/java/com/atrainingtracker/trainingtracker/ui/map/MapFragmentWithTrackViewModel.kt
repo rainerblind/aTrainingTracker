@@ -34,6 +34,8 @@ import com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepositor
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.google.android.gms.maps.model.LatLng
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -54,7 +56,8 @@ class MapFragmentWithTrackViewModel @JvmOverloads constructor(
     segmentsRepo: SegmentsRepository? = null,
     routesRepo: RoutesRepository? = null,
     workoutClusterRepo: WorkoutClusterRepository? = null,
-    prefs: SharedPreferences? = null
+    prefs: SharedPreferences? = null,
+    private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default
 ) : AndroidViewModel(application) {
 
     private val banalRepository = banalRepo ?: BANALServiceRepository.getInstance(application)
@@ -66,9 +69,17 @@ class MapFragmentWithTrackViewModel @JvmOverloads constructor(
     private val _enabledLayers = MutableStateFlow(loadEnabledLayers())
     val enabledLayers: StateFlow<Set<GeneralMapLayer>> = _enabledLayers.asStateFlow()
 
+    init {
+        if (GeneralMapLayer.CLUSTERS in _enabledLayers.value && workoutClusterRepository.allClusters.value.isEmpty()) {
+            viewModelScope.launch {
+                workoutClusterRepository.loadAllClustersLightweight()
+            }
+        }
+    }
+
     private fun loadEnabledLayers(): Set<GeneralMapLayer> {
         val saved = sharedPreferences.getStringSet(PREF_GENERAL_MAP_ENABLED_LAYERS, null)
-            ?: return GeneralMapLayer.entries.toSet()
+            ?: return GeneralMapLayer.DEFAULT_ENABLED
         return saved.mapNotNull { name ->
             safeEnumValueOfOrNull<GeneralMapLayer>(name)
         }.toSet()
@@ -81,6 +92,11 @@ class MapFragmentWithTrackViewModel @JvmOverloads constructor(
         sharedPreferences.edit()
             .putStringSet(PREF_GENERAL_MAP_ENABLED_LAYERS, updated.map { it.name }.toSet())
             .apply()
+        if (layer == GeneralMapLayer.CLUSTERS && layer in updated && workoutClusterRepository.allClusters.value.isEmpty()) {
+            viewModelScope.launch {
+                workoutClusterRepository.loadAllClustersLightweight()
+            }
+        }
     }
 
     val liveSegments = segmentsRepository.allSegmentsWithPath
@@ -97,13 +113,18 @@ class MapFragmentWithTrackViewModel @JvmOverloads constructor(
     }
 
     private val mapClustersFlow = combine(
+        enabledLayers,
         workoutClusterRepository.allClusters,
         workoutClusterRepository.clusterStats
-    ) { clusterList, statsMap ->
-        clusterList.mapNotNull { cluster ->
-            cluster.toMapCluster(stats = statsMap[cluster.id])
+    ) { layers, clusterList, statsMap ->
+        if (GeneralMapLayer.CLUSTERS !in layers) {
+            emptyList()
+        } else {
+            clusterList.mapNotNull { cluster ->
+                cluster.toMapCluster(stats = statsMap[cluster.id])
+            }
         }
-    }.distinctUntilChanged()
+    }.flowOn(defaultDispatcher).distinctUntilChanged()
 
     private data class StaticMapLayers(
         val segments: List<MapSegment>,
