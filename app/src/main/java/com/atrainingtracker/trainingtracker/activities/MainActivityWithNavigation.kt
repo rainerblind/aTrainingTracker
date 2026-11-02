@@ -99,6 +99,8 @@ import com.atrainingtracker.trainingtracker.dialogs.GPSDisabledDialog
 import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialog
 import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface
 import com.atrainingtracker.trainingtracker.migration.BackupRestoreFragment
+import com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveAuthManager
+import com.atrainingtracker.trainingtracker.exporter.ExportManager
 import com.atrainingtracker.trainingtracker.notifications.SensorBatteryNotificationManager
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
@@ -597,7 +599,9 @@ class MainActivityWithNavigation :
         }
     }
 
-    protected fun checkPreferences() {
+    @VisibleForTesting(otherwise = VisibleForTesting.PROTECTED)
+    @JvmName("checkPreferences")
+    internal fun checkPreferences() {
         if (TrainingApplication.uploadToStrava() && TrainingApplication.getStravaAccessToken() == null) {
             TrainingApplication.setUploadToStrava(false)
         }
@@ -617,6 +621,20 @@ class MainActivityWithNavigation :
             if (token.isNullOrBlank() && account == null) {
                 Log.i(TAG, "Google Drive enabled but credentials missing; resetting uploadToGoogleDrive to false")
                 TrainingApplication.setUploadToGoogleDrive(false)
+            } else {
+                lifecycleScope.launch(ioDispatcher) {
+                    try {
+                        var effectiveToken = token
+                        if (effectiveToken.isNullOrBlank() && account != null) {
+                            effectiveToken = GoogleDriveAuthManager.refreshTokenSync(this@MainActivityWithNavigation).getOrNull()
+                        }
+                        if (!effectiveToken.isNullOrBlank()) {
+                            ExportManager.recoverStuckGoogleDriveExports(this@MainActivityWithNavigation)
+                        }
+                    } catch (e: Throwable) {
+                        Log.w(TAG, "Failed to recover stuck Google Drive exports on startup", e)
+                    }
+                }
             }
         }
 

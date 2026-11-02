@@ -1936,10 +1936,10 @@
   3. *Automated Migration Unit Test Requirement*:
   • Verify mandated automated schema equivalence unit tests asserting fresh `onCreate()` vs upgraded `onUpgrade()` schema identity.
 
-### TST-DAT-033: **Resilient Google Drive Background Upload Retry, Post-Restore Re-Auth Parity & Stuck Export Recovery Verification Suite** [Verified - Silent token acquisition fallback, post-restore zombie-connected elimination, transient error retry classification in GoogleDriveUploader and DropboxUploader, and stuck credential failure recovery verified across test suite.]
+### TST-DAT-033: **Resilient Google Drive Background Upload Retry, Post-Restore Re-Auth Parity & Stuck Export Recovery Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-DAT-037`
 - **Component**: **Resilient Google Drive Background Upload Retry, Post-Restore Re-Auth Parity & Stuck Export Recovery Verification Suite**
-- **Jira**: ``ATT-4922``
+- **Jira**: ``ATT-4922``, ``ATT-5081``
 - **Test Description**:
   1. *Silent Token Refresh Fallback on Null Cached Token (`TST-DAT-033.1`, `GoogleDriveUploaderTest.kt`, `GoogleDriveBackupManagerTest.kt`)*:
   • Configure `uploadToGoogleDrive = true` and `getGoogleDriveAuthToken() = null` with mocked `GoogleDriveAuthManager.refreshTokenSync()` returning a valid token.
@@ -1955,10 +1955,11 @@
   • Verify `doExport` returns `ExportResult(false, true, ...)`.
   • In `DropboxUploaderTest`, mock `IOException`, `NetworkIOException`, `RetryException`, and `ServerException`.
   • Verify `doExport` returns `ExportResult(false, true, ...)`.
-  4. *Stuck Credential Failure Export Recovery & Re-Queueing (`TST-DAT-033.4`, `ExportManagerTest.kt`, `ExportStatusDatabaseManagerTest.kt`)*:
+  4. *Stuck Credential Failure Export Recovery & Re-Queueing (`TST-DAT-033.4`, `MainActivityGoogleDriveStartupRecoveryTest.kt`, `ExportManagerTest.kt`, `ExportStatusDatabaseManagerTest.kt`)*:
   • Insert export rows in `ExportStatus.db` with `FINISHED_FAILED` and answer `"Google Drive credential is null or not linked"`.
-  • Invoke stuck export recovery on re-authentication.
+  • Invoke stuck export recovery on re-authentication and on application startup (`MainActivityWithNavigation.checkPreferences()`).
   • Verify status of matching rows transitions to `WAITING` with answer cleared, ready for WorkManager re-queueing.
+  • Verify silent token refresh executes if cached token is null but an active Google account is signed in.
   5. *Invariant & Non-Retryable Failure Preservation (`TST-DAT-033.5`, `GoogleDriveUploaderTest.kt`, `DropboxUploaderTest.kt`)*:
   • Simulate non-retryable failures: missing local file (`!file.exists()`), permanent unrecoverable HTTP 401/403 authorization failure, unlinked account without recovery.
   • Verify `doExport` returns `shallRetry = false`, preventing unbounded WorkManager retry loops.
