@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -58,6 +59,7 @@ fun TrackingTabConfigHeader(
     onUpdateTabName: (Long, String) -> Unit,
     onAddTabRelative: (Long, Boolean) -> Unit,
     onDeleteTab: (Long) -> Unit,
+    onCopyTab: (Long) -> Unit,
     onToggleMode: () -> Unit,
 ) {
     // Local state for the text field to ensure smooth typing
@@ -103,7 +105,7 @@ fun TrackingTabConfigHeader(
 
             Spacer(Modifier.height(4.dp))
 
-            // Row 2: Management Buttons (Add Before, Delete, Add After)
+            // Row 2: Management Buttons (Add Before, Delete, Copy Tab, Add After)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -123,6 +125,15 @@ fun TrackingTabConfigHeader(
                     Icon(
                         imageVector = Icons.Default.Delete,
                         contentDescription = stringResource(R.string.cd_delete_tab)
+                    )
+                }
+
+                // Copy Tab
+                IconButton(onClick = { onCopyTab(viewInfo.tabViewId) }) {
+                    Icon(
+                        imageVector = Icons.Default.ContentCopy,
+                        contentDescription = stringResource(R.string.cd_copy_tab),
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
 

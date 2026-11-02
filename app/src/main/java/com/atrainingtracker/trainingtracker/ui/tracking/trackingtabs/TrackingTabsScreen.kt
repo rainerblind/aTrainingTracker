@@ -107,6 +107,7 @@ import com.atrainingtracker.trainingtracker.segments.LiveSegmentStatus
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.CockpitThemeMode
 import com.atrainingtracker.trainingtracker.ui.theme.resolveEffectiveCockpitDarkTheme
+import com.atrainingtracker.trainingtracker.ui.settings.trackingtabs.CopyTrackingTabDialog
 import com.atrainingtracker.trainingtracker.ui.theme.resolveEffectiveCockpitThemeState
 import com.atrainingtracker.trainingtracker.ui.tracking.LapSummaryDialog
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
@@ -469,6 +470,8 @@ fun TrackingTabsScreen(
         )
     }
 
+    val copySourceTabId by trackingTabsViewModel.copySourceTabId.collectAsState()
+
 
     val currentPagerState by rememberUpdatedState(pagerState)
     val currentScreenMode by rememberUpdatedState(screenMode)
@@ -721,6 +724,7 @@ fun TrackingTabsScreen(
                                             onUpdateTabName = { id, name -> trackingTabsViewModel.onUpdateTabName(id, name) },
                                             onAddTabRelative = { id, after -> trackingTabsViewModel.onAddTabRelative(id, after) },
                                             onDeleteTab = { id -> trackingTabsViewModel.onDeleteTab(id) },
+                                            onCopyTab = { id -> trackingTabsViewModel.onOpenCopyTabDialog(id) },
                                             onToggleMode = { trackingTabsViewModel.toggleScreenMode() }
                                         )
                                     }
@@ -1018,6 +1022,20 @@ fun TrackingTabsScreen(
                     onTakeMeHome = {
                         returnNavRepo.startTakeMeHome()
                         showRouteSelectorSheet = false
+                    }
+                )
+            }
+
+            // Modal Bottom Sheet for Copy Tracking Tab (REQ-UI-439 / ATT-5078)
+            copySourceTabId?.let { sourceId ->
+                val currentActivityType by trackingTabsViewModel.activityType.collectAsState()
+                CopyTrackingTabDialog(
+                    sourceActivityType = currentActivityType,
+                    onConfirm = { targetTypes ->
+                        trackingTabsViewModel.onConfirmCopyTab(sourceId, targetTypes)
+                    },
+                    onDismiss = {
+                        trackingTabsViewModel.onDismissCopyTabDialog()
                     }
                 )
             }

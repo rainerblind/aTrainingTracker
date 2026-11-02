@@ -2135,6 +2135,9 @@
     <string name="cd_add_before">Dodaj przed</string>
     <string name="cd_delete_tab">Usuń kartę</string>
     <string name="cd_add_after">Dodaj po</string>
+    <string name="cd_copy_tab">Kopiuj kartę</string>
+    <string name="copy_tab_title">Kopiuj kartę</string>
+    <string name="copy_tab_action">Kopiuj</string>
     <string name="back">Wstecz</string>
     <string name="close">Zamknij</string>
     <string name="clear">Wyczyść</string>

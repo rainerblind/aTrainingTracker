@@ -6929,6 +6929,30 @@
   • Test verifying localization parity across all 9 locales and confirming single-field or uniform-size rows preserve existing dimensions and styling.
 
 
+### TST-UI-439: **Copy Tracking Tab to Target Activity Types Test Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-439`
+- **Component**: `TrackingTabConfigHeaderContractTest.kt`, `TrackingViewsDatabaseManagerTest.kt`, `TrackingViewsRepositoryTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-5078`
+- **Test Description**:
+  1. *Tracking Tab Config Header Copy Button Test (`TST-UI-439.1`)*:
+  • Contract test verifying that `TrackingTabConfigHeader.kt` renders an `IconButton` with `Icons.Default.ContentCopy`, content description `R.string.cd_copy_tab`, and invokes `onCopyTab(tabViewId)`.
+  2. *Database Transactional Deep-Copy & Append Test (`TST-UI-439.2`)*:
+  • Unit test in `TrackingViewsDatabaseManagerTest.kt` verifying that calling `copyTabViewToActivityTypes(sourceViewId, targetTypes)`:
+    - Atomically duplicates the view row in `VIEWS_TABLE` for each target `ActivityType` at `LAYOUT_NR = max(LAYOUT_NR) + 1`.
+    - Duplicates all child `ROWS_TABLE` records with new `view_id`, preserving row/col indices, sensor types, sizes, filters, and column weights.
+    - Duplicates all child `SECTION_DIVIDERS_TABLE` records with new `view_id`, preserving row numbers and titles.
+    - Supports duplication within the same `ActivityType` (appending duplicate tab at the end of the current profile).
+  3. *Repository & ViewModel Auto-Navigation Test (`TST-UI-439.3`)*:
+  • Unit test in `TrackingViewsRepositoryTest.kt` and `TrackingTabsViewModelTest.kt` verifying:
+    - `copyTabView` executes on `Dispatchers.IO` and triggers `configUpdateTrigger`.
+    - When active profile is targeted, `_navigationEvent` emits `TabNavigationEvent.NavigateTo(newIndex)`.
+  4. *9-Language Localization Parity Audit (`TST-UI-439.4`)*:
+  • Test in `TranslationParityTest.kt` verifying presence and formatting of `cd_copy_tab`, `copy_tab_title`, and `copy_tab_action` across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
+  5. *Full Clean-Room Unit Regression Suite (`TST-UI-439.5`)*:
+  • Clean-room execution of unit tests ensuring zero regressions (`REQ-PRO-001`).
+
+
+
 
 
 

@@ -28,7 +28,9 @@ import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataReposit
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.audio.BikeBellAudioSynthesizer
+import com.atrainingtracker.trainingtracker.ui.tracking.ElevationProfileScope
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
+import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewInfo
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
@@ -40,6 +42,7 @@ import kotlinx.coroutines.test.*
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -476,5 +479,49 @@ class TrackingTabsViewModelTest {
         onClearedMethod.isAccessible = true
         onClearedMethod.invoke(viewModel)
         verify(exactly = 1) { mockSynthesizer.close() }
+    }
+
+    @Test
+    fun testCopyTab_dialogStateAndAutoNavigation() = runTest(testDispatcher) {
+        val viewsFlow = MutableStateFlow(
+            listOf(
+                TrackingViewInfo(1L, "Tab 1", false, true, false, false, true, true, ElevationProfileScope.FULL_ROUTE, 2000, false),
+                TrackingViewInfo(2L, "Tab 2", false, true, false, false, true, true, ElevationProfileScope.FULL_ROUTE, 2000, false)
+            )
+        )
+        every { mockTrackingViewsRepo.getTrackingViewsFlow(any()) } returns viewsFlow
+        coEvery { mockTrackingViewsRepo.copyTabView(any(), any()) } returns listOf(3L)
+
+        val viewModel = createViewModel()
+        val viewsJob = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.trackingViews.collect {}
+        }
+        testScheduler.advanceUntilIdle()
+
+        // 1. Open and dismiss dialog
+        assertNull(viewModel.copySourceTabId.value)
+        viewModel.onOpenCopyTabDialog(1L)
+        assertEquals(1L, viewModel.copySourceTabId.value)
+
+        viewModel.onDismissCopyTabDialog()
+        assertNull(viewModel.copySourceTabId.value)
+
+        // 2. Open and confirm copying to current activity type -> navigates to appended index (size = 2)
+        val events = mutableListOf<TabNavigationEvent>()
+        val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.navigationEvent.collect { events.add(it) }
+        }
+
+        viewModel.onOpenCopyTabDialog(1L)
+        viewModel.onConfirmCopyTab(1L, listOf(ActivityType.getDefaultActivityType()))
+        testScheduler.advanceUntilIdle()
+
+        assertNull(viewModel.copySourceTabId.value)
+        coVerify(exactly = 1) { mockTrackingViewsRepo.copyTabView(1L, listOf(ActivityType.getDefaultActivityType())) }
+        assertEquals(1, events.size)
+        assertTrue(events[0] is TabNavigationEvent.NavigateTo)
+        assertEquals(2, (events[0] as TabNavigationEvent.NavigateTo).index)
+
+        job.cancel()
     }
 }

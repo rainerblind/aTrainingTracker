@@ -2133,6 +2133,9 @@
     <string name="cd_add_before">Ajouter avant</string>
     <string name="cd_delete_tab">Supprimer l\'onglet</string>
     <string name="cd_add_after">Ajouter après</string>
+    <string name="cd_copy_tab">Copier l\'onglet</string>
+    <string name="copy_tab_title">Copier l\'onglet</string>
+    <string name="copy_tab_action">Copier</string>
     <string name="back">Retour</string>
     <string name="close">Fermer</string>
     <string name="clear">Effacer</string>

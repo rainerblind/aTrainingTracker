@@ -2219,6 +2219,9 @@
     <string name="cd_add_before">Davor hinzufügen</string>
     <string name="cd_delete_tab">Tab löschen</string>
     <string name="cd_add_after">Danach hinzufügen</string>
+    <string name="cd_copy_tab">Tab kopieren</string>
+    <string name="copy_tab_title">Tab kopieren</string>
+    <string name="copy_tab_action">Kopieren</string>
     <string name="back">Zurück</string>
     <string name="close">Schließen</string>
     <string name="clear">Löschen</string>

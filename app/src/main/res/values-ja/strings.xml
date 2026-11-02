@@ -2113,6 +2113,9 @@
     <string name="cd_add_before">前に追加</string>
     <string name="cd_delete_tab">タブを削除</string>
     <string name="cd_add_after">後に追加</string>
+    <string name="cd_copy_tab">タブをコピー</string>
+    <string name="copy_tab_title">タブをコピー</string>
+    <string name="copy_tab_action">コピー</string>
     <string name="back">戻る</string>
     <string name="close">閉じる</string>
     <string name="clear">クリア</string>
