@@ -464,6 +464,15 @@ class TrackingTabsViewModel(
         }
     }
 
+    fun onMoveTab(tabViewId: Long, moveLeft: Boolean) {
+        viewModelScope.launch {
+            val newIndex = trackingViewsRepository.moveTabView(tabViewId, moveLeft)
+            if (newIndex >= 0) {
+                _navigationEvent.send(TabNavigationEvent.NavigateTo(newIndex))
+            }
+        }
+    }
+
     fun onOpenCopyTabDialog(tabViewId: Long) {
         _copySourceTabId.value = tabViewId
     }

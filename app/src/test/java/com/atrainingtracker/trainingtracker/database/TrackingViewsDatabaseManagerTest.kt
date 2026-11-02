@@ -942,4 +942,115 @@ class TrackingViewsDatabaseManagerTest {
         verify(exactly = 1) { mockDb.setTransactionSuccessful() }
         verify(exactly = 1) { mockDb.endTransaction() }
     }
+
+    @Test
+    fun testMoveTabView_viewNotFound_returnsMinusOne() {
+        val manager = TrackingViewsDatabaseManager.getInstance(mockContext)
+        injectMockDatabase(manager, mockDb)
+
+        val cursor = mockk<Cursor>(relaxed = true)
+        every { cursor.moveToFirst() } returns false
+        every { cursor.moveToNext() } returns false
+        every {
+            mockDb.query(
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEWS_TABLE,
+                any(), any(), any(), any(), any(), any()
+            )
+        } returns cursor
+
+        val result = manager.moveTabView(999L, true)
+        assertEquals(-1, result)
+        verify(exactly = 0) { mockDb.beginTransaction() }
+    }
+
+    @Test
+    fun testMoveTabView_atLeftBoundary_returnsZeroAndDoesNotModify() {
+        val manager = TrackingViewsDatabaseManager.getInstance(mockContext)
+        injectMockDatabase(manager, mockDb)
+
+        val actTypeCursor = mockk<Cursor>(relaxed = true)
+        every { actTypeCursor.moveToFirst() } returns true
+        every { actTypeCursor.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.ACTIVITY_TYPE) } returns 0
+        every { actTypeCursor.getString(0) } returns "GENERIC_HR"
+
+        val tabsCursor = mockk<Cursor>(relaxed = true)
+        every { tabsCursor.moveToNext() } returnsMany listOf(true, true, false)
+        every { tabsCursor.getLong(0) } returnsMany listOf(10L, 20L)
+
+        every {
+            mockDb.query(
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEWS_TABLE,
+                any(),
+                "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID}=?",
+                arrayOf("10"),
+                any(), any(), any()
+            )
+        } returns actTypeCursor
+
+        every {
+            mockDb.query(
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEWS_TABLE,
+                arrayOf(TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID),
+                "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.ACTIVITY_TYPE}=?",
+                arrayOf("GENERIC_HR"),
+                null, null,
+                "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.LAYOUT_NR} ASC, ${TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID} ASC"
+            )
+        } returns tabsCursor
+
+        val result = manager.moveTabView(10L, true)
+        assertEquals(0, result)
+        verify(exactly = 0) { mockDb.beginTransaction() }
+    }
+
+    @Test
+    fun testMoveTabView_swapsAdjacentTabsAndNormalizesLayoutNrAtomically() {
+        val manager = TrackingViewsDatabaseManager.getInstance(mockContext)
+        injectMockDatabase(manager, mockDb)
+
+        val actTypeCursor = mockk<Cursor>(relaxed = true)
+        every { actTypeCursor.moveToFirst() } returns true
+        every { actTypeCursor.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.ACTIVITY_TYPE) } returns 0
+        every { actTypeCursor.getString(0) } returns "BIKE_POWER"
+
+        val tabsCursor = mockk<Cursor>(relaxed = true)
+        every { tabsCursor.moveToNext() } returnsMany listOf(true, true, true, false)
+        every { tabsCursor.getLong(0) } returnsMany listOf(10L, 20L, 30L)
+
+        every {
+            mockDb.query(
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEWS_TABLE,
+                any(),
+                "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID}=?",
+                arrayOf("20"),
+                any(), any(), any()
+            )
+        } returns actTypeCursor
+
+        every {
+            mockDb.query(
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEWS_TABLE,
+                arrayOf(TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID),
+                "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.ACTIVITY_TYPE}=?",
+                arrayOf("BIKE_POWER"),
+                null, null,
+                "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.LAYOUT_NR} ASC, ${TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID} ASC"
+            )
+        } returns tabsCursor
+
+        val result = manager.moveTabView(20L, false)
+        assertEquals(2, result)
+        verify(exactly = 1) { mockDb.beginTransaction() }
+        verify(exactly = 1) { mockDb.setTransactionSuccessful() }
+        verify(exactly = 1) { mockDb.endTransaction() }
+
+        verify(exactly = 3) {
+            mockDb.update(
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEWS_TABLE,
+                any(),
+                "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID}=?",
+                any()
+            )
+        }
+    }
 }

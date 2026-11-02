@@ -2133,6 +2133,8 @@
     <string name="cd_delete_tab">Excluir aba</string>
     <string name="cd_add_after">Adicionar depois</string>
     <string name="cd_copy_tab">Copiar separador</string>
+    <string name="cd_move_tab_left">Mover separador para a esquerda</string>
+    <string name="cd_move_tab_right">Mover separador para a direita</string>
     <string name="copy_tab_title">Copiar separador</string>
     <string name="copy_tab_action">Copiar</string>
     <string name="back">Voltar</string>

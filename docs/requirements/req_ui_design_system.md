@@ -12733,6 +12733,46 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 **Invariants**: Atomic SQLite transaction, zero blocking of the main thread (`Dispatchers.IO`), 9-language localization parity, and 100% clean-room test pass rate.
 
 
+### REQ-UI-440: Move Tracking Tab Left/Right [Verified]
+- **Tests**: `TST-UI-440` | **Tickets**: `ATT-5079`
+- **Implementation**: `TrackingTabConfigHeader.kt`, `TrackingTabsScreen.kt`, `TrackingTabsViewModel.kt`, `TrackingViewsRepository.kt`, `TrackingViewsDatabaseManager.java`
+- **Rationale**: Athletes configuring custom tracking cockpits need the ability to reorganize/reorder tabs within an active sport profile (`ActivityType`) (e.g., moving the 2nd tab to the very end or shifting a map/telemetry tab forward/backward) without recreating or cloning tabs. Adding Move Left and Move Right controls in the configuration header, updating SQLite `LAYOUT_NR` atomically within the sport profile, and auto-navigating the `HorizontalPager` to follow the moved tab provides seamless WYSIWYG reordering (ATT-5079, extending `REQ-UI-103`, `REQ-UI-175`, and `REQ-UI-439`):
+1. *Move Left and Move Right Header Actions (`REQ-UI-440.1`)*:
+• In `TrackingTabConfigHeader.kt`, Row 2 SHALL provide a Move Left icon button (`Icons.AutoMirrored.Filled.ArrowBack`) and a Move Right icon button (`Icons.AutoMirrored.Filled.ArrowForward`) alongside `Add Before`, `Copy`, `Delete`, and `Add After`.
+• The Move Left button SHALL be disabled when the tab is at the leftmost position (`tabIndex == 0`).
+• The Move Right button SHALL be disabled when the tab is at the rightmost position (`tabIndex >= tabCount - 1`).
+2. *Transactional SQLite Tab Reordering & Profile Isolation (`REQ-UI-440.2`)*:
+• In `TrackingViewsDatabaseManager.java` and `TrackingViewsRepository.kt`, moving a tab left or right SHALL execute atomically inside a SQLite transaction on a background thread (`Dispatchers.IO`).
+• Tab reordering SHALL be strictly scoped to the tab's `ActivityType`, swapping `LAYOUT_NR` with the adjacent neighbor and re-normalizing `LAYOUT_NR` (1..N) without affecting other sport profiles.
+3. *Reactive Pager Focus & Repeatable Reordering (`REQ-UI-440.3`)*:
+• Upon successful move in `TrackingTabsViewModel.kt`, the system SHALL emit a `TabNavigationEvent.NavigateTo(newIndex)` so the `HorizontalPager` automatically follows the moved tab, allowing the user to tap repeatedly to move a tab across multiple positions.
+4. *9-Language Localization & Accessibility Parity (`REQ-UI-440.4`)*:
+• All new user-facing action content descriptions (`cd_move_tab_left`, `cd_move_tab_right`) SHALL maintain 100% parity across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-440`, extending `REQ-UI-103` (Customizable Cockpits), `REQ-UI-175` (Tracking Tabs Configuration Transition), and `REQ-UI-439` (Copy Tracking Tab). Targets `TrackingTabConfigHeader.kt`, `TrackingTabsScreen.kt`, `TrackingTabsViewModel.kt`, `TrackingViewsRepository.kt`, and `TrackingViewsDatabaseManager.java`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-40.4 (`ATT-1281`), Sprint 2026-40.6 (`ATT-1450`), and `ATT-5078` established customizable tracking tab headers and spatial WYSIWYG configuration with `LAYOUT_NR` order.
+3. *Root Reason for Existing Formulation*: Tab order was originally fixed by creation sequence (`addEmptyTabView` before or after). Dynamic reordering controls were omitted in earlier iterations.
+4. *Preservation of Core Invariants*: Existing tab database schema (`VIEWS_TABLE`, `ROWS_TABLE`, `SECTION_DIVIDERS_TABLE`), sensor field configurations, telemetry recording, and other `ActivityType` profiles MUST remain 100% unaltered.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete in tracking tab configuration mode (`ScreenMode.CONFIGURATION`),
+• *When* viewing Row 2 of `TrackingTabConfigHeader`,
+• *Then* Move Left (`ArrowBack`) and Move Right (`ArrowForward`) buttons are visible with localized content descriptions `cd_move_tab_left` and `cd_move_tab_right`.
+• *Given* the active tab is at index 0 (first tab),
+• *When* rendered,
+• *Then* Move Left is disabled, and Move Right is enabled (if `tabCount > 1`).
+• *Given* the active tab is at index `tabCount - 1` (last tab),
+• *When* rendered,
+• *Then* Move Right is disabled, and Move Left is enabled (if `tabCount > 1`).
+• *Given* an active tab at intermediate index `0 < index < tabCount - 1`,
+• *When* the athlete taps Move Left or Move Right,
+• *Then* `LAYOUT_NR` is swapped atomically in SQLite within the active `ActivityType`, `trackingViews` updates, and `HorizontalPager` smoothly follows the tab to its `newIndex`.
+
+**Invariants**: Atomic SQLite transaction, strict `ActivityType` isolation, 9-language localization parity, and 100% clean-room test pass rate.
+
+
+
 
 
 

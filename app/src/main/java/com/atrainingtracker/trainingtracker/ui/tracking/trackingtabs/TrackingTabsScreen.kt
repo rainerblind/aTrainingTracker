@@ -721,10 +721,13 @@ fun TrackingTabsScreen(
                                     if (currentViewInfo != null) {
                                         TrackingTabConfigHeader(
                                             viewInfo = currentViewInfo,
+                                            tabIndex = pagerState.currentPage,
+                                            tabCount = trackingViews.size,
                                             onUpdateTabName = { id, name -> trackingTabsViewModel.onUpdateTabName(id, name) },
                                             onAddTabRelative = { id, after -> trackingTabsViewModel.onAddTabRelative(id, after) },
                                             onDeleteTab = { id -> trackingTabsViewModel.onDeleteTab(id) },
                                             onCopyTab = { id -> trackingTabsViewModel.onOpenCopyTabDialog(id) },
+                                            onMoveTab = { id, moveLeft -> trackingTabsViewModel.onMoveTab(id, moveLeft) },
                                             onToggleMode = { trackingTabsViewModel.toggleScreenMode() }
                                         )
                                     }

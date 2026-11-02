@@ -524,4 +524,34 @@ class TrackingTabsViewModelTest {
 
         job.cancel()
     }
+
+    @Test
+    fun testMoveTab_callsRepositoryAndEmitsNavigationEvent() = runTest(testDispatcher) {
+        coEvery { mockTrackingViewsRepo.moveTabView(1L, false) } returns 2
+        coEvery { mockTrackingViewsRepo.moveTabView(1L, true) } returns 0
+
+        val viewModel = createViewModel()
+        val events = mutableListOf<TabNavigationEvent>()
+        val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.navigationEvent.collect { events.add(it) }
+        }
+
+        viewModel.onMoveTab(1L, false)
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(1, events.size)
+        assertTrue(events[0] is TabNavigationEvent.NavigateTo)
+        assertEquals(2, (events[0] as TabNavigationEvent.NavigateTo).index)
+        coVerify(exactly = 1) { mockTrackingViewsRepo.moveTabView(1L, false) }
+
+        viewModel.onMoveTab(1L, true)
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(2, events.size)
+        assertTrue(events[1] is TabNavigationEvent.NavigateTo)
+        assertEquals(0, (events[1] as TabNavigationEvent.NavigateTo).index)
+        coVerify(exactly = 1) { mockTrackingViewsRepo.moveTabView(1L, true) }
+
+        job.cancel()
+    }
 }

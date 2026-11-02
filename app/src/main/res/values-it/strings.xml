@@ -2135,6 +2135,8 @@
     <string name="cd_delete_tab">Elimina scheda</string>
     <string name="cd_add_after">Aggiungi dopo</string>
     <string name="cd_copy_tab">Copia scheda</string>
+    <string name="cd_move_tab_left">Sposta scheda a sinistra</string>
+    <string name="cd_move_tab_right">Sposta scheda a destra</string>
     <string name="copy_tab_title">Copia scheda</string>
     <string name="copy_tab_action">Copia</string>
     <string name="back">Indietro</string>

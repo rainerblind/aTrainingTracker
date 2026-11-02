@@ -52,4 +52,21 @@ class TrackingTabConfigHeaderContractTest {
         assertTrue("CopyTrackingTabDialog must reference copy_tab_action", content.contains("R.string.copy_tab_action"))
         assertTrue("CopyTrackingTabDialog must iterate over ActivityType.values()", content.contains("ActivityType.values().forEach"))
     }
+
+    @Test
+    fun testTrackingTabConfigHeader_hasMoveButtonsAndBoundaryContracts() {
+        val headerFile = File("src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/trackingtabs/TrackingTabConfigHeader.kt")
+        assertTrue("TrackingTabConfigHeader.kt must exist", headerFile.exists())
+        val content = headerFile.readText()
+
+        assertTrue("TrackingTabConfigHeader must import ArrowBack", content.contains("ArrowBack"))
+        assertTrue("TrackingTabConfigHeader must import ArrowForward", content.contains("ArrowForward"))
+        assertTrue("TrackingTabConfigHeader must declare tabIndex parameter", content.contains("tabIndex: Int"))
+        assertTrue("TrackingTabConfigHeader must declare tabCount parameter", content.contains("tabCount: Int"))
+        assertTrue("TrackingTabConfigHeader must declare onMoveTab callback", content.contains("onMoveTab: (Long, Boolean) -> Unit"))
+        assertTrue("TrackingTabConfigHeader must reference R.string.cd_move_tab_left", content.contains("R.string.cd_move_tab_left"))
+        assertTrue("TrackingTabConfigHeader must reference R.string.cd_move_tab_right", content.contains("R.string.cd_move_tab_right"))
+        assertTrue("TrackingTabConfigHeader must gate Move Left with tabIndex > 0", content.contains("enabled = tabIndex > 0"))
+        assertTrue("TrackingTabConfigHeader must gate Move Right with tabIndex < tabCount - 1", content.contains("enabled = tabIndex < tabCount - 1"))
+    }
 }

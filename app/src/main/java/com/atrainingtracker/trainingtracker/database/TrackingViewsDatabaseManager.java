@@ -48,6 +48,7 @@ import com.atrainingtracker.util.CursorUtils;
 import com.atrainingtracker.util.EnumUtils;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -786,6 +787,65 @@ public class TrackingViewsDatabaseManager {
         values.put(TrackingViewsDbHelper.SHOW_BIKE_BELL, 0);
 
         db.insert(TrackingViewsDbHelper.VIEWS_TABLE, null, values);
+    }
+
+    /**
+     * Reorders a tab view within its associated ActivityType by swapping it with its adjacent neighbor (REQ-UI-440.2).
+     * Re-indexes all tabs for that ActivityType to sequential LAYOUT_NR values (1..N) within an atomic transaction.
+     *
+     * @param viewId The ID of the tab to move.
+     * @param moveLeft True to move towards the start (lower index/layoutNr), false to move towards the end.
+     * @return The new zero-based index of the moved tab within its ActivityType, or the unchanged index if boundary reached.
+     */
+    @WorkerThread
+    public int moveTabView(long viewId, boolean moveLeft) {
+        SQLiteDatabase db = getDatabase();
+        ActivityType activityType = getActivityTypeForTab(viewId);
+        List<Long> tabIds = new ArrayList<>();
+        try (Cursor cursor = db.query(
+                TrackingViewsDbHelper.VIEWS_TABLE,
+                new String[]{TrackingViewsDbHelper.C_ID},
+                TrackingViewsDbHelper.ACTIVITY_TYPE + "=?",
+                new String[]{activityType.name()},
+                null,
+                null,
+                TrackingViewsDbHelper.LAYOUT_NR + " ASC, " + TrackingViewsDbHelper.C_ID + " ASC"
+        )) {
+            while (cursor.moveToNext()) {
+                tabIds.add(cursor.getLong(0));
+            }
+        }
+
+        int currentIndex = tabIds.indexOf(viewId);
+        if (currentIndex == -1) {
+            return -1;
+        }
+
+        int targetIndex = moveLeft ? currentIndex - 1 : currentIndex + 1;
+        if (targetIndex < 0 || targetIndex >= tabIds.size()) {
+            return currentIndex;
+        }
+
+        Collections.swap(tabIds, currentIndex, targetIndex);
+
+        db.beginTransaction();
+        try {
+            for (int i = 0; i < tabIds.size(); i++) {
+                ContentValues values = new ContentValues();
+                values.put(TrackingViewsDbHelper.LAYOUT_NR, i + 1);
+                db.update(
+                        TrackingViewsDbHelper.VIEWS_TABLE,
+                        values,
+                        TrackingViewsDbHelper.C_ID + "=?",
+                        new String[]{String.valueOf(tabIds.get(i))}
+                );
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+
+        return targetIndex;
     }
 
     /**

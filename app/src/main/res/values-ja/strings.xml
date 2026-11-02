@@ -2114,6 +2114,8 @@
     <string name="cd_delete_tab">タブを削除</string>
     <string name="cd_add_after">後に追加</string>
     <string name="cd_copy_tab">タブをコピー</string>
+    <string name="cd_move_tab_left">タブを左へ移動</string>
+    <string name="cd_move_tab_right">タブを右へ移動</string>
     <string name="copy_tab_title">タブをコピー</string>
     <string name="copy_tab_action">コピー</string>
     <string name="back">戻る</string>

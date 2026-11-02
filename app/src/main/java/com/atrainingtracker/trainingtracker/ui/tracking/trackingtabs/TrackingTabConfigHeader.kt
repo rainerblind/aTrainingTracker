@@ -26,6 +26,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
@@ -55,11 +57,14 @@ import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewInfo
 @Composable
 fun TrackingTabConfigHeader(
     viewInfo: TrackingViewInfo,
+    tabIndex: Int = 0,
+    tabCount: Int = 1,
     // Callbacks to ViewModel
     onUpdateTabName: (Long, String) -> Unit,
     onAddTabRelative: (Long, Boolean) -> Unit,
     onDeleteTab: (Long) -> Unit,
     onCopyTab: (Long) -> Unit,
+    onMoveTab: (Long, Boolean) -> Unit = { _, _ -> },
     onToggleMode: () -> Unit,
 ) {
     // Local state for the text field to ensure smooth typing
@@ -105,26 +110,30 @@ fun TrackingTabConfigHeader(
 
             Spacer(Modifier.height(4.dp))
 
-            // Row 2: Management Buttons (Add Before, Delete, Copy Tab, Add After)
+            // Row 2: Management Buttons (Move Left, Add Before, Copy Tab, Delete, Add After, Move Right)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                // Move Left
+                IconButton(
+                    onClick = { onMoveTab(viewInfo.tabViewId, true) },
+                    enabled = tabIndex > 0
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.cd_move_tab_left),
+                        tint = if (tabIndex > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    )
+                }
+
                 // Add Before
                 IconButton(onClick = { onAddTabRelative(viewInfo.tabViewId, false) }) {
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = stringResource(R.string.cd_add_before),
                         tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-
-                // Delete in the middle
-                IconButton(onClick = { onDeleteTab(viewInfo.tabViewId) }) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = stringResource(R.string.cd_delete_tab)
                     )
                 }
 
@@ -137,12 +146,32 @@ fun TrackingTabConfigHeader(
                     )
                 }
 
+                // Delete in the middle
+                IconButton(onClick = { onDeleteTab(viewInfo.tabViewId) }) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = stringResource(R.string.cd_delete_tab)
+                    )
+                }
+
                 // Add After
                 IconButton(onClick = { onAddTabRelative(viewInfo.tabViewId, true) }) {
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = stringResource(R.string.cd_add_after),
                         tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                // Move Right
+                IconButton(
+                    onClick = { onMoveTab(viewInfo.tabViewId, false) },
+                    enabled = tabIndex < tabCount - 1
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = stringResource(R.string.cd_move_tab_right),
+                        tint = if (tabIndex < tabCount - 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                     )
                 }
             }

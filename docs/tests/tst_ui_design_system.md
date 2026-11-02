@@ -6952,6 +6952,33 @@
   • Clean-room execution of unit tests ensuring zero regressions (`REQ-PRO-001`).
 
 
+### TST-UI-440: **Move Tracking Tab Left/Right Test Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-440`
+- **Component**: `TrackingTabConfigHeaderContractTest.kt`, `TrackingViewsDatabaseManagerTest.kt`, `TrackingViewsRepositoryTest.kt`, `TrackingTabsViewModelTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-5079`
+- **Test Description**:
+  1. *Tracking Tab Config Header Move Buttons & Boundary Gating Test (`TST-UI-440.1`)*:
+  • Contract/unit test in `TrackingTabConfigHeaderContractTest.kt` verifying `TrackingTabConfigHeader.kt`:
+    - Declares Move Left (`Icons.AutoMirrored.Filled.ArrowBack`) and Move Right (`Icons.AutoMirrored.Filled.ArrowForward`) icon buttons with content descriptions `R.string.cd_move_tab_left` and `R.string.cd_move_tab_right`.
+    - Disables Move Left when `tabIndex == 0`.
+    - Disables Move Right when `tabIndex >= tabCount - 1`.
+  2. *Database Scoped Atomic Tab Swap Test (`TST-UI-440.2`)*:
+  • Unit test in `TrackingViewsDatabaseManagerTest.kt` verifying `moveTabView(viewId, moveLeft)`:
+    - Atomically swaps `LAYOUT_NR` with adjacent neighbor tab within the same `ActivityType`.
+    - Normalizes `LAYOUT_NR` to continuous 1..N order.
+    - Leaves tabs belonging to other `ActivityType` profiles completely untouched.
+    - Returns updated index.
+  3. *Repository & ViewModel Pager Navigation Test (`TST-UI-440.3`)*:
+  • Unit test in `TrackingViewsRepositoryTest.kt` and `TrackingTabsViewModelTest.kt` verifying:
+    - `moveTabView` executes on `Dispatchers.IO` and triggers `configUpdateTrigger`.
+    - `TrackingTabsViewModel.onMoveTab(tabViewId, moveLeft)` sends `TabNavigationEvent.NavigateTo(newIndex)`.
+  4. *9-Language Localization Parity Audit (`TST-UI-440.4`)*:
+  • Test in `TranslationParityTest.kt` asserting presence and format specifier parity of `cd_move_tab_left` and `cd_move_tab_right` across all 9 locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
+  5. *Full Clean-Room Unit Regression Suite (`TST-UI-440.5`)*:
+  • Clean-room execution of unit tests ensuring zero regressions (`REQ-PRO-001`).
+
+
+
 
 
 

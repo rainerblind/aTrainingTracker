@@ -2335,6 +2335,8 @@
     <string name="cd_delete_tab">Delete tab</string>
     <string name="cd_add_after">Add after</string>
     <string name="cd_copy_tab">Copy tab</string>
+    <string name="cd_move_tab_left">Move tab left</string>
+    <string name="cd_move_tab_right">Move tab right</string>
     <string name="copy_tab_title">Copy Tab</string>
     <string name="copy_tab_action">Copy</string>
     <string name="back">Back</string>
