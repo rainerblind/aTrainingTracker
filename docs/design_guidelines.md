@@ -143,9 +143,10 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 * **Rounded Top Corners & Sharp Bottom Corners on Bottom-Anchored Bars (`ATT-5195` $\rightarrow$ `ATT-5280`)**:
   * Vertical bar charts anchored to a bottom baseline (`DailyActivityStrip` in `MonthDayBar` / `WeekDayColumn`, histogram columns) **MUST** have **rounded top corners (`topStart = 2.dp..3.dp, topEnd = 2.dp..3.dp`)** and **sharp bottom corners (`bottomStart = 0.dp, bottomEnd = 0.dp`)**.
   * Never apply `.clip(RoundedCornerShape(2.dp / 3.dp))` to all 4 corners of an outer container `Box(contentAlignment = Alignment.BottomCenter)` while giving the inner bar a smaller `1.dp` top radius, which makes the bottom of the bars look rounded and the top look sharp.
-* **Unconditional Background Track Continuity in Histograms (`ATT-5190` $\rightarrow$ `ATT-5281`)**:
-  * Marginal and zone histograms (`AlignedMarginalZoneDistribution` in `ZoneDistributionComponents.kt`) **MUST** draw the `alpha = 0.15f` background container track unconditionally for every `linearBin` across the plotted range, gating only the solid foreground bar on `if (bin.durationSec > 0L && barWidth > 0f)`.
-  * Gating the background track on `durationSec > 0L` skips empty intermediate bins between non-contiguous high-wattage spikes, leaving horizontal white stripes across the Zone 7 background band.
+* **Unconditional Background Track Continuity & Domain-Boundary Clamping in Histograms (`ATT-5190` $\rightarrow$ `ATT-5281` $\rightarrow$ `ATT-5311`, Rules 69 & 70)**:
+  * Marginal and zone histograms (`TelemetryMetricGraph`, `AlignedMarginalZoneDistribution` in `ZoneDistributionComponents.kt`) **MUST** draw the `alpha = 0.15f` background container track unconditionally for every `linearBin` *within* the plotted `[dataMin, dataMax]` domain, gating only the solid foreground bar on `if (bin.durationSec > 0L && barWidth > 0f)`.
+  * Gating the background track on `durationSec > 0L` skips empty intermediate bins between non-contiguous high-wattage spikes, leaving horizontal white stripes across the Zone 7 background band (`ATT-5281`).
+  * **Domain-Boundary Clamping Guard (`Rule 70` — `ATT-5281` $\rightarrow$ `ATT-5311`)**: Always filter out-of-domain bins (`bin.rangeMax > dataMin && bin.rangeMin < dataMax`) and clamp `[rangeMin, rangeMax]` to `[dataMin, dataMax]` before mapping via `valueToY(...)`. Never apply `.coerceAtLeast(1f)` to zero-height clamped bins outside `[dataMin, dataMax]`, which causes dozens of `alpha = 0.15f` rectangles to stack at `y = 0f` into a solid black bar along the top edge.
 
 ---
 
