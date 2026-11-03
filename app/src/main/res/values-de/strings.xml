@@ -670,7 +670,7 @@
     <string name="label_max">Max</string>
 
     <string name="zone_display_title">Zonendarstellung</string>
-    <string name="zone_display_background">Heller Hintergrund</string>
+    <string name="zone_display_background">Eingefärbter Hintergrund</string>
     <string name="zone_display_left_bar">Balken links</string>
     <string name="zone_display_right_bar">Balken rechts</string>
     <string name="zone_display_text_color">Textfarbe</string>

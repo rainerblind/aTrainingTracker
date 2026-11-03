@@ -795,7 +795,7 @@
     <string name="label_max">Max</string>
 
     <string name="zone_display_title">Zone Visualization</string>
-    <string name="zone_display_background">Light background</string>
+    <string name="zone_display_background">Tinted background</string>
     <string name="zone_display_left_bar">Left bar</string>
     <string name="zone_display_right_bar">Right bar</string>
     <string name="zone_display_text_color">Text color</string>

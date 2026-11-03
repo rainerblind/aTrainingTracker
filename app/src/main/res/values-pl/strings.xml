@@ -372,7 +372,7 @@
     <string name="label_max">Max</string>
 
     <string name="zone_display_title">Wizualizacja stref</string>
-    <string name="zone_display_background">Jasne tło</string>
+    <string name="zone_display_background">Zabarwione tło</string>
     <string name="zone_display_left_bar">Lewy pasek</string>
     <string name="zone_display_right_bar">Prawy pasek</string>
     <string name="zone_display_text_color">Kolor tekstu</string>

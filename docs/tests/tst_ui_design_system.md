@@ -1359,10 +1359,10 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules.
 
-### TST-UI-124: **Configurable Zone Visualization & Theme-Aware Preview Verification** [Athletes can independently configure 4 zone visualization options per zone profile (`HR_RUN`, `HR_BIKE`, `PWR_BIKE`); live preview in `ZonesSettingsActivity` dynamically reflects toggle selections and respects the active dark/light mode theme; cockpit sensor tiles render custom combinations of background tint, left bar, right bar, and text color while preserving established zone colors; 100% 9-language localization parity; zero regressions.]
+### TST-UI-124: **Configurable Zone Visualization & Theme-Aware Preview Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-172`
 - **Component**: **Configurable Zone Visualization & Theme-Aware Preview Verification**
-- **Jira**: ``ATT-1265``
+- **Jira**: `ATT-1265`, `ATT-5200`
 - **Test Description**:
   1. *Data Model Unit Tests (`ZoneDisplayOptionsTest.kt`)*:
   • Verify default constructor sets `showBackground = true`, `showLeftBar = true`, `showRightBar = false`, `showTextColor = false` for backward compatibility.
@@ -1381,6 +1381,7 @@
   • Theme-aware preview reactivity: verify container resolves to pure black/dark surface in dark theme and light surface in light theme when background tint is off.
   4. *9-Language Localization Audit (`ZoneDisplayLocalizationTest.kt`)*:
   • Verify all newly added string keys (`zone_display_title`, `zone_display_background`, `zone_display_left_bar`, `zone_display_right_bar`, `zone_display_text_color`, `zone_display_preview_title`) exist across all 9 application locales.
+  • Verify `zone_display_background` translates accurately to "Tinted background" (EN), "Eingefärbter Hintergrund" (DE), and matching translations across ES, FR, IT, JA, NL, PL, PT.
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules.
 

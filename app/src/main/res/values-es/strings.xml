@@ -633,7 +633,7 @@
     <string name="label_max">Máx</string>
 
     <string name="zone_display_title">Visualización de zonas</string>
-    <string name="zone_display_background">Fondo claro</string>
+    <string name="zone_display_background">Fondo tintado</string>
     <string name="zone_display_left_bar">Barra izquierda</string>
     <string name="zone_display_right_bar">Barra derecha</string>
     <string name="zone_display_text_color">Color de texto</string>

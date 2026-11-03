@@ -629,7 +629,7 @@
     <string name="label_max">最大</string>
 
     <string name="zone_display_title">ゾーン表示</string>
-    <string name="zone_display_background">明るい背景</string>
+    <string name="zone_display_background">色付き背景</string>
     <string name="zone_display_left_bar">左バー</string>
     <string name="zone_display_right_bar">右バー</string>
     <string name="zone_display_text_color">文字色</string>

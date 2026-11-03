@@ -1992,13 +1992,13 @@ Specifically:
 
 **Invariants**: WCAG 2.1 AAA text contrast compliance; non-cockpit theme isolation; active zone color visibility.
 
-### REQ-UI-172: Configurable Zone Visualization Options and Theme-Aware Live Preview [`TST-UI-124`]
-- **Tests**: `SettingsDataStore.kt`, `SettingsDataStoreJavaHelper.kt`, `ZonesSettingsActivity.kt`, `SensorFieldState.kt`, `SensorFieldView.kt`, `TrackingViewModel.kt`
-- **Implementation**: Provide granular user configurability for zone visual cues (light background, left bar, right bar, text color) per zone profile in ZonesSettingsActivity with a theme-aware live preview tile, enabling pure black AMOLED tiles or high-contrast side/text cues during tracking.
-- **Rationale**: The system SHALL provide configurable zone visualization options per athletic zone profile (`HR_RUN`, `HR_BIKE`, and `PWR_BIKE`) within `ZonesSettingsActivity` and reflect the chosen visual cues dynamically across workout cockpit sensor tiles (ATT-1265):
+### REQ-UI-172: Configurable Zone Visualization Options and Theme-Aware Live Preview [Verified]
+- **Tests**: `TST-UI-124`, `ZoneDisplayLocalizationTest.kt` | **Tickets**: `ATT-1265`, `ATT-5200`
+- **Implementation**: Provide granular user configurability for zone visual cues (tinted background, left bar, right bar, text color) per zone profile in ZonesSettingsActivity with a theme-aware live preview tile, enabling pure black AMOLED tiles or high-contrast side/text cues during tracking.
+- **Rationale**: The system SHALL provide configurable zone visualization options per athletic zone profile (`HR_RUN`, `HR_BIKE`, and `PWR_BIKE`) within `ZonesSettingsActivity` and reflect the chosen visual cues dynamically across workout cockpit sensor tiles (ATT-1265). ATT-5200 updates string resource `zone_display_background` across all 9 application locales to "Tinted background" (*Eingefärbter Hintergrund*) to resolve user confusion with Dark/AMOLED themes:
 1. *Per-Profile Visualization Options (`ZoneDisplayOptions`)*:
 • The system SHALL define four independent, multi-selectable visual presentation cues for each `ZoneType`:
-- *Light background* (`showBackground`: Boolean): Renders the card container with tinted zone color at 12% opacity (`zoneColor.copy(alpha = 0.12f)`). When disabled, the card container remains neutral `MaterialTheme.colorScheme.surface` (pure `#000000` in AMOLED dark mode).
+- *Tinted background* (`showBackground`: Boolean, localized via `R.string.zone_display_background`): Renders the card container with tinted zone color at 12% opacity (`zoneColor.copy(alpha = 0.12f)`). When disabled, the card container remains neutral `MaterialTheme.colorScheme.surface` (pure `#000000` in AMOLED dark mode). Across all 9 locales, the string resource SHALL convey active zone color tinting rather than daylight theme ("Tinted background" / "Eingefärbter Hintergrund").
 - *Left bar* (`showLeftBar`: Boolean): Renders a 6dp vertical indicator strip on the left edge of the tile colored with the active `zoneColor`.
 - *Right bar* (`showRightBar`: Boolean): Renders a 6dp vertical indicator strip on the right edge of the tile colored with the active `zoneColor`.
 - *Text color* (`showTextColor`: Boolean): Renders the primary numeric metric reading (`fieldState.value`) using the active `zoneColor`. When disabled, the reading renders in standard `MaterialTheme.colorScheme.onSurface`.
@@ -2019,16 +2019,25 @@ Specifically:
 • Zero disk I/O on 1Hz sensor tick updates (options resolved in-memory on `SensorFieldState`).
 • 100% localization parity maintained across all 9 supported locales.
 
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-UI-172` (*Configurable Zone Visualization Options and Theme-Aware Live Preview*, `ATT-1265`). Targets `app/src/main/res/values*/strings.xml`, `ZoneDisplayLocalizationTest.kt`, and `docs/requirements/req_ui_design_system.md`.
+2. *Historical Origin & Commit Trace*: `ATT-1265` (commit `a48c8a38`, Sprint 2026-40.5) established `ZoneDisplayOptions` and string resource `zone_display_background = "Light background"` / `"Heller Hintergrund"`.
+3. *Root Reason for Existing Formulation*: "Light background" originally denoted "lightly tinted/colored" (12% alpha tint), but caused semantic ambiguity in Dark/AMOLED modes where athletes interpreted it as forcing a light/daylight surface.
+4. *Preservation of Core Invariants*: String identifier `R.string.zone_display_background`, backing property `showBackground: Boolean`, default value `true`, DataStore persistence schema, and 9-language translation parity are 100% preserved.
+
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete in `ZonesSettingsActivity` on the Run HR tab,
 • *When* viewing the \"Zonendarstellung\" section,
-• *Then* four toggle controls (Light background, Left bar, Right bar, Text color) and a live preview tile SHALL be rendered below the zone threshold cards.
-• *When* the athlete toggles \"Right bar\" ON and \"Light background\" OFF,
+• *Then* four toggle controls (Tinted background, Left bar, Right bar, Text color) and a live preview tile SHALL be rendered below the zone threshold cards.
+• *Given* an athlete viewing the "Zonendarstellung" section in any supported language,
+• *When* inspecting the first toggle,
+• *Then* it SHALL display "Tinted background" (EN), "Eingefärbter Hintergrund" (DE), "Fondo tintado" (ES), "Arrière-plan teinté" (FR), "Sfondo tinto" (IT), "色付き背景" (JA), "Getinte achtergrond" (NL), "Zabarwione tło" (PL), or "Fundo matizado" (PT).
+• *When* the athlete toggles \"Right bar\" ON and \"Tinted background\" OFF,
 • *Then* the live preview tile SHALL immediately update to show a right vertical strip on neutral surface with no background tint, and the preferences SHALL be persisted to DataStore.
 • *Given* the host device is in AMOLED Dark Mode,
 • *When* viewing the live preview tile in `ZonesSettingsActivity`,
 • *Then* the preview tile card background SHALL render in pure black (`#000000`) when background tint is toggled OFF.
-• *Given* an active workout with Run HR zone configured with \"Text color\" ON and \"Light background\" OFF,
+• *Given* an active workout with Run HR zone configured with \"Text color\" ON and \"Tinted background\" OFF,
 • *When* the heart rate enters Zone 4 (Threshold),
 • *Then* the heart rate metric value SHALL render in red (`#FF0000`) on a neutral dark surface with no background tint.
 • *Given* all four zone visualization toggles are switched OFF,

@@ -630,7 +630,7 @@
     <string name="label_max">Max</string>
 
     <string name="zone_display_title">Visualisation des zones</string>
-    <string name="zone_display_background">Arrière-plan clair</string>
+    <string name="zone_display_background">Arrière-plan teinté</string>
     <string name="zone_display_left_bar">Barre gauche</string>
     <string name="zone_display_right_bar">Barre droite</string>
     <string name="zone_display_text_color">Couleur du texte</string>
