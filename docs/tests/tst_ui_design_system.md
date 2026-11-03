@@ -4400,10 +4400,10 @@
   3. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-282: **General Map Layer Visibility Controls & Preference Persistence Verification** [General map Layers menu toggles routes, segments, favorite locations, favorite tracks / clusters, and live track; user layer visibility preferences persisted across sessions in SharedPreferences; CLUSTERS layer disabled by default in DEFAULT_ENABLED; Cockpit map strictly isolates and never renders clusters; fast asynchronous cluster hydration and off-Main polyline decoding; harmonized ClusterOnMapSheet look and stats enrichment without purple text tinting; 100% 9-language localization parity; 100% unit test pass rate.] [Verified]
+### TST-UI-282: **General Map Layer Visibility Controls & Preference Persistence Verification** [General map Layers menu toggles routes, segments, favorite locations, favorite tracks / clusters, and live track; user layer visibility preferences persisted across sessions in SharedPreferences; CLUSTERS layer disabled by default in DEFAULT_ENABLED; Cockpit map strictly isolates and never renders clusters; fast asynchronous cluster hydration with companion stats parity and off-Main polyline decoding; harmonized ClusterOnMapSheet MapDetailLayout, MinimumDragHandle, list component reuse, and stats enrichment without purple text tinting; 100% 9-language localization parity; 100% unit test pass rate.] [Verified]
 - **Requirement(s)**: `REQ-UI-322`
 - **Component**: **General Map Layer Visibility Controls & Preference Persistence Verification**
-- **Jira**: `ATT-2931`, `ATT-4847`, `ATT-5075`, `ATT-5074`, `ATT-5197`
+- **Jira**: `ATT-2931`, `ATT-4847`, `ATT-5075`, `ATT-5074`, `ATT-5197`, `ATT-5196`
 - **Test Description**:
   1. *GeneralMapLayer Enum & Default State Contract (`GeneralMapLayersContractTest.kt`)*:
   • Verify `GeneralMapLayer` enum declares `ROUTES`, `SEGMENTS`, `KNOWN_LOCATIONS`, `TRACK`, and `CLUSTERS` (exactly 5 entries).
@@ -4425,17 +4425,19 @@
   • Verify `TrackingViewModel` does NOT depend on or observe `WorkoutClusterRepository` or `GeneralMapLayer.CLUSTERS`.
   • Verify `TrackingViewModel.observeMapState()` populates `TrackingMapState` without `WorkoutClusterRepository.allClusters`.
   • Verify live tracking cockpit renders strictly active track, selected routes, and live segments.
-  5. *ClusterOnMapSheet Harmonized UI & Non-Purple Styling Contract Tests (`GeneralMapLayersContractTest.kt`)*:
-  • Verify `ClusterOnMapSheet` renders 32dp sport icon with `Color.Unspecified`.
+  5. *ClusterOnMapSheet Drag Handle, MapDetailLayout & Component Reuse Contract Tests (`GeneralMapLayersContractTest.kt`, `MapScreenWithTrackTest.kt`)*:
+  • Verify `ClusterOnMapSheet` is hosted within `MapDetailLayout(useStatusBarsPadding = false)` with `MinimumDragHandle()` at the top.
+  • Verify `ClusterOnMapSheet` header reuses canonical `WorkoutClusterIdentityRow` and `WorkoutClusterMetadataBlock` from `WorkoutClusterComponents.kt`.
+  • Verify `onHeaderHeightMeasured` dynamically updates `measuredClusterHeaderHeight` for bottom sheet peek calculation.
+  • Verify expandable body displays full cluster details and workout heatmap when dragged upward.
   • Verify `ClusterOnMapSheet` does NOT apply `tint = TTColor.Cluster` or hardcoded purple colors to text or icons.
-  • Verify `ClusterOnMapSheet` displays cluster name, sport subtitle, distance, elevation gain, PR trophy (`TTColor.Gold`), hit count (`primary`), and relative recency.
-  • Verify cluster peek height in `MapScreenWithTrack.kt` uses `BottomSheetDesign.PeekHeightWorkout + navBarHeight`.
   6. *MapCluster & MapFragmentWithTrackViewModel Stats Enrichment Contract Tests (`MapModelsTest.kt`, `MapFragmentWithTrackViewModelTest.kt`)*:
   • Verify `MapCluster` includes `stats: WorkoutClusterStats? = null`.
   • Verify `MapFragmentWithTrackViewModel` combines `workoutClusterRepository.clusterStats` into `mapClustersFlow`, populating `stats` on `MapCluster`.
   • Verify `WorkoutCluster.toMapCluster()` populates `stats` while preserving referential stability of decoded coordinates (`latLngs`).
-  7. *Fast Asynchronous Hydration & Off-Main Decoding Contract Tests (`WorkoutClusterRepositoryTest.kt`, `MapFragmentWithTrackViewModelTest.kt`)*:
-  • Verify `WorkoutClusterRepository` provides fast asynchronous loading from the `RouteClusters` table on `Dispatchers.IO` without requiring `clusterStats` aggregation.
+  7. *Fast Asynchronous Hydration with Companion Stats Parity Contract Tests (`WorkoutClusterRepositoryTest.kt`, `MapFragmentWithTrackViewModelTest.kt`)*:
+  • Verify `WorkoutClusterRepository.loadAllClustersLightweight()` seeds `_allClusters` from `RouteClusters` and, if `_clusterStats.value.isEmpty()`, automatically populates `_clusterStats.value = summariesManager.getWorkoutClusterStatsForAllClusters()`.
+  • Verify opening Map first hydrates cluster stats without requiring a prior visit to the Lieblingsstrecken list screen.
   • Verify `mapClustersFlow` offloads polyline decoding to `Dispatchers.Default` (`flowOn(Dispatchers.Default)`).
   8. *9-Language Localization Parity Audit (`GeneralMapLayersLocalizationTest.kt`)*:
   • Verify string resources `map_layers`, `map_layer_routes`, `map_layer_segments`, `map_layer_locations`, `map_layer_track`, `map_layer_clusters` exist and are non-empty across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).

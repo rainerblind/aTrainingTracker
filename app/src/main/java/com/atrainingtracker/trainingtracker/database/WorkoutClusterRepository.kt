@@ -39,6 +39,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 class WorkoutClusterRepository internal constructor(
@@ -51,6 +53,7 @@ class WorkoutClusterRepository internal constructor(
     private val DEBUG = com.atrainingtracker.trainingtracker.TrainingApplication.getDebug(true)
     private val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(context)
     private val isRecalculatingLock = AtomicBoolean(false)
+    private val lightweightLoadMutex = Mutex()
     
     private val mapper by lazy {
         WorkoutDataMapper(
@@ -86,18 +89,27 @@ class WorkoutClusterRepository internal constructor(
     }
 
     /**
-     * Fast, lightweight loading pathway from the SQLite RouteClusters table (REQ-UI-322.5, ATT-5074).
-     * Populates [_allClusters] directly without blocking on heavy WorkoutSummaries aggregation (clusterStats)
-     * or member workout hydration.
+     * Fast, lightweight loading pathway from the SQLite RouteClusters table (REQ-UI-322.5, ATT-5074, ATT-5196).
+     * Populates [_allClusters] directly and hydrates companion [_clusterStats] if empty (REQ-UI-322.10, ATT-5196)
+     * so initial map displays show complete metrics without waiting for cluster list screen visits.
      */
     suspend fun loadAllClustersLightweight(): List<WorkoutCluster> = withContext(Dispatchers.IO) {
-        val cached = clusterDb.getAllClusters()
-        if (cached.isNotEmpty()) {
-            val sorted = cached.sortedByDescending { it.hitCount }
-            _allClusters.value = sorted
-            sorted
-        } else {
-            emptyList()
+        lightweightLoadMutex.withLock {
+            val cached = clusterDb.getAllClusters()
+            if (cached.isNotEmpty()) {
+                val sorted = cached.sortedByDescending { it.hitCount }
+                _allClusters.value = sorted
+                if (_clusterStats.value.isEmpty()) {
+                    try {
+                        _clusterStats.value = summariesManager.getWorkoutClusterStatsForAllClusters()
+                    } catch (t: Throwable) {
+                        if (DEBUG) android.util.Log.w("WorkoutClusterRepo", "Failed to hydrate cluster stats in lightweight load: ${t.message}")
+                    }
+                }
+                sorted
+            } else {
+                emptyList()
+            }
         }
     }
 
