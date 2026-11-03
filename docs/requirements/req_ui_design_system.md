@@ -12790,6 +12790,41 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 **Invariants**: Atomic SQLite transaction, strict `ActivityType` isolation, 9-language localization parity, and 100% clean-room test pass rate.
 
 
+### REQ-UI-441: Intrinsic Minimum Height Bounding for Standalone Sensor Field View Containers [Verified]
+- **Tests**: `TST-UI-441` | **Tickets**: `ATT-5071`
+- **Implementation**: `ZonesSettingsActivity.kt`
+- **Rationale**: On the *Profil & Zonen* screen (`AthleteProfileScreen.kt`), `SensorFieldView` is embedded inside `SettingsScreenContent`'s vertically scrollable `Column(Modifier.verticalScroll(...))` across the *Lauf HF*, *Rad HF*, and *Rad Leistung* tabs as a live theme-aware preview tile. `SensorFieldView`'s internal layout contract (`REQ-UI-438`) applies `Card(Modifier.fillMaxWidth().fillMaxHeight())`, inner `Row(Modifier.fillMaxWidth().fillMaxHeight())`, and inner telemetry `Column(Modifier.fillMaxWidth().weight(1f))`. Under an unbounded scrollable container (`Constraints.Infinity`), `fillMaxHeight()` collapses to minimum height (0), causing the numeric telemetry value, unit label, zone gauge bar, and vertical indicator strips to be clipped or zero-height. Bounding the preview container via `Modifier.height(IntrinsicSize.Min)` guarantees full-height rendering of the card, centered telemetry readout, units, zone gauge bar, and vertical indicator strips without vertical collapse (ATT-5071, Parent Epic ATT-355, extending `REQ-UI-438`, Rule 67, and Design Guideline 5.14):
+1. *Preview Container Height Bounding (`REQ-UI-441.1`)*:
+• In `ZonesSettingsActivity.kt`, within `SettingsScreenContent`, the enclosing container (`Box` / `Surface`) wrapping `SensorFieldView` SHALL apply `Modifier.height(IntrinsicSize.Min)`.
+2. *Full-Height Card and Telemetry Content Visibility (`REQ-UI-441.2`)*:
+• When rendered inside the bounded preview container, `SensorFieldView` SHALL render at its minimum intrinsic height (~96 dp), fully displaying:
+  a. Field header label (`"Heart Rate"` or `"Power"`) anchored at top;
+  b. Centered telemetry numeric value and unit label (`"bpm"` / `"W"`);
+  c. Centered or active zone gauge bar (`ZoneGaugeBar`) when enabled;
+  d. Continuous vertical left/right indicator strip (`Spacer`) spanning 100% of card height flush with the borders.
+3. *Scrollable Host Container Stability & Parity (`REQ-UI-441.3`)*:
+• The enclosing `Column(Modifier.verticalScroll(scrollState))` in `ZonesSettingsActivity.kt` and `AthleteProfileScreen.kt` tabs (`Lauf HF`, `Rad HF`, `Rad Leistung`) SHALL remain smoothly scrollable with zero layout measurement exceptions or infinite constraint loops.
+4. *Cockpit Grid Invariant Preservation (`REQ-UI-441.4`)*:
+• The internal implementation of `SensorFieldView.kt` and multi-column equal-height stretching in `SensorGridScreen.kt` (`REQ-UI-438`) SHALL remain untouched and 100% preserved.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-UI-438` (*Vertical Card Height and Border Stretching in Cockpit Sensor Grid*) and targets `ZonesSettingsActivity.kt`.
+2. *Historical Origin & Commit Trace*: `ATT-4878` (commit `12682cfaf66a224127dbd5eb014ed1970f0f38e2`) introduced `Modifier.fillMaxHeight()` and inner `.weight(1f)` in `SensorFieldView` to match the tallest sibling card in cockpit rows.
+3. *Root Reason for Existing Formulation*: Equalizing row height in `SensorGridScreen` required `SensorFieldView` to fill maximum container height. However, the preview container in `ZonesSettingsActivity.kt` was not updated with `Modifier.height(IntrinsicSize.Min)`.
+4. *Preservation of Core Invariants*: `SensorFieldView`'s internal layout contract for `REQ-UI-438` and `SensorGridScreen` equal-height behavior remain strictly untouched; only the caller container in `ZonesSettingsActivity.kt` is bounded.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete viewing *Zonendarstellung -> Vorschau* on *Lauf HF*, *Rad HF*, or *Rad Leistung* in `AthleteProfileScreen`,
+• *When* the preview tile is rendered inside the scrollable settings column,
+• *Then* the preview sensor card displays the complete header label, numeric value, unit label, zone gauge bar, and vertical indicator strips without vertical clipping or collapse.
+• *Given* a standalone `SensorFieldView` embedded inside an unconstrained scrollable column,
+• *When* wrapped in a container with `Modifier.height(IntrinsicSize.Min)`,
+• *Then* Compose measures the card's intrinsic minimum height and renders all internal elements with non-zero vertical bounds.
+
+**Invariants**: Zero infinite height expansion, strict preservation of `IntrinsicSize.Min` on parent containers, zero regression on `SensorGridScreen.kt`, and 100% clean-room test pass rate.
+
+
+
 
 
 

@@ -656,9 +656,7 @@ fun SettingsScreenContent(
         val isCockpitDark = resolveEffectiveCockpitDarkTheme(cockpitThemeMode, isSystemDark)
 
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp)
+            modifier = resolveZonePreviewContainerModifier()
         ) {
             ATrainingTrackerTheme(
                 darkTheme = isCockpitDark,
@@ -666,11 +664,13 @@ fun SettingsScreenContent(
                 setWindowColors = false
             ) {
                 Surface(
+                    modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.surface,
                     shape = MaterialTheme.shapes.medium
                 ) {
                     SensorFieldView(
                         fieldState = previewFieldState,
+                        modifier = Modifier.fillMaxSize(),
                         screenMode = ScreenMode.TRACKING
                     )
                 }
@@ -680,6 +680,19 @@ fun SettingsScreenContent(
         Spacer(modifier = Modifier.height(24.dp))
     }
 }
+
+/**
+ * Modifier applied to the container wrapping the live preview [SensorFieldView] in [SettingsScreenContent].
+ *
+ * Applies [IntrinsicSize.Min] bounding to prevent vertical collapsing under scrollable parent containers
+ * (`REQ-UI-441` / `ATT-5071`, Rule 67, Design Guideline 5.14).
+ */
+fun resolveZonePreviewContainerModifier(baseModifier: Modifier = Modifier): Modifier =
+    baseModifier
+        .fillMaxWidth()
+        .height(IntrinsicSize.Min)
+        .padding(vertical = 4.dp)
+
 
 /**
  * Compact zone-tinted bordered selector pill for the live zone preview row (`REQ-UI-384` / Rule 38).

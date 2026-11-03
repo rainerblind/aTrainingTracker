@@ -6994,6 +6994,26 @@
   • Clean-room execution of unit tests ensuring zero regressions (`REQ-PRO-001`).
 
 
+### TST-UI-441: **Intrinsic Minimum Height Bounding for Standalone Sensor Field View Containers Test Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-441`
+- **Component**: `ZonesSettingsPreviewLayoutTest.kt`, `SensorFieldViewLayoutTest.kt`
+- **Jira**: `ATT-5071`
+- **Test Description**:
+  1. *ZonesSettingsActivity Preview Container Height Bounding Test (`TST-UI-441.1`)*:
+  • Unit/contract test in `ZonesSettingsPreviewLayoutTest.kt` verifying:
+    - The preview container wrapping `SensorFieldView` in `ZonesSettingsActivity.kt` applies `Modifier.height(IntrinsicSize.Min)`.
+    - When rendered in an unbounded vertical container, `SensorFieldView` does not collapse to zero height or clip telemetry.
+  2. *Sensor Field View Telemetry and Indicator Visibility Test (`TST-UI-441.2`)*:
+  • Test in `SensorFieldViewLayoutTest.kt` / `ZonesSettingsPreviewLayoutTest.kt` verifying:
+    - Telemetry value, units, and gauge bar are measured with non-zero height inside `height(IntrinsicSize.Min)` parent.
+    - Left/right indicator strips span the full intrinsic height of the card.
+  3. *Cockpit Grid Equal-Height Regression Guard (`TST-UI-441.3`)*:
+  • Contract/unit test verifying `SensorGridScreen.kt` multi-column equal-height behavior and `REQ-UI-438` invariants remain intact with zero regression.
+  4. *Clean-Room Targeted Test Suite Execution (`TST-UI-441.4`)*:
+  • Run targeted package unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.*"` ensuring 100% pass rate.
+
+
+
 
 
 
