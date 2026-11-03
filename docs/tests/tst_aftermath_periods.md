@@ -399,7 +399,7 @@
 ### TST-PER-031: **Yearly Activity Contribution Grids Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-PER-025`
 - **Component**: `YearlyContributionGridTest.kt`, `PeriodsViewModelTest.kt`, `PeriodSummaryCardTest.kt`, `YearlyContributionLocalizationTest.kt`
-- **Jira**: `ATT-4849`, `ATT-5076`
+- **Jira**: `ATT-4849`, `ATT-5076`, `ATT-5194`
 - **Test Description**:
   1. *Daily Aggregation & Calendar Matrix Mapping Test (`TST-PER-031.1`, `YearlyContributionGridTest.kt`)*:
   • Verify that daily workout totals for a given calendar year map deterministically to a 7-row (Mon–Sun) by 53-column (ISO weeks 1..53) calendar day matrix for both standard (365-day) and leap (366-day) years.
@@ -417,6 +417,8 @@
   • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"` to verify 100% clean-room test pass rate.
   8. *Embedded SportStatsRow Placement & Seamless Styling Test (`TST-PER-031.8`)*:
   • Verify that for `PeriodType.YEAR`, `YearlyContributionGrid` is rendered inside `SportStatsRow` between the header row and sub-sports divider with `showCard = false` and `showSportHeader = false`, omitting redundant outer container borders and sport titles (ATT-5076).
+  9. *Initial Viewport Auto-Scroll Alignment Unit Test (`TST-PER-031.9`, `YearlyContributionGridTest.kt`)*:
+  • Verify pure helper functions `calculateTargetColumn` and `calculateInitialScrollOffset` across past years, early year, mid year, late year, and leap years, confirming offset clamping to `[0, maxValue]` and alignment of the target week at the right edge (ATT-5194).
 
 ### TST-PER-032: **Master Sport Filter Heatmap & Region Clustering Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-PER-024` (`REQ-PER-024.5`)

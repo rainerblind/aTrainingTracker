@@ -606,9 +606,9 @@
 **Invariants**: Zero changes to `PeriodSummaries.db`, memory safety, True-Black AMOLED compliance, and 100% clean-room test pass rate.
 
 ### REQ-PER-025: GitHub-Style Yearly Activity Contribution Grids per BSportType in Periods (Years) [Verified]
-- **Tests**: `TST-PER-031` | **Tickets**: `ATT-4849`, `ATT-5076`
+- **Tests**: `TST-PER-031` | **Tickets**: `ATT-4849`, `ATT-5076`, `ATT-5194`
 - **Implementation**: `YearlyContributionGrid.kt`, `PeriodSummaryCard.kt`, `PeriodsTabsScreen.kt`, `PeriodsViewModel.kt`, `PeriodBarGraph.kt`
-- **Rationale**: In `Periods` (`PeriodType.YEAR`), the system SHALL render a compact GitHub-style $7 \times 53$ activity contribution grid for each active `BSportType`, slaved directly to the master sport filter and active metric selector, enabling athletes to visualize seasonal consistency, volume distributions, rest periods, and training blocks across the 12 months without redundant UI controls (ATT-4849, ATT-5076):
+- **Rationale**: In `Periods` (`PeriodType.YEAR`), the system SHALL render a compact GitHub-style $7 \times 53$ activity contribution grid for each active `BSportType`, slaved directly to the master sport filter and active metric selector, enabling athletes to visualize seasonal consistency, volume distributions, rest periods, and training blocks across the 12 months without redundant UI controls (ATT-4849, ATT-5076, ATT-5194):
 1. *PeriodType.YEAR Scope (`REQ-PER-025.1`)*: The contribution grid SHALL be rendered exclusively on `PeriodSummaryCard` when `periodType == PeriodType.YEAR`.
 2. *Master Selectors Authority & Hoisting (`REQ-PER-025.2`)*: The active metric for cell volume and color intensity SHALL be slaved to the master metric selector (`PeriodBarMetric`: `DURATION`, `DISTANCE`, `ASCENT`), hoisted to `PeriodsViewModel`. Active sport grids SHALL be slaved to the master sport filter (`selectedSports: Set<BSportType>`).
 3. *Matrix Dimensions & Calendar Mapping (`REQ-PER-025.3`)*: Each grid SHALL render a $7 \times 53$ calendar day matrix (rows: Monday to Sunday, index 0..6; columns: ISO weeks 1..53). Column header labels SHALL render month markers (`Jan..Dec`) based on ISO week dates.
@@ -617,12 +617,16 @@
 6. *Interactive Day Tap Drill-Down (`REQ-PER-025.6`)*: Tapping an active day cell SHALL highlight the cell, display the daily metric total formatted via Rule 36 canonical formatters (`DistanceFormatter`, `TimeFormatter`, `AltitudeFormatter`), and allow navigating to that day's workouts via `onStartWorkoutList(dayStartS, dayEndS, sport, workoutId)`.
 7. *Localization & Persistence Invariants (`REQ-PER-025.7`)*: All added UI strings SHALL maintain 100% 9-language localization parity. Storing daily contribution structures SHALL be in-memory in `PeriodSummary` without altering `PeriodSummaries.db` (v27) schema.
 8. *SportStatsRow Embedded Placement & Seamless Styling (`REQ-PER-025.8`)*: For `PeriodType.YEAR`, each sport's contribution grid SHALL be embedded directly inside that sport's `SportStatsRow` box in `PeriodSummaryCard.kt`, placed below the main summary header row and above the sub-sports breakdown (`CompactMetricRow`) and longest workout highlight. The embedded grid SHALL omit outer card borders and duplicate sport icon/title headers while retaining the intensity legend (ATT-5076).
+9. *Initial Viewport Auto-Scroll Alignment (`REQ-PER-025.9`)*: Upon initial composition or year selection of `YearlyContributionGrid`, the horizontal scroll state SHALL automatically position the viewport:
+- For the current calendar year (`year == LocalDate.now().year`): the viewport SHALL align the current week column at the far right edge of the visible content area (`scrollState.maxValue - (totalCols - 1 - targetCol) * colPitchPx`, clamped to `[0, scrollState.maxValue]`), ensuring historical activity remains visible while future weeks sit off-screen to the right.
+- For past calendar years (`year < LocalDate.now().year`): the viewport SHALL scroll to the end of the year (`scrollState.maxValue`).
+- Unrestricted Bidirectional Scrolling: The athlete SHALL retain unrestricted manual scrolling freedom left and right without snap-backs on recomposition or cell interaction (ATT-5194).
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Modifies `REQ-PER-025` (*GitHub-Style Yearly Activity Contribution Grids per BSportType in Periods (Years)*), specifically adding `REQ-PER-025.8` and targeting `PeriodSummaryCard.kt` and `YearlyContributionGrid.kt` (ATT-5076).
-2. *Historical Origin & Commit Trace*: Sprint 2026-44.2 via commit `285d2470` (`ATT-4849`).
-3. *Root Reason for Existing Formulation*: In ATT-4849, contribution grids were initially placed at the bottom of the card below all `SportStatsRow` boxes to avoid altering `SportStatsRow` before gathering user feedback on visual balance.
-4. *Preservation of Core Invariants*: $7 \times 53$ calendar day mapping, quartile intensity calculation, interactive day-tap drill-down, and non-year period layouts remain 100% preserved.
+1. *Original Requirement ID & Target*: Modifies `REQ-PER-025` (*GitHub-Style Yearly Activity Contribution Grids per BSportType in Periods (Years)*), adding `REQ-PER-025.9` and targeting `YearlyContributionGrid.kt`, `YearlyContributionGridTest.kt`, and `docs/requirements/req_aftermath_periods.md` (ATT-5194).
+2. *Historical Origin & Commit Trace*: Sprint 2026-44.2 via commit `285d2470` (`ATT-4849`) and Sprint 2026-45.1 via commit `4f74d924` (`ATT-5076`).
+3. *Root Reason for Existing Formulation*: `rememberScrollState()` defaulted to offset 0 (January on the far left), which was standard Compose behavior. During Sprint 2026-45.1 review, late-year inspection required excessive manual scrolling across ~35–45 weeks.
+4. *Preservation of Core Invariants*: $7 \times 53$ matrix mapping, quartile calculations, day-tap drill-down, embedded `SportStatsRow` placement, and bidirectional manual scrolling freedom are 100% preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* a Year period summary with Bike and Run workouts,
@@ -634,6 +638,15 @@
 • *Given* an active day cell is tapped,
 • *When* interacting with the embedded grid,
 • *Then* the cell is highlighted with formatted daily metrics and navigation to that day's workouts is triggered.
+• *Given* an athlete viewing `YearlyContributionGrid` for the current calendar year (e.g. November),
+• *When* the card is composed,
+• *Then* the grid SHALL auto-scroll so the current week is aligned at the far right edge of the viewport, with previous months visible to the left.
+• *Given* an athlete viewing `YearlyContributionGrid` for a past calendar year,
+• *When* the card is composed,
+• *Then* the grid SHALL auto-scroll to the end of the year (`scrollState.maxValue`).
+• *Given* the grid has auto-scrolled,
+• *When* the athlete drags or flings horizontally,
+• *Then* manual scrolling SHALL proceed smoothly without snap-backs or recomposition resets.
 
 **Invariants**: Zero changes to `PeriodSummaries.db` (v27), 60 fps `LazyColumn` scrolling, Rule 36 unit parity, Rule 57 sport order, and 100% clean-room test pass rate.
 
