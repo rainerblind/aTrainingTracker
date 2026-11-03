@@ -697,3 +697,41 @@
 
 **Invariants**: Zero changes to `PeriodSummaries.db` (v27) schema, zero network/disk I/O on UI thread, 9-language localization parity, and 100% clean-room test pass rate.
 
+### REQ-PER-027: Embedded Daily Activity Intensity / Mini-Bar Strip for Months & Weeks in SportStatsRow [Verified]
+- **Tests**: `TST-PER-035` | **Tickets**: `ATT-5195`
+- **Implementation**: `DailyActivityStrip.kt`, `PeriodSummaryCard.kt`, `PeriodData.kt`, `PeriodsRepository.kt`, `PeriodsViewModel.kt`
+- **Rationale**: For `Periods` in Months (`PeriodType.MONTH`) and Weeks (`PeriodType.WEEK`), the system SHALL embed a compact horizontal daily activity intensity / mini-bar chart inside each sport's `SportStatsRow` below the sport header and above sub-sports/longest workout (Option A), slaved directly to the master sport filter and active metric selector, matching the interactive drill-down and semantic coloring of `YearlyContributionGrid` (ATT-5195):
+1. *Month and Week Temporal Scope (`REQ-PER-027.1`)*: The daily activity strip SHALL be rendered inside each sport's `SportStatsRow` on `PeriodSummaryCard` when `periodType == PeriodType.MONTH` or `periodType == PeriodType.WEEK`. `PeriodType.YEAR` and `PeriodType.DAY` SHALL remain unaffected.
+2. *Data Hydration & In-Memory Domain Model (`REQ-PER-027.2`)*: `PeriodsRepository.enrich()` SHALL aggregate daily activities and peak metric values into `dailySportContributions: Map<BSportType, DailySportContribution>` for `PeriodType.WEEK` and `PeriodType.MONTH` from the period's workouts without altering `PeriodSummaries.db` (v27) schema. `PeriodsViewModel.filterPeriodSummary()` SHALL filter `dailySportContributions` symmetrically according to `selectedSports`.
+3. *Week 7-Day & Month 28..31-Day Mini-Bar Layout (`REQ-PER-027.3`)*:
+   - For `PeriodType.WEEK`: The strip SHALL render exactly 7 columns corresponding to Monday through Sunday of that week, labeled with localized day initials.
+   - For `PeriodType.MONTH`: The strip SHALL render compact non-scrolling columns for all days in that calendar month (1..28/29/30/31), displaying milestone day labels (1, 10, 20, last day).
+4. *Metric Slaving & Proportional Height Scaling (`REQ-PER-027.4`)*: Mini-bar heights and color intensity SHALL be slaved to the active metric (`DURATION`, `DISTANCE`, `ASCENT`). Active days SHALL render a filled vertical bar with height proportional to the day's metric value relative to the sport's maximum daily value in that period ($H_{\text{bar}} = \text{clamp}(V_{\text{day}} / V_{\text{max}}, 0.15, 1.0) \times H_{\text{max}}$). Zero/rest days SHALL render a subtle muted baseline track.
+5. *Semantic Sport Palette Parity (`REQ-PER-027.5`)*: Filled mini-bars SHALL be colored with the sport's semantic color token (`TTColor.BikeSportBarColor`, `TTColor.RunSportBarColor`, `TTColor.OtherSportBarColor`) and quartile/alpha shading.
+6. *Interactive Day Selection & Drill-Down Navigation (`REQ-PER-027.6`)*: Tapping a day bar SHALL toggle a day detail banner below the strip displaying the date and formatted metric total via Rule 36 canonical formatters (`TimeFormatter`, `DistanceFormatter`, `AltitudeFormatter`). For active days, tapping the banner SHALL trigger drill-down navigation via `onDayCellClick` to `WorkoutSummariesListFragment`.
+7. *Seamless SportStatsRow Embedding (`REQ-PER-027.7`)*: The strip SHALL be embedded directly inside `SportStatsRow` without extra outer card borders or redundant sport headers, positioned below the sport totals row and above sub-sports / longest workout dividers.
+8. *Localization & Invariant Parity (`REQ-PER-027.8`)*: All user-facing strings and accessibility semantics SHALL maintain 100% 9-language localization parity (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-PER-027` (*Embedded Daily Activity Intensity / Mini-Bar Strip for Months & Weeks in SportStatsRow*), extending `REQ-PER-025` (*GitHub-Style Yearly Activity Contribution Grids per BSportType in Periods (Years)*). Targets `DailyActivityStrip.kt`, `PeriodSummaryCard.kt`, `PeriodData.kt`, `PeriodsRepository.kt`, `PeriodsViewModel.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-45.1 (`ATT-5076`) embedded `YearlyContributionGrid` inside `SportStatsRow` for `PeriodType.YEAR`. Sprint 2026-45.1 Review highlighted the lack of equivalent embedded daily activity visualization for Months and Weeks (`ATT-5195`).
+3. *Root Reason for Existing Formulation*: Months and Weeks previously displayed only aggregate metric totals to minimize card height before embedded inline visual strips were designed.
+4. *Preservation of Core Invariants*: In-memory aggregation preserves zero SQLite schema changes; Rule 57 sport ordering (`[Bike, Run, Other]`) is preserved; `PeriodType.YEAR` and `PeriodType.DAY` rendering remain 100% preserved; Rule 36 canonical formatters are strictly used.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete viewing a Month summary card (`PeriodType.MONTH`),
+• *When* the card is displayed,
+• *Then* each sport's `SportStatsRow` SHALL render a horizontal mini-bar strip across the exact number of days in that month (28, 29, 30, or 31) showing daily activity for that sport.
+• *Given* an athlete viewing a Week summary card (`PeriodType.WEEK`),
+• *When* the card is displayed,
+• *Then* each sport's `SportStatsRow` SHALL render a 7-day mini-bar strip (Monday through Sunday) showing daily activity for that sport.
+• *Given* an active metric switch (Duration, Distance, or Ascent),
+• *When* the user toggles the master metric,
+• *Then* mini-bar heights in `DailyActivityStrip` SHALL reactively update to reflect the selected metric.
+• *Given* an athlete tapping an active day bar in `DailyActivityStrip`,
+• *When* tapped,
+• *Then* a summary banner is displayed with formatted metrics, and tapping navigates to that day's workouts via `WorkoutSummariesListFragment`.
+
+**Invariants**: Zero changes to `PeriodSummaries.db` (v27) schema, 60 fps `LazyColumn` scrolling, Rule 36 unit parity, Rule 57 sport order, and 100% clean-room test pass rate.
+
+

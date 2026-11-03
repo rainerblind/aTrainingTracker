@@ -385,6 +385,53 @@ class PeriodsViewModelTest {
     }
 
     /**
+     * TST-PER-035.4: Filter Daily Sport Contributions by Selected Sports Test (REQ-PER-027.2, ATT-5195).
+     */
+    @Test
+    fun testFilterPeriodSummary_filtersDailySportContributions_TST_PER_035_4() {
+        val viewModel = PeriodsViewModel(mockApplication)
+
+        val bikeContribution = DailySportContribution(sportType = BSportType.BIKE)
+        val runContribution = DailySportContribution(sportType = BSportType.RUN)
+        val otherContribution = DailySportContribution(sportType = BSportType.UNKNOWN)
+
+        val bikeStats = SportStats(count = 1, totalDurationSec = 3600L, totalDistanceMeters = 20000.0, totalAscentMeters = 200L, detailedSportStats = emptyMap(), longestWorkout = null)
+        val runStats = SportStats(count = 1, totalDurationSec = 1800L, totalDistanceMeters = 5000.0, totalAscentMeters = 50L, detailedSportStats = emptyMap(), longestWorkout = null)
+        val otherStats = SportStats(count = 1, totalDurationSec = 2700L, totalDistanceMeters = 0.0, totalAscentMeters = 0L, detailedSportStats = emptyMap(), longestWorkout = null)
+
+        val base = createPeriodSummary(
+            label = "May 2026",
+            sportStats = mapOf(
+                BSportType.BIKE to bikeStats,
+                BSportType.RUN to runStats,
+                BSportType.UNKNOWN to otherStats
+            )
+        ).copy(
+            periodType = PeriodType.MONTH,
+            dailySportContributions = mapOf(
+                BSportType.BIKE to bikeContribution,
+                BSportType.RUN to runContribution,
+                BSportType.UNKNOWN to otherContribution
+            )
+        )
+
+        // Filter for BIKE only
+        val bikeOnly = viewModel.filterPeriodSummary(base, setOf(BSportType.BIKE))
+        assertNotNull(bikeOnly)
+        assertEquals(setOf(BSportType.BIKE), bikeOnly!!.dailySportContributions.keys)
+
+        // Filter for BIKE and RUN
+        val bikeAndRun = viewModel.filterPeriodSummary(base, setOf(BSportType.BIKE, BSportType.RUN))
+        assertNotNull(bikeAndRun)
+        assertEquals(setOf(BSportType.BIKE, BSportType.RUN), bikeAndRun!!.dailySportContributions.keys)
+
+        // Filter for UNKNOWN only
+        val otherOnly = viewModel.filterPeriodSummary(base, setOf(BSportType.UNKNOWN))
+        assertNotNull(otherOnly)
+        assertEquals(setOf(BSportType.UNKNOWN), otherOnly!!.dailySportContributions.keys)
+    }
+
+    /**
      * TST-PER-032.1: Symmetric DTO Polyline Sport Filtering Unit Test (ATT-4935 / REQ-PER-024.5b).
      * Asserts that filterPeriodSummary symmetrically filters workoutIdToAllPolylinesMap, workoutIdToPathMap,
      * workoutIdToPolylineMap, and polylines strictly according to selectedSports.

@@ -947,6 +947,7 @@
     <string name="workout_periods__migration_syncing">%1$s を同期中…</string>
     <string name="workout_periods__migration_finalizing">年間の統計を計算中…</string>
     <string name="workout_periods__yearly_activity_grid">年間のアクティビティ</string>
+    <string name="workout_periods__daily_activity_strip">毎日のアクティビティ</string>
     <string name="workout_periods__no_activity">アクティビティなし</string>
 
     <!-- share screenshots -->

@@ -969,6 +969,7 @@
     <string name="workout_periods__migration_syncing">Sincronizando %1$s…</string>
     <string name="workout_periods__migration_finalizing">Finalizando totales anuales…</string>
     <string name="workout_periods__yearly_activity_grid">Actividad anual</string>
+    <string name="workout_periods__daily_activity_strip">Actividad diaria</string>
     <string name="workout_periods__no_activity">Sin actividad</string>
 
     <!-- share screenshots -->

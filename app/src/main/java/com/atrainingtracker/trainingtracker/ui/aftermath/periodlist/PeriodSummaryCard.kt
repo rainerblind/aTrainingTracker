@@ -205,11 +205,26 @@ fun PeriodSummaryCard(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                val periodStartDate = remember(summary.startTimestampS) {
+                    java.time.Instant.ofEpochSecond(summary.startTimestampS)
+                        .atZone(java.time.ZoneId.systemDefault())
+                        .toLocalDate()
+                }
+                val periodEndDate = remember(summary.endTimestampS) {
+                    java.time.Instant.ofEpochSecond(summary.endTimestampS)
+                        .atZone(java.time.ZoneId.systemDefault())
+                        .toLocalDate()
+                }
+
                 // SPORT SPECIFIC BREAKDOWN
                 summary.sportStats.entries.forEachIndexed { index, entry ->
                     val (bSportType, stats) = entry
                     val contribution = if (summary.periodType == PeriodType.YEAR) {
                         summary.yearlySportContributions[bSportType]
+                    } else null
+
+                    val dailyContribution = if (summary.periodType == PeriodType.WEEK || summary.periodType == PeriodType.MONTH) {
+                        summary.dailySportContributions[bSportType]
                     } else null
 
                     SportStatsRow(
@@ -218,6 +233,10 @@ fun PeriodSummaryCard(
                         tf = tf, df = df, af = af,
                         showDetails = true,
                         yearlyContribution = contribution,
+                        dailyContribution = dailyContribution,
+                        periodType = summary.periodType,
+                        startDate = periodStartDate,
+                        endDate = periodEndDate,
                         activeMetric = activeMetric,
                         onDayCellClick = onDayCellClick?.let { callback ->
                             { date: LocalDate, dayActivity: DailySportActivity? ->
@@ -337,6 +356,10 @@ fun SportStatsRow(
     af: AltitudeFormatter,
     showDetails: Boolean = false,
     yearlyContribution: YearlySportContribution? = null,
+    dailyContribution: DailySportContribution? = null,
+    periodType: PeriodType = PeriodType.YEAR,
+    startDate: LocalDate = LocalDate.now(),
+    endDate: LocalDate = LocalDate.now(),
     activeMetric: PeriodBarMetric = PeriodBarMetric.DURATION,
     onDayCellClick: ((LocalDate, DailySportActivity?) -> Unit)? = null,
     onClick: () -> Unit,
@@ -408,6 +431,23 @@ fun SportStatsRow(
                     },
                     showCard = false,
                     showSportHeader = false,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            // EMBEDDED DAILY ACTIVITY STRIP (REQ-PER-027, ATT-5195)
+            if (dailyContribution != null && (periodType == PeriodType.WEEK || periodType == PeriodType.MONTH)) {
+                Spacer(modifier = Modifier.height(10.dp))
+                DailyActivityStrip(
+                    sportType = bSportType,
+                    periodType = periodType,
+                    startDate = startDate,
+                    endDate = endDate,
+                    dailyContribution = dailyContribution,
+                    activeMetric = activeMetric,
+                    onDayClick = { date, activity ->
+                        onDayCellClick?.invoke(date, activity)
+                    },
                     modifier = Modifier.fillMaxWidth()
                 )
             }

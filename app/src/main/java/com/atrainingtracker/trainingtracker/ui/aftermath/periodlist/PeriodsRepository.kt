@@ -975,7 +975,7 @@ class PeriodsRepository private constructor(private val application: Application
         )
     }
 
-    private fun enrich(summary: PeriodSummary, groupWorkouts: List<WorkoutData>): PeriodSummary {
+    internal fun enrich(summary: PeriodSummary, groupWorkouts: List<WorkoutData>): PeriodSummary {
         // 1. Identify spatial anchors for instant framing (guarantees regional extrema & distant continents)
         val trueLongestId = if (groupWorkouts.isNotEmpty()) groupWorkouts.maxByOrNull { it.activeTimeSec }?.id else summary.longestId
         val anchorIds = setOf(trueLongestId ?: summary.longestId, summary.northId, summary.southId, summary.eastId, summary.westId).filter { it != -1L }
@@ -1094,6 +1094,47 @@ class PeriodsRepository private constructor(private val application: Application
             }
         } else summary.yearlySportContributions
 
+        // 6. Aggregate daily sport contributions for PeriodType.WEEK and PeriodType.MONTH (REQ-PER-027, ATT-5195)
+        val dailyContributions = if ((summary.periodType == PeriodType.WEEK || summary.periodType == PeriodType.MONTH) && groupWorkouts.isNotEmpty()) {
+            val sportsInGroup = groupWorkouts.map { it.bSportType }.distinct()
+            sportsInGroup.associateWith { sport ->
+                val sportWorkouts = groupWorkouts.filter { it.bSportType == sport }
+                val dailyMap = mutableMapOf<java.time.LocalDate, DailySportActivity>()
+
+                val byDate = sportWorkouts.groupBy { it.localDateTime.toLocalDate() }
+                for ((date, dayWorkouts) in byDate) {
+                    val count = dayWorkouts.size
+                    val totalDuration = dayWorkouts.sumOf { it.activeTimeSec }
+                    val totalDistance = dayWorkouts.sumOf { it.totalDistance }
+                    val totalAscent = dayWorkouts.sumOf { it.ascentMeters }
+                    val ids = dayWorkouts.map { it.id }
+                    val names = dayWorkouts.map { it.workoutName }
+                    dailyMap[date] = DailySportActivity(
+                        date = date,
+                        bSportType = sport,
+                        count = count,
+                        durationSec = totalDuration,
+                        distanceMeters = totalDistance,
+                        ascentMeters = totalAscent,
+                        workoutIds = ids,
+                        workoutNames = names
+                    )
+                }
+
+                val maxDuration = dailyMap.values.maxOfOrNull { it.durationSec } ?: 0L
+                val maxDistance = dailyMap.values.maxOfOrNull { it.distanceMeters } ?: 0.0
+                val maxAscent = dailyMap.values.maxOfOrNull { it.ascentMeters } ?: 0L
+
+                DailySportContribution(
+                    sportType = sport,
+                    dailyActivities = dailyMap,
+                    maxDailyDurationSec = maxDuration,
+                    maxDailyDistanceMeters = maxDistance,
+                    maxDailyAscentMeters = maxAscent
+                )
+            }
+        } else summary.dailySportContributions
+
         return summary.copy(
             sportStats = enrichedSportStats,
             polylines = if (allPolylineMap.isNotEmpty()) {
@@ -1106,6 +1147,7 @@ class PeriodsRepository private constructor(private val application: Application
             workoutIdToPathMap = anchorPathMap,
             workoutIdToSportMap = if (groupWorkouts.isNotEmpty()) groupWorkouts.associate { it.id to it.bSportType } else summary.workoutIdToSportMap,
             yearlySportContributions = yearlyContributions,
+            dailySportContributions = dailyContributions,
             extremaMarkers = anchorWorkouts.flatMap { workout ->
                 val markers = mutableListOf<PeriodPeakMarker>()
                 workout.startLatLng?.let { markers.add(PeriodPeakMarker(workout.id, it, R.drawable.control_start, "${workout.workoutName}: Start", PeriodMarkerType.START)) }

@@ -50,6 +50,18 @@ data class YearlySportContribution(
 )
 
 /**
+ * Daily activity contributions for a single sport type across a week or month (REQ-PER-027, ATT-5195).
+ * Encapsulates daily activities and max daily metric values for proportional mini-bar scaling.
+ */
+data class DailySportContribution(
+    val sportType: BSportType,
+    val dailyActivities: Map<LocalDate, DailySportActivity> = emptyMap(),
+    val maxDailyDurationSec: Long = 0L,
+    val maxDailyDistanceMeters: Double = 0.0,
+    val maxDailyAscentMeters: Long = 0L
+)
+
+/**
  * Safety threshold for rendering detailed vector tracks and markers in Period Maps.
  * When a period contains more than this number of workouts, individual vector tracks
  * and technical markers are suppressed in favor of the aggregate raster Heatmap.
@@ -114,6 +126,7 @@ data class PeriodSummary(
     val workoutIdToSportMap: Map<Long, BSportType> = emptyMap(),
     val extremaMarkers: List<PeriodPeakMarker> = emptyList(),
     val yearlySportContributions: Map<BSportType, YearlySportContribution> = emptyMap(),
+    val dailySportContributions: Map<BSportType, DailySportContribution> = emptyMap(),
     val sortKey: String // Used for sorting
 )
 
