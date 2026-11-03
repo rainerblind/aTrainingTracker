@@ -6430,7 +6430,7 @@
 ### TST-UI-384: **Electronic Bike Bell with Button, Double-Tap Gesture, and Progressive Loudness Escalation Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-421`, `REQ-UI-344`, `REQ-UI-295`, `REQ-UI-409`
 - **Component**: **Electronic Bike Bell with Button, Double-Tap Gesture, and Progressive Loudness Escalation Verification Suite**
-- **Jira**: ``ATT-4371``, ``ATT-5131``
+- **Jira**: ``ATT-4371``, ``ATT-5131``, ``ATT-5282``
 - **Test Description**:
   1. *TrackingViewsDbHelper SQLite v15 Transactional & Idempotent Migration Unit Test (`TST-UI-384.1`, `TrackingViewsRealSqliteMigrationTest.kt`)*:
   • Test database upgrade from v14 to v15: verify `SHOW_BIKE_BELL` column added.
@@ -6441,8 +6441,9 @@
   2. *TrackingViewsRepository & DTO Mapping Symmetry Unit Test (`TST-UI-384.2`, `TrackingViewsRepositoryTest.kt`)*:
   • Test `TrackingViewInfo` reads and maps `showBikeBell` correctly from single-row and batch queries.
   • Test `updateShowBikeBell(tabViewId, show)` persists toggle state accurately.
-  3. *BikeBellAudioSynthesizer Built-in Speaker Routing, Alarm Stream & Volume Boost Test (`TST-UI-384.3`, `BikeBellAudioSynthesizerTest.kt`)*:
-  • Verify 16-bit PCM mono buffer synthesis generated at $44.1\text{ kHz}$ with two distinct strikes separated by $\sim 110\text{ ms}$ and exponential decay.
+  3. *BikeBellAudioSynthesizer Built-in Speaker Routing, Alarm Stream, 5-Mode Brass Synthesis & Volume Boost Test (`TST-UI-384.3`, `BikeBellAudioSynthesizerTest.kt`)*:
+  • Verify 16-bit PCM mono buffer synthesis generated at $44.1\text{ kHz}$ with two distinct strikes separated by $\sim 110\text{ ms}$ and exponential decay across 5 resonant modes (sub-octave hum $1020\text{ Hz}$, brass fundamental $2040\text{ Hz}$, tierce $3120\text{ Hz}$, nominal $4280\text{ Hz}$, clapper $6200\text{ Hz}$) with smooth attack window ($1 - e^{-dt / 0.0015}$).
+  • Verify roll PCM synthesis incorporates headroom scaling without hard clipping distortion.
   • Verify `AudioAttributes.USAGE_ALARM` and `AudioAttributes.CONTENT_TYPE_SONIFICATION` audio attributes configuration.
   • Verify `AudioTrack.setPreferredDevice(builtInSpeaker)` where `builtInSpeaker.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER` applied upon creation and prior to playback.
   • Verify `savedAlarmVolume` capture, hardware volume boost to `getStreamMaxVolume(STREAM_ALARM)` with `flags = 0`, and delayed auto-restore (+650 ms for ring, +150 ms after stopRoll).

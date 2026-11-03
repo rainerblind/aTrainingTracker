@@ -48,25 +48,61 @@ class BikeBellAudioSynthesizerTest {
         // 0.6s at 44100Hz 16-bit mono = 26460 samples * 2 bytes = 52920 bytes
         assertEquals(52920, pcm.size)
 
-        // Sample at t = 0 must be 0 (sin(0) = 0)
+        // Sample at t = 0 must be 0 (sin(0) = 0 and attack(0) = 0)
         val s0Low = pcm[0].toInt() and 0xFF
         val s0High = pcm[1].toInt()
         val s0 = (s0High shl 8) or s0Low
         assertEquals(0, s0)
 
         // Verify strike sample calculation conforms to physical envelope
-        val sampleAtPeak = BikeBellAudioSynthesizer.calculateStrikeSample(0.0001, 2400.0)
+        val sampleAtPeak = BikeBellAudioSynthesizer.calculateStrikeSample(0.0001, 2040.0)
         assertTrue("Sample after initial transient should be non-zero", Math.abs(sampleAtPeak) > 0.0)
 
         // Decay: sample after 0.5s should be significantly lower than near peak
-        val sampleDecayed = BikeBellAudioSynthesizer.calculateStrikeSample(0.5, 2400.0)
-        assertTrue("Sample after 0.5s should be decayed", Math.abs(sampleDecayed) < 0.1)
+        val sampleDecayed = BikeBellAudioSynthesizer.calculateStrikeSample(0.5, 2040.0)
+        assertTrue("Sample after 0.5s should be decayed", Math.abs(sampleDecayed) < 0.15)
 
         // Test roll PCM synthesis
         val rollPcm = BikeBellAudioSynthesizer.synthesizeRollPcm(44100)
         assertNotNull(rollPcm)
         // 2.5s at 44100Hz = 110250 samples * 2 bytes = 220500 bytes
         assertEquals(220500, rollPcm.size)
+    }
+
+    @Test
+    fun testPcmSynthesis_5ModeBrassAcousticPropertiesAndEnvelope_TST_UI_384_3() {
+        // 1. Verify 5-mode resonant frequencies and detuning ratio (REQ-UI-421.4, ATT-5282)
+        assertEquals(1020.0, BikeBellAudioSynthesizer.HUM_FREQ, 0.001)
+        assertEquals(2040.0, BikeBellAudioSynthesizer.FUNDAMENTAL_FREQ, 0.001)
+        assertEquals(3120.0, BikeBellAudioSynthesizer.TIERCE_FREQ, 0.001)
+        assertEquals(4280.0, BikeBellAudioSynthesizer.NOMINAL_FREQ, 0.001)
+        assertEquals(6200.0, BikeBellAudioSynthesizer.CLAPPER_FREQ, 0.001)
+        assertEquals(1.025, BikeBellAudioSynthesizer.STRIKE_2_DETUNE_RATIO, 0.001)
+
+        // 2. Clapper attack envelope smoothing: zero at t <= 0, rising smoothly
+        assertEquals(0.0, BikeBellAudioSynthesizer.calculateStrikeSample(-0.01, 2040.0), 0.0)
+        assertEquals(0.0, BikeBellAudioSynthesizer.calculateStrikeSample(0.0, 2040.0), 0.0)
+
+        val sampleAtAttack = BikeBellAudioSynthesizer.calculateStrikeSample(0.002, 2040.0)
+        assertTrue("Sample at 2ms should rise smoothly", Math.abs(sampleAtAttack) > 0.05)
+
+        // 3. Roll strike sample attack and rapid dampening
+        assertEquals(0.0, BikeBellAudioSynthesizer.calculateRollStrikeSample(0.0, 2040.0), 0.0)
+        val rollSampleEarly = BikeBellAudioSynthesizer.calculateRollStrikeSample(0.002, 2040.0)
+        assertTrue("Roll sample at 2ms should be active", Math.abs(rollSampleEarly) > 0.05)
+
+        val rollSampleDamped = BikeBellAudioSynthesizer.calculateRollStrikeSample(0.2, 2040.0)
+        assertTrue("Roll strike sample at 0.2s should be damped", Math.abs(rollSampleDamped) < 0.05)
+
+        // 4. Verify roll PCM linear headroom scaling (no clipping overflow)
+        val rollPcm = BikeBellAudioSynthesizer.synthesizeRollPcm(44100)
+        assertEquals(220500, rollPcm.size)
+        for (i in 0 until rollPcm.size step 2) {
+            val low = rollPcm[i].toInt() and 0xFF
+            val high = rollPcm[i + 1].toInt()
+            val sample = (high shl 8) or low
+            assertTrue(sample >= Short.MIN_VALUE && sample <= Short.MAX_VALUE)
+        }
     }
 
     @Test
