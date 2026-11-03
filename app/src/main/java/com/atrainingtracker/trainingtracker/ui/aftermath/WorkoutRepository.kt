@@ -852,7 +852,7 @@ class WorkoutRepository private constructor(private val application: Application
                 }
 
                 val dist = if (distIdx != -1 && !cursor.isNull(distIdx)) cursor.getDouble(distIdx) else 0.0
-                val alt = if (altIdx != -1 && !cursor.isNull(altIdx)) cursor.getDouble(altIdx) else 0.0
+                val alt = if (altIdx != -1 && !cursor.isNull(altIdx)) cursor.getDouble(altIdx) else null
                 val hr = if (hrIdx != -1 && !cursor.isNull(hrIdx)) cursor.getInt(hrIdx) else null
                 val power = if (powerIdx != -1 && !cursor.isNull(powerIdx)) cursor.getInt(powerIdx) else null
                 val speed = if (speedIdx != -1 && !cursor.isNull(speedIdx)) cursor.getDouble(speedIdx) else null

@@ -2319,8 +2319,8 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 
 ### REQ-SEN-025: Pairable Position-Based Elevation Sensor & Dedicated Spatial DEM Cache [Verified]
-- **Tests**: `TST-SEN-025` | **Tickets**: `ATT-4859`, `ATT-5199`
-- **Implementation**: `AltitudeFromPositionDevice.java`, `DeviceType.java`, `ElevationCacheDatabaseManager.kt`, `DeviceManager.java`, `DevicesDatabaseManager.java`, `SensorSourceDialog.kt`, `MySensorManager.java`, `DatabaseSchemaRegistry.kt`
+- **Tests**: `TST-SEN-025` | **Tickets**: `ATT-4859`, `ATT-5199`, `ATT-5312`
+- **Implementation**: `AltitudeFromPositionDevice.java`, `DeviceType.java`, `ElevationCacheDatabaseManager.kt`, `DeviceManager.java`, `DevicesDatabaseManager.java`, `SensorSourceDialog.kt`, `MySensorManager.java`, `DatabaseSchemaRegistry.kt`, `WorkoutRepository.kt`, `ElevationSmoothingMath.kt`
 - **Rationale**: Currently, `SensorType.ALTITUDE` is supplied either by internal barometric pressure (`AltitudeFromPressureDevice`) or raw GNSS altitude ($\pm 20\text{--}50\text{ m}$ vertical GPS multipath noise). Introducing a pairable `AltitudeFromPositionDevice` (`DeviceType.ALTITUDE_FROM_POSITION`, `Protocol.SMARTPHONE`) backed by a dedicated spatial cache (`ElevationCache.db`) provides continuous topographic/DEM altitude based on GPS coordinates, seeded from route elevations (`Routes.db`) and Open-Meteo DEM queries (`ElevationService`), strictly separated from *Lieblingsorte* (`KnownLocations.db`) (ATT-4859, Parent Epic ATT-166):
 1. *Device Registration & Smartphone Pairing Lifecycle (`REQ-SEN-025.1`)*:
 • The system SHALL register `DeviceType.ALTITUDE_FROM_POSITION` under `Protocol.SMARTPHONE` with main sensor type `SensorType.ALTITUDE`.
@@ -2342,12 +2342,20 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • Background position tracking and DEM queries SHALL NEVER insert, alter, or reconcile entries in `KnownLocations.db` (`KnownLocationsDatabaseManager`), preserving athlete favorite landmarks and manual calibrations.
 5. *9-Language Localization Parity (`REQ-SEN-025.5`)*:
 • All `ALTITUDE_FROM_POSITION` device strings (`device_type_altitude_from_position`, `device_type_short_altitude_from_position`, `devices_altitude_from_position`, `devices_altitude_from_position_description`) SHALL maintain 100% translation parity across all 9 supported locales.
+6. *2D Route/Segment Zero Elevation Rejection & Self-Healing Purge (`REQ-SEN-025.6`)*:
+• The system SHALL filter out trackpoints from routes or segments where `abs(elevation) < 1e-4` or where all points in the route/segment have zero elevation, preventing 2D dummy coordinates from being inserted as `ROUTE_SEED` or `SEGMENT_SEED` into `ElevationCache.db`.
+• The cache manager SHALL execute a self-healing purge (`purgeCorruptZeroSeeds()`) on initialization and background seeding to delete existing corrupt zero-elevation records (`altitude == 0.0 AND source IN ('ROUTE_SEED', 'SEGMENT_SEED')`) while preserving genuine sea-level points and authoritative `DEM_CACHE` records.
+7. *Neighbor Seed DEM Upgrade & Anti-Poisoning (`REQ-SEN-025.7`)*:
+• When `AltitudeFromPositionDevice` resolves an altitude from a non-authoritative neighbor seed cell (`ROUTE_SEED` or `SEGMENT_SEED` where `cachedItem.latE5 != latE5 || cachedItem.lonE5 != lonE5`), upon successful completion of the asynchronous DEM fetch (`fetchDemElevationAsync`), the system SHALL update both the current position `(latE5, lonE5)` AND the matched neighbor seed cell to the authoritative `demElevation` with source `DEM_CACHE` (or purge the corrupt seed cell), preventing repetitive re-poisoning on subsequent passes.
+8. *Telemetry Null-Altitude Parity & Outlier Smoothing (`REQ-SEN-025.8`)*:
+• `WorkoutRepository.loadWorkoutDetailTelemetry` SHALL extract missing altitude samples as `null` (`if (altIdx != -1 && !cursor.isNull(altIdx)) cursor.getDouble(altIdx) else null`), maintaining symmetry with `getWorkoutTrackPoints` and `getWorkoutTelemetryPoints`.
+• `ElevationSmoothingMath.smoothAltitudes` and `calculateElevationBounds` SHALL evaluate the workout's median altitude (`medianAlt`); when `medianAlt > 50.0` m, isolated dropouts where `abs(alt) < 1e-4` SHALL be treated as missing/invalid and interpolated across surrounding terrain, while workouts at true sea level (`medianAlt <= 50.0` m) SHALL preserve `0.0 m` samples.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: `REQ-SEN-025.2` (Spatial Cache) & `REQ-SEN-025.3` (Seeding & DEM Caching). Targets `ElevationCacheDatabaseManager.kt` and `AltitudeFromPositionDevice.java`.
-2. *Historical Origin & Commit Trace*: Sprint 2026-44.2 (`ATT-4859`, commit `a11e13d7`). Builds upon `ATT-1366` (DEM resolution) and `ATT-166` (sensor fusion epic).
-3. *Root Reason for Existing Formulation*: Route/segment seeding was originally implemented with unconditional `CONFLICT_REPLACE` to provide immediate offline elevation without network roundtrips. However, this caused noisy Strava segment streams to clobber authoritative DEM entries and caused cache hits on seeded points to permanently suppress online DEM queries.
-4. *Preservation of Core Invariants*: Offline elevation availability for seeded routes is preserved with instant display; online fixes upgrade to authoritative DEM. Strict isolation from `KnownLocations.db` (`REQ-SEN-025.4`) is maintained.
+1. *Original Requirement ID & Target*: `REQ-SEN-025.2`, `REQ-SEN-025.3`, `REQ-SEN-025.6`, `REQ-SEN-025.7`, `REQ-SEN-025.8`. Targets `ElevationCacheDatabaseManager.kt`, `AltitudeFromPositionDevice.java`, `WorkoutRepository.kt`, and `ElevationSmoothingMath.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-44.2 (`ATT-4859`, commit `a11e13d7`) & Sprint 2026-45.2 (`ATT-5199`, commit `fa3c161b`); amended in Sprint 2026-45.4 (`ATT-5312`).
+3. *Root Reason for Existing Formulation*: Route/segment seeding previously accepted any non-null elevation, allowing imported 2D routes with dummy 0.0m points to poison the cache as `ROUTE_SEED`. Neighbor tolerance matching hit poisoned seeds without upgrading the neighbor cell upon DEM resolution. Additionally, `loadWorkoutDetailTelemetry` defaulted missing altitude to `0.0` instead of `null`, preventing Loess smoothing interpolation and causing 0.0m profile drops.
+4. *Preservation of Core Invariants*: Valid coastal workouts at true sea level (`medianAlt <= 50.0` m) preserve `0.0 m` values. Authoritative `DEM_CACHE` entries are never purged or overwritten by seeded points. Offline zero-latency seed emission is preserved while corrupt zero-seeds are self-healed.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* the Smartphone devices list in Settings/Devices,
@@ -2356,11 +2364,20 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Given* stored routes with elevation points in `Routes.db`,
 • *When* the cache indexer executes,
 • *Then* route trackpoints are indexed into `ElevationCache.db` and queryable offline without network calls.
+• *Given* imported 2D routes with dummy 0.0m elevations,
+• *When* `seedFromRoutes()` runs,
+• *Then* zero-elevation dummy points are rejected and never inserted into `ElevationCache.db`.
+• *Given* an asynchronous DEM query successfully resolves after matching a neighbor seed point,
+• *When* `fetchDemElevationAsync` completes,
+• *Then* the matched neighbor seed cell is updated with authoritative `DEM_CACHE` elevation.
+• *Given* workout telemetry points where GPS fix exists but altitude sensor is pending,
+• *When* `loadWorkoutDetailTelemetry` is called,
+• *Then* altitude returns `null` and is interpolated smoothly across the terrain by `ElevationSmoothingMath`.
 • *Given* continuous position tracking across a novel workout route,
 • *When* `ElevationCache.db` is queried and updated,
 • *Then* zero records are inserted into or modified within `KnownLocations.db`.
 
-**Invariants**: Zero mutation of `KnownLocations.db`, non-blocking I/O (`Dispatchers.IO`), Rule 62 schema registry integration, and 100% clean-room test pass rate.
+**Invariants**: Zero mutation of `KnownLocations.db`, non-blocking I/O (`Dispatchers.IO`), Rule 62 schema registry integration, authentic sea-level 0.0m preservation, and 100% clean-room test pass rate.
 
 
 ### REQ-TRK-048: Stationary GPS Jitter Suppression, Doppler Zero Preservation & Anchor Pinning [Verified]

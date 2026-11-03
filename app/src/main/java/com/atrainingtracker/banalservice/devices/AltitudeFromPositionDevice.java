@@ -25,6 +25,7 @@ import android.content.IntentFilter;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 import androidx.core.content.ContextCompat;
 
@@ -186,15 +187,22 @@ public class AltitudeFromPositionDevice extends MyDevice {
 
         ElevationCacheItem cachedItem = mElevationCacheDb.getElevationItem(latitude, longitude, 2);
         if (cachedItem != null) {
-            applyResolvedElevation(latE5, lonE5, cachedItem.getAltitude());
-            if (!ElevationCacheDatabaseManager.SOURCE_DEM_CACHE.equals(cachedItem.getSource())) {
-                // Non-authoritative seeded altitude: emit immediately for zero UI lag/offline fallback,
-                // and asynchronously query Open-Meteo DEM to upgrade to authoritative DEM_CACHE when online.
-                fetchDemElevationAsync(latitude, longitude, latE5, lonE5);
+            boolean isDemCache = ElevationCacheDatabaseManager.SOURCE_DEM_CACHE.equals(cachedItem.getSource());
+            boolean isCorruptZeroSeed = !isDemCache && Math.abs(cachedItem.getAltitude()) < 1e-4;
+
+            if (!isCorruptZeroSeed) {
+                applyResolvedElevation(latE5, lonE5, cachedItem.getAltitude());
+            }
+
+            if (!isDemCache) {
+                // Non-authoritative seeded altitude: emit immediately (if non-zero) for zero UI lag/offline fallback,
+                // and asynchronously query Open-Meteo DEM to upgrade to authoritative DEM_CACHE when online,
+                // upgrading the matched neighbor seed cell to prevent neighbor trap poisoning (REQ-SEN-025.7).
+                fetchDemElevationAsync(latitude, longitude, latE5, lonE5, cachedItem);
             }
         } else {
             // Cache miss: dispatch asynchronous DEM query
-            fetchDemElevationAsync(latitude, longitude, latE5, lonE5);
+            fetchDemElevationAsync(latitude, longitude, latE5, lonE5, null);
         }
     }
 
@@ -211,7 +219,7 @@ public class AltitudeFromPositionDevice extends MyDevice {
         }
     }
 
-    private void fetchDemElevationAsync(double latitude, double longitude, int latE5, int lonE5) {
+    private void fetchDemElevationAsync(double latitude, double longitude, int latE5, int lonE5, @Nullable ElevationCacheItem matchedSeedItem) {
         if (!mIsDemQueryInFlight.compareAndSet(false, true)) {
             if (DEBUG) Log.d(TAG, "DEM query already in flight; skipping redundant request for (" + latitude + ", " + longitude + ")");
             return;
@@ -222,7 +230,12 @@ public class AltitudeFromPositionDevice extends MyDevice {
                 if (result instanceof ElevationResult.Success success) {
                     double demElevation = success.getElevationMeters();
                     if (DEBUG) Log.i(TAG, "DEM fetched: " + demElevation + "m for (" + latitude + ", " + longitude + ")");
-                    mElevationCacheDb.putElevation(latitude, longitude, demElevation, ElevationCacheDatabaseManager.SOURCE_DEM_CACHE, System.currentTimeMillis());
+                    long now = System.currentTimeMillis();
+                    mElevationCacheDb.putElevationE5(latE5, lonE5, demElevation, ElevationCacheDatabaseManager.SOURCE_DEM_CACHE, now);
+                    if (matchedSeedItem != null && !ElevationCacheDatabaseManager.SOURCE_DEM_CACHE.equals(matchedSeedItem.getSource())) {
+                        // REQ-SEN-025.7: Upgrade matched neighbor seed cell to authoritative DEM_CACHE
+                        mElevationCacheDb.putElevationE5(matchedSeedItem.getLatE5(), matchedSeedItem.getLonE5(), demElevation, ElevationCacheDatabaseManager.SOURCE_DEM_CACHE, now);
+                    }
                     applyResolvedElevation(latE5, lonE5, demElevation);
                 } else {
                     if (DEBUG) Log.d(TAG, "DEM query unsuccessful: " + result);

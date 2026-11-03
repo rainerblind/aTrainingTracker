@@ -59,10 +59,17 @@ object ElevationSmoothingMath {
         if (n == 0) return DoubleArray(0)
         if (n == 1) return doubleArrayOf(pathPoints[0].altitude ?: 0.0)
 
-        val hasAnyNonNull = pathPoints.any { it.altitude != null && !it.altitude.isNaN() }
-        if (!hasAnyNonNull) {
+        val validAlts = pathPoints.mapNotNull { it.altitude }.filter { !it.isNaN() }
+        if (validAlts.isEmpty()) {
             return DoubleArray(n) { 0.0 }
         }
+
+        // ATT-5312: Determine workout median altitude. On terrain significantly above sea level (> 50m),
+        // isolated 0.0m dropouts (from unrecorded points or 2D cache poisoning) are treated as invalid missing
+        // samples and interpolated, while authentic coastal sea-level workouts (median <= 50m) preserve 0.0m.
+        val sortedAlts = validAlts.sorted()
+        val medianAlt = sortedAlts[sortedAlts.size / 2]
+        val isZeroAnOutlier = medianAlt > 50.0
 
         val distances = DoubleArray(n)
         val altitudes = DoubleArray(n)
@@ -71,17 +78,18 @@ object ElevationSmoothingMath {
         for (idx in 0 until n) {
             distances[idx] = pathPoints[idx].distance
             val alt = pathPoints[idx].altitude
-            if (alt != null && !alt.isNaN()) {
-                altitudes[idx] = alt
+            if (alt != null && !alt.isNaN() && !(isZeroAnOutlier && Math.abs(alt) < 1e-4)) {
+                val nonNullAlt = alt
+                altitudes[idx] = nonNullAlt
                 if (lastValidIdx == -1) {
                     for (k in 0 until idx) {
-                        altitudes[k] = alt
+                        altitudes[k] = nonNullAlt
                     }
                 } else if (idx > lastValidIdx + 1) {
                     val d0 = distances[lastValidIdx]
                     val a0 = altitudes[lastValidIdx]
                     val d1 = distances[idx]
-                    val a1 = alt
+                    val a1 = nonNullAlt
                     val dSpan = d1 - d0
                     for (k in (lastValidIdx + 1) until idx) {
                         altitudes[k] = if (dSpan > 1e-6) {
@@ -98,6 +106,10 @@ object ElevationSmoothingMath {
             val lastAlt = altitudes[lastValidIdx]
             for (k in (lastValidIdx + 1) until n) {
                 altitudes[k] = lastAlt
+            }
+        } else if (lastValidIdx == -1) {
+            for (k in 0 until n) {
+                altitudes[k] = medianAlt
             }
         }
 

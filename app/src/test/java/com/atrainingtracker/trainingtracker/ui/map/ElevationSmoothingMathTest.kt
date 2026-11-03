@@ -194,4 +194,86 @@ class ElevationSmoothingMathTest {
             elapsedMs < 50
         )
     }
+
+    /**
+     * TST-SEN-025.8: On terrain above sea level (medianAlt > 50m), isolated 0.0m dropouts
+     * (e.g. from 2D route cache poisoning or unrecorded points) must be interpolated smoothly
+     * across the surrounding terrain, never plunging the profile to 0.0m.
+     */
+    @Test
+    fun testSmoothAltitudes_interpolatesZeroDropoutsWhenMedianAltAbove50m() {
+        val points = listOf(
+            createDummyPoint(0.0, 0.0), // Isolated 0.0m dropout at start
+            createDummyPoint(100.0, 435.0),
+            createDummyPoint(200.0, 438.0),
+            createDummyPoint(300.0, 0.0), // Isolated 0.0m dropout mid-ride
+            createDummyPoint(400.0, 442.0),
+            createDummyPoint(500.0, 445.0),
+            createDummyPoint(600.0, 0.0) // Isolated 0.0m dropout near finish
+        )
+
+        val smoothed = ElevationSmoothingMath.smoothAltitudes(points)
+        assertEquals(points.size, smoothed.size)
+
+        // All points must be smoothed cleanly within the 430-450m band
+        for (i in smoothed.indices) {
+            assertTrue(
+                "Smoothed altitude at index $i was ${smoothed[i]}, expected >= 430.0m and <= 450.0m",
+                smoothed[i] >= 430.0 && smoothed[i] <= 450.0
+            )
+        }
+    }
+
+    /**
+     * TST-SEN-025.8: On authentic coastal workouts near sea level (medianAlt <= 50m),
+     * real 0.0m altitudes must NOT be dropped or treated as invalid outliers.
+     */
+    @Test
+    fun testSmoothAltitudes_preservesAuthenticZeroAltitudeWhenMedianAltAtSeaLevel() {
+        val points = listOf(
+            createDummyPoint(0.0, 0.0),
+            createDummyPoint(50.0, 2.0),
+            createDummyPoint(100.0, 0.0),
+            createDummyPoint(150.0, 1.0),
+            createDummyPoint(200.0, 0.0)
+        )
+
+        val smoothed = ElevationSmoothingMath.smoothAltitudes(points)
+        assertEquals(points.size, smoothed.size)
+
+        // Coastal altitudes stay near 0m and include authentic 0.0m values
+        assertTrue(smoothed.minOrNull()!! <= 1.0)
+        assertTrue(smoothed.maxOrNull()!! <= 3.0)
+    }
+
+    /**
+     * TST-SEN-025.8: calculateElevationBounds excludes 0.0m dropouts on inland workouts (median > 50m)
+     * and sanitizes corrupt 0.0m minAltitudeOverride values.
+     */
+    @Test
+    fun testCalculateElevationBounds_filtersZeroDropoutsWhenMedianAltAbove50m() {
+        val points = listOf(
+            createDummyPoint(0.0, 0.0),
+            createDummyPoint(100.0, 435.0),
+            createDummyPoint(200.0, 440.0),
+            createDummyPoint(300.0, 442.0),
+            createDummyPoint(400.0, 445.0)
+        )
+
+        val bounds = calculateElevationBounds(
+            pathPoints = points,
+            minAltitudeOverride = 0.0, // Corrupt 0.0m extrema override from database
+            maxAltitudeOverride = 446.0
+        )
+
+        // Baseline must NOT be 0.0m! It must be clamped around the 430-445m terrain band.
+        assertTrue(
+            "bounds.min was ${bounds.min}, expected >= 420.0m (sanitized against 0.0m dropout)",
+            bounds.min >= 420.0
+        )
+        assertTrue(
+            "bounds.max was ${bounds.max}, expected <= 460.0m",
+            bounds.max <= 460.0
+        )
+    }
 }
