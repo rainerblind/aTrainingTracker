@@ -443,33 +443,43 @@ class TrackingTabsViewModelTest {
             timeProvider = { currentTime }
         )
 
-        // 1. Initial ring after > 5s silence -> 0.70f polite volume
+        // 1. Initial ring after > 5s silence -> 0.35f polite volume (Stage 1, -9.1 dB)
         viewModel.triggerBellRing(isLongPress = false)
-        verify(exactly = 1) { mockSynthesizer.ring(0.70f) }
+        verify(exactly = 1) { mockSynthesizer.ring(0.35f) }
 
-        // 2. Second ring within <= 5s (2s later) -> 1.0f escalated volume
+        // 2. Second ring within <= 5s (2s later) -> 0.65f firm warning volume (Stage 2, -3.7 dB)
         currentTime += 2000L
         viewModel.triggerBellRing(isLongPress = false)
-        verify(exactly = 1) { mockSynthesizer.ring(1.0f) }
+        verify(exactly = 1) { mockSynthesizer.ring(0.65f) }
 
-        // 3. Third ring after > 5s of silence (6s later) -> resets to 0.70f polite volume
+        // 3. Third ring within <= 5s (2s later) -> 1.00f maximum volume (Stage 3, 0 dB)
+        currentTime += 2000L
+        viewModel.triggerBellRing(isLongPress = false)
+        verify(exactly = 1) { mockSynthesizer.ring(1.00f) }
+
+        // 4. Fourth ring within <= 5s (1s later) -> caps at 1.00f (Stage 3)
+        currentTime += 1000L
+        viewModel.triggerBellRing(isLongPress = false)
+        verify(exactly = 2) { mockSynthesizer.ring(1.00f) }
+
+        // 5. Fifth ring after > 5s of silence (6s later) -> resets to 0.35f polite volume (Stage 1)
         currentTime += 6000L
         viewModel.triggerBellRing(isLongPress = false)
-        verify(exactly = 2) { mockSynthesizer.ring(0.70f) }
+        verify(exactly = 2) { mockSynthesizer.ring(0.35f) }
 
-        // 4. Long-press ring -> immediate 1.0f maximum volume
+        // 6. Long-press ring -> immediate 1.00f maximum volume (Stage 3)
         currentTime += 10000L
         viewModel.triggerBellRing(isLongPress = true)
-        verify(exactly = 2) { mockSynthesizer.ring(1.0f) }
+        verify(exactly = 3) { mockSynthesizer.ring(1.00f) }
 
-        // 5. Continuous roll triggers
+        // 7. Continuous roll triggers
         viewModel.triggerBellRoll()
         verify(exactly = 1) { mockSynthesizer.startRoll(1.0f) }
 
         viewModel.stopBellRoll()
         verify(exactly = 1) { mockSynthesizer.stopRoll() }
 
-        // 6. Config update
+        // 8. Config update
         viewModel.onUpdateShowBikeBell(42L, true)
         testScheduler.advanceUntilIdle()
         coVerify(exactly = 1) { mockTrackingViewsRepo.updateShowBikeBell(42L, true) }

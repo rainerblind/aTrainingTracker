@@ -6427,10 +6427,10 @@
   5. *Clean-Room Regression Suite Execution (`TST-UI-383.5`)*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions across the full test suite.
 
-### TST-UI-384: **Electronic Bike Bell with Button, Double-Tap Gesture, and Progressive Loudness Escalation Verification Suite** [AudioTrack configured with USAGE_MEDIA and static replay stop() cycle; BikeBellButton enabled across READY, TRACKING, and PAUSED modes with gesture isolation; double-tap active across non-configuration modes; 100% test pass rate with zero regressions.]
+### TST-UI-384: **Electronic Bike Bell with Button, Double-Tap Gesture, and Progressive Loudness Escalation Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-421`, `REQ-UI-344`, `REQ-UI-295`, `REQ-UI-409`
 - **Component**: **Electronic Bike Bell with Button, Double-Tap Gesture, and Progressive Loudness Escalation Verification Suite**
-- **Jira**: ``ATT-4371``
+- **Jira**: ``ATT-4371``, ``ATT-5131``
 - **Test Description**:
   1. *TrackingViewsDbHelper SQLite v15 Transactional & Idempotent Migration Unit Test (`TST-UI-384.1`, `TrackingViewsRealSqliteMigrationTest.kt`)*:
   • Test database upgrade from v14 to v15: verify `SHOW_BIKE_BELL` column added.
@@ -6441,15 +6441,20 @@
   2. *TrackingViewsRepository & DTO Mapping Symmetry Unit Test (`TST-UI-384.2`, `TrackingViewsRepositoryTest.kt`)*:
   • Test `TrackingViewInfo` reads and maps `showBikeBell` correctly from single-row and batch queries.
   • Test `updateShowBikeBell(tabViewId, show)` persists toggle state accurately.
-  3. *BikeBellAudioSynthesizer USAGE_MEDIA Stream, Static Replay & Concurrency Test (`TST-UI-384.3`, `BikeBellAudioSynthesizerTest.kt`)*:
+  3. *BikeBellAudioSynthesizer Built-in Speaker Routing, Alarm Stream & Volume Boost Test (`TST-UI-384.3`, `BikeBellAudioSynthesizerTest.kt`)*:
   • Verify 16-bit PCM mono buffer synthesis generated at $44.1\text{ kHz}$ with two distinct strikes separated by $\sim 110\text{ ms}$ and exponential decay.
-  • Verify `AudioAttributes.USAGE_MEDIA` and `AudioAttributes.CONTENT_TYPE_SONIFICATION` audio attributes configuration.
+  • Verify `AudioAttributes.USAGE_ALARM` and `AudioAttributes.CONTENT_TYPE_SONIFICATION` audio attributes configuration.
+  • Verify `AudioTrack.setPreferredDevice(builtInSpeaker)` where `builtInSpeaker.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER` applied upon creation and prior to playback.
+  • Verify `savedAlarmVolume` capture, hardware volume boost to `getStreamMaxVolume(STREAM_ALARM)` with `flags = 0`, and delayed auto-restore (+650 ms for ring, +150 ms after stopRoll).
   • Verify static replay contract: `mockTrack.stop()` is invoked prior to `mockTrack.playbackHeadPosition = 0` on every ring and roll start, preventing `ERROR_INVALID_OPERATION`.
   • Verify thread safety: concurrent calls to `ring()`, `startRoll()`, `stopRoll()`, and `close()` from multiple threads execute without exceptions or native crashes.
-  4. *Progressive Loudness Escalation Logic Test (`TST-UI-384.4`, `TrackingTabsViewModelTest.kt`)*:
-  • Test initial ring: verify volume is 0.70f.
-  • Test repeat ring within 5 seconds ($t + 2\text{s}$): verify volume escalates to 1.0f.
-  • Test silence $> 5\text{ seconds}$ ($t + 6\text{s}$): verify volume resets to 0.70f.
+  4. *3-Stage Perceptual Loudness Escalation Logic Test (`TST-UI-384.4`, `TrackingTabsViewModelTest.kt`)*:
+  • Test initial ring: verify volume is 0.35f (Stage 1, -9.1 dB).
+  • Test repeat ring within 5 seconds ($t + 2\text{s}$): verify volume escalates to 0.65f (Stage 2, -3.7 dB).
+  • Test third ring within 5 seconds ($t + 4\text{s}$): verify volume escalates to 1.00f (Stage 3, 0 dB).
+  • Test fourth ring within 5 seconds ($t + 5\text{s}$): verify volume remains capped at 1.00f (Stage 3).
+  • Test silence $> 5\text{ seconds}$ ($t + 11\text{s}$): verify volume resets to 0.35f (Stage 1).
+  • Test long-press: verify immediate 1.00f maximum volume.
   • Test `onCleared()` releases synthesizer resources cleanly.
   5. *Cockpit Multi-Mode Availability & Pointer Gesture Isolation Contract Test (`TST-UI-384.5`, `TrackingTabsScreenTest.kt` / `BikeBellButtonTest.kt`)*:
   • Verify multi-mode availability: `BikeBellButton` is enabled in `TrackingMode.READY`, `TrackingMode.TRACKING`, and `TrackingMode.PAUSED` (enforcing Rule 53).
@@ -6469,6 +6474,8 @@
   • Verify zero missing keys and literal `\n` linebreaks.
   8. *Clean-Room Regression Suite Execution (`TST-UI-384.8`)*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions.
+  9. *Manifest Permission Security Contract (`TST-UI-384.9`, `ManifestAndBuildConfigContractTest.kt`)*:
+  • Verify `AndroidManifest.xml` actively declares `android.permission.MODIFY_AUDIO_SETTINGS`.
 
 ### TST-UI-385: **Relocate 'Sport Types' Drawer Item to Settings and Rename 'Equipment' Item to 'Bikes & Shoes' Verification Suite** [Relocate Sport Types drawer destination to Settings Hub, restrict Equipment hub strictly to physical hardware (My Sensors, Bikes & Shoes), rename Equipment title to Bikes & Shoes across all 9 locales with XML entity escaping, verify drawer state machine auto-expansion, and pass clean-room test suite.]
 - **Requirement(s)**: `REQ-UI-422`, `REQ-UI-405`, `REQ-LOC-001`

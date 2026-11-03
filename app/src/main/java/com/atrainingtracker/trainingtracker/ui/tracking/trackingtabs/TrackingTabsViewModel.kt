@@ -73,9 +73,10 @@ class TrackingTabsViewModel(
 ) : AndroidViewModel(application) {
 
     val bikeBellSynthesizer: com.atrainingtracker.trainingtracker.audio.BikeBellAudioSynthesizer =
-        bikeBellAudioSynthesizer ?: com.atrainingtracker.trainingtracker.audio.BikeBellAudioSynthesizer()
+        bikeBellAudioSynthesizer ?: com.atrainingtracker.trainingtracker.audio.BikeBellAudioSynthesizer(application)
 
     private var lastRingTimestampMs: Long = -10000L
+    private var bellEscalationStage: Int = 1
 
     // State to hold the explicitly selected ActivityType
     private val _explicitActivityType = MutableStateFlow<ActivityType?>(null)
@@ -504,16 +505,32 @@ class TrackingTabsViewModel(
     }
 
     /**
-     * Triggers electronic bike bell ring with progressive loudness escalation (REQ-UI-421.5).
+     * Triggers electronic bike bell ring with 3-stage logarithmic loudness escalation (REQ-UI-421.5).
      *
-     * Initial ring sounds at polite volume (70%). Rapid repeated rings within <= 5s or long-press
-     * escalate to 100% volume. Volume resets to polite after 5s of silence.
+     * - 1st Tap: Polite distance ring (0.35f, -9.1 dB)
+     * - 2nd Tap within <= 5s: Firm warning ring (0.65f, -3.7 dB)
+     * - 3rd+ Tap within <= 5s or Long-Press: Maximum hardware output (1.00f, 0 dB)
+     * - Resets back to Stage 1 after > 5s of silence.
      */
     fun triggerBellRing(isLongPress: Boolean = false) {
         val now = timeProvider()
-        val isEscalated = isLongPress || (now - lastRingTimestampMs <= 5000L)
+        val volume = if (isLongPress) {
+            bellEscalationStage = 3
+            1.00f
+        } else {
+            val isWithinWindow = (now - lastRingTimestampMs <= 5000L)
+            bellEscalationStage = if (isWithinWindow) {
+                (bellEscalationStage + 1).coerceAtMost(3)
+            } else {
+                1
+            }
+            when (bellEscalationStage) {
+                1 -> 0.35f
+                2 -> 0.65f
+                else -> 1.00f
+            }
+        }
         lastRingTimestampMs = now
-        val volume = if (isEscalated) 1.0f else 0.70f
         bikeBellSynthesizer.ring(volume)
     }
 
@@ -522,6 +539,7 @@ class TrackingTabsViewModel(
      */
     fun triggerBellRoll() {
         lastRingTimestampMs = timeProvider()
+        bellEscalationStage = 3
         bikeBellSynthesizer.startRoll(1.0f)
     }
 

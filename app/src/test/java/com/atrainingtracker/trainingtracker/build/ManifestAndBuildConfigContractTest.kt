@@ -173,6 +173,24 @@ class ManifestAndBuildConfigContractTest {
     }
 
     @Test
+    fun testManifest_modifyAudioSettingsPermissionDeclared() {
+        val doc = parseManifestDocument()
+        val permissions = doc.getElementsByTagName("uses-permission")
+        var hasModifyAudioSettings = false
+        for (i in 0 until permissions.length) {
+            val element = permissions.item(i) as Element
+            if (element.getAttribute("android:name") == "android.permission.MODIFY_AUDIO_SETTINGS") {
+                hasModifyAudioSettings = true
+                break
+            }
+        }
+        assertTrue(
+            "AndroidManifest.xml must declare android.permission.MODIFY_AUDIO_SETTINGS for Bike Bell speaker routing and volume boost (REQ-UI-421.4c, TST-UI-384.9)",
+            hasModifyAudioSettings
+        )
+    }
+
+    @Test
     fun testManifest_backgroundLocationRationaleCommentDocumented() {
         val content = findAndroidManifestFile().readText()
 

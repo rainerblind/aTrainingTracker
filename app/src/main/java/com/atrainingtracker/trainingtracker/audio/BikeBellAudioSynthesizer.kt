@@ -18,10 +18,14 @@
 
 package com.atrainingtracker.trainingtracker.audio
 
+import android.content.Context
 import android.media.AudioAttributes
+import android.media.AudioDeviceInfo
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 
 /**
@@ -31,12 +35,16 @@ import android.util.Log
  * 3.84 kHz, 5.28 kHz, and 7.6 kHz overtones with exponential decay envelopes) pre-loaded in memory
  * via [AudioTrack.MODE_STATIC] for zero-latency instant playback without disk I/O.
  *
- * Configured with [AudioAttributes.USAGE_MEDIA] without audio focus ducking to
- * guarantee non-intrusive coexistence with turn-by-turn spoken prompts and music playback.
+ * Configured with [AudioAttributes.USAGE_ALARM] and forced [AudioDeviceInfo.TYPE_BUILTIN_SPEAKER]
+ * routing to project bell audio loudly through the phone loudspeaker even when headphones are connected.
+ * Hardware alarm volume is temporarily boosted to 100% during rings and rolls and auto-restored afterwards.
  * All public operations are thread-safe ([synchronized]), and resources are cleanly released via [close].
  */
 class BikeBellAudioSynthesizer(
-    audioTrackFactory: ((pcmData: ByteArray) -> AudioTrack?)? = null
+    private val context: Context? = null,
+    audioManager: AudioManager? = null,
+    audioTrackFactory: ((pcmData: ByteArray) -> AudioTrack?)? = null,
+    handler: Handler? = null
 ) : AutoCloseable {
 
     companion object {
@@ -46,6 +54,8 @@ class BikeBellAudioSynthesizer(
         const val STRIKE_2_DELAY_SEC: Double = 0.110
         const val ROLL_DURATION_SEC: Double = 2.5
         const val ROLL_STRIKE_INTERVAL_SEC: Double = 0.077
+        const val RING_RESTORE_DELAY_MS: Long = 650L
+        const val ROLL_RESTORE_DELAY_MS: Long = 150L
 
         // Resonant modal frequencies for 2.4 kHz brass bell dome
         const val FUNDAMENTAL_FREQ: Double = 2400.0
@@ -161,12 +171,12 @@ class BikeBellAudioSynthesizer(
             return pcmBytes
         }
         /**
-         * Creates [AudioAttributes] for bike bell playback configured with [AudioAttributes.USAGE_MEDIA]
+         * Creates [AudioAttributes] for bike bell playback configured with [AudioAttributes.USAGE_ALARM]
          * and [AudioAttributes.CONTENT_TYPE_SONIFICATION] (REQ-UI-421.4).
          */
         fun createAudioAttributes(): AudioAttributes {
             return AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_MEDIA)
+                .setUsage(AudioAttributes.USAGE_ALARM)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .build()
         }
@@ -178,15 +188,74 @@ class BikeBellAudioSynthesizer(
     private val lock = Any()
     private var isClosed = false
 
+    private val audioManager: AudioManager? = audioManager
+        ?: (context?.getSystemService(Context.AUDIO_SERVICE) as? AudioManager)
+
+    private val handler: Handler? = handler ?: try {
+        Handler(Looper.getMainLooper())
+    } catch (_: Throwable) {
+        null
+    }
+
+    private var savedAlarmVolume: Int? = null
+
+    private val restoreRunnable = Runnable {
+        synchronized(lock) {
+            restoreAlarmVolumeLocked()
+        }
+    }
+
+    private fun applySpeakerRouting(track: AudioTrack?) {
+        if (track == null) return
+        val am = audioManager ?: return
+        try {
+            val devices = am.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+            val builtInSpeaker = devices?.firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+            if (builtInSpeaker != null) {
+                track.setPreferredDevice(builtInSpeaker)
+            }
+        } catch (t: Throwable) {
+            Log.w(TAG, "Failed to setPreferredDevice(TYPE_BUILTIN_SPEAKER)", t)
+        }
+    }
+
+    private fun boostAlarmVolumeLocked() {
+        val am = audioManager ?: return
+        try {
+            if (savedAlarmVolume == null) {
+                savedAlarmVolume = am.getStreamVolume(AudioManager.STREAM_ALARM)
+                val maxVolume = am.getStreamMaxVolume(AudioManager.STREAM_ALARM)
+                am.setStreamVolume(AudioManager.STREAM_ALARM, maxVolume, 0)
+            }
+        } catch (t: Throwable) {
+            Log.w(TAG, "Failed to boost STREAM_ALARM volume", t)
+        }
+    }
+
+    private fun restoreAlarmVolumeLocked() {
+        val original = savedAlarmVolume ?: return
+        try {
+            audioManager?.setStreamVolume(AudioManager.STREAM_ALARM, original, 0)
+        } catch (t: Throwable) {
+            Log.w(TAG, "Failed to restore STREAM_ALARM volume", t)
+        } finally {
+            savedAlarmVolume = null
+        }
+    }
+
     private var singleStrikeTrack: AudioTrack? = try {
-        audioTrackFactory?.invoke(doubleStrikePcm) ?: createStaticTrack(doubleStrikePcm)
+        val track = audioTrackFactory?.invoke(doubleStrikePcm) ?: createStaticTrack(doubleStrikePcm)
+        applySpeakerRouting(track)
+        track
     } catch (t: Throwable) {
         Log.w(TAG, "AudioTrack init failed for single strike", t)
         null
     }
 
     private var rollTrack: AudioTrack? = try {
-        audioTrackFactory?.invoke(rollPcm) ?: createStaticTrack(rollPcm)
+        val track = audioTrackFactory?.invoke(rollPcm) ?: createStaticTrack(rollPcm)
+        applySpeakerRouting(track)
+        track
     } catch (t: Throwable) {
         Log.w(TAG, "AudioTrack init failed for roll", t)
         null
@@ -218,13 +287,21 @@ class BikeBellAudioSynthesizer(
     /**
      * Plays the double-strike (*"Ding-Ding!"*) bell tone at the specified [volume].
      *
+     * Forces speaker output, temporarily boosts hardware alarm volume to 100%, and auto-restores
+     * after [RING_RESTORE_DELAY_MS] (REQ-UI-421.4).
+     *
      * @param volume Linear volume scale in range [0.0f, 1.0f].
      */
-    fun ring(volume: Float = 0.70f) {
+    fun ring(volume: Float = 0.35f) {
         synchronized(lock) {
             if (isClosed) return
             try {
                 val track = singleStrikeTrack ?: return
+                applySpeakerRouting(track)
+                boostAlarmVolumeLocked()
+                handler?.removeCallbacks(restoreRunnable)
+                handler?.postDelayed(restoreRunnable, RING_RESTORE_DELAY_MS)
+
                 val clamped = volume.coerceIn(0.0f, 1.0f)
                 track.setVolume(clamped)
                 track.stop()
@@ -239,12 +316,18 @@ class BikeBellAudioSynthesizer(
     /**
      * Starts continuous striker roll (*"Brriiiing!"*) playback at the specified [volume]
      * looping indefinitely until [stopRoll] is invoked (REQ-UI-421.4).
+     *
+     * Forces speaker output and temporarily boosts hardware alarm volume to 100%.
      */
     fun startRoll(volume: Float = 1.0f) {
         synchronized(lock) {
             if (isClosed) return
             try {
                 val track = rollTrack ?: return
+                applySpeakerRouting(track)
+                boostAlarmVolumeLocked()
+                handler?.removeCallbacks(restoreRunnable)
+
                 val clamped = volume.coerceIn(0.0f, 1.0f)
                 track.setVolume(clamped)
                 track.stop()
@@ -259,7 +342,8 @@ class BikeBellAudioSynthesizer(
     }
 
     /**
-     * Stops continuous striker roll playback.
+     * Stops continuous striker roll playback and schedules hardware alarm volume auto-restore
+     * after [ROLL_RESTORE_DELAY_MS] (REQ-UI-421.4).
      */
     fun stopRoll() {
         synchronized(lock) {
@@ -267,6 +351,8 @@ class BikeBellAudioSynthesizer(
             try {
                 rollTrack?.stop()
                 rollTrack?.playbackHeadPosition = 0
+                handler?.removeCallbacks(restoreRunnable)
+                handler?.postDelayed(restoreRunnable, ROLL_RESTORE_DELAY_MS)
             } catch (e: Exception) {
                 Log.w(TAG, "Error stopping bell roll", e)
             }
@@ -274,12 +360,15 @@ class BikeBellAudioSynthesizer(
     }
 
     /**
-     * Releases native [AudioTrack] audio hardware resources.
+     * Releases native [AudioTrack] audio hardware resources and immediately restores
+     * hardware alarm volume if currently boosted.
      */
     override fun close() {
         synchronized(lock) {
             if (isClosed) return
             isClosed = true
+            handler?.removeCallbacks(restoreRunnable)
+            restoreAlarmVolumeLocked()
             try {
                 singleStrikeTrack?.pause()
                 singleStrikeTrack?.flush()
