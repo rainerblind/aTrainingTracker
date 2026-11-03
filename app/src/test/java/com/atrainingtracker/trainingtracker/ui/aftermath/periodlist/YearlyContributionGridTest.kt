@@ -270,4 +270,31 @@ class YearlyContributionGridTest {
         val offsetEarly = calculateInitialScrollOffset(1000, totalCols, 2, colPitchPx)
         assertEquals(0, offsetEarly)
     }
+
+    /**
+     * TST-PER-031.10: Day-of-Week Label Cadence & Sunday Anchor Unit Test (REQ-PER-025.3, ATT-5193).
+     * Asserts that Monday (0), Wednesday (2), Friday (4), and Sunday (6) display labels,
+     * while Tuesday (1), Thursday (3), and Saturday (5) remain unlabeled.
+     */
+    @Test
+    fun testDayOfWeekLabelCadence_showsMonWedFriSun_TST_PER_031_10() {
+        // Monday (0)
+        assertTrue("Monday (idx 0) must show label", shouldShowDayOfWeekLabel(0))
+        // Tuesday (1)
+        assertFalse("Tuesday (idx 1) must be unlabeled", shouldShowDayOfWeekLabel(1))
+        // Wednesday (2)
+        assertTrue("Wednesday (idx 2) must show label", shouldShowDayOfWeekLabel(2))
+        // Thursday (3)
+        assertFalse("Thursday (idx 3) must be unlabeled", shouldShowDayOfWeekLabel(3))
+        // Friday (4)
+        assertTrue("Friday (idx 4) must show label", shouldShowDayOfWeekLabel(4))
+        // Saturday (5)
+        assertFalse("Saturday (idx 5) must be unlabeled", shouldShowDayOfWeekLabel(5))
+        // Sunday (6)
+        assertTrue("Sunday (idx 6) must show label", shouldShowDayOfWeekLabel(6))
+
+        // Out-of-bounds indices
+        assertFalse(shouldShowDayOfWeekLabel(-1))
+        assertFalse(shouldShowDayOfWeekLabel(7))
+    }
 }

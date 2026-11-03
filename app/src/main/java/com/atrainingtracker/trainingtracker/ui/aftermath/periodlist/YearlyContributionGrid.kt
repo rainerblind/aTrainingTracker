@@ -39,6 +39,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -140,6 +141,12 @@ fun calculateInitialScrollOffset(
     val futureWeeksWidth = remainingCols * colPitchPx
     return (maxValue - futureWeeksWidth.roundToInt()).coerceIn(0, maxValue)
 }
+
+/**
+ * Evaluates whether a day-of-week row index (0..6, Monday to Sunday) should display a label (REQ-PER-025.3).
+ * Shows labels for Monday (0), Wednesday (2), Friday (4), and Sunday (6), establishing an even 2-day cadence.
+ */
+fun shouldShowDayOfWeekLabel(rowIdx: Int): Boolean = rowIdx in listOf(0, 2, 4, 6)
 
 /**
  * Renders a GitHub-style 52/53-week x 7-day Activity Contribution Grid for a single sport type (REQ-PER-025).
@@ -281,7 +288,7 @@ fun YearlyContributionGrid(
                         DayOfWeek.SUNDAY
                     )
                     days.forEachIndexed { idx, day ->
-                        val showLabel = idx == 0 || idx == 2 || idx == 4
+                        val showLabel = shouldShowDayOfWeekLabel(idx)
                         Box(
                             modifier = Modifier
                                 .height(cellSize)
@@ -289,10 +296,16 @@ fun YearlyContributionGrid(
                             contentAlignment = Alignment.CenterStart
                         ) {
                             if (showLabel) {
+                                @Suppress("DEPRECATION")
                                 Text(
                                     text = day.getDisplayName(TextStyle.NARROW, Locale.getDefault()),
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontSize = 9.sp,
+                                        lineHeight = 9.sp,
+                                        platformStyle = PlatformTextStyle(includeFontPadding = false)
+                                    ),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.wrapContentHeight(align = Alignment.CenterVertically, unbounded = true)
                                 )
                             }
                         }
