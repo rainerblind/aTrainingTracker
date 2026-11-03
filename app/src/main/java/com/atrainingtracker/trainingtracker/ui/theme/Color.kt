@@ -312,6 +312,8 @@ object TTColor {
 
     // Cockpit Gauges, Controls & Sensor Borders (REQ-UI-381)
     val PauseAmber = Color(0xFFF59E0B)
+    val BikeBellContainer = Color(0xFFFF9800) // Distinct Warm Orange (REQ-UI-421.2, ATT-5283)
+    val BikeBellContent = Color(0xFF000000)   // High-Contrast Pure Black on Orange (WCAG AAA > 10:1) (REQ-UI-421.2, ATT-5283)
     val SensorActiveBorder = Color(0xFF2196F3)
     val SensorBorderDark = Color(0xFF383838)
     val SensorBorderLight = Color(0xFFD6D6D6)

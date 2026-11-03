@@ -6464,6 +6464,7 @@
   • Verify single button: `BikeBellButton` renders centered when `showBikeBell = true` and `showLapButton = false`.
   • Verify `ScreenMode.CONFIGURATION`: both `LapButton` and `BikeBellButton` are suppressed (preserving `REQ-UI-295`).
   • Verify `SnackbarHost` bottom padding adjusts dynamically (64.dp when button visible, 8.dp when hidden).
+  • Verify orange theme color styling (`ATT-5283`): `BikeBellButton` container uses `TTColor.BikeBellContainer` (orange) and icon uses `TTColor.BikeBellContent` (high contrast) when `isAvailable`, with zero hardcoded hex literals outside `Color.kt` (`ThemeColorCentralizationAuditTest`).
   6. *SensorGridScreen Multi-Mode Double-Tap Disambiguation & Pager Non-Interference Contract Test (`TST-UI-384.6`, `SensorGridScreenTest.kt`)*:
   • Verify double-tap on sensor grid dispatches bell ring when `screenMode != ScreenMode.CONFIGURATION && state.showBikeBell` (active in both `TRACKING` and `PREVIEW` modes).
   • Verify double-tap is disabled when `screenMode == ScreenMode.CONFIGURATION` or `showBikeBell == false`.

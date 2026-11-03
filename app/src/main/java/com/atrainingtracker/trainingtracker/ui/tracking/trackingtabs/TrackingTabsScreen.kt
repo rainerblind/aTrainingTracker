@@ -18,9 +18,17 @@
 
 package com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs
 
+import android.content.BroadcastReceiver
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.res.Configuration
 import android.util.Log
 import androidx.activity.compose.BackHandler
+import androidx.core.content.ContextCompat
+import com.atrainingtracker.util.safeUnregisterReceiver
+import com.atrainingtracker.trainingtracker.ui.tracking.tracking.CockpitStatus
+import com.atrainingtracker.trainingtracker.ui.tracking.tracking.NonRecordingStatusBanner
+import com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridStatusResolver
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -216,6 +224,29 @@ fun TrackingTabsScreen(
     val trackingViews by trackingTabsViewModel.trackingViews.collectAsState(initial = emptyList())
     val trackingMode by trackingTabsViewModel.trackingMode.observeAsState(TrackingMode.READY)
     val screenMode by trackingTabsViewModel.screenMode.collectAsState()
+
+    var isAutoPaused by remember { mutableStateOf(TrainingApplication.isAutoPaused()) }
+    DisposableEffect(context) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(c: Context?, intent: Intent?) {
+                isAutoPaused = TrainingApplication.isAutoPaused()
+            }
+        }
+        val filter = IntentFilter(TrainingApplication.TRACKING_STATE_CHANGED)
+        ContextCompat.registerReceiver(context, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+        onDispose {
+            context.safeUnregisterReceiver(receiver, "TrackingTabsScreen")
+        }
+    }
+    val cockpitStatus = remember(screenMode, trackingMode, isAutoPaused) {
+        SensorGridStatusResolver.resolveCockpitStatus(screenMode, trackingMode, isAutoPaused)
+    }
+    val onBannerAction: (CockpitStatus) -> Unit = { status ->
+        val intent = Intent(status.intentAction).apply {
+            `package` = context.packageName
+        }
+        context.sendBroadcast(intent)
+    }
 
     if (trackingViews.isEmpty() && screenMode != ScreenMode.TRACKING) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -953,6 +984,18 @@ fun TrackingTabsScreen(
                                     tuningDataStore.setHasSeenStopTrackingHint(true)
                                 }
                             }
+                        )
+                    }
+
+                    // Stationary Floating Non-Recording Status Banner across tabs (REQ-TRK-045.1 / ATT-5283)
+                    if (screenMode == ScreenMode.TRACKING && pagerState.currentPage > 0 && cockpitStatus != null) {
+                        NonRecordingStatusBanner(
+                            status = cockpitStatus,
+                            onAction = { onBannerAction(cockpitStatus) },
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .zIndex(1.5f)
+                                .padding(top = 8.dp)
                         )
                     }
                 }

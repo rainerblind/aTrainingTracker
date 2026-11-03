@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -179,8 +180,8 @@ fun BikeBellButton(
         modifier = modifier.height(72.dp),
         shape = RoundedCornerShape(12.dp),
         colors = ButtonDefaults.elevatedButtonColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            containerColor = TTColor.BikeBellContainer,
+            contentColor = TTColor.BikeBellContent,
             disabledContainerColor = colorResource(R.color.lap_button_disabled_background),
             disabledContentColor = colorResource(R.color.lap_button_disabled_text)
         ),
@@ -201,7 +202,7 @@ fun BikeBellButton(
                     .size(40.dp)
                     .graphicsLayer { rotationZ = rotation.value },
                 tint = if (isAvailable)
-                    MaterialTheme.colorScheme.onPrimaryContainer
+                    TTColor.BikeBellContent
                 else
                     colorResource(R.color.lap_button_disabled_text)
             )
