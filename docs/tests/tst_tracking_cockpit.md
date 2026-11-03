@@ -1224,8 +1224,8 @@
 
 ### TST-TRK-045: **Non-Recording Status Resolution, UI Banner, and Grid Dimming Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-045`
-- **Component**: `SensorGridStatusTest.kt`, `SensorGridScreen.kt`, `TranslationParityTest.kt`, `ThemeColorCentralizationAuditTest.kt`
-- **Jira**: `ATT-4856`
+- **Component**: `SensorGridStatusTest.kt`, `SensorGridScreen.kt`, `TrackingTabsScreen.kt`, `TranslationParityTest.kt`, `ThemeColorCentralizationAuditTest.kt`
+- **Jira**: `ATT-4856`, `ATT-5283`
 - **Test Description**:
   1. *Status Resolution Logic (`TST-TRK-045.1`)*:
   • Unit test in `SensorGridStatusTest` verifying `resolveCockpitStatus`:
@@ -1240,8 +1240,9 @@
     - Returns `1.0f` when `screenMode == ScreenMode.CONFIGURATION` or `ScreenMode.PREVIEW` regardless of `trackingMode`.
   3. *9-Language Localization Parity (`TST-TRK-045.3`)*:
   • Test in `TranslationParityTest` verifying `cockpit_status_not_started` and `cockpit_status_paused` exist in all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
-  4. *Theme Token Centralization Audit (`TST-TRK-045.4`)*:
-  • Verification via `ThemeColorCentralizationAuditTest` ensuring `SensorGridScreen.kt` uses centralized tokens (`DarkWarningContainer`, `LightWarningContainer`, etc.) without hardcoded colors.
+  4. *Theme Token Centralization & Stationary Overlay Audit (`TST-TRK-045.4`)*:
+  • Verification via `ThemeColorCentralizationAuditTest` ensuring `SensorGridScreen.kt` and `TrackingTabsScreen.kt` use centralized blue theme tokens (`primaryContainer` / `onPrimaryContainer` / `primary`) without hardcoded hex colors.
+  • Verification that `NonRecordingStatusBanner` is hosted in `TrackingTabsScreen.kt` as a stationary overlay outside `HorizontalPager` for `currentPage > 0` and hidden on `currentPage == 0`.
 
 
 ### TST-TRK-046: **Per-Sensor-Field Display Elements Configuration Test Suite** [Verified]

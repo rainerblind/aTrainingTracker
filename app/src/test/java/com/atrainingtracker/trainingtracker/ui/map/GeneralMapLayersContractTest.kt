@@ -325,8 +325,13 @@ class GeneralMapLayersContractTest {
         assertTrue("Must use canonical WorkoutClusterIdentityRow", sheetContent.contains("WorkoutClusterIdentityRow("))
         assertTrue("Must use canonical WorkoutClusterMetadataBlock", sheetContent.contains("WorkoutClusterMetadataBlock("))
 
-        // Must host WorkoutClusterDetailDashboard in metadataContent
-        assertTrue("Must host WorkoutClusterDetailDashboard in metadataContent", sheetContent.contains("WorkoutClusterDetailDashboard("))
+        // Must set showMap = true and provide mapContent in MapDetailLayout (REQ-UI-322.14, ATT-5279)
+        assertTrue("Must set showMap = true", sheetContent.contains("showMap = true"))
+        assertTrue("Must use MapZoomFocus.EXPLICIT_BOUNDS", sheetContent.contains("MapZoomFocus.EXPLICIT_BOUNDS"))
+        assertTrue("Must provide mapContent", sheetContent.contains("mapContent = {"))
+
+        // Must NOT host duplicate WorkoutClusterDetailDashboard in metadataContent (REQ-UI-322.13, ATT-5279)
+        assertFalse("Must not host WorkoutClusterDetailDashboard", sheetContent.contains("WorkoutClusterDetailDashboard("))
 
         // Must eliminate TTColor.Cluster text and icon tinting
         assertFalse("ClusterOnMapSheet must not use TTColor.Cluster", sheetContent.contains("TTColor.Cluster"))
@@ -335,6 +340,12 @@ class GeneralMapLayersContractTest {
     @Test
     fun testClusterOnMapSheet_usesMapDetailLayoutAndCanonicalComponents_TST_UI_282_14() {
         // TST-UI-282.14 contract verification
+        testClusterOnMapSheet_harmonizedLayoutAndColorTokens_TST_UI_282_5()
+    }
+
+    @Test
+    fun testClusterOnMapSheet_deduplicatesMetadataAndEnablesExpandedMap_TST_UI_282_15() {
+        // TST-UI-282.15 contract verification (REQ-UI-322.13, REQ-UI-322.14, REQ-UI-322.15, ATT-5279)
         testClusterOnMapSheet_harmonizedLayoutAndColorTokens_TST_UI_282_5()
     }
 

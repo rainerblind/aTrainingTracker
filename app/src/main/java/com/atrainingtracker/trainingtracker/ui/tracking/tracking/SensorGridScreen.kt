@@ -253,12 +253,6 @@ fun SensorGridScreen(
     val gridAlpha = remember(screenMode, trackingMode) {
         SensorGridStatusResolver.resolveGridAlpha(screenMode, trackingMode)
     }
-    val onBannerAction: (CockpitStatus) -> Unit = { status ->
-        val intent = Intent(status.intentAction).apply {
-            `package` = context.packageName
-        }
-        context.sendBroadcast(intent)
-    }
     val activeVariantStyle = remember(tuningConfig.sensorFieldVariant) {
         SensorFieldStyle.forVariant(tuningConfig.sensorFieldVariant)
     }
@@ -561,17 +555,6 @@ fun SensorGridScreen(
                         onSelectForkRoute = { routeId -> forkNavRepo.selectRouteManually(routeId) },
                         onDismissFork = { forkNavRepo.dismissPrompt() },
                         modifier = Modifier.align(Alignment.TopCenter)
-                    )
-                }
-
-                // Non-Recording HUD Status Banner (REQ-TRK-045 / ATT-4856)
-                if (cockpitStatus != null) {
-                    NonRecordingStatusBanner(
-                        status = cockpitStatus,
-                        onAction = { onBannerAction(cockpitStatus) },
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .padding(top = if (state.showNavigationHints) 64.dp else 8.dp)
                     )
                 }
 
@@ -984,17 +967,6 @@ fun SensorGridScreen(
                     )
                 }
 
-                // Non-Recording HUD Status Banner (REQ-TRK-045 / ATT-4856)
-                if (cockpitStatus != null) {
-                    NonRecordingStatusBanner(
-                        status = cockpitStatus,
-                        onAction = { onBannerAction(cockpitStatus) },
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .padding(top = if (state.showNavigationHints) 64.dp else 8.dp)
-                    )
-                }
-
                 // Indirect Tire Pressure Monitoring (iTPMS) Alert Banner (REQ-TRK-050 / ATT-4880)
                 if (activeTpmsAlert != null) {
                     TpmsAlertBanner(
@@ -1113,11 +1085,11 @@ fun NonRecordingStatusBanner(
     onAction: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-    val containerColor = if (isDark) DarkWarningContainer else LightWarningContainer
-    val contentColor = if (isDark) DarkOnWarningContainer else LightOnWarningContainer
-    val actionColor = if (isDark) DarkWarningAction else LightWarningAction
-    val borderColor = if (isDark) DarkWarning else LightWarningBorder
+    val containerColor = MaterialTheme.colorScheme.primaryContainer
+    val contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+    val actionColor = MaterialTheme.colorScheme.primary
+    val onActionColor = MaterialTheme.colorScheme.onPrimary
+    val borderColor = MaterialTheme.colorScheme.primary
 
     Surface(
         shape = RoundedCornerShape(16.dp),
@@ -1150,7 +1122,7 @@ fun NonRecordingStatusBanner(
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.filledTonalButtonColors(
                     containerColor = actionColor,
-                    contentColor = if (isDark) Color.Black else Color.White
+                    contentColor = onActionColor
                 ),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                 modifier = Modifier.height(36.dp)

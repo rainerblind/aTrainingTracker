@@ -479,7 +479,7 @@
 ### TST-PER-035: **Daily Activity Mini-Bar Strip for Months & Weeks Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-PER-027`
 - **Component**: `DailyActivityStripTest.kt`, `PeriodsRepositoryTest.kt`, `PeriodsViewModelTest.kt`, `PeriodSummaryCardTest.kt`, `DailyActivityStripLocalizationTest.kt`
-- **Jira**: `ATT-5195`
+- **Jira**: `ATT-5195`, `ATT-5280`
 - **Test Description**:
   1. *Daily Activity Aggregation & Hydration Unit Test (`TST-PER-035.1`, `PeriodsRepositoryTest.kt`)*:
   • Verify that `PeriodsRepository.enrich()` correctly aggregates daily per-sport activity buckets and peak daily metrics into `dailySportContributions` for `PeriodType.WEEK` and `PeriodType.MONTH`, while leaving `PeriodType.YEAR` and `PeriodType.DAY` untouched.
@@ -487,6 +487,7 @@
   • Verify that `DailyActivityStrip` maps 7 days (Monday..Sunday) for `PeriodType.WEEK` and the exact day count (28, 29, 30, or 31) for `PeriodType.MONTH` (including leap years), with rest days rendering baseline tracks and workout days rendering proportional bars.
   3. *Proportional Bar Height & Quartile Calculation Test (`TST-PER-035.3`, `DailyActivityStripTest.kt`)*:
   • Verify that mini-bar fill heights scale proportionally ($0.15 \le \text{ratio} \le 1.0$) according to the active metric value vs. max daily value, and sport semantic colors (`TTColor.BikeSportBarColor`, `RunSportBarColor`, `OtherSportBarColor`) are applied per sport.
+  • Contract test verifying that mini-bar shape geometry in `DailyActivityStrip.kt` applies rounded top corners and sharp flat bottom corners without outer container bottom-corner clipping per Rule 69 (ATT-5280).
   4. *Sport Filter Propagation & Decoupling Test (`TST-PER-035.4`, `PeriodsViewModelTest.kt`)*:
   • Verify that `PeriodsViewModel.filterPeriodSummary()` filters `dailySportContributions` symmetrically according to `selectedSports`, without data leakage across unselected sports.
   5. *Interactive Day Selection & Drill-Down Contract Test (`TST-PER-035.5`, `DailyActivityStripTest.kt`)*:

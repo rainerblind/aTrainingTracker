@@ -2177,8 +2177,10 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 - **Tests**: `TST-TRK-045` | **Tickets**: `ATT-4856`
 - **Implementation**: `SensorGridScreen.kt`, `Color.kt`, `strings.xml`
 - **Rationale**: When viewing live sensor tabs in `ScreenMode.TRACKING`, athletes SHALL have immediate, unambiguous visual clarity when workout recording is not active (ATT-4856, extending `REQ-TRK-018`):
-1. *Unified Non-Recording Top HUD Banner (`REQ-TRK-045.1`)*:
-• In `ScreenMode.TRACKING`, when workout recording is not active (`trackingMode != TrackingMode.TRACKING`), `SensorGridScreen` SHALL display an enlarged top HUD status banner with high-contrast amber warning styling (`DarkWarningContainer` / `LightWarningContainer`, `DarkOnWarningContainer` / `LightOnWarningContainer`, `DarkWarningAction` / `LightWarningAction`).
+1. *Stationary Floating Non-Recording Top HUD Banner across Tabs (`REQ-TRK-045.1`)*:
+• In `ScreenMode.TRACKING`, when workout recording is not active (`trackingMode != TrackingMode.TRACKING`), the system SHALL render `NonRecordingStatusBanner` as a stationary floating overlay at `Alignment.TopCenter` in `TrackingTabsScreen.kt` outside the `HorizontalPager` across all sensor/telemetry/map/lap tabs (`pagerState.currentPage > 0`), ensuring the banner stays in a fixed position when swiping between tabs (ATT-5283).
+• On the Control tab (`pagerState.currentPage == 0`), the stationary `NonRecordingStatusBanner` SHALL be cleanly hidden.
+• `NonRecordingStatusBanner` SHALL use the application's primary blue theme palette (`MaterialTheme.colorScheme.primaryContainer` / `onPrimaryContainer` container with `MaterialTheme.colorScheme.primary` / `onPrimary` action button and border), aligning with `ControlTrackingScreen` Start/Resume controls.
 • When `trackingMode == TrackingMode.READY`, the banner SHALL display "Not Started" (`cockpit_status_not_started`), icon `Icons.Default.PlayCircle`, and action button "Start" (`Start`), dispatching `REQUEST_START_TRACKING`.
 • When `trackingMode == TrackingMode.PAUSED` and `!isAutoPaused`, the banner SHALL display "Paused" (`cockpit_status_paused`), icon `Icons.Default.PauseCircle`, and action button "Resume Now" (`cockpit_auto_pause_resume`), dispatching `REQUEST_RESUME_FROM_PAUSED`.
 • When `trackingMode == TrackingMode.PAUSED` and `isAutoPaused`, the banner SHALL display "Auto-Paused" (`cockpit_auto_pause_badge`), icon `Icons.Default.PauseCircle`, and action button "Resume Now" (`cockpit_auto_pause_resume`), dispatching `REQUEST_RESUME_FROM_PAUSED`.
@@ -2186,15 +2188,15 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • In `ScreenMode.TRACKING`, whenever `trackingMode != TrackingMode.TRACKING` (`READY`, `PAUSED`, `AUTO_PAUSED`), the sensor grid content SHALL be rendered with `alpha = 0.6f` via compositing graphics layer, while the top status banner remains at full `1.0f` brightness.
 • In `ScreenMode.CONFIGURATION` and `ScreenMode.PREVIEW`, sensor grid content SHALL remain undimmed (`alpha = 1.0f`).
 3. *Reactive Tracking State Tracking (`REQ-TRK-045.3`)*:
-• `SensorGridScreen` SHALL register a broadcast receiver for `TrainingApplication.TRACKING_STATE_CHANGED`, updating both `trackingMode` and `isAutoPaused` synchronously.
+• `SensorGridScreen` and `TrackingTabsScreen` SHALL observe tracking state and auto-paused status synchronously, updating both `trackingMode` and `isAutoPaused`.
 4. *Localization Parity (`REQ-TRK-045.4`)*:
 • All new string resources (`cockpit_status_not_started`, `cockpit_status_paused`) SHALL maintain complete translation parity across all 9 supported languages.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-045`, extending `REQ-TRK-018` (AutoPauseHudBanner). Targets `SensorGridScreen.kt`.
-2. *Historical Origin & Commit Trace*: Ticket `ATT-4856`, Sprint `2026-44.1`. Follows `ATT-45` which added the small amber auto-pause pill.
-3. *Root Reason for Existing Formulation*: Originally, only auto-pause displayed a HUD pill because manual pause was controlled via a separate screen or navigation drawer. However, live sensor telemetry streams continuously on sensor tabs, leading athletes to believe recording is underway when it is actually paused or unstarted.
-4. *Preservation of Core Invariants*: Live sensor streaming, sensor field interaction (tap/long-press/double-tap), bottom sheet expansion, and navigation overlays are 100% preserved.
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-045`, amended by `ATT-5283`, extending `REQ-TRK-018` (AutoPauseHudBanner). Targets `TrackingTabsScreen.kt`, `SensorGridScreen.kt`, and `strings.xml`.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-4856`, Sprint `2026-44.1`. Follows `ATT-45` which added the small amber auto-pause pill. Sprint `2026-45.3` (`ATT-5283`) hoists the banner out of `SensorGridScreen` to a stationary floating overlay in `TrackingTabsScreen` across tabs (`currentPage > 0`) and changes amber warning colors to blue palette tokens.
+3. *Root Reason for Existing Formulation*: Originally, `REQ-TRK-045.1` embedded the banner inside `SensorGridScreen` because each sensor tab was isolated. However, during horizontal swiping across tabs, the banner scrolled with the page and jumped vertically based on per-tab navigation hint visibility. Amber warning tokens were retained from `AutoPauseHudBanner`, but clash once `BikeBellButton` is styled in orange.
+4. *Preservation of Core Invariants*: Intent action broadcasts (`REQUEST_START_TRACKING`, `REQUEST_RESUME_FROM_PAUSED`), opacity dimming `alpha = 0.6f` in `SensorGridScreen`, banner suppression on Control tab (`page == 0`) and in non-TRACKING modes, and TPMS banner clearance are 100% preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* the sensor grid tab is displayed in `ScreenMode.TRACKING` and tracking is `READY`,

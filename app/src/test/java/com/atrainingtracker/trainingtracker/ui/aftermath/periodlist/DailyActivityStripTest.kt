@@ -18,6 +18,8 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.unit.Density
 import com.atrainingtracker.banalservice.BSportType
 import org.junit.Assert.*
 import org.junit.Test
@@ -148,5 +150,38 @@ class DailyActivityStripTest {
         assertEquals(0L, contribution.maxDailyDurationSec)
         assertEquals(0.0, contribution.maxDailyDistanceMeters, 0.001)
         assertEquals(0L, contribution.maxDailyAscentMeters)
+    }
+
+    /**
+     * TST-PER-035.3 / ATT-5280: Mini-bar corner geometry verification (REQ-PER-027.4).
+     * Bottom-anchored vertical bars must have rounded top corners and sharp, flat bottom corners
+     * without outer container bottom-corner clipping per docs/design_guidelines.md §2.7 and Rule 69.
+     */
+    @Test
+    fun testMiniBarShapes_roundedTopAndSharpBottom_TST_PER_035_3() {
+        val density = Density(1f)
+        val dummySize = Size(100f, 100f)
+
+        // MonthDayBarShape: top corners 2.dp, bottom corners 0.dp
+        val monthTopStart = MonthDayBarShape.topStart.toPx(dummySize, density)
+        val monthTopEnd = MonthDayBarShape.topEnd.toPx(dummySize, density)
+        val monthBottomStart = MonthDayBarShape.bottomStart.toPx(dummySize, density)
+        val monthBottomEnd = MonthDayBarShape.bottomEnd.toPx(dummySize, density)
+
+        assertEquals("MonthDayBarShape topStart must be 2.dp", 2f, monthTopStart, 0.001f)
+        assertEquals("MonthDayBarShape topEnd must be 2.dp", 2f, monthTopEnd, 0.001f)
+        assertEquals("MonthDayBarShape bottomStart must be 0.dp (sharp baseline)", 0f, monthBottomStart, 0.001f)
+        assertEquals("MonthDayBarShape bottomEnd must be 0.dp (sharp baseline)", 0f, monthBottomEnd, 0.001f)
+
+        // WeekDayBarShape: top corners 3.dp, bottom corners 0.dp
+        val weekTopStart = WeekDayBarShape.topStart.toPx(dummySize, density)
+        val weekTopEnd = WeekDayBarShape.topEnd.toPx(dummySize, density)
+        val weekBottomStart = WeekDayBarShape.bottomStart.toPx(dummySize, density)
+        val weekBottomEnd = WeekDayBarShape.bottomEnd.toPx(dummySize, density)
+
+        assertEquals("WeekDayBarShape topStart must be 3.dp", 3f, weekTopStart, 0.001f)
+        assertEquals("WeekDayBarShape topEnd must be 3.dp", 3f, weekTopEnd, 0.001f)
+        assertEquals("WeekDayBarShape bottomStart must be 0.dp (sharp baseline)", 0f, weekBottomStart, 0.001f)
+        assertEquals("WeekDayBarShape bottomEnd must be 0.dp (sharp baseline)", 0f, weekBottomEnd, 0.001f)
     }
 }
