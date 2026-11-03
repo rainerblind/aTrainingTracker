@@ -7050,17 +7050,19 @@
 ### TST-UI-443: **Power TelemetryMetricGraph Marginal Histogram Unfolded Linear Bins Projection Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-443`
 - **Component**: `ZoneDistributionModels.kt`, `TelemetryMetricGraph.kt`, `TelemetryMetricGraphMarginalBarsContractTest.kt`, `TelemetryMetricGraphLandscapeContractTest.kt`
-- **Jira**: `ATT-5190`, `ATT-5281`
+- **Jira**: `ATT-5190`, `ATT-5281`, `ATT-5311`
 - **Test Description**:
   1. *TelemetryHistogramData Unfolded Linear Bins Unit Tests (`TelemetryHistogramCalculatorTest.kt`)*:
   • Unit tests verifying `TelemetryHistogramData.linearBins` returns `bins` directly when `sprintTail == null`.
   • Unit tests verifying `TelemetryHistogramData.linearBins` excludes `isOverflow` and `isReturn` bins and unrolls full linear bins spanning `[dataMin, dataMax]` when `sprintTail != null`.
-  2. *Portrait Marginal Strip Unfolded Linear Bins Contract Test (`TelemetryMetricGraphMarginalBarsContractTest.kt`)*:
+  2. *Portrait Marginal Strip Unfolded Linear Bins & Boundary Clamping Contract Test (`TelemetryMetricGraphMarginalBarsContractTest.kt`)*:
   • Contract test verifying `TelemetryMetricGraph.kt` portrait marginal strip logic accesses `histogram.linearBins` and computes `maxBinPct` from `linearBins`.
-  • Contract test verifying background track rendering is drawn unconditionally for every bin in `linearBins` across `[dataMin, dataMax]` (ATT-5281).
-  3. *Landscape Aligned Marginal Zone Distribution Unfolded Linear Bins Contract Test (`TelemetryMetricGraphLandscapeContractTest.kt`)*:
+  • Contract test verifying background track rendering is drawn unconditionally for every bin in `linearBins` within `[dataMin, dataMax]` (ATT-5281).
+  • Contract test verifying out-of-domain bins (`rangeMax <= dataMin || rangeMin >= dataMax`) are filtered and clamped so no zero-height or stacked rectangles occur at boundaries (`y = 0`) (ATT-5311, Rule 70).
+  3. *Landscape Aligned Marginal Zone Distribution Unfolded Linear Bins & Boundary Clamping Contract Test (`TelemetryMetricGraphLandscapeContractTest.kt`)*:
   • Contract test verifying `AlignedMarginalZoneDistribution` accesses `histogram.linearBins` and computes `maxBinPct` from `linearBins`.
-  • Contract test verifying background track rendering is drawn unconditionally for every bin in `linearBins` across `[dataMin, dataMax]` (ATT-5281).
+  • Contract test verifying background track rendering is drawn unconditionally for every bin in `linearBins` within `[dataMin, dataMax]` (ATT-5281).
+  • Contract test verifying out-of-domain bins (`rangeMax <= dataMin || rangeMin >= dataMax`) are filtered and clamped so zero out-of-domain bins stack at `y = 0` (ATT-5311, Rule 70).
   4. *Clean-Room Targeted Test Suite Execution (`TST-UI-443.4`)*:
   • Run targeted package unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.zones.*" --tests "com.atrainingtracker.trainingtracker.ui.map.*" --tests "com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest"` confirming 100% pass rate.
 

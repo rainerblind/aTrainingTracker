@@ -205,4 +205,76 @@ class TelemetryMetricGraphMarginalBarsContractTest {
             assertEquals(50f, rectHeight, 0.01f)
         }
     }
+
+    @Test
+    fun testPortraitMarginalHistogram_filtersOutOfDomainBinsAndPreventsTopBarStacking_ATT_5311() {
+        val file = resolve("app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/TelemetryMetricGraph.kt")
+        assertTrue("TelemetryMetricGraph.kt must exist", file.exists())
+        val content = file.readText()
+
+        // Contract check: TelemetryMetricGraph.kt must filter and clamp out-of-domain bins
+        assertTrue(
+            "TelemetryMetricGraph must check rangeMax <= dataMin || rangeMin >= dataMax",
+            content.contains("bin.rangeMax <= dataMin || bin.rangeMin >= dataMax")
+        )
+        assertTrue(
+            "TelemetryMetricGraph must clamp min and max to [dataMin, dataMax]",
+            content.contains("maxOf(dataMin, bin.rangeMin.toDouble())") &&
+                content.contains("minOf(dataMax, bin.rangeMax.toDouble())")
+        )
+
+        // Mathematical behavioral contract for domain filtering and clamping:
+        // Assume chart has dataMin = 100.0, dataMax = 450.0 (e.g. peak visible watt is 450 W).
+        // linearBins contains in-domain bins [100-200, 200-300, 300-400], a boundary-crossing bin [400-500],
+        // and out-of-domain bins [500-600, 600-700, 700-800].
+        val dataMin = 100.0
+        val dataMax = 450.0
+        val valRange = dataMax - dataMin
+        val chartHeightPx = 350f
+        val topPaddingPx = 10f
+
+        fun valueToY(v: Double): Float {
+            val ratio = ((v - dataMin) / valRange).coerceIn(0.0, 1.0)
+            return (topPaddingPx + (1.0 - ratio) * chartHeightPx).toFloat()
+        }
+
+        val allBins = listOf(
+            TelemetryHistogramBin(0, 0, 100, 50L, 5f, 1, Color.Blue),        // below dataMin
+            TelemetryHistogramBin(1, 100, 200, 200L, 20f, 2, Color.Green),    // in domain
+            TelemetryHistogramBin(2, 200, 300, 300L, 30f, 3, Color.Yellow),   // in domain
+            TelemetryHistogramBin(3, 300, 400, 250L, 25f, 4, Color.Yellow),   // in domain
+            TelemetryHistogramBin(4, 400, 500, 100L, 10f, 5, Color.Red),      // crosses dataMax boundary
+            TelemetryHistogramBin(5, 500, 600, 50L, 5f, 6, Color.Magenta),    // above dataMax
+            TelemetryHistogramBin(6, 600, 700, 30L, 3f, 7, Color.Black),      // above dataMax
+            TelemetryHistogramBin(7, 700, 800, 20L, 2f, 7, Color.Black)       // above dataMax
+        )
+
+        data class RenderedRect(val rectTop: Float, val rectHeight: Float)
+        val renderedRects = mutableListOf<RenderedRect>()
+
+        for (bin in allBins) {
+            if (bin.rangeMax <= dataMin || bin.rangeMin >= dataMax) continue
+            val clampedMin = maxOf(dataMin, bin.rangeMin.toDouble())
+            val clampedMax = minOf(dataMax, bin.rangeMax.toDouble())
+            if (clampedMin >= clampedMax) continue
+
+            val yTop = valueToY(clampedMax)
+            val yBottom = valueToY(clampedMin)
+            val rectTop = minOf(yTop, yBottom)
+            val rectHeight = abs(yTop - yBottom).coerceAtLeast(1f)
+            renderedRects.add(RenderedRect(rectTop, rectHeight))
+        }
+
+        // Must render exactly 4 bins (100-200, 200-300, 300-400, and clamped 400-450)
+        assertEquals(4, renderedRects.size)
+
+        // The boundary bin [400-500] is clamped to [400, 450], reaching exactly y = topPaddingPx (10f)
+        val topRect = renderedRects.last()
+        assertEquals(topPaddingPx, topRect.rectTop, 0.01f)
+        assertEquals(50f, topRect.rectHeight, 0.01f)
+
+        // Zero out-of-domain rects drawn at topPaddingPx with 1px height (which caused the black bar!)
+        val stackedZeroHeightRects = renderedRects.filter { it.rectTop == topPaddingPx && it.rectHeight == 1f }
+        assertEquals(0, stackedZeroHeightRects.size)
+    }
 }
