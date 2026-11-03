@@ -51,6 +51,8 @@ class TrackingTabConfigHeaderContractTest {
         assertTrue("CopyTrackingTabDialog must reference copy_tab_title", content.contains("R.string.copy_tab_title"))
         assertTrue("CopyTrackingTabDialog must reference copy_tab_action", content.contains("R.string.copy_tab_action"))
         assertTrue("CopyTrackingTabDialog must iterate over ActivityType.values()", content.contains("ActivityType.values().forEach"))
+        assertTrue("CopyTrackingTabDialog must initialize selectedTypes with emptySet (ATT-5189)", content.contains("mutableStateOf(emptySet<ActivityType>())"))
+        assertTrue("CopyTrackingTabDialog must gate copy button with selectedTypes.isNotEmpty()", content.contains("saveEnabled = selectedTypes.isNotEmpty()"))
     }
 
     @Test

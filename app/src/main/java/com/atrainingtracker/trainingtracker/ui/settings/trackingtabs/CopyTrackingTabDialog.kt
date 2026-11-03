@@ -97,7 +97,7 @@ fun CopyTrackingTabContent(
     onConfirm: (List<ActivityType>) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var selectedTypes by remember { mutableStateOf(setOf(sourceActivityType)) }
+    var selectedTypes by remember { mutableStateOf(emptySet<ActivityType>()) }
 
     AppBottomSheetContent(
         title = stringResource(R.string.copy_tab_title),

@@ -12744,13 +12744,15 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 
 ### REQ-UI-439: Copy Tracking Tab to Target Activity Types [Verified]
-- **Tests**: `TST-UI-439` | **Tickets**: `ATT-5078`
+- **Tests**: `TST-UI-439` | **Tickets**: `ATT-5078`, `ATT-5189`
 - **Implementation**: `TrackingTabConfigHeader.kt`, `CopyTrackingTabDialog.kt`, `TrackingTabsViewModel.kt`, `TrackingViewsDatabaseManager.java`, `TrackingViewsRepository.kt`
-- **Rationale**: Athletes configuring custom tracking cockpits often wish to reuse complex tab layouts across different sport types (`ActivityType`), or duplicate an existing tab within the same sport type. Providing a multi-select bottom sheet to copy an existing tab to one or more target sport types with deep-copy and append semantics eliminates tedious manual reconfiguration (ATT-5078, extending `REQ-UI-103` and `REQ-UI-175`):
+- **Rationale**: Athletes configuring custom tracking cockpits often wish to reuse complex tab layouts across different sport types (`ActivityType`), or duplicate an existing tab within the same sport type. Providing a multi-select bottom sheet to copy an existing tab to one or more target sport types with deep-copy and append semantics eliminates tedious manual reconfiguration (ATT-5078, ATT-5189, extending `REQ-UI-103` and `REQ-UI-175`):
 1. *Copy Tab Header Action (`REQ-UI-439.1`)*:
 • In `TrackingTabConfigHeader.kt`, Row 2 SHALL provide a Copy Tab icon button (`Icons.Default.ContentCopy`) alongside `Add Before`, `Delete`, and `Add After`, invoking `onCopyTab(tabViewId)`.
 2. *Target ActivityType Selection Dialog (`REQ-UI-439.2`)*:
 • The system SHALL provide a modal bottom sheet (`CopyTrackingTabDialog.kt`) listing all `ActivityType` profiles with their authentic sport logos (`type.logoId`), localized titles, and multi-select checkboxes.
+• Upon opening the dialog, all sport profiles SHALL start unselected by default (`selectedTypes` initialized to empty set), ensuring no profile (including the current source activity type) is preselected (ATT-5189).
+• The Copy action button SHALL remain disabled while no sport profile is selected (`selectedTypes.isEmpty()`).
 • Tapping confirm with at least one selected target SHALL trigger the copy operation for all selected profiles; tapping cancel or dismissing SHALL abort without changes.
 3. *Transactional Deep-Copy & Append Semantics (`REQ-UI-439.3`)*:
 • In `TrackingViewsDatabaseManager.java` and `TrackingViewsRepository.kt`, copying a tab SHALL execute in an atomic SQLite transaction on a background thread (`Dispatchers.IO`), cloning the source tab's row in `VIEWS_TABLE` (with new sequential `LAYOUT_NR = max(LAYOUT_NR) + 1` per target sport type), all its sensor field rows in `ROWS_TABLE`, and all its section dividers in `SECTION_DIVIDERS_TABLE`.
@@ -12759,10 +12761,10 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • All new user-facing strings (dialog title, copy action button, content descriptions) SHALL maintain 100% parity across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-439`, extending `REQ-UI-103` (Customizable Cockpits) and `REQ-UI-175` (Tracking Tabs Configuration Transition). Targets `TrackingTabConfigHeader.kt`, `CopyTrackingTabDialog.kt`, `TrackingViewsDatabaseManager.java`, `TrackingViewsRepository.kt`, and `TrackingTabsViewModel.kt`.
-2. *Historical Origin & Commit Trace*: Sprint 2026-40.4 (`ATT-1281`), Sprint 2026-40.6 (`ATT-1450`), and `ATT-2360` established customizable tracking tab headers and spatial WYSIWYG configuration.
-3. *Root Reason for Existing Formulation*: Tabs were previously strictly isolated to individual `ActivityType` profiles; cross-profile tab migration or in-profile cloning was omitted in initial MVP implementations.
-4. *Preservation of Core Invariants*: Existing tab schemas (`VIEWS_TABLE`, `ROWS_TABLE`, `SECTION_DIVIDERS_TABLE`), existing tabs, single-profile queries, and telemetry recording MUST remain 100% unaltered.
+1. *Original Requirement ID & Target*: Amends `REQ-UI-439.2` (*Target ActivityType Selection Dialog*), Parent Epic `ATT-355`. Targets `CopyTrackingTabDialog.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-45.1 commit `82bf905d` (ATT-5078) added the initial multi-select bottom sheet implementation with default `setOf(sourceActivityType)`.
+3. *Root Reason for Existing Formulation*: Preselection was introduced as a placeholder default during initial bottom sheet authoring without considering cross-sport copying ergonomics, leading to accidental duplicate tabs in the active sport profile.
+4. *Preservation of Core Invariants*: Multi-selection of any `ActivityType` (including the source profile) remains fully supported; deep copy and append semantics (`REQ-UI-439.3`) and 9-language localization (`REQ-UI-439.4`) remain 100% intact.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete in tracking tab configuration mode (`ScreenMode.CONFIGURATION`),
@@ -12770,7 +12772,10 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Then* a Copy Tab icon button (`Icons.Default.ContentCopy`) is rendered with localized content description `cd_copy_tab`.
 • *Given* the Copy Tab button is tapped,
 • *When* the modal bottom sheet opens,
-• *Then* all active `ActivityType` profiles are displayed with their authentic logos, localized titles, and multi-selection checkboxes.
+• *Then* all active `ActivityType` profiles are displayed with their authentic logos, localized titles, and multi-selection checkboxes, all unselected by default (`selectedTypes.isEmpty()`), and the Copy action button is disabled.
+• *Given* the athlete selects one or more target profiles,
+• *When* at least one checkbox is checked,
+• *Then* the Copy action button becomes enabled.
 • *Given* one or more target `ActivityType` profiles selected (including the source profile),
 • *When* the athlete taps the Copy action,
 • *Then* the source tab, all sensor field cells, and section dividers are deeply cloned and appended at the end of each selected profile's tab list.

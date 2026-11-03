@@ -6955,11 +6955,12 @@
 ### TST-UI-439: **Copy Tracking Tab to Target Activity Types Test Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-439`
 - **Component**: `TrackingTabConfigHeaderContractTest.kt`, `TrackingViewsDatabaseManagerTest.kt`, `TrackingViewsRepositoryTest.kt`, `TranslationParityTest.kt`
-- **Jira**: `ATT-5078`
+- **Jira**: `ATT-5078`, `ATT-5189`
 - **Test Description**:
   1. *Tracking Tab Config Header Copy Button Test (`TST-UI-439.1`)*:
   • Contract test verifying that `TrackingTabConfigHeader.kt` renders an `IconButton` with `Icons.Default.ContentCopy`, content description `R.string.cd_copy_tab`, and invokes `onCopyTab(tabViewId)`.
-  2. *Database Transactional Deep-Copy & Append Test (`TST-UI-439.2`)*:
+  2. *Database Transactional Deep-Copy, Append & Target Selection Unselected Default Contract Test (`TST-UI-439.2`)*:
+  • Contract/unit test verifying `CopyTrackingTabDialog.kt` initializes `selectedTypes` with `emptySet<ActivityType>()`, ensuring all sport profiles start unselected by default and the Copy action button remains disabled (`saveEnabled = false`) until at least one target profile is explicitly selected (ATT-5189).
   • Unit test in `TrackingViewsDatabaseManagerTest.kt` verifying that calling `copyTabViewToActivityTypes(sourceViewId, targetTypes)`:
     - Atomically duplicates the view row in `VIEWS_TABLE` for each target `ActivityType` at `LAYOUT_NR = max(LAYOUT_NR) + 1`.
     - Duplicates all child `ROWS_TABLE` records with new `view_id`, preserving row/col indices, sensor types, sizes, filters, and column weights.
