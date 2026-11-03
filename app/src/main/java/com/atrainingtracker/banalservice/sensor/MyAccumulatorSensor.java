@@ -109,6 +109,15 @@ public abstract class MyAccumulatorSensor<N extends Number> extends MySensor<N> 
         mInitialValue = value;
     }
 
+    /**
+     * Returns the baseline zero value defined for this accumulator sensor (e.g. 0 for time/distance/elevation, 1 for LAP_NR).
+     *
+     * @return the baseline zero value.
+     */
+    public N getZeroValue() {
+        return mZeroValue;
+    }
+
     public final void reset() {
         boolean active;
         synchronized (this) {

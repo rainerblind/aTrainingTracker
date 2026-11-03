@@ -480,22 +480,25 @@ fun TelemetryMetricGraph(
                         }
                     }
                 } else if (zoneDisplayMode == ZoneCardDisplayMode.HISTOGRAM && zoneDistribution.histogram != null) {
-                    // Fine-grained histogram mode: frequency bars for each histogram bin
+                    // Fine-grained histogram mode: frequency bars for each histogram bin (REQ-UI-443)
                     val histogram = zoneDistribution.histogram
-                    val maxBinPct = histogram.bins.maxOfOrNull { it.percentage }?.takeIf { it > 0f } ?: 1f
+                    val linearBins = histogram.linearBins
+                    val maxBinPct = linearBins.maxOfOrNull { it.percentage }?.takeIf { it > 0f } ?: 1f
 
-                    for (bin in histogram.bins) {
+                    for (bin in linearBins) {
                         val yTop = valueToY(bin.rangeMax.toDouble())
                         val yBottom = valueToY(bin.rangeMin.toDouble())
                         val rectTop = minOf(yTop, yBottom)
                         val rectHeight = abs(yTop - yBottom).coerceAtLeast(1f)
 
-                        // Background container track
-                        drawRect(
-                            color = bin.color.copy(alpha = 0.15f),
-                            topLeft = Offset(stripStartPx, rectTop),
-                            size = androidx.compose.ui.geometry.Size(stripWidthPx, rectHeight)
-                        )
+                        // Background container track (only for bins with positive duration, REQ-UI-443)
+                        if (bin.durationSec > 0L) {
+                            drawRect(
+                                color = bin.color.copy(alpha = 0.15f),
+                                topLeft = Offset(stripStartPx, rectTop),
+                                size = androidx.compose.ui.geometry.Size(stripWidthPx, rectHeight)
+                            )
+                        }
 
                         // Weighted horizontal frequency bar
                         val barWidthPx = (bin.percentage / maxBinPct).coerceIn(0f, 1f) * stripWidthPx
@@ -937,21 +940,24 @@ fun AlignedMarginalZoneDistribution(
             }
         } else if (zoneDisplayMode == ZoneCardDisplayMode.HISTOGRAM && zoneDistribution.histogram != null) {
             val histogram = zoneDistribution.histogram
-            val maxBinPct = histogram.bins.maxOfOrNull { it.percentage }?.takeIf { it > 0f } ?: 1f
+            val linearBins = histogram.linearBins
+            val maxBinPct = linearBins.maxOfOrNull { it.percentage }?.takeIf { it > 0f } ?: 1f
 
-            for (bin in histogram.bins) {
+            for (bin in linearBins) {
                 val yTop = valueToY(bin.rangeMax.toDouble())
                 val yBottom = valueToY(bin.rangeMin.toDouble())
                 val rectTop = minOf(yTop, yBottom)
                 val rectHeight = abs(yTop - yBottom).coerceAtLeast(1f)
 
-                // Background container track
-                drawRoundRect(
-                    color = bin.color.copy(alpha = 0.15f),
-                    topLeft = Offset(0f, rectTop),
-                    size = Size(availableWidthPx, rectHeight),
-                    cornerRadius = CornerRadius(2.dp.toPx())
-                )
+                // Background container track (only for bins with positive duration, REQ-UI-443)
+                if (bin.durationSec > 0L) {
+                    drawRoundRect(
+                        color = bin.color.copy(alpha = 0.15f),
+                        topLeft = Offset(0f, rectTop),
+                        size = Size(availableWidthPx, rectHeight),
+                        cornerRadius = CornerRadius(2.dp.toPx())
+                    )
+                }
 
                 // Weighted horizontal frequency bar
                 val barWidthPx = (bin.percentage / maxBinPct).coerceIn(0f, 1f) * availableWidthPx

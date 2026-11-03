@@ -21,7 +21,6 @@ package com.atrainingtracker.trainingtracker.ui.tracking.tracking
 import androidx.compose.runtime.Immutable
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
-import com.atrainingtracker.trainingtracker.ui.map.MapCluster
 import com.atrainingtracker.trainingtracker.ui.map.MapRoute
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
 import com.atrainingtracker.trainingtracker.ui.map.MapTrack
@@ -44,6 +43,5 @@ data class TrackingMapState(
     val mapSegments: List<MapSegment> = emptyList(),
     val activeLiveSegmentIds: Set<Long> = emptySet(),
     val mapRoutes: List<MapRoute> = emptyList(),
-    val mapClusters: List<MapCluster> = emptyList(),
     val mapMarkers: List<LocationMarker> = emptyList()
 )

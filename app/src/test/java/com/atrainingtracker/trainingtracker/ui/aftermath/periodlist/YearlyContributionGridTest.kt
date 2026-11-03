@@ -206,4 +206,95 @@ class YearlyContributionGridTest {
         assertFalse(embeddedShowCard)
         assertFalse(embeddedShowSportHeader)
     }
+
+    /**
+     * TST-PER-031.9: Pure Calculation Unit Tests for Initial Viewport Auto-Scroll (REQ-PER-025.9, ATT-5194).
+     */
+    @Test
+    fun testCalculateTargetColumn_pastPresentFutureYears() {
+        val today = LocalDate.of(2026, 11, 3)
+        val startOffset = 3 // Thursday (2026-01-01 was Thursday)
+        val totalCols = 53
+
+        // Past year -> scrolls to end of year (totalCols - 1)
+        val pastCol = calculateTargetColumn(2025, today, startOffset, totalCols)
+        assertEquals(52, pastCol)
+
+        // Future year -> aligns at start of year (0)
+        val futureCol = calculateTargetColumn(2027, today, startOffset, totalCols)
+        assertEquals(0, futureCol)
+
+        // Current year, early date (Jan 1) -> col 0
+        val jan1Col = calculateTargetColumn(2026, LocalDate.of(2026, 1, 1), startOffset, totalCols)
+        assertEquals(0, jan1Col)
+
+        // Current year, mid date (July 1, dayOfYear 182) -> (181 + 3) / 7 = 26
+        val midCol = calculateTargetColumn(2026, LocalDate.of(2026, 7, 1), startOffset, totalCols)
+        assertEquals(26, midCol)
+
+        // Current year, November 3 (dayOfYear 307) -> (306 + 3) / 7 = 44
+        val novCol = calculateTargetColumn(2026, today, startOffset, totalCols)
+        assertEquals(44, novCol)
+
+        // Current year, December 31 -> col 52
+        val decCol = calculateTargetColumn(2026, LocalDate.of(2026, 12, 31), startOffset, totalCols)
+        assertEquals(52, decCol)
+
+        // Leap year (2024, 366 days, startOffset = 0 for Monday)
+        val leapDecCol = calculateTargetColumn(2024, LocalDate.of(2024, 12, 31), 0, 53)
+        assertEquals(52, leapDecCol)
+    }
+
+    @Test
+    fun testCalculateInitialScrollOffset_clampingAndEdgeAlignment() {
+        val totalCols = 53
+        val colPitchPx = 39.0f // 13dp at 3x density
+
+        // Invalid or zero maxValue
+        assertEquals(0, calculateInitialScrollOffset(0, totalCols, 52, colPitchPx))
+        assertEquals(0, calculateInitialScrollOffset(-10, totalCols, 52, colPitchPx))
+        assertEquals(0, calculateInitialScrollOffset(1000, 0, 0, colPitchPx))
+
+        // Aligns end of year at maxValue
+        val offsetEnd = calculateInitialScrollOffset(1000, totalCols, 52, colPitchPx)
+        assertEquals(1000, offsetEnd)
+
+        // Aligns target column (col 44) at right edge of viewport:
+        // Remaining cols = 52 - 44 = 8 cols -> future width = 8 * 39 = 312px
+        // Desired offset = 1000 - 312 = 688px
+        val offsetTarget = calculateInitialScrollOffset(1000, totalCols, 44, colPitchPx)
+        assertEquals(688, offsetTarget)
+
+        // Early column (col 2): remaining cols = 50 -> future width = 1950px
+        // 1000 - 1950 = -950 -> clamped to 0
+        val offsetEarly = calculateInitialScrollOffset(1000, totalCols, 2, colPitchPx)
+        assertEquals(0, offsetEarly)
+    }
+
+    /**
+     * TST-PER-031.10: Day-of-Week Label Cadence & Sunday Anchor Unit Test (REQ-PER-025.3, ATT-5193).
+     * Asserts that Monday (0), Wednesday (2), Friday (4), and Sunday (6) display labels,
+     * while Tuesday (1), Thursday (3), and Saturday (5) remain unlabeled.
+     */
+    @Test
+    fun testDayOfWeekLabelCadence_showsMonWedFriSun_TST_PER_031_10() {
+        // Monday (0)
+        assertTrue("Monday (idx 0) must show label", shouldShowDayOfWeekLabel(0))
+        // Tuesday (1)
+        assertFalse("Tuesday (idx 1) must be unlabeled", shouldShowDayOfWeekLabel(1))
+        // Wednesday (2)
+        assertTrue("Wednesday (idx 2) must show label", shouldShowDayOfWeekLabel(2))
+        // Thursday (3)
+        assertFalse("Thursday (idx 3) must be unlabeled", shouldShowDayOfWeekLabel(3))
+        // Friday (4)
+        assertTrue("Friday (idx 4) must show label", shouldShowDayOfWeekLabel(4))
+        // Saturday (5)
+        assertFalse("Saturday (idx 5) must be unlabeled", shouldShowDayOfWeekLabel(5))
+        // Sunday (6)
+        assertTrue("Sunday (idx 6) must show label", shouldShowDayOfWeekLabel(6))
+
+        // Out-of-bounds indices
+        assertFalse(shouldShowDayOfWeekLabel(-1))
+        assertFalse(shouldShowDayOfWeekLabel(7))
+    }
 }

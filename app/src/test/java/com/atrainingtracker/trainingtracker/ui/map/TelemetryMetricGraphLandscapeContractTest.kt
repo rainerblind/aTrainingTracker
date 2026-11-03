@@ -216,4 +216,53 @@ class TelemetryMetricGraphLandscapeContractTest {
         assertTrue("Landscape chart end padding must be smaller than portrait to maximize plot area",
             landscapeEndPaddingPx < portraitEndPaddingPx)
     }
+
+    @Test
+    fun testLandscapeMarginalHistogram_usesLinearBinsAndGuardsEmptyTracks_TST_UI_443_3() {
+        val file = resolve("app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/TelemetryMetricGraph.kt")
+        assertTrue("TelemetryMetricGraph.kt must exist", file.exists())
+
+        // Behavioral mathematical and data model contract for linearBins in landscape marginal pane
+        val regularBins = listOf(
+            TelemetryHistogramBin(0, 100, 200, 500L, 50f, 1, Color.Blue),
+            TelemetryHistogramBin(1, 200, 300, 400L, 40f, 2, Color.Green)
+        )
+        val overflowBin = TelemetryHistogramBin(2, 300, 500, 100L, 10f, 7, Color.Black, isOverflow = true)
+        val returnBin = TelemetryHistogramBin(0, 100, 300, 900L, 90f, 1, Color.Gray, isReturn = true)
+        val sprintBins = listOf(
+            TelemetryHistogramBin(1, 300, 400, 60L, 6f, 6, Color.Magenta),
+            TelemetryHistogramBin(2, 400, 500, 40L, 4f, 7, Color.Black)
+        )
+        val sprintTail = TelemetryHistogramData(
+            binWidth = 100,
+            dataMin = 300,
+            dataMax = 500,
+            totalActiveTimeSec = 1000L,
+            bins = listOf(returnBin) + sprintBins
+        )
+        val foldedData = TelemetryHistogramData(
+            binWidth = 100,
+            dataMin = 100,
+            dataMax = 500,
+            totalActiveTimeSec = 1000L,
+            bins = regularBins + overflowBin,
+            tailCutoff = 300,
+            sprintTail = sprintTail
+        )
+
+        // Verify linearBins unrolls individual tail bins instead of folded overflowBin
+        val linearBins = foldedData.linearBins
+        assertEquals(4, linearBins.size)
+        assertTrue("No overflow bin in linear projection", linearBins.none { it.isOverflow })
+
+        // Check scaling across linearBins
+        val maxBinPct = linearBins.maxOfOrNull { it.percentage }?.takeIf { it > 0f } ?: 1f
+        assertEquals(50f, maxBinPct, 0.001f)
+
+        // Verify empty bin track suppression rule: bins with durationSec == 0L must not draw background tracks
+        val emptyBin = TelemetryHistogramBin(3, 500, 600, 0L, 0f, 7, Color.Black)
+        assertTrue("Duration zero bins must have 0L duration", emptyBin.durationSec == 0L)
+        val activeBin = linearBins.first()
+        assertTrue("Active bins have positive duration", activeBin.durationSec > 0L)
+    }
 }

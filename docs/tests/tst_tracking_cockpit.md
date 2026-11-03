@@ -1309,7 +1309,7 @@
 ### TST-SEN-025: **Position-Based Elevation Sensor & Dedicated Spatial DEM Cache Test Suite** [Verified]
 - **Requirement(s)**: `REQ-SEN-025`
 - **Component**: `ElevationCacheDatabaseManagerTest.kt`, `AltitudeFromPositionDeviceTest.kt`, `DeviceTypeTest.kt`, `SensorSourceDialogPriorityTest.kt`, `TranslationParityTest.kt`
-- **Jira**: `ATT-4859`
+- **Jira**: `ATT-4859`, `ATT-5199`
 - **Test Description**:
   1. *Spatial Elevation Cache CRUD & Nearest-Neighbor Interpolation (`TST-SEN-025.1`)*:
   • Unit test in `ElevationCacheDatabaseManagerTest` verifying:
@@ -1317,15 +1317,19 @@
     - Querying exact quantized coordinates returns cached elevation.
     - Querying coordinates within spatial tolerance ($\Delta\text{E5} \le 2$) resolves nearest neighbor.
     - Querying distant coordinates (> tolerance) returns null (cache miss).
-  2. *Background Route Elevation Seeding (`TST-SEN-025.2`)*:
+  2. *Background Route/Segment Elevation Seeding & Source Priority (`TST-SEN-025.2`)*:
   • Unit test in `ElevationCacheDatabaseManagerTest` verifying:
-    - Seeding from mock `RoutesDatabaseManager` inserts all non-null trackpoint altitudes into `ElevationCache.db`.
-    - Duplicate trackpoints are deduplicated or updated gracefully without constraint violations.
-  3. *Device Lifecycle, Pairing Toggle & Unfiltered Altitude Emission (`TST-SEN-025.3`)*:
+    - Seeding from mock `RoutesDatabaseManager` inserts non-null trackpoint altitudes into `ElevationCache.db` with `source = ROUTE_SEED`.
+    - Seeding from `SEGMENT_SEED` uses `CONFLICT_IGNORE` and NEVER overwrites existing `ROUTE_SEED` or `DEM_CACHE` records.
+    - Seeding from `ROUTE_SEED` updates existing `SEGMENT_SEED` records but NEVER overwrites authoritative `DEM_CACHE` records.
+    - Inserting authoritative `DEM_CACHE` entries replaces lower-priority seeded points.
+  3. *Device Lifecycle, Pairing Toggle, Async DEM Query & Online Upgrade (`TST-SEN-025.3`)*:
   • Unit test in `AltitudeFromPositionDeviceTest` and `DeviceManagerTest` verifying:
     - `AltitudeFromPositionDevice` initializes with `DeviceType.ALTITUDE_FROM_POSITION` under `Protocol.SMARTPHONE`.
     - Pairing toggle in `DevicesDatabaseManager` dynamically starts and shuts down the device.
-    - Incoming `(latitude, longitude)` updates resolve altitude from cache/mock DEM and publish to `mAltitudeSensor`.
+    - Incoming `(latitude, longitude)` updates on a cache miss trigger async DEM fetch via `ElevationService` and cache with `source = DEM_CACHE`.
+    - Incoming updates matching a seeded non-DEM entry (`ROUTE_SEED` / `SEGMENT_SEED`) emit the cached altitude immediately for offline continuity AND dispatch an async DEM query to upgrade the cache to `DEM_CACHE`.
+    - Concurrent location updates while an async DEM query is in flight do not queue redundant queries (`AtomicBoolean mIsDemQueryInFlight`).
   4. *Zero Contamination of Known Locations (*Lieblingsorte*) (`TST-SEN-025.4`)*:
   • Architectural isolation test verifying:
     - Continuous position tracking and cache insertion in `ElevationCache.db` execute with zero calls or writes to `KnownLocationsDatabaseManager`.
@@ -1356,7 +1360,7 @@
 ### TST-TRK-049: **Post-Workout State Cleansing, Breadcrumb Purge & Idle Service Dormancy Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-049`
 - **Component**: `BANALServiceRepositoryTest.kt`, `BANALServiceBindingLifecycleTest.kt`, `MyAccumulatorSensorTrackingGateTest.kt`, `AccumulatorResetNotificationTest.kt`, `FilterManagerAccumulatorResetTest.kt`, `TrackingViewModelSensorNullSafetyTest.kt`
-- **Jira**: `ATT-4926`, `ATT-5080`
+- **Jira**: `ATT-4926`, `ATT-5080`, `ATT-5191`
 - **Test Description**:
   1. *Breadcrumb & Elevation Path Cleansing on Session End (`TST-TRK-049.1`)*:
   • Unit test in `BANALServiceRepositoryTest` verifying that invoking `clearBreadcrumbs()`, receiving `TrackingMode.READY`, and completing a workout empties `_currentTrack` and `_currentPathPoints`.
@@ -1367,7 +1371,7 @@
   4. *Reset Notification & InstantaneousFilter Reset (`TST-TRK-049.4`)*:
   • Unit test verifying `MyAccumulatorSensor.reset()` notifies listeners with `mZeroValue`, and `InstantaneousFilter.reset()` clears cached values.
   5. *Accumulator Reset Baseline Preservation & Null String Safety (`TST-TRK-049.5`)*:
-  • Unit test in `FilterManagerTest` verifying that calling `FilterManager.resetAllFilters()` causes filters attached to `MyAccumulatorSensor` to retain/re-seed `mZeroValue` (e.g. `0` -> formatted `0:00:00`), while non-accumulator filters reset to `null` (`--`).
+  • Unit test in `FilterManagerAccumulatorResetTest` verifying that calling `FilterManager.resetAllFilters()` with filters attached directly to `MyAccumulatorSensor` or wrapped via `ProxySensor` causes them to retain/re-seed `getZeroValue()` (e.g. `0` -> formatted `0:00:00`, `1` -> formatted `1`), even when `FilterManager` executes before `MyDevice.reset()`, while non-accumulator filters reset to `null` (`--`).
   • Unit test in `TrackingViewModelSensorNullSafetyTest` verifying that `DefaultStringFormatter.format(null)` returns `"--"`, and `TrackingViewModel.applySensorData()` handles null or empty sensor string values without throwing `NullPointerException`.
 
 
@@ -1403,8 +1407,8 @@
 
 ### TST-SEN-026: **Specialized Altitude Devices Naming Parity, Idempotent SQLite Migration & Educational Details Verification** [Verified]
 - **Requirement(s)**: `REQ-SEN-026`
-- **Component**: `AltitudeFromPressureDeviceTest.kt`, `DevicesDatabaseManagerTest.java`, `EditDeviceDialogTest.kt`, `TranslationParityTest.kt`
-- **Jira**: `ATT-5073`
+- **Component**: `AltitudeFromPressureDeviceTest.kt`, `DevicesDatabaseManagerTest.java`, `EditDeviceDialogTest.kt`, `SpecializedAltitudeDevicesLocalizationTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-5073`, `ATT-5198`
 - **Test Description**:
   1. *String Resource Naming Parity Across 9 Locales (`TST-SEN-026.1`)*:
   • Verification that `devices_altitude_from_pressure` resolves to "Höhe aus Luftdruck" (DE), "Altitude from Pressure" (EN), "Altitud por presión" (ES), "Altitude par pression" (FR), "Altitudine da pressione" (IT), "気圧からの高度" (JA), "Hoogte uit luchtdruk" (NL), "Wysokość z ciśnienia" (PL), and "Altitude por pressão" (PT).
@@ -1413,7 +1417,7 @@
   3. *Educational Operation Card in EditDeviceDialog (`TST-SEN-026.3`)*:
   • Compose UI test or layout test in `EditDeviceDialogTest` verifying that viewing details for `ALTITUDE_FROM_PRESSURE` or `ALTITUDE_FROM_POSITION` renders the educational info card (`OutlinedCard`) with structured "How it works" and "Pros & Cons" sections, while other sensor types omit this section.
   4. *9-Language Translation Parity for Educational Strings (`TST-SEN-026.4`)*:
-  • Verification in `TranslationParityTest` for all altitude explanation string keys (`device_altitude_explanation_title`, `device_altitude_how_it_works_header`, `device_altitude_pros_cons_header`, `device_altitude_pressure_how_it_works`, `device_altitude_pressure_pros_cons`, `device_altitude_position_how_it_works`, `device_altitude_position_pros_cons`) across all 9 supported locales.
+  • Verification in `TranslationParityTest` and `SpecializedAltitudeDevicesLocalizationTest` for all altitude explanation string keys (`device_altitude_explanation_title`, `device_altitude_how_it_works_header`, `device_altitude_pros_cons_header`, `device_altitude_pressure_how_it_works`, `device_altitude_pressure_pros_cons`, `device_altitude_position_how_it_works`, `device_altitude_position_pros_cons`) across all 9 supported locales, specifically asserting that `device_altitude_position_pros_cons` explicitly mentions active internet connection requirements for uncached areas.
   5. *Clean-Room Regression Verification (`TST-SEN-026.5`)*:
   • Full regression pass over sensor, device management, and dialog test suites confirming zero regressions in device pairing, sensor data delivery, and calibration workflows.
 

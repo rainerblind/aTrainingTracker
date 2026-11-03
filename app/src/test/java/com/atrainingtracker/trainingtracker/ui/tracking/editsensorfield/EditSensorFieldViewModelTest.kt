@@ -93,7 +93,10 @@ class EditSensorFieldViewModelTest {
 
     private fun createViewModel(
         sensorFieldId: Long = -1L,
-        activityType: ActivityType = ActivityType.BIKE_POWER
+        activityType: ActivityType = ActivityType.BIKE_POWER,
+        tabViewId: Long = 1L,
+        rowNr: Int = 0,
+        colNr: Int = 0
     ): EditSensorFieldViewModel {
         return EditSensorFieldViewModel(
             application = application,
@@ -101,9 +104,9 @@ class EditSensorFieldViewModelTest {
             banalServiceRepository = banalServiceRepo,
             activityType = activityType,
             sensorFieldId = sensorFieldId,
-            tabViewId = 1L,
-            rowNr = 0,
-            colNr = 0
+            tabViewId = tabViewId,
+            rowNr = rowNr,
+            colNr = colNr
         )
     }
 
@@ -665,5 +668,120 @@ class EditSensorFieldViewModelTest {
         coVerify(exactly = 0) {
             trackingViewsRepo.updateColWeight(any(), any())
         }
+    }
+
+    // --- TST-UI-437.6: Relative Width Cardinality Gating (ATT-5192) ---
+
+    @Test
+    fun testCalculateIsMultiFieldRow_pureLogic() {
+        // Adding new field into a row: multi-field if row already has >= 1 field
+        assertFalse(calculateIsMultiFieldRow(existingFieldsInTargetRow = 0, isNewField = true))
+        assertTrue(calculateIsMultiFieldRow(existingFieldsInTargetRow = 1, isNewField = true))
+        assertTrue(calculateIsMultiFieldRow(existingFieldsInTargetRow = 2, isNewField = true))
+
+        // Editing existing field: multi-field only if row currently has > 1 field
+        assertFalse(calculateIsMultiFieldRow(existingFieldsInTargetRow = 0, isNewField = false))
+        assertFalse(calculateIsMultiFieldRow(existingFieldsInTargetRow = 1, isNewField = false))
+        assertTrue(calculateIsMultiFieldRow(existingFieldsInTargetRow = 2, isNewField = false))
+        assertTrue(calculateIsMultiFieldRow(existingFieldsInTargetRow = 3, isNewField = false))
+    }
+
+    @Test
+    fun testIsMultiFieldRow_editingFieldInSingleFieldRow_isFalse() = runTest {
+        val field = SensorFieldConfig(
+            sensorFieldId = 10L,
+            rowNr = 0,
+            colNr = 0,
+            viewSize = ViewSize.NORMAL,
+            sensorType = SensorType.SPEED_mps,
+            filterType = FilterType.INSTANTANEOUS,
+            filterConstant = 1.0,
+            sourceDeviceId = -1,
+            colWeight = 1.0f
+        )
+        every { trackingViewsRepo.getSensorFieldConfig(10L) } returns flowOf(field)
+        every { trackingViewsRepo.getSensorFieldConfigsForView(1L) } returns flowOf(listOf(field))
+
+        val viewModel = createViewModel(sensorFieldId = 10L, rowNr = 0, colNr = 0)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertFalse("Single-field row must not be marked as multi-field", viewModel.uiState.value.isMultiFieldRow)
+    }
+
+    @Test
+    fun testIsMultiFieldRow_editingFieldInMultiFieldRow_isTrue() = runTest {
+        val field1 = SensorFieldConfig(
+            sensorFieldId = 10L,
+            rowNr = 0,
+            colNr = 0,
+            viewSize = ViewSize.NORMAL,
+            sensorType = SensorType.SPEED_mps,
+            filterType = FilterType.INSTANTANEOUS,
+            filterConstant = 1.0,
+            sourceDeviceId = -1,
+            colWeight = 1.0f
+        )
+        val field2 = SensorFieldConfig(
+            sensorFieldId = 11L,
+            rowNr = 0,
+            colNr = 1,
+            viewSize = ViewSize.NORMAL,
+            sensorType = SensorType.HR,
+            filterType = FilterType.INSTANTANEOUS,
+            filterConstant = 1.0,
+            sourceDeviceId = -1,
+            colWeight = 1.0f
+        )
+        every { trackingViewsRepo.getSensorFieldConfig(10L) } returns flowOf(field1)
+        every { trackingViewsRepo.getSensorFieldConfigsForView(1L) } returns flowOf(listOf(field1, field2))
+
+        val viewModel = createViewModel(sensorFieldId = 10L, rowNr = 0, colNr = 0)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue("Row with 2 fields must be marked as multi-field", viewModel.uiState.value.isMultiFieldRow)
+    }
+
+    @Test
+    fun testIsMultiFieldRow_addingFieldToExistingRow_isTrue() = runTest {
+        val existingField = SensorFieldConfig(
+            sensorFieldId = 10L,
+            rowNr = 0,
+            colNr = 0,
+            viewSize = ViewSize.NORMAL,
+            sensorType = SensorType.SPEED_mps,
+            filterType = FilterType.INSTANTANEOUS,
+            filterConstant = 1.0,
+            sourceDeviceId = -1,
+            colWeight = 1.0f
+        )
+        every { trackingViewsRepo.getSensorFieldConfigsForView(1L) } returns flowOf(listOf(existingField))
+
+        // Adding into row 0 where 1 field already exists
+        val viewModel = createViewModel(sensorFieldId = -1L, rowNr = 0, colNr = 1)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue("Adding field into row with 1 existing field must result in multi-field row", viewModel.uiState.value.isMultiFieldRow)
+    }
+
+    @Test
+    fun testIsMultiFieldRow_addingFieldToNewRow_isFalse() = runTest {
+        val existingField = SensorFieldConfig(
+            sensorFieldId = 10L,
+            rowNr = 0,
+            colNr = 0,
+            viewSize = ViewSize.NORMAL,
+            sensorType = SensorType.SPEED_mps,
+            filterType = FilterType.INSTANTANEOUS,
+            filterConstant = 1.0,
+            sourceDeviceId = -1,
+            colWeight = 1.0f
+        )
+        every { trackingViewsRepo.getSensorFieldConfigsForView(1L) } returns flowOf(listOf(existingField))
+
+        // colNr = -1 indicates creating a new row
+        val viewModel = createViewModel(sensorFieldId = -1L, rowNr = 1, colNr = -1)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertFalse("Adding field to a new row must result in single-field row", viewModel.uiState.value.isMultiFieldRow)
     }
 }

@@ -515,4 +515,85 @@ class TelemetryHistogramCalculatorTest {
         assertEquals(7, overflowZ7.zoneIndex)
         assertEquals(TTColor.Zone7, overflowZ7.color)
     }
+
+    @Test
+    fun testLinearBins_unfoldsSprintTailSequenceCorrectly_tst_ui_443_1() {
+        // Case A: Linear histogram without sprint tail (sprintTail == null)
+        val linearBinsList = listOf(
+            TelemetryHistogramBin(
+                binIndex = 0,
+                rangeMin = 100,
+                rangeMax = 110,
+                durationSec = 20L,
+                percentage = 50f,
+                zoneIndex = 1,
+                color = TTColor.Zone1
+            ),
+            TelemetryHistogramBin(
+                binIndex = 1,
+                rangeMin = 110,
+                rangeMax = 120,
+                durationSec = 20L,
+                percentage = 50f,
+                zoneIndex = 1,
+                color = TTColor.Zone1
+            )
+        )
+        val linearData = TelemetryHistogramData(
+            binWidth = 10,
+            dataMin = 100,
+            dataMax = 120,
+            totalActiveTimeSec = 40L,
+            bins = linearBinsList,
+            sprintTail = null
+        )
+        assertEquals("linearBins must return bins unchanged when sprintTail is null",
+            linearBinsList, linearData.linearBins)
+
+        // Case B: Power histogram with folded sprint tail (sprintTail != null)
+        val samplesZone7Tail = mutableListOf<ZoneSample>()
+        var t = 0L
+        repeat(180) {
+            samplesZone7Tail.add(ZoneSample(timeActiveSec = t, value = 200))
+            t += 5L
+        }
+        repeat(18) {
+            samplesZone7Tail.add(ZoneSample(timeActiveSec = t, value = 300))
+            t += 5L
+        }
+        // Sprint tail samples reaching 600 W (rare spikes < 1.5% of workout time)
+        repeat(3) {
+            samplesZone7Tail.add(ZoneSample(timeActiveSec = t, value = 600))
+            t += 5L
+        }
+
+        val foldedData = TelemetryHistogramCalculator.calculatePowerHistogram(samplesZone7Tail, pwrThresholds)
+        assertNotNull(foldedData)
+        assertNotNull("Sprint tail must be present", foldedData!!.sprintTail)
+        assertTrue("Main bins must include overflow bin", foldedData.bins.any { it.isOverflow })
+        assertTrue("Sprint tail must include return bin", foldedData.sprintTail!!.bins.any { it.isReturn })
+
+        val linearBins = foldedData.linearBins
+        assertTrue("linearBins must have more elements than folded main bins",
+            linearBins.size > foldedData.bins.size)
+        assertTrue("linearBins must NOT contain any overflow bins",
+            linearBins.none { it.isOverflow })
+        assertTrue("linearBins must NOT contain any return bins",
+            linearBins.none { it.isReturn })
+
+        // Check continuity across [dataMin, dataMax]
+        assertEquals(foldedData.dataMin, linearBins.first().rangeMin)
+        assertEquals(foldedData.dataMax, linearBins.last().rangeMax)
+        for (i in 0 until linearBins.size - 1) {
+            assertEquals("Bins must be contiguous", linearBins[i].rangeMax, linearBins[i + 1].rangeMin)
+        }
+
+        // Duration conservation across linearBins
+        val totalDurationLinear = linearBins.sumOf { it.durationSec }
+        assertEquals(foldedData.totalActiveTimeSec, totalDurationLinear)
+
+        // Percentage conservation
+        val totalPctLinear = linearBins.sumOf { it.percentage.toDouble() }
+        assertEquals(100.0, totalPctLinear, 0.1)
+    }
 }

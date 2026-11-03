@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 100
+**Total Tests**: 101
 
 ---
 
@@ -1253,3 +1253,24 @@
   • Verify `tools/verify_requirement_governance.py` and `tools/jira_util.py` detect requirements, diffs, archaeology sections, and update status from `[Planned]` to `[Verified]` in domain-sharded multi-line files.
   4. *Clean-Room Governance & Full Suite Regression Execution (`TST-PRO-021.4`)*:
   • Run `python3 tools/verify_requirement_governance.py` asserting exit code 0; execute `./gradlew testDebugUnitTest` verifying 100% test pass rate.
+
+### TST-PRO-022: **AAA Story Point Estimation, CLI Operations, Complexity Split Guardrail & Sprint Capacity Tracking Verification** [Story points CLI commands verified; set-points and create-issue --points tested; list and show output asserted; skill and beamer documentation verified.]
+- **Requirement(s)**: `REQ-PRO-029`
+- **Component**: **AAA Story Point Estimation, CLI Operations, Complexity Split Guardrail & Sprint Capacity Tracking Verification**
+- **Jira**: ``ATT-5203``
+- **Test Description**:
+  1. *Jira CLI Story Point Unit & Integration Test (`TST-PRO-022.1`, `tools/test_jira_story_points.py`)*:
+  • Test `set-points` payload generation for integer and float points (`float(points)`), string parsing, and clearing (`None`).
+  • Test `create-issue` argument parsing for `--points=N` and `--story-points=N`.
+  • Test `list` sprint points aggregation (handling issues with null points, zero points, and valid points, and verifying total calculation and unestimated count).
+  • Test `show` display formatting with and without story points.
+  2. *Live Jira REST API Integration Verification (`TST-PRO-022.2`)*:
+  • Execute `python3 tools/jira_util.py set-points ATT-5203 2` and verify `python3 tools/jira_util.py show ATT-5203` displays `*Story Points*: 2.0 SP` (or `2 SP`).
+  • Verify `python3 tools/jira_util.py list` lists all active sprint tickets with `[X SP]` tags and the total sprint summary line.
+  3. *Skill & Presentation Governance Audit (`TST-PRO-022.3`)*:
+  • Verify `.agents/skills/sprint-planner/SKILL.md` documents Ceremony 1 estimation, `\ge 5 SP` split guardrail, target capacity envelope (~24–30 SP), and Ceremony 2 retro points tracking.
+  • Verify `.agents/skills/brainstormer/SKILL.md` documents `--points` flag and `\ge 5 SP` decomposition.
+  • Verify `docs/presentations/agile_agentic_aspice_beamer.tex` references the 1/2/3/5+ Story Point Complexity Guardrail and human review capacity model.
+  4. *Clean-Room Governance Verification (`TST-PRO-022.4`)*:
+  • Execute `python3 tools/verify_requirement_governance.py` asserting exit code 0 and zero governance violations.
+

@@ -606,25 +606,32 @@
 **Invariants**: Zero changes to `PeriodSummaries.db`, memory safety, True-Black AMOLED compliance, and 100% clean-room test pass rate.
 
 ### REQ-PER-025: GitHub-Style Yearly Activity Contribution Grids per BSportType in Periods (Years) [Verified]
-- **Tests**: `TST-PER-031` | **Tickets**: `ATT-4849`, `ATT-5076`
+- **Tests**: `TST-PER-031` | **Tickets**: `ATT-4849`, `ATT-5076`, `ATT-5194`, `ATT-5193`
 - **Implementation**: `YearlyContributionGrid.kt`, `PeriodSummaryCard.kt`, `PeriodsTabsScreen.kt`, `PeriodsViewModel.kt`, `PeriodBarGraph.kt`
-- **Rationale**: In `Periods` (`PeriodType.YEAR`), the system SHALL render a compact GitHub-style $7 \times 53$ activity contribution grid for each active `BSportType`, slaved directly to the master sport filter and active metric selector, enabling athletes to visualize seasonal consistency, volume distributions, rest periods, and training blocks across the 12 months without redundant UI controls (ATT-4849, ATT-5076):
+- **Rationale**: In `Periods` (`PeriodType.YEAR`), the system SHALL render a compact GitHub-style $7 \times 53$ activity contribution grid for each active `BSportType`, slaved directly to the master sport filter and active metric selector, enabling athletes to visualize seasonal consistency, volume distributions, rest periods, and training blocks across the 12 months without redundant UI controls (ATT-4849, ATT-5076, ATT-5194, ATT-5193):
 1. *PeriodType.YEAR Scope (`REQ-PER-025.1`)*: The contribution grid SHALL be rendered exclusively on `PeriodSummaryCard` when `periodType == PeriodType.YEAR`.
 2. *Master Selectors Authority & Hoisting (`REQ-PER-025.2`)*: The active metric for cell volume and color intensity SHALL be slaved to the master metric selector (`PeriodBarMetric`: `DURATION`, `DISTANCE`, `ASCENT`), hoisted to `PeriodsViewModel`. Active sport grids SHALL be slaved to the master sport filter (`selectedSports: Set<BSportType>`).
-3. *Matrix Dimensions & Calendar Mapping (`REQ-PER-025.3`)*: Each grid SHALL render a $7 \times 53$ calendar day matrix (rows: Monday to Sunday, index 0..6; columns: ISO weeks 1..53). Column header labels SHALL render month markers (`Jan..Dec`) based on ISO week dates.
+3. *Matrix Dimensions, Calendar Mapping & Day-of-Week Label Cadence (`REQ-PER-025.3`)*: Each grid SHALL render a $7 \times 53$ calendar day matrix (rows: Monday to Sunday, index 0..6; columns: ISO weeks 1..53). Column header labels SHALL render month markers (`Jan..Dec`) based on ISO week dates. The left day-of-week label column SHALL render abbreviated single-letter/narrow day labels for Monday (index 0), Wednesday (index 2), Friday (index 4), and Sunday (index 6, `DayOfWeek.SUNDAY`) via `shouldShowDayOfWeekLabel(rowIdx)`, establishing an even 2-day cadence (`[M, W, F, S]`). Day-of-week labels SHALL enforce unclipped vertical rendering inside 11 dp cell rows using `PlatformTextStyle(includeFontPadding = false)`, explicit `lineHeight = 9.sp`, and `wrapContentHeight(unbounded = true)` per Design Guidelines Section 5.15 (ATT-5193).
 4. *Multi-Sport Separation & Canonical Order (`REQ-PER-025.4`)*: One dedicated grid SHALL be rendered per active `BSportType` that has $\ge 1$ workout in that calendar year and is enabled in `selectedSports`, ordered by Rule 57 canonical order (`[Bike, Run, Other]`).
 5. *Quartile Shading & Sport Color Ramps (`REQ-PER-025.5`)*: Each grid cell SHALL be shaded using the sport's semantic palette (`TTColor.BikeSportBarColor`, `RunSportBarColor`, `OtherSportBarColor`) with 5 intensity levels: Level 0 (no activity, muted cell surface), Levels 1..4 (positive quartiles $Q_1, Q_2, Q_3, Q_4$ calibrated per sport's positive daily volumes in that year).
 6. *Interactive Day Tap Drill-Down (`REQ-PER-025.6`)*: Tapping an active day cell SHALL highlight the cell, display the daily metric total formatted via Rule 36 canonical formatters (`DistanceFormatter`, `TimeFormatter`, `AltitudeFormatter`), and allow navigating to that day's workouts via `onStartWorkoutList(dayStartS, dayEndS, sport, workoutId)`.
 7. *Localization & Persistence Invariants (`REQ-PER-025.7`)*: All added UI strings SHALL maintain 100% 9-language localization parity. Storing daily contribution structures SHALL be in-memory in `PeriodSummary` without altering `PeriodSummaries.db` (v27) schema.
 8. *SportStatsRow Embedded Placement & Seamless Styling (`REQ-PER-025.8`)*: For `PeriodType.YEAR`, each sport's contribution grid SHALL be embedded directly inside that sport's `SportStatsRow` box in `PeriodSummaryCard.kt`, placed below the main summary header row and above the sub-sports breakdown (`CompactMetricRow`) and longest workout highlight. The embedded grid SHALL omit outer card borders and duplicate sport icon/title headers while retaining the intensity legend (ATT-5076).
+9. *Initial Viewport Auto-Scroll Alignment (`REQ-PER-025.9`)*: Upon initial composition or year selection of `YearlyContributionGrid`, the horizontal scroll state SHALL automatically position the viewport:
+- For the current calendar year (`year == LocalDate.now().year`): the viewport SHALL align the current week column at the far right edge of the visible content area (`scrollState.maxValue - (totalCols - 1 - targetCol) * colPitchPx`, clamped to `[0, scrollState.maxValue]`), ensuring historical activity remains visible while future weeks sit off-screen to the right.
+- For past calendar years (`year < LocalDate.now().year`): the viewport SHALL scroll to the end of the year (`scrollState.maxValue`).
+- Unrestricted Bidirectional Scrolling: The athlete SHALL retain unrestricted manual scrolling freedom left and right without snap-backs on recomposition or cell interaction (ATT-5194).
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Modifies `REQ-PER-025` (*GitHub-Style Yearly Activity Contribution Grids per BSportType in Periods (Years)*), specifically adding `REQ-PER-025.8` and targeting `PeriodSummaryCard.kt` and `YearlyContributionGrid.kt` (ATT-5076).
-2. *Historical Origin & Commit Trace*: Sprint 2026-44.2 via commit `285d2470` (`ATT-4849`).
-3. *Root Reason for Existing Formulation*: In ATT-4849, contribution grids were initially placed at the bottom of the card below all `SportStatsRow` boxes to avoid altering `SportStatsRow` before gathering user feedback on visual balance.
-4. *Preservation of Core Invariants*: $7 \times 53$ calendar day mapping, quartile intensity calculation, interactive day-tap drill-down, and non-year period layouts remain 100% preserved.
+1. *Original Requirement ID & Target*: Modifies `REQ-PER-025` (*GitHub-Style Yearly Activity Contribution Grids per BSportType in Periods (Years)*), specifically amending `REQ-PER-025.3` for day-of-week micro-typography and Sunday anchor cadence. Targets `YearlyContributionGrid.kt`, `YearlyContributionGridTest.kt`, and `docs/requirements/req_aftermath_periods.md` (ATT-5193).
+2. *Historical Origin & Commit Trace*: Sprint 2026-44.2 via commit `285d2470` (`ATT-4849`), Sprint 2026-45.1 via commit `4f74d924` (`ATT-5076`), Sprint 2026-45.2 via `ATT-5194` and `ATT-5193`.
+3. *Root Reason for Existing Formulation*: Originally displayed only Mon, Wed, Fri following GitHub conventions. Tall glyphs (`F`) suffered vertical truncation in 11 dp cells due to default font padding and line-height overflow.
+4. *Preservation of Core Invariants*: $7 \times 53$ matrix mapping, 11 dp cell height, quartile calculations, day-tap drill-down, embedded `SportStatsRow` placement, and bidirectional manual scrolling freedom are 100% preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete viewing `YearlyContributionGrid`,
+• *When* the left day-of-week label column is rendered,
+• *Then* Monday, Wednesday, Friday, and Sunday labels SHALL be displayed without vertical glyph clipping.
 • *Given* a Year period summary with Bike and Run workouts,
 • *When* rendered in `Periods` with Distance metric selected,
 • *Then* dedicated Bike and Run $7 \times 53$ contribution grids render embedded inside each respective `SportStatsRow` below main totals without outer card borders or duplicate sport headers.
@@ -634,6 +641,15 @@
 • *Given* an active day cell is tapped,
 • *When* interacting with the embedded grid,
 • *Then* the cell is highlighted with formatted daily metrics and navigation to that day's workouts is triggered.
+• *Given* an athlete viewing `YearlyContributionGrid` for the current calendar year (e.g. November),
+• *When* the card is composed,
+• *Then* the grid SHALL auto-scroll so the current week is aligned at the far right edge of the viewport, with previous months visible to the left.
+• *Given* an athlete viewing `YearlyContributionGrid` for a past calendar year,
+• *When* the card is composed,
+• *Then* the grid SHALL auto-scroll to the end of the year (`scrollState.maxValue`).
+• *Given* the grid has auto-scrolled,
+• *When* the athlete drags or flings horizontally,
+• *Then* manual scrolling SHALL proceed smoothly without snap-backs or recomposition resets.
 
 **Invariants**: Zero changes to `PeriodSummaries.db` (v27), 60 fps `LazyColumn` scrolling, Rule 36 unit parity, Rule 57 sport order, and 100% clean-room test pass rate.
 
@@ -683,4 +699,42 @@
 • *Then* the chip displays "Hauptregion: Herrenberg (25)" with single-line ellipsis on narrow screens.
 
 **Invariants**: Zero changes to `PeriodSummaries.db` (v27) schema, zero network/disk I/O on UI thread, 9-language localization parity, and 100% clean-room test pass rate.
+
+### REQ-PER-027: Embedded Daily Activity Intensity / Mini-Bar Strip for Months & Weeks in SportStatsRow [Verified]
+- **Tests**: `TST-PER-035` | **Tickets**: `ATT-5195`
+- **Implementation**: `DailyActivityStrip.kt`, `PeriodSummaryCard.kt`, `PeriodData.kt`, `PeriodsRepository.kt`, `PeriodsViewModel.kt`
+- **Rationale**: For `Periods` in Months (`PeriodType.MONTH`) and Weeks (`PeriodType.WEEK`), the system SHALL embed a compact horizontal daily activity intensity / mini-bar chart inside each sport's `SportStatsRow` below the sport header and above sub-sports/longest workout (Option A), slaved directly to the master sport filter and active metric selector, matching the interactive drill-down and semantic coloring of `YearlyContributionGrid` (ATT-5195):
+1. *Month and Week Temporal Scope (`REQ-PER-027.1`)*: The daily activity strip SHALL be rendered inside each sport's `SportStatsRow` on `PeriodSummaryCard` when `periodType == PeriodType.MONTH` or `periodType == PeriodType.WEEK`. `PeriodType.YEAR` and `PeriodType.DAY` SHALL remain unaffected.
+2. *Data Hydration & In-Memory Domain Model (`REQ-PER-027.2`)*: `PeriodsRepository.enrich()` SHALL aggregate daily activities and peak metric values into `dailySportContributions: Map<BSportType, DailySportContribution>` for `PeriodType.WEEK` and `PeriodType.MONTH` from the period's workouts without altering `PeriodSummaries.db` (v27) schema. `PeriodsViewModel.filterPeriodSummary()` SHALL filter `dailySportContributions` symmetrically according to `selectedSports`.
+3. *Week 7-Day & Month 28..31-Day Mini-Bar Layout (`REQ-PER-027.3`)*:
+   - For `PeriodType.WEEK`: The strip SHALL render exactly 7 columns corresponding to Monday through Sunday of that week, labeled with localized day initials.
+   - For `PeriodType.MONTH`: The strip SHALL render compact non-scrolling columns for all days in that calendar month (1..28/29/30/31), displaying milestone day labels (1, 10, 20, last day).
+4. *Metric Slaving & Proportional Height Scaling (`REQ-PER-027.4`)*: Mini-bar heights and color intensity SHALL be slaved to the active metric (`DURATION`, `DISTANCE`, `ASCENT`). Active days SHALL render a filled vertical bar with height proportional to the day's metric value relative to the sport's maximum daily value in that period ($H_{\text{bar}} = \text{clamp}(V_{\text{day}} / V_{\text{max}}, 0.15, 1.0) \times H_{\text{max}}$). Zero/rest days SHALL render a subtle muted baseline track.
+5. *Semantic Sport Palette Parity (`REQ-PER-027.5`)*: Filled mini-bars SHALL be colored with the sport's semantic color token (`TTColor.BikeSportBarColor`, `TTColor.RunSportBarColor`, `TTColor.OtherSportBarColor`) and quartile/alpha shading.
+6. *Interactive Day Selection & Drill-Down Navigation (`REQ-PER-027.6`)*: Tapping a day bar SHALL toggle a day detail banner below the strip displaying the date and formatted metric total via Rule 36 canonical formatters (`TimeFormatter`, `DistanceFormatter`, `AltitudeFormatter`). For active days, tapping the banner SHALL trigger drill-down navigation via `onDayCellClick` to `WorkoutSummariesListFragment`.
+7. *Seamless SportStatsRow Embedding (`REQ-PER-027.7`)*: The strip SHALL be embedded directly inside `SportStatsRow` without extra outer card borders or redundant sport headers, positioned below the sport totals row and above sub-sports / longest workout dividers.
+8. *Localization & Invariant Parity (`REQ-PER-027.8`)*: All user-facing strings and accessibility semantics SHALL maintain 100% 9-language localization parity (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-PER-027` (*Embedded Daily Activity Intensity / Mini-Bar Strip for Months & Weeks in SportStatsRow*), extending `REQ-PER-025` (*GitHub-Style Yearly Activity Contribution Grids per BSportType in Periods (Years)*). Targets `DailyActivityStrip.kt`, `PeriodSummaryCard.kt`, `PeriodData.kt`, `PeriodsRepository.kt`, `PeriodsViewModel.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-45.1 (`ATT-5076`) embedded `YearlyContributionGrid` inside `SportStatsRow` for `PeriodType.YEAR`. Sprint 2026-45.1 Review highlighted the lack of equivalent embedded daily activity visualization for Months and Weeks (`ATT-5195`).
+3. *Root Reason for Existing Formulation*: Months and Weeks previously displayed only aggregate metric totals to minimize card height before embedded inline visual strips were designed.
+4. *Preservation of Core Invariants*: In-memory aggregation preserves zero SQLite schema changes; Rule 57 sport ordering (`[Bike, Run, Other]`) is preserved; `PeriodType.YEAR` and `PeriodType.DAY` rendering remain 100% preserved; Rule 36 canonical formatters are strictly used.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete viewing a Month summary card (`PeriodType.MONTH`),
+• *When* the card is displayed,
+• *Then* each sport's `SportStatsRow` SHALL render a horizontal mini-bar strip across the exact number of days in that month (28, 29, 30, or 31) showing daily activity for that sport.
+• *Given* an athlete viewing a Week summary card (`PeriodType.WEEK`),
+• *When* the card is displayed,
+• *Then* each sport's `SportStatsRow` SHALL render a 7-day mini-bar strip (Monday through Sunday) showing daily activity for that sport.
+• *Given* an active metric switch (Duration, Distance, or Ascent),
+• *When* the user toggles the master metric,
+• *Then* mini-bar heights in `DailyActivityStrip` SHALL reactively update to reflect the selected metric.
+• *Given* an athlete tapping an active day bar in `DailyActivityStrip`,
+• *When* tapped,
+• *Then* a summary banner is displayed with formatted metrics, and tapping navigates to that day's workouts via `WorkoutSummariesListFragment`.
+
+**Invariants**: Zero changes to `PeriodSummaries.db` (v27) schema, 60 fps `LazyColumn` scrolling, Rule 36 unit parity, Rule 57 sport order, and 100% clean-room test pass rate.
+
 

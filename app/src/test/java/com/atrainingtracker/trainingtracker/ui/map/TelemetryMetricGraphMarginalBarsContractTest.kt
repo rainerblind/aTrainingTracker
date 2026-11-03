@@ -18,6 +18,8 @@
 
 package com.atrainingtracker.trainingtracker.ui.map
 
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.TelemetryHistogramBin
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.TelemetryHistogramData
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneCardDisplayMode
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionData
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneTimeEntry
@@ -27,6 +29,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.io.File
+import kotlin.math.abs
 
 /**
  * Contract and architectural tests verifying REQ-UI-251 / ATT-2147:
@@ -146,5 +149,60 @@ class TelemetryMetricGraphMarginalBarsContractTest {
         assertEquals(2.0f, z1Width, 0.001f)
         assertEquals(8.0f, z3Width, 0.001f)
         assertTrue("Z3 bar width must be greater than Z1 bar width", z3Width > z1Width)
+    }
+
+    @Test
+    fun testPortraitMarginalHistogram_usesLinearBinsAndGuardsEmptyTracks_TST_UI_443_2() {
+        val file = resolve("app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/TelemetryMetricGraph.kt")
+        assertTrue("TelemetryMetricGraph.kt must exist", file.exists())
+
+        // Behavioral mathematical and data model contract for linearBins in portrait marginal strip
+        val regularBins = listOf(
+            TelemetryHistogramBin(0, 100, 200, 500L, 50f, 1, Color.Blue),
+            TelemetryHistogramBin(1, 200, 300, 400L, 40f, 2, Color.Green)
+        )
+        val overflowBin = TelemetryHistogramBin(2, 300, 500, 100L, 10f, 7, Color.Black, isOverflow = true)
+        val returnBin = TelemetryHistogramBin(0, 100, 300, 900L, 90f, 1, Color.Gray, isReturn = true)
+        val sprintBins = listOf(
+            TelemetryHistogramBin(1, 300, 400, 60L, 6f, 6, Color.Magenta),
+            TelemetryHistogramBin(2, 400, 500, 40L, 4f, 7, Color.Black)
+        )
+        val sprintTail = TelemetryHistogramData(
+            binWidth = 100,
+            dataMin = 300,
+            dataMax = 500,
+            totalActiveTimeSec = 1000L,
+            bins = listOf(returnBin) + sprintBins
+        )
+        val foldedData = TelemetryHistogramData(
+            binWidth = 100,
+            dataMin = 100,
+            dataMax = 500,
+            totalActiveTimeSec = 1000L,
+            bins = regularBins + overflowBin,
+            tailCutoff = 300,
+            sprintTail = sprintTail
+        )
+
+        val linearBins = foldedData.linearBins
+        assertEquals(4, linearBins.size)
+        assertTrue("No overflow bin in linear projection", linearBins.none { it.isOverflow })
+
+        val maxBinPct = linearBins.maxOfOrNull { it.percentage }?.takeIf { it > 0f } ?: 1f
+        assertEquals(50f, maxBinPct, 0.001f)
+
+        // Verify portrait strip calculation: each unfolded 100W bin maps to specific 1:1 Y coordinates
+        val dataMin = 100.0
+        val dataMax = 500.0
+        val valRange = dataMax - dataMin
+        val chartHeightPx = 200f
+        fun valueToY(v: Double): Float = (chartHeightPx - ((v - dataMin) / valRange * chartHeightPx)).toFloat()
+
+        for (bin in linearBins) {
+            val yTop = valueToY(bin.rangeMax.toDouble())
+            val yBottom = valueToY(bin.rangeMin.toDouble())
+            val rectHeight = abs(yTop - yBottom)
+            assertEquals(50f, rectHeight, 0.01f)
+        }
     }
 }

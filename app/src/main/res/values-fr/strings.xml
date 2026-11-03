@@ -630,7 +630,7 @@
     <string name="label_max">Max</string>
 
     <string name="zone_display_title">Visualisation des zones</string>
-    <string name="zone_display_background">Arrière-plan clair</string>
+    <string name="zone_display_background">Arrière-plan teinté</string>
     <string name="zone_display_left_bar">Barre gauche</string>
     <string name="zone_display_right_bar">Barre droite</string>
     <string name="zone_display_text_color">Couleur du texte</string>
@@ -965,6 +965,7 @@
     <string name="workout_periods__migration_syncing">Synchronisation de %1$s…</string>
     <string name="workout_periods__migration_finalizing">Finalisation des totaux annuels…</string>
     <string name="workout_periods__yearly_activity_grid">Activité annuelle</string>
+    <string name="workout_periods__daily_activity_strip">Activité quotidienne</string>
     <string name="workout_periods__no_activity">Aucune activité</string>
 
     <!-- share screenshots -->

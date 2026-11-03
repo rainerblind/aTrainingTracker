@@ -532,7 +532,7 @@ fun SettingsScreenContent(
             Column(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
             ) {
-                // Toggle: Light background
+                // Toggle: Tinted background
                 ZoneDisplayToggleRow(
                     label = stringResource(R.string.zone_display_background),
                     checked = displayOptions.showBackground,

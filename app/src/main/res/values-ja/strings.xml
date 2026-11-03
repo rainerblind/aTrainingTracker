@@ -629,7 +629,7 @@
     <string name="label_max">最大</string>
 
     <string name="zone_display_title">ゾーン表示</string>
-    <string name="zone_display_background">明るい背景</string>
+    <string name="zone_display_background">色付き背景</string>
     <string name="zone_display_left_bar">左バー</string>
     <string name="zone_display_right_bar">右バー</string>
     <string name="zone_display_text_color">文字色</string>
@@ -947,6 +947,7 @@
     <string name="workout_periods__migration_syncing">%1$s を同期中…</string>
     <string name="workout_periods__migration_finalizing">年間の統計を計算中…</string>
     <string name="workout_periods__yearly_activity_grid">年間のアクティビティ</string>
+    <string name="workout_periods__daily_activity_strip">毎日のアクティビティ</string>
     <string name="workout_periods__no_activity">アクティビティなし</string>
 
     <!-- share screenshots -->

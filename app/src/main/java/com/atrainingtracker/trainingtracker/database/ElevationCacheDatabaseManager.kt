@@ -139,6 +139,20 @@ class ElevationCacheDatabaseManager private constructor(context: Context) {
         @Synchronized get() = dbHelper.writableDatabase
 
     companion object {
+        const val SOURCE_DEM_CACHE = "DEM_CACHE"
+        const val SOURCE_ROUTE_SEED = "ROUTE_SEED"
+        const val SOURCE_SEGMENT_SEED = "SEGMENT_SEED"
+
+        @JvmStatic
+        fun getSourcePriority(source: String?): Int {
+            return when (source) {
+                SOURCE_DEM_CACHE -> 30
+                SOURCE_ROUTE_SEED -> 20
+                SOURCE_SEGMENT_SEED -> 10
+                else -> 0
+            }
+        }
+
         @Volatile
         private var instance: ElevationCacheDatabaseManager? = null
 
@@ -164,15 +178,15 @@ class ElevationCacheDatabaseManager private constructor(context: Context) {
     }
 
     /**
-     * Looks up cached elevation for the given latitude and longitude.
+     * Looks up cached elevation item for the given latitude and longitude.
      *
      * @param latitude Target latitude in decimal degrees.
      * @param longitude Target longitude in decimal degrees.
      * @param toleranceE5 Maximum quantized spatial tolerance (default: 2 ≈ ±2.2m).
-     * @return Elevation in meters, or null if no point is cached within tolerance.
+     * @return [ElevationCacheItem], or null if no point is cached within tolerance.
      */
     @Synchronized
-    fun getElevation(latitude: Double, longitude: Double, toleranceE5: Int = 2): Double? {
+    fun getElevationItem(latitude: Double, longitude: Double, toleranceE5: Int = 2): ElevationCacheItem? {
         val latE5 = toE5(latitude)
         val lonE5 = toE5(longitude)
         val db = database
@@ -181,13 +195,13 @@ class ElevationCacheDatabaseManager private constructor(context: Context) {
         val exactQuery = "${ElevationCacheDbHelper.COLUMN_LAT_E5} = ? AND ${ElevationCacheDbHelper.COLUMN_LON_E5} = ?"
         db.query(
             ElevationCacheDbHelper.TABLE_ELEVATION_CACHE,
-            arrayOf(ElevationCacheDbHelper.COLUMN_ALTITUDE),
+            null,
             exactQuery,
             arrayOf(latE5.toString(), lonE5.toString()),
             null, null, null
         ).use { cursor ->
             if (cursor.moveToFirst()) {
-                return cursor.getDouble(0)
+                return ElevationCacheItem.fromCursor(cursor)
             }
         }
 
@@ -204,45 +218,69 @@ class ElevationCacheDatabaseManager private constructor(context: Context) {
 
         db.query(
             ElevationCacheDbHelper.TABLE_ELEVATION_CACHE,
-            arrayOf(ElevationCacheDbHelper.COLUMN_LAT_E5, ElevationCacheDbHelper.COLUMN_LON_E5, ElevationCacheDbHelper.COLUMN_ALTITUDE),
+            null,
             rangeQuery,
             rangeArgs,
             null, null, null
         ).use { cursor ->
             var nearestDistSq = Long.MAX_VALUE
-            var nearestAltitude: Double? = null
+            var nearestItem: ElevationCacheItem? = null
 
             while (cursor.moveToNext()) {
-                val pLat = cursor.getInt(0)
-                val pLon = cursor.getInt(1)
-                val pAlt = cursor.getDouble(2)
-
-                val dLat = (pLat - latE5).toLong()
-                val dLon = (pLon - lonE5).toLong()
+                val item = ElevationCacheItem.fromCursor(cursor)
+                val dLat = (item.latE5 - latE5).toLong()
+                val dLon = (item.lonE5 - lonE5).toLong()
                 val distSq = dLat * dLat + dLon * dLon
 
                 if (distSq < nearestDistSq) {
                     nearestDistSq = distSq
-                    nearestAltitude = pAlt
+                    nearestItem = item
                 }
             }
-            return nearestAltitude
+            return nearestItem
         }
     }
 
     /**
-     * Stores or updates an elevation point in the cache with CONFLICT_REPLACE.
+     * Looks up cached elevation for the given latitude and longitude.
+     *
+     * @param latitude Target latitude in decimal degrees.
+     * @param longitude Target longitude in decimal degrees.
+     * @param toleranceE5 Maximum quantized spatial tolerance (default: 2 ≈ ±2.2m).
+     * @return Elevation in meters, or null if no point is cached within tolerance.
+     */
+    @Synchronized
+    fun getElevation(latitude: Double, longitude: Double, toleranceE5: Int = 2): Double? {
+        return getElevationItem(latitude, longitude, toleranceE5)?.altitude
+    }
+
+    /**
+     * Stores or updates an elevation point in the cache with priority-aware conflict replacement.
+     * An existing coordinate is only replaced if the incoming source has equal or higher priority
+     * than the existing source (DEM_CACHE: 30 > ROUTE_SEED: 20 > SEGMENT_SEED: 10).
      */
     @Synchronized
     fun putElevation(
         latitude: Double,
         longitude: Double,
         altitude: Double,
-        source: String = "DEM_CACHE",
+        source: String = SOURCE_DEM_CACHE,
         updatedAt: Long = System.currentTimeMillis()
     ): Long {
         val latE5 = toE5(latitude)
         val lonE5 = toE5(longitude)
+
+        // Exact match check to enforce source priority
+        val existingItem = getElevationItem(latitude, longitude, toleranceE5 = 0)
+        if (existingItem != null) {
+            val existingPriority = getSourcePriority(existingItem.source)
+            val incomingPriority = getSourcePriority(source)
+            if (incomingPriority < existingPriority) {
+                // Incoming source has lower authority than existing: do not overwrite
+                return existingItem.id
+            }
+        }
+
         val cv = ContentValues().apply {
             put(ElevationCacheDbHelper.COLUMN_LAT_E5, latE5)
             put(ElevationCacheDbHelper.COLUMN_LON_E5, lonE5)
@@ -259,7 +297,7 @@ class ElevationCacheDatabaseManager private constructor(context: Context) {
     }
 
     /**
-     * Inserts multiple elevation records atomically in a transaction.
+     * Inserts multiple elevation records atomically in a transaction with CONFLICT_REPLACE.
      */
     @Synchronized
     fun putBatchElevations(items: List<ElevationCacheItem>): Int {
@@ -291,6 +329,8 @@ class ElevationCacheDatabaseManager private constructor(context: Context) {
     /**
      * Seeds the elevation cache from existing route trackpoints in [RoutesDatabaseManager] (REQ-SEN-025.3).
      * Strictly read-only against Routes.db; never mutates KnownLocations.db.
+     * Upgrades matching SEGMENT_SEED entries to ROUTE_SEED and inserts new points with CONFLICT_IGNORE,
+     * guaranteeing authoritative DEM_CACHE entries are never overwritten.
      */
     @Synchronized
     fun seedFromRoutes(routesDatabaseManager: RoutesDatabaseManager): Int {
@@ -320,7 +360,7 @@ class ElevationCacheDatabaseManager private constructor(context: Context) {
                             latE5 = toE5(lat),
                             lonE5 = toE5(lng),
                             altitude = elev,
-                            source = "ROUTE_SEED",
+                            source = SOURCE_ROUTE_SEED,
                             updatedAt = now
                         )
                     )
@@ -328,12 +368,55 @@ class ElevationCacheDatabaseManager private constructor(context: Context) {
             }
         }
 
-        return putBatchElevations(items)
+        if (items.isEmpty()) return 0
+        val db = database
+        var processedCount = 0
+
+        db.beginTransaction()
+        try {
+            val updateCv = ContentValues()
+            for (item in items) {
+                // Try updating existing SEGMENT_SEED to ROUTE_SEED
+                updateCv.clear()
+                updateCv.put(ElevationCacheDbHelper.COLUMN_ALTITUDE, item.altitude)
+                updateCv.put(ElevationCacheDbHelper.COLUMN_SOURCE, SOURCE_ROUTE_SEED)
+                updateCv.put(ElevationCacheDbHelper.COLUMN_UPDATED_AT, item.updatedAt)
+
+                val updatedRows = db.update(
+                    ElevationCacheDbHelper.TABLE_ELEVATION_CACHE,
+                    updateCv,
+                    "${ElevationCacheDbHelper.COLUMN_LAT_E5} = ? AND ${ElevationCacheDbHelper.COLUMN_LON_E5} = ? AND ${ElevationCacheDbHelper.COLUMN_SOURCE} = ?",
+                    arrayOf(item.latE5.toString(), item.lonE5.toString(), SOURCE_SEGMENT_SEED)
+                )
+
+                if (updatedRows == 0) {
+                    // Not an existing SEGMENT_SEED; insert with CONFLICT_IGNORE so DEM_CACHE or existing ROUTE_SEED is never overwritten
+                    val cv = ElevationCacheItem.toContentValues(item)
+                    val rowId = db.insertWithOnConflict(
+                        ElevationCacheDbHelper.TABLE_ELEVATION_CACHE,
+                        null,
+                        cv,
+                        SQLiteDatabase.CONFLICT_IGNORE
+                    )
+                    if (rowId != -1L) {
+                        processedCount++
+                    }
+                } else {
+                    processedCount++
+                }
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+        return processedCount
     }
 
     /**
      * Seeds the elevation cache from existing segment streams in [SegmentsDatabaseManager] (REQ-SEN-025.3).
      * Strictly read-only against Segments.db; never mutates KnownLocations.db.
+     * Inserts records with CONFLICT_IGNORE so existing ROUTE_SEED and authoritative DEM_CACHE entries
+     * are never overwritten.
      */
     @Synchronized
     fun seedFromSegments(segmentsDatabaseManager: SegmentsDatabaseManager? = null): Int {
@@ -364,7 +447,7 @@ class ElevationCacheDatabaseManager private constructor(context: Context) {
                             latE5 = toE5(lat),
                             lonE5 = toE5(lng),
                             altitude = elev,
-                            source = "SEGMENT_SEED",
+                            source = SOURCE_SEGMENT_SEED,
                             updatedAt = now
                         )
                     )
@@ -372,7 +455,29 @@ class ElevationCacheDatabaseManager private constructor(context: Context) {
             }
         }
 
-        return putBatchElevations(items)
+        if (items.isEmpty()) return 0
+        val db = database
+        var insertedCount = 0
+
+        db.beginTransaction()
+        try {
+            for (item in items) {
+                val cv = ElevationCacheItem.toContentValues(item)
+                val rowId = db.insertWithOnConflict(
+                    ElevationCacheDbHelper.TABLE_ELEVATION_CACHE,
+                    null,
+                    cv,
+                    SQLiteDatabase.CONFLICT_IGNORE
+                )
+                if (rowId != -1L) {
+                    insertedCount++
+                }
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+        return insertedCount
     }
 
     /**

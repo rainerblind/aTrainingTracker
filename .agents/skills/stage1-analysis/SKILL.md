@@ -17,9 +17,9 @@ At Ticket Start (`ATT-XXXX`), spawn two persistent `TypeName: "self"` subagents 
 1. **Forensic Root Cause Analysis (RCA)**:
    - For defects: Investigate stack traces, system logs, SQLite table constraints, thread concurrency, and Android framework lifecycles.
    - For features: Perform gap analysis against current architectural components.
-2. **Independent Hypothesis Verification (4-Augen-Prinzip — ATT-3534)**:
+2. **Independent Hypothesis Verification (4-Augen-Prinzip — ATT-3534, Rule 69 — ATT-5202)**:
    - When a Jira ticket already includes a detailed root-cause analysis or architectural proposal, treat it strictly as a hypothesis.
-   - Independently audit the hypothesis against the live `sprint/<SPRINT_NAME>` codebase: cross-check cited files, line ranges, and architectural assumptions to identify blind spots or potential regressions.
+   - Independently audit the hypothesis against the live `sprint/<SPRINT_NAME>` codebase: cross-check cited files, line ranges, and architectural assumptions (including visual continuity of sparse/non-contiguous chart bins and header vs. body duplication in shared layout containers — `ATT-5190`/`ATT-5281`, `ATT-5196`/`ATT-5279`) to identify blind spots or potential regressions.
    - Include an explicit **"Independent Peer Review & Verification"** subsection in the Stage 1 deliverable (`docs/engineering/analysis/<TICKET_KEY>_analysis.md`).
 3. **Chesterton's Fence Archaeology (`REQ-PRO-022`) & Side-Effect / Cross-Caller Impact Audit (`Rule 68` — `ATT-5082`)**:
    - Inspect git history (`git log -S <REQ-ID> docs/requirements.md`) before proposing modifications to existing requirements.
@@ -31,8 +31,9 @@ At Ticket Start (`ATT-XXXX`), spawn two persistent `TypeName: "self"` subagents 
    - **Mandatory Side-Effect & Cross-Caller Impact Analysis (`Rule 68` — `"There should be more emphasis on possible side-effects."`)**:
      - Trace all runtime wrappers/decorators returned by factory methods (e.g., `MySensorManager.getSensor()` returning `ProxySensor` wrapping `MyAccumulatorSensor` — `ATT-5191`).
      - When adding or modifying a repository loader or shared `StateFlow` (e.g., `loadAllClustersLightweight()`), audit **every downstream consumer** (`MapFragmentWithTrackViewModel`, `TrackingViewModel`, `ClusterOnMapSheet`, `WorkoutClustersViewModel`) to ensure companion state flows (`_clusterStats`) are hydrated and overlays do not leak into unintended screens (`ATT-5196`, `ATT-5197`).
-4. **User Scope Grounding (`ATT-1250`)**:
+4. **User Scope Grounding (`ATT-1250`) & Complexity Split Guardrail (`REQ-PRO-029`)**:
    - Explicitly delineate in-scope objectives from out-of-scope adjacent refactorings to prevent scope creep.
+   - Audit ticket complexity against the AAA 1/2/3/5+ scale (1 SP: Trivial, 2 SP: Standard, 3 SP: Complex). If forensic analysis reveals that true complexity exceeds 3 SP ($\ge 5\text{ SP}$ due to multi-screen or cross-service coupling), immediately flag the ticket for splitting before proceeding to Stage 2.
 5. **Single-Turn Stage Submission (`submit-stage`) & Concise Deliverable Cap (Rule 60)**:
    - Author `docs/engineering/analysis/<TICKET_KEY>_analysis.md` using `templates/analysis_template.md` in a **concise bullet-and-table format (target $\le 60\text{--}80$ lines)**—do not repeat the ticket description verbatim or add narrative filler.
    - Submit Stage 1 in a single composite CLI call (creates/updates `[Analysis]` sub-task and moves it to `In Überprüfung`):

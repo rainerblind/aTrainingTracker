@@ -1,13 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- ATT-4956 / REQ-UI-442: bt_bike_pwr with full-bleed badge, uppercase PWR label, shifted cyclist, and bolt mini-icon -->
+<!-- ATT-5201 / REQ-UI-442: bt_bike_pwr with full-bleed badge (#0A3D91), uppercase PWR label, centered cyclist, and canonical ic_power bolt in top-left -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="48dp"
     android:height="48dp"
     android:viewportWidth="144"
     android:viewportHeight="144">
     <path
-        android:fillColor="#07377F"
+        android:fillColor="#0A3D91"
         android:pathData="M 22.0,0.0 L 122.0,0.0 A 22.0,22.0 0 0,1 144.0,22.0 L 144.0,122.0 A 22.0,22.0 0 0,1 122.0,144.0 L 22.0,144.0 A 22.0,22.0 0 0,1 0.0,122.0 L 0.0,22.0 A 22.0,22.0 0 0,1 22.0,0.0 Z" />
+    <group
+        android:name="cyclist"
+        android:translateX="18.18">
     <path
         android:fillColor="#00000000"
         android:strokeColor="#FFFFFF"
@@ -126,9 +129,18 @@
         android:strokeWidth="1.53"
         android:strokeLineJoin="round"
         android:pathData="M 41.13,31.17 Q 38.85,30.03 37.70,32.32 Q 36.56,34.61 37.12,37.46 Q 37.70,40.33 38.85,38.61 Q 39.99,36.90 41.70,34.61 Q 43.41,32.32 41.13,31.17 Z" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M 124.0,10.0 L 110.0,24.0 L 118.0,24.0 L 114.0,38.0 L 130.0,22.0 L 122.0,22.0 Z" />
+    </group>
+    <!-- Canonical ic_power.xml bolt mini-icon in top-left quadrant -->
+    <group
+        android:name="mini_icon_pwr"
+        android:translateX="12.0"
+        android:translateY="10.0"
+        android:scaleX="0.035"
+        android:scaleY="0.035">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M280,880L440,580L120,540L600,80L680,80L520,380L840,420L360,880L280,880ZM502,633L663,479L394,445L457,328L297,482L565,515L502,633ZM480,480L480,480L480,480L480,480L480,480L480,480Z" />
+    </group>
     <path
         android:fillColor="#FFFFFF"
         android:fillType="evenOdd"

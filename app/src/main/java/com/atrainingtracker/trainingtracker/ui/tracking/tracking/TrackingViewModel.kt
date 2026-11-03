@@ -42,16 +42,11 @@ import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.settings.ZoneDisplayOptions
 import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
-import com.atrainingtracker.trainingtracker.ui.map.GeneralMapLayer
-import com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrackViewModel
-import com.atrainingtracker.trainingtracker.ui.map.MapCluster
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
 import com.atrainingtracker.trainingtracker.ui.map.MapRoute
 import com.atrainingtracker.trainingtracker.ui.map.MapTrack
 import com.atrainingtracker.trainingtracker.ui.map.MapZoomFocus
-import com.atrainingtracker.trainingtracker.ui.map.toMapCluster
 import com.atrainingtracker.trainingtracker.ui.map.toMapRoute
-import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.google.android.gms.maps.model.LatLng
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.ElevationProfileScope
@@ -117,7 +112,6 @@ data class TrackingScreenState(
     val mapSegments: List<MapSegment> = mapState.mapSegments,
     val activeLiveSegmentIds: Set<Long> = mapState.activeLiveSegmentIds,
     val mapRoutes: List<MapRoute> = mapState.mapRoutes,
-    val mapClusters: List<MapCluster> = mapState.mapClusters,
     val mapMarkers: List<LocationMarker> = mapState.mapMarkers
 )
 
@@ -133,7 +127,6 @@ class TrackingViewModel @JvmOverloads constructor(
     val liveSegmentsRepository: LiveSegmentsRepository,
     val routesRepository: RoutesRepository,
     private val viewId: Long,
-    val workoutClusterRepository: WorkoutClusterRepository = WorkoutClusterRepository.getInstance(application),
     private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default
 ) : ViewModel() {
 
@@ -376,8 +369,7 @@ class TrackingViewModel @JvmOverloads constructor(
     private data class StaticMapLayerData(
         val mapSegments: List<MapSegment>,
         val activeLiveSegmentIds: Set<Long>,
-        val mapRoutes: List<MapRoute>,
-        val mapClusters: List<MapCluster>
+        val mapRoutes: List<MapRoute>
     )
 
     private data class LiveTelemetryTuple(
@@ -386,12 +378,6 @@ class TrackingViewModel @JvmOverloads constructor(
         val userSpeed: Float,
         val userBearing: Float
     )
-
-    private fun isClusterLayerEnabled(): Boolean {
-        val saved = sharedPreferences.getStringSet(MapFragmentWithTrackViewModel.PREF_GENERAL_MAP_ENABLED_LAYERS, null)
-            ?: return GeneralMapLayer.CLUSTERS in GeneralMapLayer.DEFAULT_ENABLED
-        return GeneralMapLayer.CLUSTERS.name in saved
-    }
 
     private fun observeMapState() {
         viewModelScope.launch {
@@ -424,28 +410,15 @@ class TrackingViewModel @JvmOverloads constructor(
                 allRoutes.map { it.toMapRoute(isActiveNavigation = (it.summary.id == activeNavigatedRouteId)) }
             }.distinctUntilChanged()
 
-            val mapClustersFlow = workoutClusterRepository.allClusters
-                .map { list ->
-                    if (isClusterLayerEnabled()) {
-                        list.mapNotNull { it.toMapCluster() }
-                    } else {
-                        emptyList<MapCluster>()
-                    }
-                }
-                .flowOn(defaultDispatcher)
-                .distinctUntilChanged()
-
             val staticMapLayerFlow: Flow<StaticMapLayerData> = combine(
                 staticMapSegmentsFlow,
                 activeLiveSegmentIdsFlow,
-                mapRoutesFlow,
-                mapClustersFlow
-            ) { mapSegments: List<MapSegment>, activeIds: Set<Long>, mapRoutes: List<MapRoute>, mapClusters: List<MapCluster> ->
+                mapRoutesFlow
+            ) { mapSegments: List<MapSegment>, activeIds: Set<Long>, mapRoutes: List<MapRoute> ->
                 StaticMapLayerData(
                     mapSegments = mapSegments,
                     activeLiveSegmentIds = activeIds,
-                    mapRoutes = mapRoutes,
-                    mapClusters = mapClusters
+                    mapRoutes = mapRoutes
                 )
             }
 
@@ -494,7 +467,6 @@ class TrackingViewModel @JvmOverloads constructor(
                     mapSegments = staticLayers.mapSegments,
                     mapRoutes = staticLayers.mapRoutes,
                     activeLiveSegmentIds = staticLayers.activeLiveSegmentIds,
-                    mapClusters = staticLayers.mapClusters,
                     mapMarkers = markerList
                 )
             }.collect { newMapState ->

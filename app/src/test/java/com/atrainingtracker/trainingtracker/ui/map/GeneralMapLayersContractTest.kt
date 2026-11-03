@@ -305,31 +305,37 @@ class GeneralMapLayersContractTest {
         assertTrue("MapScreenWithTrack.kt must exist", file.exists())
         val content = file.readText()
 
-        // Peek height calibration for cluster
+        // Peek height calibration for cluster with dynamic measurement (REQ-UI-322.12, ATT-5196)
         assertTrue(
-            "Cluster peek height must use BottomSheetDesign.PeekHeightWorkout + navBarHeight",
-            content.contains("selectedClusterId != null -> BottomSheetDesign.PeekHeightWorkout + navBarHeight")
+            "Cluster peek height must use dynamic measuredClusterHeaderHeight fallback to BottomSheetDesign.PeekHeightWorkout",
+            content.contains("measuredClusterHeaderHeight ?: BottomSheetDesign.PeekHeightWorkout")
         )
 
-        // ClusterOnMapSheet composable contract
+        // ClusterOnMapSheet composable contract (REQ-UI-322.11, ATT-5196)
         val sheetDefIndex = content.indexOf("fun ClusterOnMapSheet(")
         assertTrue("ClusterOnMapSheet composable must be defined", sheetDefIndex > 0)
         val sheetContent = content.substring(sheetDefIndex)
 
-        // Must render 32dp sport icon with Color.Unspecified (preserving multi-color vector asset colors)
-        assertTrue("Sport icon must have size 32.dp", sheetContent.contains("modifier = Modifier.size(32.dp)"))
-        assertTrue("Sport icon must have tint = Color.Unspecified", sheetContent.contains("tint = Color.Unspecified"))
+        // Must wrap in MapDetailLayout with useStatusBarsPadding = false
+        assertTrue("Must use MapDetailLayout", sheetContent.contains("MapDetailLayout("))
+        assertTrue("Must specify useStatusBarsPadding = false", sheetContent.contains("useStatusBarsPadding = false"))
+        assertTrue("Must wire onHeaderHeightMeasured", sheetContent.contains("onHeaderHeightMeasured = onHeaderHeightMeasured"))
+
+        // Must reuse canonical WorkoutClusterIdentityRow and WorkoutClusterMetadataBlock in header (Design Guidelines Section 5.15)
+        assertTrue("Must use canonical WorkoutClusterIdentityRow", sheetContent.contains("WorkoutClusterIdentityRow("))
+        assertTrue("Must use canonical WorkoutClusterMetadataBlock", sheetContent.contains("WorkoutClusterMetadataBlock("))
+
+        // Must host WorkoutClusterDetailDashboard in metadataContent
+        assertTrue("Must host WorkoutClusterDetailDashboard in metadataContent", sheetContent.contains("WorkoutClusterDetailDashboard("))
 
         // Must eliminate TTColor.Cluster text and icon tinting
         assertFalse("ClusterOnMapSheet must not use TTColor.Cluster", sheetContent.contains("TTColor.Cluster"))
+    }
 
-        // Must render standard tokens
-        assertTrue("Must render PR trophy in TTColor.Gold", sheetContent.contains("tint = TTColor.Gold"))
-        assertTrue("Must render Icons.Filled.EmojiEvents for best time", sheetContent.contains("Icons.Filled.EmojiEvents"))
-        assertTrue("Must render MetricItem for distance", sheetContent.contains("R.drawable.ic_distance"))
-        assertTrue("Must render MetricItem for ascent", sheetContent.contains("R.drawable.ic_ascent"))
-        assertTrue("Must render hit count in primary", sheetContent.contains("color = MaterialTheme.colorScheme.primary"))
-        assertTrue("Must format relative recency", sheetContent.contains("WorkoutClusterStats.formatRelativeRecency"))
+    @Test
+    fun testClusterOnMapSheet_usesMapDetailLayoutAndCanonicalComponents_TST_UI_282_14() {
+        // TST-UI-282.14 contract verification
+        testClusterOnMapSheet_harmonizedLayoutAndColorTokens_TST_UI_282_5()
     }
 
     private fun findSourceFile(relativePath: String): File {

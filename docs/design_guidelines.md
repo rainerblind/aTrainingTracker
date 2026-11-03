@@ -139,6 +139,14 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
   * Historical progression charts **MUST NOT** scale their Y-axis linearly across raw un-clamped `min..max` extrema when a single anomalous session (e.g. an unpaused stop yielding `115:52 /km` when normal sessions are `5:14/km – 8:28/km`) is present.
   * Use outlier-resilient bounds (such as interquartile range $\text{IQR} = Q_3 - Q_1$ clamping to $[Q_1 - 1.5 \times \text{IQR}, Q_3 + 1.5 \times \text{IQR}]$ or 5th–95th percentile clamping when $N \ge 4$, pinning extreme outliers to the top/bottom canvas edge with an indicator) so the primary trend line utilizes the full vertical canvas height.
 
+### 2.7 Bottom-Anchored Vertical Bar Rounding & Unconditional Histogram Track Continuity (Rule 69 — ATT-5195, ATT-5190 / ATT-5202)
+* **Rounded Top Corners & Sharp Bottom Corners on Bottom-Anchored Bars (`ATT-5195` $\rightarrow$ `ATT-5280`)**:
+  * Vertical bar charts anchored to a bottom baseline (`DailyActivityStrip` in `MonthDayBar` / `WeekDayColumn`, histogram columns) **MUST** have **rounded top corners (`topStart = 2.dp..3.dp, topEnd = 2.dp..3.dp`)** and **sharp bottom corners (`bottomStart = 0.dp, bottomEnd = 0.dp`)**.
+  * Never apply `.clip(RoundedCornerShape(2.dp / 3.dp))` to all 4 corners of an outer container `Box(contentAlignment = Alignment.BottomCenter)` while giving the inner bar a smaller `1.dp` top radius, which makes the bottom of the bars look rounded and the top look sharp.
+* **Unconditional Background Track Continuity in Histograms (`ATT-5190` $\rightarrow$ `ATT-5281`)**:
+  * Marginal and zone histograms (`AlignedMarginalZoneDistribution` in `ZoneDistributionComponents.kt`) **MUST** draw the `alpha = 0.15f` background container track unconditionally for every `linearBin` across the plotted range, gating only the solid foreground bar on `if (bin.durationSec > 0L && barWidth > 0f)`.
+  * Gating the background track on `durationSec > 0L` skips empty intermediate bins between non-contiguous high-wattage spikes, leaving horizontal white stripes across the Zone 7 background band.
+
 ---
 
 ## 3. Settings & Accordion Structure
@@ -365,9 +373,11 @@ Row(
 * **Guard `.fillMaxHeight()` & Vertical `.weight(1f)` Against Unbounded Scroll Containers (`ATT-4878` $\rightarrow$ `ATT-5071`)**:
   * When adding `.fillMaxHeight()` or vertical `Modifier.weight(1f)` inside a shared composable (e.g. `SensorFieldView`) to equalize row heights inside a bounded `Row(Modifier.height(IntrinsicSize.Min))` caller (`SensorGridScreen`), audit **every call site** (`grep -rn "<ComposableName>(" app/src/main/`)—especially standalone previews embedded directly inside a `verticalScroll` `Column` or `LazyColumn` (`AthleteProfileScreen`), where max height is `Constraints.Infinity` unless `Modifier.height(IntrinsicSize.Min)` is preserved on an enclosing container. Verify every call site on-device during Stage 5.
 
-### 5.15 Map Entity Bottom-Sheet Peek Parity & Micro-Typography Line-Height Bounding (Rule 68 — ATT-5075, ATT-5076 / ATT-5082)
-* **Reuse List-Item Header Composables & `MapDetailLayout` in Map Peek Sheets (`ATT-5075` $\rightarrow$ `ATT-5196`)**:
-  * Map bottom sheets for domain entities (`Segments`, `Routes`, `Lieblingsstrecken`) in `MapScreenWithTrack.kt` **MUST** reuse the entity's canonical list-item header/metadata composables (`SegmentHeader`/`SegmentDetails`, `RouteHeader`/`RouteDetails`, `WorkoutClusterIdentityRow`/`WorkoutClusterMetadataBlock`) hosted inside `MapDetailLayout(useStatusBarsPadding = false, onHeaderHeightMeasured = ...)` so the top drag-handle bar (`MinimumDragHandle()`), dynamic peek-height measurement, and full expandable detail view work identically across all map layers. Never write a standalone un-draggable `Column` with a subset of fields.
+### 5.15 Map Entity Bottom-Sheet Peek & Expansion Parity & Micro-Typography Line-Height Bounding (Rules 68 & 69 — ATT-5075, ATT-5076, ATT-5196 / ATT-5082, ATT-5202)
+* **Reuse List-Item Header Composables & `MapDetailLayout` Without Duplicate Metadata (`ATT-5075` $\rightarrow$ `ATT-5196` $\rightarrow$ `ATT-5279`)**:
+  * Map bottom sheets for domain entities (`Segments`, `Routes`, `Lieblingsstrecken`) in `MapScreenWithTrack.kt` **MUST** reuse the entity's canonical list-item header/metadata composables (`SegmentHeader`/`SegmentDetails`, `RouteHeader`/`RouteDetails`, `WorkoutClusterIdentityRow`/`WorkoutClusterMetadataBlock`) inside `MapDetailLayout(useStatusBarsPadding = false, showMap = true, onHeaderHeightMeasured = ...)`:
+    1. When **peeked** (collapsed), only the `header` slot is visible above the main map.
+    2. When **expanded** (popped up), the lower section displays the detailed sub-entity map (`showMap = true`, matching `RouteOnMapScreen` and `SegmentOnMapScreen`), and lower content slots (`metadataContent`) **MUST NEVER** repeat or duplicate statistics already rendered in the `header` (`ATT-5279`).
 * **Explicit `lineHeight` on Micro-Typography (`<= 10.sp`) Inside Compact Fixed-Height Boxes (`ATT-5076` $\rightarrow$ `ATT-5193`)**:
   * When rendering small labels (`fontSize = 9.sp` or `10.sp`, such as day-of-week labels `M`, `W`, `F`, `S` in `YearlyContributionGrid`) inside a compact fixed-height `Box(Modifier.height(11.dp))`, always set an explicit `lineHeight = fontSize` and `PlatformTextStyle(includeFontPadding = false)` on the `TextStyle`. Inheriting `labelSmall`'s default `lineHeight = 16.sp` inside an `11.dp` box clips the bottom 1–2 px of tall glyphs like `F`.
 

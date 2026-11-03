@@ -338,6 +338,7 @@ class PeriodsViewModel @JvmOverloads constructor(
         }
 
         val filteredContributions = summary.yearlySportContributions.filterKeys { it in sports }
+        val filteredDailyContributions = summary.dailySportContributions.filterKeys { it in sports }
 
         return summary.copy(
             totalWorkouts = totalWorkouts,
@@ -350,7 +351,8 @@ class PeriodsViewModel @JvmOverloads constructor(
             workoutIdToPathMap = filteredPathMap,
             workoutIdToSportMap = filteredSportMap,
             extremaMarkers = filteredMarkers,
-            yearlySportContributions = filteredContributions
+            yearlySportContributions = filteredContributions,
+            dailySportContributions = filteredDailyContributions
         )
     }
 

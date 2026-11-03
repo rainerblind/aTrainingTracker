@@ -1992,13 +1992,13 @@ Specifically:
 
 **Invariants**: WCAG 2.1 AAA text contrast compliance; non-cockpit theme isolation; active zone color visibility.
 
-### REQ-UI-172: Configurable Zone Visualization Options and Theme-Aware Live Preview [`TST-UI-124`]
-- **Tests**: `SettingsDataStore.kt`, `SettingsDataStoreJavaHelper.kt`, `ZonesSettingsActivity.kt`, `SensorFieldState.kt`, `SensorFieldView.kt`, `TrackingViewModel.kt`
-- **Implementation**: Provide granular user configurability for zone visual cues (light background, left bar, right bar, text color) per zone profile in ZonesSettingsActivity with a theme-aware live preview tile, enabling pure black AMOLED tiles or high-contrast side/text cues during tracking.
-- **Rationale**: The system SHALL provide configurable zone visualization options per athletic zone profile (`HR_RUN`, `HR_BIKE`, and `PWR_BIKE`) within `ZonesSettingsActivity` and reflect the chosen visual cues dynamically across workout cockpit sensor tiles (ATT-1265):
+### REQ-UI-172: Configurable Zone Visualization Options and Theme-Aware Live Preview [Verified]
+- **Tests**: `TST-UI-124`, `ZoneDisplayLocalizationTest.kt` | **Tickets**: `ATT-1265`, `ATT-5200`
+- **Implementation**: Provide granular user configurability for zone visual cues (tinted background, left bar, right bar, text color) per zone profile in ZonesSettingsActivity with a theme-aware live preview tile, enabling pure black AMOLED tiles or high-contrast side/text cues during tracking.
+- **Rationale**: The system SHALL provide configurable zone visualization options per athletic zone profile (`HR_RUN`, `HR_BIKE`, and `PWR_BIKE`) within `ZonesSettingsActivity` and reflect the chosen visual cues dynamically across workout cockpit sensor tiles (ATT-1265). ATT-5200 updates string resource `zone_display_background` across all 9 application locales to "Tinted background" (*Eingefärbter Hintergrund*) to resolve user confusion with Dark/AMOLED themes:
 1. *Per-Profile Visualization Options (`ZoneDisplayOptions`)*:
 • The system SHALL define four independent, multi-selectable visual presentation cues for each `ZoneType`:
-- *Light background* (`showBackground`: Boolean): Renders the card container with tinted zone color at 12% opacity (`zoneColor.copy(alpha = 0.12f)`). When disabled, the card container remains neutral `MaterialTheme.colorScheme.surface` (pure `#000000` in AMOLED dark mode).
+- *Tinted background* (`showBackground`: Boolean, localized via `R.string.zone_display_background`): Renders the card container with tinted zone color at 12% opacity (`zoneColor.copy(alpha = 0.12f)`). When disabled, the card container remains neutral `MaterialTheme.colorScheme.surface` (pure `#000000` in AMOLED dark mode). Across all 9 locales, the string resource SHALL convey active zone color tinting rather than daylight theme ("Tinted background" / "Eingefärbter Hintergrund").
 - *Left bar* (`showLeftBar`: Boolean): Renders a 6dp vertical indicator strip on the left edge of the tile colored with the active `zoneColor`.
 - *Right bar* (`showRightBar`: Boolean): Renders a 6dp vertical indicator strip on the right edge of the tile colored with the active `zoneColor`.
 - *Text color* (`showTextColor`: Boolean): Renders the primary numeric metric reading (`fieldState.value`) using the active `zoneColor`. When disabled, the reading renders in standard `MaterialTheme.colorScheme.onSurface`.
@@ -2019,16 +2019,25 @@ Specifically:
 • Zero disk I/O on 1Hz sensor tick updates (options resolved in-memory on `SensorFieldState`).
 • 100% localization parity maintained across all 9 supported locales.
 
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-UI-172` (*Configurable Zone Visualization Options and Theme-Aware Live Preview*, `ATT-1265`). Targets `app/src/main/res/values*/strings.xml`, `ZoneDisplayLocalizationTest.kt`, and `docs/requirements/req_ui_design_system.md`.
+2. *Historical Origin & Commit Trace*: `ATT-1265` (commit `a48c8a38`, Sprint 2026-40.5) established `ZoneDisplayOptions` and string resource `zone_display_background = "Light background"` / `"Heller Hintergrund"`.
+3. *Root Reason for Existing Formulation*: "Light background" originally denoted "lightly tinted/colored" (12% alpha tint), but caused semantic ambiguity in Dark/AMOLED modes where athletes interpreted it as forcing a light/daylight surface.
+4. *Preservation of Core Invariants*: String identifier `R.string.zone_display_background`, backing property `showBackground: Boolean`, default value `true`, DataStore persistence schema, and 9-language translation parity are 100% preserved.
+
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete in `ZonesSettingsActivity` on the Run HR tab,
 • *When* viewing the \"Zonendarstellung\" section,
-• *Then* four toggle controls (Light background, Left bar, Right bar, Text color) and a live preview tile SHALL be rendered below the zone threshold cards.
-• *When* the athlete toggles \"Right bar\" ON and \"Light background\" OFF,
+• *Then* four toggle controls (Tinted background, Left bar, Right bar, Text color) and a live preview tile SHALL be rendered below the zone threshold cards.
+• *Given* an athlete viewing the "Zonendarstellung" section in any supported language,
+• *When* inspecting the first toggle,
+• *Then* it SHALL display "Tinted background" (EN), "Eingefärbter Hintergrund" (DE), "Fondo tintado" (ES), "Arrière-plan teinté" (FR), "Sfondo tinto" (IT), "色付き背景" (JA), "Getinte achtergrond" (NL), "Zabarwione tło" (PL), or "Fundo matizado" (PT).
+• *When* the athlete toggles \"Right bar\" ON and \"Tinted background\" OFF,
 • *Then* the live preview tile SHALL immediately update to show a right vertical strip on neutral surface with no background tint, and the preferences SHALL be persisted to DataStore.
 • *Given* the host device is in AMOLED Dark Mode,
 • *When* viewing the live preview tile in `ZonesSettingsActivity`,
 • *Then* the preview tile card background SHALL render in pure black (`#000000`) when background tint is toggled OFF.
-• *Given* an active workout with Run HR zone configured with \"Text color\" ON and \"Light background\" OFF,
+• *Given* an active workout with Run HR zone configured with \"Text color\" ON and \"Tinted background\" OFF,
 • *When* the heart rate enters Zone 4 (Threshold),
 • *Then* the heart rate metric value SHALL render in red (`#FF0000`) on a neutral dark surface with no background tint.
 • *Given* all four zone visualization toggles are switched OFF,
@@ -8000,8 +8009,8 @@ c. Span distance consistency: $
 
 ### REQ-UI-322: General Map Layer Visibility Controls & Dynamic Decluttering Menu [`TST-UI-282`] [Verified]
 - **Tests**: `MapScreenWithTrack.kt`, `MapFragmentWithTrackViewModel.kt`, `GeneralMapLayer.kt`, `TrackingViewModel.kt`, `SensorGridScreen.kt`
-- **Implementation**: Dynamic visibility controls for general map spatial layers via floating Layers button and dropdown menu, conditional ATrainingTrackerMap layer composition, preference persistence, and Cockpit tracking map integration.
-- **Rationale**: The system SHALL provide dynamic visibility controls for general map spatial layers via a floating Layers button and Material 3 dropdown menu in `MapScreenWithTrack.kt`, conditional layer composition in `ATrainingTrackerMap`, preference persistence in `MapFragmentWithTrackViewModel`, and Lieblingsstrecken rendering on the Cockpit map in `SensorGridScreen.kt` (ATT-2931, ATT-4847, amending and complementing `REQ-UI-180`, `REQ-UI-308`, and `REQ-MAP-051`):
+- **Implementation**: Dynamic visibility controls for general map spatial layers via floating Layers button and dropdown menu, conditional ATrainingTrackerMap layer composition, preference persistence, Cockpit tracking map cluster isolation, and expandable Lieblingsstrecken bottom sheet with stats hydration.
+- **Rationale**: The system SHALL provide dynamic visibility controls for general map spatial layers via a floating Layers button and Material 3 dropdown menu in `MapScreenWithTrack.kt`, conditional layer composition in `ATrainingTrackerMap`, preference persistence in `MapFragmentWithTrackViewModel`, strict isolation of favorite route clusters (Lieblingsstrecken) from the Cockpit map in `SensorGridScreen.kt`, and full expandable detail sheet with companion stats hydration on the general map (ATT-2931, ATT-4847, ATT-5197, ATT-5196, amending and complementing `REQ-UI-180`, `REQ-UI-308`, and `REQ-MAP-051`):
 1. *Layer Model (`GeneralMapLayer`)*:
 • The system SHALL define `enum class GeneralMapLayer` in `com.atrainingtracker.trainingtracker.ui.map` declaring five layer types: `ROUTES`, `SEGMENTS`, `KNOWN_LOCATIONS`, `TRACK`, and `CLUSTERS`.
 • `GeneralMapLayer` SHALL define `DEFAULT_ENABLED = setOf(ROUTES, SEGMENTS, KNOWN_LOCATIONS, TRACK)`, excluding `CLUSTERS` so favorite route clusters are hidden by default.
@@ -8020,36 +8029,46 @@ c. Span distance consistency: $
 • The button SHALL contain an `Icon` with `Icons.Default.Layers` (`size = 22.dp`), whose tint dynamically resolves to `MaterialTheme.colorScheme.primary` when any layer is disabled (`enabledLayers.size < GeneralMapLayer.entries.size`) or `MaterialTheme.colorScheme.onSurface` when all layers are enabled.
 • Clicking the button SHALL open a Material 3 `DropdownMenu` styled consistently with `TrackOnMapScreen.kt` and `RouteOnMapScreen.kt`.
 • The dropdown menu SHALL render five `DropdownMenuItem` entries with checkbox, color legend swatch (`12.dp`, `RoundedCornerShape(2.dp)`: Routes = `TTColor.RouteSelected`, Segments = `TTColor.StravaOrange`, Locations = `MaterialTheme.colorScheme.tertiary`, Track = `TrackType.BEST.color`, Clusters = `TTColor.Cluster`), and localized text label.
-4. *Conditional Map Canvas Layer Composition & Harmonized Cluster Bottom Sheet*:
+4. *Conditional Map Canvas Layer Composition & Harmonized Expandable Cluster Bottom Sheet*:
 • In `ATrainingTrackerMap`'s content scope: `knownLocations()`, `segments()`, `routes()`, `clusters()`, and `markers()` + `liveTrack()` SHALL only be composed when their corresponding `GeneralMapLayer` is present in `enabledLayers`.
-• Tapping a cluster path SHALL open `ClusterOnMapSheet` styled consistently with `WorkoutClusterComponents.kt` list items, displaying 3 structured rows:
-  - Row 1 (Identity): 32.dp sport icon (`Color.Unspecified`, preserving multi-color vector assets), cluster title (`titleMedium`, `onSurface`), and sport subtitle (`bodySmall`, `onSurfaceVariant`).
-  - Row 2 (Metrics): Distance (`bodyMedium`, `onSurfaceVariant`), average elevation gain (when $> 0\text{m}$, `bodyMedium`, `onSurfaceVariant`), and PR / best time (when present, `Icons.Filled.EmojiEvents` in `TTColor.Gold` trophy, `bodySmall`, `onSurface`).
-  - Row 3 (Summary): Recording count in `primary` (bold `bodyMedium`), bullet separator, and localized relative recency text (`WorkoutClusterStats.formatRelativeRecency(context, timestampS)`, `bodySmall`, `onSurfaceVariant`).
+• Tapping a cluster path SHALL open `ClusterOnMapSheet` using `MapDetailLayout(useStatusBarsPadding = false, onHeaderHeightMeasured = { measuredClusterHeaderHeight = it })`, hosting `MinimumDragHandle()` at the top (Section 5.15, Rule 68).
+• The peek header of `ClusterOnMapSheet` SHALL reuse `WorkoutClusterIdentityRow` and `WorkoutClusterMetadataBlock` from `WorkoutClusterComponents.kt`, matching the Lieblingsstrecken list items 1:1 with start location, sport subtitle, gear, distance, elevation, PR, hit count, and relative recency.
+• When dragged upward into the expanded state, `ClusterOnMapSheet` SHALL display the full cluster detail and workout heatmap view instead of blank white space.
 • `ClusterOnMapSheet` SHALL NOT tint text or sport/distance icons with `TTColor.Cluster` (purple/lila); all popup typography and metric icons SHALL resolve via standard Material 3 color tokens (`onSurface`, `onSurfaceVariant`, `primary`) and `TTColor.Gold` for PR trophy.
 • The cluster path polyline stroke color rendered on `ATrainingTrackerMap` canvas SHALL strictly remain `TTColor.Cluster` with zIndex `12f`.
-• Sheet peek height for `selectedClusterId != null` SHALL use `BottomSheetDesign.PeekHeightWorkout + navBarHeight` (~140dp) to prevent vertical clipping.
-5. *Cockpit Live Tracking Map Integration & Fast Asynchronous Loading (`TrackingViewModel.kt`, `SensorGridScreen.kt`, `WorkoutClusterRepository.kt`)*:
-• `TrackingMapState` SHALL expose `val mapClusters: List<MapCluster> = emptyList()`.
-• `TrackingViewModel` SHALL evaluate enabled map layers (reading `PREF_GENERAL_MAP_ENABLED_LAYERS` and defaulting to `GeneralMapLayer.DEFAULT_ENABLED`), strictly gating cluster polyline emissions so that when `CLUSTERS !in enabledLayers`, `mapClusters` emits `emptyList()`.
-• `WorkoutClusterRepository` SHALL provide a fast, non-blocking asynchronous loading pathway from the SQLite `RouteClusters` table on `Dispatchers.IO` to seed `_allClusters` without blocking on heavy `WorkoutSummaries` aggregation (`clusterStats`) or member workout hydration.
-• Decoding of representative cluster polylines (`PolyUtil.decode`) SHALL execute off the Main/UI thread (on `Dispatchers.Default`) with coordinate memoization per `REQ-MAP-051.2`.
-• `TrackingMapContainer` in `SensorGridScreen.kt` SHALL render `clusters(mapState.mapClusters)` on `ATrainingTrackerMap`.
+• Sheet peek height for `selectedClusterId != null` in `MapScreenWithTrack.kt` SHALL dynamically adapt based on `measuredClusterHeaderHeight` (with `navigationBarHeight` / `BottomSheetDesign.PeekHeightWorkout` fallback) to sit flush above navigation bars.
+5. *Cockpit Live Tracking Map Cluster Isolation & Companion Stats Hydration (`TrackingViewModel.kt`, `SensorGridScreen.kt`, `WorkoutClusterRepository.kt`)*:
+• Historical discovery overlays (Lieblingsstrecken / `CLUSTERS`) belong strictly to the general map and SHALL NEVER be computed or displayed on the live tracking cockpit map (`SensorGridScreen.kt`, Rule 68).
+• `SensorGridScreen.kt` (`TrackingMapContainer`) SHALL NOT compose `clusters()` on `ATrainingTrackerMap`.
+• `TrackingViewModel` SHALL NOT subscribe to `WorkoutClusterRepository` or observe cluster layer state, eliminating unnecessary background collection and polyline decoding overhead during live tracking.
+• `WorkoutClusterRepository` SHALL provide a fast, non-blocking asynchronous loading pathway (`loadAllClustersLightweight()`) from the SQLite `RouteClusters` table on `Dispatchers.IO` for the general map (`MapFragmentWithTrackViewModel`); if `_clusterStats.value.isEmpty()`, it SHALL also populate `_clusterStats.value = summariesManager.getWorkoutClusterStatsForAllClusters()` so opening the Map first immediately renders full metadata (Section 5.8, Rule 68).
 6. *100% 9-Language Localization Parity*:
 • String resources `map_layers`, `map_layer_routes`, `map_layer_segments`, `map_layer_locations`, `map_layer_track`, and `map_layer_clusters` SHALL be externalized and translated across all 9 supported application locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).
 7. *Preservation of System Invariants*:
 • Entity selection bottom sheets, background GPS tracking, start marker detection, and 100% test pass rate MUST be strictly preserved.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement (`REQ-UI-322`), amending and complementing `REQ-UI-180` (*Display Favorite Locations on Central Navigation Map*) and `REQ-UI-308` (*Route Map Overlay Layer Visibility Controls*). Amended under `ATT-4847` to include `CLUSTERS` layer and Cockpit live tracking map integration. Refined under `ATT-5075` (Sprint 2026-45.1) to harmonize `ClusterOnMapSheet` popup look and information density with `WorkoutClusterComponents` list items, enrich `MapCluster` with `WorkoutClusterStats`, and eliminate purple text tinting. Refined under `ATT-5074` (Sprint 2026-45.1) to disable `GeneralMapLayer.CLUSTERS` by default (`DEFAULT_ENABLED`), gate ViewModel polyline decoding, offload decoding to `Dispatchers.Default`, and decouple map cluster loading from heavy analytical aggregation in `WorkoutClusterRepository`.
-2. *Historical Origin & Commit Trace*: Ticket `ATT-1449` (Sprint 2026-40.4), Ticket `ATT-2763` (Sprint 2026-41.4), Ticket `ATT-4847` (Sprint 2026-44.2), Ticket `ATT-5075` (Sprint 2026-45.1), and Ticket `ATT-5074` (Sprint 2026-45.1).
-3. *Root Reason for Existing Formulation*: Spatial layers were previously composed unconditionally on the general map. As routes, segments, and favorite locations accumulated, the map canvas suffered from severe visual crowding. In ATT-2931, `entries.toSet()` enabled all 4 original primary layers. In ATT-4847, `CLUSTERS` was added as the 5th layer without defining an explicit default set, inadvertently enabling it on all maps. Furthermore, polyline retrieval was coupled to heavy `clusterStats` aggregation queries and decoded on the main dispatcher, causing substantial map loading latency.
-4. *Preservation of Core Invariants*: Primary layers (`ROUTES`, `SEGMENTS`, `KNOWN_LOCATIONS`, `TRACK`) remain default-enabled; existing custom user preferences in `SharedPreferences` are preserved; stroke colors (`TTColor.Cluster`) and z-indexes (`12f`) remain intact; zero 1-Hz allocations.
+1. *Original Requirement ID & Target*: Net-new requirement (`REQ-UI-322`), amending and complementing `REQ-UI-180` (*Display Favorite Locations on Central Navigation Map*) and `REQ-UI-308` (*Route Map Overlay Layer Visibility Controls*). Amended under `ATT-4847` to include `CLUSTERS` layer and Cockpit live tracking map integration. Refined under `ATT-5075` (Sprint 2026-45.1) to harmonize `ClusterOnMapSheet` popup look and information density with `WorkoutClusterComponents` list items, enrich `MapCluster` with `WorkoutClusterStats`, and eliminate purple text tinting. Refined under `ATT-5074` (Sprint 2026-45.1) to disable `GeneralMapLayer.CLUSTERS` by default (`DEFAULT_ENABLED`), gate ViewModel polyline decoding, offload decoding to `Dispatchers.Default`, and decouple map cluster loading from heavy analytical aggregation in `WorkoutClusterRepository`. Amended under `ATT-5197` (Sprint 2026-45.2) to excise clusters completely from the live tracking cockpit map (`SensorGridScreen.kt` and `TrackingViewModel.kt`). Amended under `ATT-5196` (Sprint 2026-45.2) to mandate `MapDetailLayout` with `MinimumDragHandle()`, dynamic peek height, list component reuse (`WorkoutClusterIdentityRow`/`WorkoutClusterMetadataBlock`), and companion `_clusterStats` hydration in `loadAllClustersLightweight()`.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-1449` (Sprint 2026-40.4), Ticket `ATT-2763` (Sprint 2026-41.4), Ticket `ATT-4847` (Sprint 2026-44.2), Ticket `ATT-5075` (Sprint 2026-45.1), Ticket `ATT-5074` (Sprint 2026-45.1), Ticket `ATT-5197` (Sprint 2026-45.2), and Ticket `ATT-5196` (Sprint 2026-45.2).
+3. *Root Reason for Existing Formulation*: In ATT-5074, fast cluster loading decoupled `_allClusters` from heavy stats aggregation to prevent UI thread stalls, but omitted populating `_clusterStats`, leaving stats `null` when opening the map first. In ATT-5075, `ClusterOnMapSheet` was drafted as a static un-draggable Column with a fixed peek height and white space when dragged up. To achieve architectural parity across map layers (Section 5.15, Section 5.8, Rule 68), `ClusterOnMapSheet` must reuse canonical list items inside `MapDetailLayout` and `loadAllClustersLightweight()` must hydrate companion stats if empty.
+4. *Preservation of Core Invariants*: Fast lightweight loading on `Dispatchers.IO` is preserved; polyline decoding remains on `Dispatchers.Default`; Material 3 color tokens and non-purple styling are strictly maintained; live tracking map remains isolated from clusters.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* a fresh install or unconfigured map layer preferences,
-• *When* viewing `MapScreenWithTrack` or the Cockpit live tracking map,
+• *When* viewing `MapScreenWithTrack`,
 • *Then* `GeneralMapLayer.CLUSTERS` SHALL be disabled by default (`GeneralMapLayer.DEFAULT_ENABLED`), and favorite route cluster polylines SHALL NOT be displayed on the map canvas until explicitly toggled on by the user.
+• *Given* the user opens the map on cold start without visiting the Lieblingsstrecken list screen,
+• *When* `GeneralMapLayer.CLUSTERS` is enabled,
+• *Then* `WorkoutClusterRepository.loadAllClustersLightweight()` hydrates `_clusterStats` if empty, and favorite route clusters immediately display best time, ascent, and recency without requiring a visit to the cluster list.
+• *Given* the athlete viewing `MapScreenWithTrack`,
+• *When* tapping a favorite route cluster polyline,
+• *Then* `ClusterOnMapSheet` is displayed hosted inside `MapDetailLayout(useStatusBarsPadding = false)`, rendering `MinimumDragHandle()` at the top.
+• *And* the peek header reuses `WorkoutClusterIdentityRow` and `WorkoutClusterMetadataBlock` matching the Lieblingsstrecken list items 1:1,
+• *And* dragging the sheet upward expands to display the full cluster detail and heatmap view instead of blank space,
+• *And* peek height dynamically adapts to `measuredClusterHeaderHeight` sitting flush above navigation bars.
+• *Given* the athlete in a live tracking session viewing `SensorGridScreen.kt`,
+• *When* observing the embedded cockpit map (even when `GeneralMapLayer.CLUSTERS` is enabled on the general map),
+• *Then* favorite route clusters (Lieblingsstrecken) SHALL NEVER be displayed on the cockpit map, and `TrackingViewModel` SHALL NOT collect `WorkoutClusterRepository.allClusters`.
 • *Given* the athlete viewing `MapScreenWithTrack`,
 • *When* inspecting the top map overlay,
 • *Then* a floating layers button (`Icons.Default.Layers`) is visible at `Alignment.TopEnd` with `statusBarsPadding().padding(top = 16.dp, end = 16.dp)`.
@@ -11898,7 +11917,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • In `TelemetryHistogramChart.kt`, when `isSystemInDarkTheme()` is active (or in dark mode) and a bin has color `TTColor.Zone7` (Pure Black) or `TTColor.Zone6` (Brown), the canvas drawing routine SHALL draw an outline stroke (1.dp, `color = MaterialTheme.colorScheme.outlineVariant`) around the bar so pure black bars remain clearly discernible against dark card surfaces.
 • In `TelemetryHistogramChart.kt`, the selected bin header readout label text SHALL NOT render pure black text on dark surfaces: if `isDark && (selectedBin.color == TTColor.Zone7
 
-### REQ-UI-421: Electronic bicycle bell in Cockpit with button, zero-look double-tap gesture, and progressive loudness escalation [`TST-UI-384`, `TST-UI-390`]
+### REQ-UI-421: Electronic bicycle bell in Cockpit with button, zero-look double-tap gesture, and progressive loudness escalation [Verified]
 - **Tests**: `TrackingViewsDbHelper.java`, `DatabaseSchemaRegistry.kt`, `TrackingViewsRepository.kt`, `TrackingViewModel.kt`, `TrackingTabsViewModel.kt`, `TrackingTabsScreen.kt`, `SensorGridScreen.kt`, `BikeBellButton.kt`, `BikeBellAudioSynthesizer.kt`, `strings.xml` (all 9 locales)
 - **Implementation**: Provide cyclists with an authentic, polite, yet assertive electronic bike bell accessible instantly without taking eyes or hands off the handlebars, with zero-latency in-memory acoustic synthesis and clean Cockpit overlay integration.
 - **Rationale**: The system SHALL provide an integrated electronic bicycle bell in the Cockpit experience with button and gesture triggers, realistic acoustic brass synthesis, progressive volume escalation, per-tab persistence, audible media stream playback, static AudioTrack replay reliability, and availability across `READY`, `TRACKING`, and `PAUSED` modes (ATT-4281, amended by ATT-4371 and ATT-4431, extending `REQ-UI-344`, `REQ-UI-409`, `REQ-UI-295`, and enforcing Governance Rules 53 and 58):
@@ -11928,14 +11947,18 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • Acoustic emission SHALL be generated via pure Kotlin in-memory 16-bit PCM mono digital synthesis at $44.1\text{ kHz}$ in `BikeBellAudioSynthesizer.kt` using `AudioTrack` configured with `AudioTrack.MODE_STATIC` for zero-latency instant playback.
 • Waveform synthesis SHALL combine brass resonant modes: fundamental $f_1 = 2400\text{ Hz}$ ($\tau_1 \approx 0.35\text{ s}$), $f_2 = 3840\text{ Hz}$ ($\tau_2 \approx 0.18\text{ s}$), $f_3 = 5280\text{ Hz}$ ($\tau_3 \approx 0.09\text{ s}$), and high strike shimmer $f_4 = 7600\text{ Hz}$ ($\tau_4 \approx 0.04\text{ s}$) with rapid transient attack and exponential decay.
 • Double strike tone (*"Ding-Ding!"*) SHALL emit strike 1 at $t=0\text{ ms}$ and strike 2 at $t=110\text{ ms}$ ($f_1' = 2460\text{ Hz}$) over $\sim 600\text{ ms}$ duration.
-• Audio attributes SHALL specify `AudioAttributes.USAGE_MEDIA` and `AudioAttributes.CONTENT_TYPE_SONIFICATION` (or `CONTENT_TYPE_MUSIC`) without requesting exclusive audio focus ducking, guaranteeing that bell audio plays loudly and clearly even when device ringer is set to Silent or Vibrate mode while coexisting with turn-by-turn navigation spoken prompts and music playback.
+• Audio attributes SHALL specify `AudioAttributes.USAGE_ALARM` and `AudioAttributes.CONTENT_TYPE_SONIFICATION` (with `android.permission.MODIFY_AUDIO_SETTINGS` declared in `AndroidManifest.xml`), guaranteeing that bell audio plays loudly and clearly even when device ringer is set to Silent or Vibrate mode while coexisting with turn-by-turn navigation spoken prompts and music playback.
+• In `BikeBellAudioSynthesizer.kt`, output routing SHALL be explicitly bound to `AudioDeviceInfo.TYPE_BUILTIN_SPEAKER` via `track.setPreferredDevice(speaker)` upon creation and prior to `ring()` and `startRoll()` so bell audio plays from the external speaker and never into connected headphones.
+• Before playing `ring()` or `startRoll()`, `BikeBellAudioSynthesizer` SHALL capture `savedAlarmVolume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)` (if unboosted), boost `AudioManager.STREAM_ALARM` to `getStreamMaxVolume(AudioManager.STREAM_ALARM)` with `flags = 0`, and schedule auto-restore (+650 ms after `ring()`, +150 ms after `stopRoll()`).
 • In `BikeBellAudioSynthesizer.kt`, `ring()`, `startRoll()`, and `stopRoll()` SHALL invoke `track.stop()` prior to `track.playbackHeadPosition = 0` on static `AudioTrack`, preventing `ERROR_INVALID_OPERATION` (-38) and ensuring deterministic repeat playback.
 • In `BikeBellAudioSynthesizer.kt`, `startRoll()` SHALL invoke `track.setLoopPoints(0, rollPcm.size / 2, -1)` so that continuous striker roll audio loops seamlessly and indefinitely while held, and `stopRoll()` SHALL cleanly stop playback and reset playback head position to 0.
 • `BikeBellAudioSynthesizer` SHALL implement `AutoCloseable`, synchronize all native `AudioTrack` operations (`synchronized(lock)`), and be scoped to `TrackingTabsViewModel.onCleared()` for clean resource teardown without leaks or native crashes.
 5. *Progressive Loudness Escalation (`REQ-UI-421.5`)*:
-• The initial bell ring after $> 5\text{ seconds}$ of silence SHALL sound at polite outdoor volume (~70% amplitude, 0.70f).
-• Any repeated ring within $\le 5\text{ seconds}$ of the previous ring or any long-press gesture SHALL automatically escalate to 100% maximum volume (1.0f).
-• The escalation timestamp (`lastRingTimestampMs`) SHALL be retained in `TrackingTabsViewModel` across configuration changes and tab switches, resetting to polite volume after 5 seconds of silence.
+• In `TrackingTabsViewModel.triggerBellRing()`, volume SHALL escalate across 3 stages within a 5,000 ms repeat window:
+  - 1st Tap (Polite Distance Ring, -9.1 dB): volume = `0.35f`
+  - 2nd Tap within $\le 5\text{ s}$ (Firm Warning Ring, -3.7 dB): volume = `0.65f`
+  - 3rd+ Tap within $\le 5\text{ s}$ or Long-Press Roll (Maximum Hardware Output, 0 dB): volume = `1.00f`
+• The escalation stage and timestamp (`lastRingTimestampMs`) SHALL be retained in `TrackingTabsViewModel` across configuration changes and tab switches, resetting back to Stage 1 (`0.35f`) after $> 5\text{ seconds}$ of silence.
 6. *100% 9-Language Localization Parity (`REQ-UI-421.6`)*:
 • String resources `config_tracking__showBikeBell` and `config_tracking__showBikeBell_subtitle` SHALL be defined across all 9 canonical locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) with zero missing keys and literal `\n` linebreaks.
 7. *Preservation of System Invariants (`REQ-UI-421.7`)*:
@@ -11943,10 +11966,10 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • 100% clean-room test suite pass rate.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-421`, amended by `ATT-4371` and `ATT-4431`, extending `REQ-UI-344` (default tracking views matrix), `REQ-UI-409` (4-tab cycling architecture), `REQ-UI-295` (action button configuration suppression), and enforcing Governance Rules 53 and 58 (`docs/design_guidelines.md` §5.12). Targets `TrackingViewsDbHelper.java`, `DatabaseSchemaRegistry.kt`, `TrackingViewsRepository.kt`, `TrackingViewModel.kt`, `TrackingTabsViewModel.kt`, `TrackingTabsScreen.kt`, `SensorGridScreen.kt`, `BikeBellButton.kt`, `BikeBellAudioSynthesizer.kt`, and `strings.xml` (all 9 locales).
-2. *Historical Origin & Commit Trace*: Sprint 2026-43.1 (`ATT-4281` commit `40af18141387`) introduced bike bell with `detectTapGestures` nested on `ElevatedButton`. Sprint 2026-43.2 (`ATT-4371` commit `bac64ff9`) removed `detectTapGestures` to eliminate single-tap click contention, which inadvertently orphaned `onContinuousRingStart()` and `onContinuousRingStop()`. Sprint 2026-43.2 Joint Review filed `ATT-4431` to restore press-and-hold continuous ring without breaking single tap.
-3. *Root Reason for Existing Formulation*: In `ATT-4371`, `detectTapGestures` was excised because Compose clickable and pointerInput competed for down/up events, swallowing clicks. The developer did not implement `MutableInteractionSource` press monitoring, leaving long-press unhandled and `rollTrack` unlooped in `BikeBellAudioSynthesizer`.
-4. *Preservation of Core Invariants*: `LapButton` remains strictly gated to `TRACKING`; `ScreenMode.CONFIGURATION` button suppression is preserved (REQ-UI-295); `USAGE_MEDIA` provides audible clarity on silent/vibrate phones without audio focus ducking; `track.stop()` ensures static replay reliability; Rules 53 and 58 compliance (zero pointer contention on `ElevatedButton`); tap in `onClick` eliminates gesture contention; short taps trigger polite chime and one-shot shake; long press triggers indefinite loop with continuous shake; release cleanly stops audio and animation without spurious click; 100% clean-room test suite pass rate strictly maintained.
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-421`, amended by `ATT-4371`, `ATT-4431`, and `ATT-5131`, extending `REQ-UI-344` (default tracking views matrix), `REQ-UI-409` (4-tab cycling architecture), `REQ-UI-295` (action button configuration suppression), and enforcing Governance Rules 53 and 58 (`docs/design_guidelines.md` §5.12). Targets `TrackingViewsDbHelper.java`, `DatabaseSchemaRegistry.kt`, `TrackingViewsRepository.kt`, `TrackingViewModel.kt`, `TrackingTabsViewModel.kt`, `TrackingTabsScreen.kt`, `SensorGridScreen.kt`, `BikeBellButton.kt`, `BikeBellAudioSynthesizer.kt`, `AndroidManifest.xml`, and `strings.xml` (all 9 locales).
+2. *Historical Origin & Commit Trace*: Sprint 2026-43.1 (`ATT-4281` commit `40af18141387`) introduced bike bell with `detectTapGestures` nested on `ElevatedButton`. Sprint 2026-43.2 (`ATT-4371` commit `bac64ff9`) removed `detectTapGestures` to eliminate single-tap click contention and introduced `USAGE_MEDIA`. Sprint 2026-43.2 Joint Review filed `ATT-4431` to restore press-and-hold continuous ring. Sprint 2026-45.2 (`ATT-5131`) amends `REQ-UI-421.4` and `REQ-UI-421.5` to force built-in speaker routing (`TYPE_BUILTIN_SPEAKER`), switch to `USAGE_ALARM` (`STREAM_ALARM`) with temporary 100% hardware volume boost and auto-restore, and replace binary volume with 3-stage logarithmic escalation (`0.35f -> 0.65f -> 1.00f`).
+3. *Root Reason for Existing Formulation*: `USAGE_MEDIA` was adopted in `ATT-4371` to bypass Silent/Vibrate mode ringer suppression, but `USAGE_MEDIA` defaults to routing audio into connected headphones instead of the phone speaker and is capped by user media volume. Binary toggle `0.70f -> 1.00f` produced only 3.1 dB change, which was imperceptible outdoors.
+4. *Preservation of Core Invariants*: `USAGE_ALARM` preserves Silent/Vibrate mode bypass while isolating `STREAM_ALARM` from `STREAM_MUSIC`, ensuring headphone music volume is untouched when boosting speaker volume; `setPreferredDevice(TYPE_BUILTIN_SPEAKER)` guarantees external acoustic projection; `flags = 0` prevents UI popups; `track.stop()` ensures static replay reliability; Rules 53 and 58 compliance (zero pointer contention on `ElevatedButton`); 100% clean-room test suite pass rate strictly maintained.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* a cycling tab (`ActivityType.BIKE_SPEED_AND_CADENCE` or `ActivityType.BIKE_POWER`),
@@ -12635,7 +12658,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 
 ### REQ-UI-437: User-Configurable Horizontal Width Ratios & Split Presets in Cockpit Sensor Grid [Verified]
-- **Tests**: `TST-UI-437` | **Tickets**: `ATT-4861`, `ATT-5077`
+- **Tests**: `TST-UI-437` | **Tickets**: `ATT-4861`, `ATT-5077`, `ATT-5192`
 - **Implementation**: `TrackingViewsDatabaseManager.java`, `DatabaseSchemaRegistry.kt`, `TrackingViewsRepository.kt`, `SensorFieldState.kt`, `SensorGridScreen.kt`, `EditSensorFieldDialog.kt`, `EditSensorFieldViewModel.kt`
 - **Rationale**: In multi-column cockpit rows, side-by-side sensor fields have historically been forced to equal width (`1/2 : 1/2` or `1/3 : 1/3 : 1/3`) via hardcoded `Modifier.weight(1f)`. Asymmetric layouts—such as a wide `3/4` Power Zone Bar paired with a compact `1/4` numeric value readout—require user-configurable horizontal width ratios, backward-compatible persistence, and proportional Compose rendering (ATT-4861, Parent Epic ATT-355, extending `REQ-UI-200` and `REQ-TRK-046`):
 1. *SQLite Schema v17 & DTO Weight Persistence (`REQ-UI-437.1`)*:
@@ -12647,25 +12670,36 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • In `SensorGridScreen.kt`, multi-column rows in `SensorGridContent`, landscape row packing, and configuration mode SHALL apply `Modifier.weight(effectiveWeight)`.
 • Runtime layout code SHALL guard `effectiveWeight = if (fieldState.colWeight > 0f) fieldState.colWeight else 1.0f`, preventing `IllegalArgumentException` from zero or negative weights.
 • Single-field rows SHALL span full row width.
-3. *User Configuration UI in Edit Dialog (`REQ-UI-437.3`)*:
-• In `EditSensorFieldDialog.kt`, the UI SHALL display a Relative Width section titled with `R.string.sensor_field_relative_weight` providing selectable relative weight options (`1x`, `2x`, `3x`), setting `colWeight` to `1.0f`, `2.0f`, or `3.0f` respectively.
-• The legacy overflowing 5-chip *Zeilenaufteilung* row-split presets section (`3/4 : 1/4`, `2/3 : 1/3`, `1/2 : 1/2`, `1/3 : 2/3`, `1/4 : 3/4`), `isTwoFieldRow` dual-weight model, and sibling weight synchronization SHALL be removed from `EditSensorFieldDialog.kt` and `EditSensorFieldViewModel.kt` (ATT-5077).
+3. *User Configuration UI in Edit Dialog & Cardinality Gating (`REQ-UI-437.3`)*:
+• In `EditSensorFieldDialog.kt`, the Relative Width section (`R.string.sensor_field_relative_weight`) providing selectable relative weight options (`1x`, `2x`, `3x`) SHALL be rendered conditionally strictly when `uiState.isMultiFieldRow == true`. For single-field rows (`isMultiFieldRow == false`), the Relative Width section SHALL be omitted to eliminate misleading configuration controls (ATT-5192).
+• In `EditSensorFieldViewModel.kt`, `isMultiFieldRow` SHALL be determined during `loadInitialState()` and `setupDefaultState()` via pure helper `calculateIsMultiFieldRow(existingFieldsInTargetRow, isNewField)`.
+• The legacy overflowing 5-chip *Zeilenaufteilung* row-split presets section (`3/4 : 1/4`, `2/3 : 1/3`, `1/2 : 1/2`, `1/3 : 2/3`, `1/4 : 3/4`), `isTwoFieldRow` dual-weight model, and sibling weight synchronization SHALL remain removed from `EditSensorFieldDialog.kt` and `EditSensorFieldViewModel.kt` (ATT-5077).
 • The dialog SHALL persist the selected `colWeight` per field via `updateSensorFieldConfig()`.
 4. *9-Language Localization Parity (`REQ-UI-437.4`)*:
 • String resources for relative width section titles SHALL maintain complete parity across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`), and unused `sensor_field_row_split_presets` string keys SHALL be removed from all 9 locales (ATT-5077).
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Modifies `REQ-UI-437.3` and `REQ-UI-437.4` under parent `REQ-UI-437`. Targets `EditSensorFieldDialog.kt`, `EditSensorFieldViewModel.kt`, and 9 `strings.xml` files (ATT-5077).
-2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-44.2 via commit `244300a2` (`ATT-4861`).
-3. *Root Reason for Existing Formulation*: Row split presets were originally introduced as 1-tap shortcuts for 2-field rows, but 5 chips in a non-wrapping Row overflowed on phone screens, and having two separate weight selectors caused UX redundancy and confusion.
-4. *Preservation of Core Invariants*: Proportional column rendering via `Modifier.weight(effectiveWeight)`, non-zero weight clamping, `ColWeight` SQLite persistence, and all desired width ratios (`1:1`, `2:1`, `3:1`, `1:2`, `1:3`) remain fully supported via individual Relative Width selection (1x, 2x, 3x).
+1. *Original Requirement ID & Target*: Modifies `REQ-UI-437.3` under parent `REQ-UI-437`. Targets `EditSensorFieldDialog.kt`, `EditSensorFieldViewModel.kt`, and `EditSensorFieldViewModelTest.kt` (ATT-5077, ATT-5192).
+2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-44.2 via commit `244300a2` (`ATT-4861`), simplified in `ATT-5077` (Sprint 2026-45.1), and cardinality-gated in `ATT-5192` (Sprint 2026-45.2).
+3. *Root Reason for Existing Formulation*: Relative width chips (1x, 2x, 3x) were originally rendered unconditionally. However, for single-field rows, relative weight has zero effect on layout and causes athlete confusion.
+4. *Preservation of Core Invariants*: Multi-field rows retain full access to `1x`, `2x`, `3x` relative weights; `colWeight` persistence and proportional layout math in `SensorGridScreen.kt` remain 100% unaffected.
 
 **Acceptance Criteria (Given-When-Then)**:
-• *Given* any sensor field in `EditSensorFieldDialog`,
+• *Given* an athlete editing a sensor field that is the only tile in its row,
+• *When* `EditSensorFieldDialog` is displayed,
+• *Then* the Relative Width section (`1x`, `2x`, `3x`) SHALL NOT be rendered.
+• *Given* an athlete editing a sensor field sharing a row with one or more sibling fields,
+• *When* `EditSensorFieldDialog` is displayed,
+• *Then* the Relative Width section (`1x`, `2x`, `3x`) SHALL be rendered.
+• *Given* any sensor field in `EditSensorFieldDialog` in a multi-field row,
 • *When* the user selects a relative weight (`1x`, `2x`, or `3x`),
 • *Then* `colWeight` is updated (`1.0f`, `2.0f`, or `3.0f`) and persisted, rendering the field proportionally in multi-column rows without horizontal clipping or overflowing preset chips.
 • *Given* an existing database upgraded from schema v16 to v17,
 • *When* rows are loaded,
+• *Then* all existing layout fields are migrated with `colWeight = 1.0f`.
+• *Given* a sensor field with an invalid or zero weight ($\le 0f$),
+• *When* rendered in Compose,
+• *Then* the layout engine safely clamps to 1.0f without crashing.
 • *Then* `ColWeight` defaults to 1.0f and existing equal-width layouts remain unchanged.
 • *Given* a sensor field with an invalid or zero weight ($\le 0f$),
 • *When* rendered in Compose,
@@ -12714,13 +12748,15 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 
 ### REQ-UI-439: Copy Tracking Tab to Target Activity Types [Verified]
-- **Tests**: `TST-UI-439` | **Tickets**: `ATT-5078`
+- **Tests**: `TST-UI-439` | **Tickets**: `ATT-5078`, `ATT-5189`
 - **Implementation**: `TrackingTabConfigHeader.kt`, `CopyTrackingTabDialog.kt`, `TrackingTabsViewModel.kt`, `TrackingViewsDatabaseManager.java`, `TrackingViewsRepository.kt`
-- **Rationale**: Athletes configuring custom tracking cockpits often wish to reuse complex tab layouts across different sport types (`ActivityType`), or duplicate an existing tab within the same sport type. Providing a multi-select bottom sheet to copy an existing tab to one or more target sport types with deep-copy and append semantics eliminates tedious manual reconfiguration (ATT-5078, extending `REQ-UI-103` and `REQ-UI-175`):
+- **Rationale**: Athletes configuring custom tracking cockpits often wish to reuse complex tab layouts across different sport types (`ActivityType`), or duplicate an existing tab within the same sport type. Providing a multi-select bottom sheet to copy an existing tab to one or more target sport types with deep-copy and append semantics eliminates tedious manual reconfiguration (ATT-5078, ATT-5189, extending `REQ-UI-103` and `REQ-UI-175`):
 1. *Copy Tab Header Action (`REQ-UI-439.1`)*:
 • In `TrackingTabConfigHeader.kt`, Row 2 SHALL provide a Copy Tab icon button (`Icons.Default.ContentCopy`) alongside `Add Before`, `Delete`, and `Add After`, invoking `onCopyTab(tabViewId)`.
 2. *Target ActivityType Selection Dialog (`REQ-UI-439.2`)*:
 • The system SHALL provide a modal bottom sheet (`CopyTrackingTabDialog.kt`) listing all `ActivityType` profiles with their authentic sport logos (`type.logoId`), localized titles, and multi-select checkboxes.
+• Upon opening the dialog, all sport profiles SHALL start unselected by default (`selectedTypes` initialized to empty set), ensuring no profile (including the current source activity type) is preselected (ATT-5189).
+• The Copy action button SHALL remain disabled while no sport profile is selected (`selectedTypes.isEmpty()`).
 • Tapping confirm with at least one selected target SHALL trigger the copy operation for all selected profiles; tapping cancel or dismissing SHALL abort without changes.
 3. *Transactional Deep-Copy & Append Semantics (`REQ-UI-439.3`)*:
 • In `TrackingViewsDatabaseManager.java` and `TrackingViewsRepository.kt`, copying a tab SHALL execute in an atomic SQLite transaction on a background thread (`Dispatchers.IO`), cloning the source tab's row in `VIEWS_TABLE` (with new sequential `LAYOUT_NR = max(LAYOUT_NR) + 1` per target sport type), all its sensor field rows in `ROWS_TABLE`, and all its section dividers in `SECTION_DIVIDERS_TABLE`.
@@ -12729,10 +12765,10 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • All new user-facing strings (dialog title, copy action button, content descriptions) SHALL maintain 100% parity across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-439`, extending `REQ-UI-103` (Customizable Cockpits) and `REQ-UI-175` (Tracking Tabs Configuration Transition). Targets `TrackingTabConfigHeader.kt`, `CopyTrackingTabDialog.kt`, `TrackingViewsDatabaseManager.java`, `TrackingViewsRepository.kt`, and `TrackingTabsViewModel.kt`.
-2. *Historical Origin & Commit Trace*: Sprint 2026-40.4 (`ATT-1281`), Sprint 2026-40.6 (`ATT-1450`), and `ATT-2360` established customizable tracking tab headers and spatial WYSIWYG configuration.
-3. *Root Reason for Existing Formulation*: Tabs were previously strictly isolated to individual `ActivityType` profiles; cross-profile tab migration or in-profile cloning was omitted in initial MVP implementations.
-4. *Preservation of Core Invariants*: Existing tab schemas (`VIEWS_TABLE`, `ROWS_TABLE`, `SECTION_DIVIDERS_TABLE`), existing tabs, single-profile queries, and telemetry recording MUST remain 100% unaltered.
+1. *Original Requirement ID & Target*: Amends `REQ-UI-439.2` (*Target ActivityType Selection Dialog*), Parent Epic `ATT-355`. Targets `CopyTrackingTabDialog.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-45.1 commit `82bf905d` (ATT-5078) added the initial multi-select bottom sheet implementation with default `setOf(sourceActivityType)`.
+3. *Root Reason for Existing Formulation*: Preselection was introduced as a placeholder default during initial bottom sheet authoring without considering cross-sport copying ergonomics, leading to accidental duplicate tabs in the active sport profile.
+4. *Preservation of Core Invariants*: Multi-selection of any `ActivityType` (including the source profile) remains fully supported; deep copy and append semantics (`REQ-UI-439.3`) and 9-language localization (`REQ-UI-439.4`) remain 100% intact.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete in tracking tab configuration mode (`ScreenMode.CONFIGURATION`),
@@ -12740,7 +12776,10 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Then* a Copy Tab icon button (`Icons.Default.ContentCopy`) is rendered with localized content description `cd_copy_tab`.
 • *Given* the Copy Tab button is tapped,
 • *When* the modal bottom sheet opens,
-• *Then* all active `ActivityType` profiles are displayed with their authentic logos, localized titles, and multi-selection checkboxes.
+• *Then* all active `ActivityType` profiles are displayed with their authentic logos, localized titles, and multi-selection checkboxes, all unselected by default (`selectedTypes.isEmpty()`), and the Copy action button is disabled.
+• *Given* the athlete selects one or more target profiles,
+• *When* at least one checkbox is checked,
+• *Then* the Copy action button becomes enabled.
 • *Given* one or more target `ActivityType` profiles selected (including the source profile),
 • *When* the athlete taps the Copy action,
 • *Then* the source tab, all sensor field cells, and section dividers are deeply cloned and appended at the end of each selected profile's tab list.
@@ -12824,13 +12863,13 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 **Invariants**: Zero infinite height expansion, strict preservation of `IntrinsicSize.Min` on parent containers, zero regression on `SensorGridScreen.kt`, and 100% clean-room test pass rate.
 
 
-### REQ-UI-442: Full-Bleed Badge Geometry, Large Uppercase Labels & Top-Right Mini-Icons for Bluetooth LE Sensor Drawables [Verified]
-- **Tests**: `TST-UI-442` | **Tickets**: `ATT-4956`
+### REQ-UI-442: Full-Bleed Badge Geometry, Large Uppercase Labels, Centered Cyclist & Top-Left Canonical Mini-Icons for Bluetooth LE Sensor Drawables [Verified]
+- **Tests**: `TST-UI-442` | **Tickets**: `ATT-4956`, `ATT-5201`
 - **Implementation**: `bt_bike_pwr.xml`, `bt_bike_spd.xml`, `bt_bike_cad.xml`, `bt_bike_speed_and_cadence.xml`, `bt_hr.xml`, `bt_run.xml`, `VectorAssetResolutionContractTest.kt`
-- **Rationale**: When Bluetooth LE (`bt_*.xml`) sensor icons are rendered at compact UI dimensions (20dp–24dp, e.g. status bar, device pairing, sensor matrix rows), three visual deficiencies appear compared to ANT+ icons: (1) bottom labels are micro lowercase (`power`, `speed`, `cadence`, `s & c`) or completely missing (`bt_hr`, `bt_run`); (2) all 4 bike icons share an identical cyclist silhouette without upper motif differentiation; (3) all 6 BTLE drawables use a 10-unit inset background (`10..134` in `144x144`), making them appear ~14% smaller than ANT+ icons (`0..96` full-bleed). Standardizing BTLE drawables to full-bleed badges, bold uppercase labels, and top-right sensor mini-icons establishes visual parity and instant recognition across both protocols (ATT-4956, Parent Epic ATT-355, amending `REQ-UI-375` and Rule 37):
-1. *Full-Bleed Rounded Badge Geometry (`REQ-UI-442.1`)*:
+- **Rationale**: When Bluetooth LE (`bt_*.xml`) sensor icons are rendered at compact UI dimensions (20dp–24dp, e.g. status bar, device pairing, sensor matrix rows), full-bleed badge geometry and bold uppercase labels establish visual parity with ANT+ icons (ATT-4956). ATT-5201 refines three visual and architectural aspects: (1) restores official Bluetooth brand color `#0A3D91` (`rgb(10, 61, 145)`) from master `Bluetooth.svg` and `logo_protocol_bluetooth.png` (eliminating ICC profile distorted `#07377F`); (2) centers the cyclist silhouette horizontally ($x \in [28.5, 115.5]$) across all 4 bike icons; (3) positions canonical domain mini-icons in the open top-left quadrant ($x \approx 12..52, y \approx 10..50$) above the rear wheel and behind the rider's sloping back, reusing scaled vector paths from `ic_power.xml`, `ic_speed.xml`, and `ic_cadence.xml` (Rule 36):
+1. *Full-Bleed Rounded Badge Geometry & Protocol Color Token (`REQ-UI-442.1`)*:
 • In all 6 Bluetooth LE vector drawables (`bt_bike_pwr.xml`, `bt_bike_spd.xml`, `bt_bike_cad.xml`, `bt_bike_speed_and_cadence.xml`, `bt_hr.xml`, `bt_run.xml`), the background badge path SHALL be full-bleed spanning `0..144` with corner radius $r = 22.0$ (`M 22,0 H 122 A 22,22 0 0 1 144,22 V 122 A 22,22 0 0 1 122,144 H 22 A 22,22 0 0 1 0,122 V 22 A 22,22 0 0 1 22,0 Z`), replacing the historical 10-unit inset margin (`10..134`).
-• The badge fill color SHALL strictly maintain the `#07377F` protocol badge color token.
+• The badge fill color SHALL strictly maintain the official Bluetooth badge color `#0A3D91` (`rgb(10, 61, 145)`), replacing the historical ICC-distorted `#07377F`.
 2. *Large Bold Uppercase Bottom Typography (`REQ-UI-442.2`)*:
 • All 6 BTLE vector drawables SHALL render bold uppercase abbreviation labels centered at the bottom of the badge, occupying approximately $16.7\%$ viewport height ($y \approx 113..136$ in `144x144` coordinate space):
   a. `bt_bike_pwr.xml`: `PWR`;
@@ -12840,38 +12879,80 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
   e. `bt_hr.xml`: `HR`;
   f. `bt_run.xml`: `SPD`.
 • Glyphs with internal counters (`P`, `R`, `D`, `A`, `&`) SHALL use `android:fillType="evenOdd"` for proper punch-out transparency.
-3. *Top-Right Sensor Mini-Icons & Repositioned Upper Motifs (`REQ-UI-442.3`)*:
-• In bike icons (`bt_bike_pwr.xml`, `bt_bike_spd.xml`, `bt_bike_cad.xml`, `bt_bike_speed_and_cadence.xml`), the cyclist silhouette motif SHALL be shifted down-left ($x \approx 8..108, y \approx 22..106$) to accommodate a distinctive sensor mini-icon in the top-right quadrant ($x \approx 104..136, y \approx 8..38$):
-  a. `bt_bike_pwr.xml`: Lightning bolt symbol;
-  b. `bt_bike_spd.xml`: Speedometer dial / gauge arc;
-  c. `bt_bike_cad.xml`: Crank arm with rotation arrow;
-  d. `bt_bike_speed_and_cadence.xml`: Combined dual-sensor motif (speedometer arc + crank/arrow).
-• In `bt_hr.xml` and `bt_run.xml`, the main graphic motif (heart, runner) SHALL be scaled and positioned cleanly above the bottom `HR` and `SPD` text labels without overlap.
+3. *Centered Cyclist Motif & Top-Left Canonical Sensor Mini-Icons (`REQ-UI-442.3`)*:
+• In bike icons (`bt_bike_pwr.xml`, `bt_bike_spd.xml`, `bt_bike_cad.xml`, `bt_bike_speed_and_cadence.xml`), the cyclist silhouette motif SHALL be centered horizontally across the badge ($x \in [28.5, 115.5]$ with balanced $28.5$ unit horizontal margins).
+• Sensor mini-icons SHALL be positioned in the top-left quadrant ($x \approx 12..52, y \approx 10..50$) above the rear wheel and behind the cyclist's back, reusing and scaling canonical vector path geometry from `ic_power.xml`, `ic_speed.xml`, and `ic_cadence.xml` (Rule 36):
+  a. `bt_bike_pwr.xml`: Canonical lightning bolt from `ic_power.xml`;
+  b. `bt_bike_spd.xml`: Canonical speedometer dial / gauge arc from `ic_speed.xml`;
+  c. `bt_bike_cad.xml`: Canonical crank arm with rotation loop from `ic_cadence.xml`;
+  d. `bt_bike_speed_and_cadence.xml`: Combined dual-sensor motif reusing canonical speedometer arc (`ic_speed.xml`) and rotation loop (`ic_cadence.xml`).
+• In `bt_hr.xml` and `bt_run.xml`, the main graphic motif (heart, runner) remains horizontally centered and scaled cleanly above the bottom `HR` and `SPD` text labels without overlap.
 4. *Rule 37 Vector Geometry & Fidelity Governance (`REQ-UI-442.4`)*:
 • All modified vector paths MUST adhere to Rule 37 constraints: pure analytical geometry (`M`, `L`, `H`, `V`, `C`, `A`, `Z`), $\le 45$ `L` commands per `<path>`, zero polygon auto-tracing approximations, and 100% clean parsing.
 • Resource resolution in `UIHelper.java` and Compose screens SHALL remain 100% backward compatible without breaking changes to drawable resource identifiers.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Amends `REQ-UI-375` (*Mathematical VectorDrawable Migration from Xfig/SVG/XCF Masters & Legacy Raster Purge*, `ATT-2859`). Targets `app/src/main/res/drawable/bt_*.xml` and `VectorAssetResolutionContractTest.kt`.
-2. *Historical Origin & Commit Trace*: `ATT-2859` introduced mathematical vectorization. Inset margins (`10..134`) and lowercase labels were carried over from initial XCF/FIG bitmap sketches. ANT+ badges were updated to full-bleed (`0..96`) and uppercase typography in `ATT-2859`, while BTLE badges remained inset with micro-text.
-3. *Root Reason for Existing Formulation*: Early vectorization mirrored legacy bitmap assets without standardizing BTLE badges to the modern full-bleed and uppercase typography convention of the design system.
-4. *Preservation of Core Invariants*: Rule 37 geometric constraints ($\le 45$ `L` commands, analytical arcs), `#07377F` protocol badge color token, and `R.drawable.bt_*` resource IDs are 100% preserved.
+1. *Original Requirement ID & Target*: Amends `REQ-UI-442` (*Full-Bleed Badge Geometry, Large Uppercase Labels & Top-Right Mini-Icons for Bluetooth LE Sensor Drawables*, `ATT-4956`). Targets `app/src/main/res/drawable/bt_*.xml`, `VectorAssetResolutionContractTest.kt`, and `docs/requirements/req_ui_design_system.md`.
+2. *Historical Origin & Commit Trace*: `ATT-4956` (commit `be03a5bc14`, Sprint 2026-45.1) introduced full-bleed badges, uppercase labels, and top-right mini-icons with `#07377F`.
+3. *Root Reason for Existing Formulation*: `#07377F` was sampled from ICC-profile distorted legacy PNGs rather than the master `Bluetooth.svg` (`#0A3D91`). Hand-drawn mini-icons were placed in the top-right without recognizing that the rider's forward lean creates ideal negative space in the top-left, and without reusing canonical `ic_power`, `ic_speed`, and `ic_cadence` vector assets.
+4. *Preservation of Core Invariants*: Full-bleed badge geometry `0..144` ($r=22.0$), bold uppercase bottom typography with `evenOdd`, Rule 37 primitive limits ($\le 45$ `L` commands, analytical curves), and non-zero `R.drawable.bt_*` resource IDs are 100% preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* any of the 6 BTLE sensor vector drawables,
 • *When* inspected or rendered in compact UI (20dp–24dp),
-• *Then* the background badge spans the full viewport bounds `0..144` with corner radius $r=22.0$, matching ANT+ full-bleed proportions.
+• *Then* the background badge spans the full viewport bounds `0..144` with corner radius $r=22.0$ and background color `#0A3D91`.
 • *Given* an athlete viewing BTLE sensor icons in device pairing, status bar, or matrix screens,
 • *When* reading the icon,
 • *Then* the bold uppercase abbreviation (`PWR`, `SPD`, `CAD`, `S&C`, `HR`, `SPD`) is clearly legible at compact dimensions.
 • *Given* the 4 BTLE bike sensor icons,
 • *When* comparing `bt_bike_pwr`, `bt_bike_spd`, `bt_bike_cad`, and `bt_bike_speed_and_cadence`,
-• *Then* each displays its unique top-right sensor mini-icon (power bolt, speedometer arc, cadence crank, combined dual sensor).
+• *Then* the cyclist is horizontally centered ($x \in [28.5, 115.5]$) and each displays its unique canonical sensor mini-icon in the top-left quadrant ($x \approx 12..52, y \approx 10..50$) derived from `ic_power`, `ic_speed`, and `ic_cadence`.
 • *Given* `VectorAssetResolutionContractTest`,
 • *When* executing the test suite,
-• *Then* all vector drawables pass Rule 37 geometric primitive checks, full-bleed badge assertions, and uppercase label validation.
+• *Then* all vector drawables pass Rule 37 geometric primitive checks, full-bleed badge assertions with `#0A3D91`, centered cyclist assertions, and uppercase label validation.
 
-**Invariants**: Rule 37 geometric primitives, `#07377F` protocol badge token, `R.drawable.bt_*` resource ID mapping, and 100% clean-room test pass rate.
+**Invariants**: Rule 37 geometric primitives, official `#0A3D91` Bluetooth badge token, `R.drawable.bt_*` resource ID mapping, and 100% clean-room test pass rate.
+
+
+### REQ-UI-443: Power TelemetryMetricGraph Marginal Histogram Unfolded Linear Bins Projection Parity in Portrait and Landscape Modes [Verified]
+- **Tests**: `TST-UI-443`
+- **Implementation**: `ZoneDistributionModels.kt`, `TelemetryMetricGraph.kt`
+- **Rationale**: In workout details and telemetry graphs (`TelemetryMetricGraph.kt`), when fine-grained frequency histogram mode (`ZoneCardDisplayMode.HISTOGRAM`) is active for Cycling Power, the marginal histogram docked to the right of the continuous power time-series curve SHALL project individual 10 W frequency bins across the continuous 1:1 vertical Y-axis (`[dataMin, dataMax]`) using unfolded linear bins (`TelemetryHistogramData.linearBins`) instead of stretching folded Sprint-Tail overflow bars (`overflowBin`) across the high-wattage range (ATT-5190, amending `REQ-UI-251` and `REQ-UI-431`, and complementing `REQ-UI-419` and `REQ-UI-420`):
+1. *Unfolded Linear Bins Domain Helper (`REQ-UI-443.1`)*:
+• In `ZoneDistributionModels.kt`, `TelemetryHistogramData` SHALL expose an accessor `val linearBins: List<TelemetryHistogramBin>` that resolves the full continuous sequence of frequency bins across `[dataMin, dataMax]`:
+  - When `sprintTail == null`, returns `bins`.
+  - When `sprintTail != null`, returns `bins.filterNot { it.isOverflow } + sprintTail.bins.filterNot { it.isReturn }`.
+2. *Marginal Histogram Rendering in Portrait Mode (`REQ-UI-443.2`)*:
+• In portrait orientation (`TelemetryMetricGraph.kt:482-510`), when `zoneDisplayMode == ZoneCardDisplayMode.HISTOGRAM`, the 25dp inline marginal strip SHALL iterate over `histogram.linearBins` instead of `histogram.bins`.
+• `maxBinPct` SHALL be computed from `histogram.linearBins.maxOfOrNull { it.percentage }`.
+• For each bin in `linearBins`, the background container track (`alpha = 0.15f`) SHALL only be drawn when `bin.durationSec > 0L`, eliminating visual black clutter across empty Zone 7 high-wattage intervals.
+3. *Aligned Marginal Zone Distribution in Landscape Mode (`REQ-UI-443.3`)*:
+• In landscape orientation (`TelemetryMetricGraph.kt:938-976`, `AlignedMarginalZoneDistribution`), the marginal pane SHALL iterate over `histogram.linearBins` and compute `maxBinPct` across `linearBins`.
+• For each bin in `linearBins`, the background container track (`alpha = 0.15f`) SHALL only be drawn when `bin.durationSec > 0L`.
+• Text overlays (`${bin.percentage.toInt()}%`) SHALL continue to be rendered for bins with `rectHeight >= 12.dp.toPx() && bin.durationSec > 0L`.
+4. *Preservation of Standalone Histogram Sprint-Tail Folding & Invariants (`REQ-UI-443.4`)*:
+• The standalone Power Histogram card on the *Zones* tab (`TelemetryHistogramChart.kt`) and `TelemetryHistogramCalculator.calculatePowerHistogram` SHALL remain 100% invariant, retaining the interactive Sprint-Tail overflow bar, P99 boundary snapping, and drill-down navigation per `REQ-UI-419`.
+• Multi-chart plot alignment, horizontal 50dp start padding, 72%/28% landscape split, and touch gestures SHALL remain 100% preserved.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-UI-251` (*Marginal Strip in Portrait*) and `REQ-UI-431` (*Marginal Pane in Landscape*); complements `REQ-UI-419` (*Sprint Tail Folding*) and `REQ-UI-420` (*Coggan 7-Zone Parity*). Targets `ZoneDistributionModels.kt` and `TelemetryMetricGraph.kt`.
+2. *Historical Origin & Commit Trace*: Commit `c8192a0e` (`ATT-2147`, `REQ-UI-251`), commit `752d580f` (`ATT-4293`, `REQ-UI-419`), and commit `dcb8f15f` (`ATT-2145`, `REQ-UI-431`).
+3. *Root Reason for Existing Formulation*: Sprint-tail folding in `TelemetryHistogramCalculator.kt` was designed for standalone equal-column horizontal X-axis charts (`TelemetryHistogramChart.kt`) to avoid compressing the main training zone columns. Its side effect on marginal histograms docked to continuous 1:1 vertical Y-axes in `TelemetryMetricGraph.kt` was not anticipated, causing the single `overflowBin` spanning `[tailCutoff, dataMax]` to stretch across the entire high-power range as a giant black block.
+4. *Preservation of Core Invariants*: Standalone `TelemetryHistogramChart.kt` folding, interactive header navigation, Heart Rate linear histograms, multi-chart scrubbing alignment (`startPadding = 50.dp`), landscape 72%/28% split (`REQ-UI-431`), and clean-room test suite pass rate are 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a cycling workout with power spikes triggering sprint-tail folding (`histogram.sprintTail != null`) and `ZoneCardDisplayMode.HISTOGRAM`,
+• *When* viewing the Power time-series graph in `TelemetryMetricGraph` (both portrait and landscape),
+• *Then* the marginal histogram renders individual 10 W bins at their true Y-axis watt positions up to `dataMax` without a giant solid black `overflowBin`.
+• *Given* high-wattage power bins with `durationSec == 0L`,
+• *When* the marginal histogram renders,
+• *Then* no background container track (`alpha = 0.15f`) is drawn for zero-duration bins.
+• *Given* the same workout on the *Zones* tab (`TelemetryHistogramChart.kt`),
+• *When* inspecting the standalone Power histogram,
+• *Then* the interactive Sprint-Tail overflow bar and drill-down navigation continue to operate without regression.
+
+**Invariants**: Standalone sprint-tail folding preserved, multi-chart horizontal alignment preserved, 100% clean-room test suite pass rate.
+
 
 
 

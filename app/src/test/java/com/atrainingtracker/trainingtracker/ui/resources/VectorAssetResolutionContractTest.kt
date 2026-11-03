@@ -174,7 +174,7 @@ class VectorAssetResolutionContractTest {
         val bleBadges = listOf("bt_bike_cad", "bt_bike_pwr", "bt_bike_spd", "bt_bike_speed_and_cadence", "bt_hr", "bt_run")
         for (badge in bleBadges) {
             val xml = File(drawableDir, "$badge.xml").readText().uppercase()
-            assertTrue("$badge.xml must have Bluetooth navy badge background (#07377F)", xml.contains("#07377F"))
+            assertTrue("$badge.xml must have official Bluetooth badge background (#0A3D91)", xml.contains("#0A3D91"))
             assertTrue("$badge.xml must have white foreground glyph (#FFFFFF)", xml.contains("#FFFFFF"))
             assertTrue("$badge.xml must use evenOdd fillType for counter-holes (REQ-UI-442)", xml.contains("EVENODD"))
         }
@@ -182,7 +182,7 @@ class VectorAssetResolutionContractTest {
 
     /**
      * TST-UI-442.1: Verify all 6 BTLE sensor vector badges are full-bleed (0..144, r=22.0)
-     * and strictly preserve the Bluetooth navy badge color token (#07377F) without 10-unit inset margins.
+     * and strictly preserve the official Bluetooth badge color token (#0A3D91) without 10-unit inset margins.
      */
     @Test
     fun testBtleSensorBadgesAreFullBleedAndRetainNavyColor() {
@@ -192,7 +192,8 @@ class VectorAssetResolutionContractTest {
         for (badge in bleBadges) {
             val xml = File(drawableDir, "$badge.xml").readText()
             assertTrue("$badge.xml must define full-bleed 0..144 badge path (REQ-UI-442.1)", xml.contains("144.0,22.0") && xml.contains("122.0,144.0"))
-            assertTrue("$badge.xml must have Bluetooth navy background (#07377F)", xml.contains("#07377F"))
+            assertTrue("$badge.xml must have official Bluetooth background (#0A3D91)", xml.contains("#0A3D91"))
+            assertFalse("$badge.xml must purge legacy ICC-distorted #07377F", xml.contains("#07377F"))
             assertFalse("$badge.xml must eliminate legacy 10-unit inset margin (10.0..134.0)", xml.contains("10.0,23.5") || xml.contains("120.5,134.0"))
         }
     }
@@ -236,8 +237,9 @@ class VectorAssetResolutionContractTest {
     }
 
     /**
-     * TST-UI-442.3: Verify bike BTLE drawables contain distinctive top-right mini-icons
-     * and all 6 drawables satisfy Rule 37 geometric constraints (<= 45 L commands, analytical curves).
+     * TST-UI-442.3: Verify bike BTLE drawables center the cyclist horizontally, contain canonical
+     * top-left mini-icons (ic_power, ic_speed, ic_cadence), and all 6 drawables satisfy Rule 37
+     * geometric constraints (<= 45 L commands, analytical curves).
      */
     @Test
     fun testBtleSensorBadgesContainTopRightMiniIconsAndRule37Prims() {
@@ -249,10 +251,26 @@ class VectorAssetResolutionContractTest {
 
         val bikeBadges = listOf("bt_bike_pwr", "bt_bike_spd", "bt_bike_cad", "bt_bike_speed_and_cadence")
         for (badge in bikeBadges) {
+            val xml = File(drawableDir, "$badge.xml").readText()
+            assertTrue("$badge.xml must horizontally center cyclist with translateX=18.18", xml.contains("translateX=\"18.18\""))
+
             val doc = dBuilder.parse(File(drawableDir, "$badge.xml"))
             val pathNodes = doc.getElementsByTagName("path")
             assertTrue("$badge.xml must contain at least 20 paths", pathNodes.length >= 20)
         }
+
+        // Verify canonical mini-icon path reuse (Rule 36) in top-left
+        val pwrXml = File(drawableDir, "bt_bike_pwr.xml").readText()
+        assertTrue("bt_bike_pwr must embed canonical ic_power path in top-left", pwrXml.contains("mini_icon_pwr") && pwrXml.contains("M280,880L440,580"))
+
+        val spdXml = File(drawableDir, "bt_bike_spd.xml").readText()
+        assertTrue("bt_bike_spd must embed canonical ic_speed path in top-left", spdXml.contains("mini_icon_spd") && spdXml.contains("M418,620Q442,644"))
+
+        val cadXml = File(drawableDir, "bt_bike_cad.xml").readText()
+        assertTrue("bt_bike_cad must embed canonical ic_cadence path in top-left", cadXml.contains("mini_icon_cad") && cadXml.contains("M480,560Q447,560"))
+
+        val scXml = File(drawableDir, "bt_bike_speed_and_cadence.xml").readText()
+        assertTrue("bt_bike_speed_and_cadence must embed canonical dual mini-icons in top-left", scXml.contains("mini_icon_spd") && scXml.contains("mini_icon_cad"))
 
         val allBle = bikeBadges + listOf("bt_hr", "bt_run")
         for (badge in allBle) {

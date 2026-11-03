@@ -112,7 +112,7 @@
     <string name="device_altitude_pressure_how_it_works">Misst den Luftdruck mit dem internen Barometer. Berechnet relative Höhenänderungen über die barometrische Höhenformel, kalibriert an Lieblingsorten oder manuell.</string>
     <string name="device_altitude_pressure_pros_cons">+ Sehr reaktionsschnell und glatt; kein GPS-Höhenflattern; funktioniert in Tunnels.\n- Wetterwechsel können im Zeitverlauf zu Höhendrift führen.</string>
     <string name="device_altitude_position_how_it_works">Gleicht Ihre GPS-Position mit digitalen Geländemodellen (DEM) ab, die aus Strecken zwischengespeichert oder von Open-Meteo geladen werden.</string>
-    <string name="device_altitude_position_pros_cons">+ Wetterunabhängig und ohne Barometerdrift; absolute Höhe ohne Kalibrierung.\n- Abhängig von GPS-Genauigkeit; auf Brücken und Steilhängen ungenauer.</string>
+    <string name="device_altitude_position_pros_cons">+ Wetterunabhängig und ohne Barometerdrift; absolute Höhe ohne Kalibrierung.\n- Erfordert aktive Internetverbindung für ungecachte Gebiete; abhängig von GPS-Genauigkeit, auf Brücken und Steilhängen ungenauer.</string>
 
     <!-- live sensor data -->
     <string name="devices_live_sensor_data_header">Sensordaten</string>

@@ -33,11 +33,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -55,6 +57,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
+import kotlin.math.roundToInt
 
 /**
  * Calculates positive volume quartiles (Q1, Q2, Q3) for a list of positive values (REQ-PER-025.5).
@@ -109,6 +112,43 @@ fun getSportCellColor(sport: BSportType, level: Int): Color {
 }
 
 /**
+ * Calculates the target column index to align at the right edge of the viewport (REQ-PER-025.9).
+ * - For past calendar years (year < today.year): returns the last column (totalCols - 1)
+ * - For future calendar years (year > today.year): returns 0
+ * - For the current calendar year (year == today.year): returns the column containing today
+ */
+fun calculateTargetColumn(year: Int, today: LocalDate, startOffset: Int, totalCols: Int): Int {
+    if (year < today.year) return totalCols - 1
+    if (year > today.year) return 0
+    val dayIndex = today.dayOfYear - 1
+    return ((dayIndex + startOffset) / 7).coerceIn(0, totalCols - 1)
+}
+
+/**
+ * Calculates the initial horizontal scroll offset required to align targetCol at the right edge
+ * of the visible viewport (REQ-PER-025.9).
+ *
+ * S_target = maxValue - (totalCols - 1 - targetCol) * colPitchPx, clamped to [0, maxValue].
+ */
+fun calculateInitialScrollOffset(
+    maxValue: Int,
+    totalCols: Int,
+    targetCol: Int,
+    colPitchPx: Float
+): Int {
+    if (maxValue <= 0 || totalCols <= 0) return 0
+    val remainingCols = (totalCols - 1 - targetCol).coerceAtLeast(0)
+    val futureWeeksWidth = remainingCols * colPitchPx
+    return (maxValue - futureWeeksWidth.roundToInt()).coerceIn(0, maxValue)
+}
+
+/**
+ * Evaluates whether a day-of-week row index (0..6, Monday to Sunday) should display a label (REQ-PER-025.3).
+ * Shows labels for Monday (0), Wednesday (2), Friday (4), and Sunday (6), establishing an even 2-day cadence.
+ */
+fun shouldShowDayOfWeekLabel(rowIdx: Int): Boolean = rowIdx in listOf(0, 2, 4, 6)
+
+/**
  * Renders a GitHub-style 52/53-week x 7-day Activity Contribution Grid for a single sport type (REQ-PER-025).
  *
  * @param contribution Yearly sport contribution dataset with daily activity buckets.
@@ -155,6 +195,8 @@ fun YearlyContributionGrid(
     val cellSize = 11.dp
     val cellSpacing = 2.dp
     val colPitch = 13.dp
+    val density = LocalDensity.current
+    val colPitchPx = with(density) { colPitch.toPx() }
 
     // Month headers
     val monthOffsets = remember(year, startOffset) {
@@ -246,7 +288,7 @@ fun YearlyContributionGrid(
                         DayOfWeek.SUNDAY
                     )
                     days.forEachIndexed { idx, day ->
-                        val showLabel = idx == 0 || idx == 2 || idx == 4
+                        val showLabel = shouldShowDayOfWeekLabel(idx)
                         Box(
                             modifier = Modifier
                                 .height(cellSize)
@@ -254,10 +296,16 @@ fun YearlyContributionGrid(
                             contentAlignment = Alignment.CenterStart
                         ) {
                             if (showLabel) {
+                                @Suppress("DEPRECATION")
                                 Text(
                                     text = day.getDisplayName(TextStyle.NARROW, Locale.getDefault()),
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontSize = 9.sp,
+                                        lineHeight = 9.sp,
+                                        platformStyle = PlatformTextStyle(includeFontPadding = false)
+                                    ),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.wrapContentHeight(align = Alignment.CenterVertically, unbounded = true)
                                 )
                             }
                         }
@@ -266,6 +314,26 @@ fun YearlyContributionGrid(
 
                 // Scrollable 52/53-Week Grid
                 val scrollState = rememberScrollState()
+                var hasAutoScrolled by remember(year) { mutableStateOf(false) }
+
+                LaunchedEffect(scrollState.maxValue, year) {
+                    if (!hasAutoScrolled && scrollState.maxValue > 0 && scrollState.maxValue < Int.MAX_VALUE) {
+                        val targetCol = calculateTargetColumn(
+                            year = year,
+                            today = LocalDate.now(),
+                            startOffset = startOffset,
+                            totalCols = totalCols
+                        )
+                        val targetOffset = calculateInitialScrollOffset(
+                            maxValue = scrollState.maxValue,
+                            totalCols = totalCols,
+                            targetCol = targetCol,
+                            colPitchPx = colPitchPx
+                        )
+                        scrollState.scrollTo(targetOffset)
+                        hasAutoScrolled = true
+                    }
+                }
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()

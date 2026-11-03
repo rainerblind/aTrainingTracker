@@ -111,6 +111,18 @@ fun resolveFilterPreset(
     }
 }
 
+/**
+ * Pure helper to determine whether the target cockpit grid row contains multiple fields (REQ-UI-437.3, TST-UI-437.6, ATT-5192).
+ *
+ * When [isNewField] is true (adding a new field into a row), the resulting row will have multiple fields
+ * if there is already at least 1 existing field in that row.
+ * When [isNewField] is false (editing an existing field), the row contains multiple fields
+ * if there are strictly more than 1 fields currently in that row.
+ */
+fun calculateIsMultiFieldRow(existingFieldsInTargetRow: Int, isNewField: Boolean): Boolean {
+    return if (isNewField) existingFieldsInTargetRow >= 1 else existingFieldsInTargetRow > 1
+}
+
 // This class will hold all the state for our dialog
 data class EditDialogUiState(
     val selectedSensorType: SensorType? = null,
@@ -129,7 +141,8 @@ data class EditDialogUiState(
     val isCustomFilterExpanded: Boolean = false,
     val showValue: Boolean = true,
     val showBar: Boolean = false,
-    val colWeight: Float = 1.0f
+    val colWeight: Float = 1.0f,
+    val isMultiFieldRow: Boolean = false
 ) {
     val isBarSupported: Boolean
         get() = TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(selectedSensorType, sportType)
@@ -260,8 +273,18 @@ class EditSensorFieldViewModel(
                 filterSummary = defaultFilterType.getSummary(context, defaultConstant),
                 isCustomFilterExpanded = false,
                 showValue = true,
-                showBar = isBarSupported
+                showBar = isBarSupported,
+                isMultiFieldRow = false
             )
+        }
+
+        if (colNr != -1) {
+            viewModelScope.launch {
+                val configs = trackingViewsRepository.getSensorFieldConfigsForView(tabViewId).firstOrNull() ?: emptyList()
+                val fieldsInRow = configs.filter { it.rowNr == rowNr }
+                val isMulti = calculateIsMultiFieldRow(fieldsInRow.size, isNewField = true)
+                _uiState.update { it.copy(isMultiFieldRow = isMulti) }
+            }
         }
     }
 
@@ -294,6 +317,10 @@ class EditSensorFieldViewModel(
             val showValue = if (isBarSupported) initialConfig.showValue else true
             val showBar = if (isBarSupported) initialConfig.showBar else false
 
+            val configs = trackingViewsRepository.getSensorFieldConfigsForView(tabViewId).firstOrNull() ?: emptyList()
+            val fieldsInRow = configs.filter { it.rowNr == initialConfig.rowNr }
+            val isMulti = calculateIsMultiFieldRow(fieldsInRow.size, isNewField = false)
+
             _uiState.value = EditDialogUiState(
                 selectedSensorType = initialConfig.sensorType,
                 sportType = sportType,
@@ -309,7 +336,8 @@ class EditSensorFieldViewModel(
                 isCustomFilterExpanded = (initialPreset == FilterPreset.CUSTOM),
                 showValue = showValue,
                 showBar = showBar,
-                colWeight = initialConfig.colWeight
+                colWeight = initialConfig.colWeight,
+                isMultiFieldRow = isMulti
             )
         }
     }

@@ -1316,7 +1316,6 @@ fun TrackingMapContainer(
             mapState.mapSegments,
             mapState.activeLiveSegmentIds,
             mapState.mapRoutes,
-            mapState.mapClusters,
             mapState.mapMarkers,
             mapState.currentTrack
         ) {
@@ -1324,7 +1323,6 @@ fun TrackingMapContainer(
                 tracks(mapState.mapTracks)
                 segments(mapState.mapSegments, mapState.activeLiveSegmentIds)
                 routes(mapState.mapRoutes)
-                clusters(mapState.mapClusters)
                 markers(mapState.mapMarkers)
                 liveTrack(mapState.currentTrack)
             }

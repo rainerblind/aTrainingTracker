@@ -34,6 +34,7 @@ import com.atrainingtracker.banalservice.sensor.MySensor;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.trainingtracker.database.ElevationCacheDatabaseManager;
+import com.atrainingtracker.trainingtracker.database.ElevationCacheItem;
 import com.atrainingtracker.trainingtracker.database.RoutesDatabaseManager;
 import com.atrainingtracker.trainingtracker.elevation.ElevationResult;
 import com.atrainingtracker.trainingtracker.elevation.ElevationService;
@@ -42,6 +43,7 @@ import com.atrainingtracker.util.LifecycleUtils;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Driver for the pairable Altitude-From-Position device (REQ-SEN-025.1).
@@ -62,6 +64,7 @@ public class AltitudeFromPositionDevice extends MyDevice {
     private final ExecutorService mExecutor;
     private final ElevationCacheDatabaseManager mElevationCacheDb;
     private final ElevationService mElevationService;
+    private final AtomicBoolean mIsDemQueryInFlight = new AtomicBoolean(false);
 
     private int mLastLatE5 = Integer.MIN_VALUE;
     private int mLastLonE5 = Integer.MIN_VALUE;
@@ -137,6 +140,7 @@ public class AltitudeFromPositionDevice extends MyDevice {
         super.shutDown();
         mExecutor.shutdown();
         LifecycleUtils.safeUnregisterReceiver(mContext, mLocationReceiver, TAG);
+        mIsDemQueryInFlight.set(false);
         mLastLatE5 = Integer.MIN_VALUE;
         mLastLonE5 = Integer.MIN_VALUE;
         mLastAltitude = Double.NaN;
@@ -163,6 +167,8 @@ public class AltitudeFromPositionDevice extends MyDevice {
 
     /**
      * Handles incoming geographical coordinates, resolving elevation via ElevationCache.db or async DEM.
+     * When a non-authoritative seeded entry (ROUTE_SEED / SEGMENT_SEED) is found, it is emitted immediately
+     * for zero-latency offline feedback and an asynchronous DEM query is dispatched to refine the cache.
      */
     @VisibleForTesting
     public void onNewLocation(double latitude, double longitude) {
@@ -178,9 +184,14 @@ public class AltitudeFromPositionDevice extends MyDevice {
             return;
         }
 
-        Double cachedElevation = mElevationCacheDb.getElevation(latitude, longitude, 2);
-        if (cachedElevation != null) {
-            applyResolvedElevation(latE5, lonE5, cachedElevation);
+        ElevationCacheItem cachedItem = mElevationCacheDb.getElevationItem(latitude, longitude, 2);
+        if (cachedItem != null) {
+            applyResolvedElevation(latE5, lonE5, cachedItem.getAltitude());
+            if (!ElevationCacheDatabaseManager.SOURCE_DEM_CACHE.equals(cachedItem.getSource())) {
+                // Non-authoritative seeded altitude: emit immediately for zero UI lag/offline fallback,
+                // and asynchronously query Open-Meteo DEM to upgrade to authoritative DEM_CACHE when online.
+                fetchDemElevationAsync(latitude, longitude, latE5, lonE5);
+            }
         } else {
             // Cache miss: dispatch asynchronous DEM query
             fetchDemElevationAsync(latitude, longitude, latE5, lonE5);
@@ -201,19 +212,25 @@ public class AltitudeFromPositionDevice extends MyDevice {
     }
 
     private void fetchDemElevationAsync(double latitude, double longitude, int latE5, int lonE5) {
+        if (!mIsDemQueryInFlight.compareAndSet(false, true)) {
+            if (DEBUG) Log.d(TAG, "DEM query already in flight; skipping redundant request for (" + latitude + ", " + longitude + ")");
+            return;
+        }
         mExecutor.execute(() -> {
             try {
                 ElevationResult result = mElevationService.fetchElevation(latitude, longitude);
                 if (result instanceof ElevationResult.Success success) {
                     double demElevation = success.getElevationMeters();
                     if (DEBUG) Log.i(TAG, "DEM fetched: " + demElevation + "m for (" + latitude + ", " + longitude + ")");
-                    mElevationCacheDb.putElevation(latitude, longitude, demElevation, "DEM_CACHE", System.currentTimeMillis());
+                    mElevationCacheDb.putElevation(latitude, longitude, demElevation, ElevationCacheDatabaseManager.SOURCE_DEM_CACHE, System.currentTimeMillis());
                     applyResolvedElevation(latE5, lonE5, demElevation);
                 } else {
                     if (DEBUG) Log.d(TAG, "DEM query unsuccessful: " + result);
                 }
             } catch (Exception e) {
                 Log.w(TAG, "Error fetching DEM elevation for (" + latitude + ", " + longitude + "): " + e.getMessage());
+            } finally {
+                mIsDemQueryInFlight.set(false);
             }
         });
     }
@@ -235,6 +252,11 @@ public class AltitudeFromPositionDevice extends MyDevice {
                 if (DEBUG) Log.w(TAG, "Background seeding failed: " + e.getMessage());
             }
         });
+    }
+
+    @VisibleForTesting
+    public boolean isDemQueryInFlight() {
+        return mIsDemQueryInFlight.get();
     }
 
     @VisibleForTesting

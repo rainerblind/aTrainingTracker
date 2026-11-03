@@ -19,7 +19,10 @@
 package com.atrainingtracker.trainingtracker.audio
 
 import android.media.AudioAttributes
+import android.media.AudioDeviceInfo
+import android.media.AudioManager
 import android.media.AudioTrack
+import android.os.Handler
 import io.mockk.*
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
@@ -28,12 +31,14 @@ import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import java.util.concurrent.Executors
 
 /**
  * Unit and concurrency test suite for BikeBellAudioSynthesizer (REQ-UI-421.4, TST-UI-384.3).
  */
 @RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
 class BikeBellAudioSynthesizerTest {
 
     @Test
@@ -78,8 +83,8 @@ class BikeBellAudioSynthesizerTest {
         )
 
         // 1. Single ring at polite volume
-        synthesizer.ring(0.70f)
-        verify(exactly = 1) { mockTrack1.setVolume(0.70f) }
+        synthesizer.ring(0.35f)
+        verify(exactly = 1) { mockTrack1.setVolume(0.35f) }
         verify(exactly = 1) { mockTrack1.stop() }
         verify(exactly = 1) { mockTrack1.playbackHeadPosition = 0 }
         verify(exactly = 1) { mockTrack1.play() }
@@ -152,5 +157,147 @@ class BikeBellAudioSynthesizerTest {
         verify(atLeast = 2) { mockTrack.playbackHeadPosition = 0 }
 
         synthesizer.close()
+    }
+
+    @Test
+    fun testBikeBellAudioSynthesizer_createAudioAttributes_alarmAndSonification() {
+        val attributes = BikeBellAudioSynthesizer.createAudioAttributes()
+        assertEquals(AudioAttributes.USAGE_ALARM, attributes.usage)
+        assertEquals(AudioAttributes.CONTENT_TYPE_SONIFICATION, attributes.contentType)
+    }
+
+    @Test
+    fun testBikeBellAudioSynthesizer_routesToBuiltInSpeaker() {
+        val mockSpeaker = mockk<AudioDeviceInfo> {
+            every { type } returns AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
+        }
+        val mockHeadphones = mockk<AudioDeviceInfo> {
+            every { type } returns AudioDeviceInfo.TYPE_BLUETOOTH_A2DP
+        }
+        val mockAudioManager = mockk<AudioManager> {
+            every { getDevices(AudioManager.GET_DEVICES_OUTPUTS) } returns arrayOf(mockHeadphones, mockSpeaker)
+            every { getStreamVolume(AudioManager.STREAM_ALARM) } returns 3
+            every { getStreamMaxVolume(AudioManager.STREAM_ALARM) } returns 15
+            every { setStreamVolume(any(), any(), any()) } just Runs
+        }
+        val mockTrack = mockk<AudioTrack>(relaxed = true)
+
+        val synthesizer = BikeBellAudioSynthesizer(
+            audioManager = mockAudioManager,
+            audioTrackFactory = { mockTrack }
+        )
+
+        // setPreferredDevice must be called with mockSpeaker upon creation
+        verify(atLeast = 1) { mockTrack.setPreferredDevice(mockSpeaker) }
+
+        // And again prior to ring()
+        synthesizer.ring(0.35f)
+        verify(atLeast = 2) { mockTrack.setPreferredDevice(mockSpeaker) }
+
+        // And prior to startRoll()
+        synthesizer.startRoll(1.0f)
+        verify(atLeast = 3) { mockTrack.setPreferredDevice(mockSpeaker) }
+
+        synthesizer.close()
+    }
+
+    @Test
+    fun testBikeBellAudioSynthesizer_volumeBoostAndDelayedAutoRestore() {
+        val mockAudioManager = mockk<AudioManager> {
+            every { getDevices(any()) } returns emptyArray()
+            every { getStreamVolume(AudioManager.STREAM_ALARM) } returns 2
+            every { getStreamMaxVolume(AudioManager.STREAM_ALARM) } returns 15
+            every { setStreamVolume(any(), any(), any()) } just Runs
+        }
+        val mockHandler = mockk<Handler>(relaxed = true)
+        val runnableSlot = slot<Runnable>()
+        every { mockHandler.postDelayed(capture(runnableSlot), any()) } returns true
+
+        val mockTrack = mockk<AudioTrack>(relaxed = true)
+        val synthesizer = BikeBellAudioSynthesizer(
+            audioManager = mockAudioManager,
+            audioTrackFactory = { mockTrack },
+            handler = mockHandler
+        )
+
+        // 1. Ring triggers volume boost to max and schedules 650ms restore
+        synthesizer.ring(0.35f)
+        verify(exactly = 1) { mockAudioManager.setStreamVolume(AudioManager.STREAM_ALARM, 15, 0) }
+        verify(exactly = 1) { mockHandler.postDelayed(any(), BikeBellAudioSynthesizer.RING_RESTORE_DELAY_MS) }
+
+        // Rapid second ring does NOT re-query or overwrite savedAlarmVolume with 15
+        synthesizer.ring(0.65f)
+        verify(exactly = 1) { mockAudioManager.getStreamVolume(AudioManager.STREAM_ALARM) }
+
+        // Execute scheduled restore callback
+        assertTrue(runnableSlot.isCaptured)
+        runnableSlot.captured.run()
+        verify(exactly = 1) { mockAudioManager.setStreamVolume(AudioManager.STREAM_ALARM, 2, 0) }
+
+        // Subsequent ring after restore will capture volume again
+        synthesizer.ring(0.35f)
+        verify(exactly = 2) { mockAudioManager.getStreamVolume(AudioManager.STREAM_ALARM) }
+
+        synthesizer.close()
+    }
+
+    @Test
+    fun testBikeBellAudioSynthesizer_rollVolumeBoostAndStopRollDelayedRestore() {
+        val mockAudioManager = mockk<AudioManager> {
+            every { getDevices(any()) } returns emptyArray()
+            every { getStreamVolume(AudioManager.STREAM_ALARM) } returns 5
+            every { getStreamMaxVolume(AudioManager.STREAM_ALARM) } returns 15
+            every { setStreamVolume(any(), any(), any()) } just Runs
+        }
+        val mockHandler = mockk<Handler>(relaxed = true)
+        val runnableSlot = slot<Runnable>()
+        every { mockHandler.postDelayed(capture(runnableSlot), any()) } returns true
+
+        val mockTrack = mockk<AudioTrack>(relaxed = true)
+        val synthesizer = BikeBellAudioSynthesizer(
+            audioManager = mockAudioManager,
+            audioTrackFactory = { mockTrack },
+            handler = mockHandler
+        )
+
+        // startRoll boosts volume and cancels any pending restore
+        synthesizer.startRoll(1.0f)
+        verify(exactly = 1) { mockAudioManager.setStreamVolume(AudioManager.STREAM_ALARM, 15, 0) }
+        verify { mockHandler.removeCallbacks(any<Runnable>()) }
+
+        // stopRoll schedules restore after 150ms
+        synthesizer.stopRoll()
+        verify(exactly = 1) { mockHandler.postDelayed(any(), BikeBellAudioSynthesizer.ROLL_RESTORE_DELAY_MS) }
+
+        // Run restore runnable
+        runnableSlot.captured.run()
+        verify(exactly = 1) { mockAudioManager.setStreamVolume(AudioManager.STREAM_ALARM, 5, 0) }
+
+        synthesizer.close()
+    }
+
+    @Test
+    fun testBikeBellAudioSynthesizer_closeRestoresBoostedVolumeImmediately() {
+        val mockAudioManager = mockk<AudioManager> {
+            every { getDevices(any()) } returns emptyArray()
+            every { getStreamVolume(AudioManager.STREAM_ALARM) } returns 4
+            every { getStreamMaxVolume(AudioManager.STREAM_ALARM) } returns 15
+            every { setStreamVolume(any(), any(), any()) } just Runs
+        }
+        val mockHandler = mockk<Handler>(relaxed = true)
+        val mockTrack = mockk<AudioTrack>(relaxed = true)
+        val synthesizer = BikeBellAudioSynthesizer(
+            audioManager = mockAudioManager,
+            audioTrackFactory = { mockTrack },
+            handler = mockHandler
+        )
+
+        synthesizer.ring(0.35f)
+        verify(exactly = 1) { mockAudioManager.setStreamVolume(AudioManager.STREAM_ALARM, 15, 0) }
+
+        // Closing before restore timeout fires restores volume immediately and removes callbacks
+        synthesizer.close()
+        verify { mockHandler.removeCallbacks(any<Runnable>()) }
+        verify(exactly = 1) { mockAudioManager.setStreamVolume(AudioManager.STREAM_ALARM, 4, 0) }
     }
 }

@@ -1359,10 +1359,10 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules.
 
-### TST-UI-124: **Configurable Zone Visualization & Theme-Aware Preview Verification** [Athletes can independently configure 4 zone visualization options per zone profile (`HR_RUN`, `HR_BIKE`, `PWR_BIKE`); live preview in `ZonesSettingsActivity` dynamically reflects toggle selections and respects the active dark/light mode theme; cockpit sensor tiles render custom combinations of background tint, left bar, right bar, and text color while preserving established zone colors; 100% 9-language localization parity; zero regressions.]
+### TST-UI-124: **Configurable Zone Visualization & Theme-Aware Preview Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-172`
 - **Component**: **Configurable Zone Visualization & Theme-Aware Preview Verification**
-- **Jira**: ``ATT-1265``
+- **Jira**: `ATT-1265`, `ATT-5200`
 - **Test Description**:
   1. *Data Model Unit Tests (`ZoneDisplayOptionsTest.kt`)*:
   • Verify default constructor sets `showBackground = true`, `showLeftBar = true`, `showRightBar = false`, `showTextColor = false` for backward compatibility.
@@ -1381,6 +1381,7 @@
   • Theme-aware preview reactivity: verify container resolves to pure black/dark surface in dark theme and light surface in light theme when background tint is off.
   4. *9-Language Localization Audit (`ZoneDisplayLocalizationTest.kt`)*:
   • Verify all newly added string keys (`zone_display_title`, `zone_display_background`, `zone_display_left_bar`, `zone_display_right_bar`, `zone_display_text_color`, `zone_display_preview_title`) exist across all 9 application locales.
+  • Verify `zone_display_background` translates accurately to "Tinted background" (EN), "Eingefärbter Hintergrund" (DE), and matching translations across ES, FR, IT, JA, NL, PL, PT.
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules.
 
@@ -4399,10 +4400,10 @@
   3. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-282: **General Map Layer Visibility Controls & Preference Persistence Verification** [General map Layers menu toggles routes, segments, favorite locations, favorite tracks / clusters, and live track; user layer visibility preferences persisted across sessions in SharedPreferences; CLUSTERS layer disabled by default in DEFAULT_ENABLED; Cockpit map renders clusters only when enabled; fast asynchronous cluster hydration and off-Main polyline decoding; harmonized ClusterOnMapSheet look and stats enrichment without purple text tinting; 100% 9-language localization parity; 100% unit test pass rate.] [Verified]
+### TST-UI-282: **General Map Layer Visibility Controls & Preference Persistence Verification** [General map Layers menu toggles routes, segments, favorite locations, favorite tracks / clusters, and live track; user layer visibility preferences persisted across sessions in SharedPreferences; CLUSTERS layer disabled by default in DEFAULT_ENABLED; Cockpit map strictly isolates and never renders clusters; fast asynchronous cluster hydration with companion stats parity and off-Main polyline decoding; harmonized ClusterOnMapSheet MapDetailLayout, MinimumDragHandle, list component reuse, and stats enrichment without purple text tinting; 100% 9-language localization parity; 100% unit test pass rate.] [Verified]
 - **Requirement(s)**: `REQ-UI-322`
 - **Component**: **General Map Layer Visibility Controls & Preference Persistence Verification**
-- **Jira**: `ATT-2931`, `ATT-4847`, `ATT-5075`, `ATT-5074`
+- **Jira**: `ATT-2931`, `ATT-4847`, `ATT-5075`, `ATT-5074`, `ATT-5197`, `ATT-5196`
 - **Test Description**:
   1. *GeneralMapLayer Enum & Default State Contract (`GeneralMapLayersContractTest.kt`)*:
   • Verify `GeneralMapLayer` enum declares `ROUTES`, `SEGMENTS`, `KNOWN_LOCATIONS`, `TRACK`, and `CLUSTERS` (exactly 5 entries).
@@ -4419,22 +4420,24 @@
   • Verify floating surface at `Alignment.TopEnd` with `statusBarsPadding().padding(top = 16.dp, end = 16.dp)`.
   • Verify dropdown menu includes checkboxes and swatches for all 5 layers.
   • Verify conditional rendering of `knownLocations()`, `segments()`, `routes()`, `clusters()`, and `markers()` + `liveTrack()`.
-  4. *Cockpit Map Cluster Integration & Decoupling Contract (`TrackingViewModelTest.kt`, `SensorGridScreenTest.kt`)*:
-  • Verify `TrackingMapState` exposes `mapClusters`.
-  • Verify `TrackingViewModel` evaluates enabled map layers (`DEFAULT_ENABLED` by default), emitting `emptyList()` when `CLUSTERS` is disabled.
-  • Verify `TrackingViewModel` integrates `WorkoutClusterRepository.allClusters` into `staticMapLayerFlow` via `distinctUntilChanged()`, decoupled from 1-Hz telemetry.
-  • Verify `TrackingMapContainer` passes `clusters(mapState.mapClusters)` to `MapContentScope`.
-  5. *ClusterOnMapSheet Harmonized UI & Non-Purple Styling Contract Tests (`GeneralMapLayersContractTest.kt`)*:
-  • Verify `ClusterOnMapSheet` renders 32dp sport icon with `Color.Unspecified`.
+  4. *Cockpit Map Cluster Excision & Decoupling Contract (`TrackingMapIsolationContractTest.kt`, `TrackingViewModelMapStateTest.kt`)*:
+  • Verify `SensorGridScreen.kt` (`TrackingMapContainer`) never composes `clusters()` on `ATrainingTrackerMap`.
+  • Verify `TrackingViewModel` does NOT depend on or observe `WorkoutClusterRepository` or `GeneralMapLayer.CLUSTERS`.
+  • Verify `TrackingViewModel.observeMapState()` populates `TrackingMapState` without `WorkoutClusterRepository.allClusters`.
+  • Verify live tracking cockpit renders strictly active track, selected routes, and live segments.
+  5. *ClusterOnMapSheet Drag Handle, MapDetailLayout & Component Reuse Contract Tests (`GeneralMapLayersContractTest.kt`, `MapScreenWithTrackTest.kt`)*:
+  • Verify `ClusterOnMapSheet` is hosted within `MapDetailLayout(useStatusBarsPadding = false)` with `MinimumDragHandle()` at the top.
+  • Verify `ClusterOnMapSheet` header reuses canonical `WorkoutClusterIdentityRow` and `WorkoutClusterMetadataBlock` from `WorkoutClusterComponents.kt`.
+  • Verify `onHeaderHeightMeasured` dynamically updates `measuredClusterHeaderHeight` for bottom sheet peek calculation.
+  • Verify expandable body displays full cluster details and workout heatmap when dragged upward.
   • Verify `ClusterOnMapSheet` does NOT apply `tint = TTColor.Cluster` or hardcoded purple colors to text or icons.
-  • Verify `ClusterOnMapSheet` displays cluster name, sport subtitle, distance, elevation gain, PR trophy (`TTColor.Gold`), hit count (`primary`), and relative recency.
-  • Verify cluster peek height in `MapScreenWithTrack.kt` uses `BottomSheetDesign.PeekHeightWorkout + navBarHeight`.
   6. *MapCluster & MapFragmentWithTrackViewModel Stats Enrichment Contract Tests (`MapModelsTest.kt`, `MapFragmentWithTrackViewModelTest.kt`)*:
   • Verify `MapCluster` includes `stats: WorkoutClusterStats? = null`.
   • Verify `MapFragmentWithTrackViewModel` combines `workoutClusterRepository.clusterStats` into `mapClustersFlow`, populating `stats` on `MapCluster`.
   • Verify `WorkoutCluster.toMapCluster()` populates `stats` while preserving referential stability of decoded coordinates (`latLngs`).
-  7. *Fast Asynchronous Hydration & Off-Main Decoding Contract Tests (`WorkoutClusterRepositoryTest.kt`, `MapFragmentWithTrackViewModelTest.kt`)*:
-  • Verify `WorkoutClusterRepository` provides fast asynchronous loading from the `RouteClusters` table on `Dispatchers.IO` without requiring `clusterStats` aggregation.
+  7. *Fast Asynchronous Hydration with Companion Stats Parity Contract Tests (`WorkoutClusterRepositoryTest.kt`, `MapFragmentWithTrackViewModelTest.kt`)*:
+  • Verify `WorkoutClusterRepository.loadAllClustersLightweight()` seeds `_allClusters` from `RouteClusters` and, if `_clusterStats.value.isEmpty()`, automatically populates `_clusterStats.value = summariesManager.getWorkoutClusterStatsForAllClusters()`.
+  • Verify opening Map first hydrates cluster stats without requiring a prior visit to the Lieblingsstrecken list screen.
   • Verify `mapClustersFlow` offloads polyline decoding to `Dispatchers.Default` (`flowOn(Dispatchers.Default)`).
   8. *9-Language Localization Parity Audit (`GeneralMapLayersLocalizationTest.kt`)*:
   • Verify string resources `map_layers`, `map_layer_routes`, `map_layer_segments`, `map_layer_locations`, `map_layer_track`, `map_layer_clusters` exist and are non-empty across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
@@ -6424,10 +6427,10 @@
   5. *Clean-Room Regression Suite Execution (`TST-UI-383.5`)*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions across the full test suite.
 
-### TST-UI-384: **Electronic Bike Bell with Button, Double-Tap Gesture, and Progressive Loudness Escalation Verification Suite** [AudioTrack configured with USAGE_MEDIA and static replay stop() cycle; BikeBellButton enabled across READY, TRACKING, and PAUSED modes with gesture isolation; double-tap active across non-configuration modes; 100% test pass rate with zero regressions.]
+### TST-UI-384: **Electronic Bike Bell with Button, Double-Tap Gesture, and Progressive Loudness Escalation Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-421`, `REQ-UI-344`, `REQ-UI-295`, `REQ-UI-409`
 - **Component**: **Electronic Bike Bell with Button, Double-Tap Gesture, and Progressive Loudness Escalation Verification Suite**
-- **Jira**: ``ATT-4371``
+- **Jira**: ``ATT-4371``, ``ATT-5131``
 - **Test Description**:
   1. *TrackingViewsDbHelper SQLite v15 Transactional & Idempotent Migration Unit Test (`TST-UI-384.1`, `TrackingViewsRealSqliteMigrationTest.kt`)*:
   • Test database upgrade from v14 to v15: verify `SHOW_BIKE_BELL` column added.
@@ -6438,15 +6441,20 @@
   2. *TrackingViewsRepository & DTO Mapping Symmetry Unit Test (`TST-UI-384.2`, `TrackingViewsRepositoryTest.kt`)*:
   • Test `TrackingViewInfo` reads and maps `showBikeBell` correctly from single-row and batch queries.
   • Test `updateShowBikeBell(tabViewId, show)` persists toggle state accurately.
-  3. *BikeBellAudioSynthesizer USAGE_MEDIA Stream, Static Replay & Concurrency Test (`TST-UI-384.3`, `BikeBellAudioSynthesizerTest.kt`)*:
+  3. *BikeBellAudioSynthesizer Built-in Speaker Routing, Alarm Stream & Volume Boost Test (`TST-UI-384.3`, `BikeBellAudioSynthesizerTest.kt`)*:
   • Verify 16-bit PCM mono buffer synthesis generated at $44.1\text{ kHz}$ with two distinct strikes separated by $\sim 110\text{ ms}$ and exponential decay.
-  • Verify `AudioAttributes.USAGE_MEDIA` and `AudioAttributes.CONTENT_TYPE_SONIFICATION` audio attributes configuration.
+  • Verify `AudioAttributes.USAGE_ALARM` and `AudioAttributes.CONTENT_TYPE_SONIFICATION` audio attributes configuration.
+  • Verify `AudioTrack.setPreferredDevice(builtInSpeaker)` where `builtInSpeaker.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER` applied upon creation and prior to playback.
+  • Verify `savedAlarmVolume` capture, hardware volume boost to `getStreamMaxVolume(STREAM_ALARM)` with `flags = 0`, and delayed auto-restore (+650 ms for ring, +150 ms after stopRoll).
   • Verify static replay contract: `mockTrack.stop()` is invoked prior to `mockTrack.playbackHeadPosition = 0` on every ring and roll start, preventing `ERROR_INVALID_OPERATION`.
   • Verify thread safety: concurrent calls to `ring()`, `startRoll()`, `stopRoll()`, and `close()` from multiple threads execute without exceptions or native crashes.
-  4. *Progressive Loudness Escalation Logic Test (`TST-UI-384.4`, `TrackingTabsViewModelTest.kt`)*:
-  • Test initial ring: verify volume is 0.70f.
-  • Test repeat ring within 5 seconds ($t + 2\text{s}$): verify volume escalates to 1.0f.
-  • Test silence $> 5\text{ seconds}$ ($t + 6\text{s}$): verify volume resets to 0.70f.
+  4. *3-Stage Perceptual Loudness Escalation Logic Test (`TST-UI-384.4`, `TrackingTabsViewModelTest.kt`)*:
+  • Test initial ring: verify volume is 0.35f (Stage 1, -9.1 dB).
+  • Test repeat ring within 5 seconds ($t + 2\text{s}$): verify volume escalates to 0.65f (Stage 2, -3.7 dB).
+  • Test third ring within 5 seconds ($t + 4\text{s}$): verify volume escalates to 1.00f (Stage 3, 0 dB).
+  • Test fourth ring within 5 seconds ($t + 5\text{s}$): verify volume remains capped at 1.00f (Stage 3).
+  • Test silence $> 5\text{ seconds}$ ($t + 11\text{s}$): verify volume resets to 0.35f (Stage 1).
+  • Test long-press: verify immediate 1.00f maximum volume.
   • Test `onCleared()` releases synthesizer resources cleanly.
   5. *Cockpit Multi-Mode Availability & Pointer Gesture Isolation Contract Test (`TST-UI-384.5`, `TrackingTabsScreenTest.kt` / `BikeBellButtonTest.kt`)*:
   • Verify multi-mode availability: `BikeBellButton` is enabled in `TrackingMode.READY`, `TrackingMode.TRACKING`, and `TrackingMode.PAUSED` (enforcing Rule 53).
@@ -6466,6 +6474,8 @@
   • Verify zero missing keys and literal `\n` linebreaks.
   8. *Clean-Room Regression Suite Execution (`TST-UI-384.8`)*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions.
+  9. *Manifest Permission Security Contract (`TST-UI-384.9`, `ManifestAndBuildConfigContractTest.kt`)*:
+  • Verify `AndroidManifest.xml` actively declares `android.permission.MODIFY_AUDIO_SETTINGS`.
 
 ### TST-UI-385: **Relocate 'Sport Types' Drawer Item to Settings and Rename 'Equipment' Item to 'Bikes & Shoes' Verification Suite** [Relocate Sport Types drawer destination to Settings Hub, restrict Equipment hub strictly to physical hardware (My Sensors, Bikes & Shoes), rename Equipment title to Bikes & Shoes across all 9 locales with XML entity escaping, verify drawer state machine auto-expansion, and pass clean-room test suite.]
 - **Requirement(s)**: `REQ-UI-422`, `REQ-UI-405`, `REQ-LOC-001`
@@ -6896,7 +6906,7 @@
 ### TST-UI-437: **User-Configurable Horizontal Width Ratios & Split Presets in Cockpit Sensor Grid Test Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-437`
 - **Component**: `TrackingViewsDatabaseManagerTest.kt`, `TrackingViewsRepositoryTest.kt`, `EditSensorFieldViewModelTest.kt`, `SensorGridScreenLayoutTest.kt`, `SensorGridLocalizationTest.kt`
-- **Jira**: `ATT-4861`, `ATT-5077`
+- **Jira**: `ATT-4861`, `ATT-5077`, `ATT-5192`
 - **Test Description**:
   1. *SQLite Migration v16 -> v17 & Default Weight Backfill Test (`TST-UI-437.1`)*:
   • Unit test in `TrackingViewsRealSqliteMigrationTest.kt` / `TrackingViewsDatabaseManagerTest.kt` verifying database upgrade from schema version 16 to 17:
@@ -6919,6 +6929,10 @@
     - Single-column rows naturally take 100% width.
   5. *9-Language Localization Parity Audit (`TST-UI-437.5`)*:
   • Audit in `TranslationParityTest` verifying all active string keys exist across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) and obsolete `sensor_field_row_split_presets` is removed across all 9 locales.
+  6. *Edit Dialog Multi-Field Row Relative Width Visibility Test (`TST-UI-437.6`)*:
+  • Unit test in `EditSensorFieldViewModelTest.kt` verifying:
+    - Pure helper `calculateIsMultiFieldRow(existingFieldsInTargetRow, isNewField)` returns `false` for single-field rows and `true` when row has $\ge 2$ fields.
+    - `EditDialogUiState.isMultiFieldRow` is hydrated correctly when editing existing single-field vs multi-field rows, and when inserting new fields into new vs existing rows (ATT-5192).
 
 
 ### TST-UI-438: **Vertical Card Height and Border Stretching in Cockpit Sensor Grid Test Suite** [Verified]
@@ -6948,11 +6962,12 @@
 ### TST-UI-439: **Copy Tracking Tab to Target Activity Types Test Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-439`
 - **Component**: `TrackingTabConfigHeaderContractTest.kt`, `TrackingViewsDatabaseManagerTest.kt`, `TrackingViewsRepositoryTest.kt`, `TranslationParityTest.kt`
-- **Jira**: `ATT-5078`
+- **Jira**: `ATT-5078`, `ATT-5189`
 - **Test Description**:
   1. *Tracking Tab Config Header Copy Button Test (`TST-UI-439.1`)*:
   • Contract test verifying that `TrackingTabConfigHeader.kt` renders an `IconButton` with `Icons.Default.ContentCopy`, content description `R.string.cd_copy_tab`, and invokes `onCopyTab(tabViewId)`.
-  2. *Database Transactional Deep-Copy & Append Test (`TST-UI-439.2`)*:
+  2. *Database Transactional Deep-Copy, Append & Target Selection Unselected Default Contract Test (`TST-UI-439.2`)*:
+  • Contract/unit test verifying `CopyTrackingTabDialog.kt` initializes `selectedTypes` with `emptySet<ActivityType>()`, ensuring all sport profiles start unselected by default and the Copy action button remains disabled (`saveEnabled = false`) until at least one target profile is explicitly selected (ATT-5189).
   • Unit test in `TrackingViewsDatabaseManagerTest.kt` verifying that calling `copyTabViewToActivityTypes(sourceViewId, targetTypes)`:
     - Atomically duplicates the view row in `VIEWS_TABLE` for each target `ActivityType` at `LAYOUT_NR = max(LAYOUT_NR) + 1`.
     - Duplicates all child `ROWS_TABLE` records with new `view_id`, preserving row/col indices, sensor types, sizes, filters, and column weights.
@@ -7013,19 +7028,38 @@
   • Run targeted package unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.*"` ensuring 100% pass rate.
 
 
-### TST-UI-442: **Bluetooth LE Sensor Vector Drawables Full-Bleed Badge, Uppercase Labels & Top-Right Mini-Icons Verification Suite** [Verified]
+### TST-UI-442: **Bluetooth LE Sensor Vector Drawables Full-Bleed Badge, Uppercase Labels, Centered Cyclist & Top-Left Mini-Icons Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-442`
 - **Component**: `VectorAssetResolutionContractTest.kt`, `UIHelper.java`
-- **Jira**: `ATT-4956`
+- **Jira**: `ATT-4956`, `ATT-5201`
 - **Test Description**:
-  1. *Full-Bleed Badge Geometry & Protocol Color Verification (`TST-UI-442.1`)*:
-  • Contract test in `VectorAssetResolutionContractTest.kt` asserting that all 6 BTLE drawables (`bt_bike_pwr`, `bt_bike_spd`, `bt_bike_cad`, `bt_bike_speed_and_cadence`, `bt_hr`, `bt_run`) declare full-bleed `0..144` badge paths with corner radius $r=22.0$ and background color `#07377F`, with zero remaining `10..134` inset paths.
+  1. *Full-Bleed Badge Geometry & Official Protocol Color Verification (`TST-UI-442.1`)*:
+  • Contract test in `VectorAssetResolutionContractTest.kt` asserting that all 6 BTLE drawables (`bt_bike_pwr`, `bt_bike_spd`, `bt_bike_cad`, `bt_bike_speed_and_cadence`, `bt_hr`, `bt_run`) declare full-bleed `0..144` badge paths with corner radius $r=22.0$ and official Bluetooth color `#0A3D91`, with zero remaining `#07377F` or inset paths.
   2. *Uppercase Bottom Label & evenOdd Counter Hole Contract (`TST-UI-442.2`)*:
   • Test in `VectorAssetResolutionContractTest.kt` verifying that all 6 BTLE drawables include bold uppercase text path data (`PWR`, `SPD`, `CAD`, `S&C`, `HR`, `SPD`) with `evenOdd` fillType for counter holes, and no lowercase words (`power`, `speed`, `cadence`, `s & c`).
-  3. *Top-Right Sensor Mini-Icon & Rule 37 Geometric Primitive Audit (`TST-UI-442.3`)*:
-  • Test in `VectorAssetResolutionContractTest.kt` verifying that `bt_bike_*` drawables contain top-right mini-icon path geometry, and that all 6 drawables satisfy Rule 37 ($\le 45$ `L` commands per path, analytical curves `A`/`C`/`Q`).
+  3. *Centered Cyclist, Top-Left Canonical Mini-Icons & Rule 37 Geometric Primitive Audit (`TST-UI-442.3`)*:
+  • Test in `VectorAssetResolutionContractTest.kt` verifying that the cyclist motif is centered horizontally ($x \in [28.5, 115.5]$), top-left canonical mini-icons reside in $x \le 52, y \le 50$, and all 6 drawables satisfy Rule 37 ($\le 45$ `L` commands per path, analytical curves `A`/`C`/`Q`).
   4. *Resource Resolution & Clean-Room Suite Execution (`TST-UI-442.4`)*:
   • Assert `UIHelper.getIconId()` and `BSportType` mappings for all BTLE sensors continue to resolve to valid non-zero resource IDs with zero regression (`REQ-PRO-001`).
+
+
+### TST-UI-443: **Power TelemetryMetricGraph Marginal Histogram Unfolded Linear Bins Projection Parity Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-443`
+- **Component**: `ZoneDistributionModels.kt`, `TelemetryMetricGraph.kt`, `TelemetryMetricGraphMarginalBarsContractTest.kt`, `TelemetryMetricGraphLandscapeContractTest.kt`
+- **Jira**: `ATT-5190`
+- **Test Description**:
+  1. *TelemetryHistogramData Unfolded Linear Bins Unit Tests (`TelemetryHistogramCalculatorTest.kt`)*:
+  • Unit tests verifying `TelemetryHistogramData.linearBins` returns `bins` directly when `sprintTail == null`.
+  • Unit tests verifying `TelemetryHistogramData.linearBins` excludes `isOverflow` and `isReturn` bins and unrolls full linear bins spanning `[dataMin, dataMax]` when `sprintTail != null`.
+  2. *Portrait Marginal Strip Unfolded Linear Bins Contract Test (`TelemetryMetricGraphMarginalBarsContractTest.kt`)*:
+  • Contract test verifying `TelemetryMetricGraph.kt` portrait marginal strip logic accesses `histogram.linearBins` and computes `maxBinPct` from `linearBins`.
+  • Contract test verifying background track rendering is conditioned on `bin.durationSec > 0L`.
+  3. *Landscape Aligned Marginal Zone Distribution Unfolded Linear Bins Contract Test (`TelemetryMetricGraphLandscapeContractTest.kt`)*:
+  • Contract test verifying `AlignedMarginalZoneDistribution` accesses `histogram.linearBins` and computes `maxBinPct` from `linearBins`.
+  • Contract test verifying background track rendering is conditioned on `bin.durationSec > 0L`.
+  4. *Clean-Room Targeted Test Suite Execution (`TST-UI-443.4`)*:
+  • Run targeted package unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.zones.*" --tests "com.atrainingtracker.trainingtracker.ui.map.*" --tests "com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest"` confirming 100% pass rate.
+
 
 
 

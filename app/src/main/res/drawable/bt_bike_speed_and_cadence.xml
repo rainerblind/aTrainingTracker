@@ -1,13 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- ATT-4956 / REQ-UI-442: bt_bike_speed_and_cadence with full-bleed badge, uppercase S&C label, shifted cyclist, and dual mini-icon -->
+<!-- ATT-5201 / REQ-UI-442: bt_bike_speed_and_cadence with full-bleed badge (#0A3D91), uppercase S&C label, centered cyclist, and canonical ic_speed + ic_cadence in top-left -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="48dp"
     android:height="48dp"
     android:viewportWidth="144"
     android:viewportHeight="144">
     <path
-        android:fillColor="#07377F"
+        android:fillColor="#0A3D91"
         android:pathData="M 22.0,0.0 L 122.0,0.0 A 22.0,22.0 0 0,1 144.0,22.0 L 144.0,122.0 A 22.0,22.0 0 0,1 122.0,144.0 L 22.0,144.0 A 22.0,22.0 0 0,1 0.0,122.0 L 0.0,22.0 A 22.0,22.0 0 0,1 22.0,0.0 Z" />
+    <group
+        android:name="cyclist"
+        android:translateX="18.18">
     <path
         android:fillColor="#00000000"
         android:strokeColor="#FFFFFF"
@@ -126,27 +129,28 @@
         android:strokeWidth="1.53"
         android:strokeLineJoin="round"
         android:pathData="M 41.13,31.17 Q 38.85,30.03 37.70,32.32 Q 36.56,34.61 37.12,37.46 Q 37.70,40.33 38.85,38.61 Q 39.99,36.90 41.70,34.61 Q 43.41,32.32 41.13,31.17 Z" />
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="2.8"
-        android:strokeLineCap="round"
-        android:pathData="M 111.0,25.0 A 11.0,11.0 0 0,1 129.0,16.0" />
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="2.4"
-        android:strokeLineCap="round"
-        android:pathData="M 120.0,24.0 L 126.0,17.0" />
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="2.6"
-        android:strokeLineCap="round"
-        android:pathData="M 114.0,34.0 A 9.0,9.0 0 0,0 128.0,32.0" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M 125.0,29.0 L 131.0,33.0 L 126.0,36.0 Z" />
+    </group>
+    <!-- Canonical ic_speed.xml + ic_cadence.xml dual mini-icon in top-left quadrant -->
+    <group
+        android:name="mini_icon_spd"
+        android:translateX="11.0"
+        android:translateY="7.0"
+        android:scaleX="0.024"
+        android:scaleY="0.024">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M418,620Q442,644 480,643.5Q518,643 536,616L760,280L424,504Q397,522 395.5,559Q394,596 418,620ZM480,160Q539,160 593.5,176.5Q648,193 696,226L620,274Q587,257 551.5,248.5Q516,240 480,240Q347,240 253.5,333.5Q160,427 160,560Q160,602 171.5,643Q183,684 204,720L756,720Q779,682 789.5,641Q800,600 800,556Q800,520 791.5,486Q783,452 766,420L814,344Q844,391 861.5,444Q879,497 880,554Q881,611 867,663Q853,715 826,762Q815,780 796,790Q777,800 756,800L204,800Q183,800 164,790Q145,780 134,762Q108,717 94,666.5Q80,616 80,560Q80,477 111.5,404.5Q143,332 197.5,277.5Q252,223 325,191.5Q398,160 480,160ZM487,473L487,473Q487,473 487,473Q487,473 487,473Q487,473 487,473Q487,473 487,473Q487,473 487,473L487,473L487,473L487,473Q487,473 487,473Q487,473 487,473Q487,473 487,473Q487,473 487,473Z" />
+    </group>
+    <group
+        android:name="mini_icon_cad"
+        android:translateX="23.0"
+        android:translateY="21.0"
+        android:scaleX="0.024"
+        android:scaleY="0.024">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M480,560Q447,560 423.5,536.5Q400,513 400,480Q400,447 423.5,423.5Q447,400 480,400Q513,400 536.5,423.5Q560,447 560,480Q560,513 536.5,536.5Q513,560 480,560ZM480,840Q341,840 239,748.5Q137,657 122,520L204,520Q218,624 296.5,692Q375,760 480,760Q597,760 678.5,678.5Q760,597 760,480Q760,363 678.5,281.5Q597,200 480,200Q411,200 351,232Q291,264 250,320L360,320L360,400L120,400L120,160L200,160L200,254Q251,190 324.5,155Q398,120 480,120Q555,120 620.5,148.5Q686,177 734.5,225.5Q783,274 811.5,339.5Q840,405 840,480Q840,555 811.5,620.5Q783,686 734.5,734.5Q686,783 620.5,811.5Q555,840 480,840Z" />
+    </group>
     <path
         android:fillColor="#FFFFFF"
         android:fillType="evenOdd"

@@ -58,7 +58,12 @@ import androidx.compose.ui.platform.LocalContext
 import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
+import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterStats
+import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterIdentityRow
+import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterMetadataBlock
+import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterDetailDashboard
+import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModel
 import com.atrainingtracker.trainingtracker.ui.components.MetricItem
 import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
@@ -110,6 +115,7 @@ fun MapScreenWithTrack(
     val currentLocation by viewModel.currentLocation.collectAsStateWithLifecycle()
     val liveSegments by viewModel.liveSegments.collectAsStateWithLifecycle()
     val allRoutes by viewModel.allRoutes.collectAsStateWithLifecycle()
+    val allClusters by viewModel.allClusters.collectAsStateWithLifecycle()
     val enabledLayers by viewModel.enabledLayers.collectAsStateWithLifecycle()
 
     // The ID of the segment/route/location/cluster currently being "peeked"
@@ -122,6 +128,7 @@ fun MapScreenWithTrack(
 
     var measuredSegmentHeaderHeight by remember(selectedSegmentId) { mutableStateOf<Dp?>(null) }
     var measuredRouteHeaderHeight by remember(selectedRouteId) { mutableStateOf<Dp?>(null) }
+    var measuredClusterHeaderHeight by remember(selectedClusterId) { mutableStateOf<Dp?>(null) }
 
     LaunchedEffect(targetLocationId) {
         if (targetLocationId != null && targetLocationId > 0) {
@@ -155,8 +162,8 @@ fun MapScreenWithTrack(
     }
 
     // Effect: When dynamic measurement completes for the active sheet, re-align the resting offset flush to the navigation bar (REQ-UI-221, ATT-1645)
-    LaunchedEffect(measuredSegmentHeaderHeight, measuredRouteHeaderHeight) {
-        if (selectedSegmentId != null || selectedRouteId != null) {
+    LaunchedEffect(measuredSegmentHeaderHeight, measuredRouteHeaderHeight, measuredClusterHeaderHeight) {
+        if (selectedSegmentId != null || selectedRouteId != null || selectedClusterId != null) {
             if (scaffoldState.bottomSheetState.currentValue == SheetValue.PartiallyExpanded ||
                 scaffoldState.bottomSheetState.targetValue == SheetValue.PartiallyExpanded) {
                 scaffoldState.bottomSheetState.partialExpand()
@@ -218,7 +225,10 @@ fun MapScreenWithTrack(
                     base + navBarHeight
                 }
                 selectedLocationId != null -> BottomSheetDesign.PeekHeightKnownLocation + navBarHeight
-                selectedClusterId != null -> BottomSheetDesign.PeekHeightWorkout + navBarHeight
+                selectedClusterId != null -> {
+                    val base = measuredClusterHeaderHeight ?: BottomSheetDesign.PeekHeightWorkout
+                    base + navBarHeight
+                }
                 else -> 0.dp
             },
             sheetDragHandle = null,
@@ -231,8 +241,11 @@ fun MapScreenWithTrack(
                                     uiState.clusters.find { it.id == selectedClusterId }
 
                                 if (selectedCluster != null) {
+                                    val rawCluster = allClusters.find { it.id == selectedClusterId }
                                     ClusterOnMapSheet(
                                         cluster = selectedCluster,
+                                        rawCluster = rawCluster,
+                                        onHeaderHeightMeasured = { measuredClusterHeaderHeight = it },
                                         modifier = Modifier.fillMaxSize()
                                     )
                                 }
@@ -547,135 +560,70 @@ fun KnownLocationOnMapSheet(
 @Composable
 fun ClusterOnMapSheet(
     cluster: MapCluster,
+    rawCluster: WorkoutCluster? = null,
+    clustersViewModel: WorkoutClustersViewModel = viewModel(),
+    onHeaderHeightMeasured: ((Dp) -> Unit)? = null,
+    onHitCountClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    val distanceFormatter = remember { DistanceFormatter() }
-    val altitudeFormatter = remember { AltitudeFormatter() }
-    val timeFormatter = remember { TimeFormatter() }
-    val context = LocalContext.current
-
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            // 1. Identity Row: 32dp Sport Icon + Title & Sport Subtitle
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Icon(
-                    painter = painterResource(cluster.bSportType.iconResId),
-                    contentDescription = stringResource(cluster.bSportType.stringResId),
-                    modifier = Modifier.size(32.dp),
-                    tint = Color.Unspecified
-                )
-
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    Text(
-                        text = cluster.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = stringResource(cluster.bSportType.stringResId),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-
-            // 2. Metrics Row: Distance + Elevation (if > 0) + Best Time (PR Trophy)
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                MetricItem(
-                    iconRes = R.drawable.ic_distance,
-                    value = distanceFormatter.format_with_units(cluster.refDistance),
-                    isPrimary = false,
-                    valueColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    iconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
-                )
-
-                val avgAscent = cluster.stats?.avgAscentMeters ?: 0L
-                if (avgAscent > 0L) {
-                    MetricItem(
-                        iconRes = R.drawable.ic_ascent,
-                        value = altitudeFormatter.format_with_units(avgAscent),
-                        isPrimary = false,
-                        valueColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        iconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
-                    )
-                }
-
-                val bestDuration = cluster.stats?.bestDurationSec
-                if (bestDuration != null && bestDuration > 0L) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(3.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.EmojiEvents,
-                            contentDescription = stringResource(R.string.cluster_stats_best_time),
-                            tint = TTColor.Gold,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Text(
-                            text = timeFormatter.format(bestDuration),
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-            }
-
-            // 3. Summary Row: Hit Count (primary) + Bullet + Relative Recency
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Text(
-                    text = pluralStringResource(R.plurals.cluster_recordings, cluster.hitCount, cluster.hitCount),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-
-                val recencyText = remember(cluster.stats?.lastHitTimestampS, context) {
-                    cluster.stats?.let { WorkoutClusterStats.formatRelativeRecency(context, it.lastHitTimestampS) }.orEmpty()
-                }
-                if (recencyText.isNotEmpty()) {
-                    Text(
-                        text = "•",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = recencyText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-        }
+    val resolvedCluster = remember(cluster, rawCluster) {
+        rawCluster ?: WorkoutCluster(
+            id = cluster.id,
+            name = cluster.name,
+            probableSportId = 0L,
+            startLat = cluster.latLngs.firstOrNull()?.latitude ?: 0.0,
+            startLng = cluster.latLngs.firstOrNull()?.longitude ?: 0.0,
+            endLat = cluster.latLngs.lastOrNull()?.latitude ?: 0.0,
+            endLng = cluster.latLngs.lastOrNull()?.longitude ?: 0.0,
+            maxDispLat = cluster.latLngs.lastOrNull()?.latitude ?: 0.0,
+            maxDispLng = cluster.latLngs.lastOrNull()?.longitude ?: 0.0,
+            refDistance = cluster.refDistance,
+            hitCount = cluster.hitCount,
+            bSportType = cluster.bSportType
+        )
     }
+
+    MapDetailLayout(
+        bSportType = resolvedCluster.bSportType,
+        zoomFocus = MapZoomFocus.FIT_PRIMARY,
+        activeScrubPath = null,
+        showMap = false,
+        useStatusBarsPadding = false,
+        showElevationProfile = false,
+        showZoomControls = false,
+        showTelemetryCharts = false,
+        onHeaderHeightMeasured = onHeaderHeightMeasured,
+        header = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                WorkoutClusterIdentityRow(
+                    cluster = resolvedCluster,
+                    viewModel = clustersViewModel,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                WorkoutClusterMetadataBlock(
+                    cluster = resolvedCluster,
+                    viewModel = clustersViewModel,
+                    modifier = Modifier.fillMaxWidth(),
+                    includeSpacer = false,
+                    onHitCountClick = onHitCountClick
+                )
+            }
+        },
+        metadataContent = {
+            WorkoutClusterDetailDashboard(
+                cluster = resolvedCluster,
+                viewModel = clustersViewModel,
+                onHitCountClick = { onHitCountClick?.invoke() },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+        },
+        modifier = modifier
+    )
 }

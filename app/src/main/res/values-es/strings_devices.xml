@@ -101,7 +101,7 @@
     <string name="device_altitude_pressure_how_it_works">Mide la presión atmosférica con el barómetro interno. Calcula cambios de altitud relativos mediante la fórmula barométrica, calibrada en lugares conocidos o manualmente.</string>
     <string name="device_altitude_pressure_pros_cons">+ Muy reactivo y fluido; sin ruido vertical de GPS; funciona en túneles.\n- Los cambios meteorológicos pueden provocar desviaciones con el tiempo.</string>
     <string name="device_altitude_position_how_it_works">Compara su posición GPS con modelos de elevación digital (DEM) en caché de rutas o de Open-Meteo.</string>
-    <string name="device_altitude_position_pros_cons">+ Inmune al clima y deriva barométrica; altitud absoluta sin calibración.\n- Depende de la precisión del GPS; escalonada en puentes y desfiladeros.</string>
+    <string name="device_altitude_position_pros_cons">+ Inmune al clima y deriva barométrica; altitud absoluta sin calibración.\n- Requiere conexión activa a internet para áreas sin caché; depende de la precisión del GPS; escalonada en puentes y desfiladeros.</string>
 
     <string name="devices_live_sensor_data_header">Datos Sensores</string>
 

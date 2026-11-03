@@ -2317,30 +2317,35 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 
 ### REQ-SEN-025: Pairable Position-Based Elevation Sensor & Dedicated Spatial DEM Cache [Verified]
-- **Tests**: `TST-SEN-025` | **Tickets**: `ATT-4859`
+- **Tests**: `TST-SEN-025` | **Tickets**: `ATT-4859`, `ATT-5199`
 - **Implementation**: `AltitudeFromPositionDevice.java`, `DeviceType.java`, `ElevationCacheDatabaseManager.kt`, `DeviceManager.java`, `DevicesDatabaseManager.java`, `SensorSourceDialog.kt`, `MySensorManager.java`, `DatabaseSchemaRegistry.kt`
 - **Rationale**: Currently, `SensorType.ALTITUDE` is supplied either by internal barometric pressure (`AltitudeFromPressureDevice`) or raw GNSS altitude ($\pm 20\text{--}50\text{ m}$ vertical GPS multipath noise). Introducing a pairable `AltitudeFromPositionDevice` (`DeviceType.ALTITUDE_FROM_POSITION`, `Protocol.SMARTPHONE`) backed by a dedicated spatial cache (`ElevationCache.db`) provides continuous topographic/DEM altitude based on GPS coordinates, seeded from route elevations (`Routes.db`) and Open-Meteo DEM queries (`ElevationService`), strictly separated from *Lieblingsorte* (`KnownLocations.db`) (ATT-4859, Parent Epic ATT-166):
 1. *Device Registration & Smartphone Pairing Lifecycle (`REQ-SEN-025.1`)*:
 • The system SHALL register `DeviceType.ALTITUDE_FROM_POSITION` under `Protocol.SMARTPHONE` with main sensor type `SensorType.ALTITUDE`.
 • The system SHALL manage pairing via `DevicesDatabaseManager` and instantiate/destroy `AltitudeFromPositionDevice` dynamically in `DeviceManager` based on pairing state.
 • The system SHALL support selecting `ALTITUDE_FROM_POSITION` in `SensorSourceDialog` for `SensorType.ALTITUDE`.
-2. *Dedicated Spatial Elevation Cache Database (`REQ-SEN-025.2`)*:
+2. *Dedicated Spatial Elevation Cache Database & Source Priority (`REQ-SEN-025.2`)*:
 • The system SHALL persist elevation points in a dedicated SQLite database `ElevationCache.db` managed by `ElevationCacheDatabaseManager` (`DB_VERSION = 1`), registered with `DatabaseSchemaRegistry` per Rule 62.
 • Table `elevation_cache` SHALL store quantized coordinates `(lat_e5 INT, lon_e5 INT, altitude REAL, source TEXT, updated_at INT)` with unique compound index on `(lat_e5, lon_e5)` for $O(\log N)$ spatial queries.
-• Queries SHALL support nearest-neighbor matching within spatial tolerance ($\approx 20\text{ m}$, $\Delta\text{E5} \le 2$).
+• The system SHALL enforce a strict source priority hierarchy: `DEM_CACHE` (priority 30) > `ROUTE_SEED` (priority 20) > `SEGMENT_SEED` (priority 10).
+• `putBatchElevations()` for lower-priority sources (`ROUTE_SEED`, `SEGMENT_SEED`) SHALL use `CONFLICT_IGNORE` so authoritative `DEM_CACHE` entries are NEVER overwritten by seeded trackpoints.
+• Seeding via `seedFromRoutes()` SHALL update existing `SEGMENT_SEED` entries to `ROUTE_SEED`, while `seedFromSegments()` SHALL NEVER overwrite existing `ROUTE_SEED` or `DEM_CACHE` entries.
+• Queries SHALL support nearest-neighbor matching within spatial tolerance ($\approx 20\text{ m}$, $\Delta\text{E5} \le 2$) via `getElevation()` and `getElevationItem()`.
 3. *Background Route Seeding & Asynchronous Internet DEM Caching (`REQ-SEN-025.3`)*:
-• The system SHALL asynchronously seed `ElevationCache.db` with valid trackpoint elevations from stored routes (`Routes.db`) without network overhead.
-• When a location fix misses the local cache, `AltitudeFromPositionDevice` SHALL asynchronously query `ElevationService.getInstance().fetchElevation(lat, lon)` (Open-Meteo DEM), cache the result in `ElevationCache.db`, and emit the resolved altitude to `mAltitudeSensor`.
+• The system SHALL asynchronously seed `ElevationCache.db` with valid trackpoint elevations from stored routes (`Routes.db`) and segments (`Segments.db`) without network overhead using non-destructive conflict resolution.
+• When a location fix misses the local cache, `AltitudeFromPositionDevice` SHALL asynchronously query `ElevationService.getInstance().fetchElevation(lat, lon)` (Open-Meteo DEM), cache the result in `ElevationCache.db` with source `DEM_CACHE`, and emit the resolved altitude to `mAltitudeSensor`.
+• When a location fix matches a cached non-authoritative entry (`source != DEM_CACHE`), `AltitudeFromPositionDevice` SHALL immediately emit the cached altitude for zero-latency offline display AND SHALL asynchronously query `ElevationService` when online to upgrade the cached coordinate to `DEM_CACHE`.
+• Asynchronous DEM queries SHALL be protected by an atomic in-flight guard flag (`AtomicBoolean`) to prevent executor task queue congestion during network outages or high-frequency location fixes.
 4. *Strict Decoupling from Known Locations (*Lieblingsorte*) (`REQ-SEN-025.4`)*:
 • Background position tracking and DEM queries SHALL NEVER insert, alter, or reconcile entries in `KnownLocations.db` (`KnownLocationsDatabaseManager`), preserving athlete favorite landmarks and manual calibrations.
 5. *9-Language Localization Parity (`REQ-SEN-025.5`)*:
 • All `ALTITUDE_FROM_POSITION` device strings (`device_type_altitude_from_position`, `device_type_short_altitude_from_position`, `devices_altitude_from_position`, `devices_altitude_from_position_description`) SHALL maintain 100% translation parity across all 9 supported locales.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-SEN-025`, extending `REQ-DAT-014` (Open-Meteo DEM Integration) and `REQ-UI-199` (Altimeter Calibration Dispatch). Targets `AltitudeFromPositionDevice.java`, `DeviceType.java`, `ElevationCacheDatabaseManager.kt`, `DeviceManager.java`, and `DevicesDatabaseManager.java`.
-2. *Historical Origin & Commit Trace*: Sprint 2026-44.2 (`ATT-4859`). Builds upon `ATT-1366` (DEM resolution) and `ATT-166` (sensor fusion epic).
-3. *Root Reason for Existing Formulation*: Prior implementations only queried DEM for workout start points and wrote directly to `KnownLocations.db`, leaving in-ride position-based altitude unavailable without barometer hardware.
-4. *Preservation of Core Invariants*: Preservation of `KnownLocations.db` geofence integrity, non-blocking background I/O on `Dispatchers.IO`, and Rule 62 schema registry conformance.
+1. *Original Requirement ID & Target*: `REQ-SEN-025.2` (Spatial Cache) & `REQ-SEN-025.3` (Seeding & DEM Caching). Targets `ElevationCacheDatabaseManager.kt` and `AltitudeFromPositionDevice.java`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-44.2 (`ATT-4859`, commit `a11e13d7`). Builds upon `ATT-1366` (DEM resolution) and `ATT-166` (sensor fusion epic).
+3. *Root Reason for Existing Formulation*: Route/segment seeding was originally implemented with unconditional `CONFLICT_REPLACE` to provide immediate offline elevation without network roundtrips. However, this caused noisy Strava segment streams to clobber authoritative DEM entries and caused cache hits on seeded points to permanently suppress online DEM queries.
+4. *Preservation of Core Invariants*: Offline elevation availability for seeded routes is preserved with instant display; online fixes upgrade to authoritative DEM. Strict isolation from `KnownLocations.db` (`REQ-SEN-025.4`) is maintained.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* the Smartphone devices list in Settings/Devices,
@@ -2393,9 +2398,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 
 ### REQ-TRK-049: Post-Workout State Cleansing, Breadcrumb Purge & Idle Service Dormancy [Verified]
-- **Tests**: `TST-TRK-049` | **Tickets**: `ATT-4926`, `ATT-5080`
-- **Implementation**: `TrainingApplication.java`, `BANALServiceRepository.kt`, `MainActivityWithNavigation.kt`, `MyAccumulatorSensor.java`, `InstantaneousFilter.java`, `FilterManager.java`, `DefaultStringFormatter.java`, `SensorData.java`, `TrackingViewModel.kt`
-- **Rationale**: When an athlete completes or stops a workout and re-enters the app in `TrackingMode.READY`, lingering historical polylines, elevation profiles, and accumulator values create a confusing UI and cause phantom metric accumulation during idle periods. Clearing breadcrumbs on workout stop/abort, normalizing the service binding lifecycle, gating accumulator sensors to active tracking, dispatching zero-value resets, re-seeding accumulator filters from baseline values, and guarding against null formatted strings ensures a clean, crash-free slate for upcoming sessions (ATT-4926, ATT-5080, Parent Epic ATT-355, extending `REQ-TRK-001`, `REQ-TRK-002`, and refining `REQ-FIL-013`):
+- **Tests**: `TST-TRK-049` | **Tickets**: `ATT-4926`, `ATT-5080`, `ATT-5191`
+- **Implementation**: `TrainingApplication.java`, `BANALServiceRepository.kt`, `MainActivityWithNavigation.kt`, `ProxySensor.java`, `MyAccumulatorSensor.java`, `InstantaneousFilter.java`, `FilterManager.java`, `DefaultStringFormatter.java`, `SensorData.java`, `TrackingViewModel.kt`
+- **Rationale**: When an athlete completes or stops a workout and re-enters the app in `TrackingMode.READY`, lingering historical polylines, elevation profiles, and accumulator values create a confusing UI and cause phantom metric accumulation during idle periods. Clearing breadcrumbs on workout stop/abort, normalizing the service binding lifecycle, gating accumulator sensors to active tracking, dispatching zero-value resets, re-seeding accumulator filters from baseline values, and guarding against null formatted strings ensures a clean, crash-free slate for upcoming sessions (ATT-4926, ATT-5080, ATT-5191, Parent Epic ATT-355, extending `REQ-TRK-001`, `REQ-TRK-002`, and refining `REQ-FIL-013`):
 1. *Map & Elevation Breadcrumb Cleansing (`REQ-TRK-049.1`)*:
 • `TrainingApplication` SHALL invoke `BANALServiceRepository.clearBreadcrumbs()` in `stopTracking()`, `trackingStopped()`, and `onTrackingAborted()`.
 • `BANALServiceRepository` SHALL clear `_currentTrack` and `_currentPathPoints` upon entering `TrackingMode.READY`.
@@ -2407,16 +2412,16 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 4. *Reset Notification & Filter Cache Invalidation (`REQ-TRK-049.4`)*:
 • `MyAccumulatorSensor.reset()` SHALL notify all registered `mSensorListeners` with `mZeroValue`.
 • `InstantaneousFilter.java` SHALL override `reset()` to invalidate cached telemetry on `FilterManager.resetAllFilters()`.
-• In `FilterManager.resetAllFilters()`, the system SHALL re-seed filters mapped to `MyAccumulatorSensor` with `sensor.getValue()` (`mZeroValue`, e.g. `0` -> `0:00:00`, `0.00`, etc.), ensuring accumulator fields retain their baseline zero values instead of displaying `--:--:--` on workout stop (ATT-5080).
+• In `FilterManager.resetAllFilters()`, the system SHALL unwrap any `ProxySensor` (via `getSourceSensor()`) to its underlying source sensor. When the sensor is a `MyAccumulatorSensor`, the filter SHALL be re-seeded directly with `accumulator.getZeroValue()` (e.g. `0` -> `0:00:00`, `0.00 km`, `1` for `LAP_NR`), ensuring accumulator fields retain their baseline zero values regardless of broadcast receiver execution order between `FilterManager` and `MyDevice` (ATT-5080, ATT-5191).
 5. *Non-Null Formatter Fallback & Null-Safety Defenses (`REQ-TRK-049.5`)*:
 • `DefaultStringFormatter.format(String value)` SHALL return `"--"` instead of `null` when `value == null`, aligning with numeric formatters.
 • In `SensorData.java`, `getStringValue()` SHALL return `"--"` when `mStringValue` is null.
 • In `TrackingViewModel.applySensorData()`, `newFormattedValue` SHALL guard against Java nulls (`sensorData.stringValue ?: "--"`), preventing fatal `NullPointerException` crashes during Compose state updates (ATT-5080).
 
 ### Requirement Archaeology & Chesterton's Fence Audit
-1. *Original Requirement ID & Target*: Amends `REQ-TRK-049.4` (*Reset Notification & Filter Cache Invalidation*) and `REQ-FIL-013` (*Session Reset Isolation*), Parent Epic `ATT-355`. Targets `FilterManager.java`, `DefaultStringFormatter.java`, `SensorData.java`, and `TrackingViewModel.kt`.
-2. *Historical Origin & Commit Trace*: Traced to `080d68c3` (ATT-4926, Sprint 2026-44.2), which introduced `InstantaneousFilter.reset() { mValue = null; }` to eliminate stale workout readouts, but inadvertently wiped accumulator zero values and exposed `DefaultStringFormatter`'s null return.
-3. *Root Reason for Existing Formulation*: ATT-4926 intended to clear lingering historical metrics upon workout completion, but did not distinguish between stateless live metrics (which should clear to null/dash) and cumulative metrics (which have a defined baseline `mZeroValue`).
+1. *Original Requirement ID & Target*: Amends `REQ-TRK-049.4` (*Reset Notification & Filter Cache Invalidation*) and `REQ-FIL-013` (*Session Reset Isolation*), Parent Epic `ATT-355`. Targets `ProxySensor.java`, `MyAccumulatorSensor.java`, `FilterManager.java`, `DefaultStringFormatter.java`, `SensorData.java`, and `TrackingViewModel.kt`.
+2. *Historical Origin & Commit Trace*: Traced to `080d68c3` (ATT-4926, Sprint 2026-44.2) and `0087756f` (ATT-5080, Sprint 2026-45.1). ATT-4926 introduced `InstantaneousFilter.reset() { mValue = null; }`, and ATT-5080 introduced accumulator re-seeding in `resetAllFilters()`, but tested directly against `MyDoubleAccumulatorSensor` mocks without unwrapping `ProxySensor` or accounting for broadcast receiver execution ordering.
+3. *Root Reason for Existing Formulation*: ATT-5080 aimed to prevent stale telemetry leaks by restricting re-seeding to `MyAccumulatorSensor`, but overlooked wrapper composition (`ProxySensor` extends `MySensor`, not `MyAccumulatorSensor`) and broadcast listener sequencing between `FilterManager` and `MyDevice`.
 4. *Preservation of Core Invariants*: Stale live telemetry from disconnected sensors continues to clear to `--`; accumulators reliably display baseline zeroes (`0:00:00`, `0.00 km`, `1`) in `READY` mode; zero NPE crashes on Compose state updates.
 
 **Acceptance Criteria (Given-When-Then)**:
@@ -2426,9 +2431,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Given* the app running in `TrackingMode.READY`,
 • *When* background timer ticks or location updates arrive,
 • *Then* accumulator sensors do not increment.
-• *Given* an active workout with accumulator sensors running,
+• *Given* an active workout with accumulator sensors running (direct or `ProxySensor`-wrapped "Best Sensor"),
 • *When* the workout is stopped and `resetAllFilters()` executes,
-• *Then* accumulator fields display baseline zero values (`0:00:00`, `0.00 km`, `1`) in `TrackingMode.READY` instead of `--:--:--`.
+• *Then* accumulator fields display baseline zero values (`0:00:00`, `0.00 km`, `1`) in `TrackingMode.READY` instead of `--:--:--`, regardless of broadcast receiver execution order.
 • *Given* string-valued sensor data with null value during filter reset,
 • *When* `applySensorData()` processes the update in `TrackingViewModel`,
 • *Then* `newFormattedValue` falls back to `"--"` and Compose state updates proceed without `NullPointerException`.
@@ -2478,7 +2483,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 
 ### REQ-SEN-026: Specialized Altitude Devices: Barometric Altimeter Naming Parity, Idempotent SQLite Migration & Educational Operation Details [Verified]
-- **Tests**: `TST-SEN-026` | **Tickets**: `ATT-5073`
+- **Tests**: `TST-SEN-026` | **Tickets**: `ATT-5073`, `ATT-5198`
 - **Implementation**: `strings_devices.xml` (all 9 locales), `strings.xml` (all 9 locales), `DevicesDatabaseManager.java`, `EditDeviceDialog.kt`
 - **Rationale**: Following the introduction of `ALTITUDE_FROM_POSITION` ("Topografische Höhe (DEM)"), the internal barometric altimeter (`ALTITUDE_FROM_PRESSURE`) remained named simply "Luftdruck" ("Air Pressure") via `R.string.devices_altitude_from_pressure`, creating a naming asymmetry and confusing athletes about what the sensor produces. Furthermore, athletes in the device details bottom sheet (`EditDeviceDialog.kt`) have no visibility into how specialized altitude devices work or their respective advantages and disadvantages (e.g. barometer smooth relative ascent vs. weather drift; DEM weather immunity vs. grid resolution) (ATT-5073, Parent Epic ATT-166, complementing `REQ-SEN-025` and `REQ-UI-149`):
 1. *Barometric Altimeter Naming Parity Across 9 Locales (`REQ-SEN-026.1`)*:
@@ -2489,16 +2494,16 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 3. *Educational Operation & Trade-Offs Details in EditDeviceDialog (`REQ-SEN-026.3`)*:
 • When viewing `EditDeviceDialog.kt` for `DeviceType.ALTITUDE_FROM_PRESSURE` or `DeviceType.ALTITUDE_FROM_POSITION`, the dialog SHALL display an educational `OutlinedCard` detailing:
   a. "How it works" (`device_altitude_how_it_works_header`): Explanation of barometric formula + calibration vs. GPS position + DEM topographic grid matching.
-  b. "Pros & Cons" (`device_altitude_pros_cons_header`): Unbiased trade-offs (+ smooth relative response, zero vertical GPS jitter / - weather drift for barometer; + weather immunity, absolute height / - GPS accuracy dependency, bridge/cliff stepped response for DEM).
+  b. "Pros & Cons" (`device_altitude_pros_cons_header`): Unbiased trade-offs (+ smooth relative response, zero vertical GPS jitter / - weather drift for barometer; + weather immunity, absolute height / - GPS accuracy dependency, bridge/cliff stepped response, and explicit active internet connection requirement for uncached areas outside saved routes for DEM).
 4. *100% 9-Language Parity & M3 Typography (`REQ-SEN-026.4`)*:
 • All explanation strings SHALL maintain 100% translation parity across all 9 locales with literal `\n` linebreaks.
 • The card SHALL use Material 3 semantic color tokens (`surfaceVariant`, `onSurfaceVariant`) with accessible contrast.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
 1. *Original Requirement ID & Target*: Net-new requirement `REQ-SEN-026`, extending `REQ-SEN-025` (*Pairable Position-Based Elevation Sensor*) and `REQ-UI-149` (*Modernized Modal Bottom Sheet Dialogs & Selection Flows*). Targets `strings_devices.xml`, `strings.xml`, `DevicesDatabaseManager.java`, and `EditDeviceDialog.kt`.
-2. *Historical Origin & Commit Trace*: Sprint 2026-45.1 (`ATT-5073`). Builds on `ATT-4859` (`REQ-SEN-025`, Sprint 2026-44.2).
-3. *Root Reason for Existing Formulation*: "Luftdruck" was inherited from the initial ANT+/BLE sensor stack. `EditDeviceDialog.kt` focused solely on hardware sensors with calibration parameters (wheel circumference), omitting educational guidance for virtual/internal sensors.
-4. *Preservation of Core Invariants*: Custom device names in `Devices.db` strictly preserved; sensor data delivery, calibration dispatch, and 100% test pass rate across all 9 locales remain invariant.
+2. *Historical Origin & Commit Trace*: Sprint 2026-45.1 (`ATT-5073`). Builds on `ATT-4859` (`REQ-SEN-025`, Sprint 2026-44.2). Amended in Sprint 2026-45.2 (`ATT-5198`) to explicitly require active internet connection notice for uncached areas outside saved routes.
+3. *Root Reason for Existing Formulation*: "Luftdruck" was inherited from the initial ANT+/BLE sensor stack. `EditDeviceDialog.kt` focused solely on hardware sensors with calibration parameters (wheel circumference), omitting educational guidance for virtual/internal sensors. In ATT-5073, educational strings focused on spatial terrain limitations (GPS noise, cliffs) but omitted network dependencies for uncached DEM queries.
+4. *Preservation of Core Invariants*: Custom device names in `Devices.db` strictly preserved; sensor data delivery, calibration dispatch, literal `\n` formatting, and 100% test pass rate across all 9 locales remain invariant.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an existing user upgrade with default-named `ALTITUDE_FROM_PRESSURE` in `Devices.db`,
@@ -2507,8 +2512,11 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Given* an athlete opening `EditDeviceDialog` for `ALTITUDE_FROM_PRESSURE` or `ALTITUDE_FROM_POSITION`,
 • *When* the dialog renders,
 • *Then* an educational card displays "How it works" and "Pros & Cons" explaining the sensor's measurement mechanism and trade-offs.
+• *Given* an athlete viewing "Pros & Cons" for `ALTITUDE_FROM_POSITION` across any of the 9 supported locales,
+• *When* inspecting the cons (`-`) section,
+• *Then* the text explicitly informs the user that an active internet connection is required for uncached areas outside saved routes.
 
-**Invariants**: Custom device names preserved, sensor data delivery unchanged, 100% 9-language translation parity, zero crash on null device data.
+**Invariants**: Custom device names preserved, sensor data delivery unchanged, 100% 9-language translation parity, literal `\n` linebreaks preserved, zero crash on null device data.
 
 
 ### REQ-TRK-051: Dynamic SQLite Schema Discovery via PRAGMA table_info & Decoupled Summary Telemetry [Verified]
