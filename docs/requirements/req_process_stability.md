@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 71
+**Total Requirements**: 72
 
 ---
 
@@ -1822,3 +1822,45 @@ The workflow SHALL mandate that:
 • *Then* all 762 REQ IDs and 764 TST IDs are preserved with 100% parity.
 
 **Invariants**: Bidirectional traceability, zero loss of normative requirements, 100% clean-room test pass rate.
+
+### REQ-PRO-029: AAA 1/2/3/5+ Story Point Estimation, Complexity Split Guardrail & Sprint Capacity Tracking [Verified]
+- **Tests**: `TST-PRO-022`
+- **Implementation**: `tools/jira_util.py`, `.agents/skills/sprint-planner/SKILL.md`, `.agents/skills/brainstormer/SKILL.md`, `docs/presentations/agile_agentic_aspice_beamer.tex`
+- **Rationale**: Introduce lightweight, T-shirt-like Story Point Estimation (1 / 2 / 3 / 5+ Split) into the Agile Agentic ASPICE (AAA) workflow, `tools/jira_util.py`, and agent skills to establish an automated complexity guardrail, predictable sprint capacity planning, and empirical velocity tracking (ATT-5203, Parent Epic ATT-232, refining `REQ-PRO-027`):
+1. *AAA Story Point Scale & Mandatory Split Guardrail (`REQ-PRO-029.1`)*:
+• The system SHALL adopt a discrete Story Point scale: `1 SP` (Trivial / Isolated, ~20–30 min pipeline, ~1–2 min human review), `2 SP` (Standard Atomic Ticket, ~35–45 min pipeline, ~3–5 min human review), `3 SP` (Complex / Cross-Layer, ~50–65 min pipeline, ~5–8 min human review), and `\ge 5 SP` (Too Large / Multi-Concern).
+• Any ticket estimated at `\ge 5 SP` MUST be split into smaller atomic child tickets (1–3 SP) before entering an active sprint, preventing context bloat and multi-concern PRs.
+2. *Jira REST API & Custom Field Integration (`REQ-PRO-029.2`)*:
+• `tools/jira_util.py` SHALL bind `customfield_10016` (*Story point estimate*, type `number`) for reading and writing story point estimates across all issue types.
+• `jira_util.py set-points KEY <POINTS>` SHALL validate numeric point input, reject negative values, and execute `PUT /rest/api/2/issue/{key}` with `{"fields": {"customfield_10016": float(points)}}` (or `None` when points is `none`/`clear`).
+• `jira_util.py create-issue` SHALL support optional `--points=<N>` and `--story-points=<N>` flags to populate `customfield_10016` upon issue creation.
+3. *Sprint Capacity & Ticket Display (`REQ-PRO-029.3`)*:
+• `jira_util.py show <KEY>` SHALL query and display `*Story Points*: <N> SP` (or `*Story Points*: None`).
+• `jira_util.py list` SHALL query `customfield_10016` on sprint issues, format each ticket with `[<N> SP]` (or `[No SP]`), compute total estimated sprint story points, and output a sprint summary line: `Total Sprint Story Points: <X> SP (<Y> unestimated)`.
+4. *Sprint Ceremonies & Backlog Ideation Integration (`REQ-PRO-029.4`)*:
+• `.agents/skills/sprint-planner/SKILL.md` (Ceremony 1) SHALL mandate proposing 1/2/3/5+ SP for candidate tickets, enforce the `\ge 5 SP` split guardrail, persist approved points via `jira_util.py set-points`, and verify total sprint load against target capacity (~24–30 SP). Ceremony 2 SHALL record planned vs. completed story points in retrospective metrics.
+• `.agents/skills/brainstormer/SKILL.md` SHALL support initial estimates via `--points` and mandate splitting `\ge 5 SP` concepts into atomic child tickets.
+• `docs/presentations/agile_agentic_aspice_beamer.tex` SHALL document the 1/2/3/5+ Story Point Complexity Guardrail and Human Verification Capacity model.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-029` under Epic `ATT-232` (*Process*), refining `REQ-PRO-027` (*AAA Governance*). Targets `tools/jira_util.py`, `.agents/skills/sprint-planner/SKILL.md`, `.agents/skills/brainstormer/SKILL.md`, and `docs/presentations/agile_agentic_aspice_beamer.tex`.
+2. *Historical Origin & Commit Trace*: `REQ-PRO-027` introduced in `ATT-3534` (commit `39b3df08`).
+3. *Root Reason for Existing Formulation*: Early AAA sprints measured velocity solely by completed ticket count. As sprint velocity stabilized at 13–16 tickets, lack of complexity discrimination allowed ticket sizes to vary widely and risked oversized tickets entering sprints.
+4. *Preservation of Core Invariants*: Human Decision Gate on parent tickets, 5-stage ASPICE pipeline, subtask lifecycle, backward compatibility of existing `jira_util.py` commands, and zero Android app runtime changes remain strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an issue key,
+• *When* `python3 tools/jira_util.py set-points <KEY> 2` is executed,
+• *Then* `customfield_10016` is set to `2.0` in Jira and confirmed via `show`.
+• *Given* `python3 tools/jira_util.py create-issue ... --points=3`,
+• *When* executed,
+• *Then* the newly created issue has `customfield_10016` set to `3.0`.
+• *Given* `python3 tools/jira_util.py list`,
+• *When* executed for the active sprint,
+• *Then* each issue displays its `[X SP]` / `[No SP]` tag and the summary prints `Total Sprint Story Points`.
+• *Given* candidate sprint tickets in Ceremony 1,
+• *When* a ticket is estimated at `\ge 5 SP`,
+• *Then* the `sprint-planner` skill mandates splitting the ticket into atomic tickets (1–3 SP) before sprint entry.
+
+**Invariants**: Existing `jira_util.py` CLI interface and transitions remain 100% backward-compatible; zero Android runtime changes; zero regression in governance verification.
+

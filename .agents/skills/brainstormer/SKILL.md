@@ -17,11 +17,12 @@ This skill acts as a **Product & Architectural Ideation Partner**. It helps the 
    - Structure ideas into agile User Stories (*As a... I want... So that...*).
    - Formulate Given-When-Then acceptance criteria.
    - Identify relevant Parent Epics (e.g. `ATT-232` Process, `ATT-1396` Lieblingsorte, `ATT-1454` Cockpit).
-3. **Automated Jira Backlog Ticket Creation**:
+3. **Automated Jira Backlog Ticket Creation & Complexity Estimation (`REQ-PRO-029`)**:
+   - Propose an initial Story Point estimate using the AAA scale (`1`, `2`, `3` SP). If an idea is estimated at `\ge 5 SP` (combines multiple screens, migrations, and services), **decompose it immediately into atomic child tickets (1–3 SP)** rather than creating an oversized backlog item.
    - Format description using `templates/backlog_ticket_template.md`.
-   - File the ticket cleanly in Jira via CLI (Rule 18: Summaries MUST NOT contain category prefixes or Epic names in brackets):
+   - File the ticket cleanly in Jira via CLI with optional `--points=N` (Rule 18: Summaries MUST NOT contain category prefixes or Epic names in brackets):
      ```bash
-     python3 tools/jira_util.py create-issue "Concise Summary Describing Objective or Defect" "@scratch/ticket_desc.txt" "10008" "PARENT_EPIC_KEY"
+     python3 tools/jira_util.py create-issue "Concise Summary Describing Objective or Defect" "@scratch/ticket_desc.txt" "10008" "PARENT_EPIC_KEY" --points=2
      ```
    - Crucial: Backlog tickets should NOT be added to the active sprint (`--add-to-sprint` is strictly omitted). Agents must NEVER move tickets into active sprints.
    - **STRICT INVARIANT: Stop Immediately After Creation**: Creating a ticket must NEVER trigger implementation (`"When an agent is asked to create a ticket, he immediately wants to start realizing it. This must never ever happen!"`). The agent must report the issue key to the user and STOP. Autonomous branching, subtask generation, or stage execution is strictly prohibited without explicit human command.

@@ -26,6 +26,8 @@ ROLE_ACCOUNT_IDS = {
     "rainer": "712020:9d9c7abd-b9d3-4b45-b2e0-91c432c3ab78",
 }
 
+STORY_POINTS_FIELD = "customfield_10016"
+
 def get_account_id_for_role(role_or_account_id, config=None):
     if not role_or_account_id:
         return None
@@ -228,16 +230,56 @@ def list_sprint_issues(role="agent1"):
     print(f"Active Sprint: {active_sprint['name']}")
 
     # 3. Get issues
-    issues = jira_request(f"{config['JIRA_URL']}/rest/agile/1.0/sprint/{sprint_id}/issue?fields=summary,status,issuetype,fixVersions", role=role)["issues"]
+    issues = jira_request(f"{config['JIRA_URL']}/rest/agile/1.0/sprint/{sprint_id}/issue?fields=summary,status,issuetype,fixVersions,{STORY_POINTS_FIELD}", role=role)["issues"]
+    total_sp = 0.0
+    unestimated = 0
     for i in issues:
         itype = i['fields']['issuetype']['name']
         fvs = [v.get('name', '') for v in i['fields'].get('fixVersions', [])]
         fv_str = f" [FixVersion: {', '.join(fvs)}]" if fvs else " [No FixVersion!]"
-        print(f"{i['key']}: [{itype}] {i['fields']['summary']} [{i['fields']['status']['name']}]{fv_str}")
+        sp = i['fields'].get(STORY_POINTS_FIELD)
+        if sp is not None:
+            try:
+                sp_float = float(sp)
+                sp_disp = int(sp_float) if sp_float.is_integer() else sp_float
+                sp_str = f" [{sp_disp} SP]"
+                total_sp += sp_float
+            except (ValueError, TypeError):
+                sp_str = f" [{sp} SP]"
+        else:
+            sp_str = " [No SP]"
+            unestimated += 1
+        print(f"{i['key']}: [{itype}]{sp_str} {i['fields']['summary']} [{i['fields']['status']['name']}]{fv_str}")
+
+    total_disp = int(total_sp) if total_sp.is_integer() else total_sp
+    print(f"\nSprint Total: {len(issues)} issues, {total_disp} Story Points ({unestimated} unestimated)")
+
+def set_story_points(issue_key, points, role="agent1"):
+    config = get_config()
+    val = None
+    if str(points).lower().strip() in ("none", "clear", "null", ""):
+        val = None
+        target_disp = "None"
+    else:
+        try:
+            pts_float = float(points)
+            if pts_float < 0:
+                print(f"Error: Story points cannot be negative ({pts_float}).", file=sys.stderr)
+                sys.exit(1)
+            val = pts_float
+            target_disp = f"{int(pts_float) if pts_float.is_integer() else pts_float} SP"
+        except ValueError:
+            print(f"Error: Invalid story points '{points}'. Must be a number (e.g. 1, 2, 3, 5) or 'none'.", file=sys.stderr)
+            sys.exit(1)
+
+    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}"
+    payload = {"fields": {STORY_POINTS_FIELD: val}}
+    jira_request(url, method="PUT", payload=payload, role=role)
+    print(f"Updated story points for {issue_key} to {target_disp}.")
 
 def show_issue(issue_key, role="agent1"):
     config = get_config()
-    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=summary,description,comment,attachment,parent,issuetype,status,subtasks,fixVersions,assignee,priority,labels"
+    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=summary,description,comment,attachment,parent,issuetype,status,subtasks,fixVersions,assignee,priority,labels,{STORY_POINTS_FIELD}"
     issue = jira_request(url, role=role)
 
     itype = issue['fields']['issuetype']['name']
@@ -252,6 +294,17 @@ def show_issue(issue_key, role="agent1"):
     priority = issue['fields'].get('priority')
     priority_name = priority.get('name', 'None') if priority else 'None'
     print(f"\n*Priority*: {priority_name}")
+
+    sp = issue['fields'].get(STORY_POINTS_FIELD)
+    if sp is not None:
+        try:
+            sp_float = float(sp)
+            sp_disp = int(sp_float) if sp_float.is_integer() else sp_float
+            print(f"\n*Story Points*: {sp_disp} SP")
+        except (ValueError, TypeError):
+            print(f"\n*Story Points*: {sp} SP")
+    else:
+        print("\n*Story Points*: None")
 
     labels = issue['fields'].get('labels', [])
     if labels:
@@ -609,7 +662,7 @@ def sync_parent_stage_on_subtask_done(parent_key, subtask_summary, role="agent1"
 def transition_issue(issue_key, status_name, role="agent1", inject_context=True):
     config = get_config()
     # Check if issue is a subtask, its current status, summary, and parent
-    issue_info_url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=issuetype,status,summary,parent"
+    issue_info_url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}?fields=issuetype,status,summary,parent,{STORY_POINTS_FIELD}"
     issue_info = jira_request(issue_info_url, role=role)
     fields_data = issue_info.get("fields", {})
     is_subtask = fields_data.get("issuetype", {}).get("subtask", False)
@@ -626,10 +679,7 @@ def transition_issue(issue_key, status_name, role="agent1", inject_context=True)
               file=sys.stderr)
         sys.exit(1)
 
-    url = f"{config['JIRA_URL']}/rest/api/3/issue/{issue_key}/transitions"
-    data = jira_request(url, role=role)
-    available_transitions = data.get("transitions", [])
-
+    aliases = {}
     if is_subtask:
         aliases = {
             "todo": "zu erledigen",
@@ -668,6 +718,21 @@ def transition_issue(issue_key, status_name, role="agent1", inject_context=True)
         }
     normalized_target = aliases.get(normalized_input, normalized_input)
 
+    # Complexity split guardrail on parent tickets: Prohibit moving >= 5 SP tickets to Analysis unless forced
+    if not is_subtask and normalized_target == "analysis":
+        sp = fields_data.get(STORY_POINTS_FIELD)
+        if sp is not None:
+            try:
+                sp_float = float(sp)
+                if sp_float >= 5.0 and "--force" not in sys.argv:
+                    print(f"ERROR: Ticket '{issue_key}' is estimated at {int(sp_float) if sp_float.is_integer() else sp_float} Story Points (>= 5 SP).\n"
+                          f"In the Agile Agentic ASPICE (AAA) workflow, tickets with >= 5 SP must be split into smaller, atomic tickets (1-3 SP) before entering Analysis or an active sprint.\n"
+                          f"Mandatory action: Split '{issue_key}' into atomic child tickets before moving to Analysis (or pass --force if an explicit human exception was granted).",
+                          file=sys.stderr)
+                    sys.exit(1)
+            except (ValueError, TypeError):
+                pass
+
     # Idempotent check if already in target status
     if current_status_lower == normalized_target or (is_subtask and normalized_target == "freigabe" and current_status_lower == "erledigt"):
         print(f"{issue_key} is already in '{current_status_name}'.")
@@ -676,6 +741,10 @@ def transition_issue(issue_key, status_name, role="agent1", inject_context=True)
         if is_subtask and (normalized_target == "freigabe" or current_status_lower == "erledigt"):
             sync_parent_stage_on_subtask_done(parent_key, issue_summary, role=role, inject_context=inject_context)
         return
+
+    url = f"{config['JIRA_URL']}/rest/api/3/issue/{issue_key}/transitions"
+    data = jira_request(url, role=role)
+    available_transitions = data.get("transitions", [])
 
     chosen_trans = None
     # Pass 1: exact match on target status name
@@ -1173,7 +1242,7 @@ def resolve_valid_epic_key(parent_key, role="agent1"):
     except Exception:
         return parent_key
 
-def create_issue(summary, description, issuetype_id="10007", parent_key=None, role="agent1", add_to_sprint=False, fix_version=None, priority=None, labels=None, rank_top=True):
+def create_issue(summary, description, issuetype_id="10007", parent_key=None, role="agent1", add_to_sprint=False, fix_version=None, priority=None, labels=None, rank_top=True, points=None):
     if description.startswith("@") and os.path.exists(description[1:]):
         with open(description[1:], "r", encoding="utf-8") as f:
             description = f.read()
@@ -1200,6 +1269,16 @@ def create_issue(summary, description, issuetype_id="10007", parent_key=None, ro
         if isinstance(labels, str):
             labels = [l.strip() for l in labels.split(",") if l.strip()]
         fields["labels"] = labels
+    if points is not None:
+        try:
+            pts_float = float(points)
+            if pts_float < 0:
+                print(f"Error: Story points cannot be negative ({pts_float}).", file=sys.stderr)
+                sys.exit(1)
+            fields[STORY_POINTS_FIELD] = pts_float
+        except ValueError:
+            print(f"Error: Invalid story points '{points}'. Must be a number.", file=sys.stderr)
+            sys.exit(1)
 
     payload = {"fields": fields}
     data = jira_request(url, method="POST", payload=payload, role=role)
@@ -1255,9 +1334,26 @@ def ensure_retro_ticket(role="agent1"):
     display_sprint = sprint_name if sprint_name.lower().startswith("sprint") else f"Sprint {sprint_name}"
 
     issues = jira_request(
-        f"{base}/rest/agile/1.0/sprint/{sprint_id}/issue?fields=summary,status,issuetype",
+        f"{base}/rest/agile/1.0/sprint/{sprint_id}/issue?fields=summary,status,issuetype,{STORY_POINTS_FIELD}",
         role=role
     ).get("issues", [])
+
+    total_sp = 0.0
+    unestimated_sp = 0
+    for issue in issues:
+        itype = issue.get("fields", {}).get("issuetype", {}).get("name", "")
+        if itype.lower() in ("sub-task", "subtask"):
+            continue
+        sp = issue.get("fields", {}).get(STORY_POINTS_FIELD)
+        if sp is not None:
+            try:
+                total_sp += float(sp)
+            except (ValueError, TypeError):
+                pass
+        else:
+            unestimated_sp += 1
+    total_sp_disp = int(total_sp) if total_sp.is_integer() else total_sp
+    print(f"Active Sprint Story Points: {total_sp_disp} SP ({unestimated_sp} unestimated)")
 
     for issue in issues:
         itype = issue.get("fields", {}).get("issuetype", {}).get("name", "")
@@ -1284,7 +1380,8 @@ def ensure_retro_ticket(role="agent1"):
         role=role,
         add_to_sprint=False,
         labels=labels,
-        rank_top=False
+        rank_top=False,
+        points=1.0
     )
     add_to_active_sprint(new_key, role=role)
     final_desc = (
@@ -1301,6 +1398,7 @@ USAGE_TEXT = (
     "Commands:\n"
     "  list                                                  List active sprint issues\n"
     "  show KEY                                              Show issue details, description, comments, and subtasks\n"
+    "  set-points KEY POINTS                                 Set story points (customfield_10016) on issue (e.g. 1, 2, 3, 5, or 'none')\n"
     "  status KEY                                            Show issue status\n"
     "  search JQL                                            Search issues using JQL\n"
     "  ensure-retro                                          Check/create 'Review & Retro' ticket in the active sprint\n"
@@ -1322,7 +1420,7 @@ USAGE_TEXT = (
     "  clear-fixversion KEY                                  Clear Lösungsversion on issue\n"
     "  rank-top KEY                                          Rank issue at the very top of the backlog\n"
     "  create-subtask PARENT_KEY SUMMARY DESC [--add-to-sprint]\n"
-    "  create-issue SUMMARY DESC [TYPE_ID|Bug|Feature|Verbesserung] [PARENT_KEY] [--type=...] [--parent=...] [--bottom]"
+    "  create-issue SUMMARY DESC [TYPE_ID|Bug|Feature|Verbesserung] [PARENT_KEY] [--type=...] [--parent=...] [--bottom] [--points=N]"
 )
 
 if __name__ == "__main__":
@@ -1339,6 +1437,8 @@ if __name__ == "__main__":
         ensure_retro_ticket(role=active_role)
     elif cmd == "show" and len(remaining_argv) == 2:
         show_issue(remaining_argv[1], role=active_role)
+    elif cmd in ("set-points", "set_points") and len(remaining_argv) == 3:
+        set_story_points(remaining_argv[1], remaining_argv[2], role=active_role)
     elif cmd == "status" and len(remaining_argv) == 2:
         print_status(remaining_argv[1], role=active_role)
     elif cmd == "check-gate" and len(remaining_argv) == 2:
@@ -1422,6 +1522,7 @@ if __name__ == "__main__":
         fix_ver = None
         priority_arg = None
         labels_arg = None
+        points_arg = None
         explicit_type = None
         explicit_parent = None
         explicit_summary = None
@@ -1448,6 +1549,11 @@ if __name__ == "__main__":
                 priority_arg = arg.split("=", 1)[1]
             elif arg.startswith("--labels="):
                 labels_arg = arg.split("=", 1)[1]
+            elif arg.startswith("--points=") or arg.startswith("--story-points="):
+                points_arg = arg.split("=", 1)[1]
+            elif arg in ("--points", "--story-points") and idx + 1 < len(remaining_argv):
+                points_arg = remaining_argv[idx + 1]
+                idx += 1
             elif arg.startswith("--summary="):
                 explicit_summary = arg.split("=", 1)[1]
             elif arg == "--summary" and idx + 1 < len(remaining_argv):
@@ -1475,13 +1581,13 @@ if __name__ == "__main__":
         summary = explicit_summary if explicit_summary else (filtered_args[0] if len(filtered_args) >= 1 else None)
         desc = explicit_desc if explicit_desc else (filtered_args[1] if len(filtered_args) >= 2 else (filtered_args[0] if explicit_summary and len(filtered_args) >= 1 else None))
         if not summary or not desc:
-            print("Usage: create-issue SUMMARY DESC [TYPE_ID|Bug|Feature|Verbesserung] [PARENT_KEY] [--type=...] [--parent=...] [--bottom] [--priority=PRIORITY] [--labels=L1,L2]", file=sys.stderr)
+            print("Usage: create-issue SUMMARY DESC [TYPE_ID|Bug|Feature|Verbesserung] [PARENT_KEY] [--type=...] [--parent=...] [--bottom] [--priority=PRIORITY] [--labels=L1,L2] [--points=N]", file=sys.stderr)
             sys.exit(1)
 
         pos_offset = (0 if explicit_summary else 1) + (0 if explicit_desc else 1)
         type_id = explicit_type if explicit_type else (filtered_args[pos_offset] if len(filtered_args) > pos_offset else "10008")
         parent = explicit_parent if explicit_parent else (filtered_args[pos_offset + 1] if len(filtered_args) > pos_offset + 1 else None)
-        create_issue(summary, desc, type_id, parent, role=active_role, add_to_sprint=add_sprint, fix_version=fix_ver, priority=priority_arg, labels=labels_arg, rank_top=rank_top)
+        create_issue(summary, desc, type_id, parent, role=active_role, add_to_sprint=add_sprint, fix_version=fix_ver, priority=priority_arg, labels=labels_arg, rank_top=rank_top, points=points_arg)
     elif cmd == "add-to-sprint" and len(remaining_argv) == 2:
         if active_role in ("agent1", "agent2", "coordinator"):
             print("Error: Agents must not move tickets to sprints! Only the human user assigns tickets to sprints during Sprint-Start Screening.", file=sys.stderr)
