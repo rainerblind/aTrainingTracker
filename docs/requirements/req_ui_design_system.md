@@ -12824,13 +12824,13 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 **Invariants**: Zero infinite height expansion, strict preservation of `IntrinsicSize.Min` on parent containers, zero regression on `SensorGridScreen.kt`, and 100% clean-room test pass rate.
 
 
-### REQ-UI-442: Full-Bleed Badge Geometry, Large Uppercase Labels & Top-Right Mini-Icons for Bluetooth LE Sensor Drawables [Verified]
-- **Tests**: `TST-UI-442` | **Tickets**: `ATT-4956`
+### REQ-UI-442: Full-Bleed Badge Geometry, Large Uppercase Labels, Centered Cyclist & Top-Left Canonical Mini-Icons for Bluetooth LE Sensor Drawables [Verified]
+- **Tests**: `TST-UI-442` | **Tickets**: `ATT-4956`, `ATT-5201`
 - **Implementation**: `bt_bike_pwr.xml`, `bt_bike_spd.xml`, `bt_bike_cad.xml`, `bt_bike_speed_and_cadence.xml`, `bt_hr.xml`, `bt_run.xml`, `VectorAssetResolutionContractTest.kt`
-- **Rationale**: When Bluetooth LE (`bt_*.xml`) sensor icons are rendered at compact UI dimensions (20dp–24dp, e.g. status bar, device pairing, sensor matrix rows), three visual deficiencies appear compared to ANT+ icons: (1) bottom labels are micro lowercase (`power`, `speed`, `cadence`, `s & c`) or completely missing (`bt_hr`, `bt_run`); (2) all 4 bike icons share an identical cyclist silhouette without upper motif differentiation; (3) all 6 BTLE drawables use a 10-unit inset background (`10..134` in `144x144`), making them appear ~14% smaller than ANT+ icons (`0..96` full-bleed). Standardizing BTLE drawables to full-bleed badges, bold uppercase labels, and top-right sensor mini-icons establishes visual parity and instant recognition across both protocols (ATT-4956, Parent Epic ATT-355, amending `REQ-UI-375` and Rule 37):
-1. *Full-Bleed Rounded Badge Geometry (`REQ-UI-442.1`)*:
+- **Rationale**: When Bluetooth LE (`bt_*.xml`) sensor icons are rendered at compact UI dimensions (20dp–24dp, e.g. status bar, device pairing, sensor matrix rows), full-bleed badge geometry and bold uppercase labels establish visual parity with ANT+ icons (ATT-4956). ATT-5201 refines three visual and architectural aspects: (1) restores official Bluetooth brand color `#0A3D91` (`rgb(10, 61, 145)`) from master `Bluetooth.svg` and `logo_protocol_bluetooth.png` (eliminating ICC profile distorted `#07377F`); (2) centers the cyclist silhouette horizontally ($x \in [28.5, 115.5]$) across all 4 bike icons; (3) positions canonical domain mini-icons in the open top-left quadrant ($x \approx 12..52, y \approx 10..50$) above the rear wheel and behind the rider's sloping back, reusing scaled vector paths from `ic_power.xml`, `ic_speed.xml`, and `ic_cadence.xml` (Rule 36):
+1. *Full-Bleed Rounded Badge Geometry & Protocol Color Token (`REQ-UI-442.1`)*:
 • In all 6 Bluetooth LE vector drawables (`bt_bike_pwr.xml`, `bt_bike_spd.xml`, `bt_bike_cad.xml`, `bt_bike_speed_and_cadence.xml`, `bt_hr.xml`, `bt_run.xml`), the background badge path SHALL be full-bleed spanning `0..144` with corner radius $r = 22.0$ (`M 22,0 H 122 A 22,22 0 0 1 144,22 V 122 A 22,22 0 0 1 122,144 H 22 A 22,22 0 0 1 0,122 V 22 A 22,22 0 0 1 22,0 Z`), replacing the historical 10-unit inset margin (`10..134`).
-• The badge fill color SHALL strictly maintain the `#07377F` protocol badge color token.
+• The badge fill color SHALL strictly maintain the official Bluetooth badge color `#0A3D91` (`rgb(10, 61, 145)`), replacing the historical ICC-distorted `#07377F`.
 2. *Large Bold Uppercase Bottom Typography (`REQ-UI-442.2`)*:
 • All 6 BTLE vector drawables SHALL render bold uppercase abbreviation labels centered at the bottom of the badge, occupying approximately $16.7\%$ viewport height ($y \approx 113..136$ in `144x144` coordinate space):
   a. `bt_bike_pwr.xml`: `PWR`;
@@ -12840,38 +12840,39 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
   e. `bt_hr.xml`: `HR`;
   f. `bt_run.xml`: `SPD`.
 • Glyphs with internal counters (`P`, `R`, `D`, `A`, `&`) SHALL use `android:fillType="evenOdd"` for proper punch-out transparency.
-3. *Top-Right Sensor Mini-Icons & Repositioned Upper Motifs (`REQ-UI-442.3`)*:
-• In bike icons (`bt_bike_pwr.xml`, `bt_bike_spd.xml`, `bt_bike_cad.xml`, `bt_bike_speed_and_cadence.xml`), the cyclist silhouette motif SHALL be shifted down-left ($x \approx 8..108, y \approx 22..106$) to accommodate a distinctive sensor mini-icon in the top-right quadrant ($x \approx 104..136, y \approx 8..38$):
-  a. `bt_bike_pwr.xml`: Lightning bolt symbol;
-  b. `bt_bike_spd.xml`: Speedometer dial / gauge arc;
-  c. `bt_bike_cad.xml`: Crank arm with rotation arrow;
-  d. `bt_bike_speed_and_cadence.xml`: Combined dual-sensor motif (speedometer arc + crank/arrow).
-• In `bt_hr.xml` and `bt_run.xml`, the main graphic motif (heart, runner) SHALL be scaled and positioned cleanly above the bottom `HR` and `SPD` text labels without overlap.
+3. *Centered Cyclist Motif & Top-Left Canonical Sensor Mini-Icons (`REQ-UI-442.3`)*:
+• In bike icons (`bt_bike_pwr.xml`, `bt_bike_spd.xml`, `bt_bike_cad.xml`, `bt_bike_speed_and_cadence.xml`), the cyclist silhouette motif SHALL be centered horizontally across the badge ($x \in [28.5, 115.5]$ with balanced $28.5$ unit horizontal margins).
+• Sensor mini-icons SHALL be positioned in the top-left quadrant ($x \approx 12..52, y \approx 10..50$) above the rear wheel and behind the cyclist's back, reusing and scaling canonical vector path geometry from `ic_power.xml`, `ic_speed.xml`, and `ic_cadence.xml` (Rule 36):
+  a. `bt_bike_pwr.xml`: Canonical lightning bolt from `ic_power.xml`;
+  b. `bt_bike_spd.xml`: Canonical speedometer dial / gauge arc from `ic_speed.xml`;
+  c. `bt_bike_cad.xml`: Canonical crank arm with rotation loop from `ic_cadence.xml`;
+  d. `bt_bike_speed_and_cadence.xml`: Combined dual-sensor motif reusing canonical speedometer arc (`ic_speed.xml`) and rotation loop (`ic_cadence.xml`).
+• In `bt_hr.xml` and `bt_run.xml`, the main graphic motif (heart, runner) remains horizontally centered and scaled cleanly above the bottom `HR` and `SPD` text labels without overlap.
 4. *Rule 37 Vector Geometry & Fidelity Governance (`REQ-UI-442.4`)*:
 • All modified vector paths MUST adhere to Rule 37 constraints: pure analytical geometry (`M`, `L`, `H`, `V`, `C`, `A`, `Z`), $\le 45$ `L` commands per `<path>`, zero polygon auto-tracing approximations, and 100% clean parsing.
 • Resource resolution in `UIHelper.java` and Compose screens SHALL remain 100% backward compatible without breaking changes to drawable resource identifiers.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Amends `REQ-UI-375` (*Mathematical VectorDrawable Migration from Xfig/SVG/XCF Masters & Legacy Raster Purge*, `ATT-2859`). Targets `app/src/main/res/drawable/bt_*.xml` and `VectorAssetResolutionContractTest.kt`.
-2. *Historical Origin & Commit Trace*: `ATT-2859` introduced mathematical vectorization. Inset margins (`10..134`) and lowercase labels were carried over from initial XCF/FIG bitmap sketches. ANT+ badges were updated to full-bleed (`0..96`) and uppercase typography in `ATT-2859`, while BTLE badges remained inset with micro-text.
-3. *Root Reason for Existing Formulation*: Early vectorization mirrored legacy bitmap assets without standardizing BTLE badges to the modern full-bleed and uppercase typography convention of the design system.
-4. *Preservation of Core Invariants*: Rule 37 geometric constraints ($\le 45$ `L` commands, analytical arcs), `#07377F` protocol badge color token, and `R.drawable.bt_*` resource IDs are 100% preserved.
+1. *Original Requirement ID & Target*: Amends `REQ-UI-442` (*Full-Bleed Badge Geometry, Large Uppercase Labels & Top-Right Mini-Icons for Bluetooth LE Sensor Drawables*, `ATT-4956`). Targets `app/src/main/res/drawable/bt_*.xml`, `VectorAssetResolutionContractTest.kt`, and `docs/requirements/req_ui_design_system.md`.
+2. *Historical Origin & Commit Trace*: `ATT-4956` (commit `be03a5bc14`, Sprint 2026-45.1) introduced full-bleed badges, uppercase labels, and top-right mini-icons with `#07377F`.
+3. *Root Reason for Existing Formulation*: `#07377F` was sampled from ICC-profile distorted legacy PNGs rather than the master `Bluetooth.svg` (`#0A3D91`). Hand-drawn mini-icons were placed in the top-right without recognizing that the rider's forward lean creates ideal negative space in the top-left, and without reusing canonical `ic_power`, `ic_speed`, and `ic_cadence` vector assets.
+4. *Preservation of Core Invariants*: Full-bleed badge geometry `0..144` ($r=22.0$), bold uppercase bottom typography with `evenOdd`, Rule 37 primitive limits ($\le 45$ `L` commands, analytical curves), and non-zero `R.drawable.bt_*` resource IDs are 100% preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* any of the 6 BTLE sensor vector drawables,
 • *When* inspected or rendered in compact UI (20dp–24dp),
-• *Then* the background badge spans the full viewport bounds `0..144` with corner radius $r=22.0$, matching ANT+ full-bleed proportions.
+• *Then* the background badge spans the full viewport bounds `0..144` with corner radius $r=22.0$ and background color `#0A3D91`.
 • *Given* an athlete viewing BTLE sensor icons in device pairing, status bar, or matrix screens,
 • *When* reading the icon,
 • *Then* the bold uppercase abbreviation (`PWR`, `SPD`, `CAD`, `S&C`, `HR`, `SPD`) is clearly legible at compact dimensions.
 • *Given* the 4 BTLE bike sensor icons,
 • *When* comparing `bt_bike_pwr`, `bt_bike_spd`, `bt_bike_cad`, and `bt_bike_speed_and_cadence`,
-• *Then* each displays its unique top-right sensor mini-icon (power bolt, speedometer arc, cadence crank, combined dual sensor).
+• *Then* the cyclist is horizontally centered ($x \in [28.5, 115.5]$) and each displays its unique canonical sensor mini-icon in the top-left quadrant ($x \approx 12..52, y \approx 10..50$) derived from `ic_power`, `ic_speed`, and `ic_cadence`.
 • *Given* `VectorAssetResolutionContractTest`,
 • *When* executing the test suite,
-• *Then* all vector drawables pass Rule 37 geometric primitive checks, full-bleed badge assertions, and uppercase label validation.
+• *Then* all vector drawables pass Rule 37 geometric primitive checks, full-bleed badge assertions with `#0A3D91`, centered cyclist assertions, and uppercase label validation.
 
-**Invariants**: Rule 37 geometric primitives, `#07377F` protocol badge token, `R.drawable.bt_*` resource ID mapping, and 100% clean-room test pass rate.
+**Invariants**: Rule 37 geometric primitives, official `#0A3D91` Bluetooth badge token, `R.drawable.bt_*` resource ID mapping, and 100% clean-room test pass rate.
 
 
 
