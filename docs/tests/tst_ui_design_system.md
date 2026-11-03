@@ -4400,10 +4400,10 @@
   3. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-282: **General Map Layer Visibility Controls & Preference Persistence Verification** [General map Layers menu toggles routes, segments, favorite locations, favorite tracks / clusters, and live track; user layer visibility preferences persisted across sessions in SharedPreferences; CLUSTERS layer disabled by default in DEFAULT_ENABLED; Cockpit map strictly isolates and never renders clusters; fast asynchronous cluster hydration with companion stats parity and off-Main polyline decoding; harmonized ClusterOnMapSheet MapDetailLayout, MinimumDragHandle, list component reuse, and stats enrichment without purple text tinting; 100% 9-language localization parity; 100% unit test pass rate.] [Verified]
+### TST-UI-282: **General Map Layer Visibility Controls & Preference Persistence Verification** [General map Layers menu toggles routes, segments, favorite locations, favorite tracks / clusters, and live track; user layer visibility preferences persisted across sessions in SharedPreferences; CLUSTERS layer disabled by default in DEFAULT_ENABLED; Cockpit map strictly isolates and never renders clusters; fast asynchronous cluster hydration with companion stats parity and off-Main polyline decoding; harmonized ClusterOnMapSheet MapDetailLayout, MinimumDragHandle, list component reuse, and stats enrichment without purple text tinting; deduplicated metadata and lower expanded detailed map parity; 100% 9-language localization parity; 100% unit test pass rate.] [Verified]
 - **Requirement(s)**: `REQ-UI-322`
 - **Component**: **General Map Layer Visibility Controls & Preference Persistence Verification**
-- **Jira**: `ATT-2931`, `ATT-4847`, `ATT-5075`, `ATT-5074`, `ATT-5197`, `ATT-5196`
+- **Jira**: `ATT-2931`, `ATT-4847`, `ATT-5075`, `ATT-5074`, `ATT-5197`, `ATT-5196`, `ATT-5279`
 - **Test Description**:
   1. *GeneralMapLayer Enum & Default State Contract (`GeneralMapLayersContractTest.kt`)*:
   • Verify `GeneralMapLayer` enum declares `ROUTES`, `SEGMENTS`, `KNOWN_LOCATIONS`, `TRACK`, and `CLUSTERS` (exactly 5 entries).
@@ -4426,10 +4426,12 @@
   • Verify `TrackingViewModel.observeMapState()` populates `TrackingMapState` without `WorkoutClusterRepository.allClusters`.
   • Verify live tracking cockpit renders strictly active track, selected routes, and live segments.
   5. *ClusterOnMapSheet Drag Handle, MapDetailLayout & Component Reuse Contract Tests (`GeneralMapLayersContractTest.kt`, `MapScreenWithTrackTest.kt`)*:
-  • Verify `ClusterOnMapSheet` is hosted within `MapDetailLayout(useStatusBarsPadding = false)` with `MinimumDragHandle()` at the top.
+  • Verify `ClusterOnMapSheet` is hosted within `MapDetailLayout(useStatusBarsPadding = false, showMap = true)` with `MinimumDragHandle()` at the top.
   • Verify `ClusterOnMapSheet` header reuses canonical `WorkoutClusterIdentityRow` and `WorkoutClusterMetadataBlock` from `WorkoutClusterComponents.kt`.
+  • Verify `ClusterOnMapSheet` does NOT include `WorkoutClusterDetailDashboard` in `metadataContent` to avoid duplicate statistics stacking (ATT-5279).
+  • Verify `ClusterOnMapSheet` provides detailed cluster map composition in `mapContent` (`heatmap`, `path`, `markers`) with `MapZoomFocus.EXPLICIT_BOUNDS` (ATT-5279).
   • Verify `onHeaderHeightMeasured` dynamically updates `measuredClusterHeaderHeight` for bottom sheet peek calculation.
-  • Verify expandable body displays full cluster details and workout heatmap when dragged upward.
+  • Verify expandable body displays detailed cluster map when dragged upward.
   • Verify `ClusterOnMapSheet` does NOT apply `tint = TTColor.Cluster` or hardcoded purple colors to text or icons.
   6. *MapCluster & MapFragmentWithTrackViewModel Stats Enrichment Contract Tests (`MapModelsTest.kt`, `MapFragmentWithTrackViewModelTest.kt`)*:
   • Verify `MapCluster` includes `stats: WorkoutClusterStats? = null`.

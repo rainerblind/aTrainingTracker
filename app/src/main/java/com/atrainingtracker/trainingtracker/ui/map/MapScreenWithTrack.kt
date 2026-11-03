@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -60,9 +61,9 @@ import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterStats
+import com.atrainingtracker.trainingtracker.ui.clusters.ClusterMarkerType
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterIdentityRow
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterMetadataBlock
-import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterDetailDashboard
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModel
 import com.atrainingtracker.trainingtracker.ui.components.MetricItem
 import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
@@ -566,6 +567,7 @@ fun ClusterOnMapSheet(
     onHitCountClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val resolvedCluster = remember(cluster, rawCluster) {
         rawCluster ?: WorkoutCluster(
             id = cluster.id,
@@ -583,11 +585,148 @@ fun ClusterOnMapSheet(
         )
     }
 
+    LaunchedEffect(resolvedCluster.id) {
+        clustersViewModel.selectCluster(resolvedCluster)
+    }
+
+    val linkedRoute by clustersViewModel.linkedRoute.collectAsStateWithLifecycle()
+    val mapState by clustersViewModel.mapState.collectAsStateWithLifecycle()
+    val enabledMarkerTypes by clustersViewModel.enabledMarkerTypes.collectAsStateWithLifecycle()
+
+    val clusterBounds = remember(resolvedCluster, cluster.latLngs) {
+        if (resolvedCluster.minLat != null && resolvedCluster.maxLat != null && resolvedCluster.minLng != null && resolvedCluster.maxLng != null) {
+            LatLngBounds(
+                LatLng(resolvedCluster.minLat, resolvedCluster.minLng),
+                LatLng(resolvedCluster.maxLat, resolvedCluster.maxLng)
+            )
+        } else if (cluster.latLngs.isNotEmpty()) {
+            val builder = LatLngBounds.builder()
+            cluster.latLngs.forEach { builder.include(it) }
+            try {
+                builder.build()
+            } catch (e: Exception) {
+                null
+            }
+        } else null
+    }
+
+    val startLabel = stringResource(R.string.start)
+    val endLabel = stringResource(R.string.end)
+    val apexLabel = stringResource(R.string.max_line_distance)
+    val minAltLabel = stringResource(R.string.marker_min_altitude)
+    val maxAltLabel = stringResource(R.string.marker_max_altitude)
+
+    val fingerprintMarkers = remember(
+        resolvedCluster,
+        enabledMarkerTypes,
+        startLabel,
+        endLabel,
+        apexLabel,
+        minAltLabel,
+        maxAltLabel
+    ) {
+        val list = mutableListOf<LocationMarker>()
+
+        if (enabledMarkerTypes.contains(ClusterMarkerType.START)) {
+            list.add(
+                LocationMarker(
+                    position = LatLng(resolvedCluster.startLat, resolvedCluster.startLng),
+                    iconResId = R.drawable.control_start,
+                    title = startLabel,
+                    iconDescriptor = createSensorMarker(context, R.drawable.control_start, TTColor.StartPoint),
+                    draggable = false
+                )
+            )
+        }
+
+        if (enabledMarkerTypes.contains(ClusterMarkerType.END)) {
+            list.add(
+                LocationMarker(
+                    position = LatLng(resolvedCluster.endLat, resolvedCluster.endLng),
+                    iconResId = R.drawable.control_stop,
+                    title = endLabel,
+                    iconDescriptor = createSensorMarker(context, R.drawable.control_stop, TTColor.EndPoint),
+                    draggable = false
+                )
+            )
+        }
+
+        if (enabledMarkerTypes.contains(ClusterMarkerType.DISTANCE)) {
+            list.add(
+                LocationMarker(
+                    position = LatLng(resolvedCluster.maxDispLat, resolvedCluster.maxDispLng),
+                    iconResId = R.drawable.ic_distance,
+                    title = apexLabel,
+                    iconDescriptor = createSensorMarker(context, R.drawable.ic_distance, TTColor.ApexPoint),
+                    draggable = false
+                )
+            )
+        }
+
+        if (enabledMarkerTypes.contains(ClusterMarkerType.ALTITUDE_MIN)) {
+            resolvedCluster.minAltLatLng?.let { minAltPos ->
+                list.add(
+                    LocationMarker(
+                        position = minAltPos,
+                        iconResId = R.drawable.ic_altitude_min,
+                        title = minAltLabel,
+                        iconDescriptor = createSensorMarker(context, R.drawable.ic_altitude_min, TTColor.MinAltitude),
+                        draggable = false
+                    )
+                )
+            }
+        }
+
+        if (enabledMarkerTypes.contains(ClusterMarkerType.ALTITUDE_MAX)) {
+            resolvedCluster.maxAltLatLng?.let { maxAltPos ->
+                list.add(
+                    LocationMarker(
+                        position = maxAltPos,
+                        iconResId = R.drawable.ic_altitude_max,
+                        title = maxAltLabel,
+                        iconDescriptor = createSensorMarker(context, R.drawable.ic_altitude_max, TTColor.MaxAltitude),
+                        draggable = false
+                    )
+                )
+            }
+        }
+
+        list
+    }
+
+    val filteredMemberMarkers = remember(mapState.memberMarkers, enabledMarkerTypes) {
+        mapState.memberMarkers
+            .filter { enabledMarkerTypes.contains(it.markerType) }
+            .map { marker ->
+                val color = when (marker.markerType) {
+                    ClusterMarkerType.START -> TTColor.StartPoint
+                    ClusterMarkerType.END -> TTColor.EndPoint
+                    ClusterMarkerType.DISTANCE -> TTColor.ApexPoint
+                    ClusterMarkerType.ALTITUDE_MIN -> TTColor.MinAltitude
+                    ClusterMarkerType.ALTITUDE_MAX -> TTColor.MaxAltitude
+                }
+                LocationMarker(
+                    position = marker.pos,
+                    iconResId = marker.iconResId,
+                    title = marker.title,
+                    iconDescriptor = createSensorMarker(context, marker.iconResId, color, Color.White),
+                    alpha = 0.5f
+                )
+            }
+    }
+
+    val heatmapOpacity = when {
+        resolvedCluster.hitCount <= 5 -> 0.6
+        resolvedCluster.hitCount <= 20 -> 0.8
+        else -> 1.0
+    }
+
     MapDetailLayout(
         bSportType = resolvedCluster.bSportType,
-        zoomFocus = MapZoomFocus.FIT_PRIMARY,
+        zoomFocus = if (clusterBounds != null) MapZoomFocus.EXPLICIT_BOUNDS else MapZoomFocus.FIT_PRIMARY,
+        initialBounds = clusterBounds,
         activeScrubPath = null,
-        showMap = false,
+        showMap = true,
         useStatusBarsPadding = false,
         showElevationProfile = false,
         showZoomControls = false,
@@ -614,15 +753,37 @@ fun ClusterOnMapSheet(
                 )
             }
         },
-        metadataContent = {
-            WorkoutClusterDetailDashboard(
-                cluster = resolvedCluster,
-                viewModel = clustersViewModel,
-                onHitCountClick = { onHitCountClick?.invoke() },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+        overlay = {
+            if (mapState.isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                }
+            }
+        },
+        mapContent = {
+            heatmap(
+                allPaths = mapState.heatmapPaths,
+                opacity = heatmapOpacity,
+                colorLut = ThermalColorLut.CLASSIC_BLUE,
+                normalizeCorridors = false,
+                useClassicStepIntensity = true
             )
+
+            linkedRoute?.let { route ->
+                path(route.toMapRoute().copy(isSelected = true), alpha = 1.0f)
+            }
+
+            mapState.tracks.forEach { track ->
+                path(track, alpha = 0.3f)
+            }
+
+            markers(filteredMemberMarkers)
+            markers(fingerprintMarkers)
         },
         modifier = modifier
     )
