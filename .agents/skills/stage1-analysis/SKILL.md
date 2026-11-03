@@ -17,9 +17,9 @@ At Ticket Start (`ATT-XXXX`), spawn two persistent `TypeName: "self"` subagents 
 1. **Forensic Root Cause Analysis (RCA)**:
    - For defects: Investigate stack traces, system logs, SQLite table constraints, thread concurrency, and Android framework lifecycles.
    - For features: Perform gap analysis against current architectural components.
-2. **Independent Hypothesis Verification (4-Augen-Prinzip — ATT-3534)**:
+2. **Independent Hypothesis Verification (4-Augen-Prinzip — ATT-3534, Rule 69 — ATT-5202)**:
    - When a Jira ticket already includes a detailed root-cause analysis or architectural proposal, treat it strictly as a hypothesis.
-   - Independently audit the hypothesis against the live `sprint/<SPRINT_NAME>` codebase: cross-check cited files, line ranges, and architectural assumptions to identify blind spots or potential regressions.
+   - Independently audit the hypothesis against the live `sprint/<SPRINT_NAME>` codebase: cross-check cited files, line ranges, and architectural assumptions (including visual continuity of sparse/non-contiguous chart bins and header vs. body duplication in shared layout containers — `ATT-5190`/`ATT-5281`, `ATT-5196`/`ATT-5279`) to identify blind spots or potential regressions.
    - Include an explicit **"Independent Peer Review & Verification"** subsection in the Stage 1 deliverable (`docs/engineering/analysis/<TICKET_KEY>_analysis.md`).
 3. **Chesterton's Fence Archaeology (`REQ-PRO-022`) & Side-Effect / Cross-Caller Impact Audit (`Rule 68` — `ATT-5082`)**:
    - Inspect git history (`git log -S <REQ-ID> docs/requirements.md`) before proposing modifications to existing requirements.
