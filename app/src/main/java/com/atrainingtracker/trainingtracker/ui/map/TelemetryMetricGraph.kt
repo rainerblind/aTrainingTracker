@@ -491,14 +491,12 @@ fun TelemetryMetricGraph(
                         val rectTop = minOf(yTop, yBottom)
                         val rectHeight = abs(yTop - yBottom).coerceAtLeast(1f)
 
-                        // Background container track (only for bins with positive duration, REQ-UI-443)
-                        if (bin.durationSec > 0L) {
-                            drawRect(
-                                color = bin.color.copy(alpha = 0.15f),
-                                topLeft = Offset(stripStartPx, rectTop),
-                                size = androidx.compose.ui.geometry.Size(stripWidthPx, rectHeight)
-                            )
-                        }
+                        // Background container track (unconditional across linearBins, REQ-UI-443.2 / ATT-5281)
+                        drawRect(
+                            color = bin.color.copy(alpha = 0.15f),
+                            topLeft = Offset(stripStartPx, rectTop),
+                            size = androidx.compose.ui.geometry.Size(stripWidthPx, rectHeight)
+                        )
 
                         // Weighted horizontal frequency bar
                         val barWidthPx = (bin.percentage / maxBinPct).coerceIn(0f, 1f) * stripWidthPx
@@ -949,15 +947,13 @@ fun AlignedMarginalZoneDistribution(
                 val rectTop = minOf(yTop, yBottom)
                 val rectHeight = abs(yTop - yBottom).coerceAtLeast(1f)
 
-                // Background container track (only for bins with positive duration, REQ-UI-443)
-                if (bin.durationSec > 0L) {
-                    drawRoundRect(
-                        color = bin.color.copy(alpha = 0.15f),
-                        topLeft = Offset(0f, rectTop),
-                        size = Size(availableWidthPx, rectHeight),
-                        cornerRadius = CornerRadius(2.dp.toPx())
-                    )
-                }
+                // Background container track (unconditional across linearBins, REQ-UI-443.3 / ATT-5281)
+                drawRoundRect(
+                    color = bin.color.copy(alpha = 0.15f),
+                    topLeft = Offset(0f, rectTop),
+                    size = Size(availableWidthPx, rectHeight),
+                    cornerRadius = CornerRadius(2.dp.toPx())
+                )
 
                 // Weighted horizontal frequency bar
                 val barWidthPx = (bin.percentage / maxBinPct).coerceIn(0f, 1f) * availableWidthPx

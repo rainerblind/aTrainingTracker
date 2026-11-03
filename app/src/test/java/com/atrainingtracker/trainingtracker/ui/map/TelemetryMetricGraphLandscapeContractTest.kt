@@ -259,10 +259,16 @@ class TelemetryMetricGraphLandscapeContractTest {
         val maxBinPct = linearBins.maxOfOrNull { it.percentage }?.takeIf { it > 0f } ?: 1f
         assertEquals(50f, maxBinPct, 0.001f)
 
-        // Verify empty bin track suppression rule: bins with durationSec == 0L must not draw background tracks
+        // Verify unconditional background track continuity & foreground gating contract (REQ-UI-443.3 / ATT-5281):
+        // Container tracks (alpha = 0.15f) are rendered unconditionally for all linearBins across [dataMin, dataMax],
+        // while solid foreground bars (barWidthPx > 0f) and text overlays remain strictly gated on durationSec > 0L.
         val emptyBin = TelemetryHistogramBin(3, 500, 600, 0L, 0f, 7, Color.Black)
-        assertTrue("Duration zero bins must have 0L duration", emptyBin.durationSec == 0L)
+        assertTrue("Empty bins have 0L duration", emptyBin.durationSec == 0L)
+        val emptyBarWidth = (emptyBin.percentage / maxBinPct).coerceIn(0f, 1f) * 100f
+        assertEquals("Foreground bar width for empty bin must be zero", 0f, emptyBarWidth, 0.001f)
         val activeBin = linearBins.first()
         assertTrue("Active bins have positive duration", activeBin.durationSec > 0L)
+        val activeBarWidth = (activeBin.percentage / maxBinPct).coerceIn(0f, 1f) * 100f
+        assertTrue("Foreground bar width for active bin must be positive", activeBarWidth > 0f)
     }
 }

@@ -7048,17 +7048,17 @@
 ### TST-UI-443: **Power TelemetryMetricGraph Marginal Histogram Unfolded Linear Bins Projection Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-443`
 - **Component**: `ZoneDistributionModels.kt`, `TelemetryMetricGraph.kt`, `TelemetryMetricGraphMarginalBarsContractTest.kt`, `TelemetryMetricGraphLandscapeContractTest.kt`
-- **Jira**: `ATT-5190`
+- **Jira**: `ATT-5190`, `ATT-5281`
 - **Test Description**:
   1. *TelemetryHistogramData Unfolded Linear Bins Unit Tests (`TelemetryHistogramCalculatorTest.kt`)*:
   • Unit tests verifying `TelemetryHistogramData.linearBins` returns `bins` directly when `sprintTail == null`.
   • Unit tests verifying `TelemetryHistogramData.linearBins` excludes `isOverflow` and `isReturn` bins and unrolls full linear bins spanning `[dataMin, dataMax]` when `sprintTail != null`.
   2. *Portrait Marginal Strip Unfolded Linear Bins Contract Test (`TelemetryMetricGraphMarginalBarsContractTest.kt`)*:
   • Contract test verifying `TelemetryMetricGraph.kt` portrait marginal strip logic accesses `histogram.linearBins` and computes `maxBinPct` from `linearBins`.
-  • Contract test verifying background track rendering is conditioned on `bin.durationSec > 0L`.
+  • Contract test verifying background track rendering is drawn unconditionally for every bin in `linearBins` across `[dataMin, dataMax]` (ATT-5281).
   3. *Landscape Aligned Marginal Zone Distribution Unfolded Linear Bins Contract Test (`TelemetryMetricGraphLandscapeContractTest.kt`)*:
   • Contract test verifying `AlignedMarginalZoneDistribution` accesses `histogram.linearBins` and computes `maxBinPct` from `linearBins`.
-  • Contract test verifying background track rendering is conditioned on `bin.durationSec > 0L`.
+  • Contract test verifying background track rendering is drawn unconditionally for every bin in `linearBins` across `[dataMin, dataMax]` (ATT-5281).
   4. *Clean-Room Targeted Test Suite Execution (`TST-UI-443.4`)*:
   • Run targeted package unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.zones.*" --tests "com.atrainingtracker.trainingtracker.ui.map.*" --tests "com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest"` confirming 100% pass rate.
 
