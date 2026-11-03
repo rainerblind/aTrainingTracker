@@ -365,6 +365,12 @@ Row(
 * **Guard `.fillMaxHeight()` & Vertical `.weight(1f)` Against Unbounded Scroll Containers (`ATT-4878` $\rightarrow$ `ATT-5071`)**:
   * When adding `.fillMaxHeight()` or vertical `Modifier.weight(1f)` inside a shared composable (e.g. `SensorFieldView`) to equalize row heights inside a bounded `Row(Modifier.height(IntrinsicSize.Min))` caller (`SensorGridScreen`), audit **every call site** (`grep -rn "<ComposableName>(" app/src/main/`)—especially standalone previews embedded directly inside a `verticalScroll` `Column` or `LazyColumn` (`AthleteProfileScreen`), where max height is `Constraints.Infinity` unless `Modifier.height(IntrinsicSize.Min)` is preserved on an enclosing container. Verify every call site on-device during Stage 5.
 
+### 5.15 Map Entity Bottom-Sheet Peek Parity & Micro-Typography Line-Height Bounding (Rule 68 — ATT-5075, ATT-5076 / ATT-5082)
+* **Reuse List-Item Header Composables & `MapDetailLayout` in Map Peek Sheets (`ATT-5075` $\rightarrow$ `ATT-5196`)**:
+  * Map bottom sheets for domain entities (`Segments`, `Routes`, `Lieblingsstrecken`) in `MapScreenWithTrack.kt` **MUST** reuse the entity's canonical list-item header/metadata composables (`SegmentHeader`/`SegmentDetails`, `RouteHeader`/`RouteDetails`, `WorkoutClusterIdentityRow`/`WorkoutClusterMetadataBlock`) hosted inside `MapDetailLayout(useStatusBarsPadding = false, onHeaderHeightMeasured = ...)` so the top drag-handle bar (`MinimumDragHandle()`), dynamic peek-height measurement, and full expandable detail view work identically across all map layers. Never write a standalone un-draggable `Column` with a subset of fields.
+* **Explicit `lineHeight` on Micro-Typography (`<= 10.sp`) Inside Compact Fixed-Height Boxes (`ATT-5076` $\rightarrow$ `ATT-5193`)**:
+  * When rendering small labels (`fontSize = 9.sp` or `10.sp`, such as day-of-week labels `M`, `W`, `F`, `S` in `YearlyContributionGrid`) inside a compact fixed-height `Box(Modifier.height(11.dp))`, always set an explicit `lineHeight = fontSize` and `PlatformTextStyle(includeFontPadding = false)` on the `TextStyle`. Inheriting `labelSmall`'s default `lineHeight = 16.sp` inside an `11.dp` box clips the bottom 1–2 px of tall glyphs like `F`.
+
 ---
 
 ## 6. Map Viewport & Camera Guidelines
