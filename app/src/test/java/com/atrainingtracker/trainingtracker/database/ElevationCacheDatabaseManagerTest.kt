@@ -53,6 +53,10 @@ class ElevationCacheDatabaseManagerTest {
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
         context.deleteDatabase(ElevationCacheDbHelper.DB_NAME)
+        context.deleteDatabase("Routes.db")
+        context.deleteDatabase("Segments.db")
+        RoutesDatabaseManager.resetForTesting(null)
+        SegmentsDatabaseManager.resetForTesting(null)
         ElevationCacheDatabaseManager.resetForTesting(null)
         cacheDb = ElevationCacheDatabaseManager.getInstance(context)
     }
@@ -61,6 +65,10 @@ class ElevationCacheDatabaseManagerTest {
     fun tearDown() {
         cacheDb.close()
         context.deleteDatabase(ElevationCacheDbHelper.DB_NAME)
+        context.deleteDatabase("Routes.db")
+        context.deleteDatabase("Segments.db")
+        RoutesDatabaseManager.resetForTesting(null)
+        SegmentsDatabaseManager.resetForTesting(null)
         ElevationCacheDatabaseManager.resetForTesting(null)
     }
 
@@ -291,5 +299,161 @@ class ElevationCacheDatabaseManagerTest {
 
         val knownLocDbFile = context.getDatabasePath("KnownLocations.db")
         assertTrue("ElevationCache must never touch or create KnownLocations.db", !knownLocDbFile.exists())
+    }
+
+    /**
+     * TST-SEN-025.2: Strict source priority hierarchy:
+     * DEM_CACHE (30) > ROUTE_SEED (20) > SEGMENT_SEED (10).
+     */
+    @Test
+    fun sourcePriority_putElevationRespectsHierarchy() {
+        val lat = 48.13715
+        val lon = 11.57612
+
+        // Seed with lower priority SEGMENT_SEED
+        cacheDb.putElevation(lat, lon, 450.0, ElevationCacheDatabaseManager.SOURCE_SEGMENT_SEED)
+        var item = cacheDb.getElevationItem(lat, lon)
+        assertNotNull(item)
+        assertEquals(450.0, item!!.altitude, 1e-4)
+        assertEquals(ElevationCacheDatabaseManager.SOURCE_SEGMENT_SEED, item.source)
+
+        // Upgrade with ROUTE_SEED
+        cacheDb.putElevation(lat, lon, 500.0, ElevationCacheDatabaseManager.SOURCE_ROUTE_SEED)
+        item = cacheDb.getElevationItem(lat, lon)
+        assertNotNull(item)
+        assertEquals(500.0, item!!.altitude, 1e-4)
+        assertEquals(ElevationCacheDatabaseManager.SOURCE_ROUTE_SEED, item.source)
+
+        // Upgrade with DEM_CACHE
+        cacheDb.putElevation(lat, lon, 520.5, ElevationCacheDatabaseManager.SOURCE_DEM_CACHE)
+        item = cacheDb.getElevationItem(lat, lon)
+        assertNotNull(item)
+        assertEquals(520.5, item!!.altitude, 1e-4)
+        assertEquals(ElevationCacheDatabaseManager.SOURCE_DEM_CACHE, item.source)
+
+        // Lower priority attempts must not overwrite DEM_CACHE
+        cacheDb.putElevation(lat, lon, 400.0, ElevationCacheDatabaseManager.SOURCE_SEGMENT_SEED)
+        cacheDb.putElevation(lat, lon, 490.0, ElevationCacheDatabaseManager.SOURCE_ROUTE_SEED)
+        item = cacheDb.getElevationItem(lat, lon)
+        assertNotNull(item)
+        assertEquals(520.5, item!!.altitude, 1e-4)
+        assertEquals(ElevationCacheDatabaseManager.SOURCE_DEM_CACHE, item.source)
+    }
+
+    /**
+     * TST-SEN-025.2: seedFromRoutes upgrades SEGMENT_SEED but never overwrites DEM_CACHE.
+     */
+    @Test
+    fun seedFromRoutes_upgradesSegmentSeedAndPreservesDemCache() {
+        context.deleteDatabase("Routes.db")
+        val routesDb = RoutesDatabaseManager.getInstance(context)
+        val rDb = routesDb.getDatabase()
+
+        val routeCv = ContentValues().apply {
+            put(RoutesDatabaseManager.RouteContract.COLUMN_NAME, "Route Priority Test")
+            put(RoutesDatabaseManager.RouteContract.COLUMN_SPORT_TYPE, "BIKE")
+            put(RoutesDatabaseManager.RouteContract.COLUMN_SOURCE, RouteSource.STRAVA.name)
+            put(RoutesDatabaseManager.RouteContract.COLUMN_DISTANCE, 1000.0)
+            put(RoutesDatabaseManager.RouteContract.COLUMN_ELEVATION_GAIN, 50.0)
+        }
+        val routeId = rDb.insert(RoutesDatabaseManager.RouteContract.TABLE_ROUTES, null, routeCv)
+
+        val lat1 = 47.88100
+        val lon1 = 11.33100
+        val lat2 = 47.88200
+        val lon2 = 11.33200
+
+        // Point 1 is already cached as authoritative DEM_CACHE
+        cacheDb.putElevation(lat1, lon1, 605.0, ElevationCacheDatabaseManager.SOURCE_DEM_CACHE)
+
+        // Point 2 is already cached as SEGMENT_SEED
+        cacheDb.putElevation(lat2, lon2, 590.0, ElevationCacheDatabaseManager.SOURCE_SEGMENT_SEED)
+
+        // Route has different altitudes for both coordinates
+        val cv1 = ContentValues().apply {
+            put(RoutesDatabaseManager.RouteContract.COLUMN_ROUTE_ID_FK, routeId)
+            put(RoutesDatabaseManager.RouteContract.COLUMN_LAT, lat1)
+            put(RoutesDatabaseManager.RouteContract.COLUMN_LNG, lon1)
+            put(RoutesDatabaseManager.RouteContract.COLUMN_DIST_FROM_START, 0.0)
+            put(RoutesDatabaseManager.RouteContract.COLUMN_ALTITUDE, 650.0) // Inaccurate route altitude
+        }
+        val cv2 = ContentValues().apply {
+            put(RoutesDatabaseManager.RouteContract.COLUMN_ROUTE_ID_FK, routeId)
+            put(RoutesDatabaseManager.RouteContract.COLUMN_LAT, lat2)
+            put(RoutesDatabaseManager.RouteContract.COLUMN_LNG, lon2)
+            put(RoutesDatabaseManager.RouteContract.COLUMN_DIST_FROM_START, 100.0)
+            put(RoutesDatabaseManager.RouteContract.COLUMN_ALTITUDE, 615.0) // Accurate route altitude
+        }
+        rDb.insert(RoutesDatabaseManager.RouteContract.TABLE_ROUTE_POINTS, null, cv1)
+        rDb.insert(RoutesDatabaseManager.RouteContract.TABLE_ROUTE_POINTS, null, cv2)
+
+        cacheDb.seedFromRoutes(routesDb)
+
+        // Point 1 (DEM_CACHE) must NOT be overwritten by route point
+        val item1 = cacheDb.getElevationItem(lat1, lon1)
+        assertNotNull(item1)
+        assertEquals(605.0, item1!!.altitude, 1e-4)
+        assertEquals(ElevationCacheDatabaseManager.SOURCE_DEM_CACHE, item1.source)
+
+        // Point 2 (SEGMENT_SEED) MUST be upgraded to ROUTE_SEED
+        val item2 = cacheDb.getElevationItem(lat2, lon2)
+        assertNotNull(item2)
+        assertEquals(615.0, item2!!.altitude, 1e-4)
+        assertEquals(ElevationCacheDatabaseManager.SOURCE_ROUTE_SEED, item2.source)
+
+        context.deleteDatabase("Routes.db")
+    }
+
+    /**
+     * TST-SEN-025.2: seedFromSegments never overwrites existing ROUTE_SEED or DEM_CACHE entries.
+     */
+    @Test
+    fun seedFromSegments_neverOverwritesRouteSeedOrDemCache() {
+        context.deleteDatabase("Segments.db")
+        val segmentsDb = SegmentsDatabaseManager.getInstance(context)
+        val sDb = segmentsDb.database
+
+        val latDem = 46.50100
+        val lonDem = 10.30400
+        val latRoute = 46.50200
+        val lonRoute = 10.30500
+
+        // Pre-populate with DEM_CACHE and ROUTE_SEED
+        cacheDb.putElevation(latDem, lonDem, 1200.0, ElevationCacheDatabaseManager.SOURCE_DEM_CACHE)
+        cacheDb.putElevation(latRoute, lonRoute, 1220.0, ElevationCacheDatabaseManager.SOURCE_ROUTE_SEED)
+
+        // Insert noisy segment stream at identical coordinates
+        val cv1 = ContentValues().apply {
+            put(SegmentsDatabaseManager.Segments.STRAVA_SEGMENT_ID, 123L)
+            put(SegmentsDatabaseManager.Segments.DISTANCE, 0.0)
+            put(SegmentsDatabaseManager.Segments.LATITUDE, latDem)
+            put(SegmentsDatabaseManager.Segments.LONGITUDE, lonDem)
+            put(SegmentsDatabaseManager.Segments.ALTITUDE, 1150.0) // Noisy segment altitude
+        }
+        val cv2 = ContentValues().apply {
+            put(SegmentsDatabaseManager.Segments.STRAVA_SEGMENT_ID, 123L)
+            put(SegmentsDatabaseManager.Segments.DISTANCE, 50.0)
+            put(SegmentsDatabaseManager.Segments.LATITUDE, latRoute)
+            put(SegmentsDatabaseManager.Segments.LONGITUDE, lonRoute)
+            put(SegmentsDatabaseManager.Segments.ALTITUDE, 1170.0) // Noisy segment altitude
+        }
+        sDb.insert(SegmentsDatabaseManager.Segments.TABLE_SEGMENT_STREAMS, null, cv1)
+        sDb.insert(SegmentsDatabaseManager.Segments.TABLE_SEGMENT_STREAMS, null, cv2)
+
+        cacheDb.seedFromSegments(segmentsDb)
+
+        // DEM_CACHE must be intact
+        val itemDem = cacheDb.getElevationItem(latDem, lonDem)
+        assertNotNull(itemDem)
+        assertEquals(1200.0, itemDem!!.altitude, 1e-4)
+        assertEquals(ElevationCacheDatabaseManager.SOURCE_DEM_CACHE, itemDem.source)
+
+        // ROUTE_SEED must be intact
+        val itemRoute = cacheDb.getElevationItem(latRoute, lonRoute)
+        assertNotNull(itemRoute)
+        assertEquals(1220.0, itemRoute!!.altitude, 1e-4)
+        assertEquals(ElevationCacheDatabaseManager.SOURCE_ROUTE_SEED, itemRoute.source)
+
+        context.deleteDatabase("Segments.db")
     }
 }

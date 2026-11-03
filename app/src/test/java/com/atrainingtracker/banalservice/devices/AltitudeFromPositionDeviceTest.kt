@@ -27,6 +27,7 @@ import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.sensor.MySensorManager
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.database.ElevationCacheDatabaseManager
+import com.atrainingtracker.trainingtracker.database.ElevationCacheItem
 import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.RoutesDatabaseManager
 import com.atrainingtracker.trainingtracker.elevation.ElevationResult
@@ -40,7 +41,9 @@ import io.mockk.unmockkAll
 import io.mockk.verify
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.util.concurrent.ExecutorService
@@ -131,14 +134,21 @@ class AltitudeFromPositionDeviceTest {
     }
 
     /**
-     * TST-SEN-025.2: Cache hit resolves elevation immediately without querying ElevationService.
+     * TST-SEN-025.2: Cache hit on authoritative DEM_CACHE resolves elevation immediately without querying ElevationService.
      */
     @Test
     fun locationCacheHit_resolvesElevationFromCacheWithoutNetwork() {
         val lat = 47.99123
         val lon = 11.45678
         val expectedAlt = 605.5
-        every { mockCacheDb.getElevation(lat, lon, 2) } returns expectedAlt
+        val cachedItem = ElevationCacheItem(
+            latE5 = ElevationCacheDatabaseManager.toE5(lat),
+            lonE5 = ElevationCacheDatabaseManager.toE5(lon),
+            altitude = expectedAlt,
+            source = ElevationCacheDatabaseManager.SOURCE_DEM_CACHE,
+            updatedAt = 1000L
+        )
+        every { mockCacheDb.getElevationItem(lat, lon, 2) } returns cachedItem
 
         device.onNewLocation(lat, lon)
 
@@ -152,6 +162,56 @@ class AltitudeFromPositionDeviceTest {
     }
 
     /**
+     * TST-SEN-025.3: Cache hit on seeded non-DEM entry emits immediately for offline continuity
+     * and asynchronously queries ElevationService to upgrade to DEM_CACHE.
+     */
+    @Test
+    fun locationCacheHit_seededNonDemAltitudeEmitsImmediatelyAndRefinesViaDemQuery() {
+        val lat = 47.99123
+        val lon = 11.45678
+        val seededAlt = 600.0
+        val authoritativeDemAlt = 605.5
+        val latE5 = ElevationCacheDatabaseManager.toE5(lat)
+        val lonE5 = ElevationCacheDatabaseManager.toE5(lon)
+
+        val seededItem = ElevationCacheItem(
+            latE5 = latE5,
+            lonE5 = lonE5,
+            altitude = seededAlt,
+            source = ElevationCacheDatabaseManager.SOURCE_ROUTE_SEED,
+            updatedAt = 1000L
+        )
+
+        every { mockCacheDb.getElevationItem(lat, lon, 2) } returns seededItem
+        every { mockElevationService.fetchElevation(lat, lon) } returns ElevationResult.Success(
+            elevationMeters = authoritativeDemAlt,
+            latitude = lat,
+            longitude = lon
+        )
+
+        device.onNewLocation(lat, lon)
+
+        // Seeded altitude emitted immediately without UI lag
+        val immediateAlt = device.getAltitudeSensor().value as? Double
+        assertNotNull(immediateAlt)
+        assertEquals(seededAlt, immediateAlt!!, 1e-4)
+
+        // Allow async task to complete
+        Thread.sleep(100)
+
+        // Verifies DEM query was dispatched and cache updated to DEM_CACHE
+        verify(atLeast = 1) { mockElevationService.fetchElevation(lat, lon) }
+        verify(atLeast = 1) {
+            mockCacheDb.putElevation(lat, lon, authoritativeDemAlt, ElevationCacheDatabaseManager.SOURCE_DEM_CACHE, any())
+        }
+
+        // Updated altitude emitted after DEM fetch
+        val refinedAlt = device.getAltitudeSensor().value as? Double
+        assertNotNull(refinedAlt)
+        assertEquals(authoritativeDemAlt, refinedAlt!!, 1e-4)
+    }
+
+    /**
      * TST-SEN-025.3: Cache miss triggers asynchronous DEM query and caches the result.
      */
     @Test
@@ -160,7 +220,7 @@ class AltitudeFromPositionDeviceTest {
         val lon = 11.57612
         val demAlt = 520.8
 
-        every { mockCacheDb.getElevation(lat, lon, 2) } returns null
+        every { mockCacheDb.getElevationItem(lat, lon, 2) } returns null
         every { mockElevationService.fetchElevation(lat, lon) } returns ElevationResult.Success(
             elevationMeters = demAlt,
             latitude = 48.13715,
@@ -174,7 +234,7 @@ class AltitudeFromPositionDeviceTest {
         assertNotNull(publishedAlt)
         assertEquals(demAlt, publishedAlt!!, 1e-4)
 
-        verify(atLeast = 1) { mockCacheDb.putElevation(lat, lon, demAlt, "DEM_CACHE", any()) }
+        verify(atLeast = 1) { mockCacheDb.putElevation(lat, lon, demAlt, ElevationCacheDatabaseManager.SOURCE_DEM_CACHE, any()) }
         verify(atLeast = 1) { mockElevationService.fetchElevation(lat, lon) }
     }
 
@@ -187,7 +247,7 @@ class AltitudeFromPositionDeviceTest {
         val lon = 11.57612
         val demAlt = 520.8
 
-        every { mockCacheDb.getElevation(lat, lon, 2) } returns null
+        every { mockCacheDb.getElevationItem(lat, lon, 2) } returns null
         every { mockElevationService.fetchElevation(lat, lon) } returns ElevationResult.Success(
             elevationMeters = demAlt,
             latitude = 48.13715,
@@ -206,6 +266,36 @@ class AltitudeFromPositionDeviceTest {
     }
 
     /**
+     * TST-SEN-025.3: In-flight DEM query prevents enqueuing duplicate asynchronous queries.
+     */
+    @Test
+    fun inFlightDemQuery_suppressesDuplicateAsyncRequests() {
+        val lat1 = 48.13715
+        val lon1 = 11.57612
+        val lat2 = 48.13725
+        val lon2 = 11.57622
+
+        every { mockCacheDb.getElevationItem(any(), any(), 2) } returns null
+        // Delay response to keep query in-flight
+        every { mockElevationService.fetchElevation(any(), any()) } answers {
+            Thread.sleep(150)
+            ElevationResult.Success(520.0, lat1, lon1)
+        }
+
+        device.onNewLocation(lat1, lon1)
+        assertTrue(device.isDemQueryInFlight)
+
+        // Second fix arrives while first query is still in flight
+        device.onNewLocation(lat2, lon2)
+
+        Thread.sleep(250)
+        assertFalse(device.isDemQueryInFlight)
+
+        // Only first location was queried
+        verify(exactly = 1) { mockElevationService.fetchElevation(any(), any()) }
+    }
+
+    /**
      * TST-SEN-025.4: AltitudeFromPositionDevice strictly operates on ElevationCache.db
      * and never writes or queries KnownLocations.db.
      */
@@ -213,7 +303,14 @@ class AltitudeFromPositionDeviceTest {
     fun knownLocationsDecoupling_zeroInteractionWithKnownLocationsDb() {
         val lat = 48.13715
         val lon = 11.57612
-        every { mockCacheDb.getElevation(lat, lon, 2) } returns 520.0
+        val cachedItem = ElevationCacheItem(
+            latE5 = ElevationCacheDatabaseManager.toE5(lat),
+            lonE5 = ElevationCacheDatabaseManager.toE5(lon),
+            altitude = 520.0,
+            source = ElevationCacheDatabaseManager.SOURCE_DEM_CACHE,
+            updatedAt = 1000L
+        )
+        every { mockCacheDb.getElevationItem(lat, lon, 2) } returns cachedItem
 
         device.onNewLocation(lat, lon)
 

@@ -1309,7 +1309,7 @@
 ### TST-SEN-025: **Position-Based Elevation Sensor & Dedicated Spatial DEM Cache Test Suite** [Verified]
 - **Requirement(s)**: `REQ-SEN-025`
 - **Component**: `ElevationCacheDatabaseManagerTest.kt`, `AltitudeFromPositionDeviceTest.kt`, `DeviceTypeTest.kt`, `SensorSourceDialogPriorityTest.kt`, `TranslationParityTest.kt`
-- **Jira**: `ATT-4859`
+- **Jira**: `ATT-4859`, `ATT-5199`
 - **Test Description**:
   1. *Spatial Elevation Cache CRUD & Nearest-Neighbor Interpolation (`TST-SEN-025.1`)*:
   • Unit test in `ElevationCacheDatabaseManagerTest` verifying:
@@ -1317,15 +1317,19 @@
     - Querying exact quantized coordinates returns cached elevation.
     - Querying coordinates within spatial tolerance ($\Delta\text{E5} \le 2$) resolves nearest neighbor.
     - Querying distant coordinates (> tolerance) returns null (cache miss).
-  2. *Background Route Elevation Seeding (`TST-SEN-025.2`)*:
+  2. *Background Route/Segment Elevation Seeding & Source Priority (`TST-SEN-025.2`)*:
   • Unit test in `ElevationCacheDatabaseManagerTest` verifying:
-    - Seeding from mock `RoutesDatabaseManager` inserts all non-null trackpoint altitudes into `ElevationCache.db`.
-    - Duplicate trackpoints are deduplicated or updated gracefully without constraint violations.
-  3. *Device Lifecycle, Pairing Toggle & Unfiltered Altitude Emission (`TST-SEN-025.3`)*:
+    - Seeding from mock `RoutesDatabaseManager` inserts non-null trackpoint altitudes into `ElevationCache.db` with `source = ROUTE_SEED`.
+    - Seeding from `SEGMENT_SEED` uses `CONFLICT_IGNORE` and NEVER overwrites existing `ROUTE_SEED` or `DEM_CACHE` records.
+    - Seeding from `ROUTE_SEED` updates existing `SEGMENT_SEED` records but NEVER overwrites authoritative `DEM_CACHE` records.
+    - Inserting authoritative `DEM_CACHE` entries replaces lower-priority seeded points.
+  3. *Device Lifecycle, Pairing Toggle, Async DEM Query & Online Upgrade (`TST-SEN-025.3`)*:
   • Unit test in `AltitudeFromPositionDeviceTest` and `DeviceManagerTest` verifying:
     - `AltitudeFromPositionDevice` initializes with `DeviceType.ALTITUDE_FROM_POSITION` under `Protocol.SMARTPHONE`.
     - Pairing toggle in `DevicesDatabaseManager` dynamically starts and shuts down the device.
-    - Incoming `(latitude, longitude)` updates resolve altitude from cache/mock DEM and publish to `mAltitudeSensor`.
+    - Incoming `(latitude, longitude)` updates on a cache miss trigger async DEM fetch via `ElevationService` and cache with `source = DEM_CACHE`.
+    - Incoming updates matching a seeded non-DEM entry (`ROUTE_SEED` / `SEGMENT_SEED`) emit the cached altitude immediately for offline continuity AND dispatch an async DEM query to upgrade the cache to `DEM_CACHE`.
+    - Concurrent location updates while an async DEM query is in flight do not queue redundant queries (`AtomicBoolean mIsDemQueryInFlight`).
   4. *Zero Contamination of Known Locations (*Lieblingsorte*) (`TST-SEN-025.4`)*:
   • Architectural isolation test verifying:
     - Continuous position tracking and cache insertion in `ElevationCache.db` execute with zero calls or writes to `KnownLocationsDatabaseManager`.
