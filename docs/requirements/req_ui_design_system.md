@@ -12654,7 +12654,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 
 ### REQ-UI-437: User-Configurable Horizontal Width Ratios & Split Presets in Cockpit Sensor Grid [Verified]
-- **Tests**: `TST-UI-437` | **Tickets**: `ATT-4861`, `ATT-5077`
+- **Tests**: `TST-UI-437` | **Tickets**: `ATT-4861`, `ATT-5077`, `ATT-5192`
 - **Implementation**: `TrackingViewsDatabaseManager.java`, `DatabaseSchemaRegistry.kt`, `TrackingViewsRepository.kt`, `SensorFieldState.kt`, `SensorGridScreen.kt`, `EditSensorFieldDialog.kt`, `EditSensorFieldViewModel.kt`
 - **Rationale**: In multi-column cockpit rows, side-by-side sensor fields have historically been forced to equal width (`1/2 : 1/2` or `1/3 : 1/3 : 1/3`) via hardcoded `Modifier.weight(1f)`. Asymmetric layouts—such as a wide `3/4` Power Zone Bar paired with a compact `1/4` numeric value readout—require user-configurable horizontal width ratios, backward-compatible persistence, and proportional Compose rendering (ATT-4861, Parent Epic ATT-355, extending `REQ-UI-200` and `REQ-TRK-046`):
 1. *SQLite Schema v17 & DTO Weight Persistence (`REQ-UI-437.1`)*:
@@ -12666,25 +12666,36 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • In `SensorGridScreen.kt`, multi-column rows in `SensorGridContent`, landscape row packing, and configuration mode SHALL apply `Modifier.weight(effectiveWeight)`.
 • Runtime layout code SHALL guard `effectiveWeight = if (fieldState.colWeight > 0f) fieldState.colWeight else 1.0f`, preventing `IllegalArgumentException` from zero or negative weights.
 • Single-field rows SHALL span full row width.
-3. *User Configuration UI in Edit Dialog (`REQ-UI-437.3`)*:
-• In `EditSensorFieldDialog.kt`, the UI SHALL display a Relative Width section titled with `R.string.sensor_field_relative_weight` providing selectable relative weight options (`1x`, `2x`, `3x`), setting `colWeight` to `1.0f`, `2.0f`, or `3.0f` respectively.
-• The legacy overflowing 5-chip *Zeilenaufteilung* row-split presets section (`3/4 : 1/4`, `2/3 : 1/3`, `1/2 : 1/2`, `1/3 : 2/3`, `1/4 : 3/4`), `isTwoFieldRow` dual-weight model, and sibling weight synchronization SHALL be removed from `EditSensorFieldDialog.kt` and `EditSensorFieldViewModel.kt` (ATT-5077).
+3. *User Configuration UI in Edit Dialog & Cardinality Gating (`REQ-UI-437.3`)*:
+• In `EditSensorFieldDialog.kt`, the Relative Width section (`R.string.sensor_field_relative_weight`) providing selectable relative weight options (`1x`, `2x`, `3x`) SHALL be rendered conditionally strictly when `uiState.isMultiFieldRow == true`. For single-field rows (`isMultiFieldRow == false`), the Relative Width section SHALL be omitted to eliminate misleading configuration controls (ATT-5192).
+• In `EditSensorFieldViewModel.kt`, `isMultiFieldRow` SHALL be determined during `loadInitialState()` and `setupDefaultState()` via pure helper `calculateIsMultiFieldRow(existingFieldsInTargetRow, isNewField)`.
+• The legacy overflowing 5-chip *Zeilenaufteilung* row-split presets section (`3/4 : 1/4`, `2/3 : 1/3`, `1/2 : 1/2`, `1/3 : 2/3`, `1/4 : 3/4`), `isTwoFieldRow` dual-weight model, and sibling weight synchronization SHALL remain removed from `EditSensorFieldDialog.kt` and `EditSensorFieldViewModel.kt` (ATT-5077).
 • The dialog SHALL persist the selected `colWeight` per field via `updateSensorFieldConfig()`.
 4. *9-Language Localization Parity (`REQ-UI-437.4`)*:
 • String resources for relative width section titles SHALL maintain complete parity across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`), and unused `sensor_field_row_split_presets` string keys SHALL be removed from all 9 locales (ATT-5077).
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Modifies `REQ-UI-437.3` and `REQ-UI-437.4` under parent `REQ-UI-437`. Targets `EditSensorFieldDialog.kt`, `EditSensorFieldViewModel.kt`, and 9 `strings.xml` files (ATT-5077).
-2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-44.2 via commit `244300a2` (`ATT-4861`).
-3. *Root Reason for Existing Formulation*: Row split presets were originally introduced as 1-tap shortcuts for 2-field rows, but 5 chips in a non-wrapping Row overflowed on phone screens, and having two separate weight selectors caused UX redundancy and confusion.
-4. *Preservation of Core Invariants*: Proportional column rendering via `Modifier.weight(effectiveWeight)`, non-zero weight clamping, `ColWeight` SQLite persistence, and all desired width ratios (`1:1`, `2:1`, `3:1`, `1:2`, `1:3`) remain fully supported via individual Relative Width selection (1x, 2x, 3x).
+1. *Original Requirement ID & Target*: Modifies `REQ-UI-437.3` under parent `REQ-UI-437`. Targets `EditSensorFieldDialog.kt`, `EditSensorFieldViewModel.kt`, and `EditSensorFieldViewModelTest.kt` (ATT-5077, ATT-5192).
+2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-44.2 via commit `244300a2` (`ATT-4861`), simplified in `ATT-5077` (Sprint 2026-45.1), and cardinality-gated in `ATT-5192` (Sprint 2026-45.2).
+3. *Root Reason for Existing Formulation*: Relative width chips (1x, 2x, 3x) were originally rendered unconditionally. However, for single-field rows, relative weight has zero effect on layout and causes athlete confusion.
+4. *Preservation of Core Invariants*: Multi-field rows retain full access to `1x`, `2x`, `3x` relative weights; `colWeight` persistence and proportional layout math in `SensorGridScreen.kt` remain 100% unaffected.
 
 **Acceptance Criteria (Given-When-Then)**:
-• *Given* any sensor field in `EditSensorFieldDialog`,
+• *Given* an athlete editing a sensor field that is the only tile in its row,
+• *When* `EditSensorFieldDialog` is displayed,
+• *Then* the Relative Width section (`1x`, `2x`, `3x`) SHALL NOT be rendered.
+• *Given* an athlete editing a sensor field sharing a row with one or more sibling fields,
+• *When* `EditSensorFieldDialog` is displayed,
+• *Then* the Relative Width section (`1x`, `2x`, `3x`) SHALL be rendered.
+• *Given* any sensor field in `EditSensorFieldDialog` in a multi-field row,
 • *When* the user selects a relative weight (`1x`, `2x`, or `3x`),
 • *Then* `colWeight` is updated (`1.0f`, `2.0f`, or `3.0f`) and persisted, rendering the field proportionally in multi-column rows without horizontal clipping or overflowing preset chips.
 • *Given* an existing database upgraded from schema v16 to v17,
 • *When* rows are loaded,
+• *Then* all existing layout fields are migrated with `colWeight = 1.0f`.
+• *Given* a sensor field with an invalid or zero weight ($\le 0f$),
+• *When* rendered in Compose,
+• *Then* the layout engine safely clamps to 1.0f without crashing.
 • *Then* `ColWeight` defaults to 1.0f and existing equal-width layouts remain unchanged.
 • *Given* a sensor field with an invalid or zero weight ($\le 0f$),
 • *When* rendered in Compose,

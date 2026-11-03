@@ -6899,7 +6899,7 @@
 ### TST-UI-437: **User-Configurable Horizontal Width Ratios & Split Presets in Cockpit Sensor Grid Test Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-437`
 - **Component**: `TrackingViewsDatabaseManagerTest.kt`, `TrackingViewsRepositoryTest.kt`, `EditSensorFieldViewModelTest.kt`, `SensorGridScreenLayoutTest.kt`, `SensorGridLocalizationTest.kt`
-- **Jira**: `ATT-4861`, `ATT-5077`
+- **Jira**: `ATT-4861`, `ATT-5077`, `ATT-5192`
 - **Test Description**:
   1. *SQLite Migration v16 -> v17 & Default Weight Backfill Test (`TST-UI-437.1`)*:
   • Unit test in `TrackingViewsRealSqliteMigrationTest.kt` / `TrackingViewsDatabaseManagerTest.kt` verifying database upgrade from schema version 16 to 17:
@@ -6922,6 +6922,10 @@
     - Single-column rows naturally take 100% width.
   5. *9-Language Localization Parity Audit (`TST-UI-437.5`)*:
   • Audit in `TranslationParityTest` verifying all active string keys exist across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) and obsolete `sensor_field_row_split_presets` is removed across all 9 locales.
+  6. *Edit Dialog Multi-Field Row Relative Width Visibility Test (`TST-UI-437.6`)*:
+  • Unit test in `EditSensorFieldViewModelTest.kt` verifying:
+    - Pure helper `calculateIsMultiFieldRow(existingFieldsInTargetRow, isNewField)` returns `false` for single-field rows and `true` when row has $\ge 2$ fields.
+    - `EditDialogUiState.isMultiFieldRow` is hydrated correctly when editing existing single-field vs multi-field rows, and when inserting new fields into new vs existing rows (ATT-5192).
 
 
 ### TST-UI-438: **Vertical Card Height and Border Stretching in Cockpit Sensor Grid Test Suite** [Verified]
