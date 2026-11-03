@@ -286,6 +286,9 @@ fun DailyActivityStrip(
     }
 }
 
+internal val WeekDayBarShape = RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp, bottomStart = 0.dp, bottomEnd = 0.dp)
+internal val MonthDayBarShape = RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp, bottomStart = 0.dp, bottomEnd = 0.dp)
+
 @Composable
 private fun WeekDayColumn(
     date: LocalDate,
@@ -319,7 +322,6 @@ private fun WeekDayColumn(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(28.dp)
-                .clip(RoundedCornerShape(3.dp))
                 .then(
                     if (isSelected) {
                         Modifier.border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(3.dp))
@@ -333,7 +335,7 @@ private fun WeekDayColumn(
                     modifier = Modifier
                         .fillMaxWidth(0.85f)
                         .height(barHeight)
-                        .clip(RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp))
+                        .clip(WeekDayBarShape)
                         .background(sportColor)
                 )
             } else {
@@ -372,7 +374,6 @@ private fun MonthDayBar(
     Box(
         modifier = modifier
             .height(26.dp)
-            .clip(RoundedCornerShape(2.dp))
             .clickable(onClick = onClick)
             .then(
                 if (isSelected) {
@@ -387,7 +388,7 @@ private fun MonthDayBar(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(barHeight)
-                    .clip(RoundedCornerShape(topStart = 1.dp, topEnd = 1.dp))
+                    .clip(MonthDayBarShape)
                     .background(sportColor)
             )
         } else {
