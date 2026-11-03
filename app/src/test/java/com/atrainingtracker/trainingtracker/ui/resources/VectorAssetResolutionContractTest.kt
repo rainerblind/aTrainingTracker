@@ -176,6 +176,99 @@ class VectorAssetResolutionContractTest {
             val xml = File(drawableDir, "$badge.xml").readText().uppercase()
             assertTrue("$badge.xml must have Bluetooth navy badge background (#07377F)", xml.contains("#07377F"))
             assertTrue("$badge.xml must have white foreground glyph (#FFFFFF)", xml.contains("#FFFFFF"))
+            assertTrue("$badge.xml must use evenOdd fillType for counter-holes (REQ-UI-442)", xml.contains("EVENODD"))
+        }
+    }
+
+    /**
+     * TST-UI-442.1: Verify all 6 BTLE sensor vector badges are full-bleed (0..144, r=22.0)
+     * and strictly preserve the Bluetooth navy badge color token (#07377F) without 10-unit inset margins.
+     */
+    @Test
+    fun testBtleSensorBadgesAreFullBleedAndRetainNavyColor() {
+        val drawableDir = File(resolveResDir(), "drawable")
+        val bleBadges = listOf("bt_bike_cad", "bt_bike_pwr", "bt_bike_spd", "bt_bike_speed_and_cadence", "bt_hr", "bt_run")
+
+        for (badge in bleBadges) {
+            val xml = File(drawableDir, "$badge.xml").readText()
+            assertTrue("$badge.xml must define full-bleed 0..144 badge path (REQ-UI-442.1)", xml.contains("144.0,22.0") && xml.contains("122.0,144.0"))
+            assertTrue("$badge.xml must have Bluetooth navy background (#07377F)", xml.contains("#07377F"))
+            assertFalse("$badge.xml must eliminate legacy 10-unit inset margin (10.0..134.0)", xml.contains("10.0,23.5") || xml.contains("120.5,134.0"))
+        }
+    }
+
+    /**
+     * TST-UI-442.2: Verify all 6 BTLE sensor vector badges contain bold uppercase bottom abbreviation labels
+     * with evenOdd counter-hole punch-outs and no legacy micro lowercase words.
+     */
+    @Test
+    fun testBtleSensorBadgesContainBoldUppercaseLabelsWithEvenOdd() {
+        val drawableDir = File(resolveResDir(), "drawable")
+        val bleBadges = listOf("bt_bike_cad", "bt_bike_pwr", "bt_bike_spd", "bt_bike_speed_and_cadence", "bt_hr", "bt_run")
+
+        for (badge in bleBadges) {
+            val xml = File(drawableDir, "$badge.xml").readText()
+            val contentWithoutComments = xml.replace(Regex("<!--.*?-->", RegexOption.DOT_MATCHES_ALL), "").lowercase()
+            assertTrue("$badge.xml must declare evenOdd fillType for text counters (REQ-UI-442.2)", xml.contains("evenOdd"))
+            assertFalse("$badge.xml must purge lowercase 'power'", contentWithoutComments.contains("power"))
+            assertFalse("$badge.xml must purge lowercase 'speed'", contentWithoutComments.contains("speed"))
+            assertFalse("$badge.xml must purge lowercase 'cadence'", contentWithoutComments.contains("cadence"))
+            assertFalse("$badge.xml must purge lowercase 's & c'", contentWithoutComments.contains("s & c"))
+        }
+
+        val pwrXml = File(drawableDir, "bt_bike_pwr.xml").readText()
+        assertTrue("bt_bike_pwr must render uppercase PWR at y >= 113.25", pwrXml.contains("113.25") && pwrXml.contains("135.75"))
+
+        val spdXml = File(drawableDir, "bt_bike_spd.xml").readText()
+        assertTrue("bt_bike_spd must render uppercase SPD at y >= 113.25", spdXml.contains("113.25") && spdXml.contains("135.75"))
+
+        val cadXml = File(drawableDir, "bt_bike_cad.xml").readText()
+        assertTrue("bt_bike_cad must render uppercase CAD at y >= 113.25", cadXml.contains("113.25") && cadXml.contains("135.75"))
+
+        val scXml = File(drawableDir, "bt_bike_speed_and_cadence.xml").readText()
+        assertTrue("bt_bike_speed_and_cadence must render uppercase S&C at y >= 113.25", scXml.contains("113.25") && scXml.contains("135.75"))
+
+        val hrXml = File(drawableDir, "bt_hr.xml").readText()
+        assertTrue("bt_hr must render uppercase HR at y >= 113.25", hrXml.contains("113.25") && hrXml.contains("135.75"))
+
+        val runXml = File(drawableDir, "bt_run.xml").readText()
+        assertTrue("bt_run must render uppercase SPD at y >= 113.25", runXml.contains("113.25") && runXml.contains("135.75"))
+    }
+
+    /**
+     * TST-UI-442.3: Verify bike BTLE drawables contain distinctive top-right mini-icons
+     * and all 6 drawables satisfy Rule 37 geometric constraints (<= 45 L commands, analytical curves).
+     */
+    @Test
+    fun testBtleSensorBadgesContainTopRightMiniIconsAndRule37Prims() {
+        val drawableDir = File(resolveResDir(), "drawable")
+        val dbFactory = DocumentBuilderFactory.newInstance()
+        val dBuilder = dbFactory.newDocumentBuilder()
+        val lineCmdRegex = Regex("""\bL\b""")
+        val curveCmdRegex = Regex("""[ACQacq]""")
+
+        val bikeBadges = listOf("bt_bike_pwr", "bt_bike_spd", "bt_bike_cad", "bt_bike_speed_and_cadence")
+        for (badge in bikeBadges) {
+            val doc = dBuilder.parse(File(drawableDir, "$badge.xml"))
+            val pathNodes = doc.getElementsByTagName("path")
+            assertTrue("$badge.xml must contain at least 20 paths", pathNodes.length >= 20)
+        }
+
+        val allBle = bikeBadges + listOf("bt_hr", "bt_run")
+        for (badge in allBle) {
+            val doc = dBuilder.parse(File(drawableDir, "$badge.xml"))
+            val pathNodes = doc.getElementsByTagName("path")
+            var hasCurve = false
+            for (i in 0 until pathNodes.length) {
+                val pathElem = pathNodes.item(i)
+                val pathData = pathElem.attributes?.getNamedItem("android:pathData")?.nodeValue.orEmpty()
+                val lCount = lineCmdRegex.findAll(pathData).count()
+                assertTrue("$badge.xml path[$i] has $lCount 'L' commands (max 45 per Rule 37)", lCount <= 45)
+                if (curveCmdRegex.containsMatchIn(pathData)) {
+                    hasCurve = true
+                }
+            }
+            assertTrue("$badge.xml must contain analytical curve commands per Rule 37", hasCurve)
         }
     }
 

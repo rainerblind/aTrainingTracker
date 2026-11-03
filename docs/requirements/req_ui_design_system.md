@@ -12824,6 +12824,57 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 **Invariants**: Zero infinite height expansion, strict preservation of `IntrinsicSize.Min` on parent containers, zero regression on `SensorGridScreen.kt`, and 100% clean-room test pass rate.
 
 
+### REQ-UI-442: Full-Bleed Badge Geometry, Large Uppercase Labels & Top-Right Mini-Icons for Bluetooth LE Sensor Drawables [Verified]
+- **Tests**: `TST-UI-442` | **Tickets**: `ATT-4956`
+- **Implementation**: `bt_bike_pwr.xml`, `bt_bike_spd.xml`, `bt_bike_cad.xml`, `bt_bike_speed_and_cadence.xml`, `bt_hr.xml`, `bt_run.xml`, `VectorAssetResolutionContractTest.kt`
+- **Rationale**: When Bluetooth LE (`bt_*.xml`) sensor icons are rendered at compact UI dimensions (20dp–24dp, e.g. status bar, device pairing, sensor matrix rows), three visual deficiencies appear compared to ANT+ icons: (1) bottom labels are micro lowercase (`power`, `speed`, `cadence`, `s & c`) or completely missing (`bt_hr`, `bt_run`); (2) all 4 bike icons share an identical cyclist silhouette without upper motif differentiation; (3) all 6 BTLE drawables use a 10-unit inset background (`10..134` in `144x144`), making them appear ~14% smaller than ANT+ icons (`0..96` full-bleed). Standardizing BTLE drawables to full-bleed badges, bold uppercase labels, and top-right sensor mini-icons establishes visual parity and instant recognition across both protocols (ATT-4956, Parent Epic ATT-355, amending `REQ-UI-375` and Rule 37):
+1. *Full-Bleed Rounded Badge Geometry (`REQ-UI-442.1`)*:
+• In all 6 Bluetooth LE vector drawables (`bt_bike_pwr.xml`, `bt_bike_spd.xml`, `bt_bike_cad.xml`, `bt_bike_speed_and_cadence.xml`, `bt_hr.xml`, `bt_run.xml`), the background badge path SHALL be full-bleed spanning `0..144` with corner radius $r = 22.0$ (`M 22,0 H 122 A 22,22 0 0 1 144,22 V 122 A 22,22 0 0 1 122,144 H 22 A 22,22 0 0 1 0,122 V 22 A 22,22 0 0 1 22,0 Z`), replacing the historical 10-unit inset margin (`10..134`).
+• The badge fill color SHALL strictly maintain the `#07377F` protocol badge color token.
+2. *Large Bold Uppercase Bottom Typography (`REQ-UI-442.2`)*:
+• All 6 BTLE vector drawables SHALL render bold uppercase abbreviation labels centered at the bottom of the badge, occupying approximately $16.7\%$ viewport height ($y \approx 113..136$ in `144x144` coordinate space):
+  a. `bt_bike_pwr.xml`: `PWR`;
+  b. `bt_bike_spd.xml`: `SPD`;
+  c. `bt_bike_cad.xml`: `CAD`;
+  d. `bt_bike_speed_and_cadence.xml`: `S&C`;
+  e. `bt_hr.xml`: `HR`;
+  f. `bt_run.xml`: `SPD`.
+• Glyphs with internal counters (`P`, `R`, `D`, `A`, `&`) SHALL use `android:fillType="evenOdd"` for proper punch-out transparency.
+3. *Top-Right Sensor Mini-Icons & Repositioned Upper Motifs (`REQ-UI-442.3`)*:
+• In bike icons (`bt_bike_pwr.xml`, `bt_bike_spd.xml`, `bt_bike_cad.xml`, `bt_bike_speed_and_cadence.xml`), the cyclist silhouette motif SHALL be shifted down-left ($x \approx 8..108, y \approx 22..106$) to accommodate a distinctive sensor mini-icon in the top-right quadrant ($x \approx 104..136, y \approx 8..38$):
+  a. `bt_bike_pwr.xml`: Lightning bolt symbol;
+  b. `bt_bike_spd.xml`: Speedometer dial / gauge arc;
+  c. `bt_bike_cad.xml`: Crank arm with rotation arrow;
+  d. `bt_bike_speed_and_cadence.xml`: Combined dual-sensor motif (speedometer arc + crank/arrow).
+• In `bt_hr.xml` and `bt_run.xml`, the main graphic motif (heart, runner) SHALL be scaled and positioned cleanly above the bottom `HR` and `SPD` text labels without overlap.
+4. *Rule 37 Vector Geometry & Fidelity Governance (`REQ-UI-442.4`)*:
+• All modified vector paths MUST adhere to Rule 37 constraints: pure analytical geometry (`M`, `L`, `H`, `V`, `C`, `A`, `Z`), $\le 45$ `L` commands per `<path>`, zero polygon auto-tracing approximations, and 100% clean parsing.
+• Resource resolution in `UIHelper.java` and Compose screens SHALL remain 100% backward compatible without breaking changes to drawable resource identifiers.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-UI-375` (*Mathematical VectorDrawable Migration from Xfig/SVG/XCF Masters & Legacy Raster Purge*, `ATT-2859`). Targets `app/src/main/res/drawable/bt_*.xml` and `VectorAssetResolutionContractTest.kt`.
+2. *Historical Origin & Commit Trace*: `ATT-2859` introduced mathematical vectorization. Inset margins (`10..134`) and lowercase labels were carried over from initial XCF/FIG bitmap sketches. ANT+ badges were updated to full-bleed (`0..96`) and uppercase typography in `ATT-2859`, while BTLE badges remained inset with micro-text.
+3. *Root Reason for Existing Formulation*: Early vectorization mirrored legacy bitmap assets without standardizing BTLE badges to the modern full-bleed and uppercase typography convention of the design system.
+4. *Preservation of Core Invariants*: Rule 37 geometric constraints ($\le 45$ `L` commands, analytical arcs), `#07377F` protocol badge color token, and `R.drawable.bt_*` resource IDs are 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* any of the 6 BTLE sensor vector drawables,
+• *When* inspected or rendered in compact UI (20dp–24dp),
+• *Then* the background badge spans the full viewport bounds `0..144` with corner radius $r=22.0$, matching ANT+ full-bleed proportions.
+• *Given* an athlete viewing BTLE sensor icons in device pairing, status bar, or matrix screens,
+• *When* reading the icon,
+• *Then* the bold uppercase abbreviation (`PWR`, `SPD`, `CAD`, `S&C`, `HR`, `SPD`) is clearly legible at compact dimensions.
+• *Given* the 4 BTLE bike sensor icons,
+• *When* comparing `bt_bike_pwr`, `bt_bike_spd`, `bt_bike_cad`, and `bt_bike_speed_and_cadence`,
+• *Then* each displays its unique top-right sensor mini-icon (power bolt, speedometer arc, cadence crank, combined dual sensor).
+• *Given* `VectorAssetResolutionContractTest`,
+• *When* executing the test suite,
+• *Then* all vector drawables pass Rule 37 geometric primitive checks, full-bleed badge assertions, and uppercase label validation.
+
+**Invariants**: Rule 37 geometric primitives, `#07377F` protocol badge token, `R.drawable.bt_*` resource ID mapping, and 100% clean-room test pass rate.
+
+
+
 
 
 

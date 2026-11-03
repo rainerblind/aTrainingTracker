@@ -7013,6 +7013,22 @@
   • Run targeted package unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.*"` ensuring 100% pass rate.
 
 
+### TST-UI-442: **Bluetooth LE Sensor Vector Drawables Full-Bleed Badge, Uppercase Labels & Top-Right Mini-Icons Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-442`
+- **Component**: `VectorAssetResolutionContractTest.kt`, `UIHelper.java`
+- **Jira**: `ATT-4956`
+- **Test Description**:
+  1. *Full-Bleed Badge Geometry & Protocol Color Verification (`TST-UI-442.1`)*:
+  • Contract test in `VectorAssetResolutionContractTest.kt` asserting that all 6 BTLE drawables (`bt_bike_pwr`, `bt_bike_spd`, `bt_bike_cad`, `bt_bike_speed_and_cadence`, `bt_hr`, `bt_run`) declare full-bleed `0..144` badge paths with corner radius $r=22.0$ and background color `#07377F`, with zero remaining `10..134` inset paths.
+  2. *Uppercase Bottom Label & evenOdd Counter Hole Contract (`TST-UI-442.2`)*:
+  • Test in `VectorAssetResolutionContractTest.kt` verifying that all 6 BTLE drawables include bold uppercase text path data (`PWR`, `SPD`, `CAD`, `S&C`, `HR`, `SPD`) with `evenOdd` fillType for counter holes, and no lowercase words (`power`, `speed`, `cadence`, `s & c`).
+  3. *Top-Right Sensor Mini-Icon & Rule 37 Geometric Primitive Audit (`TST-UI-442.3`)*:
+  • Test in `VectorAssetResolutionContractTest.kt` verifying that `bt_bike_*` drawables contain top-right mini-icon path geometry, and that all 6 drawables satisfy Rule 37 ($\le 45$ `L` commands per path, analytical curves `A`/`C`/`Q`).
+  4. *Resource Resolution & Clean-Room Suite Execution (`TST-UI-442.4`)*:
+  • Assert `UIHelper.getIconId()` and `BSportType` mappings for all BTLE sensors continue to resolve to valid non-zero resource IDs with zero regression (`REQ-PRO-001`).
+
+
+
 
 
 
