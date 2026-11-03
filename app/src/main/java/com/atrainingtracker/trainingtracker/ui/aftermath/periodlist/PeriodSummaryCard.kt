@@ -42,6 +42,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.time.LocalDate
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.google.android.gms.maps.model.JointType
@@ -207,48 +208,27 @@ fun PeriodSummaryCard(
                 // SPORT SPECIFIC BREAKDOWN
                 summary.sportStats.entries.forEachIndexed { index, entry ->
                     val (bSportType, stats) = entry
+                    val contribution = if (summary.periodType == PeriodType.YEAR) {
+                        summary.yearlySportContributions[bSportType]
+                    } else null
+
                     SportStatsRow(
                         bSportType = bSportType,
                         stats = stats,
                         tf = tf, df = df, af = af,
                         showDetails = true,
+                        yearlyContribution = contribution,
+                        activeMetric = activeMetric,
+                        onDayCellClick = onDayCellClick?.let { callback ->
+                            { date: LocalDate, dayActivity: DailySportActivity? ->
+                                callback(summary, bSportType, date, dayActivity)
+                            }
+                        },
                         onClick = { onSportClick(summary, bSportType) },
                         onLongestWorkoutClick = { workoutId -> onLongestWorkoutClick(summary, bSportType, workoutId) }
                     )
                     if (index < summary.sportStats.size - 1) {
                         Spacer(modifier = Modifier.height(12.dp))
-                    }
-                }
-
-                // --- YEARLY ACTIVITY CONTRIBUTION GRIDS (REQ-PER-025, ATT-4849) ---
-                if (summary.periodType == PeriodType.YEAR && summary.yearlySportContributions.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = stringResource(R.string.workout_periods__yearly_activity_grid),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    val canonicalOrder = listOf(BSportType.BIKE, BSportType.RUN)
-                    val sortedSports = (canonicalOrder + summary.yearlySportContributions.keys.filter { it != BSportType.BIKE && it != BSportType.RUN && it != BSportType.UNKNOWN } + listOf(BSportType.UNKNOWN))
-                        .distinct()
-                        .filter { it in summary.yearlySportContributions }
-
-                    sortedSports.forEachIndexed { index, sport ->
-                        val contribution = summary.yearlySportContributions[sport] ?: return@forEachIndexed
-                        YearlyContributionGrid(
-                            contribution = contribution,
-                            activeMetric = activeMetric,
-                            onDayClick = { date, dayActivity ->
-                                onDayCellClick?.invoke(summary, sport, date, dayActivity)
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        if (index < sortedSports.size - 1) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                        }
                     }
                 }
             }
@@ -356,6 +336,9 @@ fun SportStatsRow(
     df: DistanceFormatter,
     af: AltitudeFormatter,
     showDetails: Boolean = false,
+    yearlyContribution: YearlySportContribution? = null,
+    activeMetric: PeriodBarMetric = PeriodBarMetric.DURATION,
+    onDayCellClick: ((LocalDate, DailySportActivity?) -> Unit)? = null,
     onClick: () -> Unit,
     onLongestWorkoutClick: (Long) -> Unit
 ) {
@@ -412,6 +395,21 @@ fun SportStatsRow(
                         MetricItem(R.drawable.ic_ascent, af.format_with_units(stats.totalAscentMeters))
                     }
                 }
+            }
+
+            // EMBEDDED YEARLY CONTRIBUTION GRID (REQ-PER-025.8, ATT-5076)
+            if (yearlyContribution != null) {
+                Spacer(modifier = Modifier.height(10.dp))
+                YearlyContributionGrid(
+                    contribution = yearlyContribution,
+                    activeMetric = activeMetric,
+                    onDayClick = { date, activity ->
+                        onDayCellClick?.invoke(date, activity)
+                    },
+                    showCard = false,
+                    showSportHeader = false,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
 
             // NESTED DETAILS

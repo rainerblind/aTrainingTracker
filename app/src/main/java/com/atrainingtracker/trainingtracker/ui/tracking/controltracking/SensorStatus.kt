@@ -41,6 +41,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.LocationCalibrationStatus
 
 
 @Composable
@@ -50,6 +51,7 @@ fun SensorStatus(
     allTelemetry: List<DeviceTelemetry> = emptyList(),
     allDevices: List<DeviceUiData> = emptyList(),
     currentAltitude: Double? = null,
+    matchedLocation: LocationCalibrationStatus? = null,
     onDeviceClick: (Long) -> Unit = {},
     onCalibrateAltitude: ((referenceAltitudeMeters: Double, locationName: String?, saveAsKnownLocation: Boolean) -> Unit)? = null,
     onMenuClick: (() -> Unit)? = null,
@@ -180,6 +182,7 @@ fun SensorStatus(
             allTelemetry = allTelemetry,
             allDevices = allDevices,
             currentAltitude = currentAltitude,
+            matchedLocation = matchedLocation,
             onDeviceClick = onDeviceClick,
             onCalibrateAltitude = onCalibrateAltitude,
             onDismiss = { selectedSensor = null }

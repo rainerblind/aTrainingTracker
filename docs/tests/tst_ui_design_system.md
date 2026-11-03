@@ -2957,7 +2957,7 @@
   1. *Structural & Zone Styling Contract Tests (`ScrubbingBadgeZoneColorContractTest.kt`)*:
   • Verify `ElevationProfile.kt` utilizes `buildAnnotatedString` for HR and Power telemetry badges.
   • Verify base metric value (e.g. `${point.hr} bpm`, `${point.power} W`) is styled with `MaterialTheme.colorScheme.onSurface`.
-  • Verify active zone suffix (` • Z$hrZone`, ` • Z$powerZone`) is styled with `TelemetryZoneMath.ZONE_COLORS[zone - 1]` and `FontWeight.Bold`.
+  • Verify active zone suffix (` • Z$hrZone`, ` • Z$powerZone`) is styled with `TelemetryZoneMath.ZONE_COLORS[zone - 1]` and `FontWeight.Bold` across HR zones 1..5 and all 7 Coggan power zones 1..7 (`TelemetryZoneMath.ZONE_COLORS.size`).
   • Verify fallback branch renders plain base metric value in `MaterialTheme.colorScheme.onSurface` without delimiter or zone suffix when zone is null.
   2. *Existing Invariant Tests*:
   • Verify `ElevationProfileLayoutTest.kt` passes 100%.
@@ -4399,19 +4399,21 @@
   3. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-282: **General Map Layer Visibility Controls & Preference Persistence Verification** [General map Layers menu toggles routes, segments, favorite locations, favorite tracks / clusters, and live track; user layer visibility preferences persisted across sessions in SharedPreferences; Cockpit map renders clusters; 100% 9-language localization parity; 100% unit test pass rate.] [Verified]
+### TST-UI-282: **General Map Layer Visibility Controls & Preference Persistence Verification** [General map Layers menu toggles routes, segments, favorite locations, favorite tracks / clusters, and live track; user layer visibility preferences persisted across sessions in SharedPreferences; CLUSTERS layer disabled by default in DEFAULT_ENABLED; Cockpit map renders clusters only when enabled; fast asynchronous cluster hydration and off-Main polyline decoding; harmonized ClusterOnMapSheet look and stats enrichment without purple text tinting; 100% 9-language localization parity; 100% unit test pass rate.] [Verified]
 - **Requirement(s)**: `REQ-UI-322`
 - **Component**: **General Map Layer Visibility Controls & Preference Persistence Verification**
-- **Jira**: `ATT-2931`, `ATT-4847`
+- **Jira**: `ATT-2931`, `ATT-4847`, `ATT-5075`, `ATT-5074`
 - **Test Description**:
   1. *GeneralMapLayer Enum & Default State Contract (`GeneralMapLayersContractTest.kt`)*:
   • Verify `GeneralMapLayer` enum declares `ROUTES`, `SEGMENTS`, `KNOWN_LOCATIONS`, `TRACK`, and `CLUSTERS` (exactly 5 entries).
-  • Verify default state enables all 5 layers.
+  • Verify `GeneralMapLayer.DEFAULT_ENABLED` contains `ROUTES`, `SEGMENTS`, `KNOWN_LOCATIONS`, and `TRACK` (4 entries), strictly excluding `CLUSTERS`.
+  • Verify default state in `MapFragmentWithTrackViewModel` loads `DEFAULT_ENABLED` (favorite route clusters disabled by default) when `SharedPreferences` has no stored preference.
   2. *MapFragmentWithTrackViewModel Layer Toggling & Persistence Contract (`GeneralMapLayersContractTest.kt`)*:
-  • Verify initial state loads from `SharedPreferences` or defaults to all 5 layers.
+  • Verify initial state loads from `SharedPreferences` or defaults to `DEFAULT_ENABLED`.
   • Verify `toggleLayer(layer)` removes layer if present, adds if absent.
   • Verify toggling updates `_enabledLayers` and persists serialized set to `SharedPreferences`.
-  • Verify `MapFragmentWithTrackViewModel` subscribes to `WorkoutClusterRepository.allClusters` and exposes memoized `clusters: List<MapCluster>` in `uiState`.
+  • Verify `MapFragmentWithTrackViewModel` conditionally gates `mapClustersFlow` on `GeneralMapLayer.CLUSTERS in enabledLayers`, emitting `emptyList()` immediately when disabled.
+  • Verify `MapFragmentWithTrackViewModel` subscribes to `WorkoutClusterRepository.allClusters` and exposes memoized `clusters: List<MapCluster>` in `uiState` only when `CLUSTERS` is enabled.
   3. *MapScreenWithTrack UI Structure & Conditional Layer Delegation (`GeneralMapLayersContractTest.kt`)*:
   • Verify `MapScreenWithTrack.kt` includes `Icons.Default.Layers` button.
   • Verify floating surface at `Alignment.TopEnd` with `statusBarsPadding().padding(top = 16.dp, end = 16.dp)`.
@@ -4419,11 +4421,24 @@
   • Verify conditional rendering of `knownLocations()`, `segments()`, `routes()`, `clusters()`, and `markers()` + `liveTrack()`.
   4. *Cockpit Map Cluster Integration & Decoupling Contract (`TrackingViewModelTest.kt`, `SensorGridScreenTest.kt`)*:
   • Verify `TrackingMapState` exposes `mapClusters`.
+  • Verify `TrackingViewModel` evaluates enabled map layers (`DEFAULT_ENABLED` by default), emitting `emptyList()` when `CLUSTERS` is disabled.
   • Verify `TrackingViewModel` integrates `WorkoutClusterRepository.allClusters` into `staticMapLayerFlow` via `distinctUntilChanged()`, decoupled from 1-Hz telemetry.
   • Verify `TrackingMapContainer` passes `clusters(mapState.mapClusters)` to `MapContentScope`.
-  5. *9-Language Localization Parity Audit (`GeneralMapLayersLocalizationTest.kt`)*:
+  5. *ClusterOnMapSheet Harmonized UI & Non-Purple Styling Contract Tests (`GeneralMapLayersContractTest.kt`)*:
+  • Verify `ClusterOnMapSheet` renders 32dp sport icon with `Color.Unspecified`.
+  • Verify `ClusterOnMapSheet` does NOT apply `tint = TTColor.Cluster` or hardcoded purple colors to text or icons.
+  • Verify `ClusterOnMapSheet` displays cluster name, sport subtitle, distance, elevation gain, PR trophy (`TTColor.Gold`), hit count (`primary`), and relative recency.
+  • Verify cluster peek height in `MapScreenWithTrack.kt` uses `BottomSheetDesign.PeekHeightWorkout + navBarHeight`.
+  6. *MapCluster & MapFragmentWithTrackViewModel Stats Enrichment Contract Tests (`MapModelsTest.kt`, `MapFragmentWithTrackViewModelTest.kt`)*:
+  • Verify `MapCluster` includes `stats: WorkoutClusterStats? = null`.
+  • Verify `MapFragmentWithTrackViewModel` combines `workoutClusterRepository.clusterStats` into `mapClustersFlow`, populating `stats` on `MapCluster`.
+  • Verify `WorkoutCluster.toMapCluster()` populates `stats` while preserving referential stability of decoded coordinates (`latLngs`).
+  7. *Fast Asynchronous Hydration & Off-Main Decoding Contract Tests (`WorkoutClusterRepositoryTest.kt`, `MapFragmentWithTrackViewModelTest.kt`)*:
+  • Verify `WorkoutClusterRepository` provides fast asynchronous loading from the `RouteClusters` table on `Dispatchers.IO` without requiring `clusterStats` aggregation.
+  • Verify `mapClustersFlow` offloads polyline decoding to `Dispatchers.Default` (`flowOn(Dispatchers.Default)`).
+  8. *9-Language Localization Parity Audit (`GeneralMapLayersLocalizationTest.kt`)*:
   • Verify string resources `map_layers`, `map_layer_routes`, `map_layer_segments`, `map_layer_locations`, `map_layer_track`, `map_layer_clusters` exist and are non-empty across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
-  6. *Full Clean-Room Regression Suite*:
+  9. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
 ### TST-UI-283: **Material 3 Compose ANT Missing Adapter & Dependency Alerts Verification** [Missing adapter and missing dependency alerts modernized to Material 3 Compose with official untinted ANT+ logo; direct shortcut to AntServicesStatusSheet; German typo corrected; 100% 9-language translation parity; 100% unit test pass rate.]
@@ -6881,7 +6896,7 @@
 ### TST-UI-437: **User-Configurable Horizontal Width Ratios & Split Presets in Cockpit Sensor Grid Test Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-437`
 - **Component**: `TrackingViewsDatabaseManagerTest.kt`, `TrackingViewsRepositoryTest.kt`, `EditSensorFieldViewModelTest.kt`, `SensorGridScreenLayoutTest.kt`, `SensorGridLocalizationTest.kt`
-- **Jira**: `ATT-4861`
+- **Jira**: `ATT-4861`, `ATT-5077`
 - **Test Description**:
   1. *SQLite Migration v16 -> v17 & Default Weight Backfill Test (`TST-UI-437.1`)*:
   • Unit test in `TrackingViewsRealSqliteMigrationTest.kt` / `TrackingViewsDatabaseManagerTest.kt` verifying database upgrade from schema version 16 to 17:
@@ -6892,17 +6907,18 @@
   • Unit test in `TrackingViewsRepositoryTest.kt` verifying `colWeight` mapping:
     - Verifies symmetric mapping in single and batch cursor extraction paths (Rule 20).
     - Verifies custom weights (e.g. `3.0f`, `2.0f`, `1.0f`) are preserved and mapped correctly into `SensorFieldConfig` and `SensorFieldState`.
-  3. *Edit Dialog Relative Weight & Row Split Presets Test (`TST-UI-437.3`)*:
+  3. *Edit Dialog Relative Weight Selection Test (`TST-UI-437.3`)*:
   • Unit test in `EditSensorFieldViewModelTest.kt` verifying:
-    - Selection of quick row split presets (`3/4 : 1/4`, `2/3 : 1/3`, `1/2 : 1/2`, `1/3 : 2/3`, `1/4 : 3/4`) sets correct complementary weights on both fields sharing a row.
-    - Individual relative weight selection (1x, 2x, 3x) updates state correctly.
+    - Selection of individual relative weights (1x, 2x, 3x) updates state (`colWeight = 1.0f, 2.0f, 3.0f`) and persists to repository.
+    - Zero/invalid weights are safely clamped to `1.0f`.
+    - Obsolete row-split presets and sibling field mutations are removed.
   4. *Compose Layout Proportional Width Rendering Test (`TST-UI-437.4`)*:
   • Unit test in `SensorGridScreenLayoutTest.kt` verifying:
     - `Modifier.weight(effectiveWeight)` is applied to multi-column rows in `SensorGridContent` and configuration mode.
     - Non-zero safety clamp: invalid weights ($\le 0f$) safely fallback to `1.0f`.
     - Single-column rows naturally take 100% width.
   5. *9-Language Localization Parity Audit (`TST-UI-437.5`)*:
-  • Audit in `TranslationParityTest` verifying all newly added string keys exist across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) with zero missing translations.
+  • Audit in `TranslationParityTest` verifying all active string keys exist across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) and obsolete `sensor_field_row_split_presets` is removed across all 9 locales.
 
 
 ### TST-UI-438: **Vertical Card Height and Border Stretching in Cockpit Sensor Grid Test Suite** [Verified]
@@ -6927,6 +6943,93 @@
     - Value and gauge elements are vertically centered in the body space.
   4. *Localization Parity and Visual Regression Guard (`TST-UI-438.4`)*:
   • Test verifying localization parity across all 9 locales and confirming single-field or uniform-size rows preserve existing dimensions and styling.
+
+
+### TST-UI-439: **Copy Tracking Tab to Target Activity Types Test Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-439`
+- **Component**: `TrackingTabConfigHeaderContractTest.kt`, `TrackingViewsDatabaseManagerTest.kt`, `TrackingViewsRepositoryTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-5078`
+- **Test Description**:
+  1. *Tracking Tab Config Header Copy Button Test (`TST-UI-439.1`)*:
+  • Contract test verifying that `TrackingTabConfigHeader.kt` renders an `IconButton` with `Icons.Default.ContentCopy`, content description `R.string.cd_copy_tab`, and invokes `onCopyTab(tabViewId)`.
+  2. *Database Transactional Deep-Copy & Append Test (`TST-UI-439.2`)*:
+  • Unit test in `TrackingViewsDatabaseManagerTest.kt` verifying that calling `copyTabViewToActivityTypes(sourceViewId, targetTypes)`:
+    - Atomically duplicates the view row in `VIEWS_TABLE` for each target `ActivityType` at `LAYOUT_NR = max(LAYOUT_NR) + 1`.
+    - Duplicates all child `ROWS_TABLE` records with new `view_id`, preserving row/col indices, sensor types, sizes, filters, and column weights.
+    - Duplicates all child `SECTION_DIVIDERS_TABLE` records with new `view_id`, preserving row numbers and titles.
+    - Supports duplication within the same `ActivityType` (appending duplicate tab at the end of the current profile).
+  3. *Repository & ViewModel Auto-Navigation Test (`TST-UI-439.3`)*:
+  • Unit test in `TrackingViewsRepositoryTest.kt` and `TrackingTabsViewModelTest.kt` verifying:
+    - `copyTabView` executes on `Dispatchers.IO` and triggers `configUpdateTrigger`.
+    - When active profile is targeted, `_navigationEvent` emits `TabNavigationEvent.NavigateTo(newIndex)`.
+  4. *9-Language Localization Parity Audit (`TST-UI-439.4`)*:
+  • Test in `TranslationParityTest.kt` verifying presence and formatting of `cd_copy_tab`, `copy_tab_title`, and `copy_tab_action` across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
+  5. *Full Clean-Room Unit Regression Suite (`TST-UI-439.5`)*:
+  • Clean-room execution of unit tests ensuring zero regressions (`REQ-PRO-001`).
+
+
+### TST-UI-440: **Move Tracking Tab Left/Right Test Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-440`
+- **Component**: `TrackingTabConfigHeaderContractTest.kt`, `TrackingViewsDatabaseManagerTest.kt`, `TrackingViewsRepositoryTest.kt`, `TrackingTabsViewModelTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-5079`
+- **Test Description**:
+  1. *Tracking Tab Config Header Move Buttons & Boundary Gating Test (`TST-UI-440.1`)*:
+  • Contract/unit test in `TrackingTabConfigHeaderContractTest.kt` verifying `TrackingTabConfigHeader.kt`:
+    - Declares Move Left (`Icons.AutoMirrored.Filled.ArrowBack`) and Move Right (`Icons.AutoMirrored.Filled.ArrowForward`) icon buttons with content descriptions `R.string.cd_move_tab_left` and `R.string.cd_move_tab_right`.
+    - Disables Move Left when `tabIndex == 0`.
+    - Disables Move Right when `tabIndex >= tabCount - 1`.
+  2. *Database Scoped Atomic Tab Swap Test (`TST-UI-440.2`)*:
+  • Unit test in `TrackingViewsDatabaseManagerTest.kt` verifying `moveTabView(viewId, moveLeft)`:
+    - Atomically swaps `LAYOUT_NR` with adjacent neighbor tab within the same `ActivityType`.
+    - Normalizes `LAYOUT_NR` to continuous 1..N order.
+    - Leaves tabs belonging to other `ActivityType` profiles completely untouched.
+    - Returns updated index.
+  3. *Repository & ViewModel Pager Navigation Test (`TST-UI-440.3`)*:
+  • Unit test in `TrackingViewsRepositoryTest.kt` and `TrackingTabsViewModelTest.kt` verifying:
+    - `moveTabView` executes on `Dispatchers.IO` and triggers `configUpdateTrigger`.
+    - `TrackingTabsViewModel.onMoveTab(tabViewId, moveLeft)` sends `TabNavigationEvent.NavigateTo(newIndex)`.
+  4. *9-Language Localization Parity Audit (`TST-UI-440.4`)*:
+  • Test in `TranslationParityTest.kt` asserting presence and format specifier parity of `cd_move_tab_left` and `cd_move_tab_right` across all 9 locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
+  5. *Full Clean-Room Unit Regression Suite (`TST-UI-440.5`)*:
+  • Clean-room execution of unit tests ensuring zero regressions (`REQ-PRO-001`).
+
+
+### TST-UI-441: **Intrinsic Minimum Height Bounding for Standalone Sensor Field View Containers Test Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-441`
+- **Component**: `ZonesSettingsPreviewLayoutTest.kt`, `SensorFieldViewLayoutTest.kt`
+- **Jira**: `ATT-5071`
+- **Test Description**:
+  1. *ZonesSettingsActivity Preview Container Height Bounding Test (`TST-UI-441.1`)*:
+  • Unit/contract test in `ZonesSettingsPreviewLayoutTest.kt` verifying:
+    - The preview container wrapping `SensorFieldView` in `ZonesSettingsActivity.kt` applies `Modifier.height(IntrinsicSize.Min)`.
+    - When rendered in an unbounded vertical container, `SensorFieldView` does not collapse to zero height or clip telemetry.
+  2. *Sensor Field View Telemetry and Indicator Visibility Test (`TST-UI-441.2`)*:
+  • Test in `SensorFieldViewLayoutTest.kt` / `ZonesSettingsPreviewLayoutTest.kt` verifying:
+    - Telemetry value, units, and gauge bar are measured with non-zero height inside `height(IntrinsicSize.Min)` parent.
+    - Left/right indicator strips span the full intrinsic height of the card.
+  3. *Cockpit Grid Equal-Height Regression Guard (`TST-UI-441.3`)*:
+  • Contract/unit test verifying `SensorGridScreen.kt` multi-column equal-height behavior and `REQ-UI-438` invariants remain intact with zero regression.
+  4. *Clean-Room Targeted Test Suite Execution (`TST-UI-441.4`)*:
+  • Run targeted package unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.*"` ensuring 100% pass rate.
+
+
+### TST-UI-442: **Bluetooth LE Sensor Vector Drawables Full-Bleed Badge, Uppercase Labels & Top-Right Mini-Icons Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-442`
+- **Component**: `VectorAssetResolutionContractTest.kt`, `UIHelper.java`
+- **Jira**: `ATT-4956`
+- **Test Description**:
+  1. *Full-Bleed Badge Geometry & Protocol Color Verification (`TST-UI-442.1`)*:
+  • Contract test in `VectorAssetResolutionContractTest.kt` asserting that all 6 BTLE drawables (`bt_bike_pwr`, `bt_bike_spd`, `bt_bike_cad`, `bt_bike_speed_and_cadence`, `bt_hr`, `bt_run`) declare full-bleed `0..144` badge paths with corner radius $r=22.0$ and background color `#07377F`, with zero remaining `10..134` inset paths.
+  2. *Uppercase Bottom Label & evenOdd Counter Hole Contract (`TST-UI-442.2`)*:
+  • Test in `VectorAssetResolutionContractTest.kt` verifying that all 6 BTLE drawables include bold uppercase text path data (`PWR`, `SPD`, `CAD`, `S&C`, `HR`, `SPD`) with `evenOdd` fillType for counter holes, and no lowercase words (`power`, `speed`, `cadence`, `s & c`).
+  3. *Top-Right Sensor Mini-Icon & Rule 37 Geometric Primitive Audit (`TST-UI-442.3`)*:
+  • Test in `VectorAssetResolutionContractTest.kt` verifying that `bt_bike_*` drawables contain top-right mini-icon path geometry, and that all 6 drawables satisfy Rule 37 ($\le 45$ `L` commands per path, analytical curves `A`/`C`/`Q`).
+  4. *Resource Resolution & Clean-Room Suite Execution (`TST-UI-442.4`)*:
+  • Assert `UIHelper.getIconId()` and `BSportType` mappings for all BTLE sensors continue to resolve to valid non-zero resource IDs with zero regression (`REQ-PRO-001`).
+
+
+
+
 
 
 

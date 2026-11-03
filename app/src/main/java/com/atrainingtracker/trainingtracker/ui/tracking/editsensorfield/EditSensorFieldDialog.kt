@@ -187,48 +187,10 @@ fun EditSensorFieldDialog(
                 Spacer(Modifier.height(16.dp))
             }
 
-            // --- Horizontal Width Ratio / Row Split Presets (REQ-UI-437, ATT-4861) ---
-            Text(
-                text = stringResource(R.string.sensor_field_width_title),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.height(4.dp))
-            if (uiState.isTwoFieldRow) {
-                Text(
-                    text = stringResource(R.string.sensor_field_row_split_presets),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(Modifier.height(4.dp))
-                val splits = listOf(
-                    Triple(3f, 1f, "3/4 : 1/4"),
-                    Triple(2f, 1f, "2/3 : 1/3"),
-                    Triple(1f, 1f, "1/2 : 1/2"),
-                    Triple(1f, 2f, "1/3 : 2/3"),
-                    Triple(1f, 3f, "1/4 : 3/4")
-                )
-                val currentLeftWeight = if (uiState.isLeftField) uiState.colWeight else (uiState.siblingColWeight ?: 1f)
-                val currentRightWeight = if (uiState.isLeftField) (uiState.siblingColWeight ?: 1f) else uiState.colWeight
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    splits.forEach { (lWeight, rWeight, label) ->
-                        val isSelected = (currentLeftWeight == lWeight && currentRightWeight == rWeight)
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = { viewModel.onRowSplitSelected(lWeight, rWeight) },
-                            label = { Text(label, style = MaterialTheme.typography.bodySmall) }
-                        )
-                    }
-                }
-                Spacer(Modifier.height(8.dp))
-            }
+            // --- Relative Width (REQ-UI-437, ATT-4861, ATT-5077) ---
             Text(
                 text = stringResource(R.string.sensor_field_relative_weight),
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(4.dp))

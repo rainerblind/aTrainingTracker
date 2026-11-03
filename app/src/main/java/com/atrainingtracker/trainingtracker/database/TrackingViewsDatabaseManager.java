@@ -28,6 +28,7 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.WorkerThread;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.ActivityType;
@@ -46,6 +47,8 @@ import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize;
 import com.atrainingtracker.util.CursorUtils;
 import com.atrainingtracker.util.EnumUtils;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -784,6 +787,201 @@ public class TrackingViewsDatabaseManager {
         values.put(TrackingViewsDbHelper.SHOW_BIKE_BELL, 0);
 
         db.insert(TrackingViewsDbHelper.VIEWS_TABLE, null, values);
+    }
+
+    /**
+     * Reorders a tab view within its associated ActivityType by swapping it with its adjacent neighbor (REQ-UI-440.2).
+     * Re-indexes all tabs for that ActivityType to sequential LAYOUT_NR values (1..N) within an atomic transaction.
+     *
+     * @param viewId The ID of the tab to move.
+     * @param moveLeft True to move towards the start (lower index/layoutNr), false to move towards the end.
+     * @return The new zero-based index of the moved tab within its ActivityType, or the unchanged index if boundary reached.
+     */
+    @WorkerThread
+    public int moveTabView(long viewId, boolean moveLeft) {
+        SQLiteDatabase db = getDatabase();
+        ActivityType activityType = getActivityTypeForTab(viewId);
+        List<Long> tabIds = new ArrayList<>();
+        try (Cursor cursor = db.query(
+                TrackingViewsDbHelper.VIEWS_TABLE,
+                new String[]{TrackingViewsDbHelper.C_ID},
+                TrackingViewsDbHelper.ACTIVITY_TYPE + "=?",
+                new String[]{activityType.name()},
+                null,
+                null,
+                TrackingViewsDbHelper.LAYOUT_NR + " ASC, " + TrackingViewsDbHelper.C_ID + " ASC"
+        )) {
+            while (cursor.moveToNext()) {
+                tabIds.add(cursor.getLong(0));
+            }
+        }
+
+        int currentIndex = tabIds.indexOf(viewId);
+        if (currentIndex == -1) {
+            return -1;
+        }
+
+        int targetIndex = moveLeft ? currentIndex - 1 : currentIndex + 1;
+        if (targetIndex < 0 || targetIndex >= tabIds.size()) {
+            return currentIndex;
+        }
+
+        Collections.swap(tabIds, currentIndex, targetIndex);
+
+        db.beginTransaction();
+        try {
+            for (int i = 0; i < tabIds.size(); i++) {
+                ContentValues values = new ContentValues();
+                values.put(TrackingViewsDbHelper.LAYOUT_NR, i + 1);
+                db.update(
+                        TrackingViewsDbHelper.VIEWS_TABLE,
+                        values,
+                        TrackingViewsDbHelper.C_ID + "=?",
+                        new String[]{String.valueOf(tabIds.get(i))}
+                );
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+
+        return targetIndex;
+    }
+
+    /**
+     * Deep-copies an existing tab view (including all its sensor fields in ROWS_TABLE
+     * and all its section dividers in SECTION_DIVIDERS_TABLE) to one or more target ActivityType profiles.
+     * Appends the new tab at the end of each target profile's layout list (layoutNr = max(layoutNr) + 1).
+     * Executes atomically inside a SQLite transaction (REQ-UI-439.3).
+     *
+     * @param sourceViewId The ID of the tab view in VIEWS_TABLE to clone.
+     * @param targetTypes  The list of target ActivityType profiles to copy into.
+     * @return List of newly generated view IDs in VIEWS_TABLE.
+     */
+    @WorkerThread
+    @NonNull
+    public List<Long> copyTabViewToActivityTypes(long sourceViewId, @NonNull List<ActivityType> targetTypes) {
+        List<Long> newViewIds = new ArrayList<>();
+        if (targetTypes.isEmpty()) {
+            return newViewIds;
+        }
+
+        SQLiteDatabase db = getDatabase();
+
+        // 1. Fetch source view configuration
+        ContentValues sourceViewValues = null;
+        try (Cursor cursor = db.query(TrackingViewsDbHelper.VIEWS_TABLE, null,
+                TrackingViewsDbHelper.C_ID + "=?", new String[]{String.valueOf(sourceViewId)},
+                null, null, null)) {
+            if (cursor.moveToFirst()) {
+                sourceViewValues = cursorRowToContentValues(cursor);
+                sourceViewValues.remove(TrackingViewsDbHelper.C_ID);
+            }
+        }
+
+        if (sourceViewValues == null) {
+            Log.e(TAG, "copyTabViewToActivityTypes: sourceViewId " + sourceViewId + " not found");
+            return newViewIds;
+        }
+
+        // 2. Fetch all sensor field rows for source view
+        List<ContentValues> sourceRows = new ArrayList<>();
+        try (Cursor cursor = db.query(TrackingViewsDbHelper.ROWS_TABLE, null,
+                TrackingViewsDbHelper.VIEW_ID + "=?", new String[]{String.valueOf(sourceViewId)},
+                null, null, null)) {
+            while (cursor.moveToNext()) {
+                ContentValues rowVals = cursorRowToContentValues(cursor);
+                rowVals.remove(TrackingViewsDbHelper.ROW_ID);
+                sourceRows.add(rowVals);
+            }
+        }
+
+        // 3. Fetch all section dividers for source view
+        List<ContentValues> sourceDividers = new ArrayList<>();
+        try (Cursor cursor = db.query(TrackingViewsDbHelper.SECTION_DIVIDERS_TABLE, null,
+                TrackingViewsDbHelper.VIEW_ID + "=?", new String[]{String.valueOf(sourceViewId)},
+                null, null, null)) {
+            while (cursor.moveToNext()) {
+                ContentValues divVals = cursorRowToContentValues(cursor);
+                divVals.remove(TrackingViewsDbHelper.C_ID);
+                sourceDividers.add(divVals);
+            }
+        }
+
+        // 4. Atomically clone into each target ActivityType
+        db.beginTransaction();
+        try {
+            for (ActivityType targetType : targetTypes) {
+                int nextLayoutNr = getMaxLayoutNr(db, targetType) + 1;
+
+                ContentValues viewValues = new ContentValues(sourceViewValues);
+                viewValues.put(TrackingViewsDbHelper.ACTIVITY_TYPE, targetType.name());
+                viewValues.put(TrackingViewsDbHelper.LAYOUT_NR, nextLayoutNr);
+
+                long newViewId = db.insert(TrackingViewsDbHelper.VIEWS_TABLE, null, viewValues);
+                if (newViewId == -1) {
+                    Log.e(TAG, "copyTabViewToActivityTypes: Failed to insert new view for " + targetType);
+                    continue;
+                }
+                newViewIds.add(newViewId);
+
+                // Clone sensor field rows
+                for (ContentValues rowVals : sourceRows) {
+                    ContentValues newRowVals = new ContentValues(rowVals);
+                    newRowVals.put(TrackingViewsDbHelper.VIEW_ID, newViewId);
+                    db.insert(TrackingViewsDbHelper.ROWS_TABLE, null, newRowVals);
+                }
+
+                // Clone section dividers
+                for (ContentValues divVals : sourceDividers) {
+                    ContentValues newDivVals = new ContentValues(divVals);
+                    newDivVals.put(TrackingViewsDbHelper.VIEW_ID, newViewId);
+                    db.insert(TrackingViewsDbHelper.SECTION_DIVIDERS_TABLE, null, newDivVals);
+                }
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+
+        return newViewIds;
+    }
+
+    private int getMaxLayoutNr(SQLiteDatabase db, ActivityType activityType) {
+        String query = "SELECT MAX(" + TrackingViewsDbHelper.LAYOUT_NR + ") FROM " + TrackingViewsDbHelper.VIEWS_TABLE
+                + " WHERE " + TrackingViewsDbHelper.ACTIVITY_TYPE + "=?";
+        try (Cursor c = db.rawQuery(query, new String[]{activityType.name()})) {
+            if (c.moveToFirst() && !c.isNull(0)) {
+                return c.getInt(0);
+            }
+        }
+        return 0;
+    }
+
+    private static ContentValues cursorRowToContentValues(Cursor cursor) {
+        ContentValues values = new ContentValues();
+        for (int i = 0; i < cursor.getColumnCount(); i++) {
+            String colName = cursor.getColumnName(i);
+            if (cursor.isNull(i)) {
+                values.putNull(colName);
+            } else {
+                switch (cursor.getType(i)) {
+                    case Cursor.FIELD_TYPE_INTEGER:
+                        values.put(colName, cursor.getLong(i));
+                        break;
+                    case Cursor.FIELD_TYPE_FLOAT:
+                        values.put(colName, cursor.getDouble(i));
+                        break;
+                    case Cursor.FIELD_TYPE_STRING:
+                        values.put(colName, cursor.getString(i));
+                        break;
+                    case Cursor.FIELD_TYPE_BLOB:
+                        values.put(colName, cursor.getBlob(i));
+                        break;
+                }
+            }
+        }
+        return values;
     }
 
 

@@ -399,7 +399,7 @@
 ### TST-PER-031: **Yearly Activity Contribution Grids Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-PER-025`
 - **Component**: `YearlyContributionGridTest.kt`, `PeriodsViewModelTest.kt`, `PeriodSummaryCardTest.kt`, `YearlyContributionLocalizationTest.kt`
-- **Jira**: `ATT-4849`
+- **Jira**: `ATT-4849`, `ATT-5076`
 - **Test Description**:
   1. *Daily Aggregation & Calendar Matrix Mapping Test (`TST-PER-031.1`, `YearlyContributionGridTest.kt`)*:
   • Verify that daily workout totals for a given calendar year map deterministically to a 7-row (Mon–Sun) by 53-column (ISO weeks 1..53) calendar day matrix for both standard (365-day) and leap (366-day) years.
@@ -415,6 +415,8 @@
   • Verify that all added string resources (`workout_periods__yearly_activity_grid`, `workout_periods__no_activity`) exist with matching keys across all 9 supported locales.
   7. *Targeted Regression Verification (`TST-PER-031.7`)*:
   • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"` to verify 100% clean-room test pass rate.
+  8. *Embedded SportStatsRow Placement & Seamless Styling Test (`TST-PER-031.8`)*:
+  • Verify that for `PeriodType.YEAR`, `YearlyContributionGrid` is rendered inside `SportStatsRow` between the header row and sub-sports divider with `showCard = false` and `showSportHeader = false`, omitting redundant outer container borders and sport titles (ATT-5076).
 
 ### TST-PER-032: **Master Sport Filter Heatmap & Region Clustering Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-PER-024` (`REQ-PER-024.5`)

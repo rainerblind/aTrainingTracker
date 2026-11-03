@@ -2219,6 +2219,11 @@
     <string name="cd_add_before">Davor hinzufügen</string>
     <string name="cd_delete_tab">Tab löschen</string>
     <string name="cd_add_after">Danach hinzufügen</string>
+    <string name="cd_copy_tab">Tab kopieren</string>
+    <string name="cd_move_tab_left">Tab nach links verschieben</string>
+    <string name="cd_move_tab_right">Tab nach rechts verschieben</string>
+    <string name="copy_tab_title">Tab kopieren</string>
+    <string name="copy_tab_action">Kopieren</string>
     <string name="back">Zurück</string>
     <string name="close">Schließen</string>
     <string name="clear">Löschen</string>
@@ -2270,7 +2275,6 @@
 
     <!-- Sensor Field Width & Row Split (ATT-4861, REQ-UI-437) -->
     <string name="sensor_field_width_title">Breitenverhältnis</string>
-    <string name="sensor_field_row_split_presets">Zeilenaufteilung</string>
     <string name="sensor_field_relative_weight">Relative Breite</string>
 
     <!-- Zone History (ATT-4844, REQ-SET-082) -->
@@ -2290,6 +2294,7 @@
     <string name="altitude_calibration_reference_label">Referenzhöhe</string>
     <string name="altitude_calibration_location_name">Standortname (optional)</string>
     <string name="altitude_calibration_save_location">Als Lieblingsort speichern</string>
+    <string name="altitude_calibration_matched_location">Erkannter Lieblingsort: %1$s</string>
     <string name="altitude_calibration_action">Kalibrieren</string>
     <string name="altitude_calibrated_success">Höhe auf %1$s kalibriert</string>
 

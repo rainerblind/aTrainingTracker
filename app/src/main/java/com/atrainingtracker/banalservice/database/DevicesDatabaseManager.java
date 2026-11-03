@@ -1004,7 +1004,8 @@ public class DevicesDatabaseManager {
         // static final int DB_VERSION = 5;    // upgraded at 30.12.2016 to support storing of BT features
         // static final int DB_VERSION = 6;    // upgraded at 30.01.2018 to replace storing of BT features (for Bike Power) to all Bike Power Devices
         // static final int DB_VERSION = 7;    // upgraded at 20.03.2018: added the location devices to this database
-        public static final int DB_VERSION = 8;    // upgraded at 01.11.2026: added baselineCircumference for iTPMS
+        // static final int DB_VERSION = 8;    // upgraded at 01.11.2026: added baselineCircumference for iTPMS
+        public static final int DB_VERSION = 9;    // upgraded at 03.11.2026: renamed legacy ALTITUDE_FROM_PRESSURE default names (ATT-5073)
         private static final String TAG = "DeviceDbHelper";
         private static final boolean DEBUG = BANALService.getDebug(false);
         private static final String DEVICES_V3 = "Devices";               // in version 3, the table was simply called Devices
@@ -1110,6 +1111,7 @@ public class DevicesDatabaseManager {
                     break;
 
                 case 8:
+                case 9:
                     db.execSQL(CREATE_DEVICE_DB_8);
                     if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_DEVICE_DB_8);
                     db.execSQL(CREATE_BIKE_POWER_SENSORS_TABLE_6);
@@ -1241,6 +1243,45 @@ public class DevicesDatabaseManager {
                 if (DEBUG) Log.i(TAG, "onUpgrade: upgrading from Version 7 to 8 (adding baselineCircumference)");
                 db.execSQL("ALTER TABLE " + DEVICES + " ADD COLUMN " + BASELINE_CIRCUMFERENCE + " real DEFAULT 0.0");
             }
+
+            if (oldVersion <= 8) {
+                if (DEBUG) Log.i(TAG, "onUpgrade: upgrading from Version 8 to 9 (updating legacy ALTITUDE_FROM_PRESSURE default names)");
+                migrateAltitudeFromPressureLegacyNames(db);
+            }
+        }
+
+        /**
+         * Idempotent migration updating legacy default names for ALTITUDE_FROM_PRESSURE devices
+         * across all 9 locales while strictly preserving custom user renames (REQ-SEN-026.2, ATT-5073).
+         */
+        public int migrateAltitudeFromPressureLegacyNames(SQLiteDatabase db) {
+            String newName = mContext.getString(R.string.devices_altitude_from_pressure);
+            String[] legacyNames = new String[] {
+                "Air Pressure",
+                "Luftdruck",
+                "Presión Aire",
+                "Pression Air",
+                "Pressione Aria",
+                "気圧",
+                "Luchtdruk",
+                "Ciśnienie pow.",
+                "Pressão do Ar"
+            };
+            StringBuilder placeholders = new StringBuilder();
+            for (int i = 0; i < legacyNames.length; i++) {
+                if (i > 0) placeholders.append(",");
+                placeholders.append("?");
+            }
+            String whereClause = DEVICE_TYPE + " = ? AND " + NAME + " IN (" + placeholders + ")";
+            String[] whereArgs = new String[legacyNames.length + 1];
+            whereArgs[0] = DeviceType.ALTITUDE_FROM_PRESSURE.name();
+            System.arraycopy(legacyNames, 0, whereArgs, 1, legacyNames.length);
+
+            ContentValues values = new ContentValues();
+            values.put(NAME, newName);
+            int updated = db.update(DEVICES, values, whereClause, whereArgs);
+            if (DEBUG) Log.i(TAG, "migrateAltitudeFromPressureLegacyNames: updated " + updated + " legacy rows to " + newName);
+            return updated;
         }
 
         // necessary to upgrade the database

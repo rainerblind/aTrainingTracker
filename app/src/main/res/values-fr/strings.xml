@@ -2133,6 +2133,11 @@
     <string name="cd_add_before">Ajouter avant</string>
     <string name="cd_delete_tab">Supprimer l\'onglet</string>
     <string name="cd_add_after">Ajouter après</string>
+    <string name="cd_copy_tab">Copier l\'onglet</string>
+    <string name="cd_move_tab_left">Déplacer l\'onglet vers la gauche</string>
+    <string name="cd_move_tab_right">Déplacer l\'onglet vers la droite</string>
+    <string name="copy_tab_title">Copier l\'onglet</string>
+    <string name="copy_tab_action">Copier</string>
     <string name="back">Retour</string>
     <string name="close">Fermer</string>
     <string name="clear">Effacer</string>
@@ -2184,7 +2189,6 @@
 
     <!-- Sensor Field Width & Row Split (ATT-4861, REQ-UI-437) -->
     <string name="sensor_field_width_title">Ratio de largeur</string>
-    <string name="sensor_field_row_split_presets">Préréglages de division de ligne</string>
     <string name="sensor_field_relative_weight">Largeur relative</string>
 
     <!-- Zone History (ATT-4844, REQ-SET-082) -->
@@ -2204,6 +2208,7 @@
     <string name="altitude_calibration_reference_label">Altitude de référence</string>
     <string name="altitude_calibration_location_name">Nom du lieu (facultatif)</string>
     <string name="altitude_calibration_save_location">Enregistrer comme lieu favori</string>
+    <string name="altitude_calibration_matched_location">Lieu connu reconnu : %1$s</string>
     <string name="altitude_calibration_action">Étalonner</string>
     <string name="altitude_calibrated_success">Altitude étalonnée à %1$s</string>
 

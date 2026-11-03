@@ -42,6 +42,8 @@ import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.settings.ZoneDisplayOptions
 import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
+import com.atrainingtracker.trainingtracker.ui.map.GeneralMapLayer
+import com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrackViewModel
 import com.atrainingtracker.trainingtracker.ui.map.MapCluster
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
 import com.atrainingtracker.trainingtracker.ui.map.MapRoute
@@ -64,9 +66,12 @@ import com.atrainingtracker.trainingtracker.ui.tracking.WPrimeBatteryMath
 import com.atrainingtracker.trainingtracker.ui.tracking.WPrimeBatteryState
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.SectionDividerInfo
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -76,6 +81,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -127,7 +133,8 @@ class TrackingViewModel @JvmOverloads constructor(
     val liveSegmentsRepository: LiveSegmentsRepository,
     val routesRepository: RoutesRepository,
     private val viewId: Long,
-    val workoutClusterRepository: WorkoutClusterRepository = WorkoutClusterRepository.getInstance(application)
+    val workoutClusterRepository: WorkoutClusterRepository = WorkoutClusterRepository.getInstance(application),
+    private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default
 ) : ViewModel() {
 
     // --- The StateFlow to hold and expose the UI state ---
@@ -380,6 +387,12 @@ class TrackingViewModel @JvmOverloads constructor(
         val userBearing: Float
     )
 
+    private fun isClusterLayerEnabled(): Boolean {
+        val saved = sharedPreferences.getStringSet(MapFragmentWithTrackViewModel.PREF_GENERAL_MAP_ENABLED_LAYERS, null)
+            ?: return GeneralMapLayer.CLUSTERS in GeneralMapLayer.DEFAULT_ENABLED
+        return GeneralMapLayer.CLUSTERS.name in saved
+    }
+
     private fun observeMapState() {
         viewModelScope.launch {
             // REQ-MAP-051.1: Pre-map static MapSegment instances only when static segment paths change,
@@ -412,15 +425,22 @@ class TrackingViewModel @JvmOverloads constructor(
             }.distinctUntilChanged()
 
             val mapClustersFlow = workoutClusterRepository.allClusters
-                .map { list -> list.mapNotNull { it.toMapCluster() } }
+                .map { list ->
+                    if (isClusterLayerEnabled()) {
+                        list.mapNotNull { it.toMapCluster() }
+                    } else {
+                        emptyList<MapCluster>()
+                    }
+                }
+                .flowOn(defaultDispatcher)
                 .distinctUntilChanged()
 
-            val staticMapLayerFlow = combine(
+            val staticMapLayerFlow: Flow<StaticMapLayerData> = combine(
                 staticMapSegmentsFlow,
                 activeLiveSegmentIdsFlow,
                 mapRoutesFlow,
                 mapClustersFlow
-            ) { mapSegments, activeIds, mapRoutes, mapClusters ->
+            ) { mapSegments: List<MapSegment>, activeIds: Set<Long>, mapRoutes: List<MapRoute>, mapClusters: List<MapCluster> ->
                 StaticMapLayerData(
                     mapSegments = mapSegments,
                     activeLiveSegmentIds = activeIds,
@@ -672,7 +692,7 @@ class TrackingViewModel @JvmOverloads constructor(
                 val newFormattedValue = if (isPedalBalance && newPedalBalanceState != null) {
                     PedalPowerBalanceMath.formatBalanceString(newPedalBalanceState)
                 } else {
-                    sensorData.stringValue
+                    sensorData.stringValue ?: "--"
                 }
                 val newZoneColor = calculateZoneColor(sensorData, activityType)
                 val zoneType = getZoneType(sensorData.sensorType, activityType.sportType)

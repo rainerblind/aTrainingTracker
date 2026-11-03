@@ -970,16 +970,17 @@
 - **Component**: **CyclingPowerMetricsDevice Constructor Seeding, Sensor-Presence Gating (Rule 52), Stationary/Paused W/kg Alignment, and Workout Summary Presentation Defense Verification Suite**
 - **Jira**: ``ATT-4368``
 - **Test Description**:
-  1. *Sensor-Presence Gating on Constructor & Suspended State Test (`TST-TRK-031.1`, `CyclingPowerMetricsDeviceTest.kt`)*:
-  • Mock `sensorManager.getSensor(SensorType.POWER)` returning `null` (Rule 52).
+  1. *Sensor-Presence & Active Telemetry Gating on Constructor & Suspended State Test (`TST-TRK-031.1`, `CyclingPowerMetricsDeviceTest.kt`)*:
+  • Mock `sensorManager.getSensor(SensorType.POWER)` returning `null` or an inactive power sensor with `powerSensorData.value == null` (Rule 52).
   • Instantiate `CyclingPowerMetricsDevice` with CP = 250W and W' = 20.0 kJ.
-  • Assert `wPrimeBalSensor.sensorData.value == null` immediately upon instantiation.
-  • Invoke `calculateMetrics()` with `isSuspended = true`: assert `wPrimeBalSensor.sensorData.value == null` (preventing phantom SQLite extrema).
-  2. *Constructor Baseline W' Capacity Seeding with Power Sensor Present Test (`TST-TRK-031.2`, `CyclingPowerMetricsDeviceTest.kt`)*:
+  • Assert `wPrimeBalSensor.sensorData.value == null` immediately upon instantiation (Rule 52).
+  • Invoke `calculateMetrics()` with `isSuspended = true` and `isSuspended = false`: assert `wPrimeBalSensor.sensorData.value == null` (preventing phantom SQLite extrema before real power arrives).
+  2. *Active Power Sample Telemetry-Activated W'bal Emission Test (`TST-TRK-031.2`, `CyclingPowerMetricsDeviceTest.kt`)*:
   • Mock `sensorManager.getSensor(SensorType.POWER)` returning active power sensor.
   • Instantiate `CyclingPowerMetricsDevice` with CP = 280W (and with FTP fallback 250W) and W' = 20.0 kJ.
-  • Assert `wPrimeBalSensor.sensorData.value == 20.0` (Double, delta 0.001) immediately upon instantiation without invoking `calculateMetrics()` or `resetSession()` (Rule 51).
-  • Instantiate with W' = 0.0f: assert `wPrimeBalSensor.sensorData.value == null` (Double, delta 0.001).
+  • Assert `wPrimeBalSensor.sensorData.value == null` initially (preventing unearned emissions before power packets).
+  • Inject first active power sample (e.g. 250W) and invoke `calculateMetrics()`: assert `wPrimeBalSensor.sensorData.value` emits full/stepped capacity ($\approx 20.0\text{ kJ}$).
+  • Instantiate with W' = 0.0f: assert `wPrimeBalSensor.sensorData.value == null`.
   3. *Stationary and Paused W/kg Telemetry Emission Test (`TST-TRK-031.3`, `CyclingPowerMetricsDeviceTest.kt`)*:
   • Configure `isSuspended = true` and `athleteWeightKg = 75.0f` and power sensor present.
   • Set `power = 0.0W`: invoke `calculateMetrics()`, assert `powerToWeightSensor.sensorData.value == 0.0` (not starved / not null), preventing `TimedMovingAverageFilter` from expiring to null.
@@ -1007,6 +1008,9 @@
   • Confirm zero new string resources required and 100% localization parity.
   9. *Clean-Room Regression Suite Execution (`TST-TRK-031.9`)*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% pass rate with zero regressions across the full test suite.
+  10. *TelemetryMetricUtils W'bal Chart Power Gating Test (`TST-TRK-031.10`, `TelemetryMetricUtilsTest.kt`)*:
+  • Evaluate `TelemetryMetricUtils.hasWPrimeBalData(path)` with points having `wPrimeBalKj >= 0.0` but `power == null || power <= 0`: assert returns `false`.
+  • Evaluate with points having valid `power > 0` and `wPrimeBalKj >= 0.0`: assert returns `true`.
 
 ### TST-FIL-014: **Backend Filter Key Normalization, Runtime 'Best Sensor' Field Registration & Post-Trim Rolling Filter NaN Guard Verification Suite** [Runtime sensor field creation and updating with "Best Sensor" normalizes deviceName and deviceId to null, resolving proxy filters immediately; TimedMovingAverageFilter returns null instead of Double.NaN when window samples expire; specific device selection is preserved; 9-language localization parity confirmed; clean-room test suite passes with zero regressions.]
 - **Requirement(s)**: `REQ-FIL-014`, `REQ-FIL-011`, `REQ-UI-167`
@@ -1273,8 +1277,8 @@
 
 ### TST-TRK-047: **Manual Altitude Calibration with Known Location Persistence & Drift Correction Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-047`
-- **Component**: `SensorSourceDialogTest.kt`, `KnownLocationsDatabaseManagerTest.kt`, `TrackerServiceAltitudeTest.kt`, `LiveWorkoutSessionTest.kt`, `TranslationParityTest.kt`
-- **Jira**: `ATT-4845`
+- **Component**: `SensorSourceDialogAltitudeCalibrationTest.kt`, `KnownLocationsDatabaseManagerTest.kt`, `TrackingTabsViewModelLocationTest.kt`, `TrackerServiceAltitudeTest.kt`, `LiveWorkoutSessionTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-4845`, `ATT-5072`
 - **Test Description**:
   1. *Header Dialog Manual Calibration & State Binding (`TST-TRK-047.1`)*:
   • Unit test in `SensorSourceDialogTest` verifying:
@@ -1296,6 +1300,10 @@
     - Running ascent and descent metrics are recomputed without false vertical spikes.
   5. *9-Language Localization Parity (`TST-TRK-047.5`)*:
   • Verification in `TranslationParityTest` for `altitude_calibration_title`, `altitude_calibration_reference_label`, `altitude_calibration_location_name`, `altitude_calibration_save_location`, `altitude_calibration_action`, and `altitude_calibrated_success` across all 9 locales.
+  6. *Save as Known Location Unchecked by Default & Conditional Name Input (`TST-TRK-047.6`)*:
+  • Unit test in `SensorSourceDialogAltitudeCalibrationTest` verifying that when `matchedLocation == null`, the "Save as Known Location" checkbox defaults to unchecked (`false`), and the location name input field is hidden until explicitly checked (ATT-5072).
+  7. *Matched Known Location Recognition, Pre-fill & Elevation Update (`TST-TRK-047.7`)*:
+  • Unit test in `SensorSourceDialogAltitudeCalibrationTest` and `TrackingTabsViewModelTest` verifying that when `matchedLocation != null`, the dialog displays the matched location name, hides the redundant save checkbox, pre-fills reference altitude from the stored location, and calibration updates the existing `KnownLocations.db` record with `ElevationSource.MANUAL_USER` (ATT-5072).
 
 
 ### TST-SEN-025: **Position-Based Elevation Sensor & Dedicated Spatial DEM Cache Test Suite** [Verified]
@@ -1347,8 +1355,8 @@
 
 ### TST-TRK-049: **Post-Workout State Cleansing, Breadcrumb Purge & Idle Service Dormancy Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-049`
-- **Component**: `BANALServiceRepositoryTest.kt`, `BANALServiceBindingLifecycleTest.kt`, `MyAccumulatorSensorTrackingGateTest.kt`, `AccumulatorResetNotificationTest.kt`
-- **Jira**: `ATT-4926`
+- **Component**: `BANALServiceRepositoryTest.kt`, `BANALServiceBindingLifecycleTest.kt`, `MyAccumulatorSensorTrackingGateTest.kt`, `AccumulatorResetNotificationTest.kt`, `FilterManagerAccumulatorResetTest.kt`, `TrackingViewModelSensorNullSafetyTest.kt`
+- **Jira**: `ATT-4926`, `ATT-5080`
 - **Test Description**:
   1. *Breadcrumb & Elevation Path Cleansing on Session End (`TST-TRK-049.1`)*:
   • Unit test in `BANALServiceRepositoryTest` verifying that invoking `clearBreadcrumbs()`, receiving `TrackingMode.READY`, and completing a workout empties `_currentTrack` and `_currentPathPoints`.
@@ -1358,6 +1366,9 @@
   • Unit test in `MyAccumulatorSensorTrackingGateTest` verifying that in `TrackingMode.READY`, ticks to `MyAccumulatorSensor.increment()` with `mRespectPause = true` do not increment value when `!TrainingApplication.isTracking()`.
   4. *Reset Notification & InstantaneousFilter Reset (`TST-TRK-049.4`)*:
   • Unit test verifying `MyAccumulatorSensor.reset()` notifies listeners with `mZeroValue`, and `InstantaneousFilter.reset()` clears cached values.
+  5. *Accumulator Reset Baseline Preservation & Null String Safety (`TST-TRK-049.5`)*:
+  • Unit test in `FilterManagerTest` verifying that calling `FilterManager.resetAllFilters()` causes filters attached to `MyAccumulatorSensor` to retain/re-seed `mZeroValue` (e.g. `0` -> formatted `0:00:00`), while non-accumulator filters reset to `null` (`--`).
+  • Unit test in `TrackingViewModelSensorNullSafetyTest` verifying that `DefaultStringFormatter.format(null)` returns `"--"`, and `TrackingViewModel.applySensorData()` handles null or empty sensor string values without throwing `NullPointerException`.
 
 
 ### TST-TRK-050: **Indirect Tire Pressure Monitoring (iTPMS) Gated Estimator, CUSUM Detector & Baseline Verification** [Verified]
@@ -1388,6 +1399,40 @@
     - `EditDeviceViewModel.resetTirePressureBaseline(deviceId)` saves current circumference to `baselineCircumference`.
   5. *9-Language Localization Parity Audit (`TST-TRK-050.5`)*:
   • Automated assertion in `TranslationParityTest` verifying all iTPMS strings (`devices_reset_tire_pressure_baseline`, `itpms_slow_puncture_alert_title`, `itpms_slow_puncture_alert_message`, `itpms_low_pressure_reminder_title`, `itpms_low_pressure_reminder_message`) exist across all 9 locales with valid positional specifiers (`%1$s`).
+
+
+### TST-SEN-026: **Specialized Altitude Devices Naming Parity, Idempotent SQLite Migration & Educational Details Verification** [Verified]
+- **Requirement(s)**: `REQ-SEN-026`
+- **Component**: `AltitudeFromPressureDeviceTest.kt`, `DevicesDatabaseManagerTest.java`, `EditDeviceDialogTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-5073`
+- **Test Description**:
+  1. *String Resource Naming Parity Across 9 Locales (`TST-SEN-026.1`)*:
+  • Verification that `devices_altitude_from_pressure` resolves to "Höhe aus Luftdruck" (DE), "Altitude from Pressure" (EN), "Altitud por presión" (ES), "Altitude par pression" (FR), "Altitudine da pressione" (IT), "気圧からの高度" (JA), "Hoogte uit luchtdruk" (NL), "Wysokość z ciśnienia" (PL), and "Altitude por pressão" (PT).
+  2. *Idempotent SQLite Name Migration (`TST-SEN-026.2`)*:
+  • Unit test in `DevicesDatabaseManagerTest` verifying that opening an existing `Devices.db` database containing `ALTITUDE_FROM_PRESSURE` with any legacy default name updates the row to `devices_altitude_from_pressure`, whereas custom user-defined names are strictly preserved without modification.
+  3. *Educational Operation Card in EditDeviceDialog (`TST-SEN-026.3`)*:
+  • Compose UI test or layout test in `EditDeviceDialogTest` verifying that viewing details for `ALTITUDE_FROM_PRESSURE` or `ALTITUDE_FROM_POSITION` renders the educational info card (`OutlinedCard`) with structured "How it works" and "Pros & Cons" sections, while other sensor types omit this section.
+  4. *9-Language Translation Parity for Educational Strings (`TST-SEN-026.4`)*:
+  • Verification in `TranslationParityTest` for all altitude explanation string keys (`device_altitude_explanation_title`, `device_altitude_how_it_works_header`, `device_altitude_pros_cons_header`, `device_altitude_pressure_how_it_works`, `device_altitude_pressure_pros_cons`, `device_altitude_position_how_it_works`, `device_altitude_position_pros_cons`) across all 9 supported locales.
+  5. *Clean-Room Regression Verification (`TST-SEN-026.5`)*:
+  • Full regression pass over sensor, device management, and dialog test suites confirming zero regressions in device pairing, sensor data delivery, and calibration workflows.
+
+
+### TST-TRK-051: **Dynamic SQLite Schema Discovery via PRAGMA table_info & Decoupled Summary Telemetry Test Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-051`
+- **Component**: `TrackerServicePragmaSchemaTest.kt`, `TrackerServiceDecoupledSummaryTest.kt`, `TrackOnMapAftermathViewModelFallbackTest.kt`
+- **Jira**: `ATT-4968`
+- **Test Description**:
+  1. *PRAGMA table_info Column Discovery & Staleness Immunity Test (`TST-TRK-051.1`)*:
+  • Unit test in `TrackerServicePragmaSchemaTest.kt` verifying that querying table column names via `PRAGMA table_info` correctly identifies all added columns and returns a case-insensitive set containing all dynamically added columns after `ALTER TABLE ... ADD COLUMN` without relying on `query(..., "1")`.
+  2. *Decoupled Summary Update on Sample Failure Test (`TST-TRK-051.2`)*:
+  • Unit test in `TrackerServiceTest.java` verifying that when a sample insertion fails, `updateWorkoutSummary()` is still invoked with updated duration and distance.
+  3. *FastTrack Map Polyline Fallback Retention Test (`TST-TRK-051.3`)*:
+  • Unit test in `TrackOnMapAftermathViewModelTest.kt` verifying that when Phase 4 loads sample tracks with `< 2` points, `uiState.tracks` retains the non-empty `fastTrack` from summary `mapPolyline`.
+  4. *Clean-Room Targeted Test Suite Execution (`TST-TRK-051.4`)*:
+  • Clean-room execution of unit tests ensuring zero regressions (`REQ-PRO-001`).
+
+
 
 
 

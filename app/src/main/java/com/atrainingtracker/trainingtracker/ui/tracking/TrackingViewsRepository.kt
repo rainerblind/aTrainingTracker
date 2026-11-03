@@ -684,6 +684,36 @@ class TrackingViewsRepository private constructor(private val context: Context) 
         }
     }
 
+    suspend fun moveTabView(tabViewId: Long, moveLeft: Boolean): Int {
+        val newIndex = withContext(Dispatchers.IO) {
+            viewsDbManager.moveTabView(tabViewId, moveLeft)
+        }
+
+        // trigger recreation of UI
+        withContext(Dispatchers.Main) {
+            configUpdateTrigger.value++
+        }
+        return newIndex
+    }
+
+    /**
+     * Deep-copies the specified tab to the given target ActivityTypes.
+     * Executes on Dispatchers.IO and triggers configUpdateTrigger on Dispatchers.Main.
+     *
+     * @return List of newly created view IDs.
+     */
+    suspend fun copyTabView(sourceViewId: Long, targetTypes: List<ActivityType>): List<Long> {
+        val newIds = withContext(Dispatchers.IO) {
+            viewsDbManager.copyTabViewToActivityTypes(sourceViewId, targetTypes)
+        }
+
+        withContext(Dispatchers.Main) {
+            configUpdateTrigger.value++
+        }
+
+        return newIds
+    }
+
     // --- Section Dividers (REQ-UI-411) ---
 
     fun getSectionDividersFlow(tabViewId: Long): Flow<List<SectionDividerInfo>> {

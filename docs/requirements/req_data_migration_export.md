@@ -2956,10 +2956,10 @@
 
 **Invariants**: DTO mapping symmetry (Rule 20) and DatabaseSchemaRegistry version consistency (Rule 62) preserved.
 
-### REQ-DAT-037: Resilient Google Drive Background Upload Retry, Post-Restore Re-Auth Parity & Stuck Export Recovery [`TST-DAT-033`]
-- **Tests**: `GoogleDriveUploaderTest.kt`, `DropboxUploaderTest.kt`, `GoogleDriveBackupManagerTest.kt`, `AuthCredentialsStoreTest.kt`, `GoogleDriveSettingsDialogTest.kt`, `ExportManagerTest.kt`, `ExportStatusDatabaseManagerTest.kt`
-- **Implementation**: Provide silent Bearer token acquisition fallback, post-restore zombie-connected state elimination, transient error retry classification in cloud uploaders (`shallRetry = true`), and stuck credential export recovery.
-- **Rationale**: The system SHALL guarantee reliable background cloud workout uploads and backups by attempting silent token acquisition when the cached token is null, preventing zombie connected states post-restore, classifying transient network and rate-limit errors as retryable with WorkManager exponential backoff, and automatically recovering exports previously stuck on credential failures (ATT-4922, Parent Epic ATT-162, Status: Verified, amending `REQ-DAT-030` and `REQ-DAT-032`):
+### REQ-DAT-037: Resilient Google Drive Background Upload Retry, Post-Restore Re-Auth Parity & Stuck Export Recovery [Verified]
+- **Tests**: `GoogleDriveUploaderTest.kt`, `DropboxUploaderTest.kt`, `GoogleDriveBackupManagerTest.kt`, `AuthCredentialsStoreTest.kt`, `GoogleDriveSettingsDialogTest.kt`, `ExportManagerTest.kt`, `ExportStatusDatabaseManagerTest.kt`, `MainActivityGoogleDriveStartupRecoveryTest.kt`
+- **Implementation**: `MainActivityWithNavigation.kt`, `GoogleDriveUploader.kt`, `DropboxUploader.java`, `GoogleDriveAuthManager.kt`, `GoogleDriveBackupManager.kt`, `BackupRestoreViewModel.kt`, `AuthCredentialsStore.kt`, `GoogleDriveSettingsDialog.kt`, `ExportManager.java`, `ExportStatusDatabaseManager.kt`
+- **Rationale**: The system SHALL guarantee reliable background cloud workout uploads and backups by attempting silent token acquisition when the cached token is null, preventing zombie connected states post-restore, classifying transient network and rate-limit errors as retryable with WorkManager exponential backoff, and automatically recovering exports previously stuck on credential failures both on re-authentication and asynchronously on application startup (ATT-4922, ATT-5081, Parent Epic ATT-162, amending `REQ-DAT-030` and `REQ-DAT-032`):
 1. *Silent Token Acquisition Fallback (`REQ-DAT-037.1`)*:
 • When `TrainingApplication.uploadToGoogleDrive()` is enabled (or a signed-in Google account with `DRIVE_FILE_SCOPE` exists) and `TrainingApplication.getGoogleDriveAuthToken()` is null or blank, `GoogleDriveUploader`, `GoogleDriveBackupManager`, `BackupRestoreViewModel`, and `LegacyImportEngine` SHALL attempt silent token refresh via `GoogleDriveAuthManager.refreshTokenSync(context)` before failing with `"Google Drive credential is null or not linked"`.
 2. *Post-Restore Zombie-Connected State Elimination (`REQ-DAT-037.2`)*:
@@ -2970,16 +2970,19 @@
 • In `DropboxUploader.java`, transient network errors (`IOException`, `NetworkIOException`, `RetryException`, `ServerException`, `RateLimitException`) SHALL return `ExportResult(false, true, ...)` (`shallRetry = true`), while non-transient errors (missing file, unlinked credential) return `ExportResult(false, false, ...)`.
 4. *Stuck Export Recovery & Re-Queueing (`REQ-DAT-037.4`)*:
 • When the athlete successfully connects/re-authenticates Google Drive or silent token acquisition succeeds, the system SHALL transition exports stuck in `FINISHED_FAILED` solely with `"Google Drive credential is null or not linked"` back to `WAITING`, ensuring workouts recorded while unlinked are automatically uploaded once connected.
+• On application startup (`MainActivityWithNavigation.checkPreferences()`), when `TrainingApplication.uploadToGoogleDrive()` is enabled:
+  - If cached token is null/blank and `GoogleSignIn.getLastSignedInAccount(context)` is non-null, the system SHALL silently refresh the token on a background dispatcher via `GoogleDriveAuthManager.refreshTokenSync(context)`.
+  - Whenever a valid token is present (or obtained via silent refresh), the system SHALL invoke `ExportManager.recoverStuckGoogleDriveExports(context)` on `ioDispatcher` so any workouts stuck in `FINISHED_FAILED` due to missing credentials automatically recover and re-enqueue in `WorkManager` without requiring manual reconnect (ATT-5081).
 5. *Preservation of System Invariants (`REQ-DAT-037.5`)*:
 • WorkManager retry limit (`ExportConfig.MAX_RETRIES = 5`) MUST NOT be exceeded.
 • OAuth tokens MUST remain strictly confined to `auth_credentials_prefs.xml` (`REQ-DAT-032.1`).
 • Non-transient errors MUST never trigger retry loops.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Amends `REQ-DAT-030` (*Google Drive Query Escaping, Encapsulated Account Cache, Atomic Download Staging & Transparent Scan Results*) and `REQ-DAT-032` (*OAuth Credential Isolation, Android Auto Backup & Device Transfer Rules, and .attbackup Credential Exclusion Policy*). Targets `GoogleDriveUploader.kt`, `DropboxUploader.java`, `GoogleDriveAuthManager.kt`, `GoogleDriveBackupManager.kt`, `BackupRestoreViewModel.kt`, `AuthCredentialsStore.kt`, `GoogleDriveSettingsDialog.kt`, `ExportManager.java`, and `ExportStatusDatabaseManager.kt`.
-2. *Historical Origin & Commit Trace*: `931bf45d` (ATT-1306, initial Drive integration); `01b4b49c` & `b2d4e3d6` (ATT-2631, 401 client token refresh); `e3f6de91` (ATT-3995, WorkManager export pipeline & `shallRetry`); `203baa27` (ATT-4023, credential isolation); `8ad50842` (ATT-4459, restore sanitization); `07ac3cd6` (ATT-4666, settings dialog unification).
-3. *Root Reason for Existing Formulation*: Upfront null checks in `GoogleDriveUploader` and `GoogleDriveBackupManager` were defensive guards to prevent unnecessary HTTP attempts without cached tokens, but overlooked that Google Play Services holds valid account sessions capable of silent background token refresh (`GoogleAuthUtil.getToken`). Restore sanitization purged credentials without clearing boolean preference flags, leaving a zombie connected state. Hardcoded `shallRetry = false` was inherited from local file writing exporters.
-4. *Preservation of Core Invariants*: Credential isolation in `auth_credentials_prefs.xml` (`REQ-DAT-032.1`) and clean re-auth invariant (`REQ-DAT-032.4`) remain inviolate. Permanent errors (missing local file, unrecoverable 401/403) strictly set `shallRetry = false`.
+1. *Original Requirement ID & Target*: Amends `REQ-DAT-030` (*Google Drive Query Escaping, Encapsulated Account Cache, Atomic Download Staging & Transparent Scan Results*) and `REQ-DAT-032` (*OAuth Credential Isolation, Android Auto Backup & Device Transfer Rules, and .attbackup Credential Exclusion Policy*). Targets `MainActivityWithNavigation.kt`, `GoogleDriveUploader.kt`, `DropboxUploader.java`, `GoogleDriveAuthManager.kt`, `GoogleDriveBackupManager.kt`, `BackupRestoreViewModel.kt`, `AuthCredentialsStore.kt`, `GoogleDriveSettingsDialog.kt`, `ExportManager.java`, and `ExportStatusDatabaseManager.kt`.
+2. *Historical Origin & Commit Trace*: `931bf45d` (ATT-1306, initial Drive integration); `01b4b49c` & `b2d4e3d6` (ATT-2631, 401 client token refresh); `e3f6de91` (ATT-3995, WorkManager export pipeline & `shallRetry`); `203baa27` (ATT-4023, credential isolation); `8ad50842` (ATT-4459, restore sanitization); `07ac3cd6` (ATT-4666, settings dialog unification); `9a59e825` (ATT-4922, export recovery on reconnect).
+3. *Root Reason for Existing Formulation*: Upfront null checks in `GoogleDriveUploader` and `GoogleDriveBackupManager` were defensive guards to prevent unnecessary HTTP attempts without cached tokens, but overlooked that Google Play Services holds valid account sessions capable of silent background token refresh (`GoogleAuthUtil.getToken`). ATT-4922 added recovery during new exports or interactive settings reconnect, but overlooked that previously failed workouts in terminal `FINISHED_FAILED` have no active WorkManager jobs and stay dormant on fresh app launch unless re-queued.
+4. *Preservation of Core Invariants*: Credential isolation in `auth_credentials_prefs.xml` (`REQ-DAT-032.1`) and clean re-auth invariant (`REQ-DAT-032.4`) remain inviolate. Permanent errors (missing local file, unrecoverable 401/403) strictly set `shallRetry = false`. Asynchronous dispatch on `ioDispatcher` guarantees zero main-thread blocking on startup.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* `uploadToGoogleDrive()` is enabled but cached token is null with an active device Google account,
@@ -2994,6 +2997,9 @@
 • *Given* workouts stuck in `FINISHED_FAILED` with `"Google Drive credential is null or not linked"`,
 • *When* Google Drive is connected or re-authenticated,
 • *Then* stuck exports are transitioned to `WAITING` and re-queued.
+• *Given* the app starts (`MainActivityWithNavigation.checkPreferences()`) with `uploadToGoogleDrive()` enabled and previously stuck `FINISHED_FAILED` exports in `ExportStatus.db`,
+• *When* a valid token is present or silently refreshed from an existing Google account,
+• *Then* `ExportManager.recoverStuckGoogleDriveExports()` is invoked on `ioDispatcher`, resetting stuck exports to `WAITING` and enqueuing WorkManager upload jobs automatically.
 
 **Invariants**: WorkManager `MAX_RETRIES = 5` cap preserved; credentials isolated in `auth_credentials_prefs.xml`; permanent errors return `shallRetry = false`.
 

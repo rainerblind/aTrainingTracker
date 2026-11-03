@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.map
 
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterStats
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
 import com.google.android.gms.maps.model.LatLng
@@ -326,5 +327,44 @@ class MapModelsTest {
         assertNotNull(mapCluster2)
         assertSame("Decoded coordinate list reference must be identical (===) per REQ-MAP-051.2",
             mapCluster1!!.latLngs, mapCluster2!!.latLngs)
+    }
+
+    @Test
+    fun toMapCluster_withStats_enrichesMapClusterAndPreservesCoordinates_TST_UI_282_6() {
+        val latLngs = listOf(
+            LatLng(48.137, 11.575),
+            LatLng(48.138, 11.576)
+        )
+        val encoded = PolyUtil.encode(latLngs)
+        val cluster = WorkoutCluster(
+            id = 105L,
+            name = "Cluster With Stats",
+            probableSportId = 1L,
+            startLat = 48.137,
+            startLng = 11.575,
+            endLat = 48.138,
+            endLng = 11.576,
+            maxDispLat = 48.138,
+            maxDispLng = 11.576,
+            refDistance = 1500.0,
+            hitCount = 5,
+            routePolyline = encoded
+        )
+        val stats = WorkoutClusterStats(
+            clusterId = 105L,
+            workoutCount = 5,
+            lastHitTimestampS = 1700000000L,
+            bestDurationSec = 300L,
+            totalDistanceMeters = 7500.0,
+            totalAscentMeters = 150L
+        )
+
+        val mapCluster = cluster.toMapCluster(stats = stats)
+
+        assertNotNull(mapCluster)
+        assertEquals(stats, mapCluster!!.stats)
+        assertEquals(300L, mapCluster.stats?.bestDurationSec)
+        assertEquals(30L, mapCluster.stats?.avgAscentMeters)
+        assertEquals(2, mapCluster.latLngs.size)
     }
 }

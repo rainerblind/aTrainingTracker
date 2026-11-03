@@ -2113,6 +2113,11 @@
     <string name="cd_add_before">前に追加</string>
     <string name="cd_delete_tab">タブを削除</string>
     <string name="cd_add_after">後に追加</string>
+    <string name="cd_copy_tab">タブをコピー</string>
+    <string name="cd_move_tab_left">タブを左へ移動</string>
+    <string name="cd_move_tab_right">タブを右へ移動</string>
+    <string name="copy_tab_title">タブをコピー</string>
+    <string name="copy_tab_action">コピー</string>
     <string name="back">戻る</string>
     <string name="close">閉じる</string>
     <string name="clear">クリア</string>
@@ -2164,7 +2169,6 @@
 
     <!-- Sensor Field Width & Row Split (ATT-4861, REQ-UI-437) -->
     <string name="sensor_field_width_title">幅比率</string>
-    <string name="sensor_field_row_split_presets">行分割プリセット</string>
     <string name="sensor_field_relative_weight">相対幅</string>
 
     <!-- Zone History (ATT-4844, REQ-SET-082) -->
@@ -2184,6 +2188,7 @@
     <string name="altitude_calibration_reference_label">基準高度</string>
     <string name="altitude_calibration_location_name">場所名（省略可）</string>
     <string name="altitude_calibration_save_location">登録地点として保存</string>
+    <string name="altitude_calibration_matched_location">一致したお気に入りの場所: %1$s</string>
     <string name="altitude_calibration_action">校正</string>
     <string name="altitude_calibrated_success">高度を%1$sに校正しました</string>
 

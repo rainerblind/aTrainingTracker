@@ -173,7 +173,8 @@ class TrackingViewModelMapStateTest {
             liveSegmentsRepository = mockLiveSegmentsRepo,
             routesRepository = mockRoutesRepo,
             viewId = 1L,
-            workoutClusterRepository = mockWorkoutClusterRepo
+            workoutClusterRepository = mockWorkoutClusterRepo,
+            defaultDispatcher = testDispatcher
         ).also { createdViewModels.add(it) }
     }
 
@@ -391,6 +392,20 @@ class TrackingViewModelMapStateTest {
             routePolyline = com.google.maps.android.PolyUtil.encode(listOf(LatLng(48.1, 11.5), LatLng(48.2, 11.6)))
         )
         allClustersFlow.value = listOf(cluster)
+
+        // Part 1: Default state (no preferences stored) - CLUSTERS must be disabled by default (ATT-5074, TST-UI-282.10)
+        every { mockPrefs.getStringSet(com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrackViewModel.PREF_GENERAL_MAP_ENABLED_LAYERS, null) } returns null
+
+        val viewModelDefault = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue("Clusters must be empty by default on cockpit map (REQ-UI-322.5, ATT-5074)",
+            viewModelDefault.mapState.value.mapClusters.isEmpty())
+
+        // Part 2: Explicitly enabled - CLUSTERS populates and preserves referential identity
+        every {
+            mockPrefs.getStringSet(com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrackViewModel.PREF_GENERAL_MAP_ENABLED_LAYERS, null)
+        } returns setOf("CLUSTERS", "ROUTES", "SEGMENTS", "TRACK", "KNOWN_LOCATIONS")
 
         val viewModel = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()

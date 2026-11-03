@@ -92,7 +92,16 @@
     <string name="devices_location_GPS">GPS del teléfono (Satélite)</string>
     <string name="devices_location_Network">Ubicación del teléfono (Red/WiFi)</string>
     <string name="devices_location_GoogleFused">Ubicación de Google (Fused)</string>
-    <string name="devices_altitude_from_pressure">Presión Aire</string>
+    <string name="devices_altitude_from_pressure">Altitud por presión</string>
+
+    <!-- Specialized Altitude Devices Explanations (ATT-5073, REQ-SEN-026) -->
+    <string name="device_altitude_explanation_title">Acerca de este sensor</string>
+    <string name="device_altitude_how_it_works_header">Cómo funciona</string>
+    <string name="device_altitude_pros_cons_header">Ventajas y desventajas</string>
+    <string name="device_altitude_pressure_how_it_works">Mide la presión atmosférica con el barómetro interno. Calcula cambios de altitud relativos mediante la fórmula barométrica, calibrada en lugares conocidos o manualmente.</string>
+    <string name="device_altitude_pressure_pros_cons">+ Muy reactivo y fluido; sin ruido vertical de GPS; funciona en túneles.\n- Los cambios meteorológicos pueden provocar desviaciones con el tiempo.</string>
+    <string name="device_altitude_position_how_it_works">Compara su posición GPS con modelos de elevación digital (DEM) en caché de rutas o de Open-Meteo.</string>
+    <string name="device_altitude_position_pros_cons">+ Inmune al clima y deriva barométrica; altitud absoluta sin calibración.\n- Depende de la precisión del GPS; escalonada en puentes y desfiladeros.</string>
 
     <string name="devices_live_sensor_data_header">Datos Sensores</string>
 

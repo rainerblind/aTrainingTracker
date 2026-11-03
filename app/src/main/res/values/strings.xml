@@ -2334,6 +2334,11 @@
     <string name="cd_add_before">Add before</string>
     <string name="cd_delete_tab">Delete tab</string>
     <string name="cd_add_after">Add after</string>
+    <string name="cd_copy_tab">Copy tab</string>
+    <string name="cd_move_tab_left">Move tab left</string>
+    <string name="cd_move_tab_right">Move tab right</string>
+    <string name="copy_tab_title">Copy Tab</string>
+    <string name="copy_tab_action">Copy</string>
     <string name="back">Back</string>
     <string name="close">Close</string>
     <string name="clear">Clear</string>
@@ -2385,7 +2390,6 @@
 
     <!-- Sensor Field Width & Row Split (ATT-4861, REQ-UI-437) -->
     <string name="sensor_field_width_title">Width Ratio</string>
-    <string name="sensor_field_row_split_presets">Row Split Presets</string>
     <string name="sensor_field_relative_weight">Relative Weight</string>
 
     <!-- Zone History (ATT-4844, REQ-SET-082) -->
@@ -2405,6 +2409,7 @@
     <string name="altitude_calibration_reference_label">Reference Altitude</string>
     <string name="altitude_calibration_location_name">Location Name (optional)</string>
     <string name="altitude_calibration_save_location">Save as Known Location</string>
+    <string name="altitude_calibration_matched_location">Matched Known Location: %1$s</string>
     <string name="altitude_calibration_action">Calibrate</string>
     <string name="altitude_calibrated_success">Altitude calibrated to %1$s</string>
 

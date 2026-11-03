@@ -459,4 +459,17 @@ class TrackingViewsRepositoryTest {
             mockViewsDbManager.updateShowBikeBell(77L, false)
         }
     }
+
+    @Test
+    fun moveTabView_delegatesToViewsDbManagerAndReturnsIndex() = runBlocking {
+        val repository = TrackingViewsRepository.getInstance(mockContext)
+        every { mockViewsDbManager.moveTabView(10L, true) } returns 0
+
+        val result = repository.moveTabView(10L, true)
+
+        assertEquals(0, result)
+        verify(exactly = 1) {
+            mockViewsDbManager.moveTabView(10L, true)
+        }
+    }
 }

@@ -223,6 +223,9 @@ class TrackingTabsViewModel(
     private val _currentPage = MutableStateFlow(0)
     val currentPage: StateFlow<Int> = _currentPage.asStateFlow()
 
+    private val _copySourceTabId = MutableStateFlow<Long?>(null)
+    val copySourceTabId: StateFlow<Long?> = _copySourceTabId.asStateFlow()
+
     fun onPageSelected(page: Int) {
         _currentPage.value = page
     }
@@ -461,6 +464,40 @@ class TrackingTabsViewModel(
         }
     }
 
+    fun onMoveTab(tabViewId: Long, moveLeft: Boolean) {
+        viewModelScope.launch {
+            val newIndex = trackingViewsRepository.moveTabView(tabViewId, moveLeft)
+            if (newIndex >= 0) {
+                _navigationEvent.send(TabNavigationEvent.NavigateTo(newIndex))
+            }
+        }
+    }
+
+    fun onOpenCopyTabDialog(tabViewId: Long) {
+        _copySourceTabId.value = tabViewId
+    }
+
+    fun onDismissCopyTabDialog() {
+        _copySourceTabId.value = null
+    }
+
+    fun onConfirmCopyTab(sourceViewId: Long, targetTypes: List<ActivityType>) {
+        _copySourceTabId.value = null
+        if (targetTypes.isEmpty()) return
+
+        viewModelScope.launch {
+            val currentSportType = activityType.value
+            val currentList = trackingViews.value
+            trackingViewsRepository.copyTabView(sourceViewId, targetTypes)
+
+            // If the current profile is among the targets, navigate to the newly appended tab
+            if (targetTypes.contains(currentSportType)) {
+                val newTargetIndex = currentList.size
+                _navigationEvent.send(TabNavigationEvent.NavigateTo(newTargetIndex))
+            }
+        }
+    }
+
 
     fun onLapButtonClick() {
         trackingViewsRepository.requestNewLap()
@@ -513,7 +550,20 @@ class TrackingTabsViewModel(
         locationName: String? = null,
         saveAsKnownLocation: Boolean = false
     ) {
-        if (saveAsKnownLocation) {
+        val matched = locationCalibrationStatus.value
+        if (matched != null) {
+            viewModelScope.launch(Dispatchers.IO) {
+                val db = KnownLocationsDatabaseManager.getInstance(getApplication())
+                db.updateLocation(
+                    matched.locationId,
+                    matched.locationName,
+                    referenceAltitudeMeters,
+                    ElevationSource.MANUAL_USER,
+                    true
+                )
+                knownLocationsRepo?.loadLocations()
+            }
+        } else if (saveAsKnownLocation) {
             val location = banalServiceRepository.currentLocation.value
             if (location != null) {
                 viewModelScope.launch(Dispatchers.IO) {

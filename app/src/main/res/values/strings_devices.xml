@@ -132,7 +132,16 @@
     <string name="devices_location_GPS">Phone GPS (Satellite)</string>
     <string name="devices_location_Network">Phone Location (Cell/WiFi)</string>
     <string name="devices_location_GoogleFused">Google Location (Fused)</string>
-    <string name="devices_altitude_from_pressure">Air Pressure</string>
+    <string name="devices_altitude_from_pressure">Altitude from Pressure</string>
+
+    <!-- Specialized Altitude Devices Explanations (ATT-5073, REQ-SEN-026) -->
+    <string name="device_altitude_explanation_title">About this Sensor</string>
+    <string name="device_altitude_how_it_works_header">How it works</string>
+    <string name="device_altitude_pros_cons_header">Pros &amp; Cons</string>
+    <string name="device_altitude_pressure_how_it_works">Measures atmospheric air pressure using the internal barometer. Calculates relative elevation changes via the barometric formula, calibrated automatically at known locations or manually.</string>
+    <string name="device_altitude_pressure_pros_cons">+ Very responsive and smooth; zero GPS vertical jitter; works indoors and in tunnels.\n- Weather and atmospheric pressure changes can cause altitude drift over time.</string>
+    <string name="device_altitude_position_how_it_works">Matches your GPS position against digital elevation models (DEM) cached locally from saved routes or fetched online from Open-Meteo.</string>
+    <string name="device_altitude_position_pros_cons">+ Immune to weather and barometric drift; accurate absolute height without calibration.\n- Depends on GPS accuracy; can be stepped or inaccurate on bridges and cliffs.</string>
 
     <!-- live sensor data -->
     <string name="devices_live_sensor_data_header">Sensor Data</string>

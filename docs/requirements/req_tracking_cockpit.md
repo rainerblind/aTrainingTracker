@@ -1742,12 +1742,15 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 - If `lastValidSpeedMps != null && lastValidSpeedMps > resumeThresholdMps`: the athlete was in motion at high speed before packets ceased (e.g. tunnel entry, GPS multipath shadow, BLE wheel sensor dropout). `AutoPauseManager` SHALL transition to `AutoPauseState.SENSOR_LOST` (from `TRACKING` or `PAUSE_DEBOUNCE_PENDING`), log `auditLogEvent = "SENSOR_LOST_IN_MOTION_DROPOUT"`, and reset `debounceCounter = 0`. It SHALL NOT evaluate effective speed as `0.0 m/s` and SHALL NOT transition to `AUTO_PAUSED`.
 - If `lastValidSpeedMps == null
 
-### REQ-TRK-038: Constructor State Seeding Parity (Rule 51), Sensor-Presence Gating (Rule 52), Stationary/Paused W/kg Telemetry Alignment, and Workout Summary Presentation Defense []
-- **Tests**: maxPower != null`), shielding historical database records and hiding the Anaerobic Battery row in `WorkoutDetails` for non-power workouts (ATT-4368, refining `REQ-TRK-038.1` / `ATT-4283` and enforcing Governance Rule 52):
-1. *Constructor State Seeding Parity & Sensor-Presence Gating (`REQ-TRK-038.1` — Rule 51 & Rule 52)*:
+### REQ-TRK-038: Constructor State Seeding Parity (Rule 51), Telemetry-Gated W'bal Emission (Rule 52), Stationary/Paused W/kg Alignment, and Aftermath Presentation Defense [Verified]
+- **Tests**: `TST-TRK-031`
+- **Implementation**: `CyclingPowerMetricsDevice.java`, `TelemetryMetricUtils.kt`, `WorkoutDataMapper.kt`
+- **Rationale**: The system SHALL maintain internal constructor and session reset capacity parity in `CyclingPowerMetricsDevice` (Rule 51) while strictly gating `W_PRIME_BAL` sensor emissions and pause reconstitution on the receipt of actual numeric power telemetry (Rule 52) to prevent persisting phantom 20.0 kJ samples on power-less bike workouts with offline/paired sensors, and SHALL gate aftermath W'-Bilanz chart rendering in `TelemetryMetricUtils.hasWPrimeBalData()` on `hasPowerData(path)` (ATT-5068, refining `REQ-TRK-038` and `REQ-UI-399.3`):
+1. *Constructor State Seeding Parity & Telemetry-Gated W'bal Emission (`REQ-TRK-038.1` — Rule 51 & Rule 52)*:
 • `CyclingPowerMetricsDevice` constructors SHALL invoke `resetSession()` (or seed baseline capacity identically) upon instantiation, ensuring internal capacity state parity (Rule 51).
 • When `resolveEffectiveCpWatts() > 0 && mWPrimeKjProvider.getWPrimeKj(mContext) > 0.0f`, internal accumulator `mCurrentWPrimeBalJoules` SHALL be initialized to `wPrimeKj * 1000.0`.
-• `CyclingPowerMetricsDevice` SHALL evaluate `mMySensorManager != null && mMySensorManager.getSensor(SensorType.POWER) != null`. If and only if a power sensor is present, `mWPrimeBalSensor.newValue((double) wPrimeKj)` SHALL be published immediately on device creation (Rule 51). If no power sensor is present, `mWPrimeBalSensor.newValue(null)` SHALL be published (Rule 52), preventing `TrackerService` from recording phantom `W_PRIME_BAL` extrema.
+• In `resetSession()`, `mWPrimeBalSensor.newValue(null)` SHALL be emitted unconditionally, regardless of whether a paired `SensorType.POWER` is registered, preventing `TrackerService` from recording phantom `W_PRIME_BAL` extrema before active power telemetry arrives (Rule 52).
+• In `calculateMetrics()`, `mWPrimeBalSensor.newValue(...)` SHALL be emitted if and only if actual valid numeric power telemetry (`power >= 0.0`) has been received in the active session (`mActivePowerDurationSec > 0`).
 • When $CP \le 0$ or $W' \le 0.0\text{f}$, `mCurrentWPrimeBalJoules` SHALL be initialized to `null` and `mWPrimeBalSensor.newValue(null)` emitted.
 2. *Stationary & Paused W/kg Alignment (`REQ-TRK-038.2`)*:
 • In `calculateMetrics()`, when `isSuspended == true` (Auto-Pause or Manual Pause), the engine SHALL retrieve instantaneous power (falling back to raw sensor data) and athlete weight `athleteWeightKg`.
@@ -1755,8 +1758,13 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • When `athleteWeightKg <= 0.0f` (unconfigured), `mPowerToWeightSensor.newValue(null)` SHALL be published.
 • Continuously updating `mPowerToWeightSensor` during pause prevents `TimedMovingAverageFilter` (3-second window) from starving and purging all samples, ensuring `W/kg (3 sec Ø)` displays `0.0 W/kg` (or `0,0 W/kg`) alongside `0 W` instead of expiring to `-- W/kg`.
 3. *Transient Dropout Resilience for W'bal & Cumulative Metrics (`REQ-TRK-038.3`)*:
-• In `calculateMetrics()`, when `power == null
-- **Rationale**: `CyclingPowerMetricsDevice` (`app/src/main/java/com/atrainingtracker/banalservice/devices/CyclingPowerMetricsDevice.java`) SHALL seed initial anaerobic capacity ($W'_{\text{bal}}$ in kJ) upon constructor instantiation to guarantee constructor state parity with `resetSession()` (Rule 51), while strictly gating $W'_{\text{bal}}$ sensor emissions (`mWPrimeBalSensor.newValue`) on the presence of an active power sensor (`SensorType.POWER`) in `MySensorManager` (Rule 52) to prevent persisting phantom `W_PRIME_BAL` extrema rows on non-power activities, update instantaneous power-to-weight ratio ($W/\text{kg}$) during recording suspension so stationary and paused $W/\text{kg}$ telemetry aligns with smoothed power ($0\text{ W} \iff 0.0\text{ W/kg}$) without expiring to `"-- W/kg"`, preserve $W'_{\text{bal}}$ balance and session-cumulative metrics against destructive null overwriting during transient 1-second power sample dropouts, AND `WorkoutDataMapper` SHALL gate aftermath $W'_{\text{bal}}$ summary derivation across both single and batch mapping pathways (Rule 20) on the presence of recorded power telemetry (`avgPower != null
+• In `calculateMetrics()`, when `power == null || Double.isNaN(power) || Double.isInfinite(power) || power < 0.0` during an active non-suspended session, the engine SHALL NOT publish `null` to `mWPrimeBalSensor`, `mNormalizedPowerSensor`, `mIntensityFactorSensor`, or `mTssSensor`, preserving existing session values for `TrackingViewModel` staleness timeout.
+4. *Cumulative Metric Pause Invariant & Suspended W'bal Reconstitution Gating (`REQ-TRK-038.4` — Rule 52)*:
+• While `isSuspended == true`, Normalized Power (NP), Mechanical Work (kJ), Intensity Factor (IF), and Training Stress Score (TSS) SHALL remain strictly gated and SHALL NOT accumulate, integrate work, or advance FIFO samples.
+• $W'_{\text{bal}}$ exponential reconstitution at $P = 0.0\text{ W}$ during pause SHALL step and publish to `mWPrimeBalSensor` if and only if `mCurrentWPrimeBalJoules != null` AND actual numeric power telemetry has been received in the active session (`mActivePowerDurationSec > 0`). If no power samples were received prior to pause, `mWPrimeBalSensor` SHALL remain `null`.
+5. *Aftermath Presentation Defense & Chart Power Gating (`REQ-TRK-038.5` — Rule 20, Rule 52 & REQ-UI-399.3)*:
+• In `TelemetryMetricUtils.kt`, `hasWPrimeBalData(path)` SHALL evaluate `hasPowerData(path) && path.any { it.wPrimeBalKj != null && it.wPrimeBalKj >= 0.0 }`, suppressing phantom flat-line W'-Bilanz charts in `MapDetailLayout`, `TrackOnMapScreen`, and `WorkoutSummary` on workouts lacking power telemetry.
+• In `WorkoutDataMapper.kt`, `resolveWPrimeBalSummary()` SHALL continue to gate `minWPrimeBalKj` and `minWPrimeBalPct` on `hasPowerData`.
 
 ### REQ-FIL-014: Backend Filter Key Normalization, Runtime 'Best Sensor' Field Registration & Post-Trim Rolling Filter NaN Guard [`TST-FIL-014`]
 - **Tests**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/editsensorfield/EditSensorFieldViewModel.kt`, `app/src/main/java/com/atrainingtracker/banalservice/filters/TimedMovingAverageFilter.java`
@@ -2255,14 +2263,22 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 
 ### REQ-TRK-047: Cockpit Manual Altitude Calibration with Permanent Known Location Persistence and Retroactive Piecewise-Linear Drift Correction [Verified]
-- **Tests**: `TST-TRK-047` | **Tickets**: `ATT-4845`
+- **Tests**: `TST-TRK-047` | **Tickets**: `ATT-4845`, `ATT-5072`
 - **Implementation**: `SensorSourceDialog.kt`, `SensorStatus.kt`, `AltitudeFromPressureDevice.java`, `TrackerService.java`, `LiveWorkoutSession.java`, `WorkoutSamplesDatabaseManager.java`, `WorkoutSummariesDatabaseManager.java`, `BANALServiceRepository.kt`, `KnownLocationsDatabaseManager.java`
 - **Rationale**: When passing a landmark with known altitude during outdoor workouts, athletes SHALL be able to trigger manual altimeter calibration from the tracking cockpit altitude icon, permanently persist the landmark to Known Locations (`KnownLocations.db`), and apply retroactive elevation history correction without step discontinuities or false ascent/descent spikes (ATT-4845, Parent Epic ATT-166, extending `REQ-UI-199` and `REQ-CON-017`):
 1. *Cockpit Header Manual Altitude Calibration & Geofence Persistence (`REQ-TRK-047.1`)*:
 • When tapping the `SensorType.ALTITUDE` sensor icon in the tracking header (`SensorStatus`), `SensorSourceDialog.kt` SHALL render a dedicated "Calibrate Altitude" input section.
 • The reference altitude input SHALL pre-fill with the current altitude reading formatted in the athlete's configured unit (`m` or `ft`) via canonical `AltitudeFormatter` per Rule 36.
-• The dialog SHALL provide an optional location name field (defaulting to reverse-geocoded or coordinate label) and a toggle to save to Known Locations.
-• When confirmed with save enabled, the system SHALL persist `(current LatLng, referenceAltitudeMeters, name)` to `KnownLocationsDatabaseManager` with `ElevationSource.MANUAL_USER` and `isLocked = true` so subsequent passes auto-calibrate automatically.
+• When not at a matched known location (`matchedKnownLocation == null`):
+  - The "Als Lieblingsort speichern" (*Save as Known Location*) checkbox SHALL be unchecked (`false`) by default (ATT-5072).
+  - The location name text input field SHALL be conditionally displayed and enabled only when the "Save as Known Location" checkbox is checked (`true`).
+  - When confirmed with save unchecked, the system SHALL dispatch altimeter calibration directly without persisting to `KnownLocations.db`.
+  - When confirmed with save checked, the system SHALL persist `(current LatLng, referenceAltitudeMeters, name)` to `KnownLocationsDatabaseManager` with `ElevationSource.MANUAL_USER` and `isLocked = true`.
+• When at a matched known location (`matchedKnownLocation != null`):
+  - The dialog SHALL display the matched location name.
+  - The redundant "Save as Known Location" checkbox and new location name input field SHALL be hidden.
+  - The reference altitude input SHALL pre-fill with the matched location's stored reference altitude.
+  - When confirmed, the system SHALL update the existing `KnownLocations.db` record with the calibrated elevation (`ElevationSource.MANUAL_USER`, `isLocked = true`) and dispatch altimeter calibration.
 • The system SHALL dispatch immediate calibration to `AltitudeFromPressureDevice.calibrate(referenceAltitudeMeters)` via `BANALServiceRepository.calibrateAltimeter`.
 2. *Retroactive Workout History Elevation Correction (`REQ-TRK-047.2`)*:
 • Let $t_1$ be the current calibration timestamp, $h_{\text{ref}}$ the target reference elevation, $h_{\text{baro}}(t_1)$ the pre-calibration altitude reading, and $\Delta h = h_{\text{ref}} - h_{\text{baro}}(t_1)$.
@@ -2377,9 +2393,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 
 ### REQ-TRK-049: Post-Workout State Cleansing, Breadcrumb Purge & Idle Service Dormancy [Verified]
-- **Tests**: `TST-TRK-049` | **Tickets**: `ATT-4926`
-- **Implementation**: `TrainingApplication.java`, `BANALServiceRepository.kt`, `MainActivityWithNavigation.kt`, `MyAccumulatorSensor.java`, `InstantaneousFilter.java`
-- **Rationale**: When an athlete completes or stops a workout and re-enters the app in `TrackingMode.READY`, lingering historical polylines, elevation profiles, and accumulator values create a confusing UI and cause phantom metric accumulation during idle periods. Clearing breadcrumbs on workout stop/abort, normalizing the service binding lifecycle, gating accumulator sensors to active tracking, and dispatching zero-value resets ensures a clean slate for upcoming sessions (ATT-4926, Parent Epic ATT-355, extending `REQ-TRK-001`, `REQ-TRK-002`, and refining `REQ-FIL-013`):
+- **Tests**: `TST-TRK-049` | **Tickets**: `ATT-4926`, `ATT-5080`
+- **Implementation**: `TrainingApplication.java`, `BANALServiceRepository.kt`, `MainActivityWithNavigation.kt`, `MyAccumulatorSensor.java`, `InstantaneousFilter.java`, `FilterManager.java`, `DefaultStringFormatter.java`, `SensorData.java`, `TrackingViewModel.kt`
+- **Rationale**: When an athlete completes or stops a workout and re-enters the app in `TrackingMode.READY`, lingering historical polylines, elevation profiles, and accumulator values create a confusing UI and cause phantom metric accumulation during idle periods. Clearing breadcrumbs on workout stop/abort, normalizing the service binding lifecycle, gating accumulator sensors to active tracking, dispatching zero-value resets, re-seeding accumulator filters from baseline values, and guarding against null formatted strings ensures a clean, crash-free slate for upcoming sessions (ATT-4926, ATT-5080, Parent Epic ATT-355, extending `REQ-TRK-001`, `REQ-TRK-002`, and refining `REQ-FIL-013`):
 1. *Map & Elevation Breadcrumb Cleansing (`REQ-TRK-049.1`)*:
 • `TrainingApplication` SHALL invoke `BANALServiceRepository.clearBreadcrumbs()` in `stopTracking()`, `trackingStopped()`, and `onTrackingAborted()`.
 • `BANALServiceRepository` SHALL clear `_currentTrack` and `_currentPathPoints` upon entering `TrackingMode.READY`.
@@ -2391,12 +2407,17 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 4. *Reset Notification & Filter Cache Invalidation (`REQ-TRK-049.4`)*:
 • `MyAccumulatorSensor.reset()` SHALL notify all registered `mSensorListeners` with `mZeroValue`.
 • `InstantaneousFilter.java` SHALL override `reset()` to invalidate cached telemetry on `FilterManager.resetAllFilters()`.
+• In `FilterManager.resetAllFilters()`, the system SHALL re-seed filters mapped to `MyAccumulatorSensor` with `sensor.getValue()` (`mZeroValue`, e.g. `0` -> `0:00:00`, `0.00`, etc.), ensuring accumulator fields retain their baseline zero values instead of displaying `--:--:--` on workout stop (ATT-5080).
+5. *Non-Null Formatter Fallback & Null-Safety Defenses (`REQ-TRK-049.5`)*:
+• `DefaultStringFormatter.format(String value)` SHALL return `"--"` instead of `null` when `value == null`, aligning with numeric formatters.
+• In `SensorData.java`, `getStringValue()` SHALL return `"--"` when `mStringValue` is null.
+• In `TrackingViewModel.applySensorData()`, `newFormattedValue` SHALL guard against Java nulls (`sensorData.stringValue ?: "--"`), preventing fatal `NullPointerException` crashes during Compose state updates (ATT-5080).
 
-**Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-049`, extending `REQ-TRK-001` (Start/Stop Lifecycle), `REQ-TRK-002` (Lap Lifecycle), and refining `REQ-FIL-013` (Session Reset Isolation). Targets `TrainingApplication.java`, `BANALServiceRepository.kt`, `MainActivityWithNavigation.kt`, `MyAccumulatorSensor.java`, and `InstantaneousFilter.java`.
-2. *Historical Origin & Commit Trace*: Commit `d937073c` and `ATT-3222` introduced filter reset protocol but omitted `InstantaneousFilter`. Commit `a6920388` introduced Compose tracking tabs where repeated `onResume()` binds bypassed the single-bind assumption.
-3. *Root Reason for Existing Formulation*: Breadcrumb clearing was originally deferred to `startTracking()` to preserve visual map context immediately after stopping; however, with modern multi-tab navigation, this causes stale paths and non-zero readouts when reopening the app.
-4. *Preservation of Core Invariants*: Active workout tracking, auto-pause behavior, and pre-start live rolling sensor readouts (HR, cadence, instantaneous power) are preserved per `REQ-FIL-013`.
+### Requirement Archaeology & Chesterton's Fence Audit
+1. *Original Requirement ID & Target*: Amends `REQ-TRK-049.4` (*Reset Notification & Filter Cache Invalidation*) and `REQ-FIL-013` (*Session Reset Isolation*), Parent Epic `ATT-355`. Targets `FilterManager.java`, `DefaultStringFormatter.java`, `SensorData.java`, and `TrackingViewModel.kt`.
+2. *Historical Origin & Commit Trace*: Traced to `080d68c3` (ATT-4926, Sprint 2026-44.2), which introduced `InstantaneousFilter.reset() { mValue = null; }` to eliminate stale workout readouts, but inadvertently wiped accumulator zero values and exposed `DefaultStringFormatter`'s null return.
+3. *Root Reason for Existing Formulation*: ATT-4926 intended to clear lingering historical metrics upon workout completion, but did not distinguish between stateless live metrics (which should clear to null/dash) and cumulative metrics (which have a defined baseline `mZeroValue`).
+4. *Preservation of Core Invariants*: Stale live telemetry from disconnected sensors continues to clear to `--`; accumulators reliably display baseline zeroes (`0:00:00`, `0.00 km`, `1`) in `READY` mode; zero NPE crashes on Compose state updates.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an active workout with map breadcrumbs and elevation points,
@@ -2405,9 +2426,12 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Given* the app running in `TrackingMode.READY`,
 • *When* background timer ticks or location updates arrive,
 • *Then* accumulator sensors do not increment.
-• *Given* accumulator sensors with non-zero historical totals,
-• *When* session reset is triggered,
-• *Then* zero values are published to listeners and filter caches are cleared.
+• *Given* an active workout with accumulator sensors running,
+• *When* the workout is stopped and `resetAllFilters()` executes,
+• *Then* accumulator fields display baseline zero values (`0:00:00`, `0.00 km`, `1`) in `TrackingMode.READY` instead of `--:--:--`.
+• *Given* string-valued sensor data with null value during filter reset,
+• *When* `applySensorData()` processes the update in `TrackingViewModel`,
+• *Then* `newFormattedValue` falls back to `"--"` and Compose state updates proceed without `NullPointerException`.
 
 **Invariants**: Unaffected active tracking and auto-pause, continuous pre-start live rolling sensor display (HR, power, cadence), and 100% clean-room test pass rate.
 
@@ -2451,6 +2475,78 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Then* $C_{\text{baseline}}$ is saved to `Devices.db` matching the current wheel circumference.
 
 **Invariants**: Zero mutation of raw wheel speed and distance accumulators, fresh install (`onCreate`) vs upgrade (`onUpgrade`) schema parity in `Devices.db`, zero cornering false positives, and 100% clean-room test pass rate.
+
+
+### REQ-SEN-026: Specialized Altitude Devices: Barometric Altimeter Naming Parity, Idempotent SQLite Migration & Educational Operation Details [Verified]
+- **Tests**: `TST-SEN-026` | **Tickets**: `ATT-5073`
+- **Implementation**: `strings_devices.xml` (all 9 locales), `strings.xml` (all 9 locales), `DevicesDatabaseManager.java`, `EditDeviceDialog.kt`
+- **Rationale**: Following the introduction of `ALTITUDE_FROM_POSITION` ("Topografische Höhe (DEM)"), the internal barometric altimeter (`ALTITUDE_FROM_PRESSURE`) remained named simply "Luftdruck" ("Air Pressure") via `R.string.devices_altitude_from_pressure`, creating a naming asymmetry and confusing athletes about what the sensor produces. Furthermore, athletes in the device details bottom sheet (`EditDeviceDialog.kt`) have no visibility into how specialized altitude devices work or their respective advantages and disadvantages (e.g. barometer smooth relative ascent vs. weather drift; DEM weather immunity vs. grid resolution) (ATT-5073, Parent Epic ATT-166, complementing `REQ-SEN-025` and `REQ-UI-149`):
+1. *Barometric Altimeter Naming Parity Across 9 Locales (`REQ-SEN-026.1`)*:
+• The system SHALL rename `devices_altitude_from_pressure` across all 9 supported application locales to reflect its functional role as an altitude sensor ("Höhe aus Luftdruck" in DE, "Altitude from Pressure" in EN, and equivalents in ES, FR, IT, JA, NL, PL, PT).
+2. *Idempotent SQLite Default Name Migration (`REQ-SEN-026.2`)*:
+• In `DevicesDatabaseManager`, the system SHALL execute an idempotent migration updating existing `ALTITUDE_FROM_PRESSURE` records in `Devices.db` whose name matches any known legacy default name ("Luftdruck", "Air Pressure", etc.) to the new localized string resource.
+• Any custom user-edited device name MUST NOT be overwritten or modified.
+3. *Educational Operation & Trade-Offs Details in EditDeviceDialog (`REQ-SEN-026.3`)*:
+• When viewing `EditDeviceDialog.kt` for `DeviceType.ALTITUDE_FROM_PRESSURE` or `DeviceType.ALTITUDE_FROM_POSITION`, the dialog SHALL display an educational `OutlinedCard` detailing:
+  a. "How it works" (`device_altitude_how_it_works_header`): Explanation of barometric formula + calibration vs. GPS position + DEM topographic grid matching.
+  b. "Pros & Cons" (`device_altitude_pros_cons_header`): Unbiased trade-offs (+ smooth relative response, zero vertical GPS jitter / - weather drift for barometer; + weather immunity, absolute height / - GPS accuracy dependency, bridge/cliff stepped response for DEM).
+4. *100% 9-Language Parity & M3 Typography (`REQ-SEN-026.4`)*:
+• All explanation strings SHALL maintain 100% translation parity across all 9 locales with literal `\n` linebreaks.
+• The card SHALL use Material 3 semantic color tokens (`surfaceVariant`, `onSurfaceVariant`) with accessible contrast.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-SEN-026`, extending `REQ-SEN-025` (*Pairable Position-Based Elevation Sensor*) and `REQ-UI-149` (*Modernized Modal Bottom Sheet Dialogs & Selection Flows*). Targets `strings_devices.xml`, `strings.xml`, `DevicesDatabaseManager.java`, and `EditDeviceDialog.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-45.1 (`ATT-5073`). Builds on `ATT-4859` (`REQ-SEN-025`, Sprint 2026-44.2).
+3. *Root Reason for Existing Formulation*: "Luftdruck" was inherited from the initial ANT+/BLE sensor stack. `EditDeviceDialog.kt` focused solely on hardware sensors with calibration parameters (wheel circumference), omitting educational guidance for virtual/internal sensors.
+4. *Preservation of Core Invariants*: Custom device names in `Devices.db` strictly preserved; sensor data delivery, calibration dispatch, and 100% test pass rate across all 9 locales remain invariant.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an existing user upgrade with default-named `ALTITUDE_FROM_PRESSURE` in `Devices.db`,
+• *When* the database is opened,
+• *Then* the device name updates to "Höhe aus Luftdruck" (or language equivalent), while custom user renames remain unmodified.
+• *Given* an athlete opening `EditDeviceDialog` for `ALTITUDE_FROM_PRESSURE` or `ALTITUDE_FROM_POSITION`,
+• *When* the dialog renders,
+• *Then* an educational card displays "How it works" and "Pros & Cons" explaining the sensor's measurement mechanism and trade-offs.
+
+**Invariants**: Custom device names preserved, sensor data delivery unchanged, 100% 9-language translation parity, zero crash on null device data.
+
+
+### REQ-TRK-051: Dynamic SQLite Schema Discovery via PRAGMA table_info & Decoupled Summary Telemetry [Verified]
+- **Tests**: `TST-TRK-051` | **Tickets**: `ATT-4968`
+- **Implementation**: `TrackerService.java`, `TrackOnMapAftermathViewModel.kt`
+- **Rationale**: During workouts on Android $\le 14$ (API $\le 34$), `SQLiteConnection.mPreparedStatementCache` caches compiled statements across transactions and does NOT invalidate them upon dynamic `ALTER TABLE ... ADD COLUMN` DDL. In `TrackerService.handleMissingColumns()`, querying via `samplesDb.query(tableName, null, null, null, null, null, null, "1")` returns a stale cached cursor missing newly added columns, causing false negatives in column existence checks and throwing `SQLiteException: duplicate column name` on subsequent ticks. Additionally, in `TrackerService.sampleAndWriteToDb()`, an abort guard `if (!sampleInserted) return;` prematurely halts execution upon sample insert failures, freezing `WorkoutSummaries.db` updates (duration, distance, energy) at 1 second and 0.00 km. In `TrackOnMapAftermathViewModel`, Phase 4 overwrites valid multi-point summary fast tracks with single-point sample tracks. Formulating `PRAGMA table_info` schema inspection, decoupling live summary updates from sample write failures, and gating map track replacement ensures continuous, fault-tolerant workout recording across all Android API levels (ATT-4968, Parent Epic ATT-115, extending `REQ-TRK-026`, `REQ-TRK-029`, and `REQ-DAT-033`):
+1. *Uncached Real-Time Schema Discovery via PRAGMA table_info (`REQ-TRK-051.1`)*:
+• In `TrackerService.java`, `handleMissingColumns()` SHALL discover existing table columns using `PRAGMA table_info("<tableName>")` instead of `samplesDb.query(..., "1")`.
+• `PRAGMA table_info` results SHALL be queried and mapped into a case-insensitive `Set<String>` (with a synchronized per-table in-memory set cache), guaranteeing real-time schema visibility immune to `SQLiteConnection.mPreparedStatementCache` staleness across all Android versions (API 26–36).
+2. *Decoupled Summary Persistence & Fault-Tolerant Recording (`REQ-TRK-051.2`)*:
+• In `TrackerService.sampleAndWriteToDb()`, if a sample insert into `WorkoutSamples.db` fails (`sampleInserted == false`), the service SHALL log a rate-limited warning and increment an atomic error counter (`mSampleInsertFailureCount`), but SHALL NOT abort execution (`return;`).
+• The service SHALL proceed unconditionally to update `WorkoutSummaries.db` (`updateWorkoutSummary()`) with current elapsed time, active time, distance, and live extrema, preventing summary freeze.
+3. *Map Polyline Fallback Protection in Track Inspection (`REQ-TRK-051.3`)*:
+• In `TrackOnMapAftermathViewModel.kt`, Phase 4 (loading detailed sample tracks from `WorkoutSamples.db`) SHALL verify that the loaded tracks contain at least two coordinate points (`fullTracks.any { it.path.size >= 2 }`) before replacing `_uiState.value.tracks`.
+• If `fullTracks` has fewer than 2 valid points, the system SHALL retain the multi-point `fastTrack` loaded from summary `mapPolyline`.
+4. *Transaction Integrity & Service Stability (`REQ-TRK-051.4`)*:
+• Foreground service thread execution, SQLite transaction boundaries, and rate-limited logging SHALL remain 100% resilient with zero unhandled exceptions.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-TRK-029` (*Safe SQLite Column Escaping & Sample Insert Telemetry*) and `REQ-DAT-033` (*Fast-Track Map Telemetry*), Parent Epic `ATT-115`. Targets `TrackerService.java` and `TrackOnMapAftermathViewModel.kt`.
+2. *Historical Origin & Commit Trace*: `ATT-3980` introduced dynamic column addition via `handleMissingColumns()`; `ATT-3985` added column escaping; commit `f4650d74` added `if (!sampleInserted) return;` in `TrackerService.java`.
+3. *Root Reason for Existing Formulation*: `query(..., "1")` was assumed to return an updated cursor reflecting recent DDL alterations; `if (!sampleInserted) return;` was intended to avoid updating summaries when sample inserts failed under the assumption that sample insert failures were fatal.
+4. *Preservation of Core Invariants*: Dynamic sensor additions (mid-ride slope, pace, cadence, power), double-quoted column escaping, rate-limited logging, and summary transaction finalization remain strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an active workout on Android <= 14 (API <= 34) where dynamic sensor columns (e.g. `SLOPE`, `PACE`) join on Tick 2+,
+• *When* `handleMissingColumns()` inspects existing columns,
+• *Then* `PRAGMA table_info` reflects previously added columns accurately, preventing duplicate `ALTER TABLE ... ADD COLUMN` executions and `SQLiteException`.
+• *Given* an isolated sample insert failure in `WorkoutSamples.db`,
+• *When* `sampleAndWriteToDb()` executes,
+• *Then* the failure is logged with rate-limiting, and `WorkoutSummaries.db` continues to update duration and distance without freezing.
+• *Given* a workout completed with few sample points (< 2) but a valid multi-point `mapPolyline` in summary,
+• *When* `TrackOnMapAftermathViewModel` Phase 4 loads sample tracks,
+• *Then* the multi-point `fastTrack` is preserved and remains visible on the map.
+
+**Invariants**: Zero service crashes, transaction boundary safety, rate-limited logging, and 100% clean-room test pass rate.
+
+
 
 
 

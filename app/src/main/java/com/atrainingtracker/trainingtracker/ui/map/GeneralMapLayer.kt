@@ -27,5 +27,19 @@ enum class GeneralMapLayer {
     SEGMENTS,
     KNOWN_LOCATIONS,
     TRACK,
-    CLUSTERS
+    CLUSTERS;
+
+    companion object {
+        /**
+         * Default enabled layers for fresh installations or unconfigured preferences (REQ-UI-322).
+         * Excludes [CLUSTERS] to prevent visual map clutter until explicitly toggled by the athlete (ATT-5074).
+         */
+        @JvmField
+        val DEFAULT_ENABLED: Set<GeneralMapLayer> = setOf(
+            ROUTES,
+            SEGMENTS,
+            KNOWN_LOCATIONS,
+            TRACK
+        )
+    }
 }

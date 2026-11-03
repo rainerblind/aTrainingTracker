@@ -27,7 +27,7 @@ import java.io.File
 
 /**
  * Unit verification suite for [SensorSourceDialog] altitude calibration section
- * and conversion contracts (REQ-TRK-047, TST-TRK-047.1, TST-TRK-047.5).
+ * and conversion contracts (REQ-TRK-047, REQ-TRK-047.1, TST-TRK-047.1, TST-TRK-047.5, TST-TRK-047.6, TST-TRK-047.7).
  */
 class SensorSourceDialogAltitudeCalibrationTest {
 
@@ -68,6 +68,38 @@ class SensorSourceDialogAltitudeCalibrationTest {
         assertTrue(
             "SensorSourceDialog must include calibrate action button",
             content.contains("R.string.altitude_calibration_action")
+        )
+    }
+
+    @Test
+    fun testContract_SensorSourceDialogKnownLocationDefaultsAndMatching() {
+        assertTrue("SensorSourceDialog.kt must exist", sourceFile.exists())
+        val content = sourceFile.readText()
+
+        // REQ-TRK-047.1 / TST-TRK-047.6 & TST-TRK-047.7 checks
+        assertTrue(
+            "SensorSourceDialog must accept matchedLocation parameter",
+            content.contains("matchedLocation: LocationCalibrationStatus? = null")
+        )
+        assertTrue(
+            "SensorSourceDialog must default saveLocation to false (unchecked by default)",
+            content.contains("var saveLocation by remember { mutableStateOf(false) }")
+        )
+        assertTrue(
+            "SensorSourceDialog must conditionally render save location toggle when matchedLocation is null",
+            content.contains("if (matchedLocation == null)")
+        )
+        assertTrue(
+            "SensorSourceDialog must conditionally render locationNameInput only when saveLocation is true",
+            content.contains("if (saveLocation)")
+        )
+        assertTrue(
+            "SensorSourceDialog must display matched location badge using canonical string",
+            content.contains("R.string.altitude_calibration_matched_location")
+        )
+        assertTrue(
+            "SensorSourceDialog initial altitude must prefer matchedLocation reference altitude",
+            content.contains("matchedLocation?.referenceAltitude ?: currentAltitude")
         )
     }
 

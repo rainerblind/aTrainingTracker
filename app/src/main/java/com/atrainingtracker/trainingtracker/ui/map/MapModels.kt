@@ -30,6 +30,7 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.climbs.Climb
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterStats
 import com.atrainingtracker.trainingtracker.routes.RouteWaypoint
 import com.atrainingtracker.trainingtracker.segments.SegmentWithPath
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
@@ -328,6 +329,7 @@ data class MapCluster(
     override val bSportType: BSportType,
     val hitCount: Int,
     val refDistance: Double,
+    val stats: WorkoutClusterStats? = null,
     override val path: List<PathPoint> = emptyList(),
     override val minLat: Double? = null,
     override val minLng: Double? = null,
@@ -351,7 +353,8 @@ private val sClusterLatLngCache = java.util.concurrent.ConcurrentHashMap<String,
  * with referential coordinate memoization per REQ-MAP-051.2.
  */
 fun WorkoutCluster.toMapCluster(
-    cache: java.util.concurrent.ConcurrentMap<String, List<LatLng>> = sClusterLatLngCache
+    cache: java.util.concurrent.ConcurrentMap<String, List<LatLng>> = sClusterLatLngCache,
+    stats: WorkoutClusterStats? = null
 ): MapCluster? {
     val repPolyline = this.routePolyline?.takeIf { it.isNotEmpty() } ?: this.previewPaths.firstOrNull() ?: return null
     val latLngList = cache.computeIfAbsent(repPolyline) { poly ->
@@ -369,6 +372,7 @@ fun WorkoutCluster.toMapCluster(
         bSportType = this.bSportType,
         hitCount = this.hitCount,
         refDistance = this.refDistance,
+        stats = stats,
         minLat = this.minLat,
         minLng = this.minLng,
         maxLat = this.maxLat,

@@ -2133,6 +2133,11 @@
     <string name="cd_add_before">Ervóór toevoegen</string>
     <string name="cd_delete_tab">Tabblad verwijderen</string>
     <string name="cd_add_after">Erna toevoegen</string>
+    <string name="cd_copy_tab">Tabblad kopiëren</string>
+    <string name="cd_move_tab_left">Tabblad naar links verplaatsen</string>
+    <string name="cd_move_tab_right">Tabblad naar rechts verplaatsen</string>
+    <string name="copy_tab_title">Tabblad kopiëren</string>
+    <string name="copy_tab_action">Kopiëren</string>
     <string name="back">Terug</string>
     <string name="close">Sluiten</string>
     <string name="clear">Wissen</string>
@@ -2184,7 +2189,6 @@
 
     <!-- Sensor Field Width & Row Split (ATT-4861, REQ-UI-437) -->
     <string name="sensor_field_width_title">Breedteverhouding</string>
-    <string name="sensor_field_row_split_presets">Rijverdeling voorinstellingen</string>
     <string name="sensor_field_relative_weight">Relatieve breedte</string>
 
     <!-- Zone History (ATT-4844, REQ-SET-082) -->
@@ -2204,6 +2208,7 @@
     <string name="altitude_calibration_reference_label">Referentiehoogte</string>
     <string name="altitude_calibration_location_name">Locatienaam (optioneel)</string>
     <string name="altitude_calibration_save_location">Opslaan als bekende locatie</string>
+    <string name="altitude_calibration_matched_location">Herkende bekende locatie: %1$s</string>
     <string name="altitude_calibration_action">Kalibreren</string>
     <string name="altitude_calibrated_success">Hoogte gekalibreerd naar %1$s</string>
 

@@ -148,6 +148,7 @@ class HardcodedStringsAndUnitsContractTest {
         assertTrue("TrackingTabConfigHeader must use cd_add_before", tabConfigHeader.contains("R.string.cd_add_before"))
         assertTrue("TrackingTabConfigHeader must use cd_delete_tab", tabConfigHeader.contains("R.string.cd_delete_tab"))
         assertTrue("TrackingTabConfigHeader must use cd_add_after", tabConfigHeader.contains("R.string.cd_add_after"))
+        assertTrue("TrackingTabConfigHeader must use cd_copy_tab", tabConfigHeader.contains("R.string.cd_copy_tab"))
 
         val clusterTuning = loadSource("app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/ClusterTuningScreen.kt")
         assertTrue("ClusterTuningScreen must use back resource", clusterTuning.contains("R.string.back"))

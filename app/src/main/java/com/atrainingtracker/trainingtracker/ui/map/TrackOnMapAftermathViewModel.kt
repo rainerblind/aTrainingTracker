@@ -213,10 +213,16 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
                 } else null
             }
 
+            val hasValidSampleTrack = fullTracks.any { it.path.size >= 2 }
             if (fullTracks.isNotEmpty()) {
                 withContext(Dispatchers.Main) {
+                    val tracksToSet = if (hasValidSampleTrack || _uiState.value.tracks.isEmpty()) {
+                        fullTracks
+                    } else {
+                        _uiState.value.tracks
+                    }
                     _uiState.value = _uiState.value.copy(
-                        tracks = fullTracks,
+                        tracks = tracksToSet,
                         availableTrackTypes = fullTracks.map { it.type }.toSet()
                     )
                 }
