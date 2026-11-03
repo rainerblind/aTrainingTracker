@@ -337,7 +337,9 @@ class WorkoutRepository private constructor(private val application: Application
     data class WorkoutDetailTelemetry(
         val tracks: Map<TrackType, List<PathPoint>>,
         val hrZoneDistribution: ZoneDistributionData?,
-        val powerZoneDistribution: ZoneDistributionData?
+        val powerZoneDistribution: ZoneDistributionData?,
+        val hrThresholds: HeartRateZoneThresholds? = null,
+        val powerThresholds: PowerZoneThresholds? = null
     )
 
     private fun getExistingColumns(db: android.database.sqlite.SQLiteDatabase, tableName: String): Set<String> {
@@ -568,7 +570,25 @@ class WorkoutRepository private constructor(private val application: Application
     }
 
     /**
-     * Calculates the 5-zone heart rate distribution for a workout from stored samples.
+     * Resolves the workout start timestamp in milliseconds from WorkoutSummaries (REQ-SET-082.3).
+     */
+    internal fun getWorkoutStartTimeMs(workoutId: Long): Long {
+        val dateStr = summariesManager.getString(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START)
+        if (!dateStr.isNullOrBlank()) {
+            try {
+                val format = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.ROOT).apply {
+                    timeZone = java.util.TimeZone.getTimeZone("UTC")
+                }
+                return format.parse(dateStr)?.time ?: 0L
+            } catch (_: Exception) {
+            }
+        }
+        return 0L
+    }
+
+    /**
+     * Calculates the 5-zone heart rate distribution for a workout from stored samples,
+     * resolved against the zone thresholds active at workout time (REQ-SET-082.3).
      *
      * @param workoutId The database ID of the workout summary.
      * @param bSportType The sport type of the workout (used to determine bike vs run HR zones).
@@ -588,10 +608,12 @@ class WorkoutRepository private constructor(private val application: Application
 
         val zoneType = if (bSportType == BSportType.BIKE) SettingsDataStore.ZoneType.HR_BIKE else SettingsDataStore.ZoneType.HR_RUN
 
-        val z1 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 1)
-        val z2 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 2)
-        val z3 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 3)
-        val z4 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 4)
+        val workoutStartTimeMs = getWorkoutStartTimeMs(workoutId)
+        val bounds = SettingsDataStoreJavaHelper.getEffectiveZoneBoundaries(application, zoneType, workoutStartTimeMs)
+        val z1 = bounds.getOrElse(0) { SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 1) }
+        val z2 = bounds.getOrElse(1) { SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 2) }
+        val z3 = bounds.getOrElse(2) { SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 3) }
+        val z4 = bounds.getOrElse(3) { SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 4) }
         val thresholds = HeartRateZoneThresholds(z1, z2, z3, z4)
 
         val candidateCols = listOf(
@@ -661,12 +683,14 @@ class WorkoutRepository private constructor(private val application: Application
 
         val zoneType = SettingsDataStore.ZoneType.PWR_BIKE
 
-        val z1 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 1)
-        val z2 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 2)
-        val z3 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 3)
-        val z4 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 4)
-        val z5 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 5)
-        val z6 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 6)
+        val workoutStartTimeMs = getWorkoutStartTimeMs(workoutId)
+        val bounds = SettingsDataStoreJavaHelper.getEffectiveZoneBoundaries(application, zoneType, workoutStartTimeMs)
+        val z1 = bounds.getOrElse(0) { SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 1) }
+        val z2 = bounds.getOrElse(1) { SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 2) }
+        val z3 = bounds.getOrElse(2) { SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 3) }
+        val z4 = bounds.getOrElse(3) { SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 4) }
+        val z5 = bounds.getOrElse(4) { SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 5) }
+        val z6 = bounds.getOrElse(5) { SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 6) }
         val thresholds = PowerZoneThresholds(z1, z2, z3, z4, z5, z6)
 
         val candidateCols = listOf(
@@ -747,23 +771,27 @@ class WorkoutRepository private constructor(private val application: Application
             return@withContext WorkoutDetailTelemetry(emptyMap(), null, null)
         }
 
+        val workoutStartTimeMs = getWorkoutStartTimeMs(workoutId)
+
         val hrThresholds = if (hasHr) {
             val zoneType = if (bSportType == BSportType.BIKE) SettingsDataStore.ZoneType.HR_BIKE else SettingsDataStore.ZoneType.HR_RUN
-            val z1 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 1)
-            val z2 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 2)
-            val z3 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 3)
-            val z4 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 4)
+            val bounds = SettingsDataStoreJavaHelper.getEffectiveZoneBoundaries(application, zoneType, workoutStartTimeMs)
+            val z1 = bounds.getOrElse(0) { SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 1) }
+            val z2 = bounds.getOrElse(1) { SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 2) }
+            val z3 = bounds.getOrElse(2) { SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 3) }
+            val z4 = bounds.getOrElse(3) { SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 4) }
             HeartRateZoneThresholds(z1, z2, z3, z4)
         } else null
 
         val powerThresholds = if (hasPower) {
             val zoneType = SettingsDataStore.ZoneType.PWR_BIKE
-            val z1 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 1)
-            val z2 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 2)
-            val z3 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 3)
-            val z4 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 4)
-            val z5 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 5)
-            val z6 = SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 6)
+            val bounds = SettingsDataStoreJavaHelper.getEffectiveZoneBoundaries(application, zoneType, workoutStartTimeMs)
+            val z1 = bounds.getOrElse(0) { SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 1) }
+            val z2 = bounds.getOrElse(1) { SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 2) }
+            val z3 = bounds.getOrElse(2) { SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 3) }
+            val z4 = bounds.getOrElse(3) { SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 4) }
+            val z5 = bounds.getOrElse(4) { SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 5) }
+            val z6 = bounds.getOrElse(5) { SettingsDataStoreJavaHelper.getZoneMax(application, zoneType, 6) }
             PowerZoneThresholds(z1, z2, z3, z4, z5, z6)
         } else null
 
@@ -875,7 +903,9 @@ class WorkoutRepository private constructor(private val application: Application
         WorkoutDetailTelemetry(
             tracks = enrichedTracks,
             hrZoneDistribution = hrDistribution,
-            powerZoneDistribution = powerDistribution
+            powerZoneDistribution = powerDistribution,
+            hrThresholds = hrThresholds,
+            powerThresholds = powerThresholds
         )
     }
 
@@ -1908,13 +1938,16 @@ class WorkoutRepository private constructor(private val application: Application
             // 2. Trigger export with the new data
             exportManager.exportWorkout(userEditedWorkout)
 
-            // --- LEARNING LOOP (SCRUM-44) ---
-            if (userEditedWorkout.startLatLng != null && userEditedWorkout.endLatLng != null && userEditedWorkout.maxDisplacementLatLng != null) {
+            // --- LEARNING LOOP (SCRUM-44 / ATT-4862, REQ-SET-081) ---
+            // Only update cluster learning (centroids / sport) if the workout is already assigned to a cluster (clusterId > 0).
+            // Unclustered workouts ('Offen', clusterId <= 0) strictly remain unclustered regardless of custom workout name edits.
+            // Cluster creation and assignment occur exclusively via explicit user actions in EditWorkoutClusterDialog.
+            if (userEditedWorkout.clusterId > 0 && userEditedWorkout.startLatLng != null && userEditedWorkout.endLatLng != null && userEditedWorkout.maxDisplacementLatLng != null) {
                 val finalName = userEditedWorkout.workoutName.replace(Regex(" #\\d+$"), "").trim()
                 // Only learn names that aren't the default timestamp
                 if (finalName.isNotEmpty() && finalName != userEditedWorkout.fileBaseName) {
                     val engine = com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.getInstance(application)
-                    val learnedId = engine.learnFromWorkout(
+                    engine.learnFromWorkout(
                         userEditedWorkout.startLatLng,
                         userEditedWorkout.endLatLng,
                         userEditedWorkout.maxDisplacementLatLng,
@@ -1923,16 +1956,6 @@ class WorkoutRepository private constructor(private val application: Application
                         userEditedWorkout.sportId,
                         userEditedWorkout.clusterId
                     )
-                    
-                    // persist link and increment count if it's a new or changed association (SCRUM-228)
-                    if (userEditedWorkout.clusterId != learnedId) {
-                        engine.assignClusterToWorkout(application, workoutId, learnedId)
-
-                        // reload from DB to ensure memory and UI are in sync with inferred identity (SCRUM-254)
-                        reloadWorkoutData(workoutId)
-                        saveFinishedEvent.postValue(Pair(workoutId, true))
-                        return@launch
-                    }
                 }
             }
 
@@ -1949,6 +1972,8 @@ class WorkoutRepository private constructor(private val application: Application
                             bSportType = userEditedWorkout.bSportType,
                             equipmentId = userEditedWorkout.equipmentId,
                             equipmentName = userEditedWorkout.equipmentName,
+                            clusterId = userEditedWorkout.clusterId,
+                            clusterName = userEditedWorkout.clusterName,
                             description = userEditedWorkout.description,
                             goal = userEditedWorkout.goal,
                             method = userEditedWorkout.method,

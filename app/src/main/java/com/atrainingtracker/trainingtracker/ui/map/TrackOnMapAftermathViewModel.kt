@@ -33,6 +33,8 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionData
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -55,7 +57,9 @@ data class AftermathMapUIState(
     val zoomFocus: MapZoomFocus = MapZoomFocus.FIT_PRIMARY,
     val hrZoneDistribution: ZoneDistributionData? = null,
     val powerZoneDistribution: ZoneDistributionData? = null,
-    val telemetryPath: List<PathPoint> = emptyList()
+    val telemetryPath: List<PathPoint> = emptyList(),
+    val hrThresholds: HeartRateZoneThresholds? = null,
+    val powerThresholds: PowerZoneThresholds? = null
 )
 
 class TrackOnMapAftermathViewModel @JvmOverloads constructor(
@@ -209,10 +213,16 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
                 } else null
             }
 
+            val hasValidSampleTrack = fullTracks.any { it.path.size >= 2 }
             if (fullTracks.isNotEmpty()) {
                 withContext(Dispatchers.Main) {
+                    val tracksToSet = if (hasValidSampleTrack || _uiState.value.tracks.isEmpty()) {
+                        fullTracks
+                    } else {
+                        _uiState.value.tracks
+                    }
                     _uiState.value = _uiState.value.copy(
-                        tracks = fullTracks,
+                        tracks = tracksToSet,
                         availableTrackTypes = fullTracks.map { it.type }.toSet()
                     )
                 }
@@ -255,13 +265,17 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
                 )
             }
 
-            // --- PHASE 7: Zone Analytics (Heart Rate & Power 5-Zone Distribution) ---
+            // --- PHASE 7: Zone Analytics (Heart Rate & Power 5-Zone Distribution & Thresholds) ---
             val hrDistribution = telemetry?.hrZoneDistribution ?: workoutRepository.getHeartRateZoneDistribution(workoutId, bSportType)
             val powerDistribution = telemetry?.powerZoneDistribution ?: workoutRepository.getPowerZoneDistribution(workoutId)
+            val hrThresholds = telemetry?.hrThresholds ?: TelemetryZoneMath.loadHeartRateThresholds(getApplication(), bSportType)
+            val powerThresholds = telemetry?.powerThresholds ?: TelemetryZoneMath.loadPowerThresholds(getApplication())
             withContext(Dispatchers.Main) {
                 _uiState.value = _uiState.value.copy(
                     hrZoneDistribution = hrDistribution,
-                    powerZoneDistribution = powerDistribution
+                    powerZoneDistribution = powerDistribution,
+                    hrThresholds = hrThresholds,
+                    powerThresholds = powerThresholds
                 )
             }
         }

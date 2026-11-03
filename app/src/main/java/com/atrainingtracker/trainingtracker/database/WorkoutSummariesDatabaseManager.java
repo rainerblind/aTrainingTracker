@@ -1135,26 +1135,103 @@ public class WorkoutSummariesDatabaseManager {
      * This includes shifting existing extrema and re-encoding the altitude stream.
      */
     public void shiftAltitudeData(long workoutId, double offset) {
+        shiftAltitudeData(workoutId, offset, -1L, -1L);
+    }
+
+    /**
+     * REQ-TRK-047.2: Shifts or interpolates altitude stream and extrema.
+     * When t0Ms <= 0, applies uniform shift (Case A).
+     * When t0Ms > 0, applies piecewise-linear drift interpolation across [t0, t1] (Case B).
+     */
+    public void shiftAltitudeData(long workoutId, double offset, long t0Ms, long t1Ms) {
         SQLiteDatabase db = getDatabase();
         db.beginTransaction();
         try {
-            // 1. Shift Extrema Table
-            String extremaSql = "UPDATE " + WorkoutSummaries.TABLE_EXTREMA_VALUES +
-                    " SET " + WorkoutSummaries.VALUE + " = " + WorkoutSummaries.VALUE + " + ?" +
-                    " WHERE " + WorkoutSummaries.WORKOUT_ID + " = ? AND " +
-                    WorkoutSummaries.SENSOR_TYPE + " = ?";
-            db.execSQL(extremaSql, new Object[]{offset, workoutId, SensorType.ALTITUDE.name()});
-
-            // 2. Shift Altitude Stream
             String stream = getString(workoutId, WorkoutSummaries.ALTITUDE_STREAM);
-            if (stream != null && !stream.isEmpty()) {
-                List<Double> alts = NumericalEncodingUtils.INSTANCE.decodeDoubles(stream);
-                List<Double> shiftedAlts = new ArrayList<>(alts.size());
-                for (Double a : alts) shiftedAlts.add(a + offset);
+            if (t0Ms <= 0 || t1Ms <= t0Ms) {
+                // Case A: Uniform shift
+                String extremaSql = "UPDATE " + WorkoutSummaries.TABLE_EXTREMA_VALUES +
+                        " SET " + WorkoutSummaries.VALUE + " = " + WorkoutSummaries.VALUE + " + ?" +
+                        " WHERE " + WorkoutSummaries.WORKOUT_ID + " = ? AND " +
+                        WorkoutSummaries.SENSOR_TYPE + " = ?";
+                db.execSQL(extremaSql, new Object[]{offset, workoutId, SensorType.ALTITUDE.name()});
 
-                ContentValues streamValues = new ContentValues();
-                streamValues.put(WorkoutSummaries.ALTITUDE_STREAM, NumericalEncodingUtils.INSTANCE.encodeDoubles(shiftedAlts));
-                db.update(WorkoutSummaries.TABLE, streamValues, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(workoutId)});
+                if (stream != null && !stream.isEmpty()) {
+                    List<Double> alts = NumericalEncodingUtils.INSTANCE.decodeDoubles(stream);
+                    List<Double> shiftedAlts = new ArrayList<>(alts.size());
+                    for (Double a : alts) shiftedAlts.add(a + offset);
+
+                    // Recompute ascent and descent from updated altitude profile (ATT-4845)
+                    double ascending = 0.0;
+                    double descending = 0.0;
+                    for (int i = 1; i < shiftedAlts.size(); i++) {
+                        Double prev = shiftedAlts.get(i - 1);
+                        Double curr = shiftedAlts.get(i);
+                        if (prev != null && curr != null) {
+                            double diff = curr - prev;
+                            if (diff > 0) {
+                                ascending += diff;
+                            } else if (diff < 0) {
+                                descending += -diff;
+                            }
+                        }
+                    }
+
+                    ContentValues streamValues = new ContentValues();
+                    streamValues.put(WorkoutSummaries.ALTITUDE_STREAM, NumericalEncodingUtils.INSTANCE.encodeDoubles(shiftedAlts));
+                    streamValues.put(WorkoutSummaries.ASCENDING, ascending);
+                    streamValues.put(WorkoutSummaries.DESCENDING, descending);
+                    db.update(WorkoutSummaries.TABLE, streamValues, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(workoutId)});
+                }
+            } else {
+                // Case B: Piecewise-linear drift interpolation
+                if (stream != null && !stream.isEmpty()) {
+                    List<Double> alts = NumericalEncodingUtils.INSTANCE.decodeDoubles(stream);
+                    int n = alts.size();
+                    List<Double> shiftedAlts = new ArrayList<>(n);
+                    for (int i = 0; i < n; i++) {
+                        double fraction = (n > 1) ? ((double) i / (n - 1)) : 1.0;
+                        shiftedAlts.add(alts.get(i) + offset * fraction);
+                    }
+
+                    // Recompute ascent and descent from updated altitude profile (ATT-4845)
+                    double ascending = 0.0;
+                    double descending = 0.0;
+                    for (int i = 1; i < shiftedAlts.size(); i++) {
+                        Double prev = shiftedAlts.get(i - 1);
+                        Double curr = shiftedAlts.get(i);
+                        if (prev != null && curr != null) {
+                            double diff = curr - prev;
+                            if (diff > 0) {
+                                ascending += diff;
+                            } else if (diff < 0) {
+                                descending += -diff;
+                            }
+                        }
+                    }
+
+                    ContentValues streamValues = new ContentValues();
+                    streamValues.put(WorkoutSummaries.ALTITUDE_STREAM, NumericalEncodingUtils.INSTANCE.encodeDoubles(shiftedAlts));
+                    streamValues.put(WorkoutSummaries.ASCENDING, ascending);
+                    streamValues.put(WorkoutSummaries.DESCENDING, descending);
+                    db.update(WorkoutSummaries.TABLE, streamValues, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(workoutId)});
+
+                    // Recompute Min/Max extrema from updated stream
+                    double min = Double.MAX_VALUE;
+                    double max = -Double.MAX_VALUE;
+                    for (Double a : shiftedAlts) {
+                        if (a != null) {
+                            if (a < min) min = a;
+                            if (a > max) max = a;
+                        }
+                    }
+                    if (min != Double.MAX_VALUE) {
+                        updateExtremaValue(db, workoutId, SensorType.ALTITUDE, ExtremaType.MIN, min, null);
+                    }
+                    if (max != -Double.MAX_VALUE) {
+                        updateExtremaValue(db, workoutId, SensorType.ALTITUDE, ExtremaType.MAX, max, null);
+                    }
+                }
             }
 
             db.setTransactionSuccessful();

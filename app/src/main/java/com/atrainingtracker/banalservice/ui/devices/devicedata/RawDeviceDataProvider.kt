@@ -51,6 +51,11 @@ class RawDeviceDataProvider(
             cursor.getDouble(calibIdx)
         } else null
 
+        val baselineIdx = cursor.getColumnIndex(DevicesDatabaseManager.DevicesDbHelper.BASELINE_CIRCUMFERENCE)
+        val baselineCircumference = if (baselineIdx != -1 && !cursor.isNull(baselineIdx)) {
+            cursor.getDouble(baselineIdx)
+        } else null
+
         val powerFeaturesFlags = devicesDatabaseManager.getBikePowerSensorFlags(id)
         val linkedEquipment = equipmentDbHelper.getLinkedEquipmentFromDeviceId(id)
         val availableEquipment = try {
@@ -75,7 +80,8 @@ class RawDeviceDataProvider(
             linkedEquipment = linkedEquipment,
             availableEquipment = availableEquipment,
             powerFeaturesFlags = powerFeaturesFlags,
-            linkedSportTypes = linkedSportTypes
+            linkedSportTypes = linkedSportTypes,
+            baselineCircumference = baselineCircumference
         )
     }
 

@@ -77,6 +77,7 @@ class BikePowerCockpitDefaultsAndGatingTest {
         every { anyConstructed<ContentValues>().put(any<String>(), any<Long>()) } returns Unit
         every { anyConstructed<ContentValues>().put(any<String>(), any<Int>()) } returns Unit
         every { anyConstructed<ContentValues>().put(any<String>(), any<Double>()) } returns Unit
+        every { anyConstructed<ContentValues>().put(any<String>(), any<Float>()) } returns Unit
         every { anyConstructed<ContentValues>().clear() } returns Unit
     }
 

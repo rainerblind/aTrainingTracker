@@ -41,6 +41,7 @@ import com.google.android.gms.maps.model.Gap
 import com.google.android.gms.maps.model.JointType
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.PatternItem
+import com.google.maps.android.PolyUtil
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.Polyline
@@ -252,6 +253,87 @@ fun resolveLiveTrackColor(isDark: Boolean): Color {
 }
 
 /**
+ * Incremental decimator for live tracking polylines (REQ-TRK-042.2, ATT-4923).
+ *
+ * Adheres strictly to Rule 66 (Sec 1.10) as a plain holder object with zero Compose
+ * MutableState writes during composition or within remember.
+ *
+ * Rather than re-running Douglas-Peucker over the entire historical head on every 1-Hz point
+ * (O(N log N) CPU churn and shifting vertex chords), [IncrementalTrackDecimator] freezes
+ * completed historical chunks (C = 200) once upon crossing chunk boundaries and caches
+ * their simplified representation permanently.
+ *
+ * Preserves the unsimplified active tail (M = 200) at full 1-Hz fidelity.
+ */
+class IncrementalTrackDecimator(
+    val tailCount: Int = 200,
+    val chunkSize: Int = 200,
+    val toleranceMeters: Double = 3.0
+) {
+    private val frozenHead = mutableListOf<LatLng>()
+    private var frozenUntilIndex = 0
+
+    fun reset() {
+        frozenHead.clear()
+        frozenUntilIndex = 0
+    }
+
+    fun decimate(path: List<LatLng>): List<LatLng> {
+        if (path.isEmpty()) {
+            reset()
+            return emptyList()
+        }
+
+        // If track shrank or first coordinate changed (e.g. new workout session), reset cache
+        if (path.size < frozenUntilIndex || (frozenHead.isNotEmpty() && path.first() != frozenHead.first())) {
+            reset()
+        }
+
+        val eligibleCount = path.size - tailCount
+        while (frozenUntilIndex + chunkSize <= eligibleCount) {
+            val fromIndex = frozenUntilIndex
+            val toIndex = frozenUntilIndex + chunkSize
+            val rawChunk = path.subList(fromIndex, toIndex + 1)
+            val simplified = PolyUtil.simplify(rawChunk, toleranceMeters)
+            if (frozenHead.isEmpty()) {
+                frozenHead.addAll(simplified)
+            } else {
+                if (simplified.size > 1) {
+                    frozenHead.addAll(simplified.subList(1, simplified.size))
+                }
+            }
+            frozenUntilIndex = toIndex
+        }
+
+        return if (frozenHead.isEmpty()) {
+            path
+        } else {
+            if (frozenUntilIndex + 1 < path.size) {
+                val tail = path.subList(frozenUntilIndex + 1, path.size)
+                val result = ArrayList<LatLng>(frozenHead.size + tail.size)
+                result.addAll(frozenHead)
+                result.addAll(tail)
+                result
+            } else {
+                ArrayList(frozenHead)
+            }
+        }
+    }
+}
+
+/**
+ * Bounds and downsamples a live tracking path to protect Maps Compose IPC serialization
+ * and GPU vertex buffers from OOM memory exhaustion during multi-hour sessions (REQ-TRK-042.2, ATT-4863, ATT-4923).
+ *
+ * Preserves the most recent 200 points (~3–5 minutes of active movement) at 100% full-resolution
+ * so immediate turns, forks, and chevrons remain crisp, while simplifying older history with
+ * PolyUtil.simplify at a 3.0-meter tolerance threshold in frozen chunks.
+ */
+fun decimateLiveTrack(path: List<LatLng>): List<LatLng> {
+    return IncrementalTrackDecimator().decimate(path)
+}
+
+/**
  * Renders the live session track as it is being recorded.
  */
 @Composable
@@ -260,9 +342,11 @@ fun LiveTrackLayer(path: List<LatLng>) {
     val style = LocalMapStyle.current
     val trackColor = resolveLiveTrackColor(style.isDark)
     val livePattern = remember(style.trackDotGap) { listOf(Dot(), Gap(style.trackDotGap)) }
-    
+    val decimator = remember { IncrementalTrackDecimator() }
+    val displayPath = remember(path.size) { decimator.decimate(path) }
+
     XRayPolyline(
-        points = path,
+        points = displayPath,
         color = trackColor,
         width = style.trackWidth,
         baseZIndex = style.trackBaseZIndex,

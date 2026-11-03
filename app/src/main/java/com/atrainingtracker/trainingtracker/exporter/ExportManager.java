@@ -251,6 +251,37 @@ public class ExportManager {
     }
 
     /**
+     * Recovers all Google Drive exports that failed due to null/unlinked credentials,
+     * transitioning their database status to WAITING and re-scheduling their WorkManager jobs.
+     */
+    public static void recoverStuckGoogleDriveExports(@NonNull Context context) {
+        if (!TrainingApplication.isWorkManagerAvailable()) return;
+        ExportStatusDatabaseManager repo = ExportStatusDatabaseManager.getInstance(context);
+        List<String> recoveredBaseNames = repo.recoverStuckCredentialExports(
+                ExportType.GOOGLE_DRIVE, "Google Drive credential is null or not linked"
+        );
+        if (recoveredBaseNames.isEmpty()) {
+            return;
+        }
+
+        ExportManager exportManager = new ExportManager(context);
+        for (String fileBaseName : recoveredBaseNames) {
+            for (FileFormat format : ExportType.GOOGLE_DRIVE.getExportToFileFormats()) {
+                if (TrainingApplication.exportToFile(format)) {
+                    try {
+                        ExportInfo info = new ExportInfo(fileBaseName, format, ExportType.GOOGLE_DRIVE);
+                        OneTimeWorkRequest work = exportManager.createWorkRequest(info);
+                        WorkManager.getInstance(context).enqueue(work);
+                    } catch (Throwable t) {
+                        Log.e(TAG, "Failed re-enqueueing recovered Google Drive export for " + fileBaseName, t);
+                    }
+                }
+            }
+            broadcastExportStatusChanged(context, fileBaseName);
+        }
+    }
+
+    /**
      * Defensive pre-crop cache invalidation: cancels running export tasks and deletes cached export files.
      * Marks export status as WAITING so that post-crop export refreshes cleanly.
      *

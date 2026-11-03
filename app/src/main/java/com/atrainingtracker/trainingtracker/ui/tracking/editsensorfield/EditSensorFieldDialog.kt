@@ -161,6 +161,56 @@ fun EditSensorFieldDialog(
 
             Spacer(Modifier.height(16.dp))
 
+            // --- Display Elements Selection (REQ-TRK-046, ATT-4841) ---
+            if (uiState.isBarSupported) {
+                Text(
+                    text = stringResource(R.string.sensor_field_display_elements_title),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = uiState.showValue,
+                        onClick = { viewModel.onShowValueChanged(!uiState.showValue) },
+                        label = { Text(stringResource(R.string.sensor_field_show_value)) }
+                    )
+                    FilterChip(
+                        selected = uiState.showBar,
+                        onClick = { viewModel.onShowBarChanged(!uiState.showBar) },
+                        label = { Text(stringResource(R.string.sensor_field_show_bar)) }
+                    )
+                }
+                Spacer(Modifier.height(16.dp))
+            }
+
+            // --- Relative Width (REQ-UI-437, ATT-4861, ATT-5077, ATT-5192) ---
+            if (uiState.isMultiFieldRow) {
+                Text(
+                    text = stringResource(R.string.sensor_field_relative_weight),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(4.dp))
+                val weights = listOf(1f to "1x", 2f to "2x", 3f to "3x")
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    weights.forEach { (w, label) ->
+                        FilterChip(
+                            selected = (uiState.colWeight == w),
+                            onClick = { viewModel.onColWeightChanged(w) },
+                            label = { Text(label) }
+                        )
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+            }
+
             // --- Optionally: Configure Filter Button ---
             if (uiState.selectedSensorType?.filteringPossible == true) {
                 OutlinedButton(

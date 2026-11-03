@@ -18,94 +18,384 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
+import android.content.Context
+import com.atrainingtracker.trainingtracker.location.RegionNameResolver
+import com.atrainingtracker.trainingtracker.ui.map.PolylineHeatmapTileProvider
+import com.atrainingtracker.trainingtracker.ui.map.ThermalColorLut
 import com.google.android.gms.maps.model.LatLng
-import com.google.maps.android.heatmaps.HeatmapTileProvider
-import com.atrainingtracker.trainingtracker.ui.map.createHeatmapProvider
+import com.google.android.gms.maps.model.LatLngBounds
+import com.google.android.gms.maps.model.TileProvider
+import com.google.maps.android.PolyUtil
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Encapsulates the visual styling for period-based maps.
  */
 data class PeriodMapVisuals(
-    val heatmapProvider: HeatmapTileProvider?,
+    val heatmapProvider: TileProvider?,
     val polylineAlpha: Float,
-    val polylineWidth: Float
+    val polylineWidth: Float,
+    val maxCorridorPassCount: Int? = null
 )
 
 /**
+ * Immutable data state representing the pre-processed map preview for a PeriodSummaryCard.
+ * Generated off the Android main thread (Dispatchers.Default) to ensure 60 fps scrolling.
+ * (ATT-4477 / REQ-PER-019 / TST-PER-025)
+ */
+data class PeriodCardMapState(
+    val primaryPaths: List<List<LatLng>> = emptyList(),
+    val bounds: LatLngBounds? = null,
+    val visuals: PeriodMapVisuals? = null,
+    val regionCount: Int = 0,
+    val primaryRegionPathsCount: Int = 0,
+    val isReady: Boolean = false,
+    val renderVectorPolylines: Boolean = true,
+    val activeRegionId: String? = null,
+    val maxCorridorPassCount: Int? = null,
+    val primaryRegionName: String? = null
+)
+
+/**
+ * Returns Douglas-Peucker simplification tolerance in meters for the given [PeriodType].
+ * Calibrated to <= 5-8m across all levels to preserve shared-corridor additive stacking (REQ-PER-024.3).
+ * Scales tolerance proportionally with period duration to bound aggregate vertices (REQ-PER-019.2 / ATT-4930).
+ */
+fun getPeriodSimplificationToleranceMeters(periodType: PeriodType): Double = when (periodType) {
+    PeriodType.DAY -> 5.0
+    PeriodType.WEEK -> 5.0
+    PeriodType.MONTH -> 6.0
+    PeriodType.YEAR -> 8.0
+}
+
+/**
+ * Simplifies a map of workout paths to guarantee that the total aggregate vertex count
+ * across all entries does not exceed [maxVertices] (REQ-PER-019.2 / ATT-4930), preserving map keys.
+ *
+ * Starts with [baseTolerance] (typically 5-8m, REQ-PER-024.3) to preserve high-fidelity shared-corridor pixel alignment.
+ * If total vertices across all simplified paths exceed [maxVertices], tolerance is dynamically escalated:
+ *   tau = (baseTolerance * sqrt(totalVertices / maxVertices)).coerceIn(baseTolerance, 80.0)
+ * and paths are re-simplified.
+ */
+fun <K> simplifyPathMapToBudget(
+    pathMap: Map<K, List<LatLng>>,
+    maxVertices: Int,
+    baseTolerance: Double
+): Map<K, List<LatLng>> {
+    if (pathMap.isEmpty() || maxVertices <= 0) return emptyMap()
+
+    // Pass 1: Ensure baseline simplification
+    val pass1 = if (baseTolerance > 0.0) {
+        pathMap.mapValues { PolyUtil.simplify(it.value, baseTolerance) }.filterValues { it.isNotEmpty() }
+    } else {
+        pathMap.filterValues { it.isNotEmpty() }
+    }
+
+    val totalVerticesPass1 = pass1.values.sumOf { it.size }
+    if (totalVerticesPass1 <= maxVertices) {
+        return pass1
+    }
+
+    // Pass 2: Adaptive tolerance escalation based on excess ratio
+    val ratio = totalVerticesPass1.toDouble() / maxVertices
+    val escalatedTolerance = (baseTolerance * Math.sqrt(ratio)).coerceIn(baseTolerance, 80.0)
+
+    val pass2 = pass1.mapValues { PolyUtil.simplify(it.value, escalatedTolerance) }.filterValues { it.isNotEmpty() }
+    val totalVerticesPass2 = pass2.values.sumOf { it.size }
+    if (totalVerticesPass2 <= maxVertices) {
+        return pass2
+    }
+
+    // Pass 3: Maximum tolerance clamp
+    val maxClampedTolerance = 120.0
+    val pass3 = pass2.mapValues { PolyUtil.simplify(it.value, maxClampedTolerance) }.filterValues { it.isNotEmpty() }
+    if (pass3.values.sumOf { it.size } <= maxVertices) {
+        return pass3
+    }
+
+    // Final safety: Subsample points between start and end if still exceeding budget
+    var current = pass3
+    var step = 2
+    while (current.values.sumOf { it.size } > maxVertices && step <= 10) {
+        current = current.mapValues { (_, path) ->
+            if (path.size <= 2) path
+            else {
+                val sampled = ArrayList<LatLng>(path.size / step + 2)
+                sampled.add(path.first())
+                for (i in 1 until path.size - 1) {
+                    if (i % step == 0) sampled.add(path[i])
+                }
+                sampled.add(path.last())
+                sampled
+            }
+        }.filterValues { it.isNotEmpty() }
+        step++
+    }
+    return current
+}
+
+/**
+ * Simplifies a collection of LatLng paths to guarantee that the total aggregate vertex count
+ * does not exceed [maxVertices] (REQ-PER-019.2 / ATT-4930).
+ *
+ * @param paths LatLng paths to simplify.
+ * @param maxVertices Aggregate vertex limit ([MAX_CARD_MINI_MAP_VERTICES] or [MAX_DETAILED_MAP_VERTICES]).
+ * @param baseTolerance Base tolerance in meters.
+ */
+fun simplifyPathsToBudget(
+    paths: List<List<LatLng>>,
+    maxVertices: Int,
+    baseTolerance: Double
+): List<List<LatLng>> {
+    if (paths.isEmpty() || maxVertices <= 0) return emptyList()
+    val indexedMap = paths.indices.associateWith { paths[it] }
+    return simplifyPathMapToBudget(indexedMap, maxVertices, baseTolerance).values.toList()
+}
+
+/**
  * Centralized logic to determine how workouts are visualized based on the period level.
- * Transitions from clear polylines (Day) to prominent heatmaps (Year).
+ * Transitions from clear polylines (Day) to prominent line-density heatmaps (Year).
  * @param zoom The current map zoom level. If null, a default summary radius is used.
+ * @param maxCorridorPassCount The calibrated maximum corridor overlap count for logarithmic normalization (ATT-4929 / REQ-MAP-056.6).
  */
 fun getPeriodMapVisuals(
     periodType: PeriodType,
     allPaths: List<List<LatLng>>,
     isInteractive: Boolean = false,
-    zoom: Float? = null
+    zoom: Float? = null,
+    maxCorridorPassCount: Int? = null,
+    isMiniMap: Boolean = !isInteractive,
+    colorLut: ThermalColorLut = ThermalColorLut.HOT
 ): PeriodMapVisuals {
+    val maxPasses = if (allPaths.isEmpty() || periodType == PeriodType.DAY) null
+    else maxCorridorPassCount ?: PolylineHeatmapTileProvider.estimateMaxCorridorPassCount(allPaths)
+
     val heatmapProvider = run {
         if (allPaths.isEmpty() || periodType == PeriodType.DAY) {
             null
         } else {
-            // ATT-504 Fix: Calibrated opacity levels (0.4-0.6) so terrain, roads, and map labels remain legible
             val opacity = when (periodType) {
-                PeriodType.WEEK -> 0.4
-                PeriodType.MONTH -> 0.5
-                PeriodType.YEAR -> 0.6
-                else -> 0.0
+                PeriodType.WEEK -> 0.8
+                PeriodType.MONTH -> 0.9
+                PeriodType.YEAR -> 1.0
+                PeriodType.DAY -> 0.8
             }
 
-            // ATT-310 & ATT-342: Adaptive densification based on scale and interaction
-            val interval = if (zoom != null) {
-                // Adaptive interval for interactive map
-                when {
-                    zoom < 10 -> 200.0
-                    zoom < 12 -> 100.0
-                    zoom < 14 -> 50.0
-                    else -> 10.0
-                }
-            } else {
-                // Static interval for summary cards
-                when (periodType) {
-                    PeriodType.WEEK -> 10.0
-                    PeriodType.MONTH -> 50.0
-                    PeriodType.YEAR -> 200.0
-                    else -> 10.0
-                }
+            val strokeWidth = when {
+                zoom != null -> (4f + (zoom - 10f).coerceAtLeast(0f) * 0.5f).coerceIn(3.5f, 7.5f)
+                periodType == PeriodType.WEEK -> 6f
+                periodType == PeriodType.MONTH -> 5f
+                periodType == PeriodType.YEAR -> 4f
+                else -> 5f
             }
 
-            // ATT-500 Refinement: Strict radius clamping (10-15px) prevents the heatmap from bloating into a wide band.
-            val radius = if (zoom == null) {
-                10 // Safe minimum for summary cards
-            } else {
-                (10 + (zoom - 14).coerceAtLeast(0f) * 1.0f).toInt().coerceIn(10, 15)
-            }
-
-            // ATT-342 OOM Fix: Define point caps to protect heap
-            val maxPoints = if (zoom == null) 8000 else 100000
-
-            // Use lower weight when zoomed out or in summary cards to reduce 'bloat' intensity.
-            // This ensures only high-density areas (overlapping tracks) are prominent.
-            val weight = if (zoom == null || zoom < 10) 0.3 else 1.0
-
-            createHeatmapProvider(allPaths, opacity, radius = radius, densifyInterval = interval, maxPoints = maxPoints, weight = weight)
+            PolylineHeatmapTileProvider(
+                allPaths = allPaths,
+                opacity = opacity,
+                strokeWidthPx = strokeWidth,
+                colorLut = colorLut,
+                maxCorridorPassCount = maxPasses,
+                isMiniMap = isMiniMap
+            )
         }
     }
 
-    val polylineAlpha = when {
-        periodType == PeriodType.DAY -> 1.0f
-        periodType == PeriodType.WEEK -> 0.9f
-        periodType == PeriodType.MONTH -> 0.8f
-        periodType == PeriodType.YEAR -> 0.6f
-        else -> 1.0f
+    val polylineAlpha = when (periodType) {
+        PeriodType.DAY -> 1.0f
+        PeriodType.WEEK -> 0.9f
+        PeriodType.MONTH -> 0.8f
+        PeriodType.YEAR -> 0.6f
     }
 
-    val polylineWidth = when {
-        periodType == PeriodType.DAY -> 8f
-        periodType == PeriodType.WEEK -> 8f
-        periodType == PeriodType.MONTH -> 7f
-        periodType == PeriodType.YEAR -> 5f
-        else -> 8f
+    val polylineWidth = when (periodType) {
+        PeriodType.DAY -> 8f
+        PeriodType.WEEK -> 8f
+        PeriodType.MONTH -> 7f
+        PeriodType.YEAR -> 5f
     }
 
-    return PeriodMapVisuals(heatmapProvider, polylineAlpha, polylineWidth)
+    return PeriodMapVisuals(heatmapProvider, polylineAlpha, polylineWidth, maxPasses)
+}
+
+/**
+ * Synchronous background computation pipeline for card map previews.
+ * Decodes all member polylines, applies Douglas-Peucker decimation, clusters geographic regions,
+ * and builds the appropriate line-density heatmap tile provider.
+ * (REQ-PER-019)
+ */
+fun prepareCardMapPreviewSync(
+    summary: PeriodSummary,
+    context: Context? = null
+): PeriodCardMapState {
+    val rawPolylines: Collection<String> = when {
+        summary.polylines.isNotEmpty() -> summary.polylines
+        summary.workoutIdToPolylineMap.isNotEmpty() -> summary.workoutIdToPolylineMap.values
+        else -> emptyList()
+    }
+
+    if (rawPolylines.isEmpty()) {
+        return PeriodCardMapState(isReady = true)
+    }
+
+    val tolerance = getPeriodSimplificationToleranceMeters(summary.periodType)
+
+    val decodedAndSimplified: List<List<LatLng>> = rawPolylines.mapNotNull { encoded ->
+        if (encoded.isEmpty() || !encoded.all { it in '?'..'~' }) null
+        else {
+            try {
+                val decoded = PolyUtil.decode(encoded)
+                val hasValidCoordinates = decoded.isNotEmpty() && decoded.all {
+                    it.latitude in -90.0..90.0 && it.longitude in -180.0..180.0
+                }
+                if (!hasValidCoordinates) null
+                else if (tolerance > 0.0) {
+                    PolyUtil.simplify(decoded, tolerance)
+                } else {
+                    decoded
+                }
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }.filter { it.isNotEmpty() }
+
+    if (decodedAndSimplified.isEmpty()) {
+        return PeriodCardMapState(isReady = true)
+    }
+
+    // Enforce hard vertex budget for card mini-maps (REQ-PER-019.2 / ATT-4930)
+    val budgetEnforcedPaths = simplifyPathsToBudget(
+        paths = decodedAndSimplified,
+        maxVertices = MAX_CARD_MINI_MAP_VERTICES,
+        baseTolerance = tolerance
+    )
+
+    if (budgetEnforcedPaths.isEmpty()) {
+        return PeriodCardMapState(isReady = true)
+    }
+
+    val pathRegions = if (summary.minLat < 90.0 && summary.maxLat > -90.0) {
+        val diagonal = SpatialRegionEngine.distanceBetween(
+            LatLng(summary.minLat, summary.minLng),
+            LatLng(summary.maxLat, summary.maxLng)
+        )
+        if (diagonal >= SpatialRegionConfig.SINGLE_REGION_ENVELOPE_METERS) {
+            SpatialRegionEngine.detectRegionsFromPaths(budgetEnforcedPaths)
+        } else {
+            val allPoints = budgetEnforcedPaths.flatten()
+            val bounds = if (allPoints.isNotEmpty()) {
+                SpatialRegionEngine.buildNormalizedBounds(allPoints)
+            } else {
+                LatLngBounds(LatLng(summary.minLat, summary.minLng), LatLng(summary.maxLat, summary.maxLng))
+            }
+            listOf(
+                SpatialPathRegion(
+                    region = SpatialRegion(
+                        id = "region_0",
+                        label = "Region 1",
+                        bounds = bounds,
+                        center = LatLng((summary.minLat + summary.maxLat) / 2.0, (summary.minLng + summary.maxLng) / 2.0),
+                        workoutCount = budgetEnforcedPaths.size,
+                        totalDistanceMeters = 0.0,
+                        mostRecentTimestampS = 0L,
+                        isPrimary = true
+                    ),
+                    paths = budgetEnforcedPaths
+                )
+            )
+        }
+    } else {
+        val allPoints = budgetEnforcedPaths.flatten()
+        val bounds = if (allPoints.isNotEmpty()) SpatialRegionEngine.buildNormalizedBounds(allPoints) else null
+        if (bounds != null) {
+            listOf(
+                SpatialPathRegion(
+                    region = SpatialRegion(
+                        id = "region_0",
+                        label = "Region 1",
+                        bounds = bounds,
+                        center = LatLng(0.0, 0.0),
+                        workoutCount = budgetEnforcedPaths.size,
+                        totalDistanceMeters = 0.0,
+                        mostRecentTimestampS = 0L,
+                        isPrimary = true
+                    ),
+                    paths = budgetEnforcedPaths
+                )
+            )
+        } else emptyList()
+    }
+
+    val primaryPathRegion = pathRegions.firstOrNull { it.region.isPrimary } ?: pathRegions.firstOrNull()
+    val activePaths = primaryPathRegion?.paths ?: budgetEnforcedPaths
+    val activeBounds = primaryPathRegion?.region?.bounds ?: run {
+        val allPoints = activePaths.flatten()
+        if (allPoints.isNotEmpty()) SpatialRegionEngine.buildNormalizedBounds(allPoints) else null
+    }
+    val visuals = getPeriodMapVisuals(summary.periodType, activePaths, isInteractive = false)
+    val renderVectorPolylines = visuals.heatmapProvider == null || activePaths.size <= MAX_PERIOD_VECTOR_TRACKS
+
+    val primaryRegionName = if (context != null && primaryPathRegion != null) {
+        RegionNameResolver.findNearestKnownLocationName(context, primaryPathRegion.region.center)
+    } else null
+
+    return PeriodCardMapState(
+        primaryPaths = activePaths,
+        bounds = activeBounds,
+        visuals = visuals,
+        regionCount = pathRegions.size,
+        primaryRegionPathsCount = activePaths.size,
+        isReady = true,
+        renderVectorPolylines = renderVectorPolylines,
+        activeRegionId = primaryPathRegion?.region?.id,
+        maxCorridorPassCount = visuals.maxCorridorPassCount,
+        primaryRegionName = primaryRegionName
+    )
+}
+
+/**
+ * Asynchronously prepares the [PeriodCardMapState] on a background dispatcher.
+ * (REQ-PER-019.1)
+ */
+suspend fun prepareCardMapPreview(
+    summary: PeriodSummary,
+    context: Context? = null,
+    dispatcher: CoroutineDispatcher = Dispatchers.Default
+): PeriodCardMapState = withContext(dispatcher) {
+    var state = prepareCardMapPreviewSync(summary, context)
+    if (context != null && state.primaryRegionName == null && state.bounds != null) {
+        val center = LatLng(
+            (state.bounds.southwest.latitude + state.bounds.northeast.latitude) / 2.0,
+            (state.bounds.southwest.longitude + state.bounds.northeast.longitude) / 2.0
+        )
+        val place = RegionNameResolver.resolvePlaceName(context, center)
+        if (place != null) {
+            state = state.copy(primaryRegionName = place)
+        }
+    }
+    state
+}
+
+/**
+ * Resolves the workout ID whose path is closest to the user's tap point on the map.
+ * Uses PolyUtil.isLocationOnPath with zoom-adaptive tolerance.
+ * (ATT-4475 / REQ-PER-021.4 / TST-PER-027.4)
+ */
+fun findClosestTrackOnMapClick(
+    tap: LatLng,
+    paths: Map<Long, List<LatLng>>,
+    zoom: Float = 12f
+): Long? {
+    if (paths.isEmpty()) return null
+    // Adaptive tolerance: ~100m at zoom <= 10, ~50m at zoom 11, ~25m at zoom 12, ~12m at zoom 13, down to 5m at zoom >= 14
+    val toleranceMeters = (100.0 / Math.pow(2.0, (zoom - 10.0).coerceAtLeast(0.0))).coerceIn(5.0, 100.0)
+    for ((workoutId, path) in paths) {
+        if (path.size < 2) continue
+        if (PolyUtil.isLocationOnPath(tap, path, true, toleranceMeters)) {
+            return workoutId
+        }
+    }
+    return null
 }

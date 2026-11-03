@@ -18,6 +18,8 @@ import com.atrainingtracker.trainingtracker.exporter.ExportType
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.dropbox.core.DbxException
 import com.dropbox.core.NetworkIOException
+import com.dropbox.core.RetryException
+import com.dropbox.core.ServerException
 import com.dropbox.core.oauth.DbxCredential
 import com.dropbox.core.v2.DbxClientV2
 import com.dropbox.core.v2.files.DbxUserFilesRequests
@@ -163,6 +165,76 @@ class DropboxUploaderTest {
         // Then:
         assertFalse("Export must fail when DbxException is thrown", result.success())
         assertTrue("Message must mention DropboxException", result.answer().contains("DropboxException"))
+        assertTrue("Transient NetworkIOException should set shallRetry = true", result.shallRetry())
+    }
+
+    @Test
+    fun testDoExport_retryException_returnsShallRetryTrue() {
+        val exportInfo = ExportInfo("workout_retry", FileFormat.CSV, ExportType.DROPBOX)
+        createLocalFile(exportInfo.shortPath, "sample content")
+
+        val mockCredential = mockk<DbxCredential>(relaxed = true)
+        every { TrainingApplication.readDropboxCredential() } returns mockCredential
+
+        mockkConstructor(DbxClientV2::class)
+        val mockFiles = mockk<DbxUserFilesRequests>(relaxed = true)
+        val mockUploadBuilder = mockk<UploadBuilder>(relaxed = true)
+
+        every { anyConstructed<DbxClientV2>().files() } returns mockFiles
+        every { mockFiles.uploadBuilder(any()) } returns mockUploadBuilder
+        every { mockUploadBuilder.withMode(any()) } returns mockUploadBuilder
+        every { mockUploadBuilder.uploadAndFinish(any<InputStream>()) } throws RetryException("req_1", "Backoff required")
+
+        val result = uploader.doExport(exportInfo)
+
+        assertFalse(result.success())
+        assertTrue("Transient RetryException should set shallRetry = true", result.shallRetry())
+    }
+
+    @Test
+    fun testDoExport_serverException_returnsShallRetryTrue() {
+        val exportInfo = ExportInfo("workout_server_err", FileFormat.CSV, ExportType.DROPBOX)
+        createLocalFile(exportInfo.shortPath, "sample content")
+
+        val mockCredential = mockk<DbxCredential>(relaxed = true)
+        every { TrainingApplication.readDropboxCredential() } returns mockCredential
+
+        mockkConstructor(DbxClientV2::class)
+        val mockFiles = mockk<DbxUserFilesRequests>(relaxed = true)
+        val mockUploadBuilder = mockk<UploadBuilder>(relaxed = true)
+
+        every { anyConstructed<DbxClientV2>().files() } returns mockFiles
+        every { mockFiles.uploadBuilder(any()) } returns mockUploadBuilder
+        every { mockUploadBuilder.withMode(any()) } returns mockUploadBuilder
+        every { mockUploadBuilder.uploadAndFinish(any<InputStream>()) } throws ServerException("req_2", "Internal 500 error")
+
+        val result = uploader.doExport(exportInfo)
+
+        assertFalse(result.success())
+        assertTrue("Transient ServerException should set shallRetry = true", result.shallRetry())
+    }
+
+    @Test
+    fun testDoExport_genericDbxException_returnsShallRetryFalse() {
+        val exportInfo = ExportInfo("workout_generic_dbx", FileFormat.CSV, ExportType.DROPBOX)
+        createLocalFile(exportInfo.shortPath, "sample content")
+
+        val mockCredential = mockk<DbxCredential>(relaxed = true)
+        every { TrainingApplication.readDropboxCredential() } returns mockCredential
+
+        mockkConstructor(DbxClientV2::class)
+        val mockFiles = mockk<DbxUserFilesRequests>(relaxed = true)
+        val mockUploadBuilder = mockk<UploadBuilder>(relaxed = true)
+
+        every { anyConstructed<DbxClientV2>().files() } returns mockFiles
+        every { mockFiles.uploadBuilder(any()) } returns mockUploadBuilder
+        every { mockUploadBuilder.withMode(any()) } returns mockUploadBuilder
+        every { mockUploadBuilder.uploadAndFinish(any<InputStream>()) } throws DbxException("Invalid request format")
+
+        val result = uploader.doExport(exportInfo)
+
+        assertFalse(result.success())
+        assertFalse("Generic non-transient DbxException should set shallRetry = false", result.shallRetry())
     }
 
     @Test
@@ -189,5 +261,6 @@ class DropboxUploaderTest {
         // Then:
         assertFalse("Export must fail when IOException is thrown", result.success())
         assertTrue("Message must mention IOException", result.answer().contains("IOException"))
+        assertTrue("IOException should set shallRetry = true", result.shallRetry())
     }
 }

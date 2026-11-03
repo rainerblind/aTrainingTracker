@@ -51,6 +51,16 @@ Ensure that every ticket committed to the active sprint has clear, unambiguous a
    * **Duplicate / Overlapping Ticket Detection (`Rule 63` — `ATT-4670`)**: When inspecting the active sprint backlog at the start of Ceremony 1, proactively check whether any two tickets in the sprint address the same root cause or overlapping scope (e.g., `ATT-4667` and `ATT-4663`). When a duplicate is detected, immediately flag it to the human user, propose consolidating any unique acceptance criteria into the primary ticket, and move the duplicate directly to `Final Review (Human)` with a cross-reference comment so it does not consume a redundant 5-stage pipeline cycle.
    For each feature/bug/improvement ticket in sequence (skipping the `Review & Retro` ceremony ticket, which remains as the sprint's continuous retro logging and Ceremony 2 retrospective container rather than entering `Analysis` or spawning `[Analysis]..[Test]` subtasks):
    * **Present Summary & Context**: Present the ticket key, title, and current description to the user.
+   * **Story Point Estimation & Complexity Split Guardrail (`REQ-PRO-029`)**:
+     * Propose a Story Point estimate (`1`, `2`, `3`, or `5+ -> split`) based on the AAA scale:
+       * **1 SP** (*Trivial / Isolated*): Single-file bugfix, copy/localization adjustment, icon color/layout tweak, simple guard clause, no schema or architectural change (~20–30 min pipeline, ~1–2 min human review).
+       * **2 SP** (*Standard Atomic Ticket*): Well-bounded feature or bugfix across 2–4 files (e.g. ViewModel + Compose Screen + Unit Test + 9-locale strings) (~35–45 min pipeline, ~3–5 min human review).
+       * **3 SP** (*Complex / Cross-Layer*): Multi-layer change touching Repository/SQLite migration, hardware sensor state machine, or complex Canvas/chart math with extensive edge-case testing (~50–65 min pipeline, ~5–8 min human review; max 2–3 per sprint).
+       * **>= 5 SP** (*Too Large / Multi-Concern*): Mini-epic combining multiple screens, DB migrations, and services (> 75 min pipeline, > 10 min human review). **MANDATORY SPLIT into atomic child tickets (1–3 SP) before entering an active sprint!**
+     * Record approved story points in Jira via:
+       ```bash
+       python3 tools/jira_util.py set-points <KEY> <POINTS>
+       ```
    * **Strict Turn Boundary Before Moving to `Analysis` (Rule 7)**: Never call `python3 tools/jira_util.py move <KEY> "analysis"` in the same turn in which `<KEY>` is first presented to the user. Wait for the user's explicit approval of `<KEY>` before moving it to `Analysis`.
    * **Human Prerequisite Detection (Rule 22)**: Explicitly check whether the ticket depends on actions only the human can perform (e.g. Google Cloud Console / OAuth client registration, SHA-1 fingerprints, API keys, Play Console settings, third-party accounts, test hardware/sensors, outdoor rides). If so, name each action to the user, record them in the ticket description under a `Human Prerequisites` section, and agree whether they are completed before development starts (`"Tickets that need actions by me should be detected during the sprint planning."` — Retro 2026-40.16, ATT-1306).
    * **Screening Evaluation**:
@@ -70,8 +80,9 @@ Ensure that every ticket committed to the active sprint has clear, unambiguous a
          python3 tools/jira_util.py move <KEY> "analysis"
          ```
 4. **Handoff to Autonomous Execution (Phase 2)**:
-   Once all regular sprint tickets are in status `Analysis` (with the `Review & Retro` ticket retained for in-sprint anomaly logging and Ceremony 2 retrospective documentation), Phase 1 concludes. The implementation agents (`agent1`, `agent2`) take over Phase 2:
+   Once all regular sprint tickets are in status `Analysis` (with the `Review & Retro` ticket retained for in-sprint anomaly logging and Ceremony 2 retrospective documentation), Phase 1 concludes. The agent runs `python3 tools/jira_util.py list` and verifies that the total sprint story point load aligns with the target capacity envelope (~24–30 SP for ~12–15 atomic tickets and ~30–45 min of focused human on-device verification). The implementation agents (`agent1`, `agent2`) take over Phase 2:
    * **Continuous Unattended Execution & Full-Sprint Mandate**: The sprint pipeline runs continuously and autonomously across the entire sprint backlog without stopping the console, pausing between tickets, or asking whether to continue (`"Again, I was asked if we should continue. → Agents should do the entire Sprint."`).
+   * **Automatic Realization of Mid-Sprint Added Tickets (`Rule 65` — `ATT-4776`, `"When a new ticket is added to the sprint when the sprint is already started. Please realize this ticket."`)**: Because only the human user assigns backlog tickets to sprints, any ticket added by the human user to an already-started sprint during Phase 2 (`status = 'Zu erledigen'`, excluding `Review & Retro`) carries implicit human approval. Before concluding Phase 2, always re-query the active sprint for any newly added `Zu erledigen` tickets (`python3 tools/jira_util.py search "project = ATT AND sprint = <SPRINT_ID> AND status = 'Zu erledigen' ORDER BY rank ASC"`), automatically move them to `Analysis` (`python3 tools/jira_util.py move <KEY> "analysis"`), and execute Stages 1–5 on `sprint/<SPRINT_NAME>` without stopping or asking for confirmation.
    * **Synchronous Parent Stage Progression (Rule 3 / Rule 45)**: Whenever a stage subtask (`[Analysis]`, `[Req & Test Spec]`, `[Impl-Plan]`, `[Implementation]`, `[Test]`) transitions to `Erledigt` via `freigabe`, the parent ticket immediately advances to the next workflow column (`Test Spec` $\rightarrow$ `Implementation Plan` $\rightarrow$ `Implementation` $\rightarrow$ `Test` $\rightarrow$ `Final Review (Human)`), enforced automatically by `tools/jira_util.py move <SUBTASK_KEY> freigabe`.
    * **In-Sprint Human Escalation Protocol**: If an agent encounters a blocker, design decision, or requirement ambiguity that strictly requires human guidance, the agent MUST NOT halt or prompt the console. Instead:
      1. Post a clarifying question/decision comment on the subtask: `python3 tools/jira_util.py comment <SUBTASK_KEY> "Question for Human: ..."`
@@ -81,6 +92,9 @@ Ensure that every ticket committed to the active sprint has clear, unambiguous a
    * Each ticket branches from the active `sprint/<SPRINT_NAME>` branch.
    * **Mandatory Rules & Skills Refresh ("Obey the Rules")**: At the start of handling each ticket, the agent MUST explicitly re-read `.agents/rules/aspice_governance.md` and the skill for the active stage using `view_file` to reload constraints into active working memory and prevent context drift across compactions.
    * **One Commit per Ticket (Rule 44)**: Upon completing Stage 5 verification, the ticket is integrated back into `sprint/<SPRINT_NAME>` as a **single atomic commit** (`git merge --squash feature/<KEY> && git commit -m "feat(<KEY>): <Summary>"`).
+   * **Pre-Build Debug APK at Very End of Phase 2 (`Rule 64` — `ATT-4718`, `"Build debug APK at very end of phase 2."`)**: Immediately after the final sprint ticket is squashed onto `sprint/<SPRINT_NAME>` at the end of Phase 2, run `./gradlew assembleDebug` (or `./gradlew installDebug` if the test device is connected) so the integrated sprint debug APK is already compiled and verified before Ceremony 2 begins.
+   * **Tier 2 Sprint Integration Gate at the Very End of Phase 2 (`Rule 66` — `ATT-4864`, `"Maybe, the agents should do this before the sprint review."`)**: Before the APK pre-build, run `./gradlew testDebugUnitTest --max-workers=2 && python3 tools/verify_requirement_governance.py` on `sprint/<SPRINT_NAME>` and fix all failures as separate attributed commits, so Ceremony 2 starts from a green suite (Sprint 2026-44.1: 4 failures from stale tests and a cross-test coroutine leak surfaced only in the human review).
+   * **Lost-Wakeup Watchdog (`Rule 66` — `ATT-4864`)**: After every subagent dispatch, set one `schedule` watchdog (`DurationSeconds=1200`, `TimerCondition=<subagent id>`); if it fires, re-derive the state from Jira/git and continue. Never end a Phase 2 Coordinator turn with only a status report while tickets remain, and never let a subagent take over the Coordinator role (see `aspice_governance.md` Core Rule 7).
    * *In-Sprint Anomaly Logging*: Any process hiccups, tool issues, or user corrections during execution are immediately logged as comments in the sprint's `Review & Retro` ticket.
 
 ---
@@ -91,16 +105,17 @@ Ensure that every ticket committed to the active sprint has clear, unambiguous a
 Jointly review all completed sprint tickets with the human user against expectations on the integrated sprint build, authorize release, handle rejected items, and cleanly close the sprint into `develop`.
 
 ### Step-by-Step Procedure
-1. **Mandatory Device Build, Deployment & Background Tier 2 Unit Test Launch ('Install & Test at Review Start' — Rule 62)**:
+1. **Mandatory Device Build, Deployment & Background Tier 2 Unit Test Launch ('Install & Test at Review Start' — Rules 62 & 65)**:
    At the very start of the Sprint Review session (before commencing ticket inspection with the human user), the agent MUST:
    1. Compile and deploy the latest integrated sprint APK from `sprint/<SPRINT_NAME>` to the attached physical device (e.g. Google Pixel 10), and launch `com.atrainingtracker.debug` (`"Sprint Review session must start with installing the latest sprint version on the phone."`):
       ```bash
       ./gradlew installDebug && adb shell am start -n com.atrainingtracker.debug/com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
       ```
-   2. Immediately launch the **Tier 2 Sprint Integration Gate** (`./gradlew testDebugUnitTest && python3 tools/verify_requirement_governance.py`) **in the background** (`WaitMsBeforeAsync` $\le 1000$) right at the start of the review (`"We should start the full set of unit tests right at the start of the review in the background. Then, I don't have to wait for the results (and we might even get active during the review)."` — Retro 2026-43.6, `ATT-4596`):
+   2. Immediately launch the **Tier 2 Sprint Integration Gate** (`./gradlew testDebugUnitTest --max-workers=2 && python3 tools/verify_requirement_governance.py`) **in the background** (`WaitMsBeforeAsync` $\le 1000$) right at the start of the review (`"We should start the full set of unit tests right at the start of the review in the background. Then, I don't have to wait for the results (and we might even get active during the review)."` — Retro 2026-43.6, `ATT-4596`; `--max-workers=2` prevents Robolectric fork `EOFException` — `ATT-4776`):
       ```bash
-      ./gradlew testDebugUnitTest && python3 tools/verify_requirement_governance.py
+      ./gradlew testDebugUnitTest --max-workers=2 && python3 tools/verify_requirement_governance.py
       ```
+      Since Rule 66 this run is a **confirmation** of the green Tier 2 gate executed at the end of Phase 2 and ensures `docs/engineering/test_results/index.html` (`app/build/reports/tests/testDebugUnitTest/index.html`) displays the complete HTML report of all unit tests (Rule 67 — `ATT-4936`); any failure here is itself a retro anomaly.
 
 2. **Query Tickets Ready for Review in Rank Order**:
    Find all sprint tickets in status `Final Review (Human)` sorted strictly by backlog rank for the exact active sprint ID or name:
@@ -111,9 +126,10 @@ Jointly review all completed sprint tickets with the human user against expectat
 3. **Collaborative Ticket Inspection**:
    Ensure git is checked out on `sprint/<SPRINT_NAME>` (which contains all integrated sprint changes).
    * **Rule (Strict Rank Order)**: Review tickets strictly in backlog rank order (`ORDER BY rank ASC`) (`"During the sprint planning and the sprint review, always respect the rank of the tickets."`). No ticket may jump ahead of a higher-ranked ticket.
-   * **Rule (Single-Ticket Focus)**: Evaluate tickets **strictly one-by-one** (`"Please make one ticket after the other. Please also keep this in mind for the retro."`). Never batch or present multiple tickets simultaneously. Complete verification and human acceptance for the current ticket before proceeding to the next.
+   * **Rule (Single-Ticket Focus — `Rule 68` / `ATT-5082`)**: Evaluate tickets **strictly one-by-one** (`"Please make one ticket after the other. Please also keep this in mind for the retro."` / `"During Review: Only one ticket at each time. 🙂"`). Never batch or present multiple tickets simultaneously. Complete verification and human acceptance for the current ticket before proceeding to the next. If a turn during Ceremony 2 revisits a *previous* ticket (e.g., to create or update a follow-up ticket) while ticket $N$ is pending review, and the user says *"Let's go to the next one"*, that means returning to ticket $N$ — **never** marking ticket $N$ approved or jumping to ticket $N+1$ before the user has explicitly evaluated ticket $N$.
    For each ticket in `Final Review (Human)`:
    * Present the walkthrough deliverable (`docs/engineering/walkthroughs/<KEY>_walkthrough.md`), a summary of changes, and a concise **Code Review of the actual git diff** (`git show` / key modified files, verifying edge-case handling, resource safety, and adherence to architectural invariants) (`"Within the last tickets, you also did a review of the code-changes. I would like to keep this."` — Sprint Retro 2026-42.4 / ATT-3679).
+   * **Critical Co-Reviewer Completeness Sweep (ATT-3534)**: On refactoring, API modernization, cleanup, or migration tickets, run a targeted codebase completeness sweep (`grep -rn` or `rg` across `app/src/main`) to verify that no deprecated patterns, legacy helper calls, or orphaned references were missed in unmentioned files across the repository.
    * **Mandatory Proactive Review Recommendation (`Rule 63` — `ATT-4670`, `"For some recent tickets, I asked for your suggestion during the review. This should become standard."`)**: Always conclude the presentation of each ticket with a dedicated **`Recommendation`** section stating:
      1. Your explicit verdict recommendation (e.g., **Accept as `i.O.`**, **Accept with Follow-Up Ticket**, or **Deferred Field Test**) and the technical rationale why.
      2. Whether the ticket has an **on-device UI/behavioral touchpoint** (giving the exact screen/navigation path on the phone if the user wants to test it) or is a **pure backend/unit-test ticket** already 100% verified by the automated test suite.
@@ -146,7 +162,7 @@ Jointly review all completed sprint tickets with the human user against expectat
 4. **Sprint Retrospective, Tier 2 Sprint Integration Gate & Process Hardening ("Retro Before Merge")**:
    * **Mandate**: Conduct the Retrospective, run the Tier 2 Sprint Integration Gate (`./gradlew testDebugUnitTest` if not already verified on the head of `sprint/<SPRINT_NAME>`), and update governance documents on `sprint/<SPRINT_NAME>` **BEFORE** merging into `develop`.
    * Synthesize real-time comments logged during the sprint in the `Review & Retro` ticket into actionable root cause analyses.
-   * Document insights in `docs/engineering/Sprint_Review_and_Retro_<KEY>.md`.
+   * Document insights in `docs/engineering/retros/Sprint_Review_and_Retro_<KEY>.md`, including the Planned vs. Completed Story Points velocity metric table alongside ticket counts (`REQ-PRO-029`).
    * Update `.agents/rules/aspice_governance.md`, relevant skills, `docs/coding_standards.md`, `docs/design_guidelines.md`, and `docs/engineering/rule_history_archive.md` with permanent countermeasures.
    * Commit retrospective deliverables to `sprint/<SPRINT_NAME>`.
 5. **Sprint Closure & Merge to `develop`**:

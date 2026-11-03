@@ -22,6 +22,7 @@ import android.content.Context
 import com.atrainingtracker.trainingtracker.database.AthleteMetricEntry
 import com.atrainingtracker.trainingtracker.database.AthleteMetricType
 import com.atrainingtracker.trainingtracker.database.AthleteMetricsDatabaseManager
+import com.atrainingtracker.trainingtracker.database.ZoneSnapshotEntry
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -45,6 +46,16 @@ interface AthleteMetricsDataSource {
     fun updateEntry(id: Long, metricType: AthleteMetricType, timestampMs: Long, value: Double): Int
     fun deleteEntry(id: Long): Int
     fun seedEntriesInTransaction(seedCandidates: List<AthleteMetricEntry>)
+
+    // Zone History methods (REQ-SET-082)
+    fun getAllZoneSnapshots(): List<ZoneSnapshotEntry>
+    fun getEffectiveZoneSnapshot(zoneType: SettingsDataStore.ZoneType, timestampMs: Long): ZoneSnapshotEntry?
+    fun getLatestZoneSnapshot(zoneType: SettingsDataStore.ZoneType): ZoneSnapshotEntry?
+    fun getZoneHistory(zoneType: SettingsDataStore.ZoneType): List<ZoneSnapshotEntry>
+    fun insertZoneSnapshot(timestampMs: Long, zoneType: SettingsDataStore.ZoneType, boundaries: List<Int>): Long
+    fun updateZoneSnapshot(id: Long, timestampMs: Long, zoneType: SettingsDataStore.ZoneType, boundaries: List<Int>): Int
+    fun deleteZoneSnapshot(id: Long): Int
+    fun seedZoneSnapshotsInTransaction(seedCandidates: List<ZoneSnapshotEntry>)
 }
 
 /**
@@ -67,6 +78,23 @@ class SqliteAthleteMetricsDataSource(
     override fun deleteEntry(id: Long): Int = dbManager.deleteEntry(id)
     override fun seedEntriesInTransaction(seedCandidates: List<AthleteMetricEntry>) =
         dbManager.seedEntriesInTransaction(seedCandidates)
+
+    override fun getAllZoneSnapshots(): List<ZoneSnapshotEntry> =
+        dbManager.getAllZoneSnapshots()
+    override fun getEffectiveZoneSnapshot(zoneType: SettingsDataStore.ZoneType, timestampMs: Long): ZoneSnapshotEntry? =
+        dbManager.getEffectiveZoneSnapshot(zoneType, timestampMs)
+    override fun getLatestZoneSnapshot(zoneType: SettingsDataStore.ZoneType): ZoneSnapshotEntry? =
+        dbManager.getLatestZoneSnapshot(zoneType)
+    override fun getZoneHistory(zoneType: SettingsDataStore.ZoneType): List<ZoneSnapshotEntry> =
+        dbManager.getZoneHistory(zoneType)
+    override fun insertZoneSnapshot(timestampMs: Long, zoneType: SettingsDataStore.ZoneType, boundaries: List<Int>): Long =
+        dbManager.insertZoneSnapshot(timestampMs, zoneType, boundaries)
+    override fun updateZoneSnapshot(id: Long, timestampMs: Long, zoneType: SettingsDataStore.ZoneType, boundaries: List<Int>): Int =
+        dbManager.updateZoneSnapshot(id, timestampMs, zoneType, boundaries)
+    override fun deleteZoneSnapshot(id: Long): Int =
+        dbManager.deleteZoneSnapshot(id)
+    override fun seedZoneSnapshotsInTransaction(seedCandidates: List<ZoneSnapshotEntry>) =
+        dbManager.seedZoneSnapshotsInTransaction(seedCandidates)
 }
 
 /**
@@ -221,6 +249,112 @@ class AthleteMetricsRepository(
             AthleteMetricType.W_PRIME_KJ -> {
                 settingsDataStore.setWPrimeKj(latest?.value?.toFloat())
             }
+        }
+    }
+
+    // --- ZONE HISTORY PERSISTENCE & RESOLUTION (REQ-SET-082) ---
+
+    private val _zoneHistoryFlow = MutableStateFlow<Map<SettingsDataStore.ZoneType, List<ZoneSnapshotEntry>>>(emptyMap())
+    val zoneHistoryFlow: StateFlow<Map<SettingsDataStore.ZoneType, List<ZoneSnapshotEntry>>> = _zoneHistoryFlow.asStateFlow()
+
+    suspend fun refreshZoneHistory() = withContext(ioDispatcher) {
+        mutex.withLock {
+            refreshZoneHistoryLocked()
+        }
+    }
+
+    private fun refreshZoneHistoryLocked() {
+        val map = mutableMapOf<SettingsDataStore.ZoneType, List<ZoneSnapshotEntry>>()
+        for (type in SettingsDataStore.ZoneType.entries) {
+            map[type] = dataSource.getZoneHistory(type)
+        }
+        _zoneHistoryFlow.value = map
+    }
+
+    suspend fun ensureZoneHistorySeeded(nowMs: Long = System.currentTimeMillis()) = withContext(ioDispatcher) {
+        mutex.withLock {
+            ensureZoneHistorySeededLocked(nowMs)
+            refreshZoneHistoryLocked()
+        }
+    }
+
+    private suspend fun ensureZoneHistorySeededLocked(nowMs: Long) {
+        val candidates = mutableListOf<ZoneSnapshotEntry>()
+        for (type in SettingsDataStore.ZoneType.entries) {
+            val existing = dataSource.getLatestZoneSnapshot(type)
+            if (existing == null) {
+                val profile = settingsDataStore.loadZoneProfile(type)
+                val bounds = profile.toBoundariesList()
+                if (profile.isMonotonic()) {
+                    candidates.add(
+                        ZoneSnapshotEntry(
+                            timestampMs = nowMs,
+                            zoneType = type,
+                            boundaries = bounds
+                        )
+                    )
+                }
+            }
+        }
+        if (candidates.isNotEmpty()) {
+            dataSource.seedZoneSnapshotsInTransaction(candidates)
+        }
+    }
+
+    suspend fun saveZoneSnapshot(
+        zoneType: SettingsDataStore.ZoneType,
+        boundaries: List<Int>,
+        timestampMs: Long = System.currentTimeMillis()
+    ): Long = withContext(ioDispatcher) {
+        mutex.withLock {
+            ensureZoneHistorySeededLocked(timestampMs)
+            val id = dataSource.insertZoneSnapshot(timestampMs, zoneType, boundaries)
+            syncLatestZoneSnapshotToDataStoreLocked(zoneType)
+            refreshZoneHistoryLocked()
+            id
+        }
+    }
+
+    suspend fun updateZoneSnapshot(
+        id: Long,
+        zoneType: SettingsDataStore.ZoneType,
+        boundaries: List<Int>,
+        timestampMs: Long
+    ) = withContext(ioDispatcher) {
+        mutex.withLock {
+            dataSource.updateZoneSnapshot(id, timestampMs, zoneType, boundaries)
+            syncLatestZoneSnapshotToDataStoreLocked(zoneType)
+            refreshZoneHistoryLocked()
+        }
+    }
+
+    suspend fun deleteZoneSnapshot(
+        id: Long,
+        zoneType: SettingsDataStore.ZoneType
+    ) = withContext(ioDispatcher) {
+        mutex.withLock {
+            dataSource.deleteZoneSnapshot(id)
+            syncLatestZoneSnapshotToDataStoreLocked(zoneType)
+            refreshZoneHistoryLocked()
+        }
+    }
+
+    fun getEffectiveZoneBoundaries(
+        zoneType: SettingsDataStore.ZoneType,
+        timestampMs: Long
+    ): List<Int> {
+        val snapshot = dataSource.getEffectiveZoneSnapshot(zoneType, timestampMs)
+        if (snapshot != null && snapshot.boundaries.size == zoneType.boundaryCount) {
+            return snapshot.boundaries
+        }
+        val count = zoneType.boundaryCount
+        return (1..count).map { idx -> settingsDataStore.getZoneMaxSync(zoneType, idx) }
+    }
+
+    private suspend fun syncLatestZoneSnapshotToDataStoreLocked(zoneType: SettingsDataStore.ZoneType) {
+        val latest = dataSource.getLatestZoneSnapshot(zoneType)
+        if (latest != null && latest.boundaries.size == zoneType.boundaryCount) {
+            settingsDataStore.applyLatestZoneBoundaries(zoneType, latest.boundaries)
         }
     }
 

@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.map
 
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import kotlin.math.abs
 import androidx.compose.foundation.background
@@ -36,6 +37,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -105,7 +107,9 @@ fun MapDetailLayout(
     hrZoneDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.FIVE_ZONES,
     powerZoneDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.FIVE_ZONES,
     climbs: List<Climb> = emptyList(),
-    externalScrubDistance: Double? = null
+    externalScrubDistance: Double? = null,
+    hrZoneThresholds: HeartRateZoneThresholds? = null,
+    powerZoneThresholds: PowerZoneThresholds? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -149,16 +153,19 @@ fun MapDetailLayout(
     val hasScrollableContent = metadataContent != null || analyticsContent != null || hasTelemetryGraphs
     val hasLowerSection = (showElevationProfile || hasTelemetryGraphs) && !activeScrubPath.isNullOrEmpty() || metadataContent != null || analyticsContent != null
 
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
     val unit = remember { TrainingApplication.getUnit() }
     val connection = remember { CollapsingAppBarNestedScrollConnection(0) }
     var headerHeightPx by remember { mutableIntStateOf(0) }
 
     val hrThresholds = remember(bSportType, context) {
-        TelemetryZoneMath.loadHeartRateThresholds(context, bSportType)
+        hrZoneThresholds ?: TelemetryZoneMath.loadHeartRateThresholds(context, bSportType)
     }
 
     val powerThresholds = remember(context) {
-        TelemetryZoneMath.loadPowerThresholds(context)
+        powerZoneThresholds ?: TelemetryZoneMath.loadPowerThresholds(context)
     }
 
     val activeScrubPoint = remember(selectedDistance, activeScrubPath, isTrackless) {
@@ -686,7 +693,7 @@ fun MapDetailLayout(
                                     .fillMaxWidth()
                             ) {
                                 Column(modifier = Modifier.fillMaxSize()) {
-                                    if (hasZoomToolbar) {
+                                    if (hasZoomToolbar && !isLandscape) {
                                         GlobalTelemetryZoomToolbar(
                                             zoomScale = profileZoomScale,
                                             startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
@@ -705,6 +712,22 @@ fun MapDetailLayout(
                                             .weight(1f)
                                             .fillMaxWidth()
                                             .verticalScroll(rememberScrollState())
+                                    )
+                                }
+                                if (hasZoomToolbar && isLandscape) {
+                                    GlobalTelemetryZoomToolbar(
+                                        zoomScale = profileZoomScale,
+                                        startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
+                                        totalSpan = totalSpan,
+                                        onZoomChanged = { z, s ->
+                                            profileZoomScale = z
+                                            viewportStartFraction = MapDetailViewportMath.domainToFraction(s, totalSpan, z)
+                                        },
+                                        isPanMode = isPanMode,
+                                        onPanModeToggle = { isPanMode = !isPanMode },
+                                        modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .padding(top = 4.dp, end = 8.dp)
                                     )
                                 }
                                 scrubbingOverlay()
@@ -727,7 +750,7 @@ fun MapDetailLayout(
                                 .wrapContentHeight()
                         ) {
                             Column(modifier = Modifier.fillMaxWidth().wrapContentHeight()) {
-                                if (hasZoomToolbar) {
+                                if (hasZoomToolbar && !isLandscape) {
                                     GlobalTelemetryZoomToolbar(
                                         zoomScale = profileZoomScale,
                                         startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
@@ -745,6 +768,22 @@ fun MapDetailLayout(
                                     Modifier
                                         .fillMaxWidth()
                                         .wrapContentHeight()
+                                )
+                            }
+                            if (hasZoomToolbar && isLandscape) {
+                                GlobalTelemetryZoomToolbar(
+                                    zoomScale = profileZoomScale,
+                                    startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
+                                    totalSpan = totalSpan,
+                                    onZoomChanged = { z, s ->
+                                        profileZoomScale = z
+                                        viewportStartFraction = MapDetailViewportMath.domainToFraction(s, totalSpan, z)
+                                    },
+                                    isPanMode = isPanMode,
+                                    onPanModeToggle = { isPanMode = !isPanMode },
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .padding(top = 4.dp, end = 8.dp)
                                 )
                             }
                             scrubbingOverlay()
@@ -765,7 +804,7 @@ fun MapDetailLayout(
                             .fillMaxWidth()
                     ) {
                         Column(modifier = Modifier.fillMaxSize()) {
-                            if (hasZoomToolbar) {
+                            if (hasZoomToolbar && !isLandscape) {
                                 GlobalTelemetryZoomToolbar(
                                     zoomScale = profileZoomScale,
                                     startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
@@ -786,12 +825,28 @@ fun MapDetailLayout(
                                     .verticalScroll(rememberScrollState())
                             )
                         }
+                        if (hasZoomToolbar && isLandscape) {
+                            GlobalTelemetryZoomToolbar(
+                                zoomScale = profileZoomScale,
+                                startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
+                                totalSpan = totalSpan,
+                                onZoomChanged = { z, s ->
+                                    profileZoomScale = z
+                                    viewportStartFraction = MapDetailViewportMath.domainToFraction(s, totalSpan, z)
+                                },
+                                isPanMode = isPanMode,
+                                onPanModeToggle = { isPanMode = !isPanMode },
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(top = 4.dp, end = 8.dp)
+                            )
+                        }
                         scrubbingOverlay()
                     }
                 }
             } else if (hasLowerSection) {
                 Column(modifier = Modifier.fillMaxWidth().wrapContentHeight()) {
-                    if (hasZoomToolbar) {
+                    if (hasZoomToolbar && !isLandscape) {
                         GlobalTelemetryZoomToolbar(
                             zoomScale = profileZoomScale,
                             startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
@@ -815,6 +870,22 @@ fun MapDetailLayout(
                                 .fillMaxWidth()
                                 .wrapContentHeight()
                         )
+                        if (hasZoomToolbar && isLandscape) {
+                            GlobalTelemetryZoomToolbar(
+                                zoomScale = profileZoomScale,
+                                startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, totalSpan, profileZoomScale),
+                                totalSpan = totalSpan,
+                                onZoomChanged = { z, s ->
+                                    profileZoomScale = z
+                                    viewportStartFraction = MapDetailViewportMath.domainToFraction(s, totalSpan, z)
+                                },
+                                isPanMode = isPanMode,
+                                onPanModeToggle = { isPanMode = !isPanMode },
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(top = 4.dp, end = 8.dp)
+                            )
+                        }
                         scrubbingOverlay()
                     }
                 }

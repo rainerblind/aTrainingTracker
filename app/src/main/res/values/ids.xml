@@ -21,6 +21,7 @@
     <item name="drawer_bikes" type="id" />
     <item name="drawer_shoes" type="id" />
     <item name="drawer_sport_types" type="id" />
+    <item name="drawer_auto_pause" type="id" />
     <item name="drawer_training_zones" type="id" />
     <item name="drawer_athlete_profile" type="id" />
 
@@ -37,5 +38,6 @@
     <item name="drawer_tracking_layouts" type="id" />
     <item name="drawer_search_settings" type="id" />
     <item name="drawer_backup_restore" type="id" />
+    <item name="drawer_tips_guide" type="id" />
     <item name="drawer_privacy_policy" type="id" />
 </resources>

@@ -62,7 +62,50 @@ fun PeriodsTabsScreen(
     onMapClick: (PeriodSummary) -> Unit,
     onSportClick: (PeriodSummary, BSportType) -> Unit,
     onLongestWorkoutClick: (PeriodSummary, BSportType, Long) -> Unit,
-    migrationStatus: MigrationStatus? = null
+    migrationStatus: MigrationStatus? = null,
+    selectedSports: Set<BSportType> = setOf(BSportType.BIKE, BSportType.RUN),
+    onToggleSportFilter: (BSportType) -> Unit = {},
+    selectedMetric: PeriodBarMetric = PeriodBarMetric.DURATION,
+    onSelectMetric: (PeriodBarMetric) -> Unit = {},
+    onDayCellClick: ((PeriodSummary, BSportType, java.time.LocalDate, DailySportActivity?) -> Unit)? = null
+) {
+    PeriodsTabsScreen(
+        groupedPeriods = groupedPeriods,
+        tabs = tabs,
+        pagerState = pagerState,
+        listStates = listStates,
+        isPlayServiceAvailable = isPlayServiceAvailable,
+        onHeaderClick = onHeaderClick,
+        onMapClick = { s, _ -> onMapClick(s) },
+        onSportClick = onSportClick,
+        onLongestWorkoutClick = onLongestWorkoutClick,
+        migrationStatus = migrationStatus,
+        selectedSports = selectedSports,
+        onToggleSportFilter = onToggleSportFilter,
+        selectedMetric = selectedMetric,
+        onSelectMetric = onSelectMetric,
+        onDayCellClick = onDayCellClick
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PeriodsTabsScreen(
+    groupedPeriods: List<List<PeriodSummary>>,
+    tabs: List<String>,
+    pagerState: PagerState,
+    listStates: List<LazyListState>,
+    isPlayServiceAvailable: Boolean,
+    onHeaderClick: (PeriodSummary) -> Unit,
+    onMapClick: (PeriodSummary, String?) -> Unit,
+    onSportClick: (PeriodSummary, BSportType) -> Unit,
+    onLongestWorkoutClick: (PeriodSummary, BSportType, Long) -> Unit,
+    migrationStatus: MigrationStatus? = null,
+    selectedSports: Set<BSportType> = setOf(BSportType.BIKE, BSportType.RUN),
+    onToggleSportFilter: (BSportType) -> Unit = {},
+    selectedMetric: PeriodBarMetric = PeriodBarMetric.DURATION,
+    onSelectMetric: (PeriodBarMetric) -> Unit = {},
+    onDayCellClick: ((PeriodSummary, BSportType, java.time.LocalDate, DailySportActivity?) -> Unit)? = null
 ) {
 
     val scope = rememberCoroutineScope()
@@ -84,7 +127,7 @@ fun PeriodsTabsScreen(
                 userScrollEnabled = true,
                 verticalAlignment = Alignment.Top
             ) { pageIndex ->
-                val periods = groupedPeriods[pageIndex]
+                val periods = if (pageIndex < groupedPeriods.size) groupedPeriods[pageIndex] else emptyList()
                 val scrollState = listStates[pageIndex]
 
                 Box(modifier = Modifier.fillMaxSize()) {
@@ -144,10 +187,11 @@ fun PeriodsTabsScreen(
                             periods = periods,
                             currentScrollState = scrollState,
                             onBarClick = { index -> scope.launch { scrollState.animateScrollToItem(index) } },
+                            selectedMetric = selectedMetric,
+                            onMetricSelect = onSelectMetric,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(80.dp)
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                                .padding(vertical = 4.dp)
                         )
 
                         PeriodList(
@@ -158,6 +202,8 @@ fun PeriodsTabsScreen(
                             onMapClick = onMapClick,
                             onSportClick = onSportClick,
                             onLongestWorkoutClick = onLongestWorkoutClick,
+                            activeMetric = selectedMetric,
+                            onDayCellClick = onDayCellClick,
                             modifier = Modifier.fillMaxWidth().weight(1f)
                         )
                     }
@@ -183,6 +229,31 @@ fun PeriodsTabsScreen(
                             style = MaterialTheme.typography.titleLarge,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            val canonicalSports = listOf(BSportType.BIKE, BSportType.RUN, BSportType.UNKNOWN)
+                            canonicalSports.forEach { sport ->
+                                val isSelected = selectedSports.contains(sport)
+                                val tint = if (isSelected) {
+                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = TTAlpha.Disabled)
+                                }
+                                IconButton(
+                                    onClick = { onToggleSportFilter(sport) },
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = sport.iconResId),
+                                        contentDescription = stringResource(id = sport.stringResId),
+                                        tint = tint,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                            }
+                        }
                     }
                     PrimaryScrollableTabRow(
                         selectedTabIndex = pagerState.currentPage,
@@ -203,75 +274,3 @@ fun PeriodsTabsScreen(
     }
 }
 
-@Composable
-fun PeriodBarGraph(
-    periods: List<PeriodSummary>,
-    currentScrollState: LazyListState,
-    onBarClick: (Int) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    if (periods.isEmpty()) return
-    val maxDuration = remember(periods) { max(1L, periods.maxOfOrNull { it.totalDurationSec } ?: 1L) }
-    val graphPeriods = remember(periods) { periods.reversed() }
-    val graphScrollState = rememberLazyListState()
-    val barWidth = remember(periods) {
-        when (periods.firstOrNull()?.periodType) {
-            PeriodType.DAY -> 16.dp
-            PeriodType.WEEK -> 24.dp
-            PeriodType.MONTH -> 48.dp
-            PeriodType.YEAR -> 80.dp
-            else -> 16.dp
-        }
-    }
-    val firstVisibleIndex by remember { derivedStateOf { currentScrollState.firstVisibleItemIndex } }
-    
-    // --- ATT-375: Synchronize focus with list growth ---
-    LaunchedEffect(firstVisibleIndex, graphPeriods.size) {
-        val graphIndex = graphPeriods.size - 1 - firstVisibleIndex
-        if (graphIndex in graphPeriods.indices) {
-            // Use snap (scrollToItem) during migration to keep up with high-frequency updates,
-            // or animate if the size is stable (user scrolling).
-            if (currentScrollState.isScrollInProgress) {
-                graphScrollState.animateScrollToItem(graphIndex)
-            } else {
-                graphScrollState.scrollToItem(graphIndex)
-            }
-        }
-    }
-    LazyRow(
-        state = graphScrollState, modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.Bottom,
-        contentPadding = PaddingValues(horizontal = 16.dp)
-    ) {
-        itemsIndexed(graphPeriods) { index, period ->
-            val originalIndex = periods.size - 1 - index
-            val heightFraction = period.totalDurationSec.toFloat() / maxDuration
-            val isSelected = originalIndex == firstVisibleIndex
-            Column(
-                modifier = Modifier.width(barWidth).fillMaxHeight(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Bottom
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxWidth().weight(1f, fill = false)
-                        .fillMaxHeight(heightFraction.coerceAtLeast(0.1f))
-                        .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
-                        .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = TTAlpha.Disabled))
-                        .clickable { onBarClick(originalIndex) }
-                )
-                Box(modifier = Modifier.fillMaxWidth().height(16.dp), contentAlignment = Alignment.BottomCenter) {
-                    val hours = period.totalDurationSec / 3600
-                    if (hours > 0) {
-                        Text(
-                            text = if (barWidth >= 48.dp) "$hours h" else if (barWidth >= 24.dp) "${hours}h" else hours.toString(),
-                            style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false,
-                            modifier = Modifier.wrapContentWidth(unbounded = true),
-                            color = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = TTAlpha.Medium)
-                        )
-                    }
-                }
-            }
-        }
-    }
-}

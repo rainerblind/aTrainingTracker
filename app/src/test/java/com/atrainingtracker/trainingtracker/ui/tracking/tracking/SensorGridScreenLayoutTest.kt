@@ -126,7 +126,8 @@ class SensorGridScreenLayoutTest {
         // REQ-UI-358.2 / TST-UI-319.1: Asymmetric weight allocation
         assertTrue(
             "Sensor grid must branch on state.mapState.showMap to assign bounded height vs fill=false weight (TST-UI-319.1)",
-            content.contains("val sensorGridModifier = if (state.mapState.showMap)")
+            // ATT-4856 wraps the branch in parentheses to append .alpha(gridAlpha) (REQ-TRK-045)
+            Regex("""val sensorGridModifier = \(?if \(state\.mapState\.showMap\)""").containsMatchIn(content)
         )
         assertTrue(
             "When map is visible, sensor grid must clamp to max 50% available height with vertical scroll (TST-UI-319.1)",
@@ -255,6 +256,38 @@ class SensorGridScreenLayoutTest {
         assertFalse(
             "SensorGridScreen must NOT use or import Icons.Default.HorizontalRule (TST-UI-386.3 / Rule 49)",
             content.contains("HorizontalRule")
+        )
+    }
+
+    @Test
+    fun testSensorGrid_appliesProportionalColWeightWithNonZeroSafetyClamp() {
+        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
+        val content = file.readText()
+
+        // REQ-UI-437.2 / TST-UI-437.4: SensorGridContent & Config mode must use Modifier.weight(effectiveWeight) with non-zero clamp
+        assertTrue(
+            "Sensor grid fields must compute effectiveWeight with colWeight > 0f clamp (TST-UI-437.4)",
+            content.contains("val effectiveWeight = if (fieldState.colWeight > 0f) fieldState.colWeight else 1.0f")
+        )
+        assertTrue(
+            "Sensor grid fields Box must apply Modifier.weight(effectiveWeight) (TST-UI-437.4)",
+            content.contains("Modifier.weight(effectiveWeight)")
+        )
+    }
+
+    @Test
+    fun testSensorGrid_appliesFillMaxHeightPropagationInRow() {
+        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
+        val content = file.readText()
+
+        // REQ-UI-438.1 / TST-UI-438.1: SensorGridContent & Config mode must propagate fillMaxHeight to Box and SensorFieldView
+        assertTrue(
+            "Multi-column cell Box must apply .weight(effectiveWeight).fillMaxHeight() (TST-UI-438.1)",
+            content.contains("Box(modifier = Modifier.weight(effectiveWeight).fillMaxHeight())")
+        )
+        assertTrue(
+            "SensorFieldView must receive modifier = Modifier.fillMaxHeight() (TST-UI-438.1)",
+            content.contains("modifier = Modifier.fillMaxHeight()")
         )
     }
 }

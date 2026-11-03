@@ -36,18 +36,23 @@ data class AutoPauseConfig(
     val bikeEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_ENABLED,
     val runEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_ENABLED,
     val otherEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_ENABLED,
+    val startInAutoPauseEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_START_IN_AUTO_PAUSE_ENABLED,
     val bikeSpeedThreshold: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_SPEED_THRESHOLD_METRIC,
     val bikeDebounceSec: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_DEBOUNCE_SEC,
+    val bikeResumeDebounceSec: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_RESUME_DEBOUNCE_SEC,
     val runSpeedThreshold: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_SPEED_THRESHOLD_METRIC,
     val runDebounceSec: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_DEBOUNCE_SEC,
+    val runResumeDebounceSec: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_RESUME_DEBOUNCE_SEC,
     val otherSpeedThreshold: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_SPEED_THRESHOLD_METRIC,
     val otherDebounceSec: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_DEBOUNCE_SEC,
+    val otherResumeDebounceSec: Int = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_RESUME_DEBOUNCE_SEC,
     val isMetric: Boolean = true,
     // Deprecated backward-compatibility bridges
     @Deprecated(message = "Use sport-specific speed thresholds", replaceWith = ReplaceWith("bikeSpeedThreshold"))
     val speedThresholdKmh: Float? = null,
     @Deprecated(message = "Use sport-specific debounces", replaceWith = ReplaceWith("bikeDebounceSec"))
-    val debounceSec: Int? = null
+    val debounceSec: Int? = null,
+    val resumeDebounceSec: Int? = null
 ) {
     fun isEnabledForSport(sportType: BSportType): Boolean {
         return when (sportType) {
@@ -72,6 +77,15 @@ data class AutoPauseConfig(
             BSportType.BIKE -> bikeDebounceSec
             BSportType.RUN -> runDebounceSec
             else -> otherDebounceSec
+        }
+    }
+
+    fun getResumeDebounceSecForSport(sportType: BSportType): Int {
+        if (resumeDebounceSec != null) return resumeDebounceSec
+        return when (sportType) {
+            BSportType.BIKE -> bikeResumeDebounceSec
+            BSportType.RUN -> runResumeDebounceSec
+            else -> otherResumeDebounceSec
         }
     }
 }
@@ -191,12 +205,42 @@ class AutoPauseManager(
         fun isSpeedFiniteAndValid(speedMps: Double?): Boolean {
             return speedMps != null && !speedMps.isNaN() && !speedMps.isInfinite() && speedMps >= 0.0
         }
+
+        /**
+         * Evaluates whether a workout should start directly in [AutoPauseState.AUTO_PAUSED]
+         * (REQ-TRK-044, ATT-4840, ATT-4925).
+         *
+         * Returns true if and only if [hasSpeedSource] is true, [AutoPauseConfig.startInAutoPauseEnabled] is true,
+         * auto-pause is enabled for [sportType], and [currentSpeedMps] is below the sport's
+         * configured pause speed threshold (or null/invalid/0.0 m/s stationary while speed source is registered).
+         * When [hasSpeedSource] is false (e.g. indoor workout without speed sensors), returns false immediately.
+         */
+        @JvmStatic
+        @JvmOverloads
+        fun shouldStartInAutoPause(
+            config: AutoPauseConfig,
+            sportType: BSportType,
+            currentSpeedMps: Double?,
+            hasSpeedSource: Boolean = false
+        ): Boolean {
+            if (!hasSpeedSource) return false
+            if (!config.startInAutoPauseEnabled) return false
+            if (!config.isEnabledForSport(sportType)) return false
+            val threshold = config.getSpeedThresholdForSport(sportType)
+            val unit = if (config.isMetric) MyUnits.METRIC else MyUnits.IMPERIAL
+            val thresholdMps = MyHelper.UserUnit2mps(threshold, unit)
+            val speed = if (isSpeedFiniteAndValid(currentSpeedMps)) currentSpeedMps!! else 0.0
+            return speed < thresholdMps
+        }
     }
 
     var currentState: AutoPauseState = AutoPauseState.TRACKING
         private set
 
     var debounceCounter: Int = 0
+        private set
+
+    var resumeDebounceCounter: Int = 0
         private set
 
     var sensorLostRecoveryTicks: Int = 0
@@ -211,12 +255,14 @@ class AutoPauseManager(
     @Synchronized
     fun resetDebounceCounter() {
         debounceCounter = 0
+        resumeDebounceCounter = 0
     }
 
     @Synchronized
     fun reset() {
         currentState = AutoPauseState.TRACKING
         debounceCounter = 0
+        resumeDebounceCounter = 0
         sensorLostRecoveryTicks = 0
         lastValidSpeedPacketTimestampMs = 0L
         lastValidSpeedMps = null
@@ -227,6 +273,7 @@ class AutoPauseManager(
         currentState = state
         if (state == AutoPauseState.TRACKING || state == AutoPauseState.AUTO_PAUSED || state == AutoPauseState.MANUAL_PAUSED) {
             debounceCounter = 0
+            resumeDebounceCounter = 0
             sensorLostRecoveryTicks = 0
         }
         if (state == AutoPauseState.TRACKING || state == AutoPauseState.MANUAL_PAUSED) {
@@ -249,6 +296,7 @@ class AutoPauseManager(
             return
         }
         debounceCounter = 0
+        resumeDebounceCounter = 0
         sensorLostRecoveryTicks = 0
         if (currentState == AutoPauseState.AUTO_PAUSED || currentState == AutoPauseState.PAUSE_DEBOUNCE_PENDING) {
             currentState = AutoPauseState.TRACKING
@@ -291,6 +339,7 @@ class AutoPauseManager(
         if (manualPauseLocked) {
             currentState = AutoPauseState.MANUAL_PAUSED
             debounceCounter = 0
+            resumeDebounceCounter = 0
             sensorLostRecoveryTicks = 0
             lastValidSpeedMps = null
             return AutoPauseTransition(
@@ -305,6 +354,7 @@ class AutoPauseManager(
             // Manual lock was cleared (e.g. user resumed manually)
             currentState = AutoPauseState.TRACKING
             debounceCounter = 0
+            resumeDebounceCounter = 0
             sensorLostRecoveryTicks = 0
             lastValidSpeedMps = null
         }
@@ -315,6 +365,7 @@ class AutoPauseManager(
             if (currentState == AutoPauseState.AUTO_PAUSED || currentState == AutoPauseState.PAUSE_DEBOUNCE_PENDING) {
                 currentState = AutoPauseState.TRACKING
                 debounceCounter = 0
+                resumeDebounceCounter = 0
                 return AutoPauseTransition(
                     previousState = prevState,
                     newState = AutoPauseState.TRACKING,
@@ -340,6 +391,7 @@ class AutoPauseManager(
         if (isSpeedCorrupt || !hasSpeedSource) {
             // Speed source unregistered/disconnected or corrupt numeric reading -> SENSOR_LOST
             lastValidSpeedMps = null
+            resumeDebounceCounter = 0
             if (currentState == AutoPauseState.TRACKING || currentState == AutoPauseState.PAUSE_DEBOUNCE_PENDING) {
                 currentState = AutoPauseState.SENSOR_LOST
                 debounceCounter = 0
@@ -349,11 +401,21 @@ class AutoPauseManager(
                     newState = AutoPauseState.SENSOR_LOST,
                     auditLogEvent = "SENSOR_LOST_STALE_TTL_EXCEEDED"
                 )
+            } else if (currentState == AutoPauseState.AUTO_PAUSED && !hasSpeedSource) {
+                currentState = AutoPauseState.SENSOR_LOST
+                debounceCounter = 0
+                sensorLostRecoveryTicks = 0
+                return AutoPauseTransition(
+                    previousState = prevState,
+                    newState = AutoPauseState.SENSOR_LOST,
+                    triggerResume = true,
+                    auditLogEvent = "SENSOR_LOST_SPEED_SOURCE_REMOVED"
+                )
             } else if (currentState == AutoPauseState.SENSOR_LOST) {
                 sensorLostRecoveryTicks = 0
                 return AutoPauseTransition(previousState = prevState, newState = AutoPauseState.SENSOR_LOST)
             }
-            // If already AUTO_PAUSED, remain AUTO_PAUSED
+            // If already AUTO_PAUSED and hasSpeedSource is true (corrupt numeric reading), remain AUTO_PAUSED
             return AutoPauseTransition(previousState = prevState, newState = currentState)
         }
 
@@ -373,6 +435,7 @@ class AutoPauseManager(
                 currentState = AutoPauseState.TRACKING
                 sensorLostRecoveryTicks = 0
                 debounceCounter = 0
+                resumeDebounceCounter = 0
                 return AutoPauseTransition(
                     previousState = prevState,
                     newState = AutoPauseState.TRACKING,
@@ -384,15 +447,16 @@ class AutoPauseManager(
 
         val sportThreshold = config.getSpeedThresholdForSport(sportType)
         val sportDebounceSec = config.getDebounceSecForSport(sportType)
+        val sportResumeDebounceSec = config.getResumeDebounceSecForSport(sportType)
         val unit = if (config.isMetric) MyUnits.METRIC else MyUnits.IMPERIAL
         val pauseThresholdMps = MyHelper.UserUnit2mps(sportThreshold, unit)
-        val resumeThresholdUserUnit = calculateResumeSpeedThresholdUserUnit(sportThreshold, config.isMetric)
-        val resumeThresholdMps = MyHelper.UserUnit2mps(resumeThresholdUserUnit, unit)
+        val inMotionDropoutThresholdMps = MyHelper.UserUnit2mps(calculateResumeSpeedThresholdUserUnit(sportThreshold, config.isMetric), unit)
 
         // 6. Stale Packet Classification (REQ-TRK-037.1 / ATT-4094):
-        // If speed packets stopped arriving while cruising in motion (> resumeThresholdMps),
+        // If speed packets stopped arriving while cruising in motion (>= inMotionDropoutThresholdMps),
         // classify as SENSOR_LOST (tunnel/dropout) rather than falsely pausing.
-        if (!hasFreshValidReading && lastValidSpeedMps != null && lastValidSpeedMps!! > resumeThresholdMps) {
+        if (!hasFreshValidReading && lastValidSpeedMps != null && lastValidSpeedMps!! >= inMotionDropoutThresholdMps) {
+            resumeDebounceCounter = 0
             if (currentState == AutoPauseState.TRACKING || currentState == AutoPauseState.PAUSE_DEBOUNCE_PENDING) {
                 currentState = AutoPauseState.SENSOR_LOST
                 debounceCounter = 0
@@ -410,12 +474,13 @@ class AutoPauseManager(
         }
 
         // For a registered speed source (hasSpeedSource == true): if the sensor stopped emitting
-        // packets at standstill (lastValidSpeedMps <= resumeThresholdMps or null), treat
+        // packets at standstill (lastValidSpeedMps < pauseThresholdMps or null), treat
         // effective speed as 0.0 m/s for pause evaluation while requiring a fresh reading to auto-resume.
         val speedMps = if (hasFreshValidReading) currentSpeedMps else 0.0
 
         return when (currentState) {
             AutoPauseState.TRACKING -> {
+                resumeDebounceCounter = 0
                 if (speedMps < pauseThresholdMps) {
                     debounceCounter = 1
                     if (debounceCounter >= sportDebounceSec) {
@@ -443,6 +508,7 @@ class AutoPauseManager(
             }
 
             AutoPauseState.PAUSE_DEBOUNCE_PENDING -> {
+                resumeDebounceCounter = 0
                 if (speedMps < pauseThresholdMps) {
                     debounceCounter++
                     if (debounceCounter >= sportDebounceSec) {
@@ -474,20 +540,30 @@ class AutoPauseManager(
             }
 
             AutoPauseState.AUTO_PAUSED -> {
-                // Must have a fresh reading reaching resume threshold (including hysteresis) to resume
-                if (hasFreshValidReading && speedMps >= resumeThresholdMps) {
-                    currentState = AutoPauseState.TRACKING
-                    debounceCounter = 0
-                    audioNotifier.playTone(SoundCue.AUTO_RESUME)
-                    AutoPauseTransition(
-                        previousState = prevState,
-                        newState = AutoPauseState.TRACKING,
-                        triggerResume = true,
-                        soundCue = SoundCue.AUTO_RESUME,
-                        auditLogEvent = "AUTO_RESUMED_SPEED_ABOVE_THRESHOLD"
-                    )
+                debounceCounter = 0
+                // Must have a fresh valid reading reaching pauseThresholdMps to count toward resume (REQ-TRK-043)
+                if (hasFreshValidReading && speedMps >= pauseThresholdMps) {
+                    resumeDebounceCounter++
+                    if (resumeDebounceCounter >= sportResumeDebounceSec) {
+                        currentState = AutoPauseState.TRACKING
+                        resumeDebounceCounter = 0
+                        audioNotifier.playTone(SoundCue.AUTO_RESUME)
+                        AutoPauseTransition(
+                            previousState = prevState,
+                            newState = AutoPauseState.TRACKING,
+                            triggerResume = true,
+                            soundCue = SoundCue.AUTO_RESUME,
+                            auditLogEvent = "AUTO_RESUMED_SPEED_ABOVE_THRESHOLD"
+                        )
+                    } else {
+                        AutoPauseTransition(
+                            previousState = prevState,
+                            newState = AutoPauseState.AUTO_PAUSED
+                        )
+                    }
                 } else {
-                    // Still stationary, stale, or within deadband (chatter suppression)
+                    // Still stationary, stale, or below threshold -> reset resume debounce counter
+                    resumeDebounceCounter = 0
                     AutoPauseTransition(
                         previousState = prevState,
                         newState = AutoPauseState.AUTO_PAUSED

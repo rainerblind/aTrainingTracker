@@ -795,7 +795,7 @@
     <string name="label_max">Max</string>
 
     <string name="zone_display_title">Zone Visualization</string>
-    <string name="zone_display_background">Light background</string>
+    <string name="zone_display_background">Tinted background</string>
     <string name="zone_display_left_bar">Left bar</string>
     <string name="zone_display_right_bar">Right bar</string>
     <string name="zone_display_text_color">Text color</string>
@@ -1173,12 +1173,17 @@
     <string name="workout_periods__longest_workout">Longest Workout</string>
     <string name="workout_periods__region_format">Region %1$d (%2$d)</string>
     <string name="workout_periods__primary_region_format">Primary: Region %1$d (%2$d)</string>
+    <string name="workout_periods__named_region_format">%1$s (%2$d)</string>
+    <string name="workout_periods__primary_named_region_format">Primary: %1$s (%2$d)</string>
     <string name="workout_periods__all_regions_format">All Regions (%1$d)</string>
     <string name="workout_periods__migration_title">Optimizing training history database…</string>
     <string name="workout_periods__migration_querying">Querying training history…</string>
     <string name="workout_periods__migration_reading">Reading workout %1$d of %2$d…</string>
     <string name="workout_periods__migration_syncing">Syncing %1$s…</string>
     <string name="workout_periods__migration_finalizing">Finalizing yearly totals…</string>
+    <string name="workout_periods__yearly_activity_grid">Yearly Activity</string>
+    <string name="workout_periods__daily_activity_strip">Daily Activity</string>
+    <string name="workout_periods__no_activity">No activity</string>
 
     <!-- share screenshots -->
     <string name="share">Share</string>
@@ -2034,6 +2039,7 @@
     <string name="map_layer_segments">Segments</string>
     <string name="map_layer_locations">Favorite Locations</string>
     <string name="map_layer_track">Recorded Track</string>
+    <string name="map_layer_clusters">Favorite Tracks</string>
     <string name="ant_dialog_view_status">View ANT+ Status</string>
     <string name="ant_dialog_dismiss">Got it</string>
 
@@ -2109,19 +2115,27 @@
     <string name="zone_onboarding_action_later">Not Now</string>
 
     <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
+    <string name="auto_pause_title">Auto-Pause</string>
     <string name="tuning_auto_pause_title">Auto-Pause</string>
     <string name="tuning_auto_pause_desc">Automatically pause recording when stationary</string>
+    <string name="tuning_auto_pause_enable_title">Enable Auto-Pause</string>
     <string name="tuning_auto_pause_bike_title">Cycling</string>
     <string name="tuning_auto_pause_run_title">Running</string>
     <string name="tuning_auto_pause_other_title">Other Sports</string>
-    <string name="tuning_auto_pause_speed_threshold_title">Pause Speed Threshold</string>
-    <string name="tuning_auto_pause_speed_threshold_desc">Speed below which recording is paused</string>
+    <string name="tuning_auto_pause_speed_threshold_title">Speed Threshold</string>
+    <string name="tuning_auto_pause_speed_threshold_desc">Pause below this speed, resume above</string>
     <string name="tuning_auto_pause_debounce_title">Pause Debounce Delay</string>
     <string name="tuning_auto_pause_debounce_desc">Duration below threshold before pausing</string>
+    <string name="tuning_auto_pause_resume_debounce_title">Resume Debounce Delay</string>
+    <string name="tuning_auto_pause_resume_debounce_desc">Duration above threshold before resuming</string>
+    <string name="tuning_auto_pause_start_in_auto_pause_title">Start in Auto-Paused</string>
+    <string name="tuning_auto_pause_start_in_auto_pause_desc">When starting a workout while stationary, immediately begin in Auto-Paused until movement is detected. Applies to all sports.</string>
     <string name="tuning_speed_value_format">%1$d %2$s</string>
     <string name="tuning_seconds_value_format">%1$d s</string>
     <string name="cockpit_auto_pause_badge">Auto-Pause</string>
     <string name="cockpit_auto_pause_resume">Resume Now</string>
+    <string name="cockpit_status_not_started">Not Started</string>
+    <string name="cockpit_status_paused">Paused</string>
     <string name="cockpit_speed_sensor_lost">Speed Sensor Lost</string>
 
     <!-- Athlete Baselines & W/kg Metric (ATT-1289, REQ-TRK-019) -->
@@ -2321,9 +2335,95 @@
     <string name="cd_add_before">Add before</string>
     <string name="cd_delete_tab">Delete tab</string>
     <string name="cd_add_after">Add after</string>
+    <string name="cd_copy_tab">Copy tab</string>
+    <string name="cd_move_tab_left">Move tab left</string>
+    <string name="cd_move_tab_right">Move tab right</string>
+    <string name="copy_tab_title">Copy Tab</string>
+    <string name="copy_tab_action">Copy</string>
     <string name="back">Back</string>
     <string name="close">Close</string>
     <string name="clear">Clear</string>
     <string name="select_route">Select route</string>
     <string name="equipment">Equipment</string>
+
+    <!-- In-App Feature Discovery & Tips Guide (REQ-UI-432 / ATT-2276) -->
+    <string name="drawer_tips_guide">Tips &amp; Tricks</string>
+    <string name="tips_guide_title">Tips &amp; Tricks</string>
+    <string name="tips_guide_header_title">Feature Discovery</string>
+    <string name="tips_guide_header_subtitle">Explore powerful tools and shortcuts designed for your training.</string>
+    <string name="tip_routes_clustering_title">Favorite Routes &amp; Auto-Clustering</string>
+    <string name="tip_routes_clustering_subtitle">Intelligent workout route detection</string>
+    <string name="tip_routes_clustering_desc">aTrainingTracker automatically analyzes your GPS workouts and groups similar rides or runs into favorite routes. Compare your past performances and track progression over time without manual tagging.</string>
+    <string name="tip_routes_clustering_action">View Favorite Routes</string>
+    <string name="tip_sensors_failover_title">Multi-Protocol Sensors &amp; Failover</string>
+    <string name="tip_sensors_failover_subtitle">Seamless ANT+ and Bluetooth LE switching</string>
+    <string name="tip_sensors_failover_desc">Pair multiple heart rate, power, or cadence sensors simultaneously. If an active sensor drops connection or its battery dies mid-workout, the backup sensor takes over immediately without data loss.</string>
+    <string name="tip_sensors_failover_action">Manage Sensors</string>
+    <string name="tip_cockpit_customization_title">Cockpit Displays &amp; Bike Bell</string>
+    <string name="tip_cockpit_customization_subtitle">Fully customizable telemetry grids</string>
+    <string name="tip_cockpit_customization_desc">Configure multiple telemetry pages per sport with live metrics, elevation profile, or map. Add the acoustic Bike Bell button for single-tap or continuous ringing on outdoor rides.</string>
+    <string name="tip_cockpit_customization_action">Configure Displays</string>
+    <string name="tip_live_segments_title">Strava Live Segments &amp; Scrubbing</string>
+    <string name="tip_live_segments_subtitle">Live pacing against PR and KOM</string>
+    <string name="tip_live_segments_desc">Synchronize your starred Strava segments for real-time in-ride countdowns, time deltas, and live elevation profiles. Scrub interactively across segment elevation graphs to inspect gradient and distance.</string>
+    <string name="tip_live_segments_action">Explore Segments</string>
+    <string name="tip_gear_tracking_title">Automated Gear &amp; Equipment</string>
+    <string name="tip_gear_tracking_subtitle">Distance tracking per bike and shoes</string>
+    <string name="tip_gear_tracking_desc">Link paired sensors or default sport types to specific bikes and shoes. aTrainingTracker automatically credits distance and wear to the right equipment after every workout.</string>
+    <string name="tip_gear_tracking_action">Manage Equipment</string>
+    <string name="tip_training_zones_title">Physiology &amp; Training Zones</string>
+    <string name="tip_training_zones_subtitle">Coggan Power, Karvonen HR &amp; W\' Balance</string>
+    <string name="tip_training_zones_desc">Leverage advanced athletic metrics including Normalized Power (NP), Intensity Factor (IF), TSS, and real-time W\' balance depletion. Customize 7 power zones and Karvonen heart rate zones in your profile.</string>
+    <string name="tip_training_zones_action">Configure Zones</string>
+    <string name="tip_data_backup_title">Data Sovereignty &amp; Offline Backup</string>
+    <string name="tip_data_backup_subtitle">Full control without mandatory cloud accounts</string>
+    <string name="tip_data_backup_desc">All workout telemetry, GPS tracks, and sensor records stay securely on your device in SQLite and standard FIT/TCX files. Create full offline backups anytime or configure optional sync to Google Drive or Dropbox.</string>
+    <string name="tip_data_backup_action">Backup &amp; Restore</string>
+    <string name="tip_sport_types_title">Custom Sport Types &amp; Sub-Sports</string>
+    <string name="tip_sport_types_subtitle">Speed thresholds, gear defaults &amp; export mappings</string>
+    <string name="tip_sport_types_desc">Define custom sports (e.g. Road Bike, Gravel, MTB, Trail Run). Configure speed-based automatic sport detection thresholds, bind default equipment, and customize Strava, TCX, and GoldenCheetah export type mappings.</string>
+    <string name="tip_sport_types_action">Manage Sport Types</string>
+
+    <!-- Sensor Field Display Elements (ATT-4841, REQ-TRK-046) -->
+    <string name="sensor_field_display_elements_title">Display Elements</string>
+    <string name="sensor_field_show_value">Value</string>
+    <string name="sensor_field_show_bar">Bar</string>
+
+    <!-- Sensor Field Width & Row Split (ATT-4861, REQ-UI-437) -->
+    <string name="sensor_field_width_title">Width Ratio</string>
+    <string name="sensor_field_relative_weight">Relative Weight</string>
+
+    <!-- Zone History (ATT-4844, REQ-SET-082) -->
+    <string name="zone_history_title">Zone History</string>
+    <string name="zone_history_action_history">History</string>
+    <string name="zone_history_add_snapshot">Add Historical Snapshot</string>
+    <string name="zone_history_edit_snapshot">Edit Zone Snapshot</string>
+    <string name="zone_history_delete_title">Delete zone snapshot?</string>
+    <string name="zone_history_delete_message">Delete zone snapshot from %1$s?</string>
+    <string name="zone_history_empty">No historical zone snapshots recorded yet.</string>
+    <string name="zone_history_date_label">Effective Date</string>
+    <string name="zone_history_save_snapshot">Save Snapshot</string>
+    <string name="zone_history_error_monotonic">Thresholds must be strictly increasing (%1$s)</string>
+
+    <!-- Manual Altitude Calibration (ATT-4845, REQ-TRK-047) -->
+    <string name="altitude_calibration_title">Calibrate Altitude</string>
+    <string name="altitude_calibration_reference_label">Reference Altitude</string>
+    <string name="altitude_calibration_location_name">Location Name (optional)</string>
+    <string name="altitude_calibration_save_location">Save as Known Location</string>
+    <string name="altitude_calibration_matched_location">Matched Known Location: %1$s</string>
+    <string name="altitude_calibration_action">Calibrate</string>
+    <string name="altitude_calibrated_success">Altitude calibrated to %1$s</string>
+
+    <!-- Altitude From Position DEM (ATT-4859, REQ-SEN-025) -->
+    <string name="device_type_altitude_from_position">altitude from position (DEM)</string>
+    <string name="device_type_short_altitude_from_position">alt. (DEM)</string>
+    <string name="devices_altitude_from_position">Topographic Elevation (DEM)</string>
+    <string name="devices_altitude_from_position_description">Continuous elevation resolved from GPS position, cached routes, and online DEM data.</string>
+
+    <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
+    <string name="itpms_slow_puncture_alert_title">Slow Puncture Detected</string>
+    <string name="itpms_slow_puncture_alert_message">Effective wheel circumference dropped by %1$s. Check tire pressure immediately.</string>
+    <string name="itpms_low_pressure_reminder_title">Low Tire Pressure</string>
+    <string name="itpms_low_pressure_reminder_message">Wheel circumference is %1$s below pumped baseline. Consider pumping your tires.</string>
+    <string name="itpms_alert_dismiss">Dismiss</string>
 </resources>

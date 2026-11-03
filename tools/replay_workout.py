@@ -1144,6 +1144,7 @@ class AdbGpsInjector:
         self._queue = queue.Queue(maxsize=5)
         self._worker_thread = None
         self._stop_event = threading.Event()
+        self._lock = threading.Lock()
 
     def reset_epoch(self, time_sec: float = 0.0) -> None:
         """Resets the Replay Session Epoch so injected timestamps maintain relative time_sec offset."""
@@ -1165,35 +1166,37 @@ class AdbGpsInjector:
         """Registers gps, network, and fused mock location test providers for active playback (REQ-TRK-025)."""
         if not self.enabled or not self.device_serial or self.is_killed:
             return
-        if self.is_registered:
-            return
-        try:
-            cmds = []
-            for p in self.DEFAULT_PROVIDERS:
-                cmds.append(
-                    f"cmd location providers add-test-provider {p} --supportsAltitude --supportsSpeed --supportsBearing 2>/dev/null ; "
-                    f"cmd location providers set-test-provider-enabled {p} true"
-                )
-            self._run_adb(["shell", " ; ".join(cmds)], check=False)
-            self.is_registered = True
-        except Exception as e:
-            print(f"[!] Warning: Failed to register ADB test providers: {e}")
+        with self._lock:
+            if self.is_registered:
+                return
+            try:
+                cmds = []
+                for p in self.DEFAULT_PROVIDERS:
+                    cmds.append(
+                        f"cmd location providers add-test-provider {p} --supportsAltitude --supportsSpeed --supportsBearing 2>/dev/null ; "
+                        f"cmd location providers set-test-provider-enabled {p} true"
+                    )
+                self._run_adb(["shell", " ; ".join(cmds)], check=False)
+                self.is_registered = True
+            except Exception as e:
+                print(f"[!] Warning: Failed to register ADB test providers: {e}")
 
     def release_providers(self, force: bool = False) -> None:
         """Immediately disables and removes gps, network, and fused mock location test providers (REQ-TRK-025)."""
-        self._drain_pending_locations()
-        was_reg = self.is_registered
-        self.is_registered = False
-        if (was_reg or force) and self.device_serial:
-            try:
-                cmds = [
-                    f"cmd location providers set-test-provider-enabled {p} false 2>/dev/null ; "
-                    f"cmd location providers remove-test-provider {p} 2>/dev/null"
-                    for p in self.DEFAULT_PROVIDERS
-                ]
-                self._run_adb(["shell", " ; ".join(cmds)], check=False)
-            except Exception:
-                pass
+        with self._lock:
+            self._drain_pending_locations()
+            was_reg = self.is_registered
+            self.is_registered = False
+            if (was_reg or force) and self.device_serial:
+                try:
+                    cmds = [
+                        f"cmd location providers set-test-provider-enabled {p} false 2>/dev/null ; "
+                        f"cmd location providers remove-test-provider {p} 2>/dev/null"
+                        for p in self.DEFAULT_PROVIDERS
+                    ]
+                    self._run_adb(["shell", " ; ".join(cmds)], check=False)
+                except Exception:
+                    pass
 
     @classmethod
     def cleanup_device_providers(cls, device_serial: Optional[str] = None) -> bool:
@@ -1289,16 +1292,17 @@ class AdbGpsInjector:
                 continue
             if item is None:
                 break
-            if not self.is_registered or self.is_killed:
-                self._queue.task_done()
-                continue
-            if len(item) == 3:
-                lat, lon, time_ms = item
-            else:
-                lat, lon = item
-                time_ms = int(time.time() * 1000)
-            cmds = [self.build_inject_cmd(p, lat, lon, time_ms, accuracy=2.5) for p in self.DEFAULT_PROVIDERS]
-            self._run_adb(["shell", " && ".join(cmds)], check=False)
+            with self._lock:
+                if not self.is_registered or self.is_killed:
+                    self._queue.task_done()
+                    continue
+                if len(item) == 3:
+                    lat, lon, time_ms = item
+                else:
+                    lat, lon = item
+                    time_ms = int(time.time() * 1000)
+                cmds = [self.build_inject_cmd(p, lat, lon, time_ms, accuracy=2.5) for p in self.DEFAULT_PROVIDERS]
+                self._run_adb(["shell", " && ".join(cmds)], check=False)
             self._queue.task_done()
 
     def _run_adb(self, cmd_args: List[str], check: bool = False):
@@ -1492,7 +1496,7 @@ class ReplayEngine:
             self.status = "PAUSED"
             reached_eof = True
 
-        if self.on_update:
+        if not reached_eof and self.on_update:
             self.on_update(self.current_point)
 
         if reached_eof and self.gps is not None:

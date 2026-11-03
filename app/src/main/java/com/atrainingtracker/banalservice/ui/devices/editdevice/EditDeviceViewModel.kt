@@ -300,6 +300,19 @@ class EditDeviceViewModel(private val application: Application) : AndroidViewMod
     }
 
     /**
+     * Resets the persistent tire pressure baseline (iTPMS) to the currently selected wheel circumference.
+     */
+    fun resetTirePressureBaseline() {
+        val id = _editingId.value ?: deviceSnapshot.value?.id ?: return
+        val currentCircumference = deviceSnapshot.value?.wheelCircumference
+        val currentBaselineMeters = currentCircumference?.let { it / 1000.0 } ?: 0.0
+        updateState { it.copy(baselineCircumference = currentBaselineMeters) }
+        viewModelScope.launch {
+            devicesRepository.resetTirePressureBaseline(id)
+        }
+    }
+
+    /**
      * A generic helper function to safely update the state.
      * It ensures we always work with a non-null state and posts the result.
      */

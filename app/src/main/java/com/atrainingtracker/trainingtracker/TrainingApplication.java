@@ -58,7 +58,11 @@ import android.widget.Toast;
 import com.atrainingtracker.BuildConfig;
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.BANALService;
+import com.atrainingtracker.banalservice.BSportType;
 import com.atrainingtracker.banalservice.sensor.SensorData;
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper;
+import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseConfig;
+import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManager;
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
@@ -1673,8 +1677,41 @@ public class TrainingApplication extends Application {
             ContextCompat.startForegroundService(this, intent);
             startPebbleWatchapp();
 
-            cTrackingMode = TrackingMode.TRACKING;
-            notifyTrackingStateChanged();
+            AutoPauseConfig autoPauseConfig = SettingsDataStoreJavaHelper.getAutoPauseConfig(this);
+            BANALServiceRepository banalRepo = BANALServiceRepository.Companion.getInstance(this);
+            BSportType sportType = BSportType.UNKNOWN;
+            Double speedMps = null;
+            boolean hasSpeedSource = false;
+            if (banalRepo != null) {
+                try {
+                    Object sportVal = banalRepo.getBSportType() != null ? banalRepo.getBSportType().getValue() : null;
+                    if (sportVal instanceof BSportType) {
+                        sportType = (BSportType) sportVal;
+                    }
+                } catch (Exception e) {
+                    Log.w(TAG, "Could not resolve initial sport type: " + e.getMessage());
+                }
+                try {
+                    Object speedVal = banalRepo.getCurrentSpeed() != null ? banalRepo.getCurrentSpeed().getValue() : null;
+                    if (speedVal instanceof Number) {
+                        speedMps = ((Number) speedVal).doubleValue();
+                    }
+                } catch (Exception e) {
+                    Log.w(TAG, "Could not resolve initial speed: " + e.getMessage());
+                }
+                try {
+                    hasSpeedSource = banalRepo.getHasSpeedSource();
+                } catch (Exception e) {
+                    Log.w(TAG, "Could not resolve hasSpeedSource: " + e.getMessage());
+                }
+            }
+
+            if (AutoPauseManager.shouldStartInAutoPause(autoPauseConfig, sportType, speedMps, hasSpeedSource)) {
+                pauseTracking(true);
+            } else {
+                cTrackingMode = TrackingMode.TRACKING;
+                notifyTrackingStateChanged();
+            }
         } catch (IllegalStateException | SecurityException e) {
             Log.e(TAG, "Failed to start TrackerService: app in background or permission denied: " + e.getMessage(), e);
             cTrackingMode = TrackingMode.READY;
@@ -1759,6 +1796,7 @@ public class TrainingApplication extends Application {
 
         cTrackingMode = TrackingMode.READY;
         sActiveWorkoutId = -1;
+        BANALServiceRepository.Companion.getInstance(this).clearBreadcrumbs();
         notifyTrackingStateChanged();
     }
 
@@ -1776,6 +1814,10 @@ public class TrainingApplication extends Application {
         setAutoPaused(false, cAppContext);
         cTrackingMode = TrackingMode.READY;
         sActiveWorkoutId = -1;
+        if (cAppContext != null) {
+            cAppContext.sendBroadcast(new Intent(BANALService.RESET_ACCUMULATORS_INTENT).setPackage(cAppContext.getPackageName()));
+            BANALServiceRepository.Companion.getInstance(cAppContext).clearBreadcrumbs();
+        }
     }
 
     /**
@@ -1800,12 +1842,16 @@ public class TrainingApplication extends Application {
             mNotificationManager.cancel(TRACKING_NOTIFICATION_ID);
         }
 
+        sendBroadcast(new Intent(BANALService.RESET_ACCUMULATORS_INTENT).setPackage(getPackageName()));
+        BANALServiceRepository.Companion.getInstance(this).clearBreadcrumbs();
+
         notifyTrackingStateChanged();
     }
 
     protected void trackingStopped() {
         // send broadcast to reset the accumulators
         sendBroadcast(new Intent(BANALService.RESET_ACCUMULATORS_INTENT).setPackage(getPackageName()));
+        BANALServiceRepository.Companion.getInstance(this).clearBreadcrumbs();
 
         // start EditWorkoutActivity
         // startEditWorkoutActivity(mWorkoutID, true); // here, the EditWorkoutActivity shall show the details, extrema values and the map.

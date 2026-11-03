@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.settings.googledrive
 
 import android.text.format.DateFormat
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.*
@@ -32,6 +33,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveAuthErrorResolver
 import com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveAuthManager
+import com.atrainingtracker.trainingtracker.exporter.ExportManager
 import com.atrainingtracker.trainingtracker.migration.BackupWorker
 import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetContent
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
@@ -65,8 +67,19 @@ fun GoogleDriveSettingsDialog(
     val coroutineScope = rememberCoroutineScope()
     val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
 
-    var isConnected by remember { mutableStateOf(TrainingApplication.uploadToGoogleDrive()) }
-    var accountEmail by remember { mutableStateOf(TrainingApplication.getGoogleDriveAccountEmail()) }
+    var isConnected by remember {
+        mutableStateOf(
+            TrainingApplication.uploadToGoogleDrive() &&
+            (!TrainingApplication.getGoogleDriveAuthToken().isNullOrBlank() ||
+             GoogleSignIn.getLastSignedInAccount(context) != null)
+        )
+    }
+    var accountEmail by remember {
+        mutableStateOf(
+            TrainingApplication.getGoogleDriveAccountEmail()
+                ?: GoogleSignIn.getLastSignedInAccount(context)?.let { it.email ?: it.account?.name }
+        )
+    }
     var uploadWorkouts by remember { mutableStateOf(TrainingApplication.uploadWorkoutsToGoogleDrive()) }
     var uploadBackup by remember { mutableStateOf(TrainingApplication.uploadBackupToGoogleDrive()) }
     var wifiOnly by remember { mutableStateOf(TrainingApplication.uploadToGoogleDriveOnlyOnWifi()) }
@@ -91,6 +104,11 @@ fun GoogleDriveSettingsDialog(
                         isConnected = true
                         accountEmail = account.email ?: account.account?.name
                         isLoading = false
+                        try {
+                            ExportManager.recoverStuckGoogleDriveExports(context)
+                        } catch (t: Throwable) {
+                            Log.w("GoogleDriveSettings", "Failed recovering stuck exports on sign-in", t)
+                        }
                     }.onFailure { ex ->
                         isLoading = false
                         errorMessageResId = GoogleDriveAuthErrorResolver.resolveErrorMessageResId(ex)
@@ -137,6 +155,13 @@ fun GoogleDriveSettingsDialog(
                     TrainingApplication.setUploadToGoogleDriveOnlyOnWifi(wifiOnly)
                     prefs.edit().putString("backup_interval_days", backupIntervalDays).apply()
                     BackupWorker.schedule(context)
+                    if (isConnected) {
+                        try {
+                            ExportManager.recoverStuckGoogleDriveExports(context)
+                        } catch (t: Throwable) {
+                            Log.w("GoogleDriveSettings", "Failed recovering stuck exports on save", t)
+                        }
+                    }
                     onDismiss()
                 },
                 onCancel = onDismiss,

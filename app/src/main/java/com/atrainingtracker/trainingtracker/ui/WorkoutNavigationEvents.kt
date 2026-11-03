@@ -152,4 +152,44 @@ object WorkoutNavigationEvents {
     fun consumeLowBatteryAlert() {
         _lowBatteryAlert.tryEmit(null)
     }
+
+    /**
+     * Severity tiers for indirect tire pressure monitoring (iTPMS) alerts (REQ-TRK-050, ATT-4880).
+     */
+    enum class TpmsAlertSeverity {
+        WARNING,  // Low tire pressure reminder
+        CRITICAL  // In-ride slow puncture warning
+    }
+
+    /**
+     * Encapsulates iTPMS alert telemetry for UI rendering.
+     */
+    data class TpmsAlert(
+        val title: String,
+        val message: String,
+        val severity: TpmsAlertSeverity = TpmsAlertSeverity.WARNING,
+        val dropPercentage: Double = 0.0
+    )
+
+    private val _tpmsAlert = MutableSharedFlow<TpmsAlert?>(
+        replay = 1, // Sticky event
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+    val tpmsAlert = _tpmsAlert.asSharedFlow()
+
+    /**
+     * Triggers an indirect tire pressure monitoring alert across the tracking cockpit.
+     */
+    @JvmStatic
+    fun triggerTpmsAlert(alert: TpmsAlert) {
+        _tpmsAlert.tryEmit(alert)
+    }
+
+    /**
+     * Clears the active iTPMS alert after consumption.
+     */
+    @JvmStatic
+    fun consumeTpmsAlert() {
+        _tpmsAlert.tryEmit(null)
+    }
 }

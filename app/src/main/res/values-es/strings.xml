@@ -633,7 +633,7 @@
     <string name="label_max">Máx</string>
 
     <string name="zone_display_title">Visualización de zonas</string>
-    <string name="zone_display_background">Fondo claro</string>
+    <string name="zone_display_background">Fondo tintado</string>
     <string name="zone_display_left_bar">Barra izquierda</string>
     <string name="zone_display_right_bar">Barra derecha</string>
     <string name="zone_display_text_color">Color de texto</string>
@@ -961,11 +961,16 @@
     <string name="workout_periods__longest_workout">Sesión más larga</string>
     <string name="workout_periods__region_format">Región %1$d (%2$d)</string>
     <string name="workout_periods__primary_region_format">Región principal: Región %1$d (%2$d)</string>
+    <string name="workout_periods__named_region_format">%1$s (%2$d)</string>
+    <string name="workout_periods__primary_named_region_format">Región principal: %1$s (%2$d)</string>
     <string name="workout_periods__all_regions_format">Todas las regiones (%1$d)</string>
     <string name="workout_periods__migration_querying">Cargando historial de entrenamiento…</string>
     <string name="workout_periods__migration_reading">Leyendo entrenamiento %1$d de %2$d…</string>
     <string name="workout_periods__migration_syncing">Sincronizando %1$s…</string>
     <string name="workout_periods__migration_finalizing">Finalizando totales anuales…</string>
+    <string name="workout_periods__yearly_activity_grid">Actividad anual</string>
+    <string name="workout_periods__daily_activity_strip">Actividad diaria</string>
+    <string name="workout_periods__no_activity">Sin actividad</string>
 
     <!-- share screenshots -->
     <string name="share">Compartir</string>
@@ -1834,6 +1839,7 @@
     <string name="map_layer_segments">Segmentos</string>
     <string name="map_layer_locations">Ubicaciones favoritas</string>
     <string name="map_layer_track">Track grabado</string>
+    <string name="map_layer_clusters">Rutas favoritas</string>
     <string name="ant_dialog_view_status">Ver estado de ANT+</string>
     <string name="ant_dialog_dismiss">Entendido</string>
 
@@ -1909,19 +1915,27 @@
     <string name="zone_onboarding_action_later">Ahora no</string>
 
     <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
+    <string name="auto_pause_title">Pausa automática</string>
     <string name="tuning_auto_pause_title">Pausa automática</string>
     <string name="tuning_auto_pause_desc">Pausar automáticamente la grabación al detenerse</string>
+    <string name="tuning_auto_pause_enable_title">Activar pausa automática</string>
     <string name="tuning_auto_pause_bike_title">Ciclismo</string>
     <string name="tuning_auto_pause_run_title">Carrera</string>
     <string name="tuning_auto_pause_other_title">Otros deportes</string>
-    <string name="tuning_auto_pause_speed_threshold_title">Umbral de velocidad de pausa</string>
-    <string name="tuning_auto_pause_speed_threshold_desc">Velocidad por debajo de la cual se pausa la grabación</string>
+    <string name="tuning_auto_pause_speed_threshold_title">Umbral de velocidad</string>
+    <string name="tuning_auto_pause_speed_threshold_desc">Pausar por debajo de esta velocidad, reanudar por encima</string>
     <string name="tuning_auto_pause_debounce_title">Retardo para pausar</string>
     <string name="tuning_auto_pause_debounce_desc">Duración por debajo del umbral antes de pausar</string>
+    <string name="tuning_auto_pause_resume_debounce_title">Retardo para reanudar</string>
+    <string name="tuning_auto_pause_resume_debounce_desc">Duración por encima del umbral antes de reanudar</string>
+    <string name="tuning_auto_pause_start_in_auto_pause_title">Iniciar en pausa automática</string>
+    <string name="tuning_auto_pause_start_in_auto_pause_desc">Al iniciar un entrenamiento estando parado, comienza directamente en pausa automática hasta detectar movimiento. Se aplica a todos los deportes.</string>
     <string name="tuning_speed_value_format">%1$d %2$s</string>
     <string name="tuning_seconds_value_format">%1$d s</string>
     <string name="cockpit_auto_pause_badge">Pausa automática</string>
     <string name="cockpit_auto_pause_resume">Reanudar ahora</string>
+    <string name="cockpit_status_not_started">No iniciado</string>
+    <string name="cockpit_status_paused">Pausado</string>
     <string name="cockpit_speed_sensor_lost">Sensor de velocidad perdido</string>
 
     <!-- Athlete Baselines & W/kg Metric (ATT-1289, REQ-TRK-019) -->
@@ -2121,9 +2135,95 @@
     <string name="cd_add_before">Agregar antes</string>
     <string name="cd_delete_tab">Eliminar pestaña</string>
     <string name="cd_add_after">Agregar después</string>
+    <string name="cd_copy_tab">Copiar pestaña</string>
+    <string name="cd_move_tab_left">Mover pestaña a la izquierda</string>
+    <string name="cd_move_tab_right">Mover pestaña a la derecha</string>
+    <string name="copy_tab_title">Copiar pestaña</string>
+    <string name="copy_tab_action">Copiar</string>
     <string name="back">Atrás</string>
     <string name="close">Cerrar</string>
     <string name="clear">Borrar</string>
     <string name="select_route">Seleccionar ruta</string>
     <string name="equipment">Equipamiento</string>
+
+    <!-- In-App Feature Discovery & Tips Guide (REQ-UI-432 / ATT-2276) -->
+    <string name="drawer_tips_guide">Consejos y trucos</string>
+    <string name="tips_guide_title">Consejos y trucos</string>
+    <string name="tips_guide_header_title">Descubrir funciones</string>
+    <string name="tips_guide_header_subtitle">Explora potentes herramientas y accesos directos diseñados para tu entrenamiento.</string>
+    <string name="tip_routes_clustering_title">Rutas favoritas y agrupación automática</string>
+    <string name="tip_routes_clustering_subtitle">Detección inteligente de rutas de entrenamiento</string>
+    <string name="tip_routes_clustering_desc">aTrainingTracker analiza tus entrenamientos GPS y agrupa rutas similares en rutas favoritas. Compara tus rendimientos y sigue tu progresión sin etiquetas manuales.</string>
+    <string name="tip_routes_clustering_action">Ver rutas favoritas</string>
+    <string name="tip_sensors_failover_title">Sensores multiprotocolo y redundancia</string>
+    <string name="tip_sensors_failover_subtitle">Conmutación fluida entre ANT+ y Bluetooth LE</string>
+    <string name="tip_sensors_failover_desc">Empareja varios sensores de pulso, potencia o cadencia a la vez. Si un sensor pierde conexión, el sensor de respaldo toma el control de inmediato sin perder datos.</string>
+    <string name="tip_sensors_failover_action">Administrar sensores</string>
+    <string name="tip_cockpit_customization_title">Pantallas de cabina y timbre de bicicleta</string>
+    <string name="tip_cockpit_customization_subtitle">Cuadrículas de telemetría totalmente personalizables</string>
+    <string name="tip_cockpit_customization_desc">Configura páginas de telemetría por deporte con métricas en vivo, altimetría o mapa. Añade el botón de timbre de bicicleta para toques simples o timbre continuo.</string>
+    <string name="tip_cockpit_customization_action">Configurar pantallas</string>
+    <string name="tip_live_segments_title">Segmentos en vivo de Strava e interactividad</string>
+    <string name="tip_live_segments_subtitle">Comparación en vivo contra tu récord y KOM</string>
+    <string name="tip_live_segments_desc">Sincroniza tus segmentos favoritos de Strava para ver cuentas atrás, diferencias de tiempo y perfiles de elevación en vivo durante la ruta.</string>
+    <string name="tip_live_segments_action">Explorar segmentos</string>
+    <string name="tip_gear_tracking_title">Equipamiento y material automático</string>
+    <string name="tip_gear_tracking_subtitle">Control de kilometraje para bicicletas y zapatillas</string>
+    <string name="tip_gear_tracking_desc">Vincula sensores o deportes a tus bicicletas y zapatillas. aTrainingTracker asigna automáticamente los kilómetros y el desgaste al material correspondiente.</string>
+    <string name="tip_gear_tracking_action">Administrar equipamiento</string>
+    <string name="tip_training_zones_title">Fisiología y zonas de entrenamiento</string>
+    <string name="tip_training_zones_subtitle">Potencia Coggan, FC Karvonen y batería W\'</string>
+    <string name="tip_training_zones_desc">Aprovecha métricas avanzadas como Potencia Normalizada (NP), Factor de Intensidad (IF), TSS y batería W\' en vivo. Personaliza tus 7 zonas de potencia y zonas de pulso Karvonen.</string>
+    <string name="tip_training_zones_action">Configurar zonas</string>
+    <string name="tip_data_backup_title">Soberanía de datos y copias locales</string>
+    <string name="tip_data_backup_subtitle">Control total sin cuentas obligatorias en la nube</string>
+    <string name="tip_data_backup_desc">Toda tu telemetría, rutas GPS y registros de sensores se guardan de forma segura en tu dispositivo en SQLite y archivos FIT/TCX. Crea copias de seguridad completas o sincroniza opcionalmente.</string>
+    <string name="tip_data_backup_action">Copia de seguridad y restauración</string>
+    <string name="tip_sport_types_title">Deportes personalizados y subdeportes</string>
+    <string name="tip_sport_types_subtitle">Umbrales de velocidad, equipamiento y asignación de exportación</string>
+    <string name="tip_sport_types_desc">Define deportes personalizados (p. ej., bicicleta de carretera, gravel, MTB, trail running). Configura umbrales de detección automática por velocidad, vincula equipamiento predeterminado y ajusta la exportación a Strava, TCX y GoldenCheetah.</string>
+    <string name="tip_sport_types_action">Gestionar deportes</string>
+
+    <!-- Sensor Field Display Elements (ATT-4841, REQ-TRK-046) -->
+    <string name="sensor_field_display_elements_title">Elementos de visualización</string>
+    <string name="sensor_field_show_value">Valor</string>
+    <string name="sensor_field_show_bar">Barra</string>
+
+    <!-- Sensor Field Width & Row Split (ATT-4861, REQ-UI-437) -->
+    <string name="sensor_field_width_title">Proporción de ancho</string>
+    <string name="sensor_field_relative_weight">Ancho relativo</string>
+
+    <!-- Zone History (ATT-4844, REQ-SET-082) -->
+    <string name="zone_history_title">Historial de zonas</string>
+    <string name="zone_history_action_history">Historial</string>
+    <string name="zone_history_add_snapshot">Añadir instantánea histórica</string>
+    <string name="zone_history_edit_snapshot">Editar instantánea de zonas</string>
+    <string name="zone_history_delete_title">¿Eliminar instantánea de zonas?</string>
+    <string name="zone_history_delete_message">¿Eliminar la instantánea de zonas del %1$s?</string>
+    <string name="zone_history_empty">Aún no hay instantáneas de zonas registradas.</string>
+    <string name="zone_history_date_label">Fecha de vigencia</string>
+    <string name="zone_history_save_snapshot">Guardar instantánea</string>
+    <string name="zone_history_error_monotonic">Los umbrales deben ser estrictamente crecientes (%1$s)</string>
+
+    <!-- Manual Altitude Calibration (ATT-4845, REQ-TRK-047) -->
+    <string name="altitude_calibration_title">Calibrar altitud</string>
+    <string name="altitude_calibration_reference_label">Altitud de referencia</string>
+    <string name="altitude_calibration_location_name">Nombre de ubicación (opcional)</string>
+    <string name="altitude_calibration_save_location">Guardar como lugar favorito</string>
+    <string name="altitude_calibration_matched_location">Lugar conocido reconocido: %1$s</string>
+    <string name="altitude_calibration_action">Calibrar</string>
+    <string name="altitude_calibrated_success">Altitud calibrada a %1$s</string>
+
+    <!-- Altitude From Position DEM (ATT-4859, REQ-SEN-025) -->
+    <string name="device_type_altitude_from_position">altitud de posición (DEM)</string>
+    <string name="device_type_short_altitude_from_position">alt. (DEM)</string>
+    <string name="devices_altitude_from_position">Altitud topográfica (DEM)</string>
+    <string name="devices_altitude_from_position_description">Altitud continua obtenida de la posición GPS, rutas en caché y datos DEM en línea.</string>
+
+    <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
+    <string name="itpms_slow_puncture_alert_title">Pinchazo lento detectado</string>
+    <string name="itpms_slow_puncture_alert_message">La circunferencia efectiva cayó un %1$s. Revise la presión de los neumáticos de inmediato.</string>
+    <string name="itpms_low_pressure_reminder_title">Presión baja de neumáticos</string>
+    <string name="itpms_low_pressure_reminder_message">La circunferencia está un %1$s por debajo de la base. Considere inflar los neumáticos.</string>
+    <string name="itpms_alert_dismiss">Descartar</string>
 </resources>

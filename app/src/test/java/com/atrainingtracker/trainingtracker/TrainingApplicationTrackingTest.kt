@@ -24,8 +24,10 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.util.Log
 import androidx.core.content.ContextCompat
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.tracker.TrackerService
 import io.mockk.*
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -76,6 +78,7 @@ class TrainingApplicationTrackingTest {
 
     private lateinit var app: TestableTrainingApplication
     private lateinit var mockPrefs: SharedPreferences
+    private lateinit var mockRepo: com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
     private val intentExtras = mutableMapOf<String, String>()
     private var intentAction: String? = null
 
@@ -94,8 +97,22 @@ class TrainingApplicationTrackingTest {
         setStaticField(TrainingApplication::class.java, "cSharedPreferences", mockPrefs)
 
         mockkObject(com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.Companion)
-        val mockRepo = mockk<com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository>(relaxed = true)
+        mockRepo = mockk<com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository>(relaxed = true)
+        val mockSportFlow = MutableStateFlow(BSportType.UNKNOWN)
+        val mockSpeedFlow = MutableStateFlow<Double?>(null)
+        every { mockRepo.bSportType } returns mockSportFlow
+        every { mockRepo.currentSpeed } returns mockSpeedFlow
+        every { mockRepo.hasSpeedSource } returns false
         every { com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.Companion.getInstance(any()) } returns mockRepo
+
+        // startTracking() evaluates "Start in Auto-Paused" (ATT-4840). Without this stub, the real
+        // TuningPreferencesDataStore initializes on Dispatchers.Default with a non-mocked Context
+        // (getFilesDir), and the resulting uncaught coroutine exception leaks into whichever
+        // runTest-based test runs next in the same JVM (e.g. BatterySaverControllerTest).
+        mockkStatic(com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper::class)
+        every {
+            com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getAutoPauseConfig(any())
+        } returns com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseConfig()
 
         intentExtras.clear()
         intentAction = null
@@ -320,6 +337,56 @@ class TrainingApplicationTrackingTest {
 
         // Must return cleanly without attempting to access or build notifications
         app.updateTimeAndDistanceToNotification(null, null, "Running")
+    }
+
+    /**
+     * TST-TRK-044.2: Verifies that when Start in Auto-Paused is enabled and sport auto-pause is enabled,
+     * but hasSpeedSource is false (indoor HR-only workout), startTracking() initializes in TRACKING (REQ-TRK-044, ATT-4925).
+     */
+    @Test
+    fun testStartTracking_whenStartInAutoPauseEnabled_butNoSpeedSource_startsInTracking() {
+        val config = com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseConfig(
+            bikeEnabled = true,
+            startInAutoPauseEnabled = true
+        )
+        every {
+            com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getAutoPauseConfig(any())
+        } returns config
+        every { mockRepo.bSportType } returns MutableStateFlow(BSportType.BIKE)
+        every { mockRepo.hasSpeedSource } returns false
+
+        every { ContextCompat.startForegroundService(any(), any()) } just Runs
+
+        app.startTracking()
+
+        assertEquals("Must start in TRACKING when no speed source exists", TrackingMode.TRACKING, TrainingApplication.cTrackingMode)
+        assertFalse("Must not be auto-paused", TrainingApplication.isAutoPaused())
+    }
+
+    /**
+     * TST-TRK-044.2: Verifies that when Start in Auto-Paused is enabled and sport auto-pause is enabled,
+     * and hasSpeedSource is true, startTracking() initializes directly in PAUSED (isAutoPaused = true) (REQ-TRK-044, ATT-4925).
+     */
+    @Test
+    fun testStartTracking_whenStartInAutoPauseEnabled_andSpeedSourcePresent_startsInAutoPaused() {
+        val config = com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseConfig(
+            bikeEnabled = true,
+            startInAutoPauseEnabled = true,
+            bikeSpeedThreshold = 3
+        )
+        every {
+            com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.getAutoPauseConfig(any())
+        } returns config
+        every { mockRepo.bSportType } returns MutableStateFlow(BSportType.BIKE)
+        every { mockRepo.hasSpeedSource } returns true
+        every { mockRepo.currentSpeed } returns MutableStateFlow<Double?>(null)
+
+        every { ContextCompat.startForegroundService(any(), any()) } just Runs
+
+        app.startTracking()
+
+        assertEquals("Must initialize in PAUSED", TrackingMode.PAUSED, TrainingApplication.cTrackingMode)
+        assertTrue("Must be auto-paused", TrainingApplication.isAutoPaused())
     }
 }
 

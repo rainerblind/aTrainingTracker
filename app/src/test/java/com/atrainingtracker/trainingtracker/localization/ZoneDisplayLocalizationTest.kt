@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.localization
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -107,6 +108,36 @@ class ZoneDisplayLocalizationTest {
                 assertNotNull("Translation for '$key' in '$locale' is null", text)
                 assertFalse("Translation for '$key' in '$locale' is empty or blank", text.isNullOrBlank())
             }
+        }
+    }
+
+    @Test
+    fun zoneDisplayBackground_hasAccurateTerminologyAcrossAllLocales() {
+        val expectedTranslations = mapOf(
+            "default" to "Tinted background",
+            "de" to "Eingefärbter Hintergrund",
+            "es" to "Fondo tintado",
+            "fr" to "Arrière-plan teinté",
+            "it" to "Sfondo tinto",
+            "ja" to "色付き背景",
+            "nl" to "Getinte achtergrond",
+            "pl" to "Zabarwione tło",
+            "pt" to "Fundo matizado"
+        )
+
+        expectedTranslations.forEach { (locale, expectedText) ->
+            val file = if (locale == "default") {
+                File(resDir, "values/strings.xml")
+            } else {
+                File(resDir, "values-$locale/strings.xml")
+            }
+            assertTrue("strings.xml for $locale must exist", file.exists())
+            val strings = parseStrings(file)
+            assertEquals(
+                "zone_display_background terminology mismatch for locale $locale",
+                expectedText,
+                strings["zone_display_background"]
+            )
         }
     }
 }

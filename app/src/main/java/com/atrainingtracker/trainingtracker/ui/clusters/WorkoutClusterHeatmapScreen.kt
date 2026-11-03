@@ -557,7 +557,13 @@ fun WorkoutClusterHeatmapScreen(
                 }
             },
             mapContent = {
-                heatmap(mapState.heatmapPaths, opacity = heatmapOpacity)
+                heatmap(
+                    allPaths = mapState.heatmapPaths,
+                    opacity = heatmapOpacity,
+                    colorLut = ThermalColorLut.CLASSIC_BLUE,
+                    normalizeCorridors = false,
+                    useClassicStepIntensity = true
+                )
 
                 // 1. Authoritative Route (If linked - SCRUM-216)
                 linkedRoute?.let { route ->

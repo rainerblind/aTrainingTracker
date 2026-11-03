@@ -32,6 +32,7 @@ import java.io.File
 
 import android.util.Log
 import io.mockk.every
+import io.mockk.mockkObject
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import org.junit.After
@@ -158,5 +159,38 @@ class DarkMapStyleResolutionTest {
                 content.contains("0xFF121212") || content.contains("DarkMapCanvas")
             )
         }
+    }
+
+    @Test
+    fun testResolveHeatmapMapPropertiesSelectsMutedStyleInLightMode_TST_MAP_059_3() {
+        val mockContext = mockk<android.content.Context>(relaxed = true)
+        val mockMutedOptions = mockk<MapStyleOptions>(relaxed = true)
+        mockkObject(DarkMapStyle)
+        every { DarkMapStyle.getMutedMapStyleOptions(mockContext) } returns mockMutedOptions
+
+        val properties = DarkMapStyle.resolveHeatmapMapProperties(
+            isDark = false,
+            context = mockContext,
+            isMyLocationEnabled = false
+        )
+
+        assertEquals("Light mode heatmap must select MapType.NORMAL", MapType.NORMAL, properties.mapType)
+        assertSame("Light mode heatmap must attach muted map style", mockMutedOptions, properties.mapStyleOptions)
+        assertFalse(properties.isMyLocationEnabled)
+    }
+
+    @Test
+    fun testMutedMapStyleJsonResourceParsesCleanly() {
+        val resDir = sequenceOf(
+            File("src/main/res/raw"),
+            File("app/src/main/res/raw"),
+            File("../app/src/main/res/raw")
+        ).firstOrNull { it.exists() } ?: File("app/src/main/res/raw")
+
+        val mutedStyleFile = File(resDir, "map_style_muted_light.json")
+        assertTrue("map_style_muted_light.json must exist in res/raw", mutedStyleFile.exists())
+        val json = mutedStyleFile.readText()
+        val options = DarkMapStyle.parseStyleJson(json)
+        assertNotNull("map_style_muted_light.json must parse into valid MapStyleOptions", options)
     }
 }

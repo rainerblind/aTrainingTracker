@@ -385,6 +385,10 @@ fun densifyPath(path: List<LatLng>, maxDistanceMeters: Double): List<LatLng> {
  * @param maxPoints The technical memory budget for this provider.
  * @param weight The individual weight of each point (affects "thickness").
  */
+@Deprecated(
+    message = "Replaced by PolylineHeatmapTileProvider for true line-density rendering without Gaussian KDE speed bias (ATT-4480 / REQ-MAP-056).",
+    replaceWith = ReplaceWith("PolylineHeatmapTileProvider(allPaths, opacity)")
+)
 fun createHeatmapProvider(
     allPaths: List<List<LatLng>>,
     opacity: Double = 0.8,

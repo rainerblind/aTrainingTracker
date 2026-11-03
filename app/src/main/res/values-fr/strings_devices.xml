@@ -93,11 +93,23 @@
     <string name="devices_location_GPS">GPS du téléphone (Satellite)</string>
     <string name="devices_location_Network">Localisation du téléphone (Réseau/WiFi)</string>
     <string name="devices_location_GoogleFused">Localisation Google (Fused)</string>
-    <string name="devices_altitude_from_pressure">Pression Air</string>
+    <string name="devices_altitude_from_pressure">Altitude par pression</string>
+
+    <!-- Specialized Altitude Devices Explanations (ATT-5073, REQ-SEN-026) -->
+    <string name="device_altitude_explanation_title">À propos de ce capteur</string>
+    <string name="device_altitude_how_it_works_header">Fonctionnement</string>
+    <string name="device_altitude_pros_cons_header">Avantages et inconvénients</string>
+    <string name="device_altitude_pressure_how_it_works">Mesure la pression atmosphérique avec le baromètre interne. Calcule les variations d\'altitude relatives via la formule barométrique, calibrée aux lieux connus ou manuellement.</string>
+    <string name="device_altitude_pressure_pros_cons">+ Très réactif et fluide ; sans bruit vertical GPS ; fonctionne en tunnel.\n- La météo peut entraîner une dérive d\'altitude au fil du temps.</string>
+    <string name="device_altitude_position_how_it_works">Associe votre position GPS à des modèles numériques de terrain (MNT) en cache ou en ligne via Open-Meteo.</string>
+    <string name="device_altitude_position_pros_cons">+ Insensible à la météo et aux dérives ; altitude absolue sans calibrage.\n- Nécessite une connexion Internet active pour les zones non mises en cache ; dépend de la précision GPS (moins précis sur ponts et falaises).</string>
 
     <string name="devices_live_sensor_data_header">Données Capteurs</string>
 
     <string name="devices_dialog_delete_device_title">Supprimer ?</string>
     <string name="devices_dialog_delete_device_message">Voulez-vous supprimer le capteur \'%1$s\' ?</string>
+
+    <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
+    <string name="devices_reset_tire_pressure_baseline">Réinitialiser la pression de base (pneus fraîchement gonflés)</string>
 
 </resources>

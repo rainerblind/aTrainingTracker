@@ -166,8 +166,11 @@ class FilterResetAndPreStartTest {
     }
 
     @Test
-    fun statelessFilter_resetShouldBeSafeNoOp() {
+    fun instantaneousFilter_resetShouldClearCachedValue() {
         val filter = InstantaneousFilter<Number>("test", SensorType.HR)
-        filter.reset() // should execute cleanly without error
+        filter.newValue(145)
+        assertEquals(145, filter.filteredValue)
+        filter.reset()
+        assertNull(filter.filteredValue)
     }
 }

@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.tracking
 import android.content.Context
 import androidx.compose.foundation.BorderStroke
 import com.atrainingtracker.trainingtracker.ui.components.WPrimeBatteryGaugeBar
+import com.atrainingtracker.trainingtracker.ui.components.W_PRIME_BATTERY_GAUGE_HEIGHT
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -65,6 +66,7 @@ import androidx.compose.material3.Typography
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
@@ -144,6 +146,52 @@ fun getSensorUnitTextStyle(
 }
 
 /**
+ * Resolves the ZoneGaugeBar track height dynamically based on tile [ViewSize] and display mode (REQ-UI-436).
+ * In bar-only mode (!showValue && showBar), expands track height to fill vertical tile space cleanly.
+ */
+fun resolveZoneGaugeTrackHeight(viewSize: ViewSize, isBarOnly: Boolean): Dp =
+    if (isBarOnly) {
+        when {
+            viewSize <= ViewSize.SMALL -> 10.dp
+            viewSize == ViewSize.NORMAL -> 14.dp
+            viewSize == ViewSize.LARGE -> 18.dp
+            else -> 22.dp
+        }
+    } else {
+        6.dp
+    }
+
+/**
+ * Resolves the PedalPowerBalanceBar track height dynamically based on tile [ViewSize] and display mode (REQ-UI-436).
+ */
+fun resolvePedalBalanceTrackHeight(viewSize: ViewSize, isBarOnly: Boolean): Dp =
+    if (isBarOnly) {
+        when {
+            viewSize <= ViewSize.SMALL -> 12.dp
+            viewSize == ViewSize.NORMAL -> 16.dp
+            viewSize == ViewSize.LARGE -> 20.dp
+            else -> 24.dp
+        }
+    } else {
+        8.dp
+    }
+
+/**
+ * Resolves the WPrimeBatteryGaugeBar height dynamically based on tile [ViewSize] and display mode (REQ-UI-436).
+ */
+fun resolveWPrimeBatteryHeight(viewSize: ViewSize, isBarOnly: Boolean): Dp =
+    if (isBarOnly) {
+        when {
+            viewSize <= ViewSize.SMALL -> 14.dp
+            viewSize == ViewSize.NORMAL -> 20.dp
+            viewSize == ViewSize.LARGE -> 26.dp
+            else -> 32.dp
+        }
+    } else {
+        W_PRIME_BATTERY_GAUGE_HEIGHT
+    }
+
+/**
  * A Composable that displays a single sensor field.
  * It is a "dumb" component that simply renders the FieldState it's given.
  */
@@ -216,6 +264,7 @@ fun SensorFieldView(
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .fillMaxHeight()
             .combinedClickable(
                 // Implement correct click behavior based on screen mode
                 onClick = {
@@ -242,7 +291,7 @@ fun SensorFieldView(
         ),
         border = effectiveBorder
     ) {
-        Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+        Row(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
             // 1. Left Indicator Strip
             if (fieldState.zoneColor != Color.Transparent && fieldState.zoneDisplayOptions.showLeftBar) {
                 Spacer(
@@ -255,6 +304,7 @@ fun SensorFieldView(
             Column(
                 modifier = Modifier
                     .weight(1f)
+                    .fillMaxHeight()
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
                 // Top row for Label and Filter information
@@ -279,62 +329,81 @@ fun SensorFieldView(
                     )
                 }
 
-                // Value and Unit Row, centered
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.Bottom,
-                    modifier = Modifier.fillMaxWidth()
+                // Centered telemetry content column (REQ-UI-438.3)
+                val hasActiveBar = fieldState.showBar && (
+                    fieldState.zoneGaugeState != null ||
+                    fieldState.pedalBalanceState != null ||
+                    fieldState.wPrimeBatteryState != null
+                )
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    Text(
-                        text = fieldState.value,
-                        style = valueStyle,
-                        color = if (fieldState.zoneColor != Color.Transparent && fieldState.zoneDisplayOptions.showTextColor) {
-                            fieldState.zoneColor
-                        } else {
-                            MaterialTheme.colorScheme.onSurface
+                    // Value and Unit Row, centered (REQ-TRK-046, REQ-TRK-046.3 empty-tile fallback)
+                    if (fieldState.showValue || !hasActiveBar) {
+                        Row(
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.Bottom,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = fieldState.value,
+                                style = valueStyle,
+                                color = if (fieldState.zoneColor != Color.Transparent && fieldState.zoneDisplayOptions.showTextColor) {
+                                    fieldState.zoneColor
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                }
+                            )
+                            Text(
+                                text = fieldState.units,
+                                style = unitStyle,
+                                modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
-                    )
-                    Text(
-                        text = fieldState.units,
-                        style = unitStyle,
-                        modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                    }
 
-                // Optional Zone Gauge Bar (REQ-UI-376)
-                if (fieldState.zoneDisplayOptions.showGauge && fieldState.zoneGaugeState != null) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    ZoneGaugeBar(
-                        state = fieldState.zoneGaugeState,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 4.dp),
-                        showBadge = (fieldState.viewSize >= ViewSize.NORMAL)
-                    )
-                }
+                    // Optional Zone Gauge Bar (REQ-UI-376, REQ-TRK-046, REQ-UI-436)
+                    if (fieldState.showBar && fieldState.zoneGaugeState != null) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        ZoneGaugeBar(
+                            state = fieldState.zoneGaugeState,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp),
+                            trackHeight = resolveZoneGaugeTrackHeight(fieldState.viewSize, isBarOnly = !fieldState.showValue),
+                            showBadge = (fieldState.viewSize >= ViewSize.NORMAL)
+                        )
+                    }
 
-                // Optional Pedal Power Balance Bar (REQ-UI-377)
-                if (fieldState.pedalBalanceState != null) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    PedalPowerBalanceBar(
-                        state = fieldState.pedalBalanceState,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 4.dp)
-                    )
-                }
+                    // Optional Pedal Power Balance Bar (REQ-UI-377, REQ-TRK-046, REQ-UI-436)
+                    if (fieldState.showBar && fieldState.pedalBalanceState != null) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        PedalPowerBalanceBar(
+                            state = fieldState.pedalBalanceState,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp),
+                            trackHeight = resolvePedalBalanceTrackHeight(fieldState.viewSize, isBarOnly = !fieldState.showValue)
+                        )
+                    }
 
-                // Optional W' Anaerobic Battery Gauge Bar (REQ-UI-416)
-                if (fieldState.wPrimeBatteryState != null) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    WPrimeBatteryGaugeBar(
-                        state = fieldState.wPrimeBatteryState,
-                        viewSize = fieldState.viewSize,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 4.dp)
-                    )
+                    // Optional W' Anaerobic Battery Gauge Bar (REQ-UI-416, REQ-TRK-046, REQ-UI-436)
+                    if (fieldState.showBar && fieldState.wPrimeBatteryState != null) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        WPrimeBatteryGaugeBar(
+                            state = fieldState.wPrimeBatteryState,
+                            viewSize = fieldState.viewSize,
+                            barHeight = resolveWPrimeBatteryHeight(fieldState.viewSize, isBarOnly = !fieldState.showValue),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp)
+                        )
+                    }
                 }
 
                 // Conditionally add the action buttons at the bottom in configuration mode

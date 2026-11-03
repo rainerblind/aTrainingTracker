@@ -56,6 +56,7 @@ object NavRoutes {
     const val BIKES = "bikes"
     const val SHOES = "shoes"
     const val SPORT_TYPES = "sport_types"
+    const val AUTO_PAUSE = "auto_pause"
     const val TRAINING_ZONES = "training_zones"
     const val TRAINING_ZONES_PATTERN = "training_zones?initialTab={initialTab}&promptReason={promptReason}"
     const val ARG_INITIAL_TAB = "initialTab"
@@ -63,6 +64,8 @@ object NavRoutes {
     const val ATHLETE_PROFILE = "athlete_profile"
     const val BACKUP_RESTORE = "backup_restore"
     const val ADVANCED_SETTINGS = "advanced_settings"
+    const val TIPS_GUIDE = "tips_guide"
+    const val TRACKING_LAYOUTS = "tracking_layouts"
 
     /**
      * Builds a navigation route to Training Zones, optionally parameterized with an initial tab and onboarding prompt reason (REQ-UI-374.3).
@@ -105,10 +108,12 @@ object NavRoutes {
         R.id.drawer_bikes -> BIKES
         R.id.drawer_shoes -> SHOES
         R.id.drawer_sport_types -> SPORT_TYPES
+        R.id.drawer_auto_pause -> AUTO_PAUSE
         R.id.drawer_training_zones -> TRAINING_ZONES
         R.id.drawer_athlete_profile -> ATHLETE_PROFILE
         R.id.drawer_backup_restore -> BACKUP_RESTORE
         R.id.drawer_advanced_tuning -> ADVANCED_SETTINGS
+        R.id.drawer_tips_guide -> TIPS_GUIDE
         else -> null
     }
 
@@ -129,10 +134,13 @@ object NavRoutes {
         BIKES -> R.id.drawer_bikes
         SHOES -> R.id.drawer_shoes
         SPORT_TYPES -> R.id.drawer_sport_types
+        AUTO_PAUSE -> R.id.drawer_auto_pause
         TRAINING_ZONES -> R.id.drawer_training_zones
         ATHLETE_PROFILE -> R.id.drawer_athlete_profile
         BACKUP_RESTORE -> R.id.drawer_backup_restore
         ADVANCED_SETTINGS -> R.id.drawer_advanced_tuning
+        TIPS_GUIDE -> R.id.drawer_tips_guide
+        TRACKING_LAYOUTS -> R.id.drawer_tracking_layouts
         else -> R.id.drawer_start_tracking
     }
 

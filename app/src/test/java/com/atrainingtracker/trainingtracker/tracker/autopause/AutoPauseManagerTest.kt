@@ -148,8 +148,9 @@ class AutoPauseManagerTest {
     fun `TST-TRK-010_3 anti-chatter hysteresis deadband and hard ceiling`() {
         val config = AutoPauseConfig(
             bikeEnabled = true,
-            speedThresholdKmh = 1.5f, // pause threshold = 1.5 km/h -> resume threshold = 2.0 km/h
-            debounceSec = 1
+            speedThresholdKmh = 1.5f,
+            debounceSec = 1,
+            bikeResumeDebounceSec = 2
         )
         val now = 100000L
 
@@ -157,42 +158,53 @@ class AutoPauseManagerTest {
         autoPauseManager.evaluateTick(0.0, now, now, BSportType.BIKE, config, false)
         assertTrue(autoPauseManager.isAutoPaused())
 
-        // Speed jitters within deadband: 1.6 km/h = 0.444 m/s -> strictly stays AUTO_PAUSED
-        val jitter1 = autoPauseManager.evaluateTick(
-            currentSpeedMps = 1.6 / 3.6,
+        // Speed below threshold: 1.2 km/h -> strictly stays AUTO_PAUSED, resume counter remains 0
+        val subThreshold = autoPauseManager.evaluateTick(
+            currentSpeedMps = 1.2 / 3.6,
             packetTimestampMs = now + 1000L,
             currentTimestampMs = now + 1000L,
             sportType = BSportType.BIKE,
             config = config,
             manualPauseLocked = false
         )
-        assertEquals(AutoPauseState.AUTO_PAUSED, jitter1.newState)
-        assertFalse(jitter1.triggerResume)
+        assertEquals(AutoPauseState.AUTO_PAUSED, subThreshold.newState)
+        assertFalse(subThreshold.triggerResume)
+        assertEquals(0, autoPauseManager.resumeDebounceCounter)
 
-        // Speed jitters at 1.9 km/h = 0.528 m/s -> strictly stays AUTO_PAUSED
-        val jitter2 = autoPauseManager.evaluateTick(
-            currentSpeedMps = 1.9 / 3.6,
+        // Single tick above threshold: 1.6 km/h (>= 1.5 km/h) -> stays AUTO_PAUSED (resumeDebounceCounter = 1 < 2)
+        val jitter1 = autoPauseManager.evaluateTick(
+            currentSpeedMps = 1.6 / 3.6,
             packetTimestampMs = now + 2000L,
             currentTimestampMs = now + 2000L,
             sportType = BSportType.BIKE,
             config = config,
             manualPauseLocked = false
         )
-        assertEquals(AutoPauseState.AUTO_PAUSED, jitter2.newState)
-        assertFalse(jitter2.triggerResume)
+        assertEquals(AutoPauseState.AUTO_PAUSED, jitter1.newState)
+        assertFalse(jitter1.triggerResume)
+        assertEquals(1, autoPauseManager.resumeDebounceCounter)
 
-        // Speed reaches 2.0 km/h = 0.556 m/s (pause threshold + 0.5 km/h) -> triggers resume to TRACKING
-        val resume = autoPauseManager.evaluateTick(
-            currentSpeedMps = 2.0 / 3.6,
+        // Speed drops below threshold again: 1.0 km/h -> resets resumeDebounceCounter to 0
+        val drop = autoPauseManager.evaluateTick(
+            currentSpeedMps = 1.0 / 3.6,
             packetTimestampMs = now + 3000L,
             currentTimestampMs = now + 3000L,
             sportType = BSportType.BIKE,
             config = config,
             manualPauseLocked = false
         )
+        assertEquals(AutoPauseState.AUTO_PAUSED, drop.newState)
+        assertFalse(drop.triggerResume)
+        assertEquals(0, autoPauseManager.resumeDebounceCounter)
+
+        // Two consecutive ticks >= 1.5 km/h -> resumes to TRACKING
+        autoPauseManager.evaluateTick(1.6 / 3.6, now + 4000L, now + 4000L, BSportType.BIKE, config, false)
+        assertEquals(1, autoPauseManager.resumeDebounceCounter)
+        val resume = autoPauseManager.evaluateTick(1.6 / 3.6, now + 5000L, now + 5000L, BSportType.BIKE, config, false)
         assertEquals(AutoPauseState.TRACKING, resume.newState)
         assertTrue(resume.triggerResume)
         assertEquals(SoundCue.AUTO_RESUME, resume.soundCue)
+        assertEquals(0, autoPauseManager.resumeDebounceCounter)
         assertFalse(autoPauseManager.isAutoPaused())
     }
 
@@ -374,10 +386,13 @@ class AutoPauseManagerTest {
             otherEnabled = true,
             bikeSpeedThreshold = 3,
             bikeDebounceSec = 2,
+            bikeResumeDebounceSec = 2,
             runSpeedThreshold = 2,
             runDebounceSec = 5,
+            runResumeDebounceSec = 2,
             otherSpeedThreshold = 1,
             otherDebounceSec = 10,
+            otherResumeDebounceSec = 2,
             isMetric = true
         )
         val now = 100000L
@@ -894,6 +909,278 @@ class AutoPauseManagerTest {
         autoPauseManager.setState(AutoPauseState.AUTO_PAUSED)
         autoPauseManager.onManualResume()
         assertEquals(AutoPauseState.TRACKING, autoPauseManager.currentState)
+    }
+
+    @Test
+    fun `TST-TRK-043_1 multi-tick resume debounce on Bike, Run, Other`() {
+        val config = AutoPauseConfig(
+            bikeEnabled = true,
+            runEnabled = true,
+            otherEnabled = true,
+            bikeSpeedThreshold = 3,
+            bikeResumeDebounceSec = 2,
+            runSpeedThreshold = 2,
+            runResumeDebounceSec = 5,
+            otherSpeedThreshold = 1,
+            otherResumeDebounceSec = 10,
+            isMetric = true
+        )
+        val now = 100000L
+
+        // 1. BIKE: requires 2 ticks >= 3 km/h (0.833 m/s)
+        autoPauseManager.setState(AutoPauseState.AUTO_PAUSED)
+        val bikeTick1 = autoPauseManager.evaluateTick(
+            currentSpeedMps = 3.5 / 3.6,
+            packetTimestampMs = now,
+            currentTimestampMs = now,
+            sportType = BSportType.BIKE,
+            config = config,
+            manualPauseLocked = false
+        )
+        assertEquals(AutoPauseState.AUTO_PAUSED, bikeTick1.newState)
+        assertFalse(bikeTick1.triggerResume)
+        assertEquals(1, autoPauseManager.resumeDebounceCounter)
+
+        val bikeTick2 = autoPauseManager.evaluateTick(
+            currentSpeedMps = 3.5 / 3.6,
+            packetTimestampMs = now + 1000L,
+            currentTimestampMs = now + 1000L,
+            sportType = BSportType.BIKE,
+            config = config,
+            manualPauseLocked = false
+        )
+        assertEquals(AutoPauseState.TRACKING, bikeTick2.newState)
+        assertTrue(bikeTick2.triggerResume)
+        assertEquals(SoundCue.AUTO_RESUME, bikeTick2.soundCue)
+        assertEquals(0, autoPauseManager.resumeDebounceCounter)
+
+        // 2. RUN: requires 5 ticks >= 2 km/h (0.556 m/s)
+        autoPauseManager.setState(AutoPauseState.AUTO_PAUSED)
+        for (i in 1..4) {
+            val runTick = autoPauseManager.evaluateTick(
+                currentSpeedMps = 2.5 / 3.6,
+                packetTimestampMs = now + (i * 1000L),
+                currentTimestampMs = now + (i * 1000L),
+                sportType = BSportType.RUN,
+                config = config,
+                manualPauseLocked = false
+            )
+            assertEquals(AutoPauseState.AUTO_PAUSED, runTick.newState)
+            assertEquals(i, autoPauseManager.resumeDebounceCounter)
+        }
+        val runTick5 = autoPauseManager.evaluateTick(
+            currentSpeedMps = 2.5 / 3.6,
+            packetTimestampMs = now + 5000L,
+            currentTimestampMs = now + 5000L,
+            sportType = BSportType.RUN,
+            config = config,
+            manualPauseLocked = false
+        )
+        assertEquals(AutoPauseState.TRACKING, runTick5.newState)
+        assertTrue(runTick5.triggerResume)
+
+        // 3. OTHER: requires 10 ticks >= 1 km/h (0.278 m/s)
+        autoPauseManager.setState(AutoPauseState.AUTO_PAUSED)
+        for (i in 1..9) {
+            val otherTick = autoPauseManager.evaluateTick(
+                currentSpeedMps = 1.5 / 3.6,
+                packetTimestampMs = now + (i * 1000L),
+                currentTimestampMs = now + (i * 1000L),
+                sportType = BSportType.UNKNOWN,
+                config = config,
+                manualPauseLocked = false
+            )
+            assertEquals(AutoPauseState.AUTO_PAUSED, otherTick.newState)
+            assertEquals(i, autoPauseManager.resumeDebounceCounter)
+        }
+        val otherTick10 = autoPauseManager.evaluateTick(
+            currentSpeedMps = 1.5 / 3.6,
+            packetTimestampMs = now + 10000L,
+            currentTimestampMs = now + 10000L,
+            sportType = BSportType.UNKNOWN,
+            config = config,
+            manualPauseLocked = false
+        )
+        assertEquals(AutoPauseState.TRACKING, otherTick10.newState)
+        assertTrue(otherTick10.triggerResume)
+    }
+
+    @Test
+    fun `TST-TRK-043_2 transient GPS spike rejection and counter reset on stationary or stale tick`() {
+        val config = AutoPauseConfig(
+            bikeEnabled = true,
+            bikeSpeedThreshold = 3,
+            bikeResumeDebounceSec = 3,
+            isMetric = true
+        )
+        val now = 100000L
+
+        autoPauseManager.setState(AutoPauseState.AUTO_PAUSED)
+
+        // Tick 1: GPS glitch spike at 15 km/h
+        autoPauseManager.evaluateTick(15.0 / 3.6, now, now, BSportType.BIKE, config, false)
+        assertEquals(1, autoPauseManager.resumeDebounceCounter)
+        assertEquals(AutoPauseState.AUTO_PAUSED, autoPauseManager.currentState)
+
+        // Tick 2: drops back to 0.0 m/s -> resets resumeDebounceCounter to 0
+        autoPauseManager.evaluateTick(0.0, now + 1000L, now + 1000L, BSportType.BIKE, config, false)
+        assertEquals(0, autoPauseManager.resumeDebounceCounter)
+        assertEquals(AutoPauseState.AUTO_PAUSED, autoPauseManager.currentState)
+
+        // Tick 3: 2 ticks above threshold
+        autoPauseManager.evaluateTick(5.0 / 3.6, now + 2000L, now + 2000L, BSportType.BIKE, config, false)
+        autoPauseManager.evaluateTick(5.0 / 3.6, now + 3000L, now + 3000L, BSportType.BIKE, config, false)
+        assertEquals(2, autoPauseManager.resumeDebounceCounter)
+
+        // Tick 4: Stale packet (> 5000ms) resets resumeDebounceCounter to 0
+        autoPauseManager.evaluateTick(5.0 / 3.6, now + 3000L, now + 9000L, BSportType.BIKE, config, false)
+        assertEquals(0, autoPauseManager.resumeDebounceCounter)
+        assertEquals(AutoPauseState.AUTO_PAUSED, autoPauseManager.currentState)
+    }
+
+    @Test
+    fun `TST-TRK-043_3 exact single threshold evaluation without hysteresis offset`() {
+        val config = AutoPauseConfig(
+            bikeEnabled = true,
+            bikeSpeedThreshold = 3, // exactly 3 km/h (0.833 m/s)
+            bikeResumeDebounceSec = 2,
+            isMetric = true
+        )
+        val now = 100000L
+        val exactThresholdMps = 3.0 / 3.6
+
+        autoPauseManager.setState(AutoPauseState.AUTO_PAUSED)
+
+        // Tick 1: Exactly 3.0 km/h (no +0.5 offset required) -> counts toward resume!
+        val tick1 = autoPauseManager.evaluateTick(
+            currentSpeedMps = exactThresholdMps,
+            packetTimestampMs = now,
+            currentTimestampMs = now,
+            sportType = BSportType.BIKE,
+            config = config,
+            manualPauseLocked = false
+        )
+        assertEquals(AutoPauseState.AUTO_PAUSED, tick1.newState)
+        assertEquals(1, autoPauseManager.resumeDebounceCounter)
+
+        // Tick 2: Exactly 3.0 km/h -> reaches resumeDebounceSec=2 and resumes!
+        val tick2 = autoPauseManager.evaluateTick(
+            currentSpeedMps = exactThresholdMps,
+            packetTimestampMs = now + 1000L,
+            currentTimestampMs = now + 1000L,
+            sportType = BSportType.BIKE,
+            config = config,
+            manualPauseLocked = false
+        )
+        assertEquals(AutoPauseState.TRACKING, tick2.newState)
+        assertTrue(tick2.triggerResume)
+    }
+
+    @Test
+    fun `TST-TRK-044_1 shouldStartInAutoPause contract`() {
+        val disabledConfig = AutoPauseConfig(
+            bikeEnabled = true,
+            startInAutoPauseEnabled = false
+        )
+        assertFalse(
+            "Disabled globally -> must return false",
+            AutoPauseManager.shouldStartInAutoPause(disabledConfig, BSportType.BIKE, 0.0, hasSpeedSource = true)
+        )
+
+        val enabledConfig = AutoPauseConfig(
+            bikeEnabled = true,
+            runEnabled = false,
+            otherEnabled = true,
+            startInAutoPauseEnabled = true,
+            bikeSpeedThreshold = 3,
+            isMetric = true
+        )
+
+        assertFalse(
+            "hasSpeedSource false -> must return false immediately (indoor HR-only)",
+            AutoPauseManager.shouldStartInAutoPause(enabledConfig, BSportType.BIKE, null, hasSpeedSource = false)
+        )
+        assertFalse(
+            "hasSpeedSource false with 0.0 -> must return false immediately",
+            AutoPauseManager.shouldStartInAutoPause(enabledConfig, BSportType.BIKE, 0.0, hasSpeedSource = false)
+        )
+        assertFalse(
+            "hasSpeedSource default false -> must return false",
+            AutoPauseManager.shouldStartInAutoPause(enabledConfig, BSportType.BIKE, 0.0)
+        )
+
+        assertFalse(
+            "Sport disabled -> must return false",
+            AutoPauseManager.shouldStartInAutoPause(enabledConfig, BSportType.RUN, 0.0, hasSpeedSource = true)
+        )
+
+        assertTrue(
+            "hasSpeedSource true with Speed null -> stationary GPS acquiring -> true",
+            AutoPauseManager.shouldStartInAutoPause(enabledConfig, BSportType.BIKE, null, hasSpeedSource = true)
+        )
+
+        assertTrue(
+            "hasSpeedSource true with Speed 0.0 -> stationary -> true",
+            AutoPauseManager.shouldStartInAutoPause(enabledConfig, BSportType.BIKE, 0.0, hasSpeedSource = true)
+        )
+
+        assertTrue(
+            "hasSpeedSource true with Speed below threshold -> stationary -> true",
+            AutoPauseManager.shouldStartInAutoPause(enabledConfig, BSportType.BIKE, 1.0 / 3.6, hasSpeedSource = true)
+        )
+
+        assertFalse(
+            "hasSpeedSource true with Speed equal to threshold -> moving -> false",
+            AutoPauseManager.shouldStartInAutoPause(enabledConfig, BSportType.BIKE, 3.0 / 3.6, hasSpeedSource = true)
+        )
+        assertFalse(
+            "hasSpeedSource true with Speed above threshold -> moving -> false",
+            AutoPauseManager.shouldStartInAutoPause(enabledConfig, BSportType.BIKE, 10.0 / 3.6, hasSpeedSource = true)
+        )
+    }
+
+    @Test
+    fun `TST-TRK-044_3 mid-workout speed source removal transitions out of AUTO_PAUSED to SENSOR_LOST`() {
+        val config = AutoPauseConfig(
+            bikeEnabled = true,
+            bikeSpeedThreshold = 3,
+            isMetric = true
+        )
+        autoPauseManager.setState(AutoPauseState.AUTO_PAUSED)
+        val now = 200000L
+
+        // Tick with hasSpeedSource = false (speed sensor unpaired/disconnected)
+        val transition = autoPauseManager.evaluateTick(
+            currentSpeedMps = null,
+            packetTimestampMs = 0L,
+            currentTimestampMs = now,
+            sportType = BSportType.BIKE,
+            config = config,
+            manualPauseLocked = false,
+            hasSpeedSource = false
+        )
+
+        assertEquals(AutoPauseState.AUTO_PAUSED, transition.previousState)
+        assertEquals(AutoPauseState.SENSOR_LOST, transition.newState)
+        assertTrue("Must trigger resume to recover tracking recording", transition.triggerResume)
+        assertEquals("SENSOR_LOST_SPEED_SOURCE_REMOVED", transition.auditLogEvent)
+        assertEquals(0, autoPauseManager.debounceCounter)
+        assertEquals(0, autoPauseManager.resumeDebounceCounter)
+
+        // Contrast with corrupt speed while hasSpeedSource = true (should remain AUTO_PAUSED)
+        autoPauseManager.setState(AutoPauseState.AUTO_PAUSED)
+        val corruptTransition = autoPauseManager.evaluateTick(
+            currentSpeedMps = Double.NaN,
+            packetTimestampMs = now,
+            currentTimestampMs = now,
+            sportType = BSportType.BIKE,
+            config = config,
+            manualPauseLocked = false,
+            hasSpeedSource = true
+        )
+        assertEquals(AutoPauseState.AUTO_PAUSED, corruptTransition.previousState)
+        assertEquals(AutoPauseState.AUTO_PAUSED, corruptTransition.newState)
+        assertFalse(corruptTransition.triggerResume)
     }
 }
 

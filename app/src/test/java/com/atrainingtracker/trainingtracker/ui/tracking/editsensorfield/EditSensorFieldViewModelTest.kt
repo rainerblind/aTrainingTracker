@@ -91,16 +91,22 @@ class EditSensorFieldViewModelTest {
         unmockkStatic(Log::class)
     }
 
-    private fun createViewModel(sensorFieldId: Long = -1L): EditSensorFieldViewModel {
+    private fun createViewModel(
+        sensorFieldId: Long = -1L,
+        activityType: ActivityType = ActivityType.BIKE_POWER,
+        tabViewId: Long = 1L,
+        rowNr: Int = 0,
+        colNr: Int = 0
+    ): EditSensorFieldViewModel {
         return EditSensorFieldViewModel(
             application = application,
             trackingViewsRepository = trackingViewsRepo,
             banalServiceRepository = banalServiceRepo,
-            activityType = ActivityType.BIKE_POWER,
+            activityType = activityType,
             sensorFieldId = sensorFieldId,
-            tabViewId = 1L,
-            rowNr = 0,
-            colNr = 0
+            tabViewId = tabViewId,
+            rowNr = rowNr,
+            colNr = colNr
         )
     }
 
@@ -398,8 +404,384 @@ class EditSensorFieldViewModelTest {
                 newSourceDeviceId = 123L,
                 newSourceDeviceName = "Stages Power",
                 newFilterType = any(),
-                newFilterConstant = any()
+                newFilterConstant = any(),
+                showValue = any(),
+                showBar = any()
             )
         }
+    }
+
+    /**
+     * TST-TRK-046.1: Bar-supported sensors (HR, POWER, PEDAL_POWER_BALANCE, W_PRIME_BAL)
+     * default to showValue = true and showBar = true, and enforce mutual exclusion
+     * so athlete cannot deselect both simultaneously (REQ-TRK-046).
+     */
+    @Test
+    fun testDisplayElements_barSupportedSensors_defaultsAndMutualExclusion() = runTest {
+        val viewModel = createViewModel(sensorFieldId = -1L)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.onSensorTypeChanged(SensorType.POWER)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue("POWER must support horizontal bar", state.isBarSupported)
+        assertTrue("POWER must default showValue = true", state.showValue)
+        assertTrue("POWER must default showBar = true", state.showBar)
+
+        // Deselect value -> bar remains active, showValue becomes false
+        viewModel.onShowValueChanged(false)
+        assertFalse("showValue must become false", viewModel.uiState.value.showValue)
+        assertTrue("showBar must remain true", viewModel.uiState.value.showBar)
+
+        // Try to deselect bar while value is inactive -> invariant prevents both false
+        viewModel.onShowBarChanged(false)
+        assertFalse("showValue must remain false", viewModel.uiState.value.showValue)
+        assertTrue("showBar must stay true due to mutual exclusion", viewModel.uiState.value.showBar)
+
+        // Re-enable value
+        viewModel.onShowValueChanged(true)
+        assertTrue("showValue must become true", viewModel.uiState.value.showValue)
+
+        // Deselect bar -> showBar becomes false
+        viewModel.onShowBarChanged(false)
+        assertTrue("showValue must remain true", viewModel.uiState.value.showValue)
+        assertFalse("showBar must become false", viewModel.uiState.value.showBar)
+
+        // Try to deselect value while bar is inactive -> invariant prevents both false
+        viewModel.onShowValueChanged(false)
+        assertTrue("showValue must stay true due to mutual exclusion", viewModel.uiState.value.showValue)
+        assertFalse("showBar must remain false", viewModel.uiState.value.showBar)
+    }
+
+    /**
+     * TST-TRK-046.2: Non-bar sensors (e.g. SPEED_mps) do not support bar and cannot disable value.
+     */
+    @Test
+    fun testDisplayElements_unsupportedSensor_barDisabled() = runTest {
+        val viewModel = createViewModel(sensorFieldId = -1L)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.onSensorTypeChanged(SensorType.SPEED_mps)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse("SPEED_mps must not support bar", state.isBarSupported)
+        assertTrue("SPEED_mps must default showValue = true", state.showValue)
+        assertFalse("SPEED_mps must default showBar = false", state.showBar)
+
+        // Athlete cannot deselect value when bar is unsupported
+        viewModel.onShowValueChanged(false)
+        assertTrue("showValue must remain true for non-bar sensors", viewModel.uiState.value.showValue)
+    }
+
+    /**
+     * TST-TRK-046.3: saveChanges persists showValue and showBar flags into repository.
+     */
+    @Test
+    fun testDisplayElements_saveChanges_persistsFlags() = runTest {
+        val viewModel = createViewModel(sensorFieldId = -1L)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.onSensorTypeChanged(SensorType.HR)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Configure bar-only tile: showValue = false, showBar = true
+        viewModel.onShowValueChanged(false)
+        viewModel.saveChanges()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify {
+            trackingViewsRepo.insertSensorFieldConfig(
+                tabViewId = 1L,
+                rowNr = 0,
+                colNr = 0,
+                newSensorType = SensorType.HR,
+                newViewSize = ViewSize.NORMAL,
+                newSourceDeviceId = null,
+                newSourceDeviceName = null,
+                newFilterType = any(),
+                newFilterConstant = any(),
+                showValue = false,
+                showBar = true,
+                colWeight = any()
+            )
+        }
+    }
+
+    /**
+     * TST-TRK-046.3: Sport-dependent bar support in EditDialogUiState:
+     * HR supports bar in RUN and BIKE, but not GENERIC.
+     * POWER, BALANCE, and W'BAL support bar only in BIKE, not RUN.
+     */
+    @Test
+    fun testDisplayElements_sportDependentBarFeasibility() = runTest {
+        // Run layout
+        val runViewModel = createViewModel(activityType = ActivityType.RUN_SPEED_AND_CADENCE)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        runViewModel.onSensorTypeChanged(SensorType.HR)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertTrue("HR in RUN must support bar", runViewModel.uiState.value.isBarSupported)
+
+        runViewModel.onSensorTypeChanged(SensorType.POWER)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertFalse("POWER in RUN must NOT support bar", runViewModel.uiState.value.isBarSupported)
+        assertTrue("showValue must default to true when bar unsupported", runViewModel.uiState.value.showValue)
+        assertFalse("showBar must default to false when bar unsupported", runViewModel.uiState.value.showBar)
+
+        runViewModel.onSensorTypeChanged(SensorType.PEDAL_POWER_BALANCE)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertFalse("PEDAL_POWER_BALANCE in RUN must NOT support bar", runViewModel.uiState.value.isBarSupported)
+
+        runViewModel.onSensorTypeChanged(SensorType.W_PRIME_BAL)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertFalse("W_PRIME_BAL in RUN must NOT support bar", runViewModel.uiState.value.isBarSupported)
+
+        // Generic layout
+        val genericViewModel = createViewModel(activityType = ActivityType.GENERIC_HR)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        genericViewModel.onSensorTypeChanged(SensorType.HR)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertFalse("HR in GENERIC must NOT support bar", genericViewModel.uiState.value.isBarSupported)
+    }
+
+    /**
+     * TST-TRK-046.3: Saving unsupported bar sensor enforces showValue = true, showBar = false.
+     */
+    @Test
+    fun testDisplayElements_saveChanges_unsupportedBarEnforcesShowValueTrueAndShowBarFalse() = runTest {
+        val runViewModel = createViewModel(activityType = ActivityType.RUN_SPEED_AND_CADENCE)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        runViewModel.onSensorTypeChanged(SensorType.POWER)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        runViewModel.saveChanges()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify {
+            trackingViewsRepo.insertSensorFieldConfig(
+                tabViewId = 1L,
+                rowNr = 0,
+                colNr = 0,
+                newSensorType = SensorType.POWER,
+                newViewSize = ViewSize.NORMAL,
+                newSourceDeviceId = null,
+                newSourceDeviceName = null,
+                newFilterType = any(),
+                newFilterConstant = any(),
+                showValue = true,
+                showBar = false,
+                colWeight = 1.0f
+            )
+        }
+    }
+
+    /**
+     * TST-UI-437.3: Individual relative width weight updates uiState and persists on save.
+     */
+    @Test
+    fun testColWeight_individualWeightSelection_updatesStateAndPersists() = runTest {
+        val viewModel = createViewModel(sensorFieldId = -1L)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(1.0f, viewModel.uiState.value.colWeight, 0.001f)
+
+        viewModel.onColWeightChanged(2.0f)
+        assertEquals(2.0f, viewModel.uiState.value.colWeight, 0.001f)
+
+        viewModel.onColWeightChanged(3.0f)
+        assertEquals(3.0f, viewModel.uiState.value.colWeight, 0.001f)
+
+        // Invalid weight <= 0 is safely clamped to 1.0f
+        viewModel.onColWeightChanged(0f)
+        assertEquals(1.0f, viewModel.uiState.value.colWeight, 0.001f)
+
+        viewModel.onColWeightChanged(3.0f)
+        viewModel.saveChanges()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify {
+            trackingViewsRepo.insertSensorFieldConfig(
+                tabViewId = 1L,
+                rowNr = 0,
+                colNr = 0,
+                newSensorType = any(),
+                newViewSize = any(),
+                newSourceDeviceId = any(),
+                newSourceDeviceName = any(),
+                newFilterType = any(),
+                newFilterConstant = any(),
+                showValue = any(),
+                showBar = any(),
+                colWeight = 3.0f
+            )
+        }
+    }
+
+    /**
+     * TST-UI-437.3: Editing existing field updates relative colWeight and persists without sibling update (ATT-5077).
+     */
+    @Test
+    fun testColWeight_editField_updatesColWeightAndPersistsWithoutSiblingUpdate() = runTest {
+        val field1 = SensorFieldConfig(
+            sensorFieldId = 10L,
+            rowNr = 1,
+            colNr = 1,
+            viewSize = ViewSize.NORMAL,
+            sensorType = SensorType.POWER,
+            filterType = FilterType.INSTANTANEOUS,
+            filterConstant = 1.0,
+            sourceDeviceId = -1,
+            colWeight = 1.0f
+        )
+        every { trackingViewsRepo.getSensorFieldConfig(10L) } returns flowOf(field1)
+
+        val viewModel = createViewModel(sensorFieldId = 10L)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(1.0f, viewModel.uiState.value.colWeight, 0.001f)
+
+        // Select 2x relative weight
+        viewModel.onColWeightChanged(2.0f)
+        assertEquals(2.0f, viewModel.uiState.value.colWeight, 0.001f)
+
+        viewModel.saveChanges()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify {
+            trackingViewsRepo.updateSensorFieldConfig(
+                sensorFieldId = 10L,
+                newSensorType = any(),
+                newViewSize = any(),
+                newSourceDeviceId = any(),
+                newSourceDeviceName = any(),
+                newFilterType = any(),
+                newFilterConstant = any(),
+                showValue = any(),
+                showBar = any(),
+                colWeight = 2.0f
+            )
+        }
+        coVerify(exactly = 0) {
+            trackingViewsRepo.updateColWeight(any(), any())
+        }
+    }
+
+    // --- TST-UI-437.6: Relative Width Cardinality Gating (ATT-5192) ---
+
+    @Test
+    fun testCalculateIsMultiFieldRow_pureLogic() {
+        // Adding new field into a row: multi-field if row already has >= 1 field
+        assertFalse(calculateIsMultiFieldRow(existingFieldsInTargetRow = 0, isNewField = true))
+        assertTrue(calculateIsMultiFieldRow(existingFieldsInTargetRow = 1, isNewField = true))
+        assertTrue(calculateIsMultiFieldRow(existingFieldsInTargetRow = 2, isNewField = true))
+
+        // Editing existing field: multi-field only if row currently has > 1 field
+        assertFalse(calculateIsMultiFieldRow(existingFieldsInTargetRow = 0, isNewField = false))
+        assertFalse(calculateIsMultiFieldRow(existingFieldsInTargetRow = 1, isNewField = false))
+        assertTrue(calculateIsMultiFieldRow(existingFieldsInTargetRow = 2, isNewField = false))
+        assertTrue(calculateIsMultiFieldRow(existingFieldsInTargetRow = 3, isNewField = false))
+    }
+
+    @Test
+    fun testIsMultiFieldRow_editingFieldInSingleFieldRow_isFalse() = runTest {
+        val field = SensorFieldConfig(
+            sensorFieldId = 10L,
+            rowNr = 0,
+            colNr = 0,
+            viewSize = ViewSize.NORMAL,
+            sensorType = SensorType.SPEED_mps,
+            filterType = FilterType.INSTANTANEOUS,
+            filterConstant = 1.0,
+            sourceDeviceId = -1,
+            colWeight = 1.0f
+        )
+        every { trackingViewsRepo.getSensorFieldConfig(10L) } returns flowOf(field)
+        every { trackingViewsRepo.getSensorFieldConfigsForView(1L) } returns flowOf(listOf(field))
+
+        val viewModel = createViewModel(sensorFieldId = 10L, rowNr = 0, colNr = 0)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertFalse("Single-field row must not be marked as multi-field", viewModel.uiState.value.isMultiFieldRow)
+    }
+
+    @Test
+    fun testIsMultiFieldRow_editingFieldInMultiFieldRow_isTrue() = runTest {
+        val field1 = SensorFieldConfig(
+            sensorFieldId = 10L,
+            rowNr = 0,
+            colNr = 0,
+            viewSize = ViewSize.NORMAL,
+            sensorType = SensorType.SPEED_mps,
+            filterType = FilterType.INSTANTANEOUS,
+            filterConstant = 1.0,
+            sourceDeviceId = -1,
+            colWeight = 1.0f
+        )
+        val field2 = SensorFieldConfig(
+            sensorFieldId = 11L,
+            rowNr = 0,
+            colNr = 1,
+            viewSize = ViewSize.NORMAL,
+            sensorType = SensorType.HR,
+            filterType = FilterType.INSTANTANEOUS,
+            filterConstant = 1.0,
+            sourceDeviceId = -1,
+            colWeight = 1.0f
+        )
+        every { trackingViewsRepo.getSensorFieldConfig(10L) } returns flowOf(field1)
+        every { trackingViewsRepo.getSensorFieldConfigsForView(1L) } returns flowOf(listOf(field1, field2))
+
+        val viewModel = createViewModel(sensorFieldId = 10L, rowNr = 0, colNr = 0)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue("Row with 2 fields must be marked as multi-field", viewModel.uiState.value.isMultiFieldRow)
+    }
+
+    @Test
+    fun testIsMultiFieldRow_addingFieldToExistingRow_isTrue() = runTest {
+        val existingField = SensorFieldConfig(
+            sensorFieldId = 10L,
+            rowNr = 0,
+            colNr = 0,
+            viewSize = ViewSize.NORMAL,
+            sensorType = SensorType.SPEED_mps,
+            filterType = FilterType.INSTANTANEOUS,
+            filterConstant = 1.0,
+            sourceDeviceId = -1,
+            colWeight = 1.0f
+        )
+        every { trackingViewsRepo.getSensorFieldConfigsForView(1L) } returns flowOf(listOf(existingField))
+
+        // Adding into row 0 where 1 field already exists
+        val viewModel = createViewModel(sensorFieldId = -1L, rowNr = 0, colNr = 1)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue("Adding field into row with 1 existing field must result in multi-field row", viewModel.uiState.value.isMultiFieldRow)
+    }
+
+    @Test
+    fun testIsMultiFieldRow_addingFieldToNewRow_isFalse() = runTest {
+        val existingField = SensorFieldConfig(
+            sensorFieldId = 10L,
+            rowNr = 0,
+            colNr = 0,
+            viewSize = ViewSize.NORMAL,
+            sensorType = SensorType.SPEED_mps,
+            filterType = FilterType.INSTANTANEOUS,
+            filterConstant = 1.0,
+            sourceDeviceId = -1,
+            colWeight = 1.0f
+        )
+        every { trackingViewsRepo.getSensorFieldConfigsForView(1L) } returns flowOf(listOf(existingField))
+
+        // colNr = -1 indicates creating a new row
+        val viewModel = createViewModel(sensorFieldId = -1L, rowNr = 1, colNr = -1)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertFalse("Adding field to a new row must result in single-field row", viewModel.uiState.value.isMultiFieldRow)
     }
 }

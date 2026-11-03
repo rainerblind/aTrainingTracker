@@ -32,7 +32,7 @@ Reuse the ticket's two persistent `TypeName: "self"` subagents via `send_message
      ```
    - Defer full test suite execution (`./gradlew testDebugUnitTest`) to Stage 5.
 4. **Single-Turn Stage Submission (`submit-stage`)**:
-   - Submit Stage 4 summary and targeted test results in a single composite CLI call (creates/updates `[Implementation]` sub-task and moves it to `In Überprüfung`):
+   - Submit Stage 4 summary and targeted test results in a single composite CLI call (creates/updates `[Implementation]` sub-task and moves it to `In Überprüfung`). **Never** create markdown files or folders inside `docs/engineering/` (such as `summaries/` or `implementation/`) for Stage 4 (Rule 67 — `ATT-4936`):
      ```bash
      python3 tools/jira_util.py --as agent1 submit-stage <TICKET_KEY> 4 "<Implementation Summary & Targeted Test Results>"
      ```
@@ -42,10 +42,18 @@ Reuse the ticket's two persistent `TypeName: "self"` subagents via `send_message
 Message the ticket's reviewing persistent subagent (`send_message` to `subagent_pro` for Standard tickets, `subagent_flash` for High-Risk tickets authored by `pro`) to audit the `git diff` against this checklist and record the verdict via `--as agent2 gate-verdict`:
 1. **Diff Scrutiny**: Inspect `git diff` against the approved Stage 3 implementation plan. Confirm zero unapproved files or unintended modifications.
 2. **Side-Effect Audit**: Verify adjacent callers, interfaces, and non-target metrics/features were NOT altered or broken.
-3. **Quality & Compliance**:
+3. **Acceptance-Criteria & Robustness Audit (Rule 66 — `ATT-4864`)**: Plan conformance alone is not sufficient (Sprint 2026-44.1: all gates passed, yet the review found AC gaps and edge-case defects in ATT-4840, ATT-4841, ATT-4833, ATT-4863). Include in the audit report:
+   - **AC-by-AC table**: every acceptance criterion of the parent ticket with verdict `met` / `partially met` / `not met` and evidence (file:line or test). Any `partially` / `not met` → `REVISION`, or an explicit, justified deviation documented in the ticket.
+   - **Upgrade path**: for DB schema, migrations, persisted settings or removed settings — what exactly changes for an *existing* user after the update (previous preferences carried over? visible behaviour change?).
+   - **Missing / invalid input**: for state machines, sensors and resolvers — behaviour with no source, `null`, stale data, `UNKNOWN` sport type, empty lists. A state must never become a dead end (e.g. stuck in `AUTO_PAUSED`) or render empty UI.
+   - **Shared-component blast radius**: when a shared class/default or composable layout constraint (`.fillMaxHeight()`, `.weight(1f)`) is changed (e.g. `SensorFieldView`, `ThermalColorLut`, `PolylineHeatmapTileProvider`), list all other consumers (`grep -rn`) and confirm they work in both bounded (`IntrinsicSize.Min`) and scrollable (`verticalScroll`) containers (`ATT-5071`).
+   - **Broadcast listener ordering & Java-to-Kotlin nullability**: when modifying a broadcast receiver (`RESET_ACCUMULATORS_INTENT`, `STOP_TRACKING`) or `reset()` method, verify the execution order across all registered listeners (`ClockDevice` + `FilterManager`) and ensure Java formatters/getters never return unannotated `null` to Kotlin non-null `String` callers (`ATT-5080`).
+   - **Startup self-healing**: when adding recovery for records stuck in a terminal DB state (`FINISHED_FAILED`), verify it triggers automatically on app startup in addition to manual settings dialogs (`ATT-5081`).
+   - **Compose state hygiene**: no `MutableState` writes inside `remember {}` calculations or during composition (`docs/coding_standards.md` Sec 1.10).
+4. **Quality & Compliance**:
    - Verify class/method headers comply with self-documenting standards (KDoc/JavaDoc).
    - Verify 9-language localization parity across all user-facing strings (`EN, DE, ES, FR, IT, JA, NL, PL, PT`).
-4. **Gate Verdict (`gate-verdict`)**:
+5. **Gate Verdict (`gate-verdict`)**:
    - Record the verdict in a single composite CLI call (which closes the sub-task to `Erledigt`, advances the parent ticket to `Test`, and automatically injects `stage5-verification/SKILL.md` into stdout):
      ```bash
      python3 tools/jira_util.py --as agent2 gate-verdict <IMPL_SUBTASK_KEY> PASS "<Audit Report>"

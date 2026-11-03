@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.banalservice.ui.devices.editdevice
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -26,6 +27,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -159,7 +162,12 @@ fun EditDeviceDialog(
                     PowerMeterSection(data, viewModel)
                 }
 
-                // 5. Live Data Preview
+                // 5. Specialized Altitude Explanations (ATT-5073, REQ-SEN-026)
+                if (data.deviceType == DeviceType.ALTITUDE_FROM_PRESSURE || data.deviceType == DeviceType.ALTITUDE_FROM_POSITION) {
+                    AltitudeExplanationSection(data.deviceType)
+                }
+
+                // 6. Live Data Preview
                 liveData?.let { live ->
                     LivePreviewSection(live)
                 }
@@ -359,6 +367,32 @@ private fun WheelCircumferenceSelector(data: DeviceUiData, viewModel: EditDevice
                 )
             }
         }
+
+        val baselineMm = data.baselineCircumference?.let { (it * 1000).toInt() }
+        if (baselineMm != null && baselineMm > 0) {
+            Text(
+                text = "Baseline: $baselineMm mm",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        OutlinedButton(
+            onClick = { viewModel.resetTirePressureBaseline() },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Refresh,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = stringResource(R.string.devices_reset_tire_pressure_baseline),
+                style = MaterialTheme.typography.labelMedium
+            )
+        }
     }
 
     if (showCorrectDialog) {
@@ -556,6 +590,87 @@ private fun LivePreviewSection(data: DeviceUiData) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+}
+
+/**
+ * Educational information card detailing the operational principles and trade-offs (pros & cons)
+ * of specialized altitude devices (ALTITUDE_FROM_PRESSURE and ALTITUDE_FROM_POSITION) (REQ-SEN-026.3, ATT-5073).
+ */
+@Composable
+private fun AltitudeExplanationSection(deviceType: DeviceType) {
+    val (howItWorksRes, prosConsRes) = when (deviceType) {
+        DeviceType.ALTITUDE_FROM_PRESSURE -> Pair(
+            R.string.device_altitude_pressure_how_it_works,
+            R.string.device_altitude_pressure_pros_cons
+        )
+        DeviceType.ALTITUDE_FROM_POSITION -> Pair(
+            R.string.device_altitude_position_how_it_works,
+            R.string.device_altitude_position_pros_cons
+        )
+        else -> return
+    }
+
+    OutlinedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.outlinedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = stringResource(R.string.device_altitude_explanation_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = stringResource(R.string.device_altitude_how_it_works_header),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = stringResource(howItWorksRes),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = stringResource(R.string.device_altitude_pros_cons_header),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = stringResource(prosConsRes),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }

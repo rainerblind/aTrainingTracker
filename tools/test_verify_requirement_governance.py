@@ -18,6 +18,8 @@ import subprocess
 import sys
 import unittest
 
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from tools.verify_requirement_governance import (
     parse_diff_requirements,
     validate_archaeology_section,
@@ -171,6 +173,62 @@ index 1234567..89abcdef 100644
                 std_lib_modules,
                 f"Prohibited third-party or non-standard module imported: {mod}",
             )
+
+    def test_scenario_6_multiline_markdown_heading_diff(self):
+        """Scenario 6: Accurately identifies net-new and modified requirements in multi-line heading format."""
+        diff_net_new_multiline = """
+diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_process_stability.md
+new file mode 100644
+--- /dev/null
++++ b/docs/requirements/req_process_stability.md
+@@ -0,0 +1,5 @@
++### REQ-PRO-028: Living Documentation Sharding [Planned]
++- **Tests**: `TST-PRO-021`
++- **REQ-PRO-028.1**: Shard living specs into 7 domain files...
++"""
+        modified, added, deleted = parse_diff_requirements(diff_net_new_multiline)
+        self.assertEqual(len(modified), 0)
+        self.assertIn("REQ-PRO-028", added)
+
+        diff_modified_multiline = """
+diff --git a/docs/requirements/req_tracking_cockpit.md b/docs/requirements/req_tracking_cockpit.md
+--- a/docs/requirements/req_tracking_cockpit.md
++++ b/docs/requirements/req_tracking_cockpit.md
+@@ -40,4 +40,4 @@
+ ### REQ-TRK-001: Sensor Processing Pipeline [Verified]
+ - **Tests**: `TST-TRK-001`
+-- **REQ-TRK-001.1**: Old filter configuration.
++- **REQ-TRK-001.1**: New refined filter configuration with adaptive weights.
+ """
+        modified, added, deleted = parse_diff_requirements(diff_modified_multiline)
+        self.assertIn("REQ-TRK-001", modified)
+
+    def test_scenario_7_auto_verify_living_docs_multiline_shards(self):
+        """Scenario 7: Verify auto_verify_living_docs_on_stage5 flips Planned to Verified in sharded files."""
+        import tempfile
+        from tools.jira_util import auto_verify_living_docs_on_stage5
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            req_dir = os.path.join(tmpdir, "docs", "requirements")
+            tst_dir = os.path.join(tmpdir, "docs", "tests")
+            os.makedirs(req_dir, exist_ok=True)
+            os.makedirs(tst_dir, exist_ok=True)
+
+            shard_file = os.path.join(req_dir, "req_process_stability.md")
+            with open(shard_file, "w", encoding="utf-8") as f:
+                f.write(
+                    "### REQ-PRO-028: Living Documentation Sharding [Planned (ATT-4594)]\n"
+                    "- **Tests**: `TST-PRO-021`\n"
+                    "- **Status**: Planned (ATT-4594)\n"
+                )
+
+            count = auto_verify_living_docs_on_stage5("ATT-4594", repo_root=tmpdir)
+            self.assertGreaterEqual(count, 1)
+
+            with open(shard_file, "r", encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("### REQ-PRO-028: Living Documentation Sharding [Verified]", content)
+            self.assertIn("- **Status**: Verified", content)
 
 
 if __name__ == "__main__":

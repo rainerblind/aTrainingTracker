@@ -63,6 +63,8 @@ public class AltitudeFromPressureDevice extends MyDevice
         implements SensorEventListener {
     public static final String ALTITUDE_CORRECTION_VALUE = "com.atrainingtracker.banalservice.Devices.AltitudeFromPressureDevice.ALTITUDE_CORRECTION_VALUE";
     public static final String ALTITUDE_CORRECTION_INTENT = "com.atrainingtracker.banalservice.Devices.AltitudeFromPressureDevice.ALTITUDE_CORRECTION_INTENT";
+    public static final String PREV_CALIBRATION_TIME_MS_EXTRA = "com.atrainingtracker.banalservice.Devices.AltitudeFromPressureDevice.PREV_CALIBRATION_TIME_MS_EXTRA";
+    public static final String CALIBRATION_TIME_MS_EXTRA = "com.atrainingtracker.banalservice.Devices.AltitudeFromPressureDevice.CALIBRATION_TIME_MS_EXTRA";
     protected static final double MY_PRESSURE_STANDARD_ATMOSPHERE = 1013.25;
     private static final boolean DEBUG = BANALService.getDebug(false);
     protected final IntentFilter mGPSProviderEnabledFilter = new IntentFilter(BANALService.LOCATION_AVAILABLE_INTENT);
@@ -76,6 +78,7 @@ public class AltitudeFromPressureDevice extends MyDevice
     private double mPendingReferenceAltitude = Double.NaN;
     private boolean mPressureSensorInitialized = false;
     private boolean mIsCalibrated = false;
+    private long mLastCalibrationTimeMs = -1L;
     private final ExecutorService mExecutor = Executors.newSingleThreadExecutor();
     private final BroadcastReceiver mGPSProviderEnabledReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
@@ -120,6 +123,7 @@ public class AltitudeFromPressureDevice extends MyDevice
         LifecycleUtils.safeUnregisterReceiver(mContext, mGPSProviderEnabledReceiver, TAG);
         mPendingReferenceAltitude = Double.NaN;
         mIsCalibrated = false;
+        mLastCalibrationTimeMs = -1L;
     }
 
 
@@ -234,11 +238,17 @@ public class AltitudeFromPressureDevice extends MyDevice
             mAltitudeSensor.newValue(mLastRawAltitude + mAltitudeCorrection);
         }
 
+        long prevCalTimeMs = mLastCalibrationTimeMs;
+        long currentCalTimeMs = System.currentTimeMillis();
+        mLastCalibrationTimeMs = currentCalTimeMs;
+
         // 5. Broadcast delta shift only if significant (>= 0.1m)
         if (Math.abs(deltaOffset) >= 0.1) {
             Intent intent = new Intent(ALTITUDE_CORRECTION_INTENT)
                     .setPackage(mContext.getPackageName())
-                    .putExtra(ALTITUDE_CORRECTION_VALUE, deltaOffset);
+                    .putExtra(ALTITUDE_CORRECTION_VALUE, deltaOffset)
+                    .putExtra(PREV_CALIBRATION_TIME_MS_EXTRA, prevCalTimeMs)
+                    .putExtra(CALIBRATION_TIME_MS_EXTRA, currentCalTimeMs);
             mContext.sendBroadcast(intent);
         }
     }
@@ -314,6 +324,22 @@ public class AltitudeFromPressureDevice extends MyDevice
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
     void setPressureSensorInitialized(boolean initialized) {
         mPressureSensorInitialized = initialized;
+    }
+
+    public synchronized void resetCalibrationState() {
+        mLastCalibrationTimeMs = -1L;
+        mIsCalibrated = false;
+        mAltitudeCorrection = 0.0;
+        mPendingReferenceAltitude = Double.NaN;
+    }
+
+    public synchronized long getLastCalibrationTimeMs() {
+        return mLastCalibrationTimeMs;
+    }
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    void setLastCalibrationTimeMs(long timeMs) {
+        mLastCalibrationTimeMs = timeMs;
     }
 
 

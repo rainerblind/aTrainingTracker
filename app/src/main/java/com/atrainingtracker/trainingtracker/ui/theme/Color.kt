@@ -251,6 +251,7 @@ object TTColor {
     val RouteUnselected = Color(0xFF90CAF9) // Material Blue 200 (Soft Steel Blue)
     val RouteActiveNavigation = Color(0xFF1E88E5) // Material Blue 600 (Vibrant Sapphire Blue for actively navigated routes)
     val RouteActiveNavigationOverlay = Color(0xFF0D47A1) // Material Blue 900 (Deep Midnight Navy for active route dashed overlay)
+    val Cluster = Color(0xFF8E24AA) // Material Purple 600 (Favorite Tracks / Workout Clusters)
 
     // Spatial Signature Points
     val StartPoint = Color(0xFF2E7D32) // Material Green 800
@@ -311,6 +312,8 @@ object TTColor {
 
     // Cockpit Gauges, Controls & Sensor Borders (REQ-UI-381)
     val PauseAmber = Color(0xFFF59E0B)
+    val BikeBellContainer = Color(0xFFFF9800) // Distinct Warm Orange (REQ-UI-421.2, ATT-5283)
+    val BikeBellContent = Color(0xFF000000)   // High-Contrast Pure Black on Orange (WCAG AAA > 10:1) (REQ-UI-421.2, ATT-5283)
     val SensorActiveBorder = Color(0xFF2196F3)
     val SensorBorderDark = Color(0xFF383838)
     val SensorBorderLight = Color(0xFFD6D6D6)
@@ -326,4 +329,15 @@ object TTColor {
     val PmcFreshGreen = Color(0xFF2E7D32)
     val PmcOptimalBlue = Color(0xFF1565C0)
     val PmcCautionOrange = Color(0xFFEF6C00)
+
+    // Period Stacked Bar Sport Palette (REQ-PER-018.4, ATT-4478)
+    val BikeSportBarColor = Color(0xFF1E88E5)
+    val RunSportBarColor = Color(0xFFFF7043)
+    val OtherSportBarColor = Color(0xFF26A69A)
+
+    // Warm Heatmap "Hot" Sequential Palette (REQ-MAP-057.2, ATT-4933)
+    val HeatmapHotYellow = Color(0xFFFFF176)
+    val HeatmapHotOrange = Color(0xFFFF9800)
+    val HeatmapHotRed = Color(0xFFE53935)
+    val HeatmapHotDarkRed = Color(0xFF880E4F)
 }

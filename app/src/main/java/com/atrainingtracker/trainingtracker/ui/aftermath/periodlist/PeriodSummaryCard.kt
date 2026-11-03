@@ -42,6 +42,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.time.LocalDate
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.google.android.gms.maps.model.JointType
@@ -91,7 +92,34 @@ fun PeriodSummaryCard(
     onMapClick: (PeriodSummary) -> Unit,
     onSportClick: (PeriodSummary, BSportType) -> Unit,
     onLongestWorkoutClick: (PeriodSummary, BSportType, Long) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    activeMetric: PeriodBarMetric = PeriodBarMetric.DURATION,
+    onDayCellClick: ((PeriodSummary, BSportType, java.time.LocalDate, DailySportActivity?) -> Unit)? = null
+) {
+    PeriodSummaryCard(
+        summary = summary,
+        isPlayServiceAvailable = isPlayServiceAvailable,
+        onHeaderClick = onHeaderClick,
+        onMapClick = { s, _ -> onMapClick(s) },
+        onSportClick = onSportClick,
+        onLongestWorkoutClick = onLongestWorkoutClick,
+        modifier = modifier,
+        activeMetric = activeMetric,
+        onDayCellClick = onDayCellClick
+    )
+}
+
+@Composable
+fun PeriodSummaryCard(
+    summary: PeriodSummary,
+    isPlayServiceAvailable: Boolean,
+    onHeaderClick: (PeriodSummary) -> Unit,
+    onMapClick: (PeriodSummary, String?) -> Unit,
+    onSportClick: (PeriodSummary, BSportType) -> Unit,
+    onLongestWorkoutClick: (PeriodSummary, BSportType, Long) -> Unit,
+    modifier: Modifier = Modifier,
+    activeMetric: PeriodBarMetric = PeriodBarMetric.DURATION,
+    onDayCellClick: ((PeriodSummary, BSportType, java.time.LocalDate, DailySportActivity?) -> Unit)? = null
 ) {
     val df = DistanceFormatter()
     val tf = TimeFormatter()
@@ -177,14 +205,44 @@ fun PeriodSummaryCard(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                val periodStartDate = remember(summary.startTimestampS) {
+                    java.time.Instant.ofEpochSecond(summary.startTimestampS)
+                        .atZone(java.time.ZoneId.systemDefault())
+                        .toLocalDate()
+                }
+                val periodEndDate = remember(summary.endTimestampS) {
+                    java.time.Instant.ofEpochSecond(summary.endTimestampS)
+                        .atZone(java.time.ZoneId.systemDefault())
+                        .toLocalDate()
+                }
+
                 // SPORT SPECIFIC BREAKDOWN
                 summary.sportStats.entries.forEachIndexed { index, entry ->
                     val (bSportType, stats) = entry
+                    val contribution = if (summary.periodType == PeriodType.YEAR) {
+                        summary.yearlySportContributions[bSportType]
+                    } else null
+
+                    val dailyContribution = if (summary.periodType == PeriodType.WEEK || summary.periodType == PeriodType.MONTH) {
+                        summary.dailySportContributions[bSportType]
+                    } else null
+
                     SportStatsRow(
                         bSportType = bSportType,
                         stats = stats,
                         tf = tf, df = df, af = af,
                         showDetails = true,
+                        yearlyContribution = contribution,
+                        dailyContribution = dailyContribution,
+                        periodType = summary.periodType,
+                        startDate = periodStartDate,
+                        endDate = periodEndDate,
+                        activeMetric = activeMetric,
+                        onDayCellClick = onDayCellClick?.let { callback ->
+                            { date: LocalDate, dayActivity: DailySportActivity? ->
+                                callback(summary, bSportType, date, dayActivity)
+                            }
+                        },
                         onClick = { onSportClick(summary, bSportType) },
                         onLongestWorkoutClick = { workoutId -> onLongestWorkoutClick(summary, bSportType, workoutId) }
                     )
@@ -195,90 +253,40 @@ fun PeriodSummaryCard(
             }
 
             // --- 2. THE MAP SECTION ---
-            if (isPlayServiceAvailable && summary.polylines.isNotEmpty()) {
-                val decodedAnchorPaths = remember(summary.polylines) {
-                    summary.polylines.mapNotNull { if (it.isNotEmpty()) PolyUtil.decode(it) else null }
+            if (isPlayServiceAvailable && (summary.polylines.isNotEmpty() || summary.workoutIdToPolylineMap.isNotEmpty())) {
+                val context = LocalContext.current
+                val mapState by produceState(
+                    initialValue = PeriodCardMapState(isReady = false),
+                    key1 = summary.sortKey,
+                    key2 = summary.workoutIdToPolylineMap.hashCode(),
+                    key3 = summary.polylines.hashCode()
+                ) {
+                    value = prepareCardMapPreview(summary, context)
                 }
 
-                if (decodedAnchorPaths.isNotEmpty()) {
-                    val pathRegions = remember(decodedAnchorPaths, summary.minLat, summary.maxLat, summary.minLng, summary.maxLng) {
-                        if (summary.minLat < 90.0 && summary.maxLat > -90.0) {
-                            val diagonal = SpatialRegionEngine.distanceBetween(
-                                LatLng(summary.minLat, summary.minLng),
-                                LatLng(summary.maxLat, summary.maxLng)
-                            )
-                            if (diagonal >= SpatialRegionConfig.SINGLE_REGION_ENVELOPE_METERS) {
-                                SpatialRegionEngine.detectRegionsFromPaths(decodedAnchorPaths)
-                            } else {
-                                val allPoints = decodedAnchorPaths.flatten()
-                                val bounds = if (allPoints.isNotEmpty()) {
-                                    SpatialRegionEngine.buildNormalizedBounds(allPoints)
-                                } else {
-                                    LatLngBounds(LatLng(summary.minLat, summary.minLng), LatLng(summary.maxLat, summary.maxLng))
-                                }
-                                listOf(
-                                    SpatialPathRegion(
-                                        region = SpatialRegion(
-                                            id = "region_0",
-                                            label = "Region 1",
-                                            bounds = bounds,
-                                            center = LatLng((summary.minLat + summary.maxLat) / 2.0, (summary.minLng + summary.maxLng) / 2.0),
-                                            workoutCount = decodedAnchorPaths.size,
-                                            totalDistanceMeters = 0.0,
-                                            mostRecentTimestampS = 0L,
-                                            isPrimary = true
-                                        ),
-                                        paths = decodedAnchorPaths
-                                    )
-                                )
-                            }
-                        } else {
-                            val allPoints = decodedAnchorPaths.flatten()
-                            val bounds = if (allPoints.isNotEmpty()) SpatialRegionEngine.buildNormalizedBounds(allPoints) else null
-                            if (bounds != null) {
-                                listOf(
-                                    SpatialPathRegion(
-                                        region = SpatialRegion(
-                                            id = "region_0",
-                                            label = "Region 1",
-                                            bounds = bounds,
-                                            center = LatLng(0.0, 0.0),
-                                            workoutCount = decodedAnchorPaths.size,
-                                            totalDistanceMeters = 0.0,
-                                            mostRecentTimestampS = 0L,
-                                            isPrimary = true
-                                        ),
-                                        paths = decodedAnchorPaths
-                                    )
-                                )
-                            } else emptyList()
-                        }
-                    }
-
-                    val primaryPathRegion = pathRegions.firstOrNull { it.region.isPrimary } ?: pathRegions.firstOrNull()
-                    val activeBounds = primaryPathRegion?.region?.bounds
-                    val activePaths = primaryPathRegion?.paths ?: decodedAnchorPaths
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(250.dp)
-                    ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(250.dp)
+                ) {
+                    if (mapState.isReady && mapState.primaryPaths.isNotEmpty()) {
                         PeriodMultiWorkoutMap(
                             summary = summary,
-                            paths = activePaths,
-                            onMapClick = { onMapClick(summary) },
-                            bounds = activeBounds
+                            paths = mapState.primaryPaths,
+                            onMapClick = { onMapClick(summary, mapState.activeRegionId) },
+                            bounds = mapState.bounds,
+                            precomputedVisuals = mapState.visuals,
+                            renderVectorPolylines = mapState.renderVectorPolylines
                         )
 
                         // Multi-region badge indicator when period spans multiple regions (ATT-1151)
-                        if (pathRegions.size > 1) {
+                        if (mapState.regionCount > 1) {
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
                                 color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
                                 contentColor = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier
-                                    .padding(start = 12.dp, top = 12.dp)
+                                    .padding(start = 12.dp, top = 12.dp, end = 12.dp)
                                     .align(Alignment.TopStart),
                                 shadowElevation = 2.dp
                             ) {
@@ -293,19 +301,35 @@ fun PeriodSummaryCard(
                                         modifier = Modifier.size(14.dp),
                                         tint = MaterialTheme.colorScheme.primary
                                     )
-                                    Text(
-                                        text = stringResource(
+                                    val regionText = if (!mapState.primaryRegionName.isNullOrBlank()) {
+                                        stringResource(
+                                            R.string.workout_periods__primary_named_region_format,
+                                            mapState.primaryRegionName ?: "",
+                                            mapState.primaryRegionPathsCount.coerceAtLeast(1)
+                                        )
+                                    } else {
+                                        stringResource(
                                             R.string.workout_periods__primary_region_format,
                                             1,
-                                            primaryPathRegion?.paths?.size ?: 1
-                                        ),
+                                            mapState.primaryRegionPathsCount.coerceAtLeast(1)
+                                        )
+                                    }
+                                    Text(
+                                        text = regionText,
                                         style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.SemiBold
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
                             }
                         }
-                    
+                    } else if (mapState.isReady) {
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                            Text(stringResource(R.string.period_no_gps_data), style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+
                     // Bottom Scrim for visual transition
                     Box(
                         modifier = Modifier
@@ -322,7 +346,6 @@ fun PeriodSummaryCard(
             }
         }
     }
-}
 
 @Composable
 fun SportStatsRow(
@@ -332,6 +355,13 @@ fun SportStatsRow(
     df: DistanceFormatter,
     af: AltitudeFormatter,
     showDetails: Boolean = false,
+    yearlyContribution: YearlySportContribution? = null,
+    dailyContribution: DailySportContribution? = null,
+    periodType: PeriodType = PeriodType.YEAR,
+    startDate: LocalDate = LocalDate.now(),
+    endDate: LocalDate = LocalDate.now(),
+    activeMetric: PeriodBarMetric = PeriodBarMetric.DURATION,
+    onDayCellClick: ((LocalDate, DailySportActivity?) -> Unit)? = null,
     onClick: () -> Unit,
     onLongestWorkoutClick: (Long) -> Unit
 ) {
@@ -388,6 +418,38 @@ fun SportStatsRow(
                         MetricItem(R.drawable.ic_ascent, af.format_with_units(stats.totalAscentMeters))
                     }
                 }
+            }
+
+            // EMBEDDED YEARLY CONTRIBUTION GRID (REQ-PER-025.8, ATT-5076)
+            if (yearlyContribution != null) {
+                Spacer(modifier = Modifier.height(10.dp))
+                YearlyContributionGrid(
+                    contribution = yearlyContribution,
+                    activeMetric = activeMetric,
+                    onDayClick = { date, activity ->
+                        onDayCellClick?.invoke(date, activity)
+                    },
+                    showCard = false,
+                    showSportHeader = false,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            // EMBEDDED DAILY ACTIVITY STRIP (REQ-PER-027, ATT-5195)
+            if (dailyContribution != null && (periodType == PeriodType.WEEK || periodType == PeriodType.MONTH)) {
+                Spacer(modifier = Modifier.height(10.dp))
+                DailyActivityStrip(
+                    sportType = bSportType,
+                    periodType = periodType,
+                    startDate = startDate,
+                    endDate = endDate,
+                    dailyContribution = dailyContribution,
+                    activeMetric = activeMetric,
+                    onDayClick = { date, activity ->
+                        onDayCellClick?.invoke(date, activity)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
 
             // NESTED DETAILS
@@ -520,7 +582,9 @@ private fun PeriodMultiWorkoutMap(
     summary: PeriodSummary,
     paths: List<List<LatLng>> = emptyList(),
     onMapClick: () -> Unit,
-    bounds: LatLngBounds? = null
+    bounds: LatLngBounds? = null,
+    precomputedVisuals: PeriodMapVisuals? = null,
+    renderVectorPolylines: Boolean = true
 ) {
     // --- TIER 1: INSTANT ANCHORS ---
     // Only render anchors in the summary card to prevent OOM when many maps exist in a list (ATT-440 Refinement)
@@ -530,8 +594,8 @@ private fun PeriodMultiWorkoutMap(
         else summary.polylines.mapNotNull { if (it.isNotEmpty()) PolyUtil.decode(it) else null }
     }
 
-    val visuals = remember(allPaths, summary.periodType) {
-        getPeriodMapVisuals(summary.periodType, allPaths, isInteractive = false)
+    val visuals = remember(allPaths, summary.periodType, precomputedVisuals) {
+        precomputedVisuals ?: getPeriodMapVisuals(summary.periodType, allPaths, isInteractive = false)
     }
 
     if (allPaths.isEmpty()) {
@@ -577,8 +641,12 @@ private fun PeriodMultiWorkoutMap(
 
     val context = LocalContext.current
     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-    val mapProperties = remember(isDark, context) {
-        DarkMapStyle.resolveMapProperties(isDark, context)
+    val mapProperties = remember(isDark, context, precomputedVisuals) {
+        if (precomputedVisuals?.heatmapProvider != null) {
+            DarkMapStyle.resolveHeatmapMapProperties(isDark, context)
+        } else {
+            DarkMapStyle.resolveMapProperties(isDark, context)
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize().background(if (isDark) TTColor.DarkMapCanvas else Color.White)) {
@@ -595,15 +663,18 @@ private fun PeriodMultiWorkoutMap(
             ),
             onMapClick = { onMapClick() }
         ) {
-            allPaths.forEach { path ->
-                Polyline(
-                    points = path,
-                    color = TrackType.BEST.color.copy(alpha = visuals.polylineAlpha),
-                    width = visuals.polylineWidth,
-                    startCap = RoundCap(),
-                    endCap = RoundCap(),
-                    jointType = JointType.ROUND
-                )
+            val shouldRenderPolylines = renderVectorPolylines && (visuals.heatmapProvider == null)
+            if (shouldRenderPolylines) {
+                allPaths.forEach { path ->
+                    Polyline(
+                        points = path,
+                        color = TrackType.BEST.color.copy(alpha = visuals.polylineAlpha),
+                        width = visuals.polylineWidth,
+                        startCap = RoundCap(),
+                        endCap = RoundCap(),
+                        jointType = JointType.ROUND
+                    )
+                }
             }
 
             // Heatmap Layer (Drawn on top)

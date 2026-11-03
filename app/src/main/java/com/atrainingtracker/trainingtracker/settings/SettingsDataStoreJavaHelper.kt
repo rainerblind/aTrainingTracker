@@ -45,6 +45,32 @@ object SettingsDataStoreJavaHelper {
     }
 
     /**
+     * Resolves effective zone boundaries for [zoneType] at [workoutStartTimeMs] (REQ-SET-082.3).
+     * If [workoutStartTimeMs] > 0, queries AthleteMetricsDatabaseManager for the snapshot active at that time.
+     * Falls back to current DataStore zone settings if no snapshot exists or if an error occurs.
+     */
+    @JvmStatic
+    fun getEffectiveZoneBoundaries(
+        context: Context,
+        zoneType: SettingsDataStore.ZoneType,
+        workoutStartTimeMs: Long
+    ): List<Int> {
+        if (workoutStartTimeMs > 0L) {
+            try {
+                val dbManager = com.atrainingtracker.trainingtracker.database.AthleteMetricsDatabaseManager.getInstance(context)
+                val snapshot = dbManager.getEffectiveZoneSnapshot(zoneType, workoutStartTimeMs)
+                if (snapshot != null && snapshot.boundaries.size == zoneType.boundaryCount) {
+                    return snapshot.boundaries
+                }
+            } catch (_: Throwable) {
+                // Fallback for mocked unit tests or uninitialized database
+            }
+        }
+        val count = zoneType.boundaryCount
+        return (1..count).map { idx -> getZoneMax(context, zoneType, idx) }
+    }
+
+    /**
      * Synchronous bridge for legacy Java or non-coroutine callers to fetch zone display options.
      * Non-blocking O(1) in-memory lookup.
      */
@@ -144,12 +170,16 @@ object SettingsDataStoreJavaHelper {
             bikeEnabled = tuningConfig.autoPauseBikeEnabled,
             runEnabled = tuningConfig.autoPauseRunEnabled,
             otherEnabled = tuningConfig.autoPauseOtherEnabled,
+            startInAutoPauseEnabled = tuningConfig.startInAutoPauseEnabled,
             bikeSpeedThreshold = tuningConfig.autoPauseBikeSpeedThreshold,
             bikeDebounceSec = tuningConfig.autoPauseBikeDebounceSec,
+            bikeResumeDebounceSec = tuningConfig.autoPauseBikeResumeDebounceSec,
             runSpeedThreshold = tuningConfig.autoPauseRunSpeedThreshold,
             runDebounceSec = tuningConfig.autoPauseRunDebounceSec,
+            runResumeDebounceSec = tuningConfig.autoPauseRunResumeDebounceSec,
             otherSpeedThreshold = tuningConfig.autoPauseOtherSpeedThreshold,
             otherDebounceSec = tuningConfig.autoPauseOtherDebounceSec,
+            otherResumeDebounceSec = tuningConfig.autoPauseOtherResumeDebounceSec,
             isMetric = isMetric
         )
     }

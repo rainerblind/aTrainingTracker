@@ -173,6 +173,47 @@ class TelemetryMetricUtilsTest {
     }
 
     @Test
+    fun testHasWPrimeBalData_requiresPowerData() {
+        // [TST-TRK-031.10] / REQ-TRK-038.5, REQ-UI-399.3
+        assertFalse(TelemetryMetricUtils.hasWPrimeBalData(null))
+        assertFalse(TelemetryMetricUtils.hasWPrimeBalData(emptyList()))
+
+        // Points with wPrimeBalKj but NO power data (phantom flat line on power-less ride)
+        val powerLessPoints = listOf(
+            PathPoint(
+                distance = 10.0,
+                latLng = LatLng(48.0, 11.0),
+                altitude = 500.0,
+                timeSec = 10L,
+                power = null,
+                wPrimeBalKj = 20.0
+            ),
+            PathPoint(
+                distance = 20.0,
+                latLng = LatLng(48.0, 11.0),
+                altitude = 500.0,
+                timeSec = 20L,
+                power = 0,
+                wPrimeBalKj = 20.0
+            )
+        )
+        assertFalse("wPrimeBalData must be false when no power samples exist", TelemetryMetricUtils.hasWPrimeBalData(powerLessPoints))
+
+        // Points with power data and wPrimeBalKj
+        val validPowerPoints = listOf(
+            PathPoint(
+                distance = 10.0,
+                latLng = LatLng(48.0, 11.0),
+                altitude = 500.0,
+                timeSec = 10L,
+                power = 250,
+                wPrimeBalKj = 19.5
+            )
+        )
+        assertTrue("wPrimeBalData must be true when power samples and wPrimeBal exist", TelemetryMetricUtils.hasWPrimeBalData(validPowerPoints))
+    }
+
+    @Test
     fun testFormatPaceMinutes() {
         assertEquals("4:30", TelemetryMetricUtils.formatPaceMinutes(4.5))
         assertEquals("5:00", TelemetryMetricUtils.formatPaceMinutes(5.0))

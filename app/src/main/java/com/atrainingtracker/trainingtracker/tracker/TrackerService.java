@@ -518,13 +518,16 @@ public class TrackerService extends Service {
                 return;
             }
 
+            long prevCalTimeMs = intent.getLongExtra(AltitudeFromPressureDevice.PREV_CALIBRATION_TIME_MS_EXTRA, -1L);
+            long currentCalTimeMs = intent.getLongExtra(AltitudeFromPressureDevice.CALIBRATION_TIME_MS_EXTRA, System.currentTimeMillis());
+
             if (DEBUG)
-                Log.i(TAG, "Triggering atomic altitude correction by " + altitudeCorrection);
+                Log.i(TAG, "Triggering atomic altitude correction by " + altitudeCorrection + " m (prevCal=" + prevCalTimeMs + ", currentCal=" + currentCalTimeMs + ")");
 
             // 1. Live Session Update
             LiveWorkoutSession session = mLiveSession;
             if (session != null) {
-                session.applyAltitudeCorrection(altitudeCorrection);
+                session.applyRetroactiveAltitudeCorrection(altitudeCorrection, prevCalTimeMs, currentCalTimeMs);
             }
 
             // 2. Database Synchronization (offloaded to DB executor via non-blocking barrier)
@@ -541,20 +544,11 @@ public class TrackerService extends Service {
                 WorkoutSamplesDatabaseManager samplesManager = WorkoutSamplesDatabaseManager.getInstance(TrackerService.this);
                 WorkoutSummariesDatabaseManager summariesManager = WorkoutSummariesDatabaseManager.getInstance(TrackerService.this);
 
-                // 2a. Raw Samples shift in explicit atomic SQLite transaction (REQ-CON-017)
-                android.database.sqlite.SQLiteDatabase db = samplesManager.getDatabase();
-                db.beginTransaction();
-                try {
-                    String operator = altitudeCorrection >= 0 ? " + " : " - ";
-                    db.execSQL("UPDATE " + samplesTable
-                            + " set " + SensorType.ALTITUDE.name() + " = " + SensorType.ALTITUDE.name() + operator + Math.abs(altitudeCorrection));
-                    db.setTransactionSuccessful();
-                } finally {
-                    db.endTransaction();
-                }
+                // 2a. Raw Samples drift/shift correction in explicit atomic SQLite transaction (REQ-CON-017, REQ-TRK-047.2)
+                samplesManager.applyAltitudeDriftCorrection(samplesTable, altitudeCorrection, prevCalTimeMs, currentCalTimeMs);
 
-                // 2b. Summary Extrema and Elevation Stream shift (ATT-38)
-                summariesManager.shiftAltitudeData(workoutId, altitudeCorrection);
+                // 2b. Summary Extrema and Elevation Stream shift / interpolation (ATT-38, REQ-TRK-047.2)
+                summariesManager.shiftAltitudeData(workoutId, altitudeCorrection, prevCalTimeMs, currentCalTimeMs);
 
                 // 3. Notify UI/Repository to refresh from DB
                 LocalBroadcastManager.getInstance(TrackerService.this).sendBroadcast(new Intent(WORKOUT_UPDATED_INTENT).putExtra(WORKOUT_ID, workoutId));
@@ -663,6 +657,27 @@ public class TrackerService extends Service {
 
             if (!BANALService.isSearching()) {
                 onSearchingFinished();
+            }
+
+            if (mStartType == StartType.START_NORMAL && mAutoPauseManager.getCurrentState() == AutoPauseState.TRACKING) {
+                if (TrainingApplication.isAutoPaused()) {
+                    mAutoPauseManager.setState(AutoPauseState.AUTO_PAUSED);
+                    mAutoPauseManager.resetDebounceCounter();
+                } else {
+                    BSportType sportType = mBanalService.getBSportType();
+                    if (sportType == null) {
+                        sportType = BSportType.UNKNOWN;
+                    }
+                    AutoPauseConfig config = getAutoPauseConfig();
+                    SensorData<Number> speedData = mBanalService.getBestSensorData(SensorType.SPEED_mps);
+                    Double speedMps = (speedData != null && speedData.getValue() != null) ? speedData.getValue().doubleValue() : null;
+                    boolean hasSpeedSource = (speedData != null);
+                    if (AutoPauseManager.shouldStartInAutoPause(config, sportType, speedMps, hasSpeedSource)) {
+                        mAutoPauseManager.setState(AutoPauseState.AUTO_PAUSED);
+                        mAutoPauseManager.resetDebounceCounter();
+                        mTrainingApplication.pauseTracking(true);
+                    }
+                }
             }
         }
 
@@ -807,6 +822,10 @@ public class TrackerService extends Service {
         switch (startType) {
             case START_NORMAL:
                 if (DEBUG) Log.d(TAG, "starting a new workout");
+                if (TrainingApplication.isAutoPaused()) {
+                    mAutoPauseManager.setState(AutoPauseState.AUTO_PAUSED);
+                    mAutoPauseManager.resetDebounceCounter();
+                }
                 // The workout name is just the date+time
                 mBaseFileName = (new SimpleDateFormat("yyyy-MM-dd_HHmmss", Locale.US)).format(new Date());
                 mSamplesTableName = WorkoutSamplesDatabaseManager.getTableName(mBaseFileName);
@@ -2126,46 +2145,65 @@ public class TrackerService extends Service {
         }
 
         // 2. Capture multi-sensor telemetry for raw samples database and session accumulators
-        for (SensorData<Number> sensorData : banalService.getAllSensorData()) {
-            if (sensorData == null || sensorData.getValue() == null) continue;
-
-            SensorType sensorType = sensorData.getSensorType();
-
-            String sensorName = sensorType.name();
-            String deviceName = sensorData.getDeviceName();
-            if (deviceName != null) {
-                if (deviceName.equals("gps") || deviceName.equals("network") || deviceName.equals("google_fused")) {
-                    sensorName += "_" + deviceName;
-                } else {
-                    sensorName = quoteSqlColumnIdentifier(sensorName + " (" + deviceName + ")");
+        List<SensorData> allSensorDataList = banalService.getAllSensorData();
+        Set<SensorType> canonicalSensorTypes = new HashSet<>();
+        if (allSensorDataList != null) {
+            for (SensorData<?> data : allSensorDataList) {
+                if (data != null && data.getValue() != null && data.getDeviceName() == null) {
+                    canonicalSensorTypes.add(data.getSensorType());
                 }
             }
-            SensorValueType type = sensorType.getSensorValueType();
-            sensorName2Type.put(sensorName, type);
+        }
 
-            switch (type) {
-                case INTEGER -> samplingValues.put(sensorName, sensorData.getValue().intValue());
-                case DOUBLE -> samplingValues.put(sensorName, sensorData.getValue().doubleValue());
-                default -> samplingValues.put(sensorName, sensorData.getStringValue());
-            }
+        if (allSensorDataList != null) {
+            for (SensorData sensorDataObj : allSensorDataList) {
+                SensorData<Number> sensorData = (SensorData<Number>) sensorDataObj;
+                if (sensorData == null || sensorData.getValue() == null) continue;
 
-            switch (sensorType) {
-                case TIME_TOTAL -> {
-                    mTimeTotal_s = sensorData.getValue().intValue();
-                    summaryValues.put(WorkoutSummaries.TIME_TOTAL_s, mTimeTotal_s);
+                SensorType sensorType = sensorData.getSensorType();
+
+                String sensorName = sensorType.name();
+                String deviceName = sensorData.getDeviceName();
+                if (deviceName != null) {
+                    if (deviceName.equals("gps") || deviceName.equals("network") || deviceName.equals("google_fused")) {
+                        sensorName += "_" + deviceName;
+                    } else {
+                        sensorName = quoteSqlColumnIdentifier(sensorName + " (" + deviceName + ")");
+                    }
                 }
-                case TIME_ACTIVE -> {
-                    mTimeActive_s = sensorData.getValue().intValue();
-                    summaryValues.put(WorkoutSummaries.TIME_ACTIVE_s, mTimeActive_s);
+                SensorValueType type = sensorType.getSensorValueType();
+                sensorName2Type.put(sensorName, type);
+
+                switch (type) {
+                    case INTEGER -> samplingValues.put(sensorName, sensorData.getValue().intValue());
+                    case DOUBLE -> samplingValues.put(sensorName, sensorData.getValue().doubleValue());
+                    default -> samplingValues.put(sensorName, sensorData.getStringValue());
                 }
-                case DISTANCE_m -> {
-                    mDistanceTotal_m = sensorData.getValue().doubleValue();
-                    summaryValues.put(WorkoutSummaries.DISTANCE_TOTAL_m, mDistanceTotal_m);
+
+                // REQ-TRK-041.2: Restrict session totals and summary updates to canonical proxy sensor (deviceName == null),
+                // while permitting fallback if telemetry provides only a single named source for a sensor type
+                boolean isCanonical = (deviceName == null) || !canonicalSensorTypes.contains(sensorType);
+                if (isCanonical) {
+                    switch (sensorType) {
+                        case TIME_TOTAL -> {
+                            mTimeTotal_s = sensorData.getValue().intValue();
+                            summaryValues.put(WorkoutSummaries.TIME_TOTAL_s, mTimeTotal_s);
+                        }
+                        case TIME_ACTIVE -> {
+                            mTimeActive_s = sensorData.getValue().intValue();
+                            summaryValues.put(WorkoutSummaries.TIME_ACTIVE_s, mTimeActive_s);
+                        }
+                        case DISTANCE_m -> {
+                            mDistanceTotal_m = sensorData.getValue().doubleValue();
+                            summaryValues.put(WorkoutSummaries.DISTANCE_TOTAL_m, mDistanceTotal_m);
+                        }
+                        case CALORIES -> summaryValues.put(WorkoutSummaries.CALORIES, sensorData.getValue().intValue());
+                        case LAP_NR -> summaryValues.put(WorkoutSummaries.LAPS, sensorData.getValue().intValue());
+                        case ASCENT -> summaryValues.put(WorkoutSummaries.ASCENDING, sensorData.getValue().doubleValue());
+                        case DESCENT -> summaryValues.put(WorkoutSummaries.DESCENDING, sensorData.getValue().doubleValue());
+                    }
+                    canonicalSensorTypes.add(sensorType);
                 }
-                case CALORIES -> summaryValues.put(WorkoutSummaries.CALORIES, sensorData.getValue().intValue());
-                case LAP_NR -> summaryValues.put(WorkoutSummaries.LAPS, sensorData.getValue().intValue());
-                case ASCENT -> summaryValues.put(WorkoutSummaries.ASCENDING, sensorData.getValue().doubleValue());
-                case DESCENT -> summaryValues.put(WorkoutSummaries.DESCENDING, sensorData.getValue().doubleValue());
             }
         }
 
@@ -2243,9 +2281,8 @@ public class TrackerService extends Service {
                 if (!sampleInserted) {
                     int failureCount = mSampleInsertFailureCount.get();
                     if (failureCount == 0 || shouldLogSampleInsertFailure(failureCount)) {
-                        Log.w(TAG, "Aborting sample and summary transaction because sample insert failed for table " + tableName + " (sampleInsertFailureCount=" + failureCount + ")");
+                        Log.w(TAG, "Sample insert failed for table " + tableName + " (sampleInsertFailureCount=" + failureCount + "); proceeding with decoupled summary update");
                     }
-                    return;
                 }
 
                 // Write Extrema
@@ -2265,7 +2302,9 @@ public class TrackerService extends Service {
                     summariesManager.appendToMapAndStreams(workoutId, streamIncrement.polylineIncrement, streamIncrement.altitudeIncrement, streamIncrement.distanceIncrement);
                 }
 
-                samplesDb.setTransactionSuccessful();
+                if (sampleInserted) {
+                    samplesDb.setTransactionSuccessful();
+                }
                 summariesDb.setTransactionSuccessful();
             } catch (Exception e) {
                 logSampleInsertFailure("Error during async DB write for table " + tableName, e);
@@ -2275,13 +2314,11 @@ public class TrackerService extends Service {
                 summariesDb.endTransaction();
             }
 
-            if (sampleInserted) {
-                // Notify UI
-                try {
-                    LocalBroadcastManager.getInstance(TrackerService.this).sendBroadcast(new Intent(WORKOUT_UPDATED_INTENT).putExtra("WORKOUT_ID", workoutId));
-                } catch (Exception e) {
-                    Log.w(TAG, "Failed to broadcast WORKOUT_UPDATED_INTENT", e);
-                }
+            // Notify UI
+            try {
+                LocalBroadcastManager.getInstance(TrackerService.this).sendBroadcast(new Intent(WORKOUT_UPDATED_INTENT).putExtra("WORKOUT_ID", workoutId));
+            } catch (Exception e) {
+                Log.w(TAG, "Failed to broadcast WORKOUT_UPDATED_INTENT", e);
             }
         }, mDbExecutor).exceptionally(ex -> {
             Log.e(TAG, "Sample write skipped due to initialization failure: " + ex.getMessage());
@@ -2405,6 +2442,37 @@ public class TrackerService extends Service {
     }
 
     /**
+     * Retrieves the set of all column names currently present in the specified table
+     * using {@code PRAGMA table_info}, bypassing Android SQLite prepared statement cache staleness
+     * on Android <= 14 (API <= 34) ({@code REQ-TRK-051.1}, {@code ATT-4968}).
+     *
+     * <p>Ensures every {@link Cursor} is wrapped in a try-with-resources block for leak safety.
+     *
+     * @param db the database to inspect
+     * @param tableName the table name to inspect
+     * @return a case-insensitive {@link Set} of column names present in the table
+     */
+    @VisibleForTesting
+    public static Set<String> getTableColumnNames(@NonNull SQLiteDatabase db, @NonNull String tableName) {
+        Set<String> columnNames = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        String quotedTable = quoteSqlColumnIdentifier(unquoteSqlColumnIdentifier(tableName));
+        String sql = "PRAGMA table_info(" + quotedTable + ")";
+        try (Cursor cursor = db.rawQuery(sql, null)) {
+            if (cursor != null) {
+                int nameIndex = cursor.getColumnIndex("name");
+                while (cursor.moveToNext()) {
+                    if (nameIndex >= 0) {
+                        columnNames.add(cursor.getString(nameIndex));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to read PRAGMA table_info for " + tableName, e);
+        }
+        return columnNames;
+    }
+
+    /**
      * Determines whether a sample insertion failure with the given 1-based counter should be
      * emitted to logcat under the rate-limiting policy ({@code REQ-TRK-029.3}): log the initial
      * burst ({@code 1..SAMPLE_INSERT_FAILURE_INITIAL_BURST}) and every
@@ -2461,16 +2529,28 @@ public class TrackerService extends Service {
             return false;
         }
 
-        // Implementation of the ALTER TABLE logic removed from main flow for readability.
-        // It ensures that new sensors added during a workout get their own columns.
-        try (Cursor cursor = samplesDb.query(tableName, null, null, null, null, null, null, "1")) {
-            if (cursor == null) {
-                logSampleInsertFailure("Failed to inspect columns of sample table " + tableName + ": query returned null cursor", null);
-                return false;
+        // Implementation of the ALTER TABLE logic using PRAGMA table_info to avoid
+        // SQLiteConnection.mPreparedStatementCache staleness on Android <= 14 (REQ-TRK-051.1 / ATT-4968).
+        Set<String> existingColumns = getTableColumnNames(samplesDb, tableName);
+        if (existingColumns.isEmpty()) {
+            // Fallback: If pragma returned no columns, attempt cursor query inspection
+            try (Cursor cursor = samplesDb.query(tableName, null, null, null, null, null, null, "1")) {
+                if (cursor != null) {
+                    String[] cols = cursor.getColumnNames();
+                    if (cols != null) {
+                        for (String col : cols) {
+                            existingColumns.add(col);
+                        }
+                    }
+                }
+            } catch (Exception ignored) {
             }
+        }
+
+        try {
             for (String key : values.keySet()) {
                 String queryKey = unquoteSqlColumnIdentifier(key);
-                if (!hasColumnInCursor(cursor, queryKey)) {
+                if (!existingColumns.contains(queryKey)) {
                     SensorValueType valueType = name2Type != null ? name2Type.get(key) : null;
                     String type = valueType == null ? "text" : switch (valueType) {
                         case INTEGER -> "int";
@@ -2479,6 +2559,7 @@ public class TrackerService extends Service {
                     };
                     String quotedColumn = quoteSqlColumnIdentifier(queryKey);
                     samplesDb.execSQL("ALTER TABLE " + tableName + " ADD COLUMN " + quotedColumn + " " + type + " null;");
+                    existingColumns.add(queryKey);
                 }
             }
             samplesDb.insertOrThrow(tableName, null, values);

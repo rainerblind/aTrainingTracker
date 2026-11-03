@@ -28,7 +28,9 @@ import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataReposit
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.audio.BikeBellAudioSynthesizer
+import com.atrainingtracker.trainingtracker.ui.tracking.ElevationProfileScope
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
+import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewInfo
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
@@ -40,6 +42,7 @@ import kotlinx.coroutines.test.*
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -440,33 +443,43 @@ class TrackingTabsViewModelTest {
             timeProvider = { currentTime }
         )
 
-        // 1. Initial ring after > 5s silence -> 0.70f polite volume
+        // 1. Initial ring after > 5s silence -> 0.35f polite volume (Stage 1, -9.1 dB)
         viewModel.triggerBellRing(isLongPress = false)
-        verify(exactly = 1) { mockSynthesizer.ring(0.70f) }
+        verify(exactly = 1) { mockSynthesizer.ring(0.35f) }
 
-        // 2. Second ring within <= 5s (2s later) -> 1.0f escalated volume
+        // 2. Second ring within <= 5s (2s later) -> 0.65f firm warning volume (Stage 2, -3.7 dB)
         currentTime += 2000L
         viewModel.triggerBellRing(isLongPress = false)
-        verify(exactly = 1) { mockSynthesizer.ring(1.0f) }
+        verify(exactly = 1) { mockSynthesizer.ring(0.65f) }
 
-        // 3. Third ring after > 5s of silence (6s later) -> resets to 0.70f polite volume
+        // 3. Third ring within <= 5s (2s later) -> 1.00f maximum volume (Stage 3, 0 dB)
+        currentTime += 2000L
+        viewModel.triggerBellRing(isLongPress = false)
+        verify(exactly = 1) { mockSynthesizer.ring(1.00f) }
+
+        // 4. Fourth ring within <= 5s (1s later) -> caps at 1.00f (Stage 3)
+        currentTime += 1000L
+        viewModel.triggerBellRing(isLongPress = false)
+        verify(exactly = 2) { mockSynthesizer.ring(1.00f) }
+
+        // 5. Fifth ring after > 5s of silence (6s later) -> resets to 0.35f polite volume (Stage 1)
         currentTime += 6000L
         viewModel.triggerBellRing(isLongPress = false)
-        verify(exactly = 2) { mockSynthesizer.ring(0.70f) }
+        verify(exactly = 2) { mockSynthesizer.ring(0.35f) }
 
-        // 4. Long-press ring -> immediate 1.0f maximum volume
+        // 6. Long-press ring -> immediate 1.00f maximum volume (Stage 3)
         currentTime += 10000L
         viewModel.triggerBellRing(isLongPress = true)
-        verify(exactly = 2) { mockSynthesizer.ring(1.0f) }
+        verify(exactly = 3) { mockSynthesizer.ring(1.00f) }
 
-        // 5. Continuous roll triggers
+        // 7. Continuous roll triggers
         viewModel.triggerBellRoll()
         verify(exactly = 1) { mockSynthesizer.startRoll(1.0f) }
 
         viewModel.stopBellRoll()
         verify(exactly = 1) { mockSynthesizer.stopRoll() }
 
-        // 6. Config update
+        // 8. Config update
         viewModel.onUpdateShowBikeBell(42L, true)
         testScheduler.advanceUntilIdle()
         coVerify(exactly = 1) { mockTrackingViewsRepo.updateShowBikeBell(42L, true) }
@@ -476,5 +489,79 @@ class TrackingTabsViewModelTest {
         onClearedMethod.isAccessible = true
         onClearedMethod.invoke(viewModel)
         verify(exactly = 1) { mockSynthesizer.close() }
+    }
+
+    @Test
+    fun testCopyTab_dialogStateAndAutoNavigation() = runTest(testDispatcher) {
+        val viewsFlow = MutableStateFlow(
+            listOf(
+                TrackingViewInfo(1L, "Tab 1", false, true, false, false, true, true, ElevationProfileScope.FULL_ROUTE, 2000, false),
+                TrackingViewInfo(2L, "Tab 2", false, true, false, false, true, true, ElevationProfileScope.FULL_ROUTE, 2000, false)
+            )
+        )
+        every { mockTrackingViewsRepo.getTrackingViewsFlow(any()) } returns viewsFlow
+        coEvery { mockTrackingViewsRepo.copyTabView(any(), any()) } returns listOf(3L)
+
+        val viewModel = createViewModel()
+        val viewsJob = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.trackingViews.collect {}
+        }
+        testScheduler.advanceUntilIdle()
+
+        // 1. Open and dismiss dialog
+        assertNull(viewModel.copySourceTabId.value)
+        viewModel.onOpenCopyTabDialog(1L)
+        assertEquals(1L, viewModel.copySourceTabId.value)
+
+        viewModel.onDismissCopyTabDialog()
+        assertNull(viewModel.copySourceTabId.value)
+
+        // 2. Open and confirm copying to current activity type -> navigates to appended index (size = 2)
+        val events = mutableListOf<TabNavigationEvent>()
+        val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.navigationEvent.collect { events.add(it) }
+        }
+
+        viewModel.onOpenCopyTabDialog(1L)
+        viewModel.onConfirmCopyTab(1L, listOf(ActivityType.getDefaultActivityType()))
+        testScheduler.advanceUntilIdle()
+
+        assertNull(viewModel.copySourceTabId.value)
+        coVerify(exactly = 1) { mockTrackingViewsRepo.copyTabView(1L, listOf(ActivityType.getDefaultActivityType())) }
+        assertEquals(1, events.size)
+        assertTrue(events[0] is TabNavigationEvent.NavigateTo)
+        assertEquals(2, (events[0] as TabNavigationEvent.NavigateTo).index)
+
+        job.cancel()
+    }
+
+    @Test
+    fun testMoveTab_callsRepositoryAndEmitsNavigationEvent() = runTest(testDispatcher) {
+        coEvery { mockTrackingViewsRepo.moveTabView(1L, false) } returns 2
+        coEvery { mockTrackingViewsRepo.moveTabView(1L, true) } returns 0
+
+        val viewModel = createViewModel()
+        val events = mutableListOf<TabNavigationEvent>()
+        val job = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.navigationEvent.collect { events.add(it) }
+        }
+
+        viewModel.onMoveTab(1L, false)
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(1, events.size)
+        assertTrue(events[0] is TabNavigationEvent.NavigateTo)
+        assertEquals(2, (events[0] as TabNavigationEvent.NavigateTo).index)
+        coVerify(exactly = 1) { mockTrackingViewsRepo.moveTabView(1L, false) }
+
+        viewModel.onMoveTab(1L, true)
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(2, events.size)
+        assertTrue(events[1] is TabNavigationEvent.NavigateTo)
+        assertEquals(0, (events[1] as TabNavigationEvent.NavigateTo).index)
+        coVerify(exactly = 1) { mockTrackingViewsRepo.moveTabView(1L, true) }
+
+        job.cancel()
     }
 }

@@ -28,8 +28,10 @@ import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.banalservice.devices.DeviceManager;
 import com.atrainingtracker.banalservice.devices.MyDevice;
+import com.atrainingtracker.banalservice.sensor.MyAccumulatorSensor;
 import com.atrainingtracker.banalservice.sensor.MySensor;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
+import com.atrainingtracker.banalservice.sensor.ProxySensor;
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager;
 
 import java.util.LinkedList;
@@ -181,13 +183,31 @@ public class FilterManager {
     }
 
     /**
-     * Resets all registered filters upon session start/reset (REQ-FIL-013).
+     * Resets all registered filters upon session start/reset (REQ-FIL-013, REQ-TRK-049.4).
+     * Re-seeds accumulator filters with their baseline zero values so they display
+     * 0:00:00 rather than --:--:-- in TrackingMode.READY (ATT-5080, ATT-5191).
+     * Unwraps {@link ProxySensor} decorators and queries {@link MyAccumulatorSensor#getZeroValue()}
+     * to eliminate non-deterministic broadcast receiver order dependencies.
      */
+    @SuppressWarnings({"rawtypes", "unchecked"})
     public synchronized void resetAllFilters() {
         if (DEBUG) Log.i(TAG, "resetAllFilters()");
         for (MyFilter myFilter : myFilterMap.values()) {
             if (myFilter != null) {
                 myFilter.reset();
+                MySensor sensor = mMapFilter2Sensor.get(myFilter);
+                while (sensor instanceof ProxySensor<?>) {
+                    sensor = ((ProxySensor<?>) sensor).getSourceSensor();
+                }
+                if (sensor instanceof MyAccumulatorSensor<?>) {
+                    Object resetVal = ((MyAccumulatorSensor<?>) sensor).getZeroValue();
+                    if (resetVal == null) {
+                        resetVal = sensor.getValue();
+                    }
+                    if (resetVal != null) {
+                        myFilter.newValue(resetVal);
+                    }
+                }
             }
         }
     }

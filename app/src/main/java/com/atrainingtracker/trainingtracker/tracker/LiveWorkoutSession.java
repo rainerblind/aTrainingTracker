@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.tracker;
 
 import android.util.Log;
+import androidx.annotation.VisibleForTesting;
 
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
@@ -45,6 +46,7 @@ public class LiveWorkoutSession {
     private final List<LatLng> rawLatLngs = new ArrayList<>();
     private final List<LatLng> sampledLatLngs = new ArrayList<>();
     private final List<Double> sampledAltitudes = new ArrayList<>();
+    private final List<Long> sampledAltitudeTimestamps = new ArrayList<>();
     private final List<Double> sampledDistances = new ArrayList<>();
 
     private long lastLatE5 = 0;
@@ -146,6 +148,7 @@ public class LiveWorkoutSession {
         }
 
         sampledAltitudes.clear();
+        sampledAltitudeTimestamps.clear();
         if (preResumeAltitudes != null && !preResumeAltitudes.isEmpty()) {
             for (Double alt : preResumeAltitudes) {
                 if (alt != null && Double.isFinite(alt)) {
@@ -250,6 +253,7 @@ public class LiveWorkoutSession {
                     }
                 }
                 sampledAltitudes.add(sanitizedAlt);
+                sampledAltitudeTimestamps.add(System.currentTimeMillis());
                 long currentAltE2 = Math.round(sanitizedAlt * 100);
                 StringBuilder sb = new StringBuilder();
                 NumericalEncodingUtils.INSTANCE.encodeSingle(currentAltE2 - lastAltE2, sb);
@@ -317,32 +321,128 @@ public class LiveWorkoutSession {
     }
 
     /**
-     * ATT-38: Shifts all altitude-related data by the given offset.
-     * This is used when a barometric altitude correction is triggered mid-workout.
+     * ATT-38 / REQ-CON-017: Shifts all altitude-related data by the given offset (Case A uniform shift).
+     * Maintained for backward compatibility.
      */
     public synchronized void applyAltitudeCorrection(double offset) {
+        applyRetroactiveAltitudeCorrection(offset, -1L, System.currentTimeMillis());
+    }
+
+    /**
+     * REQ-TRK-047.2: Retroactively corrects workout altitude history using uniform shift
+     * (Case A: t0Ms <= 0) or piecewise-linear drift interpolation (Case B: t0Ms > 0).
+     *
+     * @param offset Absolute delta correction in meters.
+     * @param t0Ms   Previous calibration timestamp in milliseconds (-1 if uncalibrated start).
+     * @param t1Ms   Current calibration timestamp in milliseconds.
+     */
+    public synchronized void applyRetroactiveAltitudeCorrection(double offset, long t0Ms, long t1Ms) {
         // REQ-CON-017: Reject runaway retroactive shifts exceeding 500m
         if (Math.abs(offset) > 500.0) {
             return;
         }
 
-        // 1. Shift RunningStats
-        RunningStats altStats = sensorStats.get(SensorType.ALTITUDE);
-        if (altStats != null) {
-            synchronized (altStats) {
-                if (altStats.min != Double.MAX_VALUE) altStats.min += offset;
-                if (altStats.max != -Double.MAX_VALUE) altStats.max += offset;
-                altStats.sum += (offset * altStats.count);
+        if (t0Ms <= 0 || t1Ms <= t0Ms) {
+            // Case A: Uncalibrated workout start -> uniform shift across all recorded samples
+            RunningStats altStats = sensorStats.get(SensorType.ALTITUDE);
+            if (altStats != null) {
+                synchronized (altStats) {
+                    if (altStats.min != Double.MAX_VALUE) altStats.min += offset;
+                    if (altStats.max != -Double.MAX_VALUE) altStats.max += offset;
+                    altStats.sum += (offset * altStats.count);
+                }
+            }
+
+            for (int i = 0; i < sampledAltitudes.size(); i++) {
+                sampledAltitudes.set(i, sampledAltitudes.get(i) + offset);
+            }
+            lastAltE2 += Math.round(offset * 100);
+        } else {
+            // Case B: Piecewise-linear drift interpolation between t0 and t1
+            double duration = (double) (t1Ms - t0Ms);
+            int n = sampledAltitudes.size();
+            for (int i = 0; i < n; i++) {
+                double correction;
+                if (!sampledAltitudeTimestamps.isEmpty() && i < sampledAltitudeTimestamps.size()) {
+                    long sampleTime = sampledAltitudeTimestamps.get(i);
+                    if (sampleTime <= t0Ms) {
+                        correction = 0.0;
+                    } else if (sampleTime >= t1Ms) {
+                        correction = offset;
+                    } else {
+                        correction = offset * ((sampleTime - t0Ms) / duration);
+                    }
+                } else {
+                    double fraction = (n > 1) ? ((double) i / (n - 1)) : 1.0;
+                    correction = offset * fraction;
+                }
+                sampledAltitudes.set(i, sampledAltitudes.get(i) + correction);
+            }
+
+            // Recompute RunningStats cleanly from updated sampledAltitudes
+            RunningStats altStats = sensorStats.get(SensorType.ALTITUDE);
+            if (altStats != null && !sampledAltitudes.isEmpty()) {
+                synchronized (altStats) {
+                    double min = Double.MAX_VALUE;
+                    double max = -Double.MAX_VALUE;
+                    double sum = 0.0;
+                    for (Double val : sampledAltitudes) {
+                        if (val != null) {
+                            if (val < min) min = val;
+                            if (val > max) max = val;
+                            sum += val;
+                        }
+                    }
+                    altStats.min = min;
+                    altStats.max = max;
+                    altStats.sum = sum;
+                    altStats.last = sampledAltitudes.get(sampledAltitudes.size() - 1);
+                }
+            }
+            if (!sampledAltitudes.isEmpty()) {
+                lastAltE2 = Math.round(sampledAltitudes.get(sampledAltitudes.size() - 1) * 100);
             }
         }
+    }
 
-        // 2. Shift Sampled Altitudes
-        for (int i = 0; i < sampledAltitudes.size(); i++) {
-            sampledAltitudes.set(i, sampledAltitudes.get(i) + offset);
+    public synchronized List<Long> getSampledAltitudeTimestamps() {
+        return new ArrayList<>(sampledAltitudeTimestamps);
+    }
+
+    /**
+     * REQ-TRK-047.2: Returns the cumulative ascent recomputed over the sampled altitude profile.
+     */
+    public synchronized double getSampledAscent() {
+        double ascent = 0.0;
+        for (int i = 1; i < sampledAltitudes.size(); i++) {
+            Double prev = sampledAltitudes.get(i - 1);
+            Double curr = sampledAltitudes.get(i);
+            if (prev != null && curr != null && curr > prev) {
+                ascent += (curr - prev);
+            }
         }
+        return ascent;
+    }
 
-        // 3. Update Anchor for next delta encoding
-        lastAltE2 += Math.round(offset * 100);
+    /**
+     * REQ-TRK-047.2: Returns the cumulative descent recomputed over the sampled altitude profile.
+     */
+    public synchronized double getSampledDescent() {
+        double descent = 0.0;
+        for (int i = 1; i < sampledAltitudes.size(); i++) {
+            Double prev = sampledAltitudes.get(i - 1);
+            Double curr = sampledAltitudes.get(i);
+            if (prev != null && curr != null && curr < prev) {
+                descent += (prev - curr);
+            }
+        }
+        return descent;
+    }
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    public synchronized void addSampledAltitudeWithTimestamp(double altitude, long timestampMs) {
+        sampledAltitudes.add(altitude);
+        sampledAltitudeTimestamps.add(timestampMs);
     }
 
     /**

@@ -20,8 +20,13 @@ package com.atrainingtracker.banalservice.devices;
 
 import static java.lang.Math.abs;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.util.Log;
+
+import androidx.core.content.ContextCompat;
 
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.filters.FilterData;
@@ -32,6 +37,7 @@ import com.atrainingtracker.banalservice.sensor.MySensor;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
+import com.atrainingtracker.util.LifecycleUtils;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -73,6 +79,26 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
     public static final double VAM_MAX_GPS_ACCURACY_METERS = 20.0;
     public static final double VAM_LOW_SPEED_DRIFT_THRESHOLD_MPS = 1.2;
 
+    private final BroadcastReceiver mAltitudeCorrectionReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent == null) return;
+            double delta = intent.getDoubleExtra(AltitudeFromPressureDevice.ALTITUDE_CORRECTION_VALUE, 0.0);
+            if (Math.abs(delta) < 0.1 || Math.abs(delta) > 500.0) return;
+            synchronized (VerticalSpeedAndSlopeDevice.this) {
+                if (mLastAltitudeSuperFiltered != null) {
+                    mLastAltitudeSuperFiltered += delta;
+                }
+                if (mLastAltitude != null) {
+                    mLastAltitude += delta;
+                }
+                for (int i = 0; i < mAltitudeHistoryCount; i++) {
+                    mAltitudeHistory[i] += delta;
+                }
+            }
+        }
+    };
+
     public VerticalSpeedAndSlopeDevice(Context context, MySensorManager mySensorManager) {
         super(context, mySensorManager, DeviceType.VERTICAL_SPEED_AND_SLOPE);
         if (DEBUG) Log.i(TAG, "VerticalSpeedAndSlopeDevice");
@@ -81,6 +107,10 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
         BANALService.createFilter(cAltitudeSuperFilter);
         BANALService.createFilter(cSpeedFilter);
         BANALService.createFilter(cAccuracyFilter);
+
+        ContextCompat.registerReceiver(mContext, mAltitudeCorrectionReceiver,
+                new IntentFilter(AltitudeFromPressureDevice.ALTITUDE_CORRECTION_INTENT),
+                ContextCompat.RECEIVER_NOT_EXPORTED);
 
         registerSensors();
 
@@ -95,6 +125,7 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
     @Override
     public void shutDown() {
         super.shutDown();
+        LifecycleUtils.safeUnregisterReceiver(mContext, mAltitudeCorrectionReceiver, TAG);
 
         if (mScheduler != null && !mScheduler.isShutdown()) {
             mScheduler.shutdown();

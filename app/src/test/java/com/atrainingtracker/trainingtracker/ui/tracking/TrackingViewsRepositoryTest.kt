@@ -227,6 +227,58 @@ class TrackingViewsRepositoryTest {
     }
 
     @Test
+    fun fetchSensorFieldConfigs_mapsColWeightSymmetrically() = runBlocking {
+        val repository = TrackingViewsRepository.getInstance(mockContext)
+
+        val cursor = mockk<Cursor>(relaxed = true)
+        every { cursor.moveToFirst() } returns true
+        every { cursor.moveToNext() } returns false
+
+        every { cursor.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.ROW_ID) } returns 0
+        every { cursor.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.ROW_NR) } returns 1
+        every { cursor.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.COL_NR) } returns 2
+        every { cursor.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SENSOR_TYPE) } returns 3
+        every { cursor.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.FILTER_TYPE) } returns 4
+        every { cursor.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.FILTER_CONSTANT) } returns 5
+        every { cursor.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEW_SIZE) } returns 6
+        every { cursor.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SOURCE_DEVICE_ID) } returns 7
+        every { cursor.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_VALUE) } returns 8
+        every { cursor.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_BAR) } returns 9
+        every { cursor.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.COL_WEIGHT) } returns 10
+
+        every { cursor.getLong(0) } returns 100L
+        every { cursor.getInt(1) } returns 1
+        every { cursor.getInt(2) } returns 1
+        every { cursor.getString(3) } returns "POWER"
+        every { cursor.getString(4) } returns "INSTANTANEOUS"
+        every { cursor.getDouble(5) } returns 1.0
+        every { cursor.getString(6) } returns "LARGE"
+        every { cursor.getLong(7) } returns 0L
+        every { cursor.isNull(8) } returns false
+        every { cursor.getInt(8) } returns 1
+        every { cursor.isNull(9) } returns false
+        every { cursor.getInt(9) } returns 1
+        every { cursor.isNull(10) } returns false
+        every { cursor.getFloat(10) } returns 3.0f
+
+        every {
+            mockDb.query(
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.ROWS_TABLE,
+                null,
+                "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEW_ID}=?",
+                arrayOf("1"),
+                null,
+                null,
+                any()
+            )
+        } returns cursor
+
+        val configs = repository.getSensorFieldConfigsForView(1L).first()
+        assertEquals(1, configs.size)
+        assertEquals(3.0f, configs[0].colWeight, 0.001f)
+    }
+
+    @Test
     fun trackingViewInfo_defaultsShowLiveClimbsAndNavigationHintsToTrue() {
         val info = TrackingViewInfo(
             tabViewId = 1L,
@@ -405,6 +457,19 @@ class TrackingViewsRepositoryTest {
         repository.updateShowBikeBell(77L, false)
         verify(exactly = 1) {
             mockViewsDbManager.updateShowBikeBell(77L, false)
+        }
+    }
+
+    @Test
+    fun moveTabView_delegatesToViewsDbManagerAndReturnsIndex() = runBlocking {
+        val repository = TrackingViewsRepository.getInstance(mockContext)
+        every { mockViewsDbManager.moveTabView(10L, true) } returns 0
+
+        val result = repository.moveTabView(10L, true)
+
+        assertEquals(0, result)
+        verify(exactly = 1) {
+            mockViewsDbManager.moveTabView(10L, true)
         }
     }
 }

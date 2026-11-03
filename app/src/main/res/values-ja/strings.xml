@@ -629,7 +629,7 @@
     <string name="label_max">最大</string>
 
     <string name="zone_display_title">ゾーン表示</string>
-    <string name="zone_display_background">明るい背景</string>
+    <string name="zone_display_background">色付き背景</string>
     <string name="zone_display_left_bar">左バー</string>
     <string name="zone_display_right_bar">右バー</string>
     <string name="zone_display_text_color">文字色</string>
@@ -939,11 +939,16 @@
     <string name="workout_periods__longest_workout">最長セッション</string>
     <string name="workout_periods__region_format">地域 %1$d (%2$d)</string>
     <string name="workout_periods__primary_region_format">主要地域: 地域 %1$d (%2$d)</string>
+    <string name="workout_periods__named_region_format">%1$s (%2$d)</string>
+    <string name="workout_periods__primary_named_region_format">主要地域: %1$s (%2$d)</string>
     <string name="workout_periods__all_regions_format">すべての地域 (%1$d)</string>
     <string name="workout_periods__migration_querying">トレーニング履歴を読み込み中…</string>
     <string name="workout_periods__migration_reading">トレーニング %1$d / %2$d を読み込み中…</string>
     <string name="workout_periods__migration_syncing">%1$s を同期中…</string>
     <string name="workout_periods__migration_finalizing">年間の統計を計算中…</string>
+    <string name="workout_periods__yearly_activity_grid">年間のアクティビティ</string>
+    <string name="workout_periods__daily_activity_strip">毎日のアクティビティ</string>
+    <string name="workout_periods__no_activity">アクティビティなし</string>
 
     <!-- share screenshots -->
     <string name="share">共有</string>
@@ -1810,6 +1815,7 @@
     <string name="map_layer_segments">セグメント</string>
     <string name="map_layer_locations">お気に入りの場所</string>
     <string name="map_layer_track">記録トラック</string>
+    <string name="map_layer_clusters">お気に入りトラック</string>
     <string name="ant_dialog_view_status">ANT+ ステータスを表示</string>
     <string name="ant_dialog_dismiss">了解</string>
 
@@ -1888,19 +1894,27 @@
     <string name="zone_onboarding_action_later">後で</string>
 
     <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
+    <string name="auto_pause_title">オートポーズ</string>
     <string name="tuning_auto_pause_title">オートポーズ</string>
     <string name="tuning_auto_pause_desc">停止時に記録を自動的に一時停止します</string>
+    <string name="tuning_auto_pause_enable_title">自動一時停止を有効化</string>
     <string name="tuning_auto_pause_bike_title">サイクリング</string>
     <string name="tuning_auto_pause_run_title">ランニング</string>
     <string name="tuning_auto_pause_other_title">その他のスポーツ</string>
-    <string name="tuning_auto_pause_speed_threshold_title">一時停止速度しきい値</string>
-    <string name="tuning_auto_pause_speed_threshold_desc">記録が一時停止される速度のしきい値</string>
+    <string name="tuning_auto_pause_speed_threshold_title">速度しきい値</string>
+    <string name="tuning_auto_pause_speed_threshold_desc">この速度未満で一時停止、以上で再開</string>
     <string name="tuning_auto_pause_debounce_title">一時停止遅延時間</string>
     <string name="tuning_auto_pause_debounce_desc">一時停止するまでのしきい値以下の継続時間</string>
+    <string name="tuning_auto_pause_resume_debounce_title">再開遅延時間</string>
+    <string name="tuning_auto_pause_resume_debounce_desc">再開するまでのしきい値以上の継続時間</string>
+    <string name="tuning_auto_pause_start_in_auto_pause_title">自動一時停止で開始</string>
+    <string name="tuning_auto_pause_start_in_auto_pause_desc">静止状態でワークアウトを開始した際、動きが検出されるまで自動一時停止状態で開始します。すべてのスポーツに適用されます。</string>
     <string name="tuning_speed_value_format">%1$d %2$s</string>
     <string name="tuning_seconds_value_format">%1$d s</string>
     <string name="cockpit_auto_pause_badge">オートポーズ</string>
     <string name="cockpit_auto_pause_resume">今すぐ再開</string>
+    <string name="cockpit_status_not_started">未開始</string>
+    <string name="cockpit_status_paused">一時停止中</string>
     <string name="cockpit_speed_sensor_lost">スピードセンサー喪失</string>
 
     <!-- Athlete Baselines & W/kg Metric (ATT-1289, REQ-TRK-019) -->
@@ -2100,9 +2114,95 @@
     <string name="cd_add_before">前に追加</string>
     <string name="cd_delete_tab">タブを削除</string>
     <string name="cd_add_after">後に追加</string>
+    <string name="cd_copy_tab">タブをコピー</string>
+    <string name="cd_move_tab_left">タブを左へ移動</string>
+    <string name="cd_move_tab_right">タブを右へ移動</string>
+    <string name="copy_tab_title">タブをコピー</string>
+    <string name="copy_tab_action">コピー</string>
     <string name="back">戻る</string>
     <string name="close">閉じる</string>
     <string name="clear">クリア</string>
     <string name="select_route">ルートを選択</string>
     <string name="equipment">装備</string>
+
+    <!-- In-App Feature Discovery & Tips Guide (REQ-UI-432 / ATT-2276) -->
+    <string name="drawer_tips_guide">ヒントとコツ</string>
+    <string name="tips_guide_title">ヒントとコツ</string>
+    <string name="tips_guide_header_title">機能の紹介</string>
+    <string name="tips_guide_header_subtitle">トレーニング向けに設計された強力な機能とショートカットを確認できます。</string>
+    <string name="tip_routes_clustering_title">お気に入りルートと自動クラスタリング</string>
+    <string name="tip_routes_clustering_subtitle">定期的なトレーニングルートの自動識別</string>
+    <string name="tip_routes_clustering_desc">aTrainingTrackerはGPS記録を自動分析し、類似ルートをお気に入りルートとしてまとめます。手動タグ付け不要で過去の記録と比較できます。</string>
+    <string name="tip_routes_clustering_action">お気に入りルートを見る</string>
+    <string name="tip_sensors_failover_title">マルチプロトコルセンサーとフェイルオーバー</string>
+    <string name="tip_sensors_failover_subtitle">ANT+とBluetooth LEのシームレスな切替</string>
+    <string name="tip_sensors_failover_desc">心拍、パワー、ケイデンスセンサーを複数ペアリング可能。接続が切れた場合でもバックアップセンサーへ即座に引き継がれます。</string>
+    <string name="tip_sensors_failover_action">センサーを管理</string>
+    <string name="tip_cockpit_customization_title">コックピット表示と自転車ベル</string>
+    <string name="tip_cockpit_customization_subtitle">自由にカスタマイズ可能な計測タイル</string>
+    <string name="tip_cockpit_customization_desc">スポーツごとにライブ数値、高度プロファイル、地図などの画面を構成できます。サイクリング中に鳴らせる自転車ベル機能も追加可能です。</string>
+    <string name="tip_cockpit_customization_action">表示を設定</string>
+    <string name="tip_live_segments_title">Strava Live Segmentsと標高スクラブ</string>
+    <string name="tip_live_segments_subtitle">自己ベストやKOMとのリアルタイム比較</string>
+    <string name="tip_live_segments_desc">お気に入りのStravaセグメントを同期し、走行中のタイム差カウントダウンや標高グラフを表示。勾配や距離を指でなぞって確認できます。</string>
+    <string name="tip_live_segments_action">セグメントを見る</string>
+    <string name="tip_gear_tracking_title">ギアと機材の自動管理</string>
+    <string name="tip_gear_tracking_subtitle">バイクやシューズごとの走行距離記録</string>
+    <string name="tip_gear_tracking_desc">センサーやスポーツ種目を特定のバイクやシューズに関連付け可能。トレーニング後の走行距離と摩耗を自動的に機材へ反映します。</string>
+    <string name="tip_gear_tracking_action">機材を管理</string>
+    <string name="tip_training_zones_title">生理学的指標とトレーニングゾーン</string>
+    <string name="tip_training_zones_subtitle">Cogganパワー、Karvonen心拍、W\'バッテリー</string>
+    <string name="tip_training_zones_desc">Normalized Power (NP)、Intensity Factor (IF)、TSS、リアルタイムW\'バッテリー残量などの高度な指標を活用。7段階パワーゾーンや心拍ゾーンを設定できます。</string>
+    <string name="tip_training_zones_action">ゾーンを設定</string>
+    <string name="tip_data_backup_title">データ主権とオフラインバックアップ</string>
+    <string name="tip_data_backup_subtitle">クラウド登録不要、すべてのデータを手元で保持</string>
+    <string name="tip_data_backup_desc">すべてのトレーニングデータやGPS記録は、端末内のSQLiteや標準FIT/TCXファイルに安全に保管されます。完全なオフラインバックアップや、Google Drive/Dropbox同期も利用可能です。</string>
+    <string name="tip_data_backup_action">バックアップと復元</string>
+    <string name="tip_sport_types_title">カスタムスポーツ種目とサブ種目</string>
+    <string name="tip_sport_types_subtitle">速度しきい値、デフォルト装備、エクスポート対応</string>
+    <string name="tip_sport_types_desc">ロードバイク、グラベル、MTB、トレイルランなど独自のスポーツ種目を定義できます。速度に基づく自動種目判定のしきい値設定、デフォルト装備の連携、Strava・TCX・GoldenCheetah向けのエクスポート種別設定が可能です。</string>
+    <string name="tip_sport_types_action">スポーツ種目を管理</string>
+
+    <!-- Sensor Field Display Elements (ATT-4841, REQ-TRK-046) -->
+    <string name="sensor_field_display_elements_title">表示要素</string>
+    <string name="sensor_field_show_value">値</string>
+    <string name="sensor_field_show_bar">バー</string>
+
+    <!-- Sensor Field Width & Row Split (ATT-4861, REQ-UI-437) -->
+    <string name="sensor_field_width_title">幅比率</string>
+    <string name="sensor_field_relative_weight">相対幅</string>
+
+    <!-- Zone History (ATT-4844, REQ-SET-082) -->
+    <string name="zone_history_title">ゾーン履歴</string>
+    <string name="zone_history_action_history">履歴</string>
+    <string name="zone_history_add_snapshot">過去のスナップショットを追加</string>
+    <string name="zone_history_edit_snapshot">ゾーンスナップショットの編集</string>
+    <string name="zone_history_delete_title">ゾーンスナップショットを削除しますか？</string>
+    <string name="zone_history_delete_message">%1$sのゾーンスナップショットを削除しますか？</string>
+    <string name="zone_history_empty">登録されたゾーンスナップショットの履歴はありません。</string>
+    <string name="zone_history_date_label">有効日</string>
+    <string name="zone_history_save_snapshot">スナップショットを保存</string>
+    <string name="zone_history_error_monotonic">しきい値は厳密に増加する必要があります (%1$s)</string>
+
+    <!-- Manual Altitude Calibration (ATT-4845, REQ-TRK-047) -->
+    <string name="altitude_calibration_title">高度を校正</string>
+    <string name="altitude_calibration_reference_label">基準高度</string>
+    <string name="altitude_calibration_location_name">場所名（省略可）</string>
+    <string name="altitude_calibration_save_location">登録地点として保存</string>
+    <string name="altitude_calibration_matched_location">一致したお気に入りの場所: %1$s</string>
+    <string name="altitude_calibration_action">校正</string>
+    <string name="altitude_calibrated_success">高度を%1$sに校正しました</string>
+
+    <!-- Altitude From Position DEM (ATT-4859, REQ-SEN-025) -->
+    <string name="device_type_altitude_from_position">位置情報からの高度 (DEM)</string>
+    <string name="device_type_short_altitude_from_position">高度 (DEM)</string>
+    <string name="devices_altitude_from_position">地形標高 (DEM)</string>
+    <string name="devices_altitude_from_position_description">GPS位置、キャッシュされたルート、オンラインDEMデータから算出される標高。</string>
+
+    <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
+    <string name="itpms_slow_puncture_alert_title">スローパンクを検出</string>
+    <string name="itpms_slow_puncture_alert_message">タイヤ有効周長が %1$s 低下しました。直ちに空気圧を確認してください。</string>
+    <string name="itpms_low_pressure_reminder_title">タイヤ空気圧低下</string>
+    <string name="itpms_low_pressure_reminder_message">タイヤ周長が基準値より %1$s 低下しています。空気を補充してください。</string>
+    <string name="itpms_alert_dismiss">閉じる</string>
 </resources>

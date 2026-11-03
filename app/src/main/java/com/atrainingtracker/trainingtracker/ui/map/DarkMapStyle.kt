@@ -48,6 +48,9 @@ object DarkMapStyle {
     @Volatile
     private var cachedStyleOptions: MapStyleOptions? = null
 
+    @Volatile
+    private var cachedMutedStyleOptions: MapStyleOptions? = null
+
     /**
      * Retrieves the cached [MapStyleOptions] or loads and caches it from [resId].
      *
@@ -73,6 +76,29 @@ object DarkMapStyle {
     }
 
     /**
+     * Retrieves the cached muted light [MapStyleOptions] or loads and caches it from [resId] (REQ-MAP-057.3, ATT-4933).
+     *
+     * Used for Periods heatmap views to eliminate visual color competition with base map water and terrain.
+     */
+    fun getMutedMapStyleOptions(
+        context: Context,
+        @RawRes resId: Int = R.raw.map_style_muted_light
+    ): MapStyleOptions? {
+        cachedMutedStyleOptions?.let { return it }
+
+        return synchronized(this) {
+            cachedMutedStyleOptions ?: try {
+                val options = MapStyleOptions.loadRawResourceStyle(context, resId)
+                cachedMutedStyleOptions = options
+                options
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to load muted map style from raw resource, falling back to unstyled MapType.NORMAL", e)
+                null
+            }
+        }
+    }
+
+    /**
      * Parses a raw JSON string into [MapStyleOptions] with exception handling.
      */
     fun parseStyleJson(json: String): MapStyleOptions? {
@@ -91,6 +117,7 @@ object DarkMapStyle {
     fun clearCache() {
         synchronized(this) {
             cachedStyleOptions = null
+            cachedMutedStyleOptions = null
         }
     }
 
@@ -140,6 +167,26 @@ object DarkMapStyle {
             darkMapStyleOptions = options,
             isMyLocationEnabled = isMyLocationEnabled,
             lightMapType = lightMapType
+        )
+    }
+
+    /**
+     * Resolves [MapProperties] specifically for heatmap views (REQ-MAP-057.3, ATT-4933).
+     *
+     * In dark mode: dark map style (MapType.NORMAL + [map_style_dark.json]).
+     * In light mode: muted/desaturated map style (MapType.NORMAL + [map_style_muted_light.json]),
+     * eliminating background terrain green and water blue contrast so warm heatmaps contrast cleanly.
+     */
+    fun resolveHeatmapMapProperties(
+        isDark: Boolean,
+        context: Context,
+        isMyLocationEnabled: Boolean = false
+    ): MapProperties {
+        val options = if (isDark) getMapStyleOptions(context) else getMutedMapStyleOptions(context)
+        return MapProperties(
+            mapType = MapType.NORMAL,
+            mapStyleOptions = options,
+            isMyLocationEnabled = isMyLocationEnabled
         )
     }
 }

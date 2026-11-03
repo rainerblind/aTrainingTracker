@@ -606,8 +606,14 @@ class CyclingPowerMetricsDeviceTest {
         device.calculateMetrics()
         assertEquals(14.9, device.wPrimeBalSensor.sensorData.value as Double, 0.001)
 
-        // resetSession() must restore full 15.0 kJ capacity even when CP is null because FTP is configured
+        // resetSession() seeds internal capacity to 15.0 kJ and resets sensor to null (Rule 52)
         device.resetSession()
+        assertNull(device.wPrimeBalSensor.sensorData.value)
+
+        // When next active sample arrives at CP, restores full 15.0 kJ capacity
+        every { powerSensorData.value } returns 250.0
+        currentTime += 1000L
+        device.calculateMetrics()
         assertEquals(15.0, device.wPrimeBalSensor.sensorData.value as Double, 0.001)
 
         device.shutDown()
@@ -616,9 +622,11 @@ class CyclingPowerMetricsDeviceTest {
     // --- ATT-4283: REQ-TRK-038 & TST-TRK-031 Tests ---
 
     @Test
-    fun testStartup_constructorSeedsInitialWPrimeCapacity_publishesFullCapacityImmediately() {
-        // [TST-TRK-031.1] / REQ-TRK-038.1 (Rule 51 Parity)
-        // Given CP = 280W and W' = 20.0 kJ
+    fun testStartup_constructorSeedsInitialWPrimeCapacity_doesNotPublishUntilFirstPowerSample() {
+        // [TST-TRK-031.1], [TST-TRK-031.2] / REQ-TRK-038.1 (Rule 51 Parity & Rule 52 Gating)
+        // Given CP = 280W, W' = 20.0 kJ, and paired power sensor in sensorManager
+        every { powerSensorData.value } returns null
+
         val device = CyclingPowerMetricsDevice(
             context,
             sensorManager,
@@ -630,13 +638,20 @@ class CyclingPowerMetricsDeviceTest {
             { 20.0f }
         )
 
-        // Then wPrimeBalSensor emits 20.0 immediately without calling calculateMetrics() or resetSession()
+        // Then wPrimeBalSensor MUST remain null upon instantiation without active power telemetry (Rule 52)
+        assertNull(device.wPrimeBalSensor.sensorData.value)
+
+        // When the first active power sample arrives (280W)
+        every { powerSensorData.value } returns 280.0
+        device.calculateMetrics()
+
+        // Then wPrimeBalSensor activates and publishes full capacity (20.0 kJ) stepping from seeded capacity (Rule 51)
         assertNotNull(device.wPrimeBalSensor.sensorData.value)
         assertEquals(20.0, device.wPrimeBalSensor.sensorData.value as Double, 0.001)
 
         device.shutDown()
 
-        // Unconfigured capacity (wPrimeKj <= 0.0f) emits null
+        // Unconfigured capacity (wPrimeKj <= 0.0f) emits null even after active sample
         val unconfiguredDevice = CyclingPowerMetricsDevice(
             context,
             sensorManager,
@@ -647,6 +662,8 @@ class CyclingPowerMetricsDeviceTest {
             { 280 },
             { 0.0f }
         )
+        assertNull(unconfiguredDevice.wPrimeBalSensor.sensorData.value)
+        unconfiguredDevice.calculateMetrics()
         assertNull(unconfiguredDevice.wPrimeBalSensor.sensorData.value)
         unconfiguredDevice.shutDown()
     }
@@ -682,6 +699,8 @@ class CyclingPowerMetricsDeviceTest {
     fun testStartup_constructorWithFtpFallback_seedsInitialWPrimeCapacity() {
         // [TST-TRK-031.2] / REQ-TRK-038.1
         // Given CP = null, FTP = 250W, and W' = 15.0 kJ
+        every { powerSensorData.value } returns null
+
         val device = CyclingPowerMetricsDevice(
             context,
             sensorManager,
@@ -693,7 +712,14 @@ class CyclingPowerMetricsDeviceTest {
             { 15.0f }
         )
 
-        // Then wPrimeBalSensor immediately emits 15.0 using FTP fallback
+        // Then wPrimeBalSensor initially null
+        assertNull(device.wPrimeBalSensor.sensorData.value)
+
+        // When first power sample arrives
+        every { powerSensorData.value } returns 250.0
+        device.calculateMetrics()
+
+        // Emits 15.0 using FTP fallback
         assertNotNull(device.wPrimeBalSensor.sensorData.value)
         assertEquals(15.0, device.wPrimeBalSensor.sensorData.value as Double, 0.001)
 
@@ -703,7 +729,7 @@ class CyclingPowerMetricsDeviceTest {
     @Test
     fun testCalculateMetrics_recordingSuspended_stationaryZeroPower_updatesPowerToWeightSensor() {
         // [TST-TRK-031.3] / REQ-TRK-038.2, REQ-TRK-038.4
-        // Given an active ride entering auto-pause/stationary with power = 0W and weight = 75kg
+        // Case 1: Ride suspended without prior power effort -> wPrimeBalSensor remains null
         every { powerSensorData.value } returns 0.0
 
         val device = CyclingPowerMetricsDevice(
@@ -726,10 +752,32 @@ class CyclingPowerMetricsDeviceTest {
         assertNull(device.workKjSensor.sensorData.value)
         assertNull(device.tssSensor.sensorData.value)
 
-        // W'bal remains at full capacity (or reconstitutes at 0W)
-        assertEquals(20.0, device.wPrimeBalSensor.sensorData.value as Double, 0.001)
-
+        // W'bal remains null because no active power effort started before pause (Rule 52)
+        assertNull(device.wPrimeBalSensor.sensorData.value)
         device.shutDown()
+
+        // Case 2: Active ride was ongoing (power samples received), then enters pause -> W'bal continues reconstitution
+        var isSuspended = false
+        val activeThenPausedDevice = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { isSuspended },
+            { 75.0f },
+            { 250 },
+            { 1_000_000L },
+            { 250 },
+            { 20.0f }
+        )
+        every { powerSensorData.value } returns 200.0
+        activeThenPausedDevice.calculateMetrics()
+        assertNotNull(activeThenPausedDevice.wPrimeBalSensor.sensorData.value)
+
+        // Now pause
+        isSuspended = true
+        every { powerSensorData.value } returns 0.0
+        activeThenPausedDevice.calculateMetrics()
+        assertNotNull(activeThenPausedDevice.wPrimeBalSensor.sensorData.value)
+        activeThenPausedDevice.shutDown()
     }
 
     @Test

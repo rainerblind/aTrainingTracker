@@ -45,4 +45,41 @@ data class ZoneProfileState(
             z1 > 0 && z2 > z1 && z3 > z2 && z4 > z3
         }
     }
+
+    /**
+     * Extracts boundaries as an immutable list matching the zone type's boundary count (REQ-SET-082.1).
+     */
+    fun toBoundariesList(): List<Int> = when (type) {
+        SettingsDataStore.ZoneType.PWR_BIKE -> listOf(z1, z2, z3, z4, z5, z6)
+        else -> listOf(z1, z2, z3, z4)
+    }
+
+    companion object {
+        fun fromBoundaries(
+            type: SettingsDataStore.ZoneType,
+            boundaries: List<Int>,
+            displayOptions: ZoneDisplayOptions = ZoneDisplayOptions()
+        ): ZoneProfileState {
+            return when (type) {
+                SettingsDataStore.ZoneType.PWR_BIKE -> ZoneProfileState(
+                    type = type,
+                    z1 = boundaries.getOrElse(0) { 0 },
+                    z2 = boundaries.getOrElse(1) { 0 },
+                    z3 = boundaries.getOrElse(2) { 0 },
+                    z4 = boundaries.getOrElse(3) { 0 },
+                    z5 = boundaries.getOrElse(4) { 0 },
+                    z6 = boundaries.getOrElse(5) { 0 },
+                    displayOptions = displayOptions
+                )
+                else -> ZoneProfileState(
+                    type = type,
+                    z1 = boundaries.getOrElse(0) { 0 },
+                    z2 = boundaries.getOrElse(1) { 0 },
+                    z3 = boundaries.getOrElse(2) { 0 },
+                    z4 = boundaries.getOrElse(3) { 0 },
+                    displayOptions = displayOptions
+                )
+            }
+        }
+    }
 }

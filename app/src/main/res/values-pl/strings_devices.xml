@@ -92,7 +92,16 @@
     <string name="devices_location_GPS">Telefon GPS (Satelita)</string>
     <string name="devices_location_Network">Lokalizacja telefonu (Sieć/WiFi)</string>
     <string name="devices_location_GoogleFused">Lokalizacja Google (Fused)</string>
-    <string name="devices_altitude_from_pressure">Ciśnienie pow.</string>
+    <string name="devices_altitude_from_pressure">Wysokość z ciśnienia</string>
+
+    <!-- Specialized Altitude Devices Explanations (ATT-5073, REQ-SEN-026) -->
+    <string name="device_altitude_explanation_title">O tym czujniku</string>
+    <string name="device_altitude_how_it_works_header">Jak to działa</string>
+    <string name="device_altitude_pros_cons_header">Zalety i wady</string>
+    <string name="device_altitude_pressure_how_it_works">Mierzy ciśnienie powietrza wbudowanym barometrem. Oblicza względne zmiany wysokości ze wzoru barometrycznego, kalibrowana w ulubionych miejscach lub ręcznie.</string>
+    <string name="device_altitude_pressure_pros_cons">+ Płynna i czuła; brak szumów pionowych GPS; działa w tunelach.\n- Zmiany pogody mogą powodować dryf wysokości w czasie.</string>
+    <string name="device_altitude_position_how_it_works">Porównuje pozycję GPS z cyfrowymi modelami terenu (DEM) z pamięci podręcznej lub z Open-Meteo.</string>
+    <string name="device_altitude_position_pros_cons">+ Niewrażliwa na pogodę i dryf ciśnienia; bezwzględna wysokość bez kalibracji.\n- Wymaga aktywnego połączenia z internetem w niebuforowanych obszarach; zależy od dokładności GPS (schodkowa na mostach i urwiskach).</string>
 
     <string name="devices_live_sensor_data_header">Dane czujników</string>
 
@@ -100,4 +109,7 @@
     <string name="devices_dialog_delete_device_message">Czy na pewno chcesz usunąć czujnik \'%1$s\'?</string>
 
     <string name="devices_equipment_none">- brak -</string>
+
+    <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
+    <string name="devices_reset_tire_pressure_baseline">Zresetuj ciśnienie bazowe opon (świeżo napompowane)</string>
 </resources>

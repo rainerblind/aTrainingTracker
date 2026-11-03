@@ -376,7 +376,7 @@ class PeriodsRepository private constructor(private val application: Application
     suspend fun checkIntegrityAndSync(): Boolean = withContext(Dispatchers.IO) {
         val finishedWorkouts = workoutSummariesManager.getFinishedWorkoutCount()
         val periodWorkouts = dbManager.getTotalDayWorkoutsCount()
-        if (finishedWorkouts > periodWorkouts) {
+        if (finishedWorkouts != periodWorkouts) {
             Log.i(TAG, "Integrity discrepancy detected: $finishedWorkouts workouts in SQLite vs $periodWorkouts in PeriodSummaries.db. Triggering migration.")
             performHierarchicalMigration()
             true
@@ -975,7 +975,7 @@ class PeriodsRepository private constructor(private val application: Application
         )
     }
 
-    private fun enrich(summary: PeriodSummary, groupWorkouts: List<WorkoutData>): PeriodSummary {
+    internal fun enrich(summary: PeriodSummary, groupWorkouts: List<WorkoutData>): PeriodSummary {
         // 1. Identify spatial anchors for instant framing (guarantees regional extrema & distant continents)
         val trueLongestId = if (groupWorkouts.isNotEmpty()) groupWorkouts.maxByOrNull { it.activeTimeSec }?.id else summary.longestId
         val anchorIds = setOf(trueLongestId ?: summary.longestId, summary.northId, summary.southId, summary.eastId, summary.westId).filter { it != -1L }
@@ -998,28 +998,39 @@ class PeriodsRepository private constructor(private val application: Application
             selectedWorkouts
         } else anchorWorkouts
         
-        // 2. Map ALL available workout polylines for the full heatmap (ATT-440 Refinement)
+        // 2. Curate full polylines for the card thumbnail preview (REQ-PER-019)
         val allPolylineMap = if (groupWorkouts.isNotEmpty()) {
             groupWorkouts
                 .filter { it.mapPolyline.isNotEmpty() }
                 .associate { it.id to it.mapPolyline }
+        } else if (summary.workoutIdToAllPolylinesMap.isNotEmpty()) {
+            summary.workoutIdToAllPolylinesMap
         } else summary.workoutIdToPolylineMap
 
-        // 3. Hydrate LongestWorkout metrics for each sport from in-memory workouts or fallback queries (ATT-536 / ATT-579)
+        // 3. Scope workoutIdToPolylineMap strictly to spatial anchors (<= 5 workouts) (REQ-PER-021.1)
+        // Pre-decode anchor paths off the main thread to eliminate UI-thread PolyUtil.decode calls (REQ-PER-021.3)
+        val anchorPolylineMap = if (groupWorkouts.isNotEmpty()) {
+            anchorWorkouts
+                .filter { it.mapPolyline.isNotEmpty() }
+                .associate { it.id to it.mapPolyline }
+        } else summary.workoutIdToPolylineMap.filterKeys { it in anchorIds }
+
+        val anchorPathMap = if (groupWorkouts.isNotEmpty()) {
+            anchorWorkouts
+                .filter { it.mapPolyline.isNotEmpty() }
+                .associate { it.id to PolyUtil.decode(it.mapPolyline) }
+        } else summary.workoutIdToPathMap.filterKeys { it in anchorIds }
+
+        // 4. Hydrate LongestWorkout metrics for each sport from in-memory workouts if available (ATT-536 / ATT-579 / ATT-4476)
         val enrichedSportStats = summary.sportStats.mapValues { (sport, stats) ->
             val targetId = stats.longestWorkout?.id ?: -1L
             val longestFromGroup = if (groupWorkouts.isNotEmpty()) {
                 groupWorkouts.filter { it.bSportType == sport }.maxByOrNull { it.activeTimeSec }
             } else null
 
-            var longestWorkoutData = longestFromGroup ?: (if (targetId != -1L) {
-                groupWorkouts.find { it.id == targetId }
+            val longestWorkoutData = longestFromGroup ?: (if (targetId != -1L) {
+                groupWorkouts.find { it.id == targetId } ?: workoutRepo.allWorkouts.value.find { it.id == targetId }
             } else null)
-
-            // Fallback 1: global in-memory workouts
-            if (longestWorkoutData == null && targetId != -1L) {
-                longestWorkoutData = workoutRepo.allWorkouts.value.find { it.id == targetId }
-            }
 
             if (longestWorkoutData != null) {
                 stats.copy(
@@ -1031,34 +1042,112 @@ class PeriodsRepository private constructor(private val application: Application
                         ascentMeters = longestWorkoutData.ascentMeters
                     )
                 )
-            } else if (targetId != -1L) {
-                // Fallback 2: SQLite WorkoutSummaries lookup
-                val hydrated = try {
-                    workoutSummariesManager.getWorkoutCursor(targetId).use { c ->
-                        if (c.moveToFirst()) {
-                            val name = c.getString(c.getColumnIndexOrThrow(com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_NAME)) ?: ""
-                            val dur = c.getLong(c.getColumnIndexOrThrow(com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_ACTIVE_s))
-                            val dist = c.getDouble(c.getColumnIndexOrThrow(com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_TOTAL_m))
-                            val asc = c.getLong(c.getColumnIndexOrThrow(com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries.ASCENDING))
-                            LongestWorkout(targetId, name, dur, dist, asc)
-                        } else null
-                    }
-                } catch (e: Exception) {
-                    null
-                }
-                if (hydrated != null) {
-                    stats.copy(longestWorkout = hydrated)
-                } else stats
-            } else stats
+            } else {
+                stats
+            }
         }
+
+        // 5. Aggregate yearly sport contributions for PeriodType.YEAR (REQ-PER-025, ATT-4849)
+        val yearlyContributions = if (summary.periodType == PeriodType.YEAR && groupWorkouts.isNotEmpty()) {
+            val calendarYear = java.time.OffsetDateTime.ofInstant(
+                java.time.Instant.ofEpochSecond(summary.startTimestampS),
+                java.time.ZoneId.systemDefault()
+            ).year
+
+            val sportsInGroup = groupWorkouts.map { it.bSportType }.distinct()
+            sportsInGroup.associateWith { sport ->
+                val sportWorkouts = groupWorkouts.filter { it.bSportType == sport }
+                val dailyMap = mutableMapOf<java.time.LocalDate, DailySportActivity>()
+
+                val byDate = sportWorkouts.groupBy { it.localDateTime.toLocalDate() }
+                for ((date, dayWorkouts) in byDate) {
+                    val count = dayWorkouts.size
+                    val totalDuration = dayWorkouts.sumOf { it.activeTimeSec }
+                    val totalDistance = dayWorkouts.sumOf { it.totalDistance }
+                    val totalAscent = dayWorkouts.sumOf { it.ascentMeters }
+                    val ids = dayWorkouts.map { it.id }
+                    val names = dayWorkouts.map { it.workoutName }
+                    dailyMap[date] = DailySportActivity(
+                        date = date,
+                        bSportType = sport,
+                        count = count,
+                        durationSec = totalDuration,
+                        distanceMeters = totalDistance,
+                        ascentMeters = totalAscent,
+                        workoutIds = ids,
+                        workoutNames = names
+                    )
+                }
+
+                val maxDuration = dailyMap.values.maxOfOrNull { it.durationSec } ?: 0L
+                val maxDistance = dailyMap.values.maxOfOrNull { it.distanceMeters } ?: 0.0
+                val maxAscent = dailyMap.values.maxOfOrNull { it.ascentMeters } ?: 0L
+
+                YearlySportContribution(
+                    sportType = sport,
+                    year = calendarYear,
+                    dailyActivities = dailyMap,
+                    maxDailyDurationSec = maxDuration,
+                    maxDailyDistanceMeters = maxDistance,
+                    maxDailyAscentMeters = maxAscent
+                )
+            }
+        } else summary.yearlySportContributions
+
+        // 6. Aggregate daily sport contributions for PeriodType.WEEK and PeriodType.MONTH (REQ-PER-027, ATT-5195)
+        val dailyContributions = if ((summary.periodType == PeriodType.WEEK || summary.periodType == PeriodType.MONTH) && groupWorkouts.isNotEmpty()) {
+            val sportsInGroup = groupWorkouts.map { it.bSportType }.distinct()
+            sportsInGroup.associateWith { sport ->
+                val sportWorkouts = groupWorkouts.filter { it.bSportType == sport }
+                val dailyMap = mutableMapOf<java.time.LocalDate, DailySportActivity>()
+
+                val byDate = sportWorkouts.groupBy { it.localDateTime.toLocalDate() }
+                for ((date, dayWorkouts) in byDate) {
+                    val count = dayWorkouts.size
+                    val totalDuration = dayWorkouts.sumOf { it.activeTimeSec }
+                    val totalDistance = dayWorkouts.sumOf { it.totalDistance }
+                    val totalAscent = dayWorkouts.sumOf { it.ascentMeters }
+                    val ids = dayWorkouts.map { it.id }
+                    val names = dayWorkouts.map { it.workoutName }
+                    dailyMap[date] = DailySportActivity(
+                        date = date,
+                        bSportType = sport,
+                        count = count,
+                        durationSec = totalDuration,
+                        distanceMeters = totalDistance,
+                        ascentMeters = totalAscent,
+                        workoutIds = ids,
+                        workoutNames = names
+                    )
+                }
+
+                val maxDuration = dailyMap.values.maxOfOrNull { it.durationSec } ?: 0L
+                val maxDistance = dailyMap.values.maxOfOrNull { it.distanceMeters } ?: 0.0
+                val maxAscent = dailyMap.values.maxOfOrNull { it.ascentMeters } ?: 0L
+
+                DailySportContribution(
+                    sportType = sport,
+                    dailyActivities = dailyMap,
+                    maxDailyDurationSec = maxDuration,
+                    maxDailyDistanceMeters = maxDistance,
+                    maxDailyAscentMeters = maxAscent
+                )
+            }
+        } else summary.dailySportContributions
 
         return summary.copy(
             sportStats = enrichedSportStats,
-            polylines = if (previewWorkouts.isNotEmpty()) {
+            polylines = if (allPolylineMap.isNotEmpty()) {
+                allPolylineMap.values.toList()
+            } else if (previewWorkouts.isNotEmpty()) {
                 previewWorkouts.map { it.mapPolyline }.filter { it.isNotEmpty() }
             } else summary.polylines,
-            workoutIdToPolylineMap = allPolylineMap,
+            workoutIdToPolylineMap = anchorPolylineMap,
+            workoutIdToAllPolylinesMap = allPolylineMap,
+            workoutIdToPathMap = anchorPathMap,
             workoutIdToSportMap = if (groupWorkouts.isNotEmpty()) groupWorkouts.associate { it.id to it.bSportType } else summary.workoutIdToSportMap,
+            yearlySportContributions = yearlyContributions,
+            dailySportContributions = dailyContributions,
             extremaMarkers = anchorWorkouts.flatMap { workout ->
                 val markers = mutableListOf<PeriodPeakMarker>()
                 workout.startLatLng?.let { markers.add(PeriodPeakMarker(workout.id, it, R.drawable.control_start, "${workout.workoutName}: Start", PeriodMarkerType.START)) }

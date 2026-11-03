@@ -67,6 +67,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -99,6 +100,7 @@ class TrackingViewModelMapStateTest {
     private val currentBearingFlow = MutableStateFlow<Double?>(null)
     private val allRoutesFlow = MutableStateFlow(emptyList<RouteWithPath>())
     private val activeNavigatedRouteIdFlow = MutableStateFlow<Long?>(null)
+    private val currentPathPointsFlow = MutableStateFlow(emptyList<PathPoint>())
 
     @Before
     fun setUp() {
@@ -128,7 +130,7 @@ class TrackingViewModelMapStateTest {
         every { mockBanalRepo.currentSpeed } returns currentSpeedFlow
         every { mockBanalRepo.currentBearing } returns currentBearingFlow
         every { mockBanalRepo.allFilteredSensorData } returns MutableStateFlow(emptyList<FilteredSensorData<*>>())
-        every { mockBanalRepo.currentPathPoints } returns MutableStateFlow(emptyList<PathPoint>())
+        every { mockBanalRepo.currentPathPoints } returns currentPathPointsFlow
         every { mockRoutesRepo.allRoutes } returns allRoutesFlow
         every { mockRoutesRepo.activeNavigatedRouteId } returns activeNavigatedRouteIdFlow
         coEvery { mockTrackingViewsRepo.getActivityTypeForView(any()) } returns ActivityType.getDefaultActivityType()
@@ -166,7 +168,8 @@ class TrackingViewModelMapStateTest {
             banalServiceRepository = mockBanalRepo,
             liveSegmentsRepository = mockLiveSegmentsRepo,
             routesRepository = mockRoutesRepo,
-            viewId = 1L
+            viewId = 1L,
+            defaultDispatcher = testDispatcher
         ).also { createdViewModels.add(it) }
     }
 
@@ -364,5 +367,45 @@ class TrackingViewModelMapStateTest {
             "followMeController must loop until step.isConverged",
             mapBehaviorsSource.contains("while (!step.isConverged)")
         )
+    }
+
+    @Test
+    fun testCockpitMap_neverQueriesOrComputesClustersEvenWhenLayerEnabled_ATT5197() = runTest {
+        // Given: CLUSTERS enabled in general map preferences (ATT-5197 / REQ-UI-322.7 / TST-UI-282.12)
+        every {
+            mockPrefs.getStringSet(com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrackViewModel.PREF_GENERAL_MAP_ENABLED_LAYERS, null)
+        } returns setOf("CLUSTERS", "ROUTES", "SEGMENTS", "TRACK", "KNOWN_LOCATIONS")
+
+        val viewModel = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Verify: TrackingMapState does not subscribe to or contain clusters;
+        // TrackingMapState has routes, segments, track, and markers, but zero cluster references.
+        val state = viewModel.mapState.value
+        assertNotNull(state)
+        assertEquals(true, state.showMap)
+        assertTrue(state.mapSegments.isEmpty())
+        assertTrue(state.mapRoutes.isEmpty())
+        assertTrue(state.mapMarkers.isEmpty())
+    }
+
+    @Test
+    fun testCurrentPathPoints_decoupledFromSensorFieldsCombine() {
+        val pathPoint1 = PathPoint(distance = 100.0, latLng = LatLng(48.1, 11.5), altitude = 500.0)
+        val pathPoint2 = PathPoint(distance = 200.0, latLng = LatLng(48.2, 11.6), altitude = 520.0)
+
+        val viewModel = createViewModel()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // When showElevationProfile is false (default in TrackingViewInfo in setUp)
+        assertFalse(viewModel.uiState.value.showElevationProfile)
+        assertTrue(viewModel.uiState.value.pathPoints.isEmpty())
+
+        // Emitting path points when profile is disabled does not update uiState.pathPoints
+        currentPathPointsFlow.value = listOf(pathPoint1, pathPoint2)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue("Path points must remain empty when elevation profile is disabled (REQ-TRK-042.4)",
+            viewModel.uiState.value.pathPoints.isEmpty())
     }
 }

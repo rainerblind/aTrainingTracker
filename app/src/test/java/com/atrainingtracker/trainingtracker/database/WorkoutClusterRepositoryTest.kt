@@ -201,4 +201,76 @@ class WorkoutClusterRepositoryTest {
         }
         assertEquals(0, repo.allClusters.value.size)
     }
+
+    @Test
+    fun testLoadAllClustersLightweight_populatesAllClustersWithoutHeavyAggregation() = runBlocking {
+        val cluster = WorkoutCluster(
+            id = 55L,
+            name = "Fast Loop",
+            probableSportId = 1L,
+            startLat = 48.0,
+            startLng = 9.0,
+            endLat = 48.1,
+            endLng = 9.1,
+            maxDispLat = 48.2,
+            maxDispLng = 9.2,
+            refDistance = 6000.0,
+            hitCount = 12,
+            bSportType = BSportType.BIKE
+        )
+        every { mockClusterDb.getAllClusters() } returns listOf(cluster)
+
+        val repo = WorkoutClusterRepository.getInstance(mockContext)
+        val result = repo.loadAllClustersLightweight()
+
+        assertEquals(1, result.size)
+        assertEquals("Fast Loop", result.first().name)
+        assertEquals(1, repo.allClusters.value.size)
+        assertEquals(55L, repo.allClusters.value.first().id)
+        // Verify no heavy summaries queries were executed
+        verify(exactly = 0) {
+            mockSummariesDb.query(any(), any(), any(), any(), any(), any(), any())
+        }
+    }
+
+    @Test
+    fun testLoadAllClustersLightweight_hydratesClusterStatsWhenEmpty_TST_UI_282_13() = runBlocking {
+        val cluster = WorkoutCluster(
+            id = 55L,
+            name = "Fast Loop",
+            probableSportId = 1L,
+            startLat = 48.0,
+            startLng = 9.0,
+            endLat = 48.1,
+            endLng = 9.1,
+            maxDispLat = 48.2,
+            maxDispLng = 9.2,
+            refDistance = 6000.0,
+            hitCount = 12,
+            bSportType = BSportType.BIKE
+        )
+        val mockStats = WorkoutClusterStats(
+            clusterId = 55L,
+            workoutCount = 1,
+            bestDurationSec = 1200L,
+            lastHitTimestampS = 1700000000L,
+            totalAscentMeters = 150L
+        )
+        every { mockClusterDb.getAllClusters() } returns listOf(cluster)
+        every { mockSummariesManager.getWorkoutClusterStatsForAllClusters() } returns mapOf(55L to mockStats)
+
+        val repo = WorkoutClusterRepository.getInstance(mockContext)
+        assertEquals(0, repo.clusterStats.value.size)
+
+        val result = repo.loadAllClustersLightweight()
+
+        assertEquals(1, result.size)
+        assertEquals(1, repo.clusterStats.value.size)
+        assertEquals(mockStats, repo.clusterStats.value[55L])
+        verify(exactly = 1) { mockSummariesManager.getWorkoutClusterStatsForAllClusters() }
+
+        // Second call when stats are already populated should not re-query summariesManager
+        repo.loadAllClustersLightweight()
+        verify(exactly = 1) { mockSummariesManager.getWorkoutClusterStatsForAllClusters() }
+    }
 }

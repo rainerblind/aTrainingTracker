@@ -63,6 +63,9 @@ class TrackingViewsDatabaseManagerTest {
         every { anyConstructed<ContentValues>().put(any<String>(), any<Long>()) } returns Unit
         every { anyConstructed<ContentValues>().put(any<String>(), any<Int>()) } returns Unit
         every { anyConstructed<ContentValues>().put(any<String>(), any<Double>()) } returns Unit
+        every { anyConstructed<ContentValues>().put(any<String>(), any<Float>()) } returns Unit
+        every { anyConstructed<ContentValues>().putNull(any<String>()) } returns Unit
+        every { anyConstructed<ContentValues>().remove(any<String>()) } returns Unit
         every { anyConstructed<ContentValues>().clear() } returns Unit
     }
 
@@ -532,8 +535,70 @@ class TrackingViewsDatabaseManagerTest {
     }
 
     @Test
-    fun testDatabaseVersionIs15() {
-        assertEquals(15, TrackingViewsDatabaseManager.TrackingViewsDbHelper.DB_VERSION)
+    fun testDatabaseVersionIs18() {
+        assertEquals(18, TrackingViewsDatabaseManager.TrackingViewsDbHelper.DB_VERSION)
+    }
+
+    @Test
+    fun testIsBarSupported_sportDependentFeasibility() {
+        // HR: Run and Bike only
+        assertTrue(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(SensorType.HR, com.atrainingtracker.banalservice.BSportType.RUN))
+        assertTrue(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(SensorType.HR, com.atrainingtracker.banalservice.BSportType.BIKE))
+        assertFalse(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(SensorType.HR, com.atrainingtracker.banalservice.BSportType.UNKNOWN))
+
+        // Power, Pedal Balance, W'Bal: Bike only
+        assertTrue(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(SensorType.POWER, com.atrainingtracker.banalservice.BSportType.BIKE))
+        assertFalse(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(SensorType.POWER, com.atrainingtracker.banalservice.BSportType.RUN))
+
+        assertTrue(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(SensorType.PEDAL_POWER_BALANCE, com.atrainingtracker.banalservice.BSportType.BIKE))
+        assertFalse(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(SensorType.PEDAL_POWER_BALANCE, com.atrainingtracker.banalservice.BSportType.RUN))
+
+        assertTrue(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(SensorType.W_PRIME_BAL, com.atrainingtracker.banalservice.BSportType.BIKE))
+        assertFalse(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(SensorType.W_PRIME_BAL, com.atrainingtracker.banalservice.BSportType.RUN))
+
+        // Others: false
+        assertFalse(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(SensorType.SPEED_mps, com.atrainingtracker.banalservice.BSportType.BIKE))
+        assertFalse(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(null as SensorType?, com.atrainingtracker.banalservice.BSportType.BIKE))
+    }
+
+    @Test
+    fun testOnUpgrade_from16To17_addsColWeight() {
+        val dbHelper = TrackingViewsDatabaseManager.TrackingViewsDbHelper(mockContext)
+        val mockCursor = mockk<Cursor>(relaxed = true)
+        every { mockDb.rawQuery(match { it.contains("PRAGMA table_info") }, any()) } returns mockCursor
+        every { mockCursor.moveToNext() } returns false
+        val tableExistsCursor = mockk<Cursor>(relaxed = true)
+        every { mockDb.rawQuery(match { it.contains("sqlite_master") }, any()) } returns tableExistsCursor
+        every { tableExistsCursor.moveToFirst() } returns true
+
+        dbHelper.onUpgrade(mockDb, 16, 17)
+
+        verify(atLeast = 1) {
+            mockDb.execSQL(match { it.contains("ALTER TABLE LayoutRowsTable ADD COLUMN ColWeight real DEFAULT 1.0;") })
+            mockDb.execSQL(match { it.contains("UPDATE LayoutRowsTable SET ColWeight = 1.0 WHERE ColWeight IS NULL;") })
+        }
+    }
+
+    @Test
+    fun testOnUpgrade_from15To16_addsShowValueAndShowBar() {
+        val dbHelper = TrackingViewsDatabaseManager.TrackingViewsDbHelper(mockContext)
+        val mockCursor = mockk<Cursor>(relaxed = true)
+        every { mockDb.rawQuery(match { it.contains("PRAGMA table_info") }, any()) } returns mockCursor
+        every { mockCursor.moveToNext() } returns false
+        // The v16 upgrade first checks that LayoutRowsTable exists via sqlite_master (ATT-4841)
+        val tableExistsCursor = mockk<Cursor>(relaxed = true)
+        every { mockDb.rawQuery(match { it.contains("sqlite_master") }, any()) } returns tableExistsCursor
+        every { tableExistsCursor.moveToFirst() } returns true
+
+        dbHelper.onUpgrade(mockDb, 15, 16)
+
+        verify(atLeast = 1) {
+            mockDb.execSQL(match { it.contains("ALTER TABLE LayoutRowsTable ADD COLUMN ShowValue int DEFAULT 1;") })
+            mockDb.execSQL(match { it.contains("ALTER TABLE LayoutRowsTable ADD COLUMN ShowBar int DEFAULT 0;") })
+            mockDb.execSQL(match { it.contains("UPDATE LayoutRowsTable SET ShowValue = 1 WHERE ShowValue IS NULL;") })
+            mockDb.execSQL(match { it.contains("UPDATE LayoutRowsTable SET ShowBar = 1 WHERE SensorType IN") })
+            mockDb.execSQL(match { it.contains("UPDATE LayoutRowsTable SET ShowBar = 0 WHERE ShowBar IS NULL;") })
+        }
     }
 
     @Test
@@ -773,5 +838,219 @@ class TrackingViewsDatabaseManagerTest {
 
         // Verify zero transactions or queries initiated for invalid inputs
         verify(exactly = 0) { mockDb.beginTransaction() }
+    }
+
+    @Test
+    fun testCopyTabViewToActivityTypes_emptyTargetList_returnsEmptyList() {
+        val manager = TrackingViewsDatabaseManager.getInstance(mockContext)
+        injectMockDatabase(manager, mockDb)
+
+        val result = manager.copyTabViewToActivityTypes(10L, emptyList())
+
+        assertTrue(result.isEmpty())
+        verify(exactly = 0) { mockDb.beginTransaction() }
+    }
+
+    @Test
+    fun testCopyTabViewToActivityTypes_copiesViewsRowsAndDividersTransactionally() {
+        val manager = TrackingViewsDatabaseManager.getInstance(mockContext)
+        injectMockDatabase(manager, mockDb)
+
+        val viewCursor = mockk<Cursor>(relaxed = true)
+        every { viewCursor.moveToFirst() } returns true
+        every { viewCursor.columnCount } returns 3
+        every { viewCursor.getColumnName(0) } returns "_id"
+        every { viewCursor.getType(0) } returns Cursor.FIELD_TYPE_INTEGER
+        every { viewCursor.getLong(0) } returns 10L
+        every { viewCursor.getColumnName(1) } returns "Name"
+        every { viewCursor.getType(1) } returns Cursor.FIELD_TYPE_STRING
+        every { viewCursor.getString(1) } returns "Custom Tab"
+        every { viewCursor.getColumnName(2) } returns "ShowLapButton"
+        every { viewCursor.getType(2) } returns Cursor.FIELD_TYPE_INTEGER
+        every { viewCursor.getLong(2) } returns 1L
+
+        val rowsCursor = mockk<Cursor>(relaxed = true)
+        every { rowsCursor.moveToNext() } returnsMany listOf(true, false)
+        every { rowsCursor.columnCount } returns 2
+        every { rowsCursor.getColumnName(0) } returns "RowId"
+        every { rowsCursor.getType(0) } returns Cursor.FIELD_TYPE_INTEGER
+        every { rowsCursor.getLong(0) } returns 100L
+        every { rowsCursor.getColumnName(1) } returns "SensorType"
+        every { rowsCursor.getType(1) } returns Cursor.FIELD_TYPE_STRING
+        every { rowsCursor.getString(1) } returns "CADENCE"
+
+        val dividersCursor = mockk<Cursor>(relaxed = true)
+        every { dividersCursor.moveToNext() } returnsMany listOf(true, false)
+        every { dividersCursor.columnCount } returns 2
+        every { dividersCursor.getColumnName(0) } returns "_id"
+        every { dividersCursor.getType(0) } returns Cursor.FIELD_TYPE_INTEGER
+        every { dividersCursor.getLong(0) } returns 200L
+        every { dividersCursor.getColumnName(1) } returns "Title"
+        every { dividersCursor.getType(1) } returns Cursor.FIELD_TYPE_STRING
+        every { dividersCursor.getString(1) } returns "Main Section"
+
+        val maxLayoutCursor = mockk<Cursor>(relaxed = true)
+        every { maxLayoutCursor.moveToFirst() } returns true
+        every { maxLayoutCursor.isNull(0) } returns false
+        every { maxLayoutCursor.getInt(0) } returns 2
+
+        every {
+            mockDb.query(
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEWS_TABLE,
+                any(), any(), any(), any(), any(), any()
+            )
+        } returns viewCursor
+
+        every {
+            mockDb.query(
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.ROWS_TABLE,
+                any(), any(), any(), any(), any(), any()
+            )
+        } returns rowsCursor
+
+        every {
+            mockDb.query(
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SECTION_DIVIDERS_TABLE,
+                any(), any(), any(), any(), any(), any()
+            )
+        } returns dividersCursor
+
+        every {
+            mockDb.rawQuery(any(), any())
+        } returns maxLayoutCursor
+
+        every {
+            mockDb.insert(TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEWS_TABLE, null, any())
+        } returns 11L
+
+        every {
+            mockDb.insert(TrackingViewsDatabaseManager.TrackingViewsDbHelper.ROWS_TABLE, null, any())
+        } returns 101L
+
+        every {
+            mockDb.insert(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SECTION_DIVIDERS_TABLE, null, any())
+        } returns 201L
+
+        val result = manager.copyTabViewToActivityTypes(10L, listOf(com.atrainingtracker.banalservice.ActivityType.BIKE_POWER))
+
+        assertEquals(1, result.size)
+        assertEquals(11L, result[0])
+        verify(exactly = 1) { mockDb.beginTransaction() }
+        verify(exactly = 1) { mockDb.insert(TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEWS_TABLE, null, any()) }
+        verify(exactly = 1) { mockDb.insert(TrackingViewsDatabaseManager.TrackingViewsDbHelper.ROWS_TABLE, null, any()) }
+        verify(exactly = 1) { mockDb.insert(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SECTION_DIVIDERS_TABLE, null, any()) }
+        verify(exactly = 1) { mockDb.setTransactionSuccessful() }
+        verify(exactly = 1) { mockDb.endTransaction() }
+    }
+
+    @Test
+    fun testMoveTabView_viewNotFound_returnsMinusOne() {
+        val manager = TrackingViewsDatabaseManager.getInstance(mockContext)
+        injectMockDatabase(manager, mockDb)
+
+        val cursor = mockk<Cursor>(relaxed = true)
+        every { cursor.moveToFirst() } returns false
+        every { cursor.moveToNext() } returns false
+        every {
+            mockDb.query(
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEWS_TABLE,
+                any(), any(), any(), any(), any(), any()
+            )
+        } returns cursor
+
+        val result = manager.moveTabView(999L, true)
+        assertEquals(-1, result)
+        verify(exactly = 0) { mockDb.beginTransaction() }
+    }
+
+    @Test
+    fun testMoveTabView_atLeftBoundary_returnsZeroAndDoesNotModify() {
+        val manager = TrackingViewsDatabaseManager.getInstance(mockContext)
+        injectMockDatabase(manager, mockDb)
+
+        val actTypeCursor = mockk<Cursor>(relaxed = true)
+        every { actTypeCursor.moveToFirst() } returns true
+        every { actTypeCursor.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.ACTIVITY_TYPE) } returns 0
+        every { actTypeCursor.getString(0) } returns "GENERIC_HR"
+
+        val tabsCursor = mockk<Cursor>(relaxed = true)
+        every { tabsCursor.moveToNext() } returnsMany listOf(true, true, false)
+        every { tabsCursor.getLong(0) } returnsMany listOf(10L, 20L)
+
+        every {
+            mockDb.query(
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEWS_TABLE,
+                any(),
+                "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID}=?",
+                arrayOf("10"),
+                any(), any(), any()
+            )
+        } returns actTypeCursor
+
+        every {
+            mockDb.query(
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEWS_TABLE,
+                arrayOf(TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID),
+                "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.ACTIVITY_TYPE}=?",
+                arrayOf("GENERIC_HR"),
+                null, null,
+                "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.LAYOUT_NR} ASC, ${TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID} ASC"
+            )
+        } returns tabsCursor
+
+        val result = manager.moveTabView(10L, true)
+        assertEquals(0, result)
+        verify(exactly = 0) { mockDb.beginTransaction() }
+    }
+
+    @Test
+    fun testMoveTabView_swapsAdjacentTabsAndNormalizesLayoutNrAtomically() {
+        val manager = TrackingViewsDatabaseManager.getInstance(mockContext)
+        injectMockDatabase(manager, mockDb)
+
+        val actTypeCursor = mockk<Cursor>(relaxed = true)
+        every { actTypeCursor.moveToFirst() } returns true
+        every { actTypeCursor.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.ACTIVITY_TYPE) } returns 0
+        every { actTypeCursor.getString(0) } returns "BIKE_POWER"
+
+        val tabsCursor = mockk<Cursor>(relaxed = true)
+        every { tabsCursor.moveToNext() } returnsMany listOf(true, true, true, false)
+        every { tabsCursor.getLong(0) } returnsMany listOf(10L, 20L, 30L)
+
+        every {
+            mockDb.query(
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEWS_TABLE,
+                any(),
+                "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID}=?",
+                arrayOf("20"),
+                any(), any(), any()
+            )
+        } returns actTypeCursor
+
+        every {
+            mockDb.query(
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEWS_TABLE,
+                arrayOf(TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID),
+                "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.ACTIVITY_TYPE}=?",
+                arrayOf("BIKE_POWER"),
+                null, null,
+                "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.LAYOUT_NR} ASC, ${TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID} ASC"
+            )
+        } returns tabsCursor
+
+        val result = manager.moveTabView(20L, false)
+        assertEquals(2, result)
+        verify(exactly = 1) { mockDb.beginTransaction() }
+        verify(exactly = 1) { mockDb.setTransactionSuccessful() }
+        verify(exactly = 1) { mockDb.endTransaction() }
+
+        verify(exactly = 3) {
+            mockDb.update(
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEWS_TABLE,
+                any(),
+                "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID}=?",
+                any()
+            )
+        }
     }
 }

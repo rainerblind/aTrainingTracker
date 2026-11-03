@@ -21,6 +21,8 @@ package com.atrainingtracker.trainingtracker.ui.map
 import android.app.Application
 import android.content.SharedPreferences
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.database.WorkoutCluster
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
@@ -32,6 +34,8 @@ import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -57,6 +61,7 @@ class GeneralMapLayersContractTest {
     private lateinit var mockBanalRepository: BANALServiceRepository
     private lateinit var mockSegmentsRepository: SegmentsRepository
     private lateinit var mockRoutesRepository: RoutesRepository
+    private lateinit var mockWorkoutClusterRepository: WorkoutClusterRepository
     private lateinit var mockPrefs: SharedPreferences
     private lateinit var mockEditor: SharedPreferences.Editor
 
@@ -68,6 +73,7 @@ class GeneralMapLayersContractTest {
         mockBanalRepository = mockk(relaxed = true)
         mockSegmentsRepository = mockk(relaxed = true)
         mockRoutesRepository = mockk(relaxed = true)
+        mockWorkoutClusterRepository = mockk(relaxed = true)
         mockPrefs = mockk(relaxed = true)
         mockEditor = mockk(relaxed = true)
 
@@ -77,6 +83,9 @@ class GeneralMapLayersContractTest {
         every { mockBanalRepository.currentLocation } returns MutableStateFlow(null)
         every { mockSegmentsRepository.allSegmentsWithPath } returns MutableStateFlow(emptyList())
         every { mockRoutesRepository.allRoutes } returns MutableStateFlow(emptyList())
+        every { mockRoutesRepository.activeNavigatedRouteId } returns MutableStateFlow(null)
+        every { mockWorkoutClusterRepository.allClusters } returns MutableStateFlow(emptyList())
+        every { mockWorkoutClusterRepository.clusterStats } returns MutableStateFlow(emptyMap())
 
         every { mockPrefs.edit() } returns mockEditor
         every { mockEditor.putStringSet(any(), any()) } returns mockEditor
@@ -95,28 +104,43 @@ class GeneralMapLayersContractTest {
             banalRepo = mockBanalRepository,
             segmentsRepo = mockSegmentsRepository,
             routesRepo = mockRoutesRepository,
-            prefs = prefs
+            workoutClusterRepo = mockWorkoutClusterRepository,
+            prefs = prefs,
+            defaultDispatcher = testDispatcher
         )
     }
 
     @Test
     fun testGeneralMapLayer_enumEntries() {
         val entries = GeneralMapLayer.entries
-        assertEquals("GeneralMapLayer must have exactly 4 entries", 4, entries.size)
+        assertEquals("GeneralMapLayer must have exactly 5 entries", 5, entries.size)
         assertTrue(entries.contains(GeneralMapLayer.ROUTES))
         assertTrue(entries.contains(GeneralMapLayer.SEGMENTS))
         assertTrue(entries.contains(GeneralMapLayer.KNOWN_LOCATIONS))
         assertTrue(entries.contains(GeneralMapLayer.TRACK))
+        assertTrue(entries.contains(GeneralMapLayer.CLUSTERS))
     }
 
     @Test
-    fun testDefaultEnabledLayers_containsAllLayersWhenPrefsNull() = runTest {
+    fun testGeneralMapLayer_defaultEnabledEntries() {
+        val defaults = GeneralMapLayer.DEFAULT_ENABLED
+        assertEquals("DEFAULT_ENABLED must have exactly 4 entries", 4, defaults.size)
+        assertTrue(defaults.contains(GeneralMapLayer.ROUTES))
+        assertTrue(defaults.contains(GeneralMapLayer.SEGMENTS))
+        assertTrue(defaults.contains(GeneralMapLayer.KNOWN_LOCATIONS))
+        assertTrue(defaults.contains(GeneralMapLayer.TRACK))
+        assertFalse("DEFAULT_ENABLED must strictly exclude CLUSTERS (REQ-UI-322.1, ATT-5074)", defaults.contains(GeneralMapLayer.CLUSTERS))
+    }
+
+    @Test
+    fun testDefaultEnabledLayers_excludesClustersWhenPrefsNull() = runTest {
         every { mockPrefs.getStringSet(MapFragmentWithTrackViewModel.PREF_GENERAL_MAP_ENABLED_LAYERS, null) } returns null
 
         val viewModel = createViewModel()
 
-        val expected = GeneralMapLayer.entries.toSet()
-        assertEquals("Default enabledLayers must contain all entries", expected, viewModel.enabledLayers.value)
+        val expected = GeneralMapLayer.DEFAULT_ENABLED
+        assertEquals("Default enabledLayers must equal DEFAULT_ENABLED (excluding CLUSTERS)", expected, viewModel.enabledLayers.value)
+        assertFalse("CLUSTERS must be disabled by default", GeneralMapLayer.CLUSTERS in viewModel.enabledLayers.value)
     }
 
     @Test
@@ -132,7 +156,7 @@ class GeneralMapLayersContractTest {
         verify {
             mockEditor.putStringSet(
                 MapFragmentWithTrackViewModel.PREF_GENERAL_MAP_ENABLED_LAYERS,
-                match { set -> !set.contains("ROUTES") && set.contains("SEGMENTS") && set.contains("TRACK") && set.contains("KNOWN_LOCATIONS") }
+                match { set -> !set.contains("ROUTES") && set.contains("SEGMENTS") && set.contains("TRACK") && set.contains("KNOWN_LOCATIONS") && !set.contains("CLUSTERS") }
             )
             mockEditor.apply()
         }
@@ -143,9 +167,76 @@ class GeneralMapLayersContractTest {
         verify {
             mockEditor.putStringSet(
                 MapFragmentWithTrackViewModel.PREF_GENERAL_MAP_ENABLED_LAYERS,
-                match { set -> set.contains("ROUTES") && set.contains("SEGMENTS") && set.contains("TRACK") && set.contains("KNOWN_LOCATIONS") }
+                match { set -> set.contains("ROUTES") && set.contains("SEGMENTS") && set.contains("TRACK") && set.contains("KNOWN_LOCATIONS") && !set.contains("CLUSTERS") }
             )
         }
+    }
+
+    @Test
+    fun testToggleClusterLayer_persistsAndUpdatesFlow() = runTest {
+        every { mockPrefs.getStringSet(MapFragmentWithTrackViewModel.PREF_GENERAL_MAP_ENABLED_LAYERS, null) } returns null
+
+        val viewModel = createViewModel()
+        assertFalse("Initially CLUSTERS is disabled by default (REQ-UI-322.2, ATT-5074)", GeneralMapLayer.CLUSTERS in viewModel.enabledLayers.value)
+
+        // Toggle CLUSTERS on
+        viewModel.toggleLayer(GeneralMapLayer.CLUSTERS)
+        assertTrue("CLUSTERS must be enabled after toggle", GeneralMapLayer.CLUSTERS in viewModel.enabledLayers.value)
+        verify {
+            mockEditor.putStringSet(
+                MapFragmentWithTrackViewModel.PREF_GENERAL_MAP_ENABLED_LAYERS,
+                match { set -> set.contains("CLUSTERS") && set.contains("ROUTES") && set.contains("SEGMENTS") && set.contains("TRACK") && set.contains("KNOWN_LOCATIONS") }
+            )
+            mockEditor.apply()
+        }
+
+        // Toggle CLUSTERS back off
+        viewModel.toggleLayer(GeneralMapLayer.CLUSTERS)
+        assertFalse("CLUSTERS must be disabled after second toggle", GeneralMapLayer.CLUSTERS in viewModel.enabledLayers.value)
+        verify {
+            mockEditor.putStringSet(
+                MapFragmentWithTrackViewModel.PREF_GENERAL_MAP_ENABLED_LAYERS,
+                match { set -> !set.contains("CLUSTERS") && set.contains("ROUTES") && set.contains("SEGMENTS") && set.contains("TRACK") && set.contains("KNOWN_LOCATIONS") }
+            )
+        }
+    }
+
+    @Test
+    fun testMapClustersFlow_gatedByClusterLayer() = runTest {
+        val testCluster = WorkoutCluster(
+            id = 42L,
+            name = "Morning Ridge",
+            probableSportId = 1L,
+            startLat = 48.0,
+            startLng = 9.0,
+            endLat = 48.1,
+            endLng = 9.1,
+            maxDispLat = 48.2,
+            maxDispLng = 9.2,
+            refDistance = 5000.0,
+            hitCount = 10,
+            bSportType = BSportType.BIKE,
+            routePolyline = "_p~iF~ps|U_ulLnnqC_mqNvxq`@"
+        )
+        val clustersFlow = MutableStateFlow(listOf(testCluster))
+        every { mockWorkoutClusterRepository.allClusters } returns clustersFlow
+        every { mockPrefs.getStringSet(MapFragmentWithTrackViewModel.PREF_GENERAL_MAP_ENABLED_LAYERS, null) } returns null
+
+        val viewModel = createViewModel()
+        backgroundScope.launch(kotlinx.coroutines.test.UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Gated: By default CLUSTERS is disabled, so uiState.clusters must be empty
+        assertEquals("Clusters must be empty when layer is disabled", emptyList<MapCluster>(), viewModel.uiState.value.clusters)
+
+        // Toggle CLUSTERS on
+        viewModel.toggleLayer(GeneralMapLayer.CLUSTERS)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals("Clusters must populate when layer is enabled", 1, viewModel.uiState.value.clusters.size)
+        assertEquals("Morning Ridge", viewModel.uiState.value.clusters.first().name)
     }
 
     @Test
@@ -202,6 +293,60 @@ class GeneralMapLayersContractTest {
             "Must gate track with GeneralMapLayer.TRACK in enabledLayers",
             content.contains("GeneralMapLayer.TRACK in enabledLayers")
         )
+        assertTrue(
+            "Must gate clusters with GeneralMapLayer.CLUSTERS in enabledLayers",
+            content.contains("GeneralMapLayer.CLUSTERS in enabledLayers")
+        )
+    }
+
+    @Test
+    fun testClusterOnMapSheet_harmonizedLayoutAndColorTokens_TST_UI_282_5() {
+        val file = findSourceFile("ui/map/MapScreenWithTrack.kt")
+        assertTrue("MapScreenWithTrack.kt must exist", file.exists())
+        val content = file.readText()
+
+        // Peek height calibration for cluster with dynamic measurement (REQ-UI-322.12, ATT-5196)
+        assertTrue(
+            "Cluster peek height must use dynamic measuredClusterHeaderHeight fallback to BottomSheetDesign.PeekHeightWorkout",
+            content.contains("measuredClusterHeaderHeight ?: BottomSheetDesign.PeekHeightWorkout")
+        )
+
+        // ClusterOnMapSheet composable contract (REQ-UI-322.11, ATT-5196)
+        val sheetDefIndex = content.indexOf("fun ClusterOnMapSheet(")
+        assertTrue("ClusterOnMapSheet composable must be defined", sheetDefIndex > 0)
+        val sheetContent = content.substring(sheetDefIndex)
+
+        // Must wrap in MapDetailLayout with useStatusBarsPadding = false
+        assertTrue("Must use MapDetailLayout", sheetContent.contains("MapDetailLayout("))
+        assertTrue("Must specify useStatusBarsPadding = false", sheetContent.contains("useStatusBarsPadding = false"))
+        assertTrue("Must wire onHeaderHeightMeasured", sheetContent.contains("onHeaderHeightMeasured = onHeaderHeightMeasured"))
+
+        // Must reuse canonical WorkoutClusterIdentityRow and WorkoutClusterMetadataBlock in header (Design Guidelines Section 5.15)
+        assertTrue("Must use canonical WorkoutClusterIdentityRow", sheetContent.contains("WorkoutClusterIdentityRow("))
+        assertTrue("Must use canonical WorkoutClusterMetadataBlock", sheetContent.contains("WorkoutClusterMetadataBlock("))
+
+        // Must set showMap = true and provide mapContent in MapDetailLayout (REQ-UI-322.14, ATT-5279)
+        assertTrue("Must set showMap = true", sheetContent.contains("showMap = true"))
+        assertTrue("Must use MapZoomFocus.EXPLICIT_BOUNDS", sheetContent.contains("MapZoomFocus.EXPLICIT_BOUNDS"))
+        assertTrue("Must provide mapContent", sheetContent.contains("mapContent = {"))
+
+        // Must NOT host duplicate WorkoutClusterDetailDashboard in metadataContent (REQ-UI-322.13, ATT-5279)
+        assertFalse("Must not host WorkoutClusterDetailDashboard", sheetContent.contains("WorkoutClusterDetailDashboard("))
+
+        // Must eliminate TTColor.Cluster text and icon tinting
+        assertFalse("ClusterOnMapSheet must not use TTColor.Cluster", sheetContent.contains("TTColor.Cluster"))
+    }
+
+    @Test
+    fun testClusterOnMapSheet_usesMapDetailLayoutAndCanonicalComponents_TST_UI_282_14() {
+        // TST-UI-282.14 contract verification
+        testClusterOnMapSheet_harmonizedLayoutAndColorTokens_TST_UI_282_5()
+    }
+
+    @Test
+    fun testClusterOnMapSheet_deduplicatesMetadataAndEnablesExpandedMap_TST_UI_282_15() {
+        // TST-UI-282.15 contract verification (REQ-UI-322.13, REQ-UI-322.14, REQ-UI-322.15, ATT-5279)
+        testClusterOnMapSheet_harmonizedLayoutAndColorTokens_TST_UI_282_5()
     }
 
     private fun findSourceFile(relativePath: String): File {

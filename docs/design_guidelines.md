@@ -85,6 +85,9 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 * **Sub-Entity Coordinate Space Normalization (Local vs. Global Domain)**:
   * Whenever sub-entity segments, climbs, or intervals are displayed in an inspection chart (e.g. `ClimbDetailSheet`, `SegmentDetailSheet`), their distance domain coordinates MUST be normalized to the entity's local length ($[0, \text{length}]$) rather than inheriting the parent route's global coordinate space ($[0, \text{totalRouteDistance}]$).
   * Passing global route coordinates to sub-entity elevation profile charts squishes the entity into a tiny sliver at the far edge and leaves the chart mostly blank (ATT-3053 / ATT-3105).
+* **Stacked Multi-Chart Horizontal Plot Width Alignment Invariant (`Rule 64` — ATT-2145 / ATT-4774)**:
+  * Whenever multiple charts are stacked vertically in a shared inspection view (`MapDetailLayout`, `WorkoutSummary`) with a synchronized X-axis or scrubbing cursor (`ElevationProfile`, `SPEED/PACE`, `HEART_RATE`, `POWER`, `W_PRIME_BAL`), **all** stacked charts **MUST** share the exact same horizontal plot bounds (left `startPadding = 50.dp` AND right plot edge) in both Portrait and Landscape orientations.
+  * If a subset of charts (`HEART_RATE`, `POWER`) uses a `0.72f` / `0.28f` horizontal split in Landscape mode to dock `AlignedMarginalZoneDistribution` on the right, sibling charts (`ElevationProfile`, `SPEED/PACE`, `W_PRIME_BAL`) must align their right plot edge to the identical `0.72f` horizontal boundary so X-axis ticks and the vertical scrubbing cursor line up 1:1 across all stacked charts.
 
 ### 2.2 Touch, Pan & Gesture Interactions
 1. **Lifecycle Key Stability**:
@@ -135,6 +138,15 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 * **Outlier-Resilient Y-Axis Domain Clamping**:
   * Historical progression charts **MUST NOT** scale their Y-axis linearly across raw un-clamped `min..max` extrema when a single anomalous session (e.g. an unpaused stop yielding `115:52 /km` when normal sessions are `5:14/km – 8:28/km`) is present.
   * Use outlier-resilient bounds (such as interquartile range $\text{IQR} = Q_3 - Q_1$ clamping to $[Q_1 - 1.5 \times \text{IQR}, Q_3 + 1.5 \times \text{IQR}]$ or 5th–95th percentile clamping when $N \ge 4$, pinning extreme outliers to the top/bottom canvas edge with an indicator) so the primary trend line utilizes the full vertical canvas height.
+
+### 2.7 Bottom-Anchored Vertical Bar Rounding & Unconditional Histogram Track Continuity (Rule 69 — ATT-5195, ATT-5190 / ATT-5202)
+* **Rounded Top Corners & Sharp Bottom Corners on Bottom-Anchored Bars (`ATT-5195` $\rightarrow$ `ATT-5280`)**:
+  * Vertical bar charts anchored to a bottom baseline (`DailyActivityStrip` in `MonthDayBar` / `WeekDayColumn`, histogram columns) **MUST** have **rounded top corners (`topStart = 2.dp..3.dp, topEnd = 2.dp..3.dp`)** and **sharp bottom corners (`bottomStart = 0.dp, bottomEnd = 0.dp`)**.
+  * Never apply `.clip(RoundedCornerShape(2.dp / 3.dp))` to all 4 corners of an outer container `Box(contentAlignment = Alignment.BottomCenter)` while giving the inner bar a smaller `1.dp` top radius, which makes the bottom of the bars look rounded and the top look sharp.
+* **Unconditional Background Track Continuity & Domain-Boundary Clamping in Histograms (`ATT-5190` $\rightarrow$ `ATT-5281` $\rightarrow$ `ATT-5311`, Rules 69 & 70)**:
+  * Marginal and zone histograms (`TelemetryMetricGraph`, `AlignedMarginalZoneDistribution` in `ZoneDistributionComponents.kt`) **MUST** draw the `alpha = 0.15f` background container track unconditionally for every `linearBin` *within* the plotted `[dataMin, dataMax]` domain, gating only the solid foreground bar on `if (bin.durationSec > 0L && barWidth > 0f)`.
+  * Gating the background track on `durationSec > 0L` skips empty intermediate bins between non-contiguous high-wattage spikes, leaving horizontal white stripes across the Zone 7 background band (`ATT-5281`).
+  * **Domain-Boundary Clamping Guard (`Rule 70` — `ATT-5281` $\rightarrow$ `ATT-5311`)**: Always filter out-of-domain bins (`bin.rangeMax > dataMin && bin.rangeMin < dataMax`) and clamp `[rangeMin, rangeMax]` to `[dataMin, dataMax]` before mapping via `valueToY(...)`. Never apply `.coerceAtLeast(1f)` to zero-height clamped bins outside `[dataMin, dataMax]`, which causes dozens of `alpha = 0.15f` rectangles to stack at `y = 0f` into a solid black bar along the top edge.
 
 ---
 
@@ -198,7 +210,9 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 ### 5.1 Reuse Existing UI Components & Visual Patterns (Visual Baseline)
 * Before designing a new screen, card, sheet, HUD element or button, find the **closest existing equivalent** in the app and copy its structure, shapes, spacing and colors.
 * Prefer shared components from `ui/components/` (e.g. `MetricItem`, `MetricBadge`, `DropdownSelector`, `EmptyStatePlaceholder`, `DeleteConfirmationDialog`, `BottomSheetUtils`, `MappableListItem`) and `ui/common/`.
-* Tabbed screens follow the existing tabbed layout pattern (`RouteTabbedScreen`, `EquipmentTabsScreen`): collapsing header with `LayoutConstants.HEADER_TITLE_ROW_HEIGHT` title row + standard Material 3 tab row. Do not invent alternative tab/segment visuals for top-level navigation.
+* Tabbed screens follow the existing tabbed layout pattern: `LayoutConstants.HEADER_TITLE_ROW_HEIGHT` title row + standard Material 3 tab row. Do not invent alternative tab/segment visuals for top-level navigation.
+  * **Long, scrollable list / browse screens** (Workouts, Segments, Routes, Equipment, Periods — `RouteTabbedScreen`, `EquipmentTabsScreen`): collapsing quick-return header (`CollapsingAppBarNestedScrollConnection`) to gain vertical space.
+  * **Settings / form screens** (e.g. Auto-Pause, Sport Types, short configuration pages): **fixed header** — title row, header actions (reset, …) and the tab row stay visible at all times; do **not** use `CollapsingAppBarNestedScrollConnection` (Rule 66 — ATT-4836 / ATT-4924: the collapsing header made the sport tabs and the reset action disappear on a short settings form).
 * New one-off styles (custom shapes, colors, fonts, icon sets, branding) are only allowed with an explicit justification in the Stage 3 plan (Section "UI Consistency").
 
 ### 5.2 Spacing Scale
@@ -355,6 +369,18 @@ Row(
   * Multi-chip selectors inside dialogs **MUST** use `FlowRow` (so chips wrap cleanly as intact horizontal pills) or `AppModalBottomSheet`.
 * **Verbose Locale (`de`) Segmented Button Width Check**:
   * Avoid squeezing long multi-word labels (`"Auf alle anwenden"`) into a 2-button `SingleChoiceSegmentedButtonRow` inside a narrow `AlertDialog` where labels truncate mid-word (`"Auf alle anwen"`). Prefer concise localized labels, stacked radio/card rows, or a full-width `AppModalBottomSheet`.
+
+### 5.14 Shared Composable Height Constraints Across Bounded vs. Scrollable Callers (Rule 67 — ATT-4878 / ATT-4936)
+* **Guard `.fillMaxHeight()` & Vertical `.weight(1f)` Against Unbounded Scroll Containers (`ATT-4878` $\rightarrow$ `ATT-5071`)**:
+  * When adding `.fillMaxHeight()` or vertical `Modifier.weight(1f)` inside a shared composable (e.g. `SensorFieldView`) to equalize row heights inside a bounded `Row(Modifier.height(IntrinsicSize.Min))` caller (`SensorGridScreen`), audit **every call site** (`grep -rn "<ComposableName>(" app/src/main/`)—especially standalone previews embedded directly inside a `verticalScroll` `Column` or `LazyColumn` (`AthleteProfileScreen`), where max height is `Constraints.Infinity` unless `Modifier.height(IntrinsicSize.Min)` is preserved on an enclosing container. Verify every call site on-device during Stage 5.
+
+### 5.15 Map Entity Bottom-Sheet Peek & Expansion Parity & Micro-Typography Line-Height Bounding (Rules 68 & 69 — ATT-5075, ATT-5076, ATT-5196 / ATT-5082, ATT-5202)
+* **Reuse List-Item Header Composables & `MapDetailLayout` Without Duplicate Metadata (`ATT-5075` $\rightarrow$ `ATT-5196` $\rightarrow$ `ATT-5279`)**:
+  * Map bottom sheets for domain entities (`Segments`, `Routes`, `Lieblingsstrecken`) in `MapScreenWithTrack.kt` **MUST** reuse the entity's canonical list-item header/metadata composables (`SegmentHeader`/`SegmentDetails`, `RouteHeader`/`RouteDetails`, `WorkoutClusterIdentityRow`/`WorkoutClusterMetadataBlock`) inside `MapDetailLayout(useStatusBarsPadding = false, showMap = true, onHeaderHeightMeasured = ...)`:
+    1. When **peeked** (collapsed), only the `header` slot is visible above the main map.
+    2. When **expanded** (popped up), the lower section displays the detailed sub-entity map (`showMap = true`, matching `RouteOnMapScreen` and `SegmentOnMapScreen`), and lower content slots (`metadataContent`) **MUST NEVER** repeat or duplicate statistics already rendered in the `header` (`ATT-5279`).
+* **Explicit `lineHeight` on Micro-Typography (`<= 10.sp`) Inside Compact Fixed-Height Boxes (`ATT-5076` $\rightarrow$ `ATT-5193`)**:
+  * When rendering small labels (`fontSize = 9.sp` or `10.sp`, such as day-of-week labels `M`, `W`, `F`, `S` in `YearlyContributionGrid`) inside a compact fixed-height `Box(Modifier.height(11.dp))`, always set an explicit `lineHeight = fontSize` and `PlatformTextStyle(includeFontPadding = false)` on the `TextStyle`. Inheriting `labelSmall`'s default `lineHeight = 16.sp` inside an `11.dp` box clips the bottom 1–2 px of tall glyphs like `F`.
 
 ---
 

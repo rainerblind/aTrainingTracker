@@ -92,7 +92,16 @@
     <string name="devices_location_GPS">GPS del telefono (Satellite)</string>
     <string name="devices_location_Network">Posizione del telefono (Rete/WiFi)</string>
     <string name="devices_location_GoogleFused">Posizione Google (Fused)</string>
-    <string name="devices_altitude_from_pressure">Pressione Aria</string>
+    <string name="devices_altitude_from_pressure">Altitudine da pressione</string>
+
+    <!-- Specialized Altitude Devices Explanations (ATT-5073, REQ-SEN-026) -->
+    <string name="device_altitude_explanation_title">Informazioni su questo sensore</string>
+    <string name="device_altitude_how_it_works_header">Come funziona</string>
+    <string name="device_altitude_pros_cons_header">Pro e contro</string>
+    <string name="device_altitude_pressure_how_it_works">Misura la pressione atmosferica con il barometro interno. Calcola i cambi di quota relativi tramite la formula barometrica, calibrata nei luoghi noti o manualmente.</string>
+    <string name="device_altitude_pressure_pros_cons">+ Molto reattivo e fluido; nessun disturbo verticale GPS; funziona nei tunnel.\n- Il meteo può causare derive di quota nel corso del tempo.</string>
+    <string name="device_altitude_position_how_it_works">Confronta la posizione GPS con modelli digitali di elevazione (DEM) memorizzati o scaricati da Open-Meteo.</string>
+    <string name="device_altitude_position_pros_cons">+ Immune a meteo e derive barometriche; quota assoluta senza calibrazione.\n- Richiede connessione Internet attiva per aree non memorizzate nella cache; dipende dalla precisione GPS (a scalini su ponti e pareti scoscese).</string>
 
     <string name="devices_live_sensor_data_header">Dati Sensori</string>
 
@@ -100,4 +109,7 @@
     <string name="devices_dialog_delete_device_message">Vuoi davvero eliminare il sensore \'%1$s\'?</string>
 
     <string name="devices_equipment_none">- nessuno -</string>
+
+    <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
+    <string name="devices_reset_tire_pressure_baseline">Ripristina pressione base pneumatici (appena gonfiati)</string>
 </resources>

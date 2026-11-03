@@ -18,12 +18,15 @@
 
 package com.atrainingtracker.trainingtracker.ui.components.core
 
+import android.content.res.Configuration
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -39,6 +42,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -88,18 +93,32 @@ fun GlobalTelemetryZoomToolbar(
     val canZoomOut = zoomScale > ElevationProfileZoomMath.MIN_ZOOM + 0.01f
     val isZoomed = zoomScale > 1.01f
 
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
     Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(GlobalTelemetryZoomToolbarDefaults.TOOLBAR_HEIGHT),
-        color = colorScheme.surfaceVariant.copy(alpha = 0.25f)
+        modifier = if (isLandscape) {
+            modifier
+                .wrapContentSize()
+                .height(28.dp)
+        } else {
+            modifier
+                .fillMaxWidth()
+                .height(GlobalTelemetryZoomToolbarDefaults.TOOLBAR_HEIGHT)
+        },
+        shape = if (isLandscape) RoundedCornerShape(14.dp) else RectangleShape,
+        color = if (isLandscape) colorScheme.surface.copy(alpha = TTAlpha.Overlay) else colorScheme.surfaceVariant.copy(alpha = 0.25f),
+        tonalElevation = if (isLandscape) 2.dp else 0.dp,
+        shadowElevation = if (isLandscape) 3.dp else 0.dp
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+            modifier = if (isLandscape) {
+                Modifier.wrapContentWidth().padding(horizontal = 6.dp)
+            } else {
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+            },
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(if (isLandscape) 4.dp else 8.dp)
         ) {
             // Zoom Out (-)
             IconButton(
@@ -115,12 +134,12 @@ fun GlobalTelemetryZoomToolbar(
                     onZoomChanged(newZoom, newStart)
                 },
                 enabled = canZoomOut,
-                modifier = Modifier.size(28.dp)
+                modifier = Modifier.size(if (isLandscape) 24.dp else 28.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Remove,
                     contentDescription = stringResource(R.string.zoom_out),
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(if (isLandscape) 16.dp else 18.dp),
                     tint = if (canZoomOut) colorScheme.onSurfaceVariant else colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Disabled)
                 )
             }
@@ -139,12 +158,12 @@ fun GlobalTelemetryZoomToolbar(
                     onZoomChanged(newZoom, newStart)
                 },
                 enabled = canZoomIn,
-                modifier = Modifier.size(28.dp)
+                modifier = Modifier.size(if (isLandscape) 24.dp else 28.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
                     contentDescription = stringResource(R.string.zoom_in),
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(if (isLandscape) 16.dp else 18.dp),
                     tint = if (canZoomIn) colorScheme.onSurfaceVariant else colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Disabled)
                 )
             }
@@ -153,12 +172,12 @@ fun GlobalTelemetryZoomToolbar(
             if (onPanModeToggle != null) {
                 IconButton(
                     onClick = onPanModeToggle,
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(if (isLandscape) 24.dp else 28.dp)
                 ) {
                     Icon(
                         imageVector = if (isPanMode) Icons.Default.PanTool else Icons.Default.TouchApp,
                         contentDescription = stringResource(if (isPanMode) R.string.zoom_pan_mode else R.string.zoom_scrub_mode),
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(if (isLandscape) 16.dp else 18.dp),
                         tint = if (isPanMode) colorScheme.primary else colorScheme.onSurfaceVariant
                     )
                 }
@@ -172,10 +191,10 @@ fun GlobalTelemetryZoomToolbar(
                     },
                     shape = RoundedCornerShape(12.dp),
                     color = colorScheme.primaryContainer,
-                    modifier = Modifier.height(24.dp)
+                    modifier = Modifier.height(if (isLandscape) 20.dp else 24.dp)
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 8.dp),
+                        modifier = Modifier.padding(horizontal = if (isLandscape) 6.dp else 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
@@ -187,7 +206,7 @@ fun GlobalTelemetryZoomToolbar(
                         Icon(
                             imageVector = Icons.Default.RestartAlt,
                             contentDescription = stringResource(R.string.zoom_reset),
-                            modifier = Modifier.size(14.dp),
+                            modifier = Modifier.size(if (isLandscape) 12.dp else 14.dp),
                             tint = colorScheme.onPrimaryContainer
                         )
                     }

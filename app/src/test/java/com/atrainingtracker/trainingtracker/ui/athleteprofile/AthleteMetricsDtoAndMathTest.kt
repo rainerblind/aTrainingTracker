@@ -22,6 +22,7 @@ import com.atrainingtracker.testutil.MockCursorFactory
 import com.atrainingtracker.trainingtracker.database.AthleteMetricEntry
 import com.atrainingtracker.trainingtracker.database.AthleteMetricType
 import com.atrainingtracker.trainingtracker.database.AthleteMetricsDbHelper
+import com.atrainingtracker.trainingtracker.database.ZoneSnapshotEntry
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import io.mockk.verify
 import org.junit.Assert.assertEquals
@@ -69,6 +70,72 @@ class AthleteMetricsDtoAndMathTest {
         assertEquals(49.0, batchList[1].value, 1e-6)
         assertEquals(AthleteMetricType.FTP_WATTS, batchList[2].metricType)
         assertEquals(290.0, batchList[2].value, 1e-6)
+    }
+
+    @Test
+    fun `ZoneSnapshotEntry fromCursor and fromCursorBatch map columns symmetrically without closing cursor`() {
+        val columns = listOf(
+            AthleteMetricsDbHelper.C_ID,
+            AthleteMetricsDbHelper.TIMESTAMP_MS,
+            AthleteMetricsDbHelper.ZONE_TYPE,
+            AthleteMetricsDbHelper.BOUNDARIES
+        )
+        val rows = listOf(
+            listOf<Any?>(1L, 1_700_000_000_000L, "HR_RUN", "130,145,160,175"),
+            listOf<Any?>(2L, 1_700_086_400_000L, "HR_BIKE", "125,140,155,170"),
+            listOf<Any?>(3L, 1_700_172_800_000L, "PWR_BIKE", "150,200,250,300,350,400")
+        )
+
+        val cursorSingle = MockCursorFactory.create(columns, rows)
+        assertTrue(cursorSingle.moveToFirst())
+        val firstFromSingle = ZoneSnapshotEntry.fromCursor(cursorSingle)
+        verify(exactly = 0) { cursorSingle.close() }
+
+        val cursorBatch = MockCursorFactory.create(columns, rows)
+        val batchList = ZoneSnapshotEntry.fromCursorBatch(cursorBatch)
+        verify(exactly = 0) { cursorBatch.close() }
+
+        assertEquals(3, batchList.size)
+        assertEquals(firstFromSingle, batchList[0])
+        assertEquals(SettingsDataStore.ZoneType.HR_RUN, batchList[0].zoneType)
+        assertEquals(listOf(130, 145, 160, 175), batchList[0].boundaries)
+        assertEquals(SettingsDataStore.ZoneType.HR_BIKE, batchList[1].zoneType)
+        assertEquals(listOf(125, 140, 155, 170), batchList[1].boundaries)
+        assertEquals(SettingsDataStore.ZoneType.PWR_BIKE, batchList[2].zoneType)
+        assertEquals(listOf(150, 200, 250, 300, 350, 400), batchList[2].boundaries)
+    }
+
+    @Test
+    fun `ZoneSnapshotEntry validates monotonic boundaries and counts`() {
+        // Valid HR_RUN (4 boundaries, strictly ascending)
+        val validHr = ZoneSnapshotEntry(1L, 1000L, SettingsDataStore.ZoneType.HR_RUN, listOf(120, 140, 160, 175))
+        assertTrue(validHr.isMonotonic())
+
+        // Non-monotonic HR_RUN
+        val nonMonotonicHr = ZoneSnapshotEntry(2L, 1000L, SettingsDataStore.ZoneType.HR_RUN, listOf(120, 140, 135, 175))
+        assertFalse(nonMonotonicHr.isMonotonic())
+
+        // Equal consecutive values (non-strictly monotonic)
+        val equalConsecutive = ZoneSnapshotEntry(3L, 1000L, SettingsDataStore.ZoneType.HR_RUN, listOf(120, 140, 140, 175))
+        assertFalse(equalConsecutive.isMonotonic())
+
+        // Invalid count for HR_RUN (5 boundaries instead of 4)
+        val invalidCountHr = ZoneSnapshotEntry(4L, 1000L, SettingsDataStore.ZoneType.HR_RUN, listOf(120, 140, 160, 175, 190))
+        assertFalse(invalidCountHr.isMonotonic())
+
+        // Valid PWR_BIKE (6 boundaries, strictly ascending)
+        val validPwr = ZoneSnapshotEntry(5L, 1000L, SettingsDataStore.ZoneType.PWR_BIKE, listOf(150, 200, 250, 300, 350, 400))
+        assertTrue(validPwr.isMonotonic())
+
+        // Invalid count for PWR_BIKE (5 boundaries instead of 6)
+        val invalidCountPwr = ZoneSnapshotEntry(6L, 1000L, SettingsDataStore.ZoneType.PWR_BIKE, listOf(150, 200, 250, 300, 350))
+        assertFalse(invalidCountPwr.isMonotonic())
+
+        // CSV parsing and formatting roundtrip
+        val csv = ZoneSnapshotEntry.serializeBoundaries(validPwr.boundaries)
+        assertEquals("150,200,250,300,350,400", csv)
+        val parsed = ZoneSnapshotEntry.parseBoundaries(csv)
+        assertEquals(validPwr.boundaries, parsed)
     }
 
     @Test

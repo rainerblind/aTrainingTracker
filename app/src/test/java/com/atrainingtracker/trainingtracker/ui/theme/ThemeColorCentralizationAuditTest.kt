@@ -124,4 +124,28 @@ class ThemeColorCentralizationAuditTest {
             !content.contains("grade < 3.0 ->")
         )
     }
+
+    /**
+     * TST-MAP-059.2: Asserts that warm sequential "hot" palette color tokens exist in TTColor (ATT-4933 / REQ-MAP-057.2)
+     * with valid ARGB values contrasting with base map hydrology and terrain.
+     */
+    @Test
+    fun verifyHeatmapHotPaletteTokensInTTColor() {
+        assertEquals(androidx.compose.ui.graphics.Color(0xFFFFF176), TTColor.HeatmapHotYellow)
+        assertEquals(androidx.compose.ui.graphics.Color(0xFFFF9800), TTColor.HeatmapHotOrange)
+        assertEquals(androidx.compose.ui.graphics.Color(0xFFE53935), TTColor.HeatmapHotRed)
+        assertEquals(androidx.compose.ui.graphics.Color(0xFF880E4F), TTColor.HeatmapHotDarkRed)
+    }
+
+    /**
+     * TST-UI-384.5 / TST-UI-384.10: Asserts that warm orange bike bell theme tokens exist in TTColor (ATT-5283 / REQ-UI-421.2)
+     * providing high WCAG AAA contrast between container and content.
+     */
+    @Test
+    fun verifyBikeBellThemeTokensInTTColor() {
+        assertEquals(androidx.compose.ui.graphics.Color(0xFFFF9800), TTColor.BikeBellContainer)
+        assertEquals(androidx.compose.ui.graphics.Color(0xFF000000), TTColor.BikeBellContent)
+        val contrastRatio = TTColor.calculateContrastRatio(TTColor.BikeBellContent, TTColor.BikeBellContainer)
+        assertTrue("BikeBell content on container contrast ratio ($contrastRatio) must be >= 7.0 (WCAG AAA)", contrastRatio >= 7.0)
+    }
 }

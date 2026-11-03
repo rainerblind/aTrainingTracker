@@ -599,6 +599,56 @@ public class WorkoutSamplesDatabaseManager {
         return existsColumnInTable(getDatabase(), getTableName(baseFileName), WorkoutSamplesDbHelper.TIME);
     }
 
+    /**
+     * REQ-TRK-047.2: Applies retroactive altitude correction to the workout samples table.
+     * When t0Ms <= 0, applies a uniform shift across all existing rows (Case A).
+     * When t0Ms > 0 and t1Ms > t0Ms, applies piecewise-linear drift interpolation (Case B).
+     *
+     * @param samplesTable Table name of the active workout samples.
+     * @param deltaOffset  Altitude shift delta in meters.
+     * @param t0Ms         Previous calibration timestamp in milliseconds (-1 if uncalibrated start).
+     * @param t1Ms         Current calibration timestamp in milliseconds.
+     */
+    public void applyAltitudeDriftCorrection(@NonNull String samplesTable, double deltaOffset, long t0Ms, long t1Ms) {
+        if (Math.abs(deltaOffset) < 0.001 || samplesTable.trim().isEmpty()) {
+            return;
+        }
+        SQLiteDatabase db = getDatabase();
+        db.beginTransaction();
+        try {
+            if (t0Ms <= 0 || t1Ms <= t0Ms) {
+                // Case A: Uncalibrated workout start -> uniform shift across all recorded samples
+                String operator = deltaOffset >= 0 ? " + " : " - ";
+                db.execSQL("UPDATE " + samplesTable + " SET " + SensorType.ALTITUDE.name()
+                        + " = " + SensorType.ALTITUDE.name() + operator + Math.abs(deltaOffset)
+                        + " WHERE " + SensorType.ALTITUDE.name() + " IS NOT NULL");
+            } else {
+                // Case B: Piecewise-linear drift interpolation between t0 and t1
+                double t0Sec = t0Ms / 1000.0;
+                double t1Sec = t1Ms / 1000.0;
+                double duration = t1Sec - t0Sec;
+
+                // 1. Linearly interpolate samples in [t0, t1]
+                db.execSQL("UPDATE " + samplesTable
+                        + " SET " + SensorType.ALTITUDE.name() + " = " + SensorType.ALTITUDE.name()
+                        + " + (" + deltaOffset + " * (CAST(strftime('%s', " + WorkoutSamplesDbHelper.TIME + ") AS REAL) - " + t0Sec + ") / " + duration + ")"
+                        + " WHERE " + SensorType.ALTITUDE.name() + " IS NOT NULL"
+                        + " AND CAST(strftime('%s', " + WorkoutSamplesDbHelper.TIME + ") AS REAL) >= " + t0Sec
+                        + " AND CAST(strftime('%s', " + WorkoutSamplesDbHelper.TIME + ") AS REAL) <= " + t1Sec);
+
+                // 2. Uniformly shift any samples recorded after t1 (if any)
+                String operator = deltaOffset >= 0 ? " + " : " - ";
+                db.execSQL("UPDATE " + samplesTable
+                        + " SET " + SensorType.ALTITUDE.name() + " = " + SensorType.ALTITUDE.name() + operator + Math.abs(deltaOffset)
+                        + " WHERE " + SensorType.ALTITUDE.name() + " IS NOT NULL"
+                        + " AND CAST(strftime('%s', " + WorkoutSamplesDbHelper.TIME + ") AS REAL) > " + t1Sec);
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
     // stolen from http://stackoverflow.com/questions/4719594/checking-if-a-column-exists-in-an-application-database-in-android
     private static boolean existsColumnInTable(@NonNull SQLiteDatabase inDatabase, String inTable, String columnToCheck) {
         try (Cursor mCursor = inDatabase.rawQuery("SELECT * FROM " + inTable + " LIMIT 0", null)) {

@@ -22,10 +22,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,24 +38,30 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import com.atrainingtracker.trainingtracker.ui.theme.safePainterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
+import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.sensor.MySensorManager
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
 import com.atrainingtracker.banalservice.ui.devices.DeviceStatusRow
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.trainingtracker.MyHelper
+import com.atrainingtracker.trainingtracker.MyUnits
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.repositories.DeviceTelemetry
 import com.atrainingtracker.trainingtracker.ui.components.MetricLayout
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
+import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.LocationCalibrationStatus
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,7 +70,10 @@ fun SensorSourceDialog(
     sourceDevice: DeviceUiData?,
     allTelemetry: List<DeviceTelemetry>,  // telemetry of all active devices
     allDevices: List<DeviceUiData>,       // all devices found in the database
+    currentAltitude: Double? = null,
+    matchedLocation: LocationCalibrationStatus? = null,
     onDeviceClick: (Long) -> Unit,
+    onCalibrateAltitude: ((referenceAltitudeMeters: Double, locationName: String?, saveAsKnownLocation: Boolean) -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
@@ -115,6 +128,124 @@ fun SensorSourceDialog(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // 0. Manual Altitude Calibration Section (ATT-4845, ATT-5072 / REQ-TRK-047)
+            if (sensorType == SensorType.ALTITUDE && onCalibrateAltitude != null) {
+                var altitudeInput by remember(currentAltitude, matchedLocation) {
+                    val initialAltitude = matchedLocation?.referenceAltitude ?: currentAltitude
+                    val initialFormatted = if (initialAltitude != null && java.lang.Double.isFinite(initialAltitude)) {
+                        AltitudeFormatter().format(initialAltitude)
+                    } else ""
+                    mutableStateOf(initialFormatted)
+                }
+                var locationNameInput by remember { mutableStateOf("") }
+                var saveLocation by remember { mutableStateOf(false) }
+
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = stringResource(id = R.string.altitude_calibration_title),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+
+                        if (matchedLocation != null) {
+                            Text(
+                                text = stringResource(
+                                    id = R.string.altitude_calibration_matched_location,
+                                    matchedLocation.locationName
+                                ),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        OutlinedTextField(
+                            value = altitudeInput,
+                            onValueChange = { altitudeInput = it },
+                            label = { Text(stringResource(id = R.string.altitude_calibration_reference_label)) },
+                            trailingIcon = {
+                                if (unit.isNotEmpty()) {
+                                    Text(
+                                        text = unit,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(end = 12.dp)
+                                    )
+                                }
+                            },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        if (matchedLocation == null) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { saveLocation = !saveLocation }
+                            ) {
+                                Checkbox(
+                                    checked = saveLocation,
+                                    onCheckedChange = { saveLocation = it }
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    text = stringResource(id = R.string.altitude_calibration_save_location),
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+
+                            if (saveLocation) {
+                                OutlinedTextField(
+                                    value = locationNameInput,
+                                    onValueChange = { locationNameInput = it },
+                                    label = { Text(stringResource(id = R.string.altitude_calibration_location_name)) },
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
+
+                        Button(
+                            onClick = {
+                                val entered = altitudeInput.toDoubleOrNull()
+                                if (entered != null) {
+                                    val altitudeMeters = if (TrainingApplication.getUnit() == MyUnits.IMPERIAL) {
+                                        entered * BANALService.METER_PER_FOOT
+                                    } else {
+                                        entered
+                                    }
+                                    onCalibrateAltitude(
+                                        altitudeMeters,
+                                        locationNameInput.takeIf { it.isNotBlank() },
+                                        saveLocation && matchedLocation == null
+                                    )
+                                    onDismiss()
+                                }
+                            },
+                            enabled = altitudeInput.toDoubleOrNull() != null,
+                            modifier = Modifier.align(Alignment.End)
+                        ) {
+                            Text(stringResource(id = R.string.altitude_calibration_action))
+                        }
+                    }
+                }
+                HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+            }
+
             // 1. Source Device
             if (sourceDevice != null) {
                 val telemetry = allActiveTelemetries.find { it.deviceId == sourceDevice.id }
@@ -196,7 +327,8 @@ fun SensorSourceDialog(
                         it == DeviceType.CLOCK || 
                         it == DeviceType.VERTICAL_SPEED_AND_SLOPE || 
                         it.name.startsWith("SPEED_AND_LOCATION") || 
-                        it == DeviceType.ALTITUDE_FROM_PRESSURE 
+                        it == DeviceType.ALTITUDE_FROM_PRESSURE || 
+                        it == DeviceType.ALTITUDE_FROM_POSITION 
                     }
                 }
                 if (isInternalPossible) {

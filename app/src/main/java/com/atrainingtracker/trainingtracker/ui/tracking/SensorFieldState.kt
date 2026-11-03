@@ -66,7 +66,14 @@ data class SensorFieldState(
     val wPrimeBatteryState: WPrimeBatteryState? = null,
 
     // The canonical sensor type for dynamic tuning visibility gating (REQ-UI-409.3).
-    val sensorType: SensorType? = null
+    val sensorType: SensorType? = null,
+
+    // Per-field element display configuration (REQ-TRK-046, ATT-4841)
+    val showValue: Boolean = true,
+    val showBar: Boolean = false,
+
+    // Proportional horizontal width weight (REQ-UI-437, ATT-4861)
+    val colWeight: Float = 1.0f
 )
 
 /**
@@ -132,4 +139,42 @@ fun packVisibleRowsForTuning(
         .toSortedMap()
         .values
         .map { rowFields -> rowFields.sortedBy { it.colNr } }
+}
+
+/**
+ * Transforms [fields] into widescreen row packing when in landscape orientation and maps are not shown (REQ-TRK-040.4).
+ *
+ * In landscape mode without a map, single-column rows are paired into 2-column rows to prevent
+ * excessive vertical scrolling on ~360dp landscape displays.
+ *
+ * Strict View-Only Invariant: This function never mutates [SensorFieldState.rowNr] or [SensorFieldState.colNr]
+ * and never writes to persistence. When [isLandscape] is false, [showMap] is true, or [screenMode] is
+ * [ScreenMode.CONFIGURATION], this falls back cleanly to standard [packVisibleRowsForTuning].
+ */
+fun packVisibleRowsForLandscape(
+    fields: List<SensorFieldState>,
+    tuningConfig: TuningConfig? = null,
+    screenMode: ScreenMode = ScreenMode.TRACKING,
+    isLandscape: Boolean = false,
+    showMap: Boolean = false
+): List<List<SensorFieldState>> {
+    val baseRows = packVisibleRowsForTuning(fields, tuningConfig, screenMode)
+    if (!isLandscape || showMap || screenMode == ScreenMode.CONFIGURATION) {
+        return baseRows
+    }
+    if (baseRows.isEmpty()) return emptyList()
+
+    val result = mutableListOf<List<SensorFieldState>>()
+    var i = 0
+    while (i < baseRows.size) {
+        val currentRow = baseRows[i]
+        if (currentRow.size == 1 && i + 1 < baseRows.size && baseRows[i + 1].size == 1) {
+            result.add(listOf(currentRow[0], baseRows[i + 1][0]))
+            i += 2
+        } else {
+            result.add(currentRow)
+            i += 1
+        }
+    }
+    return result
 }

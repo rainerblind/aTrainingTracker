@@ -116,6 +116,7 @@ class RoutesDatabaseManager private constructor(context: Context) {
         /**
          * Thread-safe Singleton access
          */
+        @JvmStatic
         fun getInstance(context: Context): RoutesDatabaseManager {
             return instance ?: synchronized(this) {
                 instance ?: RoutesDatabaseManager(context.applicationContext).also {

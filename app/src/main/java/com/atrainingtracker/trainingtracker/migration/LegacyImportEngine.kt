@@ -45,6 +45,7 @@ import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
 import com.dropbox.core.DbxRequestConfig
 import com.dropbox.core.v2.DbxClientV2
+import com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveAuthManager
 import com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveClient
 import com.atrainingtracker.trainingtracker.cloud.googledrive.DriveFileEntry
 import com.google.android.gms.maps.model.LatLng
@@ -321,9 +322,16 @@ object LegacyImportEngine {
         listener: ProgressListener? = null,
         uploadToStrava: Boolean = TrainingApplication.uploadImportedWorkoutsToStrava()
     ): RecoveryResult {
-        val token = TrainingApplication.getGoogleDriveAuthToken() ?: return RecoveryResult(0, 0, 0, 0)
+        var token = TrainingApplication.getGoogleDriveAuthToken()
+        if (token.isNullOrBlank()) {
+            token = GoogleDriveAuthManager.refreshTokenSync(context.applicationContext ?: context).getOrNull()
+        }
+        if (token.isNullOrBlank()) {
+            return RecoveryResult(0, 0, 0, 0)
+        }
         val driveClient = GoogleDriveClient(
             tokenProvider = { TrainingApplication.getGoogleDriveAuthToken() },
+            tokenRefresher = { GoogleDriveAuthManager.refreshTokenSync(context.applicationContext ?: context).getOrNull() },
             accountProvider = { TrainingApplication.getGoogleDriveAccountEmail() }
         )
 

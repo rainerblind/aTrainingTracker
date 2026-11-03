@@ -270,11 +270,64 @@
 
     \draw[arr, draw=aaaGreen] ([xshift=-1.4cm]p2.south) -- ([xshift=-1.4cm]fb.north);
     \draw[arr, draw=aaaGreen] ([xshift=1.4cm]fb.north) -- ([xshift=1.4cm]p2.south);
+  \end{tikzpicture}
+\end{frame}
 
-    % Bottom explanation banner
-    \node[bannerGreen, text width=14.15cm, anchor=north] at (0, -1.95) {
-      \scriptsize\textcolor{aaaGreen!85!black}{\textbf{Why Strategy A (\texttt{sprint/<ID>}) Eliminates Merge Hell:}}
-      Every ticket is merged into the shared \texttt{sprint/<ID>} branch immediately after \textbf{Gate 5 PASS}. Consequently, ticket $k+1$ automatically starts on top of the verified code of ticket $k$—preventing diverging feature branches at the end of the sprint.
+% =========================================================================
+% SLIDE 4b: STORY POINTS & COMPLEXITY SPLIT GUARDRAIL
+% =========================================================================
+\begin{frame}{Sprint Capacity \& Complexity Split Guardrail (1/2/3/5+ Story Points)}
+  \centering
+  \begin{tikzpicture}[
+    x=1cm, y=1cm,
+    colBox/.style={rectangle, rounded corners=3.5pt, draw=aaaBorder, line width=0.85pt, fill=white, text width=3.30cm, align=left, inner sep=6pt, font=\scriptsize},
+    hdr/.style={font=\scriptsize\bfseries},
+    bTxt/.style={font=\tiny\color{aaaSlate}}
+  ]
+    % 4 Column Boxes across x: -5.4, -1.8, 1.8, 5.4
+    \node[colBox, draw=aaaTeal, fill=aaaTeal!6] (sp1) at (-5.40, 0.95) {
+      \textcolor{aaaTeal}{\textbf{1 SP: Trivial / Isolated}}\\[2pt]
+      \textbf{Scope:} Single-file fix, string/copy, icon color, simple guard clause.\\[2pt]
+      \textbf{Agent Pipeline:} $\sim$20--30 min\\
+      \textbf{Human Review:} $\sim$1--2 min\\
+      \textbf{Action:} \textcolor{aaaGreen!80!black}{\textbf{Ready for Sprint}}
+    };
+
+    \node[colBox, draw=aaaNavy, fill=aaaNavy!6] (sp2) at (-1.80, 0.95) {
+      \textcolor{aaaNavy}{\textbf{2 SP: Standard Atomic}}\\[2pt]
+      \textbf{Scope:} Well-bounded change across 2--4 files (ViewModel + Compose + Tests).\\[2pt]
+      \textbf{Agent Pipeline:} $\sim$35--45 min\\
+      \textbf{Human Review:} $\sim$3--5 min\\
+      \textbf{Action:} \textcolor{aaaNavy}{\textbf{Ideal Sprint Ticket}}
+    };
+
+    \node[colBox, draw=aaaAmber, fill=aaaAmber!8] (sp3) at (1.80, 0.95) {
+      \textcolor{aaaAmber}{\textbf{3 SP: Complex / Cross-Layer}}\\[2pt]
+      \textbf{Scope:} DB schema migration, sensor state machine, complex chart math.\\[2pt]
+      \textbf{Agent Pipeline:} $\sim$50--65 min\\
+      \textbf{Human Review:} $\sim$5--8 min\\
+      \textbf{Action:} \textcolor{aaaAmber!90!black}{\textbf{Sprint Cap (Max 2--3)}}
+    };
+
+    \node[colBox, draw=aaaRed, fill=aaaRed!8] (sp5) at (5.40, 0.95) {
+      \textcolor{aaaRed}{\textbf{$\ge$ 5 SP: Too Large (Mini-Epic)}}\\[2pt]
+      \textbf{Scope:} Multi-screen workflow, multi-layer service rewrite, complex epic.\\[2pt]
+      \textbf{Agent Pipeline:} $>$ 75 min (high risk)\\
+      \textbf{Human Review:} $>$ 10 min\\
+      \textbf{Action:} \textcolor{aaaRed!90!black}{\textbf{MANDATORY SPLIT!}}
+    };
+
+    % 2 Bottom High-Level Takeaways
+    \node[bannerNavy, text width=6.90cm, anchor=north] at (-3.60, -0.65) {
+      \scriptsize\textcolor{aaaNavy}{\textbf{1. Human Verification Capacity (\texttt{customfield\_10016}):}}\\
+      \tiny\color{aaaSlate}
+      In AAA, coding time is cheap (agents work 24h/day), but \textbf{Human Final Review \& On-Device Verification} is the scarce bottleneck. Target sprint load: \textbf{$\sim$24--30 SP} ($\sim$12--15 atomic tickets = $\sim$30--45 min focused human review).
+    };
+
+    \node[bannerAmber, text width=6.90cm, anchor=north] at (3.60, -0.65) {
+      \scriptsize\textcolor{aaaAmber!90!black}{\textbf{2. Automated Complexity Split Guardrail (\texttt{REQ-PRO-029}):}}\\
+      \tiny\color{aaaSlate}
+      Enforced in \texttt{jira\_util.py move KEY analysis}: Any ticket estimated at \textbf{$\ge$ 5 SP} is strictly blocked from sprint execution. It must be decomposed into 1--3 SP child tickets during Ceremony 1 Screening, preventing context bloat and multi-concern PRs.
     };
   \end{tikzpicture}
 \end{frame}

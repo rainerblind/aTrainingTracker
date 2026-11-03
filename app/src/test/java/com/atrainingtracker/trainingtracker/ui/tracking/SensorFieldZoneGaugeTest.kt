@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.tracking
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import com.atrainingtracker.trainingtracker.settings.ZoneDisplayOptions
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -223,6 +224,116 @@ class SensorFieldZoneGaugeTest {
         assertTrue(
             "Active zone badge must use MaterialTheme.colorScheme.onSurface for high-contrast legibility across all themes",
             source.contains("color = MaterialTheme.colorScheme.onSurface")
+        )
+    }
+
+    /**
+     * TST-TRK-046.4: SensorFieldState supports showValue and showBar properties (REQ-TRK-046).
+     */
+    @Test
+    fun sensorFieldState_showValueAndShowBar_defaultsAndCopy() {
+        val defaultState = SensorFieldState(
+            configHash = 1,
+            sensorFieldId = 10,
+            rowNr = 0,
+            colNr = 0,
+            viewSize = ViewSize.NORMAL,
+            label = "Heart Rate",
+            filterDescription = "",
+            value = "145",
+            units = "bpm",
+            zoneColor = Color(0xFF008000)
+        )
+        assertTrue("showValue must default to true", defaultState.showValue)
+        assertFalse("showBar must default to false", defaultState.showBar)
+
+        val barOnly = defaultState.copy(showValue = false, showBar = true)
+        assertFalse("showValue must be false in bar-only configuration", barOnly.showValue)
+        assertTrue("showBar must be true in bar-only configuration", barOnly.showBar)
+
+        val valueOnly = defaultState.copy(showValue = true, showBar = false)
+        assertTrue("showValue must be true in value-only configuration", valueOnly.showValue)
+        assertFalse("showBar must be false in value-only configuration", valueOnly.showBar)
+    }
+
+    /**
+     * TST-UI-436.1: Active segment height elevation (1.6x base height), reserved container height,
+     * and layout height invariance across live and stale states (REQ-UI-436, ATT-4928).
+     */
+    @Test
+    fun testCalculateActiveTrackHeight_elevatesActiveZone_andKeepsInactiveUniform() {
+        val baseHeight = 6.dp
+        assertEquals(9.6.dp, calculateReservedActiveTrackHeight(baseHeight))
+
+        val staleHeight = calculateActiveTrackHeight(trackHeight = baseHeight, activeZoneIndex = null, isStale = true)
+        assertEquals(6.dp, staleHeight)
+
+        val activeHeight = calculateActiveTrackHeight(trackHeight = baseHeight, activeZoneIndex = 3, isStale = false)
+        assertEquals(9.6.dp, activeHeight)
+
+        // ATT-4928: Container height must unconditionally reserve elevated track height + needle overhang (4.dp)
+        val trackHeights = listOf(6.dp, 10.dp, 14.dp, 18.dp, 22.dp)
+        for (th in trackHeights) {
+            val reservedActive = calculateReservedActiveTrackHeight(th)
+            val containerHeight = reservedActive + 4.dp
+            assertEquals(th * 1.6f, reservedActive)
+            assertEquals(th * 1.6f + 4.dp, containerHeight)
+        }
+    }
+
+    /**
+     * TST-UI-436.2: Dynamic bar height scaling across ViewSizes in bar-only mode (REQ-UI-436).
+     */
+    @Test
+    fun testResolveBarOnlyTrackHeights_scalesWithViewSize() {
+        // ZoneGaugeBar: SMALL = 10.dp, NORMAL = 14.dp, LARGE = 18.dp, EXTRA_LARGE = 22.dp (standard: 6.dp)
+        assertEquals(10.dp, resolveZoneGaugeTrackHeight(ViewSize.SMALL, isBarOnly = true))
+        assertEquals(14.dp, resolveZoneGaugeTrackHeight(ViewSize.NORMAL, isBarOnly = true))
+        assertEquals(18.dp, resolveZoneGaugeTrackHeight(ViewSize.LARGE, isBarOnly = true))
+        assertEquals(22.dp, resolveZoneGaugeTrackHeight(ViewSize.XLARGE, isBarOnly = true))
+        assertEquals(6.dp, resolveZoneGaugeTrackHeight(ViewSize.NORMAL, isBarOnly = false))
+
+        // PedalPowerBalanceBar: SMALL = 12.dp, NORMAL = 16.dp, LARGE = 20.dp, EXTRA_LARGE = 24.dp (standard: 8.dp)
+        assertEquals(12.dp, resolvePedalBalanceTrackHeight(ViewSize.SMALL, isBarOnly = true))
+        assertEquals(16.dp, resolvePedalBalanceTrackHeight(ViewSize.NORMAL, isBarOnly = true))
+        assertEquals(20.dp, resolvePedalBalanceTrackHeight(ViewSize.LARGE, isBarOnly = true))
+        assertEquals(24.dp, resolvePedalBalanceTrackHeight(ViewSize.XLARGE, isBarOnly = true))
+        assertEquals(8.dp, resolvePedalBalanceTrackHeight(ViewSize.NORMAL, isBarOnly = false))
+
+        // WPrimeBatteryGaugeBar: SMALL = 14.dp, NORMAL = 20.dp, LARGE = 26.dp, EXTRA_LARGE = 32.dp (standard: 14.dp)
+        assertEquals(14.dp, resolveWPrimeBatteryHeight(ViewSize.SMALL, isBarOnly = true))
+        assertEquals(20.dp, resolveWPrimeBatteryHeight(ViewSize.NORMAL, isBarOnly = true))
+        assertEquals(26.dp, resolveWPrimeBatteryHeight(ViewSize.LARGE, isBarOnly = true))
+        assertEquals(32.dp, resolveWPrimeBatteryHeight(ViewSize.XLARGE, isBarOnly = true))
+        assertEquals(14.dp, resolveWPrimeBatteryHeight(ViewSize.NORMAL, isBarOnly = false))
+    }
+
+    /**
+     * TST-UI-436.3: Contract verification of reservedActiveTrackHeight, container height, and active segment pill in ZoneGaugeBar.
+     */
+    @Test
+    fun testZoneGaugeBar_sourceContainsActiveZoneElevationAndContainerHeight() {
+        val barFile = java.io.File("src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/ZoneGaugeBar.kt").let {
+            if (it.exists()) it else java.io.File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/ZoneGaugeBar.kt")
+        }
+        assertTrue("ZoneGaugeBar.kt must exist", barFile.exists())
+        val source = barFile.readText()
+
+        assertTrue(
+            "ZoneGaugeBar must calculate reserved track height using 1.6f multiplier",
+            source.contains("trackHeight * 1.6f")
+        )
+        assertTrue(
+            "ZoneGaugeBar totalBarHeight must reserve reservedActiveTrackHeight + 4.dp",
+            source.contains("reservedActiveTrackHeight + 4.dp")
+        )
+        assertTrue(
+            "ZoneGaugeBar must render active segment elevation with RoundedCornerShape",
+            source.contains("RoundedCornerShape(reservedActiveTrackHeight / 4)")
+        )
+        assertFalse(
+            "ZoneGaugeBar must not contain obsolete 2-parameter calculateActiveTrackHeight overload",
+            source.contains("fun calculateActiveTrackHeight(baseTrackHeight: Dp, isActive: Boolean)")
         )
     }
 }

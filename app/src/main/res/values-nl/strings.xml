@@ -631,7 +631,7 @@
     <string name="label_max">Max</string>
 
     <string name="zone_display_title">Zoneweergave</string>
-    <string name="zone_display_background">Lichte achtergrond</string>
+    <string name="zone_display_background">Getinte achtergrond</string>
     <string name="zone_display_left_bar">Balk links</string>
     <string name="zone_display_right_bar">Balk rechts</string>
     <string name="zone_display_text_color">Tekstkleur</string>
@@ -958,11 +958,16 @@
     <string name="workout_periods__longest_workout">Langste training</string>
     <string name="workout_periods__region_format">Regio %1$d (%2$d)</string>
     <string name="workout_periods__primary_region_format">Hoofdregio: Regio %1$d (%2$d)</string>
+    <string name="workout_periods__named_region_format">%1$s (%2$d)</string>
+    <string name="workout_periods__primary_named_region_format">Hoofdregio: %1$s (%2$d)</string>
     <string name="workout_periods__all_regions_format">Alle regio\'s (%1$d)</string>
     <string name="workout_periods__migration_querying">Trainingsgeschiedenis laden…</string>
     <string name="workout_periods__migration_reading">Training %1$d van %2$d lezen…</string>
     <string name="workout_periods__migration_syncing">Synchroniseren %1$s…</string>
     <string name="workout_periods__migration_finalizing">Jaartotalen afronden…</string>
+    <string name="workout_periods__yearly_activity_grid">Jaarlijkse activiteit</string>
+    <string name="workout_periods__daily_activity_strip">Dagelijkse activiteit</string>
+    <string name="workout_periods__no_activity">Geen activiteit</string>
 
     <!-- share screenshots -->
     <string name="share">Delen</string>
@@ -1830,6 +1835,7 @@
     <string name="map_layer_segments">Segmenten</string>
     <string name="map_layer_locations">Favoriete locaties</string>
     <string name="map_layer_track">Opgenomen track</string>
+    <string name="map_layer_clusters">Favoriete tracks</string>
     <string name="ant_dialog_view_status">ANT+ status weergeven</string>
     <string name="ant_dialog_dismiss">Begrepen</string>
 
@@ -1908,19 +1914,27 @@
     <string name="zone_onboarding_action_later">Niet nu</string>
 
     <!-- Auto-Pause Tuning & Cockpit (REQ-TRK-018 / ATT-45) -->
+    <string name="auto_pause_title">Automatisch pauzeren</string>
     <string name="tuning_auto_pause_title">Automatisch pauzeren</string>
     <string name="tuning_auto_pause_desc">Opname automatisch pauzeren bij stilstand</string>
+    <string name="tuning_auto_pause_enable_title">Automatisch pauzeren inschakelen</string>
     <string name="tuning_auto_pause_bike_title">Fietsen</string>
     <string name="tuning_auto_pause_run_title">Hardlopen</string>
     <string name="tuning_auto_pause_other_title">Overige sporten</string>
-    <string name="tuning_auto_pause_speed_threshold_title">Snelheidsdrempel voor pauzeren</string>
-    <string name="tuning_auto_pause_speed_threshold_desc">Snelheid waaronder de opname wordt gepauzeerd</string>
+    <string name="tuning_auto_pause_speed_threshold_title">Snelheidsdrempel</string>
+    <string name="tuning_auto_pause_speed_threshold_desc">Pauzeren onder deze snelheid, hervatten erboven</string>
     <string name="tuning_auto_pause_debounce_title">Pauzevertraging</string>
     <string name="tuning_auto_pause_debounce_desc">Duur onder drempelwaarde alvorens te pauzeren</string>
+    <string name="tuning_auto_pause_resume_debounce_title">Hervattingsvertraging</string>
+    <string name="tuning_auto_pause_resume_debounce_desc">Duur boven drempelwaarde alvorens te hervatten</string>
+    <string name="tuning_auto_pause_start_in_auto_pause_title">Starten in automatische pauze</string>
+    <string name="tuning_auto_pause_start_in_auto_pause_desc">Bij het starten van een training in stilstand direct beginnen in automatische pauze totdat beweging wordt gedetecteerd. Geldt voor alle sporten.</string>
     <string name="tuning_speed_value_format">%1$d %2$s</string>
     <string name="tuning_seconds_value_format">%1$d s</string>
     <string name="cockpit_auto_pause_badge">Automatisch pauzeren</string>
     <string name="cockpit_auto_pause_resume">Nu hervatten</string>
+    <string name="cockpit_status_not_started">Niet gestart</string>
+    <string name="cockpit_status_paused">Gepauzeerd</string>
     <string name="cockpit_speed_sensor_lost">Snelheidssensor verloren</string>
 
     <!-- Athlete Baselines & W/kg Metric (ATT-1289, REQ-TRK-019) -->
@@ -2120,9 +2134,95 @@
     <string name="cd_add_before">Ervóór toevoegen</string>
     <string name="cd_delete_tab">Tabblad verwijderen</string>
     <string name="cd_add_after">Erna toevoegen</string>
+    <string name="cd_copy_tab">Tabblad kopiëren</string>
+    <string name="cd_move_tab_left">Tabblad naar links verplaatsen</string>
+    <string name="cd_move_tab_right">Tabblad naar rechts verplaatsen</string>
+    <string name="copy_tab_title">Tabblad kopiëren</string>
+    <string name="copy_tab_action">Kopiëren</string>
     <string name="back">Terug</string>
     <string name="close">Sluiten</string>
     <string name="clear">Wissen</string>
     <string name="select_route">Route selecteren</string>
     <string name="equipment">Uitrusting</string>
+
+    <!-- In-App Feature Discovery & Tips Guide (REQ-UI-432 / ATT-2276) -->
+    <string name="drawer_tips_guide">Tips en trucs</string>
+    <string name="tips_guide_title">Tips en trucs</string>
+    <string name="tips_guide_header_title">Functies ontdekken</string>
+    <string name="tips_guide_header_subtitle">Ontdek krachtige functies en snelkoppelingen ontworpen voor je training.</string>
+    <string name="tip_routes_clustering_title">Favoriete routes &amp; automatisch clusteren</string>
+    <string name="tip_routes_clustering_subtitle">Intelligente herkenning van trainingsroutes</string>
+    <string name="tip_routes_clustering_desc">aTrainingTracker analyseert je gps-trainingen automatisch en groepeert vergelijkbare routes als favoriete routes. Vergelijk je tijden zonder handmatige invoer.</string>
+    <string name="tip_routes_clustering_action">Favoriete routes bekijken</string>
+    <string name="tip_sensors_failover_title">Multiprotocol-sensoren &amp; failover</string>
+    <string name="tip_sensors_failover_subtitle">Naadloos schakelen tussen ANT+ en Bluetooth LE</string>
+    <string name="tip_sensors_failover_desc">Koppel meerdere hartslag-, vermogens- of cadanssensoren tegelijk. Als een sensor wegvalt, neemt de reservesensor direct over zonder dataverlies.</string>
+    <string name="tip_sensors_failover_action">Sensoren beheren</string>
+    <string name="tip_cockpit_customization_title">Cockpit-schermen &amp; fietsbel</string>
+    <string name="tip_cockpit_customization_subtitle">Volledig aanpasbare telemetrierasters</string>
+    <string name="tip_cockpit_customization_desc">Stel meerdere telemetriepagina\'s per sport in met live statistieken, hoogteprofiel of kaart. Voeg de akoestische fietsbelknop toe voor ritten buiten.</string>
+    <string name="tip_cockpit_customization_action">Schermen configureren</string>
+    <string name="tip_live_segments_title">Strava Live Segments &amp; scrubbing</string>
+    <string name="tip_live_segments_subtitle">Live vergelijking met je PR en KOM</string>
+    <string name="tip_live_segments_desc">Synchroniseer je favoriete Strava-segmenten voor live aftellen, tijdsverschil en hoogteprofielen tijdens je rit.</string>
+    <string name="tip_live_segments_action">Segmenten bekijken</string>
+    <string name="tip_gear_tracking_title">Automatisch uitrustingsbeheer</string>
+    <string name="tip_gear_tracking_subtitle">Kilometerregistratie per fiets en schoenen</string>
+    <string name="tip_gear_tracking_desc">Koppel sensoren of sporten aan specifieke fietsen en hardloopschoenen. aTrainingTracker telt afstand en slijtage automatisch bij de juiste uitrusting.</string>
+    <string name="tip_gear_tracking_action">Uitrusting beheren</string>
+    <string name="tip_training_zones_title">Fysiologie &amp; trainingszones</string>
+    <string name="tip_training_zones_subtitle">Coggan Power, Karvonen HS &amp; W\'-batterij</string>
+    <string name="tip_training_zones_desc">Profiteer van geavanceerde statistieken zoals Normalized Power (NP), Intensity Factor (IF), TSS en live W\'-batterij. Pas je 7 vermogenszones en hartslagzones aan in je profiel.</string>
+    <string name="tip_training_zones_action">Zones configureren</string>
+    <string name="tip_data_backup_title">Datasoevereiniteit &amp; offline back-up</string>
+    <string name="tip_data_backup_subtitle">Volledige controle zonder verplichte cloudaccounts</string>
+    <string name="tip_data_backup_desc">Alle trainingsgegevens, gps-sporen en sensorwaarden blijven veilig op je apparaat in SQLite en standaard FIT/TCX-bestanden. Maak op elk moment back-ups of gebruik optionele cloud-synchronisatie.</string>
+    <string name="tip_data_backup_action">Back-up &amp; herstel</string>
+    <string name="tip_sport_types_title">Aangepaste sporttypes &amp; subsporten</string>
+    <string name="tip_sport_types_subtitle">Snelheidsdrempels, standaard uitrusting &amp; exporttoewijzing</string>
+    <string name="tip_sport_types_desc">Definieer aangepaste sporten (bijv. racefiets, gravel, MTB, trailrunning). Configureer automatische sportdetectiedrempels op basis van snelheid, koppel standaard uitrusting en pas Strava-, TCX- en GoldenCheetah-exporttypen aan.</string>
+    <string name="tip_sport_types_action">Sporttypes beheren</string>
+
+    <!-- Sensor Field Display Elements (ATT-4841, REQ-TRK-046) -->
+    <string name="sensor_field_display_elements_title">Weergave-elementen</string>
+    <string name="sensor_field_show_value">Waarde</string>
+    <string name="sensor_field_show_bar">Balk</string>
+
+    <!-- Sensor Field Width & Row Split (ATT-4861, REQ-UI-437) -->
+    <string name="sensor_field_width_title">Breedteverhouding</string>
+    <string name="sensor_field_relative_weight">Relatieve breedte</string>
+
+    <!-- Zone History (ATT-4844, REQ-SET-082) -->
+    <string name="zone_history_title">Zonegeschiedenis</string>
+    <string name="zone_history_action_history">Geschiedenis</string>
+    <string name="zone_history_add_snapshot">Historische momentopname toevoegen</string>
+    <string name="zone_history_edit_snapshot">Zonemomentopname bewerken</string>
+    <string name="zone_history_delete_title">Zonemomentopname verwijderen?</string>
+    <string name="zone_history_delete_message">Zonemomentopname van %1$s verwijderen?</string>
+    <string name="zone_history_empty">Nog geen historische zonemomentopnamen vastgelegd.</string>
+    <string name="zone_history_date_label">Ingangsdatum</string>
+    <string name="zone_history_save_snapshot">Momentopname opslaan</string>
+    <string name="zone_history_error_monotonic">Drempelwaarden moeten strikt oplopend zijn (%1$s)</string>
+
+    <!-- Manual Altitude Calibration (ATT-4845, REQ-TRK-047) -->
+    <string name="altitude_calibration_title">Hoogte kalibreren</string>
+    <string name="altitude_calibration_reference_label">Referentiehoogte</string>
+    <string name="altitude_calibration_location_name">Locatienaam (optioneel)</string>
+    <string name="altitude_calibration_save_location">Opslaan als bekende locatie</string>
+    <string name="altitude_calibration_matched_location">Herkende bekende locatie: %1$s</string>
+    <string name="altitude_calibration_action">Kalibreren</string>
+    <string name="altitude_calibrated_success">Hoogte gekalibreerd naar %1$s</string>
+
+    <!-- Altitude From Position DEM (ATT-4859, REQ-SEN-025) -->
+    <string name="device_type_altitude_from_position">hoogte van positie (DEM)</string>
+    <string name="device_type_short_altitude_from_position">hoogte (DEM)</string>
+    <string name="devices_altitude_from_position">Topografische hoogte (DEM)</string>
+    <string name="devices_altitude_from_position_description">Continue hoogte berekend op basis van GPS-positie, opgeslagen routes en online DEM-gegevens.</string>
+
+    <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
+    <string name="itpms_slow_puncture_alert_title">Langzaam leeglopende band gedetecteerd</string>
+    <string name="itpms_slow_puncture_alert_message">Effectieve wielomtrek met %1$s gedaald. Controleer onmiddellijk de bandenspanning.</string>
+    <string name="itpms_low_pressure_reminder_title">Lage bandenspanning</string>
+    <string name="itpms_low_pressure_reminder_message">Wielomtrek ligt %1$s onder de basiswaarde. Pomp de banden op.</string>
+    <string name="itpms_alert_dismiss">Sluiten</string>
 </resources>

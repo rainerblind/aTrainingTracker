@@ -67,16 +67,24 @@ public class DropboxUploader extends BaseExporter {
                     .uploadAndFinish(inputStream);
         } catch (DbxException e) {
             Log.e(TAG, "DropboxException: " + e.getMessage(), e);
-            return new ExportResult(false, false, "DropboxException: " + e.getMessage());
+            boolean shallRetry = isTransientDbxException(e);
+            return new ExportResult(false, shallRetry, "DropboxException: " + e.getMessage());
         } catch (IOException e) {
             Log.e(TAG, "IOException: " + e.getMessage(), e);
-            return new ExportResult(false, false, "IOException: " + e.getMessage());
+            return new ExportResult(false, true, "IOException: " + e.getMessage());
         }
 
 
         TrainingApplication.setDropboxLastSyncTimestamp(System.currentTimeMillis());
         if (DEBUG) Log.i(TAG, "successfully uploaded " + filename + " to Dropbox");
         return new ExportResult(true, false, "successfully uploaded " + filename + " to Dropbox");
+    }
+
+    private boolean isTransientDbxException(DbxException e) {
+        return e instanceof com.dropbox.core.NetworkIOException
+                || e instanceof com.dropbox.core.RetryException
+                || e instanceof com.dropbox.core.ServerException
+                || e instanceof com.dropbox.core.RateLimitException;
     }
 
 }

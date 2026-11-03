@@ -92,7 +92,16 @@
     <string name="devices_location_GPS">GPS do telefone (Satélite)</string>
     <string name="devices_location_Network">Localização do telefone (Rede/WiFi)</string>
     <string name="devices_location_GoogleFused">Localização Google (Fused)</string>
-    <string name="devices_altitude_from_pressure">Pressão do Ar</string>
+    <string name="devices_altitude_from_pressure">Altitude por pressão</string>
+
+    <!-- Specialized Altitude Devices Explanations (ATT-5073, REQ-SEN-026) -->
+    <string name="device_altitude_explanation_title">Sobre este sensor</string>
+    <string name="device_altitude_how_it_works_header">Como funciona</string>
+    <string name="device_altitude_pros_cons_header">Prós e contras</string>
+    <string name="device_altitude_pressure_how_it_works">Mede a pressão atmosférica pelo barômetro interno. Calcula variações de altitude relativas pela fórmula barométrica, calibrada em locais conhecidos ou manualmente.</string>
+    <string name="device_altitude_pressure_pros_cons">+ Muito responsivo e suave; sem ruído vertical de GPS; funciona em túneis.\n- Mudanças climáticas podem causar deriva de altitude com o tempo.</string>
+    <string name="device_altitude_position_how_it_works">Compara sua posição GPS com modelos digitais de elevação (DEM) em cache ou do Open-Meteo.</string>
+    <string name="device_altitude_position_pros_cons">+ Imune ao clima e deriva barométrica; altitude absoluta sem calibração.\n- Requer conexão ativa à internet para áreas sem cache; depende da precisão do GPS (pode variar em pontes e despenhadeiros).</string>
 
     <string name="devices_live_sensor_data_header">Dados dos Sensores</string>
 
@@ -100,4 +109,7 @@
     <string name="devices_dialog_delete_device_message">Deseja realmente eliminar o sensor \'%1$s\'?</string>
 
     <string name="devices_equipment_none">- nenhum -</string>
+
+    <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
+    <string name="devices_reset_tire_pressure_baseline">Redefinir pressão base dos pneus (recém-cheios)</string>
 </resources>

@@ -60,7 +60,37 @@ fun PeriodList(
     onMapClick: (PeriodSummary) -> Unit,
     onSportClick: (PeriodSummary, BSportType) -> Unit,
     onLongestWorkoutClick: (PeriodSummary, BSportType, Long) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    activeMetric: PeriodBarMetric = PeriodBarMetric.DURATION,
+    onDayCellClick: ((PeriodSummary, BSportType, java.time.LocalDate, DailySportActivity?) -> Unit)? = null
+) {
+    PeriodList(
+        scrollState = scrollState,
+        periods = periods,
+        isPlayServiceAvailable = isPlayServiceAvailable,
+        onHeaderClick = onHeaderClick,
+        onMapClick = { s, _ -> onMapClick(s) },
+        onSportClick = onSportClick,
+        onLongestWorkoutClick = onLongestWorkoutClick,
+        modifier = modifier,
+        activeMetric = activeMetric,
+        onDayCellClick = onDayCellClick
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PeriodList(
+    scrollState: LazyListState,
+    periods: List<PeriodSummary>,
+    isPlayServiceAvailable: Boolean,
+    onHeaderClick: (PeriodSummary) -> Unit,
+    onMapClick: (PeriodSummary, String?) -> Unit,
+    onSportClick: (PeriodSummary, BSportType) -> Unit,
+    onLongestWorkoutClick: (PeriodSummary, BSportType, Long) -> Unit,
+    modifier: Modifier = Modifier,
+    activeMetric: PeriodBarMetric = PeriodBarMetric.DURATION,
+    onDayCellClick: ((PeriodSummary, BSportType, java.time.LocalDate, DailySportActivity?) -> Unit)? = null
 ) {
     val bottomPadding = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
@@ -96,9 +126,11 @@ fun PeriodList(
                         summary = periodSummary,
                         isPlayServiceAvailable = isPlayServiceAvailable,
                         onHeaderClick = onHeaderClick,
-                        onMapClick = { onMapClick(periodSummary) },
+                        onMapClick = onMapClick,
                         onSportClick = onSportClick,
-                        onLongestWorkoutClick = onLongestWorkoutClick
+                        onLongestWorkoutClick = onLongestWorkoutClick,
+                        activeMetric = activeMetric,
+                        onDayCellClick = onDayCellClick
                     )
                 }
             }

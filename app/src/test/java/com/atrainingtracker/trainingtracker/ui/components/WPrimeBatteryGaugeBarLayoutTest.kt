@@ -59,10 +59,14 @@ class WPrimeBatteryGaugeBarLayoutTest {
         val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/components/WPrimeBatteryGaugeBar.kt")
         val content = file.readText()
 
-        // Verify the outer container Row strictly applies height(W_PRIME_BATTERY_GAUGE_HEIGHT)
+        // Verify the outer container Row strictly applies height(barHeight) with default W_PRIME_BATTERY_GAUGE_HEIGHT
         assertTrue(
-            "WPrimeBatteryGaugeBar must enforce fixed height using W_PRIME_BATTERY_GAUGE_HEIGHT",
-            content.contains(".height(W_PRIME_BATTERY_GAUGE_HEIGHT)")
+            "WPrimeBatteryGaugeBar must default barHeight to W_PRIME_BATTERY_GAUGE_HEIGHT",
+            content.contains("barHeight: Dp = W_PRIME_BATTERY_GAUGE_HEIGHT")
+        )
+        assertTrue(
+            "WPrimeBatteryGaugeBar must enforce container height using barHeight",
+            content.contains(".height(barHeight)")
         )
     }
 

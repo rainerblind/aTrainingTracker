@@ -101,6 +101,24 @@ public class ProxySensor<T> extends MySensor<T> {
         return (source != null && source.getDevice() != null) ? source.getDevice().getDeviceId() : -1L;
     }
 
+    /**
+     * Returns the underlying source sensor wrapped by this proxy sensor.
+     *
+     * @return the source sensor, or {@code null} if unbound.
+     */
+    public MySensor<T> getSourceSensor() {
+        return mSourceSensor;
+    }
+
+    /**
+     * Alias for {@link #getSourceSensor()} to support unwrapping in filter and metric resolvers.
+     *
+     * @return the source sensor, or {@code null} if unbound.
+     */
+    public MySensor<T> getBestSensor() {
+        return mSourceSensor;
+    }
+
     public void setSourceSensor(MySensor<T> sourceSensor) {
         final MySensor<T> previousSource;
         final java.util.List<SensorListener> listenersSnapshot;

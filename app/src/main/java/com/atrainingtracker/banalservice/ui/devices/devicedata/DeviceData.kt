@@ -44,7 +44,8 @@ data class DeviceRawData(
     val linkedEquipment: List<String>,
     val availableEquipment: List<String>,
     val powerFeaturesFlags: Int?,
-    val linkedSportTypes: List<String> = emptyList()
+    val linkedSportTypes: List<String> = emptyList(),
+    val baselineCircumference: Double? = null
 )
 
 /**
@@ -74,6 +75,7 @@ data class DeviceUiData(
     val wheelCircumference: Int?,
     val calibrationFactor: Double?,
     val powerFeatures: BikePowerFeatures?,
+    val baselineCircumference: Double? = null,
 
     // stuff that we don't get from the database but from the devices itself.
     val isConnected: Boolean,
@@ -136,6 +138,7 @@ fun raw2UiDeviceData(rawData: DeviceRawData, context: Context): DeviceUiData {
         wheelCircumference = wheelCircumference,
         calibrationFactor = calibrationFactor,
         powerFeatures = powerFeatures,
+        baselineCircumference = rawData.baselineCircumference,
 
         // set by observing the devices
         isConnected = false,
@@ -266,6 +269,7 @@ fun getIconId(deviceType: DeviceType, protocol: Protocol): Int {
             DeviceType.SPEED_AND_LOCATION_NETWORK -> R.drawable.ic_cell_5_bar
             DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED -> R.drawable.ic_navigation_arrow
             DeviceType.ALTITUDE_FROM_PRESSURE -> R.drawable.ic_altitude
+            DeviceType.ALTITUDE_FROM_POSITION -> R.drawable.ic_altitude
             else -> protocol.iconId
         }
 

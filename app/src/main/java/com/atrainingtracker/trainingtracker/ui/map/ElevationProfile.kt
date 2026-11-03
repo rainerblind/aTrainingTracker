@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.SpanStyle
@@ -484,6 +485,9 @@ fun ElevationProfile(
         hasClimbs = climbs.isNotEmpty()
     ).dp
 
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
     Box(modifier = modifier.fillMaxWidth()) {
         val baseCanvasModifier = if (fillParentHeight) {
             Modifier
@@ -499,7 +503,7 @@ fun ElevationProfile(
         val canvasModifier = if (showZoomControls) {
             baseCanvasModifier.pointerInput(totalSpan, isTimeDomain, isPanMode) {
                 val startPaddingPx = 50.dp.toPx()
-                val endPaddingPx = 25.dp.toPx()
+                val endPaddingPx = if (isLandscape && showZoomControls) 0.dp.toPx() else 25.dp.toPx()
                 val chartWidthPx = (size.width - startPaddingPx - endPaddingPx).coerceAtLeast(1f)
                 val touchSlop = viewConfiguration.touchSlop
 
@@ -653,10 +657,16 @@ fun ElevationProfile(
             baseCanvasModifier
         }
 
-        Canvas(
-            modifier = canvasModifier
-                .padding(bottom = bottomPadding, start = 50.dp, end = 25.dp, top = effectiveTopPadding)
-        ) {
+        val profileCanvas: @Composable () -> Unit = {
+            Canvas(
+                modifier = canvasModifier
+                    .padding(
+                        bottom = bottomPadding,
+                        start = 50.dp,
+                        end = if (isLandscape && showZoomControls) 0.dp else 25.dp,
+                        top = effectiveTopPadding
+                    )
+            ) {
             val width = size.width
             val height = size.height
 
@@ -903,7 +913,7 @@ fun ElevationProfile(
                 val pLeft = pathPoints[activeIndex]
                 val pRight = pathPoints.getOrNull(activeIndex + 1)
                 val interAlt = if (pRight != null && pRight.distance > pLeft.distance && pLeft.altitude != null && pRight.altitude != null) {
-                    pLeft.altitude!! + ((dist - pLeft.distance) / (pRight.distance - pLeft.distance)) * (pRight.altitude!! - pLeft.altitude!!)
+                    pLeft.altitude + ((dist - pLeft.distance) / (pRight.distance - pLeft.distance)) * (pRight.altitude - pLeft.altitude)
                 } else {
                     pLeft.altitude ?: pRight?.altitude
                 }
@@ -939,6 +949,22 @@ fun ElevationProfile(
                 }
             }
         }
+    }
+
+    if (isLandscape && showZoomControls) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(modifier = Modifier.weight(0.72f)) {
+                profileCanvas()
+            }
+            Spacer(modifier = Modifier.weight(0.28f))
+        }
+    } else {
+        profileCanvas()
+    }
 
         // Multi-metric telemetry floating badge in detailed view (REQ-UI-201 / ATT-1391)
         if (showZoomControls && showScrubbingBadge && currentDistance != null) {
@@ -948,7 +974,7 @@ fun ElevationProfile(
                 val pLeft = pathPoints[activeIndex]
                 val pRight = pathPoints.getOrNull(activeIndex + 1)
                 val interAlt = if (pRight != null && pRight.distance > pLeft.distance && pLeft.altitude != null && pRight.altitude != null) {
-                    pLeft.altitude!! + ((currentDistance - pLeft.distance) / (pRight.distance - pLeft.distance)) * (pRight.altitude!! - pLeft.altitude!!)
+                    pLeft.altitude + ((currentDistance - pLeft.distance) / (pRight.distance - pLeft.distance)) * (pRight.altitude - pLeft.altitude)
                 } else {
                     pLeft.altitude ?: pRight?.altitude
                 }
@@ -1108,7 +1134,7 @@ fun ScrubbingTelemetryBadge(
                             withStyle(SpanStyle(color = MaterialTheme.colorScheme.onSurface)) {
                                 append("${point.power} W")
                             }
-                            if (powerZone != null && powerZone in 1..5) {
+                            if (powerZone != null && powerZone in 1..TelemetryZoneMath.ZONE_COLORS.size) {
                                 withStyle(
                                     SpanStyle(
                                         color = TelemetryZoneMath.ZONE_COLORS[powerZone - 1],

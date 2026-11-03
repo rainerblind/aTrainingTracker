@@ -85,7 +85,10 @@ data class SensorFieldConfig(
     val filterType: FilterType,
     val filterConstant: Double,
     val sourceDeviceId: Long,
-    val sourceDeviceName: String? = null
+    val sourceDeviceName: String? = null,
+    val showValue: Boolean = true,
+    val showBar: Boolean = false,
+    val colWeight: Float = 1.0f
 )
 
 enum class ScreenMode {
@@ -291,6 +294,9 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                 val filterConstantIndex = c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.FILTER_CONSTANT)
                 val viewSizeIndex = c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.VIEW_SIZE)
                 val deviceIdIndex = c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SOURCE_DEVICE_ID)
+                val showValueIndex = c.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_VALUE)
+                val showBarIndex = c.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_BAR)
+                val colWeightIndex = c.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.COL_WEIGHT)
 
                 do {
                     val viewSize = safeEnumValueOf(c.getString(viewSizeIndex), ViewSize.NORMAL)
@@ -305,6 +311,18 @@ class TrackingViewsRepository private constructor(private val context: Context) 
 
                     val sensorType = safeEnumValueOf(c.getString(sensorTypeIndex), SensorType.TIME_ACTIVE)
                     val filterType = safeEnumValueOf(c.getString(filterTypeIndex), FilterType.INSTANTANEOUS)
+                    val showValue = if (showValueIndex != -1 && !c.isNull(showValueIndex)) c.getInt(showValueIndex) == 1 else true
+                    val showBar = if (showBarIndex != -1 && !c.isNull(showBarIndex)) {
+                        c.getInt(showBarIndex) == 1
+                    } else {
+                        TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupportedSensorType(sensorType)
+                    }
+                    val colWeight = if (colWeightIndex != -1 && !c.isNull(colWeightIndex)) {
+                        val w = c.getFloat(colWeightIndex)
+                        if (w > 0f) w else 1.0f
+                    } else {
+                        1.0f
+                    }
 
                     fieldList.add(
                         SensorFieldConfig(
@@ -316,7 +334,10 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                             filterType = filterType,
                             filterConstant = c.getDouble(filterConstantIndex),
                             sourceDeviceId = sourceDeviceId,
-                            sourceDeviceName = deviceName
+                            sourceDeviceName = deviceName,
+                            showValue = showValue,
+                            showBar = showBar,
+                            colWeight = colWeight
                         )
                     )
                 } while (c.moveToNext())
@@ -352,6 +373,22 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                     val sensorType = safeEnumValueOf(sensorTypeString, SensorType.TIME_ACTIVE)
                     val filterTypeString = c.getString(c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.FILTER_TYPE))
                     val filterType = safeEnumValueOf(filterTypeString, FilterType.INSTANTANEOUS)
+                    val showValueIndex = c.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_VALUE)
+                    val showBarIndex = c.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_BAR)
+                    val colWeightIndex = c.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.COL_WEIGHT)
+                    val showValue = if (showValueIndex != -1 && !c.isNull(showValueIndex)) c.getInt(showValueIndex) == 1 else true
+                    val showBar = if (showBarIndex != -1 && !c.isNull(showBarIndex)) {
+                        c.getInt(showBarIndex) == 1
+                    } else {
+                        TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupportedSensorType(sensorType)
+                    }
+                    val colWeight = if (colWeightIndex != -1 && !c.isNull(colWeightIndex)) {
+                        val w = c.getFloat(colWeightIndex)
+                        if (w > 0f) w else 1.0f
+                    } else {
+                        1.0f
+                    }
+
                     return@withContext SensorFieldConfig(
                         sensorFieldId = sensorFieldId,
                         rowNr = c.getInt(c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.ROW_NR)),
@@ -361,7 +398,10 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                         filterType = filterType,
                         filterConstant = c.getDouble(c.getColumnIndexOrThrow(TrackingViewsDatabaseManager.TrackingViewsDbHelper.FILTER_CONSTANT)),
                         sourceDeviceId = sourceDeviceId,
-                        sourceDeviceName = deviceName
+                        sourceDeviceName = deviceName,
+                        showValue = showValue,
+                        showBar = showBar,
+                        colWeight = colWeight
                     )
                 } else {
                     return@withContext null // Return null if not found
@@ -394,7 +434,10 @@ class TrackingViewsRepository private constructor(private val context: Context) 
         newSourceDeviceId: Long?,
         newSourceDeviceName: String?,
         newFilterType: FilterType,
-        newFilterConstant: Double
+        newFilterConstant: Double,
+        showValue: Boolean = true,
+        showBar: Boolean = false,
+        colWeight: Float = 1.0f
     ) {
         withContext(Dispatchers.IO) {
 
@@ -405,7 +448,10 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                 newViewSize,
                 newSourceDeviceId,
                 newFilterType,
-                newFilterConstant
+                newFilterConstant,
+                showValue,
+                showBar,
+                colWeight
             )
         }
 
@@ -424,7 +470,10 @@ class TrackingViewsRepository private constructor(private val context: Context) 
         newSourceDeviceId: Long?,
         newSourceDeviceName: String?,
         newFilterType: FilterType,
-        newFilterConstant: Double
+        newFilterConstant: Double,
+        showValue: Boolean = true,
+        showBar: Boolean = false,
+        colWeight: Float = 1.0f
     ) {
         Log.i("TrackingRepository", "insertSensorFieldConfig: $tabViewId, $rowNr, $colNr")
 
@@ -437,10 +486,32 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                 newViewSize,
                 newSourceDeviceId,
                 newFilterType,
-                newFilterConstant)
+                newFilterConstant,
+                showValue,
+                showBar,
+                colWeight
+            )
         }
 
         // trigger recreation of UI
+        withContext(Dispatchers.Main) {
+            configUpdateTrigger.value++
+        }
+    }
+
+    suspend fun updateColWeight(sensorFieldId: Long, colWeight: Float) {
+        withContext(Dispatchers.IO) {
+            viewsDbManager.updateColWeight(sensorFieldId, colWeight)
+        }
+        withContext(Dispatchers.Main) {
+            configUpdateTrigger.value++
+        }
+    }
+
+    suspend fun updateRowSplit(tabViewId: Long, rowNr: Int, leftWeight: Float, rightWeight: Float) {
+        withContext(Dispatchers.IO) {
+            viewsDbManager.updateRowSplit(tabViewId, rowNr, leftWeight, rightWeight)
+        }
         withContext(Dispatchers.Main) {
             configUpdateTrigger.value++
         }
@@ -611,6 +682,36 @@ class TrackingViewsRepository private constructor(private val context: Context) 
         withContext(Dispatchers.Main) {
             configUpdateTrigger.value++
         }
+    }
+
+    suspend fun moveTabView(tabViewId: Long, moveLeft: Boolean): Int {
+        val newIndex = withContext(Dispatchers.IO) {
+            viewsDbManager.moveTabView(tabViewId, moveLeft)
+        }
+
+        // trigger recreation of UI
+        withContext(Dispatchers.Main) {
+            configUpdateTrigger.value++
+        }
+        return newIndex
+    }
+
+    /**
+     * Deep-copies the specified tab to the given target ActivityTypes.
+     * Executes on Dispatchers.IO and triggers configUpdateTrigger on Dispatchers.Main.
+     *
+     * @return List of newly created view IDs.
+     */
+    suspend fun copyTabView(sourceViewId: Long, targetTypes: List<ActivityType>): List<Long> {
+        val newIds = withContext(Dispatchers.IO) {
+            viewsDbManager.copyTabViewToActivityTypes(sourceViewId, targetTypes)
+        }
+
+        withContext(Dispatchers.Main) {
+            configUpdateTrigger.value++
+        }
+
+        return newIds
     }
 
     // --- Section Dividers (REQ-UI-411) ---

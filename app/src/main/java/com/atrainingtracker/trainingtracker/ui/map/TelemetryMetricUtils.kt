@@ -114,10 +114,11 @@ object TelemetryMetricUtils {
 
     /**
      * Checks whether valid Skiba W'bal samples exist in [path] (`REQ-UI-399.3`).
+     * Strictly gated on [hasPowerData] to suppress phantom flat-line W'-Bilanz charts on workouts lacking power telemetry.
      */
     fun hasWPrimeBalData(path: List<PathPoint>?): Boolean {
         if (path.isNullOrEmpty()) return false
-        return path.any { it.wPrimeBalKj != null && it.wPrimeBalKj >= 0.0 }
+        return hasPowerData(path) && path.any { it.wPrimeBalKj != null && it.wPrimeBalKj >= 0.0 }
     }
 
     /**

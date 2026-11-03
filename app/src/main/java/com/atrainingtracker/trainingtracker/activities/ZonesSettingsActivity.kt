@@ -52,6 +52,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.History
+import com.atrainingtracker.trainingtracker.ui.settings.ZoneHistoryDialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
@@ -162,6 +164,8 @@ fun ZoneSettingsScreen(
     val storedHrMethod by dataStore.hrCalcMethodFlow.collectAsState(initial = null)
 
     var showCalculatorDialog by remember { mutableStateOf(false) }
+    var showHistoryDialog by rememberSaveable { mutableStateOf(false) }
+    val zoneHistoryMap by viewModel.zoneHistoryFlow.collectAsState()
     var bannerVisible by rememberSaveable { mutableStateOf(promptReason != null) }
 
     Surface(modifier = Modifier.fillMaxSize()) {
@@ -203,6 +207,15 @@ fun ZoneSettingsScreen(
                                 Icon(
                                     imageVector = Icons.Default.Calculate,
                                     contentDescription = stringResource(R.string.zone_calc_button),
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                            IconButton(
+                                onClick = { showHistoryDialog = true }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.History,
+                                    contentDescription = stringResource(R.string.zone_history_action_history),
                                     tint = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                             }
@@ -337,6 +350,24 @@ fun ZoneSettingsScreen(
                             }
                         }
                     }
+                }
+            )
+        }
+
+        if (showHistoryDialog) {
+            val historyForCurrentType = zoneHistoryMap[currentType] ?: emptyList()
+            ZoneHistoryDialog(
+                zoneType = currentType,
+                history = historyForCurrentType,
+                onDismiss = { showHistoryDialog = false },
+                onSaveSnapshot = { timestampMs, boundaries ->
+                    viewModel.saveBackdatedSnapshot(currentType, boundaries, timestampMs)
+                },
+                onUpdateSnapshot = { id, timestampMs, boundaries ->
+                    viewModel.updateHistoricalSnapshot(id, currentType, boundaries, timestampMs)
+                },
+                onDeleteSnapshot = { id ->
+                    viewModel.deleteHistoricalSnapshot(id, currentType)
                 }
             )
         }
@@ -501,7 +532,7 @@ fun SettingsScreenContent(
             Column(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
             ) {
-                // Toggle: Light background
+                // Toggle: Tinted background
                 ZoneDisplayToggleRow(
                     label = stringResource(R.string.zone_display_background),
                     checked = displayOptions.showBackground,
@@ -530,14 +561,6 @@ fun SettingsScreenContent(
                     label = stringResource(R.string.zone_display_text_color),
                     checked = displayOptions.showTextColor,
                     onCheckedChange = { onUpdateDisplayOptions(displayOptions.copy(showTextColor = it)) }
-                )
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-                // Toggle: Zone gauge bar (REQ-UI-376)
-                ZoneDisplayToggleRow(
-                    label = stringResource(R.string.zone_display_gauge),
-                    checked = displayOptions.showGauge,
-                    onCheckedChange = { onUpdateDisplayOptions(displayOptions.copy(showGauge = it)) }
                 )
             }
         }
@@ -599,13 +622,11 @@ fun SettingsScreenContent(
         } else {
             listOf(z1Max, z2Max, z3Max, z4Max)
         }
-        val previewGaugeState = if (displayOptions.showGauge) {
-            ZoneGaugeMath.calculateZoneGaugeState(
-                value = previewValue.toDoubleOrNull(),
-                zoneType = zoneType,
-                cutoffs = previewCutoffs
-            )
-        } else null
+        val previewGaugeState = ZoneGaugeMath.calculateZoneGaugeState(
+            value = previewValue.toDoubleOrNull(),
+            zoneType = zoneType,
+            cutoffs = previewCutoffs
+        )
 
         val previewFieldState = SensorFieldState(
             configHash = 0,
@@ -619,7 +640,9 @@ fun SettingsScreenContent(
             units = previewUnits,
             zoneColor = previewZoneColor,
             zoneDisplayOptions = displayOptions,
-            zoneGaugeState = previewGaugeState
+            zoneGaugeState = previewGaugeState,
+            showValue = true,
+            showBar = true
         )
 
         val isSystemDark = isSystemInDarkTheme()
@@ -633,9 +656,7 @@ fun SettingsScreenContent(
         val isCockpitDark = resolveEffectiveCockpitDarkTheme(cockpitThemeMode, isSystemDark)
 
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp)
+            modifier = resolveZonePreviewContainerModifier()
         ) {
             ATrainingTrackerTheme(
                 darkTheme = isCockpitDark,
@@ -643,11 +664,13 @@ fun SettingsScreenContent(
                 setWindowColors = false
             ) {
                 Surface(
+                    modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.surface,
                     shape = MaterialTheme.shapes.medium
                 ) {
                     SensorFieldView(
                         fieldState = previewFieldState,
+                        modifier = Modifier.fillMaxSize(),
                         screenMode = ScreenMode.TRACKING
                     )
                 }
@@ -657,6 +680,19 @@ fun SettingsScreenContent(
         Spacer(modifier = Modifier.height(24.dp))
     }
 }
+
+/**
+ * Modifier applied to the container wrapping the live preview [SensorFieldView] in [SettingsScreenContent].
+ *
+ * Applies [IntrinsicSize.Min] bounding to prevent vertical collapsing under scrollable parent containers
+ * (`REQ-UI-441` / `ATT-5071`, Rule 67, Design Guideline 5.14).
+ */
+fun resolveZonePreviewContainerModifier(baseModifier: Modifier = Modifier): Modifier =
+    baseModifier
+        .fillMaxWidth()
+        .height(IntrinsicSize.Min)
+        .padding(vertical = 4.dp)
+
 
 /**
  * Compact zone-tinted bordered selector pill for the live zone preview row (`REQ-UI-384` / Rule 38).

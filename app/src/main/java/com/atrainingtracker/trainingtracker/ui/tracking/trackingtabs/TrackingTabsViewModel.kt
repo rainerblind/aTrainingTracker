@@ -37,6 +37,7 @@ import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewInfo
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,6 +49,10 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.atrainingtracker.trainingtracker.elevation.ElevationSource
+import com.atrainingtracker.trainingtracker.database.ExtremaType
+import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager
+import com.atrainingtracker.trainingtracker.location.LocationNameResolver
 
 // helper class to navigate the fragment container after adding or deletion of a tab
 sealed class TabNavigationEvent {
@@ -68,9 +73,10 @@ class TrackingTabsViewModel(
 ) : AndroidViewModel(application) {
 
     val bikeBellSynthesizer: com.atrainingtracker.trainingtracker.audio.BikeBellAudioSynthesizer =
-        bikeBellAudioSynthesizer ?: com.atrainingtracker.trainingtracker.audio.BikeBellAudioSynthesizer()
+        bikeBellAudioSynthesizer ?: com.atrainingtracker.trainingtracker.audio.BikeBellAudioSynthesizer(application)
 
     private var lastRingTimestampMs: Long = -10000L
+    private var bellEscalationStage: Int = 1
 
     // State to hold the explicitly selected ActivityType
     private val _explicitActivityType = MutableStateFlow<ActivityType?>(null)
@@ -98,6 +104,7 @@ class TrackingTabsViewModel(
     val allTelemetry = banalServiceRepository.allActiveDevicesTelemetry
     val allFilteredSensorData = banalServiceRepository.allFilteredSensorData
     val allDevices = devicesRepository.allDevices
+    val currentAltitude: StateFlow<Double?> = banalServiceRepository.currentAltitude
     val liveSegments: StateFlow<List<com.atrainingtracker.trainingtracker.segments.LiveSegment>> = liveSegmentsRepository?.liveSegments
         ?: try {
             com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepository.getInstance(application).liveSegments
@@ -216,6 +223,9 @@ class TrackingTabsViewModel(
 
     private val _currentPage = MutableStateFlow(0)
     val currentPage: StateFlow<Int> = _currentPage.asStateFlow()
+
+    private val _copySourceTabId = MutableStateFlow<Long?>(null)
+    val copySourceTabId: StateFlow<Long?> = _copySourceTabId.asStateFlow()
 
     fun onPageSelected(page: Int) {
         _currentPage.value = page
@@ -455,22 +465,72 @@ class TrackingTabsViewModel(
         }
     }
 
+    fun onMoveTab(tabViewId: Long, moveLeft: Boolean) {
+        viewModelScope.launch {
+            val newIndex = trackingViewsRepository.moveTabView(tabViewId, moveLeft)
+            if (newIndex >= 0) {
+                _navigationEvent.send(TabNavigationEvent.NavigateTo(newIndex))
+            }
+        }
+    }
+
+    fun onOpenCopyTabDialog(tabViewId: Long) {
+        _copySourceTabId.value = tabViewId
+    }
+
+    fun onDismissCopyTabDialog() {
+        _copySourceTabId.value = null
+    }
+
+    fun onConfirmCopyTab(sourceViewId: Long, targetTypes: List<ActivityType>) {
+        _copySourceTabId.value = null
+        if (targetTypes.isEmpty()) return
+
+        viewModelScope.launch {
+            val currentSportType = activityType.value
+            val currentList = trackingViews.value
+            trackingViewsRepository.copyTabView(sourceViewId, targetTypes)
+
+            // If the current profile is among the targets, navigate to the newly appended tab
+            if (targetTypes.contains(currentSportType)) {
+                val newTargetIndex = currentList.size
+                _navigationEvent.send(TabNavigationEvent.NavigateTo(newTargetIndex))
+            }
+        }
+    }
+
 
     fun onLapButtonClick() {
         trackingViewsRepository.requestNewLap()
     }
 
     /**
-     * Triggers electronic bike bell ring with progressive loudness escalation (REQ-UI-421.5).
+     * Triggers electronic bike bell ring with 3-stage logarithmic loudness escalation (REQ-UI-421.5).
      *
-     * Initial ring sounds at polite volume (70%). Rapid repeated rings within <= 5s or long-press
-     * escalate to 100% volume. Volume resets to polite after 5s of silence.
+     * - 1st Tap: Polite distance ring (0.35f, -9.1 dB)
+     * - 2nd Tap within <= 5s: Firm warning ring (0.65f, -3.7 dB)
+     * - 3rd+ Tap within <= 5s or Long-Press: Maximum hardware output (1.00f, 0 dB)
+     * - Resets back to Stage 1 after > 5s of silence.
      */
     fun triggerBellRing(isLongPress: Boolean = false) {
         val now = timeProvider()
-        val isEscalated = isLongPress || (now - lastRingTimestampMs <= 5000L)
+        val volume = if (isLongPress) {
+            bellEscalationStage = 3
+            1.00f
+        } else {
+            val isWithinWindow = (now - lastRingTimestampMs <= 5000L)
+            bellEscalationStage = if (isWithinWindow) {
+                (bellEscalationStage + 1).coerceAtMost(3)
+            } else {
+                1
+            }
+            when (bellEscalationStage) {
+                1 -> 0.35f
+                2 -> 0.65f
+                else -> 1.00f
+            }
+        }
         lastRingTimestampMs = now
-        val volume = if (isEscalated) 1.0f else 0.70f
         bikeBellSynthesizer.ring(volume)
     }
 
@@ -479,6 +539,7 @@ class TrackingTabsViewModel(
      */
     fun triggerBellRoll() {
         lastRingTimestampMs = timeProvider()
+        bellEscalationStage = 3
         bikeBellSynthesizer.startRoll(1.0f)
     }
 
@@ -496,6 +557,57 @@ class TrackingTabsViewModel(
         viewModelScope.launch {
             trackingViewsRepository.updateShowBikeBell(tabViewId, show)
         }
+    }
+
+    /**
+     * Calibrates altimeter reading manually from tracking cockpit (REQ-TRK-047).
+     * Optionally saves/updates landmark to Known Locations with ElevationSource.MANUAL_USER.
+     */
+    fun calibrateAltitude(
+        referenceAltitudeMeters: Double,
+        locationName: String? = null,
+        saveAsKnownLocation: Boolean = false
+    ) {
+        val matched = locationCalibrationStatus.value
+        if (matched != null) {
+            viewModelScope.launch(Dispatchers.IO) {
+                val db = KnownLocationsDatabaseManager.getInstance(getApplication())
+                db.updateLocation(
+                    matched.locationId,
+                    matched.locationName,
+                    referenceAltitudeMeters,
+                    ElevationSource.MANUAL_USER,
+                    true
+                )
+                knownLocationsRepo?.loadLocations()
+            }
+        } else if (saveAsKnownLocation) {
+            val location = banalServiceRepository.currentLocation.value
+            if (location != null) {
+                viewModelScope.launch(Dispatchers.IO) {
+                    val finalName = if (!locationName.isNullOrBlank()) {
+                        locationName
+                    } else {
+                        LocationNameResolver.resolveLocationName(
+                            getApplication(),
+                            location.latitude,
+                            location.longitude
+                        )
+                    }
+                    val db = KnownLocationsDatabaseManager.getInstance(getApplication())
+                    db.upsertLocationByGeofence(
+                        location,
+                        referenceAltitudeMeters,
+                        finalName,
+                        ExtremaType.START,
+                        ElevationSource.MANUAL_USER,
+                        true
+                    )
+                    knownLocationsRepo?.loadLocations()
+                }
+            }
+        }
+        banalServiceRepository.calibrateAltimeter(referenceAltitudeMeters)
     }
 }
 

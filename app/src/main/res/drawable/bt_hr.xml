@@ -1,31 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- ATT-2859 / REQ-UI-375: bt_hr compiled from Bilder/Bluetooth/BT_HR_just_the_heart.fig & BT_HR.xcf -->
+<!-- ATT-5201 / REQ-UI-442: bt_hr with full-bleed badge (#0A3D91), scaled heart motif, and uppercase HR label -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="48dp"
     android:height="48dp"
     android:viewportWidth="144"
     android:viewportHeight="144">
     <path
-        android:fillColor="#07377F"
-        android:pathData="M 23.5,10.0 L 120.5,10.0 A 13.5,13.5 0 0,1 134.0,23.5 L 134.0,120.5 A 13.5,13.5 0 0,1 120.5,134.0 L 23.5,134.0 A 13.5,13.5 0 0,1 10.0,120.5 L 10.0,23.5 A 13.5,13.5 0 0,1 23.5,10.0 Z" />
+        android:fillColor="#0A3D91"
+        android:pathData="M 22.0,0.0 L 122.0,0.0 A 22.0,22.0 0 0,1 144.0,22.0 L 144.0,122.0 A 22.0,22.0 0 0,1 122.0,144.0 L 22.0,144.0 A 22.0,22.0 0 0,1 0.0,122.0 L 0.0,22.0 A 22.0,22.0 0 0,1 22.0,0.0 Z" />
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M 75.37,129.43 L 72.12,133.73 L 68.69,129.40 L 72.09,125.16 L 73.67,127.11 Z" />
+        android:pathData="M 74.43,95.19 L 72.09,98.29 L 69.62,95.17 L 72.06,92.12 L 73.20,93.52 Z" />
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M 76.15,41.79 L 72.00,48.98 L 68.04,42.20 L 72.03,37.74 L 74.17,40.71 Z" />
+        android:pathData="M 74.99,32.09 L 72.00,37.27 L 69.15,32.38 L 72.02,29.17 L 73.56,31.31 Z" />
     <path
         android:fillColor="#00000000"
-        android:pathData="M 72.00,126.24 L 90.11,106.74 Q 108.22,87.24 117.97,65.65 Q 127.72,44.05 124.93,35.00 Q 122.15,25.95 115.88,21.07 Q 109.61,16.19 100.56,15.50 Q 91.50,14.80 85.23,19.68 Q 78.97,24.55 72.00,39.88"
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="9.29"
+        android:strokeWidth="6.69"
         android:strokeLineCap="butt"
-        android:strokeLineJoin="round" />
+        android:strokeLineJoin="round"
+        android:pathData="M 72.00,92.89 L 85.04,78.85 Q 98.08,64.81 105.10,49.27 Q 112.12,33.72 110.11,27.20 Q 108.11,20.68 103.59,17.17 Q 99.08,13.66 92.56,13.16 Q 86.04,12.66 81.53,16.17 Q 77.02,19.68 72.00,30.71" />
     <path
         android:fillColor="#00000000"
-        android:pathData="M 72.00,126.24 L 53.89,106.74 Q 35.78,87.24 26.03,65.65 Q 16.28,44.05 19.07,35.00 Q 21.85,25.95 28.12,21.07 Q 34.39,16.19 43.44,15.50 Q 52.50,14.80 58.77,19.68 Q 65.03,24.55 72.00,39.88"
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="9.29"
+        android:strokeWidth="6.69"
         android:strokeLineCap="butt"
-        android:strokeLineJoin="round" />
+        android:strokeLineJoin="round"
+        android:pathData="M 72.00,92.89 L 58.96,78.85 Q 45.92,64.81 38.90,49.27 Q 31.88,33.72 33.89,27.20 Q 35.89,20.68 40.41,17.17 Q 44.92,13.66 51.44,13.16 Q 57.96,12.66 62.47,16.17 Q 66.98,19.68 72.00,30.71" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M 40.50,113.25 L 48.00,113.25 L 48.00,121.50 L 60.75,121.50 L 60.75,113.25 L 68.25,113.25 L 68.25,135.75 L 60.75,135.75 L 60.75,127.20 L 48.00,127.20 L 48.00,135.75 L 40.50,135.75 Z M 74.25,113.25 L 96.00,113.25 A 5.70,5.70 0 0,1 101.70,118.95 L 101.70,121.80 A 4.80,4.80 0 0,1 97.50,126.60 A 4.50,4.50 0 0,1 101.55,131.10 L 101.55,135.75 L 94.05,135.75 L 94.05,131.25 A 2.25,2.25 0 0,0 91.80,129.00 L 81.75,129.00 L 81.75,135.75 L 74.25,135.75 Z M 81.75,118.50 L 93.00,118.50 A 2.10,2.10 0 0,1 95.10,120.60 L 95.10,121.80 A 2.10,2.10 0 0,1 93.00,123.90 L 81.75,123.90 Z" />
 </vector>

@@ -19,7 +19,10 @@
 package com.atrainingtracker.trainingtracker.ui.map
 
 import android.app.Application
+import android.content.SharedPreferences
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.database.WorkoutCluster
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.elevation.ElevationSource
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
@@ -45,6 +48,7 @@ import kotlinx.coroutines.test.setMain
 import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterStats
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -68,12 +72,15 @@ class MapFragmentWithTrackViewModelTest {
     private lateinit var mockBanalRepository: BANALServiceRepository
     private lateinit var mockSegmentsRepository: SegmentsRepository
     private lateinit var mockRoutesRepository: RoutesRepository
+    private lateinit var mockWorkoutClusterRepository: WorkoutClusterRepository
 
     private val fakeLocationsFlow = MutableStateFlow<List<KnownLocationItem>>(emptyList())
     private val fakeSportTypeFlow = MutableStateFlow(BSportType.UNKNOWN)
     private val fakeCurrentTrackFlow = MutableStateFlow<List<LatLng>>(emptyList())
     private val fakeRoutesFlow = MutableStateFlow<List<com.atrainingtracker.trainingtracker.database.RouteWithPath>>(emptyList())
     private val fakeActiveNavigatedRouteIdFlow = MutableStateFlow<Long?>(null)
+    private val fakeClustersFlow = MutableStateFlow<List<WorkoutCluster>>(emptyList())
+    private val fakeClusterStatsFlow = MutableStateFlow<Map<Long, WorkoutClusterStats>>(emptyMap())
 
     @Before
     fun setUp() {
@@ -83,6 +90,7 @@ class MapFragmentWithTrackViewModelTest {
         mockBanalRepository = mockk(relaxed = true)
         mockSegmentsRepository = mockk(relaxed = true)
         mockRoutesRepository = mockk(relaxed = true)
+        mockWorkoutClusterRepository = mockk(relaxed = true)
 
         every { mockKnownLocationsRepository.locationsFlow } returns fakeLocationsFlow
         every { mockBanalRepository.bSportType } returns fakeSportTypeFlow
@@ -91,6 +99,8 @@ class MapFragmentWithTrackViewModelTest {
         every { mockSegmentsRepository.allSegmentsWithPath } returns MutableStateFlow(emptyList())
         every { mockRoutesRepository.allRoutes } returns fakeRoutesFlow
         every { mockRoutesRepository.activeNavigatedRouteId } returns fakeActiveNavigatedRouteIdFlow
+        every { mockWorkoutClusterRepository.allClusters } returns fakeClustersFlow
+        every { mockWorkoutClusterRepository.clusterStats } returns fakeClusterStatsFlow
     }
 
     @After
@@ -99,13 +109,16 @@ class MapFragmentWithTrackViewModelTest {
         clearAllMocks()
     }
 
-    private fun createViewModel(): MapFragmentWithTrackViewModel {
+    private fun createViewModel(prefs: SharedPreferences? = null): MapFragmentWithTrackViewModel {
         return MapFragmentWithTrackViewModel(
             application = mockApplication,
             knownLocationsRepository = mockKnownLocationsRepository,
             banalRepo = mockBanalRepository,
             segmentsRepo = mockSegmentsRepository,
-            routesRepo = mockRoutesRepository
+            routesRepo = mockRoutesRepository,
+            workoutClusterRepo = mockWorkoutClusterRepository,
+            prefs = prefs,
+            defaultDispatcher = testDispatcher
         )
     }
 
@@ -232,5 +245,59 @@ class MapFragmentWithTrackViewModelTest {
         assertFalse("Passive route must have isActiveNavigation = false", passiveMapRoute.isActiveNavigation)
         assertEquals(10f, passiveMapRoute.width, 0.001f)
         assertNotNull("Passive route must retain dash pattern", passiveMapRoute.pattern)
+    }
+
+    @Test
+    fun testUiState_combinesClustersFlow() = runTest {
+        val sampleCluster = WorkoutCluster(
+            id = 55L,
+            name = "Morning River Run",
+            probableSportId = 1L,
+            startLat = 48.1,
+            startLng = 11.5,
+            endLat = 48.2,
+            endLng = 11.6,
+            maxDispLat = 48.2,
+            maxDispLng = 11.6,
+            refDistance = 3500.0,
+            hitCount = 8,
+            bSportType = BSportType.RUN,
+            routePolyline = com.google.maps.android.PolyUtil.encode(listOf(LatLng(48.1, 11.5), LatLng(48.2, 11.6)))
+        )
+        val stats = WorkoutClusterStats(
+            clusterId = 55L,
+            workoutCount = 8,
+            lastHitTimestampS = 1700000000L,
+            bestDurationSec = 900L,
+            totalDistanceMeters = 28000.0,
+            totalAscentMeters = 240L
+        )
+        fakeClustersFlow.value = listOf(sampleCluster)
+        fakeClusterStatsFlow.value = mapOf(55L to stats)
+
+        val viewModel = createViewModel()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // By default, clusters are disabled (ATT-5074)
+        assertEquals("Clusters must be empty when layer is disabled by default", 0, viewModel.uiState.value.clusters.size)
+
+        // Toggle clusters on
+        viewModel.toggleLayer(GeneralMapLayer.CLUSTERS)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val clusters = viewModel.uiState.value.clusters
+        assertEquals(1, clusters.size)
+        assertEquals(55L, clusters[0].id)
+        assertEquals("Morning River Run", clusters[0].name)
+        assertEquals(BSportType.RUN, clusters[0].bSportType)
+        assertEquals(8, clusters[0].hitCount)
+        assertEquals(2, clusters[0].latLngs.size)
+        assertEquals(stats, clusters[0].stats)
+        assertEquals(900L, clusters[0].stats?.bestDurationSec)
+        assertEquals(30L, clusters[0].stats?.avgAscentMeters)
     }
 }

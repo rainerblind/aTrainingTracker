@@ -533,6 +533,29 @@ public class DevicesDatabaseManager {
         return calibrationFactor;
     }
 
+    public double getBaselineCircumference(long deviceID) {
+        double baseline = 0.0;
+        SQLiteDatabase db = getDatabase();
+        try (Cursor cursor = getCursor(db, deviceID, DevicesDbHelper.BASELINE_CIRCUMFERENCE)) {
+            if (cursor != null && cursor.moveToFirst() && !cursor.isNull(0)) {
+                baseline = cursor.getDouble(0);
+            }
+        }
+        return baseline;
+    }
+
+    public void setBaselineCircumference(long deviceID, double baselineCircumference) {
+        SQLiteDatabase db = getDatabase();
+        ContentValues values = new ContentValues();
+        values.put(DevicesDbHelper.BASELINE_CIRCUMFERENCE, baselineCircumference);
+        db.update(DevicesDbHelper.DEVICES, values, DevicesDbHelper.C_ID + "=?", new String[]{String.valueOf(deviceID)});
+    }
+
+    public void resetBaselineCircumference(long deviceID) {
+        double calib = getCalibrationFactor(deviceID);
+        setBaselineCircumference(deviceID, calib);
+    }
+
     public boolean isPaired(long deviceID) {
         boolean result = false;
 
@@ -859,6 +882,14 @@ public class DevicesDatabaseManager {
         return getSmartphoneDeviceId(DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED);
     }
 
+    public long getAltitudeFromPositionDeviceId() {
+        return getSmartphoneDeviceId(DeviceType.ALTITUDE_FROM_POSITION);
+    }
+
+    public long getAltitudeFromPressureDeviceId() {
+        return getSmartphoneDeviceId(DeviceType.ALTITUDE_FROM_PRESSURE);
+    }
+
     public long getSmartphoneDeviceId(DeviceType deviceType) {
         try (Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
                 new String[]{DevicesDbHelper.C_ID},
@@ -879,12 +910,16 @@ public class DevicesDatabaseManager {
      * Surgically inserts the record if missing, without duplicates.
      */
     public void ensureSmartphoneDeviceExists(DeviceType type, String name) {
+        ensureSmartphoneDeviceExists(type, name, true);
+    }
+
+    public void ensureSmartphoneDeviceExists(DeviceType type, String name, boolean defaultPaired) {
         if (getSmartphoneDeviceId(type) != -1L) return;
 
         ContentValues contentValues = new ContentValues();
         contentValues.put(DevicesDbHelper.PROTOCOL, Protocol.SMARTPHONE.name());
         contentValues.put(DevicesDbHelper.DEVICE_TYPE, type.name());
-        contentValues.put(DevicesDbHelper.PAIRED, 1); // Default to paired
+        contentValues.put(DevicesDbHelper.PAIRED, defaultPaired ? 1 : 0);
         contentValues.put(DevicesDbHelper.NAME, name);
         contentValues.put(DevicesDbHelper.MANUFACTURER_NAME, android.os.Build.BRAND);
         getDatabase().insert(DevicesDbHelper.DEVICES, null, contentValues);
@@ -963,11 +998,14 @@ public class DevicesDatabaseManager {
         public static final String BIKE_POWER_SENSOR_FLAGS_TABLE = "bikePowerSensorFlagsTable";
         public static final String DEVICE_ID = "deviceId";
         public static final String BIKE_POWER_SENSOR_FLAGS = "bikePowerSensorFlags";
-        static final String DB_NAME = "Devices.db";
+        public static final String BASELINE_CIRCUMFERENCE = "baselineCircumference";
+        public static final String DB_NAME = "Devices.db";
         // static final int DB_VERSION = 4;
         // static final int DB_VERSION = 5;    // upgraded at 30.12.2016 to support storing of BT features
         // static final int DB_VERSION = 6;    // upgraded at 30.01.2018 to replace storing of BT features (for Bike Power) to all Bike Power Devices
-        static final int DB_VERSION = 7;    // upgraded at 20.03.2018: added the location devices to this database
+        // static final int DB_VERSION = 7;    // upgraded at 20.03.2018: added the location devices to this database
+        // static final int DB_VERSION = 8;    // upgraded at 01.11.2026: added baselineCircumference for iTPMS
+        public static final int DB_VERSION = 9;    // upgraded at 03.11.2026: renamed legacy ALTITUDE_FROM_PRESSURE default names (ATT-5073)
         private static final String TAG = "DeviceDbHelper";
         private static final boolean DEBUG = BANALService.getDebug(false);
         private static final String DEVICES_V3 = "Devices";               // in version 3, the table was simply called Devices
@@ -986,6 +1024,19 @@ public class DevicesDatabaseManager {
                 + CALIBRATION_FACTOR + " real,"
                 + LAST_ACTIVE + " text,"
                 + LAST_BATTERY_PERCENTAGE + " int)";
+        private static final String CREATE_DEVICE_DB_8 = "create table " + DEVICES + " ("
+                + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + PROTOCOL + " text, "
+                + ANT_DEVICE_NUMBER + " int, "
+                + BT_ADDRESS + " text, "
+                + DEVICE_TYPE + " text, "
+                + PAIRED + " int, "
+                + NAME + " text, "
+                + MANUFACTURER_NAME + " text, "
+                + CALIBRATION_FACTOR + " real,"
+                + LAST_ACTIVE + " text,"
+                + LAST_BATTERY_PERCENTAGE + " int,"
+                + BASELINE_CIRCUMFERENCE + " real DEFAULT 0.0)";
         @Deprecated
         private static final String CREATE_BT_SPECIFIC_5 = "create table " + TABLE_BT_SPECIFIC + " ("
                 + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -1053,6 +1104,16 @@ public class DevicesDatabaseManager {
                 case 7:
                     db.execSQL(CREATE_DEVICE_DB_4);
                     if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_DEVICE_DB_4);
+                    db.execSQL(CREATE_BIKE_POWER_SENSORS_TABLE_6);
+                    if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_BIKE_POWER_SENSORS_TABLE_6);
+
+                    addLocationDevicesToDb(db);
+                    break;
+
+                case 8:
+                case 9:
+                    db.execSQL(CREATE_DEVICE_DB_8);
+                    if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_DEVICE_DB_8);
                     db.execSQL(CREATE_BIKE_POWER_SENSORS_TABLE_6);
                     if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_BIKE_POWER_SENSORS_TABLE_6);
 
@@ -1177,6 +1238,50 @@ public class DevicesDatabaseManager {
             if (oldVersion <= 6) {
                 addLocationDevicesToDb(db);
             }
+
+            if (oldVersion <= 7) {
+                if (DEBUG) Log.i(TAG, "onUpgrade: upgrading from Version 7 to 8 (adding baselineCircumference)");
+                db.execSQL("ALTER TABLE " + DEVICES + " ADD COLUMN " + BASELINE_CIRCUMFERENCE + " real DEFAULT 0.0");
+            }
+
+            if (oldVersion <= 8) {
+                if (DEBUG) Log.i(TAG, "onUpgrade: upgrading from Version 8 to 9 (updating legacy ALTITUDE_FROM_PRESSURE default names)");
+                migrateAltitudeFromPressureLegacyNames(db);
+            }
+        }
+
+        /**
+         * Idempotent migration updating legacy default names for ALTITUDE_FROM_PRESSURE devices
+         * across all 9 locales while strictly preserving custom user renames (REQ-SEN-026.2, ATT-5073).
+         */
+        public int migrateAltitudeFromPressureLegacyNames(SQLiteDatabase db) {
+            String newName = mContext.getString(R.string.devices_altitude_from_pressure);
+            String[] legacyNames = new String[] {
+                "Air Pressure",
+                "Luftdruck",
+                "Presión Aire",
+                "Pression Air",
+                "Pressione Aria",
+                "気圧",
+                "Luchtdruk",
+                "Ciśnienie pow.",
+                "Pressão do Ar"
+            };
+            StringBuilder placeholders = new StringBuilder();
+            for (int i = 0; i < legacyNames.length; i++) {
+                if (i > 0) placeholders.append(",");
+                placeholders.append("?");
+            }
+            String whereClause = DEVICE_TYPE + " = ? AND " + NAME + " IN (" + placeholders + ")";
+            String[] whereArgs = new String[legacyNames.length + 1];
+            whereArgs[0] = DeviceType.ALTITUDE_FROM_PRESSURE.name();
+            System.arraycopy(legacyNames, 0, whereArgs, 1, legacyNames.length);
+
+            ContentValues values = new ContentValues();
+            values.put(NAME, newName);
+            int updated = db.update(DEVICES, values, whereClause, whereArgs);
+            if (DEBUG) Log.i(TAG, "migrateAltitudeFromPressureLegacyNames: updated " + updated + " legacy rows to " + newName);
+            return updated;
         }
 
         // necessary to upgrade the database
@@ -1231,6 +1336,14 @@ public class DevicesDatabaseManager {
             contentValues.put(DEVICE_TYPE, DeviceType.SPEED_AND_LOCATION_NETWORK.name());
             contentValues.put(PAIRED, false);
             contentValues.put(NAME, mContext.getString(R.string.devices_location_Network));
+            contentValues.put(MANUFACTURER_NAME, Build.BRAND);
+            db.insert(DEVICES, null, contentValues);
+
+            contentValues = new ContentValues();
+            contentValues.put(PROTOCOL, Protocol.SMARTPHONE.name());
+            contentValues.put(DEVICE_TYPE, DeviceType.ALTITUDE_FROM_POSITION.name());
+            contentValues.put(PAIRED, false);
+            contentValues.put(NAME, mContext.getString(R.string.devices_altitude_from_position));
             contentValues.put(MANUFACTURER_NAME, Build.BRAND);
             db.insert(DEVICES, null, contentValues);
 

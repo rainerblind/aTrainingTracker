@@ -63,9 +63,12 @@ fun PeriodsScreen(
     }
 
     val groupedPeriods by viewModel.groupedPeriods.collectAsStateWithLifecycle()
+    val filteredGroupedPeriods by viewModel.filteredGroupedPeriods.collectAsStateWithLifecycle()
+    val selectedSports by viewModel.selectedSports.collectAsStateWithLifecycle()
     val migrationStatus by viewModel.migrationStatus.collectAsStateWithLifecycle()
     val selectedPeriod by viewModel.selectedPeriod.collectAsStateWithLifecycle()
     val enabledMarkerTypes by viewModel.enabledMarkerTypes.collectAsStateWithLifecycle()
+    val selectedMetric by viewModel.selectedMetric.collectAsStateWithLifecycle()
     val groups = viewModel.groups
 
     val peekedWorkoutDataWithTrack by viewModel.peekedWorkoutDataWithTrack.collectAsStateWithLifecycle()
@@ -114,6 +117,31 @@ fun PeriodsScreen(
         }
     }
 
+    val handleDayClick: (PeriodSummary, BSportType, java.time.LocalDate, DailySportActivity?) -> Unit = { summary, sport, date, activity ->
+        if (activity != null && activity.count > 0) {
+            val dayStartS = date.atStartOfDay(java.time.ZoneId.systemDefault()).toEpochSecond()
+            val dayEndS = date.atTime(23, 59, 59).atZone(java.time.ZoneId.systemDefault()).toEpochSecond()
+            val dateTitle = date.format(java.time.format.DateTimeFormatter.ofPattern("EEE, d. MMM yyyy", java.util.Locale.getDefault()))
+            val sportName = context.getString(sport.stringResId)
+            val firstWorkoutId = activity.workoutIds.firstOrNull()
+
+            val fragment = WorkoutSummariesListFragment.newInstance(
+                primaryTitle = dateTitle,
+                secondaryTitle = sportName,
+                bSportType = sport,
+                startS = dayStartS,
+                endS = dayEndS,
+                scrollToWorkoutId = firstWorkoutId
+            )
+            (context as? FragmentActivity)?.supportFragmentManager?.let { fm ->
+                fm.beginTransaction()
+                    .add(android.R.id.content, fragment)
+                    .addToBackStack(null)
+                    .commit()
+            }
+        }
+    }
+
     Box(modifier = modifier) {
         if (selectedPeriod != null) {
             val mapState by viewModel.mapState.collectAsStateWithLifecycle()
@@ -131,18 +159,23 @@ fun PeriodsScreen(
             )
         } else {
             PeriodsTabsScreen(
-                groupedPeriods = groupedPeriods,
+                groupedPeriods = filteredGroupedPeriods,
                 pagerState = pagerState,
                 listStates = listStates,
                 onHeaderClick = { summary -> handleStartWorkoutList(summary, null, null) },
-                onMapClick = { summary -> viewModel.showPeriodMap(summary) },
+                onMapClick = { summary, regionId -> viewModel.showPeriodMap(summary, regionId) },
                 onSportClick = { summary, bSportType -> handleStartWorkoutList(summary, bSportType, null) },
                 onLongestWorkoutClick = { summary, bSportType, workoutId ->
                     handleStartWorkoutList(summary, bSportType, workoutId)
                 },
                 isPlayServiceAvailable = isPlayAvailable,
                 tabs = groups,
-                migrationStatus = migrationStatus
+                migrationStatus = migrationStatus,
+                selectedSports = selectedSports,
+                onToggleSportFilter = { viewModel.toggleSportFilter(it) },
+                selectedMetric = selectedMetric,
+                onSelectMetric = { viewModel.selectMetric(it) },
+                onDayCellClick = handleDayClick
             )
         }
     }

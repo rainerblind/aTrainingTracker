@@ -80,6 +80,12 @@ This document serves as the authoritative living source of truth for software en
   * Rising-edge transitions to `TrackingMode.TRACKING` in `TrackingTabsViewModel` **MUST** distinguish between an initial workout start (`READY -> TRACKING`) / manual resume from the **Control** tab (`Page 0`) versus an **Auto-Pause** resume (`PAUSED (isAutoPaused) -> TRACKING`).
   * Emitting `TabNavigationEvent.NavigateTo(0)` when Auto-Pause finishes pulls the athlete away from whichever secondary telemetry or Map tab they were viewing. Auto-scroll to the first telemetry tab (`NavigateTo(0)`) is only permitted when starting tracking or resuming from the **Control** tab (`Page 0`).
 
+### 1.10 No Snapshot State Writes During Composition (Rule 66 — ATT-4863 / ATT-4838 / ATT-4864)
+* **Never write a Compose `MutableState` inside a `remember { ... }` calculation or anywhere else in the composition body.** Writing snapshot state while composing invalidates the current composition and causes extra recompositions (on 1-Hz cockpit data this becomes recomposition churn).
+  * ❌ `var lastIndex by remember { mutableStateOf<Int?>(null) }` + `val res = remember(key) { ...; lastIndex = res.segmentIndex; res }`
+  * ✅ Cache values that only need to survive between calculations in a **plain holder object** (`private class SegmentIndexHolder(var index: Int? = null)`, `val holder = remember(key) { SegmentIndexHolder() }`), or move the write into a `SideEffect` / `LaunchedEffect` / ViewModel.
+* Sprint 2026-44.1 removed this pattern from `SensorGridScreen` (ATT-4863) and re-introduced it in `TrackingTabsScreen` (ATT-4838) in the same sprint — Gate 4 explicitly checks for it.
+
 ---
 
 ## 2. Database & Data Transfer Object (DTO) Architecture
@@ -99,6 +105,16 @@ This document serves as the authoritative living source of truth for software en
 * **Direct Reference to `SQLiteOpenHelper.DB_VERSION` Constants**:
   * `DatabaseSchemaRegistry` (and any backup/restore or migration schema validator) **MUST** reference each `SQLiteOpenHelper` subclass's `DB_VERSION` / `C_DB_VERSION` constant directly rather than duplicating raw integer literals (`maxVersion = 1`, `25`, etc.).
   * Whenever a database's `DB_VERSION` is incremented (e.g., for an index or column migration), `DatabaseSchemaRegistry` must automatically reflect the updated version and must be guarded by a contract test asserting equality between every registered database's `maxVersion` and its corresponding `SQLiteOpenHelper` version constant.
+
+### 2.3 SQLite Schema Migration & `onCreate`/`onUpgrade` Parity (Rule 64 — ATT-3534)
+* **Symmetrical Schema Evolution**:
+  * Whenever a database's `DB_VERSION` / `C_DB_VERSION` is incremented, both `onCreate()` (the fresh-installation schema definition) and `onUpgrade()` (the incremental migration pathway) **MUST** be updated symmetrically.
+  * Fresh installs and incrementally upgraded databases must yield 100% equivalent schema structures (identical columns, constraints, indices, and defaults).
+* **Safe `DEFAULT` Constraints on Added `NOT NULL` Columns**:
+  * When executing `ALTER TABLE ... ADD COLUMN` for a non-null property on an existing table in `onUpgrade()`, the column definition **MUST** include an explicit safe `DEFAULT` constraint (e.g. `DEFAULT 0` or `DEFAULT ''`).
+  * Adding a `NOT NULL` column without a `DEFAULT` constraint causes SQLite migrations to crash with `SQLiteException: Cannot add a NOT NULL column with default value NULL` on existing user databases.
+* **Automated Migration Contract Unit Tests**:
+  * Every database schema version increment **MUST** be accompanied by an automated migration contract unit test verifying that a database upgraded incrementally through all `onUpgrade()` steps produces identical table schemas and columns as a fresh database initialized via `onCreate()`.
 
 ---
 
@@ -174,10 +190,10 @@ This document serves as the authoritative living source of truth for software en
     ./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest"
     ```
   * **High-Risk Exception**: Run the full `./gradlew testDebugUnitTest` suite per-ticket *only* for High-Risk cross-cutting changes touching core shared infrastructure (`TrainingApplication`, `TrackerService`, `BANALService`, or SQLite database schema migrations).
-* **Tier 2 — Sprint Integration Gate (Once per Sprint in `Review & Retro` Before Merging `sprint/<ID>` into `develop`, ~4 Minutes)**:
-  * During the Sprint `Review & Retro` ceremony before merging `sprint/<SPRINT_NAME>` into `develop`, execute the full clean-room test suite:
+* **Tier 2 — Sprint Integration Gate (Once per Sprint at the Very End of Phase 2, Before Ceremony 2, ~8 Minutes — Rule 66 / ATT-4864)**:
+  * After the last sprint ticket is squashed onto `sprint/<SPRINT_NAME>` (and before the Sprint Review), execute the full clean-room test suite and fix all failures as separate attributed commits; the run at the start of the Sprint Review is a confirmation:
     ```bash
-    ./gradlew testDebugUnitTest
+    ./gradlew testDebugUnitTest --max-workers=2 && python3 tools/verify_requirement_governance.py
     ```
   * Verify 100% pass rate across all 3,660+ unit tests across all project modules. Because each ticket is squashed into a single atomic commit on `sprint/<SPRINT_NAME>` (Core Rule 8), any cross-package regression caught at the Sprint Integration Gate can be pinpointed immediately.
 
@@ -196,3 +212,28 @@ This document serves as the authoritative living source of truth for software en
 * **Preservation of System Architectural Governance Guards**:
   * System policy and governance guards (such as `TryWithResourcesCursorAuditTest` for leak prevention, `ManifestSecurityContractTest` for Android security boundaries, `TranslationParityTest` for 9-language localization, and Rule 34 empty callback guards) enforce essential repository-wide invariants and **MUST NOT** be confused with prohibited UI source-grep tests.
 
+### 5.5 Test Isolation: No Real Background Work with Mocked Android Contexts (Rule 66 — ATT-4840 / ATT-4864)
+* Plain JVM unit tests (MockK, no Robolectric) **MUST NOT** let production code start real asynchronous infrastructure — `DataStore` singletons (`TuningPreferencesDataStore`, `SettingsDataStore`), `stateIn(CoroutineScope(Dispatchers.Default))`, `WorkManager`, executors — with a mocked `Context`.
+* Such work fails *asynchronously* (e.g. `Method getFilesDir ... not mocked`) after the test has finished; `kotlinx-coroutines-test` then reports it as `UncaughtExceptionsBeforeTest` in an **unrelated** `runTest`-based test that happens to run next in the same JVM fork, making failures order-dependent and misattributed (Sprint 2026-44.1: `TrainingApplicationTrackingTest` broke `BatterySaverControllerTest`).
+* Whenever production code under test gains a new dependency on such infrastructure (e.g. `TrainingApplication.startTracking()` reading `SettingsDataStoreJavaHelper.getAutoPauseConfig()`), stub the synchronous bridge in **all** existing tests that exercise that path (`mockkStatic(SettingsDataStoreJavaHelper::class)`), or use Robolectric with a real temporary context.
+* A production `try/catch` around a synchronous call does not catch exceptions thrown later on another dispatcher.
+
+### 5.6 Upgrade-Path Behaviour for Persisted Data & Removed Settings (Rule 66 — ATT-4841 / ATT-4864)
+* When a DB migration back-fills new columns or a setting is removed/replaced, the back-fill MUST reproduce the user's **previous effective behaviour** (carry over the old preference), not the new default for fresh installs. Document "what changes for an existing user after the update" in the Stage 3 plan; Gate 4 verifies it (Sprint 2026-44.1: removing the global `showGauge` (default `false`) and back-filling `ShowBar = 1` forced zone bars onto all existing layouts — ATT-4927).
+
+### 5.7 Broadcast Receiver Ordering, Java-to-Kotlin Nullability & Startup Self-Healing (Rule 67 — ATT-4926, ATT-4922 / ATT-4936)
+* **End-to-End Broadcast Listener Sequence Verification (`ATT-4926` $\rightarrow$ `ATT-5080`)**:
+  * Multiple components register `BroadcastReceiver`s for the same lifecycle intent (e.g., `ClockDevice` and `FilterManager` both listen for `RESET_ACCUMULATORS_INTENT`). When modifying a broadcast receiver or `reset()` method, verify the **end-to-end execution order across all registered listeners** (in `ATT-4926`, `ClockDevice` reset `TIME_ACTIVE` to `0` (`0:00:00`) first, and `FilterManager.resetAllFilters()` ran second and overwrote `InstantaneousFilter.mValue` with `null` (`--:--:--`)).
+* **Java Platform-Type Nullability Guard (`ATT-4926` $\rightarrow$ `ATT-5080`)**:
+  * Any Java method returning a formatted display string (`SensorData.getStringValue()`, `MyFormatter.format()`) **MUST** return a non-null fallback (`"--"`) when its underlying value is `null` or be explicitly annotated `@Nullable` so Kotlin callers cannot crash with a `NullPointerException` (`Parameter specified as non-null is null`).
+* **Startup Self-Healing for Terminal Database States (`ATT-4922` $\rightarrow$ `ATT-5081`)**:
+  * When adding recovery logic for records stuck in a terminal DB state (`FINISHED_FAILED`) from previous app versions, always wire an automatic background trigger on app startup (`MainActivityWithNavigation` / `Application.onCreate`) in addition to interactive settings dialog triggers so recovery happens without requiring manual user reconnection.
+
+### 5.8 Side-Effect, Wrapper/Proxy & Shared Repository State Audits (Rule 68 — ATT-5080, ATT-5074 / ATT-5082)
+* **Unwrap `ProxySensor` / Decorator Wrappers in `instanceof` Checks (`ATT-5080` $\rightarrow$ `ATT-5191`)**:
+  * When `deviceName == null` (`"Best Sensor"`), `MySensorManager.getSensor(sensorType)` returns a `ProxySensor<T>` (which extends `MySensor<T>`, **not** `MyAccumulatorSensor`), wrapping the underlying active sensor (`proxySensor.getBestSensor()`).
+  * Before checking `sensor instanceof MyAccumulatorSensor` (or any concrete sensor subclass) in `FilterManager` or service helpers, always unwrap `ProxySensor` first (`if (sensor instanceof ProxySensor<?> proxy && proxy.getBestSensor() != null) sensor = proxy.getBestSensor();`), and ensure unit tests cover `"Best Sensor"` (`ProxySensor`-wrapped) instances in addition to direct subclass mocks.
+* **Companion `StateFlow` Hydration Parity in Fast/Lightweight Repository Loaders (`ATT-5074` $\rightarrow$ `ATT-5196`)**:
+  * When adding a fast/lightweight loading path to a shared repository (e.g., `WorkoutClusterRepository.loadAllClustersLightweight()` populating `_allClusters`), audit all downstream UI consumers (`MapFragmentWithTrackViewModel`, `ClusterOnMapSheet`) to ensure companion `StateFlow`s (`_clusterStats`) are also hydrated if empty, so UI views opened before the primary list screen never render with missing metadata.
+* **Cross-Consumer Scope Audit for Shared Map Layers (`ATT-5074` $\rightarrow$ `ATT-5197`)**:
+  * Before wiring a map layer or repository flow into multiple ViewModels, verify whether the overlay belongs only on the general inspection map (`MapFragmentWithTrackViewModel`) or also on the live tracking cockpit map (`TrackingViewModel` / `SensorGridScreen`). Historical discovery layers (*Lieblingsstrecken* / `CLUSTERS`) belong strictly on the general map, never on the live tracking cockpit map.
