@@ -101,7 +101,7 @@
     <string name="device_altitude_pressure_how_it_works">Meet de luchtdruk via de interne barometer. Berekent relatieve hoogteverschillen via de barometrische formule, automatisch gekalibreerd bij bekende locaties of handmatig.</string>
     <string name="device_altitude_pressure_pros_cons">+ Zeer responsief en stabiel; geen verticale GPS-ruis; werkt in tunnels.\n- Weersveranderingen kunnen na verloop van tijd voor hoogtedrift zorgen.</string>
     <string name="device_altitude_position_how_it_works">Koppelt uw GPS-positie aan digitale hoogtemodellen (DEM) uit routecaches of van Open-Meteo.</string>
-    <string name="device_altitude_position_pros_cons">+ Immuun voor weer en barometrische drift; absolute hoogte zonder kalibratie.\n- Afhankelijk van GPS-nauwkeurigheid; kan verspringen op bruggen en kliffen.</string>
+    <string name="device_altitude_position_pros_cons">+ Immuun voor weer en barometrische drift; absolute hoogte zonder kalibratie.\n- Vereist actieve internetverbinding voor niet-gecachte gebieden; afhankelijk van GPS-nauwkeurigheid (kan verspringen op bruggen en kliffen).</string>
 
     <string name="devices_live_sensor_data_header">Sensorgegevens</string>
 

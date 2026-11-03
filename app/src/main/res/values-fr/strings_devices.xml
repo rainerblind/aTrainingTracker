@@ -102,7 +102,7 @@
     <string name="device_altitude_pressure_how_it_works">Mesure la pression atmosphérique avec le baromètre interne. Calcule les variations d\'altitude relatives via la formule barométrique, calibrée aux lieux connus ou manuellement.</string>
     <string name="device_altitude_pressure_pros_cons">+ Très réactif et fluide ; sans bruit vertical GPS ; fonctionne en tunnel.\n- La météo peut entraîner une dérive d\'altitude au fil du temps.</string>
     <string name="device_altitude_position_how_it_works">Associe votre position GPS à des modèles numériques de terrain (MNT) en cache ou en ligne via Open-Meteo.</string>
-    <string name="device_altitude_position_pros_cons">+ Insensible à la météo et aux dérives ; altitude absolue sans calibrage.\n- Dépend de la précision GPS ; moins précis sur ponts et falaises.</string>
+    <string name="device_altitude_position_pros_cons">+ Insensible à la météo et aux dérives ; altitude absolue sans calibrage.\n- Nécessite une connexion Internet active pour les zones non mises en cache ; dépend de la précision GPS (moins précis sur ponts et falaises).</string>
 
     <string name="devices_live_sensor_data_header">Données Capteurs</string>
 

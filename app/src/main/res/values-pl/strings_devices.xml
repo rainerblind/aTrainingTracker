@@ -101,7 +101,7 @@
     <string name="device_altitude_pressure_how_it_works">Mierzy ciśnienie powietrza wbudowanym barometrem. Oblicza względne zmiany wysokości ze wzoru barometrycznego, kalibrowana w ulubionych miejscach lub ręcznie.</string>
     <string name="device_altitude_pressure_pros_cons">+ Płynna i czuła; brak szumów pionowych GPS; działa w tunelach.\n- Zmiany pogody mogą powodować dryf wysokości w czasie.</string>
     <string name="device_altitude_position_how_it_works">Porównuje pozycję GPS z cyfrowymi modelami terenu (DEM) z pamięci podręcznej lub z Open-Meteo.</string>
-    <string name="device_altitude_position_pros_cons">+ Niewrażliwa na pogodę i dryf ciśnienia; bezwzględna wysokość bez kalibracji.\n- Zależy od dokładności GPS; schodkowa na mostach i urwiskach.</string>
+    <string name="device_altitude_position_pros_cons">+ Niewrażliwa na pogodę i dryf ciśnienia; bezwzględna wysokość bez kalibracji.\n- Wymaga aktywnego połączenia z internetem w niebuforowanych obszarach; zależy od dokładności GPS (schodkowa na mostach i urwiskach).</string>
 
     <string name="devices_live_sensor_data_header">Dane czujników</string>
 

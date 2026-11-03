@@ -31,7 +31,7 @@ import javax.xml.parsers.DocumentBuilderFactory
  * TST-SEN-026.1 / TST-SEN-026.4: 9-Language Localization Audit verifying that
  * `devices_altitude_from_pressure` is renamed to altitude terminology and all
  * specialized altitude device explanation strings exist with non-empty values
- * across all 9 supported application locales (REQ-SEN-026, ATT-5073).
+ * across all 9 supported application locales (REQ-SEN-026, ATT-5073, ATT-5198).
  */
 class SpecializedAltitudeDevicesLocalizationTest {
 
@@ -47,6 +47,18 @@ class SpecializedAltitudeDevicesLocalizationTest {
         "nl" to "Hoogte uit luchtdruk",
         "pl" to "Wysokość z ciśnienia",
         "pt" to "Altitude por pressão"
+    )
+
+    private val expectedInternetKeywords = mapOf(
+        "" to ("internet" to "uncached"),
+        "de" to ("Internet" to "ungecachte"),
+        "es" to ("internet" to "sin caché"),
+        "fr" to ("Internet" to "non mises en cache"),
+        "it" to ("Internet" to "non memorizzate nella cache"),
+        "ja" to ("インターネット" to "未キャッシュ"),
+        "nl" to ("internet" to "niet-gecachte"),
+        "pl" to ("internet" to "niebuforowanych"),
+        "pt" to ("internet" to "sem cache")
     )
 
     private val expectedExplanationKeys = listOf(
@@ -103,6 +115,52 @@ class SpecializedAltitudeDevicesLocalizationTest {
                     stringMap[key].isNullOrBlank()
                 )
             }
+        }
+    }
+
+    @Test
+    fun testDeviceAltitudePositionProsCons_mentionsInternetRequirementAcrossAll9Locales() {
+        val resDir = findResDirectory()
+
+        for (locale in locales) {
+            val dirName = if (locale.isEmpty()) "values" else "values-$locale"
+            val file = File(resDir, "$dirName/strings_devices.xml")
+            assertTrue("strings_devices.xml must exist for locale $dirName", file.exists())
+
+            val stringMap = parseStringsFile(file)
+            val value = stringMap["device_altitude_position_pros_cons"]
+            assertFalse(
+                "device_altitude_position_pros_cons must not be blank in $dirName",
+                value.isNullOrBlank()
+            )
+
+            // Invariant: Two-line structure separated by literal \n (AAPT2 literal backslash-n in XML)
+            val lines = if (value!!.contains("\\n")) value.split("\\n") else value.split("\n")
+            assertEquals(
+                "device_altitude_position_pros_cons must consist of exactly 2 lines in $dirName",
+                2,
+                lines.size
+            )
+            assertTrue(
+                "Line 1 (Pros) must start with '+ ' in $dirName",
+                lines[0].startsWith("+ ")
+            )
+            assertTrue(
+                "Line 2 (Cons) must start with '- ' in $dirName",
+                lines[1].startsWith("- ")
+            )
+
+            val (internetKeyword, cacheKeyword) = expectedInternetKeywords[locale]
+                ?: error("Missing expected keywords for locale '$locale'")
+
+            assertTrue(
+                "Line 2 in $dirName must mention active internet requirement ('$internetKeyword')",
+                lines[1].contains(internetKeyword, ignoreCase = true)
+            )
+            assertTrue(
+                "Line 2 in $dirName must mention uncached areas ('$cacheKeyword')",
+                lines[1].contains(cacheKeyword, ignoreCase = true)
+            )
         }
     }
 
