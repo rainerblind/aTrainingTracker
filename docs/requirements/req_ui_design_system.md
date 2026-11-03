@@ -12905,6 +12905,47 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 **Invariants**: Rule 37 geometric primitives, official `#0A3D91` Bluetooth badge token, `R.drawable.bt_*` resource ID mapping, and 100% clean-room test pass rate.
 
 
+### REQ-UI-443: Power TelemetryMetricGraph Marginal Histogram Unfolded Linear Bins Projection Parity in Portrait and Landscape Modes [Verified]
+- **Tests**: `TST-UI-443`
+- **Implementation**: `ZoneDistributionModels.kt`, `TelemetryMetricGraph.kt`
+- **Rationale**: In workout details and telemetry graphs (`TelemetryMetricGraph.kt`), when fine-grained frequency histogram mode (`ZoneCardDisplayMode.HISTOGRAM`) is active for Cycling Power, the marginal histogram docked to the right of the continuous power time-series curve SHALL project individual 10 W frequency bins across the continuous 1:1 vertical Y-axis (`[dataMin, dataMax]`) using unfolded linear bins (`TelemetryHistogramData.linearBins`) instead of stretching folded Sprint-Tail overflow bars (`overflowBin`) across the high-wattage range (ATT-5190, amending `REQ-UI-251` and `REQ-UI-431`, and complementing `REQ-UI-419` and `REQ-UI-420`):
+1. *Unfolded Linear Bins Domain Helper (`REQ-UI-443.1`)*:
+• In `ZoneDistributionModels.kt`, `TelemetryHistogramData` SHALL expose an accessor `val linearBins: List<TelemetryHistogramBin>` that resolves the full continuous sequence of frequency bins across `[dataMin, dataMax]`:
+  - When `sprintTail == null`, returns `bins`.
+  - When `sprintTail != null`, returns `bins.filterNot { it.isOverflow } + sprintTail.bins.filterNot { it.isReturn }`.
+2. *Marginal Histogram Rendering in Portrait Mode (`REQ-UI-443.2`)*:
+• In portrait orientation (`TelemetryMetricGraph.kt:482-510`), when `zoneDisplayMode == ZoneCardDisplayMode.HISTOGRAM`, the 25dp inline marginal strip SHALL iterate over `histogram.linearBins` instead of `histogram.bins`.
+• `maxBinPct` SHALL be computed from `histogram.linearBins.maxOfOrNull { it.percentage }`.
+• For each bin in `linearBins`, the background container track (`alpha = 0.15f`) SHALL only be drawn when `bin.durationSec > 0L`, eliminating visual black clutter across empty Zone 7 high-wattage intervals.
+3. *Aligned Marginal Zone Distribution in Landscape Mode (`REQ-UI-443.3`)*:
+• In landscape orientation (`TelemetryMetricGraph.kt:938-976`, `AlignedMarginalZoneDistribution`), the marginal pane SHALL iterate over `histogram.linearBins` and compute `maxBinPct` across `linearBins`.
+• For each bin in `linearBins`, the background container track (`alpha = 0.15f`) SHALL only be drawn when `bin.durationSec > 0L`.
+• Text overlays (`${bin.percentage.toInt()}%`) SHALL continue to be rendered for bins with `rectHeight >= 12.dp.toPx() && bin.durationSec > 0L`.
+4. *Preservation of Standalone Histogram Sprint-Tail Folding & Invariants (`REQ-UI-443.4`)*:
+• The standalone Power Histogram card on the *Zones* tab (`TelemetryHistogramChart.kt`) and `TelemetryHistogramCalculator.calculatePowerHistogram` SHALL remain 100% invariant, retaining the interactive Sprint-Tail overflow bar, P99 boundary snapping, and drill-down navigation per `REQ-UI-419`.
+• Multi-chart plot alignment, horizontal 50dp start padding, 72%/28% landscape split, and touch gestures SHALL remain 100% preserved.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-UI-251` (*Marginal Strip in Portrait*) and `REQ-UI-431` (*Marginal Pane in Landscape*); complements `REQ-UI-419` (*Sprint Tail Folding*) and `REQ-UI-420` (*Coggan 7-Zone Parity*). Targets `ZoneDistributionModels.kt` and `TelemetryMetricGraph.kt`.
+2. *Historical Origin & Commit Trace*: Commit `c8192a0e` (`ATT-2147`, `REQ-UI-251`), commit `752d580f` (`ATT-4293`, `REQ-UI-419`), and commit `dcb8f15f` (`ATT-2145`, `REQ-UI-431`).
+3. *Root Reason for Existing Formulation*: Sprint-tail folding in `TelemetryHistogramCalculator.kt` was designed for standalone equal-column horizontal X-axis charts (`TelemetryHistogramChart.kt`) to avoid compressing the main training zone columns. Its side effect on marginal histograms docked to continuous 1:1 vertical Y-axes in `TelemetryMetricGraph.kt` was not anticipated, causing the single `overflowBin` spanning `[tailCutoff, dataMax]` to stretch across the entire high-power range as a giant black block.
+4. *Preservation of Core Invariants*: Standalone `TelemetryHistogramChart.kt` folding, interactive header navigation, Heart Rate linear histograms, multi-chart scrubbing alignment (`startPadding = 50.dp`), landscape 72%/28% split (`REQ-UI-431`), and clean-room test suite pass rate are 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a cycling workout with power spikes triggering sprint-tail folding (`histogram.sprintTail != null`) and `ZoneCardDisplayMode.HISTOGRAM`,
+• *When* viewing the Power time-series graph in `TelemetryMetricGraph` (both portrait and landscape),
+• *Then* the marginal histogram renders individual 10 W bins at their true Y-axis watt positions up to `dataMax` without a giant solid black `overflowBin`.
+• *Given* high-wattage power bins with `durationSec == 0L`,
+• *When* the marginal histogram renders,
+• *Then* no background container track (`alpha = 0.15f`) is drawn for zero-duration bins.
+• *Given* the same workout on the *Zones* tab (`TelemetryHistogramChart.kt`),
+• *When* inspecting the standalone Power histogram,
+• *Then* the interactive Sprint-Tail overflow bar and drill-down navigation continue to operate without regression.
+
+**Invariants**: Standalone sprint-tail folding preserved, multi-chart horizontal alignment preserved, 100% clean-room test suite pass rate.
+
+
+
 
 
 

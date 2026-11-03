@@ -97,7 +97,22 @@ data class TelemetryHistogramData(
     val bins: List<TelemetryHistogramBin>,
     val tailCutoff: Int? = null,
     val sprintTail: TelemetryHistogramData? = null
-)
+) {
+    /**
+     * Continuous sequence of 10 W frequency bins spanning the full [dataMin, dataMax] range
+     * for 1:1 vertical Y-axis marginal histogram rendering (REQ-UI-443).
+     *
+     * When sprint-tail folding is inactive ([sprintTail] == null), returns [bins].
+     * When sprint-tail folding is active ([sprintTail] != null), excludes the folded [overflowBin]
+     * and [returnBin] and concatenates regular bins with the expanded sprint tail bins.
+     */
+    val linearBins: List<TelemetryHistogramBin>
+        get() = if (sprintTail == null) {
+            bins
+        } else {
+            bins.filterNot { it.isOverflow } + sprintTail.bins.filterNot { it.isReturn }
+        }
+}
 
 /**
  * Display modes for zone distribution cards (REQ-UI-372).
