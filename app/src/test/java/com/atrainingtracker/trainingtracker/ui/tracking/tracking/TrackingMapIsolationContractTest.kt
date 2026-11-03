@@ -63,8 +63,10 @@ class TrackingMapIsolationContractTest {
         assertTrue(state.mapTracks.isEmpty())
         assertTrue(state.mapSegments.isEmpty())
         assertTrue(state.mapRoutes.isEmpty())
-        assertTrue(state.mapClusters.isEmpty())
         assertTrue(state.mapMarkers.isEmpty())
+        val mapStateFields = TrackingMapState::class.java.declaredFields.map { it.name }
+        assertFalse("TrackingMapState must not declare mapClusters field via reflection (ATT-5197)", mapStateFields.contains("mapClusters"))
+        assertFalse("TrackingMapState must not contain mapClusters (ATT-5197)", content.contains("mapClusters"))
     }
 
     @Test
@@ -72,6 +74,9 @@ class TrackingMapIsolationContractTest {
         val screenState = TrackingScreenState()
         assertNotNull("TrackingScreenState must expose mapState", screenState.mapState)
         assertEquals(screenState.showMap, screenState.mapState.showMap)
+
+        val screenStateFields = TrackingScreenState::class.java.declaredFields.map { it.name }
+        assertFalse("TrackingScreenState must not declare mapClusters field via reflection (ATT-5197)", screenStateFields.contains("mapClusters"))
 
         // Verify delegated getters match mapState values
         assertEquals(screenState.zoomFocus, screenState.mapState.zoomFocus)
@@ -81,7 +86,6 @@ class TrackingMapIsolationContractTest {
         assertEquals(screenState.currentTrack, screenState.mapState.currentTrack)
         assertEquals(screenState.mapTracks, screenState.mapTracks)
         assertEquals(screenState.mapRoutes, screenState.mapRoutes)
-        assertEquals(screenState.mapClusters, screenState.mapClusters)
     }
 
     @Test
@@ -111,6 +115,17 @@ class TrackingMapIsolationContractTest {
         assertFalse(
             "SensorGridScreen body must NOT invoke ATrainingTrackerMap directly",
             sensorGridBody.contains("ATrainingTrackerMap(")
+        )
+
+        // 4. Verify TrackingMapContainer does NOT compose clusters (ATT-5197 / REQ-UI-322.6)
+        val containerBody = content.substring(fnEnd)
+        assertFalse(
+            "TrackingMapContainer must NOT compose clusters() on ATrainingTrackerMap (ATT-5197)",
+            containerBody.contains("clusters(")
+        )
+        assertFalse(
+            "TrackingMapContainer remember must NOT depend on mapClusters (ATT-5197)",
+            containerBody.contains("mapClusters")
         )
     }
 }

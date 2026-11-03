@@ -31,8 +31,6 @@ import com.atrainingtracker.banalservice.filters.FilteredSensorData
 import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.database.RouteWithPath
-import com.atrainingtracker.trainingtracker.database.WorkoutCluster
-import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.segments.LiveSegment
@@ -69,6 +67,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -92,7 +91,6 @@ class TrackingViewModelMapStateTest {
     private val mockBanalRepo = mockk<BANALServiceRepository>(relaxed = true)
     private val mockLiveSegmentsRepo = mockk<LiveSegmentsRepository>(relaxed = true)
     private val mockRoutesRepo = mockk<RoutesRepository>(relaxed = true)
-    private val mockWorkoutClusterRepo = mockk<WorkoutClusterRepository>(relaxed = true)
     private val mockPrefs = mockk<SharedPreferences>(relaxed = true)
 
     private val liveSegmentsFlow = MutableStateFlow(emptyList<LiveSegment>())
@@ -102,7 +100,6 @@ class TrackingViewModelMapStateTest {
     private val currentBearingFlow = MutableStateFlow<Double?>(null)
     private val allRoutesFlow = MutableStateFlow(emptyList<RouteWithPath>())
     private val activeNavigatedRouteIdFlow = MutableStateFlow<Long?>(null)
-    private val allClustersFlow = MutableStateFlow(emptyList<WorkoutCluster>())
     private val currentPathPointsFlow = MutableStateFlow(emptyList<PathPoint>())
 
     @Before
@@ -136,7 +133,6 @@ class TrackingViewModelMapStateTest {
         every { mockBanalRepo.currentPathPoints } returns currentPathPointsFlow
         every { mockRoutesRepo.allRoutes } returns allRoutesFlow
         every { mockRoutesRepo.activeNavigatedRouteId } returns activeNavigatedRouteIdFlow
-        every { mockWorkoutClusterRepo.allClusters } returns allClustersFlow
         coEvery { mockTrackingViewsRepo.getActivityTypeForView(any()) } returns ActivityType.getDefaultActivityType()
         every {
             mockTrackingViewsRepo.getTrackingViewInfoFlow(any())
@@ -173,7 +169,6 @@ class TrackingViewModelMapStateTest {
             liveSegmentsRepository = mockLiveSegmentsRepo,
             routesRepository = mockRoutesRepo,
             viewId = 1L,
-            workoutClusterRepository = mockWorkoutClusterRepo,
             defaultDispatcher = testDispatcher
         ).also { createdViewModels.add(it) }
     }
@@ -375,34 +370,8 @@ class TrackingViewModelMapStateTest {
     }
 
     @Test
-    fun testObserveMapState_incorporatesClustersDecoupledFromTelemetry() = runTest {
-        val cluster = WorkoutCluster(
-            id = 77L,
-            name = "Lakeside Sprint",
-            probableSportId = 1L,
-            startLat = 48.1,
-            startLng = 11.5,
-            endLat = 48.2,
-            endLng = 11.6,
-            maxDispLat = 48.2,
-            maxDispLng = 11.6,
-            refDistance = 4200.0,
-            hitCount = 6,
-            bSportType = BSportType.BIKE,
-            routePolyline = com.google.maps.android.PolyUtil.encode(listOf(LatLng(48.1, 11.5), LatLng(48.2, 11.6)))
-        )
-        allClustersFlow.value = listOf(cluster)
-
-        // Part 1: Default state (no preferences stored) - CLUSTERS must be disabled by default (ATT-5074, TST-UI-282.10)
-        every { mockPrefs.getStringSet(com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrackViewModel.PREF_GENERAL_MAP_ENABLED_LAYERS, null) } returns null
-
-        val viewModelDefault = createViewModel()
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        assertTrue("Clusters must be empty by default on cockpit map (REQ-UI-322.5, ATT-5074)",
-            viewModelDefault.mapState.value.mapClusters.isEmpty())
-
-        // Part 2: Explicitly enabled - CLUSTERS populates and preserves referential identity
+    fun testCockpitMap_neverQueriesOrComputesClustersEvenWhenLayerEnabled_ATT5197() = runTest {
+        // Given: CLUSTERS enabled in general map preferences (ATT-5197 / REQ-UI-322.7 / TST-UI-282.12)
         every {
             mockPrefs.getStringSet(com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrackViewModel.PREF_GENERAL_MAP_ENABLED_LAYERS, null)
         } returns setOf("CLUSTERS", "ROUTES", "SEGMENTS", "TRACK", "KNOWN_LOCATIONS")
@@ -410,27 +379,14 @@ class TrackingViewModelMapStateTest {
         val viewModel = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
 
-        // Verify clusters are in mapState
-        val clustersInitial = viewModel.mapState.value.mapClusters
-        assertEquals(1, clustersInitial.size)
-        assertEquals(77L, clustersInitial[0].id)
-        assertEquals("Lakeside Sprint", clustersInitial[0].name)
-
-        // 1-Hz speed update occurs
-        currentSpeedFlow.value = 8.5
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        val clustersAfterSpeed = viewModel.mapState.value.mapClusters
-        assertSame("Clusters must preserve referential identity across 1-Hz speed emissions (REQ-MAP-051.1)",
-            clustersInitial, clustersAfterSpeed)
-
-        // 1-Hz bearing update occurs
-        currentBearingFlow.value = 180.0
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        val clustersAfterBearing = viewModel.mapState.value.mapClusters
-        assertSame("Clusters must preserve referential identity across 1-Hz bearing emissions (REQ-MAP-051.1)",
-            clustersInitial, clustersAfterBearing)
+        // Verify: TrackingMapState does not subscribe to or contain clusters;
+        // TrackingMapState has routes, segments, track, and markers, but zero cluster references.
+        val state = viewModel.mapState.value
+        assertNotNull(state)
+        assertEquals(true, state.showMap)
+        assertTrue(state.mapSegments.isEmpty())
+        assertTrue(state.mapRoutes.isEmpty())
+        assertTrue(state.mapMarkers.isEmpty())
     }
 
     @Test

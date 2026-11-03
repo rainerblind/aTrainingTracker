@@ -18,7 +18,6 @@ import com.atrainingtracker.banalservice.filters.FilteredSensorData
 import com.atrainingtracker.banalservice.sensor.SensorData
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.banalservice.sensor.formater.DefaultStringFormatter
-import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepository
@@ -52,7 +51,6 @@ class TrackingViewModelSensorNullSafetyTest {
         val banalServiceRepo = mockk<BANALServiceRepository>(relaxed = true)
         val liveSegmentsRepo = mockk<LiveSegmentsRepository>(relaxed = true)
         val routesRepo = mockk<RoutesRepository>(relaxed = true)
-        val clusterRepo = mockk<WorkoutClusterRepository>(relaxed = true)
 
         viewModel = TrackingViewModel(
             application = app,
@@ -60,8 +58,7 @@ class TrackingViewModelSensorNullSafetyTest {
             banalServiceRepository = banalServiceRepo,
             liveSegmentsRepository = liveSegmentsRepo,
             routesRepository = routesRepo,
-            viewId = 1L,
-            workoutClusterRepository = clusterRepo
+            viewId = 1L
         )
     }
 

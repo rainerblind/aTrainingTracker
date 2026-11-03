@@ -4400,10 +4400,10 @@
   3. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-282: **General Map Layer Visibility Controls & Preference Persistence Verification** [General map Layers menu toggles routes, segments, favorite locations, favorite tracks / clusters, and live track; user layer visibility preferences persisted across sessions in SharedPreferences; CLUSTERS layer disabled by default in DEFAULT_ENABLED; Cockpit map renders clusters only when enabled; fast asynchronous cluster hydration and off-Main polyline decoding; harmonized ClusterOnMapSheet look and stats enrichment without purple text tinting; 100% 9-language localization parity; 100% unit test pass rate.] [Verified]
+### TST-UI-282: **General Map Layer Visibility Controls & Preference Persistence Verification** [General map Layers menu toggles routes, segments, favorite locations, favorite tracks / clusters, and live track; user layer visibility preferences persisted across sessions in SharedPreferences; CLUSTERS layer disabled by default in DEFAULT_ENABLED; Cockpit map strictly isolates and never renders clusters; fast asynchronous cluster hydration and off-Main polyline decoding; harmonized ClusterOnMapSheet look and stats enrichment without purple text tinting; 100% 9-language localization parity; 100% unit test pass rate.] [Verified]
 - **Requirement(s)**: `REQ-UI-322`
 - **Component**: **General Map Layer Visibility Controls & Preference Persistence Verification**
-- **Jira**: `ATT-2931`, `ATT-4847`, `ATT-5075`, `ATT-5074`
+- **Jira**: `ATT-2931`, `ATT-4847`, `ATT-5075`, `ATT-5074`, `ATT-5197`
 - **Test Description**:
   1. *GeneralMapLayer Enum & Default State Contract (`GeneralMapLayersContractTest.kt`)*:
   • Verify `GeneralMapLayer` enum declares `ROUTES`, `SEGMENTS`, `KNOWN_LOCATIONS`, `TRACK`, and `CLUSTERS` (exactly 5 entries).
@@ -4420,11 +4420,11 @@
   • Verify floating surface at `Alignment.TopEnd` with `statusBarsPadding().padding(top = 16.dp, end = 16.dp)`.
   • Verify dropdown menu includes checkboxes and swatches for all 5 layers.
   • Verify conditional rendering of `knownLocations()`, `segments()`, `routes()`, `clusters()`, and `markers()` + `liveTrack()`.
-  4. *Cockpit Map Cluster Integration & Decoupling Contract (`TrackingViewModelTest.kt`, `SensorGridScreenTest.kt`)*:
-  • Verify `TrackingMapState` exposes `mapClusters`.
-  • Verify `TrackingViewModel` evaluates enabled map layers (`DEFAULT_ENABLED` by default), emitting `emptyList()` when `CLUSTERS` is disabled.
-  • Verify `TrackingViewModel` integrates `WorkoutClusterRepository.allClusters` into `staticMapLayerFlow` via `distinctUntilChanged()`, decoupled from 1-Hz telemetry.
-  • Verify `TrackingMapContainer` passes `clusters(mapState.mapClusters)` to `MapContentScope`.
+  4. *Cockpit Map Cluster Excision & Decoupling Contract (`TrackingMapIsolationContractTest.kt`, `TrackingViewModelMapStateTest.kt`)*:
+  • Verify `SensorGridScreen.kt` (`TrackingMapContainer`) never composes `clusters()` on `ATrainingTrackerMap`.
+  • Verify `TrackingViewModel` does NOT depend on or observe `WorkoutClusterRepository` or `GeneralMapLayer.CLUSTERS`.
+  • Verify `TrackingViewModel.observeMapState()` populates `TrackingMapState` without `WorkoutClusterRepository.allClusters`.
+  • Verify live tracking cockpit renders strictly active track, selected routes, and live segments.
   5. *ClusterOnMapSheet Harmonized UI & Non-Purple Styling Contract Tests (`GeneralMapLayersContractTest.kt`)*:
   • Verify `ClusterOnMapSheet` renders 32dp sport icon with `Color.Unspecified`.
   • Verify `ClusterOnMapSheet` does NOT apply `tint = TTColor.Cluster` or hardcoded purple colors to text or icons.
