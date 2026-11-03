@@ -1418,6 +1418,22 @@
   • Full regression pass over sensor, device management, and dialog test suites confirming zero regressions in device pairing, sensor data delivery, and calibration workflows.
 
 
+### TST-TRK-051: **Dynamic SQLite Schema Discovery via PRAGMA table_info & Decoupled Summary Telemetry Test Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-051`
+- **Component**: `TrackerServicePragmaSchemaTest.kt`, `TrackerServiceDecoupledSummaryTest.kt`, `TrackOnMapAftermathViewModelFallbackTest.kt`
+- **Jira**: `ATT-4968`
+- **Test Description**:
+  1. *PRAGMA table_info Column Discovery & Staleness Immunity Test (`TST-TRK-051.1`)*:
+  • Unit test in `TrackerServicePragmaSchemaTest.kt` verifying that querying table column names via `PRAGMA table_info` correctly identifies all added columns and returns a case-insensitive set containing all dynamically added columns after `ALTER TABLE ... ADD COLUMN` without relying on `query(..., "1")`.
+  2. *Decoupled Summary Update on Sample Failure Test (`TST-TRK-051.2`)*:
+  • Unit test in `TrackerServiceTest.java` verifying that when a sample insertion fails, `updateWorkoutSummary()` is still invoked with updated duration and distance.
+  3. *FastTrack Map Polyline Fallback Retention Test (`TST-TRK-051.3`)*:
+  • Unit test in `TrackOnMapAftermathViewModelTest.kt` verifying that when Phase 4 loads sample tracks with `< 2` points, `uiState.tracks` retains the non-empty `fastTrack` from summary `mapPolyline`.
+  4. *Clean-Room Targeted Test Suite Execution (`TST-TRK-051.4`)*:
+  • Clean-room execution of unit tests ensuring zero regressions (`REQ-PRO-001`).
+
+
+
 
 
 

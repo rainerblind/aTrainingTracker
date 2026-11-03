@@ -2281,9 +2281,8 @@ public class TrackerService extends Service {
                 if (!sampleInserted) {
                     int failureCount = mSampleInsertFailureCount.get();
                     if (failureCount == 0 || shouldLogSampleInsertFailure(failureCount)) {
-                        Log.w(TAG, "Aborting sample and summary transaction because sample insert failed for table " + tableName + " (sampleInsertFailureCount=" + failureCount + ")");
+                        Log.w(TAG, "Sample insert failed for table " + tableName + " (sampleInsertFailureCount=" + failureCount + "); proceeding with decoupled summary update");
                     }
-                    return;
                 }
 
                 // Write Extrema
@@ -2303,7 +2302,9 @@ public class TrackerService extends Service {
                     summariesManager.appendToMapAndStreams(workoutId, streamIncrement.polylineIncrement, streamIncrement.altitudeIncrement, streamIncrement.distanceIncrement);
                 }
 
-                samplesDb.setTransactionSuccessful();
+                if (sampleInserted) {
+                    samplesDb.setTransactionSuccessful();
+                }
                 summariesDb.setTransactionSuccessful();
             } catch (Exception e) {
                 logSampleInsertFailure("Error during async DB write for table " + tableName, e);
@@ -2313,13 +2314,11 @@ public class TrackerService extends Service {
                 summariesDb.endTransaction();
             }
 
-            if (sampleInserted) {
-                // Notify UI
-                try {
-                    LocalBroadcastManager.getInstance(TrackerService.this).sendBroadcast(new Intent(WORKOUT_UPDATED_INTENT).putExtra("WORKOUT_ID", workoutId));
-                } catch (Exception e) {
-                    Log.w(TAG, "Failed to broadcast WORKOUT_UPDATED_INTENT", e);
-                }
+            // Notify UI
+            try {
+                LocalBroadcastManager.getInstance(TrackerService.this).sendBroadcast(new Intent(WORKOUT_UPDATED_INTENT).putExtra("WORKOUT_ID", workoutId));
+            } catch (Exception e) {
+                Log.w(TAG, "Failed to broadcast WORKOUT_UPDATED_INTENT", e);
             }
         }, mDbExecutor).exceptionally(ex -> {
             Log.e(TAG, "Sample write skipped due to initialization failure: " + ex.getMessage());
@@ -2443,6 +2442,37 @@ public class TrackerService extends Service {
     }
 
     /**
+     * Retrieves the set of all column names currently present in the specified table
+     * using {@code PRAGMA table_info}, bypassing Android SQLite prepared statement cache staleness
+     * on Android <= 14 (API <= 34) ({@code REQ-TRK-051.1}, {@code ATT-4968}).
+     *
+     * <p>Ensures every {@link Cursor} is wrapped in a try-with-resources block for leak safety.
+     *
+     * @param db the database to inspect
+     * @param tableName the table name to inspect
+     * @return a case-insensitive {@link Set} of column names present in the table
+     */
+    @VisibleForTesting
+    public static Set<String> getTableColumnNames(@NonNull SQLiteDatabase db, @NonNull String tableName) {
+        Set<String> columnNames = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        String quotedTable = quoteSqlColumnIdentifier(unquoteSqlColumnIdentifier(tableName));
+        String sql = "PRAGMA table_info(" + quotedTable + ")";
+        try (Cursor cursor = db.rawQuery(sql, null)) {
+            if (cursor != null) {
+                int nameIndex = cursor.getColumnIndex("name");
+                while (cursor.moveToNext()) {
+                    if (nameIndex >= 0) {
+                        columnNames.add(cursor.getString(nameIndex));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to read PRAGMA table_info for " + tableName, e);
+        }
+        return columnNames;
+    }
+
+    /**
      * Determines whether a sample insertion failure with the given 1-based counter should be
      * emitted to logcat under the rate-limiting policy ({@code REQ-TRK-029.3}): log the initial
      * burst ({@code 1..SAMPLE_INSERT_FAILURE_INITIAL_BURST}) and every
@@ -2499,16 +2529,28 @@ public class TrackerService extends Service {
             return false;
         }
 
-        // Implementation of the ALTER TABLE logic removed from main flow for readability.
-        // It ensures that new sensors added during a workout get their own columns.
-        try (Cursor cursor = samplesDb.query(tableName, null, null, null, null, null, null, "1")) {
-            if (cursor == null) {
-                logSampleInsertFailure("Failed to inspect columns of sample table " + tableName + ": query returned null cursor", null);
-                return false;
+        // Implementation of the ALTER TABLE logic using PRAGMA table_info to avoid
+        // SQLiteConnection.mPreparedStatementCache staleness on Android <= 14 (REQ-TRK-051.1 / ATT-4968).
+        Set<String> existingColumns = getTableColumnNames(samplesDb, tableName);
+        if (existingColumns.isEmpty()) {
+            // Fallback: If pragma returned no columns, attempt cursor query inspection
+            try (Cursor cursor = samplesDb.query(tableName, null, null, null, null, null, null, "1")) {
+                if (cursor != null) {
+                    String[] cols = cursor.getColumnNames();
+                    if (cols != null) {
+                        for (String col : cols) {
+                            existingColumns.add(col);
+                        }
+                    }
+                }
+            } catch (Exception ignored) {
             }
+        }
+
+        try {
             for (String key : values.keySet()) {
                 String queryKey = unquoteSqlColumnIdentifier(key);
-                if (!hasColumnInCursor(cursor, queryKey)) {
+                if (!existingColumns.contains(queryKey)) {
                     SensorValueType valueType = name2Type != null ? name2Type.get(key) : null;
                     String type = valueType == null ? "text" : switch (valueType) {
                         case INTEGER -> "int";
@@ -2517,6 +2559,7 @@ public class TrackerService extends Service {
                     };
                     String quotedColumn = quoteSqlColumnIdentifier(queryKey);
                     samplesDb.execSQL("ALTER TABLE " + tableName + " ADD COLUMN " + quotedColumn + " " + type + " null;");
+                    existingColumns.add(queryKey);
                 }
             }
             samplesDb.insertOrThrow(tableName, null, values);

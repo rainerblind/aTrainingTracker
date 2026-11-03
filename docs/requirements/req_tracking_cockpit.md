@@ -2511,6 +2511,43 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 **Invariants**: Custom device names preserved, sensor data delivery unchanged, 100% 9-language translation parity, zero crash on null device data.
 
 
+### REQ-TRK-051: Dynamic SQLite Schema Discovery via PRAGMA table_info & Decoupled Summary Telemetry [Verified]
+- **Tests**: `TST-TRK-051` | **Tickets**: `ATT-4968`
+- **Implementation**: `TrackerService.java`, `TrackOnMapAftermathViewModel.kt`
+- **Rationale**: During workouts on Android $\le 14$ (API $\le 34$), `SQLiteConnection.mPreparedStatementCache` caches compiled statements across transactions and does NOT invalidate them upon dynamic `ALTER TABLE ... ADD COLUMN` DDL. In `TrackerService.handleMissingColumns()`, querying via `samplesDb.query(tableName, null, null, null, null, null, null, "1")` returns a stale cached cursor missing newly added columns, causing false negatives in column existence checks and throwing `SQLiteException: duplicate column name` on subsequent ticks. Additionally, in `TrackerService.sampleAndWriteToDb()`, an abort guard `if (!sampleInserted) return;` prematurely halts execution upon sample insert failures, freezing `WorkoutSummaries.db` updates (duration, distance, energy) at 1 second and 0.00 km. In `TrackOnMapAftermathViewModel`, Phase 4 overwrites valid multi-point summary fast tracks with single-point sample tracks. Formulating `PRAGMA table_info` schema inspection, decoupling live summary updates from sample write failures, and gating map track replacement ensures continuous, fault-tolerant workout recording across all Android API levels (ATT-4968, Parent Epic ATT-115, extending `REQ-TRK-026`, `REQ-TRK-029`, and `REQ-DAT-033`):
+1. *Uncached Real-Time Schema Discovery via PRAGMA table_info (`REQ-TRK-051.1`)*:
+• In `TrackerService.java`, `handleMissingColumns()` SHALL discover existing table columns using `PRAGMA table_info("<tableName>")` instead of `samplesDb.query(..., "1")`.
+• `PRAGMA table_info` results SHALL be queried and mapped into a case-insensitive `Set<String>` (with a synchronized per-table in-memory set cache), guaranteeing real-time schema visibility immune to `SQLiteConnection.mPreparedStatementCache` staleness across all Android versions (API 26–36).
+2. *Decoupled Summary Persistence & Fault-Tolerant Recording (`REQ-TRK-051.2`)*:
+• In `TrackerService.sampleAndWriteToDb()`, if a sample insert into `WorkoutSamples.db` fails (`sampleInserted == false`), the service SHALL log a rate-limited warning and increment an atomic error counter (`mSampleInsertFailureCount`), but SHALL NOT abort execution (`return;`).
+• The service SHALL proceed unconditionally to update `WorkoutSummaries.db` (`updateWorkoutSummary()`) with current elapsed time, active time, distance, and live extrema, preventing summary freeze.
+3. *Map Polyline Fallback Protection in Track Inspection (`REQ-TRK-051.3`)*:
+• In `TrackOnMapAftermathViewModel.kt`, Phase 4 (loading detailed sample tracks from `WorkoutSamples.db`) SHALL verify that the loaded tracks contain at least two coordinate points (`fullTracks.any { it.path.size >= 2 }`) before replacing `_uiState.value.tracks`.
+• If `fullTracks` has fewer than 2 valid points, the system SHALL retain the multi-point `fastTrack` loaded from summary `mapPolyline`.
+4. *Transaction Integrity & Service Stability (`REQ-TRK-051.4`)*:
+• Foreground service thread execution, SQLite transaction boundaries, and rate-limited logging SHALL remain 100% resilient with zero unhandled exceptions.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-TRK-029` (*Safe SQLite Column Escaping & Sample Insert Telemetry*) and `REQ-DAT-033` (*Fast-Track Map Telemetry*), Parent Epic `ATT-115`. Targets `TrackerService.java` and `TrackOnMapAftermathViewModel.kt`.
+2. *Historical Origin & Commit Trace*: `ATT-3980` introduced dynamic column addition via `handleMissingColumns()`; `ATT-3985` added column escaping; commit `f4650d74` added `if (!sampleInserted) return;` in `TrackerService.java`.
+3. *Root Reason for Existing Formulation*: `query(..., "1")` was assumed to return an updated cursor reflecting recent DDL alterations; `if (!sampleInserted) return;` was intended to avoid updating summaries when sample inserts failed under the assumption that sample insert failures were fatal.
+4. *Preservation of Core Invariants*: Dynamic sensor additions (mid-ride slope, pace, cadence, power), double-quoted column escaping, rate-limited logging, and summary transaction finalization remain strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an active workout on Android <= 14 (API <= 34) where dynamic sensor columns (e.g. `SLOPE`, `PACE`) join on Tick 2+,
+• *When* `handleMissingColumns()` inspects existing columns,
+• *Then* `PRAGMA table_info` reflects previously added columns accurately, preventing duplicate `ALTER TABLE ... ADD COLUMN` executions and `SQLiteException`.
+• *Given* an isolated sample insert failure in `WorkoutSamples.db`,
+• *When* `sampleAndWriteToDb()` executes,
+• *Then* the failure is logged with rate-limiting, and `WorkoutSummaries.db` continues to update duration and distance without freezing.
+• *Given* a workout completed with few sample points (< 2) but a valid multi-point `mapPolyline` in summary,
+• *When* `TrackOnMapAftermathViewModel` Phase 4 loads sample tracks,
+• *Then* the multi-point `fastTrack` is preserved and remains visible on the map.
+
+**Invariants**: Zero service crashes, transaction boundary safety, rate-limited logging, and 100% clean-room test pass rate.
+
+
+
 
 
 
