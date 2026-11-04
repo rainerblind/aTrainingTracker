@@ -18,9 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.settings.supporter
 
-import android.util.Log
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -39,18 +37,17 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,26 +61,24 @@ import com.atrainingtracker.trainingtracker.monetization.SupporterBasePlan
 import com.atrainingtracker.trainingtracker.monetization.SupporterTier
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.ui.branding.SupporterQuickIconPickerDialog
-import kotlinx.coroutines.launch
 
 /**
- * "Pay what you want" Supporter screen offering 5 subscription base plans,
- * hardware wishlist voting, and Pioneer recognition (REQ-SET-086).
+ * "Pay what you want" Supporter screen offering 5 subscription base plans
+ * and Pioneer recognition (REQ-SET-086).
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SupporterScreen(
     onNavigateBack: () -> Unit,
     preSelectedPlanId: String? = null
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val settingsDataStore = remember { SettingsDataStore.getInstance(context) }
     val proFeatureManager = remember { ProFeatureManager.getInstance(context) }
 
     val effectiveTier by proFeatureManager.effectiveTier.collectAsState()
     val isPioneer by settingsDataStore.isPioneerEarlyAdopter.collectAsState(initial = false)
-    val selectedHardwareVote by settingsDataStore.hardwareVote.collectAsState(initial = null)
+    val pioneerSinceYear by proFeatureManager.pioneerSinceYear.collectAsState()
     var showIconPicker by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -127,7 +122,7 @@ fun SupporterScreen(
 
             // Pioneer recognition banner
             if (isPioneer || effectiveTier == SupporterTier.PIONEER) {
-                PioneerStatusBanner()
+                PioneerStatusBanner(sinceYear = pioneerSinceYear)
                 Spacer(modifier = Modifier.height(10.dp))
                 OutlinedButton(
                     onClick = { showIconPicker = true },
@@ -147,19 +142,6 @@ fun SupporterScreen(
                 }
                 Spacer(modifier = Modifier.height(16.dp))
             }
-
-            // Hardware voting section (REQ-SET-086.2)
-            HardwareVotingSection(
-                selectedOption = selectedHardwareVote,
-                onSelectOption = { option ->
-                    scope.launch {
-                        settingsDataStore.setHardwareVote(option.name)
-                        Log.i("SupporterScreen", "Hardware vote cast: ${option.name}")
-                    }
-                }
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
 
             // Subscription plans section header
             Text(
@@ -201,7 +183,7 @@ fun SupporterScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "100% Free Core Invariant",
+                            text = stringResource(R.string.supporter_core_invariant_title),
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
@@ -209,7 +191,7 @@ fun SupporterScreen(
                     }
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "Core workout recording, map display, sensor telemetry, and offline GPX/TCX/FIT export remain 100% free and unmonetized forever. Subscriptions fund hardware acquisition for upcoming sensors.",
+                        text = stringResource(R.string.supporter_core_invariant_body),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

@@ -210,8 +210,9 @@ class SettingsDataStore(
         val KEY_IS_HR_ZONES_CONFIGURED = booleanPreferencesKey("is_hr_zones_configured")
         val KEY_IS_PWR_ZONES_CONFIGURED = booleanPreferencesKey("is_pwr_zones_configured")
 
-        // Monetization & Supporter Models (ATT-51, REQ-SET-085, REQ-SET-086, REQ-SET-087, ATT-2308, REQ-REV-004, ATT-1406, REQ-UI-445)
+        // Monetization & Supporter Models (ATT-51, REQ-SET-085, REQ-SET-086, REQ-SET-087, ATT-2308, REQ-REV-004, ATT-1406, REQ-UI-445, ATT-5371)
         val KEY_IS_PIONEER_EARLY_ADOPTER = booleanPreferencesKey("is_pioneer_early_adopter")
+        val KEY_PIONEER_SINCE_YEAR = intPreferencesKey("pioneer_since_year")
         val KEY_SUPPORTER_TIER = stringPreferencesKey("supporter_tier")
         val KEY_SUPPORTER_TIER_OVERRIDE = stringPreferencesKey("supporter_tier_override")
         val KEY_SELECTED_LAUNCHER_ICON = stringPreferencesKey("selected_launcher_icon")
@@ -555,6 +556,20 @@ class SettingsDataStore(
     suspend fun setIsPioneerEarlyAdopter(isPioneer: Boolean) {
         dataStore.edit { prefs ->
             prefs[KEY_IS_PIONEER_EARLY_ADOPTER] = isPioneer
+        }
+    }
+
+    val pioneerSinceYear: Flow<Int?> = dataStore.data.map { prefs ->
+        prefs[KEY_PIONEER_SINCE_YEAR]
+    }
+
+    suspend fun setPioneerSinceYear(year: Int?) {
+        dataStore.edit { prefs ->
+            if (year != null) {
+                prefs[KEY_PIONEER_SINCE_YEAR] = year
+            } else {
+                prefs.remove(KEY_PIONEER_SINCE_YEAR)
+            }
         }
     }
 

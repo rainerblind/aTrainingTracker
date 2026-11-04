@@ -59,17 +59,6 @@ enum class SupporterTierOverride {
 }
 
 /**
- * Hardware wishlist categories for voluntary athlete voting (REQ-SET-086.2).
- */
-enum class HardwareVoteOption(val id: String, @StringRes val labelRes: Int) {
-    BIKE_RADAR("radar", R.string.hardware_vote_bike_radar),
-    RUNNING_POWER("running_power", R.string.hardware_vote_running_power),
-    SMARTWATCH_WEAROS("smartwatch", R.string.hardware_vote_smartwatch),
-    PEBBLE("pebble", R.string.hardware_vote_pebble),
-    GENERAL_DEVELOPMENT("general", R.string.hardware_vote_general)
-}
-
-/**
  * Google Play Billing base plan configuration for "att_supporter_sub" (REQ-SET-086.1).
  */
 data class SupporterBasePlan(

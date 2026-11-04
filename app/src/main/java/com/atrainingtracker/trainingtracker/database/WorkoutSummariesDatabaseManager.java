@@ -999,6 +999,35 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     /**
+     * Resolves the earliest workout year from the WorkoutSummaries database (REQ-SET-085.3, ATT-5371).
+     *
+     * @return Earliest 4-digit year as an Integer (e.g. 2021), or null if no workouts exist or an error occurs.
+     */
+    @Nullable
+    public Integer getEarliestWorkoutYear() {
+        SQLiteDatabase db = getDatabase();
+        if (db == null || !db.isOpen()) {
+            return null;
+        }
+        String query = "SELECT MIN(" + WorkoutSummaries.TIME_START + ") FROM " + WorkoutSummaries.TABLE;
+        try (Cursor cursor = db.rawQuery(query, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                String earliestTime = cursor.getString(0);
+                if (earliestTime != null && earliestTime.length() >= 4) {
+                    try {
+                        return Integer.parseInt(earliestTime.substring(0, 4));
+                    } catch (NumberFormatException e) {
+                        Log.e(TAG, "Error parsing earliest workout year from timestamp: " + earliestTime, e);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error querying earliest workout year", e);
+        }
+        return null;
+    }
+
+    /**
      * Checks if there is an unfinalized workout in the database (ATT-635).
      *
      * @return true if the most recent workout exists and has FINISHED == 0.

@@ -26,6 +26,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseMan
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -53,21 +54,35 @@ class ProFeatureManager @JvmOverloads constructor(
     /**
      * Eagerly verifies historical workouts in SQLite to detect and persist Pioneer status (REQ-SET-085).
      */
-    fun checkAndPersistPioneerEligibility() {
-        coroutineScope.launch {
-            try {
-                val alreadyPioneer = settingsDataStore.isPioneerEarlyAdopter.first()
-                if (!alreadyPioneer) {
-                    val qualifies = workoutSummariesDatabaseManager.hasPioneerEarlyAdopterWorkout()
-                    if (qualifies) {
-                        settingsDataStore.setIsPioneerEarlyAdopter(true)
-                    }
+    fun checkAndPersistPioneerEligibility(): Job = coroutineScope.launch {
+        try {
+            val alreadyPioneer = settingsDataStore.isPioneerEarlyAdopter.first()
+            if (!alreadyPioneer) {
+                val qualifies = workoutSummariesDatabaseManager.hasPioneerEarlyAdopterWorkout()
+                if (qualifies) {
+                    settingsDataStore.setIsPioneerEarlyAdopter(true)
                 }
-            } catch (e: Exception) {
-                // Defensive guard against closed DB during early startup
             }
+            val cachedYear = settingsDataStore.pioneerSinceYear.first()
+            if (cachedYear == null) {
+                val earliestYear = workoutSummariesDatabaseManager.getEarliestWorkoutYear()
+                if (earliestYear != null) {
+                    settingsDataStore.setPioneerSinceYear(earliestYear)
+                }
+            }
+        } catch (e: Exception) {
+            // Defensive guard against closed DB during early startup
         }
     }
+
+    /**
+     * Reactive StateFlow emitting the athlete's earliest workout year for Pioneer recognition (REQ-SET-085.3).
+     */
+    val pioneerSinceYear: StateFlow<Int?> = settingsDataStore.pioneerSinceYear.stateIn(
+        scope = coroutineScope,
+        started = SharingStarted.Eagerly,
+        initialValue = null
+    )
 
     /**
      * Reactive StateFlow emitting the resolved effective SupporterTier based on the authoritative hierarchy:

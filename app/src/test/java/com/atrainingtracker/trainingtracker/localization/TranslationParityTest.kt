@@ -47,6 +47,7 @@ class TranslationParityTest {
         val name: String,
         val text: String,
         val isTranslatable: Boolean,
+        val isFormatted: Boolean = true,
         val sourceFile: String
     )
 
@@ -89,8 +90,10 @@ class TranslationParityTest {
                     val name = elem.getAttribute("name")
                     val translatableAttr = elem.getAttribute("translatable")
                     val isTranslatable = translatableAttr != "false"
+                    val formattedAttr = elem.getAttribute("formatted")
+                    val isFormatted = formattedAttr != "false"
                     val text = elem.textContent
-                    result[name] = StringResource(name, text, isTranslatable, fileName)
+                    result[name] = StringResource(name, text, isTranslatable, isFormatted, fileName)
                 }
             }
         }
@@ -188,7 +191,7 @@ class TranslationParityTest {
             val localeStrings = parseStrings(File(resDir, "values-$locale"))
 
             for ((key, baseRes) in baseStrings) {
-                if (!baseRes.isTranslatable) continue
+                if (!baseRes.isTranslatable || !baseRes.isFormatted) continue
                 val locRes = localeStrings[key] ?: continue
 
                 val baseSpecs = extractSpecifiers(baseRes.text)

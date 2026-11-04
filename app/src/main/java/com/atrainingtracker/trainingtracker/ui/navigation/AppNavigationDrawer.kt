@@ -371,13 +371,19 @@ fun DrawerHeader() {
                 )
                 val proFeatureManager = remember(context) { ProFeatureManager.getInstance(context.applicationContext) }
                 val effectiveTier by proFeatureManager.effectiveTier.collectAsState()
+                val pioneerSinceYear by proFeatureManager.pioneerSinceYear.collectAsState()
                 if (effectiveTier.isPro) {
+                    val year = pioneerSinceYear
                     val badgeText = when (effectiveTier) {
-                        SupporterTier.DIAMOND -> "◆ DIAMOND SPONSOR • Unlimited Sensors"
-                        SupporterTier.GOLD -> "★ GOLD PRO-SUPPORTER"
-                        SupporterTier.SILVER -> "★ SILVER PRO-SUPPORTER"
-                        SupporterTier.BRONZE -> "★ BRONZE SUPPORTER"
-                        SupporterTier.PIONEER -> "★ PIONEER (SINCE 2011)"
+                        SupporterTier.DIAMOND -> stringResource(R.string.drawer_tier_diamond)
+                        SupporterTier.GOLD -> stringResource(R.string.drawer_tier_gold)
+                        SupporterTier.SILVER -> stringResource(R.string.drawer_tier_silver)
+                        SupporterTier.BRONZE -> stringResource(R.string.drawer_tier_bronze)
+                        SupporterTier.PIONEER -> if (year != null) {
+                            stringResource(R.string.drawer_tier_pioneer_with_year, year)
+                        } else {
+                            stringResource(R.string.drawer_tier_pioneer)
+                        }
                         SupporterTier.FREE -> ""
                     }
                     if (badgeText.isNotEmpty()) {

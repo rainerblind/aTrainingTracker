@@ -1380,32 +1380,41 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 **Invariants**: No unexpected unpairing without user confirmation; 1-tap swap must execute atomically.
 
 ### REQ-SET-085: Lifetime Pioneer Early Adopter Recognition via Historical Cutoff (REQ-MON-003) [Verified]
-- **Tests**: `TST-SET-085` | **Tickets**: `ATT-51`
-- **Implementation**: `WorkoutSummariesDatabaseManager.java`, `SettingsDataStore.kt`, `ProFeatureManager.kt`
-- **Rationale**: Honor existing loyal athletes who tracked workouts prior to V5.0.0 by granting them permanent, lifetime Pro privileges without payment.
+- **Tests**: `TST-SET-085` | **Tickets**: `ATT-51`, `ATT-5371`
+- **Implementation**: `WorkoutSummariesDatabaseManager.java`, `SettingsDataStore.kt`, `ProFeatureManager.kt`, `SupporterScreen.kt`, `AppNavigationDrawer.kt`
+- **Rationale**: Honor existing loyal athletes who tracked workouts prior to V5.0.0 by granting them permanent, lifetime Pro privileges without payment, and dynamically displaying their authentic joining year.
 - **Description**:
 1. *Cutoff Timestamp Evaluation (`REQ-SET-085.1`)*:
 • The system SHALL define `PIONEER_CUTOFF_TIMESTAMP = "2026-11-30 23:59:59"` (UTC / SQLite standard datetime).
 • `WorkoutSummariesDatabaseManager.hasWorkoutBefore(cutoffTimestamp)` SHALL query `WorkoutSummaries` for `COUNT(*) > 0` with `TIME_START <= PIONEER_CUTOFF_TIMESTAMP`.
 2. *Permanent Lifetime Flag Persistence (`REQ-SET-085.2`)*:
 • If at least one historical workout exists before the cutoff timestamp, `SettingsDataStore` SHALL persist `isPioneerEarlyAdopter = true`. Once true, this flag is permanent and irrevocable.
-3. *Pioneer Privileges & Badge (`REQ-SET-085.3`)*:
-• Pioneer athletes SHALL have `isProActive() == true` with unlimited device pairing, a lifetime Pioneer badge (`★ PIONEER ★`) in navigation drawer and settings, and voluntary access to Supporter tiers.
+3. *Dynamic Pioneer Year & Badge (`REQ-SET-085.3`)*:
+• Pioneer athletes SHALL have `isProActive() == true` with unlimited device pairing, a lifetime Pioneer badge in navigation drawer and settings, and voluntary access to Supporter tiers.
+• The system SHALL dynamically query the athlete's earliest workout year via `WorkoutSummariesDatabaseManager.getEarliestWorkoutYear()` (`SELECT MIN(timeStart)`).
+• When an earliest workout year is found, `SettingsDataStore` SHALL cache `pioneerSinceYear` and the system SHALL display `"★ Pioneer (Seit %1$d)"` / `"★ Pioneer (Since %1$d)"` across both `SupporterScreen` (`PioneerStatusBanner`) and `AppNavigationDrawer` (`DrawerHeader`).
+• When no historical workout year exists, the badge SHALL cleanly fall back to `"★ Pioneer"`.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* a database containing a workout recorded on or before `2026-11-30 23:59:59`,
 • *When* Pro status is evaluated,
 • *Then* `isPioneerEarlyAdopter` evaluates to `true`, `isProActive()` returns `true`, and unlimited device pairing is enabled.
+• *Given* an athlete recognized as Pioneer with an earliest workout recorded in 2018,
+• *When* viewing the Navigation Drawer or SupporterScreen banner,
+• *Then* `"★ Pioneer (Seit 2018)"` / `"★ Pioneer (Since 2018)"` is displayed dynamically instead of a hardcoded year.
+• *Given* a Pioneer athlete with no recorded workouts,
+• *When* viewing the Navigation Drawer or SupporterScreen banner,
+• *Then* `"★ Pioneer"` is displayed without a year suffix.
 • *Given* a new user whose first workout is recorded on `2026-12-01 00:00:00` or later,
 • *When* Pro status is evaluated,
 • *Then* `isPioneerEarlyAdopter` evaluates to `false` and Free tier limits apply unless an active subscription exists.
 
 **Invariants**: Pioneer status cannot be revoked by app updates or database re-indexes; existing workouts remain unmodified.
 
-### REQ-SET-086: Five-Tier Google Play Supporter Subscriptions with Hardware Voting (REQ-MON-004) [Verified]
-- **Tests**: `TST-SET-086` | **Tickets**: `ATT-51`
-- **Implementation**: `SupporterScreen.kt`, `BillingClientLifecycle.kt`, `ProFeatureManager.kt`, `AppNavigationDrawer.kt`
-- **Rationale**: Offer transparent, flexible "Pay what you want" subscription tiers capped at max 100 € / year, allowing athletes to fund continuous development and vote for upcoming hardware integrations.
+### REQ-SET-086: Five-Tier Google Play Supporter Subscriptions (REQ-MON-004) [Verified]
+- **Tests**: `TST-SET-086`, `TST-LOC-001` | **Tickets**: `ATT-51`, `ATT-5371`
+- **Implementation**: `SupporterScreen.kt`, `SupporterComponents.kt`, `BillingClientLifecycle.kt`, `ProFeatureManager.kt`, `AppNavigationDrawer.kt`
+- **Rationale**: Offer transparent, flexible "Pay what you want" subscription tiers capped at max 100 € / year, allowing athletes to fund continuous independent development and feature maintenance without scope liabilities.
 - **Description**:
 1. *Subscription Product & 5 Base Plans (`REQ-SET-086.1`)*:
 • The system SHALL integrate Google Play Billing with product ID `att_supporter_sub` across 5 base plans:
@@ -1414,21 +1423,26 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
   - `silver-yearly` (25 € / year, Recommended) — Silver Supporter
   - `gold-yearly` (50 € / year) — Gold Supporter
   - `diamond-yearly` (100 € / year) — Diamond Sponsor
-2. *Hardware Voting Flow (`REQ-SET-086.2`)*:
-• `SupporterScreen` SHALL feature an interactive hardware voting selector allowing athletes to direct their support towards planned hardware: Bike-Radar (Garmin Varia), Running Power (Stryd), Smartwatch / WearOS, Pebble, or General Development.
-• Selection SHALL log a serverless Firebase Analytics event `hardware_vote` and pass `setObfuscatedProfileId("vote:<target>")` in `BillingFlowParams`.
+2. *Retirement of Hardware Voting (`REQ-SET-086.2`)*:
+• `SupporterScreen` SHALL NOT display hardware device voting options or make device acquisition promises, focusing communication strictly on independent open-source sustainability.
 3. *Navigation & Drawer Presence (`REQ-SET-086.3`)*:
 • The Navigation Drawer SHALL display the active Supporter/Pioneer tier badge in `DrawerHeader` and provide a dedicated "Supporter / Pro" navigation destination.
+4. *Card Layout & Button Wrap Prevention (`REQ-SET-086.4`)*:
+• In `SupporterPlanCard`, the `"Empfehlung"` / `"Recommended"` badge SHALL be positioned vertically above the tier title.
+• Action buttons in plan cards SHALL enforce `maxLines = 1, softWrap = false` to guarantee zero single-character or mid-word line wrapping (`Rule 38`).
+5. *Typo Correction & 9-Locale Localization Parity (`REQ-SET-086.5`)*:
+• `supporter_screen_subtitle` SHALL render `100%` (single percent sign) across all locales.
+• All user-facing strings in `SupporterComponents.kt`, `SupporterScreen.kt`, and `AppNavigationDrawer.kt` SHALL be localized across all 9 supported application locales.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete navigating to the Supporter screen,
 • *When* the screen renders,
-• *Then* 5 base plan cards are displayed in a clean responsive layout with `silver-yearly` highlighted as Recommended, along with hardware voting options.
+• *Then* 5 base plan cards are displayed in a clean responsive layout with `silver-yearly` highlighted with an `Empfehlung` badge placed above the title, with action buttons rendered on a single line without wrapping, and without hardware voting sections.
 • *Given* a successful subscription purchase of `gold-yearly`,
 • *When* purchases are acknowledged,
 • *Then* `supporterTier` updates to `GOLD`, `isProActive()` returns `true`, and the Gold Supporter badge is displayed.
 
-**Invariants**: Google Play Billing purchase acknowledgment within 3 days; graceful offline fallback caching of verified purchases.
+**Invariants**: Google Play Billing purchase acknowledgment within 3 days; graceful offline fallback caching of verified purchases; action buttons never wrap text across multiple lines.
 
 ### REQ-SET-087: Debug Supporter Tier Override & Pro Feature Manager Architecture (REQ-MON-005) [Verified]
 - **Tests**: `TST-SET-087` | **Tickets**: `ATT-51`
