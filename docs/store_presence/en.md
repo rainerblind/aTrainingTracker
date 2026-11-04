@@ -13,7 +13,7 @@ Focus on your training. We'll handle the technology.
 aTrainingTracker turns your Android device into a professional, privacy-first bike computer and multi-sport tracker. Built for cyclists, runners, and endurance athletes who demand precision telemetry, intelligent automation, and complete data sovereignty. No mandatory cloud, no account required, and 100% ad-free.
 
 <b>INTELLIGENT SENSOR MANAGEMENT & HARDWARE ARBITRATION</b>
-Connect multiple Bluetooth® LE and ANT+® sensors simultaneously: heart rate, cadence, speed, cycling power, radar, and temperature.
+Connect multiple Bluetooth® LE and ANT+® sensors simultaneously: heart rate, cadence, speed, cycling power, and temperature.
 • <b>Intelligent Priority</b>: Dedicated wheel speed sensors are automatically preferred over GPS for millimeter precision.
 • <b>Seamless Failover</b>: If a speed sensor disconnects, GPS immediately takes over without dropping a single meter.
 • <b>Dual-Protocol Reliability</b>: Connect modern BLE sensors alongside established ANT+ devices without interference.
@@ -23,7 +23,6 @@ Professional analytics formerly exclusive to specialized desktop software:
 • <b>Coggan Power Suite</b>: Normalized Power (NP), Intensity Factor (IF), Training Stress Score (TSS), and Variability Index (VI).
 • <b>Skiba W' Balance</b>: Real-time anaerobic battery tracking with 2-point Critical Power (CP/W') modeling.
 • <b>Longitudinal PMC</b>: Track Chronic Training Load (CTL), Acute Training Load (ATL), Training Stress Balance (TSB), and ACWR.
-• <b>Metabolic Control</b>: Mader-Heck physiological simulation and live carbohydrate & glycogen depletion balance.
 • <b>Aerobic Efficiency</b>: Real-time Efficiency Factor (EF) and Aerobic Decoupling (Pw:Hr %).
 
 <b>NAVIGATION, LIEBLINGSSTRECKEN & LIVE SEGMENTS</b>

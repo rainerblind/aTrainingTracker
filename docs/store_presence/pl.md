@@ -13,7 +13,7 @@ Skup się na treningu. My zajmiemy się technologią.
 aTrainingTracker przekształca Twój smartfon z systemem Android w profesjonalny licznik rowerowy i wielosportowy tracker stawiający na prywatność i precyzję. Stworzony dla kolarzy, biegaczy i sportowców wytrzymałościowych oczekujących dokładnej telemetrii, automatyzacji i pełnej kontroli nad danymi. Bez konieczności logowania, bez przymusu chmury i w 100% bez reklam.
 
 <b>INTELIGENTNE ZARZĄDZANIE CZUJNIKAMI I ARBITRAŻ SPRZĘTU</b>
-Podłączaj jednocześnie czujniki Bluetooth® LE oraz ANT+®: tętno, kadencję, prędkość, pomiar mocy, radar i temperaturę.
+Podłączaj jednocześnie czujniki Bluetooth® LE oraz ANT+®: tętno, kadencję, prędkość, pomiar mocy i temperaturę.
 • <b>Priorytet czujników</b>: Dedykowane czujniki prędkości na koło mają automatyczny priorytet nad GPS dla maksymalnej precyzji.
 • <b>Płynny failover</b>: W przypadku utraty sygnału z czujnika koła GPS przejmuje pomiar bez utraty dystansu.
 • <b>Podwójny protokół</b>: Bezproblemowa współpraca nowoczesnych czujników BLE z urządzeniami ANT+.
@@ -23,7 +23,6 @@ Profesjonalne analizy dostępne w smartfonie bez drogich subskrypcji:
 • <b>Pakiet Coggana</b>: Normalized Power (NP), Intensity Factor (IF), Training Stress Score (TSS) oraz Variability Index (VI).
 • <b>Bateria beztlenowa Skiba W'</b>: Śledzenie rezerwy beztlenowej w czasie rzeczywistym z modelem 2-punktowym (CP/W').
 • <b>Długofalowy wykres PMC</b>: Kontroluj obciążenie przewlekłe (CTL), ostre (ATL), formę (TSB) oraz wskaźnik ACWR.
-• <b>Model metaboliczny Madera-Hecka</b>: Symulacja fizjologiczna i bieżący bilans zużycia węglowodanów i zapasów glikogenu.
 • <b>Wydajność tlenowa</b>: Bieżący wskaźnik wydajności (EF) oraz rozprzężenie tlenowe (Pw:Hr %).
 
 <b>NAWIGACJA, ULUBIONE TRASY I SEGMENTY NA ŻYWO</b>

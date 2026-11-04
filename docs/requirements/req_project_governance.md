@@ -27,7 +27,7 @@
   1. Store listing descriptions across all 9 languages SHALL highlight native `.FIT` file export/import (`ATT-1117`) alongside `.TCX`, `.GPX`, and `.CSV`.
   2. Descriptions SHALL feature the automatic cloud backup triad: Strava, Dropbox, and Google Drive.
   3. Descriptions SHALL highlight advanced sports science & physiology telemetry: Coggan Normalized Power ($\text{NP}$), Intensity Factor ($\text{IF}$), Training Stress Score ($\text{TSS}$), Variability Index ($\text{VI}$), Skiba Anaerobic Battery ($W'_{\text{bal}}$) with 2-point $\text{CP}/W'$ estimator, Efficiency Factor ($\text{EF}$), Aerobic Decoupling ($\text{Pw:Hr }\%$), and longitudinal Performance Management Chart ($\text{PMC}$: $\text{CTL}$, $\text{ATL}$, $\text{TSB}$, $\text{ACWR}$).
-  4. Descriptions SHALL feature the Mader-Heck Metabolic Control Model (`ATT-4786`) and live athlete energy / carbohydrate & glycogen balance (`ATT-4785`).
+  4. Descriptions SHALL strictly refrain from claiming unimplemented backlog features (*Radar*, *Mader-Heck*, *glycogen depletion*) (Rule 71). 100% of marketed features MUST be backed by implemented, verified code in `app/src/main/`.
   5. Descriptions SHALL feature Periods 2.0 (`ATT-4474`) with multi-year analytics and Yearly Activity Contribution Grids.
   6. Descriptions SHALL feature Barometric altitude calibration with known locations (`ATT-508`) and the integrated Electronic Bike Bell.
   7. Descriptions SHALL emphasize our core values: 100% ad-free, no mandatory account/cloud, local SQLite data sovereignty, and unmonetized core tracking with optional Pay-What-You-Want Supporter tier (`ATT-51`).
@@ -43,6 +43,7 @@
   4. The test SHALL assert that Short Description is non-empty and has length $\le 80$.
   5. The test SHALL assert that Full Description is non-empty and has length $\le 4000$.
   6. The test SHALL assert that all mandatory section headings are present and valid HTML formatting tags (e.g. `<b>`, `•`) are well-formed.
+  7. The test SHALL assert that no store presence file in `docs/store_presence/*.md` contains references to unimplemented backlog features: 'Radar', 'Mader', 'Glykogen', or 'Glycogen' (case-insensitive) (Rule 71).
 
 ### REQ-STP-004: Modernized Jetpack Compose Material 3 & AMOLED Device Store Screenshots [Verified]
 - **Tests**: `TST-STP-004` | **Tickets**: `ATT-4853`
@@ -50,7 +51,7 @@
 - **Rationale**: Existing screenshots depicted legacy pre-Compose views. Modern store presence requires high-resolution screenshots of the Jetpack Compose Material 3 and AMOLED Dark UI.
 - **Description**:
   1. The project SHALL maintain high-resolution Play Store screenshots in `docs/store_presence/screenshots/` and update `images/Screenshots/`.
-  2. Screenshots SHALL capture key app surfaces: Cockpit, Sensor Matrix, Live Map & Elevation Profile, Lieblingsstrecken, Physiology/PMC, and Periods 2.0.
+  2. Screenshots SHALL capture key app surfaces: Cockpit, Sensor Matrix, Live Map & Elevation Profile, Lieblingsstrecken, Physiology/PMC, and Periods 2.0. All 6 primary screenshots in `docs/store_presence/screenshots/` (`01_cockpit_tracking.png`, `02_sensor_management.png`, `03_live_map.png`, `04_lieblingsstrecken.png`, `05_physiology_zones.png`, `06_periods_analytics.png`) MUST be unique (distinct SHA-256 hashes, zero duplicate files) and visually verified via `read_file` to display their respective screens without mislabeling (Rule 71).
   3. Screenshots SHALL capture both Light and AMOLED Dark modes from connected Android hardware (Pixel 10, $1080 \times 2424$).
   4. Updating store listings and screenshots in the Google Play Console is designated as a Human Prerequisite (Rule 22).
 

@@ -23,6 +23,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
+import java.security.MessageDigest
 import java.util.regex.Pattern
 
 /**
@@ -174,6 +175,78 @@ class PlayStoreListingContractTest {
             val openICount = countOccurrences(full, "<i>")
             val closeICount = countOccurrences(full, "</i>")
             assertEquals("Mismatched <i> and </i> tags in locale '$locale'", openICount, closeICount)
+        }
+    }
+
+    @Test
+    fun storeListingsDoNotContainUnimplementedBacklogFeatures() {
+        val bannedKeywords = listOf("radar", "mader", "glykogen", "glycogen", "stoffwechselmodell", "レーダー")
+        for (locale in supportedLocales) {
+            val listing = loadListing(locale)
+            val fullLower = listing.fullDescription.lowercase()
+            val shortLower = listing.shortDescription.lowercase()
+            val titleLower = listing.title.lowercase()
+
+            for (kw in bannedKeywords) {
+                assertTrue(
+                    "Store copy in locale '$locale' contains banned unimplemented backlog keyword '$kw' (Rule 71)",
+                    !fullLower.contains(kw) && !shortLower.contains(kw) && !titleLower.contains(kw)
+                )
+            }
+        }
+    }
+
+    @Test
+    fun storeScreenshotsAreUniqueAndValid() {
+        val screenshotNames = listOf(
+            "01_cockpit_tracking.png",
+            "02_sensor_management.png",
+            "03_live_map.png",
+            "04_lieblingsstrecken.png",
+            "05_physiology_zones.png",
+            "06_periods_analytics.png"
+        )
+        val screenshotDir = findRepoRootFile("docs/store_presence/screenshots")
+        assertTrue("Screenshots directory must exist", screenshotDir.isDirectory)
+
+        val hashes = mutableSetOf<String>()
+        val md = MessageDigest.getInstance("SHA-256")
+
+        for (name in screenshotNames) {
+            val file = File(screenshotDir, name)
+            assertTrue("Screenshot '$name' must exist in docs/store_presence/screenshots/", file.exists() && file.isFile)
+            assertTrue("Screenshot '$name' must have size > 50 KB (actual: ${file.length()} bytes)", file.length() > 50_000)
+
+            val bytes = file.readBytes()
+            val hash = md.digest(bytes).joinToString("") { "%02x".format(it) }
+            assertTrue("Screenshot '$name' duplicate hash detected ($hash). All screenshots must be unique (Rule 71)", hashes.add(hash))
+
+            val (width, height) = getPngDimensions(file)
+            assertEquals("Screenshot '$name' width must be 1080 px", 1080, width)
+            assertTrue("Screenshot '$name' height must be 2400 or 2424 px (actual: $height)", height in listOf(2400, 2424))
+        }
+
+        assertEquals("Must have exactly 6 distinct screenshot hashes", 6, hashes.size)
+    }
+
+    private fun getPngDimensions(file: File): Pair<Int, Int> {
+        file.inputStream().use { input ->
+            val header = ByteArray(24)
+            val read = input.read(header)
+            require(read == 24) { "File too short for PNG header: ${file.name}" }
+            require(
+                header[0] == 0x89.toByte() && header[1] == 0x50.toByte() &&
+                        header[2] == 0x4E.toByte() && header[3] == 0x47.toByte()
+            ) { "Not a valid PNG file: ${file.name}" }
+            val width = ((header[16].toInt() and 0xFF) shl 24) or
+                    ((header[17].toInt() and 0xFF) shl 16) or
+                    ((header[18].toInt() and 0xFF) shl 8) or
+                    (header[19].toInt() and 0xFF)
+            val height = ((header[20].toInt() and 0xFF) shl 24) or
+                    ((header[21].toInt() and 0xFF) shl 16) or
+                    ((header[22].toInt() and 0xFF) shl 8) or
+                    (header[23].toInt() and 0xFF)
+            return Pair(width, height)
         }
     }
 

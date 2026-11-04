@@ -13,7 +13,7 @@ Concentrez-vous sur votre entraînement. Nous nous occupons de la technologie.
 aTrainingTracker transforme votre smartphone Android en compteur vélo professionnel et tracker multisport axé sur la précision et la confidentialité. Conçu pour les cyclistes, coureurs et athlètes d'endurance qui exigent une télémétrie précise, une automatisation poussée et la souveraineté absolue de leurs données. Sans compte obligatoire, sans cloud imposé et 100% sans publicité.
 
 <b>GESTION INTELLIGENTE DES CAPTEURS ET ARBITRAGE MATÉRIEL</b>
-Connectez plusieurs capteurs Bluetooth® LE et ANT+® simultanément : fréquence cardiaque, cadence, vitesse, puissance, radar et température.
+Connectez plusieurs capteurs Bluetooth® LE et ANT+® simultanément : fréquence cardiaque, cadence, vitesse, puissance et température.
 • <b>Priorité matérielle</b> : Les capteurs de vitesse dédiés sont automatiquement privilégiés par rapport au GPS pour une précision optimale.
 • <b>Bascule transparente</b> : Si un capteur se déconnecte, le GPS prend immédiatement le relais sans perte de données.
 • <b>Double protocole fiable</b> : Associez capteurs BLE récents et accessoires ANT+ sans interférence.
@@ -23,7 +23,6 @@ Des analyses professionnelles directement sur votre smartphone sans abonnement m
 • <b>Suite Coggan</b> : Puissance normalisée (NP), facteur d'intensité (IF), score de stress (TSS) et indice de variabilité (VI).
 • <b>Batterie anaérobie Skiba W'</b> : Suivi en direct du réservoir W' avec modélisation de la puissance critique (CP/W').
 • <b>Graphique PMC longitudinal</b> : Suivez la charge d'entraînement chronique (CTL), aiguë (ATL), la balance (TSB) et l'ACWR.
-• <b>Modèle métabolique de Mader-Heck</b> : Simulation physiologique avec bilan en temps réel des glucides et du glycogène.
 • <b>Efficacité aérobie</b> : Facteur d'efficacité (EF) et découplage aérobie (Pw:Hr %) en direct.
 
 <b>NAVIGATION, CIRCUITS FAVORIS ET SEGMENTS EN DIRECT</b>
