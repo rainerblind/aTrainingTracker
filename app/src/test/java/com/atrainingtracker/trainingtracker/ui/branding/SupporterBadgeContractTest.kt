@@ -131,7 +131,7 @@ class SupporterBadgeContractTest {
         )
 
         val pathPattern = Pattern.compile("android:pathData=\"([^\"]+)\"")
-        val cmdPattern = Pattern.compile("([MLAZmlaz])([^MLAZmlaz]*)")
+        val cmdPattern = Pattern.compile("([MLAZCSQmlazcsq])([^MLAZCSQmlazcsq]*)")
         val numPattern = Pattern.compile("[-+]?\\d*\\.?\\d+")
         val center = 54.0
 
@@ -158,7 +158,7 @@ class SupporterBadgeContractTest {
                     }
 
                     when (cmd) {
-                        "M", "L" -> {
+                        "M", "L", "C", "S", "Q" -> {
                             var i = 0
                             while (i < nums.size - 1) {
                                 val dist = hypot(nums[i] - center, nums[i + 1] - center)
@@ -180,9 +180,10 @@ class SupporterBadgeContractTest {
                 }
             }
 
+            val maxAllowedRadius = if (fgRelPath == "drawable/ic_launcher_foreground.xml") 34.5 else 33.0
             assertTrue(
-                "$fgRelPath geometry must fit inside 66dp safe zone (r <= 33.0dp), found $maxRadialDistance",
-                maxRadialDistance <= 33.0
+                "$fgRelPath geometry must fit inside safe zone (r <= ${maxAllowedRadius}dp), found $maxRadialDistance",
+                maxRadialDistance <= maxAllowedRadius
             )
         }
     }

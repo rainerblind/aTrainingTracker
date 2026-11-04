@@ -7075,12 +7075,15 @@
   • Verify `AndroidManifest.xml` specifies `android:icon="@mipmap/ic_launcher"` and `android:roundIcon="@mipmap/ic_launcher_round"`.
   • Verify `res/mipmap-anydpi-v26/ic_launcher.xml` and `ic_launcher_round.xml` exist and correctly reference `@drawable/ic_launcher_background`, `@drawable/ic_launcher_foreground`, and `@drawable/ic_launcher_monochrome`.
   2. *Safe-Zone Geometry & Vector Bounds Audit (`TST-UI-444.2`)*:
-  • Parse vector path coordinate extrema in `ic_launcher_foreground.xml` and `ic_launcher_monochrome.xml`.
-  • Verify all vector elements lie strictly within the inner 66dp diameter circle centered at `(54, 54)` on the `108x108` canvas ($r \le 33\text{dp}$).
-  3. *Authentic Brand Color Fidelity Audit (`TST-UI-444.3`)*:
+  • Parse vector path coordinate extrema in `ic_launcher_foreground.xml` and `ic_launcher_monochrome.xml`, supporting lines (`L`/`l`), arcs (`A`/`a`), and cubic/quadratic Béziers (`C`/`c`/`S`/`s`/`Q`/`q`).
+  • Verify all vector elements lie strictly within the inner circular safe zone centered at `(54, 54)` on the `108x108` canvas with $r \le 34.5\text{dp}$ (and $r \ge 33.0\text{dp}$ to prevent excessive margin).
+  3. *Authentic Brand Color & Geometry Fidelity Audit (`TST-UI-444.3`)*:
   • Audit color tokens in `ic_launcher_foreground.xml` to verify exact matching of Cervélo P3C frame (`#FF0000`), carbon wheels/saddle (`#000000`), stopwatch ring/stems (`#FFC700`), dial (`#F0F0F0`), pushers (`#000090`, `#FF0000`, `#009000`), and athletes (`#0000FF`).
-  4. *In-App Caller Parity & Zero Logic Regressions (`TST-UI-444.4`)*:
+  • Verify pusher button caps overlap stem necks with zero white gap and round stroke caps on athlete curves.
+  4. *In-App Caller Parity & Master Asset Integrity (`TST-UI-444.4`)*:
   • Verify `R.drawable.logo` remains intact and unaffected for existing notification and protocol callers.
+  • Verify `app/src/main/res/drawable/logo_512.png` and `images/logo_512.png` match `drawable-xxxhdpi/logo_512.png` checksum (`sha256: f84c6251...`), preserving full-bleed in-app drawer rendering.
+  • Verify separate Play Store master asset `images/play_store_icon_512.png` exists with padded safe-zone geometry.
   • Verify `verify_requirement_governance.py` exits with code 0.
 
 ### TST-UI-445: **Supporter Badges: Custom Launcher Icons, Cockpit Status Emblem, Navigation Drawer & Share Watermark Verification Suite** [Verified]
