@@ -47,7 +47,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.atrainingtracker.trainingtracker.monetization.ProFeatureManager
 import com.atrainingtracker.trainingtracker.monetization.SupporterTier
-import com.atrainingtracker.trainingtracker.ui.branding.SupporterQuickIconPickerDialog
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.LocationCalibrationStatus
 
 
@@ -62,11 +61,11 @@ fun SensorStatus(
     onDeviceClick: (Long) -> Unit = {},
     onCalibrateAltitude: ((referenceAltitudeMeters: Double, locationName: String?, saveAsKnownLocation: Boolean) -> Unit)? = null,
     onMenuClick: (() -> Unit)? = null,
+    onSupporterClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     isCompactLandscape: Boolean = false
 ) {
     var selectedSensor by remember { mutableStateOf<SensorType?>(null) }
-    var showSupporterDialog by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val proFeatureManager = remember(context) { ProFeatureManager.getInstance(context.applicationContext) }
@@ -141,7 +140,8 @@ fun SensorStatus(
             if (supporterEmblemRes != null) {
                 Spacer(modifier = Modifier.width(6.dp))
                 IconButton(
-                    onClick = { showSupporterDialog = true },
+                    onClick = { onSupporterClick?.invoke() },
+                    enabled = onSupporterClick != null,
                     modifier = Modifier.size(24.dp)
                 ) {
                     Icon(
@@ -209,7 +209,8 @@ fun SensorStatus(
 
             if (supporterEmblemRes != null) {
                 IconButton(
-                    onClick = { showSupporterDialog = true },
+                    onClick = { onSupporterClick?.invoke() },
+                    enabled = onSupporterClick != null,
                     modifier = Modifier.size(24.dp)
                 ) {
                     Icon(
@@ -240,12 +241,6 @@ fun SensorStatus(
             onDeviceClick = onDeviceClick,
             onCalibrateAltitude = onCalibrateAltitude,
             onDismiss = { selectedSensor = null }
-        )
-    }
-
-    if (showSupporterDialog) {
-        SupporterQuickIconPickerDialog(
-            onDismiss = { showSupporterDialog = false }
         )
     }
 }

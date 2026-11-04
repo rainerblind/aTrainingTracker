@@ -7089,23 +7089,24 @@
 ### TST-UI-445: **Supporter Badges: Custom Launcher Icons, Cockpit Status Emblem, Navigation Drawer & Share Watermark Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-445`
 - **Component**: `LauncherIconManagerTest.kt`, `SupporterBadgeContractTest.kt`, `SensorStatusTest.kt`, `AppNavigationDrawerTest.kt`, `ShareUtilsTest.kt`, `TranslationParityTest.kt`
-- **Jira**: `ATT-1406`, `ATT-5372`
+- **Jira**: `ATT-1406`, `ATT-5372`, `ATT-5397`
 - **Test Description**:
   1. *Adaptive Launcher Icon Safe-Zone & Brand Color Contract Test (`TST-UI-445.1`)*:
   • Parse all 6 foreground vector drawables (`ic_launcher_foreground.xml` and tier variants).
   • Verify maximum radial distance from canvas center `(54, 54)` is $33.0 \le r \le 34.5\text{dp}$ for all path coordinates, and verify cubic Bézier curves (`C`/`c`) are present for smooth cyclist back/hip geometry.
   • Verify exact color token preservation: Cervélo P3C red frame (`#FF0000`), carbon wheels/saddle (`#000000`), golden bezel (`#FFC700`), pushers (`#000090`, `#FF0000`, `#009000`), and blue athletes (`#0000FF`).
-  2. *Activity-Alias Manifest & Deferred Lifecycle Switching Test (`TST-UI-445.2`)*:
+  2. *Activity-Alias Manifest & Deferred Automatic Tier Synchronization Test (`TST-UI-445.2`)*:
   • Verify `AndroidManifest.xml` declares 6 `<activity-alias>` entries targeting `MainActivityWithNavigation`, with default alias enabled.
-  • Verify `LauncherIconManager` defers alias changes with `PackageManager.DONT_KILL_APP` during active foreground or tracking sessions (`isTracking == true`), executing component state transitions on `ProcessLifecycleOwner` `onStop`.
-  3. *Live Cockpit Status Emblem & Crash-Free Quick-Picker Contract Test (`TST-UI-445.3` / `ATT-5372`)*:
-  • Verify `SensorStatus.kt` renders the right-aligned 24dp emblem symmetrically balancing the 24dp menu button in Portrait and Landscape.
-  • Verify `SupporterQuickIconPickerDialog.kt` renders icon preview items using `safePainterResource(id = variant.foregroundRes)` (or standard `R.drawable.logo_512`) and assert zero `<adaptive-icon>` `R.mipmap.*` XML references are passed to `painterResource` or `safePainterResource` (`Rule 71`).
+  • Verify `LauncherIconManager` automatically synchronizes with `ProFeatureManager.effectiveTier` via `LauncherIconVariant.fromTier(effectiveTier)` and defers alias changes with `PackageManager.DONT_KILL_APP` during active foreground or tracking sessions (`isTracking == true`), executing component state transitions on `ProcessLifecycleOwner` `onStop`.
+  3. *Live Cockpit Status Emblem & Retired Quick-Picker Verification (`TST-UI-445.3` / `ATT-5372`, `ATT-5397`)*:
+  • Verify `SensorStatus.kt` renders the right-aligned 24dp emblem symmetrically balancing the 24dp menu button in Portrait and Landscape without opening an icon picker dialog.
+  • Verify `SupporterQuickIconPickerDialog.kt` and `supporter_quick_picker_*` string resources are removed from the codebase.
+  • Verify `SupporterBadgeContractTest.kt` verifies automatic tier matching and non-modal emblem layout.
   4. *Navigation Drawer Header & Share Watermark Contract Test (`TST-UI-445.4`)*:
-  • Verify `AppNavigationDrawer.DrawerHeader` preserves the original single-line header layout without a text pill below the title and renders the active custom Cervélo supporter icon at the original full 46dp visual size (`scale = 1.81f`).
+  • Verify `AppNavigationDrawer.DrawerHeader` preserves the original single-line header layout without a text pill below the title and renders the active custom Cervélo supporter icon at the original full 46dp visual size (`scale = 1.81f`) matching `effectiveTier` directly.
   • Verify `ShareUtils.drawFooter` renders the Cervélo P3C icon, "Tracked with aTrainingTracker", and supporter tier pill.
   5. *9-Locale Localization Parity Test (`TST-LOC-001` / `TST-UI-445.5`)*:
-  • Verify all newly added string resources for launcher icons, tier ribbons, and dialogs exist with 100% parity across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+  • Verify zero orphaned strings after removing `supporter_quick_picker_*` across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
 
 ### TST-UI-446: **Universal Stacked Workout Details Marginal Histograms & Widened Strip Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-446`

@@ -79,7 +79,6 @@ import com.atrainingtracker.trainingtracker.monetization.ProFeatureManager
 import com.atrainingtracker.trainingtracker.monetization.SupporterTier
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.ui.branding.LauncherIconVariant
-import com.atrainingtracker.trainingtracker.ui.branding.SupporterQuickIconPickerDialog
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.safePainterResource
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
@@ -333,28 +332,14 @@ fun DrawerHeader() {
                     .background(MaterialTheme.colorScheme.surfaceVariant)
             )
         }
-        var showQuickPicker by remember { mutableStateOf(false) }
-        val settingsDataStore = remember(context) { SettingsDataStore.getInstance(context.applicationContext) }
         val proFeatureManager = remember(context) { ProFeatureManager.getInstance(context.applicationContext) }
         val effectiveTier by proFeatureManager.effectiveTier.collectAsState()
-        val isPioneer by settingsDataStore.isPioneerEarlyAdopter.collectAsState(initial = false)
-        val selectedIconId by settingsDataStore.selectedLauncherIcon.collectAsState(initial = "standard")
-        val selectedVariant = LauncherIconVariant.fromId(selectedIconId)
-        val activeVariant = if (effectiveTier.isPro) {
-            if (selectedVariant != LauncherIconVariant.STANDARD && selectedVariant.isUnlocked(effectiveTier, isPioneer)) {
-                selectedVariant
-            } else {
-                LauncherIconVariant.fromTier(effectiveTier)
-            }
-        } else {
-            LauncherIconVariant.STANDARD
-        }
+        val activeVariant = LauncherIconVariant.fromTier(effectiveTier)
 
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(start = 16.dp, end = 16.dp, top = statusBarHeight + 2.dp, bottom = 14.dp)
-                .clickable { showQuickPicker = true },
+                .padding(start = 16.dp, end = 16.dp, top = statusBarHeight + 2.dp, bottom = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Start
         ) {
@@ -394,12 +379,6 @@ fun DrawerHeader() {
                 color = colorResource(id = R.color.my_blue),
                 fontSize = 21.sp,
                 fontWeight = FontWeight.Bold
-            )
-        }
-
-        if (showQuickPicker) {
-            SupporterQuickIconPickerDialog(
-                onDismiss = { showQuickPicker = false }
             )
         }
     }

@@ -214,33 +214,30 @@ class SupporterBadgeContractTest {
     }
 
     @Test
-    fun testQuickPickerDialogNeverPassesMipmapToPainterResource() {
-        val dialogFile = findRepoRootFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/branding/SupporterQuickIconPickerDialog.kt")
-        assertTrue("SupporterQuickIconPickerDialog.kt must exist", dialogFile.exists())
-        val source = dialogFile.readText()
+    fun testSupporterQuickIconPickerDialogRetired() {
+        val candidates = listOf(
+            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/branding/SupporterQuickIconPickerDialog.kt"),
+            File("src/main/java/com/atrainingtracker/trainingtracker/ui/branding/SupporterQuickIconPickerDialog.kt"),
+            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/branding/SupporterQuickIconPickerDialog.kt")
+        )
+        for (candidate in candidates) {
+            assertFalse(
+                "SupporterQuickIconPickerDialog.kt must be completely retired and deleted (REQ-UI-445.3 / ATT-5397)",
+                candidate.exists()
+            )
+        }
 
-        // Assert no direct painterResource call
+        // Verify SensorStatus.kt and AppNavigationDrawer.kt have zero references to SupporterQuickIconPickerDialog
+        val sensorStatusFile = findRepoRootFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/controltracking/SensorStatus.kt")
         assertFalse(
-            "SupporterQuickIconPickerDialog must not call Compose painterResource directly (REQ-UI-445.3 / ATT-5372)",
-            source.contains("painterResource(")
+            "SensorStatus.kt must not reference SupporterQuickIconPickerDialog",
+            sensorStatusFile.readText().contains("SupporterQuickIconPickerDialog")
         )
 
-        // Assert safePainterResource uses foregroundRes (not iconRes or mipmapRes)
-        assertTrue(
-            "SupporterQuickIconPickerDialog must use safePainterResource for icon preview",
-            source.contains("safePainterResource(")
-        )
-        assertTrue(
-            "SupporterQuickIconPickerDialog must pass variant.foregroundRes to safePainterResource",
-            source.contains("variant.foregroundRes")
-        )
+        val drawerFile = findRepoRootFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/navigation/AppNavigationDrawer.kt")
         assertFalse(
-            "SupporterQuickIconPickerDialog must never pass variant.iconRes to safePainterResource",
-            source.contains("variant.iconRes")
-        )
-        assertFalse(
-            "SupporterQuickIconPickerDialog must never reference mipmap resources in Compose rendering",
-            source.contains("R.mipmap")
+            "AppNavigationDrawer.kt must not reference SupporterQuickIconPickerDialog",
+            drawerFile.readText().contains("SupporterQuickIconPickerDialog")
         )
     }
 

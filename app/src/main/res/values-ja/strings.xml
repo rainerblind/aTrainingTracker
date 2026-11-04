@@ -2283,8 +2283,6 @@
     <string name="launcher_icon_silver">シルバーProサポーター</string>
     <string name="launcher_icon_gold">ゴールドProサポーター</string>
     <string name="launcher_icon_diamond">ダイヤモンドスポンサー</string>
-    <string name="supporter_quick_picker_title">サポーターアイコン選択</string>
-    <string name="supporter_quick_picker_thank_you">15年以上にわたる広告なしの個人開発へのご支援ありがとうございます！</string>
     <string name="supporter_status_emblem_cd">サポーターステータスエンブレム</string>
     <string name="share_watermark_tracked_with">aTrainingTrackerで記録</string>
 </resources>

@@ -2389,8 +2389,6 @@
     <string name="launcher_icon_silver">Silber Pro-Supporter</string>
     <string name="launcher_icon_gold">Gold Pro-Supporter</string>
     <string name="launcher_icon_diamond">Diamant Sponsor</string>
-    <string name="supporter_quick_picker_title">Supporter Icon-Auswahl</string>
-    <string name="supporter_quick_picker_thank_you">Vielen Dank für Ihre Unterstützung von 15+ Jahren werbefreier Indie-Entwicklung!</string>
     <string name="supporter_status_emblem_cd">Supporter-Statussymbol</string>
     <string name="share_watermark_tracked_with">Aufgezeichnet mit aTrainingTracker</string>
 </resources>

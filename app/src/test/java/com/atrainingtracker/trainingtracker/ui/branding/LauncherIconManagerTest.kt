@@ -23,12 +23,13 @@ import android.content.Context
 import android.content.pm.PackageManager
 import androidx.lifecycle.LifecycleOwner
 import androidx.test.core.app.ApplicationProvider
+import com.atrainingtracker.trainingtracker.monetization.ProFeatureManager
 import com.atrainingtracker.trainingtracker.monetization.SupporterTier
-import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
@@ -48,7 +49,6 @@ class LauncherIconManagerTest {
 
     private lateinit var context: Context
     private lateinit var packageManager: PackageManager
-    private lateinit var settingsDataStore: SettingsDataStore
     private val testDispatcher = StandardTestDispatcher()
     private val testScope = TestScope(testDispatcher)
 
@@ -56,7 +56,16 @@ class LauncherIconManagerTest {
     fun setup() {
         context = ApplicationProvider.getApplicationContext()
         packageManager = context.packageManager
-        settingsDataStore = SettingsDataStore(context)
+    }
+
+    @Test
+    fun testFromTierMapping() {
+        assertEquals(LauncherIconVariant.STANDARD, LauncherIconVariant.fromTier(SupporterTier.FREE))
+        assertEquals(LauncherIconVariant.PIONEER, LauncherIconVariant.fromTier(SupporterTier.PIONEER))
+        assertEquals(LauncherIconVariant.BRONZE, LauncherIconVariant.fromTier(SupporterTier.BRONZE))
+        assertEquals(LauncherIconVariant.SILVER, LauncherIconVariant.fromTier(SupporterTier.SILVER))
+        assertEquals(LauncherIconVariant.GOLD, LauncherIconVariant.fromTier(SupporterTier.GOLD))
+        assertEquals(LauncherIconVariant.DIAMOND, LauncherIconVariant.fromTier(SupporterTier.DIAMOND))
     }
 
     @Test
@@ -96,7 +105,7 @@ class LauncherIconManagerTest {
 
         val manager = LauncherIconManager(
             context = mockContext,
-            settingsDataStore = settingsDataStore,
+            proFeatureManager = mockk(relaxed = true),
             coroutineScope = testScope,
             ioDispatcher = testDispatcher,
             isTrackingProvider = { false }
@@ -127,6 +136,38 @@ class LauncherIconManagerTest {
     }
 
     @Test
+    fun testApplyDesiredLauncherIconResolvesFromProFeatureManager() = runTest(testDispatcher) {
+        val mockPm = mockk<PackageManager>(relaxed = true)
+        val mockContext = mockk<Context>()
+        every { mockContext.packageManager } returns mockPm
+        every { mockContext.packageName } returns "com.atrainingtracker"
+        every { mockPm.getComponentEnabledSetting(any()) } returns PackageManager.COMPONENT_ENABLED_STATE_DEFAULT
+
+        val mockProFeatureManager = mockk<ProFeatureManager>()
+        every { mockProFeatureManager.effectiveTier } returns MutableStateFlow(SupporterTier.GOLD)
+
+        val manager = LauncherIconManager(
+            context = mockContext,
+            proFeatureManager = mockProFeatureManager,
+            coroutineScope = this,
+            ioDispatcher = testDispatcher,
+            isTrackingProvider = { false }
+        )
+
+        val changed = manager.applyDesiredLauncherIcon()
+        assertTrue("State should report changed", changed)
+
+        val goldComponent = ComponentName("com.atrainingtracker", LauncherIconVariant.GOLD.aliasName)
+        verify {
+            mockPm.setComponentEnabledSetting(
+                goldComponent,
+                PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                PackageManager.DONT_KILL_APP
+            )
+        }
+    }
+
+    @Test
     fun testDeferredActivationSuppressedDuringActiveTracking() = runTest(testDispatcher) {
         var isTracking = true
         val mockPm = mockk<PackageManager>(relaxed = true)
@@ -134,12 +175,12 @@ class LauncherIconManagerTest {
         every { mockContext.packageManager } returns mockPm
         every { mockContext.packageName } returns "com.atrainingtracker"
 
-        val mockSettingsDataStore = mockk<SettingsDataStore>()
-        every { mockSettingsDataStore.selectedLauncherIcon } returns kotlinx.coroutines.flow.flowOf("gold")
+        val mockProFeatureManager = mockk<ProFeatureManager>()
+        every { mockProFeatureManager.effectiveTier } returns MutableStateFlow(SupporterTier.GOLD)
 
         val manager = LauncherIconManager(
             context = mockContext,
-            settingsDataStore = mockSettingsDataStore,
+            proFeatureManager = mockProFeatureManager,
             coroutineScope = this,
             ioDispatcher = testDispatcher,
             isTrackingProvider = { isTracking }

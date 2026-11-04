@@ -13011,8 +13011,8 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 ---
 
 ### REQ-UI-445: Supporter Badges: Custom Launcher Icons, Cockpit Status Emblem, Navigation Drawer & Share Watermark [Verified]
-- **Tests**: `TST-UI-445`, `TST-LOC-001` | **Tickets**: `ATT-1406`, `ATT-5372`
-- **Implementation**: `LauncherIconManager.kt`, `SensorStatus.kt`, `AppNavigationDrawer.kt`, `ShareUtils.kt`, `SupporterQuickIconPickerDialog.kt`, `AndroidManifest.xml`, `res/mipmap-anydpi-v26/`, `res/drawable/`
+- **Tests**: `TST-UI-445`, `TST-LOC-001` | **Tickets**: `ATT-1406`, `ATT-5372`, `ATT-5397`
+- **Implementation**: `LauncherIconManager.kt`, `SensorStatus.kt`, `AppNavigationDrawer.kt`, `ShareUtils.kt`, `AndroidManifest.xml`, `res/mipmap-anydpi-v26/`, `res/drawable/`
 - **Rationale**: To provide visible recognition for athletes supporting development via Supporter subscriptions (Bronze, Silver, Gold, Diamond) or recognized as Pioneer Early Adopters (ATT-51), the system SHALL introduce customizable homescreen launcher icons (Option A), a live Cockpit status emblem, Navigation Drawer branding, and a workout share watermark, while strictly preserving 100% of authentic Cervélo P3C and classic stopwatch colors (ATT-1482):
 1. *Option A Adaptive Launcher Icons with Safe-Zone Compliance (`REQ-UI-445.1`)*:
 • The application SHALL provide 6 adaptive launcher icon variants (`STANDARD`, `PIONEER`, `BRONZE`, `SILVER`, `GOLD`, `DIAMOND`) under `res/mipmap-anydpi-v26/` and `res/drawable/`.
@@ -13025,17 +13025,17 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
   f. Diamond Sponsor: Faceted Brilliant-Cut Cyan/Ice Diamond with sparkle at top-right, `◆ SPONSOR ◆` diamond-blue ribbon at bottom, cyan-blue border ring.
 • All 6 launcher icon foreground drawables SHALL preserve 100% authentic Cervélo P3C bike (red frame `#FF0000`, carbon wheels/saddle `#000000`), classic stopwatch (golden bezel `#FFC700`, dial `#F0F0F0`, pushers `#000090`, `#FF0000`, `#009000`), and royal blue athletes (`#0000FF`).
 • All vector paths across all 6 icons SHALL fit strictly inside the safe zone ($33.0 \le r \le 34.5\text{dp}$) on the 108dp canvas, guaranteeing zero clipping across Circle, Squircle, Rounded Square, and Teardrop launcher masks.
-2. *Activity-Alias Manifest Architecture & Deferred Non-Disruptive Switching (`REQ-UI-445.2`)*:
+2. *Activity-Alias Manifest Architecture & Deferred Automatic Tier Synchronization (`REQ-UI-445.2`)*:
 • `AndroidManifest.xml` SHALL declare 6 `<activity-alias>` entries targeting `MainActivityWithNavigation`, with the Standard alias enabled by default.
 • The system SHALL provide `LauncherIconManager` observing `ProcessLifecycleOwner` lifecycle.
-• When the athlete selects a new launcher icon in Settings or the Quick-Picker dialog, the choice SHALL be immediately persisted in `SettingsDataStore` (`KEY_SELECTED_LAUNCHER_ICON`) and reflected in the preview UI.
+• `LauncherIconManager` SHALL automatically synchronize the homescreen launcher icon with `ProFeatureManager.effectiveTier` via `LauncherIconVariant.fromTier(effectiveTier)` (`FREE -> STANDARD`, `PIONEER -> PIONEER`, `BRONZE -> BRONZE`, `SILVER -> SILVER`, `GOLD -> GOLD`, `DIAMOND -> DIAMOND`) (ATT-5397). Manual icon selection and `SettingsDataStore.selectedLauncherIcon` are retired.
 • The system SHALL apply `PackageManager.setComponentEnabledSetting` with `PackageManager.DONT_KILL_APP` deferred until the application transitions to the background (`onStop`) AND no active workout recording is running (`!TrainingApplication.isTracking()`). The app process or active workout SHALL NEVER be killed or restarted.
-3. *Live Cockpit Status Emblem & Crash-Free Quick Icon Picker Dialog (`REQ-UI-445.3` / `ATT-5372`)*:
+3. *Live Cockpit Status Emblem & Retirement of Quick Icon Picker Dialog (`REQ-UI-445.3` / `ATT-5372`, `ATT-5397`)*:
 • In `SensorStatus.kt` (top sensor status bar of the Tracking Cockpit), the system SHALL render a pure 24dp vector emblem (Bronze Medal, Silver Medal, 24K Gold Medal, Faceted Brilliant Diamond, or Pioneer Star — without text) at the right end of the row, symmetrically balancing the 24dp menu button on the left while keeping the 8 sensor icons centered.
-• Tapping the emblem SHALL open `SupporterQuickIconPickerDialog`, displaying supporter recognition and enabling 1-tap switching between unlocked launcher icons.
-• In `SupporterQuickIconPickerDialog` (`LauncherIconItemCard`), preview icons SHALL be rendered via `safePainterResource(id = variant.foregroundRes)` (or `R.drawable.logo_512` for standard) inside a styled `Surface(shape = CircleShape)` and SHALL NEVER pass `<adaptive-icon>` `R.mipmap.*` XML resources to `painterResource` or `safePainterResource` (`ATT-5372`, `Rule 71`).
+• Tapping the emblem in `SensorStatus.kt` SHALL NOT open an icon picker dialog; it renders as a non-modal supporter status emblem (or navigates directly to `SupporterScreen`) (ATT-5397).
+• `SupporterQuickIconPickerDialog.kt` and `supporter_quick_picker_*` string resources SHALL be retired and removed from the codebase.
 4. *Navigation Drawer Header Recognition (`REQ-UI-445.4`)*:
-• In `AppNavigationDrawer.DrawerHeader`, the system SHALL preserve the original clean single-line header layout (`46.dp` icon on the left + `"a Training Tracker"` title on the right over `menu_header_background`, without any text pill below the title) and render the paying customer's active custom Cervélo P3C supporter icon (`foregroundRes` scaled by `1.81f` to compensate for the 108dp adaptive-icon safe-zone margin so its visual size matches `R.drawable.logo_512` at `46.dp` 1:1).
+• In `AppNavigationDrawer.DrawerHeader`, the system SHALL preserve the original clean single-line header layout (`46.dp` icon on the left + `"a Training Tracker"` title on the right over `menu_header_background`, without any text pill below the title) and render the active custom Cervélo P3C supporter icon matching `effectiveTier` directly (`foregroundRes` scaled by `1.81f` to compensate for the 108dp adaptive-icon safe-zone margin so its visual size matches `R.drawable.logo_512` at `46.dp` 1:1) without manual icon picking (ATT-5397).
 5. *Social Share Workout Watermark (`REQ-UI-445.5`)*:
 • In `ShareUtils.kt` (`combineWorkoutAndShare` and `combinePeriodAndShare`), the footer watermark signature bar SHALL render the mini Cervélo P3C icon, "Tracked with aTrainingTracker", and the user's active supporter tier pill (`★ GOLD PRO`, `◆ SPONSOR`, `★ PIONEER`, etc.).
 6. *Tier Unlock Hierarchy & Debug Override (`REQ-UI-445.6`)*:
@@ -13045,18 +13045,18 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete with an active Supporter tier or Pioneer status,
 • *When* inspecting the Tracking Cockpit, Navigation Drawer, or shared workout image,
-• *Then* the corresponding 24dp Cockpit emblem, Drawer header icon + tier pill, and share watermark render accurately.
-• *Given* an athlete selecting a different unlocked launcher icon,
-• *When* the selection is made during active use or while recording a workout,
-• *Then* the choice persists immediately in SettingsDataStore without interrupting or killing the foreground session, and the new `<activity-alias>` activates via `DONT_KILL_APP` when the app moves to background.
+• *Then* the corresponding 24dp Cockpit emblem, Drawer header icon, and share watermark render accurately matching `effectiveTier`.
+• *Given* an athlete whose `effectiveTier` updates (or on background `onStop`),
+• *When* the application transitions to the background while not tracking (`!TrainingApplication.isTracking()`),
+• *Then* `LauncherIconManager` automatically activates the corresponding `<activity-alias>` via `DONT_KILL_APP` without interrupting active tracking or killing the foreground process.
 • *Given* any of the 6 launcher icon drawables,
 • *When* rendered inside circular or squircle launcher masks,
 • *Then* zero artwork paths clip outside the safe zone ($33.0 \le r \le 34.5\text{dp}$) and 100% of Cervélo P3C and stopwatch colors are preserved.
-• *Given* an athlete tapping the Cockpit status emblem,
-• *When* `SupporterQuickIconPickerDialog` is displayed,
-• *Then* the dialog opens smoothly without `IllegalArgumentException` by rendering preview items using foreground vector drawables.
+• *Given* an athlete tapping the Cockpit status emblem or navigation drawer header,
+• *When* the interaction occurs,
+• *Then* no icon picker dialog is opened.
 
-**Invariants**: 100% Cervélo P3C and stopwatch color fidelity preserved, 100% safe-zone containment ($33.0 \le r \le 34.5\text{dp}$), zero interruption/restart during workout recording or foreground sessions, 100% crash-free Compose icon preview rendering, 100% free core workout tracking features.
+**Invariants**: 100% Cervélo P3C and stopwatch color fidelity preserved, 100% safe-zone containment ($33.0 \le r \le 34.5\text{dp}$), zero interruption/restart during workout recording or foreground sessions, zero crash-prone mipmap Compose references, 100% free core workout tracking features.
 
 ### REQ-UI-446: Universal Stacked Workout Details Marginal Histograms & Widened Strip Layout Parity [Verified]
 - **Tests**: `TST-UI-446`, `TST-LOC-001` | **Tickets**: `ATT-5370`

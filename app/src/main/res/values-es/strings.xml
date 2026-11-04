@@ -2304,8 +2304,6 @@
     <string name="launcher_icon_silver">Pro-Supporter Plata</string>
     <string name="launcher_icon_gold">Pro-Supporter Oro</string>
     <string name="launcher_icon_diamond">Patrocinador Diamante</string>
-    <string name="supporter_quick_picker_title">Selector de Iconos Supporter</string>
-    <string name="supporter_quick_picker_thank_you">¡Gracias por apoyar más de 15 años de desarrollo independiente sin anuncios!</string>
     <string name="supporter_status_emblem_cd">Emblema de estado Supporter</string>
     <string name="share_watermark_tracked_with">Registrado con aTrainingTracker</string>
 </resources>
