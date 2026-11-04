@@ -210,10 +210,11 @@ class SettingsDataStore(
         val KEY_IS_HR_ZONES_CONFIGURED = booleanPreferencesKey("is_hr_zones_configured")
         val KEY_IS_PWR_ZONES_CONFIGURED = booleanPreferencesKey("is_pwr_zones_configured")
 
-        // Monetization & Supporter Models (ATT-51, REQ-SET-085, REQ-SET-086, REQ-SET-087, ATT-2308, REQ-REV-004)
+        // Monetization & Supporter Models (ATT-51, REQ-SET-085, REQ-SET-086, REQ-SET-087, ATT-2308, REQ-REV-004, ATT-1406, REQ-UI-445)
         val KEY_IS_PIONEER_EARLY_ADOPTER = booleanPreferencesKey("is_pioneer_early_adopter")
         val KEY_SUPPORTER_TIER = stringPreferencesKey("supporter_tier")
         val KEY_SUPPORTER_TIER_OVERRIDE = stringPreferencesKey("supporter_tier_override")
+        val KEY_SELECTED_LAUNCHER_ICON = stringPreferencesKey("selected_launcher_icon")
         val KEY_HARDWARE_VOTE = stringPreferencesKey("hardware_vote")
         val KEY_HAS_SHOWN_FIRST_JUBILEE_PROMPT = booleanPreferencesKey("has_shown_first_jubilee_prompt")
         val KEY_HAS_SHOWN_GOLD_GARAGE_NUDGE = booleanPreferencesKey("has_shown_gold_garage_nudge")
@@ -592,6 +593,16 @@ class SettingsDataStore(
     suspend fun setSupporterTierOverride(override: SupporterTierOverride) {
         dataStore.edit { prefs ->
             prefs[KEY_SUPPORTER_TIER_OVERRIDE] = override.name
+        }
+    }
+
+    val selectedLauncherIcon: Flow<String> = dataStore.data.map { prefs ->
+        prefs[KEY_SELECTED_LAUNCHER_ICON] ?: "standard"
+    }
+
+    suspend fun setSelectedLauncherIcon(iconId: String) {
+        dataStore.edit { prefs ->
+            prefs[KEY_SELECTED_LAUNCHER_ICON] = iconId
         }
     }
 

@@ -2481,4 +2481,15 @@
     <string name="debug_garage_preview_diamond">Preview Diamond Nudge</string>
     <string name="debug_garage_reset_flags">Reset Nudge Flags</string>
     <string name="debug_garage_flags_reset_toast">Garage nudge flags reset</string>
+    <!-- Pro Supporter Badges & Launcher Icons (REQ-UI-445 / ATT-1406) -->
+    <string name="launcher_icon_standard">Standard</string>
+    <string name="launcher_icon_pioneer">Pioneer Edition</string>
+    <string name="launcher_icon_bronze">Bronze Supporter</string>
+    <string name="launcher_icon_silver">Silver Pro-Supporter</string>
+    <string name="launcher_icon_gold">Gold Pro-Supporter</string>
+    <string name="launcher_icon_diamond">Diamond Sponsor</string>
+    <string name="supporter_quick_picker_title">Supporter Icon Picker</string>
+    <string name="supporter_quick_picker_thank_you">Thank you for supporting 15+ years of ad-free indie development!</string>
+    <string name="supporter_status_emblem_cd">Supporter Status Emblem</string>
+    <string name="share_watermark_tracked_with">Tracked with aTrainingTracker</string>
 </resources>

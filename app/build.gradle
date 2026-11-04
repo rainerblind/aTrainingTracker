@@ -160,6 +160,7 @@ dependencies {
     implementation 'androidx.activity:activity-compose:1.10.1'
     implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0'
     implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.11.0'
+    implementation 'androidx.lifecycle:lifecycle-process:2.11.0'
     implementation 'androidx.compose.runtime:runtime-livedata'
     implementation 'androidx.compose.runtime:runtime-saveable'
     implementation 'androidx.compose.foundation:foundation-layout'

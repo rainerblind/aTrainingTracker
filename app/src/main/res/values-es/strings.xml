@@ -2281,4 +2281,15 @@
     <string name="debug_garage_preview_diamond">Vista previa aviso Diamante</string>
     <string name="debug_garage_reset_flags">Restablecer marcas de aviso</string>
     <string name="debug_garage_flags_reset_toast">Marcas de aviso de garaje restablecidas</string>
+    <!-- Pro Supporter Badges & Launcher Icons (REQ-UI-445 / ATT-1406) -->
+    <string name="launcher_icon_standard">Estándar</string>
+    <string name="launcher_icon_pioneer">Edición Pioneer</string>
+    <string name="launcher_icon_bronze">Supporter Bronce</string>
+    <string name="launcher_icon_silver">Pro-Supporter Plata</string>
+    <string name="launcher_icon_gold">Pro-Supporter Oro</string>
+    <string name="launcher_icon_diamond">Patrocinador Diamante</string>
+    <string name="supporter_quick_picker_title">Selector de Iconos Supporter</string>
+    <string name="supporter_quick_picker_thank_you">¡Gracias por apoyar más de 15 años de desarrollo independiente sin anuncios!</string>
+    <string name="supporter_status_emblem_cd">Emblema de estado Supporter</string>
+    <string name="share_watermark_tracked_with">Registrado con aTrainingTracker</string>
 </resources>

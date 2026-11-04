@@ -44,11 +44,14 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -60,6 +63,7 @@ import com.atrainingtracker.trainingtracker.monetization.ProFeatureManager
 import com.atrainingtracker.trainingtracker.monetization.SupporterBasePlan
 import com.atrainingtracker.trainingtracker.monetization.SupporterTier
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
+import com.atrainingtracker.trainingtracker.ui.branding.SupporterQuickIconPickerDialog
 import kotlinx.coroutines.launch
 
 /**
@@ -80,6 +84,7 @@ fun SupporterScreen(
     val effectiveTier by proFeatureManager.effectiveTier.collectAsState()
     val isPioneer by settingsDataStore.isPioneerEarlyAdopter.collectAsState(initial = false)
     val selectedHardwareVote by settingsDataStore.hardwareVote.collectAsState(initial = null)
+    var showIconPicker by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -123,9 +128,23 @@ fun SupporterScreen(
             // Pioneer recognition banner
             if (isPioneer || effectiveTier == SupporterTier.PIONEER) {
                 PioneerStatusBanner()
+                Spacer(modifier = Modifier.height(10.dp))
+                OutlinedButton(
+                    onClick = { showIconPicker = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = stringResource(R.string.supporter_quick_picker_title))
+                }
                 Spacer(modifier = Modifier.height(16.dp))
             } else if (effectiveTier.isPro) {
                 ActiveTierBanner(tier = effectiveTier)
+                Spacer(modifier = Modifier.height(10.dp))
+                OutlinedButton(
+                    onClick = { showIconPicker = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = stringResource(R.string.supporter_quick_picker_title))
+                }
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
@@ -198,6 +217,12 @@ fun SupporterScreen(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        if (showIconPicker) {
+            SupporterQuickIconPickerDialog(
+                onDismiss = { showIconPicker = false }
+            )
         }
     }
 }

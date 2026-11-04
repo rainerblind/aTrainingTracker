@@ -33,6 +33,8 @@ import androidx.core.content.FileProvider
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.monetization.ProFeatureManager
+import com.atrainingtracker.trainingtracker.monetization.SupporterTier
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -221,19 +223,72 @@ private fun drawFooter(
     val margin = 24f
     canvas.drawBitmap(scaledLogo, margin, top + (height - logoSize) / 2f, null)
 
-    // Text
+    // Text: Tracked with aTrainingTracker
     val textPaint = Paint().apply {
         color = colors.footerTextColor
-        textSize = 42f
+        textSize = 38f
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
         isAntiAlias = true
     }
-    val appName = "aTrainingTracker"
+    val trackedWith = context.getString(R.string.share_watermark_tracked_with)
     val textBounds = android.graphics.Rect()
-    textPaint.getTextBounds(appName, 0, appName.length, textBounds)
+    textPaint.getTextBounds(trackedWith, 0, trackedWith.length, textBounds)
     val textY = top + (height / 2f) + (textBounds.height() / 2f)
+    canvas.drawText(trackedWith, margin + logoSize + 20f, textY, textPaint)
 
-    canvas.drawText(appName, margin + logoSize + 20f, textY, textPaint)
+    // Supporter Tier Pill on the right (REQ-UI-445 / ATT-1406)
+    try {
+        val proFeatureManager = ProFeatureManager.getInstance(context)
+        val effectiveTier = proFeatureManager.effectiveTier.value
+        if (effectiveTier.isPro) {
+            val pillText = when (effectiveTier) {
+                SupporterTier.DIAMOND -> "◆ SPONSOR"
+                SupporterTier.GOLD -> "★ GOLD PRO"
+                SupporterTier.SILVER -> "★ SILVER PRO"
+                SupporterTier.BRONZE -> "★ BRONZE"
+                SupporterTier.PIONEER -> "★ PIONEER"
+                SupporterTier.FREE -> ""
+            }
+            if (pillText.isNotEmpty()) {
+                val pillPaint = Paint().apply {
+                    textSize = 30f
+                    typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                    isAntiAlias = true
+                }
+                val pillBounds = android.graphics.Rect()
+                pillPaint.getTextBounds(pillText, 0, pillText.length, pillBounds)
+                val pillWidth = pillBounds.width() + 36f
+                val pillHeight = 48f
+                val pillRight = width.toFloat() - margin
+                val pillLeft = pillRight - pillWidth
+                val pillTop = top + (height - pillHeight) / 2f
+
+                val pillBgPaint = Paint().apply {
+                    color = when (effectiveTier) {
+                        SupporterTier.DIAMOND -> android.graphics.Color.rgb(0, 229, 255)
+                        SupporterTier.GOLD -> android.graphics.Color.rgb(255, 215, 0)
+                        SupporterTier.SILVER -> android.graphics.Color.rgb(192, 192, 192)
+                        SupporterTier.BRONZE -> android.graphics.Color.rgb(205, 127, 50)
+                        SupporterTier.PIONEER -> android.graphics.Color.rgb(0, 168, 107)
+                        SupporterTier.FREE -> colors.footerBackground
+                    }
+                    isAntiAlias = true
+                }
+                pillPaint.color = when (effectiveTier) {
+                    SupporterTier.DIAMOND, SupporterTier.GOLD, SupporterTier.SILVER -> android.graphics.Color.BLACK
+                    SupporterTier.BRONZE, SupporterTier.PIONEER -> android.graphics.Color.WHITE
+                    SupporterTier.FREE -> colors.footerTextColor
+                }
+
+                canvas.drawRoundRect(pillLeft, pillTop, pillRight, pillTop + pillHeight, 10f, 10f, pillBgPaint)
+                val pillTextY = pillTop + (pillHeight / 2f) + (pillBounds.height() / 2f) - 2f
+                val pillTextX = pillLeft + 18f
+                canvas.drawText(pillText, pillTextX, pillTextY, pillPaint)
+            }
+        }
+    } catch (_: Throwable) {
+        // Defensive fallback in headless/test environments
+    }
 }
 
 private suspend fun saveAndShare(context: Context, bitmap: Bitmap, fileName: String) = withContext(Dispatchers.IO) {

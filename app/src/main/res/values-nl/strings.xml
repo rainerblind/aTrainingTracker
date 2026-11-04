@@ -2280,4 +2280,15 @@
     <string name="debug_garage_preview_diamond">Voorbeeld Diamant-nudge</string>
     <string name="debug_garage_reset_flags">Nudge-vlaggen resetten</string>
     <string name="debug_garage_flags_reset_toast">Garage-nudgevlaggen gereset</string>
+    <!-- Pro Supporter Badges & Launcher Icons (REQ-UI-445 / ATT-1406) -->
+    <string name="launcher_icon_standard">Standaard</string>
+    <string name="launcher_icon_pioneer">Pioneer Editie</string>
+    <string name="launcher_icon_bronze">Brons Supporter</string>
+    <string name="launcher_icon_silver">Zilver Pro-Supporter</string>
+    <string name="launcher_icon_gold">Goud Pro-Supporter</string>
+    <string name="launcher_icon_diamond">Diamant Sponsor</string>
+    <string name="supporter_quick_picker_title">Supporter Icoon Kiezer</string>
+    <string name="supporter_quick_picker_thank_you">Bedankt voor het steunen van 15+ jaar advertentievrije indie-ontwikkeling!</string>
+    <string name="supporter_status_emblem_cd">Supporter Status Embleem</string>
+    <string name="share_watermark_tracked_with">Geregistreerd met aTrainingTracker</string>
 </resources>

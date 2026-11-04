@@ -12999,6 +12999,52 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: 100% Cervélo P3C and stopwatch color fidelity preserved, 100% containment within $r \le 33\text{dp}$ circular safe zone on 108dp canvas, zero regression in in-app notification drawables.
 
+---
+
+### REQ-UI-445: Supporter Badges: Custom Launcher Icons, Cockpit Status Emblem, Navigation Drawer & Share Watermark [Verified]
+- **Tests**: `TST-UI-445`, `TST-LOC-001` | **Tickets**: `ATT-1406`
+- **Implementation**: `LauncherIconManager.kt`, `SensorStatus.kt`, `AppNavigationDrawer.kt`, `ShareUtils.kt`, `SupporterQuickIconPickerDialog.kt`, `AndroidManifest.xml`, `res/mipmap-anydpi-v26/`, `res/drawable/`
+- **Rationale**: To provide visible recognition for athletes supporting development via Supporter subscriptions (Bronze, Silver, Gold, Diamond) or recognized as Pioneer Early Adopters (ATT-51), the system SHALL introduce customizable homescreen launcher icons (Option A), a live Cockpit status emblem, Navigation Drawer branding, and a workout share watermark, while strictly preserving 100% of authentic Cervélo P3C and classic stopwatch colors (ATT-1482):
+1. *Option A Adaptive Launcher Icons with Safe-Zone Compliance (`REQ-UI-445.1`)*:
+• The application SHALL provide 6 adaptive launcher icon variants (`STANDARD`, `PIONEER`, `BRONZE`, `SILVER`, `GOLD`, `DIAMOND`) under `res/mipmap-anydpi-v26/` and `res/drawable/`.
+• Every supporter launcher icon SHALL implement Option A: modernized classic Cervélo P3C & stopwatch base artwork (REQ-UI-444) combined with a Top-Right Emblem pocket at `cx=67.6, cy=31.8` ($r \le 33\text{dp}$) and a Bottom Tier Ribbon ($y=74.8..83.0$, $|x| \le 15.7\text{dp}$):
+  a. Standard: Authentic Cervélo P3C & classic stopwatch adaptive icon without badge overlays.
+  b. Pioneer Edition: Emerald & Gold Heritage Star emblem at top-right, `★ PIONEER ★` ribbon at bottom, emerald border ring.
+  c. Bronze Supporter: Bronze Medal on neck ribbon at top-right, `SUPPORTER` bronze ribbon at bottom, bronze border ring.
+  d. Silver Pro-Supporter: Silver Medal on neck ribbon at top-right, `PRO-SUPPORTER` silver ribbon at bottom, silver border ring.
+  e. Gold Pro-Supporter: 24K Gold Medal on neck ribbon at top-right, `PRO-SUPPORTER` gold ribbon at bottom, gold border ring.
+  f. Diamond Sponsor: Faceted Brilliant-Cut Cyan/Ice Diamond with sparkle at top-right, `◆ SPONSOR ◆` diamond-blue ribbon at bottom, cyan-blue border ring.
+• All 6 launcher icon foreground drawables SHALL preserve 100% authentic Cervélo P3C bike (red frame `#FF0000`, carbon wheels/saddle `#000000`), classic stopwatch (golden bezel `#FFC700`, dial `#F0F0F0`, pushers `#000090`, `#FF0000`, `#009000`), and royal blue athletes (`#0000FF`).
+• All vector paths across all 6 icons SHALL fit strictly inside the 66dp circular safe zone ($r \le 33\text{dp}$) on the 108dp canvas, guaranteeing zero clipping across Circle, Squircle, Rounded Square, and Teardrop launcher masks.
+2. *Activity-Alias Manifest Architecture & Deferred Non-Disruptive Switching (`REQ-UI-445.2`)*:
+• `AndroidManifest.xml` SHALL declare 6 `<activity-alias>` entries targeting `MainActivityWithNavigation`, with the Standard alias enabled by default.
+• The system SHALL provide `LauncherIconManager` observing `ProcessLifecycleOwner` lifecycle.
+• When the athlete selects a new launcher icon in Settings or the Quick-Picker dialog, the choice SHALL be immediately persisted in `SettingsDataStore` (`KEY_SELECTED_LAUNCHER_ICON`) and reflected in the preview UI.
+• The system SHALL apply `PackageManager.setComponentEnabledSetting` with `PackageManager.DONT_KILL_APP` deferred until the application transitions to the background (`onStop`) AND no active workout recording is running (`!TrainingApplication.isTracking()`). The app process or active workout SHALL NEVER be killed or restarted.
+3. *Live Cockpit Status Emblem & Quick Icon Picker Dialog (`REQ-UI-445.3`)*:
+• In `SensorStatus.kt` (top sensor status bar of the Tracking Cockpit), the system SHALL render a pure 24dp vector emblem (Bronze Medal, Silver Medal, 24K Gold Medal, Faceted Brilliant Diamond, or Pioneer Star — without text) at the right end of the row, symmetrically balancing the 24dp menu button on the left while keeping the 8 sensor icons centered.
+• Tapping the emblem SHALL open `SupporterQuickIconPickerDialog`, displaying supporter recognition and enabling 1-tap switching between unlocked launcher icons.
+4. *Navigation Drawer Header Recognition (`REQ-UI-445.4`)*:
+• In `AppNavigationDrawer.DrawerHeader`, the system SHALL render the active custom Cervélo P3C supporter icon on the left (46dp) and the supporter tier pill beneath the application title (e.g., `◆ DIAMOND SPONSOR • Unlimited Sensors`, `★ GOLD PRO-SUPPORTER`, or `★ PIONEER (SINCE 2011)`).
+5. *Social Share Workout Watermark (`REQ-UI-445.5`)*:
+• In `ShareUtils.kt` (`combineWorkoutAndShare` and `combinePeriodAndShare`), the footer watermark signature bar SHALL render the mini Cervélo P3C icon, "Tracked with aTrainingTracker", and the user's active supporter tier pill (`★ GOLD PRO`, `◆ SPONSOR`, `★ PIONEER`, etc.).
+6. *Tier Unlock Hierarchy & Debug Override (`REQ-UI-445.6`)*:
+• Higher supporter tiers SHALL automatically unlock all lower-tier launcher icons (and Pioneer early adopters additionally unlock Pioneer Edition).
+• In `AdvancedSettings` when `BuildConfig.DEBUG == true`, the system SHALL expose a developer tier override selector (`AUTO`, `FREE`, `PIONEER`, `BRONZE`, `SILVER`, `GOLD`, `DIAMOND`) allowing instant 1-tap testing of all 6 tiers and badges.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete with an active Supporter tier or Pioneer status,
+• *When* inspecting the Tracking Cockpit, Navigation Drawer, or shared workout image,
+• *Then* the corresponding 24dp Cockpit emblem, Drawer header icon + tier pill, and share watermark render accurately.
+• *Given* an athlete selecting a different unlocked launcher icon,
+• *When* the selection is made during active use or while recording a workout,
+• *Then* the choice persists immediately in SettingsDataStore without interrupting or killing the foreground session, and the new `<activity-alias>` activates via `DONT_KILL_APP` when the app moves to background.
+• *Given* any of the 6 launcher icon drawables,
+• *When* rendered inside circular or squircle launcher masks,
+• *Then* zero artwork paths clip outside the 66dp safe zone and 100% of Cervélo P3C and stopwatch colors are preserved.
+
+**Invariants**: 100% Cervélo P3C and stopwatch color fidelity preserved, 100% safe-zone containment ($r \le 33\text{dp}$), zero interruption/restart during workout recording or foreground sessions, 100% free core workout tracking features.
+
 
 
 

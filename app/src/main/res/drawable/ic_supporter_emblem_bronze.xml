@@ -1,0 +1,20 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Bronze Supporter Medal Emblem (REQ-UI-445) -->
+    <path
+        android:strokeColor="#B22222"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:pathData="M 7.0,2.5 L 12.0,8.5 L 17.0,2.5" />
+    <path
+        android:fillColor="#CD7F32"
+        android:strokeColor="#8C4C14"
+        android:strokeWidth="1.0"
+        android:pathData="M 12,7.5 A 6.5,6.5 0 1,0 12,20.5 A 6.5,6.5 0 1,0 12,7.5 Z" />
+    <path
+        android:fillColor="#E69A55"
+        android:pathData="M 12,10.2 A 3.8,3.8 0 1,0 12,17.8 A 3.8,3.8 0 1,0 12,10.2 Z" />
+</vector>

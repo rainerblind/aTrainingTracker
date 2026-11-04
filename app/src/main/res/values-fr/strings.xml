@@ -2280,4 +2280,15 @@
     <string name="debug_garage_preview_diamond">Aperçu Nudge Diamant</string>
     <string name="debug_garage_reset_flags">Réinitialiser les drapeaux de notification</string>
     <string name="debug_garage_flags_reset_toast">Drapeaux de notification de garage réinitialisés</string>
+    <!-- Pro Supporter Badges & Launcher Icons (REQ-UI-445 / ATT-1406) -->
+    <string name="launcher_icon_standard">Standard</string>
+    <string name="launcher_icon_pioneer">Édition Pioneer</string>
+    <string name="launcher_icon_bronze">Supporter Bronze</string>
+    <string name="launcher_icon_silver">Pro-Supporter Argent</string>
+    <string name="launcher_icon_gold">Pro-Supporter Or</string>
+    <string name="launcher_icon_diamond">Sponsor Diamant</string>
+    <string name="supporter_quick_picker_title">Sélecteur d\'icônes Supporter</string>
+    <string name="supporter_quick_picker_thank_you">Merci de soutenir plus de 15 ans de développement indépendant sans publicité !</string>
+    <string name="supporter_status_emblem_cd">Emblème de statut Supporter</string>
+    <string name="share_watermark_tracked_with">Enregistré avec aTrainingTracker</string>
 </resources>

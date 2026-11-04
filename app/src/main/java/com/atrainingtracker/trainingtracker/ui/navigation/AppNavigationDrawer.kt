@@ -76,6 +76,9 @@ import androidx.core.content.ContextCompat
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.monetization.ProFeatureManager
 import com.atrainingtracker.trainingtracker.monetization.SupporterTier
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
+import com.atrainingtracker.trainingtracker.ui.branding.LauncherIconVariant
+import com.atrainingtracker.trainingtracker.ui.branding.SupporterQuickIconPickerDialog
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.safePainterResource
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
@@ -329,16 +332,22 @@ fun DrawerHeader() {
                     .background(MaterialTheme.colorScheme.surfaceVariant)
             )
         }
+        var showQuickPicker by remember { mutableStateOf(false) }
+        val settingsDataStore = remember(context) { SettingsDataStore.getInstance(context.applicationContext) }
+        val selectedIconId by settingsDataStore.selectedLauncherIcon.collectAsState(initial = "standard")
+        val activeVariant = LauncherIconVariant.fromId(selectedIconId)
+
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(start = 16.dp, end = 16.dp, top = statusBarHeight + 2.dp, bottom = 14.dp),
+                .padding(start = 16.dp, end = 16.dp, top = statusBarHeight + 2.dp, bottom = 14.dp)
+                .clickable { showQuickPicker = true },
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Start
         ) {
             Image(
                 painter = safePainterResource(
-                    id = R.drawable.logo_512,
+                    id = activeVariant.foregroundRes,
                     fallback = Icons.AutoMirrored.Filled.DirectionsRun
                 ),
                 contentDescription = null,
@@ -356,26 +365,37 @@ fun DrawerHeader() {
                 val proFeatureManager = remember(context) { ProFeatureManager.getInstance(context.applicationContext) }
                 val effectiveTier by proFeatureManager.effectiveTier.collectAsState()
                 if (effectiveTier.isPro) {
-                    val badgeText = if (effectiveTier == SupporterTier.PIONEER) {
-                        "★ PIONEER ★"
-                    } else {
-                        "★ ${stringResource(id = effectiveTier.titleRes)} ★"
+                    val badgeText = when (effectiveTier) {
+                        SupporterTier.DIAMOND -> "◆ DIAMOND SPONSOR • Unlimited Sensors"
+                        SupporterTier.GOLD -> "★ GOLD PRO-SUPPORTER"
+                        SupporterTier.SILVER -> "★ SILVER PRO-SUPPORTER"
+                        SupporterTier.BRONZE -> "★ BRONZE SUPPORTER"
+                        SupporterTier.PIONEER -> "★ PIONEER (SINCE 2011)"
+                        SupporterTier.FREE -> ""
                     }
-                    Surface(
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        modifier = Modifier.padding(top = 2.dp)
-                    ) {
-                        Text(
-                            text = badgeText,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
+                    if (badgeText.isNotEmpty()) {
+                        Surface(
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            modifier = Modifier.padding(top = 2.dp)
+                        ) {
+                            Text(
+                                text = badgeText,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
                     }
                 }
             }
+        }
+
+        if (showQuickPicker) {
+            SupporterQuickIconPickerDialog(
+                onDismiss = { showQuickPicker = false }
+            )
         }
     }
 }
