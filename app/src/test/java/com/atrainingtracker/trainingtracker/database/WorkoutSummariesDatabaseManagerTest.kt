@@ -156,4 +156,46 @@ class WorkoutSummariesDatabaseManagerTest {
         )
         assertEquals(1, valuesSlot.captured.getAsInteger(WorkoutSummaries.FINISHED))
     }
+
+    @Test
+    fun testGetFinishedWorkoutCountForSport_queriesFinishedAndSportId() {
+        val querySlot = slot<String>()
+        val argsSlot = slot<Array<String>>()
+        val mockCursor = mockk<Cursor>(relaxed = true)
+
+        every { mockCursor.moveToFirst() } returns true
+        every { mockCursor.getInt(0) } returns 100
+
+        every {
+            mockDb.rawQuery(capture(querySlot), capture(argsSlot))
+        } returns mockCursor
+
+        val count = manager.getFinishedWorkoutCountForSport(2L)
+
+        assertEquals(100, count)
+        assertTrue(querySlot.captured.contains("finished = 1"))
+        assertTrue(querySlot.captured.contains("sportId = ?"))
+        assertEquals("2", argsSlot.captured[0])
+    }
+
+    @Test
+    fun testGetFinishedWorkoutCountForSportType_queriesFinishedAndBSport() {
+        val querySlot = slot<String>()
+        val argsSlot = slot<Array<String>>()
+        val mockCursor = mockk<Cursor>(relaxed = true)
+
+        every { mockCursor.moveToFirst() } returns true
+        every { mockCursor.getInt(0) } returns 250
+
+        every {
+            mockDb.rawQuery(capture(querySlot), capture(argsSlot))
+        } returns mockCursor
+
+        val count = manager.getFinishedWorkoutCountForSportType(com.atrainingtracker.banalservice.BSportType.BIKE)
+
+        assertEquals(250, count)
+        assertTrue(querySlot.captured.contains("finished = 1"))
+        assertTrue(querySlot.captured.contains("Sport = ?"))
+        assertEquals("BIKE", argsSlot.captured[0])
+    }
 }

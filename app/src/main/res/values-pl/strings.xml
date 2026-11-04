@@ -2253,4 +2253,18 @@
     <string name="pioneer_badge_label">★ Pionier (Od 2011) — Pełny dostęp odblokowany</string>
     <string name="debug_supporter_override_title">Nadpisanie poziomu wspierającego (Debug)</string>
     <string name="debug_supporter_override_subtitle">Symuluje poziomy licencji lokalnie bez poświadczeń Google Play Billing</string>
+
+    <!-- Milestone Workout Auto-Naming & First Jubilee Celebration (ATT-2308 / REQ-REV-001..005) -->
+    <string name="milestone_workout_name_format">%1$d. %2$s: %3$s</string>
+    <string name="jubilee_dialog_title">Gratulacje z okazji %1$d. %2$s!</string>
+    <string name="jubilee_dialog_message">Ukończyłeś %1$d treningów (%2$s) w aTrainingTracker! To wspaniały kamień milowy.</string>
+    <string name="jubilee_action_review">Oceń w Google Play</string>
+    <string name="jubilee_action_email_feedback">Opinia e-mail do Rainera</string>
+    <string name="jubilee_supporter_appeal_title">Wesprzyj 15+ lat niezależnego rozwoju</string>
+    <string name="jubilee_supporter_appeal_message">aTrainingTracker od 2011 roku jest całkowicie wolny od reklam i dba o prywatność. Jeśli aplikacja Ci pomaga, wesprzyj rozwój wersją Pro.</string>
+    <string name="jubilee_action_upgrade_pro">Wesprzyj rozwój</string>
+    <string name="jubilee_action_dismiss">Trenuj dalej</string>
+    <string name="debug_jubilee_preview_button">Podgląd dialogu jubileuszowego</string>
+    <string name="debug_jubilee_preview_title">Podgląd dialogu jubileuszowego (Debug)</string>
+    <string name="debug_jubilee_preview_subtitle">Testuje dialog Material 3 bez modyfikacji stanu kamieni milowych</string>
 </resources>

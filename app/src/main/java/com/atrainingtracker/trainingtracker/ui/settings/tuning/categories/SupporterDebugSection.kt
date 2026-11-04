@@ -26,18 +26,26 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -46,8 +54,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.BuildConfig
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.monetization.ProFeatureManager
 import com.atrainingtracker.trainingtracker.monetization.SupporterTierOverride
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
+import com.atrainingtracker.trainingtracker.ui.dialogs.FirstJubileeActionHelper
+import com.atrainingtracker.trainingtracker.ui.dialogs.FirstJubileeCelebrationDialog
 import kotlinx.coroutines.launch
 
 /**
@@ -62,6 +73,7 @@ fun SupporterDebugSection() {
     val scope = rememberCoroutineScope()
     val settingsDataStore = remember { SettingsDataStore.getInstance(context) }
     val currentOverride by settingsDataStore.supporterTierOverride.collectAsState(initial = SupporterTierOverride.AUTO)
+    var showPreviewJubileeDialog by remember { mutableStateOf(false) }
 
     Card(
         colors = CardDefaults.cardColors(
@@ -114,6 +126,63 @@ fun SupporterDebugSection() {
                     )
                 }
             }
+
+            // Jubilee Celebration Dialog 1-Tap Preview (ATT-2308 / REQ-REV-005)
+            Spacer(modifier = Modifier.height(14.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.2f))
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Text(
+                text = stringResource(R.string.debug_jubilee_preview_title),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onTertiaryContainer
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = stringResource(R.string.debug_jubilee_preview_subtitle),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f)
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+
+            FilledTonalButton(
+                onClick = { showPreviewJubileeDialog = true },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.EmojiEvents,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.size(8.dp))
+                Text(text = stringResource(R.string.debug_jubilee_preview_button))
+            }
         }
+    }
+
+    if (showPreviewJubileeDialog) {
+        val proFeatureManager = remember { ProFeatureManager(context) }
+        val isProActive by proFeatureManager.isProActive.collectAsState()
+
+        FirstJubileeCelebrationDialog(
+            count = 100,
+            sportName = stringResource(R.string.sport_types),
+            isProActive = isProActive,
+            onRequestInAppReview = {
+                showPreviewJubileeDialog = false
+                FirstJubileeActionHelper.launchInAppReviewOrStore(context)
+            },
+            onSendFeedbackEmail = {
+                showPreviewJubileeDialog = false
+                FirstJubileeActionHelper.launchFeedbackEmail(context)
+            },
+            onNavigateToSupporter = {
+                showPreviewJubileeDialog = false
+            },
+            onDismiss = {
+                showPreviewJubileeDialog = false
+            }
+        )
     }
 }

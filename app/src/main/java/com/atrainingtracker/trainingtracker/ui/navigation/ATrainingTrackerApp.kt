@@ -77,7 +77,11 @@ import androidx.navigation.navArgument
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ui.devices.ant.AntServicesStatusSheet
 import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedScreen
+import com.atrainingtracker.trainingtracker.monetization.ProFeatureManager
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.ui.ant.AntDialogState
+import com.atrainingtracker.trainingtracker.ui.dialogs.FirstJubileeActionHelper
+import com.atrainingtracker.trainingtracker.ui.dialogs.FirstJubileeCelebrationDialog
 import com.atrainingtracker.trainingtracker.ui.ant.AntMissingAdapterDialog
 import com.atrainingtracker.trainingtracker.ui.ant.AntMissingDependencyDialog
 import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModel
@@ -703,6 +707,47 @@ fun ATrainingTrackerApp(
             )
         }
         null -> Unit
+    }
+
+    // Material 3 First-Jubilee Celebration Dialog (REQ-REV-003, REQ-REV-004 / ATT-2308)
+    activity.firstJubileeCelebrationState?.let { jubileeData ->
+        val proFeatureManager = remember { ProFeatureManager(context) }
+        val isProActive by proFeatureManager.isProActive.collectAsState()
+        val settingsDataStore = remember { SettingsDataStore.getInstance(context) }
+        val jubileeScope = rememberCoroutineScope()
+
+        FirstJubileeCelebrationDialog(
+            count = jubileeData.count,
+            sportName = jubileeData.sportName,
+            isProActive = isProActive,
+            onRequestInAppReview = {
+                activity.firstJubileeCelebrationState = null
+                jubileeScope.launch {
+                    settingsDataStore.setHasShownFirstJubileePrompt(true)
+                }
+                FirstJubileeActionHelper.launchInAppReviewOrStore(activity)
+            },
+            onSendFeedbackEmail = {
+                activity.firstJubileeCelebrationState = null
+                jubileeScope.launch {
+                    settingsDataStore.setHasShownFirstJubileePrompt(true)
+                }
+                FirstJubileeActionHelper.launchFeedbackEmail(activity)
+            },
+            onNavigateToSupporter = {
+                activity.firstJubileeCelebrationState = null
+                jubileeScope.launch {
+                    settingsDataStore.setHasShownFirstJubileePrompt(true)
+                }
+                activity.navigateToDrawerItem(R.id.drawer_supporter)
+            },
+            onDismiss = {
+                activity.firstJubileeCelebrationState = null
+                jubileeScope.launch {
+                    settingsDataStore.setHasShownFirstJubileePrompt(true)
+                }
+            }
+        )
     }
 
     if (activity.showAntStatusSheet) {

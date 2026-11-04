@@ -2231,4 +2231,18 @@
     <string name="pioneer_badge_label">★ パイオニア（2011年より）— 全機能アンロック済み</string>
     <string name="debug_supporter_override_title">サポーターティア上書き（デバッグ）</string>
     <string name="debug_supporter_override_subtitle">Google Play Billing認証情報なしでローカルにライセンス層をシミュレート</string>
+
+    <!-- Milestone Workout Auto-Naming & First Jubilee Celebration (ATT-2308 / REQ-REV-001..005) -->
+    <string name="milestone_workout_name_format">%1$d. %2$s: %3$s</string>
+    <string name="jubilee_dialog_title">%1$d回目の%2$s達成おめでとうございます！</string>
+    <string name="jubilee_dialog_message">aTrainingTrackerで%1$d回の%2$sセッションを完了しました！素晴らしいマイルストーンです。</string>
+    <string name="jubilee_action_review">Google Playで評価</string>
+    <string name="jubilee_action_email_feedback">Rainerへメールでフィードバック</string>
+    <string name="jubilee_supporter_appeal_title">15年以上の個人開発を支援</string>
+    <string name="jubilee_supporter_appeal_message">aTrainingTrackerは2011年以来、広告なし・プライバシー重視で開発されています。トレーニングに役立っている場合はProで開発を支援してください。</string>
+    <string name="jubilee_action_upgrade_pro">開発を支援する</string>
+    <string name="jubilee_action_dismiss">トレーニングを続ける</string>
+    <string name="debug_jubilee_preview_button">記念ダイアログをプレビュー</string>
+    <string name="debug_jubilee_preview_title">マイルストーンダイアログのプレビュー（Debug）</string>
+    <string name="debug_jubilee_preview_subtitle">マイルストーン状態を変更せずにダイアログをテストします</string>
 </resources>

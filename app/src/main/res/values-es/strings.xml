@@ -2252,4 +2252,18 @@
     <string name="pioneer_badge_label">★ Pionero (Desde 2011) — Acceso total desbloqueado</string>
     <string name="debug_supporter_override_title">Anulación de nivel de patrocinador (Debug)</string>
     <string name="debug_supporter_override_subtitle">Simula niveles de licencia localmente sin credenciales de Google Play Billing</string>
+
+    <!-- Milestone Workout Auto-Naming & First Jubilee Celebration (ATT-2308 / REQ-REV-001..005) -->
+    <string name="milestone_workout_name_format">%1$d. %2$s: %3$s</string>
+    <string name="jubilee_dialog_title">¡Felicidades por tu %1$d.ª %2$s!</string>
+    <string name="jubilee_dialog_message">¡Has completado %1$d sesiones de %2$s con aTrainingTracker! Este es un gran hito deportivo.</string>
+    <string name="jubilee_action_review">Valorar en Google Play</string>
+    <string name="jubilee_action_email_feedback">Comentarios por correo a Rainer</string>
+    <string name="jubilee_supporter_appeal_title">Apoya más de 15 años de desarrollo indie</string>
+    <string name="jubilee_supporter_appeal_message">aTrainingTracker ha sido completamente libre de publicidad y privado desde 2011. Si te ayuda a entrenar, considera apoyar el desarrollo con Pro.</string>
+    <string name="jubilee_action_upgrade_pro">Apoyar el desarrollo</string>
+    <string name="jubilee_action_dismiss">Seguir entrenando</string>
+    <string name="debug_jubilee_preview_button">Probar diálogo de aniversario</string>
+    <string name="debug_jubilee_preview_title">Vista previa de aniversario (Debug)</string>
+    <string name="debug_jubilee_preview_subtitle">Prueba el diálogo Material 3 sin alterar el estado de hitos</string>
 </resources>

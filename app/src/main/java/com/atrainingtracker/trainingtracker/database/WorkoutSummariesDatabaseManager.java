@@ -450,6 +450,39 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     /**
+     * Returns the total count of finished workouts for a specific sportId.
+     * Used for milestone workout auto-naming and jubilee celebration tracking (REQ-REV-001 / ATT-2308).
+     */
+    public int getFinishedWorkoutCountForSport(long sportId) {
+        String query = "SELECT COUNT(*) FROM " + WorkoutSummaries.TABLE +
+                " WHERE " + WorkoutSummaries.FINISHED + " = 1 AND " + WorkoutSummaries.SPORT_ID + " = ?";
+        try (Cursor c = getDatabase().rawQuery(query, new String[]{String.valueOf(sportId)})) {
+            return (c != null && c.moveToFirst()) ? c.getInt(0) : 0;
+        } catch (Exception e) {
+            Log.e(TAG, "Error querying finished workout count for sport " + sportId + ": " + e.getMessage(), e);
+            return 0;
+        }
+    }
+
+    /**
+     * Returns the total count of finished workouts for a BSportType.
+     * Used for milestone tracking when sportId is ambiguous or unassigned (REQ-REV-001 / ATT-2308).
+     */
+    public int getFinishedWorkoutCountForSportType(BSportType bSportType) {
+        if (bSportType == null || bSportType == BSportType.UNKNOWN) {
+            return 0;
+        }
+        String query = "SELECT COUNT(*) FROM " + WorkoutSummaries.TABLE +
+                " WHERE " + WorkoutSummaries.FINISHED + " = 1 AND " + WorkoutSummaries.B_SPORT + " = ?";
+        try (Cursor c = getDatabase().rawQuery(query, new String[]{bSportType.name()})) {
+            return (c != null && c.moveToFirst()) ? c.getInt(0) : 0;
+        } catch (Exception e) {
+            Log.e(TAG, "Error querying finished workout count for sport type " + bSportType + ": " + e.getMessage(), e);
+            return 0;
+        }
+    }
+
+    /**
      * Returns a cursor for all workouts within a specific time range.
      * Used for hierarchical periods (ATT-346) and analytical rollups.
      *

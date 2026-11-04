@@ -210,11 +210,12 @@ class SettingsDataStore(
         val KEY_IS_HR_ZONES_CONFIGURED = booleanPreferencesKey("is_hr_zones_configured")
         val KEY_IS_PWR_ZONES_CONFIGURED = booleanPreferencesKey("is_pwr_zones_configured")
 
-        // Monetization & Supporter Models (ATT-51, REQ-SET-085, REQ-SET-086, REQ-SET-087)
+        // Monetization & Supporter Models (ATT-51, REQ-SET-085, REQ-SET-086, REQ-SET-087, ATT-2308, REQ-REV-004)
         val KEY_IS_PIONEER_EARLY_ADOPTER = booleanPreferencesKey("is_pioneer_early_adopter")
         val KEY_SUPPORTER_TIER = stringPreferencesKey("supporter_tier")
         val KEY_SUPPORTER_TIER_OVERRIDE = stringPreferencesKey("supporter_tier_override")
         val KEY_HARDWARE_VOTE = stringPreferencesKey("hardware_vote")
+        val KEY_HAS_SHOWN_FIRST_JUBILEE_PROMPT = booleanPreferencesKey("has_shown_first_jubilee_prompt")
 
         // Athlete Baselines (ATT-1289, REQ-TRK-019, ATT-3704, REQ-UI-391, ATT-3862, REQ-UI-399)
         val KEY_ATHLETE_WEIGHT_KG = floatPreferencesKey("athlete_weight_kg")
@@ -603,6 +604,16 @@ class SettingsDataStore(
             } else {
                 prefs.remove(KEY_HARDWARE_VOTE)
             }
+        }
+    }
+
+    val hasShownFirstJubileePrompt: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[KEY_HAS_SHOWN_FIRST_JUBILEE_PROMPT] ?: false
+    }
+
+    suspend fun setHasShownFirstJubileePrompt(hasShown: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[KEY_HAS_SHOWN_FIRST_JUBILEE_PROMPT] = hasShown
         }
     }
 

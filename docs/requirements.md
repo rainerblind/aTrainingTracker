@@ -14,8 +14,9 @@ Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Statu
 | [Settings, Profiles & Localization](requirements/req_settings_profiles.md) | Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity. | `LOC`, `MON`, `PRI`, `SET` | 88 | 60 | 28 |
 | [UI Components & Design System](requirements/req_ui_design_system.md) | Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts. | `UI`, `UNT` | 372 | 61 | 311 |
 | [Engineering Process, Stability & Architecture](requirements/req_process_stability.md) | ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools. | `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST` | 73 | 21 | 52 |
+| [Jubilee Milestones & App Reviews](requirements/req_aftermath_reviews.md) | Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions. | `REV` | 5 | 5 | 0 |
 
-**Total Living Requirements**: 823 across 7 domain shards.
+**Total Living Requirements**: 828 across 8 domain shards.
 
 ---
 

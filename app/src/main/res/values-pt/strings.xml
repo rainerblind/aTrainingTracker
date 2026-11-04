@@ -2250,4 +2250,18 @@
     <string name="pioneer_badge_label">★ Pioneiro (Desde 2011) — Acesso total desbloqueado</string>
     <string name="debug_supporter_override_title">Substituição do nível de apoiador (Debug)</string>
     <string name="debug_supporter_override_subtitle">Simula níveis de licença localmente sem credenciais do Google Play Billing</string>
+
+    <!-- Milestone Workout Auto-Naming & First Jubilee Celebration (ATT-2308 / REQ-REV-001..005) -->
+    <string name="milestone_workout_name_format">%1$d. %2$s: %3$s</string>
+    <string name="jubilee_dialog_title">Parabéns pela sua %1$dª %2$s!</string>
+    <string name="jubilee_dialog_message">Você completou %1$d sessões de %2$s com o aTrainingTracker! Um marco atlético notável.</string>
+    <string name="jubilee_action_review">Avaliar no Google Play</string>
+    <string name="jubilee_action_email_feedback">Feedback por e-mail para Rainer</string>
+    <string name="jubilee_supporter_appeal_title">Apoie mais de 15 anos de desenvolvimento indie</string>
+    <string name="jubilee_supporter_appeal_message">O aTrainingTracker é 100%% sem anúncios e focado em privacidade desde 2011. Se o app ajuda seu treino, apoie o desenvolvimento com o Pro.</string>
+    <string name="jubilee_action_upgrade_pro">Apoiar desenvolvimento</string>
+    <string name="jubilee_action_dismiss">Continuar treinando</string>
+    <string name="debug_jubilee_preview_button">Testar diálogo de jubileu</string>
+    <string name="debug_jubilee_preview_title">Pré-visualização do jubileu (Debug)</string>
+    <string name="debug_jubilee_preview_subtitle">Testa o diálogo Material 3 sem alterar o estado dos marcos</string>
 </resources>
