@@ -1451,3 +1451,46 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • *Then* the debug override control is absent from `AdvancedTuningScreen` and cannot be activated via UI.
 
 **Invariants**: Release builds must never permit arbitrary tier override; ProFeatureManager resolution must be thread-safe.
+
+### REQ-SET-088: Supporter N+1 Garage Detector & Upgrade Prompts (REQ-MON-006) [Verified]
+- **Tests**: `TST-SET-088`, `TST-LOC-001` | **Tickets**: `ATT-5299`
+- **Implementation**: `GarageLeagueDetector.kt`, `GarageDetectorDialog.kt`, `EquipmentViewModel.kt`, `DeviceListViewModel.kt`, `SettingsDataStore.kt`, `SupporterDebugSection.kt`
+- **Rationale**: Athlete equipment expansion reflects escalating engagement. When an athlete adds bikes, shoes, or pairs additional sensors reaching enthusiast ("Gold") or world-class ("Diamond") scale, the system detects their qualified garage league and presents a humorous, non-blocking "N+1 Cyclist Garage" dialog inviting an upgrade to Gold Pro-Supporter (50 € / year) or Diamond Sponsor (100 € / year) with the matching plan pre-selected, while preventing repeated prompt spam and honoring tier monotonicity.
+- **Description**:
+1. *Garage League Qualification Thresholds (`REQ-SET-088.1`)*:
+• The system SHALL classify athlete equipment and sensors into two garage leagues:
+  - **Diamond League**: $\ge 4$ bikes OR $\ge 8$ remote sensors (paired or registered in `Devices.db`) OR $\ge 2$ power meters (`DeviceType.BIKE_POWER`).
+  - **Gold League**: $\ge 3$ bikes OR $\ge 4$ running shoes OR $\ge 5$ remote sensors OR $\ge 1$ power meter (`DeviceType.BIKE_POWER`).
+• Diamond League evaluation SHALL strictly take precedence over Gold League evaluation.
+2. *Tier Monotonicity Gating (`REQ-SET-088.2`)*:
+• The system SHALL compare the qualified garage league against the athlete's current effective `SupporterTier`:
+  - Diamond League prompt SHALL only trigger if effective tier is `< SupporterTier.DIAMOND`.
+  - Gold League prompt SHALL only trigger if effective tier is `< SupporterTier.GOLD`.
+• If the current effective tier is already $\ge$ the qualified league tier, no upgrade prompt SHALL be triggered.
+3. *Event-Driven Post-Save Evaluation (`REQ-SET-088.3`)*:
+• The evaluation SHALL execute asynchronously in the background immediately following:
+  - Saving a newly added bike or running shoe in equipment management (`EquipmentViewModel.saveEquipment()`).
+  - Pairing an additional sensor or completing device swap-and-pair (`DeviceListViewModel.onPairedChanged()` / `executeSwapAndPair()`).
+• Evaluation and dialog triggering MUST NOT block SQLite persistence, UI responsiveness, or sensor connection lifecycles.
+4. *Non-Spam Persistence (`REQ-SET-088.4`)*:
+• `SettingsDataStore` SHALL persist boolean flags `hasShownGoldGarageNudge` and `hasShownDiamondGarageNudge`.
+• The upgrade prompt for each league SHALL be displayed at most once across the lifetime of the application.
+• Showing or dismissing the dialog SHALL set the respective league flag to `true`.
+5. *Humorous N+1 Dialog & Pre-Selected Navigation (`REQ-SET-088.5`)*:
+• When qualified, `GarageDetectorDialog` SHALL render a Material 3 dialog presenting dynamic gear counts (bikes, shoes, sensors, power meters) and good-humored cyclist/runner copy.
+• The dialog SHALL offer a 1-tap upgrade action navigating to `SupporterScreen` (`NavRoutes.SUPPORTER`) with the recommended plan pre-selected (`gold-yearly` for Gold League, `diamond-yearly` for Diamond League), and a secondary "Später / Weiter zum Training" dismiss action.
+6. *Diagnostic Debug Preview Triggers (`REQ-SET-088.6`)*:
+• `SupporterDebugSection` SHALL expose 1-tap test preview buttons for Gold and Diamond N+1 garage dialogs, and a reset button clearing both nudge flags in DataStore, strictly enclosed within `if (BuildConfig.DEBUG)`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete on Free or Silver tier with 2 bikes,
+• *When* a 3rd bike is added and saved in Equipment Management,
+• *Then* `hasShownGoldGarageNudge` is false, Gold League is detected, and `GarageDetectorDialog` is triggered with the Gold Pro-Supporter upgrade path.
+• *Given* an athlete on Gold tier with 3 bikes and 7 sensors,
+• *When* an 8th sensor is paired,
+• *Then* Diamond League is detected, and `GarageDetectorDialog` is triggered with the Diamond Sponsor upgrade path pre-selected.
+• *Given* an athlete who has already dismissed the Gold League dialog (`hasShownGoldGarageNudge == true`),
+• *When* an additional bike is added,
+• *Then* the Gold upgrade dialog is NOT re-triggered.
+
+**Invariants**: Equipment and sensor persistence complete before dialog triggering; each league level nudges at most once; tier monotonicity is strictly preserved; release builds compile out debug preview controls.

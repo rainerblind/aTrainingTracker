@@ -476,8 +476,8 @@ fun ATrainingTrackerApp(
                         onNavigateToZones = { initialTab, promptReason ->
                             navController.navigate(NavRoutes.trainingZones(initialTab, promptReason))
                         },
-                        onNavigateToSupporter = {
-                            navController.navigate(NavRoutes.SUPPORTER)
+                        onNavigateToSupporter = { planId ->
+                            navController.navigate(NavRoutes.supporter(planId))
                         }
                     )
                 }
@@ -489,6 +489,9 @@ fun ATrainingTrackerApp(
                         initialTab = 0,
                         onNavigateToWorkouts = { stats ->
                             activity.navigateToFilteredWorkouts(stats)
+                        },
+                        onNavigateToSupporter = { planId ->
+                            navController.navigate(NavRoutes.supporter(planId))
                         }
                     )
                 }
@@ -500,6 +503,9 @@ fun ATrainingTrackerApp(
                         initialTab = 0,
                         onNavigateToWorkouts = { stats ->
                             activity.navigateToFilteredWorkouts(stats)
+                        },
+                        onNavigateToSupporter = { planId ->
+                            navController.navigate(NavRoutes.supporter(planId))
                         }
                     )
                 }
@@ -511,6 +517,9 @@ fun ATrainingTrackerApp(
                         initialTab = 1,
                         onNavigateToWorkouts = { stats ->
                             activity.navigateToFilteredWorkouts(stats)
+                        },
+                        onNavigateToSupporter = { planId ->
+                            navController.navigate(NavRoutes.supporter(planId))
                         }
                     )
                 }
@@ -575,9 +584,20 @@ fun ATrainingTrackerApp(
                     )
                 }
 
-                composable(NavRoutes.SUPPORTER) {
+                composable(
+                    route = NavRoutes.SUPPORTER_PATTERN,
+                    arguments = listOf(
+                        navArgument(NavRoutes.ARG_PLAN_ID) {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        }
+                    )
+                ) { backStackEntry ->
+                    val planId = backStackEntry.arguments?.getString(NavRoutes.ARG_PLAN_ID)
                     SupporterScreen(
-                        onNavigateBack = { navController.popBackStack() }
+                        onNavigateBack = { navController.popBackStack() },
+                        preSelectedPlanId = planId
                     )
                 }
 

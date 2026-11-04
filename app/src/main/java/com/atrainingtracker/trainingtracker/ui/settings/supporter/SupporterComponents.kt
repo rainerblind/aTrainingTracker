@@ -205,18 +205,23 @@ internal fun HardwareVotingSection(
 internal fun SupporterPlanCard(
     plan: SupporterBasePlan,
     isCurrentTier: Boolean,
+    isPreSelected: Boolean = false,
     onSelectPlan: () -> Unit
 ) {
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = if (plan.isRecommended) {
+            containerColor = if (isPreSelected) {
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+            } else if (plan.isRecommended) {
                 MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
             } else {
                 MaterialTheme.colorScheme.surface
             }
         ),
         shape = RoundedCornerShape(12.dp),
-        border = if (plan.isRecommended) {
+        border = if (isPreSelected) {
+            BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+        } else if (plan.isRecommended) {
             BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
         } else {
             BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)

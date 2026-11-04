@@ -2245,4 +2245,19 @@
     <string name="debug_jubilee_preview_button">記念ダイアログをプレビュー</string>
     <string name="debug_jubilee_preview_title">マイルストーンダイアログのプレビュー（Debug）</string>
     <string name="debug_jubilee_preview_subtitle">マイルストーン状態を変更せずにダイアログをテストします</string>
+
+    <!-- Supporter N+1 Garage Detector (ATT-5299 / REQ-SET-088) -->
+    <string name="garage_detector_dialog_title_gold">ゴールドリーグの機材を発見！ 🚴‍♂️</string>
+    <string name="garage_detector_dialog_title_diamond">ワールドクラスのダイヤモンド機材！ 💎</string>
+    <string name="garage_detector_dialog_message_gold">aTrainingTrackerでの%1$d台のバイク、%2$d足のシューズ、%3$d個のセンサー（うち%4$d個のパワーメーター）の登録おめでとうございます！ 🚴‍♂️✨ ガレージはすでにプロ級ですが、ステータスは%5$sのままです。ぜひゴールドサポーターへのアップグレードをご検討ください！</string>
+    <string name="garage_detector_dialog_message_diamond">驚異的な機材数です：%1$d台のバイク、%2$d足のシューズ、%3$d個のセンサー（うち%4$d個のパワーメーター）！ 💎✨ ガレージはすでにワールドクラスですが、ステータスは%5$sです。ダイヤモンドスポンサーへのアップグレードで完璧に仕上げましょう！</string>
+    <string name="garage_detector_action_upgrade_gold">ゴールドプロにアップグレード（年額50€）</string>
+    <string name="garage_detector_action_upgrade_diamond">ダイヤモンドスポンサーにアップグレード（年額100€）</string>
+    <string name="garage_detector_action_dismiss">後で / トレーニングを続ける</string>
+    <string name="debug_garage_nudge_title">N+1 ガレージ検出器（デバッグ）</string>
+    <string name="debug_garage_nudge_subtitle">ゴールド/ダイヤモンド昇格通知のプレビューと表示状態のリセット</string>
+    <string name="debug_garage_preview_gold">ゴールド通知プレビュー</string>
+    <string name="debug_garage_preview_diamond">ダイヤモンド通知プレビュー</string>
+    <string name="debug_garage_reset_flags">通知フラグをリセット</string>
+    <string name="debug_garage_flags_reset_toast">ガレージ通知フラグがリセットされました</string>
 </resources>

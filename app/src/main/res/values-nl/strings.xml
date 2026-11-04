@@ -2265,4 +2265,19 @@
     <string name="debug_jubilee_preview_button">Mijlpaaldialoog testen</string>
     <string name="debug_jubilee_preview_title">Voorbeeld mijlpaaldialoog (Debug)</string>
     <string name="debug_jubilee_preview_subtitle">Test het Material 3 dialoogvenster zonder de mijlpaalstatus te wijzigen</string>
+
+    <!-- Supporter N+1 Garage Detector (ATT-5299 / REQ-SET-088) -->
+    <string name="garage_detector_dialog_title_gold">Goud-klasse garage gedetecteerd! 🚴‍♂️</string>
+    <string name="garage_detector_dialog_title_diamond">Diamant-klasse wereldgarage! 💎</string>
+    <string name="garage_detector_dialog_message_gold">Gefeliciteerd met je %1$d fietsen, %2$d schoenen en %3$d sensoren (incl. %4$d vermogensmeters) in aTrainingTracker! 🚴‍♂️✨ Je garage speelt in de profcompetitie, maar je app-status is %5$s. Gun je uitrusting de upgrade naar Goud Pro-Supporter!</string>
+    <string name="garage_detector_dialog_message_diamond">Ongelooflijke garage: %1$d fietsen, %2$d schoenen en %3$d sensoren (incl. %4$d vermogensmeters) in aTrainingTracker! 💎✨ Je uitrusting is van wereldklasse, maar je app-status is %5$s. Bekroon je garage met Diamant Sponsor!</string>
+    <string name="garage_detector_action_upgrade_gold">Upgrade naar Goud Pro (50 € / jr)</string>
+    <string name="garage_detector_action_upgrade_diamond">Upgrade naar Diamant Sponsor (100 € / jr)</string>
+    <string name="garage_detector_action_dismiss">Later / Verder trainen</string>
+    <string name="debug_garage_nudge_title">N+1 Garage Detector (Debug)</string>
+    <string name="debug_garage_nudge_subtitle">Voorbeeld van Goud/Diamant upgrade-meldingen en weergavestatus resetten</string>
+    <string name="debug_garage_preview_gold">Voorbeeld Goud-nudge</string>
+    <string name="debug_garage_preview_diamond">Voorbeeld Diamant-nudge</string>
+    <string name="debug_garage_reset_flags">Nudge-vlaggen resetten</string>
+    <string name="debug_garage_flags_reset_toast">Garage-nudgevlaggen gereset</string>
 </resources>

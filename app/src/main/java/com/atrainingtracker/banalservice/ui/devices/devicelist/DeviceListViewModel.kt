@@ -26,6 +26,8 @@ import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.ui.devices.GetMergedDevicesUseCase
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
+import com.atrainingtracker.trainingtracker.monetization.GarageLeagueDetector
+import com.atrainingtracker.trainingtracker.monetization.GarageNudgeEvent
 import com.atrainingtracker.trainingtracker.monetization.ProFeatureManager
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
@@ -56,7 +58,8 @@ class DeviceListViewModel @JvmOverloads constructor(
     private val settingsDataStore: SettingsDataStore = SettingsDataStore.getInstance(application),
     private val devicesDBRepository: DeviceDataRepository = DeviceDataRepository.getInstance(application),
     private val banalServiceRepository: BANALServiceRepository = BANALServiceRepository.getInstance(application),
-    private val proFeatureManager: ProFeatureManager = ProFeatureManager.getInstance(application)
+    private val proFeatureManager: ProFeatureManager = ProFeatureManager.getInstance(application),
+    private val garageLeagueDetector: GarageLeagueDetector = GarageLeagueDetector(application)
 ) : AndroidViewModel(application) {
 
     private val useCase = GetMergedDevicesUseCase(
@@ -73,6 +76,27 @@ class DeviceListViewModel @JvmOverloads constructor(
 
     private val _swapOrUpgradeDialogEvent = MutableStateFlow<SwapOrUpgradeDialogEvent?>(null)
     val swapOrUpgradeDialogEvent: StateFlow<SwapOrUpgradeDialogEvent?> = _swapOrUpgradeDialogEvent.asStateFlow()
+
+    private val _garageNudgeEvent = MutableStateFlow<GarageNudgeEvent?>(null)
+    val garageNudgeEvent: StateFlow<GarageNudgeEvent?> = _garageNudgeEvent.asStateFlow()
+
+    fun dismissGarageNudge() {
+        _garageNudgeEvent.value = null
+    }
+
+    private fun checkGarageNudge() {
+        viewModelScope.launch {
+            try {
+                val event = garageLeagueDetector.evaluateNudge()
+                if (event != null) {
+                    garageLeagueDetector.markNudgeShown(event.league)
+                    _garageNudgeEvent.value = event
+                }
+            } catch (e: Throwable) {
+                // Defensive guard against unmocked Android dependencies during unit testing
+            }
+        }
+    }
 
     /**
      * This is the key public method.
@@ -146,6 +170,7 @@ class DeviceListViewModel @JvmOverloads constructor(
             // When transitioning from un-paired to paired, evaluate physiological zone onboarding (REQ-UI-374.1, REQ-UI-374.2)
             if (!wasPaired && newPaired) {
                 checkZoneOnboarding(currentState)
+                checkGarageNudge()
             }
         }
     }
@@ -161,6 +186,7 @@ class DeviceListViewModel @JvmOverloads constructor(
             if (candidate != null) {
                 checkZoneOnboarding(candidate)
             }
+            checkGarageNudge()
         }
     }
 

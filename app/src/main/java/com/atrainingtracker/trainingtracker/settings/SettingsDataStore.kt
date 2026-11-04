@@ -216,6 +216,8 @@ class SettingsDataStore(
         val KEY_SUPPORTER_TIER_OVERRIDE = stringPreferencesKey("supporter_tier_override")
         val KEY_HARDWARE_VOTE = stringPreferencesKey("hardware_vote")
         val KEY_HAS_SHOWN_FIRST_JUBILEE_PROMPT = booleanPreferencesKey("has_shown_first_jubilee_prompt")
+        val KEY_HAS_SHOWN_GOLD_GARAGE_NUDGE = booleanPreferencesKey("has_shown_gold_garage_nudge")
+        val KEY_HAS_SHOWN_DIAMOND_GARAGE_NUDGE = booleanPreferencesKey("has_shown_diamond_garage_nudge")
 
         // Athlete Baselines (ATT-1289, REQ-TRK-019, ATT-3704, REQ-UI-391, ATT-3862, REQ-UI-399)
         val KEY_ATHLETE_WEIGHT_KG = floatPreferencesKey("athlete_weight_kg")
@@ -614,6 +616,33 @@ class SettingsDataStore(
     suspend fun setHasShownFirstJubileePrompt(hasShown: Boolean) {
         dataStore.edit { prefs ->
             prefs[KEY_HAS_SHOWN_FIRST_JUBILEE_PROMPT] = hasShown
+        }
+    }
+
+    val hasShownGoldGarageNudge: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[KEY_HAS_SHOWN_GOLD_GARAGE_NUDGE] ?: false
+    }
+
+    suspend fun setHasShownGoldGarageNudge(hasShown: Boolean = true) {
+        dataStore.edit { prefs ->
+            prefs[KEY_HAS_SHOWN_GOLD_GARAGE_NUDGE] = hasShown
+        }
+    }
+
+    val hasShownDiamondGarageNudge: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[KEY_HAS_SHOWN_DIAMOND_GARAGE_NUDGE] ?: false
+    }
+
+    suspend fun setHasShownDiamondGarageNudge(hasShown: Boolean = true) {
+        dataStore.edit { prefs ->
+            prefs[KEY_HAS_SHOWN_DIAMOND_GARAGE_NUDGE] = hasShown
+        }
+    }
+
+    suspend fun resetGarageNudgeFlags() {
+        dataStore.edit { prefs ->
+            prefs[KEY_HAS_SHOWN_GOLD_GARAGE_NUDGE] = false
+            prefs[KEY_HAS_SHOWN_DIAMOND_GARAGE_NUDGE] = false
         }
     }
 

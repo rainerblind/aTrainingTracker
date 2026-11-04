@@ -67,6 +67,14 @@ object NavRoutes {
     const val TIPS_GUIDE = "tips_guide"
     const val TRACKING_LAYOUTS = "tracking_layouts"
     const val SUPPORTER = "supporter"
+    const val ARG_PLAN_ID = "planId"
+    const val SUPPORTER_PATTERN = "supporter?planId={planId}"
+
+    /**
+     * Builds a navigation route to the Supporter screen, optionally pre-selecting a base plan (REQ-SET-088.5).
+     */
+    fun supporter(planId: String? = null): String =
+        if (planId != null) "$SUPPORTER?$ARG_PLAN_ID=$planId" else SUPPORTER
 
     /**
      * Builds a navigation route to Training Zones, optionally parameterized with an initial tab and onboarding prompt reason (REQ-UI-374.3).

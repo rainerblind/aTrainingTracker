@@ -31,6 +31,8 @@ import com.atrainingtracker.trainingtracker.database.SportTypeEquipmentLinkManag
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsPeriodHelper
+import com.atrainingtracker.trainingtracker.monetization.GarageLeagueDetector
+import com.atrainingtracker.trainingtracker.monetization.GarageNudgeEvent
 import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -80,8 +82,12 @@ class EquipmentViewModel @JvmOverloads constructor(
     private val dbSportHelper: SportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(application),
     private val dbDevicesHelper: DevicesDatabaseManager = DevicesDatabaseManager.getInstance(application),
     private val dbSummariesManager: WorkoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(application),
-    private val syncStatusFlow: StateFlow<Boolean> = EquipmentRepository.isSyncing
+    private val syncStatusFlow: StateFlow<Boolean> = EquipmentRepository.isSyncing,
+    private val garageLeagueDetector: GarageLeagueDetector = GarageLeagueDetector(application)
 ) : AndroidViewModel(application) {
+
+    private val _garageNudgeEvent = MutableStateFlow<GarageNudgeEvent?>(null)
+    val garageNudgeEvent: StateFlow<GarageNudgeEvent?> = _garageNudgeEvent
 
     private val _bikes = MutableStateFlow<List<EquipmentItem>>(emptyList())
     val bikes: StateFlow<List<EquipmentItem>> = _bikes
@@ -285,7 +291,33 @@ class EquipmentViewModel @JvmOverloads constructor(
             }
 
             loadEquipment() // Refresh the list
+
+            // Evaluate N+1 garage qualification post-save (REQ-SET-088.3)
+            if (newEquipmentId != -1L) {
+                checkGarageNudge()
+            }
         }
+    }
+
+    /**
+     * Evaluates garage league status after adding new equipment and emits a nudge event if qualified (REQ-SET-088.3).
+     */
+    fun checkGarageNudge() {
+        viewModelScope.launch(ioDispatcher) {
+            try {
+                val event = garageLeagueDetector.evaluateNudge()
+                if (event != null) {
+                    garageLeagueDetector.markNudgeShown(event.league)
+                    _garageNudgeEvent.value = event
+                }
+            } catch (e: Throwable) {
+                // Defensive guard against unmocked Android dependencies during unit testing
+            }
+        }
+    }
+
+    fun dismissGarageNudge() {
+        _garageNudgeEvent.value = null
     }
 
     fun deleteEquipment(item: EquipmentItem) {

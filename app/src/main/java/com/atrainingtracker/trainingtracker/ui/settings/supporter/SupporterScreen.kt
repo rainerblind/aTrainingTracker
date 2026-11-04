@@ -69,7 +69,8 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun SupporterScreen(
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    preSelectedPlanId: String? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -155,6 +156,7 @@ fun SupporterScreen(
                 SupporterPlanCard(
                     plan = plan,
                     isCurrentTier = effectiveTier == plan.tier,
+                    isPreSelected = plan.basePlanId == preSelectedPlanId,
                     onSelectPlan = {
                         handlePlanSelection(context, plan, settingsDataStore)
                     }
