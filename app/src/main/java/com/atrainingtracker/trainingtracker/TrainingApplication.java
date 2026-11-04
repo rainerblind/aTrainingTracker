@@ -1439,6 +1439,9 @@ public class TrainingApplication extends Application {
         // ATT-3989 / REQ-MIG-041: Transactional restore recovery for interrupted operations
         com.atrainingtracker.trainingtracker.migration.RestoreJournalManager.recoverInterruptedRestoreIfNecessary(this);
 
+        // ATT-1406 / REQ-UI-445: Initialize dynamic launcher icon manager with deferred lifecycle observer
+        com.atrainingtracker.trainingtracker.ui.branding.LauncherIconManager.Companion.getInstance(this).init();
+
         // ATT-3983 / REQ-SEC-041: Security migration for fresh Strava re-authentication
         com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaSecurityMigration.runMigrationIfRequired(this);
 

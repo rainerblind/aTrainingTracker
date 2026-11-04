@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker: Android Adaptive Icon Foreground - Bronze Supporter Edition
+  ~ REQ-UI-445 / ATT-1406: Option A (Top-Right Emblem + Bottom Tier Ribbon + Border Ring)
+  ~ 108dp canvas with all vector geometry contained within the 66dp safe zone (r <= 33dp).
+  ~ Cervélo P3C bike: #FF0000 frame, #000000 wheels/saddle.
+  ~ Stopwatch: #FFC700 ring/stems, #F0F0F0 dial, #000090/#FF0000/#009000 pushers.
+  ~ Athletes: #0000FF royal blue.
+  -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Stopwatch Dial & Golden Bezel (Depth 70) -->
+    <path
+        android:fillColor="#F0F0F0"
+        android:strokeColor="#FFC700"
+        android:strokeWidth="2.78"
+        android:pathData="M 47.23,38.92 A 20.16,20.16 0 1,0 47.23,79.24 A 20.16,20.16 0 1,0 47.23,38.92 Z" />
+
+    <path
+        android:strokeColor="#0000FF"
+        android:strokeWidth="2.53"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 43.43,55.34 L 46.97,62.15 L 44.85,69.88 L 46.97,71.55" />
+
+    <!-- Cyclist Arched Back (Depth 58) -->
+    <path
+        android:strokeColor="#0000FF"
+        android:strokeWidth="3.79"
+        android:strokeLineCap="round"
+        android:pathData="M 53.35,51.85 A 11.68,11.68 0 0,0 43.05,54.56" />
+
+    <path
+        android:strokeColor="#FF0000"
+        android:strokeWidth="2.15"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 53.2,60.79 L 44.57,68.24" />
+
+    <path
+        android:strokeColor="#FF0000"
+        android:strokeWidth="2.28"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 44.85,68.51 L 42.13,55.02" />
+
+    <!-- Carbon Aero Wheel (Depth 55) -->
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="3.03"
+        android:pathData="M 37.74,62.19 A 5.29,5.29 0 1,0 37.74,72.77 A 5.29,5.29 0 1,0 37.74,62.19 Z" />
+
+    <!-- Carbon Aero Wheel (Depth 55) -->
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="2.53"
+        android:pathData="M 55.95,62.88 A 5.36,5.36 0 1,0 55.95,73.6 A 5.36,5.36 0 1,0 55.95,62.88 Z" />
+
+    <path
+        android:strokeColor="#FF0000"
+        android:strokeWidth="1.52"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 55.78,68.22 L 52.88,59.42" />
+
+    <path
+        android:strokeColor="#FF0000"
+        android:strokeWidth="0.63"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 53.04,60.33 L 43.34,59.58" />
+
+    <path
+        android:strokeColor="#FFC700"
+        android:strokeWidth="3.79"
+        android:strokeLineCap="square"
+        android:strokeLineJoin="miter"
+        android:pathData="M 36.91,41.73 L 35.58,39.43" />
+
+    <path
+        android:strokeColor="#FFC700"
+        android:strokeWidth="3.79"
+        android:strokeLineCap="square"
+        android:strokeLineJoin="miter"
+        android:pathData="M 47.23,38.65 L 47.23,36.0" />
+
+    <path
+        android:strokeColor="#FFC700"
+        android:strokeWidth="3.79"
+        android:strokeLineCap="square"
+        android:strokeLineJoin="miter"
+        android:pathData="M 57.29,41.43 L 58.62,39.13" />
+
+    <path
+        android:strokeColor="#0000FF"
+        android:strokeWidth="2.53"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 46.02,67.24 L 44.65,64.52 L 51.78,60.28 L 42.57,56.68" />
+
+    <path
+        android:strokeColor="#000000"
+        android:strokeWidth="0.89"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 40.02,57.24 L 43.37,57.24" />
+
+    <!-- Athlete Head (Depth 50) -->
+    <path
+        android:fillColor="#0000FF"
+        android:strokeColor="#0000FF"
+        android:strokeWidth="1.26"
+        android:pathData="M 56.24,49.77 A 2.14,2.14 0 1,0 56.24,54.05 A 2.14,2.14 0 1,0 56.24,49.77 Z" />
+
+    <!-- Athlete Head (Depth 50) -->
+    <path
+        android:fillColor="#0000FF"
+        android:strokeColor="#0000FF"
+        android:strokeWidth="1.26"
+        android:pathData="M 76.82,47.89 A 2.14,2.14 0 1,0 76.82,52.17 A 2.14,2.14 0 1,0 76.82,47.89 Z" />
+
+    <path
+        android:strokeColor="#0000FF"
+        android:strokeWidth="0.63"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 53.2,51.85 L 54.56,51.99" />
+
+    <path
+        android:strokeColor="#FF0000"
+        android:strokeWidth="0.89"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 45.33,68.62 L 38.02,67.47" />
+
+    <path
+        android:strokeColor="#0000FF"
+        android:strokeWidth="1.9"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 59.37,59.52 L 53.5,58.97 L 53.2,51.69" />
+
+    <path
+        android:strokeColor="#0000FF"
+        android:strokeWidth="3.54"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 75.95,62.54 L 82.94,64.51 L 78.61,72.5" />
+
+    <path
+        android:strokeColor="#0000FF"
+        android:strokeWidth="2.15"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 76.61,53.22 L 79.61,59.53 L 80.94,54.21" />
+
+    <path
+        android:strokeColor="#0000FF"
+        android:strokeWidth="2.15"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 76.61,53.22 L 70.97,54.54 L 73.29,59.21" />
+
+    <path
+        android:strokeColor="#FF0000"
+        android:strokeWidth="6.32"
+        android:strokeLineCap="square"
+        android:strokeLineJoin="miter"
+        android:pathData="M 47.23,36.38 L 47.23,32.58" />
+
+    <path
+        android:strokeColor="#000090"
+        android:strokeWidth="6.32"
+        android:strokeLineCap="square"
+        android:strokeLineJoin="miter"
+        android:pathData="M 35.85,39.67 L 33.95,36.38" />
+
+    <path
+        android:strokeColor="#0000FF"
+        android:strokeWidth="2.91"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 43.81,54.97 L 52.54,52.31" />
+
+    <path
+        android:strokeColor="#009000"
+        android:strokeWidth="6.32"
+        android:strokeLineCap="square"
+        android:strokeLineJoin="miter"
+        android:pathData="M 58.57,39.27 L 60.47,35.98" />
+
+    <path
+        android:strokeColor="#FF0000"
+        android:strokeWidth="0.89"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 38.02,67.47 L 43.34,59.58" />
+
+    <path
+        android:strokeColor="#0000FF"
+        android:strokeWidth="3.29"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 51.02,59.52 L 42.67,56.1" />
+
+    <path
+        android:strokeColor="#0000FF"
+        android:strokeWidth="3.54"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 76.44,54.97 L 75.62,62.54 L 71.13,69.0 L 64.68,74.31" />
+
+    <!-- Bicycle Saddle (Depth 50) -->
+    <path
+        android:fillColor="#000000"
+        android:strokeColor="#000000"
+        android:strokeWidth="0.51"
+        android:strokeLineJoin="round"
+        android:pathData="M 41.92,53.45 L 41.16,54.97 L 41.54,56.86 L 42.3,55.72 L 43.43,54.21 Z" />
+
+    <!-- === OPTION A BADGE OVERLAYS (REQ-UI-445) === -->
+    <!-- Outer Border Ring (r = 32dp, safe-zone compliant r <= 33dp) -->
+    <path
+        android:strokeColor="#CD7F32"
+        android:strokeWidth="1.5"
+        android:pathData="M 54,22 A 32,32 0 1,0 54,86 A 32,32 0 1,0 54,22 Z" />
+
+    <!-- Top-Right Emblem: Bronze Medal on Neck Ribbon (cx=67.6, cy=31.8) -->
+    <path
+        android:strokeColor="#B22222"
+        android:strokeWidth="1.2"
+        android:strokeLineCap="round"
+        android:pathData="M 65.2,27.0 L 67.6,30.0 L 70.0,27.0" />
+    <path
+        android:fillColor="#CD7F32"
+        android:strokeColor="#8C4C14"
+        android:strokeWidth="0.6"
+        android:pathData="M 67.6,29.3 A 3.2,3.2 0 1,0 67.6,35.7 A 3.2,3.2 0 1,0 67.6,29.3 Z" />
+    <path
+        android:fillColor="#E69A55"
+        android:pathData="M 67.6,30.7 A 1.8,1.8 0 1,0 67.6,34.3 A 1.8,1.8 0 1,0 67.6,30.7 Z" />
+
+    <!-- Bottom Tier Ribbon: SUPPORTER (y=75.5..82.5) -->
+    <path
+        android:fillColor="#CD7F32"
+        android:pathData="M 42,76.5 L 66,76.5 L 66,82.5 L 42,82.5 Z" />
+    <path
+        android:strokeColor="#FFC700"
+        android:strokeWidth="0.8"
+        android:pathData="M 42,76.5 L 66,76.5 L 66,82.5 L 42,82.5 Z" />
+    <path
+        android:fillColor="#8C4C14"
+        android:pathData="M 40,78.0 L 42,76.5 L 42,82.5 L 40,81.0 Z" />
+    <path
+        android:fillColor="#8C4C14"
+        android:pathData="M 68,78.0 L 66,76.5 L 66,82.5 L 68,81.0 Z" />
+    <path
+        android:strokeColor="#FFC700"
+        android:strokeWidth="0.8"
+        android:pathData="M 45.0,79.5 L 63.0,79.5" />
+</vector>

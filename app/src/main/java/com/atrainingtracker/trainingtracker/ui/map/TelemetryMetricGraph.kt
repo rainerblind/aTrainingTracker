@@ -486,12 +486,18 @@ fun TelemetryMetricGraph(
                     val maxBinPct = linearBins.maxOfOrNull { it.percentage }?.takeIf { it > 0f } ?: 1f
 
                     for (bin in linearBins) {
-                        val yTop = valueToY(bin.rangeMax.toDouble())
-                        val yBottom = valueToY(bin.rangeMin.toDouble())
+                        // Domain boundary filtering & clamping (Rule 70 / ATT-5311)
+                        if (bin.rangeMax <= dataMin || bin.rangeMin >= dataMax) continue
+                        val clampedMin = maxOf(dataMin, bin.rangeMin.toDouble())
+                        val clampedMax = minOf(dataMax, bin.rangeMax.toDouble())
+                        if (clampedMin >= clampedMax) continue
+
+                        val yTop = valueToY(clampedMax)
+                        val yBottom = valueToY(clampedMin)
                         val rectTop = minOf(yTop, yBottom)
                         val rectHeight = abs(yTop - yBottom).coerceAtLeast(1f)
 
-                        // Background container track (unconditional across linearBins, REQ-UI-443.2 / ATT-5281)
+                        // Background container track (unconditional across linearBins within [dataMin, dataMax], REQ-UI-443.2 / ATT-5281 / ATT-5311)
                         drawRect(
                             color = bin.color.copy(alpha = 0.15f),
                             topLeft = Offset(stripStartPx, rectTop),
@@ -942,12 +948,18 @@ fun AlignedMarginalZoneDistribution(
             val maxBinPct = linearBins.maxOfOrNull { it.percentage }?.takeIf { it > 0f } ?: 1f
 
             for (bin in linearBins) {
-                val yTop = valueToY(bin.rangeMax.toDouble())
-                val yBottom = valueToY(bin.rangeMin.toDouble())
+                // Domain boundary filtering & clamping (Rule 70 / ATT-5311)
+                if (bin.rangeMax <= dataMin || bin.rangeMin >= dataMax) continue
+                val clampedMin = maxOf(dataMin, bin.rangeMin.toDouble())
+                val clampedMax = minOf(dataMax, bin.rangeMax.toDouble())
+                if (clampedMin >= clampedMax) continue
+
+                val yTop = valueToY(clampedMax)
+                val yBottom = valueToY(clampedMin)
                 val rectTop = minOf(yTop, yBottom)
                 val rectHeight = abs(yTop - yBottom).coerceAtLeast(1f)
 
-                // Background container track (unconditional across linearBins, REQ-UI-443.3 / ATT-5281)
+                // Background container track (unconditional across linearBins within [dataMin, dataMax], REQ-UI-443.3 / ATT-5281 / ATT-5311)
                 drawRoundRect(
                     color = bin.color.copy(alpha = 0.15f),
                     topLeft = Offset(0f, rectTop),

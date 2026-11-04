@@ -40,4 +40,5 @@
     <item name="drawer_backup_restore" type="id" />
     <item name="drawer_tips_guide" type="id" />
     <item name="drawer_privacy_policy" type="id" />
+    <item name="drawer_supporter" type="id" />
 </resources>

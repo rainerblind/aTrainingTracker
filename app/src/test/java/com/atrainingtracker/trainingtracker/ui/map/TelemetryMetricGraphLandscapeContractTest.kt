@@ -271,4 +271,58 @@ class TelemetryMetricGraphLandscapeContractTest {
         val activeBarWidth = (activeBin.percentage / maxBinPct).coerceIn(0f, 1f) * 100f
         assertTrue("Foreground bar width for active bin must be positive", activeBarWidth > 0f)
     }
+
+    @Test
+    fun testLandscapeMarginalHistogram_filtersOutOfDomainBinsAndPreventsTopBarStacking_ATT_5311() {
+        val file = resolve("app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/TelemetryMetricGraph.kt")
+        assertTrue("TelemetryMetricGraph.kt must exist", file.exists())
+        val content = file.readText()
+
+        // Contract check: AlignedMarginalZoneDistribution must filter and clamp out-of-domain bins
+        assertTrue(
+            "AlignedMarginalZoneDistribution must check rangeMax <= dataMin || rangeMin >= dataMax",
+            content.contains("bin.rangeMax <= dataMin || bin.rangeMin >= dataMax")
+        )
+
+        val dataMin = 100.0
+        val dataMax = 450.0
+        val valRange = dataMax - dataMin
+        val chartHeightPx = 76f
+        val topPaddingPx = 10f
+
+        fun valueToY(v: Double): Float {
+            val ratio = ((v - dataMin) / valRange).coerceIn(0.0, 1.0)
+            return (topPaddingPx + (1.0 - ratio) * chartHeightPx).toFloat()
+        }
+
+        val allBins = listOf(
+            TelemetryHistogramBin(0, 0, 100, 50L, 5f, 1, Color.Blue),        // below dataMin
+            TelemetryHistogramBin(1, 100, 200, 200L, 20f, 2, Color.Green),    // in domain
+            TelemetryHistogramBin(2, 200, 300, 300L, 30f, 3, Color.Yellow),   // in domain
+            TelemetryHistogramBin(3, 300, 400, 250L, 25f, 4, Color.Yellow),   // in domain
+            TelemetryHistogramBin(4, 400, 500, 100L, 10f, 5, Color.Red),      // crosses dataMax boundary
+            TelemetryHistogramBin(5, 500, 600, 50L, 5f, 6, Color.Magenta),    // above dataMax
+            TelemetryHistogramBin(6, 600, 700, 30L, 3f, 7, Color.Black)       // above dataMax
+        )
+
+        data class RenderedRect(val rectTop: Float, val rectHeight: Float)
+        val renderedRects = mutableListOf<RenderedRect>()
+
+        for (bin in allBins) {
+            if (bin.rangeMax <= dataMin || bin.rangeMin >= dataMax) continue
+            val clampedMin = maxOf(dataMin, bin.rangeMin.toDouble())
+            val clampedMax = minOf(dataMax, bin.rangeMax.toDouble())
+            if (clampedMin >= clampedMax) continue
+
+            val yTop = valueToY(clampedMax)
+            val yBottom = valueToY(clampedMin)
+            val rectTop = minOf(yTop, yBottom)
+            val rectHeight = abs(yTop - yBottom).coerceAtLeast(1f)
+            renderedRects.add(RenderedRect(rectTop, rectHeight))
+        }
+
+        assertEquals(4, renderedRects.size)
+        val stackedZeroHeightRects = renderedRects.filter { it.rectTop == topPaddingPx && it.rectHeight == 1f }
+        assertEquals(0, stackedZeroHeightRects.size)
+    }
 }

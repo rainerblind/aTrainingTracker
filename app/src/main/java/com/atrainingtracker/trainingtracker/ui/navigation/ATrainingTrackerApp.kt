@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.runtime.collectAsState
 import androidx.core.content.ContextCompat
 import com.atrainingtracker.trainingtracker.ui.onboarding.permission.PermissionOnboardingSheet
+import com.atrainingtracker.trainingtracker.ui.settings.supporter.SupporterScreen
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.union
@@ -76,7 +77,11 @@ import androidx.navigation.navArgument
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ui.devices.ant.AntServicesStatusSheet
 import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedScreen
+import com.atrainingtracker.trainingtracker.monetization.ProFeatureManager
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.ui.ant.AntDialogState
+import com.atrainingtracker.trainingtracker.ui.dialogs.FirstJubileeActionHelper
+import com.atrainingtracker.trainingtracker.ui.dialogs.FirstJubileeCelebrationDialog
 import com.atrainingtracker.trainingtracker.ui.ant.AntMissingAdapterDialog
 import com.atrainingtracker.trainingtracker.ui.ant.AntMissingDependencyDialog
 import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModel
@@ -470,6 +475,9 @@ fun ATrainingTrackerApp(
                         initialTab = 2,
                         onNavigateToZones = { initialTab, promptReason ->
                             navController.navigate(NavRoutes.trainingZones(initialTab, promptReason))
+                        },
+                        onNavigateToSupporter = { planId ->
+                            navController.navigate(NavRoutes.supporter(planId))
                         }
                     )
                 }
@@ -481,6 +489,9 @@ fun ATrainingTrackerApp(
                         initialTab = 0,
                         onNavigateToWorkouts = { stats ->
                             activity.navigateToFilteredWorkouts(stats)
+                        },
+                        onNavigateToSupporter = { planId ->
+                            navController.navigate(NavRoutes.supporter(planId))
                         }
                     )
                 }
@@ -492,6 +503,9 @@ fun ATrainingTrackerApp(
                         initialTab = 0,
                         onNavigateToWorkouts = { stats ->
                             activity.navigateToFilteredWorkouts(stats)
+                        },
+                        onNavigateToSupporter = { planId ->
+                            navController.navigate(NavRoutes.supporter(planId))
                         }
                     )
                 }
@@ -503,6 +517,9 @@ fun ATrainingTrackerApp(
                         initialTab = 1,
                         onNavigateToWorkouts = { stats ->
                             activity.navigateToFilteredWorkouts(stats)
+                        },
+                        onNavigateToSupporter = { planId ->
+                            navController.navigate(NavRoutes.supporter(planId))
                         }
                     )
                 }
@@ -567,6 +584,23 @@ fun ATrainingTrackerApp(
                     )
                 }
 
+                composable(
+                    route = NavRoutes.SUPPORTER_PATTERN,
+                    arguments = listOf(
+                        navArgument(NavRoutes.ARG_PLAN_ID) {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        }
+                    )
+                ) { backStackEntry ->
+                    val planId = backStackEntry.arguments?.getString(NavRoutes.ARG_PLAN_ID)
+                    SupporterScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        preSelectedPlanId = planId
+                    )
+                }
+
                 composable(NavRoutes.TIPS_GUIDE) {
                     TipsGuideScreen(
                         onNavigateBack = {
@@ -585,6 +619,7 @@ fun ATrainingTrackerApp(
                                 NavRoutes.SEGMENTS -> activity.navigateToDrawerItem(R.id.drawer_segments)
                                 NavRoutes.EQUIPMENT -> activity.navigateToDrawerItem(R.id.drawer_equipment)
                                 NavRoutes.BACKUP_RESTORE -> activity.navigateToDrawerItem(R.id.drawer_backup_restore)
+                                NavRoutes.SUPPORTER -> activity.navigateToDrawerItem(R.id.drawer_supporter)
                                 else -> navController.navigate(route)
                             }
                         }
@@ -692,6 +727,47 @@ fun ATrainingTrackerApp(
             )
         }
         null -> Unit
+    }
+
+    // Material 3 First-Jubilee Celebration Dialog (REQ-REV-003, REQ-REV-004 / ATT-2308)
+    activity.firstJubileeCelebrationState?.let { jubileeData ->
+        val proFeatureManager = remember { ProFeatureManager(context) }
+        val isProActive by proFeatureManager.isProActive.collectAsState()
+        val settingsDataStore = remember { SettingsDataStore.getInstance(context) }
+        val jubileeScope = rememberCoroutineScope()
+
+        FirstJubileeCelebrationDialog(
+            count = jubileeData.count,
+            sportName = jubileeData.sportName,
+            isProActive = isProActive,
+            onRequestInAppReview = {
+                activity.firstJubileeCelebrationState = null
+                jubileeScope.launch {
+                    settingsDataStore.setHasShownFirstJubileePrompt(true)
+                }
+                FirstJubileeActionHelper.launchInAppReviewOrStore(activity)
+            },
+            onSendFeedbackEmail = {
+                activity.firstJubileeCelebrationState = null
+                jubileeScope.launch {
+                    settingsDataStore.setHasShownFirstJubileePrompt(true)
+                }
+                FirstJubileeActionHelper.launchFeedbackEmail(activity)
+            },
+            onNavigateToSupporter = {
+                activity.firstJubileeCelebrationState = null
+                jubileeScope.launch {
+                    settingsDataStore.setHasShownFirstJubileePrompt(true)
+                }
+                activity.navigateToDrawerItem(R.id.drawer_supporter)
+            },
+            onDismiss = {
+                activity.firstJubileeCelebrationState = null
+                jubileeScope.launch {
+                    settingsDataStore.setHasShownFirstJubileePrompt(true)
+                }
+            }
+        )
     }
 
     if (activity.showAntStatusSheet) {

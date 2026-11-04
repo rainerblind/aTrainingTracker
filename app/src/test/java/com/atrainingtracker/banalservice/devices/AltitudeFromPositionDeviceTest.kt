@@ -202,7 +202,7 @@ class AltitudeFromPositionDeviceTest {
         // Verifies DEM query was dispatched and cache updated to DEM_CACHE
         verify(atLeast = 1) { mockElevationService.fetchElevation(lat, lon) }
         verify(atLeast = 1) {
-            mockCacheDb.putElevation(lat, lon, authoritativeDemAlt, ElevationCacheDatabaseManager.SOURCE_DEM_CACHE, any())
+            mockCacheDb.putElevationE5(latE5, lonE5, authoritativeDemAlt, ElevationCacheDatabaseManager.SOURCE_DEM_CACHE, any())
         }
 
         // Updated altitude emitted after DEM fetch
@@ -212,12 +212,109 @@ class AltitudeFromPositionDeviceTest {
     }
 
     /**
+     * TST-SEN-025.7: Matching a non-authoritative neighbor seed cell emits cached altitude,
+     * triggers DEM query, and upgrades BOTH current fix and the neighbor seed cell to DEM_CACHE.
+     */
+    @Test
+    fun locationCacheHit_neighborSeedUpgradesNeighborCellOnDemResolution() {
+        val lat = 48.65698
+        val lon = 9.05479
+        val latE5 = ElevationCacheDatabaseManager.toE5(lat)
+        val lonE5 = ElevationCacheDatabaseManager.toE5(lon)
+        val neighborLatE5 = latE5 + 2
+        val neighborLonE5 = lonE5 - 2
+        val seedAltitude = 430.0
+        val demAltitude = 438.0
+
+        val neighborSeedItem = ElevationCacheItem(
+            latE5 = neighborLatE5,
+            lonE5 = neighborLonE5,
+            altitude = seedAltitude,
+            source = ElevationCacheDatabaseManager.SOURCE_ROUTE_SEED,
+            updatedAt = 1000L
+        )
+
+        every { mockCacheDb.getElevationItem(lat, lon, 2) } returns neighborSeedItem
+        every { mockElevationService.fetchElevation(lat, lon) } returns ElevationResult.Success(
+            elevationMeters = demAltitude,
+            latitude = lat,
+            longitude = lon
+        )
+
+        device.onNewLocation(lat, lon)
+
+        // Seed altitude emitted immediately
+        assertEquals(seedAltitude, device.getAltitudeSensor().value as Double, 1e-4)
+
+        Thread.sleep(100)
+
+        // Upgrades BOTH the current fix AND the neighbor seed cell to DEM_CACHE
+        verify(atLeast = 1) {
+            mockCacheDb.putElevationE5(latE5, lonE5, demAltitude, ElevationCacheDatabaseManager.SOURCE_DEM_CACHE, any())
+        }
+        verify(atLeast = 1) {
+            mockCacheDb.putElevationE5(neighborLatE5, neighborLonE5, demAltitude, ElevationCacheDatabaseManager.SOURCE_DEM_CACHE, any())
+        }
+        assertEquals(demAltitude, device.getAltitudeSensor().value as Double, 1e-4)
+    }
+
+    /**
+     * TST-SEN-025.7: Matching a corrupt 0.0m seed cell does NOT emit 0.0 to sensor,
+     * triggers DEM query, and upgrades both cells.
+     */
+    @Test
+    fun locationCacheHit_corruptZeroSeedDoesNotEmitZeroAndUpgradesOnDemFetch() {
+        val lat = 48.65698
+        val lon = 9.05479
+        val latE5 = ElevationCacheDatabaseManager.toE5(lat)
+        val lonE5 = ElevationCacheDatabaseManager.toE5(lon)
+        val neighborLatE5 = latE5 + 1
+        val neighborLonE5 = lonE5 - 1
+        val demAltitude = 438.0
+
+        val corruptZeroSeed = ElevationCacheItem(
+            latE5 = neighborLatE5,
+            lonE5 = neighborLonE5,
+            altitude = 0.0,
+            source = ElevationCacheDatabaseManager.SOURCE_ROUTE_SEED,
+            updatedAt = 1000L
+        )
+
+        every { mockCacheDb.getElevationItem(lat, lon, 2) } returns corruptZeroSeed
+        every { mockElevationService.fetchElevation(lat, lon) } returns ElevationResult.Success(
+            elevationMeters = demAltitude,
+            latitude = lat,
+            longitude = lon
+        )
+
+        device.onNewLocation(lat, lon)
+
+        // Corrupt 0.0m seed must NOT be emitted to sensor!
+        val immediateAlt = device.getAltitudeSensor().value as? Double
+        val isZero = immediateAlt != null && Math.abs(immediateAlt) < 1e-4
+        assertFalse(isZero)
+
+        Thread.sleep(100)
+
+        // After DEM fetch resolves, 438.0m is emitted and both cells are upgraded
+        verify(atLeast = 1) {
+            mockCacheDb.putElevationE5(latE5, lonE5, demAltitude, ElevationCacheDatabaseManager.SOURCE_DEM_CACHE, any())
+        }
+        verify(atLeast = 1) {
+            mockCacheDb.putElevationE5(neighborLatE5, neighborLonE5, demAltitude, ElevationCacheDatabaseManager.SOURCE_DEM_CACHE, any())
+        }
+        assertEquals(demAltitude, device.getAltitudeSensor().value as Double, 1e-4)
+    }
+
+    /**
      * TST-SEN-025.3: Cache miss triggers asynchronous DEM query and caches the result.
      */
     @Test
     fun locationCacheMiss_queriesElevationServiceAndCachesResult() {
         val lat = 48.13715
         val lon = 11.57612
+        val latE5 = ElevationCacheDatabaseManager.toE5(lat)
+        val lonE5 = ElevationCacheDatabaseManager.toE5(lon)
         val demAlt = 520.8
 
         every { mockCacheDb.getElevationItem(lat, lon, 2) } returns null
@@ -234,7 +331,7 @@ class AltitudeFromPositionDeviceTest {
         assertNotNull(publishedAlt)
         assertEquals(demAlt, publishedAlt!!, 1e-4)
 
-        verify(atLeast = 1) { mockCacheDb.putElevation(lat, lon, demAlt, ElevationCacheDatabaseManager.SOURCE_DEM_CACHE, any()) }
+        verify(atLeast = 1) { mockCacheDb.putElevationE5(latE5, lonE5, demAlt, ElevationCacheDatabaseManager.SOURCE_DEM_CACHE, any()) }
         verify(atLeast = 1) { mockElevationService.fetchElevation(lat, lon) }
     }
 
@@ -275,7 +372,7 @@ class AltitudeFromPositionDeviceTest {
         val lat2 = 48.13725
         val lon2 = 11.57622
 
-        every { mockCacheDb.getElevationItem(any(), any(), 2) } returns null
+        every { mockCacheDb.getElevationItem(any<Double>(), any<Double>(), 2) } returns null
         // Delay response to keep query in-flight
         every { mockElevationService.fetchElevation(any(), any()) } answers {
             Thread.sleep(150)

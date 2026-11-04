@@ -41,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.atrainingtracker.BuildConfig
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.MyUnits
@@ -61,6 +62,7 @@ import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.Physio
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorsGpsFilterSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorSearchPreferences
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorSearchTuningSection
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SupporterDebugSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.WorkoutMasksAndCardsSection
 import kotlinx.coroutines.launch
 
@@ -367,6 +369,10 @@ fun AdvancedTuningScreen(
                     elevationSmoothingSigmaMeters = elevationSmoothingSigmaMeters,
                     onElevationSmoothingSigmaChange = { elevationSmoothingSigmaMeters = it }
                 )
+            }
+
+            if (BuildConfig.DEBUG) {
+                SupporterDebugSection()
             }
 
             Spacer(modifier = Modifier.height(8.dp))

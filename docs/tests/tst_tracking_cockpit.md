@@ -1,9 +1,9 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Domain**: `tracking_cockpit`  
-**Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `STP`, `TRK`, `WEA`  
+**Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 55
+**Total Tests**: 53
 
 ---
 
@@ -23,17 +23,6 @@
 - **Component**: **Atomic Altitude Correction**
 - **Jira**: ``ATT-425``
 - **Test Description**: 1. Start a workout with barometric altitude at 100m. 2. Record data for 1 minute. 3. Trigger a correction to 200m (e.g. by nearing a known location). 4. Stop workout and inspect summary.
-
-### TST-STP-001: **Localization** [Adhere to Google Play character limits.]
-- **Requirement(s)**: `REQ-STP-001`
-- **Component**: **Localization**
-- **Test Description**: Review generated markdown files in `docs/store_presence/`. Verify that Title, Short Description and Full Description are correctly translated.
-
-### TST-STP-002: **Messaging Review** [Description is punchy, highlights key features (Automation, Privacy, Clusters), and maintains professional tone.]
-- **Requirement(s)**: `REQ-STP-002`
-- **Component**: **Messaging Review**
-- **Jira**: ``ATT-276``
-- **Test Description**: 1. Compare new Play Store description with user's draft and project vision.
 
 ### TST-CON-002: **Barometric Cold-Start Baseline Protection Audit** [Cold-start uncalibrated pressure readings cannot contaminate session extrema before reference anchor or calibration is established.]
 - **Requirement(s)**: `REQ-CON-011`
@@ -1309,8 +1298,8 @@
 
 ### TST-SEN-025: **Position-Based Elevation Sensor & Dedicated Spatial DEM Cache Test Suite** [Verified]
 - **Requirement(s)**: `REQ-SEN-025`
-- **Component**: `ElevationCacheDatabaseManagerTest.kt`, `AltitudeFromPositionDeviceTest.kt`, `DeviceTypeTest.kt`, `SensorSourceDialogPriorityTest.kt`, `TranslationParityTest.kt`
-- **Jira**: `ATT-4859`, `ATT-5199`
+- **Component**: `ElevationCacheDatabaseManagerTest.kt`, `AltitudeFromPositionDeviceTest.kt`, `WorkoutRepositoryTelemetryTest.kt`, `ElevationSmoothingMathTest.kt`, `DeviceTypeTest.kt`, `SensorSourceDialogPriorityTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-4859`, `ATT-5199`, `ATT-5312`
 - **Test Description**:
   1. *Spatial Elevation Cache CRUD & Nearest-Neighbor Interpolation (`TST-SEN-025.1`)*:
   • Unit test in `ElevationCacheDatabaseManagerTest` verifying:
@@ -1336,6 +1325,17 @@
     - Continuous position tracking and cache insertion in `ElevationCache.db` execute with zero calls or writes to `KnownLocationsDatabaseManager`.
   5. *9-Language Localization Parity (`TST-SEN-025.5`)*:
   • Verification in `TranslationParityTest` for `device_type_altitude_from_position`, `device_type_short_altitude_from_position`, `devices_altitude_from_position`, and `devices_altitude_from_position_description` across all 9 locales.
+  6. *2D Route/Segment Zero Elevation Rejection & Self-Healing Purge (`TST-SEN-025.6`)*:
+  • Unit test in `ElevationCacheDatabaseManagerTest` verifying:
+    - `seedFromRoutes()` and `seedFromSegments()` reject dummy 0.0m points (`abs(elevation) < 1e-4`) and skip routes where all elevations are 0.0.
+    - `purgeCorruptZeroSeeds()` deletes existing 0.0m `ROUTE_SEED` and `SEGMENT_SEED` entries on startup while preserving legitimate points and `DEM_CACHE` records.
+  7. *Neighbor Seed Cell DEM Upgrade (`TST-SEN-025.7`)*:
+  • Unit test in `AltitudeFromPositionDeviceTest` verifying:
+    - Matching a non-authoritative neighbor seed cell triggers async DEM query and, on success, upgrades both the current coordinates and the neighbor seed cell to `DEM_CACHE`.
+  8. *Telemetry Null-Altitude Parity & Outlier Smoothing (`TST-SEN-025.8`)*:
+  • Unit tests in `WorkoutRepositoryTelemetryTest` and `ElevationSmoothingMathTest` verifying:
+    - `WorkoutRepository.loadWorkoutDetailTelemetry` returns `null` for unrecorded altitude samples.
+    - `ElevationSmoothingMath.smoothAltitudes` interpolates isolated 0.0m dropouts when median altitude $> 50.0$ m, and preserves valid 0.0m elevations when median altitude $\le 50.0$ m.
 
 
 ### TST-TRK-048: **Stationary GPS Jitter Suppression, Doppler Zero Preservation & Anchor Pinning Test Suite** [Verified]

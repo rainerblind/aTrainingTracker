@@ -244,6 +244,33 @@ public class DevicesDatabaseManager {
     }
 
     /**
+     * Maximum number of simultaneously paired devices allowed on the Free tier across all protocols (REQ-SET-083).
+     */
+    public static final int MAX_FREE_PAIRED_DEVICES = 2;
+
+    /**
+     * Returns the total number of paired devices across all protocols (SMARTPHONE, BLUETOOTH_LE, ANT_PLUS) (REQ-SET-083).
+     *
+     * @return count of devices currently marked paired.
+     */
+    public int getPairedDevicesCount() {
+        if (DEBUG) Log.d(TAG, "getPairedDevicesCount()");
+        SQLiteDatabase db = getDatabase();
+        if (db == null || !db.isOpen()) {
+            return 0;
+        }
+        try (Cursor cursor = db.rawQuery(
+                "SELECT COUNT(*) FROM " + DevicesDbHelper.DEVICES + " WHERE " + DevicesDbHelper.PAIRED + " > 0", null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                return cursor.getInt(0);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error counting paired devices", e);
+        }
+        return 0;
+    }
+
+    /**
      * Checks if at least one real, paired remote device (protocol ANT+ or Bluetooth LE with paired > 0)
      * exists in the database (REQ-UI-259).
      *
@@ -1326,7 +1353,7 @@ public class DevicesDatabaseManager {
             contentValues = new ContentValues();
             contentValues.put(PROTOCOL, Protocol.SMARTPHONE.name());
             contentValues.put(DEVICE_TYPE, DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED.name());
-            contentValues.put(PAIRED, true);
+            contentValues.put(PAIRED, false);
             contentValues.put(NAME, mContext.getString(R.string.devices_location_GoogleFused));
             contentValues.put(MANUFACTURER_NAME, Build.BRAND);
             db.insert(DEVICES, null, contentValues);

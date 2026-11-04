@@ -2225,4 +2225,70 @@
     <string name="itpms_low_pressure_reminder_title">Lage bandenspanning</string>
     <string name="itpms_low_pressure_reminder_message">Wielomtrek ligt %1$s onder de basiswaarde. Pomp de banden op.</string>
     <string name="itpms_alert_dismiss">Sluiten</string>
+
+    <!-- Monetization, Supporter Model & Quota (ATT-51 / REQ-SET-083..087) -->
+    <string name="supporter_tier_free">Gratis</string>
+    <string name="supporter_tier_pioneer">★ Pionier ★</string>
+    <string name="supporter_tier_bronze">Bronzen supporter</string>
+    <string name="supporter_tier_silver">Zilveren supporter</string>
+    <string name="supporter_tier_gold">Gouden supporter</string>
+    <string name="supporter_tier_diamond">Diamanten sponsor</string>
+    <string name="hardware_vote_bike_radar">Fietsradar (bijv. Garmin Varia)</string>
+    <string name="hardware_vote_running_power">Hardloopvermogen (bijv. Stryd / BLE)</string>
+    <string name="hardware_vote_smartwatch">Smartwatch / WearOS</string>
+    <string name="hardware_vote_pebble">Pebble smartwatch</string>
+    <string name="hardware_vote_general">Algemene continue ontwikkeling</string>
+    <string name="supporter_screen_title">Betaal wat je wilt</string>
+    <string name="supporter_screen_subtitle">Financier testhardware voor nieuwe sensoren (radar, hardloopvermogen, smartwatch) en houd aTrainingTracker 100%% advertentievrij.</string>
+    <string name="supporter_recommended_badge">Aanbevolen</string>
+    <string name="hardware_vote_title">Welke hardware-ondersteuning wil je hierna?</string>
+    <string name="swap_dialog_title">Apparaatlimiet (2/2 gratis plaatsen bezet)</string>
+    <string name="swap_dialog_select_device_to_unpair">Selecteer apparaat om te ontkoppelen:</string>
+    <string name="swap_dialog_message">In het gratis niveau kunnen maximaal 2 apparaten tegelijkertijd gekoppeld zijn (bijv. GPS + Barometer). Om \'%1$s\' te koppelen, ontkoppel een bestaand apparaat of ontgrendel onbeperkt sensoren via \'Betaal wat je wilt\'.</string>
+    <string name="swap_dialog_action_swap">Ruilen &amp; koppelen</string>
+    <string name="swap_dialog_action_unlock">Onbeperkte sensoren ontgrendelen</string>
+    <string name="drawer_supporter">Supporter &amp; Pro</string>
+    <string name="pioneer_badge_label">★ Pionier (Sinds 2011) — Volledige toegang ontgrendeld</string>
+    <string name="debug_supporter_override_title">Supporter-niveau overschrijven (Debug)</string>
+    <string name="debug_supporter_override_subtitle">Simuleert licentieniveaus lokaal zonder Google Play Billing inloggegevens</string>
+
+    <!-- Milestone Workout Auto-Naming & First Jubilee Celebration (ATT-2308 / REQ-REV-001..005) -->
+    <string name="milestone_workout_name_format">%1$d. %2$s: %3$s</string>
+    <string name="jubilee_dialog_title">Gefeliciteerd met je %1$de %2$s!</string>
+    <string name="jubilee_dialog_message">Je hebt %1$d %2$s-sessies voltooid met aTrainingTracker! Een geweldige sportieve mijlpaal.</string>
+    <string name="jubilee_action_review">Beoordelen op Google Play</string>
+    <string name="jubilee_action_email_feedback">Feedback per e-mail naar Rainer</string>
+    <string name="jubilee_supporter_appeal_title">Steun 15+ jaar onafhankelijke ontwikkeling</string>
+    <string name="jubilee_supporter_appeal_message">aTrainingTracker is sinds 2011 volledig advertentievrij en privacygericht. Als de app je helpt, overweeg dan Pro om de ontwikkeling te steunen.</string>
+    <string name="jubilee_action_upgrade_pro">Ontwikkeling steunen</string>
+    <string name="jubilee_action_dismiss">Verder trainen</string>
+    <string name="debug_jubilee_preview_button">Mijlpaaldialoog testen</string>
+    <string name="debug_jubilee_preview_title">Voorbeeld mijlpaaldialoog (Debug)</string>
+    <string name="debug_jubilee_preview_subtitle">Test het Material 3 dialoogvenster zonder de mijlpaalstatus te wijzigen</string>
+
+    <!-- Supporter N+1 Garage Detector (ATT-5299 / REQ-SET-088) -->
+    <string name="garage_detector_dialog_title_gold">Goud-klasse garage gedetecteerd! 🚴‍♂️</string>
+    <string name="garage_detector_dialog_title_diamond">Diamant-klasse wereldgarage! 💎</string>
+    <string name="garage_detector_dialog_message_gold">Gefeliciteerd met je %1$d fietsen, %2$d schoenen en %3$d sensoren (incl. %4$d vermogensmeters) in aTrainingTracker! 🚴‍♂️✨ Je garage speelt in de profcompetitie, maar je app-status is %5$s. Gun je uitrusting de upgrade naar Goud Pro-Supporter!</string>
+    <string name="garage_detector_dialog_message_diamond">Ongelooflijke garage: %1$d fietsen, %2$d schoenen en %3$d sensoren (incl. %4$d vermogensmeters) in aTrainingTracker! 💎✨ Je uitrusting is van wereldklasse, maar je app-status is %5$s. Bekroon je garage met Diamant Sponsor!</string>
+    <string name="garage_detector_action_upgrade_gold">Upgrade naar Goud Pro (50 € / jr)</string>
+    <string name="garage_detector_action_upgrade_diamond">Upgrade naar Diamant Sponsor (100 € / jr)</string>
+    <string name="garage_detector_action_dismiss">Later / Verder trainen</string>
+    <string name="debug_garage_nudge_title">N+1 Garage Detector (Debug)</string>
+    <string name="debug_garage_nudge_subtitle">Voorbeeld van Goud/Diamant upgrade-meldingen en weergavestatus resetten</string>
+    <string name="debug_garage_preview_gold">Voorbeeld Goud-nudge</string>
+    <string name="debug_garage_preview_diamond">Voorbeeld Diamant-nudge</string>
+    <string name="debug_garage_reset_flags">Nudge-vlaggen resetten</string>
+    <string name="debug_garage_flags_reset_toast">Garage-nudgevlaggen gereset</string>
+    <!-- Pro Supporter Badges & Launcher Icons (REQ-UI-445 / ATT-1406) -->
+    <string name="launcher_icon_standard">Standaard</string>
+    <string name="launcher_icon_pioneer">Pioneer Editie</string>
+    <string name="launcher_icon_bronze">Brons Supporter</string>
+    <string name="launcher_icon_silver">Zilver Pro-Supporter</string>
+    <string name="launcher_icon_gold">Goud Pro-Supporter</string>
+    <string name="launcher_icon_diamond">Diamant Sponsor</string>
+    <string name="supporter_quick_picker_title">Supporter Icoon Kiezer</string>
+    <string name="supporter_quick_picker_thank_you">Bedankt voor het steunen van 15+ jaar advertentievrije indie-ontwikkeling!</string>
+    <string name="supporter_status_emblem_cd">Supporter Status Embleem</string>
+    <string name="share_watermark_tracked_with">Geregistreerd met aTrainingTracker</string>
 </resources>

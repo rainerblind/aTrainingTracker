@@ -71,7 +71,8 @@
 
     <application
         android:name=".trainingtracker.TrainingApplication"
-        android:icon="@drawable/logo"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
         android:largeHeap="true"
         android:allowBackup="true"
@@ -89,12 +90,86 @@
             android:exported="true"
             android:launchMode="singleTask"
             android:theme="@style/Theme.aTrainingTracker">
+        </activity>
+
+        <!-- Dynamic Supporter Homescreen Launcher Icon Aliases (REQ-UI-445 / ATT-1406) -->
+        <activity-alias
+            android:name=".trainingtracker.activities.MainActivityStandard"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:targetActivity=".trainingtracker.activities.MainActivityWithNavigation">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+        </activity-alias>
 
-        </activity>
+        <activity-alias
+            android:name=".trainingtracker.activities.MainActivityPioneer"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_pioneer"
+            android:roundIcon="@mipmap/ic_launcher_pioneer_round"
+            android:targetActivity=".trainingtracker.activities.MainActivityWithNavigation">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".trainingtracker.activities.MainActivityBronze"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_bronze"
+            android:roundIcon="@mipmap/ic_launcher_bronze_round"
+            android:targetActivity=".trainingtracker.activities.MainActivityWithNavigation">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".trainingtracker.activities.MainActivitySilver"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_silver"
+            android:roundIcon="@mipmap/ic_launcher_silver_round"
+            android:targetActivity=".trainingtracker.activities.MainActivityWithNavigation">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".trainingtracker.activities.MainActivityGold"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_gold"
+            android:roundIcon="@mipmap/ic_launcher_gold_round"
+            android:targetActivity=".trainingtracker.activities.MainActivityWithNavigation">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".trainingtracker.activities.MainActivityDiamond"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_diamond"
+            android:roundIcon="@mipmap/ic_launcher_diamond_round"
+            android:targetActivity=".trainingtracker.activities.MainActivityWithNavigation">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <activity
             android:name=".trainingtracker.activities.GpxImportActivity"

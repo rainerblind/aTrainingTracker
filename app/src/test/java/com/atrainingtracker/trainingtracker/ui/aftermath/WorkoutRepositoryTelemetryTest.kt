@@ -355,4 +355,54 @@ class WorkoutRepositoryTelemetryTest {
         assertNotNull(telemetry.hrZoneDistribution)
         assertNotNull(telemetry.powerZoneDistribution)
     }
+
+    /**
+     * TST-SEN-025.8: loadWorkoutDetailTelemetry must extract null altitude as null (not 0.0)
+     * so that missing altitude rows are interpolated by ElevationSmoothingMath.
+     */
+    @Test
+    fun testLoadWorkoutDetailTelemetry_mapsNullAltitudeToNullRatherThanZero() = runBlocking {
+        val baseFileName = "2026-11-03-06-00-00"
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        every { mockSummariesDb.getBaseFileName(800L) } returns baseFileName
+        every { mockSamplesDb.existsTable(baseFileName) } returns true
+
+        val pragmaCursor = MockCursorFactory.create(
+            listOf("name"),
+            listOf(
+                listOf(TrackType.BEST.latitudeColumn),
+                listOf(TrackType.BEST.longitudeColumn),
+                listOf(SensorType.ALTITUDE.name),
+                listOf(SensorType.DISTANCE_m.name),
+                listOf(SensorType.TIME_ACTIVE.name)
+            )
+        )
+        every { mockSqliteDb.rawQuery(match { it.contains("PRAGMA table_info") }, null) } returns pragmaCursor
+
+        // Row 1 has null altitude (GPS fix present, but ALTITUDE sensor not yet resolved)
+        // Row 2 has resolved altitude 435.0
+        val dataCursor = MockCursorFactory.create(
+            listOf(
+                TrackType.BEST.latitudeColumn,
+                TrackType.BEST.longitudeColumn,
+                SensorType.ALTITUDE.name,
+                SensorType.DISTANCE_m.name,
+                SensorType.TIME_ACTIVE.name
+            ),
+            listOf(
+                listOf(48.656, 9.054, null, 10.0, 1L),
+                listOf(48.657, 9.055, 435.0, 20.0, 2L)
+            )
+        )
+        every { mockSqliteDb.query(tableName, any(), null, null, null, null, null) } returns dataCursor
+
+        val telemetry = repository.loadWorkoutDetailTelemetry(800L, com.atrainingtracker.banalservice.BSportType.BIKE)
+        val bestTrack = telemetry.tracks[TrackType.BEST]
+        assertNotNull(bestTrack)
+        assertEquals(2, bestTrack!!.size)
+
+        // Row 1 MUST have null altitude (not 0.0) so ElevationSmoothingMath can interpolate cleanly (REQ-SEN-025.8, ATT-5312)
+        assertNull(bestTrack[0].altitude)
+        assertEquals(435.0, bestTrack[1].altitude!!, 1e-4)
+    }
 }

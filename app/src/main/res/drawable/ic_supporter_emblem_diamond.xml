@@ -1,0 +1,25 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Diamond Sponsor Faceted Brilliant Emblem (REQ-UI-445) -->
+    <path
+        android:fillColor="#E0F7FA"
+        android:strokeColor="#00B0FF"
+        android:strokeWidth="0.8"
+        android:pathData="M 7.0,6.0 L 17.0,6.0 L 21.0,11.0 L 3.0,11.0 Z" />
+    <path
+        android:fillColor="#00E5FF"
+        android:strokeColor="#0091EA"
+        android:strokeWidth="0.8"
+        android:pathData="M 3.0,11.0 L 21.0,11.0 L 12.0,21.0 Z" />
+    <path
+        android:fillColor="#80DEEA"
+        android:pathData="M 9.0,11.0 L 15.0,11.0 L 12.0,21.0 Z" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.0"
+        android:strokeLineCap="round"
+        android:pathData="M 20.0,2.0 L 20.0,8.0 M 17.0,5.0 L 23.0,5.0" />
+</vector>

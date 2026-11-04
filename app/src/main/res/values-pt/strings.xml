@@ -2224,4 +2224,70 @@
     <string name="itpms_low_pressure_reminder_title">Pressão baixa dos pneus</string>
     <string name="itpms_low_pressure_reminder_message">A circunferência da roda está %1$s abaixo da base. Considere encher os pneus.</string>
     <string name="itpms_alert_dismiss">Dispensar</string>
+
+    <!-- Monetization, Supporter Model & Quota (ATT-51 / REQ-SET-083..087) -->
+    <string name="supporter_tier_free">Grátis</string>
+    <string name="supporter_tier_pioneer">★ Pioneiro ★</string>
+    <string name="supporter_tier_bronze">Apoiador Bronze</string>
+    <string name="supporter_tier_silver">Apoiador Prata</string>
+    <string name="supporter_tier_gold">Apoiador Ouro</string>
+    <string name="supporter_tier_diamond">Patrocinador Diamante</string>
+    <string name="hardware_vote_bike_radar">Radar de bicicleta (ex. Garmin Varia)</string>
+    <string name="hardware_vote_running_power">Potência de corrida (ex. Stryd / BLE)</string>
+    <string name="hardware_vote_smartwatch">Smartwatch / WearOS</string>
+    <string name="hardware_vote_pebble">Smartwatch Pebble</string>
+    <string name="hardware_vote_general">Desenvolvimento contínuo geral</string>
+    <string name="supporter_screen_title">Pague o quanto quiser</string>
+    <string name="supporter_screen_subtitle">Financie hardware de teste para novos sensores (Radar, Running Power, Smartwatch) e mantenha o aTrainingTracker 100%% sem anúncios.</string>
+    <string name="supporter_recommended_badge">Recomendado</string>
+    <string name="hardware_vote_title">Qual suporte de hardware você deseja a seguir?</string>
+    <string name="swap_dialog_title">Limite de dispositivos (2/2 vagas ocupadas)</string>
+    <string name="swap_dialog_select_device_to_unpair">Selecione o dispositivo a desemparelhar:</string>
+    <string name="swap_dialog_message">No plano gratuito, até 2 dispositivos podem ser pareados simultaneamente (ex. GPS + Barômetro). Para parear \'%1$s\', desemparelhe um dispositivo existente ou desbloqueie sensores ilimitados com \'Pague o quanto quiser\'.</string>
+    <string name="swap_dialog_action_swap">Trocar e parear</string>
+    <string name="swap_dialog_action_unlock">Desbloquear sensores ilimitados</string>
+    <string name="drawer_supporter">Apoiador e Pro</string>
+    <string name="pioneer_badge_label">★ Pioneiro (Desde 2011) — Acesso total desbloqueado</string>
+    <string name="debug_supporter_override_title">Substituição do nível de apoiador (Debug)</string>
+    <string name="debug_supporter_override_subtitle">Simula níveis de licença localmente sem credenciais do Google Play Billing</string>
+
+    <!-- Milestone Workout Auto-Naming & First Jubilee Celebration (ATT-2308 / REQ-REV-001..005) -->
+    <string name="milestone_workout_name_format">%1$d. %2$s: %3$s</string>
+    <string name="jubilee_dialog_title">Parabéns pela sua %1$dª %2$s!</string>
+    <string name="jubilee_dialog_message">Você completou %1$d sessões de %2$s com o aTrainingTracker! Um marco atlético notável.</string>
+    <string name="jubilee_action_review">Avaliar no Google Play</string>
+    <string name="jubilee_action_email_feedback">Feedback por e-mail para Rainer</string>
+    <string name="jubilee_supporter_appeal_title">Apoie mais de 15 anos de desenvolvimento indie</string>
+    <string name="jubilee_supporter_appeal_message">O aTrainingTracker é 100%% sem anúncios e focado em privacidade desde 2011. Se o app ajuda seu treino, apoie o desenvolvimento com o Pro.</string>
+    <string name="jubilee_action_upgrade_pro">Apoiar desenvolvimento</string>
+    <string name="jubilee_action_dismiss">Continuar treinando</string>
+    <string name="debug_jubilee_preview_button">Testar diálogo de jubileu</string>
+    <string name="debug_jubilee_preview_title">Pré-visualização do jubileu (Debug)</string>
+    <string name="debug_jubilee_preview_subtitle">Testa o diálogo Material 3 sem alterar o estado dos marcos</string>
+
+    <!-- Supporter N+1 Garage Detector (ATT-5299 / REQ-SET-088) -->
+    <string name="garage_detector_dialog_title_gold">Garagem de nível Ouro detetada! 🚴‍♂️</string>
+    <string name="garage_detector_dialog_title_diamond">Garagem Diamante de nível mundial! 💎</string>
+    <string name="garage_detector_dialog_message_gold">Parabéns pelas suas %1$d bicicletas, %2$d sapatilhas e %3$d sensores (incl. %4$d medidores de potência) no aTrainingTracker! 🚴‍♂️✨ A sua garagem joga na liga profissional, mas o seu estado é %5$s. Ofereça ao seu cockpit o nível Apoiante Ouro!</string>
+    <string name="garage_detector_dialog_message_diamond">Equipamento incrível: %1$d bicicletas, %2$d sapatilhas e %3$d sensores (incl. %4$d medidores de potência) no aTrainingTracker! 💎✨ A sua garagem é de nível mundial, mas o seu estado é %5$s. Coroe a sua frota com Patrocinador Diamante!</string>
+    <string name="garage_detector_action_upgrade_gold">Atualizar para Ouro Pro (50 € / ano)</string>
+    <string name="garage_detector_action_upgrade_diamond">Atualizar para Patrocinador Diamante (100 € / ano)</string>
+    <string name="garage_detector_action_dismiss">Mais tarde / Continuar treino</string>
+    <string name="debug_garage_nudge_title">Detetor de garagem N+1 (Depuração)</string>
+    <string name="debug_garage_nudge_subtitle">Pré-visualizar avisos de atualização Ouro/Diamante e repor estado de visualização</string>
+    <string name="debug_garage_preview_gold">Pré-visualizar aviso Ouro</string>
+    <string name="debug_garage_preview_diamond">Pré-visualizar aviso Diamante</string>
+    <string name="debug_garage_reset_flags">Repor sinalizadores de aviso</string>
+    <string name="debug_garage_flags_reset_toast">Sinalizadores de aviso de garagem repostos</string>
+    <!-- Pro Supporter Badges & Launcher Icons (REQ-UI-445 / ATT-1406) -->
+    <string name="launcher_icon_standard">Padrão</string>
+    <string name="launcher_icon_pioneer">Edição Pioneer</string>
+    <string name="launcher_icon_bronze">Supporter Bronze</string>
+    <string name="launcher_icon_silver">Pro-Supporter Prata</string>
+    <string name="launcher_icon_gold">Pro-Supporter Ouro</string>
+    <string name="launcher_icon_diamond">Patrocinador Diamante</string>
+    <string name="supporter_quick_picker_title">Seletor de Ícones Supporter</string>
+    <string name="supporter_quick_picker_thank_you">Obrigado por apoiar mais de 15 anos de desenvolvimento independente sem anúncios!</string>
+    <string name="supporter_status_emblem_cd">Emblema de status Supporter</string>
+    <string name="share_watermark_tracked_with">Rastreado com aTrainingTracker</string>
 </resources>

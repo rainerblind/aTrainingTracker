@@ -66,6 +66,15 @@ object NavRoutes {
     const val ADVANCED_SETTINGS = "advanced_settings"
     const val TIPS_GUIDE = "tips_guide"
     const val TRACKING_LAYOUTS = "tracking_layouts"
+    const val SUPPORTER = "supporter"
+    const val ARG_PLAN_ID = "planId"
+    const val SUPPORTER_PATTERN = "supporter?planId={planId}"
+
+    /**
+     * Builds a navigation route to the Supporter screen, optionally pre-selecting a base plan (REQ-SET-088.5).
+     */
+    fun supporter(planId: String? = null): String =
+        if (planId != null) "$SUPPORTER?$ARG_PLAN_ID=$planId" else SUPPORTER
 
     /**
      * Builds a navigation route to Training Zones, optionally parameterized with an initial tab and onboarding prompt reason (REQ-UI-374.3).
@@ -114,6 +123,7 @@ object NavRoutes {
         R.id.drawer_backup_restore -> BACKUP_RESTORE
         R.id.drawer_advanced_tuning -> ADVANCED_SETTINGS
         R.id.drawer_tips_guide -> TIPS_GUIDE
+        R.id.drawer_supporter -> SUPPORTER
         else -> null
     }
 
@@ -141,6 +151,7 @@ object NavRoutes {
         ADVANCED_SETTINGS -> R.id.drawer_advanced_tuning
         TIPS_GUIDE -> R.id.drawer_tips_guide
         TRACKING_LAYOUTS -> R.id.drawer_tracking_layouts
+        SUPPORTER -> R.id.drawer_supporter
         else -> R.id.drawer_start_tracking
     }
 

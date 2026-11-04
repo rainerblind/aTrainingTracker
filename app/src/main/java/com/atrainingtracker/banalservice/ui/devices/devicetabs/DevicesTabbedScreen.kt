@@ -58,6 +58,7 @@ import androidx.compose.foundation.rememberScrollState
 import com.atrainingtracker.trainingtracker.ui.common.filters.FilterActionButton
 import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSportSensorMatrix
 import com.atrainingtracker.trainingtracker.ui.equipment.EquipmentViewModel
+import com.atrainingtracker.trainingtracker.ui.settings.supporter.GarageUpgradeNudgeDialog
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -75,6 +76,7 @@ fun DevicesTabbedScreen(
     initialTab: Int = 0,
     onCheckAntInstallation: () -> Unit = {},
     onNavigateToZones: ((initialTab: Int, promptReason: String?) -> Unit)? = null,
+    onNavigateToSupporter: ((planId: String?) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     LaunchedEffect(listViewModel) {
@@ -628,6 +630,40 @@ fun DevicesTabbedScreen(
             },
             onDismiss = {
                 tabViewModel.dismissZonePrompt()
+            }
+        )
+    }
+
+    // Swap-or-Upgrade Quota Dialog (REQ-SET-084)
+    val swapDialogEvent by listViewModel.swapOrUpgradeDialogEvent.collectAsState()
+    swapDialogEvent?.let { event ->
+        SwapOrUpgradeDialog(
+            candidateDevice = event.candidateDevice,
+            currentlyPairedDevices = event.currentlyPairedDevices,
+            recommendedUnpairDeviceId = event.recommendedUnpairDeviceId,
+            onSwapConfirmed = { unpairId, pairId ->
+                listViewModel.executeSwapAndPair(unpairId, pairId)
+            },
+            onNavigateToSupporter = {
+                onNavigateToSupporter?.invoke(null)
+            },
+            onDismiss = {
+                listViewModel.dismissSwapOrUpgradeDialog()
+            }
+        )
+    }
+
+    // N+1 Garage Upgrade Nudge Dialog (REQ-SET-088.5)
+    val garageNudgeEvent by listViewModel.garageNudgeEvent.collectAsState()
+    garageNudgeEvent?.let { event ->
+        GarageUpgradeNudgeDialog(
+            event = event,
+            onUpgrade = { planId ->
+                listViewModel.dismissGarageNudge()
+                onNavigateToSupporter?.invoke(planId)
+            },
+            onDismiss = {
+                listViewModel.dismissGarageNudge()
             }
         )
     }

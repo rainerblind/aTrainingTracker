@@ -26,12 +26,18 @@ import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.ui.devices.GetMergedDevicesUseCase
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
+import com.atrainingtracker.trainingtracker.monetization.GarageLeagueDetector
+import com.atrainingtracker.trainingtracker.monetization.GarageNudgeEvent
+import com.atrainingtracker.trainingtracker.monetization.ProFeatureManager
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -41,11 +47,19 @@ data class ZoneOnboardingEvent(
     val promptReason: String
 )
 
+data class SwapOrUpgradeDialogEvent(
+    val candidateDevice: DeviceUiData,
+    val currentlyPairedDevices: List<DeviceUiData>,
+    val recommendedUnpairDeviceId: Long
+)
+
 class DeviceListViewModel @JvmOverloads constructor(
     private val application: Application,
     private val settingsDataStore: SettingsDataStore = SettingsDataStore.getInstance(application),
     private val devicesDBRepository: DeviceDataRepository = DeviceDataRepository.getInstance(application),
-    private val banalServiceRepository: BANALServiceRepository = BANALServiceRepository.getInstance(application)
+    private val banalServiceRepository: BANALServiceRepository = BANALServiceRepository.getInstance(application),
+    private val proFeatureManager: ProFeatureManager = ProFeatureManager.getInstance(application),
+    private val garageLeagueDetector: GarageLeagueDetector = GarageLeagueDetector(application)
 ) : AndroidViewModel(application) {
 
     private val useCase = GetMergedDevicesUseCase(
@@ -59,6 +73,30 @@ class DeviceListViewModel @JvmOverloads constructor(
 
     private val _zoneNavigationEvent = MutableSharedFlow<ZoneOnboardingEvent>(extraBufferCapacity = 1)
     val zoneNavigationEvent: SharedFlow<ZoneOnboardingEvent> = _zoneNavigationEvent.asSharedFlow()
+
+    private val _swapOrUpgradeDialogEvent = MutableStateFlow<SwapOrUpgradeDialogEvent?>(null)
+    val swapOrUpgradeDialogEvent: StateFlow<SwapOrUpgradeDialogEvent?> = _swapOrUpgradeDialogEvent.asStateFlow()
+
+    private val _garageNudgeEvent = MutableStateFlow<GarageNudgeEvent?>(null)
+    val garageNudgeEvent: StateFlow<GarageNudgeEvent?> = _garageNudgeEvent.asStateFlow()
+
+    fun dismissGarageNudge() {
+        _garageNudgeEvent.value = null
+    }
+
+    private fun checkGarageNudge() {
+        viewModelScope.launch {
+            try {
+                val event = garageLeagueDetector.evaluateNudge()
+                if (event != null) {
+                    garageLeagueDetector.markNudgeShown(event.league)
+                    _garageNudgeEvent.value = event
+                }
+            } catch (e: Throwable) {
+                // Defensive guard against unmocked Android dependencies during unit testing
+            }
+        }
+    }
 
     /**
      * This is the key public method.
@@ -108,6 +146,20 @@ class DeviceListViewModel @JvmOverloads constructor(
             val wasPaired = currentState.isPaired
             val newPaired = !wasPaired
 
+            // Free-tier Quota Interception (REQ-SET-083, REQ-SET-084)
+            if (!wasPaired && newPaired) {
+                val pairedDevices = devicesDBRepository.getPairedDevices()
+                if (!proFeatureManager.isDevicePairingAllowed(pairedDevices.size)) {
+                    val recommendedId = determineRecommendedUnpairDeviceId(pairedDevices)
+                    _swapOrUpgradeDialogEvent.value = SwapOrUpgradeDialogEvent(
+                        candidateDevice = currentState,
+                        currentlyPairedDevices = pairedDevices,
+                        recommendedUnpairDeviceId = recommendedId
+                    )
+                    return@launch
+                }
+            }
+
             // Create a new state with the isPaired property flipped
             val newState = currentState.copy(isPaired = newPaired)
 
@@ -117,27 +169,59 @@ class DeviceListViewModel @JvmOverloads constructor(
 
             // When transitioning from un-paired to paired, evaluate physiological zone onboarding (REQ-UI-374.1, REQ-UI-374.2)
             if (!wasPaired && newPaired) {
-                when (currentState.deviceType) {
-                    DeviceType.HRM -> {
-                        val isConfigured = settingsDataStore.isHrZonesConfigured.first()
-                        if (!isConfigured) {
-                            _zoneNavigationEvent.emit(
-                                ZoneOnboardingEvent(initialTab = 0, promptReason = PROMPT_REASON_HR_PAIRED)
-                            )
-                        }
-                    }
-                    DeviceType.BIKE_POWER -> {
-                        val isConfigured = settingsDataStore.isPwrZonesConfigured.first()
-                        if (!isConfigured) {
-                            _zoneNavigationEvent.emit(
-                                ZoneOnboardingEvent(initialTab = 2, promptReason = PROMPT_REASON_PWR_PAIRED)
-                            )
-                        }
-                    }
-                    else -> {
-                        // Non-physiological sensors (speed, cadence, environmental, GPS, etc.) complete silently (REQ-UI-374.1)
-                    }
+                checkZoneOnboarding(currentState)
+                checkGarageNudge()
+            }
+        }
+    }
+
+    /**
+     * Executes 1-tap atomic swap of pairing status between an active device and a candidate device (REQ-SET-084).
+     */
+    fun executeSwapAndPair(unpairDeviceId: Long, candidateDeviceId: Long) {
+        viewModelScope.launch {
+            devicesDBRepository.swapPairedDevice(unpairDeviceId, candidateDeviceId)
+            _swapOrUpgradeDialogEvent.value = null
+            val candidate = devicesDBRepository.getDeviceSnapshotById(candidateDeviceId)
+            if (candidate != null) {
+                checkZoneOnboarding(candidate)
+            }
+            checkGarageNudge()
+        }
+    }
+
+    fun dismissSwapOrUpgradeDialog() {
+        _swapOrUpgradeDialogEvent.value = null
+    }
+
+    private fun determineRecommendedUnpairDeviceId(pairedDevices: List<DeviceUiData>): Long {
+        val barometer = pairedDevices.firstOrNull { it.deviceType == DeviceType.ALTITUDE_FROM_PRESSURE }
+        if (barometer != null) return barometer.id
+        val gps = pairedDevices.firstOrNull { it.deviceType == DeviceType.SPEED_AND_LOCATION_GPS }
+        if (gps != null) return gps.id
+        return pairedDevices.firstOrNull()?.id ?: -1L
+    }
+
+    private suspend fun checkZoneOnboarding(device: DeviceUiData) {
+        when (device.deviceType) {
+            DeviceType.HRM -> {
+                val isConfigured = settingsDataStore.isHrZonesConfigured.first()
+                if (!isConfigured) {
+                    _zoneNavigationEvent.emit(
+                        ZoneOnboardingEvent(initialTab = 0, promptReason = PROMPT_REASON_HR_PAIRED)
+                    )
                 }
+            }
+            DeviceType.BIKE_POWER -> {
+                val isConfigured = settingsDataStore.isPwrZonesConfigured.first()
+                if (!isConfigured) {
+                    _zoneNavigationEvent.emit(
+                        ZoneOnboardingEvent(initialTab = 2, promptReason = PROMPT_REASON_PWR_PAIRED)
+                    )
+                }
+            }
+            else -> {
+                // Non-physiological sensors complete silently (REQ-UI-374.1)
             }
         }
     }

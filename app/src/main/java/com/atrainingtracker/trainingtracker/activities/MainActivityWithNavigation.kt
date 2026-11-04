@@ -93,6 +93,7 @@ import com.atrainingtracker.banalservice.ui.sporttype.SportTypeListFragment
 import com.atrainingtracker.trainingtracker.MyPreferenceManager
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.ActiveDevicesDbHelper
+import com.atrainingtracker.trainingtracker.database.MilestoneAutoNamingManager
 import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.dialogs.GPSDisabledDialog
@@ -278,6 +279,15 @@ class MainActivityWithNavigation :
             navigateToDrawerItem(mSelectedFragmentId)
             val workoutId = intent?.getLongExtra(TrackerService.WORKOUT_ID, -1L) ?: -1L
             checkSensorBatteryAfterWorkout(workoutId)
+
+            val isFirstJubilee = intent?.getBooleanExtra(MilestoneAutoNamingManager.EXTRA_IS_FIRST_JUBILEE, false) ?: false
+            if (isFirstJubilee) {
+                val count = intent?.getIntExtra(MilestoneAutoNamingManager.EXTRA_MILESTONE_COUNT, 0) ?: 0
+                val sportName = intent?.getStringExtra(MilestoneAutoNamingManager.EXTRA_MILESTONE_SPORT_NAME) ?: ""
+                if (count > 0) {
+                    firstJubileeCelebrationState = MilestoneAutoNamingManager.MilestoneCelebrationData(workoutId, count, sportName)
+                }
+            }
         }
     }
 
@@ -301,6 +311,7 @@ class MainActivityWithNavigation :
 
     var antDialogState: AntDialogState? by mutableStateOf(null)
     var showAntStatusSheet: Boolean by mutableStateOf(false)
+    var firstJubileeCelebrationState: MilestoneAutoNamingManager.MilestoneCelebrationData? by mutableStateOf(null)
 
     fun showSpecificInstallANTDialog() {
         if (antDialogState != null || showAntStatusSheet) {

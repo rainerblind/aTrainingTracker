@@ -382,6 +382,14 @@ Row(
 * **Explicit `lineHeight` on Micro-Typography (`<= 10.sp`) Inside Compact Fixed-Height Boxes (`ATT-5076` $\rightarrow$ `ATT-5193`)**:
   * When rendering small labels (`fontSize = 9.sp` or `10.sp`, such as day-of-week labels `M`, `W`, `F`, `S` in `YearlyContributionGrid`) inside a compact fixed-height `Box(Modifier.height(11.dp))`, always set an explicit `lineHeight = fontSize` and `PlatformTextStyle(includeFontPadding = false)` on the `TextStyle`. Inheriting `labelSmall`'s default `lineHeight = 16.sp` inside an `11.dp` box clips the bottom 1–2 px of tall glyphs like `F`.
 
+### 5.16 Adaptive Icon `<adaptive-icon>` Mipmap Restriction in Compose & Mandatory Visual Screenshot Inspection (Rule 71 — ATT-1406, ATT-1482, ATT-4853 / ATT-5313)
+* **Never Pass `R.mipmap.*` (`<adaptive-icon>`) to Compose `painterResource` / `safePainterResource` (`ATT-1406` $\rightarrow$ `ATT-5372`)**:
+  * Jetpack Compose `painterResource` only supports `<vector>` (`VectorDrawable`) and raster bitmaps (`PNG`, `JPG`, `WEBP`). Passing an `<adaptive-icon>` XML resource (`R.mipmap.ic_launcher*`) throws `IllegalArgumentException: Only VectorDrawables and rasterized asset types are supported` at runtime. Always pass the inner foreground `VectorDrawable` (`R.drawable.ic_launcher_foreground*`) or load the adaptive icon via `ContextCompat.getDrawable(context, mipmapRes)` + `rememberDrawablePainter`.
+* **Preserve Xfig X-Splines (`3 0 ...`) & Full-Bleed `logo_512.png` (`ATT-1482`)**:
+  * When converting Xfig `.fig` master files (`logo.fig`), never treat interpolated X-splines (`3 0 ...`) as straight-line polygons (`M...L...`). Always evaluate smooth spline curves with round caps (`strokeLineCap="round"`) and verify 1:1 visual parity against `/home/rainer/Dropbox/workspace/TrainingTracker4/Bilder/logo.png` (`993x872` RGBA), and never overwrite full-bleed `drawable/logo_512.png` or `images/logo_512.png` with padded `108dp` adaptive canvas bitmaps.
+* **Mandatory `read_file` Visual Inspection of All Captured Screenshots (`ATT-1406`, `ATT-4853`, `ATT-2274`)**:
+  * Every screenshot or generated visual asset (`img/*.png`, `screenshots/*.png`, `video/frames/*.png`) must be inspected via `read_file` in Stage 5 and Gate 5 to confirm it renders the intended screen without mid-word button wrapping (`Suppor\nt`), untranslated strings, or crash fallbacks.
+
 ---
 
 ## 6. Map Viewport & Camera Guidelines

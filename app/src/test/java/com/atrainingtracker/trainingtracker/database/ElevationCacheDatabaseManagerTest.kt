@@ -456,4 +456,142 @@ class ElevationCacheDatabaseManagerTest {
 
         context.deleteDatabase("Segments.db")
     }
+
+    /**
+     * TST-SEN-025.6: seedFromRoutes rejects 2D dummy routes and filters zero-elevation points.
+     */
+    @Test
+    fun seedFromRoutes_skipsAllZeroDummyRoutesAndFiltersZeroPoints() {
+        context.deleteDatabase("Routes.db")
+        val routesDb = RoutesDatabaseManager.getInstance(context)
+        val rDb = routesDb.getDatabase()
+
+        // 1. Create a 2D route with all 0.0m elevations (e.g. Route 42 / 45)
+        val route2dCv = ContentValues().apply {
+            put(RoutesDatabaseManager.RouteContract.COLUMN_NAME, "2D Route")
+            put(RoutesDatabaseManager.RouteContract.COLUMN_SPORT_TYPE, "BIKE")
+            put(RoutesDatabaseManager.RouteContract.COLUMN_SOURCE, RouteSource.LOCAL_GPX.name)
+            put(RoutesDatabaseManager.RouteContract.COLUMN_DISTANCE, 2000.0)
+            put(RoutesDatabaseManager.RouteContract.COLUMN_ELEVATION_GAIN, 0.0)
+        }
+        val route2dId = rDb.insert(RoutesDatabaseManager.RouteContract.TABLE_ROUTES, null, route2dCv)
+
+        for (i in 0 until 5) {
+            val cv = ContentValues().apply {
+                put(RoutesDatabaseManager.RouteContract.COLUMN_ROUTE_ID_FK, route2dId)
+                put(RoutesDatabaseManager.RouteContract.COLUMN_LAT, 48.65000 + i * 0.001)
+                put(RoutesDatabaseManager.RouteContract.COLUMN_LNG, 9.05000 + i * 0.001)
+                put(RoutesDatabaseManager.RouteContract.COLUMN_DIST_FROM_START, (i * 100).toDouble())
+                put(RoutesDatabaseManager.RouteContract.COLUMN_ALTITUDE, 0.0)
+            }
+            rDb.insert(RoutesDatabaseManager.RouteContract.TABLE_ROUTE_POINTS, null, cv)
+        }
+
+        // 2. Create a genuine 3D route with 450m elevation but one corrupt 0.0m dropout point
+        val route3dCv = ContentValues().apply {
+            put(RoutesDatabaseManager.RouteContract.COLUMN_NAME, "3D Route")
+            put(RoutesDatabaseManager.RouteContract.COLUMN_SPORT_TYPE, "BIKE")
+            put(RoutesDatabaseManager.RouteContract.COLUMN_SOURCE, RouteSource.STRAVA.name)
+            put(RoutesDatabaseManager.RouteContract.COLUMN_DISTANCE, 1000.0)
+            put(RoutesDatabaseManager.RouteContract.COLUMN_ELEVATION_GAIN, 50.0)
+        }
+        val route3dId = rDb.insert(RoutesDatabaseManager.RouteContract.TABLE_ROUTES, null, route3dCv)
+
+        val cv3dValid = ContentValues().apply {
+            put(RoutesDatabaseManager.RouteContract.COLUMN_ROUTE_ID_FK, route3dId)
+            put(RoutesDatabaseManager.RouteContract.COLUMN_LAT, 48.70000)
+            put(RoutesDatabaseManager.RouteContract.COLUMN_LNG, 9.10000)
+            put(RoutesDatabaseManager.RouteContract.COLUMN_DIST_FROM_START, 0.0)
+            put(RoutesDatabaseManager.RouteContract.COLUMN_ALTITUDE, 452.0)
+        }
+        val cv3dZero = ContentValues().apply {
+            put(RoutesDatabaseManager.RouteContract.COLUMN_ROUTE_ID_FK, route3dId)
+            put(RoutesDatabaseManager.RouteContract.COLUMN_LAT, 48.70100)
+            put(RoutesDatabaseManager.RouteContract.COLUMN_LNG, 9.10100)
+            put(RoutesDatabaseManager.RouteContract.COLUMN_DIST_FROM_START, 100.0)
+            put(RoutesDatabaseManager.RouteContract.COLUMN_ALTITUDE, 0.0)
+        }
+        rDb.insert(RoutesDatabaseManager.RouteContract.TABLE_ROUTE_POINTS, null, cv3dValid)
+        rDb.insert(RoutesDatabaseManager.RouteContract.TABLE_ROUTE_POINTS, null, cv3dZero)
+
+        val seeded = cacheDb.seedFromRoutes(routesDb)
+        // Only the valid 452.0m point from 3D route must be seeded
+        assertEquals(1, seeded)
+        assertEquals(1L, cacheDb.getCacheCount())
+
+        assertNotNull(cacheDb.getElevation(48.70000, 9.10000))
+        assertEquals(452.0, cacheDb.getElevation(48.70000, 9.10000)!!, 1e-4)
+
+        // 2D route and 0.0m dropout points must NOT exist in cache
+        assertNull(cacheDb.getElevation(48.65000, 9.05000))
+        assertNull(cacheDb.getElevation(48.70100, 9.10100))
+
+        context.deleteDatabase("Routes.db")
+    }
+
+    /**
+     * TST-SEN-025.6: purgeCorruptZeroSeeds cleanses poisoned 0.0m seed records and preserves DEM_CACHE.
+     */
+    @Test
+    fun purgeCorruptZeroSeeds_cleansesPoisonedSeedRecordsAndPreservesDemCache() {
+        val latRouteZero = 48.65673
+        val lonRouteZero = 9.05476
+        val latSegZero = 48.65675
+        val lonSegZero = 9.05476
+        val latDemSeaLevel = 54.00000
+        val lonDemSeaLevel = 8.00000
+        val latRouteValid = 48.66000
+        val lonRouteValid = 9.06000
+
+        // Pre-populate with poisoned 0.0m seeds and valid entries
+        cacheDb.putElevation(latRouteZero, lonRouteZero, 0.0, ElevationCacheDatabaseManager.SOURCE_ROUTE_SEED)
+        cacheDb.putElevation(latSegZero, lonSegZero, 0.0, ElevationCacheDatabaseManager.SOURCE_SEGMENT_SEED)
+        cacheDb.putElevation(latDemSeaLevel, lonDemSeaLevel, 0.0, ElevationCacheDatabaseManager.SOURCE_DEM_CACHE)
+        cacheDb.putElevation(latRouteValid, lonRouteValid, 440.0, ElevationCacheDatabaseManager.SOURCE_ROUTE_SEED)
+
+        assertEquals(4L, cacheDb.getCacheCount())
+
+        val purged = cacheDb.purgeCorruptZeroSeeds()
+        assertEquals(2, purged)
+        assertEquals(2L, cacheDb.getCacheCount())
+
+        // Poisoned seeds purged
+        assertNull(cacheDb.getElevation(latRouteZero, lonRouteZero))
+        assertNull(cacheDb.getElevation(latSegZero, lonSegZero))
+
+        // Authoritative DEM sea-level 0.0m and valid route seed preserved
+        val itemDem = cacheDb.getElevationItem(latDemSeaLevel, lonDemSeaLevel)
+        assertNotNull(itemDem)
+        assertEquals(0.0, itemDem!!.altitude, 1e-4)
+        assertEquals(ElevationCacheDatabaseManager.SOURCE_DEM_CACHE, itemDem.source)
+
+        val itemValid = cacheDb.getElevationItem(latRouteValid, lonRouteValid)
+        assertNotNull(itemValid)
+        assertEquals(440.0, itemValid!!.altitude, 1e-4)
+        assertEquals(ElevationCacheDatabaseManager.SOURCE_ROUTE_SEED, itemValid.source)
+    }
+
+    /**
+     * TST-SEN-025.7: putElevationE5 supports direct quantized coordinate writes and priority management.
+     */
+    @Test
+    fun putElevationE5_insertsAndPrioritizesCorrectly() {
+        val latE5 = 4865673
+        val lonE5 = 905476
+
+        val row1 = cacheDb.putElevationE5(latE5, lonE5, 435.0, ElevationCacheDatabaseManager.SOURCE_ROUTE_SEED)
+        assertTrue(row1 > 0)
+
+        var item = cacheDb.getElevationItem(latE5, lonE5, 0)
+        assertNotNull(item)
+        assertEquals(435.0, item!!.altitude, 1e-4)
+        assertEquals(ElevationCacheDatabaseManager.SOURCE_ROUTE_SEED, item.source)
+
+        // Upgrade with DEM_CACHE
+        cacheDb.putElevationE5(latE5, lonE5, 438.0, ElevationCacheDatabaseManager.SOURCE_DEM_CACHE)
+        item = cacheDb.getElevationItem(latE5, lonE5, 0)
+        assertNotNull(item)
+        assertEquals(438.0, item!!.altitude, 1e-4)
+        assertEquals(ElevationCacheDatabaseManager.SOURCE_DEM_CACHE, item.source)
+    }
 }

@@ -1274,3 +1274,19 @@
   4. *Clean-Room Governance Verification (`TST-PRO-022.4`)*:
   • Execute `python3 tools/verify_requirement_governance.py` asserting exit code 0 and zero governance violations.
 
+### TST-PRO-033: **Online User Guide Content, Exclusion & Asset Contract** [Verified]
+- **Requirement(s)**: `REQ-PRO-033`
+- **Component**: **Online User Guide Content, Exclusion & Asset Contract**
+- **Jira**: ``ATT-2275``
+- **Test Description**:
+  1. *Jekyll Configuration & Exclusion Hygiene (`TST-PRO-033.1`)*:
+  • Verify `docs/_config.yml` exists and explicitly excludes internal developer paths (`ci-secrets.md`, `project_protocol.md`, `coding_standards.md`, `design_guidelines.md`, `engineering/`, `requirements/`, `tests/`).
+  2. *Landing Page & Bilingual Chapter Completeness (`TST-PRO-033.2`)*:
+  • Verify `docs/index.md` exists and links to both German and English guides.
+  • Verify all 18 chapter files exist across `docs/guide/de/` and `docs/guide/en/` with non-empty content.
+  3. *Image Asset Resolution & Existence (`TST-PRO-033.3`)*:
+  • Verify all markdown image references (`../img/...` or `img/...`) resolve to existing, non-empty PNG/JPG image assets under `docs/guide/img/`.
+  4. *Anchor Parity & Deep Linking Contract (`TST-PRO-033.4`)*:
+  • Verify all `<a id="...">` anchor identifiers match 1:1 between corresponding German and English chapter files.
+
+

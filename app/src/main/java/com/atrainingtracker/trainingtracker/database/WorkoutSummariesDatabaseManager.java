@@ -450,6 +450,39 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     /**
+     * Returns the total count of finished workouts for a specific sportId.
+     * Used for milestone workout auto-naming and jubilee celebration tracking (REQ-REV-001 / ATT-2308).
+     */
+    public int getFinishedWorkoutCountForSport(long sportId) {
+        String query = "SELECT COUNT(*) FROM " + WorkoutSummaries.TABLE +
+                " WHERE " + WorkoutSummaries.FINISHED + " = 1 AND " + WorkoutSummaries.SPORT_ID + " = ?";
+        try (Cursor c = getDatabase().rawQuery(query, new String[]{String.valueOf(sportId)})) {
+            return (c != null && c.moveToFirst()) ? c.getInt(0) : 0;
+        } catch (Exception e) {
+            Log.e(TAG, "Error querying finished workout count for sport " + sportId + ": " + e.getMessage(), e);
+            return 0;
+        }
+    }
+
+    /**
+     * Returns the total count of finished workouts for a BSportType.
+     * Used for milestone tracking when sportId is ambiguous or unassigned (REQ-REV-001 / ATT-2308).
+     */
+    public int getFinishedWorkoutCountForSportType(BSportType bSportType) {
+        if (bSportType == null || bSportType == BSportType.UNKNOWN) {
+            return 0;
+        }
+        String query = "SELECT COUNT(*) FROM " + WorkoutSummaries.TABLE +
+                " WHERE " + WorkoutSummaries.FINISHED + " = 1 AND " + WorkoutSummaries.B_SPORT + " = ?";
+        try (Cursor c = getDatabase().rawQuery(query, new String[]{bSportType.name()})) {
+            return (c != null && c.moveToFirst()) ? c.getInt(0) : 0;
+        } catch (Exception e) {
+            Log.e(TAG, "Error querying finished workout count for sport type " + bSportType + ": " + e.getMessage(), e);
+            return 0;
+        }
+    }
+
+    /**
      * Returns a cursor for all workouts within a specific time range.
      * Used for hierarchical periods (ATT-346) and analytical rollups.
      *
@@ -928,6 +961,41 @@ public class WorkoutSummariesDatabaseManager {
             }
         }
         return records;
+    }
+
+    /**
+     * Stichtag timestamp for Pioneer Early Adopter eligibility: 2026-11-30 23:59:59 (ATT-51 / REQ-SET-085).
+     */
+    public static final String PIONEER_CUTOFF_TIMESTAMP = "2026-11-30 23:59:59";
+
+    /**
+     * Checks if at least one historical workout exists with start time on or before the specified cutoff timestamp (REQ-SET-085).
+     *
+     * @param cutoffTimestamp SQLite-compatible datetime string (e.g. "2026-11-30 23:59:59").
+     * @return true if at least one workout started before or at the cutoff.
+     */
+    public boolean hasWorkoutBefore(@NonNull String cutoffTimestamp) {
+        SQLiteDatabase db = getDatabase();
+        if (db == null || !db.isOpen()) {
+            return false;
+        }
+        String query = "SELECT COUNT(*) FROM " + WorkoutSummaries.TABLE
+                + " WHERE " + WorkoutSummaries.TIME_START + " <= ?";
+        try (Cursor cursor = db.rawQuery(query, new String[]{cutoffTimestamp})) {
+            if (cursor != null && cursor.moveToFirst()) {
+                return cursor.getInt(0) > 0;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error checking workout before cutoff: " + cutoffTimestamp, e);
+        }
+        return false;
+    }
+
+    /**
+     * Convenience method checking whether the athlete qualifies as a Pioneer Early Adopter (ATT-51 / REQ-SET-085).
+     */
+    public boolean hasPioneerEarlyAdopterWorkout() {
+        return hasWorkoutBefore(PIONEER_CUTOFF_TIMESTAMP);
     }
 
     /**

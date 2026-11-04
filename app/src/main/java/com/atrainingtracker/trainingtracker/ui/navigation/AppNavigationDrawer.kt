@@ -49,6 +49,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -73,6 +74,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.monetization.ProFeatureManager
+import com.atrainingtracker.trainingtracker.monetization.SupporterTier
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
+import com.atrainingtracker.trainingtracker.ui.branding.LauncherIconVariant
+import com.atrainingtracker.trainingtracker.ui.branding.SupporterQuickIconPickerDialog
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.safePainterResource
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
@@ -231,6 +237,7 @@ fun createDrawerGroups(startTrackingTitleRes: Int): List<DrawerGroup> {
                 DrawerItemConfig(R.id.drawer_auto_pause, R.drawable.ic_pause_circle, R.string.auto_pause_title),
                 DrawerItemConfig(R.id.drawer_backup_restore, R.drawable.ic_save_to_disc, R.string.import_backup),
                 DrawerItemConfig(R.id.drawer_tips_guide, R.drawable.ic_tips_and_updates, R.string.drawer_tips_guide),
+                DrawerItemConfig(R.id.drawer_supporter, R.drawable.ic_crown, R.string.drawer_supporter),
                 DrawerItemConfig(R.id.drawer_privacy_policy, R.drawable.ic_privacy, R.string.privacy_policy),
                 DrawerItemConfig(R.id.drawer_advanced_tuning, R.drawable.ic_tune, R.string.advanced_tuning_title)
             )
@@ -325,28 +332,76 @@ fun DrawerHeader() {
                     .background(MaterialTheme.colorScheme.surfaceVariant)
             )
         }
+        var showQuickPicker by remember { mutableStateOf(false) }
+        val settingsDataStore = remember(context) { SettingsDataStore.getInstance(context.applicationContext) }
+        val selectedIconId by settingsDataStore.selectedLauncherIcon.collectAsState(initial = "standard")
+        val activeVariant = LauncherIconVariant.fromId(selectedIconId)
+
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(start = 16.dp, end = 16.dp, top = statusBarHeight + 2.dp, bottom = 14.dp),
+                .padding(start = 16.dp, end = 16.dp, top = statusBarHeight + 2.dp, bottom = 14.dp)
+                .clickable { showQuickPicker = true },
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Start
         ) {
             Image(
-                painter = safePainterResource(
-                    id = R.drawable.logo_512,
-                    fallback = Icons.AutoMirrored.Filled.DirectionsRun
-                ),
+                painter = if (activeVariant == LauncherIconVariant.STANDARD) {
+                    safePainterResource(
+                        id = R.drawable.logo_512,
+                        fallback = Icons.AutoMirrored.Filled.DirectionsRun
+                    )
+                } else {
+                    safePainterResource(
+                        id = activeVariant.foregroundRes,
+                        fallback = Icons.AutoMirrored.Filled.DirectionsRun
+                    )
+                },
                 contentDescription = null,
                 modifier = Modifier.size(46.dp),
                 contentScale = ContentScale.Fit
             )
             Spacer(modifier = Modifier.width(10.dp))
-            Text(
-                text = stringResource(id = R.string.TrainingTracker),
-                color = colorResource(id = R.color.my_blue),
-                fontSize = 21.sp,
-                fontWeight = FontWeight.Bold
+            Column {
+                Text(
+                    text = stringResource(id = R.string.TrainingTracker),
+                    color = colorResource(id = R.color.my_blue),
+                    fontSize = 21.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                val proFeatureManager = remember(context) { ProFeatureManager.getInstance(context.applicationContext) }
+                val effectiveTier by proFeatureManager.effectiveTier.collectAsState()
+                if (effectiveTier.isPro) {
+                    val badgeText = when (effectiveTier) {
+                        SupporterTier.DIAMOND -> "◆ DIAMOND SPONSOR • Unlimited Sensors"
+                        SupporterTier.GOLD -> "★ GOLD PRO-SUPPORTER"
+                        SupporterTier.SILVER -> "★ SILVER PRO-SUPPORTER"
+                        SupporterTier.BRONZE -> "★ BRONZE SUPPORTER"
+                        SupporterTier.PIONEER -> "★ PIONEER (SINCE 2011)"
+                        SupporterTier.FREE -> ""
+                    }
+                    if (badgeText.isNotEmpty()) {
+                        Surface(
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            modifier = Modifier.padding(top = 2.dp)
+                        ) {
+                            Text(
+                                text = badgeText,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        if (showQuickPicker) {
+            SupporterQuickIconPickerDialog(
+                onDismiss = { showQuickPicker = false }
             )
         }
     }

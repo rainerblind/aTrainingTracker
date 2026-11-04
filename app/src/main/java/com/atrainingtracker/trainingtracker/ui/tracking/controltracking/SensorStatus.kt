@@ -38,9 +38,16 @@ import com.atrainingtracker.trainingtracker.repositories.DeviceTelemetry
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import androidx.compose.foundation.clickable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.atrainingtracker.trainingtracker.monetization.ProFeatureManager
+import com.atrainingtracker.trainingtracker.monetization.SupporterTier
+import com.atrainingtracker.trainingtracker.ui.branding.SupporterQuickIconPickerDialog
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.LocationCalibrationStatus
 
 
@@ -59,6 +66,20 @@ fun SensorStatus(
     isCompactLandscape: Boolean = false
 ) {
     var selectedSensor by remember { mutableStateOf<SensorType?>(null) }
+    var showSupporterDialog by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    val proFeatureManager = remember(context) { ProFeatureManager.getInstance(context.applicationContext) }
+    val effectiveTier by proFeatureManager.effectiveTier.collectAsState()
+
+    val supporterEmblemRes = when (effectiveTier) {
+        SupporterTier.PIONEER -> R.drawable.ic_supporter_emblem_pioneer
+        SupporterTier.BRONZE -> R.drawable.ic_supporter_emblem_bronze
+        SupporterTier.SILVER -> R.drawable.ic_supporter_emblem_silver
+        SupporterTier.GOLD -> R.drawable.ic_supporter_emblem_gold
+        SupporterTier.DIAMOND -> R.drawable.ic_supporter_emblem_diamond
+        SupporterTier.FREE -> null
+    }
 
     // Fixed order definition
     val sensorDefinitions = remember {
@@ -116,6 +137,23 @@ fun SensorStatus(
                     tint = MaterialTheme.colorScheme.onSurface
                 )
             }
+
+            if (supporterEmblemRes != null) {
+                Spacer(modifier = Modifier.width(6.dp))
+                IconButton(
+                    onClick = { showSupporterDialog = true },
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        painter = safePainterResource(id = supporterEmblemRes, fallback = Icons.Default.Sensors),
+                        contentDescription = stringResource(R.string.supporter_status_emblem_cd),
+                        tint = Color.Unspecified,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            } else if (onMenuClick != null) {
+                Spacer(modifier = Modifier.width(30.dp))
+            }
         }
     } else {
         // Portrait Mode: preserved multi-row / full-width row with left-aligned menu button and centered sensor icons
@@ -168,6 +206,22 @@ fun SensorStatus(
                     }
                 }
             }
+
+            if (supporterEmblemRes != null) {
+                IconButton(
+                    onClick = { showSupporterDialog = true },
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        painter = safePainterResource(id = supporterEmblemRes, fallback = Icons.Default.Sensors),
+                        contentDescription = stringResource(R.string.supporter_status_emblem_cd),
+                        tint = Color.Unspecified,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            } else {
+                Spacer(modifier = Modifier.size(24.dp))
+            }
         }
     }
 
@@ -186,6 +240,12 @@ fun SensorStatus(
             onDeviceClick = onDeviceClick,
             onCalibrateAltitude = onCalibrateAltitude,
             onDismiss = { selectedSensor = null }
+        )
+    }
+
+    if (showSupporterDialog) {
+        SupporterQuickIconPickerDialog(
+            onDismiss = { showSupporterDialog = false }
         )
     }
 }

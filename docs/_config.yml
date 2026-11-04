@@ -1,1 +1,20 @@
 theme: jekyll-theme-merlot
+title: aTrainingTracker Online User Guide
+description: Comprehensive User Manual, Feature Showcase, and Technical Reference for aTrainingTracker
+markdown: kramdown
+kramdown:
+  input: GFM
+  hard_wrap: false
+
+exclude:
+  - ci-secrets.md
+  - project_protocol.md
+  - coding_standards.md
+  - design_guidelines.md
+  - architecture.md
+  - engineering/
+  - requirements/
+  - tests/
+  - attachments/
+  - presentations/
+  - store_presence/

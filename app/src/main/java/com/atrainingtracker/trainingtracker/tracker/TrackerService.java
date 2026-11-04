@@ -52,6 +52,7 @@ import android.app.PendingIntent;
 import android.content.pm.PackageManager;
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation;
 import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager;
+import com.atrainingtracker.trainingtracker.database.MilestoneAutoNamingManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelper;
 import com.atrainingtracker.trainingtracker.database.WorkoutSource;
 
@@ -177,6 +178,7 @@ public class TrackerService extends Service {
     private volatile boolean mIsStopping = false;
     private volatile boolean mBanalBound = false;
     @Nullable private volatile BanalFinalizationSnapshot mFinalizationSnapshot = null;
+    @Nullable private volatile MilestoneAutoNamingManager.MilestoneCelebrationData mFirstJubileeCelebrationData = null;
 
     @VisibleForTesting
     @Nullable
@@ -1981,17 +1983,28 @@ public class TrackerService extends Service {
                 Intent finishedIntent = new Intent(TRACKING_FINISHED_INTENT)
                         .setPackage(getPackageName())
                         .putExtra(WORKOUT_ID, mWorkoutID);
+                if (mFirstJubileeCelebrationData != null) {
+                    finishedIntent.putExtra(MilestoneAutoNamingManager.EXTRA_IS_FIRST_JUBILEE, true);
+                    finishedIntent.putExtra(MilestoneAutoNamingManager.EXTRA_MILESTONE_COUNT, mFirstJubileeCelebrationData.getCount());
+                    finishedIntent.putExtra(MilestoneAutoNamingManager.EXTRA_MILESTONE_SPORT_NAME, mFirstJubileeCelebrationData.getSportName());
+                }
                 sendBroadcast(finishedIntent);
 
                 // 2. Broadcast TRACKING_FINISHED_INTENT via LocalBroadcastManager
                 // for internal components (WorkoutRepository, etc.) to trigger reactive period & cluster updates (REQ-TRK-010, ATT-505)
                 Intent localFinishedIntent = new Intent(TRACKING_FINISHED_INTENT)
                         .putExtra(WORKOUT_ID, mWorkoutID);
+                if (mFirstJubileeCelebrationData != null) {
+                    localFinishedIntent.putExtra(MilestoneAutoNamingManager.EXTRA_IS_FIRST_JUBILEE, true);
+                    localFinishedIntent.putExtra(MilestoneAutoNamingManager.EXTRA_MILESTONE_COUNT, mFirstJubileeCelebrationData.getCount());
+                    localFinishedIntent.putExtra(MilestoneAutoNamingManager.EXTRA_MILESTONE_SPORT_NAME, mFirstJubileeCelebrationData.getSportName());
+                }
                 LocalBroadcastManager.getInstance(this).sendBroadcast(localFinishedIntent);
             } catch (Throwable t) {
                 Log.w(TAG, "Error broadcasting tracking finished intents during endWorkout", t);
             } finally {
                 mFinalizationSnapshot = null;
+                mFirstJubileeCelebrationData = null;
             }
         }
     }
@@ -2950,6 +2963,24 @@ public class TrackerService extends Service {
             } else {
                 // No spatial data -> use hardware identity
                 summariesManager.applyInferredIdentity(mWorkoutID, identity);
+            }
+
+            // 6. Milestone Workout Auto-Naming & First Jubilee Evaluation (ATT-2308 / REQ-REV-001, REQ-REV-002, REQ-REV-004)
+            try {
+                long finalSportId = (identity != null && identity.getSportId() > 0)
+                        ? identity.getSportId()
+                        : ((snapshot != null) ? snapshot.sportTypeId : getSportTypeId());
+                BSportType finalSportType = (identity != null && identity.getBSportType() != null && identity.getBSportType() != BSportType.UNKNOWN)
+                        ? identity.getBSportType()
+                        : ((snapshot != null && snapshot.bSportType != BSportType.UNKNOWN) ? snapshot.bSportType : banalSportType);
+                mFirstJubileeCelebrationData = MilestoneAutoNamingManager.evaluateAndApplyMilestone(
+                        this,
+                        mWorkoutID,
+                        finalSportId,
+                        finalSportType
+                );
+            } catch (Throwable t) {
+                Log.e(TAG, "finalizeLiveSession: Error evaluating milestone auto-naming", t);
             }
         } catch (Throwable t) {
             Log.e(TAG, "finalizeLiveSession: Error in identity determination, clustering, or auto-naming", t);

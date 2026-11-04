@@ -3,7 +3,7 @@
 **Domain**: `ui_design_system`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 389
+**Total Tests**: 390
 
 ---
 
@@ -7050,19 +7050,59 @@
 ### TST-UI-443: **Power TelemetryMetricGraph Marginal Histogram Unfolded Linear Bins Projection Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-443`
 - **Component**: `ZoneDistributionModels.kt`, `TelemetryMetricGraph.kt`, `TelemetryMetricGraphMarginalBarsContractTest.kt`, `TelemetryMetricGraphLandscapeContractTest.kt`
-- **Jira**: `ATT-5190`, `ATT-5281`
+- **Jira**: `ATT-5190`, `ATT-5281`, `ATT-5311`
 - **Test Description**:
   1. *TelemetryHistogramData Unfolded Linear Bins Unit Tests (`TelemetryHistogramCalculatorTest.kt`)*:
   • Unit tests verifying `TelemetryHistogramData.linearBins` returns `bins` directly when `sprintTail == null`.
   • Unit tests verifying `TelemetryHistogramData.linearBins` excludes `isOverflow` and `isReturn` bins and unrolls full linear bins spanning `[dataMin, dataMax]` when `sprintTail != null`.
-  2. *Portrait Marginal Strip Unfolded Linear Bins Contract Test (`TelemetryMetricGraphMarginalBarsContractTest.kt`)*:
+  2. *Portrait Marginal Strip Unfolded Linear Bins & Boundary Clamping Contract Test (`TelemetryMetricGraphMarginalBarsContractTest.kt`)*:
   • Contract test verifying `TelemetryMetricGraph.kt` portrait marginal strip logic accesses `histogram.linearBins` and computes `maxBinPct` from `linearBins`.
-  • Contract test verifying background track rendering is drawn unconditionally for every bin in `linearBins` across `[dataMin, dataMax]` (ATT-5281).
-  3. *Landscape Aligned Marginal Zone Distribution Unfolded Linear Bins Contract Test (`TelemetryMetricGraphLandscapeContractTest.kt`)*:
+  • Contract test verifying background track rendering is drawn unconditionally for every bin in `linearBins` within `[dataMin, dataMax]` (ATT-5281).
+  • Contract test verifying out-of-domain bins (`rangeMax <= dataMin || rangeMin >= dataMax`) are filtered and clamped so no zero-height or stacked rectangles occur at boundaries (`y = 0`) (ATT-5311, Rule 70).
+  3. *Landscape Aligned Marginal Zone Distribution Unfolded Linear Bins & Boundary Clamping Contract Test (`TelemetryMetricGraphLandscapeContractTest.kt`)*:
   • Contract test verifying `AlignedMarginalZoneDistribution` accesses `histogram.linearBins` and computes `maxBinPct` from `linearBins`.
-  • Contract test verifying background track rendering is drawn unconditionally for every bin in `linearBins` across `[dataMin, dataMax]` (ATT-5281).
+  • Contract test verifying background track rendering is drawn unconditionally for every bin in `linearBins` within `[dataMin, dataMax]` (ATT-5281).
+  • Contract test verifying out-of-domain bins (`rangeMax <= dataMin || rangeMin >= dataMax`) are filtered and clamped so zero out-of-domain bins stack at `y = 0` (ATT-5311, Rule 70).
   4. *Clean-Room Targeted Test Suite Execution (`TST-UI-443.4`)*:
   • Run targeted package unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.zones.*" --tests "com.atrainingtracker.trainingtracker.ui.map.*" --tests "com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest"` confirming 100% pass rate.
+
+### TST-UI-444: **Android Adaptive Icon Architecture, Safe-Zone Bounds & Brand Preservation Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-444`
+- **Component**: `AppIconAdaptiveContractTest.kt`, `AndroidManifest.xml`, `res/mipmap-anydpi-v26/`, `res/drawable/`
+- **Jira**: `ATT-1482`
+- **Test Description**:
+  1. *Adaptive Resource & Manifest Contract (`TST-UI-444.1`)*:
+  • Verify `AndroidManifest.xml` specifies `android:icon="@mipmap/ic_launcher"` and `android:roundIcon="@mipmap/ic_launcher_round"`.
+  • Verify `res/mipmap-anydpi-v26/ic_launcher.xml` and `ic_launcher_round.xml` exist and correctly reference `@drawable/ic_launcher_background`, `@drawable/ic_launcher_foreground`, and `@drawable/ic_launcher_monochrome`.
+  2. *Safe-Zone Geometry & Vector Bounds Audit (`TST-UI-444.2`)*:
+  • Parse vector path coordinate extrema in `ic_launcher_foreground.xml` and `ic_launcher_monochrome.xml`.
+  • Verify all vector elements lie strictly within the inner 66dp diameter circle centered at `(54, 54)` on the `108x108` canvas ($r \le 33\text{dp}$).
+  3. *Authentic Brand Color Fidelity Audit (`TST-UI-444.3`)*:
+  • Audit color tokens in `ic_launcher_foreground.xml` to verify exact matching of Cervélo P3C frame (`#FF0000`), carbon wheels/saddle (`#000000`), stopwatch ring/stems (`#FFC700`), dial (`#F0F0F0`), pushers (`#000090`, `#FF0000`, `#009000`), and athletes (`#0000FF`).
+  4. *In-App Caller Parity & Zero Logic Regressions (`TST-UI-444.4`)*:
+  • Verify `R.drawable.logo` remains intact and unaffected for existing notification and protocol callers.
+  • Verify `verify_requirement_governance.py` exits with code 0.
+
+### TST-UI-445: **Supporter Badges: Custom Launcher Icons, Cockpit Status Emblem, Navigation Drawer & Share Watermark Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-445`
+- **Component**: `LauncherIconManagerTest.kt`, `SupporterBadgeContractTest.kt`, `SensorStatusTest.kt`, `AppNavigationDrawerTest.kt`, `ShareUtilsTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-1406`
+- **Test Description**:
+  1. *Adaptive Launcher Icon Safe-Zone & Brand Color Contract Test (`TST-UI-445.1`)*:
+  • Parse all 6 foreground vector drawables (`ic_launcher_foreground.xml` and tier variants).
+  • Verify maximum radial distance from canvas center `(54, 54)` is $\le 33.0\text{dp}$ ($r \le 33$) for all path coordinates.
+  • Verify exact color token preservation: Cervélo P3C red frame (`#FF0000`), carbon wheels/saddle (`#000000`), golden bezel (`#FFC700`), pushers (`#000090`, `#FF0000`, `#009000`), and blue athletes (`#0000FF`).
+  2. *Activity-Alias Manifest & Deferred Lifecycle Switching Test (`TST-UI-445.2`)*:
+  • Verify `AndroidManifest.xml` declares 6 `<activity-alias>` entries targeting `MainActivityWithNavigation`, with default alias enabled.
+  • Verify `LauncherIconManager` defers alias changes with `PackageManager.DONT_KILL_APP` during active foreground or tracking sessions (`isTracking == true`), executing component state transitions on `ProcessLifecycleOwner` `onStop`.
+  3. *Live Cockpit Status Emblem & Quick-Picker Contract Test (`TST-UI-445.3`)*:
+  • Verify `SensorStatus.kt` renders the right-aligned 24dp emblem symmetrically balancing the 24dp menu button in Portrait and Landscape.
+  • Verify clicking the emblem triggers `SupporterQuickIconPickerDialog` displaying unlocked launcher icons according to active tier rank.
+  4. *Navigation Drawer Header & Share Watermark Contract Test (`TST-UI-445.4`)*:
+  • Verify `AppNavigationDrawer.DrawerHeader` renders the active custom Cervélo icon (46dp) and supporter tier pill.
+  • Verify `ShareUtils.drawFooter` renders the Cervélo P3C icon, "Tracked with aTrainingTracker", and supporter tier pill.
+  5. *9-Locale Localization Parity Test (`TST-LOC-001` / `TST-UI-445.5`)*:
+  • Verify all newly added string resources for launcher icons, tier ribbons, and dialogs exist with 100% parity across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
 
 
 

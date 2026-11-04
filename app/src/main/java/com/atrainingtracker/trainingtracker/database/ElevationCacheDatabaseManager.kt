@@ -178,17 +178,15 @@ class ElevationCacheDatabaseManager private constructor(context: Context) {
     }
 
     /**
-     * Looks up cached elevation item for the given latitude and longitude.
+     * Looks up cached elevation item for the given quantized E5 latitude and longitude.
      *
-     * @param latitude Target latitude in decimal degrees.
-     * @param longitude Target longitude in decimal degrees.
+     * @param latE5 Quantized latitude (lat * 1e5).
+     * @param lonE5 Quantized longitude (lon * 1e5).
      * @param toleranceE5 Maximum quantized spatial tolerance (default: 2 ≈ ±2.2m).
      * @return [ElevationCacheItem], or null if no point is cached within tolerance.
      */
     @Synchronized
-    fun getElevationItem(latitude: Double, longitude: Double, toleranceE5: Int = 2): ElevationCacheItem? {
-        val latE5 = toE5(latitude)
-        val lonE5 = toE5(longitude)
+    fun getElevationItem(latE5: Int, lonE5: Int, toleranceE5: Int = 2): ElevationCacheItem? {
         val db = database
 
         // Fast path: exact match on unique index
@@ -242,6 +240,14 @@ class ElevationCacheDatabaseManager private constructor(context: Context) {
     }
 
     /**
+     * Looks up cached elevation item for the given latitude and longitude in decimal degrees.
+     */
+    @Synchronized
+    fun getElevationItem(latitude: Double, longitude: Double, toleranceE5: Int = 2): ElevationCacheItem? {
+        return getElevationItem(toE5(latitude), toE5(longitude), toleranceE5)
+    }
+
+    /**
      * Looks up cached elevation for the given latitude and longitude.
      *
      * @param latitude Target latitude in decimal degrees.
@@ -255,23 +261,20 @@ class ElevationCacheDatabaseManager private constructor(context: Context) {
     }
 
     /**
-     * Stores or updates an elevation point in the cache with priority-aware conflict replacement.
+     * Stores or updates an elevation point in the cache with priority-aware conflict replacement using quantized E5 coordinates.
      * An existing coordinate is only replaced if the incoming source has equal or higher priority
      * than the existing source (DEM_CACHE: 30 > ROUTE_SEED: 20 > SEGMENT_SEED: 10).
      */
     @Synchronized
-    fun putElevation(
-        latitude: Double,
-        longitude: Double,
+    fun putElevationE5(
+        latE5: Int,
+        lonE5: Int,
         altitude: Double,
         source: String = SOURCE_DEM_CACHE,
         updatedAt: Long = System.currentTimeMillis()
     ): Long {
-        val latE5 = toE5(latitude)
-        val lonE5 = toE5(longitude)
-
         // Exact match check to enforce source priority
-        val existingItem = getElevationItem(latitude, longitude, toleranceE5 = 0)
+        val existingItem = getElevationItem(latE5, lonE5, toleranceE5 = 0)
         if (existingItem != null) {
             val existingPriority = getSourcePriority(existingItem.source)
             val incomingPriority = getSourcePriority(source)
@@ -294,6 +297,22 @@ class ElevationCacheDatabaseManager private constructor(context: Context) {
             cv,
             SQLiteDatabase.CONFLICT_REPLACE
         )
+    }
+
+    /**
+     * Stores or updates an elevation point in the cache with priority-aware conflict replacement.
+     * An existing coordinate is only replaced if the incoming source has equal or higher priority
+     * than the existing source (DEM_CACHE: 30 > ROUTE_SEED: 20 > SEGMENT_SEED: 10).
+     */
+    @Synchronized
+    fun putElevation(
+        latitude: Double,
+        longitude: Double,
+        altitude: Double,
+        source: String = SOURCE_DEM_CACHE,
+        updatedAt: Long = System.currentTimeMillis()
+    ): Long {
+        return putElevationE5(toE5(latitude), toE5(longitude), altitude, source, updatedAt)
     }
 
     /**
@@ -327,34 +346,73 @@ class ElevationCacheDatabaseManager private constructor(context: Context) {
     }
 
     /**
-     * Seeds the elevation cache from existing route trackpoints in [RoutesDatabaseManager] (REQ-SEN-025.3).
+     * Purges corrupted zero-elevation entries from lower-priority seed sources
+     * (ROUTE_SEED and SEGMENT_SEED) that were poisoned by 2D routes or dummy points (REQ-SEN-025.6).
+     * Authoritative DEM_CACHE entries are strictly preserved.
+     */
+    @Synchronized
+    fun purgeCorruptZeroSeeds(): Int {
+        return database.delete(
+            ElevationCacheDbHelper.TABLE_ELEVATION_CACHE,
+            "(${ElevationCacheDbHelper.COLUMN_ALTITUDE} = 0.0 OR abs(${ElevationCacheDbHelper.COLUMN_ALTITUDE}) < 1e-4) AND ${ElevationCacheDbHelper.COLUMN_SOURCE} IN (?, ?)",
+            arrayOf(SOURCE_ROUTE_SEED, SOURCE_SEGMENT_SEED)
+        )
+    }
+
+    /**
+     * Seeds the elevation cache from existing route trackpoints in [RoutesDatabaseManager] (REQ-SEN-025.3, REQ-SEN-025.6).
      * Strictly read-only against Routes.db; never mutates KnownLocations.db.
+     * Rejects 2D routes and dummy 0.0m elevations.
      * Upgrades matching SEGMENT_SEED entries to ROUTE_SEED and inserts new points with CONFLICT_IGNORE,
      * guaranteeing authoritative DEM_CACHE entries are never overwritten.
      */
     @Synchronized
     fun seedFromRoutes(routesDatabaseManager: RoutesDatabaseManager): Int {
+        purgeCorruptZeroSeeds()
         val dbRoutes = routesDatabaseManager.getDatabase()
         val items = mutableListOf<ElevationCacheItem>()
         val now = System.currentTimeMillis()
 
         val cursor = dbRoutes.query(
             "route_points",
-            arrayOf("lat", "lng", "elevation"),
+            arrayOf(
+                RoutesDatabaseManager.RouteContract.COLUMN_ROUTE_ID_FK,
+                "lat",
+                "lng",
+                "elevation"
+            ),
             "lat IS NOT NULL AND lng IS NOT NULL AND elevation IS NOT NULL",
             null, null, null, null
         )
 
+        val routePointsMap = mutableMapOf<Long, MutableList<Triple<Double, Double, Double>>>()
+
         cursor.use { c ->
+            val routeIdIdx = c.getColumnIndexOrThrow(RoutesDatabaseManager.RouteContract.COLUMN_ROUTE_ID_FK)
             val latIdx = c.getColumnIndexOrThrow("lat")
             val lngIdx = c.getColumnIndexOrThrow("lng")
             val elevIdx = c.getColumnIndexOrThrow("elevation")
 
             while (c.moveToNext()) {
+                val routeId = c.getLong(routeIdIdx)
                 val lat = c.getDouble(latIdx)
                 val lng = c.getDouble(lngIdx)
                 val elev = c.getDouble(elevIdx)
                 if (!lat.isNaN() && !lng.isNaN() && !elev.isNaN()) {
+                    routePointsMap.getOrPut(routeId) { mutableListOf() }.add(Triple(lat, lng, elev))
+                }
+            }
+        }
+
+        for ((_, points) in routePointsMap) {
+            // Check if route has genuine non-zero elevation points (REQ-SEN-025.6)
+            val hasNonZero = points.any { Math.abs(it.third) >= 1e-4 }
+            if (!hasNonZero) {
+                // Skip 2D routes with dummy 0.0m elevations entirely
+                continue
+            }
+            for ((lat, lng, elev) in points) {
+                if (Math.abs(elev) >= 1e-4) {
                     items.add(
                         ElevationCacheItem(
                             latE5 = toE5(lat),
@@ -413,7 +471,7 @@ class ElevationCacheDatabaseManager private constructor(context: Context) {
     }
 
     /**
-     * Seeds the elevation cache from existing segment streams in [SegmentsDatabaseManager] (REQ-SEN-025.3).
+     * Seeds the elevation cache from existing segment streams in [SegmentsDatabaseManager] (REQ-SEN-025.3, REQ-SEN-025.6).
      * Strictly read-only against Segments.db; never mutates KnownLocations.db.
      * Inserts records with CONFLICT_IGNORE so existing ROUTE_SEED and authoritative DEM_CACHE entries
      * are never overwritten.
@@ -421,6 +479,7 @@ class ElevationCacheDatabaseManager private constructor(context: Context) {
     @Synchronized
     fun seedFromSegments(segmentsDatabaseManager: SegmentsDatabaseManager? = null): Int {
         if (segmentsDatabaseManager == null) return 0
+        purgeCorruptZeroSeeds()
         val dbSegments = segmentsDatabaseManager.database
         val items = mutableListOf<ElevationCacheItem>()
         val now = System.currentTimeMillis()
@@ -441,7 +500,7 @@ class ElevationCacheDatabaseManager private constructor(context: Context) {
                 val lat = c.getDouble(latIdx)
                 val lng = c.getDouble(lngIdx)
                 val elev = c.getDouble(elevIdx)
-                if (!lat.isNaN() && !lng.isNaN() && !elev.isNaN()) {
+                if (!lat.isNaN() && !lng.isNaN() && !elev.isNaN() && Math.abs(elev) >= 1e-4) {
                     items.add(
                         ElevationCacheItem(
                             latE5 = toE5(lat),

@@ -58,6 +58,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
 import com.atrainingtracker.trainingtracker.ui.components.EmptyStatePlaceholder
 import com.atrainingtracker.trainingtracker.ui.components.DeleteConfirmationDialog
+import com.atrainingtracker.trainingtracker.ui.settings.supporter.GarageUpgradeNudgeDialog
 import com.atrainingtracker.trainingtracker.ui.components.stats.RichStatsSheet
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsSummaryBlock
@@ -70,7 +71,8 @@ import kotlinx.coroutines.launch
 fun EquipmentTabsScreen(
     viewModel: EquipmentViewModel,
     initialTab: Int,
-    onNavigateToWorkouts: (StatsData) -> Unit
+    onNavigateToWorkouts: (StatsData) -> Unit,
+    onNavigateToSupporter: ((String) -> Unit)? = null
 ) {
     val bikes by viewModel.bikes.collectAsState()
     val shoes by viewModel.shoes.collectAsState()
@@ -244,6 +246,21 @@ fun EquipmentTabsScreen(
                     addedItem.linkedDeviceIds,
                     addedItem.linkedSportTypeIds)
                 isAddingNew = false
+            }
+        )
+    }
+
+    // N+1 Garage Upgrade Nudge Dialog (REQ-SET-088.5)
+    val garageNudgeEvent by viewModel.garageNudgeEvent.collectAsState()
+    garageNudgeEvent?.let { event ->
+        GarageUpgradeNudgeDialog(
+            event = event,
+            onUpgrade = { planId ->
+                viewModel.dismissGarageNudge()
+                onNavigateToSupporter?.invoke(planId)
+            },
+            onDismiss = {
+                viewModel.dismissGarageNudge()
             }
         )
     }

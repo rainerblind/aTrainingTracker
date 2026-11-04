@@ -134,15 +134,18 @@ fun calculateElevationBounds(
         return ElevationBounds(fallbackMin, fallbackMax, range)
     }
 
-    // REQ-CON-017: Filter extreme non-physical altitude outliers (e.g. 7300m calibration staircase)
+    // REQ-CON-017 / ATT-5312: Filter extreme non-physical altitude outliers and isolated 0.0m dropouts on inland terrain
     val validPoints = if (nonNullPoints.size >= 5) {
         val sortedAlts = nonNullPoints.map { it.altitude!! }.sorted()
         val medianAlt = sortedAlts[sortedAlts.size / 2]
+        var filtered = nonNullPoints
         if (medianAlt < 1500.0 && nonNullPoints.any { it.altitude!! > 3000.0 }) {
-            nonNullPoints.filter { it.altitude!! in -500.0..3000.0 }.ifEmpty { nonNullPoints }
-        } else {
-            nonNullPoints
+            filtered = filtered.filter { it.altitude!! in -500.0..3000.0 }.ifEmpty { filtered }
         }
+        if (medianAlt > 50.0 && filtered.any { Math.abs(it.altitude!!) < 1e-4 }) {
+            filtered = filtered.filter { Math.abs(it.altitude!!) >= 1e-4 }.ifEmpty { filtered }
+        }
+        filtered
     } else {
         nonNullPoints
     }
