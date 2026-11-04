@@ -346,10 +346,17 @@ fun DrawerHeader() {
             horizontalArrangement = Arrangement.Start
         ) {
             Image(
-                painter = safePainterResource(
-                    id = activeVariant.foregroundRes,
-                    fallback = Icons.AutoMirrored.Filled.DirectionsRun
-                ),
+                painter = if (activeVariant == LauncherIconVariant.STANDARD) {
+                    safePainterResource(
+                        id = R.drawable.logo_512,
+                        fallback = Icons.AutoMirrored.Filled.DirectionsRun
+                    )
+                } else {
+                    safePainterResource(
+                        id = activeVariant.foregroundRes,
+                        fallback = Icons.AutoMirrored.Filled.DirectionsRun
+                    )
+                },
                 contentDescription = null,
                 modifier = Modifier.size(46.dp),
                 contentScale = ContentScale.Fit
