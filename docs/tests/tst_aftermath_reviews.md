@@ -22,8 +22,8 @@
 ### TST-REV-003: **First-Jubilee Celebration Dialog Tier Gating & Intent Dispatch Contract Test** [Verified]
 - **Requirement(s)**: `REQ-REV-003`
 - **Component**: `FirstJubileeCelebrationDialog.kt`
-- **Jira**: `ATT-2308`
-- **Test Description**: 1. Launch dialog in Free tier mode. 2. Verify Google Play Review action, email feedback action, and indie supporter appeal note with Pro upgrade button are displayed. 3. Launch dialog with Pro tier active. 4. Verify supporter appeal note and upgrade button are cleanly hidden. 5. Trigger review action and verify `ReviewManager` is requested (or Play Store URI fallback launched).
+- **Jira**: `ATT-2308`, `ATT-5401`
+- **Test Description**: 1. Launch dialog in Free tier mode. 2. Verify Google Play Review action, email feedback action, and indie supporter appeal note with Pro upgrade button are displayed. 3. Launch dialog with Pro tier active. 4. Verify supporter appeal note and upgrade button are cleanly hidden. 5. Trigger review action and verify visible outcome: verify `Context.findActivity()` resolution, and ensure that in debug mode, or if `launchReviewFlow` terminates immediately (< 300ms) or without Activity, `openPlayStorePage(context)` fallback is immediately launched.
 
 ### TST-REV-004: **Single-Prompt Invariant & Zero-Spam Re-prompt Suppression Test** [Verified]
 - **Requirement(s)**: `REQ-REV-004`

@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.dialogs
 
 import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
@@ -192,17 +193,35 @@ fun FirstJubileeCelebrationDialog(
 }
 
 /**
+ * Unwraps nested [ContextWrapper] instances (e.g. from Compose theming or dependency injection)
+ * to locate the hosting [Activity], or returns null if not an Activity context.
+ */
+internal tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext?.findActivity()
+    else -> null
+}
+
+/**
  * Helper object managing Google Play In-App Review requests and feedback email dispatches.
  */
 object FirstJubileeActionHelper {
 
     /**
      * Launches the official Google Play In-App Review flow (ReviewManager).
-     * Falls back seamlessly to opening the app's Play Store page if unavailable or rejected.
+     * Falls back seamlessly to opening the app's Play Store page if unavailable, rejected,
+     * running in BuildConfig.DEBUG, or completing without user UI interaction (< 300 ms).
      */
     @JvmStatic
     fun launchInAppReviewOrStore(context: Context) {
-        val activity = context as? Activity
+        if (BuildConfig.DEBUG) {
+            // Google Play Core ReviewManager returns synthetic no-op tokens in debug/sideloaded builds.
+            // In debug builds, guarantee immediate visible feedback by directly opening the Play Store.
+            openPlayStorePage(context)
+            return
+        }
+
+        val activity = context.findActivity()
         if (activity != null) {
             try {
                 val manager = ReviewManagerFactory.create(activity)
@@ -210,9 +229,15 @@ object FirstJubileeActionHelper {
                 request.addOnCompleteListener { task ->
                     if (task.isSuccessful) {
                         val reviewInfo = task.result
+                        val launchStartTime = System.currentTimeMillis()
                         val flow = manager.launchReviewFlow(activity, reviewInfo)
                         flow.addOnCompleteListener {
-                            // Flow concluded (user rated, dismissed, or quota reached)
+                            val elapsed = System.currentTimeMillis() - launchStartTime
+                            // If review flow terminated immediately (< 300 ms), Play Core suppressed UI
+                            // (e.g. quota-throttled or sideloaded). Guarantee visible action via store page.
+                            if (elapsed < 300) {
+                                openPlayStorePage(context)
+                            }
                         }
                     } else {
                         openPlayStorePage(context)
