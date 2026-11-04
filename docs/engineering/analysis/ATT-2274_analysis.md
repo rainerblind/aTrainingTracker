@@ -1,64 +1,57 @@
-# Stage 1 Analysis: ATT-2274 - Produce Google Play Store Promo Video and Feature Highlights
+# Stage 1 Analysis: ATT-2274 - Produce Google Play Store Promo Video & Feature Highlights
 
 **Ticket**: [ATT-2274](https://rainerblind.atlassian.net/browse/ATT-2274)  
 **Sub-task**: [ATT-5365](https://rainerblind.atlassian.net/browse/ATT-5365) (`[Analysis]`)  
 **Parent Epic**: [ATT-2273](https://rainerblind.atlassian.net/browse/ATT-2273) (*User Documentation, Feature Showcase and Video Guides*)  
-**Target Release**: `V5.0.0`  
-**Active Sprint**: `2026-45.4`  
-**Branch**: `feature/ATT-2274`  
-**Author**: AI Agent 1 (Implementer)  
-**Date**: 2026-11-04  
+**Target Release**: `V5.0.0` | **Active Sprint**: `2026-45.5` | **Branch**: `feature/ATT-2274`  
+**Author**: AI Agent 1 (`subagent_pro`) | **Date**: 2026-11-04  
 
 ---
 
 ## 1. Problem Statement & Motivation
-The Google Play Store presence for `aTrainingTracker` currently relies entirely on static screenshots and text descriptions. Prospective athletes cannot observe dynamic capabilities (Compose gauges, live map tracking, Strava segment elevation scrubbing, route clustering). During Sprint 2026-45.4 screening, the user requested: *"Please prepare everything. Maybe, we could also take a photo somewhere else, replay some workout, take a screenshot and put it into the photo?"* We need an authentic hybrid production pipeline combining handlebar/outdoor context with razor-sharp telemetry cutaways.
+In Sprint 2026-45.4 Review, ATT-2274 was rated `n.i.O.` due to two critical visual flaws in the promo video pipeline:
+1. **Cascaded Mislabeled Screenshots (Rule 71)**: Because `tools/generate_promo_video.py` ingested unverified screenshots from `docs/store_presence/screenshots/`, Scene 1 ("COLOR-CODED ZONE TELEMETRY") and Scene 4 displayed the "Trainingseinheit überarbeiten" edit dialog, Scene 2 ("MULTI-PROTOCOL SENSOR LINKING") and Scene 3 displayed workout details instead of sensor pairing or live maps.
+2. **Handlebar Mount Disconnect & Off-Center Alignment**: The procedural background drew a cartoon stem centered at $X = 960$ while placing the smartphone at $X = 680$, leaving the phone floating in mid-air over the left drop bar. The aero cockpit and out-front mount must be centered directly under and behind the smartphone.
+3. **B-Roll Zoom Crop Misalignment**: B-roll callouts framed non-existent or irrelevant portions of the mislabeled screens.
 
 ---
 
-## 2. Root Cause Analysis & Independent Hypothesis Verification
-* **Current State**: `docs/store_presence/` contains localized descriptions (`de.md`..`pt.md`) and static screenshots (`screenshots/`). No promo video storyboard, video assets, or automated compositing pipeline exists.
-* **Independent Peer Review & Verification**:
-  * **Toolchain Compatibility**: Host environment has Python 3.14, Pillow 12.1.1, and GStreamer 1.26 (`x264enc`, `openh264enc`, `mp4mux`), while `ffmpeg` is not in PATH. `tools/generate_promo_video.py` must support dual video backends (`ffmpeg` with automatic `gst-launch-1.0` fallback, plus Pillow keyframe export) for robust local execution.
-  * **Asset Availability**: Verified 24+ high-resolution AMOLED and Light mode UI screens in `docs/store_presence/screenshots/` and `docs/guide/img/` covering Cockpit, Sensors, Routes, Clusters, and Analytics.
-  * **Rule 67 Governance**: Output video (`docs/store_presence/video/`) and storyboard (`docs/store_presence/`) reside outside `docs/engineering/`. Walkthrough evidence images (`att2274_*.png`) conform to `docs/engineering/walkthroughs/img/`.
+## 2. Forensic Root Cause Analysis & Independent Hypothesis Verification
+* **Visual Frame Audit (`read_file` — Rule 71)**:
+  * `scene_01_cockpit.png`: Mislabeled edit dialog on phone; B-roll callout crops edit fields instead of live telemetry tiles $\rightarrow$ update to `01_cockpit_tracking.png` with crop on speed, distance, and HR zone bar.
+  * `scene_02_sensors.png`: Mislabeled workout details $\rightarrow$ update to `02_sensor_management.png` with crop on BLE/ANT+ device rows.
+  * `scene_03_navigation.png`: Duplicate workout details $\rightarrow$ update to `03_live_map.png` with crop on live map canvas, navigation heading, and bike bell.
+  * `scene_04_clustering.png`: Mislabeled edit dialog $\rightarrow$ update to `04_lieblingsstrecken.png` with crop on cluster performance curve and heatmap.
+  * `scene_05_privacy_export.png`: Periods overview $\rightarrow$ update to `05_physiology_zones.png` / `docs/guide/img/09_fit_export.png` with crop on .FIT/cloud export and data sovereignty.
+* **Cockpit Geometry & Alignment Forensics**:
+  * Smartphone center is at $X = 680, Y = 610$. Stem and out-front dual-arm mount must align symmetrically at $X = 680$ with carbon weave shading, faceplate bolts, 31.8mm clamp, and aero wing profile.
+  * Background road vanishing point and depth-of-field bokeh must anchor the athletic perspective.
+* **Toolchain Verification**: Python 3.14 + Pillow + GStreamer (`x264enc`/`openh264enc`) verified working locally.
 
 ---
 
-## 3. User Scope Grounding (ATT-1250)
-* **In-Scope Goals**:
-  * Author 5-scene promo video storyboard (`docs/store_presence/promo_video_storyboard.md`, 0:00–1:00).
-  * Build Python/Pillow/GStreamer composite video generator (`tools/generate_promo_video.py`) producing composite keyframes and 1080p MP4 (`docs/store_presence/video/att_promo_showcase.mp4`).
-  * Include realistic handlebar/outdoor cockpit composite background template with modular photo/screenshot drop-in support.
-  * Author JUnit 4 contract test `PromoVideoAssetsContractTest.kt` in `app/src/test/.../build/`.
-  * Document Rule 22 Human Prerequisites (custom handlebar photo swap, YouTube upload, Play Console URL).
-* **Out-of-Scope Non-Goals (Scope Bounding)**:
-  * No modification to Android APK runtime code or database schemas.
-  * Physical external YouTube video upload and Play Console store URL linking (Rule 22 manual step).
+## 3. User Scope Grounding (ATT-1250) & Complexity Split Guardrail
+* **In-Scope**: Refactor `tools/generate_promo_video.py` to: (a) center the aero carbon cockpit and out-front mount under the smartphone at $X = 680$; (b) map scenes 1–5 to verified authentic screenshots; (c) recalculate B-roll crop boxes; (d) regenerate all keyframes and `att_promo_showcase.mp4`; (e) update contract assertions in `PromoVideoAssetsContractTest.kt`.
+* **Out-of-Scope**: Runtime Android APK code; manual YouTube upload / Play Console URL linking (Rule 22 human prerequisite).
+* **Complexity**: 2 SP. Single-script generator and media asset pipeline; well within AAA $\le 3\text{ SP}$ limit (`REQ-PRO-029`).
 
 ---
 
 ## 4. Requirement Archaeology & Chesterton's Fence Audit
-* **Original Requirement ID & Target**: Net-new requirement `REQ-STP-006` (*Promo Video Storyboard, Composite Generator & Showcase Asset Pipeline*) and test `TST-STP-006` in `req_project_governance.md` / `tst_project_governance.md`.
-* **Historical Origin & Commit Trace**: Sprint 2026-45.4 (`ATT-2274`, Parent Epic `ATT-2273`). Extends `REQ-STP-004` (Store Screenshots) and `REQ-STP-005` (Store Navigation).
-* **Root Reason for Existing Formulation**: Store presence historically relied exclusively on static screenshots and localized textual descriptions.
-* **Preservation of Core Invariants**: Existing requirements `REQ-STP-001`..`005` remain unmodified; 9-language character length bounds strictly preserved.
+* **Requirement Mapping**: `REQ-STP-006` (*Promo Video Storyboard, Composite Generator & Showcase Asset Pipeline*) and test `TST-STP-006`.
+* **Chesterton's Fence & Side-Effect Audit (Rule 68)**:
+  * Preserves dual-backend encoding (GStreamer / Pillow keyframe fallback).
+  * Enhances visual realism without adding binary dependencies or breaking automated CI headless runs.
 
 ---
 
-## 5. Architectural Strategy & High-Level Solution
-* **Storyboard**: 5 scenes (0:00–0:10 Hook & Cockpit, 0:10–0:25 Sensors & Gear Matrix, 0:25–0:40 Navigation & Segments, 0:40–0:50 Clustering & Physiology, 0:50–1:00 Privacy & Supporter).
-* **Generator Pipeline (`tools/generate_promo_video.py`)**:
-  * Procedurally renders or loads high-resolution outdoor bicycle handlebar background.
-  * Composites Pixel 10 smartphone bezel, workout screenshots, touch ripples, and visual-first English callout overlays.
-  * Renders 1080p MP4 via GStreamer/ffmpeg and exports individual scene keyframe images.
-* **Contract Verification**: `PromoVideoAssetsContractTest.kt` verifies storyboard structure, generator script exit code 0, video file presence, and keyframe dimensions.
+## 5. Architectural & Implementation Strategy
+1. **Handlebar Cockpit Redesign**: Symmetrically center carbon stem, 4 faceplate hex bolts, out-front computer mount arms, and 3K carbon weave at $X = 680$.
+2. **Scene Source Mapping & B-Roll Crops**: Point each scene to authentic `docs/store_presence/screenshots/` and `docs/guide/img/` assets with pixel-exact crop boxes.
+3. **Asset Generation & Visual Audit (Rule 71)**: Execute `python3 tools/generate_promo_video.py` and inspect all 5 generated PNGs via `read_file`.
 
 ---
 
 ## 6. System Invariants & Risk Assessment
-* **Core Invariants**:
-  1. Zero modification to production Android application codebase or Gradle dependencies.
-  2. Generator runs deterministically using standard library + Pillow + GStreamer without extra pip packages.
-  3. `docs/engineering/` canonical directory structure strictly preserved (Rule 67).
-* **Risk Rating**: **LOW** — Offline media generation pipeline, documentation, and build contract test.
+* **Core Invariants**: 1080p Full HD resolution ($1920 \times 1080$); video duration 60s; 100% genuine Compose screenshots; zero runtime app code edits.
+* **Risk Rating**: **HIGH-RISK for Stage 4 (Store Presence & Video Generation — Rule 71)**. Visual marketing asset requires `subagent_pro` construction and `read_file` verification.

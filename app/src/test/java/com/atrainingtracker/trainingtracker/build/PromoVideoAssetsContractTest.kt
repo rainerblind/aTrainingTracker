@@ -22,6 +22,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
+import java.security.MessageDigest
 
 /**
  * Validates the Google Play Store promo video storyboard, composite generator tooling,
@@ -37,6 +38,18 @@ class PromoVideoAssetsContractTest {
         )
         return candidates.firstOrNull { it.exists() }
             ?: throw IllegalStateException("Could not locate $relativePath in working directory: ${File(".").absolutePath}")
+    }
+
+    private fun computeSha256(file: File): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { stream ->
+            val buffer = ByteArray(8192)
+            var bytesRead: Int
+            while (stream.read(buffer).also { bytesRead = it } != -1) {
+                digest.update(buffer, 0, bytesRead)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
     }
 
     private fun getPngDimensions(file: File): Pair<Int, Int> {
@@ -94,6 +107,7 @@ class PromoVideoAssetsContractTest {
         assertTrue("Script must declare CLI arguments", content.contains("--bg-photo") && content.contains("--output-video"))
         assertTrue("Script must implement GStreamer encoder backend", content.contains("gst-launch-1.0") && content.contains("x264enc"))
         assertTrue("Script must implement procedural handlebar generator fallback", content.contains("generate_procedural_handlebar_background"))
+        assertTrue("Script must enforce out-front mount centering at X = 680", content.contains("MOUNT_CX = 680"))
     }
 
     @Test
@@ -112,6 +126,7 @@ class PromoVideoAssetsContractTest {
             "scene_05_privacy_export.png"
         )
 
+        val hashes = mutableSetOf<String>()
         for (frameName in expectedFrames) {
             val frameFile = findRepoRootFile("docs/store_presence/video/frames/$frameName")
             assertTrue("Keyframe $frameName must exist", frameFile.exists() && frameFile.length() > 10_000)
@@ -119,7 +134,12 @@ class PromoVideoAssetsContractTest {
             val (width, height) = getPngDimensions(frameFile)
             assertEquals("Keyframe $frameName width must be 1920", 1920, width)
             assertEquals("Keyframe $frameName height must be 1080", 1080, height)
+
+            val hash = computeSha256(frameFile)
+            assertTrue("Keyframe $frameName must have a unique SHA-256 hash (duplicate: $hash)", hashes.add(hash))
         }
+
+        assertEquals("All 5 scene frames must have distinct SHA-256 hashes", 5, hashes.size)
 
         val walkthroughImg1 = findRepoRootFile("docs/engineering/walkthroughs/img/att2274_scene_01_cockpit.png")
         val walkthroughImg3 = findRepoRootFile("docs/engineering/walkthroughs/img/att2274_scene_03_navigation.png")

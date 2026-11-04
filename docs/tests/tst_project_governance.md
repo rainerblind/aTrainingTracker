@@ -67,12 +67,14 @@
 - **Test Description**:
   1. *Storyboard Structure & Scene Timing Audit (`TST-STP-006.1`)*:
   • Verify `docs/store_presence/promo_video_storyboard.md` exists and defines all 5 mandatory scenes spanning 0:00 to 1:00.
-  2. *Composite Generator Script & Dual-Backend Verification (`TST-STP-006.2`)*:
+  2. *Composite Generator Script & Cockpit Alignment (`TST-STP-006.2`)*:
   • Execute `python3 tools/generate_promo_video.py` and verify exit code 0.
+  • Verify carbon stem and out-front mount are centered at $X = 680$ directly under the smartphone, with calibrated B-roll callout crop coordinates.
   • Verify generator supports dual encoding backends (`ffmpeg` with `gst-launch-1.0` / keyframe export fallback).
-  3. *Video Asset & Keyframe Resolution Contract (`TST-STP-006.3`)*:
+  3. *Video Asset & Frame Uniqueness Contract (`TST-STP-006.3`)*:
   • Verify existence of `docs/store_presence/video/att_promo_showcase.mp4` with size $> 100\text{ KB}$.
   • Verify scene keyframes exist under `docs/store_presence/video/keyframes/` at $1920 \times 1080$ resolution.
+  • Confirm all 5 rendered scene frames (`scene_01_cockpit.png`..`scene_05_privacy_export.png`) have distinct SHA-256 hashes (zero duplicate files), display genuine verified screenshots from `ATT-4853`, and are visually verified via `read_file` (`Rule 71`).
   4. *JUnit 4 Build Contract Suite (`TST-STP-006.4`)*:
   • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.PromoVideoAssetsContractTest"` asserting 100% pass rate in CI.
 
