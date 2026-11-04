@@ -3,7 +3,7 @@
 **Domain**: `ui_design_system`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 389
+**Total Tests**: 390
 
 ---
 
@@ -7065,6 +7065,23 @@
   • Contract test verifying out-of-domain bins (`rangeMax <= dataMin || rangeMin >= dataMax`) are filtered and clamped so zero out-of-domain bins stack at `y = 0` (ATT-5311, Rule 70).
   4. *Clean-Room Targeted Test Suite Execution (`TST-UI-443.4`)*:
   • Run targeted package unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.zones.*" --tests "com.atrainingtracker.trainingtracker.ui.map.*" --tests "com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest"` confirming 100% pass rate.
+
+### TST-UI-444: **Android Adaptive Icon Architecture, Safe-Zone Bounds & Brand Preservation Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-444`
+- **Component**: `AppIconAdaptiveContractTest.kt`, `AndroidManifest.xml`, `res/mipmap-anydpi-v26/`, `res/drawable/`
+- **Jira**: `ATT-1482`
+- **Test Description**:
+  1. *Adaptive Resource & Manifest Contract (`TST-UI-444.1`)*:
+  • Verify `AndroidManifest.xml` specifies `android:icon="@mipmap/ic_launcher"` and `android:roundIcon="@mipmap/ic_launcher_round"`.
+  • Verify `res/mipmap-anydpi-v26/ic_launcher.xml` and `ic_launcher_round.xml` exist and correctly reference `@drawable/ic_launcher_background`, `@drawable/ic_launcher_foreground`, and `@drawable/ic_launcher_monochrome`.
+  2. *Safe-Zone Geometry & Vector Bounds Audit (`TST-UI-444.2`)*:
+  • Parse vector path coordinate extrema in `ic_launcher_foreground.xml` and `ic_launcher_monochrome.xml`.
+  • Verify all vector elements lie strictly within the inner 66dp diameter circle centered at `(54, 54)` on the `108x108` canvas ($r \le 33\text{dp}$).
+  3. *Authentic Brand Color Fidelity Audit (`TST-UI-444.3`)*:
+  • Audit color tokens in `ic_launcher_foreground.xml` to verify exact matching of Cervélo P3C frame (`#FF0000`), carbon wheels/saddle (`#000000`), stopwatch ring/stems (`#FFC700`), dial (`#F0F0F0`), pushers (`#000090`, `#FF0000`, `#009000`), and athletes (`#0000FF`).
+  4. *In-App Caller Parity & Zero Logic Regressions (`TST-UI-444.4`)*:
+  • Verify `R.drawable.logo` remains intact and unaffected for existing notification and protocol callers.
+  • Verify `verify_requirement_governance.py` exits with code 0.
 
 
 

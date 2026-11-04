@@ -3,7 +3,7 @@
 **Domain**: `ui_design_system`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Requirements**: 369
+**Total Requirements**: 370
 
 ---
 
@@ -12961,6 +12961,44 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Then* the interactive Sprint-Tail overflow bar and drill-down navigation continue to operate without regression.
 
 **Invariants**: Standalone sprint-tail folding preserved, multi-chart horizontal alignment preserved, 100% clean-room test suite pass rate.
+
+---
+
+### REQ-UI-444: Android Adaptive Icon Support, 66dp Safe-Zone Padding & Brand Preservation [Verified]
+- **Tests**: `TST-UI-444` | **Tickets**: `ATT-1482`
+- **Implementation**: `res/mipmap-anydpi-v26/ic_launcher.xml`, `res/mipmap-anydpi-v26/ic_launcher_round.xml`, `res/drawable/ic_launcher_foreground.xml`, `res/drawable/ic_launcher_background.xml`, `res/drawable/ic_launcher_monochrome.xml`, `AndroidManifest.xml`
+- **Rationale**: Modern Android launchers (API 26+) mask app icons into round, squircle, or teardrop shapes, clipping unpadded legacy static icons (`@drawable/logo`) and enclosing them in artificial white plates. REQ-UI-444 introduces a fully conformant Android Adaptive Icon architecture while preserving 100% of the authentic Cervélo P3C and classic stopwatch branding from `Bilder/logo.fig`:
+1. *Adaptive Icon Layer Architecture (`REQ-UI-444.1`)*:
+• The application SHALL provide standard adaptive icon configurations under `res/mipmap-anydpi-v26/` (`ic_launcher.xml` and `ic_launcher_round.xml`).
+• The adaptive icon SHALL decouple visual representation into three distinct layers: `<background android:drawable="@drawable/ic_launcher_background" />`, `<foreground android:drawable="@drawable/ic_launcher_foreground" />`, and `<monochrome android:drawable="@drawable/ic_launcher_monochrome" />`.
+• The background layer SHALL render a clean, neutral surface (`#FFFFFF`).
+2. *Brand Geometry & 66dp Circular Safe-Zone Containment (`REQ-UI-444.2`)*:
+• The foreground vector drawable (`ic_launcher_foreground.xml`) SHALL be vectorized directly from `Bilder/logo.fig` master geometry (vector depths 70 down to 50), preserving 100% of the authentic brand elements and colors:
+  a. Cervélo P3C Time-Trial Bike: Red aero frame (`#FF0000`), black carbon aero wheels (`#000000`), and black saddle (`#000000`);
+  b. Classic Multi-Sport Stopwatch: Golden bezel & stems (`#FFC700`), light dial (`#F0F0F0`), and classic 3 pushers (Left Navy Blue `#000090`, Center Red `#FF0000`, Right Green `#009000`);
+  c. Athletes: Royal blue cyclist and runner (`#0000FF`).
+• All visual paths and elements within `ic_launcher_foreground.xml` SHALL be scaled and centered strictly within the inner 66dp circular safe zone ($cx=54, cy=54, r \le 33\text{dp}$) on the standard 108dp canvas, guaranteeing zero clipping across Circle, Squircle, Rounded Square, and Teardrop launcher masks.
+3. *Android 13+ Themed Icons Support (`REQ-UI-444.3`)*:
+• The application SHALL provide `res/drawable/ic_launcher_monochrome.xml` defining a clean single-color vector silhouette of the complete logo artwork.
+• The monochrome silhouette SHALL dynamically adapt to the active Material You system palette on Android 13+ (API 33+) when Themed Icons are enabled.
+4. *Manifest Integration, Master Assets & Caller Parity (`REQ-UI-444.4`)*:
+• `AndroidManifest.xml` SHALL declare `android:icon="@mipmap/ic_launcher"` and `android:roundIcon="@mipmap/ic_launcher_round"`.
+• High-resolution 512x512 Play Store master icon assets and legacy density mipmaps (`mdpi`..`xxxhdpi`) SHALL be maintained with identical safe-zone padding.
+• Existing legacy bitmap `res/drawable/logo.png` SHALL remain untouched to preserve backward compatibility for existing in-app callers (notifications, protocol emblems).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an Android 8.0+ (API 26+) launcher with arbitrary mask shapes (circle, squircle, teardrop),
+• *When* the user views the launcher home screen,
+• *Then* the app icon renders without outer container padding plates and all athlete and bicycle elements fit completely inside the safe zone without clipping.
+• *Given* an Android 13+ (API 33+) launcher with Themed Icons enabled,
+• *When* the user switches system wallpaper or dynamic color theme,
+• *Then* the launcher icon adapts dynamically to the active palette using `ic_launcher_monochrome.xml`.
+• *Given* existing in-app callers referencing `R.drawable.logo`,
+• *When* displaying notifications or protocol emblems,
+• *Then* legacy drawable resolution functions with zero regressions.
+
+**Invariants**: 100% Cervélo P3C and stopwatch color fidelity preserved, 100% containment within $r \le 33\text{dp}$ circular safe zone on 108dp canvas, zero regression in in-app notification drawables.
+
 
 
 
