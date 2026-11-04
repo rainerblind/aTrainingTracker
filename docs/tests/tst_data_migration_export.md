@@ -1967,3 +1967,31 @@
   • Verify 100% parity across all 9 application locales with zero missing string entries.
   7. *Clean-Room Regression Suite Execution (`TST-DAT-033.7`)*:
   • Run targeted package unit tests (`exporter.*`, `cloud.*`, `migration.*`, `security.*`) and verify 100% pass rate.
+
+### TST-MIG-046: **Strava Bulk Export Archive Ingestion Pipeline, Bilingual CSV Metadata Enrichment, Transparent GZIP Decompression, Tolerant XML Deserialization, Equipment Sync, and Duplicate Re-Upload Prevention Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-MIG-048`
+- **Component**: `StravaBulkExportImporter.kt`, `StravaCsvParser.kt`, `LegacyImportEngine.kt`, `ImportBackupTabsScreen.kt`, `TrackpointModels.kt`, `EquipmentDbHelper.java`, `StravaUploadDbHelper.java`
+- **Jira**: `ATT-4957`
+- **Test Description**:
+  1. *Bilingual & Multi-Line RFC 4180 CSV Metadata Parser (`TST-MIG-046.1`, `StravaActivitiesCsvParserTest.kt`)*:
+  • Verify parsing of `activities.csv` with German headers (`Aktivitäts-ID`, `Dateiname`, `Name der Aktivität`, `Aktivitätsart`, `Aktivitätsbeschreibung`, `Hinweis zur Privatsphäre für Aktivitäten`, `Pendeln`, `Aktivitätsausrüstung`) and English headers (`Activity ID`, `Filename`, `Activity Name`, etc.).
+  • Verify correct handling of multiline quoted descriptions containing commas, newlines, and escaped quotes (`""`).
+  • Verify indexing and mapping of relative filenames (`activities/*.tcx.gz`, `*.fit.gz`, `*.gpx.gz`).
+  2. *XML Leading Whitespace Sanitization & Trackpoint Models (`TST-MIG-046.2`, `TcxLeadingWhitespaceSanitizationTest.kt`)*:
+  • Construct TCX stream fixture with leading ASCII whitespace (` `, `\t`, `\r`, `\n`) before `<?xml`.
+  • Verify `stripBomAndLeadingWhitespace` (or equivalent stream sanitizer) cleanly skips whitespace and `TcxWorkoutParser` / `XmlPullParser` parses document without `XmlPullParserException`.
+  3. *Streaming ZIP Decompression & In-Memory GZIP Handling (`TST-MIG-046.3`, `StravaZipImportEngineTest.kt`)*:
+  • Verify `StravaZipImportEngine` processes `.fit.gz`, `.tcx.gz`, `.gpx.gz`, and uncompressed `.gpx` entries from a ZIP archive via streaming without staging uncompressed files to disk.
+  • Verify Zip-Slip path traversal attempts are detected and rejected with `SecurityException`.
+  4. *Metadata Enrichment, Equipment Matching & Deduplication (`TST-MIG-046.4`, `StravaZipImportEngineTest.kt`)*:
+  • Verify imported workout records `WORKOUT_NAME`, `DESCRIPTION`, `GOAL`, `COMMUTE`, and mapped `BSportType` from CSV row.
+  • Verify `bikes.csv` and `shoes.csv` match or insert into `EquipmentDbHelper` and assign valid `EQUIPMENT_ID`.
+  • Verify pre-existing workouts are skipped (`DUPLICATE_SKIPPED`) without data modification.
+  5. *Strava Activity ID Registration & Re-Upload Suppression (`TST-MIG-046.5`, `StravaZipImportEngineTest.kt`)*:
+  • Verify imported workouts have their Strava `Activity ID` registered in `StravaUploadDbHelper` with status `Uploaded`.
+  • Verify `WorkoutSummaries.UPLOAD_TO_STRAVA` is set to `0`, preventing automated re-upload.
+  6. *9-Language Localization Parity (`TST-MIG-046.6`, `TranslationParityTest.kt`)*:
+  • Verify all Strava bulk export string resources exist across all 9 locales (`values`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`) with zero missing keys and matching `%d` format tokens.
+  7. *Clean-Room Regression Suite Execution (`TST-MIG-046.7`)*:
+  • Execute targeted package unit tests (`com.atrainingtracker.trainingtracker.migration.*`) asserting 100% pass rate.
+

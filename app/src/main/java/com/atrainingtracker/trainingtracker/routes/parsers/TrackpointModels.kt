@@ -95,18 +95,35 @@ data class ParsedGpxData(
 )
 
 /**
- * Wraps an [java.io.InputStream] with a [java.io.PushbackInputStream] to detect and strip UTF-8 Byte Order Marks (BOM),
- * preventing XmlPullParserException ("PI must not start with xml") when XML files contain a BOM before <?xml.
+ * Wraps an [java.io.InputStream] with a [java.io.PushbackInputStream] to detect and strip UTF-8 Byte Order Marks (BOM)
+ * and any leading ASCII whitespace before <?xml (REQ-MIG-048.3), preventing XmlPullParserException
+ * ("PI must not start with xml" or "Unexpected token") when XML files contain BOM or leading whitespace.
  */
-fun stripBom(stream: java.io.InputStream): java.io.InputStream {
-    val pushback = java.io.PushbackInputStream(stream, 4)
+fun stripBomAndLeadingWhitespace(stream: java.io.InputStream): java.io.InputStream {
+    val pushback = if (stream is java.io.PushbackInputStream) stream else java.io.PushbackInputStream(stream, 1024)
     val bom = ByteArray(3)
     val read = pushback.read(bom, 0, 3)
     if (read >= 3 && bom[0] == 0xEF.toByte() && bom[1] == 0xBB.toByte() && bom[2] == 0xBF.toByte()) {
-        // UTF-8 BOM detected and consumed (stripped)
+        // UTF-8 BOM detected and consumed
     } else if (read > 0) {
         pushback.unread(bom, 0, read)
     }
+    // Skip leading ASCII whitespace
+    while (true) {
+        val b = pushback.read()
+        if (b == -1) break
+        if (b != ' '.code && b != '\t'.code && b != '\r'.code && b != '\n'.code) {
+            pushback.unread(b)
+            break
+        }
+    }
     return pushback
+}
+
+/**
+ * Backwards-compatible alias for [stripBomAndLeadingWhitespace].
+ */
+fun stripBom(stream: java.io.InputStream): java.io.InputStream {
+    return stripBomAndLeadingWhitespace(stream)
 }
 

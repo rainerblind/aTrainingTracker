@@ -748,10 +748,19 @@ object LegacyImportEngine {
                         put(WorkoutSummaries.TIME_START, firstTime)
                         put(WorkoutSummaries.SPORT_ID, parsedWorkout.resolvedSportId)
                         put(WorkoutSummaries.B_SPORT, parsedWorkout.bSportType.name)
-                        put(WorkoutSummaries.EQUIPMENT_ID, -1L)
+                        put(WorkoutSummaries.EQUIPMENT_ID, if (parsedWorkout.equipmentId > 0) parsedWorkout.equipmentId else -1L)
+                        if (!parsedWorkout.workoutNotes.isNullOrBlank()) {
+                            put(WorkoutSummaries.DESCRIPTION, parsedWorkout.workoutNotes.trim())
+                        }
+                        if (!parsedWorkout.goal.isNullOrBlank()) {
+                            put(WorkoutSummaries.GOAL, parsedWorkout.goal.trim())
+                        }
+                        if (parsedWorkout.isCommute) {
+                            put(WorkoutSummaries.COMMUTE, 1)
+                        }
                         put(WorkoutSummaries.FINISHED, 1)
                         put(WorkoutSummaries.SOURCE, source.name)
-                        if (uploadToStrava && TrainingApplication.uploadToCommunity(FileFormat.STRAVA)) {
+                        if (parsedWorkout.stravaActivityId.isNullOrBlank() && uploadToStrava && TrainingApplication.uploadToCommunity(FileFormat.STRAVA)) {
                             put(WorkoutSummaries.UPLOAD_TO_STRAVA, 1)
                         } else {
                             put(WorkoutSummaries.UPLOAD_TO_STRAVA, 0)
@@ -759,6 +768,20 @@ object LegacyImportEngine {
                     }
                     workoutId = summaryDb.database.insert(WorkoutSummaries.TABLE, null, summaryValues)
                     require(workoutId > 0) { "Failed to insert summary row for $effectiveBaseFileName" }
+
+                    if (!parsedWorkout.stravaActivityId.isNullOrBlank()) {
+                        try {
+                            StravaUploadDbHelper.getInstance(context).updateAll(
+                                effectiveBaseFileName,
+                                parsedWorkout.stravaActivityId,
+                                parsedWorkout.stravaActivityId,
+                                "Uploaded",
+                                null
+                            )
+                        } catch (t: Throwable) {
+                            Log.w(TAG, "Could not register Strava ID in StravaUploadDb for $effectiveBaseFileName: ${t.message}")
+                        }
+                    }
                 }
 
                 // Post-parsing: Bulk insertion and dynamic table creation (ATT-357 / ATT-602)

@@ -55,18 +55,44 @@ object FitWorkoutParser {
      */
     fun parse(file: File, context: Context): Result<ParsedWorkoutData> {
         return try {
+            val bytes = file.readBytes()
+            parse(bytes, context)
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception reading FIT file ${file.name}", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Parses a Garmin FIT binary stream into [ParsedWorkoutData] (REQ-MIG-048.1).
+     */
+    fun parse(stream: java.io.InputStream, context: Context): Result<ParsedWorkoutData> {
+        return try {
+            val bytes = stream.readBytes()
+            parse(bytes, context)
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception reading FIT stream", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Parses Garmin FIT binary bytes into [ParsedWorkoutData].
+     */
+    fun parse(bytes: ByteArray, context: Context): Result<ParsedWorkoutData> {
+        return try {
             // Verify file integrity
             val decode = Decode()
             val isIntegrityValid = try {
-                FileInputStream(file).use { fis ->
-                    decode.checkFileIntegrity(fis)
+                java.io.ByteArrayInputStream(bytes).use { bais ->
+                    decode.checkFileIntegrity(bais)
                 }
             } catch (t: Throwable) {
-                Log.w(TAG, "Integrity check exception for ${file.name}: ${t.message}")
+                Log.w(TAG, "Integrity check exception: ${t.message}")
                 false
             }
             if (!isIntegrityValid) {
-                Log.e(TAG, "FIT file integrity check failed for ${file.name}")
+                Log.e(TAG, "FIT file integrity check failed")
                 return Result.failure(IllegalArgumentException("FIT file integrity check failed"))
             }
 
@@ -82,16 +108,16 @@ object FitWorkoutParser {
             broadcaster.addListener(RecordMesgListener { rawRecords.add(it) })
 
             val readSuccess = try {
-                FileInputStream(file).use { fis ->
-                    decode.read(fis, broadcaster)
+                java.io.ByteArrayInputStream(bytes).use { bais ->
+                    decode.read(bais, broadcaster)
                 }
             } catch (t: Throwable) {
-                Log.e(TAG, "Error decoding FIT file ${file.name}: ${t.message}", t)
+                Log.e(TAG, "Error decoding FIT bytes: ${t.message}", t)
                 false
             }
 
             if (!readSuccess || rawRecords.isEmpty()) {
-                Log.e(TAG, "Decoding failed or no record trackpoints found in ${file.name}")
+                Log.e(TAG, "Decoding failed or no record trackpoints found")
                 return Result.failure(IllegalArgumentException("Decoding failed or no record trackpoints found"))
             }
 
@@ -301,7 +327,7 @@ object FitWorkoutParser {
                 )
             )
         } catch (e: Exception) {
-            Log.e(TAG, "Exception parsing FIT file ${file.name}", e)
+            Log.e(TAG, "Exception parsing FIT data", e)
             Result.failure(e)
         }
     }

@@ -3003,3 +3003,45 @@
 
 **Invariants**: WorkManager `MAX_RETRIES = 5` cap preserved; credentials isolated in `auth_credentials_prefs.xml`; permanent errors return `shallRetry = false`.
 
+### REQ-MIG-048: Strava Bulk Export Archive Ingestion Pipeline, Bilingual CSV Metadata Enrichment, Transparent GZIP Decompression, Tolerant XML Deserialization, Equipment Sync, and Duplicate Re-Upload Prevention [Verified]
+- **Tests**: `TST-MIG-046` | **Tickets**: `ATT-4957`
+- **Implementation**: `StravaBulkExportImporter.kt`, `StravaCsvParser.kt`, `LegacyImportEngine.kt`, `ImportBackupTabsScreen.kt`, `TrackpointModels.kt`, `EquipmentDbHelper.java`, `StravaUploadDbHelper.java`
+- **Rationale**: Strava provides users with complete account archives (`export_<id>.zip`) containing an authoritative metadata summary (`activities.csv`), user equipment tables (`bikes.csv`, `shoes.csv`), and compressed activity streams (`activities/*.fit.gz`, `*.tcx.gz`, `*.gpx.gz`). To enable seamless migration into `aTrainingTracker` without gigabyte-scale uncompressed disk bloat or XML parser crashes, the system SHALL ingest Strava export archives via streaming ZIP reading, decode compressed stream files transparently, parse bilingual RFC 4180 metadata, sanitize TCX XML declarations against leading whitespace, synchronize equipment, and register Strava activity IDs to prevent duplicate re-upload loops (ATT-4957, extending `REQ-MIG-030`, `REQ-MIG-031`, `REQ-MIG-037`, `REQ-MIG-038`, and `REQ-MIG-040`):
+1. *Streaming ZIP Archive & Transparent GZIP Decompression (`REQ-MIG-048.1`)*:
+• The system SHALL accept Strava bulk export archives (`.zip`) in `ImportBackupTabsScreen` and process entries on-the-fly via streaming (`ZipFile` / `ZipInputStream` and `GZIPInputStream`), directly feeding decompressed streams into `FitWorkoutParser`, `TcxWorkoutParser`, or `GpxWorkoutParser` without staging uncompressed activity files to disk storage.
+• Every archive entry path SHALL be verified against Zip-Slip path traversal vulnerabilities (`REQ-MIG-040`).
+2. *Bilingual & Multi-Line RFC 4180 CSV Metadata Parser (`REQ-MIG-048.2`)*:
+• The system SHALL stream and parse `activities.csv`, supporting both German (`Aktivitäts-ID`, `Dateiname`, `Name der Aktivität`, `Aktivitätsart`, `Aktivitätsbeschreibung`, `Hinweis zur Privatsphäre für Aktivitäten`, `Pendeln`, `Aktivitätsausrüstung`) and English (`Activity ID`, `Filename`, `Activity Name`, `Activity Type`, `Activity Description`, `Activity Private Note`, `Commute`, `Activity Gear`) column aliases.
+• The CSV parser SHALL strictly adhere to RFC 4180, handling multiline quoted fields with embedded commas, newlines, and escaped quotes (`""`).
+• Each activity row SHALL be indexed by its relative stream filename under `activities/`.
+3. *Tolerant XML Stream Whitespace Sanitization (`REQ-MIG-048.3`)*:
+• In `TrackpointModels.kt` (and TCX/GPX stream pre-processing), the system SHALL sanitize stream input by skipping leading ASCII whitespace (` `, `\t`, `\r`, `\n`) before the XML declaration (`<?xml`), preventing `XmlPullParserException: Unexpected token` crashes caused by Strava export files with leading spaces (e.g. `activities/3131550008.tcx.gz`).
+4. *Rich Metadata Enrichment, Equipment Matching & Strava Re-Upload Suppression (`REQ-MIG-048.4`)*:
+• Parsed workouts SHALL be enriched with metadata from `activities.csv`: custom workout title (`WorkoutSummaries.WORKOUT_NAME`), description (`DESCRIPTION`), private training goal (`GOAL`), commute flag (`COMMUTE`), and sport type mapped to canonical `BSportType` / `SportTypeDatabaseManager`.
+• Equipment names from `Activity Gear` / `Aktivitätsausrüstung` and gear tables (`bikes.csv`, `shoes.csv`) SHALL be matched or created in `EquipmentDbHelper` (`Equipment.db`), linking the resolved `EQUIPMENT_ID` into `WorkoutSummaries`.
+• The Strava `Activity ID` SHALL be recorded in `StravaUploadDbHelper` (with status `Uploaded`) and `WorkoutSummaries.UPLOAD_TO_STRAVA` set to `0`, ensuring imported workouts are never re-uploaded to Strava.
+5. *Deduplication, Granular Progress & Non-Regression Invariants (`REQ-MIG-048.5`)*:
+• Pre-existing workouts matching start timestamp and sport type SHALL be skipped via `LegacyImportEngine.isWorkoutExisting()` without data corruption (`DUPLICATE_SKIPPED`).
+• Progress updates SHALL be reported through `LegacyImportEngine.ProgressListener` with current index, total count, and activity title.
+• Existing standalone FIT, TCX, and GPX file/directory import pipelines MUST remain fully functional and unregressed.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-MIG-048` under Standalone Ticket `ATT-4957` (Sprint `2026-45.6`), extending `REQ-MIG-030` (*Legacy GPX Import*), `REQ-MIG-031` (*Deduplication*), `REQ-MIG-037` (*Streaming XML Parsing*), `REQ-MIG-038` (*ParsedWorkoutData DTO*), and `REQ-MIG-040` (*Secure Zip Extraction*). Targets `StravaZipImportEngine.kt`, `LegacyImportEngine.kt`, `ImportBackupTabsScreen.kt`, `TrackpointModels.kt`, `EquipmentDbHelper.java`, and `StravaUploadDbHelper.java`.
+2. *Historical Origin & Commit Trace*: `ATT-314` (commit `4d5b2c1` - Deduplication), `ATT-3982` (commit `b875938` - `REQ-MIG-040` Secure Zip Extraction), `ATT-4008` (commit `69e6b41` - TCX/GPX stream parsers).
+3. *Root Reason for Existing Formulation*: Prior import architecture supported only individual standalone files and directory scanning of uncompressed files. It lacked archive entry indexing, bilingual CSV metadata mapping, in-memory GZIP decompression, and TCX leading-whitespace tolerance.
+4. *Preservation of Core Invariants*: Mutex-guarded deduplication, transactional compensatory rollback on failure, Zip-Slip path sanitization, and standalone FIT/TCX/GPX import paths remain strictly invariant.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an official Strava export ZIP archive containing `activities.csv` with German or English headers and `.tcx.gz` files with leading whitespace before `<?xml`,
+• *When* the athlete selects the archive in `ImportBackupTabsScreen`,
+• *Then* `StravaZipImportEngine` decompresses and parses the streams transparently, strips leading whitespace, imports workouts with user titles, descriptions, and gear, and reports completion progress.
+• *Given* an activity in the Strava export matching a workout already stored in local databases,
+• *When* the archive import executes,
+• *Then* the existing workout is detected and skipped without duplicating entries (`DUPLICATE_SKIPPED`).
+• *Given* an imported Strava activity with a valid Strava `Activity ID`,
+• *When* the import completes,
+• *Then* `StravaUploadDbHelper` records the activity ID with status `Uploaded` and `UPLOAD_TO_STRAVA` is set to `0`, preventing duplicate re-uploads to Strava.
+
+**Invariants**: Zip-Slip protection strictly enforced; zero uncompressed multi-gigabyte disk staging; standalone FIT/TCX/GPX imports remain 100% unregressed.
+
+

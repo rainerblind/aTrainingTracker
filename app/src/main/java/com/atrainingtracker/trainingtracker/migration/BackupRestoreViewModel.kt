@@ -563,6 +563,48 @@ class BackupRestoreViewModel @JvmOverloads constructor(
     }
 
     /**
+     * Ingests a Strava bulk export ZIP archive with activities.csv metadata and compressed streams (REQ-MIG-048).
+     */
+    fun importStravaArchive(
+        context: Context,
+        archiveUri: Uri,
+        dispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO
+    ): Job {
+        return viewModelScope.launch(dispatcher) {
+            _uiState.value = UiState.Loading(context.getString(R.string.import_strava_archive_progress, 0, 0))
+            try {
+                val listener = createLegacyListener()
+                val result = StravaBulkExportImporter.importArchive(context, archiveUri, listener)
+                if (result.importedCount > 0 && result.failedCount == 0) {
+                    _uiState.value = UiState.Success(
+                        context.getString(R.string.import_strava_archive_summary_success, result.importedCount, result.skippedCount),
+                        result.lastImportedWorkoutId
+                    )
+                } else if (result.importedCount > 0 || result.skippedCount > 0) {
+                    _uiState.value = UiState.Success(
+                        context.getString(R.string.import_strava_archive_summary_with_errors, result.importedCount, result.skippedCount, result.failedCount),
+                        result.lastImportedWorkoutId
+                    )
+                } else if (result.failedCount > 0) {
+                    _uiState.value = UiState.Error(
+                        context.getString(R.string.import_strava_archive_summary_with_errors, result.importedCount, result.skippedCount, result.failedCount)
+                    )
+                } else {
+                    _uiState.value = UiState.Success(
+                        context.getString(R.string.import_strava_archive_summary_success, 0, 0),
+                        null
+                    )
+                }
+            } catch (ce: kotlinx.coroutines.CancellationException) {
+                throw ce
+            } catch (e: Exception) {
+                Log.e("BackupRestoreVM", "Failed to import Strava archive", e)
+                _uiState.value = UiState.Error("Failed to import Strava archive: ${e.message}")
+            }
+        }
+    }
+
+    /**
      * Imports multiple Garmin FIT workout files sequentially with duplicate skipping (REQ-DAT-019).
      */
     fun importFitFiles(

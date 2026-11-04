@@ -1630,6 +1630,13 @@
     <string name="import_fit_progress">FITファイルをインポート中 (%1$d / %2$d)…</string>
     <string name="import_fit_summary_success">%1$d 件のワークアウトを正常にインポートしました (%2$d 件の重複をスキップ)。</string>
     <string name="import_fit_summary_with_errors">%1$d 件のワークアウトをインポート、%2$d 件の重複をスキップ、%3$d 件失敗。</string>
+    <!-- Strava Bulk Export Importer (ATT-4957 / REQ-MIG-048) -->
+    <string name="import_strava_archive_title">Strava一括エクスポート (ZIP)</string>
+    <string name="import_strava_archive_description">Stravaエクスポートアーカイブから完全なメタデータ、説明、ギア付きでワークアウトをインポート (.zip)。</string>
+    <string name="import_strava_archive_button">Stravaアーカイブを選択 (ZIP)</string>
+    <string name="import_strava_archive_progress">Stravaアーカイブをインポート中 (%1$d / %2$d)…</string>
+    <string name="import_strava_archive_summary_success">%1$d 件のStravaワークアウトを正常にインポートしました (%2$d 件の重複をスキップ)。</string>
+    <string name="import_strava_archive_summary_with_errors">%1$d 件のStravaワークアウトをインポート、%2$d 件の重複をスキップ、%3$d 件失敗。</string>
     <!-- TCX & GPX Importer (ATT-2623 / REQ-UI-293) -->
     <string name="import_tcx_title">TCXファイルをインポート</string>
     <string name="import_tcx_description">Training Center XMLファイル（.tcx）からワークアウトをインポートします。</string>

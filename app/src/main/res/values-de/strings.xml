@@ -1739,6 +1739,13 @@
     <string name="import_fit_progress">Importiere FIT-Dateien (%1$d von %2$d)…</string>
     <string name="import_fit_summary_success">%1$d Aktivitäten erfolgreich importiert (%2$d Duplikate übersprungen).</string>
     <string name="import_fit_summary_with_errors">%1$d Aktivitäten importiert, %2$d Duplikate übersprungen, %3$d fehlgeschlagen.</string>
+    <!-- Strava Bulk Export Importer (ATT-4957 / REQ-MIG-048) -->
+    <string name="import_strava_archive_title">Strava-Bulk-Export (ZIP)</string>
+    <string name="import_strava_archive_description">Workouts aus einem Strava-Exportarchiv mit vollständigen Metadaten, Beschreibungen und Ausrüstung importieren (.zip).</string>
+    <string name="import_strava_archive_button">Strava-Archiv auswählen (ZIP)</string>
+    <string name="import_strava_archive_progress">Strava-Archiv wird importiert (%1$d von %2$d)…</string>
+    <string name="import_strava_archive_summary_success">%1$d Strava-Workouts erfolgreich importiert (%2$d Duplikate übersprungen).</string>
+    <string name="import_strava_archive_summary_with_errors">%1$d Strava-Workouts importiert, %2$d Duplikate übersprungen, %3$d fehlgeschlagen.</string>
     <!-- TCX & GPX Importer (ATT-2623 / REQ-UI-293) -->
     <string name="import_tcx_title">TCX-Dateien importieren</string>
     <string name="import_tcx_description">Aktivitäten aus Training Center XML-Dateien importieren (.tcx).</string>
