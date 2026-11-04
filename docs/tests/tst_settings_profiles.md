@@ -818,10 +818,10 @@
   4. *Clean-Room Regression Execution (`TST-SET-081.4`)*:
   • Execute targeted unit tests in `EditWorkoutClusteringTest`, `EditWorkoutClusterTest`, and `ThemeColorCentralizationAuditTest` with 100% pass rate.
 
-### TST-SET-082: **Timestamped Zone Boundary Snapshots & Historical Workout Resolution Verification Suite** [Atomic zone boundary persistence in AthleteMetrics.db; DB_VERSION=2 migration and schema parity; unidirectional SettingsDataStore projection; effective-at-workout-time zone resolution in WorkoutRepository and TelemetryMetricGraph; Profile & Zones history dialog and backdating; 9-language localization parity.]
+### TST-SET-082: **Timestamped Zone Boundary Snapshots & Historical Workout Resolution Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-082`
 - **Component**: **AthleteMetricsDatabaseManager / AthleteMetricsRepository / WorkoutRepository / TelemetryMetricGraph / ZonesSettingsViewModel**
-- **Jira**: ``ATT-4844``
+- **Jira**: `ATT-4844`, `ATT-5399`
 - **Test Description**:
   1. *SQLite Schema Migration, Parity & Registry Contract Test (`TST-SET-082.1`, `AthleteMetricsRealSqliteMigrationTest.kt`)*:
   • Verify `AthleteMetricsDbHelper` upgrades from `DB_VERSION = 1` to `2` by creating the `zone_history` table and `idx_zone_history_type_time` index.
@@ -851,6 +851,7 @@
 ### TST-SET-084: **One-Tap Swap-or-Upgrade Dialog Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-084`
 - **Component**: `DeviceListViewModel.kt`, `SwapOrUpgradeDialog.kt`
+- **Jira**: `ATT-51`, `ATT-5399`
 - **Test Description**:
 1. Trigger pairing of a 3rd device in Free tier; verify `showSwapOrUpgradeDialog` state is set to true.
 2. Verify dialog displays candidate devices and preselects recommendation.
@@ -889,6 +890,7 @@
 ### TST-SET-088: **Supporter N+1 Garage Detector & Upgrade Prompts Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-088`
 - **Component**: `GarageLeagueDetector.kt`, `GarageDetectorDialog.kt`, `DeviceListViewModel.kt`, `EquipmentViewModel.kt`, `SettingsDataStore.kt`, `SupporterDebugSection.kt`
+- **Jira**: `ATT-5299`, `ATT-5400`, `ATT-5399`
 - **Test Description**:
 1. Verify `GarageLeagueDetector.evaluateLeague()` resolves to `DIAMOND` when bikes $\ge 4$, sensors $\ge 8$, or power meters $\ge 2$, taking precedence over Gold criteria.
 2. Verify `GarageLeagueDetector.evaluateLeague()` resolves to `GOLD` when bikes $\ge 3$, shoes $\ge 4$, sensors $\ge 5$, or power meters $\ge 1$.

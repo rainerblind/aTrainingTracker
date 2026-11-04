@@ -223,10 +223,13 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 * Screen / card horizontal content padding: `16.dp` (dominant), compact cards `12.dp`.
 * Vertical spacing between list rows / small elements: `4.dp`–`8.dp`.
 
-### 5.3 Shapes
+### 5.3 Shapes & Dialog/Sheet Presentation
 * Cards, sheets, panels, HUD overlays: `RoundedCornerShape(12.dp)` (dominant) or `MaterialTheme.shapes.medium`.
 * Small elements (badges, inner tiles, chips): `8.dp`; tiny markers / bars: `4.dp`.
 * Dialogs: Material 3 defaults (`MaterialTheme.shapes.extraLarge`).
+* **Bottom Sheet vs. AlertDialog Standard (ATT-5399)**:
+  * Interactive selection popups, editors, upgrade nudges, and celebratory prompts **MUST** be implemented as bottom popups using `AppModalBottomSheet` rather than centered `AlertDialog`s, ensuring optimal one-handed thumb reachability and edge-to-edge system insets.
+  * Centered `AlertDialog` is strictly reserved for concise 1–2 sentence destructive confirmations (`DeleteConfirmationDialog`, `WorkoutDeleteDialog`) or transient tracking HUDs (`LapSummaryDialog`).
 
 ### 5.4 Color
 * Surfaces, text and accents come from `MaterialTheme.colorScheme` so that Light, Dark and **AMOLED** themes all render correctly. Verify new UI in all three.
@@ -284,6 +287,9 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
   * Unmounting the underlying screen while a modal sheet is open destroys non-saveable composition state and causes `PrimaryScrollableTabRow` (`rememberScrollState(0)`), `LazyListState`, and collapsing header states to visibly jump or reset when the modal closes.
 * **No Nested `verticalScroll` Inside `AppModalBottomSheet` (ATT-3274 / ATT-3679)**:
   * `AppModalBottomSheet` defaults to `scrollable = true`, which wraps its content slot in a `Column(Modifier.verticalScroll(rememberScrollState()))`. Child screens hosted inside `AppModalBottomSheet` **MUST NOT** apply a second `Modifier.verticalScroll` (which crashes Compose with `IllegalStateException: Vertically scrollable component was measured with an infinity maximum height constraints`), or must explicitly pass `scrollable = false` to `AppModalBottomSheet`.
+* **Mandatory Bottom Popup Standard for Interactive Dialogs & Editors (ATT-5399 / REQ-UI-149)**:
+  * All user-interactive configuration dialogs, device swap prompts (`SwapOrUpgradeDialog`), fleet upgrade nudges (`GarageUpgradeNudgeDialog`), milestone celebration prompts (`FirstJubileeCelebrationDialog`), and multi-entry history editors (`ZoneHistoryDialog`, `ZoneSnapshotEditDialog`) **MUST** use `AppModalBottomSheet`.
+  * **Nested LazyColumn Safety**: When a bottom sheet hosts an internal `LazyColumn` or `LazyRow` (such as snapshot history in `ZoneHistoryDialog`), the parent sheet **MUST** be configured with `scrollable = false` to prevent infinite-height measurement exceptions.
 * **Default Fully Expanded Presentation**:
   * Live Segment (`LiveSegmentSheet`) and Climb (`LiveClimbSheet`) bottom sheets during active tracking (`SensorGridScreen`) must pop up **fully expanded** (`SheetValue.Expanded`) by default instead of partially expanded (`SheetValue.PartiallyExpanded` / peek height).
   * This provides immediate visibility of the elevation profile graph, instantaneous gradient profile, and live pacing telemetry HUD without requiring manual touch interaction or swipe gestures while riding or running.

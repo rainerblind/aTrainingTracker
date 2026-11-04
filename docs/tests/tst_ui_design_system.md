@@ -809,10 +809,10 @@
   3. *Regression Verification*:
   • Execute full clean-room unit test suite (`./gradlew testDebugUnitTest --no-daemon`) to ensure zero regressions across all modules.
 
-### TST-UI-102: **Modernized Modal Bottom Sheet Dialogs & Selection Flows Verification** [All interactive configuration and selection popups render as bottom sheets anchored above the navigation bar; transient tracking HUD and destructive alerts remain centered dialogs; SharedPreferences state and callbacks are 100% preserved; zero regressions.]
+### TST-UI-102: **Modernized Modal Bottom Sheet Dialogs & Selection Flows Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-149`
 - **Component**: **Modernized Modal Bottom Sheet Dialogs & Selection Flows Verification**
-- **Jira**: ``ATT-900`, `ATT-1029`, `ATT-1031`, `ATT-1032``
+- **Jira**: `ATT-900`, `ATT-1029`, `ATT-1031`, `ATT-1032`, `ATT-5399`
 - **Test Description**:
   1. *Unit & Contract Verification (`ModalBottomSheetDialogsIntegrityTest.kt`)*:
   • Verify `AppModalBottomSheet` supports both vector icon (`icon: ImageVector?`) and painter icon (`iconPainter: Painter?`) parameters in its composable signature.

@@ -32,12 +32,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
+import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 
 /**
- * Dialog presented when a Free-tier athlete attempts to pair a 3rd device (REQ-SET-084).
+ * Bottom popup presented when a Free-tier athlete attempts to pair a 3rd device (REQ-SET-084, REQ-UI-149).
  * Allows a 1-tap atomic swap with a currently paired device (with smart recommendation)
  * or navigation to the Supporter screen ("Pay what you want").
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SwapOrUpgradeDialog(
     candidateDevice: DeviceUiData,
@@ -57,113 +59,96 @@ fun SwapOrUpgradeDialog(
         )
     }
 
-    AlertDialog(
+    AppModalBottomSheet(
+        title = stringResource(R.string.swap_dialog_title),
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(16.dp),
-        icon = {
-            Icon(
-                imageVector = Icons.Default.SwapHoriz,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(28.dp)
-            )
-        },
-        title = {
-            Text(
-                text = stringResource(R.string.swap_dialog_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+        icon = Icons.Default.SwapHoriz,
+        actions = {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.weight(1f)
             ) {
-                Text(
-                    text = stringResource(R.string.swap_dialog_message, candidateDevice.deviceName),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-                Text(
-                    text = stringResource(R.string.swap_dialog_select_device_to_unpair),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold
-                )
-
-                currentlyPairedDevices.forEach { device ->
-                    val isSelected = device.id == selectedUnpairId
-                    val isRecommended = device.id == recommendedUnpairDeviceId
-
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { selectedUnpairId = device.id },
-                        shape = RoundedCornerShape(8.dp),
-                        color = if (isSelected) {
-                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
-                        } else {
-                            MaterialTheme.colorScheme.surface
-                        }
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 8.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = isSelected,
-                                onClick = { selectedUnpairId = device.id }
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = device.deviceName,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                )
-                                if (isRecommended) {
-                                    Text(
-                                        text = stringResource(R.string.supporter_recommended_badge),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
+                Text(text = stringResource(R.string.cancel))
             }
-        },
-        confirmButton = {
+            FilledTonalButton(
+                onClick = {
+                    onDismiss()
+                    onNavigateToSupporter()
+                },
+                modifier = Modifier.weight(1.5f)
+            ) {
+                Text(text = stringResource(R.string.swap_dialog_action_unlock))
+            }
             Button(
                 onClick = {
                     if (selectedUnpairId != -1L) {
                         onSwapConfirmed(selectedUnpairId, candidateDevice.id)
                     }
                 },
-                enabled = selectedUnpairId != -1L
+                enabled = selectedUnpairId != -1L,
+                modifier = Modifier.weight(1f)
             ) {
                 Text(text = stringResource(R.string.swap_dialog_action_swap))
             }
-        },
-        dismissButton = {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = onDismiss) {
-                    Text(text = stringResource(R.string.cancel))
+        }
+    ) {
+        Text(
+            text = stringResource(R.string.swap_dialog_message, candidateDevice.deviceName),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+        Text(
+            text = stringResource(R.string.swap_dialog_select_device_to_unpair),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        currentlyPairedDevices.forEach { device ->
+            val isSelected = device.id == selectedUnpairId
+            val isRecommended = device.id == recommendedUnpairDeviceId
+
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { selectedUnpairId = device.id },
+                shape = RoundedCornerShape(8.dp),
+                color = if (isSelected) {
+                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                } else {
+                    MaterialTheme.colorScheme.surface
                 }
-                FilledTonalButton(onClick = {
-                    onDismiss()
-                    onNavigateToSupporter()
-                }) {
-                    Text(text = stringResource(R.string.swap_dialog_action_unlock))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = isSelected,
+                        onClick = { selectedUnpairId = device.id }
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = device.deviceName,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                        )
+                        if (isRecommended) {
+                            Text(
+                                text = stringResource(R.string.supporter_recommended_badge),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
                 }
             }
         }
-    )
+    }
 }

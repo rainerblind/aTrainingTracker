@@ -1295,7 +1295,7 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 **Invariants**: Explicit cluster creation and selection in `EditWorkoutClusterDialog` (`createNewCluster`, `applyClusterIdentity`, `unassignCluster`) remain fully functional; SQLite database schemas remain unchanged.
 
 ### REQ-SET-082: Timestamped Zone Boundary Snapshots per ZoneType & Historical Workout Zone Resolution [Verified] [`TST-SET-082`]
-- **Tests**: `AthleteMetricsDatabaseManager.kt`, `AthleteMetricsRepository.kt`, `SettingsDataStore.kt`, `WorkoutRepository.kt`, `TelemetryMetricGraph.kt`, `ZonesSettingsViewModel.kt`, `ZoneProfileTabContent.kt`
+- **Tests**: `AthleteMetricsDatabaseManager.kt`, `AthleteMetricsRepository.kt`, `SettingsDataStore.kt`, `WorkoutRepository.kt`, `TelemetryMetricGraph.kt`, `ZonesSettingsViewModel.kt`, `ZoneProfileTabContent.kt`, `ZoneHistoryDialog.kt` | **Tickets**: `ATT-5399`
 - **Implementation**: Persist atomic zone boundary snapshots in `AthleteMetrics.db` (`zone_history` table, `DB_VERSION = 2`), maintain unidirectional projection to `SettingsDataStore`, resolve historical workouts at `workoutStartTimeMs`, and provide history/backdating UI.
 - **Rationale**: Currently, training zone boundaries (`HR_RUN`, `HR_BIKE`, `PWR_BIKE`) are stored only as single un-timestamped preferences in `SettingsDataStore`. When an athlete updates zone boundaries, past workouts in Workout Summaries, Workout Details, and Telemetry Graphs retroactively re-evaluate against modern boundaries, distorting training history. Extending timestamped persistence to zone configurations ensures historical workout fidelity and preserves full temporal integrity:
 1. *Atomic Timestamped Zone Snapshot Persistence (`REQ-SET-082.1`)*:
@@ -1356,7 +1356,7 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 **Invariants**: Core tracking, telemetry processing, local file exports, and database pairing persistence across app updates MUST NOT be compromised.
 
 ### REQ-SET-084: One-Tap Swap-or-Upgrade Dialog on 3rd Paired Device (REQ-MON-002) [Verified]
-- **Tests**: `TST-SET-084` | **Tickets**: `ATT-51`
+- **Tests**: `TST-SET-084` | **Tickets**: `ATT-51`, `ATT-5399`
 - **Implementation**: `DeviceListViewModel.kt`, `SwapOrUpgradeDialog.kt`
 - **Rationale**: Ensure athletes are never blocked by a hard paywall when adding sensors. When attempting to pair a 3rd device in Free tier, athletes can easily unpair a currently active device with a single tap or upgrade to Pro via "Pay what you want".
 - **Description**:
@@ -1467,7 +1467,7 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 **Invariants**: Release builds must never permit arbitrary tier override; ProFeatureManager resolution must be thread-safe.
 
 ### REQ-SET-088: Supporter N+1 Garage Detector & Upgrade Prompts (REQ-MON-006) [Verified]
-- **Tests**: `TST-SET-088`, `TST-LOC-001` | **Tickets**: `ATT-5299`, `ATT-5400`
+- **Tests**: `TST-SET-088`, `TST-LOC-001` | **Tickets**: `ATT-5299`, `ATT-5400`, `ATT-5399`
 - **Implementation**: `GarageLeagueDetector.kt`, `GarageDetectorDialog.kt`, `EquipmentViewModel.kt`, `DeviceListViewModel.kt`, `SettingsDataStore.kt`, `SupporterDebugSection.kt`
 - **Rationale**: Athlete equipment expansion reflects escalating engagement. When an athlete adds bikes, shoes, or pairs additional sensors reaching enthusiast ("Gold") or world-class ("Diamond") scale, the system detects their qualified garage league and presents a humorous, non-blocking "N+1 Cyclist Garage" dialog inviting an upgrade to Gold Pro-Supporter (50 € / year) or Diamond Sponsor (100 € / year) with the matching plan pre-selected, while preventing repeated prompt spam and honoring tier monotonicity.
 - **Description**:

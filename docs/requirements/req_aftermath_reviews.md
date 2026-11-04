@@ -26,7 +26,7 @@
   3. Non-milestone sessions SHALL retain standard naming behavior without counter prefixing.
 
 ### REQ-REV-003: First-Jubilee Celebration Dialog & Multi-Channel Engagement [Verified]
-- **Tests**: `TST-REV-003` | **Tickets**: `ATT-2308`, `ATT-5401`
+- **Tests**: `TST-REV-003` | **Tickets**: `ATT-2308`, `ATT-5401`, `ATT-5399`
 - **Implementation**: `FirstJubileeCelebrationDialog.kt`, `MainActivityWithNavigation.kt`
 - **Rationale**: Reaching the very first milestone across any sport is an athlete's peak emotional moment. The app SHALL present a celebratory Material 3 dialog offering frictionless Google Play review, direct email feedback to Rainer, and an authentic supporter appeal.
 - **Description**:
