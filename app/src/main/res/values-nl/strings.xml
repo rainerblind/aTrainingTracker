@@ -2312,4 +2312,15 @@
     <string name="launcher_icon_diamond">Diamant Sponsor</string>
     <string name="supporter_status_emblem_cd">Supporter Status Embleem</string>
     <string name="share_watermark_tracked_with">Geregistreerd met aTrainingTracker</string>
+    <!-- Workout Share Mode & Photo Track Overlay (REQ-UI-447 / ATT-30) -->
+    <string name="share_workout_title">Workout delen</string>
+    <string name="share_option_map_snapshot">Kaart- en analyse-momentopname</string>
+    <string name="share_option_map_snapshot_desc">Overzicht met kaart, hoogteprofiel en prestatiestatistieken</string>
+    <string name="share_option_photo_track">Foto met route en statistieken</string>
+    <string name="share_option_photo_track_desc">GPS-routesilhouet en kernstatistieken over uw eigen foto gelegd</string>
+    <string name="share_choose_photo">Foto kiezen</string>
+    <string name="share_preview_title">Voorbeeld delen</string>
+    <string name="share_cta_button">Delen</string>
+    <string name="share_error_no_gps">Geen GPS-route geregistreerd voor deze workout</string>
+    <string name="share_error_photo_load">Geselecteerde foto laden mislukt</string>
 </resources>

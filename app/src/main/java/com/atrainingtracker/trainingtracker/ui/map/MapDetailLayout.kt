@@ -56,6 +56,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThreshol
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneCardDisplayMode
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionData
 import com.atrainingtracker.trainingtracker.helpers.combineWorkoutAndShare
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
 import com.atrainingtracker.trainingtracker.ui.components.core.GlobalTelemetryZoomToolbar
 import com.atrainingtracker.trainingtracker.ui.components.core.GlobalTelemetryZoomToolbarDefaults
@@ -109,7 +110,8 @@ fun MapDetailLayout(
     climbs: List<Climb> = emptyList(),
     externalScrubDistance: Double? = null,
     hrZoneThresholds: HeartRateZoneThresholds? = null,
-    powerZoneThresholds: PowerZoneThresholds? = null
+    powerZoneThresholds: PowerZoneThresholds? = null,
+    workoutData: WorkoutData? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -124,6 +126,7 @@ fun MapDetailLayout(
     val analyticsLayer = rememberGraphicsLayer()
 
     var isSharing by remember { mutableStateOf(false) }
+    var showShareModeSheet by remember { mutableStateOf(false) }
     var selectedDistance by remember { mutableStateOf<Double?>(null) }
 
     LaunchedEffect(externalScrubDistance) {
@@ -270,7 +273,15 @@ fun MapDetailLayout(
 
             // SHARE BUTTON
             Surface(
-                onClick = { if (!isSharing) isSharing = true },
+                onClick = {
+                    if (!isSharing) {
+                        if (workoutData != null) {
+                            showShareModeSheet = true
+                        } else {
+                            isSharing = true
+                        }
+                    }
+                },
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(16.dp)
@@ -892,6 +903,14 @@ fun MapDetailLayout(
                 }
             }
         }
+    }
+
+    if (showShareModeSheet && workoutData != null) {
+        WorkoutShareBottomSheet(
+            workoutData = workoutData,
+            onDismissRequest = { showShareModeSheet = false },
+            onSelectMapSnapshot = { isSharing = true }
+        )
     }
 }
 }

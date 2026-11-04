@@ -240,6 +240,7 @@ fun WorkoutDetailTabbedContent(
                                 powerZoneDisplayMode = effectivePowerZoneDisplayMode,
                                 hrZoneThresholds = hrZoneThresholds,
                                 powerZoneThresholds = powerZoneThresholds,
+                                workoutData = workoutData,
                                 header = {},
                                 mapContent = mapContent,
                                 overlay = mapOverlay,
@@ -280,6 +281,7 @@ fun WorkoutDetailTabbedContent(
                                 powerZoneDisplayMode = effectivePowerZoneDisplayMode,
                                 hrZoneThresholds = hrZoneThresholds,
                                 powerZoneThresholds = powerZoneThresholds,
+                                workoutData = workoutData,
                                 header = {},
                                 mapContent = mapContent,
                                 overlay = mapOverlay,
@@ -353,6 +355,7 @@ fun WorkoutDetailTabbedContent(
                                     powerZoneDisplayMode = effectivePowerZoneDisplayMode,
                                     hrZoneThresholds = hrZoneThresholds,
                                     powerZoneThresholds = powerZoneThresholds,
+                                    workoutData = workoutData,
                                     header = {},
                                     metadataContent = null,
                                     analyticsContent = if (nonMapNonGraphSections.isNotEmpty()) {

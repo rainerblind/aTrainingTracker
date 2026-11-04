@@ -2398,4 +2398,15 @@
     <string name="launcher_icon_diamond">Diamant Sponsor</string>
     <string name="supporter_status_emblem_cd">Supporter-Statussymbol</string>
     <string name="share_watermark_tracked_with">Aufgezeichnet mit aTrainingTracker</string>
+    <!-- Workout Share Mode & Photo Track Overlay (REQ-UI-447 / ATT-30) -->
+    <string name="share_workout_title">Workout teilen</string>
+    <string name="share_option_map_snapshot">Karten- &amp; Analyse-Snapshot</string>
+    <string name="share_option_map_snapshot_desc">Zusammenfassung mit Karte, Höhenprofil und Leistungsdaten</string>
+    <string name="share_option_photo_track">Foto mit Track &amp; Daten</string>
+    <string name="share_option_photo_track_desc">GPS-Streckensilhouette und Leistungsdaten auf eigenem Foto</string>
+    <string name="share_choose_photo">Foto auswählen</string>
+    <string name="share_preview_title">Vorschau teilen</string>
+    <string name="share_cta_button">Teilen</string>
+    <string name="share_error_no_gps">Keine GPS-Strecke für dieses Workout aufgezeichnet</string>
+    <string name="share_error_photo_load">Ausgewähltes Foto konnte nicht geladen werden</string>
 </resources>

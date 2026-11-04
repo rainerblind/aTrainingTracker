@@ -2292,4 +2292,15 @@
     <string name="launcher_icon_diamond">ダイヤモンドスポンサー</string>
     <string name="supporter_status_emblem_cd">サポーターステータスエンブレム</string>
     <string name="share_watermark_tracked_with">aTrainingTrackerで記録</string>
+    <!-- Workout Share Mode & Photo Track Overlay (REQ-UI-447 / ATT-30) -->
+    <string name="share_workout_title">ワークアウトを共有</string>
+    <string name="share_option_map_snapshot">マップ＆分析スナップショット</string>
+    <string name="share_option_map_snapshot_desc">マップ、高低図、パフォーマンス指標を含む概要</string>
+    <string name="share_option_photo_track">トラック＆統計付き写真</string>
+    <string name="share_option_photo_track_desc">GPSトラックのシルエットと主要指標を写真に重ねて表示</string>
+    <string name="share_choose_photo">写真を選択</string>
+    <string name="share_preview_title">共有プレビュー</string>
+    <string name="share_cta_button">共有</string>
+    <string name="share_error_no_gps">このワークアウトにはGPSトラックが記録されていません</string>
+    <string name="share_error_photo_load">選択した写真を読み込めませんでした</string>
 </resources>

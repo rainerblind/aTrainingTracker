@@ -369,6 +369,7 @@ fun TrackOnMapScreen(
         powerZoneDisplayMode = effectivePowerZoneDisplayMode,
         hrZoneThresholds = hrZoneThresholds,
         powerZoneThresholds = powerZoneThresholds,
+        workoutData = workoutData,
         header = {
             WorkoutHeader(
                 modifier = Modifier.fillMaxWidth(),

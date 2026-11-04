@@ -2313,4 +2313,15 @@
     <string name="launcher_icon_diamond">Patrocinador Diamante</string>
     <string name="supporter_status_emblem_cd">Emblema de estado Supporter</string>
     <string name="share_watermark_tracked_with">Registrado con aTrainingTracker</string>
+    <!-- Workout Share Mode & Photo Track Overlay (REQ-UI-447 / ATT-30) -->
+    <string name="share_workout_title">Compartir entrenamiento</string>
+    <string name="share_option_map_snapshot">Instantánea de mapa y análisis</string>
+    <string name="share_option_map_snapshot_desc">Resumen con mapa, perfil de elevación y métricas de rendimiento</string>
+    <string name="share_option_photo_track">Foto con ruta y estadísticas</string>
+    <string name="share_option_photo_track_desc">Silueta de ruta GPS y métricas clave sobre tu foto</string>
+    <string name="share_choose_photo">Elegir foto</string>
+    <string name="share_preview_title">Vista previa de compartir</string>
+    <string name="share_cta_button">Compartir</string>
+    <string name="share_error_no_gps">No se ha registrado ninguna ruta GPS para este entrenamiento</string>
+    <string name="share_error_photo_load">Error al cargar la foto seleccionada</string>
 </resources>

@@ -2513,4 +2513,15 @@
     <string name="launcher_icon_diamond">Diamond Sponsor</string>
     <string name="supporter_status_emblem_cd">Supporter Status Emblem</string>
     <string name="share_watermark_tracked_with">Tracked with aTrainingTracker</string>
+    <!-- Workout Share Mode & Photo Track Overlay (REQ-UI-447 / ATT-30) -->
+    <string name="share_workout_title">Share Workout</string>
+    <string name="share_option_map_snapshot">Map &amp; Analytics Snapshot</string>
+    <string name="share_option_map_snapshot_desc">Summary with map, elevation profile, and performance metrics</string>
+    <string name="share_option_photo_track">Photo with Track &amp; Stats</string>
+    <string name="share_option_photo_track_desc">GPS track silhouette and key metrics overlaid on your photo</string>
+    <string name="share_choose_photo">Choose Photo</string>
+    <string name="share_preview_title">Share Preview</string>
+    <string name="share_cta_button">Share</string>
+    <string name="share_error_no_gps">No GPS track recorded for this workout</string>
+    <string name="share_error_photo_load">Failed to load selected photo</string>
 </resources>

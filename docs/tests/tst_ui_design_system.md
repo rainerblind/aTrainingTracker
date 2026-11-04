@@ -7129,6 +7129,29 @@
   • Execute targeted test suite (`--tests "com.atrainingtracker.trainingtracker.ui.map.*"`, `aftermath.zones.*`, `ThemeColorCentralizationAuditTest`, `build.*`) with 100% pass rate.
 
 
+### TST-UI-447: **Workout Share Mode Selection & Photo Track Overlay Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-447`
+- **Component**: `PhotoTrackOverlayComposerTest.kt`, `WorkoutShareBottomSheetContractTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-30`
+- **Test Description**:
+  1. *Equirectangular Track Projection & Silhouette Geometry (`TST-UI-447.1`)*:
+  • Verify `PhotoTrackOverlayComposer` scales GPS polyline points via cosine-latitude projection ($\Delta x = \Delta\lambda \cdot \cos(\phi_{\text{mean}})$, $\Delta y = -\Delta\phi$) preserving true aspect ratio.
+  • Verify track silhouette bounds normalization, drop shadow rendering, and start/finish marker dot placement in the upper-right or side quadrant.
+  2. *Metrics Formatting, Gradient Scrim & WCAG AAA Contrast (`TST-UI-447.2`)*:
+  • Verify bottom gradient scrim renders with dark translucent gradient (alpha $0.0 \rightarrow 0.85$).
+  • Verify workout metrics (distance, duration, ascent, avg speed/power) render in crisp white typography satisfying WCAG AAA contrast ratio ($\ge 7.0:1$).
+  • Verify footer watermark renders official Cervélo P3C logo, "Tracked with aTrainingTracker", and supporter tier pill per `REQ-UI-445.5`.
+  3. *Mode Switcher & Backward Compatibility Contract (`TST-UI-447.3`)*:
+  • Verify `MapDetailLayout` with `workoutData != null` launches `WorkoutShareBottomSheet` on Share button tap.
+  • Verify non-workout callers (`workoutData == null`) bypass bottom sheet and directly invoke `combineWorkoutAndShare`.
+  • Verify Option A executes existing composite snapshot sharing (`combineWorkoutAndShare`).
+  • Verify `WorkoutShareBottomSheet` conforms to `AppModalBottomSheet` edge-to-edge system insets guidelines.
+  4. *9-Language Localization & Targeted Test Suite (`TST-UI-447.4`)*:
+  • Verify 100% parity across all 9 locales via `TranslationParityTest` for new share mode strings.
+  • Run targeted test suite (`--tests "com.atrainingtracker.trainingtracker.helpers.*"`, `ui.map.*`, `ThemeColorCentralizationAuditTest`) with 100% pass rate.
+
+
+
 
 
 
