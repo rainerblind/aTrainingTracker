@@ -64,3 +64,16 @@
   3. The hero section SHALL provide direct navigation links to the Online User Guide (`docs/index.md`) including both English (`docs/guide/en/index.md`) and German (`docs/guide/de/index.md`) editions.
   4. `README.md` SHALL present an updated summary of key V5.0 features including .FIT export/import, Strava/Dropbox/Google Drive cloud sync, Skiba $W'_{\text{bal}}$ and Coggan power analytics, and Lieblingsstrecken navigation.
   5. All linked asset and documentation targets referenced in `README.md` MUST resolve to valid existing local repository files or valid canonical external URLs.
+
+### REQ-STP-006: Google Play Store Promo Video Storyboard, Composite Generator & Showcase Pipeline [Verified]
+- **Tests**: `TST-STP-006` | **Tickets**: `ATT-2274`
+- **Implementation**: `docs/store_presence/promo_video_storyboard.md`, `tools/generate_promo_video.py`, `docs/store_presence/video/`, `PromoVideoAssetsContractTest.kt`
+- **Rationale**: A static Google Play Store listing cannot convey dynamic telemetry visualizations, live map scrubbing, or Strava segment elevation profiles. A modular promo video production pipeline combining a 5-scene storyboard, procedural bicycle handlebar compositing, and automated 1080p MP4 rendering enables continuous showcase generation and authentic visual marketing while respecting Rule 22 human publishing prerequisites (ATT-2274, Parent Epic ATT-2273):
+- **Description**:
+  1. The project SHALL provide a comprehensive, timestamped 5-scene promo video storyboard in `docs/store_presence/promo_video_storyboard.md` covering Hook & Cockpit (0:00–0:10), Dual-Protocol Sensors & Gear Matrix (0:10–0:25), Maps, Elevation & Live Segments (0:25–0:40), Route Clustering & Sports Science Analytics (0:40–0:50), and Privacy Sovereignty & Supporter Call to Action (0:50–1:00).
+  2. The project SHALL maintain an automated offline composite generator in `tools/generate_promo_video.py` using Python/Pillow with dual video encoding support (ffmpeg with fallback to `gst-launch-1.0` and keyframe image export).
+  3. The generator SHALL support an authentic handlebar/outdoor background layer with modular photo drop-in replacement, smartphone bezel framing, touch gesture ripples, and visual-first English title overlays.
+  4. The generator SHALL output a 1080p ($1920 \times 1080$) showcase MP4 video to `docs/store_presence/video/att_promo_showcase.mp4` and individual scene keyframe PNGs.
+  5. The generator pipeline, storyboard structure, and video assets SHALL be verified by an automated JUnit 4 contract test `PromoVideoAssetsContractTest.kt` in the build test suite.
+  6. Final upload to YouTube and Google Play Store Console URL registration is designated as a Human Prerequisite (Rule 22).
+

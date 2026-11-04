@@ -56,3 +56,20 @@
   5. Test verifies that `images/logo_512.png` is embedded in `README.md` and exists on disk.
   6. Test verifies that `README.md` contains valid relative links to `docs/index.md`, `docs/guide/en/index.md`, and `docs/guide/de/index.md`, and that all target files exist on disk.
   7. Ensure 100% pass rate in CI.
+
+### TST-STP-006: Play Store Promo Video Assets, Storyboard & Generator Contract Test [Verified]
+- **Requirement(s)**: `REQ-STP-006`
+- **Component**: `docs/store_presence/promo_video_storyboard.md`, `tools/generate_promo_video.py`, `docs/store_presence/video/att_promo_showcase.mp4`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/PromoVideoAssetsContractTest.kt`
+- **Jira**: `ATT-2274`
+- **Test Description**:
+  1. *Storyboard Structure & Scene Timing Audit (`TST-STP-006.1`)*:
+  • Verify `docs/store_presence/promo_video_storyboard.md` exists and defines all 5 mandatory scenes spanning 0:00 to 1:00.
+  2. *Composite Generator Script & Dual-Backend Verification (`TST-STP-006.2`)*:
+  • Execute `python3 tools/generate_promo_video.py` and verify exit code 0.
+  • Verify generator supports dual encoding backends (`ffmpeg` with `gst-launch-1.0` / keyframe export fallback).
+  3. *Video Asset & Keyframe Resolution Contract (`TST-STP-006.3`)*:
+  • Verify existence of `docs/store_presence/video/att_promo_showcase.mp4` with size $> 100\text{ KB}$.
+  • Verify scene keyframes exist under `docs/store_presence/video/keyframes/` at $1920 \times 1080$ resolution.
+  4. *JUnit 4 Build Contract Suite (`TST-STP-006.4`)*:
+  • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.PromoVideoAssetsContractTest"` asserting 100% pass rate in CI.
+
