@@ -1,58 +1,46 @@
 # Google Play Store Presence - French
 
-**App Title**: aTrainingTracker – Outil de suivi sportif (30/30)
+**App Title**: aTrainingTracker: Vélo & Sport (30/30)
 
 **Short Description**:
-Compteur vélo intelligent avec ANT+, BLE, Strava et segments en direct. (71/80)
+Compteur vélo et tracker sport avec ANT+, BLE, .FIT, Strava et 100% privé. (74/80)
 
 **Full Description**:
 <b>aTrainingTracker – L'outil de suivi sportif intelligent pour votre smartphone</b>
 
 Concentrez-vous sur votre entraînement. Nous nous occupons de la technologie.
 
-aTrainingTracker est un outil de suivi sportif intelligent pour les athlètes qui apprécient l'automatisation, la précision et la confidentialité. Il détecte automatiquement votre sport, sélectionne le bon équipement et organise vos parcours favoris. Appuyez simplement sur Start : l'application s'occupe du reste en arrière-plan.
+aTrainingTracker transforme votre smartphone Android en compteur vélo professionnel et tracker multisport axé sur la précision et la confidentialité. Conçu pour les cyclistes, coureurs et athlètes d'endurance qui exigent une télémétrie précise, une automatisation poussée et la souveraineté absolue de leurs données. Sans compte obligatoire, sans cloud imposé et 100% sans publicité.
 
-Parfait pour les cyclistes, les coureurs, les randonneurs et autres athlètes d'endurance qui recherchent un suivi fiable, une gestion intelligente des capteurs et un contrôle total de leurs données.
+<b>GESTION INTELLIGENTE DES CAPTEURS ET ARBITRAGE MATÉRIEL</b>
+Connectez plusieurs capteurs Bluetooth® LE et ANT+® simultanément : fréquence cardiaque, cadence, vitesse, puissance, radar et température.
+• <b>Priorité matérielle</b> : Les capteurs de vitesse dédiés sont automatiquement privilégiés par rapport au GPS pour une précision optimale.
+• <b>Bascule transparente</b> : Si un capteur se déconnecte, le GPS prend immédiatement le relais sans perte de données.
+• <b>Double protocole fiable</b> : Associez capteurs BLE récents et accessoires ANT+ sans interférence.
 
-<b>UN SUIVI PLUS INTELLIGENT</b>
-Transformez votre smartphone en un compteur intelligent qui apprend comment vous vous entraînez.
-• <b>Détection automatique</b> : Reconnaît automatiquement votre sport et sélectionne le vélo ou les chaussures appropriés en fonction de vos capteurs connectés.
-• <b>Des tableaux de bord pour chaque sport</b> : Profitez d'un cockpit qui s'adapte à vous. Personnalisez des mises en page distinctes pour le cyclisme, la course à pied, la randonnée et plus encore. Affichez les métriques exactes pour chaque activité.
-• <b>Intelligence d'activité</b> : Arrêtez d'organiser vos entraînements manuellement. Les parcours fréquemment utilisés sont automatiquement reconnus et nommés, gardant votre journal d'entraînement organisé sans effort.
+<b>SCIENCES DU SPORT ET PHYSIOLOGIE AVANCÉE</b>
+Des analyses professionnelles directement sur votre smartphone sans abonnement mensuel :
+• <b>Suite Coggan</b> : Puissance normalisée (NP), facteur d'intensité (IF), score de stress (TSS) et indice de variabilité (VI).
+• <b>Batterie anaérobie Skiba W'</b> : Suivi en direct du réservoir W' avec modélisation de la puissance critique (CP/W').
+• <b>Graphique PMC longitudinal</b> : Suivez la charge d'entraînement chronique (CTL), aiguë (ATL), la balance (TSB) et l'ACWR.
+• <b>Modèle métabolique de Mader-Heck</b> : Simulation physiologique avec bilan en temps réel des glucides et du glycogène.
+• <b>Efficacité aérobie</b> : Facteur d'efficacité (EF) et découplage aérobie (Pw:Hr %) en direct.
 
-<b>GESTION INTELLIGENTE DES CAPTEURS</b>
-Connectez simultanément plusieurs capteurs Bluetooth® LE et ANT+®, y compris la fréquence cardiaque, la cadence, la vitesse, la puissance, la température et plus encore.
-Contrairement aux applications classiques, aTrainingTracker ne se contente pas de se connecter aux capteurs : il sélectionne intelligemment la meilleure source de données pour vous :
-• <b>Priorité au matériel</b> : Les capteurs de vitesse dédiés sont automatiquement préférés au GPS pour une précision maximale.
-• <b>Ne perdez jamais vos données de vitesse</b> : Si un capteur de roue se déconnecte, le GPS prend le relais de manière fluide pour éviter les interruptions de données.
-• <b>Toujours le meilleur capteur</b> : L'application garantit que vous utilisez toujours la source de données la plus précise disponible à l'instant T.
+<b>NAVIGATION, CIRCUITS FAVORIS ET SEGMENTS EN DIRECT</b>
+• <b>Boucles régulières (Lieblingsstrecken)</b> : Détection et nommage automatiques de vos circuits avec comparaison de vos records.
+• <b>Strava Live Segments et montées</b> : Suivi en direct par rapport à votre PR et au KOM avec profil d'élévation interactif.
+• <b>Guidage d'itinéraire</b> : Importez des fichiers GPX ou parcours Strava et suivez-les sur carte vectorielle.
+• <b>Précision barométrique</b> : Calibrage altimétrique basé sur des repères connus enregistrés.
+• <b>Sonnette de vélo électronique</b> : Sonnette intégrée déclenchable facilement au guidon.
 
-<b>PARCOURS FAVORIS</b>
-Vous vous entraînez régulièrement sur les mêmes parcours ? aTrainingTracker s'occupe de l'organisation. Les parcours fréquemment utilisés sont automatiquement reconnus et regroupés, vous offrant un historique complet de chaque séance sur ce parcours.
-• <b>Records personnels</b> : Comparez automatiquement toutes vos performances sur des parcours spécifiques.
-• <b>Évolution visuelle</b> : Visualisez votre historique d'entraînement grâce à des cartes de chaleur détaillées.
-• <b>Statistiques de parcours</b> : Obtenez des données complètes pour vos boucles d'entraînement régulières sans saisie manuelle.
+<b>PERIODS 2.0 ET STATISTIQUES PLURIANNUELLES</b>
+• <b>Grilles d'activité</b> : Visualisez votre assiduité annuelle par sport sous forme de grilles de contribution GitHub.
+• <b>Interface Jetpack Compose</b> : Design Material 3 soigné et thème sombre AMOLED économe en batterie.
 
-<b>SEGMENTS EN DIRECT ET NAVIGATION</b>
-Passez au niveau supérieur avec un retour d'expérience et un guidage en temps réel.
-• <b>Strava Live Segments</b> : Suivez vos progrès par rapport à votre record personnel en temps réel pendant votre course ou votre sortie.
-• <b>Suivi d'itinéraire</b> : Importez des fichiers GPX ou des itinéraires Strava et suivez-les sur la carte interactive en direct.
-• <b>Zones d'entraînement</b> : Restez dans la bonne intensité grâce aux zones de fréquence cardiaque et de puissance configurables.
+<b>SOUVERAINETÉ DES DONNÉES ET TRIADE CLOUD</b>
+Vos données vous appartiennent. Vos entraînements restent dans une base SQLite locale sur votre téléphone.
+• <b>Support natif .FIT</b> : Export et import au standard FIT, ainsi qu'en TCX, GPX et CSV.
+• <b>Sauvegarde cloud flexible</b> : Synchronisation automatique vers Google Drive, Dropbox et Strava.
+• <b>100% privé et sans publicité</b> : Aucun compte obligatoire, aucun traceur tiers et modèle Supporter solidaire.
 
-<b>ANALYSE DÉTAILLÉE</b>
-Une fois votre session terminée, retrouvez des statistiques locales complètes prêtes à être analysées :
-• <b>Outils analytiques</b> : Graphiques interactifs, cartes de chaleur, comparaisons de parcours et statistiques d'équipement.
-• <b>Données environnementales</b> : Dénivelé, pente et température.
-• <b>Métriques de performance</b> : Distance, vitesse, puissance, fréquence cardiaque, cadence.
-
-<b>VOS DONNÉES, VOTRE CHOIX</b>
-Vous décidez de la destination de vos données. aTrainingTracker donne la priorité à la confidentialité tout en offrant la commodité du cloud.
-• <b>Confidentialité par défaut</b> : Aucun compte requis. Pas de cloud obligatoire. Vos entraînements restent sur votre appareil, sauf si vous en décidez autrement.
-• <b>Importation d'entraînements</b> : migrez facilement votre historique d'entraînement depuis d'anciens appareils en important des fichiers TCX.
-• <b>Synchronisation cloud optionnelle</b> : Téléchargez automatiquement les nouvelles activités sur Strava ou Dropbox pour une analyse approfondie.
-• <b>Formats populaires</b> : Exportez vos entraînements aux formats GPX, TCX, CSV et autres formats standard.
-
-<b>CONÇU POUR LES ATHLÈTES SÉRIEUX</b>
-Développé en continu depuis plus de 15 ans avec un seul objectif : rendre l'enregistrement de l'activité aussi fiable et automatique que possible. Pas de bruit social, pas de distractions – juste un suivi d'excellente qualité.
-
-Vous vous concentrez sur votre entraînement. aTrainingTracker s'occupe de l'enregistrement.
+Développé en continu depuis plus de 15 ans par et pour des passionnés d'endurance.

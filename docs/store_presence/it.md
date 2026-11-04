@@ -1,58 +1,46 @@
 # Google Play Store Presence - Italian
 
-**App Title**: aTrainingTracker – Tracker Sportivo (30/30)
+**App Title**: aTrainingTracker: Bici e Sport (30/30)
 
 **Short Description**:
-Computer bici intelligente con ANT+, BLE, Strava e segmenti live. (64/80)
+Computer bici smart con ANT+, BLE, .FIT, Strava e privacy al 100%. (66/80)
 
 **Full Description**:
 <b>aTrainingTracker – L'intelligente tracker sportivo per il tuo smartphone</b>
 
 Concentrati sul tuo allenamento. Al resto pensiamo noi.
 
-aTrainingTracker è un intelligente tracker sportivo per gli atleti che apprezzano l'automazione, la precisione e la privacy. Rileva automaticamente il tuo sport, seleziona l'attrezzatura corretta e organizza i tuoi percorsi preferiti. Basta premere Start: l'app gestisce il resto in background.
+aTrainingTracker trasforma il tuo smartphone Android in un ciclocomputer professionale e tracker multisport incentrato su privacy e precisione. Progettato per ciclisti, corridori e atleti di resistenza che cercano automazione intelligente, telemetria avanzata e pieno controllo sui propri dati. Nessun account obbligatorio, nessun obbligo di cloud e 100% senza pubblicità.
 
-Perfetto per ciclisti, corridori, escursionisti e altri atleti di resistenza che cercano un tracking affidabile, una gestione intelligente dei sensori e un controllo totale dei propri dati.
+<b>GESTIONE INTELLIGENTE DEI SENSORI E PRIORITÀ HARDWARE</b>
+Collega contemporaneamente più sensori Bluetooth® LE e ANT+®: cardiofrequenzimetri, cadenza, velocità, sensori di potenza, radar e temperatura.
+• <b>Priorità hardware</b> : I sensori di velocità alla ruota sono automaticamente preferiti al GPS per la massima precisione.
+• <b>Failover immediato</b> : Se un sensore perde la connessione, il GPS subentra istantaneamente senza buchi di tracciamento.
+• <b>Doppio protocollo affidabile</b> : Connetti dispositivi BLE moderni e accessori ANT+ senza conflitti.
 
-<b>TRACKING PIÙ INTELLIGENTE</b>
-Trasforma il tuo smartphone in un intelligente computer sportivo che impara come ti alleni.
-• <b>Rilevamento automatico</b>: Riconosce automaticamente il tuo sport e seleziona la bici o le scarpe corrette in base ai sensori collegati.
-• <b>Dashboard personalizzate per ogni sport</b>: Prova un cockpit che si adatta a te. Personalizza layout distinti per ciclismo, corsa, escursionismo e altro. Visualizza le metriche esatte necessarie per ogni attività.
-• <b>Attività intelligente</b>: Smetti di organizzare i tuoi allenamenti manualmente. I percorsi ricorrenti vengono riconosciuti e nominati automaticamente, mantenendo il registro degli allenamenti organizzato senza sforzo.
+<b>SCIENZA DELLO SPORT E FISIOLOGIA AVANZATA</b>
+Metriche professionali direttamente sul tuo smartphone, senza costosi abbonamenti cloud:
+• <b>Coggan Power Suite</b> : Normalized Power (NP), Intensity Factor (IF), Training Stress Score (TSS) e Variability Index (VI).
+• <b>Bilancio Skiba W'</b> : Monitoraggio in tempo real della batteria anaerobica con modello a 2 punti Critical Power (CP/W').
+• <b>Grafico PMC longitudinale</b> : Controlla Fitness (CTL), Affaticamento (ATL), Forma (TSB) e indice ACWR.
+• <b>Modello metabolico di Mader-Heck</b> : Simulazione fisiologica e consumo stimato di carboidrati e riserve di glicogeno.
+• <b>Efficienza aerobica</b> : Efficiency Factor (EF) e disaccoppiamento aerobico (Pw:Hr %) in tempo reale.
 
-<b>GESTIONE INTELLIGENTE DEI SENSORI</b>
-Collega contemporaneamente più sensori Bluetooth® LE e ANT+®, tra cui frequenza cardiaca, cadenza, velocità, potenza, temperatura e altro ancora.
-A differenza delle app standard, aTrainingTracker non si limita a connettersi ai sensori: seleziona intelligentemente la migliore fonte di dati per non doverlo fare tu:
-• <b>Priorità hardware</b>: I sensori di velocità dedicati sono preferiti automaticamente al GPS per la massima precisione.
-• <b>Mai più perdita di dati</b>: Se un sensore di velocità si disconnette, il GPS subentra senza problemi per garantire l'assenza di interruzioni nei dati.
-• <b>Sempre il miglior sensore</b>: L'app utilizza automaticamente il sensore più accurato attualmente disponibile.
+<b>NAVIGAZIONE, PERCORSI PREFERITI E LIVE SEGMENTS</b>
+• <b>Percorsi abituali (Lieblingsstrecken)</b> : I tragitti ripetuti vengono identificati, nominati e confrontati automaticamente con i tuoi record personali.
+• <b>Strava Live Segments e salite</b> : Monitora i tuoi progressi contro il PR o il KOM in tempo reale con profilo altimetrico.
+• <b>Guida su traccia</b> : Importa percorsi GPX o Strava e seguili su mappa vettoriale ad alta visibilità.
+• <b>Calibrazione barometrica</b> : Quota barometrica calibrata automaticamente con posizioni note registrate.
+• <b>Campanello elettronico</b> : Campanello da manubrio integrato e udibile sopra avvisi e musica.
 
-<b>PERCORSI PREFERITI</b>
-Ti alleni regolarmente sugli stessi percorsi? aTrainingTracker si occupa dell'organizzazione. I percorsi frequentati sono automaticamente riconosciuti e raggruppati, offrendoti una cronologia completa di ogni uscita su quel percorso.
-• <b>Record personali</b>: Confronta automaticamente tutti i tuoi sforzi su percorsi specifici.
-• <b>Evoluzione visiva</b>: Visualizza la cronologia degli allenamenti attraverso mappe di calore dettagliate.
-• <b>Statistiche del percorso</b>: Ottieni dati completi per i tuoi circuiti di allenamento regolari senza tagging manuale.
+<b>PERIODS 2.0 E ANALITICA MULTI-ANNO</b>
+• <b>Mappe di contribuzione</b> : Griglie annuali di attività in stile GitHub per visualizzare la costanza per ciascun sport.
+• <b>UI Jetpack Compose</b> : Design moderno Material 3 con modalità scura AMOLED per risparmiare batteria.
 
-<b>SEGMENTI LIVE E NAVIGAZIONE</b>
-Porta le tue prestazioni al livello successivo con feedback e orientamento in tempo reale.
-• <b>Strava Live Segments</b>: Segui i tuoi progressi rispetto al tuo record personale in tempo reale mentre corri o pedali.
-• <b>Navigazione percorsi</b>: Importa file GPX o percorsi Strava e seguili sulla mappa interattiva dal vivo.
-• <b>Zone di allenamento</b>: Allenati nella giusta intensità con zone di frequenza cardiaca e potenza configurabili.
+<b>SOVRANITÀ DEI DATI E TRIADE CLOUD</b>
+I tuoi dati restano tuoi. Tutti gli allenamenti sono archiviati in un database SQLite locale sul dispositivo.
+• <b>Supporto nativo .FIT</b> : Esportazione e importazione standard FIT, oltre a TCX, GPX e CSV.
+• <b>Backup su cloud opzionale</b> : Caricamento automatico su Google Drive, Dropbox e Strava.
+• <b>100% privato e senza annunci</b> : Nessuna registrazione richiesta, zero tracciamento e modello di supporto equo.
 
-<b>ANALISI DETTAGLIATA</b>
-Al termine della sessione, troverai statistiche locali complete pronte per la revisione:
-• <b>Strumenti analitici</b>: Grafici interattivi, mappe di calore, confronti di percorsi e statistiche dell'attrezzatura.
-• <b>Dati ambientali</b>: Dislivello, pendenza e temperatura.
-• <b>Metriche di performance</b>: Distanza, velocità, potenza, frequenza cardiaca, cadenza.
-
-<b>I TUOI DATI, LA TUA SCELTA</b>
-Tu decidi dove vanno i tuoi dati. aTrainingTracker mette la privacy al primo posto offrendo al contempo la comodità del cloud.
-• <b>Privacy come impostazione predefinita</b>: Nessun account richiesto. Nessun cloud obbligatorio. I tuoi allenamenti rimangono sul tuo dispositivo, a meno che tu non scelga diversamente.
-• <b>Importazione allenamenti</b>: migra facilmente la tua cronologia degli allenamenti da dispositivi precedenti importando file TCX.
-• <b>Sincronizzazione cloud opzionale</b>: Carica automaticamente le nuove attività su Strava o Dropbox per analisi approfondite.
-• <b>Formati popolari</b>: Esporta i tuoi allenamenti in formati GPX, TCX, CSV e altri standard.
-
-<b>COSTRUITO PER ATLETI SERI</b>
-Sviluppato continuamente per oltre 15 anni con un unico obiettivo: rendere la registrazione delle attività il più affidabile e automatica possibile. Niente rumore social, niente distrazioni: solo un tracking eccellente.
-
-Tu ti concentri sull'allenamento. aTrainingTracker si occupa della registrazione.
+Sviluppato con passione da oltre 15 anni da atleti di resistenza, per atleti di resistenza.

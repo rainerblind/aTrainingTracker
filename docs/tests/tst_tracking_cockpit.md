@@ -1,9 +1,9 @@
 # Living Test Specification: Tracking & Live Sensor Cockpit
 
 **Domain**: `tracking_cockpit`  
-**Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `STP`, `TRK`, `WEA`  
+**Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 55
+**Total Tests**: 53
 
 ---
 
@@ -23,17 +23,6 @@
 - **Component**: **Atomic Altitude Correction**
 - **Jira**: ``ATT-425``
 - **Test Description**: 1. Start a workout with barometric altitude at 100m. 2. Record data for 1 minute. 3. Trigger a correction to 200m (e.g. by nearing a known location). 4. Stop workout and inspect summary.
-
-### TST-STP-001: **Localization** [Adhere to Google Play character limits.]
-- **Requirement(s)**: `REQ-STP-001`
-- **Component**: **Localization**
-- **Test Description**: Review generated markdown files in `docs/store_presence/`. Verify that Title, Short Description and Full Description are correctly translated.
-
-### TST-STP-002: **Messaging Review** [Description is punchy, highlights key features (Automation, Privacy, Clusters), and maintains professional tone.]
-- **Requirement(s)**: `REQ-STP-002`
-- **Component**: **Messaging Review**
-- **Jira**: ``ATT-276``
-- **Test Description**: 1. Compare new Play Store description with user's draft and project vision.
 
 ### TST-CON-002: **Barometric Cold-Start Baseline Protection Audit** [Cold-start uncalibrated pressure readings cannot contaminate session extrema before reference anchor or calibration is established.]
 - **Requirement(s)**: `REQ-CON-011`
