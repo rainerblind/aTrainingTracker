@@ -148,4 +148,53 @@ class StravaCsvParserTest {
         assertEquals(BSportType.UNKNOWN, StravaCsvParser.mapSportType("Yoga"))
         assertEquals(BSportType.UNKNOWN, StravaCsvParser.mapSportType(null))
     }
+
+    @Test
+    fun testParseActivities_mediaColumnGermanAndEnglish() {
+        val germanCsv = """
+            Aktivitäts-ID,Aktivitätsdatum,Name der Aktivität,Aktivitätsart,Medien
+            1001,"01.05.2024, 10:00:00",Trail Run,Lauf,"media/pic1.jpg|media/pic2.jpg"
+            1002,"02.05.2024, 12:00:00",Bike Ride,Radfahrt,
+        """.trimIndent()
+
+        val germanActivities = StravaCsvParser.parseActivities(StringReader(germanCsv))
+        assertEquals(2, germanActivities.size)
+        assertEquals(listOf("media/pic1.jpg", "media/pic2.jpg"), germanActivities[0].media)
+        assertTrue(germanActivities[1].media.isEmpty())
+
+        val englishCsv = """
+            Activity ID,Activity Date,Activity Name,Activity Type,Media
+            2001,"01.05.2024, 10:00:00",Trail Run,Run,"media/picA.jpg"
+        """.trimIndent()
+
+        val englishActivities = StravaCsvParser.parseActivities(StringReader(englishCsv))
+        assertEquals(1, englishActivities.size)
+        assertEquals(listOf("media/picA.jpg"), englishActivities[0].media)
+    }
+
+    @Test
+    fun testParseMediaCaptions_germanAndEnglish() {
+        val germanMediaCsv = """
+            Medien-Dateiname,Medienunterschrift
+            media/pic1.jpg,"Beautiful mountain summit"
+            media/pic2.jpg,Trailhead start
+        """.trimIndent()
+
+        val germanCaptions = StravaCsvParser.parseMediaCaptions(StringReader(germanMediaCsv))
+        assertEquals(4, germanCaptions.size)
+        assertEquals("Beautiful mountain summit", germanCaptions["media/pic1.jpg"])
+        assertEquals("Beautiful mountain summit", germanCaptions["pic1.jpg"])
+        assertEquals("Trailhead start", germanCaptions["media/pic2.jpg"])
+        assertEquals("Trailhead start", germanCaptions["pic2.jpg"])
+
+        val englishMediaCsv = """
+            Media Filename,Media Caption
+            media/picA.jpg,Finish line celebration
+        """.trimIndent()
+
+        val englishCaptions = StravaCsvParser.parseMediaCaptions(StringReader(englishMediaCsv))
+        assertEquals(2, englishCaptions.size)
+        assertEquals("Finish line celebration", englishCaptions["media/picA.jpg"])
+        assertEquals("Finish line celebration", englishCaptions["picA.jpg"])
+    }
 }

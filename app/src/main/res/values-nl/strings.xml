@@ -2323,4 +2323,12 @@
     <string name="share_cta_button">Delen</string>
     <string name="share_error_no_gps">Geen GPS-route geregistreerd voor deze workout</string>
     <string name="share_error_photo_load">Geselecteerde foto laden mislukt</string>
+    <!-- Workout Photos (REQ-UI-448 / ATT-43) -->
+    <string name="workout_photos_title">Foto\'s</string>
+    <string name="workout_photos_add">Foto\'s toevoegen</string>
+    <string name="workout_photos_empty">Geen foto\'s bijgevoegd</string>
+    <string name="workout_photos_delete">Foto verwijderen</string>
+    <string name="workout_photos_delete_confirm">Wil je deze foto van de workout verwijderen?</string>
+    <string name="workout_photos_share_overlay">Delen met track-overlay</string>
+    <string name="workout_photos_marker_title">Foto</string>
 </resources>

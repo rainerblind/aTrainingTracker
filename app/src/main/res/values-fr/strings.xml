@@ -2323,4 +2323,12 @@
     <string name="share_cta_button">Partager</string>
     <string name="share_error_no_gps">Aucun tracé GPS enregistré pour cet entraînement</string>
     <string name="share_error_photo_load">Échec du chargement de la photo sélectionnée</string>
+    <!-- Workout Photos (REQ-UI-448 / ATT-43) -->
+    <string name="workout_photos_title">Photos</string>
+    <string name="workout_photos_add">Ajouter des photos</string>
+    <string name="workout_photos_empty">Aucune photo jointe</string>
+    <string name="workout_photos_delete">Supprimer la photo</string>
+    <string name="workout_photos_delete_confirm">Voulez-vous supprimer cette photo de l\'entraînement ?</string>
+    <string name="workout_photos_share_overlay">Partager avec superposition du tracé</string>
+    <string name="workout_photos_marker_title">Photo</string>
 </resources>

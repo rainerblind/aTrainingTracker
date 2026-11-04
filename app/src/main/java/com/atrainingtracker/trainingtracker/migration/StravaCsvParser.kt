@@ -12,6 +12,7 @@ package com.atrainingtracker.trainingtracker.migration
 
 import com.atrainingtracker.banalservice.BSportType
 import java.io.BufferedReader
+import java.io.File
 import java.io.Reader
 import java.util.Locale
 
@@ -41,7 +42,8 @@ data class StravaActivityRow(
     val avgHr: Double? = null,
     val maxHr: Double? = null,
     val avgWatts: Double? = null,
-    val maxWatts: Double? = null
+    val maxWatts: Double? = null,
+    val media: List<String> = emptyList()
 )
 
 /**
@@ -148,6 +150,7 @@ object StravaCsvParser {
         val maxHrIdx = findFirstHeader(headers, "max. herzfrequenz", "max heart rate")
         val avgWattsIdx = findFirstHeader(headers, "durchschnittliche watt", "average watts")
         val maxWattsIdx = findFirstHeader(headers, "max. watt", "max watts")
+        val mediaIdx = findFirstHeader(headers, "medien", "media")
 
         val result = mutableListOf<StravaActivityRow>()
         for (i in 1 until records.size) {
@@ -157,6 +160,15 @@ object StravaCsvParser {
 
             val rawType = getField(row, typeIdx)
             val sportType = mapSportType(rawType)
+
+            val rawMedia = getField(row, mediaIdx)
+            val mediaList = if (!rawMedia.isNullOrBlank()) {
+                rawMedia.split('|')
+                    .map { it.trim().replace('\\', '/') }
+                    .filter { it.isNotBlank() }
+            } else {
+                emptyList()
+            }
 
             result.add(
                 StravaActivityRow(
@@ -178,7 +190,8 @@ object StravaCsvParser {
                     avgHr = parseDouble(getField(row, avgHrIdx)),
                     maxHr = parseDouble(getField(row, maxHrIdx)),
                     avgWatts = parseDouble(getField(row, avgWattsIdx)),
-                    maxWatts = parseDouble(getField(row, maxWattsIdx))
+                    maxWatts = parseDouble(getField(row, maxWattsIdx)),
+                    media = mediaList
                 )
             )
         }
@@ -247,6 +260,30 @@ object StravaCsvParser {
             }
         }
         return list
+    }
+
+    /**
+     * Parses `media.csv` into a map of media filenames to captions (REQ-MIG-048.6 / ATT-43).
+     */
+    fun parseMediaCaptions(reader: Reader): Map<String, String> {
+        val records = parseCsv(reader)
+        if (records.isEmpty()) return emptyMap()
+
+        val headers = records[0].map { normalize(it) }
+        val filenameIdx = findFirstHeader(headers, "medien-dateiname", "media filename", "filename", "file name")
+        val captionIdx = findFirstHeader(headers, "medienunterschrift", "media caption", "caption")
+
+        val captions = mutableMapOf<String, String>()
+        for (i in 1 until records.size) {
+            val row = records[i]
+            val file = getField(row, filenameIdx)?.trim()?.replace('\\', '/')
+            val caption = getField(row, captionIdx)?.trim()
+            if (!file.isNullOrBlank() && !caption.isNullOrBlank()) {
+                captions[file] = caption
+                captions[File(file).name] = caption
+            }
+        }
+        return captions
     }
 
     /**

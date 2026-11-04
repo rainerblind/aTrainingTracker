@@ -2322,4 +2322,12 @@
     <string name="share_cta_button">Compartilhar</string>
     <string name="share_error_no_gps">Nenhum trajeto GPS registrado para este treino</string>
     <string name="share_error_photo_load">Falha ao carregar a foto selecionada</string>
+    <!-- Workout Photos (REQ-UI-448 / ATT-43) -->
+    <string name="workout_photos_title">Fotos</string>
+    <string name="workout_photos_add">Adicionar fotos</string>
+    <string name="workout_photos_empty">Nenhuma foto anexada</string>
+    <string name="workout_photos_delete">Excluir foto</string>
+    <string name="workout_photos_delete_confirm">Deseja excluir esta foto do treino?</string>
+    <string name="workout_photos_share_overlay">Compartilhar com sobreposição de percurso</string>
+    <string name="workout_photos_marker_title">Foto</string>
 </resources>

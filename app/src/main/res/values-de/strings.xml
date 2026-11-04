@@ -2409,4 +2409,12 @@
     <string name="share_cta_button">Teilen</string>
     <string name="share_error_no_gps">Keine GPS-Strecke für dieses Workout aufgezeichnet</string>
     <string name="share_error_photo_load">Ausgewähltes Foto konnte nicht geladen werden</string>
+    <!-- Workout Photos (REQ-UI-448 / ATT-43) -->
+    <string name="workout_photos_title">Fotos</string>
+    <string name="workout_photos_add">Fotos hinzufügen</string>
+    <string name="workout_photos_empty">Keine Fotos angehängt</string>
+    <string name="workout_photos_delete">Foto löschen</string>
+    <string name="workout_photos_delete_confirm">Möchtest du dieses Foto aus dem Workout löschen?</string>
+    <string name="workout_photos_share_overlay">Mit Track-Overlay teilen</string>
+    <string name="workout_photos_marker_title">Foto</string>
 </resources>

@@ -13143,6 +13143,42 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Backward compatibility for all existing `combineWorkoutAndShare` callers, safe bitmap downsampling preventing OOM, WCAG AAA text contrast, 9-language localization parity, and 100% clean-room test pass rate.
 
+### REQ-UI-448: Workout Photos Strip, Full-Screen Preview Bottom Sheet with ATT-30 Overlay Share, and Map Pin Markers [Verified]
+- **Tests**: `TST-UI-448` | **Tickets**: `ATT-43`
+- **Implementation**: `WorkoutDetails.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `ATrainingTrackerMap.kt`, `WorkoutPhotoViewerSheet.kt`, `WorkoutShareBottomSheet.kt`
+- **Rationale**: Athletes capture photos during workouts and wish to browse them alongside workout telemetry, inspect them on the workout GPS map, and share them via social media. REQ-UI-448 defines the UI presentation and interaction contracts for workout photos (ATT-43, extending `REQ-UI-447` and `REQ-UI-408`):
+1. *Workout Photos Horizontal Strip (`REQ-UI-448.1`)*:
+• In `WorkoutDetails.kt` (and `WorkoutDetailTabbedContent.kt`), when attached photos exist, the system SHALL render a dedicated horizontal photo strip displaying downsampled thumbnail previews (`RoundedCornerShape(8.dp)`), along with an "Add Photos" action button (`ActivityResultContracts.PickMultipleVisualMedia`).
+• If no photos are attached, an empty-state action button SHALL allow athletes to attach photos from the system Photo Picker.
+2. *Full-Screen Photo Viewer Bottom Sheet (`REQ-UI-448.2`)*:
+• Tapping a photo thumbnail SHALL open `WorkoutPhotoViewerSheet` (hosted in `AppModalBottomSheet` per ATT-5399), displaying the full image, capture timestamp, caption (if present), an action to delete the photo (with confirmation dialog), and a prominent CTA to share the photo via `WorkoutShareBottomSheet` (ATT-30).
+3. *Map Photo Pin Markers (`REQ-UI-448.3`)*:
+• In `TrackOnMapScreen.kt` and `ATrainingTrackerMap.kt`, photos with resolved GPS coordinates SHALL be rendered as distinct photo pin markers (`LocationMarker`) along the workout route.
+• Tapping a photo marker on the map SHALL trigger `WorkoutPhotoViewerSheet` for that photo.
+4. *Memory Safety & 9-Language Localization Parity (`REQ-UI-448.4`)*:
+• Thumbnail and preview decoding SHALL use downsampled bitmap decoders (`inSampleSize`) via `PhotoTrackOverlayComposer.decodeSampledBitmap` to prevent out-of-memory exceptions.
+• All user-visible labels, headers, dialogs, and accessibility descriptions SHALL maintain 100% parity across all 9 supported locales without decorative inline Unicode emojis.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-448`, extending `REQ-UI-447` (*Workout Share Mode Selection & Photo Track Overlay*) and `REQ-UI-408` (*Multi-Tab Workout Details*). Targets `WorkoutDetails.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `ATrainingTrackerMap.kt`, and `WorkoutPhotoViewerSheet.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-45.6 (`ATT-30`, `REQ-UI-447`), Sprint 2026-44.1 (`ATT-3920`, `REQ-UI-408`).
+3. *Root Reason for Existing Formulation*: Prior to ATT-43, `WorkoutDetails` only rendered tabular telemetry metrics and `TrackOnMapScreen` only rendered start, finish, and lap markers.
+4. *Preservation of Core Invariants*: Existing metric rows, tab layouts, and map marker contracts remain invariant; memory-safe sampled decoding prevents OOM.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete viewing a workout with attached photos in `WorkoutDetails`,
+• *When* the details screen renders,
+• *Then* a horizontal photo strip appears displaying thumbnails and an add-photos button.
+• *Given* the athlete taps a photo in the strip or a photo pin on the map,
+• *When* clicked,
+• *Then* `WorkoutPhotoViewerSheet` opens displaying the full preview, caption, delete action, and "Share with Track Overlay" CTA.
+• *Given* the athlete taps "Share with Track Overlay" in the viewer sheet,
+• *When* triggered,
+• *Then* `WorkoutShareBottomSheet` (ATT-30) opens pre-seeded with the selected photo.
+
+**Invariants**: Bottom popup standard via `AppModalBottomSheet`, safe downsampled bitmap decoding, 9-language localization parity without inline emojis, 100% clean-room test pass rate.
+
+
 
 
 

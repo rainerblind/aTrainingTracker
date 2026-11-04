@@ -57,6 +57,11 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.LapEditBot
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.atrainingtracker.trainingtracker.database.WorkoutPhotoEntry
+import com.atrainingtracker.trainingtracker.ui.aftermath.photos.WorkoutPhotoPreviewBottomSheet
+import com.atrainingtracker.trainingtracker.ui.aftermath.photos.WorkoutPhotoStrip
+import com.atrainingtracker.trainingtracker.ui.map.WorkoutShareBottomSheet
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.produceState
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatus
 import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
@@ -117,6 +122,20 @@ fun WorkoutSummary(
     val tuningDataStore = remember(context) { TuningPreferencesDataStore(context.applicationContext) }
     val observedTuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(initial = TuningConfig())
     val effectiveTuningConfig = tuningConfig ?: observedTuningConfig
+    val coroutineScope = rememberCoroutineScope()
+
+    var photosRefreshKey by remember { mutableIntStateOf(0) }
+    val workoutPhotos by produceState<List<WorkoutPhotoEntry>>(
+        initialValue = emptyList(),
+        key1 = workoutData.id,
+        key2 = photosRefreshKey
+    ) {
+        value = withContext(Dispatchers.IO) {
+            repository.getWorkoutPhotos(workoutData.id)
+        }
+    }
+    var activePreviewPhoto by remember { mutableStateOf<WorkoutPhotoEntry?>(null) }
+    var activeSharePhoto by remember { mutableStateOf<WorkoutPhotoEntry?>(null) }
 
     // Lazy telemetry points loading (ATT-1714 / REQ-UI-210)
     val telemetryPoints by produceState<List<PathPoint>>(
@@ -206,6 +225,19 @@ fun WorkoutSummary(
             showAerobicEfficiencyInWorkoutSummary = effectiveTuningConfig.showAerobicEfficiencyInWorkoutSummary,
             enableCriticalPowerModel = effectiveTuningConfig.enableCriticalPowerModel,
             showCriticalPowerInWorkoutSummary = effectiveTuningConfig.showCriticalPowerInWorkoutSummary
+        )
+
+        WorkoutPhotoStrip(
+            photos = workoutPhotos,
+            onPhotoClick = { photo -> activePreviewPhoto = photo },
+            onAddPhotos = { uris ->
+                coroutineScope.launch {
+                    uris.forEach { uri ->
+                        repository.addWorkoutPhoto(workoutData.id, uri, null)
+                    }
+                    photosRefreshKey++
+                }
+            }
         )
 
         // 2. Dynamic Section Rendering Loop (REQ-UI-255)
@@ -485,6 +517,34 @@ fun WorkoutSummary(
                         .updateLapDetails(workoutData.id, lapNr, name, description)
                 }
             }
+        )
+    }
+
+    activePreviewPhoto?.let { photo ->
+        WorkoutPhotoPreviewBottomSheet(
+            photo = photo,
+            onDismissRequest = { activePreviewPhoto = null },
+            onDeletePhoto = { photoToDelete ->
+                coroutineScope.launch {
+                    repository.deleteWorkoutPhoto(photoToDelete.id)
+                    photosRefreshKey++
+                    activePreviewPhoto = null
+                }
+            },
+            onShareOverlay = { photoToShare ->
+                activeSharePhoto = photoToShare
+                activePreviewPhoto = null
+            }
+        )
+    }
+
+    activeSharePhoto?.let { photo ->
+        WorkoutShareBottomSheet(
+            workoutData = workoutData,
+            onDismissRequest = { activeSharePhoto = null },
+            onSelectMapSnapshot = { activeSharePhoto = null },
+            initialPhotoUri = photo.uri,
+            attachedPhotos = workoutPhotos.map { it.uri }
         )
     }
 }

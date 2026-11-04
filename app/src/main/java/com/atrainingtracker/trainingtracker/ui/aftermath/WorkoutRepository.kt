@@ -23,6 +23,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.Uri
 import android.util.Log
 import androidx.annotation.VisibleForTesting
 import androidx.core.content.ContextCompat
@@ -41,6 +42,8 @@ import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.database.WorkoutDeletionHelper
+import com.atrainingtracker.trainingtracker.database.WorkoutPhotoEntry
+import com.atrainingtracker.trainingtracker.database.WorkoutPhotoManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
@@ -959,7 +962,44 @@ class WorkoutRepository private constructor(private val application: Application
                 }
             }
         }
+
+        // 3. Photo Location Markers (REQ-UI-448.3 / ATT-43)
+        val photos = summariesManager.getPhotosForWorkout(workoutId)
+        photos.forEach { photo ->
+            if (photo.latitude != null && photo.longitude != null) {
+                val title = photo.caption ?: application.getString(R.string.workout_photos_marker_title)
+                markerList.add(
+                    LocationMarker(
+                        position = LatLng(photo.latitude, photo.longitude),
+                        iconResId = R.drawable.ic_place,
+                        title = title
+                    )
+                )
+            }
+        }
+
         markerList
+    }
+
+    /**
+     * Retrieves all photos attached to the given workout (REQ-DAT-038 / ATT-43).
+     */
+    fun getWorkoutPhotos(workoutId: Long): List<WorkoutPhotoEntry> {
+        return summariesManager.getPhotosForWorkout(workoutId)
+    }
+
+    /**
+     * Attaches an athlete-selected photo URI to the workout.
+     */
+    suspend fun addWorkoutPhoto(workoutId: Long, sourceUri: Uri, caption: String? = null): WorkoutPhotoEntry? {
+        return WorkoutPhotoManager.addPhoto(application, workoutId, sourceUri, caption)
+    }
+
+    /**
+     * Deletes a photo from the workout database and disk.
+     */
+    fun deleteWorkoutPhoto(photoId: Long): Boolean {
+        return WorkoutPhotoManager.deletePhoto(application, photoId)
     }
 
     /**

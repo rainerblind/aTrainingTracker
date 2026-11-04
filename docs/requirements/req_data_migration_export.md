@@ -3024,6 +3024,10 @@
 • Pre-existing workouts matching start timestamp and sport type SHALL be skipped via `LegacyImportEngine.isWorkoutExisting()` without data corruption (`DUPLICATE_SKIPPED`).
 • Progress updates SHALL be reported through `LegacyImportEngine.ProgressListener` with current index, total count, and activity title.
 • Existing standalone FIT, TCX, and GPX file/directory import pipelines MUST remain fully functional and unregressed.
+6. *Strava Bulk Export Media & Photo Ingestion (`REQ-MIG-048.6`)*:
+• The system SHALL stream and parse the pipe-separated `Medien` / `Media` column in `activities.csv` and photo captions from `media.csv` (`Medien-Dateiname,Medienunterschrift` / `media-filename,caption`) (ATT-43).
+• Referenced image files (`media/*`) SHALL be extracted directly into app-private workout media storage (`filesDir/workout_photos/<workout_id>/`) with strict Zip-Slip path sanitization (`REQ-MIG-040`).
+• If EXIF capture timestamp and GPS metadata are absent (e.g. stripped by Strava export), the photo SHALL default to the workout start timestamp and the corresponding GPS trackpoint coordinate.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
 1. *Original Requirement ID & Target*: Net-new requirement `REQ-MIG-048` under Standalone Ticket `ATT-4957` (Sprint `2026-45.6`), extending `REQ-MIG-030` (*Legacy GPX Import*), `REQ-MIG-031` (*Deduplication*), `REQ-MIG-037` (*Streaming XML Parsing*), `REQ-MIG-038` (*ParsedWorkoutData DTO*), and `REQ-MIG-040` (*Secure Zip Extraction*). Targets `StravaZipImportEngine.kt`, `LegacyImportEngine.kt`, `ImportBackupTabsScreen.kt`, `TrackpointModels.kt`, `EquipmentDbHelper.java`, and `StravaUploadDbHelper.java`.
@@ -3043,5 +3047,40 @@
 • *Then* `StravaUploadDbHelper` records the activity ID with status `Uploaded` and `UPLOAD_TO_STRAVA` is set to `0`, preventing duplicate re-uploads to Strava.
 
 **Invariants**: Zip-Slip protection strictly enforced; zero uncompressed multi-gigabyte disk staging; standalone FIT/TCX/GPX imports remain 100% unregressed.
+
+### REQ-DAT-038: Workout Photo Storage, Symmetrical SQLite Schema v27, and EXIF/Trackpoint Interpolation [Verified]
+- **Tests**: `TST-DAT-034` | **Tickets**: `ATT-43`
+- **Implementation**: `WorkoutSummariesDatabaseManager.java`, `DatabaseSchemaRegistry.kt`, `WorkoutPhotoManager.kt`, `WorkoutDeletionHelper.java`
+- **Rationale**: Athletes capture photos during workouts and export archives containing workout media. To persist photos attached to workouts without ballooning SQLite database size, photo metadata SHALL be stored in a dedicated `workout_photos` table in `WorkoutSummaries.db` (v27) while image binaries are stored in app-private filesystem storage (`filesDir/workout_photos/<workout_id>/`), accompanied by EXIF metadata extraction and GPS trackpoint interpolation (ATT-43):
+1. *Symmetrical SQLite Schema v27 & DatabaseSchemaRegistry Parity (`REQ-DAT-038.1`)*:
+• `WorkoutSummaries.db` SHALL increment `DB_VERSION` from 26 to 27 and create table `workout_photos` (`_id` INTEGER PRIMARY KEY AUTOINCREMENT, `workout_id` INTEGER NOT NULL, `file_path` TEXT NOT NULL, `taken_at_ms` INTEGER, `latitude` REAL, `longitude` REAL, `caption` TEXT).
+• Both `onCreate()` and `onUpgrade()` SHALL define identical table schemas, constraints, and index `idx_workout_photos_workout_id` on `workout_photos (workout_id)` (Rule 2.3).
+• `DatabaseSchemaRegistry.kt` SHALL reference `WorkoutSummariesDbHelper.DB_VERSION` directly rather than hardcoding a static integer (Rule 2.2).
+2. *EXIF Timestamp & GPS Trackpoint Interpolation (`REQ-DAT-038.2`)*:
+• When a photo is attached, the system SHALL extract the EXIF capture timestamp (`TAG_DATETIME_ORIGINAL`) and GPS coordinates.
+• If EXIF GPS coordinates are absent but `taken_at_ms` falls within the workout start and end time window, the system SHALL interpolate latitude and longitude by querying adjacent timestamped trackpoints in `WorkoutSamples.db`.
+3. *Cascading Deletion & Cleanup Invariants (`REQ-DAT-038.3`)*:
+• Deleting a single photo SHALL remove its database record and delete the physical image file from storage.
+• Deleting a workout via `WorkoutSummariesDatabaseManager.deleteWorkout` or `WorkoutDeletionHelper` SHALL cascade-delete all associated photo rows in `workout_photos` and delete directory `filesDir/workout_photos/<workout_id>/`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-DAT-038` under Standalone Ticket `ATT-43` (Sprint `2026-45.6`), extending `REQ-DAT-034` (*SQLite Schema Indexing*) and `REQ-MIG-040` (*Secure Storage*). Targets `WorkoutSummariesDatabaseManager.java`, `DatabaseSchemaRegistry.kt`, `WorkoutPhotoManager.kt`, and `WorkoutDeletionHelper.java`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-40.16 (`ATT-4008`, commit `69e6b41` - `DB_VERSION = 26`), Sprint 2026-44.1 (`ATT-4592`, `DatabaseSchemaRegistry`).
+3. *Root Reason for Existing Formulation*: `WorkoutSummaries.db` previously stored only scalar telemetry aggregates and encoded polylines, lacking media entity association.
+4. *Preservation of Core Invariants*: Zero regression on existing workout summaries; symmetrical `onCreate`/`onUpgrade` evolution; cascading disk cleanup; non-blocking background IO.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an upgraded or fresh installation of `aTrainingTracker`,
+• *When* `WorkoutSummariesDbHelper` initializes or upgrades from version 26 to 27,
+• *Then* table `workout_photos` and index `idx_workout_photos_workout_id` exist identically in both pathways, and `DatabaseSchemaRegistry` validates version 27.
+• *Given* a photo taken during a workout without embedded EXIF GPS coordinates,
+• *When* attached to the workout,
+• *Then* `taken_at_ms` is matched against `WorkoutSamples.db` trackpoints and interpolated latitude/longitude coordinates are stored.
+• *Given* an attached photo or complete workout deleted by the athlete,
+• *When* deletion is confirmed,
+• *Then* all corresponding rows in `workout_photos` and image files on disk are deleted.
+
+**Invariants**: Symmetrical SQLite evolution, safe file deletion, memory-safe bitmap sampling, 100% clean-room test pass rate.
+
 
 

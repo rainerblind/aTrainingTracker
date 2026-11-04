@@ -2325,4 +2325,12 @@
     <string name="share_cta_button">Udostępnij</string>
     <string name="share_error_no_gps">Brak zarejestrowanej trasy GPS dla tego treningu</string>
     <string name="share_error_photo_load">Nie udało się załadować wybranego zdjęcia</string>
+    <!-- Workout Photos (REQ-UI-448 / ATT-43) -->
+    <string name="workout_photos_title">Zdjęcia</string>
+    <string name="workout_photos_add">Dodaj zdjęcia</string>
+    <string name="workout_photos_empty">Brak dołączonych zdjęć</string>
+    <string name="workout_photos_delete">Usuń zdjęcie</string>
+    <string name="workout_photos_delete_confirm">Czy chcesz usunąć to zdjęcie z treningu?</string>
+    <string name="workout_photos_share_overlay">Udostępnij z nakładką trasy</string>
+    <string name="workout_photos_marker_title">Zdjęcie</string>
 </resources>

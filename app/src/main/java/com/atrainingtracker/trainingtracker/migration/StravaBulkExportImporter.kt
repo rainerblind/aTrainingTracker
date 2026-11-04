@@ -16,6 +16,7 @@ import android.util.Log
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
+import com.atrainingtracker.trainingtracker.database.WorkoutPhotoManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSource
 import com.atrainingtracker.trainingtracker.migration.parsers.FitWorkoutParser
 import com.atrainingtracker.trainingtracker.migration.parsers.GpxWorkoutParser
@@ -107,8 +108,22 @@ object StravaBulkExportImporter {
         }
 
         zipFile.use { zip ->
-            // 1. Sanitize entries and pre-load gear
+            // 1. Sanitize entries and pre-load gear and captions
             syncEquipmentFromArchive(context, zip)
+
+            val mediaCaptions = findZipEntryIgnoreCase(zip, "media.csv")?.let { entry ->
+                try {
+                    validateZipEntry(entry.name)
+                    zip.getInputStream(entry).use { stream ->
+                        InputStreamReader(stream, Charsets.UTF_8).use { reader ->
+                            StravaCsvParser.parseMediaCaptions(reader)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Could not parse media.csv", e)
+                    emptyMap()
+                }
+            } ?: emptyMap()
 
             // 2. Parse activities.csv
             val activitiesEntry = findZipEntryIgnoreCase(zip, "activities.csv")
@@ -236,6 +251,16 @@ object StravaBulkExportImporter {
                             importedCount++
                             if (importResult.workoutId != null) {
                                 lastWorkoutId = importResult.workoutId
+                                if (row.media.isNotEmpty()) {
+                                    importActivityPhotos(
+                                        context = context,
+                                        zip = zip,
+                                        workoutId = importResult.workoutId,
+                                        mediaPaths = row.media,
+                                        mediaCaptions = mediaCaptions,
+                                        parsedWorkout = enrichedWorkout
+                                    )
+                                }
                             }
                         }
                         LegacyImportEngine.ImportStatus.DUPLICATE_SKIPPED -> {
@@ -378,5 +403,74 @@ object StravaBulkExportImporter {
             }
         }
         return null
+    }
+
+    private fun importActivityPhotos(
+        context: Context,
+        zip: ZipFile,
+        workoutId: Long,
+        mediaPaths: List<String>,
+        mediaCaptions: Map<String, String>,
+        parsedWorkout: ParsedWorkoutData
+    ) {
+        val summariesDb = com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.getInstance(context)
+        val targetDir = WorkoutPhotoManager.getWorkoutPhotosDir(context, workoutId)
+        val startTimeMs: Long = parsedWorkout.firstTime?.let { timeStr ->
+            runCatching {
+                SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).parse(timeStr)?.time
+            }.getOrNull() ?: runCatching {
+                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).parse(timeStr)?.time
+            }.getOrNull()
+        } ?: System.currentTimeMillis()
+
+        mediaPaths.forEach { rawPath ->
+            try {
+                validateZipEntry(rawPath)
+                val entry = findZipEntryIgnoreCase(zip, rawPath) ?: return@forEach
+                val entryFile = File(entry.name)
+                val targetFile = File(targetDir, entryFile.name)
+
+                zip.getInputStream(entry).use { inStream ->
+                    FileOutputStream(targetFile).use { outStream ->
+                        inStream.copyTo(outStream)
+                    }
+                }
+
+                val caption = mediaCaptions[rawPath] ?: mediaCaptions[entryFile.name]
+                val exif = WorkoutPhotoManager.extractExifMetadata(targetFile)
+                val takenAtMs = exif.takenAtMs ?: startTimeMs
+                var latitude = exif.latitude
+                var longitude = exif.longitude
+
+                // Fallback trackpoint interpolation when EXIF is stripped
+                if (latitude == null || longitude == null) {
+                    val baseFileName = summariesDb.getBaseFileName(workoutId)
+                    if (baseFileName != null) {
+                        try {
+                            val samplesDb = com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager.getInstance(context).database
+                            val interpolated = WorkoutPhotoManager.interpolateCoordinatesAtTimestamp(samplesDb, baseFileName, takenAtMs)
+                            if (interpolated != null) {
+                                latitude = interpolated.latitude
+                                longitude = interpolated.longitude
+                            }
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Failed to interpolate coordinates for imported photo ${targetFile.name}", e)
+                        }
+                    }
+                    if ((latitude == null || longitude == null) && parsedWorkout.points.isNotEmpty()) {
+                        val firstGps = parsedWorkout.points.firstOrNull()
+                        if (firstGps != null) {
+                            latitude = firstGps.latitude
+                            longitude = firstGps.longitude
+                        }
+                    }
+                }
+
+                summariesDb.insertPhoto(workoutId, targetFile.absolutePath, takenAtMs, latitude, longitude, caption)
+                Log.d(TAG, "Imported workout photo: ${targetFile.name} (lat=$latitude, lng=$longitude, caption=$caption)")
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to import photo $rawPath for workout $workoutId", e)
+            }
+        }
     }
 }

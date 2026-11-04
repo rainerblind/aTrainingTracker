@@ -18,8 +18,10 @@
 
 package com.atrainingtracker.trainingtracker.ui.map
 
+import android.app.Application
 import android.content.res.Configuration
 import android.graphics.Bitmap
+import android.net.Uri
 import kotlin.math.abs
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -57,6 +59,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneCardDisplayMo
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionData
 import com.atrainingtracker.trainingtracker.helpers.combineWorkoutAndShare
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
 import com.atrainingtracker.trainingtracker.ui.components.core.GlobalTelemetryZoomToolbar
 import com.atrainingtracker.trainingtracker.ui.components.core.GlobalTelemetryZoomToolbarDefaults
@@ -906,10 +909,18 @@ fun MapDetailLayout(
     }
 
     if (showShareModeSheet && workoutData != null) {
+        val attachedPhotos by produceState<List<Uri>>(initialValue = emptyList(), workoutData.id) {
+            value = withContext(Dispatchers.IO) {
+                WorkoutRepository.getInstance(context.applicationContext as Application)
+                    .getWorkoutPhotos(workoutData.id)
+                    .map { it.uri }
+            }
+        }
         WorkoutShareBottomSheet(
             workoutData = workoutData,
             onDismissRequest = { showShareModeSheet = false },
-            onSelectMapSnapshot = { isSharing = true }
+            onSelectMapSnapshot = { isSharing = true },
+            attachedPhotos = attachedPhotos
         )
     }
 }

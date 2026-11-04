@@ -2303,4 +2303,12 @@
     <string name="share_cta_button">共有</string>
     <string name="share_error_no_gps">このワークアウトにはGPSトラックが記録されていません</string>
     <string name="share_error_photo_load">選択した写真を読み込めませんでした</string>
+    <!-- Workout Photos (REQ-UI-448 / ATT-43) -->
+    <string name="workout_photos_title">写真</string>
+    <string name="workout_photos_add">写真を追加</string>
+    <string name="workout_photos_empty">添付された写真はありません</string>
+    <string name="workout_photos_delete">写真を削除</string>
+    <string name="workout_photos_delete_confirm">この写真をワークアウトから削除しますか？</string>
+    <string name="workout_photos_share_overlay">トラックオーバーレイで共有</string>
+    <string name="workout_photos_marker_title">写真</string>
 </resources>

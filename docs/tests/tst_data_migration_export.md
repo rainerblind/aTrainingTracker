@@ -1994,4 +1994,31 @@
   • Verify all Strava bulk export string resources exist across all 9 locales (`values`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`) with zero missing keys and matching `%d` format tokens.
   7. *Clean-Room Regression Suite Execution (`TST-MIG-046.7`)*:
   • Execute targeted package unit tests (`com.atrainingtracker.trainingtracker.migration.*`) asserting 100% pass rate.
+  8. *Strava Bulk Export Media & Caption Parsing (`TST-MIG-046.8`, `StravaBulkExportMediaTest.kt`)*:
+  • Parse `activities.csv` containing pipe-separated `Medien` / `Media` filenames and `media.csv` with `Medien-Dateiname,Medienunterschrift`.
+  • Verify `StravaBulkExportImporter` extracts `media/*` files to `filesDir/workout_photos/<workout_id>/` and persists photo rows with matched captions.
+  • Verify Zip-Slip path traversal attempts in media filenames are rejected with `SecurityException`.
+
+### TST-DAT-034: **Workout Photo Storage, Symmetrical Schema Migration v27, and EXIF/Trackpoint Interpolation Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-DAT-038`
+- **Component**: `WorkoutSummariesDatabaseManager.java`, `DatabaseSchemaRegistry.kt`, `WorkoutPhotoManager.kt`, `WorkoutDeletionHelper.java`
+- **Jira**: `ATT-43`
+- **Test Description**:
+  1. *Symmetrical SQLite Schema v27 Migration & Index Contract Test (`TST-DAT-034.1`, `WorkoutSummariesMigrationV27Test.kt`)*:
+  • Verify `WorkoutSummariesDbHelper.DB_VERSION == 27` and `DatabaseSchemaRegistry.getMaxSupportedVersion("WorkoutSummaries.db") == 27`.
+  • Create database at version 26 and execute `onUpgrade(db, 26, 27)`.
+  • Create fresh database at version 27 via `onCreate(db)`.
+  • Assert both schemas contain identical columns, types, and defaults for `workout_photos`, and index `idx_workout_photos_workout_id` exists.
+  2. *EXIF Extraction & GPS Trackpoint Interpolation (`TST-DAT-034.2`, `WorkoutPhotoManagerTest.kt`)*:
+  • Provide sample image with EXIF timestamp and GPS tags; verify exact extraction.
+  • Provide sample image with EXIF timestamp but without GPS tags; mock `WorkoutSamples.db` trackpoints surrounding `taken_at_ms`.
+  • Verify linear interpolation calculates matching latitude and longitude within the workout window.
+  • Verify timestamps outside workout window leave coordinates as null.
+  3. *Cascading Deletion & File Cleanup (`TST-DAT-034.3`, `WorkoutPhotoManagerTest.kt`, `WorkoutDeletionHelperTest.kt`)*:
+  • Attach test photos creating records in `workout_photos` and files in `filesDir/workout_photos/<id>/`.
+  • Delete single photo; verify DB row removed and file deleted.
+  • Delete workout; verify all photo rows removed and workout photo folder purged.
+  4. *Clean-Room Regression Suite Execution (`TST-DAT-034.4`)*:
+  • Run targeted package tests (`com.atrainingtracker.trainingtracker.database.*`) with 100% pass rate.
+
 

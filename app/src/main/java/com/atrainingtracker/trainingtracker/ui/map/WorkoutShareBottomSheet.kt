@@ -51,6 +51,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -89,7 +90,8 @@ fun WorkoutShareBottomSheet(
     workoutData: WorkoutData,
     onDismissRequest: () -> Unit,
     onSelectMapSnapshot: () -> Unit,
-    attachedPhotos: List<Uri> = emptyList()
+    attachedPhotos: List<Uri> = emptyList(),
+    initialPhotoUri: Uri? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -97,6 +99,23 @@ fun WorkoutShareBottomSheet(
     var composedBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var isComposing by remember { mutableStateOf(false) }
     var isSharing by remember { mutableStateOf(false) }
+
+    LaunchedEffect(initialPhotoUri) {
+        if (initialPhotoUri != null && composedBitmap == null) {
+            isComposing = true
+            val photo = withContext(Dispatchers.IO) {
+                PhotoTrackOverlayComposer.decodeSampledBitmap(context, initialPhotoUri)
+            }
+            if (photo != null) {
+                composedBitmap = withContext(Dispatchers.Default) {
+                    PhotoTrackOverlayComposer.composeOverlay(context, photo, workoutData)
+                }
+            } else {
+                Toast.makeText(context, R.string.share_error_photo_load, Toast.LENGTH_SHORT).show()
+            }
+            isComposing = false
+        }
+    }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()

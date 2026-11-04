@@ -2324,4 +2324,12 @@
     <string name="share_cta_button">Compartir</string>
     <string name="share_error_no_gps">No se ha registrado ninguna ruta GPS para este entrenamiento</string>
     <string name="share_error_photo_load">Error al cargar la foto seleccionada</string>
+    <!-- Workout Photos (REQ-UI-448 / ATT-43) -->
+    <string name="workout_photos_title">Fotos</string>
+    <string name="workout_photos_add">Añadir fotos</string>
+    <string name="workout_photos_empty">No hay fotos adjuntas</string>
+    <string name="workout_photos_delete">Eliminar foto</string>
+    <string name="workout_photos_delete_confirm">¿Deseas eliminar esta foto del entrenamiento?</string>
+    <string name="workout_photos_share_overlay">Compartir con superposición de ruta</string>
+    <string name="workout_photos_marker_title">Foto</string>
 </resources>

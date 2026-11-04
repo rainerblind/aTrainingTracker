@@ -7150,6 +7150,29 @@
   • Verify 100% parity across all 9 locales via `TranslationParityTest` for new share mode strings.
   • Run targeted test suite (`--tests "com.atrainingtracker.trainingtracker.helpers.*"`, `ui.map.*`, `ThemeColorCentralizationAuditTest`) with 100% pass rate.
 
+### TST-UI-448: **Workout Photos Strip, Full-Screen Preview Bottom Sheet with ATT-30 Overlay Share, and Map Pin Markers Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-448`
+- **Component**: `WorkoutDetails.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `WorkoutPhotoViewerSheet.kt`, `WorkoutShareBottomSheet.kt`
+- **Jira**: `ATT-43`
+- **Test Description**:
+  1. *Workout Photos Strip & Empty State Contract Test (`TST-UI-448.1`, `WorkoutPhotoUiContractTest.kt`)*:
+  • Verify horizontal photo strip renders when photos are attached, displaying thumbnail cards with `RoundedCornerShape(8.dp)`.
+  • Verify empty-state "Add Photos" button renders when no photos are attached.
+  • Verify photo picker launcher contract invocation on add button click.
+  2. *Workout Photo Viewer Bottom Sheet & ATT-30 Share Handoff (`TST-UI-448.2`, `WorkoutPhotoViewerSheetTest.kt`)*:
+  • Verify clicking thumbnail displays `WorkoutPhotoViewerSheet` via `AppModalBottomSheet`.
+  • Verify full image display, formatted capture timestamp, and caption rendering.
+  • Verify "Delete Photo" action presents confirmation dialog and triggers photo deletion callback.
+  • Verify "Share with Track Overlay" CTA launches `WorkoutShareBottomSheet` pre-populated with the photo Uri.
+  3. *Map Photo Pin Markers Contract Test (`TST-UI-448.3`, `WorkoutMarkersPhotoTest.kt`)*:
+  • Verify `WorkoutRepository.getWorkoutMarkers()` or mapper transforms photo records with non-null lat/lon into `LocationMarker`s with photo pin drawable.
+  • Verify `TrackOnMapScreen` / `ATrainingTrackerMap` renders photo pins along the GPS route.
+  4. *9-Language Localization & Format Specifier Parity Test (`TST-UI-448.4`, `TranslationParityTest.kt`)*:
+  • Verify 100% parity across all 9 supported locales for all `workout_photos_*` string keys with zero missing entries and zero decorative inline emojis.
+  5. *Clean-Room Regression Suite Execution (`TST-UI-448.5`)*:
+  • Run targeted package tests (`com.atrainingtracker.trainingtracker.ui.aftermath.*`, `ui.map.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
+
+
 
 
 
