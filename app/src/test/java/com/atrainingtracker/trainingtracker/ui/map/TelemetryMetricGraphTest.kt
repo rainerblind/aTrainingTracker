@@ -178,8 +178,9 @@ class TelemetryMetricGraphTest {
             content.contains("val startPaddingPx = 50.dp.toPx()")
         )
         assertTrue(
-            "TelemetryMetricGraph must set endPadding = 25.dp in portrait to match ElevationProfile exactly",
-            content.contains("val endPaddingPx = if (isLandscape) 0.dp.toPx() else 25.dp.toPx()") ||
+            "TelemetryMetricGraph must set endPadding = 52.dp in portrait to match ElevationProfile exactly",
+            content.contains("val endPaddingPx = if (isLandscape) 0.dp.toPx() else 52.dp.toPx()") ||
+                content.contains("val endPaddingPx = if (isLandscape) 0.dp.toPx() else 25.dp.toPx()") ||
                 content.contains("val endPaddingPx = 25.dp.toPx()")
         )
         assertTrue(
@@ -508,6 +509,79 @@ class TelemetryMetricGraphTest {
         assertFalse(
             "TelemetryMetricGraph must eliminate uncentered fixed tickX - 20f offset",
             content.contains("tickX - 20f")
+        )
+    }
+
+    @Test
+    fun testUniversalMarginalHistogram_REQ_UI_446_contract() {
+        assertTrue("TelemetryMetricGraph.kt must exist", telemetryGraphFile.exists())
+        val content = telemetryGraphFile.readText()
+
+        // 1. Widened portrait margin 52.dp (REQ-UI-446.3)
+        assertTrue(
+            "TelemetryMetricGraph must set endPadding = 52.dp in portrait",
+            content.contains("val endPaddingPx = if (isLandscape) 0.dp.toPx() else 52.dp.toPx()")
+        )
+
+        // 2. Uniform linear marginal histogram calculation
+        assertTrue(
+            "TelemetryMetricGraph must calculate nonZonedHistogram for non-zoned metrics",
+            content.contains("val nonZonedHistogram = remember") &&
+                content.contains("computeLinearMarginalHistogram")
+        )
+
+        // 3. Domain boundary filtering and clamping (Rule 70 / ATT-5311)
+        assertTrue(
+            "TelemetryMetricGraph must check rangeMax <= dataMin || rangeMin >= dataMax for linear bins",
+            content.contains("bin.rangeMax <= dataMin || bin.rangeMin >= dataMax")
+        )
+
+        // 4. Landscape AlignedMarginalLinearDistribution integration (REQ-UI-446.1)
+        assertTrue(
+            "TelemetryMetricGraph must render AlignedMarginalLinearDistribution in landscape",
+            content.contains("AlignedMarginalLinearDistribution(")
+        )
+    }
+
+    @Test
+    fun testComputeLinearMarginalHistogram_functionalValidation() {
+        val values = listOf(10.0, 15.0, 20.0, 25.0, 30.0)
+        val timestamps = listOf(0L, 2L, 4L, 6L, 8L)
+        val dataMin = 10.0
+        val dataMax = 30.0
+        val color = androidx.compose.ui.graphics.Color.Blue
+
+        val bins = com.atrainingtracker.trainingtracker.ui.aftermath.zones.TelemetryHistogramCalculator.computeLinearMarginalHistogram(
+            values = values,
+            timestamps = timestamps,
+            dataMin = dataMin,
+            dataMax = dataMax,
+            numBins = 20,
+            color = color
+        )
+
+        assertEquals("Must generate exactly 20 bins", 20, bins.size)
+        assertEquals(dataMin, bins.first().rangeMin, 0.001)
+        assertEquals(dataMax, bins.last().rangeMax, 0.001)
+        assertTrue("Total percentage across all bins must sum to 100%", kotlin.math.abs(bins.sumOf { it.percentage.toDouble() } - 100.0) < 0.1)
+
+        // Empty / degenerate checks
+        assertTrue(
+            com.atrainingtracker.trainingtracker.ui.aftermath.zones.TelemetryHistogramCalculator.computeLinearMarginalHistogram(
+                values = emptyList(),
+                timestamps = emptyList(),
+                dataMin = 10.0,
+                dataMax = 20.0,
+                color = color
+            ).isEmpty()
+        )
+        assertTrue(
+            com.atrainingtracker.trainingtracker.ui.aftermath.zones.TelemetryHistogramCalculator.computeLinearMarginalHistogram(
+                values = values,
+                dataMin = 20.0,
+                dataMax = 10.0,
+                color = color
+            ).isEmpty()
         )
     }
 }

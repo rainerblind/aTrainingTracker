@@ -349,6 +349,7 @@ fun MapDetailLayout(
                                         hrZoneThresholds = hrThresholds,
                                         powerZoneThresholds = powerThresholds,
                                         climbs = climbs,
+                                        alignWithTelemetryCharts = true,
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                 }

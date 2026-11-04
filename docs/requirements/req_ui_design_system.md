@@ -13053,6 +13053,47 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: 100% Cervélo P3C and stopwatch color fidelity preserved, 100% safe-zone containment ($33.0 \le r \le 34.5\text{dp}$), zero interruption/restart during workout recording or foreground sessions, 100% crash-free Compose icon preview rendering, 100% free core workout tracking features.
 
+### REQ-UI-446: Universal Stacked Workout Details Marginal Histograms & Widened Strip Layout Parity [Verified]
+- **Tests**: `TST-UI-446`, `TST-LOC-001` | **Tickets**: `ATT-5370`
+- **Implementation**: `TelemetryMetricGraph.kt`, `ElevationProfile.kt`, `MapDetailLayout.kt`, `WorkoutSummary.kt`, `TrackOnMapScreen.kt`
+- **Rationale**: In workout details and map inspection views (`MapDetailLayout`, `WorkoutSummary`, `TrackOnMapScreen`), right-side marginal histograms were historically restricted to physiological metrics with zone models (Heart Rate and Power), leaving elevation profile, speed/pace, and W' balance with an unused right margin (empty 25dp strip in portrait; blank spacer in landscape). To create a unified visual analytics layout across the entire stacked telemetry family, utilize the Rule 64 right-edge alignment space on every chart, and provide athletes an immediate distribution of altitude bands, cruising speed/pace, and anaerobic W' balance depletion, the system SHALL render marginal histograms across all stacked graphs in graph/series color, widen the portrait margin to 52dp, and strictly maintain 1:1 horizontal plot-width alignment (`Rule 64`), unconditional background tracks (`Rule 69`), and domain-boundary clamping (`Rule 70`) (ATT-5370, amending `REQ-UI-251`, `REQ-UI-431`, and `REQ-UI-433.4`):
+1. *Universal Marginal Histogram Across All Stacked Workout Details Graphs (`REQ-UI-446.1`)*:
+• The system SHALL render a right-side Y-axis-aligned marginal histogram on *all* stacked graphs in Workout Details and Map inspection views: `ElevationProfile`, `SPEED/PACE`, `HEART_RATE`, `POWER`, and `W_PRIME_BAL` (and any future stacked telemetry metrics).
+• `ElevationProfile` SHALL support an optional parameter `alignWithTelemetryCharts: Boolean = false`. When `true`, it SHALL calculate and render an altitude marginal histogram aligned with its Y-axis `[minAltitude, maxAltitude]`. Non-stacked callers (`SensorGridScreen`, `LiveClimbSheet`, `ClimbDetailSheet`, `RouteItem`, `SegmentItem`) SHALL default to `false`, preserving clean boundary paddings without histograms.
+2. *Series-Color Rendering for Non-Zoned Graphs (`REQ-UI-446.2`)*:
+• For telemetry and elevation graphs without physiological training zones (`ElevationProfile`, `SPEED/PACE`, `W_PRIME_BAL`), the system SHALL compute uniform linear frequency bins (20–24 bins) across the plotted domain `[dataMin, dataMax]`.
+• Non-zoned marginal histograms SHALL render in the graph's primary series color (Speed/Pace: `MaterialTheme.colorScheme.primary`; W'bal: `TTColor.WPrimeBalGreen`; Elevation: primary terrain profile color).
+• For each bin in the non-zoned histogram, the background container track (`alpha = 0.15f`) SHALL be drawn unconditionally across the plotted domain `[dataMin, dataMax]` (Rule 69), while the solid foreground bar (`barWidthPx > 0f`) is gated on `bin.durationSec > 0L` (or sample count > 0).
+• Drawing routines SHALL filter out-of-domain bins and clamp bin boundaries to `[dataMin, dataMax]` before Y-mapping (`valueToY(...)`). Bins with clamped height $\le 0$ SHALL NOT be rendered with `.coerceAtLeast(1f)`, preventing out-of-domain rectangle stacking at `y = 0` (Rule 70).
+• Physiological 5/7-zone coloring and thresholds SHALL be preserved for `HEART_RATE` and `POWER`.
+3. *Widened Marginal Histogram Strip & 1:1 Plot Alignment (`REQ-UI-446.3`)*:
+• In portrait orientation (`Configuration.ORIENTATION_PORTRAIT`), the right-side margin (`endPaddingPx`) SHALL be widened from `25.dp` to `52.dp` across all stacked charts (`TelemetryMetricGraph` and `ElevationProfile` with `alignWithTelemetryCharts = true`), yielding a bar strip width of ~44dp (`(endPaddingPx - 8.dp).coerceAtLeast(10.dp)`), providing clear legibility for frequency variations.
+• In landscape orientation (`Configuration.ORIENTATION_LANDSCAPE`), all stacked charts SHALL adhere to the 72%/28% dual-pane split (`Modifier.weight(0.72f)` for the chart canvas and `Modifier.weight(0.28f)` for the marginal histogram pane), eliminating blank fallback spacers for non-zoned metrics and ensuring X-axis ticks and vertical scrubbing cursors align 1:1 horizontally across all sister charts (Rule 64).
+• Both portrait and landscape plot areas SHALL maintain `startPadding = 50.dp` across all stacked charts.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-UI-251` (Portrait Marginal Strip), `REQ-UI-431` (Landscape Marginal Pane), and `REQ-UI-433.4` (Multi-Chart Alignment). Targets `TelemetryMetricGraph.kt`, `ElevationProfile.kt`, `MapDetailLayout.kt`, `WorkoutSummary.kt`, and `TrackOnMapScreen.kt`.
+2. *Historical Origin & Commit Trace*: Commit `c8192a0e` (`ATT-2147`, `REQ-UI-251`), commit `dcb8f15f` (`ATT-2145`, `REQ-UI-431`), commit `56b230ec` (`ATT-4774`, `REQ-UI-433.4`), and commits `9ce1ef68` / `cbb8317a` (`ATT-5281` / `ATT-5311`, Rules 69 & 70).
+3. *Root Reason for Existing Formulation*: Originally, `endPadding = 25.dp` was reserved solely for HR and Power zone labels and bars; non-zoned charts left this margin blank because zone classification did not exist. The 25dp width produced narrow ~20dp bars. With uniform linear binning and series-colored bars, extending histograms across all stacked graphs utilizes this alignment margin consistently while 52dp width improves visual scannability.
+4. *Preservation of Core Invariants*: 1:1 horizontal plot width (`startPadding = 50.dp`, `endPadding = 52.dp` in portrait; 72%/28% in landscape per Rule 64) and vertical scrubbing cursor alignment across all stacked charts; unconditional background tracks (Rule 69); domain-boundary clamping (Rule 70); untouched non-stacked callers (`alignWithTelemetryCharts = false`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete inspecting stacked workout details graphs in portrait orientation,
+• *When* `ElevationProfile`, `Speed/Pace`, `Heart Rate`, `Power`, or `W'bal` render,
+• *Then* all charts render a right-side marginal histogram of width ~44dp within a widened 52dp margin, with non-zoned charts rendered in their respective series color and HR/Power in physiological zone colors.
+• *Given* an athlete inspecting stacked workout details graphs in landscape orientation,
+• *When* rendered side-by-side,
+• *Then* all stacked charts share identical 72%/28% dual-pane horizontal bounds, rendering the marginal histogram pane on the right without blank spacers, aligning X-axis bounds and scrubbing cursors 1:1.
+• *Given* non-zoned marginal histograms (`ElevationProfile`, `Speed/Pace`, `W'bal`),
+• *When* bins are drawn across `[dataMin, dataMax]`,
+• *Then* background container tracks (`alpha = 0.15f`) are drawn unconditionally for all in-domain bins, foreground bars are gated on positive frequency, and out-of-domain bins are clamped and filtered so zero rectangles stack at `y = 0`.
+• *Given* non-stacked callers of `ElevationProfile` (`SensorGridScreen`, `LiveClimbSheet`, `ClimbDetailSheet`, `RouteItem`, `SegmentItem`),
+• *When* rendered,
+• *Then* they default to `alignWithTelemetryCharts = false`, rendering clean profiles without marginal histograms.
+
+**Invariants**: 1:1 horizontal plot width and scrubbing alignment (Rule 64), unconditional background tracks (Rule 69), domain-boundary clamping (Rule 70), 5/7-zone coloring preserved for HR/Power, 100% clean-room test suite pass rate.
+
+
 
 
 

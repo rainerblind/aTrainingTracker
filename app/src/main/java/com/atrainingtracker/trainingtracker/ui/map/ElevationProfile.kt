@@ -34,6 +34,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
@@ -67,13 +68,16 @@ import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.climbs.Climb
 import com.atrainingtracker.trainingtracker.climbs.ClimbCategory
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.LinearHistogramBin
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThresholds
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.TelemetryHistogramCalculator
 import com.atrainingtracker.trainingtracker.ui.climbs.getClimbCategoryColors
 import com.atrainingtracker.trainingtracker.ui.climbs.getClimbGradeColor
 import com.atrainingtracker.trainingtracker.ui.theme.*
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
 import com.google.android.gms.maps.model.LatLng
 import java.util.Locale
+import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.pow
 
@@ -267,6 +271,7 @@ fun ElevationProfile(
     segmentColorProvider: ((Double) -> Color)? = null,
     fixedHeight: androidx.compose.ui.unit.Dp? = null,
     showEmptyState: Boolean = false,
+    alignWithTelemetryCharts: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val decodedData = remember(encodedAltitudes, encodedDistances) {
@@ -299,6 +304,7 @@ fun ElevationProfile(
         segmentColorProvider = segmentColorProvider,
         fixedHeight = fixedHeight,
         showEmptyState = showEmptyState,
+        alignWithTelemetryCharts = alignWithTelemetryCharts,
         modifier = modifier
     )
 }
@@ -328,7 +334,8 @@ fun ElevationProfile(
     climbGradientShading: Boolean = false,
     segmentColorProvider: ((Double) -> Color)? = null,
     fixedHeight: androidx.compose.ui.unit.Dp? = null,
-    showEmptyState: Boolean = false
+    showEmptyState: Boolean = false,
+    alignWithTelemetryCharts: Boolean = false
 ) {
     if (pathPoints.size < 2 && showEmptyState) {
         ElevationProfileEmptyState(
@@ -488,6 +495,24 @@ fun ElevationProfile(
         hasClimbs = climbs.isNotEmpty()
     ).dp
 
+    val altitudeHistogram = remember(pathPoints, cachedData.minAlt, cachedData.maxAlt, alignWithTelemetryCharts, colorScheme) {
+        if (!alignWithTelemetryCharts || pathPoints.isEmpty() || cachedData.maxAlt <= cachedData.minAlt) {
+            emptyList()
+        } else {
+            val altColor = cachedData.segments.firstOrNull()?.color ?: colorScheme.primary
+            val altValues = pathPoints.map { it.altitude }
+            val timestamps = pathPoints.map { it.timeSec }
+            TelemetryHistogramCalculator.computeLinearMarginalHistogram(
+                values = altValues,
+                timestamps = timestamps,
+                dataMin = cachedData.minAlt,
+                dataMax = cachedData.maxAlt,
+                numBins = 20,
+                color = altColor
+            )
+        }
+    }
+
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
@@ -506,7 +531,7 @@ fun ElevationProfile(
         val canvasModifier = if (showZoomControls) {
             baseCanvasModifier.pointerInput(totalSpan, isTimeDomain, isPanMode) {
                 val startPaddingPx = 50.dp.toPx()
-                val endPaddingPx = if (isLandscape && showZoomControls) 0.dp.toPx() else 25.dp.toPx()
+                val endPaddingPx = if (isLandscape && showZoomControls) 0.dp.toPx() else (if (alignWithTelemetryCharts) 52.dp.toPx() else 25.dp.toPx())
                 val chartWidthPx = (size.width - startPaddingPx - endPaddingPx).coerceAtLeast(1f)
                 val touchSlop = viewConfiguration.touchSlop
 
@@ -666,7 +691,7 @@ fun ElevationProfile(
                     .padding(
                         bottom = bottomPadding,
                         start = 50.dp,
-                        end = if (isLandscape && showZoomControls) 0.dp else 25.dp,
+                        end = if (isLandscape && showZoomControls) 0.dp else (if (alignWithTelemetryCharts) 52.dp else 25.dp),
                         top = effectiveTopPadding
                     )
             ) {
@@ -963,10 +988,76 @@ fun ElevationProfile(
             Box(modifier = Modifier.weight(0.72f)) {
                 profileCanvas()
             }
-            Spacer(modifier = Modifier.weight(0.28f))
+            if (alignWithTelemetryCharts && altitudeHistogram.isNotEmpty()) {
+                AlignedMarginalLinearDistribution(
+                    bins = altitudeHistogram,
+                    dataMin = cachedData.minAlt,
+                    dataMax = cachedData.maxAlt,
+                    metricType = null,
+                    topPadding = effectiveTopPadding,
+                    bottomPadding = bottomPadding,
+                    modifier = Modifier.weight(0.28f).height(totalCanvasHeight)
+                )
+            } else {
+                Spacer(modifier = Modifier.weight(0.28f))
+            }
         }
     } else {
         profileCanvas()
+        if (!isLandscape && alignWithTelemetryCharts && altitudeHistogram.isNotEmpty()) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .width(52.dp)
+                    .height(totalCanvasHeight)
+                    .padding(top = effectiveTopPadding, bottom = bottomPadding)
+            ) {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val stripStartPx = 3.dp.toPx()
+                    val stripWidthPx = (size.width - 8.dp.toPx()).coerceAtLeast(10.dp.toPx())
+                    val chartHeightPx = size.height
+                    val valRange = (cachedData.maxAlt - cachedData.minAlt).coerceAtLeast(1.0)
+                    fun valueToY(alt: Double): Float {
+                        val ratio = ((alt - cachedData.minAlt) / valRange).coerceIn(0.0, 1.0)
+                        return ((1.0 - ratio) * chartHeightPx).toFloat()
+                    }
+                    val maxBinPct = altitudeHistogram.maxOfOrNull { it.percentage }?.takeIf { it > 0f } ?: 1f
+
+                    for (bin in altitudeHistogram) {
+                        // Rule 70: Domain boundary filtering & clamping
+                        if (bin.rangeMax <= cachedData.minAlt || bin.rangeMin >= cachedData.maxAlt) continue
+                        val clampedMin = maxOf(cachedData.minAlt, bin.rangeMin)
+                        val clampedMax = minOf(cachedData.maxAlt, bin.rangeMax)
+                        if (clampedMin >= clampedMax) continue
+
+                        val yTop = valueToY(clampedMax)
+                        val yBottom = valueToY(clampedMin)
+                        val rectTop = minOf(yTop, yBottom)
+                        val rectHeight = abs(yTop - yBottom)
+                        if (rectHeight <= 0f) continue
+
+                        // Rule 69: Unconditional background track
+                        drawRect(
+                            color = bin.color.copy(alpha = 0.15f),
+                            topLeft = Offset(stripStartPx, rectTop),
+                            size = Size(stripWidthPx, rectHeight)
+                        )
+
+                        // Foreground bar
+                        if (bin.durationSec > 0L) {
+                            val barWidthPx = (bin.percentage / maxBinPct).coerceIn(0f, 1f) * stripWidthPx
+                            if (barWidthPx > 0f) {
+                                drawRect(
+                                    color = bin.color,
+                                    topLeft = Offset(stripStartPx, rectTop),
+                                    size = Size(barWidthPx, rectHeight)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
         // Multi-metric telemetry floating badge in detailed view (REQ-UI-201 / ATT-1391)

@@ -70,6 +70,8 @@ class TelemetryMetricGraphLandscapeContractTest {
             methods.any { it.contains("TelemetryMetricGraph") })
         assertTrue("AlignedMarginalZoneDistribution composable must be declared in TelemetryMetricGraphKt, found: $methods",
             methods.any { it.contains("AlignedMarginalZoneDistribution") })
+        assertTrue("AlignedMarginalLinearDistribution composable must be declared in TelemetryMetricGraphKt, found: $methods",
+            methods.any { it.contains("AlignedMarginalLinearDistribution") })
 
         // Mathematical contract for 72/28 dual-pane proportional distribution
         val totalWidth = 800f
