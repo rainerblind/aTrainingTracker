@@ -82,6 +82,7 @@ class DeviceListViewModelQuotaTest {
         every { mockBanalRepo.allActiveDevicesTelemetry } returns activeTelemetryFlow
         every { mockSettingsDataStore.isHrZonesConfigured } returns flowOf(true)
         every { mockSettingsDataStore.isPwrZonesConfigured } returns flowOf(true)
+        every { mockProFeatureManager.isProActive } returns MutableStateFlow(false)
     }
 
     @After
@@ -215,5 +216,147 @@ class DeviceListViewModelQuotaTest {
         assertNull("Dialog must not be shown for Pro user", viewModel.swapOrUpgradeDialogEvent.value)
         // Update device must be called
         coVerify(exactly = 1) { mockDeviceRepo.updateDevice(match { it.id == 3L && it.isPaired }) }
+    }
+
+    @Test
+    fun testDowngradeDetection_triggersReconciliationWithDefaults() = runTest(testDispatcher) {
+        val pairedGps = createUiDevice(1L, DeviceType.SPEED_AND_LOCATION_GPS, isPaired = true)
+        val pairedBaro = createUiDevice(2L, DeviceType.ALTITUDE_FROM_PRESSURE, isPaired = true)
+        val pairedHrm = createUiDevice(3L, DeviceType.HRM, isPaired = true)
+        val pairedPower = createUiDevice(4L, DeviceType.BIKE_POWER, isPaired = true)
+
+        coEvery { mockDeviceRepo.getPairedDevices() } returns listOf(pairedGps, pairedBaro, pairedHrm, pairedPower)
+        every { mockProFeatureManager.isProActive } returns MutableStateFlow(false)
+
+        val viewModel = DeviceListViewModel(
+            application = mockApplication,
+            settingsDataStore = mockSettingsDataStore,
+            devicesDBRepository = mockDeviceRepo,
+            banalServiceRepository = mockBanalRepo,
+            proFeatureManager = mockProFeatureManager,
+            isTrackingProvider = { false }
+        )
+
+        viewModel.checkDowngradeReconciliation()
+        advanceUntilIdle()
+
+        val event = viewModel.keepTwoSensorsDialogEvent.value
+        assertNotNull("Reconciliation dialog must be triggered when paired > 2 on Free tier", event)
+        assertEquals(4, event?.currentlyPairedDevices?.size)
+        // Defaults must be GPS (1L) + Barometer (2L)
+        assertEquals(setOf(1L, 2L), event?.defaultKeepDeviceIds)
+    }
+
+    @Test
+    fun testDowngradeDetection_doesNotTrigger_whenActiveTracking() = runTest(testDispatcher) {
+        val pairedGps = createUiDevice(1L, DeviceType.SPEED_AND_LOCATION_GPS, isPaired = true)
+        val pairedBaro = createUiDevice(2L, DeviceType.ALTITUDE_FROM_PRESSURE, isPaired = true)
+        val pairedHrm = createUiDevice(3L, DeviceType.HRM, isPaired = true)
+
+        coEvery { mockDeviceRepo.getPairedDevices() } returns listOf(pairedGps, pairedBaro, pairedHrm)
+        every { mockProFeatureManager.isProActive } returns MutableStateFlow(false)
+
+        val viewModel = DeviceListViewModel(
+            application = mockApplication,
+            settingsDataStore = mockSettingsDataStore,
+            devicesDBRepository = mockDeviceRepo,
+            banalServiceRepository = mockBanalRepo,
+            proFeatureManager = mockProFeatureManager,
+            isTrackingProvider = { true }
+        )
+
+        viewModel.checkDowngradeReconciliation()
+        advanceUntilIdle()
+
+        assertNull("Reconciliation dialog must NOT trigger during active workout recording", viewModel.keepTwoSensorsDialogEvent.value)
+    }
+
+    @Test
+    fun testConfirmKeepTwoSensors_invokesRepositoryReconcile_andClearsEvent() = runTest(testDispatcher) {
+        val pairedGps = createUiDevice(1L, DeviceType.SPEED_AND_LOCATION_GPS, isPaired = true)
+        val pairedBaro = createUiDevice(2L, DeviceType.ALTITUDE_FROM_PRESSURE, isPaired = true)
+        val pairedHrm = createUiDevice(3L, DeviceType.HRM, isPaired = true)
+
+        coEvery { mockDeviceRepo.getPairedDevices() } returns listOf(pairedGps, pairedBaro, pairedHrm)
+        every { mockProFeatureManager.isProActive } returns MutableStateFlow(false)
+
+        val viewModel = DeviceListViewModel(
+            application = mockApplication,
+            settingsDataStore = mockSettingsDataStore,
+            devicesDBRepository = mockDeviceRepo,
+            banalServiceRepository = mockBanalRepo,
+            proFeatureManager = mockProFeatureManager,
+            isTrackingProvider = { false }
+        )
+
+        viewModel.checkDowngradeReconciliation()
+        advanceUntilIdle()
+        assertNotNull(viewModel.keepTwoSensorsDialogEvent.value)
+
+        viewModel.confirmKeepTwoSensors(setOf(1L, 3L))
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { mockDeviceRepo.reconcilePairedDevices(setOf(1L, 3L)) }
+        assertNull("Event must be cleared after confirmation", viewModel.keepTwoSensorsDialogEvent.value)
+    }
+
+    @Test
+    fun testDismissKeepTwoSensors_appliesDefaults_andClearsEvent() = runTest(testDispatcher) {
+        val pairedGps = createUiDevice(1L, DeviceType.SPEED_AND_LOCATION_GPS, isPaired = true)
+        val pairedBaro = createUiDevice(2L, DeviceType.ALTITUDE_FROM_PRESSURE, isPaired = true)
+        val pairedHrm = createUiDevice(3L, DeviceType.HRM, isPaired = true)
+
+        coEvery { mockDeviceRepo.getPairedDevices() } returns listOf(pairedGps, pairedBaro, pairedHrm)
+        every { mockProFeatureManager.isProActive } returns MutableStateFlow(false)
+
+        val viewModel = DeviceListViewModel(
+            application = mockApplication,
+            settingsDataStore = mockSettingsDataStore,
+            devicesDBRepository = mockDeviceRepo,
+            banalServiceRepository = mockBanalRepo,
+            proFeatureManager = mockProFeatureManager,
+            isTrackingProvider = { false }
+        )
+
+        viewModel.checkDowngradeReconciliation()
+        advanceUntilIdle()
+        assertNotNull(viewModel.keepTwoSensorsDialogEvent.value)
+
+        // Dismissal must apply the default keep IDs (1L and 2L) to prevent Free quota bypass
+        viewModel.dismissKeepTwoSensors()
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { mockDeviceRepo.reconcilePairedDevices(setOf(1L, 2L)) }
+        assertNull("Event must be cleared after dismissal", viewModel.keepTwoSensorsDialogEvent.value)
+    }
+
+    @Test
+    fun testMultiSensorSwap_hardensExcessSensorsToStrictlyTwo() = runTest(testDispatcher) {
+        val pairedGps = createUiDevice(1L, DeviceType.SPEED_AND_LOCATION_GPS, isPaired = true)
+        val pairedBaro = createUiDevice(2L, DeviceType.ALTITUDE_FROM_PRESSURE, isPaired = true)
+        val pairedHrm = createUiDevice(3L, DeviceType.HRM, isPaired = true)
+        val candidatePower = createUiDevice(4L, DeviceType.BIKE_POWER, isPaired = false)
+
+        coEvery { mockDeviceRepo.getDeviceSnapshotById(4L) } returns candidatePower
+        coEvery { mockDeviceRepo.getPairedDevices() } returns listOf(pairedGps, pairedBaro, pairedHrm)
+        every { mockProFeatureManager.isProActive } returns MutableStateFlow(false)
+
+        val viewModel = DeviceListViewModel(
+            application = mockApplication,
+            settingsDataStore = mockSettingsDataStore,
+            devicesDBRepository = mockDeviceRepo,
+            banalServiceRepository = mockBanalRepo,
+            proFeatureManager = mockProFeatureManager,
+            isTrackingProvider = { false }
+        )
+
+        // Swapping device 2 (Baro) with 4 (Power) when 3 devices were previously paired
+        viewModel.executeSwapAndPair(unpairDeviceId = 2L, candidateDeviceId = 4L)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { mockDeviceRepo.swapPairedDevice(2L, 4L) }
+        // Hardening must reconcile so that candidate 4L plus at most 1 retained device are kept
+        coVerify(exactly = 1) { mockDeviceRepo.reconcilePairedDevices(match { it.contains(4L) && it.size <= 2 }) }
+        assertNull(viewModel.swapOrUpgradeDialogEvent.value)
     }
 }

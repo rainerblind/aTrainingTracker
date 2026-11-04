@@ -2336,6 +2336,11 @@
     <string name="swap_dialog_message">Im Free-Tier können maximal 2 Geräte gleichzeitig gekoppelt sein (z. B. GPS + Barometer). Um „%1$s“ zu koppeln, wähle ein bestehendes Gerät ab oder schalte unbegrenzte Sensoren über „Pay what you want“ frei.</string>
     <string name="swap_dialog_action_swap">Tauschen &amp; Koppeln</string>
     <string name="swap_dialog_action_unlock">Unbegrenzte Sensoren freischalten</string>
+    <string name="keep_two_sensors_title">2 aktive Sensoren auswählen</string>
+    <string name="keep_two_sensors_message">Dein Abonnement ist abgelaufen und im Free-Tarif können maximal 2 Sensoren aktiv sein. Wähle 2 Sensoren aus, die aktiv bleiben sollen. Die übrigen Sensoren werden entkoppelt, bleiben aber mit allen Kalibrierungs- und Ausrüstungsdaten erhalten.</string>
+    <string name="keep_two_sensors_selection_header">Aktive Sensoren (%1$d/%2$d):</string>
+    <string name="keep_two_sensors_action_confirm">Auswahl bestätigen</string>
+    <string name="keep_two_sensors_action_unlock">Unbegrenzte Sensoren freischalten</string>
     <string name="drawer_supporter">Unterstützer &amp; Pro</string>
     <string name="drawer_tier_diamond">◆ DIAMOND-SPONSOR • Unbegrenzte Sensoren</string>
     <string name="drawer_tier_gold">★ GOLD PRO-SUPPORTER</string>

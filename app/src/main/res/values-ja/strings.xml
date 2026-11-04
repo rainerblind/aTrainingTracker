@@ -2230,6 +2230,11 @@
     <string name="swap_dialog_message">無料版では最大2台のデバイスを同時接続できます（例：GPS + 気圧計）。「%1$s」を接続するには、既存のデバイスを解除するか、「お好みの価格で支援」で無制限のセンサー接続を解除してください。</string>
     <string name="swap_dialog_action_swap">入れ替えて接続</string>
     <string name="swap_dialog_action_unlock">無制限センサーを解除</string>
+    <string name="keep_two_sensors_title">アクティブなセンサーを2つ選択</string>
+    <string name="keep_two_sensors_message">サブスクリプションが終了しました。無料プランでは最大2つのセンサーをアクティブにできます。維持する2つのセンサーを選択してください。余分なセンサーは解除されますが、キャリブレーションや機材データは保持されます。</string>
+    <string name="keep_two_sensors_selection_header">アクティブなセンサー (%1$d/%2$d):</string>
+    <string name="keep_two_sensors_action_confirm">選択を保持</string>
+    <string name="keep_two_sensors_action_unlock">無制限のセンサーを解放</string>
     <string name="drawer_supporter">サポーター＆Pro</string>
     <string name="drawer_tier_diamond">◆ ダイヤモンドスポンサー • センサー無制限</string>
     <string name="drawer_tier_gold">★ ゴールド PROサポーター</string>

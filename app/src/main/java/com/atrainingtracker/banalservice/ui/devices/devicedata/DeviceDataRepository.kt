@@ -304,6 +304,22 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
     }
 
     /**
+     * Reconciles paired devices during subscription downgrade (REQ-SET-084.5).
+     * Unpairs any currently paired device not contained in [keepDeviceIds],
+     * preserving all other device metadata (calibration, equipment links, names).
+     */
+    suspend fun reconcilePairedDevices(keepDeviceIds: Set<Long>) {
+        withContext(ioDispatcher) {
+            val paired = getPairedDevices()
+            for (device in paired) {
+                if (device.id !in keepDeviceIds) {
+                    updateDevice(device.copy(isPaired = false))
+                }
+            }
+        }
+    }
+
+    /**
      * A helper function to create a ContentValues object containing only the fields that have changed.
      */
     private fun createContentValuesForUpdate(original: DeviceUiData, final: DeviceUiData): ContentValues {

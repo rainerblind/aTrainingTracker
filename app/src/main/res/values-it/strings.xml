@@ -2251,6 +2251,11 @@
     <string name="swap_dialog_message">Nel livello gratuito possono essere associati al massimo 2 dispositivi contemporaneamente (es. GPS + Barometro). Per associare \'%1$s\', deseleziona un dispositivo esistente o sblocca sensori illimitati con \'Paga quanto vuoi\'.</string>
     <string name="swap_dialog_action_swap">Sostituisci &amp; associa</string>
     <string name="swap_dialog_action_unlock">Sblocca sensori illimitati</string>
+    <string name="keep_two_sensors_title">Seleziona 2 sensori attivi</string>
+    <string name="keep_two_sensors_message">Il tuo abbonamento è scaduto e il piano gratuito supporta fino a 2 sensori attivi. Seleziona 2 sensori da mantenere attivi. I sensori in eccesso verranno dissociati senza cancellare dati di calibrazione o equipaggiamento.</string>
+    <string name="keep_two_sensors_selection_header">Sensori attivi (%1$d/%2$d):</string>
+    <string name="keep_two_sensors_action_confirm">Conferma selezione</string>
+    <string name="keep_two_sensors_action_unlock">Sblocca sensori illimitati</string>
     <string name="drawer_supporter">Sostenitore &amp; Pro</string>
     <string name="drawer_tier_diamond">◆ SPONSOR DIAMANTE • Sensori illimitati</string>
     <string name="drawer_tier_gold">★ PRO-SUPPORTER ORO</string>

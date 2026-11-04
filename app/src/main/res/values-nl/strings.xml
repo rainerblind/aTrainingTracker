@@ -2250,6 +2250,11 @@
     <string name="swap_dialog_message">In het gratis niveau kunnen maximaal 2 apparaten tegelijkertijd gekoppeld zijn (bijv. GPS + Barometer). Om \'%1$s\' te koppelen, ontkoppel een bestaand apparaat of ontgrendel onbeperkt sensoren via \'Betaal wat je wilt\'.</string>
     <string name="swap_dialog_action_swap">Ruilen &amp; koppelen</string>
     <string name="swap_dialog_action_unlock">Onbeperkte sensoren ontgrendelen</string>
+    <string name="keep_two_sensors_title">2 actieve sensors behouden</string>
+    <string name="keep_two_sensors_message">Je abonnement is beëindigd en het gratis abonnement ondersteunt maximaal 2 actieve sensors. Selecteer 2 sensors om actief te houden. Overtollige sensors worden ontkoppeld zonder kalibratie- of uitrustingsgegevens te verwijderen.</string>
+    <string name="keep_two_sensors_selection_header">Actieve sensors (%1$d/%2$d):</string>
+    <string name="keep_two_sensors_action_confirm">Selectie bevestigen</string>
+    <string name="keep_two_sensors_action_unlock">Onbeperkte sensors ontgrendelen</string>
     <string name="drawer_supporter">Supporter &amp; Pro</string>
     <string name="drawer_tier_diamond">◆ DIAMOND SPONSOR • Onbeperkte sensoren</string>
     <string name="drawer_tier_gold">★ GOUD PRO-SUPPORTER</string>

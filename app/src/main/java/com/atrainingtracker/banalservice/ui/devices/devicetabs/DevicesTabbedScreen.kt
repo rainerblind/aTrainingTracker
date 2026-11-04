@@ -135,6 +135,7 @@ fun DevicesTabbedScreen(
     DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                listViewModel.checkDowngradeReconciliation()
                 val granted = checkHasBluetoothScan()
                 hasBluetoothScanPermission = granted
                 if (granted) {
@@ -649,6 +650,24 @@ fun DevicesTabbedScreen(
             },
             onDismiss = {
                 listViewModel.dismissSwapOrUpgradeDialog()
+            }
+        )
+    }
+
+    // Subscription Downgrade Keep-2-Sensors Reconciliation Bottom Sheet (REQ-SET-084.5)
+    val keepTwoSensorsEvent by listViewModel.keepTwoSensorsDialogEvent.collectAsState()
+    keepTwoSensorsEvent?.let { event ->
+        KeepTwoSensorsBottomSheet(
+            currentlyPairedDevices = event.currentlyPairedDevices,
+            defaultKeepDeviceIds = event.defaultKeepDeviceIds,
+            onConfirmSelection = { selectedIds ->
+                listViewModel.confirmKeepTwoSensors(selectedIds)
+            },
+            onNavigateToSupporter = {
+                onNavigateToSupporter?.invoke(null)
+            },
+            onDismiss = {
+                listViewModel.dismissKeepTwoSensors()
             }
         )
     }

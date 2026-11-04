@@ -2251,6 +2251,11 @@
     <string name="swap_dialog_message">En la versión gratuita se pueden emparejar hasta 2 dispositivos simultáneamente (p. ej. GPS + Barómetro). Para emparejar \'%1$s\', desempareja un dispositivo existente o desbloquea sensores ilimitados mediante \'Paga lo que quieras\'.</string>
     <string name="swap_dialog_action_swap">Cambiar y emparejar</string>
     <string name="swap_dialog_action_unlock">Desbloquear sensores ilimitados</string>
+    <string name="keep_two_sensors_title">Seleccionar 2 sensores activos</string>
+    <string name="keep_two_sensors_message">Tu suscripción ha finalizado y el plan gratuito admite hasta 2 sensores activos. Selecciona 2 sensores para mantener activos. Los sensores restantes se desvincularán sin eliminar datos de calibración ni equipamiento.</string>
+    <string name="keep_two_sensors_selection_header">Sensores activos (%1$d/%2$d):</string>
+    <string name="keep_two_sensors_action_confirm">Confirmar selección</string>
+    <string name="keep_two_sensors_action_unlock">Desbloquear sensores ilimitados</string>
     <string name="drawer_supporter">Patrocinador y Pro</string>
     <string name="drawer_tier_diamond">◆ PATROCINADOR DIAMANTE • Sensores ilimitados</string>
     <string name="drawer_tier_gold">★ PRO-SUPPORTER ORO</string>
