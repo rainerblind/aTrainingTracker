@@ -859,21 +859,24 @@
 
 ### TST-SET-085: **Lifetime Pioneer Early Adopter Recognition Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-085`
-- **Component**: `WorkoutSummariesDatabaseManager.java`, `SettingsDataStore.kt`, `ProFeatureManager.kt`
+- **Component**: `WorkoutSummariesDatabaseManager.java`, `SettingsDataStore.kt`, `ProFeatureManager.kt`, `SupporterScreen.kt`, `AppNavigationDrawer.kt`
 - **Test Description**:
 1. Seed a workout before `2026-11-30 23:59:59`; verify `hasWorkoutBefore()` returns true and `isPioneerEarlyAdopter` is persisted as true.
 2. Seed a workout after `2026-11-30 23:59:59` with no prior workouts; verify `isPioneerEarlyAdopter` is false.
 3. Verify Pioneer status grants `isProActive() == true` and permits pairing $> 2$ devices.
 4. Verify Pioneer badge appears in UI and voluntary supporter upgrade is accessible.
+5. Seed historical workouts across multiple years (e.g. 2018); verify `getEarliestWorkoutYear()` returns 2018; verify `PioneerStatusBanner` and `DrawerHeader` format dynamic string `"★ Pioneer (Seit 2018)"` / `"★ Pioneer (Since 2018)"`. When no workouts exist, verify fallback to `"★ Pioneer"`.
 
-### TST-SET-086: **Five-Tier Google Play Supporter Subscriptions & Hardware Voting Verification Suite** [Verified]
+### TST-SET-086: **Five-Tier Google Play Supporter Subscriptions Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-086`
-- **Component**: `SupporterScreen.kt`, `BillingClientLifecycle.kt`, `ProFeatureManager.kt`, `AppNavigationDrawer.kt`
+- **Component**: `SupporterScreen.kt`, `SupporterComponents.kt`, `BillingClientLifecycle.kt`, `ProFeatureManager.kt`, `AppNavigationDrawer.kt`
 - **Test Description**:
 1. Verify 5 base plan IDs (`bronze-monthly`, `bronze-yearly`, `silver-yearly`, `gold-yearly`, `diamond-yearly`) mapped to correct `SupporterTier` enums.
-2. Verify `silver-yearly` is visually highlighted as Recommended.
-3. Verify hardware voting chips update selected target and pass payload to billing/analytics.
+2. Verify `silver-yearly` is visually highlighted as Recommended with the badge placed vertically above the tier title.
+3. Verify `SupporterPlanCard` action buttons enforce `maxLines = 1, softWrap = false` to guarantee single-line rendering without text wrapping (`Rule 38`).
 4. Verify drawer header reflects active supporter tier and drawer contains Supporter destination.
+5. Verify `HardwareVotingSection` and hardware acquisition promises are completely removed.
+6. Verify `supporter_screen_subtitle` renders `100%` (single percent sign) across all locales and zero hardcoded user-facing strings in supporter UI components.
 
 ### TST-SET-087: **Debug Supporter Tier Override & Pro Feature Manager Governance Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-087`

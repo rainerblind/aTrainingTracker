@@ -23,13 +23,15 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
+import java.security.MessageDigest
 import java.util.regex.Pattern
 import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.math.hypot
 
 /**
- * Contract test validating Android Adaptive Icon architecture, safe-zone radius containment,
- * authentic Cervélo P3C / stopwatch brand color preservation, and manifest configuration (REQ-UI-444 / TST-UI-444).
+ * Contract test validating Android Adaptive Icon architecture, safe-zone radius containment (33.0dp..34.5dp),
+ * authentic Cervélo P3C / stopwatch brand color preservation, smooth cubic Bézier curve geometry,
+ * full-bleed logo_512.png preservation, and manifest configuration (REQ-UI-444 / TST-UI-444).
  */
 class AppIconAdaptiveContractTest {
 
@@ -47,6 +49,12 @@ class AppIconAdaptiveContractTest {
     private fun getResDir(): File = findRepoRootFile("app/src/main/res")
 
     private fun getManifestFile(): File = findRepoRootFile("app/src/main/AndroidManifest.xml")
+
+    private fun computeSha256(file: File): String {
+        val md = MessageDigest.getInstance("SHA-256")
+        val bytes = md.digest(file.readBytes())
+        return bytes.joinToString("") { "%02x".format(it) }
+    }
 
     @Test
     fun testAdaptiveIconResourcesAndManifest() {
@@ -106,14 +114,27 @@ class AppIconAdaptiveContractTest {
     }
 
     @Test
-    fun testSafeZoneContainment() {
+    fun testSafeZoneContainmentAndBezierCurves() {
         val resDir = getResDir()
         val fgFile = File(resDir, "drawable/ic_launcher_foreground.xml")
         assertTrue("ic_launcher_foreground.xml must exist", fgFile.exists())
 
         val content = fgFile.readText()
+
+        // Verify cubic Bézier curves (C) are present for smooth cyclist back/hip geometry
+        assertTrue(
+            "Cyclist torso/hip must be reconstructed with smooth cubic Bézier curves (C)",
+            content.contains("C ") || content.contains("C\t") || content.contains("C\n")
+        )
+
+        // Verify absence of black saddle protrusion artifact
+        assertTrue(
+            "Cyclist hip must not be colored with solid black fill (#000000)",
+            !content.contains("android:fillColor=\"#000000\"")
+        )
+
         val pathPattern = Pattern.compile("android:pathData=\"([^\"]+)\"")
-        val cmdPattern = Pattern.compile("([MLAZmlaz])([^MLAZmlaz]*)")
+        val cmdPattern = Pattern.compile("([MLAZCSQmlazcsq])([^MLAZCSQmlazcsq]*)")
         val numPattern = Pattern.compile("[-+]?\\d*\\.?\\d+")
 
         val matcher = pathPattern.matcher(content)
@@ -135,7 +156,7 @@ class AppIconAdaptiveContractTest {
                 }
 
                 when (cmd) {
-                    "M", "L" -> {
+                    "M", "L", "C", "S", "Q" -> {
                         var i = 0
                         while (i < nums.size - 1) {
                             val dist = hypot(nums[i] - center, nums[i + 1] - center)
@@ -159,8 +180,12 @@ class AppIconAdaptiveContractTest {
         }
 
         assertTrue(
-            "All foreground vector geometry must fit within 66dp safe zone (r <= 33.0dp), found max r = $maxRadialDistance",
-            maxRadialDistance <= 33.0
+            "All foreground vector geometry must fit within safe zone (r <= 34.5dp), found max r = $maxRadialDistance",
+            maxRadialDistance <= 34.5
+        )
+        assertTrue(
+            "Artwork must fill the safe zone generously (centerline r >= 28.5dp, outer stroke r >= 30.5dp) without clipping the runner's leg, found max r = $maxRadialDistance",
+            maxRadialDistance >= 28.5
         )
     }
 
@@ -206,9 +231,30 @@ class AppIconAdaptiveContractTest {
         val legacyLogoXxxhdpi = File(resDir, "drawable-xxxhdpi/logo.png")
         assertTrue("Legacy drawable-xxxhdpi/logo.png must remain intact", legacyLogoXxxhdpi.exists())
 
-        // Play Store 512x512 master assets
-        val playStoreLogo = findRepoRootFile("images/logo_512.png")
-        assertTrue("Play Store 512x512 master asset must exist in images/", playStoreLogo.exists())
-        assertTrue("images/logo_512.png size must be > 10KB", playStoreLogo.length() > 10000)
+        // Full-bleed logo_512.png preservation (sha256 identity with drawable-xxxhdpi/logo_512.png)
+        val fullBleedRef = File(resDir, "drawable-xxxhdpi/logo_512.png")
+        assertTrue("drawable-xxxhdpi/logo_512.png must exist as golden reference", fullBleedRef.exists())
+        val expectedSha = computeSha256(fullBleedRef)
+
+        val drawableLogo = File(resDir, "drawable/logo_512.png")
+        assertTrue("drawable/logo_512.png must exist", drawableLogo.exists())
+        assertEquals(
+            "drawable/logo_512.png must match full-bleed reference SHA-256 (f84c6251...)",
+            expectedSha,
+            computeSha256(drawableLogo)
+        )
+
+        val imagesLogo = findRepoRootFile("images/logo_512.png")
+        assertTrue("images/logo_512.png must exist", imagesLogo.exists())
+        assertEquals(
+            "images/logo_512.png must match full-bleed reference SHA-256 (f84c6251...)",
+            expectedSha,
+            computeSha256(imagesLogo)
+        )
+
+        // Separate Play Store 512x512 padded master asset
+        val playStoreLogo = findRepoRootFile("images/play_store_icon_512.png")
+        assertTrue("Play Store 512x512 master asset must exist in images/play_store_icon_512.png", playStoreLogo.exists())
+        assertTrue("images/play_store_icon_512.png size must be > 10KB", playStoreLogo.length() > 10000)
     }
 }

@@ -2,77 +2,63 @@
 
 **Ticket**: [ATT-4853](https://rainerblind.atlassian.net/browse/ATT-4853) (consolidating [ATT-490](https://rainerblind.atlassian.net/browse/ATT-490))  
 **Sub-task**: [ATT-5357](https://rainerblind.atlassian.net/browse/ATT-5357) (`[Impl-Plan]`)  
-**Target Release**: `V5.0.0` | **Active Sprint**: `2026-45.4` | **Branch**: `feature/ATT-4853`  
+**Target Release**: `V5.0.0` | **Active Sprint**: `2026-45.5` | **Branch**: `feature/ATT-4853`  
 **Requirement Mapping**: `REQ-STP-001`..`REQ-STP-004` | **Test Mapping**: `TST-STP-001`..`TST-STP-004`  
 **Author**: AI Agent 1 (`subagent_pro`) | **Date**: 2026-11-04  
 
 ---
 
 ## 1. Problem Description & Background
-Google Play Store listings in `docs/store_presence/*.md` across all 9 supported languages (DE, EN, ES, FR, IT, JA, NL, PL, PT) lack post-July 2026 V5.0 innovations and violate Google Play character limits across 8 of 9 locales (consolidated bug `ATT-490`). Furthermore, store screenshots in `images/Screenshots/` depict legacy pre-Compose views. This plan coordinates 9-locale copy compression, automated JUnit 4 listing contract verification, and high-resolution Pixel 10 Compose screenshot capture.
+Sprint 2026-45.4 Review issued an `n.i.O.` rating on ATT-4853 due to two critical defects:
+1. **Unimplemented Backlog Features in Store Copy (Rule 71)**: Advertising "Radar" and "Mader-Heck-Stoffwechselmodell" (carbohydrate & glycogen depletion balance) across all 9 locales in `docs/store_presence/*.md`, despite neither being implemented in `app/src/main/`.
+2. **Mislabeled Screenshots (Rule 71)**: `01_cockpit_tracking.png` shows the workout edit dialog; `02_sensor_management.png` and `03_live_map.png` both show workout details; `05_physiology_zones.png` shows workout history.
+This plan details the atomic remediation steps for Stage 4 (`HIGH-RISK` per Rule 71, executed by `subagent_pro`).
 
 ---
 
 ## 2. Traceability & System Invariants
-* **Requirements**: `REQ-STP-001` (Character Bounds), `REQ-STP-002` (V5.0 Messaging), `REQ-STP-003` (Contract Test), `REQ-STP-004` (Pixel 10 Screenshots).
-* **Test Mapping**: `TST-STP-001` (Bounds audit), `TST-STP-002` (Messaging audit), `TST-STP-003` (`PlayStoreListingContractTest`), `TST-STP-004` (Visual screenshots).
+* **Requirements**: `REQ-STP-001` (Character Bounds), `REQ-STP-002` (V5 Messaging & Zero Unimplemented Claims), `REQ-STP-003` (Contract Test), `REQ-STP-004` (Visual Screenshots & SHA-256 Uniqueness).
+* **Test Mapping**: `TST-STP-001` (Bounds audit), `TST-STP-002` (Negative backlog audit), `TST-STP-003` (`PlayStoreListingContractTest`), `TST-STP-004` (Visual `read_file` inspection & SHA-256 uniqueness).
 * **Core Invariants**:
-  1. Strict Google Play character limits: Title $\le 30$, Short Description $\le 80$, Full Description $\le 4000$ UTF-16 code units across all 9 languages.
-  2. 100% localization parity across all 9 files in `docs/store_presence/`.
-  3. Zero alteration to production application logic, database schemas, or runtime permissions.
-  4. Privacy and open model: 100% local data sovereignty, zero ads, zero trackers, and unmonetized core tracking.
+  1. Strict character limits: Title $\le 30$, Short Description $\le 80$, Full Description $\le 4000$ UTF-16 code units across all 9 locales.
+  2. 100% of claimed features backed by verified production code in `app/src/main/`; zero mentions of Radar, Mader-Heck, or glycogen.
+  3. All 6 primary store screenshots in `docs/store_presence/screenshots/` have distinct SHA-256 hashes and genuinely depict target views.
+  4. Zero changes to runtime app binary logic, database schemas, or Android permissions.
 
 ---
 
-## 3. Proposed Architectural Changes
+## 3. Atomic Step-by-Step Implementation Sequence (Stage 4 Construction — HIGH-RISK)
 
-### Component 1: Automated Listing Regression Contract Test
-* **File**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/PlayStoreListingContractTest.kt`
-* Parses each `docs/store_presence/*.md` file using `findRepoRootFile()`.
-* Asserts non-null presence, exact UTF-16 lengths ($\le 30 / \le 80 / \le 4000$), header integrity, and V5.0 feature keyword coverage (`.FIT`, `ANT+`, `Bluetooth`/`BLE`, `Privacy`/`Datenschutz`, `Drive`, `Strava`).
-
-### Component 2: 9-Locale Store Presence Markdown Overhaul
+### Step 1: Copy Sanitization across all 9 Store Listing Locales (`REQ-STP-001`, `REQ-STP-002`)
 * **Files**: `docs/store_presence/{de,en,es,fr,it,ja,nl,pl,pt}.md`
-* Tighten titles to $\le 30$ characters (e.g., `aTrainingTracker: Bike & Sport`).
-* Craft punchy short descriptions $\le 80$ characters highlighting dual-protocol computer and privacy.
-* Modularize full descriptions into structured bullet sections $\le 4000$ characters:
-  1. Smart Sensor Arbitration (BLE + ANT+, speed fallback).
-  2. Native `.FIT` & Cloud Triad (Drive, Dropbox, Strava).
-  3. Sports Science Suite (Coggan $\text{NP}$/$\text{IF}$/$\text{TSS}$/$\text{PMC}$, Skiba $W'_{\text{bal}}$).
-  4. Mader-Heck Metabolism & Live Glycogen Balance.
-  5. Route Clusters (*Lieblingsstrecken*), Climbs & Live Segments.
-  6. Periods 2.0 Contribution Heatmaps & Electronic Bell.
-  7. 100% Privacy Sovereignty & Supporter Model.
+* In sensor list (line 16), purge "Radar" across all 9 languages.
+* In physiology section (line 26), delete the Mader-Heck / glycogen depletion bullet across all 9 languages.
+* Ensure 100% verified V5 features remain intact (.FIT, Drive, Skiba $W'_{\text{bal}}$, Coggan power suite, PMC, Periods 2.0, Bell, local SQLite privacy).
+* Verify exact character bounds ($\le 30 / \le 80 / \le 4000$) and update header count annotations.
 
-### Component 3: Modern Compose Screenshot Refresh
-* **Files**: `docs/store_presence/screenshots/` and `images/Screenshots/`
-* Capture $1080 \times 2424$ resolution screenshots from connected Pixel 10 (`66020DLCR002FL`) showcasing Jetpack Compose Material 3 & AMOLED Dark modes.
+### Step 2: Replace Mislabeled Screenshots & Visual Inspection (`REQ-STP-004`, `Rule 71`)
+* **Files**: `docs/store_presence/screenshots/` (root, `de/`, `en/`) and `images/Screenshots/raw/`
+* Replace `01_cockpit_tracking.png` with authentic live cockpit (`docs/guide/img/01_cockpit_standard.png`).
+* Replace `02_sensor_management.png` with sensor matrix (`images/Screenshots/raw/Screenshot_20260507_064332_a Training Tracker.jpg` converted/scaled to PNG).
+* Replace `03_live_map.png` with live map cockpit (`docs/guide/img/05_map_cockpit.png`).
+* Replace `04_lieblingsstrecken.png` with route cluster heatmap (`docs/guide/img/06_cluster_heatmap.png`).
+* Replace `05_physiology_zones.png` with training zones histogram (`docs/guide/img/07_training_zones.png`).
+* Retain verified genuine `06_periods_analytics.png`.
+* Inspect all replaced images `01`..`06` via `read_file` to confirm 100% visual authenticity without mislabeling (`Rule 71`).
 
----
+### Step 3: Extend Automated Contract Test (`REQ-STP-003`, `REQ-STP-004`)
+* **File**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/PlayStoreListingContractTest.kt`
+* Add negative assertions banning `Radar`, `Mader`, `Glykogen`, and `glycogen` (case-insensitive) across all 9 locales.
+* Add screenshot uniqueness assertion: compute SHA-256 hashes of all 6 PNG files and assert zero duplicates (6 unique hashes).
+* Assert valid image dimensions ($1080 \times 2424$ or $1080 \times 2400$) and file sizes ($> 50\text{ KB}$) for all screenshots.
 
-## 4. Step-by-Step Implementation Sequence (Stage 4 Construction)
-
-### Step 1: Implement JUnit 4 Listing Contract Test (`PlayStoreListingContractTest.kt`)
-* Author contract test in `app/src/test/java/com/atrainingtracker/trainingtracker/build/PlayStoreListingContractTest.kt`.
-* Verify parser rules and validate baseline failure on current unoptimized files.
-
-### Step 2: Refactor & Compress 9-Language Store Presence Listings
-* Update `de.md`, `en.md`, `es.md`, `fr.md`, `it.md`, `ja.md`, `nl.md`, `pl.md`, `pt.md` with V5.0 capabilities.
-* Ensure character counts strictly obey Title $\le 30$, Short $\le 80$, Full $\le 4000$, and sync count annotations.
-
-### Step 3: Run Contract Test Suite & Requirement Governance
+### Step 4: Verification & Governance
 * Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.PlayStoreListingContractTest"`.
 * Execute `python3 tools/verify_requirement_governance.py` (`exit code 0`).
-
-### Step 4: Capture Refreshed Play Store Screenshots on Pixel 10
-* Use ADB screencap on connected Pixel 10 to capture key screens in Light & Dark modes: Cockpit, Sensor Matrix, Live Map, Route Clusters, Physiology/PMC, and Periods 2.0.
-* Populate `docs/store_presence/screenshots/` and update `images/Screenshots/`.
-
-### Step 5: Document Google Play Console Release Handoff
-* Document manual Play Console submission as Human Prerequisite (Rule 22).
+* Document Play Console publishing as Human Prerequisite (`Rule 22`).
 
 ---
 
-## 5. Verification & Rollback Plan
-* **Verification**: `PlayStoreListingContractTest` 100% PASS across all 9 locales; image asset integrity verification.
+## 4. System Invariants & Rollback Plan
+* **Risk Classification**: **HIGH-RISK for Stage 4 (Rule 71)** — executed by `subagent_pro`.
 * **Rollback**: Branch isolation (`feature/ATT-4853`) ensures instant clean rollback with zero repository side effects.

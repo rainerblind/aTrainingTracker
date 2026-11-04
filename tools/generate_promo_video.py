@@ -22,6 +22,7 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 WIDTH = 1920
 HEIGHT = 1080
+MOUNT_CX = 680
 
 def get_font(size: int, bold: bool = False) -> ImageFont.ImageFont:
     """Load standard system TrueType font or fallback to default."""
@@ -39,7 +40,11 @@ def get_font(size: int, bold: bool = False) -> ImageFont.ImageFont:
     return ImageFont.load_default()
 
 def generate_procedural_handlebar_background(path: str):
-    """Generates an authentic outdoor cycling perspective (asphalt road, horizon, greenery, carbon handlebar & stem mount)."""
+    """
+    Generates an authentic outdoor cycling perspective (asphalt road, horizon, greenery,
+    aero carbon stem, 4 titanium bolts, drop handlebar, and out-front dual-arm computer mount)
+    symmetrically centered directly behind and beneath the smartphone at X = 680 (MOUNT_CX).
+    """
     img = Image.new("RGBA", (WIDTH, HEIGHT), (20, 25, 30, 255))
     draw = ImageDraw.Draw(img)
 
@@ -60,12 +65,12 @@ def generate_procedural_handlebar_background(path: str):
     draw.polygon(hill_points, fill=(70, 95, 80, 255))
 
     # Roadside greenery
-    draw.polygon([(0, 470), (WIDTH, 470), (WIDTH, 580), (0, 580)], fill=(45, 80, 50, 255))
+    draw.polygon([(0, 460), (WIDTH, 460), (WIDTH, 560), (0, 560)], fill=(45, 80, 50, 255))
 
     # 2. Asphalt road perspective
     road_poly = [
-        (int(WIDTH * 0.42), 470),
-        (int(WIDTH * 0.58), 470),
+        (int(WIDTH * 0.40), 460),
+        (int(WIDTH * 0.60), 460),
         (WIDTH + 200, HEIGHT),
         (-200, HEIGHT)
     ]
@@ -73,68 +78,107 @@ def generate_procedural_handlebar_background(path: str):
 
     # Asphalt center dash lines
     for i in range(8):
-        y1 = 480 + int(math.pow(i / 7.0, 1.8) * 350)
+        y1 = 470 + int(math.pow(i / 7.0, 1.8) * 360)
         y2 = y1 + int(12 + i * 8)
         w1 = max(2, int(i * 1.5))
         w2 = max(3, int((i + 1) * 2.2))
         cx = int(WIDTH * 0.50)
         draw.polygon([(cx - w1, y1), (cx + w1, y1), (cx + w2, y2), (cx - w2, y2)], fill=(220, 220, 200, 200))
 
-    # 3. Soft outdoor blur for natural camera depth of field
-    img = img.filter(ImageFilter.GaussianBlur(radius=3))
+    # 3. Soft outdoor blur for natural camera depth of field bokeh
+    img = img.filter(ImageFilter.GaussianBlur(radius=5))
     draw = ImageDraw.Draw(img)
 
-    # 4. Out-front bike mount arm (reaching forward from bottom center)
-    stem_top_w = 60
-    stem_bot_w = 110
-    mount_arm = [
-        (WIDTH // 2 - stem_top_w // 2, 600),
-        (WIDTH // 2 + stem_top_w // 2, 600),
-        (WIDTH // 2 + stem_bot_w // 2, HEIGHT),
-        (WIDTH // 2 - stem_bot_w // 2, HEIGHT)
+    # 4. Aero Carbon Stem (centered symmetrically at MOUNT_CX = 680)
+    bar_y = 970
+    stem_y_top = bar_y - 20
+    stem_top_w = 76
+    stem_bot_w = 114
+
+    stem_poly = [
+        (MOUNT_CX - stem_top_w // 2, stem_y_top),
+        (MOUNT_CX + stem_top_w // 2, stem_y_top),
+        (MOUNT_CX + stem_bot_w // 2, HEIGHT),
+        (MOUNT_CX - stem_bot_w // 2, HEIGHT)
     ]
-    draw.polygon(mount_arm, fill=(25, 28, 32, 255))
-    draw.line([(WIDTH // 2 - stem_top_w // 2, 600), (WIDTH // 2 - stem_bot_w // 2, HEIGHT)], fill=(55, 60, 68, 255), width=2)
-    draw.line([(WIDTH // 2 + stem_top_w // 2, 600), (WIDTH // 2 + stem_bot_w // 2, HEIGHT)], fill=(15, 18, 20, 255), width=2)
+    draw.polygon(stem_poly, fill=(24, 26, 30, 255))
+    draw.line([(MOUNT_CX - stem_top_w // 2, stem_y_top), (MOUNT_CX - stem_bot_w // 2, HEIGHT)], fill=(65, 72, 82, 255), width=2)
+    draw.line([(MOUNT_CX + stem_top_w // 2, stem_y_top), (MOUNT_CX + stem_bot_w // 2, HEIGHT)], fill=(12, 14, 16, 255), width=2)
 
-    # Clamp head
-    draw.ellipse([WIDTH // 2 - 45, 570, WIDTH // 2 + 45, 660], fill=(30, 34, 38, 255), outline=(60, 65, 72, 255), width=3)
-    draw.ellipse([WIDTH // 2 - 12, 603, WIDTH // 2 + 12, 627], fill=(12, 14, 16, 255))
+    # Carbon weave cross-hatch texture on stem
+    for sy in range(stem_y_top, HEIGHT, 14):
+        w_at_y = int(stem_top_w + (stem_bot_w - stem_top_w) * (sy - stem_y_top) / max(1, HEIGHT - stem_y_top))
+        draw.line([(MOUNT_CX - w_at_y // 2 + 4, sy), (MOUNT_CX + w_at_y // 2 - 4, sy + 7)], fill=(34, 38, 44, 180), width=1)
+        draw.line([(MOUNT_CX - w_at_y // 2 + 4, sy + 7), (MOUNT_CX + w_at_y // 2 - 4, sy)], fill=(18, 20, 23, 180), width=1)
 
-    # 5. Carbon Drop Handlebars across bottom
+    # 5. Carbon Drop Handlebars across bar_y = 970 through MOUNT_CX = 680
+    bar_h = 44
     # Left bar
-    left_bar = [
-        (0, 820),
-        (WIDTH // 2 - 50, 770),
-        (WIDTH // 2 - 50, 830),
-        (0, 900)
-    ]
-    draw.polygon(left_bar, fill=(35, 38, 42, 255))
-    draw.line([(0, 820), (WIDTH // 2 - 50, 770)], fill=(75, 80, 88, 255), width=3)
+    draw.polygon([(0, bar_y + 10), (MOUNT_CX - 35, bar_y), (MOUNT_CX - 35, bar_y + bar_h), (0, bar_y + 10 + bar_h)], fill=(30, 33, 38, 255))
+    draw.line([(0, bar_y + 10), (MOUNT_CX - 35, bar_y)], fill=(80, 88, 98, 255), width=3)
+    draw.line([(0, bar_y + 10 + bar_h), (MOUNT_CX - 35, bar_y + bar_h)], fill=(15, 17, 20, 255), width=2)
 
     # Right bar
-    right_bar = [
-        (WIDTH // 2 + 50, 770),
-        (WIDTH, 820),
-        (WIDTH, 900),
-        (WIDTH // 2 + 50, 830)
-    ]
-    draw.polygon(right_bar, fill=(35, 38, 42, 255))
-    draw.line([(WIDTH // 2 + 50, 770), (WIDTH, 820)], fill=(75, 80, 88, 255), width=3)
+    draw.polygon([(MOUNT_CX + 35, bar_y), (WIDTH, bar_y + 10), (WIDTH, bar_y + 10 + bar_h), (MOUNT_CX + 35, bar_y + bar_h)], fill=(30, 33, 38, 255))
+    draw.line([(MOUNT_CX + 35, bar_y), (WIDTH, bar_y + 10)], fill=(80, 88, 98, 255), width=3)
+    draw.line([(MOUNT_CX + 35, bar_y + bar_h), (WIDTH, bar_y + 10 + bar_h)], fill=(15, 17, 20, 255), width=2)
 
-    # Subtle handlebar tape wrap texture lines
-    for bx in range(60, WIDTH // 2 - 60, 45):
-        draw.line([(bx, 840), (bx + 20, 800)], fill=(20, 22, 25, 200), width=4)
-    for bx in range(WIDTH // 2 + 80, WIDTH - 40, 45):
-        draw.line([(bx, 800), (bx + 20, 840)], fill=(20, 22, 25, 200), width=4)
+    # Handlebar tape wrap texture lines
+    for bx in range(40, MOUNT_CX - 45, 36):
+        draw.line([(bx, bar_y + bar_h + 8), (bx + 18, bar_y + 4)], fill=(20, 22, 26, 210), width=4)
+    for bx in range(MOUNT_CX + 60, WIDTH - 40, 36):
+        draw.line([(bx, bar_y + 4), (bx + 18, bar_y + bar_h + 8)], fill=(20, 22, 26, 210), width=4)
+
+    # 6. Out-Front Dual-Arm Computer Mount reaching up to smartphone center cy = 570
+    arm_left_clamp_x = MOUNT_CX - 44
+    arm_right_clamp_x = MOUNT_CX + 44
+    cradle_y = 570
+
+    # Dual CNC alloy mount arms
+    draw.polygon([(arm_left_clamp_x - 8, bar_y), (MOUNT_CX - 32, cradle_y + 40), (MOUNT_CX - 18, cradle_y + 40), (arm_left_clamp_x + 8, bar_y)], fill=(22, 24, 28, 255))
+    draw.line([(arm_left_clamp_x - 8, bar_y), (MOUNT_CX - 32, cradle_y + 40)], fill=(95, 105, 118, 255), width=2)
+    draw.line([(arm_left_clamp_x + 8, bar_y), (MOUNT_CX - 18, cradle_y + 40)], fill=(12, 14, 16, 255), width=2)
+
+    draw.polygon([(arm_right_clamp_x - 8, bar_y), (MOUNT_CX + 18, cradle_y + 40), (MOUNT_CX + 32, cradle_y + 40), (arm_right_clamp_x + 8, bar_y)], fill=(22, 24, 28, 255))
+    draw.line([(arm_right_clamp_x + 8, bar_y), (MOUNT_CX + 32, cradle_y + 40)], fill=(95, 105, 118, 255), width=2)
+    draw.line([(arm_right_clamp_x - 8, bar_y), (MOUNT_CX + 18, cradle_y + 40)], fill=(12, 14, 16, 255), width=2)
+
+    # Circular cradle puck with quarter-turn insert
+    draw.ellipse([MOUNT_CX - 50, cradle_y - 25, MOUNT_CX + 50, cradle_y + 75], fill=(28, 31, 36, 255), outline=(80, 90, 102, 255), width=3)
+    draw.ellipse([MOUNT_CX - 22, cradle_y, MOUNT_CX + 22, cradle_y + 44], fill=(14, 16, 18, 255), outline=(110, 122, 138, 255), width=2)
+    draw.rectangle([MOUNT_CX - 6, cradle_y + 8, MOUNT_CX + 6, cradle_y + 36], fill=(45, 50, 58, 255))
+    draw.rectangle([MOUNT_CX - 14, cradle_y + 16, MOUNT_CX + 14, cradle_y + 28], fill=(45, 50, 58, 255))
+
+    # 7. Stem Faceplate Clamp (centered symmetrically at MOUNT_CX = 680)
+    fp_w = 72
+    fp_h = 52
+    fp_x1 = MOUNT_CX - fp_w // 2
+    fp_y1 = bar_y - 6
+    fp_x2 = MOUNT_CX + fp_w // 2
+    fp_y2 = bar_y + fp_h - 6
+    draw.rounded_rectangle([fp_x1, fp_y1, fp_x2, fp_y2], radius=6, fill=(36, 40, 46, 255), outline=(100, 110, 124, 255), width=2)
+    draw.rounded_rectangle([MOUNT_CX - 12, bar_y + 6, MOUNT_CX + 12, bar_y + 32], radius=3, fill=(18, 20, 24, 255), outline=(60, 66, 75, 255), width=1)
+
+    # 8. Four Titanium Hex Bolts
+    bolt_coords = [
+        (MOUNT_CX - 24, bar_y + 4),
+        (MOUNT_CX + 24, bar_y + 4),
+        (MOUNT_CX - 24, bar_y + 36),
+        (MOUNT_CX + 24, bar_y + 36)
+    ]
+    for bx, by in bolt_coords:
+        draw.ellipse([bx - 6, by - 6, bx + 6, by + 6], fill=(175, 185, 195, 255), outline=(230, 240, 250, 255), width=1)
+        draw.polygon([
+            (bx - 3, by - 2), (bx, by - 4), (bx + 3, by - 2),
+            (bx + 3, by + 2), (bx, by + 4), (bx - 3, by + 2)
+        ], fill=(30, 35, 40, 255))
 
     os.makedirs(os.path.dirname(path), exist_ok=True)
     img.convert("RGB").save(path, format="PNG", quality=95)
-    print(f"[Generator] Created procedural handlebar background: {path}")
+    print(f"[Generator] Created procedural handlebar background: {path} (Mount centered at X={MOUNT_CX})")
 
-def draw_smartphone_frame(bg_image: Image.Image, screenshot: Image.Image, cx: int, cy: int, target_h: int = 740) -> tuple:
+def draw_smartphone_frame(bg_image: Image.Image, screenshot: Image.Image, cx: int = MOUNT_CX, cy: int = 570, target_h: int = 720) -> tuple:
     """Renders a realistic Pixel 10 bezel with rounded corners and drops the screenshot into it."""
-    # Compute proportional size
     aspect = screenshot.width / float(screenshot.height)
     screen_w = int(target_h * aspect)
     screen_h = target_h
@@ -254,18 +298,21 @@ def draw_broll_cutaway(img: Image.Image, screenshot: Image.Image, crop_box: tupl
     img.paste(overlay, (target_x, target_y), overlay)
 
 def find_screenshot(screens_dir: Path, filename_candidates: list) -> Image.Image:
-    """Finds the first existing screenshot from a list of candidates or creates a rich fallback."""
+    """Finds the first existing screenshot from candidates across store presence and docs/guide/img."""
     for c in filename_candidates:
         p = screens_dir / c
         if p.exists():
             return Image.open(p).convert("RGB")
-        # Try parent guide/img
-        guide_p = screens_dir.parent / "guide" / "img" / c
+        # Direct check in docs/guide/img/
+        guide_p = screens_dir.parent.parent / "guide" / "img" / c
         if guide_p.exists():
             return Image.open(guide_p).convert("RGB")
+        guide_p2 = screens_dir.parent / "guide" / "img" / c
+        if guide_p2.exists():
+            return Image.open(guide_p2).convert("RGB")
     
     # Fallback placeholder image
-    fb = Image.new("RGB", (1080, 2400), (20, 22, 28))
+    fb = Image.new("RGB", (1080, 2424), (20, 22, 28))
     fdraw = ImageDraw.Draw(fb)
     fdraw.text((100, 300), "aTrainingTracker\nPreview Screen", font=get_font(48, bold=True), fill=(255, 255, 255))
     return fb
@@ -277,57 +324,60 @@ def render_scene(bg_path: str, screens_dir: Path, scene_idx: int) -> Image.Image
     if scene_idx == 1:
         # Scene 1: Cockpit & Electronic Bell
         scr = find_screenshot(screens_dir, ["01_cockpit_tracking.png", "01_cockpit_standard.png"])
-        px, py, pw, ph = draw_smartphone_frame(bg, scr, cx=680, cy=610, target_h=760)
+        px, py, pw, ph = draw_smartphone_frame(bg, scr, cx=MOUNT_CX, cy=570, target_h=720)
         draw_callout_banner(bg, "YOUR ULTIMATE BIKE COMPUTER", "Live Telemetry Cockpit • Zero Subscriptions • 100% Ad-Free")
-        draw_touch_ripple(bg, px + int(pw * 0.78), py + int(ph * 0.88), radius=38) # Touch on Bell button
+        draw_touch_ripple(bg, px + int(pw * 0.78), py + int(ph * 0.88), radius=38)  # Touch on Bell button
 
-        # B-roll zoom on power/speed gauge
-        crop = (int(scr.width * 0.05), int(scr.height * 0.20), int(scr.width * 0.95), int(scr.height * 0.50))
+        # B-roll zoom on speed/distance/HR telemetry cluster
+        crop = (int(scr.width * 0.04), int(scr.height * 0.18), int(scr.width * 0.96), int(scr.height * 0.60))
         draw_broll_cutaway(bg, scr, crop, target_x=1220, target_y=320, w=580, h=360, title="Color-Coded Zone Telemetry")
 
     elif scene_idx == 2:
         # Scene 2: Sensors & Gear Matrix
         scr = find_screenshot(screens_dir, ["02_sensor_management.png", "02_sensor_pairing.png", "03_equipment_bikes.png"])
-        px, py, pw, ph = draw_smartphone_frame(bg, scr, cx=680, cy=610, target_h=760)
+        px, py, pw, ph = draw_smartphone_frame(bg, scr, cx=MOUNT_CX, cy=570, target_h=720)
         draw_callout_banner(bg, "DUAL BLE + NATIVE ANT+", "Intelligent Hardware Arbitration • Automatic Gear Matrix • Battery Gauges")
-        draw_touch_ripple(bg, px + int(pw * 0.50), py + int(ph * 0.35), radius=32)
+        draw_touch_ripple(bg, px + int(pw * 0.50), py + int(ph * 0.62), radius=34)
 
-        # B-roll zoom on sensor list
-        crop = (int(scr.width * 0.05), int(scr.height * 0.15), int(scr.width * 0.95), int(scr.height * 0.55))
-        draw_broll_cutaway(bg, scr, crop, target_x=1220, target_y=320, w=580, h=360, title="Multi-Protocol Sensor Linking")
+        # B-roll zoom on paired hardware sensors (cadence, speed, HR with battery gauges)
+        crop = (int(scr.width * 0.04), int(scr.height * 0.47), int(scr.width * 0.96), int(scr.height * 0.88))
+        draw_broll_cutaway(bg, scr, crop, target_x=1220, target_y=320, w=580, h=360, title="Multi-Protocol Sensor Matrix")
 
     elif scene_idx == 3:
         # Scene 3: Navigation, Dynamic Climbs & Strava Live Segments
-        scr = find_screenshot(screens_dir, ["03_live_map.png", "05_gpx_routes.png", "05_live_segments.png"])
-        px, py, pw, ph = draw_smartphone_frame(bg, scr, cx=680, cy=610, target_h=760)
+        scr = find_screenshot(screens_dir, ["03_live_map.png", "05_map_cockpit.png"])
+        scr_broll = find_screenshot(screens_dir, ["05_live_segments.png", "03_live_map.png"])
+        px, py, pw, ph = draw_smartphone_frame(bg, scr, cx=MOUNT_CX, cy=570, target_h=720)
         draw_callout_banner(bg, "OFFLINE MAPS, LIVE CLIMBS & STRAVA SEGMENTS", "Adaptive Elevation Profiles • Grade Colors • Real-Time PR / KOM Delta")
         draw_touch_ripple(bg, px + int(pw * 0.50), py + int(ph * 0.65), radius=35)
 
-        # B-roll zoom on climb profile
-        crop = (int(scr.width * 0.05), int(scr.height * 0.50), int(scr.width * 0.95), int(scr.height * 0.85))
-        draw_broll_cutaway(bg, scr, crop, target_x=1220, target_y=320, w=580, h=360, title="Adaptive Elevation Scrubbing")
+        # B-roll zoom on Strava Live Segment tracking with PR comparison
+        crop = (int(scr_broll.width * 0.04), int(scr_broll.height * 0.68), int(scr_broll.width * 0.96), int(scr_broll.height * 0.93))
+        draw_broll_cutaway(bg, scr_broll, crop, target_x=1220, target_y=320, w=580, h=360, title="Strava Live Segment Tracking")
 
     elif scene_idx == 4:
         # Scene 4: Route Clustering & Coggan/Skiba Analytics
-        scr = find_screenshot(screens_dir, ["04_lieblingsstrecken.png", "05_physiology_zones.png", "06_cluster_expanded.png"])
-        px, py, pw, ph = draw_smartphone_frame(bg, scr, cx=680, cy=610, target_h=760)
+        scr = find_screenshot(screens_dir, ["04_lieblingsstrecken.png", "06_cluster_expanded.png"])
+        scr_broll = find_screenshot(screens_dir, ["05_physiology_zones.png", "07_training_zones.png"])
+        px, py, pw, ph = draw_smartphone_frame(bg, scr, cx=MOUNT_CX, cy=570, target_h=720)
         draw_callout_banner(bg, "AUTONOMOUS ROUTE CLUSTERING & COGGAN / SKIBA ANALYTICS", "Lieblingsstrecken Heatmap • Skiba W'bal Battery • NP, IF, TSS & Banister PMC")
         draw_touch_ripple(bg, px + int(pw * 0.50), py + int(ph * 0.40), radius=34)
 
-        # B-roll zoom on physiological analytics
-        crop = (int(scr.width * 0.05), int(scr.height * 0.20), int(scr.width * 0.95), int(scr.height * 0.60))
-        draw_broll_cutaway(bg, scr, crop, target_x=1220, target_y=320, w=580, h=360, title="Longitudinal Fitness & Fatigue")
+        # B-roll zoom on Coggan physiological training zones histogram
+        crop = (int(scr_broll.width * 0.04), int(scr_broll.height * 0.24), int(scr_broll.width * 0.96), int(scr_broll.height * 0.69))
+        draw_broll_cutaway(bg, scr_broll, crop, target_x=1220, target_y=320, w=580, h=360, title="Coggan Heart Rate & Power Zones")
 
     elif scene_idx == 5:
         # Scene 5: 100% Privacy Sovereignty, Cloud Sync & Supporter CTA
-        scr = find_screenshot(screens_dir, ["06_periods_analytics.png", "08_yearly_activity_grid.png", "09_dropbox_backup.png"])
-        px, py, pw, ph = draw_smartphone_frame(bg, scr, cx=680, cy=610, target_h=760)
+        scr = find_screenshot(screens_dir, ["06_periods_analytics.png", "08_periods_screen.png"])
+        scr_broll = find_screenshot(screens_dir, ["09_fit_export.png", "09_dropbox_backup.png"])
+        px, py, pw, ph = draw_smartphone_frame(bg, scr, cx=MOUNT_CX, cy=570, target_h=720)
         draw_callout_banner(bg, "100% LOCAL DATA OWNERSHIP • GET IT ON GOOGLE PLAY", "1-Click .FIT / Strava Export • Zero Accounts • Community-Driven Supporter Tiers")
-        draw_touch_ripple(bg, px + int(pw * 0.80), py + int(ph * 0.25), radius=35)
+        draw_touch_ripple(bg, px + int(pw * 0.70), py + int(ph * 0.32), radius=34)
 
-        # B-roll zoom on yearly activity grid
-        crop = (int(scr.width * 0.05), int(scr.height * 0.15), int(scr.width * 0.95), int(scr.height * 0.55))
-        draw_broll_cutaway(bg, scr, crop, target_x=1220, target_y=320, w=580, h=360, title="Yearly Activity Contribution")
+        # B-roll zoom on Android SAF .FIT export & cloud sync targets (Drive, Dropbox, NAS)
+        crop = (int(scr_broll.width * 0.04), int(scr_broll.height * 0.08), int(scr_broll.width * 0.96), int(scr_broll.height * 0.45))
+        draw_broll_cutaway(bg, scr_broll, crop, target_x=1220, target_y=320, w=580, h=360, title="SAF .FIT & Cloud Export")
 
     return bg.convert("RGB")
 
@@ -408,6 +458,7 @@ def main():
     parser.add_argument("--output-frames", default="docs/store_presence/video/frames", help="Directory for exported keyframes")
     parser.add_argument("--fps", type=int, default=1, help="Frame rate for video compilation")
     parser.add_argument("--duration", type=int, default=60, help="Target duration in seconds")
+    parser.add_argument("--force-bg", action="store_true", help="Force regenerate procedural background plate")
     args = parser.parse_args()
 
     repo_root = Path(__file__).resolve().parent.parent
@@ -421,9 +472,10 @@ def main():
     out_video_path.parent.mkdir(parents=True, exist_ok=True)
     walkthrough_img_dir.mkdir(parents=True, exist_ok=True)
 
-    # 1. Background plate check / generation
-    if not bg_photo_path.exists():
-        print(f"[Generator] Custom photo not found at {bg_photo_path}. Generating procedural handlebar plate...")
+    # 1. Background plate check / generation (always regenerate procedural template)
+    is_default_template = "handlebar_bg_template.png" in str(bg_photo_path)
+    if args.force_bg or not bg_photo_path.exists() or is_default_template:
+        print(f"[Generator] Generating procedural handlebar plate at {bg_photo_path} (MOUNT_CX={MOUNT_CX})...")
         generate_procedural_handlebar_background(str(bg_photo_path))
 
     # 2. Render 5 distinct storyboard scenes
@@ -451,7 +503,6 @@ def main():
     print("  ✓ Copied evidence previews to docs/engineering/walkthroughs/img/")
 
     # 3. Build sequence of frames matching scene durations
-    # For a 60s video at 1 fps: 10 frames S1, 15 frames S2, 15 frames S3, 10 frames S4, 10 frames S5 = 60 frames
     timeline_frames = []
     with tempfile.TemporaryDirectory() as seq_dir:
         frame_counter = 0

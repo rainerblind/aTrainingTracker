@@ -31,6 +31,7 @@ import io.mockk.verify
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -197,5 +198,44 @@ class WorkoutSummariesDatabaseManagerTest {
         assertTrue(querySlot.captured.contains("finished = 1"))
         assertTrue(querySlot.captured.contains("Sport = ?"))
         assertEquals("BIKE", argsSlot.captured[0])
+    }
+
+    @Test
+    fun testGetEarliestWorkoutYear_returnsYearWhenRecordExists() {
+        val querySlot = slot<String>()
+        val mockCursor = mockk<Cursor>(relaxed = true)
+
+        every { mockCursor.moveToFirst() } returns true
+        every { mockCursor.getString(0) } returns "2018-05-10 14:32:00"
+
+        every {
+            mockDb.rawQuery(capture(querySlot), isNull())
+        } returns mockCursor
+
+        val year = manager.earliestWorkoutYear
+
+        assertEquals(2018, year)
+        assertTrue(querySlot.captured.contains("MIN(timeStart)"))
+        assertTrue(querySlot.captured.contains("WorkoutSummaries"))
+    }
+
+    @Test
+    fun testGetEarliestWorkoutYear_returnsNullWhenEmptyOrInvalid() {
+        val mockCursor = mockk<Cursor>(relaxed = true)
+
+        every { mockCursor.moveToFirst() } returns true
+        every { mockCursor.getString(0) } returns null
+
+        every {
+            mockDb.rawQuery(any(), isNull())
+        } returns mockCursor
+
+        assertNull(manager.earliestWorkoutYear)
+
+        every { mockCursor.getString(0) } returns "invalid"
+        assertNull(manager.earliestWorkoutYear)
+
+        every { mockCursor.moveToFirst() } returns false
+        assertNull(manager.earliestWorkoutYear)
     }
 }

@@ -13,7 +13,7 @@ Concentre-se no seu treino. Nós tratamos da tecnologia.
 aTrainingTracker transforma o seu smartphone Android num ciclocomputador profissional e rastreador multidesportivo focado na privacidade e na precisão. Desenvolvido para ciclistas, corredores e atletas de resistência que exigem telemetria fiável, automação inteligente e soberania total dos seus dados. Sem conta obrigatória, sem nuvem forçada e 100% sem anúncios.
 
 <b>GESTÃO INTELIGENTE DE SENSORES E PRIORIDADE DE HARDWARE</b>
-Ligue múltiplos sensores Bluetooth® LE e ANT+® em simultâneo: frequência cardíaca, cadência, velocidade, potenciómetros, radar e temperatura.
+Ligue múltiplos sensores Bluetooth® LE e ANT+® em simultâneo: frequência cardíaca, cadência, velocidade, potenciómetros e temperatura.
 • <b>Prioridade de hardware</b>: Sensores dedicados na roda são automaticamente preferidos ao GPS para máxima precisão.
 • <b>Transição contínua</b>: Se um sensor de roda falhar, o GPS assume o registo instantaneamente sem perda de distância.
 • <b>Protocolo duplo estável</b>: Ligue dispositivos BLE modernos e equipamentos ANT+ sem conflitos.
@@ -23,7 +23,6 @@ Análise de nível profissional diretamente no telemóvel, sem assinaturas pagas
 • <b>Conjunto de métricas Coggan</b>: Normalized Power (NP), Intensity Factor (IF), Training Stress Score (TSS) e Variability Index (VI).
 • <b>Bateria anaeróbica Skiba W'</b>: Cálculo em tempo real da reserva W' com modelo de 2 pontos Critical Power (CP/W').
 • <b>Gráfico PMC longitudinal</b>: Monitorize a carga crónica (CTL), aguda (ATL), balanço (TSB) e rácio ACWR.
-• <b>Modelo metabólico de Mader-Heck</b>: Simulação fisiológica com estimativa em tempo real de hidratos de carbono e glicogénio.
 • <b>Eficiência aeróbica</b>: Fator de eficiência (EF) e desacoplamento aeróbico (Pw:Hr %) em tempo real.
 
 <b>NAVEGAÇÃO, ROTAS HABITUAIS E SEGMENTOS LIVE</b>

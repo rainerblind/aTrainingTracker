@@ -551,6 +551,7 @@ fun TrackOnMapScreen(
                                     onDistanceSelected = {},
                                     showZoomControls = false,
                                     bSportType = workoutData.bSportType,
+                                    alignWithTelemetryCharts = activeDetailPrefs.showTelemetryCharts,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(120.dp)

@@ -1,20 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-    <!-- Bronze Supporter Medal Emblem (REQ-UI-445) -->
+    <!-- 3. Bronze Supporter 24dp Cockpit Emblem (REQ-UI-445) -->
     <path
-        android:strokeColor="#B22222"
-        android:strokeWidth="2.5"
-        android:strokeLineCap="round"
-        android:pathData="M 7.0,2.5 L 12.0,8.5 L 17.0,2.5" />
+        android:fillColor="#1E3A8A"
+        android:pathData="M 5.35,2.30 L 10.25,2.30 L 12.35,10.70 L 8.50,10.70 Z" />
+    <path
+        android:fillColor="#B91C1C"
+        android:pathData="M 18.65,2.30 L 13.75,2.30 L 11.65,10.70 L 15.50,10.70 Z" />
     <path
         android:fillColor="#CD7F32"
-        android:strokeColor="#8C4C14"
-        android:strokeWidth="1.0"
-        android:pathData="M 12,7.5 A 6.5,6.5 0 1,0 12,20.5 A 6.5,6.5 0 1,0 12,7.5 Z" />
+        android:strokeColor="#6E3B16"
+        android:strokeWidth="1.14"
+        android:pathData="M 12.00,6.15 A 8.75,8.75 0 1,0 12.00,23.65 A 8.75,8.75 0 1,0 12.00,6.15 Z" />
     <path
-        android:fillColor="#E69A55"
-        android:pathData="M 12,10.2 A 3.8,3.8 0 1,0 12,17.8 A 3.8,3.8 0 1,0 12,10.2 Z" />
+        android:fillColor="#A05A2C"
+        android:strokeColor="#FFE0B2"
+        android:strokeWidth="0.61"
+        android:pathData="M 12.00,8.60 A 6.30,6.30 0 1,0 12.00,21.20 A 6.30,6.30 0 1,0 12.00,8.60 Z" />
+    <path
+        android:fillColor="#FFE0B2"
+        android:pathData="M 12.00,10.70 L 13.03,13.48 L 15.99,13.60 L 13.66,15.44 L 14.47,18.30 L 12.00,16.65 L 9.53,18.30 L 10.34,15.44 L 8.01,13.60 L 10.97,13.48 Z" />
 </vector>

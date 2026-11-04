@@ -340,4 +340,7 @@ object TTColor {
     val HeatmapHotOrange = Color(0xFFFF9800)
     val HeatmapHotRed = Color(0xFFE53935)
     val HeatmapHotDarkRed = Color(0xFF880E4F)
+
+    // Supporter Launcher Icon Preview Surface (REQ-UI-445, ATT-1406, ATT-5372)
+    val SupporterIconPreviewContainer = Color(0xFFF1F5F9)
 }

@@ -389,10 +389,10 @@
   6. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules verifying 100% pass rate with zero regressions.
 
-### TST-FIL-004: **Stabilized VAM (Vertical Speed) Metric, Location Accuracy Gating & Indoor Drift Suppression Verification** [\text{raw\_vam}]
+### TST-FIL-004: **Stabilized VAM (Vertical Speed) Metric, Location Accuracy Gating & Indoor Drift Suppression Verification** [Verified]
 - **Requirement(s)**: `REQ-FIL-012`
 - **Component**: **Stabilized VAM (Vertical Speed) Metric, Location Accuracy Gating & Indoor Drift Suppression Verification**
-- **Jira**: ``ATT-1621`, `ATT-1738``
+- **Jira**: `ATT-1621`, `ATT-1738`, `ATT-5373`
 - **Test Description**:
   1. *Stationary Indoor Drift Suppression Tests (`VerticalSpeedAndSlopeDeviceTest.kt`)*:
   • Simulate stationary athlete (`speed = 0.0 m/s` or `speed = 0.2 m/s`) with altitude oscillating randomly by $\pm 0.5\text{ m}$ around 100m.
@@ -401,7 +401,15 @@
   • Simulate athlete with degraded GPS accuracy ($> 20.0\text{ m}$, e.g. 25m or 35m) indoors/basement while altitude fluctuates.
   • Verify `calculateVam` suppresses vertical speed to `0 m/h` whenever GPS accuracy exceeds `VAM_MAX_GPS_ACCURACY_METERS = 20.0`.
   3. *Low-Speed Indoor GPS Wander Suppression Tests (`VerticalSpeedAndSlopeDeviceTest.kt`)*:
-  • Simulate indoor wander with phantom horizontal speed between $0.5\text{ m/s}$ and $1.1\text{ m/s}$ ($2.0\dots 4.0\text{ km/h}$) and altitude jitter ($
+  • Simulate indoor wander with phantom horizontal speed between $0.5\text{ m/s}$ and $1.1\text{ m/s}$ ($2.0\dots 4.0\text{ km/h}$) and altitude jitter ($< 150\text{ m/h}$).
+  • Verify `calculateVam` suppresses vertical speed to `0 m/h`.
+  4. *Standstill Altitude Source Transition Artifact Suppression (`VerticalSpeedAndSlopeDeviceTest.kt`, ATT-5373)*:
+  • Simulate exact Workout #455 trace: GPS altitude of 492.0 m during seconds 1–2 at standstill (`speed = 0.0 m/s`), transitioning at second 3 to DEM altitude of 438.0 m (-54 m geoid jump), followed by first 20m movement at seconds 11–16.
+  • Verify `mDescentSensor` accumulation remains strictly `0.0 m` at standstill (second 3) and `mSlopeSensor` / `mVerticalSpeedSensor` exhibit no -59% slope or -3.0 m/s jump.
+  5. *Barometric Recalibration Filter Shift Synchronization (`VerticalSpeedAndSlopeDeviceTest.kt`, `TimedMovingAverageFilterTest.kt`, ATT-5373)*:
+  • Populate `cAltitudeFilter` and `cAltitudeSuperFilter` with steady altitude samples (e.g. 500.0 m).
+  • Broadcast `ALTITUDE_CORRECTION_INTENT` with `deltaOffset = +20.0 m` (or `-20.0 m`).
+  • Verify `cAltitudeFilter` and `cAltitudeSuperFilter` shift buffered timestamped values by `deltaOffset` so `getFilteredValue()` immediately shifts to 520.0 m (or 480.0 m) without transient decay, false descent, or false ascent.
 
 ### TST-TRK-009: **Guaranteed Defensive Location Device Initialization on Tracking Startup and BANAL Connection Verification** [Location devices reliably initialize and register update listeners when tracking begins after dynamic permission grants; GCData includes GPS/Distance/Speed; 100% test pass rate.]
 - **Requirement(s)**: `REQ-TRK-017`

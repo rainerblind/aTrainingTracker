@@ -26,6 +26,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.util.Log;
 
+import androidx.annotation.VisibleForTesting;
 import androidx.core.content.ContextCompat;
 
 import com.atrainingtracker.banalservice.BANALService;
@@ -35,6 +36,7 @@ import com.atrainingtracker.banalservice.filters.FilteredSensorData;
 import com.atrainingtracker.banalservice.sensor.MyDoubleAccumulatorSensor;
 import com.atrainingtracker.banalservice.sensor.MySensor;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
+import com.atrainingtracker.banalservice.sensor.ProxySensor;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.util.LifecycleUtils;
@@ -61,6 +63,7 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
 
     private Double mLastAltitude;
     private Double mLastAltitudeSuperFiltered;
+    private MyDevice mLastAltitudeSourceDevice;
 
     // VAM linear regression sliding window (REQ-FIL-012, ATT-1621)
     public static final int VAM_WINDOW_SIZE = 15;
@@ -95,11 +98,18 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
                 for (int i = 0; i < mAltitudeHistoryCount; i++) {
                     mAltitudeHistory[i] += delta;
                 }
+                BANALService.shiftFilter(cAltitudeFilter, delta);
+                BANALService.shiftFilter(cAltitudeSuperFilter, delta);
             }
         }
     };
 
     public VerticalSpeedAndSlopeDevice(Context context, MySensorManager mySensorManager) {
+        this(context, mySensorManager, true);
+    }
+
+    @VisibleForTesting
+    public VerticalSpeedAndSlopeDevice(Context context, MySensorManager mySensorManager, boolean autoStartScheduler) {
         super(context, mySensorManager, DeviceType.VERTICAL_SPEED_AND_SLOPE);
         if (DEBUG) Log.i(TAG, "VerticalSpeedAndSlopeDevice");
 
@@ -114,7 +124,9 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
 
         registerSensors();
 
-        mScheduler.scheduleWithFixedDelay(this::calculateMetrics, 1, 1, TimeUnit.SECONDS);
+        if (autoStartScheduler) {
+            mScheduler.scheduleWithFixedDelay(this::calculateMetrics, 1, 1, TimeUnit.SECONDS);
+        }
     }
 
     @Override
@@ -241,7 +253,8 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
         return (int) Math.round(verticalSpeed);
     }
 
-    private void calculateMetrics() {
+    @VisibleForTesting
+    void calculateMetrics() {
         if (DEBUG) Log.i(TAG, "calculateMetrics()");
 
         if (TrainingApplication.isPaused()) {
@@ -250,6 +263,9 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
         if (TrainingApplication.isAutoPaused()) {
             return;
         }
+
+        // Check for active altitude source transition (REQ-FIL-012.5, ATT-5373)
+        checkAltitudeSourceTransition();
 
         // get current values
         FilteredSensorData<Double> altitudeFilteredSensorData = BANALService.getFilteredSensorData(cAltitudeFilter);
@@ -313,5 +329,103 @@ public class VerticalSpeedAndSlopeDevice extends MyDevice {
         } else if (deltaAltitude_mps < 0) {
             mDescentSensor.increment(-deltaAltitude_mps);
         }
+    }
+
+    /**
+     * Checks whether the active source device backing {@link SensorType#ALTITUDE} has transitioned
+     * (e.g. from GPS ellipsoid to DEM elevation or barometric pressure) and re-seeds filters
+     * to eliminate phantom historical decay and linear regression slope jumps (REQ-FIL-012.5, ATT-5373).
+     */
+    protected void checkAltitudeSourceTransition() {
+        if (mMySensorManager == null) return;
+        MySensor<?> altSensor = mMySensorManager.getSensor(SensorType.ALTITUDE);
+        while (altSensor instanceof ProxySensor<?>) {
+            altSensor = ((ProxySensor<?>) altSensor).getBestSensor();
+        }
+        if (altSensor == null) return;
+
+        MyDevice currentDevice = altSensor.getDevice();
+        if (currentDevice == null) return;
+
+        if (mLastAltitudeSourceDevice != null && currentDevice != mLastAltitudeSourceDevice) {
+            Object val = altSensor.getValue();
+            if (val instanceof Number) {
+                double rawAlt = ((Number) val).doubleValue();
+                if (!Double.isNaN(rawAlt)) {
+                    if (DEBUG) Log.i(TAG, "Altitude source transitioned from "
+                            + mLastAltitudeSourceDevice.getName() + " to "
+                            + currentDevice.getName() + ", rawAlt=" + rawAlt);
+                    reseedAltitudeFilters(rawAlt);
+                    mLastAltitudeSourceDevice = currentDevice;
+                }
+            }
+        } else if (mLastAltitudeSourceDevice == null) {
+            mLastAltitudeSourceDevice = currentDevice;
+        }
+    }
+
+    /**
+     * Re-seeds internal filters, baseline references, and history ring buffer with the new authoritative
+     * raw altitude upon source device transition (REQ-FIL-012.5, ATT-5373).
+     *
+     * @param rawAlt the initial altitude sample emitted by the new active source device.
+     */
+    protected synchronized void reseedAltitudeFilters(double rawAlt) {
+        BANALService.reseedFilter(cAltitudeFilter, rawAlt);
+        BANALService.reseedFilter(cAltitudeSuperFilter, rawAlt);
+
+        mLastAltitudeSuperFiltered = rawAlt;
+        mLastAltitude = rawAlt;
+
+        for (int i = 0; i < VAM_WINDOW_SIZE; i++) {
+            mAltitudeHistory[i] = rawAlt;
+        }
+        mAltitudeHistoryHead = 0;
+        mAltitudeHistoryCount = 0;
+    }
+
+    @VisibleForTesting
+    BroadcastReceiver getAltitudeCorrectionReceiver() {
+        return mAltitudeCorrectionReceiver;
+    }
+
+    @VisibleForTesting
+    MySensor<Integer> getVerticalSpeedSensor() {
+        return mVerticalSpeedSensor;
+    }
+
+    @VisibleForTesting
+    MySensor<Integer> getSlopeSensor() {
+        return mSlopeSensor;
+    }
+
+    @VisibleForTesting
+    MyDoubleAccumulatorSensor getAscentSensor() {
+        return mAscentSensor;
+    }
+
+    @VisibleForTesting
+    MyDoubleAccumulatorSensor getDescentSensor() {
+        return mDescentSensor;
+    }
+
+    @VisibleForTesting
+    MyDevice getLastAltitudeSourceDevice() {
+        return mLastAltitudeSourceDevice;
+    }
+
+    @VisibleForTesting
+    void setLastAltitudeSourceDevice(MyDevice device) {
+        mLastAltitudeSourceDevice = device;
+    }
+
+    @VisibleForTesting
+    Double getLastAltitudeSuperFiltered() {
+        return mLastAltitudeSuperFiltered;
+    }
+
+    @VisibleForTesting
+    void setLastAltitudeSuperFiltered(Double alt) {
+        mLastAltitudeSuperFiltered = alt;
     }
 }

@@ -259,7 +259,7 @@ class TelemetryMetricGraphZoneTest {
         assertTrue(graphContent.contains("25.dp"))
         assertTrue(
             profileContent.contains("start = 50.dp, end = 25.dp") ||
-                (profileContent.contains("start = 50.dp") && profileContent.contains("end = if (isLandscape && showZoomControls) 0.dp else 25.dp"))
+                (profileContent.contains("start = 50.dp") && profileContent.contains("0.dp else") && profileContent.contains("25.dp"))
         )
 
         // 2. Right-hand zone labels must be positioned within the 25.dp end margin

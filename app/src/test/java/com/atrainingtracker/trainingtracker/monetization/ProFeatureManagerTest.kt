@@ -18,7 +18,16 @@
 
 package com.atrainingtracker.trainingtracker.monetization
 
+import android.content.Context
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.mockk
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -123,5 +132,31 @@ class ProFeatureManagerTest {
         ).forEach { proTier ->
             assertTrue(proTier.isPro)
         }
+    }
+
+    @Test
+    fun testCheckAndPersistPioneerEligibility_cachesEarliestYearWhenNull() = runTest {
+        val mockContext = mockk<Context>(relaxed = true)
+        val mockSettingsDataStore = mockk<SettingsDataStore>(relaxed = true)
+        val mockDbManager = mockk<WorkoutSummariesDatabaseManager>(relaxed = true)
+
+        every { mockSettingsDataStore.isPioneerEarlyAdopter } returns flowOf(true)
+        every { mockSettingsDataStore.pioneerSinceYear } returns flowOf(null)
+        every { mockSettingsDataStore.supporterTierOverride } returns flowOf(SupporterTierOverride.AUTO)
+        every { mockSettingsDataStore.supporterTier } returns flowOf(SupporterTier.FREE)
+        every { mockDbManager.getEarliestWorkoutYear() } returns 2018
+        coEvery { mockSettingsDataStore.setPioneerSinceYear(2018) } returns Unit
+
+        val manager = ProFeatureManager(
+            context = mockContext,
+            settingsDataStore = mockSettingsDataStore,
+            workoutSummariesDatabaseManager = mockDbManager,
+            coroutineScope = backgroundScope,
+            isDebugBuild = false
+        )
+
+        manager.checkAndPersistPioneerEligibility().join()
+
+        coVerify { mockSettingsDataStore.setPioneerSinceYear(2018) }
     }
 }

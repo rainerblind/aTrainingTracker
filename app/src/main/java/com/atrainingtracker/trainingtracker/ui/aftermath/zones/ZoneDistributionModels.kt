@@ -64,6 +64,18 @@ data class ZoneTimeEntry(
 )
 
 /**
+ * Individual frequency bin for uniform linear marginal histograms on non-zoned telemetry and elevation graphs (REQ-UI-446).
+ */
+data class LinearHistogramBin(
+    val binIndex: Int,
+    val rangeMin: Double,
+    val rangeMax: Double,
+    val durationSec: Long,
+    val percentage: Float,
+    val color: Color
+)
+
+/**
  * Individual frequency bin for fine-grained telemetry histograms.
  *
  * @property isOverflow True if this bin represents a folded rightmost high-wattage sprint overflow bar.

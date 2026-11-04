@@ -7075,34 +7075,58 @@
   • Verify `AndroidManifest.xml` specifies `android:icon="@mipmap/ic_launcher"` and `android:roundIcon="@mipmap/ic_launcher_round"`.
   • Verify `res/mipmap-anydpi-v26/ic_launcher.xml` and `ic_launcher_round.xml` exist and correctly reference `@drawable/ic_launcher_background`, `@drawable/ic_launcher_foreground`, and `@drawable/ic_launcher_monochrome`.
   2. *Safe-Zone Geometry & Vector Bounds Audit (`TST-UI-444.2`)*:
-  • Parse vector path coordinate extrema in `ic_launcher_foreground.xml` and `ic_launcher_monochrome.xml`.
-  • Verify all vector elements lie strictly within the inner 66dp diameter circle centered at `(54, 54)` on the `108x108` canvas ($r \le 33\text{dp}$).
-  3. *Authentic Brand Color Fidelity Audit (`TST-UI-444.3`)*:
+  • Parse vector path coordinate extrema in `ic_launcher_foreground.xml` and `ic_launcher_monochrome.xml`, supporting lines (`L`/`l`), arcs (`A`/`a`), and cubic/quadratic Béziers (`C`/`c`/`S`/`s`/`Q`/`q`).
+  • Verify all vector elements lie strictly within the inner circular safe zone centered at `(54, 54)` on the `108x108` canvas with $r \le 34.5\text{dp}$ (and $r \ge 33.0\text{dp}$ to prevent excessive margin).
+  3. *Authentic Brand Color & Geometry Fidelity Audit (`TST-UI-444.3`)*:
   • Audit color tokens in `ic_launcher_foreground.xml` to verify exact matching of Cervélo P3C frame (`#FF0000`), carbon wheels/saddle (`#000000`), stopwatch ring/stems (`#FFC700`), dial (`#F0F0F0`), pushers (`#000090`, `#FF0000`, `#009000`), and athletes (`#0000FF`).
-  4. *In-App Caller Parity & Zero Logic Regressions (`TST-UI-444.4`)*:
+  • Verify pusher button caps overlap stem necks with zero white gap and round stroke caps on athlete curves.
+  4. *In-App Caller Parity & Master Asset Integrity (`TST-UI-444.4`)*:
   • Verify `R.drawable.logo` remains intact and unaffected for existing notification and protocol callers.
+  • Verify `app/src/main/res/drawable/logo_512.png` and `images/logo_512.png` match `drawable-xxxhdpi/logo_512.png` checksum (`sha256: f84c6251...`), preserving full-bleed in-app drawer rendering.
+  • Verify separate Play Store master asset `images/play_store_icon_512.png` exists with padded safe-zone geometry.
   • Verify `verify_requirement_governance.py` exits with code 0.
 
 ### TST-UI-445: **Supporter Badges: Custom Launcher Icons, Cockpit Status Emblem, Navigation Drawer & Share Watermark Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-445`
 - **Component**: `LauncherIconManagerTest.kt`, `SupporterBadgeContractTest.kt`, `SensorStatusTest.kt`, `AppNavigationDrawerTest.kt`, `ShareUtilsTest.kt`, `TranslationParityTest.kt`
-- **Jira**: `ATT-1406`
+- **Jira**: `ATT-1406`, `ATT-5372`
 - **Test Description**:
   1. *Adaptive Launcher Icon Safe-Zone & Brand Color Contract Test (`TST-UI-445.1`)*:
   • Parse all 6 foreground vector drawables (`ic_launcher_foreground.xml` and tier variants).
-  • Verify maximum radial distance from canvas center `(54, 54)` is $\le 33.0\text{dp}$ ($r \le 33$) for all path coordinates.
+  • Verify maximum radial distance from canvas center `(54, 54)` is $33.0 \le r \le 34.5\text{dp}$ for all path coordinates, and verify cubic Bézier curves (`C`/`c`) are present for smooth cyclist back/hip geometry.
   • Verify exact color token preservation: Cervélo P3C red frame (`#FF0000`), carbon wheels/saddle (`#000000`), golden bezel (`#FFC700`), pushers (`#000090`, `#FF0000`, `#009000`), and blue athletes (`#0000FF`).
   2. *Activity-Alias Manifest & Deferred Lifecycle Switching Test (`TST-UI-445.2`)*:
   • Verify `AndroidManifest.xml` declares 6 `<activity-alias>` entries targeting `MainActivityWithNavigation`, with default alias enabled.
   • Verify `LauncherIconManager` defers alias changes with `PackageManager.DONT_KILL_APP` during active foreground or tracking sessions (`isTracking == true`), executing component state transitions on `ProcessLifecycleOwner` `onStop`.
-  3. *Live Cockpit Status Emblem & Quick-Picker Contract Test (`TST-UI-445.3`)*:
+  3. *Live Cockpit Status Emblem & Crash-Free Quick-Picker Contract Test (`TST-UI-445.3` / `ATT-5372`)*:
   • Verify `SensorStatus.kt` renders the right-aligned 24dp emblem symmetrically balancing the 24dp menu button in Portrait and Landscape.
-  • Verify clicking the emblem triggers `SupporterQuickIconPickerDialog` displaying unlocked launcher icons according to active tier rank.
+  • Verify `SupporterQuickIconPickerDialog.kt` renders icon preview items using `safePainterResource(id = variant.foregroundRes)` (or standard `R.drawable.logo_512`) and assert zero `<adaptive-icon>` `R.mipmap.*` XML references are passed to `painterResource` or `safePainterResource` (`Rule 71`).
   4. *Navigation Drawer Header & Share Watermark Contract Test (`TST-UI-445.4`)*:
-  • Verify `AppNavigationDrawer.DrawerHeader` renders the active custom Cervélo icon (46dp) and supporter tier pill.
+  • Verify `AppNavigationDrawer.DrawerHeader` preserves the original single-line header layout without a text pill below the title and renders the active custom Cervélo supporter icon at the original full 46dp visual size (`scale = 1.81f`).
   • Verify `ShareUtils.drawFooter` renders the Cervélo P3C icon, "Tracked with aTrainingTracker", and supporter tier pill.
   5. *9-Locale Localization Parity Test (`TST-LOC-001` / `TST-UI-445.5`)*:
   • Verify all newly added string resources for launcher icons, tier ribbons, and dialogs exist with 100% parity across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+
+### TST-UI-446: **Universal Stacked Workout Details Marginal Histograms & Widened Strip Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-446`
+- **Component**: `TelemetryMetricGraphTest.kt`, `TelemetryMetricGraphLandscapeContractTest.kt`, `ElevationProfileTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-5370`
+- **Test Description**:
+  1. *Universal Marginal Histogram & Widened Portrait Margin Contract Test (`TST-UI-446.1`)*:
+  • Verify `TelemetryMetricGraph` and `ElevationProfile` allocate `endPaddingPx = 52.dp` in portrait mode when aligned with stacked charts, yielding ~44dp bar width within the 52dp margin.
+  • Verify universal marginal histogram rendering across all stacked telemetry types: `ElevationProfile`, `SPEED`, `PACE`, `HEART_RATE`, `POWER`, and `W_PRIME_BAL`.
+  2. *Series-Color Rendering, Track Continuity & Domain Clamping Contract Test (`TST-UI-446.2`)*:
+  • Verify non-zoned charts (`Speed/Pace`, `W'bal`, `Elevation`) render marginal histograms in series color without physiological zone segmentation.
+  • Verify unconditional `alpha = 0.15f` background container tracks across `[dataMin, dataMax]` per Rule 69.
+  • Verify strict domain-boundary filtering and clamping (`bin.rangeMax <= dataMin || bin.rangeMin >= dataMax`) preventing out-of-domain bin stacking at `y = 0` per Rule 70.
+  • Verify 5/7-zone coloring and threshold alignment are preserved for `HEART_RATE` and `POWER`.
+  3. *Landscape 72%/28% Multi-Chart Alignment & Elevation Parity Contract Test (`TST-UI-446.3`)*:
+  • Verify all stacked charts in landscape orientation share identical 72%/28% dual-pane horizontal bounds (`chartCanvas` at 0.72f, marginal pane at 0.28f), guaranteeing 1:1 horizontal plot-width and scrubbing cursor alignment per Rule 64.
+  • Verify `ElevationProfile(alignWithTelemetryCharts = false)` default preserves clean standalone layout without marginal histogram or extra padding for non-stacked callers (`SensorGridScreen`, `LiveClimbSheet`, `ClimbDetailSheet`, `RouteItem`, `SegmentItem`).
+  4. *9-Language Localization & Targeted Test Suite (`TST-UI-446.4`)*:
+  • Run `TranslationParityTest` verifying 100% parity across all 9 locales.
+  • Execute targeted test suite (`--tests "com.atrainingtracker.trainingtracker.ui.map.*"`, `aftermath.zones.*`, `ThemeColorCentralizationAuditTest`, `build.*`) with 100% pass rate.
+
 
 
 

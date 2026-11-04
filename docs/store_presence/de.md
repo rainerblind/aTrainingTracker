@@ -13,7 +13,7 @@ Konzentrier dich auf dein Training. Wir kümmern uns um die Technik.
 aTrainingTracker verwandelt dein Android-Smartphone in einen professionellen Fahrradcomputer und Multisport-Tracker mit Fokus auf Privatsphäre und Präzision. Entwickelt für Radfahrer, Läufer und Ausdauersportler, die intelligente Automatisierung und volle Kontrolle über ihre Daten verlangen. Keine Cloud-Pflicht, kein Account und 100% werbefrei.
 
 <b>INTELLIGENTES SENSOR-MANAGEMENT & HARDWARE-ARBITRIERUNG</b>
-Verbinde mehrere Bluetooth® LE- und ANT+®-Sensoren gleichzeitig: Herzfrequenz, Trittfrequenz, Geschwindigkeit, Wattmessung, Radar und Temperatur.
+Verbinde mehrere Bluetooth® LE- und ANT+®-Sensoren gleichzeitig: Herzfrequenz, Trittfrequenz, Geschwindigkeit, Wattmessung und Temperatur.
 • <b>Hardware-Priorität</b>: Dedizierte Geschwindigkeitssensoren am Laufrad werden automatisch gegenüber GPS bevorzugt – für maximale Präzision.
 • <b>Nahtloses Failover</b>: Bricht ein Radsensor ab, übernimmt GPS sofort lückenlos die Geschwindigkeitsaufzeichnung.
 • <b>Dual-Protokoll-Stabilität</b>: Verbinde moderne BLE-Sensoren parallel zu etablierten ANT+-Geräten ohne Interferenzen.
@@ -23,7 +23,6 @@ Profianalysen direkt auf dem Smartphone – ohne teure Cloud-Abos:
 • <b>Coggan Power Suite</b>: Normalized Power (NP), Intensity Factor (IF), Training Stress Score (TSS) und Variability Index (VI).
 • <b>Skiba W' Balance</b>: Echtzeit-Anzeige der anaeroben Batterie mit 2-Punkt Critical Power (CP/W') Modellierung.
 • <b>Longitudinales PMC</b>: Verfolge deine Fitness (CTL), Ermüdung (ATL), Form (TSB) und ACWR im Performance Management Chart.
-• <b>Mader-Heck-Stoffwechselmodell</b>: Physiologische Simulation mit Live-Berechnung des Kohlenhydrat- und Glykogenspeichers.
 • <b>Aerobe Effizienz</b>: Live-Anzeige von Efficiency Factor (EF) und aerober Entkopplung (Pw:Hr %).
 
 <b>NAVIGATION, LIEBLINGSSTRECKEN & LIVE-SEGMENTE</b>

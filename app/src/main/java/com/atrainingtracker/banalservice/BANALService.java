@@ -29,6 +29,8 @@ import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
 
+import androidx.annotation.VisibleForTesting;
+
 import com.atrainingtracker.BuildConfig;
 import com.atrainingtracker.util.LifecycleUtils;
 import com.atrainingtracker.banalservice.devices.DeviceManager;
@@ -215,6 +217,11 @@ public class BANALService
     }
 
     /* filtered stuff */
+    @VisibleForTesting
+    public static void setFilterManager(FilterManager filterManager) {
+        cFilterManager = filterManager;
+    }
+
     public static void createFilter(FilterData filterData) {
         FilterManager filterManager = cFilterManager;
         if (filterManager != null) {
@@ -230,6 +237,26 @@ public class BANALService
     protected static List<FilteredSensorData> getAllFilteredSensorData() {
         FilterManager filterManager = cFilterManager;
         return filterManager != null ? filterManager.getAllFilteredSensorData() : new LinkedList<>();
+    }
+
+    /**
+     * Shifts buffered values in the specified filter uniformly by delta (REQ-FIL-012.6, ATT-5373).
+     */
+    public static void shiftFilter(FilterData filterData, double delta) {
+        FilterManager filterManager = cFilterManager;
+        if (filterManager != null) {
+            filterManager.shiftFilter(filterData, delta);
+        }
+    }
+
+    /**
+     * Clears and reseeds the specified filter with a new baseline value (REQ-FIL-012.5, ATT-5373).
+     */
+    public static void reseedFilter(FilterData filterData, Number value) {
+        FilterManager filterManager = cFilterManager;
+        if (filterManager != null) {
+            filterManager.reseedFilter(filterData, value);
+        }
     }
 
     /* non-filtered stuff */  // outdated?

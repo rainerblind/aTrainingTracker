@@ -69,7 +69,9 @@ import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.LinearHistogramBin
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThresholds
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.TelemetryHistogramCalculator
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneCardDisplayMode
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionData
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneTimeEntry
@@ -269,7 +271,7 @@ fun TelemetryMetricGraph(
     val canvasModifier = if (enableGestures) {
         baseCanvasModifier.pointerInput(totalSpan, isTimeDomain, isPanMode) {
             val startPaddingPx = 50.dp.toPx()
-            val endPaddingPx = if (isLandscape) 0.dp.toPx() else 25.dp.toPx()
+            val endPaddingPx = if (isLandscape) 0.dp.toPx() else 52.dp.toPx()
             val chartWidthPx = (size.width - startPaddingPx - endPaddingPx).coerceAtLeast(1f)
             val touchSlop = viewConfiguration.touchSlop
 
@@ -389,12 +391,28 @@ fun TelemetryMetricGraph(
             baseCanvasModifier
         }
 
+    val nonZonedHistogram = remember(rawValues, pathPoints, dataMin, dataMax, accentColor, zoneDistribution) {
+        if (zoneDistribution != null || validValues.isEmpty() || dataMax <= dataMin) {
+            emptyList()
+        } else {
+            val timestamps = pathPoints.map { it.timeSec }
+            TelemetryHistogramCalculator.computeLinearMarginalHistogram(
+                values = rawValues,
+                timestamps = timestamps,
+                dataMin = dataMin,
+                dataMax = dataMax,
+                numBins = 20,
+                color = accentColor
+            )
+        }
+    }
+
     val chartCanvas: @Composable () -> Unit = {
         Canvas(
             modifier = canvasModifier
         ) {
             val startPaddingPx = 50.dp.toPx()
-            val endPaddingPx = if (isLandscape) 0.dp.toPx() else 25.dp.toPx()
+            val endPaddingPx = if (isLandscape) 0.dp.toPx() else 52.dp.toPx()
             val bottomPaddingPx = 24.dp.toPx()
             val topPaddingPx = 10.dp.toPx()
 
@@ -444,10 +462,10 @@ fun TelemetryMetricGraph(
                 }
             }
 
-            // 1b. Draw minimalist marginal zone bars / histogram (REQ-UI-251 / ATT-2147)
+            // 1b. Draw minimalist marginal zone bars / histogram (REQ-UI-251 / ATT-2147 / REQ-UI-446 / ATT-5370)
             if (zoneDistribution != null && !isLandscape) {
                 val stripStartPx = startPaddingPx + chartWidthPx + 3.dp.toPx()
-                val stripWidthPx = (endPaddingPx - 5.dp.toPx()).coerceAtLeast(10.dp.toPx())
+                val stripWidthPx = (endPaddingPx - 8.dp.toPx()).coerceAtLeast(10.dp.toPx())
 
                 if (zoneDisplayMode == ZoneCardDisplayMode.FIVE_ZONES || zoneDisplayMode == ZoneCardDisplayMode.COLUMNS || zoneDisplayMode == ZoneCardDisplayMode.STACKED_BAR) {
                     // 5-Zones mode: horizontal bars aligned with zone threshold boundaries
@@ -505,6 +523,44 @@ fun TelemetryMetricGraph(
                         )
 
                         // Weighted horizontal frequency bar
+                        val barWidthPx = (bin.percentage / maxBinPct).coerceIn(0f, 1f) * stripWidthPx
+                        if (barWidthPx > 0f) {
+                            drawRect(
+                                color = bin.color,
+                                topLeft = Offset(stripStartPx, rectTop),
+                                size = androidx.compose.ui.geometry.Size(barWidthPx, rectHeight)
+                            )
+                        }
+                    }
+                }
+            } else if (nonZonedHistogram.isNotEmpty() && !isLandscape) {
+                // Non-zoned uniform linear marginal histogram in series color (REQ-UI-446 / ATT-5370)
+                val stripStartPx = startPaddingPx + chartWidthPx + 3.dp.toPx()
+                val stripWidthPx = (endPaddingPx - 8.dp.toPx()).coerceAtLeast(10.dp.toPx())
+                val maxBinPct = nonZonedHistogram.maxOfOrNull { it.percentage }?.takeIf { it > 0f } ?: 1f
+
+                for (bin in nonZonedHistogram) {
+                    // Domain boundary filtering & clamping (Rule 70 / ATT-5311)
+                    if (bin.rangeMax <= dataMin || bin.rangeMin >= dataMax) continue
+                    val clampedMin = maxOf(dataMin, bin.rangeMin)
+                    val clampedMax = minOf(dataMax, bin.rangeMax)
+                    if (clampedMin >= clampedMax) continue
+
+                    val yTop = valueToY(clampedMax)
+                    val yBottom = valueToY(clampedMin)
+                    val rectTop = minOf(yTop, yBottom)
+                    val rectHeight = abs(yTop - yBottom)
+                    if (rectHeight <= 0f) continue
+
+                    // Background container track (unconditional across linearBins within [dataMin, dataMax], Rule 69)
+                    drawRect(
+                        color = bin.color.copy(alpha = 0.15f),
+                        topLeft = Offset(stripStartPx, rectTop),
+                        size = androidx.compose.ui.geometry.Size(stripWidthPx, rectHeight)
+                    )
+
+                    // Weighted horizontal frequency bar
+                    if (bin.durationSec > 0L) {
                         val barWidthPx = (bin.percentage / maxBinPct).coerceIn(0f, 1f) * stripWidthPx
                         if (barWidthPx > 0f) {
                             drawRect(
@@ -819,6 +875,14 @@ fun TelemetryMetricGraph(
                     thresholdDashes = thresholdDashes,
                     modifier = Modifier.weight(0.28f).height(110.dp)
                 )
+            } else if (nonZonedHistogram.isNotEmpty()) {
+                AlignedMarginalLinearDistribution(
+                    bins = nonZonedHistogram,
+                    dataMin = dataMin,
+                    dataMax = dataMax,
+                    metricType = metricType,
+                    modifier = Modifier.weight(0.28f).height(110.dp)
+                )
             } else {
                 Spacer(modifier = Modifier.weight(0.28f))
             }
@@ -827,6 +891,96 @@ fun TelemetryMetricGraph(
         Box(modifier = modifier.fillMaxWidth()) {
             chartCanvas()
         }
+    }
+}
+
+/**
+ * Aligned marginal linear histogram distribution pane for landscape mode telemetry and elevation graphs (REQ-UI-446).
+ */
+@Composable
+fun AlignedMarginalLinearDistribution(
+    bins: List<LinearHistogramBin>,
+    dataMin: Double,
+    dataMax: Double,
+    metricType: TelemetryMetricType? = null,
+    modifier: Modifier = Modifier,
+    topPadding: Dp = 10.dp,
+    bottomPadding: Dp = 24.dp
+) {
+    if (bins.isEmpty()) return
+    val colorScheme = MaterialTheme.colorScheme
+
+    Canvas(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(110.dp)
+    ) {
+        val topPaddingPx = topPadding.toPx()
+        val bottomPaddingPx = bottomPadding.toPx()
+        val chartHeightPx = (size.height - topPaddingPx - bottomPaddingPx).coerceAtLeast(1f)
+        val availableWidthPx = size.width
+        val valRange = (dataMax - dataMin).coerceAtLeast(1.0)
+
+        fun valueToY(v: Double): Float {
+            return if (metricType == TelemetryMetricType.PACE) {
+                val ratio = ((v - dataMin) / valRange).coerceIn(0.0, 1.0)
+                (topPaddingPx + ratio * chartHeightPx).toFloat()
+            } else {
+                val ratio = ((v - dataMin) / valRange).coerceIn(0.0, 1.0)
+                (topPaddingPx + (1.0 - ratio) * chartHeightPx).toFloat()
+            }
+        }
+
+        val maxBinPct = bins.maxOfOrNull { it.percentage }?.takeIf { it > 0f } ?: 1f
+
+        for (bin in bins) {
+            // Rule 70: Domain boundary filtering & clamping
+            if (bin.rangeMax <= dataMin || bin.rangeMin >= dataMax) continue
+            val clampedMin = maxOf(dataMin, bin.rangeMin)
+            val clampedMax = minOf(dataMax, bin.rangeMax)
+            if (clampedMin >= clampedMax) continue
+
+            val yTop = valueToY(clampedMax)
+            val yBottom = valueToY(clampedMin)
+            val rectTop = minOf(yTop, yBottom)
+            val rectHeight = abs(yTop - yBottom)
+            if (rectHeight <= 0f) continue
+
+            // Rule 69: Unconditional background container track
+            drawRoundRect(
+                color = bin.color.copy(alpha = 0.15f),
+                topLeft = Offset(0f, rectTop),
+                size = Size(availableWidthPx, rectHeight),
+                cornerRadius = CornerRadius(2.dp.toPx())
+            )
+
+            // Weighted horizontal frequency bar
+            if (bin.durationSec > 0L) {
+                val barWidthPx = (bin.percentage / maxBinPct).coerceIn(0f, 1f) * availableWidthPx
+                if (barWidthPx > 0f) {
+                    drawRoundRect(
+                        color = bin.color.copy(alpha = 0.85f),
+                        topLeft = Offset(0f, rectTop),
+                        size = Size(barWidthPx, rectHeight),
+                        cornerRadius = CornerRadius(2.dp.toPx())
+                    )
+                }
+            }
+        }
+
+        // Draw horizontal boundary grid lines matching adjacent graph
+        drawLine(
+            color = colorScheme.outlineVariant.copy(alpha = 0.35f),
+            start = Offset(0f, topPaddingPx),
+            end = Offset(availableWidthPx, topPaddingPx),
+            strokeWidth = 1f
+        )
+        drawLine(
+            color = colorScheme.outlineVariant.copy(alpha = 0.35f),
+            start = Offset(0f, topPaddingPx + chartHeightPx),
+            end = Offset(availableWidthPx, topPaddingPx + chartHeightPx),
+            strokeWidth = 1f
+        )
     }
 }
 

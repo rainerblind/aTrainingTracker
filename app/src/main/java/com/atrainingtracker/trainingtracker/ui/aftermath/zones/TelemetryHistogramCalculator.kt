@@ -333,4 +333,77 @@ object TelemetryHistogramCalculator {
             bins = bins
         )
     }
+
+    /**
+     * Computes a uniform linear frequency histogram across [dataMin, dataMax] for non-zoned telemetry
+     * and elevation graphs (Speed/Pace, W' Balance, Elevation Profile) (REQ-UI-446).
+     *
+     * Divides [dataMin, dataMax] into [numBins] uniform linear intervals, accumulates duration or
+     * sample counts for points falling within each bin, and normalizes percentages to the total duration.
+     *
+     * @param values Continuous metric scalar samples (Speed, Pace, W'bal, Altitude).
+     * @param timestamps Timestamp for each sample in seconds (or null if unweighted / sample count based).
+     * @param dataMin Plotted domain lower bound.
+     * @param dataMax Plotted domain upper bound.
+     * @param numBins Number of uniform intervals across [dataMin, dataMax] (default: 20).
+     * @param color Primary series color for histogram background and foreground bars.
+     * @return List of [LinearHistogramBin] containing [numBins] continuous intervals.
+     */
+    fun computeLinearMarginalHistogram(
+        values: List<Double?>,
+        timestamps: List<Long>? = null,
+        dataMin: Double,
+        dataMax: Double,
+        numBins: Int = 20,
+        color: Color
+    ): List<LinearHistogramBin> {
+        if (values.isEmpty() || dataMax <= dataMin || numBins <= 0) return emptyList()
+
+        val binWidth = (dataMax - dataMin) / numBins
+        if (binWidth <= 0.0) return emptyList()
+
+        val binDurations = LongArray(numBins)
+        val hasTimestamps = timestamps != null && timestamps.size == values.size
+        val isDegenerate = hasTimestamps && timestamps.first() == timestamps.last()
+
+        for (i in values.indices) {
+            val v = values[i] ?: continue
+            if (v < dataMin || v > dataMax) continue
+
+            val dt = if (!hasTimestamps || isDegenerate) {
+                1L
+            } else if (i < values.size - 1) {
+                val rawDt = timestamps[i + 1] - timestamps[i]
+                when {
+                    rawDt < 0L -> 0L
+                    rawDt > MAX_DELTA_T_SEC -> MAX_DELTA_T_SEC
+                    else -> rawDt
+                }
+            } else {
+                DEFAULT_LAST_SAMPLE_DURATION_SEC
+            }
+
+            val rawIdx = ((v - dataMin) / (dataMax - dataMin) * numBins).toInt()
+            val binIdx = rawIdx.coerceIn(0, numBins - 1)
+            binDurations[binIdx] += dt
+        }
+
+        val totalDuration = binDurations.sum()
+
+        return (0 until numBins).map { idx ->
+            val rangeMin = dataMin + idx * binWidth
+            val rangeMax = rangeMin + binWidth
+            val duration = binDurations[idx]
+            val percentage = if (totalDuration > 0L) (duration.toFloat() / totalDuration) * 100f else 0f
+
+            LinearHistogramBin(
+                binIndex = idx,
+                rangeMin = rangeMin,
+                rangeMax = rangeMax,
+                durationSec = duration,
+                percentage = percentage,
+                color = color
+            )
+        }
+    }
 }

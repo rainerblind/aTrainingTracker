@@ -73,6 +73,43 @@ public class TimedMovingAverageFilter
         mTimestampedValues.clear();
     }
 
+    /**
+     * Shifts all buffered timestamped samples uniformly by the given delta offset (REQ-FIL-012.6, ATT-5373).
+     *
+     * <p>Used for barometric recalibration where the physical elevation baseline changes
+     * by {@code delta} without affecting the rate of ascent or descent.</p>
+     *
+     * @param delta the vertical offset to add to every non-null sample in the rolling window.
+     */
+    @Override
+    public synchronized void shiftValues(double delta) {
+        if (Math.abs(delta) < 1e-4) {
+            return;
+        }
+        for (TimestampedValue tv : mTimestampedValues) {
+            if (tv != null && tv.value != null) {
+                tv.value = tv.value.doubleValue() + delta;
+            }
+        }
+    }
+
+    /**
+     * Clears all buffered historical samples and re-seeds the filter with the specified single baseline sample (REQ-FIL-012.5, ATT-5373).
+     *
+     * <p>Used when the active telemetry source switches (e.g. from GPS ellipsoid to DEM elevation)
+     * to prevent historical decay artifacts from accumulating false ascent or descent.</p>
+     *
+     * @param value the new authoritative baseline sample.
+     */
+    @Override
+    public synchronized void reseed(Number value) {
+        mTimestampedValues.clear();
+        if (value != null) {
+            long now = System.currentTimeMillis();
+            mTimestampedValues.add(new TimestampedValue(now, value));
+        }
+    }
+
     @Override
     public synchronized void newValue(Number value) {
         if (value != null) {

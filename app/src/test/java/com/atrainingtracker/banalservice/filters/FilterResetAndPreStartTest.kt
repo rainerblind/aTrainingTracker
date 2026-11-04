@@ -109,6 +109,53 @@ class FilterResetAndPreStartTest {
         assertNull(filter.filteredValue)
     }
 
+    /**
+     * TST-FIL-004.5: Verifies that shiftValues(delta) shifts buffered samples uniformly
+     * and updates getFilteredValue() immediately (REQ-FIL-012.6, ATT-5373).
+     */
+    @Test
+    fun timedMovingAverageFilter_shiftValues_shiftsBufferedSamplesUniformly() {
+        val filter = TimedMovingAverageFilter("test", SensorType.ALTITUDE, 10)
+        filter.newValue(100.0)
+        filter.newValue(102.0)
+        filter.newValue(104.0)
+        assertEquals(102.0, filter.filteredValue.toDouble(), 0.01)
+
+        // Uniform upward shift on barometric calibration (+20.0m)
+        filter.shiftValues(20.0)
+        assertEquals(122.0, filter.filteredValue.toDouble(), 0.01)
+
+        // Uniform downward shift (-30.0m)
+        filter.shiftValues(-30.0)
+        assertEquals(92.0, filter.filteredValue.toDouble(), 0.01)
+
+        // Micro delta (< 1e-4) should be no-op
+        filter.shiftValues(0.00001)
+        assertEquals(92.0, filter.filteredValue.toDouble(), 0.01)
+    }
+
+    /**
+     * TST-FIL-004.4: Verifies that reseed(value) clears stale historical samples and
+     * immediately seeds the new baseline without historical decay (REQ-FIL-012.5, ATT-5373).
+     */
+    @Test
+    fun timedMovingAverageFilter_reseed_clearsHistoryAndSeedsNewBaseline() {
+        val filter = TimedMovingAverageFilter("test", SensorType.ALTITUDE, 10)
+        // Stale GPS ellipsoid altitude samples
+        filter.newValue(492.0)
+        filter.newValue(492.0)
+        filter.newValue(492.0)
+        assertEquals(492.0, filter.filteredValue.toDouble(), 0.01)
+
+        // Active source transitions to DEM elevation (438.0m)
+        filter.reseed(438.0)
+        assertEquals(438.0, filter.filteredValue.toDouble(), 0.01)
+
+        // Subsequent sample averages cleanly with new baseline only (not stale 492m)
+        filter.newValue(439.0)
+        assertEquals(438.5, filter.filteredValue.toDouble(), 0.01)
+    }
+
     @Test
     fun averageFilter_shouldDiscardSamplesWhenPaused_andAccumulateOnlyWhenTracking() {
         val filter = AverageFilter("test", SensorType.CADENCE)

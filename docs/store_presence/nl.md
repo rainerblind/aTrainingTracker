@@ -13,7 +13,7 @@ Concentreer je op je training. Wij regelen de techniek.
 aTrainingTracker verandert je Android-smartphone in een professionele fietscomputer en multisport-tracker met maximale privacy en precisie. Ontworpen voor fietsers, hardlopers en duursporters die betrouwbare telemetrie, slimme automatisering en volledige controle over hun gegevens willen. Geen verplicht account, geen verplichte cloud en 100% advertentievrij.
 
 <b>SLIM SENSORBEHEER & HARDWARE-ARBITRAGE</b>
-Verbind gelijktijdig meerdere Bluetooth® LE- en ANT+®-sensoren: hartslag, cadans, snelheid, vermogensmeters, radar en temperatuur.
+Verbind gelijktijdig meerdere Bluetooth® LE- en ANT+®-sensoren: hartslag, cadans, snelheid, vermogensmeters en temperatuur.
 • <b>Hardware-prioriteit</b>: Snelheidssensoren op het wiel krijgen automatisch voorrang boven GPS voor maximale precisie.
 • <b>Vlekkeloze overdracht</b>: Valt een wielsensor weg, dan neemt GPS het direct over zonder meetverschil.
 • <b>Betrouwbaar dubbel protocol</b>: Gebruik moderne BLE-sensoren en ANT+-accessoires naadloos naast elkaar.
@@ -23,7 +23,6 @@ Professionele prestatie-analyses direct op je smartphone zonder dure abonnemente
 • <b>Coggan Power Suite</b>: Normalized Power (NP), Intensity Factor (IF), Training Stress Score (TSS) en Variability Index (VI).
 • <b>Skiba W' Balans</b>: Realtime weergave van je anaerobe batterij met 2-punts Critical Power (CP/W') modellering.
 • <b>Longitudinale PMC</b>: Volg je chronische trainingsbelasting (CTL), acute belasting (ATL), vorm (TSB) en ACWR.
-• <b>Mader-Heck stofwisselingsmodel</b>: Fysiologische simulatie met realtime berekening van koolhydraat- en glycogeenverbruik.
 • <b>Aerobe efficiëntie</b>: Live weergave van Efficiency Factor (EF) en aerobe ontkoppeling (Pw:Hr %).
 
 <b>NAVIGATIE, VASTE ROUTES & LIVE SEGMENTEN</b>

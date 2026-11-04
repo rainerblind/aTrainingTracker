@@ -2434,22 +2434,33 @@
     <string name="supporter_tier_silver">Silver Supporter</string>
     <string name="supporter_tier_gold">Gold Supporter</string>
     <string name="supporter_tier_diamond">Diamond Sponsor</string>
-    <string name="hardware_vote_bike_radar">Bike-Radar (e.g. Garmin Varia)</string>
-    <string name="hardware_vote_running_power">Running Power (e.g. Stryd / BLE)</string>
-    <string name="hardware_vote_smartwatch">Smartwatch / WearOS</string>
-    <string name="hardware_vote_pebble">Pebble Smartwatch</string>
-    <string name="hardware_vote_general">General Continuous Development</string>
     <string name="supporter_screen_title">Pay What You Want</string>
-    <string name="supporter_screen_subtitle">Fund test hardware for new sensors (Radar, Running Power, Smartwatch) &amp; keep aTrainingTracker 100%% ad-free.</string>
+    <string name="supporter_screen_subtitle" formatted="false">Support independent fitness tracking &amp; keep aTrainingTracker 100% ad-free.</string>
     <string name="supporter_recommended_badge">Recommended</string>
-    <string name="hardware_vote_title">Which hardware support do you want next?</string>
+    <string name="supporter_active_tier_prefix">Active Tier: %1$s</string>
+    <string name="supporter_active_tier_thank_you">Thank you for supporting independent fitness development!</string>
+    <string name="supporter_plan_button_active">Active</string>
+    <string name="supporter_plan_button_support">Support</string>
+    <string name="supporter_period_month">month</string>
+    <string name="supporter_period_year">year</string>
+    <string name="supporter_price_per_period">%1$s / %2$s</string>
+    <string name="supporter_core_invariant_title" formatted="false">100% Free Core Invariant</string>
+    <string name="supporter_core_invariant_body" formatted="false">Core workout recording, map display, sensor telemetry, and offline GPX/TCX/FIT export remain 100% free and unmonetized forever. Subscriptions fund continuous independent development.</string>
     <string name="swap_dialog_title">Device Limit (2/2 Free Slots Used)</string>
     <string name="swap_dialog_select_device_to_unpair">Select device to unpair:</string>
     <string name="swap_dialog_message">The Free tier supports up to 2 simultaneously paired devices (e.g. GPS + Barometer). To pair \'%1$s\', unpair one existing device or unlock unlimited sensors via \'Pay what you want\'.</string>
     <string name="swap_dialog_action_swap">Swap &amp; Pair</string>
     <string name="swap_dialog_action_unlock">Unlock Unlimited Sensors</string>
     <string name="drawer_supporter">Supporter &amp; Pro</string>
-    <string name="pioneer_badge_label">★ Pioneer (Since 2011) — Full Access Unlocked</string>
+    <string name="drawer_tier_diamond">◆ DIAMOND SPONSOR • Unlimited Sensors</string>
+    <string name="drawer_tier_gold">★ GOLD PRO-SUPPORTER</string>
+    <string name="drawer_tier_silver">★ SILVER PRO-SUPPORTER</string>
+    <string name="drawer_tier_bronze">★ BRONZE SUPPORTER</string>
+    <string name="drawer_tier_pioneer_with_year">★ Pioneer (Since %1$d)</string>
+    <string name="drawer_tier_pioneer">★ Pioneer</string>
+    <string name="pioneer_badge_label_with_year">★ Pioneer (Since %1$d)</string>
+    <string name="pioneer_badge_label">★ Pioneer</string>
+    <string name="pioneer_thank_you_body">Thank you for supporting aTrainingTracker since the early ANT+ days! Unlimited sensors and all future features are permanently unlocked.</string>
     <string name="debug_supporter_override_title">Supporter Tier Override (Debug)</string>
     <string name="debug_supporter_override_subtitle">Simulates license tiers locally without Google Play Billing credentials</string>
 

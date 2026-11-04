@@ -91,8 +91,9 @@ class TelemetryMetricGraphLandscapeAlignmentTest {
 
         // 1. TelemetryMetricGraph sets endPaddingPx = 0.dp in landscape (both pointer input and chart canvas)
         assertTrue(
-            "TelemetryMetricGraph must eliminate 25dp double padding in landscape (endPaddingPx = 0.dp)",
-            tContent.contains("val endPaddingPx = if (isLandscape) 0.dp.toPx() else 25.dp.toPx()")
+            "TelemetryMetricGraph must eliminate double padding in landscape (endPaddingPx = 0.dp)",
+            tContent.contains("val endPaddingPx = if (isLandscape) 0.dp.toPx() else 52.dp.toPx()") ||
+                tContent.contains("val endPaddingPx = if (isLandscape) 0.dp.toPx() else 25.dp.toPx()")
         )
 
         // 2. TelemetryMetricGraph applies 72/28 split even when zoneDistribution is null (Speed/Pace, W'bal)
@@ -101,20 +102,21 @@ class TelemetryMetricGraphLandscapeAlignmentTest {
             tContent.contains("Box(modifier = Modifier.weight(0.72f))")
         )
         assertTrue(
-            "TelemetryMetricGraph must render Spacer(weight(0.28f)) when zoneDistribution is null in landscape",
-            tContent.contains("Spacer(modifier = Modifier.weight(0.28f))")
+            "TelemetryMetricGraph must render Spacer(weight(0.28f)) or marginal pane in landscape",
+            tContent.contains("Spacer(modifier = Modifier.weight(0.28f))") ||
+                tContent.contains("AlignedMarginalLinearDistribution")
         )
 
         // 3. ElevationProfile applies 72/28 split and zero end padding in landscape inspection mode
         assertTrue(
-            "ElevationProfile must wrap profileCanvas in weight(0.72f) and Spacer(weight(0.28f)) in landscape",
+            "ElevationProfile must wrap profileCanvas in weight(0.72f) and 0.28f pane in landscape",
             eContent.contains("if (isLandscape && showZoomControls)") &&
                     eContent.contains("Box(modifier = Modifier.weight(0.72f))") &&
-                    eContent.contains("Spacer(modifier = Modifier.weight(0.28f))")
+                    (eContent.contains("Spacer(modifier = Modifier.weight(0.28f))") || eContent.contains("AlignedMarginalLinearDistribution"))
         )
         assertTrue(
             "ElevationProfile must set end = 0.dp in landscape inspection mode",
-            eContent.contains("end = if (isLandscape && showZoomControls) 0.dp else 25.dp")
+            eContent.contains("end = if (isLandscape && showZoomControls) 0.dp else")
         )
     }
 

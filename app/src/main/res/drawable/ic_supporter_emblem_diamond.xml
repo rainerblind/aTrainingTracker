@@ -1,25 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-    <!-- Diamond Sponsor Faceted Brilliant Emblem (REQ-UI-445) -->
+    <!-- 6. Diamond Sponsor 24dp Cockpit Emblem (REQ-UI-445) -->
     <path
-        android:fillColor="#E0F7FA"
-        android:strokeColor="#00B0FF"
-        android:strokeWidth="0.8"
-        android:pathData="M 7.0,6.0 L 17.0,6.0 L 21.0,11.0 L 3.0,11.0 Z" />
+        android:fillColor="#38BDF8"
+        android:strokeColor="#0284C7"
+        android:strokeWidth="1.14"
+        android:strokeLineJoin="round"
+        android:pathData="M 4.40,3.60 L 18.40,3.60 L 22.60,9.55 L 11.40,22.50 L 0.20,9.55 Z" />
     <path
-        android:fillColor="#00E5FF"
-        android:strokeColor="#0091EA"
-        android:strokeWidth="0.8"
-        android:pathData="M 3.0,11.0 L 21.0,11.0 L 12.0,21.0 Z" />
+        android:fillColor="#E0F2FE"
+        android:pathData="M 7.72,3.60 L 15.08,3.60 L 16.30,9.55 L 6.50,9.55 Z" />
     <path
-        android:fillColor="#80DEEA"
-        android:pathData="M 9.0,11.0 L 15.0,11.0 L 12.0,21.0 Z" />
+        android:fillColor="#BAE6FD"
+        android:pathData="M 4.40,3.60 L 7.72,3.60 L 6.50,9.55 L 0.20,9.55 Z" />
+    <path
+        android:fillColor="#7DD3FC"
+        android:pathData="M 15.08,3.60 L 18.40,3.60 L 22.60,9.55 L 16.30,9.55 Z" />
+    <path
+        android:fillColor="#7DD3FC"
+        android:pathData="M 6.50,9.55 L 16.30,9.55 L 11.40,22.50 Z" />
+    <path
+        android:fillColor="#BAE6FD"
+        android:pathData="M 0.20,9.55 L 6.50,9.55 L 11.40,22.50 Z" />
+    <path
+        android:fillColor="#0EA5E9"
+        android:pathData="M 16.30,9.55 L 22.60,9.55 L 11.40,22.50 Z" />
     <path
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="1.0"
+        android:strokeWidth="0.79"
+        android:pathData="M 0.20,9.55 L 22.60,9.55" />
+    <path
+        android:strokeColor="#0284C7"
+        android:strokeWidth="1.05"
         android:strokeLineCap="round"
-        android:pathData="M 20.0,2.0 L 20.0,8.0 M 17.0,5.0 L 23.0,5.0" />
+        android:pathData="M 20.50,3.42 L 20.50,7.28 M 18.57,5.35 L 22.43,5.35" />
 </vector>

@@ -232,6 +232,34 @@ public class FilterManager {
         return result;
     }
 
+    /**
+     * Shifts buffered values in the specified filter uniformly by delta (REQ-FIL-012.6, ATT-5373).
+     *
+     * @param filterData the filter specification identifier.
+     * @param delta the vertical offset to add to every sample.
+     */
+    public void shiftFilter(FilterData filterData, double delta) {
+        if (filterData == null) return;
+        MyFilter filter = myFilterMap.get(filterData.getHashKey());
+        if (filter != null) {
+            filter.shiftValues(delta);
+        }
+    }
+
+    /**
+     * Clears and reseeds the specified filter with a new baseline value (REQ-FIL-012.5, ATT-5373).
+     *
+     * @param filterData the filter specification identifier.
+     * @param value the new authoritative baseline sample.
+     */
+    public void reseedFilter(FilterData filterData, Number value) {
+        if (filterData == null) return;
+        MyFilter filter = myFilterMap.get(filterData.getHashKey());
+        if (filter != null) {
+            filter.reseed(value);
+        }
+    }
+
 
     // TODO: method to remove a filter
 }

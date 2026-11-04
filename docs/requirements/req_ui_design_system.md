@@ -12972,42 +12972,46 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • The application SHALL provide standard adaptive icon configurations under `res/mipmap-anydpi-v26/` (`ic_launcher.xml` and `ic_launcher_round.xml`).
 • The adaptive icon SHALL decouple visual representation into three distinct layers: `<background android:drawable="@drawable/ic_launcher_background" />`, `<foreground android:drawable="@drawable/ic_launcher_foreground" />`, and `<monochrome android:drawable="@drawable/ic_launcher_monochrome" />`.
 • The background layer SHALL render a clean, neutral surface (`#FFFFFF`).
-2. *Brand Geometry & 66dp Circular Safe-Zone Containment (`REQ-UI-444.2`)*:
-• The foreground vector drawable (`ic_launcher_foreground.xml`) SHALL be vectorized directly from `Bilder/logo.fig` master geometry (vector depths 70 down to 50), preserving 100% of the authentic brand elements and colors:
+2. *Brand Geometry & Safe-Zone Fill (`REQ-UI-444.2`)*:
+• The foreground vector drawable (`ic_launcher_foreground.xml`) SHALL be reconstructed directly from `Bilder/logo.fig` master geometry (vector depths 70 down to 50), preserving 100% of the authentic brand elements and colors:
   a. Cervélo P3C Time-Trial Bike: Red aero frame (`#FF0000`), black carbon aero wheels (`#000000`), and black saddle (`#000000`);
-  b. Classic Multi-Sport Stopwatch: Golden bezel & stems (`#FFC700`), light dial (`#F0F0F0`), and classic 3 pushers (Left Navy Blue `#000090`, Center Red `#FF0000`, Right Green `#009000`);
-  c. Athletes: Royal blue cyclist and runner (`#0000FF`).
-• All visual paths and elements within `ic_launcher_foreground.xml` SHALL be scaled and centered strictly within the inner 66dp circular safe zone ($cx=54, cy=54, r \le 33\text{dp}$) on the standard 108dp canvas, guaranteeing zero clipping across Circle, Squircle, Rounded Square, and Teardrop launcher masks.
+  b. Classic Multi-Sport Stopwatch: Golden bezel & stems (`#FFC700`), light dial (`#F0F0F0`), and classic 3 pushers (Left Navy Blue `#000090`, Center Red `#FF0000`, Right Green `#009000`) with overlapping button caps eliminating white gaps;
+  c. Athletes: Royal blue cyclist and runner (`#0000FF`), reconstructing the cyclist back/hip via smooth cubic Bézier curves (`C`/`c`) with round caps covering the frame junction without angular kinks or protruding black saddle artifacts.
+• All visual paths and elements within `ic_launcher_foreground.xml` SHALL be scaled and centered strictly within the balanced circular safe zone ($cx=54, cy=54, r \le 34.5\text{dp}$) on the standard 108dp canvas, guaranteeing zero clipping across Circle, Squircle, Rounded Square, and Teardrop launcher masks while filling the mask generously.
 3. *Android 13+ Themed Icons Support (`REQ-UI-444.3`)*:
-• The application SHALL provide `res/drawable/ic_launcher_monochrome.xml` defining a clean single-color vector silhouette of the complete logo artwork.
+• The application SHALL provide `res/drawable/ic_launcher_monochrome.xml` defining a clean single-color vector silhouette (`#000000`) of the complete logo artwork.
 • The monochrome silhouette SHALL dynamically adapt to the active Material You system palette on Android 13+ (API 33+) when Themed Icons are enabled.
-4. *Manifest Integration, Master Assets & Caller Parity (`REQ-UI-444.4`)*:
+4. *Manifest Integration, Master Asset Preservation & Caller Parity (`REQ-UI-444.4`)*:
 • `AndroidManifest.xml` SHALL declare `android:icon="@mipmap/ic_launcher"` and `android:roundIcon="@mipmap/ic_launcher_round"`.
-• High-resolution 512x512 Play Store master icon assets and legacy density mipmaps (`mdpi`..`xxxhdpi`) SHALL be maintained with identical safe-zone padding.
+• Existing full-bleed bitmap assets `app/src/main/res/drawable/logo_512.png` and `images/logo_512.png` SHALL remain intact and match `drawable-xxxhdpi/logo_512.png` (`sha256: f84c625104d15bab...`), preserving unpadded in-app rendering (`AppNavigationDrawer.kt`).
+• High-resolution 512x512 Play Store master icon asset with safe-zone padding SHALL be maintained separately (`images/play_store_icon_512.png`).
 • Existing legacy bitmap `res/drawable/logo.png` SHALL remain untouched to preserve backward compatibility for existing in-app callers (notifications, protocol emblems).
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an Android 8.0+ (API 26+) launcher with arbitrary mask shapes (circle, squircle, teardrop),
 • *When* the user views the launcher home screen,
-• *Then* the app icon renders without outer container padding plates and all athlete and bicycle elements fit completely inside the safe zone without clipping.
+• *Then* the app icon renders without outer container padding plates and all athlete and bicycle elements fit completely inside the safe zone ($r \le 34.5\text{dp}$) without clipping.
 • *Given* an Android 13+ (API 33+) launcher with Themed Icons enabled,
 • *When* the user switches system wallpaper or dynamic color theme,
 • *Then* the launcher icon adapts dynamically to the active palette using `ic_launcher_monochrome.xml`.
+• *Given* in-app callers displaying the application branding in `AppNavigationDrawer`,
+• *When* resolving `R.drawable.logo_512`,
+• *Then* full-bleed unpadded asset renders without artificial margin plates.
 • *Given* existing in-app callers referencing `R.drawable.logo`,
 • *When* displaying notifications or protocol emblems,
 • *Then* legacy drawable resolution functions with zero regressions.
 
-**Invariants**: 100% Cervélo P3C and stopwatch color fidelity preserved, 100% containment within $r \le 33\text{dp}$ circular safe zone on 108dp canvas, zero regression in in-app notification drawables.
+**Invariants**: 100% Cervélo P3C and stopwatch color fidelity preserved, 100% containment within $r \le 34.5\text{dp}$ circular safe zone on 108dp canvas, zero regression in in-app notification drawables or drawer headers.
 
 ---
 
 ### REQ-UI-445: Supporter Badges: Custom Launcher Icons, Cockpit Status Emblem, Navigation Drawer & Share Watermark [Verified]
-- **Tests**: `TST-UI-445`, `TST-LOC-001` | **Tickets**: `ATT-1406`
+- **Tests**: `TST-UI-445`, `TST-LOC-001` | **Tickets**: `ATT-1406`, `ATT-5372`
 - **Implementation**: `LauncherIconManager.kt`, `SensorStatus.kt`, `AppNavigationDrawer.kt`, `ShareUtils.kt`, `SupporterQuickIconPickerDialog.kt`, `AndroidManifest.xml`, `res/mipmap-anydpi-v26/`, `res/drawable/`
 - **Rationale**: To provide visible recognition for athletes supporting development via Supporter subscriptions (Bronze, Silver, Gold, Diamond) or recognized as Pioneer Early Adopters (ATT-51), the system SHALL introduce customizable homescreen launcher icons (Option A), a live Cockpit status emblem, Navigation Drawer branding, and a workout share watermark, while strictly preserving 100% of authentic Cervélo P3C and classic stopwatch colors (ATT-1482):
 1. *Option A Adaptive Launcher Icons with Safe-Zone Compliance (`REQ-UI-445.1`)*:
 • The application SHALL provide 6 adaptive launcher icon variants (`STANDARD`, `PIONEER`, `BRONZE`, `SILVER`, `GOLD`, `DIAMOND`) under `res/mipmap-anydpi-v26/` and `res/drawable/`.
-• Every supporter launcher icon SHALL implement Option A: modernized classic Cervélo P3C & stopwatch base artwork (REQ-UI-444) combined with a Top-Right Emblem pocket at `cx=67.6, cy=31.8` ($r \le 33\text{dp}$) and a Bottom Tier Ribbon ($y=74.8..83.0$, $|x| \le 15.7\text{dp}$):
+• Every supporter launcher icon SHALL implement Option A: built directly upon the corrected `ATT-1482` base vector (smooth cubic Béziers `C`/`c` for royal blue `#0000FF` cyclist back/hip at depth 50, black saddle `#000000` at depth 53 with zero protrusion, flush stopwatch pushers on thick `#FFC700` stems, safe zone $33.0 \le r \le 34.5\text{dp}$ on 108dp canvas) combined with a Top-Right Emblem pocket at `cx=67.6, cy=31.8` and a Bottom Tier Ribbon ($y=74.8..83.0$, $|x| \le 15.7\text{dp}$):
   a. Standard: Authentic Cervélo P3C & classic stopwatch adaptive icon without badge overlays.
   b. Pioneer Edition: Emerald & Gold Heritage Star emblem at top-right, `★ PIONEER ★` ribbon at bottom, emerald border ring.
   c. Bronze Supporter: Bronze Medal on neck ribbon at top-right, `SUPPORTER` bronze ribbon at bottom, bronze border ring.
@@ -13015,17 +13019,18 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
   e. Gold Pro-Supporter: 24K Gold Medal on neck ribbon at top-right, `PRO-SUPPORTER` gold ribbon at bottom, gold border ring.
   f. Diamond Sponsor: Faceted Brilliant-Cut Cyan/Ice Diamond with sparkle at top-right, `◆ SPONSOR ◆` diamond-blue ribbon at bottom, cyan-blue border ring.
 • All 6 launcher icon foreground drawables SHALL preserve 100% authentic Cervélo P3C bike (red frame `#FF0000`, carbon wheels/saddle `#000000`), classic stopwatch (golden bezel `#FFC700`, dial `#F0F0F0`, pushers `#000090`, `#FF0000`, `#009000`), and royal blue athletes (`#0000FF`).
-• All vector paths across all 6 icons SHALL fit strictly inside the 66dp circular safe zone ($r \le 33\text{dp}$) on the 108dp canvas, guaranteeing zero clipping across Circle, Squircle, Rounded Square, and Teardrop launcher masks.
+• All vector paths across all 6 icons SHALL fit strictly inside the safe zone ($33.0 \le r \le 34.5\text{dp}$) on the 108dp canvas, guaranteeing zero clipping across Circle, Squircle, Rounded Square, and Teardrop launcher masks.
 2. *Activity-Alias Manifest Architecture & Deferred Non-Disruptive Switching (`REQ-UI-445.2`)*:
 • `AndroidManifest.xml` SHALL declare 6 `<activity-alias>` entries targeting `MainActivityWithNavigation`, with the Standard alias enabled by default.
 • The system SHALL provide `LauncherIconManager` observing `ProcessLifecycleOwner` lifecycle.
 • When the athlete selects a new launcher icon in Settings or the Quick-Picker dialog, the choice SHALL be immediately persisted in `SettingsDataStore` (`KEY_SELECTED_LAUNCHER_ICON`) and reflected in the preview UI.
 • The system SHALL apply `PackageManager.setComponentEnabledSetting` with `PackageManager.DONT_KILL_APP` deferred until the application transitions to the background (`onStop`) AND no active workout recording is running (`!TrainingApplication.isTracking()`). The app process or active workout SHALL NEVER be killed or restarted.
-3. *Live Cockpit Status Emblem & Quick Icon Picker Dialog (`REQ-UI-445.3`)*:
+3. *Live Cockpit Status Emblem & Crash-Free Quick Icon Picker Dialog (`REQ-UI-445.3` / `ATT-5372`)*:
 • In `SensorStatus.kt` (top sensor status bar of the Tracking Cockpit), the system SHALL render a pure 24dp vector emblem (Bronze Medal, Silver Medal, 24K Gold Medal, Faceted Brilliant Diamond, or Pioneer Star — without text) at the right end of the row, symmetrically balancing the 24dp menu button on the left while keeping the 8 sensor icons centered.
 • Tapping the emblem SHALL open `SupporterQuickIconPickerDialog`, displaying supporter recognition and enabling 1-tap switching between unlocked launcher icons.
+• In `SupporterQuickIconPickerDialog` (`LauncherIconItemCard`), preview icons SHALL be rendered via `safePainterResource(id = variant.foregroundRes)` (or `R.drawable.logo_512` for standard) inside a styled `Surface(shape = CircleShape)` and SHALL NEVER pass `<adaptive-icon>` `R.mipmap.*` XML resources to `painterResource` or `safePainterResource` (`ATT-5372`, `Rule 71`).
 4. *Navigation Drawer Header Recognition (`REQ-UI-445.4`)*:
-• In `AppNavigationDrawer.DrawerHeader`, the system SHALL render the active custom Cervélo P3C supporter icon on the left (46dp) and the supporter tier pill beneath the application title (e.g., `◆ DIAMOND SPONSOR • Unlimited Sensors`, `★ GOLD PRO-SUPPORTER`, or `★ PIONEER (SINCE 2011)`).
+• In `AppNavigationDrawer.DrawerHeader`, the system SHALL preserve the original clean single-line header layout (`46.dp` icon on the left + `"a Training Tracker"` title on the right over `menu_header_background`, without any text pill below the title) and render the paying customer's active custom Cervélo P3C supporter icon (`foregroundRes` scaled by `1.81f` to compensate for the 108dp adaptive-icon safe-zone margin so its visual size matches `R.drawable.logo_512` at `46.dp` 1:1).
 5. *Social Share Workout Watermark (`REQ-UI-445.5`)*:
 • In `ShareUtils.kt` (`combineWorkoutAndShare` and `combinePeriodAndShare`), the footer watermark signature bar SHALL render the mini Cervélo P3C icon, "Tracked with aTrainingTracker", and the user's active supporter tier pill (`★ GOLD PRO`, `◆ SPONSOR`, `★ PIONEER`, etc.).
 6. *Tier Unlock Hierarchy & Debug Override (`REQ-UI-445.6`)*:
@@ -13041,9 +13046,53 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Then* the choice persists immediately in SettingsDataStore without interrupting or killing the foreground session, and the new `<activity-alias>` activates via `DONT_KILL_APP` when the app moves to background.
 • *Given* any of the 6 launcher icon drawables,
 • *When* rendered inside circular or squircle launcher masks,
-• *Then* zero artwork paths clip outside the 66dp safe zone and 100% of Cervélo P3C and stopwatch colors are preserved.
+• *Then* zero artwork paths clip outside the safe zone ($33.0 \le r \le 34.5\text{dp}$) and 100% of Cervélo P3C and stopwatch colors are preserved.
+• *Given* an athlete tapping the Cockpit status emblem,
+• *When* `SupporterQuickIconPickerDialog` is displayed,
+• *Then* the dialog opens smoothly without `IllegalArgumentException` by rendering preview items using foreground vector drawables.
 
-**Invariants**: 100% Cervélo P3C and stopwatch color fidelity preserved, 100% safe-zone containment ($r \le 33\text{dp}$), zero interruption/restart during workout recording or foreground sessions, 100% free core workout tracking features.
+**Invariants**: 100% Cervélo P3C and stopwatch color fidelity preserved, 100% safe-zone containment ($33.0 \le r \le 34.5\text{dp}$), zero interruption/restart during workout recording or foreground sessions, 100% crash-free Compose icon preview rendering, 100% free core workout tracking features.
+
+### REQ-UI-446: Universal Stacked Workout Details Marginal Histograms & Widened Strip Layout Parity [Verified]
+- **Tests**: `TST-UI-446`, `TST-LOC-001` | **Tickets**: `ATT-5370`
+- **Implementation**: `TelemetryMetricGraph.kt`, `ElevationProfile.kt`, `MapDetailLayout.kt`, `WorkoutSummary.kt`, `TrackOnMapScreen.kt`
+- **Rationale**: In workout details and map inspection views (`MapDetailLayout`, `WorkoutSummary`, `TrackOnMapScreen`), right-side marginal histograms were historically restricted to physiological metrics with zone models (Heart Rate and Power), leaving elevation profile, speed/pace, and W' balance with an unused right margin (empty 25dp strip in portrait; blank spacer in landscape). To create a unified visual analytics layout across the entire stacked telemetry family, utilize the Rule 64 right-edge alignment space on every chart, and provide athletes an immediate distribution of altitude bands, cruising speed/pace, and anaerobic W' balance depletion, the system SHALL render marginal histograms across all stacked graphs in graph/series color, widen the portrait margin to 52dp, and strictly maintain 1:1 horizontal plot-width alignment (`Rule 64`), unconditional background tracks (`Rule 69`), and domain-boundary clamping (`Rule 70`) (ATT-5370, amending `REQ-UI-251`, `REQ-UI-431`, and `REQ-UI-433.4`):
+1. *Universal Marginal Histogram Across All Stacked Workout Details Graphs (`REQ-UI-446.1`)*:
+• The system SHALL render a right-side Y-axis-aligned marginal histogram on *all* stacked graphs in Workout Details and Map inspection views: `ElevationProfile`, `SPEED/PACE`, `HEART_RATE`, `POWER`, and `W_PRIME_BAL` (and any future stacked telemetry metrics).
+• `ElevationProfile` SHALL support an optional parameter `alignWithTelemetryCharts: Boolean = false`. When `true`, it SHALL calculate and render an altitude marginal histogram aligned with its Y-axis `[minAltitude, maxAltitude]`. Non-stacked callers (`SensorGridScreen`, `LiveClimbSheet`, `ClimbDetailSheet`, `RouteItem`, `SegmentItem`) SHALL default to `false`, preserving clean boundary paddings without histograms.
+2. *Series-Color Rendering for Non-Zoned Graphs (`REQ-UI-446.2`)*:
+• For telemetry and elevation graphs without physiological training zones (`ElevationProfile`, `SPEED/PACE`, `W_PRIME_BAL`), the system SHALL compute uniform linear frequency bins (20–24 bins) across the plotted domain `[dataMin, dataMax]`.
+• Non-zoned marginal histograms SHALL render in the graph's primary series color (Speed/Pace: `MaterialTheme.colorScheme.primary`; W'bal: `TTColor.WPrimeBalGreen`; Elevation: primary terrain profile color).
+• For each bin in the non-zoned histogram, the background container track (`alpha = 0.15f`) SHALL be drawn unconditionally across the plotted domain `[dataMin, dataMax]` (Rule 69), while the solid foreground bar (`barWidthPx > 0f`) is gated on `bin.durationSec > 0L` (or sample count > 0).
+• Drawing routines SHALL filter out-of-domain bins and clamp bin boundaries to `[dataMin, dataMax]` before Y-mapping (`valueToY(...)`). Bins with clamped height $\le 0$ SHALL NOT be rendered with `.coerceAtLeast(1f)`, preventing out-of-domain rectangle stacking at `y = 0` (Rule 70).
+• Physiological 5/7-zone coloring and thresholds SHALL be preserved for `HEART_RATE` and `POWER`.
+3. *Widened Marginal Histogram Strip & 1:1 Plot Alignment (`REQ-UI-446.3`)*:
+• In portrait orientation (`Configuration.ORIENTATION_PORTRAIT`), the right-side margin (`endPaddingPx`) SHALL be widened from `25.dp` to `52.dp` across all stacked charts (`TelemetryMetricGraph` and `ElevationProfile` with `alignWithTelemetryCharts = true`), yielding a bar strip width of ~44dp (`(endPaddingPx - 8.dp).coerceAtLeast(10.dp)`), providing clear legibility for frequency variations.
+• In landscape orientation (`Configuration.ORIENTATION_LANDSCAPE`), all stacked charts SHALL adhere to the 72%/28% dual-pane split (`Modifier.weight(0.72f)` for the chart canvas and `Modifier.weight(0.28f)` for the marginal histogram pane), eliminating blank fallback spacers for non-zoned metrics and ensuring X-axis ticks and vertical scrubbing cursors align 1:1 horizontally across all sister charts (Rule 64).
+• Both portrait and landscape plot areas SHALL maintain `startPadding = 50.dp` across all stacked charts.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-UI-251` (Portrait Marginal Strip), `REQ-UI-431` (Landscape Marginal Pane), and `REQ-UI-433.4` (Multi-Chart Alignment). Targets `TelemetryMetricGraph.kt`, `ElevationProfile.kt`, `MapDetailLayout.kt`, `WorkoutSummary.kt`, and `TrackOnMapScreen.kt`.
+2. *Historical Origin & Commit Trace*: Commit `c8192a0e` (`ATT-2147`, `REQ-UI-251`), commit `dcb8f15f` (`ATT-2145`, `REQ-UI-431`), commit `56b230ec` (`ATT-4774`, `REQ-UI-433.4`), and commits `9ce1ef68` / `cbb8317a` (`ATT-5281` / `ATT-5311`, Rules 69 & 70).
+3. *Root Reason for Existing Formulation*: Originally, `endPadding = 25.dp` was reserved solely for HR and Power zone labels and bars; non-zoned charts left this margin blank because zone classification did not exist. The 25dp width produced narrow ~20dp bars. With uniform linear binning and series-colored bars, extending histograms across all stacked graphs utilizes this alignment margin consistently while 52dp width improves visual scannability.
+4. *Preservation of Core Invariants*: 1:1 horizontal plot width (`startPadding = 50.dp`, `endPadding = 52.dp` in portrait; 72%/28% in landscape per Rule 64) and vertical scrubbing cursor alignment across all stacked charts; unconditional background tracks (Rule 69); domain-boundary clamping (Rule 70); untouched non-stacked callers (`alignWithTelemetryCharts = false`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete inspecting stacked workout details graphs in portrait orientation,
+• *When* `ElevationProfile`, `Speed/Pace`, `Heart Rate`, `Power`, or `W'bal` render,
+• *Then* all charts render a right-side marginal histogram of width ~44dp within a widened 52dp margin, with non-zoned charts rendered in their respective series color and HR/Power in physiological zone colors.
+• *Given* an athlete inspecting stacked workout details graphs in landscape orientation,
+• *When* rendered side-by-side,
+• *Then* all stacked charts share identical 72%/28% dual-pane horizontal bounds, rendering the marginal histogram pane on the right without blank spacers, aligning X-axis bounds and scrubbing cursors 1:1.
+• *Given* non-zoned marginal histograms (`ElevationProfile`, `Speed/Pace`, `W'bal`),
+• *When* bins are drawn across `[dataMin, dataMax]`,
+• *Then* background container tracks (`alpha = 0.15f`) are drawn unconditionally for all in-domain bins, foreground bars are gated on positive frequency, and out-of-domain bins are clamped and filtered so zero rectangles stack at `y = 0`.
+• *Given* non-stacked callers of `ElevationProfile` (`SensorGridScreen`, `LiveClimbSheet`, `ClimbDetailSheet`, `RouteItem`, `SegmentItem`),
+• *When* rendered,
+• *Then* they default to `alignWithTelemetryCharts = false`, rendering clean profiles without marginal histograms.
+
+**Invariants**: 1:1 horizontal plot width and scrubbing alignment (Rule 64), unconditional background tracks (Rule 69), domain-boundary clamping (Rule 70), 5/7-zone coloring preserved for HR/Power, 100% clean-room test suite pass rate.
+
 
 
 

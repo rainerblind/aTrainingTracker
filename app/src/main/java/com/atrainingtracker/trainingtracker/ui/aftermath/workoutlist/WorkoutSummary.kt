@@ -288,6 +288,7 @@ fun WorkoutSummary(
                             currentDistance = null,
                             minAltitudeOverride = workoutData.minAltitude,
                             maxAltitudeOverride = workoutData.maxAltitude,
+                            alignWithTelemetryCharts = preferences.showTelemetryCharts && telemetryPoints.isNotEmpty(),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(100.dp)

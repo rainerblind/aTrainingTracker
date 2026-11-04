@@ -1,11 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  ~ aTrainingTracker: Android Adaptive Icon Foreground - Diamond Sponsor Edition
+  ~ aTrainingTracker: Android Adaptive Icon Foreground - 6. Diamond Sponsor
   ~ REQ-UI-445 / ATT-1406: Option A (Top-Right Emblem + Bottom Tier Ribbon + Border Ring)
-  ~ 108dp canvas with all vector geometry contained within the 66dp safe zone (r <= 33dp).
-  ~ Cervélo P3C bike: #FF0000 frame, #000000 wheels/saddle.
-  ~ Stopwatch: #FFC700 ring/stems, #F0F0F0 dial, #000090/#FF0000/#009000 pushers.
-  ~ Athletes: #0000FF royal blue.
+  ~ Matches att_1406_cervelo_tiers_board.png 1:1 on smooth B-spline ATT-1482 base geometry.
   -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
@@ -16,260 +13,183 @@
     <path
         android:fillColor="#F0F0F0"
         android:strokeColor="#FFC700"
-        android:strokeWidth="2.78"
-        android:pathData="M 47.23,38.92 A 20.16,20.16 0 1,0 47.23,79.24 A 20.16,20.16 0 1,0 47.23,38.92 Z" />
-
+        android:strokeWidth="2.57"
+        android:pathData="M 46.51,34.61 A 18.66,18.66 0 1,0 46.51,71.93 A 18.66,18.66 0 1,0 46.51,34.61 Z" />
+    <!-- Cyclist Right Leg & Pedal (Depth 62) -->
     <path
         android:strokeColor="#0000FF"
-        android:strokeWidth="2.53"
+        android:strokeWidth="2.34"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M 43.43,55.34 L 46.97,62.15 L 44.85,69.88 L 46.97,71.55" />
-
+        android:pathData="M 43.00,49.82 L 46.28,56.11 L 44.31,63.26 L 46.28,64.81" />
     <!-- Cyclist Arched Back (Depth 58) -->
     <path
         android:strokeColor="#0000FF"
-        android:strokeWidth="3.79"
+        android:strokeWidth="3.51"
         android:strokeLineCap="round"
-        android:pathData="M 53.35,51.85 A 11.68,11.68 0 0,0 43.05,54.56" />
-
+        android:pathData="M 52.17,46.58 A 10.81,10.81 0 0,0 42.64,49.09" />
+    <!-- Bike Down Tube (Depth 56) -->
     <path
         android:strokeColor="#FF0000"
-        android:strokeWidth="2.15"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M 53.2,60.79 L 44.57,68.24" />
-
+        android:strokeWidth="1.99"
+        android:pathData="M 52.04,54.85 L 44.05,61.75" />
+    <!-- Bike Seat Tube (Depth 56) -->
     <path
         android:strokeColor="#FF0000"
-        android:strokeWidth="2.28"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M 44.85,68.51 L 42.13,55.02" />
-
-    <!-- Carbon Aero Wheel (Depth 55) -->
+        android:strokeWidth="2.11"
+        android:pathData="M 44.31,62.00 L 41.79,49.52" />
+    <!-- Carbon Aero Rear Wheel (Depth 55) -->
     <path
         android:strokeColor="#000000"
-        android:strokeWidth="3.03"
-        android:pathData="M 37.74,62.19 A 5.29,5.29 0 1,0 37.74,72.77 A 5.29,5.29 0 1,0 37.74,62.19 Z" />
-
-    <!-- Carbon Aero Wheel (Depth 55) -->
+        android:strokeWidth="2.81"
+        android:pathData="M 37.74,56.16 A 4.89,4.89 0 1,0 37.74,65.94 A 4.89,4.89 0 1,0 37.74,56.16 Z" />
+    <!-- Carbon Aero Front Wheel (Depth 55) -->
     <path
         android:strokeColor="#000000"
-        android:strokeWidth="2.53"
-        android:pathData="M 55.95,62.88 A 5.36,5.36 0 1,0 55.95,73.6 A 5.36,5.36 0 1,0 55.95,62.88 Z" />
-
+        android:strokeWidth="2.34"
+        android:pathData="M 54.59,56.79 A 4.96,4.96 0 1,0 54.59,66.71 A 4.96,4.96 0 1,0 54.59,56.79 Z" />
+    <!-- Bike Front Head Tube (Depth 55) -->
     <path
         android:strokeColor="#FF0000"
-        android:strokeWidth="1.52"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M 55.78,68.22 L 52.88,59.42" />
-
+        android:strokeWidth="1.40"
+        android:pathData="M 54.43,61.73 L 51.75,53.59" />
+    <!-- Bike Top Tube (Depth 55) -->
     <path
         android:strokeColor="#FF0000"
-        android:strokeWidth="0.63"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M 53.04,60.33 L 43.34,59.58" />
-
+        android:strokeWidth="0.58"
+        android:pathData="M 51.89,54.43 L 42.92,53.73" />
+    <!-- Left Pusher Stem (Depth 55) -->
     <path
         android:strokeColor="#FFC700"
-        android:strokeWidth="3.79"
-        android:strokeLineCap="square"
-        android:strokeLineJoin="miter"
-        android:pathData="M 36.91,41.73 L 35.58,39.43" />
-
+        android:strokeWidth="4.68"
+        android:pathData="M 36.96,37.22 L 35.59,34.92" />
+    <!-- Center Pusher Stem (Depth 55) -->
     <path
         android:strokeColor="#FFC700"
-        android:strokeWidth="3.79"
-        android:strokeLineCap="square"
-        android:strokeLineJoin="miter"
-        android:pathData="M 47.23,38.65 L 47.23,36.0" />
-
+        android:strokeWidth="4.68"
+        android:pathData="M 46.51,34.37 L 46.51,31.64" />
+    <!-- Right Pusher Stem (Depth 55) -->
     <path
         android:strokeColor="#FFC700"
-        android:strokeWidth="3.79"
-        android:strokeLineCap="square"
-        android:strokeLineJoin="miter"
-        android:pathData="M 57.29,41.43 L 58.62,39.13" />
-
+        android:strokeWidth="4.68"
+        android:pathData="M 55.83,36.94 L 57.20,34.68" />
+    <!-- Cyclist Left Leg (Depth 54) -->
     <path
         android:strokeColor="#0000FF"
-        android:strokeWidth="2.53"
+        android:strokeWidth="2.34"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M 46.02,67.24 L 44.65,64.52 L 51.78,60.28 L 42.57,56.68" />
-
+        android:pathData="M 45.40,60.82 L 44.13,58.31 L 50.72,54.38 L 42.21,51.06" />
+    <!-- Bicycle Saddle Underneath (Depth 53) -->
     <path
         android:strokeColor="#000000"
-        android:strokeWidth="0.89"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M 40.02,57.24 L 43.37,57.24" />
-
-    <!-- Athlete Head (Depth 50) -->
+        android:strokeWidth="0.82"
+        android:pathData="M 39.84,51.57 L 42.94,51.57" />
+    <!-- Bike Rear Seat Stay (Depth 50) -->
+    <path
+        android:strokeColor="#FF0000"
+        android:strokeWidth="0.82"
+        android:pathData="M 37.99,61.03 L 42.92,53.73" />
+    <!-- Bike Chain Stay (Depth 50) -->
+    <path
+        android:strokeColor="#FF0000"
+        android:strokeWidth="0.82"
+        android:pathData="M 44.76,62.10 L 37.99,61.03" />
+    <!-- Cyclist Head (Depth 50) -->
     <path
         android:fillColor="#0000FF"
         android:strokeColor="#0000FF"
-        android:strokeWidth="1.26"
-        android:pathData="M 56.24,49.77 A 2.14,2.14 0 1,0 56.24,54.05 A 2.14,2.14 0 1,0 56.24,49.77 Z" />
-
-    <!-- Athlete Head (Depth 50) -->
+        android:strokeWidth="1.17"
+        android:pathData="M 54.85,44.65 A 1.98,1.98 0 1,0 54.85,48.61 A 1.98,1.98 0 1,0 54.85,44.65 Z" />
+    <!-- Runner Head (Depth 50) -->
     <path
         android:fillColor="#0000FF"
         android:strokeColor="#0000FF"
-        android:strokeWidth="1.26"
-        android:pathData="M 76.82,47.89 A 2.14,2.14 0 1,0 76.82,52.17 A 2.14,2.14 0 1,0 76.82,47.89 Z" />
-
+        android:strokeWidth="1.17"
+        android:pathData="M 73.89,42.92 A 1.98,1.98 0 1,0 73.89,46.88 A 1.98,1.98 0 1,0 73.89,42.92 Z" />
+    <!-- Cyclist Chin/Neck (Depth 50) -->
     <path
         android:strokeColor="#0000FF"
-        android:strokeWidth="0.63"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M 53.2,51.85 L 54.56,51.99" />
-
-    <path
-        android:strokeColor="#FF0000"
-        android:strokeWidth="0.89"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M 45.33,68.62 L 38.02,67.47" />
-
+        android:strokeWidth="0.58"
+        android:pathData="M 52.04,46.58 L 53.30,46.71" />
+    <!-- Cyclist Lower Torso / Chest (Depth 50) -->
     <path
         android:strokeColor="#0000FF"
-        android:strokeWidth="1.9"
+        android:strokeWidth="2.69"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M 59.37,59.52 L 53.5,58.97 L 53.2,51.69" />
-
+        android:pathData="M 43.35,49.47 L 51.43,47.01" />
+    <!-- Cyclist Upper Thigh (Depth 50) -->
     <path
         android:strokeColor="#0000FF"
-        android:strokeWidth="3.54"
+        android:strokeWidth="3.04"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M 75.95,62.54 L 82.94,64.51 L 78.61,72.5" />
-
+        android:pathData="M 50.02,53.68 L 42.30,50.52" />
+    <!-- Cyclist Arm & Aerobar (Depth 50) -->
     <path
         android:strokeColor="#0000FF"
-        android:strokeWidth="2.15"
+        android:strokeWidth="1.75"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M 76.61,53.22 L 79.61,59.53 L 80.94,54.21" />
-
+        android:pathData="M 57.74,53.68 L 52.32,53.17 L 52.04,46.43" />
+    <!-- Cyclist Torso & Hip B-Spline (Depth 50) -->
     <path
+        android:fillColor="#0000FF"
         android:strokeColor="#0000FF"
-        android:strokeWidth="2.15"
-        android:strokeLineCap="round"
+        android:strokeWidth="0.47"
         android:strokeLineJoin="round"
-        android:pathData="M 76.61,53.22 L 70.97,54.54 L 73.29,59.21" />
-
-    <path
-        android:strokeColor="#FF0000"
-        android:strokeWidth="6.32"
-        android:strokeLineCap="square"
-        android:strokeLineJoin="miter"
-        android:pathData="M 47.23,36.38 L 47.23,32.58" />
-
+        android:pathData="M 41.25,48.76 C 41.01,49.23 40.95,49.76 41.07,50.34 C 41.19,50.93 41.36,51.04 41.60,50.69 C 41.83,50.34 42.12,49.93 42.48,49.47 C 42.83,49.00 42.77,48.65 42.30,48.41 C 41.83,48.18 41.48,48.30 41.25,48.76 Z" />
+    <!-- Left Navy Blue Pusher (Depth 50) -->
     <path
         android:strokeColor="#000090"
-        android:strokeWidth="6.32"
-        android:strokeLineCap="square"
-        android:strokeLineJoin="miter"
-        android:pathData="M 35.85,39.67 L 33.95,36.38" />
-
-    <path
-        android:strokeColor="#0000FF"
-        android:strokeWidth="2.91"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M 43.81,54.97 L 52.54,52.31" />
-
-    <path
-        android:strokeColor="#009000"
-        android:strokeWidth="6.32"
-        android:strokeLineCap="square"
-        android:strokeLineJoin="miter"
-        android:pathData="M 58.57,39.27 L 60.47,35.98" />
-
+        android:strokeWidth="5.85"
+        android:pathData="M 35.98,35.32 L 34.23,32.27" />
+    <!-- Center Red Pusher (Depth 50) -->
     <path
         android:strokeColor="#FF0000"
-        android:strokeWidth="0.89"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M 38.02,67.47 L 43.34,59.58" />
-
+        android:strokeWidth="5.85"
+        android:pathData="M 46.51,32.27 L 46.51,28.76" />
+    <!-- Right Green Pusher (Depth 50) -->
+    <path
+        android:strokeColor="#009000"
+        android:strokeWidth="5.85"
+        android:pathData="M 57.01,34.94 L 58.77,31.90" />
+    <!-- Runner Front Arm (Depth 50) -->
     <path
         android:strokeColor="#0000FF"
-        android:strokeWidth="3.29"
+        android:strokeWidth="1.99"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M 51.02,59.52 L 42.67,56.1" />
-
+        android:pathData="M 73.70,47.85 L 76.48,53.68 L 77.70,48.77" />
+    <!-- Runner Back Arm (Depth 50) -->
     <path
         android:strokeColor="#0000FF"
-        android:strokeWidth="3.54"
+        android:strokeWidth="1.99"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M 76.44,54.97 L 75.62,62.54 L 71.13,69.0 L 64.68,74.31" />
-
-    <!-- Bicycle Saddle (Depth 50) -->
+        android:pathData="M 73.70,47.85 L 68.48,49.08 L 70.63,53.40" />
+    <!-- Runner Front Leg (Depth 50) -->
     <path
-        android:fillColor="#000000"
-        android:strokeColor="#000000"
-        android:strokeWidth="0.51"
-        android:strokeLineJoin="round"
-        android:pathData="M 41.92,53.45 L 41.16,54.97 L 41.54,56.86 L 42.3,55.72 L 43.43,54.21 Z" />
-
-    <!-- === OPTION A BADGE OVERLAYS (REQ-UI-445) === -->
-    <!-- Outer Border Ring (r = 32dp, safe-zone compliant r <= 33dp) -->
-    <path
-        android:strokeColor="#00E5FF"
-        android:strokeWidth="1.5"
-        android:pathData="M 54,22 A 32,32 0 1,0 54,86 A 32,32 0 1,0 54,22 Z" />
-
-    <!-- Top-Right Emblem: Faceted Brilliant Cyan Diamond (cx=67.6, cy=31.8) -->
-    <path
-        android:fillColor="#E0F7FA"
-        android:strokeColor="#00B0FF"
-        android:strokeWidth="0.4"
-        android:pathData="M 65.2,29.5 L 70.0,29.5 L 71.8,31.5 L 63.4,31.5 Z" />
-    <path
-        android:fillColor="#00E5FF"
-        android:strokeColor="#0091EA"
-        android:strokeWidth="0.4"
-        android:pathData="M 63.4,31.5 L 71.8,31.5 L 67.6,35.5 Z" />
-    <path
-        android:fillColor="#80DEEA"
-        android:pathData="M 66.0,31.5 L 69.2,31.5 L 67.6,35.5 Z" />
-    <path
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="0.6"
+        android:strokeColor="#0000FF"
+        android:strokeWidth="3.28"
         android:strokeLineCap="round"
-        android:pathData="M 71.5,27.0 L 71.5,30.0 M 70.0,28.5 L 73.0,28.5" />
-
-    <!-- Bottom Tier Ribbon: ◆ SPONSOR ◆ (y=75.5..82.5) -->
+        android:strokeLineJoin="round"
+        android:pathData="M 73.09,56.47 L 79.55,58.29 L 75.55,65.69" />
+    <!-- Runner Torso & Back Leg (Depth 50) -->
     <path
-        android:fillColor="#00E5FF"
-        android:pathData="M 42,76.5 L 66,76.5 L 66,82.5 L 42,82.5 Z" />
+        android:strokeColor="#0000FF"
+        android:strokeWidth="3.28"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 73.54,49.47 L 72.78,56.47 L 68.62,62.45 L 62.66,67.37" />
+    <!-- === SUPPORTER BADGE OVERLAY (REQ-UI-445: Bottom Tier Stadium Ribbon) === -->
     <path
-        android:strokeColor="#0091EA"
-        android:strokeWidth="0.8"
-        android:pathData="M 42,76.5 L 66,76.5 L 66,82.5 L 42,82.5 Z" />
+        android:fillColor="#0369A1"
+        android:strokeColor="#7DD3FC"
+        android:strokeWidth="0.75"
+        android:pathData="M 36.50,74.20 L 71.50,74.20 A 4.00,4.00 0 0,1 71.50,82.20 L 36.50,82.20 A 4.00,4.00 0 0,1 36.50,74.20 Z" />
     <path
-        android:fillColor="#0091EA"
-        android:pathData="M 40,78.0 L 42,76.5 L 42,82.5 L 40,81.0 Z" />
-    <path
-        android:fillColor="#0091EA"
-        android:pathData="M 68,78.0 L 66,76.5 L 66,82.5 L 68,81.0 Z" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M 45.0,79.5 L 46.0,78.5 L 47.0,79.5 L 46.0,80.5 Z" />
-    <path
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="0.8"
-        android:pathData="M 49.0,79.5 L 59.0,79.5" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M 61.0,79.5 L 62.0,78.5 L 63.0,79.5 L 62.0,80.5 Z" />
+        android:fillColor="#E0F2FE"
+        android:pathData="M 36.70,78.63 C 36.70,78.63 37.22,78.11 38.26,77.07 C 38.26,77.07 38.78,77.59 39.83,78.63 C 39.83,78.63 39.30,79.16 38.26,80.20 Z M 44.32,76.81 L 44.32,77.44 C 44.16,77.36 44.00,77.31 43.84,77.27 C 43.68,77.23 43.54,77.22 43.40,77.22 C 43.21,77.22 43.08,77.24 42.99,77.29 C 42.90,77.34 42.86,77.42 42.86,77.53 C 42.86,77.61 42.89,77.67 42.95,77.72 C 43.01,77.76 43.11,77.80 43.27,77.83 L 43.60,77.90 C 43.93,77.96 44.17,78.06 44.31,78.20 C 44.45,78.34 44.52,78.53 44.52,78.78 C 44.52,79.11 44.42,79.36 44.22,79.52 C 44.03,79.68 43.73,79.76 43.33,79.76 C 43.14,79.76 42.95,79.74 42.76,79.70 C 42.57,79.67 42.38,79.61 42.19,79.54 L 42.19,78.89 C 42.38,78.99 42.56,79.07 42.74,79.12 C 42.92,79.17 43.09,79.20 43.25,79.20 C 43.42,79.20 43.55,79.17 43.64,79.12 C 43.73,79.06 43.77,78.98 43.77,78.88 C 43.77,78.78 43.74,78.71 43.68,78.66 C 43.62,78.61 43.50,78.56 43.32,78.52 L 43.02,78.46 C 42.72,78.39 42.50,78.29 42.37,78.15 C 42.23,78.01 42.16,77.82 42.16,77.58 C 42.16,77.29 42.26,77.06 42.45,76.90 C 42.64,76.74 42.92,76.66 43.28,76.66 C 43.44,76.66 43.61,76.67 43.78,76.70 C 43.96,76.72 44.14,76.76 44.32,76.81 Z M 45.49,76.71 L 46.77,76.71 C 47.15,76.71 47.45,76.80 47.65,76.97 C 47.85,77.13 47.95,77.37 47.95,77.69 C 47.95,78.00 47.85,78.24 47.65,78.41 C 47.45,78.58 47.15,78.66 46.77,78.66 L 46.27,78.66 L 46.27,79.70 L 45.49,79.70 Z M 46.27,77.27 L 46.27,78.10 L 46.69,78.10 C 46.84,78.10 46.96,78.07 47.04,78.00 C 47.12,77.92 47.16,77.82 47.16,77.69 C 47.16,77.55 47.12,77.45 47.04,77.38 C 46.96,77.31 46.84,77.27 46.69,77.27 Z M 50.16,77.22 C 49.93,77.22 49.75,77.30 49.62,77.48 C 49.49,77.65 49.42,77.89 49.42,78.21 C 49.42,78.52 49.49,78.77 49.62,78.94 C 49.75,79.11 49.93,79.20 50.16,79.20 C 50.40,79.20 50.58,79.11 50.71,78.94 C 50.84,78.77 50.91,78.52 50.91,78.21 C 50.91,77.89 50.84,77.65 50.71,77.48 C 50.58,77.30 50.40,77.22 50.16,77.22 Z M 50.16,76.66 C 50.65,76.66 51.02,76.79 51.29,77.07 C 51.57,77.34 51.70,77.72 51.70,78.21 C 51.70,78.69 51.57,79.07 51.29,79.35 C 51.02,79.62 50.65,79.76 50.16,79.76 C 49.69,79.76 49.31,79.62 49.04,79.35 C 48.76,79.07 48.63,78.69 48.63,78.21 C 48.63,77.72 48.76,77.34 49.04,77.07 C 49.31,76.79 49.69,76.66 50.16,76.66 Z M 52.58,76.71 L 53.45,76.71 L 54.53,78.76 L 54.53,76.71 L 55.26,76.71 L 55.26,79.70 L 54.40,79.70 L 53.32,77.65 L 53.32,79.70 L 52.58,79.70 Z M 58.40,76.81 L 58.40,77.44 C 58.23,77.36 58.07,77.31 57.92,77.27 C 57.76,77.23 57.61,77.22 57.47,77.22 C 57.29,77.22 57.15,77.24 57.06,77.29 C 56.98,77.34 56.93,77.42 56.93,77.53 C 56.93,77.61 56.96,77.67 57.02,77.72 C 57.08,77.76 57.19,77.80 57.34,77.83 L 57.67,77.90 C 58.01,77.96 58.24,78.06 58.38,78.20 C 58.52,78.34 58.59,78.53 58.59,78.78 C 58.59,79.11 58.49,79.36 58.30,79.52 C 58.10,79.68 57.80,79.76 57.40,79.76 C 57.21,79.76 57.02,79.74 56.83,79.70 C 56.64,79.67 56.45,79.61 56.26,79.54 L 56.26,78.89 C 56.45,78.99 56.63,79.07 56.81,79.12 C 56.99,79.17 57.16,79.20 57.33,79.20 C 57.50,79.20 57.63,79.17 57.72,79.12 C 57.80,79.06 57.85,78.98 57.85,78.88 C 57.85,78.78 57.82,78.71 57.76,78.66 C 57.70,78.61 57.58,78.56 57.40,78.52 L 57.10,78.46 C 56.80,78.39 56.58,78.29 56.44,78.15 C 56.30,78.01 56.23,77.82 56.23,77.58 C 56.23,77.29 56.33,77.06 56.52,76.90 C 56.71,76.74 56.99,76.66 57.35,76.66 C 57.52,76.66 57.68,76.67 57.86,76.70 C 58.03,76.72 58.21,76.76 58.40,76.81 Z M 60.93,77.22 C 60.70,77.22 60.52,77.30 60.39,77.48 C 60.26,77.65 60.19,77.89 60.19,78.21 C 60.19,78.52 60.26,78.77 60.39,78.94 C 60.52,79.11 60.70,79.20 60.93,79.20 C 61.17,79.20 61.35,79.11 61.48,78.94 C 61.61,78.77 61.68,78.52 61.68,78.21 C 61.68,77.89 61.61,77.65 61.48,77.48 C 61.35,77.30 61.17,77.22 60.93,77.22 Z M 60.93,76.66 C 61.41,76.66 61.79,76.79 62.06,77.07 C 62.34,77.34 62.47,77.72 62.47,78.21 C 62.47,78.69 62.34,79.07 62.06,79.35 C 61.79,79.62 61.41,79.76 60.93,79.76 C 60.46,79.76 60.08,79.62 59.81,79.35 C 59.53,79.07 59.40,78.69 59.40,78.21 C 59.40,77.72 59.53,77.34 59.81,77.07 C 60.08,76.79 60.46,76.66 60.93,76.66 Z M 64.45,78.04 C 64.61,78.04 64.73,78.01 64.80,77.95 C 64.87,77.89 64.90,77.79 64.90,77.65 C 64.90,77.51 64.87,77.42 64.80,77.36 C 64.73,77.30 64.61,77.27 64.45,77.27 L 64.12,77.27 L 64.12,78.04 Z M 64.12,78.57 L 64.12,79.70 L 63.35,79.70 L 63.35,76.71 L 64.53,76.71 C 64.93,76.71 65.21,76.78 65.40,76.91 C 65.58,77.04 65.67,77.25 65.67,77.54 C 65.67,77.73 65.62,77.90 65.53,78.02 C 65.43,78.15 65.29,78.24 65.10,78.30 C 65.20,78.33 65.30,78.38 65.38,78.47 C 65.46,78.55 65.55,78.68 65.63,78.85 L 66.05,79.70 L 65.23,79.70 L 64.87,78.96 C 64.79,78.81 64.72,78.71 64.64,78.65 C 64.57,78.60 64.47,78.57 64.34,78.57 Z M 68.17,78.63 C 68.17,78.63 68.70,78.11 69.74,77.07 C 69.74,77.07 70.26,77.59 71.30,78.63 C 71.30,78.63 70.78,79.16 69.74,80.20 Z" />
 </vector>
