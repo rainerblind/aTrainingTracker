@@ -195,6 +195,9 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 * **9-Language Localization Parity**:
   * Any user-visible string (titles, subtitles, button labels, descriptions, error dialogs, tooltips) must be localized across all 9 supported application locales (`values/strings.xml`, `values-de/strings.xml`, `values-es/strings.xml`, `values-fr/strings.xml`, `values-it/strings.xml`, `values-ja/strings.xml`, `values-nl/strings.xml`, `values-pl/strings.xml`, `values-pt/strings.xml`).
   * Hardcoding untranslated string literals in Kotlin code or Compose layouts is strictly forbidden.
+* **Prohibition of Decorative Inline Unicode Emojis in Localized Strings (ATT-5400)**:
+  * Localized string resources for dialogs, bottom sheets, cards, and banners **MUST NOT** contain decorative inline Unicode emojis (e.g. 🚴‍♂️, 💎, ✨, 😉).
+  * UI layouts must rely on dedicated Material vector icons or custom drawables (e.g. in the dialog's `icon` slot) to convey iconography, avoiding visual clutter, text wrapping anomalies, and duplication of visual motifs.
 * **Positional Format Specifiers Invariant**:
   * When formatted strings contain multiple dynamic arguments, they **MUST** use indexed positional specifiers (e.g. `%1$s`, `%2$d`, `%1$f`) rather than unindexed specifiers (e.g. `%s`, `%d`).
   * Unindexed specifiers fail Android Lint and crash or misorder text in languages whose grammatical syntax reorders subject and object (such as Japanese, German, or Polish).
@@ -242,6 +245,8 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 * **Unambiguous Action Iconography & No ASCII Symbol Prefixes in Strings (Rule 49 — ATT-4286, ATT-4288)**:
   * **Never Use Minus-Like Icons (`HorizontalRule`) for Insert/Add Actions**: Never use `Icons.Default.HorizontalRule` (`—`) in a toolbar next to `+` (`Icons.Default.Add`) to represent inserting a section divider or item; a horizontal bar next to `+` visually reads as a minus/remove button (`-`). Use a dedicated split/section icon or labeled menu item.
   * **Never Include Literal `"+ "` Prefixes Inside Localized `<string>` Resources**: When a button, chip, or action item renders a leading `Icon(Icons.Default.Add, ...)`, the corresponding `<string>` resource in `strings.xml` **MUST NOT** start with a literal `"+ "` character (which produces duplicate `+ + Pair Sensor` labels on screen). Keep icon graphics in Compose `Icon` slots and keep XML strings purely textual.
+* **Vector Header Iconography over Inline Unicode Emojis (ATT-5400)**:
+  * Dialogs, alerts, and bottom sheets **MUST** provide dedicated Material or custom vector icons in their composable icon slot (e.g. `AlertDialog(icon = { Icon(...) }, ...)`), rather than peppering localized title or message strings with decorative inline Unicode emojis. Inline emojis create visual clutter, rendering inconsistencies across Android OEM fonts, and icon-to-text redundancy.
 * **Semantic Category Icon Tinting (Rule 23)**: When rendering paired or symmetric category items across lists, tables, or tabbed views (e.g. equipment categories like bikes and shoes in `EquipmentSensorMatrixScreen`):
   * **Unified Active Role**: All active entities across categories MUST use the same unified brand color token (`MaterialTheme.colorScheme.primary`). Do NOT assign disparate color roles (e.g. `primary` to bikes and `secondary` to shoes) to differentiate categories; visual distinction is provided by the vector drawables themselves (`ic_equipment_bike` vs `ic_equipment_shoe`) and section/tab titles.
   * **Status Tinting**: Use `MaterialTheme.colorScheme.outline` for retired/inactive entities, and `MaterialTheme.colorScheme.error` for failed/unhealthy states.

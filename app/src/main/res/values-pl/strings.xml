@@ -2280,10 +2280,10 @@
     <string name="debug_jubilee_preview_subtitle">Testuje dialog Material 3 bez modyfikacji stanu kamieni milowych</string>
 
     <!-- Supporter N+1 Garage Detector (ATT-5299 / REQ-SET-088) -->
-    <string name="garage_detector_dialog_title_gold">Wykryto garaż ligi złotej! 🚴‍♂️</string>
-    <string name="garage_detector_dialog_title_diamond">Światowej klasy garaż diamentowy! 💎</string>
-    <string name="garage_detector_dialog_message_gold">Gratulacje z okazji posiadania %1$d rowerów, %2$d par butów i %3$d czujników (w tym %4$d mierników mocy) w aTrainingTracker! 🚴‍♂️✨ Twój garaż to liga mistrzowska, ale Twój status to %5$s. Zrób krok naprzód ze statusem Złoty Wspierający!</string>
-    <string name="garage_detector_dialog_message_diamond">Niesamowite wyposażenie: %1$d rowerów, %2$d par butów i %3$d czujników (w tym %4$d mierników mocy) w aTrainingTracker! 💎✨ Twój garaż to absolutna klasa światowa, ale Twój status to %5$s. Zwieńcz swoją kolekcję statusem Sponsor Diamentowy!</string>
+    <string name="garage_detector_dialog_title_gold">Wykryto garaż ligi złotej!</string>
+    <string name="garage_detector_dialog_title_diamond">Światowej klasy garaż diamentowy!</string>
+    <string name="garage_detector_dialog_message_gold">Gratulacje z okazji posiadania %1$d rowerów, %2$d par butów i %3$d czujników (w tym %4$d mierników mocy) w aTrainingTracker! Twój garaż to liga mistrzowska, ale Twój status to %5$s. Zrób krok naprzód ze statusem Złoty Wspierający!</string>
+    <string name="garage_detector_dialog_message_diamond">Niesamowite wyposażenie: %1$d rowerów, %2$d par butów i %3$d czujników (w tym %4$d mierników mocy) w aTrainingTracker! Twój garaż to absolutna klasa światowa, ale Twój status to %5$s. Zwieńcz swoją kolekcję statusem Sponsor Diamentowy!</string>
     <string name="garage_detector_action_upgrade_gold">Uaktualnij do Złotego Pro (50 € / rok)</string>
     <string name="garage_detector_action_upgrade_diamond">Uaktualnij do Sponsora Diamentowego (100 € / rok)</string>
     <string name="garage_detector_action_dismiss">Później / Kontynuuj trening</string>

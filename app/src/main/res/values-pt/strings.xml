@@ -2277,10 +2277,10 @@
     <string name="debug_jubilee_preview_subtitle">Testa o diálogo Material 3 sem alterar o estado dos marcos</string>
 
     <!-- Supporter N+1 Garage Detector (ATT-5299 / REQ-SET-088) -->
-    <string name="garage_detector_dialog_title_gold">Garagem de nível Ouro detetada! 🚴‍♂️</string>
-    <string name="garage_detector_dialog_title_diamond">Garagem Diamante de nível mundial! 💎</string>
-    <string name="garage_detector_dialog_message_gold">Parabéns pelas suas %1$d bicicletas, %2$d sapatilhas e %3$d sensores (incl. %4$d medidores de potência) no aTrainingTracker! 🚴‍♂️✨ A sua garagem joga na liga profissional, mas o seu estado é %5$s. Ofereça ao seu cockpit o nível Apoiante Ouro!</string>
-    <string name="garage_detector_dialog_message_diamond">Equipamento incrível: %1$d bicicletas, %2$d sapatilhas e %3$d sensores (incl. %4$d medidores de potência) no aTrainingTracker! 💎✨ A sua garagem é de nível mundial, mas o seu estado é %5$s. Coroe a sua frota com Patrocinador Diamante!</string>
+    <string name="garage_detector_dialog_title_gold">Garagem de nível Ouro detetada!</string>
+    <string name="garage_detector_dialog_title_diamond">Garagem Diamante de nível mundial!</string>
+    <string name="garage_detector_dialog_message_gold">Parabéns pelas suas %1$d bicicletas, %2$d sapatilhas e %3$d sensores (incl. %4$d medidores de potência) no aTrainingTracker! A sua garagem joga na liga profissional, mas o seu estado é %5$s. Ofereça ao seu cockpit o nível Apoiante Ouro!</string>
+    <string name="garage_detector_dialog_message_diamond">Equipamento incrível: %1$d bicicletas, %2$d sapatilhas e %3$d sensores (incl. %4$d medidores de potência) no aTrainingTracker! A sua garagem é de nível mundial, mas o seu estado é %5$s. Coroe a sua frota com Patrocinador Diamante!</string>
     <string name="garage_detector_action_upgrade_gold">Atualizar para Ouro Pro (50 € / ano)</string>
     <string name="garage_detector_action_upgrade_diamond">Atualizar para Patrocinador Diamante (100 € / ano)</string>
     <string name="garage_detector_action_dismiss">Mais tarde / Continuar treino</string>

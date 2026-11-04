@@ -2479,10 +2479,10 @@
     <string name="debug_jubilee_preview_subtitle">Tests the Material 3 Jubilee dialog without modifying lifetime milestone state</string>
 
     <!-- Supporter N+1 Garage Detector (ATT-5299 / REQ-SET-088) -->
-    <string name="garage_detector_dialog_title_gold">Gold-League Garage Detected! 🚴‍♂️</string>
-    <string name="garage_detector_dialog_title_diamond">World-Class Diamond Garage! 💎</string>
-    <string name="garage_detector_dialog_message_gold">Congratulations on your %1$d bikes, %2$d shoes, and %3$d sensors (incl. %4$d power meters) in aTrainingTracker! 🚴‍♂️✨ Your garage plays in the pro league, but your app status is %5$s. Treat your setup to Gold Pro-Supporter!</string>
-    <string name="garage_detector_dialog_message_diamond">Incredible setup: %1$d bikes, %2$d shoes, and %3$d sensors (incl. %4$d power meters) in aTrainingTracker! 💎✨ Your garage plays in the world-class league, but your app status is %5$s. Match your fleet with Diamond Sponsor!</string>
+    <string name="garage_detector_dialog_title_gold">Gold-League Garage Detected!</string>
+    <string name="garage_detector_dialog_title_diamond">World-Class Diamond Garage!</string>
+    <string name="garage_detector_dialog_message_gold">Congratulations on your %1$d bikes, %2$d shoes, and %3$d sensors (incl. %4$d power meters) in aTrainingTracker! Your garage plays in the pro league, but your app status is %5$s. Treat your setup to Gold Pro-Supporter!</string>
+    <string name="garage_detector_dialog_message_diamond">Incredible setup: %1$d bikes, %2$d shoes, and %3$d sensors (incl. %4$d power meters) in aTrainingTracker! Your garage plays in the world-class league, but your app status is %5$s. Match your fleet with Diamond Sponsor!</string>
     <string name="garage_detector_action_upgrade_gold">Upgrade to Gold Pro (50 € / yr)</string>
     <string name="garage_detector_action_upgrade_diamond">Upgrade to Diamond Sponsor (100 € / yr)</string>
     <string name="garage_detector_action_dismiss">Later / Keep Training</string>

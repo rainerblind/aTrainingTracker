@@ -2279,10 +2279,10 @@
     <string name="debug_jubilee_preview_subtitle">Prueba el diálogo Material 3 sin alterar el estado de hitos</string>
 
     <!-- Supporter N+1 Garage Detector (ATT-5299 / REQ-SET-088) -->
-    <string name="garage_detector_dialog_title_gold">¡Garaje de liga Oro detectado! 🚴‍♂️</string>
-    <string name="garage_detector_dialog_title_diamond">¡Garaje Diamante de clase mundial! 💎</string>
-    <string name="garage_detector_dialog_message_gold">¡Enhorabuena por tus %1$d bicicletas, %2$d zapatillas y %3$d sensores (incl. %4$d potenciómetros) en aTrainingTracker! 🚴‍♂️✨ Tu garaje juega en la liga profesional, pero tu estado es %5$s. ¡Regálate la mejora a Partidario Oro!</string>
-    <string name="garage_detector_dialog_message_diamond">¡Equipamiento increíble: %1$d bicicletas, %2$d zapatillas y %3$d sensores (incl. %4$d potenciómetros) en aTrainingTracker! 💎✨ Tu garaje es de clase mundial, pero tu estado es %5$s. ¡Corona tu flota con Patrocinador Diamante!</string>
+    <string name="garage_detector_dialog_title_gold">¡Garaje de liga Oro detectado!</string>
+    <string name="garage_detector_dialog_title_diamond">¡Garaje Diamante de clase mundial!</string>
+    <string name="garage_detector_dialog_message_gold">¡Enhorabuena por tus %1$d bicicletas, %2$d zapatillas y %3$d sensores (incl. %4$d potenciómetros) en aTrainingTracker! Tu garaje juega en la liga profesional, pero tu estado es %5$s. ¡Regálate la mejora a Partidario Oro!</string>
+    <string name="garage_detector_dialog_message_diamond">¡Equipamiento increíble: %1$d bicicletas, %2$d zapatillas y %3$d sensores (incl. %4$d potenciómetros) en aTrainingTracker! Tu garaje es de clase mundial, pero tu estado es %5$s. ¡Corona tu flota con Patrocinador Diamante!</string>
     <string name="garage_detector_action_upgrade_gold">Mejorar a Oro Pro (50 € / año)</string>
     <string name="garage_detector_action_upgrade_diamond">Mejorar a Patrocinador Diamante (100 € / año)</string>
     <string name="garage_detector_action_dismiss">Más tarde / Seguir entrenando</string>
