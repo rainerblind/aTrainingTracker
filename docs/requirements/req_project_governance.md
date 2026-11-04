@@ -3,7 +3,7 @@
 **Domain**: `project_governance`  
 **Prefixes**: `STP`  
 **Scope**: Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance.  
-**Total Requirements**: 4
+**Total Requirements**: 5
 
 ---
 
@@ -53,3 +53,14 @@
   2. Screenshots SHALL capture key app surfaces: Cockpit, Sensor Matrix, Live Map & Elevation Profile, Lieblingsstrecken, Physiology/PMC, and Periods 2.0.
   3. Screenshots SHALL capture both Light and AMOLED Dark modes from connected Android hardware (Pixel 10, $1080 \times 2424$).
   4. Updating store listings and screenshots in the Google Play Console is designated as a Human Prerequisite (Rule 22).
+
+### REQ-STP-005: Repository README Google Play Store Badge & User Guide Navigation Integration [Verified]
+- **Tests**: `TST-STP-005` | **Tickets**: `ATT-2371`
+- **Implementation**: `README.md`, `images/google-play-badge.svg`, `ReadmePlayStoreBadgeContractTest.kt`
+- **Rationale**: The repository root `README.md` is the primary entry point on GitHub for athletes and developers. A prominent, brand-compliant Google Play Store badge with canonical application ID targeting (`id=com.atrainingtracker`), coupled with direct navigation to the bilingual Online User Guide (`ATT-2275`) and V5.0 feature highlights, ensures immediate installation conversion and documentation discoverability while avoiding broken external CDN dependencies.
+- **Description**:
+  1. The repository root `README.md` SHALL feature a centered hero section embedding the application logo (`images/logo_512.png`), application title, subtitle, and an official clickable Google Play Store badge.
+  2. The Google Play badge SHALL be hosted locally within the repository as a vector asset at `images/google-play-badge.svg` and SHALL link directly to the canonical store listing `https://play.google.com/store/apps/details?id=com.atrainingtracker`.
+  3. The hero section SHALL provide direct navigation links to the Online User Guide (`docs/index.md`) including both English (`docs/guide/en/index.md`) and German (`docs/guide/de/index.md`) editions.
+  4. `README.md` SHALL present an updated summary of key V5.0 features including .FIT export/import, Strava/Dropbox/Google Drive cloud sync, Skiba $W'_{\text{bal}}$ and Coggan power analytics, and Lieblingsstrecken navigation.
+  5. All linked asset and documentation targets referenced in `README.md` MUST resolve to valid existing local repository files or valid canonical external URLs.

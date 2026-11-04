@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 646 250" width="646" height="250" role="img" aria-label="Get it on Google Play">
+    <title>Get it on Google Play</title>
+    <defs>
+        <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#00E5FF"/>
+            <stop offset="100%" stop-color="#0091EA"/>
+        </linearGradient>
+        <linearGradient id="greenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#00E676"/>
+            <stop offset="100%" stop-color="#00C853"/>
+        </linearGradient>
+        <linearGradient id="yellowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#FFD600"/>
+            <stop offset="100%" stop-color="#FFAB00"/>
+        </linearGradient>
+        <linearGradient id="redGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#FF1744"/>
+            <stop offset="100%" stop-color="#D50000"/>
+        </linearGradient>
+    </defs>
+    <!-- Background rounded rectangle -->
+    <rect x="5" y="5" width="636" height="240" rx="36" ry="36" fill="#000000" stroke="#A6A6A6" stroke-width="4"/>
+
+    <!-- Google Play Triangle Icon -->
+    <g transform="translate(5, 0)">
+        <!-- Cyan/Blue left segment -->
+        <path d="M 62,63 C 57,68 54,76 54,85 L 54,165 C 54,174 57,182 62,187 L 124,125 Z" fill="url(#cyanGrad)"/>
+        <!-- Green top segment -->
+        <path d="M 124,125 L 62,63 C 67,58 75,56 84,61 L 150,99 Z" fill="url(#greenGrad)"/>
+        <!-- Yellow right apex segment -->
+        <path d="M 124,125 L 150,99 L 168,109 C 176,114 180,121 176,129 C 174,133 171,137 168,141 L 150,151 Z" fill="url(#yellowGrad)"/>
+        <!-- Red bottom segment -->
+        <path d="M 124,125 L 150,151 L 84,189 C 75,194 67,192 62,187 Z" fill="url(#redGrad)"/>
+    </g>
+
+    <!-- Typography -->
+    <text x="212" y="92" fill="#FFFFFF" font-family="'Google Sans', 'Roboto', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="34" font-weight="500" letter-spacing="3.2">GET IT ON</text>
+    <text x="212" y="174" fill="#FFFFFF" font-family="'Google Sans', 'Product Sans', 'Roboto', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="76" font-weight="700" letter-spacing="0.5">Google Play</text>
+</svg>

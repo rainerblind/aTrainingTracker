@@ -3,7 +3,7 @@
 **Domain**: `project_governance`  
 **Prefixes**: `STP`  
 **Scope**: Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance.  
-**Total Tests**: 4
+**Total Tests**: 5
 
 ---
 
@@ -43,3 +43,16 @@
   1. Capture high-resolution $1080 \times 2424$ screenshots via ADB from connected Pixel 10 hardware.
   2. Verify images cover Cockpit, Sensor Matrix, Live Map, Lieblingsstrecken, Physiology/PMC, and Periods 2.0 in Light and AMOLED Dark modes.
   3. Confirm images are saved in `docs/store_presence/screenshots/` and reflected in `images/Screenshots/`.
+
+### TST-STP-005: README Play Store Badge Asset, Link Integrity & Navigation Contract Test [Verified]
+- **Requirement(s)**: `REQ-STP-005`
+- **Component**: `README.md`, `images/google-play-badge.svg`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReadmePlayStoreBadgeContractTest.kt`
+- **Jira**: `ATT-2371`
+- **Test Description**:
+  1. Execute JUnit 4 contract test `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.ReadmePlayStoreBadgeContractTest"`.
+  2. Test verifies that root `README.md` exists and contains a markdown or HTML image link referencing `images/google-play-badge.svg`.
+  3. Test verifies that the Play Store badge links directly to `https://play.google.com/store/apps/details?id=com.atrainingtracker` (and asserts absence of the erroneous `.trainingtracker` package suffix).
+  4. Test verifies that `images/google-play-badge.svg` exists locally and contains valid XML root `<svg` and Google Play branding text.
+  5. Test verifies that `images/logo_512.png` is embedded in `README.md` and exists on disk.
+  6. Test verifies that `README.md` contains valid relative links to `docs/index.md`, `docs/guide/en/index.md`, and `docs/guide/de/index.md`, and that all target files exist on disk.
+  7. Ensure 100% pass rate in CI.
