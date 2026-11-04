@@ -18,7 +18,27 @@
 
 package com.atrainingtracker.banalservice.devices
 
+import android.content.Context
+import android.content.Intent
+import androidx.core.content.ContextCompat
+import com.atrainingtracker.banalservice.BANALService
+import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
+import com.atrainingtracker.banalservice.filters.FilterData
+import com.atrainingtracker.banalservice.filters.FilterManager
+import com.atrainingtracker.banalservice.filters.FilterType
+import com.atrainingtracker.banalservice.filters.FilteredSensorData
+import com.atrainingtracker.banalservice.sensor.MyDoubleAccumulatorSensor
+import com.atrainingtracker.banalservice.sensor.MySensor
+import com.atrainingtracker.banalservice.sensor.MySensorManager
+import com.atrainingtracker.banalservice.sensor.ProxySensor
+import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
+import io.mockk.*
+import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 
 /**
@@ -28,6 +48,12 @@ import org.junit.Test
 class VerticalSpeedAndSlopeDeviceTest {
 
     private val windowSize = VerticalSpeedAndSlopeDevice.VAM_WINDOW_SIZE // 15
+
+    @After
+    fun tearDown() {
+        BANALService.setFilterManager(null)
+        unmockkAll()
+    }
 
     @Test
     fun testCalculateLinearRegressionSlope_withLinearRamp_computesExactSlope() {
@@ -222,5 +248,154 @@ class VerticalSpeedAndSlopeDeviceTest {
         // Calling 5-param overload delegates to accuracy = 0.0m
         val vam = VerticalSpeedAndSlopeDevice.calculateVam(history, windowSize, 0, 5.0, 0.5)
         assertEquals(800, vam)
+    }
+
+    /**
+     * TST-FIL-004.4: Replicates Workout #455 trace (GPS 492.0m -> DEM 438.0m at standstill,
+     * followed by first 20m movement) and asserts that re-seeding eliminates the +22.5m DESCENT
+     * jump and -59% SLOPE spike (REQ-FIL-012.5, ATT-5373).
+     */
+    @Test
+    fun testStandstillAltitudeSourceTransition_suppressesDescentAndSlopeArtifacts() {
+        mockkConstructor(Intent::class)
+        every { anyConstructed<Intent>().setPackage(any()) } answers { self as Intent }
+
+        mockkStatic(ContextCompat::class)
+        every { ContextCompat.registerReceiver(any(), any(), any(), any()) } returns null
+
+        mockkStatic(DevicesDatabaseManager::class)
+        val mockDevicesDb = mockk<DevicesDatabaseManager>(relaxed = true)
+        every { DevicesDatabaseManager.getInstance(any()) } returns mockDevicesDb
+
+        val mockFilterManager = mockk<FilterManager>()
+        BANALService.setFilterManager(mockFilterManager)
+        every { mockFilterManager.createFilter(any()) } returns Unit
+        every { mockFilterManager.shiftFilter(any(), any()) } returns Unit
+
+        var altitudeFilterVal = 492.0
+        var altitudeSuperFilterVal = 492.0
+        var speedFilterVal = 0.0
+
+        every { mockFilterManager.getFilteredSensorData(any()) } answers {
+            val fd = firstArg<FilterData>()
+            if (fd.sensorType == SensorType.ALTITUDE) {
+                if (fd.filterConstant == 21.0) {
+                    FilteredSensorData(SensorType.ALTITUDE, altitudeFilterVal, "$altitudeFilterVal m", null, FilterType.MOVING_AVERAGE_TIME, 21.0)
+                } else {
+                    FilteredSensorData(SensorType.ALTITUDE, altitudeSuperFilterVal, "$altitudeSuperFilterVal m", null, FilterType.MOVING_AVERAGE_TIME, 300.0)
+                }
+            } else if (fd.sensorType == SensorType.SPEED_mps) {
+                FilteredSensorData(SensorType.SPEED_mps, speedFilterVal, "$speedFilterVal km/h", null, FilterType.MOVING_AVERAGE_TIME, 21.0)
+            } else {
+                FilteredSensorData(SensorType.ACCURACY, 5.0, "5 m", null, FilterType.INSTANTANEOUS, 1.0)
+            }
+        }
+        every { mockFilterManager.reseedFilter(any(), any()) } answers {
+            val fd = firstArg<FilterData>()
+            val num = secondArg<Number>().toDouble()
+            if (fd.filterConstant == 21.0) {
+                altitudeFilterVal = num
+            } else if (fd.filterConstant == 300.0) {
+                altitudeSuperFilterVal = num
+            }
+        }
+
+        mockkStatic(TrainingApplication::class)
+        every { TrainingApplication.isPaused() } returns false
+        every { TrainingApplication.isAutoPaused() } returns false
+
+        mockkStatic(SettingsDataStoreJavaHelper::class)
+        every { SettingsDataStoreJavaHelper.getSlopeMinSpeed(any()) } returns 0.5f
+
+        val mockContext = mockk<Context>(relaxed = true)
+        val mockSensorManager = mockk<MySensorManager>(relaxed = true)
+
+        // GPS Device emitting 492.0m WGS84 ellipsoid height
+        val gpsDevice = mockk<MyDevice>(relaxed = true)
+        every { gpsDevice.name } returns "SpeedAndLocationDevice (GPS)"
+        val gpsSensor = mockk<MySensor<Number>>(relaxed = true)
+        every { gpsSensor.device } returns gpsDevice
+        every { gpsSensor.value } returns 492.0
+
+        val proxySensor = mockk<ProxySensor<Number>>(relaxed = true)
+        every { proxySensor.bestSensor } returns gpsSensor
+        every { mockSensorManager.getSensor(SensorType.ALTITUDE) } returns proxySensor
+
+        val device = VerticalSpeedAndSlopeDevice(mockContext, mockSensorManager, false)
+
+        // Second 1 & 2: Standstill with GPS (492.0m)
+        device.calculateMetrics()
+        assertEquals(gpsDevice, device.lastAltitudeSourceDevice)
+
+        device.calculateMetrics()
+        assertEquals("Descent during GPS warmup must be 0.0m", 0.0, (device.descentSensor.value as Number).toDouble(), 0.001)
+
+        // Second 3: Standstill (distance = 0.0m) - DEM elevation arrives (438.0m, a -54.0m geoid undulation drop!)
+        val demDevice = mockk<MyDevice>(relaxed = true)
+        every { demDevice.name } returns "AltitudeFromPositionDevice"
+        val demSensor = mockk<MySensor<Number>>(relaxed = true)
+        every { demSensor.device } returns demDevice
+        every { demSensor.value } returns 438.0
+        every { proxySensor.bestSensor } returns demSensor
+
+        device.calculateMetrics()
+
+        assertEquals("Source device must transition to DEM device", demDevice, device.lastAltitudeSourceDevice)
+        assertEquals("Super-filtered reference must be reseeded to DEM altitude (438.0m)", 438.0, device.lastAltitudeSuperFiltered, 0.001)
+        assertEquals("Descent must remain strictly 0.0m upon DEM transition at standstill", 0.0, (device.descentSensor.value as Number).toDouble(), 0.001)
+        assertEquals("Vertical speed must remain 0 m/h upon DEM transition at standstill", 0, (device.verticalSpeedSensor.value as Number).toInt())
+
+        // Seconds 11 to 16: Athlete starts riding (speed = 4.0 m/s > minSpeed 0.5 m/s) on flat/gentle DEM terrain
+        speedFilterVal = 4.0
+        for (sec in 11..16) {
+            altitudeFilterVal = 438.0 + (sec - 10) * 0.05
+            altitudeSuperFilterVal = 438.0 + (sec - 10) * 0.02
+            device.calculateMetrics()
+            val slope = (device.slopeSensor.value as Number).toInt()
+            assertTrue("Slope must not jump to negative anomaly like -59% (actual: $slope%)", slope >= -5)
+        }
+
+        assertEquals("Total descent must remain strictly 0.0m throughout initial riding", 0.0, (device.descentSensor.value as Number).toDouble(), 0.001)
+
+        device.shutDown()
+        unmockkAll()
+    }
+
+    /**
+     * TST-FIL-004.5: Verifies that ALTITUDE_CORRECTION_INTENT uniformly shifts super-filtered altitude
+     * and delegates shiftFilter to BANALService for both filters (REQ-FIL-012.6, ATT-5373).
+     */
+    @Test
+    fun testAltitudeCorrectionIntent_shiftsFiltersAndSuperFilteredAltitude() {
+        mockkConstructor(Intent::class)
+        every { anyConstructed<Intent>().setPackage(any()) } answers { self as Intent }
+
+        mockkStatic(ContextCompat::class)
+        every { ContextCompat.registerReceiver(any(), any(), any(), any()) } returns null
+
+        mockkStatic(DevicesDatabaseManager::class)
+        val mockDevicesDb = mockk<DevicesDatabaseManager>(relaxed = true)
+        every { DevicesDatabaseManager.getInstance(any()) } returns mockDevicesDb
+
+        val mockFilterManager = mockk<FilterManager>(relaxed = true)
+        BANALService.setFilterManager(mockFilterManager)
+
+        val mockContext = mockk<Context>(relaxed = true)
+        val mockSensorManager = mockk<MySensorManager>(relaxed = true)
+
+        val device = VerticalSpeedAndSlopeDevice(mockContext, mockSensorManager, false)
+        device.lastAltitudeSuperFiltered = 500.0
+
+        val intent = mockk<Intent>()
+        every { intent.getDoubleExtra(AltitudeFromPressureDevice.ALTITUDE_CORRECTION_VALUE, 0.0) } returns 25.0
+
+        device.altitudeCorrectionReceiver.onReceive(mockContext, intent)
+
+        assertEquals("Super-filtered altitude must shift by +25.0m", 525.0, device.lastAltitudeSuperFiltered, 0.001)
+        verify(exactly = 1) { mockFilterManager.shiftFilter(match { it.filterConstant == 21.0 }, 25.0) }
+        verify(exactly = 1) { mockFilterManager.shiftFilter(match { it.filterConstant == 300.0 }, 25.0) }
+
+        device.shutDown()
+        unmockkAll()
     }
 }

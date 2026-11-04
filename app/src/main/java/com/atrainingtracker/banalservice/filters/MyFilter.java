@@ -52,4 +52,27 @@ public abstract class MyFilter<T>
     public void reset() {
         // Default no-op for stateless filters (e.g. InstantaneousFilter)
     }
+
+    /**
+     * Shifts buffered values uniformly by delta (REQ-FIL-012.6, ATT-5373).
+     * Default implementation is a no-op for filters that do not support translation.
+     *
+     * @param delta the offset to add to existing samples.
+     */
+    public void shiftValues(double delta) {
+        // Default no-op
+    }
+
+    /**
+     * Reseeds filter state with a single baseline value (REQ-FIL-012.5, ATT-5373).
+     * Default implementation calls reset() and newValue(value).
+     *
+     * @param value the new baseline sample.
+     */
+    public void reseed(Number value) {
+        reset();
+        if (value != null) {
+            newValue((T) value);
+        }
+    }
 }
