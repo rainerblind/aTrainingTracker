@@ -271,6 +271,39 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
     }
 
     /**
+     * Returns an instantaneous snapshot of currently paired devices (REQ-SET-083).
+     */
+    fun getPairedDevices(): List<DeviceUiData> {
+        return _allDevices.value.filter { it.isPaired }
+    }
+
+    /**
+     * Returns the count of currently paired devices (REQ-SET-083).
+     */
+    fun getPairedDevicesCount(): Int {
+        return _allDevices.value.count { it.isPaired }
+    }
+
+    /**
+     * Atomically swaps pairing state between an existing paired device and a newly requested candidate (REQ-SET-084).
+     *
+     * @param unpairDeviceId Device to be unpaired.
+     * @param pairDeviceId Device to be paired.
+     */
+    suspend fun swapPairedDevice(unpairDeviceId: Long, pairDeviceId: Long) {
+        withContext(ioDispatcher) {
+            val unpairDevice = getDeviceSnapshotById(unpairDeviceId)
+            val pairDevice = getDeviceSnapshotById(pairDeviceId)
+            if (unpairDevice != null && unpairDevice.isPaired) {
+                updateDevice(unpairDevice.copy(isPaired = false))
+            }
+            if (pairDevice != null && !pairDevice.isPaired) {
+                updateDevice(pairDevice.copy(isPaired = true))
+            }
+        }
+    }
+
+    /**
      * A helper function to create a ContentValues object containing only the fields that have changed.
      */
     private fun createContentValuesForUpdate(original: DeviceUiData, final: DeviceUiData): ContentValues {

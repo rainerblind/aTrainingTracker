@@ -122,7 +122,7 @@ class NavigationDrawerStateTest {
         assertEquals(R.drawable.ic_equipment_combined, equipmentItem.iconRes)
         assertEquals(R.string.equipment_management_title, equipmentItem.titleRes)
 
-        // Verify Settings ordering: Units, Display, Tracking Layouts, Sport Types, Auto-Pause, Backup & Restore, Tips & Tricks, Privacy Policy, Advanced Tuning (REQ-UI-422.2, REQ-UI-432, REQ-SET-080.1 / ATT-4836)
+        // Verify Settings ordering: Units, Display, Tracking Layouts, Sport Types, Auto-Pause, Backup & Restore, Tips & Tricks, Supporter, Privacy Policy, Advanced Tuning (REQ-UI-422.2, REQ-UI-432, REQ-SET-080.1 / ATT-4836, REQ-SET-086.3 / ATT-51)
         val settingsIds = settingsGroup.items.map { it.id }
         assertEquals(
             listOf(
@@ -133,6 +133,7 @@ class NavigationDrawerStateTest {
                 R.id.drawer_auto_pause,
                 R.id.drawer_backup_restore,
                 R.id.drawer_tips_guide,
+                R.id.drawer_supporter,
                 R.id.drawer_privacy_policy,
                 R.id.drawer_advanced_tuning
             ),
@@ -148,14 +149,18 @@ class NavigationDrawerStateTest {
         assertEquals(R.drawable.ic_tips_and_updates, tipsGuideItem.iconRes)
         assertEquals(R.string.drawer_tips_guide, tipsGuideItem.titleRes)
 
+        val supporterItem = settingsGroup.items.first { it.id == R.id.drawer_supporter }
+        assertEquals(R.drawable.ic_crown, supporterItem.iconRes)
+        assertEquals(R.string.drawer_supporter, supporterItem.titleRes)
+
         // Verify default visible destination items across non-collapsible groups = 9 (4 + 5) (REQ-UI-405.3, REQ-UI-422.5)
         val defaultVisibleCount = groups.filter { !it.collapsible }.sumOf { it.items.size }
         assertEquals("Default visible destination items when secondary groups are collapsed must be 9", 9, defaultVisibleCount)
 
         val allItems = groups.flatMap { it.items.map { item -> item.id } }
-        // 24 items since ATT-4836 added drawer_auto_pause to the Settings group
-        assertEquals("Navigation drawer must contain 24 total items across 5 groups", 24, allItems.size)
-        assertEquals("All 24 navigation items must have distinct IDs", 24, allItems.toSet().size)
+        // 25 items since ATT-51 added drawer_supporter to the Settings group
+        assertEquals("Navigation drawer must contain 25 total items across 5 groups", 25, allItems.size)
+        assertEquals("All 25 navigation items must have distinct IDs", 25, allItems.toSet().size)
         org.junit.Assert.assertFalse(
             "drawer_search_settings must be removed from drawer destinations",
             allItems.contains(R.id.drawer_search_settings)

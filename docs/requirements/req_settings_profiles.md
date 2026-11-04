@@ -1,9 +1,9 @@
 # Living Requirements: Settings, Profiles & Localization
 
 **Domain**: `settings_profiles`  
-**Prefixes**: `LOC`, `PRI`, `SET`  
-**Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, and 9-locale parity.  
-**Total Requirements**: 83
+**Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
+**Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
+**Total Requirements**: 88
 
 ---
 
@@ -1328,3 +1328,126 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • *Then* persistence SHALL fail with an `IllegalArgumentException` and the UI SHALL surface a localized validation error.
 
 **Invariants**: Monotonicity ($Z_1 < Z_2 < \dots < Z_n$) is strictly enforced; `SettingsDataStore` remains synchronized with the latest snapshot; live cockpit $O(1)$ latency is preserved; `AthleteMetrics.db` migration maintains `onCreate`/`onUpgrade` parity.
+
+### REQ-SET-083: Two-Device Free Tier Limit Across All Sensor Protocols (REQ-MON-001) [Verified]
+- **Tests**: `TST-SET-083` | **Tickets**: `ATT-51`
+- **Implementation**: `DevicesDatabaseManager.java`, `DeviceListViewModel.kt`, `ProFeatureManager.kt`
+- **Rationale**: Establish a fair, transparent monetization model that supports hardware acquisition while keeping 100% of core tracking, telemetry processing, and local file exports free.
+- **Description**:
+1. *Uniform 2-Device Free Limit (`REQ-SET-083.1`)*:
+• In the Free tier (`!isProActive()`), athletes SHALL be permitted to pair at most `MAX_FREE_PAIRED_DEVICES = 2` devices simultaneously.
+• This limit applies uniformly across ALL supported device protocols: `SMARTPHONE` (internal sensors), `BLUETOOTH_LE`, and `ANT_PLUS`.
+2. *Fresh Installation Pairing Baseline (`REQ-SET-083.2`)*:
+• Upon initial installation or database creation, exactly two devices SHALL be paired by default:
+  - `SPEED_AND_LOCATION_GPS` (internal GPS)
+  - `ALTITUDE_FROM_PRESSURE` (internal barometer, if hardware present)
+• `SPEED_AND_LOCATION_GOOGLE_FUSED` and `SPEED_AND_LOCATION_NETWORK` SHALL be initialized as unpaired (`isPaired = false`), reserving the 2/2 baseline slots cleanly.
+3. *Unrestricted Core Functionality (`REQ-SET-083.3`)*:
+• Workout recording, sensor telemetry display, elevation profiles, interactive maps, and file export (GPX, TCX, FIT) SHALL remain 100% free and unmonetized.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a fresh application install on a phone with GPS and barometer,
+• *When* the database is initialized,
+• *Then* exactly 2 devices (`GPS` and `ALTITUDE_FROM_PRESSURE`) are paired, and `getPairedDevicesCount()` equals 2.
+• *Given* an athlete in the Free tier with 2 paired devices attempting to pair a 3rd device,
+• *When* the pairing switch is toggled,
+• *Then* pairing SHALL be intercepted and the Swap-or-Upgrade dialog SHALL be triggered.
+
+**Invariants**: Core tracking, telemetry processing, local file exports, and database pairing persistence across app updates MUST NOT be compromised.
+
+### REQ-SET-084: One-Tap Swap-or-Upgrade Dialog on 3rd Paired Device (REQ-MON-002) [Verified]
+- **Tests**: `TST-SET-084` | **Tickets**: `ATT-51`
+- **Implementation**: `DeviceListViewModel.kt`, `SwapOrUpgradeDialog.kt`
+- **Rationale**: Ensure athletes are never blocked by a hard paywall when adding sensors. When attempting to pair a 3rd device in Free tier, athletes can easily unpair a currently active device with a single tap or upgrade to Pro via "Pay what you want".
+- **Description**:
+1. *Quota Interception (`REQ-SET-084.1`)*:
+• When a Free tier athlete (`!isProActive()`) attempts to pair a device that would increase total paired devices beyond `MAX_FREE_PAIRED_DEVICES = 2`, `DeviceListViewModel` SHALL intercept the action and display `SwapOrUpgradeDialog` without changing database pairing state.
+2. *Smart Recommendation Preselection (`REQ-SET-084.2`)*:
+• The dialog SHALL present currently paired devices for 1-tap unpairing, preselecting `ALTITUDE_FROM_PRESSURE` for outdoor profiles (preserving GPS) and `SPEED_AND_LOCATION_GPS` for indoor profiles.
+3. *Atomic Swap Execution (`REQ-SET-084.3`)*:
+• Tapping "Swap" SHALL unpair the selected existing device and pair the new candidate device in a single database operation, maintaining total paired devices $\le 2$.
+4. *Direct Upgrade Path (`REQ-SET-084.4`)*:
+• The dialog SHALL offer a prominent "Unlock Unlimited Sensors (Pay What You Want)" action navigating directly to `SupporterScreen`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a Free tier athlete with 2 paired devices attempting to pair a heart rate monitor,
+• *When* the toggle is clicked,
+• *Then* the Swap-or-Upgrade dialog appears showing currently paired devices and the "Unlock Unlimited Sensors" button.
+• *Given* the Swap dialog with `ALTITUDE_FROM_PRESSURE` preselected,
+• *When* the athlete taps "Swap & Pair",
+• *Then* `ALTITUDE_FROM_PRESSURE` is unpaired, the heart rate monitor is paired, and total paired devices equals 2.
+
+**Invariants**: No unexpected unpairing without user confirmation; 1-tap swap must execute atomically.
+
+### REQ-SET-085: Lifetime Pioneer Early Adopter Recognition via Historical Cutoff (REQ-MON-003) [Verified]
+- **Tests**: `TST-SET-085` | **Tickets**: `ATT-51`
+- **Implementation**: `WorkoutSummariesDatabaseManager.java`, `SettingsDataStore.kt`, `ProFeatureManager.kt`
+- **Rationale**: Honor existing loyal athletes who tracked workouts prior to V5.0.0 by granting them permanent, lifetime Pro privileges without payment.
+- **Description**:
+1. *Cutoff Timestamp Evaluation (`REQ-SET-085.1`)*:
+• The system SHALL define `PIONEER_CUTOFF_TIMESTAMP = "2026-11-30 23:59:59"` (UTC / SQLite standard datetime).
+• `WorkoutSummariesDatabaseManager.hasWorkoutBefore(cutoffTimestamp)` SHALL query `WorkoutSummaries` for `COUNT(*) > 0` with `TIME_START <= PIONEER_CUTOFF_TIMESTAMP`.
+2. *Permanent Lifetime Flag Persistence (`REQ-SET-085.2`)*:
+• If at least one historical workout exists before the cutoff timestamp, `SettingsDataStore` SHALL persist `isPioneerEarlyAdopter = true`. Once true, this flag is permanent and irrevocable.
+3. *Pioneer Privileges & Badge (`REQ-SET-085.3`)*:
+• Pioneer athletes SHALL have `isProActive() == true` with unlimited device pairing, a lifetime Pioneer badge (`★ PIONEER ★`) in navigation drawer and settings, and voluntary access to Supporter tiers.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a database containing a workout recorded on or before `2026-11-30 23:59:59`,
+• *When* Pro status is evaluated,
+• *Then* `isPioneerEarlyAdopter` evaluates to `true`, `isProActive()` returns `true`, and unlimited device pairing is enabled.
+• *Given* a new user whose first workout is recorded on `2026-12-01 00:00:00` or later,
+• *When* Pro status is evaluated,
+• *Then* `isPioneerEarlyAdopter` evaluates to `false` and Free tier limits apply unless an active subscription exists.
+
+**Invariants**: Pioneer status cannot be revoked by app updates or database re-indexes; existing workouts remain unmodified.
+
+### REQ-SET-086: Five-Tier Google Play Supporter Subscriptions with Hardware Voting (REQ-MON-004) [Verified]
+- **Tests**: `TST-SET-086` | **Tickets**: `ATT-51`
+- **Implementation**: `SupporterScreen.kt`, `BillingClientLifecycle.kt`, `ProFeatureManager.kt`, `AppNavigationDrawer.kt`
+- **Rationale**: Offer transparent, flexible "Pay what you want" subscription tiers capped at max 100 € / year, allowing athletes to fund continuous development and vote for upcoming hardware integrations.
+- **Description**:
+1. *Subscription Product & 5 Base Plans (`REQ-SET-086.1`)*:
+• The system SHALL integrate Google Play Billing with product ID `att_supporter_sub` across 5 base plans:
+  - `bronze-monthly` (1 € / month) — Bronze Supporter
+  - `bronze-yearly` (10 € / year) — Bronze Supporter
+  - `silver-yearly` (25 € / year, Recommended) — Silver Supporter
+  - `gold-yearly` (50 € / year) — Gold Supporter
+  - `diamond-yearly` (100 € / year) — Diamond Sponsor
+2. *Hardware Voting Flow (`REQ-SET-086.2`)*:
+• `SupporterScreen` SHALL feature an interactive hardware voting selector allowing athletes to direct their support towards planned hardware: Bike-Radar (Garmin Varia), Running Power (Stryd), Smartwatch / WearOS, Pebble, or General Development.
+• Selection SHALL log a serverless Firebase Analytics event `hardware_vote` and pass `setObfuscatedProfileId("vote:<target>")` in `BillingFlowParams`.
+3. *Navigation & Drawer Presence (`REQ-SET-086.3`)*:
+• The Navigation Drawer SHALL display the active Supporter/Pioneer tier badge in `DrawerHeader` and provide a dedicated "Supporter / Pro" navigation destination.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete navigating to the Supporter screen,
+• *When* the screen renders,
+• *Then* 5 base plan cards are displayed in a clean responsive layout with `silver-yearly` highlighted as Recommended, along with hardware voting options.
+• *Given* a successful subscription purchase of `gold-yearly`,
+• *When* purchases are acknowledged,
+• *Then* `supporterTier` updates to `GOLD`, `isProActive()` returns `true`, and the Gold Supporter badge is displayed.
+
+**Invariants**: Google Play Billing purchase acknowledgment within 3 days; graceful offline fallback caching of verified purchases.
+
+### REQ-SET-087: Debug Supporter Tier Override & Pro Feature Manager Architecture (REQ-MON-005) [Verified]
+- **Tests**: `TST-SET-087` | **Tickets**: `ATT-51`
+- **Implementation**: `ProFeatureManager.kt`, `AdvancedTuningScreen.kt`, `SettingsDataStore.kt`
+- **Rationale**: Provide deterministic local and UI testing capabilities without requiring live Play Billing credentials, while maintaining strict release-build security invariants.
+- **Description**:
+1. *Unified ProFeatureManager (`REQ-SET-087.1`)*:
+• `ProFeatureManager` SHALL compute effective Pro status via priority order: `BuildConfig.DEBUG` Tier Override > Lifetime Pioneer Status > Active Google Play Subscription.
+• `isProActive()` SHALL return `true` if any tier $\ge$ `BRONZE` or `isPioneerEarlyAdopter == true`.
+2. *Debug Tier Override Selector (`REQ-SET-087.2`)*:
+• `AdvancedTuningScreen` SHALL expose a "Supporter Tier Override" dropdown/segmented selector offering options `[NONE, PIONEER, BRONZE, SILVER, GOLD, DIAMOND]`, strictly enclosed within `if (BuildConfig.DEBUG)` (Rule 22).
+• In release builds, `BuildConfig.DEBUG` override code SHALL be completely inert or compiled out, preventing unauthorized tier escalation.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a debug build of the app,
+• *When* the tester selects "SILVER" in the Advanced Tuning Supporter Tier Override,
+• *Then* `ProFeatureManager.effectiveTier` evaluates to `SILVER`, `isProActive()` returns `true`, and unlimited device pairing is enabled.
+• *Given* a release build,
+• *When* inspected,
+• *Then* the debug override control is absent from `AdvancedTuningScreen` and cannot be activated via UI.
+
+**Invariants**: Release builds must never permit arbitrary tier override; ProFeatureManager resolution must be thread-safe.

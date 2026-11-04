@@ -2227,4 +2227,30 @@
     <string name="itpms_low_pressure_reminder_title">Niskie ciśnienie w oponach</string>
     <string name="itpms_low_pressure_reminder_message">Obwód koła jest o %1$s poniżej wartości bazowej. Rozważ napompowanie opon.</string>
     <string name="itpms_alert_dismiss">Odrzuć</string>
+
+    <!-- Monetization, Supporter Model & Quota (ATT-51 / REQ-SET-083..087) -->
+    <string name="supporter_tier_free">Darmowy</string>
+    <string name="supporter_tier_pioneer">★ Pionier ★</string>
+    <string name="supporter_tier_bronze">Brązowy wspierający</string>
+    <string name="supporter_tier_silver">Srebrny wspierający</string>
+    <string name="supporter_tier_gold">Złoty wspierający</string>
+    <string name="supporter_tier_diamond">Sponsor diamentowy</string>
+    <string name="hardware_vote_bike_radar">Radar rowerowy (np. Garmin Varia)</string>
+    <string name="hardware_vote_running_power">Moc biegowa (np. Stryd / BLE)</string>
+    <string name="hardware_vote_smartwatch">Smartwatch / WearOS</string>
+    <string name="hardware_vote_pebble">Smartwatch Pebble</string>
+    <string name="hardware_vote_general">Ogólny ciągły rozwój</string>
+    <string name="supporter_screen_title">Płać ile chcesz</string>
+    <string name="supporter_screen_subtitle">Sfinansuj sprzęt testowy dla nowych czujników (radar, moc biegowa, smartwatch) i zachowaj aTrainingTracker w 100%% bez reklam.</string>
+    <string name="supporter_recommended_badge">Polecane</string>
+    <string name="hardware_vote_title">Jaką obsługę sprzętu chcesz w następnej kolejności?</string>
+    <string name="swap_dialog_title">Limit urządzeń (zajęte 2/2 darmowych miejsc)</string>
+    <string name="swap_dialog_select_device_to_unpair">Wybierz urządzenie do odłączenia:</string>
+    <string name="swap_dialog_message">W planie darmowym można sparować maksymalnie 2 urządzenia jednocześnie (np. GPS + barometr). Aby sparować „%1$s”, odłącz istniejące urządzenie lub odblokuj nielimitowane czujniki przez „Płać ile chcesz”.</string>
+    <string name="swap_dialog_action_swap">Zamień i sparuj</string>
+    <string name="swap_dialog_action_unlock">Odblokuj nielimitowane czujniki</string>
+    <string name="drawer_supporter">Wspierający i Pro</string>
+    <string name="pioneer_badge_label">★ Pionier (Od 2011) — Pełny dostęp odblokowany</string>
+    <string name="debug_supporter_override_title">Nadpisanie poziomu wspierającego (Debug)</string>
+    <string name="debug_supporter_override_subtitle">Symuluje poziomy licencji lokalnie bez poświadczeń Google Play Billing</string>
 </resources>

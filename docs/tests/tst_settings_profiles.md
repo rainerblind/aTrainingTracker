@@ -1,9 +1,9 @@
 # Living Test Specification: Settings, Profiles & Localization
 
 **Domain**: `settings_profiles`  
-**Prefixes**: `LOC`, `PRI`, `SET`  
-**Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, and 9-locale parity.  
-**Total Tests**: 69
+**Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
+**Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
+**Total Tests**: 75
 
 ---
 
@@ -839,3 +839,52 @@
   • Verify `TelemetryMetricGraph` and `MapDetailLayout` receive effective historical thresholds.
   5. *9-Language Localization & Format Specifier Parity Test (`TST-SET-082.5`, `TranslationParityTest.kt`)*:
   • Verify all zone history UI strings are present in all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with matching positional specifiers (`%1$s`).
+
+### TST-SET-083: **Two-Device Free Tier Quota Across All Sensor Protocols Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-083`
+- **Component**: `DevicesDatabaseManager.java`, `DeviceListViewModel.kt`, `ProFeatureManager.kt`
+- **Test Description**:
+1. Verify fresh install `addLocationDevicesToDb` sets `SPEED_AND_LOCATION_GPS` (paired=true), `SPEED_AND_LOCATION_GOOGLE_FUSED` (paired=false), `SPEED_AND_LOCATION_NETWORK` (paired=false), and `ALTITUDE_FROM_PRESSURE` (paired=true).
+2. Verify `DeviceListViewModel` counts total paired devices across all protocols and permits pairing up to 2 devices in Free tier.
+3. Assert pairing attempt for a 3rd device is blocked and intercepted in Free tier.
+
+### TST-SET-084: **One-Tap Swap-or-Upgrade Dialog Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-084`
+- **Component**: `DeviceListViewModel.kt`, `SwapOrUpgradeDialog.kt`
+- **Test Description**:
+1. Trigger pairing of a 3rd device in Free tier; verify `showSwapOrUpgradeDialog` state is set to true.
+2. Verify dialog displays candidate devices and preselects recommendation.
+3. Execute "Swap & Pair" action; assert atomic database update (unpair existing, pair new) and final paired count $\le 2$.
+4. Verify "Unlock Unlimited Sensors" button triggers navigation to `NavRoutes.SUPPORTER`.
+
+### TST-SET-085: **Lifetime Pioneer Early Adopter Recognition Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-085`
+- **Component**: `WorkoutSummariesDatabaseManager.java`, `SettingsDataStore.kt`, `ProFeatureManager.kt`
+- **Test Description**:
+1. Seed a workout before `2026-11-30 23:59:59`; verify `hasWorkoutBefore()` returns true and `isPioneerEarlyAdopter` is persisted as true.
+2. Seed a workout after `2026-11-30 23:59:59` with no prior workouts; verify `isPioneerEarlyAdopter` is false.
+3. Verify Pioneer status grants `isProActive() == true` and permits pairing $> 2$ devices.
+4. Verify Pioneer badge appears in UI and voluntary supporter upgrade is accessible.
+
+### TST-SET-086: **Five-Tier Google Play Supporter Subscriptions & Hardware Voting Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-086`
+- **Component**: `SupporterScreen.kt`, `BillingClientLifecycle.kt`, `ProFeatureManager.kt`, `AppNavigationDrawer.kt`
+- **Test Description**:
+1. Verify 5 base plan IDs (`bronze-monthly`, `bronze-yearly`, `silver-yearly`, `gold-yearly`, `diamond-yearly`) mapped to correct `SupporterTier` enums.
+2. Verify `silver-yearly` is visually highlighted as Recommended.
+3. Verify hardware voting chips update selected target and pass payload to billing/analytics.
+4. Verify drawer header reflects active supporter tier and drawer contains Supporter destination.
+
+### TST-SET-087: **Debug Supporter Tier Override & Pro Feature Manager Governance Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-087`
+- **Component**: `ProFeatureManager.kt`, `AdvancedTuningScreen.kt`, `SettingsDataStore.kt`
+- **Test Description**:
+1. In debug build, set `supporterTierOverride` to `BRONZE`, `SILVER`, `GOLD`, `DIAMOND`; verify `ProFeatureManager.effectiveTier` and `isProActive()` immediately reflect override.
+2. Verify setting override to `NONE` falls back to Pioneer or Subscription status.
+3. Verify `AdvancedTuningScreen` override control is conditionally compiled/rendered only when `BuildConfig.DEBUG == true`.
+
+### TST-LOC-001: **Monetization & Supporter 9-Language Localization Parity Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-083`, `REQ-SET-084`, `REQ-SET-085`, `REQ-SET-086`, `REQ-SET-087`
+- **Component**: `res/values*/strings.xml`, `TranslationParityTest.kt`
+- **Test Description**:
+1. Run `TranslationParityTest` verifying all 9 locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) have identical key sets and parameter specifiers for all new monetization strings.

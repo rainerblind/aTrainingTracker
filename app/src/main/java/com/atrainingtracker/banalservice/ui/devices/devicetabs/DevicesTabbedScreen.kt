@@ -75,6 +75,7 @@ fun DevicesTabbedScreen(
     initialTab: Int = 0,
     onCheckAntInstallation: () -> Unit = {},
     onNavigateToZones: ((initialTab: Int, promptReason: String?) -> Unit)? = null,
+    onNavigateToSupporter: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     LaunchedEffect(listViewModel) {
@@ -628,6 +629,25 @@ fun DevicesTabbedScreen(
             },
             onDismiss = {
                 tabViewModel.dismissZonePrompt()
+            }
+        )
+    }
+
+    // Swap-or-Upgrade Quota Dialog (REQ-SET-084)
+    val swapDialogEvent by listViewModel.swapOrUpgradeDialogEvent.collectAsState()
+    swapDialogEvent?.let { event ->
+        SwapOrUpgradeDialog(
+            candidateDevice = event.candidateDevice,
+            currentlyPairedDevices = event.currentlyPairedDevices,
+            recommendedUnpairDeviceId = event.recommendedUnpairDeviceId,
+            onSwapConfirmed = { unpairId, pairId ->
+                listViewModel.executeSwapAndPair(unpairId, pairId)
+            },
+            onNavigateToSupporter = {
+                onNavigateToSupporter?.invoke()
+            },
+            onDismiss = {
+                listViewModel.dismissSwapOrUpgradeDialog()
             }
         )
     }

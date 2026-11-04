@@ -70,6 +70,7 @@ class SingleActivityNavigationTest {
         assertEquals("backup_restore", NavRoutes.BACKUP_RESTORE)
         assertEquals("tips_guide", NavRoutes.TIPS_GUIDE)
         assertEquals("tracking_layouts", NavRoutes.TRACKING_LAYOUTS)
+        assertEquals("supporter", NavRoutes.SUPPORTER)
     }
 
     @Test
@@ -90,6 +91,7 @@ class SingleActivityNavigationTest {
         assertEquals(NavRoutes.BACKUP_RESTORE, NavRoutes.fromDrawerItemId(R.id.drawer_backup_restore))
         assertEquals(NavRoutes.ADVANCED_SETTINGS, NavRoutes.fromDrawerItemId(R.id.drawer_advanced_tuning))
         assertEquals(NavRoutes.TIPS_GUIDE, NavRoutes.fromDrawerItemId(R.id.drawer_tips_guide))
+        assertEquals(NavRoutes.SUPPORTER, NavRoutes.fromDrawerItemId(R.id.drawer_supporter))
 
         // Non-route items must return null
         assertNull(NavRoutes.fromDrawerItemId(R.id.drawer_strava))
@@ -121,6 +123,7 @@ class SingleActivityNavigationTest {
         assertEquals(R.id.drawer_advanced_tuning, NavRoutes.toDrawerItemId(NavRoutes.ADVANCED_SETTINGS))
         assertEquals(R.id.drawer_tips_guide, NavRoutes.toDrawerItemId(NavRoutes.TIPS_GUIDE))
         assertEquals(R.id.drawer_tracking_layouts, NavRoutes.toDrawerItemId(NavRoutes.TRACKING_LAYOUTS))
+        assertEquals(R.id.drawer_supporter, NavRoutes.toDrawerItemId(NavRoutes.SUPPORTER))
 
         // Unknown route falls back to start tracking
         assertEquals(R.id.drawer_start_tracking, NavRoutes.toDrawerItemId("unknown_route"))

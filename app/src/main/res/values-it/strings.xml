@@ -2226,4 +2226,30 @@
     <string name="itpms_low_pressure_reminder_title">Pressione pneumatici bassa</string>
     <string name="itpms_low_pressure_reminder_message">La circonferenza è inferiore del %1$s rispetto alla base. Gonfiare i pneumatici.</string>
     <string name="itpms_alert_dismiss">Ignora</string>
+
+    <!-- Monetization, Supporter Model & Quota (ATT-51 / REQ-SET-083..087) -->
+    <string name="supporter_tier_free">Gratuito</string>
+    <string name="supporter_tier_pioneer">★ Pioniere ★</string>
+    <string name="supporter_tier_bronze">Sostenitore Bronzo</string>
+    <string name="supporter_tier_silver">Sostenitore Argento</string>
+    <string name="supporter_tier_gold">Sostenitore Oro</string>
+    <string name="supporter_tier_diamond">Sponsor Diamante</string>
+    <string name="hardware_vote_bike_radar">Radar per bici (es. Garmin Varia)</string>
+    <string name="hardware_vote_running_power">Potenza di corsa (es. Stryd / BLE)</string>
+    <string name="hardware_vote_smartwatch">Smartwatch / WearOS</string>
+    <string name="hardware_vote_pebble">Smartwatch Pebble</string>
+    <string name="hardware_vote_general">Sviluppo continuo generale</string>
+    <string name="supporter_screen_title">Paga quanto vuoi</string>
+    <string name="supporter_screen_subtitle">Finanzia hardware di test per nuovi sensori (Radar, Running Power, Smartwatch) e mantieni aTrainingTracker 100%% senza pubblicità.</string>
+    <string name="supporter_recommended_badge">Consigliato</string>
+    <string name="hardware_vote_title">Quale supporto hardware desideri per il futuro?</string>
+    <string name="swap_dialog_title">Limite dispositivi (2/2 posti utilizzati)</string>
+    <string name="swap_dialog_select_device_to_unpair">Seleziona il dispositivo da dissociare:</string>
+    <string name="swap_dialog_message">Nel livello gratuito possono essere associati al massimo 2 dispositivi contemporaneamente (es. GPS + Barometro). Per associare \'%1$s\', deseleziona un dispositivo esistente o sblocca sensori illimitati con \'Paga quanto vuoi\'.</string>
+    <string name="swap_dialog_action_swap">Sostituisci &amp; associa</string>
+    <string name="swap_dialog_action_unlock">Sblocca sensori illimitati</string>
+    <string name="drawer_supporter">Sostenitore &amp; Pro</string>
+    <string name="pioneer_badge_label">★ Pioniere (Dal 2011) — Accesso completo sbloccato</string>
+    <string name="debug_supporter_override_title">Forzatura livello sostenitore (Debug)</string>
+    <string name="debug_supporter_override_subtitle">Simula i livelli di licenza localmente senza credenziali di Google Play Billing</string>
 </resources>

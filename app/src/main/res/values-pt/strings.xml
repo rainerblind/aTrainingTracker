@@ -2224,4 +2224,30 @@
     <string name="itpms_low_pressure_reminder_title">Pressão baixa dos pneus</string>
     <string name="itpms_low_pressure_reminder_message">A circunferência da roda está %1$s abaixo da base. Considere encher os pneus.</string>
     <string name="itpms_alert_dismiss">Dispensar</string>
+
+    <!-- Monetization, Supporter Model & Quota (ATT-51 / REQ-SET-083..087) -->
+    <string name="supporter_tier_free">Grátis</string>
+    <string name="supporter_tier_pioneer">★ Pioneiro ★</string>
+    <string name="supporter_tier_bronze">Apoiador Bronze</string>
+    <string name="supporter_tier_silver">Apoiador Prata</string>
+    <string name="supporter_tier_gold">Apoiador Ouro</string>
+    <string name="supporter_tier_diamond">Patrocinador Diamante</string>
+    <string name="hardware_vote_bike_radar">Radar de bicicleta (ex. Garmin Varia)</string>
+    <string name="hardware_vote_running_power">Potência de corrida (ex. Stryd / BLE)</string>
+    <string name="hardware_vote_smartwatch">Smartwatch / WearOS</string>
+    <string name="hardware_vote_pebble">Smartwatch Pebble</string>
+    <string name="hardware_vote_general">Desenvolvimento contínuo geral</string>
+    <string name="supporter_screen_title">Pague o quanto quiser</string>
+    <string name="supporter_screen_subtitle">Financie hardware de teste para novos sensores (Radar, Running Power, Smartwatch) e mantenha o aTrainingTracker 100%% sem anúncios.</string>
+    <string name="supporter_recommended_badge">Recomendado</string>
+    <string name="hardware_vote_title">Qual suporte de hardware você deseja a seguir?</string>
+    <string name="swap_dialog_title">Limite de dispositivos (2/2 vagas ocupadas)</string>
+    <string name="swap_dialog_select_device_to_unpair">Selecione o dispositivo a desemparelhar:</string>
+    <string name="swap_dialog_message">No plano gratuito, até 2 dispositivos podem ser pareados simultaneamente (ex. GPS + Barômetro). Para parear \'%1$s\', desemparelhe um dispositivo existente ou desbloqueie sensores ilimitados com \'Pague o quanto quiser\'.</string>
+    <string name="swap_dialog_action_swap">Trocar e parear</string>
+    <string name="swap_dialog_action_unlock">Desbloquear sensores ilimitados</string>
+    <string name="drawer_supporter">Apoiador e Pro</string>
+    <string name="pioneer_badge_label">★ Pioneiro (Desde 2011) — Acesso total desbloqueado</string>
+    <string name="debug_supporter_override_title">Substituição do nível de apoiador (Debug)</string>
+    <string name="debug_supporter_override_subtitle">Simula níveis de licença localmente sem credenciais do Google Play Billing</string>
 </resources>

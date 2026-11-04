@@ -206,7 +206,7 @@ class DevicesDatabaseManagerOrderingTest {
 
         assertEquals(2L, devices[1].first)
         assertEquals(DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED.name, devices[1].second)
-        assertEquals(1, devices[1].third)
+        assertEquals(0, devices[1].third) // PAIRED = false by default to reserve 2nd slot for Barometer (REQ-TRK-024.6, REQ-SET-083)
 
         assertEquals(3L, devices[2].first)
         assertEquals(DeviceType.SPEED_AND_LOCATION_NETWORK.name, devices[2].second)

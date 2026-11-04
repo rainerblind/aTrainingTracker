@@ -30,6 +30,8 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.preferencesDataStore
+import com.atrainingtracker.trainingtracker.monetization.SupporterTier
+import com.atrainingtracker.trainingtracker.monetization.SupporterTierOverride
 import com.atrainingtracker.trainingtracker.zones.ValidationResult
 import com.atrainingtracker.trainingtracker.zones.ZoneValidator
 import kotlinx.coroutines.CoroutineScope
@@ -207,6 +209,12 @@ class SettingsDataStore(
         // Zone Configuration Onboarding (ATT-3189, REQ-UI-374)
         val KEY_IS_HR_ZONES_CONFIGURED = booleanPreferencesKey("is_hr_zones_configured")
         val KEY_IS_PWR_ZONES_CONFIGURED = booleanPreferencesKey("is_pwr_zones_configured")
+
+        // Monetization & Supporter Models (ATT-51, REQ-SET-085, REQ-SET-086, REQ-SET-087)
+        val KEY_IS_PIONEER_EARLY_ADOPTER = booleanPreferencesKey("is_pioneer_early_adopter")
+        val KEY_SUPPORTER_TIER = stringPreferencesKey("supporter_tier")
+        val KEY_SUPPORTER_TIER_OVERRIDE = stringPreferencesKey("supporter_tier_override")
+        val KEY_HARDWARE_VOTE = stringPreferencesKey("hardware_vote")
 
         // Athlete Baselines (ATT-1289, REQ-TRK-019, ATT-3704, REQ-UI-391, ATT-3862, REQ-UI-399)
         val KEY_ATHLETE_WEIGHT_KG = floatPreferencesKey("athlete_weight_kg")
@@ -531,6 +539,70 @@ class SettingsDataStore(
     suspend fun setPwrZonesConfigured(configured: Boolean) {
         dataStore.edit { prefs ->
             prefs[KEY_IS_PWR_ZONES_CONFIGURED] = configured
+        }
+    }
+
+    // --- MONETIZATION & SUPPORTER ACCESSORS (ATT-51 / REQ-SET-085, REQ-SET-086, REQ-SET-087) ---
+
+    val isPioneerEarlyAdopter: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[KEY_IS_PIONEER_EARLY_ADOPTER] ?: false
+    }
+
+    suspend fun setIsPioneerEarlyAdopter(isPioneer: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[KEY_IS_PIONEER_EARLY_ADOPTER] = isPioneer
+        }
+    }
+
+    val supporterTier: Flow<SupporterTier> = dataStore.data.map { prefs ->
+        val raw = prefs[KEY_SUPPORTER_TIER]
+        if (raw != null) {
+            try {
+                SupporterTier.valueOf(raw)
+            } catch (e: IllegalArgumentException) {
+                SupporterTier.FREE
+            }
+        } else {
+            SupporterTier.FREE
+        }
+    }
+
+    suspend fun setSupporterTier(tier: SupporterTier) {
+        dataStore.edit { prefs ->
+            prefs[KEY_SUPPORTER_TIER] = tier.name
+        }
+    }
+
+    val supporterTierOverride: Flow<SupporterTierOverride> = dataStore.data.map { prefs ->
+        val raw = prefs[KEY_SUPPORTER_TIER_OVERRIDE]
+        if (raw != null) {
+            try {
+                SupporterTierOverride.valueOf(raw)
+            } catch (e: IllegalArgumentException) {
+                SupporterTierOverride.AUTO
+            }
+        } else {
+            SupporterTierOverride.AUTO
+        }
+    }
+
+    suspend fun setSupporterTierOverride(override: SupporterTierOverride) {
+        dataStore.edit { prefs ->
+            prefs[KEY_SUPPORTER_TIER_OVERRIDE] = override.name
+        }
+    }
+
+    val hardwareVote: Flow<String?> = dataStore.data.map { prefs ->
+        prefs[KEY_HARDWARE_VOTE]
+    }
+
+    suspend fun setHardwareVote(vote: String?) {
+        dataStore.edit { prefs ->
+            if (vote != null) {
+                prefs[KEY_HARDWARE_VOTE] = vote
+            } else {
+                prefs.remove(KEY_HARDWARE_VOTE)
+            }
         }
     }
 

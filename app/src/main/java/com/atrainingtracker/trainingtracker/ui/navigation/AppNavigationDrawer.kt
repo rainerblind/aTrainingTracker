@@ -49,6 +49,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -73,6 +74,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.monetization.ProFeatureManager
+import com.atrainingtracker.trainingtracker.monetization.SupporterTier
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.safePainterResource
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
@@ -231,6 +234,7 @@ fun createDrawerGroups(startTrackingTitleRes: Int): List<DrawerGroup> {
                 DrawerItemConfig(R.id.drawer_auto_pause, R.drawable.ic_pause_circle, R.string.auto_pause_title),
                 DrawerItemConfig(R.id.drawer_backup_restore, R.drawable.ic_save_to_disc, R.string.import_backup),
                 DrawerItemConfig(R.id.drawer_tips_guide, R.drawable.ic_tips_and_updates, R.string.drawer_tips_guide),
+                DrawerItemConfig(R.id.drawer_supporter, R.drawable.ic_crown, R.string.drawer_supporter),
                 DrawerItemConfig(R.id.drawer_privacy_policy, R.drawable.ic_privacy, R.string.privacy_policy),
                 DrawerItemConfig(R.id.drawer_advanced_tuning, R.drawable.ic_tune, R.string.advanced_tuning_title)
             )
@@ -342,12 +346,36 @@ fun DrawerHeader() {
                 contentScale = ContentScale.Fit
             )
             Spacer(modifier = Modifier.width(10.dp))
-            Text(
-                text = stringResource(id = R.string.TrainingTracker),
-                color = colorResource(id = R.color.my_blue),
-                fontSize = 21.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Column {
+                Text(
+                    text = stringResource(id = R.string.TrainingTracker),
+                    color = colorResource(id = R.color.my_blue),
+                    fontSize = 21.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                val proFeatureManager = remember(context) { ProFeatureManager.getInstance(context.applicationContext) }
+                val effectiveTier by proFeatureManager.effectiveTier.collectAsState()
+                if (effectiveTier.isPro) {
+                    val badgeText = if (effectiveTier == SupporterTier.PIONEER) {
+                        "★ PIONEER ★"
+                    } else {
+                        "★ ${stringResource(id = effectiveTier.titleRes)} ★"
+                    }
+                    Surface(
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        modifier = Modifier.padding(top = 2.dp)
+                    ) {
+                        Text(
+                            text = badgeText,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }
         }
     }
 }

@@ -931,6 +931,41 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     /**
+     * Stichtag timestamp for Pioneer Early Adopter eligibility: 2026-11-30 23:59:59 (ATT-51 / REQ-SET-085).
+     */
+    public static final String PIONEER_CUTOFF_TIMESTAMP = "2026-11-30 23:59:59";
+
+    /**
+     * Checks if at least one historical workout exists with start time on or before the specified cutoff timestamp (REQ-SET-085).
+     *
+     * @param cutoffTimestamp SQLite-compatible datetime string (e.g. "2026-11-30 23:59:59").
+     * @return true if at least one workout started before or at the cutoff.
+     */
+    public boolean hasWorkoutBefore(@NonNull String cutoffTimestamp) {
+        SQLiteDatabase db = getDatabase();
+        if (db == null || !db.isOpen()) {
+            return false;
+        }
+        String query = "SELECT COUNT(*) FROM " + WorkoutSummaries.TABLE
+                + " WHERE " + WorkoutSummaries.TIME_START + " <= ?";
+        try (Cursor cursor = db.rawQuery(query, new String[]{cutoffTimestamp})) {
+            if (cursor != null && cursor.moveToFirst()) {
+                return cursor.getInt(0) > 0;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error checking workout before cutoff: " + cutoffTimestamp, e);
+        }
+        return false;
+    }
+
+    /**
+     * Convenience method checking whether the athlete qualifies as a Pioneer Early Adopter (ATT-51 / REQ-SET-085).
+     */
+    public boolean hasPioneerEarlyAdopterWorkout() {
+        return hasWorkoutBefore(PIONEER_CUTOFF_TIMESTAMP);
+    }
+
+    /**
      * Checks if there is an unfinalized workout in the database (ATT-635).
      *
      * @return true if the most recent workout exists and has FINISHED == 0.

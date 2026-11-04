@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.runtime.collectAsState
 import androidx.core.content.ContextCompat
 import com.atrainingtracker.trainingtracker.ui.onboarding.permission.PermissionOnboardingSheet
+import com.atrainingtracker.trainingtracker.ui.settings.supporter.SupporterScreen
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.union
@@ -470,6 +471,9 @@ fun ATrainingTrackerApp(
                         initialTab = 2,
                         onNavigateToZones = { initialTab, promptReason ->
                             navController.navigate(NavRoutes.trainingZones(initialTab, promptReason))
+                        },
+                        onNavigateToSupporter = {
+                            navController.navigate(NavRoutes.SUPPORTER)
                         }
                     )
                 }
@@ -567,6 +571,12 @@ fun ATrainingTrackerApp(
                     )
                 }
 
+                composable(NavRoutes.SUPPORTER) {
+                    SupporterScreen(
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+
                 composable(NavRoutes.TIPS_GUIDE) {
                     TipsGuideScreen(
                         onNavigateBack = {
@@ -585,6 +595,7 @@ fun ATrainingTrackerApp(
                                 NavRoutes.SEGMENTS -> activity.navigateToDrawerItem(R.id.drawer_segments)
                                 NavRoutes.EQUIPMENT -> activity.navigateToDrawerItem(R.id.drawer_equipment)
                                 NavRoutes.BACKUP_RESTORE -> activity.navigateToDrawerItem(R.id.drawer_backup_restore)
+                                NavRoutes.SUPPORTER -> activity.navigateToDrawerItem(R.id.drawer_supporter)
                                 else -> navController.navigate(route)
                             }
                         }

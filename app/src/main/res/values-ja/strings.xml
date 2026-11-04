@@ -2205,4 +2205,30 @@
     <string name="itpms_low_pressure_reminder_title">タイヤ空気圧低下</string>
     <string name="itpms_low_pressure_reminder_message">タイヤ周長が基準値より %1$s 低下しています。空気を補充してください。</string>
     <string name="itpms_alert_dismiss">閉じる</string>
+
+    <!-- Monetization, Supporter Model & Quota (ATT-51 / REQ-SET-083..087) -->
+    <string name="supporter_tier_free">無料</string>
+    <string name="supporter_tier_pioneer">★ パイオニア ★</string>
+    <string name="supporter_tier_bronze">ブロンズサポーター</string>
+    <string name="supporter_tier_silver">シルバーサポーター</string>
+    <string name="supporter_tier_gold">ゴールドサポーター</string>
+    <string name="supporter_tier_diamond">ダイヤモンドスポンサー</string>
+    <string name="hardware_vote_bike_radar">バイクレーダー（Garmin Variaなど）</string>
+    <string name="hardware_vote_running_power">ランニングパワー（Stryd / BLEなど）</string>
+    <string name="hardware_vote_smartwatch">スマートウォッチ / WearOS</string>
+    <string name="hardware_vote_pebble">Pebbleスマートウォッチ</string>
+    <string name="hardware_vote_general">一般的な継続開発</string>
+    <string name="supporter_screen_title">お好みの価格で支援</string>
+    <string name="supporter_screen_subtitle">新しいセンサー（レーダー、ランニングパワー、スマートウォッチ）のテスト機器調達を支援し、完全広告なしを継続します。</string>
+    <string name="supporter_recommended_badge">おすすめ</string>
+    <string name="hardware_vote_title">次に希望するハードウェア対応はどれですか？</string>
+    <string name="swap_dialog_title">デバイス制限（無料枠2/2使用中）</string>
+    <string name="swap_dialog_select_device_to_unpair">ペアリング解除するデバイスを選択：</string>
+    <string name="swap_dialog_message">無料版では最大2台のデバイスを同時接続できます（例：GPS + 気圧計）。「%1$s」を接続するには、既存のデバイスを解除するか、「お好みの価格で支援」で無制限のセンサー接続を解除してください。</string>
+    <string name="swap_dialog_action_swap">入れ替えて接続</string>
+    <string name="swap_dialog_action_unlock">無制限センサーを解除</string>
+    <string name="drawer_supporter">サポーター＆Pro</string>
+    <string name="pioneer_badge_label">★ パイオニア（2011年より）— 全機能アンロック済み</string>
+    <string name="debug_supporter_override_title">サポーターティア上書き（デバッグ）</string>
+    <string name="debug_supporter_override_subtitle">Google Play Billing認証情報なしでローカルにライセンス層をシミュレート</string>
 </resources>

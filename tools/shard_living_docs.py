@@ -52,8 +52,8 @@ DOMAINS = [
         "title": "Settings, Profiles & Localization",
         "req_file": "docs/requirements/req_settings_profiles.md",
         "tst_file": "docs/tests/tst_settings_profiles.md",
-        "prefixes": {"SET", "PRI", "LOC"},
-        "desc": "Athlete settings, bike/sensor profiles, privacy zones, data stores, and 9-locale parity.",
+        "prefixes": {"SET", "PRI", "LOC", "MON"},
+        "desc": "Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.",
     },
     {
         "key": "ui_design_system",
