@@ -1392,7 +1392,7 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 3. *Dynamic Pioneer Year & Badge (`REQ-SET-085.3`)*:
 • Pioneer athletes SHALL have `isProActive() == true` with unlimited device pairing, a lifetime Pioneer badge in navigation drawer and settings, and voluntary access to Supporter tiers.
 • The system SHALL dynamically query the athlete's earliest workout year via `WorkoutSummariesDatabaseManager.getEarliestWorkoutYear()` (`SELECT MIN(timeStart)`).
-• When an earliest workout year is found, `SettingsDataStore` SHALL cache `pioneerSinceYear` and the system SHALL display `"★ Pioneer (Seit %1$d)"` / `"★ Pioneer (Since %1$d)"` across both `SupporterScreen` (`PioneerStatusBanner`) and `AppNavigationDrawer` (`DrawerHeader`).
+• When an earliest workout year is found, `SettingsDataStore` SHALL cache `pioneerSinceYear` and the system SHALL display `"★ Pioneer (Seit %1$d)"` / `"★ Pioneer (Since %1$d)"` on `SupporterScreen` (`PioneerStatusBanner`), while `AppNavigationDrawer` (`DrawerHeader`) preserves the original clean header layout and displays the Pioneer / Supporter app icon in the original full `46.dp` visual size (`scale = 1.81f`).
 • When no historical workout year exists, the badge SHALL cleanly fall back to `"★ Pioneer"`.
 
 **Acceptance Criteria (Given-When-Then)**:

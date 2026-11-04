@@ -59,6 +59,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
@@ -334,8 +335,20 @@ fun DrawerHeader() {
         }
         var showQuickPicker by remember { mutableStateOf(false) }
         val settingsDataStore = remember(context) { SettingsDataStore.getInstance(context.applicationContext) }
+        val proFeatureManager = remember(context) { ProFeatureManager.getInstance(context.applicationContext) }
+        val effectiveTier by proFeatureManager.effectiveTier.collectAsState()
+        val isPioneer by settingsDataStore.isPioneerEarlyAdopter.collectAsState(initial = false)
         val selectedIconId by settingsDataStore.selectedLauncherIcon.collectAsState(initial = "standard")
-        val activeVariant = LauncherIconVariant.fromId(selectedIconId)
+        val selectedVariant = LauncherIconVariant.fromId(selectedIconId)
+        val activeVariant = if (effectiveTier.isPro) {
+            if (selectedVariant != LauncherIconVariant.STANDARD && selectedVariant.isUnlocked(effectiveTier, isPioneer)) {
+                selectedVariant
+            } else {
+                LauncherIconVariant.fromTier(effectiveTier)
+            }
+        } else {
+            LauncherIconVariant.STANDARD
+        }
 
         Row(
             modifier = Modifier
@@ -345,64 +358,43 @@ fun DrawerHeader() {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Start
         ) {
-            Image(
-                painter = if (activeVariant == LauncherIconVariant.STANDARD) {
-                    safePainterResource(
-                        id = R.drawable.logo_512,
-                        fallback = Icons.AutoMirrored.Filled.DirectionsRun
-                    )
-                } else {
-                    safePainterResource(
-                        id = activeVariant.foregroundRes,
-                        fallback = Icons.AutoMirrored.Filled.DirectionsRun
-                    )
-                },
-                contentDescription = null,
+            Box(
                 modifier = Modifier.size(46.dp),
-                contentScale = ContentScale.Fit
-            )
-            Spacer(modifier = Modifier.width(10.dp))
-            Column {
-                Text(
-                    text = stringResource(id = R.string.TrainingTracker),
-                    color = colorResource(id = R.color.my_blue),
-                    fontSize = 21.sp,
-                    fontWeight = FontWeight.Bold
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = if (activeVariant == LauncherIconVariant.STANDARD) {
+                        safePainterResource(
+                            id = R.drawable.logo_512,
+                            fallback = Icons.AutoMirrored.Filled.DirectionsRun
+                        )
+                    } else {
+                        safePainterResource(
+                            id = activeVariant.foregroundRes,
+                            fallback = Icons.AutoMirrored.Filled.DirectionsRun
+                        )
+                    },
+                    contentDescription = null,
+                    modifier = if (activeVariant == LauncherIconVariant.STANDARD) {
+                        Modifier.size(46.dp)
+                    } else {
+                        Modifier
+                            .size(46.dp)
+                            .graphicsLayer {
+                                scaleX = 1.81f
+                                scaleY = 1.81f
+                            }
+                    },
+                    contentScale = ContentScale.Fit
                 )
-                val proFeatureManager = remember(context) { ProFeatureManager.getInstance(context.applicationContext) }
-                val effectiveTier by proFeatureManager.effectiveTier.collectAsState()
-                val pioneerSinceYear by proFeatureManager.pioneerSinceYear.collectAsState()
-                if (effectiveTier.isPro) {
-                    val year = pioneerSinceYear
-                    val badgeText = when (effectiveTier) {
-                        SupporterTier.DIAMOND -> stringResource(R.string.drawer_tier_diamond)
-                        SupporterTier.GOLD -> stringResource(R.string.drawer_tier_gold)
-                        SupporterTier.SILVER -> stringResource(R.string.drawer_tier_silver)
-                        SupporterTier.BRONZE -> stringResource(R.string.drawer_tier_bronze)
-                        SupporterTier.PIONEER -> if (year != null) {
-                            stringResource(R.string.drawer_tier_pioneer_with_year, year)
-                        } else {
-                            stringResource(R.string.drawer_tier_pioneer)
-                        }
-                        SupporterTier.FREE -> ""
-                    }
-                    if (badgeText.isNotEmpty()) {
-                        Surface(
-                            shape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            modifier = Modifier.padding(top = 2.dp)
-                        ) {
-                            Text(
-                                text = badgeText,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
-                    }
-                }
             }
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = stringResource(id = R.string.TrainingTracker),
+                color = colorResource(id = R.color.my_blue),
+                fontSize = 21.sp,
+                fontWeight = FontWeight.Bold
+            )
         }
 
         if (showQuickPicker) {

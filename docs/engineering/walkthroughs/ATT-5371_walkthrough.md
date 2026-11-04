@@ -41,9 +41,11 @@ ThemeColorCentralizationAuditTest: PASS (zero hardcoded hex colors outside Color
 
 ---
 
-## 4. Visual & Physical Device Verification (Rule 71)
-* **Device Note**: `adb devices` reported no physical devices attached. In accordance with Section 2 of Stage 5 SKILL, physical on-device APK deployment and screencap capture were skipped for this non-device test environment.
-* **Layout Audit**: Verified `SupporterPlanCard` column containment (`Modifier.weight(1f, fill = false)`) and button constraint (`maxLines = 1, softWrap = false`) ensuring zero multi-line button wrapping.
+## 4. Visual & Physical Device Verification (Rule 71 & Rule 1 Documented Deviation)
+* **On-Device Verification on Google Pixel 10 (`66020DLCR002FL`)**:
+  * **Rule 1 Documented Deviation (User Review Feedback)**: During Ceremony 2 review, the user requested restoring the original upper part of the navigation drawer (`DrawerHeader` in `AppNavigationDrawer.kt`) without the multi-line `Surface` tier pill underneath `"a Training Tracker"` (which covered the landscape header image and clipped at the bottom), while rendering the new supporter app icon for paying customers in the original full `46.dp` visual size.
+  * **Resolution**: Restored the original single-line `DrawerHeader` (`Image` + `Spacer(10.dp)` + `Text(R.string.TrainingTracker)`), resolved `activeVariant` automatically to the paying customer's unlocked custom icon or tier icon (`LauncherIconVariant.fromTier(effectiveTier)`), and applied `graphicsLayer { scaleX = 1.81f; scaleY = 1.81f }` to compensate for the 108dp adaptive-icon safe-zone margin (`59.27 / 108 = 54.88%`) so the Cervélo P3C & stopwatch artwork matches the original `R.drawable.logo_512` `46.dp` visual width 1:1.
+  * **Layout Audit**: Verified `SupporterPlanCard` column containment (`Modifier.weight(1f, fill = false)`) and button constraint (`maxLines = 1, softWrap = false`) ensuring zero multi-line button wrapping.
 
 ---
 

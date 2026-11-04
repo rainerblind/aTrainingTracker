@@ -7102,7 +7102,7 @@
   • Verify `SensorStatus.kt` renders the right-aligned 24dp emblem symmetrically balancing the 24dp menu button in Portrait and Landscape.
   • Verify `SupporterQuickIconPickerDialog.kt` renders icon preview items using `safePainterResource(id = variant.foregroundRes)` (or standard `R.drawable.logo_512`) and assert zero `<adaptive-icon>` `R.mipmap.*` XML references are passed to `painterResource` or `safePainterResource` (`Rule 71`).
   4. *Navigation Drawer Header & Share Watermark Contract Test (`TST-UI-445.4`)*:
-  • Verify `AppNavigationDrawer.DrawerHeader` renders the active custom Cervélo icon (46dp) and supporter tier pill.
+  • Verify `AppNavigationDrawer.DrawerHeader` preserves the original single-line header layout without a text pill below the title and renders the active custom Cervélo supporter icon at the original full 46dp visual size (`scale = 1.81f`).
   • Verify `ShareUtils.drawFooter` renders the Cervélo P3C icon, "Tracked with aTrainingTracker", and supporter tier pill.
   5. *9-Locale Localization Parity Test (`TST-LOC-001` / `TST-UI-445.5`)*:
   • Verify all newly added string resources for launcher icons, tier ribbons, and dialogs exist with 100% parity across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
