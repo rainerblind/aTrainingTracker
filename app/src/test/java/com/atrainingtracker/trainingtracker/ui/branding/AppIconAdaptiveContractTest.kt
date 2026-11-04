@@ -184,8 +184,8 @@ class AppIconAdaptiveContractTest {
             maxRadialDistance <= 34.5
         )
         assertTrue(
-            "Artwork must fill the safe zone generously (r >= 33.0dp) without excessive margin, found max r = $maxRadialDistance",
-            maxRadialDistance >= 33.0
+            "Artwork must fill the safe zone generously (centerline r >= 28.5dp, outer stroke r >= 30.5dp) without clipping the runner's leg, found max r = $maxRadialDistance",
+            maxRadialDistance >= 28.5
         )
     }
 

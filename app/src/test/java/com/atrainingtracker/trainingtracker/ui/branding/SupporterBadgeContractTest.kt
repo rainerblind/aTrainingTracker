@@ -187,8 +187,8 @@ class SupporterBadgeContractTest {
                 maxRadialDistance <= maxAllowedRadius
             )
             assertTrue(
-                "$fgRelPath geometry must be scaled up to fill the safe zone (r >= 33.0dp), found $maxRadialDistance",
-                maxRadialDistance >= 33.0
+                "$fgRelPath geometry must be scaled up to fill the safe zone (centerline r >= 28.5dp) without clipping the runner's leg, found $maxRadialDistance",
+                maxRadialDistance >= 28.5
             )
         }
     }

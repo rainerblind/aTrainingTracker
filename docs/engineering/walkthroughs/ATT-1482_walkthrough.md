@@ -9,9 +9,9 @@
 
 ## 1. Executive Summary & Sprint Revision Resolution
 Modernized the application launcher icon to Android Adaptive Icon standards (API 26+) and Material You themed icon support (`ic_launcher_monochrome.xml`), resolving all 5 Sprint 2026-45.4 Review rejection items:
-1. *Cyclist Hip & Spline Continuity*: Reconstructed `logo.fig:65` as smooth closed cubic Bézier curves (`C`/`c`) with round caps in royal blue (`#0000FF`, depth 50) covering the frame junction, eliminating angular kinks and black saddle protrusion artifacts. Saddle placed underneath at depth 53 (`#000000`).
-2. *Stopwatch Pusher Overlap*: Calibrated stems (`#FFC700`, strokeWidth 5.58) and button caps (`#000090`, `#FF0000`, `#009000`, strokeWidth 6.98) with coordinate overlap, eliminating all white gaps.
-3. *Safe-Zone Fill*: Calibrated vector geometry to $r = 33.97\text{dp}$ ($33.0 \le r \le 34.5\text{dp}$) on the 108dp canvas, filling launcher circle/squircle masks generously without clipping.
+1. *Cyclist Hip & Spline Continuity*: Reconstructed `logo.fig:65` as smooth closed degree-elevated quadratic-to-cubic B-spline curves (`C`) with authentic `logo.fig` `thickness = 4` (`ts(4)`) in royal blue (`#0000FF`, depth 50) covering the frame junction, eliminating angular kinks, lower-back humps, and black saddle protrusion artifacts. Saddle placed underneath at depth 53 (`#000000`).
+2. *Stopwatch Pusher Overlap*: Calibrated stems (`#FFC700`, `ts(40)`) and button caps (`#000090`, `#FF0000`, `#009000`, `ts(50)`) with coordinate overlap, eliminating all white gaps.
+3. *Safe-Zone Centering & Fill*: Centered at stroke-inclusive bounding center (`cx = 7080.0, cy = 1280.0, scale = 0.0086`, centerline $r = 29.19\text{dp}$, outer stroke $r = 30.99\text{dp}$) on the 108dp canvas so the runner's front leg has balanced ~`4.8dp` clearance inside both Circle and Squircle masks without clipping (verified via documented Rule 1 Ceremony 2 refinement).
 4. *Asset Preservation*: Restored full-bleed `res/drawable/logo_512.png` and `images/logo_512.png` matching `drawable-xxxhdpi/logo_512.png` (`sha256: f84c6251...`), preserving unpadded `AppNavigationDrawer.kt` rendering; created separate `images/play_store_icon_512.png`.
 5. *Rule 71 Compliance*: Stage 4 mathematical vector curve reconstruction executed by Pro model (`subagent_pro`).
 
