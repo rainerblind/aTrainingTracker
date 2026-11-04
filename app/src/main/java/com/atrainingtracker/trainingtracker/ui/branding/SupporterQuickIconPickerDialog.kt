@@ -31,9 +31,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DirectionsRun
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.AlertDialog
@@ -52,8 +54,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -61,6 +63,8 @@ import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.monetization.ProFeatureManager
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
+import com.atrainingtracker.trainingtracker.ui.theme.safePainterResource
 import kotlinx.coroutines.launch
 
 /**
@@ -166,11 +170,21 @@ private fun LauncherIconItemCard(
                 .padding(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Image(
-                painter = painterResource(id = variant.iconRes),
-                contentDescription = null,
-                modifier = Modifier.size(44.dp)
-            )
+            Surface(
+                modifier = Modifier.size(44.dp),
+                shape = CircleShape,
+                color = TTColor.SupporterIconPreviewContainer
+            ) {
+                Image(
+                    painter = safePainterResource(
+                        id = variant.foregroundRes,
+                        fallback = Icons.AutoMirrored.Filled.DirectionsRun
+                    ),
+                    contentDescription = null,
+                    modifier = Modifier.padding(2.dp),
+                    contentScale = ContentScale.Fit
+                )
+            }
 
             Spacer(modifier = Modifier.width(12.dp))
 

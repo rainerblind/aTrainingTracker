@@ -7089,18 +7089,18 @@
 ### TST-UI-445: **Supporter Badges: Custom Launcher Icons, Cockpit Status Emblem, Navigation Drawer & Share Watermark Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-445`
 - **Component**: `LauncherIconManagerTest.kt`, `SupporterBadgeContractTest.kt`, `SensorStatusTest.kt`, `AppNavigationDrawerTest.kt`, `ShareUtilsTest.kt`, `TranslationParityTest.kt`
-- **Jira**: `ATT-1406`
+- **Jira**: `ATT-1406`, `ATT-5372`
 - **Test Description**:
   1. *Adaptive Launcher Icon Safe-Zone & Brand Color Contract Test (`TST-UI-445.1`)*:
   • Parse all 6 foreground vector drawables (`ic_launcher_foreground.xml` and tier variants).
-  • Verify maximum radial distance from canvas center `(54, 54)` is $\le 33.0\text{dp}$ ($r \le 33$) for all path coordinates.
+  • Verify maximum radial distance from canvas center `(54, 54)` is $33.0 \le r \le 34.5\text{dp}$ for all path coordinates, and verify cubic Bézier curves (`C`/`c`) are present for smooth cyclist back/hip geometry.
   • Verify exact color token preservation: Cervélo P3C red frame (`#FF0000`), carbon wheels/saddle (`#000000`), golden bezel (`#FFC700`), pushers (`#000090`, `#FF0000`, `#009000`), and blue athletes (`#0000FF`).
   2. *Activity-Alias Manifest & Deferred Lifecycle Switching Test (`TST-UI-445.2`)*:
   • Verify `AndroidManifest.xml` declares 6 `<activity-alias>` entries targeting `MainActivityWithNavigation`, with default alias enabled.
   • Verify `LauncherIconManager` defers alias changes with `PackageManager.DONT_KILL_APP` during active foreground or tracking sessions (`isTracking == true`), executing component state transitions on `ProcessLifecycleOwner` `onStop`.
-  3. *Live Cockpit Status Emblem & Quick-Picker Contract Test (`TST-UI-445.3`)*:
+  3. *Live Cockpit Status Emblem & Crash-Free Quick-Picker Contract Test (`TST-UI-445.3` / `ATT-5372`)*:
   • Verify `SensorStatus.kt` renders the right-aligned 24dp emblem symmetrically balancing the 24dp menu button in Portrait and Landscape.
-  • Verify clicking the emblem triggers `SupporterQuickIconPickerDialog` displaying unlocked launcher icons according to active tier rank.
+  • Verify `SupporterQuickIconPickerDialog.kt` renders icon preview items using `safePainterResource(id = variant.foregroundRes)` (or standard `R.drawable.logo_512`) and assert zero `<adaptive-icon>` `R.mipmap.*` XML references are passed to `painterResource` or `safePainterResource` (`Rule 71`).
   4. *Navigation Drawer Header & Share Watermark Contract Test (`TST-UI-445.4`)*:
   • Verify `AppNavigationDrawer.DrawerHeader` renders the active custom Cervélo icon (46dp) and supporter tier pill.
   • Verify `ShareUtils.drawFooter` renders the Cervélo P3C icon, "Tracked with aTrainingTracker", and supporter tier pill.

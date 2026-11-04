@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
 """
-aTrainingTracker: Reconstructed Android Adaptive Icon Generator (REQ-UI-444 / ATT-1482)
+aTrainingTracker: Reconstructed Android Adaptive Icon Generator (REQ-UI-444 / ATT-1482 / ATT-1406)
 Converts master vector geometry from Bilder/logo.fig directly to:
-1. app/src/main/res/drawable/ic_launcher_foreground.xml (VectorDrawable, 108dp canvas, r ~ 34.0dp)
+1. app/src/main/res/drawable/ic_launcher_foreground.xml (Standard VectorDrawable, 108dp canvas, r ~ 34.0dp)
 2. app/src/main/res/drawable/ic_launcher_monochrome.xml (Single-color #000000 silhouette for Material You)
-3. images/play_store_icon_512.png (512x512 Play Store master icon with safe-zone padding)
-4. docs/engineering/walkthroughs/img/att1482_reconstructed_preview.png (Visual comparison preview)
+3. app/src/main/res/drawable/ic_launcher_foreground_pioneer.xml (Pioneer Edition Option A)
+4. app/src/main/res/drawable/ic_launcher_foreground_bronze.xml (Bronze Supporter Option A)
+5. app/src/main/res/drawable/ic_launcher_foreground_silver.xml (Silver Pro-Supporter Option A)
+6. app/src/main/res/drawable/ic_launcher_foreground_gold.xml (Gold Pro-Supporter Option A)
+7. app/src/main/res/drawable/ic_launcher_foreground_diamond.xml (Diamond Sponsor Option A)
+8. images/play_store_icon_512.png (512x512 Play Store master icon with safe-zone padding)
+9. docs/engineering/walkthroughs/img/att1482_reconstructed_preview.png (Visual comparison preview)
+10. docs/engineering/walkthroughs/img/att1406_reconstructed_tiers_preview.png (All 6 variants comparison preview board)
 And restores full-bleed logo_512.png from drawable-xxxhdpi/logo_512.png (sha256: f84c6251...).
 """
 
@@ -13,7 +19,7 @@ import math
 import os
 import shutil
 import subprocess
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 def fig_to_dp(x, y, cx=6923.26, cy=920.25, scale=0.0093, offset_x=54.0, offset_y=54.0):
     return offset_x + (x - cx) * scale, offset_y + (y - cy) * scale
@@ -42,9 +48,239 @@ def catmull_rom_to_bezier(pts):
     commands.append("Z")
     return " ".join(commands)
 
-def generate_vector_drawable(is_monochrome=False):
+TIER_CONFIGS = {
+    'pioneer': {
+        'title': 'Pioneer Edition',
+        'ring_color': '#00A86B',
+        'overlay_xml': '''    <!-- === OPTION A BADGE OVERLAYS (REQ-UI-445) === -->
+    <!-- Outer Border Ring (r = 34dp, safe-zone compliant r <= 34.5dp) -->
+    <path
+        android:strokeColor="#00A86B"
+        android:strokeWidth="1.0"
+        android:pathData="M 54,20 A 34,34 0 1,0 54,88 A 34,34 0 1,0 54,20 Z" />
+
+    <!-- Top-Right Emblem: Emerald & Gold Heritage Star (cx=67.6, cy=31.8) -->
+    <path
+        android:fillColor="#FFD700"
+        android:strokeColor="#CCAC00"
+        android:strokeWidth="0.4"
+        android:pathData="M 67.6,27.3 L 68.8,30.3 L 71.9,30.4 L 69.3,32.2 L 70.3,35.2 L 67.6,33.4 L 64.9,35.2 L 65.9,32.2 L 63.3,30.4 L 66.4,30.3 Z" />
+    <path
+        android:fillColor="#00A86B"
+        android:pathData="M 67.6,28.8 L 68.4,30.8 L 70.5,30.9 L 68.7,32.1 L 69.4,34.1 L 67.6,32.9 L 65.8,34.1 L 66.5,32.1 L 64.7,30.9 L 66.8,30.8 Z" />
+
+    <!-- Bottom Tier Ribbon: ★ PIONEER ★ (y=75.5..82.5) -->
+    <path
+        android:fillColor="#00A86B"
+        android:pathData="M 42,76.5 L 66,76.5 L 66,82.5 L 42,82.5 Z" />
+    <path
+        android:strokeColor="#FFD700"
+        android:strokeWidth="0.8"
+        android:pathData="M 42,76.5 L 66,76.5 L 66,82.5 L 42,82.5 Z" />
+    <path
+        android:fillColor="#007849"
+        android:pathData="M 40,78.0 L 42,76.5 L 42,82.5 L 40,81.0 Z" />
+    <path
+        android:fillColor="#007849"
+        android:pathData="M 68,78.0 L 66,76.5 L 66,82.5 L 68,81.0 Z" />
+    <path
+        android:strokeColor="#FFD700"
+        android:strokeWidth="0.8"
+        android:pathData="M 44.5,79.5 L 45.5,79.5 M 48.0,79.5 L 60.0,79.5 M 62.5,79.5 L 63.5,79.5" />'''
+    },
+    'bronze': {
+        'title': 'Bronze Supporter',
+        'ring_color': '#CD7F32',
+        'overlay_xml': '''    <!-- === OPTION A BADGE OVERLAYS (REQ-UI-445) === -->
+    <!-- Outer Border Ring (r = 34dp, safe-zone compliant r <= 34.5dp) -->
+    <path
+        android:strokeColor="#CD7F32"
+        android:strokeWidth="1.0"
+        android:pathData="M 54,20 A 34,34 0 1,0 54,88 A 34,34 0 1,0 54,20 Z" />
+
+    <!-- Top-Right Emblem: Bronze Medal on Neck Ribbon (cx=67.6, cy=31.8) -->
+    <path
+        android:strokeColor="#B22222"
+        android:strokeWidth="1.2"
+        android:strokeLineCap="round"
+        android:pathData="M 65.2,27.0 L 67.6,30.0 L 70.0,27.0" />
+    <path
+        android:fillColor="#CD7F32"
+        android:strokeColor="#8C4C14"
+        android:strokeWidth="0.6"
+        android:pathData="M 67.6,29.3 A 3.2,3.2 0 1,0 67.6,35.7 A 3.2,3.2 0 1,0 67.6,29.3 Z" />
+    <path
+        android:fillColor="#E69A55"
+        android:pathData="M 67.6,30.7 A 1.8,1.8 0 1,0 67.6,34.3 A 1.8,1.8 0 1,0 67.6,30.7 Z" />
+
+    <!-- Bottom Tier Ribbon: SUPPORTER (y=75.5..82.5) -->
+    <path
+        android:fillColor="#CD7F32"
+        android:pathData="M 42,76.5 L 66,76.5 L 66,82.5 L 42,82.5 Z" />
+    <path
+        android:strokeColor="#FFC700"
+        android:strokeWidth="0.8"
+        android:pathData="M 42,76.5 L 66,76.5 L 66,82.5 L 42,82.5 Z" />
+    <path
+        android:fillColor="#8C4C14"
+        android:pathData="M 40,78.0 L 42,76.5 L 42,82.5 L 40,81.0 Z" />
+    <path
+        android:fillColor="#8C4C14"
+        android:pathData="M 68,78.0 L 66,76.5 L 66,82.5 L 68,81.0 Z" />
+    <path
+        android:strokeColor="#FFC700"
+        android:strokeWidth="0.8"
+        android:pathData="M 45.0,79.5 L 63.0,79.5" />'''
+    },
+    'silver': {
+        'title': 'Silver Pro-Supporter',
+        'ring_color': '#C0C0C0',
+        'overlay_xml': '''    <!-- === OPTION A BADGE OVERLAYS (REQ-UI-445) === -->
+    <!-- Outer Border Ring (r = 34dp, safe-zone compliant r <= 34.5dp) -->
+    <path
+        android:strokeColor="#C0C0C0"
+        android:strokeWidth="1.0"
+        android:pathData="M 54,20 A 34,34 0 1,0 54,88 A 34,34 0 1,0 54,20 Z" />
+
+    <!-- Top-Right Emblem: Silver Medal on Neck Ribbon (cx=67.6, cy=31.8) -->
+    <path
+        android:strokeColor="#1E3A8A"
+        android:strokeWidth="1.2"
+        android:strokeLineCap="round"
+        android:pathData="M 65.2,27.0 L 67.6,30.0 L 70.0,27.0" />
+    <path
+        android:fillColor="#C0C0C0"
+        android:strokeColor="#707070"
+        android:strokeWidth="0.6"
+        android:pathData="M 67.6,29.3 A 3.2,3.2 0 1,0 67.6,35.7 A 3.2,3.2 0 1,0 67.6,29.3 Z" />
+    <path
+        android:fillColor="#E8E8E8"
+        android:pathData="M 67.6,30.7 A 1.8,1.8 0 1,0 67.6,34.3 A 1.8,1.8 0 1,0 67.6,30.7 Z" />
+
+    <!-- Bottom Tier Ribbon: PRO-SUPPORTER (y=75.5..82.5) -->
+    <path
+        android:fillColor="#C0C0C0"
+        android:pathData="M 42,76.5 L 66,76.5 L 66,82.5 L 42,82.5 Z" />
+    <path
+        android:strokeColor="#707070"
+        android:strokeWidth="0.8"
+        android:pathData="M 42,76.5 L 66,76.5 L 66,82.5 L 42,82.5 Z" />
+    <path
+        android:fillColor="#707070"
+        android:pathData="M 40,78.0 L 42,76.5 L 42,82.5 L 40,81.0 Z" />
+    <path
+        android:fillColor="#707070"
+        android:pathData="M 68,78.0 L 66,76.5 L 66,82.5 L 68,81.0 Z" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.8"
+        android:pathData="M 45.0,79.5 L 63.0,79.5" />'''
+    },
+    'gold': {
+        'title': 'Gold Pro-Supporter',
+        'ring_color': '#FFD700',
+        'overlay_xml': '''    <!-- === OPTION A BADGE OVERLAYS (REQ-UI-445) === -->
+    <!-- Outer Border Ring (r = 34dp, safe-zone compliant r <= 34.5dp) -->
+    <path
+        android:strokeColor="#FFD700"
+        android:strokeWidth="1.0"
+        android:pathData="M 54,20 A 34,34 0 1,0 54,88 A 34,34 0 1,0 54,20 Z" />
+
+    <!-- Top-Right Emblem: 24K Gold Medal on Neck Ribbon (cx=67.6, cy=31.8) -->
+    <path
+        android:strokeColor="#8B0000"
+        android:strokeWidth="1.2"
+        android:strokeLineCap="round"
+        android:pathData="M 65.2,27.0 L 67.6,30.0 L 70.0,27.0" />
+    <path
+        android:fillColor="#FFD700"
+        android:strokeColor="#CCAC00"
+        android:strokeWidth="0.6"
+        android:pathData="M 67.6,29.3 A 3.2,3.2 0 1,0 67.6,35.7 A 3.2,3.2 0 1,0 67.6,29.3 Z" />
+    <path
+        android:fillColor="#FFF099"
+        android:pathData="M 67.6,30.7 A 1.8,1.8 0 1,0 67.6,34.3 A 1.8,1.8 0 1,0 67.6,30.7 Z" />
+
+    <!-- Bottom Tier Ribbon: PRO-SUPPORTER (y=75.5..82.5) -->
+    <path
+        android:fillColor="#FFD700"
+        android:pathData="M 42,76.5 L 66,76.5 L 66,82.5 L 42,82.5 Z" />
+    <path
+        android:strokeColor="#B89600"
+        android:strokeWidth="0.8"
+        android:pathData="M 42,76.5 L 66,76.5 L 66,82.5 L 42,82.5 Z" />
+    <path
+        android:fillColor="#B89600"
+        android:pathData="M 40,78.0 L 42,76.5 L 42,82.5 L 40,81.0 Z" />
+    <path
+        android:fillColor="#B89600"
+        android:pathData="M 68,78.0 L 66,76.5 L 66,82.5 L 68,81.0 Z" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.8"
+        android:pathData="M 45.0,79.5 L 63.0,79.5" />'''
+    },
+    'diamond': {
+        'title': 'Diamond Sponsor',
+        'ring_color': '#00E5FF',
+        'overlay_xml': '''    <!-- === OPTION A BADGE OVERLAYS (REQ-UI-445) === -->
+    <!-- Outer Border Ring (r = 34dp, safe-zone compliant r <= 34.5dp) -->
+    <path
+        android:strokeColor="#00E5FF"
+        android:strokeWidth="1.0"
+        android:pathData="M 54,20 A 34,34 0 1,0 54,88 A 34,34 0 1,0 54,20 Z" />
+
+    <!-- Top-Right Emblem: Faceted Brilliant Cyan Diamond (cx=67.6, cy=31.8) -->
+    <path
+        android:fillColor="#E0F7FA"
+        android:strokeColor="#00B0FF"
+        android:strokeWidth="0.4"
+        android:pathData="M 65.2,29.5 L 70.0,29.5 L 71.8,31.5 L 63.4,31.5 Z" />
+    <path
+        android:fillColor="#00E5FF"
+        android:strokeColor="#0091EA"
+        android:strokeWidth="0.4"
+        android:pathData="M 63.4,31.5 L 71.8,31.5 L 67.6,35.5 Z" />
+    <path
+        android:fillColor="#80DEEA"
+        android:pathData="M 66.0,31.5 L 69.2,31.5 L 67.6,35.5 Z" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.6"
+        android:strokeLineCap="round"
+        android:pathData="M 71.5,27.0 L 71.5,30.0 M 70.0,28.5 L 73.0,28.5" />
+
+    <!-- Bottom Tier Ribbon: ◆ SPONSOR ◆ (y=75.5..82.5) -->
+    <path
+        android:fillColor="#00E5FF"
+        android:pathData="M 42,76.5 L 66,76.5 L 66,82.5 L 42,82.5 Z" />
+    <path
+        android:strokeColor="#0091EA"
+        android:strokeWidth="0.8"
+        android:pathData="M 42,76.5 L 66,76.5 L 66,82.5 L 42,82.5 Z" />
+    <path
+        android:fillColor="#0091EA"
+        android:pathData="M 40,78.0 L 42,76.5 L 42,82.5 L 40,81.0 Z" />
+    <path
+        android:fillColor="#0091EA"
+        android:pathData="M 68,78.0 L 66,76.5 L 66,82.5 L 68,81.0 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 45.0,79.5 L 46.0,78.5 L 47.0,79.5 L 46.0,80.5 Z" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.8"
+        android:pathData="M 49.0,79.5 L 59.0,79.5" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 61.0,79.5 L 62.0,78.5 L 63.0,79.5 L 62.0,80.5 Z" />'''
+    }
+}
+
+def generate_vector_drawable(tier=None, is_monochrome=False):
     """
-    Generates VectorDrawable XML with proper depth ordering (70 down to 50).
+    Generates VectorDrawable XML with proper depth ordering (70 down to 50),
+    integrating Option A badge overlays for supporter tiers.
     """
     scale = 0.0093
     cx, cy = 6923.26, 920.25
@@ -59,6 +295,14 @@ def generate_vector_drawable(is_monochrome=False):
     if is_monochrome:
         lines.append('  ~ aTrainingTracker: Android Adaptive Icon Themed Monochrome Layer (Android 13+ / API 33+)')
         lines.append('  ~ Single-color silhouette dynamically tinted by system Material You wallpaper palette.')
+    elif tier:
+        tier_title = TIER_CONFIGS[tier]['title']
+        lines.append(f'  ~ aTrainingTracker: Android Adaptive Icon Foreground - {tier_title}')
+        lines.append('  ~ REQ-UI-445 / ATT-1406: Option A (Top-Right Emblem + Bottom Tier Ribbon + Border Ring)')
+        lines.append('  ~ Reconstructed on corrected ATT-1482 base geometry (33.0 <= r <= 34.5dp safe zone).')
+        lines.append('  ~ Cervélo P3C bike: #FF0000 frame, #000000 wheels/saddle.')
+        lines.append('  ~ Stopwatch: #FFC700 ring/stems, #F0F0F0 dial, #000090/#FF0000/#009000 pushers.')
+        lines.append('  ~ Athletes: #0000FF royal blue.')
     else:
         lines.append('  ~ aTrainingTracker: Android Adaptive Icon Foreground')
         lines.append('  ~ Reconstructed from authentic master artwork Bilder/logo.fig (REQ-UI-444 / ATT-1482)')
@@ -412,6 +656,10 @@ def generate_vector_drawable(is_monochrome=False):
     lines.append('        android:strokeLineJoin="round"')
     lines.append(f'        android:pathData="M {p28_0[0]:.2f},{p28_0[1]:.2f} L {p28_1[0]:.2f},{p28_1[1]:.2f} L {p28_2[0]:.2f},{p28_2[1]:.2f} L {p28_3[0]:.2f},{p28_3[1]:.2f}" />')
 
+    # Append tier overlays if requested
+    if tier and tier in TIER_CONFIGS:
+        lines.append(TIER_CONFIGS[tier]['overlay_xml'])
+
     lines.append('</vector>')
     return '\n'.join(lines) + '\n'
 
@@ -440,6 +688,88 @@ def vector_to_svg(vd_text, background_color="#FFFFFF"):
     svg_lines.append('</svg>')
     return '\n'.join(svg_lines)
 
+def composite_tiers_preview(variant_images, output_png):
+    """
+    Composites a 6-variant preview board PNG showing Standard, Pioneer, Bronze, Silver, Gold, Diamond
+    with circular launcher guides and badge metadata.
+    """
+    # 2 rows x 3 columns
+    card_w, card_h = 360, 420
+    board_w = card_w * 3 + 80
+    board_h = card_h * 2 + 160
+
+    board = Image.new("RGBA", (board_w, board_h), (15, 23, 42, 255)) # Dark slate #0F172A
+    draw = ImageDraw.Draw(board)
+
+    # Header
+    title_text = "aTrainingTracker - Pro Supporter Launcher Icons (Option A Reconstructed - ATT-1406)"
+    sub_text = "Corrected ATT-1482 Base Geometry (Smooth Béziers, Flush Pushers, r <= 34.5dp) + Option A Badges"
+    draw.text((40, 30), title_text, fill=(255, 255, 255, 255))
+    draw.text((40, 65), sub_text, fill=(148, 163, 184, 255))
+
+    keys = ['standard', 'pioneer', 'bronze', 'silver', 'gold', 'diamond']
+    labels = [
+        "1. Standard (Free / Default)",
+        "2. Pioneer Edition (0 € Lifetime)",
+        "3. Bronze Supporter (1 €/mo)",
+        "4. Silver Pro-Supporter (25 €/yr)",
+        "5. Gold Pro-Supporter (50 €/yr)",
+        "6. Diamond Sponsor (100 €/yr)"
+    ]
+    subtitles = [
+        "Modernized Cervélo P3C & Stopwatch",
+        "Emerald & Gold Star + Ribbon",
+        "Bronze Medal + SUPPORTER Ribbon",
+        "Silver Medal + PRO-SUPPORTER Ribbon",
+        "24K Gold Medal + PRO-SUPPORTER Ribbon",
+        "Faceted Diamond + SPONSOR Ribbon"
+    ]
+
+    for idx, key in enumerate(keys):
+        col = idx % 3
+        row = idx // 3
+        x_card = 40 + col * card_w
+        y_card = 120 + row * card_h
+
+        # Card container
+        draw.rounded_rectangle([x_card + 10, y_card + 10, x_card + card_w - 10, y_card + card_h - 10], radius=16, fill=(30, 41, 59, 255), outline=(51, 65, 85, 255), width=1)
+
+        # Label
+        draw.text((x_card + 24, y_card + 24), labels[idx], fill=(248, 250, 252, 255))
+        draw.text((x_card + 24, y_card + 46), subtitles[idx], fill=(148, 163, 184, 255))
+
+        # Icon image (resize to 260x260)
+        img = variant_images[key].convert("RGBA").resize((260, 260), Image.Resampling.LANCZOS)
+        
+        # Create circular masked icon (Pixel launcher preview)
+        mask = Image.new("L", (260, 260), 0)
+        mask_draw = ImageDraw.Draw(mask)
+        mask_draw.ellipse((0, 0, 259, 259), fill=255)
+        
+        # Circular surface background (#F1F5F9)
+        circle_surf = Image.new("RGBA", (260, 260), (241, 245, 249, 255))
+        circle_surf.paste(img, (0, 0), img)
+
+        icon_x = x_card + (card_w - 260) // 2
+        icon_y = y_card + 75
+
+        # Paste with circular mask
+        board.paste(circle_surf, (icon_x, icon_y), mask)
+
+        # Draw circle outline & safe-zone guide
+        draw.ellipse([icon_x, icon_y, icon_x + 259, icon_y + 259], outline=(203, 213, 225, 255), width=2)
+        # Safe-zone guideline (dashed/subtle circle at r = 34.5dp on 108dp canvas -> scale = 260 / 108 * 34.5 ~ 83px radius from center)
+        cx_i = icon_x + 130
+        cy_i = icon_y + 130
+        r_sz = int(260.0 / 108.0 * 34.5)
+        draw.ellipse([cx_i - r_sz, cy_i - r_sz, cx_i + r_sz, cy_i + r_sz], outline=(100, 116, 139, 120), width=1)
+
+        # Status caption
+        draw.text((icon_x + 30, icon_y + 280), "Safe-zone envelope r <= 34.5dp", fill=(100, 116, 139, 255))
+
+    board.save(output_png)
+    print(f"Composited 6-variant preview board -> {output_png}")
+
 def main():
     repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
     res_dir = os.path.join(repo_root, 'app', 'src', 'main', 'res')
@@ -447,21 +777,33 @@ def main():
     preview_dir = os.path.join(repo_root, 'docs', 'engineering', 'walkthroughs', 'img')
     os.makedirs(preview_dir, exist_ok=True)
 
-    # 1. Generate ic_launcher_foreground.xml
-    fg_xml = generate_vector_drawable(is_monochrome=False)
+    variant_xmls = {}
+
+    # 1. Generate ic_launcher_foreground.xml (Standard)
+    fg_xml = generate_vector_drawable(tier=None, is_monochrome=False)
     fg_path = os.path.join(res_dir, 'drawable', 'ic_launcher_foreground.xml')
     with open(fg_path, 'w', encoding='utf-8') as f:
         f.write(fg_xml)
+    variant_xmls['standard'] = fg_xml
     print(f"Generated {fg_path}")
 
     # 2. Generate ic_launcher_monochrome.xml
-    mono_xml = generate_vector_drawable(is_monochrome=True)
+    mono_xml = generate_vector_drawable(tier=None, is_monochrome=True)
     mono_path = os.path.join(res_dir, 'drawable', 'ic_launcher_monochrome.xml')
     with open(mono_path, 'w', encoding='utf-8') as f:
         f.write(mono_xml)
     print(f"Generated {mono_path}")
 
-    # 3. Restore full-bleed logo_512.png (sha256: f84c6251...) to drawable/ and images/
+    # 3. Generate all 5 Supporter Tier Foregrounds
+    for tier in ['pioneer', 'bronze', 'silver', 'gold', 'diamond']:
+        tier_xml = generate_vector_drawable(tier=tier, is_monochrome=False)
+        tier_path = os.path.join(res_dir, 'drawable', f'ic_launcher_foreground_{tier}.xml')
+        with open(tier_path, 'w', encoding='utf-8') as f:
+            f.write(tier_xml)
+        variant_xmls[tier] = tier_xml
+        print(f"Generated {tier_path}")
+
+    # 4. Restore full-bleed logo_512.png (sha256: f84c6251...) to drawable/ and images/
     xxxhdpi_logo = os.path.join(res_dir, 'drawable-xxxhdpi', 'logo_512.png')
     target_drawable_logo = os.path.join(res_dir, 'drawable', 'logo_512.png')
     target_images_logo = os.path.join(img_dir, 'logo_512.png')
@@ -469,21 +811,37 @@ def main():
     shutil.copyfile(xxxhdpi_logo, target_images_logo)
     print(f"Restored full-bleed {target_drawable_logo} and {target_images_logo} from {xxxhdpi_logo}")
 
-    # 4. Generate high-res Play Store master icon (images/play_store_icon_512.png)
-    svg_content = vector_to_svg(fg_xml, background_color="#FFFFFF")
+    # 5. Render high-res PNG for Play Store & ATT-1482 preview
     temp_svg = os.path.join(preview_dir, 'temp_icon.svg')
+    svg_content = vector_to_svg(fg_xml, background_color="#FFFFFF")
     with open(temp_svg, 'w', encoding='utf-8') as f:
         f.write(svg_content)
 
     play_store_icon = os.path.join(img_dir, 'play_store_icon_512.png')
     preview_png = os.path.join(preview_dir, 'att1482_reconstructed_preview.png')
-
-    cmd = ['/snap/bin/inkscape', temp_svg, '-o', play_store_icon, '-w', '512', '-h', '512']
-    subprocess.run(cmd, check=True)
+    subprocess.run(['/snap/bin/inkscape', temp_svg, '-o', play_store_icon, '-w', '512', '-h', '512'], check=True)
     shutil.copyfile(play_store_icon, preview_png)
     if os.path.exists(temp_svg):
         os.remove(temp_svg)
     print(f"Generated high-res {play_store_icon} and {preview_png}")
+
+    # 6. Render high-res PNGs for all 6 variants and composite ATT-1406 preview board
+    variant_images = {}
+    for key, xml_data in variant_xmls.items():
+        svg_data = vector_to_svg(xml_data, background_color="#FFFFFF")
+        temp_tier_svg = os.path.join(preview_dir, f'temp_{key}.svg')
+        temp_tier_png = os.path.join(preview_dir, f'temp_{key}.png')
+        with open(temp_tier_svg, 'w', encoding='utf-8') as f:
+            f.write(svg_data)
+        subprocess.run(['/snap/bin/inkscape', temp_tier_svg, '-o', temp_tier_png, '-w', '512', '-h', '512'], check=True)
+        variant_images[key] = Image.open(temp_tier_png)
+        if os.path.exists(temp_tier_svg):
+            os.remove(temp_tier_svg)
+        if os.path.exists(temp_tier_png):
+            os.remove(temp_tier_png)
+
+    board_output = os.path.join(preview_dir, 'att1406_reconstructed_tiers_preview.png')
+    composite_tiers_preview(variant_images, board_output)
 
 if __name__ == '__main__':
     main()

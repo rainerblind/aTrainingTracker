@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.branding
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -180,12 +181,67 @@ class SupporterBadgeContractTest {
                 }
             }
 
-            val maxAllowedRadius = if (fgRelPath == "drawable/ic_launcher_foreground.xml") 34.5 else 33.0
+            val maxAllowedRadius = 34.5
             assertTrue(
                 "$fgRelPath geometry must fit inside safe zone (r <= ${maxAllowedRadius}dp), found $maxRadialDistance",
                 maxRadialDistance <= maxAllowedRadius
             )
+            assertTrue(
+                "$fgRelPath geometry must be scaled up to fill the safe zone (r >= 33.0dp), found $maxRadialDistance",
+                maxRadialDistance >= 33.0
+            )
         }
+    }
+
+    @Test
+    fun testCubicBezierCurvesPresentAcrossAllTiers() {
+        val resDir = getResDir()
+        val fgFiles = listOf(
+            "drawable/ic_launcher_foreground.xml",
+            "drawable/ic_launcher_foreground_pioneer.xml",
+            "drawable/ic_launcher_foreground_bronze.xml",
+            "drawable/ic_launcher_foreground_silver.xml",
+            "drawable/ic_launcher_foreground_gold.xml",
+            "drawable/ic_launcher_foreground_diamond.xml"
+        )
+        for (fgRelPath in fgFiles) {
+            val content = File(resDir, fgRelPath).readText()
+            assertTrue(
+                "$fgRelPath must contain smooth cubic Bézier curves (C) for cyclist back/hip geometry (ATT-1482 / ATT-1406)",
+                content.contains(" C ") || content.contains(" c ")
+            )
+        }
+    }
+
+    @Test
+    fun testQuickPickerDialogNeverPassesMipmapToPainterResource() {
+        val dialogFile = findRepoRootFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/branding/SupporterQuickIconPickerDialog.kt")
+        assertTrue("SupporterQuickIconPickerDialog.kt must exist", dialogFile.exists())
+        val source = dialogFile.readText()
+
+        // Assert no direct painterResource call
+        assertFalse(
+            "SupporterQuickIconPickerDialog must not call Compose painterResource directly (REQ-UI-445.3 / ATT-5372)",
+            source.contains("painterResource(")
+        )
+
+        // Assert safePainterResource uses foregroundRes (not iconRes or mipmapRes)
+        assertTrue(
+            "SupporterQuickIconPickerDialog must use safePainterResource for icon preview",
+            source.contains("safePainterResource(")
+        )
+        assertTrue(
+            "SupporterQuickIconPickerDialog must pass variant.foregroundRes to safePainterResource",
+            source.contains("variant.foregroundRes")
+        )
+        assertFalse(
+            "SupporterQuickIconPickerDialog must never pass variant.iconRes to safePainterResource",
+            source.contains("variant.iconRes")
+        )
+        assertFalse(
+            "SupporterQuickIconPickerDialog must never reference mipmap resources in Compose rendering",
+            source.contains("R.mipmap")
+        )
     }
 
     @Test
