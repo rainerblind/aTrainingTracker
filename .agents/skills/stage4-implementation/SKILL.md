@@ -10,7 +10,7 @@ This skill guides the agent through **Stage 4 (Implementation / Software Constru
 
 ## Subagent Model Pairing ("Zipper Principle" & Persistent Ping-Pong — Core Rule 7)
 Reuse the ticket's two persistent `TypeName: "self"` subagents via `send_message`:
-- **Doing (`--as agent1`)**: **`subagent_flash`** *(Standard)* / **`subagent_pro`** *(High-Risk)* (`send_message` to the ticket's `flash` subagent — which just audited the Stage 3 plan in Gate 3! — or `subagent_pro` for `HIGH`-risk concurrency/DB/service lifecycle tickets) — Executes the Stage 3 file-and-method blueprint, unit tests, and 9-locale XML updates.
+- **Doing (`--as agent1`)**: **`subagent_flash`** *(Standard)* / **`subagent_pro`** *(High-Risk)* (`send_message` to the ticket's `flash` subagent — which just audited the Stage 3 plan in Gate 3! — or `subagent_pro` for `HIGH`-risk concurrency/DB/service lifecycle tickets, **Vector Graphics / Icon Design / Visual Asset Reconstruction**, and **Store Presence / Video Generation** tickets per `Rule 71` — `ATT-5313`) — Executes the Stage 3 file-and-method blueprint, unit tests, and 9-locale XML updates.
 - **Gate 4 Review (`--as agent2`)**: **`subagent_pro`** *(Standard)* / **`subagent_flash`** *(High-Risk)* (`send_message` to the ticket's `pro` subagent — which authored the Stage 3 plan! — or `subagent_flash` when `pro` authored a High-Risk implementation) — Audits the `git diff` for subtle race conditions, Compose recomposition traps, resource leaks, and side effects against its own Stage 3 plan, followed by executing `python3 tools/jira_util.py --as agent2 gate-verdict <SUBTASK_KEY> PASS ...`.
 
 ## Key Responsibilities (`subagent_flash` / `subagent_pro` as `agent1`)
