@@ -19,6 +19,8 @@
 package com.atrainingtracker.trainingtracker.ui.knownlocations
 
 import android.app.Application
+import com.atrainingtracker.trainingtracker.database.WorkoutCluster
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.elevation.ElevationSource
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository
@@ -61,8 +63,10 @@ class KnownLocationsViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var mockApplication: Application
     private lateinit var mockRepository: KnownLocationsRepository
+    private lateinit var mockClusterRepository: WorkoutClusterRepository
     private lateinit var mockWorkoutRepository: WorkoutRepository
     private val fakeLocationsFlow = MutableStateFlow<List<KnownLocationItem>>(emptyList())
+    private val fakeClustersFlow = MutableStateFlow<List<WorkoutCluster>>(emptyList())
     private val fakeWorkoutsFlow = MutableStateFlow<List<WorkoutData>>(emptyList())
 
     private lateinit var viewModel: KnownLocationsViewModel
@@ -72,15 +76,18 @@ class KnownLocationsViewModelTest {
         Dispatchers.setMain(testDispatcher)
         mockApplication = mockk(relaxed = true)
         mockRepository = mockk(relaxed = true)
+        mockClusterRepository = mockk(relaxed = true)
         mockWorkoutRepository = mockk(relaxed = true)
 
         every { mockRepository.locationsFlow } returns fakeLocationsFlow
+        every { mockClusterRepository.allClusters } returns fakeClustersFlow
         every { mockWorkoutRepository.allWorkouts } returns fakeWorkoutsFlow
 
         viewModel = KnownLocationsViewModel(
             application = mockApplication,
             repository = mockRepository,
             initialIsMetric = true,
+            clusterRepository = mockClusterRepository,
             workoutRepository = mockWorkoutRepository,
             defaultDispatcher = testDispatcher
         )
