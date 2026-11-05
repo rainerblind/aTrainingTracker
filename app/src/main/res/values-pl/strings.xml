@@ -2142,6 +2142,13 @@
     <string name="split_lap_preview_after">Część 2 (Nowe okrążenie)</string>
     <string name="split_lap_slider_label">Pozycja podziału</string>
     <string name="split_lap_success">Okrążenie pomyślnie podzielone</string>
+    <string name="move_lap_boundary_action">Przesuń granicę okrążenia</string>
+    <string name="move_lap_boundary_title">Przesuń granicę okrążenia na mapie</string>
+    <string name="move_lap_boundary_confirm">Przesuń granicę</string>
+    <string name="move_lap_boundary_slider_label">Pozycja granicy</string>
+    <string name="move_lap_boundary_lap_k_preview">Okrążenie %1$d (Poprzednie)</string>
+    <string name="move_lap_boundary_lap_k_plus_1_preview">Okrążenie %1$d (Następne)</string>
+    <string name="move_lap_boundary_select_boundary">Granica: Okrążenie %1$d / Okrążenie %2$d</string>
     <string name="cd_fastest_split">Najszybszy międzyczas</string>
     <string name="cd_switch_view_mode">Przełącz tryb widoku</string>
     <string name="connect_with_strava">Połącz ze Strava</string>

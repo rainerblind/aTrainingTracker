@@ -2140,6 +2140,13 @@
     <string name="split_lap_preview_after">Partie 2 (Nouveau tour)</string>
     <string name="split_lap_slider_label">Position de division</string>
     <string name="split_lap_success">Tour divisé avec succès</string>
+    <string name="move_lap_boundary_action">Déplacer la limite du tour</string>
+    <string name="move_lap_boundary_title">Déplacer la limite du tour sur la carte</string>
+    <string name="move_lap_boundary_confirm">Déplacer la limite</string>
+    <string name="move_lap_boundary_slider_label">Position de la limite</string>
+    <string name="move_lap_boundary_lap_k_preview">Tour %1$d (Précédent)</string>
+    <string name="move_lap_boundary_lap_k_plus_1_preview">Tour %1$d (Suivant)</string>
+    <string name="move_lap_boundary_select_boundary">Limite : Tour %1$d / Tour %2$d</string>
     <string name="cd_fastest_split">Temps intermédiaire le plus rapide</string>
     <string name="cd_switch_view_mode">Changer de mode d\'affichage</string>
     <string name="connect_with_strava">Se connecter à Strava</string>

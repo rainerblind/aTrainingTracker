@@ -55,7 +55,8 @@ fun WorkoutLaps(
     lapDisplayMode: LapDisplayMode = LapDisplayMode.VISUALIZER_ONLY,
     modifier: Modifier = Modifier,
     onLapClick: ((LapData) -> Unit)? = null,
-    onSplitLapClick: (() -> Unit)? = null
+    onSplitLapClick: (() -> Unit)? = null,
+    onMoveBoundaryClick: ((boundaryLapNr: Long) -> Unit)? = null
 ) {
     if (laps.isEmpty()) return
 
@@ -109,17 +110,33 @@ fun WorkoutLaps(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
-            if (onSplitLapClick != null) {
-                IconButton(
-                    onClick = onSplitLapClick,
-                    modifier = Modifier.size(24.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_lap_add),
-                        contentDescription = stringResource(R.string.split_lap_action),
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp)
-                    )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (onMoveBoundaryClick != null && laps.size >= 2) {
+                    IconButton(
+                        onClick = { onMoveBoundaryClick(1L) },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_lap_timer),
+                            contentDescription = stringResource(R.string.move_lap_boundary_action),
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                }
+                if (onSplitLapClick != null) {
+                    IconButton(
+                        onClick = onSplitLapClick,
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_lap_add),
+                            contentDescription = stringResource(R.string.split_lap_action),
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
         }

@@ -115,6 +115,7 @@ fun WorkoutDetailTabbedContent(
     mapOverlay: @Composable BoxScope.() -> Unit,
     onSplitLapClick: (() -> Unit)? = null,
     onCreateLapClick: ((Double) -> Unit)? = null,
+    onMoveBoundaryClick: ((boundaryLapNr: Long) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val visibleTabs = remember(tabs, availability, detailPreferences) {
@@ -343,6 +344,7 @@ fun WorkoutDetailTabbedContent(
                                                 photos = workoutPhotos,
                                                 onPhotoClick = { activePreviewPhoto = it },
                                                 onSplitLapClick = onSplitLapClick,
+                                                onMoveBoundaryClick = onMoveBoundaryClick,
                                                 onAddPhotos = { uris ->
                                                     coroutineScope.launch {
                                                         uris.forEach { uri ->
@@ -427,6 +429,7 @@ fun WorkoutDetailTabbedContent(
                                                     photos = workoutPhotos,
                                                     onPhotoClick = { activePreviewPhoto = it },
                                                     onSplitLapClick = onSplitLapClick,
+                                                    onMoveBoundaryClick = onMoveBoundaryClick,
                                                     onAddPhotos = { uris ->
                                                         coroutineScope.launch {
                                                             uris.forEach { uri ->
@@ -477,6 +480,7 @@ fun WorkoutDetailTabbedContent(
                                     photos = workoutPhotos,
                                     onPhotoClick = { activePreviewPhoto = it },
                                     onSplitLapClick = onSplitLapClick,
+                                    onMoveBoundaryClick = onMoveBoundaryClick,
                                     onAddPhotos = { uris ->
                                         coroutineScope.launch {
                                             uris.forEach { uri ->
@@ -638,7 +642,8 @@ private fun RenderWorkoutDetailCardSections(
     photos: List<WorkoutPhotoEntry> = emptyList(),
     onPhotoClick: ((WorkoutPhotoEntry) -> Unit)? = null,
     onAddPhotos: ((List<android.net.Uri>) -> Unit)? = null,
-    onSplitLapClick: (() -> Unit)? = null
+    onSplitLapClick: (() -> Unit)? = null,
+    onMoveBoundaryClick: ((boundaryLapNr: Long) -> Unit)? = null
 ) {
     sections.forEach { section ->
         when (section) {
@@ -711,6 +716,7 @@ private fun RenderWorkoutDetailCardSections(
                             onSelectLapNr(if (selectedLapNr == lap.lapNr) null else lap.lapNr)
                         },
                         onSplitLapClick = onSplitLapClick,
+                        onMoveBoundaryClick = onMoveBoundaryClick,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 4.dp)

@@ -58,6 +58,7 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.Workout
 import com.atrainingtracker.trainingtracker.ui.components.strava.StravaActivitySection
 import android.app.Application
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.CreateLapOnMapSheet
+import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.MoveLapBoundaryOnMapSheet
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.LapDisplayMode
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.WorkoutLaps
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatus
@@ -108,6 +109,8 @@ fun TrackOnMapScreen(
     var showTabsConfigSheet by rememberSaveable { mutableStateOf(false) }
     val repository = remember(context) { WorkoutRepository.getInstance(context.applicationContext as Application) }
     var showCreateLapSheet by rememberSaveable { mutableStateOf(false) }
+    var showMoveBoundarySheet by rememberSaveable { mutableStateOf(false) }
+    var moveBoundaryLapNr by rememberSaveable { mutableLongStateOf(1L) }
     var candidateSplitIndex by rememberSaveable { mutableStateOf<Int?>(null) }
     val lapStartMarkerTitle = stringResource(R.string.marker_lap_start)
     val lapEndMarkerTitle = stringResource(R.string.marker_lap_end)
@@ -365,6 +368,10 @@ fun TrackOnMapScreen(
                 candidateSplitIndex = activeScrubPath?.indexOfFirst { it.distance >= scrubDist }?.takeIf { it >= 0 }
                 showCreateLapSheet = true
             },
+            onMoveBoundaryClick = { boundaryLapNr ->
+                moveBoundaryLapNr = boundaryLapNr
+                showMoveBoundarySheet = true
+            },
             modifier = modifier
         )
     } else {
@@ -537,6 +544,10 @@ fun TrackOnMapScreen(
                                         onSplitLapClick = {
                                             candidateSplitIndex = null
                                             showCreateLapSheet = true
+                                        },
+                                        onMoveBoundaryClick = { boundaryLapNr ->
+                                            moveBoundaryLapNr = boundaryLapNr
+                                            showMoveBoundarySheet = true
                                         },
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -743,6 +754,10 @@ fun TrackOnMapScreen(
                                             candidateSplitIndex = null
                                             showCreateLapSheet = true
                                         },
+                                        onMoveBoundaryClick = { boundaryLapNr ->
+                                            moveBoundaryLapNr = boundaryLapNr
+                                            showMoveBoundarySheet = true
+                                        },
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(horizontal = 16.dp, vertical = 4.dp)
@@ -779,6 +794,23 @@ fun TrackOnMapScreen(
                 coroutineScope.launch {
                     repository.splitLapAtSample(workoutData.id, splitIndex)
                     showCreateLapSheet = false
+                }
+            }
+        )
+    }
+
+    if (showMoveBoundarySheet) {
+        MoveLapBoundaryOnMapSheet(
+            workoutId = workoutData.id,
+            boundaryLapNr = moveBoundaryLapNr,
+            bSportType = workoutData.bSportType,
+            existingLaps = workoutData.laps,
+            repository = repository,
+            onDismiss = { showMoveBoundarySheet = false },
+            onBoundaryMoved = { boundaryLapNr, newIndex ->
+                coroutineScope.launch {
+                    repository.moveLapBoundary(workoutData.id, boundaryLapNr, newIndex)
+                    showMoveBoundarySheet = false
                 }
             }
         )

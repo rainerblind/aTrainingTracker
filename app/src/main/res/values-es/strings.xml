@@ -2141,6 +2141,13 @@
     <string name="split_lap_preview_after">Parte 2 (Nueva vuelta)</string>
     <string name="split_lap_slider_label">Posición de división</string>
     <string name="split_lap_success">Vuelta dividida con éxito</string>
+    <string name="move_lap_boundary_action">Mover límite de vuelta</string>
+    <string name="move_lap_boundary_title">Mover límite de vuelta en el mapa</string>
+    <string name="move_lap_boundary_confirm">Mover límite</string>
+    <string name="move_lap_boundary_slider_label">Posición del límite</string>
+    <string name="move_lap_boundary_lap_k_preview">Vuelta %1$d (Anterior)</string>
+    <string name="move_lap_boundary_lap_k_plus_1_preview">Vuelta %1$d (Siguiente)</string>
+    <string name="move_lap_boundary_select_boundary">Límite: Vuelta %1$d / Vuelta %2$d</string>
     <string name="cd_fastest_split">Parcial más rápido</string>
     <string name="cd_switch_view_mode">Cambiar modo de vista</string>
     <string name="connect_with_strava">Conectar con Strava</string>

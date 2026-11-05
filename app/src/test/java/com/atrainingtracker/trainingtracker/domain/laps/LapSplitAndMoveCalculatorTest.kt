@@ -163,4 +163,170 @@ class LapSplitAndMoveCalculatorTest {
         assertEquals(150, newLaps[2].timeTotalS)
         assertEquals(700.0, newLaps[2].distanceTotalM, 1e-4)
     }
+
+    @Test
+    fun `validateBoundaryMove clamps to legal range and computes forward shift metrics`() {
+        // Samples 0..2 are Lap 1, 3..5 are Lap 2
+        val samples = listOf(
+            createPoint(1, 0, 0, 0.0, 1),
+            createPoint(2, 1, 100, 500.0, 1),
+            createPoint(3, 2, 200, 1000.0, 1),
+            createPoint(4, 3, 300, 1500.0, 2),
+            createPoint(5, 4, 400, 2000.0, 2),
+            createPoint(6, 5, 500, 2500.0, 2)
+        )
+        val existingLaps = listOf(
+            LapData(id = 1L, workoutId = 10L, lapNr = 1L, timeTotalS = 200, distanceTotalM = 1000.0, speedAverageMps = 5.0, name = "Lap 1"),
+            LapData(id = 2L, workoutId = 10L, lapNr = 2L, timeTotalS = 200, distanceTotalM = 1000.0, speedAverageMps = 5.0, name = "Lap 2")
+        )
+
+        // Current boundary between Lap 1 and 2 is at index 3 (Lap 2 starts at 3).
+        // Forward shift: move boundary to index 4 (Lap 1 expands to 0..3, Lap 2 shrinks to 4..5)
+        val result = LapSplitAndMoveCalculator.validateBoundaryMove(
+            samples = samples,
+            boundaryLapNr = 1L,
+            newBoundaryIndex = 4,
+            existingLaps = existingLaps
+        )
+
+        assertTrue(result.isValid)
+        assertEquals(4, result.clampedSampleIndex)
+        assertNotNull(result.previewLapK)
+        assertNotNull(result.previewLapKPlus1)
+
+        val lap1 = result.previewLapK!!
+        val lap2 = result.previewLapKPlus1!!
+
+        // Lap 1: samples 0..3 (time: 0..300s -> 300s, dist: 0..1500m -> 1500m)
+        assertEquals(1L, lap1.lapNr)
+        assertEquals(300, lap1.timeTotalS)
+        assertEquals(1500.0, lap1.distanceTotalM, 1e-4)
+        assertEquals(5.0, lap1.speedAverageMps, 1e-4)
+        assertEquals("Lap 1", lap1.name)
+
+        // Lap 2: samples 4..5 (time: 400..500s -> 100s, dist: 2000..2500m -> 500m)
+        assertEquals(2L, lap2.lapNr)
+        assertEquals(100, lap2.timeTotalS)
+        assertEquals(500.0, lap2.distanceTotalM, 1e-4)
+        assertEquals(5.0, lap2.speedAverageMps, 1e-4)
+        assertEquals("Lap 2", lap2.name)
+    }
+
+    @Test
+    fun `validateBoundaryMove clamps to legal range and computes backward shift metrics`() {
+        // Samples 0..2 are Lap 1, 3..5 are Lap 2
+        val samples = listOf(
+            createPoint(1, 0, 0, 0.0, 1),
+            createPoint(2, 1, 100, 500.0, 1),
+            createPoint(3, 2, 200, 1000.0, 1),
+            createPoint(4, 3, 300, 1500.0, 2),
+            createPoint(5, 4, 400, 2000.0, 2),
+            createPoint(6, 5, 500, 2500.0, 2)
+        )
+        val existingLaps = listOf(
+            LapData(id = 1L, workoutId = 10L, lapNr = 1L, timeTotalS = 200, distanceTotalM = 1000.0, speedAverageMps = 5.0),
+            LapData(id = 2L, workoutId = 10L, lapNr = 2L, timeTotalS = 200, distanceTotalM = 1000.0, speedAverageMps = 5.0)
+        )
+
+        // Backward shift: move boundary to index 2 (Lap 1 shrinks to 0..1, Lap 2 expands to 2..5)
+        val result = LapSplitAndMoveCalculator.validateBoundaryMove(
+            samples = samples,
+            boundaryLapNr = 1L,
+            newBoundaryIndex = 2,
+            existingLaps = existingLaps
+        )
+
+        assertTrue(result.isValid)
+        assertEquals(2, result.clampedSampleIndex)
+
+        val lap1 = result.previewLapK!!
+        val lap2 = result.previewLapKPlus1!!
+
+        // Lap 1: samples 0..1 (time: 0..100s -> 100s, dist: 0..500m -> 500m)
+        assertEquals(100, lap1.timeTotalS)
+        assertEquals(500.0, lap1.distanceTotalM, 1e-4)
+
+        // Lap 2: samples 2..5 (time: 200..500s -> 300s, dist: 1000..2500m -> 1500m)
+        assertEquals(300, lap2.timeTotalS)
+        assertEquals(1500.0, lap2.distanceTotalM, 1e-4)
+    }
+
+    @Test
+    fun `validateBoundaryMove clamps values exceeding min and max boundary range`() {
+        val samples = listOf(
+            createPoint(1, 0, 0, 0.0, 1),
+            createPoint(2, 1, 100, 500.0, 1),
+            createPoint(3, 2, 200, 1000.0, 1),
+            createPoint(4, 3, 300, 1500.0, 2),
+            createPoint(5, 4, 400, 2000.0, 2),
+            createPoint(6, 5, 500, 2500.0, 2)
+        )
+        // startK = 0, endKPlus1 = 5
+        // minBoundaryIndex = 0 + 1 = 1
+        // maxBoundaryIndex = 5 - 1 = 4
+
+        // Attempt to move below min (e.g. -5) -> clamps to 1
+        val resBelow = LapSplitAndMoveCalculator.validateBoundaryMove(samples, 1L, newBoundaryIndex = -5)
+        assertEquals(1, resBelow.clampedSampleIndex)
+
+        // Attempt to move above max (e.g. 10) -> clamps to 4
+        val resAbove = LapSplitAndMoveCalculator.validateBoundaryMove(samples, 1L, newBoundaryIndex = 10)
+        assertEquals(4, resAbove.clampedSampleIndex)
+    }
+
+    @Test
+    fun `recalculateLapsAfterBoundaryMove updates only affected adjacent laps and preserves other laps`() {
+        val workoutId = 99L
+        val existingLaps = listOf(
+            LapData(id = 1L, workoutId = workoutId, lapNr = 1L, timeTotalS = 100, distanceTotalM = 500.0, speedAverageMps = 5.0, name = "Warmup"),
+            LapData(id = 2L, workoutId = workoutId, lapNr = 2L, timeTotalS = 200, distanceTotalM = 1000.0, speedAverageMps = 5.0, name = "Tempo"),
+            LapData(id = 3L, workoutId = workoutId, lapNr = 3L, timeTotalS = 200, distanceTotalM = 1000.0, speedAverageMps = 5.0, name = "Interval"),
+            LapData(id = 4L, workoutId = workoutId, lapNr = 4L, timeTotalS = 100, distanceTotalM = 500.0, speedAverageMps = 5.0, name = "Cooldown")
+        )
+
+        // Lap 1: 0..1, Lap 2: 2..4, Lap 3: 5..7, Lap 4: 8..9
+        val samples = listOf(
+            createPoint(1, 0, 0, 0.0, 1),
+            createPoint(2, 1, 100, 500.0, 1),
+            createPoint(3, 2, 110, 550.0, 2),
+            createPoint(4, 3, 200, 1000.0, 2),
+            createPoint(5, 4, 310, 1550.0, 2),
+            createPoint(6, 5, 320, 1600.0, 3),
+            createPoint(7, 6, 400, 2000.0, 3),
+            createPoint(8, 7, 520, 2600.0, 3),
+            createPoint(9, 8, 530, 2650.0, 4),
+            createPoint(10, 9, 630, 3150.0, 4)
+        )
+
+        // Move boundary between Lap 2 and Lap 3 to index 6
+        // Lap 2 expands from [2..4] to [2..5]
+        // Lap 3 shrinks from [5..7] to [6..7]
+        val updatedLaps = LapSplitAndMoveCalculator.recalculateLapsAfterBoundaryMove(
+            workoutId = workoutId,
+            existingLaps = existingLaps,
+            samples = samples,
+            boundaryLapNr = 2L,
+            newBoundarySampleIndex = 6
+        )
+
+        assertEquals(4, updatedLaps.size)
+
+        // Lap 1: untouched
+        assertEquals(existingLaps[0], updatedLaps[0])
+
+        // Lap 2: updated (samples 2..5 -> 110..320s = 210s, 550..1600m = 1050m)
+        assertEquals(2L, updatedLaps[1].lapNr)
+        assertEquals(210, updatedLaps[1].timeTotalS)
+        assertEquals(1050.0, updatedLaps[1].distanceTotalM, 1e-4)
+        assertEquals("Tempo", updatedLaps[1].name)
+
+        // Lap 3: updated (samples 6..7 -> 400..520s = 120s, 2000..2600m = 600m)
+        assertEquals(3L, updatedLaps[2].lapNr)
+        assertEquals(120, updatedLaps[2].timeTotalS)
+        assertEquals(600.0, updatedLaps[2].distanceTotalM, 1e-4)
+        assertEquals("Interval", updatedLaps[2].name)
+
+        // Lap 4: untouched
+        assertEquals(existingLaps[3], updatedLaps[3])
+    }
 }

@@ -7193,6 +7193,29 @@
   5. *Clean-Room Regression Suite (`TST-UI-449.5`)*:
   • Run targeted package tests (`com.atrainingtracker.trainingtracker.ui.aftermath.*`, `database.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
 
+### TST-UI-450: **Interactive Map Lap Boundary Moving in Workout Aftermath Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-450`
+- **Component**: `MoveLapBoundaryOnMapSheet.kt`, `LapSplitAndMoveCalculator.kt`, `WorkoutRepository.kt`, `WorkoutSamplesDatabaseManager.java`, `LapsDatabaseManager.java`, `LapEditBottomSheet.kt`, `WorkoutLaps.kt`
+- **Jira**: `ATT-908`
+- **Test Description**:
+  1. *Domain Boundary Clamping & Move Preview Contract Test (`TST-UI-450.1`, `LapBoundaryMoveCalculatorTest.kt`)*:
+  • Verify `LapSplitAndMoveCalculator.validateBoundaryMove` clamps and rejects boundaries outside $[startIndex(k) + 1, endIndex(k+1) - 1]$.
+  • Verify reactive duration, distance, and speed calculations for forward and backward boundary adjustments.
+  • Verify phantom lap prevention: both adjacent laps maintain positive duration and distance.
+  2. *Database Range Update & Invariant Contract Test (`TST-UI-450.2`, `WorkoutSamplesDatabaseManagerBoundaryMoveTest.java` / `WorkoutRepositoryBoundaryMoveTest.kt`)*:
+  • Verify `WorkoutSamplesDatabaseManager.updateLapNumberForSampleRange` selectively updates `LAP_NR` for sample rows between old and new boundaries.
+  • Verify `WorkoutRepository.moveLapBoundary` updates `Laps.db` for Lap $k$ and Lap $k+1$ via `replaceCroppedLaps` while leaving all other laps ($1 \dots k-1$ and $k+2 \dots K$) untouched.
+  • Verify rollback on SQLite exception preserves data integrity across tables.
+  3. *Compose UI & Boundary Sheet Contract Test (`TST-UI-450.3`, `MoveLapBoundaryOnMapSheetTest.kt`)*:
+  • Verify `MoveLapBoundaryOnMapSheet` renders track segment, boundary markers, precision slider, and live preview cards.
+  • Verify pre-seeding from existing boundary index.
+  • Verify confirmation button dispatches `onBoundaryConfirmed` with selected sample index.
+  4. *9-Language Localization & Parity Test (`TST-UI-450.4`, `TranslationParityTest.kt`)*:
+  • Verify 100% parity across all 9 supported locales for new `move_lap_boundary_*` string keys with zero missing entries and zero decorative inline emojis.
+  5. *Clean-Room Regression Suite (`TST-UI-450.5`)*:
+  • Run targeted package tests (`com.atrainingtracker.trainingtracker.domain.laps.*`, `ui.aftermath.*`, `database.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
+
+
 
 
 

@@ -35,6 +35,18 @@ data class LapSplitValidationResult(
 )
 
 /**
+ * Result data class representing validation and preview metrics for moving a lap boundary (REQ-UI-450.2 / ATT-908).
+ */
+data class LapBoundaryMoveValidationResult(
+    val isValid: Boolean,
+    val boundaryLapNr: Long = 1L,
+    val clampedSampleIndex: Int = 0,
+    val previewLapK: LapData? = null,
+    val previewLapKPlus1: LapData? = null,
+    val errorMessage: String? = null
+)
+
+/**
  * Pure calculation engine for interactive lap splitting and boundary moving on recorded workout maps.
  * (REQ-UI-449 / ATT-907, with synergistic architecture for ATT-908)
  */
@@ -201,5 +213,141 @@ object LapSplitAndMoveCalculator {
         }
 
         return resultLaps
+    }
+
+    /**
+     * Validates shifting the boundary between [boundaryLapNr] (Lap k) and [boundaryLapNr] + 1 (Lap k+1)
+     * to [newBoundaryIndex], enforcing boundary clamping within [startIndex(k) + 1, endIndex(k+1) - 1]
+     * and zero-phantom lap invariants (REQ-UI-450.3 / ATT-908).
+     */
+    fun validateBoundaryMove(
+        samples: List<CropSamplePoint>,
+        boundaryLapNr: Long,
+        newBoundaryIndex: Int,
+        existingLaps: List<LapData> = emptyList()
+    ): LapBoundaryMoveValidationResult {
+        if (samples.isEmpty()) {
+            return LapBoundaryMoveValidationResult(isValid = false, boundaryLapNr = boundaryLapNr, errorMessage = "No samples available")
+        }
+
+        val lapKIndices = samples.indices.filter { samples[it].lapNr == boundaryLapNr }
+        val lapKPlus1Indices = samples.indices.filter { samples[it].lapNr == boundaryLapNr + 1L }
+
+        if (lapKIndices.isEmpty() || lapKPlus1Indices.isEmpty()) {
+            return LapBoundaryMoveValidationResult(
+                isValid = false,
+                boundaryLapNr = boundaryLapNr,
+                errorMessage = "Adjacent laps $boundaryLapNr and ${boundaryLapNr + 1} not found"
+            )
+        }
+
+        val startK = lapKIndices.first()
+        val endKPlus1 = lapKPlus1Indices.last()
+
+        val minBoundaryIndex = (startK + 1).coerceAtMost(endKPlus1 - 1)
+        val maxBoundaryIndex = (endKPlus1 - 1).coerceAtLeast(startK + 1)
+        val clampedIndex = newBoundaryIndex.coerceIn(minBoundaryIndex, maxBoundaryIndex)
+
+        if (clampedIndex - 1 < startK || clampedIndex > endKPlus1) {
+            return LapBoundaryMoveValidationResult(
+                isValid = false,
+                boundaryLapNr = boundaryLapNr,
+                clampedSampleIndex = clampedIndex,
+                errorMessage = "Boundary position out of legal lap range"
+            )
+        }
+
+        val pKStart = samples[startK]
+        val pKEnd = samples[clampedIndex - 1]
+        val durationKS = (pKEnd.timeTotalS - pKStart.timeTotalS).coerceAtLeast(0L).toInt()
+        val distanceKM = (pKEnd.distanceTotalM - pKStart.distanceTotalM).coerceAtLeast(0.0)
+
+        val pKPlus1Start = samples[clampedIndex]
+        val pKPlus1End = samples[endKPlus1]
+        val durationKPlus1S = (pKPlus1End.timeTotalS - pKPlus1Start.timeTotalS).coerceAtLeast(0L).toInt()
+        val distanceKPlus1M = (pKPlus1End.distanceTotalM - pKPlus1Start.distanceTotalM).coerceAtLeast(0.0)
+
+        // Zero phantom lap invariant (REQ-TRK-002)
+        if (durationKS <= 0 && distanceKM <= 0.0) {
+            return LapBoundaryMoveValidationResult(
+                isValid = false,
+                boundaryLapNr = boundaryLapNr,
+                clampedSampleIndex = clampedIndex,
+                errorMessage = "First lap would be empty"
+            )
+        }
+        if (durationKPlus1S <= 0 && distanceKPlus1M <= 0.0) {
+            return LapBoundaryMoveValidationResult(
+                isValid = false,
+                boundaryLapNr = boundaryLapNr,
+                clampedSampleIndex = clampedIndex,
+                errorMessage = "Second lap would be empty"
+            )
+        }
+
+        val avgSpeedK = CropWorkoutMath.calculateAverageSpeed(distanceKM, durationKS)
+        val avgSpeedKPlus1 = CropWorkoutMath.calculateAverageSpeed(distanceKPlus1M, durationKPlus1S)
+
+        val existingK = existingLaps.firstOrNull { it.lapNr == boundaryLapNr }
+        val existingKPlus1 = existingLaps.firstOrNull { it.lapNr == boundaryLapNr + 1L }
+        val workoutId = existingK?.workoutId ?: samples.first().rowId
+
+        val previewLapK = LapData(
+            id = existingK?.id ?: 0L,
+            workoutId = workoutId,
+            lapNr = boundaryLapNr,
+            timeStart = pKStart.timeStr ?: existingK?.timeStart,
+            timeTotalS = durationKS,
+            distanceTotalM = distanceKM,
+            speedAverageMps = avgSpeedK,
+            name = existingK?.name,
+            description = existingK?.description
+        )
+
+        val previewLapKPlus1 = LapData(
+            id = existingKPlus1?.id ?: 0L,
+            workoutId = workoutId,
+            lapNr = boundaryLapNr + 1L,
+            timeStart = pKPlus1Start.timeStr ?: existingKPlus1?.timeStart,
+            timeTotalS = durationKPlus1S,
+            distanceTotalM = distanceKPlus1M,
+            speedAverageMps = avgSpeedKPlus1,
+            name = existingKPlus1?.name,
+            description = existingKPlus1?.description
+        )
+
+        return LapBoundaryMoveValidationResult(
+            isValid = true,
+            boundaryLapNr = boundaryLapNr,
+            clampedSampleIndex = clampedIndex,
+            previewLapK = previewLapK,
+            previewLapKPlus1 = previewLapKPlus1
+        )
+    }
+
+    /**
+     * Recalculates the complete sequence of laps after shifting the boundary between
+     * [boundaryLapNr] and [boundaryLapNr] + 1. Only these two adjacent laps are updated; all other
+     * laps (1..k-1 and k+2..K) retain their exact existing properties and summaries.
+     */
+    fun recalculateLapsAfterBoundaryMove(
+        workoutId: Long,
+        existingLaps: List<LapData>,
+        samples: List<CropSamplePoint>,
+        boundaryLapNr: Long,
+        newBoundarySampleIndex: Int
+    ): List<LapData> {
+        val validation = validateBoundaryMove(samples, boundaryLapNr, newBoundarySampleIndex, existingLaps)
+        if (!validation.isValid || validation.previewLapK == null || validation.previewLapKPlus1 == null) {
+            return existingLaps
+        }
+
+        return existingLaps.map { lap ->
+            when (lap.lapNr) {
+                boundaryLapNr -> validation.previewLapK
+                boundaryLapNr + 1L -> validation.previewLapKPlus1
+                else -> lap
+            }
+        }
     }
 }

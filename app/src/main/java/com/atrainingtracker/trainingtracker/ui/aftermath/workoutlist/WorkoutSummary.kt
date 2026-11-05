@@ -34,6 +34,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -70,6 +71,7 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.Workout
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.WorkoutExtrema
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeader
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.CreateLapOnMapSheet
+import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.MoveLapBoundaryOnMapSheet
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.WorkoutLaps
 import com.atrainingtracker.trainingtracker.ui.components.strava.StravaActivitySection
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
@@ -138,6 +140,8 @@ fun WorkoutSummary(
     var activePreviewPhoto by remember { mutableStateOf<WorkoutPhotoEntry?>(null) }
     var activeSharePhoto by remember { mutableStateOf<WorkoutPhotoEntry?>(null) }
     var showCreateLapSheet by rememberSaveable { mutableStateOf(false) }
+    var showMoveBoundarySheet by rememberSaveable { mutableStateOf(false) }
+    var moveBoundaryLapNr by rememberSaveable { mutableLongStateOf(1L) }
 
     // Lazy telemetry points loading (ATT-1714 / REQ-UI-210)
     val telemetryPoints by produceState<List<PathPoint>>(
@@ -276,7 +280,11 @@ fun WorkoutSummary(
                             bSportType = workoutData.bSportType,
                             lapDisplayMode = preferences.lapDisplayMode,
                             onLapClick = { lap -> activeEditingLap = lap },
-                            onSplitLapClick = { showCreateLapSheet = true }
+                            onSplitLapClick = { showCreateLapSheet = true },
+                            onMoveBoundaryClick = { boundaryLapNr ->
+                                moveBoundaryLapNr = boundaryLapNr
+                                showMoveBoundarySheet = true
+                            }
                         )
                     }
                 }
@@ -519,6 +527,11 @@ fun WorkoutSummary(
                     WorkoutRepository.getInstance(context.applicationContext as Application)
                         .updateLapDetails(workoutData.id, lapNr, name, description)
                 }
+            },
+            onMoveBoundaryClick = { boundaryLapNr ->
+                activeEditingLap = null
+                moveBoundaryLapNr = boundaryLapNr
+                showMoveBoundarySheet = true
             }
         )
     }
@@ -562,6 +575,23 @@ fun WorkoutSummary(
                 coroutineScope.launch {
                     repository.splitLapAtSample(workoutData.id, splitIndex)
                     showCreateLapSheet = false
+                }
+            }
+        )
+    }
+
+    if (showMoveBoundarySheet) {
+        MoveLapBoundaryOnMapSheet(
+            workoutId = workoutData.id,
+            boundaryLapNr = moveBoundaryLapNr,
+            bSportType = workoutData.bSportType,
+            existingLaps = workoutData.laps,
+            repository = repository,
+            onDismiss = { showMoveBoundarySheet = false },
+            onBoundaryMoved = { boundaryLapNr, newIndex ->
+                coroutineScope.launch {
+                    repository.moveLapBoundary(workoutData.id, boundaryLapNr, newIndex)
+                    showMoveBoundarySheet = false
                 }
             }
         )

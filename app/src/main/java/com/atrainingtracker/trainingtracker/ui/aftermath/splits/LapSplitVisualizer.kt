@@ -224,6 +224,7 @@ fun LapSplitVisualizerCard(
     selectedLapNr: Long? = null,
     onLapClick: ((Long) -> Unit)? = null,
     onSplitLapClick: (() -> Unit)? = null,
+    onMoveBoundaryClick: ((boundaryLapNr: Long) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -258,6 +259,20 @@ fun LapSplitVisualizerCard(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.weight(1f))
+                if (onMoveBoundaryClick != null && splitData.splits.size >= 2) {
+                    IconButton(
+                        onClick = { onMoveBoundaryClick(1L) },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_lap_timer),
+                            contentDescription = stringResource(R.string.move_lap_boundary_action),
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                }
                 if (onSplitLapClick != null) {
                     IconButton(
                         onClick = onSplitLapClick,

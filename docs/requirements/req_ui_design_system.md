@@ -13214,6 +13214,42 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Zero phantom laps (`REQ-TRK-002`), sequential $1 \dots K$ contiguous lap sequence, immutable workout total duration/distance, 9-locale parity without inline emojis, 100% clean-room test pass rate.
 
+### REQ-UI-450: Interactive Map Lap Boundary Moving in Workout Aftermath [Verified]
+- **Tests**: `TST-UI-450` | **Tickets**: `ATT-908`
+- **Implementation**: `MoveLapBoundaryOnMapSheet.kt`, `LapSplitAndMoveCalculator.kt`, `WorkoutRepository.kt`, `WorkoutSamplesDatabaseManager.java`, `LapsDatabaseManager.java`, `LapEditBottomSheet.kt`, `WorkoutLaps.kt`
+- **Rationale**: When an athlete triggers a lap split too early or too late, or when auto-lap boundaries split mid-segment, the system SHALL allow retroactively shifting the boundary between any two adjacent recorded laps ($k$ and $k+1$) along the GPS track in Aftermath, updating sample records in an atomic range transaction and recalculating both lap summaries without altering total session metrics or affecting any other laps.
+- **Description**:
+  1. *Entry Points & Boundary Pre-Seeding (`REQ-UI-450.1`)*: In `LapEditBottomSheet.kt` (for lap $k < K$) and `WorkoutLaps.kt` / `LapSplitVisualizerCard` (boundary edit action between adjacent laps), the system SHALL provide an interactive "Move Boundary on Map" (*Rundengrenze auf Karte verschieben*) action. When triggered, the boundary editor SHALL open pre-seeded at the current boundary index between Lap $k$ and Lap $k+1$.
+  2. *Interactive Boundary Move Bottom Sheet (`REQ-UI-450.2`, `MoveLapBoundaryOnMapSheet.kt`)*: The editor SHALL be hosted in `AppModalBottomSheet` (per `ATT-5399`), rendering:
+     - The workout GPS track with the active two-lap sub-segment highlighted, start/stop pins, and a movable boundary pin draggable or adjustable via a precision slider.
+     - Live metric preview cards for both affected adjacent laps (Lap $k$ and Lap $k+1$: duration, distance, and average speed/pace calculated via `LapSplitAndMoveCalculator`).
+     - Boundary Clamping & Zero-Phantom Invariant: The new boundary index $s_{\text{new}}$ SHALL be strictly clamped to the range $[startIndex(k) + 1, endIndex(k+1) - 1]$. Neither Lap $k$ nor Lap $k+1$ can collapse into a zero-duration or zero-distance phantom lap (`REQ-TRK-002`).
+  3. *Atomic Multi-Database Transaction (`REQ-UI-450.3`, `WorkoutRepository.moveLapBoundary`)*:
+     - In `WorkoutSamples.db`, `WorkoutSamplesDatabaseManager.updateLapNumberForSampleRange` SHALL execute an atomic update assigning the shifted sample range $[s_{\text{min}}, s_{\text{max}}]$ to the appropriate target `LAP_NR` ($k$ if shifting boundary forward/right, $k+1$ if shifting boundary backward/left).
+     - In `Laps.db`, updated lap summaries for Lap $k$ and Lap $k+1$ SHALL be recalculated from samples and persisted via `LapsDatabaseManager.replaceCroppedLaps` in a single SQLite transaction, leaving all other laps ($1 \dots k-1$ and $k+2 \dots K$) untouched.
+     - Export caches SHALL be invalidated and reactive `WorkoutData` emitted to refresh UI immediately.
+  4. *9-Language Localization Parity (`REQ-UI-450.4`)*: All user-facing strings SHALL maintain 100% parity across all 9 supported locales without inline decorative Unicode emojis.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-450`, extending `REQ-UI-449` (ATT-907), `REQ-TRK-002` (Lap lifecycle & phantom lap elimination), and `REQ-UI-142` (Edit lap details). Targets `WorkoutRepository.kt`, `LapSplitAndMoveCalculator.kt`, `WorkoutSamplesDatabaseManager.java`, `LapsDatabaseManager.java`, and `MoveLapBoundaryOnMapSheet.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-45.6 (`ATT-907`, map lap creation) and Sprint 2026-44.1 (`ATT-896`, zero phantom laps).
+3. *Root Reason for Existing Formulation*: Lap boundaries were historically immutable after tracking to prevent sample/summary desynchronization.
+4. *Preservation of Core Invariants*: No phantom laps: both Lap $k$ and Lap $k+1$ maintain duration $> 0$ and distance $> 0.0$; contiguous $1 \dots K$ lap numbering strictly preserved; total workout duration, distance, polyline, and extrema remain immutable.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an aftermath workout with $\ge 2$ laps,
+• *When* the athlete taps "Move Boundary on Map" for Lap $k$,
+• *Then* `MoveLapBoundaryOnMapSheet` opens showing the adjacent route segment, the movable boundary pin, and live preview cards for Lap $k$ and Lap $k+1$.
+• *When* the athlete adjusts the boundary slider or pin,
+• *Then* the preview metrics for Lap $k$ and Lap $k+1$ update reactively in real time.
+• *Given* an attempt to drag the boundary pin to $s \le startIndex(k)$ or $s \ge endIndex(k+1)$,
+• *Then* the pin is strictly clamped within $[startIndex(k) + 1, endIndex(k+1) - 1]$ and confirmation is preserved for valid interior points.
+• *When* the athlete confirms the boundary move,
+• *Then* `WorkoutRepository.moveLapBoundary` executes atomically, updating sample rows in `WorkoutSamples.db` and replacing both lap summaries in `Laps.db`, and the UI immediately displays the updated lap boundaries.
+
+**Invariants**: Zero phantom laps (`REQ-TRK-002`), strictly interior boundary clamping $[startIndex(k) + 1, endIndex(k+1) - 1]$, contiguous $1 \dots K$ lap sequence, immutable workout total duration/distance, 9-locale parity without inline emojis, 100% clean-room test pass rate.
+
+
 
 
 

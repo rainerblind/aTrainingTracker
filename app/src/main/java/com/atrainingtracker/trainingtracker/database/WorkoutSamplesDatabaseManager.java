@@ -604,6 +604,47 @@ public class WorkoutSamplesDatabaseManager {
     }
 
     /**
+     * Atomically updates LAP_NR to the specified newLapNr for all samples within [startRowId, endRowId] (inclusive) (REQ-UI-450.4 / ATT-908).
+     *
+     * @param fileBaseName The workout table base name.
+     * @param startRowId The starting _id threshold (inclusive).
+     * @param endRowId The ending _id threshold (inclusive).
+     * @param newLapNr The new lap number to assign.
+     * @return The number of rows affected.
+     */
+    public int updateLapNumberForSampleRange(@NonNull String fileBaseName, long startRowId, long endRowId, long newLapNr) {
+        SQLiteDatabase db = getDatabase();
+        String table = getTableName(fileBaseName);
+        if (!existsTable(fileBaseName)) {
+            Log.w(TAG, "Table does not exist for " + fileBaseName);
+            return 0;
+        }
+
+        db.beginTransaction();
+        try {
+            boolean hasLapNr = existsColumnInTable(db, table, SensorType.LAP_NR.name());
+            if (!hasLapNr) {
+                db.execSQL("ALTER TABLE " + table + " ADD COLUMN " + SensorType.LAP_NR.name() + " INTEGER DEFAULT 1");
+            }
+
+            String sql = "UPDATE " + table + " SET " + SensorType.LAP_NR.name() + " = ? WHERE _id >= ? AND _id <= ?";
+            SQLiteStatement stmt = db.compileStatement(sql);
+            stmt.bindLong(1, newLapNr);
+            stmt.bindLong(2, Math.min(startRowId, endRowId));
+            stmt.bindLong(3, Math.max(startRowId, endRowId));
+            int rowsAffected = stmt.executeUpdateDelete();
+
+            db.setTransactionSuccessful();
+            return rowsAffected;
+        } catch (Exception e) {
+            Log.e(TAG, "Error updating lap numbers for sample range [" + startRowId + ", " + endRowId + "] to " + newLapNr, e);
+            throw e;
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    /**
      * Reclaims SQLite storage via incremental vacuum if deleted rows exceed 20% of total rows
      * and the database is configured for INCREMENTAL auto-vacuum (mode 2).
      */

@@ -2341,6 +2341,13 @@
     <string name="split_lap_preview_after">Part 2 (New Lap)</string>
     <string name="split_lap_slider_label">Split Position</string>
     <string name="split_lap_success">Lap split successfully</string>
+    <string name="move_lap_boundary_action">Move Lap Boundary</string>
+    <string name="move_lap_boundary_title">Move Lap Boundary</string>
+    <string name="move_lap_boundary_confirm">Move Boundary</string>
+    <string name="move_lap_boundary_slider_label">Boundary Position</string>
+    <string name="move_lap_boundary_lap_k_preview">Lap %1$d (Previous)</string>
+    <string name="move_lap_boundary_lap_k_plus_1_preview">Lap %1$d (Next)</string>
+    <string name="move_lap_boundary_select_boundary">Boundary: Lap %1$d / Lap %2$d</string>
     <string name="cd_fastest_split">Fastest split</string>
     <string name="cd_switch_view_mode">Switch view mode</string>
     <string name="connect_with_strava">Connect with Strava</string>

@@ -1865,6 +1865,95 @@ class WorkoutRepository private constructor(private val application: Application
     }
 
     /**
+     * Moves an existing boundary between [boundaryLapNr] (Lap k) and [boundaryLapNr] + 1 (Lap k+1)
+     * to [newBoundarySampleIndex] (REQ-UI-450.4 / ATT-908).
+     *
+     * Atomically reassigns sample lap numbers in WorkoutSamples.db for the shifted range,
+     * updates affected lap summaries in Laps.db via replaceCroppedLaps, invalidates export cache,
+     * and refreshes in-memory workout data.
+     */
+    suspend fun moveLapBoundary(
+        workoutId: Long,
+        boundaryLapNr: Long,
+        newBoundarySampleIndex: Int
+    ): Result<List<LapData>> = withContext(Dispatchers.IO) {
+        try {
+            val baseFileName = summariesManager.getBaseFileName(workoutId)
+                ?: return@withContext Result.failure(IllegalStateException("No base file name for workout $workoutId"))
+            if (!samplesManager.existsTable(baseFileName)) {
+                return@withContext Result.failure(IllegalStateException("Samples table does not exist for $baseFileName"))
+            }
+
+            val samples = getCropSamplePoints(workoutId)
+            if (samples.isEmpty()) {
+                return@withContext Result.failure(IllegalStateException("No samples for workout $workoutId"))
+            }
+
+            val existingLaps = lapsDatabaseManager.getLaps(workoutId)
+            val validation = com.atrainingtracker.trainingtracker.domain.laps.LapSplitAndMoveCalculator.validateBoundaryMove(
+                samples = samples,
+                boundaryLapNr = boundaryLapNr,
+                newBoundaryIndex = newBoundarySampleIndex,
+                existingLaps = existingLaps
+            )
+            if (!validation.isValid) {
+                return@withContext Result.failure(IllegalArgumentException(validation.errorMessage ?: "Invalid boundary position"))
+            }
+
+            val lapKPlus1Indices = samples.indices.filter { samples[it].lapNr == boundaryLapNr + 1L }
+            if (lapKPlus1Indices.isEmpty()) {
+                return@withContext Result.failure(IllegalStateException("Lap ${boundaryLapNr + 1} not found in samples"))
+            }
+            val currentBoundaryIndex = lapKPlus1Indices.first()
+            val targetBoundaryIndex = validation.clampedSampleIndex
+
+            if (targetBoundaryIndex != currentBoundaryIndex) {
+                if (targetBoundaryIndex > currentBoundaryIndex) {
+                    // Shifted forward: samples in [currentBoundaryIndex, targetBoundaryIndex - 1] move from lap k+1 to lap k
+                    val startRowId = samples[currentBoundaryIndex].rowId
+                    val endRowId = samples[targetBoundaryIndex - 1].rowId
+                    samplesManager.updateLapNumberForSampleRange(baseFileName, startRowId, endRowId, boundaryLapNr)
+                } else {
+                    // Shifted backward: samples in [targetBoundaryIndex, currentBoundaryIndex - 1] move from lap k to lap k+1
+                    val startRowId = samples[targetBoundaryIndex].rowId
+                    val endRowId = samples[currentBoundaryIndex - 1].rowId
+                    samplesManager.updateLapNumberForSampleRange(baseFileName, startRowId, endRowId, boundaryLapNr + 1L)
+                }
+            }
+
+            // Recalculate laps
+            val newLaps = com.atrainingtracker.trainingtracker.domain.laps.LapSplitAndMoveCalculator.recalculateLapsAfterBoundaryMove(
+                workoutId = workoutId,
+                existingLaps = existingLaps,
+                samples = samples,
+                boundaryLapNr = boundaryLapNr,
+                newBoundarySampleIndex = targetBoundaryIndex
+            )
+
+            // Persist updated laps to Laps.db atomically
+            lapsDatabaseManager.replaceCroppedLaps(workoutId, newLaps)
+
+            // Invalidate export cache
+            try {
+                val updatedWorkout = allWorkouts.value.find { it.id == workoutId }
+                if (updatedWorkout != null) {
+                    exportManager.exportWorkout(updatedWorkout)
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Non-fatal export cache refresh exception after move lap boundary: ${e.message}")
+            }
+
+            // Refresh in-memory reactive state
+            reloadWorkoutData(workoutId)
+
+            Result.success(newLaps)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to move lap boundary for lap $boundaryLapNr at index $newBoundarySampleIndex for workout $workoutId", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
      * Atomically updates a workout session in memory while handling potential race conditions.
      *
      * Implementation: If the workout is already cached, it applies the [block] transform purely in-place
