@@ -108,7 +108,7 @@ class ExportNotificationManager private constructor(private val context: Context
         val contentText = getContentText(fileBaseName)
 
         val notification = NotificationCompat.Builder(context, TrainingApplication.NOTIFICATION_CHANNEL__EXPORT)
-            .setSmallIcon(R.drawable.logo)
+            .setSmallIcon(R.drawable.ic_stat_notify_logo)
             .setContentTitle(title)       // Fallback für Wear OS etc.
             .setContentText(contentText)  // Fallback für Wear OS etc.
             .setStyle(NotificationCompat.DecoratedCustomViewStyle())

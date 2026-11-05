@@ -13284,20 +13284,46 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Option A 16 dp visual edge offset, exact mathematical centering of 8 sensor icons across all tiers, untouched compact landscape layout (`REQ-UI-434.1`), and 100% test pass rate.
 
+### REQ-UI-452: Dedicated Status Bar Vector Icon, Notification Builder Migration & Monolithic Density Packaging [Verified]
+- **Tests**: `TST-UI-452` | **Tickets**: `ATT-5477`
+- **Implementation**: `app/src/main/res/drawable/ic_stat_notify_logo.xml`, `TrainingApplication.java`, `TrackerService.java`, `WorkoutDeletionNotificationManager.kt`, `ExportNotificationManager.kt`, `SensorBatteryNotificationManager.kt`, `app/build.gradle`, `DrawableDensityFallbackAuditTest.kt`
+- **Rationale**: To eliminate fatal `android.app.RemoteServiceException` / `BadForegroundServiceNotificationException` crashes reported via Firebase Crashlytics on split-APK devices (where `SystemUI` fails to resolve multi-density raster drawables like `R.drawable.logo` across Binder IPC) and enforce Android notification status bar guidelines requiring monochrome vector silhouettes:
+- **Description**:
+  1. *Dedicated Monochrome Vector Notification Icon (`REQ-UI-452.1`)*:
+     - The application SHALL provide a single density-independent VectorDrawable at `app/src/main/res/drawable/ic_stat_notify_logo.xml` (viewport width 24dp, viewport height 24dp).
+     - The vector asset SHALL render the canonical athlete/stopwatch silhouette in monochrome white (`#FFFFFF`) with transparent negative space, without any density-specific (`drawable-*dpi`) or `nodpi` raster siblings.
+  2. *Universal Notification Builder Migration (`REQ-UI-452.2`)*:
+     - All status bar notification builders across the application SHALL invoke `.setSmallIcon(R.drawable.ic_stat_notify_logo)` instead of `R.drawable.logo`.
+     - Specifically, all 6 call sites across the 5 notification managers SHALL be migrated:
+       1. `TrainingApplication.java:1511` (Foreground Tracking notification)
+       2. `TrackerService.java:1118` (Tracking Interrupted alert notification)
+       3. `WorkoutDeletionNotificationManager.kt:62` (Workout deletion progress notification)
+       4. `WorkoutDeletionNotificationManager.kt:84` (Workout cache resync notification)
+       5. `ExportNotificationManager.kt:111` (Workout export notification)
+       6. `SensorBatteryNotificationManager.kt:102` (Sensor battery alert notification)
+  3. *Monolithic Density Packaging in App Bundle (`REQ-UI-452.3`)*:
+     - In `app/build.gradle`, under `android { ... }`, the application SHALL configure `bundle { density { enableSplit = false } }`.
+     - This ensures all raster and vector drawable resources remain embedded directly in `base.apk`, eliminating Split-APK resource resolution desynchronization across all Android devices.
+  4. *Redundant `drawable-nodpi/` Duplicate Cleanup & Contract Test Alignment (`REQ-UI-452.4`)*:
+     - Duplicate raster assets in `app/src/main/res/drawable-nodpi/` that already exist across canonical density folders (`drawable-mdpi`, `-hdpi`, `-xhdpi`, `-xxhdpi`, `-xxxhdpi`) and root fallback `drawable/` SHALL be removed.
+     - `DrawableDensityFallbackAuditTest.kt` SHALL be updated to verify core assets across canonical high-density buckets (`drawable-xhdpi`, `drawable-xxhdpi`, `drawable-xxxhdpi`) without requiring redundant `drawable-nodpi/` duplicates.
 
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-452`, extending `REQ-UI-380` (*Complete High-Density Asset Coverage & Defensive Compose Architecture*) and `REQ-UI-444.4` (*Master Asset Preservation & Notification Callers*). Targets notification managers, `app/build.gradle`, and `res/drawable/`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-44.1 (`ATT-3529`, commit `4adb2fcb`) introduced high-density coverage and `drawable-nodpi/` duplicates; Sprint 2026-45.4 (`ATT-1482`, commit `df8bc617`) preserved `R.drawable.logo` for notification backwards compatibility.
+3. *Root Reason for Existing Formulation*: `ATT-3529` populated `drawable-nodpi/` to prevent density fallback crashes, but did not prevent AGP density splitting in App Bundles, nor did it provide a vector drawable for `SystemUI` Binder IPC.
+4. *Preservation of Core Invariants*: Legacy `R.drawable.logo` is preserved for non-notification usages (`Protocol.java`); all 5 notification managers continue to post notifications on their designated notification channels; zero change to notification priorities or pending intents.
 
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* any notification posted by `TrainingApplication`, `TrackerService`, `WorkoutDeletionNotificationManager`, `ExportNotificationManager`, or `SensorBatteryNotificationManager`,
+• *When* `NotificationCompat.Builder` builds and posts the notification to `NotificationManagerCompat`,
+• *Then* the small icon is `R.drawable.ic_stat_notify_logo` which resolves safely from `base.apk` without throwing `RemoteServiceException`.
+• *Given* the Android App Bundle packaging configuration in `app/build.gradle`,
+• *When* building release or debug artifacts,
+• *Then* `bundle.density.enableSplit` is `false`, keeping all drawables inside `base.apk`.
+• *Given* `DrawableDensityFallbackAuditTest.kt`,
+• *When* unit tests execute,
+• *Then* the test asserts high-density coverage across `drawable-xhdpi`, `drawable-xxhdpi`, and `drawable-xxxhdpi` and passes cleanly.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+**Invariants**: Zero `RemoteServiceException` / `BadForegroundServiceNotificationException` crashes, standard monochrome status bar icon style, preservation of `R.drawable.logo` for non-notification callers, and 100% test pass rate.
 

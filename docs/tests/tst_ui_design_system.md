@@ -7231,19 +7231,24 @@
   4. *Clean-Room Regression Suite Execution (`TST-UI-451.4`)*:
   • Execute targeted package tests (`com.atrainingtracker.trainingtracker.ui.tracking.controltracking.*`, `com.atrainingtracker.trainingtracker.ui.branding.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+### TST-UI-452: **Dedicated Status Bar Vector Icon, Notification Builder Migration & Monolithic Density Packaging Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-452`
+- **Component**: `ic_stat_notify_logo.xml`, `TrainingApplication.java`, `TrackerService.java`, `WorkoutDeletionNotificationManager.kt`, `ExportNotificationManager.kt`, `SensorBatteryNotificationManager.kt`, `app/build.gradle`, `DrawableDensityFallbackAuditTest.kt`, `NotificationIconContractTest.kt`
+- **Jira**: `ATT-5477`
+- **Test Description**:
+  1. *Vector Asset & Monochrome Silhouette Contract Test (`TST-UI-452.1`, `NotificationIconContractTest.kt`)*:
+  • Verify `ic_stat_notify_logo.xml` exists in `app/src/main/res/drawable/` as a valid XML `<vector>`.
+  • Verify `viewportWidth="24"` and `viewportHeight="24"`.
+  • Verify there are no density-specific (`drawable-*dpi`) or `nodpi` siblings for `ic_stat_notify_logo`.
+  2. *Notification Builder SmallIcon Call Site Verification (`TST-UI-452.2`, `NotificationIconContractTest.kt`)*:
+  • Audit all 6 call sites across `TrainingApplication.java`, `TrackerService.java`, `WorkoutDeletionNotificationManager.kt`, `ExportNotificationManager.kt`, and `SensorBatteryNotificationManager.kt`.
+  • Assert that zero notification builders invoke `.setSmallIcon(R.drawable.logo)`.
+  • Assert that all notification builders invoke `.setSmallIcon(R.drawable.ic_stat_notify_logo)`.
+  3. *App Bundle Density Split Configuration Test (`TST-UI-452.3`, `NotificationIconContractTest.kt`)*:
+  • Verify `app/build.gradle` contains `bundle { density { enableSplit = false } }`.
+  4. *Drawable Density Fallback & Core Coverage Test (`TST-UI-452.4`, `DrawableDensityFallbackAuditTest.kt`)*:
+  • Verify `testAllDensityDrawablesHaveRootFallback()` passes without error.
+  • Verify `testCoreDrawablesHaveFullHighDensityCoverage()` checks `xhdpi`, `xxhdpi`, and `xxxhdpi` and passes without requiring redundant `drawable-nodpi/` duplicates.
+  5. *Clean-Room Regression Suite Execution (`TST-UI-452.5`)*:
+  • Execute targeted package tests (`com.atrainingtracker.trainingtracker.resources.*`, `com.atrainingtracker.trainingtracker.notifications.*`, `build.*`) asserting 100% pass rate.
 

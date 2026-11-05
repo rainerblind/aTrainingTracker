@@ -85,13 +85,13 @@ class DrawableDensityFallbackAuditTest {
         }
         assertTrue("Resource directory must exist: ${resDir.absolutePath}", resDir.exists() && resDir.isDirectory)
 
-        val targetDensities = listOf("drawable-xxhdpi", "drawable-xxxhdpi", "drawable-nodpi")
+        val targetDensities = listOf("drawable-xhdpi", "drawable-xxhdpi", "drawable-xxxhdpi")
         for (density in targetDensities) {
             val dir = File(resDir, density)
             assertTrue("Directory $density must exist: ${dir.absolutePath}", dir.exists() && dir.isDirectory)
             val filesInDir = dir.listFiles()?.map { it.nameWithoutExtension }?.toSet() ?: emptySet()
             for (asset in CORE_DENSITY_ASSETS) {
-                assertTrue("Asset $asset must exist in $density to prevent density-split crashes (REQ-UI-380)", asset in filesInDir)
+                assertTrue("Asset $asset must exist in $density to prevent density-split crashes (REQ-UI-380 / REQ-UI-452)", asset in filesInDir)
                 val assetFile = dir.listFiles()?.firstOrNull { it.nameWithoutExtension == asset }
                 assertTrue("Asset file $asset in $density must not be null and must not be empty", assetFile != null && assetFile.length() > 0)
             }

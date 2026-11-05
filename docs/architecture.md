@@ -188,3 +188,7 @@ To prevent UI jank, thread contention, and Android SQLite database lock errors, 
 - All SQLite databases employ an idempotent schema upgrade architecture (`onUpgrade` parity).
 - Schema alterations execute non-destructive `ALTER TABLE ADD COLUMN` operations within defensive `try-catch` blocks checking existing column presence via `PRAGMA table_info`.
 - Under no circumstances does schema migration drop user tables or purge historical telemetry records.
+
+### 4.4 Status Bar Notification Architecture & Monolithic Density Packaging (`REQ-UI-452`)
+- **Monochrome Status Bar Silhouette**: All foreground service and application status bar notifications (`TrackerService`, `TrainingApplication`, `WorkoutDeletionNotificationManager`, `ExportNotificationManager`, `SensorBatteryNotificationManager`) route through dedicated density-independent vector asset `ic_stat_notify_logo.xml` (24x24dp, `#FFFFFF` with alpha channel). Colored multi-density raster PNGs are prohibited in `.setSmallIcon(...)` to prevent `SystemUI` Binder IPC `RemoteServiceException` / `BadForegroundServiceNotificationException` crashes.
+- **Monolithic Density App Bundle Packaging**: In `app/build.gradle`, `bundle { density { enableSplit = false } }` is enforced to ensure all drawable resources remain packaged inside `base.apk`, preventing Split-APK resource desynchronization across Android devices.

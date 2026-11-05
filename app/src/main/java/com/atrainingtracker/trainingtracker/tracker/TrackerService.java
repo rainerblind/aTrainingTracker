@@ -1115,7 +1115,7 @@ public class TrackerService extends Service {
         PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, resumeIntent, flags);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, TrainingApplication.NOTIFICATION_CHANNEL__TRACKING_2)
-                .setSmallIcon(R.drawable.logo)
+                .setSmallIcon(R.drawable.ic_stat_notify_logo)
                 .setContentTitle(context.getString(R.string.tracking_interrupted_notification_title))
                 .setContentText(context.getString(R.string.tracking_interrupted_notification_text))
                 .setPriority(NotificationCompat.PRIORITY_HIGH)

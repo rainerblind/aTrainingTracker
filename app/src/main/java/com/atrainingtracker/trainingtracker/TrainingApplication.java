@@ -1508,7 +1508,7 @@ public class TrainingApplication extends Application {
         PendingIntent mStartMainActivityPendingIntent = PendingIntent.getActivity(this, 0, newIntent, PendingIntent.FLAG_IMMUTABLE);  // TODO: correct???
 
         return new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL__TRACKING_2)
-                .setSmallIcon(R.drawable.logo)
+                .setSmallIcon(R.drawable.ic_stat_notify_logo)
                 .setContentTitle(getString(R.string.TrainingTracker))
                 .setContentText(getString(R.string.notification_tracking))
                 .setContentIntent(mStartMainActivityPendingIntent);
