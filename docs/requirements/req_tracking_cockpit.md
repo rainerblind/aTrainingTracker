@@ -2593,6 +2593,45 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Zero service crashes, transaction boundary safety, rate-limited logging, and 100% clean-room test pass rate.
 
+### REQ-CON-023: Paired BLE Random Static Address Resolution, Scan-Assisted Connection & Configurable Search Timeout [Verified]
+- **Tests**: `MyBTLEDeviceTest.java`, `SensorSearchPreferencesTest.kt`, `SensorSearchTuningSectionTest.kt`, `SearchSettingsDialogTest.kt`, `TranslationParityTest.kt`
+- **Implementation**: `MyBTLEDevice.java`, `TrainingApplication.java`, `SensorSearchPreferences`, `SensorSearchTuningSection.kt`, `SearchSettingsDialog.kt`
+- **Rationale**: Paired BLE fitness peripherals utilizing BLE Random Static Addresses fail to connect during paired search when Android's `BluetoothRemoteDevices` cache is empty because `getRemoteDevice(mAddress)` defaults to `ADDRESS_TYPE_PUBLIC`. The system SHALL resolve Random Static addresses using `BluetoothDevice.ADDRESS_TYPE_RANDOM` (via `getRemoteLeDevice` on API 33+), provide active filtered BLE scan assistance to warm the OS remote device cache across all supported Android versions, and expose a configurable BLE search timeout per attempt ($3\text{--}15$ seconds, default 5 seconds) across Expert Settings and Search Settings Dialog to prevent head-of-line blocking in sequential paired search (ATT-5489, refining `REQ-CON-019` and `REQ-UI-154`):
+1. *BLE Random Static MAC Classification & Address Type Resolution (`MyBTLEDevice.java`, `REQ-CON-023.1`)*:
+• The system SHALL classify a MAC address as Random Static when the two most significant bits of the first byte are set (`(firstOctet & 0xC0) == 0xC0`), adhering to Bluetooth Core Spec Vol 6 Part B §1.3.2.1.
+• On Android 13+ (API 33+, `Build.VERSION_CODES.TIRAMISU`), `MyBTLEDevice` SHALL obtain the remote device handle via `BluetoothAdapter.getRemoteLeDevice(mAddress, addressType)` using `BluetoothDevice.ADDRESS_TYPE_RANDOM` for Random Static addresses and `BluetoothDevice.ADDRESS_TYPE_PUBLIC` otherwise, falling back to `BluetoothAdapter.getRemoteDevice(mAddress)` on API < 33.
+2. *Active Scan-Assisted BLE Discovery & Guaranteed Scanner Teardown (`MyBTLEDevice.java`, `REQ-CON-023.2`)*:
+• During `startSearching()`, if `BLUETOOTH_SCAN` runtime permission is granted, `MyBTLEDevice` SHALL start a targeted `BluetoothLeScanner` scan filtered by `mAddress` to accelerate cache population in `BluetoothRemoteDevices` and trigger direct GATT connection upon discovering the advertising peripheral.
+• Active scans SHALL be defensively stopped and cleaned up unconditionally upon GATT connection (`STATE_CONNECTED`), search timeout (`mSearchTimeoutRunnable`), explicit disconnect (`disconnectFromGatt()`), and device shutdown (`shutDown()`).
+3. *Configurable BLE Search Duration Persistence & Application Plumbing (`TrainingApplication.java`, `SensorSearchPreferences`, `REQ-CON-023.3`)*:
+• The system SHALL persist the athlete's configured BLE search timeout in `SharedPreferences` under key `SP_BTLE_SEARCH_PERIOD_SEC = "btleSearchPeriodSec"`, constrained to discrete integer seconds in $[3, 15]$ with default $5$ seconds.
+• `TrainingApplication.getBtleSearchPeriodMs()` SHALL read `btleSearchPeriodSec` (defaulting to 5) and return the timeout in milliseconds ($[3000, 15000]\text{ ms}$).
+• `MyBTLEDevice.startSearching()` SHALL delay `mSearchTimeoutRunnable` using `TrainingApplication.getBtleSearchPeriodMs()` instead of the legacy hardcoded 10-second constant.
+4. *Expert Settings & Search Settings Dialog Slider UI (`SensorSearchTuningSection.kt`, `SearchSettingsDialog.kt`, `REQ-CON-023.4`)*:
+• In `SensorSearchTuningSection.kt` and `SearchSettingsDialog.kt`, the system SHALL render a discrete Material 3 Slider for the BLE search duration directly below the search retry attempts control with range $3\text{--}15$ seconds (11 snap steps), dynamic value badge (`"%d s"`), explanatory scale summary, and transactional save/cancel support.
+5. *9-Language Localization Parity (`REQ-CON-023.5`)*:
+• Search duration UI strings (`prefs_btle_search_period_title` and `prefs_btle_search_period_summary`) SHALL be localized with 100% parity across all 9 application locales without missing entries or format specifier mismatches.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-CON-019` (*Robust Bluetooth LE Sensor Discovery & Direct LE Transport Connection Architecture*, Sprint 2026-41.4, `ATT-2773`) and `REQ-UI-154` (*Search Settings Modal Bottom Sheet & Navigation Integration*, Sprint 2026-41.2, `ATT-2780`), targeting `MyBTLEDevice.java`, `TrainingApplication.java`, `SensorSearchTuningSection.kt`, `SearchSettingsDialog.kt`, and `values*/strings.xml`.
+2. *Historical Origin & Commit Trace*: `ATT-2773` established `device.connectGatt(mContext, false, mGattCallback, TRANSPORT_LE)` using `BluetoothAdapter.getRemoteDevice()`. `ATT-2780` introduced search attempt tuning (1..5 tries) with hardcoded 10s timeout.
+3. *Root Reason for Existing Formulation*: `getRemoteDevice(mAddress)` was standard before API 33 introduced `getRemoteLeDevice(address, addressType)`. When sensors were paired, Android typically retained cached records while Bluetooth stayed active. Cold boots and BT toggles evict unbonded records, forcing default public addressing. 10s was inherited from ANT+ search intervals.
+4. *Preservation of Core Invariants*: Direct LE connection (`TRANSPORT_LE`), search queue sequential rotation in `DeviceManager`, zero leak of GATT/scan instances, and 100% test suite pass rate remain strictly intact.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a paired BLE sensor with a Random Static MAC (e.g. `C6:CC:E3:F5:F0:37` or `E8:4D:74:07:F4:DD`) and an uncached Android BLE stack after cold reboot,
+• *When* `MyBTLEDevice.startSearching()` is initiated,
+• *Then* the device handle is resolved with `ADDRESS_TYPE_RANDOM` (API 33+) or scan assistance, and GATT connection succeeds without timing out with `addr_type=public`.
+• *Given* an athlete adjusting the BLE search timeout in Expert Settings or Search Settings Dialog to $4$ seconds,
+• *When* search executes for an offline peripheral,
+• *Then* `MyBTLEDevice` advances to the next paired device after 4 seconds instead of 10 seconds.
+• *Given* the 9 localized `strings.xml` resource files,
+• *When* executing `TranslationParityTest`,
+• *Then* `prefs_btle_search_period_title` and `prefs_btle_search_period_summary` pass with zero discrepancies.
+
+**Invariants**: `TRANSPORT_LE` direct connect, non-leaking scanner lifecycle, and 100% clean-room test pass rate.
+
+
 
 
 

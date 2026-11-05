@@ -520,6 +520,8 @@
 
     <string name="Search_Settings">Recherche</string>
     <string name="prefsNumberOfSearchTriesTitle">Nombre de tours de recherche</string>
+    <string name="prefs_btle_search_period_title">Durée de recherche BLE par tentative</string>
+    <string name="prefs_btle_search_period_summary">Temps en secondes à attendre un capteur BLE avant de continuer (3..15 s). Des valeurs plus courtes réduisent l\'attente pour les capteurs hors ligne.</string>
     <string name="prefStartSearchTitle">Lancer recherche quand …</string>
     <string name="prefsStartSearchWhenAppStartsTitle">L\'app démarre</string>
     <string name="prefsStartSearchWhenTrackingStartsTitle">Le suivi démarre</string>

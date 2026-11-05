@@ -261,6 +261,8 @@
     <string name="prefsExportTitle">Eksport</string>
     <string name="prefsOnlineCommunities">Synchronizacja</string>
     <string name="prefsNumberOfSearchTriesTitle">Rundy szukania</string>
+    <string name="prefs_btle_search_period_title">Czas wyszukiwania BLE na próbę</string>
+    <string name="prefs_btle_search_period_summary">Czas w sekundach oczekiwania na czujnik BLE przed przejściem dalej (3..15 s). Krótsze wartości skracają opóźnienie przy czujnikach offline.</string>
     <string name="prefStartSearchTitle">Zacznij szukać, gdy …</string>
     <string name="prefsStartSearchWhenAppStartsTitle">App startuje</string>
     <string name="prefsStartSearchWhenTrackingStartsTitle">Trening startuje</string>

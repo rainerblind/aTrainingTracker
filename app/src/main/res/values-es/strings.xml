@@ -522,6 +522,8 @@
 
     <string name="Search_Settings">Búsqueda</string>
     <string name="prefsNumberOfSearchTriesTitle">Rondas de búsqueda</string>
+    <string name="prefs_btle_search_period_title">Duración de búsqueda BLE por intento</string>
+    <string name="prefs_btle_search_period_summary">Tiempo en segundos de espera para un sensor BLE antes de avanzar (3..15 s). Valores más cortos reducen la espera con sensores apagados.</string>
     <string name="prefStartSearchTitle">Iniciar búsqueda al …</string>
     <string name="prefsStartSearchWhenAppStartsTitle">Abrir la app</string>
     <string name="prefsStartSearchWhenTrackingStartsTitle">Iniciar entrenamiento</string>

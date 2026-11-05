@@ -518,6 +518,8 @@
 
     <string name="Search_Settings">検索</string>
     <string name="prefsNumberOfSearchTriesTitle">検索ラウンド数</string>
+    <string name="prefs_btle_search_period_title">試行ごとのBLE検索時間</string>
+    <string name="prefs_btle_search_period_summary">次のセンサーへ進むまでのBLE待機時間（秒、3〜15秒）。短い値にするとオフライン時の待機時間が短縮されます。</string>
     <string name="prefStartSearchTitle">検索を開始するタイミング …</string>
     <string name="prefsStartSearchWhenAppStartsTitle">アプリ起動時</string>
     <string name="prefsStartSearchWhenTrackingStartsTitle">記録開始時</string>

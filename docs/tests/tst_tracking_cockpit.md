@@ -1445,6 +1445,29 @@
   4. *Clean-Room Targeted Test Suite Execution (`TST-TRK-051.4`)*:
   • Clean-room execution of unit tests ensuring zero regressions (`REQ-PRO-001`).
 
+### TST-CON-023: **Paired BLE Random Static Address Resolution, Scan Assistance & Configurable Search Timeout Test Suite** [Verified]
+- **Requirement(s)**: `REQ-CON-023`
+- **Component**: `MyBTLEDeviceTest.java`, `SensorSearchPreferencesTest.kt`, `SensorSearchTuningSectionTest.kt`, `SearchSettingsDialogTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-5489`
+- **Test Description**:
+  1. *Random Static MAC Classification Unit Tests (`TST-CON-023.1`, `MyBTLEDeviceTest.java`)*:
+  • Verify that `MyBTLEDevice.isRandomStaticAddress(String)` returns `true` for addresses with bits 47..46 = 11b (e.g. `C6:CC:E3:F5:F0:37` -> 0xC6 = 1100_0110b, `E8:4D:74:07:F4:DD` -> 0xE8 = 1110_1000b, `FE:00:11:22:33:44`, `C0:00:00:00:00:00`).
+  • Verify that `isRandomStaticAddress(String)` returns `false` for public addresses (e.g. `00:1A:7D:DA:71:13`, `10:20:30:40:50:60`, `44:55:66:77:88:99`), invalid addresses, or null.
+  2. *Scan Assistance Lifecycle & Resource Cleanup Tests (`TST-CON-023.2`, `MyBTLEDeviceTest.java`)*:
+  • Verify that `startSearching()` initiates filtered `BluetoothLeScanner.startScan(...)` when `BLUETOOTH_SCAN` permission is granted.
+  • Verify that `stopScan()` is unconditionally invoked upon successful connection (`STATE_CONNECTED`), search timeout (`mSearchTimeoutRunnable`), explicit disconnect (`disconnectFromGatt()`), and device teardown (`shutDown()`).
+  3. *Configurable Search Timeout Persistence & Plumbing Tests (`TST-CON-023.3`, `SensorSearchPreferencesTest.kt`, `TrainingApplicationTest.java`)*:
+  • Verify `SensorSearchPreferences` loads and persists `btleSearchPeriodSec` in `SharedPreferences` with default `5` seconds and boundary clamping $[3, 15]$.
+  • Verify `TrainingApplication.getBtleSearchPeriodMs()` returns `btleSearchPeriodSec * 1000L`.
+  • Verify `SensorSearchPreferences.reset()` resets `btleSearchPeriodSec` back to `5`.
+  4. *Expert Settings & Search Settings Dialog UI Tests (`TST-CON-023.4`, `SensorSearchTuningSectionTest.kt`, `SearchSettingsDialogTest.kt`)*:
+  • Verify that `SensorSearchTuningSection` and `SearchSettingsDialog` render the discrete Slider with range $3\text{--}15$, steps 11, and format `"%d s"`.
+  5. *9-Language Localization Parity Verification (`TST-CON-023.5`, `TranslationParityTest.kt`)*:
+  • Verification in `TranslationParityTest` that `prefs_btle_search_period_title` and `prefs_btle_search_period_summary` exist across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with 100% parity.
+  6. *Targeted Suite Regression Execution (`TST-CON-023.6`)*:
+  • Execute targeted unit tests verifying 100% test pass rate across modified packages without regressions.
+
+
 
 
 

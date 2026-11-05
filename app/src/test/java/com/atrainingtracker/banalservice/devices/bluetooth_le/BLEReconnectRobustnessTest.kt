@@ -33,6 +33,7 @@ import android.util.Log
 import androidx.core.app.ActivityCompat
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.sensor.MySensorManager
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
@@ -171,9 +172,9 @@ class BLEReconnectRobustnessTest {
         // Verify prior search timeout was removed
         assertTrue(removedRunnables.contains(device.searchTimeoutRunnable))
 
-        // Verify 10,000ms timeout was scheduled
+        // Verify configurable BLE search timeout (default 5,000ms) was scheduled
         val timeoutScheduled = postedDelayedRunnables.any {
-            it.first == device.searchTimeoutRunnable && it.second == 10000L
+            it.first == device.searchTimeoutRunnable && it.second == TrainingApplication.getBtleSearchPeriodMs()
         }
         assertTrue(timeoutScheduled)
     }

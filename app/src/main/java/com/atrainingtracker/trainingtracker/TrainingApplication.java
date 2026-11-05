@@ -119,6 +119,10 @@ public class TrainingApplication extends Application {
     // configure search behaviour
     public static final String SP_NUMBER_OF_SEARCH_TRIES_INT = "numberOfSearchTriesInt";
     private static final int DEFAULT_NUMBER_OF_SEARCH_TRIES = 3;
+    public static final String SP_BTLE_SEARCH_PERIOD_SEC = "btleSearchPeriodSec";
+    public static final int DEFAULT_BTLE_SEARCH_PERIOD_SEC = 5;
+    public static final int MIN_BTLE_SEARCH_PERIOD_SEC = 3;
+    public static final int MAX_BTLE_SEARCH_PERIOD_SEC = 15;
 
     public static final String CLOUD_UPLOAD = "cloudUpload";
     //    protected static final String SP_DROPBOX_KEY       = "dropboxKey";
@@ -404,6 +408,29 @@ public class TrainingApplication extends Application {
 
     public static int getNumberOfSearchTries() {
         return cSharedPreferences.getInt(SP_NUMBER_OF_SEARCH_TRIES_INT, DEFAULT_NUMBER_OF_SEARCH_TRIES);
+    }
+
+    public static int getBtleSearchPeriodSec() {
+        if (cSharedPreferences == null) {
+            return DEFAULT_BTLE_SEARCH_PERIOD_SEC;
+        }
+        int sec = cSharedPreferences.getInt(SP_BTLE_SEARCH_PERIOD_SEC, DEFAULT_BTLE_SEARCH_PERIOD_SEC);
+        if (sec < MIN_BTLE_SEARCH_PERIOD_SEC || sec > MAX_BTLE_SEARCH_PERIOD_SEC) {
+            return Math.max(MIN_BTLE_SEARCH_PERIOD_SEC, Math.min(MAX_BTLE_SEARCH_PERIOD_SEC, sec));
+        }
+        return sec;
+    }
+
+    public static void setBtleSearchPeriodSec(int seconds) {
+        if (cSharedPreferences == null) {
+            return;
+        }
+        int clamped = Math.max(MIN_BTLE_SEARCH_PERIOD_SEC, Math.min(MAX_BTLE_SEARCH_PERIOD_SEC, seconds));
+        cSharedPreferences.edit().putInt(SP_BTLE_SEARCH_PERIOD_SEC, clamped).apply();
+    }
+
+    public static long getBtleSearchPeriodMs() {
+        return (long) getBtleSearchPeriodSec() * 1000L;
     }
 
     public static boolean startSearchWhenAppStarts() {
