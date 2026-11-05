@@ -7,25 +7,25 @@
 
 ---
 
-### TST-NAV-001: **Navigation** [Drawer is organized logically. All promoted items are accessible and functional. Preferences screen is clean and focused.]
+### TST-NAV-001: **Navigation** [Verified]
 - **Requirement(s)**: `REQ-SET-050`
 - **Component**: **Navigation**
 - **Jira**: ``ATT-239``
 - **Test Description**: 1. Open the navigation drawer and verify the new sections (Training, Spatial, My Equipment, Ecosystem, System). 2. Verify 'Sport Types' and 'Training Zones' are in 'My Equipment'. 3. Verify individual items for 'Strava' and 'Dropbox' are in 'Ecosystem'. 4. Open 'Preferences' and verify moved items are no longer present.
 
-### TST-NAV-002: **Navigation** [Drawer labels are updated to professional terminology across supported languages.]
+### TST-NAV-002: **Navigation** [Verified]
 - **Requirement(s)**: `REQ-UI-112`
 - **Component**: **Navigation**
 - **Jira**: ``ATT-249``
 - **Test Description**: 1. Open the navigation drawer. 2. Verify section "Equipment" (EN) / "Ausrüstung" (DE). 3. Verify section "Synchronization" (EN) / "Synchronisation" (DE). 4. Verify item "Dateiexport" (DE).
 
-### TST-NAV-003: **Direct Config Navigation** [1. An 'AlertDialog' to choose Activity Type appears immediately over the current screen. 2. Selecting a type opens the configuration cockpit (TrackingTabsFragment in CONFIGURATION mode) for that type.]
+### TST-NAV-003: **Direct Config Navigation** [Verified]
 - **Requirement(s)**: `REQ-SET-051`
 - **Component**: **Direct Config Navigation**
 - **Jira**: ``ATT-258``
 - **Test Description**: 1. Open Navigation Drawer -> Settings. 2. Tap 'Tracking Tabs'.
 
-### TST-NAV-004: **Direct Display Settings Dialog & State Parity Verification** [1. Display switches display in the ON state by default, achieving 100% parity with runtime behavior.
+### TST-NAV-004: **Direct Display Settings Dialog & State Parity Verification** [Verified]
 2. Multiple switches can be toggled without state overwrites.
 3. Host activity dynamically reflects flag and orientation changes upon dismissal.
 4. Automated unit tests pass with zero regressions.]
@@ -40,19 +40,19 @@
   5. Toggle "force portrait" to OFF and dismiss dialog. Verify `MainActivityWithNavigation` dynamically clears orientation lock (`SCREEN_ORIENTATION_UNSPECIFIED`) and clears `FLAG_SHOW_WHEN_LOCKED`.
   6. Run automated regression suite `./gradlew testDebugUnitTest` including `DisplaySettingsTest`.
 
-### TST-NAV-005: **Direct Units Settings Dialog** [1. A dialog to choose between Metric and Imperial appears immediately over the current screen. 2. Selecting a unit updates the application state.]
+### TST-NAV-005: **Direct Units Settings Dialog** [Verified]
 - **Requirement(s)**: `REQ-SET-053`
 - **Component**: **Direct Units Settings Dialog**
 - **Jira**: ``ATT-262``
 - **Test Description**: 1. Open Navigation Drawer -> Settings. 2. Tap 'Units'.
 
-### TST-NAV-006: **Direct Export Settings Dialog** [1. A dialog containing file export settings appears immediately over the current screen. 2. Toggling formats works as expected.]
+### TST-NAV-006: **Direct Export Settings Dialog** [Verified]
 - **Requirement(s)**: `REQ-SET-054`
 - **Component**: **Direct Export Settings Dialog**
 - **Jira**: ``ATT-264``
 - **Test Description**: 1. Open Navigation Drawer -> Ecosystem. 2. Tap 'Export'.
 
-### TST-NAV-007: **Declarative Navigation Drawer & Item Density Verification** [Navigation drawer renders deterministically via Jetpack Compose with compact density, reactive title updates, and zero inflation errors.]
+### TST-NAV-007: **Declarative Navigation Drawer & Item Density Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-123`
 - **Component**: **Declarative Navigation Drawer & Item Density Verification**
 - **Jira**: ``ATT-526` / `ATT-243``
@@ -63,7 +63,7 @@
   4. Start tracking, pause tracking, and stop tracking, verifying that the top tracking drawer item label reactively updates between "Start Tracking", "Tracking", and "Pause".
   5. Execute unit tests and run regression suite `./gradlew testDebugUnitTest`.
 
-### TST-NAV-008: **MainActivityWithNavigation Kotlin Migration & Lifecycle Verification** [`MainActivityWithNavigation` compiles cleanly in Kotlin, executes without regression across all existing unit tests, and reproduces 100% of runtime navigation and lifecycle behavior on device.]
+### TST-NAV-008: **MainActivityWithNavigation Kotlin Migration & Lifecycle Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-124`
 - **Component**: **MainActivityWithNavigation Kotlin Migration & Lifecycle Verification**
 - **Jira**: ``ATT-658``
@@ -78,7 +78,7 @@
   • Test interrupted workout resumption intent handling.
   • Test back gesture closing navigation drawer without exiting the app.
 
-### TST-NAV-009: **Single-Activity Compose Navigation & Architectural Interop Verification** [Single-activity Compose architecture compiles cleanly, passes 100% of unit tests and regression tasks, maintains all Java/bytecode interop contracts, and executes flawlessly on physical hardware with zero UI flicker or sensor drops.]
+### TST-NAV-009: **Single-Activity Compose Navigation & Architectural Interop Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-159`
 - **Component**: **Single-Activity Compose Navigation & Architectural Interop Verification**
 - **Jira**: ``ATT-1083``
@@ -95,37 +95,37 @@
   • Rotate device during active sensor telemetry and verify zero disconnect/rebind storms.
   • Test interrupted workout recovery notification intent launch.
 
-### TST-MAP-010: **Zoom-Adaptive Heatmap Styling** [1. At level 11/12, lines are thin and member markers (pins) are HIDDEN. 2. At level 17+, individual traces are prominent and member markers appear clearly.]
+### TST-MAP-010: **Zoom-Adaptive Heatmap Styling** [Verified]
 - **Requirement(s)**: `REQ-MAP-016`
 - **Component**: **Zoom-Adaptive Heatmap Styling**
 - **Jira**: ``ATT-437``
 - **Test Description**: 1. Open a Workout Cluster heatmap. 2. Zoom out to level 11/12. 3. Observe line width and marker pins. 4. Zoom in to level 17+.
 
-### TST-MAP-020: **Detailed Map View Heatmap Visibility** [The translucent density heatmap remains clearly visible over the route area at high zoom levels (13 to 18) and does not vanish or turn blank.]
+### TST-MAP-020: **Detailed Map View Heatmap Visibility** [Verified]
 - **Requirement(s)**: `REQ-MAP-018`
 - **Component**: **Detailed Map View Heatmap Visibility**
 - **Jira**: ``ATT-538``
 - **Test Description**: 1. Open a Workout Cluster heatmap view or a Period Detail map view. 2. Zoom in to a detailed level (zoom 13 to 18) over a route area. 3. Inspect the map overlay.
 
-### TST-MAP-021: **Minimum Altitude Marker Spatial Positioning Verification** [The minimum altitude marker renders at the true geographic minimum point of the activity without being diverted by GPS glitches or unanchored start conditions.]
+### TST-MAP-021: **Minimum Altitude Marker Spatial Positioning Verification** [Verified]
 - **Requirement(s)**: `REQ-MAP-019`
 - **Component**: **Minimum Altitude Marker Spatial Positioning Verification**
 - **Jira**: ``ATT-594``
 - **Test Description**: 1. Execute `LiveWorkoutSessionTest` to verify that starting without GPS fix anchors `minPos` to the first valid GPS fix at baseline altitude. 2. Simulate multi-sensor live tracking with barometric and GPS altitude; verify that non-best GPS altitude dips do not contaminate `min` or `minPos`. 3. Open a workout map view and verify that `ic_altitude_min` is positioned at the lowest geographic elevation point (e.g. trailhead), matching the minimum point on the elevation chart.
 
-### TST-MAP-022: **Authoritative Max Line Distance & Apex Coordinate Integrity** [The Max Line Distance marker (`ic_distance`) is positioned exactly at the true point of maximum straight-line distance from the start point across all recorded and legacy workouts.]
+### TST-MAP-022: **Authoritative Max Line Distance & Apex Coordinate Integrity** [Verified]
 - **Requirement(s)**: `REQ-MAP-020`
 - **Component**: **Authoritative Max Line Distance & Apex Coordinate Integrity**
 - **Jira**: ``ATT-611``
 - **Test Description**: 1. Verify `SpeedAndLocationDevice` instantiates `mLineDistanceSensor` as `MySensor<Double>` and does not alter initial value upon `RESET_ACCUMULATORS_INTENT`. 2. Simulate live workout tracking with branching trajectory (short spur vs long return); verify `LiveWorkoutSession` anchors line distance directly to `startLatLng`. 3. Simulate `finalizeLiveSession()` and verify apex coordinate and max line distance are derived deterministically from the recorded polyline geometry. 4. Verify existing workouts with corrupted or missing apex coordinates self-heal to the true maximum displacement point on the track.
 
-### TST-MAP-023: **Dark Mode Map Styling, Vector Tile Configuration & Anti-Flash Surface Mask Verification** [All map views apply AMOLED dark vector tile styling when surface luminance indicates dark mode, containers enforce `#121212` background and surface mask eliminating tile loading flashes during list scrolling, `MapType.TERRAIN` is preserved in light mode; all unit and regression tests pass.]
+### TST-MAP-023: **Dark Mode Map Styling, Vector Tile Configuration & Anti-Flash Surface Mask Verification** [Verified]
 - **Requirement(s)**: `REQ-MAP-021`
 - **Component**: **Dark Mode Map Styling, Vector Tile Configuration & Anti-Flash Surface Mask Verification**
 - **Jira**: ``ATT-1266`, `ATT-1479`, `ATT-1536`, `ATT-1537`, `ATT-1538`, `ATT-1539`, `ATT-1553`, `ATT-1555``
 - **Test Description**: 1. Unit Test Map Style JSON Validation: Verify `map_style_dark.json` is valid JSON, background `#121212`, water `#0A1118`, POI labels hidden, road styling defined, text labels `#9E9E9E`, singleton caching returns identical instance, and corrupt JSON safely falls back to unstyled `MapType.NORMAL`.\<br\>2. Unit Test Dynamic Map Properties Resolution (`DarkMapStyleResolutionTest.kt`): Verify `resolveMapProperties(isDark, context)` returns `MapType.NORMAL` with dark styling when `isDark=true`, and `MapType.TERRAIN` with null styling when `isDark=false`.\<br\>3. Anti-Flash Surface Mask Verification (`DarkMapAntiFlashOverlayTest.kt`): Verify `DarkMapAntiFlashOverlay` renders an opaque `#121212` Box when `isDark=true` and `isMapLoaded=false`, and renders nothing when `isMapLoaded=true` or `isDark=false`.\<br\>4. Secondary Map Composables & Anti-Flash Audit: Verify `PathPreviewMap`, `EditKnownLocationDialog`, `WorkoutClusterComponents`, `ManualClusterScreen`, `PeriodSummaryCard`, `LapEditBottomSheet`, `ImportBackupTabsScreen`, and `ATrainingTrackerMap` adopt dynamic properties and anti-flash surface mask protection in dark mode.\<br\>5. UI & Clean-Room Regression: Verify dark mode rendering across all map components without white loading flashes and execute `./gradlew testDebugUnitTest`.
 
-### TST-MAP-024: **Google Maps CameraUpdateFactory Initialization Resilience and Lifecycle Guarding Verification** [Camera bounds animation in ImportBackupTabsScreen is strictly deferred until map loading completes; sequential cluster candidates in the import queue actively trigger camera re-alignment and zoom bounds fitting once loaded; exceptions during early layout are caught and handled via fallback static centering; 100% test pass rate with zero crashes.]
+### TST-MAP-024: **Google Maps CameraUpdateFactory Initialization Resilience and Lifecycle Guarding Verification** [Verified]
 - **Requirement(s)**: `REQ-MAP-022`
 - **Component**: **Google Maps CameraUpdateFactory Initialization Resilience and Lifecycle Guarding Verification**
 - **Jira**: ``ATT-1579`, `ATT-2022``
@@ -144,7 +144,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-MAP-025: **Prominent High-Contrast Rendering for Actively Navigated Routes & Multi-Layer X-Ray Segment Synergy Verification** [Actively navigated routes render with 16f width and vibrant Electric Emerald `#00E676` color; multi-layer X-Ray polyline sandwich preserves Strava segment visibility; directional chevrons calculate bearing accurately; 100% test pass rate.]
+### TST-MAP-025: **Prominent High-Contrast Rendering for Actively Navigated Routes & Multi-Layer X-Ray Segment Synergy Verification** [Verified]
 - **Requirement(s)**: `REQ-MAP-023`
 - **Component**: **Prominent High-Contrast Rendering for Actively Navigated Routes & Multi-Layer X-Ray Segment Synergy Verification**
 - **Jira**: ``ATT-1841``
@@ -165,7 +165,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions.
 
-### TST-MAP-026: **Quick Route Selector from Cockpit with GPS Proximity Sorting and Automated Route Detection Verification** [Multi-stage ranking resolves home-hub tie-breaking; adaptive chips display dynamically; 1-tap activation and deselection operational; automated route detection accurately detects matching polylines; 100% test pass rate.]
+### TST-MAP-026: **Quick Route Selector from Cockpit with GPS Proximity Sorting and Automated Route Detection Verification** [Verified]
 - **Requirement(s)**: `REQ-MAP-024`
 - **Component**: **Quick Route Selector from Cockpit with GPS Proximity Sorting and Automated Route Detection Verification**
 - **Jira**: ``ATT-1835``
@@ -195,7 +195,7 @@
   7. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions.
 
-### TST-MAP-027: **Automatic DEM Elevation Enrichment for Imported GPX Routes Lacking Altitude Verification** [Altitude-deficient GPX files are detected and automatically enriched via chunked DEM API calls ($\le 100$ coordinates/batch); routes with existing elevations are preserved without network calls; offline and API failures fallback gracefully to 2D track without crashing; 100% test pass rate.]
+### TST-MAP-027: **Automatic DEM Elevation Enrichment for Imported GPX Routes Lacking Altitude Verification** [Verified]
 - **Requirement(s)**: `REQ-MAP-025`
 - **Component**: **Automatic DEM Elevation Enrichment for Imported GPX Routes Lacking Altitude Verification**
 - **Jira**: ``ATT-1502``
@@ -218,7 +218,7 @@
   7. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions.
 
-### TST-MAP-028: **Support Waypoints, POIs (Benches, Water, Summits) and TCX Course Points Verification** [GPX `<wpt>` and TCX `<CoursePoint>` elements are parsed, classified, projected with cumulative distance along route, persisted in SQLite `route_waypoints` with `ON DELETE CASCADE`, and rendered on the map with interactive markers; 100% test pass rate with zero regressions.]
+### TST-MAP-028: **Support Waypoints, POIs (Benches, Water, Summits) and TCX Course Points Verification** [Verified]
 - **Requirement(s)**: `REQ-MAP-026`
 - **Component**: **Support Waypoints, POIs (Benches, Water, Summits) and TCX Course Points Verification**
 - **Jira**: ``ATT-58``
@@ -244,7 +244,7 @@
   7. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions.
 
-### TST-MAP-029: **Persistent Climbs Database & Live ClimbPro Cockpit Sheet Verification** [Climbs are detected from route profiles, deduplicated within 50m, persisted in SQLite `Climbs.db`, tracked via `LiveClimbsRepository`, and visualized in Cockpit BottomSheet with standard slope colors; 100% test pass rate.]
+### TST-MAP-029: **Persistent Climbs Database & Live ClimbPro Cockpit Sheet Verification** [Verified]
 - **Requirement(s)**: `REQ-MAP-027`
 - **Component**: **Persistent Climbs Database & Live ClimbPro Cockpit Sheet Verification**
 - **Jira**: ``ATT-1281``
@@ -267,7 +267,7 @@
   6. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions.
 
-### TST-MAP-030: **Visual & Auditory Turn-by-Turn Navigation Prompts, Battery Saver Wake-Up & Off-Route Alerts Verification** [Turn cues are detected or extracted from course points, countdown distances track accurately, HUD banner displays direction and remaining meters, display wakes in battery saver mode, audio chimes alert athlete, and off-route deviations trigger warnings; 100% test pass rate.]
+### TST-MAP-030: **Visual & Auditory Turn-by-Turn Navigation Prompts, Battery Saver Wake-Up & Off-Route Alerts Verification** [Verified]
 - **Requirement(s)**: `REQ-MAP-028`
 - **Component**: **Visual & Auditory Turn-by-Turn Navigation Prompts, Battery Saver Wake-Up & Off-Route Alerts Verification**
 - **Jira**: ``ATT-1450``
@@ -292,7 +292,7 @@
   6. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions.
 
-### TST-MAP-031: **"Take Me Home" Return Navigation, Remaining Distance & Elevation-Aware ETA HUD Verification** [Home base is resolved from KnownLocations, return corridor snaps to active or saved route, dynamic ETA calculates elevation-aware duration factoring in climb, and Cockpit HUD renders glanceable metrics; 100% test pass rate.]
+### TST-MAP-031: **"Take Me Home" Return Navigation, Remaining Distance & Elevation-Aware ETA HUD Verification** [Verified]
 - **Requirement(s)**: `REQ-MAP-029`
 - **Component**: **"Take Me Home" Return Navigation, Remaining Distance & Elevation-Aware ETA HUD Verification**
 - **Jira**: ``ATT-1953``
@@ -318,13 +318,13 @@
   6. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions.
 
-### TST-MAP-032: **[SUPERSEDED / REMOVED by ATT-2463 / TST-MAP-037] Corridor-Based Route Grouping & Differentiating Thumbnail Zoom Verification** [Gateway classification and differentiating bounding boxes excised; test suite cleaned; superseded by TST-MAP-037.]
+### TST-MAP-032: **[SUPERSEDED / REMOVED by ATT-2463 / TST-MAP-037] Corridor-Based Route Grouping & Differentiating Thumbnail Zoom Verification** [Verified]
 - **Requirement(s)**: `REQ-MAP-030`
 - **Component**: **[SUPERSEDED / REMOVED by ATT-2463 / TST-MAP-037] Corridor-Based Route Grouping & Differentiating Thumbnail Zoom Verification**
 - **Jira**: ``ATT-1954``
 - **Test Description**: **SUPERSEDED & REMOVED**: Corridor-based route grouping and differentiating thumbnail zoom capabilities were removed in ATT-2463. Tests `RouteCorridorClassifierTest.kt`, `RouteBoundingBoxCalculatorTest.kt`, and `RouteCorridorUiIntegrationTest.kt` were deleted. Core geodesic calculations were migrated to `GeoUtilsTest.kt` under `TST-MAP-037`.
 
-### TST-MAP-033: **In-Ride Fork-in-the-Road Route Selection & Decision Alerts Verification** [Route candidates matching outbound corridor are identified, upcoming forks trigger Cockpit HUD card within 300m, directional arrows and route metrics display accurately, manual and autonomous binding activate active navigation with configurable auto-follow and departure auto-unselection; 100% test pass rate.]
+### TST-MAP-033: **In-Ride Fork-in-the-Road Route Selection & Decision Alerts Verification** [Verified]
 - **Requirement(s)**: `REQ-MAP-031`
 - **Component**: **In-Ride Fork-in-the-Road Route Selection & Decision Alerts Verification**
 - **Jira**: ``ATT-1955`, `ATT-3320`, `ATT-3326``
@@ -355,7 +355,7 @@
   • Verify that when active route was selected manually (`isRouteAutoSelected == false`), triggering `isOffRoute` retains active route selection.
   • Verify that clearing an auto-selected route upon leaving corridor re-enables candidate fork monitoring.
 
-### TST-MAP-034: **Domain-Agnostic Scrubber Marker Synchronization & Telemetry Graph Auto-Centering Verification** [Touching or dragging across ElevationProfile or TelemetryMetricGraph (Speed, HR, Power) in TIME or DISTANCE domain reliably displays the directional scrubber marker and auto-centers the camera; trackless (0,0) coordinates are safely guarded; 100% test pass rate.]
+### TST-MAP-034: **Domain-Agnostic Scrubber Marker Synchronization & Telemetry Graph Auto-Centering Verification** [Verified]
 - **Requirement(s)**: `REQ-MAP-032`
 - **Component**: **Domain-Agnostic Scrubber Marker Synchronization & Telemetry Graph Auto-Centering Verification**
 - **Jira**: ``ATT-2340``
@@ -374,7 +374,7 @@
   4. *Clean-Room Full Suite Regression*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions.
 
-### TST-MAP-035: **High-Contrast Maki POI Waypoint Badges, Shelter Classification & Substring Disambiguation Verification** [High-contrast circular badge markers with category-specific vibrant tinting, crisp white halo rings, outer contrast borders, and centered Maki glyphs across interactive maps and route thumbnails; POI_SHELTER classification for shelters and huts; disambiguation of "Kreuzung" false positives; 100% 9-language localization parity; 100% test pass rate.]
+### TST-MAP-035: **High-Contrast Maki POI Waypoint Badges, Shelter Classification & Substring Disambiguation Verification** [Verified]
 - **Requirement(s)**: `REQ-MAP-033`
 - **Component**: **High-Contrast Maki POI Waypoint Badges, Shelter Classification & Substring Disambiguation Verification**
 - **Jira**: ``ATT-2461``
@@ -395,7 +395,7 @@
   6. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% pass rate.
 
-### TST-MAP-036: **Designated Home-Base Selection, Database Migration & Substring Disambiguation Verification** [Explicit home-base selection for return navigation; single-home SQLite transactional exclusivity; complete elimination of "Rathaus"/"Gasthaus" false positives; prominent visual indicators and context menu/edit dialog actions in Known Locations UI; 100% 9-language localization parity; 100% test pass rate.]
+### TST-MAP-036: **Designated Home-Base Selection, Database Migration & Substring Disambiguation Verification** [Verified]
 - **Requirement(s)**: `REQ-MAP-034`
 - **Component**: **Designated Home-Base Selection, Database Migration & Substring Disambiguation Verification**
 - **Jira**: ``ATT-2472``
@@ -421,7 +421,7 @@
   6. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% pass rate.
 
-### TST-MAP-037: **Standalone Geodesic Calculation Utilities & Flat Route List Presentation Verification** [Standalone GeoUtils calculates geodesic distance and initial bearing deterministically; RouteTabbedScreen presents clean flat route list without gateway direction chips; RouteItem previews render full route bounds; obsolete classes and strings cleanly excised; 100% test pass rate.]
+### TST-MAP-037: **Standalone Geodesic Calculation Utilities & Flat Route List Presentation Verification** [Verified]
 - **Requirement(s)**: `REQ-MAP-035`
 - **Component**: **Standalone Geodesic Calculation Utilities & Flat Route List Presentation Verification**
 - **Jira**: ``ATT-2463``
@@ -442,7 +442,7 @@
   5. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-MAP-039: **Route Waypoint Marker Badge Diameter Optimization & Glanceability Proportional Scaling Verification** [Route waypoint badge marker default diameter reduced to 22 dp with proportional stroke scaling; MapLayers integrates markerSizeDp; 100% 9-language translation parity; 100% unit test pass rate.]
+### TST-MAP-039: **Route Waypoint Marker Badge Diameter Optimization & Glanceability Proportional Scaling Verification** [Verified]
 - **Requirement(s)**: `REQ-MAP-037`
 - **Component**: **Route Waypoint Marker Badge Diameter Optimization & Glanceability Proportional Scaling Verification**
 - **Jira**: ``ATT-2628``
@@ -460,7 +460,7 @@
   4. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-MAP-040: **In-Ride Fork Route Detection Performance Optimization Verification** [Bounding box spatial pre-filtering eliminates distant routes in O(1); sport profile filtering excludes incompatible disciplines; GPS evaluation throttled to 3s / 20m during quiescent tracking while preserving 1 Hz responsiveness during active fork alerts; 100% test pass rate.]
+### TST-MAP-040: **In-Ride Fork Route Detection Performance Optimization Verification** [Verified]
 - **Requirement(s)**: `REQ-MAP-038`
 - **Component**: **In-Ride Fork Route Detection Performance Optimization Verification**
 - **Jira**: ``ATT-2873``
@@ -478,7 +478,7 @@
   4. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate with 0 regressions.
 
-### TST-MAP-041: **Strict "Take Me Home" Activation Decoupling, Tab Hints Gating, and Non-Displacing Overlay Verification** [ReturnNavigationHud active strictly on explicit Take Me Home activation; suppressed on tabs with navigation hints disabled; floats as non-displacing top overlay without shifting sensor tiles; 100% unit test pass rate.]
+### TST-MAP-041: **Strict "Take Me Home" Activation Decoupling, Tab Hints Gating, and Non-Displacing Overlay Verification** [Verified]
 - **Requirement(s)**: `REQ-MAP-039`
 - **Component**: **Strict "Take Me Home" Activation Decoupling, Tab Hints Gating, and Non-Displacing Overlay Verification**
 - **Jira**: ``ATT-2938``
@@ -496,7 +496,7 @@
   4. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-MAP-042: **High-Glanceability Route Polyline Scaling and Solid Line Verification** [Actively navigated routes render with 26f width and solid pattern (null); active non-navigated routes preserve 10f width and dashed pattern; Z-index stacking hierarchy preserved; ViewModel and inspection views propagate active navigation; 100% unit test pass rate.]
+### TST-MAP-042: **High-Glanceability Route Polyline Scaling and Solid Line Verification** [Verified]
 - **Requirement(s)**: `REQ-MAP-040`
 - **Component**: **High-Glanceability Route Polyline Scaling and Solid Line Verification**
 - **Jira**: ``ATT-2940``
@@ -517,7 +517,7 @@
   6. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate with 0 regressions.
 
-### TST-MAP-043: **Active Selected Route Fork Candidate Filtering & Quiescent Short-Circuit Verification** [Fork decision candidate matching only evaluates routes where summary.isSelected is true; unselected routes ignored; short-circuits in O(1) when fewer than 2 routes selected; 100% unit test pass rate.]
+### TST-MAP-043: **Active Selected Route Fork Candidate Filtering & Quiescent Short-Circuit Verification** [Verified]
 - **Requirement(s)**: `REQ-MAP-041`
 - **Component**: **Active Selected Route Fork Candidate Filtering & Quiescent Short-Circuit Verification**
 - **Jira**: ``ATT-2942``
@@ -532,7 +532,7 @@
   3. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-MAP-044: **Speed-Dependent Map Zoom Calibration, Lookahead Padding & Tuning Preferences Verification** [Speed-dependent zoom scales accurately with speed in km/h; speed zoom toggle locks base zoom; bottom content padding positions rider in lower third during Follow-Me tracking; tilt is configurable; all parameters persist in DataStore and reset atomically; 100% 9-language translation parity; 100% unit test pass rate.]
+### TST-MAP-044: **Speed-Dependent Map Zoom Calibration, Lookahead Padding & Tuning Preferences Verification** [Verified]
 - **Requirement(s)**: `REQ-MAP-042`
 - **Component**: **Speed-Dependent Map Zoom Calibration, Lookahead Padding & Tuning Preferences Verification**
 - **Jira**: ``ATT-2946``
@@ -556,7 +556,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions.
 
-### TST-NAV-045: **In-Ride Fork Decision Direction Diversity & Alert Suppression Verification** [Fork decision alerts are strictly suppressed when all candidate routes share the same direction; active alerts trigger cleanly when routes diverge into distinct directions; 100% unit test pass rate.]
+### TST-NAV-045: **In-Ride Fork Decision Direction Diversity & Alert Suppression Verification** [Verified]
 - **Requirement(s)**: `REQ-NAV-043`
 - **Component**: **In-Ride Fork Decision Direction Diversity & Alert Suppression Verification**
 - **Jira**: ``ATT-2964``
@@ -568,7 +568,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate with zero regressions.
 
-### TST-MAP-045: **Multi-Scale Turn Cue Detection, Spatial Heading Smoothing & Curvature Classification Verification** [Multi-scale sliding window detection captures sharp and sweeping turns; 5m spatial heading average filters GPS noise with sparse fallback; cues anchor at true curvature apex; 180-degree hairpins consolidated into single U-turn; short routes safely guarded; 100% test pass rate.]
+### TST-MAP-045: **Multi-Scale Turn Cue Detection, Spatial Heading Smoothing & Curvature Classification Verification** [Verified]
 - **Requirement(s)**: `REQ-MAP-028`
 - **Component**: **Multi-Scale Turn Cue Detection, Spatial Heading Smoothing & Curvature Classification Verification**
 - **Jira**: ``ATT-3494``
@@ -590,7 +590,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate with zero regressions.
 
-### TST-MAP-046: **Forward Lookahead Camera Top Padding Inversion & Zoom Level Directional Guidance Verification** [Top content padding applied in follow-me mode to anchor rider in lower third; non-follow-me modes resolve to 0dp; zoom sliders explain direction; forward lookahead title cleaned; 100% 9-language translation parity; 100% test pass rate.]
+### TST-MAP-046: **Forward Lookahead Camera Top Padding Inversion & Zoom Level Directional Guidance Verification** [Verified]
 - **Requirement(s)**: `REQ-MAP-044`
 - **Component**: **Forward Lookahead Camera Top Padding Inversion & Zoom Level Directional Guidance Verification**
 - **Jira**: ``ATT-3054``
@@ -609,7 +609,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate with zero regressions.
 
-### TST-MAP-047: **Automatic Active Workout Sport Type Synchronization on Route Selection (Bike / Run) Verification** [RouteSelectorViewModel synchronizes workout sport type to BIKE or RUN upon route selection or candidate activation; UNKNOWN and CONFLICT routes do not alter sport; stopping route does not alter sport; BANALServiceRepository updates state synchronously; 100% unit test pass rate.]
+### TST-MAP-047: **Automatic Active Workout Sport Type Synchronization on Route Selection (Bike / Run) Verification** [Verified]
 - **Requirement(s)**: `REQ-MAP-045`
 - **Component**: **Automatic Active Workout Sport Type Synchronization on Route Selection (Bike / Run) Verification**
 - **Jira**: ``ATT-3092``
@@ -628,7 +628,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate with zero regressions.
 
-### TST-MAP-048: **Unified Viewport Anchor Authority & Lookahead Camera Targeting Verification** [Camera target projected ahead of athlete along bearing; zero padding in GoogleMap avoids oscillation; lookahead scales with zoom and latitude; 100% clean-room unit test pass rate.]
+### TST-MAP-048: **Unified Viewport Anchor Authority & Lookahead Camera Targeting Verification** [Verified]
 - **Requirement(s)**: `REQ-MAP-046`
 - **Component**: **Unified Viewport Anchor Authority & Lookahead Camera Targeting Verification**
 - **Jira**: ``ATT-3102``
@@ -646,7 +646,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-MAP-049: **Live Climb Continuous Linear Projection, Telemetry Metric Interpolation & Cross-Track Off-Route Verification** [Orthogonal segment projection continuously interpolates distance, altitude, progress fraction, and gradient on sparse tracks; cross-track distance calculation prevents false off-route triggers; single-point fallback preserved; 100% unit test pass rate.]
+### TST-MAP-049: **Live Climb Continuous Linear Projection, Telemetry Metric Interpolation & Cross-Track Off-Route Verification** [Verified]
 - **Requirement(s)**: `REQ-MAP-047`
 - **Component**: **Live Climb Continuous Linear Projection, Telemetry Metric Interpolation & Cross-Track Off-Route Verification**
 - **Jira**: ``ATT-3174``
@@ -665,7 +665,7 @@
   4. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-MAP-050: **Follow-Me Camera Target Forward Lookahead Projection Scaling, Tilt Foreshortening Compensation & Scale Direction Transparency Verification** [Ground offset scales proportionally across slider; tilt foreshortening compensated up to 70°; controller propagates effective tilt; all 9 locales updated; 100% unit test pass rate.]
+### TST-MAP-050: **Follow-Me Camera Target Forward Lookahead Projection Scaling, Tilt Foreshortening Compensation & Scale Direction Transparency Verification** [Verified]
 - **Requirement(s)**: `REQ-MAP-048`
 - **Component**: **Follow-Me Camera Target Forward Lookahead Projection Scaling, Tilt Foreshortening Compensation & Scale Direction Transparency Verification**
 - **Jira**: ``ATT-3171``
@@ -683,7 +683,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-GEO-001: **Unified Polyline Progress Tracking Engine with Directional Virtual Gates and Orthogonal Segment Projection Verification** [\Delta\theta]
+### TST-GEO-001: **Unified Polyline Progress Tracking Engine with Directional Virtual Gates and Orthogonal Segment Projection Verification** [Verified]
 - **Requirement(s)**: `REQ-GEO-001`
 - **Component**: **Unified Polyline Progress Tracking Engine with Directional Virtual Gates and Orthogonal Segment Projection Verification**
 - **Jira**: ``ATT-3266``
@@ -700,7 +700,7 @@
   • Verify smooth $\lambda$-blended remaining distance convergence to exactly $0.0\text{m}$ at finish line.
   • Verify approach filtering ($D \le 250\text{m},
 
-### TST-MAP-051: **Follow-Me Speed Zoom Smoothing, Zoom Hysteresis Deadband, and Configurable Filter Calibration Verification** [Speed zoom smoothing eliminates camera pumping; zoom hysteresis suppresses micro-animations; configurable filter sliders integrated in Advanced Settings; 100% localization parity; 100% unit test pass rate.]
+### TST-MAP-051: **Follow-Me Speed Zoom Smoothing, Zoom Hysteresis Deadband, and Configurable Filter Calibration Verification** [Verified]
 - **Requirement(s)**: `REQ-MAP-049`
 - **Component**: **Follow-Me Speed Zoom Smoothing, Zoom Hysteresis Deadband, and Configurable Filter Calibration Verification**
 - **Jira**: ``ATT-3227``
@@ -723,7 +723,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-MAP-052: **Follow-Me Piecewise Logarithmic Zoom Calibration & UI Simplification Verification Suite** [Piecewise linear-to-logarithmic Follow-Me camera zoom calibration, minimum zoom clamping at 16.0f, autonomous controller invocation, and removal of camera sliders from Advanced Settings verified across unit and contract tests; 100% test pass rate.]
+### TST-MAP-052: **Follow-Me Piecewise Logarithmic Zoom Calibration & UI Simplification Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-MAP-050`
 - **Component**: **Follow-Me Piecewise Logarithmic Zoom Calibration & UI Simplification Verification Suite**
 - **Jira**: ``ATT-3581``
@@ -741,7 +741,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate across all 2,964+ unit tests.
 
-### TST-MAP-053: **Map Polyline Memory Stability, Referential Identity & Preview Downsampling Verification Suite** [Referentially stable `latLngs` and `PatternItem` lists, decoupled static map layer flows, keyed `MappablePathLayer` composition, and bounded 500-point preview downsampling in `CropWorkoutScreen`; 100% test pass rate.]
+### TST-MAP-053: **Map Polyline Memory Stability, Referential Identity & Preview Downsampling Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-MAP-051`
 - **Component**: **Map Polyline Memory Stability, Referential Identity & Preview Downsampling Verification Suite**
 - **Jira**: ``ATT-3690``
@@ -759,7 +759,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions across all unit tests.
 
-### TST-MAP-054: **Reactive Speed/Bearing Flow Subscription in TrackingViewModel & Continuous Follow-Me Smoothing Convergence Verification Suite** [Reactive `currentSpeed` and `currentBearing` updates in `TrackingViewModel.observeMapState` (Rule 39) and continuous Follow-Me EMA zoom/bearing convergence in `MapBehaviors.kt` verified across unit tests and full clean-room suite.]
+### TST-MAP-054: **Reactive Speed/Bearing Flow Subscription in TrackingViewModel & Continuous Follow-Me Smoothing Convergence Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-MAP-052`
 - **Component**: **Reactive Speed/Bearing Flow Subscription in TrackingViewModel & Continuous Follow-Me Smoothing Convergence Verification Suite**
 - **Jira**: ``ATT-3775``
@@ -775,7 +775,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-MAP-055: **Multi-File Route Selection, Batch Import & External Multi-Share Verification Suite** [Multi-file route picking, batch progress dialog, fault-tolerant batch persistence, external multi-share intent handling, 9-language translation parity, and full test suite pass verified.]
+### TST-MAP-055: **Multi-File Route Selection, Batch Import & External Multi-Share Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-MAP-053`
 - **Component**: **Multi-File Route Selection, Batch Import & External Multi-Share Verification Suite**
 - **Jira**: ``ATT-4049``
@@ -806,7 +806,7 @@
   8. *Clean-Room Regression Suite Execution (`TST-MAP-055.8`)*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-MAP-056: **Batch GPX Route Import Sport Type Selection, Responsive Bottom Sheet Layout & Sequential Review Verification Suite** [Batch GPX route import sport type selection prompt, AppModalBottomSheet layout container, FlowRow intact chip wrapping, multi-line centered segmented button labels, neutral BSportType.UNKNOWN preselection, canonical chip ordering with Other on far right (Rule 57), apply-to-all sport override in RoutesViewModel and GpxImportViewModel, sequential individual review state machine, RoutesScreen flow discrimination, 9-language localization parity, and clean-room test pass specified.]
+### TST-MAP-056: **Batch GPX Route Import Sport Type Selection, Responsive Bottom Sheet Layout & Sequential Review Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-MAP-053`, `REQ-UI-106`
 - **Component**: **Batch GPX Route Import Sport Type Selection, Responsive Bottom Sheet Layout & Sequential Review Verification Suite**
 - **Jira**: ``ATT-4372 / ATT-4430``
@@ -860,7 +860,7 @@
   • *When* executing `./gradlew testDebugUnitTest`,
   • *Then* assert 100% pass rate with zero regressions across the complete unit test suite.
 
-### TST-MAP-057: **TurnCueDetector Dead Code Cleanup, Exact Distance Window Boundary Interpolation & Sparse-Vertex Route Geometry Verification Suite** [Dead code eliminated; lookaround chords interpolated at exact $d_{\text{cur}} \pm W$ boundaries; sparse-vertex corners accurately detected; primitive coordinate bearing verified; 100% test pass rate with zero regressions.]
+### TST-MAP-057: **TurnCueDetector Dead Code Cleanup, Exact Distance Window Boundary Interpolation & Sparse-Vertex Route Geometry Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-MAP-054`, `REQ-MAP-028`
 - **Component**: **TurnCueDetector Dead Code Cleanup, Exact Distance Window Boundary Interpolation & Sparse-Vertex Route Geometry Verification Suite**
 - **Jira**: ``ATT-4460``
@@ -883,7 +883,7 @@
   6. *Full Existing Test Suite Regression Execution (`TST-MAP-057.6`)*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions across all 18 existing test cases in `TurnCueDetectorTest` (`TST-MAP-045.1` - `TST-MAP-045.18`) and the entire project test suite.
 
-### TST-GEO-002: **Equirectangular Scaled Polyline Projection, Orthogonal Virtual Gates & Windowed Out-and-Back Route Progress Tracking Verification Suite** [Equirectangular scaling eliminates projection distortion and virtual gate skew at mid-latitudes; windowed forward search prevents out-and-back leg jumping with robust corridor fallback; 100% backward compatibility and test pass rate.]
+### TST-GEO-002: **Equirectangular Scaled Polyline Projection, Orthogonal Virtual Gates & Windowed Out-and-Back Route Progress Tracking Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-GEO-002`
 - **Component**: **Equirectangular Scaled Polyline Projection, Orthogonal Virtual Gates & Windowed Out-and-Back Route Progress Tracking Verification Suite**
 - **Jira**: ``ATT-4015``
@@ -908,7 +908,7 @@
   7. *Clean-Room Regression Suite Execution (`TST-GEO-002.7`)*:
   • Run targeted unit tests and full clean-room suite verifying 100% test pass rate.
 
-### TST-NAV-056: **Stateful Polyline Progress Tracking Continuity & Production Caller Propagation Verification Suite** [Stateful lastSegmentIndex propagation verified across TrackingElevationProfileResolver, LiveSegmentsRepository, and LiveClimbsRepository; deterministic lifecycle reset rules enforced; out-and-back jumping eliminated in production; 100% clean-room test pass rate.]
+### TST-NAV-056: **Stateful Polyline Progress Tracking Continuity & Production Caller Propagation Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-NAV-056`, `REQ-GEO-002`
 - **Component**: **Stateful Polyline Progress Tracking Continuity & Production Caller Propagation Verification Suite**
 - **Jira**: ``ATT-4015``
@@ -932,7 +932,7 @@
   6. *Clean-Room Full Suite Regression Execution (`TST-NAV-056.6`)*:
   • Run targeted caller unit tests and `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-MAP-055: **Climb Detection Performance, Route/TCX Import Fidelity & Power Calibration Verification Suite** [Climb detector executes in near-linear time and detects steep sections without summit dilution; GPX elevation gain ignores sub-2m noise and DEM enrichment continues on batch failures; TCX parses decimal watts/cadence and retains indoor telemetry; NP rolling window adapts to sample interval; Zone 1 includes 0W coasting when positive power exists while returning null for non-power workouts; 100% unit tests pass.]
+### TST-MAP-055: **Climb Detection Performance, Route/TCX Import Fidelity & Power Calibration Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-MAP-055`, `REQ-MAP-027`, `REQ-MAP-025`, `REQ-EXP-001`, `REQ-UI-370`
 - **Component**: **Climb Detection Performance, Route/TCX Import Fidelity & Power Calibration Verification Suite**
 - **Jira**: ``ATT-4033``

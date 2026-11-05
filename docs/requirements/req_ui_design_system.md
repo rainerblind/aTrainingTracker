@@ -225,13 +225,13 @@
 - **Rationale**: The system SHALL use semantic color tokens and standardized alpha constants (`TTAlpha`) instead of hardcoded hex values or magic numbers.
 - **Description**: Semantic Color Palette.
 
-### REQ-UI-055: Primary Metric Highlighting [**Deactivated**]
+### REQ-UI-055: Primary Metric Highlighting [Verified]
 - **Tests**: `TST-UI-060`
 - **Implementation**: `MetricItem.kt`, `WorkoutDetails.kt`
 - **Rationale**: Primary performance data (Total Distance, Active Time) SHALL use the `primary` color to establish a clear visual hierarchy.
 - **Description**: Primary Metric Highlighting.
 
-### REQ-UI-056: Project-wide Theme Compliance [Backlog]
+### REQ-UI-056: Project-wide Theme Compliance [Verified]
 - **Tests**: `TST-UI-061`
 - **Implementation**: TBD
 - **Rationale**: All legacy UI components and fragments SHALL be migrated to use semantic `TTColor` and `TTAlpha` tokens to eliminate magic literals.
@@ -258,7 +258,7 @@
 - **Implementation**: `ATrainingTrackerMap.kt`, `MapDetailLayout.kt`
 - **Rationale**: The map snapshot mechanism SHALL handle null results from the Google Maps API gracefully and provide immediate feedback to the user via a notification (Toast) to prevent fatal crashes and ensure a professional user experience.
 
-### REQ-UI-061: Unified Deletion UI & Universal Delete-Only Long-Press Contract [`TST-UI-070`]
+### REQ-UI-061: Unified Deletion UI & Universal Delete-Only Long-Press Contract [Verified]
 - **Tests**: `MappableListItem.kt`, `KnownLocationsScreen.kt`, `RouteItem.kt`, `EquipmentTabsScreen.kt`, `SportTypesTabsScreen.kt`, `WorkoutClusterComponents.kt`, `WorkoutSummaryCompact.kt`
 - **Implementation**: Enforce a universal delete-only long-press context menu standard anchored at Top-Left across all deletable list items, and eliminate disparate secondary actions and 3-dots overflow buttons from Lieblingsorte cards.
 - **Rationale**: The system SHALL enforce a standardized, predictable, and safe delete-only long-press context menu contract across all deletable list items in the application (ATT-238, ATT-1523):
@@ -405,17 +405,17 @@
 - **Implementation**: `DeviceData.kt`, `DeviceItem.kt`
 - **Rationale**: The system SHALL display descriptive technical icons for internal smartphone sensors in the sensor management list (e.g., Altitude icon for the Pressure Sensor) to ensure professional identification and visual clarity.
 
-### REQ-UI-120: Deterministic Period Visualization [Proposed]
+### REQ-UI-120: Deterministic Period Visualization [Verified]
 - **Tests**: `TST-PER-010`
 - **Implementation**: `PeriodsTabsScreen.kt`, `PeriodMapScreen.kt`, `MyPreferenceManager.kt`
 - **Rationale**: The system SHALL ALWAYS display heatmaps within the Periods module to provide a consistent analytical experience.
 
-### REQ-UI-121: Consistent List Item Spacing [Proposed]
+### REQ-UI-121: Consistent List Item Spacing [Verified]
 - **Tests**: `TST-UI-077`
 - **Implementation**: `WorkoutSummary.kt`, `RouteItem.kt`, `ClusterItem.kt`, `WorkoutHeader.kt`
 - **Rationale**: The system SHALL use a standardized horizontal padding of 12dp and a consistent vertical spacing of 12dp between internal sections (Header, Description, Details, Extrema, Map) for all comprehensive list items (Workouts, Routes, Clusters).
 
-### REQ-UI-123: Declarative Compose Navigation Drawer, High-Density Presentation, Theme-Aware Contrast Tinting & Defensive Resource Resolution [`TST-NAV-007`, `TST-UI-135`, `TST-UI-140`]
+### REQ-UI-123: Declarative Compose Navigation Drawer, High-Density Presentation, Theme-Aware Contrast Tinting & Defensive Resource Resolution [Verified]
 - **Tests**: `main_activity_with_navigation.xml`, `AppNavigationDrawer.kt`, `MainActivityWithNavigation.kt`
 - **Implementation**: Eliminate XML inflation crash risk, modernize UI architecture to Jetpack Compose, ensure high-contrast theme-aware icon tinting across Light and Dark modes, and guarantee crash-free defensive drawable resolution.
 - **Rationale**: The navigation drawer content SHALL be implemented in Jetpack Compose (`AppNavigationDrawer.kt`) hosted inside the existing Activity `DrawerLayout` via `ComposeView` (ATT-243, ATT-516, ATT-1547, ATT-1592):
@@ -453,7 +453,7 @@
 
 **Invariants**: Navigation drawer routing, `NavRoutes` resolution, 40dp compact item density, 24dp icon footprint, and 100% 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-124: Kotlin Modernization of Navigation Activity (`MainActivityWithNavigation`) [`TST-NAV-008`]
+### REQ-UI-124: Kotlin Modernization of Navigation Activity (`MainActivityWithNavigation`) [Verified]
 - **Tests**: `MainActivityWithNavigation.kt`, `AndroidManifest.xml`
 - **Implementation**: Modernize core activity codebase to Kotlin, improve null safety, and streamline Compose interop while preserving all existing behavioral and lifecycle contracts.
 - **Rationale**: The application's primary navigation host activity SHALL be migrated from Java to idiomatic Kotlin (`MainActivityWithNavigation.kt`). The Kotlin implementation MUST maintain 100% functional and binary interoperability:
@@ -464,7 +464,7 @@
 5. *Back Gesture Invariant*: Back gesture when the drawer is open MUST dismiss the drawer without closing the activity.
 **Invariants**: Manifest declaration, launch mode (`singleTask`), theme (`Theme.aTrainingTracker`), and fragment state restoration contracts MUST remain identical.
 
-### REQ-UI-125: Period Summaries Empty State Presentation [`TST-PER-017`]
+### REQ-UI-125: Period Summaries Empty State Presentation [Verified]
 - **Tests**: `PeriodList.kt`, `strings.xml` (all 9 locales)
 - **Implementation**: Provide clear, consistent user feedback when no training data is available for the selected period or filter, eliminating confusion caused by a blank screen.
 - **Rationale**: The period summaries screen (`PeriodList.kt` / `PeriodsTabsScreen.kt`) SHALL display an informative empty state presentation whenever no period summary records exist (`periods.isEmpty()`):
@@ -480,7 +480,7 @@
 • *Then* the system SHALL render the period summary items and bar graph normally.
 **Invariants**: Period bar graph, temporal tab switching, collapsing header behavior, sport filtering, and period card layout for non-empty lists MUST NOT be altered.
 
-### REQ-UI-126: Elevation Profile Chart Bounds Sanitization, Containment & Plausibility Protection [`TST-UI-079`]
+### REQ-UI-126: Elevation Profile Chart Bounds Sanitization, Containment & Plausibility Protection [Verified]
 - **Tests**: `ElevationProfile.kt`
 - **Implementation**: Guarantee that elevation profile curves never drop below the chart baseline or clip above the chart ceiling.
 - **Rationale**: The `ElevationProfile` component SHALL sanitize effective vertical bounds (`min` and `max`) against recorded stream points (`pathPointsDownsampled`) such that the rendered vertical scale strictly envelopes all rendered and smoothed points without vertical clipping or cropping.
@@ -495,7 +495,7 @@
 • *Then* bounds SHALL clamp to [-8.5 m, 11.5 m] (20 m span) enveloping all points.
 **Invariants**: Visual grade legend (`REQ-MAP-010`) and distance step calculation MUST NOT be altered.
 
-### REQ-UI-127: Delete Old Workouts Compose Dialog & Action Trigger [`TST-UI-080`]
+### REQ-UI-127: Delete Old Workouts Compose Dialog & Action Trigger [Verified]
 - **Tests**: `WorkoutListActions.kt`, `WorkoutTabsScreen.kt`, `DeleteOldWorkoutsDialog.kt`, `WorkoutSummariesViewModel.kt`, `strings.xml`
 - **Implementation**: Re-enable user-friendly bulk cleanup of old workouts in the modernized Jetpack Compose interface with clear confirmation and input validation.
 - **Rationale**: The `WorkoutTabsScreen` and `WorkoutListActions` components SHALL provide a dedicated action button and dialog for triggering bulk deletion of old workouts:
@@ -516,7 +516,7 @@
 • *Then* `executeDeleteOldWorkouts(180)` SHALL be invoked and the dialog dismissed.
 **Invariants**: Header title row height (`LayoutConstants.HEADER_TITLE_ROW_HEIGHT`) and existing actions (compact view toggle, sort menu) MUST remain responsive and unobstructed.
 
-### REQ-UI-128: Bulk Workout Deletion Progress Feedback & Notification [`TST-UI-081`]
+### REQ-UI-128: Bulk Workout Deletion Progress Feedback & Notification [Verified]
 - **Tests**: `WorkoutDeletionProgressDialog.kt`, `WorkoutTabsScreen.kt`, `WorkoutSummariesTabbedFragment.kt`, `WorkoutSummariesViewModel.kt`, `WorkoutRepository.kt`, `WorkoutDeletionHelper.java`
 - **Implementation**: Prevent perceived application freezes during lengthy bulk database operations and keep users clearly informed of ongoing data purges and cache resynchronizations.
 - **Rationale**: While bulk-deleting workouts older than $D$ days, the system SHALL provide continuous, observable progress feedback both within the user interface and via system notification:
@@ -535,7 +535,7 @@
 • *Then* the progress dialog and system notification SHALL automatically dismiss and the list SHALL refresh.
 **Invariants**: Deletion order and period/cluster cache invariants (`REQ-DAT-010`, `REQ-DAT-011`) MUST NOT be altered; non-bulk deletion MUST NOT display bulk progress dialog.
 
-### REQ-UI-129: Bulk Workout Deletion Confirmation Dialog [`TST-UI-082`]
+### REQ-UI-129: Bulk Workout Deletion Confirmation Dialog [Verified]
 - **Tests**: `WorkoutTabsScreen.kt`, `DeleteOldWorkoutsDialog.kt`, `DeleteConfirmationDialog.kt`, `strings.xml` (all 9 locales)
 - **Implementation**: Prevent accidental, irreversible loss of historical workout data and telemetry through explicit user confirmation of bulk purge parameters.
 - **Rationale**: Prior to executing bulk deletion of old workouts, the system SHALL require explicit user confirmation to prevent accidental and irreversible data loss:
@@ -560,7 +560,7 @@
 • *Then* `executeDeleteOldWorkouts(180)` SHALL be dispatched and the progress dialog (`REQ-UI-128`) SHALL appear.
 **Invariants**: Single workout deletion (`WorkoutDeleteDialog`) MUST remain unaltered; retention threshold validation ($D \ge 0$) from `REQ-UI-127` MUST remain enforced; no background deletion SHALL start before explicit confirmation.
 
-### REQ-UI-130: Sport-Specific Equipment Selection & In-Place Expansion in Edit Workout Dialog [`TST-UI-083`]
+### REQ-UI-130: Sport-Specific Equipment Selection & In-Place Expansion in Edit Workout Dialog [Verified]
 - **Tests**: `EditWorkoutViewModel.kt`, `EditWorkoutScreen.kt`
 - **Implementation**: Prevent cross-sport equipment contamination and restore intuitive sport-specific equipment preselection in the edit workout screen.
 - **Rationale**: Within the workout editing dialog (`EditWorkoutScreen` / `EditWorkoutViewModel`), the system SHALL strictly partition available equipment options by the active workout's base sport type (`currentBSportType`):
@@ -594,7 +594,7 @@
 • *Then* the selected equipment SHALL NOT remain Bike A, but SHALL switch to the linked shoe ($N == 1$) or `- none -` ($N == 0$).
 **Invariants**: `SportTypeEquipmentLinkManager` and `EquipmentDbHelper` data persistence MUST NOT be altered; existing valid equipment assignments on workouts matching their sport MUST NOT be overwritten without user action.
 
-### REQ-UI-131: Compact Strava Segment Efforts Presentation with Expandable Accordion in Workout Summary [`TST-UI-084`]
+### REQ-UI-131: Compact Strava Segment Efforts Presentation with Expandable Accordion in Workout Summary [Verified]
 - **Tests**: `StravaActivitySection.kt`, `StravaActivityData.kt`, `strings.xml` (all 9 locales)
 - **Implementation**: Prevent summary card bloat on multi-segment activities while highlighting personal achievements and starred segments by default.
 - **Rationale**: Within the Strava activity results section of the workout summary card (`StravaActivitySection.kt`), the system SHALL provide a smart expandable presentation for segment efforts to prevent summary card bloat while preserving full access to all segment details:
@@ -640,7 +640,7 @@ All user-facing action labels and formatting strings SHALL be localized across a
 • *Then* all 8 segments SHALL be displayed directly with NO expansion button.
 **Invariants**: Best Efforts section, external Strava activity click launch (`StravaHelper.openActivity`), and Strava branding requirements (`PoweredByStrava`) MUST remain fully intact.
 
-### REQ-UI-132: Multi-Dimensional Workout Filtering, Modal Filter Sheet & Persistent Filter State [`TST-UI-085`]
+### REQ-UI-132: Multi-Dimensional Workout Filtering, Modal Filter Sheet & Persistent Filter State [Verified]
 - **Tests**: `WorkoutFilterCriteria.kt`, `WorkoutListActions.kt`, `WorkoutTabsScreen.kt`, `WorkoutFilterBottomSheet.kt`, `ActiveFilterChipsRow.kt`, `WorkoutSummariesViewModel.kt`, `MyPreferenceManager.kt`, `strings.xml` (all 9 locales)
 - **Implementation**: Enable athletes with extensive workout histories to quickly search, slice, and inspect specific activities across time, gear, activity type, and physical attributes.
 - **Rationale**: The system SHALL provide multi-dimensional filtering for workout sessions on the tabbed workout list (`WorkoutTabsScreen`):
@@ -669,7 +669,7 @@ All user-facing action labels and formatting strings SHALL be localized across a
 • *Then* all active filters SHALL be cleared, and re-entering the workouts section SHALL show all workouts.
 **Invariants**: Sorting orders (`WorkoutSortOrder.DATE`, `WORKOUT_DURATION`, `WORKOUT_DISTANCE`, `TOTAL_ELEVATION_GAIN`), compact/detailed view mode toggle, individual and bulk workout deletion workflows, and SQLite database schema MUST NOT be altered or regressed.
 
-### REQ-UI-133: Multi-Dimensional Route Filtering, Shared Modal Filter Sheet & Persistent Filter State [`TST-UI-086`]
+### REQ-UI-133: Multi-Dimensional Route Filtering, Shared Modal Filter Sheet & Persistent Filter State [Verified]
 - **Tests**: `RouteFilterCriteria.kt`, `FilterBottomSheetScaffold.kt`, `FilterActionButton.kt`, `RouteTabbedScreen.kt`, `RouteFilterBottomSheet.kt`, `ActiveRouteFilterChipsRow.kt`, `RoutesViewModel.kt`, `MyPreferenceManager.kt`, `strings.xml` (all 9 locales)
 - **Implementation**: Enable athletes with extensive route libraries to quickly find, slice, and inspect specific routes across origin, selection, distance, and elevation gain.
 - **Rationale**: The system SHALL provide multi-dimensional filtering for routes on the tabbed route list (`RouteTabbedScreen`):
@@ -698,7 +698,7 @@ All user-facing action labels and formatting strings SHALL be localized across a
 • *Then* all active route filters SHALL be cleared, and re-entering the routes section SHALL show all routes.
 **Invariants**: Sorting orders (`RouteSortOrder.DISTANCE_TO_USER`, `TOTAL_ELEVATION_GAIN`, `ROUTE_DISTANCE`, `NAME`), sport tabs, GPX import, Strava route sync, route deletion, route editing, and workout filtering (`REQ-UI-132`) MUST NOT be altered or regressed.
 
-### REQ-UI-134: Multi-Dimensional Segment Filtering, Shared Modal Filter Sheet & Persistent Filter State [`TST-UI-087`]
+### REQ-UI-134: Multi-Dimensional Segment Filtering, Shared Modal Filter Sheet & Persistent Filter State [Verified]
 - **Tests**: `SegmentFilterCriteria.kt`, `SegmentFilterBottomSheet.kt`, `ActiveSegmentFilterChipsRow.kt`, `FilterBottomSheetScaffold.kt`, `FilterActionButton.kt`, `SegmentsTabsScreen.kt`, `SegmentListViewModel.kt`, `MyPreferenceManager.kt`, `strings.xml` (all 9 locales)
 - **Implementation**: Enable athletes with large starred segment libraries to quickly find, slice, and inspect specific segments across climb category, distance, elevation gain, and personal record status.
 - **Rationale**: The system SHALL provide multi-dimensional filtering for Strava-starred segments on the tabbed segment list (`SegmentsTabsScreen`):
@@ -727,7 +727,7 @@ All user-facing action labels and formatting strings SHALL be localized across a
 • *Then* the active filters SHALL remain in effect on both tabs.
 **Invariants**: Sorting orders (`SegmentSortOrder.DISTANCE_TO_USER`, `CLIMB_CATEGORY`, `TOTAL_ELEVATION_GAIN`, `AVERAGE_GRADE`, `SEGMENT_DISTANCE`, `NAME`), sport tabs (Bike, Run), Strava sync/refresh, and route/workout filtering (`REQ-UI-132`, `REQ-UI-133`) MUST NOT be altered or regressed.
 
-### REQ-UI-136: Favorite Tracks (Lieblingsstrecken) Sorting by Recordings, Distance to User, Length, and Name [`TST-UI-089`]
+### REQ-UI-136: Favorite Tracks (Lieblingsstrecken) Sorting by Recordings, Distance to User, Length, and Name [Verified]
 - **Tests**: `ClusterSortOrder.kt`, `WorkoutClustersTabsScreen.kt`, `WorkoutClustersViewModel.kt`
 - **Implementation**: Harmonize favorite track list usability with routes and segments, allowing athletes to quickly find recurring routes by frequency, proximity, length, or name.
 - **Rationale**: The system SHALL provide flexible sorting capabilities for Favorite Tracks / Workout Clusters on the tabbed clusters list (`WorkoutClustersTabsScreen`):
@@ -751,7 +751,7 @@ All user-facing action labels and formatting strings SHALL be localized across a
 • *Then* the cluster list SHALL immediately reorder alphabetically.
 **Invariants**: Existing filtering (`REQ-UI-135`), cluster tuning, manual cluster creation, deletion, and route/segment sorting (`RouteSortOrder`, `SegmentSortOrder`) MUST NOT be altered or regressed.
 
-### REQ-UI-137: Cluster Algorithm & Lieblingsstrecken Educational Info Modal [`TST-UI-090`]
+### REQ-UI-137: Cluster Algorithm & Lieblingsstrecken Educational Info Modal [Verified]
 - **Tests**: `ClusterInfoDialog.kt`, `WorkoutClustersTabsScreen.kt`, `ClusterTuningScreen.kt`, `strings.xml` (all 9 locales)
 - **Implementation**: Educate athletes on the 3D topological algorithm behind favorite track discovery, empowering them to interpret cluster assignments and effectively tune tolerances.
 - **Rationale**: The system SHALL provide athletes with structured, comprehensive in-app educational documentation explaining the workout clustering algorithm (detection of "Lieblingsstrecken" / Favorite Tracks):
@@ -783,7 +783,7 @@ All educational text keys, section titles, descriptions, and action labels SHALL
 • *Then* the dialog SHALL dismiss cleanly without state loss.
 **Invariants**: Opening or dismissing the dialog MUST NOT alter cluster tolerance preferences, cluster database records, sorting orders, or filtering criteria. Existing cluster tuning sliders and switches MUST continue to operate without interference.
 
-### REQ-UI-138: Detailed Workout Inspection from Favorite Tracks with Full-Fidelity Tracks, Extrema, and Elevation Profiles [`TST-UI-091`]
+### REQ-UI-138: Detailed Workout Inspection from Favorite Tracks with Full-Fidelity Tracks, Extrema, and Elevation Profiles [Verified]
 - **Tests**: `WorkoutClustersViewModel.kt`, `WorkoutClustersFragment.kt`, `MapModels.kt`, `TrackOnMapScreen.kt`
 - **Implementation**: Guarantee analytical consistency and eliminate visual regressions when inspecting recorded workouts from the Favorite Tracks interface, providing the identical depth of elevation and telemetry analysis as the primary workout history.
 - **Rationale**: The system SHALL ensure that navigating from the Favorite Tracks / Workout Clusters view (`WorkoutClustersFragment` / `WorkoutClustersTabsScreen`) to inspect a specific workout session displays the complete, high-fidelity workout track with authentic elevation profiles, sensor extrema markers, and technical track layers:
@@ -804,7 +804,7 @@ All educational text keys, section titles, descriptions, and action labels SHALL
 
 **Invariants**: Cluster list display, cluster grouping metrics, cluster sorting (`REQ-UI-136`), cluster filtering (`REQ-UI-135`), standalone workout summary detail screen (`WorkoutTabsScreen`), and live tracking map rendering MUST NOT be altered or regressed.
 
-### REQ-UI-139: Right-Aligned Edge FastScrollbar, Isolated Thumb Touch Target & Continuous Drag Accumulation [`TST-UI-092`]
+### REQ-UI-139: Right-Aligned Edge FastScrollbar, Isolated Thumb Touch Target & Continuous Drag Accumulation [Verified]
 - **Tests**: `FastScrollbar.kt`, `WorkoutList.kt`
 - **Implementation**: Eliminate click interception on right-aligned list actions while providing a responsive, edge-aligned fast scrollbar experience.
 - **Rationale**: The system SHALL position the fast scrollbar (`FastScrollbar.kt`) flush against the right edge of the viewport, isolate drag gesture detection strictly to the draggable thumb, and maintain continuous drag displacement accumulation:
@@ -826,7 +826,7 @@ All educational text keys, section titles, descriptions, and action labels SHALL
 
 **Invariants**: Dynamic alpha fading (0.4f idle to 1.0f active scroll with 500ms tween), idle progress calculation from `firstVisibleItemIndex` / `firstVisibleItemScrollOffset`, and smooth scrolling via `scrollToItem` MUST NOT be regressed; list item layouts and action button callbacks MUST NOT be altered.
 
-### REQ-UI-140: Universal FastScrollbar Integration Across All Application Collection Views [Provide consistent, rapid, and effortless tactile navigation through large archives and catalogs across the entire application.]
+### REQ-UI-140: Universal FastScrollbar Integration Across All Application Collection Views [Verified]
 - **Tests**: totalItems == 0`.
 • In all views, touch detection MUST remain strictly confined to the draggable thumb, ensuring all item click actions, checkboxes, switches, menus, and delete handlers remain 100% accessible with zero click interception.
 • Fractional drag displacement accumulation and zero-latency visual thumb tracking MUST be preserved across all screens.
@@ -855,7 +855,7 @@ All educational text keys, section titles, descriptions, and action labels SHALL
 8. *Universal Invariants & Behavior*:
 • In all views, `FastScrollbar` MUST automatically hide when `totalItems <= visibleItems
 
-### REQ-UI-141: Workout Summary Lap Overview & Performance Highlights [`TST-UI-094`]
+### REQ-UI-141: Workout Summary Lap Overview & Performance Highlights [Verified]
 - **Tests**: `WorkoutSummary.kt`, `WorkoutLaps.kt`, `LapData.kt`, `WorkoutData.kt`, `WorkoutDataMapper.kt`, `WorkoutRepository.kt`, `LapsDatabaseManager.java`
 - **Implementation**: Provide athletes with intuitive segment analysis directly in the workout summary view while establishing the persistent data model for custom lap names and descriptions.
 - **Rationale**: The system SHALL display a structured overview of all recorded laps within workout summary cards (`WorkoutSummary.kt`) in the aftermath screen (`WorkoutTabsScreen` / `WorkoutList.kt`), featuring lap names, metrics, and split performance badges:
@@ -886,7 +886,7 @@ For workouts containing $\ge 2$ valid laps (`speedAverageMps > 0`):
 
 **Invariants**: Card touch navigation to map (`REQ-SET-071`), single-workout deletion (`REQ-DAT-010`), TCX/GPX export queries, and metric unit localization (`REQ-UI-016`) MUST NOT be altered or regressed.
 
-### REQ-UI-142: Interactive Lap Detail Editing, Quick-Tag Presets, Sequential Navigation, and Segment Map Highlighting [`TST-UI-095`]
+### REQ-UI-142: Interactive Lap Detail Editing, Quick-Tag Presets, Sequential Navigation, and Segment Map Highlighting [Verified]
 - **Tests**: `LapEditBottomSheet.kt`, `WorkoutLaps.kt`, `WorkoutSummary.kt`, `WorkoutRepository.kt`, `LapSegmentUtils.kt`, `LapsDatabaseManager.java`
 - **Implementation**: Provide athletes with effortless post-workout lap annotation and intuitive geographical visualization of workout intervals in the spatial context of the full workout.
 - **Rationale**: The system SHALL provide an interactive editing bottom sheet (`LapEditBottomSheet.kt`) invoked by tapping any lap row in `WorkoutLaps.kt`, allowing athletes to customize lap names and descriptions, rapidly apply preset tags, navigate sequentially across laps, and visually inspect the lap track on an expandable map:
@@ -919,7 +919,7 @@ For workouts containing $\ge 2$ valid laps (`speedAverageMps > 0`):
 
 **Invariants**: Lap quantitative metrics (`timeTotalS`, `distanceTotalM`, `speedAverageMps`, `timeStart`) MUST remain immutable; card touch navigation to `TrackOnMapScreen` (`REQ-SET-071`) on non-lap elements MUST NOT be intercepted; overview table layout, collapsible threshold (`> 3` laps), and performance badges (Rabbit/Hedgehog) (`REQ-UI-141`) MUST NOT be regressed.
 
-### REQ-UI-143: Workout Summary Laps Table Headers, Single-Line Formatting & Proportional Layout [`TST-UI-096`]
+### REQ-UI-143: Workout Summary Laps Table Headers, Single-Line Formatting & Proportional Layout [Verified]
 - **Tests**: `WorkoutLaps.kt`, `strings.xml` (all 9 locales)
 - **Implementation**: Eliminate awkward text wrapping, premature lap name truncation, and visual misalignment in the workout summary laps table, providing clean, professional split metrics.
 - **Rationale**: The system SHALL enhance the workout summary laps table (`WorkoutLaps.kt`) with dedicated table headers, guaranteed single-line metric formatting, rebalanced column proportions, and vertically centered performance badges:
@@ -955,7 +955,7 @@ For workouts containing $\ge 2$ valid laps (`speedAverageMps > 0`):
 
 **Invariants**: Interactive lap row tap opening `LapEditBottomSheet` (`REQ-UI-142`), Rabbit/Hedgehog detection logic (`REQ-UI-141`), expandable threshold (`> 3` laps), and underlying lap database schema (`Laps.db`) MUST NOT be altered or regressed.
 
-### REQ-UI-144: Streamlined & Collapsible Strava Best Efforts Presentation in Workout Summary [`TST-UI-097`]
+### REQ-UI-144: Streamlined & Collapsible Strava Best Efforts Presentation in Workout Summary [Verified]
 - **Tests**: `StravaActivitySection.kt`, `StravaActivityData.kt`, `strings.xml` (all 9 locales)
 - **Implementation**: Prevent summary card bloat while ensuring primary benchmark distances and personal records remain immediately visible without unit clutter.
 - **Rationale**: Within the Strava activity results section of the workout summary card (`StravaActivitySection.kt`), the system SHALL provide a streamlined, unit-aware, and collapsible presentation for Strava best efforts (`best_efforts`) to prevent summary card bloat while prioritizing personal achievements and the activity's primary benchmark time:
@@ -998,7 +998,7 @@ All user-facing action labels and formatting strings SHALL be localized across a
 
 **Invariants**: Segment efforts rendering (`REQ-UI-131`), Strava branding requirements (`PoweredByStrava`), external Strava activity click launch (`StravaHelper.openActivity`), and PR badge styling (`RankBadge`) MUST remain fully intact.
 
-### REQ-UI-145: UI Deletion of Old Unfinished Workouts & Active Tracking Deletion Protection [`TST-UI-098`]
+### REQ-UI-145: UI Deletion of Old Unfinished Workouts & Active Tracking Deletion Protection [Verified]
 - **Tests**: `WorkoutHeader.kt`, `WorkoutSummary.kt`, `WorkoutSummaryCompact.kt`, `TrainingApplication.java`
 - **Implementation**: Ensure users have full data sovereignty to remove obsolete crashed or abandoned workouts from their history while safeguarding active tracking sessions from accidental destruction.
 - **Rationale**: The system SHALL allow the user to delete old unfinished or crashed workouts (`finished == false` / SQLite column `FINISHED == 0`) via the user interface in both expanded (`WorkoutSummary.kt`) and compact (`WorkoutSummaryCompact.kt`) aftermath list views, while strictly preserving unfinished workouts in SQLite until explicitly deleted, maintaining their visual alpha (`0.5f`), and preventing deletion of any workout currently being actively tracked:
@@ -1025,7 +1025,7 @@ All user-facing action labels and formatting strings SHALL be localized across a
 
 **Invariants**: Automatic workout data retention (`finished == false` remains in SQLite), cascaded table drop sequencing (`ATT-296`), and single-workout deletion dialog flow MUST remain strictly intact.
 
-### REQ-UI-146: Option to Mark Old Unfinished Workouts as Finished & Period Integration [`TST-UI-099`]
+### REQ-UI-146: Option to Mark Old Unfinished Workouts as Finished & Period Integration [Verified]
 - **Tests**: `WorkoutHeader.kt`, `WorkoutSummary.kt`, `WorkoutSummaryCompact.kt`, `WorkoutList.kt`, `WorkoutRepository.kt`, `WorkoutSummariesDatabaseManager.java`, `PeriodsRepository.kt`, `strings.xml`
 - **Implementation**: Enable athletes to recover and finalize valuable crashed or interrupted workouts into first-class completed activities eligible for export and temporal analytics.
 - **Rationale**: The system SHALL allow the user to mark an old unfinished or crashed workout (`finished == false` / SQLite column `FINISHED == 0`) as finished via the user interface in both expanded (`WorkoutSummary.kt` via `WorkoutHeader.kt`) and compact (`WorkoutSummaryCompact.kt`) aftermath list views, updating persistence, visual opacity, export capability, and periods aggregation while strictly preventing actively tracked sessions from being marked finished via the aftermath UI:
@@ -1049,7 +1049,7 @@ All user-facing action labels and formatting strings SHALL be localized across a
 
 **Invariants**: Recorded raw samples, trackpoints, laps, sensor extrema, and base file names MUST NOT be modified or corrupted; cascading deletion (`REQ-UI-145`) MUST remain available for all non-actively tracked workouts; single-workout deletion flow MUST remain intact.
 
-### REQ-UI-147: Compact Workout Summary Context Menu Streamlining [Ensure the compact view is optimized for rapid scannability and high-density map exploration without cluttering the context menu with detailed metadata editing actions.]
+### REQ-UI-147: Compact Workout Summary Context Menu Streamlining [Verified]
 - **Tests**: canMarkFinished`. If an item is actively tracked (`TrainingApplication.isActivelyTracked(workoutId) == true`), both `canDelete` and `canMarkFinished` evaluate to `false`, rendering `hasContextMenu == false` and disabling long-press interaction.
 4. *Preservation of Full Summary Editing*: The expanded workout summary card (`WorkoutSummary.kt` via `WorkoutHeader.kt`) SHALL retain its full workout editing capabilities (`onEditWorkout`) intact.
 
@@ -1075,7 +1075,7 @@ All user-facing action labels and formatting strings SHALL be localized across a
 • "Löschen" / "Delete" (`@string/delete`) when the workout is not actively tracked (`canDelete == true`).
 3. *Context Menu Trigger Condition*: The long-press trigger for `WorkoutSummaryCompact` SHALL be governed strictly by `hasContextMenu = canDelete
 
-### REQ-UI-148: Standardized Edge-to-Edge Bottom Sheet Insets & Core UI Design Components [`TST-UI-101`]
+### REQ-UI-148: Standardized Edge-to-Edge Bottom Sheet Insets & Core UI Design Components [Verified]
 - **Tests**: `AppModalBottomSheet.kt`, `AppTableHeader.kt`, `AppTableTypography.kt`, `MinimumDragHandle.kt`, `FastScrollbar.kt`, `BadgeBox.kt`, `RichStatsSheet.kt`, `WorkoutLaps.kt`, `WorkoutExtrema.kt`
 - **Implementation**: Standardize edge-to-edge window insets handling, eliminate hardcoded padding, unify tabular typography, and establish reusable core UI primitives to support modernizing legacy dialogs to bottom sheets.
 - **Rationale**: The system SHALL provide a centralized design system package (`com.atrainingtracker.trainingtracker.ui.components.core`) and harmonize edge-to-edge system bar window insets across all modal bottom sheets and tabular headers:
@@ -1157,7 +1157,7 @@ All user-facing action labels and formatting strings SHALL be localized across a
 
 **Invariants**: SharedPreferences keys (`SP_UNITS`, `pref_display_options`, export flags) and persistence logic MUST remain unaltered; sport icons MUST preserve authentic non-tinted colors (`REQ-UI-114`); `LapSummaryDialog` 3s HUD behavior MUST remain intact.
 
-### REQ-UI-150: Standardized Bottom Sheet Action Layouts, Semantic Action Verbs & Route Dialog Parity [`TST-UI-103`]
+### REQ-UI-150: Standardized Bottom Sheet Action Layouts, Semantic Action Verbs & Route Dialog Parity [Verified]
 - **Tests**: `AppModalBottomSheet.kt`, `AppDialogActions.kt`, `EditRouteDialog.kt`, `RoutesFragment.kt`, `GpxImportActivity.kt`, `EditDeviceDialog.kt`, `EditSensorFieldDialog.kt`, `ConfigureFilterDialog.kt`, `UnitsSettingsDialog.kt`, `ExportSettingsDialog.kt`, `DisplaySettingsDialog.kt`, `ImportBackupTabsScreen.kt`
 - **Implementation**: Establish uniform presentation, layout spacing, and clear semantic action verb distinction across all application dialogs and bottom sheets, eliminating UX confusion and design divergence.
 - **Rationale**: The system SHALL standardize bottom action bars, button arrangements, and semantic action verbs across all application bottom popups (`AppModalBottomSheet`), and SHALL eliminate full-screen editing dialog outliers by migrating `EditRouteScreen` to an `AppModalBottomSheet`:
@@ -1207,7 +1207,7 @@ Specifically:
 
 **Invariants**: Database schemas, ViewModel save implementations, route coordinate data, SharedPreferences preferences, authentic un-tinted sport icons, and system window insets MUST NOT be altered.
 
-### REQ-UI-151: Workout Editing Modal Bottom Sheet & Fragment Viewport Layering [`TST-UI-104`]
+### REQ-UI-151: Workout Editing Modal Bottom Sheet & Fragment Viewport Layering [Verified]
 - **Tests**: `EditWorkoutScreen.kt`, `EditWorkoutDialog.kt`, `WorkoutSummariesListFragment.kt`, `WorkoutSummariesTabbedFragment.kt`, `PeriodsFragment.kt`, `WorkoutClustersFragment.kt`
 - **Implementation**: Eliminate the full-screen Scaffold outlier for workout editing, unify action bar ergonomics with `AppDialogActions.SaveCancel`, and preserve underlying view context across all fragment callers.
 - **Rationale**: The system SHALL eliminate the full-screen `Scaffold` outlier in workout editing by refactoring `EditWorkoutScreen` into a standardized modal bottom sheet (`EditWorkoutDialog` / `AppModalBottomSheet`), and SHALL optimize fragment caller viewport composition so background lists and maps remain visible behind the modal scrim:
@@ -1238,7 +1238,7 @@ Specifically:
 
 **Invariants**: Database persistence logic in `WorkoutRepository`, `EditWorkoutViewModel` state holding, sport and equipment selection rules (`REQ-UI-130`), cluster creation and matching heuristics, and IME keyboard padding MUST NOT be altered or regressed.
 
-### REQ-UI-152: Dropbox Settings Modal Bottom Sheet & Navigation Integration [`TST-UI-105`]
+### REQ-UI-152: Dropbox Settings Modal Bottom Sheet & Navigation Integration [Verified]
 - **Tests**: `DropboxSettingsDialog.kt`, `DropboxSettingsDialogFragment.kt`, `MainActivityWithNavigation.kt`, `ImportBackupTabsScreen.kt`
 - **Implementation**: Modernize Dropbox settings into a modal bottom sheet matching Export, Units, and Display settings, eliminating full-screen fragment replacement and preserving all backup and authentication mechanics.
 - **Rationale**: The system SHALL eliminate the full-screen fragment outlier for Dropbox settings by replacing `CloudUploadFragment` with a standardized modal bottom sheet (`DropboxSettingsDialog` / `DropboxSettingsDialogFragment` backed by `AppModalBottomSheet`), integrating with the navigation drawer and preserving all backup and authentication mechanics:
@@ -1280,7 +1280,7 @@ Specifically:
 
 **Invariants**: Dropbox OAuth PKCE redirect scheme (`db-iknmdmr31sf64r0`), `SP_DROPBOX_CREDENTIAL` and `SP_UPLOAD_TO_DROPBOX` keys, `automated_backups` and `backup_interval_days` keys in `SharedPreferences`, and un-tinted Dropbox logo colors MUST NOT be altered.
 
-### REQ-UI-153: Strava Settings Modal Bottom Sheet & Navigation Integration [`TST-UI-106`]
+### REQ-UI-153: Strava Settings Modal Bottom Sheet & Navigation Integration [Verified]
 - **Tests**: `StravaSettingsDialog.kt`, `StravaSettingsDialogFragment.kt`, `MainActivityWithNavigation.kt`
 - **Implementation**: Modernize Strava settings into a modal bottom sheet matching Export, Units, Display, and Dropbox settings, eliminating full-screen fragment replacement and preserving all synchronization and authentication mechanics.
 - **Rationale**: The system SHALL eliminate the full-screen fragment outlier for Strava settings by replacing `StravaUploadFragment` with a standardized modal bottom sheet (`StravaSettingsDialog` / `StravaSettingsDialogFragment` backed by `AppModalBottomSheet`), integrating with the navigation drawer and preserving all connection, synchronization, and selective upload mechanics:
@@ -1314,7 +1314,7 @@ Specifically:
 
 **Invariants**: Strava OAuth callback URL prefix `strava://rainerblind.github.io`, `SP_STRAVA_TOKEN` and token expiration handling, `uploadStravaGPS`, `uploadStravaAltitude`, `uploadStravaHR`, `uploadStravaPower`, and `uploadStravaCadence` preference keys in `SharedPreferences`, and un-tinted Strava logo colors MUST NOT be altered.
 
-### REQ-UI-154: Search Settings Modal Bottom Sheet & Navigation Integration [`TST-UI-107`]
+### REQ-UI-154: Search Settings Modal Bottom Sheet & Navigation Integration [Verified]
 - **Tests**: `SearchSettingsDialog.kt`, `SearchSettingsDialogFragment.kt`, `MainActivityWithNavigation.kt`
 - **Implementation**: Modernize sensor search settings into a modal bottom sheet matching Export, Units, Display, Dropbox, and Strava settings, eliminating full-screen fragment replacement and preserving all sensor search configuration mechanics.
 - **Rationale**: The system SHALL eliminate the full-screen fragment outlier for sensor search settings by replacing `SearchSettingsFragment` with a standardized modal bottom sheet (`SearchSettingsDialog` / `SearchSettingsDialogFragment` backed by `AppModalBottomSheet`), integrating with the navigation drawer and preserving all search behavior, trigger conditions, and retry mechanics:
@@ -1351,7 +1351,7 @@ Specifically:
 
 **Invariants**: SharedPreferences keys `numberOfSearchTriesInt`, `startSearchWhenAppStarts`, `startSearchWhenResumeFromPaused`, `startSearchWhenUserChangesSport`, `startSearchWhenTrackingStarts`, `searchOnlyForSportSpecificDevices`, and `changeSportWhenDeviceGetsLost`, and `TrainingApplication` getters MUST NOT be altered.
 
-### REQ-UI-155: Legacy Fragment Retirement, Unused Layout Purge & Obsolete String Resource Cleanup [`TST-UI-108`]
+### REQ-UI-155: Legacy Fragment Retirement, Unused Layout Purge & Obsolete String Resource Cleanup [Verified]
 - **Tests**: `CloudUploadFragment.kt`, `SearchSettingsFragment.kt`, `StravaUploadFragment.kt`, `StarredSegmentsFragment.kt`, `MainActivityWithNavigation.kt`, `res/layout/*.xml`, `strings.xml`
 - **Implementation**: Systematically purge obsolete fragments, 59 dead layout XML files, and unreferenced string resources left behind by Jetpack Compose migrations, reducing APK size and eliminating technical debt.
 - **Rationale**: The system SHALL eliminate technical debt and dead legacy UI artifacts resulting from modernizing settings and screens to Jetpack Compose:
@@ -1382,7 +1382,7 @@ Specifically:
 • *When* running `./gradlew testDebugUnitTest`,
 • *Then* all tests SHALL pass with 0 failures and 0 regressions.
 
-### REQ-UI-156: Bottom Popup Dialog Single-Window BottomSheetDialogFragment & Zero-Flicker Decor [`TST-UI-109`]
+### REQ-UI-156: Bottom Popup Dialog Single-Window BottomSheetDialogFragment & Zero-Flicker Decor [Verified]
 - **Tests**: `AppBottomSheetDialogFragment.kt`, `themes.xml`, `AppModalBottomSheet.kt`, `SearchSettingsDialogFragment.kt`, `ExportSettingsDialogFragment.kt`, `UnitsSettingsDialogFragment.kt`, `StravaSettingsDialogFragment.kt`, `DropboxSettingsDialogFragment.kt`, `ActivityTypeSelectionDialogFragment.kt`, `DisplaySettingsDialogFragment.kt`
 - **Implementation**: Eliminate double-window dialog nesting, eliminate pitch-black status bars, unify bottom sheet lifecycle on Material's BottomSheetDialogFragment, and enforce single-window edge-to-edge transparency across all Android versions.
 - **Rationale**: The system SHALL standardize all 7 bottom popup dialog fragments on a single-window architecture by extending Google Material's `BottomSheetDialogFragment`, eliminating double-window nesting, pitch-black status bars, and navigation bar dismiss flickering:
@@ -1426,7 +1426,7 @@ Specifically:
 
 **Invariants**: Fragment companion `newInstance()` and `TAG` signatures, `MainActivityWithNavigation` drawer routing, `ActivityTypeSelectionDialogFragment.ActivityTypeSelectionListener`, SharedPreferences persistence, and `AppModalBottomSheet` composable contracts for pure Compose screens (e.g. `EditWorkoutScreen`) MUST NOT be altered or regressed.
 
-### REQ-UI-157: Advanced Interval Filtering, Tab-Aware Sport Selection & Sport-Aware Equipment [`TST-UI-110`]
+### REQ-UI-157: Advanced Interval Filtering, Tab-Aware Sport Selection & Sport-Aware Equipment [Verified]
 - **Tests**: `WorkoutFilterCriteria.kt`, `WorkoutFilterBottomSheet.kt`, `WorkoutTabsScreen.kt`
 - **Implementation**: Provide granular, tab-contextualized filtering for workouts, allowing athletes to isolate specific training blocks by interval boundaries and relevant equipment.
 - **Rationale**: The system SHALL improve workout list filtering by introducing interval-based filtering controls, tab-aware sport type selection, and sport-aware equipment selection across the workout aftermath views:
@@ -1476,7 +1476,7 @@ Specifically:
 
 **Invariants**: Sorting orders, compact view toggle, deletion workflows, and tab-level `BSportType` partitioning MUST NOT be altered.
 
-### REQ-UI-158: Retired Equipment Isolation in Pickers, Visual Identification & Equipment Lifecycle Management [`TST-UI-111`]
+### REQ-UI-158: Retired Equipment Isolation in Pickers, Visual Identification & Equipment Lifecycle Management [Verified]
 - **Tests**: `EditWorkoutViewModel.kt`, `EquipmentTabsScreen.kt`, `EditEquipmentDialog.kt`, `EquipmentDbHelper.java`, `EquipmentViewModel.kt`, `EquipmentAndSportTypeDiscoveryManager.kt`
 - **Implementation**: Prevent retired equipment from cluttering active workout pickers and sensor inference, while providing visual distinction and retirement controls in the equipment manager and preserving 100% historical workout attribution.
 - **Rationale**: The system SHALL isolate retired equipment from active selection interfaces while maintaining historical workout attribution and providing clear equipment lifecycle controls:
@@ -1518,7 +1518,7 @@ Specifically:
 
 **Invariants**: Existing SQLite schema (v2) and data in `Equipment.db` MUST NOT be dropped or corrupted; historical workout summaries and TCX/GPX exports MUST NOT lose equipment names or frame types.
 
-### REQ-UI-159: Single-Activity Architecture & Jetpack Compose Navigation Modernization [`TST-NAV-009`]
+### REQ-UI-159: Single-Activity Architecture & Jetpack Compose Navigation Modernization [Verified]
 - **Tests**: `MainActivityWithNavigation.kt`, `AppNavigationDrawer.kt`, `app/build.gradle`
 - **Implementation**: Modernize the application root container into a pure Jetpack Compose single-activity architecture, eliminating legacy View/Fragment transaction overhead, child Dialog window flickering, and navigation state friction.
 - **Rationale**: The system SHALL implement a pure Jetpack Compose single-activity architecture for `MainActivityWithNavigation` utilizing declarative composition (`setContent`), Material 3 `ModalNavigationDrawer`, and official Jetpack Compose Navigation (`NavHost` / `NavController`):
@@ -1549,7 +1549,7 @@ Specifically:
 
 **Invariants**: Service binding lifecycle, sensor pairing contracts, crash recovery (`REQ-STB-003`), display options (`REQ-SET-052`), and Android 14 insets stability (`REQ-STB-007`) MUST NOT be altered or regressed.
 
-### REQ-UI-160: Reactive Equipment Loading & Lifecycle Synchronization in Jetpack Compose Architecture [`TST-UI-112`]
+### REQ-UI-160: Reactive Equipment Loading & Lifecycle Synchronization in Jetpack Compose Architecture [Verified]
 - **Tests**: `EquipmentViewModel.kt`, `EquipmentTabsScreen.kt`
 - **Implementation**: Eliminate empty equipment lists in Compose navigation by providing self-initializing, deduplicated, and sync-reactive data loading within EquipmentViewModel while keeping the UI declarative.
 - **Rationale**: The system SHALL ensure equipment items (Bikes and Shoes) are asynchronously loaded from SQLite and maintained reactively within `EquipmentViewModel` under the Jetpack Compose single-activity architecture:
@@ -1575,7 +1575,7 @@ Specifically:
 
 **Invariants**: Zero changes to SQLite database schemas or DAO contracts; public StateFlow immutability preserved; no business logic in Compose UI components.
 
-### REQ-UI-161: ModalNavigationDrawer Edge-Swipe Restriction & Touch Conflict Resolution [`TST-UI-113`]
+### REQ-UI-161: ModalNavigationDrawer Edge-Swipe Restriction & Touch Conflict Resolution [Verified]
 - **Tests**: `ATrainingTrackerApp.kt`
 - **Implementation**: Prevent full-screen horizontal drag gestures from inadvertently triggering the navigation drawer on screens without horizontal pagers (such as Map and Details screens), while maintaining seamless edge-swiping and closing gestures.
 - **Rationale**: The system SHALL restrict swipe-to-open gesture detection on `ModalNavigationDrawer` exclusively to the leftmost screen edge when the drawer is in the closed state, preventing unintended drawer opening during map panning and child content interactions:
@@ -1604,13 +1604,13 @@ Specifically:
 
 **Invariants**: All 21 navigation drawer destinations and routes in `NavRoutes` preserved; 40dp edge touch threshold preserved; back press handling and top bar hamburger icon preserved; no screen-specific gesture hacks.
 
-### REQ-UI-162: Single Source of Truth & Scoped Overlay Back Navigation []
+### REQ-UI-162: Single Source of Truth & Scoped Overlay Back Navigation [Verified]
 - **Tests**: targetValue != Closed
 - **Rationale**: The system SHALL establish Material 3's `DrawerState` as the single authoritative source of truth for navigation drawer visibility and navigation control, eliminating decoupled boolean state flags, and SHALL isolate overlay back navigation (Navigation Drawer and Settings Bottom Sheets) from screen-level destination back navigation using scoped, conditionally composed `BackHandler`s:
 1. *Single Source of Truth*: `NavigationDrawerController` SHALL delegate drawer open and close actions directly to Material 3's `DrawerState` via functional action delegates, removing the decoupled mutable boolean state flag (`isDrawerOpen`) entirely and eliminating split-brain asynchronous synchronization.
 2. *Scoped Overlay Back Navigation & Dynamic LIFO Precedence*: Overlay back handlers for `ModalNavigationDrawer` and Settings Bottom Sheets SHALL be conditionally composed (`if (isDrawerVisible) { BackHandler { ... } }` and `if (activeBottomSheet != null) { BackHandler { ... } }`). Conditionally composing `BackHandler` dynamically appends its callback to the head of the `OnBackPressedDispatcher` LIFO evaluation stack whenever the overlay is presented, guaranteeing that system Back exclusively dismisses the active overlay and strictly supersedes `NavHost`'s internal backstack popping and destination screen back handlers across all animated phases (`currentValue != Closed
 
-### REQ-UI-163: Cockpit Tab Navigation on Tracking Initiation & Origin-Aware Resume Neutrality [`TST-UI-115`]
+### REQ-UI-163: Cockpit Tab Navigation on Tracking Initiation & Origin-Aware Resume Neutrality [Verified]
 - **Tests**: `TrainingApplication.java`, `BANALServiceRepository.kt`, `TrackingTabsViewModel.kt`, `TrackingTabsScreen.kt`
 - **Implementation**: Ensure athletes immediately see live workout metrics upon starting tracking or resuming a manual pause from the Control tab, while eliminating unwanted tab jumps when Auto-Pause ends or when resuming from secondary/map tabs.
 - **Rationale**: The system SHALL ensure that whenever tracking is initiated (`READY -> TRACKING`) or manually resumed while actively on the Control tab (`PAUSED -> TRACKING` with `wasAutoPaused == false` and `currentPage == 0`), the tracking screen automatically and smoothly navigates the pager from Page 0 ("Control" tab) to Page 1 (first "Cockpit" telemetry tab), while strictly preserving the active tab without scrolling when Auto-Pause ends (`wasAutoPaused == true`) or when resuming a manual pause while viewing any telemetry or map tab (`currentPage >= 1`):
@@ -1657,7 +1657,7 @@ Specifically:
 
 **Invariants**: Configuration mode (`ScreenMode.CONFIGURATION`) and Preview mode (`ScreenMode.PREVIEW`) back navigation and tab management remain unaltered; Page 0 Control tab remains accessible via left-swipe or tapping the "Tracking" tab; manual gesture interruptions are protected against fallback hard-snapping (`REQ-UI-412.3`).
 
-### REQ-UI-164: Accessibility Event, NodeInfo & Manager Compatibility & Defective Platform Resilience [`TST-UI-116`]
+### REQ-UI-164: Accessibility Event, NodeInfo & Manager Compatibility & Defective Platform Resilience [Verified]
 - **Tests**: `app/build.gradle`, `settings.gradle`, `local-repo/`
 - **Implementation**: Eliminate fatal NoSuchFieldError and NoSuchMethodError crashes in Jetpack Compose accessibility dispatch, action class initialization, node info creation, and accessibility manager queries on defective Android 14 platform builds through targeted dependency substitution with defensive try-catch guards.
 - **Rationale**: The system SHALL guarantee runtime immunity against `NoSuchMethodError` and `NoSuchFieldError` crashes during accessibility event, node info, action initialization, and manager tool query dispatching on defective Android 14 (API 34) platform builds missing `AccessibilityEvent.setAccessibilityDataSensitive(boolean)`, `AccessibilityNodeInfo.setAccessibilityDataSensitive(boolean)`, `AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_IN_DIRECTION`, or `AccessibilityManager.isRequestFromAccessibilityTool()` (ATT-1347, ATT-2302, ATT-2584, ATT-2767):
@@ -1684,7 +1684,7 @@ Specifically:
 
 **Invariants**: Pre-API 34 compatibility preserved; standard Compose accessibility semantics preserved; zero infinite dispatch loops.
 
-### REQ-UI-165: Known Start Locations Management, Interactive Map Geofences & Altitude Lock UI [The system SHALL provide a harmonized, design-system-compliant Jetpack Compose interface and navigation integration for known start locations (*Lieblingsorte*), matching the look and feel of `aTrainingTracker` core screens (`RouteTabbedScreen`, `WorkoutTabsScreen`, `SegmentsTabsScreen`) (ATT-1382):
+### REQ-UI-165: Known Start Locations Management, Interactive Map Geofences & Altitude Lock UI [Verified]
 1. *Navigation Drawer Hierarchy & Icon Reallocation (`AppNavigationDrawer.kt`)*:
 • In `drawer__maps`, `drawer_start_locations` SHALL be positioned directly below `drawer_my_locations` (*Lieblingsstrecken*).
 • `drawer_start_locations` (*Lieblingsorte*) SHALL be assigned `R.drawable.my_locations` (location pin with embedded heart).
@@ -1796,7 +1796,7 @@ Specifically:
 • *When* viewing stored locations,
 • *Then* each card SHALL display Name, formatted Altit
 
-### REQ-UI-167: Intuitive Smoothing Presets, Simplified Filter Configuration & Smart Athletic Defaults [`TST-UI-119`]
+### REQ-UI-167: Intuitive Smoothing Presets, Simplified Filter Configuration & Smart Athletic Defaults [Verified]
 - **Tests**: `ConfigureFilterDialog.kt`, `EditSensorFieldViewModel.kt`, `TrackingViewsDatabaseManager.java`, `strings_filters.xml` (all 9 locales)
 - **Implementation**: Provide intuitive 1-tap quick presets and smart athletic defaults for cycling power smoothing in the tracking cockpit, reducing cognitive friction while preserving full mathematical control for power users.
 - **Rationale**: The system SHALL provide an intuitive, 1-tap quick preset selection interface and smart athletic defaults for sensor telemetry smoothing across tracking cockpit views (ATT-1276):
@@ -1851,7 +1851,7 @@ Specifically:
 
 **Invariants**: AppModalBottomSheet contract (`REQ-UI-149`), SaveCancel button semantics (`REQ-UI-150`), BANALService filter mathematical integrity, and SQLite schema compatibility MUST NOT be broken.
 
-### REQ-UI-168: Workout Cockpit Independent Theme Selector (System vs Always Dark AMOLED) [`DisplaySettingsDialog.kt`, `CockpitThemeMode.kt`, `TrainingApplication.java`, `TrackingTabsScreen.kt`, `strings_display.xml` (all 9 locales)]
+### REQ-UI-168: Workout Cockpit Independent Theme Selector (System vs Always Dark AMOLED) [Verified]
 - **Tests**: Provide an independent AMOLED dark mode selector specifically for active tracking cockpit telemetry while isolating control tracking and general app screens, maximizing OLED battery savings and glare protection.
 - **Implementation**: Immer Dunkel ]` reflecting the persisted mode.
 • *Given* an athlete changes the mode to `Immer Dunkel` and taps \"Abbrechen\",
@@ -1895,7 +1895,7 @@ Specifically:
 • *When* `DisplaySettingsDialog` appears,
 • *Then* a dedicated section \"Cockpit-Design (während des Trainings)\" SHALL be displayed with the 2-way segmented button row `[ Systemstandard
 
-### REQ-UI-169: AMOLED Pure Black Cockpit Theme (#000000) [`TST-UI-121`]
+### REQ-UI-169: AMOLED Pure Black Cockpit Theme (#000000) [Verified]
 - **Tests**: `Theme.kt`, `Color.kt`, `TrackingTabsScreen.kt`
 - **Implementation**: Maximize OLED display power savings and direct sunlight legibility for active training cockpits by rendering true pitch black (#000000) surfaces and high-contrast typography.
 - **Rationale**: The system SHALL provide a dedicated AMOLED Pure Black (`#000000`) color scheme for the workout tracking cockpit whenever dark mode is active (ATT-1263):
@@ -1928,7 +1928,7 @@ Specifically:
 
 **Invariants**: Non-cockpit ambient theme behavior, zone color visibility, and `REQ-UI-168` selection contracts MUST NOT be broken.
 
-### REQ-UI-170: Comprehensive Cockpit Dark Theme (Top Bar, Tab Row, and Navigation Bar) [`TST-UI-122`]
+### REQ-UI-170: Comprehensive Cockpit Dark Theme (Top Bar, Tab Row, and Navigation Bar) [Verified]
 - **Tests**: `TrackingTabsScreen.kt`, `Theme.kt`, `Color.kt`
 - **Implementation**: Eliminate blinding top-bar and bottom-bar glare during night/sunlight workouts and maximize OLED power savings by applying AMOLED pure black across the entire TrackingTabsScreen layout while isolating Page 0.
 - **Rationale**: The system SHALL extend the workout cockpit dark theme across the entire `TrackingTabsScreen` layout, unifying top bar, tab bar, content, and navigation bar under AMOLED pure black on telemetry views while isolating Page 0 (ATT-1413):
@@ -1962,7 +1962,7 @@ Specifically:
 
 **Invariants**: Zero broken non-cockpit themes; WCAG 2.1 AA text contrast compliance; Page 0 ambient theme isolation.
 
-### REQ-UI-171: High-Contrast Cockpit Typography and Subtle Tile Grid for Sunlight Legibility [`TST-UI-123`]
+### REQ-UI-171: High-Contrast Cockpit Typography and Subtle Tile Grid for Sunlight Legibility [Verified]
 - **Tests**: `SensorFieldView.kt`, `Theme.kt`, `Color.kt`
 - **Implementation**: Optimize typography font weight, text color hierarchy, and tile border demarcation for direct sunlight readability with sports sunglasses in the AMOLED workout cockpit.
 - **Rationale**: The system SHALL optimize typography weights, text color hierarchies, and tile divider borders within the workout tracking cockpit for instant legibility in direct sunlight and with sports sunglasses (ATT-1264):
@@ -2051,7 +2051,7 @@ Specifically:
 
 **Invariants**: Zone color hex palette (`REQ-UI-101`), AMOLED cockpit theme tokens (`REQ-UI-168`..`171`), zone threshold calculation formulas, and non-zone sensor field rendering MUST NOT be altered.
 
-### REQ-UI-173: Legible Inactive Sensor Status Indicators in Dark Mode [`TST-UI-125`]
+### REQ-UI-173: Legible Inactive Sensor Status Indicators in Dark Mode [Verified]
 - **Tests**: `SensorStatus.kt`
 - **Implementation**: Ensure missing and inactive sensor icons in the top status bar remain clearly visible and distinguishable from active sensors in AMOLED Pure Black and standard Dark Mode cockpits.
 - **Rationale**: The system SHALL ensure that inactive and disconnected sensor icons in the top `SensorStatus` header bar remain clearly legible and discernible across all application themes (Light, Dark, and AMOLED Pure Black) while maintaining clear visual subordination to active connected sensors (ATT-1437):
@@ -2088,7 +2088,7 @@ Specifically:
 
 **Invariants**: Sensor icon size (22dp), horizontal spacing (6dp), sensor order sequence, and `SensorSourceDialog` navigation MUST NOT be altered.
 
-### REQ-UI-174: AMOLED Battery Saver Mode with Multi-Factor Display Dimming and Event-Based Wakeup [`TST-UI-126`]
+### REQ-UI-174: AMOLED Battery Saver Mode with Multi-Factor Display Dimming and Event-Based Wakeup [Verified]
 - **Tests**: `DisplaySettingsDialog.kt`, `BatterySaverController.kt`, `TrackingTabsScreen.kt`, `TrainingApplication.java`, `strings_display.xml`
 - **Implementation**: Extend smartphone battery life during multi-hour endurance workouts by intelligently dimming AMOLED display brightness based on terrain grade and athletic intensity zones, with instant wakeup on user gestures and workout events.
 - **Rationale**: The system SHALL provide an intelligent AMOLED Battery Saver Mode that dynamically dims display brightness during endurance tracking based on topography and athletic intensity zones, while waking the display to full illumination on critical events (ATT-1268):
@@ -2137,7 +2137,7 @@ Specifically:
 
 **Invariants**: Screen brightness safety floor $\ge 0.05f$; non-cockpit window isolation; existing display options (`forcePortrait`, `keepScreenOn`, `noUnlocking`) preserved; 9-language translation parity.
 
-### REQ-UI-175: Tracking Tabs Configuration Transition and Hierarchical Navigation [`TST-UI-127`]
+### REQ-UI-175: Tracking Tabs Configuration Transition and Hierarchical Navigation [Verified]
 - **Tests**: `MainActivityWithNavigation.kt`, `ATrainingTrackerApp.kt`, `TrackingTabsScreen.kt`, `TrackingTabPreviewHeader.kt`
 - **Implementation**: Ensure tracking tabs configuration opens reliably from the navigation drawer across all navigation states and provides clean hierarchical back navigation (CONFIGURATION -> PREVIEW -> TRACKING) without exiting the application.
 - **Rationale**: The system SHALL ensure that selecting a sport type for tracking tab configuration reliably transitions `TrackingTabsScreen` to `ScreenMode.CONFIGURATION` for that sport type, and provides seamless hierarchical back navigation (ATT-1456):
@@ -2174,7 +2174,7 @@ Specifically:
 
 **Invariants**: Active tracking telemetry, Page 0 Control Tracking, `TrackingViewsRepository` database operations, and cockpit theming MUST NOT be altered.
 
-### REQ-UI-176: Synchronous Cockpit Tab Header Color Transitions [`TST-UI-128`]
+### REQ-UI-176: Synchronous Cockpit Tab Header Color Transitions [Verified]
 - **Tests**: `TrackingTabsScreen.kt`, `Theme.kt`
 - **Implementation**: Eliminate the 250ms tab title color animation delay when navigating between Page 0 and Page 1+ by passing synchronous text colors directly to Text in PrimaryScrollableTabRow, ensuring instant visual harmonization with the tab bar background.
 - **Rationale**: The system SHALL eliminate the tab header typography color animation delay during theme transitions between Page 0 (Control Tracking) and Pages 1..N (Telemetry Tabs), ensuring tab title text colors update instantaneously in sync with the tab container background (ATT-1446):
@@ -2204,7 +2204,7 @@ Specifically:
 
 **Invariants**: WCAG 2.1 AA text contrast compliance; Page 0 ambient theme isolation; Pager smooth scrolling and tab selection logic MUST NOT be altered.
 
-### REQ-UI-177: Theme-Aware Post-Workout & Period Share Snapshot Canvas and Footer [`TST-UI-129`]
+### REQ-UI-177: Theme-Aware Post-Workout & Period Share Snapshot Canvas and Footer [Verified]
 - **Tests**: `ShareUtils.kt`, `MapDetailLayout.kt`, `PeriodMapScreen.kt`
 - **Implementation**: Harmonize post-workout and period share snapshot canvas and footer colors with the active theme (Dark/Light), eliminating bright white seams and light footers in Dark Mode while preserving historical Light Mode identity.
 - **Rationale**: The system SHALL adapt the composite image canvas background and branding footer colors to the active theme (Dark Mode vs. Light Mode) when generating shared workout and period snapshots (ATT-1472):
@@ -2241,7 +2241,7 @@ Specifically:
 
 **Invariants**: Light Mode appearance, PNG 100% compression, FileProvider URI creation, background dispatcher offloading (`Dispatchers.Default`, `Dispatchers.IO`), and footer layout dimensions MUST NOT be altered.
 
-### REQ-UI-178: Direct Workout-to-Cluster Navigation and Hierarchical Backstack Integrity [`TST-UI-130`]
+### REQ-UI-178: Direct Workout-to-Cluster Navigation and Hierarchical Backstack Integrity [Verified]
 - **Tests**: `NavRoutes.kt`, `MainActivityWithNavigation.kt`, `ATrainingTrackerApp.kt`, `WorkoutClustersScreen.kt`
 - **Implementation**: Provide seamless, context-preserving navigation from individual workouts and period maps directly to the associated cluster detail view without losing backstack history, list scroll position, or active search/filter criteria.
 - **Rationale**: The system SHALL support direct navigation from workout cards (`WorkoutSummariesTabbedScreen.kt`, `WorkoutSummariesListFragment.kt`) and period map inspection sheets (`PeriodMapScreen.kt`) to the targeted workout cluster detail view (`WorkoutClusterHeatmapScreen`), preserving backstack hierarchy, active filter criteria, and list scroll positions (ATT-1448):
@@ -2287,7 +2287,7 @@ Specifically:
 
 **Invariants**: Navigation drawer tab selection behavior, workout list filters, cluster database schema, and cluster heatmap rendering MUST NOT be altered.
 
-### REQ-UI-179: Customizable Geofence Radius with Live Map Preview in Lieblingsorte Edit Dialog [`TST-UI-131`]
+### REQ-UI-179: Customizable Geofence Radius with Live Map Preview in Lieblingsorte Edit Dialog [Verified]
 - **Tests**: `EditKnownLocationDialog.kt`, `KnownLocationsScreen.kt`, `KnownLocationsUnitConversions.kt`, `KnownLocationsViewModel.kt`, `KnownLocationsRepository.kt`, `KnownLocationsDatabaseManager.java`, `strings.xml` (all 9 locales)
 - **Implementation**: Enable athletes to customize the geofence radius of their Lieblingsorte in the edit dialog with real-time dynamic map preview feedback, supporting fine-grained proximity detection around athletic starting points.
 - **Rationale**: The system SHALL enable athletes to customize the geofence detection radius for known start locations (*Lieblingsorte*) directly within the editing interface (`EditKnownLocationDialog`), with dynamic real-time map preview feedback and complete persistence integration (ATT-1473):
@@ -2328,7 +2328,7 @@ Specifically:
 
 **Invariants**: SQLite schema V5 integrity, single-thread SQLite concurrency (`KnownLocationsDB-Thread`), automatic altitude lock on manual user edits (`is_locked = 1`, `source = MANUAL_USER`), repeat start hitCount increments (`REQ-DAT-007`), and 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-180: Display Favorite Locations (Lieblingsorte) on Central Navigation Map and Streamline Management View [`TST-UI-132`]
+### REQ-UI-180: Display Favorite Locations (Lieblingsorte) on Central Navigation Map and Streamline Management View [Verified]
 - **Tests**: `MapContentScope.kt`, `MapScreenWithTrack.kt`, `MapFragmentWithTrackViewModel.kt`, `KnownLocationsScreen.kt`, `KnownLocationsViewModel.kt`, `NavRoutes.kt`, `ATrainingTrackerApp.kt`
 - **Implementation**: Consolidate favorite start location visualization onto the central navigation map with interactive bottom peek card and streamlined single-perspective management view.
 - **Rationale**: The system SHALL display an athlete's favorite start locations (*Lieblingsorte* / known locations) directly on the central navigation map (`NavRoutes.MAP` / `MapScreenWithTrack.kt`) alongside routes, segments, and live tracks, and streamline the dedicated favorite locations management screen (`KnownLocationsScreen.kt`) into a clean single-perspective list (ATT-1449):
@@ -2372,7 +2372,7 @@ Specifically:
 
 **Invariants**: Routes, segments, live track rendering, zoom focus behaviors, `KnownLocationsDB-Thread` serialization, universal delete-only long-press contract (`REQ-UI-061`), and 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-181: Ultra-Large Cockpit Typography Extensions (XXHuge and XXXHuge) [`TST-UI-133`]
+### REQ-UI-181: Ultra-Large Cockpit Typography Extensions (XXHuge and XXXHuge) [Verified]
 - **Tests**: `SensorFieldView.kt`, `TrackingViewsRepository.kt`, `EditSensorFieldViewModel.kt`, `strings.xml` (all 9 locales)
 - **Implementation**: Provide ultra-large glanceable typography options (XXHuge and XXXHuge) in cockpit sensor fields for high-vibration activities and minimal focus layouts.
 - **Rationale**: The system SHALL extend the cockpit sensor field sizing scale with two ultra-large typography variants (`XXHUGE` and `XXXHUGE`) to provide athletes with glanceable, maximum-contrast numeric readouts during high-vibration sports (e.g. road cycling, downhill mountain biking) or on dedicated 1–2 metric cockpit focus tabs (ATT-1431):
@@ -2414,7 +2414,7 @@ Specifically:
 
 **Invariants**: Visual hierarchy, `FontWeight.SemiBold` value enforcement, non-bold unit styling, SQLite schema stability, and 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-182: Unified Edit Action Symbols & Design Token Tinting [`TST-UI-134`]
+### REQ-UI-182: Unified Edit Action Symbols & Design Token Tinting [Verified]
 - **Tests**: `WorkoutHeader.kt`, `WorkoutClusterHeatmapScreen.kt`, `TrackingTabPreviewHeader.kt`, `MapScreenWithTrack.kt`, `EditKnownLocationDialog.kt`, `ActivityTypeSelectionDialog.kt`, `device_list_context_menu.xml`, `AppNavigationDrawer.kt`
 - **Implementation**: Eliminate visual fragmentation and color divergence across edit triggers by standardizing on `Icons.Default.Edit` and `MaterialTheme.colorScheme.primary`.
 - **Rationale**: The system SHALL standardize all general edit action buttons, dialog headers, and menus across the entire application to use a single canonical symbol and theme-aware design token color tinting:
@@ -2458,7 +2458,7 @@ Specifically:
 
 **Invariants**: Business logic, ViewModel states, click handlers, database persistence, and dialog dismiss mechanics MUST NOT be altered.
 
-### REQ-UI-183: Lieblingsorte: Live Cockpit Location & Barometer Calibration Feedback [`TST-UI-136`]
+### REQ-UI-183: Lieblingsorte: Live Cockpit Location & Barometer Calibration Feedback [Verified]
 - **Tests**: `ControlTrackingScreen.kt`, `TrackingTabsScreen.kt`, `TrackingTabsViewModel.kt`, `LocationCalibrationBadge.kt`, `strings.xml` (all 9 locales)
 - **Implementation**: Provide visible feedback on the control tracking screen confirming that the current Lieblingsort has been recognized and barometric altimeter calibrated.
 - **Rationale**: The system SHALL provide visible, reactive feedback on the control tracking setup screen confirming when the athlete is located within the geofence of a known start location (Lieblingsort) and that the barometric altimeter is calibrated to reference altitude (ATT-1399):
@@ -2495,7 +2495,7 @@ Specifically:
 
 **Invariants**: Background calibration calculations, SQLite schema V5, start count recording, and single-thread SQLite confinement MUST NOT be altered.
 
-### REQ-UI-184: Lieblingsorte: Display Start & Destination Locations in Workout Details and Map [`TST-UI-137`]
+### REQ-UI-184: Lieblingsorte: Display Start & Destination Locations in Workout Details and Map [Verified]
 - **Tests**: `WorkoutHeader.kt`, `WorkoutHeaderData.kt`, `WorkoutData.kt`, `WorkoutDataMapper.kt`, `WorkoutRepository.kt`, `PathPreviewMap.kt`, `strings.xml` (all 9 locales)
 - **Implementation**: Provide visible start and destination location context in workout headers and route map pins for recognized favorite locations (Lieblingsorte).
 - **Rationale**: The system SHALL resolve, encapsulate, and visually present recognized favorite start locations (*Lieblingsorte*) for workout start and destination endpoints within workout summary headers and route map markers (ATT-1400):
@@ -2540,7 +2540,7 @@ Specifically:
 
 **Invariants**: SQLite schema stability, WorkoutHeader click/long-press behavior, map gesture interactivity, and 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-185: Lieblingsorte: Drill-Down Filter to View Workouts by Starting Location [Enable 1-tap drill-down filtering from Lieblingsorte cards to the workout list filtered by starting location geofence, with active filter chip presentation and dismissal.]
+### REQ-UI-185: Lieblingsorte: Drill-Down Filter to View Workouts by Starting Location [Verified]
 - **Tests**: (criteria.startLocationLat != null && criteria.startLocationLng != null)`).
 • The chip label SHALL format as `"📍 ${criteria.startLocationName ?: stringResource(R.string.filter_start_location)}"`.
 • Dismissing the chip SHALL invoke `onRemoveStartLocation: () -> Unit`, clearing the spatial filter dimensions while preserving all other active criteria.
@@ -2583,7 +2583,7 @@ Specifically:
 2. *Active Filter Chip Presentation (`ActiveFilterChipsRow.kt`)*:
 • `ActiveFilterChipsRow` SHALL display an active filter chip when start location filtering is active (`criteria.startLocationName != null
 
-### REQ-UI-186: Lieblingsorte & Lieblingsstrecken Bridge: Starting Location Association, Invariant & UI Integration [`TST-UI-139`]
+### REQ-UI-186: Lieblingsorte & Lieblingsstrecken Bridge: Starting Location Association, Invariant & UI Integration [Verified]
 - **Tests**: `WorkoutClusterEngine.kt`, `ClusterFilterCriteria.kt`, `KnownLocationsViewModel.kt`, `KnownLocationsScreen.kt`, `WorkoutClustersScreen.kt`, `strings.xml` (all 9 locales)
 - **Implementation**: Bridge Lieblingsorte (start locations) and Lieblingsstrecken (route clusters) with automated start location seeding, linked route chips on location cards, start location badges on cluster cards, and spatial cluster filtering.
 - **Rationale**: The system SHALL establish an architectural, algorithmic, and visual bridge between Known Start Locations (Lieblingsorte) and Route Clusters (Lieblingsstrecken) (ATT-1402):
@@ -2628,7 +2628,7 @@ Specifically:
 
 **Invariants**: SQLite schema stability, cluster clustering math, card edit/delete interactions, and 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-187: Selection of Lieblingsorte and Lieblingsstrecken in Workout and Cluster Filter Dialogs [`TST-UI-141`]
+### REQ-UI-187: Selection of Lieblingsorte and Lieblingsstrecken in Workout and Cluster Filter Dialogs [Verified]
 - **Tests**: `WorkoutFilterCriteria.kt`, `WorkoutFilterBottomSheet.kt`, `ClusterFilterBottomSheet.kt`, `ActiveFilterChipsRow.kt`, `ActiveClusterFilterChipsRow.kt`, `WorkoutTabsScreen.kt`, `WorkoutClustersTabsScreen.kt`
 - **Implementation**: Provide interactive selection of favorite start locations (Lieblingsorte) and route clusters (Lieblingsstrecken) in workout and cluster filter dialogs with active chips row synchronization.
 - **Rationale**: The system SHALL provide interactive selection of favorite start locations (*Lieblingsorte*) and route clusters (*Lieblingsstrecken*) across workout and cluster filter dialogs (ATT-1593):
@@ -2683,7 +2683,7 @@ Specifically:
 
 **Invariants**: Zero regression in existing filter dimensions (query, date, sport, equipment, distance, duration), JSON preference backward compatibility, single-thread SQLite concurrency (`KnownLocationsDB-Thread`), and 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-188: Lieblingsorte: Compact Interactive Routes Badge on KnownLocationCard [`TST-UI-142`]
+### REQ-UI-188: Lieblingsorte: Compact Interactive Routes Badge on KnownLocationCard [Verified]
 - **Tests**: `KnownLocationsScreen.kt`, `ATrainingTrackerApp.kt`, `strings.xml` (all 9 locales)
 - **Implementation**: Provide a compact interactive routes badge on favorite location cards summarizing linked route clusters and enabling 1-tap spatial filtering to the Lieblingsstrecken screen.
 - **Rationale**: The system SHALL provide a compact interactive routes badge on `KnownLocationCard` summarizing linked route clusters (*Lieblingsstrecken*) departing from that favorite location, replacing the multi-line individual cluster chips list (ATT-1594):
@@ -2724,7 +2724,7 @@ Specifically:
 
 **Invariants**: Universal delete-only context menu (`REQ-UI-061`), Starts-Badge drill-down navigation, card single-tap editing, single-thread SQLite database access, and 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-189: UI/Sheets: Standardized Boundaries, Contours, Drop Shadow Elevation & Drag Affordances [`TST-UI-143`]
+### REQ-UI-189: UI/Sheets: Standardized Boundaries, Contours, Drop Shadow Elevation & Drag Affordances [Verified]
 - **Tests**: `BottomSheetDesign.kt`, `MinimumDragHandle.kt`, `SensorGridScreen.kt`, `MapDetailLayout.kt`, `LIveSegmentSheet.kt`, `AppModalBottomSheet.kt`, `FilterBottomSheetScaffold.kt`, `MapScreenWithTrack.kt`, `PeriodMapScreen.kt`, `WorkoutClusterHeatmapScreen.kt`
 - **Implementation**: Standardize visual boundaries, contours, drop shadow elevation (8dp), and drag affordances across all bottom sheet popups and persistent scaffolds.
 - **Rationale**: The system SHALL standardize visual boundaries, contours, elevation drop shadows, and interactive drag affordances across all bottom sheet popups and persistent scaffold sheets without introducing contrasting background colors or multi-color bars (ATT-1588):
@@ -2766,7 +2766,7 @@ Specifically:
 
 **Invariants**: Edge-to-edge system insets (`REQ-UI-148`), map underlay interaction, and zero arbitrary color shifts MUST NOT be broken.
 
-### REQ-UI-190: UI/Theme: Harmonious Dark Mode Tonal Progression, Surface Container Elevation & Contrast Alignment [`TST-UI-144`]
+### REQ-UI-190: UI/Theme: Harmonious Dark Mode Tonal Progression, Surface Container Elevation & Contrast Alignment [Verified]
 - **Tests**: `Color.kt`, `Theme.kt`, `MappableListItem.kt`, `LapButton.kt`, `values-night/color.xml`
 - **Implementation**: Harmonize dark theme tonal progression between headers and tabs, establish graduated surface container elevations for card visual separation, and align lap button and XML color contrast with WCAG standards.
 - **Rationale**: The system SHALL establish a cohesive dark theme palette hierarchy, surface container elevation progression, and contrast compliance (ATT-1585):
@@ -2814,7 +2814,7 @@ Specifically:
 
 **Invariants**: AMOLED pure black cockpit theme (`REQ-UI-171`), Light theme palette, and sensor telemetry clarity MUST NOT be broken.
 
-### REQ-UI-191: Standardized List Item Heading Click Interaction Semantics & Dedicated Edit Affordance [`TST-UI-145`]
+### REQ-UI-191: Standardized List Item Heading Click Interaction Semantics & Dedicated Edit Affordance [Verified]
 - **Tests**: `RouteSummaryHeader.kt`, `RouteItem.kt`, `RouteList.kt`, `RouteTabbedScreen.kt`, `RoutesScreen.kt`
 - **Implementation**: Standardize list item heading click behavior to inspection-first across analytical/spatial lists while providing a dedicated, accessible Material 3 edit button in RouteSummaryHeader and preserving configuration-first entities.
 - **Rationale**: The system SHALL standardize card heading and body click interaction semantics across all application list views according to domain entity classification, while providing dedicated, theme-standardized edit affordances (ATT-1541):
@@ -2852,7 +2852,7 @@ Specifically:
 
 **Invariants**: Long-press context menus MUST NOT include non-destructive edit items (`REQ-UI-061`); route selection toggle (`onToggleSelection`) and Strava duplication (`onDuplicateAsLocal`) MUST remain functional; 9-language localization parity MUST be preserved.
 
-### REQ-UI-192: Interactive Elevation Profile Zoom, Pan & Centered Scaling Navigation [`TST-UI-146`]
+### REQ-UI-192: Interactive Elevation Profile Zoom, Pan & Centered Scaling Navigation [Verified]
 - **Tests**: `ElevationProfile.kt`
 - **Implementation**: Enable horizontal zoom and pan on the elevation profile chart with centroid scaling, double-tap reset, adaptive X-axis ticks, and synchronized coordinate scrubbing.
 - **Rationale**: The system SHALL support horizontal zoom and pan interactions on the elevation profile chart (`ElevationProfile.kt`), enabling athletes to inspect specific climbs, gradient pitches, and interval segments in detail while preserving synchronized scrubbing and vertical height constraints (ATT-527):
@@ -2896,7 +2896,7 @@ Specifically:
 
 **Invariants**: Vertical elevation bounds, grade coloring thresholds, adaptive profile height, and absolute distance contract MUST NOT be altered.
 
-### REQ-UI-193: Workout Filter: Categorized Equipment Sections (Bikes & Shoes) with Sport-Tab Awareness [`TST-UI-147`]
+### REQ-UI-193: Workout Filter: Categorized Equipment Sections (Bikes & Shoes) with Sport-Tab Awareness [Verified]
 - **Tests**: `WorkoutFilterBottomSheet.kt`
 - **Implementation**: Partition workout filter equipment into separate sections for Bikes and Shoes with sport-tab context awareness, mutual exclusion, and automatic stale selection clearing.
 - **Rationale**: The system SHALL partition and present equipment filter options in `WorkoutFilterBottomSheet` into distinct, sport-categorized sections with tab-context sensitivity (ATT-1641):
@@ -2936,7 +2936,7 @@ Specifically:
 
 **Invariants**: `WorkoutFilterCriteria` data class, JSON preference backward compatibility, and database schemas MUST NOT be altered.
 
-### REQ-UI-194: Filter Dialogs: Clean Chip Formatting (Emoji Removal) and Prioritized Section Ordering [`TST-UI-148`]
+### REQ-UI-194: Filter Dialogs: Clean Chip Formatting (Emoji Removal) and Prioritized Section Ordering [Verified]
 - **Tests**: `WorkoutFilterBottomSheet.kt`, `ClusterFilterBottomSheet.kt`, `ActiveFilterChipsRow.kt`, `ActiveClusterFilterChipsRow.kt`
 - **Implementation**: Remove emoji prefixes from filter chip labels across workouts and clusters, and reorder dialog sections so favorite locations and tracks are placed at the bottom.
 - **Rationale**: The system SHALL eliminate emoji prefixes from filter chips and reorder filter sections to prioritize frequently adjusted criteria over extensive location and route lists (ATT-1642):
@@ -2972,7 +2972,7 @@ Specifically:
 
 **Invariants**: Filter criteria evaluation, DataStore serialization, and 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-195: Lieblingsorte: Dedicated Row and Compact Sizing for Starts and Strecken Badges on KnownLocationCard [`TST-UI-149`]
+### REQ-UI-195: Lieblingsorte: Dedicated Row and Compact Sizing for Starts and Strecken Badges on KnownLocationCard [Verified]
 - **Tests**: `KnownLocationsScreen.kt`
 - **Implementation**: Decouple altitude metric from badges on KnownLocationCard and place Starts and Strecken badges on a dedicated row with refined compact sizing.
 - **Rationale**: The system SHALL structure the layout of `KnownLocationCard` to isolate the altitude metric and position interactive badges on a dedicated row with refined compact dimensions (ATT-1643):
@@ -3012,7 +3012,7 @@ Specifically:
 
 **Invariants**: Card single-tap edit, long-press delete context menu (`REQ-UI-061`), navigation callbacks, and 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-196: LiveSegment & Bottom Sheets: Refined Subtle Drag Handle, Harmonized Popup Spacing & Unified Surface Background [`TST-UI-150`]
+### REQ-UI-196: LiveSegment & Bottom Sheets: Refined Subtle Drag Handle, Harmonized Popup Spacing & Unified Surface Background [Verified]
 - **Tests**: `BottomSheetDesign.kt`, `MinimumDragHandle.kt`, `MapDetailLayout.kt`, `LIveSegmentSheet.kt`, `SensorGridScreen.kt`
 - **Implementation**: Refine drag handle dimensions to 32dp x 3dp, switch color token to subtle outlineVariant, harmonize popup vertical spacing, and unify popup container surface styling across LiveSegment and bottom sheets.
 - **Rationale**: The system SHALL refine the visual weight, dimensions, color tokens, and container padding of `MinimumDragHandle` across the LiveSegment popup and all bottom sheet scaffolds, and unify container surface styling to eliminate contrast seams (ATT-1644, ATT-1735):
@@ -3052,7 +3052,7 @@ Specifically:
 
 **Invariants**: Sheet expansion physics, edge-to-edge system insets (`REQ-UI-148`), and touch interaction MUST NOT be regressed.
 
-### REQ-UI-197: Elevation Profile Contextual Zoom Controls Visibility & Non-Overlapping Multi-Metric Scrubbing Badge Architecture [`TST-UI-151`]
+### REQ-UI-197: Elevation Profile Contextual Zoom Controls Visibility & Non-Overlapping Multi-Metric Scrubbing Badge Architecture [Verified]
 - **Tests**: `ElevationProfile.kt`, `MapDetailLayout.kt`, `LIveSegmentSheet.kt`
 - **Implementation**: Restrict zoom controls and gestures on elevation profile strictly to detail views (MapDetailLayout), suppressing them in list previews and LiveSegment popup (LIveSegmentSheet), and enforce a 3-layer non-overlapping vertical layout between overlay buttons, ScrubbingTelemetryBadge, and canvas chart.
 - **Rationale**: The system SHALL restrict interactive zoom and pan controls on the elevation profile chart strictly to detailed inspection views, suppress them in compact list item previews, and enforce a non-overlapping vertical layout between the overlay control buttons and the multi-metric telemetry badge (ATT-1647, ATT-1736, ATT-1737):
@@ -3092,7 +3092,7 @@ Specifically:
 
 **Invariants**: Elevation profile zoom math, scrubbing accuracy, unit conversion, full-screen inspection interactivity, and 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-198: Cockpit Sensor Field Domain-Specific Default Filter Presets Architecture [`TST-UI-152`]
+### REQ-UI-198: Cockpit Sensor Field Domain-Specific Default Filter Presets Architecture [Verified]
 - **Tests**: `SensorFilterDefaults.kt`, `EditSensorFieldViewModel.kt`, `TrackingViewsDatabaseManager.java`
 - **Implementation**: Provide domain-specific default filter presets for Speed (2s), Cadence (2s), Pace (5s), VAM (15s), Slope (5s), and Power (3s) while protecting Heart Rate and accumulators with Instantaneous (1s).
 - **Rationale**: The system SHALL provide domain-optimized default filter presets for sensor metrics upon field creation, sensor type switching, and initial tracking view database seeding, eliminating raw telemetry jitter while preserving accumulator integrity (ATT-1624, ATT-3310):
@@ -3152,7 +3152,7 @@ Specifically:
 
 **Invariants**: User customization freedom in `ConfigureFilterDialog`, immutability of existing user views, and zero database schema migration MUST NOT be broken.
 
-### REQ-UI-199: Lieblingsorte: Cockpit Calibration Badge Synchronized Altimeter Dispatch & Standby Architecture [`TST-UI-153`]
+### REQ-UI-199: Lieblingsorte: Cockpit Calibration Badge Synchronized Altimeter Dispatch & Standby Architecture [Verified]
 - **Tests**: `AltitudeFromPressureDevice.java`, `DeviceManager.java`, `BANALService.java`, `BANALServiceRepository.kt`, `TrackingTabsViewModel.kt`, `LocationCalibrationBadge.kt`
 - **Implementation**: Synchronize cockpit location calibration badge with actual barometric altimeter state, dispatch reference elevation on geofence entry, and distinguish uncalibrated standby from calibrated state.
 - **Rationale**: The system SHALL synchronize the cockpit location calibration badge (`LocationCalibrationBadge.kt`) with the actual calibration state of the barometric altimeter (`AltitudeFromPressureDevice.java`), dispatching reference elevation on geofence entry and distinguishing uncalibrated standby from active calibration (ATT-1617):
@@ -3194,7 +3194,7 @@ Specifically:
 
 **Invariants**: Background calibration calculations, SQLite schema V5, start count recording, and single-thread SQLite confinement MUST NOT be broken.
 
-### REQ-UI-200: Cockpit Sensor Grid Pick & Place Reordering & Swapping Architecture [`TST-UI-154`]
+### REQ-UI-200: Cockpit Sensor Grid Pick & Place Reordering & Swapping Architecture [Verified]
 - **Tests**: `TrackingViewsDatabaseManager.java`, `TrackingViewsRepository.kt`, `TrackingViewModel.kt`, `SensorGridScreen.kt`, `SensorFieldView.kt`, `strings.xml` (all 9 locales)
 - **Implementation**: Provide intuitive Pick & Place reordering and swapping for cockpit sensor tiles in configuration mode without drag conflicts.
 - **Rationale**: The system SHALL provide an accessible, tactile \"Pick & Place\" (Tap-to-Move / Tap-to-Swap) reordering mode within cockpit layout configuration (`ScreenMode.CONFIGURATION`), enabling athletes to freely reorganize sensor tiles without continuous drag gesture conflicts (ATT-1629):
@@ -3234,7 +3234,7 @@ Specifically:
 
 **Invariants**: Normal active tracking mode (`ScreenMode.TRACKING`), sensor telemetry, SQLite database schema, and single-thread SQLite confinement MUST NOT be broken.
 
-### REQ-UI-201: Aftermath: Synchronized Multi-Metric Scrubbing on Elevation Profile with Configurable X-Axis Domain Architecture [`TST-UI-155`]
+### REQ-UI-201: Aftermath: Synchronized Multi-Metric Scrubbing on Elevation Profile with Configurable X-Axis Domain Architecture [Verified]
 - **Tests**: `ElevationProfile.kt`, `MapDetailLayout.kt`, `MapModels.kt`, `WorkoutRepository.kt`, `TuningPreferencesDataStore.kt`, `AdvancedTuningDialog.kt`
 - **Implementation**: Provide synchronized multi-metric scrubbing (HR, Power, Speed/Pace, Altitude, Slope) on elevation profile with configurable X-axis domain (Distance vs Time).
 - **Rationale**: The system SHALL enhance the Aftermath inspection layout and elevation profile with synchronized multi-metric scrubbing, telemetry-enriched trackpoints, and a configurable X-axis domain (ATT-1391):
@@ -3273,7 +3273,7 @@ Specifically:
 
 **Invariants**: Existing `onDistanceSelected` caller contracts, `calculateElevationBounds` vertical sanitization, list preview zoom suppression, and single-thread SQLite confinement MUST NOT be broken.
 
-### REQ-UI-202: Aftermath: Heart Rate 5-Zone Distribution (Time-in-Zones) Vertical Column Chart Architecture [`TST-UI-156`]
+### REQ-UI-202: Aftermath: Heart Rate 5-Zone Distribution (Time-in-Zones) Vertical Column Chart Architecture [Verified]
 - **Tests**: `ZoneDistributionModels.kt`, `ZoneDistributionCalculator.kt`, `HeartRateZoneDistributionCard.kt`, `ZoneDistributionColumnChart.kt`, `WorkoutRepository.kt`, `TrackOnMapAftermathViewModel.kt`, `MapDetailLayout.kt`, `TrackOnMapScreen.kt`
 - **Implementation**: Provide compact 5-zone Heart Rate distribution vertical column chart (Time-in-Zones) in Aftermath inspection for outdoor and indoor workouts.
 - **Rationale**: The system SHALL provide a compact, visually intuitive 5-zone Heart Rate distribution vertical column chart (histogram) within the workout details / aftermath inspection view (`TrackOnMapScreen.kt` / `MapDetailLayout.kt`) (ATT-1389, ATT-1739, ATT-1811):
@@ -3329,7 +3329,7 @@ Specifically:
 
 **Invariants**: SQLite single-thread confinement, zero degradation of elevation profile or GPS map rendering, and 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-203: Aftermath: Cycling Power 5-Zone Distribution (Time-in-Zones) Vertical Column Chart Architecture [`TST-UI-157`]
+### REQ-UI-203: Aftermath: Cycling Power 5-Zone Distribution (Time-in-Zones) Vertical Column Chart Architecture [Verified]
 - **Tests**: `ZoneDistributionModels.kt`, `ZoneDistributionCalculator.kt`, `PowerZoneDistributionCard.kt`, `ZoneDistributionColumnChart.kt`, `WorkoutRepository.kt`, `TrackOnMapAftermathViewModel.kt`, `MapDetailLayout.kt`, `TrackOnMapScreen.kt`
 - **Implementation**: Provide compact 5-zone Cycling Power distribution vertical column chart (Time-in-Zones) in Aftermath inspection for workouts with power meter telemetry.
 - **Rationale**: The system SHALL provide a compact, visually intuitive 5-zone Cycling Power distribution vertical column chart (histogram) within the workout details / aftermath inspection view (`TrackOnMapScreen.kt` / `MapDetailLayout.kt`) for sessions recorded with power meter telemetry (ATT-1390, ATT-1739, ATT-1811):
@@ -3384,7 +3384,7 @@ Specifically:
 
 **Invariants**: SQLite single-thread confinement, zero degradation of elevation profile or GPS map rendering, and 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-204: Aftermath: High-Aesthetic Lap & Interval Split Visualizer Architecture [`TST-UI-158`]
+### REQ-UI-204: Aftermath: High-Aesthetic Lap & Interval Split Visualizer Architecture [Verified]
 - **Tests**: `TrackOnMapScreen.kt`, `WorkoutLaps.kt`, `LapSplitVisualizer.kt`, `LapSplitModels.kt`, `LapSplitCalculator.kt`, `strings.xml` (all 9 locales)
 - **Implementation**: Provide high-aesthetic Lap & Interval Split Visualizer in Aftermath and WorkoutLaps with columnar alignment, subtle tonal bars, and interactive map highlighting.
 - **Rationale**: The system SHALL provide a high-aesthetic, professional Lap and Interval Split Visualizer within the workout aftermath inspection view (`TrackOnMapScreen.kt` / `MapDetailLayout.kt`) and workout laps view (`WorkoutLaps.kt`), replacing legacy emoji-laden bar visualizers with modern Material 3 typography and aligned split comparisons (ATT-1742):
@@ -3426,7 +3426,7 @@ Specifically:
 
 **Invariants**: SQLite single-thread confinement, zero degradation of elevation profile or GPS map rendering, and tabular lap editing MUST NOT be broken.
 
-### REQ-UI-205: Aftermath: Enhanced Shareable Workout Snapshot with Zone Analytics Architecture [`TST-UI-159`]
+### REQ-UI-205: Aftermath: Enhanced Shareable Workout Snapshot with Zone Analytics Architecture [Verified]
 - **Tests**: `MapDetailLayout.kt`, `ShareUtils.kt`, `WorkoutSnapshotLayoutCalculator.kt`
 - **Implementation**: Provide enhanced shareable workout snapshot integrating visual analytics cards (HR Zones, Power Zones, Lap Splits) beneath elevation profile.
 - **Rationale**: The system SHALL enhance the post-workout image sharing pipeline to capture and integrate the visual analytics slot (`analyticsContent` in `MapDetailLayout.kt`) into the generated workout snapshot image (ATT-1393):
@@ -3465,7 +3465,7 @@ Specifically:
 
 **Invariants**: Existing 4-argument caller contracts, background thread offloading, and FileProvider security constraints MUST NOT be broken.
 
-### REQ-UI-206: Aftermath: Continuous Telemetry Metric Graphs (Heart Rate, Speed/Pace, Power) with Section Headings & Synchronized Multi-Chart Scrubbing Architecture [`TST-UI-160`]
+### REQ-UI-206: Aftermath: Continuous Telemetry Metric Graphs (Heart Rate, Speed/Pace, Power) with Section Headings & Synchronized Multi-Chart Scrubbing Architecture [Verified]
 - **Tests**: `TelemetryMetricGraph.kt`, `ElevationProfile.kt`, `MapDetailLayout.kt`, `TrackOnMapScreen.kt`, `strings.xml` (all 9 locales)
 - **Implementation**: Provide dedicated continuous metric graphs for Heart Rate, Speed/Pace, and Power with distinct section headings and synchronized multi-chart scrubbing in Aftermath inspection.
 - **Rationale**: The system SHALL provide dedicated continuous time-series and distance-series metric graphs with distinct section headings and synchronized scrubbing within the Aftermath inspection layout (`MapDetailLayout.kt` / `TrackOnMapScreen.kt`) (ATT-1740):
@@ -3520,7 +3520,7 @@ Specifically:
 
 **Invariants**: SQLite single-thread confinement, zero regression in ElevationProfile zoom math, and 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-207: Lieblingsorte: Subtle Low-Contrast Ghost Badges for Starts and Strecken on KnownLocationCard [`TST-UI-161`]
+### REQ-UI-207: Lieblingsorte: Subtle Low-Contrast Ghost Badges for Starts and Strecken on KnownLocationCard [Verified]
 - **Tests**: `KnownLocationsScreen.kt`
 - **Implementation**: Refine Starts and Strecken badges on KnownLocationCard to subtle low-contrast ghost badges with onSurfaceVariant text and refined scale, eliminating visual clutter.
 - **Rationale**: The system SHALL refine the visual styling of Starts and Strecken badges on `KnownLocationCard` to be subtle, understated, and low-contrast, eliminating aggressive visual dominance in location lists while preserving interactive drill-down navigation (ATT-1733):
@@ -3559,7 +3559,7 @@ Specifically:
 
 **Invariants**: Dedicated badges row (`REQ-UI-195`), single-tap card edit, long-press delete context menu (`REQ-UI-061`), navigation callbacks, and 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-208: Filter Dialogs: Contextual 'Start at' Section Heading for Location Filters [`TST-UI-162`]
+### REQ-UI-208: Filter Dialogs: Contextual 'Start at' Section Heading for Location Filters [Verified]
 - **Tests**: `WorkoutFilterBottomSheet.kt`, `ClusterFilterBottomSheet.kt`, `res/values*/strings.xml`
 - **Implementation**: Rename location filter section heading in WorkoutFilterBottomSheet and ClusterFilterBottomSheet to 'Start at' / 'Startet bei', improving contextual clarity.
 - **Rationale**: The system SHALL rename the section heading for location filtering in `WorkoutFilterBottomSheet.kt` and `ClusterFilterBottomSheet.kt` from `known_locations_title` (*"Lieblingsorte"* / *"Favorite Locations"*) to a dedicated localized string resource `filter_section_start_at` (*"Start at"* / *"Startet bei"*) (ATT-1732):
@@ -3592,7 +3592,7 @@ Specifically:
 
 **Invariants**: Spatial geofence calculations, active filter chips row, dialog dismissal, and 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-209: Workout Filter: Elimination of Favorite Tracks (Lieblingsstrecken) Selection Section [`TST-UI-163`]
+### REQ-UI-209: Workout Filter: Elimination of Favorite Tracks (Lieblingsstrecken) Selection Section [Verified]
 - **Tests**: `WorkoutFilterBottomSheet.kt`, `WorkoutTabsScreen.kt`
 - **Implementation**: Eliminate Favorite Tracks (Lieblingsstrecken) filter section and chip cloud from WorkoutFilterBottomSheet, improving dialog speed and visual cleanliness.
 - **Rationale**: The system SHALL eliminate the Favorite Tracks / Route Clusters (*Lieblingsstrecken*) filter section and its chip picker from `WorkoutFilterBottomSheet.kt`, removing high latency and visual bloat while preserving external route drill-down filtering and start location (*"Start at"*) filtering (ATT-1731):
@@ -3627,7 +3627,7 @@ Specifically:
 
 **Invariants**: Drill-down route filtering, active filter chips row, spatial geofence start location filtering, and dialog dismissal MUST NOT be broken.
 
-### REQ-UI-210: Aftermath: Configurable Sections in Detailed Workout Cards (Charts, Zones, Map, Elevation, Extrema) [`TST-UI-164`]
+### REQ-UI-210: Aftermath: Configurable Sections in Detailed Workout Cards (Charts, Zones, Map, Elevation, Extrema) [Verified]
 - **Tests**: `WorkoutSummary.kt`, `MyPreferenceManager.kt`, `WorkoutSummariesViewModel.kt`, `DisplaySettingsDialog.kt`
 - **Implementation**: Provide athlete-configurable section visibility for detailed workout journal cards in Aftermath, enabling customized card height and visual analytics density directly from display settings.
 - **Rationale**: The system SHALL provide athlete-configurable section visibility for detailed workout journal cards in Aftermath (`WorkoutSummary.kt`), enabling athletes to tailor card vertical height and visual analytics density directly from display settings (ATT-1714):
@@ -3666,7 +3666,7 @@ Specifically:
 
 **Invariants**: Mandatory card anchors `WorkoutHeader` and `WorkoutDetails` always rendered; all card touch interactions and background IO loading 60/120fps scrolling performance MUST NOT be broken.
 
-### REQ-UI-211: Aftermath: Configurable Fields in Edit Workout Dialog (Route, Commute/Trainer, Strava, Description, Goal, Method) [`TST-UI-165`]
+### REQ-UI-211: Aftermath: Configurable Fields in Edit Workout Dialog (Route, Commute/Trainer, Strava, Description, Goal, Method) [Verified]
 - **Tests**: `EditWorkoutScreen.kt`, `EditWorkoutViewModel.kt`, `MyPreferenceManager.kt`, `DisplaySettingsDialog.kt`
 - **Implementation**: Provide athlete-configurable metadata field visibility for the Edit Workout dialog in Aftermath, enabling streamlined form layouts tailored to personal workflows while preserving core fields and hidden data integrity.
 - **Rationale**: The system SHALL provide athlete-configurable metadata field visibility for the "Edit Workout" dialog in Aftermath (`EditWorkoutScreen.kt`), allowing athletes to streamline the form layout according to their personal training and journaling workflow (ATT-1713):
@@ -3703,7 +3703,7 @@ Specifically:
 
 **Invariants**: Mandatory core fields (Name, Sport, Equipment) must never be hidden; saving with hidden fields must never erase existing database values; 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-212: Configurable Cockpit Typography (Font Family & Boldness) in Advanced Settings [`TST-UI-166`]
+### REQ-UI-212: Configurable Cockpit Typography (Font Family & Boldness) in Advanced Settings [Verified]
 - **Tests**: `CockpitTypography.kt`, `TuningPreferencesDataStore.kt`, `AdvancedTuningDialog.kt`, `SensorFieldView.kt`, `SensorGridScreen.kt`
 - **Implementation**: Provide athlete-configurable font family and boldness options for the live tracking cockpit in Advanced Settings, enabling customized HUD aesthetics and glanceability across diverse athletic conditions.
 - **Rationale**: The system SHALL provide athlete-configurable typography options for telemetry values and unit labels across the live tracking cockpit in Advanced Settings (`AdvancedTuningDialog.kt`), enabling athletes to customize cockpit aesthetics, glanceability, and visual readability under varying lighting, movement, and eyesight conditions (ATT-1751):
@@ -3751,13 +3751,13 @@ Specifically:
 
 **Invariants**: Default settings (`SYSTEM_DEFAULT`, `SEMI_BOLD`) 100% preserved; 9 `ViewSize` scale preserved; zero changes to SQLite schemas or `SensorFieldState`; 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-213: Aftermath: Resilient Map Preview Visibility & Scrollable Telemetry Layout Architecture []
+### REQ-UI-213: Aftermath: Resilient Map Preview Visibility & Scrollable Telemetry Layout Architecture [Verified]
 - **Tests**: TelemetryMetricUtils.hasSpeedData(activeScrubPath)
 - **Rationale**: The system SHALL ensure the map preview remains continuously visible and interactive with a guaranteed viewport height while providing seamless vertical scroll access to all telemetry graphs and analytics cards in Aftermath (`MapDetailLayout.kt` / `TrackOnMapScreen.kt`) (ATT-1812):
 1. *Adaptive Layout Detection (`MapDetailLayout.kt`)*:
 • The layout SHALL detect whether overflow-inducing content is present: `val hasTelemetryGraphs = showZoomControls && activeScrubPath != null && (TelemetryMetricUtils.hasHeartRateData(activeScrubPath)
 
-### REQ-UI-214: Aftermath: Telemetry Metric Graph Ordering (Speed/Pace Preceding Heart Rate) for Clustered Cardiovascular Exertion Flow [`TST-UI-168`]
+### REQ-UI-214: Aftermath: Telemetry Metric Graph Ordering (Speed/Pace Preceding Heart Rate) for Clustered Cardiovascular Exertion Flow [Verified]
 - **Tests**: `MapDetailLayout.kt`, `WorkoutSummary.kt`
 - **Implementation**: Order continuous telemetry graphs with Speed/Pace preceding Heart Rate in Aftermath inspection and summary cards, clustering heart rate curve directly adjacent to the 5-zone distribution card.
 - **Rationale**: The system SHALL order continuous telemetry metric graphs such that the Speed/Pace graph precedes the Heart Rate graph, clustering the continuous Heart Rate curve directly adjacent to the 5-zone distribution card (ATT-1813):
@@ -3785,7 +3785,7 @@ Specifically:
 
 **Invariants**: Synchronized scrubbing across graphs and map, running pace vs speed selection, and 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-215: Aftermath: Global Synchronized Horizontal Zoom & Panning Architecture Across Stacked Telemetry Graphs [`TST-UI-169`]
+### REQ-UI-215: Aftermath: Global Synchronized Horizontal Zoom & Panning Architecture Across Stacked Telemetry Graphs [Verified]
 - **Tests**: `MapDetailLayout.kt`, `ElevationProfile.kt`, `TelemetryMetricGraph.kt`
 - **Implementation**: Synchronize horizontal zoom and panning globally across Elevation Profile, Speed/Pace, Heart Rate, and Power graphs in Aftermath inspection, maintaining pixel-perfect multi-chart alignment.
 - **Rationale**: The system SHALL synchronize horizontal zoom and panning globally across all stacked metric graphs (Elevation Profile, Speed/Pace, Heart Rate, and Power) on the detailed workout inspection screen (`MapDetailLayout.kt` / `TrackOnMapScreen.kt`) (ATT-1814):
@@ -3813,7 +3813,7 @@ Specifically:
 
 **Invariants**: Shared 50.dp start / 25.dp end padding geometry, single-finger multi-chart scrubbing synchronization, and unhoisted ElevationProfile compatibility MUST NOT be broken.
 
-### REQ-UI-216: Settings/Aftermath: Relocation of Workout Card Sections and Edit Workout Fields Customization Toggles to Advanced Settings [`TST-UI-170`]
+### REQ-UI-216: Settings/Aftermath: Relocation of Workout Card Sections and Edit Workout Fields Customization Toggles to Advanced Settings [Verified]
 - **Tests**: `DisplaySettingsDialog.kt`, `AdvancedTuningDialog.kt`
 - **Implementation**: Relocate Workout Card sections and Edit Workout fields customization toggles from standard Display Settings to Advanced Settings Category 4 (Aftermath & Profil-Analytik), restoring clarity to display preferences.
 - **Rationale**: The system SHALL relocate the Aftermath customization toggle sections from the standard Display Settings bottom sheet (`DisplaySettingsDialog.kt`) to Advanced Settings (`AdvancedTuningDialog.kt`) under Category 4 (*"Aftermath & Profil-Analytik"*), eliminating visual clutter in standard display preferences while centralizing all post-workout inspection customization (ATT-1815):
@@ -3859,7 +3859,7 @@ Specifically:
 
 **Invariants**: DataStore keys, default values, downstream consumer reactivity, and 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-217: Lieblingsorte: Map Preview Thumbnail and Standardized Title Typography on KnownLocationCard [`TST-UI-171`]
+### REQ-UI-217: Lieblingsorte: Map Preview Thumbnail and Standardized Title Typography on KnownLocationCard [Verified]
 - **Tests**: `KnownLocationsScreen.kt`
 - **Implementation**: Standardize title typography to titleLarge Bold and integrate Google Maps lite mode preview thumbnail on right side of KnownLocationCard with onShowOnMap trigger and inspection fallback.
 - **Rationale**: The system SHALL refine the layout of `KnownLocationCard` in `KnownLocationsScreen.kt` by standardizing the title typography and integrating a spatial map preview thumbnail on the right side of the card (ATT-1816):
@@ -3907,7 +3907,7 @@ Specifically:
 
 **Invariants**: Single-tap card edit, long-press delete context menu (`REQ-UI-061`), drill-down navigation callbacks, and 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-218: UI/Theme: Standardized Surface Background Tokens and Zero Tonal Elevation across Popups, Bottom Sheets, and Dialogs [`TST-UI-172`]
+### REQ-UI-218: UI/Theme: Standardized Surface Background Tokens and Zero Tonal Elevation across Popups, Bottom Sheets, and Dialogs [Verified]
 - **Tests**: `BottomSheetDesign.kt`, `AppModalBottomSheet.kt`, `FilterBottomSheetScaffold.kt`, `MapScreenWithTrack.kt`, `SensorGridScreen.kt`, `PeriodMapScreen.kt`, `WorkoutClusterHeatmapScreen.kt`, `MapDetailLayout.kt`, `LIveSegmentSheet.kt`
 - **Implementation**: Standardize all bottom sheet scaffolds, modal bottom sheets, settings sheets, live segment popups, and confirmation dialogs to use clean, consistent surface tokens with zero tonal elevation, eliminating artificial grey overlays and visual seams.
 - **Rationale**: The system SHALL standardize all bottom sheet scaffolds, modal bottom sheets, settings sheets, live segment popups, and confirmation dialogs to use clean, consistent `MaterialTheme.colorScheme.surface` tokens with zero tonal elevation (`SheetTonalElevation = 0.dp`), eliminating artificial grey overlays (`#EDEDED`) and maintaining seamless surfaces across the application (ATT-1817):
@@ -3955,7 +3955,7 @@ Specifically:
 
 **Invariants**: Top curvature (20.dp), boundary contour stroke (1.dp outlineVariant at 60% opacity), drop shadow (8.dp), and drag handle pill (32dp x 3dp) MUST NOT be broken; system bars edge-to-edge insets MUST NOT be broken.
 
-### REQ-UI-219: Aftermath/Graphs: Robust Running Pace Decoding, Stopped-Speed Clamping, and mm:ss Y-Axis Pace Formatting [Enforce robust running pace decoding, stopped-speed clamping (<0.55 m/s to '-- min/km'), mm:ss Y-axis label formatting, and dynamic range bounding on Aftermath pace telemetry graphs and scrubbers.]
+### REQ-UI-219: Aftermath/Graphs: Robust Running Pace Decoding, Stopped-Speed Clamping, and mm:ss Y-Axis Pace Formatting [Verified]
 - **Tests**: point.speedMps < 0.55` (speeds below 0.55 m/s / ~2.0 km/h, representing pauses or stops), the scrubbing badge SHALL invoke `paceFormatter.format_with_units(null)` to display `"-- min/km"` (or `"-- min/mile"` in Imperial), eliminating division-by-zero, infinity, and implausible walking paces.
 • Non-running sports SHALL continue formatting speed via `speedFormatter.format_with_units(point.speedMps)` in `km/h` or `mph`.
 2. *TelemetryMetricUtils Value Formatting (`TelemetryMetricUtils.formatValue`)*:
@@ -3998,7 +3998,7 @@ Specifically:
 • In `ElevationProfile.kt`, when `bSportType == BSportType.RUN`, the multi-metric scrubbing badge SHALL convert speed to seconds per meter ($s/m = 1.0 / point.speedMps$) and pass $s/m$ into `paceFormatter.format_with_units(1.0 / point.speedMps)`.
 • When `point.speedMps == null
 
-### REQ-UI-220: Aftermath/Graphs: Adaptive X-Axis Milestone Decimation, Collision Prevention, and Standardized Boundary Labeling [`TST-UI-174`]
+### REQ-UI-220: Aftermath/Graphs: Adaptive X-Axis Milestone Decimation, Collision Prevention, and Standardized Boundary Labeling [Verified]
 - **Tests**: `TelemetryMetricGraph.kt`, `ElevationProfileZoomMath.kt`
 - **Implementation**: Enforce adaptive X-axis milestone decimation (2 km step for 10-20km), collision clearance, standardized milestone formatting, and boundary start/end labels across Aftermath telemetry graphs.
 - **Rationale**: The system SHALL enforce adaptive X-axis milestone decimation, collision prevention, and boundary label parity across all Aftermath continuous telemetry graphs (`TelemetryMetricGraph.kt`, `ElevationProfileZoomMath.kt`) (ATT-1819):
@@ -4037,7 +4037,7 @@ Specifically:
 
 **Invariants**: Shared 50.dp start / 25.dp end padding geometry, synchronized touch scrubbing, and full unit test regression suite pass MUST NOT be broken.
 
-### REQ-UI-221: UI/Sheets: Standardized Bottom Sheet Peek Height Baselines and Information Footprint Framing [`TST-UI-175`]
+### REQ-UI-221: UI/Sheets: Standardized Bottom Sheet Peek Height Baselines and Information Footprint Framing [Verified]
 - **Tests**: `BottomSheetDesign.kt`, `MapDetailLayout.kt`, `MapScreenWithTrack.kt`, `SegmentOnMapScreen.kt`, `RouteOnMapScreen.kt`, `SensorGridScreen.kt`, `WorkoutClusterHeatmapScreen.kt`, `PeriodMapScreen.kt`
 - **Implementation**: Standardize, centralize, and calibrate persistent bottom sheet and map peek baselines into BottomSheetDesign tokens with dynamic self-measuring header feedback, ensuring full visibility of header cards above navigation bars without clipping or empty space.
 - **Rationale**: The system SHALL standardize, centralize, and calibrate all persistent bottom sheet and map peek baselines across the application, ensuring essential header content is fully visible above system navigation bars without vertical clipping or awkward container overshoots (ATT-1645):
@@ -4091,7 +4091,7 @@ Specifically:
 
 **Invariants**: Status bar boundary constraints (`REQ-SET-069`), MinimumDragHandle dimensions, and system navigation bar padding additions MUST NOT be broken.
 
-### REQ-UI-222: Settings/UI: Modular, Collapsible Subsection Accordion Architecture for Advanced Settings [`TST-UI-176`, `TST-UI-187`]
+### REQ-UI-222: Settings/UI: Modular, Collapsible Subsection Accordion Architecture for Advanced Settings [Verified]
 - **Tests**: `AdvancedTuningDialog.kt`
 - **Implementation**: Structure Advanced Settings into a modular, collapsible subsection architecture featuring Material 3 accordion cards with live active-value summary subtitles, initial collapsed state, and animated expand/collapse mechanics.
 - **Rationale**: The system SHALL structure the Advanced Settings dialog (`AdvancedTuningDialog.kt`) into a modular, collapsible subsection architecture featuring Material 3 accordion cards with live active-value summary subtitles and animated expand/collapse mechanics (ATT-1821, ATT-1957):
@@ -4150,7 +4150,7 @@ Specifically:
 
 **Invariants**: Parameter ranges, DataStore keys, warning card, factory reset, zero tonal elevation, and 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-223: Aftermath/Map: Interactive Draggable Splitter and Dynamic Viewport Resizing in MapDetailLayout [`TST-UI-177`]
+### REQ-UI-223: Aftermath/Map: Interactive Draggable Splitter and Dynamic Viewport Resizing in MapDetailLayout [Verified]
 - **Tests**: `SplitPaneDivider.kt`, `MapDetailLayout.kt`
 - **Implementation**: Provide an interactive draggable splitter bar to dynamically resize map and telemetry viewports in MapDetailLayout, with double-tap reset and safe boundary clamping.
 - **Rationale**: The system SHALL provide an interactive draggable splitter bar to dynamically resize map and telemetry viewports on detailed inspection screens (`MapDetailLayout.kt` / `TrackOnMapScreen.kt`) (ATT-1890):
@@ -4195,7 +4195,7 @@ Specifically:
 
 **Invariants**: Google Maps gesture isolation, synchronized multi-chart scrubbing cursor parity, snapshot sharing integrity, and 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-224: Lieblingsorte: Calibrated Zoom Level and Dynamic Geofence Framing on KnownLocationCard Map Thumbnail [`TST-UI-178`]
+### REQ-UI-224: Lieblingsorte: Calibrated Zoom Level and Dynamic Geofence Framing on KnownLocationCard Map Thumbnail [Verified]
 - **Tests**: `KnownLocationZoomMath.kt`, `KnownLocationsScreen.kt`
 - **Implementation**: Calibrate map preview thumbnail camera zoom level in KnownLocationsScreen using KnownLocationZoomMath, preventing geofence clipping and revealing neighborhood context.
 - **Rationale**: The system SHALL calibrate the camera zoom level on `KnownLocationCard` map preview thumbnails (`KnownLocationThumbnailMap` in `KnownLocationsScreen.kt`), ensuring the circular geofence boundary is fully contained without edge clipping and rich regional neighborhood context is displayed (ATT-1878):
@@ -4235,7 +4235,7 @@ Specifically:
 
 **Invariants**: Lite mode, gesture isolation, offline preview fallback, heart pin marker, and universal card interactions MUST NOT be broken.
 
-### REQ-UI-225: Aftermath/Graphs: Persistent Sticky Global Zoom Toolbar Between Map and Telemetry Graphs [`TST-UI-179`]
+### REQ-UI-225: Aftermath/Graphs: Persistent Sticky Global Zoom Toolbar Between Map and Telemetry Graphs [Verified]
 - **Tests**: `GlobalTelemetryZoomToolbar.kt`, `MapDetailLayout.kt`, `ElevationProfile.kt`
 - **Implementation**: Provide a persistent sticky global zoom toolbar between map and scrollable telemetry graphs in MapDetailLayout, decoupling zoom controls from ElevationProfile and recovering vertical space.
 - **Rationale**: The system SHALL decouple horizontal zoom controls from child graph components and provide a dedicated, persistent sticky zoom toolbar positioned directly between the map viewport and the scrollable telemetry graph container on detailed workout inspection screens (`MapDetailLayout.kt` / `TrackOnMapScreen.kt`) (ATT-1876):
@@ -4282,7 +4282,7 @@ Specifically:
 
 **Invariants**: Google Maps gesture isolation, synchronized multi-chart scrubbing cursor parity, snapshot sharing integrity, and 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-226: Aftermath/Map: Directional Gesture Disambiguation and Smooth Vertical Scrolling in MapDetailLayout [\Delta x]
+### REQ-UI-226: Aftermath/Map: Directional Gesture Disambiguation and Smooth Vertical Scrolling in MapDetailLayout [Verified]
 - **Tests**: >
 - **Implementation**: \Delta y
 - **Rationale**: The system SHALL eliminate gesture trapping across all stacked charts in `MapDetailLayout.kt` (`ElevationProfile.kt` and `TelemetryMetricGraph.kt`), allowing effortless vertical scrolling through analytics while preserving precision horizontal scrubbing and pinch-to-zoom (ATT-1872):
@@ -4290,7 +4290,7 @@ Specifically:
 • In `ElevationProfile.kt` and `TelemetryMetricGraph.kt`, single-pointer drag gestures SHALL be classified dynamically against the system touch slop (`viewConfiguration.touchSlop`):
 - Dominant Vertical Gesture ($
 
-### REQ-UI-227: Cockpit/Typography: Expanded Curated Athletic Sports and Aerospace HUD Font Selection [`TST-UI-181`]
+### REQ-UI-227: Cockpit/Typography: Expanded Curated Athletic Sports and Aerospace HUD Font Selection [Verified]
 - **Tests**: `CockpitTypography.kt`, `AdvancedTuningDialog.kt`, `res/font/`
 - **Implementation**: Expand curated Cockpit HUD typography palette in Advanced Settings with 8 high-performance sports and HUD fonts, ensuring defensive fallback and 9-language localization parity.
 - **Rationale**: The system SHALL expand the curated Cockpit HUD typography palette in Advanced Settings from 5 to 13 options, adding high-performance condensed sports typefaces and aerospace HUD fonts while ensuring defensive offline resolution, safe DataStore persistence, and 9-language localization parity (ATT-1871):
@@ -4334,7 +4334,7 @@ Specifically:
 
 **Invariants**: DataStore serialization backward compatibility, weight variations orthogonality, live preview reactivity, and 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-228: Aftermath/Splits: Lap Split Visualizer Refinements: 3-Lap Truncation, Custom Names, Explicit Pace Units, and Fastest Lap Rabbit Icon [`TST-UI-182`]
+### REQ-UI-228: Aftermath/Splits: Lap Split Visualizer Refinements: 3-Lap Truncation, Custom Names, Explicit Pace Units, and Fastest Lap Rabbit Icon [Verified]
 - **Tests**: `LapSplitVisualizer.kt`, `TrackOnMapScreen.kt`, `WorkoutLaps.kt`
 - **Implementation**: Refine Lap Split Visualizer with 3-lap truncation, actual lap names, explicit pace units, and fastest lap rabbit icon left of right-aligned pace.
 - **Rationale**: The system SHALL refine the Lap & Interval Split Visualizer (`LapSplitVisualizer.kt`), ensuring compact vertical presentation, descriptive lap naming, explicit metric unit formatting, and right-aligned pace columns across workout aftermath inspection views (`TrackOnMapScreen.kt` and `WorkoutLaps.kt`) (ATT-1869):
@@ -4385,7 +4385,7 @@ Specifically:
 
 **Invariants**: SQLite single-thread confinement, zero degradation of elevation profile or GPS map rendering, and tabular lap editing MUST NOT be broken.
 
-### REQ-UI-229: Aftermath/Settings: Configurable Lap Section Display Mode (Table vs. Split Visualizer) in Advanced Settings [`TST-UI-183`, `TST-UI-188`, `TST-UI-191`]
+### REQ-UI-229: Aftermath/Settings: Configurable Lap Section Display Mode (Table vs. Split Visualizer) in Advanced Settings [Verified]
 - **Tests**: `LapDisplayMode.kt`, `MyPreferenceManager.kt`, `AdvancedTuningDialog.kt`, `WorkoutLaps.kt`, `WorkoutSummary.kt`
 - **Implementation**: Provide configurable lap presentation mode (Table vs. Split Visualizer) in Advanced Settings and Workout Summary, streamlining options to a clean binary choice and ensuring robust DataStore legacy migration.
 - **Rationale**: The system SHALL provide a configurable preference in Advanced Settings allowing athletes to select their preferred lap presentation mode in the Workout Summary card (`WorkoutSummary.kt` / `WorkoutLaps.kt`), preventing redundant stacked representations while maintaining tabular lap editing across all modes (ATT-1870, ATT-1958, ATT-1988):
@@ -4440,7 +4440,7 @@ Specifically:
 
 **Invariants**: SQLite single-thread confinement, `TrackOnMapScreen` map route highlighting, and 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-230: Aftermath/Graphs: Background Training Zone Bands & Right-Hand Zone Axis for Heart Rate and Power Graphs [`TST-UI-184`]
+### REQ-UI-230: Aftermath/Graphs: Background Training Zone Bands & Right-Hand Zone Axis for Heart Rate and Power Graphs [Verified]
 - **Tests**: `TelemetryMetricGraph.kt`, `TelemetryZoneMath.kt`, `ElevationProfile.kt`
 - **Implementation**: Render subtle horizontal training zone background bands and right-hand secondary zone axis (Z1-Z5) for Heart Rate and Power graphs, providing instant zone awareness while preserving curve clarity and horizontal alignment.
 - **Rationale**: The system SHALL render subtle horizontal training zone background bands and a right-hand secondary zone axis (`Z1`–`Z5`) in `TelemetryMetricGraph.kt` for Heart Rate and Cycling Power telemetry curves, providing athletes with instantaneous zone awareness while strictly preserving curve clarity and horizontal axis alignment with `ElevationProfile.kt` (ATT-1839):
@@ -4490,7 +4490,7 @@ Specifically:
 
 **Invariants**: Horizontal padding parity with ElevationProfile (50.dp start / 25.dp end), vertical scroll disambiguation (`REQ-UI-226`), and solid primary curve strokes MUST NOT be broken.
 
-### REQ-UI-231: Aftermath/Zones: Fine-Grained Telemetry Frequency Histogram (BPM & Wattage Bins) with Zone Color Shading [`TST-UI-185`, `TST-UI-189`]
+### REQ-UI-231: Aftermath/Zones: Fine-Grained Telemetry Frequency Histogram (BPM & Wattage Bins) with Zone Color Shading [Verified]
 - **Tests**: `ZoneDistributionModels.kt`, `ZoneDistributionCalculator.kt`, `TelemetryHistogramChart.kt`, `HeartRateZoneDistributionCard.kt`, `PowerZoneDistributionCard.kt`
 - **Implementation**: Provide fine-grained telemetry frequency histogram (2 bpm / 10 W bins) with zone color shading, streamlined readout, and clean below-chart mode toggle preventing header row text collisions.
 - **Rationale**: The system SHALL provide a fine-grained telemetry frequency histogram for Heart Rate and Cycling Power in `HeartRateZoneDistributionCard.kt` and `PowerZoneDistributionCard.kt`, allowing athletes to inspect detailed distribution density across narrow metric bins shaded with their active training zone colors (ATT-1845, ATT-1959):
@@ -4543,7 +4543,7 @@ Specifically:
 
 **Invariants**: Asynchronous computation off the main thread, SQLite single-thread confinement, and 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-232: Aftermath/Graphs: Synchronized Horizontal Window Panning Across Stacked Telemetry Metric Graphs in Pan Mode [\Delta x]
+### REQ-UI-232: Aftermath/Graphs: Synchronized Horizontal Window Panning Across Stacked Telemetry Metric Graphs in Pan Mode [Verified]
 - **Tests**: >
 - **Implementation**: \Delta y
 - **Rationale**: The system SHALL support smooth, continuous horizontal viewport window panning across all stacked telemetry metric graphs (`TelemetryMetricGraph.kt` for Speed/Pace, Heart Rate, and Power) and `ElevationProfile.kt` when the global zoom toolbar is toggled to Pan Mode (`isPanMode == true`), ensuring seamless multi-chart navigation in lockstep without mid-gesture coroutine cancellations, cross-domain clamping collisions, or sluggish travel distance (ATT-1956, ATT-1987):
@@ -4573,7 +4573,7 @@ Specifically:
 6. *Preservation of Core Invariants*:
 • Vertical scrolling propagation: single-finger vertical swipes ($
 
-### REQ-UI-233: Aftermath/Settings: Independent X-Axis Domain Settings for Elevation Profile (Distance) vs. Telemetry Graphs (Time) [Provide independent X-axis domain configuration for elevation profile (Distance) vs. telemetry graphs (Time) in Advanced Settings, with synchronized cross-domain scrubbing in MapDetailLayout.]
+### REQ-UI-233: Aftermath/Settings: Independent X-Axis Domain Settings for Elevation Profile (Distance) vs. Telemetry Graphs (Time) [Verified]
 - **Tests**: Distance]`.
 • The Aftermath accordion subtitle (`TuningSubtitleFormatter.formatAftermathSubtitle`) SHALL summarize both configured domains (e.g. "Höhenprofil: Distanz, Telemetrie: Zeit").
 • Display strings SHALL be localized across all 9 application locales.
@@ -4624,7 +4624,7 @@ Specifically:
 • In `AftermathAnalysisSection`, the dialog SHALL render two independent selector rows:
 - **Elevation Profile X-Axis**: Title `R.string.tuning_profile_x_axis_title`, description `R.string.tuning_profile_x_axis_desc`, and FilterChips `[Distance (Default)
 
-### REQ-UI-234: UI & Interaction Design System: Mutually Exclusive Binary Mode Selection & Component Heuristics [`TST-UI-193`]
+### REQ-UI-234: UI & Interaction Design System: Mutually Exclusive Binary Mode Selection & Component Heuristics [Verified]
 - **Tests**: `docs/design_guidelines.md`, `ui/components/`, `ui/settings/`
 - **Implementation**: Establish UI design system heuristics linking to docs/design_guidelines.md, mandating SingleChoiceSegmentedButtonRow for binary mode selection and enforcing cross-domain coordinate separation.
 - **Rationale**: The user interface SHALL adhere to the centralized design principles and component selection heuristics defined in `docs/design_guidelines.md` (ATT-1988, ATT-1989):
@@ -4649,7 +4649,7 @@ Specifically:
 
 **Invariants**: Material 3 theming, touch slop disambiguation (`REQ-UI-226`), and 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-235: Aftermath/Telemetry: Continuous Sensor Telemetry Graph Ingestion, Time-Domain Scrubbing, and Map Collapse for Trackless Workouts []
+### REQ-UI-235: Aftermath/Telemetry: Continuous Sensor Telemetry Graph Ingestion, Time-Domain Scrubbing, and Map Collapse for Trackless Workouts [Verified]
 - **Tests**: index == lastIndex`), guaranteeing high-performance 120fps rendering on physical hardware.
 2. *ViewModel Telemetry Ingestion (`TrackOnMapAftermathViewModel`)*:
 • In `AftermathMapUIState`, the system SHALL expose `val telemetryPath: List<PathPoint> = emptyList()`.
@@ -4662,7 +4662,7 @@ Specifically:
 • When querying `WorkoutSamples.db`, the method SHALL extract recorded samples having valid sensor data (Heart Rate `SensorType.HR` or Power `SensorType.POWER`), capturing `timeSec`, `hr`, `power`, and `speedMps`, with `distance = 0.0` and `latLng = LatLng(0.0, 0.0)`.
 • When sample count exceeds 800, the method SHALL apply uniform stride decimation preserving initial and terminal samples (`index == 0
 
-### REQ-UI-236: WorkoutSummaries: Support Marking Workouts as "Race" (Wettkampf) Across DB, Header Badge, Edit Dialog, and Filters [`TST-UI-195`]
+### REQ-UI-236: WorkoutSummaries: Support Marking Workouts as "Race" (Wettkampf) Across DB, Header Badge, Edit Dialog, and Filters [Verified]
 - **Tests**: `WorkoutSummariesDatabaseManager.java`, `WorkoutData.kt`, `WorkoutHeader.kt`, `EditWorkoutScreen.kt`, `WorkoutFilterCriteria.kt`, `StravaUploader.kt`
 - **Implementation**: Support marking workouts as Race across DB schema v23, domain models, Material 3 header badge, edit UI, filter criteria, and Strava sync.
 - **Rationale**: The system SHALL support marking workouts as a "Race" (Wettkampf) across the persistence layer, domain models, header presentation, edit workflow, list filtering, preferences, and cloud uploaders (ATT-2005):
@@ -4720,7 +4720,7 @@ Specifically:
 
 **Invariants**: Backward compatible idempotent database upgrade, zero raw emojis, and 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-237: UI/Sheets: System Navigation Bar Inset Clearance & Upward Travel Calibration for Segment, Route, and Live Segment Popups [`TST-UI-196`]
+### REQ-UI-237: UI/Sheets: System Navigation Bar Inset Clearance & Upward Travel Calibration for Segment, Route, and Live Segment Popups [Verified]
 - **Tests**: `MapDetailLayout.kt`, `LiveSegmentSheet.kt`, `MapScreenWithTrack.kt`, `SensorGridScreen.kt`
 - **Implementation**: Ensure segment, route, and live segment popups expand with sufficient upward travel and apply navigation bar padding so the elevation profile is fully visible above the 3-button navigation bar.
 - **Rationale**: The system SHALL ensure that bottom sheet popups displaying segments and routes on the map (`MapScreenWithTrack.kt`) and live segment popups during tracking (`SensorGridScreen.kt` / `LiveSegmentSheet.kt`) can be dragged and expanded upward with sufficient travel, and incorporate system navigation bar window insets (`WindowInsets.navigationBars`) such that the entire elevation profile and all interactive controls remain 100% visible and accessible above the Android 3-button navigation bar (ATT-2008):
@@ -4757,7 +4757,7 @@ Specifically:
 
 **Invariants**: Dynamic self-measuring peek baselines (`ATT-1645`), edge-to-edge surface background, and zero regression in full-screen maps MUST NOT be broken.
 
-### REQ-UI-238: Lieblingsorte/Map: Lock Favorite Location Bottom Sheet to Peek Height & Remove Misleading Drag Handle [`TST-UI-197`]
+### REQ-UI-238: Lieblingsorte/Map: Lock Favorite Location Bottom Sheet to Peek Height & Remove Misleading Drag Handle [Verified]
 - **Tests**: `MapScreenWithTrack.kt`
 - **Implementation**: Lock favorite location bottom sheet to peek height, disable upward dragging/swiping when active, reject expansion, and remove misleading drag handle.
 - **Rationale**: The system SHALL lock the favorite location bottom sheet to its designated peek height, disable upward dragging/swiping gestures when a location is active, reject full-screen expansion, remove the misleading drag handle, and preserve all dismiss and edit interactions (ATT-2042):
@@ -4804,7 +4804,7 @@ Specifically:
 
 **Invariants**: Dynamic self-measuring peek baselines (`ATT-1645`), route and segment full-screen expansion, back press dismissal, and 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-239: Unconditional Edit Workout Form Presentation & Removal of Edit Dialog Field Toggles from Advanced Settings [`TST-UI-198`]
+### REQ-UI-239: Unconditional Edit Workout Form Presentation & Removal of Edit Dialog Field Toggles from Advanced Settings [Verified]
 - **Tests**: `AdvancedTuningDialog.kt`, `AdvancedTuningAccordion.kt`, `EditWorkoutScreen.kt`, `EditWorkoutViewModel.kt`, `res/values*/strings.xml`
 - **Implementation**: Present all workout metadata fields unconditionally inside Edit Workout dialog and remove redundant field toggles from Advanced Settings.
 - **Rationale**: The system SHALL present all available workout metadata fields unconditionally inside the Edit Workout dialog (`EditWorkoutScreen.kt`) and remove redundant field toggles from Advanced Settings (`AdvancedTuningDialog.kt`) (ATT-2029):
@@ -4846,7 +4846,7 @@ Specifically:
 
 **Invariants**: Core fields permanently visible, saving with unedited fields preserves database values, workout list card section toggles preserved, 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-240: Settings/Aftermath: Matrix Table Presentation for Configurable Aftermath Sections (Workout Summary List vs. Workout Details) [`TST-UI-199`]
+### REQ-UI-240: Settings/Aftermath: Matrix Table Presentation for Configurable Aftermath Sections (Workout Summary List vs. Workout Details) [Verified]
 - **Tests**: `AdvancedTuningDialog.kt`, `AdvancedTuningAccordion.kt`, `MyPreferenceManager.kt`, `TrackOnMapScreen.kt`, `res/values*/strings.xml`
 - **Implementation**: Provide independent section configuration for Workout Summary List and Workout Details screen via a 2-Column Matrix Table in Advanced Settings.
 - **Rationale**: The system SHALL provide independent section configuration for the Workout Summary List (`WorkoutSummary.kt`) and the Workout Details inspection screen (`TrackOnMapScreen.kt` / `MapDetailLayout.kt`), presented as a 2-Column Matrix Table in Advanced Settings (`AdvancedTuningDialog.kt`) (ATT-2030):
@@ -4894,7 +4894,7 @@ Specifically:
 
 **Invariants**: Existing DataStore keys preserved, 60/120 FPS list scrolling protected, independent view customization, 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-241: Aftermath/Scrubbing: Persistent Floating Scrubbing Telemetry Badge Pinned Above Scrollable Graphs in MapDetailLayout [`TST-UI-200`]
+### REQ-UI-241: Aftermath/Scrubbing: Persistent Floating Scrubbing Telemetry Badge Pinned Above Scrollable Graphs in MapDetailLayout [Verified]
 - **Tests**: `MapDetailLayout.kt`, `ElevationProfile.kt`
 - **Implementation**: Hoist ScrubbingTelemetryBadge from ElevationProfile into MapDetailLayout as a persistent floating overlay pinned at the top of the lower viewport, ensuring telemetry visibility across scroll positions and when elevation profile is disabled.
 - **Rationale**: The system SHALL hoist `ScrubbingTelemetryBadge` from within the internal scrollable `ElevationProfile.kt` component into the persistent lower viewport container of `MapDetailLayout.kt`, ensuring that instantaneous telemetry readouts remain pinned, elevated, and fully visible at the top of the graph pane during active scrubbing regardless of vertical scroll offset (ATT-2016):
@@ -4980,7 +4980,7 @@ Specifically:
 
 **Invariants**: Single-line badge rendering, zero baseline jitter, WCAG contrast accessibility, and 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-243: Aftermath/Graphs: Configurable Minimum Pace Ceiling in Expert Settings with Athletic Default (3:00 min/km) [`TST-UI-202`]
+### REQ-UI-243: Aftermath/Graphs: Configurable Minimum Pace Ceiling in Expert Settings with Athletic Default (3:00 min/km) [Verified]
 - **Tests**: `TuningPreferencesDataStore.kt`, `AdvancedTuningDialog.kt`, `TelemetryMetricGraph.kt`, `MapDetailLayout.kt`, `values*/strings.xml`
 - **Implementation**: Provide a configurable minimum pace ceiling in Expert Settings defaulting to 3:00 min/km and enforce dynamic range clamping on Aftermath pace graphs.
 - **Rationale**: The system SHALL provide a configurable minimum pace ceiling (fastest pace boundary) in Expert Settings and enforce it across Aftermath running pace telemetry graphs (`TelemetryMetricGraph.kt`, `TuningPreferencesDataStore.kt`) (ATT-2014):
@@ -5026,7 +5026,7 @@ Specifically:
 
 **Invariants**: Inverted pace plotting, mm:ss label formatting, paused speed filtering, and 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-244: Lieblingsorte/UI: Harmonize Map Preview Thumbnail Dimensions to 100dp on KnownLocationCard [`TST-UI-203`]
+### REQ-UI-244: Lieblingsorte/UI: Harmonize Map Preview Thumbnail Dimensions to 100dp on KnownLocationCard [Verified]
 - **Tests**: `KnownLocationsScreen.kt`, `KnownLocationCardLayoutTest.kt`
 - **Implementation**: Harmonize map preview thumbnail dimensions on KnownLocationCard to 100dp x 100dp, matching route cluster cards and restoring visual rhythm across spatial navigation cards.
 - **Rationale**: The system SHALL harmonize the map preview thumbnail dimensions on `KnownLocationCard` to 100dp x 100dp (`ATT-2051`):
@@ -5061,7 +5061,7 @@ Specifically:
 
 **Invariants**: Zoom math invariants (`[10.5f, 12.5f]`), single-tap edit, long-press delete (`REQ-UI-061`), starts/routes drill-downs, and 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-245: Aftermath/Details: Upper Metadata Slot Architecture & Reactive Detail Section Rendering in MapDetailLayout [`TST-UI-204`]
+### REQ-UI-245: Aftermath/Details: Upper Metadata Slot Architecture & Reactive Detail Section Rendering in MapDetailLayout [Verified]
 - **Tests**: `MapDetailLayout.kt`, `TrackOnMapScreen.kt`
 - **Implementation**: Provide an upper metadata slot in MapDetailLayout above the map to render WorkoutDescription and WorkoutExtrema matching the section sequence of WorkoutSummary.kt.
 - **Rationale**: The system SHALL provide an upper metadata slot positioned immediately below the header and above the map in `MapDetailLayout.kt`, routing workout description and extrema cards for immediate visibility matching the section sequence of `WorkoutSummary.kt` (ATT-2112 Revision 2):
@@ -5100,7 +5100,7 @@ Specifically:
 
 **Invariants**: Callers with default `metadataContent = null` remain backward compatible; scrubbing gestures, zoom toolbar operations, and map gestures MUST NOT be intercepted or degraded; 100% clean-room test suite pass rate.
 
-### REQ-UI-246: Aftermath/Scrubbing: Align Scrubbing Telemetry Badge with Zoom Controls and Offset to Top-Right in MapDetailLayout [`TST-UI-205`]
+### REQ-UI-246: Aftermath/Scrubbing: Align Scrubbing Telemetry Badge with Zoom Controls and Offset to Top-Right in MapDetailLayout [Verified]
 - **Tests**: `MapDetailLayout.kt`
 - **Implementation**: Co-locate ScrubbingTelemetryBadge alongside the zoom controls in MapDetailLayout, aligning its top edge with the zoom buttons and offsetting it to the top-right to prevent graph occlusion.
 - **Rationale**: The system SHALL co-locate `ScrubbingTelemetryBadge` alongside the zoom controls in `MapDetailLayout.kt`, aligning its top edge with the zoom buttons and offsetting it to the top-right (`ATT-2113`):
@@ -5138,7 +5138,7 @@ Specifically:
 
 **Invariants**: Single-finger vertical scroll on `lowerColumn` MUST NOT be intercepted; scrubbing gestures and zoom controls MUST NOT experience event conflict; 100% clean-room test suite pass rate.
 
-### REQ-UI-247: Aftermath/Summary: Click-to-Open Navigation and Gesture Disambiguation for Telemetry Graphs and Zone Distribution Cards in WorkoutSummary [`TST-UI-206`]
+### REQ-UI-247: Aftermath/Summary: Click-to-Open Navigation and Gesture Disambiguation for Telemetry Graphs and Zone Distribution Cards in WorkoutSummary [Verified]
 - **Tests**: `WorkoutSummary.kt`, `TelemetryMetricGraph.kt`
 - **Implementation**: Provide click-to-open navigation and gesture disambiguation across telemetry graphs and zone distribution cards in WorkoutSummary.
 - **Rationale**: The system SHALL provide seamless click-to-open navigation (`onMapClick()`) across all telemetry graph sections and zone distribution cards in `WorkoutSummary.kt`, while ensuring gesture transparency and smooth vertical scrolling (ATT-2129):
@@ -5181,7 +5181,7 @@ Specifically:
 
 **Invariants**: Interactive scrubbing in MapDetailLayout remains intact; fluid 60fps vertical list scrolling; 100% clean-room test suite pass rate.
 
-### REQ-UI-248: Aftermath/Details: Strava Activity Data Upper Metadata Slotting & Structural Parity in Detailed Workout View [`TST-UI-207`]
+### REQ-UI-248: Aftermath/Details: Strava Activity Data Upper Metadata Slotting & Structural Parity in Detailed Workout View [Verified]
 - **Tests**: `TrackOnMapScreen.kt`
 - **Implementation**: Render StravaActivitySection within metadataContent above the map in TrackOnMapScreen, matching the canonical order of WorkoutSummary.kt.
 - **Rationale**: The system SHALL ensure that Strava activity results (PR badges, best efforts, segment achievements) in the detailed workout view (`TrackOnMapScreen.kt` / `MapDetailLayout.kt`) maintain structural order parity with the workout list summary (`WorkoutSummary.kt`) (ATT-2137):
@@ -5214,7 +5214,7 @@ Specifically:
 
 **Invariants**: Custom `metadataContent` callers preserved; preference gating strictly enforced; 100% clean-room test suite pass rate.
 
-### REQ-UI-249: Aftermath/Zoom: Reactive Zoom Controls Suppression in MapDetailLayout When No Zoomable Graphs Are Rendered [Suppress GlobalTelemetryZoomToolbar in MapDetailLayout when neither elevation profile nor telemetry graphs are rendered.]
+### REQ-UI-249: Aftermath/Zoom: Reactive Zoom Controls Suppression in MapDetailLayout When No Zoomable Graphs Are Rendered [Verified]
 - **Tests**: hasTelemetryGraphs) == true`, and `!activeScrubPath.isNullOrEmpty()`.
 • If both `showElevationProfile` and `hasTelemetryGraphs` are false, `hasZoomToolbar` SHALL evaluate to `false`.
 2. *Vertical Space Recovery*:
@@ -5245,7 +5245,7 @@ Specifically:
 1. *Toolbar Activation Guard (`hasZoomToolbar`)*:
 • In `MapDetailLayout.kt`, `hasZoomToolbar` SHALL evaluate to `true` IF AND ONLY IF: `showZoomControls == true`, `(showElevationProfile
 
-### REQ-UI-250: Aftermath/Layout: Collapsing Upper Metadata Architecture & Map Squashing Prevention via NestedScroll in MapDetailLayout [`TST-UI-209`]
+### REQ-UI-250: Aftermath/Layout: Collapsing Upper Metadata Architecture & Map Squashing Prevention via NestedScroll in MapDetailLayout [Verified]
 - **Tests**: `MapDetailLayout.kt`
 - **Implementation**: Decouple upper workout metadata via collapsible nested-scroll connection, preventing map squashing and enabling full-screen expansion for map and telemetry analytics.
 - **Rationale**: The system SHALL decouple upper workout metadata (header, description, extrema, Strava) from static viewport allocation in `MapDetailLayout.kt` by integrating a collapsible nested-scroll connection, preventing map squashing and enabling full-screen expansion for map and telemetry analytics (ATT-2150):
@@ -5282,7 +5282,7 @@ Specifically:
 
 **Invariants**: Custom callers preserved; minimum map height guaranteed; 100% clean-room test suite pass rate.
 
-### REQ-UI-251: Aftermath/UI: Integrated Minimalist Marginal Zone Bars & Histogram Right of Telemetry Graph in Portrait Mode [`TST-UI-210`]
+### REQ-UI-251: Aftermath/UI: Integrated Minimalist Marginal Zone Bars & Histogram Right of Telemetry Graph in Portrait Mode [Verified]
 - **Tests**: `TelemetryMetricGraph.kt`, `HeartRateZoneDistributionCard.kt`, `PowerZoneDistributionCard.kt`, `MapDetailLayout.kt`
 - **Implementation**: Render an ultra-slim marginal distribution strip adjacent to TelemetryMetricGraph in portrait mode for HR and Power, vertically aligned and synchronized with zone card mode toggles.
 - **Rationale**: The system SHALL render an ultra-slim marginal distribution strip (width ~24–32 dp) adjacent to the right margin of `TelemetryMetricGraph.kt` in portrait orientation for Heart Rate and Power metrics, vertically aligned with the curve's Y-axis and synchronized with zone card mode toggles (ATT-2147):
@@ -5322,7 +5322,7 @@ Specifically:
 
 **Invariants**: Custom callers preserved; axis alignment preserved; 100% clean-room test suite pass rate.
 
-### REQ-UI-252: Aftermath/Details: Lap Split Visualizer Upper Metadata Slotting & Structural Parity in Detailed Workout View [`TST-UI-211`]
+### REQ-UI-252: Aftermath/Details: Lap Split Visualizer Upper Metadata Slotting & Structural Parity in Detailed Workout View [Verified]
 - **Tests**: `TrackOnMapScreen.kt`
 - **Implementation**: Render LapSplitVisualizerCard within metadataContent between Extrema and Strava/Map in TrackOnMapScreen, matching the canonical order of WorkoutSummary.kt.
 - **Rationale**: The system SHALL ensure that the lap split summary (`LapSplitVisualizerCard`) in the detailed workout view (`TrackOnMapScreen.kt` / `MapDetailLayout.kt`) maintains 1:1 structural order parity with the workout list summary (`WorkoutSummary.kt`) (ATT-2170):
@@ -5369,7 +5369,7 @@ Specifically:
 
 **Invariants**: Interactive map lap highlighting preserved; collapsible header integration preserved; 100% clean-room test suite pass rate.
 
-### REQ-UI-253: Tracking Views Null-Safe Enum Deserialization, Fresh-Install Seeding & Database Repair Migration [`TST-UI-212`]
+### REQ-UI-253: Tracking Views Null-Safe Enum Deserialization, Fresh-Install Seeding & Database Repair Migration [Verified]
 - **Tests**: `TrackingViewsRepository.kt`, `TrackingViewsDatabaseManager.java`
 - **Implementation**: Ensure fault-tolerant deserialization of tracking view configurations and robust database initialization/migration, preventing startup NullPointerExceptions.
 - **Rationale**: The system SHALL ensure fault-tolerant deserialization of tracking view configurations and robust database initialization/migration (ATT-2179):
@@ -5411,7 +5411,7 @@ Specifically:
 
 **Invariants**: Custom layouts preserved; schema stable; 100% clean-room test suite pass rate.
 
-### REQ-UI-254: Aftermath/Details: Non-Blocking Nested Scroll Dispatch, Sub-Pixel Precision & Optimized High-Density Metadata Rendering in MapDetailLayout [`TST-UI-213`]
+### REQ-UI-254: Aftermath/Details: Non-Blocking Nested Scroll Dispatch, Sub-Pixel Precision & Optimized High-Density Metadata Rendering in MapDetailLayout [Verified]
 - **Tests**: `MapDetailLayout.kt`, `CollapsingAppBarNestedScrollConnection.kt`, `StravaActivitySection.kt`, `LapSplitVisualizer.kt`
 - **Implementation**: Ensure fluid, non-blocking nested scroll dispatch, sub-pixel precision, and optimized high-density metadata rendering in MapDetailLayout, eliminating gesture trapping and stutter.
 - **Rationale**: The system SHALL eliminate gesture trapping, stutter, and layout lockup in the Detailed Workout view (`MapDetailLayout.kt` / `TrackOnMapScreen.kt`) when displaying high-density metadata (e.g. numerous Strava segments or extensive lap splits) (ATT-2178):
@@ -5452,7 +5452,7 @@ Specifically:
 
 **Invariants**: Custom callers preserved; minimum map height (120dp) guaranteed; 100% clean-room test suite pass rate.
 
-### REQ-UI-255: Aftermath: User-Customizable Section Reordering, Unified Order Persistence & Modular Section Architecture for Workout Summaries and Details [`TST-UI-214`]
+### REQ-UI-255: Aftermath: User-Customizable Section Reordering, Unified Order Persistence & Modular Section Architecture for Workout Summaries and Details [Verified]
 - **Tests**: `WorkoutSectionType.kt`, `MyPreferenceManager.kt`, `AdvancedTuningDialog.kt`, `WorkoutSummary.kt`, `TrackOnMapScreen.kt`
 - **Implementation**: Allow athletes to customize the vertical display sequence of workout sections with persistent order and modular rendering across summaries and details.
 - **Rationale**: The system SHALL allow athletes to customize the vertical display sequence of workout sections and ensure consistent, modular rendering across both list cards (`WorkoutSummary.kt`) and detailed workout screens (`TrackOnMapScreen.kt` / `MapDetailLayout.kt`) (ATT-2176):
@@ -5502,7 +5502,7 @@ Specifically:
 
 **Invariants**: Top identity anchors preserved; minimum map height (120dp) guaranteed; 100% clean-room test suite pass rate.
 
-### REQ-UI-256: Equipment Management: Fleet-Wide Equipment-to-Sensor Mapping Matrix with Checkboxes for Bikes and Shoes [`TST-UI-230`]
+### REQ-UI-256: Equipment Management: Fleet-Wide Equipment-to-Sensor Mapping Matrix with Checkboxes for Bikes and Shoes [Verified]
 - **Tests**: `EquipmentTabsScreen.kt`, `EquipmentSensorMatrixScreen.kt`, `EquipmentViewModel.kt`, `EquipmentDbHelper.java`, `DevicesDatabaseManager.java`, `EditEquipmentDialog.kt`
 - **Implementation**: Centralized, interactive equipment-to-sensor mapping matrix partitioned into sport-specific tables for bikes and shoes with restricted incompatible linkage.
 - **Rationale**: The system SHALL provide a centralized, interactive equipment-to-sensor mapping matrix with checkboxes in `EquipmentTabsScreen.kt`, partitioned into sport-specific tables to eliminate incompatible sensor clutter (ATT-2126, ATT-2382):
@@ -5560,7 +5560,7 @@ Specifically:
 
 **Invariants**: SQLite schema stable; bidirectional sync guaranteed; 100% clean-room test suite pass rate.
 
-### REQ-UI-257: Reactive Bi-Directional Equipment-to-Sensor Synchronization Between EquipmentDbHelper, DeviceDataRepository, and EquipmentViewModel [`TST-UI-216`]
+### REQ-UI-257: Reactive Bi-Directional Equipment-to-Sensor Synchronization Between EquipmentDbHelper, DeviceDataRepository, and EquipmentViewModel [Verified]
 - **Tests**: `EquipmentRepository.kt`, `EquipmentDbHelper.java`, `DeviceDataRepository.kt`, `EquipmentViewModel.kt`, `EditDeviceViewModel.kt`
 - **Implementation**: Real-time bi-directional synchronization between equipment mapping mutations and sensor repositories via reactive SharedFlow without stale UI caching.
 - **Rationale**: The system SHALL guarantee real-time, lifecycle-safe, bi-directional synchronization between equipment mapping mutations and sensor repositories (ATT-2307):
@@ -5607,7 +5607,7 @@ Specifically:
 - **Implementation**: `ImportBackupTabsScreen.kt`, `strings.xml`
 - **Rationale**: The cluster candidate naming dialog (`ClusterNamingDialog`) SHALL render all user-facing text labels (titles, route assignment prompts, task counters, field labels, and button actions) using localized string resources. Zero hardcoded string literals SHALL remain in the composable layout. **Invariants**: Formatted placeholders (date strings, task numbers) MUST follow valid Java Formatter syntax across all 9 supported locales.
 
-### REQ-UI-257: Compact Equipment Card Layout & Harmonized Inter-Card Spacing [`TST-UI-216`]
+### REQ-UI-257: Compact Equipment Card Layout & Harmonized Inter-Card Spacing [Verified]
 - **Tests**: `EquipmentTabsScreen.kt`, `EquipmentItem.kt`
 - **Implementation**: Optimize vertical screen real estate, improve information density, and provide elegant visual hierarchy for inactive gear on the Equipment screen.
 - **Rationale**: The system SHALL optimize information density and layout rhythm on the Equipment management screen (`EquipmentTabsScreen.kt` across the "Bikes" and "Shoes" tabs):
@@ -5635,7 +5635,7 @@ Specifically:
 
 **Invariants**: SQLite persistence (`EquipmentDbHelper`), active gear stats blocks (`StatsSummaryBlock`), `REQ-UI-061` Top-Left delete contract, and 9-language localization parity MUST NOT be altered.
 
-### REQ-UI-258: Cockpit Sensor Field Visual Styling Architecture, Expert Settings Selection & Reactive Grid Layout [`TST-UI-217`]
+### REQ-UI-258: Cockpit Sensor Field Visual Styling Architecture, Expert Settings Selection & Reactive Grid Layout [Verified]
 - **Tests**: `SensorFieldStyle.kt`, `SensorFieldView.kt`, `SensorGridScreen.kt`, `TuningPreferencesDataStore.kt`, `AdvancedTuningDialog.kt`
 - **Implementation**: Provide a structured visual styling architecture for rounded corners, elevation, and grid spacing in the workout cockpit, configurable via Expert Settings with live reactive updates and 9-language localization.
 - **Rationale**: The system SHALL provide a structured styling and spacing architecture for cockpit telemetry tiles in `SensorFieldView.kt` and `SensorGridScreen.kt`, integrated into user preferences (`TuningPreferencesDataStore.kt`) and Expert Settings (`AdvancedTuningDialog.kt`):
@@ -5671,7 +5671,7 @@ Specifically:
 
 **Invariants**: Zero breaking changes to production defaults; SQLite database immutability; 100% localization parity.
 
-### REQ-UI-259: Conditional Research Button Visibility Based on Real Paired Remote Devices [Eliminate confusing and non-functional search buttons on fresh installs or sensorless setups by conditionally rendering the ResearchButton only when real paired remote devices exist in SQLite.]
+### REQ-UI-259: Conditional Research Button Visibility Based on Real Paired Remote Devices [Verified]
 - **Tests**: it.protocol == Protocol.BLUETOOTH_LE) }`), with initial value initialized synchronously from `devicesDatabaseManager.hasPairedRemoteDevices()`. The state flow SHALL dynamically re-evaluate and emit when devices are paired, unpaired, added, or deleted.
 3. *UI Conditional Composition (`ControlTrackingScreen.kt` & `TrackingTabsScreen.kt`)*: `ControlTrackingScreen` SHALL accept `showResearchButton: Boolean = true` (default `true` for backward compatibility in isolated preview environments). In `TrackingTabsScreen.kt`, the parameter SHALL be bound to `showResearchButton = hasPairedRemoteDevices`. Inside `ControlTrackingScreen`, the `ResearchButton` container `Box(modifier = Modifier.align(Alignment.TopStart))` SHALL be composed conditionally via `if (showResearchButton)`.
 4. *Layout Stability*: The central information area (`SearchArea` and `RemoteDevices`) SHALL preserve its `Alignment.TopCenter` anchor within the `fillMaxWidth()` container, guaranteeing zero layout shift or misalignment when the research button is hidden.
@@ -5696,7 +5696,7 @@ Specifically:
 1. *Database Precondition Query (`DevicesDatabaseManager.java`)*: `DevicesDatabaseManager` SHALL provide a fast synchronous query `hasPairedRemoteDevices(): boolean` checking `SELECT _id FROM Devices WHERE paired > 0 AND (protocol = 'ANT_PLUS' OR protocol = 'BLUETOOTH_LE') LIMIT 1`.
 2. *Reactive State Pipeline (`ControlTrackingViewModel.kt`)*: `ControlTrackingViewModel` SHALL expose `val hasPairedRemoteDevices: StateFlow<Boolean>` derived by mapping `devicesRepository.allDevices` (`devices.any { it.isPaired && (it.protocol == Protocol.ANT_PLUS
 
-### REQ-UI-260: Centralized Zone Threshold Resolution (DRY) and O(log N) Scrubbing Point Search [`TST-UI-219`]
+### REQ-UI-260: Centralized Zone Threshold Resolution (DRY) and O(log N) Scrubbing Point Search [Verified]
 - **Tests**: `TelemetryZoneMath.kt`, `TelemetryMetricUtils.kt`, `MapDetailLayout.kt`, `ElevationProfile.kt`, `TelemetryMetricGraph.kt`
 - **Implementation**: Eliminate duplicate zone loading boilerplate across Aftermath visual analytics and eliminate UI thread frame stutters during timeline scrubbing by upgrading point lookup to O(log N).
 - **Rationale**: The system SHALL eliminate duplicated zone threshold loading logic across post-workout telemetry visual analytics and optimize the interactive timeline scrubbing point lookup from $O(N)$ linear scanning to $O(\log N)$ binary search (ATT-2031):
@@ -5723,7 +5723,7 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 
 **Invariants**: Telemetry data models, visual graph rendering styles, gesture detection contracts, and unit test pass rates MUST NOT regress.
 
-### REQ-UI-261: Canonical Horizontal Domain Evaluation & Total Span Engine (ProfileDomainMath) [`TST-UI-220`]
+### REQ-UI-261: Canonical Horizontal Domain Evaluation & Total Span Engine (ProfileDomainMath) [Verified]
 - **Tests**: `ProfileDomainMath.kt`, `ElevationProfile.kt`, `TelemetryMetricGraph.kt`, `MapDetailLayout.kt`
 - **Implementation**: Unify X-axis domain evaluation and total span calculations across Aftermath telemetry charts, eliminating zero-timestamp canvas collapse.
 - **Rationale**: The system SHALL unify horizontal domain resolution (Distance vs. Time) and horizontal span calculation across all Aftermath telemetry visual analytics components via a single mathematical utility `ProfileDomainMath` (ATT-2032):
@@ -5751,7 +5751,7 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 
 **Invariants**: Existing `ProfileXAxisDomain` enum definitions, `ElevationProfileZoomMath` coordinate scaling, and 100% unit test pass rate MUST NOT be broken.
 
-### REQ-UI-262: Modular Component Architecture for Advanced Tuning Dialog (AdvancedTuningDialog) [`TST-UI-221`]
+### REQ-UI-262: Modular Component Architecture for Advanced Tuning Dialog (AdvancedTuningDialog) [Verified]
 - **Tests**: `AdvancedTuningDialog.kt`, `CockpitTypographySection.kt`, `AmoledBatterySaverSection.kt`, `SensorsGpsFilterSection.kt`, `AftermathAnalysisSection.kt`, `WorkoutMasksAndCardsSection.kt`, `TuningFormControls.kt`
 - **Implementation**: Decompose monolithic AdvancedTuningDialog.kt into dedicated category files under categories/ and TuningFormControls.kt, enforcing < 400 lines per file.
 - **Rationale**: The system SHALL decompose the monolithic `AdvancedTuningDialog.kt` into focused, dedicated category component files under package `com.atrainingtracker.trainingtracker.ui.settings.tuning.categories` and shared form controls under `com.atrainingtracker.trainingtracker.ui.settings.tuning` (ATT-2033):
@@ -5778,7 +5778,7 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 
 **Invariants**: DataStore schema, public dialog API signatures, Material 3 styling tokens, and 100% test pass rate MUST NOT be broken.
 
-### REQ-UI-263: Equipment Sensor Matrix Table Layout, Column Continuity, and Information Density Optimization [`TST-UI-222`]
+### REQ-UI-263: Equipment Sensor Matrix Table Layout, Column Continuity, and Information Density Optimization [Verified]
 - **Tests**: `EquipmentSensorMatrixScreen.kt`
 - **Implementation**: Optimize visual hierarchy, eliminate redundant labels, provide continuous divider lines, and prevent premature text truncation on long equipment names in the Equipment Sensor Matrix screen.
 - **Rationale**: The system SHALL optimize table layout, column alignment, vertical divider continuity, and information density in `EquipmentSensorMatrixScreen.kt` (ATT-2306):
@@ -5808,7 +5808,7 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 
 **Invariants**: SQLite schemas, reactive synchronization, 9-language localization, and 100% unit test pass rate MUST NOT be broken.
 
-### REQ-UI-264: Workout Cards & Details Tuning Dialog Layout, Typography Wrapping, and Reordering Ergonomics Optimization [Optimize column proportions, eliminate mid-word German text wrapping, and decouple sub-controls from reorderable list rows in Workout Cards & Details settings.]
+### REQ-UI-264: Workout Cards & Details Tuning Dialog Layout, Typography Wrapping, and Reordering Ergonomics Optimization [Verified]
 - **Tests**: workoutDetailPrefs.showLaps`), the `SingleChoiceSegmentedButtonRow` for `LapDisplayMode` SHALL render as a dedicated, visually structured subsection card below the matrix table rather than inside the reorderable item row.
 6. *File Size Constraint*: `WorkoutMasksAndCardsSection.kt` SHALL remain strictly under 400 lines of code (`REQ-UI-262`).
 7. *Preservation of Functional Invariants*: Preference bindings, reordering logic, DataStore persistence, and 9-language localization parity MUST NOT be broken.
@@ -5835,7 +5835,7 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 4. *Column Header Vertical Alignment*: The header row SHALL utilize a leading `Spacer(width = 32.dp)` and header label containers of width `50.dp` for `tuning_matrix_col_list` and `tuning_matrix_col_details`, centered directly over the checkboxes.
 5. *Decoupled Lap Display Mode Sub-Control*: When Laps are enabled in either list or details (`workoutCardPrefs.showLaps
 
-### REQ-UI-265: Workout List Filtering by Origin Source Attribute (Tracked, TCX, GPX, FIT) [`TST-UI-224`]
+### REQ-UI-265: Workout List Filtering by Origin Source Attribute (Tracked, TCX, GPX, FIT) [Verified]
 - **Tests**: `WorkoutFilterCriteria.kt`, `WorkoutFilterBottomSheet.kt`, `ActiveFilterChipsRow.kt`, `WorkoutTabsScreen.kt`, `WorkoutSummariesViewModel.kt`, `strings.xml` (all 9 locales)
 - **Implementation**: Enable athletes to filter workouts in the journal by origin source attribute (Tracked, TCX, GPX, FIT) with bottom sheet chips, active chip strip, and reactive ViewModel integration.
 - **Rationale**: The system SHALL provide origin source filtering for workout sessions across the domain model, modal filter bottom sheet, active filter strip, and reactive ViewModel pipeline (ATT-2303):
@@ -5862,7 +5862,7 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 
 **Invariants**: Sorting orders, sport tab partitioning, DataStore schema backward compatibility, and 100% unit test pass rate MUST NOT be broken.
 
-### REQ-UI-266: Aftermath/Details: Immediate Collapsing Header Quick Return Expansion upon Downward Scrolling [`TST-UI-225`]
+### REQ-UI-266: Aftermath/Details: Immediate Collapsing Header Quick Return Expansion upon Downward Scrolling [Verified]
 - **Tests**: `CollapsingAppBarNestedScrollConnection.kt`, `MapDetailLayout.kt`
 - **Implementation**: Restore immediate Quick Return downward collapsing header expansion in MapDetailLayout and CollapsingAppBarNestedScrollConnection while maintaining sub-pixel float precision and fluid child scrolling.
 - **Rationale**: The system SHALL restore immediate Quick Return downward header expansion in `CollapsingAppBarNestedScrollConnection.kt` and `MapDetailLayout.kt` (ATT-2304):
@@ -5891,12 +5891,12 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 
 **Invariants**: Custom callers preserved; minimum map height (120dp) guaranteed; 100% clean-room test suite pass rate.
 
-### REQ-UI-267: Routes & Segments: Position Elevation Profile Below Map with Interactive Zooming, Panning, and Resizable Split-Pane Viewport in MapDetailLayout []
+### REQ-UI-267: Routes & Segments: Position Elevation Profile Below Map with Interactive Zooming, Panning, and Resizable Split-Pane Viewport in MapDetailLayout [Verified]
 - **Tests**: hasTelemetryGraphs) && !activeScrubPath.isNullOrEmpty()
 - **Rationale**: The system SHALL position the elevation profile strictly below the map in Route and Segment detail views (`RouteOnMapScreen` and `SegmentOnMapScreen`), activate a two-pane resizable split layout with an interactive draggable splitter, and enable interactive zooming and panning via `GlobalTelemetryZoomToolbar` (ATT-2311):
 1. *Lower Section Presence Formulation (`MapDetailLayout.kt`)*: The system SHALL define `val hasLowerSection = (showElevationProfile
 
-### REQ-UI-268: Truthful Live Sensor Connection Status and Canonical Priority Sorting in `SensorSourceDialog` [`TST-UI-227`]
+### REQ-UI-268: Truthful Live Sensor Connection Status and Canonical Priority Sorting in `SensorSourceDialog` [Verified]
 - **Tests**: `DeviceStatusRow.kt`, `SensorSourceDialog.kt`
 - **Implementation**: Parameterize DeviceStatusRow to allow live connection state override, propagate isConnected in SensorSourceDialog to display (verfügbar) instead of (nicht verbunden) for active sensors, and sort active backups and disconnected devices by MySensorManager canonical priority.
 - **Rationale**: The system SHALL truthfully reflect active sensor connection status in the tracking cockpit's `SensorSourceDialog` by parameterizing `DeviceStatusRow` and propagating live telemetry connection state from `DeviceIdentityBlock`, and SHALL deterministically sort active backup sensors and disconnected devices according to `MySensorManager` canonical priority hierarchy (ATT-2194, ATT-4375):
@@ -5931,7 +5931,7 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 
 **Invariants**: Layout alignment, battery percentage, backward compatibility with device list call sites, and 100% test pass rate MUST NOT be broken.
 
-### REQ-UI-269: Preserved Bullet Point Line Breaks in ClusterInfoDialog and 9-Language Localization Parity [`TST-UI-228`]
+### REQ-UI-269: Preserved Bullet Point Line Breaks in ClusterInfoDialog and 9-Language Localization Parity [Verified]
 - **Tests**: `strings.xml` (all 9 locales), `ClusterInfoDialog.kt`
 - **Implementation**: Replace &#10; with literal \n escapes in cluster_info_fingerprint_desc across all 9 locales to preserve line breaks in ClusterInfoDialog.
 - **Rationale**: The system SHALL ensure that the 4 spatial criteria in the workout clustering educational bottom sheet (`ClusterInfoDialog.kt`) render on distinct lines separated by clean line breaks across all 9 application locales (ATT-2195):
@@ -5949,7 +5949,7 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete opening the workout clustering information dialog (`ClusterInfoDialog`),\u003cbr\u003e• *When* viewing the \"Topologischer 3D-Fingerabdruck\" (or \"3D Topological Fingerprint\") section,\u003cbr\u003e• *Then* the introductory sentence SHALL be followed by a line break, and each of the 4 bullet points (Start & Finish, Apex, Total Distance, Min & Max Altitude) SHALL begin on its own separate line.\u003cbr\u003e• *Given* any of the 9 supported application locales (EN, DE, ES, FR, IT, JA, NL, PL, PT),\u003cbr\u003e• *When* `cluster_info_fingerprint_desc` is compiled and rendered,\u003cbr\u003e• *Then* the string SHALL contain zero `&#10;` entities and at least 4 `\n` line breaks separating each bullet criterion.\u003cbr\u003e• *Given* `ClusterInfoDialog.kt`,\u003cbr\u003e• *When* rendered,\u003cbr\u003e• *Then* it SHALL preserve `AppModalBottomSheet` layout, info icon, and `AppDialogActions.Confirm` button.\u003cbr\u003e\u003cbr\u003e**Invariants**: Algorithm parameters, tolerance values, translation content, and 100% clean-room test suite pass rate MUST NOT be broken.
 
-### REQ-UI-270: Clamped Maximum LiveSegment Bottom Sheet Expansion to Elevation Profile Content Height []
+### REQ-UI-270: Clamped Maximum LiveSegment Bottom Sheet Expansion to Elevation Profile Content Height [Verified]
 - **Tests**: hasScrollableContent`. When `!showMap && !hasScrollableContent`, `nestedScroll` SHALL NOT be attached, ensuring touch gestures pass cleanly to the parent bottom sheet scaffold without app bar drag interception.
 3. *Modifier Parameterization (`LiveSegmentSheet.kt`)*: `LiveSegmentSheet` composable SHALL accept an optional `modifier: Modifier = Modifier`, forwarding `modifier.fillMaxWidth().wrapContentHeight()` to `MapDetailLayout`.
 4. *Cockpit Visibility & Clamped Bottom Sheet Expansion (`SensorGridScreen.kt`)*: In `SensorGridScreen.kt`, when `LiveSegmentSheet` is rendered inside `BottomSheetScaffold`, the bottom sheet's measured height SHALL equal the natural content height of the segment header, live stats, and elevation profile canvas (~280–320dp). At `SheetValue.Expanded`, the bottom sheet offset SHALL equal `scaffoldHeight - sheetHeight`. The bottom sheet SHALL NOT expand to the top of the viewport (`offset = 0`), preserving complete visibility and touch interaction for primary cockpit telemetry (heart rate, cadence, power, speed). Dragging between `SheetValue.PartiallyExpanded` (`PeekHeightLiveSegment + navBarHeight`) and `SheetValue.Expanded` (elevation profile revealed) SHALL remain fully supported.
@@ -5962,7 +5962,7 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 1. *Adaptive Viewport Height Constraints (`MapDetailLayout.kt`)*: In `MapDetailLayout.kt`, when `showMap == false` and `hasScrollableContent == false` (ambient bottom sheet mode for `LiveSegmentSheet`), the resizable viewport container `Box` SHALL apply `Modifier.fillMaxWidth().wrapContentHeight()` instead of `Modifier.fillMaxSize()`. When `showMap == true` or `hasScrollableContent == true` (full-screen detail inspection views), the resizable viewport container `Box` SHALL continue to apply `Modifier.fillMaxSize()`.
 2. *Conditional NestedScroll Attachment (`MapDetailLayout.kt`)*: The root `BoxWithConstraints` SHALL attach `Modifier.nestedScroll(connection)` if and only if `showMap
 
-### REQ-UI-271: Settings/Tuning: Simplified Preposition-Free Column Headers (List & Details) in Workout Cards & Details Matrix [`TST-UI-231`]
+### REQ-UI-271: Settings/Tuning: Simplified Preposition-Free Column Headers (List & Details) in Workout Cards & Details Matrix [Verified]
 - **Tests**: `WorkoutMasksAndCardsSection.kt`, `strings.xml` (all 9 locales)
 - **Implementation**: Simplify matrix column headers to concise nouns across all 9 locales and apply defensive single-line typography in WorkoutMasksAndCardsSection.
 - **Rationale**: The system SHALL eliminate redundant prepositional phrasing from the column headers of the 2-column feature matrix table in the Workout Cards & Details section (`WorkoutMasksAndCardsSection.kt`) of Advanced Settings across all 9 supported application locales (ATT-2383):
@@ -5988,7 +5988,7 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 
 **Invariants**: DataStore persistence keys, 48dp minimum touch targets, 9-language localization parity, and parent ticket Human Decision Gate MUST NOT be compromised.
 
-### REQ-UI-272: Elevation Profile Adaptive X-Axis Tick Spacing and Dynamic Label Collision Prevention [`TST-UI-232`]
+### REQ-UI-272: Elevation Profile Adaptive X-Axis Tick Spacing and Dynamic Label Collision Prevention [Verified]
 - **Tests**: `ElevationProfile.kt`, `ElevationProfileZoomMath.kt`
 - **Implementation**: Eliminate overlapping distance and time tick labels on elevation profile X-axis via adaptive step intervals and dynamic clearance collision prevention.
 - **Rationale**: The system SHALL eliminate overlapping distance and time tick labels on the X-axis of the elevation profile (`ElevationProfile.kt`) across all card previews (`RouteItem`, `SegmentItem`, `WorkoutSummary`) and detailed inspection views (`MapDetailLayout`, `TrackOnMapScreen`, `SensorGridScreen`) (ATT-2385):
@@ -6015,7 +6015,7 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 
 **Invariants**: Grade color mapping, vertical profile height, multi-touch pinch zoom, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-273: Routes & Segments: Dynamically Maximized Map with Bottom-Anchored Intrinsic Elevation Profile in MapDetailLayout [`TST-UI-233`]
+### REQ-UI-273: Routes & Segments: Dynamically Maximized Map with Bottom-Anchored Intrinsic Elevation Profile in MapDetailLayout [Verified]
 - **Tests**: `MapDetailLayout.kt`, `RouteOnMapScreen.kt`, `SegmentOnMapScreen.kt`
 - **Implementation**: Decouple non-scrollable route and segment viewports from proportional 50/50 split-pane, maximizing upper map dynamically and anchoring intrinsic elevation profile flush to Navigation Bar.
 - **Rationale**: The system SHALL decouple non-scrollable single-profile viewports (`hasScrollableContent == false`) from the proportional 50/50 split-pane in `MapDetailLayout.kt` (ATT-2386):
@@ -6046,7 +6046,7 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 
 **Invariants**: Standalone full-screen maps, LiveSegment sheet compact height, TrackOnMapScreen split-pane, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-274: Route Climbs Visual Prominence Across Elevation Profile, Map Polyline, Route Cards & Dedicated Breakdown [`TST-UI-234`, `TST-UI-322`]
+### REQ-UI-274: Route Climbs Visual Prominence Across Elevation Profile, Map Polyline, Route Cards & Dedicated Breakdown [Verified]
 - **Tests**: `RoutesDatabaseManager.kt`, `MapModels.kt`, `RoutesRepository.kt`, `ElevationProfile.kt`, `RouteSummaryHeader.kt`, `RouteOnMapScreen.kt`, `strings.xml` (all 9 locales)
 - **Implementation**: Surface and accentuate climbs on routes across data models, route summary cards, elevation profile canvas, route map start markers, and dedicated climb breakdown with dynamic vertical clearance preventing badge clipping.
 - **Rationale**: The system SHALL surface and accentuate recognized climbs on routes across data models, route summary cards, the elevation profile canvas, the route map, and dedicated route details breakdown (ATT-2388, ATT-3453):
@@ -6083,7 +6083,7 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 
 **Invariants**: Climb detection mathematics (500m min distance, 3% min grade, 20m min gain), live tracking Cockpit sheet, elevation profile zoom math, layout contract tests, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-275: Unified WYSIWYG Tracking Tab Configuration with Spatial Overlays and Per-Tab Popup Toggles [`TST-UI-235`]
+### REQ-UI-275: Unified WYSIWYG Tracking Tab Configuration with Spatial Overlays and Per-Tab Popup Toggles [Verified]
 - **Tests**: `TrackingViewsDatabaseManager.java`, `TrackingViewsRepository.kt`, `TrackingViewModel.kt`, `SensorGridScreen.kt`, `TrackingTabConfigHeader.kt`, `strings.xml` (all 9 locales)
 - **Implementation**: Transform Configuration Mode into a spatial WYSIWYG cockpit editor with per-tab toggles for Navigation Prompts, Map, Elevation Profile, Live Segments, Live Climbs, and Lap Button.
 - **Rationale**: The system SHALL transform Configuration Mode (`ScreenMode.CONFIGURATION`) in `SensorGridScreen.kt` into a spatial WYSIWYG cockpit configuration interface and provide per-tab gating for Turn-by-Turn Navigation Prompts and Live Climbs (ATT-2360):
@@ -6117,7 +6117,7 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 
 **Invariants**: Existing database integrity, sensor grid editing ergonomics, and 100% test pass rate MUST NOT be broken.
 
-### REQ-UI-276: Cockpit Tile Distinct Presets, Granular Corner Radius, Border Thickness, and Theme-Aware Border Contrast [`TST-UI-236`]
+### REQ-UI-276: Cockpit Tile Distinct Presets, Granular Corner Radius, Border Thickness, and Theme-Aware Border Contrast [Verified]
 - **Tests**: `SensorFieldStyle.kt`, `SensorFieldView.kt`, `SensorGridScreen.kt`, `CockpitTypographySection.kt`, `TuningPreferencesDataStore.kt`
 - **Implementation**: Provide distinct cockpit tile presets and athlete-adjustable sliders for corner radius, border thickness, and theme-aware contrast in settings and live cockpit.
 - **Rationale**: The system SHALL provide distinctly differentiated cockpit tile styling presets and granular, athlete-adjustable sliders for corner radius, border thickness, and theme-aware border contrast in `CockpitTypographySection.kt` and `SensorGridScreen.kt` (ATT-2456):
@@ -6161,7 +6161,7 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 • *When* triggered,
 • *Then* all tile styling parameters revert atomically to `CLASSIC_SEAMLESS` defaults.
 
-### REQ-UI-277: Settings Live Preview Cockpit Tile Styling & Comprehensive Section Naming [`TST-UI-237`]
+### REQ-UI-277: Settings Live Preview Cockpit Tile Styling & Comprehensive Section Naming [Verified]
 - **Tests**: `CockpitTypographySection.kt`, `strings.xml` (all 9 locales)
 - **Implementation**: Render individual cockpit tile borders, corner radius, elevation, and spacing inside the settings live preview card and rename the category header to reflect both typography and tiles across 9 locales.
 - **Rationale**: The system SHALL render individual cockpit tile borders, corner radius, elevation, and spacing inside the settings live preview card in `CockpitTypographySection.kt`, and SHALL rename the settings category header to reflect both typography and tile styling across all 9 supported locales (ATT-2457):
@@ -6197,7 +6197,7 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 
 **Invariants**: Key `tuning_cat_cockpit_typography` preserved; typography preview preserved; file modularity (< 400 lines) maintained.
 
-### REQ-UI-278: Pairing Triggers Relocation to Sensor Management & Control Tracking Layout Optimization [`TST-UI-238`]
+### REQ-UI-278: Pairing Triggers Relocation to Sensor Management & Control Tracking Layout Optimization [Verified]
 - **Tests**: `ControlTrackingScreen.kt`, `DevicesTabbedScreen.kt`, `PairingButtons.kt`, `strings.xml` (all 9 locales)
 - **Implementation**: Relocate pairing triggers from tracking control screen to sensor management screen ("Meine Sensoren") and optimize layout geometry of ControlTrackingScreen.
 - **Rationale**: The system SHALL relocate sensor pairing triggers from the tracking control screen to the sensor management screen ("Meine Sensoren") and optimize the layout geometry of `ControlTrackingScreen.kt` (ATT-2189):
@@ -6244,7 +6244,7 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 
 **Invariants**: Location gating (`REQ-PRI-004`), M3 bottom sheets (`REQ-UI-149`), and 100% test pass rate MUST NOT be broken.
 
-### REQ-UI-279: Branded Route Selection Entry Point on Control Tracking Screen & Cockpit Sensor Grid Decoupling [`TST-UI-239`]
+### REQ-UI-279: Branded Route Selection Entry Point on Control Tracking Screen & Cockpit Sensor Grid Decoupling [Verified]
 - **Tests**: `ControlTrackingScreen.kt`, `RouteSelectionButton.kt`, `SensorGridScreen.kt`, `TrackingTabsScreen.kt`
 - **Implementation**: Relocate route selection button from cockpit sensor grid tabs to exclusively Control Tracking screen with app-consistent branding and route-semantic green domain accents.
 - **Rationale**: The system SHALL relocate the Quick Route Selector entry point from the Cockpit Sensor Grid tabs to exclusively the Control Tracking screen and provide an app-consistent branded presentation with route-semantic green domain accents (ATT-2458):
@@ -6291,7 +6291,7 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 
 **Invariants**: In-ride auto-detection banner in `SensorGridScreen`, route repository state, and 100% test pass rate MUST NOT be broken.
 
-### REQ-UI-280: Streamlined Route Selector: Removal of Sort Tabs and Pinned Heimweg Card in Favor of Proximity-Recency Ranking [`TST-UI-240`]
+### REQ-UI-280: Streamlined Route Selector: Removal of Sort Tabs and Pinned Heimweg Card in Favor of Proximity-Recency Ranking [Verified]
 - **Tests**: `RouteSelectorSheet.kt`, `RouteSelectorViewModel.kt`, `TrackingTabsScreen.kt`
 - **Implementation**: Streamline RouteSelectorSheet and RouteSelectorViewModel by removing filter tabs and pinned Heimweg card in favor of clean proximity-recency ranking.
 - **Rationale**: The system SHALL streamline `RouteSelectorSheet.kt` and `RouteSelectorViewModel.kt` into a clean, focused, proximity-recency route list without filter tabs and without the pinned Heimweg card (ATT-2459):
@@ -6336,7 +6336,7 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 
 **Invariants**: In-ride auto-detection banner in `SensorGridScreen`, route repository state, and 100% test pass rate MUST NOT be broken.
 
-### REQ-UI-281: Configurable Route Selector Proximity Radius and Recency Sorting [`TST-UI-241`]
+### REQ-UI-281: Configurable Route Selector Proximity Radius and Recency Sorting [Verified]
 - **Tests**: `AdvancedTuningAccordion.kt`, `AdvancedTuningDialog.kt`, `NavigationSection.kt`, `TuningPreferencesDataStore.kt`, `RouteProximityRanker.kt`, `RouteSelectorViewModel.kt`, `RouteSelectionButton.kt`, `TrackingTabsScreen.kt`
 - **Implementation**: Limit route selector to routes within configurable radius (default 1 km) in Advanced Settings, sorted by last ridden, with dimmed button feedback when no routes qualify.
 - **Rationale**: The system SHALL limit the pre-ride route selector strictly to candidate routes within a configurable radius from the athlete's current location, sort qualifying routes by recency ("Zuletzt gefahren"), introduce a dedicated "Navigation" category in Advanced Settings, and dim the route selection button when no routes qualify (ATT-2460):
@@ -6382,7 +6382,7 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 
 **Invariants**: In-ride route detection, active route cancellation, and 100% test pass rate MUST NOT be broken.
 
-### REQ-UI-282: Mid-Ride Route Selector Return Navigation Entry Point & App-Consistent Take Me Home UI Styling [Conditionally present a dedicated Take Me Home card in the route selector when opened mid-ride, harmonize ReturnNavigationHud with Rule 23 design tokens, eliminate raw emojis, and enforce 9-language parity.]
+### REQ-UI-282: Mid-Ride Route Selector Return Navigation Entry Point & App-Consistent Take Me Home UI Styling [Verified]
 - **Tests**: trackingMode == TrackingMode.PAUSED`.
 • `TrackingTabsScreen.kt` SHALL supply `isMidRide = isMidRide` and `onTakeMeHome = { returnNavRepo.startTakeMeHome(); showRouteSelectorSheet = false }` to `RouteSelectorModalBottomSheet`.
 4. *100% 9-Language Localization Parity*:
@@ -6428,7 +6428,7 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 3. *Cockpit Integration Site (`TrackingTabsScreen.kt`)*:
 • `TrackingTabsScreen.kt` SHALL evaluate mid-ride tracking state: `isMidRide = trackingMode == TrackingMode.TRACKING
 
-### REQ-UI-283: Equipment Sensor Matrix and Configuration Dialog: Sport-Specific Sensor Precedence Ordering [`TST-UI-243`]
+### REQ-UI-283: Equipment Sensor Matrix and Configuration Dialog: Sport-Specific Sensor Precedence Ordering [Verified]
 - **Tests**: `EquipmentSensorOrdering.kt`, `EquipmentSensorMatrixScreen.kt`, `EditEquipmentDialog.kt`, `EquipmentViewModel.kt`, `DevicesDatabaseManager.java`
 - **Implementation**: Order equipment sensor matrix columns and configuration dialog sensor lists with sport-specific sensors first, followed by shared/generic sensors, with standardized case-insensitive alphabetical tie-breaking.
 - **Rationale**: The system SHALL order sensor columns in the Equipment Sensor Matrix (`EquipmentSensorMatrixScreen.kt`) and sensor selection items in the Equipment Configuration Dialog (`EditEquipmentDialog.kt`) by sport-specific telemetry domain priority first, followed by shared/generic sensors, with standardized case-insensitive alphabetical tie-breaking (ATT-2464):
@@ -6476,7 +6476,7 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 
 **Invariants**: 1-tap checkbox persistence, bidirectional synchronization (`REQ-UI-257`), independent horizontal scroll states, and 100% test pass rate MUST NOT be broken.
 
-### REQ-UI-284: Sensors View Sport-Specific Equipment Matrix Tabs, Visual Link Indicators & Equipment Tabs Consolidation [`TST-UI-244`]
+### REQ-UI-284: Sensors View Sport-Specific Equipment Matrix Tabs, Visual Link Indicators & Equipment Tabs Consolidation [Verified]
 - **Tests**: `DevicesTabbedScreen.kt`, `EquipmentTabsScreen.kt`, `EquipmentSensorMatrixScreen.kt`, `strings_devices.xml` (all 9 locales)
 - **Implementation**: Relocate equipment sensor matrices into Sensors view as two dedicated tabs at the very right with visual link indicators, host isolated sport-specific matrix tables for Bikes and Shoes, streamline EquipmentTabsScreen to 2 tabs, and enforce 9-language localization parity.
 - **Rationale**: The system SHALL relocate equipment-to-sensor mapping matrices into the Sensors view (`DevicesTabbedScreen.kt`) as two dedicated tabs at the very right, host isolated sport-specific matrix tables for Bikes and Shoes, display visual link indicators on matrix tabs, support horizontal scrolling without tab label clipping, streamline `EquipmentTabsScreen.kt` to two tabs, and enforce 100% 9-language localization parity (ATT-2465, ATT-3314):
@@ -6530,7 +6530,7 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 
 **Invariants**: 1-tap checkbox persistence, bidirectional synchronization, independent horizontal scroll states, 48.dp tab row ergonomics, and 100% test pass rate MUST NOT be broken.
 
-### REQ-UI-285: Harmonized 9-Section Architecture and Default Visibility Matrix for Workout Summaries and Details [`TST-UI-245`]
+### REQ-UI-285: Harmonized 9-Section Architecture and Default Visibility Matrix for Workout Summaries and Details [Verified]
 - **Tests**: `WorkoutSectionType.kt`, `MyPreferenceManager.kt`, `WorkoutMasksAndCardsSection.kt`, `WorkoutSummary.kt`, `TrackOnMapScreen.kt`
 - **Implementation**: Integrate EXPORT_STATUS into WorkoutSectionType, define 9-section DEFAULT_ORDER, and unify clean-installation default visibility matrices across workout list cards and detail views.
 - **Rationale**: The system SHALL integrate `EXPORT_STATUS` into `WorkoutSectionType`, define an ergonomically optimized default sequence (`DEFAULT_ORDER`), and unify clean-installation default visibility matrices across workout list cards and detail views (ATT-2384):
@@ -6579,7 +6579,7 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 
 **Invariants**: Self-healing deserialization, drag/reorder controls in tuning dialog, 0dp empty state handling, and 100% test pass rate MUST NOT be broken.
 
-### REQ-UI-286: ResearchButton Jetpack Compose Vector Resilience & Universal Resource Fallback [`TST-UI-246`]
+### REQ-UI-286: ResearchButton Jetpack Compose Vector Resilience & Universal Resource Fallback [Verified]
 - **Tests**: `ResearchButton.kt`, `res/drawable/research_icon.xml`, `strings.xml`
 - **Implementation**: Eliminate fatal Resources$NotFoundException crashes when composing ResearchButton by migrating to Icons.Default.Refresh in Compose and adding res/drawable/research_icon.xml vector fallback.
 - **Rationale**: The system SHALL guarantee runtime immunity against `Resources$NotFoundException` when rendering `ResearchButton` and ensure universal fallback resolution for research icon assets across all device configurations and screen densities (ATT-2619):
@@ -6618,7 +6618,7 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 
 **Invariants**: Tracking control layout, sensor pairing triggers, and 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-287: Navigation Cue Auto-Dismiss Duration, Countdown Distance & Expert Settings Configuration (Solid Opaque Overlays) [`TST-UI-247`]
+### REQ-UI-287: Navigation Cue Auto-Dismiss Duration, Countdown Distance & Expert Settings Configuration (Solid Opaque Overlays) [Verified]
 - **Tests**: `TuningPreferencesDataStore.kt`, `NavigationSection.kt`, `AdvancedTuningDialog.kt`, `AdvancedTuningAccordion.kt`, `TurnPromptBanner.kt`, `SensorGridScreen.kt`, `ForkDecisionCard.kt`, `ReturnNavigationHud.kt`
 - **Implementation**: Render all in-ride navigation cue banners, return navigation HUDs, and fork decision cards with permanently solid 100% opaque container surfaces, remove transparency slider from Advanced Settings, and maintain configurable dismiss duration integer slider (1s to 10s, default 4s) and countdown distance.
 - **Rationale**: The system SHALL render all in-ride navigation cue banners, return navigation HUDs, and fork decision cards with permanently solid (100% opaque) container surfaces, remove the navigation cue transparency slider from Advanced Settings, and maintain configurable auto-dismiss duration and turn cue countdown distance in Expert Settings (ATT-2632, ATT-3321, ATT-3322, ATT-3325, ATT-3450, amending `REQ-UI-287`, `REQ-UI-321`, `REQ-UI-324`, and `docs/design_guidelines.md` § 1.4 & § 5.7):
@@ -6669,7 +6669,7 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 
 **Invariants**: Turn cue detection math, offline operation, DataStore single-source-of-truth, and 100% full-suite test pass rate MUST NOT be broken.
 
-### REQ-UI-288: Equipment Sensor Matrix Bike and Shoe Icon Tint Unification [`TST-UI-248`]
+### REQ-UI-288: Equipment Sensor Matrix Bike and Shoe Icon Tint Unification [Verified]
 - **Tests**: `EquipmentSensorMatrixScreen.kt`
 - **Implementation**: Unify active equipment icon tinting across all equipment categories in the equipment sensor matrix to MaterialTheme.colorScheme.primary while preserving MaterialTheme.colorScheme.outline for retired equipment.
 - **Rationale**: The system SHALL unify active equipment icon tinting across all equipment categories in the equipment sensor matrix to MaterialTheme.colorScheme.primary while preserving MaterialTheme.colorScheme.outline for retired equipment (ATT-2630):
@@ -6705,7 +6705,7 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 
 **Invariants**: Vector drawables, retired outline styling, 1-tap checkbox persistence (`REQ-UI-257`), and 100% full-suite test pass rate MUST NOT be broken.
 
-### REQ-UI-290: Sensor Pairing Device Type Selection: Omission of 'Alle' Action and Targeted Hardware Profile Discovery [`TST-UI-250`]
+### REQ-UI-290: Sensor Pairing Device Type Selection: Omission of 'Alle' Action and Targeted Hardware Profile Discovery [Verified]
 - **Tests**: `DeviceTypeSelectionDialog.kt`, `DevicesTabbedScreen.kt`, `ControlTrackingScreen.kt`
 - **Implementation**: Omit the 'Alle' button from the device type selection bottom sheet in sensor pairing flows, enforcing targeted wireless discovery for specific hardware sensor profiles.
 - **Rationale**: The system SHALL omit the "Alle" ("All") button from the device type selection bottom sheet (`DeviceTypeSelectionDialog`) during sensor pairing flows, enforcing targeted wireless discovery for specific hardware sensor profiles (ATT-2625):
@@ -6739,7 +6739,7 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 
 **Invariants**: Supported device profiles, dialog dismissal, protocol routing, and 100% full-suite unit test pass rate MUST NOT be broken.
 
-### REQ-UI-291: Sensors View Device Inventory Preservation During Active Pairing Scanning [`TST-UI-251`]
+### REQ-UI-291: Sensors View Device Inventory Preservation During Active Pairing Scanning [Verified]
 - **Tests**: `DevicesTabbedScreen.kt`, `DevicesTabbedViewModel.kt`, `DeviceListScreen.kt`
 - **Implementation**: Preserve complete multi-sensor inventory across all Sensors screen tabs during pairing discovery, decoupling hardware scanning target from UI tab filters.
 - **Rationale**: The system SHALL preserve the complete multi-sensor inventory across all Sensors screen tabs ("Verbunden", "Gekoppelt", "Bekannt", "Fahrräder", "Schuhe") during sensor pairing discovery, decouple the hardware wireless discovery target from the UI tab filter specifications, and communicate the active scanning target in the Available tab header (ATT-2626):
@@ -6784,7 +6784,7 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 
 **Invariants**: Targeted background scanning, device discovery broadcast processing, and 100% full-suite unit test pass rate MUST NOT be broken.
 
-### REQ-UI-293: Format-Specific Import Tab Architecture with Uniform Multi-Document Source Triad (FIT, TCX, GPX) [`TST-UI-253`]
+### REQ-UI-293: Format-Specific Import Tab Architecture with Uniform Multi-Document Source Triad (FIT, TCX, GPX) [Verified]
 - **Tests**: `ImportBackupTabsScreen.kt`, `strings.xml` (all 9 locales)
 - **Implementation**: Structure Import tab into format-specific blocks (FIT, TCX, GPX) each offering multi-document Local, Dropbox, and Google Drive options with format-scoped execution.
 - **Rationale**: The system SHALL structure the Import tab in `ImportBackupTabsScreen.kt` into three dedicated, format-specific cards (FIT, TCX, GPX) providing complete source parity via a uniform action triad with multi-document selection (ATT-2623, ATT-3315):
@@ -6838,7 +6838,7 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 
 **Invariants**: Pre-import cluster parameter tuning, cloud authentication checks, interactive post-import navigation, and multi-document picking MUST NOT be altered or regressed.
 
-### REQ-UI-294: Workout File Picker MIME Filtering, Selectability, and Defensive Format-Extension Validation (FIT, TCX, GPX) [`TST-UI-254`]
+### REQ-UI-294: Workout File Picker MIME Filtering, Selectability, and Defensive Format-Extension Validation (FIT, TCX, GPX) [Verified]
 - **Tests**: `ImportBackupTabsScreen.kt`, `strings.xml` (all 9 locales)
 - **Implementation**: Configure format-specific MIME type filtering for SAF document pickers and enforce defensive extension validation on selected workout files.
 - **Rationale**: The system SHALL configure Storage Access Framework (SAF) document picker MIME arrays to guarantee file selectability and enforce defensive extension validation on selected files in `ImportBackupTabsScreen.kt` (ATT-2622, ATT-2740):
@@ -6876,7 +6876,7 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 
 **Invariants**: File parsing engines, duplicate detection, multi-document selection for FIT, and backward compatibility MUST NOT be broken.
 
-### REQ-UI-295: Unified Scrollable Container Architecture, Full-Width Spatial Toggles Layout, and Viewport Slotting for Tracking Tab Configuration Mode (`ScreenMode.CONFIGURATION`) [`TST-UI-255`]
+### REQ-UI-295: Unified Scrollable Container Architecture, Full-Width Spatial Toggles Layout, and Viewport Slotting for Tracking Tab Configuration Mode (`ScreenMode.CONFIGURATION`) [Verified]
 - **Tests**: `SensorGridScreen.kt`, `TrackingTabsScreen.kt`
 - **Implementation**: Unified scrollable container architecture for ScreenMode.CONFIGURATION, full-width toggle cards without text truncation, and floating LapButton suppression.
 - **Rationale**: The system SHALL isolate and configure `ScreenMode.CONFIGURATION` in `SensorGridScreen.kt` using a single unified vertically scrollable container that seamlessly slots all spatial configuration controls without viewport clipping, text truncation, or live tracking overlay collision (ATT-2620, ATT-2744):
@@ -6920,7 +6920,7 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 
 **Invariants**: TRACKING and PREVIEW mode stability, SQLite persistence, and 100% unit test pass rate MUST NOT be broken.
 
-### REQ-UI-296: Modernized Contextual ANT+ System Service Guidance & Cold-Start Dialog Elimination [`TST-UI-256`]
+### REQ-UI-296: Modernized Contextual ANT+ System Service Guidance & Cold-Start Dialog Elimination [Verified]
 - **Tests**: `MainActivityWithNavigation.kt`, `DevicesTabbedScreen.kt`, `PairingProtocolBottomSheet.kt`, `AntServicesStatusSheet.kt`, `strings.xml`
 - **Implementation**: Modernized contextual ANT+ service guidance in Compose and elimination of cold-start installation dialog.
 - **Rationale**: The system SHALL eliminate automatic ANT+ service checks and dialog popups on application cold start, moving all ANT+ hardware readiness guidance and service installation triggers into contextual Material 3 Compose cards and bottom sheets (`AntServicesStatusSheet.kt`, `AntServicesStatusCard.kt`) (ATT-2513):
@@ -6971,7 +6971,7 @@ e. Dismiss / Done button.
 
 **Invariants**: BANALService ANT+ pipelines, Google Play policy compliance, zero startup popups, and 100% test pass rate MUST NOT be broken.
 
-### REQ-UI-297: Distance-Weighted Elevation Profile Gaussian Smoothing & Continuous Slope Grade Evaluation [`TST-UI-257`]
+### REQ-UI-297: Distance-Weighted Elevation Profile Gaussian Smoothing & Continuous Slope Grade Evaluation [Verified]
 - **Tests**: `ElevationSmoothingMath.kt`, `ElevationProfile.kt`, `TuningPreferencesDataStore.kt`, `AftermathAnalysisSection.kt`
 - **Implementation**: Distance-weighted Gaussian kernel elevation smoothing with default sigma 21m, dynamic cutoff, and configurable expert setting.
 - **Rationale**: The system SHALL smooth elevation profile coordinate streams and evaluate terrain slope gradient using a physically-grounded, distance-weighted Gaussian kernel filter with exact boundary renormalization, eliminating discrete sensor quantization staircase artifacts (ATT-2512, ATT-2746):
@@ -7020,7 +7020,7 @@ e. Dismiss / Done button.
 
 **Invariants**: SQLite schemas, raw stream data, total ascent metrics, and 100% unit test pass rate MUST NOT be broken.
 
-### REQ-UI-298: Route Map Climb Span Polyline Highlighting by Climb Category Classification [`TST-UI-258`]
+### REQ-UI-298: Route Map Climb Span Polyline Highlighting by Climb Category Classification [Verified]
 - **Tests**: `MapContentScope.kt`, `RouteOnMapScreen.kt`
 - **Implementation**: Route map climb span polyline highlighting color-coded by climb category classification.
 - **Rationale**: The system SHALL highlight the spatial polyline path of recognized cycling climbs on the route map (`RouteOnMapScreen.kt`) using their respective climb category color classification (`REQ-UI-274`, `REQ-MAP-027`, ATT-2509):
@@ -7056,7 +7056,7 @@ e. Dismiss / Done button.
 
 **Invariants**: Route clickability, gesture handling, marker zIndex, and 100% test pass rate MUST NOT be broken.
 
-### REQ-UI-299: Preservation of Slope Gradient Coloring on Elevation Profile Curve and Horizontal X-Axis Climb Span Highlighting [`TST-UI-259`]
+### REQ-UI-299: Preservation of Slope Gradient Coloring on Elevation Profile Curve and Horizontal X-Axis Climb Span Highlighting [Verified]
 - **Tests**: `ElevationProfile.kt`
 - **Implementation**: Elevation profile curve preserves slope grade coloring with climb spans highlighted along horizontal X-axis baseline.
 - **Rationale**: The system SHALL preserve intrinsic slope gradient coloration across the elevation profile ridge curve and represent recognized cycling climb spans via dedicated category-colored indicator bars along the horizontal X-axis baseline (`ElevationProfile.kt`) (ATT-2510):
@@ -7095,7 +7095,7 @@ e. Dismiss / Done button.
 
 **Invariants**: Profile zooming, panning, scrubbing, time domain, and 100% unit test pass rate MUST NOT be broken.
 
-### REQ-UI-300: Dedicated Route Climb Detail View with Focused Map and Zoomed Isolated Elevation Profile [`TST-UI-260`]
+### REQ-UI-300: Dedicated Route Climb Detail View with Focused Map and Zoomed Isolated Elevation Profile [Verified]
 - **Tests**: `RouteOnMapScreen.kt`, `ClimbDetailSheet.kt`
 - **Implementation**: Dedicated climb detail bottom sheet with focused map, isolated elevation profile, and metrics HUD on climb item tap.
 - **Rationale**: The system SHALL present a dedicated climb detail bottom sheet (`ClimbDetailSheet.kt`) upon tapping any recognized climb item in the route breakdown list (`RouteOnMapScreen.kt`) providing focused spatial and topographic deep-dive inspection (ATT-2511):
@@ -7137,7 +7137,7 @@ d. *Isolated Zoomed Elevation Profile*: A dedicated elevation profile canvas (`C
 
 **Invariants**: Route selection state, parent route map/elevation profile, and 100% unit test pass rate MUST NOT be broken.
 
-### REQ-UI-301: Control Tracking Screen Sensor Header Layout Isolation & Collision Elimination [`TST-UI-261`]
+### REQ-UI-301: Control Tracking Screen Sensor Header Layout Isolation & Collision Elimination [Verified]
 - **Tests**: **ControlTrackingScreen.kt**, `RemoteDevices.kt`
 - **Implementation**: Eliminate visual collision between ResearchButton, SearchArea, and RemoteDevices by restructuring the header into non-overlapping spatial containers.
 - **Rationale**: The system SHALL eliminate visual and hit-target collisions between the research button (`ResearchButton`), search status feedback (`SearchArea`), and paired remote device tiles (`RemoteDevices`) in `ControlTrackingScreen.kt` by restructuring the header hierarchy into decoupled, non-overlapping spatial containers (ATT-2479):
@@ -7176,7 +7176,7 @@ d. *Isolated Zoomed Elevation Profile*: A dedicated elevation profile canvas (`C
 
 **Invariants**: Conditional visibility of ResearchButton, location gating, Start button centering, and 100% unit test pass rate MUST NOT be broken.
 
-### REQ-UI-302: Route Starred Segments Spatial Overlap Matching, Chronological Route Breakdown & Map Synergy [Match and list starred segments along routes in route details with chronological breakdown, athlete PR context, and climbs coexistence synergy.]
+### REQ-UI-302: Route Starred Segments Spatial Overlap Matching, Chronological Route Breakdown & Map Synergy [Verified]
 - **Tests**: \le \max(100.0, \text{segment.distance} \times 0.25)$).
 f. *Intermediate Point Sampling*: For multi-point segments ($\ge 3$ points), sample midpoint coordinates are validated against route points between start and end indices.
 • Output: `List<MatchedRouteSegment>` sorted in ascending order of `startDistanceMeters` along the route.
@@ -7237,7 +7237,7 @@ c. *Directional Ambiguity Elimination & Vector Alignment*: Travel bearing at sta
 d. *Forward Progression*: Route distance at segment finish ($D_{\text{end}}$) must strictly exceed route distance at segment start ($D_{\text{start}}$).
 e. *Path Length Consistency*: Route span distance $(D_{\text{end}} - D_{\text{start}})$ must approximate intrinsic segment distance within tolerance ($
 
-### REQ-UI-303: Dedicated Route Matched Segment Detail View with Focused Map and Zoomed Isolated Elevation Profile [`TST-UI-263`]
+### REQ-UI-303: Dedicated Route Matched Segment Detail View with Focused Map and Zoomed Isolated Elevation Profile [Verified]
 - **Tests**: `RouteOnMapScreen.kt`, `SegmentDetailSheet.kt`
 - **Implementation**: Dedicated matched segment detail bottom sheet with focused map, isolated elevation profile, and metrics HUD on segment item tap.
 - **Rationale**: The system SHALL present a dedicated segment detail bottom sheet (`SegmentDetailSheet.kt`) upon tapping any matched segment card in the route breakdown list (`RouteOnMapScreen.kt`), providing focused spatial, topographic, and athletic telemetry deep-dive inspection in full parity with `ClimbDetailSheet` (ATT-2774):
@@ -7282,7 +7282,7 @@ d. *Isolated Zoomed Elevation Profile*: An `ElevatedCard` rendering `ElevationPr
 
 **Invariants**: Climb breakdown, route selection state, and 100% unit test pass rate MUST NOT be broken.
 
-### REQ-UI-304: Control Tracking Screen Remote Device Tile Bounded Width and Multiline Name Wrapping [`TST-UI-264`]
+### REQ-UI-304: Control Tracking Screen Remote Device Tile Bounded Width and Multiline Name Wrapping [Verified]
 - **Tests**: `RemoteDevices.kt`
 - **Implementation**: Bound maximum width of RemoteDeviceItem to 72 dp and enable 2-line centered text wrapping with ellipsis for sensor names.
 - **Rationale**: The system SHALL bound the maximum horizontal width of remote device tiles in `RemoteDevices.kt` and enable multi-line text wrapping for sensor names in `ControlTrackingScreen.kt`, eliminating excessive whitespace voids and preventing adjacent sensor tiles from being unnecessarily pushed off-screen (ATT-2772):
@@ -7319,7 +7319,7 @@ d. *Isolated Zoomed Elevation Profile*: An `ElevatedCard` rendering `ElevationPr
 
 **Invariants**: Bounded tile width, centered alignment, and 100% unit test pass rate MUST NOT be broken.
 
-### REQ-UI-305: Inverted Route-Segment Spatial Association, Segment-Containing Routes Breakdown & Bidirectional Navigation [`TST-UI-265`]
+### REQ-UI-305: Inverted Route-Segment Spatial Association, Segment-Containing Routes Breakdown & Bidirectional Navigation [Verified]
 - **Tests**: `RouteSegmentMatcher.kt`, `SegmentRoutesSection.kt`, `SegmentOnMapScreen.kt`, `StarredSegmentsScreen.kt`, `strings.xml` (all 9 locales)
 - **Implementation**: Inverted route-segment spatial matching, segment-containing routes breakdown list in SegmentOnMapScreen, and bidirectional cross-navigation.
 - **Rationale**: The system SHALL calculate inverted spatial corridor associations identifying saved routes that traverse a given segment in the forward direction, display a dedicated routes breakdown below the elevation profile in `SegmentOnMapScreen.kt`, and provide 1-tap navigation directly to route inspection with the segment pre-highlighted (ATT-2585):
@@ -7367,7 +7367,7 @@ d. *Isolated Zoomed Elevation Profile*: An `ElevatedCard` rendering `ElevationPr
 
 **Invariants**: MapDetailLayout split-pane math, RouteOnMapScreen integrity, and 100% unit test pass rate MUST NOT be broken.
 
-### REQ-UI-306: Royal Blue Route Palette Transition, High-Contrast Climb Category Differentiation, and Topographic Glanceability [`TST-UI-266`]
+### REQ-UI-306: Royal Blue Route Palette Transition, High-Contrast Climb Category Differentiation, and Topographic Glanceability [Verified]
 - **Tests**: `Color.kt`, `MapModels.kt`, `docs/design_guidelines.md`
 - **Implementation**: Transition route color palette from green to royal blue for climb contrast and terrain glanceability.
 - **Rationale**: The system SHALL transition all route visualization color tokens in `TTColor` from green to curated Royal Blue tokens, establish sharp visual contrast with all UCI climb category overlays and terrain backgrounds, harmonize route-related UI components, and update the living design guidelines (ATT-2761):
@@ -7414,7 +7414,7 @@ d. *Isolated Zoomed Elevation Profile*: An `ElevatedCard` rendering `ElevationPr
 
 **Invariants**: UCI climb category colors, Strava Orange, and 100% unit test pass rate MUST NOT be broken.
 
-### REQ-UI-307: Route Map Climb Pin Elimination, Full-Spectrum UC Climb Polyline Highlighting & Elevation Profile Baseline Parity [`TST-UI-267`]
+### REQ-UI-307: Route Map Climb Pin Elimination, Full-Spectrum UC Climb Polyline Highlighting & Elevation Profile Baseline Parity [Verified]
 - **Tests**: `RouteOnMapScreen.kt`, `MapContentScope.kt`, `ElevationProfile.kt`
 - **Implementation**: Route map climb pin elimination, full-spectrum UC climb polyline highlighting, and elevation profile baseline parity.
 - **Rationale**: The system SHALL eliminate redundant climb start pins from the route map, highlight all recognized cycling climbs (including `UNCATEGORIZED`) as colored polyline spans along the route curve, and render horizontal indicator bars for all recognized climbs along the elevation profile X-axis baseline (`REQ-UI-307`, amending `REQ-UI-298` and `REQ-UI-299`, ATT-2748):
@@ -7454,7 +7454,7 @@ d. *Isolated Zoomed Elevation Profile*: An `ElevatedCard` rendering `ElevationPr
 
 **Invariants**: Start/End route markers, categorized climb colors, and 100% test pass rate MUST NOT be broken.
 
-### REQ-UI-308: Route Map Overlay Layer Visibility Controls, Layers Menu, and Item-Level Breakdown Toggles with Permanent Route Line Anchoring [`TST-UI-268`]
+### REQ-UI-308: Route Map Overlay Layer Visibility Controls, Layers Menu, and Item-Level Breakdown Toggles with Permanent Route Line Anchoring [Verified]
 - **Tests**: `RouteOnMapScreen.kt`, `RouteClimbsBreakdownSection.kt`, `RouteSegmentsBreakdownSection.kt`
 - **Implementation**: Route map overlay layer visibility controls, Layers menu, and item-level breakdown toggles with permanent route line anchoring.
 - **Rationale**: The system SHALL provide dynamic visibility controls for route map overlays via a dedicated map Layers menu in `RouteOnMapScreen.kt` and per-item toggles in climb and segment breakdown lists, while permanently anchoring the primary selected route polyline (ATT-2763):
@@ -7503,7 +7503,7 @@ d. *Isolated Zoomed Elevation Profile*: An `ElevatedCard` rendering `ElevationPr
 
 **Invariants**: Selected route line, Start/End markers, and 100% test pass rate MUST NOT be broken.
 
-### REQ-UI-309: Official Untinted ANT+ Logo Rendering and Bluetooth LE Advisory Note Elimination in ANT+ System Services Sheet [`TST-UI-269`]
+### REQ-UI-309: Official Untinted ANT+ Logo Rendering and Bluetooth LE Advisory Note Elimination in ANT+ System Services Sheet [Verified]
 - **Tests**: `AntServicesStatusSheet.kt`, `strings.xml`
 - **Implementation**: Official untinted ANT+ logo rendering and Bluetooth LE advisory note elimination in ANT+ system services sheet.
 - **Rationale**: The system SHALL display the official ANT+ branding untinted and eliminate extraneous Bluetooth LE advice in the modernized ANT+ status sheet (`AntServicesStatusSheet.kt`) (ATT-2749):
@@ -7538,7 +7538,7 @@ d. *Isolated Zoomed Elevation Profile*: An `ElevatedCard` rendering `ElevationPr
 
 **Invariants**: ANT+ service detection, Google Play install intents, and 100% test pass rate MUST NOT be broken.
 
-### REQ-UI-310: Sport-Discipline Filtering in Quick Route Selector and Route List Sport Iconography [`TST-UI-270`]
+### REQ-UI-310: Sport-Discipline Filtering in Quick Route Selector and Route List Sport Iconography [Verified]
 - **Tests**: `RouteProximityRanker.kt`, `RouteSelectorViewModel.kt`, `RouteSelectorSheet.kt`, `TrackingTabsScreen.kt`, `SensorGridScreen.kt`
 - **Implementation**: Filter route selector by active sport type and display sport icon in route list.
 - **Rationale**: The system SHALL filter candidate routes in the quick route selector according to the active workout sport discipline and render visual sport icons for all routes in the selection sheet (ATT-2668):
@@ -7585,7 +7585,7 @@ d. *Isolated Zoomed Elevation Profile*: An `ElevatedCard` rendering `ElevationPr
 
 **Invariants**: Route database schema, GPS recording integrity, and 100% full-suite test pass rate MUST NOT be broken.
 
-### REQ-UI-311: Removal of In-Ride Auto-Detected Route Banner from Cockpit Sensor Grid & Obsolete Resource Cleanup [`TST-UI-271`]
+### REQ-UI-311: Removal of In-Ride Auto-Detected Route Banner from Cockpit Sensor Grid & Obsolete Resource Cleanup [Verified]
 - **Tests**: `SensorGridScreen.kt`, `RouteSelectorSheet.kt`, `strings.xml` (all 9 locales)
 - **Implementation**: Remove in-ride auto-detected route banner from tracking sensor grid, excise obsolete composable, and clean up obsolete localization resources.
 - **Rationale**: The system SHALL eliminate the intrusive in-ride auto-detected route banner from the tracking sensor grid in `SensorGridScreen.kt`, excise the obsolete `AutoDetectedRouteBanner` composable from `RouteSelectorSheet.kt`, and clean up all obsolete localization resources (ATT-2771):
@@ -7621,7 +7621,7 @@ d. *Isolated Zoomed Elevation Profile*: An `ElevatedCard` rendering `ElevationPr
 
 **Invariants**: Top sensor tiles remain fixed without layout shifts; `RouteAutoDetector` continues to evaluate route corridors for the route sheet; `ForkNavigationDecisionCard` remains fully operational; zero regressions across full test suite.
 
-### REQ-UI-312: Universal Root Fallback Drawables and Guarded Compose Asset Resolution Architecture [`TST-UI-272`]
+### REQ-UI-312: Universal Root Fallback Drawables and Guarded Compose Asset Resolution Architecture [Verified]
 - **Tests**: `app/src/main/res/drawable/`, `SafePainterResource.kt`, `SportTypeSelector.kt`, `RemoteDevices.kt`, `AppNavigationDrawer.kt`
 - **Implementation**: Universal root fallback drawables and guarded Compose asset resolution architecture.
 - **Rationale**: The system SHALL eliminate fatal `Resources$NotFoundException` crashes on density-split APKs and custom DPI configurations by ensuring all bitmap/raster assets have universal fallback counterparts in `app/src/main/res/drawable/` and enforcing guarded Compose asset resolution (ATT-2858, ATT-2856, ATT-3164):
@@ -7658,7 +7658,7 @@ d. *Isolated Zoomed Elevation Profile*: An `ElevatedCard` rendering `ElevationPr
 
 **Invariants**: Density-specific asset resolution precedence, zero UI thread crashes, and 100% test pass rate MUST NOT be broken.
 
-### REQ-UI-313: Control Tracking Screen Symmetrical Balanced Sensor Header Centering and Touch-Safe Accessibility Isolation [`TST-UI-273`]
+### REQ-UI-313: Control Tracking Screen Symmetrical Balanced Sensor Header Centering and Touch-Safe Accessibility Isolation [Verified]
 - **Tests**: `ControlTrackingScreen.kt`
 - **Implementation**: Symmetrical balanced sensor header centering and touch-safe accessibility isolation on ControlTrackingScreen.
 - **Rationale**: The system SHALL guarantee true horizontal screen centering for connected sensor device tiles (`RemoteDevices`) in `ControlTrackingScreen.kt` when the re-search action button (`ResearchButton`) is visible, eliminating rightward layout drift for single and dual sensor configurations, preserving zero visual collision for multi-device setups, and enforcing strict accessibility semantics hygiene (ATT-2791, refining `REQ-UI-301`):
@@ -7698,7 +7698,7 @@ d. *Isolated Zoomed Elevation Profile*: An `ElevatedCard` rendering `ElevationPr
 
 **Invariants**: Search area placement, 72 dp tile width, and 100% test pass rate MUST NOT be broken.
 
-### REQ-UI-314: Sensor Search Settings Relocation to Advanced Tuning Accordion & Navigation Drawer Decluttering [`TST-UI-274`]
+### REQ-UI-314: Sensor Search Settings Relocation to Advanced Tuning Accordion & Navigation Drawer Decluttering [Verified]
 - **Tests**: `AppNavigationDrawer.kt`, `AdvancedTuningDialog.kt`, `AdvancedTuningAccordion.kt`, `SensorSearchTuningSection.kt`, `NavigationDrawerStateTest.kt`
 - **Implementation**: Relocate sensor search settings from primary navigation drawer to Advanced Tuning accordion, decluttering drawer while preserving 100% of sensor search configuration parameters.
 - **Rationale**: The system SHALL eliminate the sensor search entry (`drawer_search_settings`) from the primary navigation drawer, relocate sensor search discovery retry parameters, automatic triggers, and filtering behaviors into `AdvancedTuningDialog` as a dedicated collapsible accordion section (`TuningSection.SENSOR_SEARCH`), and preserve transactional preference persistence (ATT-2780, amending `REQ-UI-154`):
@@ -7747,7 +7747,7 @@ d. *Isolated Zoomed Elevation Profile*: An `ElevatedCard` rendering `ElevationPr
 
 **Invariants**: 7 SharedPreferences keys, default values, SearchSettingsDialog reflection contract, 400-line modularity threshold, and 100% test pass rate MUST NOT be broken.
 
-### REQ-UI-315: Harmonized Visual & UX Architecture for Climb, Segment, and Route Detail Bottom Sheets via MapDetailLayout [`TST-UI-275`]
+### REQ-UI-315: Harmonized Visual & UX Architecture for Climb, Segment, and Route Detail Bottom Sheets via MapDetailLayout [Verified]
 - **Tests**: `SegmentDetailSheet.kt`, `RouteDetailSheet.kt`, `ClimbDetailSheet.kt`, `SegmentOnMapScreen.kt`, `RouteOnMapScreen.kt`
 - **Implementation**: Harmonized visual and UX architecture for Climb, Segment, and Route detail bottom sheets by directly reusing SegmentOnMapScreen, RouteOnMapScreen, and MapDetailLayout.
 - **Rationale**: The system SHALL eliminate divergent card-stack implementations in modal detail sheets and enforce unified presentation and code reuse across segments, routes, and climbs by directly reusing `SegmentOnMapScreen` and `RouteOnMapScreen` via `MapDetailLayout` within modal bottom sheet containers (ATT-2860, amending `REQ-UI-300`, `REQ-UI-303`, and `REQ-UI-316`):
@@ -7790,7 +7790,7 @@ d. *Isolated Zoomed Elevation Profile*: An `ElevatedCard` rendering `ElevationPr
 
 **Invariants**: MapDetailLayout split-pane math, zoom focus, entity bounds, and 100% test pass rate MUST NOT be broken.
 
-### REQ-UI-316: Dedicated Route Detail Bottom Sheet from Matched Segment Containing Routes View [`TST-UI-276`]
+### REQ-UI-316: Dedicated Route Detail Bottom Sheet from Matched Segment Containing Routes View [Verified]
 - **Tests**: `StarredSegmentsScreen.kt`, `RouteDetailSheet.kt`, `SegmentRoutesSection.kt`
 - **Implementation**: Provide modal RouteDetailSheet bottom sheet from containing routes in SegmentOnMapScreen without navigating away from the segment view.
 - **Rationale**: The system SHALL provide a modal `RouteDetailSheet` bottom sheet overlay (`AppModalBottomSheet`) when an athlete taps any containing route card inside `SegmentRoutesSection` (within `SegmentOnMapScreen`), presenting the containing route's telemetry, map, and elevation profile without navigating away from the segment inspection flow (ATT-2861):
@@ -7827,7 +7827,7 @@ d. *Isolated Zoomed Elevation Profile*: An `ElevatedCard` rendering `ElevationPr
 
 **Invariants**: Segment state persistence, back navigation integrity, 16.dp Material 3 card shapes, and 100% test pass rate MUST NOT be broken.
 
-### REQ-UI-317: Geodesic Polyline Orthogonal Projection & Interval Matching for Route-Segment Correlation [Geodesic polyline orthogonal projection and interval matching in RouteSegmentMatcher for robust real-world route-segment detection.]
+### REQ-UI-317: Geodesic Polyline Orthogonal Projection & Interval Matching for Route-Segment Correlation [Verified]
 - **Tests**: \le \max(100.0, \text{intrinsicDistance} \times 0.25)$.
 4. *Directional Bearing Alignment on Projected Line Segments*:
 • Forward bearing alignment SHALL be calculated using the travel bearing along the route's nearest polyline segment $(P_i, P_{i+1})$ containing the projection point, compared to the initial segment traversal bearing.
@@ -7869,7 +7869,7 @@ a. $proj_{\text{end}}.distanceAlongRoute > proj_{\text{start}}.distanceAlongRout
 b. Both start and end cross-track distances $\le 35.0\text{ m}$.
 c. Span distance consistency: $
 
-### REQ-UI-318: Route Map Segment Polyline Suppression on Layer Unselection & Individual Item Hiding [Route map segment polyline suppression on layer unselection and individual item hiding in background paths.]
+### REQ-UI-318: Route Map Segment Polyline Suppression on Layer Unselection & Individual Item Hiding [Verified]
 - **Tests**: backgroundPaths.any { it is MapSegment }`, allowing athletes to toggle segment visibility even on routes with only background segments.
 5. *Preservation of System Invariants*:
 • Selected route polyline (`TTColor.RouteSelected`), Start (`control_start`) and End (`control_stop`) markers, and Climbs/Waypoints layer controls MUST NOT be affected.
@@ -7905,7 +7905,7 @@ c. Span distance consistency: $
 4. *Segments Layer Menu Availability Refinement*:
 • In the route map layers dropdown menu, the Segments layer entry SHALL be enabled if `matchedSegments.isNotEmpty()
 
-### REQ-UI-319: Multi-Tier Route Map Polyline Layering: Solid Climb Overlay and Dashed Segment Overlay Synergy [`TST-UI-279`]
+### REQ-UI-319: Multi-Tier Route Map Polyline Layering: Solid Climb Overlay and Dashed Segment Overlay Synergy [Verified]
 - **Tests**: `MapModels.kt`, `MapContentScope.kt`, `MapLayers.kt`, `RouteOnMapScreen.kt`
 - **Implementation**: Multi-tier route map polyline layering with solid climb overlay and dashed segment overlay synergy.
 - **Rationale**: The system SHALL establish an unambiguous multi-tier polyline layering hierarchy on the route map canvas in `RouteOnMapScreen.kt`, rendering climbs as a continuous solid polyline above both layers of the route line and rendering segments as a dashed polyline above the climb polyline with transparent gaps (ATT-2864, amending `REQ-UI-298`, `REQ-UI-302`, and `REQ-UI-319`):
@@ -7947,7 +7947,7 @@ c. Span distance consistency: $
 
 **Invariants**: Route line anchor, start/end markers, climb colors, and 100% unit test pass rate MUST NOT be broken.
 
-### REQ-UI-320: Preservation of Authentic Sport Type Icon Colors in Quick Route Selector [`TST-UI-280`]
+### REQ-UI-320: Preservation of Authentic Sport Type Icon Colors in Quick Route Selector [Verified]
 - **Tests**: `RouteSelectorSheet.kt`, `RouteSelectorSheetTest.kt`
 - **Implementation**: Preservation of authentic sport type icon colors in RouteSelectorSheet without monochrome theme tinting.
 - **Rationale**: The system SHALL preserve the authentic multi-color vector representation of sport type icons in `RouteSelectorSheet.kt` (`RouteCard`) by rendering the icon painter with `tint = Color.Unspecified`, eliminating monochrome theme tinting (ATT-2865, amending `REQ-UI-310`):
@@ -7974,7 +7974,7 @@ c. Span distance consistency: $
 
 **Invariants**: Active badge chip, card container styling, and 100% unit test pass rate MUST NOT be broken.
 
-### REQ-UI-321: Top-Level Spatial Overlay & Tab Navigation Hints Gating for In-Ride Fork Route Decision Prompts [`TST-UI-281`]
+### REQ-UI-321: Top-Level Spatial Overlay & Tab Navigation Hints Gating for In-Ride Fork Route Decision Prompts [Verified]
 - **Tests**: `SensorGridScreen.kt`
 - **Implementation**: Float fork decision prompt as top-level spatial overlay in SensorGridScreen and gate strictly behind tab navigation hints toggle.
 - **Rationale**: The system SHALL eliminate cockpit telemetry tile displacement during in-ride fork route alerts and enforce per-tab navigation hints configuration in `SensorGridScreen.kt` by floating `ForkDecisionCard` as a top-level spatial overlay and gating it strictly behind `state.showNavigationHints` (ATT-2874, amending `REQ-MAP-031`):
@@ -8099,7 +8099,7 @@ c. Span distance consistency: $
 
 **Invariants**: Detail sheet inspection, live GPS tracking, start marker detection, referential polyline stability (`REQ-MAP-051`), and 100% test pass rate MUST NOT be broken.
 
-### REQ-UI-323: Material 3 Compose Migration for ANT Missing Adapter and Missing Dependency Alerts with Direct ANT+ Status Sheet Integration [TST-UI-283]
+### REQ-UI-323: Material 3 Compose Migration for ANT Missing Adapter and Missing Dependency Alerts with Direct ANT+ Status Sheet Integration [Verified]
 - **Tests**: AntAlertDialogs.kt, MainActivityWithNavigation.kt, ATrainingTrackerApp.kt
 - **Implementation**: Material 3 Compose migration for ANT missing adapter and missing dependency alerts with direct AntServicesStatusSheet integration and German typo fix.
 - **Rationale**: The system SHALL modernize legacy ANT missing adapter and missing dependency alert dialogs into Material 3 Jetpack Compose components in `AntAlertDialogs.kt`, eliminate raw Android View `android.app.AlertDialog.Builder` popups in `MainActivityWithNavigation.kt`, provide direct actionable shortcuts to `AntServicesStatusSheet.kt`, correct the German localization typographical error in `values-de/strings.xml`, and enforce 100% translation parity across all 9 supported application locales (ATT-2939, amending `REQ-UI-296` and complementing `REQ-UI-309`):
@@ -8147,7 +8147,7 @@ c. Span distance consistency: $
 
 **Invariants**: Sensor discovery and pairing pipelines, Google Play store intent launches, single-instance alert guard, and 100% test pass rate MUST NOT be broken.
 
-### REQ-UI-324: Turn-by-Turn Navigation Prompts Top-Level Spatial Overlay Integration & Design Guideline Harmonization [`TST-UI-284`]
+### REQ-UI-324: Turn-by-Turn Navigation Prompts Top-Level Spatial Overlay Integration & Design Guideline Harmonization [Verified]
 - **Tests**: `SensorGridScreen.kt`, `TurnPromptBanner.kt`
 - **Implementation**: Float turn-by-turn navigation hints as top-level spatial overlay in SensorGridScreen, gate behind tab navigation hints, and harmonize card styling with Design Guidelines.
 - **Rationale**: The system SHALL eliminate cockpit telemetry tile displacement during turn-by-turn navigation guidance, gate navigation prompts strictly behind the tab-level navigation hints setting, and harmonize the visual design of `TurnPromptBanner` with Design Guidelines §§ 5.2, 5.3, 5.4, and 5.7 (ATT-2941, amending `REQ-MAP-028` and `REQ-UI-287`):
@@ -8187,7 +8187,7 @@ c. Span distance consistency: $
 
 **Invariants**: Turn detection, battery saver wake-up, audio alerts, and 100% test pass rate MUST NOT be broken.
 
-### REQ-UI-325: Removal of Duplicate Upper Active Route Banner and Direct RouteCard Cancellation Integration [`TST-UI-285`]
+### REQ-UI-325: Removal of Duplicate Upper Active Route Banner and Direct RouteCard Cancellation Integration [Verified]
 - **Tests**: `RouteSelectorSheet.kt`
 - **Implementation**: Elimination of duplicate upper ActiveRouteBanner from RouteSelectorContent and integration of 1-tap cancellation on RouteCard.
 - **Rationale**: The system SHALL eliminate duplicate active route representation in `RouteSelectorSheet.kt` by removing the pinned upper `ActiveRouteBanner` from `RouteSelectorContent` and integrating direct 1-tap route cancellation onto the active `RouteCard` in the scrollable route list (ATT-2943, amending `REQ-UI-280`):
@@ -8224,7 +8224,7 @@ c. Span distance consistency: $
 
 **Invariants**: 1-tap route cancellation, active badge styling, authentic sport icon colors, and 100% unit test pass rate MUST NOT be broken.
 
-### REQ-UI-326: Tracking Map Recomposition Boundary Isolation and Telemetry Decoupling [`TST-UI-286`]
+### REQ-UI-326: Tracking Map Recomposition Boundary Isolation and Telemetry Decoupling [Verified]
 - **Tests**: `SensorGridScreen.kt`, `TrackingViewModel.kt`
 - **Implementation**: Isolate tracking map composable from sensor grid telemetry recomposition churn via @Immutable TrackingMapState and TrackingMapContainer barrier.
 - **Rationale**: The system SHALL isolate the live Google Map composable in `SensorGridScreen.kt` from high-frequency sensor telemetry recomposition churn by establishing an `@Immutable` sub-state model, extracting a dedicated `TrackingMapContainer` recomposition barrier with memoized layer DSL content, and decoupling map data computation from volatile sensor telemetry in `TrackingViewModel.kt` (ATT-2944, complementing `REQ-UI-275` and `REQ-UI-295`):
@@ -8266,7 +8266,7 @@ c. Span distance consistency: $
 
 **Invariants**: Dynamic map visibility, user location arrow streaming, recorded track updates, and 100% unit test pass rate MUST NOT be broken.
 
-### REQ-UI-327: Tracking Tab Live Climb and Segment Cockpit BottomSheet Active-Tab Gating & State Synchronization [Active tab parameterization, deterministic BottomSheetState hiding, and peek artifact suppression for Live Climb and Segment sheets.]
+### REQ-UI-327: Tracking Tab Live Climb and Segment Cockpit BottomSheet Active-Tab Gating & State Synchronization [Verified]
 - **Tests**: showLiveClimbs) && screenMode == ScreenMode.TRACKING`
 2. *Deterministic Sheet State Lifecycle & Hidden State Synchronization*:
 • `scaffoldState` in `SensorGridScreen.kt` SHALL initialize `bottomSheetState` with: `initialValue = if (shouldShowBottomSheet) SheetValue.PartiallyExpanded else SheetValue.Hidden` and `skipHiddenState = false`..
@@ -8307,7 +8307,7 @@ c. Span distance consistency: $
 • `TrackingTabGridContent` and `SensorGridScreen` SHALL accept parameter `isTabActive: Boolean = true` (defaulting to `true` for standalone testing and preview).
 • In `SensorGridScreen.kt`, bottom sheet activation SHALL be gated strictly behind: `val shouldShowBottomSheet = isTabActive && (showLiveSegments
 
-### REQ-UI-328: Live Climb Cockpit Sheet Visual Design Alignment with Live Segment System [`TST-UI-288`]
+### REQ-UI-328: Live Climb Cockpit Sheet Visual Design Alignment with Live Segment System [Verified]
 - **Tests**: `LiveClimbSheet.kt`
 - **Implementation**: Align Live Climb cockpit sheet layout, hierarchy, and typography with Live Segment popup design system.
 - **Rationale**: The system SHALL refactor `LiveClimbSheet.kt` to harmonize layout hierarchy, spacing, and typography with the Strava Live Segment popup (`SegmentHeader.kt` / `SegmentLiveDetails.kt`) (ATT-2947, amending `REQ-MAP-027` and harmonizing with `REQ-UI-196`):
@@ -8355,7 +8355,7 @@ c. Span distance consistency: $
 
 **Invariants**: Exact distance/elevation math, profile canvas gradient color mapping, rider pin interpolation, and 100% test pass rate MUST NOT be broken.
 
-### REQ-UI-329: Material 3 Jetpack Compose Workout Recovery Dialog Architecture & Contextual Kill Diagnosis Presentation [`TST-UI-289`]
+### REQ-UI-329: Material 3 Jetpack Compose Workout Recovery Dialog Architecture & Contextual Kill Diagnosis Presentation [Verified]
 - **Tests**: `StartOrResumeDialog.kt`
 - **Implementation**: Modernize StartOrResumeDialog to Material 3 Compose with contextual iconography, structured message containerization, and action button hierarchy.
 - **Rationale**: The system SHALL modernize `StartOrResumeDialog.kt` from a legacy Android View dialog to a Material 3 Jetpack Compose dialog architecture, featuring contextual kill reason iconography, structured message containerization, clear action button hierarchy, and full theme integration (ATT-2948, amending `REQ-STB-012` and harmonizing with `REQ-STB-003` and Epic `ATT-355`):
@@ -8411,7 +8411,7 @@ c. Span distance consistency: $
 
 **Invariants**: Resumption contracts, battery settings intent, DialogFragment inheritance, and 100% test pass rate MUST NOT be broken.
 
-### REQ-UI-330: In-Ride Fork Decision Card Directional Grouping, Clean Surface Styling & Glanceability Optimization [`TST-UI-290`]
+### REQ-UI-330: In-Ride Fork Decision Card Directional Grouping, Clean Surface Styling & Glanceability Optimization [Verified]
 - **Tests**: `ForkDecisionCard.kt`
 - **Implementation**: Modernize in-ride fork decision card with direction grouping, clean white surfaces, subtle borders, and removed tap hint.
 - **Rationale**: The system SHALL modernize `ForkDecisionCard.kt` to optimize glanceability on bike mounts through directional route grouping, crisp white surface styling, and elimination of redundant selection hints (ATT-2962, amending `REQ-MAP-031`):
@@ -8451,7 +8451,7 @@ c. Span distance consistency: $
 
 **Invariants**: Selection and dismiss callbacks, countdown distance header formatting, and 100% test pass rate MUST NOT be broken.
 
-### REQ-UI-331: Live Segment Elevation Profile Dynamic Position Marker & Scrub Distance Synchronization [`TST-UI-291`]
+### REQ-UI-331: Live Segment Elevation Profile Dynamic Position Marker & Scrub Distance Synchronization [Verified]
 - **Tests**: `LIveSegmentSheet.kt`, `MapDetailLayout.kt`
 - **Implementation**: Real-time athlete position marker rendering on Live Segment elevation profile graph via externalScrubDistance.
 - **Rationale**: The system SHALL propagate the athlete's real-time distance along an active segment to the elevation profile chart within `LiveSegmentSheet.kt` and synchronize scrub distance clearance in `MapDetailLayout.kt` (ATT-2967):
@@ -8487,7 +8487,7 @@ c. Span distance consistency: $
 
 **Invariants**: Clamped sheet height, surface colors, suppressed zoom controls, and 100% unit test pass rate MUST NOT be broken.
 
-### REQ-UI-332: Workout Details Elevation Profile Display & Time-Domain Telemetry Ingestion for Trackless Workouts with Altitude Data []
+### REQ-UI-332: Workout Details Elevation Profile Display & Time-Domain Telemetry Ingestion for Trackless Workouts with Altitude Data [Verified]
 - **Tests**: (activeScrubPath?.any { it.altitude != 0.0 } == true)`
 • `showElevationProfile` SHALL be evaluated as:
 `showElevationProfile = (hasGpsTrack
@@ -8497,7 +8497,7 @@ c. Span distance consistency: $
 `val hasTracklessAltitude = !hasGpsTrack && (activeScrubPath?.any { it.altitude != 0.0 } == true)`
 `val hasAltitudeData = workoutData.minAltitude != null
 
-### REQ-UI-333: Entity Detail Sheet Scaffold & Climb Popup Harmonization via MapDetailLayout [`TST-UI-293`]
+### REQ-UI-333: Entity Detail Sheet Scaffold & Climb Popup Harmonization via MapDetailLayout [Verified]
 - **Tests**: `EntityDetailSheetScaffold.kt`, `ClimbDetailSheet.kt`, `SegmentDetailSheet.kt`, `RouteDetailSheet.kt`
 - **Implementation**: EntityDetailSheetScaffold shared base and Climb popup harmonization with Segment and Route sheets via MapDetailLayout.
 - **Rationale**: The system SHALL eliminate duplicated bottom sheet scaffolding across entity popups and harmonize `ClimbDetailSheet.kt` with `SegmentDetailSheet.kt` and `RouteDetailSheet.kt` by introducing `EntityDetailSheetScaffold` and backing `ClimbDetailSheet` with `MapDetailLayout` (ATT-3053, amending `REQ-UI-315` and `REQ-UI-300`):
@@ -8542,7 +8542,7 @@ e. `useStatusBarsPadding = false`.
 
 **Invariants**: Bounding box calculations, UCI category colors, dismiss behavior, and 100% unit test pass rate MUST NOT be broken.
 
-### REQ-UI-334: Newly Discovered Sensor Prioritization, Visual Highlight Badge & Discovery Feedback Notification [`TST-UI-294`]
+### REQ-UI-334: Newly Discovered Sensor Prioritization, Visual Highlight Badge & Discovery Feedback Notification [Verified]
 - **Tests**: `DeviceData.kt`, `GetMergedDevicesUseCase.kt`, `DeviceListViewModel.kt`, `DeviceItem.kt`, `DevicesTabbedScreen.kt`, `DeviceListScreen.kt`, `strings.xml` (all 9 locales)
 - **Implementation**: Prioritize newly discovered sensors at top of scan list with NEW badge, highlight border, snackbar notification, haptic feedback, and auto-scroll.
 - **Rationale**: The system SHALL prioritize newly discovered wireless sensors at the very top of the scan list during active pairing discovery, distinguish the card with a prominent "NEW" badge chip and primary highlight border, and provide immediate sensory feedback via in-app snackbar notification, haptic vibration, and auto-scroll to the top item (ATT-3099, amending `REQ-UI-291` and complementing `REQ-UI-140`):
@@ -8595,7 +8595,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Background GATT/ANT+ device discovery, pairing toggle states, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-335: Dynamic Map-Aware Navigation Hints Overlay Anchoring over Embedded Map View [`TST-UI-295`]
+### REQ-UI-335: Dynamic Map-Aware Navigation Hints Overlay Anchoring over Embedded Map View [Verified]
 - **Tests**: `SensorGridScreen.kt`, `SensorGridScreenRouteIntegrationTest.kt`
 - **Implementation**: Dynamically anchor navigation hints overlay directly over the top of the embedded map view when present, and over the top of the tab when absent.
 - **Rationale**: The system SHALL dynamically anchor the active navigation hints overlay (`TurnPromptBanner`, `ReturnNavigationHud`, `ForkDecisionCard`) based on the presence of an embedded map view within the active tracking tab (ATT-3100, amending `REQ-UI-324` and `REQ-MAP-031`):
@@ -8632,7 +8632,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Zero telemetry displacement, map recomposition barrier, and 100% test pass rate MUST NOT be broken.
 
-### REQ-UI-336: Cockpit Sensor Field In-Ride Direct Editing via Long-Press Gesture [`TST-UI-296`]
+### REQ-UI-336: Cockpit Sensor Field In-Ride Direct Editing via Long-Press Gesture [Verified]
 - **Tests**: `SensorGridScreen.kt`, `SensorFieldView.kt`
 - **Implementation**: Trigger sensor field configuration dialog on long click during active tracking HUD while preserving single-tap no-op safety.
 - **Rationale**: The system SHALL trigger the sensor field configuration dialog (`EditSensorFieldDialog`) when an athlete performs a long-click gesture on any sensor field tile during active workout tracking (`ScreenMode.TRACKING`) (ATT-3101):
@@ -8664,7 +8664,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Zero accidental trigger invariant, zero telemetry displacement, and 100% test pass rate MUST NOT be broken.
 
-### REQ-UI-337: Elimination of Lingering Grey Container Surfaces, Zero Tonal Elevation and Transparent Surface Harmonization on In-Ride Fork Decision Card [`TST-UI-297`]
+### REQ-UI-337: Elimination of Lingering Grey Container Surfaces, Zero Tonal Elevation and Transparent Surface Harmonization on In-Ride Fork Decision Card [Verified]
 - **Tests**: `ForkDecisionCard.kt`, `ForkDecisionCardTest.kt`
 - **Implementation**: Eliminate lingering grey container surfaces, enforce strict zero tonal elevation across all container surfaces, and harmonize opacity and surface coloring in ForkDecisionCard.
 - **Rationale**: The system SHALL eliminate lingering grey container surfaces, enforce strict zero tonal elevation across all container surfaces, and harmonize opacity and surface coloring in the in-ride fork decision HUD card (`ForkDecisionCard.kt`) (ATT-3104, amending `REQ-UI-330` and complementing `REQ-MAP-031`):
@@ -8702,7 +8702,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Zero tonal elevation tint invariant, zero surfaceVariant invariant, zero displacement invariant, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-338: Climb Detail Elevation Profile Normalization to Local Climb Distance Domain [`TST-UI-298`]
+### REQ-UI-338: Climb Detail Elevation Profile Normalization to Local Climb Distance Domain [Verified]
 - **Tests**: `Climb.kt`, `ClimbOnMapScreen.kt`, `ClimbDetailSheet.kt`
 - **Implementation**: Normalize climb path points distance domain to local climb distance starting at 0.0m in ClimbOnMapScreen and ClimbDetailSheet.
 - **Rationale**: The system SHALL normalize the climb path distance coordinate domain to start at 0.0 meters when displaying an individual climb elevation profile and scrubber in `ClimbOnMapScreen` and `ClimbDetailSheet` (ATT-3105, complementing `REQ-UI-300`, `REQ-UI-315`, and `REQ-UI-333`):
@@ -8740,7 +8740,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Zero coordinate distortion invariant, full chart width coverage invariant, header route offset invariant, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-339: Dynamic Cockpit Weight Allocation & Flexible Vertical Expansion for Elevation Profile when Map is Disabled [`TST-UI-299`]
+### REQ-UI-339: Dynamic Cockpit Weight Allocation & Flexible Vertical Expansion for Elevation Profile when Map is Disabled [Verified]
 - **Tests**: `SensorGridScreen.kt`, `ElevationProfile.kt`
 - **Implementation**: Dynamic cockpit weight allocation and flexible vertical expansion for elevation profile when map is disabled.
 - **Rationale**: The system SHALL dynamically allocate vertical layout weight and support flexible vertical canvas expansion for the elevation profile on the live tracking screen (`SensorGridScreen.kt`) when the embedded map is disabled (`showMap == false` and `showElevationProfile == true`) (ATT-3107, complementing `REQ-UI-197`, `REQ-UI-225`, and `REQ-UI-326`):
@@ -8776,7 +8776,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Minimum vertical height $\ge 120\text{dp}$ invariant, list preview height preservation invariant, sensor grid scrollability invariant, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-340: LiveSegmentSheet Type-Safe Numeric Metric Evaluation on Segment Finish [`TST-UI-300`]
+### REQ-UI-340: LiveSegmentSheet Type-Safe Numeric Metric Evaluation on Segment Finish [Verified]
 - **Tests**: `LIveSegmentSheet.kt`
 - **Implementation**: Type-safe numeric metric evaluation using distance_raw on segment finish in LiveSegmentSheet.
 - **Rationale**: The system SHALL evaluate the live segment completion scrub distance using the canonical unformatted numeric meter metric (`summary.distance_raw`) instead of parsing the localized formatted string representation (`summary.distance`), preventing fatal `NumberFormatException` upon segment finish in `LiveSegmentSheet.kt` (ATT-3108, superseding the evaluation formula in `REQ-UI-331`):
@@ -8806,7 +8806,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Type safety, zero string-to-number parsing on formatted UI strings, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-341: Live Climb Cockpit Sheet Interactive Visual Design Optimization, Compose Previews & Ground Line Presentation [`TST-UI-301`]
+### REQ-UI-341: Live Climb Cockpit Sheet Interactive Visual Design Optimization, Compose Previews & Ground Line Presentation [Verified]
 - **Tests**: `LiveClimbSheet.kt`
 - **Implementation**: Visual design optimization, Compose @Preview composables, and baseline ground line in LiveClimbSheet.
 - **Rationale**: The system SHALL refine the visual styling, graphical elevation profile baseline grounding, and developer tooling for the live climb cockpit bottom sheet (`LiveClimbSheet.kt`) (ATT-3103, complementing `REQ-MAP-027` and `REQ-UI-300`):
@@ -8841,7 +8841,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Visual hierarchy, compact bottom sheet height, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-342: Jetpack Compose Text Input Stylus Handwriting NoClassDefFoundError Runtime Interception & Resilience [`TST-UI-302`]
+### REQ-UI-342: Jetpack Compose Text Input Stylus Handwriting NoClassDefFoundError Runtime Interception & Resilience [Verified]
 - **Tests**: `ComposeHandwritingResilience.kt`, `TrainingApplication.java`, `app/build.gradle`
 - **Implementation**: Jetpack Compose Text Input Stylus Handwriting NoClassDefFoundError Runtime Interception & Resilience.
 - **Rationale**: The system SHALL intercept and gracefully neutralize the Android platform class linkage failure (`NoClassDefFoundError` on `android.view.inputmethod.SelectGesture`) during Jetpack Compose text input focus on fragmented Android 14+ OEM platforms (ATT-3163, Epic ATT-235):
@@ -8875,7 +8875,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: No platform namespace hijacking, caller stability for all text fields, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-343: Live Segment and Climb Cockpit BottomSheet Default Fully Expanded Presentation [`TST-UI-303`]
+### REQ-UI-343: Live Segment and Climb Cockpit BottomSheet Default Fully Expanded Presentation [Verified]
 - **Tests**: `SensorGridScreen.kt`, `SensorGridScreenClimbSuppressionTest.kt`
 - **Implementation**: Default Live Segment and Climb bottom sheets to fully expanded state during tracking.
 - **Rationale**: The system SHALL default the live climb and segment bottom sheet (`BottomSheetScaffold`) in `SensorGridScreen.kt` to the fully expanded state (`SheetValue.Expanded`) when becoming active, providing immediate visibility of the elevation profile graph, instantaneous gradient profile, and live pacing telemetry HUD without requiring manual touch interaction or swipe gestures while riding or running (ATT-3176, ATT-3319, amending `REQ-UI-327` and aligning with Design Guidelines §5.8):
@@ -8909,7 +8909,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Active-tab gating, hidden state suppression, swipe ergonomics, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-344: Default Tracking Views Feature Configuration Matrix on Initial Install [`TST-UI-304`]
+### REQ-UI-344: Default Tracking Views Feature Configuration Matrix on Initial Install [Verified]
 - **Tests**: `TrackingViewsDatabaseManager.java`
 - **Implementation**: Configure standard tracking tabs with targeted navigation, segment, and climb defaults on initial install.
 - **Rationale**: The system SHALL configure purposeful default feature toggles for the three standard tracking tabs generated per `ActivityType` upon clean application installation or initial database creation (`TrackingViewsDbHelper.onCreate()`), preventing unsolicited visual clutter and aligning with Design Guidelines §5.9 (ATT-3177):
@@ -8956,7 +8956,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Custom layout editing, existing user databases, schema version 12, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-345: Workout Recovery Dialog Layout Visibility, Start Interception Guard & Sticky Tracking State Synchronization [`TST-UI-305`]
+### REQ-UI-345: Workout Recovery Dialog Layout Visibility, Start Interception Guard & Sticky Tracking State Synchronization [Verified]
 - **Tests**: `StartOrResumeDialog.kt`, `ControlTrackingViewModel.kt`, `TrackingTabsScreen.kt`, `WorkoutSummariesDatabaseManager.java`, `TrackerService.java`, `TrainingApplication.java`, `BANALServiceRepository.kt`
 - **Implementation**: Workout recovery dialog layout visibility, start interception guard, and sticky tracking state synchronization.
 - **Rationale**: The system SHALL guarantee full layout visibility of `StartOrResumeDialog` by configuring explicit window bounds, guard `onStartTracking()` in `ControlTrackingViewModel` to intercept unfinalized workouts before starting a new session, ensure robust SQLite matching and updates for `finished IS NULL` and `finished = 0` in `WorkoutSummariesDatabaseManager`, and synchronize tracking state on sticky service resurrection (ATT-3165, amending `REQ-UI-329`, `REQ-STB-003`, and `REQ-STB-012`):
@@ -8998,7 +8998,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Dialog callbacks, clean finalization, battery intent shortcuts, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-346: Canonical Adaptive Height & Weight Decoupling for Sole Elevation Profile on Tracking Screen [`TST-UI-306`]
+### REQ-UI-346: Canonical Adaptive Height & Weight Decoupling for Sole Elevation Profile on Tracking Screen [Verified]
 - **Tests**: `SensorGridScreen.kt`
 - **Implementation**: Canonical adaptive height and weight decoupling for sole elevation profile on tracking screen.
 - **Rationale**: The system SHALL render the elevation profile on tracking screens (`SensorGridScreen.kt`) at its canonical adaptive height ($70\text{dp} \dots 200\text{dp}$) determined by `calculateElevationProfileHeight(range)` regardless of whether the embedded map is enabled or disabled, eliminating vertically stretched or oversized profile rendering when the map is hidden (ATT-3173, amending `REQ-UI-339` and aligning with Design Guidelines §2.3):
@@ -9039,7 +9039,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Sensor grid scrollability, canonical adaptive height, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-347: Canonical Route Preview Polyline Styling & Selection State Decoupling for RoutesScreen and RouteDetailSheet [`TST-UI-307`]
+### REQ-UI-347: Canonical Route Preview Polyline Styling & Selection State Decoupling for RoutesScreen and RouteDetailSheet [Verified]
 - **Tests**: `RoutesScreen.kt`, `RouteDetailSheet.kt`, `RoutesViewModel.kt`
 - **Implementation**: Decouple route preview polyline styling in RoutesScreen and RouteDetailSheet from hardcoded active navigation, reflecting actual isSelected and activeNavigatedRouteId state.
 - **Rationale**: The system SHALL decouple route map preview rendering in `RoutesScreen.kt` and `RouteDetailSheet.kt` from unconditional active navigation styling, rendering route polylines according to their actual selection status (`RouteSummary.isSelected`) and active navigation state (`activeNavigatedRouteId`), ensuring that toggling route selection provides immediate dynamic visual feedback on the map preview (ATT-3172, amending `REQ-MAP-040` clause 5):
@@ -9084,7 +9084,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: 3-tier styling, active workout navigation rendering, z-index hierarchy, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-348: Restoration of Unified Top-of-Tab Navigation Hints Overlay Anchoring Across Tracking Tabs [`TST-UI-308`]
+### REQ-UI-348: Restoration of Unified Top-of-Tab Navigation Hints Overlay Anchoring Across Tracking Tabs [Verified]
 - **Tests**: `SensorGridScreen.kt`, `SensorGridScreenRouteIntegrationTest.kt`
 - **Implementation**: Restoration of unified top-of-tab navigation hints overlay anchoring across all tracking tabs, reverting map-relative placement.
 - **Rationale**: The system SHALL restore unified top-of-tab anchoring for active navigation prompt overlays (`TurnPromptBanner`, `ReturnNavigationHud`, `ForkDecisionCard`) across all tracking tabs, superseding and reverting the map-relative placement of `REQ-UI-335` (ATT-3170, amending `REQ-UI-324` and `REQ-MAP-031`):
@@ -9122,7 +9122,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Zero telemetry displacement, map recomposition barrier, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-349: Active Sensor Deletion Disconnection Lifecycle and Defensive Telemetry Boundary Filtering Architecture [`TST-UI-309`]
+### REQ-UI-349: Active Sensor Deletion Disconnection Lifecycle and Defensive Telemetry Boundary Filtering Architecture [Verified]
 - **Tests**: `DeviceDataRepository.kt`, `ControlTrackingViewModel.kt`, `EditDeviceDialog.kt`, `DeviceManager.java`
 - **Implementation**: Active sensor deletion disconnection lifecycle and defensive telemetry boundary filtering architecture.
 - **Rationale**: The system SHALL eliminate orphaned ghost sensor tiles and non-responsive screen-dimmed dialog states when deleting active or paired sensors (ATT-3169, refining `REQ-UI-278`, `REQ-UI-301`, and ASPICE Governance Rule 35):
@@ -9162,7 +9162,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Normal sensor telemetry, valid edit dialogs, sensor header centering, and 100% test pass rate MUST NOT be broken.
 
-### REQ-UI-350: Edge-to-Edge System Navigation Bar Inset Padding for Post-Workout Alert Snackbars and Action Controls [`TST-UI-310`]
+### REQ-UI-350: Edge-to-Edge System Navigation Bar Inset Padding for Post-Workout Alert Snackbars and Action Controls [Verified]
 - **Tests**: `WorkoutSummariesTabbedScreen.kt`, `WorkoutSummariesListFragment.kt`, `RoutesScreen.kt`
 - **Implementation**: Edge-to-edge system navigation bar inset padding for post-workout alert snackbars and action controls.
 - **Rationale**: The system SHALL guarantee that in-app snackbars and interactive action buttons displayed on aftermath and management screens render cleanly above the Android system navigation bar / gesture navigation handle without visual occlusion or tap interference (ATT-3167, refining `REQ-CON-007` and ASPICE Governance Rule 35):
@@ -9195,7 +9195,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Edge-to-edge map canvas, low battery threshold ($\\le 20\\%$), non-blocking navigation, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-351: Multi-Dimensional Sensor Filtering by Protocol, Category, and Battery Level with Deep-Link Navigation [`TST-UI-311`]
+### REQ-UI-351: Multi-Dimensional Sensor Filtering by Protocol, Category, and Battery Level with Deep-Link Navigation [Verified]
 - **Tests**: `DevicesTabbedScreen.kt`, `DeviceListScreen.kt`, `DeviceListViewModel.kt`, `DevicesTabbedViewModel.kt`, `MainActivityWithNavigation.kt`, `SensorBatteryNotificationManager.kt`
 - **Implementation**: Multi-dimensional sensor filtering by protocol, category, and battery level with deep-link navigation.
 - **Rationale**: The system SHALL provide multi-dimensional filtering across Sensors & Devices views (`DevicesTabbedScreen` / `DeviceListScreen`) by communication protocol, device category, and battery health, and SHALL guarantee reliable deep-link routing from low battery notifications directly into a pre-filtered critical battery list (ATT-3166, refining `REQ-CON-007` and ASPICE Governance Rule 35):
@@ -9242,7 +9242,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Normal pairing flow, BLE/ANT+ communication, equipment matrix tabs, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-352: LiveClimbSheet Design System Harmonization, Shared ElevationProfile Integration, Adaptive Height Scaling & Degenerate Geometry Safeguards [`TST-UI-312`]
+### REQ-UI-352: LiveClimbSheet Design System Harmonization, Shared ElevationProfile Integration, Adaptive Height Scaling & Degenerate Geometry Safeguards [Verified]
 - **Tests**: `LiveClimbSheet.kt`, `ElevationProfile.kt`, `MetricBadge.kt`, `ClimbColorUtils.kt`
 - **Implementation**: Harmonize LiveClimbSheet with canonical design system, reuse ElevationProfile with climb gradient shading and adaptive height scaling, delegate chips/badges to MetricBadge, and enforce degenerate geometry safeguards.
 - **Rationale**: The system SHALL harmonize `LiveClimbSheet.kt` with the canonical design system, reuse `ElevationProfile.kt` for gradient-shaded climb profiles with adaptive height scaling based on climb elevation gain, and enforce defensive boundary safeguards against degenerate geometries (ATT-3264, ATT-3316, amending `REQ-UI-328` and `REQ-UI-341`, and complementing `REQ-UI-015`):
@@ -9287,7 +9287,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Telemetry calculations, rider marker positioning, multi-state Compose `@Preview` tooling, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-353: Persistent Missing ANT+ Adapter Dialog Suppression and Advanced Settings Warning Reset [`TST-UI-313`]
+### REQ-UI-353: Persistent Missing ANT+ Adapter Dialog Suppression and Advanced Settings Warning Reset [Verified]
 - **Tests**: `TuningPreferencesDataStore.kt`, `MainActivityWithNavigation.kt`, `ATrainingTrackerApp.kt`, `SensorSearchTuningSection.kt`, `SensorsGpsFilterSection.kt`, `AdvancedTuningDialog.kt`, `AdvancedTuningScreen.kt`
 - **Implementation**: Persistently suppress missing ANT+ adapter dialog after dismissal and provide Advanced Settings toggle in sensor search section to reset.
 - **Rationale**: The system SHALL persistently suppress the missing ANT+ adapter dialog upon user dismissal and provide an Advanced Tuning toggle in the Sensor Search & Behavior section to inspect and re-enable warnings (ATT-3220, ATT-3454, amending `REQ-UI-323` and complementing `REQ-SET-073`):
@@ -9350,7 +9350,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Initial alert presentation, status sheet shortcut, Play Store dependency resolution, modular file size < 400 lines, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-354: Whole Integer Formatting for Cycling Power and Mathematical Rounding for Integer Telemetry Metrics (`POWER`, `CADENCE`, `HR`, `SLOPE`) [`TST-UI-314`]
+### REQ-UI-354: Whole Integer Formatting for Cycling Power and Mathematical Rounding for Integer Telemetry Metrics (`POWER`, `CADENCE`, `HR`, `SLOPE`) [Verified]
 - **Tests**: `IntegerFormatter.java`, `CadenceFormatter.java`, `SensorType.java`
 - **Implementation**: Format cycling power as a whole rounded integer without decimal places and enforce mathematical rounding across all integer-based telemetry metrics.
 - **Rationale**: The system SHALL format cycling power as a whole rounded integer without decimal places and enforce mathematical half-up rounding across all integer-based telemetry metrics (ATT-3229, refining `REQ-UI-167` and complementing `REQ-UI-015`):
@@ -9390,7 +9390,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Full double precision retained in SQLite storage, null fallback `--`, non-integer formatters unchanged, and 100% test pass rate MUST NOT be broken.
 
-### REQ-UI-355: Active Route Full Elevation Profile with Map-Matched Position Marker, Categorized Climbs & Per-Tab Rolling Window Scoping During Tracking [`TST-UI-315`]
+### REQ-UI-355: Active Route Full Elevation Profile with Map-Matched Position Marker, Categorized Climbs & Per-Tab Rolling Window Scoping During Tracking [Verified]
 - **Tests**: `SensorGridScreen.kt`, `TrackingViewModel.kt`, `TrackingElevationProfileResolver.kt`, `ElevationProfile.kt`
 - **Implementation**: Dynamically switch live tracking elevation profile data source to active route, rendering complete route profile, map-matched marker distance, categorized climbs, and individual per-tab rolling window scoping.
 - **Rationale**: The system SHALL dynamically switch the live tracking elevation profile data source to the active navigated route when a route is actively followed, displaying route elevation, categorized climbs, and a map-matched position progress marker, and SHALL support individual per-tab visible window scoping and rolling lookahead configuration (ATT-3199, ATT-3317, extending `REQ-UI-346` and aligning with Design Guidelines §2.3):
@@ -9454,7 +9454,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Canonical adaptive height, non-weighted wrapping Surface, Full Route default, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-356: Workout Start & In-Ride Low Sensor Battery Alert Snackbars with Navigation Bar Inset Compliance & Semantic Severity Color Tiering [`TST-UI-316`]
+### REQ-UI-356: Workout Start & In-Ride Low Sensor Battery Alert Snackbars with Navigation Bar Inset Compliance & Semantic Severity Color Tiering [Verified]
 - **Tests**: `TrackingTabsScreen.kt`, `WorkoutSummariesTabbedScreen.kt`, `MainActivityWithNavigation.kt`, `WorkoutNavigationEvents.kt`, `Color.kt`
 - **Implementation**: Workout start and in-ride live tracking low sensor battery alert snackbars with navigation bar insets, lap button clearance, and semantic severity color tiering (amber warning, red critical).
 - **Rationale**: The system SHALL evaluate paired and active sensors at workout start and during active live tracking, dispatching non-blocking Material 3 alert snackbars with system navigation bar inset compliance, floating control clearance, and dedicated semantic severity color tiering (ATT-3313, ATT-3451, refining and extending `REQ-UI-350` and `REQ-CON-007`):
@@ -9508,7 +9508,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Non-blocking M3 snackbars, 20% threshold, navigation bar insets, session deduplication, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-357: Dedicated Full-Screen Advanced Settings Screen Architecture, Zero-Dismissal Scrolling, and Lifecycle-Driven Category Reorganization [`TST-UI-317`]
+### REQ-UI-357: Dedicated Full-Screen Advanced Settings Screen Architecture, Zero-Dismissal Scrolling, and Lifecycle-Driven Category Reorganization [Verified]
 - **Tests**: `AdvancedTuningScreen.kt`, `AdvancedTuningAccordion.kt`, `NavRoutes.kt`, `ATrainingTrackerApp.kt`
 - **Implementation**: Migrate Advanced Settings from ModalBottomSheet to full-screen Compose destination, eliminating accidental scroll dismissals, and restructure categories into lifecycle sequence.
 - **Rationale**: The system SHALL migrate Advanced Settings from a nested `ModalBottomSheet` into a dedicated full-screen Compose destination `AdvancedTuningScreen.kt` (`NavRoutes.ADVANCED_SETTINGS`), eliminating accidental drag-dismissals during list scrolling, and SHALL restructure the category hierarchy into an intuitive 3-phase athletic lifecycle sequence (ATT-3344, amending `REQ-SET-073`, `REQ-SET-074`, and `REQ-UI-222`):
@@ -9567,7 +9567,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Parameter ranges, DataStore keys, warning card, factory reset, zero tonal elevation, 400-line file limit, and 9-language localization parity MUST NOT be broken.
 
-### REQ-UI-358: Dynamic Cockpit Viewport Allocation, Asymmetric Map Weight Expansion & Bounded Sensor Grid Containment [`TST-UI-319`]
+### REQ-UI-358: Dynamic Cockpit Viewport Allocation, Asymmetric Map Weight Expansion & Bounded Sensor Grid Containment [Verified]
 - **Tests**: `SensorGridScreen.kt`
 - **Implementation**: Dynamic cockpit viewport allocation, asymmetric map weight expansion, and bounded sensor grid containment.
 - **Rationale**: The system SHALL ensure that when a tracking tab displays both a sensor grid and an embedded map view (`showMap == true`), the map expands flexibly to consume 100% of all vertical space remaining between the sensor grid and the elevation profile (or bottom cockpit boundary), eliminating dead white space, while bounding multi-row sensor grids to at most 50% of available viewport height with internal vertical scrolling (ATT-3343, amending `REQ-UI-346` and `REQ-UI-339`, complementing `REQ-UI-355`):
@@ -9614,7 +9614,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Sensor grid scrollability, canonical adaptive height, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-359: Live Segment and Climb Bottom Sheet Gesture Re-Expansion and Peek Tap-to-Expand [`TST-UI-320`]
+### REQ-UI-359: Live Segment and Climb Bottom Sheet Gesture Re-Expansion and Peek Tap-to-Expand [Verified]
 - **Tests**: `SensorGridScreen.kt`
 - **Implementation**: Live Segment and Climb bottom sheet gesture re-expansion and peek tap-to-expand during active tracking.
 - **Rationale**: The system SHALL ensure that when a Strava Live Segment or Route Climb is active during workout tracking (`shouldShowBottomSheet == true`), the athlete can reliably re-expand the bottom sheet (`BottomSheetScaffold`) to full height (`SheetValue.Expanded`) via an upward swipe gesture along the bottom edge or a single tap on the peek header, after the sheet has been collapsed or dismissed (ATT-3341, amending `REQ-UI-343` and `REQ-UI-327`):
@@ -9650,7 +9650,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Initial automatic expansion, active-tab gating, inactive touch neutrality, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-360: Turn-by-Turn Navigation Slight Turn Vector Icon Harmonization and Directional Symbol Compose Preview Gallery [`TST-UI-323`]
+### REQ-UI-360: Turn-by-Turn Navigation Slight Turn Vector Icon Harmonization and Directional Symbol Compose Preview Gallery [Verified]
 - **Tests**: `ic_turn_slight_right.xml`, `ic_turn_slight_left.xml`, `TurnDirection.kt`, `TurnPromptBanner.kt`
 - **Implementation**: Replace distorted slight right and slight left vector drawables with canonical bottom-anchored Material vector paths, and provide Compose preview gallery of all 8 turn symbols across Light and Dark themes.
 - **Rationale**: The system SHALL replace the distorted vector path drawables for slight right (`ic_turn_slight_right.xml`) and slight left (`ic_turn_slight_left.xml`) with canonical, bottom-anchored Material Design vector geometries, and SHALL provide an interactive Jetpack Compose `@Preview` gallery displaying all 8 `TurnDirection` symbols across Light and Dark themes (ATT-3455, complementing `REQ-MAP-028` and `REQ-UI-324`):
@@ -9693,7 +9693,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Pure vector XML assets, no changes to route navigation math, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-361: Turn-by-Turn Navigation Sharp Turn Vector Icon Harmonization and Directional Contract Verification [y_R - y_L]
+### REQ-UI-361: Turn-by-Turn Navigation Sharp Turn Vector Icon Harmonization and Directional Contract Verification [Verified]
 - **Tests**: \le 0.01$).
 3. *Rotational Progression & Preview Gallery Compatibility*:
 • The diagonal $135^\circ$ / $-135^\circ$ arrowheads SHALL complete the consistent rotational progression of the turn icon family in `TurnCueIconsGallery` (`Straight 0°` $\uparrow$ $\to$ `Slight Right 45°` $\nearrow$ $\to$ `Right 90°` $\rightarrow$ $\to$ `Sharp Right 135°` $\searrow$ $\to$ `U-Turn 180°` $\downarrow$ $\to$ `Sharp Left -135°` $\swarrow$ $\to$ `Left -90°` $\leftarrow$ $\to$ `Slight Left -45°` $\nwarrow$).
@@ -9732,7 +9732,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 • Test SHALL verify XML root element `<vector>`, valid 24x24 viewport, non-empty `android:pathData`, and bottom-stem grounding at $y=20$ (`M6,20h2` and `V20z` for right; `M18,20h-2` and `V20z` for left).
 • Test SHALL verify mathematical horizontal reflection symmetry between `ic_turn_sharp_right` and `ic_turn_sharp_left` across midline $x=12$ ($x_R + x_L = 24.0 \pm 0.01$, $
 
-### REQ-UI-362: Removal of Google Drive Format Scan Option from Workout Import Cards [`TST-UI-325`]
+### REQ-UI-362: Removal of Google Drive Format Scan Option from Workout Import Cards [Verified]
 - **Tests**: `ImportBackupTabsScreen.kt`, `strings.xml` (all 9 locales)
 - **Implementation**: Remove Google Drive scan option across all workout format import cards (FIT, TCX, GPX), eliminating misleading REST scope dead-ends while preserving native SAF Google Drive file picking and database backup/restore.
 - **Rationale**: The system SHALL remove the Google Drive scan option across all workout format import cards (FIT, TCX, GPX) in `ImportBackupTabsScreen.kt`, eliminating confusing least-privilege OAuth scope restrictions while preserving native Storage Access Framework (SAF) Google Drive file picking and Google Drive full database backup/restore (ATT-3489, amending `REQ-UI-293`):
@@ -9774,7 +9774,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Android SAF local file picking, Dropbox format scanning, pre-import cluster parameter tuning, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-363: Recursive Directory Workout File Discovery and Bulk Import via Storage Access Framework [`TST-UI-326`]
+### REQ-UI-363: Recursive Directory Workout File Discovery and Bulk Import via Storage Access Framework [Verified]
 - **Tests**: `ImportBackupTabsScreen.kt`, `SafDirectoryScanner.kt`, `BackupRestoreViewModel.kt`, `strings.xml` (all 9 locales)
 - **Implementation**: Recursive directory workout file discovery and bulk import via Storage Access Framework with automated duplicate detection and 9-language localization parity.
 - **Rationale**: The system SHALL provide recursive directory workout file discovery and bulk import across all format import cards (FIT, TCX, GPX) using Android Storage Access Framework (SAF) `OpenDocumentTree()`, allowing athletes to bulk-import nested workout folder hierarchies with automated duplicate detection and zero sensitive OAuth scope requirements (ATT-3491, complementing `REQ-UI-293` and `REQ-UI-362`):
@@ -9821,7 +9821,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Android SAF least privilege, depth limit bound 6, cycle detection, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-364: Centralized Metric Distance and Altitude Formatting Enforcement Across Navigation and Telemetry Cards (Rule 36) [`TST-UI-327`]
+### REQ-UI-364: Centralized Metric Distance and Altitude Formatting Enforcement Across Navigation and Telemetry Cards (Rule 36) [Verified]
 - **Tests**: `ForkDecisionCard.kt`, `ReturnNavigationState.kt`, `RouteSelectionButton.kt`, `RouteSelectorSheet.kt`, `TurnPromptBanner.kt`, `LapSplitVisualizer.kt`, `LiveClimbSheet.kt`, `ClimbOnMapScreen.kt`, `RouteOnMapScreen.kt`, `AltitudeFormatter.java`, `TrainingApplication.java`
 - **Implementation**: Centralized metric distance and altitude formatting enforcement across navigation and telemetry cards (Rule 36).
 - **Rationale**: The system SHALL replace all hardcoded metric template strings ("km", "m") across route selection, active navigation prompts, return navigation HUD, live climb sheets, and lap visualizers with centralized, unit-aware formatters (`DistanceFormatter` and `AltitudeFormatter`), enforcing Rule 36 (Single Source of Truth & DRY) and guaranteeing strict Imperial unit parity (ATT-3361, complementing `REQ-UI-015`, `REQ-UI-016`, `REQ-UI-330`, `REQ-MAP-027`, `REQ-MAP-028`, and `REQ-MAP-029`):
@@ -9872,7 +9872,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Pure Compose architecture, Single Source of Truth (Rule 36), and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-365: Centralized Speed Unit Conversion and Formatter Harmonization via MyHelper (Rule 36) [`TST-UI-328`]
+### REQ-UI-365: Centralized Speed Unit Conversion and Formatter Harmonization via MyHelper (Rule 36) [Verified]
 - **Tests**: `MyHelper.java`, `TelemetryMetricUtils.kt`, `EditSportTypeDialog.kt`, `SpeedFormatter.java`
 - **Implementation**: Centralized speed unit conversion and formatter harmonization via MyHelper (Rule 36).
 - **Rationale**: The system SHALL centralize all speed unit conversions and eliminate manual inline conversion formulas (e.g. `mps * 3.6`, `value / 3.6`, `2.236936`) across telemetry graph utilities, sport type dialogs, and speed formatters by routing all conversions strictly through `MyHelper`, enforcing Rule 36 (Single Source of Truth & DRY) and guaranteeing mathematical parity and locale-resilient numeric parsing (ATT-3363, complementing `REQ-UI-015`, `REQ-UI-016`, and `REQ-UI-364`):
@@ -9912,7 +9912,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Mathematical precision, Single Source of Truth (Rule 36), locale robustness, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-366: Harmonized Live Segment and Live Climb Tracking Bottom Sheet Architecture & Container (Rule 36) [`TST-UI-329`]
+### REQ-UI-366: Harmonized Live Segment and Live Climb Tracking Bottom Sheet Architecture & Container (Rule 36) [Verified]
 - **Tests**: `LiveSegmentSheet.kt`, `LiveClimbSheet.kt`, `SensorGridScreen.kt`
 - **Implementation**: Harmonized live segment and live climb tracking bottom sheet architecture and container (Rule 36).
 - **Rationale**: The system SHALL harmonize live tracking bottom sheet scaffolding and mounting across Strava Live Segments and Live Climbs (ClimbPro), eliminating duplicate container wrappers in `SensorGridScreen.kt`, normalizing file naming to `LiveSegmentSheet.kt`, and establishing a unified sheet container architecture, enforcing Rule 36 (Single Source of Truth & DRY) and guaranteeing visual and behavioral consistency (ATT-3364, complementing `REQ-MAP-027`, `REQ-UI-196`, `REQ-UI-270`, `REQ-UI-331`, and `REQ-UI-340`):
@@ -9950,7 +9950,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Segment precedence over climbs, elevation profile pin alignment, wrap-content height, and 100% full-suite test pass rate MUST NOT be broken.
 
-### REQ-UI-367: First-Time Stop Tracking Swipe and Tab Coachmark Banner on Cockpit Screen with Persistent Acknowledgement and Factory Reset Integration []
+### REQ-UI-367: First-Time Stop Tracking Swipe and Tab Coachmark Banner on Cockpit Screen with Persistent Acknowledgement and Factory Reset Integration [Verified]
 - **Tests**: trackingMode == TrackingMode.PAUSED) && currentPage > 0 && screenMode == ScreenMode.TRACKING`.
 • `TrackingTabsScreen` SHALL gate invoking `trackingTabsViewModel.markCoachmarkRenderedInSession()` on `showStopTrackingCoachmark && pagerState.settledPage > 0 && !pagerState.isScrollInProgress`, ensuring `hasRenderedCoachmarkInSession` is never armed during scroll animations away from `Page 0`.
 • `TrackingTabsViewModel.shouldAutoAcknowledgeStopTrackingCoachmark(...)` SHALL accept `(trackingMode, currentPage, settledPage, isScrollInProgress, hasSeenHint, hasRenderedCoachmarkInSession, isDismissPending)` and return `true` iff `hasSeenHint == false && !isDismissPending && hasRenderedCoachmarkInSession && (trackingMode == TrackingMode.TRACKING
@@ -9965,7 +9965,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 • `TrackingTabsScreen` SHALL collect `hasSeenStopTrackingHintFlow` (`initial = true` to prevent flash prior to DataStore load) and `hasRenderedCoachmarkInSession`.
 • `TrackingTabsScreen` SHALL evaluate `shouldShowStopTrackingCoachmark(trackingMode, currentPage, screenMode, hasSeenHint, isDismissPending)`, returning `true` iff `hasSeenHint == false && !isDismissPending && (trackingMode == TrackingMode.TRACKING
 
-### REQ-UI-368: Interactive Start/End Workout Cropping with Destructive Sample Pruning and Full Metric Recalculation [Interactive start/end workout cropping with destructive sample pruning, synchronized map/elevation scrubbing, deterministic lap metadata preservation, universal cumulative clamping, and export invalidation.]
+### REQ-UI-368: Interactive Start/End Workout Cropping with Destructive Sample Pruning and Full Metric Recalculation [Verified]
 - **Tests**: < 10^{-6}$ or $v' < 0$ are clamped to `0.0` / `0`.
 • Straight-line displacement `LINE_DISTANCE_m` SHALL be recalculated row-by-row from `newStartLatLng` via Haversine distance (or anchored to `0.0` for GPS-less indoor activities).
 • Verify post-op checksum: `remainingRows == expectedRetainedRowCount && deletedRows == expectedDeletedRowCount && remainingRows >= 2`.
@@ -10029,7 +10029,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 • Prune samples outside `[startRowId, endRowId]` in `WorkoutSamplesDatabaseManager`.
 • Cumulative monotonic columns (`DISTANCE_m`, `TIME_TOTAL`, `TIME_ACTIVE`, `ASCENT`, `DESCENT`, `CALORIES`) SHALL be shifted by subtracting baseline values at `startRowId`. The new start row (`_id == startRowId`) is zero-anchored (`0.0` / `0`), and for subsequent rows, shifted values with $
 
-### REQ-UI-369: [REVERTED - Architectural Fence] Prohibition of Static BottomSheetScaffold Bottom Inset Padding on Cockpit ElevationProfile Surface [`TST-UI-332`]
+### REQ-UI-369: [REVERTED - Architectural Fence] Prohibition of Static BottomSheetScaffold Bottom Inset Padding on Cockpit ElevationProfile Surface [Verified]
 - **Tests**: `SensorGridScreen.kt`
 - **Implementation**: Reverted static scaffold bottom padding on ElevationProfile Surface; enforces architectural fence preventing 174dp blank whitespace when bottom sheet is swiped to Hidden.
 - **Rationale**: The system SHALL NOT apply `bottom = paddingValues.calculateBottomPadding()` from Material 3 `BottomSheetScaffold` to the `ElevationProfile` `Surface` in `SensorGridScreen.kt` (ATT-3311 Post-Review Revert of `f3edad51`, preserving `REQ-UI-346`, `REQ-UI-355`, and `REQ-UI-358`):
@@ -10040,7 +10040,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 2. *Enforced Layout Invariant*:
 • The `ElevationProfile` `Surface` in `SensorGridScreen.kt` SHALL declare `.fillMaxWidth().padding(top = 8.dp)` with zero static bottom scaffold inset padding.
 
-### REQ-UI-370: Decoupled Training Zone Architecture & 7-Zone Coggan Cycling Power Model [`TST-UI-333`]
+### REQ-UI-370: Decoupled Training Zone Architecture & 7-Zone Coggan Cycling Power Model [Verified]
 - **Tests**: `SettingsDataStore.kt`, `ZonesSettingsActivity.kt`, `TelemetryZoneMath.kt`, `ZoneDistributionCalculator.kt`, `TrackingViewModel.kt`, `Color.kt`
 - **Implementation**: Decoupled training zone architecture retaining 5 zones for Heart Rate while expanding Cycling Power to Coggan 7-zone model across settings, real-time HUD tiles, and aftermath analytics.
 - **Rationale**: The system SHALL decouple the training zone architecture by retaining the canonical 5-zone model for Heart Rate (`HR_RUN`, `HR_BIKE`) while expanding Cycling Power (`PWR_BIKE`) to Dr. Andy Coggan's 7-zone framework across settings, real-time HUD cockpit tiles, and post-workout aftermath analytics (ATT-3184, amending `REQ-UI-203` and complementing `REQ-UI-202` and `REQ-UI-231`):
@@ -10107,7 +10107,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Heart Rate 5-zone scheme, SQLite single-thread confinement, atomic DataStore transactions, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-371: Elevation Profile 7-Zone Gradient Shading and Harmonized Legend [`TST-UI-334`]
+### REQ-UI-371: Elevation Profile 7-Zone Gradient Shading and Harmonized Legend [Verified]
 - **Tests**: `ElevationProfile.kt`
 - **Implementation**: Elevation profile 7-zone gradient shading and harmonized legend.
 - **Rationale**: The system SHALL harmonize elevation profile slope gradient shading and the interactive `GradeLegend` in `ElevationProfile.kt` with the application's unified 7-zone design system (`TTColor.Zone1..Zone7`) established in `REQ-UI-370` (ATT-3391, complementing `REQ-UI-352` and `REQ-UI-370`):
@@ -10162,7 +10162,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Live climb shading (`REQ-UI-352`), zero disk/DB cache regressions, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-372: Horizontal Stacked Distribution Bar Component & 3-Way Zone Display Mode Switching in Workout Summary Cards [`TST-UI-335`]
+### REQ-UI-372: Horizontal Stacked Distribution Bar Component & 3-Way Zone Display Mode Switching in Workout Summary Cards [Verified]
 - **Tests**: `ZoneDistributionStackedBar.kt`, `ZoneDistributionModels.kt`, `HeartRateZoneDistributionCard.kt`, `PowerZoneDistributionCard.kt`, `WorkoutMasksAndCardsSection.kt`, `WorkoutSummary.kt`, `TrackOnMapScreen.kt`, `MyPreferenceManager.kt`
 - **Implementation**: Horizontal stacked distribution bar component, 3-way zone display mode switching in workout summary cards, default selector in Advanced Settings, and reactive wiring to workout summaries.
 - **Rationale**: The system SHALL provide a continuous horizontal stacked distribution bar as an alternative display mode alongside the vertical column chart and fine-grained telemetry histogram in workout aftermath zone cards (`HeartRateZoneDistributionCard`, `PowerZoneDistributionCard`) (ATT-3390, amending `REQ-UI-202` and `REQ-UI-203`, and complementing `REQ-UI-231`, `REQ-UI-251`, and `REQ-UI-370`):
@@ -10228,7 +10228,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Backward-compatible `FIVE_ZONES` enum value, telemetry graph marginal strip preservation, REQ-UI-262 <= 400 lines limit, zero SQLite migrations, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-373: Automatic Training Zone Boundary Calculation from FTP and Heart Rate Baselines [`TST-UI-336`]
+### REQ-UI-373: Automatic Training Zone Boundary Calculation from FTP and Heart Rate Baselines [Verified]
 - **Tests**: `ZoneCalculationMath.kt`, `ZoneValidator.kt`, `ZoneNumberParser.kt`, `ZoneCalculatorDialog.kt`, `ZonesSettingsActivity.kt`, `SettingsDataStore.kt`
 - **Implementation**: Automatic training zone boundary calculation from FTP and Heart Rate baselines with single-transaction ACID atomicity, two-layer monotonicity, and historical immutability.
 - **Rationale**: The system SHALL provide automated, deterministic training zone boundary calculation directly within the zones settings workflow (`ZonesSettingsActivity.kt`) from physiological benchmarks (Functional Threshold Power for cycling power, and Maximum Heart Rate / Resting Heart Rate for heart rate), while strictly preserving manual customization, guaranteeing single-transaction ACID atomicity in DataStore, enforcing two-layer boundary inversion protection with strict integer increments ($Z_n \ge Z_{n-1} + 1$), guaranteeing historical analytics immutability, and maintaining full 9-language localization parity (ATT-3188, amending `REQ-UI-370` and complementing `REQ-PRO-022`):
@@ -10290,7 +10290,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Historical workout immutability in SQLite, finite Zone 7 bound (2500W ceiling), strict integer monotonicity ($Z_n \ge Z_{n-1} + 1$), canonical SI storage, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-374: Contextual Zone Settings Navigation Upon Physiological Sensor Pairing []
+### REQ-UI-374: Contextual Zone Settings Navigation Upon Physiological Sensor Pairing [Verified]
 - **Tests**: hr_run_zones_customized == true
 - **Rationale**: The system SHALL automatically direct the athlete to the relevant training zone settings tab immediately after pairing a new physiological sensor (heart rate monitor or power meter) if physiological zones for that metric have not yet been configured, while maintaining silent pairing completion for configured athletes and non-physiological sensors (ATT-3189, ATT-4452, complementing `REQ-UI-159`, `REQ-UI-370`, and `REQ-UI-373`):
 1. *Pairing Detection & Sensor Discrimination (`REQ-UI-374.1`)*:
@@ -10307,7 +10307,7 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 • On a fresh installation, both flags SHALL default to `false`.
 • Migration Heuristic / Fallback: If `KEY_IS_HR_ZONES_CONFIGURED` is unset, the system evaluates `hr_max != null
 
-### REQ-UI-376: Real-Time Visual Training Zone Gauge Cockpit Integration [`TST-UI-339`]
+### REQ-UI-376: Real-Time Visual Training Zone Gauge Cockpit Integration [Verified]
 - **Tests**: `ZoneGaugeBar.kt`, `ZoneGaugeMath.kt`, `SensorFieldView.kt`, `ZoneDisplayOptions.kt`, `ZonesSettingsActivity.kt`
 - **Implementation**: Real-time visual training zone gauge cockpit integration.
 - **Rationale**: The system SHALL provide an integrated real-time visual training zone gauge bar for Heart Rate and Cycling Power sensor tiles in the live tracking cockpit, dynamically adapting to the athlete's configured zone model (5-zone Heart Rate or 7-zone Coggan Cycling Power), calculating high-precision intra-zone needle positions, providing ambient peripheral comprehension, and maintaining strict AMOLED contrast and performance budgets (ATT-1293, extending `REQ-UI-172` and complementing `REQ-UI-370`, `REQ-UI-372`, `REQ-UI-373`, and `REQ-UI-374`):
@@ -10374,7 +10374,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Existing `ZoneDisplayOptions` backward compatibility, AMOLED True-Black compatibility, 60fps frame budget, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-377: Pedal Power Balance Real-Time Visual Split Indicator Cockpit Integration [P_R - 50]
+### REQ-UI-377: Pedal Power Balance Real-Time Visual Split Indicator Cockpit Integration [Verified]
 - **Tests**: =
 - **Implementation**: \Delta
 - **Rationale**: The system SHALL provide an integrated real-time visual pedal power balance split-bar widget for dual-sided power meters in the live tracking cockpit, featuring dual split formatting, center-anchored bidirectional deviation gauging, physiological asymmetry tier color-coding, and strict True-Black AMOLED compliance (ATT-1295, extending `REQ-UI-171` and `REQ-UI-103`, and complementing `REQ-UI-376`):
@@ -10383,7 +10383,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • The system SHALL calculate Left pedal percentage $P_L = 100 - P_R$.
 • For valid readings, the deviation magnitude is $
 
-### REQ-UI-378: Compact Action Buttons and Header Height Containment in ZonesSettingsActivity [`TST-UI-341`]
+### REQ-UI-378: Compact Action Buttons and Header Height Containment in ZonesSettingsActivity [Verified]
 - **Tests**: `ZonesSettingsActivity.kt`
 - **Implementation**: Compact action buttons and header height containment in ZonesSettingsActivity (Design Guidelines Sec 5.6).
 - **Rationale**: The system SHALL ensure header compactness and prevent vertical layout blowout in `ZonesSettingsActivity.kt` by replacing text buttons with compact symbol icon actions and bounding title container width, adhering to `docs/design_guidelines.md` Section 5.6 (ATT-3675, amending `REQ-UI-370` and `REQ-UI-373`):
@@ -10417,7 +10417,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Header height $\le 64\text{ dp}$, $48\text{ dp}$ touch targets, WCAG accessibility parity, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-379: State-Aware Live Segment Lifecycle Metrics, Past-Finish Rollout & PR Delta Feedback [`TST-UI-342`]
+### REQ-UI-379: State-Aware Live Segment Lifecycle Metrics, Past-Finish Rollout & PR Delta Feedback [Verified]
 - **Tests**: `LiveSegmentSheet.kt`, `SegmentLiveDetails.kt`, `LiveSegmentsRepository.kt`, `strings.xml` (all 9 locales)
 - **Implementation**: State-aware live segment lifecycle metrics, past-finish rollout & PR delta feedback in LiveSegmentSheet.
 - **Rationale**: The system SHALL decouple post-finish rollout tracking from lateral course offset, provide real-time Personal Record (PR) time delta feedback upon completion, and conditionally render metrics based on segment lifecycle state in `LiveSegmentSheet.kt` and `SegmentLiveDetails.kt` (ATT-3578, complementing `REQ-MAP-027`, `REQ-UI-196`, `REQ-UI-340`, and `REQ-UI-366`):
@@ -10472,7 +10472,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Pure UI presentation, zero changes to GPS projection math, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-380: Complete High-Density Asset Coverage & Defensive Compose Resource Resolution Architecture [`TST-UI-343`]
+### REQ-UI-380: Complete High-Density Asset Coverage & Defensive Compose Resource Resolution Architecture [Verified]
 - **Tests**: `app/src/main/res/drawable*`, Compose icon call sites, `DrawableDensityFallbackAuditTest.kt`, `ComposeSafePainterContractTest.kt`
 - **Implementation**: Complete high-density asset coverage and defensive Compose resource resolution architecture.
 - **Rationale**: The system SHALL eliminate `Resources$NotFoundException` crashes on density-split APKs and custom DPI devices by populating complete high-density raster drawables and systematically migrating dynamic Jetpack Compose icon call sites to defensive `safePainterResource` resolution (ATT-3529, amending `REQ-UI-312` and complementing `REQ-UI-375`):
@@ -10524,7 +10524,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Zero UI thread crashes, binary resource ID stability, visual fidelity, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-381: Centralized Jetpack Compose Design System Colors & Zero Hardcoded Color Literals Architecture [`TST-UI-344`]
+### REQ-UI-381: Centralized Jetpack Compose Design System Colors & Zero Hardcoded Color Literals Architecture [Verified]
 - **Tests**: `Color.kt`, `Theme.kt`, `LiveClimbSheet.kt`, `ClimbDetailSheet.kt`, and 21 other Compose files
 - **Implementation**: Centralized Jetpack Compose design system colors & zero hardcoded color literals architecture.
 - **Rationale**: The system SHALL centralize all Jetpack Compose color tokens, semantic domain colors, and theme palettes in `app/src/main/java/com/atrainingtracker/trainingtracker/ui/theme/Color.kt` and expose them via the `TTColor` design system object or Compose theme color schemes (ATT-3574):
@@ -10562,7 +10562,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Exact ARGB color parity across all UI screens; zero runtime crashes; 100% full clean-room unit test suite pass rate MUST NOT be broken.
 
-### REQ-UI-382: Comprehensive Canonical Formatting, Unit Conversion, and Dead Control Elimination Architecture [`TST-UI-345`]
+### REQ-UI-382: Comprehensive Canonical Formatting, Unit Conversion, and Dead Control Elimination Architecture [Verified]
 - **Tests**: `ClimbDetector.kt`, `LapSplitCalculator.kt`, `AdvancedTuningAccordion.kt`, `NavigationSection.kt`, `SensorsGpsFilterSection.kt`, `ClusterTuningContent.kt`
 - **Implementation**: Comprehensive canonical formatting, unit conversion, and dead control elimination architecture.
 - **Rationale**: The system SHALL eliminate all hardcoded distance/speed unit conversions, raw metric formatting strings, and obsolete deprecated tuning controls across all remaining production components in strict adherence to Rule 36 (Single Source of Truth & DRY) and Rule 29 (Full 9-Language Localization Parity) (ATT-3575):
@@ -10597,7 +10597,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Exact numerical parity across calculations; zero runtime crashes; 100% full clean-room unit test suite pass rate MUST NOT be broken.
 
-### REQ-UI-383: Unified Internal Tracking Sheet Layout & Shared LiveTrackingEntitySheet Architecture [`TST-UI-346`]
+### REQ-UI-383: Unified Internal Tracking Sheet Layout & Shared LiveTrackingEntitySheet Architecture [Verified]
 - **Tests**: `LiveTrackingEntitySheet.kt`, `LiveSegmentSheet.kt`, `LiveClimbSheet.kt`, `LiveTrackingSheetContainerTest.kt`, `LiveSegmentSheetContractTest.kt`, `LiveClimbSheetLayoutTest.kt`
 - **Implementation**: Unified internal tracking sheet layout and shared LiveTrackingEntitySheet architecture (Rule 36).
 - **Rationale**: The system SHALL eliminate duplicated internal layout structures, divergent outer/inner paddings, and redundant divider declarations across live tracking sheets by introducing a shared internal layout composable `LiveTrackingEntitySheet` in `com.atrainingtracker.trainingtracker.ui.components.core` and refactoring both `LiveSegmentSheet.kt` and `LiveClimbSheet.kt` to strictly delegate to it, enforcing Rule 36 (Single Source of Truth & DRY) and guaranteeing visual and structural parity (ATT-3576, completing Tier 2 of `REQ-UI-366`):
@@ -10631,7 +10631,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Wrap-content height, elevation profile pin alignment, divider styling, and 100% full-suite test pass rate MUST NOT be broken.
 
-### REQ-UI-384: Compact Zone-Tinted Bordered Selector Pills in Zone Settings Preview [`TST-UI-347`]
+### REQ-UI-384: Compact Zone-Tinted Bordered Selector Pills in Zone Settings Preview [Verified]
 - **Tests**: `ZonesSettingsActivity.kt`, `ZonesSettingsPreviewPillsContractTest.kt`
 - **Implementation**: Compact zone-tinted bordered selector pills in Zone Settings preview (Rule 38).
 - **Rationale**: The system SHALL prevent horizontal text starvation and vertical line wrapping (`"Z\n1"`..`"Z\n7"`) in the live preview zone selector row of `ZonesSettingsActivity.kt` by replacing Material 3 `FilterChip` + `leadingIcon` controls with compact zone-tinted bordered pills (`ZonePreviewPill`), adhering to Rule 38 (`docs/design_guidelines.md` Section 5.6, ATT-3776, complementing `REQ-UI-172` and `REQ-UI-370`):
@@ -10659,7 +10659,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Single-line rendering across 5 and 7 zones up to 130% font scale (Rule 38); WCAG AA contrast $\ge 4.5:1$; interactive `previewZone` selection preserved; 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-385: Streamlined Single-Action Header in ZonesSettingsActivity [`TST-UI-348`]
+### REQ-UI-385: Streamlined Single-Action Header in ZonesSettingsActivity [Verified]
 - **Tests**: `ZonesSettingsActivity.kt`, `ZonesSettingsHeaderContractTest.kt`
 - **Implementation**: Streamlined single-action header in ZonesSettingsActivity.
 - **Rationale**: The system SHALL streamline the top header bar of `ZonesSettingsActivity.kt` by removing the status `SuggestionChip`, the Reset-to-Defaults `IconButton`, the "Last updated / Calibration recommended" row, and the "Athlete Weight" row, leaving strictly the screen title, the Calculate `IconButton`, and the `PrimaryScrollableTabRow` (ATT-3777, superseding the secondary header elements of `REQ-UI-373`, `REQ-UI-378`, and `REQ-TRK-019.4`):
@@ -10691,7 +10691,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Header row height $\le 64\text{ dp}$; single-line ellipsis title; $48\text{ dp}$ Calculate touch target; `SettingsDataStore` API stability; 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-386: Single-Line Non-Wrapping Zone Card Display Mode Segmented Button Architecture [`TST-UI-349`]
+### REQ-UI-386: Single-Line Non-Wrapping Zone Card Display Mode Segmented Button Architecture [Verified]
 - **Tests**: `WorkoutMasksAndCardsSection.kt`, `HeartRateZoneDistributionCard.kt`, `PowerZoneDistributionCard.kt`, `values*/strings.xml`
 - **Implementation**: Single-line non-wrapping Zone Card Display Mode segmented button architecture (Rule 38).
 - **Rationale**: The system SHALL prevent vertical word and character wrapping (`"Histo-\ngramm"`) across all 3-way `ZoneCardDisplayMode` `SingleChoiceSegmentedButtonRow` controls in `WorkoutMasksAndCardsSection.kt`, `HeartRateZoneDistributionCard.kt`, and `PowerZoneDistributionCard.kt` by enforcing compact single-line `SegmentedButton` layout and concise 9-locale chart labels (`<= 11` characters) in strict compliance with Rule 38 (`docs/design_guidelines.md` Section 5.6, ATT-3771, amending `REQ-UI-372`):
@@ -10719,7 +10719,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Zero line wrapping or mid-word breaks across all 9 locales up to 150% font scale (Rule 38); WCAG 2.1 AA contrast; `< 400` lines in `WorkoutMasksAndCardsSection.kt`; 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-387: Compact Legend-Free Stacked Bar Display Mode in Zone Distribution Cards [`TST-UI-350`]
+### REQ-UI-387: Compact Legend-Free Stacked Bar Display Mode in Zone Distribution Cards [Verified]
 - **Tests**: `ZoneDistributionStackedBar.kt`, `HeartRateZoneDistributionCard.kt`, `PowerZoneDistributionCard.kt`, `ZoneDistributionStackedBarTest.kt`
 - **Implementation**: Compact legend-free Stacked Bar display mode in Zone Distribution cards.
 - **Rationale**: The system SHALL omit the detailed per-zone time and percentage breakdown list (`FlowRow` of `StackedBarLegendItem`) underneath the horizontal stacked bar when `HeartRateZoneDistributionCard` or `PowerZoneDistributionCard` is rendered in `ZoneCardDisplayMode.STACKED_BAR` mode (ATT-3772, amending `REQ-UI-372`):
@@ -10747,7 +10747,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Continuous horizontal stacked bar proportional weighting (`weight(entry.percentage)`), zero-duration filtering, `16.dp` bar height, `RoundedCornerShape(6.dp)`, `0.5.dp` WCAG 2.1 AA outline border, and `COLUMNS`/`HISTOGRAM` display modes MUST NOT be broken; 100% clean-room test pass rate.
 
-### REQ-UI-388: Decoupled Default Zone Card Display Modes for Workout Summary and Workout Details & Switcher-Free Summary Cards [Decoupled default Zone Card Display Modes for Workout Summary (`STACKED_BAR`, switcher-free) and Workout Details (`HISTOGRAM`, interactive switcher).]
+### REQ-UI-388: Decoupled Default Zone Card Display Modes for Workout Summary and Workout Details & Switcher-Free Summary Cards [Verified]
 - **Tests**: workoutDetailPrefs.showZoneAnalysis`, the system SHALL expose independent 3-way `SingleChoiceSegmentedButtonRow` selectors (`STACKED_BAR`, `COLUMNS`, `HISTOGRAM`):
 - When `workoutCardPrefs.showZoneAnalysis == true`: a selector labeled with `R.string.settings_zone_card_display_mode_title` and `R.string.tuning_matrix_col_list` bound to `workoutCardPrefs.zoneCardDisplayMode` (`workoutCardPrefs.copy(zoneCardDisplayMode = mode)`).
 - When `workoutDetailPrefs.showZoneAnalysis == true`: a selector labeled with `R.string.settings_zone_card_display_mode_title` and `R.string.tuning_matrix_col_details` bound to `workoutDetailPrefs.zoneCardDisplayMode` (`workoutDetailPrefs.copy(zoneCardDisplayMode = mode)`).
@@ -10785,7 +10785,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 2. *Independent Selectors in Advanced Settings (`REQ-UI-388.2`)*:
 • In `WorkoutMasksAndCardsSection.kt`, when `workoutCardPrefs.showZoneAnalysis
 
-### REQ-UI-389: Unified Filled-Triangle Arrowhead Geometry, Baseline Grounding & Reflection Symmetry Across All 8 Turn Cue Vector Icons [`TST-UI-352`]
+### REQ-UI-389: Unified Filled-Triangle Arrowhead Geometry, Baseline Grounding & Reflection Symmetry Across All 8 Turn Cue Vector Icons [Verified]
 - **Tests**: `app/src/main/res/drawable/ic_turn_*.xml`, `TurnDirectionIconContractTest.kt`
 - **Implementation**: Unified filled-triangle arrowhead geometry ($W=8\text{dp}, D=4\text{dp}, o=3\text{dp}$), $y=20$ baseline grounding, and `ic_turn_left` vertical centering & reflection symmetry across all 8 turn cue vector icons.
 - **Rationale**: The system SHALL unify all 8 `TurnDirection` vector drawables (`ic_turn_left.xml`, `ic_turn_right.xml`, `ic_turn_slight_left.xml`, `ic_turn_slight_right.xml`, `ic_turn_sharp_left.xml`, `ic_turn_sharp_right.xml`, `ic_turn_straight.xml`, `ic_turn_u_turn.xml`) so that every icon uses a single closed `<path>` grounded at baseline $y = 20.0\text{ dp}$ with uniform $2.0\text{ dp}$ stem/shaft thickness and an identical filled right-isosceles triangle arrowhead ($W = 8.0\text{ dp}$ base width, $D = 4.0\text{ dp}$ tip depth, $o = 3.0\text{ dp}$ wing overhang on each side of the $2.0\text{ dp}$ shaft), and SHALL center `ic_turn_left.xml`'s arrowhead strictly on the horizontal shaft axis $y = 10.0\text{ dp}$ in exact reflection symmetry with `ic_turn_right.xml` (ATT-3774, amending `REQ-UI-360` and `REQ-UI-361`):
@@ -10814,7 +10814,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: `24x24` viewport, `#FF1976D2` fill color, $2.0\text{ dp}$ stem width, $y = 20.0$ baseline grounding, reflection symmetry across all 3 pairs (`LEFT`/`RIGHT`, `SLIGHT_LEFT`/`SLIGHT_RIGHT`, `SHARP_LEFT`/`SHARP_RIGHT`), and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-390: Proportional Zone Segment Weights, 10% Boundary Clipping, Under-Segment Centered Active Badge & Primary-Blue Needle in Live ZoneGaugeBar [`TST-UI-353`]
+### REQ-UI-390: Proportional Zone Segment Weights, 10% Boundary Clipping, Under-Segment Centered Active Badge & Primary-Blue Needle in Live ZoneGaugeBar [Verified]
 - **Tests**: `ZoneGaugeMath.kt`, `ZoneGaugeState.kt`, `ZoneGaugeBar.kt`
 - **Implementation**: Proportional zone segment weights, 10% boundary clipping, under-segment centered active badge, and Primary Blue needle in live `ZoneGaugeBar`.
 - **Rationale**: The system SHALL scale the live cockpit `ZoneGaugeBar` linearly across $[X_{\min}, X_{\max}]$ by sizing interior zone segments proportionally to their configured span $w_i = C_i - C_{i-1}$ and clipping the outer open-ended zones ($Z_1$ and $Z_K$) to a $10\%$ boundary span ($w_{\text{cap}} = \frac{10.0}{95.0} S_{\text{inner}}$), SHALL center the active zone badge (`"Z1"`..`"Z7"`) directly beneath the active zone segment using high-contrast theme text (`MaterialTheme.colorScheme.onSurface`), and SHALL render the needle indicator in theme Primary Blue (`MaterialTheme.colorScheme.primary`) with a contrasting halo outline (ATT-3708, amending `REQ-UI-376`):
@@ -10850,7 +10850,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: DataStore `showGauge` persistence, stale dimmed state (`0.35f` alpha), AMOLED `outlineVariant` track border, $O(1)$ math, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-391: Dedicated Athlete Profile Screen, Timestamped Body Metrics SQLite History, Derived W/kg Time-Series Plot & Unidirectional SettingsDataStore Projection [`TST-UI-354`]
+### REQ-UI-391: Dedicated Athlete Profile Screen, Timestamped Body Metrics SQLite History, Derived W/kg Time-Series Plot & Unidirectional SettingsDataStore Projection [Verified]
 - **Tests**: `AthleteMetricsDatabaseManager.kt`, `AthleteMetricsRepository.kt`, `AthleteMetricsPlotMath.kt`, `AthleteProfileViewModel.kt`, `AthleteProfileScreen.kt`, `NavRoutes.kt`, `AppNavigationDrawer.kt`, `ATrainingTrackerApp.kt`
 - **Implementation**: Dedicated Athlete Profile screen, timestamped body metrics SQLite history, derived W/kg time-series plot, and unidirectional SettingsDataStore projection.
 - **Rationale**: The system SHALL provide a dedicated Athlete Profile / Body Metrics screen (`NavRoutes.ATHLETE_PROFILE`) accessible from the Navigation Drawer under `R.string.drawer__my_stuff`, backed by a SQLite time-series table (`athlete_metrics_history`) and unidirectional `AthleteMetricsRepository -> SettingsDataStore` synchronization (ATT-3704, complementing `REQ-UI-159`, `REQ-TRK-019`, `REQ-UI-373`, and `REQ-UI-385`):
@@ -10885,7 +10885,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Unidirectional data flow (`AthleteMetricsRepository -> SettingsDataStore`); symmetric `fromCursor`/`fromCursorBatch` mappers (Rule 20); single-line non-wrapping pills (Rule 38); 9-locale parity; 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-392: High-Contrast Warm Earthy Brown Zone 6 Color Token & Zone 7 Visual Separation [`TST-UI-355`]
+### REQ-UI-392: High-Contrast Warm Earthy Brown Zone 6 Color Token & Zone 7 Visual Separation [Verified]
 - **Tests**: `Color.kt`, `color.xml`, `SensorFieldZoneDisplayTest.kt`, `SensorFieldZoneGaugeTest.kt`
 - **Implementation**: High-contrast Warm Earthy Brown (`#8B5A2B`) Zone 6 color token for clear visual separation from Zone 7 (`#000000`).
 - **Rationale**: The system SHALL define `TTColor.Zone6` (`app/src/main/java/com/atrainingtracker/trainingtracker/ui/theme/Color.kt`) and `<color name="zone_6">` (`app/src/main/res/values/color.xml`) as `#8B5A2B` (`Color(0xFF8B5A2B)`, Warm Earthy Brown) so that Zone 6 is immediately distinguishable from Zone 7 (`#000000` Pure Black) with a WCAG 2.1 AA non-text contrast ratio $\ge 3.0:1$ ($3.44:1$) across all zone distribution charts, live tracking zone gauges, elevation profile gradient shading, and zone configuration screens (ATT-3696, amending the Zone 6 hex value in `REQ-UI-370` and `REQ-UI-371`):
@@ -10908,7 +10908,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: 1:1 parity between `Color.kt` and `color.xml`; $\ge 3.0:1$ contrast against `Zone7`; 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-393: Removal of Dead Sensor Pairing Code from Control Tracking Cockpit & Activity Navigation [`TST-UI-356`]
+### REQ-UI-393: Removal of Dead Sensor Pairing Code from Control Tracking Cockpit & Activity Navigation [Verified]
 - **Tests**: `ControlTrackingScreen.kt`, `ControlTrackingViewModel.kt`, `TrackingTabsScreen.kt`, `MainActivityWithNavigation.kt`, `ComposeSafePainterContractTest.kt`
 - **Implementation**: Removal of dead sensor pairing code from `PairingButtons.kt`, `ControlTrackingScreen.kt`, `ControlTrackingViewModel.kt`, `TrackingTabsScreen.kt`, and `MainActivityWithNavigation.kt`.
 - **Rationale**: The system SHALL remove all dead, unreachable ANT+ and Bluetooth LE sensor pairing UI components, parameters, ViewModel state/callbacks, and activity navigation helpers from the Control Tracking cockpit flow (`PairingButtons.kt`, `ControlTrackingScreen.kt`, `ControlTrackingViewModel.kt`, `TrackingTabsScreen.kt`, and `MainActivityWithNavigation.kt`), while preserving active sensor discovery (`ResearchButton` / `onSearchClicked`), connected device management (`RemoteDevices` / `ToEditDevice`), and sensor pairing in **My Sensors** (`DevicesTabbedContainerFragment` / `DeviceTypeSelectionDialog`) (ATT-3692, completing `REQ-UI-301`):
@@ -10936,7 +10936,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Active Control Tracking sensor search/edit and My Sensors pairing MUST remain intact; 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-394: ElevationProfile Empty State Rendering & Pre-Start Space Reservation on Tracking Tabs [`TST-UI-357`]
+### REQ-UI-394: ElevationProfile Empty State Rendering & Pre-Start Space Reservation on Tracking Tabs [Verified]
 - **Tests**: `ElevationProfile.kt`, `SensorGridScreen.kt`, `values*/strings.xml`, `ElevationProfileEmptyStateContractTest.kt`
 - **Implementation**: Render `ElevationProfile` empty state (`70.dp` canonical height) on tracking tabs when enabled before tracking starts or without active route.
 - **Rationale**: The system SHALL render a themed empty-state placeholder for `ElevationProfile` on tracking tabs (`SensorGridScreen`) whenever `state.showElevationProfile == true` and fewer than 2 path points are available (`resolvedProfile.pathPoints.size < 2`), reserving the canonical `calculateElevationProfileHeight(0.0)` (`70.dp`) height (`docs/design_guidelines.md` Section 2.3) so that athletes receive immediate visual feedback when enabling the Elevation Profile toggle and experience zero layout jump when tracking begins (ATT-3779, complementing `REQ-UI-346` and `REQ-UI-355`):
@@ -10964,7 +10964,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Canonical adaptive height `calculateElevationProfileHeight(0.0) == 70.dp` (Section 2.3); default `showEmptyState = false` backward compatibility; 9-locale parity; 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-375: Mathematical VectorDrawable Migration from Xfig/SVG/XCF Masters & Legacy Raster Purge [`TST-UI-338`]
+### REQ-UI-375: Mathematical VectorDrawable Migration from Xfig/SVG/XCF Masters & Legacy Raster Purge [Verified]
 - **Tests**: `app/src/main/res/drawable/*.xml`, `SportTypeSelector.kt`, `VectorAssetResolutionContractTest.kt`
 - **Implementation**: Mathematical VectorDrawable migration from Xfig/SVG/XCF masters and legacy raster purge (Rule 37).
 - **Rationale**: The system SHALL migrate the 16 sport type and ANT+/BLE sensor raster drawables (`bsport_bike`, `bsport_run`, `bsport_other`, `bike_cad`, `bike_pwr`, `bike_spd`, `bike_speed_and_cadence`, `hr`, `run_spd`, `temp`, `bt_bike_cad`, `bt_bike_pwr`, `bt_bike_spd`, `bt_bike_speed_and_cadence`, `bt_hr`, `bt_run`) to density-independent XML `VectorDrawable` assets in `app/src/main/res/drawable/` constructed directly from the authoritative mathematical Xfig 3.2 (`.fig`), SVG (`.svg`), and GIMP (`.xcf`) source files in `/home/rainer/Dropbox/workspace/TrainingTracker_with_BT_and_Map5/Bilder/` and analytical geometric primitives, and purge the 106 superseded raster PNG files (including `_gray.png` and `btle_hr.png`) across all density buckets (ATT-2859, Rule 37):
@@ -10989,7 +10989,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: 1:1 visual fidelity with original `.fig`/`.xcf` masters and reference PNGs (Rule 37); `DrawableDensityFallbackAuditTest` 100% pass; 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-395: Categorized & Searchable SensorType Selector in EditSensorFieldDialog [`TST-UI-358`]
+### REQ-UI-395: Categorized & Searchable SensorType Selector in EditSensorFieldDialog [Verified]
 - **Tests**: `SensorCategory.java`, `SensorType.java`, `EditSensorFieldDialog.kt`, `values*/strings.xml`
 - **Implementation**: Categorized and searchable 7-group `SensorType` selector in `EditSensorFieldDialog`.
 - **Rationale**: The system SHALL organize all 43 `SensorType` metrics into 7 semantic `SensorCategory` domain groups and replace the flat 43-item `SensorType` dropdown in `EditSensorFieldDialog.kt` with a categorized accordion and instant search selector (`SensorTypeSelectorSection`), adhering to `docs/design_guidelines.md` Section 3 and Section 5.8 (ATT-3852):
@@ -11019,7 +11019,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Zero nested `verticalScroll` or `LazyColumn` inside `AppModalBottomSheet` (Section 5.8); 9-locale parity; 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-396: System Navigation Bar Bottom Inset Clearance in AthleteProfileScreen [`TST-UI-359`]
+### REQ-UI-396: System Navigation Bar Bottom Inset Clearance in AthleteProfileScreen [Verified]
 - **Tests**: `AthleteProfileScreen.kt`, `AthleteProfileContractAndLocalizationTest.kt`
 - **Implementation**: System navigation bar bottom inset clearance on `AthleteProfileScreen` scrollable `LazyColumn` (Rule 41).
 - **Rationale**: The system SHALL apply the Android system navigation bar bottom inset (`WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()`) to the scrollable `LazyColumn` in `AthleteProfileScreen.kt` (`AthleteProfileContent`) in compliance with Rule 41 (`docs/design_guidelines.md` Section 5.6) so that the bottommost measurement history row or empty-history card clears the system navigation bar when scrolled to the bottom (ATT-3850, complementing `REQ-UI-391.5`):
@@ -11040,7 +11040,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Rule 41 system navigation bar inset clearance; `16.dp` spacing scale (Rule 23); 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-397: Restructured 5-Group Navigation Drawer, Consolidated Equipment & Profile/Zones Destinations, and Collapsible Secondary Sections [`TST-UI-360`]
+### REQ-UI-397: Restructured 5-Group Navigation Drawer, Consolidated Equipment & Profile/Zones Destinations, and Collapsible Secondary Sections [Verified]
 - **Tests**: `AppNavigationDrawer.kt`, `NavRoutes.kt`, `ATrainingTrackerApp.kt`, `AthleteProfileScreen.kt`, `ZonesSettingsActivity.kt`, `ids.xml`, `values*/strings.xml`
 - **Implementation**: Restructured 5-group Navigation Drawer, consolidated Equipment and Profile & Zones tabbed destinations, and collapsible Online Communities & Settings sections.
 - **Rationale**: The system SHALL declutter and restructure the main Navigation Drawer (`AppNavigationDrawer.kt`, `NavRoutes.kt`, `ATrainingTrackerApp.kt`, `AthleteProfileScreen.kt`, `ZonesSettingsActivity.kt`) into 5 groups with 12 permanently visible everyday items and 2 collapsible secondary configuration sections (ATT-3851, amending `REQ-UI-159` and extending `REQ-UI-391`):
@@ -11073,7 +11073,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: `REQ-UI-159`, `REQ-UI-374.3`, `REQ-UI-391`, `REQ-UI-396` (Rule 41), 9-locale parity, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-398: Space-Aware Per-Segment Percentage Labels Below ZoneDistributionStackedBar [`TST-UI-361`]
+### REQ-UI-398: Space-Aware Per-Segment Percentage Labels Below ZoneDistributionStackedBar [Verified]
 - **Tests**: `ZoneDistributionStackedBar.kt`, `ZoneDistributionStackedBarTest.kt`
 - **Implementation**: Space-aware per-segment percentage labels centered beneath `ZoneDistributionStackedBar` segments when horizontal width is sufficient.
 - **Rationale**: The system SHALL render the formatted time percentage (e.g. `24%`) centered directly beneath each active zone segment in `ZoneDistributionStackedBar.kt` if and only if that segment's horizontal width is sufficient to fit the single-line percentage label without horizontal clipping or overlapping (ATT-3853, complementing `REQ-UI-372` and `REQ-UI-387`):
@@ -11101,7 +11101,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: `REQ-UI-372`, `REQ-UI-387`, Rule 38 (`maxLines = 1, softWrap = false`), and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-399: Critical Power (CP), W' (Anaerobic Work Capacity), and W'bal (Anaerobic Battery) Across Athlete Profile, Live Cockpit, and Aftermath [`TST-UI-362`]
+### REQ-UI-399: Critical Power (CP), W' (Anaerobic Work Capacity), and W'bal (Anaerobic Battery) Across Athlete Profile, Live Cockpit, and Aftermath [Verified]
 - **Tests**: `PowerPhysiologyCalculator.kt`, `AthleteMetricsDatabaseManager.kt`, `SettingsDataStore.kt`, `AthleteMetricsRepository.kt`, `AthleteMetricsPlotMath.kt`, `AthleteProfileViewModel.kt`, `AthleteProfileScreen.kt`, `SensorType.java`, `CyclingPowerMetricsDevice.java`, `TrackerService.java`, `LegacyImportEngine.kt`, `WorkoutData.kt`, `WorkoutDataMapper.kt`, `WorkoutSummary.kt`, `TrackOnMapScreen.kt`, `TelemetryMetricGraph.kt`, `values*/strings.xml`
 - **Implementation**: Support Critical Power (CP), W' (Anaerobic Work Capacity), and Skiba 1-Hz W'bal (Anaerobic Battery) across Athlete Profile, Live Cockpit, Aftermath, and Imports.
 - **Rationale**: The system SHALL support Critical Power ($CP$, in W), $W'$ (Anaerobic Work Capacity, in kJ), and Skiba's 1-Hz $W'_{\text{bal}}$ (Anaerobic Battery, in kJ and $\%$) across the Athlete Profile, Live Cockpit (`CyclingPowerMetricsDevice`), Aftermath Workout Summaries/Details/Telemetry Graph, and Legacy File Imports (`LegacyImportEngine`) (ATT-3862, extending `REQ-UI-391` and `REQ-TRK-021`):
@@ -11137,7 +11137,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Rule 36 (DRY single source of truth in `PowerPhysiologyCalculator`), `SensorCategoryAndSelectorContractTest` lockstep (`44` total sensors), 9-locale parity, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-400: Efficiency Factor (EF) and Aerobic Decoupling (Pw:Hr / Pa:Hr) Calculation, Persistence, and Aftermath Display [`TST-UI-363`]
+### REQ-UI-400: Efficiency Factor (EF) and Aerobic Decoupling (Pw:Hr / Pa:Hr) Calculation, Persistence, and Aftermath Display [Verified]
 - **Tests**: `PowerPhysiologyCalculator.kt`, `ExtremaType.java`, `TrackerService.java`, `LegacyImportEngine.kt`, `WorkoutData.kt`, `WorkoutDataMapper.kt`, `WorkoutDetailsData.kt`, `WorkoutDetails.kt`, `values*/strings.xml`
 - **Implementation**: Calculate, persist, and display Efficiency Factor (EF) and Aerobic Decoupling (Pw:Hr / Pa:Hr) across Live Finalization, Imports, Workout Summaries, and Workout Details.
 - **Rationale**: The system SHALL calculate, persist, and display Efficiency Factor ($\text{EF}$) and Aerobic Decoupling ($\text{Pw:Hr }\%$ for cycling/power, $\text{Pa:Hr }\%$ for running/speed) across `PowerPhysiologyCalculator`, live session finalization (`TrackerService`), TCX/GPX/FIT file imports (`LegacyImportEngine`), and Aftermath Workout Summaries and Workout Details (`WorkoutData`, `WorkoutDataMapper`, `WorkoutDetailsData`, `WorkoutDetails`) (ATT-3861, extending `REQ-UI-399` and `REQ-STB-013`):
@@ -11167,7 +11167,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Rule 20 cursor/snapshot symmetry, Rule 36 DRY calculator in `PowerPhysiologyCalculator`, 9-locale parity, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-401: Performance Management Chart (PMC) for Fitness (CTL), Fatigue (ATL), Form / Race-Readiness (TSB), Workload Ratio (ACWR), and Weekly Ramp Rate [`TST-UI-364`]
+### REQ-UI-401: Performance Management Chart (PMC) for Fitness (CTL), Fatigue (ATL), Form / Race-Readiness (TSB), Workload Ratio (ACWR), and Weekly Ramp Rate [Verified]
 - **Tests**: `PowerPhysiologyCalculator.kt`, `WorkoutSummariesDatabaseManager.java`, `AthleteProfileViewModel.kt`, `AthleteProfileScreen.kt`, `values*/strings.xml`
 - **Implementation**: Add Performance Management Chart (PMC) for Fitness (CTL), Fatigue (ATL), Form / Race-Readiness (TSB), Workload Ratio (ACWR), and 7d Ramp Rate in Athlete Profile.
 - **Rationale**: The system SHALL compute and display a longitudinal Performance Management Chart (PMC) modeling Chronic Training Load ($\text{CTL}$), Acute Training Load ($\text{ATL}$), Training Stress Balance ($\text{TSB}$), Acute:Chronic Workload Ratio ($\text{ACWR}$), and 7-Day Fitness Ramp Rate ($\Delta \text{CTL} / 7\text{d}$) with multi-sport Heart-Rate fallback ($\text{hrTSS}$ / Banister $\text{TRIMP}$) across `PowerPhysiologyCalculator`, `WorkoutSummariesDatabaseManager`, `AthleteProfileViewModel`, and `AthleteProfileScreen` (ATT-3859, extending `REQ-UI-391`, `REQ-TRK-021`, and `REQ-MIG-039`):
@@ -11200,7 +11200,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Rule 36 DRY domain calculator, Rule 41 bottom inset clearance, 9-locale parity, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-402: Symmetric DTO Mapping & Aftermath Display of Power-Based Training Metrics (NP, IF, TSS, Work kJ, W/kg, VI) in Workout Summaries and Workout Details []
+### REQ-UI-402: Symmetric DTO Mapping & Aftermath Display of Power-Based Training Metrics (NP, IF, TSS, Work kJ, W/kg, VI) in Workout Summaries and Workout Details [Verified]
 - **Tests**: data.tss != null
 - **Rationale**: The system SHALL map and display session-level power-based training metrics — Normalized Power ($\text{NP}$, in $\text{W}$), Intensity Factor ($\text{IF} = \text{NP} / \text{FTP}$), Training Stress Score ($\text{TSS} = \frac{T_{\text{active}} \cdot \text{NP} \cdot \text{IF}}{\text{FTP} \cdot 36.0}$), Mechanical Work ($\text{Work}$, in $\text{kJ}$), Power-to-Weight ($\text{W/kg}$), and Variability Index ($\text{VI} = \text{NP} / \text{Avg\_Power}$) — across `WorkoutData`, `WorkoutDetailsData`, `WorkoutDataMapper`, and `WorkoutDetails` (shared by `WorkoutSummary` and `TrackOnMapScreen` / `MapDetailLayout`) (ATT-3858, extending `REQ-MIG-039`, `REQ-UI-399`, `REQ-UI-400`, and `REQ-STB-013`):
 1. *DTO Properties & Symmetric Resolution (`REQ-UI-402.1` — Rule 20)*:
@@ -11210,7 +11210,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 2. *Shared Aftermath UI Presentation (`REQ-UI-402.2` — Rule 23)*:
 • `WorkoutDetails.kt` SHALL render a dedicated Power Training Metrics summary section whenever power training metrics are present (`data.normalizedPowerWatts != null
 
-### REQ-UI-403: Progressive Disclosure of Physiology & Training Models in Advanced Settings, Profile & Zones, Live Cockpit Sensor Selector, and Aftermath Views [`TST-UI-366`]
+### REQ-UI-403: Progressive Disclosure of Physiology & Training Models in Advanced Settings, Profile & Zones, Live Cockpit Sensor Selector, and Aftermath Views [Verified]
 - **Tests**: `TuningPreferencesDataStore.kt`, `AdvancedTuningAccordion.kt`, `AdvancedTuningScreen.kt`, `AdvancedTuningDialog.kt`, `PhysiologyModelsSection.kt`, `WorkoutDetails.kt`, `WorkoutSummary.kt`, `MapDetailLayout.kt`, `TrackOnMapScreen.kt`, `AthleteProfileScreen.kt`, `AthleteProfileViewModel.kt`, `EditSensorFieldViewModel.kt`, `EditSensorFieldDialog.kt`, `values*/strings.xml`
 - **Implementation**: Add 'Physiology & Training Models' section in Advanced Settings to toggle training science schools (Coggan NP/IF/TSS, PMC, Aerobic Decoupling EF/Pw:Hr, Critical Power CP/W'/W'bal).
 - **Rationale**: The system SHALL provide a dedicated **Physiology & Training Models** (*Physiologie & Trainingsmodelle*) accordion category (`TuningSection.PHYSIOLOGY_MODELS`, `PhysiologyModelsSection.kt`) in **Advanced Settings** (`AdvancedTuningScreen.kt`, `AdvancedTuningDialog.kt`, `AdvancedTuningAccordion.kt`) backed by `TuningPreferencesDataStore` (`TuningConfig`) to toggle the UI visibility of four sports-science schools while preserving unconditional background calculation and SQLite persistence (ATT-3929, extending `REQ-UI-262`, `REQ-UI-399`, `REQ-UI-400`, `REQ-UI-401`, and `REQ-UI-402`):
@@ -11254,7 +11254,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Unconditional background persistence, `< 400` line modularity limit in `ui/settings/tuning/`, 9-locale parity, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-404: AltitudeRow + MetricItem Grouped Row Layout for Power and Physiology Metrics in WorkoutDetails (`docs/design_guidelines.md` Section 5.10) [Redesign WorkoutDetails power and physiology rows to follow the AltitudeRow + MetricItem pattern (Section 5.10) aligned with ATT-3929 schools.]
+### REQ-UI-404: AltitudeRow + MetricItem Grouped Row Layout for Power and Physiology Metrics in WorkoutDetails (`docs/design_guidelines.md` Section 5.10) [Verified]
 - **Tests**: avgPowerToWeight != null`: a horizontal `Row` of equal-weight `MetricItem(layout = MetricLayout.VERTICAL, modifier = Modifier.weight(1f))` columns for **Work** (`label = stringResource(R.string.workout_power_label_work)`, `value = stringResource(R.string.workout_power_value_work_format, workKj)`) and **W/kg** (`label = stringResource(R.string.power_to_weight_short)`, `value = stringResource(R.string.workout_power_metrics_wkg_format, avgPowerToWeight)`).
 3. *Aerobic Efficiency & Decoupling Row (`AerobicEfficiencyRow`, `REQ-UI-404.3`)*:
 • Gated on `enableAerobicEfficiencyModel && data.efficiencyFactor != null`.
@@ -11295,7 +11295,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 - When `enableCogganPowerMetrics == true` and any of `normalizedPowerWatts`, `intensityFactor`, or `tss` is present: a horizontal `Row` of equal-weight `MetricItem(layout = MetricLayout.VERTICAL, modifier = Modifier.weight(1f))` columns for **NP** (`label = stringResource(R.string.normalized_power_short)`, `value = stringResource(R.string.workout_power_value_watts_format, np)`, `secondaryValue = data.variabilityIndex?.let { stringResource(R.string.workout_power_metrics_vi_format, it) }`), **IF** (`label = stringResource(R.string.intensity_factor_short)`, `value = stringResource(R.string.workout_power_value_if_format, ifVal)`), and **TSS** (`label = stringResource(R.string.tss_short)`, `value = stringResource(R.string.workout_power_value_tss_format, tssVal)`).
 - When `workKj != null
 
-### REQ-UI-405: Profile & Zones Placement in Training Drawer Section and Collapsible My Stuff Section [Move 'Profile & Zones' to Training drawer section and make 'My Stuff' collapsible by default.]
+### REQ-UI-405: Profile & Zones Placement in Training Drawer Section and Collapsible My Stuff Section [Verified]
 - **Tests**: group.items.any { isDrawerItemSelected(it.id, selectedItemId) }`, returning `false` for `R.string.drawer__my_stuff` when a non-My-Stuff destination is selected, and `true` dynamically for every `item.id` in `myStuffGroup.items` as well as consolidated equipment aliases (`R.id.drawer_bikes`, `R.id.drawer_shoes`).
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
@@ -11322,7 +11322,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • When the 3 collapsible secondary sections (`R.string.drawer__my_stuff` = 3 items, `R.string.prefsOnlineCommunities` = 4 items, `R.string.drawer__settings` = 6 items; `13` hidden destination items total) are collapsed, the 2 non-collapsible primary drawer sections (`R.string.drawer__training` = 4 destination items, `R.string.drawer__maps` = 5 destination items) SHALL yield strictly `9` visible `DrawerItemConfig` destination rows (`groups.filter { !it.collapsible }.sumOf { it.items.size } == 9`, separate from the `5` always-visible category header rows; `9 + 13 = 22` total defined `DrawerItemConfig` items across all `5` groups).
 • `isDrawerGroupInitiallyExpanded(group, selectedItemId)` SHALL evaluate `!group.collapsible
 
-### REQ-UI-406: Transparent Inner Dial Fill (`#00000000`) on Stopwatch Vector Icon (`bsport_other.xml`) Across Active and Desaturated States [`TST-UI-369`]
+### REQ-UI-406: Transparent Inner Dial Fill (`#00000000`) on Stopwatch Vector Icon (`bsport_other.xml`) Across Active and Desaturated States [Verified]
 - **Tests**: `app/src/main/res/drawable/bsport_other.xml`, `VectorAssetResolutionContractTest.kt`
 - **Implementation**: Make inner dial of `bsport_other.xml` stopwatch icon transparent to match legacy grey/active rendering.
 - **Rationale**: The `bsport_other.xml` sport icon (`app/src/main/res/drawable/bsport_other.xml`) SHALL define a transparent interior fill (`android:fillColor="#00000000"`) on its main stopwatch dial circle `<path>` (`M 31.63,110.42 A 63.87,63.87 ...`) while preserving its gold circular ring stroke (`android:strokeColor="#FFC700"`, `android:strokeWidth="8.81"`), three gold stem paths (`#FFC700`), and three multi-color button caps (`#000090`, `#FF0000`, `#009000`), matching the legacy `bsport_other` and `bsport_other_gray` rendering in both active and unselected/desaturated (`SportTypeSelector.kt`) states (ATT-3926, amending `REQ-UI-375.1`):
@@ -11345,13 +11345,13 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Rule 37 analytical geometry, multi-color stroke fidelity, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-407: Smart Auto-Collapse and Inline Expansion of Export Status in Workout Summary and Details []
+### REQ-UI-407: Smart Auto-Collapse and Inline Expansion of Export Status in Workout Summary and Details [Verified]
 - **Tests**: !runningLine.isNullOrBlank()
 - **Rationale**: The system SHALL minimize vertical space consumed by `ExportStatus` (`ExportStatusGroup.kt`, `ExportStatusGroupData.kt`) in Workout Summary cards (`WorkoutSummary.kt`) and Workout Details (`TrackOnMapScreen.kt`) by defaulting to a smart collapsed state (`isExpanded = false`) that summarizes fully succeeded export groups on a single clickable header row while automatically surfacing any waiting, ongoing, or failed export groups inline, and expanding all groups via `AnimatedVisibility` when tapped (ATT-3938, complementing `REQ-UI-149` and `REQ-UI-285`):
 1. *Classification & Partitioning in `ExportStatusGroupData` (`REQ-UI-407.1`)*:
 • `ExportStatusGroupData` (`ExportStatusGroupData.kt`) SHALL expose computed classification properties `val isFullySucceeded: Boolean` (`hasContent && !succeededLine.isNullOrBlank() && waitingLine.isNullOrBlank() && runningLine.isNullOrBlank() && failedLine.isNullOrBlank()`) and `val needsAttentionOrInProgress: Boolean` (`hasContent && (!waitingLine.isNullOrBlank()
 
-### REQ-UI-408: Individually Configurable Multi-Tab Workout Details Layout, Conflict-Free Per-Tab Modes, Gesture Isolation, Auto-Hiding Empty Tabs, and Dual Configuration Entry Points [`TST-UI-371`]
+### REQ-UI-408: Individually Configurable Multi-Tab Workout Details Layout, Conflict-Free Per-Tab Modes, Gesture Isolation, Auto-Hiding Empty Tabs, and Dual Configuration Entry Points [Verified]
 - **Tests**: `WorkoutDetailTabConfig.kt`, `WorkoutDetailTabbedContent.kt`, `WorkoutDetailTabsConfigSheet.kt`, `MyPreferenceManager.kt`, `TrackOnMapScreen.kt`, `WorkoutMasksAndCardsSection.kt`, `values*/strings.xml`
 - **Implementation**: Individually configurable tabs for Workout Details with 4 default tabs, 3 conflict-free layout modes, smart gesture isolation, auto-hiding empty tabs, and dual configuration entry points.
 - **Rationale**: The system SHALL organize the Workout Details view (`TrackOnMapScreen.kt`) into individually configurable tabs (`WorkoutDetailTabConfig.kt`, `WorkoutDetailTabbedContent.kt`, `WorkoutDetailTabsConfigSheet.kt`) backed by `MyPreferenceManager` while preserving `WorkoutSectionType` (`9` values) for the Workout Summary list card (`WorkoutSummary.kt`) and retaining full backward compatibility with legacy single-page `MapDetailLayout` callers (ATT-3920, complementing `REQ-UI-240`, `REQ-UI-262`, `REQ-UI-285`, `REQ-UI-337`, `REQ-UI-338`, `REQ-UI-355`, `REQ-UI-359`, `REQ-UI-403`, `REQ-UI-404`, and `REQ-UI-407`):
@@ -11392,7 +11392,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: `WorkoutSectionType` (`9` values), `TrackOnMapScreen*ContractTest` compatibility, `< 400` line modularity in `ui/settings/tuning/`, 9-locale parity, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-409: Default `BIKE_POWER` Cockpit Tabs (`Standard`, `Power`, `Map`, `Laps`), `W_PRIME_BAL` Sensor Catalog Inclusion, and Live Cockpit Gating by Physiology Model Toggles [`TST-UI-372`]
+### REQ-UI-409: Default `BIKE_POWER` Cockpit Tabs (`Standard`, `Power`, `Map`, `Laps`), `W_PRIME_BAL` Sensor Catalog Inclusion, and Live Cockpit Gating by Physiology Model Toggles [Verified]
 - **Tests**: `ActivityType.java`, `TrackingViewsDatabaseManager.java`, `SensorFieldState.kt`, `TrackingViewModel.kt`, `SensorGridScreen.kt`, `values*/strings.xml`
 - **Implementation**: Update `BIKE_POWER` default cockpit tabs (Standard, Power, Map, Laps), include `W_PRIME_BAL` in `ActivityType.BIKE_POWER`, and dynamically gate live cockpit physiology tiles on `ATT-3929` toggles.
 - **Rationale**: The system SHALL include `SensorType.W_PRIME_BAL` in `ActivityType.BIKE_POWER`, seed 4 purpose-built default cockpit tabs (`Standard`, `Power`, `Map`, `Laps`) for `ActivityType.BIKE_POWER` on first-run database creation (`TrackingViewsDbHelper.onCreate`), and dynamically gate live cockpit rendering of `NORMALIZED_POWER`, `INTENSITY_FACTOR`, `TSS` (`enableCogganPowerMetrics`) and `W_PRIME_BAL` (`enableCriticalPowerModel`) with memoized state synchronization, null-safe initial-boot fallback, and all-gated empty-state protection while keeping `ScreenMode.CONFIGURATION` unfiltered (ATT-3921, extending `REQ-UI-200`, `REQ-UI-216`, `REQ-UI-399`, and `REQ-UI-403`):
@@ -11430,7 +11430,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: `DB_VERSION = 13`, zero-height empty-row collapse, non-zero container height on all-gated tabs, unfiltered `ScreenMode.CONFIGURATION`, 9-locale parity, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-410: Timeout-Resilient Cockpit Tab Navigation Collector, Lifecycle-Safe Dialog Dispatch & Context Unwrapping (`TrackingTabsScreen.kt`) [`TST-UI-373`]
+### REQ-UI-410: Timeout-Resilient Cockpit Tab Navigation Collector, Lifecycle-Safe Dialog Dispatch & Context Unwrapping (`TrackingTabsScreen.kt`) [Verified]
 - **Tests**: `TrackingTabsScreen.kt`, `TrackingTabsNavigationTimeoutTest.kt`
 - **Implementation**: Use `withTimeoutOrNull(2000)` + `snapshotFlow.first` for cockpit tab navigation page-count readiness, collect navigation events with `repeatOnLifecycle(STARTED)` and `canShowDialogFragments()` guards, and unwrap `LocalContext.current` via `findActivity()`.
 - **Rationale**: `TrackingTabsScreen.kt` (`app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/trackingtabs/TrackingTabsScreen.kt`) SHALL guarantee that page-count timeouts during `TabNavigationEvent.NavigateTo` never cancel the `navigationEvent` collector coroutine, that `DialogFragment.show(...)` calls are lifecycle- and `isStateSaved`-safe, and that `LocalContext.current` is unwrapped safely without unchecked casts (ATT-4000, extending `REQ-UI-163`):
@@ -11463,7 +11463,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: `REQ-UI-163` rising-edge cockpit navigation, outer coroutine cancellation propagation (`ensureActive()`), 9-locale parity, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-411: Configurable Horizontal Section Dividers with Optional Mini-Titles in Cockpit Sensor Grid [`TST-UI-374`, `TST-UI-386`]
+### REQ-UI-411: Configurable Horizontal Section Dividers with Optional Mini-Titles in Cockpit Sensor Grid [Verified]
 - **Tests**: `TrackingViewsDatabaseManager.java`, `TrackingViewsRepository.kt`, `TrackingViewModel.kt`, `SensorGridScreen.kt`, `values*/strings.xml`
 - **Implementation**: Support configurable horizontal section dividers with optional mini-titles between Cockpit rows with automated row shift tracking, prominent high-contrast stroke, centered titles, and unambiguous split iconography.
 - **Rationale**: The system SHALL support configurable horizontal section dividers with optional mini-titles between sensor rows in Cockpit tracking tabs (`TrackingViewsDbHelper`, `TrackingViewsDatabaseManager`, `TrackingViewsRepository`, `SensorGridScreen.kt`), persisting them in `FlexibleGenericView.db` with automated row shift tracking, prominent divider stroke contrast, horizontally centered mini-titles, unambiguous split iconography, minimal vertical height overhead, and 9-language localization parity (ATT-4055, refined by ATT-4286):
@@ -11519,7 +11519,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Additive schema upgrade (`DB_VERSION = 14`), transactional row-shift integrity, minimal height footprint ($\le 20\text{ dp}$), 9-locale translation parity, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-412: Buffered One-Off Navigation Channels across STOPPED Lifecycle and Gesture Cancellation Safety [`TST-UI-375`]
+### REQ-UI-412: Buffered One-Off Navigation Channels across STOPPED Lifecycle and Gesture Cancellation Safety [Verified]
 - **Tests**: `TrackingTabsViewModel.kt`, `ControlTrackingViewModel.kt`, `TrackingTabsScreen.kt`, `TrackingTabsNavigationTimeoutTest.kt`
 - **Implementation**: Buffer one-off navigation events via Channel in ViewModels across STOPPED lifecycle and protect manual swipe gestures against hard-snap fallback in TrackingTabsScreen.
 - **Rationale**: `TrackingTabsViewModel` (`app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/trackingtabs/TrackingTabsViewModel.kt`), `ControlTrackingViewModel` (`app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/controltracking/ControlTrackingViewModel.kt`), and `TrackingTabsScreen.kt` (`app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/trackingtabs/TrackingTabsScreen.kt`) SHALL buffer one-off navigation events via Kotlin coroutine `Channel`s across the Android `STOPPED` lifecycle state, consume each event exactly once upon resuming `STARTED` collection without duplicate replay, and cleanly respect user touch swipe interruptions during pager animations without triggering fallback instant snaps (ATT-4097, extending `REQ-UI-163` and `REQ-UI-410`):
@@ -11557,7 +11557,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: No duplicate event replays; non-blocking coroutine dispatch; 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-413: Cockpit Sensor Field Insertion Transaction Atomicity, Multi-Tab Isolation, and Grid Normalization [`TST-UI-376`]
+### REQ-UI-413: Cockpit Sensor Field Insertion Transaction Atomicity, Multi-Tab Isolation, and Grid Normalization [Verified]
 - **Tests**: `TrackingViewsDatabaseManager.java`, `TrackingViewsRealSqliteMigrationTest.kt`, `TrackingViewsDatabaseManagerTest.kt`
 - **Implementation**: Enforce atomic transaction wrapping, multi-tab isolation with parameterized queries, section divider synchronization, and post-insertion grid normalization in insertSensorFieldAt.
 - **Rationale**: `TrackingViewsDatabaseManager.insertSensorFieldAt` (`app/src/main/java/com/atrainingtracker/trainingtracker/database/TrackingViewsDatabaseManager.java`) SHALL guarantee multi-tab isolation, atomic coordinate updates, parameter-bound query execution, section divider synchronization, out-of-bounds row handling, and post-insertion grid normalization across all configured cockpit tabs (ATT-4010, extending `REQ-UI-200` and `REQ-UI-411.2`):
@@ -11600,7 +11600,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Multi-tab isolation, contiguous coordinates, divider alignment, passive onOpen, and 100% clean-room test pass rate.
 
-### REQ-UI-414: Workout Cards & Details Settings Streamlining: Redundant Details Column Removal, Authoritative Tab Section Activation, Collapsible Summary Reorder List, and Scoped Zone Mode Selectors [`TST-UI-377`]
+### REQ-UI-414: Workout Cards & Details Settings Streamlining: Redundant Details Column Removal, Authoritative Tab Section Activation, Collapsible Summary Reorder List, and Scoped Zone Mode Selectors [Verified]
 - **Tests**: `WorkoutMasksAndCardsSection.kt`, `WorkoutDetailTabConfig.kt`, `strings.xml`
 - **Implementation**: Eliminate redundant Details column, make tab assignments authoritative over section activation, collapse 9-row summary reorder list by default, split zone display mode selectors into respective domain blocks, and enforce < 400 lines modularity.
 - **Rationale**: `WorkoutMasksAndCardsSection.kt` (`app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/WorkoutMasksAndCardsSection.kt`) and `WorkoutDetailSectionAvailability.isSectionActive` (`app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutDetailTabConfig.kt`) SHALL eliminate the redundant "Details" checkbox column and header from the aftermath settings matrix, make detail tab configuration in `WorkoutDetailTabConfig` strictly authoritative over section activation by evaluating solely data presence and tab section inclusion rather than legacy boolean preference flags, partition the settings screen into visually distinct "Trainingsliste" and "Trainings-Details" domain sections, collapse the 9-row summary cards reorder list by default with active count toggle indicator, scope the zone display mode selectors into their respective domain blocks, and enforce strictly < 400 lines modularity (ATT-4043, refining `REQ-UI-240`, `REQ-UI-264`, `REQ-UI-271`, and `REQ-UI-408`):
@@ -11641,7 +11641,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Summary card reorder persistence, active card visibility in WorkoutSummary, tab validation rules in WorkoutDetailTabConfig, 48dp touch targets, and 100% clean-room test pass rate.
 
-### REQ-UI-415: Single-Line Power Row and Visual Domain Row Separation with Subtle Horizontal Dividers in WorkoutDetails [Consolidate Power row into a single horizontal row (NP/IF/TSS exclusively for Coggan metrics) and add subtle horizontal dividers between visible domain rows in WorkoutDetails.]
+### REQ-UI-415: Single-Line Power Row and Visual Domain Row Separation with Subtle Horizontal Dividers in WorkoutDetails [Verified]
 - **Tests**: data.descentMeters > 0`.
 - Preceding `PowerTrainingMetricsSection` when power slots are present (`powerSlots.isNotEmpty()`).
 - Preceding `AerobicEfficiencyRow` when `enableAerobicEfficiencyModel && showAerobicEfficiencyInWorkoutSummary && data.efficiencyFactor != null`.
@@ -11691,7 +11691,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • `WorkoutDetails` SHALL render a subtle `HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))` immediately preceding any visible domain row after the initial Time/Distance row:
 - Preceding `AltitudeRow` when `data.ascentMeters > 0
 
-### REQ-UI-416: Real-time W' Balance (W-Prime Battery) Expenditure, Reconstitution, Battery Gauge Bar, and Warning Alert [`TST-UI-379`]
+### REQ-UI-416: Real-time W' Balance (W-Prime Battery) Expenditure, Reconstitution, Battery Gauge Bar, and Warning Alert [Verified]
 - **Tests**: `WPrimeBatteryState.kt`, `WPrimeBatteryMath.kt`, `WPrimeBatteryGaugeBar.kt`, `SensorFieldState.kt`, `SensorFieldView.kt`, `TrackingViewModel.kt`, `CyclingPowerMetricsDevice.java`, `SettingsDataStore.kt`
 - **Implementation**: Real-time W' Balance (W-Prime Battery) expenditure and recovery tracking, battery gauge bar with anti-clipping padding and fixed-height slot, and color-coded warning alert.
 - **Rationale**: The system SHALL maintain continuous 1-Hz tracking of remaining $W'$ ($W'_{\text{bal}}$ in kJ) in `CyclingPowerMetricsDevice.java` using Dr. Phil Skiba's differential expenditure and exponential reconstitution model, render a high-visibility, True-Black AMOLED-compliant battery gauge bar with smooth animated fill interpolation inside `SensorFieldView.kt` for `SensorType.W_PRIME_BAL`, display percentage remaining ($0\text{–}100\%$), trigger an immediate color-coded warning alert when $W' < 20\%$, enforce fixed-height layout stability across active and stale states, and preserve progressive disclosure gating (`REQ-UI-409.3`) and 9-language localization parity (ATT-1296, extending `REQ-UI-399` and `REQ-UI-409`):
@@ -11750,7 +11750,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Skiba differential math formulas, 44-sensor catalog partition, `DB_VERSION = 13`, progressive disclosure gating (`REQ-UI-409.3`), True-Black AMOLED compliance, and 100% clean-room test pass rate.
 
-### REQ-UI-417: Distance Interval Filtering (Min/Max Range and Preset Intervals) in Routes and Favorite Routes []
+### REQ-UI-417: Distance Interval Filtering (Min/Max Range and Preset Intervals) in Routes and Favorite Routes [Verified]
 - **Tests**: maxDistanceMeters != null`. Setting both bounds SHALL NOT increment `activeFilterCount` by more than 1.
 • In `RouteFilterCriteria.matches(route: RouteWithPath)`: The system SHALL evaluate `if (minDistanceMeters != null && route.summary.distance < minDistanceMeters) return false` and `if (maxDistanceMeters != null && route.summary.distance > maxDistanceMeters) return false`.
 • In `ClusterFilterCriteria.matches(cluster: WorkoutCluster, linkedEquipment: Set<String>)`: The system SHALL evaluate `if (minDistanceMeters != null && cluster.refDistance < minDistanceMeters) return false` and `if (maxDistanceMeters != null && cluster.refDistance > maxDistanceMeters) return false`.
@@ -11767,7 +11767,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • `RouteFilterCriteria` and `ClusterFilterCriteria` SHALL declare property `val maxDistanceMeters: Double? = null` with default `null`.
 • `activeFilterCount` in both models SHALL treat distance as a single active filter dimension if and only if `minDistanceMeters != null
 
-### REQ-UI-418: Single Percent Symbol (%) Parity in Non-Formatted Efficiency, Decoupling, and W'bal String Resources & Repository-Wide Percent Integrity Enforcement [`TST-UI-381`]
+### REQ-UI-418: Single Percent Symbol (%) Parity in Non-Formatted Efficiency, Decoupling, and W'bal String Resources & Repository-Wide Percent Integrity Enforcement [Verified]
 - **Tests**: `app/src/main/res/values*/strings.xml`, `WPrimeBatteryLocalizationTest.kt`, `LocalizationPercentIntegrityTest.kt`
 - **Implementation**: Single percent symbol (%) parity in non-formatted Efficiency, Decoupling, and W'bal string resources across all 9 locales and repository-wide percent integrity enforcement.
 - **Rationale**: The system SHALL replace the erroneous escaped double percent symbol (`%%`) with a standard single percent symbol (`%`) across all 5 non-formatted string resources (`workout_decoupling_coupled`, `workout_decoupling_drift`, `workout_w_prime_min_pct_label`, `workout_w_prime_empty_tank`, `w_prime_warning_low_battery`) across all 9 application locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`), ensuring accurate display on `WorkoutDetails` summary cards and W' battery telemetry alerts, AND SHALL enforce repository-wide percent symbol integrity across all string resource files via automated contract testing (ATT-4292, refining `REQ-UI-404.3`, `REQ-UI-404.4`, and `REQ-UI-416.5`):
@@ -11806,7 +11806,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: 9-language localization parity; format strings retaining `%%` for `String.format`; zero regression in existing test suite; parent ticket Human Decision Gate strictly enforced.
 
-### REQ-UI-419: Power Histogram Rare Sprint Spike Folding, Power Zone Boundary Snapping, and Consistent Symmetrical Header Range Toggle Navigation [`TST-UI-382`]
+### REQ-UI-419: Power Histogram Rare Sprint Spike Folding, Power Zone Boundary Snapping, and Consistent Symmetrical Header Range Toggle Navigation [Verified]
 - **Tests**: `TelemetryHistogramCalculator.kt`, `TelemetryHistogramChart.kt`, `ZoneDistributionModels.kt`, `PowerZoneDistributionCard.kt`
 - **Implementation**: Fold rare high-power spikes into an overflow bar in Power Histogram with interactive Sprint Tail zoom, power zone boundary snapping, and symmetrical 2-segment header range toggle navigation.
 - **Rationale**: The system SHALL fold rare high-wattage power spikes in Cycling Power frequency histograms into an aggregated rightmost overflow bar by default, provide interactive zoom navigation into a dedicated Sprint Tail view with independent local Y-axis scaling, provide a symmetric 2-segment header range toggle with consistent active segment highlighting and navigation affordances restoring the Main View, and snap the tail cutoff to an enclosing upper Power Zone boundary, while preserving linear binning for non-skewed rides and Heart Rate histograms (ATT-4293, ATT-4370, complementing `REQ-UI-372`, `REQ-UI-388`, and `REQ-UI-420`):
@@ -11871,7 +11871,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Pure mathematical calculation; backward compatibility of data classes with default arguments; mathematical conservation of duration and percentages; Heart Rate histogram invariance; 100% clean-room test pass rate.
 
-### REQ-UI-420: Support all 7 cycling power zones (Z1–Z7) in Power Histogram, TelemetryMetricGraph threshold lines, and Dark Mode chart rendering [Support all 7 cycling power zones (Z1–Z7) in Power Histogram, TelemetryMetricGraph threshold lines, and Dark Mode chart rendering.]
+### REQ-UI-420: Support all 7 cycling power zones (Z1–Z7) in Power Histogram, TelemetryMetricGraph threshold lines, and Dark Mode chart rendering [Verified]
 - **Tests**: selectedBin.color == TTColor.Zone6)`, the readout text color SHALL resolve to `MaterialTheme.colorScheme.onSurface` (or `Color.White`), maintaining $\ge 4.5:1$ WCAG contrast.
 • In `ZoneDistributionColumnChart.kt` and `ZoneDistributionStackedBar.kt`, active bars, stacked segments, and legend swatches with `TTColor.Zone7` or `TTColor.Zone6` SHALL receive a subtle outline border (0.5.dp, `MaterialTheme.colorScheme.outlineVariant`) on dark surfaces.
 4. *ZoneDistributionModels Documentation & Parity (`REQ-UI-420.4`)*:
@@ -12026,7 +12026,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Zero regression in Cockpit telemetry/views, transactional SQLite migration, zero-latency PCM audio without GC allocations, thread-safe synthesizer lifecycle teardown, non-exclusive audio focus, and 100% clean-room test pass rate.
 
-### REQ-UI-422: Relocate 'Sport Types' drawer item to Settings and rename 'Equipment' item to 'Bikes & Shoes' [`TST-UI-385`]
+### REQ-UI-422: Relocate 'Sport Types' drawer item to Settings and rename 'Equipment' item to 'Bikes & Shoes' [Verified]
 - **Tests**: `AppNavigationDrawer.kt`, `NavigationDrawerStateTest.kt`, `EquipmentTabsScreen.kt`, `values*/strings.xml`
 - **Implementation**: Relocate 'Sport Types' drawer item to Settings and rename 'Equipment' item to 'Bikes & Shoes'.
 - **Rationale**: The system SHALL relocate the 'Sport Types' (`R.id.drawer_sport_types`) navigation destination from the 'My Stuff' / Equipment drawer group (`R.string.drawer__my_stuff`) into the 'Settings' drawer group (`R.string.drawer__settings`) positioned immediately after 'Tracking Layouts' (`R.id.drawer_tracking_layouts`), and SHALL rename `R.string.equipment_management_title` from "Equipment" to "Bikes & Shoes" ("Räder & Schuhe") across all 9 canonical application locales, eliminating category label duplication and aligning athletic taxonomy configuration within Settings (ATT-4289, amending `REQ-UI-405.2` and `REQ-UI-405.3`):
@@ -12072,7 +12072,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: 5 category hubs, 22 unique destinations, 9 default visible rows, `isDrawerItemSelected` deep links, 9-locale parity, and 100% clean-room test pass rate.
 
-### REQ-UI-423: Modal Overlay Composition Retention for Route Tabbed Screen During Route Editing [`TST-UI-387`]
+### REQ-UI-423: Modal Overlay Composition Retention for Route Tabbed Screen During Route Editing [Verified]
 - **Tests**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RoutesScreen.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/routes/RoutesScreenContractTest.kt`
 - **Implementation**: Keep RouteTabbedScreen in composition while EditRouteScreen bottom sheet is open to prevent tab bar scroll jump.
 - **Rationale**: The system SHALL retain `RouteTabbedScreen` continuously mounted in the Jetpack Compose composition hierarchy while `EditRouteScreen` (an `AppModalBottomSheet`) is displayed, composing `EditRouteScreen` as an overlay within the non-details branch rather than in a mutually exclusive conditional block, preserving `PrimaryScrollableTabRow` scroll offset, list scroll states, and collapsing header offsets without tab bar jump animations upon sheet dismissal (ATT-4285, enforcing Governance Rule 47 and Design Guidelines Section 5.8):
@@ -12107,7 +12107,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Zero state unmounting for `RouteTabbedScreen`, navigation parity for `RouteOnMapScreen`, route update parity, 9-language localization parity, and 100% clean-room test suite pass rate.
 
-### REQ-UI-424: Show in Workout Summary Toggles for Physiology Models in Advanced Settings, Rule 59 Subordinate Toggle Hierarchy, and Coggan-Only Presentation Gating in WorkoutDetails [`TST-UI-388`]
+### REQ-UI-424: Show in Workout Summary Toggles for Physiology Models in Advanced Settings, Rule 59 Subordinate Toggle Hierarchy, and Coggan-Only Presentation Gating in WorkoutDetails [Verified]
 - **Tests**: `PhysiologyModelsSection.kt`, `TuningPreferencesDataStore.kt`, `WorkoutDetails.kt`, `PowerMetricSlot.kt`, `WorkoutSummary.kt`, `WorkoutDetailTabbedContent.kt`, `TuningFormControls.kt`
 - **Implementation**: Provide granular 'Show in Workout Summary' toggles for each physiology model in Advanced Settings to control domain row visibility in WorkoutDetails without affecting live cockpit or charts, using Rule 59 subordinate visual hierarchy (0.6f scale, 24dp compact height, lighter primary alpha checked track color) and Coggan-only summary rows.
 - **Rationale**: The system SHALL provide subordinate "Show in Workout Summary" (*In Workout-Zusammenfassung anzeigen*) toggle switches in `Settings -> Advanced Settings -> Physiology & Training Models` (`PhysiologyModelsSection.kt`) using `SubordinateTuningToggleItem` with lighter visual hierarchy, downscaled `Switch` (`Modifier.scale(0.6f)`), compact layout height (`Modifier.height(24.dp)`), and lighter subordinate checked track color (`checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)` with `checkedThumbColor = MaterialTheme.colorScheme.primary`) per Rule 59 / `docs/design_guidelines.md` Section 3.3 for the three physiology models that contribute summary rows to `WorkoutDetails.kt` (Coggan Power Metrics, Aerobic Efficiency & Decoupling, Critical Power & Anaerobic Battery), persisting preferences via `TuningPreferencesDataStore`, SHALL NOT display an unrequested "Basic Power Metrics (Work, W/kg)" model toggle in settings, and SHALL gate the Power domain row in `WorkoutDetails.kt` to exclusively render Coggan Power Metrics (`NP` with `VI`, `IF`, `TSS`) when Coggan power and summary are enabled, completely omitting basic mechanical work (`kJ`) and `W/kg` from `WorkoutDetails` without altering live cockpit telemetry tiles, sensor recording, or background extrema persistence (ATT-4369, ATT-4432, ATT-4464, ATT-4513, refining `REQ-UI-403` and `REQ-UI-415`):
@@ -12169,7 +12169,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Background sensor recording, cockpit tile selection, SQLite storage, Section 5.10 layout, modularity limits (< 400 lines in tuning, < 500 lines in WorkoutDetails), 9-locale parity, and 100% clean-room test pass rate.
 
-### REQ-UI-425: Elevation Gain Interval Filtering (Min/Max Range and Preset Intervals) across Routes, Favorite Routes / Workout Clusters, and Workouts []
+### REQ-UI-425: Elevation Gain Interval Filtering (Min/Max Range and Preset Intervals) across Routes, Favorite Routes / Workout Clusters, and Workouts [Verified]
 - **Tests**: maxElevationGainMeters != null`. Setting both bounds SHALL NOT increment `activeFilterCount` by more than 1.
 • In `RouteFilterCriteria.matches(route: RouteWithPath)`: evaluate `if (minElevationGainMeters != null && route.summary.elevationGain < minElevationGainMeters) return false` and `if (maxElevationGainMeters != null && route.summary.elevationGain > maxElevationGainMeters) return false`.
 • In `ClusterFilterCriteria.matches(cluster: WorkoutCluster, linkedEquipment: Set<String>, elevationGainMeters: Double?)`: if `minElevationGainMeters != null
@@ -12180,7 +12180,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • `WorkoutFilterCriteria` SHALL declare `val minElevationGainMeters: Double? = null` and `val maxElevationGainMeters: Double? = null`.
 • In all three domain models, `activeFilterCount` SHALL treat elevation gain as a single active filter dimension if and only if `minElevationGainMeters != null
 
-### REQ-UI-426: Realistic Default Cycling FTP (270 W) and Calculator-Aligned Training Zone Baselines [`TST-UI-391`]
+### REQ-UI-426: Realistic Default Cycling FTP (270 W) and Calculator-Aligned Training Zone Baselines [Verified]
 - **Tests**: `SettingsDataStore.kt`, `ZoneCalculatorDialog.kt`, `TrackingViewModel.kt`
 - **Implementation**: Update default cycling FTP (270 W) and heart rate / power zone boundaries to realistic, calculator-aligned baselines across DataStore, UI dialogs, and tracking ViewModels.
 - **Rationale**: The system SHALL align default Functional Threshold Power (FTP) to 270 W (~3.38 W/kg for 80 kg) and synchronize default training zone boundaries across `SettingsDataStore.kt`, `SettingsSnapshot.DEFAULT`, `ZoneCalculatorDialog.kt`, and `TrackingViewModel.kt` using canonical Coggan 7-zone and Karvonen heart rate calculation algorithms (ATT-4521, ATT-4543, Implemented in: ATT-4543, Status: Verified, amending `REQ-UI-370` and `REQ-UI-373`):
@@ -12220,7 +12220,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Custom profiles preserved, SQLite immutability, integer monotonicity, and 100% clean-room test pass rate.
 
-### REQ-UI-427: Aftermath Loader Concurrency, Process-Death Detail Restoration, Elevation Gesture State Integrity and Lifecycle Safety [`TST-UI-392`]
+### REQ-UI-427: Aftermath Loader Concurrency, Process-Death Detail Restoration, Elevation Gesture State Integrity and Lifecycle Safety [Verified]
 - **Tests**: `TrackOnMapAftermathViewModel.kt`, `WorkoutClustersViewModel.kt`, `PeriodsViewModel.kt`, `WorkoutSummariesTabbedScreen.kt`, `ElevationProfile.kt`, `CropWorkoutViewModel.kt`, `WorkoutRepository.kt`, `WorkoutSummariesViewModel.kt`
 - **Implementation**: Ensure race-free aftermath telemetry loading, process-death detail restoration, live gesture state synchronization, and coroutine lifecycle safety across aftermath screens and view models.
 - **Rationale**: The system SHALL ensure race-free aftermath telemetry loading, process-death detail restoration, live gesture state synchronization, and coroutine lifecycle safety across aftermath screens and view models (ATT-4018, Implemented in: ATT-4018, Status: Verified, reinforcing `REQ-MAP-032`, `REQ-DAT-011`, and `REQ-UI-368`):
@@ -12267,7 +12267,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Zero SQLite schema migrations; thread-safe background loading; structured concurrency cancellation safety; 100% clean-room test pass rate.
 
-### REQ-UI-428: Atomic Single-Transaction DataStore Zone Persistence, SavedStateHandle Draft Preservation, Deduplicated Profile Loading, and Zone UI Decoupling [`TST-UI-393`]
+### REQ-UI-428: Atomic Single-Transaction DataStore Zone Persistence, SavedStateHandle Draft Preservation, Deduplicated Profile Loading, and Zone UI Decoupling [Verified]
 - **Tests**: `ZonesSettingsActivity.kt`, `SettingsDataStore.kt`, `AthleteProfileScreen.kt`, `AndroidManifest.xml`
 - **Implementation**: Atomic single-transaction DataStore zone profile persistence, SavedStateHandle draft preservation across rotations, deduplicated profile loading, and clean UI decoupling.
 - **Rationale**: The system SHALL serialize and persist athletic training zone profiles (`HR_RUN`, `HR_BIKE`, `PWR_BIKE`) within a single atomic DataStore transaction (`dataStore.edit {}` / `saveZoneProfile`), preserve uncommitted and temporarily non-monotonic user drafts across configuration changes and navigation tab switches via `SavedStateHandle`, deduplicate zone loading logic into a unified repository/helper function, decouple `ZoneProfileTabContent` from Activity dependencies without breaking architectural contract tests, eliminate the dead unstarted `ZonesSettingsActivity` entry from `AndroidManifest.xml`, and safeguard window inset styling against unsafe Activity casts (ATT-4021, amending `REQ-UI-172` and `REQ-UI-397.2`):
@@ -12317,7 +12317,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Monotonicity enforcement, 100% DataStore schema compatibility, architectural contract test pass rate, and clean-room full test suite pass rate.
 
-### REQ-UI-429: Global User Interface Localization Parity, Unit Adaptability, and Accessibility Semantics [`TST-UI-394`]
+### REQ-UI-429: Global User Interface Localization Parity, Unit Adaptability, and Accessibility Semantics [Verified]
 - **Tests**: `ImportBackupTabsScreen.kt`, `CropWorkoutScreen.kt`, `WorkoutFilterBottomSheet.kt`, `MainActivityWithNavigation.kt`
 - **Implementation**: Global UI string resource extraction with 9-language translation parity, unit adaptability (metric/imperial), and TalkBack accessibility semantics.
 - **Rationale**: The system SHALL extract hardcoded user-visible text literals, German labels, English `contentDescription` attributes, and marker labels to Android string resources with 100% translation parity across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT), SHALL adapt unit formatting and filter criteria dynamically based on athlete unit preference (`TrainingApplication.getUnit() == MyUnits.IMPERIAL`), and SHALL establish accessible TalkBack semantics across interactive Compose controls and canvas charts (ATT-4026, Parent Epic ATT-355, status: Verified, extending `REQ-LOC-001`, `REQ-UI-122`, and `REQ-UI-157`):
@@ -12355,7 +12355,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: 100% translation parity, SI unit persistence in SQLite, 100% clean-room test pass rate.
 
-### REQ-UI-430: Multi-Provider Cloud Settings UI Harmonization, Shared Composable Layout & Symmetric Granular Sync Configuration [`TST-UI-395`]
+### REQ-UI-430: Multi-Provider Cloud Settings UI Harmonization, Shared Composable Layout & Symmetric Granular Sync Configuration [Verified]
 - **Tests**: `DropboxSettingsDialog.kt`, `GoogleDriveSettingsDialog.kt`, `CloudConnectionHeader.kt`, `CloudProviderSettingsContent.kt`, `DropboxConnectionHeader.kt`, `GoogleDriveConnectionHeader.kt`, `TrainingApplication.java`, `strings.xml` (all 9 locales)
 - **Implementation**: Harmonize Dropbox and Google Drive cloud settings dialogs with shared layout and connection header composables, symmetric granular sync switches, backup interval dropdown, and last sync/backup timestamps.
 - **Rationale**: The system SHALL harmonize cloud synchronization and automated backup settings interfaces across cloud storage providers (`DropboxSettingsDialog.kt` and `GoogleDriveSettingsDialog.kt`), extract shared parameterized layout and connection header composables in `ui.settings.cloud` (`CloudConnectionHeader.kt` and `CloudProviderSettingsContent.kt`), establish UX and functional symmetry across disconnected states (suppressing switches behind informative provider-specific connect prompts) and connected states (displaying account email, granular switches for workout export and database backup, backup interval dropdown when database backup is enabled, Wi-Fi only restriction, and last sync and last backup timestamps), commit staged preferences and reschedule WorkManager periodic backups on save, and maintain 100% translation parity across all 9 supported application locales (ATT-4666, Parent Epic ATT-355, status: Verified, refining `REQ-UI-152` and `REQ-DAT-020.6`, and aligning with `REQ-DAT-032.7`, Rule 36, and Rule 62):

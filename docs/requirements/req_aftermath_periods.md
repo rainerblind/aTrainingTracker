@@ -12,12 +12,12 @@
 - **Implementation**: `PeriodsViewModel.kt`, `PeriodsRepository.kt`
 - **Rationale**: The system SHALL ensure that all workouts belonging to a specific period are correctly and reactively associated when viewing period details (Map or List). The visualization SHALL automatically update as workout data is loaded or modified in the background, ensuring no sessions are omitted due to partial loading states.
 
-### REQ-PER-008: Precise Period Filtering [Proposed]
+### REQ-PER-008: Precise Period Filtering [Verified]
 - **Tests**: `TST-PER-009`
 - **Implementation**: `PeriodsFragment.kt`, `WorkoutSummariesViewModel.kt`
 - **Rationale**: The system SHALL correctly filter the workout list when navigating from a period summary highlight (Base Sport or Sub-Sport). This filtering MUST respect both the temporal bounds of the period and the specific sport identity selected to ensure professional analytical depth.
 
-### REQ-PER-009: Detail Map Sport Filtering [Proposed]
+### REQ-PER-009: Detail Map Sport Filtering [Verified]
 - **Tests**: `TST-PER-012`
 - **Implementation**: `PeriodMapScreen.kt`, `InteractivePeriodMap.kt`
 - **Rationale**: Within the Period Detail view, the system SHALL allow filtering the map visualization by Sport Type. Tapping a sport summary SHALL toggle its visibility on the map, including tracks, markers, and heatmaps, ensuring a clean and focused analytical context.
@@ -32,7 +32,7 @@
 - **Implementation**: `PeriodsRepository.kt`, `PeriodSummaryCard.kt`, `PeriodSummariesDatabaseManager.kt`
 - **Rationale**: When displaying the Longest Workout highlight within a sport summary, the system SHALL show the workout's name, active duration, total distance, and total ascent. Period summary card headers SHALL display total duration and workout count. **Invariants**: All displayed metrics SHALL be formatted according to the active localized unit settings.
 
-### REQ-PER-012: Period Map Scalability, Memory Budget & Adaptive Layering Invariant [`TST-PER-018`]
+### REQ-PER-012: Period Map Scalability, Memory Budget & Adaptive Layering Invariant [Verified]
 - **Tests**: `PeriodsViewModel.kt`, `PeriodMapScreen.kt`, `InteractivePeriodMap.kt`, `AndroidManifest.xml`
 - **Implementation**: Ensure smooth, non-crashing (OOM-free) spatial rendering of long-term training periods with hundreds of sessions.
 - **Rationale**: The system SHALL ensure high-performance, non-crashing spatial visualization across periods of arbitrary size (days, weeks, months, years with hundreds of workouts):
@@ -42,7 +42,7 @@
 4. *Memory & Point Budgeting*: In `PeriodsViewModel`, polyline decoding and `MapTrack` instantiation SHALL be budget-aware, avoiding redundant duplicate representations in memory.
 5. *Process Heap Headroom*: The application manifest SHALL declare `android:largeHeap="true"` to grant the runtime sufficient memory bandwidth for GIS map overlays and raster heatmaps on high-resolution devices.
 
-### REQ-PER-013: Multi-Region Period Map Viewport Detection & Adaptive Bounding [`TST-PER-019`]
+### REQ-PER-013: Multi-Region Period Map Viewport Detection & Adaptive Bounding [Verified]
 - **Tests**: `SpatialRegionEngine.kt`, `PeriodsViewModel.kt`, `InteractivePeriodMap.kt`, `PeriodMapScreen.kt`, `PeriodSummaryCard.kt`
 - **Implementation**: Eliminate unusable viewports centered on empty oceans (Greenland anomaly) during multi-region training periods while providing seamless 1-tap region switching and preserving single-region performance.
 - **Rationale**: When a period contains workouts separated across geographically distinct regions ($> \text{REGION\_CLUSTER\_THRESHOLD\_METERS} = 75\text{ km}$ geodesic span), the system SHALL NOT center the initial map camera or overview thumbnail over empty oceans or continents between regions (e.g. centering over Greenland / the North Atlantic for athletes training in Europe and North America). Instead, the system SHALL partition workouts into geographic activity regions, prioritize the primary activity region, and provide interactive region switching:
@@ -69,7 +69,7 @@
 
 **Invariants**: SQLite schema for `PeriodSummaries.db` MUST NOT be altered; single-region periods MUST maintain 100% camera and visual parity; vector track limit ($\le 30$) and heatmap rendering per `REQ-PER-012` MUST NOT be regressed; all user-facing chip strings MUST maintain 9-language localization parity.
 
-### REQ-PER-001: The system SHALL load and display the detailed visualization (Heatmap and List)  [Verified]
+### REQ-PER-001: The system SHALL load and display the detailed visualization (Heatmap and List) [Verified]
 - **Tests**: `TST-PERF-002`
 - **Implementation**: `WorkoutClustersViewModel.kt`, `WorkoutClusterRepository.kt`, `WorkoutSummariesDatabaseManager.java`, `WorkoutClusterHeatmapScreen.kt`
 - **Rationale**: Ensure a responsive and professional user experience when analyzing recurring routes.
@@ -105,7 +105,7 @@
 - **Rationale**: Provide technical transparency and maintain consistency with other progressive background tasks.
 - **Description**: The system SHALL display a detailed, multi-phase progress notification during the full recalculation or migration of Workout Clusters.
 
-### REQ-PER-014: Immediate Period View Reactive Synchronization on Workout Finalization [`TST-PER-020`]
+### REQ-PER-014: Immediate Period View Reactive Synchronization on Workout Finalization [Verified]
 - **Tests**: `PeriodsRepository.kt`, `PeriodsViewModel.kt`, `WorkoutSummariesDatabaseManager.java`
 - **Implementation**: Immediate period view reactive synchronization upon workout completion on fresh installs.
 - **Rationale**: The system SHALL guarantee that newly finalized workouts are immediately aggregated and presented across all period analytics views (Day, Week, Month, Year) without requiring an app restart, navigation change, or manual refresh, even on clean installations or initial profiles (ATT-3056, refining `REQ-PER-001` and `REQ-MIG-026`):
@@ -142,7 +142,7 @@
 
 **Invariants**: O(1) integrity check formula, hierarchical rollup math, and 100% test pass rate MUST NOT be broken.
 
-### REQ-PER-015: Calendar-Aware Period Boundaries Across DST Transitions, Sentinel Epoch Symmetry, and Local Day PMC Bucketing [`TST-PER-021`]
+### REQ-PER-015: Calendar-Aware Period Boundaries Across DST Transitions, Sentinel Epoch Symmetry, and Local Day PMC Bucketing [Verified]
 - **Tests**: `PeriodsRepository.kt`, `WorkoutDataMapper.kt`, `PowerPhysiologyCalculator.kt`
 - **Implementation**: Calendar-aware local timezone period aggregation boundaries across DST transitions, sentinel epoch symmetry in WorkoutDataMapper, and local-day PMC bucketing in PowerPhysiologyCalculator.
 - **Rationale**: The system SHALL calculate temporal aggregation boundaries (Day, Week, Month, Year) in `PeriodsRepository` using calendar-aware local timezone offsets (`plusDays(1)` / `plusWeeks(1)` `.atStartOfDay(zoneId).toEpochSecond() - 1`) to eliminate 1-hour workout overlap or omission across Daylight Saving Time (DST) spring-forward (23h) and fall-back (25h) transitions, SHALL establish 1:1 symmetry in `WorkoutDataMapper.formatDateTime` by returning `Instant.EPOCH.atZone(zoneId).toLocalDateTime()` (epoch 1970-01-01T00:00:00) on parse failures to match sentinel `timestampS = 0L` while filtering out invalid `timestampS <= 0L` in period rebuilds, and SHALL bucket daily training load in `PowerPhysiologyCalculator.computePerformanceManagementChart` according to the athlete's local calendar day (`Instant.ofEpochMilli(sample.timestampMs).atZone(zoneId).toLocalDate().toEpochDay()`) using an injectable `ZoneId = ZoneId.systemDefault()`, while preserving `getPeriodSortKey` database string contracts and 100% clean-room test pass rate (ATT-4016, Implemented in: ATT-4016, Status: Planned, amending `REQ-PER-014` and `REQ-UI-401`):
@@ -186,7 +186,7 @@
 
 **Invariants**: Zero SQLite schema migration; `getPeriodSortKey` string invariance; EWMA math invariance; 100% clean-room test pass rate.
 
-### REQ-PER-016: Period Rebuild Flow Projection, Single-Owner Tracking Finalization Orchestration & Shared Mapper Instance [`TST-PER-022`]
+### REQ-PER-016: Period Rebuild Flow Projection, Single-Owner Tracking Finalization Orchestration & Shared Mapper Instance [Verified]
 - **Tests**: `PeriodsRepository.kt`, `WorkoutRepository.kt`
 - **Implementation**: Eliminate redundant period rebuilds on non-period workout updates and progressive loading chunks, establish single-owner tracking finalization orchestration, and consolidate WorkoutDataMapper allocations in PeriodsRepository.
 - **Rationale**: The system SHALL eliminate redundant period rebuilds on non-period workout updates and progressive loading chunks, establish single-owner tracking finalization orchestration, and consolidate `WorkoutDataMapper` allocations across `PeriodsRepository` (ATT-4019, Implemented in: ATT-4019, Status: Verified, amending `REQ-PER-014` and interacting with `REQ-STB-018.1`):

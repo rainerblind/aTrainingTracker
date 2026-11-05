@@ -7,13 +7,13 @@
 
 ---
 
-### TST-EXP-004: **TCX Schema Compliance Audit** [Exported TCX file strictly uses integer formatting for cadence and power tags.]
+### TST-EXP-004: **TCX Schema Compliance Audit** [Verified]
 - **Requirement(s)**: `REQ-EXP-001`
 - **Component**: **TCX Schema Compliance Audit**
 - **Jira**: ``ATT-517``
 - **Test Description**: 1. Perform a TCX export of a workout containing Cadence and Power data. 2. Inspect the raw XML content. 3. Verify that `<Cadence>`, `<Watts>`, and `<RunCadence>` tags contain ONLY integer values (no decimal points).
 
-### TST-EXP-005: **Smart Asymmetric Strava Naming & Pre-Upload Discovery Test** [All test cases pass; existing Strava activities bypass TCX file upload, Strava titles are never overwritten, local app names are preserved when Strava title is default, custom Strava titles enrich local app database, and fresh uploads auto-name or serialize custom titles properly.]
+### TST-EXP-005: **Smart Asymmetric Strava Naming & Pre-Upload Discovery Test** [Verified]
 - **Requirement(s)**: `REQ-EXP-008`
 - **Component**: **Smart Asymmetric Strava Naming & Pre-Upload Discovery Test**
 - **Jira**: ``ATT-902`, `ATT-1105``
@@ -29,7 +29,7 @@
   9. Verify other metadata (`sportName`, `gearId`, `description`, `trainer`, `commute`) continue to be updated in both paths.
   10. Unit test reactive in-memory cache update in `WorkoutRepository`: verify `reloadExportStatusesFor` refreshes `workoutName` in memory when updated in SQLite.
 
-### TST-EXP-006: **Strava Duplicate Reconciliation Equipment, Retired Gear & Detailed Sport Type Enrichment Test** [All test cases pass, confirming accurate equipment and sport type enrichment from Strava, retired gear lazy fetch and storage with original name, preservation of Strava cloud metadata, and in-memory cache reactivity.]
+### TST-EXP-006: **Strava Duplicate Reconciliation Equipment, Retired Gear & Detailed Sport Type Enrichment Test** [Verified]
 - **Requirement(s)**: `REQ-EXP-009`
 - **Component**: **Strava Duplicate Reconciliation Equipment, Retired Gear & Detailed Sport Type Enrichment Test**
 - **Jira**: ``ATT-1114``
@@ -43,7 +43,7 @@
   7. Unit test `WorkoutRepository.reloadExportStatusesFor`: verify `sportId`, `sportName`, `bSportType`, and `equipmentId` are reloaded from cursor into the in-memory cache.
   8. Verify fresh upload (`isDuplicate = false`) continues to send local sport type and equipment to Strava.
 
-### TST-EXP-007: **Strava Segment PB Feedback Ingestion, Database Update & UI Celebration Test** [Segment PB is automatically updated in SQLite and in-memory flow upon Strava upload feedback; new PRs are celebrated with a dedicated banner in Workout Summary; all invariants remain preserved with 0 test failures.]
+### TST-EXP-007: **Strava Segment PB Feedback Ingestion, Database Update & UI Celebration Test** [Verified]
 - **Requirement(s)**: `REQ-EXP-010`
 - **Component**: **Strava Segment PB Feedback Ingestion, Database Update & UI Celebration Test**
 - **Jira**: ``ATT-912``
@@ -57,7 +57,7 @@
   7. Invariants: verify `REQ-EXP-008` (smart naming), `REQ-EXP-009` (duplicate reconciliation), `REQ-UI-131` (segment accordion), and `REQ-UI-144` (best efforts) continue to pass without regression.
   8. Clean-Room Regression: execute `./gradlew testDebugUnitTest`.
 
-### TST-EXP-008: **Strava Segments Mandatory Daily Automated Synchronization Test** [Mandatory daily segments synchronization reliably schedules with WorkManager with fixed 1-day interval and updates segments in the background; UI omits unnecessary interval controls; all tests pass.]
+### TST-EXP-008: **Strava Segments Mandatory Daily Automated Synchronization Test** [Verified]
 - **Requirement(s)**: `REQ-EXP-011`
 - **Component**: **Strava Segments Mandatory Daily Automated Synchronization Test**
 - **Jira**: ``ATT-913`, `ATT-1178``
@@ -67,7 +67,7 @@
   3. Unit Test `StravaSettingsDialog` UI state: verify automated segments sync toggle and interval dropdown are omitted; verify manual update card displays formatted timestamp and triggers sync.
   4. Invariants: verify `REQ-EXP-008`, `REQ-EXP-009`, `REQ-EXP-010`, `REQ-LIV-001` - `REQ-LIV-004` remain preserved with 0 regressions.
 
-### TST-EXP-009: **Strava Routes Mandatory Daily Automated Synchronization Test** [Mandatory daily routes synchronization reliably schedules with WorkManager with fixed 1-day interval and updates routes in the background; UI omits unnecessary interval controls; all tests pass.]
+### TST-EXP-009: **Strava Routes Mandatory Daily Automated Synchronization Test** [Verified]
 - **Requirement(s)**: `REQ-EXP-012`
 - **Component**: **Strava Routes Mandatory Daily Automated Synchronization Test**
 - **Jira**: ``ATT-914`, `ATT-1178``
@@ -77,7 +77,7 @@
   3. Unit Test `StravaSettingsDialog` UI state: verify automated routes sync toggle and interval dropdown are omitted; verify manual update card displays formatted timestamp and triggers sync.
   4. Invariants: verify `REQ-EXP-008` (smart naming), `REQ-EXP-009` (duplicate reconciliation), `REQ-EXP-010` (segment PB), `REQ-EXP-011` (segment periodic sync), and `REQ-ROU-001` (route clustering) remain preserved with 0 regressions.
 
-### TST-EXP-010: **Minimized Strava Activity Feedback Persistence & Backward-Compatible Rendering Verification** [Data minimization achieves 90%+ storage reduction; transient social fields are completely eliminated; offline celebration and segment rendering retain 100% parity; CQS, DB_VERSION 6 migration, and disconnect wipe invariants are preserved.]
+### TST-EXP-010: **Minimized Strava Activity Feedback Persistence & Backward-Compatible Rendering Verification** [Verified]
 - **Requirement(s)**: `REQ-EXP-013`
 - **Component**: **Minimized Strava Activity Feedback Persistence & Backward-Compatible Rendering Verification**
 - **Jira**: ``ATT-1190` / `ATT-1214`, `ATT-1215``
@@ -105,7 +105,7 @@
   8. *Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` across all modules with zero regressions.
 
-### TST-EXP-011: **Reactive Strava Segment Synchronization Progress & Transient Decoupling Verification** [`SegmentsRepository.isSyncing` reactively reflects sync state; SharedPreferences is never polluted with transient text; UI displays localized "now" during sync; clicks are debounced; 9-language parity verified; 100% test pass rate.]
+### TST-EXP-011: **Reactive Strava Segment Synchronization Progress & Transient Decoupling Verification** [Verified]
 - **Requirement(s)**: `REQ-EXP-014`
 - **Component**: **Reactive Strava Segment Synchronization Progress & Transient Decoupling Verification**
 - **Jira**: ``ATT-1219` / `ATT-1226``
@@ -130,7 +130,7 @@
   6. *Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` across all modules with zero regressions.
 
-### TST-EXP-012: **Reactive Strava Route Synchronization Progress & Transient Decoupling Verification** [`RoutesRepository.isSyncing` reactively reflects sync state; SharedPreferences is never polluted with transient text; UI displays localized "now" during sync; clicks are debounced; 9-language parity verified; 100% test pass rate.]
+### TST-EXP-012: **Reactive Strava Route Synchronization Progress & Transient Decoupling Verification** [Verified]
 - **Requirement(s)**: `REQ-EXP-015`
 - **Component**: **Reactive Strava Route Synchronization Progress & Transient Decoupling Verification**
 - **Jira**: ``ATT-1230` / `ATT-1233``
@@ -153,7 +153,7 @@
   5. *Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` across all modules with zero regressions.
 
-### TST-EXP-013: **Reactive Strava Equipment Synchronization Progress & Transient Decoupling Verification** [`EquipmentRepository.isSyncing` reactively reflects sync state; SharedPreferences is never polluted with transient text; UI displays localized "now" during sync; clicks and worker calls are debounced; 9-language parity verified; 100% test pass rate.]
+### TST-EXP-013: **Reactive Strava Equipment Synchronization Progress & Transient Decoupling Verification** [Verified]
 - **Requirement(s)**: `REQ-EXP-016`
 - **Component**: **Reactive Strava Equipment Synchronization Progress & Transient Decoupling Verification**
 - **Jira**: ``ATT-1231` / `ATT-1238``
@@ -179,7 +179,7 @@
   6. *Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` across all modules with zero regressions.
 
-### TST-EXP-014: **Non-Blocking Strava Equipment Background Synchronization & Dialog Elimination Verification** [`StravaEquipmentSynchronizeThread` executes fully non-blockingly without any ProgressDialog; broadcasts completion intent; updates formatted timestamp; respects concurrency debounce; zero regressions.]
+### TST-EXP-014: **Non-Blocking Strava Equipment Background Synchronization & Dialog Elimination Verification** [Verified]
 - **Requirement(s)**: `REQ-EXP-017`
 - **Component**: **Non-Blocking Strava Equipment Background Synchronization & Dialog Elimination Verification**
 - **Jira**: ``ATT-1242` / `ATT-1249``
@@ -198,7 +198,7 @@
   5. *Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` across all modules with zero regressions.
 
-### TST-EXP-016: **Automated Background Synchronization for Strava Segments, Routes, and Equipment Verification** [WorkManager periodic synchronization for Strava segments, routes, and equipment honors user preferences, configurable intervals, and token refresh; no startup cancellation storms; purge invariant preserved; 100% test pass rate.]
+### TST-EXP-016: **Automated Background Synchronization for Strava Segments, Routes, and Equipment Verification** [Verified]
 - **Requirement(s)**: `REQ-EXP-019`
 - **Component**: **Automated Background Synchronization for Strava Segments, Routes, and Equipment Verification**
 - **Jira**: ``ATT-3478``
@@ -228,7 +228,7 @@
   7. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules asserting 100% test pass rate with zero regressions.
 
-### TST-EXP-017: **Decommission Obsolete Runkeeper and TrainingPeaks Legacy Exporters, Activities, and Unused Apache HttpClient Dependencies Verification** [Apache HttpClient dependencies and legacy library wrapper completely removed; dead Runkeeper and TrainingPeaks classes, activities, and elevation helpers permanently excised; SQLite schema compatibility preserved; 100% test pass rate.]
+### TST-EXP-017: **Decommission Obsolete Runkeeper and TrainingPeaks Legacy Exporters, Activities, and Unused Apache HttpClient Dependencies Verification** [Verified]
 - **Requirement(s)**: `REQ-EXP-020`
 - **Component**: **Decommission Obsolete Runkeeper and TrainingPeaks Legacy Exporters, Activities, and Unused Apache HttpClient Dependencies Verification**
 - **Jira**: ``ATT-3551``
@@ -243,7 +243,7 @@
   2. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules asserting 100% test pass rate with zero regressions.
 
-### TST-EXP-018: **Strava Upload Transient Error Resilient Retry, Polling Fault Tolerance & Pre-Upload Duplicate False-Start Protection Verification** [Transient Strava upload failures (429, 5xx) and timeouts trigger WorkManager retry; polling loop survives intermittent null responses; duplicate discovery rejects false starts, unparseable dates, and sport mismatches; SQL queries parameterized; 100% test pass rate.]
+### TST-EXP-018: **Strava Upload Transient Error Resilient Retry, Polling Fault Tolerance & Pre-Upload Duplicate False-Start Protection Verification** [Verified]
 - **Requirement(s)**: `REQ-EXP-021`
 - **Component**: **Strava Upload Transient Error Resilient Retry, Polling Fault Tolerance & Pre-Upload Duplicate False-Start Protection Verification**
 - **Jira**: ``ATT-4012``
@@ -269,7 +269,7 @@
   6. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules asserting 100% test pass rate with zero regressions.
 
-### TST-EXP-019: **GPX/TCX Export XML Well-Formedness, Garmin Schema Compliance, Downloads MIME Type & Privacy Verification** [GPX and TCX exports are well-formed XML and schema compliant; segment state machine prevents orphan tags; TCX creator placed within Activity; Downloads copies use proper MIME types and omit internal community files; 100% test pass rate.]
+### TST-EXP-019: **GPX/TCX Export XML Well-Formedness, Garmin Schema Compliance, Downloads MIME Type & Privacy Verification** [Verified]
 - **Requirement(s)**: `REQ-EXP-022`
 - **Component**: **GPX/TCX Export XML Well-Formedness, Garmin Schema Compliance, Downloads MIME Type & Privacy Verification**
 - **Jira**: ``ATT-4013``
@@ -295,55 +295,55 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules asserting 100% test pass rate with zero regressions.
 
-### TST-MIG-001: **Full Migration Cycle** [App state (settings, history, equipment) is perfectly restored.]
+### TST-MIG-001: **Full Migration Cycle** [Verified]
 - **Requirement(s)**: `REQ-MIG-001`, `002`, `004`, `006`
 - **Component**: **Full Migration Cycle**
 - **Jira**: ``ATT-117``
 - **Test Description**: 1. Generate local backup. 2. Wipe app data. 3. Restore from backup.
 
-### TST-MIG-002: **Deduplication Verification** [Duplicate workouts are identified by `FILE_BASE_NAME` and skipped.]
+### TST-MIG-002: **Deduplication Verification** [Verified]
 - **Requirement(s)**: `REQ-MIG-005`
 - **Component**: **Deduplication Verification**
 - **Jira**: ``ATT-117``
 - **Test Description**: 1. Import a backup containing already existing workouts.
 
-### TST-MIG-003: **Automated Dropbox Backup** [Backup is present and valid in `/Backups/` folder.]
+### TST-MIG-003: **Automated Dropbox Backup** [Verified]
 - **Requirement(s)**: `REQ-MIG-003`
 - **Component**: **Automated Dropbox Backup**
 - **Jira**: ``ATT-93``
 - **Test Description**: 1. Enable regular backups. 2. Verify archive exists in Dropbox after background task runs.
 
-### TST-MIG-004: **Full Restore Confirmation (Dropbox)** [1. A confirmation dialog appears with a warning about data loss. 2. Tapping 'Cancel' dismisses the dialog. 3. Tapping 'Restore' starts the process.]
+### TST-MIG-004: **Full Restore Confirmation (Dropbox)** [Verified]
 - **Requirement(s)**: `REQ-MIG-007`
 - **Component**: **Full Restore Confirmation (Dropbox)**
 - **Jira**: ``ATT-290``
 - **Test Description**: 1. Navigate to 'Backup \u0026 Restore'. 2. Tap \"Dropbox: Restore Backup\".
 
-### TST-MIG-005: **Informative Labels Audit** [Labels are accurate and follow the dual-action naming. Descriptions are clearly visible and explain the operation impact.]
+### TST-MIG-005: **Informative Labels Audit** [Verified]
 - **Requirement(s)**: `REQ-MIG-008`
 - **Component**: **Informative Labels Audit**
 - **Jira**: ``ATT-295``
 - **Test Description**: 1. Open Backup \u0026 Restore dashboard. 2. Verify Dropbox button label. 3. Verify presence of descriptions in Restore and Import sections.
 
-### TST-MIG-006: **Default Backup Interval Verification** [The interval SHALL be set to 'Daily' by default.]
+### TST-MIG-006: **Default Backup Interval Verification** [Verified]
 - **Requirement(s)**: `REQ-MIG-009`
 - **Component**: **Default Backup Interval Verification**
 - **Jira**: ``ATT-321``
 - **Test Description**: 1. Clear application data. 2. Navigate to 'Dropbox' settings. 3. Inspect 'Backup Interval'.
 
-### TST-MIG-007: **Enable Backups by Default Verification** [The switch SHALL be in the 'ON' position by default.]
+### TST-MIG-007: **Enable Backups by Default Verification** [Verified]
 - **Requirement(s)**: `REQ-MIG-010`
 - **Component**: **Enable Backups by Default Verification**
 - **Jira**: ``ATT-322``
 - **Test Description**: 1. Clear application data. 2. Navigate to 'Dropbox' settings. 3. Inspect 'Automated Backups' switch.
 
-### TST-MIG-008: **Tabbed UI Navigation** [UI is organized into tabs. Navigation is smooth. Titles match requirements.]
+### TST-MIG-008: **Tabbed UI Navigation** [Verified]
 - **Requirement(s)**: `REQ-MIG-011`
 - **Component**: **Tabbed UI Navigation**
 - **Jira**: ``ATT-323``
 - **Test Description**: 1. Open drawer and verify 'Import \u0026 Backup' label. 2. Open screen and verify 3 tabs: Import, Backup, Restore. 3. Swipe between tabs.
 
-### TST-MIG-009: **Pre-Import Workout Cluster Tuning Bottom Sheet & Info Action Verification** [The bottom sheet provides a spacious, responsive layout without spatial confinement or clipped controls. The Info button launches `ClusterInfoDialog` properly. Tolerances persist upon confirmation and import commences smoothly.]
+### TST-MIG-009: **Pre-Import Workout Cluster Tuning Bottom Sheet & Info Action Verification** [Verified]
 - **Requirement(s)**: `REQ-MIG-012`
 - **Component**: **Pre-Import Workout Cluster Tuning Bottom Sheet & Info Action Verification**
 - **Jira**: ``ATT-793``
@@ -356,85 +356,85 @@
   6. Adjust parameters, tap OK, and verify tolerances persist to `SharedPreferences` and import commences.
   7. Re-open sheet, tap Cancel or dismiss sheet via drag, and verify no import commences and unconfirmed edits are discarded.
 
-### TST-MIG-010: **Idempotent TCX Import** [The system SHALL detect the existing workout and skip it. No clustering dialog SHALL appear.]
+### TST-MIG-010: **Idempotent TCX Import** [Verified]
 - **Requirement(s)**: `REQ-MIG-013`
 - **Component**: **Idempotent TCX Import**
 - **Jira**: ``ATT-331``
 - **Test Description**: 1. Import a TCX file. 2. Re-run 'Scan TCX' for the same file.
 
-### TST-MIG-011: **Legacy Recovery Performance Audit** [The skipping messages appear almost instantaneously, without the 2-5 second delay previously caused by file downloads.]
+### TST-MIG-011: **Legacy Recovery Performance Audit** [Verified]
 - **Requirement(s)**: `REQ-MIG-015`
 - **Component**: **Legacy Recovery Performance Audit**
 - **Jira**: ``ATT-337``
 - **Test Description**: 1. Ensure several legacy workouts exist in the local database. 2. Run 'Scan TCX' with those same files present in Dropbox.
 
-### TST-MIG-012: **Paginated Cloud Scan Verification** [The app SHALL discover all files and process the entire set.]
+### TST-MIG-012: **Paginated Cloud Scan Verification** [Verified]
 - **Requirement(s)**: `REQ-MIG-016`
 - **Component**: **Paginated Cloud Scan Verification**
 - **Jira**: ``ATT-339``
 - **Test Description**: 1. Use a Dropbox account with > 1000 TCX files in the target folder. 2. Trigger 'Scan TCX'.
 
-### TST-MIG-013: **Interaction Queue Size Limiting** [Interaction queue size is strictly enforced (limit: 10). The engine MUST NOT download or parse more files until space is cleared in the queue.]
+### TST-MIG-013: **Interaction Queue Size Limiting** [Verified]
 - **Requirement(s)**: `REQ-MIG-017`
 - **Component**: **Interaction Queue Size Limiting**
 - **Jira**: ``ATT-401``
 - **Test Description**: 1. Start bulk import of > 10 unclustered workouts. 2. Verify engine pauses at 10 queued items. 3. Monitor network/parsing logs.
 
-### TST-MIG-014: **Sparse Data Import** [Missing sensors are NOT displayed in summary and NOT created as columns in samples table.]
+### TST-MIG-014: **Sparse Data Import** [Verified]
 - **Requirement(s)**: `REQ-MIG-018`
 - **Component**: **Sparse Data Import**
 - **Jira**: ``ATT-403``
 - **Test Description**: 1. Import a TCX file missing HR/Power. 2. Inspect summary and DB schema.
 
-### TST-MIG-015: **Dropbox Wait Feedback** [Explicit messages like "Waiting for Dropbox..." or "Downloading [File]..." SHALL be visible during network operations.]
+### TST-MIG-015: **Dropbox Wait Feedback** [Explicit messages like "Waiting for Dropbox..." or "Downloading [File]..." SHALL be visible during network operations.] [Verified]
 - **Requirement(s)**: `REQ-MIG-019`
 - **Component**: **Dropbox Wait Feedback**
 - **Jira**: ``ATT-405``
 - **Test Description**: 1. Trigger 'Scan TCX' from Dropbox. 2. Observe the progress status messages.
 
-### TST-MIG-016: **Positive Import UI Alignment** [1. The redundant introduction message is GONE. 2. The section title is positive (e.g., \"Workout Import\") and avoids recovery/legacy terminology. 3. Buttons have feature-oriented labels.]
+### TST-MIG-016: **Positive Import UI Alignment** [Verified]
 - **Requirement(s)**: `REQ-MIG-020`
 - **Component**: **Positive Import UI Alignment**
 - **Jira**: ``ATT-435``
 - **Test Description**: 1. Navigate to 'Import & Backup'. 2. Inspect the 'Import' tab content.
 
-### TST-MIG-017: **Concurrent TCX Import Background Queuing & Throttling** [The TCX import engine SHALL continue downloading and processing subsequent files concurrently in the background while waiting for user interaction, pausing ONLY when 3 items accumulate in the interaction queue.]
+### TST-MIG-017: **Concurrent TCX Import Background Queuing & Throttling** [Verified]
 - **Requirement(s)**: `REQ-MIG-014`, `REQ-MIG-017`
 - **Component**: **Concurrent TCX Import Background Queuing & Throttling**
 - **Jira**: ``ATT-549``
 - **Test Description**: 1. Start bulk import of multiple TCX files requiring route cluster naming. 2. Leave the first cluster naming dialog open without confirming immediately. 3. Monitor background progress indicators.
 
-### TST-MIG-018: **Recursive Cloud Folder Scanning & Informative Import Summary** [The import engine discovers files across all paths and subdirectories without terminating early. The final message clearly states the number of newly imported workouts, skipped existing workouts, and total files scanned.]
+### TST-MIG-018: **Recursive Cloud Folder Scanning & Informative Import Summary** [Verified]
 - **Requirement(s)**: `REQ-MIG-016`, `REQ-MIG-021`
 - **Component**: **Recursive Cloud Folder Scanning & Informative Import Summary**
 - **Jira**: ``ATT-560``
 - **Test Description**: 1. Set up a Dropbox folder structure containing TCX files in multiple paths and subdirectories (e.g., `/TCX/2025/` and `/apps/Workouts/TCX/`). 2. Trigger bulk recovery. 3. Inspect final success message.
 
-### TST-MIG-019: **Workout Name Filename Integrity** [The workout name and `FILE_BASE_NAME` in the database match `2026-08-01_10-00-00` exactly. No numeric counter prefix (e.g. `1_`) is prepended.]
+### TST-MIG-019: **Workout Name Filename Integrity** [Verified]
 - **Requirement(s)**: `REQ-MIG-022`
 - **Component**: **Workout Name Filename Integrity**
 - **Jira**: ``ATT-571``
 - **Test Description**: 1. Import a TCX file named `2026-08-01_10-00-00.tcx`. 2. Inspect the workout list and database entry for `FILE_BASE_NAME` and `WORKOUT_NAME`.
 
-### TST-MIG-020: **Unlinked Dropbox Import Deactivation & Null Safety** [The feature is visibly deactivated in grey, clicking it displays the informational dialog, and credential reading never crashes with NullPointerException.]
+### TST-MIG-020: **Unlinked Dropbox Import Deactivation & Null Safety** [Verified]
 - **Requirement(s)**: `REQ-MIG-023`
 - **Component**: **Unlinked Dropbox Import Deactivation & Null Safety**
 - **Jira**: ``ATT-491``
 - **Test Description**: 1. Ensure Dropbox is not linked in settings. 2. Open 'Import & Backup' -> 'Import' tab. 3. Verify 'Scan Dropbox' is styled in grey. 4. Click 'Scan Dropbox' and verify informational dialog appears without crashing. 5. Run automated unit test suite.
 
-### TST-MIG-021: **High-Fidelity TCX Telemetry & Multi-Lap Structure Import** [All laps, instantaneous speed/cadence streams, active durations, calories, and workout notes are faithfully preserved without data loss or pause inflation.]
+### TST-MIG-021: **High-Fidelity TCX Telemetry & Multi-Lap Structure Import** [Verified]
 - **Requirement(s)**: `REQ-MIG-024`
 - **Component**: **High-Fidelity TCX Telemetry & Multi-Lap Structure Import**
 - **Jira**: ``ATT-618``
 - **Test Description**: 1. Construct a multi-lap TCX test fixture containing: 2 distinct `<Lap>` elements with explicit `<TotalTimeSeconds>`, `<DistanceMeters>`, `<Calories>`, and `<MaximumSpeed>`; trackpoints inside `<Extensions><TPX>` containing `<Speed>` and `<RunCadence>`; an activity `<Notes>` field; and a 5-minute pause gap between Lap 1 end and Lap 2 start. 2. Execute `LegacyImportEngine.importFromTcx()` on the fixture. 3. Query `LapsDatabaseManager.getLaps(workoutId)`: Verify 2 distinct lap records exist with matching durations, distances, and metrics. 4. Query `WorkoutSamplesDatabaseManager`: Verify samples have `SensorType.SPEED` and `SensorType.CADENCE` values from the TPX stream, and `SensorType.LAP_NR` values corresponding to 0 and 1. 5. Query `WorkoutSummariesDatabaseManager.getWorkoutSummary(workoutId)`: Verify active duration equals the sum of `<TotalTimeSeconds>` (excluding the 5-minute pause gap), calories are populated, and notes match.
 
-### TST-MIG-022: **TCX Import Leave Unclustered Integrity Verification** [The workout remains unassigned (`clusterId == -1L`), no new cluster is created in `WorkoutClusterDatabaseManager`, the original workout name is preserved, and the workout appears in the Unclustered workouts collection.]
+### TST-MIG-022: **TCX Import Leave Unclustered Integrity Verification** [Verified]
 - **Requirement(s)**: `REQ-MIG-025`
 - **Component**: **TCX Import Leave Unclustered Integrity Verification**
 - **Jira**: ``ATT-741``
 - **Test Description**: 1. Construct a spatial workout fixture where `suggestCluster()` finds no existing cluster match. 2. Simulate user selection of "Leave Unclustered" (`Pair(null, null)`). 3. Verify `LegacyImportEngine` leaves `WorkoutSummaries.CLUSTER_ID = -1L`. 4. Trigger `WorkoutRepository.reloadWorkoutData()`. 5. Verify `WorkoutClusterEngine.onWorkoutFinished()` does NOT create an auto-generated fallback cluster, does NOT assign any cluster, and does NOT mutate `WorkoutSummaries.CLUSTER_ID` (it remains `-1L`). 6. Verify the workout name does NOT become "Workout at [date]" / "Einheit bei [date]". 7. Verify the workout is queryable under the Unclustered tab (`clusterId == -1L`).
 
-### TST-MIG-023: **TCX Import Periods Aggregation & Self-Healing Sync** [Imported workouts are immediately visible in all period summaries without requiring broadcast reception or app restart. The self-healing integrity check automatically detects and repairs any discrepancy between finished workouts in SQLite and period summaries.]
+### TST-MIG-023: **TCX Import Periods Aggregation & Self-Healing Sync** [Verified]
 - **Requirement(s)**: `REQ-MIG-026`
 - **Component**: **TCX Import Periods Aggregation & Self-Healing Sync**
 - **Jira**: ``ATT-909``
@@ -447,7 +447,7 @@
   6. Trigger `PeriodsRepository.loadPeriods()`.
   7. Verify that the self-healing count check detects the discrepancy and executes `performHierarchicalMigration()` to reconcile all missing periods.
 
-### TST-MIG-024: **TCX Import Cluster Heuristics & Reactive UI Cache Refresh** [Workouts with unknown/missing sports are accurately matched against route clusters based on spatial geometry and speed heuristics. Cluster names boost similarity scoring. Assigned workouts update cluster hit counts and preview states in real time across the UI.]
+### TST-MIG-024: **TCX Import Cluster Heuristics & Reactive UI Cache Refresh** [Verified]
 - **Requirement(s)**: `REQ-MIG-027`
 - **Component**: **TCX Import Cluster Heuristics & Reactive UI Cache Refresh**
 - **Jira**: ``ATT-909``
@@ -460,7 +460,7 @@
   6. Verify `WorkoutSummaries.B_SPORT` is populated with the inferred `BSportType` name.
   7. Verify `WorkoutClusterRepository.refreshClusters()` is invoked and in-memory caches (`allClusters`, `clusterStats`, `unclusteredWorkouts`) immediately update with the newly imported session.
 
-### TST-MIG-025: **TCX Import Optional Strava Upload & UI Switch Verification** [Disabling Strava upload prevents auto-upload and sets `UPLOAD_TO_STRAVA = 0`. Enabling Strava upload schedules export and sets `UPLOAD_TO_STRAVA = 1`. Pre-import bottom sheet conditionally renders the switch only when Strava is connected. All 9 language resource directories satisfy translation parity.]
+### TST-MIG-025: **TCX Import Optional Strava Upload & UI Switch Verification** [Verified]
 - **Requirement(s)**: `REQ-MIG-028`
 - **Component**: **TCX Import Optional Strava Upload & UI Switch Verification**
 - **Jira**: ``ATT-911``
@@ -473,7 +473,7 @@
   6. Render `PreImportTuningBottomSheet` when Strava is disconnected: verify that the Strava toggle switch is not visible.
   7. Execute `TranslationParityTest` to verify that `import_upload_to_strava_label` and `import_upload_to_strava_summary` exist across all 9 localized `strings.xml` resource files.
 
-### TST-MIG-026: **TCX Import Route Cluster Auto-Matching Parity & Lossless Candidate Discovery** [Workouts with start point deviation $> 1.0\times$ endpoint tolerance but composite similarity $< 1.0$ are auto-matched without manual dialog intervention. `suggestCluster` and `ClusterNamingDialog` compute identical similarity scores.]
+### TST-MIG-026: **TCX Import Route Cluster Auto-Matching Parity & Lossless Candidate Discovery** [Verified]
 - **Requirement(s)**: `REQ-MIG-029`
 - **Component**: **TCX Import Route Cluster Auto-Matching Parity & Lossless Candidate Discovery**
 - **Jira**: ``ATT-1133``
@@ -486,7 +486,7 @@
   6. Verify that `ClusterNamingDialog` passes these parameters to `clusterEngine.scoreClusters()`, resulting in 100% numerical parity with `suggestCluster()`.
   7. Construct a workout that genuinely diverges from all existing clusters (composite similarity $\ge 1.0$): verify that `suggestCluster()` returns `null`, `onNewClusterCandidate()` is called, and all candidate scores in `scoreClusters()` are $\ge 1.0$.
 
-### TST-MIG-027: **High-Fidelity GPX Workout Import & Full Telemetry Ingestion Parity** [GPX workouts import seamlessly with high-fidelity telemetry (HR, cadence, speed, power, temp), multi-lap structure, cumulative distance calculation, and full parity with TCX pipeline.]
+### TST-MIG-027: **High-Fidelity GPX Workout Import & Full Telemetry Ingestion Parity** [Verified]
 - **Requirement(s)**: `REQ-MIG-030`
 - **Component**: **High-Fidelity GPX Workout Import & Full Telemetry Ingestion Parity**
 - **Jira**: ``ATT-1116``
@@ -500,7 +500,7 @@
   7. Verify cluster routing and period integration: verify `suggestCluster()` and `PeriodsRepository.onWorkoutFinished()` are called.
   8. Verify `BackupRestoreViewModel.importLegacyFile()` detects `.gpx` files and executes `importFromGpx()` successfully.
 
-### TST-MIG-028: **Multi-Dimensional Workout Deduplication & Concurrent Worker Race Condition Guard Verification (Revision 2: Option 2)** [Workouts are deduplicated across differing filenames by start timestamp ($\pm 180$s for same sport); dual-phone recordings offset by 65s are skipped; duplicate remote folder paths are filtered prior to download; concurrent workers synchronize atomically; 100% test pass rate with zero duplicate records.]
+### TST-MIG-028: **Multi-Dimensional Workout Deduplication & Concurrent Worker Race Condition Guard Verification (Revision 2: Option 2)** [Verified]
 - **Requirement(s)**: `REQ-MIG-031`
 - **Component**: **Multi-Dimensional Workout Deduplication & Concurrent Worker Race Condition Guard Verification (Revision 2: Option 2)**
 - **Jira**: ``ATT-2023``
@@ -518,7 +518,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-MIG-029: **Post-Import Workout Navigation & Decoupled List Auto-Focus Verification** [Success banner displays `[View]` and `[OK]` upon import. Tapping `[View]` fires `WorkoutNavigationEvents` and auto-scrolls to the imported workout in the list. Tapping `[OK]` dismisses without navigation. Legacy return types and deduplication remain intact.]
+### TST-MIG-029: **Post-Import Workout Navigation & Decoupled List Auto-Focus Verification** [Success banner displays `[View]` and `[OK]` upon import. Tapping `[View]` fires `WorkoutNavigationEvents` and auto-scrolls to the imported workout in the list. Tapping `[OK]` dismisses without navigation. Legacy return types and deduplication remain intact.] [Verified]
 - **Requirement(s)**: `REQ-MIG-032`
 - **Component**: **Post-Import Workout Navigation & Decoupled List Auto-Focus Verification**
 - **Jira**: ``ATT-2337``
@@ -539,7 +539,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-MIG-030: **FIT Enhanced Altitude & Speed Ingestion Verification** [Modern FIT files recorded by Garmin/Wahoo/Karoo retain full elevation curves, ascent/descent calculations, and speed samples without regression on legacy devices.]
+### TST-MIG-030: **FIT Enhanced Altitude & Speed Ingestion Verification** [Verified]
 - **Requirement(s)**: `REQ-MIG-033`
 - **Component**: **FIT Enhanced Altitude & Speed Ingestion Verification**
 - **Jira**: ``ATT-2338``
@@ -555,7 +555,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules.
 
-### TST-MIG-031: **Google Drive Historical Workout File Discovery, Top-Level Candidates & Zero-Result Diagnostic Verification** [Google Drive scanner discovers .fit, .tcx, and .gpx archives across nested and top-level paths; existing workouts are skipped without downloading; zero-result scans emit descriptive guidance; activities are parsed and inserted into WorkoutSummaries; post-import reconciliation updates periods and clusters; 100% test pass rate.]
+### TST-MIG-031: **Google Drive Historical Workout File Discovery, Top-Level Candidates & Zero-Result Diagnostic Verification** [Verified]
 - **Requirement(s)**: `REQ-MIG-034`
 - **Component**: **Google Drive Historical Workout File Discovery, Top-Level Candidates & Zero-Result Diagnostic Verification**
 - **Jira**: ``ATT-2346` / `ATT-3315``
@@ -579,7 +579,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions.
 
-### TST-MIG-032: **Dropbox Historical Workout File Discovery & Bulk Recovery for FIT Verification** [Dropbox cloud recovery scanner discovers, downloads, and imports historical .fit files alongside legacy XML formats with cross-folder deduplication and pre-download duplicate skipping; 100% test pass rate.]
+### TST-MIG-032: **Dropbox Historical Workout File Discovery & Bulk Recovery for FIT Verification** [Verified]
 - **Requirement(s)**: `REQ-MIG-035`
 - **Component**: **Dropbox Historical Workout File Discovery & Bulk Recovery for FIT Verification**
 - **Jira**: ``ATT-2341``
@@ -595,7 +595,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-MIG-033: **Automated Background Backup WorkManager Scheduling, Conditional Constraints, Status Diagnostics and Local UI Restore Verification** [WorkManager periodic backup uses ExistingPeriodicWorkPolicy.UPDATE with conditional UNMETERED network constraints; preference defaults to true; bounded local backup created via co-located atomic move; per-target statuses persisted; LastBackupInfo exposes target breakdown; automatic local restore triggers MigrationEngine; 100% test pass rate with zero regressions.]
+### TST-MIG-033: **Automated Background Backup WorkManager Scheduling, Conditional Constraints, Status Diagnostics and Local UI Restore Verification** [Verified]
 - **Requirement(s)**: `REQ-MIG-036`
 - **Component**: **Automated Background Backup WorkManager Scheduling, Conditional Constraints, Status Diagnostics and Local UI Restore Verification**
 - **Jira**: ``ATT-3472` / `ATT-4458``
@@ -626,7 +626,7 @@
   9. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-MIG-036: **Unified Provider-Aware Manual Cloud Backup, Concurrency Lock & Status Parity, and Dynamic Subtitle Verification Suite** [Dynamic manual cloud backup button label and visual state adapt across 4 provider states; no-cloud prompt dialog opens when neither connected; uploadToCloud acquires BackupManager lock and persists status/targets with worker parity; automated backups subtitle dynamically reflects active targets; multi-line label formats with centered alignment and newline; 9-language translation parity verified.]
+### TST-MIG-036: **Unified Provider-Aware Manual Cloud Backup, Concurrency Lock & Status Parity, and Dynamic Subtitle Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-MIG-036`
 - **Component**: **Unified Provider-Aware Manual Cloud Backup, Concurrency Lock & Status Parity, and Dynamic Subtitle Verification Suite**
 - **Jira**: ``ATT-4518` / `ATT-4587``
@@ -653,59 +653,59 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate with zero regressions.
 
-### TST-DAT-001: **Automated Altitude Discovery** [The database SHALL contain an entry for Location A with an average altitude of 105m and a hit count of 2.]
+### TST-DAT-001: **Automated Altitude Discovery** [Verified]
 - **Requirement(s)**: `REQ-DAT-007`
 - **Component**: **Automated Altitude Discovery**
 - **Jira**: ``ATT-423``
 - **Test Description**: 1. Record/Import a workout starting at Location A (Alt=100m). 2. Record/Import another workout starting at Location A (Alt=110m). 3. Verify the 'Known Locations' database entry for Location A.
 
-### TST-DAT-002: **Precise Altitude Learning** [Location A MUST be learned as 200m. It MUST NOT be 100m (the session minimum).]
+### TST-DAT-002: **Precise Altitude Learning** [Verified]
 - **Requirement(s)**: `REQ-DAT-007`
 - **Component**: **Precise Altitude Learning**
 - **Jira**: ``ATT-482``
 - **Test Description**: 1. Start workout at Location A (200m). 2. Descend to 100m. 3. Stop workout. 4. Inspect 'Known Locations' DB.
 
-### TST-EXT-001: **Strava Custom Tabs** [The authorization page SHALL open in a Chrome Custom Tab.]
+### TST-EXT-001: **Strava Custom Tabs** [Verified]
 - **Requirement(s)**: `REQ-EXT-004`
 - **Component**: **Strava Custom Tabs**
 - **Test Description**: 1. Click "Connect to Strava". 2. Verify that a Custom Tab opens.
 
-### TST-EXT-002: **Strava OAuth Flow** [The app SHALL show a non-blocking loading indicator and correctly store the resulting token.]
+### TST-EXT-002: **Strava OAuth Flow** [Verified]
 - **Requirement(s)**: `REQ-EXT-005`
 - **Component**: **Strava OAuth Flow**
 - **Test Description**: 1. Complete Strava authorization. 2. Observe the loading state.
 
-### TST-EXT-003: **Strava Profile Scope & Equipment Synchronization Flow** [Gear items from Strava athlete payload are parsed and stored accurately into `EquipmentDbHelper` with correct sport and frame types without duplication.]
+### TST-EXT-003: **Strava Profile Scope & Equipment Synchronization Flow** [Verified]
 - **Requirement(s)**: `REQ-EXT-006`
 - **Component**: **Strava Profile Scope & Equipment Synchronization Flow**
 - **Jira**: ``ATT-588``
 - **Test Description**: 1. Verify `StravaHelper.getAuthorizationUrl()` includes `profile:read_all` in the OAuth scope. 2. Provide simulated Strava `/athlete` responses with shoes and bikes. 3. Execute synchronization. 4. Verify equipment is populated in `EquipmentDbHelper` and unlinked duplicate records are avoided. 5. Verify null access token handling.
 
-### TST-EXT-004: **Strava Route Synchronization & Connection Trigger Flow** [Routes from Strava are synchronized automatically on connection and manually on request, stored with detailed geometry in `RoutesDatabaseManager`, update sync timestamp, and seed into `WorkoutClusterEngine`.]
+### TST-EXT-004: **Strava Route Synchronization & Connection Trigger Flow** [Verified]
 - **Requirement(s)**: `REQ-EXT-007`
 - **Component**: **Strava Route Synchronization & Connection Trigger Flow**
 - **Jira**: ``ATT-497` (`ATT-607`)`
 - **Test Description**: 1. Simulate Strava connection success (`StravaAuthState.Success`) in `StravaUploadFragment` and verify route synchronization is initiated. 2. Trigger on-demand sync via `updateStravaRoutes` in Strava settings. 3. Provide mock Strava routes payload (`GET /athletes/{id}/routes`) and stream responses (`GET /routes/{id}/streams`). 4. Verify routes are parsed, streams are converted to `PathPoint`s, and records are stored in `RoutesDatabaseManager` with `RouteSource.STRAVA`. 5. Verify timestamp updates in `TrainingApplication`. 6. Verify missing token/athlete ID handling.
 
-### TST-EXT-005: **Automated Strava Upload for Imported TCX Workouts** [Successfully imported TCX workouts automatically schedule a Strava upload job via ExportManager when Strava integration is active.]
+### TST-EXT-005: **Automated Strava Upload for Imported TCX Workouts** [Verified]
 - **Requirement(s)**: `REQ-EXT-008`
 - **Component**: **Automated Strava Upload for Imported TCX Workouts**
 - **Jira**: ``ATT-602``
 - **Test Description**: 1. Configure Strava upload as enabled (`TrainingApplication.uploadToCommunity(FileFormat.STRAVA)` returns true). 2. Import a valid TCX workout file via `LegacyImportEngine.importFromTcx()`. 3. Verify that an asynchronous upload task is scheduled with `ExportManager`. 4. Verify that `ExportStatusDatabaseManager` records the pending export status for the imported workout. 5. Verify that when Strava upload is disabled, no upload is scheduled. 6. Verify that local database records and statistics remain intact regardless of network status.
 
-### TST-EXT-006: **Strava Data Purge on Deauthorization & Revocation, and Reauthorization Integrity Flow** [All Strava-originated data (credentials, activity details, segments, routes, gear IDs) is thoroughly purged without affecting native workouts or hardware sensor pairings; reauthorization smoothly re-links existing equipment by name without duplicates; interactive disconnect prompts user with clear consequences before executing purge.]
+### TST-EXT-006: **Strava Data Purge on Deauthorization & Revocation, and Reauthorization Integrity Flow** [Verified]
 - **Requirement(s)**: `REQ-EXT-009`
 - **Component**: **Strava Data Purge on Deauthorization & Revocation, and Reauthorization Integrity Flow**
 - **Jira**: ``ATT-1078``
 - **Test Description**: 1. Populate mock Strava tokens, athlete ID, and upload preferences in `SharedPreferences`. 2. Insert mock Strava activity JSON and Strava ID in `StravaUploadDbHelper`. 3. Insert mock starred segments in `SegmentsDatabaseManager`. 4. Insert mock Strava route in `RoutesDatabaseManager`. 5. Insert mock equipment in `EquipmentDbHelper` with `StravaId` and `StravaName`, linked to an ANT+ sensor in `LINKS`. 6. Insert mock native workout in `WorkoutSummariesDatabaseManager` with samples and laps. 7. Execute data purge (simulating user disconnect or refresh token rejection). 8. Verify: tokens and athlete ID removed from `SharedPreferences`; `StravaUploadDbHelper` contains zero Strava activity data or Strava IDs; `SegmentsDatabaseManager` contains zero starred segments; `RoutesDatabaseManager` contains zero Strava routes; `EquipmentDbHelper` equipment row still exists with preserved `_id`, `Name`, and sensor links, but `StravaId` and `StravaName` are `NULL`; native workouts in `WorkoutSummariesDatabaseManager`, samples, and laps remain 100% intact; `WorkManager` has canceled sync workers. 9. Simulate reauthorization: set new mock token, execute `StravaEquipmentSynchronizeThread` with matching bike/shoe names, verify equipment row has `StravaId` re-attached without creating new duplicate rows. 10. In `StravaSettingsDialog`, verify tapping 'Disconnect' triggers the confirmation dialog detailing consequences; verify tapping 'Cancel' dismisses without side effects; verify tapping 'Disconnect' executes deauthorization and purge.
 
-### TST-EXT-007: **Strava Route & Segment 7-Day TTL Cache Retention, Orphan Pruning & Route Preservation Flow** [Strava routes and segments older than 7 days are automatically evicted; orphaned Strava routes and segments are pruned during sync; local GPX and workout routes never expire; duplicated local routes survive TTL pruning; native workouts and hardware pairings remain 100% intact.]
+### TST-EXT-007: **Strava Route & Segment 7-Day TTL Cache Retention, Orphan Pruning & Route Preservation Flow** [Verified]
 - **Requirement(s)**: `REQ-EXT-010`
 - **Component**: **Strava Route & Segment 7-Day TTL Cache Retention, Orphan Pruning & Route Preservation Flow**
 - **Jira**: ``ATT-1177``
 - **Test Description**: 1. Insert mock Strava route (`RouteSource.STRAVA`) with `synced_at = now - 8 days` and another with `synced_at = now - 1 day` in `RoutesDatabaseManager`. 2. Insert mock local route (`RouteSource.LOCAL_GPX`) with `synced_at = 0` / legacy timestamp. 3. Insert mock starred segment and streams with `synced_at = now - 8 days` and another with `synced_at = now - 2 days` in `SegmentsDatabaseManager`. 4. Execute TTL pruning routine. 5. Verify: expired Strava route (> 7 days) is deleted; fresh Strava route (< 7 days) is retained; expired starred segment and its coordinate streams are deleted; fresh segment is retained; local GPX route is completely untouched. 6. Simulate remote sync with orphan detection: populate active Strava route IDs set excluding a currently cached fresh Strava route; execute orphan pruning; verify missing route is deleted. 7. Test route preservation: take an existing Strava route, invoke `duplicateRouteAsLocal`, verify new route is created with `RouteSource.LOCAL_GPX` and identical geometry/bounds; advance simulated time past 7 days and execute TTL pruning; verify duplicated local route survives while original Strava route is evicted. 8. Verify native workout databases (`WorkoutSummaries.db`, `WorkoutSamples.db`, `Laps.db`) and `Equipment.db` are completely untouched throughout all pruning operations.
 
-### TST-EXT-008: **Strava Token Refresh Concurrency, Expiry Margin, Precise Revocation Discrimination & Header Verification Suite** [Protect local Strava data against accidental deletion during token refresh, synchronize concurrent refresh requests, enforce 300-second expiry margin, reuse OkHttpClient, and eliminate Bearer null headers verified across unit test suite.]
+### TST-EXT-008: **Strava Token Refresh Concurrency, Expiry Margin, Precise Revocation Discrimination & Header Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-EXT-011`
 - **Component**: **Strava Token Refresh Concurrency, Expiry Margin, Precise Revocation Discrimination & Header Verification Suite**
 - **Jira**: ``ATT-3996``
@@ -745,7 +745,7 @@
   9. *Clean-Room Regression Suite Execution (`TST-EXT-008.9`)*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-EXT-009: **Strava OAuth 2.0 State Parameter CSRF Protection, Structured Repository Scope Exchange, and Legacy Callback Deletion Verification Suite** [Cryptographically random OAuth state generation, 10-minute expiration, constant-time validation with single-use consumption, callback CSRF rejection, structured repository scope exchange, and legacy callback deletion verified across unit test suite.]
+### TST-EXT-009: **Strava OAuth 2.0 State Parameter CSRF Protection, Structured Repository Scope Exchange, and Legacy Callback Deletion Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-EXT-012`
 - **Component**: **Strava OAuth 2.0 State Parameter CSRF Protection, Structured Repository Scope Exchange, and Legacy Callback Deletion Verification Suite**
 - **Jira**: ``ATT-4022``
@@ -787,7 +787,7 @@
   13. *Clean-Room Regression Suite Execution (`TST-EXT-009.13`)*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-EXT-012: **Strava OAuth Callback Application ID Scheme Scoping & Intent Disambiguation Test Suite** [Strava OAuth redirect URI scheme scoping by applicationId eliminates system app chooser dialogs on co-installed release, debug, and legacy builds, rejects mismatched variant callbacks, and preserves single-variant authentication and CSRF state validation.]
+### TST-EXT-012: **Strava OAuth Callback Application ID Scheme Scoping & Intent Disambiguation Test Suite** [Verified]
 - **Requirement(s)**: `REQ-EXT-012`
 - **Component**: **Strava OAuth Callback Application ID Scheme Scoping & Intent Disambiguation Test Suite**
 - **Jira**: ``ATT-4668, ATT-4706``
@@ -809,7 +809,7 @@
   6. *Clean-Room Regression Suite (`TST-EXT-012.6`)*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-DAT-003: **Authoritative Altitude Extrema Reconciliation & Self-Healing Verification** [Corrupted legacy extrema (both rogue spikes and extrema falling inside stream bounds) are automatically healed from the authoritative stream, satisfying `REQ-DAT-009` and restoring consistency to both summary table and chart.]
+### TST-DAT-003: **Authoritative Altitude Extrema Reconciliation & Self-Healing Verification** [Verified]
 - **Requirement(s)**: `REQ-DAT-009`
 - **Component**: **Authoritative Altitude Extrema Reconciliation & Self-Healing Verification**
 - **Jira**: ``ATT-508``
@@ -820,7 +820,7 @@
   4. Verify legitimate workouts matching their stream are not altered.
   5. Execute unit tests in `WorkoutDataMapperAltitudeTest.kt`.
 
-### TST-DAT-004: **Bulk Workout Deletion & Relational Storage Purge Verification** [Sessions older than threshold are fully purged across all databases without leaving orphaned sample tables; surviving sessions and cluster hit counts are preserved.]
+### TST-DAT-004: **Bulk Workout Deletion & Relational Storage Purge Verification** [Verified]
 - **Requirement(s)**: `REQ-DAT-010`
 - **Component**: **Bulk Workout Deletion & Relational Storage Purge Verification**
 - **Jira**: ``ATT-296``
@@ -835,7 +835,7 @@
   8. Verify surviving workout clusters keep their lifetime `hitCount` untouched, while unlinked zero-workout orphan clusters are purged.
   9. Execute automated unit tests in `WorkoutDeletionHelperTest.kt` and `WorkoutClusterRepositoryTest.kt`.
 
-### TST-DAT-005: **Period Cache Synchronization on Bulk Deletion Verification** [Period cache completely purges orphaned historical periods, recomputes boundary periods, and eliminates dangling foreign keys upon bulk deletion.]
+### TST-DAT-005: **Period Cache Synchronization on Bulk Deletion Verification** [Verified]
 - **Requirement(s)**: `REQ-DAT-011`
 - **Component**: **Period Cache Synchronization on Bulk Deletion Verification**
 - **Jira**: ``ATT-296``
@@ -848,7 +848,7 @@
   6. Verify all `longest_workout_id` values point to surviving workouts or are `-1`.
   7. Execute automated unit tests.
 
-### TST-DAT-006: **TCX Lap Serialization, Parsing, Round-Trip & Escaping Verification** [TCX files serialize lap name and description in both human-readable `<Notes>` and structured `<Extensions>`; TCX import accurately parses both formats and populates `Laps.db`; full round-trip preservation is verified with zero regressions.]
+### TST-DAT-006: **TCX Lap Serialization, Parsing, Round-Trip & Escaping Verification** [Verified]
 - **Requirement(s)**: `REQ-DAT-012`
 - **Component**: **TCX Lap Serialization, Parsing, Round-Trip & Escaping Verification**
 - **Jira**: ``ATT-892`, `ATT-915`, `ATT-921``
@@ -874,7 +874,7 @@
   4. *Regression Verification*:
   • Execute full clean-room unit test suite (`./gradlew testDebugUnitTest`) to ensure zero regressions across all modules.
 
-### TST-DAT-007: **TCX Workout Name & Description Bidirectional Export, Import, Round-Trip & Cluster Protection Verification** [TCX files serialize workout name and description in `<Notes>` and `<att:ActivityExtension>`; TCX import restores `WORKOUT_NAME` and `DESCRIPTION`; custom names are immune to cluster overwrites; zero test regressions.]
+### TST-DAT-007: **TCX Workout Name & Description Bidirectional Export, Import, Round-Trip & Cluster Protection Verification** [Verified]
 - **Requirement(s)**: `REQ-DAT-013`
 - **Component**: **TCX Workout Name & Description Bidirectional Export, Import, Round-Trip & Cluster Protection Verification**
 - **Jira**: ``ATT-922`, `ATT-924``
@@ -900,7 +900,7 @@
   4. *Clean-Room Regression Verification*:
   • Execute full unit test suite (`./gradlew testDebugUnitTest`) to ensure zero regressions across all modules.
 
-### TST-DAT-008: **Internet Digital Elevation Model (DEM) Reference Altitude Retrieval, Schema V5, Healing & Resilience Test** [Topographic elevation retrieval, 5-decimal quantization, 200m spatial caching, HTTP error handling (429, 503, timeout), offline GPS fallback, database V4->V5 atomic migration, locked location immutability, and legacy batch healing are 100% verified with 0 regressions.]
+### TST-DAT-008: **Internet Digital Elevation Model (DEM) Reference Altitude Retrieval, Schema V5, Healing & Resilience Test** [Verified]
 - **Requirement(s)**: `REQ-DAT-014`
 - **Component**: **Internet Digital Elevation Model (DEM) Reference Altitude Retrieval, Schema V5, Healing & Resilience Test**
 - **Jira**: ``ATT-1278``
@@ -938,7 +938,7 @@
   9. *Clean-Room Regression Suite*:
   • Execute full unit test suite (`./gradlew testDebugUnitTest`) to ensure zero regressions across all modules.
 
-### TST-DAT-009: **Stable Reference Altitude Preservation, Hit Count Tracking & Concurrency Test** [Reference altitude is strictly preserved without moving average corruption; repeat visits increment `hitCount`; locked records remain immutable; concurrent operations are serialized atomically via SQLite transactions; 0 regressions.]
+### TST-DAT-009: **Stable Reference Altitude Preservation, Hit Count Tracking & Concurrency Test** [Verified]
 - **Requirement(s)**: `REQ-DAT-007`
 - **Component**: **Stable Reference Altitude Preservation, Hit Count Tracking & Concurrency Test**
 - **Jira**: ``ATT-1366``
@@ -958,7 +958,7 @@
   5. *Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` to ensure zero regressions across all modules.
 
-### TST-DAT-010: **Decoupled Altimeter Calibration and Authoritative Workout Start Counting Verification** [Altimeter calibration executes as a pure read-only operation during sensor warmup without mutating SQLite; workout starts are recorded atomically once per new session; pause/resume is neutral; existing hit counts are preserved; 100% test pass rate with zero regressions.]
+### TST-DAT-010: **Decoupled Altimeter Calibration and Authoritative Workout Start Counting Verification** [Verified]
 - **Requirement(s)**: `REQ-DAT-015`
 - **Component**: **Decoupled Altimeter Calibration and Authoritative Workout Start Counting Verification**
 - **Jira**: ``ATT-1447`, `ATT-1468`, `ATT-1469`, `ATT-1474``
@@ -984,7 +984,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-DAT-011: **Authoritative Workout Start Count Self-Healing Reconciliation & Reactive Presentation Verification** [Start count on KnownLocationCard accurately reconciles with and reflects recorded workout starts in SQLite and reactive UI; DEM healing does not increment hit count; 100% test pass rate with zero regressions.]
+### TST-DAT-011: **Authoritative Workout Start Count Self-Healing Reconciliation & Reactive Presentation Verification** [Verified]
 - **Requirement(s)**: `REQ-DAT-016`
 - **Component**: **Authoritative Workout Start Count Self-Healing Reconciliation & Reactive Presentation Verification**
 - **Jira**: ``ATT-1734`, `ATT-1780`, `ATT-1781``
@@ -1004,7 +1004,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules verifying 0 test failures.
 
-### TST-DAT-012: **Workout Origin Source Provenance Verification** [Origin source attribute is accurately tracked, persisted across SQLite schema v24, mapped safely in domain models, displayed cleanly in WorkoutHeader without cluttering live tracked workouts, and backed by 100% test coverage.]
+### TST-DAT-012: **Workout Origin Source Provenance Verification** [Verified]
 - **Requirement(s)**: `REQ-DAT-017`
 - **Component**: **Workout Origin Source Provenance Verification**
 - **Jira**: ``ATT-2186``
@@ -1029,7 +1029,7 @@
   6. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 0 test failures.
 
-### TST-DAT-013: **Full-Telemetry FIT Workout Exporter via Garmin FIT SDK Verification** [FitFileWriter generates fully compliant, CRC-verified binary FIT activity files with complete sensor telemetry, session/lap summaries, semicircles GPS conversion, and indoor fallback; integrated into export manager, preferences, and settings UI; 100% unit test pass rate.]
+### TST-DAT-013: **Full-Telemetry FIT Workout Exporter via Garmin FIT SDK Verification** [Verified]
 - **Requirement(s)**: `REQ-DAT-018`
 - **Component**: **Full-Telemetry FIT Workout Exporter via Garmin FIT SDK Verification**
 - **Jira**: ``ATT-1827``
@@ -1056,7 +1056,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with 0 regressions.
 
-### TST-DAT-014: **External FIT Workout Importer with Duplicate Detection & Sport Mapping Verification** [External FIT files are parsed and imported cleanly into SQLite with full sensor telemetry, semicircles conversion, indoor safety, automatic sport mapping, and duplicate prevention; batch UI feedback; 100% 9-language localization parity; zero test regressions.]
+### TST-DAT-014: **External FIT Workout Importer with Duplicate Detection & Sport Mapping Verification** [Verified]
 - **Requirement(s)**: `REQ-DAT-019`
 - **Component**: **External FIT Workout Importer with Duplicate Detection & Sport Mapping Verification**
 - **Jira**: ``ATT-1828``
@@ -1092,7 +1092,7 @@
   7. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with 0 regressions.
 
-### TST-DAT-015: **Google Drive Workout Export and Database Backup Integration Verification** [Google Drive native Google Sign-In with least-privilege `drive.file` scope, REST client, uploader, backup manager, WorkManager Wi-Fi constraints, settings modal dialog with localized error mapping and conditional disconnected state, and viewmodel operations execute with full fidelity, independent coexistence with Dropbox, and 100% test coverage.]
+### TST-DAT-015: **Google Drive Workout Export and Database Backup Integration Verification** [Verified]
 - **Requirement(s)**: `REQ-DAT-020`
 - **Component**: **Google Drive Workout Export and Database Backup Integration Verification**
 - **Jira**: ``ATT-1306``
@@ -1137,7 +1137,7 @@
   9. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with 0 regressions.
 
-### TST-DAT-016: **Workout Origin Source Batch Mapping Symmetry Verification** [Workout origin source attribute is preserved symmetrically across batch cursor mapping and snapshot streaming pipelines; UI origin badges render reliably for imported workouts; 100% test coverage with zero regressions.]
+### TST-DAT-016: **Workout Origin Source Batch Mapping Symmetry Verification** [Verified]
 - **Requirement(s)**: `REQ-DAT-021`
 - **Component**: **Workout Origin Source Batch Mapping Symmetry Verification**
 - **Jira**: ``ATT-2387``
@@ -1154,7 +1154,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with 0 regressions.
 
-### TST-DAT-017: **Google Drive Background Token Refresh, 401 Re-Authentication, Folder Concurrency Synchronization & Diagnostics Verification** [Google Drive automatic token refresh on HTTP 401, process-wide concurrency synchronization preventing duplicate folders, canonical Google Drive API v3 root folder creation, and actionable localized error reporting execute with full fidelity; 100% 9-language parity; 100% test pass rate.]
+### TST-DAT-017: **Google Drive Background Token Refresh, 401 Re-Authentication, Folder Concurrency Synchronization & Diagnostics Verification** [Verified]
 - **Requirement(s)**: `REQ-DAT-022`
 - **Component**: **Google Drive Background Token Refresh, 401 Re-Authentication, Folder Concurrency Synchronization & Diagnostics Verification**
 - **Jira**: ``ATT-2631``
@@ -1181,7 +1181,7 @@
   8. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with 0 regressions.
 
-### TST-DAT-018: **Raw GPS Track Douglas-Peucker Simplification and Scalar Stream Downsampling Verification** [Polyline simplification reduces point counts by >90% while preserving curve fidelity; scalar streams are downsampled to 20s intervals; live tracking collects raw 1 Hz fixes and simplifies upon finalization; 100% test pass rate with zero regressions.]
+### TST-DAT-018: **Raw GPS Track Douglas-Peucker Simplification and Scalar Stream Downsampling Verification** [Verified]
 - **Requirement(s)**: `REQ-DAT-023`
 - **Component**: **Raw GPS Track Douglas-Peucker Simplification and Scalar Stream Downsampling Verification**
 - **Jira**: ``ATT-2667``
@@ -1207,7 +1207,7 @@
   5. *Clean-Room Regression Suite*:
   • Run `./gradlew testDebugUnitTest` verifying 0 test failures.
 
-### TST-DAT-019: **Google Drive Format-Specific Directory Organization for Workout Exports and Imports Verification** [Google Drive workout uploads dynamically target format-specific folders (FIT, TCX, GPX, CSV, GC) matching Dropbox parity; bulk imports prioritize format folders with backward-compatible legacy Workouts fallback and base filename deduplication; 100% test pass rate with zero regressions.]
+### TST-DAT-019: **Google Drive Format-Specific Directory Organization for Workout Exports and Imports Verification** [Verified]
 - **Requirement(s)**: `REQ-DAT-024`
 - **Component**: **Google Drive Format-Specific Directory Organization for Workout Exports and Imports Verification**
 - **Jira**: ``ATT-3168``
@@ -1225,7 +1225,7 @@
   3. *Clean-Room Regression Suite*:
   • Run `./gradlew testDebugUnitTest` verifying 0 test failures.
 
-### TST-DAT-020: **Authoritative Database Cursor Row and Batch Mappers Verification** [Authoritative cursor row and batch mappers extract entities with 100% fidelity, default fallbacks, and single-pass index caching; cursor lifecycle and positioning invariants preserved; zero regressions across test suite.]
+### TST-DAT-020: **Authoritative Database Cursor Row and Batch Mappers Verification** [Verified]
 - **Requirement(s)**: `REQ-DAT-025`
 - **Component**: **Authoritative Database Cursor Row and Batch Mappers Verification**
 - **Jira**: ``ATT-3366``
@@ -1248,7 +1248,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` verifying 0 test failures across the full suite.
 
-### TST-EXP-015: **FIT Format Detailed Export Report, Safe Database Upsert & Workout Header Menu Verification** [FIT format is accurately rendered in detailed export report for both legacy and new workouts, ExportStatusDatabaseManager executes safe upserts without NPE, and WorkoutHeader offers direct FIT export; 100% test pass rate.]
+### TST-EXP-015: **FIT Format Detailed Export Report, Safe Database Upsert & Workout Header Menu Verification** [Verified]
 - **Requirement(s)**: `REQ-EXP-018`
 - **Component**: **FIT Format Detailed Export Report, Safe Database Upsert & Workout Header Menu Verification**
 - **Jira**: ``ATT-2310``
@@ -1268,7 +1268,7 @@
   5. *Clean-Room Full Suite Regression*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% pass rate.
 
-### TST-MIG-034: **Unified Streaming TCX and GPX XML Trackpoint Parsing Engine Verification** [Unified streaming TCX and GPX XML trackpoint parsing engine verification (Rule 36), ensuring zero XML parsing duplication and 100% backward-compatible workout and route import fidelity; 100% test pass rate.]
+### TST-MIG-034: **Unified Streaming TCX and GPX XML Trackpoint Parsing Engine Verification** [Verified]
 - **Requirement(s)**: `REQ-MIG-037`
 - **Component**: **Unified Streaming TCX and GPX XML Trackpoint Parsing Engine Verification**
 - **Jira**: ``ATT-3362``
@@ -1285,7 +1285,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-MIG-035: **Modular Workout Format Parsers for TCX, GPX, and FIT Ingestion & LegacyImportEngine Architectural Facade Verification** [Modular workout format parsers for TCX, GPX, and FIT ingestion & LegacyImportEngine architectural facade verification (Rule 20, Rule 23, Rule 36), ensuring dedicated parser components and 100% test pass rate.]
+### TST-MIG-035: **Modular Workout Format Parsers for TCX, GPX, and FIT Ingestion & LegacyImportEngine Architectural Facade Verification** [Verified]
 - **Requirement(s)**: `REQ-MIG-038`
 - **Component**: **Modular Workout Format Parsers for TCX, GPX, and FIT Ingestion & LegacyImportEngine Architectural Facade Verification**
 - **Jira**: ``ATT-3552``
@@ -1302,7 +1302,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-DAT-001: **Deterministic Resource Management via Try-With-Resources and Bounds Checking on SQLite Cursors Verification Suite** [Deterministic resource management verified across try-with-resources allocation, empty query bounds immunity, static architectural audit guard, and full clean-room suite.]
+### TST-DAT-001: **Deterministic Resource Management via Try-With-Resources and Bounds Checking on SQLite Cursors Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-DAT-001`
 - **Component**: **Deterministic Resource Management via Try-With-Resources and Bounds Checking on SQLite Cursors Verification Suite**
 - **Jira**: ``ATT-3550``
@@ -1320,7 +1320,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions across all 2932+ tests.
 
-### TST-DAT-021: **Targeted Crash-Resume Single-Row Query & Bounds Safety Verification Suite** [Targeted crash-resume single-row query and bounds safety verified across unit tests, empty database handling, static guard, and full clean-room suite.]
+### TST-DAT-021: **Targeted Crash-Resume Single-Row Query & Bounds Safety Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-DAT-026`
 - **Component**: **Targeted Crash-Resume Single-Row Query & Bounds Safety Verification Suite**
 - **Jira**: ``ATT-3549``
@@ -1335,7 +1335,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-DAT-021: **Workout Cluster Engine, Repository, and Equipment Data Provider Cursor Mapper Verification Suite** [Authoritative cursor row and batch mappers extract entities with 100% fidelity, default fallbacks, and single-pass index caching; zero manual cursor column lookups in WorkoutClusterEngine, WorkoutClusterRepository, and EquipmentDataProvider; zero regressions across test suite.]
+### TST-DAT-021: **Workout Cluster Engine, Repository, and Equipment Data Provider Cursor Mapper Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-DAT-026`
 - **Component**: **Workout Cluster Engine, Repository, and Equipment Data Provider Cursor Mapper Verification Suite**
 - **Jira**: ``ATT-3577``
@@ -1356,7 +1356,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions across all unit tests.
 
-### TST-MIG-036: **Offline Power Training Metrics Math, Historical Threshold Resolution & FIT/TCX/GPX Import Persistence Verification Suite** [Offline power training metrics (`NP`, `IF`, `TSS`, `Work kJ`, `W/kg`, `VI`), historical athlete FTP/weight lookup, FIT parser sensor discovery, and import/finalization extrema persistence verified across unit tests, contract tests, and full clean-room regression suite.]
+### TST-MIG-036: **Offline Power Training Metrics Math, Historical Threshold Resolution & FIT/TCX/GPX Import Persistence Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-MIG-039`
 - **Component**: **Offline Power Training Metrics Math, Historical Threshold Resolution & FIT/TCX/GPX Import Persistence Verification Suite**
 - **Jira**: ``ATT-3860``
@@ -1370,7 +1370,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-DAT-022: **GoldenCheetah JSON File Export Format and Data Integrity Verification Suite** [GoldenCheetah JSON export format, numeric primitives, German locale independence, GPS double-precision fidelity, intervals array, and metadata tags verified in `GCFileWriterTest` and full clean-room suite.]
+### TST-DAT-022: **GoldenCheetah JSON File Export Format and Data Integrity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-DAT-027`
 - **Component**: **GoldenCheetah JSON File Export Format and Data Integrity Verification Suite**
 - **Jira**: ``ATT-2169``
@@ -1392,7 +1392,7 @@
   7. *9-Language Localization & Clean-Room Full Suite Regression (`TST-DAT-022.7`, `TST-DAT-022.8`)*:
   • Execute `TranslationParityTest` and `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-MIG-037: **Zip-Slip Path Traversal Protection, Top-Level Whitelist, Symlink Rejection & Resource Exhaustion Defense Verification Suite** [Zip-slip path traversal rejection in MigrationEngine and ImportEngine, directory whitelist enforcement, zip bomb defense, symlink rejection, Google Drive filename sanitization, and valid archive integrity verified in BackupImportSecurityTest and clean-room full suite.]
+### TST-MIG-037: **Zip-Slip Path Traversal Protection, Top-Level Whitelist, Symlink Rejection & Resource Exhaustion Defense Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-MIG-040`, `REQ-MIG-004`, `REQ-MIG-036`
 - **Component**: **Zip-Slip Path Traversal Protection, Top-Level Whitelist, Symlink Rejection & Resource Exhaustion Defense Verification Suite**
 - **Jira**: ``ATT-3982``
@@ -1427,7 +1427,7 @@
   9. *Clean-Room Full Suite Regression Execution (`TST-MIG-037.9`)*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-MIG-038: **Pre-Restore Validation, Schema Version Bounds, Integrity Checking & Atomic Rollback Verification Suite** [Missing databases rejection, corrupted SQLite rejection, forward schema version downgrade prevention, atomic rollback snapshot recovery, and valid restore verified in FullRestoreValidationSecurityTest and clean-room full suite.]
+### TST-MIG-038: **Pre-Restore Validation, Schema Version Bounds, Integrity Checking & Atomic Rollback Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-MIG-041`, `REQ-MIG-040`
 - **Component**: **Pre-Restore Validation, Schema Version Bounds, Integrity Checking & Atomic Rollback Verification Suite**
 - **Jira**: ``ATT-3989``
@@ -1453,7 +1453,7 @@
   6. *Clean-Room Full Suite Regression Execution (`TST-MIG-038.6`)*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-MIG-039: **Samples Table Identifier Escaping, Case-Insensitive Collision Disambiguation & Structural DDL Verification** [Samples table identifier quote escaping, case-insensitive collision disambiguation with sub-second guard, true duplicate skip, and structural DDL whitelisting verified.]
+### TST-MIG-039: **Samples Table Identifier Escaping, Case-Insensitive Collision Disambiguation & Structural DDL Verification** [Verified]
 - **Requirement(s)**: `REQ-MIG-042`
 - **Component**: **Samples Table Identifier Escaping, Case-Insensitive Collision Disambiguation & Structural DDL Verification**
 - **Jira**: ``ATT-3991``
@@ -1479,7 +1479,7 @@
   6. *Clean-Room Regression Suite*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-MIG-040: **Atomic Cross-Database Import via SQLite ATTACH, insertOrThrow Enforcement, Schema Intersection & Cooperative Coroutine Responsiveness Verification Suite** [Atomic cross-database rollback, partial ATTACH resilience, shared locking, non-destructive orphan diagnostics, insertOrThrow enforcement, schema intersection with NOT NULL defaults, inverted legacy staging, and cooperative coroutine cancellation verified in WorkoutImportAtomicityTest and full test suite.]
+### TST-MIG-040: **Atomic Cross-Database Import via SQLite ATTACH, insertOrThrow Enforcement, Schema Intersection & Cooperative Coroutine Responsiveness Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-MIG-043`
 - **Component**: **Atomic Cross-Database Import via SQLite ATTACH, insertOrThrow Enforcement, Schema Intersection & Cooperative Coroutine Responsiveness Verification Suite**
 - **Jira**: ``ATT-3992``
@@ -1511,7 +1511,7 @@
   9. *Clean-Room Full Suite Regression Execution (`TST-MIG-040.9`)*:
   • Run `./gradlew testDebugUnitTest` asserting 100% pass rate.
 
-### TST-MIG-041: **Non-Destructive SportType Schema Upgrade, Custom Sport Preservation, Corrupted State Healing & Downgrade Safety Verification Suite** [Non-destructive v1->v3 upgrade, custom sport type preservation, WALK base sport update, corrupted post-v2 placeholder healing, sequence protection, UI picker filtering, and strict downgrade guard verified in SportTypeDatabaseUpgradeTest and clean-room full test suite.]
+### TST-MIG-041: **Non-Destructive SportType Schema Upgrade, Custom Sport Preservation, Corrupted State Healing & Downgrade Safety Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-MIG-044`
 - **Component**: **Non-Destructive SportType Schema Upgrade, Custom Sport Preservation, Corrupted State Healing & Downgrade Safety Verification Suite**
 - **Jira**: ``ATT-3993``
@@ -1538,7 +1538,7 @@
   6. *Clean-Room Full Suite Regression Execution (`TST-MIG-041.6`)*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-DAT-023: **UTC-Compliant Binary FIT Export, Transient Lap Synthesis, Fail-Fast Error Propagation, Pause Handling & File Cleanup Verification Suite** [True UTC timestamps under all device timezones via DateTimeFormatter, transient lap synthesis with timer consistency without DB mutation, fail-fast error propagation, partial file deletion on failure, pause support, and historical re-export verified in FitFileWriterTest and full clean-room suite.]
+### TST-DAT-023: **UTC-Compliant Binary FIT Export, Transient Lap Synthesis, Fail-Fast Error Propagation, Pause Handling & File Cleanup Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-DAT-028`
 - **Component**: **UTC-Compliant Binary FIT Export, Transient Lap Synthesis, Fail-Fast Error Propagation, Pause Handling & File Cleanup Verification Suite**
 - **Jira**: ``ATT-3994``
@@ -1574,7 +1574,7 @@
   9. *Clean-Room Full Suite Regression Execution (`TST-DAT-023.9`)*:
   • Run `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-DAT-024: **Resilient Export Pipeline, Attempt Capping, Cooperative Cancellation, Transactional Upload Remediation & Stuck State Recovery Verification Suite** [Deterministic vs transient error classification, retry capping at 3 attempts, uncaught runtime exception fail-safe, transactional dependent upload failure, cooperative cancellation in sample loops, WorkManager unique work and invalidation tags, safe workout deletion, and stuck state self-healing with decoupled non-blocking double-checked liveness guard and attempt ID matching verified across test suite.]
+### TST-DAT-024: **Resilient Export Pipeline, Attempt Capping, Cooperative Cancellation, Transactional Upload Remediation & Stuck State Recovery Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-DAT-029`
 - **Component**: **Resilient Export Pipeline, Attempt Capping, Cooperative Cancellation, Transactional Upload Remediation & Stuck State Recovery Verification Suite**
 - **Jira**: ``ATT-3995``
@@ -1626,7 +1626,7 @@
   16. *Worker I/O In-Flight Grace Period & Attempt ID Match Test (`TST-DAT-024.16`, `ExportStatusDatabaseManagerTest.kt`)*:
   • Verify that recovery logic does not terminate a worker currently performing I/O within the grace period or when attempt count has progressed.
 
-### TST-MIG-042: **Real SQLite Robolectric Database Migration & Data Preservation Verification Suite** [Real SQLite execution via Robolectric verifying multi-step migration chains, table preservation, column creation with defaults, and data integrity across WorkoutSummaries, SportType, Equipment, Routes, and TrackingViews.]
+### TST-MIG-042: **Real SQLite Robolectric Database Migration & Data Preservation Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-MIG-045`
 - **Component**: **Real SQLite Robolectric Database Migration & Data Preservation Verification Suite**
 - **Jira**: ``ATT-4005``
@@ -1662,7 +1662,7 @@
   6. *Clean-Room Full Suite Regression Execution (`TST-MIG-042.6`)*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate across all unit and Robolectric tests.
 
-### TST-MIG-043: **Legacy SQLite Migration Hardening, Fast onUpgrade DDL, Background Backfill Convergence, and DAL Guard Verification Suite** [Legacy v3->v25 and v10->v25 upgrade with quoted defaults, deterministic cluster column additions, non-blocking fast DDL onUpgrade, idempotent background backfill with interruption resilience, and DAL on-demand fallbacks verified.]
+### TST-MIG-043: **Legacy SQLite Migration Hardening, Fast onUpgrade DDL, Background Backfill Convergence, and DAL Guard Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-MIG-046`
 - **Component**: **Legacy SQLite Migration Hardening, Fast onUpgrade DDL, Background Backfill Convergence, and DAL Guard Verification Suite**
 - **Jira**: ``ATT-4009``
@@ -1693,7 +1693,7 @@
   8. *Clean-Room Full Suite Regression Execution (`TST-MIG-043.8`)*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% pass rate.
 
-### TST-DAT-025: **Google Drive Query Escaping, Account Cache Isolation, Atomic Download Staging & Transparent Scan Results Verification Suite** [Google Drive query escaping, account cache isolation, bounded 404 self-healing, atomic download staging with durability flush, and transparent recursive listing error reporting verified across test suite.]
+### TST-DAT-025: **Google Drive Query Escaping, Account Cache Isolation, Atomic Download Staging & Transparent Scan Results Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-DAT-030`
 - **Component**: **Google Drive Query Escaping, Account Cache Isolation, Atomic Download Staging & Transparent Scan Results Verification Suite**
 - **Jira**: ``ATT-4014``
@@ -1723,7 +1723,7 @@
   12. *Clean-Room Full Regression Suite (`TST-DAT-025.12`)*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions.
 
-### TST-DAT-026: **Atomic Concurrent-Safe Database Backup Snapshots, Storage Verification, and Singleton Helper Lifecycle Verification Suite** [Storage space pre-verification, API 30+ VACUUM INTO atomic snapshot under concurrent writes, API 26-29 fallback checkpoint with retry backoff, thread-safe singleton helper lifecycle, zero leaked connections, and clean-room full suite verified.]
+### TST-DAT-026: **Atomic Concurrent-Safe Database Backup Snapshots, Storage Verification, and Singleton Helper Lifecycle Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-DAT-031`
 - **Component**: **Atomic Concurrent-Safe Database Backup Snapshots, Storage Verification, and Singleton Helper Lifecycle Verification Suite**
 - **Jira**: ``ATT-4011``
@@ -1753,7 +1753,7 @@
   8. *Clean-Room Full Suite Regression Execution (`TST-DAT-026.8`)*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-DAT-027: **OAuth Credential Isolation, Android Auto Backup & Device Transfer Rules, and .attbackup Credential Exclusion Verification Suite** [Dedicated credentials store with legacy migration, Auto Backup and device-transfer exclusion rules, .attbackup credential exclusion, restore sanitization, FileProvider hardening, guarded BackupWorker cloud checks, and self-healing preference cleanup verified across test suite.]
+### TST-DAT-027: **OAuth Credential Isolation, Android Auto Backup & Device Transfer Rules, and .attbackup Credential Exclusion Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-DAT-032`
 - **Component**: **OAuth Credential Isolation, Android Auto Backup & Device Transfer Rules, and .attbackup Credential Exclusion Verification Suite**
 - **Jira**: ``ATT-4023`, `ATT-4459``
@@ -1792,7 +1792,7 @@
   • Invoke `checkPreferences()`.
   • Verify `uploadToDropbox` is automatically reset to `false`.
 
-### TST-DAT-028: **High-Performance Batch Workout Mapping, Non-Blocking Cluster Equipment Resolution & Consolidated Samples DB Telemetry Loading Verification Suite** [Batch workout mapping eliminates N+1 queries and read-time writes, cluster filtering operates non-blocking in-memory on UI thread, samples queries quote column identifiers and eliminate redundant table scans, and 100% clean-room test pass rate is achieved.]
+### TST-DAT-028: **High-Performance Batch Workout Mapping, Non-Blocking Cluster Equipment Resolution & Consolidated Samples DB Telemetry Loading Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-DAT-033`, `REQ-DAT-009`, `REQ-MAP-020`
 - **Component**: **High-Performance Batch Workout Mapping, Non-Blocking Cluster Equipment Resolution & Consolidated Samples DB Telemetry Loading Verification Suite**
 - **Jira**: ``ATT-4003, ATT-4707``
@@ -1812,7 +1812,7 @@
   4. *Clean-Room Regression Suite Execution (`TST-DAT-028.4`)*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-DAT-029: **Database Schema Migrations, Index Verification, Routes N+1 Query Batching & Synchronized Transactional Clustering Engine Verification Suite** [Database migrations v11 (Routes), v26 (WorkoutSummaries), and v3 (Laps) verified; missing indexes confirmed; routes N+1 queries eliminated; transactional clustering with in-memory caching and concurrency synchronization verified with 100% test pass rate.]
+### TST-DAT-029: **Database Schema Migrations, Index Verification, Routes N+1 Query Batching & Synchronized Transactional Clustering Engine Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-DAT-034`
 - **Component**: **Database Schema Migrations, Index Verification, Routes N+1 Query Batching & Synchronized Transactional Clustering Engine Verification Suite**
 - **Jira**: ``ATT-4008``
@@ -1833,7 +1833,7 @@
   5. *Clean-Room Regression Suite Execution (`TST-DAT-029.5`)*:
   • Execute targeted database tests and verify 100% test pass rate across the full project test suite.
 
-### TST-DAT-030: **Nullable Altitude Telemetry, Sea-Level Fidelity (0.0 m), Crop Stream Gap Resilience & Extrema Reconciliation Integrity Verification Suite** [Nullable altitude handling verified: missing altitude represented as null, legitimate sea-level (0.0 m) workouts preserved, crop downsampling canyon plunge eliminated, extrema reconciliation guarded against stream gap corruption, and 100% unit tests pass.]
+### TST-DAT-030: **Nullable Altitude Telemetry, Sea-Level Fidelity (0.0 m), Crop Stream Gap Resilience & Extrema Reconciliation Integrity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-DAT-035`
 - **Component**: **Nullable Altitude Telemetry, Sea-Level Fidelity (0.0 m), Crop Stream Gap Resilience & Extrema Reconciliation Integrity Verification Suite**
 - **Jira**: ``ATT-4017``
@@ -1858,7 +1858,7 @@
   6. *Clean-Room Regression Suite Execution (`TST-DAT-030.6`)*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate across the full test suite.
 
-### TST-DAT-031: **Granular Dropbox Sync Preferences, Wi-Fi Network Constraints & Sync Timestamp Verification Suite** [Granular Dropbox preferences, isolated email storage in AuthCredentialsStore, export and backup gating parity with Google Drive, dynamic Wi-Fi network constraints, sync timestamp updates, and error resilience verified.]
+### TST-DAT-031: **Granular Dropbox Sync Preferences, Wi-Fi Network Constraints & Sync Timestamp Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-DAT-032`, `REQ-MIG-036`
 - **Component**: **Granular Dropbox Sync Preferences, Wi-Fi Network Constraints & Sync Timestamp Verification Suite**
 - **Jira**: ``ATT-4665``
@@ -1880,7 +1880,7 @@
   5. *Clean-Room Regression Suite & Translation Parity Execution (`TST-DAT-031.5`)*:
   • Execute targeted tests, `TranslationParityTest`, and `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-MIG-044: **SecureZipExtractor Symlinked Parent Directory Extraction & Symlink Rejection Boundary Verification Suite** [SecureZipExtractor canonical destination resolution verified: valid archives extract cleanly through symlinked parent directories (/data/user/0 -> /data/data), internal symlinks and zip-slip traversal remain strictly blocked, and 100% clean-room test pass rate.]
+### TST-MIG-044: **SecureZipExtractor Symlinked Parent Directory Extraction & Symlink Rejection Boundary Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-MIG-047`, `REQ-MIG-040`
 - **Component**: **SecureZipExtractor Symlinked Parent Directory Extraction & Symlink Rejection Boundary Verification Suite**
 - **Jira**: ``ATT-4592``
@@ -1905,7 +1905,7 @@
   6. *Clean-Room Full Suite Regression Execution (`TST-MIG-044.6`)*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate across the full test suite.
 
-### TST-MIG-045: **Restore Backup Card Button Labels, Icons & Disconnected Visibility Verification Suite** [Restore Backup card button labels unified across all 9 locales, Dropbox restore icon updated to CloudDownload, Google Drive restore rendered unconditionally with dimmed disconnected state, disconnected dialog triggered safely without confirmation dialog, and 100% unit tests pass.]
+### TST-MIG-045: **Restore Backup Card Button Labels, Icons & Disconnected Visibility Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-MIG-036`
 - **Component**: **Restore Backup Card Button Labels, Icons & Disconnected Visibility Verification Suite**
 - **Jira**: ``ATT-4664``
@@ -1924,7 +1924,7 @@
   4. *Clean-Room Regression Suite Execution (`TST-MIG-045.4`)*:
   • Execute targeted migration unit tests and `TranslationParityTest` asserting 100% pass rate.
 
-### TST-DAT-032: **SQLite Schema Evolution, onCreate/onUpgrade Parity & Automated Migration Verification Standard Audit** [Coding standards updated with Section 2.3 SQLite schema migration parity, safe NOT NULL default constraint rules, and automated migration test verification requirements.]
+### TST-DAT-032: **SQLite Schema Evolution, onCreate/onUpgrade Parity & Automated Migration Verification Standard Audit** [Verified]
 - **Requirement(s)**: `REQ-DAT-036`
 - **Component**: **SQLite Schema Evolution, `onCreate`/`onUpgrade` Parity & Automated Migration Verification Standard Audit**
 - **Jira**: ``ATT-3534``

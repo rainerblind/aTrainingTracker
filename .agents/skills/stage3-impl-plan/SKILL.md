@@ -14,9 +14,10 @@ Reuse the ticket's two persistent `TypeName: "self"` subagents via `send_message
 - **Gate 3 Review (`--as agent2`)**: **`subagent_flash`** (`send_message` to the ticket's `flash` subagent, which authored Stage 2!) — Audits structural completeness (1:1 mapping of `REQ`/`TST` to atomic steps, DB migration checklist, and strict *Code Lock* verification), followed by executing `python3 tools/jira_util.py --as agent2 gate-verdict <SUBTASK_KEY> PASS ...` (warming `subagent_flash` for Stage 4 implementation!).
 
 ## Key Responsibilities (`subagent_pro` as `agent1` — `pro`)
-1. **Architectural Decomposition (SWE.2)**:
+1. **Architectural Decomposition & Continuous SWE.2 Maintenance (`ATT-5431`)**:
    - Identify clean architecture boundaries: UI (Jetpack Compose), ViewModel (`StateFlow`), Repository, Database (SQLite / Room / ContentProvider), Service (`TrackerService`).
    - Define thread dispatchers (`dbDispatcher`, `Dispatchers.Main`, `Dispatchers.IO`).
+   - **Continuous SWE.2 Maintenance**: If the ticket introduces a new subsystem, foreground service, database manager, repository, or requirement prefix family, explicitly schedule an atomic step to update [`docs/architecture.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/architecture.md) (component models, requirement allocations, Mermaid dynamic flows, and threading/DB invariants).
 2. **Atomic Step Sequencing**:
    - Break down construction into bite-sized, order-dependent steps.
    - Map each step to specific target files and targeted unit test commands.

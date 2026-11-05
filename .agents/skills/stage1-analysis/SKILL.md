@@ -21,13 +21,14 @@ At Ticket Start (`ATT-XXXX`), spawn two persistent `TypeName: "self"` subagents 
    - When a Jira ticket already includes a detailed root-cause analysis or architectural proposal, treat it strictly as a hypothesis.
    - Independently audit the hypothesis against the live `sprint/<SPRINT_NAME>` codebase: cross-check cited files, line ranges, and architectural assumptions (including visual continuity of sparse/non-contiguous chart bins, domain-boundary clamping so out-of-range bins do not stack at `y = 0` via `.coerceAtLeast(1f)`, and header vs. body duplication in shared layout containers — `ATT-5190`/`ATT-5281`/`ATT-5311`, `ATT-5196`/`ATT-5279`) to identify blind spots or potential regressions.
    - Include an explicit **"Independent Peer Review & Verification"** subsection in the Stage 1 deliverable (`docs/engineering/analysis/<TICKET_KEY>_analysis.md`).
-3. **Chesterton's Fence Archaeology (`REQ-PRO-022`) & Side-Effect / Cross-Caller Impact Audit (`Rule 68` — `ATT-5082`)**:
+3. **Chesterton's Fence Archaeology (`REQ-PRO-022`), Side-Effect Audit (`Rule 68`) & Documentation Code-Grounding (`ATT-5431`)**:
    - Inspect git history (`git log -S <REQ-ID> docs/requirements.md`) before proposing modifications to existing requirements.
    - If modifying an existing requirement, populate the 4 mandatory fields:
      - `Original Requirement ID & Target`
      - `Historical Origin & Commit Trace`
      - `Root Reason for Existing Formulation`
      - `Preservation of Core Invariants`
+   - **Documentation Code-Grounding Mandate (`ATT-5431`)**: When investigating documentation, guides (`docs/guide/`), or architectural assets, ground every claim against authentic production code (`AndroidManifest.xml`, Compose composables, strings, and Repositories). Unverified keywords, draft claims, or speculation from ticket descriptions must never be accepted without codebase proof.
    - **Mandatory Side-Effect & Cross-Caller Impact Analysis (`Rule 68` — `"There should be more emphasis on possible side-effects."`)**:
      - Trace all runtime wrappers/decorators returned by factory methods (e.g., `MySensorManager.getSensor()` returning `ProxySensor` wrapping `MyAccumulatorSensor` — `ATT-5191`).
      - When adding or modifying a repository loader or shared `StateFlow` (e.g., `loadAllClustersLightweight()`), audit **every downstream consumer** (`MapFragmentWithTrackViewModel`, `TrackingViewModel`, `ClusterOnMapSheet`, `WorkoutClustersViewModel`) to ensure companion state flows (`_clusterStats`) are hydrated and overlays do not leak into unintended screens (`ATT-5196`, `ATT-5197`).

@@ -7,257 +7,257 @@
 
 ---
 
-### TST-SET-031: **Unified Spatial Markers** [1. All views use Green pins with `control_start` icon and Red pins with `control_stop` icon. 2. Icons are vertically centered in the pin base.]
+### TST-SET-031: **Unified Spatial Markers** [Verified]
 - **Requirement(s)**: `REQ-SET-041`
 - **Component**: **Unified Spatial Markers**
 - **Test Description**: 1. Open Workout Details, Period Map, and Route Heatmap. 2. Inspect Start/End markers.
 
-### TST-SET-001: **Workout Learning Engine** [1. The second workout SHALL automatically be named \"Park Loop #2\". 2. The sport SHALL automatically be set to \"Running\". 3. Changing the name to \"Morning Loop\" SHALL update future suggestions to \"Morning Loop\".]
+### TST-SET-001: **Workout Learning Engine** [Verified]
 - **Requirement(s)**: `REQ-SET-006`, `007`, `008`
 - **Component**: **Workout Learning Engine**
 - **Test Description**: 1. Track a route. 2. Name it \"Park Loop\" and set sport to \"Running\". 3. Track the same route again.
 
-### TST-SET-002: **Favorite Tracks Heatmap** [1. A map SHALL open showing a heatmap of all associated workouts. 2. Start, Stop, and Apex markers SHALL be visible as clear pins.]
+### TST-SET-002: **Favorite Tracks Heatmap** [Verified]
 - **Requirement(s)**: `REQ-SET-009`
 - **Component**: **Favorite Tracks Heatmap**
 - **Test Description**: 1. Navigate to \"Workout Clusters\" drawer. 2. Select a recurring path.
 
-### TST-SET-003: **Cluster Tuning** [1. The master slider SHALL adjust all three tolerances proportionally. 2. The Workout Cluster database SHALL be wiped. 3. A background migration SHALL rebuild the clusters with the new parameters.]
+### TST-SET-003: **Cluster Tuning** [Verified]
 - **Requirement(s)**: `REQ-SET-010`, `011`
 - **Component**: **Cluster Tuning**
 - **Test Description**: 1. Navigate to \"Workout Clusters\". 2. Open Tuning menu. 3. Adjust the master slider. 4. Optionally toggle detailed controls. 5. Tap \"Recalculate\".
 
-### TST-SET-004: **Workout Cluster Item Map** [1. Each item SHALL display a small map. 2. Start (Green pin with start icon), End (Red pin with stop icon), and Apex (Blue pin with distance icon) SHALL be visible on the map.]
+### TST-SET-004: **Workout Cluster Item Map** [Verified]
 - **Requirement(s)**: `REQ-SET-012`
 - **Component**: **Workout Cluster Item Map**
 - **Test Description**: 1. Navigate to \"Workout Clusters\". 2. Inspect list items.
 
-### TST-SET-005: **Name-Aware Clustering** [The system SHALL group them into the same cluster by applying the name-match bonus to the similarity score.]
+### TST-SET-005: **Name-Aware Clustering** [Verified]
 - **Requirement(s)**: `REQ-SET-013`
 - **Component**: **Name-Aware Clustering**
 - **Test Description**: 1. Identify two workouts with same name but high spatial drift. 2. Trigger recalculation.
 
-### TST-SET-006: **Auto-Dismiss Tuning** [The UI SHALL automatically navigate back to the Favorite Tracks list view upon completion.]
+### TST-SET-006: **Auto-Dismiss Tuning** [Verified]
 - **Requirement(s)**: `REQ-SET-014`
 - **Component**: **Auto-Dismiss Tuning**
 - **Test Description**: 1. Open Tuning screen. 2. Tap \"Recalculate All Clusters\". 3. Wait for completion.
 
-### TST-SET-007: **Unique Cluster Naming** [The second cluster SHALL be automatically named \"Home var 2\".]
+### TST-SET-007: **Unique Cluster Naming** [Verified]
 - **Requirement(s)**: `REQ-SET-015`
 - **Component**: **Unique Cluster Naming**
 - **Test Description**: 1. Create a cluster named \"Home\". 2. Create a spatially distinct route and also name it \"Home\".
 
-### TST-SET-008: **Edit Cluster Identity** [1. The name and sport SHALL be updated in the database. 2. The UI SHALL immediately reflect the new name and sport icon in the list and details view.]
+### TST-SET-008: **Edit Cluster Identity** [Verified]
 - **Requirement(s)**: `REQ-SET-016`
 - **Component**: **Edit Cluster Identity**
 - **Test Description**: 1. Select a workout cluster. 2. Tap Edit Icon in TopAppBar. 3. Enter new name and select a different sport. 4. Save.
 
-### TST-SET-009: **Manual Workout Reassignment** [1. The workout SHALL be moved to the target cluster. 2. Centroids for both clusters SHALL be recalculated. 3. The UI SHALL refresh to show the workout in its new home.]
+### TST-SET-009: **Manual Workout Reassignment** [Verified]
 - **Requirement(s)**: `REQ-SET-017`
 - **Component**: **Manual Workout Reassignment**
 - **Test Description**: 1. Open a Workout Heatmap. 2. Tap a specific workout polyline. 3. Select a different cluster from the candidate list. 4. Save.
 
-### TST-SET-010: **Edit Workout Suggestions** [1. The workout name SHALL update to the cluster's name. 2. The sport SHALL update to the cluster's sport. 3. Saving SHALL persist the cluster association.]
+### TST-SET-010: **Edit Workout Suggestions** [Verified]
 - **Requirement(s)**: `REQ-SET-018`
 - **Component**: **Edit Workout Suggestions**
 - **Test Description**: 1. Edit a workout. 2. Tap the \"My Locations\" icon in the Name field. 3. Select a suggested cluster.
 
-### TST-SET-011: **Manual Cluster Creation** [1. A new cluster SHALL be created in the database with 0 hit count. 2. The cluster SHALL be visible in the list.]
+### TST-SET-011: **Manual Cluster Creation** [Verified]
 - **Requirement(s)**: `REQ-SET-019`
 - **Component**: **Manual Cluster Creation**
 - **Test Description**: 1. Navigate to \"Workout Clusters\". 2. Tap \"+\" FAB. 3. Fill in name and distance. 4. Tap map to set 3 points. 5. Save.
 
-### TST-SET-012: **Workout Peek & Move** [1. The workout details SHALL be visible in the sheet. 2. The \"Move Workout\" dialog SHALL appear upon tapping the FAB.]
+### TST-SET-012: **Workout Peek & Move** [Verified]
 - **Requirement(s)**: `REQ-SET-020`
 - **Component**: **Workout Peek & Move**
 - **Test Description**: 1. Open a Workout Heatmap. 2. Tap a specific workout track. 3. Observe the Bottom Sheet peek. 4. Tap the \"Move\" FAB in the peek.
 
-### TST-SET-013: **Manual Fingerprint Edit** [1. The cluster centroid SHALL be updated in the database. 2. Future matching SHALL use the new coordinates.]
+### TST-SET-013: **Manual Fingerprint Edit** [Verified]
 - **Requirement(s)**: `REQ-SET-021`
 - **Component**: **Manual Fingerprint Edit**
 - **Test Description**: 1. Open a Workout Heatmap. 2. Tap a signature marker (Start/End/Apex). 3. Select \"Edit Position\". 4. Tap map to set new position. 5. Save.
 
-### TST-SET-014: **Workout Markers in Cluster** [1. Markers for ALL member workouts SHALL be visible with subtle transparency. 2. Tapping a marker SHALL correctly trigger the detailed peek for that workout.]
+### TST-SET-014: **Workout Markers in Cluster** [Verified]
 - **Requirement(s)**: `REQ-SET-022`
 - **Component**: **Workout Markers in Cluster**
 - **Test Description**: 1. Open a Workout Heatmap. 2. Observe the distribution of markers for all members. 3. Tap a specific workout track OR any marker. 4. Inspect markers in the peek.
 
-### TST-SET-015: **Imperial Units in Clusters** [1. Manual distance input SHALL accept miles and store as meters. 2. Tuning tolerances SHALL be displayed in miles with high precision.]
+### TST-SET-015: **Imperial Units in Clusters** [Verified]
 - **Requirement(s)**: `REQ-SET-023`
 - **Component**: **Imperial Units in Clusters**
 - **Test Description**: 1. Switch to Imperial. 2. Add manual cluster (miles). 3. View tuning details (mile).
 
-### TST-SET-016: **Cluster Equipment Determination** [1. The list of equipment linked to the cluster's primary sport SHALL be visible.]
+### TST-SET-016: **Cluster Equipment Determination** [Verified]
 - **Requirement(s)**: `REQ-SET-024`
 - **Component**: **Cluster Equipment Determination**
 - **Test Description**: 1. Open a Workout Cluster. 2. Verify the associated equipment list (→).
 
-### TST-SET-017: **Workout Cluster Collapsing Header** [1. The header SHALL collapse smoothly as the user scrolls. 2. The header SHALL re-expand when the user scrolls back to the top.]
+### TST-SET-017: **Workout Cluster Collapsing Header** [Verified]
 - **Requirement(s)**: `REQ-SET-025`
 - **Component**: **Workout Cluster Collapsing Header**
 - **Test Description**: 1. Navigate to \"Workout Clusters\". 2. Scroll the list downwards. 3. Observe the TopAppBar behavior.
 
-### TST-SET-018: **Workout Cluster Tabbed Layout** [1. The list SHALL filter clusters correctly based on the selected sport type tab. 2. Swiping SHALL be smooth and synchronized with the tab indicator.]
+### TST-SET-018: **Workout Cluster Tabbed Layout** [Verified]
 - **Requirement(s)**: `REQ-SET-026`
 - **Component**: **Workout Cluster Tabbed Layout**
 - **Test Description**: 1. Navigate to \"Workout Clusters\". 2. Observe the tabs at the top. 3. Swipe between tabs (All, Bike, Run, Other).
 
-### TST-SET-019: **Workout Cluster Scroll Persistence** [1. The list SHALL remain scrolled to the previously viewed position. 2. The active tab SHALL be preserved.]
+### TST-SET-019: **Workout Cluster Scroll Persistence** [Verified]
 - **Requirement(s)**: `REQ-SET-027`
 - **Component**: **Workout Cluster Scroll Persistence**
 - **Test Description**: 1. Scroll down the \"All\" tab. 2. Select a cluster to open its heatmap. 3. Navigate back.
 
-### TST-SET-020: **Unified FAB Layout** [1. The FAB SHALL be positioned at the bottom-right. 2. It SHALL correctly respect system navigation bar padding.]
+### TST-SET-020: **Unified FAB Layout** [Verified]
 - **Requirement(s)**: `REQ-SET-028`
 - **Component**: **Unified FAB Layout**
 - **Test Description**: 1. Navigate to \"Workout Clusters\". 2. Observe FAB position and styling. 3. Compare with \"Sport Types\" and \"Equipment\" FABs.
 
-### TST-SET-021: **Identity Arbitration** [1. The workout SHALL adopt the cluster's Name. 2. The sport and equipment SHALL remain hardware-driven (Vetoing the route majority).]
+### TST-SET-021: **Identity Arbitration** [Verified]
 - **Requirement(s)**: `REQ-SET-029`, `030`
 - **Component**: **Identity Arbitration**
 - **Test Description**: 1. Link a specific sensor to a bike. 2. Record a session with that sensor on a route matched to a cluster with a different majority sport.
 
-### TST-SET-022: **Route-to-Cluster Matching** [1. A new Workout Cluster SHALL automatically be created for the imported route. 2. Recalculating history SHALL also include existing routes as cluster seeds.]
+### TST-SET-022: **Route-to-Cluster Matching** [Verified]
 - **Requirement(s)**: `REQ-SET-031`
 - **Component**: **Route-to-Cluster Matching**
 - **Test Description**: 1. Import a GPX Route. 2. Navigate to \"Workout Clusters\".
 
-### TST-SET-023: **Reference Route in Heatmap** [1. The authoritative route's path SHALL be visible as a solid, prominent line overlaid on the workout heatmap.]
+### TST-SET-023: **Reference Route in Heatmap** [Verified]
 - **Requirement(s)**: `REQ-SET-032`
 - **Component**: **Reference Route in Heatmap**
 - **Test Description**: 1. Open a Workout Cluster that is linked to an explicit Route. 2. Observe the heatmap visualization.
 
-### TST-SET-024: **Workout Cluster Deletion** [1. The cluster SHALL be deleted. 2. Associated workouts SHALL remain in history but lose their cluster assignment.]
+### TST-SET-024: **Workout Cluster Deletion** [Verified]
 - **Requirement(s)**: `REQ-SET-033`
 - **Component**: **Workout Cluster Deletion**
 - **Test Description**: 1. Open a Workout Cluster detail view. 2. Long-click the header. 3. Select \"Delete\". 4. Confirm deletion.
 
-### TST-SET-025: **Stable Cluster Naming** [1. The workout SHALL be named \"Park Loop #X\". 2. The cluster name SHALL remain \"Park Loop\".]
+### TST-SET-025: **Stable Cluster Naming** [Verified]
 - **Requirement(s)**: `REQ-SET-034`
 - **Component**: **Stable Cluster Naming**
 - **Test Description**: 1. Identify a cluster named \"Park Loop\". 2. Track a workout matching this cluster.
 
-### TST-SET-026: **Preview Heatmap** [1. If a Route is linked, its path is visible. 2. If no Route, a subtle heatmap of recent tracks is visible. 3. All 3 signature markers are visible.]
+### TST-SET-026: **Preview Heatmap** [Verified]
 - **Requirement(s)**: `REQ-SET-035`
 - **Component**: **Preview Heatmap**
 - **Test Description**: 1. Open the Favorite Tracks list. 2. Observe the mini-map in a list item.
 
-### TST-SET-027: **Persistent DB Connection** [1. RouteClusters.db should be visible and accessible as an active connection.]
+### TST-SET-027: **Persistent DB Connection** [Verified]
 - **Requirement(s)**: `REQ-SET-036`
 - **Component**: **Persistent DB Connection**
 - **Test Description**: 1. Start the app. 2. Open Android Studio Database Inspector.
 
-### TST-SET-028: **Hit Count Synchronization** [1. The hit count should automatically update to 0. 2. Assigning a workout via editor should correctly increment both DBs.]
+### TST-SET-028: **Hit Count Synchronization** [Verified]
 - **Requirement(s)**: `REQ-SET-037`, `038`
 - **Component**: **Hit Count Synchronization**
 - **Test Description**: 1. Identify a cluster with hit count > 0. 2. Use Database Inspector to manually clear `clusterId` for its workouts. 3. Open Favorite Tracks list.
 
-### TST-SET-029: **Unclustered Tab Verification** [1. Workouts with clusterId=-1 are visible. 2. Selection dialog opens and reassignment works correctly.]
+### TST-SET-029: **Unclustered Tab Verification** [Verified]
 - **Requirement(s)**: `REQ-SET-040`
 - **Component**: **Unclustered Tab Verification**
 - **Test Description**: 1. Navigate to Favorite Tracks. 2. Open 'Offen' tab. 3. Tap a workout.
 
-### TST-SET-030: **Locale-Aware Distance Input** [1. The 'Save' button becomes enabled. 2. Saving the cluster correctly parses '5,5' as 5.5 units (km or miles).]
+### TST-SET-030: **Locale-Aware Distance Input** [Verified]
 - **Requirement(s)**: `REQ-SET-039`
 - **Component**: **Locale-Aware Distance Input**
 - **Test Description**: 1. Set device locale to German. 2. Open 'Add Workout Cluster' flow. 3. Enter '5,5' in the distance field.
 
-### TST-SET-032: **Markers & Framing in Previews** [1. Workout previews show Start (Green), End (Red), and Apex (Blue) markers. 2. Route previews show ONLY Start and End markers. 3. All previews correctly frame the entire route, ensuring no parts are cropped.]
+### TST-SET-032: **Markers & Framing in Previews** [Verified]
 - **Requirement(s)**: `REQ-SET-042`
 - **Component**: **Markers & Framing in Previews**
 - **Jira**: ``ATT-390``
 - **Test Description**: 1. Open Workout History, Routes, and My Locations lists. 2. Observe the mini-maps.
 
-### TST-SET-033: **Fingerprint Parity** [1. Both the Route and Workout SHALL have the exact same Apex coordinate (Furthest from Start). 2. Grouping accuracy is 100%.]
+### TST-SET-033: **Fingerprint Parity** [Verified]
 - **Requirement(s)**: `REQ-SET-043`
 - **Component**: **Fingerprint Parity**
 - **Test Description**: 1. Import a Route. 2. Record a workout on that exact route. 3. Navigate to Favorite Tracks.
 
-### TST-SET-034: **Sport-Aware Clustering** [Clustering logic correctly applies/removes the sport-type similarity penalty.]
+### TST-SET-034: **Sport-Aware Clustering** [Verified]
 - **Requirement(s)**: `REQ-SET-010`, `REQ-SET-043`
 - **Component**: **Sport-Aware Clustering**
 - **Jira**: ``ATT-399``
 - **Test Description**: 1. Navigate to My Locations -> Tuning. 2. Toggle 'Take Sport Type into account' to ON. 3. Recalculate clusters. 4. Verify that Runs and Rides on the same path remain in separate clusters. 5. Toggle to OFF and recalculate. 6. Verify they merge into one cluster.
 
-### TST-SET-035: **Sport Mismatch with UNKNOWN** [The 'Running' workout SHALL NOT match the 'UNKNOWN' cluster (+2.0 penalty applied).]
+### TST-SET-035: **Sport Mismatch with UNKNOWN** [Verified]
 - **Requirement(s)**: `REQ-SET-043`
 - **Component**: **Sport Mismatch with UNKNOWN**
 - **Jira**: ``ATT-427``
 - **Test Description**: 1. Ensure Tuning toggle is ON. 2. Record a 'Running' workout on a path that currently has an 'UNKNOWN' cluster.
 
-### TST-SET-040: **Unclustered Workout Navigation** [1. Layout is consistent. 2. Map opens correctly. 3. Cluster selection dialog appears.]
+### TST-SET-040: **Unclustered Workout Navigation** [Verified]
 - **Requirement(s)**: `REQ-SET-056`
 - **Component**: **Unclustered Workout Navigation**
 - **Jira**: ``ATT-278``
 - **Test Description**: 1. Open 'Unclustered' tab in My Locations. 2. Verify layout parity with clusters (mini-map exists). 3. Tap a workout. 4. Verify navigation to map. 5. Tap 'Move to Cluster' icon.
 
-### TST-SET-041: **Cluster Member Listing** [1. List is correctly filtered by clusterId.]
+### TST-SET-041: **Cluster Member Listing** [Verified]
 - **Requirement(s)**: `REQ-SET-057`
 - **Component**: **Cluster Member Listing**
 - **Jira**: ``ATT-280``
 - **Test Description**: 1. Open 'Clusters' tab. 2. Click on the \"X recordings\" text for a cluster. 3. Verify navigation to a list containing only those recordings.
 
-### TST-SET-042: **Workout Session Naming Isolation** [1. Workout is named 'Morning Run'. 2. Cluster name remains 'Park Loop' in the database and cluster list.]
+### TST-SET-042: **Workout Session Naming Isolation** [Verified]
 - **Requirement(s)**: `REQ-SET-034`, `REQ-SET-044`
 - **Component**: **Workout Session Naming Isolation**
 - **Jira**: ``ATT-317``
 - **Test Description**: 1. Track a workout matching cluster 'Park Loop'. 2. Open 'Edit Workout' screen. 3. Change name to 'Morning Run'. 4. Save.
 
-### TST-SET-043: **Cluster Visibility & Re-clustering** [1. Cluster name and icon are visible and aligned to the left. 2. Re-assignment in editor successfully updates the workout's association.]
+### TST-SET-043: **Cluster Visibility & Re-clustering** [Verified]
 - **Requirement(s)**: `REQ-SET-058`, `REQ-SET-059`
 - **Component**: **Cluster Visibility & Re-clustering**
 - **Jira**: ``ATT-395``
 - **Test Description**: 1. Open the Workout History list. 2. Verify each item displays its Cluster Name with the leading route icon at the very left below the workout name. 3. Edit a workout and manually re-assign it to a different cluster. 4. Save and verify the update in the list.
 
-### TST-SET-044: **Selection Dialog Hit Count Accuracy** [The cluster SHALL correctly display "5 Aufzeichnungen" (or equivalent) in the suggestion list.]
+### TST-SET-044: **Selection Dialog Hit Count Accuracy** [Verified]
 - **Requirement(s)**: `REQ-SET-038`
 - **Component**: **Selection Dialog Hit Count Accuracy**
 - **Jira**: ``ATT-429``
 - **Test Description**: 1. Identify a cluster with 5 associated workouts. 2. Open a workout for manual re-clustering or trigger a TCX import interaction. 3. Open the "Select Existing Route" dialog.
 
-### TST-SET-045: **Selectable Cluster Markers** [Visibility reflects user selection and persists across sessions.]
+### TST-SET-045: **Selectable Cluster Markers** [Verified]
 - **Requirement(s)**: `REQ-SET-060`
 - **Component**: **Selectable Cluster Markers**
 - **Jira**: ``ATT-463``
 - **Test Description**: 1. Open a Workout Cluster heatmap. 2. Tap the Marker Options button. 3. Uncheck "Start Point". 4. Verify that all green pins (signature and member distribution) disappear. 5. Re-check and Verify reappearance. 6. Re-check persistence after app restart.
 
-### TST-SET-046: **Reactive Editor Suggestions** [Scores update reactively to sport changes.]
+### TST-SET-046: **Reactive Editor Suggestions** [Verified]
 - **Requirement(s)**: `REQ-SET-018`
 - **Component**: **Reactive Editor Suggestions**
 - **Jira**: ``ATT-447``
 - **Test Description**: 1. Edit a 'Running' workout on a 'Cycling' path. 2. Observe high similarity score (> 5.0) for 'Cycling' cluster in suggestions. 3. Change workout sport to 'Cycling'. 4. Verify score drops below 1.0 (penalty removed).
 
-### TST-SET-047: **Idempotent Route Cluster Creation** [The system refines the existing "Route A" cluster and does NOT create a duplicate cluster named "Route A var 2".]
+### TST-SET-047: **Idempotent Route Cluster Creation** [Verified]
 - **Requirement(s)**: `REQ-SET-061`
 - **Component**: **Idempotent Route Cluster Creation**
 - **Jira**: ``ATT-543``
 - **Test Description**: 1. Import multiple TCX workout files that follow the same route name (e.g. "Route A"). 2. Verify cluster assignment.
 
-### TST-SET-048: **Automatic Zero-Workout Cluster Purging** [Unlinked orphan route clusters with 0 workouts are automatically deleted from the database. Clusters linked to an explicit Route are preserved even with 0 workouts.]
+### TST-SET-048: **Automatic Zero-Workout Cluster Purging** [Verified]
 - **Requirement(s)**: `REQ-SET-062`
 - **Component**: **Automatic Zero-Workout Cluster Purging**
 - **Jira**: ``ATT-544``
 - **Test Description**: 1. Trigger a TCX import or cluster refresh. 2. Inspect the cluster list and database for orphan clusters with 0 assigned workouts and no linked Route. 3. Import an explicit Route with 0 workouts.
 
-### TST-SET-049: **Route Cluster Apex Arithmetic Mean & Live Tracking Synchronization** [The cluster apex marker strictly represents the arithmetic mean of all member workouts, without UI-triggered database mutations or track-snapping deviations. Live workout tracking and accumulator resets preserve spatial integrity.]
+### TST-SET-049: **Route Cluster Apex Arithmetic Mean & Live Tracking Synchronization** [Verified]
 - **Requirement(s)**: `REQ-SET-063`
 - **Component**: **Route Cluster Apex Arithmetic Mean & Live Tracking Synchronization**
 - **Jira**: ``ATT-1138``
 - **Test Description**: 1. Assign or learn workouts into a Workout Cluster. 2. Verify that the cluster's `maxDispLat` and `maxDispLng` are the exact arithmetic mean of the member workouts' maximum displacement coordinates. 3. Delete or move a member workout and verify the moving average reverses accurately. 4. Select/inspect the cluster in `WorkoutClustersViewModel` and verify that the cluster's apex in SQLite is NOT mutated or overwritten. 5. Verify `WorkoutClusterEngine.onWorkoutFinished` propagates `maxDisplacementLatLng` instead of `startLatLng`. 6. Verify `SpeedAndLocationDevice` clears `mStartLocation` upon reset.
 
-### TST-SET-050: **Explicit Cluster Selection (No Cluster, New Cluster) in Edit Workout** [1. Cluster selection is prominent and accessible below the workout name with the look and feel of the TCX import dialog. 2. "No Cluster" explicitly detaches the workout from any cluster. 3. "New Cluster" creates a new cluster from the workout. 4. Candidate cluster selection updates the cluster identity and hit counts reliably.]
+### TST-SET-050: **Explicit Cluster Selection (No Cluster, New Cluster) in Edit Workout** [Verified]
 - **Requirement(s)**: `REQ-SET-059`
 - **Component**: **Explicit Cluster Selection (No Cluster, New Cluster) in Edit Workout**
 - **Jira**: ``ATT-666``
 - **Test Description**: 1. Open the Workout History list and tap a workout to open `EditWorkoutScreen`. 2. Verify an explicit Cluster Assignment field is rendered directly below the Workout Name input, displaying the route icon (`my_locations`), label ("Route Assignment" / "Selected Route"), and current cluster name (or "Unclustered" / "Leave Unclustered"). 3. Tap the Cluster Assignment field to launch the assignment dialog (harmonized with `RouteClusterNamingDialog`). 4. Select "Leave Unclustered" / "Kein Cluster" and save the workout: verify that the workout is unassigned (`clusterId = -1L`), its previous cluster hit count is decremented, and the workout header displays "Unclustered". 5. Re-open editor, tap the Cluster Assignment field, select "Create New..." / enter a new route name, and save: verify a new cluster is generated from the workout's spatial fingerprint and assigned to the workout. 6. Re-open editor, tap the Cluster Assignment field, select an existing cluster candidate: verify the workout is reassigned, hit counts are updated atomically, and the new cluster name is displayed.
 
-### TST-SET-051: **Speed-Based Multi-Sport Cluster Discovery & Identity Resolution** [1. Ambiguous intermediate-speed workout matches existing route cluster without creating false duplicate cluster. 2. Workout adopts cluster sport type. 3. Explicit user pre-selection and hardware sensors take absolute precedence.]
+### TST-SET-051: **Speed-Based Multi-Sport Cluster Discovery & Identity Resolution** [Verified]
 - **Requirement(s)**: `REQ-SET-064`
 - **Component**: **Speed-Based Multi-Sport Cluster Discovery & Identity Resolution**
 - **Jira**: ``ATT-773``
 - **Test Description**: 1. Create/seed a Workout Cluster with `BSportType.BIKE` for a known route geometry. 2. Simulate/record a workout following the identical route geometry with average speed 3.0 m/s without paired cadence/power sensors and without user pre-selection (speed suggests both `RUN` and `BIKE`). 3. Verify that `suggestCluster` identifies the existing bike cluster with 0.0 sport penalty and links the workout to it, adopting `BSportType.BIKE`. 4. Repeat with explicit user pre-selection of `BSportType.RUN`: verify the bike cluster receives +5.0 penalty and is rejected. 5. Repeat with high-confidence cadence sensor active: verify candidate sports are strictly `{BIKE}`.
 
-### TST-SET-052: **Altitude Extrema-Aware Cluster Matching, Migration & Fingerprint Relocation** [1. Database upgrades to v10 seamlessly with historical altitude backfill.
+### TST-SET-052: **Altitude Extrema-Aware Cluster Matching, Migration & Fingerprint Relocation** [Verified]
 2. 3D altitude-aware scoring distinguishes routes with distinct vertical profiles.
 3. Flat/sensorless routes degrade gracefully.
 4. Interactive map markers display and relocate altitude extrema anchors reliably.]
@@ -272,7 +272,7 @@
   5. Open Cluster Heatmap: verify Min and Max Altitude markers are rendered and toggleable in options menu.
   6. Enter fingerprint editing: drag Min and Max Altitude markers, save, and verify persisted coordinates.
 
-### TST-SET-053: **Workout Cluster Auto-Naming Counter Ergonomics Verification** [The first workout of a cluster receives the clean cluster name without `"#1"`. Subsequent workouts receive incrementing numerical suffixes `"#<count>"`. Clustering matching, suggestions, and normalization remain 100% stable.]
+### TST-SET-053: **Workout Cluster Auto-Naming Counter Ergonomics Verification** [Verified]
 - **Requirement(s)**: `REQ-SET-066`
 - **Component**: **Workout Cluster Auto-Naming Counter Ergonomics Verification**
 - **Jira**: ``ATT-785``
@@ -294,7 +294,7 @@
   6. Normalization & Deduplication Invariants:
   • Verify `stripHitCount` and `normalizeName` return identical base outputs for names with and without `"#1"`.
 
-### TST-SET-054: **Optional Route Cluster Counter Verification** [When `hasCounter` is true (default), sequential numbering `#2`, `#3` applies. When `hasCounter` is false, workouts retain the static cluster name without numbers. Existing databases upgrade safely to v11.]
+### TST-SET-054: **Optional Route Cluster Counter Verification** [Verified]
 - **Requirement(s)**: `REQ-SET-067`
 - **Component**: **Optional Route Cluster Counter Verification**
 - **Jira**: ``ATT-714``
@@ -319,7 +319,7 @@
   5. Invariant Verification:
   • Verify cluster hitCount in database continues to increment regardless of `hasCounter` setting.
 
-### TST-SET-055: **Workout Cluster Performance & Volume Statistics Verification** [Aggregate statistics accurately calculate Best Time, Average Time, Average Speed/Pace, Total Distance, Total Climbing, and Recency. Metrics adapt to sport type, handle zero-workout edge cases, and render in a structured 3-tier layout across all 9 locales.]
+### TST-SET-055: **Workout Cluster Performance & Volume Statistics Verification** [Verified]
 - **Requirement(s)**: `REQ-SET-068`
 - **Component**: **Workout Cluster Performance & Volume Statistics Verification**
 - **Jira**: ``ATT-221``
@@ -341,7 +341,7 @@
   5. Invariant & Regression Check:
   • Full regression suite (`./gradlew testDebugUnitTest`) passes with 0 failures; spatial clustering and sorting remain 100% intact.
 
-### TST-SET-056: **Multi-Sport Candidate Clustering & Cost Minimization in Workout Editor & Tracker** [1. Multi-sport speed profile correctly identifies all candidate sports across base sport boundaries without premature single-sport lock-in.
+### TST-SET-056: **Multi-Sport Candidate Clustering & Cost Minimization in Workout Editor & Tracker** [Verified]
 2. `EditWorkoutViewModel` evaluates clusters against candidate sports with 0.0 penalty and selects/ranks the lowest geometric cost cluster first.
 3. Suggested sport type dropdown in `EditWorkoutScreen` lists all speed-matching sports.
 4. `TrackerService` assigns the lowest-cost cluster on live tracking completion.
@@ -366,7 +366,7 @@
   • Explicit user pre-selection (`RUN`): verify `BIKE` cluster receives +5.0 penalty and is rejected.
   • High-confidence cadence sensor: candidate sports are strictly `{BIKE}`.
 
-### TST-SET-057: **Direct Navigation from Workout to Linked Workout Cluster Verification** [1. Clustered workouts render a prominent, compact subtle primary tinted Button mirroring the cluster detail screen's recordings button.
+### TST-SET-057: **Direct Navigation from Workout to Linked Workout Cluster Verification** [Verified]
 2. Tapping the cluster button immediately routes to the linked cluster heatmap without triggering edit mode.
 3. Unclustered workouts display neutral non-interactive text.
 4. Back navigation returns reliably to the originating workout view.]
@@ -389,7 +389,7 @@
   • Tap top app bar back arrow or system Back button: verify navigation returns directly to Workout History.
   • Open a workout in `TrackOnMapScreen`: tap the cluster button: verify direct navigation to the cluster heatmap.
 
-### TST-SET-058: **Workout, Route & Segment Bottom Scaffold Status Bar Boundary & Peek Verification** [1. When fully expanded, bottom sheets stop cleanly at the bottom of the system status bar across Workouts, Routes, and Segments with zero overlap.
+### TST-SET-058: **Workout, Route & Segment Bottom Scaffold Status Bar Boundary & Peek Verification** [Verified]
 2. Background maps render edge-to-edge under the status bar.
 3. Workout popup displays both header and track map.
 4. Initial popups display compact drag handles and unclipped header information.
@@ -414,7 +414,7 @@
   4. *Regression Verification*:
   • Run full clean-room unit test suite (`./gradlew testDebugUnitTest`) to ensure zero regressions across all modules.
 
-### TST-SET-059: **Workout Popup Direct Edit & Header Button Layout Verification** [1. Edit button appears on the very right across both workout popup and cluster summary headers.
+### TST-SET-059: **Workout Popup Direct Edit & Header Button Layout Verification** [Verified]
 2. Tapping the edit button or header opens `EditWorkoutScreen` without crashing or losing map state.
 3. Returning from editor updates workout details cleanly.
 4. All unit tests pass.]
@@ -440,7 +440,7 @@
   4. *Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` to ensure zero regressions across all modules.
 
-### TST-SET-060: **Workout Card Click-to-Map Navigation & Dedicated Header Edit Action Verification** [1. Tapping workout body sections (header, description, details, extrema, map) reliably navigates to `TrackOnMapScreen`.
+### TST-SET-060: **Workout Card Click-to-Map Navigation & Dedicated Header Edit Action Verification** [Verified]
 2. Tapping the dedicated edit button in the header (before the 3-dots) reliably opens `EditWorkoutScreen`.
 3. Tapping the edit button within `TrackOnMapScreen` immediately opens `EditWorkoutScreen`, returning to `TrackOnMapScreen` upon dismissal.
 4. Cluster button, export status badge, and export menu function independently without navigation conflicts.
@@ -469,7 +469,7 @@
   3. *Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` to ensure zero regressions across all modules.
 
-### TST-SET-061: **Edit Workout New Cluster Creation & Name Synchronization Verification** [1. Create Cluster dialog pre-fills clean base name without counter.
+### TST-SET-061: **Edit Workout New Cluster Creation & Name Synchronization Verification** [Verified]
 2. Creating a new cluster updates database and UI with the new cluster identity (`forceIdentity = true`).
 3. Non-customized workout names automatically adopt the new cluster name; manually typed custom workout names are safely preserved.]
 - **Requirement(s)**: `REQ-SET-072`
@@ -494,7 +494,7 @@
   • Enter `"Neue Abendrunde"`, tap OK.
   • Verify Edit Workout screen immediately displays `"Neue Abendrunde"` in both Workout Name and Selected Route fields.
 
-### TST-SET-062: **Advanced Tuning Preferences Clamping, Persistence, and Reset Verification** [1. All tuning parameters clamp strictly within bounds.
+### TST-SET-062: **Advanced Tuning Preferences Clamping, Persistence, and Reset Verification** [Verified]
 2. Atomic factory reset restores all defaults.
 3. Active services adopt parameters reactively.
 4. All unit and contract tests pass.]
@@ -518,7 +518,7 @@
   4. *Regression Verification*:
   • Full test suite execution `./gradlew testDebugUnitTest`.
 
-### TST-SET-063: **Expert Settings Navigation Drawer Grouping, Localization and 50m GPS Default Verification** [1. Expert Settings appears in a dedicated final drawer group at the bottom of the navigation drawer.
+### TST-SET-063: **Expert Settings Navigation Drawer Grouping, Localization and 50m GPS Default Verification** [Verified]
 2. General settings no longer includes advanced tuning.
 3. Default GPS accuracy tolerance defaults to 50.0m across data structures and resets.
 4. 100% 9-language translation parity.
@@ -538,7 +538,7 @@
   4. *Regression Verification*:
   • Full test suite execution `./gradlew testDebugUnitTest`.
 
-### TST-SET-064: **Favorite Route Icon Disambiguation for Clusters in Workout Header and Editor** [Clustered and unclustered cluster chips in WorkoutHeader and the selected route field in EditWorkoutScreen render `ic_favorite_route`. Point locations (Lieblingsorte) preserve `my_locations`, eliminating visual ambiguity between routes and geographic endpoints.]
+### TST-SET-064: **Favorite Route Icon Disambiguation for Clusters in Workout Header and Editor** [Verified]
 - **Requirement(s)**: `REQ-SET-058`, `REQ-SET-059`
 - **Component**: **Favorite Route Icon Disambiguation for Clusters in Workout Header and Editor**
 - **Jira**: ``ATT-3277``
@@ -551,7 +551,7 @@
   2. *Regression Suite*:
   • Execute clean-room unit test suite `./gradlew testDebugUnitTest` to ensure zero regressions across all modules.
 
-### TST-SET-076: **Red Cluster Recalculate Button and Direct Advanced Settings Deep-Link from Favorite Routes Verification** [Recalculate button styled in high-visibility Material 3 error colors with accessible progress indicator; Favorite Routes info dialog provides educational explanation and direct deep-link to Advanced Settings with strict dismissal ordering; 100% 9-language parity; modularity < 400 lines preserved; 100% test pass rate.]
+### TST-SET-076: **Red Cluster Recalculate Button and Direct Advanced Settings Deep-Link from Favorite Routes Verification** [Verified]
 - **Requirement(s)**: `REQ-SET-076`
 - **Component**: **Red Cluster Recalculate Button and Direct Advanced Settings Deep-Link from Favorite Routes Verification**
 - **Jira**: ``ATT-3492``
@@ -573,7 +573,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-SET-077: **Standardized Route Clustering Form Controls via TuningFormControls Verification** [Route clustering form controls in ClusterTuningContent standardized with TuningFormControls (Rule 36), full state propagation, negative callback gating, and deprecation preservation; 100% test pass rate.]
+### TST-SET-077: **Standardized Route Clustering Form Controls via TuningFormControls Verification** [Verified]
 - **Requirement(s)**: `REQ-SET-077`
 - **Component**: **Standardized Route Clustering Form Controls via TuningFormControls Verification**
 - **Jira**: ``ATT-3365``
@@ -594,7 +594,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-PRI-002: **Contextual Just-in-Time Permission Flow, Zero-Friction Cold Start, Background Location Escalation & Battery Optimization Verification** [Cold start is free of blocking modal dialogs; permissions requested contextually at moment of intent; background location escalation ('Allow all the time') and battery optimization exemption ('Unrestricted') handled gracefully with fail-safe OEM fallback; warning badge signals missing permissions with direct settings guidance; 100% test pass rate.]
+### TST-PRI-002: **Contextual Just-in-Time Permission Flow, Zero-Friction Cold Start, Background Location Escalation & Battery Optimization Verification** [Verified]
 - **Requirement(s)**: `REQ-PRI-003`
 - **Component**: **Contextual Just-in-Time Permission Flow, Zero-Friction Cold Start, Background Location Escalation & Battery Optimization Verification**
 - **Jira**: ``ATT-2075``
@@ -615,7 +615,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` asserting 100% pass rate.
 
-### TST-PRI-003: **Precise Location Gating and Dynamic Sensor Device Instantiation Verification** [Workout tracking strictly requires Precise Location (ACCESS_FINE_LOCATION); Approximate location triggers educational rationale and amber warning badge; GPS devices instantiate dynamically upon permission grant without app restart; 100% 9-language translation parity; 100% test pass rate.]
+### TST-PRI-003: **Precise Location Gating and Dynamic Sensor Device Instantiation Verification** [Verified]
 - **Requirement(s)**: `REQ-PRI-004`
 - **Component**: **Precise Location Gating and Dynamic Sensor Device Instantiation Verification**
 - **Jira**: ``ATT-2357``
@@ -634,7 +634,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` asserting 100% pass rate.
 
-### TST-PRI-004: **Proactive Background Energy Warning Banner, Start Badge Integration & Cascade Decoupling Verification** [Proactive battery warning banner renders dynamically; Start button badge reflects missing background energy; rationale cascade decouples from background location; 100% unit test pass rate.]
+### TST-PRI-004: **Proactive Background Energy Warning Banner, Start Badge Integration & Cascade Decoupling Verification** [Verified]
 - **Requirement(s)**: `REQ-PRI-005`
 - **Component**: **Proactive Background Energy Warning Banner, Start Badge Integration & Cascade Decoupling Verification**
 - **Jira**: ``ATT-2621``
@@ -653,7 +653,7 @@
   4. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-SET-078: **Workout Cluster Historical Effort Trend Chart, Dual-Metric Inversion, Outlier-Resilient Y-Scaling, X/Y Axis Scale Labels, and 9-Language Parity Verification Suite** [Chronological sorting, non-positive filtering, faster-is-higher scaling, division-by-zero resilience, PR index detection, touch hit testing, Tukey IQR outlier-resilient Y-scaling, X/Y axis scale markers, density-adaptive point sizing, 9-language localization parity, and full test suite pass specified.]
+### TST-SET-078: **Workout Cluster Historical Effort Trend Chart, Dual-Metric Inversion, Outlier-Resilient Y-Scaling, X/Y Axis Scale Labels, and 9-Language Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-078`
 - **Component**: **Workout Cluster Historical Effort Trend Chart, Dual-Metric Inversion, Outlier-Resilient Y-Scaling, X/Y Axis Scale Labels, and 9-Language Parity Verification Suite**
 - **Jira**: ``ATT-4067`, `ATT-4287``
@@ -693,7 +693,7 @@
   11. *Clean-Room Regression Suite Execution (`TST-SET-078.11`)*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% pass rate with zero regressions.
 
-### TST-PRI-005: **Decoupled Multi-Permission Cascade, Contextual Bluetooth & Notification Gating, Sensor Discovery Permission Handling, and Legacy Code Retirement Verification Suite** [Decoupled permission check predicates allow independent notification and Bluetooth gating when location is already granted; Just-in-Time sensor discovery prompts athlete for missing Bluetooth permissions rather than failing silently; dead legacy methods in MainActivityWithNavigation are retired; 100% 9-language translation parity; 100% test pass rate.]
+### TST-PRI-005: **Decoupled Multi-Permission Cascade, Contextual Bluetooth & Notification Gating, Sensor Discovery Permission Handling, and Legacy Code Retirement Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-PRI-006`, `REQ-UI-106`
 - **Component**: **Decoupled Multi-Permission Cascade, Contextual Bluetooth & Notification Gating, Sensor Discovery Permission Handling, and Legacy Code Retirement Verification Suite**
 - **Jira**: ``ATT-3998`, `ATT-4449``
@@ -716,7 +716,7 @@
   5. *Clean-Room Full Regression Suite Execution (`TST-PRI-005.5`)*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions across the full test suite.
 
-### TST-SET-079: **Non-Blocking DataStore Architecture, Reactive In-Memory StateFlow Caching, Pure Parameter Passing & Hot Path Decoupling Verification Suite** [Reactive in-memory StateFlow caching, non-blocking Java helper query contracts, pure BatterySaverModel zone index math, hot path UI and sensor thread decoupling architecture verification, mockkStatic compatibility preservation, and clean-room full test pass specified.]
+### TST-SET-079: **Non-Blocking DataStore Architecture, Reactive In-Memory StateFlow Caching, Pure Parameter Passing & Hot Path Decoupling Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-079`
 - **Component**: **Non-Blocking DataStore Architecture, Reactive In-Memory StateFlow Caching, Pure Parameter Passing & Hot Path Decoupling Verification Suite**
 - **Jira**: ``ATT-3999``
@@ -739,7 +739,7 @@
   4. *Clean-Room Full Suite Regression Execution (`TST-SET-079.4`)*:
   • Verify `./gradlew testDebugUnitTest` runs with 100% pass rate across the full project test suite.
 
-### TST-PRI-006: **Abortable First-Install Permission Onboarding Flow, DataStore Persistence, Upgrade Auto-Skip & 9-Language Localization Verification Suite** [Abortable first-install permission onboarding flow verified across DataStore persistence, upgraded user auto-skip, wizard step navigation and abortability, JIT fallback preservation, 9-language localization parity, and clean-room full test suite execution.]
+### TST-PRI-006: **Abortable First-Install Permission Onboarding Flow, DataStore Persistence, Upgrade Auto-Skip & 9-Language Localization Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-PRI-007`, `REQ-PRI-003`, `REQ-PRI-006`, `REQ-UI-106`
 - **Component**: **Abortable First-Install Permission Onboarding Flow, DataStore Persistence, Upgrade Auto-Skip & 9-Language Localization Verification Suite**
 - **Jira**: ``ATT-4455``
@@ -796,7 +796,7 @@
 
 ---
 
-### TST-SET-081: **Preservation of Unclustered Status on Workout Edits & Explicit Cluster Management Verification Suite** [Unclustered workouts strictly remain unclustered on metadata edits; automatic cluster creation and assignment in saveWorkout() removed; cluster creation/assignment gated to explicit dialog actions; centroid updates for clustered workouts preserved.]
+### TST-SET-081: **Preservation of Unclustered Status on Workout Edits & Explicit Cluster Management Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-081`
 - **Component**: **WorkoutRepository / EditWorkoutClustering / WorkoutClusterEngine**
 - **Jira**: ``ATT-4862``
