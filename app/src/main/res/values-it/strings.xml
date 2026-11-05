@@ -2134,6 +2134,13 @@
     <string name="marker_summit">Cima</string>
     <string name="marker_lap_start">Inizio giro</string>
     <string name="marker_lap_end">Fine giro</string>
+    <string name="split_lap_action">Dividi giro sulla mappa</string>
+    <string name="create_lap_on_map_title">Crea giro sulla mappa</string>
+    <string name="split_lap_confirm">Dividi giro</string>
+    <string name="split_lap_preview_before">Parte 1 (Prima divisione)</string>
+    <string name="split_lap_preview_after">Parte 2 (Nuovo giro)</string>
+    <string name="split_lap_slider_label">Posizione di divisione</string>
+    <string name="split_lap_success">Giro diviso con successo</string>
     <string name="cd_fastest_split">Frazione più veloce</string>
     <string name="cd_switch_view_mode">Cambia modalità di visualizzazione</string>
     <string name="connect_with_strava">Connettiti con Strava</string>

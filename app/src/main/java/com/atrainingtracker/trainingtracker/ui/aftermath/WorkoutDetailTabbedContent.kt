@@ -66,6 +66,8 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.Wor
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetails
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.WorkoutExtrema
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeader
+import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.LapDisplayMode
+import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.WorkoutLaps
 import com.atrainingtracker.trainingtracker.ui.map.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -111,6 +113,8 @@ fun WorkoutDetailTabbedContent(
     onOpenTabsConfig: () -> Unit,
     mapContent: MapContentScope.() -> Unit,
     mapOverlay: @Composable BoxScope.() -> Unit,
+    onSplitLapClick: (() -> Unit)? = null,
+    onCreateLapClick: ((Double) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val visibleTabs = remember(tabs, availability, detailPreferences) {
@@ -262,6 +266,7 @@ fun WorkoutDetailTabbedContent(
                                 hrZoneThresholds = hrZoneThresholds,
                                 powerZoneThresholds = powerZoneThresholds,
                                 workoutData = workoutData,
+                                onCreateLapClick = onCreateLapClick,
                                 header = {},
                                 mapContent = mapContent,
                                 overlay = mapOverlay,
@@ -303,6 +308,7 @@ fun WorkoutDetailTabbedContent(
                                 hrZoneThresholds = hrZoneThresholds,
                                 powerZoneThresholds = powerZoneThresholds,
                                 workoutData = workoutData,
+                                onCreateLapClick = onCreateLapClick,
                                 header = {},
                                 mapContent = mapContent,
                                 overlay = mapOverlay,
@@ -336,6 +342,7 @@ fun WorkoutDetailTabbedContent(
                                                 onPowerZoneDisplayModeChange = onPowerZoneDisplayModeChange,
                                                 photos = workoutPhotos,
                                                 onPhotoClick = { activePreviewPhoto = it },
+                                                onSplitLapClick = onSplitLapClick,
                                                 onAddPhotos = { uris ->
                                                     coroutineScope.launch {
                                                         uris.forEach { uri ->
@@ -387,6 +394,7 @@ fun WorkoutDetailTabbedContent(
                                     hrZoneThresholds = hrZoneThresholds,
                                     powerZoneThresholds = powerZoneThresholds,
                                     workoutData = workoutData,
+                                    onCreateLapClick = onCreateLapClick,
                                     header = {},
                                     metadataContent = null,
                                     analyticsContent = if (nonMapNonGraphSections.isNotEmpty()) {
@@ -418,6 +426,7 @@ fun WorkoutDetailTabbedContent(
                                                     onPowerZoneDisplayModeChange = onPowerZoneDisplayModeChange,
                                                     photos = workoutPhotos,
                                                     onPhotoClick = { activePreviewPhoto = it },
+                                                    onSplitLapClick = onSplitLapClick,
                                                     onAddPhotos = { uris ->
                                                         coroutineScope.launch {
                                                             uris.forEach { uri ->
@@ -467,6 +476,7 @@ fun WorkoutDetailTabbedContent(
                                     onPowerZoneDisplayModeChange = onPowerZoneDisplayModeChange,
                                     photos = workoutPhotos,
                                     onPhotoClick = { activePreviewPhoto = it },
+                                    onSplitLapClick = onSplitLapClick,
                                     onAddPhotos = { uris ->
                                         coroutineScope.launch {
                                             uris.forEach { uri ->
@@ -627,7 +637,8 @@ private fun RenderWorkoutDetailCardSections(
     onPowerZoneDisplayModeChange: (ZoneCardDisplayMode) -> Unit,
     photos: List<WorkoutPhotoEntry> = emptyList(),
     onPhotoClick: ((WorkoutPhotoEntry) -> Unit)? = null,
-    onAddPhotos: ((List<android.net.Uri>) -> Unit)? = null
+    onAddPhotos: ((List<android.net.Uri>) -> Unit)? = null,
+    onSplitLapClick: (() -> Unit)? = null
 ) {
     sections.forEach { section ->
         when (section) {
@@ -691,13 +702,15 @@ private fun RenderWorkoutDetailCardSections(
                 }
             }
             WorkoutDetailSectionType.LAPS -> {
-                splitChartData?.let { splits ->
-                    LapSplitVisualizerCard(
-                        splitData = splits,
-                        selectedLapNr = selectedLapNr,
-                        onLapClick = { tappedLapNr ->
-                            onSelectLapNr(if (selectedLapNr == tappedLapNr) null else tappedLapNr)
+                if (workoutData.laps.isNotEmpty()) {
+                    WorkoutLaps(
+                        laps = workoutData.laps,
+                        bSportType = workoutData.bSportType,
+                        lapDisplayMode = if (workoutData.laps.size > 1) LapDisplayMode.VISUALIZER_ONLY else LapDisplayMode.TABLE_ONLY,
+                        onLapClick = { lap ->
+                            onSelectLapNr(if (selectedLapNr == lap.lapNr) null else lap.lapNr)
                         },
+                        onSplitLapClick = onSplitLapClick,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 4.dp)

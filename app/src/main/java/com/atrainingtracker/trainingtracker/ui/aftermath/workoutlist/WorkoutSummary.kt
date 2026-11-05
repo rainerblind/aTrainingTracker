@@ -69,6 +69,7 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.Wor
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetails
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.WorkoutExtrema
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeader
+import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.CreateLapOnMapSheet
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.WorkoutLaps
 import com.atrainingtracker.trainingtracker.ui.components.strava.StravaActivitySection
 import com.atrainingtracker.trainingtracker.ui.map.ElevationProfile
@@ -136,6 +137,7 @@ fun WorkoutSummary(
     }
     var activePreviewPhoto by remember { mutableStateOf<WorkoutPhotoEntry?>(null) }
     var activeSharePhoto by remember { mutableStateOf<WorkoutPhotoEntry?>(null) }
+    var showCreateLapSheet by rememberSaveable { mutableStateOf(false) }
 
     // Lazy telemetry points loading (ATT-1714 / REQ-UI-210)
     val telemetryPoints by produceState<List<PathPoint>>(
@@ -273,7 +275,8 @@ fun WorkoutSummary(
                             laps = workoutData.laps,
                             bSportType = workoutData.bSportType,
                             lapDisplayMode = preferences.lapDisplayMode,
-                            onLapClick = { lap -> activeEditingLap = lap }
+                            onLapClick = { lap -> activeEditingLap = lap },
+                            onSplitLapClick = { showCreateLapSheet = true }
                         )
                     }
                 }
@@ -545,6 +548,22 @@ fun WorkoutSummary(
             onSelectMapSnapshot = { activeSharePhoto = null },
             initialPhotoUri = photo.uri,
             attachedPhotos = workoutPhotos.map { it.uri }
+        )
+    }
+
+    if (showCreateLapSheet) {
+        CreateLapOnMapSheet(
+            workoutId = workoutData.id,
+            bSportType = workoutData.bSportType,
+            existingLaps = workoutData.laps,
+            repository = repository,
+            onDismiss = { showCreateLapSheet = false },
+            onSplitConfirmed = { splitIndex ->
+                coroutineScope.launch {
+                    repository.splitLapAtSample(workoutData.id, splitIndex)
+                    showCreateLapSheet = false
+                }
+            }
         )
     }
 }

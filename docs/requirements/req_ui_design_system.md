@@ -13178,6 +13178,42 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Bottom popup standard via `AppModalBottomSheet`, safe downsampled bitmap decoding, 9-language localization parity without inline emojis, 100% clean-room test pass rate.
 
+### REQ-UI-449: Interactive Map Lap Creation & Splitting in Workout Aftermath [Verified]
+- **Tests**: `TST-UI-449` | **Tickets**: `ATT-907`
+- **Implementation**: `CreateLapOnMapSheet.kt`, `LapEditorMath.kt`, `WorkoutRepository.kt`, `WorkoutSamplesDatabaseManager.java`, `LapsDatabaseManager.java`, `TrackOnMapScreen.kt`, `MapDetailLayout.kt`, `WorkoutLaps.kt`
+- **Rationale**: When an athlete forgets to trigger a lap split during an activity, the system SHALL allow retroactively creating and splitting a lap at any selected sample point along the recorded GPS polyline in Aftermath (`TrackOnMapScreen` / `WorkoutDetails`), calculating accurate split metrics and updating both telemetry sample records and lap summaries in an atomic SQLite transaction without altering total session metrics.
+- **Description**:
+  1. *Entry Points & Scrub Pre-Seeding (`REQ-UI-449.1`)*: In `WorkoutLaps.kt` / `LapSplitVisualizerCard` and `MapDetailLayout.kt` (scrubbing overlay action bar), the system SHALL provide an interactive "Create / Split Lap on Map" (*Runde auf Karte teilen*) action. When triggered from an active map or chart scrubbing position, the selected split position SHALL be pre-seeded to the current scrub point index.
+  2. *Interactive Split Bottom Sheet (`REQ-UI-449.2`, `CreateLapOnMapSheet.kt`)*: The editor SHALL be hosted in `AppModalBottomSheet` (per `ATT-5399`), rendering:
+     - The complete workout GPS track with existing lap boundary pins and a movable "New Lap Split Pin" draggable along the route or selectable via a precision sample/distance slider.
+     - Live metric preview cards for both resulting split laps (Lap $k$ before split and Lap $k+1$ after split: active duration, distance, and average speed/pace calculated via `LapEditorMath`).
+     - Split Boundary Validation: The split index $s$ SHALL be strictly constrained between the start and end of the target lap ($start_k < s \le end_k$) so neither resulting split lap has duration $\le 0$ or distance $\le 0.0$ (enforcing zero phantom laps per `REQ-TRK-002`).
+  3. *Atomic Multi-Database Transaction (`REQ-UI-449.3`, `WorkoutRepository.splitLapAtSample`)*:
+     - In `WorkoutSamples.db`, `WorkoutSamplesDatabaseManager.splitLapAtSampleRow` SHALL execute an atomic update incrementing `LAP_NR = LAP_NR + 1` for all samples with `_id >= splitRowId` in the workout table.
+     - In `Laps.db`, updated lap summaries for Lap $k$ and Lap $k+1$ (plus subsequent renumbered laps) SHALL be recalculated and persisted via `LapsDatabaseManager.replaceCroppedLaps` in a single SQLite transaction.
+     - Export caches SHALL be invalidated and reactive `WorkoutData` emitted so `WorkoutLaps`, `LapSplitVisualizerCard`, and map markers refresh immediately without reloading the screen.
+  4. *Synergistic Foundation for ATT-908 (`REQ-UI-449.4`)*: Domain calculations (`LapEditorMath.calculateSplitLapsPreview`) and sheet components SHALL be architected to support adjacent lap boundary moving (`ATT-908`).
+  5. *9-Language Localization Parity (`REQ-UI-449.5`)*: All user-facing strings SHALL maintain 100% parity across all 9 supported locales without inline decorative Unicode emojis.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-449`, extending `REQ-TRK-002` (Lap lifecycle & phantom lap elimination), `REQ-UI-368` (Workout cropping & sample pruning), and `REQ-UI-204` (Lap split visualizer). Targets `WorkoutRepository.kt`, `WorkoutSamplesDatabaseManager.java`, `LapsDatabaseManager.java`, and `CreateLapOnMapSheet.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-44.1 (`ATT-896`, zero phantom laps) and Sprint 2026-42.3 (`ATT-3274`, transactional sample pruning).
+3. *Root Reason for Existing Formulation*: Laps were historically recorded exclusively during live tracking to avoid post-hoc data desynchronization between samples and lap summaries.
+4. *Preservation of Core Invariants*: Resulting laps MUST NOT be phantom (duration $> 0$ or distance $> 0.0$); sequential $1 \dots K$ lap numbering strictly maintained; total workout summary metrics, polyline, and extrema remain immutable.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete viewing a workout with recorded samples in `TrackOnMapScreen` or `WorkoutDetails`,
+• *When* the athlete triggers "Create Lap on Map" (or scrubs to a point and taps the split lap action),
+• *Then* `CreateLapOnMapSheet` opens with the track map, existing lap markers, the movable split pin, and live preview metrics for Lap $k$ and Lap $k+1$.
+• *When* the split pin or slider is adjusted,
+• *Then* the preview metrics for Lap $k$ and Lap $k+1$ update reactively in real time.
+• *When* the athlete confirms the split,
+• *Then* `WorkoutRepository.splitLapAtSample` executes atomically, `LAP_NR` is incremented for subsequent samples in `WorkoutSamples.db`, `Laps.db` is updated via `replaceCroppedLaps`, and the UI reflects the new lap split immediately.
+• *Given* an attempt to place a split pin at an invalid boundary ($s \le start_k$ or $s > end_k$),
+• *Then* confirmation is disabled and the boundary is clamped.
+
+**Invariants**: Zero phantom laps (`REQ-TRK-002`), sequential $1 \dots K$ contiguous lap sequence, immutable workout total duration/distance, 9-locale parity without inline emojis, 100% clean-room test pass rate.
+
 
 
 

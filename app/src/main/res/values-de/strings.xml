@@ -2219,6 +2219,13 @@
     <string name="marker_summit">Gipfel</string>
     <string name="marker_lap_start">Rundenstart</string>
     <string name="marker_lap_end">Rundenende</string>
+    <string name="split_lap_action">Runde auf Karte teilen</string>
+    <string name="create_lap_on_map_title">Runde auf Karte erstellen</string>
+    <string name="split_lap_confirm">Runde teilen</string>
+    <string name="split_lap_preview_before">Teil 1 (Vor Schnitt)</string>
+    <string name="split_lap_preview_after">Teil 2 (Neue Runde)</string>
+    <string name="split_lap_slider_label">Teilungsposition</string>
+    <string name="split_lap_success">Runde erfolgreich geteilt</string>
     <string name="cd_fastest_split">Schnellster Split</string>
     <string name="cd_switch_view_mode">Ansichtsmodus wechseln</string>
     <string name="connect_with_strava">Mit Strava verbinden</string>

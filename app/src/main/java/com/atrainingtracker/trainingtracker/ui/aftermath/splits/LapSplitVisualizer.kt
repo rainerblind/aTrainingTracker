@@ -223,6 +223,7 @@ fun LapSplitVisualizerCard(
     splitData: LapSplitChartData,
     selectedLapNr: Long? = null,
     onLapClick: ((Long) -> Unit)? = null,
+    onSplitLapClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -257,6 +258,20 @@ fun LapSplitVisualizerCard(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.weight(1f))
+                if (onSplitLapClick != null) {
+                    IconButton(
+                        onClick = onSplitLapClick,
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_lap_add),
+                            contentDescription = stringResource(R.string.split_lap_action),
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                }
                 Text(
                     text = stringResource(R.string.laps_header, splitData.splits.size),
                     style = MaterialTheme.typography.bodySmall,

@@ -2132,6 +2132,13 @@
     <string name="marker_summit">Cume</string>
     <string name="marker_lap_start">Início da volta</string>
     <string name="marker_lap_end">Fim da volta</string>
+    <string name="split_lap_action">Dividir volta no mapa</string>
+    <string name="create_lap_on_map_title">Criar volta no mapa</string>
+    <string name="split_lap_confirm">Dividir volta</string>
+    <string name="split_lap_preview_before">Parte 1 (Antes da divisão)</string>
+    <string name="split_lap_preview_after">Parte 2 (Nova volta)</string>
+    <string name="split_lap_slider_label">Posição de divisão</string>
+    <string name="split_lap_success">Volta dividida com sucesso</string>
     <string name="cd_fastest_split">Parcial mais rápido</string>
     <string name="cd_switch_view_mode">Alternar modo de exibição</string>
     <string name="connect_with_strava">Conectar ao Strava</string>

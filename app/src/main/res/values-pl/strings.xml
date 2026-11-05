@@ -2135,6 +2135,13 @@
     <string name="marker_summit">Szczyt</string>
     <string name="marker_lap_start">Początek okrążenia</string>
     <string name="marker_lap_end">Koniec okrążenia</string>
+    <string name="split_lap_action">Podziel okrążenie na mapie</string>
+    <string name="create_lap_on_map_title">Utwórz okrążenie na mapie</string>
+    <string name="split_lap_confirm">Podziel okrążenie</string>
+    <string name="split_lap_preview_before">Część 1 (Przed podziałem)</string>
+    <string name="split_lap_preview_after">Część 2 (Nowe okrążenie)</string>
+    <string name="split_lap_slider_label">Pozycja podziału</string>
+    <string name="split_lap_success">Okrążenie pomyślnie podzielone</string>
     <string name="cd_fastest_split">Najszybszy międzyczas</string>
     <string name="cd_switch_view_mode">Przełącz tryb widoku</string>
     <string name="connect_with_strava">Połącz ze Strava</string>

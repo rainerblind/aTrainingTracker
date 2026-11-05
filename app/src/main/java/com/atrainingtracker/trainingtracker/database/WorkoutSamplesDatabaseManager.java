@@ -567,6 +567,43 @@ public class WorkoutSamplesDatabaseManager {
     }
 
     /**
+     * Atomically increments LAP_NR by 1 for all samples at and after the specified splitRowId (REQ-UI-449.3 / ATT-907).
+     *
+     * @param fileBaseName The workout table base name.
+     * @param splitRowId The _id threshold from which samples have their lap number incremented.
+     * @return The number of rows affected.
+     */
+    public int incrementLapNumbersFromSample(@NonNull String fileBaseName, long splitRowId) {
+        SQLiteDatabase db = getDatabase();
+        String table = getTableName(fileBaseName);
+        if (!existsTable(fileBaseName)) {
+            Log.w(TAG, "Table does not exist for " + fileBaseName);
+            return 0;
+        }
+
+        db.beginTransaction();
+        try {
+            boolean hasLapNr = existsColumnInTable(db, table, SensorType.LAP_NR.name());
+            if (!hasLapNr) {
+                db.execSQL("ALTER TABLE " + table + " ADD COLUMN " + SensorType.LAP_NR.name() + " INTEGER DEFAULT 1");
+            }
+
+            String sql = "UPDATE " + table + " SET " + SensorType.LAP_NR.name() + " = COALESCE(" + SensorType.LAP_NR.name() + ", 1) + 1 WHERE _id >= ?";
+            SQLiteStatement stmt = db.compileStatement(sql);
+            stmt.bindLong(1, splitRowId);
+            int rowsAffected = stmt.executeUpdateDelete();
+
+            db.setTransactionSuccessful();
+            return rowsAffected;
+        } catch (Exception e) {
+            Log.e(TAG, "Error incrementing lap numbers from sample row " + splitRowId, e);
+            throw e;
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    /**
      * Reclaims SQLite storage via incremental vacuum if deleted rows exceed 20% of total rows
      * and the database is configured for INCREMENTAL auto-vacuum (mode 2).
      */

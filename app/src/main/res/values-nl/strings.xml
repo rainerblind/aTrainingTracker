@@ -2133,6 +2133,13 @@
     <string name="marker_summit">Top</string>
     <string name="marker_lap_start">Rondestart</string>
     <string name="marker_lap_end">Ronde-einde</string>
+    <string name="split_lap_action">Ronde splitsen op kaart</string>
+    <string name="create_lap_on_map_title">Ronde maken op kaart</string>
+    <string name="split_lap_confirm">Ronde splitsen</string>
+    <string name="split_lap_preview_before">Deel 1 (Voor splitsing)</string>
+    <string name="split_lap_preview_after">Deel 2 (Nieuwe ronde)</string>
+    <string name="split_lap_slider_label">Splitsingspositie</string>
+    <string name="split_lap_success">Ronde succesvol gesplitst</string>
     <string name="cd_fastest_split">Snelste tussentijd</string>
     <string name="cd_switch_view_mode">Weergavemodus wijzigen</string>
     <string name="connect_with_strava">Verbinden met Strava</string>

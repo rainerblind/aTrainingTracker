@@ -1792,6 +1792,79 @@ class WorkoutRepository private constructor(private val application: Application
     }
 
     /**
+     * Splits a lap at the specified sample index in both WorkoutSamples.db and Laps.db (REQ-UI-449.3 / ATT-907).
+     *
+     * @param workoutId The ID of the workout.
+     * @param splitSampleIndex The 0-based sample index within the full workout samples list where the split begins.
+     * @return Result.success with updated List<LapData>, or Result.failure with descriptive error.
+     */
+    suspend fun splitLapAtSample(workoutId: Long, splitSampleIndex: Int): Result<List<LapData>> = withContext(Dispatchers.IO) {
+        try {
+            val baseFileName = summariesManager.getBaseFileName(workoutId)
+                ?: return@withContext Result.failure(IllegalStateException("No baseFileName found for workout $workoutId"))
+            if (!samplesManager.existsTable(baseFileName)) {
+                return@withContext Result.failure(IllegalStateException("Samples table does not exist for $baseFileName"))
+            }
+
+            val samples = getCropSamplePoints(workoutId)
+            if (samples.isEmpty()) {
+                return@withContext Result.failure(IllegalStateException("No samples found for workout $workoutId"))
+            }
+            if (splitSampleIndex !in samples.indices) {
+                return@withContext Result.failure(IndexOutOfBoundsException("Split index $splitSampleIndex out of bounds [0, ${samples.size})"))
+            }
+
+            val existingLaps = lapsDatabaseManager.getLaps(workoutId)
+            val validation = com.atrainingtracker.trainingtracker.domain.laps.LapSplitAndMoveCalculator.validateSplit(
+                samples = samples,
+                splitSampleIndex = splitSampleIndex,
+                existingLaps = existingLaps
+            )
+            if (!validation.isValid) {
+                return@withContext Result.failure(IllegalArgumentException(validation.errorMessage ?: "Invalid split point"))
+            }
+
+            val splitPoint = samples[splitSampleIndex]
+
+            // 1. Transactional update in WorkoutSamples.db: Increment LAP_NR for all rows >= splitPoint.rowId
+            samplesManager.incrementLapNumbersFromSample(baseFileName, splitPoint.rowId)
+
+            // 2. Map updated samples with new lap numbers
+            val updatedSamples = samples.map { pt ->
+                if (pt.index >= splitSampleIndex) pt.copy(lapNr = pt.lapNr + 1) else pt
+            }
+
+            // 3. Recalculate all laps
+            val newLaps = com.atrainingtracker.trainingtracker.domain.laps.LapSplitAndMoveCalculator.recalculateLapsAfterSplit(
+                workoutId = workoutId,
+                existingLaps = existingLaps,
+                updatedSamples = updatedSamples
+            )
+
+            // 4. Persist updated laps to Laps.db atomically
+            lapsDatabaseManager.replaceCroppedLaps(workoutId, newLaps)
+
+            // 5. Invalidate export cache
+            try {
+                val updatedWorkout = allWorkouts.value.find { it.id == workoutId }
+                if (updatedWorkout != null) {
+                    exportManager.exportWorkout(updatedWorkout)
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Non-fatal export cache refresh exception after split lap: ${e.message}")
+            }
+
+            // 6. Refresh in-memory reactive state
+            reloadWorkoutData(workoutId)
+
+            Result.success(newLaps)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to split lap at sample index $splitSampleIndex for workout $workoutId", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
      * Atomically updates a workout session in memory while handling potential race conditions.
      *
      * Implementation: If the workout is already cached, it applies the [block] transform purely in-place

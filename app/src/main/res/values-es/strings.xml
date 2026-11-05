@@ -2134,6 +2134,13 @@
     <string name="marker_summit">Cima</string>
     <string name="marker_lap_start">Inicio de vuelta</string>
     <string name="marker_lap_end">Fin de vuelta</string>
+    <string name="split_lap_action">Dividir vuelta en mapa</string>
+    <string name="create_lap_on_map_title">Crear vuelta en el mapa</string>
+    <string name="split_lap_confirm">Dividir vuelta</string>
+    <string name="split_lap_preview_before">Parte 1 (Antes de dividir)</string>
+    <string name="split_lap_preview_after">Parte 2 (Nueva vuelta)</string>
+    <string name="split_lap_slider_label">Posición de división</string>
+    <string name="split_lap_success">Vuelta dividida con éxito</string>
     <string name="cd_fastest_split">Parcial más rápido</string>
     <string name="cd_switch_view_mode">Cambiar modo de vista</string>
     <string name="connect_with_strava">Conectar con Strava</string>

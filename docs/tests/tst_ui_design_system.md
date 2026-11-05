@@ -7172,6 +7172,27 @@
   5. *Clean-Room Regression Suite Execution (`TST-UI-448.5`)*:
   • Run targeted package tests (`com.atrainingtracker.trainingtracker.ui.aftermath.*`, `ui.map.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
 
+### TST-UI-449: **Interactive Map Lap Creation & Splitting in Workout Aftermath Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-449`
+- **Component**: `CreateLapOnMapSheet.kt`, `LapEditorMath.kt`, `WorkoutRepository.kt`, `WorkoutSamplesDatabaseManager.java`, `LapsDatabaseManager.java`, `TrackOnMapScreen.kt`, `MapDetailLayout.kt`, `WorkoutLaps.kt`
+- **Jira**: `ATT-907`
+- **Test Description**:
+  1. *Domain Math & Split Preview Contract Test (`TST-UI-449.1`, `LapEditorMathTest.kt`)*:
+  • Verify `LapEditorMath.calculateSplitLapsPreview` computes duration, distance, and speed correctly for Lap $k$ and Lap $k+1$.
+  • Verify boundary validation rejects splits at $s \le start_k$ or $s > end_k$ and prevents zero-duration/zero-distance phantom laps.
+  2. *Database Transactional Splitting Contract Test (`TST-UI-449.2`, `WorkoutSamplesDatabaseManagerLapSplitTest.java` / `WorkoutRepositoryLapSplitTest.kt`)*:
+  • Verify `WorkoutSamplesDatabaseManager.splitLapAtSampleRow` atomically increments `LAP_NR` by 1 for all rows with `_id >= splitRowId`.
+  • Verify `WorkoutRepository.splitLapAtSample` persists updated lap sequence to `Laps.db` via `replaceCroppedLaps` and reloads `WorkoutData`.
+  • Verify rollback on SQLite exception leaves `WorkoutSamples.db` and `Laps.db` unchanged.
+  3. *Compose UI & Sheet Contract Test (`TST-UI-449.3`, `CreateLapOnMapSheetTest.kt`)*:
+  • Verify `CreateLapOnMapSheet` renders full GPS track, movable split pin, slider, and live preview cards.
+  • Verify pre-seeding from scrub point index when launched from `MapDetailLayout`.
+  • Verify confirmation button invocation dispatches split action with correct sample index.
+  4. *9-Language Localization & Parity Test (`TST-UI-449.4`, `TranslationParityTest.kt`)*:
+  • Verify 100% parity across all 9 supported locales for new `create_lap_*` string keys with zero missing entries and zero decorative inline emojis.
+  5. *Clean-Room Regression Suite (`TST-UI-449.5`)*:
+  • Run targeted package tests (`com.atrainingtracker.trainingtracker.ui.aftermath.*`, `database.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
+
 
 
 

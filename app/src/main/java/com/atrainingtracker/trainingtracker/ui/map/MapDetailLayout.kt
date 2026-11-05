@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.Dp
@@ -114,7 +115,8 @@ fun MapDetailLayout(
     externalScrubDistance: Double? = null,
     hrZoneThresholds: HeartRateZoneThresholds? = null,
     powerZoneThresholds: PowerZoneThresholds? = null,
-    workoutData: WorkoutData? = null
+    workoutData: WorkoutData? = null,
+    onCreateLapClick: ((Double) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -209,22 +211,43 @@ fun MapDetailLayout(
 
     val scrubbingOverlay: @Composable BoxScope.() -> Unit = {
         if (showZoomControls && selectedDistance != null && activeScrubPoint != null) {
-            ScrubbingTelemetryBadge(
-                point = activeScrubPoint,
-                bSportType = bSportType,
-                altitude = activeScrubAltitude,
-                unit = unit,
-                xAxisDomain = if (showElevationProfile) {
-                    if (isElevationTimeDomain) ProfileXAxisDomain.TIME else ProfileXAxisDomain.DISTANCE
-                } else {
-                    if (isTelemetryTimeDomain) ProfileXAxisDomain.TIME else ProfileXAxisDomain.DISTANCE
-                },
+            Row(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(top = 2.dp, end = 8.dp),
-                hrZoneThresholds = hrThresholds,
-                powerZoneThresholds = powerThresholds
-            )
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                if (onCreateLapClick != null) {
+                    FilledTonalIconButton(
+                        onClick = { onCreateLapClick(selectedDistance!!) },
+                        modifier = Modifier.size(32.dp),
+                        colors = IconButtonDefaults.filledTonalIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = TTAlpha.Overlay),
+                            contentColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_lap_add),
+                            contentDescription = stringResource(R.string.split_lap_action),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+                ScrubbingTelemetryBadge(
+                    point = activeScrubPoint,
+                    bSportType = bSportType,
+                    altitude = activeScrubAltitude,
+                    unit = unit,
+                    xAxisDomain = if (showElevationProfile) {
+                        if (isElevationTimeDomain) ProfileXAxisDomain.TIME else ProfileXAxisDomain.DISTANCE
+                    } else {
+                        if (isTelemetryTimeDomain) ProfileXAxisDomain.TIME else ProfileXAxisDomain.DISTANCE
+                    },
+                    hrZoneThresholds = hrThresholds,
+                    powerZoneThresholds = powerThresholds
+                )
+            }
         }
     }
 

@@ -2334,6 +2334,13 @@
     <string name="marker_summit">Summit</string>
     <string name="marker_lap_start">Lap Start</string>
     <string name="marker_lap_end">Lap End</string>
+    <string name="split_lap_action">Split Lap on Map</string>
+    <string name="create_lap_on_map_title">Create Lap on Map</string>
+    <string name="split_lap_confirm">Split Lap</string>
+    <string name="split_lap_preview_before">Part 1 (Before Split)</string>
+    <string name="split_lap_preview_after">Part 2 (New Lap)</string>
+    <string name="split_lap_slider_label">Split Position</string>
+    <string name="split_lap_success">Lap split successfully</string>
     <string name="cd_fastest_split">Fastest split</string>
     <string name="cd_switch_view_mode">Switch view mode</string>
     <string name="connect_with_strava">Connect with Strava</string>
