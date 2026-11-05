@@ -818,10 +818,10 @@
   4. *Clean-Room Regression Execution (`TST-SET-081.4`)*:
   • Execute targeted unit tests in `EditWorkoutClusteringTest`, `EditWorkoutClusterTest`, and `ThemeColorCentralizationAuditTest` with 100% pass rate.
 
-### TST-SET-082: **Timestamped Zone Boundary Snapshots & Historical Workout Resolution Verification Suite** [Atomic zone boundary persistence in AthleteMetrics.db; DB_VERSION=2 migration and schema parity; unidirectional SettingsDataStore projection; effective-at-workout-time zone resolution in WorkoutRepository and TelemetryMetricGraph; Profile & Zones history dialog and backdating; 9-language localization parity.]
+### TST-SET-082: **Timestamped Zone Boundary Snapshots & Historical Workout Resolution Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-082`
 - **Component**: **AthleteMetricsDatabaseManager / AthleteMetricsRepository / WorkoutRepository / TelemetryMetricGraph / ZonesSettingsViewModel**
-- **Jira**: ``ATT-4844``
+- **Jira**: `ATT-4844`, `ATT-5399`
 - **Test Description**:
   1. *SQLite Schema Migration, Parity & Registry Contract Test (`TST-SET-082.1`, `AthleteMetricsRealSqliteMigrationTest.kt`)*:
   • Verify `AthleteMetricsDbHelper` upgrades from `DB_VERSION = 1` to `2` by creating the `zone_history` table and `idx_zone_history_type_time` index.
@@ -850,12 +850,17 @@
 
 ### TST-SET-084: **One-Tap Swap-or-Upgrade Dialog Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-084`
-- **Component**: `DeviceListViewModel.kt`, `SwapOrUpgradeDialog.kt`
+- **Component**: `DeviceListViewModel.kt`, `SwapOrUpgradeDialog.kt`, `KeepTwoSensorsBottomSheet.kt`, `DeviceDataRepository.kt`
+- **Jira**: `ATT-51`, `ATT-5399`, `ATT-5398`
 - **Test Description**:
 1. Trigger pairing of a 3rd device in Free tier; verify `showSwapOrUpgradeDialog` state is set to true.
 2. Verify dialog displays candidate devices and preselects recommendation.
 3. Execute "Swap & Pair" action; assert atomic database update (unpair existing, pair new) and final paired count $\le 2$.
 4. Verify "Unlock Unlimited Sensors" button triggers navigation to `NavRoutes.SUPPORTER`.
+5. *Subscription Downgrade Reconciliation Test*: Given `!isProActive()` and $> 2$ paired sensors without active tracking, verify reconciliation event is emitted with 2 sensible defaults pre-selected.
+6. *Non-Destructive Batch Pruning Test*: Confirming selection or dismissing applies selection, setting unselected sensors `isPaired = false` in database while preserving custom names, calibration, and equipment links. Total paired devices $\le 2$.
+7. *Multi-Sensor Swap Hardening Test*: When executing swap while $> 2$ sensors are paired, excess devices are pruned so resulting paired count is strictly $\le 2$.
+8. *9-Language Localization Parity Test*: Verify all reconciliation bottom sheet UI strings exist across all 9 locales with matching format specifiers.
 
 ### TST-SET-085: **Lifetime Pioneer Early Adopter Recognition Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-085`
@@ -889,6 +894,7 @@
 ### TST-SET-088: **Supporter N+1 Garage Detector & Upgrade Prompts Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-088`
 - **Component**: `GarageLeagueDetector.kt`, `GarageDetectorDialog.kt`, `DeviceListViewModel.kt`, `EquipmentViewModel.kt`, `SettingsDataStore.kt`, `SupporterDebugSection.kt`
+- **Jira**: `ATT-5299`, `ATT-5400`, `ATT-5399`
 - **Test Description**:
 1. Verify `GarageLeagueDetector.evaluateLeague()` resolves to `DIAMOND` when bikes $\ge 4$, sensors $\ge 8$, or power meters $\ge 2$, taking precedence over Gold criteria.
 2. Verify `GarageLeagueDetector.evaluateLeague()` resolves to `GOLD` when bikes $\ge 3$, shoes $\ge 4$, sensors $\ge 5$, or power meters $\ge 1$.
@@ -896,6 +902,7 @@
 4. Assert tier monotonicity: when effective tier is already `GOLD`, Gold League prompt is suppressed; when effective tier is `DIAMOND`, both Gold and Diamond prompts are suppressed.
 5. Verify non-spam persistence: when `hasShownGoldGarageNudge` or `hasShownDiamondGarageNudge` is true, subsequent nudges for that league are suppressed.
 6. Verify debug preview triggers in `SupporterDebugSection` render respective dialogs and reset button clears DataStore flags.
+7. Verify 9-language localization audit (`ATT-5400`): all 4 `garage_detector_dialog_*` string resources across all 9 locales contain zero decorative inline Unicode emojis (`🚴‍♂️`, `💎`, `✨`, `😉`) while strictly preserving positional format specifiers (`%1$d`..`%5$s`).
 
 ### TST-LOC-001: **Monetization & Supporter 9-Language Localization Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-083`, `REQ-SET-084`, `REQ-SET-085`, `REQ-SET-086`, `REQ-SET-087`, `REQ-SET-088`

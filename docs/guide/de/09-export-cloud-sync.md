@@ -1,42 +1,77 @@
 # Kapitel 9: Datensouveränität, Export & Cloud-Synchronisation
 
 <a id="local-sqlite-data-ownership"></a>
-## 9.1 100% Lokale SQLite-Datenhoheit
 
-aTrainingTracker basiert auf dem Grundsatz absoluter Privatsphäre und digitaler Selbstbestimmung:
+<table>
+<tr>
+<td width="65%" valign="top" markdown="1">
 
-- **Kein Account-Zwang**: Sie müssen kein Konto anlegen, keine E-Mail-Adresse angeben und kein Passwort merken.
-- **Lokale Speicherung**: Sämtliche Workouts, GPX-Punkte, Sensorkalibrierungen und Ausrüstungsdaten liegen in einer standardkonformen SQLite-Datenbank auf Ihrem Gerät.
-- **Kein Tracking & keine Werbung**: Weder aTrainingTracker noch Drittanbieter lesen Ihre Daten aus.
+## 9.1 100% Lokale SQLite-Datenhoheit & Import
 
-![Backup- & Synchronisations-Tab](../img/09_backup_sync_tab.png)
+**aTrainingTracker** basiert auf dem Grundsatz absoluter Privatsphäre und voller digitaler Selbstbestimmung:
+
+- **Kein Account-Zwang**: Du musst kein Benutzerkonto registrieren, keine E-Mail-Adresse angeben und kein Passwort merken.
+- **Vollständige lokale Speicherung**: Sämtliche Trainingseinheiten, Trackpunkte, Sensorkalibrierungen und Ausrüstungsdaten verbleiben in einer standardkonformen SQLite-Datenbank auf deinem Smartphone.
+- **Import bestehender Trainings**: Über **Import & Backup** kannst du historische Aktivitäten (`.fit`, `.tcx`, `.gpx`) direkt importieren und in deine Statistik einbinden.
+- **Keine Werbung & kein Drittanbieter-Tracking**: Deine Trainings- und Standortdaten gehören ausschließlich dir.
+
+</td>
+<td width="35%" valign="top" align="center">
+  <a href="../img/09_backup_sync_tab.png"><img src="../img/09_backup_sync_tab.png" width="240" alt="Import & Backup Übersicht" /></a>
+  <br/><sub><em>Import & Backup im Menü</em></sub>
+</td>
+</tr>
+</table>
 
 ---
 
 <a id="file-formats-fit-tcx-gpx"></a>
-## 9.2 Offene Dateiformate: FIT, TCX, GPX & CSV
 
-Ihre Daten gehören Ihnen. Jedes Workout lässt sich jederzeit in alle gängigen Industrie-Formate exportieren:
+<table>
+<tr>
+<td width="65%" valign="top" markdown="1">
 
-- **`.fit` (Flexible and Interoperable Data Transfer)**: Das binäre Garmin/Dynastream-Standardformat mit vollständiger Sensor-Telemetrie (Watt, Trittfrequenz, Balance, Herzfrequenz).
-- **`.tcx` (Training Center XML)**: XML-basiertes Format mit Runden-Splits und GPS-Trackpoints.
-- **`.gpx` (GPS Exchange Format)**: Universeller Standard für Kartendienste und Routenplaner.
-- **`.csv`**: Tabellarischer Rohdatenexport für eigene Auswertungen in Excel, R oder Python.
+## 9.2 Offene Dateiformate: FIT, TCX, GPX, CSV & Golden Cheetah
 
-![FIT-Dateiexport via SAF](../img/09_fit_export.png)
+Deine Daten bleiben uneingeschränkt portabel und lassen sich über den **Export**-Dialog flexibel ausgeben:
+
+- **`.fit` (Flexible and Interoperable Data Transfer)**: Binäres Garmin/Dynastream-Standardformat mit vollständigen Sensordaten (Watt, Trittfrequenz, Balance, Herzfrequenz).
+- **`.tcx` (Training Center XML)**: XML-Format mit Runden-Splits und GPS-Trackpunkten.
+- **`.gpx` (GPS Exchange Format)**: Universeller Standard für Kartendienste und Navigationsgeräte.
+- **`Golden Cheetah JSON`**: Direkte Kompatibilität mit der Open-Source-Analyse-Software Golden Cheetah.
+- **`.csv`**: Tabellarischer Rohdatenexport für eigene Auswertungen in Excel oder Python.
+
+</td>
+<td width="35%" valign="top" align="center">
+  <a href="../img/09_fit_export.png"><img src="../img/09_fit_export.png" width="240" alt="Export-Format-Einstellungen" /></a>
+  <br/><sub><em>Auswahl der aktiven Exportformate im Export-Dialog</em></sub>
+</td>
+</tr>
+</table>
 
 ---
 
 <a id="cloud-backup-and-strava-sync"></a>
-## 9.3 Automatische Backups (Dropbox / Google Drive) & 1-Klick-Upload
 
-Um Ihre Trainingshistorie vor Geräteverlust oder Neuinstallationen zu schützen:
+<table>
+<tr>
+<td width="65%" valign="top" markdown="1">
 
-- **Nahtlose Cloud-Backups**: Konfigurieren Sie tägliche oder wöchentliche Backups direkt in Ihren persönlichen Dropbox- oder Google Drive-Speicher.
-- **WLAN-Only Option**: Schont das mobile Datenvolumen durch Upload nur bei aktiver Wi-Fi-Verbindung.
-- **1-Klick-Synchronisation**: Laden Sie absolvierte Aktivitäten mit einem Fingertipp zu Strava oder TrainingPeaks hoch.
+## 9.3 Automatische Backups (Dropbox / Google Drive) & Strava-Sync
 
-![Dropbox-Backup Konfigurationsdialog](../img/09_dropbox_backup.png)
+Um deine Trainingshistorie vor Geräteverlust oder Neuinstallationen abzusichern:
+
+- **Automatisierte Cloud-Backups**: Konfiguriere regelmäßige Backups (z. B. täglich) direkt in deinen persönlichen **Dropbox**- oder **Google Drive**-Speicher.
+- **WLAN-Schutz**: Schone dein mobiles Datenvolumen durch Upload nur bei aktiver WLAN-Verbindung.
+- **Strava-Synchronisation**: Verbinde deinen Strava-Account, um absolvierte Einheiten nach dem Speichern automatisch hochzuladen.
+
+</td>
+<td width="35%" valign="top" align="center">
+  <a href="../img/09_dropbox_backup.png"><img src="../img/09_dropbox_backup.png" width="240" alt="Dropbox-Backup Konfiguration" /></a>
+  <br/><sub><em>Automatisierte Datensicherung zu Dropbox</em></sub>
+</td>
+</tr>
+</table>
 
 ---
 

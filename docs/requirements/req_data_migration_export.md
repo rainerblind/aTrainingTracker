@@ -3003,3 +3003,84 @@
 
 **Invariants**: WorkManager `MAX_RETRIES = 5` cap preserved; credentials isolated in `auth_credentials_prefs.xml`; permanent errors return `shallRetry = false`.
 
+### REQ-MIG-048: Strava Bulk Export Archive Ingestion Pipeline, Bilingual CSV Metadata Enrichment, Transparent GZIP Decompression, Tolerant XML Deserialization, Equipment Sync, and Duplicate Re-Upload Prevention [Verified]
+- **Tests**: `TST-MIG-046` | **Tickets**: `ATT-4957`
+- **Implementation**: `StravaBulkExportImporter.kt`, `StravaCsvParser.kt`, `LegacyImportEngine.kt`, `ImportBackupTabsScreen.kt`, `TrackpointModels.kt`, `EquipmentDbHelper.java`, `StravaUploadDbHelper.java`
+- **Rationale**: Strava provides users with complete account archives (`export_<id>.zip`) containing an authoritative metadata summary (`activities.csv`), user equipment tables (`bikes.csv`, `shoes.csv`), and compressed activity streams (`activities/*.fit.gz`, `*.tcx.gz`, `*.gpx.gz`). To enable seamless migration into `aTrainingTracker` without gigabyte-scale uncompressed disk bloat or XML parser crashes, the system SHALL ingest Strava export archives via streaming ZIP reading, decode compressed stream files transparently, parse bilingual RFC 4180 metadata, sanitize TCX XML declarations against leading whitespace, synchronize equipment, and register Strava activity IDs to prevent duplicate re-upload loops (ATT-4957, extending `REQ-MIG-030`, `REQ-MIG-031`, `REQ-MIG-037`, `REQ-MIG-038`, and `REQ-MIG-040`):
+1. *Streaming ZIP Archive & Transparent GZIP Decompression (`REQ-MIG-048.1`)*:
+• The system SHALL accept Strava bulk export archives (`.zip`) in `ImportBackupTabsScreen` and process entries on-the-fly via streaming (`ZipFile` / `ZipInputStream` and `GZIPInputStream`), directly feeding decompressed streams into `FitWorkoutParser`, `TcxWorkoutParser`, or `GpxWorkoutParser` without staging uncompressed activity files to disk storage.
+• Every archive entry path SHALL be verified against Zip-Slip path traversal vulnerabilities (`REQ-MIG-040`).
+2. *Bilingual & Multi-Line RFC 4180 CSV Metadata Parser (`REQ-MIG-048.2`)*:
+• The system SHALL stream and parse `activities.csv`, supporting both German (`Aktivitäts-ID`, `Dateiname`, `Name der Aktivität`, `Aktivitätsart`, `Aktivitätsbeschreibung`, `Hinweis zur Privatsphäre für Aktivitäten`, `Pendeln`, `Aktivitätsausrüstung`) and English (`Activity ID`, `Filename`, `Activity Name`, `Activity Type`, `Activity Description`, `Activity Private Note`, `Commute`, `Activity Gear`) column aliases.
+• The CSV parser SHALL strictly adhere to RFC 4180, handling multiline quoted fields with embedded commas, newlines, and escaped quotes (`""`).
+• Each activity row SHALL be indexed by its relative stream filename under `activities/`.
+3. *Tolerant XML Stream Whitespace Sanitization (`REQ-MIG-048.3`)*:
+• In `TrackpointModels.kt` (and TCX/GPX stream pre-processing), the system SHALL sanitize stream input by skipping leading ASCII whitespace (` `, `\t`, `\r`, `\n`) before the XML declaration (`<?xml`), preventing `XmlPullParserException: Unexpected token` crashes caused by Strava export files with leading spaces (e.g. `activities/3131550008.tcx.gz`).
+4. *Rich Metadata Enrichment, Equipment Matching & Strava Re-Upload Suppression (`REQ-MIG-048.4`)*:
+• Parsed workouts SHALL be enriched with metadata from `activities.csv`: custom workout title (`WorkoutSummaries.WORKOUT_NAME`), description (`DESCRIPTION`), private training goal (`GOAL`), commute flag (`COMMUTE`), and sport type mapped to canonical `BSportType` / `SportTypeDatabaseManager`.
+• Equipment names from `Activity Gear` / `Aktivitätsausrüstung` and gear tables (`bikes.csv`, `shoes.csv`) SHALL be matched or created in `EquipmentDbHelper` (`Equipment.db`), linking the resolved `EQUIPMENT_ID` into `WorkoutSummaries`.
+• The Strava `Activity ID` SHALL be recorded in `StravaUploadDbHelper` (with status `Uploaded`) and `WorkoutSummaries.UPLOAD_TO_STRAVA` set to `0`, ensuring imported workouts are never re-uploaded to Strava.
+5. *Deduplication, Granular Progress & Non-Regression Invariants (`REQ-MIG-048.5`)*:
+• Pre-existing workouts matching start timestamp and sport type SHALL be skipped via `LegacyImportEngine.isWorkoutExisting()` without data corruption (`DUPLICATE_SKIPPED`).
+• Progress updates SHALL be reported through `LegacyImportEngine.ProgressListener` with current index, total count, and activity title.
+• Existing standalone FIT, TCX, and GPX file/directory import pipelines MUST remain fully functional and unregressed.
+6. *Strava Bulk Export Media & Photo Ingestion (`REQ-MIG-048.6`)*:
+• The system SHALL stream and parse the pipe-separated `Medien` / `Media` column in `activities.csv` and photo captions from `media.csv` (`Medien-Dateiname,Medienunterschrift` / `media-filename,caption`) (ATT-43).
+• Referenced image files (`media/*`) SHALL be extracted directly into app-private workout media storage (`filesDir/workout_photos/<workout_id>/`) with strict Zip-Slip path sanitization (`REQ-MIG-040`).
+• If EXIF capture timestamp and GPS metadata are absent (e.g. stripped by Strava export), the photo SHALL default to the workout start timestamp and the corresponding GPS trackpoint coordinate.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-MIG-048` under Standalone Ticket `ATT-4957` (Sprint `2026-45.6`), extending `REQ-MIG-030` (*Legacy GPX Import*), `REQ-MIG-031` (*Deduplication*), `REQ-MIG-037` (*Streaming XML Parsing*), `REQ-MIG-038` (*ParsedWorkoutData DTO*), and `REQ-MIG-040` (*Secure Zip Extraction*). Targets `StravaZipImportEngine.kt`, `LegacyImportEngine.kt`, `ImportBackupTabsScreen.kt`, `TrackpointModels.kt`, `EquipmentDbHelper.java`, and `StravaUploadDbHelper.java`.
+2. *Historical Origin & Commit Trace*: `ATT-314` (commit `4d5b2c1` - Deduplication), `ATT-3982` (commit `b875938` - `REQ-MIG-040` Secure Zip Extraction), `ATT-4008` (commit `69e6b41` - TCX/GPX stream parsers).
+3. *Root Reason for Existing Formulation*: Prior import architecture supported only individual standalone files and directory scanning of uncompressed files. It lacked archive entry indexing, bilingual CSV metadata mapping, in-memory GZIP decompression, and TCX leading-whitespace tolerance.
+4. *Preservation of Core Invariants*: Mutex-guarded deduplication, transactional compensatory rollback on failure, Zip-Slip path sanitization, and standalone FIT/TCX/GPX import paths remain strictly invariant.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an official Strava export ZIP archive containing `activities.csv` with German or English headers and `.tcx.gz` files with leading whitespace before `<?xml`,
+• *When* the athlete selects the archive in `ImportBackupTabsScreen`,
+• *Then* `StravaZipImportEngine` decompresses and parses the streams transparently, strips leading whitespace, imports workouts with user titles, descriptions, and gear, and reports completion progress.
+• *Given* an activity in the Strava export matching a workout already stored in local databases,
+• *When* the archive import executes,
+• *Then* the existing workout is detected and skipped without duplicating entries (`DUPLICATE_SKIPPED`).
+• *Given* an imported Strava activity with a valid Strava `Activity ID`,
+• *When* the import completes,
+• *Then* `StravaUploadDbHelper` records the activity ID with status `Uploaded` and `UPLOAD_TO_STRAVA` is set to `0`, preventing duplicate re-uploads to Strava.
+
+**Invariants**: Zip-Slip protection strictly enforced; zero uncompressed multi-gigabyte disk staging; standalone FIT/TCX/GPX imports remain 100% unregressed.
+
+### REQ-DAT-038: Workout Photo Storage, Symmetrical SQLite Schema v27, and EXIF/Trackpoint Interpolation [Verified]
+- **Tests**: `TST-DAT-034` | **Tickets**: `ATT-43`
+- **Implementation**: `WorkoutSummariesDatabaseManager.java`, `DatabaseSchemaRegistry.kt`, `WorkoutPhotoManager.kt`, `WorkoutDeletionHelper.java`
+- **Rationale**: Athletes capture photos during workouts and export archives containing workout media. To persist photos attached to workouts without ballooning SQLite database size, photo metadata SHALL be stored in a dedicated `workout_photos` table in `WorkoutSummaries.db` (v27) while image binaries are stored in app-private filesystem storage (`filesDir/workout_photos/<workout_id>/`), accompanied by EXIF metadata extraction and GPS trackpoint interpolation (ATT-43):
+1. *Symmetrical SQLite Schema v27 & DatabaseSchemaRegistry Parity (`REQ-DAT-038.1`)*:
+• `WorkoutSummaries.db` SHALL increment `DB_VERSION` from 26 to 27 and create table `workout_photos` (`_id` INTEGER PRIMARY KEY AUTOINCREMENT, `workout_id` INTEGER NOT NULL, `file_path` TEXT NOT NULL, `taken_at_ms` INTEGER, `latitude` REAL, `longitude` REAL, `caption` TEXT).
+• Both `onCreate()` and `onUpgrade()` SHALL define identical table schemas, constraints, and index `idx_workout_photos_workout_id` on `workout_photos (workout_id)` (Rule 2.3).
+• `DatabaseSchemaRegistry.kt` SHALL reference `WorkoutSummariesDbHelper.DB_VERSION` directly rather than hardcoding a static integer (Rule 2.2).
+2. *EXIF Timestamp & GPS Trackpoint Interpolation (`REQ-DAT-038.2`)*:
+• When a photo is attached, the system SHALL extract the EXIF capture timestamp (`TAG_DATETIME_ORIGINAL`) and GPS coordinates.
+• If EXIF GPS coordinates are absent but `taken_at_ms` falls within the workout start and end time window, the system SHALL interpolate latitude and longitude by querying adjacent timestamped trackpoints in `WorkoutSamples.db`.
+3. *Cascading Deletion & Cleanup Invariants (`REQ-DAT-038.3`)*:
+• Deleting a single photo SHALL remove its database record and delete the physical image file from storage.
+• Deleting a workout via `WorkoutSummariesDatabaseManager.deleteWorkout` or `WorkoutDeletionHelper` SHALL cascade-delete all associated photo rows in `workout_photos` and delete directory `filesDir/workout_photos/<workout_id>/`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-DAT-038` under Standalone Ticket `ATT-43` (Sprint `2026-45.6`), extending `REQ-DAT-034` (*SQLite Schema Indexing*) and `REQ-MIG-040` (*Secure Storage*). Targets `WorkoutSummariesDatabaseManager.java`, `DatabaseSchemaRegistry.kt`, `WorkoutPhotoManager.kt`, and `WorkoutDeletionHelper.java`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-40.16 (`ATT-4008`, commit `69e6b41` - `DB_VERSION = 26`), Sprint 2026-44.1 (`ATT-4592`, `DatabaseSchemaRegistry`).
+3. *Root Reason for Existing Formulation*: `WorkoutSummaries.db` previously stored only scalar telemetry aggregates and encoded polylines, lacking media entity association.
+4. *Preservation of Core Invariants*: Zero regression on existing workout summaries; symmetrical `onCreate`/`onUpgrade` evolution; cascading disk cleanup; non-blocking background IO.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an upgraded or fresh installation of `aTrainingTracker`,
+• *When* `WorkoutSummariesDbHelper` initializes or upgrades from version 26 to 27,
+• *Then* table `workout_photos` and index `idx_workout_photos_workout_id` exist identically in both pathways, and `DatabaseSchemaRegistry` validates version 27.
+• *Given* a photo taken during a workout without embedded EXIF GPS coordinates,
+• *When* attached to the workout,
+• *Then* `taken_at_ms` is matched against `WorkoutSamples.db` trackpoints and interpolated latitude/longitude coordinates are stored.
+• *Given* an attached photo or complete workout deleted by the athlete,
+• *When* deletion is confirmed,
+• *Then* all corresponding rows in `workout_photos` and image files on disk are deleted.
+
+**Invariants**: Symmetrical SQLite evolution, safe file deletion, memory-safe bitmap sampling, 100% clean-room test pass rate.
+
+
+

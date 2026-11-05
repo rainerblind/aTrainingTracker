@@ -1,40 +1,81 @@
 # Chapter 4: Customizable Live Cockpit & Tracking Tabs
 
 <a id="grid-layout-and-widths"></a>
-## 4.1 Grid Layouts & Relative Tile Widths (1x, 2x, 3x)
 
-The aTrainingTracker live telemetry cockpit adapts fully to your eye-level ergonomics, handlebar cockpit mounts, and data priorities:
+<table>
+<tr>
+<td width="65%" valign="top" markdown="1">
 
-- **Modular Column Widths**:
-  - `1x`: Compact slot for secondary metrics (Time of Day, Sensor Battery, Ambient Temperature).
-  - `2x`: Dominant gauge tile for primary numbers (Instantaneous Speed, Heart Rate, 3s Power).
-  - `3x`: Full-width banner for visual zone gauges, real-time progression graphs, and lap tables.
-- **Multiple Tracking Tabs**:
-  Configure separate specialized views (e.g. *Standard Cockpit*, *Map Navigation*, *Interval Splits*). Swipe smoothly between tabs or duplicate established layouts across different sports.
+## 4.1 Grid Layouts & Cockpit Configuration
 
-![Cockpit Layout Configuration](../img/04_tab_layout_config.png)
+The **aTrainingTracker** live telemetry cockpit adapts fully to your personal ergonomics and handlebar mounts using an intuitive visual layout editor:
+
+- **Row & Column Editor**:
+  - Blue **`+` buttons** allow you to insert new rows or split any existing row into 1, 2, 3, or more side-by-side metric tiles.
+  - The swap icon (**`⇄`**) lets you exchange tile positions with a single tap.
+  - The trash icon (**`🗑️`**) removes unused fields instantly.
+- **Multiple Tracking Tabs & Module Toggles**:
+  - Configure distinct tabs tailored to different workout phases (e.g. *Standard*, *Map*, *Laps*, *Map focus*).
+  - Enable or disable modular overlays per tab, such as **Turn-by-Turn hints**, the live map, the manual lap button, or Strava Live Segments.
+
+</td>
+<td width="35%" valign="top" align="center">
+  <a href="../img/04_tab_layout_config.png"><img src="../img/04_tab_layout_config.png" width="240" alt="Cockpit Layout Configuration" /></a>
+  <br/><sub><em>Visual layout editor with row and column plus buttons</em></sub>
+</td>
+</tr>
+</table>
 
 ---
 
 <a id="cockpit-visuals-and-tts"></a>
-## 4.2 AMOLED Dark Mode, Zone Gauges & Voice Announcements (TTS)
 
-- **Pure AMOLED Dark Mode**: Conserves battery life on OLED displays and eliminates night-ride glare with true `#000000` pitch-black surfaces.
-- **Color-Coded Zone Gauges**: Heart rate and cycling power tiles highlight the active physiological zone dynamically (Z1 Grey to Z7 Dark Red) for glanceable intensity verification.
-- **Voice Announcements (TTS)**: Periodic spoken cues read aloud lap times, average speeds, heart rate thresholds, and navigation maneuvers through connected headphones.
+<table>
+<tr>
+<td width="65%" valign="top" markdown="1">
 
-![Cockpit Tuning Options](../img/04_cockpit_tuning.png)
+## 4.2 AMOLED Mode, Zone Gauges & Intelligent Auto-Dimmer
+
+To maximize battery endurance on multi-hour rides while keeping telemetry readable in all conditions:
+
+- **AMOLED Dark Mode**: Employs true deep black (`#000000`) for data tiles during tracking, significantly reducing power consumption on OLED displays.
+- **Color-Coded Zone Gauges**: Real-time heart rate and power zone indicators appear beneath primary metrics (Z1 Gray to Z7 Dark Red), letting you monitor exertion in your peripheral vision.
+- **Intelligent Screen Dimmer (*Auto-Dimmer*)**:
+  - In Auto mode, the display backlight dims during steady cruising to preserve power.
+  - When a key event occurs—such as a steep gradient climb, exceeding heart rate/power thresholds, approaching navigation turns, or crossing segment boundaries—the display illuminates instantly to full brightness.
+
+</td>
+<td width="35%" valign="top" align="center">
+  <a href="../img/04_cockpit_tuning.png"><img src="../img/04_cockpit_tuning.png" width="240" alt="Display & Auto-Dimmer Settings" /></a>
+  <br/><sub><em>Display settings for AMOLED dark mode & Auto-Dimmer</em></sub>
+</td>
+</tr>
+</table>
 
 ---
 
 <a id="electronic-bike-bell"></a>
-## 4.3 Integrated Electronic Bike Bell
 
-To alert pedestrians and other cyclists courteously without clamping heavy brass bells onto aero handlebars:
+<table>
+<tr>
+<td width="65%" valign="top" markdown="1">
 
-- **Acoustic Two-Tone Synthesis**: Generates a natural, dual-frequency metallic chime (*"Brriiiing!"*) directly through your smartphone speaker.
-- **Always-Accessible Cockpit Control**: The vibrant bell button remains responsive across all states (*Ready*, *Tracking*, *Paused*). Single tap triggers an alert chime; press-and-hold produces a continuous warning roll.
+## 4.3 Integrated Electronic Bicycle Bell
+
+Alert hikers, pedestrians, or fellow riders cleanly and politely without cluttering your carbon handlebars with a mechanical bell:
+
+- **Harmonic Chime**: Synthesizes a warm, resonant dual-tone bell sound through your smartphone's speaker.
+- **Always Accessible**: The prominent orange bell button remains anchored at the bottom across all tracking states (*Ready*, *Tracking*, *Paused*).
+- **Tap & Hold**: Short taps sound an individual chime, while holding down the button rings the bell repeatedly.
+
+</td>
+<td width="35%" valign="top" align="center">
+  <a href="../img/01_cockpit_standard.png"><img src="../img/01_cockpit_standard.png" width="240" alt="Integrated Bicycle Bell" /></a>
+  <br/><sub><em>Prominent orange bell button in the live cockpit</em></sub>
+</td>
+</tr>
+</table>
 
 ---
 
-[Previous: Equipment & Sensor Matrix](03-equipment-sensor-matrix.md) | [Next: Maps, Routes & Live Segments](05-maps-routes-climbs-segments.md)
+[Previous Chapter: Equipment & Sensor Matrix](03-equipment-sensor-matrix.md) | [Next Chapter: Maps, Routes & Segments](05-maps-routes-climbs-segments.md) | [Back to Table of Contents](index.md)

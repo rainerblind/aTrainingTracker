@@ -1105,9 +1105,9 @@ All user-facing action labels and formatting strings SHALL be localized across a
 
 **Invariants**: Filter bottom sheet scaffold behavior (`REQ-UI-133`, `REQ-UI-134`), status bar boundary limits on map bottom sheets (`REQ-SET-069`), live tracking lap summary HUD dialog (`LapSummaryDialog`), and lap table formatting (`REQ-UI-143`) MUST NOT be altered or regressed.
 
-### REQ-UI-149: Modernized Modal Bottom Sheet Dialogs & Selection Flows [`TST-UI-102`]
-- **Tests**: `AppModalBottomSheet.kt`, `ExportSettingsDialog.kt`, `UnitsSettingsDialog.kt`, `DisplaySettingsDialog.kt`, `ActivityTypeSelectionDialog.kt`, `SensorSourceDialog.kt`, `DeviceTypeSelectionDialog.kt`, `EditSensorFieldDialog.kt`, `ConfigureFilterDialog.kt`, `EditSportTypeDialog.kt`, `EditEquipmentDialog.kt`, `EditDeviceDialog.kt`, `WorkoutClusterComponents.kt`, `ClusterInfoDialog.kt`, `ExportStatusGroup.kt`, `LapSummaryDialog.kt`
-- **Implementation**: Modernize mobile ergonomics by transitioning interactive selection and configuration popups to edge-to-edge modal bottom sheets while keeping transient HUDs and destructive alerts as centered dialogs.
+### REQ-UI-149: Modernized Modal Bottom Sheet Dialogs & Selection Flows [Verified]
+- **Tests**: `TST-UI-102` | **Tickets**: `ATT-900`, `ATT-5399`
+- **Implementation**: Modernize mobile ergonomics by transitioning interactive selection, configuration, nudge, and history popups to edge-to-edge modal bottom sheets (AppModalBottomSheet) while keeping transient HUDs and destructive alerts as centered dialogs.
 - **Rationale**: The system SHALL modernize interactive configuration, settings, editing, and device/sensor selection dialogs into bottom popups backed by `AppModalBottomSheet`, improving one-handed mobile ergonomics and edge-to-edge system navigation support, while strictly preserving transient tracking HUDs and destructive alerts as centered modal dialogs:
 1. *Drawer Settings Modernization*:
 • `ExportSettingsDialog.kt` (`ExportSettingsDialogFragment`) SHALL compose `AppModalBottomSheet` displaying file export format toggles (TCX, GPX, Golden Cheetah JSON, CSV) with leading export icon (`Icons.Default.Upload`), title (`@string/prefs_Export`), close button, and confirm action button (`@string/Done`).
@@ -1133,6 +1133,11 @@ All user-facing action labels and formatting strings SHALL be localized across a
 7. *Preserved Modal Dialog Invariants*:
 • `LapSummaryDialog` MUST remain an auto-dismissing (3-second) centered HUD `Dialog` during active tracking.
 • Destructive confirmation dialogs (`DeleteConfirmationDialog`, `WorkoutDeleteDialog`, `DeleteOldWorkoutsDialog`), deletion progress dialogs (`WorkoutDeletionProgressDialog`), and system redirects (`GPSDisabledDialog`, `StartOrResumeDialog`) MUST remain centered `AlertDialog`s.
+8. *Monetization, Nudge & History Dialog Modernization (`ATT-5399`)*:
+• `SwapOrUpgradeDialog.kt` SHALL compose `AppModalBottomSheet` displaying candidate devices for swap, smart recommendation, and upgrade navigation (`NavRoutes.SUPPORTER`) with swap action button and dismiss action.
+• `GarageUpgradeNudgeDialog.kt` SHALL compose `AppModalBottomSheet` displaying dynamic gear counts and upgrade navigation to Gold Pro or Diamond Sponsor with dismiss action.
+• `FirstJubileeCelebrationDialog.kt` SHALL compose `AppModalBottomSheet` displaying milestone achievements, tier-gated engagement actions, and dismiss action.
+• `ZoneHistoryDialog.kt` SHALL compose `AppModalBottomSheet` with `scrollable = false` for the outer sheet container displaying the zone snapshot list (`LazyColumn`), and `ZoneSnapshotEditDialog` SHALL compose `AppModalBottomSheet(scrollable = true)` for editing individual snapshot boundaries.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* the navigation drawer in `MainActivityWithNavigation`,
@@ -13006,8 +13011,8 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 ---
 
 ### REQ-UI-445: Supporter Badges: Custom Launcher Icons, Cockpit Status Emblem, Navigation Drawer & Share Watermark [Verified]
-- **Tests**: `TST-UI-445`, `TST-LOC-001` | **Tickets**: `ATT-1406`, `ATT-5372`
-- **Implementation**: `LauncherIconManager.kt`, `SensorStatus.kt`, `AppNavigationDrawer.kt`, `ShareUtils.kt`, `SupporterQuickIconPickerDialog.kt`, `AndroidManifest.xml`, `res/mipmap-anydpi-v26/`, `res/drawable/`
+- **Tests**: `TST-UI-445`, `TST-LOC-001` | **Tickets**: `ATT-1406`, `ATT-5372`, `ATT-5397`
+- **Implementation**: `LauncherIconManager.kt`, `SensorStatus.kt`, `AppNavigationDrawer.kt`, `ShareUtils.kt`, `AndroidManifest.xml`, `res/mipmap-anydpi-v26/`, `res/drawable/`
 - **Rationale**: To provide visible recognition for athletes supporting development via Supporter subscriptions (Bronze, Silver, Gold, Diamond) or recognized as Pioneer Early Adopters (ATT-51), the system SHALL introduce customizable homescreen launcher icons (Option A), a live Cockpit status emblem, Navigation Drawer branding, and a workout share watermark, while strictly preserving 100% of authentic Cervélo P3C and classic stopwatch colors (ATT-1482):
 1. *Option A Adaptive Launcher Icons with Safe-Zone Compliance (`REQ-UI-445.1`)*:
 • The application SHALL provide 6 adaptive launcher icon variants (`STANDARD`, `PIONEER`, `BRONZE`, `SILVER`, `GOLD`, `DIAMOND`) under `res/mipmap-anydpi-v26/` and `res/drawable/`.
@@ -13020,17 +13025,17 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
   f. Diamond Sponsor: Faceted Brilliant-Cut Cyan/Ice Diamond with sparkle at top-right, `◆ SPONSOR ◆` diamond-blue ribbon at bottom, cyan-blue border ring.
 • All 6 launcher icon foreground drawables SHALL preserve 100% authentic Cervélo P3C bike (red frame `#FF0000`, carbon wheels/saddle `#000000`), classic stopwatch (golden bezel `#FFC700`, dial `#F0F0F0`, pushers `#000090`, `#FF0000`, `#009000`), and royal blue athletes (`#0000FF`).
 • All vector paths across all 6 icons SHALL fit strictly inside the safe zone ($33.0 \le r \le 34.5\text{dp}$) on the 108dp canvas, guaranteeing zero clipping across Circle, Squircle, Rounded Square, and Teardrop launcher masks.
-2. *Activity-Alias Manifest Architecture & Deferred Non-Disruptive Switching (`REQ-UI-445.2`)*:
+2. *Activity-Alias Manifest Architecture & Deferred Automatic Tier Synchronization (`REQ-UI-445.2`)*:
 • `AndroidManifest.xml` SHALL declare 6 `<activity-alias>` entries targeting `MainActivityWithNavigation`, with the Standard alias enabled by default.
 • The system SHALL provide `LauncherIconManager` observing `ProcessLifecycleOwner` lifecycle.
-• When the athlete selects a new launcher icon in Settings or the Quick-Picker dialog, the choice SHALL be immediately persisted in `SettingsDataStore` (`KEY_SELECTED_LAUNCHER_ICON`) and reflected in the preview UI.
+• `LauncherIconManager` SHALL automatically synchronize the homescreen launcher icon with `ProFeatureManager.effectiveTier` via `LauncherIconVariant.fromTier(effectiveTier)` (`FREE -> STANDARD`, `PIONEER -> PIONEER`, `BRONZE -> BRONZE`, `SILVER -> SILVER`, `GOLD -> GOLD`, `DIAMOND -> DIAMOND`) (ATT-5397). Manual icon selection and `SettingsDataStore.selectedLauncherIcon` are retired.
 • The system SHALL apply `PackageManager.setComponentEnabledSetting` with `PackageManager.DONT_KILL_APP` deferred until the application transitions to the background (`onStop`) AND no active workout recording is running (`!TrainingApplication.isTracking()`). The app process or active workout SHALL NEVER be killed or restarted.
-3. *Live Cockpit Status Emblem & Crash-Free Quick Icon Picker Dialog (`REQ-UI-445.3` / `ATT-5372`)*:
+3. *Live Cockpit Status Emblem & Retirement of Quick Icon Picker Dialog (`REQ-UI-445.3` / `ATT-5372`, `ATT-5397`)*:
 • In `SensorStatus.kt` (top sensor status bar of the Tracking Cockpit), the system SHALL render a pure 24dp vector emblem (Bronze Medal, Silver Medal, 24K Gold Medal, Faceted Brilliant Diamond, or Pioneer Star — without text) at the right end of the row, symmetrically balancing the 24dp menu button on the left while keeping the 8 sensor icons centered.
-• Tapping the emblem SHALL open `SupporterQuickIconPickerDialog`, displaying supporter recognition and enabling 1-tap switching between unlocked launcher icons.
-• In `SupporterQuickIconPickerDialog` (`LauncherIconItemCard`), preview icons SHALL be rendered via `safePainterResource(id = variant.foregroundRes)` (or `R.drawable.logo_512` for standard) inside a styled `Surface(shape = CircleShape)` and SHALL NEVER pass `<adaptive-icon>` `R.mipmap.*` XML resources to `painterResource` or `safePainterResource` (`ATT-5372`, `Rule 71`).
+• Tapping the emblem in `SensorStatus.kt` SHALL NOT open an icon picker dialog; it renders as a non-modal supporter status emblem (or navigates directly to `SupporterScreen`) (ATT-5397).
+• `SupporterQuickIconPickerDialog.kt` and `supporter_quick_picker_*` string resources SHALL be retired and removed from the codebase.
 4. *Navigation Drawer Header Recognition (`REQ-UI-445.4`)*:
-• In `AppNavigationDrawer.DrawerHeader`, the system SHALL preserve the original clean single-line header layout (`46.dp` icon on the left + `"a Training Tracker"` title on the right over `menu_header_background`, without any text pill below the title) and render the paying customer's active custom Cervélo P3C supporter icon (`foregroundRes` scaled by `1.81f` to compensate for the 108dp adaptive-icon safe-zone margin so its visual size matches `R.drawable.logo_512` at `46.dp` 1:1).
+• In `AppNavigationDrawer.DrawerHeader`, the system SHALL preserve the original clean single-line header layout (`46.dp` icon on the left + `"a Training Tracker"` title on the right over `menu_header_background`, without any text pill below the title) and render the active custom Cervélo P3C supporter icon matching `effectiveTier` directly (`foregroundRes` scaled by `1.81f` to compensate for the 108dp adaptive-icon safe-zone margin so its visual size matches `R.drawable.logo_512` at `46.dp` 1:1) without manual icon picking (ATT-5397).
 5. *Social Share Workout Watermark (`REQ-UI-445.5`)*:
 • In `ShareUtils.kt` (`combineWorkoutAndShare` and `combinePeriodAndShare`), the footer watermark signature bar SHALL render the mini Cervélo P3C icon, "Tracked with aTrainingTracker", and the user's active supporter tier pill (`★ GOLD PRO`, `◆ SPONSOR`, `★ PIONEER`, etc.).
 6. *Tier Unlock Hierarchy & Debug Override (`REQ-UI-445.6`)*:
@@ -13040,18 +13045,18 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete with an active Supporter tier or Pioneer status,
 • *When* inspecting the Tracking Cockpit, Navigation Drawer, or shared workout image,
-• *Then* the corresponding 24dp Cockpit emblem, Drawer header icon + tier pill, and share watermark render accurately.
-• *Given* an athlete selecting a different unlocked launcher icon,
-• *When* the selection is made during active use or while recording a workout,
-• *Then* the choice persists immediately in SettingsDataStore without interrupting or killing the foreground session, and the new `<activity-alias>` activates via `DONT_KILL_APP` when the app moves to background.
+• *Then* the corresponding 24dp Cockpit emblem, Drawer header icon, and share watermark render accurately matching `effectiveTier`.
+• *Given* an athlete whose `effectiveTier` updates (or on background `onStop`),
+• *When* the application transitions to the background while not tracking (`!TrainingApplication.isTracking()`),
+• *Then* `LauncherIconManager` automatically activates the corresponding `<activity-alias>` via `DONT_KILL_APP` without interrupting active tracking or killing the foreground process.
 • *Given* any of the 6 launcher icon drawables,
 • *When* rendered inside circular or squircle launcher masks,
 • *Then* zero artwork paths clip outside the safe zone ($33.0 \le r \le 34.5\text{dp}$) and 100% of Cervélo P3C and stopwatch colors are preserved.
-• *Given* an athlete tapping the Cockpit status emblem,
-• *When* `SupporterQuickIconPickerDialog` is displayed,
-• *Then* the dialog opens smoothly without `IllegalArgumentException` by rendering preview items using foreground vector drawables.
+• *Given* an athlete tapping the Cockpit status emblem or navigation drawer header,
+• *When* the interaction occurs,
+• *Then* no icon picker dialog is opened.
 
-**Invariants**: 100% Cervélo P3C and stopwatch color fidelity preserved, 100% safe-zone containment ($33.0 \le r \le 34.5\text{dp}$), zero interruption/restart during workout recording or foreground sessions, 100% crash-free Compose icon preview rendering, 100% free core workout tracking features.
+**Invariants**: 100% Cervélo P3C and stopwatch color fidelity preserved, 100% safe-zone containment ($33.0 \le r \le 34.5\text{dp}$), zero interruption/restart during workout recording or foreground sessions, zero crash-prone mipmap Compose references, 100% free core workout tracking features.
 
 ### REQ-UI-446: Universal Stacked Workout Details Marginal Histograms & Widened Strip Layout Parity [Verified]
 - **Tests**: `TST-UI-446`, `TST-LOC-001` | **Tickets**: `ATT-5370`
@@ -13092,6 +13097,196 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Then* they default to `alignWithTelemetryCharts = false`, rendering clean profiles without marginal histograms.
 
 **Invariants**: 1:1 horizontal plot width and scrubbing alignment (Rule 64), unconditional background tracks (Rule 69), domain-boundary clamping (Rule 70), 5/7-zone coloring preserved for HR/Power, 100% clean-room test suite pass rate.
+
+
+### REQ-UI-447: Workout Share Mode Selection Bottom Sheet & Photo Track Overlay Snapshot Composer [Verified]
+- **Tests**: `TST-UI-447` | **Tickets**: `ATT-30`
+- **Implementation**: `MapDetailLayout.kt`, `ShareUtils.kt`, `PhotoTrackOverlayComposer.kt`, `WorkoutShareBottomSheet.kt`
+- **Rationale**: Currently, tapping the Share button in `MapDetailLayout` immediately executes a vertical composite map/graph snapshot (`combineWorkoutAndShare`). Athletes frequently prefer sharing activities using a personal scenery, selfie, or gear photo overlaid with their GPS route silhouette and key stats (Strava/Garmin style). REQ-UI-447 introduces a share mode selection sheet offering the classic analysis snapshot or a photo with track & stats overlay:
+1. *Share Mode Selection Bottom Sheet (`REQ-UI-447.1`)*:
+• In `MapDetailLayout.kt`, tapping the floating Share button on a completed workout SHALL display `WorkoutShareBottomSheet` (hosted in `AppModalBottomSheet`) presenting two choices:
+  - *Option A — Karten- & Analyse-Snapshot*: Executes the existing vertical composite snapshot (`combineWorkoutAndShare`).
+  - *Option B — Foto mit Track-Overlay*: Launches the Android Photo Picker (`ActivityResultContracts.PickVisualMedia`) to pick a background photo.
+• For non-workout callers (`RouteOnMapScreen`, `SegmentOnMapScreen`, or when `workoutData == null`), tapping Share SHALL continue executing Option A directly without presenting the mode sheet.
+2. *2D GPS Track Silhouette Projection (`REQ-UI-447.2`)*:
+• In `PhotoTrackOverlayComposer.kt`, the workout's GPS polyline (`workoutData.mapPolyline`) SHALL be decoded via `PolyUtil.decode` and projected onto the photo.
+• Projection SHALL apply equirectangular cosine-latitude scaling ($\Delta x = \Delta\lambda \cdot \cos(\phi_{\text{mean}})$, $\Delta y = -\Delta\phi$) to preserve true geometric aspect ratio across all latitudes without distortion.
+• The track silhouette SHALL be drawn with a subtle drop shadow, anti-aliased stroke, and distinctive start/finish marker dots in the upper-right or side quadrant of the photo.
+3. *Bottom Gradient Scrim & Key Metrics Typography (`REQ-UI-447.3`)*:
+• A vertical translucent gradient scrim (transparent $\rightarrow$ black alpha 0.85) SHALL be drawn across the bottom 25–30% of the photo canvas.
+• Workout title, date, distance, duration, ascent, and average speed/power SHALL be rendered on the scrim in high-contrast white typography, guaranteeing WCAG AAA contrast ratio ($\ge 7.0:1$) over arbitrary bright or dark backgrounds.
+4. *Official Branding & Supporter Tier Watermark (`REQ-UI-447.4`)*:
+• The bottom footer watermark bar SHALL render the Cervélo P3C logo, "Tracked with aTrainingTracker", and the user's active supporter tier pill (`REQ-UI-445.5`) in alignment with standard branding invariants.
+5. *Interactive Preview, Sharing & 9-Language Parity (`REQ-UI-447.5`)*:
+• After photo selection, `WorkoutShareBottomSheet` SHALL display an in-sheet preview of the composed photo with a primary "Teilen" / "Share" CTA dispatching the generated image via `FileProvider`.
+• All user-visible strings SHALL maintain 100% localization parity across all 9 supported application locales (`values`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-447`, extending `REQ-UI-177` (*Theme-Aware Post-Workout & Period Share Snapshot Canvas and Footer*), `REQ-UI-205` (*Workout Snapshot Layout*), and `REQ-UI-445.5` (*Social Share Workout Watermark*). Targets `MapDetailLayout.kt`, `ShareUtils.kt`, `PhotoTrackOverlayComposer.kt`, and `WorkoutShareBottomSheet.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-40.8 (`ATT-1472`, `REQ-UI-177`), Sprint 2026-40.7 (`ATT-1393`, `REQ-UI-205`), and `ATT-5397` (`REQ-UI-445.5`) established composite snapshot sharing and branding watermarks.
+3. *Root Reason for Existing Formulation*: Prior to ATT-30, snapshot sharing only supported stitching layout bitmaps (Header, Map, Elevation, Analytics). Personal photo backgrounds with overlaid vector silhouettes were not supported.
+4. *Preservation of Core Invariants*: Existing `combineWorkoutAndShare` and `combineAndShare` functions and non-workout callers remain 100% operational and unchanged under Option A. Safe bitmap decoding (`inSampleSize`) avoids OOM on high-resolution camera photos.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete viewing a completed workout in `MapDetailLayout`,
+• *When* the athlete taps the floating Share button,
+• *Then* `WorkoutShareBottomSheet` appears displaying Option A (Classic Analysis Snapshot) and Option B (Photo with Track-Overlay).
+• *Given* the athlete selects Option A,
+• *When* triggered,
+• *Then* `combineWorkoutAndShare` captures Header, Map, Elevation, Analytics, and Footer and dispatches via `FileProvider`.
+• *Given* the athlete selects Option B,
+• *When* selecting a photo via `PickVisualMedia`,
+• *Then* `PhotoTrackOverlayComposer` composites the downsampled photo with the cosine-latitude-scaled GPS track silhouette, bottom gradient scrim, key workout metrics, and branding watermark.
+• *Given* the composed photo preview inside the bottom sheet,
+• *When* the athlete taps the Share CTA,
+• *Then* the image is shared via system send intent.
+
+**Invariants**: Backward compatibility for all existing `combineWorkoutAndShare` callers, safe bitmap downsampling preventing OOM, WCAG AAA text contrast, 9-language localization parity, and 100% clean-room test pass rate.
+
+### REQ-UI-448: Workout Photos Strip, Full-Screen Preview Bottom Sheet with ATT-30 Overlay Share, and Map Pin Markers [Verified]
+- **Tests**: `TST-UI-448` | **Tickets**: `ATT-43`
+- **Implementation**: `WorkoutDetails.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `ATrainingTrackerMap.kt`, `WorkoutPhotoViewerSheet.kt`, `WorkoutShareBottomSheet.kt`
+- **Rationale**: Athletes capture photos during workouts and wish to browse them alongside workout telemetry, inspect them on the workout GPS map, and share them via social media. REQ-UI-448 defines the UI presentation and interaction contracts for workout photos (ATT-43, extending `REQ-UI-447` and `REQ-UI-408`):
+1. *Workout Photos Horizontal Strip (`REQ-UI-448.1`)*:
+• In `WorkoutDetails.kt` (and `WorkoutDetailTabbedContent.kt`), when attached photos exist, the system SHALL render a dedicated horizontal photo strip displaying downsampled thumbnail previews (`RoundedCornerShape(8.dp)`), along with an "Add Photos" action button (`ActivityResultContracts.PickMultipleVisualMedia`).
+• If no photos are attached, an empty-state action button SHALL allow athletes to attach photos from the system Photo Picker.
+2. *Full-Screen Photo Viewer Bottom Sheet (`REQ-UI-448.2`)*:
+• Tapping a photo thumbnail SHALL open `WorkoutPhotoViewerSheet` (hosted in `AppModalBottomSheet` per ATT-5399), displaying the full image, capture timestamp, caption (if present), an action to delete the photo (with confirmation dialog), and a prominent CTA to share the photo via `WorkoutShareBottomSheet` (ATT-30).
+3. *Map Photo Pin Markers (`REQ-UI-448.3`)*:
+• In `TrackOnMapScreen.kt` and `ATrainingTrackerMap.kt`, photos with resolved GPS coordinates SHALL be rendered as distinct photo pin markers (`LocationMarker`) along the workout route.
+• Tapping a photo marker on the map SHALL trigger `WorkoutPhotoViewerSheet` for that photo.
+4. *Memory Safety & 9-Language Localization Parity (`REQ-UI-448.4`)*:
+• Thumbnail and preview decoding SHALL use downsampled bitmap decoders (`inSampleSize`) via `PhotoTrackOverlayComposer.decodeSampledBitmap` to prevent out-of-memory exceptions.
+• All user-visible labels, headers, dialogs, and accessibility descriptions SHALL maintain 100% parity across all 9 supported locales without decorative inline Unicode emojis.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-448`, extending `REQ-UI-447` (*Workout Share Mode Selection & Photo Track Overlay*) and `REQ-UI-408` (*Multi-Tab Workout Details*). Targets `WorkoutDetails.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `ATrainingTrackerMap.kt`, and `WorkoutPhotoViewerSheet.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-45.6 (`ATT-30`, `REQ-UI-447`), Sprint 2026-44.1 (`ATT-3920`, `REQ-UI-408`).
+3. *Root Reason for Existing Formulation*: Prior to ATT-43, `WorkoutDetails` only rendered tabular telemetry metrics and `TrackOnMapScreen` only rendered start, finish, and lap markers.
+4. *Preservation of Core Invariants*: Existing metric rows, tab layouts, and map marker contracts remain invariant; memory-safe sampled decoding prevents OOM.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete viewing a workout with attached photos in `WorkoutDetails`,
+• *When* the details screen renders,
+• *Then* a horizontal photo strip appears displaying thumbnails and an add-photos button.
+• *Given* the athlete taps a photo in the strip or a photo pin on the map,
+• *When* clicked,
+• *Then* `WorkoutPhotoViewerSheet` opens displaying the full preview, caption, delete action, and "Share with Track Overlay" CTA.
+• *Given* the athlete taps "Share with Track Overlay" in the viewer sheet,
+• *When* triggered,
+• *Then* `WorkoutShareBottomSheet` (ATT-30) opens pre-seeded with the selected photo.
+
+**Invariants**: Bottom popup standard via `AppModalBottomSheet`, safe downsampled bitmap decoding, 9-language localization parity without inline emojis, 100% clean-room test pass rate.
+
+### REQ-UI-449: Interactive Map Lap Creation & Splitting in Workout Aftermath [Verified]
+- **Tests**: `TST-UI-449` | **Tickets**: `ATT-907`
+- **Implementation**: `CreateLapOnMapSheet.kt`, `LapEditorMath.kt`, `WorkoutRepository.kt`, `WorkoutSamplesDatabaseManager.java`, `LapsDatabaseManager.java`, `TrackOnMapScreen.kt`, `MapDetailLayout.kt`, `WorkoutLaps.kt`
+- **Rationale**: When an athlete forgets to trigger a lap split during an activity, the system SHALL allow retroactively creating and splitting a lap at any selected sample point along the recorded GPS polyline in Aftermath (`TrackOnMapScreen` / `WorkoutDetails`), calculating accurate split metrics and updating both telemetry sample records and lap summaries in an atomic SQLite transaction without altering total session metrics.
+- **Description**:
+  1. *Entry Points & Scrub Pre-Seeding (`REQ-UI-449.1`)*: In `WorkoutLaps.kt` / `LapSplitVisualizerCard` and `MapDetailLayout.kt` (scrubbing overlay action bar), the system SHALL provide an interactive "Create / Split Lap on Map" (*Runde auf Karte teilen*) action. When triggered from an active map or chart scrubbing position, the selected split position SHALL be pre-seeded to the current scrub point index.
+  2. *Interactive Split Bottom Sheet (`REQ-UI-449.2`, `CreateLapOnMapSheet.kt`)*: The editor SHALL be hosted in `AppModalBottomSheet` (per `ATT-5399`), rendering:
+     - The complete workout GPS track with existing lap boundary pins and a movable "New Lap Split Pin" draggable along the route or selectable via a precision sample/distance slider.
+     - Live metric preview cards for both resulting split laps (Lap $k$ before split and Lap $k+1$ after split: active duration, distance, and average speed/pace calculated via `LapEditorMath`).
+     - Split Boundary Validation: The split index $s$ SHALL be strictly constrained between the start and end of the target lap ($start_k < s \le end_k$) so neither resulting split lap has duration $\le 0$ or distance $\le 0.0$ (enforcing zero phantom laps per `REQ-TRK-002`).
+  3. *Atomic Multi-Database Transaction (`REQ-UI-449.3`, `WorkoutRepository.splitLapAtSample`)*:
+     - In `WorkoutSamples.db`, `WorkoutSamplesDatabaseManager.splitLapAtSampleRow` SHALL execute an atomic update incrementing `LAP_NR = LAP_NR + 1` for all samples with `_id >= splitRowId` in the workout table.
+     - In `Laps.db`, updated lap summaries for Lap $k$ and Lap $k+1$ (plus subsequent renumbered laps) SHALL be recalculated and persisted via `LapsDatabaseManager.replaceCroppedLaps` in a single SQLite transaction.
+     - Export caches SHALL be invalidated and reactive `WorkoutData` emitted so `WorkoutLaps`, `LapSplitVisualizerCard`, and map markers refresh immediately without reloading the screen.
+  4. *Synergistic Foundation for ATT-908 (`REQ-UI-449.4`)*: Domain calculations (`LapEditorMath.calculateSplitLapsPreview`) and sheet components SHALL be architected to support adjacent lap boundary moving (`ATT-908`).
+  5. *9-Language Localization Parity (`REQ-UI-449.5`)*: All user-facing strings SHALL maintain 100% parity across all 9 supported locales without inline decorative Unicode emojis.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-449`, extending `REQ-TRK-002` (Lap lifecycle & phantom lap elimination), `REQ-UI-368` (Workout cropping & sample pruning), and `REQ-UI-204` (Lap split visualizer). Targets `WorkoutRepository.kt`, `WorkoutSamplesDatabaseManager.java`, `LapsDatabaseManager.java`, and `CreateLapOnMapSheet.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-44.1 (`ATT-896`, zero phantom laps) and Sprint 2026-42.3 (`ATT-3274`, transactional sample pruning).
+3. *Root Reason for Existing Formulation*: Laps were historically recorded exclusively during live tracking to avoid post-hoc data desynchronization between samples and lap summaries.
+4. *Preservation of Core Invariants*: Resulting laps MUST NOT be phantom (duration $> 0$ or distance $> 0.0$); sequential $1 \dots K$ lap numbering strictly maintained; total workout summary metrics, polyline, and extrema remain immutable.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete viewing a workout with recorded samples in `TrackOnMapScreen` or `WorkoutDetails`,
+• *When* the athlete triggers "Create Lap on Map" (or scrubs to a point and taps the split lap action),
+• *Then* `CreateLapOnMapSheet` opens with the track map, existing lap markers, the movable split pin, and live preview metrics for Lap $k$ and Lap $k+1$.
+• *When* the split pin or slider is adjusted,
+• *Then* the preview metrics for Lap $k$ and Lap $k+1$ update reactively in real time.
+• *When* the athlete confirms the split,
+• *Then* `WorkoutRepository.splitLapAtSample` executes atomically, `LAP_NR` is incremented for subsequent samples in `WorkoutSamples.db`, `Laps.db` is updated via `replaceCroppedLaps`, and the UI reflects the new lap split immediately.
+• *Given* an attempt to place a split pin at an invalid boundary ($s \le start_k$ or $s > end_k$),
+• *Then* confirmation is disabled and the boundary is clamped.
+
+**Invariants**: Zero phantom laps (`REQ-TRK-002`), sequential $1 \dots K$ contiguous lap sequence, immutable workout total duration/distance, 9-locale parity without inline emojis, 100% clean-room test pass rate.
+
+### REQ-UI-450: Interactive Map Lap Boundary Moving in Workout Aftermath [Verified]
+- **Tests**: `TST-UI-450` | **Tickets**: `ATT-908`
+- **Implementation**: `MoveLapBoundaryOnMapSheet.kt`, `LapSplitAndMoveCalculator.kt`, `WorkoutRepository.kt`, `WorkoutSamplesDatabaseManager.java`, `LapsDatabaseManager.java`, `LapEditBottomSheet.kt`, `WorkoutLaps.kt`
+- **Rationale**: When an athlete triggers a lap split too early or too late, or when auto-lap boundaries split mid-segment, the system SHALL allow retroactively shifting the boundary between any two adjacent recorded laps ($k$ and $k+1$) along the GPS track in Aftermath, updating sample records in an atomic range transaction and recalculating both lap summaries without altering total session metrics or affecting any other laps.
+- **Description**:
+  1. *Entry Points & Boundary Pre-Seeding (`REQ-UI-450.1`)*: In `LapEditBottomSheet.kt` (for lap $k < K$) and `WorkoutLaps.kt` / `LapSplitVisualizerCard` (boundary edit action between adjacent laps), the system SHALL provide an interactive "Move Boundary on Map" (*Rundengrenze auf Karte verschieben*) action. When triggered, the boundary editor SHALL open pre-seeded at the current boundary index between Lap $k$ and Lap $k+1$.
+  2. *Interactive Boundary Move Bottom Sheet (`REQ-UI-450.2`, `MoveLapBoundaryOnMapSheet.kt`)*: The editor SHALL be hosted in `AppModalBottomSheet` (per `ATT-5399`), rendering:
+     - The workout GPS track with the active two-lap sub-segment highlighted, start/stop pins, and a movable boundary pin draggable or adjustable via a precision slider.
+     - Live metric preview cards for both affected adjacent laps (Lap $k$ and Lap $k+1$: duration, distance, and average speed/pace calculated via `LapSplitAndMoveCalculator`).
+     - Boundary Clamping & Zero-Phantom Invariant: The new boundary index $s_{\text{new}}$ SHALL be strictly clamped to the range $[startIndex(k) + 1, endIndex(k+1) - 1]$. Neither Lap $k$ nor Lap $k+1$ can collapse into a zero-duration or zero-distance phantom lap (`REQ-TRK-002`).
+  3. *Atomic Multi-Database Transaction (`REQ-UI-450.3`, `WorkoutRepository.moveLapBoundary`)*:
+     - In `WorkoutSamples.db`, `WorkoutSamplesDatabaseManager.updateLapNumberForSampleRange` SHALL execute an atomic update assigning the shifted sample range $[s_{\text{min}}, s_{\text{max}}]$ to the appropriate target `LAP_NR` ($k$ if shifting boundary forward/right, $k+1$ if shifting boundary backward/left).
+     - In `Laps.db`, updated lap summaries for Lap $k$ and Lap $k+1$ SHALL be recalculated from samples and persisted via `LapsDatabaseManager.replaceCroppedLaps` in a single SQLite transaction, leaving all other laps ($1 \dots k-1$ and $k+2 \dots K$) untouched.
+     - Export caches SHALL be invalidated and reactive `WorkoutData` emitted to refresh UI immediately.
+  4. *9-Language Localization Parity (`REQ-UI-450.4`)*: All user-facing strings SHALL maintain 100% parity across all 9 supported locales without inline decorative Unicode emojis.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-450`, extending `REQ-UI-449` (ATT-907), `REQ-TRK-002` (Lap lifecycle & phantom lap elimination), and `REQ-UI-142` (Edit lap details). Targets `WorkoutRepository.kt`, `LapSplitAndMoveCalculator.kt`, `WorkoutSamplesDatabaseManager.java`, `LapsDatabaseManager.java`, and `MoveLapBoundaryOnMapSheet.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-45.6 (`ATT-907`, map lap creation) and Sprint 2026-44.1 (`ATT-896`, zero phantom laps).
+3. *Root Reason for Existing Formulation*: Lap boundaries were historically immutable after tracking to prevent sample/summary desynchronization.
+4. *Preservation of Core Invariants*: No phantom laps: both Lap $k$ and Lap $k+1$ maintain duration $> 0$ and distance $> 0.0$; contiguous $1 \dots K$ lap numbering strictly preserved; total workout duration, distance, polyline, and extrema remain immutable.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an aftermath workout with $\ge 2$ laps,
+• *When* the athlete taps "Move Boundary on Map" for Lap $k$,
+• *Then* `MoveLapBoundaryOnMapSheet` opens showing the adjacent route segment, the movable boundary pin, and live preview cards for Lap $k$ and Lap $k+1$.
+• *When* the athlete adjusts the boundary slider or pin,
+• *Then* the preview metrics for Lap $k$ and Lap $k+1$ update reactively in real time.
+• *Given* an attempt to drag the boundary pin to $s \le startIndex(k)$ or $s \ge endIndex(k+1)$,
+• *Then* the pin is strictly clamped within $[startIndex(k) + 1, endIndex(k+1) - 1]$ and confirmation is preserved for valid interior points.
+• *When* the athlete confirms the boundary move,
+• *Then* `WorkoutRepository.moveLapBoundary` executes atomically, updating sample rows in `WorkoutSamples.db` and replacing both lap summaries in `Laps.db`, and the UI immediately displays the updated lap boundaries.
+
+**Invariants**: Zero phantom laps (`REQ-TRK-002`), strictly interior boundary clamping $[startIndex(k) + 1, endIndex(k+1) - 1]$, contiguous $1 \dots K$ lap sequence, immutable workout total duration/distance, 9-locale parity without inline emojis, 100% clean-room test pass rate.
+
+### REQ-UI-451: Tracking Cockpit SensorStatus Top Bar 16 dp Screen Edge Offset and 32 dp Touch Target Symmetrical Centering [Verified]
+- **Tests**: `TST-UI-451` | **Tickets**: `ATT-5422`
+- **Implementation**: `SensorStatus.kt`, `TrackingTabsScreen.kt`
+- **Rationale**: To eliminate display edge clinging (~4 dp) of the hamburger menu button and supporter emblem in the top tracking cockpit bar, align edge margins with Material 3 standard 16 dp offsets (Option A), improve touch ergonomics from 24 dp to 32 dp, and strictly preserve mathematical centering of the 8 telemetry sensor indicators (ATT-5422, extending `REQ-UI-445.3`):
+- **Description**:
+  1. *Screen Edge Offset & Padding Geometry (`REQ-UI-451.1`)*:
+     - In portrait mode (`!isCompactLandscape`), `SensorStatus.kt` outer `Row` SHALL apply `padding(horizontal = 8.dp, vertical = 4.dp)`.
+     - In combination with the enclosing `Surface` padding (`Modifier.padding(4.dp)`) in `TrackingTabsScreen.kt` and the internal 4 dp offset of the 24 dp icon within the 32 dp button (`(32 - 24) / 2 = 4.dp`), the visual edge margin from the display boundary to the outer icon contours SHALL equal exactly 16 dp (`4.dp + 8.dp + 4.dp = 16.dp`), achieving visual harmony with the Material 3 `TopAppBar` and cockpit sensor card headers (`aktiv`, `Geschw.`, `HF`, `Höhe`).
+  2. *Symmetrical 32 dp Touch Targets & Fallback Spacers (`REQ-UI-451.2`)*:
+     - The left drawer hamburger menu `IconButton` (`onMenuClick`) and right supporter status emblem `IconButton` (`onSupporterClick`) SHALL have touch target bounds of `Modifier.size(32.dp)` housing their standard 24 dp vector drawables (`Icons.Default.Menu` and `supporterEmblemRes`).
+     - Symmetrical inactive/fallback spacers (`onMenuClick == null` and `supporterEmblemRes == null`) in both branches SHALL be sized identically to `Modifier.size(32.dp)`.
+     - The central container `Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center)` housing the 8 telemetry sensor icons SHALL remain strictly and mathematically centered in the viewport across all supporter tiers (`FREE`, `PIONEER`, `BRONZE`, `SILVER`, `GOLD`, `DIAMOND`).
+  3. *Landscape Mode & Invariant Preservation (`REQ-UI-451.3`)*:
+     - Compact landscape mode (`isCompactLandscape = true`) governed by `REQ-UI-434.1` SHALL remain untouched (max 28 dp height, trailing horizontal layout).
+     - Sensor source dialog trigger, sensor alpha states (`INACTIVE_SENSOR_ALPHA = 0.38f`), and telemetry click behaviors SHALL remain 100% operational with zero regressions.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Extending `REQ-UI-445.3` (*Live Cockpit Status Emblem & Retirement of Quick Icon Picker Dialog*), targets `SensorStatus.kt` and `TrackingTabsScreen.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-45.4 (`ATT-5397`, commit `8baf42c8`) and Sprint 2026-40.8 (`ATT-1406`, commit `8f8b8098`).
+3. *Root Reason for Existing Formulation*: `REQ-UI-445.3` balanced the hamburger menu button with the supporter emblem at 24 dp, but did not specify outer screen margin padding, resulting in 4 dp display clinging.
+4. *Preservation of Core Invariants*: The 8 sensor icons maintain exact mathematical centering via equal-width 32 dp outer slots; 24 dp icon vectors and click handlers are preserved; touch target increases from 24 dp to 32 dp.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete viewing the tracking cockpit in portrait mode,
+• *When* inspecting the top `SensorStatus` bar,
+• *Then* the left hamburger menu icon and right supporter emblem (or fallback spacer) start at exactly 16 dp from the outer display boundary (Option A).
+• *Given* an athlete with any supporter tier or free tier,
+• *When* the cockpit header renders,
+• *Then* the 8 sensor icons are mathematically centered in the horizontal viewport.
+• *Given* the athlete tapping the hamburger menu or supporter emblem,
+• *When* interacting with the controls,
+• *Then* the enlarged 32 dp touch targets respond reliably to touches.
+
+**Invariants**: Option A 16 dp visual edge offset, exact mathematical centering of 8 sensor icons across all tiers, untouched compact landscape layout (`REQ-UI-434.1`), and 100% test pass rate.
+
+
+
+
 
 
 

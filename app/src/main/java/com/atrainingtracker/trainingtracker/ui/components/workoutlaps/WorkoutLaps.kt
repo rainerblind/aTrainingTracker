@@ -26,6 +26,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -53,7 +54,9 @@ fun WorkoutLaps(
     bSportType: BSportType = BSportType.UNKNOWN,
     lapDisplayMode: LapDisplayMode = LapDisplayMode.VISUALIZER_ONLY,
     modifier: Modifier = Modifier,
-    onLapClick: ((LapData) -> Unit)? = null
+    onLapClick: ((LapData) -> Unit)? = null,
+    onSplitLapClick: (() -> Unit)? = null,
+    onMoveBoundaryClick: ((boundaryLapNr: Long) -> Unit)? = null
 ) {
     if (laps.isEmpty()) return
 
@@ -107,6 +110,35 @@ fun WorkoutLaps(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (onMoveBoundaryClick != null && laps.size >= 2) {
+                    IconButton(
+                        onClick = { onMoveBoundaryClick(1L) },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_lap_timer),
+                            contentDescription = stringResource(R.string.move_lap_boundary_action),
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                }
+                if (onSplitLapClick != null) {
+                    IconButton(
+                        onClick = onSplitLapClick,
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_lap_add),
+                            contentDescription = stringResource(R.string.split_lap_action),
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
         }
 
         // High-Aesthetic Lap & Interval Split Visualizer (REQ-UI-204 / ATT-1742 / REQ-UI-229 / ATT-1870)

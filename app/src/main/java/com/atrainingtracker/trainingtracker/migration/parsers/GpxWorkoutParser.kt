@@ -49,9 +49,21 @@ object GpxWorkoutParser {
      */
     fun parse(file: File, context: Context): Result<ParsedWorkoutData> {
         return try {
-            val parseResult = FileInputStream(file).use { fis ->
-                GpxTrackpointParser.parse(fis)
+            FileInputStream(file).use { fis ->
+                parse(fis, context)
             }
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception reading GPX file ${file.name}", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Parses a GPX stream into [ParsedWorkoutData] (REQ-MIG-048.1).
+     */
+    fun parse(stream: java.io.InputStream, context: Context): Result<ParsedWorkoutData> {
+        return try {
+            val parseResult = GpxTrackpointParser.parse(stream)
             if (parseResult.isFailure) {
                 Log.e(TAG, "Failed to parse GPX XML: ${parseResult.exceptionOrNull()?.message}")
                 return Result.failure(parseResult.exceptionOrNull() ?: Exception("Unknown GPX parse error"))
@@ -287,7 +299,7 @@ object GpxWorkoutParser {
                 )
             )
         } catch (e: Exception) {
-            Log.e(TAG, "Exception parsing GPX file ${file.name}", e)
+            Log.e(TAG, "Exception parsing GPX stream", e)
             Result.failure(e)
         }
     }

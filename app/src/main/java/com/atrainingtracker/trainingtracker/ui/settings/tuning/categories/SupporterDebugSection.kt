@@ -85,7 +85,6 @@ fun SupporterDebugSection() {
     val scope = rememberCoroutineScope()
     val settingsDataStore = remember { SettingsDataStore.getInstance(context) }
     val currentOverride by settingsDataStore.supporterTierOverride.collectAsState(initial = SupporterTierOverride.AUTO)
-    var showPreviewIconPickerDialog by remember { mutableStateOf(false) }
     var showPreviewJubileeDialog by remember { mutableStateOf(false) }
     var showPreviewGoldGarageDialog by remember { mutableStateOf(false) }
     var showPreviewDiamondGarageDialog by remember { mutableStateOf(false) }
@@ -140,14 +139,6 @@ fun SupporterDebugSection() {
                         )
                     )
                 }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedButton(
-                onClick = { showPreviewIconPickerDialog = true },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(text = stringResource(R.string.supporter_quick_picker_title))
             }
 
             // Jubilee Celebration Dialog 1-Tap Preview (ATT-2308 / REQ-REV-005)
@@ -307,12 +298,6 @@ fun SupporterDebugSection() {
             event = dummyDiamondEvent,
             onUpgrade = { showPreviewDiamondGarageDialog = false },
             onDismiss = { showPreviewDiamondGarageDialog = false }
-        )
-    }
-
-    if (showPreviewIconPickerDialog) {
-        com.atrainingtracker.trainingtracker.ui.branding.SupporterQuickIconPickerDialog(
-            onDismiss = { showPreviewIconPickerDialog = false }
         )
     }
 }

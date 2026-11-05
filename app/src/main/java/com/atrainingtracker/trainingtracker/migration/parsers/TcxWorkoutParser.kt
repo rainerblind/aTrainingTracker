@@ -46,9 +46,21 @@ object TcxWorkoutParser {
      */
     fun parse(file: File, context: Context): Result<ParsedWorkoutData> {
         return try {
-            val parseResult = FileInputStream(file).use { fis ->
-                TcxTrackpointParser.parse(fis)
+            FileInputStream(file).use { fis ->
+                parse(fis, context)
             }
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception reading TCX file ${file.name}", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Parses a TCX stream into [ParsedWorkoutData] (REQ-MIG-048.1).
+     */
+    fun parse(stream: java.io.InputStream, context: Context): Result<ParsedWorkoutData> {
+        return try {
+            val parseResult = TcxTrackpointParser.parse(stream)
             if (parseResult.isFailure) {
                 Log.e(TAG, "Failed to parse TCX: ${parseResult.exceptionOrNull()?.message}")
                 return Result.failure(parseResult.exceptionOrNull() ?: Exception("Unknown TCX parse error"))
@@ -223,7 +235,7 @@ object TcxWorkoutParser {
                 )
             )
         } catch (e: Exception) {
-            Log.e(TAG, "Exception parsing TCX file ${file.name}", e)
+            Log.e(TAG, "Exception parsing TCX stream", e)
             Result.failure(e)
         }
     }

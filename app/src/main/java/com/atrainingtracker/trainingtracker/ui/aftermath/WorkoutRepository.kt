@@ -23,6 +23,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.Uri
 import android.util.Log
 import androidx.annotation.VisibleForTesting
 import androidx.core.content.ContextCompat
@@ -41,6 +42,8 @@ import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.database.WorkoutDeletionHelper
+import com.atrainingtracker.trainingtracker.database.WorkoutPhotoEntry
+import com.atrainingtracker.trainingtracker.database.WorkoutPhotoManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
@@ -959,7 +962,44 @@ class WorkoutRepository private constructor(private val application: Application
                 }
             }
         }
+
+        // 3. Photo Location Markers (REQ-UI-448.3 / ATT-43)
+        val photos = summariesManager.getPhotosForWorkout(workoutId)
+        photos.forEach { photo ->
+            if (photo.latitude != null && photo.longitude != null) {
+                val title = photo.caption ?: application.getString(R.string.workout_photos_marker_title)
+                markerList.add(
+                    LocationMarker(
+                        position = LatLng(photo.latitude, photo.longitude),
+                        iconResId = R.drawable.ic_place,
+                        title = title
+                    )
+                )
+            }
+        }
+
         markerList
+    }
+
+    /**
+     * Retrieves all photos attached to the given workout (REQ-DAT-038 / ATT-43).
+     */
+    fun getWorkoutPhotos(workoutId: Long): List<WorkoutPhotoEntry> {
+        return summariesManager.getPhotosForWorkout(workoutId)
+    }
+
+    /**
+     * Attaches an athlete-selected photo URI to the workout.
+     */
+    suspend fun addWorkoutPhoto(workoutId: Long, sourceUri: Uri, caption: String? = null): WorkoutPhotoEntry? {
+        return WorkoutPhotoManager.addPhoto(application, workoutId, sourceUri, caption)
+    }
+
+    /**
+     * Deletes a photo from the workout database and disk.
+     */
+    fun deleteWorkoutPhoto(photoId: Long): Boolean {
+        return WorkoutPhotoManager.deletePhoto(application, photoId)
     }
 
     /**
@@ -1748,6 +1788,168 @@ class WorkoutRepository private constructor(private val application: Application
                 if (lap.lapNr == lapNr) lap.copy(name = name, description = description) else lap
             }
             current.copy(laps = updatedLaps)
+        }
+    }
+
+    /**
+     * Splits a lap at the specified sample index in both WorkoutSamples.db and Laps.db (REQ-UI-449.3 / ATT-907).
+     *
+     * @param workoutId The ID of the workout.
+     * @param splitSampleIndex The 0-based sample index within the full workout samples list where the split begins.
+     * @return Result.success with updated List<LapData>, or Result.failure with descriptive error.
+     */
+    suspend fun splitLapAtSample(workoutId: Long, splitSampleIndex: Int): Result<List<LapData>> = withContext(Dispatchers.IO) {
+        try {
+            val baseFileName = summariesManager.getBaseFileName(workoutId)
+                ?: return@withContext Result.failure(IllegalStateException("No baseFileName found for workout $workoutId"))
+            if (!samplesManager.existsTable(baseFileName)) {
+                return@withContext Result.failure(IllegalStateException("Samples table does not exist for $baseFileName"))
+            }
+
+            val samples = getCropSamplePoints(workoutId)
+            if (samples.isEmpty()) {
+                return@withContext Result.failure(IllegalStateException("No samples found for workout $workoutId"))
+            }
+            if (splitSampleIndex !in samples.indices) {
+                return@withContext Result.failure(IndexOutOfBoundsException("Split index $splitSampleIndex out of bounds [0, ${samples.size})"))
+            }
+
+            val existingLaps = lapsDatabaseManager.getLaps(workoutId)
+            val validation = com.atrainingtracker.trainingtracker.domain.laps.LapSplitAndMoveCalculator.validateSplit(
+                samples = samples,
+                splitSampleIndex = splitSampleIndex,
+                existingLaps = existingLaps
+            )
+            if (!validation.isValid) {
+                return@withContext Result.failure(IllegalArgumentException(validation.errorMessage ?: "Invalid split point"))
+            }
+
+            val splitPoint = samples[splitSampleIndex]
+
+            // 1. Transactional update in WorkoutSamples.db: Increment LAP_NR for all rows >= splitPoint.rowId
+            samplesManager.incrementLapNumbersFromSample(baseFileName, splitPoint.rowId)
+
+            // 2. Map updated samples with new lap numbers
+            val updatedSamples = samples.map { pt ->
+                if (pt.index >= splitSampleIndex) pt.copy(lapNr = pt.lapNr + 1) else pt
+            }
+
+            // 3. Recalculate all laps
+            val newLaps = com.atrainingtracker.trainingtracker.domain.laps.LapSplitAndMoveCalculator.recalculateLapsAfterSplit(
+                workoutId = workoutId,
+                existingLaps = existingLaps,
+                updatedSamples = updatedSamples
+            )
+
+            // 4. Persist updated laps to Laps.db atomically
+            lapsDatabaseManager.replaceCroppedLaps(workoutId, newLaps)
+
+            // 5. Invalidate export cache
+            try {
+                val updatedWorkout = allWorkouts.value.find { it.id == workoutId }
+                if (updatedWorkout != null) {
+                    exportManager.exportWorkout(updatedWorkout)
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Non-fatal export cache refresh exception after split lap: ${e.message}")
+            }
+
+            // 6. Refresh in-memory reactive state
+            reloadWorkoutData(workoutId)
+
+            Result.success(newLaps)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to split lap at sample index $splitSampleIndex for workout $workoutId", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Moves an existing boundary between [boundaryLapNr] (Lap k) and [boundaryLapNr] + 1 (Lap k+1)
+     * to [newBoundarySampleIndex] (REQ-UI-450.4 / ATT-908).
+     *
+     * Atomically reassigns sample lap numbers in WorkoutSamples.db for the shifted range,
+     * updates affected lap summaries in Laps.db via replaceCroppedLaps, invalidates export cache,
+     * and refreshes in-memory workout data.
+     */
+    suspend fun moveLapBoundary(
+        workoutId: Long,
+        boundaryLapNr: Long,
+        newBoundarySampleIndex: Int
+    ): Result<List<LapData>> = withContext(Dispatchers.IO) {
+        try {
+            val baseFileName = summariesManager.getBaseFileName(workoutId)
+                ?: return@withContext Result.failure(IllegalStateException("No base file name for workout $workoutId"))
+            if (!samplesManager.existsTable(baseFileName)) {
+                return@withContext Result.failure(IllegalStateException("Samples table does not exist for $baseFileName"))
+            }
+
+            val samples = getCropSamplePoints(workoutId)
+            if (samples.isEmpty()) {
+                return@withContext Result.failure(IllegalStateException("No samples for workout $workoutId"))
+            }
+
+            val existingLaps = lapsDatabaseManager.getLaps(workoutId)
+            val validation = com.atrainingtracker.trainingtracker.domain.laps.LapSplitAndMoveCalculator.validateBoundaryMove(
+                samples = samples,
+                boundaryLapNr = boundaryLapNr,
+                newBoundaryIndex = newBoundarySampleIndex,
+                existingLaps = existingLaps
+            )
+            if (!validation.isValid) {
+                return@withContext Result.failure(IllegalArgumentException(validation.errorMessage ?: "Invalid boundary position"))
+            }
+
+            val lapKPlus1Indices = samples.indices.filter { samples[it].lapNr == boundaryLapNr + 1L }
+            if (lapKPlus1Indices.isEmpty()) {
+                return@withContext Result.failure(IllegalStateException("Lap ${boundaryLapNr + 1} not found in samples"))
+            }
+            val currentBoundaryIndex = lapKPlus1Indices.first()
+            val targetBoundaryIndex = validation.clampedSampleIndex
+
+            if (targetBoundaryIndex != currentBoundaryIndex) {
+                if (targetBoundaryIndex > currentBoundaryIndex) {
+                    // Shifted forward: samples in [currentBoundaryIndex, targetBoundaryIndex - 1] move from lap k+1 to lap k
+                    val startRowId = samples[currentBoundaryIndex].rowId
+                    val endRowId = samples[targetBoundaryIndex - 1].rowId
+                    samplesManager.updateLapNumberForSampleRange(baseFileName, startRowId, endRowId, boundaryLapNr)
+                } else {
+                    // Shifted backward: samples in [targetBoundaryIndex, currentBoundaryIndex - 1] move from lap k to lap k+1
+                    val startRowId = samples[targetBoundaryIndex].rowId
+                    val endRowId = samples[currentBoundaryIndex - 1].rowId
+                    samplesManager.updateLapNumberForSampleRange(baseFileName, startRowId, endRowId, boundaryLapNr + 1L)
+                }
+            }
+
+            // Recalculate laps
+            val newLaps = com.atrainingtracker.trainingtracker.domain.laps.LapSplitAndMoveCalculator.recalculateLapsAfterBoundaryMove(
+                workoutId = workoutId,
+                existingLaps = existingLaps,
+                samples = samples,
+                boundaryLapNr = boundaryLapNr,
+                newBoundarySampleIndex = targetBoundaryIndex
+            )
+
+            // Persist updated laps to Laps.db atomically
+            lapsDatabaseManager.replaceCroppedLaps(workoutId, newLaps)
+
+            // Invalidate export cache
+            try {
+                val updatedWorkout = allWorkouts.value.find { it.id == workoutId }
+                if (updatedWorkout != null) {
+                    exportManager.exportWorkout(updatedWorkout)
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Non-fatal export cache refresh exception after move lap boundary: ${e.message}")
+            }
+
+            // Refresh in-memory reactive state
+            reloadWorkoutData(workoutId)
+
+            Result.success(newLaps)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to move lap boundary for lap $boundaryLapNr at index $newBoundarySampleIndex for workout $workoutId", e)
+            Result.failure(e)
         }
     }
 

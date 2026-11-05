@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath
 
+import android.app.Application
 import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -36,6 +37,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -46,7 +48,10 @@ import androidx.compose.ui.zIndex
 import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrollConnection
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.WorkoutDetailPreferences
+import com.atrainingtracker.trainingtracker.database.WorkoutPhotoEntry
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
+import com.atrainingtracker.trainingtracker.ui.aftermath.photos.WorkoutPhotoPreviewBottomSheet
+import com.atrainingtracker.trainingtracker.ui.aftermath.photos.WorkoutPhotoStrip
 import com.atrainingtracker.trainingtracker.ui.aftermath.splits.LapSplitChartData
 import com.atrainingtracker.trainingtracker.ui.aftermath.splits.LapSplitVisualizerCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneDistributionCard
@@ -61,8 +66,12 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.Wor
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetails
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.WorkoutExtrema
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeader
+import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.LapDisplayMode
+import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.WorkoutLaps
 import com.atrainingtracker.trainingtracker.ui.map.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Multi-tab Workout Details container (`REQ-UI-408` / `ATT-3920`).
@@ -104,6 +113,9 @@ fun WorkoutDetailTabbedContent(
     onOpenTabsConfig: () -> Unit,
     mapContent: MapContentScope.() -> Unit,
     mapOverlay: @Composable BoxScope.() -> Unit,
+    onSplitLapClick: (() -> Unit)? = null,
+    onCreateLapClick: ((Double) -> Unit)? = null,
+    onMoveBoundaryClick: ((boundaryLapNr: Long) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val visibleTabs = remember(tabs, availability, detailPreferences) {
@@ -119,6 +131,20 @@ fun WorkoutDetailTabbedContent(
         pageCount = { visibleTabs.size }
     )
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val repository = remember(context) { WorkoutRepository.getInstance(context.applicationContext as Application) }
+    var photosRefreshKey by remember { mutableIntStateOf(0) }
+    val workoutPhotos by produceState<List<WorkoutPhotoEntry>>(
+        initialValue = emptyList(),
+        key1 = workoutData.id,
+        key2 = photosRefreshKey
+    ) {
+        value = withContext(Dispatchers.IO) {
+            repository.getWorkoutPhotos(workoutData.id)
+        }
+    }
+    var activePreviewPhoto by remember { mutableStateOf<WorkoutPhotoEntry?>(null) }
+    var activeSharePhoto by remember { mutableStateOf<WorkoutPhotoEntry?>(null) }
 
     // Hit-test & edge-gutter state for gesture arbitration between Map/Chart canvases and lower-pane cards
     var isTouchingInteractiveCanvas by remember { mutableStateOf(true) }
@@ -240,6 +266,8 @@ fun WorkoutDetailTabbedContent(
                                 powerZoneDisplayMode = effectivePowerZoneDisplayMode,
                                 hrZoneThresholds = hrZoneThresholds,
                                 powerZoneThresholds = powerZoneThresholds,
+                                workoutData = workoutData,
+                                onCreateLapClick = onCreateLapClick,
                                 header = {},
                                 mapContent = mapContent,
                                 overlay = mapOverlay,
@@ -280,6 +308,8 @@ fun WorkoutDetailTabbedContent(
                                 powerZoneDisplayMode = effectivePowerZoneDisplayMode,
                                 hrZoneThresholds = hrZoneThresholds,
                                 powerZoneThresholds = powerZoneThresholds,
+                                workoutData = workoutData,
+                                onCreateLapClick = onCreateLapClick,
                                 header = {},
                                 mapContent = mapContent,
                                 overlay = mapOverlay,
@@ -310,7 +340,19 @@ fun WorkoutDetailTabbedContent(
                                                 effectiveHrZoneDisplayMode = effectiveHrZoneDisplayMode,
                                                 effectivePowerZoneDisplayMode = effectivePowerZoneDisplayMode,
                                                 onHrZoneDisplayModeChange = onHrZoneDisplayModeChange,
-                                                onPowerZoneDisplayModeChange = onPowerZoneDisplayModeChange
+                                                onPowerZoneDisplayModeChange = onPowerZoneDisplayModeChange,
+                                                photos = workoutPhotos,
+                                                onPhotoClick = { activePreviewPhoto = it },
+                                                onSplitLapClick = onSplitLapClick,
+                                                onMoveBoundaryClick = onMoveBoundaryClick,
+                                                onAddPhotos = { uris ->
+                                                    coroutineScope.launch {
+                                                        uris.forEach { uri ->
+                                                            repository.addWorkoutPhoto(workoutData.id, uri, null)
+                                                        }
+                                                        photosRefreshKey++
+                                                    }
+                                                }
                                             )
                                         }
                                     }
@@ -353,6 +395,8 @@ fun WorkoutDetailTabbedContent(
                                     powerZoneDisplayMode = effectivePowerZoneDisplayMode,
                                     hrZoneThresholds = hrZoneThresholds,
                                     powerZoneThresholds = powerZoneThresholds,
+                                    workoutData = workoutData,
+                                    onCreateLapClick = onCreateLapClick,
                                     header = {},
                                     metadataContent = null,
                                     analyticsContent = if (nonMapNonGraphSections.isNotEmpty()) {
@@ -381,7 +425,19 @@ fun WorkoutDetailTabbedContent(
                                                     effectiveHrZoneDisplayMode = effectiveHrZoneDisplayMode,
                                                     effectivePowerZoneDisplayMode = effectivePowerZoneDisplayMode,
                                                     onHrZoneDisplayModeChange = onHrZoneDisplayModeChange,
-                                                    onPowerZoneDisplayModeChange = onPowerZoneDisplayModeChange
+                                                    onPowerZoneDisplayModeChange = onPowerZoneDisplayModeChange,
+                                                    photos = workoutPhotos,
+                                                    onPhotoClick = { activePreviewPhoto = it },
+                                                    onSplitLapClick = onSplitLapClick,
+                                                    onMoveBoundaryClick = onMoveBoundaryClick,
+                                                    onAddPhotos = { uris ->
+                                                        coroutineScope.launch {
+                                                            uris.forEach { uri ->
+                                                                repository.addWorkoutPhoto(workoutData.id, uri, null)
+                                                            }
+                                                            photosRefreshKey++
+                                                        }
+                                                    }
                                                 )
                                             }
                                         }
@@ -420,7 +476,19 @@ fun WorkoutDetailTabbedContent(
                                     effectiveHrZoneDisplayMode = effectiveHrZoneDisplayMode,
                                     effectivePowerZoneDisplayMode = effectivePowerZoneDisplayMode,
                                     onHrZoneDisplayModeChange = onHrZoneDisplayModeChange,
-                                    onPowerZoneDisplayModeChange = onPowerZoneDisplayModeChange
+                                    onPowerZoneDisplayModeChange = onPowerZoneDisplayModeChange,
+                                    photos = workoutPhotos,
+                                    onPhotoClick = { activePreviewPhoto = it },
+                                    onSplitLapClick = onSplitLapClick,
+                                    onMoveBoundaryClick = onMoveBoundaryClick,
+                                    onAddPhotos = { uris ->
+                                        coroutineScope.launch {
+                                            uris.forEach { uri ->
+                                                repository.addWorkoutPhoto(workoutData.id, uri, null)
+                                            }
+                                            photosRefreshKey++
+                                        }
+                                    }
                                 )
                             }
                         }
@@ -524,6 +592,34 @@ fun WorkoutDetailTabbedContent(
             }
         }
     }
+
+    activePreviewPhoto?.let { photo ->
+        WorkoutPhotoPreviewBottomSheet(
+            photo = photo,
+            onDismissRequest = { activePreviewPhoto = null },
+            onDeletePhoto = { photoToDelete ->
+                coroutineScope.launch {
+                    repository.deleteWorkoutPhoto(photoToDelete.id)
+                    photosRefreshKey++
+                    activePreviewPhoto = null
+                }
+            },
+            onShareOverlay = { photoToShare ->
+                activeSharePhoto = photoToShare
+                activePreviewPhoto = null
+            }
+        )
+    }
+
+    activeSharePhoto?.let { photo ->
+        WorkoutShareBottomSheet(
+            workoutData = workoutData,
+            onDismissRequest = { activeSharePhoto = null },
+            onSelectMapSnapshot = { activeSharePhoto = null },
+            initialPhotoUri = photo.uri,
+            attachedPhotos = workoutPhotos.map { it.uri }
+        )
+    }
 }
 
 /**
@@ -542,7 +638,12 @@ private fun RenderWorkoutDetailCardSections(
     effectiveHrZoneDisplayMode: ZoneCardDisplayMode,
     effectivePowerZoneDisplayMode: ZoneCardDisplayMode,
     onHrZoneDisplayModeChange: (ZoneCardDisplayMode) -> Unit,
-    onPowerZoneDisplayModeChange: (ZoneCardDisplayMode) -> Unit
+    onPowerZoneDisplayModeChange: (ZoneCardDisplayMode) -> Unit,
+    photos: List<WorkoutPhotoEntry> = emptyList(),
+    onPhotoClick: ((WorkoutPhotoEntry) -> Unit)? = null,
+    onAddPhotos: ((List<android.net.Uri>) -> Unit)? = null,
+    onSplitLapClick: (() -> Unit)? = null,
+    onMoveBoundaryClick: ((boundaryLapNr: Long) -> Unit)? = null
 ) {
     sections.forEach { section ->
         when (section) {
@@ -557,6 +658,13 @@ private fun RenderWorkoutDetailCardSections(
                     showCriticalPowerInWorkoutSummary = tuningConfig.showCriticalPowerInWorkoutSummary,
                     modifier = Modifier.fillMaxWidth()
                 )
+                if (onPhotoClick != null && onAddPhotos != null) {
+                    WorkoutPhotoStrip(
+                        photos = photos,
+                        onPhotoClick = onPhotoClick,
+                        onAddPhotos = onAddPhotos
+                    )
+                }
             }
             WorkoutDetailSectionType.DESCRIPTION -> {
                 WorkoutDescription(
@@ -599,13 +707,16 @@ private fun RenderWorkoutDetailCardSections(
                 }
             }
             WorkoutDetailSectionType.LAPS -> {
-                splitChartData?.let { splits ->
-                    LapSplitVisualizerCard(
-                        splitData = splits,
-                        selectedLapNr = selectedLapNr,
-                        onLapClick = { tappedLapNr ->
-                            onSelectLapNr(if (selectedLapNr == tappedLapNr) null else tappedLapNr)
+                if (workoutData.laps.isNotEmpty()) {
+                    WorkoutLaps(
+                        laps = workoutData.laps,
+                        bSportType = workoutData.bSportType,
+                        lapDisplayMode = if (workoutData.laps.size > 1) LapDisplayMode.VISUALIZER_ONLY else LapDisplayMode.TABLE_ONLY,
+                        onLapClick = { lap ->
+                            onSelectLapNr(if (selectedLapNr == lap.lapNr) null else lap.lapNr)
                         },
+                        onSplitLapClick = onSplitLapClick,
+                        onMoveBoundaryClick = onMoveBoundaryClick,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 4.dp)

@@ -53,13 +53,25 @@ data class SwapOrUpgradeDialogEvent(
     val recommendedUnpairDeviceId: Long
 )
 
+data class KeepTwoSensorsDialogEvent(
+    val currentlyPairedDevices: List<DeviceUiData>,
+    val defaultKeepDeviceIds: Set<Long>
+)
+
 class DeviceListViewModel @JvmOverloads constructor(
     private val application: Application,
     private val settingsDataStore: SettingsDataStore = SettingsDataStore.getInstance(application),
     private val devicesDBRepository: DeviceDataRepository = DeviceDataRepository.getInstance(application),
     private val banalServiceRepository: BANALServiceRepository = BANALServiceRepository.getInstance(application),
     private val proFeatureManager: ProFeatureManager = ProFeatureManager.getInstance(application),
-    private val garageLeagueDetector: GarageLeagueDetector = GarageLeagueDetector(application)
+    private val garageLeagueDetector: GarageLeagueDetector = GarageLeagueDetector(application),
+    private val isTrackingProvider: () -> Boolean = {
+        try {
+            com.atrainingtracker.trainingtracker.TrainingApplication.isTracking()
+        } catch (e: Throwable) {
+            false
+        }
+    }
 ) : AndroidViewModel(application) {
 
     private val useCase = GetMergedDevicesUseCase(
@@ -77,8 +89,15 @@ class DeviceListViewModel @JvmOverloads constructor(
     private val _swapOrUpgradeDialogEvent = MutableStateFlow<SwapOrUpgradeDialogEvent?>(null)
     val swapOrUpgradeDialogEvent: StateFlow<SwapOrUpgradeDialogEvent?> = _swapOrUpgradeDialogEvent.asStateFlow()
 
+    private val _keepTwoSensorsDialogEvent = MutableStateFlow<KeepTwoSensorsDialogEvent?>(null)
+    val keepTwoSensorsDialogEvent: StateFlow<KeepTwoSensorsDialogEvent?> = _keepTwoSensorsDialogEvent.asStateFlow()
+
     private val _garageNudgeEvent = MutableStateFlow<GarageNudgeEvent?>(null)
     val garageNudgeEvent: StateFlow<GarageNudgeEvent?> = _garageNudgeEvent.asStateFlow()
+
+    init {
+        checkDowngradeReconciliation()
+    }
 
     fun dismissGarageNudge() {
         _garageNudgeEvent.value = null
@@ -177,10 +196,23 @@ class DeviceListViewModel @JvmOverloads constructor(
 
     /**
      * Executes 1-tap atomic swap of pairing status between an active device and a candidate device (REQ-SET-084).
+     * Hardened to ensure total paired sensors is strictly <= 2 on Free tier even if pairedCount > 2 previously existed (REQ-SET-084.6).
      */
     fun executeSwapAndPair(unpairDeviceId: Long, candidateDeviceId: Long) {
         viewModelScope.launch {
             devicesDBRepository.swapPairedDevice(unpairDeviceId, candidateDeviceId)
+            // Multi-Sensor Hardening (REQ-SET-084.6):
+            if (!proFeatureManager.isProActive.value) {
+                val paired = devicesDBRepository.getPairedDevices()
+                if (paired.size > 2) {
+                    val retained = paired.filter { it.id != candidateDeviceId && it.id != unpairDeviceId }
+                        .take(1)
+                        .map { it.id }
+                        .toSet()
+                    val keepIds = retained + candidateDeviceId
+                    devicesDBRepository.reconcilePairedDevices(keepIds)
+                }
+            }
             _swapOrUpgradeDialogEvent.value = null
             val candidate = devicesDBRepository.getDeviceSnapshotById(candidateDeviceId)
             if (candidate != null) {
@@ -192,6 +224,59 @@ class DeviceListViewModel @JvmOverloads constructor(
 
     fun dismissSwapOrUpgradeDialog() {
         _swapOrUpgradeDialogEvent.value = null
+    }
+
+    /**
+     * Reconciles sensor pairing quota when returning to Free tier with > 2 paired sensors (REQ-SET-084.5).
+     * Strictly gated on !isTracking() to avoid in-ride disruption.
+     */
+    fun checkDowngradeReconciliation() {
+        if (isTrackingProvider()) return
+        viewModelScope.launch {
+            if (!proFeatureManager.isProActive.value) {
+                val pairedDevices = devicesDBRepository.getPairedDevices()
+                if (pairedDevices.size > 2) {
+                    val defaultKeepIds = determineDefaultKeepDeviceIds(pairedDevices)
+                    _keepTwoSensorsDialogEvent.value = KeepTwoSensorsDialogEvent(
+                        currentlyPairedDevices = pairedDevices,
+                        defaultKeepDeviceIds = defaultKeepIds
+                    )
+                }
+            }
+        }
+    }
+
+    fun confirmKeepTwoSensors(selectedIds: Set<Long>) {
+        viewModelScope.launch {
+            devicesDBRepository.reconcilePairedDevices(selectedIds)
+            _keepTwoSensorsDialogEvent.value = null
+        }
+    }
+
+    fun dismissKeepTwoSensors() {
+        val event = _keepTwoSensorsDialogEvent.value
+        viewModelScope.launch {
+            if (event != null) {
+                // To prevent bypassing Free quota by dismissing, automatically apply default keep sensors
+                devicesDBRepository.reconcilePairedDevices(event.defaultKeepDeviceIds)
+            }
+            _keepTwoSensorsDialogEvent.value = null
+        }
+    }
+
+    private fun determineDefaultKeepDeviceIds(pairedDevices: List<DeviceUiData>): Set<Long> {
+        val keep = mutableSetOf<Long>()
+        val gps = pairedDevices.firstOrNull { it.deviceType == DeviceType.SPEED_AND_LOCATION_GPS }
+        if (gps != null) keep.add(gps.id)
+        val baro = pairedDevices.firstOrNull { it.deviceType == DeviceType.ALTITUDE_FROM_PRESSURE }
+        if (baro != null && keep.size < 2) keep.add(baro.id)
+        if (keep.size < 2) {
+            for (dev in pairedDevices) {
+                if (keep.size >= 2) break
+                keep.add(dev.id)
+            }
+        }
+        return keep
     }
 
     private fun determineRecommendedUnpairDeviceId(pairedDevices: List<DeviceUiData>): Long {

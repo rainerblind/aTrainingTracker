@@ -25,7 +25,7 @@ import java.io.File
 
 /**
  * Validates the online User Guide infrastructure, chapter parity, image assets,
- * and Jekyll exclusion hygiene on GitHub Pages (REQ-PRO-033, TST-PRO-033, ATT-2275).
+ * and Jekyll exclusion hygiene on GitHub Pages (REQ-PRO-033, TST-PRO-033, ATT-2275, ATT-5418).
  */
 class OnlineUserGuideContractTest {
 
@@ -105,7 +105,8 @@ class OnlineUserGuideContractTest {
     @Test
     fun testImageReferences_resolveToExistingAssets() {
         val guideDir = findRepoRootFile("docs/guide")
-        val imageRegex = Regex("""!\[.*?\]\((.*?)\)""")
+        val markdownRegex = Regex("""!\[.*?\]\((.*?)\)""")
+        val htmlImgRegex = Regex("""<img\s+[^>]*src=["']([^"']+)["']""", RegexOption.IGNORE_CASE)
 
         val markdownFiles = guideDir.walkTopDown().filter { it.extension == "md" }.toList()
         assertTrue("Expected markdown files in docs/guide/", markdownFiles.isNotEmpty())
@@ -113,10 +114,11 @@ class OnlineUserGuideContractTest {
         var imageReferencesChecked = 0
         for (mdFile in markdownFiles) {
             val content = mdFile.readText()
-            val matches = imageRegex.findAll(content)
+            val mdMatches = markdownRegex.findAll(content).map { it.groupValues[1] }
+            val htmlMatches = htmlImgRegex.findAll(content).map { it.groupValues[1] }
+            val allMatches = (mdMatches + htmlMatches).toList()
 
-            for (match in matches) {
-                val imagePath = match.groupValues[1]
+            for (imagePath in allMatches) {
                 val resolvedFile = File(mdFile.parentFile, imagePath).canonicalFile
 
                 assertTrue(
@@ -156,5 +158,78 @@ class OnlineUserGuideContractTest {
                 enAnchors
             )
         }
+    }
+
+    @Test
+    fun testGermanGuide_usesInformalDuPronouns() {
+        val deDir = findRepoRootFile("docs/guide/de")
+        val formalPronounsRegex = Regex("""\b(Sie|Ihnen|Ihre|Ihrem|Ihren|Ihres)\b""")
+
+        val germanMarkdownFiles = deDir.walkTopDown().filter { it.extension == "md" }.toList()
+        assertTrue("Expected German markdown files in docs/guide/de/", germanMarkdownFiles.isNotEmpty())
+
+        val violations = mutableListOf<String>()
+        for (file in germanMarkdownFiles) {
+            val lines = file.readLines()
+            for ((index, line) in lines.withIndex()) {
+                val match = formalPronounsRegex.find(line)
+                if (match != null) {
+                    violations.add("${file.name}:${index + 1}: found formal '${match.value}' in \"${line.trim()}\"")
+                }
+            }
+        }
+
+        assertTrue(
+            "German user guide must consistently use informal 'Du' address. Violations found:\n${violations.joinToString("\n")}",
+            violations.isEmpty()
+        )
+    }
+
+    @Test
+    fun testGuide_forbidsHallucinatedFeatures() {
+        val guideDir = findRepoRootFile("docs/guide")
+        val forbiddenTerms = listOf(
+            "TrainingPeaks",
+            "ACTIVITY_RECOGNITION",
+            "Sprachansagen",
+            "Text-to-Speech",
+            "text-to-speech",
+            "1x, 2x, 3x",
+            "1x/2x/3x",
+            "Eigengewicht des Fahrrads",
+            "bike tare weight"
+        )
+
+        val markdownFiles = guideDir.walkTopDown().filter { it.extension == "md" }.toList()
+        val violations = mutableListOf<String>()
+
+        for (file in markdownFiles) {
+            val content = file.readText()
+            for (term in forbiddenTerms) {
+                if (content.contains(term, ignoreCase = true)) {
+                    violations.add("${file.name} contains forbidden hallucinated feature: '$term'")
+                }
+            }
+        }
+
+        assertTrue(
+            "User guide must not contain hallucinated features. Violations:\n${violations.joinToString("\n")}",
+            violations.isEmpty()
+        )
+    }
+
+    @Test
+    fun testImageAssets_fileSizesWithinLimit() {
+        val imgDir = findRepoRootFile("docs/guide/img")
+        val images = imgDir.listFiles { file -> file.isFile && (file.extension == "png" || file.extension == "jpg") }
+            ?: emptyArray()
+
+        assertTrue("Expected image assets in docs/guide/img", images.isNotEmpty())
+
+        val oversizedImages = images.filter { it.length() > 1_000_000 }
+        assertTrue(
+            "Image assets must be under 1 MB to prevent layout bloating. Oversized: ${oversizedImages.map { "${it.name}: ${it.length()} bytes" }}",
+            oversizedImages.isEmpty()
+        )
     }
 }

@@ -18,8 +18,10 @@
 
 package com.atrainingtracker.trainingtracker.ui.map
 
+import android.app.Application
 import android.content.res.Configuration
 import android.graphics.Bitmap
+import android.net.Uri
 import kotlin.math.abs
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -39,6 +41,7 @@ import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.Dp
@@ -56,6 +59,8 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThreshol
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneCardDisplayMode
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionData
 import com.atrainingtracker.trainingtracker.helpers.combineWorkoutAndShare
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
 import com.atrainingtracker.trainingtracker.ui.components.core.GlobalTelemetryZoomToolbar
 import com.atrainingtracker.trainingtracker.ui.components.core.GlobalTelemetryZoomToolbarDefaults
@@ -109,7 +114,9 @@ fun MapDetailLayout(
     climbs: List<Climb> = emptyList(),
     externalScrubDistance: Double? = null,
     hrZoneThresholds: HeartRateZoneThresholds? = null,
-    powerZoneThresholds: PowerZoneThresholds? = null
+    powerZoneThresholds: PowerZoneThresholds? = null,
+    workoutData: WorkoutData? = null,
+    onCreateLapClick: ((Double) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -124,6 +131,7 @@ fun MapDetailLayout(
     val analyticsLayer = rememberGraphicsLayer()
 
     var isSharing by remember { mutableStateOf(false) }
+    var showShareModeSheet by remember { mutableStateOf(false) }
     var selectedDistance by remember { mutableStateOf<Double?>(null) }
 
     LaunchedEffect(externalScrubDistance) {
@@ -203,22 +211,43 @@ fun MapDetailLayout(
 
     val scrubbingOverlay: @Composable BoxScope.() -> Unit = {
         if (showZoomControls && selectedDistance != null && activeScrubPoint != null) {
-            ScrubbingTelemetryBadge(
-                point = activeScrubPoint,
-                bSportType = bSportType,
-                altitude = activeScrubAltitude,
-                unit = unit,
-                xAxisDomain = if (showElevationProfile) {
-                    if (isElevationTimeDomain) ProfileXAxisDomain.TIME else ProfileXAxisDomain.DISTANCE
-                } else {
-                    if (isTelemetryTimeDomain) ProfileXAxisDomain.TIME else ProfileXAxisDomain.DISTANCE
-                },
+            Row(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(top = 2.dp, end = 8.dp),
-                hrZoneThresholds = hrThresholds,
-                powerZoneThresholds = powerThresholds
-            )
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                if (onCreateLapClick != null) {
+                    FilledTonalIconButton(
+                        onClick = { onCreateLapClick(selectedDistance!!) },
+                        modifier = Modifier.size(32.dp),
+                        colors = IconButtonDefaults.filledTonalIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = TTAlpha.Overlay),
+                            contentColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_lap_add),
+                            contentDescription = stringResource(R.string.split_lap_action),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+                ScrubbingTelemetryBadge(
+                    point = activeScrubPoint,
+                    bSportType = bSportType,
+                    altitude = activeScrubAltitude,
+                    unit = unit,
+                    xAxisDomain = if (showElevationProfile) {
+                        if (isElevationTimeDomain) ProfileXAxisDomain.TIME else ProfileXAxisDomain.DISTANCE
+                    } else {
+                        if (isTelemetryTimeDomain) ProfileXAxisDomain.TIME else ProfileXAxisDomain.DISTANCE
+                    },
+                    hrZoneThresholds = hrThresholds,
+                    powerZoneThresholds = powerThresholds
+                )
+            }
         }
     }
 
@@ -270,7 +299,15 @@ fun MapDetailLayout(
 
             // SHARE BUTTON
             Surface(
-                onClick = { if (!isSharing) isSharing = true },
+                onClick = {
+                    if (!isSharing) {
+                        if (workoutData != null) {
+                            showShareModeSheet = true
+                        } else {
+                            isSharing = true
+                        }
+                    }
+                },
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(16.dp)
@@ -892,6 +929,22 @@ fun MapDetailLayout(
                 }
             }
         }
+    }
+
+    if (showShareModeSheet && workoutData != null) {
+        val attachedPhotos by produceState<List<Uri>>(initialValue = emptyList(), workoutData.id) {
+            value = withContext(Dispatchers.IO) {
+                WorkoutRepository.getInstance(context.applicationContext as Application)
+                    .getWorkoutPhotos(workoutData.id)
+                    .map { it.uri }
+            }
+        }
+        WorkoutShareBottomSheet(
+            workoutData = workoutData,
+            onDismissRequest = { showShareModeSheet = false },
+            onSelectMapSnapshot = { isSharing = true },
+            attachedPhotos = attachedPhotos
+        )
     }
 }
 }

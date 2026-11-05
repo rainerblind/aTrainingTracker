@@ -15,7 +15,9 @@
 
 package com.atrainingtracker.trainingtracker.ui.dialogs
 
+import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.net.Uri
 import io.mockk.every
@@ -26,6 +28,7 @@ import io.mockk.slot
 import io.mockk.unmockkConstructor
 import io.mockk.unmockkStatic
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -68,6 +71,93 @@ class FirstJubileeCelebrationDialogTest {
 
         // 5. Store fallback URI
         assertTrue("Action helper must have Play Store market fallback", content.contains("market://details?id="))
+
+        // 6. Context unwrapping helper
+        assertTrue("Dialog file must contain findActivity helper", content.contains("fun Context.findActivity()"))
+
+        // 7. BuildConfig.DEBUG immediate fallback
+        assertTrue("Action helper must check BuildConfig.DEBUG", content.contains("BuildConfig.DEBUG"))
+
+        // 8. Rapid completion (< 300ms) review flow fallback
+        assertTrue("Action helper must handle rapid completion fallback", content.contains("< 300"))
+    }
+
+    @Test
+    fun testContext_findActivity_unwrapsContextWrappers() {
+        val mockActivity = mockk<Activity>()
+        assertEquals(mockActivity, mockActivity.findActivity())
+
+        val wrapper1 = mockk<ContextWrapper> {
+            every { baseContext } returns mockActivity
+        }
+        assertEquals(mockActivity, wrapper1.findActivity())
+
+        val wrapper2 = mockk<ContextWrapper> {
+            every { baseContext } returns wrapper1
+        }
+        assertEquals(mockActivity, wrapper2.findActivity())
+
+        val plainContext = mockk<Context>()
+        val nonActivityWrapper = mockk<ContextWrapper> {
+            every { baseContext } returns plainContext
+        }
+        assertNull(plainContext.findActivity())
+        assertNull(nonActivityWrapper.findActivity())
+    }
+
+    @Test
+    fun testFirstJubileeActionHelper_debugBuildLaunchesPlayStoreFallback() {
+        mockkStatic(Uri::class)
+        val mockMarketUri = mockk<Uri>(relaxed = true)
+        every { Uri.parse("market://details?id=com.atrainingtracker") } returns mockMarketUri
+        every { mockMarketUri.toString() } returns "market://details?id=com.atrainingtracker"
+
+        mockkConstructor(Intent::class)
+        every { anyConstructed<Intent>().addFlags(any()) } answers { self as Intent }
+        every { anyConstructed<Intent>().action } returns Intent.ACTION_VIEW
+
+        val mockContext = mockk<Context>(relaxed = true)
+        every { mockContext.packageName } returns "com.atrainingtracker.debug"
+
+        val intentSlot = slot<Intent>()
+        every { mockContext.startActivity(capture(intentSlot)) } returns Unit
+
+        FirstJubileeActionHelper.launchInAppReviewOrStore(mockContext)
+
+        assertTrue("Intent must be captured", intentSlot.isCaptured)
+        val intent = intentSlot.captured
+        assertEquals(Intent.ACTION_VIEW, intent.action)
+
+        unmockkConstructor(Intent::class)
+        unmockkStatic(Uri::class)
+    }
+
+    @Test
+    fun testFirstJubileeActionHelper_openPlayStorePage_fallsBackToWebWhenMarketThrows() {
+        mockkStatic(Uri::class)
+        val mockMarketUri = mockk<Uri>(relaxed = true)
+        val mockWebUri = mockk<Uri>(relaxed = true)
+        every { Uri.parse("market://details?id=com.atrainingtracker") } returns mockMarketUri
+        every { Uri.parse("https://play.google.com/store/apps/details?id=com.atrainingtracker") } returns mockWebUri
+
+        mockkConstructor(Intent::class)
+        every { anyConstructed<Intent>().addFlags(any()) } answers { self as Intent }
+        every { anyConstructed<Intent>().action } returns Intent.ACTION_VIEW
+
+        val mockContext = mockk<Context>(relaxed = true)
+        every { mockContext.packageName } returns "com.atrainingtracker"
+
+        val capturedIntents = mutableListOf<Intent>()
+        every { mockContext.startActivity(capture(capturedIntents)) } throws android.content.ActivityNotFoundException() andThen Unit
+
+        FirstJubileeActionHelper.openPlayStorePage(mockContext)
+
+        assertEquals(2, capturedIntents.size)
+        assertEquals(Intent.ACTION_VIEW, capturedIntents[0].action)
+        assertEquals(Intent.ACTION_VIEW, capturedIntents[1].action)
+
+        unmockkConstructor(Intent::class)
+        unmockkStatic(Uri::class)
     }
 
     @Test

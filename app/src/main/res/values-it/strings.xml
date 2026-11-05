@@ -1650,6 +1650,13 @@
     <string name="import_fit_progress">Importazione dei file FIT (%1$d di %2$d)…</string>
     <string name="import_fit_summary_success">%1$d allenamenti importati con successo (%2$d duplicati ignorati).</string>
     <string name="import_fit_summary_with_errors">%1$d allenamenti importati, %2$d duplicati ignorati, %3$d non riusciti.</string>
+    <!-- Strava Bulk Export Importer (ATT-4957 / REQ-MIG-048) -->
+    <string name="import_strava_archive_title">Esportazione in blocco Strava (ZIP)</string>
+    <string name="import_strava_archive_description">Importa allenamenti da un archivio di esportazione Strava con metadati, descrizioni ed equipaggiamento (.zip).</string>
+    <string name="import_strava_archive_button">Seleziona archivio Strava (ZIP)</string>
+    <string name="import_strava_archive_progress">Importazione dell\'archivio Strava in corso (%1$d di %2$d)…</string>
+    <string name="import_strava_archive_summary_success">%1$d allenamenti Strava importati con successo (%2$d duplicati saltati).</string>
+    <string name="import_strava_archive_summary_with_errors">%1$d allenamenti Strava importati, %2$d duplicati saltati, %3$d non riusciti.</string>
     <!-- TCX & GPX Importer (ATT-2623 / REQ-UI-293) -->
     <string name="import_tcx_title">Importa file TCX</string>
     <string name="import_tcx_description">Importa allenamenti da file Training Center XML (.tcx).</string>
@@ -2127,6 +2134,20 @@
     <string name="marker_summit">Cima</string>
     <string name="marker_lap_start">Inizio giro</string>
     <string name="marker_lap_end">Fine giro</string>
+    <string name="split_lap_action">Dividi giro sulla mappa</string>
+    <string name="create_lap_on_map_title">Crea giro sulla mappa</string>
+    <string name="split_lap_confirm">Dividi giro</string>
+    <string name="split_lap_preview_before">Parte 1 (Prima divisione)</string>
+    <string name="split_lap_preview_after">Parte 2 (Nuovo giro)</string>
+    <string name="split_lap_slider_label">Posizione di divisione</string>
+    <string name="split_lap_success">Giro diviso con successo</string>
+    <string name="move_lap_boundary_action">Sposta limite giro</string>
+    <string name="move_lap_boundary_title">Sposta limite giro sulla mappa</string>
+    <string name="move_lap_boundary_confirm">Sposta limite</string>
+    <string name="move_lap_boundary_slider_label">Posizione limite</string>
+    <string name="move_lap_boundary_lap_k_preview">Giro %1$d (Precedente)</string>
+    <string name="move_lap_boundary_lap_k_plus_1_preview">Giro %1$d (Successivo)</string>
+    <string name="move_lap_boundary_select_boundary">Limite: Giro %1$d / Giro %2$d</string>
     <string name="cd_fastest_split">Frazione più veloce</string>
     <string name="cd_switch_view_mode">Cambia modalità di visualizzazione</string>
     <string name="connect_with_strava">Connettiti con Strava</string>
@@ -2251,6 +2272,11 @@
     <string name="swap_dialog_message">Nel livello gratuito possono essere associati al massimo 2 dispositivi contemporaneamente (es. GPS + Barometro). Per associare \'%1$s\', deseleziona un dispositivo esistente o sblocca sensori illimitati con \'Paga quanto vuoi\'.</string>
     <string name="swap_dialog_action_swap">Sostituisci &amp; associa</string>
     <string name="swap_dialog_action_unlock">Sblocca sensori illimitati</string>
+    <string name="keep_two_sensors_title">Seleziona 2 sensori attivi</string>
+    <string name="keep_two_sensors_message">Il tuo abbonamento è scaduto e il piano gratuito supporta fino a 2 sensori attivi. Seleziona 2 sensori da mantenere attivi. I sensori in eccesso verranno dissociati senza cancellare dati di calibrazione o equipaggiamento.</string>
+    <string name="keep_two_sensors_selection_header">Sensori attivi (%1$d/%2$d):</string>
+    <string name="keep_two_sensors_action_confirm">Conferma selezione</string>
+    <string name="keep_two_sensors_action_unlock">Sblocca sensori illimitati</string>
     <string name="drawer_supporter">Sostenitore &amp; Pro</string>
     <string name="drawer_tier_diamond">◆ SPONSOR DIAMANTE • Sensori illimitati</string>
     <string name="drawer_tier_gold">★ PRO-SUPPORTER ORO</string>
@@ -2279,10 +2305,10 @@
     <string name="debug_jubilee_preview_subtitle">Testa il dialogo Material 3 senza alterare lo stato dei traguardi</string>
 
     <!-- Supporter N+1 Garage Detector (ATT-5299 / REQ-SET-088) -->
-    <string name="garage_detector_dialog_title_gold">Garage di Lega Oro rilevato! 🚴‍♂️</string>
-    <string name="garage_detector_dialog_title_diamond">Garage Diamante di classe mondiale! 💎</string>
-    <string name="garage_detector_dialog_message_gold">Congratulazioni per le tue %1$d bici, %2$d scarpe e %3$d sensori (inclusi %4$d potenziometri) in aTrainingTracker! 🚴‍♂️✨ La tua attrezzatura è da professionisti, ma il tuo stato è %5$s. Passa al livello Sostenitore Oro!</string>
-    <string name="garage_detector_dialog_message_diamond">Attrezzatura incredibile: %1$d bici, %2$d scarpe e %3$d sensori (inclusi %4$d potenziometri) in aTrainingTracker! 💎✨ Il tuo garage è di classe mondiale, ma il tuo stato è %5$s. Corona il tuo parco mezzi con Sponsor Diamante!</string>
+    <string name="garage_detector_dialog_title_gold">Garage di Lega Oro rilevato!</string>
+    <string name="garage_detector_dialog_title_diamond">Garage Diamante di classe mondiale!</string>
+    <string name="garage_detector_dialog_message_gold">Congratulazioni per le tue %1$d bici, %2$d scarpe e %3$d sensori (inclusi %4$d potenziometri) in aTrainingTracker! La tua attrezzatura è da professionisti, ma il tuo stato è %5$s. Passa al livello Sostenitore Oro!</string>
+    <string name="garage_detector_dialog_message_diamond">Attrezzatura incredibile: %1$d bici, %2$d scarpe e %3$d sensori (inclusi %4$d potenziometri) in aTrainingTracker! Il tuo garage è di classe mondiale, ma il tuo stato è %5$s. Corona il tuo parco mezzi con Sponsor Diamante!</string>
     <string name="garage_detector_action_upgrade_gold">Passa a Oro Pro (50 € / anno)</string>
     <string name="garage_detector_action_upgrade_diamond">Passa a Sponsor Diamant (100 € / anno)</string>
     <string name="garage_detector_action_dismiss">Più tardi / Continua l\'allenamento</string>
@@ -2299,8 +2325,25 @@
     <string name="launcher_icon_silver">Pro-Supporter Argento</string>
     <string name="launcher_icon_gold">Pro-Supporter Oro</string>
     <string name="launcher_icon_diamond">Sponsor Diamante</string>
-    <string name="supporter_quick_picker_title">Selettore Icona Supporter</string>
-    <string name="supporter_quick_picker_thank_you">Grazie per il supporto a oltre 15 anni di sviluppo indipendente senza pubblicità!</string>
     <string name="supporter_status_emblem_cd">Emblema di stato Supporter</string>
     <string name="share_watermark_tracked_with">Registrato con aTrainingTracker</string>
+    <!-- Workout Share Mode & Photo Track Overlay (REQ-UI-447 / ATT-30) -->
+    <string name="share_workout_title">Condividi allenamento</string>
+    <string name="share_option_map_snapshot">Istantanea mappa e analisi</string>
+    <string name="share_option_map_snapshot_desc">Riepilogo con mappa, profilo altimetrico e metriche di prestazione</string>
+    <string name="share_option_photo_track">Foto con percorso e statistiche</string>
+    <string name="share_option_photo_track_desc">Sagoma del percorso GPS e metriche chiave sovrapposte alla tua foto</string>
+    <string name="share_choose_photo">Scegli foto</string>
+    <string name="share_preview_title">Anteprima di condivisione</string>
+    <string name="share_cta_button">Condividi</string>
+    <string name="share_error_no_gps">Nessun percorso GPS registrato per questo allenamento</string>
+    <string name="share_error_photo_load">Impossibile caricare la foto selezionata</string>
+    <!-- Workout Photos (REQ-UI-448 / ATT-43) -->
+    <string name="workout_photos_title">Foto</string>
+    <string name="workout_photos_add">Aggiungi foto</string>
+    <string name="workout_photos_empty">Nessuna foto allegata</string>
+    <string name="workout_photos_delete">Elimina foto</string>
+    <string name="workout_photos_delete_confirm">Vuoi eliminare questa foto dall\'allenamento?</string>
+    <string name="workout_photos_share_overlay">Condividi con traccia in sovrimpressione</string>
+    <string name="workout_photos_marker_title">Foto</string>
 </resources>

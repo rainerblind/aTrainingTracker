@@ -27,7 +27,7 @@ package com.atrainingtracker.trainingtracker.migration
 object DatabaseSchemaRegistry {
 
     private val SUPPORTED_DB_VERSIONS: Map<String, Int> = mapOf(
-        "WorkoutSummaries.db" to 25,
+        "WorkoutSummaries.db" to com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummariesDbHelper.DB_VERSION,
         "WorkoutSamples.db" to 1,
         "Laps.db" to 2,
         "Routes.db" to 10,

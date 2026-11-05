@@ -47,7 +47,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.atrainingtracker.trainingtracker.monetization.ProFeatureManager
 import com.atrainingtracker.trainingtracker.monetization.SupporterTier
-import com.atrainingtracker.trainingtracker.ui.branding.SupporterQuickIconPickerDialog
 import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.LocationCalibrationStatus
 
 
@@ -62,11 +61,11 @@ fun SensorStatus(
     onDeviceClick: (Long) -> Unit = {},
     onCalibrateAltitude: ((referenceAltitudeMeters: Double, locationName: String?, saveAsKnownLocation: Boolean) -> Unit)? = null,
     onMenuClick: (() -> Unit)? = null,
+    onSupporterClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     isCompactLandscape: Boolean = false
 ) {
     var selectedSensor by remember { mutableStateOf<SensorType?>(null) }
-    var showSupporterDialog by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val proFeatureManager = remember(context) { ProFeatureManager.getInstance(context.applicationContext) }
@@ -141,7 +140,8 @@ fun SensorStatus(
             if (supporterEmblemRes != null) {
                 Spacer(modifier = Modifier.width(6.dp))
                 IconButton(
-                    onClick = { showSupporterDialog = true },
+                    onClick = { onSupporterClick?.invoke() },
+                    enabled = onSupporterClick != null,
                     modifier = Modifier.size(24.dp)
                 ) {
                     Icon(
@@ -160,23 +160,26 @@ fun SensorStatus(
         Row(
             modifier = modifier
                 .fillMaxWidth()
-                .padding(vertical = 4.dp),
+                .padding(
+                    horizontal = SENSOR_STATUS_PORTRAIT_HORIZONTAL_PADDING,
+                    vertical = SENSOR_STATUS_PORTRAIT_VERTICAL_PADDING
+                ),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (onMenuClick != null) {
                 IconButton(
                     onClick = onMenuClick,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(SENSOR_STATUS_ACTION_BUTTON_SIZE)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Menu,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(SENSOR_STATUS_ACTION_ICON_SIZE)
                     )
                 }
             } else {
-                Spacer(modifier = Modifier.size(24.dp))
+                Spacer(modifier = Modifier.size(SENSOR_STATUS_ACTION_BUTTON_SIZE))
             }
 
             Box(
@@ -209,18 +212,19 @@ fun SensorStatus(
 
             if (supporterEmblemRes != null) {
                 IconButton(
-                    onClick = { showSupporterDialog = true },
-                    modifier = Modifier.size(24.dp)
+                    onClick = { onSupporterClick?.invoke() },
+                    enabled = onSupporterClick != null,
+                    modifier = Modifier.size(SENSOR_STATUS_ACTION_BUTTON_SIZE)
                 ) {
                     Icon(
                         painter = safePainterResource(id = supporterEmblemRes, fallback = Icons.Default.Sensors),
                         contentDescription = stringResource(R.string.supporter_status_emblem_cd),
                         tint = Color.Unspecified,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(SENSOR_STATUS_ACTION_ICON_SIZE)
                     )
                 }
             } else {
-                Spacer(modifier = Modifier.size(24.dp))
+                Spacer(modifier = Modifier.size(SENSOR_STATUS_ACTION_BUTTON_SIZE))
             }
         }
     }
@@ -242,16 +246,18 @@ fun SensorStatus(
             onDismiss = { selectedSensor = null }
         )
     }
-
-    if (showSupporterDialog) {
-        SupporterQuickIconPickerDialog(
-            onDismiss = { showSupporterDialog = false }
-        )
-    }
 }
 
 // Inactive sensor content alpha adhering to Material Design 3 disabled content standards (REQ-UI-173)
 internal const val INACTIVE_SENSOR_ALPHA = 0.38f
+
+// Option A: 16 dp total display offset for cockpit top action icons (REQ-UI-451 / ATT-5422).
+// Outer Surface in TrackingTabsScreen provides 4.dp, outer Row provides 8.dp horizontal padding,
+// and 32.dp IconButton provides 4.dp internal icon inset for the 24.dp icon (4 + 8 + 4 = 16.dp).
+internal val SENSOR_STATUS_PORTRAIT_HORIZONTAL_PADDING = 8.dp
+internal val SENSOR_STATUS_PORTRAIT_VERTICAL_PADDING = 4.dp
+internal val SENSOR_STATUS_ACTION_BUTTON_SIZE = 32.dp
+internal val SENSOR_STATUS_ACTION_ICON_SIZE = 24.dp
 
 // --- Previews ---
 

@@ -242,6 +242,23 @@ fun ImportBackupTabsScreen(
         }
     }
 
+    val pickStravaArchiveLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            val fileName = ImportFileValidator.resolveDisplayName(context, uri)
+            if (ImportFileValidator.isMatchingFormat(fileName, "zip")) {
+                viewModel.importStravaArchive(context, uri)
+            } else {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.invalid_workout_file_format, "ZIP"),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
     LaunchedEffect(uiState) {
         val state = uiState
         if (state is BackupRestoreViewModel.UiState.MappingRequired) {
@@ -332,6 +349,9 @@ fun ImportBackupTabsScreen(
                             } else {
                                 showDropboxDisconnectedDialog = true
                             }
+                        },
+                        onStravaArchiveClick = {
+                            pickStravaArchiveLauncher.launch(arrayOf("application/zip", "application/x-zip-compressed", "*/*"))
                         }
                     )
                     1 -> BackupTabContent(
@@ -1254,17 +1274,66 @@ private fun FormatImportCard(
 }
 
 @Composable
+private fun StravaArchiveImportCard(
+    title: String,
+    description: String,
+    buttonText: String,
+    onClick: () -> Unit,
+    isBusy: Boolean
+) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = onClick,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isBusy
+            ) {
+                Icon(Icons.Default.CloudUpload, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(buttonText)
+            }
+        }
+    }
+}
+
+@Composable
 private fun ImportTabContent(
     isBusy: Boolean,
     isDropboxConnected: Boolean,
     onLocalImportClick: (format: String) -> Unit,
     onFolderImportClick: (format: String) -> Unit,
-    onDropboxScanClick: (format: String) -> Unit
+    onDropboxScanClick: (format: String) -> Unit,
+    onStravaArchiveClick: () -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // --- Strava Bulk Export Card (REQ-MIG-048) ---
+        StravaArchiveImportCard(
+            title = stringResource(R.string.import_strava_archive_title),
+            description = stringResource(R.string.import_strava_archive_description),
+            buttonText = stringResource(R.string.import_strava_archive_button),
+            onClick = onStravaArchiveClick,
+            isBusy = isBusy
+        )
+
         // --- FIT Importer Card (REQ-DAT-019 / REQ-UI-293 / REQ-UI-362 / REQ-UI-363) ---
         FormatImportCard(
             title = stringResource(R.string.import_fit_title),

@@ -1851,6 +1851,13 @@
     <string name="import_fit_progress">Importing FIT files (%1$d of %2$d)…</string>
     <string name="import_fit_summary_success">Successfully imported %1$d workouts (%2$d duplicates skipped).</string>
     <string name="import_fit_summary_with_errors">Imported %1$d workouts, %2$d duplicates skipped, %3$d failed.</string>
+    <!-- Strava Bulk Export Importer (ATT-4957 / REQ-MIG-048) -->
+    <string name="import_strava_archive_title">Strava Bulk Export (ZIP)</string>
+    <string name="import_strava_archive_description">Import workouts from a Strava export archive with full metadata, descriptions, and gear (.zip).</string>
+    <string name="import_strava_archive_button">Select Strava Archive (ZIP)</string>
+    <string name="import_strava_archive_progress">Importing Strava archive (%1$d of %2$d)…</string>
+    <string name="import_strava_archive_summary_success">Successfully imported %1$d Strava workouts (%2$d duplicates skipped).</string>
+    <string name="import_strava_archive_summary_with_errors">Imported %1$d Strava workouts, %2$d duplicates skipped, %3$d failed.</string>
     <!-- TCX & GPX Importer (ATT-2623 / REQ-UI-293) -->
     <string name="import_tcx_title">Import TCX files</string>
     <string name="import_tcx_description">Import workouts from Training Center XML files (.tcx).</string>
@@ -2327,6 +2334,20 @@
     <string name="marker_summit">Summit</string>
     <string name="marker_lap_start">Lap Start</string>
     <string name="marker_lap_end">Lap End</string>
+    <string name="split_lap_action">Split Lap on Map</string>
+    <string name="create_lap_on_map_title">Create Lap on Map</string>
+    <string name="split_lap_confirm">Split Lap</string>
+    <string name="split_lap_preview_before">Part 1 (Before Split)</string>
+    <string name="split_lap_preview_after">Part 2 (New Lap)</string>
+    <string name="split_lap_slider_label">Split Position</string>
+    <string name="split_lap_success">Lap split successfully</string>
+    <string name="move_lap_boundary_action">Move Lap Boundary</string>
+    <string name="move_lap_boundary_title">Move Lap Boundary</string>
+    <string name="move_lap_boundary_confirm">Move Boundary</string>
+    <string name="move_lap_boundary_slider_label">Boundary Position</string>
+    <string name="move_lap_boundary_lap_k_preview">Lap %1$d (Previous)</string>
+    <string name="move_lap_boundary_lap_k_plus_1_preview">Lap %1$d (Next)</string>
+    <string name="move_lap_boundary_select_boundary">Boundary: Lap %1$d / Lap %2$d</string>
     <string name="cd_fastest_split">Fastest split</string>
     <string name="cd_switch_view_mode">Switch view mode</string>
     <string name="connect_with_strava">Connect with Strava</string>
@@ -2451,6 +2472,11 @@
     <string name="swap_dialog_message">The Free tier supports up to 2 simultaneously paired devices (e.g. GPS + Barometer). To pair \'%1$s\', unpair one existing device or unlock unlimited sensors via \'Pay what you want\'.</string>
     <string name="swap_dialog_action_swap">Swap &amp; Pair</string>
     <string name="swap_dialog_action_unlock">Unlock Unlimited Sensors</string>
+    <string name="keep_two_sensors_title">Keep 2 Active Sensors</string>
+    <string name="keep_two_sensors_message">Your subscription has ended and the Free tier supports up to 2 active sensors. Select 2 sensors to keep active. Excess sensors will be unpaired without deleting any calibration or equipment data.</string>
+    <string name="keep_two_sensors_selection_header">Active Sensors (%1$d/%2$d):</string>
+    <string name="keep_two_sensors_action_confirm">Keep Selected</string>
+    <string name="keep_two_sensors_action_unlock">Unlock Unlimited Sensors</string>
     <string name="drawer_supporter">Supporter &amp; Pro</string>
     <string name="drawer_tier_diamond">◆ DIAMOND SPONSOR • Unlimited Sensors</string>
     <string name="drawer_tier_gold">★ GOLD PRO-SUPPORTER</string>
@@ -2479,10 +2505,10 @@
     <string name="debug_jubilee_preview_subtitle">Tests the Material 3 Jubilee dialog without modifying lifetime milestone state</string>
 
     <!-- Supporter N+1 Garage Detector (ATT-5299 / REQ-SET-088) -->
-    <string name="garage_detector_dialog_title_gold">Gold-League Garage Detected! 🚴‍♂️</string>
-    <string name="garage_detector_dialog_title_diamond">World-Class Diamond Garage! 💎</string>
-    <string name="garage_detector_dialog_message_gold">Congratulations on your %1$d bikes, %2$d shoes, and %3$d sensors (incl. %4$d power meters) in aTrainingTracker! 🚴‍♂️✨ Your garage plays in the pro league, but your app status is %5$s. Treat your setup to Gold Pro-Supporter!</string>
-    <string name="garage_detector_dialog_message_diamond">Incredible setup: %1$d bikes, %2$d shoes, and %3$d sensors (incl. %4$d power meters) in aTrainingTracker! 💎✨ Your garage plays in the world-class league, but your app status is %5$s. Match your fleet with Diamond Sponsor!</string>
+    <string name="garage_detector_dialog_title_gold">Gold-League Garage Detected!</string>
+    <string name="garage_detector_dialog_title_diamond">World-Class Diamond Garage!</string>
+    <string name="garage_detector_dialog_message_gold">Congratulations on your %1$d bikes, %2$d shoes, and %3$d sensors (incl. %4$d power meters) in aTrainingTracker! Your garage plays in the pro league, but your app status is %5$s. Treat your setup to Gold Pro-Supporter!</string>
+    <string name="garage_detector_dialog_message_diamond">Incredible setup: %1$d bikes, %2$d shoes, and %3$d sensors (incl. %4$d power meters) in aTrainingTracker! Your garage plays in the world-class league, but your app status is %5$s. Match your fleet with Diamond Sponsor!</string>
     <string name="garage_detector_action_upgrade_gold">Upgrade to Gold Pro (50 € / yr)</string>
     <string name="garage_detector_action_upgrade_diamond">Upgrade to Diamond Sponsor (100 € / yr)</string>
     <string name="garage_detector_action_dismiss">Later / Keep Training</string>
@@ -2499,8 +2525,25 @@
     <string name="launcher_icon_silver">Silver Pro-Supporter</string>
     <string name="launcher_icon_gold">Gold Pro-Supporter</string>
     <string name="launcher_icon_diamond">Diamond Sponsor</string>
-    <string name="supporter_quick_picker_title">Supporter Icon Picker</string>
-    <string name="supporter_quick_picker_thank_you">Thank you for supporting 15+ years of ad-free indie development!</string>
     <string name="supporter_status_emblem_cd">Supporter Status Emblem</string>
     <string name="share_watermark_tracked_with">Tracked with aTrainingTracker</string>
+    <!-- Workout Share Mode & Photo Track Overlay (REQ-UI-447 / ATT-30) -->
+    <string name="share_workout_title">Share Workout</string>
+    <string name="share_option_map_snapshot">Map &amp; Analytics Snapshot</string>
+    <string name="share_option_map_snapshot_desc">Summary with map, elevation profile, and performance metrics</string>
+    <string name="share_option_photo_track">Photo with Track &amp; Stats</string>
+    <string name="share_option_photo_track_desc">GPS track silhouette and key metrics overlaid on your photo</string>
+    <string name="share_choose_photo">Choose Photo</string>
+    <string name="share_preview_title">Share Preview</string>
+    <string name="share_cta_button">Share</string>
+    <string name="share_error_no_gps">No GPS track recorded for this workout</string>
+    <string name="share_error_photo_load">Failed to load selected photo</string>
+    <!-- Workout Photos (REQ-UI-448 / ATT-43) -->
+    <string name="workout_photos_title">Photos</string>
+    <string name="workout_photos_add">Add Photos</string>
+    <string name="workout_photos_empty">No photos attached</string>
+    <string name="workout_photos_delete">Delete Photo</string>
+    <string name="workout_photos_delete_confirm">Do you want to delete this photo from the workout?</string>
+    <string name="workout_photos_share_overlay">Share with Track Overlay</string>
+    <string name="workout_photos_marker_title">Photo</string>
 </resources>

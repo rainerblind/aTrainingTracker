@@ -1,27 +1,53 @@
-# Chapter 6: Route Clustering & Automated Intelligence ("Lieblingsstrecken")
+# Chapter 6: Favorite Routes & Automatic Route Clustering
 
 <a id="automatic-clustering-engine"></a>
-## 6.1 The Autonomous Clustering Engine
 
-Athletes naturally establish favorite loops, commute routes, and threshold testing hills. aTrainingTracker uncovers these geographic patterns autonomously in the background:
+<table>
+<tr>
+<td width="65%" valign="top" markdown="1">
 
-- **Geometric Path Analysis**: Following workout completion, an offline spatial clustering algorithm (leveraging Fréchet distance and Hausdorff metric bounding) inspects the GPS track against your history.
-- **Cluster Synthesis (*Lieblingsstrecken*)**: When 2 or more activities share identical route corridors, they are automatically consolidated into an authoritative Route Cluster.
-- **Automated Activity Naming**: Assign a name to a cluster once (e.g. *"Lakeside 40k"* or *"Morning Commute"*), and all subsequent workouts matching that path inherit the descriptive title automatically.
+## 6.1 Automatic Route Recognition Engine
 
-![Cluster Details & Trajectory Popup](../img/06_cluster_expanded.png)
+Athletes naturally develop regular training circuits, commuting corridors, and weekend loops. **aTrainingTracker** detects and groups these recurring courses completely autonomously:
+
+- **Autonomous Spatial Clustering**: After completing any workout, an onboard spatial matching engine compares the recorded trajectory against your historic GPS database.
+- **Favorite Route (*Lieblingsstrecken*) Grouping**: When identical courses are traversed repeatedly, they are automatically organized into cohesive route clusters.
+- **Auto-Naming with Sequential Numbering**:
+  - Name a favorite route once (e.g. *"Zum Bäcker"*), and every subsequent session on that trajectory inherits that descriptive title.
+  - Sequential workout iteration counters (e.g. *"Zum Bäcker #44"*) and milestone celebration jubilee dialogs track your long-term athletic consistency.
+
+</td>
+<td width="35%" valign="top" align="center">
+  <a href="../img/06_cluster_expanded.png"><img src="../img/06_cluster_expanded.png" width="240" alt="Favorite Routes Overview" /></a>
+  <br/><sub><em>Overview list of automatically clustered favorite routes</em></sub>
+</td>
+</tr>
+</table>
 
 ---
 
 <a id="cluster-map-and-history"></a>
-## 6.2 Cluster Map Layers & Historical Performance Tracking
 
-- **Trajectory Heatmap Overlays**: The cluster map visualizes recurring routes with density-weighted polylines, revealing your personal athletic training footprint.
-- **Longitudinal Trend Curves**: Inspect progression charts tracking average speed, normalized power, and heart rate efficiency across identical circuits over seasons and years.
-- **Sport-Specific Filtering**: Isolate running loops from cycling routes to gauge discipline-specific aerobic adaptations cleanly.
+<table>
+<tr>
+<td width="65%" valign="top" markdown="1">
 
-![Cluster Trajectory Heatmap on Map](../img/06_cluster_heatmap.png)
+## 6.2 Cluster Detail View & Longitudinal Performance
+
+Tapping on any cluster opens a comprehensive retrospective inspection view:
+
+- **Performance Progression (Duration vs. Pace)**: Compare your completion times and velocities across every historical repetition of that specific loop.
+- **Automated Outlier Detection**: Sessions interrupted by excessive traffic, shopping stops, or mechanical punctures are automatically tagged as **Outlier** (*Ausreißer*) to keep benchmark averages clean.
+- **Aggregate Analytics & Track Heatmaps**: View best times, lifetime mileage, elevation gain, and repeating polyline heatmaps overlaid directly on the map.
+
+</td>
+<td width="35%" valign="top" align="center">
+  <a href="../img/06_cluster_heatmap.png"><img src="../img/06_cluster_heatmap.png" width="240" alt="Cluster Detail View & Heatmap" /></a>
+  <br/><sub><em>Performance curve with outlier tagging & polyline heatmap</em></sub>
+</td>
+</tr>
+</table>
 
 ---
 
-[Previous: Maps, GPX Routes & Segments](05-maps-routes-climbs-segments.md) | [Next: Physiology & Training Zones](07-physiology-training-zones.md)
+[Previous Chapter: Maps, Routes & Segments](05-maps-routes-climbs-segments.md) | [Next Chapter: Physiology & Training Zones](07-physiology-training-zones.md) | [Back to Table of Contents](index.md)

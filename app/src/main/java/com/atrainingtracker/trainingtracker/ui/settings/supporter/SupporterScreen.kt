@@ -60,7 +60,6 @@ import com.atrainingtracker.trainingtracker.monetization.ProFeatureManager
 import com.atrainingtracker.trainingtracker.monetization.SupporterBasePlan
 import com.atrainingtracker.trainingtracker.monetization.SupporterTier
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
-import com.atrainingtracker.trainingtracker.ui.branding.SupporterQuickIconPickerDialog
 
 /**
  * "Pay what you want" Supporter screen offering 5 subscription base plans
@@ -79,7 +78,6 @@ fun SupporterScreen(
     val effectiveTier by proFeatureManager.effectiveTier.collectAsState()
     val isPioneer by settingsDataStore.isPioneerEarlyAdopter.collectAsState(initial = false)
     val pioneerSinceYear by proFeatureManager.pioneerSinceYear.collectAsState()
-    var showIconPicker by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -123,23 +121,9 @@ fun SupporterScreen(
             // Pioneer recognition banner
             if (isPioneer || effectiveTier == SupporterTier.PIONEER) {
                 PioneerStatusBanner(sinceYear = pioneerSinceYear)
-                Spacer(modifier = Modifier.height(10.dp))
-                OutlinedButton(
-                    onClick = { showIconPicker = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(text = stringResource(R.string.supporter_quick_picker_title))
-                }
                 Spacer(modifier = Modifier.height(16.dp))
             } else if (effectiveTier.isPro) {
                 ActiveTierBanner(tier = effectiveTier)
-                Spacer(modifier = Modifier.height(10.dp))
-                OutlinedButton(
-                    onClick = { showIconPicker = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(text = stringResource(R.string.supporter_quick_picker_title))
-                }
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
@@ -199,12 +183,6 @@ fun SupporterScreen(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-        }
-
-        if (showIconPicker) {
-            SupporterQuickIconPickerDialog(
-                onDismiss = { showIconPicker = false }
-            )
         }
     }
 }

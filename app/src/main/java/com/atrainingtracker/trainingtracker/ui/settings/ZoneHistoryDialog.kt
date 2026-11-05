@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.database.ZoneSnapshotEntry
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
+import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import java.text.DateFormat
 import java.util.Date
@@ -72,86 +73,66 @@ fun ZoneHistoryDialog(
         SettingsDataStore.ZoneType.PWR_BIKE -> stringResource(R.string.tab_pwr_bike)
     }
 
-    AlertDialog(
+    AppModalBottomSheet(
+        title = "${stringResource(R.string.zone_history_title)}: $zoneTypeName",
         onDismissRequest = onDismiss,
-        title = {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+        icon = Icons.Default.CalendarToday,
+        scrollable = false,
+        actions = {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Text(
-                    text = "${stringResource(R.string.zone_history_title)}: $zoneTypeName",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                IconButton(onClick = onDismiss) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = stringResource(R.string.cancel)
-                    )
-                }
-            }
-        },
-        text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 200.dp, max = 450.dp)
-            ) {
-                Button(
-                    onClick = { isAddingNew = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.zone_history_add_snapshot))
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                if (history.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = stringResource(R.string.zone_history_empty),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(history, key = { it.id }) { snapshot ->
-                            ZoneSnapshotCard(
-                                snapshot = snapshot,
-                                onEdit = { editingEntry = snapshot },
-                                onDelete = { entryToDelete = snapshot }
-                            )
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.close))
             }
         }
-    )
+    ) {
+        Button(
+            onClick = { isAddingNew = true },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(stringResource(R.string.zone_history_add_snapshot))
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        if (history.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(160.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = stringResource(R.string.zone_history_empty),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 400.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(history, key = { it.id }) { snapshot ->
+                    ZoneSnapshotCard(
+                        snapshot = snapshot,
+                        onEdit = { editingEntry = snapshot },
+                        onDelete = { entryToDelete = snapshot }
+                    )
+                }
+            }
+        }
+    }
 
     if (isAddingNew) {
         val initialBoundaries = history.firstOrNull()?.boundaries
@@ -305,91 +286,27 @@ fun ZoneSnapshotEditDialog(
         DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(selectedTimestampMs))
     }
 
-    AlertDialog(
+    AppModalBottomSheet(
+        title = stringResource(
+            if (isNew) R.string.zone_history_add_snapshot else R.string.zone_history_edit_snapshot
+        ),
         onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = stringResource(
-                    if (isNew) R.string.zone_history_add_snapshot else R.string.zone_history_edit_snapshot
-                )
-            )
-        },
-        text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-            ) {
-                // Date Selector
-                OutlinedCard(
-                    onClick = { showDatePicker = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = stringResource(R.string.zone_history_date_label),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = dateFormatted,
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                        Icon(
-                            imageVector = Icons.Default.CalendarToday,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Threshold Inputs
-                boundaryInputs.forEachIndexed { index, valueStr ->
-                    val labelRes = zoneLabels.getOrElse(index) { R.string.zone_1_label }
-                    OutlinedTextField(
-                        value = valueStr,
-                        onValueChange = { newVal ->
-                            boundaryInputs[index] = newVal.filter { it.isDigit() }
-                            errorMessage = null
-                        },
-                        label = { Text(stringResource(labelRes)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        singleLine = true
-                    )
-                }
-
-                errorMessage?.let { err ->
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = err,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-            }
-        },
-        confirmButton = {
+        icon = Icons.Default.Edit,
+        scrollable = true,
+        actions = {
             val errorMonotonicTemplate = stringResource(R.string.zone_history_error_monotonic)
             TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(stringResource(R.string.cancel))
+            }
+            Button(
                 onClick = {
                     val parsed = boundaryInputs.mapNotNull { it.toIntOrNull() }
                     if (parsed.size != zoneType.boundaryCount) {
                         errorMessage = "Please enter all ${zoneType.boundaryCount} thresholds"
-                        return@TextButton
+                        return@Button
                     }
                     var monotonic = parsed.first() > 0
                     for (i in 0 until parsed.size - 1) {
@@ -400,20 +317,77 @@ fun ZoneSnapshotEditDialog(
                     }
                     if (!monotonic) {
                         errorMessage = String.format(errorMonotonicTemplate, parsed.joinToString(" < "))
-                        return@TextButton
+                        return@Button
                     }
                     onConfirm(selectedTimestampMs, parsed)
-                }
+                },
+                modifier = Modifier.weight(1f)
             ) {
                 Text(stringResource(R.string.zone_history_save_snapshot))
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
+        }
+    ) {
+        // Date Selector
+        OutlinedCard(
+            onClick = { showDatePicker = true },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = stringResource(R.string.zone_history_date_label),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = dateFormatted,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Default.CalendarToday,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
             }
         }
-    )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Threshold Inputs
+        boundaryInputs.forEachIndexed { index, valueStr ->
+            val labelRes = zoneLabels.getOrElse(index) { R.string.zone_1_label }
+            OutlinedTextField(
+                value = valueStr,
+                onValueChange = { newVal ->
+                    boundaryInputs[index] = newVal.filter { it.isDigit() }
+                    errorMessage = null
+                },
+                label = { Text(stringResource(labelRes)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                singleLine = true
+            )
+        }
+
+        errorMessage?.let { err ->
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = err,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
 
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(initialSelectedDateMillis = selectedTimestampMs)

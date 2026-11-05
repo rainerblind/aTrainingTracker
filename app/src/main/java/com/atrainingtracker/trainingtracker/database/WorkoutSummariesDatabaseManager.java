@@ -1566,7 +1566,134 @@ public class WorkoutSummariesDatabaseManager {
         dbSummaries.delete(WorkoutSummaries.TABLE, WorkoutSummaries.C_ID + "=?", new String[]{workoutId + ""});
         dbSummaries.delete(WorkoutSummaries.TABLE_ACCUMULATED_SENSORS, WorkoutSummaries.WORKOUT_ID + "=?", new String[]{workoutId + ""});
         dbSummaries.delete(WorkoutSummaries.TABLE_EXTREMA_VALUES, WorkoutSummaries.WORKOUT_ID + "=?", new String[]{workoutId + ""});
+        dbSummaries.delete(WorkoutSummaries.TABLE_WORKOUT_PHOTOS, WorkoutSummaries.WORKOUT_ID + "=?", new String[]{String.valueOf(workoutId)});
+        deleteWorkoutPhotoFiles(workoutId);
 
+        return true;
+    }
+
+    public void deleteWorkoutPhotoFiles(long workoutId) {
+        if (mContext != null) {
+            java.io.File photoDir = new java.io.File(mContext.getFilesDir(), "workout_photos/" + workoutId);
+            if (photoDir.exists() && photoDir.isDirectory()) {
+                java.io.File[] files = photoDir.listFiles();
+                if (files != null) {
+                    for (java.io.File f : files) {
+                        f.delete();
+                    }
+                }
+                photoDir.delete();
+            }
+        }
+    }
+
+    public long insertPhoto(long workoutId, @NonNull String filePath, @Nullable Long takenAtMs,
+                            @Nullable Double latitude, @Nullable Double longitude, @Nullable String caption) {
+        SQLiteDatabase db = getDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put(WorkoutSummaries.WORKOUT_ID, workoutId);
+        cv.put(WorkoutSummaries.PHOTO_FILE_PATH, filePath);
+        if (takenAtMs != null) {
+            cv.put(WorkoutSummaries.PHOTO_TAKEN_AT_MS, takenAtMs);
+        } else {
+            cv.putNull(WorkoutSummaries.PHOTO_TAKEN_AT_MS);
+        }
+        if (latitude != null) {
+            cv.put(WorkoutSummaries.PHOTO_LATITUDE, latitude);
+        } else {
+            cv.putNull(WorkoutSummaries.PHOTO_LATITUDE);
+        }
+        if (longitude != null) {
+            cv.put(WorkoutSummaries.PHOTO_LONGITUDE, longitude);
+        } else {
+            cv.putNull(WorkoutSummaries.PHOTO_LONGITUDE);
+        }
+        if (caption != null) {
+            cv.put(WorkoutSummaries.PHOTO_CAPTION, caption);
+        } else {
+            cv.putNull(WorkoutSummaries.PHOTO_CAPTION);
+        }
+        return db.insert(WorkoutSummaries.TABLE_WORKOUT_PHOTOS, null, cv);
+    }
+
+    @NonNull
+    public List<WorkoutPhotoEntry> getPhotosForWorkout(long workoutId) {
+        List<WorkoutPhotoEntry> photos = new ArrayList<>();
+        SQLiteDatabase db = getDatabase();
+        String[] columns = {
+                WorkoutSummaries.C_ID,
+                WorkoutSummaries.WORKOUT_ID,
+                WorkoutSummaries.PHOTO_FILE_PATH,
+                WorkoutSummaries.PHOTO_TAKEN_AT_MS,
+                WorkoutSummaries.PHOTO_LATITUDE,
+                WorkoutSummaries.PHOTO_LONGITUDE,
+                WorkoutSummaries.PHOTO_CAPTION
+        };
+        try (Cursor cursor = db.query(WorkoutSummaries.TABLE_WORKOUT_PHOTOS, columns,
+                WorkoutSummaries.WORKOUT_ID + "=?", new String[]{String.valueOf(workoutId)},
+                null, null, WorkoutSummaries.C_ID + " ASC")) {
+            if (cursor != null) {
+                int idCol = cursor.getColumnIndexOrThrow(WorkoutSummaries.C_ID);
+                int wIdCol = cursor.getColumnIndexOrThrow(WorkoutSummaries.WORKOUT_ID);
+                int fileCol = cursor.getColumnIndexOrThrow(WorkoutSummaries.PHOTO_FILE_PATH);
+                int timeCol = cursor.getColumnIndexOrThrow(WorkoutSummaries.PHOTO_TAKEN_AT_MS);
+                int latCol = cursor.getColumnIndexOrThrow(WorkoutSummaries.PHOTO_LATITUDE);
+                int lngCol = cursor.getColumnIndexOrThrow(WorkoutSummaries.PHOTO_LONGITUDE);
+                int capCol = cursor.getColumnIndexOrThrow(WorkoutSummaries.PHOTO_CAPTION);
+
+                while (cursor.moveToNext()) {
+                    long id = cursor.getLong(idCol);
+                    long wId = cursor.getLong(wIdCol);
+                    String filePath = cursor.getString(fileCol);
+                    Long takenAtMs = cursor.isNull(timeCol) ? null : cursor.getLong(timeCol);
+                    Double lat = cursor.isNull(latCol) ? null : cursor.getDouble(latCol);
+                    Double lng = cursor.isNull(lngCol) ? null : cursor.getDouble(lngCol);
+                    String caption = cursor.isNull(capCol) ? null : cursor.getString(capCol);
+
+                    photos.add(new WorkoutPhotoEntry(id, wId, filePath, takenAtMs, lat, lng, caption));
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error fetching photos for workout " + workoutId, e);
+        }
+        return photos;
+    }
+
+    public boolean deletePhoto(long photoId) {
+        SQLiteDatabase db = getDatabase();
+        String filePath = null;
+        try (Cursor cursor = db.query(WorkoutSummaries.TABLE_WORKOUT_PHOTOS,
+                new String[]{WorkoutSummaries.PHOTO_FILE_PATH},
+                WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(photoId)},
+                null, null, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                filePath = cursor.getString(0);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error querying photo file path before deletion: " + photoId, e);
+        }
+
+        int deleted = db.delete(WorkoutSummaries.TABLE_WORKOUT_PHOTOS,
+                WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(photoId)});
+
+        if (filePath != null) {
+            try {
+                java.io.File file = new java.io.File(filePath);
+                if (file.exists()) {
+                    file.delete();
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "Could not delete physical photo file: " + filePath, e);
+            }
+        }
+        return deleted > 0;
+    }
+
+    public boolean deletePhotosForWorkout(long workoutId) {
+        deleteWorkoutPhotoFiles(workoutId);
+        SQLiteDatabase db = getDatabase();
+        db.delete(WorkoutSummaries.TABLE_WORKOUT_PHOTOS,
+                WorkoutSummaries.WORKOUT_ID + "=?", new String[]{String.valueOf(workoutId)});
         return true;
     }
 
@@ -1769,6 +1896,13 @@ public class WorkoutSummariesDatabaseManager {
         public static final String LONGITUDE = "longitude";
         public static final String COUNT = "count"; // added in Version 25 (ATT-3987)
 
+        public static final String TABLE_WORKOUT_PHOTOS = "workout_photos";
+        public static final String PHOTO_FILE_PATH = "file_path";
+        public static final String PHOTO_TAKEN_AT_MS = "taken_at_ms";
+        public static final String PHOTO_LATITUDE = "latitude";
+        public static final String PHOTO_LONGITUDE = "longitude";
+        public static final String PHOTO_CAPTION = "caption";
+
         public final static int ENCODING_STEP_SIZE = 20;  // twenty seconds (Introduced in Version 15)
     }
 
@@ -1798,7 +1932,8 @@ public class WorkoutSummariesDatabaseManager {
         // public static final int DB_VERSION = 22; // 01.10.2026 Added composite index on extrema table for start location queries (ATT-1734)
         // public static final int DB_VERSION = 23; // 02.10.2026 Added race column (ATT-2005)
         // public static final int DB_VERSION = 25; // 18.10.2026 Added count column to extrema table (ATT-3987)
-        public static final int DB_VERSION = 26; // 21.10.2026 Added missing indexes on extrema and summaries tables (REQ-DAT-034, ATT-4008)
+        // public static final int DB_VERSION = 26; // 21.10.2026 Added missing indexes on extrema and summaries tables (REQ-DAT-034, ATT-4008)
+        public static final int DB_VERSION = 27; // 04.11.2026 Added workout_photos table (ATT-43)
         
 
 
@@ -1858,6 +1993,15 @@ public class WorkoutSummariesDatabaseManager {
                 + WorkoutSummaries.WORKOUT_ID + " int,"
                 + WorkoutSummaries.SENSOR_TYPE + " text)";
 
+        protected static final String CREATE_TABLE_WORKOUT_PHOTOS = "create table " + WorkoutSummaries.TABLE_WORKOUT_PHOTOS + " ("
+                + WorkoutSummaries.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + WorkoutSummaries.WORKOUT_ID + " INTEGER NOT NULL, "
+                + WorkoutSummaries.PHOTO_FILE_PATH + " TEXT NOT NULL, "
+                + WorkoutSummaries.PHOTO_TAKEN_AT_MS + " INTEGER, "
+                + WorkoutSummaries.PHOTO_LATITUDE + " REAL, "
+                + WorkoutSummaries.PHOTO_LONGITUDE + " REAL, "
+                + WorkoutSummaries.PHOTO_CAPTION + " TEXT)";
+
         private static final String TAG = "WorkoutSummariesDbHelper";
         private static final boolean DEBUG = TrainingApplication.getDebug(true);
 
@@ -1903,6 +2047,12 @@ public class WorkoutSummariesDatabaseManager {
             // case-insensitive index for deduplication and lookup (REQ-MIG-042 / ATT-3991)
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_summaries_file_base_name_nocase ON "
                     + WorkoutSummaries.TABLE + " (" + WorkoutSummaries.FILE_BASE_NAME + " COLLATE NOCASE)");
+
+            // workout photos table and index (REQ-DAT-038 / ATT-43)
+            db.execSQL(CREATE_TABLE_WORKOUT_PHOTOS);
+            if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_WORKOUT_PHOTOS);
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_workout_photos_workout_id ON " + WorkoutSummaries.TABLE_WORKOUT_PHOTOS
+                    + " (" + WorkoutSummaries.WORKOUT_ID + ")");
         }
 
         private void addColumn(@NonNull SQLiteDatabase db, String table, String column, String type, String defaultValue) {
@@ -2157,6 +2307,17 @@ public class WorkoutSummariesDatabaseManager {
                             + WorkoutSummaries.TABLE + " (" + WorkoutSummaries.FILE_BASE_NAME + " COLLATE NOCASE)");
                 } catch (Exception e) {
                     Log.e(TAG, "Error creating indexes in onUpgrade to v26", e);
+                }
+            }
+
+            if (oldVersion < 27) {
+                Log.i(TAG, "upgrading to DB version 27 (Adding workout_photos table and index)");
+                try {
+                    db.execSQL(CREATE_TABLE_WORKOUT_PHOTOS);
+                    db.execSQL("CREATE INDEX IF NOT EXISTS idx_workout_photos_workout_id ON " + WorkoutSummaries.TABLE_WORKOUT_PHOTOS
+                            + " (" + WorkoutSummaries.WORKOUT_ID + ")");
+                } catch (Exception e) {
+                    Log.e(TAG, "Error creating workout_photos table in onUpgrade to v27", e);
                 }
             }
         }

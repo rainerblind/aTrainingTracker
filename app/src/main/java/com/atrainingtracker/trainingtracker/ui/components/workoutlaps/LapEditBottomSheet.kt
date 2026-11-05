@@ -50,6 +50,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
@@ -96,7 +97,8 @@ fun LapEditBottomSheet(
     onDismissRequest: () -> Unit,
     onSaveLap: (lapNr: Long, name: String?, description: String?) -> Unit,
     modifier: Modifier = Modifier,
-    isPlayServiceAvailable: Boolean = true
+    isPlayServiceAvailable: Boolean = true,
+    onMoveBoundaryClick: ((boundaryLapNr: Long) -> Unit)? = null
 ) {
     val laps = workoutData.laps
     if (laps.isEmpty()) return
@@ -393,6 +395,26 @@ fun LapEditBottomSheet(
                                     Text(stringResource(R.string.next_lap))
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Icon(Icons.Default.ChevronRight, contentDescription = null)
+                                }
+                            }
+
+                            // Move Lap Boundary Action (REQ-UI-450.1 / ATT-908)
+                            if (onMoveBoundaryClick != null && totalLaps >= 2) {
+                                val boundaryTargetLap = if (currentIndex < totalLaps - 1) currentLap.lapNr else laps[currentIndex - 1].lapNr
+                                OutlinedButton(
+                                    onClick = {
+                                        saveCurrentLap()
+                                        onMoveBoundaryClick(boundaryTargetLap)
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_lap_timer),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(stringResource(R.string.move_lap_boundary_action))
                                 }
                             }
 

@@ -1295,7 +1295,7 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 **Invariants**: Explicit cluster creation and selection in `EditWorkoutClusterDialog` (`createNewCluster`, `applyClusterIdentity`, `unassignCluster`) remain fully functional; SQLite database schemas remain unchanged.
 
 ### REQ-SET-082: Timestamped Zone Boundary Snapshots per ZoneType & Historical Workout Zone Resolution [Verified] [`TST-SET-082`]
-- **Tests**: `AthleteMetricsDatabaseManager.kt`, `AthleteMetricsRepository.kt`, `SettingsDataStore.kt`, `WorkoutRepository.kt`, `TelemetryMetricGraph.kt`, `ZonesSettingsViewModel.kt`, `ZoneProfileTabContent.kt`
+- **Tests**: `AthleteMetricsDatabaseManager.kt`, `AthleteMetricsRepository.kt`, `SettingsDataStore.kt`, `WorkoutRepository.kt`, `TelemetryMetricGraph.kt`, `ZonesSettingsViewModel.kt`, `ZoneProfileTabContent.kt`, `ZoneHistoryDialog.kt` | **Tickets**: `ATT-5399`
 - **Implementation**: Persist atomic zone boundary snapshots in `AthleteMetrics.db` (`zone_history` table, `DB_VERSION = 2`), maintain unidirectional projection to `SettingsDataStore`, resolve historical workouts at `workoutStartTimeMs`, and provide history/backdating UI.
 - **Rationale**: Currently, training zone boundaries (`HR_RUN`, `HR_BIKE`, `PWR_BIKE`) are stored only as single un-timestamped preferences in `SettingsDataStore`. When an athlete updates zone boundaries, past workouts in Workout Summaries, Workout Details, and Telemetry Graphs retroactively re-evaluate against modern boundaries, distorting training history. Extending timestamped persistence to zone configurations ensures historical workout fidelity and preserves full temporal integrity:
 1. *Atomic Timestamped Zone Snapshot Persistence (`REQ-SET-082.1`)*:
@@ -1356,9 +1356,9 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 **Invariants**: Core tracking, telemetry processing, local file exports, and database pairing persistence across app updates MUST NOT be compromised.
 
 ### REQ-SET-084: One-Tap Swap-or-Upgrade Dialog on 3rd Paired Device (REQ-MON-002) [Verified]
-- **Tests**: `TST-SET-084` | **Tickets**: `ATT-51`
-- **Implementation**: `DeviceListViewModel.kt`, `SwapOrUpgradeDialog.kt`
-- **Rationale**: Ensure athletes are never blocked by a hard paywall when adding sensors. When attempting to pair a 3rd device in Free tier, athletes can easily unpair a currently active device with a single tap or upgrade to Pro via "Pay what you want".
+- **Tests**: `TST-SET-084` | **Tickets**: `ATT-51`, `ATT-5399`, `ATT-5398`
+- **Implementation**: `DeviceListViewModel.kt`, `SwapOrUpgradeDialog.kt`, `KeepTwoSensorsBottomSheet.kt`, `DeviceDataRepository.kt`
+- **Rationale**: Ensure athletes are never blocked by a hard paywall when adding sensors. When attempting to pair a 3rd device in Free tier, athletes can easily unpair a currently active device with a single tap or upgrade to Pro via "Pay what you want". Furthermore, athletes who downgrade from Supporter to Free tier with $> 2$ paired sensors are guided through a non-destructive reconciliation flow to keep 2 sensors.
 - **Description**:
 1. *Quota Interception (`REQ-SET-084.1`)*:
 • When a Free tier athlete (`!isProActive()`) attempts to pair a device that would increase total paired devices beyond `MAX_FREE_PAIRED_DEVICES = 2`, `DeviceListViewModel` SHALL intercept the action and display `SwapOrUpgradeDialog` without changing database pairing state.
@@ -1368,6 +1368,12 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • Tapping "Swap" SHALL unpair the selected existing device and pair the new candidate device in a single database operation, maintaining total paired devices $\le 2$.
 4. *Direct Upgrade Path (`REQ-SET-084.4`)*:
 • The dialog SHALL offer a prominent "Unlock Unlimited Sensors (Pay What You Want)" action navigating directly to `SupporterScreen`.
+5. *Subscription Downgrade Sensor Quota Reconciliation (`REQ-SET-084.5`)*:
+• When an athlete returns to Free tier (`!isProActive()`) with $> 2$ paired sensors in `Devices.db` while not actively recording (`!isTracking()`), `DeviceListViewModel` SHALL present a Material 3 reconciliation bottom sheet (`KeepTwoSensorsBottomSheet`) to reconcile down to 2 active sensors.
+• The sheet SHALL present all currently paired devices, preselect 2 sensible defaults (`SPEED_AND_LOCATION_GPS` + `ALTITUDE_FROM_PRESSURE` or 2 most recently paired), permit selection of at most 2 active sensors, and offer a 1-tap shortcut to `SupporterScreen`.
+• Confirming selection (or dismissing the sheet, applying the 2 defaults to prevent quota bypass) SHALL set `PAIRED = 0` on all unselected devices in `Devices.db`. Unselected sensors MUST NOT be deleted; all custom names, calibration factors, wheel circumferences, and equipment links MUST remain 100% intact.
+6. *Multi-Sensor Swap Hardening (`REQ-SET-084.6`)*:
+• In Free tier, `executeSwapAndPair()` and `DeviceDataRepository` SHALL ensure that even if more than 2 sensors were paired prior to the swap, all excess sensors beyond the newly paired candidate and retained sensor are set to `PAIRED = 0`, guaranteeing total paired count is strictly $\le 2$.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* a Free tier athlete with 2 paired devices attempting to pair a heart rate monitor,
@@ -1376,8 +1382,14 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • *Given* the Swap dialog with `ALTITUDE_FROM_PRESSURE` preselected,
 • *When* the athlete taps "Swap & Pair",
 • *Then* `ALTITUDE_FROM_PRESSURE` is unpaired, the heart rate monitor is paired, and total paired devices equals 2.
+• *Given* an athlete downgraded to Free tier with $> 2$ paired sensors and not actively recording,
+• *When* the sensor list screen is opened,
+• *Then* the Keep-2-Sensors reconciliation bottom sheet is displayed with 2 sensible defaults preselected.
+• *Given* the reconciliation bottom sheet,
+• *When* the athlete confirms selection or dismisses the sheet,
+• *Then* all unselected sensors are marked unpaired in `Devices.db` with data intact, and total paired count equals 2.
 
-**Invariants**: No unexpected unpairing without user confirmation; 1-tap swap must execute atomically.
+**Invariants**: No unexpected unpairing without user confirmation; 1-tap swap must execute atomically; unselected sensors MUST NOT be deleted and their calibration/equipment configuration MUST be preserved; quota reconciliation MUST NOT disrupt active tracking.
 
 ### REQ-SET-085: Lifetime Pioneer Early Adopter Recognition via Historical Cutoff (REQ-MON-003) [Verified]
 - **Tests**: `TST-SET-085` | **Tickets**: `ATT-51`, `ATT-5371`
@@ -1467,7 +1479,7 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 **Invariants**: Release builds must never permit arbitrary tier override; ProFeatureManager resolution must be thread-safe.
 
 ### REQ-SET-088: Supporter N+1 Garage Detector & Upgrade Prompts (REQ-MON-006) [Verified]
-- **Tests**: `TST-SET-088`, `TST-LOC-001` | **Tickets**: `ATT-5299`
+- **Tests**: `TST-SET-088`, `TST-LOC-001` | **Tickets**: `ATT-5299`, `ATT-5400`, `ATT-5399`
 - **Implementation**: `GarageLeagueDetector.kt`, `GarageDetectorDialog.kt`, `EquipmentViewModel.kt`, `DeviceListViewModel.kt`, `SettingsDataStore.kt`, `SupporterDebugSection.kt`
 - **Rationale**: Athlete equipment expansion reflects escalating engagement. When an athlete adds bikes, shoes, or pairs additional sensors reaching enthusiast ("Gold") or world-class ("Diamond") scale, the system detects their qualified garage league and presents a humorous, non-blocking "N+1 Cyclist Garage" dialog inviting an upgrade to Gold Pro-Supporter (50 € / year) or Diamond Sponsor (100 € / year) with the matching plan pre-selected, while preventing repeated prompt spam and honoring tier monotonicity.
 - **Description**:
@@ -1491,7 +1503,7 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • The upgrade prompt for each league SHALL be displayed at most once across the lifetime of the application.
 • Showing or dismissing the dialog SHALL set the respective league flag to `true`.
 5. *Humorous N+1 Dialog & Pre-Selected Navigation (`REQ-SET-088.5`)*:
-• When qualified, `GarageDetectorDialog` SHALL render a Material 3 dialog presenting dynamic gear counts (bikes, shoes, sensors, power meters) and good-humored cyclist/runner copy.
+• When qualified, `GarageDetectorDialog` SHALL render a Material 3 dialog presenting dynamic gear counts (bikes, shoes, sensors, power meters) and good-humored cyclist/runner copy without decorative inline Unicode emojis (relying on the dialog's vector header icon).
 • The dialog SHALL offer a 1-tap upgrade action navigating to `SupporterScreen` (`NavRoutes.SUPPORTER`) with the recommended plan pre-selected (`gold-yearly` for Gold League, `diamond-yearly` for Diamond League), and a secondary "Später / Weiter zum Training" dismiss action.
 6. *Diagnostic Debug Preview Triggers (`REQ-SET-088.6`)*:
 • `SupporterDebugSection` SHALL expose 1-tap test preview buttons for Gold and Diamond N+1 garage dialogs, and a reset button clearing both nudge flags in DataStore, strictly enclosed within `if (BuildConfig.DEBUG)`.

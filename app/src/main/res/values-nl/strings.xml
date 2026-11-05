@@ -1650,6 +1650,13 @@
     <string name="import_fit_progress">FIT-bestanden importeren (%1$d van %2$d)…</string>
     <string name="import_fit_summary_success">Succesvol %1$d trainingen geïmporteerd (%2$d duplicaten overgeslagen).</string>
     <string name="import_fit_summary_with_errors">%1$d trainingen geïmporteerd, %2$d duplicaten overgeslagen, %3$d mislukt.</string>
+    <!-- Strava Bulk Export Importer (ATT-4957 / REQ-MIG-048) -->
+    <string name="import_strava_archive_title">Strava bulk-export (ZIP)</string>
+    <string name="import_strava_archive_description">Importeer workouts uit een Strava-exportarchief met volledige metagegevens, beschrijvingen en uitrusting (.zip).</string>
+    <string name="import_strava_archive_button">Strava-archief selecteren (ZIP)</string>
+    <string name="import_strava_archive_progress">Strava-archief importeren (%1$d van %2$d)…</string>
+    <string name="import_strava_archive_summary_success">%1$d Strava-workouts succesvol geïmporteerd (%2$d duplicaten overgeslagen).</string>
+    <string name="import_strava_archive_summary_with_errors">%1$d Strava-workouts geïmporteerd, %2$d duplicaten overgeslagen, %3$d mislukt.</string>
     <!-- TCX & GPX Importer (ATT-2623 / REQ-UI-293) -->
     <string name="import_tcx_title">TCX-bestanden importeren</string>
     <string name="import_tcx_description">Workouts importeren uit Training Center XML-bestanden (.tcx).</string>
@@ -2126,6 +2133,20 @@
     <string name="marker_summit">Top</string>
     <string name="marker_lap_start">Rondestart</string>
     <string name="marker_lap_end">Ronde-einde</string>
+    <string name="split_lap_action">Ronde splitsen op kaart</string>
+    <string name="create_lap_on_map_title">Ronde maken op kaart</string>
+    <string name="split_lap_confirm">Ronde splitsen</string>
+    <string name="split_lap_preview_before">Deel 1 (Voor splitsing)</string>
+    <string name="split_lap_preview_after">Deel 2 (Nieuwe ronde)</string>
+    <string name="split_lap_slider_label">Splitsingspositie</string>
+    <string name="split_lap_success">Ronde succesvol gesplitst</string>
+    <string name="move_lap_boundary_action">Rondegrens verplaatsen</string>
+    <string name="move_lap_boundary_title">Rondegrens verplaatsen op kaart</string>
+    <string name="move_lap_boundary_confirm">Grens verplaatsen</string>
+    <string name="move_lap_boundary_slider_label">Grenspositie</string>
+    <string name="move_lap_boundary_lap_k_preview">Ronde %1$d (Vorige)</string>
+    <string name="move_lap_boundary_lap_k_plus_1_preview">Ronde %1$d (Volgende)</string>
+    <string name="move_lap_boundary_select_boundary">Grens: Ronde %1$d / Ronde %2$d</string>
     <string name="cd_fastest_split">Snelste tussentijd</string>
     <string name="cd_switch_view_mode">Weergavemodus wijzigen</string>
     <string name="connect_with_strava">Verbinden met Strava</string>
@@ -2250,6 +2271,11 @@
     <string name="swap_dialog_message">In het gratis niveau kunnen maximaal 2 apparaten tegelijkertijd gekoppeld zijn (bijv. GPS + Barometer). Om \'%1$s\' te koppelen, ontkoppel een bestaand apparaat of ontgrendel onbeperkt sensoren via \'Betaal wat je wilt\'.</string>
     <string name="swap_dialog_action_swap">Ruilen &amp; koppelen</string>
     <string name="swap_dialog_action_unlock">Onbeperkte sensoren ontgrendelen</string>
+    <string name="keep_two_sensors_title">2 actieve sensors behouden</string>
+    <string name="keep_two_sensors_message">Je abonnement is beëindigd en het gratis abonnement ondersteunt maximaal 2 actieve sensors. Selecteer 2 sensors om actief te houden. Overtollige sensors worden ontkoppeld zonder kalibratie- of uitrustingsgegevens te verwijderen.</string>
+    <string name="keep_two_sensors_selection_header">Actieve sensors (%1$d/%2$d):</string>
+    <string name="keep_two_sensors_action_confirm">Selectie bevestigen</string>
+    <string name="keep_two_sensors_action_unlock">Onbeperkte sensors ontgrendelen</string>
     <string name="drawer_supporter">Supporter &amp; Pro</string>
     <string name="drawer_tier_diamond">◆ DIAMOND SPONSOR • Onbeperkte sensoren</string>
     <string name="drawer_tier_gold">★ GOUD PRO-SUPPORTER</string>
@@ -2278,10 +2304,10 @@
     <string name="debug_jubilee_preview_subtitle">Test het Material 3 dialoogvenster zonder de mijlpaalstatus te wijzigen</string>
 
     <!-- Supporter N+1 Garage Detector (ATT-5299 / REQ-SET-088) -->
-    <string name="garage_detector_dialog_title_gold">Goud-klasse garage gedetecteerd! 🚴‍♂️</string>
-    <string name="garage_detector_dialog_title_diamond">Diamant-klasse wereldgarage! 💎</string>
-    <string name="garage_detector_dialog_message_gold">Gefeliciteerd met je %1$d fietsen, %2$d schoenen en %3$d sensoren (incl. %4$d vermogensmeters) in aTrainingTracker! 🚴‍♂️✨ Je garage speelt in de profcompetitie, maar je app-status is %5$s. Gun je uitrusting de upgrade naar Goud Pro-Supporter!</string>
-    <string name="garage_detector_dialog_message_diamond">Ongelooflijke garage: %1$d fietsen, %2$d schoenen en %3$d sensoren (incl. %4$d vermogensmeters) in aTrainingTracker! 💎✨ Je uitrusting is van wereldklasse, maar je app-status is %5$s. Bekroon je garage met Diamant Sponsor!</string>
+    <string name="garage_detector_dialog_title_gold">Goud-klasse garage gedetecteerd!</string>
+    <string name="garage_detector_dialog_title_diamond">Diamant-klasse wereldgarage!</string>
+    <string name="garage_detector_dialog_message_gold">Gefeliciteerd met je %1$d fietsen, %2$d schoenen en %3$d sensoren (incl. %4$d vermogensmeters) in aTrainingTracker! Je garage speelt in de profcompetitie, maar je app-status is %5$s. Gun je uitrusting de upgrade naar Goud Pro-Supporter!</string>
+    <string name="garage_detector_dialog_message_diamond">Ongelooflijke garage: %1$d fietsen, %2$d schoenen en %3$d sensoren (incl. %4$d vermogensmeters) in aTrainingTracker! Je uitrusting is van wereldklasse, maar je app-status is %5$s. Bekroon je garage met Diamant Sponsor!</string>
     <string name="garage_detector_action_upgrade_gold">Upgrade naar Goud Pro (50 € / jr)</string>
     <string name="garage_detector_action_upgrade_diamond">Upgrade naar Diamant Sponsor (100 € / jr)</string>
     <string name="garage_detector_action_dismiss">Later / Verder trainen</string>
@@ -2298,8 +2324,25 @@
     <string name="launcher_icon_silver">Zilver Pro-Supporter</string>
     <string name="launcher_icon_gold">Goud Pro-Supporter</string>
     <string name="launcher_icon_diamond">Diamant Sponsor</string>
-    <string name="supporter_quick_picker_title">Supporter Icoon Kiezer</string>
-    <string name="supporter_quick_picker_thank_you">Bedankt voor het steunen van 15+ jaar advertentievrije indie-ontwikkeling!</string>
     <string name="supporter_status_emblem_cd">Supporter Status Embleem</string>
     <string name="share_watermark_tracked_with">Geregistreerd met aTrainingTracker</string>
+    <!-- Workout Share Mode & Photo Track Overlay (REQ-UI-447 / ATT-30) -->
+    <string name="share_workout_title">Workout delen</string>
+    <string name="share_option_map_snapshot">Kaart- en analyse-momentopname</string>
+    <string name="share_option_map_snapshot_desc">Overzicht met kaart, hoogteprofiel en prestatiestatistieken</string>
+    <string name="share_option_photo_track">Foto met route en statistieken</string>
+    <string name="share_option_photo_track_desc">GPS-routesilhouet en kernstatistieken over uw eigen foto gelegd</string>
+    <string name="share_choose_photo">Foto kiezen</string>
+    <string name="share_preview_title">Voorbeeld delen</string>
+    <string name="share_cta_button">Delen</string>
+    <string name="share_error_no_gps">Geen GPS-route geregistreerd voor deze workout</string>
+    <string name="share_error_photo_load">Geselecteerde foto laden mislukt</string>
+    <!-- Workout Photos (REQ-UI-448 / ATT-43) -->
+    <string name="workout_photos_title">Foto\'s</string>
+    <string name="workout_photos_add">Foto\'s toevoegen</string>
+    <string name="workout_photos_empty">Geen foto\'s bijgevoegd</string>
+    <string name="workout_photos_delete">Foto verwijderen</string>
+    <string name="workout_photos_delete_confirm">Wil je deze foto van de workout verwijderen?</string>
+    <string name="workout_photos_share_overlay">Delen met track-overlay</string>
+    <string name="workout_photos_marker_title">Foto</string>
 </resources>

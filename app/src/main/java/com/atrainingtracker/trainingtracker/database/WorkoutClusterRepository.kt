@@ -83,7 +83,7 @@ class WorkoutClusterRepository internal constructor(
                     loadAllClustersLightweight()
                 }
             } catch (t: Throwable) {
-                if (DEBUG) android.util.Log.w("WorkoutClusterRepo", "Failed initial lightweight clusters load: ${t.message}")
+                if (DEBUG) runCatching { android.util.Log.w("WorkoutClusterRepo", "Failed initial lightweight clusters load: ${t.message}") }
             }
         }
     }
@@ -103,7 +103,7 @@ class WorkoutClusterRepository internal constructor(
                     try {
                         _clusterStats.value = summariesManager.getWorkoutClusterStatsForAllClusters()
                     } catch (t: Throwable) {
-                        if (DEBUG) android.util.Log.w("WorkoutClusterRepo", "Failed to hydrate cluster stats in lightweight load: ${t.message}")
+                        if (DEBUG) runCatching { android.util.Log.w("WorkoutClusterRepo", "Failed to hydrate cluster stats in lightweight load: ${t.message}") }
                     }
                 }
                 sorted

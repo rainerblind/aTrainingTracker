@@ -193,15 +193,15 @@ suspend fun combineWorkoutAndShare(
     saveAndShare(context, combined, "workout_summary.png")
 }
 
-// --- PRIVATE HELPERS ---
+// --- INTERNAL HELPERS ---
 
-private fun ensureSoftwareBitmap(bitmap: Bitmap): Bitmap {
+internal fun ensureSoftwareBitmap(bitmap: Bitmap): Bitmap {
     return if (bitmap.config == Bitmap.Config.HARDWARE) {
         bitmap.copy(Bitmap.Config.ARGB_8888, false)
     } else bitmap
 }
 
-private fun drawFooter(
+internal fun drawFooter(
     context: Context,
     canvas: Canvas,
     width: Int,
@@ -291,7 +291,7 @@ private fun drawFooter(
     }
 }
 
-private suspend fun saveAndShare(context: Context, bitmap: Bitmap, fileName: String) = withContext(Dispatchers.IO) {
+internal suspend fun saveAndShare(context: Context, bitmap: Bitmap, fileName: String) = withContext(Dispatchers.IO) {
     val imagesFolder = File(context.cacheDir, "images")
     if (!imagesFolder.exists()) imagesFolder.mkdirs()
 

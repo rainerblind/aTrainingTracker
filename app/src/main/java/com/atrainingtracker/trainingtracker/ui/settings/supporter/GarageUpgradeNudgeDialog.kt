@@ -18,24 +18,21 @@
 
 package com.atrainingtracker.trainingtracker.ui.settings.supporter
 
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsBike
 import androidx.compose.material.icons.filled.Diamond
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.monetization.GarageLeague
 import com.atrainingtracker.trainingtracker.monetization.GarageNudgeEvent
+import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 
 /**
  * Humorous Material 3 N+1 Cyclist & Runner Garage Upgrade Dialog (REQ-SET-088.5, Rule 23).
@@ -47,6 +44,7 @@ import com.atrainingtracker.trainingtracker.monetization.GarageNudgeEvent
  * @param onUpgrade Callback triggered with the recommended plan ID to navigate to SupporterScreen.
  * @param onDismiss Callback triggered when the dialog is dismissed without upgrading.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GarageUpgradeNudgeDialog(
     event: GarageNudgeEvent,
@@ -89,50 +87,37 @@ fun GarageUpgradeNudgeDialog(
         stringResource(R.string.garage_detector_action_upgrade_gold)
     }
 
-    AlertDialog(
+    AppModalBottomSheet(
+        title = title,
         onDismissRequest = onDismiss,
-        icon = {
-            Icon(
-                imageVector = if (isDiamond) Icons.Default.Diamond else Icons.AutoMirrored.Filled.DirectionsBike,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(32.dp)
-            )
-        },
-        title = {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        },
-        confirmButton = {
-            Button(
-                onClick = { onUpgrade(event.recommendedPlanId) }
-            ) {
-                Text(text = upgradeButtonText)
-            }
-        },
-        dismissButton = {
+        icon = if (isDiamond) Icons.Default.Diamond else Icons.AutoMirrored.Filled.DirectionsBike,
+        actions = {
             OutlinedButton(
-                onClick = onDismiss
+                onClick = onDismiss,
+                modifier = Modifier.weight(1f)
             ) {
                 Text(text = stringResource(R.string.garage_detector_action_dismiss))
             }
+            Button(
+                onClick = { onUpgrade(event.recommendedPlanId) },
+                modifier = Modifier.weight(1.5f)
+            ) {
+                Text(text = upgradeButtonText)
+            }
         }
-    )
+    ) {
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
 }
 
 /**
  * Composable alias guaranteeing bidirectional name compatibility between specification and implementation.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GarageDetectorDialog(
     event: GarageNudgeEvent,

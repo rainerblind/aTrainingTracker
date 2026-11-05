@@ -25,6 +25,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.testutil.RealSqliteTestHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummariesDbHelper
+import com.atrainingtracker.trainingtracker.migration.DatabaseSchemaRegistry
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -443,6 +444,54 @@ class WorkoutSummariesRealSqliteMigrationTest {
         val durationMs = System.currentTimeMillis() - startTime
 
         assertTrue("onUpgrade DDL should execute instantaneously (took ${durationMs}ms)", durationMs < 500)
+    }
+
+    @Test
+    fun testIncrementalUpgradeV26ToV27CreatesWorkoutPhotosTableAndIndex() {
+        val database = checkNotNull(db)
+        scaffoldV22Schema(database)
+        helper.onUpgrade(database, 22, 26)
+        database.version = 26
+
+        // Upgrade v26 -> v27
+        helper.onUpgrade(database, 26, 27)
+        database.version = 27
+
+        // Verify table and columns
+        assertTrue("Table workout_photos must exist", RealSqliteTestHelper.hasTable(database, WorkoutSummaries.TABLE_WORKOUT_PHOTOS))
+        assertTrue(RealSqliteTestHelper.hasColumn(database, WorkoutSummaries.TABLE_WORKOUT_PHOTOS, WorkoutSummaries.C_ID))
+        assertTrue(RealSqliteTestHelper.hasColumn(database, WorkoutSummaries.TABLE_WORKOUT_PHOTOS, WorkoutSummaries.WORKOUT_ID))
+        assertTrue(RealSqliteTestHelper.hasColumn(database, WorkoutSummaries.TABLE_WORKOUT_PHOTOS, WorkoutSummaries.PHOTO_FILE_PATH))
+        assertTrue(RealSqliteTestHelper.hasColumn(database, WorkoutSummaries.TABLE_WORKOUT_PHOTOS, WorkoutSummaries.PHOTO_TAKEN_AT_MS))
+        assertTrue(RealSqliteTestHelper.hasColumn(database, WorkoutSummaries.TABLE_WORKOUT_PHOTOS, WorkoutSummaries.PHOTO_LATITUDE))
+        assertTrue(RealSqliteTestHelper.hasColumn(database, WorkoutSummaries.TABLE_WORKOUT_PHOTOS, WorkoutSummaries.PHOTO_LONGITUDE))
+        assertTrue(RealSqliteTestHelper.hasColumn(database, WorkoutSummaries.TABLE_WORKOUT_PHOTOS, WorkoutSummaries.PHOTO_CAPTION))
+
+        // Verify photo insertion and querying
+        val photoCv = ContentValues().apply {
+            put(WorkoutSummaries.WORKOUT_ID, 1L)
+            put(WorkoutSummaries.PHOTO_FILE_PATH, "/data/user/0/test/files/workout_photos/1/photo_1.jpg")
+            put(WorkoutSummaries.PHOTO_TAKEN_AT_MS, 1716000000000L)
+            put(WorkoutSummaries.PHOTO_LATITUDE, 48.137154)
+            put(WorkoutSummaries.PHOTO_LONGITUDE, 11.576124)
+            put(WorkoutSummaries.PHOTO_CAPTION, "Summit view")
+        }
+        val insertedPhotoId = database.insertOrThrow(WorkoutSummaries.TABLE_WORKOUT_PHOTOS, null, photoCv)
+        assertTrue(insertedPhotoId > 0)
+
+        database.query(WorkoutSummaries.TABLE_WORKOUT_PHOTOS, null, "${WorkoutSummaries.C_ID} = ?", arrayOf(insertedPhotoId.toString()), null, null, null).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("/data/user/0/test/files/workout_photos/1/photo_1.jpg", cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.PHOTO_FILE_PATH)))
+            assertEquals(1716000000000L, cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.PHOTO_TAKEN_AT_MS)))
+            assertEquals(48.137154, cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.PHOTO_LATITUDE)), 0.00001)
+            assertEquals(11.576124, cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.PHOTO_LONGITUDE)), 0.00001)
+            assertEquals("Summit view", cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.PHOTO_CAPTION)))
+        }
+    }
+
+    @Test
+    fun testSchemaRegistryMatchesV27() {
+        assertEquals(27, DatabaseSchemaRegistry.getMaxSupportedVersion("WorkoutSummaries.db"))
     }
 }
 

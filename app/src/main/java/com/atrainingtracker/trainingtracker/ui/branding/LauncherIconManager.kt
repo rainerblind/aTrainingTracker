@@ -27,25 +27,28 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.atrainingtracker.trainingtracker.TrainingApplication
-import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
+import com.atrainingtracker.trainingtracker.monetization.ProFeatureManager
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
- * Manages dynamic homescreen launcher icon switches via Android <activity-alias> (REQ-UI-445 / ATT-1406).
+ * Manages dynamic homescreen launcher icon switches via Android <activity-alias> (REQ-UI-445 / ATT-1406, ATT-5397).
  *
  * System Invariant (Non-Disruptive Deferred Activation):
  * Component switches via [PackageManager.setComponentEnabledSetting] with [PackageManager.DONT_KILL_APP]
  * are deferred until the application moves to background ([ProcessLifecycleOwner] [onStop]) AND no active
  * workout recording is running (![TrainingApplication.isTracking]). Active sessions and workouts are NEVER interrupted.
+ *
+ * Automatic Tier-Matched Launcher Icon (ATT-5397):
+ * Homescreen launcher icon is automatically synchronized with [ProFeatureManager.effectiveTier] via
+ * [LauncherIconVariant.fromTier], retiring manual selection.
  */
 class LauncherIconManager @VisibleForTesting constructor(
     private val context: Context,
-    private val settingsDataStore: SettingsDataStore = SettingsDataStore.getInstance(context),
+    private val proFeatureManager: ProFeatureManager = ProFeatureManager.getInstance(context),
     private val coroutineScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val isTrackingProvider: () -> Boolean = { TrainingApplication.isTracking() }
@@ -74,11 +77,11 @@ class LauncherIconManager @VisibleForTesting constructor(
     }
 
     /**
-     * Resolves the persisted icon preference from [SettingsDataStore] and applies it to the PackageManager.
+     * Resolves the effective supporter tier from [ProFeatureManager] and applies the matching icon variant to the PackageManager.
      */
     suspend fun applyDesiredLauncherIcon(): Boolean {
-        val selectedId = settingsDataStore.selectedLauncherIcon.first()
-        val targetVariant = LauncherIconVariant.fromId(selectedId)
+        val effectiveTier = proFeatureManager.effectiveTier.value
+        val targetVariant = LauncherIconVariant.fromTier(effectiveTier)
         return applyLauncherIcon(targetVariant)
     }
 

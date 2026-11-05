@@ -195,6 +195,9 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 * **9-Language Localization Parity**:
   * Any user-visible string (titles, subtitles, button labels, descriptions, error dialogs, tooltips) must be localized across all 9 supported application locales (`values/strings.xml`, `values-de/strings.xml`, `values-es/strings.xml`, `values-fr/strings.xml`, `values-it/strings.xml`, `values-ja/strings.xml`, `values-nl/strings.xml`, `values-pl/strings.xml`, `values-pt/strings.xml`).
   * Hardcoding untranslated string literals in Kotlin code or Compose layouts is strictly forbidden.
+* **Prohibition of Decorative Inline Unicode Emojis in Localized Strings (ATT-5400)**:
+  * Localized string resources for dialogs, bottom sheets, cards, and banners **MUST NOT** contain decorative inline Unicode emojis (e.g. 🚴‍♂️, 💎, ✨, 😉).
+  * UI layouts must rely on dedicated Material vector icons or custom drawables (e.g. in the dialog's `icon` slot) to convey iconography, avoiding visual clutter, text wrapping anomalies, and duplication of visual motifs.
 * **Positional Format Specifiers Invariant**:
   * When formatted strings contain multiple dynamic arguments, they **MUST** use indexed positional specifiers (e.g. `%1$s`, `%2$d`, `%1$f`) rather than unindexed specifiers (e.g. `%s`, `%d`).
   * Unindexed specifiers fail Android Lint and crash or misorder text in languages whose grammatical syntax reorders subject and object (such as Japanese, German, or Polish).
@@ -220,10 +223,15 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 * Screen / card horizontal content padding: `16.dp` (dominant), compact cards `12.dp`.
 * Vertical spacing between list rows / small elements: `4.dp`–`8.dp`.
 
-### 5.3 Shapes
+### 5.3 Shapes & Dialog/Sheet Presentation
 * Cards, sheets, panels, HUD overlays: `RoundedCornerShape(12.dp)` (dominant) or `MaterialTheme.shapes.medium`.
 * Small elements (badges, inner tiles, chips): `8.dp`; tiny markers / bars: `4.dp`.
 * Dialogs: Material 3 defaults (`MaterialTheme.shapes.extraLarge`).
+* **Bottom Sheet vs. AlertDialog Standard (ATT-5399)**:
+  * Interactive selection popups, editors, upgrade nudges, and celebratory prompts **MUST** be implemented as bottom popups using `AppModalBottomSheet` rather than centered `AlertDialog`s, ensuring optimal one-handed thumb reachability and edge-to-edge system insets.
+  * Centered `AlertDialog` is strictly reserved for concise 1–2 sentence destructive confirmations (`DeleteConfirmationDialog`, `WorkoutDeleteDialog`) or transient tracking HUDs (`LapSummaryDialog`).
+* **Stacked Full-Width Action Button Pattern for `AppModalBottomSheet` (`Rule 73` — `ATT-5399` $\rightarrow$ `ATT-5468`, `ATT-5470`)**:
+  * `AppModalBottomSheet.actions` is a single horizontal `RowScope`. Whenever a bottom sheet has **$\ge 3$ action buttons** OR **any button label exceeds ~15 characters** across the 9 supported locales (especially German, e.g. `"Tauschen & Koppeln"` or `"Unbegrenzte Garage freischalten"`), primary and secondary CTAs **MUST** be placed as **full-width vertically stacked buttons** (`Button` / `OutlinedButton` with `Modifier.fillMaxWidth()`) at the bottom of the sheet's `content` column (modeled on `FirstJubileeCelebrationDialog.kt`), leaving only a single full-width dismiss/secondary `TextButton(Modifier.fillMaxWidth())` in `actions` (or at most 2 short 1-word buttons like `"Abbrechen"` / `"Speichern"`). Never pack 3 buttons or multi-word German CTAs horizontally inside `actions`.
 
 ### 5.4 Color
 * Surfaces, text and accents come from `MaterialTheme.colorScheme` so that Light, Dark and **AMOLED** themes all render correctly. Verify new UI in all three.
@@ -242,6 +250,8 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
 * **Unambiguous Action Iconography & No ASCII Symbol Prefixes in Strings (Rule 49 — ATT-4286, ATT-4288)**:
   * **Never Use Minus-Like Icons (`HorizontalRule`) for Insert/Add Actions**: Never use `Icons.Default.HorizontalRule` (`—`) in a toolbar next to `+` (`Icons.Default.Add`) to represent inserting a section divider or item; a horizontal bar next to `+` visually reads as a minus/remove button (`-`). Use a dedicated split/section icon or labeled menu item.
   * **Never Include Literal `"+ "` Prefixes Inside Localized `<string>` Resources**: When a button, chip, or action item renders a leading `Icon(Icons.Default.Add, ...)`, the corresponding `<string>` resource in `strings.xml` **MUST NOT** start with a literal `"+ "` character (which produces duplicate `+ + Pair Sensor` labels on screen). Keep icon graphics in Compose `Icon` slots and keep XML strings purely textual.
+* **Vector Header Iconography over Inline Unicode Emojis (ATT-5400)**:
+  * Dialogs, alerts, and bottom sheets **MUST** provide dedicated Material or custom vector icons in their composable icon slot (e.g. `AlertDialog(icon = { Icon(...) }, ...)`), rather than peppering localized title or message strings with decorative inline Unicode emojis. Inline emojis create visual clutter, rendering inconsistencies across Android OEM fonts, and icon-to-text redundancy.
 * **Semantic Category Icon Tinting (Rule 23)**: When rendering paired or symmetric category items across lists, tables, or tabbed views (e.g. equipment categories like bikes and shoes in `EquipmentSensorMatrixScreen`):
   * **Unified Active Role**: All active entities across categories MUST use the same unified brand color token (`MaterialTheme.colorScheme.primary`). Do NOT assign disparate color roles (e.g. `primary` to bikes and `secondary` to shoes) to differentiate categories; visual distinction is provided by the vector drawables themselves (`ic_equipment_bike` vs `ic_equipment_shoe`) and section/tab titles.
   * **Status Tinting**: Use `MaterialTheme.colorScheme.outline` for retired/inactive entities, and `MaterialTheme.colorScheme.error` for failed/unhealthy states.
@@ -279,6 +289,9 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
   * Unmounting the underlying screen while a modal sheet is open destroys non-saveable composition state and causes `PrimaryScrollableTabRow` (`rememberScrollState(0)`), `LazyListState`, and collapsing header states to visibly jump or reset when the modal closes.
 * **No Nested `verticalScroll` Inside `AppModalBottomSheet` (ATT-3274 / ATT-3679)**:
   * `AppModalBottomSheet` defaults to `scrollable = true`, which wraps its content slot in a `Column(Modifier.verticalScroll(rememberScrollState()))`. Child screens hosted inside `AppModalBottomSheet` **MUST NOT** apply a second `Modifier.verticalScroll` (which crashes Compose with `IllegalStateException: Vertically scrollable component was measured with an infinity maximum height constraints`), or must explicitly pass `scrollable = false` to `AppModalBottomSheet`.
+* **Mandatory Bottom Popup Standard for Interactive Dialogs & Editors (ATT-5399 / REQ-UI-149)**:
+  * All user-interactive configuration dialogs, device swap prompts (`SwapOrUpgradeDialog`), fleet upgrade nudges (`GarageUpgradeNudgeDialog`), milestone celebration prompts (`FirstJubileeCelebrationDialog`), and multi-entry history editors (`ZoneHistoryDialog`, `ZoneSnapshotEditDialog`) **MUST** use `AppModalBottomSheet`.
+  * **Nested LazyColumn Safety**: When a bottom sheet hosts an internal `LazyColumn` or `LazyRow` (such as snapshot history in `ZoneHistoryDialog`), the parent sheet **MUST** be configured with `scrollable = false` to prevent infinite-height measurement exceptions.
 * **Default Fully Expanded Presentation**:
   * Live Segment (`LiveSegmentSheet`) and Climb (`LiveClimbSheet`) bottom sheets during active tracking (`SensorGridScreen`) must pop up **fully expanded** (`SheetValue.Expanded`) by default instead of partially expanded (`SheetValue.PartiallyExpanded` / peek height).
   * This provides immediate visibility of the elevation profile graph, instantaneous gradient profile, and live pacing telemetry HUD without requiring manual touch interaction or swipe gestures while riding or running.
@@ -391,6 +404,14 @@ Row(
   * Every screenshot or generated visual asset (`img/*.png`, `screenshots/*.png`, `video/frames/*.png`) **AND** any reference design attachment in `docs/attachments/*.png` must be inspected via `read_file` in Stages 1, 4, and 5 to confirm 1:1 visual parity without mid-word button wrapping (`Suppor\nt`), clipped header pills, untranslated strings, or crash fallbacks. When embedding text in `VectorDrawable` badges/ribbons, convert true font glyphs via `inkscape --export-text-to-path` rather than hand-coding geometric stick polygons.
 * **Adaptive Icon (`108dp`) Safe-Zone Compensation in In-App Compose Slots (`Rule 72` — `ATT-5371` / `ATT-5375`)**:
   * `ic_launcher_foreground_*.xml` is a `108dp × 108dp` adaptive icon foreground where the artwork occupies ~55% (`59.27 / 108`) inside the central safe zone. When rendering `ic_launcher_foreground_*.xml` inside an in-app UI slot expecting full-bleed `R.drawable.logo_512` proportions (such as `DrawerHeader` in `AppNavigationDrawer.kt`), scale the foreground by `1.81f` (`graphicsLayer { scaleX = 1.81f; scaleY = 1.81f }` inside `Box(Modifier.size(46.dp))`) and keep `DrawerHeader` strictly to its original single-line layout without text pills below `"a Training Tracker"`.
+
+### 5.17 Workout Summary Visual Cohesion, Advanced Settings Wiring & Stable Detail Pager Host (`Rule 73` — `ATT-43`, `ATT-907`, `ATT-908` / `ATT-5402`)
+* **Neutral Section Iconography & Divider Cadence in `WorkoutSummary` (`ATT-43` $\rightarrow$ `ATT-5474`)**:
+  * Passive section headers and icons inside `WorkoutSummary.kt` (*Zeit aktiv*, *Distanz*, *Höhenmeter*, *Geschw.*, *Höhe*, *Fotos*) **MUST** use neutral `MaterialTheme.colorScheme.onSurfaceVariant` (dark grey) and standard `HorizontalDivider` separators, reserving `MaterialTheme.colorScheme.primary` (bright blue) strictly for interactive header links (Edit button, Route chip, Date/Time). Never render passive section icons or square action tiles with clipped multi-word German labels (`"Fotos hinzufügen"`) in primary blue.
+* **Mandatory Advanced Settings (`WorkoutMasksAndCardsSection`) Integration for New Summary / Detail Sections (`ATT-43` $\rightarrow$ `ATT-5476`)**:
+  * Whenever a ticket introduces a new visual section or widget into `WorkoutSummary.kt` (Summary Cards) or `WorkoutDetailTabbedContent.kt` (Workout Details), it **MUST** be wired into `WorkoutCardPreferences`, `WorkoutSectionType`, and `WorkoutMasksAndCardsSection.kt` (*Experten-Einstellungen -> Trainingsmasken & Karten*) with visibility toggles and display sub-settings.
+* **Map Track Color Semantics & Unambiguous Action Icons (`ATT-907` $\rightarrow$ `ATT-5480`)**:
+  * Primary workout tracks on aftermath and editor maps (`CreateLapOnMapSheet`, `MoveLapBoundaryOnMapSheet`) **MUST** use `TrackType.BEST` (Royal Blue) rather than `TrackType.GPS` (Green). Never reuse domain-specific telemetry icons (such as `R.drawable.ic_distance` / `max_line_distance`) for unrelated actions like splitting a lap; create or use a semantically matching vector icon (e.g. `Icons.Default.ContentCut` scissors for lap split).
 
 ---
 
