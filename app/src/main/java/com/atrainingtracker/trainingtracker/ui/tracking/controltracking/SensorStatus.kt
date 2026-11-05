@@ -160,23 +160,26 @@ fun SensorStatus(
         Row(
             modifier = modifier
                 .fillMaxWidth()
-                .padding(vertical = 4.dp),
+                .padding(
+                    horizontal = SENSOR_STATUS_PORTRAIT_HORIZONTAL_PADDING,
+                    vertical = SENSOR_STATUS_PORTRAIT_VERTICAL_PADDING
+                ),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (onMenuClick != null) {
                 IconButton(
                     onClick = onMenuClick,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(SENSOR_STATUS_ACTION_BUTTON_SIZE)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Menu,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(SENSOR_STATUS_ACTION_ICON_SIZE)
                     )
                 }
             } else {
-                Spacer(modifier = Modifier.size(24.dp))
+                Spacer(modifier = Modifier.size(SENSOR_STATUS_ACTION_BUTTON_SIZE))
             }
 
             Box(
@@ -211,17 +214,17 @@ fun SensorStatus(
                 IconButton(
                     onClick = { onSupporterClick?.invoke() },
                     enabled = onSupporterClick != null,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(SENSOR_STATUS_ACTION_BUTTON_SIZE)
                 ) {
                     Icon(
                         painter = safePainterResource(id = supporterEmblemRes, fallback = Icons.Default.Sensors),
                         contentDescription = stringResource(R.string.supporter_status_emblem_cd),
                         tint = Color.Unspecified,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(SENSOR_STATUS_ACTION_ICON_SIZE)
                     )
                 }
             } else {
-                Spacer(modifier = Modifier.size(24.dp))
+                Spacer(modifier = Modifier.size(SENSOR_STATUS_ACTION_BUTTON_SIZE))
             }
         }
     }
@@ -247,6 +250,14 @@ fun SensorStatus(
 
 // Inactive sensor content alpha adhering to Material Design 3 disabled content standards (REQ-UI-173)
 internal const val INACTIVE_SENSOR_ALPHA = 0.38f
+
+// Option A: 16 dp total display offset for cockpit top action icons (REQ-UI-451 / ATT-5422).
+// Outer Surface in TrackingTabsScreen provides 4.dp, outer Row provides 8.dp horizontal padding,
+// and 32.dp IconButton provides 4.dp internal icon inset for the 24.dp icon (4 + 8 + 4 = 16.dp).
+internal val SENSOR_STATUS_PORTRAIT_HORIZONTAL_PADDING = 8.dp
+internal val SENSOR_STATUS_PORTRAIT_VERTICAL_PADDING = 4.dp
+internal val SENSOR_STATUS_ACTION_BUTTON_SIZE = 32.dp
+internal val SENSOR_STATUS_ACTION_ICON_SIZE = 24.dp
 
 // --- Previews ---
 

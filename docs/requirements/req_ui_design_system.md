@@ -13249,6 +13249,42 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Zero phantom laps (`REQ-TRK-002`), strictly interior boundary clamping $[startIndex(k) + 1, endIndex(k+1) - 1]$, contiguous $1 \dots K$ lap sequence, immutable workout total duration/distance, 9-locale parity without inline emojis, 100% clean-room test pass rate.
 
+### REQ-UI-451: Tracking Cockpit SensorStatus Top Bar 16 dp Screen Edge Offset and 32 dp Touch Target Symmetrical Centering [Verified]
+- **Tests**: `TST-UI-451` | **Tickets**: `ATT-5422`
+- **Implementation**: `SensorStatus.kt`, `TrackingTabsScreen.kt`
+- **Rationale**: To eliminate display edge clinging (~4 dp) of the hamburger menu button and supporter emblem in the top tracking cockpit bar, align edge margins with Material 3 standard 16 dp offsets (Option A), improve touch ergonomics from 24 dp to 32 dp, and strictly preserve mathematical centering of the 8 telemetry sensor indicators (ATT-5422, extending `REQ-UI-445.3`):
+- **Description**:
+  1. *Screen Edge Offset & Padding Geometry (`REQ-UI-451.1`)*:
+     - In portrait mode (`!isCompactLandscape`), `SensorStatus.kt` outer `Row` SHALL apply `padding(horizontal = 8.dp, vertical = 4.dp)`.
+     - In combination with the enclosing `Surface` padding (`Modifier.padding(4.dp)`) in `TrackingTabsScreen.kt` and the internal 4 dp offset of the 24 dp icon within the 32 dp button (`(32 - 24) / 2 = 4.dp`), the visual edge margin from the display boundary to the outer icon contours SHALL equal exactly 16 dp (`4.dp + 8.dp + 4.dp = 16.dp`), achieving visual harmony with the Material 3 `TopAppBar` and cockpit sensor card headers (`aktiv`, `Geschw.`, `HF`, `Höhe`).
+  2. *Symmetrical 32 dp Touch Targets & Fallback Spacers (`REQ-UI-451.2`)*:
+     - The left drawer hamburger menu `IconButton` (`onMenuClick`) and right supporter status emblem `IconButton` (`onSupporterClick`) SHALL have touch target bounds of `Modifier.size(32.dp)` housing their standard 24 dp vector drawables (`Icons.Default.Menu` and `supporterEmblemRes`).
+     - Symmetrical inactive/fallback spacers (`onMenuClick == null` and `supporterEmblemRes == null`) in both branches SHALL be sized identically to `Modifier.size(32.dp)`.
+     - The central container `Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center)` housing the 8 telemetry sensor icons SHALL remain strictly and mathematically centered in the viewport across all supporter tiers (`FREE`, `PIONEER`, `BRONZE`, `SILVER`, `GOLD`, `DIAMOND`).
+  3. *Landscape Mode & Invariant Preservation (`REQ-UI-451.3`)*:
+     - Compact landscape mode (`isCompactLandscape = true`) governed by `REQ-UI-434.1` SHALL remain untouched (max 28 dp height, trailing horizontal layout).
+     - Sensor source dialog trigger, sensor alpha states (`INACTIVE_SENSOR_ALPHA = 0.38f`), and telemetry click behaviors SHALL remain 100% operational with zero regressions.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Extending `REQ-UI-445.3` (*Live Cockpit Status Emblem & Retirement of Quick Icon Picker Dialog*), targets `SensorStatus.kt` and `TrackingTabsScreen.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-45.4 (`ATT-5397`, commit `8baf42c8`) and Sprint 2026-40.8 (`ATT-1406`, commit `8f8b8098`).
+3. *Root Reason for Existing Formulation*: `REQ-UI-445.3` balanced the hamburger menu button with the supporter emblem at 24 dp, but did not specify outer screen margin padding, resulting in 4 dp display clinging.
+4. *Preservation of Core Invariants*: The 8 sensor icons maintain exact mathematical centering via equal-width 32 dp outer slots; 24 dp icon vectors and click handlers are preserved; touch target increases from 24 dp to 32 dp.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete viewing the tracking cockpit in portrait mode,
+• *When* inspecting the top `SensorStatus` bar,
+• *Then* the left hamburger menu icon and right supporter emblem (or fallback spacer) start at exactly 16 dp from the outer display boundary (Option A).
+• *Given* an athlete with any supporter tier or free tier,
+• *When* the cockpit header renders,
+• *Then* the 8 sensor icons are mathematically centered in the horizontal viewport.
+• *Given* the athlete tapping the hamburger menu or supporter emblem,
+• *When* interacting with the controls,
+• *Then* the enlarged 32 dp touch targets respond reliably to touches.
+
+**Invariants**: Option A 16 dp visual edge offset, exact mathematical centering of 8 sensor icons across all tiers, untouched compact landscape layout (`REQ-UI-434.1`), and 100% test pass rate.
+
+
 
 
 

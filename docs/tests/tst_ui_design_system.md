@@ -7215,6 +7215,23 @@
   5. *Clean-Room Regression Suite (`TST-UI-450.5`)*:
   • Run targeted package tests (`com.atrainingtracker.trainingtracker.domain.laps.*`, `ui.aftermath.*`, `database.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
 
+### TST-UI-451: **Tracking Cockpit SensorStatus Top Bar 16 dp Margin and Symmetrical Centering Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-451`
+- **Component**: `SensorStatus.kt`, `SensorStatusLayoutTest.kt`, `SensorStatusLegibilityTest.kt`, `TrackingTabsLandscapeLayoutTest.kt`
+- **Jira**: `ATT-5422`
+- **Test Description**:
+  1. *Portrait Edge Margin & Symmetrical Spacer Contract Test (`TST-UI-451.1`, `SensorStatusLayoutTest.kt`)*:
+  • Verify outer `Row` has `padding(horizontal = 8.dp, vertical = 4.dp)` in portrait mode.
+  • Verify left menu button and right supporter emblem (and their fallback `Spacer`s) have identical `Modifier.size(32.dp)` width.
+  • Verify central `Box` has `weight(1f)` with `Alignment.Center` guaranteeing mathematical centering of the 8 sensor icons across `supporterEmblemRes != null` and `supporterEmblemRes == null`.
+  2. *Compact Landscape Invariant Contract Test (`TST-UI-451.2`, `TrackingTabsLandscapeLayoutTest.kt`)*:
+  • Verify compact landscape mode (`isCompactLandscape = true`) preserves `padding(horizontal = 4.dp, vertical = 2.dp)` and max height 28 dp per `REQ-UI-434.1`.
+  3. *Sensor Inactive Alpha & Contrast Non-Regression Test (`TST-UI-451.3`, `SensorStatusLegibilityTest.kt`)*:
+  • Verify `INACTIVE_SENSOR_ALPHA = 0.38f` and WCAG AAA contrast ratio compliance are preserved.
+  4. *Clean-Room Regression Suite Execution (`TST-UI-451.4`)*:
+  • Execute targeted package tests (`com.atrainingtracker.trainingtracker.ui.tracking.controltracking.*`, `com.atrainingtracker.trainingtracker.ui.branding.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
+
+
 
 
 
