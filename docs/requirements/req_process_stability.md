@@ -1865,7 +1865,7 @@ The workflow SHALL mandate that:
 **Invariants**: Existing `jira_util.py` CLI interface and transitions remain 100% backward-compatible; zero Android runtime changes; zero regression in governance verification.
 
 ### REQ-PRO-033: Comprehensive Online User Guide and Feature Showcase on GitHub Pages [Verified]
-- **Tests**: `TST-PRO-033` | **Tickets**: `ATT-2275`
+- **Tests**: `TST-PRO-033` | **Tickets**: `ATT-2275`, `ATT-5418`
 - **Implementation**: `docs/_config.yml`, `docs/index.md`, `docs/guide/`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/OnlineUserGuideContractTest.kt`
 - **Rationale**: Establish a comprehensive, responsive, screenshot-illustrated online user manual and feature showcase on GitHub Pages (in German and English) covering quick start, sensors, equipment matrix, live cockpit, maps/segments, route clustering, physiology, aftermath, and data export while preserving developer protocol hygiene (ATT-2275, Parent Epic ATT-2273):
 1. *Bilingual Screenshot-Rich Feature Chapters (`REQ-PRO-033.1`)*:
@@ -1878,23 +1878,29 @@ The workflow SHALL mandate that:
 • Every chapter SHALL maintain identical HTML anchor identifiers (`<a id="...">`) across German and English versions to allow deep linking from in-app Help and Info dialogs to corresponding manual sections.
 4. *Automated Build Contract Verification (`REQ-PRO-033.4`)*:
 • `OnlineUserGuideContractTest.kt` SHALL verify chapter completeness (18 files), exclusion list hygiene, image asset existence, and anchor parity across languages.
+5. *Responsive 2-Column Layout, Du-Anrede & Screenshot Authenticity (`REQ-PRO-033.5`, ATT-5418)*:
+• All 9 chapters across German (`docs/guide/de/`) and English (`docs/guide/en/`) SHALL implement a 2-column table layout with text in `<td width="65%" valign="top" markdown="1">` and clickable screenshot thumbnail in `<td width="35%" valign="top" align="center">` constrained to `width="240"` (`<a href="../img/..."><img src="../img/..." width="240" alt="..." /></a><br/><sub><em>Caption</em></sub>`).
+• The German edition SHALL consistently adopt personal "Du"-Anrede across all chapters and index.
+• All screenshot assets in `docs/guide/img/` SHALL reflect actual production app screens, eliminating mismatched screens, internal developer boards, private user assets, and scrolled-off content.
+• Descriptions in chapters 1 to 9 SHALL strictly correspond to authentic application features, removing hallucinated or unsupported capabilities.
+• `OnlineUserGuideContractTest.kt` SHALL validate both standard Markdown and HTML `<img>` tag image references without breaking asset verification.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-033` under Epic `ATT-2273` (*User Documentation & Video Guides*). Targets `docs/`, `docs/guide/`, and `app/src/test/java/com/atrainingtracker/trainingtracker/build/OnlineUserGuideContractTest.kt`.
-2. *Historical Origin & Commit Trace*: Net-new requirement created for `ATT-2275` (Sprint 2026-45.4).
-3. *Root Reason for Existing Formulation*: While aTrainingTracker has matured over 15+ years into an advanced athletic tracking suite, there was no centralized, searchable, illustrated user manual for athletes.
-4. *Preservation of Core Invariants*: Local SQLite data sovereignty, existing tracking algorithms, zero third-party tracking, and developer protocol security remain 100% preserved.
+1. *Original Requirement ID & Target*: `REQ-PRO-033` under Epic `ATT-2273` (*User Documentation & Video Guides*). Targets `docs/guide/`, `docs/index.md`, and `app/src/test/java/com/atrainingtracker/trainingtracker/build/OnlineUserGuideContractTest.kt`.
+2. *Historical Origin & Commit Trace*: Created in `ATT-2275` (commit `1fbb551625`), amended in `ATT-5418` (Sprint 2026-45.6).
+3. *Root Reason for Existing Formulation*: Initial generation created full-width portrait screenshots (~1,400 px height), mismatched image assets, formal "Sie" tone, and hallucinated feature descriptions needing systematic structural and factual rectification.
+4. *Preservation of Core Invariants*: Bilingual chapter parity (18 files), anchor parity (`<a id="...">`) for in-app deep-linking, Jekyll exclusion hygiene, and zero runtime app regression remain 100% preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* the `docs/` repository structure,
 • *When* Jekyll builds the GitHub Pages site,
 • *Then* internal developer documentation is excluded and the landing page offers bilingual navigation.
 • *Given* an athlete accessing the user guide in DE or EN,
-• *When* navigating between chapters 1 to 9,
-• *Then* all features are explained with annotated screenshots and matching anchor tags.
+• *When* reading chapters 1 to 9,
+• *Then* content is formatted in a 2-column layout with `width="240"` thumbnails, German chapters use "Du", and all screenshots and features match actual app behavior.
 • *Given* `OnlineUserGuideContractTest`,
 • *When* executed via Gradle,
-• *Then* all 18 chapter files, exclusion rules, image assets, and anchor parity pass with 100% success.
+• *Then* all 18 chapter files, exclusion rules, HTML/Markdown image assets, and anchor parity pass with 100% success.
 
 **Invariants**: Developer ASPICE documentation files remain strictly in git; zero regression in app performance or build hygiene.
 

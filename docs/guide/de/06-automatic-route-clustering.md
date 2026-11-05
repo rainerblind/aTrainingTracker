@@ -1,27 +1,53 @@
 # Kapitel 6: Lieblingsstrecken & Automatische Routen-Clustering
 
 <a id="automatic-clustering-engine"></a>
+
+<table>
+<tr>
+<td width="65%" valign="top" markdown="1">
+
 ## 6.1 Die automatische Streckenerkennung
 
-Die meisten Athleten haben feste Hausrunden, Feierabendstrecken oder Standard-Trainingsrouten. aTrainingTracker erkennt diese Muster vollkommen autonom im Hintergrund:
+Die meisten Athleten haben feste Hausrunden, Pendelwege oder Standard-Trainingsstrecken. **aTrainingTracker** erkennt diese Muster vollkommen autonom im Hintergrund:
 
-- **Geometrischer Ähnlichkeits-Algorithmus**: Nach Abschluss jeder Aktivität vergleicht ein spatialer Clustering-Algorithmus (Fréchet-Distanz & Hausdorff-Metrik) den aufgezeichneten GPS-Track mit früheren Einheiten.
-- **Cluster-Bildung (*Lieblingsstrecken*)**: Werden 2 oder mehr Workouts auf demselben Streckenverlauf erkannt, werden sie automatisch zu einem gemeinsamen Strecken-Cluster zusammengefasst.
-- **Automatische Workout-Benennung**: Benennen Sie einen Cluster einmalig (z. B. *"Isarrunde"* oder *"Hausberg-Intervall"*), erhalten alle zukünftigen Einheiten auf dieser Strecke automatisch denselben aussagekräftigen Titel.
+- **Autonomes Clustering**: Nach dem Beenden einer Einheit vergleicht ein intelligenter räumlicher Clustering-Algorithmus den GPS-Track mit deinen früheren Aufzeichnungen.
+- **Lieblingsstrecken-Gruppierung**: Werden wiederkehrende Streckenverläufe erkannt, fasst die App diese automatisch zu einem gemeinsamen Cluster unter **Lieblingsstrecken** zusammen.
+- **Automatische Workout-Benennung mit Nummerierung**:
+  - Benennst du eine Lieblingsstrecke einmalig (z. B. *„Zum Bäcker"*), erhalten alle zukünftigen Einheiten auf dieser Route automatisch denselben Namen.
+  - Mit fortlaufenden Workout-Zählern (z. B. *„Zum Bäcker #44"*) und Meilenstein-Jubiläen feiert die App deine Trainingsdisziplin.
 
-![Cluster-Details & Strecken-Popup](../img/06_cluster_expanded.png)
+</td>
+<td width="35%" valign="top" align="center">
+  <a href="../img/06_cluster_expanded.png"><img src="../img/06_cluster_expanded.png" width="240" alt="Lieblingsstrecken-Übersicht" /></a>
+  <br/><sub><em>Übersichtsliste der automatisch erkannten Lieblingsstrecken</em></sub>
+</td>
+</tr>
+</table>
 
 ---
 
 <a id="cluster-map-and-history"></a>
-## 6.2 Cluster-Karten & Historischer Performance-Vergleich
 
-- **Strecken-Heatmap**: Auf der Übersichtskarte werden Ihre Lieblingsstrecken farblich hervorgehoben. Dicke Linien visualisieren häufig gefahrene Routen.
-- **Langzeit-Trends**: Verfolgen Sie, wie sich Ihre Durchschnittsgeschwindigkeit, Wattleistung oder Herzfrequenz auf derselben Standardstrecke über Monate und Jahre hinweg entwickelt.
-- **Filterung nach Sportart**: Cluster lassen sich nach Radfahren, Laufen oder Wandern filtern, um spezifische Leistungssteigerungen isoliert zu betrachten.
+<table>
+<tr>
+<td width="65%" valign="top" markdown="1">
 
-![Cluster-Heatmap auf der Karte](../img/06_cluster_heatmap.png)
+## 6.2 Cluster-Detailansicht & Leistungsverlauf
+
+Tippst du auf eine Lieblingsstrecke, öffnet sich eine umfassende historische Analyse:
+
+- **Leistungsverlauf (Dauer vs. Tempo)**: Vergleiche deine Fahrzeit oder Geschwindigkeit über alle bisherigen Wiederholungen dieser Stammrunde.
+- **Automatische Ausreißer-Erkennung**: Ungewöhnlich langsame oder schnelle Fahrten (z. B. durch Stadtbummel oder Reifenpanne) werden automatisch als **Ausreißer** markiert, damit sie deine Durchschnitte nicht verfälschen.
+- **Summen-Statistiken & Track-Überlagerung**: Behalte Bestzeit, Durchschnittszeit, Gesamtdistanz und Gesamt-Höhenmeter im Blick, während die Streckenführung farbig auf der Karte visualisiert wird.
+
+</td>
+<td width="35%" valign="top" align="center">
+  <a href="../img/06_cluster_heatmap.png"><img src="../img/06_cluster_heatmap.png" width="240" alt="Cluster-Detailansicht & Heatmap" /></a>
+  <br/><sub><em>Leistungsverlauf mit Ausreißer-Erkennung & Track-Überlagerung</em></sub>
+</td>
+</tr>
+</table>
 
 ---
 
-[Vorheriges Kapitel: Karten & GPX-Routen](05-maps-routes-climbs-segments.md) | [Nächstes Kapitel: Physiologie & Zonen](07-physiology-training-zones.md)
+[Vorheriges Kapitel: Karten, Routen & Segmente](05-maps-routes-climbs-segments.md) | [Nächstes Kapitel: Physiologie & Zonen](07-physiology-training-zones.md) | [Zurück zur Übersicht](index.md)

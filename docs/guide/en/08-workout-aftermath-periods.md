@@ -1,42 +1,81 @@
-# Chapter 8: Workout Aftermath, Periods 2.0 & Lifetime Statistics
+# Chapter 8: Workout Aftermath, Periods 2.0 & Annual Analytics
 
 <a id="workout-inspection-and-charts"></a>
-## 8.1 Detailed Workout Inspection & Synchronized Charts
 
-Following session completion, aTrainingTracker opens a holistic retrospective breakdown:
+<table>
+<tr>
+<td width="65%" valign="top" markdown="1">
 
-- **Stacked Telemetry Graphs**: Speed/Pace, Heart Rate, Cycling Power, and Altitude profile stack vertically with synchronized touch-scrubbing cursors.
-- **Marginal Zone Histograms**: Inspect exact minutes and fractional duration spent within each Coggan power and Karvonen heart rate boundary.
-- **Lap Table Splits**: Review manual lap triggers or automated distance splits (e.g. 1 km / 5 km / 5 miles) with cadence, power, and heart rate aggregates.
+## 8.1 Detailed Workout Retrospective & Telemetry Charts
 
-![Periods Overview & Inspection](../img/08_periods_screen.png)
+Following session completion and storage, **aTrainingTracker** opens a holistic retrospective breakdown:
+
+- **Three Dedicated Retrospective Tabs**:
+  - **Overview**: Core aggregates (duration, distance, climbing, calories, averages, gear).
+  - **Map & Charts**: Synchronized time-series curves for speed, elevation, heart rate, power, and Skiba W'bal with synchronized touch scrubbing.
+  - **Zones**: Detailed zone breakdowns for heart rate and power, toggleable between **Bars**, **Columns**, and **Histogram**.
+- **Manual Laps**: Inspect interval splits and lap triggers with dedicated power, cadence, and heart rate metrics.
+
+</td>
+<td width="35%" valign="top" align="center">
+  <a href="../img/08_workout_detail.png"><img src="../img/08_workout_detail.png" width="240" alt="Workout Retrospective & Zones" /></a>
+  <br/><sub><em>Heart rate and power zone distribution in post-workout analysis</em></sub>
+</td>
+</tr>
+</table>
 
 ---
 
 <a id="periods-two-point-zero"></a>
+
+<table>
+<tr>
+<td width="65%" valign="top" markdown="1">
+
 ## 8.2 Periods 2.0: Weeks, Months & Years
 
-To understand periodization cycles and long-term training consistency:
+To understand periodization cycles and long-term athletic volume across calendar boundaries:
 
-- **Calendar Aggregation**: Transition seamlessly across Weeks, Months, and Years.
-- **Sport Filtering**: Inspect running mileage versus cycling distance in isolation or combined.
-- **Comparative Metrics**: Compare total distance, vertical ascent, moving time, and cumulative Training Stress Score against previous seasons.
+- **Calendar Aggregation**: Transition smoothly between weekly, monthly, and yearly summaries.
+- **Weekly & Monthly Cards**:
+  - Summarizes duration, distance, and elevation gain paired with daily mini-bar charts.
+  - Highlights the longest session of each period with route map previews and telemetry summary.
+- **Sport Filtering**: Filter by cycling, running, or other activities to isolate specific training disciplines.
 
-![Periods Cards](../img/08_periods_cards.png)
+</td>
+<td width="35%" valign="top" align="center">
+  <a href="../img/08_periods_screen.png"><img src="../img/08_periods_screen.png" width="240" alt="Periods 2.0 Weekly View" /></a>
+  <br/><sub><em>Weekly cards with activity bar charts & route maps</em></sub>
+</td>
+</tr>
+</table>
 
 ---
 
 <a id="yearly-activity-grid"></a>
-## 8.3 The Yearly Activity Contribution Heatmap
 
-Inspired by developer contribution matrices, the Yearly Activity Grid plots all 365 days of the calendar year:
+<table>
+<tr>
+<td width="65%" valign="top" markdown="1">
 
-- **Shaded Green Cadence**: The saturation of each day box scales directly with training volume or TSS stress achieved on that date.
-- **Consistency Verification**: Instantly highlights steady training streaks, recovery weeks, or unforced sedentary gaps.
-- **Day Cell Inspection**: Tapping any individual square surfaces the complete session list recorded on that day.
+## 8.3 Yearly Activity Contribution Grid
 
-![Yearly Activity Grid](../img/08_yearly_activity_grid.png)
+Under the annual view, the **Yearly Activity Grid** visualizes every single calendar day of the training season:
+
+- **Sport Color-Coding**:
+  - Contribution cells are color-coded based on the primary discipline of the day: **Blue** for cycling, **Orange** for running, and **Turquoise** for other activities.
+- **4-Level Quartile Intensity**:
+  - Color saturation scales across four intensity quartiles (from subtle pastel to deep saturated hues).
+  - Promotes athletic consistency, turning workout adherence and rest intervals into a compelling visual mosaic.
+
+</td>
+<td width="35%" valign="top" align="center">
+  <a href="../img/08_yearly_activity_grid.png"><img src="../img/08_yearly_activity_grid.png" width="240" alt="Yearly Activity Contribution Grid" /></a>
+  <br/><sub><em>Annual activity grid with sport-coded 4-quartile intensity blocks</em></sub>
+</td>
+</tr>
+</table>
 
 ---
 
-[Previous: Physiology & Training Zones](07-physiology-training-zones.md) | [Next: Data Sovereignty & Cloud Sync](09-export-cloud-sync.md)
+[Previous Chapter: Physiology & Training Zones](07-physiology-training-zones.md) | [Next Chapter: Data Sovereignty & Export](09-export-cloud-sync.md) | [Back to Table of Contents](index.md)

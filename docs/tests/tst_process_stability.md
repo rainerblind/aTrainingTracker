@@ -1277,7 +1277,7 @@
 ### TST-PRO-033: **Online User Guide Content, Exclusion & Asset Contract** [Verified]
 - **Requirement(s)**: `REQ-PRO-033`
 - **Component**: **Online User Guide Content, Exclusion & Asset Contract**
-- **Jira**: ``ATT-2275``
+- **Jira**: ``ATT-2275``, ``ATT-5418``
 - **Test Description**:
   1. *Jekyll Configuration & Exclusion Hygiene (`TST-PRO-033.1`)*:
   • Verify `docs/_config.yml` exists and explicitly excludes internal developer paths (`ci-secrets.md`, `project_protocol.md`, `coding_standards.md`, `design_guidelines.md`, `engineering/`, `requirements/`, `tests/`).
@@ -1288,5 +1288,8 @@
   • Verify all markdown image references (`../img/...` or `img/...`) resolve to existing, non-empty PNG/JPG image assets under `docs/guide/img/`.
   4. *Anchor Parity & Deep Linking Contract (`TST-PRO-033.4`)*:
   • Verify all `<a id="...">` anchor identifiers match 1:1 between corresponding German and English chapter files.
+  5. *Layout Structure & HTML/Markdown Asset Resolution (`TST-PRO-033.5`, ATT-5418)*:
+  • Verify `OnlineUserGuideContractTest.kt` parses both Markdown `![]()` and HTML `<img src="...">` / `<a href="...">` syntax, asserting all referenced screenshot assets exist and are non-empty.
+  • Verify 100% anchor parity across all 9 chapters between DE and EN.
 
 

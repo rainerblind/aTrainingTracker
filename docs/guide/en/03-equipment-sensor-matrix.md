@@ -1,29 +1,51 @@
 # Chapter 3: Equipment & Sensor Matrix
 
 <a id="equipment-management"></a>
+
+<table>
+<tr>
+<td width="65%" valign="top" markdown="1">
+
 ## 3.1 Managing Multiple Bicycles & Running Shoes
 
-For multi-sport athletes maintaining a fleet of bikes (Road, Gravel, MTB, TT) and rotating shoe pairs, aTrainingTracker provides comprehensive equipment lifecycle management:
+For athletes maintaining a fleet of bikes (Road, Gravel, Mountain, Time Trial) or rotating shoe pairs, **aTrainingTracker** provides centralized equipment lifecycle tracking under **Equipment** (*Bikes & Shoes*):
 
-- **Bicycles**: Record individual bike profiles with custom names, frame weight, tire circumference, and default sport discipline.
-- **Running Shoes**: Track accumulated mileage per shoe pair to retire worn-out midsoles before repetitive strain injuries occur.
-- **Mileage Accumulation**: Completed workouts automatically increment odometer totals on the assigned gear item.
+- **Bicycles (*Bikes*)**: Register each bike with a custom name, associated sport disciplines (e.g. *Bike*, *MTB*, *Time Trial*), optional Strava Gear ID, and linked telemetry sensors.
+- **Running Shoes (*Shoes*)**: Manage your running footwear roster categorized by model and discipline.
+- **Complete Usage Tracking**: The app automatically aggregates lifetime distance, active moving time, total elevation climbed, workout count, and dates of first and most recent use.
 
-![Bicycle Equipment Management](../img/03_equipment_bikes.png)
+</td>
+<td width="35%" valign="top" align="center">
+  <a href="../img/03_equipment_bikes.png"><img src="../img/03_equipment_bikes.png" width="240" alt="Bicycle Equipment Management" /></a>
+  <br/><sub><em>Bike garage overview with lifetime distance & hours</em></sub>
+</td>
+</tr>
+</table>
 
 ---
 
 <a id="sensor-to-gear-matrix"></a>
+
+<table>
+<tr>
+<td width="65%" valign="top" markdown="1">
+
 ## 3.2 The Sensor-to-Gear Matrix
 
-If you operate dedicated power meters or speed pods across different bikes, you never have to reconfigure sensor assignments before pressing Start:
+If you operate dedicated power meters, cadence pods, or wheel sensors across different bicycles, there is no need to manually select your gear before heading out:
 
-- **Hardware Binding**: Associate sensors directly with specific bicycles or shoes (e.g. *Stages Left* to Road Bike, *Quarq DZero* to Gravel Bike).
-- **Auto-Detection by Sensor Presence**: The instant aTrainingTracker connects to the road bike's power meter, it activates the Road Bike profile and applies its specific wheel circumference and FTP profile.
-- **Error-Free Mileage Tracking**: Eliminates inaccurate distance calculation from mismatched wheel sizes or accidental gear misattribution.
+- **Automatic Gear Selection**: Bind individual sensors directly to a bike or pair of shoes (via the sensor details or the interactive equipment matrix). As soon as **aTrainingTracker** receives telemetry from that sensor, it selects the corresponding gear item automatically.
+- **Accurate Mileage Accounting**: Eliminates erroneous accounting, ensuring gravel or trail miles never accidentally accrue onto your road bike or racing flats.
+- **Strava Gear Sync**: Uploaded activities automatically sync to the matching equipment on Strava.
 
-![Shoe Equipment Management](../img/03_equipment_shoes.png)
+</td>
+<td width="35%" valign="top" align="center">
+  <a href="../img/03_equipment_shoes.png"><img src="../img/03_equipment_shoes.png" width="240" alt="Running Shoes & Sport Assignments" /></a>
+  <br/><sub><em>Shoe roster and discipline assignments</em></sub>
+</td>
+</tr>
+</table>
 
 ---
 
-[Previous: Sensors & Dual-Protocol Hardware](02-sensors-dual-protocol.md) | [Next: Live Cockpit & Tracking Tabs](04-live-cockpit-tabs.md)
+[Previous Chapter: Sensors & Hardware](02-sensors-dual-protocol.md) | [Next Chapter: Live Cockpit & Tabs](04-live-cockpit-tabs.md) | [Back to Table of Contents](index.md)
