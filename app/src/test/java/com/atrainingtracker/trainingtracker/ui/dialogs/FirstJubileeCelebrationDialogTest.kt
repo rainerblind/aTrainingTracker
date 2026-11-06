@@ -63,8 +63,22 @@ class FirstJubileeCelebrationDialogTest {
         assertTrue("Dialog must contain email feedback action", content.contains("onSendFeedbackEmail"))
         assertTrue("Dialog must contain Pro supporter appeal action", content.contains("onNavigateToSupporter"))
 
-        // 3. Free vs Pro tier gating: supporter appeal note must be gated by !isProActive
-        assertTrue("Supporter appeal must be conditionally gated by !isProActive", content.contains("if (!isProActive)"))
+        // 3. Free and Pioneer tier gating: supporter appeal must be visible for FREE and PIONEER
+        assertTrue(
+            "Supporter appeal must check FREE and PIONEER tiers",
+            content.contains("supporterTier == SupporterTier.FREE || supporterTier == SupporterTier.PIONEER")
+        )
+        assertTrue(
+            "Supporter appeal must be conditionally gated by showFinancialSupport",
+            content.contains("if (showFinancialSupport)")
+        )
+
+        // 3b. Strict vertical ordering: Email Feedback -> Play Store Review -> Financial Support
+        val emailIdx = content.indexOf("jubilee_email_feedback_prompt")
+        val reviewIdx = content.indexOf("jubilee_review_prompt")
+        val supportIdx = content.indexOf("if (showFinancialSupport)")
+        assertTrue("Email feedback section must precede Google Play review section", emailIdx in 1 until reviewIdx)
+        assertTrue("Google Play review section must precede financial support section", reviewIdx in 1 until supportIdx)
 
         // 4. In-App Review with ReviewManagerFactory
         assertTrue("Action helper must use ReviewManagerFactory", content.contains("ReviewManagerFactory"))
@@ -83,12 +97,37 @@ class FirstJubileeCelebrationDialogTest {
     }
 
     @Test
-    fun testJubileeFeedbackPrompt_resourceExists() {
+    fun testJubileePromptResources_exist() {
         // Assert generated R resource identifier exists without source-file text grepping (Section 5.4)
         assertTrue(
-            "R.string.jubilee_feedback_prompt must exist",
-            com.atrainingtracker.R.string.jubilee_feedback_prompt > 0
+            "R.string.jubilee_email_feedback_prompt must exist",
+            com.atrainingtracker.R.string.jubilee_email_feedback_prompt > 0
         )
+        assertTrue(
+            "R.string.jubilee_review_prompt must exist",
+            com.atrainingtracker.R.string.jubilee_review_prompt > 0
+        )
+        assertTrue(
+            "R.string.jubilee_supporter_appeal_message must exist",
+            com.atrainingtracker.R.string.jubilee_supporter_appeal_message > 0
+        )
+    }
+
+    @Test
+    fun testFinancialSupportVisibilityLogic_visibleForFreeAndPioneerOnly() {
+        val freeVisible = com.atrainingtracker.trainingtracker.monetization.SupporterTier.FREE == com.atrainingtracker.trainingtracker.monetization.SupporterTier.FREE || com.atrainingtracker.trainingtracker.monetization.SupporterTier.FREE == com.atrainingtracker.trainingtracker.monetization.SupporterTier.PIONEER
+        val pioneerVisible = com.atrainingtracker.trainingtracker.monetization.SupporterTier.PIONEER == com.atrainingtracker.trainingtracker.monetization.SupporterTier.FREE || com.atrainingtracker.trainingtracker.monetization.SupporterTier.PIONEER == com.atrainingtracker.trainingtracker.monetization.SupporterTier.PIONEER
+        val bronzeVisible = com.atrainingtracker.trainingtracker.monetization.SupporterTier.BRONZE == com.atrainingtracker.trainingtracker.monetization.SupporterTier.FREE || com.atrainingtracker.trainingtracker.monetization.SupporterTier.BRONZE == com.atrainingtracker.trainingtracker.monetization.SupporterTier.PIONEER
+        val silverVisible = com.atrainingtracker.trainingtracker.monetization.SupporterTier.SILVER == com.atrainingtracker.trainingtracker.monetization.SupporterTier.FREE || com.atrainingtracker.trainingtracker.monetization.SupporterTier.SILVER == com.atrainingtracker.trainingtracker.monetization.SupporterTier.PIONEER
+        val goldVisible = com.atrainingtracker.trainingtracker.monetization.SupporterTier.GOLD == com.atrainingtracker.trainingtracker.monetization.SupporterTier.FREE || com.atrainingtracker.trainingtracker.monetization.SupporterTier.GOLD == com.atrainingtracker.trainingtracker.monetization.SupporterTier.PIONEER
+        val diamondVisible = com.atrainingtracker.trainingtracker.monetization.SupporterTier.DIAMOND == com.atrainingtracker.trainingtracker.monetization.SupporterTier.FREE || com.atrainingtracker.trainingtracker.monetization.SupporterTier.DIAMOND == com.atrainingtracker.trainingtracker.monetization.SupporterTier.PIONEER
+
+        assertTrue("Financial support must be visible for FREE tier", freeVisible)
+        assertTrue("Financial support must be visible for PIONEER tier", pioneerVisible)
+        org.junit.Assert.assertFalse("Financial support must be hidden for BRONZE tier", bronzeVisible)
+        org.junit.Assert.assertFalse("Financial support must be hidden for SILVER tier", silverVisible)
+        org.junit.Assert.assertFalse("Financial support must be hidden for GOLD tier", goldVisible)
+        org.junit.Assert.assertFalse("Financial support must be hidden for DIAMOND tier", diamondVisible)
     }
 
     @Test

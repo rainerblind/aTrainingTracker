@@ -19,11 +19,11 @@
 - **Jira**: `ATT-2308`
 - **Test Description**: 1. Format title for 100th Bike workout with base cluster name "Hausrunde". 2. Verify formatted title matches localized string pattern "[Count]. [SportName]: [ClusterName]" (e.g. "100. Radfahrt: Hausrunde"). 3. Verify title is persisted in `WorkoutSummaries.WORKOUT_NAME` prior to export.
 
-### TST-REV-003: **First-Jubilee Celebration Dialog Tier Gating & Intent Dispatch Contract Test** [Verified]
+### TST-REV-003: **First-Jubilee Celebration Dialog Tier Gating, Reordering & Intent Dispatch Contract Test** [Verified]
 - **Requirement(s)**: `REQ-REV-003`
 - **Component**: `FirstJubileeCelebrationDialog.kt`
-- **Jira**: `ATT-2308`, `ATT-5401`, `ATT-5399`, `ATT-5467`, `ATT-5659`
-- **Test Description**: 1. Launch dialog in Free tier mode. 2. Verify Google Play Review action, email feedback action, transitional prompt text, and appreciative development support appeal note with Pro upgrade button are displayed without marketing buzzwords ("15+ Jahre", "Indie", "Datenschutz") (ATT-5659). 3. Launch dialog with Pro tier active. 4. Verify supporter appeal note and upgrade button are cleanly hidden, while transitional prompt text remains displayed before action buttons. 5. Trigger review action and verify visible outcome: verify `Context.findActivity()` resolution, and ensure that in debug mode, or if `launchReviewFlow` terminates immediately (< 300ms) or without Activity, `openPlayStorePage(context)` fallback is immediately launched.
+- **Jira**: `ATT-2308`, `ATT-5401`, `ATT-5399`, `ATT-5467`, `ATT-5659`, `ATT-5658`
+- **Test Description**: 1. Launch dialog in Free and Pioneer tier modes. 2. Verify top-to-bottom ordering: milestone message, email feedback prompt and button, Play Store review prompt and button, and financial development support card at the bottom. 3. Launch dialog with active paid Pro tier (Bronze, Silver, Gold, Diamond). 4. Verify financial support card is cleanly hidden, while email and Play Store sections remain visible. 5. Trigger review action and verify visible outcome: verify `Context.findActivity()` resolution, and ensure that in debug mode, or if `launchReviewFlow` terminates immediately (< 300ms) or without Activity, `openPlayStorePage(context)` fallback is immediately launched.
 
 ### TST-REV-004: **Single-Prompt Invariant & Zero-Spam Re-prompt Suppression Test** [Verified]
 - **Requirement(s)**: `REQ-REV-004`
@@ -34,8 +34,8 @@
 ### TST-REV-005: **9-Locale Localization Parity & String Resource Verification** [Verified]
 - **Requirement(s)**: `REQ-REV-002`, `REQ-REV-003`
 - **Component**: `res/values/strings.xml`, `TranslationParityTest.kt`
-- **Jira**: `ATT-2308`, `ATT-5467`, `ATT-5659`
-- **Test Description**: Run `TranslationParityTest` (`TST-LOC-001`) asserting that all milestone title templates, dialog headers, review button labels, email body strings, transitional feedback prompts (`jubilee_feedback_prompt`), and supporter appeal texts exist with 100% parity across EN, DE, ES, FR, IT, JA, NL, PL, and PT with valid literal linebreaks and matching format specifiers.
+- **Jira**: `ATT-2308`, `ATT-5467`, `ATT-5659`, `ATT-5658`
+- **Test Description**: Run `TranslationParityTest` (`TST-LOC-001`) asserting that all milestone title templates, dialog headers, review button labels, email body strings, transitional feedback prompts (`jubilee_email_feedback_prompt`, `jubilee_review_prompt`), and supporter appeal texts exist with 100% parity across EN, DE, ES, FR, IT, JA, NL, PL, and PT with valid literal linebreaks, matching format specifiers, and zero decorative inline Unicode emojis.
 
 ### TST-REV-006: **SupporterDebugSection Jubilee Preview Trigger Contract Test** [Verified]
 - **Requirement(s)**: `REQ-REV-005`

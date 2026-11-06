@@ -2396,7 +2396,9 @@
     <!-- Milestone Workout Auto-Naming & First Jubilee Celebration (ATT-2308 / REQ-REV-001..005) -->
     <string name="milestone_workout_name_format">%1$d. %2$s: %3$s</string>
     <string name="jubilee_dialog_title">Glückwunsch zum %1$d. %2$s!</string>
-    <string name="jubilee_dialog_message">Du hast %1$d %2$s-Einheiten mit aTrainingTracker absolviert! Das ist ein beeindruckender Meilenstein.</string>
+    <string name="jubilee_dialog_message">Du hast %1$d %2$s-Einheiten mit aTrainingTracker absolviert – ein schöner Meilenstein! Da kommen sicherlich noch ein paar dazu.</string>
+    <string name="jubilee_email_feedback_prompt">Wenn dir die App gefällt oder du Ideen hast, wie sie noch besser werden kann, würde ich mich sehr über dein Feedback freuen:</string>
+    <string name="jubilee_review_prompt">Gefällt dir aTrainingTracker? Dann freue ich mich insbesondere über eine positive Bewertung bei Google Play:</string>
     <string name="jubilee_feedback_prompt">Gefällt dir aTrainingTracker? Teile deine Erfahrung mit einer Bewertung bei Google Play oder schicke dein Feedback direkt per E-Mail an Rainer.</string>
     <string name="jubilee_action_review">Bei Google Play bewerten</string>
     <string name="jubilee_action_email_feedback">Feedback per E-Mail an Rainer</string>
