@@ -1082,7 +1082,7 @@
     <string name="legacy_import__finished_with_failed">インポート完了: %4$d個のスキャン済みファイルのうち、%1$d個をインポート、%2$d個をスキップ、%3$d個が失敗しました。</string>
     <string name="cluster_naming__select_existing_route">既存のルートを選択</string>
     <string name="cluster_naming__title">ワークアウトをルートに割り当て</string>
-    <string name="cluster_naming__found_recurring">%1$s からの新しいルートが見つかりました。</string>
+    <string name="cluster_naming__found_recurring">%1$s からの未割り当てルート。</string>
     <string name="cluster_naming__task_count">タスク %1$d / %2$d</string>
     <string name="cluster_naming__assignment_label">既存のお気に入りルートを選択:</string>
     <string name="cluster_naming__create_new">新規作成…</string>

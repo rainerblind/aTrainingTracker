@@ -1104,7 +1104,7 @@
     <string name="legacy_import__finished_with_failed">Import voltooid: %1$d geïmporteerd, %2$d overgeslagen, %3$d mislukt van %4$d gescande bestanden.</string>
     <string name="cluster_naming__select_existing_route">Bestaande route selecteren</string>
     <string name="cluster_naming__title">Workout aan route toewijzen</string>
-    <string name="cluster_naming__found_recurring">Nieuwe route gevonden van %1$s.</string>
+    <string name="cluster_naming__found_recurring">Niet-toegewezen route van %1$s.</string>
     <string name="cluster_naming__task_count">Taak %1$d van %2$d</string>
     <string name="cluster_naming__assignment_label">Bestaande favoriete route selecteren:</string>
     <string name="cluster_naming__create_new">Nieuwe maken…</string>

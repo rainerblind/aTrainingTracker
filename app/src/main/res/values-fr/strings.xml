@@ -1103,7 +1103,7 @@
     <string name="legacy_import__finished_with_failed">Importation terminée : %1$d importés, %2$d ignorés, %3$d échoués sur %4$d fichiers analysés.</string>
     <string name="cluster_naming__select_existing_route">Sélectionner un itinéraire existant</string>
     <string name="cluster_naming__title">Attribuer l\'entraînement à un itinéraire</string>
-    <string name="cluster_naming__found_recurring">Nouvel itinéraire trouvé du %1$s.</string>
+    <string name="cluster_naming__found_recurring">Itinéraire non attribué du %1$s.</string>
     <string name="cluster_naming__task_count">Tâche %1$d sur %2$d</string>
     <string name="cluster_naming__assignment_label">Sélectionner un itinéraire favori existant :</string>
     <string name="cluster_naming__create_new">Créer nouveau…</string>

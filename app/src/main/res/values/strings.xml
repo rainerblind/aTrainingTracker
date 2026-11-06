@@ -1336,7 +1336,7 @@
     <string name="legacy_import__finished_with_failed">Import finished: %1$d imported, %2$d skipped, %3$d failed out of %4$d files scanned.</string>
     <string name="cluster_naming__select_existing_route">Select Existing Route</string>
     <string name="cluster_naming__title">Assign Workout to Route</string>
-    <string name="cluster_naming__found_recurring">Found a new route from %1$s.</string>
+    <string name="cluster_naming__found_recurring">Unassigned route from %1$s.</string>
     <string name="cluster_naming__task_count">Task %1$d of %2$d</string>
     <string name="cluster_naming__assignment_label">Select existing favorite route:</string>
     <string name="cluster_naming__create_new">Create New…</string>

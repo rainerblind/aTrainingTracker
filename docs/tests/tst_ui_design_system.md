@@ -400,10 +400,10 @@
 ### TST-UI-078: **Cluster Naming Dialog Localization Audit** [Verified]
 - **Requirement(s)**: `REQ-UI-123`
 - **Component**: **Cluster Naming Dialog Localization Audit**
-- **Jira**: `ATT-565`, `ATT-5664`
+- **Jira**: `ATT-565`, `ATT-5664`, `ATT-5662`
 - **Test Description**:
-  1. Inspect `ClusterNamingDialog` strings across all 9 locales: verify `cluster_naming__assignment_label`, `cluster_naming__new_name_prompt`, and `cluster_naming__new_route_name_label` explicitly reference existing and new favorite routes (*Lieblingsstrecken*).
-  2. Run `TranslationParityTest` to confirm 100% string presence and parity across `values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, and `values-pt/`.
+  1. Inspect `ClusterNamingDialog` strings across all 9 locales: verify `cluster_naming__assignment_label`, `cluster_naming__new_name_prompt`, and `cluster_naming__new_route_name_label` explicitly reference existing and new favorite routes (*Lieblingsstrecken*), and verify `cluster_naming__found_recurring` provides neutral unassigned route copy with `%1$s` placeholder.
+  2. Run `TranslationParityTest` and `ClusterNamingDialogLabelsVisualContractTest` to confirm 100% string presence, copy correctness, and parity across `values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, and `values-pt/`.
   3. Verify `verify_requirement_governance.py` passes cleanly.
 
 ### TST-UI-076: **Period UI Layout Integrity** [Verified]

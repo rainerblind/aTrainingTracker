@@ -1104,7 +1104,7 @@
     <string name="legacy_import__finished_with_failed">Importação concluída: %1$d importados, %2$d ignorados, %3$d falhados de %4$d ficheiros analisados.</string>
     <string name="cluster_naming__select_existing_route">Selecionar rota existente</string>
     <string name="cluster_naming__title">Atribuir treino à rota</string>
-    <string name="cluster_naming__found_recurring">Encontrada nova rota de %1$s.</string>
+    <string name="cluster_naming__found_recurring">Rota não atribuída de %1$s.</string>
     <string name="cluster_naming__task_count">Tarefa %1$d de %2$d</string>
     <string name="cluster_naming__assignment_label">Selecionar rota favorita existente:</string>
     <string name="cluster_naming__create_new">Criar nova…</string>

@@ -1189,7 +1189,7 @@
     <string name="legacy_import__finished_with_failed">Import abgeschlossen: %1$d importiert, %2$d übersprungen, %3$d fehlgeschlagen von %4$d gescannten Dateien.</string>
     <string name="cluster_naming__select_existing_route">Bestehende Route auswählen</string>
     <string name="cluster_naming__title">Einheit einer Lieblingsstrecke zuweisen</string>
-    <string name="cluster_naming__found_recurring">Neue Lieblingsstrecke vom %1$s gefunden.</string>
+    <string name="cluster_naming__found_recurring">Nicht automatisch zuweisbare Strecke vom %1$s.</string>
     <string name="cluster_naming__task_count">Aufgabe %1$d von %2$d</string>
     <string name="cluster_naming__assignment_label">Bestehende Lieblingsstrecke auswählen:</string>
     <string name="cluster_naming__create_new">Neu erstellen…</string>

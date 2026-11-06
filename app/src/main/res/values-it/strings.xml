@@ -1104,7 +1104,7 @@
     <string name="legacy_import__finished_with_failed">Importazione completata: %1$d importati, %2$d ignorati, %3$d non riusciti su %4$d file scansionati.</string>
     <string name="cluster_naming__select_existing_route">Seleziona percorso esistente</string>
     <string name="cluster_naming__title">Assegna allenamento al percorso</string>
-    <string name="cluster_naming__found_recurring">Trovato nuovo percorso del %1$s.</string>
+    <string name="cluster_naming__found_recurring">Percorso non assegnato del %1$s.</string>
     <string name="cluster_naming__task_count">Attività %1$d di %2$d</string>
     <string name="cluster_naming__assignment_label">Seleziona percorso preferito esistente:</string>
     <string name="cluster_naming__create_new">Crea nuovo…</string>

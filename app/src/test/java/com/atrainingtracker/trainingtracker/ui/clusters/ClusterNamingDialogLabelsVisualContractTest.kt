@@ -66,7 +66,8 @@ class ClusterNamingDialogLabelsVisualContractTest {
         val keys = listOf(
             "cluster_naming__assignment_label",
             "cluster_naming__new_name_prompt",
-            "cluster_naming__new_route_name_label"
+            "cluster_naming__new_route_name_label",
+            "cluster_naming__found_recurring"
         )
         for (locale in supportedLocales) {
             val valuesDir = if (locale.isEmpty()) "values" else "values-$locale"
@@ -78,6 +79,12 @@ class ClusterNamingDialogLabelsVisualContractTest {
                 assertNotNull("Key '$key' must exist in $valuesDir/strings.xml", rawContent)
                 assertFalse("Key '$key' in $valuesDir must not be blank", rawContent!!.isBlank())
             }
+
+            val recurring = extractStringTagRawContent(stringsFile, "cluster_naming__found_recurring")
+            assertTrue(
+                "cluster_naming__found_recurring in $valuesDir must contain '%1\$s'",
+                recurring!!.contains("%1\$s")
+            )
         }
     }
 
@@ -89,10 +96,12 @@ class ClusterNamingDialogLabelsVisualContractTest {
         val assignmentLabel = extractStringTagRawContent(stringsFile, "cluster_naming__assignment_label")
         val newNamePrompt = extractStringTagRawContent(stringsFile, "cluster_naming__new_name_prompt")
         val newRouteNameLabel = extractStringTagRawContent(stringsFile, "cluster_naming__new_route_name_label")
+        val foundRecurring = extractStringTagRawContent(stringsFile, "cluster_naming__found_recurring")
 
         assertEquals("Bestehende Lieblingsstrecke auswählen:", assignmentLabel)
         assertEquals("Oder neue Lieblingsstrecke anlegen:", newNamePrompt)
         assertEquals("Name der neuen Lieblingsstrecke", newRouteNameLabel)
+        assertEquals("Nicht automatisch zuweisbare Strecke vom %1\$s.", foundRecurring)
     }
 
     @Test
@@ -103,10 +112,18 @@ class ClusterNamingDialogLabelsVisualContractTest {
         val assignmentLabel = extractStringTagRawContent(stringsFile, "cluster_naming__assignment_label")
         val newNamePrompt = extractStringTagRawContent(stringsFile, "cluster_naming__new_name_prompt")
         val newRouteNameLabel = extractStringTagRawContent(stringsFile, "cluster_naming__new_route_name_label")
+        val foundRecurring = extractStringTagRawContent(stringsFile, "cluster_naming__found_recurring")
 
         assertEquals("Select existing favorite route:", assignmentLabel)
         assertEquals("Or create a new favorite route:", newNamePrompt)
         assertEquals("New Favorite Route Name", newRouteNameLabel)
+        assertEquals("Unassigned route from %1\$s.", foundRecurring)
+    }
+
+    private fun containsEmoji(text: String): Boolean {
+        return text.codePoints().anyMatch { cp ->
+            (cp in 0x1F000..0x1FAFF) || (cp in 0x2600..0x27BF) || cp == 0xFE0F || cp == 0x200D
+        }
     }
 
     @Test
@@ -115,10 +132,9 @@ class ClusterNamingDialogLabelsVisualContractTest {
         val keys = listOf(
             "cluster_naming__assignment_label",
             "cluster_naming__new_name_prompt",
-            "cluster_naming__new_route_name_label"
+            "cluster_naming__new_route_name_label",
+            "cluster_naming__found_recurring"
         )
-        // ATT-5400 emoji detection regex
-        val emojiPattern = Pattern.compile("[\uD83C-\uDBFF\uDC00-\uDFFF\u2600-\u26FF\u2700-\u27BF]")
 
         for (locale in supportedLocales) {
             val valuesDir = if (locale.isEmpty()) "values" else "values-$locale"
@@ -129,7 +145,7 @@ class ClusterNamingDialogLabelsVisualContractTest {
                 assertNotNull(rawContent)
                 assertFalse(
                     "String '$key' in $valuesDir must not contain decorative emojis (ATT-5400)",
-                    emojiPattern.matcher(rawContent!!).find()
+                    containsEmoji(rawContent!!)
                 )
             }
         }
@@ -151,6 +167,10 @@ class ClusterNamingDialogLabelsVisualContractTest {
         assertTrue(
             "ImportBackupTabsScreen must reference cluster_naming__new_route_name_label",
             importContent.contains("R.string.cluster_naming__new_route_name_label")
+        )
+        assertTrue(
+            "ImportBackupTabsScreen must reference cluster_naming__found_recurring",
+            importContent.contains("R.string.cluster_naming__found_recurring")
         )
 
         val clusterComponents = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClusterComponents.kt")

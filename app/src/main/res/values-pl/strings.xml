@@ -885,7 +885,7 @@
     <string name="legacy_import__finished_with_failed">Import zakończony: %1$d zaimportowanych, %2$d pominiętych, %3$d nieudanych z %4$d zeskanowanych plików.</string>
     <string name="cluster_naming__select_existing_route">Wybierz istniejącą trasę</string>
     <string name="cluster_naming__title">Przypisz trening do trasy</string>
-    <string name="cluster_naming__found_recurring">Znaleziono nową trasę z %1$s.</string>
+    <string name="cluster_naming__found_recurring">Nieprzypisana trasa z %1$s.</string>
     <string name="cluster_naming__task_count">Zadanie %1$d z %2$d</string>
     <string name="cluster_naming__assignment_label">Wybierz istniejącą ulubioną trasę:</string>
     <string name="cluster_naming__create_new">Utwórz nową…</string>
