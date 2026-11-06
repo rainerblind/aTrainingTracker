@@ -2345,4 +2345,11 @@
     <string name="workout_photos_time_picker_subtitle">このワークアウト中に撮影された写真</string>
     <string name="workout_photos_show_all">すべての写真を表示</string>
     <string name="workout_photos_add_count">%1$d枚の写真を追加</string>
+    <!-- Workout Photos Settings (REQ-UI-414.6 / ATT-5474) -->
+    <string name="settings_workout_card_photos">ワークアウトの写真</string>
+    <string name="settings_workout_photos_show_add_button">「写真を追加」ボタンを表示</string>
+    <string name="settings_workout_photos_thumbnail_size">写真プレビューのサイズ</string>
+    <string name="settings_workout_photos_size_small">小</string>
+    <string name="settings_workout_photos_size_medium">中</string>
+    <string name="settings_workout_photos_size_large">大</string>
 </resources>

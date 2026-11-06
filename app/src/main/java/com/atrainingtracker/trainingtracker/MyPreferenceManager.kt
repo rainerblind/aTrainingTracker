@@ -32,6 +32,7 @@ import com.atrainingtracker.trainingtracker.ui.clusters.ClusterFilterCriteria
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.LapDisplayMode
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabConfig
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutSectionType
+import com.atrainingtracker.trainingtracker.ui.aftermath.photos.PhotoThumbnailSize
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneCardDisplayMode
 import com.atrainingtracker.trainingtracker.ui.routes.RouteFilterCriteria
 import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.SegmentFilterCriteria
@@ -60,7 +61,18 @@ internal fun parseZoneCardDisplayMode(
 }
 
 /**
- * Configurable section visibility preferences for detailed workout journal cards (REQ-UI-210 / ATT-1714 / REQ-UI-229 / REQ-UI-240 / REQ-UI-388).
+ * Resolves a persisted [PhotoThumbnailSize] string with downgrade-safe fallback to [defaultSize] (REQ-UI-414.6).
+ */
+internal fun parsePhotoThumbnailSize(
+    rawSize: String?,
+    defaultSize: PhotoThumbnailSize = PhotoThumbnailSize.MEDIUM
+): PhotoThumbnailSize {
+    if (rawSize == null) return defaultSize
+    return safeEnumValueOf(rawSize, defaultSize)
+}
+
+/**
+ * Configurable section visibility preferences for detailed workout journal cards (REQ-UI-210 / ATT-1714 / REQ-UI-229 / REQ-UI-240 / REQ-UI-388 / REQ-UI-414.6).
  */
 data class WorkoutCardSectionPreferences(
     val showDescription: Boolean = true,
@@ -73,12 +85,15 @@ data class WorkoutCardSectionPreferences(
     val showZoneAnalysis: Boolean = true,
     val showGradeDistribution: Boolean = false,
     val showExportStatus: Boolean = true,
+    val showPhotos: Boolean = true,
+    val showPhotoAddButton: Boolean = true,
+    val photoThumbnailSize: PhotoThumbnailSize = PhotoThumbnailSize.MEDIUM,
     val lapDisplayMode: LapDisplayMode = LapDisplayMode.VISUALIZER_ONLY,
     val zoneCardDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.STACKED_BAR
 )
 
 /**
- * Configurable section visibility preferences for the full-screen Workout Details screen (REQ-UI-240 / ATT-2030 / REQ-UI-388).
+ * Configurable section visibility preferences for the full-screen Workout Details screen (REQ-UI-240 / ATT-2030 / REQ-UI-388 / REQ-UI-414.6).
  */
 data class WorkoutDetailPreferences(
     val showDescription: Boolean = true,
@@ -91,6 +106,9 @@ data class WorkoutDetailPreferences(
     val showZoneAnalysis: Boolean = true,
     val showGradeDistribution: Boolean = true,
     val showExportStatus: Boolean = true,
+    val showPhotos: Boolean = true,
+    val showPhotoAddButton: Boolean = true,
+    val photoThumbnailSize: PhotoThumbnailSize = PhotoThumbnailSize.MEDIUM,
     val zoneCardDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.HISTOGRAM
 )
 
@@ -131,6 +149,9 @@ class MyPreferenceManager(context: Context) {
         val WORKOUT_CARD_SHOW_ZONES = booleanPreferencesKey("workout_card_show_zones")
         val WORKOUT_CARD_SHOW_GRADE_DISTRIBUTION = booleanPreferencesKey("workout_card_show_grade_distribution")
         val WORKOUT_CARD_SHOW_EXPORT_STATUS = booleanPreferencesKey("workout_card_show_export_status")
+        val WORKOUT_CARD_SHOW_PHOTOS = booleanPreferencesKey("workout_card_show_photos")
+        val WORKOUT_CARD_SHOW_PHOTO_ADD_BUTTON = booleanPreferencesKey("workout_card_show_photo_add_button")
+        val WORKOUT_CARD_PHOTO_THUMBNAIL_SIZE = stringPreferencesKey("workout_card_photo_thumbnail_size")
         val WORKOUT_CARD_LAP_DISPLAY_MODE = stringPreferencesKey("workout_card_lap_display_mode")
         val WORKOUT_CARD_ZONE_DISPLAY_MODE = stringPreferencesKey("workout_card_zone_display_mode")
 
@@ -144,6 +165,9 @@ class MyPreferenceManager(context: Context) {
         val WORKOUT_DETAIL_SHOW_ZONES = booleanPreferencesKey("workout_detail_show_zones")
         val WORKOUT_DETAIL_SHOW_GRADE_DISTRIBUTION = booleanPreferencesKey("workout_detail_show_grade_distribution")
         val WORKOUT_DETAIL_SHOW_EXPORT_STATUS = booleanPreferencesKey("workout_detail_show_export_status")
+        val WORKOUT_DETAIL_SHOW_PHOTOS = booleanPreferencesKey("workout_detail_show_photos")
+        val WORKOUT_DETAIL_SHOW_PHOTO_ADD_BUTTON = booleanPreferencesKey("workout_detail_show_photo_add_button")
+        val WORKOUT_DETAIL_PHOTO_THUMBNAIL_SIZE = stringPreferencesKey("workout_detail_photo_thumbnail_size")
         val WORKOUT_DETAIL_ZONE_DISPLAY_MODE = stringPreferencesKey("workout_detail_zone_display_mode")
         val WORKOUT_SECTIONS_ORDER = stringPreferencesKey("workout_sections_order")
         val WORKOUT_DETAIL_TABS_CONFIG = stringPreferencesKey("pref_key_workout_detail_tabs_config")
@@ -169,6 +193,12 @@ class MyPreferenceManager(context: Context) {
             showZoneAnalysis = preferences[WORKOUT_CARD_SHOW_ZONES] ?: true,
             showGradeDistribution = preferences[WORKOUT_CARD_SHOW_GRADE_DISTRIBUTION] ?: false,
             showExportStatus = preferences[WORKOUT_CARD_SHOW_EXPORT_STATUS] ?: true,
+            showPhotos = preferences[WORKOUT_CARD_SHOW_PHOTOS] ?: true,
+            showPhotoAddButton = preferences[WORKOUT_CARD_SHOW_PHOTO_ADD_BUTTON] ?: true,
+            photoThumbnailSize = parsePhotoThumbnailSize(
+                preferences[WORKOUT_CARD_PHOTO_THUMBNAIL_SIZE],
+                PhotoThumbnailSize.MEDIUM
+            ),
             lapDisplayMode = run {
                 val rawMode = preferences[WORKOUT_CARD_LAP_DISPLAY_MODE]
                 if (rawMode != null && rawMode != "BOTH") safeEnumValueOf(rawMode, LapDisplayMode.VISUALIZER_ONLY) else LapDisplayMode.VISUALIZER_ONLY
@@ -192,6 +222,9 @@ class MyPreferenceManager(context: Context) {
             preferences[WORKOUT_CARD_SHOW_ZONES] = prefs.showZoneAnalysis
             preferences[WORKOUT_CARD_SHOW_GRADE_DISTRIBUTION] = prefs.showGradeDistribution
             preferences[WORKOUT_CARD_SHOW_EXPORT_STATUS] = prefs.showExportStatus
+            preferences[WORKOUT_CARD_SHOW_PHOTOS] = prefs.showPhotos
+            preferences[WORKOUT_CARD_SHOW_PHOTO_ADD_BUTTON] = prefs.showPhotoAddButton
+            preferences[WORKOUT_CARD_PHOTO_THUMBNAIL_SIZE] = prefs.photoThumbnailSize.name
             preferences[WORKOUT_CARD_LAP_DISPLAY_MODE] = prefs.lapDisplayMode.name
             preferences[WORKOUT_CARD_ZONE_DISPLAY_MODE] = prefs.zoneCardDisplayMode.name
         }
@@ -214,6 +247,15 @@ class MyPreferenceManager(context: Context) {
             showGradeDistribution = preferences[WORKOUT_DETAIL_SHOW_GRADE_DISTRIBUTION] ?: true,
             showExportStatus = preferences[WORKOUT_DETAIL_SHOW_EXPORT_STATUS]
                 ?: preferences[WORKOUT_CARD_SHOW_EXPORT_STATUS] ?: true,
+            showPhotos = preferences[WORKOUT_DETAIL_SHOW_PHOTOS]
+                ?: preferences[WORKOUT_CARD_SHOW_PHOTOS] ?: true,
+            showPhotoAddButton = preferences[WORKOUT_DETAIL_SHOW_PHOTO_ADD_BUTTON]
+                ?: preferences[WORKOUT_CARD_SHOW_PHOTO_ADD_BUTTON] ?: true,
+            photoThumbnailSize = parsePhotoThumbnailSize(
+                preferences[WORKOUT_DETAIL_PHOTO_THUMBNAIL_SIZE]
+                    ?: preferences[WORKOUT_CARD_PHOTO_THUMBNAIL_SIZE],
+                PhotoThumbnailSize.MEDIUM
+            ),
             zoneCardDisplayMode = parseZoneCardDisplayMode(
                 preferences[WORKOUT_DETAIL_ZONE_DISPLAY_MODE],
                 ZoneCardDisplayMode.HISTOGRAM
@@ -233,6 +275,9 @@ class MyPreferenceManager(context: Context) {
             preferences[WORKOUT_DETAIL_SHOW_ZONES] = prefs.showZoneAnalysis
             preferences[WORKOUT_DETAIL_SHOW_GRADE_DISTRIBUTION] = prefs.showGradeDistribution
             preferences[WORKOUT_DETAIL_SHOW_EXPORT_STATUS] = prefs.showExportStatus
+            preferences[WORKOUT_DETAIL_SHOW_PHOTOS] = prefs.showPhotos
+            preferences[WORKOUT_DETAIL_SHOW_PHOTO_ADD_BUTTON] = prefs.showPhotoAddButton
+            preferences[WORKOUT_DETAIL_PHOTO_THUMBNAIL_SIZE] = prefs.photoThumbnailSize.name
             preferences[WORKOUT_DETAIL_ZONE_DISPLAY_MODE] = prefs.zoneCardDisplayMode.name
         }
     }

@@ -84,9 +84,15 @@ fun WorkoutPhotoStrip(
     onPhotoClick: (WorkoutPhotoEntry) -> Unit,
     onAddPhotos: (List<android.net.Uri>) -> Unit,
     modifier: Modifier = Modifier,
+    showAddButton: Boolean = true,
+    thumbnailSize: PhotoThumbnailSize = PhotoThumbnailSize.MEDIUM,
     startTimeMs: Long = 0L,
     endTimeMs: Long = 0L
 ) {
+    if (photos.isEmpty() && !showAddButton) {
+        return
+    }
+
     val context = LocalContext.current
     var timeFilteredPhotos by remember { mutableStateOf<List<WorkoutPhotoManager.TimeFilteredPhoto>?>(null) }
     var showTimePickerSheet by remember { mutableStateOf(false) }
@@ -224,33 +230,35 @@ fun WorkoutPhotoStrip(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // "Add Photos" Tile
-            item(key = "add_photo_tile") {
-                OutlinedCard(
-                    onClick = onAddTileClick,
-                    modifier = Modifier.size(76.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = CardDefaults.outlinedCardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
+            if (showAddButton) {
+                item(key = "add_photo_tile") {
+                    OutlinedCard(
+                        onClick = onAddTileClick,
+                        modifier = Modifier.size(thumbnailSize.dpSize.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = CardDefaults.outlinedCardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                        )
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.AddPhotoAlternate,
-                            contentDescription = stringResource(R.string.workout_photos_add),
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(26.dp)
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = stringResource(R.string.workout_photos_add),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            maxLines = 1
-                        )
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AddPhotoAlternate,
+                                contentDescription = stringResource(R.string.workout_photos_add),
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(if (thumbnailSize == PhotoThumbnailSize.SMALL) 20.dp else 26.dp)
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = stringResource(R.string.workout_photos_add),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                maxLines = 1
+                            )
+                        }
                     }
                 }
             }
@@ -259,7 +267,8 @@ fun WorkoutPhotoStrip(
             items(photos, key = { it.id }) { photo ->
                 PhotoThumbnailCard(
                     photo = photo,
-                    onClick = { onPhotoClick(photo) }
+                    onClick = { onPhotoClick(photo) },
+                    thumbnailSize = thumbnailSize
                 )
             }
         }
@@ -269,7 +278,8 @@ fun WorkoutPhotoStrip(
 @Composable
 private fun PhotoThumbnailCard(
     photo: WorkoutPhotoEntry,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    thumbnailSize: PhotoThumbnailSize = PhotoThumbnailSize.MEDIUM
 ) {
     val context = LocalContext.current
     var bitmap by remember(photo.filePath) { mutableStateOf<Bitmap?>(null) }
@@ -284,7 +294,7 @@ private fun PhotoThumbnailCard(
 
     Card(
         modifier = Modifier
-            .size(76.dp)
+            .size(thumbnailSize.dpSize.dp)
             .clip(RoundedCornerShape(8.dp))
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(8.dp),

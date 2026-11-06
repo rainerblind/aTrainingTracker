@@ -2451,4 +2451,11 @@
     <string name="workout_photos_time_picker_subtitle">Fotos, die während dieser Einheit aufgenommen wurden</string>
     <string name="workout_photos_show_all">Alle Bilder anzeigen</string>
     <string name="workout_photos_add_count">%1$d Fotos hinzufügen</string>
+    <!-- Workout Photos Settings (REQ-UI-414.6 / ATT-5474) -->
+    <string name="settings_workout_card_photos">Trainingsfotos</string>
+    <string name="settings_workout_photos_show_add_button">\"Foto hinzufügen\"-Feld anzeigen</string>
+    <string name="settings_workout_photos_thumbnail_size">Foto-Vorschaugröße</string>
+    <string name="settings_workout_photos_size_small">Klein</string>
+    <string name="settings_workout_photos_size_medium">Mittel</string>
+    <string name="settings_workout_photos_size_large">Groß</string>
 </resources>

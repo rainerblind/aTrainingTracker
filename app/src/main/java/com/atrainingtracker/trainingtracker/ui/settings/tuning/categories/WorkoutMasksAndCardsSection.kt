@@ -51,10 +51,7 @@ import com.atrainingtracker.trainingtracker.ui.settings.tuning.SubordinateTuning
 import kotlinx.coroutines.launch
 
 private data class MatrixFeatureRow(
-    val sectionType: WorkoutSectionType,
-    val titleRes: Int,
-    val listChecked: Boolean,
-    val onListChange: (Boolean) -> Unit
+    val sectionType: WorkoutSectionType, val titleRes: Int, val listChecked: Boolean, val onListChange: (Boolean) -> Unit
 )
 
 private fun buildMatrixFeatureRow(
@@ -71,6 +68,7 @@ private fun buildMatrixFeatureRow(
     WorkoutSectionType.CHARTS -> MatrixFeatureRow(type, R.string.settings_workout_card_charts, prefs.showTelemetryCharts) { onPrefsChange(prefs.copy(showTelemetryCharts = it)) }
     WorkoutSectionType.ZONES -> MatrixFeatureRow(type, R.string.settings_workout_card_zones, prefs.showZoneAnalysis) { onPrefsChange(prefs.copy(showZoneAnalysis = it)) }
     WorkoutSectionType.EXPORT_STATUS -> MatrixFeatureRow(type, R.string.export_status, prefs.showExportStatus) { onPrefsChange(prefs.copy(showExportStatus = it)) }
+    WorkoutSectionType.PHOTOS -> MatrixFeatureRow(type, R.string.settings_workout_card_photos, prefs.showPhotos) { onPrefsChange(prefs.copy(showPhotos = it)) }
 }
 
 /**
@@ -135,9 +133,9 @@ fun WorkoutMasksAndCardsSection(
 
     val activeCardCount = remember(workoutCardPrefs) {
         listOf(
-            workoutCardPrefs.showDescription, workoutCardPrefs.showExtrema, workoutCardPrefs.showLaps,
-            workoutCardPrefs.showStrava, workoutCardPrefs.showMapPreview, workoutCardPrefs.showElevationProfile,
-            workoutCardPrefs.showTelemetryCharts, workoutCardPrefs.showZoneAnalysis, workoutCardPrefs.showExportStatus
+            workoutCardPrefs.showDescription, workoutCardPrefs.showExtrema, workoutCardPrefs.showLaps, workoutCardPrefs.showStrava,
+            workoutCardPrefs.showMapPreview, workoutCardPrefs.showElevationProfile, workoutCardPrefs.showTelemetryCharts,
+            workoutCardPrefs.showZoneAnalysis, workoutCardPrefs.showExportStatus, workoutCardPrefs.showPhotos
         ).count { it }
     }
 
@@ -314,6 +312,9 @@ fun WorkoutMasksAndCardsSection(
             }
         }
 
+        // Summary Photo Sub-Settings Section (REQ-UI-414.6 / ATT-5474)
+        SummaryPhotoSubSettings(workoutCardPrefs, onWorkoutCardPrefsChange)
+
         // ==========================================
         // PART 2: Trainings-Details (Detail-Ansicht)
         // ==========================================
@@ -372,6 +373,9 @@ fun WorkoutMasksAndCardsSection(
                 )
             }
         }
+
+        // Details Photo Sub-Settings Section (REQ-UI-414.6 / ATT-5474)
+        DetailPhotoSubSettings(workoutDetailPrefs, onWorkoutDetailPrefsChange)
     }
 }
 
@@ -384,11 +388,4 @@ fun WorkoutAftermathMatrixSection(
     onWorkoutCardPrefsChange: (WorkoutCardSectionPreferences) -> Unit,
     workoutDetailPrefs: WorkoutDetailPreferences = WorkoutDetailPreferences(),
     onWorkoutDetailPrefsChange: (WorkoutDetailPreferences) -> Unit = {}
-) {
-    WorkoutMasksAndCardsSection(
-        workoutCardPrefs = workoutCardPrefs,
-        onWorkoutCardPrefsChange = onWorkoutCardPrefsChange,
-        workoutDetailPrefs = workoutDetailPrefs,
-        onWorkoutDetailPrefsChange = onWorkoutDetailPrefsChange
-    )
-}
+) = WorkoutMasksAndCardsSection(workoutCardPrefs, onWorkoutCardPrefsChange, workoutDetailPrefs, onWorkoutDetailPrefsChange)

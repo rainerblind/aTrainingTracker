@@ -57,7 +57,7 @@ class WorkoutSectionReorderContractTest {
         val afterMoveUp = moveSection(initialOrder, 1, 0)
         assertEquals(WorkoutSectionType.EXTREMA, afterMoveUp[0])
         assertEquals(WorkoutSectionType.DESCRIPTION, afterMoveUp[1])
-        assertEquals(9, afterMoveUp.size)
+        assertEquals(10, afterMoveUp.size)
 
         // 2. Move Down on first element (EXTREMA at index 0 -> index 1)
         val afterMoveDown = moveSection(afterMoveUp, 0, 1)
@@ -126,6 +126,12 @@ class WorkoutSectionReorderContractTest {
             "WorkoutMasksAndCardsSection must support EXPORT_STATUS",
             content.contains("WorkoutSectionType.EXPORT_STATUS")
         )
+
+        // 6. Must support PHOTOS row in WorkoutMasksAndCardsSection (REQ-UI-414.6)
+        assertTrue(
+            "WorkoutMasksAndCardsSection must support PHOTOS",
+            content.contains("WorkoutSectionType.PHOTOS")
+        )
     }
 
     @Test
@@ -140,6 +146,14 @@ class WorkoutSectionReorderContractTest {
             assertTrue(
                 "WorkoutSummary.kt must check preferences.showExportStatus",
                 content.contains("preferences.showExportStatus")
+            )
+            assertTrue(
+                "WorkoutSummary.kt must handle WorkoutSectionType.PHOTOS inside loop",
+                content.contains("WorkoutSectionType.PHOTOS ->")
+            )
+            assertTrue(
+                "WorkoutSummary.kt must check preferences.showPhotos",
+                content.contains("preferences.showPhotos")
             )
         }
 

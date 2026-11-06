@@ -253,20 +253,6 @@ fun WorkoutSummary(
 
         val workoutStartMs = workoutData.startTimeS * 1000L
         val workoutEndMs = (workoutData.startTimeS + workoutData.totalTimeSec) * 1000L
-        WorkoutPhotoStrip(
-            photos = workoutPhotos,
-            onPhotoClick = { photo -> activePreviewPhoto = photo },
-            onAddPhotos = { uris ->
-                coroutineScope.launch {
-                    uris.forEach { uri ->
-                        repository.addWorkoutPhoto(workoutData.id, uri, null)
-                    }
-                    photosRefreshKey++
-                }
-            },
-            startTimeMs = workoutStartMs,
-            endTimeMs = workoutEndMs
-        )
 
         // 2. Dynamic Section Rendering Loop (REQ-UI-255)
         val hasMap = isPlayServiceAvailable && workoutData.mapPolyline != ""
@@ -540,6 +526,26 @@ fun WorkoutSummary(
                     if (preferences.showExportStatus) {
                         ExportStatus(
                             exportStatuses = workoutData.exportStatuses
+                        )
+                    }
+                }
+                WorkoutSectionType.PHOTOS -> {
+                    if (preferences.showPhotos) {
+                        WorkoutPhotoStrip(
+                            photos = workoutPhotos,
+                            onPhotoClick = { photo -> activePreviewPhoto = photo },
+                            onAddPhotos = { uris ->
+                                coroutineScope.launch {
+                                    uris.forEach { uri ->
+                                        repository.addWorkoutPhoto(workoutData.id, uri, null)
+                                    }
+                                    photosRefreshKey++
+                                }
+                            },
+                            showAddButton = preferences.showPhotoAddButton,
+                            thumbnailSize = preferences.photoThumbnailSize,
+                            startTimeMs = workoutStartMs,
+                            endTimeMs = workoutEndMs
                         )
                     }
                 }

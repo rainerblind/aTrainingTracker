@@ -226,4 +226,54 @@ class WorkoutMasksAndCardsLayoutTest {
             lineCount < 400
         )
     }
+
+    /**
+     * TST-UI-377.7: Workout Photos Configuration Subordinate Controls Contract Test (REQ-UI-414.6 / ATT-5474).
+     */
+    @Test
+    fun `TST-UI-377_7 workout photos configuration and subordinate controls contract`() {
+        val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/WorkoutMasksAndCardsSection.kt")
+        val content = file.readText()
+
+        // 1. Photos row in reorder list & sub-settings integration
+        assertTrue(
+            "Must support PHOTOS feature row",
+            content.contains("WorkoutSectionType.PHOTOS")
+        )
+        assertTrue(
+            "Must bind workoutCardPrefs.showPhotos",
+            content.contains("workoutCardPrefs.showPhotos")
+        )
+        assertTrue(
+            "Must pass workoutDetailPrefs to photo sub-settings",
+            content.contains("DetailPhotoSubSettings(workoutDetailPrefs")
+        )
+
+        // 2. Subordinate photo components file must exist and contain required selectors
+        val compFile = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/WorkoutPhotoPreferencesComponents.kt")
+        val compContent = compFile.readText()
+
+        assertTrue(
+            "Must define PhotoThumbnailSizeSelector",
+            compContent.contains("fun PhotoThumbnailSizeSelector")
+        )
+        assertTrue(
+            "Must define PhotoCardSubSettings",
+            compContent.contains("fun PhotoCardSubSettings")
+        )
+        assertTrue(
+            "Must reference settings_workout_photos_show_add_button string",
+            compContent.contains("R.string.settings_workout_photos_show_add_button")
+        )
+        assertTrue(
+            "Must reference settings_workout_photos_thumbnail_size string",
+            compContent.contains("R.string.settings_workout_photos_thumbnail_size")
+        )
+        assertTrue(
+            "Must support SMALL, MEDIUM, LARGE photo thumbnail sizes",
+            compContent.contains("PhotoThumbnailSize.SMALL") &&
+                compContent.contains("PhotoThumbnailSize.MEDIUM") &&
+                compContent.contains("PhotoThumbnailSize.LARGE")
+        )
+    }
 }

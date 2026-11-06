@@ -85,6 +85,7 @@ class WorkoutSummaryDynamicOrderContractTest {
             WorkoutSectionType.CHARTS,
             WorkoutSectionType.ZONES,
             WorkoutSectionType.MAP,
+            WorkoutSectionType.PHOTOS,
             WorkoutSectionType.ELEVATION,
             WorkoutSectionType.LAPS,
             WorkoutSectionType.EXPORT_STATUS,
@@ -98,7 +99,8 @@ class WorkoutSummaryDynamicOrderContractTest {
             showElevationProfile = true,
             showTelemetryCharts = true,
             showZoneAnalysis = true,
-            showExportStatus = true
+            showExportStatus = true,
+            showPhotos = true
         )
         val renderedSections = mutableListOf<WorkoutSectionType>()
 
@@ -113,6 +115,7 @@ class WorkoutSummaryDynamicOrderContractTest {
                 WorkoutSectionType.CHARTS -> prefs.showTelemetryCharts
                 WorkoutSectionType.ZONES -> prefs.showZoneAnalysis
                 WorkoutSectionType.EXPORT_STATUS -> prefs.showExportStatus
+                WorkoutSectionType.PHOTOS -> prefs.showPhotos
             }
             if (isEnabled) {
                 renderedSections.add(type)

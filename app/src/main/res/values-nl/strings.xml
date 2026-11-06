@@ -2365,4 +2365,11 @@
     <string name="workout_photos_time_picker_subtitle">Foto\'s gemaakt tijdens deze workout</string>
     <string name="workout_photos_show_all">Alle foto\'s tonen</string>
     <string name="workout_photos_add_count">%1$d foto\'s toevoegen</string>
+    <!-- Workout Photos Settings (REQ-UI-414.6 / ATT-5474) -->
+    <string name="settings_workout_card_photos">Workoutfoto\'s</string>
+    <string name="settings_workout_photos_show_add_button">Knop \"Foto toevoegen\" tonen</string>
+    <string name="settings_workout_photos_thumbnail_size">Grootte van fotovoorbeeld</string>
+    <string name="settings_workout_photos_size_small">Klein</string>
+    <string name="settings_workout_photos_size_medium">Gemiddeld</string>
+    <string name="settings_workout_photos_size_large">Groot</string>
 </resources>

@@ -738,6 +738,10 @@ fun TrackOnMapScreen(
                                 )
                             }
                         }
+                        WorkoutSectionType.PHOTOS,
+                        WorkoutSectionType.MAP -> {
+                            // Handled in Tabbed content / MapDetailLayout
+                        }
                     }
                 }
             }
@@ -817,7 +821,7 @@ fun TrackOnMapScreen(
                             }
                         }
                         else -> {
-                            // DESCRIPTION, EXTREMA, MAP, ELEVATION, CHARTS, STRAVA are rendered in metadataContent or MapDetailLayout
+                            // DESCRIPTION, EXTREMA, MAP, ELEVATION, CHARTS, STRAVA, PHOTOS are rendered in metadataContent or MapDetailLayout
                         }
                     }
                 }

@@ -6257,7 +6257,7 @@
 ### TST-UI-377: **Workout Cards & Details Settings Streamlining, Collapsible Section Order, Authoritative Tab Activation, and 9-Language Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-414`
 - **Component**: **Workout Cards & Details Settings Streamlining, Collapsible Section Order, Authoritative Tab Activation, and 9-Language Parity Verification Suite**
-- **Jira**: ``ATT-4043``
+- **Jira**: `ATT-4043`, `ATT-5474`
 - **Test Description**:
   1. *Authoritative Tab Data Availability & Section Activation Test (`TST-UI-377.1`, `WorkoutDetailTabsTest.kt`)*:
   • Initialize `WorkoutDetailSectionAvailability` with `hasMap = true` and `hasElevation = true`, alongside `WorkoutDetailPreferences` with `showMap = false` and `showElevationProfile = false`.
@@ -6279,7 +6279,12 @@
   6. *9-Language Localization Parity Audit (`TST-UI-377.6`, `TranslationParityTest.kt`)*:
   • Inspect all 9 supported locale directories (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
   • Verify `workout_card_reorder_toggle` and `settings_workout_details_title` exist in all 9 files with `%1$d` specifier match and no entity issues.
-  7. *Clean-Room Full Suite Regression Execution (`TST-UI-377.7`)*:
+  7. *Workout Photos Settings & Layout Contract Test (`TST-UI-377.7` / `ATT-5474`, `WorkoutMasksAndCardsLayoutTest.kt`)*:
+  • Verify `WorkoutSectionType.PHOTOS` and `WorkoutDetailSectionType.PHOTOS` inclusion, `DEFAULT_ORDER`, and bidirectional mapping.
+  • Verify `WorkoutPhotoPreferencesComponents.kt` modularity maintains `WorkoutMasksAndCardsSection.kt` strictly < 400 lines.
+  • Verify `PhotoThumbnailSize` enum values (`SMALL` 56dp, `MEDIUM` 76dp, `LARGE` 104dp) and DataStore persistence in `WorkoutCardSectionPreferences` and `WorkoutDetailPreferences`.
+  • Verify 9-language translation parity across all 6 new `settings_workout_photos_*` keys via `TranslationParityTest`.
+  8. *Clean-Room Full Suite Regression Execution (`TST-UI-377.8`)*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
 ### TST-UI-378: **WorkoutDetails Single-Line Power Row Layout, Domain Row Dividers, Priority Resolution, and 9-Language Parity Verification Suite** [Verified]

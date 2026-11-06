@@ -2566,4 +2566,11 @@
     <string name="workout_photos_time_picker_subtitle">Photos taken during this workout</string>
     <string name="workout_photos_show_all">Show all photos</string>
     <string name="workout_photos_add_count">Add %1$d photos</string>
+    <!-- Workout Photos Settings (REQ-UI-414.6 / ATT-5474) -->
+    <string name="settings_workout_card_photos">Workout Photos</string>
+    <string name="settings_workout_photos_show_add_button">Show \"Add Photo\" Button</string>
+    <string name="settings_workout_photos_thumbnail_size">Photo Preview Size</string>
+    <string name="settings_workout_photos_size_small">Small</string>
+    <string name="settings_workout_photos_size_medium">Medium</string>
+    <string name="settings_workout_photos_size_large">Large</string>
 </resources>
