@@ -711,10 +711,11 @@ Normalization (`WorkoutClusterEngine.normalizeName`) and hit count stripping (`W
 
 **Invariants**: Navigation route mapping, DataStore keys, slider clamping, and factory reset behavior MUST be preserved.
 
-### REQ-SET-075: Dedicated Workout Route Clustering Section in Advanced Settings, Single Source of Truth, and Modularity Preservation [Verified]
-- **Tests**: `ClusterTuningSection.kt`, `WorkoutClustersTabsScreen.kt`, `WorkoutClustersScreen.kt`, `ClusterTuningContent.kt`, `AdvancedTuningAccordion.kt`, `AdvancedTuningScreen.kt`, `TuningPreferencesDataStore.kt`
-- **Implementation**: Consolidate workout route clustering algorithmic parameters into Advanced Settings as a dedicated accordion section, eliminating code duplication, excising redundant header tuning from favorite routes, and providing recalculate action with confirmation dialog.
-- **Rationale**: The system SHALL consolidate the canonical configuration of workout route clustering algorithmic parameters into Advanced Settings (`AdvancedTuningScreen.kt` / `AdvancedTuningDialog.kt`) as a dedicated modular accordion section, adhering to the Single Source of Truth and DRY principles (Rule 36), and SHALL preserve existing parameter ranges, keys, defaults, and modularity bounds (ATT-3355, amended by ATT-3452, amending `REQ-SET-010` and `REQ-SET-065`, superseding `REQ-SET-014`, referencing `REQ-UI-357`):
+### REQ-SET-075: Dedicated Workout Route Clustering Section in Advanced Settings, Configurable Score Threshold, Single Source of Truth, and Modularity Preservation [Verified]
+- **Tests**: `ClusterTuningSection.kt`, `WorkoutClustersTabsScreen.kt`, `WorkoutClustersScreen.kt`, `ClusterTuningContent.kt`, `AdvancedTuningAccordion.kt`, `AdvancedTuningScreen.kt`, `TuningPreferencesDataStore.kt`, `WorkoutClusterEngineTest.kt`
+- **Tickets**: `ATT-3355`, `ATT-3452`, `ATT-5559`
+- **Implementation**: Consolidate workout route clustering algorithmic parameters into Advanced Settings as a dedicated accordion section, provide configurable cluster assignment score threshold (default 1.2, range 0.5..2.5), eliminate code duplication, excise redundant header tuning from favorite routes, and provide recalculate action with confirmation dialog.
+- **Rationale**: The system SHALL consolidate the canonical configuration of workout route clustering algorithmic parameters into Advanced Settings (`AdvancedTuningScreen.kt` / `AdvancedTuningDialog.kt`) as a dedicated modular accordion section, adhering to the Single Source of Truth and DRY principles (Rule 36), and SHALL provide a user-configurable cluster assignment score threshold (default 1.2f, range 0.5f..2.5f, step 0.1f) in `ClusterTuningContent.kt` and `PreImportTuningBottomSheet` (ATT-3355, amended by ATT-3452 and ATT-5559, amending `REQ-SET-010` and `REQ-SET-065`, superseding `REQ-SET-014`, referencing `REQ-UI-357`):
 1. *Modular Accordion Section Architecture (`ClusterTuningSection.kt`, `AdvancedTuningAccordion.kt`)*:
 • The system SHALL add `ROUTE_CLUSTERING` to `TuningSection` enum in `AdvancedTuningAccordion.kt`, positioned in Phase C (History, Routes & Post-Workout) between `WORKOUT_MASKS_CARDS` and `AFTERMATH_ANALYSIS`.
 • The system SHALL create `ClusterTuningSection.kt` under `ui.settings.tuning.categories`, hosting the clustering parameters UI.
@@ -724,42 +725,47 @@ Normalization (`WorkoutClusterEngine.normalizeName`) and hit count stripping (`W
 • The shared UI controls and validation logic SHALL be encapsulated in `ClusterTuningContent.kt` (< 250 lines), shared identically with zero code or layout duplication.
 • The cluster tuning settings icon button (`onTuneClick`) SHALL be completely removed from `WorkoutClustersTabsScreen.kt`, and `ClusterTuningScreen.kt` and `isTuning` state handling SHALL be excised from `WorkoutClustersScreen.kt` in favor of centralized Advanced Settings.
 • `ImportBackupTabsScreen.kt` SHALL consume `ClusterTuningContent` for pre-import sensitivity adjustments.
-3. *DataStore, Defaults & Atomic Factory Reset Integration*:
-• `TuningPreferencesDefaults` SHALL define defaults: `CLUSTER_TOL_ENDPOINTS = 200f`, `CLUSTER_TOL_APEX = 400f`, `CLUSTER_TOL_DISTANCE = 0.20f`, `CLUSTER_TOL_ALTITUDE_POS = 400f`, `CLUSTER_USE_SPORT_TYPE = true`, `CLUSTER_USE_ALTITUDE_POS = true`.
-• `TuningConfig` SHALL incorporate these 6 clustering parameters.
-• `TuningPreferencesDataStore` SHALL manage persistence, updating both DataStore and `TrainingApplication.cSharedPreferences` synchronously on save to ensure background services (`WorkoutClusterEngine`, `LegacyImportEngine`, `TrackerService`) read updated values immediately.
-• Invoking "Auf Standardwerte zurücksetzen" (Reset to Defaults) in Advanced Settings SHALL atomically reset clustering tolerances to their canonical factory defaults.
+3. *DataStore, Defaults & Atomic Factory Reset Integration (ATT-5559)*:
+• `TuningPreferencesDefaults` SHALL define defaults: `CLUSTER_TOL_ENDPOINTS = 200f`, `CLUSTER_TOL_APEX = 400f`, `CLUSTER_TOL_DISTANCE = 0.20f`, `CLUSTER_TOL_ALTITUDE_POS = 400f`, `CLUSTER_USE_SPORT_TYPE = true`, `CLUSTER_USE_ALTITUDE_POS = true`, and `CLUSTER_SCORE_THRESHOLD = 1.2f` (range `0.5f..2.5f`, step `0.1f`, ATT-5559).
+• `TuningConfig` SHALL incorporate these 7 clustering parameters.
+• `TuningPreferencesDataStore` SHALL manage persistence, updating both DataStore and `TrainingApplication.cSharedPreferences` (`SP_CLUSTER_SCORE_THRESHOLD = "cluster_score_threshold"`, with `getClusterScoreThreshold()` and `setClusterScoreThreshold(float)`) synchronously on save to ensure background services (`WorkoutClusterEngine`, `LegacyImportEngine`, `TrackerService`) read updated values immediately.
+• Invoking "Auf Standardwerte zurücksetzen" (Reset to Defaults) in Advanced Settings SHALL atomically reset clustering tolerances and the score threshold to their canonical factory defaults.
 4. *Dedicated Recalculate Action, Material 3 Confirmation Guard & Concurrency Isolation (ATT-3452)*:
 • `ClusterTuningSection.kt` SHALL host a dedicated "Recalculate All Clusters" button (`R.string.cluster_tuning_recalculate_button`).
 • Tapping the button opens a modal Material 3 confirmation `AlertDialog` (`containerColor = MaterialTheme.colorScheme.surface`, `tonalElevation = 0.dp`) displaying `R.string.cluster_tuning_warning` with high-contrast error confirmation action and cancel dismissal.
 • Recalculation executes asynchronously via singleton `WorkoutClusterRepository.getInstance(context).recalculateClustersWithProgress()`, decoupled from UI Composable lifecycles.
 • While active (`migrationStatus != null`), the recalculate button is disabled and displays `CircularProgressIndicator` alongside `R.string.cluster_tuning_recalculating`, and all tolerance sliders are disabled (`enabled = false`) to prevent concurrent modification.
 • Process-death recovery is guaranteed by the self-healing bootstrapper in `WorkoutClusterRepository.refreshClusters()`.
-5. *Preservation of Invariants & Modularity*:
-• All 6 parameters, SharedPreferences keys (`clusterTolEndpoints`, `clusterTolApex`, `clusterTolDistance`, `clusterTolAltitudePos`, `clusterUseSportType`, `clusterUseAltitudePos`), default values, and range validations MUST NOT be altered.
+5. *Cluster Assignment Score Threshold & Master Sensitivity Coupling (ATT-5559)*:
+• `WorkoutClusterEngine.suggestCluster` SHALL evaluate candidate clusters against `scoreThreshold` (`it.second < scoreThreshold`), resolving the threshold dynamically via `runCatching { TrainingApplication.getClusterScoreThreshold().toDouble() }.getOrDefault(1.2)` to ensure static mock resilience in testing.
+• `ClusterTuningContent.kt` SHALL incorporate `clusterScoreThreshold` into the derived master sensitivity slider calculation, mapping the threshold across its `0.5f..2.5f` range to normalize sensitivity.
+• `ClusterTuningContent.kt` SHALL render a dedicated `TuningSliderItem` for `clusterScoreThreshold` with localized title `R.string.cluster_tuning_score_threshold_label`, step `0.1f`, formatted value `String.format(locale, "%.1f", scoreThreshold)`, and helper text `R.string.cluster_tuning_score_threshold_helper` ("Lower = stricter matching · Higher = more tolerant").
+• `WorkoutClusterRepository.recalculateClustersAsync` SHALL accept and persist `scoreThreshold: Float? = null` alongside spatial tolerances prior to recalculation.
+6. *Preservation of Invariants & Modularity*:
+• All 7 parameters, SharedPreferences keys (`clusterTolEndpoints`, `clusterTolApex`, `clusterTolDistance`, `clusterTolAltitudePos`, `clusterUseSportType`, `clusterUseAltitudePos`, `cluster_score_threshold`), default values, and range validations MUST NOT be altered.
 • Modularity invariant: Every source file in `ui.settings.tuning` MUST remain strictly < 400 lines of code (`AdvancedTuningModularityTest`).
 • 100% 9-language translation parity maintained across EN, DE, ES, FR, IT, JA, NL, PL, PT.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Amends `REQ-SET-010` (*Tuning Parameters UI*) and `REQ-SET-065` (*Altitude Extrema-Aware 3D Route Clustering & Database Migration*), supersedes `REQ-SET-014` (*Auto-Dismiss Tuning UI*), integrating with `REQ-UI-357` (*Dedicated Full-Screen Advanced Settings Screen Architecture*).
-2. *Historical Origin & Commit Trace*: Sprint 2026-40.2 (`REQ-SET-010`, `REQ-SET-014`), Sprint 2026-40.5 (`ATT-502` / `ATT-503`, `REQ-SET-065`), Sprint 2026-40.8 (`REQ-UI-222`), Sprint 2026-42.1 (`ATT-3344`, `REQ-UI-357`; `ATT-3355`, `REQ-SET-075`).
-3. *Root Reason for Existing Formulation*: Clustering tolerances originally resided inside a standalone screen (`ClusterTuningScreen.kt`) opened from an overflow menu in `WorkoutClustersScreen.kt`. In ATT-3355, the controls were consolidated into Advanced Settings, but the legacy header button in favorite routes was temporarily retained, leaving dual competing paths and omitting full recalculation in Advanced Settings. ATT-3452 eliminates the redundant header trigger and unifies recalculation with a Material 3 confirmation guard.
-4. *Preservation of Core Invariants*: Parameter keys, storage semantics in `TrainingApplication.java`, value ranges, modularity < 400 lines, and 9-language translation parity remain 100% strictly intact.
+1. *Original Requirement ID & Target*: Amends `REQ-SET-010` (*Tuning Parameters UI*), `REQ-SET-065` (*Altitude Extrema-Aware 3D Route Clustering & Database Migration*), `REQ-SET-075` (*Dedicated Route Clustering Section in Advanced Settings*), and `REQ-MIG-012` (*Pre-Import Sensitivity Tuning*), supersedes `REQ-SET-014` (*Auto-Dismiss Tuning UI*), integrating with `REQ-UI-357` (*Dedicated Full-Screen Advanced Settings Screen Architecture*).
+2. *Historical Origin & Commit Trace*: Sprint 2026-40.2 (`REQ-SET-010`, `REQ-SET-014`), Sprint 2026-40.5 (`ATT-502` / `ATT-503`, `REQ-SET-065`), Sprint 2026-40.8 (`REQ-UI-222`), Sprint 2026-42.1 (`ATT-3344`, `REQ-UI-357`; `ATT-3355`, `REQ-SET-075`), Sprint 2026-42.2 (`ATT-3452`), Sprint 2026-45.8 (`ATT-5559`).
+3. *Root Reason for Existing Formulation*: Route clustering originally hardcoded an internal candidate similarity cutoff of `1.0` in `WorkoutClusterEngine.kt`, established during initial route clustering implementation when routes were assumed to be near-identical traces. In practice, slight GPS jitter, elevation variations, or differing recording devices on identical real-world courses regularly produce composite similarity scores between 1.01 and 1.20, causing false-negative cluster rejections and redundant manual naming dialogs. ATT-5559 introduces an overarching configurable score threshold (default 1.2f, range 0.5f..2.5f) to accommodate real-world GPS variance without altering individual component tolerance geometries.
+4. *Preservation of Core Invariants*: Parameter keys, storage semantics in `TrainingApplication.java`, value ranges, spatial normalization bounds, sport type firewall (`REQ-SET-064`), 3D altitude extrema logic (`REQ-SET-065`), modularity < 400 lines, and 9-language translation parity remain 100% strictly intact.
 
 **Acceptance Criteria (Given-When-Then)**:
-• *Given* the athlete browsing Advanced Settings ("Erweiterte Einstellungen"),
-• *When* viewing the category list,
-• *Then* a dedicated section "Routen- & Workout-Clustering" (`ROUTE_CLUSTERING`) appears in Phase C with an active subtitle summarizing current tolerances and toggles.
-• *Given* the athlete modifying clustering tolerances in Advanced Settings,
-• *When* tapping Save,
-• *Then* the values are persisted to DataStore and SharedPreferences and immediately take effect in subsequent workout clustering and import operations.
-• *Given* the athlete tapping "Recalculate All Clusters" in Advanced Settings,
-• *When* tapped,
-• *Then* a modal confirmation `AlertDialog` appears warning of cluster wiping before any recalculation starts.
-• *Given* an active recalculation in progress,
-• *Then* recalculation runs in the repository coroutine scope decoupled from UI navigation, the recalculate button and sliders are disabled with progress feedback, and self-healing bootstrap protects against process death.
-• *Given* an athlete viewing Favorite Routes (`WorkoutClustersTabsScreen`),
-• *Then* zero cluster tuning buttons are present in the top app bar.
+• *Given* the athlete browsing Advanced Settings ("Erweiterte Einstellungen") or Pre-Import Tuning,
+• *When* viewing the route clustering parameters,
+• *Then* a dedicated slider for "Cluster-Zuordnung Schwellenwert" (`cluster_tuning_score_threshold_label`) is rendered with range `0.5` to `2.5`, step `0.1`, default `1.2`, and directional helper text ("Lower = stricter matching · Higher = more tolerant").
+• *Given* an athlete adjusting the cluster score threshold,
+• *When* saving or completing pre-import tuning,
+• *Then* `clusterScoreThreshold` is persisted to DataStore and SharedPreferences (`cluster_score_threshold`) and immediately utilized during workout clustering and import matching.
+• *Given* an imported or completed workout with composite cluster similarity score of `1.15`,
+• *When* evaluated by `WorkoutClusterEngine.suggestCluster` with default threshold `1.2`,
+• *Then* the workout SHALL be matched to the existing cluster candidate instead of being rejected as unclustered.
+• *Given* an active cluster recalculation in progress,
+• *Then* recalculation runs in the repository coroutine scope decoupled from UI navigation, the recalculate button and all sliders (including score threshold) are disabled with progress feedback.
+• *Given* an athlete invoking "Auf Standardwerte zurücksetzen" (Reset to Defaults),
+• *Then* `clusterScoreThreshold` is reset to its canonical default of `1.2f`.
 
 **Invariants**: Parameter ranges, DataStore keys, warning card, factory reset, zero tonal elevation, 400-line file limit, and 9-language localization parity MUST NOT be broken.
 
@@ -920,13 +926,13 @@ Normalization (`WorkoutClusterEngine.normalizeName`) and hit count stripping (`W
 • All existing 15+ call sites across `NavigationSection`, `SensorsGpsFilterSection`, `CockpitTypographySection`, `AmoledBatterySaverSection`, `SensorSearchTuningSection`, and `AftermathAnalysisSection` SHALL retain 100% backward and binary compatibility without signature regressions or source modifications.
 2. *Standardization of `ClusterTuningContent.kt`*:
 • The system SHALL replace hand-crafted `Row` + `Switch` blocks for `showDetails`, `useSportTypeForClustering`, and `useAltitudePosForClustering` with canonical `TuningToggleItem` composables.
-• The system SHALL replace bespoke tolerance slider blocks (`endpointTolerance`, `apexTolerance`, `distanceTolerance`, `altitudePositionTolerance`) with direct invocations of `TuningSliderItem`.
+• The system SHALL replace bespoke tolerance slider blocks (`endpointTolerance`, `apexTolerance`, `distanceTolerance`, `altitudePositionTolerance`, and `clusterScoreThreshold`, ATT-5559) with direct invocations of `TuningSliderItem`.
 • The legacy `TuningSlider` composable in `ClusterTuningContent.kt` SHALL be marked with `@Deprecated` containing a fully-qualified `ReplaceWith(expression = "TuningSliderItem(title = title, valueText = valueText, helperText = \"\", defaultText = \"\", value = value, onValueChange = onValueChange, valueRange = valueRange, steps = steps, enabled = enabled, onValueChangeFinished = onValueChangeFinished)", imports = ["com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSliderItem"])`.
 3. *Multi-Consumer & State Propagation Support*:
 • All consumers of `ClusterTuningContent` (`ClusterTuningScreen.kt`, `ClusterTuningSection.kt`, and `ImportBackupTabsScreen.kt`) SHALL inherit unified visual rhythm, typography, and switch scaling (`scale(0.8f)`).
 • The `enabled` state (e.g. `!isRecalculating`) SHALL cleanly propagate down to all toggles and sliders. The altitude position tolerance slider SHALL be gated to `enabled = enabled && useAltitudePosForClustering`.
 4. *Preservation of System Invariants*:
-• Tolerance bounds (`10..500f`, `0.01..0.2f`), master sensitivity calculation, recalculation domain locking (`isRecalculatingLock`), persistence on drag completion (`onValueChangeFinished`), and 100% full-suite unit test pass rate MUST be strictly preserved.
+• Tolerance bounds (`10..500f`, `0.01..0.2f`), cluster score threshold bounds (`0.5f..2.5f`, ATT-5559), master sensitivity calculation, recalculation domain locking (`isRecalculatingLock`), persistence on drag completion (`onValueChangeFinished`), and 100% full-suite unit test pass rate MUST be strictly preserved.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
 1. *Original Requirement ID & Target*: Net-new requirement (`REQ-SET-077`). Complements and standardizes implementation of `REQ-SET-075` (*Centralized Route Clustering Tuning Controls via ClusterTuningContent*) and `REQ-UI-262` (*Standardized Advanced Tuning Form Controls & Parameter Presentation*). Targets `TuningFormControls.kt`, `ClusterTuningContent.kt`, `ClusterTuningScreen.kt`, and `ClusterTuningSection.kt`.

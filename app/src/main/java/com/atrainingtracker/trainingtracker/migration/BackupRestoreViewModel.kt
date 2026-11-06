@@ -168,6 +168,7 @@ class BackupRestoreViewModel @JvmOverloads constructor(
     var altitudePositionTolerance by mutableStateOf(TrainingApplication.getClusterTolAltitudePos())
     var useSportTypeForClustering by mutableStateOf(TrainingApplication.useSportTypeForClustering())
     var useAltitudePosForClustering by mutableStateOf(TrainingApplication.useAltitudePosForClustering())
+    var clusterScoreThreshold by mutableStateOf(TrainingApplication.getClusterScoreThreshold())
 
     var uploadToStravaOnImport by mutableStateOf(TrainingApplication.uploadImportedWorkoutsToStrava())
         private set
@@ -197,6 +198,7 @@ class BackupRestoreViewModel @JvmOverloads constructor(
             .putFloat(TrainingApplication.SP_CLUSTER_TOL_ALTITUDE_POS, altitudePositionTolerance)
             .putBoolean(TrainingApplication.SP_CLUSTER_USE_SPORT_TYPE, useSportTypeForClustering)
             .putBoolean(TrainingApplication.SP_CLUSTER_USE_ALTITUDE_POS, useAltitudePosForClustering)
+            .putFloat(TrainingApplication.SP_CLUSTER_SCORE_THRESHOLD, clusterScoreThreshold)
             .apply()
     }
 

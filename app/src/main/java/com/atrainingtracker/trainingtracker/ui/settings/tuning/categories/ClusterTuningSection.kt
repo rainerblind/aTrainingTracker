@@ -71,6 +71,8 @@ fun ClusterTuningSection(
     onUseSportTypeChange: (Boolean) -> Unit,
     useAltitudePosForClustering: Boolean,
     onUseAltitudePosChange: (Boolean) -> Unit,
+    clusterScoreThreshold: Float = com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults.CLUSTER_SCORE_THRESHOLD,
+    onClusterScoreThresholdChange: (Float) -> Unit = {},
     onValueChangeFinished: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -97,6 +99,8 @@ fun ClusterTuningSection(
             onUseSportTypeChange = onUseSportTypeChange,
             useAltitudePosForClustering = useAltitudePosForClustering,
             onUseAltitudePosChange = onUseAltitudePosChange,
+            clusterScoreThreshold = clusterScoreThreshold,
+            onClusterScoreThresholdChange = onClusterScoreThresholdChange,
             onValueChangeFinished = onValueChangeFinished,
             isDialog = false,
             enabled = !isRecalculating
@@ -148,7 +152,8 @@ fun ClusterTuningSection(
                             distTol = distanceTolerance,
                             altPosTol = altitudePositionTolerance,
                             useSport = useSportTypeForClustering,
-                            useAlt = useAltitudePosForClustering
+                            useAlt = useAltitudePosForClustering,
+                            scoreThreshold = clusterScoreThreshold
                         )
                         onValueChangeFinished()
                     },

@@ -1056,6 +1056,8 @@
     <string name="cluster_tuning_apex_label">Apextolerantie (max. verplaatsing)</string>
     <string name="cluster_tuning_distance_label">Afstandstolerantie</string>
     <string name="cluster_tuning_altitude_pos_label">Tolerantie hoogtepositie</string>
+    <string name="cluster_tuning_score_threshold_label">Score-drempelwaarde voor clustertoewijzing</string>
+    <string name="cluster_tuning_score_threshold_helper">Lager = striktere overeenkomst · Hoger = toleranter</string>
     <string name="cluster_tuning_recalculate_button">Bereken alle clusters opnieuw</string>
     <string name="cluster_tuning_warning">Waarschuwing: Herberekenen wist alle geleerde clusternamen en groeperingen en bouwt ze vervolgens opnieuw op uit de geschiedenis met deze nieuwe parameters.</string>
     <string name="cluster_tuning_recalculating">Clusters opnieuw berekenen…</string>

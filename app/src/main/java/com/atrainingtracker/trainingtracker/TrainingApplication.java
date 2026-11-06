@@ -155,6 +155,7 @@ public class TrainingApplication extends Application {
     public static final String SP_CLUSTER_USE_SPORT_TYPE = "clusterUseSportType";
     public static final String SP_CLUSTER_USE_ALTITUDE_POS = "clusterUseAltitudePos";
     public static final String SP_CLUSTER_TOL_ALTITUDE_POS = "clusterTolAltitudePos";
+    public static final String SP_CLUSTER_SCORE_THRESHOLD = "cluster_score_threshold";
     public static final String UPDATE_STRAVA_EQUIPMENT = "updateStravaEquipment";
     public static final String SP_LAST_UPDATE_TIME_OF_STRAVA_EQUIPMENT = "lastUpdateTimeOfStravaEquipment";
     public static final String UPDATE_STRAVA_ROUTES = "updateStravaRoutes";
@@ -1034,6 +1035,7 @@ public class TrainingApplication extends Application {
     public static boolean useSportTypeForClustering() { return cSharedPreferences.getBoolean(SP_CLUSTER_USE_SPORT_TYPE, true); }
     public static boolean useAltitudePosForClustering() { return cSharedPreferences.getBoolean(SP_CLUSTER_USE_ALTITUDE_POS, true); }
     public static float getClusterTolAltitudePos() { return cSharedPreferences.getFloat(SP_CLUSTER_TOL_ALTITUDE_POS, 400f); }
+    public static float getClusterScoreThreshold() { return cSharedPreferences.getFloat(SP_CLUSTER_SCORE_THRESHOLD, 1.2f); }
 
     public static void setClusterTolEndpoints(float val) { cSharedPreferences.edit().putFloat(SP_CLUSTER_TOL_ENDPOINTS, val).apply(); }
     public static void setClusterTolApex(float val) { cSharedPreferences.edit().putFloat(SP_CLUSTER_TOL_APEX, val).apply(); }
@@ -1041,6 +1043,7 @@ public class TrainingApplication extends Application {
     public static void setUseSportTypeForClustering(boolean val) { cSharedPreferences.edit().putBoolean(SP_CLUSTER_USE_SPORT_TYPE, val).apply(); }
     public static void setUseAltitudePosForClustering(boolean val) { cSharedPreferences.edit().putBoolean(SP_CLUSTER_USE_ALTITUDE_POS, val).apply(); }
     public static void setClusterTolAltitudePos(float val) { cSharedPreferences.edit().putFloat(SP_CLUSTER_TOL_ALTITUDE_POS, val).apply(); }
+    public static void setClusterScoreThreshold(float val) { cSharedPreferences.edit().putFloat(SP_CLUSTER_SCORE_THRESHOLD, val).apply(); }
 
     @NonNull
     public static String getLastUpdateTimeOfStravaEquipment() {

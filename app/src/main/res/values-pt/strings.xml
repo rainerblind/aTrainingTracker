@@ -1056,6 +1056,8 @@
     <string name="cluster_tuning_apex_label">Tolerância do ápice (deslocamento máx.)</string>
     <string name="cluster_tuning_distance_label">Tolerância de distância</string>
     <string name="cluster_tuning_altitude_pos_label">Tolerância de posição de altitude</string>
+    <string name="cluster_tuning_score_threshold_label">Limiar de pontuação de atribuição de cluster</string>
+    <string name="cluster_tuning_score_threshold_helper">Mais baixo = correspondência mais estrita · Mais alto = mais tolerante</string>
     <string name="cluster_tuning_recalculate_button">Recalcular todos os grupos</string>
     <string name="cluster_tuning_warning">Aviso: Recalcular apagará todos os nomes de grupos aprendidos e agrupamentos, reconstruindo-os a partir do histórico usando estes novos parâmetros.</string>
     <string name="cluster_tuning_recalculating">Recalculando grupos…</string>

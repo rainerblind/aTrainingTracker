@@ -712,6 +712,8 @@ fun PreImportTuningBottomSheet(
                 viewModel.useAltitudePosForClustering = it
                 viewModel.saveClusteringTolerances()
             },
+            clusterScoreThreshold = viewModel.clusterScoreThreshold,
+            onClusterScoreThresholdChange = { viewModel.clusterScoreThreshold = it },
             onValueChangeFinished = { viewModel.saveClusteringTolerances() },
             isDialog = false
         )

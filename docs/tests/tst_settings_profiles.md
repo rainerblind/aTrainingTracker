@@ -574,10 +574,10 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-SET-077: **Standardized Route Clustering Form Controls via TuningFormControls Verification** [Verified]
-- **Requirement(s)**: `REQ-SET-077`
+### TST-SET-077: **Standardized Route Clustering Form Controls & Configurable Score Threshold Verification** [Verified]
+- **Requirement(s)**: `REQ-SET-075`, `REQ-SET-077`
 - **Component**: **Standardized Route Clustering Form Controls via TuningFormControls Verification**
-- **Jira**: ``ATT-3365``
+- **Jira**: `ATT-3365`, `ATT-5559`
 - **Test Description**:
   1. *Unit & Parameter Tests (`TuningFormControlsTest.kt`)*:
   • Verify `TuningSliderItem` accepts optional `enabled: Boolean` and `onValueChangeFinished: (() -> Unit)?`.
@@ -592,7 +592,15 @@
   • Verify altitude tolerance slider gating logic: asserts `enabled = enabled && useAltitudePosForClustering` across all state combinations.
   3. *Visual & Existing Tuning Section Regression Tests (`AdvancedTuningVisualContractTest.kt`)*:
   • Verify all existing callers in `NavigationSection`, `SensorsGpsFilterSection`, `CockpitTypographySection`, etc., maintain intact rendering and behavior without modification.
-  4. *Clean-Room Full Suite Regression Execution*:
+  4. *Cluster Score Threshold Persistence, Evaluation & UI Coupling Tests (`WorkoutClusterEngineTest.kt`, `TuningPreferencesDataStoreTest.kt`, `ClusterTuningContractTest.kt`, `TranslationParityTest.kt`)*:
+  • Verify `TuningPreferencesDefaults.CLUSTER_SCORE_THRESHOLD` defaults to `1.2f` with range `0.5f..2.5f` and step `0.1f`.
+  • Verify `TuningPreferencesDataStore` persists `cluster_score_threshold` to DataStore and `TrainingApplication.setClusterScoreThreshold` synchronously on save.
+  • Verify `TrainingApplication.getClusterScoreThreshold()` returns default `1.2f` when unset and reads persisted float.
+  • Verify `WorkoutClusterEngine.suggestCluster` accepts candidate clusters when similarity score `< scoreThreshold` (e.g. score `1.15` matches when threshold is `1.2`, rejected when threshold is `1.0`).
+  • Verify defensive fallback `runCatching { TrainingApplication.getClusterScoreThreshold().toDouble() }.getOrDefault(1.2)` executes safely under un-stubbed static mocks.
+  • Verify `ClusterTuningContent.kt` incorporates score threshold into derived master sensitivity average and renders a dedicated `TuningSliderItem`.
+  • Verify 100% 9-language translation parity for `cluster_tuning_score_threshold_label` and `cluster_tuning_score_threshold_helper` across EN, DE, ES, FR, IT, JA, NL, PL, PT.
+  5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
 ### TST-PRI-002: **Contextual Just-in-Time Permission Flow, Zero-Friction Cold Start, Background Location Escalation & Battery Optimization Verification** [Verified]

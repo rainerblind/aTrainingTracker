@@ -125,6 +125,8 @@ fun ClusterTuningScreen(
                         viewModel.useAltitudePosForClustering = it
                         viewModel.saveTuningParameters()
                     },
+                    clusterScoreThreshold = viewModel.clusterScoreThreshold,
+                    onClusterScoreThresholdChange = { viewModel.clusterScoreThreshold = it },
                     onValueChangeFinished = { viewModel.saveTuningParameters() }
                 )
 

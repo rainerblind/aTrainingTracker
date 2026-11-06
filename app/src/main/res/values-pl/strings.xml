@@ -837,6 +837,8 @@
     <string name="cluster_tuning_apex_label">Tolerancja wierzchołka (maks. przesunięcie)</string>
     <string name="cluster_tuning_distance_label">Tolerancja dystansu</string>
     <string name="cluster_tuning_altitude_pos_label">Tolerancja pozycji wysokości</string>
+    <string name="cluster_tuning_score_threshold_label">Próg wyniku przypisania klastra</string>
+    <string name="cluster_tuning_score_threshold_helper">Niższy = ściślejsze dopasowanie · Wyższy = większa tolerancja</string>
     <string name="cluster_tuning_recalculate_button">Przelicz wszystkie klastry</string>
     <string name="cluster_tuning_warning">Ostrzeżenie: Przeliczenie spowoduje usunięcie wszystkich wyuczonych nazw klastrów i grupowań, a następnie ich ponowne utworzenie z historii przy użyciu nowych parametrów.</string>
     <string name="cluster_tuning_recalculating">Przeliczanie klastrów…</string>

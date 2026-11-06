@@ -252,5 +252,33 @@ class ClusterTuningContractTest {
                     content.contains("color = MaterialTheme.colorScheme.onError")
         )
     }
+
+    @Test
+    fun clusterTuning_includesScoreThresholdSliderAndMasterCoupling() {
+        val contentFile = File("src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/ClusterTuningContent.kt")
+        assertTrue("ClusterTuningContent.kt must exist", contentFile.exists())
+        val content = contentFile.readText()
+
+        assertTrue(
+            "ClusterTuningContent must render score threshold label (REQ-SET-077, ATT-5559)",
+            content.contains("R.string.cluster_tuning_score_threshold_label")
+        )
+        assertTrue(
+            "ClusterTuningContent must render score threshold directional helper text (REQ-SET-077, ATT-5559)",
+            content.contains("R.string.cluster_tuning_score_threshold_helper")
+        )
+        assertTrue(
+            "ClusterTuningContent must incorporate clusterScoreThreshold into master sensitivity calculation (ATT-5559)",
+            content.contains("clusterScoreThreshold") && content.contains("scoreRange")
+        )
+
+        val sectionFile = File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/ClusterTuningSection.kt")
+        assertTrue("ClusterTuningSection.kt must exist", sectionFile.exists())
+        val sectionContent = sectionFile.readText()
+        assertTrue(
+            "ClusterTuningSection must forward clusterScoreThreshold to recalculateClustersAsync (ATT-5559)",
+            sectionContent.contains("scoreThreshold = clusterScoreThreshold")
+        )
+    }
 }
 

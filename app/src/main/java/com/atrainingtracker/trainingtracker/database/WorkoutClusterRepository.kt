@@ -387,7 +387,8 @@ class WorkoutClusterRepository internal constructor(
         distTol: Float? = null,
         altPosTol: Float? = null,
         useSport: Boolean? = null,
-        useAlt: Boolean? = null
+        useAlt: Boolean? = null,
+        scoreThreshold: Float? = null
     ) {
         if (!isRecalculatingLock.compareAndSet(false, true)) {
             if (DEBUG) android.util.Log.w("WorkoutClusterRepo", "Recalculation already active. Rejecting concurrent trigger.")
@@ -401,6 +402,7 @@ class WorkoutClusterRepository internal constructor(
                 altPosTol?.let { com.atrainingtracker.trainingtracker.TrainingApplication.setClusterTolAltitudePos(it) }
                 useSport?.let { com.atrainingtracker.trainingtracker.TrainingApplication.setUseSportTypeForClustering(it) }
                 useAlt?.let { com.atrainingtracker.trainingtracker.TrainingApplication.setUseAltitudePosForClustering(it) }
+                scoreThreshold?.let { com.atrainingtracker.trainingtracker.TrainingApplication.setClusterScoreThreshold(it) }
                 recalculateClustersWithProgress()
             } catch (t: Throwable) {
                 android.util.Log.e("WorkoutClusterRepo", "Error during cluster recalculation", t)
