@@ -37,7 +37,9 @@ def find_sprint_milestones(limit: int = 30) -> List[Dict[str, str]]:
         f"-n{limit * 3}",
         "--pretty=format:%h|%ad|%s",
         "--date=short",
+        "--grep=Merge branch 'sprint/",
         "--grep=Sprint Review & Retrospective",
+        "--grep=Review & Retro",
         "--grep=docs(retro):",
         "--grep=docs: author Sprint",
         "--grep=Release V"
@@ -55,8 +57,8 @@ def find_sprint_milestones(limit: int = 30) -> List[Dict[str, str]]:
             continue
         sha, date, subject = parts[0].strip(), parts[1].strip(), parts[2].strip()
 
-        # Match sprint identifier, e.g., 2026-41.5 or 2026-40.16
-        sprint_match = re.search(r'(?:Sprint\s+)?(202[0-9]-[0-9]+(?:\.[0-9]+)?)', subject, re.IGNORECASE)
+        # Match sprint identifier, e.g., sprint/2026-45.6, Sprint 2026-41.5, or 2026-40.16
+        sprint_match = re.search(r'(?:Sprint\s+|sprint/)(202[0-9]-[0-9]+(?:\.[0-9]+)?)', subject, re.IGNORECASE)
         # Match release tag identifier, e.g., V4.9.38
         release_match = re.search(r'(V[0-9]+\.[0-9]+(?:\.[0-9]+)*(?:\.[0-9]+)?)', subject)
 

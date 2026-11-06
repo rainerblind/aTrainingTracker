@@ -165,16 +165,19 @@ Jointly review all completed sprint tickets with the human user against expectat
    * Document insights in `docs/engineering/retros/Sprint_Review_and_Retro_<KEY>.md`, including the Planned vs. Completed Story Points velocity metric table alongside ticket counts (`REQ-PRO-029`).
    * Update `.agents/rules/aspice_governance.md`, relevant skills, `docs/coding_standards.md`, `docs/design_guidelines.md`, and `docs/engineering/rule_history_archive.md` with permanent countermeasures.
    * Commit retrospective deliverables to `sprint/<SPRINT_NAME>`.
-5. **Sprint Closure & Merge to `develop`**:
-   * Once all tickets and the Retrospective are signed off:
+5. **Sprint Closure, Milestone Tagging & Merge to `develop`**:
+   * Once all tickets and the Retrospective are signed off, merge `sprint/<SPRINT_NAME>` into `develop`, delete the local sprint branch (to keep the active branch list clean), and create an immutable `sprint/<SPRINT_NAME>` Git tag on the `--no-ff` merge commit so every completed sprint remains directly addressable by name (`git checkout sprint/<SPRINT_NAME>`, `git diff`, `regression-bisect`):
    ```bash
    git checkout develop
    git pull origin develop
    git merge --no-ff sprint/<SPRINT_NAME> -m "Merge branch 'sprint/<SPRINT_NAME>' into develop"
-   git push origin develop
    git branch -d sprint/<SPRINT_NAME>
-   # Post-condition verification: ensure no merged sprint branches remain locally
+   git tag -f sprint/<SPRINT_NAME>
+   git push origin develop
+   git push origin sprint/<SPRINT_NAME>
+   # Post-condition verification: ensure no merged sprint branches remain locally and sprint tag exists
    git branch --list 'sprint/*'
+   git tag --list 'sprint/<SPRINT_NAME>'
    ```
    * Transition the sprint's `Review & Retro` ticket to `Final Review (Human)` (for human closure to `Erledigt`).
    * Post final integration notice to Jira.
