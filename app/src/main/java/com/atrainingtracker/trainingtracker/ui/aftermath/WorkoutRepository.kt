@@ -2314,9 +2314,10 @@ class WorkoutRepository private constructor(private val application: Application
             // Post the detailed progress to the LiveData.
             _deletionProgress.postValue(DeletionProgress.InProgress(workoutName, id))
 
+            var success = false
             try {
                 // Perform the actual deletion in the database first
-                val success = deletionHelper.deleteWorkout(id)
+                success = deletionHelper.deleteWorkout(id)
                 if (success) {
                     if (isListLoading.get()) {
                         deletedDuringLoadIds.add(id)
@@ -2331,18 +2332,15 @@ class WorkoutRepository private constructor(private val application: Application
                     _allWorkouts.update { currentList ->
                         currentList.filterNot { it.id == id }
                     }
-
-                    // Post event for UI to react (e.g., close screen)
-                    deleteFinishedEvent.postValue(Pair(id, true))
-                } else {
-                    deleteFinishedEvent.postValue(Pair(id, false))
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "deleteWorkout: exception deleting workoutId=$id", e)
-                deleteFinishedEvent.postValue(Pair(id, false))
+                success = false
             } finally {
-                // Reset the state to Idle when done or if an error occurs.
+                // REQ-STB-018.4 / Rule 74 (ATT-5565): Reset progress to Idle BEFORE posting
+                // deleteFinishedEvent so observers awakened by the event never observe a stale InProgress state.
                 _deletionProgress.postValue(DeletionProgress.Idle)
+                deleteFinishedEvent.postValue(Pair(id, success))
             }
         }
     }

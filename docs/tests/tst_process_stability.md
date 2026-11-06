@@ -1036,7 +1036,7 @@
 ### TST-STB-018: **WorkoutRepository Concurrency, Conflated Dirty-Flag Reloads, Stale Snapshot Defense & Exception Shielding Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-STB-018`, `REQ-STB-013`
 - **Component**: **WorkoutRepository Concurrency, Conflated Dirty-Flag Reloads, Stale Snapshot Defense & Exception Shielding Verification Suite**
-- **Jira**: ``ATT-4002``
+- **Jira**: `ATT-4002`, `ATT-5565`
 - **Test Description**:
   1. *Conflated Per-Workout Reload & Lifecycle Callback Unit Tests (`TST-STB-018.1`, `WorkoutRepositoryConcurrencyTest.kt`)*:
   • Verify concurrent reload requests during an active reload mark the workout dirty and trigger a sequential re-query.
@@ -1051,9 +1051,9 @@
   5. *Pure Functional CAS Transformation Contract Tests (`TST-STB-018.5`, `WorkoutRepositoryConcurrencyTest.kt`)*:
   • Verify `updateWorkoutInMemory` and `saveWorkout` execute zero coroutines, database queries, or external mutations inside `_allWorkouts.update`.
   • Verify un-cached workouts trigger background fetch outside CAS lambda.
-  6. *Defensive Deletion Reporting Unit Tests (`TST-STB-018.6`, `WorkoutRepositoryConcurrencyTest.kt`)*:
+  6. *Defensive Deletion Reporting & Rule 74 Completion Ordering Unit Tests (`TST-STB-018.6`, `WorkoutRepositoryConcurrencyTest.kt`)*:
   • Verify `deleteWorkout` posts `Pair(id, false)` when deletion returns false or throws an exception.
-  • Verify `_deletionProgress` is guaranteed to reset to `DeletionProgress.Idle` under all execution paths.
+  • Verify `_deletionProgress` unconditionally resets to `DeletionProgress.Idle` prior to posting `deleteFinishedEvent`, preventing race conditions for completion event observers.
   7. *9-Language Localization Parity (`TST-STB-018.7`, `TranslationParityTest.kt`)*:
   • Verify 100% translation parity and matching string specifiers across all 9 supported locales.
   8. *Clean-Room Regression Suite Execution (`TST-STB-018.8`)*:
