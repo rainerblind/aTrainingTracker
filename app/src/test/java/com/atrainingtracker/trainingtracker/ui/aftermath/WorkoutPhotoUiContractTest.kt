@@ -189,4 +189,39 @@ class WorkoutPhotoUiContractTest {
             tempFile.delete()
         }
     }
+
+    @Test
+    fun testPhotoLocationMarkerExcludedWhenNullIslandCoordinates() {
+        runBlocking {
+            val summariesDb = WorkoutSummariesDatabaseManager.getInstance(context)
+            val workoutId = 88888L
+            val tempFile = File(context.filesDir, "test_null_island_photo.jpg")
+            tempFile.writeText("test image data")
+
+            val insertedId = summariesDb.insertPhoto(
+                workoutId,
+                tempFile.absolutePath,
+                System.currentTimeMillis(),
+                0.0,
+                0.0,
+                "Null Island Photo"
+            )
+            assertTrue(insertedId > 0)
+
+            val repository = WorkoutRepository.getInstance(context as android.app.Application)
+            val dummyData = createWorkoutData(workoutId)
+
+            val markers = repository.getWorkoutMarkers(dummyData)
+            val photoMarker = markers.find { it.title == "Null Island Photo" }
+
+            org.junit.Assert.assertNull(
+                "Photo marker with (0.0, 0.0) coordinates must be excluded from getWorkoutMarkers",
+                photoMarker
+            )
+
+            // Cleanup
+            summariesDb.deletePhotosForWorkout(workoutId)
+            tempFile.delete()
+        }
+    }
 }

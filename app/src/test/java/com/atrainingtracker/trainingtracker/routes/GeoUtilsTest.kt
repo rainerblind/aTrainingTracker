@@ -83,4 +83,49 @@ class GeoUtilsTest {
             assertTrue("Bearing $bearing should be in [0, 360)", bearing in 0.0..360.0)
         }
     }
+
+    @Test
+    fun isValidGpsCoordinate_nullCoordinates_returnsFalse() {
+        org.junit.Assert.assertFalse(GeoUtils.isValidGpsCoordinate(null, null))
+        org.junit.Assert.assertFalse(GeoUtils.isValidGpsCoordinate(48.65, null))
+        org.junit.Assert.assertFalse(GeoUtils.isValidGpsCoordinate(null, 9.05))
+    }
+
+    @Test
+    fun isValidGpsCoordinate_nullIsland_returnsFalse() {
+        // Exact 0.0, 0.0
+        org.junit.Assert.assertFalse(GeoUtils.isValidGpsCoordinate(0.0, 0.0))
+        // Coordinates within epsilon 1e-5
+        org.junit.Assert.assertFalse(GeoUtils.isValidGpsCoordinate(1e-6, 1e-6))
+        org.junit.Assert.assertFalse(GeoUtils.isValidGpsCoordinate(-1e-6, 0.0))
+        org.junit.Assert.assertFalse(GeoUtils.isValidGpsCoordinate(0.0, -1e-6))
+    }
+
+    @Test
+    fun isValidGpsCoordinate_nonFiniteValues_returnsFalse() {
+        org.junit.Assert.assertFalse(GeoUtils.isValidGpsCoordinate(Double.NaN, 9.05))
+        org.junit.Assert.assertFalse(GeoUtils.isValidGpsCoordinate(48.65, Double.NaN))
+        org.junit.Assert.assertFalse(GeoUtils.isValidGpsCoordinate(Double.POSITIVE_INFINITY, 9.05))
+        org.junit.Assert.assertFalse(GeoUtils.isValidGpsCoordinate(48.65, Double.NEGATIVE_INFINITY))
+    }
+
+    @Test
+    fun isValidGpsCoordinate_outOfBoundsLatitudeOrLongitude_returnsFalse() {
+        org.junit.Assert.assertFalse(GeoUtils.isValidGpsCoordinate(90.1, 9.05))
+        org.junit.Assert.assertFalse(GeoUtils.isValidGpsCoordinate(-90.1, 9.05))
+        org.junit.Assert.assertFalse(GeoUtils.isValidGpsCoordinate(48.65, 180.1))
+        org.junit.Assert.assertFalse(GeoUtils.isValidGpsCoordinate(48.65, -180.1))
+    }
+
+    @Test
+    fun isValidGpsCoordinate_validAuthenticCoordinates_returnsTrue() {
+        org.junit.Assert.assertTrue(GeoUtils.isValidGpsCoordinate(48.65, 9.05))
+        org.junit.Assert.assertTrue(GeoUtils.isValidGpsCoordinate(-33.8688, 151.2093))
+        // Edge boundaries
+        org.junit.Assert.assertTrue(GeoUtils.isValidGpsCoordinate(90.0, 180.0))
+        org.junit.Assert.assertTrue(GeoUtils.isValidGpsCoordinate(-90.0, -180.0))
+        // Non-zero point on prime meridian or equator
+        org.junit.Assert.assertTrue(GeoUtils.isValidGpsCoordinate(1.0, 0.0))
+        org.junit.Assert.assertTrue(GeoUtils.isValidGpsCoordinate(0.0, 1.0))
+    }
 }

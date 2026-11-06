@@ -97,4 +97,67 @@ class WorkoutPhotoManagerTest {
         val empty = WorkoutPhotoManager.interpolateCoordinatesFromPoints(emptyList(), 150L)
         assertNull(empty)
     }
+
+    @Test
+    fun testExtractExifMetadata_emptyFile_returnsNullCoordinates() {
+        val tempFile = File(context.cacheDir, "test_empty_exif.jpg")
+        tempFile.writeText("fake image bytes without exif")
+        val metadata = WorkoutPhotoManager.extractExifMetadata(tempFile)
+        assertNull(metadata.latitude)
+        assertNull(metadata.longitude)
+        tempFile.delete()
+    }
+
+    @Test
+    fun testSelfHealPhotos_nullIslandCoordinatesResetToNullWhenNoTrack() {
+        val summariesDb = WorkoutSummariesDatabaseManager.getInstance(context)
+        val workoutId = 12345L
+        val photoPath = File(context.cacheDir, "photo1.jpg").apply { writeText("img") }.absolutePath
+
+        val insertedId = summariesDb.insertPhoto(workoutId, photoPath, 1700000000000L, 0.0, 0.0, "Test")
+        assertTrue(insertedId > 0)
+
+        val unhealed = summariesDb.getPhotosForWorkout(workoutId)
+        assertEquals(1, unhealed.size)
+        assertEquals(0.0, unhealed[0].latitude!!, 1e-6)
+        assertEquals(0.0, unhealed[0].longitude!!, 1e-6)
+
+        // Run self-healing
+        val healed = WorkoutPhotoManager.selfHealPhotos(context, workoutId, unhealed)
+        assertEquals(1, healed.size)
+        assertNull("Latitude must be reset to null when interpolation cannot be performed", healed[0].latitude)
+        assertNull("Longitude must be reset to null when interpolation cannot be performed", healed[0].longitude)
+
+        // Verify SQLite was updated
+        val fromDb = summariesDb.getPhotosForWorkout(workoutId)
+        assertEquals(1, fromDb.size)
+        assertNull("DB row latitude must be updated to null", fromDb[0].latitude)
+        assertNull("DB row longitude must be updated to null", fromDb[0].longitude)
+
+        // Cleanup
+        summariesDb.deletePhotosForWorkout(workoutId)
+        File(photoPath).delete()
+    }
+
+    @Test
+    fun testUpdatePhotoCoordinatesInDatabase() {
+        val summariesDb = WorkoutSummariesDatabaseManager.getInstance(context)
+        val workoutId = 12346L
+        val photoPath = File(context.cacheDir, "photo2.jpg").apply { writeText("img2") }.absolutePath
+
+        val insertedId = summariesDb.insertPhoto(workoutId, photoPath, 1700000000000L, 0.0, 0.0, "Before")
+        assertTrue(insertedId > 0)
+
+        val updated = summariesDb.updatePhotoCoordinates(insertedId, 48.65, 9.05)
+        assertTrue(updated)
+
+        val photos = summariesDb.getPhotosForWorkout(workoutId)
+        assertEquals(1, photos.size)
+        assertEquals(48.65, photos[0].latitude!!, 1e-5)
+        assertEquals(9.05, photos[0].longitude!!, 1e-5)
+
+        // Cleanup
+        summariesDb.deletePhotosForWorkout(workoutId)
+        File(photoPath).delete()
+    }
 }

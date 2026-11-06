@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.map
 import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.*
+import com.atrainingtracker.trainingtracker.routes.GeoUtils
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
@@ -115,15 +116,29 @@ fun MapBoundsController(
                     // Optimized: Use persisted bounds where available
                     tracks.forEach { track ->
                         if (track.minLat != null && track.maxLat != null && track.minLng != null && track.maxLng != null) {
-                            builder.include(LatLng(track.minLat, track.minLng))
-                            builder.include(LatLng(track.maxLat, track.maxLng))
-                            hasPoints = true
+                            if (GeoUtils.isValidGpsCoordinate(track.minLat, track.minLng) &&
+                                GeoUtils.isValidGpsCoordinate(track.maxLat, track.maxLng)
+                            ) {
+                                builder.include(LatLng(track.minLat, track.minLng))
+                                builder.include(LatLng(track.maxLat, track.maxLng))
+                                hasPoints = true
+                            }
                         } else {
                             // Fallback for legacy
-                            track.path.forEach { builder.include(it.latLng); hasPoints = true }
+                            track.path.forEach { point ->
+                                if (GeoUtils.isValidGpsCoordinate(point.latLng.latitude, point.latLng.longitude)) {
+                                    builder.include(point.latLng)
+                                    hasPoints = true
+                                }
+                            }
                         }
                     }
-                    markers.forEach { marker -> builder.include(marker.position); hasPoints = true }
+                    markers.forEach { marker ->
+                        if (GeoUtils.isValidGpsCoordinate(marker.position.latitude, marker.position.longitude)) {
+                            builder.include(marker.position)
+                            hasPoints = true
+                        }
+                    }
                     
                     if (zoomFocus == MapZoomFocus.FIT_PRIMARY) {
                         segments.forEach { segment ->

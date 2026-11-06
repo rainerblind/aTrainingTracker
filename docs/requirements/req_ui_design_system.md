@@ -13113,17 +13113,17 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 
 ### REQ-UI-447: Workout Share Mode Selection Bottom Sheet & Photo Track Overlay Snapshot Composer [Verified]
-- **Tests**: `TST-UI-447` | **Tickets**: `ATT-30`
+- **Tests**: `TST-UI-447` | **Tickets**: `ATT-30`, `ATT-5479`
 - **Implementation**: `MapDetailLayout.kt`, `ShareUtils.kt`, `PhotoTrackOverlayComposer.kt`, `WorkoutShareBottomSheet.kt`
-- **Rationale**: Currently, tapping the Share button in `MapDetailLayout` immediately executes a vertical composite map/graph snapshot (`combineWorkoutAndShare`). Athletes frequently prefer sharing activities using a personal scenery, selfie, or gear photo overlaid with their GPS route silhouette and key stats (Strava/Garmin style). REQ-UI-447 introduces a share mode selection sheet offering the classic analysis snapshot or a photo with track & stats overlay:
+- **Rationale**: Currently, tapping the Share button in `MapDetailLayout` immediately executes a vertical composite map/graph snapshot (`combineWorkoutAndShare`). Athletes frequently prefer sharing activities using a personal scenery, selfie, or gear photo overlaid with their GPS route silhouette and key stats (Strava/Garmin style). REQ-UI-447 introduces a share mode selection sheet offering the classic analysis snapshot or a photo with track & stats overlay (ATT-30, ATT-5479):
 1. *Share Mode Selection Bottom Sheet (`REQ-UI-447.1`)*:
 • In `MapDetailLayout.kt`, tapping the floating Share button on a completed workout SHALL display `WorkoutShareBottomSheet` (hosted in `AppModalBottomSheet`) presenting two choices:
   - *Option A — Karten- & Analyse-Snapshot*: Executes the existing vertical composite snapshot (`combineWorkoutAndShare`).
   - *Option B — Foto mit Track-Overlay*: Launches the Android Photo Picker (`ActivityResultContracts.PickVisualMedia`) to pick a background photo.
 • For non-workout callers (`RouteOnMapScreen`, `SegmentOnMapScreen`, or when `workoutData == null`), tapping Share SHALL continue executing Option A directly without presenting the mode sheet.
-2. *2D GPS Track Silhouette Projection (`REQ-UI-447.2`)*:
+2. *2D GPS Track Silhouette Projection & Coordinate Sanitization (`REQ-UI-447.2`)*:
 • In `PhotoTrackOverlayComposer.kt`, the workout's GPS polyline (`workoutData.mapPolyline`) SHALL be decoded via `PolyUtil.decode` and projected onto the photo.
-• Projection SHALL apply equirectangular cosine-latitude scaling ($\Delta x = \Delta\lambda \cdot \cos(\phi_{\text{mean}})$, $\Delta y = -\Delta\phi$) to preserve true geometric aspect ratio across all latitudes without distortion.
+• Projection SHALL apply equirectangular cosine-latitude scaling ($\Delta x = \Delta\lambda \cdot \cos(\phi_{\text{mean}})$, $\Delta y = -\Delta\phi$) to preserve true geometric aspect ratio across all latitudes without distortion. Trackpoints with invalid or Null-Island coordinates (`!isValidGpsCoordinate(lat, lng)`) SHALL be filtered out prior to bounding box and silhouette calculation to prevent track silhouette distortion.
 • The track silhouette SHALL be drawn with a subtle drop shadow, anti-aliased stroke, and distinctive start/finish marker dots in the upper-right or side quadrant of the photo.
 3. *Bottom Gradient Scrim & Key Metrics Typography (`REQ-UI-447.3`)*:
 • A vertical translucent gradient scrim (transparent $\rightarrow$ black alpha 0.85) SHALL be drawn across the bottom 25–30% of the photo canvas.
@@ -13135,10 +13135,10 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • All user-visible strings SHALL maintain 100% localization parity across all 9 supported application locales (`values`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`).
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-447`, extending `REQ-UI-177` (*Theme-Aware Post-Workout & Period Share Snapshot Canvas and Footer*), `REQ-UI-205` (*Workout Snapshot Layout*), and `REQ-UI-445.5` (*Social Share Workout Watermark*). Targets `MapDetailLayout.kt`, `ShareUtils.kt`, `PhotoTrackOverlayComposer.kt`, and `WorkoutShareBottomSheet.kt`.
-2. *Historical Origin & Commit Trace*: Sprint 2026-40.8 (`ATT-1472`, `REQ-UI-177`), Sprint 2026-40.7 (`ATT-1393`, `REQ-UI-205`), and `ATT-5397` (`REQ-UI-445.5`) established composite snapshot sharing and branding watermarks.
-3. *Root Reason for Existing Formulation*: Prior to ATT-30, snapshot sharing only supported stitching layout bitmaps (Header, Map, Elevation, Analytics). Personal photo backgrounds with overlaid vector silhouettes were not supported.
-4. *Preservation of Core Invariants*: Existing `combineWorkoutAndShare` and `combineAndShare` functions and non-workout callers remain 100% operational and unchanged under Option A. Safe bitmap decoding (`inSampleSize`) avoids OOM on high-resolution camera photos.
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-447` (amended by `ATT-5479`), extending `REQ-UI-177` (*Theme-Aware Post-Workout & Period Share Snapshot Canvas and Footer*), `REQ-UI-205` (*Workout Snapshot Layout*), and `REQ-UI-445.5` (*Social Share Workout Watermark*). Targets `MapDetailLayout.kt`, `ShareUtils.kt`, `PhotoTrackOverlayComposer.kt`, and `WorkoutShareBottomSheet.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-40.8 (`ATT-1472`, `REQ-UI-177`), Sprint 2026-40.7 (`ATT-1393`, `REQ-UI-205`), `ATT-5397` (`REQ-UI-445.5`), and `ATT-30` (`584284ff`).
+3. *Root Reason for Existing Formulation*: Prior to ATT-30, snapshot sharing only supported stitching layout bitmaps (Header, Map, Elevation, Analytics). Prior to ATT-5479, track projection assumed decoded polyline trackpoints were non-zero, risking visual silhouette skewing if raw track logs contained Null Island points.
+4. *Preservation of Core Invariants*: Existing `combineWorkoutAndShare` and `combineAndShare` functions and non-workout callers remain 100% operational and unchanged under Option A. Safe bitmap decoding (`inSampleSize`) avoids OOM on high-resolution camera photos. Legitimate GPS coordinates and track geometry are strictly preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete viewing a completed workout in `MapDetailLayout`,
@@ -13149,39 +13149,54 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Then* `combineWorkoutAndShare` captures Header, Map, Elevation, Analytics, and Footer and dispatches via `FileProvider`.
 • *Given* the athlete selects Option B,
 • *When* selecting a photo via `PickVisualMedia`,
-• *Then* `PhotoTrackOverlayComposer` composites the downsampled photo with the cosine-latitude-scaled GPS track silhouette, bottom gradient scrim, key workout metrics, and branding watermark.
+• *Then* `PhotoTrackOverlayComposer` composites the downsampled photo with the cosine-latitude-scaled GPS track silhouette (excluding any invalid/Null-Island coordinates), bottom gradient scrim, key workout metrics, and branding watermark.
 • *Given* the composed photo preview inside the bottom sheet,
 • *When* the athlete taps the Share CTA,
 • *Then* the image is shared via system send intent.
 
 **Invariants**: Backward compatibility for all existing `combineWorkoutAndShare` callers, safe bitmap downsampling preventing OOM, WCAG AAA text contrast, 9-language localization parity, and 100% clean-room test pass rate.
 
-### REQ-UI-448: Workout Photos Strip, Full-Screen Preview Bottom Sheet with ATT-30 Overlay Share, and Map Pin Markers [Verified]
-- **Tests**: `TST-UI-448` | **Tickets**: `ATT-43`
-- **Implementation**: `WorkoutDetails.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `ATrainingTrackerMap.kt`, `WorkoutPhotoViewerSheet.kt`, `WorkoutShareBottomSheet.kt`
-- **Rationale**: Athletes capture photos during workouts and wish to browse them alongside workout telemetry, inspect them on the workout GPS map, and share them via social media. REQ-UI-448 defines the UI presentation and interaction contracts for workout photos (ATT-43, extending `REQ-UI-447` and `REQ-UI-408`):
+### REQ-UI-448: Workout Photos Strip, Full-Screen Preview Bottom Sheet with ATT-30 Overlay Share, Map Pin Markers, and Null-Island Coordinate Rejection [Verified]
+- **Tests**: `TST-UI-448` | **Tickets**: `ATT-43`, `ATT-5479`
+- **Implementation**: `WorkoutDetails.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `ATrainingTrackerMap.kt`, `WorkoutPhotoViewerSheet.kt`, `WorkoutShareBottomSheet.kt`, `WorkoutPhotoManager.kt`, `WorkoutRepository.kt`, `MapBehaviors.kt`
+- **Rationale**: Athletes capture photos during workouts and wish to browse them alongside workout telemetry, inspect them on the workout GPS map, and share them via social media. REQ-UI-448 defines the UI presentation and interaction contracts for workout photos, EXIF coordinate validation, and camera bounds protection (ATT-43, ATT-5479, extending `REQ-UI-447` and `REQ-UI-408`):
 1. *Workout Photos Horizontal Strip (`REQ-UI-448.1`)*:
 • In `WorkoutDetails.kt` (and `WorkoutDetailTabbedContent.kt`), when attached photos exist, the system SHALL render a dedicated horizontal photo strip displaying downsampled thumbnail previews (`RoundedCornerShape(8.dp)`), along with an "Add Photos" action button (`ActivityResultContracts.PickMultipleVisualMedia`).
 • If no photos are attached, an empty-state action button SHALL allow athletes to attach photos from the system Photo Picker.
 2. *Full-Screen Photo Viewer Bottom Sheet (`REQ-UI-448.2`)*:
 • Tapping a photo thumbnail SHALL open `WorkoutPhotoViewerSheet` (hosted in `AppModalBottomSheet` per ATT-5399), displaying the full image, capture timestamp, caption (if present), an action to delete the photo (with confirmation dialog), and a prominent CTA to share the photo via `WorkoutShareBottomSheet` (ATT-30).
-3. *Map Photo Pin Markers (`REQ-UI-448.3`)*:
-• In `TrackOnMapScreen.kt` and `ATrainingTrackerMap.kt`, photos with resolved GPS coordinates SHALL be rendered as distinct photo pin markers (`LocationMarker`) along the workout route.
-• Tapping a photo marker on the map SHALL trigger `WorkoutPhotoViewerSheet` for that photo.
-4. *Memory Safety & 9-Language Localization Parity (`REQ-UI-448.4`)*:
+3. *Map Photo Pin Markers & Strict Coordinate Validation (`REQ-UI-448.3`)*:
+• In `TrackOnMapScreen.kt` and `ATrainingTrackerMap.kt`, photos with valid geographic GPS coordinates SHALL be rendered as distinct photo pin markers (`LocationMarker`) along the workout route.
+• Coordinate validity SHALL be evaluated via `GeoUtils.isValidGpsCoordinate(latitude, longitude)`, requiring finite latitude in `[-90.0, 90.0]`, finite longitude in `[-180.0, 180.0]`, and strictly excluding Null Island (`abs(lat) < 1e-5 && abs(lng) < 1e-5`).
+• In `WorkoutRepository.getWorkoutMarkers`, photos missing coordinates or holding invalid/Null-Island coordinates (`!isValidGpsCoordinate`) SHALL be excluded from the marker list and never rendered on the map.
+• In `MapBoundsController` (`MapBehaviors.kt`), invalid coordinates (`!isValidGpsCoordinate`) SHALL be excluded from `LatLngBounds.Builder`, ensuring map camera bounds never expand to continental zoom levels.
+• Tapping a valid photo marker on the map SHALL trigger `WorkoutPhotoViewerSheet` for that photo.
+4. *EXIF Null-Island Rejection & Database Self-Healing (`REQ-UI-448.4`)*:
+• In `WorkoutPhotoManager.extractExifMetadata`, when `ExifInterface.getLatLong()` returns true for zeroed EXIF rational tags (`0.0, 0.0`), the system SHALL treat latitude and longitude as `null` (`!isValidGpsCoordinate`), enabling fallback timestamp-based trackpoint interpolation (`interpolateCoordinatesAtTimestamp`) against `WorkoutSamples.db` to execute.
+• When loading photos for a workout in `WorkoutPhotoManager` / `WorkoutRepository`, existing database records in `workout_photos` holding `(0.0, 0.0)` coordinates SHALL be self-healed: the system SHALL re-interpolate valid coordinates from `WorkoutSamples.db` using `taken_at_ms` (or reset to `null` if interpolation fails) and persist the repaired coordinates back to SQLite via `WorkoutSummariesDatabaseManager.updatePhotoCoordinates`.
+5. *Memory Safety & 9-Language Localization Parity (`REQ-UI-448.5`)*:
 • Thumbnail and preview decoding SHALL use downsampled bitmap decoders (`inSampleSize`) via `PhotoTrackOverlayComposer.decodeSampledBitmap` to prevent out-of-memory exceptions.
 • All user-visible labels, headers, dialogs, and accessibility descriptions SHALL maintain 100% parity across all 9 supported locales without decorative inline Unicode emojis.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-448`, extending `REQ-UI-447` (*Workout Share Mode Selection & Photo Track Overlay*) and `REQ-UI-408` (*Multi-Tab Workout Details*). Targets `WorkoutDetails.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `ATrainingTrackerMap.kt`, and `WorkoutPhotoViewerSheet.kt`.
-2. *Historical Origin & Commit Trace*: Sprint 2026-45.6 (`ATT-30`, `REQ-UI-447`), Sprint 2026-44.1 (`ATT-3920`, `REQ-UI-408`).
-3. *Root Reason for Existing Formulation*: Prior to ATT-43, `WorkoutDetails` only rendered tabular telemetry metrics and `TrackOnMapScreen` only rendered start, finish, and lap markers.
-4. *Preservation of Core Invariants*: Existing metric rows, tab layouts, and map marker contracts remain invariant; memory-safe sampled decoding prevents OOM.
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-448` (amended by `ATT-5479`), extending `REQ-UI-447` (*Workout Share Mode Selection & Photo Track Overlay*), `REQ-UI-408` (*Multi-Tab Workout Details*), and `REQ-DAT-038` (*Workout Photo Storage & EXIF Interpolation*). Targets `WorkoutDetails.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `ATrainingTrackerMap.kt`, `WorkoutPhotoViewerSheet.kt`, `WorkoutPhotoManager.kt`, `WorkoutRepository.kt`, and `MapBehaviors.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-45.6 (`ATT-30`, `REQ-UI-447`; `ATT-43`, commit `5c9d9653`), Sprint 2026-44.1 (`ATT-3920`, `REQ-UI-408`).
+3. *Root Reason for Existing Formulation*: Prior to ATT-43, `WorkoutDetails` only rendered tabular telemetry metrics and `TrackOnMapScreen` only rendered start, finish, and lap markers. `ExifInterface.getLatLong()` was trusted to only return true for non-zero coordinates, and `photo.latitude != null` in `WorkoutRepository.getWorkoutMarkers` and `MapBoundsController` was assumed sufficient to ensure spatial validity.
+4. *Preservation of Core Invariants*: Existing metric rows, tab layouts, and legitimate map markers remain invariant; genuine GPS coordinates are untouched; photos taken during workouts without EXIF GPS gain interpolated track coordinates; camera framing remains focused strictly on actual workout trajectories; memory-safe sampled decoding prevents OOM.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete viewing a workout with attached photos in `WorkoutDetails`,
 • *When* the details screen renders,
 • *Then* a horizontal photo strip appears displaying thumbnails and an add-photos button.
+• *Given* an attached photo with zeroed EXIF GPS tags (`0.0, 0.0`),
+• *When* processed by `WorkoutPhotoManager`,
+• *Then* Null Island coordinates are rejected as null, triggering fallback trackpoint interpolation based on `taken_at_ms`.
+• *Given* an existing photo record in SQLite `workout_photos` with `(0.0, 0.0)` coordinates,
+• *When* loaded in `WorkoutPhotoManager` / `WorkoutRepository`,
+• *Then* the record is self-healed in-place with interpolated coordinates or set to null.
+• *Given* an athlete viewing a workout map,
+• *When* `WorkoutRepository.getWorkoutMarkers` and `MapBoundsController` compute markers and bounds,
+• *Then* invalid coordinates (`!isValidGpsCoordinate`) are excluded from marker generation and camera bounding box calculations, preserving tight map framing on the workout track.
 • *Given* the athlete taps a photo in the strip or a photo pin on the map,
 • *When* clicked,
 • *Then* `WorkoutPhotoViewerSheet` opens displaying the full preview, caption, delete action, and "Share with Track Overlay" CTA.

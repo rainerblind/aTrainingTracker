@@ -56,6 +56,7 @@ import com.atrainingtracker.trainingtracker.exporter.ExportStatusChangedBroadcas
 import com.atrainingtracker.trainingtracker.exporter.ExportType
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
+import com.atrainingtracker.trainingtracker.routes.GeoUtils
 import com.atrainingtracker.trainingtracker.tracker.TrackerService
 import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutDeletionNotificationManager
@@ -946,7 +947,7 @@ class WorkoutRepository private constructor(private val application: Application
         val markerList = mutableListOf<LocationMarker>()
 
         // 1. Primary spatial markers (Fast, from WorkoutData)
-        workoutData.startLatLng?.let {
+        workoutData.startLatLng?.takeIf { GeoUtils.isValidGpsCoordinate(it.latitude, it.longitude) }?.let {
             val startTitle = if (!workoutData.startLocationName.isNullOrBlank()) {
                 "${application.getString(R.string.Start)}: ${workoutData.startLocationName}"
             } else {
@@ -954,7 +955,7 @@ class WorkoutRepository private constructor(private val application: Application
             }
             markerList.add(LocationMarker(it, R.drawable.control_start, startTitle))
         }
-        workoutData.endLatLng?.let {
+        workoutData.endLatLng?.takeIf { GeoUtils.isValidGpsCoordinate(it.latitude, it.longitude) }?.let {
             val stopTitle = if (!workoutData.endLocationName.isNullOrBlank()) {
                 "${application.getString(R.string.Stop)}: ${workoutData.endLocationName}"
             } else {
@@ -962,7 +963,7 @@ class WorkoutRepository private constructor(private val application: Application
             }
             markerList.add(LocationMarker(it, R.drawable.control_stop, stopTitle))
         }
-        workoutData.maxDisplacementLatLng?.let {
+        workoutData.maxDisplacementLatLng?.takeIf { GeoUtils.isValidGpsCoordinate(it.latitude, it.longitude) }?.let {
             markerList.add(LocationMarker(it, R.drawable.ic_distance, application.getString(R.string.max_line_distance)))
         }
 
@@ -978,14 +979,14 @@ class WorkoutRepository private constructor(private val application: Application
             }
         }
 
-        // 3. Photo Location Markers (REQ-UI-448.3 / ATT-43)
-        val photos = summariesManager.getPhotosForWorkout(workoutId)
+        // 3. Photo Location Markers (REQ-UI-448.3 / ATT-43 / ATT-5479)
+        val photos = getWorkoutPhotos(workoutId)
         photos.forEach { photo ->
-            if (photo.latitude != null && photo.longitude != null) {
+            if (GeoUtils.isValidGpsCoordinate(photo.latitude, photo.longitude)) {
                 val title = photo.caption ?: application.getString(R.string.workout_photos_marker_title)
                 markerList.add(
                     LocationMarker(
-                        position = LatLng(photo.latitude, photo.longitude),
+                        position = LatLng(photo.latitude!!, photo.longitude!!),
                         iconResId = R.drawable.ic_place,
                         title = title
                     )
@@ -997,10 +998,11 @@ class WorkoutRepository private constructor(private val application: Application
     }
 
     /**
-     * Retrieves all photos attached to the given workout (REQ-DAT-038 / ATT-43).
+     * Retrieves all photos attached to the given workout (REQ-DAT-038 / ATT-43 / ATT-5479).
      */
     fun getWorkoutPhotos(workoutId: Long): List<WorkoutPhotoEntry> {
-        return summariesManager.getPhotosForWorkout(workoutId)
+        val rawPhotos = summariesManager.getPhotosForWorkout(workoutId)
+        return WorkoutPhotoManager.selfHealPhotos(application, workoutId, rawPhotos)
     }
 
     /**

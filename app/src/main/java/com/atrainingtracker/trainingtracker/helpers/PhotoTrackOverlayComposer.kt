@@ -35,6 +35,7 @@ import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
+import com.atrainingtracker.trainingtracker.routes.GeoUtils
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
@@ -234,7 +235,9 @@ object PhotoTrackOverlayComposer {
 
         // 2. Draw 2D GPS Track Silhouette in Upper-Right / Side Quadrant
         val points = try {
-            PolyUtil.decode(workoutData.mapPolyline)
+            PolyUtil.decode(workoutData.mapPolyline).filter {
+                GeoUtils.isValidGpsCoordinate(it.latitude, it.longitude)
+            }
         } catch (_: Throwable) {
             emptyList()
         }

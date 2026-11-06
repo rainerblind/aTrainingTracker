@@ -1659,6 +1659,32 @@ public class WorkoutSummariesDatabaseManager {
         return photos;
     }
 
+    /**
+     * Updates the geographic coordinates of a persisted photo entry (REQ-UI-448.4 / ATT-5479).
+     *
+     * @param photoId Database row ID (_id) of the photo in workout_photos.
+     * @param latitude New latitude, or null if invalid or unassigned.
+     * @param longitude New longitude, or null if invalid or unassigned.
+     * @return true if exactly one row was updated, false otherwise.
+     */
+    public boolean updatePhotoCoordinates(long photoId, @Nullable Double latitude, @Nullable Double longitude) {
+        SQLiteDatabase db = getDatabase();
+        ContentValues cv = new ContentValues();
+        if (latitude != null) {
+            cv.put(WorkoutSummaries.PHOTO_LATITUDE, latitude);
+        } else {
+            cv.putNull(WorkoutSummaries.PHOTO_LATITUDE);
+        }
+        if (longitude != null) {
+            cv.put(WorkoutSummaries.PHOTO_LONGITUDE, longitude);
+        } else {
+            cv.putNull(WorkoutSummaries.PHOTO_LONGITUDE);
+        }
+        int rows = db.update(WorkoutSummaries.TABLE_WORKOUT_PHOTOS, cv,
+                WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(photoId)});
+        return rows > 0;
+    }
+
     public boolean deletePhoto(long photoId) {
         SQLiteDatabase db = getDatabase();
         String filePath = null;

@@ -24,6 +24,7 @@ import android.media.ExifInterface
 import android.net.Uri
 import android.util.Log
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.routes.GeoUtils
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.Dispatchers
@@ -92,8 +93,11 @@ object WorkoutPhotoManager {
             val takenAt = parseExifDateTime(dateStr)
             val latLong = FloatArray(2)
             val hasGps = exif.getLatLong(latLong)
-            val lat = if (hasGps) latLong[0].toDouble() else null
-            val lng = if (hasGps) latLong[1].toDouble() else null
+            val rawLat = if (hasGps) latLong[0].toDouble() else null
+            val rawLng = if (hasGps) latLong[1].toDouble() else null
+            val isValid = GeoUtils.isValidGpsCoordinate(rawLat, rawLng)
+            val lat = if (isValid) rawLat else null
+            val lng = if (isValid) rawLng else null
             ExifMetadata(takenAt, lat, lng)
         } catch (e: Exception) {
             Log.w(TAG, "Failed to read EXIF from ${file.name}", e)
@@ -245,7 +249,7 @@ object WorkoutPhotoManager {
                     try {
                         val samplesDb = WorkoutSamplesDatabaseManager.getInstance(context).database
                         val interpolated = interpolateCoordinatesAtTimestamp(samplesDb, baseFileName, takenAtMs)
-                        if (interpolated != null) {
+                        if (interpolated != null && GeoUtils.isValidGpsCoordinate(interpolated.latitude, interpolated.longitude)) {
                             latitude = interpolated.latitude
                             longitude = interpolated.longitude
                         }
@@ -253,6 +257,12 @@ object WorkoutPhotoManager {
                         Log.w(TAG, "Failed to interpolate coordinates for ${destFile.name}", e)
                     }
                 }
+            }
+
+            // Ensure invalid coordinates (e.g. Null Island 0.0, 0.0) are never persisted
+            if (!GeoUtils.isValidGpsCoordinate(latitude, longitude)) {
+                latitude = null
+                longitude = null
             }
 
             val id = summariesDb.insertPhoto(workoutId, destFile.absolutePath, takenAtMs, latitude, longitude, caption)
@@ -268,8 +278,86 @@ object WorkoutPhotoManager {
         }
     }
 
+    /**
+     * Inspects a list of photo entries for invalid or Null-Island (0.0, 0.0) GPS coordinates,
+     * attempts to re-interpolate valid track coordinates from WorkoutSamples.db using takenAtMs,
+     * or resets invalid coordinates to null, persisting updates back to SQLite (REQ-UI-448.4 / ATT-5479).
+     *
+     * @param context Application context.
+     * @param workoutId Workout ID to which the photos belong.
+     * @param photos List of photo entries retrieved from the database.
+     * @return Sanitized photo entries with repaired coordinates.
+     */
+    fun selfHealPhotos(
+        context: Context,
+        workoutId: Long,
+        photos: List<WorkoutPhotoEntry>
+    ): List<WorkoutPhotoEntry> {
+        val hasInvalid = photos.any { photo ->
+            (photo.latitude != null || photo.longitude != null) &&
+                !GeoUtils.isValidGpsCoordinate(photo.latitude, photo.longitude)
+        }
+        if (!hasInvalid) {
+            return photos
+        }
+
+        val summariesDb = WorkoutSummariesDatabaseManager.getInstance(context)
+        val baseFileName = summariesDb.getBaseFileName(workoutId)
+        val startTimeStr = summariesDb.getString(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START)
+        val startTimeMs: Long = startTimeStr?.let { str ->
+            runCatching {
+                SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ROOT).apply {
+                    timeZone = TimeZone.getTimeZone("UTC")
+                }.parse(str)?.time
+            }.getOrNull() ?: runCatching {
+                SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ROOT).parse(str)?.time
+            }.getOrNull()
+        } ?: 0L
+
+        val totalTimeSec = summariesDb.getInt(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_TOTAL_s) ?: 0
+        val endTimeMs = if (startTimeMs > 0) startTimeMs + totalTimeSec * 1000L else 0L
+
+        var samplesDb: SQLiteDatabase? = null
+        try {
+            if (baseFileName != null && startTimeMs > 0) {
+                samplesDb = WorkoutSamplesDatabaseManager.getInstance(context).database
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to open samples database for self-healing photos of workout $workoutId", e)
+        }
+
+        return photos.map { photo ->
+            val hasCoords = photo.latitude != null || photo.longitude != null
+            if (hasCoords && !GeoUtils.isValidGpsCoordinate(photo.latitude, photo.longitude)) {
+                var repairedLat: Double? = null
+                var repairedLng: Double? = null
+
+                val takenAtMs = photo.takenAtMs
+                if (samplesDb != null && baseFileName != null && takenAtMs != null && startTimeMs > 0) {
+                    if (takenAtMs in (startTimeMs - 300_000L)..(endTimeMs + 300_000L)) {
+                        try {
+                            val interpolated = interpolateCoordinatesAtTimestamp(samplesDb, baseFileName, takenAtMs)
+                            if (interpolated != null && GeoUtils.isValidGpsCoordinate(interpolated.latitude, interpolated.longitude)) {
+                                repairedLat = interpolated.latitude
+                                repairedLng = interpolated.longitude
+                            }
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Failed to re-interpolate photo ${photo.id}", e)
+                        }
+                    }
+                }
+
+                summariesDb.updatePhotoCoordinates(photo.id, repairedLat, repairedLng)
+                photo.copy(latitude = repairedLat, longitude = repairedLng)
+            } else {
+                photo
+            }
+        }
+    }
+
     fun getPhotosForWorkout(context: Context, workoutId: Long): List<WorkoutPhotoEntry> {
-        return WorkoutSummariesDatabaseManager.getInstance(context).getPhotosForWorkout(workoutId)
+        val photos = WorkoutSummariesDatabaseManager.getInstance(context).getPhotosForWorkout(workoutId)
+        return selfHealPhotos(context, workoutId, photos)
     }
 
     fun deletePhoto(context: Context, photoId: Long): Boolean {

@@ -7138,10 +7138,11 @@
 ### TST-UI-447: **Workout Share Mode Selection & Photo Track Overlay Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-447`
 - **Component**: `PhotoTrackOverlayComposerTest.kt`, `WorkoutShareBottomSheetContractTest.kt`, `TranslationParityTest.kt`
-- **Jira**: `ATT-30`
+- **Jira**: `ATT-30`, `ATT-5479`
 - **Test Description**:
-  1. *Equirectangular Track Projection & Silhouette Geometry (`TST-UI-447.1`)*:
+  1. *Equirectangular Track Projection, Coordinate Sanitization & Silhouette Geometry (`TST-UI-447.1`)*:
   • Verify `PhotoTrackOverlayComposer` scales GPS polyline points via cosine-latitude projection ($\Delta x = \Delta\lambda \cdot \cos(\phi_{\text{mean}})$, $\Delta y = -\Delta\phi$) preserving true aspect ratio.
+  • Verify `PhotoTrackOverlayComposer` filters out invalid or Null-Island coordinates (`!isValidGpsCoordinate(lat, lng)`) prior to silhouette and bounding box computation.
   • Verify track silhouette bounds normalization, drop shadow rendering, and start/finish marker dot placement in the upper-right or side quadrant.
   2. *Metrics Formatting, Gradient Scrim & WCAG AAA Contrast (`TST-UI-447.2`)*:
   • Verify bottom gradient scrim renders with dark translucent gradient (alpha $0.0 \rightarrow 0.85$).
@@ -7156,10 +7157,10 @@
   • Verify 100% parity across all 9 locales via `TranslationParityTest` for new share mode strings.
   • Run targeted test suite (`--tests "com.atrainingtracker.trainingtracker.helpers.*"`, `ui.map.*`, `ThemeColorCentralizationAuditTest`) with 100% pass rate.
 
-### TST-UI-448: **Workout Photos Strip, Full-Screen Preview Bottom Sheet with ATT-30 Overlay Share, and Map Pin Markers Verification Suite** [Verified]
+### TST-UI-448: **Workout Photos Strip, Full-Screen Preview Bottom Sheet with ATT-30 Overlay Share, Map Pin Markers, and Null-Island Coordinate Rejection Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-448`
-- **Component**: `WorkoutDetails.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `WorkoutPhotoViewerSheet.kt`, `WorkoutShareBottomSheet.kt`
-- **Jira**: `ATT-43`
+- **Component**: `WorkoutDetails.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `ATrainingTrackerMap.kt`, `WorkoutPhotoViewerSheet.kt`, `WorkoutShareBottomSheet.kt`, `WorkoutPhotoManager.kt`, `WorkoutRepository.kt`, `MapBehaviors.kt`
+- **Jira**: `ATT-43`, `ATT-5479`
 - **Test Description**:
   1. *Workout Photos Strip & Empty State Contract Test (`TST-UI-448.1`, `WorkoutPhotoUiContractTest.kt`)*:
   • Verify horizontal photo strip renders when photos are attached, displaying thumbnail cards with `RoundedCornerShape(8.dp)`.
@@ -7170,13 +7171,17 @@
   • Verify full image display, formatted capture timestamp, and caption rendering.
   • Verify "Delete Photo" action presents confirmation dialog and triggers photo deletion callback.
   • Verify "Share with Track Overlay" CTA launches `WorkoutShareBottomSheet` pre-populated with the photo Uri.
-  3. *Map Photo Pin Markers Contract Test (`TST-UI-448.3`, `WorkoutMarkersPhotoTest.kt`)*:
-  • Verify `WorkoutRepository.getWorkoutMarkers()` or mapper transforms photo records with non-null lat/lon into `LocationMarker`s with photo pin drawable.
-  • Verify `TrackOnMapScreen` / `ATrainingTrackerMap` renders photo pins along the GPS route.
-  4. *9-Language Localization & Format Specifier Parity Test (`TST-UI-448.4`, `TranslationParityTest.kt`)*:
+  3. *Map Photo Pin Markers & Strict Coordinate Validation Contract Test (`TST-UI-448.3`, `WorkoutPhotoUiContractTest.kt`, `WorkoutRepositoryMarkerTest.kt`)*:
+  • Verify pure coordinate validator `GeoUtils.isValidGpsCoordinate` rejects `(0.0, 0.0)` (`abs(lat) < 1e-5 && abs(lng) < 1e-5`), out-of-range latitudes/longitudes, and non-finite values (`NaN`, `Infinity`).
+  • Verify `WorkoutRepository.getWorkoutMarkers()` excludes photo records with `(0.0, 0.0)` or invalid coordinates from producing `LocationMarker` objects.
+  • Verify `MapBoundsController` (`MapBehaviors.kt`) excludes invalid coordinates from `LatLngBounds.Builder`, preventing continental zoom level inflation.
+  4. *EXIF Null-Island Rejection & Database Self-Healing Contract Test (`TST-UI-448.4`, `WorkoutPhotoManagerTest.kt`)*:
+  • Verify `WorkoutPhotoManager.extractExifMetadata` treats `(0.0, 0.0)` as `null`, allowing trackpoint fallback interpolation to run.
+  • Verify existing `(0.0, 0.0)` records in `workout_photos` are self-healed upon loading by re-interpolating against `WorkoutSamples.db` trackpoints using `taken_at_ms`.
+  5. *9-Language Localization & Format Specifier Parity Test (`TST-UI-448.5`, `TranslationParityTest.kt`)*:
   • Verify 100% parity across all 9 supported locales for all `workout_photos_*` string keys with zero missing entries and zero decorative inline emojis.
-  5. *Clean-Room Regression Suite Execution (`TST-UI-448.5`)*:
-  • Run targeted package tests (`com.atrainingtracker.trainingtracker.ui.aftermath.*`, `ui.map.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
+  6. *Clean-Room Regression Suite Execution (`TST-UI-448.6`)*:
+  • Run targeted package tests (`com.atrainingtracker.trainingtracker.database.WorkoutPhotoManagerTest`, `ui.aftermath.*`, `ui.map.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
 
 ### TST-UI-449: **Interactive Map Lap Creation & Splitting in Workout Aftermath Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-449`
