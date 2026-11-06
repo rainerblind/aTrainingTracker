@@ -123,4 +123,20 @@ class WorkoutDetailTabbedContentTest {
         assertEquals(Offset(0f, -totalTopChrome.toFloat()), consumedLandUp)
         assertEquals(-totalTopChrome, landscapeConn.appBarOffset)
     }
+
+    @Test
+    fun testWorkoutDetailTabbedContent_exposesAndWiresOnLapClickParameter() {
+        assertTrue("WorkoutDetailTabbedContent.kt must exist", sourceFile.exists())
+        val content = sourceFile.readText()
+
+        assertTrue(
+            "WorkoutDetailTabbedContent must declare onLapClick parameter (REQ-UI-142 / REQ-UI-408 / ATT-5483)",
+            content.contains("onLapClick: ((LapData) -> Unit)? = null")
+        )
+
+        assertTrue(
+            "WorkoutDetailTabbedContent must invoke onLapClick?.invoke(lap) when a lap is clicked in LAPS section",
+            content.contains("onLapClick?.invoke(lap)")
+        )
+    }
 }

@@ -94,7 +94,7 @@ fun CreateLapOnMapSheet(
 
     AppModalBottomSheet(
         title = stringResource(R.string.create_lap_on_map_title),
-        icon = Icons.Default.Add,
+        iconPainter = painterResource(R.drawable.ic_lap_split_scissors),
         onDismissRequest = { if (!isSplitting) onDismiss() },
         actions = {
             Row(
@@ -119,7 +119,7 @@ fun CreateLapOnMapSheet(
                     enabled = validationResult.isValid && !isSplitting && !isLoading
                 ) {
                     Icon(
-                        painter = painterResource(R.drawable.ic_lap_add),
+                        painter = painterResource(R.drawable.ic_lap_split_scissors),
                         contentDescription = null,
                         modifier = Modifier.size(16.dp)
                     )
@@ -184,7 +184,7 @@ fun CreateLapOnMapSheet(
                 val mapTrack = remember(downsampledPath) {
                     MapTrack(
                         id = workoutId,
-                        type = TrackType.GPS,
+                        type = TrackType.BEST,
                         bSportType = bSportType,
                         path = downsampledPath
                     )
@@ -204,7 +204,8 @@ fun CreateLapOnMapSheet(
                         modifier = Modifier.fillMaxSize(),
                         start = downsampledPath.firstOrNull()?.latLng,
                         end = downsampledPath.lastOrNull()?.latLng,
-                        apex = currentSplitPoint
+                        apex = currentSplitPoint,
+                        apexIconRes = R.drawable.ic_lap_split_scissors
                     )
                 }
             }

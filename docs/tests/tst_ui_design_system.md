@@ -22,22 +22,22 @@
 - **Component**: `EquipmentDiscovery`
 - **Test Description**: Verify sport-type resolution logic based on varied active sensor ID sets and speed.
 
-### TST-UNT-004: MovingAverageFilter [Proposed]
+### TST-UNT-004: MovingAverageFilter [Verified]
 - **Requirement(s)**: `REQ-FIL-001`
 - **Component**: `MovingAverageFilter`
 - **Test Description**: Verify correct averaging of a sequence of numbers (Numbered and Timed variants).
 
-### TST-UNT-005: ExponentialSmoothing [Proposed]
+### TST-UNT-005: ExponentialSmoothing [Verified]
 - **Requirement(s)**: `REQ-FIL-002`
 - **Component**: `ExponentialSmoothing`
 - **Test Description**: Verify the recursive smoothing formula: `y[k+1] = α m[k] + (1-α) y[k]`.
 
-### TST-UNT-006: SportTypeMapping [Proposed]
+### TST-UNT-006: SportTypeMapping [Verified]
 - **Requirement(s)**: `REQ-EXP-006`
 - **Component**: `SportTypeMapping`
 - **Test Description**: Verify that `SportTypeDatabaseManager` correctly handles a `null` Strava mapping as a persistent state.
 
-### TST-UNT-007: EditWorkoutViewModel [Proposed]
+### TST-UNT-007: EditWorkoutViewModel [Verified]
 - **Requirement(s)**: `REQ-EXP-006`
 - **Component**: `EditWorkoutViewModel`
 - **Test Description**: Verify that selecting a sport type with a `null` Strava mapping automatically sets `uploadToStrava` to `0`.
@@ -52,7 +52,7 @@
 - **Component**: `WorkoutDataMapper`
 - **Test Description**: Verify that the extrema rows only include the "Big 6" performance metrics: HR, Speed/Pace, Cadence, Power, Altitude, and Temperature.
 
-### TST-UNT-010: MappablePath [Proposed]
+### TST-UNT-010: MappablePath [Verified]
 - **Requirement(s)**: `REQ-MAP-007`
 - **Component**: `MappablePath`
 - **Test Description**: Verify that coordinate projection (latLngs) is lazy and only occurs once.
@@ -62,13 +62,13 @@
 - **Component**: `TrackingViewsDb`
 - **Test Description**: 1. Simulated fresh install (Wipe data): Verify schema contains ShowElevationProfile. 2. Simulated upgrade (v9->v10): Verify ShowElevationProfile is added.
 
-### TST-UNT-012: WorkoutSummariesViewModel [Proposed]
+### TST-UNT-012: WorkoutSummariesViewModel [Verified]
 - **Requirement(s)**: `REQ-PER-008`
 - **Component**: `WorkoutSummariesViewModel`
 - **Jira**: ``ATT-457``
 - **Test Description**: Verify `getFilteredWorkouts` correctly filters by `sportId` (Sub-Sport) when provided.
 
-### TST-UNT-013: WorkoutSummariesViewModel [Proposed]
+### TST-UNT-013: WorkoutSummariesViewModel [Verified]
 - **Requirement(s)**: `REQ-PER-008`
 - **Component**: `WorkoutSummariesViewModel`
 - **Jira**: ``ATT-458``
@@ -80,204 +80,204 @@
 - **Jira**: ``ATT-476``
 - **Test Description**: Verify that `onUpgrade` does not call `setTransactionSuccessful()` explicitly, which would conflict with `SQLiteOpenHelper`'s internal transaction management.
 
-### TST-UNT-015: WorkoutClusterEngine [Proposed]
+### TST-UNT-015: WorkoutClusterEngine [Verified]
 - **Requirement(s)**: `REQ-SET-065`
 - **Component**: `WorkoutClusterEngine`
 - **Jira**: ``ATT-502``
 - **Test Description**: Verify that 6-term altitude-aware cluster similarity calculation correctly applies displacement weights when altitude positions are present, differentiates routes with distinct peaks/valleys, and cleanly falls back to 4-term matching when altitude coordinates are null or disabled.
 
-### TST-UI-075: **Settings Terminology Audit** [Labels are concise and free of redundant qualifiers ("Settings"/"Einstellungen").]
+### TST-UI-075: **Settings Terminology Audit** [Verified]
 - **Requirement(s)**: `REQ-UI-115`
 - **Component**: **Settings Terminology Audit**
 - **Jira**: ``ATT-272``
 - **Test Description**: 1. Open Navigation Drawer -> Settings. 2. Verify items "Display" and "Search". 3. Switch to German. 4. Verify items "Display" and "Suche".
 
-### TST-UI-001: **UI Design** [The table has distinct headers, clear alignment, and high-quality typography matching the Material 3 standards.]
+### TST-UI-001: **UI Design** [Verified]
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: **UI Design**
 - **Test Description**: Inspect the workout summary extrema table on various device themes.
 
-### TST-UI-011: **Formatting** [-]
+### TST-UI-011: **Formatting** [Verified]
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: **Formatting**
 - **Test Description**: Verify that units in data rows are surrounded by square brackets (e.g., `[km/h]`).
 
-### TST-UI-012: **Hierarchy** [-]
+### TST-UI-012: **Hierarchy** [Verified]
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: **Hierarchy**
 - **Test Description**: Verify that the Sensor Name and the Numeric Values share the same visual weight, while the unit is micro-scaled.
 
-### TST-UI-013: **Alignment** [-]
+### TST-UI-013: **Alignment** [Verified]
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: **Alignment**
 - **Test Description**: Verify that in all data rows, the icon, sensor label, and numeric values are vertically aligned to their bottom edge.
 
-### TST-UI-014: **Typography** [-]
+### TST-UI-014: **Typography** [Verified]
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: **Typography**
 - **Test Description**: Verify that units use a micro font size (e.g., 8-9.sp) and a lighter color (reduced alpha) than the sensor name.
 
-### TST-UI-015: **Notation** [-]
+### TST-UI-015: **Notation** [Verified]
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: **Notation**
 - **Test Description**: Verify that the "Average" header column displays the mathematical symbol (Ø) instead of the word "average".
 
-### TST-UI-016: **Proportion** [-]
+### TST-UI-016: **Proportion** [Verified]
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: **Proportion**
 - **Test Description**: Verify that the icon height visually matches the height of the sensor name (bodyLarge line height).
 
-### TST-UI-017: **Alignment** [-]
+### TST-UI-017: **Alignment** [Verified]
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: **Alignment**
 - **Test Description**: Verify that the icon, sensor label, and bracketed unit are perfectly aligned to the same bottom baseline in the Compose Preview.
 
-### TST-UI-018: **Baseline Precision** [-]
+### TST-UI-018: **Baseline Precision** [Verified]
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: **Baseline Precision**
 - **Test Description**: Verify that the bottom edge of the icon and the bottom of the text characters are visually perfectly aligned.
 
-### TST-UI-019: **Hierarchy** [-]
+### TST-UI-019: **Hierarchy** [Verified]
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: **Hierarchy**
 - **Test Description**: Verify context-aware bolding: HR/Power (Avg+Max), Speed/Pace/Cadence (Avg), Alt/Temp (Min+Max).
 
-### TST-UI-020: **Contrast** [-]
+### TST-UI-020: **Contrast** [Verified]
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: **Contrast**
 - **Test Description**: Verify that the "-" placeholder is visually lighter (alpha 0.3) than numeric values.
 
-### TST-UI-021: **Redundancy** [-]
+### TST-UI-021: **Redundancy** [Verified]
 - **Requirement(s)**: `REQ-UI-012`
 - **Component**: **Redundancy**
 - **Test Description**: Verify that Min/Max altitude no longer appear in the Workout Details row, only Ascent and Descent.
 
-### TST-UI-026: **Consistency** [-]
+### TST-UI-026: **Consistency** [Verified]
 - **Requirement(s)**: `REQ-UI-013`
 - **Component**: **Consistency**
 - **Test Description**: In the Workout Summary card, verify that the altitude labels at the start/end of the chart axes match the Min/Max values shown in the Extrema table.
 
-### TST-UI-027: **Harmonization** [-]
+### TST-UI-027: **Harmonization** [Verified]
 - **Requirement(s)**: `REQ-UI-014`
 - **Component**: **Harmonization**
 - **Test Description**: Start tracking; verify the Speed Average in the extrema table exactly matches the value derived from Total Distance / Active Time (e.g., if distance is 100m and active time is 100s, avg speed must be 1.0 m/s).
 
-### TST-UI-028: **Localization** [Correct linguistic distinction across all supported languages.]
+### TST-UI-028: **Localization** [Verified]
 - **Requirement(s)**: `REQ-UI-018`
 - **Component**: **Localization**
 - **Test Description**: Inspect Workout Summary in various languages. Verify Ascent/Descent uses relative terminology (e.g., "Höhenmeter", "Elevation") and Min/Max uses absolute terminology (e.g., "Höhe", "Altitude").
 
-### TST-UI-029: **Session Isolation** [Verify Map and Elevation Profile are empty at start.]
+### TST-UI-029: **Session Isolation** [Verified]
 - **Requirement(s)**: `REQ-UI-009`
 - **Component**: **Session Isolation**
 - **Test Description**: 1. Start a workout, move, stop workout. 2. Immediately start a new workout.
 
-### TST-UI-030: **Metric Consistency** [-]
+### TST-UI-030: **Metric Consistency** [Verified]
 - **Requirement(s)**: `REQ-UI-020`
 - **Component**: **Metric Consistency**
 - **Test Description**: Audit Workout and Segment items. Verify \"Gain\" uses `ic_ascent` in both. Verify \"Elevation\" label in Workout is bottom-aligned with values. Verify all icons/text share a consistent baseline.
 
-### TST-UI-031: **Layout Hierarchy** [-]
+### TST-UI-031: **Layout Hierarchy** [Verified]
 - **Requirement(s)**: `REQ-UI-021`
 - **Component**: **Layout Hierarchy**
 - **Test Description**: Open Workout Summary. Inspect the Elevation section header (left column).
 
-### TST-UI-034: **Identity Branding UI** [-]
+### TST-UI-034: **Identity Branding UI** [Verified]
 - **Requirement(s)**: `REQ-UI-024`
 - **Component**: **Identity Branding UI**
 - **Test Description**: 1. Open Route List. 2. Inspect Strava route: verify logo is below name and no \"Source: Strava\" text exists. 3. Inspect Local route: verify \"Source: Local\" text is below name. 4. Verify no branding logo in metrics row.
 
-### TST-UI-035: **Compact Metric Row** [-]
+### TST-UI-035: **Compact Metric Row** [Verified]
 - **Requirement(s)**: `REQ-UI-025`
 - **Component**: **Compact Metric Row**
 - **Test Description**: 1. Open Route List. 2. Inspect gap between identity row and metrics row.
 
-### TST-UI-036: **Branding Audit** [-]
+### TST-UI-036: **Branding Audit** [Verified]
 - **Requirement(s)**: `REQ-UI-026`
 - **Component**: **Branding Audit**
 - **Test Description**: 1. Open Segment List. 2. Verify top logo height (e.g., 24dp). 3. Inspect individual Segment Items (if enabled).
 
-### TST-UI-038: **Detailed Metric Scale** [Verify icons are 14dp and text is bodySmall.]
+### TST-UI-038: **Detailed Metric Scale** [Verified]
 - **Requirement(s)**: `REQ-UI-028`
 - **Component**: **Detailed Metric Scale**
 - **Test Description**: 1. Open Periods screen. 2. Inspect sub-sport rows and \"Longest Workout\" highlight.
 
-### TST-UI-039: **Pause Movement Isolation** [Observe map. No movement recorded during pause.]
+### TST-UI-039: **Pause Movement Isolation** [Verified]
 - **Requirement(s)**: `REQ-PRO-004`
 - **Component**: **Pause Movement Isolation**
 - **Test Description**: 1. Start workout. 2. Move to create track. 3. **Pause**. 4. Move 50m.
 
-### TST-UI-043: **Device Management Modernization** [-]
+### TST-UI-043: **Device Management Modernization** [Verified]
 - **Requirement(s)**: `REQ-UI-041`, `REQ-UI-043`
 - **Component**: **Device Management Modernization**
 - **Test Description**: 1. Navigate to Pairing screen. 2. Verify Tabbed layout. 3. Interact with Pair switches. 4. Click device to open Edit Dialog. 5. Modify a setting (e.g. name).
 
-### TST-UI-045: **Reactive Map Updates** [The route polyline on the map SHALL immediately change its color and width without requiring any camera movement (zoom/pan).]
+### TST-UI-045: **Reactive Map Updates** [Verified]
 - **Requirement(s)**: `REQ-MAP-009`
 - **Component**: **Reactive Map Updates**
 - **Test Description**: Open Route Detail Map. Toggle the \"Active\" switch in the header.
 
-### TST-UI-046: **Stats Summary Block Visual Alignment** [The block SHALL use the unified `MetricItem` component. Headings (Workouts, Distance, Time, Ascent) SHALL be positioned above their respective values. Visual hierarchy (icons, typography) SHALL be consistent with Workout and Segment list items.]
+### TST-UI-046: **Stats Summary Block Visual Alignment** [Verified]
 - **Requirement(s)**: `REQ-UI-046`
 - **Component**: **Stats Summary Block Visual Alignment**
 - **Test Description**: Inspect the `StatsSummaryBlock` in the Equipment or SportType details screen.
 
-### TST-UI-047: **Live Segment Sheet Swipe Limit** [The sheet SHALL stop expanding once the header and elevation profile are fully visible. It SHALL NOT cover the entire screen or reach the status bar.]
+### TST-UI-047: **Live Segment Sheet Swipe Limit** [Verified]
 - **Requirement(s)**: `REQ-UI-047`
 - **Component**: **Live Segment Sheet Swipe Limit**
 - **Test Description**: 1. Start tracking. 2. When a segment is active, swipe up on the bottom sheet.
 
-### TST-UI-048: **Sensor Status Header Visual Audit** [The row SHALL contain only sensor icons. No text labels (e.g., "HR", "Speed") SHALL be visible below the icons. Icons SHALL use a 22dp scale to remain legible without dominating the cockpit.]
+### TST-UI-048: **Sensor Status Header Visual Audit** [Verified]
 - **Requirement(s)**: `REQ-UI-048`
 - **Component**: **Sensor Status Header Visual Audit**
 - **Test Description**: Inspect the `SensorStatus` row at the top of the tracking screen.
 
-### TST-UI-049: **Sensor Source Dialog Verification** [A dialog SHALL appear. For active sensors, it shows real-time telemetry. For inactive sensors, it identifies the paired source device(s) or internal fallbacks.]
+### TST-UI-049: **Sensor Source Dialog Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-049`
 - **Component**: **Sensor Source Dialog Verification**
 - **Test Description**: 1. Start a session. 2. Tap any sensor icon (active or inactive) in the header.
 
-### TST-UI-051: **Grade Legend Visibility** [The grade color legend SHALL appear. Tap again to hide.]
+### TST-UI-051: **Grade Legend Visibility** [Verified]
 - **Requirement(s)**: `REQ-MAP-010`
 - **Component**: **Grade Legend Visibility**
 - **Test Description**: 1. Open any Elevation Profile (e.g., in Aftermath). 2. Tap the info icon.
 
-### TST-UI-050: **Sensor Identity Logic** [Both SHALL feature identical Row 1/2 blocks. `EditDeviceDialog` SHALL include Row 3 (Manufacturer). The LED dot and the Battery icon SHALL be perfectly aligned on their vertical centers.]
+### TST-UI-050: **Sensor Identity Logic** [Verified]
 - **Requirement(s)**: `REQ-UI-050`
 - **Component**: **Sensor Identity Logic**
 - **Test Description**: Open `SensorSourceDialog`, `EditDeviceDialog`, and `DeviceItem`.
 
-### TST-UI-071: **Branding** [Hamburger menu is visible on the very left. Tapping it opens the navigation drawer.]
+### TST-UI-071: **Branding** [Verified]
 - **Requirement(s)**: `REQ-UI-062`
 - **Component**: **Branding**
 - **Jira**: ``ATT-237``
 - **Test Description**: 1. Open the app to the main tracking screen. 2. Inspect the header area.
 
-### TST-UI-074: **Weekly Period Date Range** [Each week item SHALL display its start and end dates (e.g., \"May 11 - May 17\") below the primary week label.]
+### TST-UI-074: **Weekly Period Date Range** [Verified]
 - **Requirement(s)**: `REQ-UI-116`
 - **Component**: **Weekly Period Date Range**
 - **Jira**: ``ATT-386``
 - **Test Description**: 1. Open the 'Periods' screen. 2. Navigate to the 'Weeks' tab. 3. Inspect the period items.
 
-### TST-UI-072: **Progress Notification Neutrality** [The card background SHALL be the neutral *surface* color. Branding colors (e.g. secondaryContainer) MUST NOT be used for the card background.]
+### TST-UI-072: **Progress Notification Neutrality** [Verified]
 - **Requirement(s)**: `REQ-UI-101`
 - **Component**: **Progress Notification Neutrality**
 - **Jira**: ``ATT-369``
 - **Test Description**: 1. Trigger a Periods sync or Cluster initial load. 2. Inspect the background color of the progress card.
 
-### TST-UI-073: **Bar Graph Synchronization** [1. During migration, the graph SHALL display the most recent months (right side of the graph) by default. 2. As the list grows into the past, the "Current" selection in the graph SHALL remain synchronized with the top-most visible period in the list.]
+### TST-UI-073: **Bar Graph Synchronization** [Verified]
 - **Requirement(s)**: `REQ-UI-104`
 - **Component**: **Bar Graph Synchronization**
 - **Jira**: ``ATT-376``
 - **Test Description**: 1. Clear application data to trigger a Periods migration. 2. Navigate to the 'Periods' screen. 3. Observe the bar graph as the newest months are aggregated first. 4. Scroll the period list.
 
-### TST-UI-077: **Consistent Spacing Audit** [Perfect horizontal alignment and uniform vertical rhythm across all list items.]
+### TST-UI-077: **Consistent Spacing Audit** [Verified]
 - **Requirement(s)**: `REQ-UI-121`
 - **Component**: **Consistent Spacing Audit**
 - **Jira**: ``ATT-474``
 - **Test Description**: 1. Open Workout List, Route List, and Cluster List. 2. Verify all cards have 12dp horizontal internal padding. 3. Verify vertical spacing between sections (Header, Details, etc.) is uniform (12dp). 4. Verify list items are separated by 8dp.
 
-### TST-UI-052: **SensorSourceDialog Header Color Decoupling & Semantic Green Token Verification Suite** [Section headers in `SensorSourceDialog` are decoupled from route blue tokens and render in dedicated dark green (`TTColor.SensorSourceActive`) and light green (`TTColor.SensorBackupActive`); route tokens remain untouched; all contract and unit tests pass with 100% clean-room success.]
+### TST-UI-052: **SensorSourceDialog Header Color Decoupling & Semantic Green Token Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-051`
 - **Component**: **SensorSourceDialog Header Color Decoupling & Semantic Green Token Verification Suite**
 - **Jira**: ``ATT-4374``
@@ -316,77 +316,77 @@
   • *When* route colors are queried,
   • *Then* `RouteSelected` and `RouteUnselected` SHALL remain strictly Royal Blue without regression.
 
-### TST-UI-053: **Longest Workout Navigation** [The app SHALL navigate to the list and automatically scroll to the targeted workout.]
+### TST-UI-053: **Longest Workout Navigation** [Verified]
 - **Requirement(s)**: `REQ-UI-052`
 - **Component**: **Longest Workout Navigation**
 - **Test Description**: 1. Open a Period Summary with multiple workouts. 2. Tap the "Longest Workout" section.
 
-### TST-UI-054: **Location Audit Metric** [The `SensorSourceDialog` SHALL show "Accuracy" and its current value (e.g. "5 m") instead of "Longitude".]
+### TST-UI-054: **Location Audit Metric** [Verified]
 - **Requirement(s)**: `REQ-UI-053`
 - **Component**: **Location Audit Metric**
 - **Test Description**: 1. Start a tracking session with a location provider active. 2. Tap the location icon in the `SensorStatus` header.
 
-### TST-UI-055: **Multi-Track Visibility Audit** [The map SHALL update polylines in real-time to show/hide the selected tracks. The selection menu includes a color legend.]
+### TST-UI-055: **Multi-Track Visibility Audit** [Verified]
 - **Requirement(s)**: `REQ-MAP-011`, `REQ-MAP-012`
 - **Component**: **Multi-Track Visibility Audit**
 - **Test Description**: 1. Open the Workout Details screen for a recorded activity. 2. Tap the "Layers" FAB. 3. Toggle different track types (GPS, Fused, Network).
 
-### TST-UI-056: **Map Preference Persistence** [The previously selected track layers SHALL remain visible.]
+### TST-UI-056: **Map Preference Persistence** [Verified]
 - **Requirement(s)**: `REQ-MAP-013`
 - **Component**: **Map Preference Persistence**
 - **Test Description**: 1. Toggle technical tracks in Workout Details. 2. Close and reopen the workout.
 
-### TST-UI-057: **Period FAB Order** [The Share button SHALL be the topmost item in the FAB stack.]
+### TST-UI-057: **Period FAB Order** [Verified]
 - **Requirement(s)**: `REQ-MAP-014`
 - **Component**: **Period FAB Order**
 - **Test Description**: 1. Open the Period Map. 2. Verify the vertical order of FABs.
 
-### TST-UI-058: **High-Fidelity Period Tracks** [Both tracks SHALL show identical fine-granular detail.]
+### TST-UI-058: **High-Fidelity Period Tracks** [Verified]
 - **Requirement(s)**: `REQ-MAP-015`
 - **Component**: **High-Fidelity Period Tracks**
 - **Test Description**: 1. Compare a track in a Period Map overview with the same track in Workout Details.
 
-### TST-UI-059: **Alpha Consistency Audit** [No hardcoded `copy(alpha = ...)` literals; all use `TTAlpha` constants.]
+### TST-UI-059: **Alpha Consistency Audit** [Verified]
 - **Requirement(s)**: `REQ-UI-054`
 - **Component**: **Alpha Consistency Audit**
 - **Test Description**: Static analysis of `WorkoutExtrema.kt` and `MetricItem.kt`.
 
-### TST-UI-060: **Primary Metric Hierarchy** [The primary value (e.g. Distance) SHALL be rendered in the `primary` theme color.]
+### TST-UI-060: **Primary Metric Hierarchy** [Verified]
 - **Requirement(s)**: `REQ-UI-055`
 - **Component**: **Primary Metric Hierarchy**
 - **Test Description**: Open Workout Details or Segment Details.
 
-### TST-UI-061: **Theme Audit** [All UI-related colors and alphas MUST use semantic tokens.]
+### TST-UI-061: **Theme Audit** [Verified]
 - **Requirement(s)**: `REQ-UI-056`
 - **Component**: **Theme Audit**
 - **Test Description**: Project-wide grep for `Color(0xFF...)` and `copy(alpha = ...)`.
 
-### TST-UI-062: **Protocol-Aware Menu** [The "Check ANT+ Installation" option SHALL NOT be visible in the Bluetooth view, but SHALL be visible in the ANT+ view.]
+### TST-UI-062: **Protocol-Aware Menu** [Verified]
 - **Requirement(s)**: `REQ-UI-044`
 - **Component**: **Protocol-Aware Menu**
 - **Test Description**: 1. Open the Bluetooth sensor list. 2. Check the options menu. 3. Open the ANT+ sensor list. 4. Check the options menu.
 
-### TST-UI-063: **Global Icon Clipping** [All icons SHALL appear with subtle 4dp rounded corners, and square white corner artifacts (on PNG assets) SHALL be masked.]
+### TST-UI-063: **Global Icon Clipping** [Verified]
 - **Requirement(s)**: `REQ-UI-057`
 - **Component**: **Global Icon Clipping**
 - **Test Description**: 1. Open the app in Dark Mode. 2. Inspect sensor and protocol icons.
 
-### TST-UI-066: **Elevation Profile Visibility** [The elevation profile SHALL NOT be visible.]
+### TST-UI-066: **Elevation Profile Visibility** [Verified]
 - **Requirement(s)**: `REQ-UI-058`
 - **Component**: **Elevation Profile Visibility**
 - **Test Description**: 1. Open the Recurring Path Heatmap. 2. Inspect the bottom of the screen.
 
-### TST-UI-067: **Robust Sharing Snapshot** [1. The app SHALL NOT crash. 2. A combined image containing the Header and Map (but no elevation profile) SHALL be generated. 3. The UI MUST remain responsive during generation.]
+### TST-UI-067: **Robust Sharing Snapshot** [Verified]
 - **Requirement(s)**: `REQ-UI-059`
 - **Component**: **Robust Sharing Snapshot**
 - **Test Description**: 1. Open a Workout Cluster Heatmap (where elevation is hidden). 2. Tap the Share button. 3. Verify that a loading indicator appears on the button. 4. Select a sharing target in the system dialog.
 
-### TST-UI-069: **Safe Map Snapshot** [1. App does not crash. 2. A Toast message ("Unable to generate share image") appears if the snapshot fails.]
+### TST-UI-069: **Safe Map Snapshot** [Verified]
 - **Requirement(s)**: `REQ-UI-060`
 - **Component**: **Safe Map Snapshot**
 - **Test Description**: 1. Trigger a snapshot multiple times rapidly. 2. Attempt a snapshot on a device with low memory.
 
-### TST-UI-070: **Universal Delete-Only Long-Press Context Menu Enforcement** [The deletion `DropdownMenu` is anchored consistently at the Top-Left corner (`Alignment.TopStart`, covering the header) across all deletable list items. The menu strictly and exclusively contains the Delete option (or documented lifecycle exceptions), forbidding Edit or Show on Map. All automated tests pass with 100% success rate.]
+### TST-UI-070: **Universal Delete-Only Long-Press Context Menu Enforcement** [Verified]
 - **Requirement(s)**: `REQ-UI-061`, `REQ-UI-165`, `REQ-UI-166`, `REQ-UI-180`
 - **Component**: **Universal Delete-Only Long-Press Context Menu Enforcement**
 - **Jira**: ``ATT-238` / `ATT-1523``
@@ -397,19 +397,19 @@
   4. Run 9-language localization audit for deletion confirmation strings (`@string/delete`, `@string/really_delete_format`).
   5. Execute full unit test suite.
 
-### TST-UI-078: **Cluster Naming Dialog Localization Audit** [All titles, labels, prompts, dropdown options, and buttons in `ClusterNamingDialog` are rendered in the active locale. Zero hardcoded English strings appear.]
+### TST-UI-078: **Cluster Naming Dialog Localization Audit** [Verified]
 - **Requirement(s)**: `REQ-UI-123`
 - **Component**: **Cluster Naming Dialog Localization Audit**
 - **Jira**: ``ATT-565``
 - **Test Description**: 1. Set app locale to non-English (e.g., German/DE). 2. Trigger a TCX import to launch `ClusterNamingDialog`. 3. Inspect all text elements in the dialog.
 
-### TST-UI-076: **Period UI Layout Integrity** [1. The Bar Graph SHALL be immediately visible below the tabs. 2. The Bar Graph SHALL move up and down in synchronization with the list as the header collapses/expands.]
+### TST-UI-076: **Period UI Layout Integrity** [Verified]
 - **Requirement(s)**: `REQ-UI-104`
 - **Component**: **Period UI Layout Integrity**
 - **Jira**: ``ATT-444``
 - **Test Description**: 1. Open the 'Periods' screen. 2. Inspect the visibility of the Bar Graph. 3. Scroll the period list downwards.
 
-### TST-UI-079: **Elevation Profile Chart Bounds Sanitization & Strict Containment Verification** [Unplausible override bounds are sanitized to match stream envelope; chart bounds strictly envelope all rendered points without clipping; mountainous profiles retain full dynamic range.]
+### TST-UI-079: **Elevation Profile Chart Bounds Sanitization & Strict Containment Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-126`
 - **Component**: **Elevation Profile Chart Bounds Sanitization & Strict Containment Verification**
 - **Jira**: ``ATT-508``
@@ -419,7 +419,7 @@
   3. Test with valid mountainous route; verify that full dynamic elevation range is preserved.
   4. Run unit tests in `ElevationProfileBoundsTest.kt`.
 
-### TST-UI-080: **Delete Old Workouts Compose Dialog & Action Trigger Verification** [Action trigger and Compose dialog operate seamlessly with input validation and default 365 days retention.]
+### TST-UI-080: **Delete Old Workouts Compose Dialog & Action Trigger Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-127`
 - **Component**: **Delete Old Workouts Compose Dialog & Action Trigger Verification**
 - **Jira**: ``ATT-296``
@@ -434,7 +434,7 @@
   8. Verify dismissing closes dialog without triggering deletion.
   9. Execute automated tests.
 
-### TST-UI-081: **Bulk Workout Deletion Progress Feedback & Notification Verification** [In-app modal dialog and system notification provide continuous, accurate progress updates during deletion and analytical resynchronization, automatically dismissing upon completion.]
+### TST-UI-081: **Bulk Workout Deletion Progress Feedback & Notification Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-128`
 - **Component**: **Bulk Workout Deletion Progress Feedback & Notification Verification**
 - **Jira**: ``ATT-705``
@@ -448,7 +448,7 @@
   7. Verify upon operation completion or error, `deletionProgress` resets to `Idle`, the dialog dismisses automatically, and the notification is cleared.
   8. Execute automated unit tests.
 
-### TST-UI-082: **Bulk Workout Deletion Two-Step Confirmation Verification** [Bulk workout deletion requires explicit, two-step user confirmation; cancellation cleanly aborts without mutations, while confirmation accurately triggers deletion with the specified retention parameter.]
+### TST-UI-082: **Bulk Workout Deletion Two-Step Confirmation Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-129`
 - **Component**: **Bulk Workout Deletion Two-Step Confirmation Verification**
 - **Jira**: ``ATT-704``
@@ -462,7 +462,7 @@
   7. Verify string formatting and localization parity across all 9 supported application locales.
   8. Execute automated unit tests.
 
-### TST-UI-083: **Sport-Specific Equipment Selection & In-Place Expansion Verification** [Equipment dropdown strictly enforces base sport partitioning; 3-case hierarchy ($N > 1$, $N == 1$, $N == 0$) and in-place expansion operate as specified; cross-sport gear pollution is completely eliminated.]
+### TST-UI-083: **Sport-Specific Equipment Selection & In-Place Expansion Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-130`
 - **Component**: **Sport-Specific Equipment Selection & In-Place Expansion Verification**
 - **Jira**: ``ATT-715``
@@ -477,7 +477,7 @@
   8. Other / Unknown Sport (`BSportType.UNKNOWN`): Verify dropdown presents only `[- none -]` (plus explicit links).
   9. Execute automated unit tests in `EditWorkoutEquipmentTest.kt`.
 
-### TST-UI-084: **Compact Strava Segment Efforts Presentation & Expandable Accordion Verification** [Segment efforts in workout summary automatically collapse to highlights when $> 4$ segments with non-highlights exist; in-place accordion expands and collapses smoothly; card bloat is prevented.]
+### TST-UI-084: **Compact Strava Segment Efforts Presentation & Expandable Accordion Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-131`
 - **Component**: **Compact Strava Segment Efforts Presentation & Expandable Accordion Verification**
 - **Jira**: ``ATT-716``
@@ -493,7 +493,7 @@
   9. Invariants: Verify Best Efforts, external Strava activity click launch, and Strava branding are fully preserved.
   10. Automated Unit & UI Tests: Execute automated test suite.
 
-### TST-UI-085: **Multi-Dimensional Workout Filtering, Modal Sheet & Persistence Verification** [Multi-dimensional workout filtering filters sessions accurately across all criteria; funnel icon and active badge render cleanly; bottom sheet layout is spacious and anchored flush; criteria reset when returning to main view; all existing list behaviors and invariants remain intact.]
+### TST-UI-085: **Multi-Dimensional Workout Filtering, Modal Sheet & Persistence Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-132`
 - **Component**: **Multi-Dimensional Workout Filtering, Modal Sheet & Persistence Verification**
 - **Jira**: ``ATT-128`, `ATT-742``
@@ -508,7 +508,7 @@
   8. Localization Parity: Verify all filter category labels, action buttons, chip descriptors, and empty-state filter prompts are localized across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).
   9. Automated Unit Tests: Execute automated test suite.
 
-### TST-UI-086: **Multi-Dimensional Route Filtering, Shared Modal Sheet & Persistence Verification** [Multi-dimensional route filtering accurately filters routes across all criteria; shared bottom sheet layout is spacious, gap-free, and code is cleanly shared with workout filtering; criteria reset when returning to main view; all existing route behaviors and invariants remain intact.]
+### TST-UI-086: **Multi-Dimensional Route Filtering, Shared Modal Sheet & Persistence Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-133`
 - **Component**: **Multi-Dimensional Route Filtering, Shared Modal Sheet & Persistence Verification**
 - **Jira**: ``ATT-736``
@@ -524,7 +524,7 @@
   9. Localization Parity: Verify all route filter category labels, action buttons, chip descriptors, and empty-state filter prompts are localized across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).
   10. Automated Unit Tests: Execute automated test suite (`RouteFilterCriteriaTest`, `RoutesViewModelFilterTest`, `TranslationParityTest`).
 
-### TST-UI-087: **Multi-Dimensional Segment Filtering, Shared Modal Sheet & Persistence Verification** [Multi-dimensional segment filtering accurately filters starred segments across all criteria; shared bottom sheet layout is spacious, gap-free, and code is cleanly shared with workout and route filtering; criteria persist across tab switches; all existing segment behaviors and invariants remain intact.]
+### TST-UI-087: **Multi-Dimensional Segment Filtering, Shared Modal Sheet & Persistence Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-134`
 - **Component**: **Multi-Dimensional Segment Filtering, Shared Modal Sheet & Persistence Verification**
 - **Jira**: ``ATT-735``
@@ -541,7 +541,7 @@
   10. Localization Parity: Verify all segment filter category labels, action buttons, chip descriptors, and empty-state filter prompts are localized across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).
   11. Automated Unit Tests: Execute automated test suite (`SegmentFilterCriteriaTest`, `SegmentListViewModelFilterTest`, `TranslationParityTest`).
 
-### TST-UI-088: **Multi-Dimensional Favorite Tracks Filtering, Shared Modal Sheet & Persistence Verification** [Multi-dimensional favorite track filtering accurately filters clusters across all criteria; shared bottom sheet layout is spacious and gap-free; criteria reset when returning to main view; all existing cluster behaviors and invariants remain intact.]
+### TST-UI-088: **Multi-Dimensional Favorite Tracks Filtering, Shared Modal Sheet & Persistence Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-135`
 - **Component**: **Multi-Dimensional Favorite Tracks Filtering, Shared Modal Sheet & Persistence Verification**
 - **Jira**: ``ATT-737``
@@ -558,7 +558,7 @@
   10. Localization Parity: Verify all cluster filter category labels, action buttons, chip descriptors, and empty-state filter prompts are localized across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).
   11. Automated Unit Tests: Execute automated test suite (`ClusterFilterCriteriaTest`).
 
-### TST-UI-089: **Favorite Tracks (Lieblingsstrecken) Sorting Verification** [Favorite tracks sort cleanly and reactively across all dimensions; location availability is handled gracefully with muted state; sort dropdown UI adheres to Routes and Segments design language.]
+### TST-UI-089: **Favorite Tracks (Lieblingsstrecken) Sorting Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-136`
 - **Component**: **Favorite Tracks (Lieblingsstrecken) Sorting Verification**
 - **Jira**: ``ATT-761``
@@ -577,7 +577,7 @@
   8. Localization Parity: Verify all sort order labels are localized across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).
   9. Automated Unit Tests: Execute automated unit test suite (`ClusterSortOrderTest`).
 
-### TST-UI-090: **Cluster Algorithm Info Presentation & Action Trigger Verification** [Educational info modal displays clearly with complete 3D topological algorithm explanations; accessible from both Favorite Tracks header and Cluster Parameter screen; dismisses smoothly; zero effect on cluster calculations or settings state.]
+### TST-UI-090: **Cluster Algorithm Info Presentation & Action Trigger Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-137`
 - **Component**: **Cluster Algorithm Info Presentation & Action Trigger Verification**
 - **Jira**: ``ATT-501`, `ATT-792`, `ATT-795`, `ATT-796``
@@ -591,7 +591,7 @@
   4. Localization Parity: Verify all newly introduced string keys exist across all 9 supported application locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) via automated resource validation.
   5. Invariants & State Isolation: Verify opening and closing `ClusterInfoDialog` does not mutate cluster tolerance preferences (`ClusterTolerances`), database entries, or sort/filter state.
 
-### TST-UI-091: **Detailed Workout Inspection from Favorite Tracks Verification** [Inspecting any workout from Lieblingsstrecken displays true altitude profile, correct elevation bounds, sensor extrema pins, and available technical track layers; `toMapTrack()` decodes elevations accurately.]
+### TST-UI-091: **Detailed Workout Inspection from Favorite Tracks Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-138`
 - **Component**: **Detailed Workout Inspection from Favorite Tracks Verification**
 - **Jira**: ``ATT-818`, `ATT-821``
@@ -608,7 +608,7 @@
   4. Regression Verification:
   • Execute full clean-room unit test suite (`./gradlew testDebugUnitTest`) to verify zero regressions.
 
-### TST-UI-092: **FastScrollbar Edge Alignment, Continuous Drag Accumulation & Action Non-Interference Verification** [FastScrollbar sits flush at the right edge; thumb dragging smoothly scrolls the list even with small finger movements; taps on card action buttons are never intercepted by the scrollbar overlay.]
+### TST-UI-092: **FastScrollbar Edge Alignment, Continuous Drag Accumulation & Action Non-Interference Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-139`
 - **Component**: **FastScrollbar Edge Alignment, Continuous Drag Accumulation & Action Non-Interference Verification**
 - **Jira**: ``ATT-861`, `ATT-873`, `ATT-878``
@@ -625,7 +625,7 @@
   3. *Regression Verification*:
   • Execute full clean-room unit test suite (`./gradlew testDebugUnitTest`) to verify zero regressions.
 
-### TST-UI-093: **Universal FastScrollbar Integration & Action Non-Interference Verification Across Collection Views** [All 7 collection views render the edge-aligned FastScrollbar when content overflows; dragging thumb scrolls each list smoothly; short lists hide the scrollbar automatically; all card actions and buttons remain 100% accessible; 0 test regressions.]
+### TST-UI-093: **Universal FastScrollbar Integration & Action Non-Interference Verification Across Collection Views** [Verified]
 - **Requirement(s)**: `REQ-UI-140`
 - **Component**: **Universal FastScrollbar Integration & Action Non-Interference Verification Across Collection Views**
 - **Jira**: ``ATT-866`, `ATT-885`, `ATT-888``
@@ -646,7 +646,7 @@
   • Execute full clean-room unit test suite (`./gradlew testDebugUnitTest`): BUILD SUCCESSFUL (0 regressions).
   • Execute physical hardware verification on Google Pixel 10 (`66020DLCR002FL`): FastScrollbar thumb drags and list scrolls smoothly across Workouts, Periods, Routes, Sport Types, Equipment, and Clusters; auto-hiding confirmed on short lists.
 
-### TST-UI-094: **Workout Summary Lap Overview, Rabbit/Hedgehog Highlights & Database Migration Verification** [Laps table migrates safely from v1 to v2 preserving historical records; batch loading eliminates N+1 queries; WorkoutLaps renders clean split table with rabbit (🐇) on fastest lap and hedgehog (🦔) on slowest lap; collapsible toggle works cleanly for >3 laps; 0 regressions.]
+### TST-UI-094: **Workout Summary Lap Overview, Rabbit/Hedgehog Highlights & Database Migration Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-141`
 - **Component**: **Workout Summary Lap Overview, Rabbit/Hedgehog Highlights & Database Migration Verification**
 - **Jira**: ``ATT-510`, `ATT-891`, `ATT-894`, `ATT-895``
@@ -670,10 +670,10 @@
   4. *Regression Verification*:
   • Execute full clean-room unit test suite (`./gradlew testDebugUnitTest`) to ensure zero regressions across all modules.
 
-### TST-UI-095: **Interactive Lap Editing, Quick-Tag Presets, Sequential Navigation, and Full Workout Map Framing Verification** [Lap edit bottom sheet allows one-tap tag assignment, custom text entry, sequential lap navigation, and highlighted segment map visualization with stable camera bounds framing the full workout course; repository updates database and cache reactively; 0 regressions.]
+### TST-UI-095: **Interactive Lap Editing, Quick-Tag Presets, Sequential Navigation, and Full Workout Map Framing Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-142`
 - **Component**: **Interactive Lap Editing, Quick-Tag Presets, Sequential Navigation, and Full Workout Map Framing Verification**
-- **Jira**: ``ATT-511`, `ATT-897`, `ATT-925`, `ATT-947``
+- **Jira**: `ATT-511`, `ATT-897`, `ATT-925`, `ATT-947`, `ATT-5483`
 - **Test Description**:
   1. *Geometry & Slicing Unit Test (`LapSegmentUtilsTest.kt`)*:
   • Given a polyline with 100 `LatLng` points and 100 corresponding cumulative distances ($0 \dots 1000\text{m}$).
@@ -701,10 +701,15 @@
   - Verify `LapsDatabaseManager.updateLapDetails` is invoked with correct arguments.
   - Verify in-memory `WorkoutData.laps` is updated with new name and description.
   - Verify `WorkoutData` emitted by repository reflects updated lap details immediately without full list reload.
-  4. *Regression Verification*:
+  4. *Workout Details Integration & Modal Overlay Contract Test (`WorkoutDetailTabbedLapsTest.kt` / `TrackOnMapScreenTest.kt`)*:
+  • Verify tapping any lap row in `WorkoutDetailTabbedContent` on the "Runden & Segmente" tab invokes `onLapClick(lap)`.
+  • Verify `TrackOnMapScreen` captures `activeEditingLap` and mounts `LapEditBottomSheet` as an `AppModalBottomSheet` overlay alongside the tabbed container (`Rule 47`).
+  • Verify saving lap edits persists name and description to `WorkoutRepository.updateLapDetails`.
+  • Verify tapping "Move Boundary on Map" dismisses `LapEditBottomSheet` and opens `MoveLapBoundaryOnMapSheet`.
+  5. *Regression Verification*:
   • Execute full clean-room unit test suite (`./gradlew testDebugUnitTest`) to ensure zero regressions across all modules.
 
-### TST-UI-096: **Workout Summary Laps Table Header, Pace Single-Line & Column Width Verification** [Laps table in `WorkoutSummary` displays distinct headers styled with `labelSmall`, pace values never wrap across multiple lines due to column unit placement, lap names have expanded 1.6f width, badges are vertically centered, and 100% translation parity is preserved across all 9 locales with 0 regressions.]
+### TST-UI-096: **Workout Summary Laps Table Header, Pace Single-Line & Column Width Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-143`
 - **Component**: **Workout Summary Laps Table Header, Pace Single-Line & Column Width Verification**
 - **Jira**: ``ATT-920`, `ATT-931``
@@ -719,7 +724,7 @@
   2. *Localization Parity Test*: Verify string keys `lap_table_header_lap`, `lap_table_header_time`, `lap_table_header_distance`, and `pace_short` / `speed_short` exist and are translated across all 9 supported locales (values, values-de, values-es, values-fr, values-it, values-ja, values-nl, values-pl, values-pt).
   3. *Regression Verification*: Execute full clean-room unit test suite (`./gradlew testDebugUnitTest`) to ensure zero regressions across all modules.
 
-### TST-UI-097: **Strava Best Efforts Collapsible Display, Metric Unit Filtering & Longest Distance Verification** [Collapsed best efforts view excludes miles when metric units are active; guarantees visibility of the longest distance time; displays PRs without duplication; expands in-place to all efforts; maintains 100% localization parity across all 9 locales with zero regressions.]
+### TST-UI-097: **Strava Best Efforts Collapsible Display, Metric Unit Filtering & Longest Distance Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-144`
 - **Component**: **Strava Best Efforts Collapsible Display, Metric Unit Filtering & Longest Distance Verification**
 - **Jira**: ``ATT-883`, `ATT-974``
@@ -741,7 +746,7 @@
   5. *Clean-Room Regression Verification*:
   • Execute full repository test suite (`./gradlew testDebugUnitTest`): BUILD SUCCESSFUL with 0 regressions.
 
-### TST-UI-098: **UI Deletion of Old Unfinished Workouts & Active Workout Protection Verification** [Old unfinished workouts allow UI deletion via long-press in both full and compact views; live actively tracked workouts are strictly protected from deletion; unfinished workouts retain alpha = 0.5f; 100% test pass with 0 regressions.]
+### TST-UI-098: **UI Deletion of Old Unfinished Workouts & Active Workout Protection Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-145`
 - **Component**: **UI Deletion of Old Unfinished Workouts & Active Workout Protection Verification**
 - **Jira**: ``ATT-917`, `ATT-983``
@@ -760,7 +765,7 @@
   4. *Clean-Room Regression Verification*:
   • Execute full clean-room unit test suite (`./gradlew testDebugUnitTest`): BUILD SUCCESSFUL (0 regressions).
 
-### TST-UI-099: **Mark Old Unfinished Workout Finished & Active Workout Protection Verification** [Unfinished workouts allow marking as finished via context menu; active sessions are strictly protected; marking finished updates alpha to 1.0f, enables export, triggers periods rollup, and translates across all 9 locales; 0 regressions.]
+### TST-UI-099: **Mark Old Unfinished Workout Finished & Active Workout Protection Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-146`
 - **Component**: **Mark Old Unfinished Workout Finished & Active Workout Protection Verification**
 - **Jira**: ``ATT-987`, `ATT-989``
@@ -780,7 +785,7 @@
   5. *Clean-Room Regression Verification*:
   • Execute full clean-room unit test suite (`./gradlew testDebugUnitTest`): BUILD SUCCESSFUL (0 regressions).
 
-### TST-UI-100: **Compact Workout Summary Context Menu Streamlining Verification** [Compact view context menu excludes "Edit workout" across all workout states, restricts items to lifecycle actions, disables context menu when actively tracked, and preserves expanded view editing with zero regressions.]
+### TST-UI-100: **Compact Workout Summary Context Menu Streamlining Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-147`
 - **Component**: **Compact Workout Summary Context Menu Streamlining Verification**
 - **Jira**: ``ATT-993`, `ATT-995``
@@ -792,7 +797,7 @@
   2. *Full Summary Editing Invariant*: Verify `WorkoutSummary` / `WorkoutHeader` retains `onEditWorkout` parameter and continues to support edit interaction in expanded view.
   3. *Regression Verification*: Execute full clean-room unit test suite (`./gradlew testDebugUnitTest`): BUILD SUCCESSFUL with 0 regressions.
 
-### TST-UI-101: **Edge-to-Edge Bottom Sheet Insets & Shared Core Components Verification** [`AppModalBottomSheet`, `AppTableHeader`, `AppTableTypography`, `MinimumDragHandle`, `FastScrollbar`, and `BadgeBox` provide clean, reusable core primitives; bottom sheets handle navigation bars reactively; `LapTableHeader` and `WorkoutExtrema` render tabular metrics with bottom-baseline alignment and uniform 26dp badge width; zero unit test regressions.]
+### TST-UI-101: **Edge-to-Edge Bottom Sheet Insets & Shared Core Components Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-148`
 - **Component**: **Edge-to-Edge Bottom Sheet Insets & Shared Core Components Verification**
 - **Jira**: ``ATT-939`, `ATT-1025``
@@ -834,7 +839,7 @@
   3. *Regression Verification*:
   • Execute full clean-room unit test suite (`./gradlew testDebugUnitTest --no-daemon`) to ensure zero regressions across all modules.
 
-### TST-UI-103: **Standardized Bottom Sheet Action Layouts, Semantic Action Verbs & Route Dialog Verification** [Bottom popups provide uniform action bar layouts and semantic verb distinctions (Save vs. OK); route editing is integrated as an `AppModalBottomSheet`; cluster tuning in import conforms to design system; 100% test pass with zero regressions.]
+### TST-UI-103: **Standardized Bottom Sheet Action Layouts, Semantic Action Verbs & Route Dialog Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-150`
 - **Component**: **Standardized Bottom Sheet Action Layouts, Semantic Action Verbs & Route Dialog Verification**
 - **Jira**: ``ATT-1034`, `ATT-1039``
@@ -853,7 +858,7 @@
   3. *Clean-Room Regression Verification*:
   • Execute full clean-room unit test suite (`./gradlew testDebugUnitTest --no-daemon`) to ensure zero regressions across all modules.
 
-### TST-UI-104: **Workout Editing Modal Bottom Sheet & Viewport Layering Verification** [`EditWorkoutScreen` conforms to `AppModalBottomSheet` and `AppDialogActions.SaveCancel`; callers maintain active background layers beneath scrim; 100% tests pass.]
+### TST-UI-104: **Workout Editing Modal Bottom Sheet & Viewport Layering Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-151`
 - **Component**: **Workout Editing Modal Bottom Sheet & Viewport Layering Verification**
 - **Jira**: ``ATT-1043`, `ATT-1046``
@@ -870,7 +875,7 @@
   4. *Clean-Room Regression Verification*:
   • Execute full clean-room unit test suite (`./gradlew testDebugUnitTest --no-daemon`) ensuring zero regressions.
 
-### TST-UI-105: **Dropbox Settings Modal Bottom Sheet & Navigation Integration Verification** [Dropbox settings conforms to `AppModalBottomSheet` and `AppDialogActions.SaveCancel`; drawer opens modal bottom sheet; credential capture and backup scheduling preserved; reactive connection state refresh on Import/Backup screen verified; 100% tests pass.]
+### TST-UI-105: **Dropbox Settings Modal Bottom Sheet & Navigation Integration Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-152`
 - **Component**: **Dropbox Settings Modal Bottom Sheet & Navigation Integration Verification**
 - **Jira**: ``ATT-1051`, `ATT-1053`, `ATT-4588``
@@ -893,7 +898,7 @@
   5. *Clean-Room Regression Verification*:
   • Execute full clean-room unit test suite (`./gradlew testDebugUnitTest --no-daemon`) ensuring zero regressions.
 
-### TST-UI-106: **Strava Settings Modal Bottom Sheet & Navigation Integration Verification** [Strava settings conforms to `AppModalBottomSheet` and `AppDialogActions.SaveCancel`; drawer opens modal bottom sheet directly; token revocation, sync triggers, and selective upload options preserved; 100% tests pass.]
+### TST-UI-106: **Strava Settings Modal Bottom Sheet & Navigation Integration Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-153`
 - **Component**: **Strava Settings Modal Bottom Sheet & Navigation Integration Verification**
 - **Jira**: ``ATT-1048`, `ATT-1058``
@@ -914,7 +919,7 @@
   5. *Clean-Room Regression Verification*:
   • Execute full clean-room unit test suite (`./gradlew testDebugUnitTest --no-daemon`) ensuring zero regressions.
 
-### TST-UI-107: **Search Settings Modal Bottom Sheet & Navigation Integration Verification** [Search settings conforms to `AppModalBottomSheet` and `AppDialogActions.SaveCancel`; drawer opens modal bottom sheet directly; search triggers, behavior options, and retry slider preserved; 100% tests pass.]
+### TST-UI-107: **Search Settings Modal Bottom Sheet & Navigation Integration Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-154`
 - **Component**: **Search Settings Modal Bottom Sheet & Navigation Integration Verification**
 - **Jira**: ``ATT-1044`, `ATT-1063``
@@ -932,7 +937,7 @@
   4. *Clean-Room Regression Verification*:
   • Execute full clean-room unit test suite (`./gradlew testDebugUnitTest --no-daemon`) ensuring zero regressions.
 
-### TST-UI-108: **Legacy Fragment Retirement, Unused Layout Purge & Resource Cleanup Verification** [Obsolete fragments, 59 dead layout XML files, and unreferenced strings purged; active layouts preserved; 100% clean-room test pass with zero regressions.]
+### TST-UI-108: **Legacy Fragment Retirement, Unused Layout Purge & Resource Cleanup Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-155`
 - **Component**: **Legacy Fragment Retirement, Unused Layout Purge & Resource Cleanup Verification**
 - **Jira**: ``ATT-1018`, `ATT-1068``
@@ -951,7 +956,7 @@
   4. *Device Deployment & Runtime Sanity*:
   • Deploy debug APK to Google Pixel 10 (`./gradlew installDebug`) and verify clean launch without `InflateException` or missing resource crashes.
 
-### TST-UI-109: **Bottom Popup Single-Window BottomSheetDialogFragment, Decor & Zero-Flicker Dismiss Verification** [All 7 bottom popup dialog fragments inherit from `AppBottomSheetDialogFragment` (extending `BottomSheetDialogFragment`); theme overlay correctly configures single-window edge-to-edge transparent system bars; status bar remains transparent with single scrim; dismissal is completely free of black flickering; 100% of unit tests pass with zero regressions.]
+### TST-UI-109: **Bottom Popup Single-Window BottomSheetDialogFragment, Decor & Zero-Flicker Dismiss Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-156`
 - **Component**: **Bottom Popup Single-Window BottomSheetDialogFragment, Decor & Zero-Flicker Dismiss Verification**
 - **Jira**: ``ATT-1072`, `ATT-1080``
@@ -978,7 +983,7 @@
   • Verify top status bar displays the underlying activity dimmed by a single scrim (never solid black).
   • Dismiss each popup via system back button, navigation gesture, scrim tap, and close button: verify 100% transparent navigation bar with zero black flicker.
 
-### TST-UI-110: **Advanced Interval, Tab-Aware Sport & Sport-Aware Equipment Workout Filtering Verification** [Workouts are accurately filtered by date interval, distance interval, and duration interval; sport type selector displays sports contextual to the active tab; equipment selector displays equipment contextual to the active sport/tab; JSON serialization is backward-compatible; 100% unit tests pass with zero regressions.]
+### TST-UI-110: **Advanced Interval, Tab-Aware Sport & Sport-Aware Equipment Workout Filtering Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-157`
 - **Component**: **Advanced Interval, Tab-Aware Sport & Sport-Aware Equipment Workout Filtering Verification**
 - **Jira**: ``ATT-882`, `ATT-1103`, `ATT-1108``
@@ -999,7 +1004,7 @@
   5. *Clean-Room Regression Verification*:
   • Execute full clean-room unit test suite (`./gradlew testDebugUnitTest`) to ensure zero regressions across all modules.
 
-### TST-UI-111: **Retired Equipment Isolation in Pickers, Visual Identification & Equipment Lifecycle Management Test** [Retired equipment is hidden from workout pickers unless assigned to the current workout; retired equipment is excluded from auto-inference; equipment manager displays visual retired indicators and grouping; manual retirement toggle functions properly; historical workouts preserve equipment name and icon with zero regressions.]
+### TST-UI-111: **Retired Equipment Isolation in Pickers, Visual Identification & Equipment Lifecycle Management Test** [Verified]
 - **Requirement(s)**: `REQ-UI-158`
 - **Component**: **Retired Equipment Isolation in Pickers, Visual Identification & Equipment Lifecycle Management Test**
 - **Jira**: ``ATT-1118``
@@ -1024,7 +1029,7 @@
   7. *Clean-Room Regression Verification*:
   • Execute full clean-room unit test suite (`./gradlew testDebugUnitTest`) to ensure zero regressions across all modules.
 
-### TST-UI-112: **Equipment ViewModel Automated Initialization & Reactive Sync Test** [EquipmentViewModel self-initializes immediately, reacts to Strava sync completion, deduplicates concurrent load requests, and displays items in Compose navigation with 0 test failures.]
+### TST-UI-112: **Equipment ViewModel Automated Initialization & Reactive Sync Test** [Verified]
 - **Requirement(s)**: `REQ-UI-160`
 - **Component**: **Equipment ViewModel Automated Initialization & Reactive Sync Test**
 - **Jira**: ``ATT-1309``
@@ -1039,7 +1044,7 @@
   4. *Clean-Room Regression Verification*:
   • Execute `./gradlew testDebugUnitTest` and verify 0 regressions across all modules.
 
-### TST-UI-113: **ModalNavigationDrawer Edge-Swipe Restriction & Map Panning Test** [Full-screen drag gestures outside the 40dp margin never open the drawer; map panning operates unhindered; edge-swiping, scrim tap, back press, and hamburger icon open/close the drawer reliably with 0 test failures.]
+### TST-UI-113: **ModalNavigationDrawer Edge-Swipe Restriction & Map Panning Test** [Verified]
 - **Requirement(s)**: `REQ-UI-161`
 - **Component**: **ModalNavigationDrawer Edge-Swipe Restriction & Map Panning Test**
 - **Jira**: ``ATT-1310``
@@ -1056,7 +1061,7 @@
   • Swipe right from extreme left edge ($x \le 40\text{dp}$); verify drawer opens smoothly.
   • While open, swipe left or tap scrim; verify drawer closes smoothly.
 
-### TST-UI-114: **ModalNavigationDrawer Back Navigation Isolation & State Synchronization Test** [Pressing Back with drawer open exclusively dismisses the drawer without altering the current screen; pressing Back with drawer closed navigates to main tracking control; dynamic LIFO composition guarantees NavHost preemption; rapid double-back presses and cancellation exceptions are handled without route jumps; 400ms timeout prevents UI deadlocks; 0 unit test regressions.]
+### TST-UI-114: **ModalNavigationDrawer Back Navigation Isolation & State Synchronization Test** [Verified]
 - **Requirement(s)**: `REQ-UI-162`
 - **Component**: **ModalNavigationDrawer Back Navigation Isolation & State Synchronization Test**
 - **Jira**: ``ATT-1335``
@@ -1085,7 +1090,7 @@
   • Press Back again with drawer closed: verify app navigates to main tracking control screen.
   • While drawer is opening, perform rapid double-back press: verify drawer closes cleanly without unexpected screen route changes.
 
-### TST-UI-115: **Cockpit Tab Navigation on Tracking Initiation & Origin-Aware Resume Neutrality Verification** [Tapping Start Tracking or resuming a manual pause from Page 0 automatically and smoothly scrolls the pager to Cockpit Page 1; ending Auto-Pause and resuming manual pause from Page >= 1 strictly preserves the active tab without scrolling; cold starts and rotations preserve the active tab; 0 unit test regressions.]
+### TST-UI-115: **Cockpit Tab Navigation on Tracking Initiation & Origin-Aware Resume Neutrality Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-163`
 - **Component**: **Cockpit Tab Navigation on Tracking Initiation & Origin-Aware Resume Neutrality Verification**
 - **Jira**: ``ATT-1340`, `ATT-4373``
@@ -1123,7 +1128,7 @@
   9. *Physical Device Verification*:
   • On physical device, start tracking from Page 0 and verify smooth animation to Page 1 cockpit tab; verify resuming manual pause from Page 0 navigates to Page 1; verify ending Auto-Pause while on Map or secondary tab preserves the active tab with zero scroll.
 
-### TST-UI-116: **Accessibility Event, NodeInfo & Manager Api34 Compatibility & LinkageError Resilience Verification** [Missing Android 14 (API 34) accessibility platform methods and fields are safely absorbed via LinkageError try-catch guards without throwing NoSuchFieldError/NoSuchMethodError or swallowing OutOfMemoryError; native execution preserved on intact devices; 0 unit test regressions.]
+### TST-UI-116: **Accessibility Event, NodeInfo & Manager Api34 Compatibility & LinkageError Resilience Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-164`
 - **Component**: **Accessibility Event, NodeInfo & Manager Api34 Compatibility & LinkageError Resilience Verification**
 - **Jira**: ``ATT-1347`, `ATT-2302`, `ATT-2584`, `ATT-2767``
@@ -1147,7 +1152,7 @@
   6. *Clean-Room Regression Suite Execution*:
   • Execute `./gradlew testDebugUnitTest` and verify 0 failures across all modules.
 
-### TST-UI-216: **Reactive Bi-Directional Equipment-to-Sensor Synchronization and Cache Invalidation Test** [Real-time bi-directional synchronization between equipment mapping mutations and sensor repositories via reactive SharedFlow without stale UI caching; 100% test pass rate.]
+### TST-UI-216: **Reactive Bi-Directional Equipment-to-Sensor Synchronization and Cache Invalidation Test** [Verified]
 - **Requirement(s)**: `REQ-UI-257`
 - **Component**: **Reactive Bi-Directional Equipment-to-Sensor Synchronization and Cache Invalidation Test**
 - **Jira**: ``ATT-2307``
@@ -1167,7 +1172,7 @@
   5. *Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` to guarantee 0 regressions across all test suites.
 
-### TST-UI-117: **Known Start Locations Management, Interactive Map Geofences & Altitude Lock Verification** [Known start locations management interface provides complete user sovereignty over elevation reference points; human-readable place names are resolved via Geocoder and editable in UI; dual-perspective tabs render cards and 200m geofences; manual edits automatically lock altitude and update source to MANUAL_USER without UI toggle friction; DEM fetch retrieves online elevation; hitCount increments on repeat starts while locked altitude remains immutable; single-thread SQLite dispatcher prevents coroutine deadlocks; 100% 9-language localization parity; 0 regressions.]
+### TST-UI-117: **Known Start Locations Management, Interactive Map Geofences & Altitude Lock Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-165`
 - **Component**: **Known Start Locations Management, Interactive Map Geofences & Altitude Lock Verification**
 - **Jira**: ``ATT-919`, `ATT-1379``
@@ -1205,7 +1210,7 @@
   9. *Clean-Room Regression Suite*:
   • Execute full clean-room unit test suite (`./gradlew testDebugUnitTest`) to ensure zero regressions across all modules.
 
-### TST-UI-118: **Lieblingsorte UI/UX Harmonization, Standard Tabbed Layout, Sorting Options, Map Deletion & Legacy Name Healing Verification** [Navigation drawer positions Lieblingsorte below Lieblingsstrecken with distinct icons; fallback map camera centers on highest hitCount start location; screen header uses primaryContainer Surface with PrimaryTabRow, HorizontalPager, 4-way sorting, map delete context menu, and navigation bar insets; automatic legacy name healing resolves geocoded addresses for placeholder starts; custom theme-colored heart markers render on map; 100% 9-language localization parity; zero regressions.]
+### TST-UI-118: **Lieblingsorte UI/UX Harmonization, Standard Tabbed Layout, Sorting Options, Map Deletion & Legacy Name Healing Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-166`
 - **Component**: **Lieblingsorte UI/UX Harmonization, Standard Tabbed Layout, Sorting Options, Map Deletion & Legacy Name Healing Verification**
 - **Jira**: ``ATT-1382`, `ATT-1387``
@@ -1249,7 +1254,7 @@
   11. *Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` to ensure zero regressions across all modules.
 
-### TST-UI-119: **Intuitive Smoothing Presets, Smart Defaults & Filter Dialog Verification** [Sensor field configuration defaults cycling power to 3-second moving average; ConfigureFilterDialog provides 1-tap quick preset selection with live preview, custom mode expansion, and SaveCancel semantics; 100% 9-language localization parity; zero regressions.]
+### TST-UI-119: **Intuitive Smoothing Presets, Smart Defaults & Filter Dialog Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-167`
 - **Component**: **Intuitive Smoothing Presets, Smart Defaults & Filter Dialog Verification**
 - **Jira**: ``ATT-1276``
@@ -1272,7 +1277,7 @@
   6. *Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` to ensure zero regressions across all modules.
 
-### TST-UI-120: **Workout Cockpit Theme Selection & Isolation Verification** [Independent AMOLED dark mode selector in DisplaySettingsDialog allows forcing AMOLED pure black mode on active workout telemetry views while isolating control tracking and general app navigation; 100% 9-language translation parity; zero regressions.]
+### TST-UI-120: **Workout Cockpit Theme Selection & Isolation Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-168`
 - **Component**: **Workout Cockpit Theme Selection & Isolation Verification**
 - **Jira**: ``ATT-1267``
@@ -1301,7 +1306,7 @@
   6. *Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` and confirm 100% pass rate across all unit tests with 0 failures and 0 regressions.
 
-### TST-UI-121: **AMOLED Pure Black Cockpit Theme Verification** [AMOLED pure black (#000000) theme turns off OLED pixels across tracking views while maintaining crisp tile outlines (#2C2C2E), pure white metrics (#FFFFFF), and athletic zone color contrast; Page 0 and global app shell remain isolated in standard Material 3; zero regressions.]
+### TST-UI-121: **AMOLED Pure Black Cockpit Theme Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-169`
 - **Component**: **AMOLED Pure Black Cockpit Theme Verification**
 - **Jira**: ``ATT-1263``
@@ -1321,7 +1326,7 @@
   4. *Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` to ensure zero broken invariants across existing tests.
 
-### TST-UI-122: **Comprehensive Cockpit Dark Theme Verification** [Top bar, tab row, telemetry cards, and navigation bar area render in unified AMOLED pure black (#000000) on telemetry views without light-blue borders or glare; Page 0 and non-cockpit destinations cleanly isolate in ambient theme; zero regressions.]
+### TST-UI-122: **Comprehensive Cockpit Dark Theme Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-170`
 - **Component**: **Comprehensive Cockpit Dark Theme Verification**
 - **Jira**: ``ATT-1413``
@@ -1342,7 +1347,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules.
 
-### TST-UI-123: **High-Contrast Typography & Cockpit Tile Grid Verification** [Sensor field values render with semibold typography in pure white (#FFFFFF); metric labels and unit annotations render in high-contrast muted grey (#9E9E9E); subtle divider borders (#262626) demarcate tiles; standard dark mode remains strictly isolated; zero regressions.]
+### TST-UI-123: **High-Contrast Typography & Cockpit Tile Grid Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-171`
 - **Component**: **High-Contrast Typography & Cockpit Tile Grid Verification**
 - **Jira**: ``ATT-1264``
@@ -1385,7 +1390,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules.
 
-### TST-UI-125: **Sensor Status Inactive Indicator Legibility Verification** [Inactive sensor icons in the top status bar remain clearly visible and legible across AMOLED Pure Black, standard Dark, and Light themes; active sensors remain full brightness; tapping inactive icons opens SensorSourceDialog; 100% test pass rate with zero regressions.]
+### TST-UI-125: **Sensor Status Inactive Indicator Legibility Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-173`
 - **Component**: **Sensor Status Inactive Indicator Legibility Verification**
 - **Jira**: ``ATT-1437``
@@ -1407,7 +1412,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules.
 
-### TST-UI-126: **AMOLED Battery Saver Multi-Factor Dimming & Wakeup Verification** [AMOLED Battery Saver mode dynamically adapts display brightness based on terrain slope, heart rate, and power zones; immediate event-based wakeup restores 100% brightness for 15s on touch, wave, lap, segment, or movement; window-scoped brightness enforcement respects safety floor >= 0.05f; DisplaySettingsDialog stages "Einsparungen" category; 100% 9-language localization parity; zero regressions.]
+### TST-UI-126: **AMOLED Battery Saver Multi-Factor Dimming & Wakeup Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-174`
 - **Component**: **AMOLED Battery Saver Multi-Factor Dimming & Wakeup Verification**
 - **Jira**: ``ATT-1268``
@@ -1430,7 +1435,7 @@
   • 100% string coverage across 9 locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).
   • Full `testDebugUnitTest` suite passes cleanly with zero regressions.
 
-### TST-UI-127: **Tracking Tabs Configuration Transition and Hierarchical Navigation Verification** [Tracking tabs configuration reliably opens from navigation drawer regardless of active screen; hierarchical back navigation transitions CONFIGURATION -> PREVIEW -> TRACKING without exiting app; zero test regressions.]
+### TST-UI-127: **Tracking Tabs Configuration Transition and Hierarchical Navigation Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-175`
 - **Component**: **Tracking Tabs Configuration Transition and Hierarchical Navigation Verification**
 - **Jira**: ``ATT-1456`, `ATT-1459``
@@ -1451,7 +1456,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-UI-128: **Cockpit Tab Header Synchronous Color Transition Verification** [Tab header text colors switch instantaneously in sync with tab bar background during Page 0 <-> Page 1+ navigation; contrast ratios comply with WCAG 2.1 AA/AAA; zero test regressions.]
+### TST-UI-128: **Cockpit Tab Header Synchronous Color Transition Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-176`
 - **Component**: **Cockpit Tab Header Synchronous Color Transition Verification**
 - **Jira**: ``ATT-1446`, `ATT-1464`, `ATT-1466`, `ATT-1467``
@@ -1468,7 +1473,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-UI-129: **Theme-Aware Share Snapshot Color Harmonization Verification** [Post-workout and period share snapshots harmonize perfectly with active Light and Dark themes; WCAG 2.1 AAA contrast compliance; zero white seams or bright footers in Dark Mode; zero regressions.]
+### TST-UI-129: **Theme-Aware Share Snapshot Color Harmonization Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-177`
 - **Component**: **Theme-Aware Share Snapshot Color Harmonization Verification**
 - **Jira**: ``ATT-1472`, `ATT-1475`, `ATT-1476`, `ATT-1477`, `ATT-1478`, `ATT-1480``
@@ -1490,7 +1495,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-UI-130: **Direct Workout-to-Cluster Navigation and Backstack Integrity Verification** [Direct navigation from workout summaries and period map opens the targeted cluster detail/heatmap immediately; pressing Back pops directly to the caller screen; workout filters and scroll state are preserved; drawer navigation opens the cluster tabs list; zero test regressions.]
+### TST-UI-130: **Direct Workout-to-Cluster Navigation and Backstack Integrity Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-178`
 - **Component**: **Direct Workout-to-Cluster Navigation and Backstack Integrity Verification**
 - **Jira**: ``ATT-1448`, `ATT-1481`, `ATT-1483``
@@ -1519,7 +1524,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-UI-131: **Customizable Geofence Radius with Live Map Preview Verification** [Athletes can customize geofence radius (50m–1000m, step=25m) in edit dialog with live map preview; custom radius persists to SQLite; imperial/metric unit formatting; 100% 9-language localization parity; zero test regressions.]
+### TST-UI-131: **Customizable Geofence Radius with Live Map Preview Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-179`
 - **Component**: **Customizable Geofence Radius with Live Map Preview Verification**
 - **Jira**: ``ATT-1473`, `ATT-1493`, `ATT-1494`, `ATT-1495`, `ATT-1496`, `ATT-1497``
@@ -1548,7 +1553,7 @@
   8. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-UI-132: **Favorite Locations on Central Map & Streamlined Management Verification** [Favorite locations render seamlessly on central navigation map with interactive bottom peek card; "Show on Map" in streamlined list navigates directly to central map; redundant map tab removed; 100% test pass rate with zero regressions.]
+### TST-UI-132: **Favorite Locations on Central Map & Streamlined Management Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-180`
 - **Component**: **Favorite Locations on Central Map & Streamlined Management Verification**
 - **Jira**: ``ATT-1449`, `ATT-1498`, `ATT-1499``
@@ -1577,7 +1582,7 @@
   7. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-UI-133: **Ultra-Large ViewSize Typography & Configuration Verification** [Athletes can select XXHuge and XXXHuge text sizes in sensor field configuration; primary values render at 140.sp and 180.sp with SemiBold weight; unit annotations scale proportionally; 100% 9-language localization parity; zero test regressions.]
+### TST-UI-133: **Ultra-Large ViewSize Typography & Configuration Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-181`
 - **Component**: **Ultra-Large ViewSize Typography & Configuration Verification**
 - **Jira**: ``ATT-1431`, `ATT-1505`, `ATT-1506``
@@ -1605,7 +1610,7 @@
   7. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-UI-134: **Unified Edit Action Symbols & Design Token Tinting Verification** [All interactive edit buttons, dialog headers, and menus use the canonical Material 3 pencil symbol (`Icons.Default.Edit` / `@drawable/ic_edit`); 100% color tint uniformity with `MaterialTheme.colorScheme.primary`; 100% localization parity; zero test regressions.]
+### TST-UI-134: **Unified Edit Action Symbols & Design Token Tinting Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-182`
 - **Component**: **Unified Edit Action Symbols & Design Token Tinting Verification**
 - **Jira**: ``ATT-1503`, `ATT-1518`, `ATT-1519``
@@ -1631,7 +1636,7 @@
   7. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-UI-135: **Navigation Drawer Icon Theme-Aware Contrast Tinting Verification** [Navigation drawer destination icons dynamically tint to high-contrast white in Dark Mode and dark navy in Light Mode matching text labels; selected items tint with primary color; partner brand logos (Strava, Dropbox) retain authentic colors; 100% test pass rate with zero regressions.]
+### TST-UI-135: **Navigation Drawer Icon Theme-Aware Contrast Tinting Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-123`
 - **Component**: **Navigation Drawer Icon Theme-Aware Contrast Tinting Verification**
 - **Jira**: ``ATT-1547``
@@ -1649,7 +1654,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules.
 
-### TST-UI-136: **Live Cockpit Location & Barometer Calibration Feedback Verification** [Live cockpit location & calibration feedback badge renders recognized start location and calibrated altitude at the top of the ControlTrackingScreen; clean setup screen without clobbering tracking data tabs; 100% 9-language localization parity; zero regressions.]
+### TST-UI-136: **Live Cockpit Location & Barometer Calibration Feedback Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-183`
 - **Component**: **Live Cockpit Location & Barometer Calibration Feedback Verification**
 - **Jira**: ``ATT-1399``
@@ -1670,7 +1675,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-UI-137: **Lieblingsorte: Display Start & Destination Locations in Workout Details and Map Verification** [Workout summary cards, headers, and route map markers display recognized favorite start and destination locations; round-trip workouts cleanly combine into a single indicator; zero database migrations needed; 100% 9-language localization parity; zero regressions.]
+### TST-UI-137: **Lieblingsorte: Display Start & Destination Locations in Workout Details and Map Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-184`
 - **Component**: **Lieblingsorte: Display Start & Destination Locations in Workout Details and Map Verification**
 - **Jira**: ``ATT-1400``
@@ -1696,7 +1701,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-UI-138: **Lieblingsorte: Drill-Down Filter to View Workouts by Starting Location Verification** [Interactive starts badge on Lieblingsort cards enables 1-tap navigation to filtered workout list; spatial start location geofence filter accurately filters workouts; active chip provides visual feedback and dismissal; zero regressions.]
+### TST-UI-138: **Lieblingsorte: Drill-Down Filter to View Workouts by Starting Location Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-185`
 - **Component**: **Lieblingsorte: Drill-Down Filter to View Workouts by Starting Location Verification**
 - **Jira**: ``ATT-1401``
@@ -1720,7 +1725,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-UI-139: **Lieblingsorte & Lieblingsstrecken Bridge Verification** [Automated seeding ensures every route cluster originates at a recognized favorite location; favorite location cards show linked route clusters; cluster cards show departure location badge; spatial filter enables filtering clusters by starting location; 100% 9-language localization parity; zero regressions.]
+### TST-UI-139: **Lieblingsorte & Lieblingsstrecken Bridge Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-186`
 - **Component**: **Lieblingsorte & Lieblingsstrecken Bridge Verification**
 - **Jira**: ``ATT-1402``
@@ -1743,7 +1748,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-UI-140: **Navigation Drawer Icon Defensive Resource Resolution & Crash Prevention Verification** [Navigation drawer handles missing or density-unresolvable drawables gracefully without crashing; partner brand icons have unqualified root fallbacks; all drawer items pass integrity verification; zero test regressions.]
+### TST-UI-140: **Navigation Drawer Icon Defensive Resource Resolution & Crash Prevention Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-123`
 - **Component**: **Navigation Drawer Icon Defensive Resource Resolution & Crash Prevention Verification**
 - **Jira**: ``ATT-1592``
@@ -1759,7 +1764,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-UI-141: **Workout & Cluster Filter Dialogs: Lieblingsorte and Lieblingsstrecken Selection Verification** [Both filter dialogs allow interactive selection of Lieblingsorte and Lieblingsstrecken; active filter chips rows show immediate visual feedback and enable 1-tap removal; 100% localization parity; zero regressions.]
+### TST-UI-141: **Workout & Cluster Filter Dialogs: Lieblingsorte and Lieblingsstrecken Selection Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-187`
 - **Component**: **Workout & Cluster Filter Dialogs: Lieblingsorte and Lieblingsstrecken Selection Verification**
 - **Jira**: ``ATT-1593``
@@ -1788,7 +1793,7 @@
   6. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-UI-142: **Lieblingsorte Compact Routes Badge & Drill-Down Verification** [Compact routes badge renders on cards with linked clusters and navigates with preset spatial filter; omitted on zero clusters; 100% localization parity; zero regressions.]
+### TST-UI-142: **Lieblingsorte Compact Routes Badge & Drill-Down Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-188`
 - **Component**: **Lieblingsorte Compact Routes Badge & Drill-Down Verification**
 - **Jira**: ``ATT-1594``
@@ -1806,7 +1811,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-UI-143: **Bottom Sheet Boundaries, Curvature, Drop Shadow & Affordance Verification** [Bottom sheets have distinct 20dp rounded top corners, 1dp outlineVariant contour border, 8dp shadow elevation, and prominent drag handle without color shifts; 100% test pass rate.]
+### TST-UI-143: **Bottom Sheet Boundaries, Curvature, Drop Shadow & Affordance Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-189`
 - **Component**: **Bottom Sheet Boundaries, Curvature, Drop Shadow & Affordance Verification**
 - **Jira**: ``ATT-1588``
@@ -1823,7 +1828,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-UI-144: **Dark Theme Tonal Progression, Surface Elevation, Lap Button & Contrast Verification** [Dark theme displays coordinated slate-blue progression between headers and tabs, elevated cards have distinct surface color and subtle outline, disabled lap button has muted dark background, and XML colors meet WCAG contrast; 100% test pass rate.]
+### TST-UI-144: **Dark Theme Tonal Progression, Surface Elevation, Lap Button & Contrast Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-190`
 - **Component**: **Dark Theme Tonal Progression, Surface Elevation, Lap Button & Contrast Verification**
 - **Jira**: ``ATT-1585``
@@ -1842,7 +1847,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-UI-145: **List Item Heading Click Standardization & Dedicated Route Edit Button Verification** [Route header tap standardizes on route inspection/details navigation; dedicated 48dp Material 3 edit button opens route editor; context menu strictly preserves REQ-UI-061 delete-only invariant; 100% localization parity; zero regressions.]
+### TST-UI-145: **List Item Heading Click Standardization & Dedicated Route Edit Button Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-191`
 - **Component**: **List Item Heading Click Standardization & Dedicated Route Edit Button Verification**
 - **Jira**: ``ATT-1541``
@@ -1863,7 +1868,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-UI-146: **Elevation Profile Zoom, Pan, Reset & Synchronized Scrubbing Verification** [Horizontal pinch zoom expands visible distance window up to 10x; horizontal drag smoothly pans visible window within [0..totalDist]; double-tap and reset button restore 1.0x extent; scrubbing accurately reflects absolute distance; adaptive distance ticks format cleanly; 100% test pass rate.]
+### TST-UI-146: **Elevation Profile Zoom, Pan, Reset & Synchronized Scrubbing Verification** [Horizontal pinch zoom expands visible distance window up to 10x; horizontal drag smoothly pans visible window within [0..totalDist]; double-tap and reset button restore 1.0x extent; scrubbing accurately reflects absolute distance; adaptive distance ticks format cleanly; 100% test pass rate.] [Verified]
 - **Requirement(s)**: `REQ-UI-192`
 - **Component**: **Elevation Profile Zoom, Pan, Reset & Synchronized Scrubbing Verification**
 - **Jira**: ``ATT-527``
@@ -1883,7 +1888,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-UI-147: **Workout Filter Categorized Equipment Partitioning & Tab-Awareness Verification** [Workout filter equipment is partitioned cleanly into Bikes and Shoes with sport-tab context awareness, mutual exclusion, and automatic stale selection clearing; 100% test pass rate.]
+### TST-UI-147: **Workout Filter Categorized Equipment Partitioning & Tab-Awareness Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-193`
 - **Component**: **Workout Filter Categorized Equipment Partitioning & Tab-Awareness Verification**
 - **Jira**: ``ATT-1641``
@@ -1905,7 +1910,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-UI-148: **Filter Dialogs Clean Chip Formatting (Emoji Removal) & Prioritized Section Ordering Verification** [Filter dialog chip labels and active filter chip strips render cleanly without emojis (📍, 🗺️); dialog sections are reordered with favorite locations and tracks placed at the bottom; 100% test pass rate with zero regressions.]
+### TST-UI-148: **Filter Dialogs Clean Chip Formatting (Emoji Removal) & Prioritized Section Ordering Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-194`
 - **Component**: **Filter Dialogs Clean Chip Formatting (Emoji Removal) & Prioritized Section Ordering Verification**
 - **Jira**: ``ATT-1642``
@@ -1922,7 +1927,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-UI-149: **KnownLocationCard Dedicated Badges Row & Compact Sizing Verification** [KnownLocationCard renders altitude on its own row and places Starts and Strecken badges on a dedicated row with refined compact sizing; 100% test pass rate with zero regressions.]
+### TST-UI-149: **KnownLocationCard Dedicated Badges Row & Compact Sizing Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-195`
 - **Component**: **KnownLocationCard Dedicated Badges Row & Compact Sizing Verification**
 - **Jira**: ``ATT-1643``
@@ -1939,7 +1944,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-UI-150: **MinimumDragHandle Dimensions, Unified Popup Surface and Customization Unit Test** [Drag handle dimensions conform to 32dp x 3dp, color defaults to outlineVariant(0.6f), padding is balanced (8dp top, 4dp bottom), bottom sheet hierarchy uniformly applies MaterialTheme.colorScheme.surface, and core components integrity is maintained; 100% test pass rate.]
+### TST-UI-150: **MinimumDragHandle Dimensions, Unified Popup Surface and Customization Unit Test** [Verified]
 - **Requirement(s)**: `REQ-UI-196`
 - **Component**: **MinimumDragHandle Dimensions, Unified Popup Surface and Customization Unit Test**
 - **Jira**: ``ATT-1644`, `ATT-1735``
@@ -1956,7 +1961,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-UI-151: **Elevation Profile Contextual Zoom Controls Visibility and Non-Overlapping Multi-Metric Badge Layout Verification** [Zoom controls suppressed in list previews and LiveSegment popup, and enabled in MapDetailLayout detail views; 3-layer vertical layout guarantees zero collision between controls row, scrubbing badge, and canvas curve; 100% test pass rate.]
+### TST-UI-151: **Elevation Profile Contextual Zoom Controls Visibility and Non-Overlapping Multi-Metric Badge Layout Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-197`
 - **Component**: **Elevation Profile Contextual Zoom Controls Visibility and Non-Overlapping Multi-Metric Badge Layout Verification**
 - **Jira**: ``ATT-1647`, `ATT-1736`, `ATT-1737``
@@ -1974,7 +1979,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-UI-152: **Cockpit Sensor Field Domain-Specific Default Filter Presets Verification** [Centralized filter defaults registry defines domain-optimized presets for Speed (2s), Cadence (2s), Pace (5s), VAM (15s), Slope (5s), and Power (3s); accumulators and HR strictly protected with Instantaneous (1s); EditSensorFieldViewModel dynamically adopts defaults; 100% test pass rate.]
+### TST-UI-152: **Cockpit Sensor Field Domain-Specific Default Filter Presets Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-198`
 - **Component**: **Cockpit Sensor Field Domain-Specific Default Filter Presets Verification**
 - **Jira**: ``ATT-1624`, `ATT-3310``
@@ -1982,7 +1987,7 @@
   1. *Centralized Defaults Registry Unit Verification (`SensorFilterDefaultsTest.kt`)*:
   • Verify `getDefaultFilterConfig` for `SensorType.POWER` returns `MOVING_AVERAGE_TIME`, `3.0`, `"sec"`.\u003cbr\u003e• Verify `SensorType.SPEED_mps` returns `MOVING_AVERAGE_TIME`, `2.0`, `"sec"` (ATT-3310).\u003cbr\u003e• Verify `SensorType.CADENCE` returns `MOVING_AVERAGE_TIME`, `2.0`, `"sec"` (ATT-3310).\u003cbr\u003e• Verify `SensorType.PACE_spm` returns `MOVING_AVERAGE_TIME`, `5.0`, `"sec"`.\u003cbr\u003e• Verify `SensorType.VERTICAL_SPEED` returns `MOVING_AVERAGE_TIME`, `15.0`, `"sec"`.\u003cbr\u003e• Verify `SensorType.SLOPE` returns `MOVING_AVERAGE_TIME`, `5.0`, `"sec"`.\u003cbr\u003e• Verify all accumulator sensors (`DISTANCE_m`, `TIME_ACTIVE`, `CALORIES`, `LAP_NR`, `DISTANCE_m_LAP`, `TIME_LAP`, `TIME_TOTAL`, `PHONE_BATTERY`, `BATTERY_REMAINING_TIME`) return `INSTANTANEOUS`, `1.0`, `"sec"`.\u003cbr\u003e• Verify continuous physiological and environmental metrics (`HR`, `ALTITUDE`, `TEMPERATURE`) return `INSTANTANEOUS`, `1.0`.\u003cbr\u003e• Verify exhaustive coverage: loop across all entries of `SensorType.values()`, asserting non-null and valid configuration.\u003cbr\u003e• Verify `@JvmStatic` helper methods (`getDefaultFilterType`, `getDefaultFilterConstant`, `getDefaultUnit`).\u003cbr\u003e2. *ViewModel Dynamic Defaults Unit Verification (`EditSensorFieldViewModelTest.kt`)*:\u003cbr\u003e• Initialize `EditSensorFieldViewModel` and call `onSensorTypeChanged(SensorType.SPEED_mps)`: verify `selectedFilterType == FilterType.MOVING_AVERAGE_TIME` and `filterConstant == 2.0`.\u003cbr\u003e• Call `onSensorTypeChanged(SensorType.CADENCE)`: verify `selectedFilterType == FilterType.MOVING_AVERAGE_TIME` and `filterConstant == 2.0`.\u003cbr\u003e• Call `onSensorTypeChanged(SensorType.PACE_spm)`: verify `selectedFilterType == FilterType.MOVING_AVERAGE_TIME` and `filterConstant == 5.0`.\u003cbr\u003e• Call `onSensorTypeChanged(SensorType.VERTICAL_SPEED)`: verify `selectedFilterType == FilterType.MOVING_AVERAGE_TIME` and `filterConstant == 15.0`.\u003cbr\u003e• Call `onSensorTypeChanged(SensorType.SLOPE)`: verify `selectedFilterType == FilterType.MOVING_AVERAGE_TIME` and `filterConstant == 5.0`.\u003cbr\u003e• Call `onSensorTypeChanged(SensorType.POWER)`: verify `selectedFilterType == FilterType.MOVING_AVERAGE_TIME` and `filterConstant == 3.0`.\u003cbr\u003e• Call `onSensorTypeChanged(SensorType.DISTANCE_m)`: verify `selectedFilterType == FilterType.INSTANTANEOUS` and `filterConstant == 1.0`.\u003cbr\u003e• Verify `onFilterConfigDismissed()` resets to domain-specific defaults when sensor type was changed.\u003cbr\u003e3. *Clean-Room Full Suite Regression Execution*:\u003cbr\u003e• Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-UI-153: **Lieblingsorte Cockpit Location Calibration Badge & Altimeter Synchronization Verification** [Altimeter calibration dispatched on geofence entry, pending warmup handled, badge accurately differentiates standby (detected) from calibrated, 9-language localization parity maintained; 100% test pass rate.]
+### TST-UI-153: **Lieblingsorte Cockpit Location Calibration Badge & Altimeter Synchronization Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-199`
 - **Component**: **Lieblingsorte Cockpit Location Calibration Badge & Altimeter Synchronization Verification**
 - **Jira**: ``ATT-1617``
@@ -2006,7 +2011,7 @@
   6. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules.
 
-### TST-UI-154: **Cockpit Sensor Grid Pick & Place Reordering & Swapping Verification** [Sensor tiles swapped and moved atomically in database; grid coordinates normalized without gaps; Move Mode guided by banner and primary highlight; 9-language localization parity maintained; 100% test pass rate.]
+### TST-UI-154: **Cockpit Sensor Grid Pick & Place Reordering & Swapping Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-200`
 - **Component**: **Cockpit Sensor Grid Pick & Place Reordering & Swapping Verification**
 - **Jira**: ``ATT-1629``
@@ -2033,7 +2038,7 @@
   6. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules.
 
-### TST-UI-155: **Aftermath Synchronized Multi-Metric Scrubbing & X-Axis Domain Verification** [Enriched PathPoint telemetry extracted from sample db, configurable ProfileXAxisDomain managed in DataStore, adaptive time ticks generated, multi-metric scrubbing overlay renders and falls back gracefully, 9-language localization parity maintained; 100% test pass rate.]
+### TST-UI-155: **Aftermath Synchronized Multi-Metric Scrubbing & X-Axis Domain Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-201`
 - **Component**: **Aftermath Synchronized Multi-Metric Scrubbing & X-Axis Domain Verification**
 - **Jira**: ``ATT-1391``
@@ -2055,7 +2060,7 @@
   6. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-UI-156: **Aftermath Heart Rate 5-Zone Distribution Vertical Column Chart Verification** [HR samples mapped to 5 zones based on athlete thresholds; duration accumulated and clamped; degenerate identical timestamps fall back to unit duration; missing TIME_ACTIVE falls back to time column; 5-column vertical histogram renders accurately with X-axis zones and Y-axis duration; missing HR handled cleanly; 9-language parity maintained; 100% test pass rate.]
+### TST-UI-156: **Aftermath Heart Rate 5-Zone Distribution Vertical Column Chart Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-202`
 - **Component**: **Aftermath Heart Rate 5-Zone Distribution Vertical Column Chart Verification**
 - **Jira**: ``ATT-1389`, `ATT-1739`, `ATT-1811``
@@ -2081,7 +2086,7 @@
   6. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-UI-157: **Aftermath Cycling Power 5-Zone Distribution Vertical Column Chart Verification** [Power samples mapped to 5 zones based on athlete thresholds; duration accumulated and clamped; degenerate identical timestamps fall back to unit duration; missing TIME_ACTIVE falls back to time column; 5-column vertical histogram renders accurately with X-axis zones and Y-axis duration; missing power handled cleanly; 9-language parity maintained; 100% test pass rate.]
+### TST-UI-157: **Aftermath Cycling Power 5-Zone Distribution Vertical Column Chart Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-203`
 - **Component**: **Aftermath Cycling Power 5-Zone Distribution Vertical Column Chart Verification**
 - **Jira**: ``ATT-1390`, `ATT-1739`, `ATT-1811``
@@ -2107,7 +2112,7 @@
   6. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-UI-158: **Aftermath High-Aesthetic Lap & Interval Split Visualizer Verification** [High-aesthetic Lap & Interval Split Visualizer renders with clean typography, aligned columns, and subtle split bars; fastest split features elegant 'Best' badge; map polyline highlights on selection; 9-language localization parity maintained; 100% test pass rate.]
+### TST-UI-158: **Aftermath High-Aesthetic Lap & Interval Split Visualizer Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-204`
 - **Component**: **Aftermath High-Aesthetic Lap & Interval Split Visualizer Verification**
 - **Jira**: ``ATT-1392`, `ATT-1741`, `ATT-1742``
@@ -2127,7 +2132,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-UI-159: **Aftermath Enhanced Shareable Workout Snapshot Verification** [Snapshot layout calculated accurately; analytics layer integrated cleanly below elevation profile; absent analytics collapses without phantom space; 100% test pass rate.]
+### TST-UI-159: **Aftermath Enhanced Shareable Workout Snapshot Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-205`
 - **Component**: **Aftermath Enhanced Shareable Workout Snapshot Verification**
 - **Jira**: ``ATT-1393``
@@ -2143,7 +2148,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-UI-160: **Aftermath Continuous Telemetry Metric Graphs & Synchronized Scrubbing Verification** [Metric curves render with dynamic scaling and synchronized cursor; speed vs pace selected by sport; conditional presence checks omit empty graphs cleanly; 9-language translation parity maintained; 100% test pass rate.]
+### TST-UI-160: **Aftermath Continuous Telemetry Metric Graphs & Synchronized Scrubbing Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-206`
 - **Component**: **Aftermath Continuous Telemetry Metric Graphs & Synchronized Scrubbing Verification**
 - **Jira**: ``ATT-1740``
@@ -2163,7 +2168,7 @@
   7. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules verifying 0 test failures.
 
-### TST-UI-161: **KnownLocationCard Subtle Ghost Badges & Low-Contrast Styling Verification** [KnownLocationCard renders subtle ghost badges with low-contrast onSurfaceVariant typography and refined icon scale, eliminating visual dominance while preserving 100% drill-down navigation and test tag contracts.]
+### TST-UI-161: **KnownLocationCard Subtle Ghost Badges & Low-Contrast Styling Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-207`
 - **Component**: **KnownLocationCard Subtle Ghost Badges & Low-Contrast Styling Verification**
 - **Jira**: ``ATT-1733``
@@ -2183,7 +2188,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules verifying 100% test pass rate with 0 regressions.
 
-### TST-UI-162: **Filter Dialogs 'Start at' Section Heading & 9-Language Localization Verification** [WorkoutFilterBottomSheet and ClusterFilterBottomSheet display contextual 'Start at' / 'Startet bei' section headings with 100% 9-language localization parity while KnownLocationsScreen top app bar remains intact.]
+### TST-UI-162: **Filter Dialogs 'Start at' Section Heading & 9-Language Localization Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-208`
 - **Component**: **Filter Dialogs 'Start at' Section Heading & 9-Language Localization Verification**
 - **Jira**: ``ATT-1732``
@@ -2198,7 +2203,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules verifying 100% test pass rate with 0 regressions.
 
-### TST-UI-163: **WorkoutFilterBottomSheet Favorite Tracks Section Removal Verification** [WorkoutFilterBottomSheet eliminates Favorite Tracks (Lieblingsstrecken) filter section and chip cloud, reducing visual bloat and sheet load latency while preserving external route drill-down filters and start location filtering; 100% test pass rate with zero regressions.]
+### TST-UI-163: **WorkoutFilterBottomSheet Favorite Tracks Section Removal Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-209`
 - **Component**: **WorkoutFilterBottomSheet Favorite Tracks Section Removal Verification**
 - **Jira**: ``ATT-1731``
@@ -2214,7 +2219,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules verifying 100% test pass rate with 0 regressions.
 
-### TST-UI-164: **Aftermath Detailed Workout Card Configurable Sections Verification** [WorkoutSummary cards support athlete-configurable section visibility for map, elevation, extrema, laps, strava, description, telemetry charts, and zone distribution with DataStore persistence, decoupled media rendering, and 100% 9-language translation parity.]
+### TST-UI-164: **Aftermath Detailed Workout Card Configurable Sections Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-210`
 - **Component**: **Aftermath Detailed Workout Card Configurable Sections Verification**
 - **Jira**: ``ATT-1714``
@@ -2233,7 +2238,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules verifying 100% test pass rate with 0 regressions.
 
-### TST-UI-165: **Aftermath Edit Workout Dialog Configurable Fields Verification** [Edit Workout dialog supports athlete-configurable metadata field visibility with DataStore persistence, mandatory core field invariants, hidden field data preservation, and 100% 9-language translation parity.]
+### TST-UI-165: **Aftermath Edit Workout Dialog Configurable Fields Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-211`
 - **Component**: **Aftermath Edit Workout Dialog Configurable Fields Verification**
 - **Jira**: ``ATT-1713``
@@ -2251,7 +2256,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules verifying 100% test pass rate with 0 regressions.
 
-### TST-UI-166: **Cockpit Typography (Font Family & Boldness) Configuration & Rendering Verification** [Live cockpit typography and boldness are configurable in Advanced Settings with DataStore persistence, live preview, clean scaling across all 9 ViewSizes, 9-language localization parity, and zero regressions.]
+### TST-UI-166: **Cockpit Typography (Font Family & Boldness) Configuration & Rendering Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-212`, `REQ-UI-171`, `REQ-UI-181`
 - **Component**: **Cockpit Typography (Font Family & Boldness) Configuration & Rendering Verification**
 - **Jira**: ``ATT-1751``
@@ -2274,7 +2279,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules verifying 100% test pass rate with 0 regressions.
 
-### TST-UI-167: **Aftermath Resilient Map Preview Visibility & Scrollable Telemetry Layout Verification** [Map preview remains visible with guaranteed viewport height (>= 240 dp), charts and analytics cards are smoothly scrollable, route/segment/sheet views maintain zero regressions, and multi-metric scrubbing operates synchronously; 100% test pass rate.]
+### TST-UI-167: **Aftermath Resilient Map Preview Visibility & Scrollable Telemetry Layout Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-213`, `REQ-UI-206`, `REQ-UI-196`, `REQ-UI-197`
 - **Component**: **Aftermath Resilient Map Preview Visibility & Scrollable Telemetry Layout Verification**
 - **Jira**: ``ATT-1812``
@@ -2295,7 +2300,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules verifying 100% test pass rate with 0 regressions.
 
-### TST-UI-168: **Aftermath Telemetry Metric Graph Ordering & Visual Flow Verification** [Continuous telemetry graphs render in Speed/Pace -> Heart Rate -> Power sequence across inspection screens and summary cards, clustering Heart Rate continuous curve directly adjacent to the 5-zone distribution card with zero regressions.]
+### TST-UI-168: **Aftermath Telemetry Metric Graph Ordering & Visual Flow Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-214`, `REQ-UI-206`
 - **Component**: **Aftermath Telemetry Metric Graph Ordering & Visual Flow Verification**
 - **Jira**: ``ATT-1813``
@@ -2309,7 +2314,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules verifying 100% test pass rate with 0 regressions.
 
-### TST-UI-169: **Aftermath Global Synchronized Horizontal Zoom & Telemetry Alignment Verification** [Horizontal zoom and panning operate synchronously across Elevation Profile, Speed/Pace, Heart Rate, and Power graphs, maintaining identical visible windows and pixel-perfect tick alignment with zero regressions.]
+### TST-UI-169: **Aftermath Global Synchronized Horizontal Zoom & Telemetry Alignment Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-215`, `REQ-UI-192`, `REQ-UI-206`
 - **Component**: **Aftermath Global Synchronized Horizontal Zoom & Telemetry Alignment Verification**
 - **Jira**: ``ATT-1814``
@@ -2327,7 +2332,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules verifying 100% test pass rate with 0 regressions.
 
-### TST-UI-170: **Settings/Aftermath Relocation of Aftermath Customization Toggles to Advanced Settings Verification** [Workout card sections and Edit Workout field toggles are cleanly relocated to Advanced Settings Category 4 (Aftermath & Profil-Analytik), restoring clarity to standard Display Settings while preserving DataStore persistence, factory reset, downstream reactivity, and 9-language localization parity.]
+### TST-UI-170: **Settings/Aftermath Relocation of Aftermath Customization Toggles to Advanced Settings Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-216`, `REQ-UI-210`, `REQ-UI-211`
 - **Component**: **Settings/Aftermath Relocation of Aftermath Customization Toggles to Advanced Settings Verification**
 - **Jira**: ``ATT-1815``
@@ -2349,7 +2354,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules verifying 100% test pass rate with 0 regressions.
 
-### TST-UI-171: **Lieblingsorte Map Preview Thumbnail & Standardized Typography on KnownLocationCard Verification** [KnownLocationCard title is standardized to titleLarge Bold, map preview thumbnail renders on the right side in Google Maps lite mode with onShowOnMap click trigger and inspection fallback, while card edit, delete context menu, and badge drill-downs remain 100% operational.]
+### TST-UI-171: **Lieblingsorte Map Preview Thumbnail & Standardized Typography on KnownLocationCard Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-217`, `REQ-UI-195`, `REQ-UI-207`
 - **Component**: **Lieblingsorte Map Preview Thumbnail & Standardized Typography on KnownLocationCard Verification**
 - **Jira**: ``ATT-1816``
@@ -2373,7 +2378,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules verifying 100% test pass rate with 0 regressions.
 
-### TST-UI-172: **Popups, Bottom Sheets & Dialogs Surface Background Standardization Verification** [Bottom sheet scaffolds, modal sheets, settings sheets, live segment popups, and confirmation dialogs cleanly adhere to standardized surface container color tokens with zero tonal elevation, eliminating artificial grey overlays and contrast splits across all supported themes.]
+### TST-UI-172: **Popups, Bottom Sheets & Dialogs Surface Background Standardization Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-218`, `REQ-UI-189`, `REQ-UI-196`
 - **Component**: **Popups, Bottom Sheets & Dialogs Surface Background Standardization Verification**
 - **Jira**: ``ATT-1817``
@@ -2396,7 +2401,7 @@
   6. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules verifying 100% test pass rate with 0 regressions.
 
-### TST-UI-173: **Aftermath Pace Telemetry Decoding, Stopped Speed Clamping & Y-Axis Label Formatting Verification** [Elevation profile scrubbing badge passes seconds per meter ($1.0/speed$) and clamps stopped speeds to '-- min/km'; TelemetryMetricUtils formats pace in Metric/Imperial correctly; Y-axis pace labels render in athletic mm:ss format; pause points do not distort the vertical dynamic range; 100% test pass rate.]
+### TST-UI-173: **Aftermath Pace Telemetry Decoding, Stopped Speed Clamping & Y-Axis Label Formatting Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-219`, `REQ-UI-206`
 - **Component**: **Aftermath Pace Telemetry Decoding, Stopped Speed Clamping & Y-Axis Label Formatting Verification**
 - **Jira**: ``ATT-1818``
@@ -2414,7 +2419,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% pass rate with 0 regressions.
 
-### TST-UI-174: **Aftermath Telemetry Graphs X-Axis Milestone Decimation, Collision Clearance & Boundary Labeling Verification** [Adaptive 2 km step progression active for 10-20km workouts; milestone labels omit redundant unit suffixes; boundary end label anchored with units; intermediate milestones cleanly decimated without collision; 100% test pass rate.]
+### TST-UI-174: **Aftermath Telemetry Graphs X-Axis Milestone Decimation, Collision Clearance & Boundary Labeling Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-220`, `REQ-UI-206`
 - **Component**: **Aftermath Telemetry Graphs X-Axis Milestone Decimation, Collision Clearance & Boundary Labeling Verification**
 - **Jira**: ``ATT-1819``
@@ -2434,7 +2439,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% pass rate with 0 regressions.
 
-### TST-UI-175: **Bottom Sheet Peek Baselines, Design Token Centralization, Dynamic Self-Measurement & System Navigation Inset Verification** [Bottom sheet peek heights across workout, route, segment, favorite location, and live tracking sheets consume centralized BottomSheetDesign tokens and dynamic header self-measuring feedback, ensuring full visibility of header information above system navigation bars without clipping or empty container overshoots; 100% test pass rate.]
+### TST-UI-175: **Bottom Sheet Peek Baselines, Design Token Centralization, Dynamic Self-Measurement & System Navigation Inset Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-221`
 - **Component**: **Bottom Sheet Peek Baselines, Design Token Centralization, Dynamic Self-Measurement & System Navigation Inset Verification**
 - **Jira**: ``ATT-1645``
@@ -2456,7 +2461,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules verifying 100% pass rate with 0 regressions.
 
-### TST-UI-176: **Advanced Settings Modular Collapsible Subsection Accordion Architecture & Live Subtitle Verification** [Advanced Settings cleanly structured into 5 collapsible Material 3 accordion sections with dynamic live-updating subtitle summaries, decoupled subsection composables, zero tonal elevation, 100% 9-language localization parity, and full test suite pass.]
+### TST-UI-176: **Advanced Settings Modular Collapsible Subsection Accordion Architecture & Live Subtitle Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-222`
 - **Component**: **Advanced Settings Modular Collapsible Subsection Accordion Architecture & Live Subtitle Verification**
 - **Jira**: ``ATT-1821``
@@ -2478,7 +2483,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules verifying 100% pass rate with 0 regressions.
 
-### TST-UI-177: **MapDetailLayout Interactive Draggable Splitter & Viewport Resizing Verification** [Interactive draggable splitter allows continuous resizing of map and telemetry viewports in MapDetailLayout; double-tap resets to 50/50; boundaries safely clamped to >=120dp map and >=160dp graphs; routes/segments unaffected; 100% test pass rate.]
+### TST-UI-177: **MapDetailLayout Interactive Draggable Splitter & Viewport Resizing Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-223`
 - **Component**: **MapDetailLayout Interactive Draggable Splitter & Viewport Resizing Verification**
 - **Jira**: ``ATT-1890``
@@ -2499,7 +2504,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules verifying 100% pass rate with 0 regressions.
 
-### TST-UI-178: **KnownLocationCard Map Thumbnail Calibrated Zoom & Framing Verification** [KnownLocationCard map preview thumbnail camera zoom dynamically calibrated via KnownLocationZoomMath; geofence circle completely contained without clipping; >=1.4km neighborhood context visible; 100% test pass rate.]
+### TST-UI-178: **KnownLocationCard Map Thumbnail Calibrated Zoom & Framing Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-224`
 - **Component**: **KnownLocationCard Map Thumbnail Calibrated Zoom & Framing Verification**
 - **Jira**: ``ATT-1878``
@@ -2518,7 +2523,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules verifying 100% pass rate with 0 regressions.
 
-### TST-UI-179: **MapDetailLayout Persistent Sticky Global Zoom Toolbar & Decoupled ElevationProfile Verification** [Persistent sticky global zoom toolbar sits between map and telemetry graphs in MapDetailLayout, remaining stationary during scrolling; zoom controls decoupled from ElevationProfile, recovering vertical plotting area; 100% 9-language localization parity and zero regressions.]
+### TST-UI-179: **MapDetailLayout Persistent Sticky Global Zoom Toolbar & Decoupled ElevationProfile Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-225`, `REQ-UI-215`, `REQ-UI-197`
 - **Component**: **MapDetailLayout Persistent Sticky Global Zoom Toolbar & Decoupled ElevationProfile Verification**
 - **Jira**: ``ATT-1876``
@@ -2547,7 +2552,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules verifying 100% pass rate with 0 regressions.
 
-### TST-UI-180: **MapDetailLayout Directional Gesture Disambiguation & Vertical Scroll Verification** [\Delta y]
+### TST-UI-180: **MapDetailLayout Directional Gesture Disambiguation & Vertical Scroll Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-226`, `REQ-UI-206`, `REQ-UI-213`
 - **Component**: **MapDetailLayout Directional Gesture Disambiguation & Vertical Scroll Verification**
 - **Jira**: ``ATT-1872``
@@ -2555,7 +2560,7 @@
   1. *ChartGestureDisambiguator Pure Logic Unit Tests (`ChartGestureDisambiguatorTest.kt`)*:
   • Verify dominant vertical swipes ($
 
-### TST-UI-181: **Cockpit HUD Curated Font Palette Expansion & Defensive Resolution Verification** [Curated Cockpit typography palette expanded to 13 fonts; athletic condensed and HUD fonts selectable and render in live preview; 100% 9-language localization parity; safe offline fallbacks; 100% test pass rate.]
+### TST-UI-181: **Cockpit HUD Curated Font Palette Expansion & Defensive Resolution Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-227`, `REQ-UI-212`
 - **Component**: **Cockpit HUD Curated Font Palette Expansion & Defensive Resolution Verification**
 - **Jira**: ``ATT-1871``
@@ -2576,7 +2581,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules verifying 100% pass rate with 0 regressions.
 
-### TST-UI-182: **Aftermath Lap Split Visualizer Refinements & Alignment Verification** [Lap Split Visualizer shows 3-lap preview with expand toggle; custom and descriptive lap names display in lap badge; pace column features explicit units; fastest split row features rabbit icon left of right-aligned pace; 100% test pass rate.]
+### TST-UI-182: **Aftermath Lap Split Visualizer Refinements & Alignment Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-228`, `REQ-UI-204`
 - **Component**: **Aftermath Lap Split Visualizer Refinements & Alignment Verification**
 - **Jira**: ``ATT-1869``
@@ -2598,7 +2603,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules verifying 100% pass rate with 0 regressions.
 
-### TST-UI-183: **Configurable Lap Section Display Mode Verification** [Lap presentation mode is fully configurable in Advanced Settings (Table, Visualizer, Both); conditional rendering in WorkoutLaps respects saved mode; lap editing works in all modes; 100% 9-language localization parity; 100% test pass rate.]
+### TST-UI-183: **Configurable Lap Section Display Mode Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-229`, `REQ-UI-210`, `REQ-UI-204`
 - **Component**: **Configurable Lap Section Display Mode Verification**
 - **Jira**: ``ATT-1870``
@@ -2621,7 +2626,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules verifying 100% pass rate with 0 regressions.
 
-### TST-UI-184: **Background Training Zone Bands & Right-Hand Zone Axis Verification** [HR and Power graphs render 5 subtle horizontal zone bands (10% alpha) and right-hand Z1-Z5 axis; Speed/Pace remain plain; scrubbing tooltip indicates active zone; 100% padding alignment with ElevationProfile; 100% test pass rate.]
+### TST-UI-184: **Background Training Zone Bands & Right-Hand Zone Axis Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-230`, `REQ-UI-206`
 - **Component**: **Background Training Zone Bands & Right-Hand Zone Axis Verification**
 - **Jira**: ``ATT-1839``
@@ -2643,7 +2648,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules verifying 100% pass rate with 0 regressions.
 
-### TST-UI-185: **Fine-Grained Telemetry Frequency Histogram Verification** [Fine-grained frequency histograms accurately computed for HR and Power; individual bars shaded with matching zone colors; toggle between 5-zone and histogram operates cleanly; interactive readout updates on touch; 100% 9-language parity; 100% test pass rate.]
+### TST-UI-185: **Fine-Grained Telemetry Frequency Histogram Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-231`, `REQ-UI-202`, `REQ-UI-203`
 - **Component**: **Fine-Grained Telemetry Frequency Histogram Verification**
 - **Jira**: ``ATT-1845``
@@ -2663,7 +2668,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules verifying 100% pass rate with 0 regressions.
 
-### TST-UI-186: **Aftermath/Graphs: TelemetryMetricGraph Pan Mode Gesture & Lockstep Synchronization Verification** [Horizontal dragging across Speed/Pace, Heart Rate, and Power graphs in Pan Mode pans visible window via ElevationProfileZoomMath.applyPan in lockstep across all charts; Scrub Mode preserved; vertical scrolling untouched; 100% test pass rate.]
+### TST-UI-186: **Aftermath/Graphs: TelemetryMetricGraph Pan Mode Gesture & Lockstep Synchronization Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-232`
 - **Component**: **Aftermath/Graphs: TelemetryMetricGraph Pan Mode Gesture & Lockstep Synchronization Verification**
 - **Jira**: ``ATT-1956``
@@ -2684,7 +2689,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` across all modules verifying 100% pass rate.
 
-### TST-UI-187: **Advanced Settings Initial Collapsed Accordion State Verification** [All 5 accordion subsections in AdvancedTuningDialog are initially collapsed by default on dialog launch, displaying category icons, titles, and live subtitles without vertical scrolling; manual expansion and rotation retention fully operational; 100% test pass rate.]
+### TST-UI-187: **Advanced Settings Initial Collapsed Accordion State Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-222`
 - **Component**: **Advanced Settings Initial Collapsed Accordion State Verification**
 - **Jira**: ``ATT-1957``
@@ -2699,7 +2704,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` across all modules verifying 100% pass rate.
 
-### TST-UI-188: **Lap Display Mode Visualizer Default & Advanced Settings Dialog State Synchronization Verification** [LapDisplayMode defaults to VISUALIZER_ONLY out-of-the-box for fresh installs and resets; AdvancedTuningDialog robustly initializes and displays persisted DataStore lapDisplayMode upon reopen without state desynchronization; 100% test pass rate.]
+### TST-UI-188: **Lap Display Mode Visualizer Default & Advanced Settings Dialog State Synchronization Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-229`
 - **Component**: **Lap Display Mode Visualizer Default & Advanced Settings Dialog State Synchronization Verification**
 - **Jira**: ``ATT-1958``
@@ -2716,7 +2721,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` across all modules verifying 100% pass rate.
 
-### TST-UI-189: **Zone Card Header Row Layout, Bottom Toggle Placement & Streamlined Readout Verification** [Header row in Heart Rate and Power zone cards never wraps duration across all 9 languages; mode toggle renders centered below chart; default histogram readout omits active bins metric and preserves range and bin delta; 100% test pass rate.]
+### TST-UI-189: **Zone Card Header Row Layout, Bottom Toggle Placement & Streamlined Readout Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-231`
 - **Component**: **Zone Card Header Row Layout, Bottom Toggle Placement & Streamlined Readout Verification**
 - **Jira**: ``ATT-1959``
@@ -2735,7 +2740,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` across all modules verifying 100% pass rate.
 
-### TST-UI-190: **Pan Mode Gesture Sensitivity & Cross-Domain Continuous Panning Verification** [PointerInput keys in TelemetryMetricGraph and ElevationProfile exclude running startDist and zoomScale; dynamic parameters captured via rememberUpdatedState; viewport offset managed as normalized fraction eliminating cross-domain collisions; lockstep panning across Elevation and Telemetry verified; 100% test pass rate.]
+### TST-UI-190: **Pan Mode Gesture Sensitivity & Cross-Domain Continuous Panning Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-232`
 - **Component**: **Pan Mode Gesture Sensitivity & Cross-Domain Continuous Panning Verification**
 - **Jira**: ``ATT-1987``
@@ -2758,7 +2763,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` across all modules verifying 100% pass rate.
 
-### TST-UI-191: **Lap Display Mode Binary Choice (Table vs. Visualizer) & Legacy Migration Verification** [LapDisplayMode is streamlined to binary choice (Table vs. Visualizer); legacy 'BOTH' deserializes safely to Visualizer Only; Advanced Settings renders SingleChoiceSegmentedButtonRow with two SegmentedButtons; WorkoutLaps defaults to Visualizer Only; 100% test pass rate.]
+### TST-UI-191: **Lap Display Mode Binary Choice (Table vs. Visualizer) & Legacy Migration Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-229`
 - **Component**: **Lap Display Mode Binary Choice (Table vs. Visualizer) & Legacy Migration Verification**
 - **Jira**: ``ATT-1988``
@@ -2779,7 +2784,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-192: **Independent X-Axis Domain Settings (Elevation vs. Telemetry) & Cross-Domain Scrubbing Verification** [Elevation profile defaults to Distance, telemetry graphs default to Time; both can be independently configured in Expert Settings; cross-domain scrubbing and cursor rendering operate synchronously; 100% test pass rate.]
+### TST-UI-192: **Independent X-Axis Domain Settings (Elevation vs. Telemetry) & Cross-Domain Scrubbing Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-233`
 - **Component**: **Independent X-Axis Domain Settings (Elevation vs. Telemetry) & Cross-Domain Scrubbing Verification**
 - **Jira**: ``ATT-1986``
@@ -2798,7 +2803,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-193: **UI Design System & Mode Selection Heuristics Verification** [Centralized UI design guidelines are documented and verified; binary mode switchers adhere to SingleChoiceSegmentedButtonRow heuristics; requirement traceability is 100% established.]
+### TST-UI-193: **UI Design System & Mode Selection Heuristics Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-234`
 - **Component**: **UI Design System & Mode Selection Heuristics Verification**
 - **Jira**: ``ATT-1989``
@@ -2810,7 +2815,7 @@
   3. *Requirement Traceability*:
   • Verify cross-reference link between `REQ-UI-234` in `docs/requirements.md` and `docs/design_guidelines.md`.
 
-### TST-UI-194: **Aftermath/Telemetry: Trackless Continuous Telemetry Graph Ingestion, Time-Domain Scrubbing, and Map Collapse Verification** [Continuous Heart Rate curve renders along Time domain for trackless workouts; Google Map is collapsed; touch scrubbing smoothly traverses duration with instantaneous metric/zone readouts; full-screen content scrolls without clipping; 100% test pass rate.]
+### TST-UI-194: **Aftermath/Telemetry: Trackless Continuous Telemetry Graph Ingestion, Time-Domain Scrubbing, and Map Collapse Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-235`
 - **Component**: **Aftermath/Telemetry: Trackless Continuous Telemetry Graph Ingestion, Time-Domain Scrubbing, and Map Collapse Verification**
 - **Jira**: ``ATT-2006``
@@ -2833,7 +2838,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-195: **WorkoutSummaries: Support Marking Workouts as "Race" (Wettkampf) Verification Across DB, Header, Edit UI, and Filters** [Workouts can be marked as Race; DB upgrades to version 23 idempotently; Material 3 header badge renders with vector trophy icon and zero raw emojis; edit dialog and filter bottom sheet operate seamlessly; Strava syncs native race workout type; 100% test pass rate.]
+### TST-UI-195: **WorkoutSummaries: Support Marking Workouts as "Race" (Wettkampf) Verification Across DB, Header, Edit UI, and Filters** [Verified]
 - **Requirement(s)**: `REQ-UI-236`
 - **Component**: **WorkoutSummaries: Support Marking Workouts as "Race" (Wettkampf) Verification Across DB, Header, Edit UI, and Filters**
 - **Jira**: ``ATT-2005``
@@ -2859,7 +2864,7 @@
   7. *Clean-Room Regression Suite*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-196: **Segment, Route, and Live Segment Popup Navigation Bar Inset & Upward Travel Calibration Verification** [Segment, route, and live segment popups incorporate navigation bar padding so that the elevation profile and all controls remain 100% visible and interactive above the Android 3-button navigation bar; 100% test pass rate.]
+### TST-UI-196: **Segment, Route, and Live Segment Popup Navigation Bar Inset & Upward Travel Calibration Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-237`
 - **Component**: **Segment, Route, and Live Segment Popup Navigation Bar Inset & Upward Travel Calibration Verification**
 - **Jira**: ``ATT-2008``
@@ -2874,7 +2879,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-197: **Lieblingsorte/Map: Favorite Location Bottom Sheet Non-Expandable Contract & Drag Handle Removal Verification** [Favorite location bottom sheet is locked to peek height; swipe gestures are disabled when a location is active; upward expansion is rejected via confirmValueChange; misleading drag handle is removed; 100% test pass rate.]
+### TST-UI-197: **Lieblingsorte/Map: Favorite Location Bottom Sheet Non-Expandable Contract & Drag Handle Removal Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-238`
 - **Component**: **Lieblingsorte/Map: Favorite Location Bottom Sheet Non-Expandable Contract & Drag Handle Removal Verification**
 - **Jira**: ``ATT-2042``
@@ -2888,7 +2893,7 @@
   2. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-198: **Unconditional Edit Workout Form Presentation & Removal of Edit Dialog Field Toggles Verification** [All edit workout metadata fields are rendered unconditionally; field toggles and state are removed from Advanced Settings; Section 5 subtitle formats active cards correctly; 100% test pass rate.]
+### TST-UI-198: **Unconditional Edit Workout Form Presentation & Removal of Edit Dialog Field Toggles Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-239`
 - **Component**: **Unconditional Edit Workout Form Presentation & Removal of Edit Dialog Field Toggles Verification**
 - **Jira**: ``ATT-2029``
@@ -2907,7 +2912,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-199: **Matrix Table Presentation for Configurable Aftermath Sections (Workout Summary List vs. Workout Details) Verification** [Independent aftermath section customization operates via 2-column matrix table in Advanced Settings; list view preserves 60/120 FPS scrolling performance; details view renders full analytics by default; 100% test pass rate.]
+### TST-UI-199: **Matrix Table Presentation for Configurable Aftermath Sections (Workout Summary List vs. Workout Details) Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-240`
 - **Component**: **Matrix Table Presentation for Configurable Aftermath Sections (Workout Summary List vs. Workout Details) Verification**
 - **Jira**: ``ATT-2030``
@@ -2930,7 +2935,7 @@
   6. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-200: **Persistent Floating Scrubbing Telemetry Badge Pinned Above Scrollable Graphs in MapDetailLayout Verification** [Scrubbing telemetry badge is hoisted into MapDetailLayout and pinned above scrollable graphs; remains visible across scroll positions and when elevation profile is disabled; 100% test pass rate.]
+### TST-UI-200: **Persistent Floating Scrubbing Telemetry Badge Pinned Above Scrollable Graphs in MapDetailLayout Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-241`
 - **Component**: **Persistent Floating Scrubbing Telemetry Badge Pinned Above Scrollable Graphs in MapDetailLayout Verification**
 - **Jira**: ``ATT-2016``
@@ -2950,7 +2955,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-201: **Aftermath/Scrubbing: Render Training Zone Badge Suffix in Active Zone Color in Scrubbing Telemetry Badge Verification** [Training zone suffix in ScrubbingTelemetryBadge is rendered directly in active zone color while base value remains neutral onSurface; graceful fallback without dangling delimiters; 100% test pass rate.]
+### TST-UI-201: **Aftermath/Scrubbing: Render Training Zone Badge Suffix in Active Zone Color in Scrubbing Telemetry Badge Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-242`
 - **Component**: **Aftermath/Scrubbing: Render Training Zone Badge Suffix in Active Zone Color in Scrubbing Telemetry Badge Verification**
 - **Jira**: ``ATT-2015``
@@ -2969,7 +2974,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-202: **Aftermath/Graphs: Configurable Minimum Pace Ceiling in Expert Settings with Athletic Default 3:00 min/km Verification** [Configurable minimum pace ceiling operates in Expert Settings with default 3:00 min/km; eliminates GPS noise spikes and hardcoded 1:30 min/km ceiling from pace telemetry graphs; 100% test pass rate.]
+### TST-UI-202: **Aftermath/Graphs: Configurable Minimum Pace Ceiling in Expert Settings with Athletic Default 3:00 min/km Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-243`
 - **Component**: **Aftermath/Graphs: Configurable Minimum Pace Ceiling in Expert Settings with Athletic Default 3:00 min/km Verification**
 - **Jira**: ``ATT-2014``
@@ -2992,7 +2997,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-203: **Lieblingsorte/UI: Harmonize Map Preview Thumbnail Dimensions to 100dp on KnownLocationCard Verification** [Map preview thumbnail dimensions on KnownLocationCard are harmonized to 100dp x 100dp; visual parity with route cluster cards is achieved; all gestures, edit dialog, delete context menu, and navigation drill-downs operate cleanly; 100% test pass rate.]
+### TST-UI-203: **Lieblingsorte/UI: Harmonize Map Preview Thumbnail Dimensions to 100dp on KnownLocationCard Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-244`
 - **Component**: **Lieblingsorte/UI: Harmonize Map Preview Thumbnail Dimensions to 100dp on KnownLocationCard Verification**
 - **Jira**: ``ATT-2051``
@@ -3009,7 +3014,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-204: **Aftermath/Details: Upper Metadata Slot Architecture & Reactive Detail Section Rendering in MapDetailLayout Verification** [MapDetailLayout upper metadata slot renders WorkoutDescription and WorkoutExtrema above the map; visual order parity with WorkoutSummary.kt is achieved; preferences reactively toggle visibility; backward compatibility for other callers preserved; 100% test pass rate.]
+### TST-UI-204: **Aftermath/Details: Upper Metadata Slot Architecture & Reactive Detail Section Rendering in MapDetailLayout Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-245`
 - **Component**: **Aftermath/Details: Upper Metadata Slot Architecture & Reactive Detail Section Rendering in MapDetailLayout Verification**
 - **Jira**: ``ATT-2112``
@@ -3028,7 +3033,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-205: **Aftermath/Scrubbing: Align Scrubbing Telemetry Badge with Zoom Controls and Offset to Top-Right in MapDetailLayout Verification** [ScrubbingTelemetryBadge top edge aligns with zoom controls and offsets to top-right in MapDetailLayout; unifies viewport container; zero graph occlusion; 100% test pass rate.]
+### TST-UI-205: **Aftermath/Scrubbing: Align Scrubbing Telemetry Badge with Zoom Controls and Offset to Top-Right in MapDetailLayout Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-246`
 - **Component**: **Aftermath/Scrubbing: Align Scrubbing Telemetry Badge with Zoom Controls and Offset to Top-Right in MapDetailLayout Verification**
 - **Jira**: ``ATT-2113``
@@ -3041,7 +3046,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-206: **Aftermath/Summary: Click-to-Open Navigation and Gesture Disambiguation for Telemetry Graphs and Zone Distribution Cards in WorkoutSummary Verification** [Telemetry graphs and zone cards in WorkoutSummary trigger onMapClick() on tap; pointer input is disabled in list preview mode ensuring fluid vertical scrolling; full interactive scrubbing in MapDetailLayout is preserved; 100% test pass rate.]
+### TST-UI-206: **Aftermath/Summary: Click-to-Open Navigation and Gesture Disambiguation for Telemetry Graphs and Zone Distribution Cards in WorkoutSummary Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-247`
 - **Component**: **Aftermath/Summary: Click-to-Open Navigation and Gesture Disambiguation for Telemetry Graphs and Zone Distribution Cards in WorkoutSummary Verification**
 - **Jira**: ``ATT-2129``
@@ -3058,7 +3063,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-207: **Aftermath/Details: Strava Activity Data Upper Metadata Slotting & Structural Parity in Detailed Workout View Verification** [StravaActivitySection renders in metadataContent above the map in TrackOnMapScreen, matching the canonical order of WorkoutSummary.kt; preference gating strictly enforced; analyticsContent does not duplicate Strava; 100% test pass rate.]
+### TST-UI-207: **Aftermath/Details: Strava Activity Data Upper Metadata Slotting & Structural Parity in Detailed Workout View Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-248`
 - **Component**: **Aftermath/Details: Strava Activity Data Upper Metadata Slotting & Structural Parity in Detailed Workout View Verification**
 - **Jira**: ``ATT-2137``
@@ -3072,7 +3077,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-208: **Aftermath/Zoom: Reactive Zoom Controls Suppression in MapDetailLayout When No Zoomable Graphs Are Rendered Verification** []
+### TST-UI-208: **Aftermath/Zoom: Reactive Zoom Controls Suppression in MapDetailLayout When No Zoomable Graphs Are Rendered Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-249`
 - **Component**: **Aftermath/Zoom: Reactive Zoom Controls Suppression in MapDetailLayout When No Zoomable Graphs Are Rendered Verification**
 - **Jira**: ``ATT-2138``
@@ -3080,7 +3085,7 @@
   1. *Structural Contract Test (`MapDetailLayoutZoomContractTest.kt`)*:
   • Verify `MapDetailLayout.kt` specifies `hasZoomToolbar = showZoomControls && (showElevationProfile
 
-### TST-UI-209: **Aftermath/Layout: Collapsing Upper Metadata Architecture & Map Squashing Prevention via NestedScroll Verification** [Upper metadata collapses smoothly on scroll, freeing full screen height for map and telemetry graphs; minimum map height guaranteed in base state; 100% test pass rate.]
+### TST-UI-209: **Aftermath/Layout: Collapsing Upper Metadata Architecture & Map Squashing Prevention via NestedScroll Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-250`
 - **Component**: **Aftermath/Layout: Collapsing Upper Metadata Architecture & Map Squashing Prevention via NestedScroll Verification**
 - **Jira**: ``ATT-2150``
@@ -3093,7 +3098,7 @@
   2. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-210: **Aftermath/UI: Integrated Minimalist Marginal Zone Bars & Histogram Right of Telemetry Graph in Portrait Mode Verification** [Minimalist marginal bars rendered right of HR and Power graphs without text clutter; vertically aligned with zone thresholds; synchronous mode switching with zone cards; 100% test pass rate.]
+### TST-UI-210: **Aftermath/UI: Integrated Minimalist Marginal Zone Bars & Histogram Right of Telemetry Graph in Portrait Mode Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-251`
 - **Component**: **Aftermath/UI: Integrated Minimalist Marginal Zone Bars & Histogram Right of Telemetry Graph in Portrait Mode Verification**
 - **Jira**: ``ATT-2147``
@@ -3105,7 +3110,7 @@
   2. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-211: **Aftermath/Details: Lap Split Visualizer Upper Metadata Slotting & Structural Parity in Detailed Workout View Verification** [LapSplitVisualizerCard renders in metadataContent above the map between Extrema and Strava in TrackOnMapScreen, matching the canonical order of WorkoutSummary.kt; preference gating strictly enforced; analyticsContent does not duplicate Laps; 100% test pass rate.]
+### TST-UI-211: **Aftermath/Details: Lap Split Visualizer Upper Metadata Slotting & Structural Parity in Detailed Workout View Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-252`
 - **Component**: **Aftermath/Details: Lap Split Visualizer Upper Metadata Slotting & Structural Parity in Detailed Workout View Verification**
 - **Jira**: ``ATT-2170``
@@ -3117,7 +3122,7 @@
   2. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-212: **Tracking Views Null-Safe Deserialization & DB Seeding Verification** [Null and corrupt enum cursor values resolve cleanly to defaults with zero NullPointerExceptions; addDefaultTab seeds VIEW_SIZE on fresh installs; DB upgrade 11 repairs null values; 100% test pass rate.]
+### TST-UI-212: **Tracking Views Null-Safe Deserialization & DB Seeding Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-253`
 - **Component**: **Tracking Views Null-Safe Deserialization & DB Seeding Verification**
 - **Jira**: ``ATT-2179``
@@ -3133,7 +3138,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-213: **Aftermath/Details: Non-Blocking Nested Scroll Dispatch, Sub-Pixel Precision & Optimized High-Density Metadata Verification** [Nested scroll dispatches smoothly in both directions without gesture trapping or premature header expansion; float precision prevents jitter; high-density segments and laps render fluidly; 100% test pass rate.]
+### TST-UI-213: **Aftermath/Details: Non-Blocking Nested Scroll Dispatch, Sub-Pixel Precision & Optimized High-Density Metadata Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-254`
 - **Component**: **Aftermath/Details: Non-Blocking Nested Scroll Dispatch, Sub-Pixel Precision & Optimized High-Density Metadata Verification**
 - **Jira**: ``ATT-2178``
@@ -3152,7 +3157,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-214: **Aftermath: User-Customizable Section Reordering, Unified Order Persistence & Modular Section Architecture Verification** [User-customizable section reordering persists across app sessions and dynamically drives section sequences in WorkoutSummary.kt and TrackOnMapScreen.kt while preserving fixed top identity anchors and 120dp minimum map height safety; 100% test pass rate.]
+### TST-UI-214: **Aftermath: User-Customizable Section Reordering, Unified Order Persistence & Modular Section Architecture Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-255`
 - **Component**: **Aftermath: User-Customizable Section Reordering, Unified Order Persistence & Modular Section Architecture Verification**
 - **Jira**: ``ATT-2176``
@@ -3174,7 +3179,7 @@
   6. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-215: **Equipment Management: Fleet-Wide Equipment-to-Sensor Mapping Matrix with Checkboxes Verification** [Centralized, interactive equipment-to-sensor mapping matrix with checkboxes accurately maps and toggles links in SQLite; 3 tabs integrated in EquipmentTabsScreen; sticky first column functions smoothly; 100% test pass rate.]
+### TST-UI-215: **Equipment Management: Fleet-Wide Equipment-to-Sensor Mapping Matrix with Checkboxes Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-256`
 - **Component**: **Equipment Management: Fleet-Wide Equipment-to-Sensor Mapping Matrix with Checkboxes Verification**
 - **Jira**: ``ATT-2126``
@@ -3193,7 +3198,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-216: **Compact Equipment Card Layout & Harmonized Inter-Card Spacing Verification** [Equipment list items exhibit clean 6dp–8dp inter-card spacing without 20dp compounding gaps; inactive and 0-workout items present compact card layout while preserving 48dp minimum touch target and delete contract; 100% test pass rate.]
+### TST-UI-216: **Compact Equipment Card Layout & Harmonized Inter-Card Spacing Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-257`
 - **Component**: **Compact Equipment Card Layout & Harmonized Inter-Card Spacing Verification**
 - **Jira**: ``ATT-2059``
@@ -3212,7 +3217,7 @@
   4. *Clean-Room Regression Execution*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-217: **Cockpit Sensor Field Visual Styling Architecture, Expert Settings Selection & Reactive Grid Layout Verification** [Default production parameters remain 100% faithful to baseline (CLASSIC_SEAMLESS); 4 distinct variants cleanly specified, selectable in Expert Settings, persisted in DataStore, and reactively reflected in live cockpit; 100% test pass rate.]
+### TST-UI-217: **Cockpit Sensor Field Visual Styling Architecture, Expert Settings Selection & Reactive Grid Layout Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-258`
 - **Component**: **Cockpit Sensor Field Visual Styling Architecture, Expert Settings Selection & Reactive Grid Layout Verification**
 - **Jira**: ``ATT-2058``
@@ -3238,7 +3243,7 @@
   7. *Clean-Room Regression Suite*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-218: **Conditional Research Button Visibility Based on Real Paired Remote Devices Verification** [ResearchButton is conditionally rendered only when real paired remote devices exist in SQLite; cold-start instantaneous seeding prevents layout flicker; trademark logos unchanged; 100% unit test pass rate.]
+### TST-UI-218: **Conditional Research Button Visibility Based on Real Paired Remote Devices Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-259`
 - **Component**: **Conditional Research Button Visibility Based on Real Paired Remote Devices Verification**
 - **Jira**: ``ATT-2057``
@@ -3259,7 +3264,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-219: **Centralized Zone Threshold Resolution & O(log N) Scrubbing Point Search Verification** [Centralized zone resolution eliminates duplicate boilerplate; binary search resolves nearest scrubbing point in O(log N) comparisons with exact numerical parity to linear search; zero layout regressions; 100% unit test pass rate.]
+### TST-UI-219: **Centralized Zone Threshold Resolution & O(log N) Scrubbing Point Search Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-260`
 - **Component**: **Centralized Zone Threshold Resolution & O(log N) Scrubbing Point Search Verification**
 - **Jira**: ``ATT-2031``
@@ -3277,7 +3282,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-220: **Canonical Horizontal Domain Evaluation & Total Span Engine (ProfileDomainMath) Verification** [ProfileDomainMath provides unified single source of truth for horizontal domain and span calculations; corrupt zero-timestamp tracks gracefully fall back to distance; stationary sessions resolve to time; 100% unit test pass rate.]
+### TST-UI-220: **Canonical Horizontal Domain Evaluation & Total Span Engine (ProfileDomainMath) Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-261`
 - **Component**: **Canonical Horizontal Domain Evaluation & Total Span Engine (ProfileDomainMath) Verification**
 - **Jira**: ``ATT-2032``
@@ -3296,7 +3301,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-221: **Modular Component Architecture for Advanced Tuning Dialog Verification** [Monolithic AdvancedTuningDialog.kt successfully decomposed into focused category files under categories/ and TuningFormControls.kt; all files strictly under 400 lines; 100% behavioral and test parity; 100% unit test pass rate.]
+### TST-UI-221: **Modular Component Architecture for Advanced Tuning Dialog Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-262`
 - **Component**: **Modular Component Architecture for Advanced Tuning Dialog Verification**
 - **Jira**: ``ATT-2033``
@@ -3313,7 +3318,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-222: **Equipment Sensor Matrix Table Layout, Column Continuity, and Information Density Verification** [Top-left header displays Equipment title; continuous 1dp divider line between equipment column and sensor columns through section headers; sticky column expanded to 184dp with 2-line text wrapping; 100% unit test pass rate.]
+### TST-UI-222: **Equipment Sensor Matrix Table Layout, Column Continuity, and Information Density Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-263`
 - **Component**: **Equipment Sensor Matrix Table Layout, Column Continuity, and Information Density Verification**
 - **Jira**: ``ATT-2306``
@@ -3328,7 +3333,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-223: **Workout Cards & Details Tuning Dialog Layout, Typography Wrapping, and Reordering Ergonomics Verification** [Reorder controls formatted as compact 32dp vertical stack; checkbox columns set to 50dp; section titles gain 60dp horizontal width, preventing mid-word line breaking in German; LapDisplayMode cleanly decoupled; 100% unit test pass rate.]
+### TST-UI-223: **Workout Cards & Details Tuning Dialog Layout, Typography Wrapping, and Reordering Ergonomics Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-264`
 - **Component**: **Workout Cards & Details Tuning Dialog Layout, Typography Wrapping, and Reordering Ergonomics Verification**
 - **Jira**: ``ATT-2305``
@@ -3347,7 +3352,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-224: **Workout List Filtering by Origin Source Attribute Verification** [WorkoutFilterCriteria filters workouts by origin source with accurate predicate matching, active count derivation, and JSON persistence; WorkoutSummariesViewModel reactively emits filtered list; 100% 9-language parity; 100% test pass rate.]
+### TST-UI-224: **Workout List Filtering by Origin Source Attribute Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-265`
 - **Component**: **Workout List Filtering by Origin Source Attribute Verification**
 - **Jira**: ``ATT-2303``
@@ -3369,7 +3374,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-225: **Immediate Collapsing Header Quick Return Expansion Verification** [CollapsingAppBarNestedScrollConnection immediately consumes downward scroll deltas in onPreScroll, restoring smooth Quick Return header expansion with sub-pixel precision and fluid child handoff; 100% unit test pass rate.]
+### TST-UI-225: **Immediate Collapsing Header Quick Return Expansion Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-266`
 - **Component**: **Immediate Collapsing Header Quick Return Expansion Verification**
 - **Jira**: ``ATT-2304``
@@ -3383,7 +3388,7 @@
   2. *Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% pass rate.
 
-### TST-UI-226: **Routes & Segments Elevation Profile Below Map & Interactive Zooming Verification** [MapDetailLayout activates two-pane resizable split layout for routes and segments with elevation profile positioned strictly below map, interactive GlobalTelemetryZoomToolbar (+, -, reset, pan), draggable SplitPaneDivider, and synchronized map marker scrubbing; 100% test pass rate.]
+### TST-UI-226: **Routes & Segments Elevation Profile Below Map & Interactive Zooming Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-267`
 - **Component**: **Routes & Segments Elevation Profile Below Map & Interactive Zooming Verification**
 - **Jira**: ``ATT-2311``
@@ -3400,7 +3405,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-227: **SensorSourceDialog Truthful Connection Status, Parameterization & Priority Sorting Verification** [Actively connected primary and backup sensors in SensorSourceDialog render (verfügbar) / (available) next to battery level, disconnected sensors render (nicht verbunden), active backups and disconnected devices are sorted strictly by MySensorManager canonical priority order (Google Fused before Network), and DeviceStatusRow maintains full backward compatibility; 100% clean-room test pass rate.]
+### TST-UI-227: **SensorSourceDialog Truthful Connection Status, Parameterization & Priority Sorting Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-268`
 - **Component**: **SensorSourceDialog Truthful Connection Status, Parameterization & Priority Sorting Verification**
 - **Jira**: ``ATT-2194`, `ATT-4375``
@@ -3418,7 +3423,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-228: **ClusterInfoDialog Preserved Bullet Point Line Breaks & 9-Language Localization Audit Verification** [cluster_info_fingerprint_desc contains zero &#10; entities and uses literal \n escapes across all 9 locales, ensuring each of the 4 topological fingerprint criteria starts on its own line; 100% test pass rate.]
+### TST-UI-228: **ClusterInfoDialog Preserved Bullet Point Line Breaks & 9-Language Localization Audit Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-269`
 - **Component**: **ClusterInfoDialog Preserved Bullet Point Line Breaks & 9-Language Localization Audit Verification**
 - **Jira**: ``ATT-2195``
@@ -3432,7 +3437,7 @@
   4. *Clean-Room Full Suite Regression*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% pass rate.
 
-### TST-UI-229: **LiveSegmentSheet Clamped Bottom Sheet Height & MapDetailLayout Viewport Constraints Verification** []
+### TST-UI-229: **LiveSegmentSheet Clamped Bottom Sheet Height & MapDetailLayout Viewport Constraints Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-270`
 - **Component**: **LiveSegmentSheet Clamped Bottom Sheet Height & MapDetailLayout Viewport Constraints Verification**
 - **Jira**: ``ATT-2231``
@@ -3442,7 +3447,7 @@
   • Verify `MapDetailLayout.kt` applies `wrapContentHeight()` on the resizable viewport Box when `!showMap && !hasScrollableContent`.
   • Verify `MapDetailLayout.kt` conditionally attaches `Modifier.nestedScroll(connection)` only when `showMap
 
-### TST-UI-230: **Sport-Specific Equipment Sensor Matrix Partitioning and Incompatible Sensor Restriction Verification** [Equipment sensor matrix cleanly partitioned into sport-specific tables for bikes and shoes with independent scrolling; incompatible sensor linkages restricted; 100% test pass rate.]
+### TST-UI-230: **Sport-Specific Equipment Sensor Matrix Partitioning and Incompatible Sensor Restriction Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-256`
 - **Component**: **Sport-Specific Equipment Sensor Matrix Partitioning and Incompatible Sensor Restriction Verification**
 - **Jira**: ``ATT-2382``
@@ -3461,7 +3466,7 @@
   5. *Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` to guarantee 0 regressions across all test suites.
 
-### TST-UI-231: **Settings/Tuning: Simplified Preposition-Free Column Headers (List & Details) in Workout Cards & Details Matrix Verification** [Simplified preposition-free column headers ("Liste" / "Details", "List" / "Details", "Lista" / "Szczegóły", etc.) align cleanly over 50dp checkbox columns without 2-line wrapping; defensive single-line typography enforced; 100% test pass rate.]
+### TST-UI-231: **Settings/Tuning: Simplified Preposition-Free Column Headers (List & Details) in Workout Cards & Details Matrix Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-271`
 - **Component**: **Settings/Tuning: Simplified Preposition-Free Column Headers (List & Details) in Workout Cards & Details Matrix Verification**
 - **Jira**: ``ATT-2383``
@@ -3473,7 +3478,7 @@
   3. *Full Clean-Room Test Suite*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-232: **Elevation Profile Adaptive X-Axis Tick Spacing and Dynamic Label Collision Prevention Verification** [Distance and time tick labels on elevation profile render without overlap across all card previews and detail screens; minimum 24dp clearance enforced; 100% test pass rate.]
+### TST-UI-232: **Elevation Profile Adaptive X-Axis Tick Spacing and Dynamic Label Collision Prevention Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-272`
 - **Component**: **Elevation Profile Adaptive X-Axis Tick Spacing and Dynamic Label Collision Prevention Verification**
 - **Jira**: ``ATT-2385``
@@ -3489,7 +3494,7 @@
   4. *Full Clean-Room Test Suite*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-233: **Routes & Segments: Dynamically Maximized Map with Bottom-Anchored Intrinsic Elevation Profile Verification** [In Route and Segment details, upper map dynamically expands with weight(1f) to occupy all available vertical space above elevation profile; lower elevation profile sizes intrinsically to content and sits flush with Navigation Bar with zero dead space; TrackOnMapScreen split-pane preserved; 100% test pass rate.]
+### TST-UI-233: **Routes & Segments: Dynamically Maximized Map with Bottom-Anchored Intrinsic Elevation Profile Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-273`
 - **Component**: **Routes & Segments: Dynamically Maximized Map with Bottom-Anchored Intrinsic Elevation Profile Verification**
 - **Jira**: ``ATT-2386``
@@ -3505,7 +3510,7 @@
   3. *Full Clean-Room Test Suite*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-234: **Route Climbs Visual Prominence Across Elevation Profile, Map Polyline, Route Cards & Dedicated Breakdown Verification** [Route climbs prominently visible on elevation profile with colored ridge strokes and summit category badges, on route map with climb start markers, in header metrics, and interactive breakdown; backward-compatible fallback detection; 100% 9-language parity; 100% test pass rate.]
+### TST-UI-234: **Route Climbs Visual Prominence Across Elevation Profile, Map Polyline, Route Cards & Dedicated Breakdown Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-274`
 - **Component**: **Route Climbs Visual Prominence Across Elevation Profile, Map Polyline, Route Cards & Dedicated Breakdown Verification**
 - **Jira**: ``ATT-2388``
@@ -3525,7 +3530,7 @@
   4. *Clean-Room Full Suite Regression*:
   • Run `./gradlew testDebugUnitTest` asserting 100% pass rate.
 
-### TST-UI-235: **Unified WYSIWYG Tracking Tab Configuration with Spatial Overlays and Per-Tab Popup Toggles Verification** [WYSIWYG spatial cockpit configuration in ScreenMode.CONFIGURATION; per-tab gating of navigation prompts and live climbs; smooth SQLite migration with default 1; 100% 9-language translation parity; 100% test pass rate.]
+### TST-UI-235: **Unified WYSIWYG Tracking Tab Configuration with Spatial Overlays and Per-Tab Popup Toggles Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-275`
 - **Component**: **Unified WYSIWYG Tracking Tab Configuration with Spatial Overlays and Per-Tab Popup Toggles Verification**
 - **Jira**: ``ATT-2360``
@@ -3546,7 +3551,7 @@
   5. *Clean-Room Full Suite Regression*:
   • Run `./gradlew testDebugUnitTest` asserting 100% pass rate.
 
-### TST-UI-236: **Cockpit Tile Distinct Presets, Granular Corner Radius, Border Thickness, and Theme-Aware Border Contrast Verification** [Four distinct presets; athlete-adjustable corner radius (0-20dp), border thickness (0-4dp), and theme-aware contrast sliders in Cockpit Typography settings; live cockpit updates; 100% 9-language translation parity; 100% test pass rate.]
+### TST-UI-236: **Cockpit Tile Distinct Presets, Granular Corner Radius, Border Thickness, and Theme-Aware Border Contrast Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-276`
 - **Component**: **Cockpit Tile Distinct Presets, Granular Corner Radius, Border Thickness, and Theme-Aware Border Contrast Verification**
 - **Jira**: ``ATT-2456``
@@ -3568,7 +3573,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate.
 
-### TST-UI-237: **Settings Live Preview Cockpit Tile Styling & Comprehensive Section Naming Verification** [Settings live preview renders sample metrics as individual cockpit tiles reflecting corner radius, elevation, border stroke, and spacing; section header renamed across all 9 locales; modularity preserved; 100% test pass rate.]
+### TST-UI-237: **Settings Live Preview Cockpit Tile Styling & Comprehensive Section Naming Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-277`
 - **Component**: **Settings Live Preview Cockpit Tile Styling & Comprehensive Section Naming Verification**
 - **Jira**: ``ATT-2457``
@@ -3585,7 +3590,7 @@
   4. *Full Clean-Room Regression*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-238: **Pairing Triggers Relocation to Sensor Management & Control Tracking Layout Optimization Verification** [Pairing triggers removed from Control Tracking screen; FAB added to "Meine Sensoren" tabs; bottom sheet protocol and device type selection; Start button vertically centered with bottom slot; 100% 9-language translation parity; 100% test pass rate.]
+### TST-UI-238: **Pairing Triggers Relocation to Sensor Management & Control Tracking Layout Optimization Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-278`
 - **Component**: **Pairing Triggers Relocation to Sensor Management & Control Tracking Layout Optimization Verification**
 - **Jira**: ``ATT-2189``
@@ -3605,7 +3610,7 @@
   4. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-239: **Branded Route Selection Button on Control Tracking Screen & Cockpit Sensor Grid Decoupling Verification** [Route selection button removed from all cockpit sensor grid tabs; branded route selection card with green border/icon accent rendered in bottom slot of Control Tracking screen; active/inactive route state display and cancellation operational; in-ride auto-detection banner preserved; 100% 9-language translation parity; 100% test pass rate.]
+### TST-UI-239: **Branded Route Selection Button on Control Tracking Screen & Cockpit Sensor Grid Decoupling Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-279`
 - **Component**: **Branded Route Selection Button on Control Tracking Screen & Cockpit Sensor Grid Decoupling Verification**
 - **Jira**: ``ATT-2458``
@@ -3625,7 +3630,7 @@
   4. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-240: **Route Selector Streamlining: Pinned Heimweg Card and Sort Tab Bar Removal Contract and Unit Verification** [Route selector bottom sheet streamlined by removing filter tabs and pinned Heimweg card; direct proximity-recency ranking via RouteProximityRanker operational; active route banner and auto-detection intact; 100% test pass rate.]
+### TST-UI-240: **Route Selector Streamlining: Pinned Heimweg Card and Sort Tab Bar Removal Contract and Unit Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-280`
 - **Component**: **Route Selector Streamlining: Pinned Heimweg Card and Sort Tab Bar Removal Contract and Unit Verification**
 - **Jira**: ``ATT-2459``
@@ -3645,7 +3650,7 @@
   4. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-241: **Configurable Route Selector Proximity Radius and Recency Sorting Verification** [Dedicated Navigation category in Advanced Settings; configurable radius (default 1 km) with factory reset support; strict straight-line start point filtering; recency sorting; dimmed button visual feedback when no routes qualify; 100% localization parity; 100% test pass rate.]
+### TST-UI-241: **Configurable Route Selector Proximity Radius and Recency Sorting Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-281`
 - **Component**: **Configurable Route Selector Proximity Radius and Recency Sorting Verification**
 - **Jira**: ``ATT-2460``
@@ -3671,7 +3676,7 @@
   6. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% pass rate.
 
-### TST-UI-242: **Mid-Ride Route Selector Return Navigation Entry Point & Take Me Home Design Consistency Verification** [Mid-ride Take Me Home card presented in route selector during active sessions; ReturnNavigationHud styled with 12.dp shape, subtle green accents, and no raw emojis; 100% 9-language localization parity; 100% test pass rate.]
+### TST-UI-242: **Mid-Ride Route Selector Return Navigation Entry Point & Take Me Home Design Consistency Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-282`
 - **Component**: **Mid-Ride Route Selector Return Navigation Entry Point & Take Me Home Design Consistency Verification**
 - **Jira**: ``ATT-2462``
@@ -3691,7 +3696,7 @@
   4. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate.
 
-### TST-UI-243: **Equipment Sensor Matrix and Configuration Dialog: Sport-Specific Sensor Precedence Ordering Verification** [Equipment sensor matrix columns and configuration dialog sensor lists ordered with sport-specific sensors first, followed by shared/generic sensors, with standardized case-insensitive alphabetical tie-breaking; 100% test pass rate.]
+### TST-UI-243: **Equipment Sensor Matrix and Configuration Dialog: Sport-Specific Sensor Precedence Ordering Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-283`
 - **Component**: **Equipment Sensor Matrix and Configuration Dialog: Sport-Specific Sensor Precedence Ordering Verification**
 - **Jira**: ``ATT-2464``
@@ -3712,7 +3717,7 @@
   5. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-244: **Sensors View Sport-Specific Equipment Matrix Tabs, Visual Link Indicators & Equipment Tabs Consolidation Verification** [Relocate equipment sensor matrices into Sensors view as two dedicated tabs at the very right with leading link indicators on matrix tabs, host isolated sport-specific matrix tables for Bikes and Shoes, streamline EquipmentTabsScreen to 2 tabs, and enforce 9-language localization parity; 100% test pass rate.]
+### TST-UI-244: **Sensors View Sport-Specific Equipment Matrix Tabs, Visual Link Indicators & Equipment Tabs Consolidation Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-284`
 - **Component**: **Sensors View Sport-Specific Equipment Matrix Tabs, Visual Link Indicators & Equipment Tabs Consolidation Verification**
 - **Jira**: ``ATT-2465` / `ATT-3314``
@@ -3735,7 +3740,7 @@
   5. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-245: **Workout Section 9-Item Default Sequence and Visibility Matrix Verification** [Integrate EXPORT_STATUS into WorkoutSectionType, define 9-section DEFAULT_ORDER, and unify clean-installation default visibility matrices across workout list cards and detail views; 100% test pass rate.]
+### TST-UI-245: **Workout Section 9-Item Default Sequence and Visibility Matrix Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-285`
 - **Component**: **Workout Section 9-Item Default Sequence and Visibility Matrix Verification**
 - **Jira**: ``ATT-2384``
@@ -3754,7 +3759,7 @@
   4. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-246: **ResearchButton Jetpack Compose Vector Resilience & Universal Resource Fallback Verification** [`ResearchButton` renders with complete immunity to `Resources$NotFoundException` across all states; `R.drawable.research_icon` resolves reliably; 9-language translation parity verified; 100% test pass rate.]
+### TST-UI-246: **ResearchButton Jetpack Compose Vector Resilience & Universal Resource Fallback Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-286`
 - **Component**: **ResearchButton Jetpack Compose Vector Resilience & Universal Resource Fallback Verification**
 - **Jira**: ``ATT-2619``
@@ -3770,7 +3775,7 @@
   4. *Clean-Room Regression Suite Execution*:
   • Execute `./gradlew testDebugUnitTest` and verify 0 regressions across all modules.
 
-### TST-UI-247: **Navigation Cue Auto-Dismiss Duration, Countdown Distance & Solid Opaque Overlays Verification** [Navigation cue overlays render 100% opaque, dismiss duration rendered as discrete integer slider from 1s to 10s with steps = 8 and legacy 0 fallback to 4s, countdown distance persisted in DataStore; 100% 9-language parity; 100% test pass rate.]
+### TST-UI-247: **Navigation Cue Auto-Dismiss Duration, Countdown Distance & Solid Opaque Overlays Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-287`
 - **Component**: **Navigation Cue Auto-Dismiss Duration, Countdown Distance & Solid Opaque Overlays Verification**
 - **Jira**: ``ATT-2632`, `ATT-3321`, `ATT-3322`, `ATT-3325`, `ATT-3450``
@@ -3791,7 +3796,7 @@
   4. *Clean-Room Regression Suite Execution*:
   • Execute `./gradlew testDebugUnitTest` and verify 0 regressions across all modules.
 
-### TST-UI-248: **Equipment Sensor Matrix Bike and Shoe Icon Tint Unification Verification** [Unify active equipment icon tinting across bikes and shoes to MaterialTheme.colorScheme.primary in MatrixEquipmentRow while preserving MaterialTheme.colorScheme.outline for retired items; 100% test pass rate.]
+### TST-UI-248: **Equipment Sensor Matrix Bike and Shoe Icon Tint Unification Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-288`
 - **Component**: **Equipment Sensor Matrix Bike and Shoe Icon Tint Unification Verification**
 - **Jira**: ``ATT-2630``
@@ -3808,7 +3813,7 @@
   4. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-249: **Context-Aware Route Selection: Pre-Tracking Start Proximity and In-Ride Corridor Auto-Detection Verification** [Route candidate selection and UI feedback dynamically adapt to workout tracking state; in-ride corridor matching directly feeds route list; dimmed button displays context-aware hints; 100% 9-language translation parity; 100% test pass rate.]
+### TST-UI-249: **Context-Aware Route Selection: Pre-Tracking Start Proximity and In-Ride Corridor Auto-Detection Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-289`
 - **Component**: **Context-Aware Route Selection: Pre-Tracking Start Proximity and In-Ride Corridor Auto-Detection Verification**
 - **Jira**: ``ATT-2627``
@@ -3830,7 +3835,7 @@
   5. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-250: **Sensor Pairing Device Type Selection: Omission of 'Alle' Action and Targeted Hardware Profile Discovery Verification** [Omit "Alle" button from DeviceTypeSelectionDialog during sensor pairing flows, enforcing targeted wireless discovery for specific hardware sensor profiles; 100% unit test pass rate.]
+### TST-UI-250: **Sensor Pairing Device Type Selection: Omission of 'Alle' Action and Targeted Hardware Profile Discovery Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-290`
 - **Component**: **Sensor Pairing Device Type Selection: Omission of 'Alle' Action and Targeted Hardware Profile Discovery Verification**
 - **Jira**: ``ATT-2625``
@@ -3850,7 +3855,7 @@
   4. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-251: **Sensors View Multi-Sensor Inventory Preservation During Pairing Verification** [Preserve complete multi-sensor inventory across all Sensors screen tabs during pairing discovery, decoupling hardware scanning target from UI tab filters; 100% unit test pass rate.]
+### TST-UI-251: **Sensors View Multi-Sensor Inventory Preservation During Pairing Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-291`
 - **Component**: **Sensors View Multi-Sensor Inventory Preservation During Pairing Verification**
 - **Jira**: ``ATT-2626``
@@ -3868,7 +3873,7 @@
   4. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-253: **Format-Specific Import Tab Architecture and Multi-Document Recovery Verification** [Import tab partitioned into FIT, TCX, and GPX cards with complete action triad parity and multi-document local picking; format-scoped cloud recovery; 100% 9-language localization parity; 100% unit test pass rate.]
+### TST-UI-253: **Format-Specific Import Tab Architecture and Multi-Document Recovery Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-293`
 - **Component**: **Format-Specific Import Tab Architecture and Multi-Document Recovery Verification**
 - **Jira**: ``ATT-2623` / `ATT-3315``
@@ -3886,7 +3891,7 @@
   4. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-254: **Workout File Picker Selectability and Format-Extension Validation Verification** [System document pickers ensure workout file selectability by including application/octet-stream; defensive extension validation prevents format mismatches; 100% 9-language localization parity; 100% unit test pass rate.]
+### TST-UI-254: **Workout File Picker Selectability and Format-Extension Validation Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-294`
 - **Component**: **Workout File Picker Selectability and Format-Extension Validation Verification**
 - **Jira**: ``ATT-2622`, `ATT-2740``
@@ -3906,7 +3911,7 @@
   4. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-255: **Unified Scrollable Container Architecture, Full-Width Spatial Toggles Layout, and Viewport Slotting Verification** [Unified scrollable configuration container eliminates viewport clipping; full-width single-column toggle layout eliminates text truncation across all locales; floating LapButton suppressed in edit mode; 100% unit test pass rate.]
+### TST-UI-255: **Unified Scrollable Container Architecture, Full-Width Spatial Toggles Layout, and Viewport Slotting Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-295`
 - **Component**: **Unified Scrollable Container Architecture, Full-Width Spatial Toggles Layout, and Viewport Slotting Verification**
 - **Jira**: ``ATT-2620`, `ATT-2744``
@@ -3929,7 +3934,7 @@
   5. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-256: **Contextual ANT+ Service Guidance and Startup Dialog Elimination Verification** [Cold-start ANT+ dialog completely eliminated; contextual Compose card and bottom sheet guide missing services; 100% 9-language localization parity; 100% test pass rate.]
+### TST-UI-256: **Contextual ANT+ Service Guidance and Startup Dialog Elimination Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-296`
 - **Component**: **Contextual ANT+ Service Guidance and Startup Dialog Elimination Verification**
 - **Jira**: ``ATT-2513``
@@ -3947,7 +3952,7 @@
   4. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-257: **Distance-Weighted Elevation Profile Gaussian Smoothing & Continuous Slope Grade Verification** [Distance-weighted Gaussian kernel smoothing with default sigma 21m, dynamic cutoff, DataStore preference clamping, and dynamic profile reactivity; 100% test pass rate.]
+### TST-UI-257: **Distance-Weighted Elevation Profile Gaussian Smoothing & Continuous Slope Grade Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-297`
 - **Component**: **Distance-Weighted Elevation Profile Gaussian Smoothing & Continuous Slope Grade Verification**
 - **Jira**: ``ATT-2512`, `ATT-2746``
@@ -3976,7 +3981,7 @@
   6. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-258: **Route Map Climb Polyline Highlighting by Climb Category Classification Verification** [Route map climb span polyline highlighting color-coded by climb category classification; unclassified/flat sections retain standard route coloring; 100% test pass rate.]
+### TST-UI-258: **Route Map Climb Polyline Highlighting by Climb Category Classification Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-298`
 - **Component**: **Route Map Climb Polyline Highlighting by Climb Category Classification Verification**
 - **Jira**: ``ATT-2509``
@@ -3992,7 +3997,7 @@
   3. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-259: **Elevation Profile Slope Gradient Preservation and X-Axis Climb Span Highlight Verification** [Elevation profile curve strictly preserves physical slope grade coloration; horizontal X-axis displays categorized climb span bars; 100% unit test pass rate.]
+### TST-UI-259: **Elevation Profile Slope Gradient Preservation and X-Axis Climb Span Highlight Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-299`
 - **Component**: **Elevation Profile Slope Gradient Preservation and X-Axis Climb Span Highlight Verification**
 - **Jira**: ``ATT-2510``
@@ -4007,7 +4012,7 @@
   2. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-260: **Dedicated Route Climb Detail View with Focused Map and Zoomed Elevation Profile Verification** [Dedicated climb detail sheet with focused map, isolated elevation profile, and metrics HUD on climb item tap; 100% 9-language localization parity; 100% unit test pass rate.]
+### TST-UI-260: **Dedicated Route Climb Detail View with Focused Map and Zoomed Elevation Profile Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-300`
 - **Component**: **Dedicated Route Climb Detail View with Focused Map and Zoomed Elevation Profile Verification**
 - **Jira**: ``ATT-2511``
@@ -4027,7 +4032,7 @@
   4. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-261: **Control Tracking Screen Sensor Header Layout Isolation & Collision Elimination Verification** [Header layout in ControlTrackingScreen restructured into non-overlapping containers; ResearchButton and RemoteDevices arranged in structured Row; 100% unit test pass rate.]
+### TST-UI-261: **Control Tracking Screen Sensor Header Layout Isolation & Collision Elimination Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-301`
 - **Component**: **Control Tracking Screen Sensor Header Layout Isolation & Collision Elimination Verification**
 - **Jira**: ``ATT-2479``
@@ -4044,7 +4049,7 @@
   3. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-262: **Route Starred Segments Spatial Overlap Matching, Chronological Route Breakdown & Map Synergy Verification** [(D_{end} - D_{start}) - \text{segment.distance}]
+### TST-UI-262: **Route Starred Segments Spatial Overlap Matching, Chronological Route Breakdown & Map Synergy Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-302`
 - **Component**: **Route Starred Segments Spatial Overlap Matching, Chronological Route Breakdown & Map Synergy Verification**
 - **Jira**: ``ATT-2583``
@@ -4055,7 +4060,7 @@
   • Verify directional bearing alignment: forward traversal ($\Delta \theta \le 45^\circ$, dot product $> 0$) passes; reverse direction ($\Delta \theta > 90^\circ$, negative dot product) or crossing perpendicular corridors rejected.
   • Verify progression and length consistency: $D_{end} > D_{start}$ strictly enforced, and route span distance approximates segment distance within tolerance ($
 
-### TST-UI-263: **Route Matched Segment Detail Bottom Sheet, Focused Map, Isolated Elevation Profile & Interaction Parity Verification** [Dedicated matched segment detail bottom sheet with focused map, isolated elevation profile, and metrics HUD on segment card tap; 100% 9-language localization parity; 100% unit test pass rate.]
+### TST-UI-263: **Route Matched Segment Detail Bottom Sheet, Focused Map, Isolated Elevation Profile & Interaction Parity Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-303`
 - **Component**: **Route Matched Segment Detail Bottom Sheet, Focused Map, Isolated Elevation Profile & Interaction Parity Verification**
 - **Jira**: ``ATT-2774``
@@ -4075,7 +4080,7 @@
   4. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-264: **Control Tracking Screen Remote Device Tile Bounded Width, Multiline Wrapping & Centering Contract Verification** [Remote device tiles bounded to 72 dp maximum width; device names wrap onto 2 centered lines with ellipsis truncation; 100% unit test pass rate.]
+### TST-UI-264: **Control Tracking Screen Remote Device Tile Bounded Width, Multiline Wrapping & Centering Contract Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-304`
 - **Component**: **Control Tracking Screen Remote Device Tile Bounded Width, Multiline Wrapping & Centering Contract Verification**
 - **Jira**: ``ATT-2772``
@@ -4089,7 +4094,7 @@
   4. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-265: **Inverted Route-Segment Association Engine, Segment Details Routes Breakdown & Cross-Navigation Verification** [Inverted route-segment spatial matching engine identifies containing routes; SegmentRoutesSection renders cards with metrics HUD; tapping route navigates to RouteOnMapScreen; 100% 9-language localization parity; 100% unit test pass rate.]
+### TST-UI-265: **Inverted Route-Segment Association Engine, Segment Details Routes Breakdown & Cross-Navigation Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-305`
 - **Component**: **Inverted Route-Segment Association Engine, Segment Details Routes Breakdown & Cross-Navigation Verification**
 - **Jira**: ``ATT-2585``
@@ -4108,7 +4113,7 @@
   4. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-266: **Royal Blue Route Color Tokens, Multi-Tier Contrast Hierarchy, and Living Style Guide Synchronization Verification** [Route visualization transitioned to Royal Blue palette; high contrast against UCI climb categories and terrain; living style guide synchronized; 100% test pass rate.]
+### TST-UI-266: **Royal Blue Route Color Tokens, Multi-Tier Contrast Hierarchy, and Living Style Guide Synchronization Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-306`
 - **Component**: **Royal Blue Route Color Tokens, Multi-Tier Contrast Hierarchy, and Living Style Guide Synchronization Verification**
 - **Jira**: ``ATT-2761``
@@ -4124,7 +4129,7 @@
   5. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew clean testDebugUnitTest` asserting 100% test pass rate across all test classes.
 
-### TST-UI-267: **Route Map Pin Elimination, Full-Spectrum UC Climb Polyline Highlighting, and Elevation Profile Baseline Parity Verification** [Elimination of climb pin markers from route map; full-spectrum UC climb polyline highlighting in neutral grey; elevation profile X-axis baseline span indicator bars for all climbs including UC; 100% unit test pass rate.]
+### TST-UI-267: **Route Map Pin Elimination, Full-Spectrum UC Climb Polyline Highlighting, and Elevation Profile Baseline Parity Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-307`
 - **Component**: **Route Map Pin Elimination, Full-Spectrum UC Climb Polyline Highlighting, and Elevation Profile Baseline Parity Verification**
 - **Jira**: ``ATT-2748``
@@ -4140,7 +4145,7 @@
   5. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew clean testDebugUnitTest` asserting 100% test pass rate across all test classes.
 
-### TST-UI-268: **Route Map Layers Menu, Overlay Layer Visibility, Item-Level Breakdown Toggles, and Permanent Route Line Parity Verification** [Route map Layers menu toggles climbs, segments, and waypoints; primary route polyline permanently anchored; item-level visibility toggles in breakdown sections; 100% 9-language localization parity; 100% unit test pass rate.]
+### TST-UI-268: **Route Map Layers Menu, Overlay Layer Visibility, Item-Level Breakdown Toggles, and Permanent Route Line Parity Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-308`
 - **Component**: **Route Map Layers Menu, Overlay Layer Visibility, Item-Level Breakdown Toggles, and Permanent Route Line Parity Verification**
 - **Jira**: ``ATT-2763``
@@ -4162,7 +4167,7 @@
   4. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-269: **ANT+ Status Sheet Untinted Branding, BLE Hint Elimination, and Localization Parity Verification** [Official ANT+ logo renders untinted in AntServicesStatusSheet title bar; BLE hint card removed; string resource cleanly eliminated across all 9 locales; 100% unit test pass rate.]
+### TST-UI-269: **ANT+ Status Sheet Untinted Branding, BLE Hint Elimination, and Localization Parity Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-309`
 - **Component**: **ANT+ Status Sheet Untinted Branding, BLE Hint Elimination, and Localization Parity Verification**
 - **Jira**: ``ATT-2749``
@@ -4177,7 +4182,7 @@
   3. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-270: **Sport-Discipline Filtering in Quick Route Selector and Route List Sport Iconography Verification** [Route selector filters candidate routes matching active sport discipline with fallback to untagged routes; route cards display sport icons; 100% unit test pass rate.]
+### TST-UI-270: **Sport-Discipline Filtering in Quick Route Selector and Route List Sport Iconography Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-310`
 - **Component**: **Sport-Discipline Filtering in Quick Route Selector and Route List Sport Iconography Verification**
 - **Jira**: ``ATT-2668``
@@ -4197,7 +4202,7 @@
   4. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-271: **Removal of In-Ride Auto-Detected Route Banner and Sensor Grid Decoupling Verification** [Auto-detected route banner eliminated from SensorGridScreen; obsolete composable excised from RouteSelectorSheet; obsolete strings removed across all 9 locales; 100% unit test pass rate.]
+### TST-UI-271: **Removal of In-Ride Auto-Detected Route Banner and Sensor Grid Decoupling Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-311`
 - **Component**: **Removal of In-Ride Auto-Detected Route Banner and Sensor Grid Decoupling Verification**
 - **Jira**: ``ATT-2771``
@@ -4216,7 +4221,7 @@
   5. *Clean-Room Full Suite Regression*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% pass rate with 0 regressions.
 
-### TST-UI-272: **Root Fallback Drawables Density Audit, Drawer Header Resilience and Guarded Compose Loading Contract Verification** [100% of density-specific drawables have matching root fallback assets in `res/drawable/`; safe painter loader handles invalid/missing IDs gracefully; SportTypeSelector and AppNavigationDrawer are protected against Resources$NotFoundException; logo_512 exists across density buckets; 100% test pass rate.]
+### TST-UI-272: **Root Fallback Drawables Density Audit, Drawer Header Resilience and Guarded Compose Loading Contract Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-312`
 - **Component**: **Root Fallback Drawables Density Audit, Drawer Header Resilience and Guarded Compose Loading Contract Verification**
 - **Jira**: ``ATT-2858`, `ATT-3164``
@@ -4238,7 +4243,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-273: **Control Tracking Screen Sensor Header Centering & Accessibility Parity Verification** [Symmetrical balancing anchor ensures mathematical screen centering for single/dual sensor tiles; accessibility semantics cleared; zero collision for multi-device setups; 100% unit test pass rate.]
+### TST-UI-273: **Control Tracking Screen Sensor Header Centering & Accessibility Parity Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-313`
 - **Component**: **Control Tracking Screen Sensor Header Centering & Accessibility Parity Verification**
 - **Jira**: ``ATT-2791``
@@ -4253,7 +4258,7 @@
   2. *Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-274: **Navigation Drawer Decluttering and Advanced Tuning Sensor Search Section Contract Verification** [Navigation drawer decluttered to 21 items without search settings; Advanced Tuning hosts dedicated SensorSearchTuningSection with retry slider and 6 switches; all tuning files strictly under 400 lines; 100% test pass rate.]
+### TST-UI-274: **Navigation Drawer Decluttering and Advanced Tuning Sensor Search Section Contract Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-314`
 - **Component**: **Navigation Drawer Decluttering and Advanced Tuning Sensor Search Section Contract Verification**
 - **Jira**: ``ATT-2780``
@@ -4274,7 +4279,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-275: **Harmonized Visual & UX Architecture for Climb, Segment, and Route Detail Bottom Sheets via MapDetailLayout Verification** [Segment, Route, and Climb modal detail sheets directly reuse SegmentOnMapScreen, RouteOnMapScreen, and MapDetailLayout; obsolete card columns eliminated; 100% 9-language parity; 100% unit test pass rate.]
+### TST-UI-275: **Harmonized Visual & UX Architecture for Climb, Segment, and Route Detail Bottom Sheets via MapDetailLayout Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-315`
 - **Component**: **Harmonized Visual & UX Architecture for Climb, Segment, and Route Detail Bottom Sheets via MapDetailLayout Verification**
 - **Jira**: ``ATT-2860``
@@ -4293,7 +4298,7 @@
   5. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-276: **Dedicated Route Detail Bottom Sheet from Segment View Verification** [Dedicated RouteDetailSheet modal bottom sheet overlay from containing routes in SegmentOnMapScreen; renders route metrics, bounded map, and elevation profile without navigating away from segment view; 100% test pass rate.]
+### TST-UI-276: **Dedicated Route Detail Bottom Sheet from Segment View Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-316`
 - **Component**: **Dedicated Route Detail Bottom Sheet from Segment View Verification**
 - **Jira**: ``ATT-2861``
@@ -4314,7 +4319,7 @@
   4. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-277: **Geodesic Polyline Orthogonal Projection & Interval Matching Verification** [Geodesic orthogonal projection onto polyline line segments matches segments between sparse vertices and on out-and-back routes; reverse/perpendicular tracks rejected; 100% test pass rate.]
+### TST-UI-277: **Geodesic Polyline Orthogonal Projection & Interval Matching Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-317`
 - **Component**: **Geodesic Polyline Orthogonal Projection & Interval Matching Verification**
 - **Jira**: ``ATT-2862``
@@ -4332,7 +4337,7 @@
   4. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-278: **Route Map Segment Polyline Suppression & Background Path Layer Filtering Contract Verification** [Segment layer toggle unselection suppresses all segment polylines (matched and background) from the map canvas; individual hidden segments filtered from background paths; 100% unit test pass rate.]
+### TST-UI-278: **Route Map Segment Polyline Suppression & Background Path Layer Filtering Contract Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-318`
 - **Component**: **Route Map Segment Polyline Suppression & Background Path Layer Filtering Contract Verification**
 - **Jira**: ``ATT-2863``
@@ -4346,7 +4351,7 @@
   2. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-279: **Multi-Tier Route Map Polyline Layering: Solid Climb Overlay and Dashed Segment Overlay Synergy Verification** [Multi-tier polyline layering establishes climbs as solid polylines above both route layers and segments as dashed polylines above climbs with transparent gaps; 100% test pass rate.]
+### TST-UI-279: **Multi-Tier Route Map Polyline Layering: Solid Climb Overlay and Dashed Segment Overlay Synergy Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-319`
 - **Component**: **Multi-Tier Route Map Polyline Layering: Solid Climb Overlay and Dashed Segment Overlay Synergy Verification**
 - **Jira**: ``ATT-2864``
@@ -4371,7 +4376,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-280: **Preservation of Authentic Sport Type Icon Colors in Quick Route Selector Verification** [Sport type icons render in their authentic multi-color vector asset colors with tint = Color.Unspecified; active route chip and layout invariants preserved; 100% test pass rate.]
+### TST-UI-280: **Preservation of Authentic Sport Type Icon Colors in Quick Route Selector Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-320`
 - **Component**: **Preservation of Authentic Sport Type Icon Colors in Quick Route Selector Verification**
 - **Jira**: ``ATT-2865``
@@ -4386,7 +4391,7 @@
   2. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-281: **Fork Decision Prompt Spatial Overlay & Tab Navigation Hints Gating Verification** [Fork decision prompt floats as top-level spatial overlay at Alignment.TopCenter without displacing underlying sensor tiles; conditionally gated strictly behind state.showNavigationHints; 100% test pass rate.]
+### TST-UI-281: **Fork Decision Prompt Spatial Overlay & Tab Navigation Hints Gating Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-321`
 - **Component**: **Fork Decision Prompt Spatial Overlay & Tab Navigation Hints Gating Verification**
 - **Jira**: ``ATT-2874``
@@ -4446,7 +4451,7 @@
   9. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-283: **Material 3 Compose ANT Missing Adapter & Dependency Alerts Verification** [Missing adapter and missing dependency alerts modernized to Material 3 Compose with official untinted ANT+ logo; direct shortcut to AntServicesStatusSheet; German typo corrected; 100% 9-language translation parity; 100% unit test pass rate.]
+### TST-UI-283: **Material 3 Compose ANT Missing Adapter & Dependency Alerts Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-323`
 - **Component**: **Material 3 Compose ANT Missing Adapter & Dependency Alerts Verification**
 - **Jira**: ``ATT-2939``
@@ -4472,7 +4477,7 @@
   5. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-284: **Turn-by-Turn Navigation Prompts Spatial Overlay & Visual Harmonization Verification** [TurnPromptBanner floats as non-displacing top-level overlay in SensorGridScreen; gated strictly by state.showNavigationHints; card shapes, colors, borders, and padding conform to Design Guidelines; 100% unit test pass rate.]
+### TST-UI-284: **Turn-by-Turn Navigation Prompts Spatial Overlay & Visual Harmonization Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-324`
 - **Component**: **Turn-by-Turn Navigation Prompts Spatial Overlay & Visual Harmonization Verification**
 - **Jira**: ``ATT-2941``
@@ -4491,7 +4496,7 @@
   3. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-285: **Single Active Route Card Presentation and Direct In-List Cancellation Verification** [Active route appears exactly once in RouteSelectorSheet without upper duplicate banner; direct 1-tap route cancellation operational on active RouteCard; 100% unit test pass rate.]
+### TST-UI-285: **Single Active Route Card Presentation and Direct In-List Cancellation Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-325`
 - **Component**: **Single Active Route Card Presentation and Direct In-List Cancellation Verification**
 - **Jira**: ``ATT-2943``
@@ -4506,7 +4511,7 @@
   3. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-286: **Tracking Map Recomposition Boundary and State Decoupling Verification** [TrackingMapContainer acts as Compose recomposition barrier; map DSL lambda memoized; TrackingViewModel reuses mapState across telemetry ticks; 100% unit test pass rate.]
+### TST-UI-286: **Tracking Map Recomposition Boundary and State Decoupling Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-326`
 - **Component**: **Tracking Map Recomposition Boundary and State Decoupling Verification**
 - **Jira**: ``ATT-2944``
@@ -4524,7 +4529,7 @@
   4. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
-### TST-UI-287: **Tracking Tab Live Climb and Segment Cockpit BottomSheet Suppression & State Synchronization Verification** []
+### TST-UI-287: **Tracking Tab Live Climb and Segment Cockpit BottomSheet Suppression & State Synchronization Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-327`
 - **Component**: **Tracking Tab Live Climb and Segment Cockpit BottomSheet Suppression & State Synchronization Verification**
 - **Jira**: ``ATT-2945``
@@ -4533,7 +4538,7 @@
   • Verify `SensorGridScreen` accepts parameter `isTabActive: Boolean = true`..
   • Verify `shouldShowBottomSheet` incorporates `isTabActive`, `(showLiveSegments
 
-### TST-UI-288: **Live Climb Cockpit Sheet Visual Design Alignment & Layout Verification** [LiveClimbSheet layout, spacing, typography, and telemetry HUD match LiveSegmentSheet design system; 100% unit test pass rate.]
+### TST-UI-288: **Live Climb Cockpit Sheet Visual Design Alignment & Layout Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-328`
 - **Component**: **Live Climb Cockpit Sheet Visual Design Alignment & Layout Verification**
 - **Jira**: ``ATT-2947``
@@ -4556,7 +4561,7 @@
   6. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate with zero regressions.
 
-### TST-UI-289: **StartOrResumeDialog Material 3 Compose Migration & Kill Diagnosis Verification** [StartOrResumeDialog modernizes to Material 3 Compose; contextual icons, typography, and button hierarchy match design system; 100% unit test pass rate.]
+### TST-UI-289: **StartOrResumeDialog Material 3 Compose Migration & Kill Diagnosis Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-329`
 - **Component**: **StartOrResumeDialog Material 3 Compose Migration & Kill Diagnosis Verification**
 - **Jira**: ``ATT-2948``
@@ -4575,7 +4580,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate with zero regressions.
 
-### TST-UI-290: **In-Ride Fork Decision Card Directional Grouping, Styling & Interaction Verification** [Candidate routes group cleanly under directional headers; crisp white surface and subtle border styling applied; hint text removed; 100% unit test pass rate.]
+### TST-UI-290: **In-Ride Fork Decision Card Directional Grouping, Styling & Interaction Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-330`
 - **Component**: **In-Ride Fork Decision Card Directional Grouping, Styling & Interaction Verification**
 - **Jira**: ``ATT-2962``
@@ -4590,7 +4595,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate with zero regressions.
 
-### TST-UI-291: **Live Segment Elevation Profile Position Marker & Scrub Distance Verification** [LiveSegmentSheet maps status to externalScrubDistance; MapDetailLayout synchronizes position marker; approaching status renders clean profile; 100% unit test pass rate.]
+### TST-UI-291: **Live Segment Elevation Profile Position Marker & Scrub Distance Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-331`
 - **Component**: **Live Segment Elevation Profile Position Marker & Scrub Distance Verification**
 - **Jira**: ``ATT-2967``
@@ -4603,7 +4608,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate with zero regressions.
 
-### TST-UI-292: **Workout Details Elevation Profile Display & Telemetry Ingestion Verification for Trackless Workouts** [Altitude telemetry samples extracted correctly for trackless sessions; showElevationProfile enables elevation profile chart in time domain when altitude exists; remains suppressed for zero-altitude sessions; 100% unit test pass rate.]
+### TST-UI-292: **Workout Details Elevation Profile Display & Telemetry Ingestion Verification for Trackless Workouts** [Verified]
 - **Requirement(s)**: `REQ-UI-332`
 - **Component**: **Workout Details Elevation Profile Display & Telemetry Ingestion Verification for Trackless Workouts**
 - **Jira**: ``ATT-3046``
@@ -4618,7 +4623,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate with zero regressions.
 
-### TST-UI-293: **Entity Detail Sheet Scaffold & Climb Popup Harmonization Verification** [EntityDetailSheetScaffold shared across Climb, Segment, and Route popups; ClimbDetailSheet harmonized with MapDetailLayout, ClimbHeader, and ClimbDetails; 100% unit test pass rate.]
+### TST-UI-293: **Entity Detail Sheet Scaffold & Climb Popup Harmonization Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-333`
 - **Component**: **Entity Detail Sheet Scaffold & Climb Popup Harmonization Verification**
 - **Jira**: ``ATT-3053``
@@ -4638,7 +4643,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate with zero regressions.
 
-### TST-UI-294: **Newly Discovered Sensor Prioritization, Visual Highlight Badge & Discovery Feedback Notification Verification** [Newly discovered sensors prioritized at index 0 in scan list; rendered with NEW badge chip and highlight border; snackbar feedback, haptic vibration, and auto-scroll to top operational; 100% 9-language translation parity; 100% unit test pass rate.]
+### TST-UI-294: **Newly Discovered Sensor Prioritization, Visual Highlight Badge & Discovery Feedback Notification Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-334`
 - **Component**: **Newly Discovered Sensor Prioritization, Visual Highlight Badge & Discovery Feedback Notification Verification**
 - **Jira**: ``ATT-3099``
@@ -4660,7 +4665,7 @@
   6. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-295: **Dynamic Map-Aware Navigation Hints Overlay Anchoring over Embedded Map View Verification** [Navigation hints overlay anchored over the top of the embedded map view when present, leaving sensor grid unobstructed; anchored at top of tab when map is absent; zero displacement invariant preserved; 100% unit test pass rate.]
+### TST-UI-295: **Dynamic Map-Aware Navigation Hints Overlay Anchoring over Embedded Map View Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-335`
 - **Component**: **Dynamic Map-Aware Navigation Hints Overlay Anchoring over Embedded Map View Verification**
 - **Jira**: ``ATT-3100``
@@ -4675,7 +4680,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-296: **Cockpit Sensor Field In-Ride Direct Editing via Long-Press Gesture Verification** [Long-clicking sensor field tile in live tracking triggers sensor field configuration dialog; single-tap remains safe no-op; configuration mode move/edit gestures intact; 100% unit test pass rate.]
+### TST-UI-296: **Cockpit Sensor Field In-Ride Direct Editing via Long-Press Gesture Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-336`
 - **Component**: **Cockpit Sensor Field In-Ride Direct Editing via Long-Press Gesture Verification**
 - **Jira**: ``ATT-3101``
@@ -4690,7 +4695,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate with zero regressions.
 
-### TST-UI-297: **In-Ride Fork Decision Card Zero Tonal Elevation & Clean Surface Verification** [Outer container and direction groups strictly enforce tonalElevation = 0.dp; zero surfaceVariant backgrounds; uniform overlayAlpha; dividers preserved; 100% test pass rate.]
+### TST-UI-297: **In-Ride Fork Decision Card Zero Tonal Elevation & Clean Surface Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-337`
 - **Component**: **In-Ride Fork Decision Card Zero Tonal Elevation & Clean Surface Verification**
 - **Jira**: ``ATT-3104``
@@ -4705,7 +4710,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-298: **Climb Detail Elevation Profile Local Distance Normalization & Scrubbing Synchronization Verification** [Climb elevation profile X-axis normalized to 0.0m..climbDistanceMeters spanning 100% chart width; scrubbing synchronized with map pin; header route offset preserved; 100% test pass rate.]
+### TST-UI-298: **Climb Detail Elevation Profile Local Distance Normalization & Scrubbing Synchronization Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-338`
 - **Component**: **Climb Detail Elevation Profile Local Distance Normalization & Scrubbing Synchronization Verification**
 - **Jira**: ``ATT-3105``
@@ -4725,7 +4730,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-299: **Dynamic Cockpit Layout Weighting, Sensor Grid Scrollability & Elevation Profile Vertical Expansion Verification** [Sensor grid constrained with weight(1f, fill = false); elevation profile given weight(1f) and fillParentHeight = true when map is disabled; list previews unchanged; 100% test pass rate.]
+### TST-UI-299: **Dynamic Cockpit Layout Weighting, Sensor Grid Scrollability & Elevation Profile Vertical Expansion Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-339`
 - **Component**: **Dynamic Cockpit Layout Weighting, Sensor Grid Scrollability & Elevation Profile Vertical Expansion Verification**
 - **Jira**: ``ATT-3107``
@@ -4745,7 +4750,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-300: **LiveSegmentSheet Finish State Type-Safe Metric Resolution & NumberFormatException Elimination Verification** [LiveSegmentSheet resolves externalScrubDistance via distance_raw without string parsing; zero NumberFormatException on segment finish; 100% unit test pass rate.]
+### TST-UI-300: **LiveSegmentSheet Finish State Type-Safe Metric Resolution & NumberFormatException Elimination Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-340`
 - **Component**: **LiveSegmentSheet Finish State Type-Safe Metric Resolution & NumberFormatException Elimination Verification**
 - **Jira**: ``ATT-3108``
@@ -4759,7 +4764,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-301: **Live Climb Cockpit Sheet Visual Design Optimization & Multi-State Compose Previews Verification** [LiveClimbSheet includes multi-state Compose @Previews, 68dp canvas height with ground baseline, and preserves all typography tokens; 100% unit test pass rate.]
+### TST-UI-301: **Live Climb Cockpit Sheet Visual Design Optimization & Multi-State Compose Previews Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-341`
 - **Component**: **Live Climb Cockpit Sheet Visual Design Optimization & Multi-State Compose Previews Verification**
 - **Jira**: ``ATT-3103``
@@ -4775,7 +4780,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-302: **Compose Text Input Stylus Handwriting Interception & Resilience Verification** [ComposeHandwritingResilience safely disables isStylusHandwritingSupported when SelectGesture is missing, neutralizing NoClassDefFoundError; 100% unit test pass rate.]
+### TST-UI-302: **Compose Text Input Stylus Handwriting Interception & Resilience Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-342`
 - **Component**: **Compose Text Input Stylus Handwriting Interception & Resilience Verification**
 - **Jira**: ``ATT-3163``
@@ -4790,7 +4795,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-303: **Tracking Tab Live Segment & Climb BottomSheet Default Fully Expanded Presentation Contract Verification** []
+### TST-UI-303: **Tracking Tab Live Segment & Climb BottomSheet Default Fully Expanded Presentation Contract Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-343`
 - **Component**: **Tracking Tab Live Segment & Climb BottomSheet Default Fully Expanded Presentation Contract Verification**
 - **Jira**: ``ATT-3176`, `ATT-3319``
@@ -4805,7 +4810,7 @@
   3. *Preserved Dynamic Drag & Inactive Tab Suppression Contract Tests (`SensorGridScreenClimbSuppressionTest.kt`)*:
   • Verify `sheetSwipeEnabled` incorporates `isTabActive`, `screenMode == ScreenMode.TRACKING`, and `showLiveSegments
 
-### TST-UI-304: **Default Tracking Views Feature Configuration Matrix Initial Database Seeding Contract Verification** [Default tracking views on clean database creation enforce the targeted toggle matrix for Standard, Map, and Laps tabs across all activity types; addDefaultTab propagates explicit parameters; 100% unit test pass rate.]
+### TST-UI-304: **Default Tracking Views Feature Configuration Matrix Initial Database Seeding Contract Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-344`
 - **Component**: **Default Tracking Views Feature Configuration Matrix Initial Database Seeding Contract Verification**
 - **Jira**: ``ATT-3177``
@@ -4822,7 +4827,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-305: **Workout Recovery Dialog Layout Visibility, Start Interception Guard & Sticky Tracking State Verification** [Recovery dialog window parameters set to MATCH_PARENT/WRAP_CONTENT; tracking start intercepted when unfinalized session exists; SQLite predicates match and update NULL/0 finished states; sticky service syncs UI tracking mode; 100% unit test pass rate.]
+### TST-UI-305: **Workout Recovery Dialog Layout Visibility, Start Interception Guard & Sticky Tracking State Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-345`
 - **Component**: **Workout Recovery Dialog Layout Visibility, Start Interception Guard & Sticky Tracking State Verification**
 - **Jira**: ``ATT-3165``
@@ -4844,7 +4849,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-306: **Tracking Screen Sole Elevation Profile Canonical Adaptive Height & Layout Weight Decoupling Verification** [Surface unweighted without fillParentHeight; profile uses canonical adaptive height (70dp-200dp); sensor grid weight(1f, fill=false) preserved; 100% unit test pass rate.]
+### TST-UI-306: **Tracking Screen Sole Elevation Profile Canonical Adaptive Height & Layout Weight Decoupling Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-346`
 - **Component**: **Tracking Screen Sole Elevation Profile Canonical Adaptive Height & Layout Weight Decoupling Verification**
 - **Jira**: ``ATT-3173``
@@ -4866,7 +4871,7 @@
   6. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-307: **RoutesScreen and RouteDetailSheet Route Preview Polyline Styling & Selection State Decoupling Verification** [Route preview reflects actual selection and active navigation state; toggling selection dynamically updates polyline appearance; 100% unit test pass rate.]
+### TST-UI-307: **RoutesScreen and RouteDetailSheet Route Preview Polyline Styling & Selection State Decoupling Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-347`
 - **Component**: **RoutesScreen and RouteDetailSheet Route Preview Polyline Styling & Selection State Decoupling Verification**
 - **Jira**: ``ATT-3172``
@@ -4886,7 +4891,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-308: **Unified Top-of-Tab Navigation Hints Overlay Anchoring Contract & Reversion Verification** [Navigation hints overlay anchored at top of root tracking container across all tabs; map container decoupled from navigation overlay; TurnPromptBanner, ReturnNavigationHud, and ForkDecisionCard encapsulation preserved; 100% unit test pass rate.]
+### TST-UI-308: **Unified Top-of-Tab Navigation Hints Overlay Anchoring Contract & Reversion Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-348`
 - **Component**: **Unified Top-of-Tab Navigation Hints Overlay Anchoring Contract & Reversion Verification**
 - **Jira**: ``ATT-3170``
@@ -4901,7 +4906,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-309: **Active Sensor Deletion Disconnection Lifecycle and Defensive Telemetry Boundary Filtering Verification** [Deleted/orphaned sensors never appear as ghost tiles or "New Sensor"; BLE/ANT+ connection terminated on delete; missing device edit dialog automatically dismisses; 100% unit test pass rate.]
+### TST-UI-309: **Active Sensor Deletion Disconnection Lifecycle and Defensive Telemetry Boundary Filtering Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-349`
 - **Component**: **Active Sensor Deletion Disconnection Lifecycle and Defensive Telemetry Boundary Filtering Verification**
 - **Jira**: ``ATT-3169``
@@ -4926,7 +4931,7 @@
 - **Jira**: `**Post-Workout Low Battery Alert Snackbar Navigation Bar Inset Padding Verification.**`
 - **Test Description**: `REQ-UI-350`
 
-### TST-UI-311: **Multi-Dimensional Sensor Filtering by Protocol, Category, and Battery Level with Deep-Link Navigation Verification** [Multi-dimensional sensor filtering by protocol, category, and battery level; deep-link from low battery notification navigates reliably on cold and hot launches to pre-filtered critical battery sensors; 100% unit test pass rate.]
+### TST-UI-311: **Multi-Dimensional Sensor Filtering by Protocol, Category, and Battery Level with Deep-Link Navigation Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-351`
 - **Component**: **Multi-Dimensional Sensor Filtering by Protocol, Category, and Battery Level with Deep-Link Navigation Verification**
 - **Jira**: ``ATT-3166``
@@ -4951,7 +4956,7 @@
   6. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-312: **LiveClimbSheet Design System Harmonization, ElevationProfile Gradient Shading, Adaptive Height Scaling & Degenerate Geometry Verification** [LiveClimbSheet reuses ElevationProfile with gradient shading and adaptive height scaling based on climb elevation gain; chips and badges delegate to MetricBadge; degenerate geometries guarded; 100% unit test pass rate.]
+### TST-UI-312: **LiveClimbSheet Design System Harmonization, ElevationProfile Gradient Shading, Adaptive Height Scaling & Degenerate Geometry Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-352`
 - **Component**: **LiveClimbSheet Design System Harmonization, ElevationProfile Gradient Shading, Adaptive Height Scaling & Degenerate Geometry Verification**
 - **Jira**: ``ATT-3264`, `ATT-3316``
@@ -4975,7 +4980,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-313: **Persistent Missing ANT+ Adapter Dialog Suppression, DataStore Persistence, and Advanced Settings Warning Reset Verification** [Persistent suppression preference in DataStore, broadcast guard in MainActivityWithNavigation, Advanced Settings toggle in sensor search section, 100% localization parity, and 100% unit test pass rate.]
+### TST-UI-313: **Persistent Missing ANT+ Adapter Dialog Suppression, DataStore Persistence, and Advanced Settings Warning Reset Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-353`
 - **Component**: **Persistent Missing ANT+ Adapter Dialog Suppression, DataStore Persistence, and Advanced Settings Warning Reset Verification**
 - **Jira**: ``ATT-3220`, `ATT-3454``
@@ -5000,7 +5005,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-314: **Whole Integer Cycling Power Formatting, IntegerFormatter Mathematical Rounding, and Cadence Consolidation Verification** [Filtered cycling power formats as whole rounded integer; IntegerFormatter and CadenceFormatter perform mathematical half-up rounding; null and invalid inputs display dashes; 100% unit test pass rate.]
+### TST-UI-314: **Whole Integer Cycling Power Formatting, IntegerFormatter Mathematical Rounding, and Cadence Consolidation Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-354`
 - **Component**: **Whole Integer Cycling Power Formatting, IntegerFormatter Mathematical Rounding, and Cadence Consolidation Verification**
 - **Jira**: ``ATT-3229``
@@ -5022,7 +5027,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-315: **Active Route Full Elevation Profile with Map-Matched Position Marker, Categorized Climbs & Per-Tab Rolling Window Verification** [Live tracking elevation profile switches dynamically to active route, rendering complete route profile or rolling window with 15% athlete centering, map-matched marker distance, and categorized climbs; 100% unit test pass rate.]
+### TST-UI-315: **Active Route Full Elevation Profile with Map-Matched Position Marker, Categorized Climbs & Per-Tab Rolling Window Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-355`
 - **Component**: **Active Route Full Elevation Profile with Map-Matched Position Marker, Categorized Climbs & Per-Tab Rolling Window Verification**
 - **Jira**: ``ATT-3199`, `ATT-3317``
@@ -5053,7 +5058,7 @@
   6. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-316: **Workout Start & In-Ride Low Sensor Battery Alert Snackbars with Navigation Bar Inset Compliance & Semantic Severity Color Tiering Verification** [Non-blocking low battery snackbars displayed on workout start and in-ride live tracking with semantic severity color tiering (amber warning, red critical), instantaneous critical preemption, navigation bar insets, and lap button clearance; 100% unit test pass rate.]
+### TST-UI-316: **Workout Start & In-Ride Low Sensor Battery Alert Snackbars with Navigation Bar Inset Compliance & Semantic Severity Color Tiering Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-356`
 - **Component**: **Workout Start & In-Ride Low Sensor Battery Alert Snackbars with Navigation Bar Inset Compliance & Semantic Severity Color Tiering Verification**
 - **Jira**: ``ATT-3313`, `ATT-3451``
@@ -5083,7 +5088,7 @@
   7. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-317: **Dedicated Full-Screen Advanced Settings Screen Architecture, Zero-Dismissal Scrolling, and Lifecycle Category Reorganization Verification** [Advanced Settings migrated to dedicated full-screen Compose destination with zero scroll dismissals, drawer and dialogs route cleanly, categories reorganized into 3-phase athletic lifecycle, modularity < 400 lines preserved; 100% unit test pass rate.]
+### TST-UI-317: **Dedicated Full-Screen Advanced Settings Screen Architecture, Zero-Dismissal Scrolling, and Lifecycle Category Reorganization Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-357`
 - **Component**: **Dedicated Full-Screen Advanced Settings Screen Architecture, Zero-Dismissal Scrolling, and Lifecycle Category Reorganization Verification**
 - **Jira**: ``ATT-3344``
@@ -5115,7 +5120,7 @@
   7. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-318: **Dedicated Workout Route Clustering Section in Advanced Settings, Single Source of Truth, and Modularity Preservation Verification** [Route clustering configuration consolidated in Advanced Settings accordion; single source of truth shared composable eliminates code duplication; atomic factory reset supported; modularity < 400 lines preserved; 100% unit test pass rate.]
+### TST-UI-318: **Dedicated Workout Route Clustering Section in Advanced Settings, Single Source of Truth, and Modularity Preservation Verification** [Verified]
 - **Requirement(s)**: `REQ-SET-075`
 - **Component**: **Dedicated Workout Route Clustering Section in Advanced Settings, Single Source of Truth, and Modularity Preservation Verification**
 - **Jira**: ``ATT-3355``
@@ -5142,7 +5147,7 @@
   7. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-319: **Dynamic Cockpit Viewport Allocation, Asymmetric Map Weight Expansion & Bounded Sensor Grid Containment Verification** [Tracking map expands flexibly with weight(1f, fill = true) to consume 100% of remaining vertical space above elevation profile, eliminating all dead white space; sensor grid wraps content and is capped at 50% screen height with scrolling; map-disabled fallback preserved; 100% unit test pass rate.]
+### TST-UI-319: **Dynamic Cockpit Viewport Allocation, Asymmetric Map Weight Expansion & Bounded Sensor Grid Containment Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-358`
 - **Component**: **Dynamic Cockpit Viewport Allocation, Asymmetric Map Weight Expansion & Bounded Sensor Grid Containment Verification**
 - **Jira**: ``ATT-3343``
@@ -5162,7 +5167,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-320: **Live Segment and Climb Bottom Sheet Gesture Re-Expansion, Peek Tap-to-Expand, and Inactive Touch Neutrality Verification** [Upward bottom swipe gesture and peek tap smoothly re-expand dismissed LiveSegment/Climb bottom sheets to full height; touch neutrality preserved when no entity is active; 100% unit test pass rate.]
+### TST-UI-320: **Live Segment and Climb Bottom Sheet Gesture Re-Expansion, Peek Tap-to-Expand, and Inactive Touch Neutrality Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-359`
 - **Component**: **Live Segment and Climb Bottom Sheet Gesture Re-Expansion, Peek Tap-to-Expand, and Inactive Touch Neutrality Verification**
 - **Jira**: ``ATT-3341``
@@ -5181,7 +5186,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-321: **Favorite Routes Cluster Tuning Elimination, Advanced Settings Recalculate Action & Material 3 Confirmation Guard Verification** [Cluster tuning removed from Favorite Routes header; dedicated recalculate action added to Advanced Settings with Material 3 blocking confirmation AlertDialog; decoupled coroutine execution with progress indication; modularity < 400 lines preserved; 100% unit test pass rate.]
+### TST-UI-321: **Favorite Routes Cluster Tuning Elimination, Advanced Settings Recalculate Action & Material 3 Confirmation Guard Verification** [Verified]
 - **Requirement(s)**: `REQ-SET-075`
 - **Component**: **Favorite Routes Cluster Tuning Elimination, Advanced Settings Recalculate Action & Material 3 Confirmation Guard Verification**
 - **Jira**: ``ATT-3452``
@@ -5205,7 +5210,7 @@
   6. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-322: **Prevent Clipping of Climb Category Marker Badges in Elevation Profile Canvas Verification** [Dynamic font-scale aware clearance prevents climb category badge clipping on elevation profile canvas; container height stability preserved; two-layer boundary protection ceiling guarantees >= 2dp margin; 100% unit test pass rate.]
+### TST-UI-322: **Prevent Clipping of Climb Category Marker Badges in Elevation Profile Canvas Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-274`
 - **Component**: **Prevent Clipping of Climb Category Marker Badges in Elevation Profile Canvas Verification**
 - **Jira**: ``ATT-3453``
@@ -5228,7 +5233,7 @@
   6. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-323: **Turn-by-Turn Navigation Slight Turn Vector Icon Harmonization and Directional Symbol Compose Preview Gallery Verification** [Canonical Material vector geometries for slight right and slight left turn navigation icons with baseline y=20 grounding, symmetric mirroring, and interactive multi-theme Compose preview gallery; 100% unit test pass rate.]
+### TST-UI-323: **Turn-by-Turn Navigation Slight Turn Vector Icon Harmonization and Directional Symbol Compose Preview Gallery Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-360`
 - **Component**: **Turn-by-Turn Navigation Slight Turn Vector Icon Harmonization and Directional Symbol Compose Preview Gallery Verification**
 - **Jira**: ``ATT-3455``
@@ -5248,7 +5253,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-324: **Turn-by-Turn Navigation Sharp Turn Vector Icon Harmonization and Directional Contract Verification** [Canonical Material vector geometries for sharp right and sharp left turn navigation icons with acute ~135° deflection bends, diagonal downward-pointing arrowheads, baseline y=20 grounding, and symmetric reflection mirroring; 100% unit test pass rate.]
+### TST-UI-324: **Turn-by-Turn Navigation Sharp Turn Vector Icon Harmonization and Directional Contract Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-361`
 - **Component**: **Turn-by-Turn Navigation Sharp Turn Vector Icon Harmonization and Directional Contract Verification**
 - **Jira**: ``ATT-3493`, `ATT-3573``
@@ -5268,7 +5273,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-325: **Removal of Google Drive Format Scan Option from Workout Import Cards Verification** [Format import tab cards render exclusively Local SAF and Dropbox scan action buttons; obsolete Google Drive scan buttons and dialogs removed; full cloud database backup and SAF picking preserved; 100% test pass rate.]
+### TST-UI-325: **Removal of Google Drive Format Scan Option from Workout Import Cards Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-362`
 - **Component**: **Removal of Google Drive Format Scan Option from Workout Import Cards Verification**
 - **Jira**: ``ATT-3489``
@@ -5285,7 +5290,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-326: **Recursive Directory Workout File Discovery and Bulk Import via Storage Access Framework Verification** [Recursive directory traversal and bulk import via Android SAF OpenDocumentTree() with automated duplicate skipping, depth limit bounding, cycle detection, and 9-language localization parity; 100% test pass rate.]
+### TST-UI-326: **Recursive Directory Workout File Discovery and Bulk Import via Storage Access Framework Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-363`
 - **Component**: **Recursive Directory Workout File Discovery and Bulk Import via Storage Access Framework Verification**
 - **Jira**: ``ATT-3491``
@@ -5306,7 +5311,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-327: **Centralized Metric Distance and Altitude Formatting Enforcement Across Navigation and Telemetry Cards Verification** [Centralized metric distance and altitude formatting enforcement across navigation and telemetry cards (Rule 36), ensuring strict Imperial unit parity and headless JVM formatter null safety; 100% test pass rate.]
+### TST-UI-327: **Centralized Metric Distance and Altitude Formatting Enforcement Across Navigation and Telemetry Cards Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-364`
 - **Component**: **Centralized Metric Distance and Altitude Formatting Enforcement Across Navigation and Telemetry Cards Verification**
 - **Jira**: ``ATT-3361``
@@ -5327,7 +5332,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-328: **Centralized Speed Unit Conversion and Formatter Harmonization via MyHelper Verification** [Centralized speed conversions via MyHelper (Rule 36), zero inline magic constants in TelemetryMetricUtils, locale-resilient numeric parsing in EditSportTypeDialog, and 100% unit test pass rate.]
+### TST-UI-328: **Centralized Speed Unit Conversion and Formatter Harmonization via MyHelper Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-365`
 - **Component**: **Centralized Speed Unit Conversion and Formatter Harmonization via MyHelper Verification**
 - **Jira**: ``ATT-3363``
@@ -5348,7 +5353,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-329: **Harmonized Live Segment and Live Climb Tracking Bottom Sheet Architecture & Container Verification** [Harmonized live segment and live climb tracking bottom sheet architecture and container verification (Rule 36), ensuring zero container duplication, correct file casing, and 100% unit test pass rate.]
+### TST-UI-329: **Harmonized Live Segment and Live Climb Tracking Bottom Sheet Architecture & Container Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-366`
 - **Component**: **Harmonized Live Segment and Live Climb Tracking Bottom Sheet Architecture & Container Verification**
 - **Jira**: ``ATT-3364``
@@ -5366,7 +5371,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-330: **First-Time Stop Tracking Swipe and Tab Coachmark Banner on Cockpit Screen Verification** [First-time stop tracking swipe and tab coachmark banner on cockpit screen verified for visibility predicates, synchronous optimistic dismissal (`isDismissPending`), scroll-settled gating (`settledPage > 0 && !isScrollInProgress`), ViewModel configuration-change survival, DataStore persistence & factory reset, zero-jump `Box(Modifier.weight(1f))` overlay (`heightIn(max = 120.dp)`, `maxLines = 2` for 4-inch small-screen telemetry clearance), and 9-language localization parity; 100% unit test pass rate.]
+### TST-UI-330: **First-Time Stop Tracking Swipe and Tab Coachmark Banner on Cockpit Screen Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-367`
 - **Component**: **First-Time Stop Tracking Swipe and Tab Coachmark Banner on Cockpit Screen Verification**
 - **Jira**: ``ATT-3387`, `ATT-4456``
@@ -5388,7 +5393,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-331: **Interactive Start/End Workout Cropping with Destructive Sample Pruning and Full Metric Recalculation Verification** [Interactive start/end workout cropping with destructive sample pruning, synchronized map/elevation previews, universal EPSILON = 1e-6 cumulative clamping, deterministic lap note preservation, pre-flight storage safety, export replacement, and 9-language localization parity; 100% unit test pass rate.]
+### TST-UI-331: **Interactive Start/End Workout Cropping with Destructive Sample Pruning and Full Metric Recalculation Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-368`
 - **Component**: **Interactive Start/End Workout Cropping with Destructive Sample Pruning and Full Metric Recalculation Verification**
 - **Jira**: ``ATT-3274``
@@ -5422,7 +5427,7 @@
   6. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-332: **Prohibition of Static BottomSheetScaffold Bottom Inset Padding on Cockpit ElevationProfile Surface Verification (Post-Review Revert Fence)** [Enforces post-review revert fence on `SensorGridScreen.kt` prohibiting static `BottomSheetScaffold` bottom padding on `ElevationProfile` `Surface`; 100% unit test pass rate.]
+### TST-UI-332: **Prohibition of Static BottomSheetScaffold Bottom Inset Padding on Cockpit ElevationProfile Surface Verification (Post-Review Revert Fence)** [Verified]
 - **Requirement(s)**: `REQ-UI-369`
 - **Component**: **Prohibition of Static BottomSheetScaffold Bottom Inset Padding on Cockpit ElevationProfile Surface Verification (Post-Review Revert Fence)**
 - **Jira**: ``ATT-3311``
@@ -5432,7 +5437,7 @@
   2. *Sensor Grid Scrollability & Asymmetric Map Weight Preservation Tests (`SensorGridScreenLayoutTest.kt`)*:
   • Verify sensor grid retains `.weight(1f, fill = false)` when map is hidden and `.heightIn(max = availableHeight * 0.5f)` when map is visible (`REQ-UI-358`).
 
-### TST-UI-333: **Decoupled Training Zone Architecture & 7-Zone Coggan Cycling Power Model Verification** [Decoupled training zone architecture retaining 5 zones for Heart Rate while expanding Cycling Power to Coggan 7-zone model across DataStore dynamic migration, telemetry math, real-time HUD tiles, aftermath column charts, and 9-language localization parity; 100% unit test pass rate.]
+### TST-UI-333: **Decoupled Training Zone Architecture & 7-Zone Coggan Cycling Power Model Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-370`
 - **Component**: **Decoupled Training Zone Architecture & 7-Zone Coggan Cycling Power Model Verification**
 - **Jira**: ``ATT-3184``
@@ -5459,7 +5464,7 @@
   7. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-334: **Elevation Profile 7-Zone Gradient Shading and Legend Verification** [Elevation profile 7-zone gradient shading and harmonized legend verified for all 7 zone intervals, exact boundaries, descent mapping, contract delegation, accessibility borders, and climb shading non-regression; 100% unit test pass rate.]
+### TST-UI-334: **Elevation Profile 7-Zone Gradient Shading and Legend Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-371`
 - **Component**: **Elevation Profile 7-Zone Gradient Shading and Legend Verification**
 - **Jira**: ``ATT-3391``
@@ -5478,7 +5483,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-335: **Horizontal Stacked Distribution Bar Component & 3-Way Zone Display Mode Switching Verification** [Horizontal stacked distribution bar component, 3-way display mode switching, zero-duration handling, uniform contour and swatch borders, default preference selector in Advanced Settings, reactive wiring to workout summaries with Tier 1/2 state precedence, and histogram absence fallback verified across 5-zone HR and 7-zone Power; 100% unit test pass rate.]
+### TST-UI-335: **Horizontal Stacked Distribution Bar Component & 3-Way Zone Display Mode Switching Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-372`
 - **Component**: **Horizontal Stacked Distribution Bar Component & 3-Way Zone Display Mode Switching Verification**
 - **Jira**: ``ATT-3390`, `ATT-3676``
@@ -5509,7 +5514,7 @@
   8. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-336: **Automatic Training Zone Boundary Calculation from FTP and Heart Rate Baselines Verification** [Automatic training zone calculation from FTP and Heart Rate baselines verified for Coggan 7-zone rounding, Karvonen invariants, two-layer monotonicity with strict +1 increments, single-transaction ACID atomicity, UI mutation locking, locale-aware parsing, overwrite dialog safety, and 9-language format token parity; 100% unit test pass rate.]
+### TST-UI-336: **Automatic Training Zone Boundary Calculation from FTP and Heart Rate Baselines Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-373`
 - **Component**: **Automatic Training Zone Boundary Calculation from FTP and Heart Rate Baselines Verification**
 - **Jira**: ``ATT-3188``
@@ -5549,7 +5554,7 @@
   8. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-337: **Contextual Zone Settings Navigation Upon Physiological Sensor Pairing Verification** [Contextual zone settings navigation upon physiological sensor pairing verified across configuration guards, migration heuristics, sensor discrimination, parameterized routing, guidance banner UI, auto-pairing discovery confirmation prompt dialogs, and 9-language token parity; 100% unit test pass rate.]
+### TST-UI-337: **Contextual Zone Settings Navigation Upon Physiological Sensor Pairing Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-374`
 - **Component**: **Contextual Zone Settings Navigation Upon Physiological Sensor Pairing Verification**
 - **Jira**: ``ATT-3189`, `ATT-4452``
@@ -5590,7 +5595,7 @@
   7. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-339: **Real-Time Visual Training Zone Gauge Verification & Precision Test Suite** [Real-time visual training zone gauge verified across 5-zone and 7-zone math, dynamic ceilings, DataStore persistence, cockpit integration, and 9-language translation parity.]
+### TST-UI-339: **Real-Time Visual Training Zone Gauge Verification & Precision Test Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-376`
 - **Component**: **Real-Time Visual Training Zone Gauge Verification & Precision Test Suite**
 - **Jira**: ``ATT-1293``
@@ -5614,7 +5619,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-340: **Real-Time Pedal Power Balance Verification & Precision Test Suite** [52".
+### TST-UI-340: **Real-Time Pedal Power Balance Verification & Precision Test Suite** [Verified]
 • Verify null/non-finite returns "-- \]
 - **Requirement(s)**: `REQ-UI-377`
 - **Component**: **Real-Time Pedal Power Balance Verification & Precision Test Suite**
@@ -5631,7 +5636,7 @@
   2. *Formatter Tests (`PedalPowerBalanceFormatterTest.kt`)*:
   • Verify valid input formats as "48 \
 
-### TST-UI-341: **Compact Action Buttons & Header Height Containment Verification Suite** [Compact icon buttons and header height containment verified across contract tests, 9-language localization audit, and full clean-room suite.]
+### TST-UI-341: **Compact Action Buttons & Header Height Containment Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-378`
 - **Component**: **Compact Action Buttons & Header Height Containment Verification Suite**
 - **Jira**: ``ATT-3675``
@@ -5645,7 +5650,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% pass rate across the full unit test suite.
 
-### TST-UI-342: **Live Segment State-Aware Metrics, Past-Finish Rollout & PR Delta Verification Suite** [State-aware live segment metrics, post-finish rollout distance, and PR delta feedback verified across repository unit tests, composable layout contract tests, 9-language localization audit, and full clean-room suite.]
+### TST-UI-342: **Live Segment State-Aware Metrics, Past-Finish Rollout & PR Delta Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-379`
 - **Component**: **Live Segment State-Aware Metrics, Past-Finish Rollout & PR Delta Verification Suite**
 - **Jira**: ``ATT-3578``
@@ -5666,7 +5671,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions across all 2,964+ unit tests.
 
-### TST-UI-343: **Complete High-Density Asset Coverage & Defensive Compose Resource Resolution Verification Suite** [Complete high-density asset coverage across xxhdpi and xxxhdpi, systematic Compose migration to safePainterResource across all 11 components, and complete density-split crash immunity verified across contract tests and full clean-room suite; 100% test pass rate.]
+### TST-UI-343: **Complete High-Density Asset Coverage & Defensive Compose Resource Resolution Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-380`
 - **Component**: **Complete High-Density Asset Coverage & Defensive Compose Resource Resolution Verification Suite**
 - **Jira**: ``ATT-3529``
@@ -5682,7 +5687,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions across all unit tests.
 
-### TST-UI-344: **Compose Theme Color Centralization Audit & Climb Gradient Parity Verification Suite** [Centralized Jetpack Compose color architecture, zero hardcoded Color(0x) hex literals outside Color.kt, and unified climb gradient resolver verified across contract and unit tests; 100% test pass rate.]
+### TST-UI-344: **Compose Theme Color Centralization Audit & Climb Gradient Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-381`
 - **Component**: **Compose Theme Color Centralization Audit & Climb Gradient Parity Verification Suite**
 - **Jira**: ``ATT-3574``
@@ -5696,7 +5701,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions across all unit tests.
 
-### TST-UI-345: **Canonical Metric/Speed Formatting Contract Audit and Dead Slider Purge Verification Suite** [Canonical metric and speed formatting across all remaining helper and tuning components, zero hardcoded conversion multipliers or string templates, and complete removal of dead TuningSlider verified; 100% test pass rate.]
+### TST-UI-345: **Canonical Metric/Speed Formatting Contract Audit and Dead Slider Purge Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-382`
 - **Component**: **Canonical Metric/Speed Formatting Contract Audit and Dead Slider Purge Verification Suite**
 - **Jira**: ``ATT-3575``
@@ -5712,7 +5717,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions across all unit tests.
 
-### TST-UI-346: **Unified Internal Tracking Sheet Layout & Shared LiveTrackingEntitySheet Verification Suite** [Unified internal tracking sheet layout, shared LiveTrackingEntitySheet composable, and complete elimination of direct HorizontalDivider calls in LiveSegmentSheet and LiveClimbSheet verified across contract tests and full clean-room suite; 100% test pass rate.]
+### TST-UI-346: **Unified Internal Tracking Sheet Layout & Shared LiveTrackingEntitySheet Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-383`
 - **Component**: **Unified Internal Tracking Sheet Layout & Shared LiveTrackingEntitySheet Verification Suite**
 - **Jira**: ``ATT-3576``
@@ -5731,7 +5736,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions across all unit tests.
 
-### TST-UI-347: **Compact Zone-Tinted Bordered Preview Pills Verification Suite** [Compact zone-tinted bordered selector pills in Zone Settings preview verified across source contract tests, 130% font scale width budget & WCAG contrast math, and full clean-room suite; zero line wrapping on Z1..Z7.]
+### TST-UI-347: **Compact Zone-Tinted Bordered Preview Pills Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-384`
 - **Component**: **Compact Zone-Tinted Bordered Preview Pills Verification Suite**
 - **Jira**: ``ATT-3776``
@@ -5746,7 +5751,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-348: **Streamlined Single-Action ZonesSettingsActivity Header Verification Suite** [Streamlined single-action header in `ZonesSettingsActivity` verified across source contract tests and full clean-room suite; status badge, reset action, last-updated row, and athlete weight row cleanly removed.]
+### TST-UI-348: **Streamlined Single-Action ZonesSettingsActivity Header Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-385`
 - **Component**: **Streamlined Single-Action ZonesSettingsActivity Header Verification Suite**
 - **Jira**: ``ATT-3777``
@@ -5761,7 +5766,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-349: **Single-Line Non-Wrapping Zone Card Display Mode Segmented Button Verification Suite** [Single-line non-wrapping `ZoneCardDisplayMode` `SegmentedButton` layout and concise 9-locale chart labels (`<= 11` chars) verified across contract tests, 9-locale audit, and full clean-room suite (Rule 38).]
+### TST-UI-349: **Single-Line Non-Wrapping Zone Card Display Mode Segmented Button Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-386`
 - **Component**: **Single-Line Non-Wrapping Zone Card Display Mode Segmented Button Verification Suite**
 - **Jira**: ``ATT-3771``
@@ -5775,7 +5780,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-350: **Compact Legend-Free Stacked Bar Display Mode Verification Suite** [Compact legend-free Stacked Bar display mode verified across source contract tests, math tests, and full clean-room suite; detailed per-zone breakdown list omitted in Stacked Bar mode while preserved in Columns mode.]
+### TST-UI-350: **Compact Legend-Free Stacked Bar Display Mode Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-387`
 - **Component**: **Compact Legend-Free Stacked Bar Display Mode Verification Suite**
 - **Jira**: ``ATT-3772``
@@ -5787,7 +5792,7 @@
   2. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-351: **Decoupled Summary/Details Zone Card Display Mode & Switcher-Free Summary Verification Suite** [Decoupled Summary (`STACKED_BAR`, `showModeSelector = false`) and Details (`HISTOGRAM`, `showModeSelector = true`) Zone Card Display Modes and legacy `"FIVE_ZONES"` / downgrade migration verified across preference tests, contract tests, and full clean-room suite.]
+### TST-UI-351: **Decoupled Summary/Details Zone Card Display Mode & Switcher-Free Summary Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-388`
 - **Component**: **Decoupled Summary/Details Zone Card Display Mode & Switcher-Free Summary Verification Suite**
 - **Jira**: ``ATT-3773``
@@ -5804,7 +5809,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-352: **Unified 8-Icon Turn Cue Arrowhead Geometry, Baseline Grounding & Reflection Symmetry Verification Suite** [Unified filled-triangle arrowhead geometry ($W=8\text{dp}, D=4\text{dp}, o=3\text{dp}$), $y=20$ baseline grounding, and `ic_turn_left` vertical centering & 3-pair reflection symmetry verified across contract tests and full clean-room suite.]
+### TST-UI-352: **Unified 8-Icon Turn Cue Arrowhead Geometry, Baseline Grounding & Reflection Symmetry Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-389`
 - **Component**: **Unified 8-Icon Turn Cue Arrowhead Geometry, Baseline Grounding & Reflection Symmetry Verification Suite**
 - **Jira**: ``ATT-3774``
@@ -5819,7 +5824,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-353: **Linear ZoneGaugeBar Scaling, 10% Boundary Clipping, Under-Segment Badge & Primary-Blue Needle Verification Suite** [Proportional segment weights, 10% boundary clipping, strictly linear needle velocity, centered under-segment active zone badge, and Primary Blue needle verified across math tests, contract tests, and full clean-room suite.]
+### TST-UI-353: **Linear ZoneGaugeBar Scaling, 10% Boundary Clipping, Under-Segment Badge & Primary-Blue Needle Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-390`
 - **Component**: **Linear ZoneGaugeBar Scaling, 10% Boundary Clipping, Under-Segment Badge & Primary-Blue Needle Verification Suite**
 - **Jira**: ``ATT-3708``
@@ -5834,7 +5839,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-354: **Athlete Profile SQLite History, Unidirectional DataStore Projection, Derived W/kg Time-Series Math, Navigation & 9-Language Parity Verification Suite** [Dedicated Athlete Profile screen, timestamped SQLite history, unidirectional DataStore projection state machine, derived W/kg time-series math, and 9-locale parity verified across unit tests, contract tests, and full clean-room suite.]
+### TST-UI-354: **Athlete Profile SQLite History, Unidirectional DataStore Projection, Derived W/kg Time-Series Math, Navigation & 9-Language Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-391`
 - **Component**: **Athlete Profile SQLite History, Unidirectional DataStore Projection, Derived W/kg Time-Series Math, Navigation & 9-Language Parity Verification Suite**
 - **Jira**: ``ATT-3704``
@@ -5854,7 +5859,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-355: **Warm Earthy Brown Zone 6 Color Token, XML/Compose Parity & Zone 7 Luminance Contrast Verification Suite** [Warm Earthy Brown (`#8B5A2B`) Zone 6 color token, 1:1 XML/Compose parity, and $\ge 3.0:1$ contrast against Zone 7 Black verified across unit tests, contract tests, and full clean-room suite.]
+### TST-UI-355: **Warm Earthy Brown Zone 6 Color Token, XML/Compose Parity & Zone 7 Luminance Contrast Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-392`
 - **Component**: **Warm Earthy Brown Zone 6 Color Token, XML/Compose Parity & Zone 7 Luminance Contrast Verification Suite**
 - **Jira**: ``ATT-3696``
@@ -5868,7 +5873,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-356: **Control Tracking Dead Sensor Pairing Removal & Active Sensor Flow Preservation Verification Suite** [Dead sensor pairing code cleanly removed from `PairingButtons.kt`, `ControlTrackingScreen.kt`, `ControlTrackingViewModel.kt`, `TrackingTabsScreen.kt`, and `MainActivityWithNavigation.kt`, with active sensor discovery and My Sensors pairing preserved.]
+### TST-UI-356: **Control Tracking Dead Sensor Pairing Removal & Active Sensor Flow Preservation Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-393`
 - **Component**: **Control Tracking Dead Sensor Pairing Removal & Active Sensor Flow Preservation Verification Suite**
 - **Jira**: ``ATT-3692``
@@ -5887,7 +5892,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-357: **ElevationProfile Empty State Rendering, Canonical Height & 9-Language Parity Verification Suite** [`ElevationProfile` empty state rendering (`70.dp` canonical height), unconditional `SensorGridScreen` `showEmptyState = true` wiring, and 9-locale parity verified across contract tests and full clean-room suite.]
+### TST-UI-357: **ElevationProfile Empty State Rendering, Canonical Height & 9-Language Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-394`
 - **Component**: **ElevationProfile Empty State Rendering, Canonical Height & 9-Language Parity Verification Suite**
 - **Jira**: ``ATT-3779``
@@ -5902,7 +5907,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-338: **Mathematical VectorDrawable Migration from Xfig/SVG/XCF Masters & Legacy Raster Purge Verification Suite** [All 16 sport and sensor icons migrated to mathematical XML VectorDrawables from original Xfig/SVG/XCF sources and analytical primitives; 106 legacy raster PNGs purged; 100% test pass rate.]
+### TST-UI-338: **Mathematical VectorDrawable Migration from Xfig/SVG/XCF Masters & Legacy Raster Purge Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-375`
 - **Component**: **Mathematical VectorDrawable Migration from Xfig/SVG/XCF Masters & Legacy Raster Purge Verification Suite**
 - **Jira**: ``ATT-2859``
@@ -5918,7 +5923,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-358: **Categorized & Searchable SensorType Selector, 7-Category Exhaustive Partition & 9-Language Parity Verification Suite** [All 43 `SensorType` metrics partitioned into 7 `SensorCategory` groups, categorized accordion & instant search selector wired in `EditSensorFieldDialog.kt` without nested scroll containers, and 9-locale parity verified.]
+### TST-UI-358: **Categorized & Searchable SensorType Selector, 7-Category Exhaustive Partition & 9-Language Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-395`
 - **Component**: **Categorized & Searchable SensorType Selector, 7-Category Exhaustive Partition & 9-Language Parity Verification Suite**
 - **Jira**: ``ATT-3852``
@@ -5933,7 +5938,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-359: **AthleteProfileScreen System Navigation Bar Bottom Inset Clearance Verification Suite** [System navigation bar bottom inset clearance (`bottom = 16.dp + navBarBottomPadding`) on `AthleteProfileScreen` `LazyColumn` verified across contract tests, 9-locale audit, and full clean-room suite (Rule 41).]
+### TST-UI-359: **AthleteProfileScreen System Navigation Bar Bottom Inset Clearance Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-396`
 - **Component**: **AthleteProfileScreen System Navigation Bar Bottom Inset Clearance Verification Suite**
 - **Jira**: ``ATT-3850``
@@ -5947,7 +5952,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-360: **Navigation Drawer 5-Group Restructuring, Consolidated Equipment & Profile/Zones Tabs, and Collapsible Secondary Sections Verification Suite** [Restructured 5-group Navigation Drawer, consolidated Equipment and Profile & Zones tabbed destinations, and collapsible Online Communities & Settings sections verified across unit tests, contract tests, 9-locale audit, and full clean-room suite.]
+### TST-UI-360: **Navigation Drawer 5-Group Restructuring, Consolidated Equipment & Profile/Zones Tabs, and Collapsible Secondary Sections Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-397`
 - **Component**: **Navigation Drawer 5-Group Restructuring, Consolidated Equipment & Profile/Zones Tabs, and Collapsible Secondary Sections Verification Suite**
 - **Jira**: ``ATT-3851``
@@ -5964,7 +5969,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-361: **ZoneDistributionStackedBar Per-Segment Percentage Formatting, Width Threshold & Source Contract Verification Suite** [Space-aware per-segment percentage labels below `ZoneDistributionStackedBar` verified across math threshold unit tests, source contract assertions, 9-locale parity tests, and full clean-room regression suite.]
+### TST-UI-361: **ZoneDistributionStackedBar Per-Segment Percentage Formatting, Width Threshold & Source Contract Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-398`
 - **Component**: **ZoneDistributionStackedBar Per-Segment Percentage Formatting, Width Threshold & Source Contract Verification Suite**
 - **Jira**: ``ATT-3853``
@@ -5978,7 +5983,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-362: **Critical Power (CP), W', and Skiba 1-Hz W'bal Athlete Profile, Live Cockpit, Aftermath & 9-Language Parity Verification Suite** [Critical Power (CP), W', and Skiba 1-Hz W'bal verified across physiology math unit tests, live device emission tests, Athlete Profile repository sync tests, 9-locale audit, and full clean-room regression suite.]
+### TST-UI-362: **Critical Power (CP), W', and Skiba 1-Hz W'bal Athlete Profile, Live Cockpit, Aftermath & 9-Language Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-399`
 - **Component**: **Critical Power (CP), W', and Skiba 1-Hz W'bal Athlete Profile, Live Cockpit, Aftermath & 9-Language Parity Verification Suite**
 - **Jira**: ``ATT-3862``
@@ -5995,7 +6000,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-363: **Efficiency Factor (EF) & Aerobic Decoupling (Pw:Hr / Pa:Hr) Calculation, DTO Symmetry & 9-Language Parity Verification Suite** [Efficiency Factor (EF) and Aerobic Decoupling (Pw:Hr / Pa:Hr) verified across physiology math unit tests, Rule 20 DTO mapping symmetry tests, 9-locale audit, and full clean-room regression suite.]
+### TST-UI-363: **Efficiency Factor (EF) & Aerobic Decoupling (Pw:Hr / Pa:Hr) Calculation, DTO Symmetry & 9-Language Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-400`
 - **Component**: **Efficiency Factor (EF) & Aerobic Decoupling (Pw:Hr / Pa:Hr) Calculation, DTO Symmetry & 9-Language Parity Verification Suite**
 - **Jira**: ``ATT-3861``
@@ -6011,7 +6016,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-364: **Performance Management Chart (PMC) Impulse-Response Math, Multi-Sport hrTSS Fallback & 9-Language Parity Verification Suite** [Performance Management Chart (PMC) for Fitness (CTL), Fatigue (ATL), Form / Race-Readiness (TSB), Workload Ratio (ACWR), and 7d Ramp Rate with multi-sport hrTSS fallback verified across unit tests, UI contract tests, 9-locale audit, and full clean-room regression suite.]
+### TST-UI-364: **Performance Management Chart (PMC) Impulse-Response Math, Multi-Sport hrTSS Fallback & 9-Language Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-401`
 - **Component**: **Performance Management Chart (PMC) Impulse-Response Math, Multi-Sport hrTSS Fallback & 9-Language Parity Verification Suite**
 - **Jira**: ``ATT-3859``
@@ -6026,7 +6031,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-365: **Power-Based Training Metrics (NP, IF, TSS, Work kJ, W/kg, VI) Symmetric DTO Mapping, Aftermath UI Contract & 9-Language Parity Verification Suite** [Power-based training metrics (`NP`, `IF`, `TSS`, `Work kJ`, `W/kg`, `VI`) in Workout Summaries and Workout Details verified across Rule 20 DTO mapping symmetry tests, UI contract tests, 9-locale audit, and full clean-room regression suite.]
+### TST-UI-365: **Power-Based Training Metrics (NP, IF, TSS, Work kJ, W/kg, VI) Symmetric DTO Mapping, Aftermath UI Contract & 9-Language Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-402`
 - **Component**: **Power-Based Training Metrics (NP, IF, TSS, Work kJ, W/kg, VI) Symmetric DTO Mapping, Aftermath UI Contract & 9-Language Parity Verification Suite**
 - **Jira**: ``ATT-3858``
@@ -6040,7 +6045,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-366: **Physiology & Training Models Advanced Tuning Category, Consumer UI Gating, < 400 Line Modularity & 9-Language Parity Verification Suite** ['Physiology & Training Models' Advanced Settings toggles, progressive UI disclosure across WorkoutDetails, AthleteProfileScreen, Telemetry Charts, and EditSensorFieldDialog, < 400 line modularity, and 9-locale parity verified.]
+### TST-UI-366: **Physiology & Training Models Advanced Tuning Category, Consumer UI Gating, < 400 Line Modularity & 9-Language Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-403`
 - **Component**: **Physiology & Training Models Advanced Tuning Category, Consumer UI Gating, < 400 Line Modularity & 9-Language Parity Verification Suite**
 - **Jira**: ``ATT-3929``
@@ -6058,7 +6063,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-367: **WorkoutDetails Section 5.10 AltitudeRow + MetricItem Grouped Row Layout & 9-Language Parity Verification Suite** [`WorkoutDetails.kt` power and physiology rows refactored to the canonical `AltitudeRow` + `MetricItem(layout = MetricLayout.VERTICAL, modifier = Modifier.weight(1f))` pattern (`docs/design_guidelines.md` Section 5.10), eliminating all `FlowRow` pill badges and raw inline text rows.]
+### TST-UI-367: **WorkoutDetails Section 5.10 AltitudeRow + MetricItem Grouped Row Layout & 9-Language Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-404`
 - **Component**: **WorkoutDetails Section 5.10 AltitudeRow + MetricItem Grouped Row Layout & 9-Language Parity Verification Suite**
 - **Jira**: ``ATT-3930``
@@ -6074,7 +6079,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-368: **Profile & Zones in Training Drawer Section and Collapsible My Stuff Verification Suite** ['Profile & Zones' moved to the bottom of the 'Training' drawer section (`4` items) and 'My Stuff' (`3` items) configured with `collapsible = true` (`9` default visible destination items) verified across unit tests and full clean-room regression suite.]
+### TST-UI-368: **Profile & Zones in Training Drawer Section and Collapsible My Stuff Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-405`
 - **Component**: **Profile & Zones in Training Drawer Section and Collapsible My Stuff Verification Suite**
 - **Jira**: ``ATT-3928``
@@ -6090,7 +6095,7 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-369: **Transparent Inner Dial Fill (#00000000) on bsport_other.xml Stopwatch Vector Icon Verification Suite** [Transparent inner dial (`#00000000`) on `bsport_other.xml` stopwatch icon verified in `VectorAssetResolutionContractTest` and full clean-room regression suite.]
+### TST-UI-369: **Transparent Inner Dial Fill (#00000000) on bsport_other.xml Stopwatch Vector Icon Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-406`
 - **Component**: **Transparent Inner Dial Fill (`#00000000`) on `bsport_other.xml` Stopwatch Vector Icon Verification Suite**
 - **Jira**: ``ATT-3926``
@@ -6102,7 +6107,7 @@
   2. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-370: **Smart Auto-Collapse & Inline Expansion of Export Status Unit and Contract Verification Suite** [Smart auto-collapse (`isExpanded = false`), 1-line succeeded summary header, automatic surfacing of attention groups (`waiting`, `running`, `failed`), and inline `AnimatedVisibility` expansion verified in `ExportStatusCollapseTest`.]
+### TST-UI-370: **Smart Auto-Collapse & Inline Expansion of Export Status Unit and Contract Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-407`
 - **Component**: **Smart Auto-Collapse & Inline Expansion of Export Status Unit and Contract Verification Suite**
 - **Jira**: ``ATT-3938``
@@ -6116,10 +6121,10 @@
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-371: **Individually Configurable Workout Detail Tabs, Conflict-Free Layout Modes, Smart Gesture Isolation, Auto-Hiding Empty Tabs & 9-Language Parity Verification Suite** [Individually configurable Workout Detail tabs, 3 conflict-free layout modes, smart gesture isolation, auto-hiding empty tabs, tab configuration bottom sheet, dual entry points, and 9-locale parity verified in `WorkoutDetailTabsTest`.]
+### TST-UI-371: **Individually Configurable Workout Detail Tabs, Conflict-Free Layout Modes, Smart Gesture Isolation, Auto-Hiding Empty Tabs & 9-Language Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-408`
 - **Component**: **Individually Configurable Workout Detail Tabs, Conflict-Free Layout Modes, Smart Gesture Isolation, Auto-Hiding Empty Tabs & 9-Language Parity Verification Suite**
-- **Jira**: ``ATT-3920``
+- **Jira**: `ATT-3920`, `ATT-5483`
 - **Test Description**:
   1. *Domain Model, Default 4-Tab Archetype & Serialization Unit Tests (`WorkoutDetailTabsTest.kt`)*:
   • Verify `WorkoutDetailSectionType.entries.size == 10`, `WorkoutSectionType.entries.size == 9`, and `WorkoutDetailTabConfig.DEFAULT_TABS` defines the 4 default tabs (`OVERVIEW`: `[DETAILS, DESCRIPTION, EXTREMA, EXPORT_STATUS]`, `MAP_AND_GRAPHS`: `[MAP, ELEVATION, CHARTS]`, `ZONES`: `[ZONES]`, `LAPS_AND_SEGMENTS`: `[LAPS, STRAVA]`).
@@ -6131,11 +6136,12 @@
   • Verify `addCustomTab`, `renameTab`, `moveTab`, `deleteTab` (min 1 tab), `toggleSectionInTab`, and `moveSectionInTab` (`MAP` pinned at index `0`).
   3. *UI Integration, Tuning Modularity (`< 400` lines) & 9-Language Parity Audit (`WorkoutDetailTabsTest.kt`)*:
   • Verify `TrackOnMapScreen.kt` routes to `WorkoutDetailTabbedContent` and `WorkoutDetailTabsConfigSheet` while preserving legacy `MapDetailLayout` fallback contracts, `MyPreferenceManager.kt` exposes `workoutDetailTabsOrderFlow`, and every `.kt` file under `ui/settings/tuning/` has `< 400` lines.
+  • Verify that in `WorkoutDetailTabbedContent`, clicking a lap in `WorkoutDetailSectionType.LAPS` propagates `onLapClick(lap)`, triggering `LapEditBottomSheet` as a modal overlay alongside tabbed content without unmounting or resetting the active tab (`Rule 47`).
   • Verify all new `workout_detail_tab_*`, `workout_detail_section_*`, and `workout_detail_tabs_config_*` string resources exist and are non-blank across all 9 locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-372: **Default BIKE_POWER Cockpit Tabs (Standard, Power, Map, Laps), W_PRIME_BAL Catalog Inclusion, Live Cockpit Gating & 9-Language Parity Verification Suite** [`BIKE_POWER` 4-tab default cockpit layouts (`Standard`, `Power`, `Map`, `Laps`), `W_PRIME_BAL` sensor catalog inclusion, memoized live cockpit gating (`enableCogganPowerMetrics`, `enableCriticalPowerModel`), empty-row zero-height collapse, all-gated empty grid & null boot fallback (`TST-UI-372.5`), custom-layout coordinate preservation, and 9-locale parity verified in `BikePowerCockpitDefaultsAndGatingTest` and `TrackingViewsDatabaseManagerTest`.]
+### TST-UI-372: **Default BIKE_POWER Cockpit Tabs (Standard, Power, Map, Laps), W_PRIME_BAL Catalog Inclusion, Live Cockpit Gating & 9-Language Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-409`
 - **Component**: **Default `BIKE_POWER` Cockpit Tabs (`Standard`, `Power`, `Map`, `Laps`), `W_PRIME_BAL` Catalog Inclusion, Live Cockpit Gating & 9-Language Parity Verification Suite**
 - **Jira**: ``ATT-3921`, `ATT-4447``
@@ -6157,7 +6163,7 @@
   6. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-373: **Timeout-Resilient Cockpit Tab Navigation Collector, Lifecycle-Safe Dialog Dispatch & Context.findActivity() Verification Suite** [Timeout-resilient cockpit tab navigation (`withTimeoutOrNull` + `first`), `repeatOnLifecycle(STARTED)` collection, `canShowDialogFragments()` guard, and `Context.findActivity()` unwrapping verified in `TrackingTabsNavigationTimeoutTest`.]
+### TST-UI-373: **Timeout-Resilient Cockpit Tab Navigation Collector, Lifecycle-Safe Dialog Dispatch & Context.findActivity() Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-410`, `REQ-UI-163`
 - **Component**: **Timeout-Resilient Cockpit Tab Navigation Collector, Lifecycle-Safe Dialog Dispatch & `Context.findActivity()` Verification Suite**
 - **Jira**: ``ATT-4000``
@@ -6174,7 +6180,7 @@
   4. *9-Language Localization & Clean-Room Full Suite Regression (`TST-UI-373.4`, `TST-UI-373.5`)*:
   • Execute `TranslationParityTest` and `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-374: **Cockpit Sensor Grid Configurable Section Dividers, Automated Row Shift & 9-Language Localization Verification Suite** [SectionDividersTable schema v14, CRUD operations, row shifting on row insertion, grid normalization integrity, repository flow emissions, glanceable horizontal divider rendering, and 9-language localization parity verified in TrackingViewsDatabaseManagerTest, TrackingViewsRepositoryTest, SensorGridLocalizationTest, and full clean-room suite.]
+### TST-UI-374: **Cockpit Sensor Grid Configurable Section Dividers, Automated Row Shift & 9-Language Localization Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-411`
 - **Component**: **Cockpit Sensor Grid Configurable Section Dividers, Automated Row Shift & 9-Language Localization Verification Suite**
 - **Jira**: ``ATT-4055``
@@ -6196,7 +6202,7 @@
   6. *Clean-Room Full Suite Regression Execution (`TST-UI-374.6`)*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-375: **Buffered One-Off Navigation Channels across STOPPED Lifecycle and Gesture Cancellation Safety Verification Suite** [Channel background buffering across STOPPED lifecycle, ControlTrackingViewModel buffering, exactly-once consumption, user swipe gesture cancellation resilience, non-cancellation fallback, and full regression pass verified in TrackingTabsNavigationTimeoutTest, ControlTrackingViewModelTest, and full clean-room suite.]
+### TST-UI-375: **Buffered One-Off Navigation Channels across STOPPED Lifecycle and Gesture Cancellation Safety Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-412`, `REQ-UI-163`, `REQ-UI-410`
 - **Component**: **Buffered One-Off Navigation Channels across STOPPED Lifecycle and Gesture Cancellation Safety Verification Suite**
 - **Jira**: ``ATT-4097``
@@ -6223,7 +6229,7 @@
   6. *Clean-Room Full Suite Regression Execution (`TST-UI-375.6`)*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-376: **Cockpit Sensor Field Insertion Atomicity, Tab Isolation, Divider Synchronization, and Rollback Verification Suite** [Cockpit sensor field insertion atomicity, multi-tab isolation, divider shift synchronization, contiguous grid normalization with gapped healing, parameter and out-of-bounds boundary validation, and rollback safety verified in real SQLite integration and unit tests.]
+### TST-UI-376: **Cockpit Sensor Field Insertion Atomicity, Tab Isolation, Divider Synchronization, and Rollback Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-413`
 - **Component**: **Cockpit Sensor Field Insertion Atomicity, Tab Isolation, Divider Synchronization, and Rollback Verification Suite**
 - **Jira**: ``ATT-4010``
@@ -6248,7 +6254,7 @@
   6. *Clean-Room Regression Suite Execution (`TST-UI-376.6`)*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-377: **Workout Cards & Details Settings Streamlining, Collapsible Section Order, Authoritative Tab Activation, and 9-Language Parity Verification Suite** [Authoritative tab data availability activation, single-column checkbox table, collapsible summary reorder list by default, domain-scoped zone display mode selectors, < 400 lines modularity, 9-language parity, and full clean-room suite verified.]
+### TST-UI-377: **Workout Cards & Details Settings Streamlining, Collapsible Section Order, Authoritative Tab Activation, and 9-Language Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-414`
 - **Component**: **Workout Cards & Details Settings Streamlining, Collapsible Section Order, Authoritative Tab Activation, and 9-Language Parity Verification Suite**
 - **Jira**: ``ATT-4043``
@@ -6276,7 +6282,7 @@
   7. *Clean-Room Full Suite Regression Execution (`TST-UI-377.7`)*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-378: **WorkoutDetails Single-Line Power Row Layout, Domain Row Dividers, Priority Resolution, and 9-Language Parity Verification Suite** [Single-line power row priority logic without physics fallback, domain row horizontal dividers, Section 5.10 compliance, < 500 lines modularity, 9-language parity, and full test suite verified.]
+### TST-UI-378: **WorkoutDetails Single-Line Power Row Layout, Domain Row Dividers, Priority Resolution, and 9-Language Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-415`
 - **Component**: **WorkoutDetails Single-Line Power Row Layout, Domain Row Dividers, Priority Resolution, and 9-Language Parity Verification Suite**
 - **Jira**: ``ATT-4042``
@@ -6299,7 +6305,7 @@
   5. *Clean-Room Full Suite Regression Execution (`TST-UI-378.5`)*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% pass rate with zero regressions.
 
-### TST-UI-379: **W' Balance Battery Gauge, Mathematical Normalization, Layout Invariants, and 9-Language Parity Verification Suite** [Mathematical normalization, warning thresholds, bounds clamping, stale transitions, mid-session mutation, device reset fallback to FTP, fixed 14.dp layout stability, anti-clipping padding, 9-language parity, and full clean-room pass verified.]
+### TST-UI-379: **W' Balance Battery Gauge, Mathematical Normalization, Layout Invariants, and 9-Language Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-416`
 - **Component**: **W' Balance Battery Gauge, Mathematical Normalization, Layout Invariants, and 9-Language Parity Verification Suite**
 - **Jira**: ``ATT-1296``
@@ -6324,7 +6330,7 @@
   5. *Clean-Room Regression Suite Execution (`TST-UI-379.5`)*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% pass rate.
 
-### TST-UI-380: **Distance Interval Filtering (Min/Max Range and Preset Intervals) Verification Suite across Routes and Favorite Routes** [Distance interval filtering accurately filters routes and favorite tracks across preset chips and custom min/max decimal bounds; active filter count reflects 1 dimension for distance; JSON persistence is backward compatible; chips format cleanly; 9-language parity and full clean-room pass verified.]
+### TST-UI-380: **Distance Interval Filtering (Min/Max Range and Preset Intervals) Verification Suite across Routes and Favorite Routes** [Verified]
 - **Requirement(s)**: `REQ-UI-417`
 - **Component**: **Distance Interval Filtering (Min/Max Range and Preset Intervals) Verification Suite across Routes and Favorite Routes**
 - **Jira**: ``ATT-4291``
@@ -6353,7 +6359,7 @@
   7. *Clean-Room Regression Suite Execution (`TST-UI-380.7`)*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-381: **Double Percent Symbol Removal & 9-Locale Percent Integrity Verification Suite** [Single percent symbol (%) parity verified across all 5 non-formatted keys in all 9 locales; w_prime_warning_low_battery confirmed free of %%; repository-wide non-formatted strings confirmed free of %%; clean-room test suite passes with zero regressions.]
+### TST-UI-381: **Double Percent Symbol Removal & 9-Locale Percent Integrity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-418`
 - **Component**: **Double Percent Symbol Removal & 9-Locale Percent Integrity Verification Suite**
 - **Jira**: ``ATT-4292``
@@ -6373,7 +6379,7 @@
   4. *Clean-Room Regression Suite Execution (`TST-UI-381.4`)*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-382: **Power Histogram Rare Sprint Spike Folding, Zone Boundary Snapping, and Consistent Symmetrical Header Range Toggle Verification Suite** [Statistical tail cutoff calculation with Zone 4–6 upper boundary snapping and 50 W fallback, bin width alignment, eligibility gating, overflow bin aggregation, return bin aggregation, symmetrical 2-segment header range toggle layout contracts, independent Y-axis scaling, and 9-language localization parity specified and verified across test suite.]
+### TST-UI-382: **Power Histogram Rare Sprint Spike Folding, Zone Boundary Snapping, and Consistent Symmetrical Header Range Toggle Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-419`, `REQ-UI-372`, `REQ-UI-388`, `REQ-UI-420`
 - **Component**: **Power Histogram Rare Sprint Spike Folding, Zone Boundary Snapping, and Consistent Symmetrical Header Range Toggle Verification Suite**
 - **Jira**: ``ATT-4370``
@@ -6404,7 +6410,7 @@
   7. *Clean-Room Full Suite Regression Execution (`TST-UI-382.7`)*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-383: **7 Cycling Power Zones in Power Histogram, TelemetryMetricGraph Threshold Lines, and Dark Mode Chart Rendering Verification Suite** [Power histogram correctly maps Zone 6 and Zone 7 wattage bins without clamping to Zone 5; overflow bar reflects peak sprint tail zone; TelemetryMetricGraph displays all 6 power threshold lines; dark mode outlines and text colors ensure full contrast; heart rate remains 5 zones; full clean-room test suite passes with zero regressions.]
+### TST-UI-383: **7 Cycling Power Zones in Power Histogram, TelemetryMetricGraph Threshold Lines, and Dark Mode Chart Rendering Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-420`, `REQ-UI-419`, `REQ-UI-372`, `REQ-UI-392`
 - **Component**: **7 Cycling Power Zones in Power Histogram, TelemetryMetricGraph Threshold Lines, and Dark Mode Chart Rendering Verification Suite**
 - **Jira**: ``ATT-4294``
@@ -6481,7 +6487,7 @@
   9. *Manifest Permission Security Contract (`TST-UI-384.9`, `ManifestAndBuildConfigContractTest.kt`)*:
   • Verify `AndroidManifest.xml` actively declares `android.permission.MODIFY_AUDIO_SETTINGS`.
 
-### TST-UI-385: **Relocate 'Sport Types' Drawer Item to Settings and Rename 'Equipment' Item to 'Bikes & Shoes' Verification Suite** [Relocate Sport Types drawer destination to Settings Hub, restrict Equipment hub strictly to physical hardware (My Sensors, Bikes & Shoes), rename Equipment title to Bikes & Shoes across all 9 locales with XML entity escaping, verify drawer state machine auto-expansion, and pass clean-room test suite.]
+### TST-UI-385: **Relocate 'Sport Types' Drawer Item to Settings and Rename 'Equipment' Item to 'Bikes & Shoes' Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-422`, `REQ-UI-405`, `REQ-LOC-001`
 - **Component**: **Relocate 'Sport Types' Drawer Item to Settings and Rename 'Equipment' Item to 'Bikes & Shoes' Verification Suite**
 - **Jira**: ``ATT-4289``
@@ -6504,7 +6510,7 @@
   5. *Clean-Room Regression Suite Execution (`TST-UI-385.5`)*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions across the full test suite.
 
-### TST-UI-386: **Cockpit Section Divider Prominence, Centered Title Layout, and Unambiguous Split Icon Verification Suite** [Unlabeled divider thickness (2.5.dp) and outline contrast, titled divider horizontal centering with symmetric weight(1f) flanking rules, configuration mode HorizontalSplit icon and HorizontalRule exclusion, 9-language localization audit, and full clean-room pass specified.]
+### TST-UI-386: **Cockpit Section Divider Prominence, Centered Title Layout, and Unambiguous Split Icon Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-411`
 - **Component**: **Cockpit Section Divider Prominence, Centered Title Layout, and Unambiguous Split Icon Verification Suite**
 - **Jira**: ``ATT-4286``
@@ -6529,7 +6535,7 @@
   5. *Clean-Room Regression Suite Execution (`TST-UI-386.5`)*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions across the full test suite.
 
-### TST-UI-387: **RouteTabbedScreen Modal Overlay Composition Retention & Tab Scroll Stability Verification Suite** [RouteTabbedScreen composition retention during route editing, modal overlay composition alongside RouteTabbedScreen, BackHandler dismissal contract, 9-language localization audit, and full clean-room pass specified.]
+### TST-UI-387: **RouteTabbedScreen Modal Overlay Composition Retention & Tab Scroll Stability Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-423`, `REQ-UI-191`, `REQ-UI-159`
 - **Component**: **RouteTabbedScreen Modal Overlay Composition Retention & Tab Scroll Stability Verification Suite**
 - **Jira**: ``ATT-4285``
@@ -6547,7 +6553,7 @@
   4. *Clean-Room Regression Suite Execution (`TST-UI-387.4`)*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions across the full test suite.
 
-### TST-UI-388: **Physiology Models 'Show in Workout Summary' Gating, Rule 59 Subordinate Switch Scale & Hierarchy, Lighter Checked Track Color, Coggan-Only PowerMetricSlot, Modularity & 9-Language Parity Verification Suite** [Granular 'Show in Workout Summary' gating for each physiology model, Rule 59 subordinate switch downscaling (0.6f, 24dp height, lighter primary alpha checked track color), PowerMetricSlot without basic power fallback, TuningPreferencesDataStore persistence, < 400 and < 500 line modularity invariants, 9-language dead string removal and parity, and clean-room full test pass specified.]
+### TST-UI-388: **Physiology Models 'Show in Workout Summary' Gating, Rule 59 Subordinate Switch Scale & Hierarchy, Lighter Checked Track Color, Coggan-Only PowerMetricSlot, Modularity & 9-Language Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-424`, `REQ-UI-403`, `REQ-UI-415`
 - **Component**: **Physiology Models 'Show in Workout Summary' Gating, Rule 59 Subordinate Switch Scale & Hierarchy, Lighter Checked Track Color, Coggan-Only PowerMetricSlot, Modularity & 9-Language Parity Verification Suite**
 - **Jira**: ``ATT-4369`, `ATT-4432`, `ATT-4464`, `ATT-4513``
@@ -6594,7 +6600,7 @@
   • *When* executing `./gradlew testDebugUnitTest`,
   • *Then* assert 100% pass rate with zero regressions across the complete test suite.
 
-### TST-UI-389: **Elevation Gain Interval Filtering (Min/Max Range and Preset Intervals) Verification Suite across Routes, Favorite Routes, and Workouts** [Elevation gain interval filtering accurately filters routes, favorite tracks, and workouts across preset chips and custom min/max bounds; active filter count reflects strictly 1 dimension for elevation gain; JSON persistence is backward compatible; chips format cleanly; 9-language parity and full clean-room pass verified.]
+### TST-UI-389: **Elevation Gain Interval Filtering (Min/Max Range and Preset Intervals) Verification Suite across Routes, Favorite Routes, and Workouts** [Verified]
 - **Requirement(s)**: `REQ-UI-425`
 - **Component**: **Elevation Gain Interval Filtering (Min/Max Range and Preset Intervals) Verification Suite across Routes, Favorite Routes, and Workouts**
 - **Jira**: ``ATT-4367``
@@ -6629,7 +6635,7 @@
   9. *Clean-Room Regression Suite Execution (`TST-UI-389.9`)*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-390: **BikeBellButton MutableInteractionSource Press Monitoring, Long-Press Continuous Ring Disambiguation & Looping Roll Synthesis Verification Suite** [Contention-free long-press continuous ring via MutableInteractionSource press monitoring on ElevatedButton; single-tap disambiguation suppressing accidental ring on release; continuous shake animation loop; AudioTrack.setLoopPoints indefinite roll looping in BikeBellAudioSynthesizer; Rules 53 and 58 zero gesture contention; 100% test pass rate with zero regressions.]
+### TST-UI-390: **BikeBellButton MutableInteractionSource Press Monitoring, Long-Press Continuous Ring Disambiguation & Looping Roll Synthesis Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-421`, `REQ-UI-421.2`, `REQ-UI-421.4`
 - **Component**: **BikeBellButton MutableInteractionSource Press Monitoring, Long-Press Continuous Ring Disambiguation & Looping Roll Synthesis Verification Suite**
 - **Jira**: ``ATT-4431``
@@ -6660,7 +6666,7 @@
   8. *Clean-Room Full Regression Suite Execution (`TST-UI-390.8`)*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions across the full project test suite.
 
-### TST-UI-391: **Realistic Default Cycling FTP (270 W), Coggan 7-Zone and Karvonen Heart Rate Zone Baselines Verification Suite** [Default cycling FTP is 270 W, default Coggan power cutoffs are [149, 203, 243, 284, 324, 405] W, default Karvonen HR cutoffs are [132, 145, 158, 171] bpm for run and [127, 140, 153, 166] bpm for bike across DataStore, UI calculator dialogs, and tracking ViewModels.]
+### TST-UI-391: **Realistic Default Cycling FTP (270 W), Coggan 7-Zone and Karvonen Heart Rate Zone Baselines Verification Suite** [Default cycling FTP is 270 W, default Coggan power cutoffs are [149, 203, 243, 284, 324, 405] W, default Karvonen HR cutoffs are [132, 145, 158, 171] bpm for run and [127, 140, 153, 166] bpm for bike across DataStore, UI calculator dialogs, and tracking ViewModels.] [Verified]
 - **Requirement(s)**: `REQ-UI-426`, `REQ-UI-370`, `REQ-UI-373`
 - **Component**: **Realistic Default Cycling FTP (270 W), Coggan 7-Zone and Karvonen Heart Rate Zone Baselines Verification Suite**
 - **Jira**: ``ATT-4521, ATT-4543``
@@ -6687,16 +6693,19 @@
   6. *Clean-Room Regression Suite Execution (`TST-UI-391.6`)*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate across the full project test suite.
 
-### TST-UI-392: **Aftermath Loader Concurrency, Process-Death Detail Restoration, Elevation Gesture State Integrity and Lifecycle Safety Verification Suite** [Aftermath and peek loader coroutine cancellation verified; process-death detail restoration triggered reactively; elevation scrub gestures access live telemetry points; crop double-tap and CancellationException rethrow verified; bulk delete cache resync protected under NonCancellable; 100% test pass rate.]
+### TST-UI-392: **Aftermath Loader Concurrency, Process-Death Detail Restoration, Elevation Gesture State Integrity and Lifecycle Safety Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-427`, `REQ-MAP-032`, `REQ-DAT-011`, `REQ-UI-368`
 - **Component**: **Aftermath Loader Concurrency, Process-Death Detail Restoration, Elevation Gesture State Integrity and Lifecycle Safety Verification Suite**
-- **Jira**: ``ATT-4018``
+- **Jira**: ``ATT-4018``, ``ATT-5478``
 - **Test Description**:
   1. *Aftermath & Peek Loader Coroutine Cancellation Unit Tests (`TST-UI-392.1`, `TrackOnMapAftermathViewModelTest.kt`, `WorkoutClustersViewModelTest.kt`, `PeriodsViewModelTest.kt`)*:
   • Verify that dispatching `loadAftermathData` for a second workout cancels the previous `Job` before completing.
   • Verify that calling `selectWorkoutForPeek` consecutively cancels the previous peek coroutine job in both ViewModels.
-  2. *Process-Death Restoration Reactive Trigger Contract Tests (`TST-UI-392.2`, `WorkoutSummariesTabbedScreenTest.kt`)*:
+  2. *Process-Death Restoration & Idempotent In-Place WorkoutData Contract Tests (`TST-UI-392.2`, `WorkoutSummariesTabbedScreenTest.kt`, `TrackOnMapAftermathViewModelTest.kt`)*:
   • Verify that initializing `selectedWorkoutIdForDetails` without `onMapClick` triggers `loadAftermathData` via `LaunchedEffect`.
+  • Verify `AftermathMapUIState` exposes `loadedWorkoutId: Long?` populated with the loaded workout ID.
+  • Verify that emitting an updated `WorkoutData` instance with the same `id` skips Phase 1 track wipe in `loadAftermathData`, preserving `tracks` and preventing `visibleTabs` tab count shrinkage and `HorizontalPager` tab jumping (`Rule 73`).
+  • Verify that switching to a different workout `id` executes Phase 1 track wipe, clearing previous tracks to prevent ghost data.
   3. *Elevation Profile Gesture Updated State Unit/Contract Tests (`TST-UI-392.3`, `ElevationProfileGestureTest.kt`)*:
   • Verify that `ElevationProfile` pointerInput evaluates `rememberUpdatedState(pathPoints)` and retrieves updated telemetry during ongoing scrub gestures.
   4. *Crop Double-Tap Guard & CancellationException Rethrow Unit Tests (`TST-UI-392.4`, `CropWorkoutViewModelTest.kt`, `WorkoutRepositoryCropTest.kt`)*:
@@ -6711,7 +6720,7 @@
   8. *Clean-Room Regression Suite Execution (`TST-UI-392.8`)*:
   • Run targeted unit tests and full clean-room suite verifying 100% test pass rate.
 
-### TST-UI-393: **Atomic Single-Transaction DataStore Zone Persistence, SavedStateHandle Draft Preservation, Deduplicated Profile Loading & UI Decoupling Verification Suite** [Zone persistence is atomic and race-free, drafts are preserved across rotation via SavedStateHandle, loading is deduplicated, dead manifest entry removed, contract tests pass, and 100% clean-room unit test pass rate is maintained.]
+### TST-UI-393: **Atomic Single-Transaction DataStore Zone Persistence, SavedStateHandle Draft Preservation, Deduplicated Profile Loading & UI Decoupling Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-428`, `REQ-UI-172`, `REQ-UI-397`
 - **Component**: **Atomic Single-Transaction DataStore Zone Persistence, SavedStateHandle Draft Preservation, Deduplicated Profile Loading & UI Decoupling Verification Suite**
 - **Jira**: ``ATT-4021``
@@ -6735,7 +6744,7 @@
   6. *Clean-Room Full Suite Regression Execution (`TST-UI-393.6`)*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate across the full project test suite.
 
-### TST-UI-394: **Global User Interface Localization Parity, Unit Adaptability, and Accessibility Semantics Verification Suite** [All extracted string resources maintain 100% 9-language parity; CropWorkoutScreen and WorkoutFilterBottomSheet adapt to metric/imperial units; TalkBack semantics provided for buttons and charts; 100% clean-room test pass rate.]
+### TST-UI-394: **Global User Interface Localization Parity, Unit Adaptability, and Accessibility Semantics Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-429`, `REQ-LOC-001`, `REQ-UI-122`, `REQ-UI-157`
 - **Component**: **Global User Interface Localization Parity, Unit Adaptability, and Accessibility Semantics Verification Suite**
 - **Jira**: ``ATT-4026``
@@ -6753,7 +6762,7 @@
   5. *Clean-Room Full Suite Regression Execution (`TST-UI-394.5`)*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate across the full test suite.
 
-### TST-UI-395: **Multi-Provider Cloud Settings Layout Unification, Symmetric Configuration & Localization Parity Verification Suite** [Disconnected prompt and connected switches verified for both cloud providers; backup interval and last backup available symmetrically; Compose safe painter contracts preserved; 100% localization parity; 100% clean-room test pass rate.]
+### TST-UI-395: **Multi-Provider Cloud Settings Layout Unification, Symmetric Configuration & Localization Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-430`, `REQ-UI-152`, `REQ-DAT-020.6`, `REQ-LOC-001`
 - **Component**: **Multi-Provider Cloud Settings Layout Unification, Symmetric Configuration & Localization Parity Verification Suite**
 - **Jira**: ``ATT-4666``
@@ -6774,7 +6783,7 @@
   5. *Clean-Room Full Suite Regression Execution (`TST-UI-395.5`)*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate across the full project test suite.
 
-### TST-UI-396: **Landscape Compact Aligned Marginal Zone Distribution Bars Verification Suite** [Side-by-side 72/28 Row layout in landscape mode; 1:1 vertical Y-axis alignment with graph zone thresholds; granular text legibility for zone, percentage, duration; synchronous FIVE_ZONES and HISTOGRAM display mode switching; portrait 25dp inline strip regression preservation; 100% clean-room test pass rate.]
+### TST-UI-396: **Landscape Compact Aligned Marginal Zone Distribution Bars Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-431`, `REQ-UI-251`, `REQ-UI-206`
 - **Component**: **Landscape Compact Aligned Marginal Zone Distribution Bars Verification Suite**
 - **Jira**: ``ATT-2145``
@@ -6796,7 +6805,7 @@
   6. *Clean-Room Full Suite Regression Execution (`TST-UI-396.6`)*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate across the full project test suite.
 
-### TST-UI-397: **In-App Feature Discovery & Tips Guide, Navigation Drawer Integration & 9-Language Parity Verification Suite** [In-app feature discovery destination 'tips_guide' hosted in single-activity architecture, drawer integration under collapsible Settings group (23 total destinations, 9 non-collapsible default visible rows, advanced tuning terminal position preserved), 8 curated tips with deep-link navigation actions, zero raster asset bloat, 100% 9-language localization parity across all 36 string resources, and clean-room unit test pass rate.]
+### TST-UI-397: **In-App Feature Discovery & Tips Guide, Navigation Drawer Integration & 9-Language Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-432`
 - **Component**: **In-App Feature Discovery & Tips Guide Verification Suite**
 - **Jira**: ``ATT-2276``, ``ATT-4775``
@@ -6823,7 +6832,7 @@
   5. *Clean-Room Full Suite Regression Execution (`TST-UI-397.5`)*:
   • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.navigation.*" --tests "com.atrainingtracker.trainingtracker.localization.*" --tests "com.atrainingtracker.trainingtracker.ui.help.*"` and verify 100% pass rate.
 
-### TST-UI-398: **WorkoutDetailTabbedContent Vertical Space Reclamation, Collapsing Header, Single-Line Landscape Header, Inline Zoom Controls, and 72% Plot Alignment Verification Suite** [Collapsing NestedScrollConnection in WorkoutDetailTabbedContent; single-line compact WorkoutHeader in landscape; zero-row inline/floating zoom controls in MapDetailLayout; 72% horizontal plot alignment and double-padding elimination across stacked charts in landscape; portrait invariants preserved; 100% clean-room test pass rate.]
+### TST-UI-398: **WorkoutDetailTabbedContent Vertical Space Reclamation, Collapsing Header, Single-Line Landscape Header, Inline Zoom Controls, and 72% Plot Alignment Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-433`, `REQ-UI-408`, `REQ-UI-431`, `REQ-UI-225`
 - **Component**: **WorkoutDetailTabbedContent Vertical Space Reclamation Verification Suite**
 - **Jira**: ``ATT-4774``
@@ -6846,7 +6855,7 @@
   5. *Clean-Room Full Suite Regression Execution (`TST-UI-398.5`)*:
   • Execute targeted unit tests and verify 100% pass rate with zero regressions.
 
-### TST-UI-399: **TrackingTabsScreen Landscape Vertical Space Optimization, Center Status Bar Sensor Icons, and Auto-Hiding Floating Tab Row Suite** [Center status bar sensor icons in landscape; auto-hiding floating PrimaryScrollableTabRow with 2.5-3s timer; portrait and configuration mode invariants preserved; 100% clean-room test pass rate.]
+### TST-UI-399: **TrackingTabsScreen Landscape Vertical Space Optimization, Center Status Bar Sensor Icons, and Auto-Hiding Floating Tab Row Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-434`, `REQ-UI-163`, `REQ-UI-410`, `REQ-UI-412`
 - **Component**: **TrackingTabsScreen Landscape Vertical Space Optimization Suite**
 - **Jira**: ``ATT-4773``
@@ -7110,14 +7119,14 @@
 
 ### TST-UI-446: **Universal Stacked Workout Details Marginal Histograms & Widened Strip Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-446`
-- **Component**: `TelemetryMetricGraphTest.kt`, `TelemetryMetricGraphLandscapeContractTest.kt`, `ElevationProfileTest.kt`, `TranslationParityTest.kt`
-- **Jira**: `ATT-5370`
+- **Component**: `TelemetryMetricGraphTest.kt`, `TelemetryMetricGraphLandscapeContractTest.kt`, `ElevationProfileTest.kt`, `ElevationProfileGradeColorTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-5370`, `ATT-5486`
 - **Test Description**:
   1. *Universal Marginal Histogram & Widened Portrait Margin Contract Test (`TST-UI-446.1`)*:
   • Verify `TelemetryMetricGraph` and `ElevationProfile` allocate `endPaddingPx = 52.dp` in portrait mode when aligned with stacked charts, yielding ~44dp bar width within the 52dp margin.
   • Verify universal marginal histogram rendering across all stacked telemetry types: `ElevationProfile`, `SPEED`, `PACE`, `HEART_RATE`, `POWER`, and `W_PRIME_BAL`.
   2. *Series-Color Rendering, Track Continuity & Domain Clamping Contract Test (`TST-UI-446.2`)*:
-  • Verify non-zoned charts (`Speed/Pace`, `W'bal`, `Elevation`) render marginal histograms in series color without physiological zone segmentation.
+  • Verify non-zoned charts (`Speed/Pace`, `W'bal`, `Elevation`) render marginal histograms in series color without physiological zone segmentation, specifically asserting that `ElevationProfile` in portrait and landscape `AlignedMarginalZoneDistribution` uses fixed `TTColor.Zone1` green regardless of the initial segment slope gradient.
   • Verify unconditional `alpha = 0.15f` background container tracks across `[dataMin, dataMax]` per Rule 69.
   • Verify strict domain-boundary filtering and clamping (`bin.rangeMax <= dataMin || bin.rangeMin >= dataMax`) preventing out-of-domain bin stacking at `y = 0` per Rule 70.
   • Verify 5/7-zone coloring and threshold alignment are preserved for `HEART_RATE` and `POWER`.
@@ -7132,10 +7141,11 @@
 ### TST-UI-447: **Workout Share Mode Selection & Photo Track Overlay Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-447`
 - **Component**: `PhotoTrackOverlayComposerTest.kt`, `WorkoutShareBottomSheetContractTest.kt`, `TranslationParityTest.kt`
-- **Jira**: `ATT-30`
+- **Jira**: `ATT-30`, `ATT-5479`
 - **Test Description**:
-  1. *Equirectangular Track Projection & Silhouette Geometry (`TST-UI-447.1`)*:
+  1. *Equirectangular Track Projection, Coordinate Sanitization & Silhouette Geometry (`TST-UI-447.1`)*:
   • Verify `PhotoTrackOverlayComposer` scales GPS polyline points via cosine-latitude projection ($\Delta x = \Delta\lambda \cdot \cos(\phi_{\text{mean}})$, $\Delta y = -\Delta\phi$) preserving true aspect ratio.
+  • Verify `PhotoTrackOverlayComposer` filters out invalid or Null-Island coordinates (`!isValidGpsCoordinate(lat, lng)`) prior to silhouette and bounding box computation.
   • Verify track silhouette bounds normalization, drop shadow rendering, and start/finish marker dot placement in the upper-right or side quadrant.
   2. *Metrics Formatting, Gradient Scrim & WCAG AAA Contrast (`TST-UI-447.2`)*:
   • Verify bottom gradient scrim renders with dark translucent gradient (alpha $0.0 \rightarrow 0.85$).
@@ -7150,10 +7160,10 @@
   • Verify 100% parity across all 9 locales via `TranslationParityTest` for new share mode strings.
   • Run targeted test suite (`--tests "com.atrainingtracker.trainingtracker.helpers.*"`, `ui.map.*`, `ThemeColorCentralizationAuditTest`) with 100% pass rate.
 
-### TST-UI-448: **Workout Photos Strip, Full-Screen Preview Bottom Sheet with ATT-30 Overlay Share, and Map Pin Markers Verification Suite** [Verified]
+### TST-UI-448: **Workout Photos Strip, Full-Screen Preview Bottom Sheet with ATT-30 Overlay Share, Map Pin Markers, and Null-Island Coordinate Rejection Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-448`
-- **Component**: `WorkoutDetails.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `WorkoutPhotoViewerSheet.kt`, `WorkoutShareBottomSheet.kt`
-- **Jira**: `ATT-43`
+- **Component**: `WorkoutDetails.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `ATrainingTrackerMap.kt`, `WorkoutPhotoViewerSheet.kt`, `WorkoutShareBottomSheet.kt`, `WorkoutPhotoManager.kt`, `WorkoutRepository.kt`, `MapBehaviors.kt`
+- **Jira**: `ATT-43`, `ATT-5479`
 - **Test Description**:
   1. *Workout Photos Strip & Empty State Contract Test (`TST-UI-448.1`, `WorkoutPhotoUiContractTest.kt`)*:
   • Verify horizontal photo strip renders when photos are attached, displaying thumbnail cards with `RoundedCornerShape(8.dp)`.
@@ -7164,18 +7174,22 @@
   • Verify full image display, formatted capture timestamp, and caption rendering.
   • Verify "Delete Photo" action presents confirmation dialog and triggers photo deletion callback.
   • Verify "Share with Track Overlay" CTA launches `WorkoutShareBottomSheet` pre-populated with the photo Uri.
-  3. *Map Photo Pin Markers Contract Test (`TST-UI-448.3`, `WorkoutMarkersPhotoTest.kt`)*:
-  • Verify `WorkoutRepository.getWorkoutMarkers()` or mapper transforms photo records with non-null lat/lon into `LocationMarker`s with photo pin drawable.
-  • Verify `TrackOnMapScreen` / `ATrainingTrackerMap` renders photo pins along the GPS route.
-  4. *9-Language Localization & Format Specifier Parity Test (`TST-UI-448.4`, `TranslationParityTest.kt`)*:
+  3. *Map Photo Pin Markers & Strict Coordinate Validation Contract Test (`TST-UI-448.3`, `WorkoutPhotoUiContractTest.kt`, `WorkoutRepositoryMarkerTest.kt`)*:
+  • Verify pure coordinate validator `GeoUtils.isValidGpsCoordinate` rejects `(0.0, 0.0)` (`abs(lat) < 1e-5 && abs(lng) < 1e-5`), out-of-range latitudes/longitudes, and non-finite values (`NaN`, `Infinity`).
+  • Verify `WorkoutRepository.getWorkoutMarkers()` excludes photo records with `(0.0, 0.0)` or invalid coordinates from producing `LocationMarker` objects.
+  • Verify `MapBoundsController` (`MapBehaviors.kt`) excludes invalid coordinates from `LatLngBounds.Builder`, preventing continental zoom level inflation.
+  4. *EXIF Null-Island Rejection & Database Self-Healing Contract Test (`TST-UI-448.4`, `WorkoutPhotoManagerTest.kt`)*:
+  • Verify `WorkoutPhotoManager.extractExifMetadata` treats `(0.0, 0.0)` as `null`, allowing trackpoint fallback interpolation to run.
+  • Verify existing `(0.0, 0.0)` records in `workout_photos` are self-healed upon loading by re-interpolating against `WorkoutSamples.db` trackpoints using `taken_at_ms`.
+  5. *9-Language Localization & Format Specifier Parity Test (`TST-UI-448.5`, `TranslationParityTest.kt`)*:
   • Verify 100% parity across all 9 supported locales for all `workout_photos_*` string keys with zero missing entries and zero decorative inline emojis.
-  5. *Clean-Room Regression Suite Execution (`TST-UI-448.5`)*:
-  • Run targeted package tests (`com.atrainingtracker.trainingtracker.ui.aftermath.*`, `ui.map.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
+  6. *Clean-Room Regression Suite Execution (`TST-UI-448.6`)*:
+  • Run targeted package tests (`com.atrainingtracker.trainingtracker.database.WorkoutPhotoManagerTest`, `ui.aftermath.*`, `ui.map.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
 
 ### TST-UI-449: **Interactive Map Lap Creation & Splitting in Workout Aftermath Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-449`
-- **Component**: `CreateLapOnMapSheet.kt`, `LapEditorMath.kt`, `WorkoutRepository.kt`, `WorkoutSamplesDatabaseManager.java`, `LapsDatabaseManager.java`, `TrackOnMapScreen.kt`, `MapDetailLayout.kt`, `WorkoutLaps.kt`
-- **Jira**: `ATT-907`
+- **Component**: `CreateLapOnMapSheet.kt`, `PathPreviewMap.kt`, `LapEditorMath.kt`, `WorkoutRepository.kt`, `WorkoutSamplesDatabaseManager.java`, `LapsDatabaseManager.java`, `TrackOnMapScreen.kt`, `MapDetailLayout.kt`, `WorkoutLaps.kt`
+- **Jira**: `ATT-907`, `ATT-5480`
 - **Test Description**:
   1. *Domain Math & Split Preview Contract Test (`TST-UI-449.1`, `LapEditorMathTest.kt`)*:
   • Verify `LapEditorMath.calculateSplitLapsPreview` computes duration, distance, and speed correctly for Lap $k$ and Lap $k+1$.
@@ -7184,19 +7198,21 @@
   • Verify `WorkoutSamplesDatabaseManager.splitLapAtSampleRow` atomically increments `LAP_NR` by 1 for all rows with `_id >= splitRowId`.
   • Verify `WorkoutRepository.splitLapAtSample` persists updated lap sequence to `Laps.db` via `replaceCroppedLaps` and reloads `WorkoutData`.
   • Verify rollback on SQLite exception leaves `WorkoutSamples.db` and `Laps.db` unchanged.
-  3. *Compose UI & Sheet Contract Test (`TST-UI-449.3`, `CreateLapOnMapSheetTest.kt`)*:
-  • Verify `CreateLapOnMapSheet` renders full GPS track, movable split pin, slider, and live preview cards.
+  3. *Compose UI, Canonical Blue Track & Split Iconography Contract Test (`TST-UI-449.3`, `CreateLapOnMapSheetTest.kt`, `PathPreviewMapTest.kt`)*:
+  • Verify `CreateLapOnMapSheet` renders full GPS track instantiated via `MapTrack` with `type = TrackType.BEST` (canonical blue `TTColor.TrackBest`).
+  • Verify `PathPreviewMap` receives `apexIconRes = R.drawable.ic_lap_split_scissors` for the split pin marker rather than the Max Line Distance ruler icon (`R.drawable.ic_distance`).
+  • Verify dedicated scissors vector drawable `R.drawable.ic_lap_split_scissors` is rendered for split action buttons across `WorkoutLaps.kt`, `LapSplitVisualizer.kt`, `MapDetailLayout.kt`, and `CreateLapOnMapSheet.kt`.
   • Verify pre-seeding from scrub point index when launched from `MapDetailLayout`.
   • Verify confirmation button invocation dispatches split action with correct sample index.
   4. *9-Language Localization & Parity Test (`TST-UI-449.4`, `TranslationParityTest.kt`)*:
   • Verify 100% parity across all 9 supported locales for new `create_lap_*` string keys with zero missing entries and zero decorative inline emojis.
   5. *Clean-Room Regression Suite (`TST-UI-449.5`)*:
-  • Run targeted package tests (`com.atrainingtracker.trainingtracker.ui.aftermath.*`, `database.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
+  • Run targeted package tests (`com.atrainingtracker.trainingtracker.ui.aftermath.*`, `com.atrainingtracker.trainingtracker.ui.map.*`, `database.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
 
 ### TST-UI-450: **Interactive Map Lap Boundary Moving in Workout Aftermath Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-450`
-- **Component**: `MoveLapBoundaryOnMapSheet.kt`, `LapSplitAndMoveCalculator.kt`, `WorkoutRepository.kt`, `WorkoutSamplesDatabaseManager.java`, `LapsDatabaseManager.java`, `LapEditBottomSheet.kt`, `WorkoutLaps.kt`
-- **Jira**: `ATT-908`
+- **Component**: `MoveLapBoundaryOnMapSheet.kt`, `PathPreviewMap.kt`, `LapSplitAndMoveCalculator.kt`, `WorkoutRepository.kt`, `WorkoutSamplesDatabaseManager.java`, `LapsDatabaseManager.java`, `LapEditBottomSheet.kt`, `WorkoutLaps.kt`, `TrackOnMapScreen.kt`
+- **Jira**: `ATT-908`, `ATT-5483`, `ATT-5480`
 - **Test Description**:
   1. *Domain Boundary Clamping & Move Preview Contract Test (`TST-UI-450.1`, `LapBoundaryMoveCalculatorTest.kt`)*:
   • Verify `LapSplitAndMoveCalculator.validateBoundaryMove` clamps and rejects boundaries outside $[startIndex(k) + 1, endIndex(k+1) - 1]$.
@@ -7206,14 +7222,17 @@
   • Verify `WorkoutSamplesDatabaseManager.updateLapNumberForSampleRange` selectively updates `LAP_NR` for sample rows between old and new boundaries.
   • Verify `WorkoutRepository.moveLapBoundary` updates `Laps.db` for Lap $k$ and Lap $k+1$ via `replaceCroppedLaps` while leaving all other laps ($1 \dots k-1$ and $k+2 \dots K$) untouched.
   • Verify rollback on SQLite exception preserves data integrity across tables.
-  3. *Compose UI & Boundary Sheet Contract Test (`TST-UI-450.3`, `MoveLapBoundaryOnMapSheetTest.kt`)*:
-  • Verify `MoveLapBoundaryOnMapSheet` renders track segment, boundary markers, precision slider, and live preview cards.
+  3. *Compose UI, Canonical Blue Track & Boundary Iconography Contract Test (`TST-UI-450.3`, `MoveLapBoundaryOnMapSheetTest.kt`, `PathPreviewMapTest.kt`)*:
+  • Verify `MoveLapBoundaryOnMapSheet` renders track segment instantiated via `MapTrack` with `type = TrackType.BEST` (canonical blue `TTColor.TrackBest`).
+  • Verify `PathPreviewMap` receives `apexIconRes = R.drawable.ic_lap_move_boundary` for the boundary pin marker rather than the Max Line Distance ruler icon (`R.drawable.ic_distance`).
+  • Verify dedicated shift boundary vector drawable `R.drawable.ic_lap_move_boundary` is rendered for boundary move action buttons across `WorkoutLaps.kt`, `LapEditBottomSheet.kt`, `LapSplitVisualizer.kt`, and `MoveLapBoundaryOnMapSheet.kt`.
   • Verify pre-seeding from existing boundary index.
   • Verify confirmation button dispatches `onBoundaryConfirmed` with selected sample index.
+  • Verify seamless entry point invocation from `LapEditBottomSheet` when opened within Workout Details (`TrackOnMapScreen.kt`), dismissing the edit sheet and opening `MoveLapBoundaryOnMapSheet` as a modal overlay (`Rule 47`).
   4. *9-Language Localization & Parity Test (`TST-UI-450.4`, `TranslationParityTest.kt`)*:
   • Verify 100% parity across all 9 supported locales for new `move_lap_boundary_*` string keys with zero missing entries and zero decorative inline emojis.
   5. *Clean-Room Regression Suite (`TST-UI-450.5`)*:
-  • Run targeted package tests (`com.atrainingtracker.trainingtracker.domain.laps.*`, `ui.aftermath.*`, `database.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
+  • Run targeted package tests (`com.atrainingtracker.trainingtracker.domain.laps.*`, `com.atrainingtracker.trainingtracker.ui.aftermath.*`, `com.atrainingtracker.trainingtracker.ui.map.*`, `database.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
 
 ### TST-UI-451: **Tracking Cockpit SensorStatus Top Bar 16 dp Margin and Symmetrical Centering Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-451`
@@ -7231,19 +7250,94 @@
   4. *Clean-Room Regression Suite Execution (`TST-UI-451.4`)*:
   • Execute targeted package tests (`com.atrainingtracker.trainingtracker.ui.tracking.controltracking.*`, `com.atrainingtracker.trainingtracker.ui.branding.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
 
+### TST-UI-452: **Dedicated Status Bar Vector Icon, Notification Builder Migration & Monolithic Density Packaging Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-452`
+- **Component**: `ic_stat_notify_logo.xml`, `TrainingApplication.java`, `TrackerService.java`, `WorkoutDeletionNotificationManager.kt`, `ExportNotificationManager.kt`, `SensorBatteryNotificationManager.kt`, `app/build.gradle`, `DrawableDensityFallbackAuditTest.kt`, `NotificationIconContractTest.kt`
+- **Jira**: `ATT-5477`
+- **Test Description**:
+  1. *Vector Asset & Monochrome Silhouette Contract Test (`TST-UI-452.1`, `NotificationIconContractTest.kt`)*:
+  • Verify `ic_stat_notify_logo.xml` exists in `app/src/main/res/drawable/` as a valid XML `<vector>`.
+  • Verify `viewportWidth="24"` and `viewportHeight="24"`.
+  • Verify there are no density-specific (`drawable-*dpi`) or `nodpi` siblings for `ic_stat_notify_logo`.
+  2. *Notification Builder SmallIcon Call Site Verification (`TST-UI-452.2`, `NotificationIconContractTest.kt`)*:
+  • Audit all 6 call sites across `TrainingApplication.java`, `TrackerService.java`, `WorkoutDeletionNotificationManager.kt`, `ExportNotificationManager.kt`, and `SensorBatteryNotificationManager.kt`.
+  • Assert that zero notification builders invoke `.setSmallIcon(R.drawable.logo)`.
+  • Assert that all notification builders invoke `.setSmallIcon(R.drawable.ic_stat_notify_logo)`.
+  3. *App Bundle Density Split Configuration Test (`TST-UI-452.3`, `NotificationIconContractTest.kt`)*:
+  • Verify `app/build.gradle` contains `bundle { density { enableSplit = false } }`.
+  4. *Drawable Density Fallback & Core Coverage Test (`TST-UI-452.4`, `DrawableDensityFallbackAuditTest.kt`)*:
+  • Verify `testAllDensityDrawablesHaveRootFallback()` passes without error.
+  • Verify `testCoreDrawablesHaveFullHighDensityCoverage()` checks `xhdpi`, `xxhdpi`, and `xxxhdpi` and passes without requiring redundant `drawable-nodpi/` duplicates.
+  5. *Clean-Room Regression Suite Execution (`TST-UI-452.5`)*:
+  • Execute targeted package tests (`com.atrainingtracker.trainingtracker.resources.*`, `com.atrainingtracker.trainingtracker.notifications.*`, `build.*`) asserting 100% pass rate.
 
 
 
+### TST-UI-453: **Aftermath Workout Details: Grade / Slope Zone Distribution Card & 1% Telemetry Histogram Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-453`
+- **Component**: `GradeZoneDistributionCard.kt`, `ZoneDistributionCalculator.kt`, `GradeZoneDistributionCardTest.kt`, `GradeZoneDistributionCalculatorTest.kt`, `TrackOnMapScreen.kt`, `WorkoutDetailTabbedContent.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-5487`
+- **Test Description**:
+  1. *Grade Zone Calculation & Canonical Thresholds Unit Test (`TST-UI-453.1`, `GradeZoneDistributionCalculatorTest.kt`)*:
+  • Verify `ZoneDistributionCalculator.calculateGradeDistribution(...)` maps segments into exactly 7 zones matching `getElevationGradeColor` thresholds: `< 2%` (Z1), `2–5%` (Z2), `5–10%` (Z3), `10–15%` (Z4), `15–20%` (Z5), `20–25%` (Z6), `> 25%` (Z7).
+  • Verify smoothing eliminates GPS quantization noise and prevents artificial `> 25%` spikes on flat segments.
+  • Verify delta time clamping ($\Delta t \le 5\text{s}$) and handling of degenerate/stationary points.
+  • Verify null return when path points or elevation data are empty or missing.
+  2. *Fine-Grained 1% Grade Histogram Calculation Test (`TST-UI-453.2`, `GradeZoneDistributionCalculatorTest.kt`)*:
+  • Verify generation of 1% histogram bins spanning `[minGrade, maxGrade]`.
+  • Verify bin zone indices and colors match `ElevationProfile.kt` color coding.
+  • Verify total active time matches the sum of 7 zone durations.
+  3. *`GradeZoneDistributionCard` UI & 3-Way Mode Switcher Test (`TST-UI-453.3`, `GradeZoneDistributionCardTest.kt`)*:
+  • Verify card renders icon `R.drawable.ic_grade`, localized title, and formatted total duration.
+  • Verify 3-way toggle renders Balken (`STACKED_BAR`), Säulen (`COLUMNS`), and Histogramm (`HISTOGRAM`).
+  • Verify view switching renders `ZoneDistributionStackedBar`, `ZoneDistributionColumnChart`, and `TelemetryHistogramChart` respectively.
+  4. *9-Language Localization & Parity Test (`TST-UI-453.4`, `TranslationParityTest.kt`)*:
+  • Verify 100% parity across all 9 supported locales for `aftermath_grade_zones_title` with zero missing entries and zero decorative inline emojis.
+  5. *Clean-Room Regression Suite Execution (`TST-UI-453.5`)*:
+  • Execute targeted package tests (`com.atrainingtracker.trainingtracker.ui.aftermath.zones.*`, `com.atrainingtracker.trainingtracker.ui.aftermath.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
 
 
 
+### TST-UI-454: **Interactive Aftermath Lap Deletion & Adjacent Lap Merging Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-454`
+- **Component**: `WorkoutSamplesDatabaseManager.java`, `LapsDatabaseManager.java`, `LapSplitAndMoveCalculator.kt`, `WorkoutRepository.kt`, `LapEditBottomSheet.kt`, `DeleteLapConfirmationDialog.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-5482`
+- **Test Description**:
+  1. *Domain Math & Merge Preview Calculation Test (`TST-UI-454.1`, `LapSplitAndMoveCalculatorTest.kt`)*:
+  • Verify `calculateMergePreview` accurately sums active duration and distance and recomputes average speed for adjacent laps $k$ and $k+1$.
+  • Verify `recalculateLapsAfterMerge` renumbers laps contiguously $1 \dots N-1$, combines names/descriptions cleanly, and preserves unaffected laps ($< k$ and $> k+1$).
+  • Verify boundary validation rejects invalid boundary indices ($B < 1$ or $B \ge N$).
+  2. *Database Transactional Decrement & Replace Contract Test (`TST-UI-454.2`, `WorkoutSamplesDatabaseManagerLapDeleteTest.java` / `WorkoutRepositoryLapDeleteTest.kt`)*:
+  • Verify `WorkoutSamplesDatabaseManager.decrementLapNumbersAbove` atomically executes `UPDATE ... SET LAP_NR = LAP_NR - 1 WHERE LAP_NR > ?`.
+  • Verify `WorkoutRepository.deleteLap` updates sample rows, calls `LapsDatabaseManager.replaceCroppedLaps`, refreshes reactive `WorkoutData`, and verifies total session metrics remain identical.
+  • Verify rollback on SQLite exception leaves `WorkoutSamples.db` and `Laps.db` unchanged.
+  3. *UI & Confirmation Dialog Contract Test (`TST-UI-454.3`, `DeleteLapConfirmationDialogTest.kt` / `LapEditBottomSheetTest.kt`)*:
+  • Verify Delete / Merge CTA is displayed in `LapEditBottomSheet` when `totalLaps >= 2` and hidden/disabled when `totalLaps < 2`.
+  • Verify `SingleChoiceSegmentedButtonRow` displays direction toggle for interior laps ($1 < k < N$) and fixed direction for boundary laps ($k=1$ and $k=N$).
+  • Verify confirm button triggers repository delete action with the selected boundary.
+  4. *9-Language Localization & Parity Test (`TST-UI-454.4`, `TranslationParityTest.kt`)*:
+  • Verify 100% parity across all 9 supported locales for all `delete_lap_*` string keys with zero missing entries and zero decorative inline emojis.
+  5. *Clean-Room Regression Suite Execution (`TST-UI-454.5`)*:
+  • Execute targeted package tests (`com.atrainingtracker.trainingtracker.domain.laps.*`, `com.atrainingtracker.trainingtracker.ui.aftermath.*`, `com.atrainingtracker.trainingtracker.database.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
 
-
-
-
-
-
-
-
-
+### TST-UI-455: **Workout-Time Pre-Filtered Photo Picker with Show All Photos Fallback Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-455`
+- **Component**: `WorkoutPhotoStrip.kt`, `WorkoutTimePhotoPickerSheet.kt`, `WorkoutPhotoManager.kt`, `AndroidManifest.xml`, `TranslationParityTest.kt`
+- **Jira**: `ATT-5475`
+- **Test Description**:
+  1. *MediaStore Query & Temporal Filtering Unit Test (`TST-UI-455.1`, `WorkoutPhotoManagerTest.kt`)*:
+  • Verify `WorkoutPhotoManager.queryWorkoutTimePhotos` queries `MediaStore.Images.Media.EXTERNAL_CONTENT_URI` with temporal bounds `[startTimeMs - 300_000L .. endTimeMs + 300_000L]`.
+  • Verify fallback to `DATE_ADDED * 1000L` when `DATE_TAKEN` is null or $\le 0$.
+  • Verify sorting by `DATE_TAKEN ASC` / `DATE_ADDED ASC`.
+  2. *Runtime Permission & Fallback Decision Contract Test (`TST-UI-455.2`, `WorkoutPhotoPickerContractTest.kt`)*:
+  • Verify clicking "Add Photos" when permission is denied or zero photos match immediately invokes `PickMultipleVisualMedia`.
+  • Verify manifest declares `READ_MEDIA_IMAGES`, `READ_MEDIA_VISUAL_USER_SELECTED`, and `READ_EXTERNAL_STORAGE` (`maxSdkVersion="32"`).
+  3. *`WorkoutTimePhotoPickerSheet` Compose UI & Rule 73 Contract Test (`TST-UI-455.3`, `WorkoutTimePhotoPickerSheetTest.kt`)*:
+  • Verify sheet uses `AppModalBottomSheet(scrollable = false)` hosting a 3-column multi-select grid.
+  • Verify Rule 73 stacked full-width buttons: Primary "Hinzufügen (<count>)" and Secondary "Alle Bilder anzeigen".
+  • Verify thumbnail items render downsampled bitmaps and formatted capture timestamps.
+  4. *9-Language Localization & Parity Test (`TST-UI-455.4`, `TranslationParityTest.kt`)*:
+  • Verify 100% parity across all 9 supported locales for all new `workout_photos_*` strings with zero missing entries and zero decorative inline emojis.
+  5. *Clean-Room Regression Suite Execution (`TST-UI-455.5`)*:
+  • Execute targeted package tests (`com.atrainingtracker.trainingtracker.database.WorkoutPhotoManagerTest`, `com.atrainingtracker.trainingtracker.ui.aftermath.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
 

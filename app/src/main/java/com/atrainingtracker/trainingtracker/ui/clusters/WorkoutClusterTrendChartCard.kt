@@ -19,19 +19,15 @@
 package com.atrainingtracker.trainingtracker.ui.clusters
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.ShowChart
-import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Path
@@ -80,10 +76,6 @@ fun WorkoutClusterTrendChartCard(
 
     var selectedPointId by remember(trendSeries) {
         mutableStateOf<Long?>(trendSeries.points.lastOrNull()?.workoutId)
-    }
-
-    val selectedPoint = remember(trendSeries, selectedPointId) {
-        trendSeries.points.find { it.workoutId == selectedPointId } ?: trendSeries.points.lastOrNull()
     }
 
     val primaryColor = MaterialTheme.colorScheme.primary
@@ -208,7 +200,10 @@ fun WorkoutClusterTrendChartCard(
                                     heightPx = (size.height - 44.dp.toPx()).coerceAtLeast(1f),
                                     maxDistancePx = 36.dp.toPx()
                                 )
-                                if (hit != null) selectedPointId = hit.workoutId
+                                if (hit != null) {
+                                    selectedPointId = hit.workoutId
+                                    onSelectWorkout(hit.workoutId)
+                                }
                             }
                         }
                 ) {
@@ -313,108 +308,6 @@ fun WorkoutClusterTrendChartCard(
                             drawCircle(color = primaryColor, radius = pointRadius, center = c)
                             drawCircle(color = surfaceColor, radius = innerRadius, center = c)
                         }
-                    }
-                }
-            }
-
-            // Interactive Callout / Inspector Card
-            if (selectedPoint != null) {
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.6f),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable { onSelectWorkout(selectedPoint.workoutId) }
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Text(
-                                    text = selectedPoint.formattedDate,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = onSurfaceVariantColor
-                                )
-                                if (selectedPoint.isPr) {
-                                    Surface(
-                                        shape = RoundedCornerShape(4.dp),
-                                        color = TTColor.Gold.copy(alpha = 0.2f)
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(2.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Filled.EmojiEvents,
-                                                contentDescription = null,
-                                                tint = TTColor.Gold,
-                                                modifier = Modifier.size(10.dp)
-                                            )
-                                            Text(
-                                                text = stringResource(R.string.cluster_trend_pr),
-                                                style = MaterialTheme.typography.labelSmall,
-                                                fontWeight = FontWeight.Bold,
-                                                color = TTColor.Gold
-                                            )
-                                        }
-                                    }
-                                }
-                                if (selectedPoint.isClampedOutlier) {
-                                    Surface(
-                                        shape = RoundedCornerShape(4.dp),
-                                        color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f)
-                                    ) {
-                                        Text(
-                                            text = stringResource(R.string.cluster_trend_outlier),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onTertiaryContainer,
-                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                                        )
-                                    }
-                                }
-                            }
-
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = selectedPoint.formattedDuration,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = onSurfaceColor
-                                )
-                                Text(
-                                    text = "•",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = onSurfaceVariantColor
-                                )
-                                Text(
-                                    text = selectedPoint.formattedSpeedOrPace,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Medium,
-                                    color = onSurfaceColor
-                                )
-                            }
-                        }
-
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = null,
-                            tint = onSurfaceVariantColor,
-                            modifier = Modifier.size(16.dp)
-                        )
                     }
                 }
             }

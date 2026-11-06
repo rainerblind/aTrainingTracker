@@ -98,7 +98,8 @@ fun LapEditBottomSheet(
     onSaveLap: (lapNr: Long, name: String?, description: String?) -> Unit,
     modifier: Modifier = Modifier,
     isPlayServiceAvailable: Boolean = true,
-    onMoveBoundaryClick: ((boundaryLapNr: Long) -> Unit)? = null
+    onMoveBoundaryClick: ((boundaryLapNr: Long) -> Unit)? = null,
+    onDeleteLapClick: ((boundaryLapNr: Long) -> Unit)? = null
 ) {
     val laps = workoutData.laps
     if (laps.isEmpty()) return
@@ -111,6 +112,7 @@ fun LapEditBottomSheet(
 
     var nameText by remember(currentLapNr) { mutableStateOf(currentLap.name ?: "") }
     var descriptionText by remember(currentLapNr) { mutableStateOf(currentLap.description ?: "") }
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
 
     val formatters = LocalMetricFormatter.current
     val isRunningSport = (workoutData.bSportType == BSportType.RUN)
@@ -409,12 +411,34 @@ fun LapEditBottomSheet(
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Icon(
-                                        painter = painterResource(R.drawable.ic_lap_timer),
+                                        painter = painterResource(R.drawable.ic_lap_move_boundary),
                                         contentDescription = null,
                                         modifier = Modifier.size(16.dp)
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(stringResource(R.string.move_lap_boundary_action))
+                                }
+                            }
+
+                            // Delete / Merge Lap Action (REQ-UI-454.1 / ATT-5482)
+                            if (onDeleteLapClick != null && totalLaps >= 2) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                OutlinedButton(
+                                    onClick = {
+                                        showDeleteConfirmation = true
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        contentColor = MaterialTheme.colorScheme.error
+                                    )
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_delete),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(stringResource(R.string.delete_lap_action))
                                 }
                             }
 
@@ -658,6 +682,21 @@ fun LapEditBottomSheet(
                 }
             }
         }
+    }
+
+    if (showDeleteConfirmation && onDeleteLapClick != null) {
+        DeleteLapConfirmationDialog(
+            currentLap = currentLap,
+            allLaps = laps,
+            isRunningSport = isRunningSport,
+            onConfirm = { boundaryLapNr ->
+                showDeleteConfirmation = false
+                onDeleteLapClick(boundaryLapNr)
+            },
+            onDismiss = {
+                showDeleteConfirmation = false
+            }
+        )
     }
 }
 }

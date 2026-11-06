@@ -350,4 +350,102 @@ object LapSplitAndMoveCalculator {
             }
         }
     }
+
+    /**
+     * Calculates the preview [LapData] resulting from merging two adjacent laps [lapA] and [lapB] (REQ-UI-454.2 / ATT-5482).
+     *
+     * Computes the combined active duration, summed distance, and re-computes average speed
+     * via [CropWorkoutMath.calculateAverageSpeed]. Preserves and combines non-empty custom names
+     * and descriptions cleanly.
+     */
+    fun calculateMergePreview(lapA: LapData, lapB: LapData): LapData {
+        val mergedDuration = (lapA.timeTotalS + lapB.timeTotalS).coerceAtLeast(0)
+        val mergedDistance = (lapA.distanceTotalM + lapB.distanceTotalM).coerceAtLeast(0.0)
+        val avgSpeed = CropWorkoutMath.calculateAverageSpeed(mergedDistance, mergedDuration)
+
+        val mergedName = when {
+            !lapA.name.isNullOrBlank() && !lapB.name.isNullOrBlank() -> {
+                if (lapA.name == lapB.name) lapA.name else "${lapA.name} / ${lapB.name}"
+            }
+            !lapA.name.isNullOrBlank() -> lapA.name
+            !lapB.name.isNullOrBlank() -> lapB.name
+            else -> null
+        }
+
+        val mergedDescription = when {
+            !lapA.description.isNullOrBlank() && !lapB.description.isNullOrBlank() -> {
+                if (lapA.description == lapB.description) lapA.description else "${lapA.description}\n${lapB.description}"
+            }
+            !lapA.description.isNullOrBlank() -> lapA.description
+            !lapB.description.isNullOrBlank() -> lapB.description
+            else -> null
+        }
+
+        return LapData(
+            id = lapA.id,
+            workoutId = lapA.workoutId,
+            lapNr = lapA.lapNr,
+            timeStart = lapA.timeStart ?: lapB.timeStart,
+            timeTotalS = mergedDuration,
+            distanceTotalM = mergedDistance,
+            speedAverageMps = avgSpeed,
+            name = mergedName,
+            description = mergedDescription
+        )
+    }
+
+    /**
+     * Recalculates the complete sequence of laps after removing the boundary between
+     * [removedBoundaryLapNr] (Lap k) and [removedBoundaryLapNr] + 1 (Lap k+1) (REQ-UI-454.3 / ATT-5482).
+     *
+     * Merges Lap k and Lap k+1 into a single Lap k with combined duration, distance, and speed.
+     * Decrements lap numbers for all subsequent laps (L > k+1) so the resulting list has size N-1
+     * and strictly contiguous 1..N-1 lap numbers.
+     *
+     * @param workoutId The ID of the workout.
+     * @param existingLaps The list of existing LapData objects before boundary deletion.
+     * @param removedBoundaryLapNr The 1-based lap number of the first lap in the merged pair (1 <= k < N).
+     * @param updatedSamples Optional list of CropSamplePoints with updated lap numbers if available.
+     * @return List of updated LapData with contiguous 1..N-1 lap numbers, or [existingLaps] if invalid.
+     */
+    fun recalculateLapsAfterMerge(
+        workoutId: Long,
+        existingLaps: List<LapData>,
+        removedBoundaryLapNr: Long,
+        updatedSamples: List<CropSamplePoint>? = null
+    ): List<LapData> {
+        if (existingLaps.size < 2 || removedBoundaryLapNr < 1L || removedBoundaryLapNr >= existingLaps.size) {
+            return existingLaps
+        }
+
+        val sortedLaps = existingLaps.sortedBy { it.lapNr }
+        val lapA = sortedLaps.firstOrNull { it.lapNr == removedBoundaryLapNr } ?: return existingLaps
+        val lapB = sortedLaps.firstOrNull { it.lapNr == removedBoundaryLapNr + 1L } ?: return existingLaps
+
+        val mergedLap = calculateMergePreview(lapA, lapB).copy(
+            workoutId = workoutId,
+            lapNr = removedBoundaryLapNr
+        )
+
+        val result = mutableListOf<LapData>()
+        var seqNr = 1L
+        for (lap in sortedLaps) {
+            when {
+                lap.lapNr < removedBoundaryLapNr -> {
+                    result.add(lap.copy(lapNr = seqNr++))
+                }
+                lap.lapNr == removedBoundaryLapNr -> {
+                    result.add(mergedLap.copy(lapNr = seqNr++))
+                }
+                lap.lapNr == removedBoundaryLapNr + 1L -> {
+                    // Merged into lapA, omit from output
+                }
+                else -> {
+                    // Subsequent laps: lapNr > removedBoundaryLapNr + 1
+                    result.add(lap.copy(lapNr = seqNr++))
+                }
+            }
+        }
+        return result
+    }
 }

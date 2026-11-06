@@ -19,6 +19,15 @@
         app:min="1"
         app:showSeekBarValue="true"/>
 
+    <SeekBarPreference
+        android:key="btleSearchPeriodSec"
+        android:title="@string/prefs_btle_search_period_title"
+        android:summary="@string/prefs_btle_search_period_summary"
+        android:defaultValue="5"
+        android:max="15"
+        app:min="3"
+        app:showSeekBarValue="true"/>
+
     <PreferenceCategory
         android:title="@string/prefStartSearchTitle"
         android:layout="@layout/preference_category">

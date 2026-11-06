@@ -261,6 +261,8 @@
     <string name="prefsExportTitle">Eksport</string>
     <string name="prefsOnlineCommunities">Synchronizacja</string>
     <string name="prefsNumberOfSearchTriesTitle">Rundy szukania</string>
+    <string name="prefs_btle_search_period_title">Czas wyszukiwania BLE na próbę</string>
+    <string name="prefs_btle_search_period_summary">Czas w sekundach oczekiwania na czujnik BLE przed przejściem dalej (3..15 s). Krótsze wartości skracają opóźnienie przy czujnikach offline.</string>
     <string name="prefStartSearchTitle">Zacznij szukać, gdy …</string>
     <string name="prefsStartSearchWhenAppStartsTitle">App startuje</string>
     <string name="prefsStartSearchWhenTrackingStartsTitle">Trening startuje</string>
@@ -812,6 +814,7 @@
     <string name="track_type_network">Sieć</string>
     <string name="legend">Legenda</string>
     <string name="cluster_statistics_title">Statystyki treningu</string>
+    <string name="cluster_tab_statistics">Statystyki</string>
     <string name="cluster_total_recordings">Całkowita liczba nagrań</string>
     <string name="cluster_average_distance">Średni dystans</string>
     <string name="cluster_recordings_format">%1$d nagrań</string>
@@ -1546,6 +1549,9 @@
 
     <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
     <string name="aftermath_power_zones_title">Strefy mocy</string>
+
+    <!-- Grade / Slope Distribution Card (ATT-5487 / REQ-UI-453) -->
+    <string name="aftermath_grade_zones_title">Strefy nachylenia</string>
     <!-- Telemetry Frequency Histogram & Display Modes (ATT-1845 / ATT-3390 / REQ-UI-372) -->
     <string name="zone_mode_5_zones">5 stref</string>
     <string name="zone_mode_columns">Kolumny</string>
@@ -2149,6 +2155,14 @@
     <string name="move_lap_boundary_lap_k_preview">Okrążenie %1$d (Poprzednie)</string>
     <string name="move_lap_boundary_lap_k_plus_1_preview">Okrążenie %1$d (Następne)</string>
     <string name="move_lap_boundary_select_boundary">Granica: Okrążenie %1$d / Okrążenie %2$d</string>
+    <string name="delete_lap_action">Usuń / połącz okrążenie</string>
+    <string name="delete_lap_dialog_title">Usuń / połącz okrążenie</string>
+    <string name="delete_lap_confirm">Usuń i połącz</string>
+    <string name="delete_lap_merge_with_previous">Okrążenie %1$d + Okrążenie %2$d (Poprzednie)</string>
+    <string name="delete_lap_merge_with_next">Okrążenie %1$d + Okrążenie %2$d (Następne)</string>
+    <string name="delete_lap_preview_title">Podgląd połączonego okrążenia</string>
+    <string name="delete_lap_warning_description">Granica między okrążeniem %1$d i okrążeniem %2$d zostanie usunięta. Kolejne okrążenia zostaną przenumerowane.</string>
+    <string name="delete_lap_direction_label">Kierunek połączenia</string>
     <string name="cd_fastest_split">Najszybszy międzyczas</string>
     <string name="cd_switch_view_mode">Przełącz tryb widoku</string>
     <string name="connect_with_strava">Połącz ze Strava</string>
@@ -2347,4 +2361,9 @@
     <string name="workout_photos_delete_confirm">Czy chcesz usunąć to zdjęcie z treningu?</string>
     <string name="workout_photos_share_overlay">Udostępnij z nakładką trasy</string>
     <string name="workout_photos_marker_title">Zdjęcie</string>
+    <!-- Workout Photo Time Picker (REQ-UI-455 / ATT-5475) -->
+    <string name="workout_photos_time_picker_title">Zdjęcia z treningu</string>
+    <string name="workout_photos_time_picker_subtitle">Zdjęcia zrobione podczas tego treningu</string>
+    <string name="workout_photos_show_all">Pokaż wszystkie zdjęcia</string>
+    <string name="workout_photos_add_count">Dodaj %1$d zdjęć</string>
 </resources>

@@ -99,7 +99,7 @@ class SensorBatteryNotificationManager @VisibleForTesting constructor(
         }
 
         val builder = NotificationCompat.Builder(context, TrainingApplication.NOTIFICATION_CHANNEL__SENSOR_BATTERY)
-            .setSmallIcon(R.drawable.logo)
+            .setSmallIcon(R.drawable.ic_stat_notify_logo)
             .setContentTitle(title)
             .setContentText(content)
             .setStyle(NotificationCompat.BigTextStyle().bigText(content))

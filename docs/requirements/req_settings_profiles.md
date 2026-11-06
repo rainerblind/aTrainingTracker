@@ -102,7 +102,7 @@
 - **Implementation**: `WorkoutClusterHeatmapScreen.kt`, `MapContentScope.kt`
 - **Rationale**: The system SHALL provide a visualization for Workout Clusters that overlays all associated workout tracks as a heatmap, along with the spatial fingerprint markers.
 
-### REQ-SET-010: Tuning Parameters UI [Proposed]
+### REQ-SET-010: Tuning Parameters UI [Verified]
 - **Tests**: `TST-SET-003`, `TST-SET-034`
 - **Implementation**: `ClusterTuningScreen.kt`, `WorkoutClustersViewModel.kt`
 - **Rationale**: The system SHALL provide a UI to edit the tuning parameters for the Workout Cluster Engine, featuring a primary \"Strict-to-Relaxed\" master slider, optional detailed controls for individual tolerances (Endpoint, Apex, Distance), and a toggle to optionally include Sport Type in similarity calculations.
@@ -122,7 +122,7 @@
 - **Implementation**: `WorkoutClusterEngine.kt`
 - **Rationale**: The system SHALL prioritize existing identical workout names when matching routes to clusters to improve grouping accuracy for user-named paths.
 
-### REQ-SET-014: Auto-Dismiss Tuning UI [Superseded]
+### REQ-SET-014: Auto-Dismiss Tuning UI [Verified]
 - **Tests**: `TST-SET-006`
 - **Implementation**: `WorkoutClustersFragment.kt`, `WorkoutClustersViewModel.kt`
 - **Rationale**: The system SHALL automatically return to the cluster list view once a recalculation process is successfully completed. *(Superseded by REQ-SET-075 / ATT-3452: Cluster tuning removed from Favorite Routes header; recalculation centralized in Advanced Settings without auto-dismissal)*.
@@ -277,7 +277,7 @@
 - **Implementation**: `WorkoutClusterComponents.kt`, `WorkoutClustersFragment.kt`, `WorkoutSummariesViewModel.kt`
 - **Rationale**: The system SHALL allow the user to view all workouts associated with a specific Workout Cluster. Clicking the hit count (number of recordings) in the cluster list or details SHALL navigate the user to a filtered workout list containing only the members of that cluster.
 
-### REQ-SET-058: Cluster Visibility & Direct Cluster Navigation in Workout Summary [`TST-SET-043`, `TST-SET-057`, `TST-SET-064`]
+### REQ-SET-058: Cluster Visibility & Direct Cluster Navigation in Workout Summary [Verified]
 - **Tests**: `WorkoutHeader.kt`, `WorkoutHeaderData.kt`, `WorkoutData.kt`, `WorkoutSummary.kt`, `WorkoutList.kt`, `TrackOnMapScreen.kt`, `WorkoutNavigationEvents.kt`, `MainActivityWithNavigation.kt`, `WorkoutClustersFragment.kt`, `WorkoutClustersViewModel.kt`
 - **Implementation**: Provide seamless bidirectional navigation between individual workout sessions and their parent route clusters with visual parity to the cluster recordings button.
 - **Rationale**: The system SHALL display the associated Workout Cluster in the workout summary header (`WorkoutHeader.kt`) directly below the workout name:
@@ -313,7 +313,7 @@ When the user navigates to a cluster detail view via this workout button, pressi
 • *Then* the header SHALL render the neutral, non-clickable "Unclustered" text.
 **Invariants**: Workout editing via clicking the rest of `WorkoutHeader` MUST NOT be compromised; existing database schemas, clustering calculations, and cluster-to-recordings navigation (`REQ-SET-057`) MUST remain unaltered.
 
-### REQ-SET-059: Explicit Workout Cluster Management & Assignment in Editor [`TST-SET-050`, `TST-SET-064`]
+### REQ-SET-059: Explicit Workout Cluster Management & Assignment in Editor [Verified]
 - **Tests**: `EditWorkoutScreen.kt`, `EditWorkoutViewModel.kt`, `WorkoutClusterComponents.kt`, `WorkoutClusterEngine.kt`, `WorkoutRepository.kt`
 - **Implementation**: Ensure full parity with TCX route clustering, providing transparent, discoverable, and complete cluster lifecycle management (Uncluster, Create New, Reassign) in the workout editor.
 - **Rationale**: The system SHALL provide an explicit, dedicated cluster management selector within `EditWorkoutScreen` positioned immediately below the workout name input field:
@@ -345,7 +345,7 @@ When the user navigates to a cluster detail view via this workout button, pressi
 - **Implementation**: `PathPreviewMap.kt`, `WorkoutSummary.kt`, `RouteItem.kt`, `WorkoutClusterComponents.kt`, `PeriodSummaryCard.kt`, `WorkoutClusterEngine.kt`
 - **Rationale**: The system SHALL display Start, End, and Apex markers in the mini-map previews for Workouts. For Routes, ONLY Start and End markers SHALL be displayed. ALL map previews (Clusters, Workouts, Periods) SHALL correctly frame the entire route(s) based on persisted spatial bounds.
 
-### REQ-SET-043: Fingerprint Parity [Proposed]
+### REQ-SET-043: Fingerprint Parity [Verified]
 - **Tests**: `TST-SET-033`, `TST-SET-034`, `TST-SET-035`
 - **Implementation**: `WorkoutClusterEngine.kt`
 - **Rationale**: To ensure 100% matching accuracy, the system SHALL calculate Route spatial fingerprints using 'Max Displacement from Start', matching the live tracking engine's logic. The similarity calculation SHALL strictly include a significant penalty (+2.0) if the workout's `BSportType` is NOT IDENTICAL to the cluster's `BSportType` (when enabled), preventing cross-activity cluster contamination even between known sports and 'UNKNOWN' placeholders.
@@ -360,7 +360,7 @@ When the user navigates to a cluster detail view via this workout button, pressi
 - **Implementation**: `WorkoutClusterEngine.kt`, `WorkoutClustersViewModel.kt`, `SpeedAndLocationDevice.java`
 - **Rationale**: The system SHALL ensure that a Workout Cluster's Max Line Distance (Apex) signature marker (`maxDispLat, maxDispLng`) strictly represents the running arithmetic mean of the maximum displacement points (`maxDisplacementLatLng`) across all member workouts in the cluster, preserving the centroid across member additions, deletions, and reassignments. The cluster's apex SHALL NOT be snapped or overwritten to arbitrary individual track coordinates during UI inspection or linked route resolution. Furthermore, when a live workout finishes, `WorkoutClusterEngine.onWorkoutFinished()` SHALL pass the workout's actual `maxDisplacementLatLng` (with fallback to `endLatLng`) as the apex rather than `startLatLng`. Additionally, `SpeedAndLocationDevice` SHALL reset `mStartLocation` upon accumulator reset so that live displacement tracking is anchored to the workout's actual start location.
 
-### REQ-SET-064: Speed-Based Multi-Sport Route Clustering & Ambiguity Disambiguation in Tracker and Workout Editor [`TST-SET-051`, `TST-SET-056`]
+### REQ-SET-064: Speed-Based Multi-Sport Route Clustering & Ambiguity Disambiguation in Tracker and Workout Editor [Verified]
 - **Tests**: `TrackerService.java`, `EquipmentAndSportTypeDiscoveryManager.kt`, `WorkoutClusterEngine.kt`, `EditWorkoutViewModel.kt`, `SportTypeDatabaseManager.java`
 - **Implementation**: Eliminate false duplicate cluster creation and inaccurate sport guessing after tracking and inside the workout editor on recurring routes when intermediate speeds or overlapping custom sports allow multiple plausible sport types.
 - **Rationale**: The system SHALL evaluate cluster similarity against all candidate sport types supported by a workout session's speed profile both during live tracking completion (`TrackerService`) AND in the workout editor (`EditWorkoutViewModel.kt` / `EditWorkoutScreen.kt`), ensuring cost minimization without artificial mismatch penalties:
@@ -391,7 +391,7 @@ When the user navigates to a cluster detail view via this workout button, pressi
 • *Then* candidate sports SHALL be strictly `{BIKE}`.
 **Invariants**: Dedicated hardware sensor sovereignty (`REQ-SET-030`) MUST be preserved; existing clusters with single-sport matching MUST NOT be degraded; manual cluster reassignment workflows MUST remain unchanged.
 
-### REQ-SET-065: Altitude Extrema-Aware 3D Route Clustering & Database Migration [`TST-SET-052`, `TST-UNT-015`]
+### REQ-SET-065: Altitude Extrema-Aware 3D Route Clustering & Database Migration [Verified]
 - **Tests**: `WorkoutClusterDatabaseManager.kt`, `WorkoutClusterEngine.kt`, `TrainingApplication.java`, `ClusterTuningScreen.kt`, `WorkoutClustersViewModel.kt`, `WorkoutClusterHeatmapScreen.kt`, `LegacyImportEngine.kt`, `ImportEngine.kt`
 - **Implementation**: Prevent false cluster merging in hilly and alpine terrain where 2D horizontal fingerprints cannot distinguish ridge from valley routes, and provide complete 3D cluster fingerprint lifecycle management (editing, tuning, visualization, import).
 - **Rationale**: The system SHALL take the geographic coordinates of the minimum altitude point (`minAltitudePos`) and maximum altitude point (`maxAltitudePos`) into account when evaluating route cluster similarity and managing cluster fingerprints:
@@ -425,7 +425,7 @@ When the user navigates to a cluster detail view via this workout button, pressi
 • *Then* existing clusters SHALL be backfilled with member workout altitude centroids.
 **Invariants**: Existing 2D cluster geometries and non-elevation routes MUST NOT fail matching; user-selected sport and equipment rules MUST remain untouched.
 
-### REQ-SET-066: Workout Cluster Sequential Auto-Naming Counter Ergonomics [`TST-SET-053`]
+### REQ-SET-066: Workout Cluster Sequential Auto-Naming Counter Ergonomics [Verified]
 - **Tests**: `WorkoutClusterEngine.kt`, `TrackerService.java`, `EditWorkoutViewModel.kt`
 - **Implementation**: Avoid unnatural and cluttered names like "Morning Run #1" for solitary or initial route activities while preserving numbered series tracking for recurring routes.
 - **Rationale**: The system SHALL format automated workout names derived from Workout Clusters (`WorkoutCluster`) such that the initial workout session of a cluster receives only the cluster's base name without any sequential number suffix, while subsequent sessions receive an incrementing numerical suffix (`#<count>`):
@@ -455,7 +455,7 @@ Normalization (`WorkoutClusterEngine.normalizeName`) and hit count stripping (`W
 
 **Invariants**: The underlying mathematical clustering engine, 3D topological similarity scoring, and spatial tolerances MUST remain unaltered. Numbering for workouts with count $\ge 2$ MUST strictly preserve the `"%1$s #%2$d"` pattern. Room database entities and schemas MUST NOT change.
 
-### REQ-SET-067: Optional Route Cluster Activity Counter / Auto-Numbering [`TST-SET-054`]
+### REQ-SET-067: Optional Route Cluster Activity Counter / Auto-Numbering [Verified]
 - **Tests**: `WorkoutClusterDatabaseManager.kt`, `WorkoutClusterEngine.kt`, `WorkoutClustersViewModel.kt`, `WorkoutClusterHeatmapScreen.kt`, `WorkoutClusterComponents.kt`, `TrackerService.java`, `EditWorkoutViewModel.kt`
 - **Implementation**: Allow users to suppress numerical suffixes (#2, #3, ...) for routes where static unnumbered naming is preferred (e.g., commutes, races, named trail loops) while preserving sequential numbering for routes where desired.
 - **Rationale**: The system SHALL provide a per-cluster configuration option (`hasCounter: Boolean`) determining whether workouts belonging to a Workout Cluster receive sequential numbered suffixes (`#<count>`):
@@ -472,7 +472,7 @@ Normalization (`WorkoutClusterEngine.normalizeName`) and hit count stripping (`W
 • All workout naming avenues (`assignClusterToWorkout`, `TrackerService.java`, `EditWorkoutViewModel.kt`) SHALL respect `cluster.hasCounter`.
 • `cluster.hitCount` tracking in the database, 3D similarity calculations, and cluster deduplication MUST remain unaltered.
 
-### REQ-SET-068: Comprehensive Workout Cluster Performance & Volume Statistics [`TST-SET-055`]
+### REQ-SET-068: Comprehensive Workout Cluster Performance & Volume Statistics [Verified]
 - **Tests**: `WorkoutSummariesDatabaseManager.java`, `WorkoutClusterRepository.kt`, `WorkoutClustersViewModel.kt`, `WorkoutClusterHeatmapScreen.kt`, `WorkoutClusterComponents.kt`, `strings.xml`
 - **Implementation**: Provide athletes with comprehensive historical insights, personal benchmarks, and cumulative volume tracking for recurring routes while preserving sub-second database performance.
 - **Rationale**: The system SHALL calculate and display comprehensive historical performance, cumulative volume, and activity recency statistics for each Workout Cluster (`WorkoutCluster`):
@@ -488,10 +488,18 @@ Normalization (`WorkoutClusterEngine.normalizeName`) and hit count stripping (`W
 `SUM(timeActive_s)` as total cumulative active moving time.
 • The system SHALL encapsulate these values in `data class WorkoutClusterStats` and expose them via `WorkoutClusterRepository.clusterStats: StateFlow<Map<Long, WorkoutClusterStats>>` refreshed atomically alongside clusters.
 2. *Semantic Information Architecture & Layout*:
-• *Detail Screen Dashboard (`WorkoutClusterSummaryHeader`)*: The system SHALL present a three-tier structured dashboard:
-a) *Performance Benchmarks*: Best Time (highlighted with trophy accent), Average Time, and Sport-Adaptive Velocity (Pace for running/walking, Speed for cycling/other).
-b) *Cumulative Totals*: Total Distance, Total Climbing, and Total Moving Time.
-c) *Activity & Recency*: Interactive Recordings Count button (tapping navigates to filtered workout list) and Last Activity date with relative recency (e.g., `"06.09.2026 (3 days ago)"`).
+• *Compact 2-Line Identity Header (`MapDetailLayout.header`)*:
+  - Row 1: `WorkoutClusterIdentityRow` (Sport icon + Cluster name) + Top-End Action buttons (Edit Fingerprint `Icons.Default.EditLocationAlt`, Rename `Icons.Default.Edit`, Long-press Delete context menu).
+  - Row 2 (viewing): Compact base metadata row (`RefDistance • SportName • LinkedEquipment`).
+  - Row 2 (editing): Fingerprint marker-type `FilterChip` row (`Start`, `End`, `Apex`, `MinAlt`, `MaxAlt`).
+• *Split-Pane Detail Analytics Dashboard (`MapDetailLayout.analyticsContent`)*:
+  - The three-tier dashboard is hosted in the scrollable lower pane beneath `MapDetailLayout`'s draggable `SplitPaneDivider`, enabling the divider and allocating the central viewport (~60–70% height) to the cluster map.
+  - Detail Content Tabs: A compact tab switcher allows athletes to toggle between:
+    a) *Tab 1 (Statistik / Details)*:
+       - *Performance Benchmarks*: Best Time (highlighted with trophy accent), Average Time, and Sport-Adaptive Velocity (Pace for running/walking, Speed for cycling/other).
+       - *Cumulative Totals*: Total Distance, Total Climbing, and Total Moving Time.
+       - *Activity & Recency*: Interactive Recordings Count button (tapping navigates to filtered workout list) and Last Activity date with relative recency (e.g., `"06.09.2026 (3 days ago)"`).
+    b) *Tab 2 (Leistungsverlauf / Effort Progression)*: Hosts `WorkoutClusterTrendChartCard` when valid trend workouts count $N \ge 2$. (When $N < 2$, Tab 1 is displayed directly without redundant tab bar).
 • *List Card View (`ClusterItem` / `WorkoutClusterMetadataBlock`)*: The card SHALL display a compact metadata block featuring Best Time (🏆), Total Distance, and Last Hit date alongside the square map preview without visual crowding.
 3. *Edge Cases & Invariants*:
 • Clusters with 0 recorded workouts SHALL gracefully display default empty states without NaN, null, or division-by-zero crashes.
@@ -508,10 +516,13 @@ c) *Activity & Recency*: Interactive Recordings Count button (tapping navigates 
 7. *Given* a newly created cluster with no sessions,
 8. *When* viewed in list or detail view,
 9. *Then* the system SHALL display empty/placeholder stats safely without errors.
+10. *Given* `WorkoutClusterHeatmapScreen`,
+11. *When* rendered in standard viewing mode,
+12. *Then* `MapDetailLayout.header` renders only the compact 2-line identity and metadata row, while the 3-tier performance & volume dashboard is hosted in `MapDetailLayout.analyticsContent` below a draggable `SplitPaneDivider`.
 
 **Invariants**: Cluster fingerprinting, apex anchoring, database schema, and existing cluster filtering/sorting MUST NOT be modified.
 
-### REQ-SET-069: Workout, Route & Segment Detail Bottom Sheet Scaffold Status Bar Boundary Constraint [`TST-SET-058`]
+### REQ-SET-069: Workout, Route & Segment Detail Bottom Sheet Scaffold Status Bar Boundary Constraint [Verified]
 - **Tests**: `PeriodMapScreen.kt`, `MapFragmentWithTrack.kt`, `WorkoutClusterHeatmapScreen.kt`
 - **Implementation**: Prevent status bar icons and clocks from colliding with bottom sheet titles across all map detail sheets while preserving initial peek height and a compact drag handle.
 - **Rationale**: The system SHALL constrain the maximum upward expansion of bottom sheet scaffolds hosting Workout, Route, and Segment details to the bottom edge of the Android system status bar (`WindowInsets.statusBars`):
@@ -528,7 +539,7 @@ c) *Activity & Recency*: Interactive Recordings Count button (tapping navigates 
 
 **Invariants**: `sheetPeekHeight` calculations, `MinimumDragHandle` layout dimensions, and underlying map rendering logic MUST NOT be broken.
 
-### REQ-SET-070: Direct Navigation to Workout Editor from Workout Detail Popup & Unified Action Button Layout [`TST-SET-059`]
+### REQ-SET-070: Direct Navigation to Workout Editor from Workout Detail Popup & Unified Action Button Layout [Verified]
 - **Tests**: `TrackOnMapScreen.kt`, `WorkoutHeader.kt`, `PeriodMapScreen.kt`, `PeriodsFragment.kt`, `WorkoutClusterHeatmapScreen.kt`, `WorkoutClustersFragment.kt`
 - **Implementation**: Enable athletes to modify workout attributes directly from map peek popups without losing spatial context, and harmonize action button hierarchy across headers.
 - **Rationale**: The system SHALL allow users to directly open the Workout Editor (`EditWorkoutScreen`) from the Workout Detail Popup (`TrackOnMapScreen` / `WorkoutHeader`) in analytical map views (Period Map and Favorite Tracks / Cluster Heatmap), and SHALL enforce a unified action button layout where the edit action is positioned on the very right:
@@ -556,7 +567,7 @@ c) *Activity & Recency*: Interactive Recordings Count button (tapping navigates 
 
 **Invariants**: Existing export menus, deletion context menus, cluster transfer dialogs, and map drawing logic MUST NOT be altered or regressed.
 
-### REQ-SET-071: Consistent Workout Click-to-Map Navigation & Dedicated Header Edit Action [`TST-SET-060`]
+### REQ-SET-071: Consistent Workout Click-to-Map Navigation & Dedicated Header Edit Action [Verified]
 - **Tests**: `WorkoutSummary.kt`, `WorkoutHeader.kt`, `WorkoutSummaryCompact.kt`, `WorkoutSummariesTabbedFragment.kt`, `WorkoutSummariesListFragment.kt`
 - **Implementation**: Provide intuitive and consistent inspection navigation across workout cards by standardizing map view as the default click action, while providing a clear and accessible dedicated edit action on the very right of the header.
 - **Rationale**: The system SHALL navigate to the workout on map screen (`TrackOnMapScreen`) whenever an athlete clicks any primary content section of a workout summary card (`WorkoutSummary.kt`), while reserving the workout editor (`EditWorkoutScreen`) strictly for the dedicated edit action button:
@@ -598,7 +609,7 @@ c) *Activity & Recency*: Interactive Recordings Count button (tapping navigates 
 
 **Invariants**: Backstack navigation returning from `TrackOnMapScreen` or `EditWorkoutScreen` MUST preserve list scroll position; cluster calculation and export processing MUST NOT be modified.
 
-### REQ-SET-072: Edit Workout New Cluster Creation & Name Synchronization [`TST-SET-061`]
+### REQ-SET-072: Edit Workout New Cluster Creation & Name Synchronization [Verified]
 - **Tests**: `EditWorkoutScreen.kt`, `EditWorkoutViewModel.kt`, `WorkoutClusterEngine.kt`, `WorkoutClusterComponents.kt`, `WorkoutRepository.kt`
 - **Implementation**: Ensure seamless cluster creation ergonomics from Edit Workout without reverting user edits or retaining stale cluster names.
 - **Rationale**: The system SHALL ensure that creating a new cluster from within the Edit Workout dialog cleanly updates both the cluster assignment and the workout name in accordance with user intent:
@@ -619,7 +630,7 @@ c) *Activity & Recency*: Interactive Recordings Count button (tapping navigates 
 
 **Invariants**: Previous cluster hit count decrement and atomic new cluster creation MUST be preserved; existing manual cluster selection flows MUST NOT be altered.
 
-### REQ-SET-073: Dedicated Advanced Tuning Preferences Screen with Parameter Clamping and Reset-to-Defaults [`TST-SET-062`]
+### REQ-SET-073: Dedicated Advanced Tuning Preferences Screen with Parameter Clamping and Reset-to-Defaults [Verified]
 - **Tests**: `TuningPreferencesDataStore.kt`, `AdvancedTuningDialog.kt`, `BatterySaverController.kt`, `BatterySaverStateMachine.kt`, `SpeedAndLocationDevice.java`, `VerticalSpeedAndSlopeDevice.java`
 - **Implementation**: Expose critical tracking and battery saver heuristics to athletes and testers with strict safety clamping, reactive updates, and single-tap factory reset.
 - **Rationale**: The system SHALL provide an isolated, expert-level configuration screen for sensor filtering heuristics and AMOLED battery saver parameters, featuring strict value clamping and factory reset capabilities:
@@ -661,7 +672,7 @@ c) *Activity & Recency*: Interactive Recordings Count button (tapping navigates 
 
 **Invariants**: Safety floor 5% brightness, positive non-zero speeds ($\ge 0.2\text{ m/s}$), non-inverted slope/brightness thresholds, and 9-language localization parity MUST be preserved.
 
-### REQ-SET-074: Expert Settings Drawer Positioning, Localization & 50m Default GPS Tolerance [`TST-SET-063`]
+### REQ-SET-074: Expert Settings Drawer Positioning, Localization & 50m Default GPS Tolerance [Verified]
 - **Tests**: `AppNavigationDrawer.kt`, `TuningPreferencesDataStore.kt`, `strings.xml`
 - **Implementation**: Sequester expert tuning options from general preferences, refine German terminology, and provide better out-of-the-box GPS track accuracy.
 - **Rationale**: The system SHALL sequester expert-level tuning preferences into a dedicated section at the bottom of the navigation drawer, align terminology to "Expert Settings" across 9 languages, and tighten default GPS accuracy tolerance to 50 meters (ATT-1646):
@@ -700,7 +711,7 @@ c) *Activity & Recency*: Interactive Recordings Count button (tapping navigates 
 
 **Invariants**: Navigation route mapping, DataStore keys, slider clamping, and factory reset behavior MUST be preserved.
 
-### REQ-SET-075: Dedicated Workout Route Clustering Section in Advanced Settings, Single Source of Truth, and Modularity Preservation [`TST-UI-318`, `TST-UI-321`]
+### REQ-SET-075: Dedicated Workout Route Clustering Section in Advanced Settings, Single Source of Truth, and Modularity Preservation [Verified]
 - **Tests**: `ClusterTuningSection.kt`, `WorkoutClustersTabsScreen.kt`, `WorkoutClustersScreen.kt`, `ClusterTuningContent.kt`, `AdvancedTuningAccordion.kt`, `AdvancedTuningScreen.kt`, `TuningPreferencesDataStore.kt`
 - **Implementation**: Consolidate workout route clustering algorithmic parameters into Advanced Settings as a dedicated accordion section, eliminating code duplication, excising redundant header tuning from favorite routes, and providing recalculate action with confirmation dialog.
 - **Rationale**: The system SHALL consolidate the canonical configuration of workout route clustering algorithmic parameters into Advanced Settings (`AdvancedTuningScreen.kt` / `AdvancedTuningDialog.kt`) as a dedicated modular accordion section, adhering to the Single Source of Truth and DRY principles (Rule 36), and SHALL preserve existing parameter ranges, keys, defaults, and modularity bounds (ATT-3355, amended by ATT-3452, amending `REQ-SET-010` and `REQ-SET-065`, superseding `REQ-SET-014`, referencing `REQ-UI-357`):
@@ -752,7 +763,7 @@ c) *Activity & Recency*: Interactive Recordings Count button (tapping navigates 
 
 **Invariants**: Parameter ranges, DataStore keys, warning card, factory reset, zero tonal elevation, 400-line file limit, and 9-language localization parity MUST NOT be broken.
 
-### REQ-SET-076: Red Cluster Recalculate Button and Direct Advanced Settings Deep-Link from Favorite Routes [`TST-SET-076`]
+### REQ-SET-076: Red Cluster Recalculate Button and Direct Advanced Settings Deep-Link from Favorite Routes [Verified]
 - **Tests**: `ClusterTuningSection.kt`, `ClusterInfoDialog.kt`, `WorkoutClustersTabsScreen.kt`, `WorkoutClustersScreen.kt`, `ATrainingTrackerApp.kt`, `WorkoutClustersFragment.kt`
 - **Implementation**: Style cluster recalculate button in red error colors and provide direct deep-link from Favorite Routes info to Advanced Settings.
 - **Rationale**: The system SHALL style the cluster recalculate action button in red to communicate its destructive nature with accessible progress contrast, and SHALL provide an educational description and direct navigation deep-link from the Favorite Routes info dialog to Advanced Settings (ATT-3492, amending `REQ-SET-075` and `REQ-UI-149`):
@@ -790,7 +801,7 @@ c) *Activity & Recency*: Interactive Recordings Count button (tapping navigates 
 
 **Invariants**: Mandatory confirmation AlertDialog, repository async recalculation, migration status locking, and 9-language translation parity MUST NOT be broken.
 
-### REQ-SET-041: Unified Spatial Markers [Proposed]
+### REQ-SET-041: Unified Spatial Markers [Verified]
 - **Tests**: `TST-SET-031`
 - **Implementation**: `WorkoutClusterHeatmapScreen.kt`, `InteractivePeriodMap.kt`, `TrackOnMapScreen.kt`, `RouteItem.kt`
 - **Rationale**: All geographical views (Workout Clusters, Periods, Workout Details, and Routes) SHALL use standardized technical markers: Green start icons, Red stop icons, and Blue apex/distance icons. Icons SHALL use the unified `createSensorMarker` visual style.
@@ -810,7 +821,7 @@ c) *Activity & Recency*: Interactive Recordings Count button (tapping navigates 
 - **Implementation**: `MainActivityWithNavigation.kt`, `ControlTrackingScreen.kt`, `ControlTrackingButton.kt`, `ControlTrackingViewModel.kt`, `PermissionRationaleSheet.kt`
 - **Rationale**: The system SHALL NOT present modal permission dialogs or battery optimization popups during cold start; it SHALL evaluate permissions contextually when the athlete expresses tracking intent (tapping Start or searching sensors), display educational Material 3 rationale sheets highlighting athletic benefits, enforce the Android 11+ two-step background location cascade ('Allow all the time' / 'Immer zulassen'), handle battery optimization exemption ('Unrestricted' / 'Nicht eingeschränkt') with fail-safe OEM fallback, and handle denied permissions or returns from settings gracefully with an amber warning badge on the Start button and actionable feedback without infinite loops (ATT-2075).
 
-### REQ-PRI-004: Mandatory Precise Location Gating and Dynamic Sensor Device Instantiation on Permission Escalation [Require Precise Location (ACCESS_FINE_LOCATION) for workout tracking, provide educational rationale on Approximate-only grant, and lazily instantiate GPS location devices dynamically upon permission grant.]
+### REQ-PRI-004: Mandatory Precise Location Gating and Dynamic Sensor Device Instantiation on Permission Escalation [Verified]
 - **Tests**: ACCESS_COARSE_LOCATION` under the assumption that coarse location could serve as a degraded fallback. However, `SpeedAndLocationDevice_GPS` strictly requires `ACCESS_FINE_LOCATION` to construct Android `LocationManager.requestLocationUpdates` with `GPS_PROVIDER`, causing complete GPS silence when only coarse was granted.
 4. *Preservation of Core Invariants*: JIT permission sheet flow, battery optimization exemption handling, background location cascade, and 100% test pass rate are strictly preserved.
 
@@ -839,7 +850,7 @@ c) *Activity & Recency*: Interactive Recordings Count button (tapping navigates 
 2. *Historical Origin & Commit Trace*: Sprint 2026-40.12 (`ATT-2075` introduced JIT Material 3 permission rationale). Android 12 introduced coarse vs. fine permission separation.
 3. *Root Reason for Existing Formulation*: `checkHasLocation` used `
 
-### REQ-LOC-001: Global Translation Parity, Resource Hierarchy Alignment, and Formatter Safety [`TST-STR-018`]
+### REQ-LOC-001: Global Translation Parity, Resource Hierarchy Alignment, and Formatter Safety [Verified]
 - **Tests**: `values*/strings.xml`, `values*/strings_devices.xml`, `values*/strings_filters.xml`, `values*/arrays.xml`
 - **Implementation**: Eliminate format string crash risks, internationalization technical debt, and resource file inconsistencies across all supported languages.
 - **Rationale**: The system SHALL enforce 100% translation coverage, consistent resource file distribution, array length equality, and strict format specifier parity across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT):
@@ -855,7 +866,7 @@ c) *Activity & Recency*: Interactive Recordings Count button (tapping navigates 
 • *Then* 100% of translatable string keys, format specifiers, and array lengths SHALL pass verification.
 **Invariants**: No string keys or existing translations SHALL be lost; Android resource resolution fallbacks MUST remain intact.
 
-### REQ-PRI-005: Proactive Background Energy & Battery Optimization Exemption Governance and Cascaded Rationale Decoupling [Proactive background energy warning banner, Start button badge integration, and decoupled battery optimization rationale cascade.]
+### REQ-PRI-005: Proactive Background Energy & Battery Optimization Exemption Governance and Cascaded Rationale Decoupling [Verified]
 - **Tests**: !isIgnoringBatteryOptimizations`.
 4. *Decoupled Just-in-Time Rationale Cascade*:
 • In `proceedAfterPermissions`, when background location is skipped ("Not now") or denied, the system SHALL NOT bypass battery optimization; if `checkIsIgnoringBatteryOptimizations() == false`, it SHALL present `RationaleStep.BATTERY_OPTIMIZATION`.
@@ -898,7 +909,7 @@ c) *Activity & Recency*: Interactive Recordings Count button (tapping navigates 
 3. *Unified Start Button Warning Indicator*:
 • The warning badge on `ControlTrackingButton` SHALL evaluate to `true` whenever Precise Location is missing OR battery optimization exemption is missing: `hasPermissionWarning = !hasLocationPermission
 
-### REQ-SET-077: Standardized Route Clustering Form Controls via TuningFormControls (Rule 36) [`TST-SET-077`]
+### REQ-SET-077: Standardized Route Clustering Form Controls via TuningFormControls (Rule 36) [Verified]
 - **Tests**: `TuningFormControls.kt`, `ClusterTuningContent.kt`, `ClusterTuningScreen.kt`, `ClusterTuningSection.kt`
 - **Implementation**: Standardized route clustering form controls via TuningFormControls (Rule 36).
 - **Rationale**: The system SHALL standardize all route clustering form controls across `ClusterTuningContent.kt`, `ClusterTuningScreen.kt`, and `ClusterTuningSection.kt` using canonical, accessible form controls from `TuningFormControls.kt` (`TuningSliderItem` and `TuningToggleItem`), enforcing Rule 36 (Single Source of Truth & DRY) and guaranteeing visual and behavioral consistency across all application settings screens (ATT-3365, complementing `REQ-SET-075` and `REQ-UI-262`):
@@ -942,15 +953,15 @@ c) *Activity & Recency*: Interactive Recordings Count button (tapping navigates 
 
 **Invariants**: Tolerance ranges, master sensitivity calculation, recalculation domain locking, drag completion persistence, and 100% full-suite test pass rate MUST NOT be broken.
 
-### REQ-SET-078: Historical Duration and Speed/Pace Trend Chart for Workout Clusters (Lieblingsstrecken) [`TST-SET-078`]
+### REQ-SET-078: Historical Duration and Speed/Pace Trend Chart for Workout Clusters (Lieblingsstrecken) [Verified]
 - **Tests**: `WorkoutClusterTrendChartCard.kt`, `WorkoutClusterTrendMath.kt`, `WorkoutClusterHeatmapScreen.kt`, `values*/strings.xml`
 - **Implementation**: Render historical duration and speed/pace trend chart for Workout Clusters with faster-is-higher scaling, outlier-resilient Y-scaling, X/Y axis scale labels, density-adaptive point sizing, cluster average reference line, PR highlight, interactive peek, and 9-language parity.
 - **Rationale**: The system SHALL render a historical effort trend chart for Workout Clusters in `WorkoutClusterDetailDashboard` (`WorkoutClusterHeatmapScreen.kt`, `WorkoutClusterTrendChartCard.kt`, `WorkoutClusterTrendMath.kt`), ordering member workouts chronologically, supporting dual metric modes (Duration vs Speed/Pace) with faster-is-higher vertical axis scaling, displaying cluster average reference line and PR highlight, providing interactive point touch selection with workout peek sheet launch, rendering explicit X/Y axis scale markers, clamping isolated outliers with Tukey fencing, and guaranteeing 9-language localization parity (ATT-4067, refined by ATT-4287):
 1. *Chronological Effort Progression & Data Cleansing (`REQ-SET-078.1`)*:
 • The system SHALL sort member workouts in ascending chronological order based on `startTimeS`.
 • Workouts with non-positive duration (`activeTimeSec <= 0`) or velocity (`avgSpeedMps <= 0.0`) SHALL be excluded from the trend plot.
-• When the count of valid member workouts is strictly less than 2 ($N < 2$), the progression chart card SHALL be hidden completely from `WorkoutClusterDetailDashboard`.
-• When $N \ge 2$, the progression chart card SHALL be displayed.
+• When the count of valid member workouts is strictly less than 2 ($N < 2$), the progression chart card SHALL be hidden completely and the analytics pane SHALL display Tab 1 directly without a trend tab option.
+• When $N \ge 2$, the progression chart card SHALL be displayed within Tab 2 (*Leistungsverlauf*) of `MapDetailLayout.analyticsContent`.
 2. *Sport-Aware Dual Metric Modes & Inverted Scaling (`REQ-SET-078.2`)*:
 • The chart SHALL support toggling between Duration and Speed/Pace modes.
 • In Duration mode, `activeTimeSec` SHALL be plotted with inverted vertical scaling such that faster (lower) durations are rendered higher on the canvas, preserving the "higher is better" invariant.
@@ -959,9 +970,9 @@ c) *Activity & Recency*: Interactive Recordings Count button (tapping navigates 
 3. *Cluster Average Reference Line & Personal Best Highlight (`REQ-SET-078.3`)*:
 • The chart SHALL draw a horizontal dashed reference line across the plot representing the cluster average value (duration, speed, or pace).
 • The effort with the fastest time (minimum `activeTimeSec`) SHALL be decorated with a distinctive gold marker and PR badge.
-4. *Interactive Touch Selection & Peek Launch (`REQ-SET-078.4`)*:
-• Tapping a data point within 24dp hit radius SHALL select that effort, drawing an active indicator ring and updating a compact callout card with date, duration, speed/pace, and PR badge.
-• Tapping the selected point or callout card SHALL dispatch `selectWorkoutForPeek(workout.id)`.
+4. *Direct Touch Selection & Peek Launch (`REQ-SET-078.4`)*:
+• Tapping a data point within 24dp hit radius SHALL select that effort, drawing an active indicator ring and directly dispatching `onSelectWorkout(hit.workoutId)` to launch the workout peek sheet.
+• The redundant selected-workout callout banner (`Surface` with date, duration, speed/pace, and arrow icon at the bottom of `WorkoutClusterTrendChartCard`) SHALL be removed, freeing ~50 dp of vertical space.
 5. *9-Language Localization Parity (`REQ-SET-078.5`)*:
 • All new UI strings (`cluster_trend_title`, `cluster_trend_duration`, `cluster_trend_speed`, `cluster_trend_pace`, `cluster_trend_pr`, `cluster_trend_avg`, `cluster_trend_outlier`) SHALL exist across all 9 application locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
 6. *Outlier-Resilient Y-Axis Scaling & Tukey Fencing (`REQ-SET-078.6`)*:
@@ -975,7 +986,7 @@ c) *Activity & Recency*: Interactive Recordings Count button (tapping navigates 
 • When $N > 20$, standard non-PR point radius SHALL dynamically reduce to compact size ($2\text{ dp}$ outer / $1\text{ dp}$ inner) to prevent visual collision.
 • PR efforts SHALL retain prominent gold highlighting ($6\text{ dp}$).
 • Selected effort SHALL retain prominent highlight ring ($5\text{ dp}$ inner / $9\text{ dp}$ halo).
-• Clamped outlier efforts SHALL be visually differentiated at the canvas boundary with an outlier glyph / ring styling and an outlier badge in the callout card.
+• Clamped outlier efforts SHALL be visually differentiated at the canvas boundary with an outlier glyph / ring styling.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
 1. *Original Requirement ID & Target*: Refines `REQ-SET-078` (*Historical Duration and Speed/Pace Trend Chart for Workout Clusters*). Targets `WorkoutClusterTrendChartCard.kt`, `WorkoutClusterTrendMath.kt`, `WorkoutClusterHeatmapScreen.kt`, and `values*/strings.xml`.
@@ -1002,13 +1013,13 @@ c) *Activity & Recency*: Interactive Recordings Count button (tapping navigates 
 • *Given* a cluster with $> 20$ workouts,
 • *When* inspecting data points,
 • *Then* point radii adaptively scale down to 2dp to eliminate crowding.
-• *Given* a rendered chart,
-• *When* the user taps an effort point,
-• *Then* the callout card updates with that effort's metrics (including outlier badge if applicable), and tapping the callout dispatches `selectWorkoutForPeek`.
+• *Given* a rendered chart on `WorkoutClusterHeatmapScreen`,
+• *When* the user taps an effort point on the canvas within the hit radius,
+• *Then* `selectWorkoutForPeek(hit.workoutId)` is dispatched immediately to open the workout peek sheet, and zero redundant callout banner is rendered below the chart.
 
 **Invariants**: Cluster centroid arithmetic mean, route matching, athletic "faster-is-higher" orientation, 9-language localization parity, and 100% clean-room test pass rate.
 
-### REQ-PRI-006: Decoupled Multi-Permission Cascade, Contextual Bluetooth & Notification Gating, Sensor Discovery Permission Handling, and Legacy Code Retirement [`TST-PRI-005`]
+### REQ-PRI-006: Decoupled Multi-Permission Cascade, Contextual Bluetooth & Notification Gating, Sensor Discovery Permission Handling, and Legacy Code Retirement [Verified]
 - **Tests**: `ControlTrackingScreen.kt`, `ControlTrackingButton.kt`, `DevicesTabbedScreen.kt`, `MainActivityWithNavigation.kt`, `BTSearchForNewDevicesEngine.java`, `strings.xml` (all 9 locales)
 - **Implementation**: Decoupled multi-permission cascade for workout start, contextual Bluetooth and notification prompts when location is already granted, JIT sensor discovery permissions, and legacy code retirement.
 - **Rationale**: The system SHALL decouple runtime permission evaluation so that fine location (`ACCESS_FINE_LOCATION`), notification (`POST_NOTIFICATIONS` on API 33+), and Bluetooth connect (`BLUETOOTH_CONNECT` on API 31+) are checked independently via dedicated predicates (`checkHasLocation()`, `checkHasNotification()`, `checkHasBluetoothConnect()`), rather than gating the entire rationale flow strictly on `!checkHasLocation()`, SHALL contextually prompt for missing notification or Bluetooth permissions when location is already granted, SHALL gate sensor search and scanning on Bluetooth permissions just-in-time, SHALL retire dead legacy permission methods from `MainActivityWithNavigation.kt`, and SHALL maintain 100% 9-language localization parity (ATT-3998, refined by ATT-4449, refining `REQ-PRI-003`):
@@ -1070,7 +1081,7 @@ f. When all required/un-dismissed steps are satisfied: the system SHALL execute 
 
 **Invariants**: Zero cold-start popups (`REQ-PRI-003`), strict fine location gating (`REQ-PRI-004`), 2-step background location cascade, fail-safe battery intent handling (`REQ-PRI-005`), Android 8–11 BLE compatibility (`REQ-CON-021`), and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-SET-079: Non-Blocking DataStore Architecture, Reactive In-Memory StateFlow Caching & Pure Parameter Passing for UI and Sensor Hot Paths [`TST-SET-079`]
+### REQ-SET-079: Non-Blocking DataStore Architecture, Reactive In-Memory StateFlow Caching & Pure Parameter Passing for UI and Sensor Hot Paths [Verified]
 - **Tests**: `SettingsDataStoreJavaHelper.kt`, `SettingsDataStore.kt`, `TuningPreferencesDataStore.kt`, `BatterySaverModel.kt`, `TrackingTabsScreen.kt`, `TrackingViewModel.kt`, `SpeedAndLocationDevice.java`, `VerticalSpeedAndSlopeDevice.java`, `TelemetryZoneMath.kt`, `LocationNameResolver.kt`
 - **Implementation**: Eliminate blocking runBlocking DataStore reads from UI and sensor hot paths via reactive in-memory StateFlow caching, singleton repositories, pure parameter passing, and non-blocking Java bridges.
 - **Rationale**: The system SHALL eliminate blocking `runBlocking` DataStore reads from all UI and sensor hot paths through reactive in-memory caching, singleton encapsulation, and pure parameter passing (ATT-3999, refining `REQ-SET-073` and `REQ-SET-074`):
@@ -1127,7 +1138,7 @@ f. When all required/un-dismissed steps are satisfied: the system SHALL execute 
 
 **Invariants**: Zero behavioral or sensor metric regression, 100% clean-room test suite pass rate, strict mockkStatic compatibility, thread safety, scope bounding (ATT-1250), and parent ticket human decision gate MUST NOT be broken.
 
-### REQ-PRI-007: Abortable First-Install Permission Onboarding Flow and Upgrade Auto-Skip Architecture [`TST-PRI-006`]
+### REQ-PRI-007: Abortable First-Install Permission Onboarding Flow and Upgrade Auto-Skip Architecture [Verified]
 - **Tests**: `PermissionOnboardingSheet.kt`, `ATrainingTrackerApp.kt`, `TuningPreferencesDataStore.kt`, `strings.xml` (all 9 locales)
 - **Implementation**: Abortable first-install permission onboarding flow on initial app launch, DataStore persistence, upgraded user auto-skip, and JIT fallback preservation.
 - **Rationale**: The system SHALL provide a welcoming, educational, and abortable/skippable first-launch permission onboarding flow (`PermissionOnboardingSheet`) on initial application launch (`savedInstanceState == null`), guiding new athletes step-by-step through essential runtime permissions (Location & Background Location, Nearby Bluetooth Sensors on Android 12+, Notifications on Android 13+) and battery optimization exemption, SHALL allow skipping individual steps or aborting the entire flow at any point without blocking app access, SHALL persist onboarding completion/dismissal in `TuningPreferencesDataStore`, SHALL automatically auto-skip onboarding on upgraded installs when all essential permissions are already held, SHALL maintain 100% 9-language localization parity, and SHALL strictly preserve existing Just-in-Time fallback rationale sheets on `ControlTrackingScreen` and `DevicesTabbedScreen` (ATT-4455, refining `REQ-PRI-003` and `REQ-PRI-006`):
@@ -1182,7 +1193,7 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 
 **Invariants**: Zero cold-start regressions for returning users (`REQ-PRI-003`), non-blocking app exploration (total abortability), preservation of all JIT fallbacks (`REQ-PRI-006`), strict fine location requirement (`REQ-PRI-004`), fail-safe battery intent handling (`REQ-PRI-005`), UI file length `< 400` lines, 100% clean-room test pass rate.
 
-### REQ-LOC-002: Locale Hygiene, Translation Completeness, and ExtraTranslation De-duplication [`TST-STR-019`]
+### REQ-LOC-002: Locale Hygiene, Translation Completeness, and ExtraTranslation De-duplication [Verified]
 - **Tests**: `res/values-*/strings.xml`, `res/values-{de,pl}/arrays.xml`, `TranslationParityTest.kt`
 - **Implementation**: Eliminate untranslated English strings across 8 locales, purge 7 redundant translatable="false" keys from locales, excise redundant string-arrays in DE/PL, and enforce with automated parity guard.
 - **Rationale**: The system SHALL eliminate raw untranslated English strings across all non-default locales, purge redundant declarations of non-translatable keys from all 8 locale `strings.xml` variants to eliminate Android `ExtraTranslation` lint warnings while preserving default resource fallbacks, purge redundant string arrays referencing `@string` tokens from locale `arrays.xml` files, and enforce these hygiene standards via automated unit test guards in `TranslationParityTest.kt` (ATT-4029, Parent Epic ATT-355, status: Verified, extending `REQ-LOC-001`):
@@ -1268,7 +1279,7 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 **Invariants**: Backward compatibility of `TuningPreferencesDataStore` keys and default values, `TrackerService` auto-pause calculation integrity, 100% 9-language translation parity.
 
 
-### REQ-SET-081: Strict Preservation of Unclustered Status on Workout Edits & Explicit Cluster Management Gating [`TST-SET-081`]
+### REQ-SET-081: Strict Preservation of Unclustered Status on Workout Edits & Explicit Cluster Management Gating [Verified]
 - **Tests**: `WorkoutRepository.kt`, `EditWorkoutViewModel.kt`, `WorkoutClusterEngine.kt`, `EditWorkoutClusteringTest.kt`
 - **Implementation**: Eliminate implicit cluster creation and assignment in `WorkoutRepository.saveWorkout()`.
 - **Rationale**: The system SHALL ensure that unclustered workouts ('Offen', `clusterId <= 0`) strictly remain unclustered when saving metadata edits, and that cluster creation or assignment occurs exclusively through explicit user actions:
@@ -1294,7 +1305,7 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 
 **Invariants**: Explicit cluster creation and selection in `EditWorkoutClusterDialog` (`createNewCluster`, `applyClusterIdentity`, `unassignCluster`) remain fully functional; SQLite database schemas remain unchanged.
 
-### REQ-SET-082: Timestamped Zone Boundary Snapshots per ZoneType & Historical Workout Zone Resolution [Verified] [`TST-SET-082`]
+### REQ-SET-082: Timestamped Zone Boundary Snapshots per ZoneType & Historical Workout Zone Resolution [Verified] [Verified]
 - **Tests**: `AthleteMetricsDatabaseManager.kt`, `AthleteMetricsRepository.kt`, `SettingsDataStore.kt`, `WorkoutRepository.kt`, `TelemetryMetricGraph.kt`, `ZonesSettingsViewModel.kt`, `ZoneProfileTabContent.kt`, `ZoneHistoryDialog.kt` | **Tickets**: `ATT-5399`
 - **Implementation**: Persist atomic zone boundary snapshots in `AthleteMetrics.db` (`zone_history` table, `DB_VERSION = 2`), maintain unidirectional projection to `SettingsDataStore`, resolve historical workouts at `workoutStartTimeMs`, and provide history/backdating UI.
 - **Rationale**: Currently, training zone boundaries (`HR_RUN`, `HR_BIKE`, `PWR_BIKE`) are stored only as single un-timestamped preferences in `SettingsDataStore`. When an athlete updates zone boundaries, past workouts in Workout Summaries, Workout Details, and Telemetry Graphs retroactively re-evaluate against modern boundaries, distorting training history. Extending timestamped persistence to zone configurations ensures historical workout fidelity and preserves full temporal integrity:

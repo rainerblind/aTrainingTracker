@@ -265,7 +265,7 @@ fun LapSplitVisualizerCard(
                         modifier = Modifier.size(24.dp)
                     ) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_lap_timer),
+                            painter = painterResource(R.drawable.ic_lap_move_boundary),
                             contentDescription = stringResource(R.string.move_lap_boundary_action),
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(18.dp)
@@ -279,7 +279,7 @@ fun LapSplitVisualizerCard(
                         modifier = Modifier.size(24.dp)
                     ) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_lap_add),
+                            painter = painterResource(R.drawable.ic_lap_split_scissors),
                             contentDescription = stringResource(R.string.split_lap_action),
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(18.dp)

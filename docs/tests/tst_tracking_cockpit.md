@@ -12,19 +12,19 @@
 - **Component**: `WorkoutSamplesDb`
 - **Test Description**: Verify that `calcExtremaValue` returns `null` (not 0.0) when querying a sensor that has only NULL values or does not exist in the table.
 
-### TST-FIL-001: **Null-Safe Filter Verification** [1. The system MUST NOT throw a NullPointerException. 2. The filtered value SHALL remain consistent with previous data or return null if no valid data exists.]
+### TST-FIL-001: **Null-Safe Filter Verification** [Verified]
 - **Requirement(s)**: `REQ-FIL-011`
 - **Component**: **Null-Safe Filter Verification**
 - **Jira**: ``ATT-275``
 - **Test Description**: 1. Execute `AverageFilterTest` (or similar unit test). 2. Pass `null` as a new value to the filter. 3. Call `getFilteredValue`.
 
-### TST-FIL-003: **Atomic Altitude Correction** [1. Samples table altitudes MUST be shifted by +100m. 2. Summary Min/Max altitude MUST be updated. 3. Encoded altitude stream MUST reflect the shift.]
+### TST-FIL-003: **Atomic Altitude Correction** [Verified]
 - **Requirement(s)**: `REQ-FIL-004`
 - **Component**: **Atomic Altitude Correction**
 - **Jira**: ``ATT-425``
 - **Test Description**: 1. Start a workout with barometric altitude at 100m. 2. Record data for 1 minute. 3. Trigger a correction to 200m (e.g. by nearing a known location). 4. Stop workout and inspect summary.
 
-### TST-CON-002: **Barometric Cold-Start Baseline Protection Audit** [Cold-start uncalibrated pressure readings cannot contaminate session extrema before reference anchor or calibration is established.]
+### TST-CON-002: **Barometric Cold-Start Baseline Protection Audit** [Verified]
 - **Requirement(s)**: `REQ-CON-011`
 - **Component**: **Barometric Cold-Start Baseline Protection Audit**
 - **Jira**: ``ATT-508``
@@ -33,7 +33,7 @@
   2. Simulate cold start with sea level pressure = 1020.8 hPa (raw altitude = -63.0 m); verify that -63 m is suppressed from session extrema.
   3. Execute unit tests in `AltitudeFromPressureDeviceTest.kt`.
 
-### TST-TRK-002: **Workout Lap Lifecycle, Pause Neutrality & Zero-Duration Phantom Prevention** [1. Pausing and resuming does not split or increment laps.
+### TST-TRK-002: **Workout Lap Lifecycle, Pause Neutrality & Zero-Duration Phantom Prevention** [Verified]
 2. Single-lap tracked workouts contain exactly 1 lap with correct duration and distance, with 0 phantom laps.
 3. Workouts with $N$ manual laps contain exactly $N+1$ laps.
 4. `LapsDatabaseManager` rejects zero-duration writes and filters legacy zero-duration rows.
@@ -56,7 +56,7 @@
   4. *Clean-Room Regression Verification*:
   • Execute full clean-room unit test suite (`./gradlew testDebugUnitTest`): BUILD SUCCESSFUL (0 regressions).
 
-### TST-TRK-003: **Lieblingsorte Start & Destination Workout Auto-Naming Unit & Localization Tests** [Unclustered recorded activities and new cluster proposals automatically receive meaningful, localized names based on recognized Lieblingsorte across all sport profiles and languages; established cluster names and manual user edits remain strictly intact; zero test regressions.]
+### TST-TRK-003: **Lieblingsorte Start & Destination Workout Auto-Naming Unit & Localization Tests** [Verified]
 - **Requirement(s)**: `REQ-TRK-011`
 - **Component**: **Lieblingsorte Start & Destination Workout Auto-Naming Unit & Localization Tests**
 - **Jira**: ``ATT-1398``
@@ -83,7 +83,7 @@
   7. *Clean-Room Regression Suite*:
   • Execute full unit test suite (`./gradlew testDebugUnitTest`) to guarantee 100% pass rate.
 
-### TST-TRK-004: **Distance-Enriched Auto-Generated Workout Names for Start-Location Sessions Verification** [Start-location and round-trip auto-generated workout names cleanly append session distance in the user's preferred unit (km / mi); point-to-point and destination-only names remain uncluttered; backward-compatible calls without distance preserved; 9-language translation parity verified; 100% test pass rate.]
+### TST-TRK-004: **Distance-Enriched Auto-Generated Workout Names for Start-Location Sessions Verification** [Verified]
 - **Requirement(s)**: `REQ-TRK-012`
 - **Component**: **Distance-Enriched Auto-Generated Workout Names for Start-Location Sessions Verification**
 - **Jira**: ``ATT-2247``
@@ -108,7 +108,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions.
 
-### TST-TRK-005: **GPS Speed Inactivity Watchdog, Progressive Decay & Recovery Verification** [Verified - Speed decays smoothly to 0.0 m/s after 10 seconds of location silence; pace sensor cleanly nullifies without division-by-zero; multi-second 7-8s fix cadences do not trigger premature decay; fresh location recovers without averaging against decayed watchdog artifacts; zero phantom distance accumulated; 100% test pass rate.]
+### TST-TRK-005: **GPS Speed Inactivity Watchdog, Progressive Decay & Recovery Verification** [Verified]
 - **Requirement(s)**: `REQ-TRK-013`
 - **Component**: **GPS Speed Inactivity Watchdog, Progressive Decay & Recovery Verification**
 - **Jira**: ``ATT-2616``, ``ATT-4802``
@@ -138,7 +138,7 @@
   8. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions.
 
-### TST-TRK-006: **Successive Geodesic Location Delta Fallback for Missing GPS Bearing & Speed Verification** [`SpeedAndLocationDevice` reliably calculates forward bearing and speed from location deltas when hardware/test provider fixes omit them; stationary fixes retain compass heading without snapping to North; hardware non-zero metrics take precedence; 100% unit test pass rate.]
+### TST-TRK-006: **Successive Geodesic Location Delta Fallback for Missing GPS Bearing & Speed Verification** [Verified]
 - **Requirement(s)**: `REQ-TRK-014`
 - **Component**: **Successive Geodesic Location Delta Fallback for Missing GPS Bearing & Speed Verification**
 - **Jira**: ``ATT-2467``
@@ -157,7 +157,7 @@
   4. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate with zero regressions across all tracking and route navigation test suites.
 
-### TST-TRK-007: **Permission-Gated Foreground Service Types Verification** [`TrackerService` gates Android 14+ FGS health type by runtime permission, preventing fatal `SecurityException` during foreground promotion; 100% unit test pass rate.]
+### TST-TRK-007: **Permission-Gated Foreground Service Types Verification** [Verified]
 - **Requirement(s)**: `REQ-TRK-015`
 - **Component**: **Permission-Gated Foreground Service Types Verification**
 - **Jira**: ``ATT-2972``
@@ -176,7 +176,7 @@
   4. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate with zero regressions.
 
-### TST-TRK-008: **Guaranteed Workout Finalization and Completion Broadcast Test** [Workout termination reliably finalizes session in SQLite and broadcasts completion intent; false unclosed workouts eliminated; 100% unit test pass rate.]
+### TST-TRK-008: **Guaranteed Workout Finalization and Completion Broadcast Test** [Verified]
 - **Requirement(s)**: `REQ-TRK-016`
 - **Component**: **Guaranteed Workout Finalization and Completion Broadcast Test**
 - **Jira**: ``ATT-2972``
@@ -193,7 +193,7 @@
   4. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate with zero regressions.
 
-### TST-CON-003: **BLE GATT Lifecycle, Thread-Safe Concurrency & Null-Safety Unit Tests** [Robust execution across all BLE lifecycle transitions with 0 NPEs.]
+### TST-CON-003: **BLE GATT Lifecycle, Thread-Safe Concurrency & Null-Safety Unit Tests** [Verified]
 - **Requirement(s)**: `REQ-CON-012`
 - **Component**: **BLE GATT Lifecycle, Thread-Safe Concurrency & Null-Safety Unit Tests**
 - **Jira**: ``ATT-1348``
@@ -204,7 +204,7 @@
   4. *Delayed Battery Callback Cancellation*: Trigger battery update; verify delayed runnable is scheduled; trigger disconnection; verify delayed runnable is cancelled from `mHandler` and does not run.
   5. *Empty Queue Descriptor Safety*: Invoke empty queue branch when `mBluetoothGatt` is null or service/characteristic is missing; verify zero crashes.
 
-### TST-CON-004: **Barometric Altitude Sensor Initialization & Null-Safe Correction Dispatch Test** [Hardware barometric sensor initialization and altitude correction dispatch are 100% null-safe; cold-start NPE and native JNI SIGABRT aborts are eliminated; downstream atomic shift and reference learning invariants remain fully intact.]
+### TST-CON-004: **Barometric Altitude Sensor Initialization & Null-Safe Correction Dispatch Test** [Verified]
 - **Requirement(s)**: `REQ-CON-013`
 - **Component**: **Barometric Altitude Sensor Initialization & Null-Safe Correction Dispatch Test**
 - **Jira**: ``ATT-1353``
@@ -217,7 +217,7 @@
   6. *Sensor Event Integration*: Verify that in `onSensorChanged()`, the initial pressure event with known location initializes cleanly, sets `mPressureSensorInitialized = true`, updates `mAltitudeSensor` with reference altitude, and dispatches the correction atomically.
   7. *Regression Suite*: Execute full test suite (`./gradlew testDebugUnitTest`) to ensure zero regressions across all modules.
 
-### TST-CON-005: **BLE GATT Measurement Packet Parsing Resilience & Null-Safe Telemetry Test** [All BLE characteristic measurement updates are protected against truncated packets and null-unboxing NPEs across all BLE sensor profiles; production crash ATT-1485 is completely eliminated; valid telemetry calculations remain 100% intact.]
+### TST-CON-005: **BLE GATT Measurement Packet Parsing Resilience & Null-Safe Telemetry Test** [Verified]
 - **Requirement(s)**: `REQ-CON-014`
 - **Component**: **BLE GATT Measurement Packet Parsing Resilience & Null-Safe Telemetry Test**
 - **Jira**: ``ATT-1485``
@@ -245,7 +245,7 @@
   7. *Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` to guarantee 0 regressions across all test suites.
 
-### TST-CON-006: **Smartphone Battery Level & Remaining Duration Telemetry Unit & Localization Tests** [Smartphone battery level and remaining tracking duration telemetry are 100% verified across all hardware states (discharging, charging, warmup, idle) with zero memory leaks, zero wake-locks, and full 9-language localization parity.]
+### TST-CON-006: **Smartphone Battery Level & Remaining Duration Telemetry Unit & Localization Tests** [Verified]
 - **Requirement(s)**: `REQ-CON-015`
 - **Component**: **Smartphone Battery Level & Remaining Duration Telemetry Unit & Localization Tests**
 - **Jira**: ``ATT-1454``
@@ -270,7 +270,7 @@
   7. *Clean-Room Regression Suite*:
   • Run `./gradlew testDebugUnitTest` to guarantee 100% pass rate.
 
-### TST-CON-007: **Battery Remaining Duration Monotonic Countdown and Step-Transition Recalibration Verification** [Battery remaining time counts down monotonically during constant battery percentage without upward drift; step-down transitions recalibrate rate smoothly; floor clamping protects against premature depletion; 100% test pass rate.]
+### TST-CON-007: **Battery Remaining Duration Monotonic Countdown and Step-Transition Recalibration Verification** [Verified]
 - **Requirement(s)**: `REQ-CON-016`
 - **Component**: **Battery Remaining Duration Monotonic Countdown and Step-Transition Recalibration Verification**
 - **Jira**: ``ATT-1631``
@@ -288,7 +288,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
-### TST-CON-008: **Barometric Altimeter Idempotent Calibration, Delta Shift Dispatch, Physical Sanity Limiting & Mountain Climb Preservation Test** [Barometric calibration oscillations eliminated; runaway retroactive sample accumulation prevented; altimeter calibration gated to geofence transitions; physical sanity limits enforced; legitimate mountain climbs 100% preserved; thread leaks eliminated; 100% test pass rate.]
+### TST-CON-008: **Barometric Altimeter Idempotent Calibration, Delta Shift Dispatch, Physical Sanity Limiting & Mountain Climb Preservation Test** [Verified]
 - **Requirement(s)**: `REQ-CON-017`
 - **Component**: **Barometric Altimeter Idempotent Calibration, Delta Shift Dispatch, Physical Sanity Limiting & Mountain Climb Preservation Test**
 - **Jira**: ``ATT-1810`, `ATT-3990``
@@ -317,7 +317,7 @@
   8. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules verifying 0 test failures.
 
-### TST-CON-009: **Robust Bluetooth LE Sensor Discovery: GATT Queue Deadlock Prevention and State Reset Test** [BLE device discovery queue deadlock eliminated; missing optional characteristics handled gracefully; state maps cleanly purged on search stop; 100% test pass rate.]
+### TST-CON-009: **Robust Bluetooth LE Sensor Discovery: GATT Queue Deadlock Prevention and State Reset Test** [Verified]
 - **Requirement(s)**: `REQ-CON-018`
 - **Component**: **Robust Bluetooth LE Sensor Discovery: GATT Queue Deadlock Prevention and State Reset Test**
 - **Jira**: ``ATT-2224``
@@ -340,7 +340,7 @@
   5. *Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` to guarantee 0 regressions across all test suites.
 
-### TST-CON-010: **Continuous Sensor Battery State Persistence, Live Battery Display in Sensors List & Post-Workout Alerting Verification** [Continuous active session device persistence; real-time GATT battery notifications; live battery merging in sensors list; reliable post-workout alerts even for sensors disconnecting mid-session; 100% test pass rate.]
+### TST-CON-010: **Continuous Sensor Battery State Persistence, Live Battery Display in Sensors List & Post-Workout Alerting Verification** [Verified]
 - **Requirement(s)**: `REQ-CON-007`
 - **Component**: **Continuous Sensor Battery State Persistence, Live Battery Display in Sensors List & Post-Workout Alerting Verification**
 - **Jira**: ``ATT-2192` / `ATT-3312``
@@ -370,7 +370,7 @@
   9. *Full Suite Clean-Room Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-CON-011: **Bluetooth LE Sensor Discovery, LE Transport Selection & Foreground Service Compliance Test** [BLE sensor discovery and reconnection use direct Low Energy transport (TRANSPORT_LE); scan results delivered unsuppressed without neverForLocation; runtime permissions checked safely; aggressive scan settings prevent OS batching; Android 14+ foreground service compliant; 100% test pass rate.]
+### TST-CON-011: **Bluetooth LE Sensor Discovery, LE Transport Selection & Foreground Service Compliance Test** [Verified]
 - **Requirement(s)**: `REQ-CON-019`
 - **Component**: **Bluetooth LE Sensor Discovery, LE Transport Selection & Foreground Service Compliance Test**
 - **Jira**: ``ATT-2773`, `ATT-4449``
@@ -411,7 +411,7 @@
   • Broadcast `ALTITUDE_CORRECTION_INTENT` with `deltaOffset = +20.0 m` (or `-20.0 m`).
   • Verify `cAltitudeFilter` and `cAltitudeSuperFilter` shift buffered timestamped values by `deltaOffset` so `getFilteredValue()` immediately shifts to 520.0 m (or 480.0 m) without transient decay, false descent, or false ascent.
 
-### TST-TRK-009: **Guaranteed Defensive Location Device Initialization on Tracking Startup and BANAL Connection Verification** [Location devices reliably initialize and register update listeners when tracking begins after dynamic permission grants; GCData includes GPS/Distance/Speed; 100% test pass rate.]
+### TST-TRK-009: **Guaranteed Defensive Location Device Initialization on Tracking Startup and BANAL Connection Verification** [Verified]
 - **Requirement(s)**: `REQ-TRK-017`
 - **Component**: **Guaranteed Defensive Location Device Initialization on Tracking Startup and BANAL Connection Verification**
 - **Jira**: ``ATT-3045``
@@ -432,7 +432,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate with zero regressions.
 
-### TST-FIL-005: **Continuous Rolling Smoothing Telemetry, Session Reset Isolation & Live Pre-Start Metric Verification** [Rolling smoothing filters compute continuously in pre-start ready mode; cumulative session filters isolate workout statistics until active tracking; FilterManager executes reset() on RESET_ACCUMULATORS_INTENT; 100% unit test pass rate.]
+### TST-FIL-005: **Continuous Rolling Smoothing Telemetry, Session Reset Isolation & Live Pre-Start Metric Verification** [Verified]
 - **Requirement(s)**: `REQ-FIL-013`
 - **Component**: **Continuous Rolling Smoothing Telemetry, Session Reset Isolation & Live Pre-Start Metric Verification**
 - **Jira**: ``ATT-3222``
@@ -456,7 +456,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-TRK-010: **Sport-Specific Auto-Pause Engine, Anti-Chatter Hysteresis, Unit Conversion & Mutex Verification** [Sport-specific auto-pause engine verified for sport defaults, decoupled thresholds and debounces, unit conversion, debounce filtering, hysteresis deadband with ceiling, synchronous sensor gating, moving average speed, sensor dropout/recovery with audit trail, mutex lock precedence, FIFO flush ordering, and deterministic crash recovery hierarchy; 100% unit test pass rate.]
+### TST-TRK-010: **Sport-Specific Auto-Pause Engine, Anti-Chatter Hysteresis, Unit Conversion & Mutex Verification** [Verified]
 - **Requirement(s)**: `REQ-TRK-018`
 - **Component**: **Sport-Specific Auto-Pause Engine, Anti-Chatter Hysteresis, Unit Conversion & Mutex Verification**
 - **Jira**: ``ATT-45`, `ATT-3677``
@@ -495,7 +495,7 @@
   12. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions across all unit tests.
 
-### TST-TRK-011: **Real-Time Power-to-Weight (W/kg) Calculation, Weight Persistence & Unit Parity Test Suite** [Real-time power-to-weight ratio verified for weight persistence in canonical kg, metric/imperial conversion, 1Hz computed metrics engine, pause gating, 1-decimal formatting, filter defaults, and 9-language localization parity.]
+### TST-TRK-011: **Real-Time Power-to-Weight (W/kg) Calculation, Weight Persistence & Unit Parity Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-019`
 - **Component**: **Real-Time Power-to-Weight (W/kg) Calculation, Weight Persistence & Unit Parity Test Suite**
 - **Jira**: ``ATT-1289``
@@ -528,7 +528,7 @@
   8. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions across all unit tests.
 
-### TST-TRK-012: **Real-Time Normalized Power (NP) and Intensity Factor (IF) Calculation, Algorithm Math & Formatter Test Suite** [Normalized Power (NP) and Intensity Factor (IF) verified across 30s rolling buffer, 4th power weighting, cumulative 4th power average, 4th root extraction, pause gating, unconfigured FTP handling, 2-decimal formatting, filter presets, and 9-language translation parity.]
+### TST-TRK-012: **Real-Time Normalized Power (NP) and Intensity Factor (IF) Calculation, Algorithm Math & Formatter Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-020`
 - **Component**: **Real-Time Normalized Power (NP) and Intensity Factor (IF) Calculation, Algorithm Math & Formatter Test Suite**
 - **Jira**: ``ATT-1290``
@@ -560,7 +560,7 @@
   7. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-TRK-013: **Real-Time Mechanical Work (kJ) and Training Stress Score (TSS) Telemetry Test Suite** [Real-time Mechanical Work (kJ) and Training Stress Score (TSS) verified across 1Hz integration, Coggan TSS formula, pause gating, unconfigured FTP handling, filter defaults, and 9-language translation parity.]
+### TST-TRK-013: **Real-Time Mechanical Work (kJ) and Training Stress Score (TSS) Telemetry Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-021`
 - **Component**: **Real-Time Mechanical Work (kJ) and Training Stress Score (TSS) Telemetry Test Suite**
 - **Jira**: ``ATT-1291``
@@ -589,7 +589,7 @@
   6. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-TRK-014: **Streamlined Dual-Type (Location and Health) Foreground Service Verification Suite** [health"`.
+### TST-TRK-014: **Streamlined Dual-Type (Location and Health) Foreground Service Verification Suite** [Verified]
 2. *TrackerService Foreground Service Type Derivation Tests (`TrackerServiceFGSTypeTest.kt`)*:
 • Verify that `determineForegroundServiceType()` returns `FOREGROUND_SERVICE_TYPE_LOCATION` when health permission is not granted.
 • Verify that `determineForegroundServiceType()` returns `LOCATION]
@@ -601,7 +601,7 @@
   • Verify that `FOREGROUND_SERVICE_CONNECTED_DEVICE` does not exist in any `<uses-permission>` tag in `AndroidManifest.xml` or merged manifest.
   • Verify that `TrackerService` and `BANALService` specify `android:foregroundServiceType="location
 
-### TST-TRK-015: **Growing 1..29s Warm-Up Window Verification Suite for NP, IF, and TSS** [Growing 1..29s warm-up rolling window for live Normalized Power, Intensity Factor, and TSS and $t=29\to 30$ boundary stability verified across unit tests and full clean-room suite; live telemetry published from second 1 (Rule 40).]
+### TST-TRK-015: **Growing 1..29s Warm-Up Window Verification Suite for NP, IF, and TSS** [Verified]
 - **Requirement(s)**: `REQ-TRK-023`
 - **Component**: **Growing 1..29s Warm-Up Window Verification Suite for NP, IF, and TSS**
 - **Jira**: ``ATT-3778``
@@ -618,7 +618,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-TRK-016: **MySensorManager Priority Hierarchy, DeviceType Enum Alignment, LINE_DISTANCE_m & Canonical Rank Verification Suite** [`SPEED_AND_LOCATION_GOOGLE_FUSED` enabled in `SPEED_PRIORITY` after `GPS`; `DeviceType` enum order aligned (`GPS < GOOGLE_FUSED < NETWORK`); `LINE_DISTANCE_m` registered in `LOCATION_PRIORITY` with `getBestSensor` selecting `GOOGLE_FUSED`; canonical `getPriorityRank` helper verified across all sensor types; `DevicesDatabaseManager` insertion sequence verified; 100% clean-room test pass rate.]
+### TST-TRK-016: **MySensorManager Priority Hierarchy, DeviceType Enum Alignment, LINE_DISTANCE_m & Canonical Rank Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-024`
 - **Component**: **`MySensorManager` Priority Hierarchy, `DeviceType` Enum Alignment, `LINE_DISTANCE_m` & Canonical Rank Verification Suite**
 - **Jira**: ``ATT-3961`, `ATT-4375``
@@ -642,7 +642,7 @@
   8. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-TRK-017: **Deterministic AdbGpsInjector Mock Provider Lifecycle (PLAYING Registration & Immediate PAUSED/STOPPED/EOF Removal) Verification Suite** [Deterministic `AdbGpsInjector` mock provider lifecycle verified across startup cleanup, lazy `PLAYING` registration, and immediate removal on `PAUSED`, `STOPPED`, `kill_gps`, and `EOF` in `tools/test_replay_workout.py`.]
+### TST-TRK-017: **Deterministic AdbGpsInjector Mock Provider Lifecycle (PLAYING Registration & Immediate PAUSED/STOPPED/EOF Removal) Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-025`
 - **Component**: **Deterministic `AdbGpsInjector` Mock Provider Lifecycle (`PLAYING` Registration & Immediate `PAUSED`/`STOPPED`/`EOF` Removal) Verification Suite**
 - **Jira**: ``ATT-3961`, `ATT-3971``
@@ -655,7 +655,7 @@
   3. *Clean-Room Regression Execution*:
   • Execute `python3 -m unittest tools/test_replay_workout.py` and `./gradlew testDebugUnitTest` asserting 100% pass rate.
 
-### TST-TRK-018: **Resumed Workout Sample Table Resolution, Asynchronous BANAL Binding Barrier & Sample Write Error Surfacing Verification Suite** [Resumed workout sample table name synchronization (`applyResumedState`), asynchronous `mBanalConnection.onServiceConnected()` ordering, `"null"` table name rejection, and `SQLiteException` surfacing verified in `TrackerServiceResumeTest` and full clean-room regression suite.]
+### TST-TRK-018: **Resumed Workout Sample Table Resolution, Asynchronous BANAL Binding Barrier & Sample Write Error Surfacing Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-026`
 - **Component**: **Resumed Workout Sample Table Resolution, Asynchronous BANAL Binding Barrier & Sample Write Error Surfacing Verification Suite**
 - **Jira**: ``ATT-3980``
@@ -670,7 +670,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-TRK-019: **Fault-Tolerant 1 Hz Sampling Loop, Clock Timer Exception Guard & Volatile mBanalService Snapshot Concurrency Verification Suite** [Fault-tolerant `try / catch (Throwable)` guards in `TrackerService.tracker.run()` and `ClockDevice.ClockTimeTask.run()` and `volatile` local-snapshot concurrency safety for `mBanalService` verified in `TrackerServiceResilienceTest`, `ClockDeviceResilienceTest`, and full 3,116-test clean-room regression suite.]
+### TST-TRK-019: **Fault-Tolerant 1 Hz Sampling Loop, Clock Timer Exception Guard & Volatile mBanalService Snapshot Concurrency Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-027`
 - **Component**: **Fault-Tolerant 1 Hz Sampling Loop, Clock Timer Exception Guard & Volatile `mBanalService` Snapshot Concurrency Verification Suite**
 - **Jira**: ``ATT-3981``
@@ -685,7 +685,7 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-TRK-020: **ProxySensor Timestamp Delegation, End-to-End MySensorManager + AutoPauseManager Integration, Manual Resume Sync & ToneGenerator Lifecycle Verification Suite** [`ProxySensor` timestamp and `SensorData` delegation (`getDeviceName() == null`), end-to-end `MySensorManager` + `AutoPauseManager` integration across sub-threshold auto-pause, registered-source standstill, hysteresis auto-resume, manual pause lock precedence, manual resume state sync, and `ToneGenerator` reuse/release verified in `AutoPauseManagerTest` and full clean-room regression suite.]
+### TST-TRK-020: **ProxySensor Timestamp Delegation, End-to-End MySensorManager + AutoPauseManager Integration, Manual Resume Sync & ToneGenerator Lifecycle Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-028`, `REQ-TRK-018`
 - **Component**: **`ProxySensor` Timestamp Delegation, End-to-End `MySensorManager` + `AutoPauseManager` Integration, Manual Resume Sync & `ToneGenerator` Lifecycle Verification Suite**
 - **Jira**: ``ATT-3984``
@@ -706,7 +706,7 @@
   6. *`DefaultAutoPauseAudioNotifier` `ToneGenerator` Reuse & `release()` Lifecycle Test (`TST-TRK-020_6`, `AutoPauseManagerTest.kt`)*:
   • Inject a mock `ToneGenerator` provider into `DefaultAutoPauseAudioNotifier`, trigger multiple pause and resume tones, verify the provider is invoked only once (reusing the same `ToneGenerator`), and verify `autoPauseManager.release()` calls `ToneGenerator.release()`.
 
-### TST-TRK-021: **Safe SQLite Column Identifier Escaping for Custom Device Names (' and ") & Rate-Limited Sample Insert Failure Telemetry Verification Suite** [Safe SQLite column identifier escaping (`"..."` with `""` escaping and outer-delimiter unquoting) for device names containing apostrophes and double quotes, plus rate-limited sample insert failure telemetry, verified in `TrackerServiceDeviceNameQuotingTest` and full clean-room regression suite.]
+### TST-TRK-021: **Safe SQLite Column Identifier Escaping for Custom Device Names (' and ") & Rate-Limited Sample Insert Failure Telemetry Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-029`
 - **Component**: **Safe SQLite Column Identifier Escaping for Custom Device Names (`'` and `"`) & Rate-Limited Sample Insert Failure Telemetry Verification Suite**
 - **Jira**: ``ATT-3985``
@@ -721,7 +721,7 @@
   4. *Clean-Room Full Suite Regression Execution (`TST-TRK-021.4`)*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-TRK-022: **Fault-Isolated Workout Finalization, Dedicated FINISHED=1 Commit, Defensive AccumulatedSensorTypeSet Copy & Zero-Duration Average Speed Verification Suite** [Dedicated `FINISHED = 1` commit transaction, defensive `MySensorManager.getAccumulatedSensorTypeSet()` copy, finite `0.0` average speed guard at `0 s` active time, and fault-isolated map/stream persistence in `finalizeLiveSession()` verified in `TrackerServiceFinalizationTest` and full clean-room regression suite.]
+### TST-TRK-022: **Fault-Isolated Workout Finalization, Dedicated FINISHED=1 Commit, Defensive AccumulatedSensorTypeSet Copy & Zero-Duration Average Speed Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-030`
 - **Component**: **Fault-Isolated Workout Finalization, Dedicated `FINISHED=1` Commit, Defensive `AccumulatedSensorTypeSet` Copy & Zero-Duration Average Speed Verification Suite**
 - **Jira**: ``ATT-3986``
@@ -735,7 +735,7 @@
   4. *Clean-Room Full Suite Regression Execution (`TST-TRK-022.5`)*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-TRK-023: **LiveWorkoutSession Stream & Extrema Rehydration on Workout Resume, Sample Count Persistence & finalizeLiveSession() Continuity Verification Suite** [`LiveWorkoutSession` instantiation and rehydration of delta-encoded 20s streams and per-sensor `MIN`/`MAX`/`AVG` (`COUNT` column in `TABLE_EXTREMA_VALUES` with `TIME_ACTIVE_s` fallback) across `RESUME_BY_USER` and `RESUME_SERVICE_RECREATION` verified in `LiveWorkoutSessionTest`, `TrackerServiceResumeTest`, and full clean-room regression suite.]
+### TST-TRK-023: **LiveWorkoutSession Stream & Extrema Rehydration on Workout Resume, Sample Count Persistence & finalizeLiveSession() Continuity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-031`
 - **Component**: **`LiveWorkoutSession` Stream & Extrema Rehydration on Workout Resume, Sample Count Persistence & `finalizeLiveSession()` Continuity Verification Suite**
 - **Jira**: ``ATT-3987``
@@ -752,7 +752,7 @@
   4. *DB Version 25 Migration & Clean-Room Full Suite Regression Execution (`TST-TRK-023.4`)*:
   • Verify `WorkoutSummariesDbHelper.DB_VERSION == 25` (`>= 24`) and execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-TRK-024: **Thread-Safe Sensor, Device, Filter, Service & Live Session Concurrency Verification Suite** [Thread-safe collections, `volatile` cross-thread fields, atomic `putIfAbsent` device registration, non-null `shutDown()` teardown, lock-free `MySensor` / `MySensorManager` listener dispatch, null-safe `BANALService` accessors, and synchronized `LiveWorkoutSession` verified in `SensorAndDeviceConcurrencyStressTest` and full clean-room regression suite.]
+### TST-TRK-024: **Thread-Safe Sensor, Device, Filter, Service & Live Session Concurrency Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-032`
 - **Component**: **Thread-Safe Sensor, Device, Filter, Service & Live Session Concurrency Verification Suite**
 - **Jira**: ``ATT-3988``
@@ -773,7 +773,7 @@
   4. *Clean-Room Full Suite Regression Execution (`TST-TRK-024.4`)*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-TRK-025: **Non-Blocking TrackerService.onDestroy() Finalization on mDbExecutor, Deterministic mScheduler Shutdown & Async Init Failure Recovery Verification Suite** [Deterministic `mScheduler.shutdownNow()`, non-blocking `onDestroy()` FIFO finalization on `mDbExecutor`, and `TrainingApplication` tracking mode recovery on async DB init abort verified in `TrackerServiceFinalizationTest`, `TrackerServiceResilienceTest`, `TrackerServiceAsyncInitTest`, and full clean-room regression suite.]
+### TST-TRK-025: **Non-Blocking TrackerService.onDestroy() Finalization on mDbExecutor, Deterministic mScheduler Shutdown & Async Init Failure Recovery Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-033`, `REQ-TRK-015`, `REQ-TRK-030`
 - **Component**: **Non-Blocking `TrackerService.onDestroy()` Finalization on `mDbExecutor`, Deterministic `mScheduler` Shutdown & Async Init Failure Recovery Verification Suite**
 - **Jira**: ``ATT-4006``
@@ -791,7 +791,7 @@
   4. *Clean-Room Full Suite Regression Execution (`TST-TRK-025.4`)*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-SEN-020: **Sensor Onboarding, Empty-State Action & Discovery Auto-Pairing Verification Suite** [Start screen "Pair Sensor" onboarding button, actionable empty state in My Sensors with timeout guard, default discovery auto-pairing in DeviceManager with instant unpair safety, active workout auto-pair immunity, database insertion failure resilience, manual override conflict resolution, 9-language localization parity, and absence of '+' prefix in action strings across all 9 locales verified in DevicesDatabaseManagerTest, ControlTrackingScreenTest, DeviceListScreenTest, DeviceManagerDiscoveryTest, SensorOnboardingLocalizationTest, and clean-room full suite.]
+### TST-SEN-020: **Sensor Onboarding, Empty-State Action & Discovery Auto-Pairing Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SEN-020`
 - **Component**: **Sensor Onboarding, Empty-State Action & Discovery Auto-Pairing Verification Suite**
 - **Jira**: ``ATT-4051`, `ATT-4288``
@@ -827,7 +827,7 @@
   • In `SensorOnboardingLocalizationTest.kt`, parse `onboarding_pair_sensor_action` and `devices_action_search_sensors` across all 9 locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
   • Assert that none of the values begin with `'+'`, enforcing Rule 49 and Design Guidelines Section 5.5 to eliminate duplicate `+ +` action iconography.
 
-### TST-TRK-026: **Foreground-Protected Asynchronous Workout Finalization and Stop Lifecycle Isolation Verification Suite** [Foreground priority retention during endWorkout(), BANALService connection preservation until finalization completes, ACTION_STOP idempotency, TrainingApplication dispatch, and consolidated async init abort verified in TrackerServiceFinalizationTest, TrackerServiceAsyncInitTest, and full clean-room suite.]
+### TST-TRK-026: **Foreground-Protected Asynchronous Workout Finalization and Stop Lifecycle Isolation Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-034`, `REQ-TRK-015`, `REQ-TRK-030`, `REQ-TRK-033`
 - **Component**: **Foreground-Protected Asynchronous Workout Finalization and Stop Lifecycle Isolation Verification Suite**
 - **Jira**: ``ATT-4098``
@@ -847,7 +847,7 @@
   6. *Clean-Room Full Suite Regression Execution (`TST-TRK-026.6`)*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-TRK-027: **Deterministic BANAL State Snapshotting and Bound Lifecycle Preservation Verification Suite** [Main-thread snapshot capture, in-flight tick suppression, final lap and sensor preservation when BANAL destroyed, and onDestroy deferred unbinding verified in TrackerServiceFinalizationTest and clean-room full suite.]
+### TST-TRK-027: **Deterministic BANAL State Snapshotting and Bound Lifecycle Preservation Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-035`, `REQ-TRK-034`
 - **Component**: **Deterministic BANAL State Snapshotting and Bound Lifecycle Preservation Verification Suite**
 - **Jira**: ``ATT-4099``
@@ -867,7 +867,7 @@
   5. *Clean-Room Full Suite Regression Execution (`TST-TRK-027.5`)*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-TRK-028: **Lock-Free ProxySensor Listener Dispatch & Deadlock Prevention Concurrency Suite** [Concurrency stress test verifying absence of A/B deadlocks between MySensorManager and ProxySensor across 8 threads, lock-free callback assertions, and source sensor initial value propagation verified in SensorAndDeviceConcurrencyStressTest and clean-room full suite.]
+### TST-TRK-028: **Lock-Free ProxySensor Listener Dispatch & Deadlock Prevention Concurrency Suite** [Verified]
 - **Requirement(s)**: `REQ-SEN-021`, `REQ-TRK-032`
 - **Component**: **Lock-Free ProxySensor Listener Dispatch & Deadlock Prevention Concurrency Suite**
 - **Jira**: ``ATT-4096``
@@ -887,7 +887,7 @@
   4. *Clean-Room Full Suite Regression Execution (`TST-TRK-028.4`)*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-TRK-029: **In-Memory LiveWorkoutSession Reuse on User Resume and Safe Publication Verification Suite** [In-memory LiveWorkoutSession reuse on RESUME_BY_USER, 1 Hz rawLatLngs preservation, fresh instance construction and publication safety after rehydration verified in TrackerServiceResumeTest and clean-room full suite.]
+### TST-TRK-029: **In-Memory LiveWorkoutSession Reuse on User Resume and Safe Publication Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-036`, `REQ-TRK-031`
 - **Component**: **In-Memory `LiveWorkoutSession` Reuse on User Resume and Safe Publication Verification Suite**
 - **Jira**: ``ATT-4095``
@@ -913,7 +913,7 @@
   4. *Clean-Room Full Suite Regression Execution (`TST-TRK-029.4`)*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-CON-012: **Resilient Bluetooth LE & ANT+ Reconnection, Immutable Telemetry Dispatch, and Queue Integrity Verification Suite** [BLE notification payload byte cloning guarantees immutability under high-frequency telemetry; single deterministic search timeout and exponential backoff eliminate GATT 133/257 disconnect storms; DeviceManager search queue guards against alien device preemption; ANT+ channel release prevents DEAD lock and DEVICE_ALREADY_IN_USE errors.]
+### TST-CON-012: **Resilient Bluetooth LE & ANT+ Reconnection, Immutable Telemetry Dispatch, and Queue Integrity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-CON-020`
 - **Component**: **Resilient Bluetooth LE & ANT+ Reconnection, Immutable Telemetry Dispatch, and Queue Integrity Verification Suite**
 - **Jira**: ``ATT-4007``
@@ -937,7 +937,7 @@
   5. *Clean-Room Full Suite Regression Execution (`TST-CON-012.5`)*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions across all unit and Robolectric tests.
 
-### TST-TRK-030: **AutoPauseManager In-Motion Dropout vs. Standstill Silence Verification Suite** [In-motion signal loss transitions to SENSOR_LOST, standstill silence debounces to AUTO_PAUSED, dynamic unpairing resets lastValidSpeedMps, 2-tick recovery hysteresis, and decoupled manual resume verified.]
+### TST-TRK-030: **AutoPauseManager In-Motion Dropout vs. Standstill Silence Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-037`
 - **Component**: **AutoPauseManager In-Motion Dropout vs. Standstill Silence Verification Suite**
 - **Jira**: ``ATT-4094``
@@ -962,7 +962,7 @@
   6. *Clean-Room Regression Suite Execution (`TST-TRK-030.6`)*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-TRK-031: **CyclingPowerMetricsDevice Constructor Seeding, Sensor-Presence Gating (Rule 52), Stationary/Paused W/kg Alignment, and Workout Summary Presentation Defense Verification Suite** [Sensor-presence gating in CyclingPowerMetricsDevice constructor and pause (Rule 52), Rule 51 constructor seeding parity with power sensor, stationary/paused W/kg alignment, transient dropout resilience, WorkoutDataMapper power gating and DTO symmetry (Rule 20), WorkoutDetails presentation gating, < 500 lines modularity invariant, 9-language localization audit, and full clean-room pass specified.]
+### TST-TRK-031: **CyclingPowerMetricsDevice Constructor Seeding, Sensor-Presence Gating (Rule 52), Stationary/Paused W/kg Alignment, and Workout Summary Presentation Defense Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-038`, `REQ-UI-106`
 - **Component**: **CyclingPowerMetricsDevice Constructor Seeding, Sensor-Presence Gating (Rule 52), Stationary/Paused W/kg Alignment, and Workout Summary Presentation Defense Verification Suite**
 - **Jira**: ``ATT-4368``
@@ -1009,7 +1009,7 @@
   • Evaluate `TelemetryMetricUtils.hasWPrimeBalData(path)` with points having `wPrimeBalKj >= 0.0` but `power == null || power <= 0`: assert returns `false`.
   • Evaluate with points having valid `power > 0` and `wPrimeBalKj >= 0.0`: assert returns `true`.
 
-### TST-FIL-014: **Backend Filter Key Normalization, Runtime 'Best Sensor' Field Registration & Post-Trim Rolling Filter NaN Guard Verification Suite** [Runtime sensor field creation and updating with "Best Sensor" normalizes deviceName and deviceId to null, resolving proxy filters immediately; TimedMovingAverageFilter returns null instead of Double.NaN when window samples expire; specific device selection is preserved; 9-language localization parity confirmed; clean-room test suite passes with zero regressions.]
+### TST-FIL-014: **Backend Filter Key Normalization, Runtime 'Best Sensor' Field Registration & Post-Trim Rolling Filter NaN Guard Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-FIL-014`, `REQ-FIL-011`, `REQ-UI-167`
 - **Component**: **Backend Filter Key Normalization, Runtime 'Best Sensor' Field Registration & Post-Trim Rolling Filter NaN Guard Verification Suite**
 - **Jira**: ``ATT-4282``
@@ -1046,7 +1046,7 @@
   7. *Clean-Room Regression Suite Execution (`TST-FIL-014.7`)*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions across the full test suite.
 
-### TST-CON-021: **BLE Sensor Search Android 8–11 Compatibility and Defensive Exception Handling Verification Suite** [BLE sensor search Android 8–11 compatibility (BLUETOOTH_ADMIN declaration with maxSdkVersion=30, pre-API 31 permission checking), defensive startScan and stopScan SecurityException/IllegalStateException recovery, 9-language localization audit, and full clean-room pass specified.]
+### TST-CON-021: **BLE Sensor Search Android 8–11 Compatibility and Defensive Exception Handling Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-CON-021`, `REQ-CON-019`, `REQ-UI-106`
 - **Component**: **BLE Sensor Search Android 8–11 Compatibility and Defensive Exception Handling Verification Suite**
 - **Jira**: ``ATT-3997``
@@ -1094,7 +1094,7 @@
   9. *Clean-Room Regression Suite Execution (`TST-CON-021.9`)*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions across the full test suite.
 
-### TST-CON-022: **Automated BLE/ANT+ Pedal Power Balance Reference Normalization & Obsolete UI Checkbox Deprecation Verification Suite** [Automated BLE and ANT+ pedal power balance reference normalization verified; Right-pedal telemetry contract (REQ-UI-377.1) guaranteed; obsolete UI checkboxes deprecated; 9-locale parity verified; zero database migrations; 100% clean-room test pass rate.]
+### TST-CON-022: **Automated BLE/ANT+ Pedal Power Balance Reference Normalization & Obsolete UI Checkbox Deprecation Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-CON-022`, `REQ-UI-377`
 - **Component**: **Automated BLE/ANT+ Pedal Power Balance Reference Normalization & Obsolete UI Checkbox Deprecation Verification Suite**
 - **Jira**: ``ATT-4554``
@@ -1115,7 +1115,7 @@
   5. *Clean-Room Full Suite Regression Execution (`TST-CON-022.5`)*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate across the full test suite.
 
-### TST-TRK-039: **Tracking Subsystem Robustness, Resource Lifecycle & Rate-Limited Error Telemetry Hygiene Verification Suite** [Zero-duration lap speed guard, empty sport list guard, notification resurrection prevention, rate-limited error logging, AltitudeFromPressureDevice shutDown cleanup, BatterySaverController scope cancellation, and full clean-room pass specified.]
+### TST-TRK-039: **Tracking Subsystem Robustness, Resource Lifecycle & Rate-Limited Error Telemetry Hygiene Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-039`
 - **Component**: **Tracking Subsystem Robustness, Resource Lifecycle & Rate-Limited Error Telemetry Hygiene Verification Suite**
 - **Jira**: ``ATT-4032``
@@ -1183,7 +1183,7 @@
   • Execute targeted tests across `BANALServiceRepository`, `MapLayers`, and `TrackingViewModel` suites verifying 100% pass rate.
 
 
-### TST-TRK-043: **Sport-Specific Auto-Pause Resume Debounce & Symmetric Single-Threshold Test Suite** [Planned]
+### TST-TRK-043: **Sport-Specific Auto-Pause Resume Debounce & Symmetric Single-Threshold Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-043`
 - **Component**: `AutoPauseManagerTest.kt`, `AutoPauseViewModelTest.kt`, `TranslationParityTest.kt`
 - **Jira**: `ATT-4839`
@@ -1445,10 +1445,36 @@
   4. *Clean-Room Targeted Test Suite Execution (`TST-TRK-051.4`)*:
   • Clean-room execution of unit tests ensuring zero regressions (`REQ-PRO-001`).
 
+### TST-CON-023: **Paired BLE Random Static Address Resolution, Scan Assistance & Configurable Search Timeout Test Suite** [Verified]
+- **Requirement(s)**: `REQ-CON-023`
+- **Component**: `MyBTLEDeviceTest.java`, `SensorSearchPreferencesTest.kt`, `SensorSearchTuningSectionTest.kt`, `SearchSettingsDialogTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-5489`
+- **Test Description**:
+  1. *Random Static MAC Classification Unit Tests (`TST-CON-023.1`, `MyBTLEDeviceTest.java`)*:
+  • Verify that `MyBTLEDevice.isRandomStaticAddress(String)` returns `true` for addresses with bits 47..46 = 11b (e.g. `C6:CC:E3:F5:F0:37` -> 0xC6 = 1100_0110b, `E8:4D:74:07:F4:DD` -> 0xE8 = 1110_1000b, `FE:00:11:22:33:44`, `C0:00:00:00:00:00`).
+  • Verify that `isRandomStaticAddress(String)` returns `false` for public addresses (e.g. `00:1A:7D:DA:71:13`, `10:20:30:40:50:60`, `44:55:66:77:88:99`), invalid addresses, or null.
+  2. *Scan Assistance Lifecycle & Resource Cleanup Tests (`TST-CON-023.2`, `MyBTLEDeviceTest.java`)*:
+  • Verify that `startSearching()` initiates filtered `BluetoothLeScanner.startScan(...)` when `BLUETOOTH_SCAN` permission is granted.
+  • Verify that `stopScan()` is unconditionally invoked upon successful connection (`STATE_CONNECTED`), search timeout (`mSearchTimeoutRunnable`), explicit disconnect (`disconnectFromGatt()`), and device teardown (`shutDown()`).
+  3. *Configurable Search Timeout Persistence & Plumbing Tests (`TST-CON-023.3`, `SensorSearchPreferencesTest.kt`, `TrainingApplicationTest.java`)*:
+  • Verify `SensorSearchPreferences` loads and persists `btleSearchPeriodSec` in `SharedPreferences` with default `5` seconds and boundary clamping $[3, 15]$.
+  • Verify `TrainingApplication.getBtleSearchPeriodMs()` returns `btleSearchPeriodSec * 1000L`.
+  • Verify `SensorSearchPreferences.reset()` resets `btleSearchPeriodSec` back to `5`.
+  4. *Expert Settings & Search Settings Dialog UI Tests (`TST-CON-023.4`, `SensorSearchTuningSectionTest.kt`, `SearchSettingsDialogTest.kt`)*:
+  • Verify that `SensorSearchTuningSection` and `SearchSettingsDialog` render the discrete Slider with range $3\text{--}15$, steps 11, and format `"%d s"`.
+  5. *9-Language Localization Parity Verification (`TST-CON-023.5`, `TranslationParityTest.kt`)*:
+  • Verification in `TranslationParityTest` that `prefs_btle_search_period_title` and `prefs_btle_search_period_summary` exist across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with 100% parity.
+  6. *Targeted Suite Regression Execution (`TST-CON-023.6`)*:
+  • Execute targeted unit tests verifying 100% test pass rate across modified packages without regressions.
 
-
-
-
-
-
-
+### TST-TRK-052: **Zero-Allocation 1-Hz ClockTimeTask Time-of-Day Formatting Test Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-052`
+- **Component**: `ClockDevice.java`, `ClockDeviceResilienceTest.kt`
+- **Jira**: `ATT-5481`
+- **Test Description**:
+  1. *Time-of-Day Formatting Parity Test (`TST-TRK-052.1`, `ClockDeviceResilienceTest.kt`)*:
+  • Verify that `ClockTimeTask.run()` updates `mTimeOfDaySensor` with a formatted time string identical to `SimpleDateFormat.getTimeInstance().format(...)`.
+  2. *Zero-Allocation Contract & Source Code Audit Test (`TST-TRK-052.2`, `ClockDeviceResilienceTest.kt`)*:
+  • Verify that `ClockDevice.java` contains `private final Date mReusableDate` and `ClockTimeTask.run()` uses `mReusableDate.setTime(...)` without calling `Calendar.getInstance()`.
+  3. *Clean-Room Regression Suite Execution (`TST-TRK-052.3`)*:
+  • Run targeted package tests (`com.atrainingtracker.banalservice.*`, `com.atrainingtracker.trainingtracker.tracker.*`, `build.*`) asserting 100% pass rate.

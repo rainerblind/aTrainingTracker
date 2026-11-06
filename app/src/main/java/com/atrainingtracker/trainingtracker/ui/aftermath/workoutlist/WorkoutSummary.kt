@@ -82,6 +82,7 @@ import com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricType
 import com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricUtils
 import com.atrainingtracker.trainingtracker.ui.map.toMapTrack
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.GradeZoneDistributionCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneDistributionCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneDistributionCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneCardDisplayMode
@@ -118,8 +119,10 @@ fun WorkoutSummary(
     var activeEditingLap by remember { mutableStateOf<LapData?>(null) }
     var hrZoneDisplayMode by rememberSaveable { mutableStateOf<ZoneCardDisplayMode?>(null) }
     var powerZoneDisplayMode by rememberSaveable { mutableStateOf<ZoneCardDisplayMode?>(null) }
+    var gradeZoneDisplayMode by rememberSaveable { mutableStateOf<ZoneCardDisplayMode?>(null) }
     val effectiveHrZoneDisplayMode = hrZoneDisplayMode ?: preferences.zoneCardDisplayMode
     val effectivePowerZoneDisplayMode = powerZoneDisplayMode ?: preferences.zoneCardDisplayMode
+    val effectiveGradeZoneDisplayMode = gradeZoneDisplayMode ?: preferences.zoneCardDisplayMode
     val context = LocalContext.current
     val repository = remember(context) { WorkoutRepository.getInstance(context.applicationContext as Application) }
     val tuningDataStore = remember(context) { TuningPreferencesDataStore(context.applicationContext) }
@@ -187,6 +190,20 @@ fun WorkoutSummary(
         }
     }
 
+    val gradeZoneDistribution by produceState<ZoneDistributionData?>(
+        initialValue = null,
+        key1 = workoutData.id,
+        key2 = preferences.showZoneAnalysis
+    ) {
+        if (preferences.showZoneAnalysis) {
+            value = withContext(Dispatchers.IO) {
+                repository.getGradeZoneDistribution(workoutData.id)
+            }
+        } else {
+            value = null
+        }
+    }
+
     // Shared modifier for the clickable body sections (navigates to map view, ATT-850)
     val mapClickModifier = Modifier.clickable {
         if (workoutData.headerData.finished) {
@@ -233,6 +250,8 @@ fun WorkoutSummary(
             showCriticalPowerInWorkoutSummary = effectiveTuningConfig.showCriticalPowerInWorkoutSummary
         )
 
+        val workoutStartMs = workoutData.startTimeS * 1000L
+        val workoutEndMs = (workoutData.startTimeS + workoutData.totalTimeSec) * 1000L
         WorkoutPhotoStrip(
             photos = workoutPhotos,
             onPhotoClick = { photo -> activePreviewPhoto = photo },
@@ -243,7 +262,9 @@ fun WorkoutSummary(
                     }
                     photosRefreshKey++
                 }
-            }
+            },
+            startTimeMs = workoutStartMs,
+            endTimeMs = workoutEndMs
         )
 
         // 2. Dynamic Section Rendering Loop (REQ-UI-255)
@@ -467,7 +488,7 @@ fun WorkoutSummary(
                 }
                 WorkoutSectionType.ZONES -> {
                     // 9. Zone Distribution Cards
-                    if (preferences.showZoneAnalysis && (hrZoneDistribution != null || powerZoneDistribution != null)) {
+                    if (preferences.showZoneAnalysis && (hrZoneDistribution != null || powerZoneDistribution != null || gradeZoneDistribution != null)) {
                         HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
                             thickness = 0.5.dp,
@@ -490,6 +511,18 @@ fun WorkoutSummary(
                                 distribution = distribution,
                                 displayMode = effectivePowerZoneDisplayMode,
                                 onDisplayModeChange = { powerZoneDisplayMode = it },
+                                showModeSelector = false,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                                    .then(mapClickModifier)
+                            )
+                        }
+                        gradeZoneDistribution?.let { distribution ->
+                            GradeZoneDistributionCard(
+                                distribution = distribution,
+                                displayMode = effectiveGradeZoneDisplayMode,
+                                onDisplayModeChange = { gradeZoneDisplayMode = it },
                                 showModeSelector = false,
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -532,6 +565,13 @@ fun WorkoutSummary(
                 activeEditingLap = null
                 moveBoundaryLapNr = boundaryLapNr
                 showMoveBoundarySheet = true
+            },
+            onDeleteLapClick = { boundaryLapNr ->
+                coroutineScope.launch {
+                    WorkoutRepository.getInstance(context.applicationContext as Application)
+                        .deleteLap(workoutData.id, boundaryLapNr)
+                    activeEditingLap = null
+                }
             }
         )
     }

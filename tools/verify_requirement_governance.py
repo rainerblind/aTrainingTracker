@@ -248,6 +248,89 @@ def verify_engineering_directory_structure(eng_dir="docs/engineering"):
     return True, []
 
 
+def verify_master_table_parity(repo_root=None):
+    """
+    Verifies that the summary tables in docs/requirements.md and docs/tests.md have 100% mathematical
+    parity with actual parsed ### REQ-* and ### TST-* headings across the 9 domain shards (ATT-5431).
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    errors = []
+    specs = [
+        ("docs/requirements.md", "docs/requirements", "REQ"),
+        ("docs/tests.md", "docs/tests", "TST"),
+    ]
+    for master_rel, shard_dir_rel, prefix in specs:
+        abs_shard_dir = os.path.join(repo_root, shard_dir_rel)
+        if not os.path.isdir(abs_shard_dir):
+            continue
+        shard_counts = {}
+        for fn in sorted(os.listdir(abs_shard_dir)):
+            if not fn.endswith(".md"):
+                continue
+            fp = os.path.join(abs_shard_dir, fn)
+            with open(fp, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+            tot = ver = plan = 0
+            for l in lines:
+                m = re.match(r"^(#{2,4})\s*(" + prefix + r"-[A-Z0-9_-]+):?\s*(.*?)$", l.strip())
+                if not m:
+                    continue
+                tot += 1
+                if "[Verified]" in l:
+                    ver += 1
+                else:
+                    plan += 1
+            shard_counts[fn] = (tot, ver, plan)
+
+        master_fp = os.path.join(repo_root, master_rel)
+        if not os.path.exists(master_fp):
+            continue
+        with open(master_fp, "r", encoding="utf-8") as f:
+            master_lines = f.readlines()
+
+        grand_total = sum(c[0] for c in shard_counts.values())
+        shards_checked = 0
+        for lno, line in enumerate(master_lines, 1):
+            m_link = re.search(r"\((?:requirements|tests)/((?:req|tst)_[^)]+\.md)\)", line)
+            if m_link:
+                s_name = m_link.group(1)
+                m_cells = re.search(r"\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*$", line)
+                if not m_cells:
+                    errors.append(f"{master_rel}:{lno}: Table row for {s_name} missing numeric counts.")
+                    continue
+                t, v, p = int(m_cells.group(1)), int(m_cells.group(2)), int(m_cells.group(3))
+                shards_checked += 1
+                if s_name in shard_counts:
+                    exp_t, exp_v, exp_p = shard_counts[s_name]
+                    if (t, v, p) != (exp_t, exp_v, exp_p):
+                        errors.append(
+                            f"{master_rel}:{lno}: Count mismatch for {s_name}: "
+                            f"Table has Total={t}, Verified={v}, Planned={p}; "
+                            f"Shard has Total={exp_t}, Verified={exp_v}, Planned={exp_p}."
+                        )
+                else:
+                    errors.append(f"{master_rel}:{lno}: Shard {s_name} referenced in table does not exist.")
+            elif "Total Living " in line:
+                m_tot = re.search(r"\*\*Total Living (?:Requirements|Tests)\*\*:\s*(\d+)", line)
+                if m_tot:
+                    reported_total = int(m_tot.group(1))
+                    if reported_total != grand_total:
+                        errors.append(
+                            f"{master_rel}:{lno}: Grand total mismatch: "
+                            f"Reported={reported_total}, Actual parsed sum={grand_total}."
+                        )
+
+        if shards_checked != len(shard_counts):
+            errors.append(
+                f"{master_rel}: Shard count mismatch: Table checked {shards_checked} shards, "
+                f"filesystem has {len(shard_counts)} shards."
+            )
+
+    return len(errors) == 0, errors
+
+
 def verify_governance(deliverable_text=None, diff_text=None, base_ref="develop"):
     """
     Main governance validation entrypoint.
@@ -262,6 +345,12 @@ def verify_governance(deliverable_text=None, diff_text=None, base_ref="develop")
     if not dir_ok:
         diagnostics.extend(dir_errors)
         return False, diagnostics
+
+    parity_ok, parity_errors = verify_master_table_parity()
+    if not parity_ok:
+        diagnostics.extend([f"ERROR: {e}" for e in parity_errors])
+        return False, diagnostics
+    diagnostics.append("PASS: Living documentation master tables match all 9 domain shards with 100% parity.")
 
     if diff_text is None:
         diff_text = get_git_diff(base_ref=base_ref)

@@ -125,7 +125,7 @@ fun MoveLapBoundaryOnMapSheet(
 
     AppModalBottomSheet(
         title = stringResource(R.string.move_lap_boundary_title),
-        iconPainter = painterResource(R.drawable.ic_lap_timer),
+        iconPainter = painterResource(R.drawable.ic_lap_move_boundary),
         scrollable = false,
         onDismissRequest = { if (!isMoving) onDismiss() },
         actions = {
@@ -151,7 +151,7 @@ fun MoveLapBoundaryOnMapSheet(
                     enabled = validationResult.isValid && !isMoving && !isLoading
                 ) {
                     Icon(
-                        painter = painterResource(R.drawable.ic_lap_timer),
+                        painter = painterResource(R.drawable.ic_lap_move_boundary),
                         contentDescription = null,
                         modifier = Modifier.size(16.dp)
                     )
@@ -241,7 +241,7 @@ fun MoveLapBoundaryOnMapSheet(
                 val mapTrack = remember(downsampledPath) {
                     MapTrack(
                         id = workoutId,
-                        type = TrackType.GPS,
+                        type = TrackType.BEST,
                         bSportType = bSportType,
                         path = downsampledPath
                     )
@@ -261,7 +261,8 @@ fun MoveLapBoundaryOnMapSheet(
                         modifier = Modifier.fillMaxSize(),
                         start = downsampledPath.firstOrNull()?.latLng,
                         end = downsampledPath.lastOrNull()?.latLng,
-                        apex = currentJunctionPoint
+                        apex = currentJunctionPoint,
+                        apexIconRes = R.drawable.ic_lap_move_boundary
                     )
                 }
             }

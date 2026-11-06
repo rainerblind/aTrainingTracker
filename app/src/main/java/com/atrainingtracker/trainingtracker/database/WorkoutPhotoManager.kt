@@ -18,12 +18,15 @@
 
 package com.atrainingtracker.trainingtracker.database
 
+import android.content.ContentUris
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.media.ExifInterface
 import android.net.Uri
+import android.provider.MediaStore
 import android.util.Log
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.routes.GeoUtils
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.Dispatchers
@@ -51,6 +54,115 @@ object WorkoutPhotoManager {
         val latitude: Double?,
         val longitude: Double?
     )
+
+    /**
+     * DTO representing a photo queried from the device's MediaStore during a workout time window (REQ-UI-455.1).
+     */
+    data class TimeFilteredPhoto(
+        val id: Long,
+        val contentUri: Uri,
+        val dateTakenMs: Long
+    )
+
+    /**
+     * Calculates the chronological time window for a workout with tolerance (REQ-UI-455.1).
+     * Defaults to canonical 5-minute (300,000 ms) tolerance before start and after end.
+     */
+    fun calculateWorkoutTimeWindow(
+        startTimeMs: Long,
+        endTimeMs: Long,
+        toleranceMs: Long = 300_000L
+    ): Pair<Long, Long> {
+        val windowStart = startTimeMs - toleranceMs
+        val windowEnd = endTimeMs + toleranceMs
+        return Pair(windowStart, windowEnd)
+    }
+
+    /**
+     * Queries the device's MediaStore for photos taken within the specified workout time window (REQ-UI-455.1).
+     * Evaluates DATE_TAKEN (ms) with fallback to DATE_ADDED (seconds * 1000).
+     */
+    fun queryWorkoutTimePhotos(
+        context: Context,
+        startTimeMs: Long,
+        endTimeMs: Long,
+        toleranceMs: Long = 300_000L
+    ): List<TimeFilteredPhoto> {
+        if (startTimeMs <= 0L || endTimeMs < startTimeMs) {
+            return emptyList()
+        }
+        val (windowStartMs, windowEndMs) = calculateWorkoutTimeWindow(startTimeMs, endTimeMs, toleranceMs)
+        val windowStartSec = windowStartMs / 1000L
+        val windowEndSec = windowEndMs / 1000L
+
+        val projection = arrayOf(
+            MediaStore.Images.Media._ID,
+            MediaStore.Images.Media.DATE_TAKEN,
+            MediaStore.Images.Media.DATE_ADDED,
+            MediaStore.Images.Media.DATE_MODIFIED
+        )
+
+        val selection = "(${MediaStore.Images.Media.DATE_TAKEN} BETWEEN ? AND ?) OR " +
+                "((${MediaStore.Images.Media.DATE_TAKEN} IS NULL OR ${MediaStore.Images.Media.DATE_TAKEN} <= 0) " +
+                "AND (${MediaStore.Images.Media.DATE_MODIFIED} BETWEEN ? AND ? OR ${MediaStore.Images.Media.DATE_ADDED} BETWEEN ? AND ?))"
+
+        val selectionArgs = arrayOf(
+            windowStartMs.toString(),
+            windowEndMs.toString(),
+            windowStartSec.toString(),
+            windowEndSec.toString(),
+            windowStartSec.toString(),
+            windowEndSec.toString()
+        )
+
+        val sortOrder = "${MediaStore.Images.Media.DATE_TAKEN} ASC, ${MediaStore.Images.Media.DATE_MODIFIED} ASC, ${MediaStore.Images.Media.DATE_ADDED} ASC"
+
+        val matchingPhotos = mutableListOf<TimeFilteredPhoto>()
+        try {
+            context.contentResolver.query(
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                projection,
+                selection,
+                selectionArgs,
+                sortOrder
+            )?.use { cursor ->
+                val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
+                val dateTakenColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_TAKEN)
+                val dateAddedColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_ADDED)
+                val dateModifiedColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_MODIFIED)
+
+                while (cursor.moveToNext()) {
+                    val id = cursor.getLong(idColumn)
+                    val rawDateTaken = cursor.getLong(dateTakenColumn)
+                    val rawDateAdded = cursor.getLong(dateAddedColumn)
+                    val rawDateModified = cursor.getLong(dateModifiedColumn)
+                    val effectiveDateMs = when {
+                        rawDateTaken > 0 -> rawDateTaken
+                        rawDateModified in windowStartSec..windowEndSec -> rawDateModified * 1000L
+                        else -> rawDateAdded * 1000L
+                    }
+
+                    if (effectiveDateMs in windowStartMs..windowEndMs) {
+                        val contentUri = ContentUris.withAppendedId(
+                            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                            id
+                        )
+                        matchingPhotos.add(
+                            TimeFilteredPhoto(
+                                id = id,
+                                contentUri = contentUri,
+                                dateTakenMs = effectiveDateMs
+                            )
+                        )
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Error querying MediaStore photos for workout time window [$windowStartMs..$windowEndMs]", e)
+            return emptyList()
+        }
+        return matchingPhotos
+    }
 
     private data class TrackSamplePoint(
         val seconds: Long,
@@ -92,8 +204,11 @@ object WorkoutPhotoManager {
             val takenAt = parseExifDateTime(dateStr)
             val latLong = FloatArray(2)
             val hasGps = exif.getLatLong(latLong)
-            val lat = if (hasGps) latLong[0].toDouble() else null
-            val lng = if (hasGps) latLong[1].toDouble() else null
+            val rawLat = if (hasGps) latLong[0].toDouble() else null
+            val rawLng = if (hasGps) latLong[1].toDouble() else null
+            val isValid = GeoUtils.isValidGpsCoordinate(rawLat, rawLng)
+            val lat = if (isValid) rawLat else null
+            val lng = if (isValid) rawLng else null
             ExifMetadata(takenAt, lat, lng)
         } catch (e: Exception) {
             Log.w(TAG, "Failed to read EXIF from ${file.name}", e)
@@ -245,7 +360,7 @@ object WorkoutPhotoManager {
                     try {
                         val samplesDb = WorkoutSamplesDatabaseManager.getInstance(context).database
                         val interpolated = interpolateCoordinatesAtTimestamp(samplesDb, baseFileName, takenAtMs)
-                        if (interpolated != null) {
+                        if (interpolated != null && GeoUtils.isValidGpsCoordinate(interpolated.latitude, interpolated.longitude)) {
                             latitude = interpolated.latitude
                             longitude = interpolated.longitude
                         }
@@ -253,6 +368,12 @@ object WorkoutPhotoManager {
                         Log.w(TAG, "Failed to interpolate coordinates for ${destFile.name}", e)
                     }
                 }
+            }
+
+            // Ensure invalid coordinates (e.g. Null Island 0.0, 0.0) are never persisted
+            if (!GeoUtils.isValidGpsCoordinate(latitude, longitude)) {
+                latitude = null
+                longitude = null
             }
 
             val id = summariesDb.insertPhoto(workoutId, destFile.absolutePath, takenAtMs, latitude, longitude, caption)
@@ -268,8 +389,86 @@ object WorkoutPhotoManager {
         }
     }
 
+    /**
+     * Inspects a list of photo entries for invalid or Null-Island (0.0, 0.0) GPS coordinates,
+     * attempts to re-interpolate valid track coordinates from WorkoutSamples.db using takenAtMs,
+     * or resets invalid coordinates to null, persisting updates back to SQLite (REQ-UI-448.4 / ATT-5479).
+     *
+     * @param context Application context.
+     * @param workoutId Workout ID to which the photos belong.
+     * @param photos List of photo entries retrieved from the database.
+     * @return Sanitized photo entries with repaired coordinates.
+     */
+    fun selfHealPhotos(
+        context: Context,
+        workoutId: Long,
+        photos: List<WorkoutPhotoEntry>
+    ): List<WorkoutPhotoEntry> {
+        val hasInvalid = photos.any { photo ->
+            (photo.latitude != null || photo.longitude != null) &&
+                !GeoUtils.isValidGpsCoordinate(photo.latitude, photo.longitude)
+        }
+        if (!hasInvalid) {
+            return photos
+        }
+
+        val summariesDb = WorkoutSummariesDatabaseManager.getInstance(context)
+        val baseFileName = summariesDb.getBaseFileName(workoutId)
+        val startTimeStr = summariesDb.getString(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START)
+        val startTimeMs: Long = startTimeStr?.let { str ->
+            runCatching {
+                SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ROOT).apply {
+                    timeZone = TimeZone.getTimeZone("UTC")
+                }.parse(str)?.time
+            }.getOrNull() ?: runCatching {
+                SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ROOT).parse(str)?.time
+            }.getOrNull()
+        } ?: 0L
+
+        val totalTimeSec = summariesDb.getInt(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_TOTAL_s) ?: 0
+        val endTimeMs = if (startTimeMs > 0) startTimeMs + totalTimeSec * 1000L else 0L
+
+        var samplesDb: SQLiteDatabase? = null
+        try {
+            if (baseFileName != null && startTimeMs > 0) {
+                samplesDb = WorkoutSamplesDatabaseManager.getInstance(context).database
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to open samples database for self-healing photos of workout $workoutId", e)
+        }
+
+        return photos.map { photo ->
+            val hasCoords = photo.latitude != null || photo.longitude != null
+            if (hasCoords && !GeoUtils.isValidGpsCoordinate(photo.latitude, photo.longitude)) {
+                var repairedLat: Double? = null
+                var repairedLng: Double? = null
+
+                val takenAtMs = photo.takenAtMs
+                if (samplesDb != null && baseFileName != null && takenAtMs != null && startTimeMs > 0) {
+                    if (takenAtMs in (startTimeMs - 300_000L)..(endTimeMs + 300_000L)) {
+                        try {
+                            val interpolated = interpolateCoordinatesAtTimestamp(samplesDb, baseFileName, takenAtMs)
+                            if (interpolated != null && GeoUtils.isValidGpsCoordinate(interpolated.latitude, interpolated.longitude)) {
+                                repairedLat = interpolated.latitude
+                                repairedLng = interpolated.longitude
+                            }
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Failed to re-interpolate photo ${photo.id}", e)
+                        }
+                    }
+                }
+
+                summariesDb.updatePhotoCoordinates(photo.id, repairedLat, repairedLng)
+                photo.copy(latitude = repairedLat, longitude = repairedLng)
+            } else {
+                photo
+            }
+        }
+    }
+
     fun getPhotosForWorkout(context: Context, workoutId: Long): List<WorkoutPhotoEntry> {
-        return WorkoutSummariesDatabaseManager.getInstance(context).getPhotosForWorkout(workoutId)
+        val photos = WorkoutSummariesDatabaseManager.getInstance(context).getPhotosForWorkout(workoutId)
+        return selfHealPhotos(context, workoutId, photos)
     }
 
     fun deletePhoto(context: Context, photoId: Long): Boolean {

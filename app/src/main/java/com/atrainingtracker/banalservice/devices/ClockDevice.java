@@ -35,7 +35,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
+import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -62,6 +62,11 @@ public class ClockDevice extends MyDevice {
     private Timer timer;
     private boolean timerRunning = false;
     private final DateFormat df = SimpleDateFormat.getTimeInstance();
+    /**
+     * Pre-allocated Date instance mutated via {@link Date#setTime(long)} on every 1 Hz tick
+     * to eliminate 1 Hz {@link java.util.Calendar#getInstance()} heap allocations (REQ-TRK-052).
+     */
+    private final Date mReusableDate = new Date();
     private final AtomicInteger mClockTimerErrorCount = new AtomicInteger(0);
     private volatile long mLastTickElapsedRealtimeMs = 0L;
 
@@ -215,7 +220,8 @@ public class ClockDevice extends MyDevice {
                 mActiveTimeSensor_s.increment(1);
                 mLapTimeSensor_s.increment(1);
 
-                mTimeOfDaySensor.newValue(df.format(Calendar.getInstance().getTime()));
+                mReusableDate.setTime(System.currentTimeMillis());
+                mTimeOfDaySensor.newValue(df.format(mReusableDate));
 
                 // send broadcast
                 if (DEBUG) Log.d(TAG, "sending new time event broadcast");

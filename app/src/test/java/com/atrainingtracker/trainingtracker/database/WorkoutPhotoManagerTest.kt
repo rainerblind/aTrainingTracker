@@ -18,10 +18,16 @@
 
 package com.atrainingtracker.trainingtracker.database
 
+import android.content.ContentResolver
+import android.content.ContentValues
 import android.content.Context
+import android.database.Cursor
+import android.provider.MediaStore
 import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.google.android.gms.maps.model.LatLng
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -96,5 +102,185 @@ class WorkoutPhotoManagerTest {
         // Empty list
         val empty = WorkoutPhotoManager.interpolateCoordinatesFromPoints(emptyList(), 150L)
         assertNull(empty)
+    }
+
+    @Test
+    fun testExtractExifMetadata_emptyFile_returnsNullCoordinates() {
+        val tempFile = File(context.cacheDir, "test_empty_exif.jpg")
+        tempFile.writeText("fake image bytes without exif")
+        val metadata = WorkoutPhotoManager.extractExifMetadata(tempFile)
+        assertNull(metadata.latitude)
+        assertNull(metadata.longitude)
+        tempFile.delete()
+    }
+
+    @Test
+    fun testSelfHealPhotos_nullIslandCoordinatesResetToNullWhenNoTrack() {
+        val summariesDb = WorkoutSummariesDatabaseManager.getInstance(context)
+        val workoutId = 12345L
+        val photoPath = File(context.cacheDir, "photo1.jpg").apply { writeText("img") }.absolutePath
+
+        val insertedId = summariesDb.insertPhoto(workoutId, photoPath, 1700000000000L, 0.0, 0.0, "Test")
+        assertTrue(insertedId > 0)
+
+        val unhealed = summariesDb.getPhotosForWorkout(workoutId)
+        assertEquals(1, unhealed.size)
+        assertEquals(0.0, unhealed[0].latitude!!, 1e-6)
+        assertEquals(0.0, unhealed[0].longitude!!, 1e-6)
+
+        // Run self-healing
+        val healed = WorkoutPhotoManager.selfHealPhotos(context, workoutId, unhealed)
+        assertEquals(1, healed.size)
+        assertNull("Latitude must be reset to null when interpolation cannot be performed", healed[0].latitude)
+        assertNull("Longitude must be reset to null when interpolation cannot be performed", healed[0].longitude)
+
+        // Verify SQLite was updated
+        val fromDb = summariesDb.getPhotosForWorkout(workoutId)
+        assertEquals(1, fromDb.size)
+        assertNull("DB row latitude must be updated to null", fromDb[0].latitude)
+        assertNull("DB row longitude must be updated to null", fromDb[0].longitude)
+
+        // Cleanup
+        summariesDb.deletePhotosForWorkout(workoutId)
+        File(photoPath).delete()
+    }
+
+    @Test
+    fun testUpdatePhotoCoordinatesInDatabase() {
+        val summariesDb = WorkoutSummariesDatabaseManager.getInstance(context)
+        val workoutId = 12346L
+        val photoPath = File(context.cacheDir, "photo2.jpg").apply { writeText("img2") }.absolutePath
+
+        val insertedId = summariesDb.insertPhoto(workoutId, photoPath, 1700000000000L, 0.0, 0.0, "Before")
+        assertTrue(insertedId > 0)
+
+        val updated = summariesDb.updatePhotoCoordinates(insertedId, 48.65, 9.05)
+        assertTrue(updated)
+
+        val photos = summariesDb.getPhotosForWorkout(workoutId)
+        assertEquals(1, photos.size)
+        assertEquals(48.65, photos[0].latitude!!, 1e-5)
+        assertEquals(9.05, photos[0].longitude!!, 1e-5)
+
+        // Cleanup
+        summariesDb.deletePhotosForWorkout(workoutId)
+        File(photoPath).delete()
+    }
+
+    @Test
+    fun testCalculateWorkoutTimeWindow_defaultTolerance() {
+        val startMs = 1_700_000_000_000L
+        val endMs = 1_700_003_600_000L // 1 hour workout
+        val (wStart, wEnd) = WorkoutPhotoManager.calculateWorkoutTimeWindow(startMs, endMs)
+
+        // 300,000L ms = 5 minutes
+        assertEquals(startMs - 300_000L, wStart)
+        assertEquals(endMs + 300_000L, wEnd)
+    }
+
+    @Test
+    fun testCalculateWorkoutTimeWindow_customTolerance() {
+        val startMs = 1_700_000_000_000L
+        val endMs = 1_700_001_800_000L
+        val customTol = 60_000L
+        val (wStart, wEnd) = WorkoutPhotoManager.calculateWorkoutTimeWindow(startMs, endMs, customTol)
+
+        assertEquals(startMs - 60_000L, wStart)
+        assertEquals(endMs + 60_000L, wEnd)
+    }
+
+    @Test
+    fun testQueryWorkoutTimePhotos_invalidTimestamps_returnsEmptyList() {
+        // Zero start time
+        val res1 = WorkoutPhotoManager.queryWorkoutTimePhotos(context, 0L, 1000L)
+        assertTrue(res1.isEmpty())
+
+        // Negative start time
+        val res2 = WorkoutPhotoManager.queryWorkoutTimePhotos(context, -100L, 1000L)
+        assertTrue(res2.isEmpty())
+
+        // End time before start time
+        val res3 = WorkoutPhotoManager.queryWorkoutTimePhotos(context, 2000L, 1000L)
+        assertTrue(res3.isEmpty())
+    }
+
+    @Test
+    fun testQueryWorkoutTimePhotos_matchingWindow() {
+        val workoutStart = 1_700_000_000_000L
+        val workoutEnd = 1_700_003_600_000L
+
+        val mockContext = mockk<Context>()
+        val mockResolver = mockk<ContentResolver>()
+        val mockCursor = mockk<Cursor>()
+
+        every { mockContext.contentResolver } returns mockResolver
+        every {
+            mockResolver.query(
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                any(),
+                any(),
+                any(),
+                any()
+            )
+        } returns mockCursor
+
+        every { mockCursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID) } returns 0
+        every { mockCursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_TAKEN) } returns 1
+        every { mockCursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_ADDED) } returns 2
+        every { mockCursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_MODIFIED) } returns 3
+
+        // Simulate 2 rows: 1 inside window, 1 outside window
+        every { mockCursor.moveToNext() } returnsMany listOf(true, true, false)
+        every { mockCursor.getLong(0) } returnsMany listOf(101L, 102L)
+        // Row 1: inside window (workoutStart + 30 min)
+        // Row 2: outside window (workoutStart - 2 hours)
+        every { mockCursor.getLong(1) } returnsMany listOf(workoutStart + 1_800_000L, workoutStart - 7_200_000L)
+        every { mockCursor.getLong(2) } returnsMany listOf((workoutStart + 1_800_000L) / 1000L, (workoutStart - 7_200_000L) / 1000L)
+        every { mockCursor.getLong(3) } returnsMany listOf((workoutStart + 1_800_000L) / 1000L, (workoutStart - 7_200_000L) / 1000L)
+        every { mockCursor.close() } returns Unit
+
+        val photos = WorkoutPhotoManager.queryWorkoutTimePhotos(mockContext, workoutStart, workoutEnd)
+        assertEquals("Exactly 1 photo inside window must be returned", 1, photos.size)
+        assertEquals(101L, photos[0].id)
+        assertEquals(workoutStart + 1_800_000L, photos[0].dateTakenMs)
+    }
+
+    @Test
+    fun testQueryWorkoutTimePhotos_fallbackToDateAddedWhenDateTakenZero() {
+        val workoutStart = 1_700_000_000_000L
+        val workoutEnd = 1_700_003_600_000L
+
+        val mockContext = mockk<Context>()
+        val mockResolver = mockk<ContentResolver>()
+        val mockCursor = mockk<Cursor>()
+
+        every { mockContext.contentResolver } returns mockResolver
+        every {
+            mockResolver.query(
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                any(),
+                any(),
+                any(),
+                any()
+            )
+        } returns mockCursor
+
+        every { mockCursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID) } returns 0
+        every { mockCursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_TAKEN) } returns 1
+        every { mockCursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_ADDED) } returns 2
+        every { mockCursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_MODIFIED) } returns 3
+
+        // Row has DATE_TAKEN = 0, but valid DATE_ADDED * 1000 inside window
+        every { mockCursor.moveToNext() } returnsMany listOf(true, false)
+        every { mockCursor.getLong(0) } returns 103L
+        every { mockCursor.getLong(1) } returns 0L
+        every { mockCursor.getLong(2) } returns (workoutStart + 600_000L) / 1000L
+        every { mockCursor.getLong(3) } returns 0L
+        every { mockCursor.close() } returns Unit
+
+        val photos = WorkoutPhotoManager.queryWorkoutTimePhotos(mockContext, workoutStart, workoutEnd)
+        assertEquals(1, photos.size)
+        assertEquals(103L, photos[0].id)
+        assertEquals(workoutStart + 600_000L, photos[0].dateTakenMs)
     }
 }

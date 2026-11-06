@@ -20,11 +20,13 @@ Reuse the ticket's two persistent `TypeName: "self"` subagents via `send_message
      python3 tools/jira_util.py check-gate <Impl-Plan-Subtask-Key>
      ```
    - If exit code is not 0, halt immediately.
-2. **Software Construction**:
+2. **Software Construction, Universal Image Audit & Code-Grounding (`ATT-5431`)**:
    - Execute the planned atomic steps sequentially.
    - Follow clean architecture and Kotlin/Java best practices (`docs/coding_standards.md` and `docs/design_guidelines.md`).
    - Add comprehensive internal documentation (KDoc/JavaDoc) for all new or modified public methods and classes (`REQ-PRO-011`).
    - For string additions: ensure entries exist across all 9 supported language directories (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with consistent format specifiers.
+   - **Universal `read_file` Image Inspection (`Rule 71`, `ATT-5431`)**: Visually inspect every created, modified, or referenced image asset (`.png`, `.jpg`, `.svg` across `docs/guide/img/*`, `docs/store_presence/*`, drawables) via `read_file`.
+   - **Documentation Code-Grounding (`ATT-5431`)**: Every statement in guides or docs must be verified against actual code (`AndroidManifest.xml`, Compose screens, Strings, Repositories).
 3. **Targeted Unit Testing**:
    - Run exclusively targeted unit tests for modified packages/classes (5–15s runtime) to verify logic rapidly during development:
      ```bash
@@ -50,9 +52,10 @@ Message the ticket's reviewing persistent subagent (`send_message` to `subagent_
    - **Broadcast listener ordering & Java-to-Kotlin nullability**: when modifying a broadcast receiver (`RESET_ACCUMULATORS_INTENT`, `STOP_TRACKING`) or `reset()` method, verify the execution order across all registered listeners (`ClockDevice` + `FilterManager`) and ensure Java formatters/getters never return unannotated `null` to Kotlin non-null `String` callers (`ATT-5080`).
    - **Startup self-healing**: when adding recovery for records stuck in a terminal DB state (`FINISHED_FAILED`), verify it triggers automatically on app startup in addition to manual settings dialogs (`ATT-5081`).
    - **Compose state hygiene**: no `MutableState` writes inside `remember {}` calculations or during composition (`docs/coding_standards.md` Sec 1.10).
-4. **Quality & Compliance**:
+4. **Quality, Compliance & Universal Image Certification (`ATT-5431`)**:
    - Verify class/method headers comply with self-documenting standards (KDoc/JavaDoc).
    - Verify 9-language localization parity across all user-facing strings (`EN, DE, ES, FR, IT, JA, NL, PL, PT`).
+   - **Universal `read_file` Image Certification**: For all created, modified, or markdown-referenced image assets (`.png`, `.jpg`, `.svg`), `agent2` MUST inspect them with `read_file` and explicitly certify in the audit report that the visual image content matches accompanying documentation and real UI 1:1.
 5. **Gate Verdict (`gate-verdict`)**:
    - Record the verdict in a single composite CLI call (which closes the sub-task to `Erledigt`, advances the parent ticket to `Test`, and automatically injects `stage5-verification/SKILL.md` into stdout):
      ```bash

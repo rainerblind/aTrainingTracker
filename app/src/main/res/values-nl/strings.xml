@@ -520,6 +520,8 @@
 
     <string name="Search_Settings">Zoeken</string>
     <string name="prefsNumberOfSearchTriesTitle">Aantal zoekrondes</string>
+    <string name="prefs_btle_search_period_title">BLE-zoekduur per poging</string>
+    <string name="prefs_btle_search_period_summary">Wachttijd in seconden voor een BLE-sensor voor het doorgaan (3..15 s). Kortere waarden verkorten de wachttijd bij offline sensoren.</string>
     <string name="prefStartSearchTitle">Start zoeken wanneer …</string>
     <string name="prefsStartSearchWhenAppStartsTitle">App start</string>
     <string name="prefsStartSearchWhenTrackingStartsTitle">Training start</string>
@@ -1033,6 +1035,7 @@
     <string name="track_type_network">Netwerk</string>
     <string name="legend">Legenda</string>
     <string name="cluster_statistics_title">Workout-statistieken</string>
+    <string name="cluster_tab_statistics">Statistieken</string>
     <string name="cluster_total_recordings">Totaal aantal opnamen</string>
     <string name="cluster_average_distance">Gemiddelde afstand</string>
     <string name="cluster_recordings_format">%1$d opnamen</string>
@@ -1543,6 +1546,9 @@
 
     <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
     <string name="aftermath_power_zones_title">Vermogenszones</string>
+
+    <!-- Grade / Slope Distribution Card (ATT-5487 / REQ-UI-453) -->
+    <string name="aftermath_grade_zones_title">Hellingzones</string>
     <!-- Telemetry Frequency Histogram & Display Modes (ATT-1845 / ATT-3390 / REQ-UI-372) -->
     <string name="zone_mode_5_zones">5 zones</string>
     <string name="zone_mode_columns">Kolommen</string>
@@ -2147,6 +2153,14 @@
     <string name="move_lap_boundary_lap_k_preview">Ronde %1$d (Vorige)</string>
     <string name="move_lap_boundary_lap_k_plus_1_preview">Ronde %1$d (Volgende)</string>
     <string name="move_lap_boundary_select_boundary">Grens: Ronde %1$d / Ronde %2$d</string>
+    <string name="delete_lap_action">Ronde verwijderen / samenvoegen</string>
+    <string name="delete_lap_dialog_title">Ronde verwijderen / samenvoegen</string>
+    <string name="delete_lap_confirm">Verwijderen en samenvoegen</string>
+    <string name="delete_lap_merge_with_previous">Ronde %1$d + Ronde %2$d (Vorige)</string>
+    <string name="delete_lap_merge_with_next">Ronde %1$d + Ronde %2$d (Volgende)</string>
+    <string name="delete_lap_preview_title">Voorbeeld samengevoegde ronde</string>
+    <string name="delete_lap_warning_description">De grens tussen Ronde %1$d en Ronde %2$d wordt verwijderd. Opeenvolgende ronden worden hernummerd.</string>
+    <string name="delete_lap_direction_label">Richting van samenvoeging</string>
     <string name="cd_fastest_split">Snelste tussentijd</string>
     <string name="cd_switch_view_mode">Weergavemodus wijzigen</string>
     <string name="connect_with_strava">Verbinden met Strava</string>
@@ -2345,4 +2359,9 @@
     <string name="workout_photos_delete_confirm">Wil je deze foto van de workout verwijderen?</string>
     <string name="workout_photos_share_overlay">Delen met track-overlay</string>
     <string name="workout_photos_marker_title">Foto</string>
+    <!-- Workout Photo Time Picker (REQ-UI-455 / ATT-5475) -->
+    <string name="workout_photos_time_picker_title">Workout-foto\'s</string>
+    <string name="workout_photos_time_picker_subtitle">Foto\'s gemaakt tijdens deze workout</string>
+    <string name="workout_photos_show_all">Alle foto\'s tonen</string>
+    <string name="workout_photos_add_count">%1$d foto\'s toevoegen</string>
 </resources>

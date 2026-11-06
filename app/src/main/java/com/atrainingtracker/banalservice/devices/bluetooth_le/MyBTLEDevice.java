@@ -19,6 +19,7 @@
 package com.atrainingtracker.banalservice.devices.bluetooth_le;
 
 import android.Manifest;
+import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
@@ -27,6 +28,11 @@ import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
+import android.bluetooth.le.BluetoothLeScanner;
+import android.bluetooth.le.ScanCallback;
+import android.bluetooth.le.ScanFilter;
+import android.bluetooth.le.ScanResult;
+import android.bluetooth.le.ScanSettings;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Build;
@@ -36,6 +42,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.devices.DeviceType;
@@ -43,7 +50,9 @@ import com.atrainingtracker.banalservice.devices.MyRemoteDevice;
 import com.atrainingtracker.banalservice.Protocol;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
+import com.atrainingtracker.trainingtracker.TrainingApplication;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.Queue;
 import java.util.UUID;
@@ -71,10 +80,149 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
     private volatile BluetoothGattCharacteristic mBatteryCharacteristic;
     private volatile boolean mIsShutDown = false;
     private volatile long mCurrentReconnectDelayMs = INITIAL_RECONNECT_DELAY_MS;
+    private volatile boolean mIsScanning = false;
+    private ScanCallback mScanCallback;
 
     private static final int SNAPSHOT_POOL_SIZE = 8;
     private final Map<UUID, BluetoothGattCharacteristic[]> mCharacteristicPool = new ConcurrentHashMap<>();
     private final AtomicInteger mPoolIndex = new AtomicInteger(0);
+
+    /**
+     * Determines whether a given Bluetooth MAC address is a BLE Random Static Address
+     * per Bluetooth Core Specification Vol 6, Part B, Section 1.3.2.1.
+     *
+     * <p>A Random Static Address is identified by the two most significant bits of the
+     * first (most significant) octet being 11b (i.e. (firstOctet &amp; 0xC0) == 0xC0).
+     *
+     * @param address the 48-bit MAC address string (e.g. "C6:CC:E3:F5:F0:37")
+     * @return true if the address matches BLE Random Static addressing, false otherwise
+     */
+    public static boolean isRandomStaticAddress(String address) {
+        if (address == null || address.trim().isEmpty()) {
+            return false;
+        }
+        String clean = address.trim();
+        String[] parts = clean.split(":");
+        if (parts.length != 6) {
+            return false;
+        }
+        try {
+            int firstOctet = Integer.parseInt(parts[0], 16);
+            return (firstOctet & 0xC0) == 0xC0;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Initiates active scan assistance to populate Android's BluetoothRemoteDevices cache
+     * and accelerate connection to unbonded BLE peripherals with Random Static MAC addresses (REQ-CON-023.2).
+     */
+    private void startScanAssistance(BluetoothAdapter adapter) {
+        if (mIsScanning || mIsShutDown) {
+            return;
+        }
+        if (adapter == null || !adapter.isEnabled()) {
+            return;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+                if (DEBUG) Log.d(TAG, "Scan assist skipped: BLUETOOTH_SCAN permission not granted");
+                return;
+            }
+        } else {
+            if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_ADMIN) != PackageManager.PERMISSION_GRANTED
+                    || ContextCompat.checkSelfPermission(mContext, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                if (DEBUG) Log.d(TAG, "Scan assist skipped: BLUETOOTH_ADMIN or ACCESS_FINE_LOCATION not granted on API < 31");
+                return;
+            }
+        }
+
+        final BluetoothLeScanner scanner;
+        try {
+            scanner = adapter.getBluetoothLeScanner();
+        } catch (Exception e) {
+            Log.w(TAG, "Unable to get BluetoothLeScanner: " + e.getMessage());
+            return;
+        }
+        if (scanner == null) {
+            return;
+        }
+
+        if (mScanCallback == null) {
+            mScanCallback = new ScanCallback() {
+                @Override
+                public void onScanResult(int callbackType, ScanResult result) {
+                    if (result == null || result.getDevice() == null || mIsShutDown) {
+                        return;
+                    }
+                    BluetoothDevice dev = result.getDevice();
+                    if (mAddress != null && mAddress.equalsIgnoreCase(dev.getAddress())) {
+                        if (DEBUG) Log.i(TAG, "Scan assist discovered target device: " + mAddress);
+                        stopScanAssistance();
+                        synchronized (mGattLock) {
+                            if (mState == State.SEARCHING && mBluetoothGatt == null) {
+                                if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                                    if (DEBUG) Log.i(TAG, "Connecting GATT using scan-resolved device handle");
+                                    mBluetoothGatt = dev.connectGatt(mContext, false, mGattCallback, BluetoothDevice.TRANSPORT_LE);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                @Override
+                public void onScanFailed(int errorCode) {
+                    Log.w(TAG, "Scan assist failed with code: " + errorCode);
+                    mIsScanning = false;
+                }
+            };
+        }
+
+        try {
+            ScanFilter filter = new ScanFilter.Builder()
+                    .setDeviceAddress(mAddress)
+                    .build();
+            ScanSettings settings = new ScanSettings.Builder()
+                    .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+                    .build();
+            scanner.startScan(Collections.singletonList(filter), settings, mScanCallback);
+            mIsScanning = true;
+            if (DEBUG) Log.i(TAG, "Scan assist started for " + mAddress);
+        } catch (SecurityException | IllegalStateException | IllegalArgumentException e) {
+            Log.w(TAG, "Failed to start scan assist: " + e.getMessage());
+            mIsScanning = false;
+        }
+    }
+
+    /**
+     * Defensively stops active BLE scan assistance and clears scanning state.
+     */
+    protected void stopScanAssistance() {
+        if (!mIsScanning) {
+            return;
+        }
+        mIsScanning = false;
+        try {
+            BluetoothManager btManager = (BluetoothManager) mContext.getSystemService(Context.BLUETOOTH_SERVICE);
+            if (btManager != null && btManager.getAdapter() != null && btManager.getAdapter().isEnabled()) {
+                BluetoothLeScanner scanner = btManager.getAdapter().getBluetoothLeScanner();
+                if (scanner != null && mScanCallback != null) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED) {
+                            scanner.stopScan(mScanCallback);
+                        }
+                    } else {
+                        if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_ADMIN) == PackageManager.PERMISSION_GRANTED) {
+                            scanner.stopScan(mScanCallback);
+                        }
+                    }
+                }
+            }
+        } catch (SecurityException | IllegalStateException | NullPointerException e) {
+            Log.w(TAG, "Exception while stopping scan assist: " + e.getMessage());
+        }
+    }
 
     /**
      * Obtains an immutable snapshot BluetoothGattCharacteristic from a pre-allocated pool
@@ -109,6 +257,7 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
         @Override
         public void run() {
             if (DEBUG) Log.i(TAG, "search time out");
+            stopScanAssistance();
             if (mIsShutDown) {
                 return;
             }
@@ -165,6 +314,7 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
 
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 if (DEBUG) Log.i(TAG, "Connected to GATT server");
+                stopScanAssistance();
 
                 synchronized (mGattLock) {
                     mState = State.CONNECTED_TO_GATT;
@@ -348,16 +498,36 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
             mHandler.removeCallbacks(mSearchTimeoutRunnable);
             mHandler.removeCallbacks(mReconnectRunnable);
 
-            // stop searching after some time
-            mHandler.postDelayed(mSearchTimeoutRunnable, SEARCH_PERIOD);
+            // stop searching after configurable timeout
+            long timeoutMs = TrainingApplication.getBtleSearchPeriodMs();
+            mHandler.postDelayed(mSearchTimeoutRunnable, timeoutMs);
         }
 
-        final BluetoothDevice device = ((BluetoothManager) mContext.getSystemService(Context.BLUETOOTH_SERVICE)).getAdapter().getRemoteDevice(mAddress);
+        final BluetoothManager btManager = (BluetoothManager) mContext.getSystemService(Context.BLUETOOTH_SERVICE);
+        final BluetoothAdapter btAdapter = (btManager != null) ? btManager.getAdapter() : null;
+
+        if (btAdapter == null) {
+            Log.w(TAG, "BluetoothAdapter is null, cannot startSearching()");
+            notifyStopSearching(false);
+            return;
+        }
+
+        final BluetoothDevice device;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            int addressType = isRandomStaticAddress(mAddress)
+                    ? BluetoothDevice.ADDRESS_TYPE_RANDOM
+                    : BluetoothDevice.ADDRESS_TYPE_PUBLIC;
+            device = btAdapter.getRemoteLeDevice(mAddress, addressType);
+        } else {
+            device = btAdapter.getRemoteDevice(mAddress);
+        }
+
+        startScanAssistance(btAdapter);
 
         mHandler.post(new Runnable() {
             @Override
             public void run() {
-                if (mIsShutDown) {
+                if (mIsShutDown || device == null) {
                     return;
                 }
                 if (DEBUG) Log.i(TAG, "trying to connect gatt");
@@ -365,7 +535,9 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                     return;
                 }
                 synchronized (mGattLock) {
-                    mBluetoothGatt = device.connectGatt(mContext, false, mGattCallback, BluetoothDevice.TRANSPORT_LE);
+                    if (mBluetoothGatt == null && mState == State.SEARCHING) {
+                        mBluetoothGatt = device.connectGatt(mContext, false, mGattCallback, BluetoothDevice.TRANSPORT_LE);
+                    }
                 }
             }
         });
@@ -374,6 +546,7 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
     protected void disconnectFromGatt() {
         if (DEBUG) Log.i(TAG, "disconnectFromGatt()");
 
+        stopScanAssistance();
         mHandler.removeCallbacks(mSearchTimeoutRunnable);
         mHandler.removeCallbacks(mBatteryReadRunnable);
         mReadCharacteristicQueue.clear();
@@ -411,6 +584,8 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
         mIsShutDown = true;
         if (DEBUG) Log.i(TAG, "shutDown()");
 
+        stopScanAssistance();
+
         synchronized (mGattLock) {
             mState = State.DISCONNECTED;
             mCurrentReconnectDelayMs = INITIAL_RECONNECT_DELAY_MS;
@@ -428,6 +603,7 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
 
     @Override
     protected void notifyStopSearching(boolean success) {
+        stopScanAssistance();
         if (success) {
             mHandler.removeCallbacks(mSearchTimeoutRunnable);
             synchronized (mGattLock) {
@@ -438,6 +614,13 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
     }
 
     // Package-private inspection methods for unit testing
+    boolean isScanningForTesting() {
+        return mIsScanning;
+    }
+
+    ScanCallback getScanCallbackForTesting() {
+        return mScanCallback;
+    }
     boolean isShutDown() {
         return mIsShutDown;
     }

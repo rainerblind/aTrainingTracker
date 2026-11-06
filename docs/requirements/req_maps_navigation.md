@@ -49,7 +49,7 @@
 - **Rationale**: Optimize performance for long tracks and multiple layers.
 - **Description**: Lazy coordinate projection for path rendering.
 
-### REQ-MAP-008: Global Path Context [In Progress]
+### REQ-MAP-008: Global Path Context [Verified]
 - **Tests**: `TST-REG-005`
 - **Implementation**: `MapDetailLayout.kt`, `*OnMapScreen.kt`
 - **Rationale**: In any detail map view, show all loaded Segments and Routes in the background. Use tiered alpha levels: same sport type = muted (0.3), different sport type = highly muted (0.1).
@@ -67,7 +67,7 @@
 - **Rationale**: The Elevation Profile SHALL provide a toggleable legend that explains the grade color mapping (e.g., < 2%, 2-5%, etc.) via a dedicated info icon.
 - **Description**: Toggleable Grade Legend.
 
-### REQ-MAP-055: Climb Detection Performance, Route/TCX Import Fidelity & Power Calibration [`TST-MAP-055`]
+### REQ-MAP-055: Climb Detection Performance, Route/TCX Import Fidelity & Power Calibration [Verified]
 - **Tests**: `ClimbDetector.kt`, `GpxRouteImporter.kt`, `TcxTrackpointParser.kt`, `TrackpointModels.kt`, `PowerPhysiologyCalculator.kt`, `WorkoutRepository.kt`, `ZoneDistributionCalculator.kt`
 - **Implementation**: Optimize climb detection performance, apply GPX elevation gain hysteresis and batch resilience, support decimal tags and indoor trackpoints in TCX ingestion, provide interval-aware Normalized Power, and accurately record coasting in Power Zone 1.
 - **Rationale**: The system SHALL optimize climb detection performance, apply GPX elevation gain hysteresis and batch resilience, support decimal tags and indoor trackpoints in TCX ingestion, provide interval-aware Normalized Power, and accurately record coasting in Power Zone 1 (ATT-4033, Parent Epic ATT-2565, Status: Verified, refining `REQ-MAP-027`, `REQ-MAP-025`, `REQ-EXP-001`, and `REQ-UI-370`):
@@ -161,17 +161,17 @@
 - **Implementation**: `MapContentScope.kt`, `MapUtils.kt`, `PeriodMapUtils.kt`, `WorkoutClusterHeatmapScreen.kt`
 - **Rationale**: The system SHALL render density heatmaps across all map views (including detailed Workout Cluster maps and Period Detail maps) at all zoom levels (zoom 1 to 18). Heatmap point weighting and intensity scaling SHALL ensure point density remains clearly visible without vanishing at high zoom levels. **Invariants**: The heatmap overlay MUST NOT obscure map terrain or road labels and MUST NOT exceed the `maxPoints` memory budget.
 
-### REQ-MAP-019: Authoritative Sensor Extrema Spatial Positioning [`TST-MAP-021`]
+### REQ-MAP-019: Authoritative Sensor Extrema Spatial Positioning [Verified]
 - **Tests**: `TrackerService.java`, `LiveWorkoutSession.java`, `WorkoutSamplesDatabaseManager.java`
 - **Implementation**: Ensure extrema markers (e.g. min/max altitude pins) accurately reflect true spatial locations on the route map.
 - **Rationale**: The system SHALL bind sensor extrema (including minimum altitude `ExtremaType.MIN`, maximum altitude `ExtremaType.MAX`, and maximum speed) strictly to authoritative sensor telemetry (`getBestSensorData`), preventing secondary or noisy fallback sensors from polluting session peak values and spatial coordinates. If tracking commences before spatial fix (`currentPos == null`), the system SHALL anchor initial extrema to the first acquired valid GPS coordinate when the initial reading matches the baseline. Furthermore, legacy database queries for extrema positions SHALL filter out records lacking valid coordinates (`LATITUDE IS NOT NULL AND LONGITUDE IS NOT NULL`).
 
-### REQ-MAP-020: Authoritative Workout Max Line Distance (Apex) Calculation & Self-Anchored Displacement Integrity [`TST-MAP-022`]
+### REQ-MAP-020: Authoritative Workout Max Line Distance (Apex) Calculation & Self-Anchored Displacement Integrity [Verified]
 - **Tests**: `SpeedAndLocationDevice.java`, `LiveWorkoutSession.java`, `TrackerService.java`, `WorkoutSummariesDatabaseManager.java`, `WorkoutDataMapper.kt`
 - **Implementation**: Ensure the Max Line Distance marker (`ic_distance`) accurately and reliably indicates the true furthest point from the start location on the route map across all recorded workouts.
 - **Rationale**: The system SHALL ensure that a recorded workout's Maximum Line Distance (Apex) value and coordinate (`maxDisplacementLatLng`) accurately and authoritatively reflect the geographical point along the workout's recorded track that has the maximum geodesic displacement from the workout's start point (`startLatLng`) (amended by `REQ-DAT-033` in ATT-4003: apex self-healing writes decoupled from batch cursor iterations). `SpeedAndLocationDevice` SHALL instantiate `mLineDistanceSensor` as an instantaneous scalar gauge `MySensor<Double>` rather than an accumulator (`MyDoubleAccumulatorSensor`), preventing accumulator reset operations from corrupting displacement with negative offsets. During live workout recording, `LiveWorkoutSession` / `TrackerService` SHALL anchor line distance calculations directly to the workout's authoritative start coordinate (`startLatLng`), computing displacement dynamically rather than relying on unanchored or pre-tracking hardware sensor state. Upon workout completion, `TrackerService.finalizeLiveSession()` SHALL deterministically compute the authoritative maximum line distance and apex coordinate by evaluating the geodesic displacement of all recorded track points relative to `startPos`, persisting the result in `WorkoutSummariesDatabaseManager`. The system SHALL provide self-healing recalculation for existing workouts with missing, zero, or geometrically invalid apex coordinates by deriving the apex from the stored `mapPolyline` and `startLatLng`. **Invariants**: Existing raw samples database schema and non-target sensor extrema (Altitude, Speed, HR, Power) MUST NOT be altered.
 
-### REQ-MAP-021: Dark Mode Map Styling for Live Route Tracking, Navigation, Cockpit, and Secondary Map Views [`TST-MAP-023`]
+### REQ-MAP-021: Dark Mode Map Styling for Live Route Tracking, Navigation, Cockpit, and Secondary Map Views [Verified]
 - **Tests**: `DarkMapStyle.kt`, `ATrainingTrackerMap.kt`, `PathPreviewMap.kt`, `EditKnownLocationDialog.kt`, `WorkoutClusterComponents.kt`, `ManualClusterScreen.kt`, `PeriodSummaryCard.kt`, `LapEditBottomSheet.kt`, `ImportBackupTabsScreen.kt`
 - **Implementation**: Eliminate blinding white screen glare and save display battery on OLED screens across all map views in dark mode by applying universal AMOLED-optimized dark vector tile styling, anti-flash container backgrounds, and active anti-flash surface masks during list scrolling.
 - **Rationale**: The system SHALL provide an AMOLED-optimized dark vector tile style for `ATrainingTrackerMap` and all secondary map views across the application (route previews, cluster heatmaps, lap editors, and dialog mini-maps), eliminating white tile loading flashes and glare in dark mode (ATT-1266, ATT-1479, ATT-1553):
@@ -213,7 +213,7 @@
 
 **Invariants**: Light mode appearance, singleton caching in `DarkMapStyle`, custom route polyline colors, and 100% full-suite unit test pass rate MUST NOT be broken.
 
-### REQ-MAP-022: Google Maps CameraUpdateFactory Initialization Resilience and Lifecycle Guarding in Import Route Preview [`TST-MAP-024`]
+### REQ-MAP-022: Google Maps CameraUpdateFactory Initialization Resilience and Lifecycle Guarding in Import Route Preview [Verified]
 - **Tests**: `ImportBackupTabsScreen.kt`
 - **Implementation**: Prevent fatal crashes on cold start and rapid dialog launch in ImportBackupTabsScreen while guaranteeing camera re-alignment and zoom bounds fitting across sequential queue items.
 - **Rationale**: The system SHALL guard all camera animation and update calls against premature execution before the Google Maps native renderer and layout view are fully initialized, while guaranteeing that the camera actively re-aligns, centers, and fits bounds for every sequential cluster candidate presented in the import naming queue (ATT-1579, ATT-2022):
@@ -255,7 +255,7 @@
 
 **Invariants**: Track polyline geometry, marker positioning, cluster scoring engine, queue sequencing, and cold-start crash prevention MUST NOT be broken.
 
-### REQ-MAP-023: Prominent High-Contrast Rendering for Actively Navigated Routes Preserving Multi-Layer X-Ray Segment Synergy [`TST-MAP-025`]
+### REQ-MAP-023: Prominent High-Contrast Rendering for Actively Navigated Routes Preserving Multi-Layer X-Ray Segment Synergy [Verified]
 - **Tests**: `MapModels.kt`, `MapLayers.kt`, `RoutesRepository.kt`, `Color.kt`
 - **Implementation**: Provide prominent, high-contrast, directionally clear rendering for actively navigated routes while preserving multi-layer X-Ray Strava segment visibility.
 - **Rationale**: The system SHALL visually differentiate actively followed/navigated routes from passive background routes on the tracking and detail maps, rendering active routes with prominent thickness, vibrant high-contrast color, and directional chevrons while strictly preserving the multi-layer X-Ray polyline synergy with Strava Live Segments (ATT-1841):
@@ -300,7 +300,7 @@
 
 **Invariants**: Strava Live Segment detection and rendering (`SEGMENT_Z_INDEX = 30f`), existing route database schema, and 100% full-suite test pass rate MUST NOT be broken.
 
-### REQ-MAP-024: Quick Route Selector from Cockpit with GPS Proximity Sorting and Automated Route Detection [`TST-MAP-026`]
+### REQ-MAP-024: Quick Route Selector from Cockpit with GPS Proximity Sorting and Automated Route Detection [Verified]
 - **Tests**: `RouteProximityRanker.kt`, `RouteAutoDetector.kt`, `RouteSelectorSheet.kt`, `SensorStatus.kt`, `SensorGridScreen.kt`, `TuningPreferencesDataStore.kt`, `AdvancedTuningDialog.kt`
 - **Implementation**: Provide fast, frictionless route selection from the Cockpit with smart tie-breaking for home routes and automated in-ride route detection.
 - **Rationale**: The system SHALL provide a 1-tap Quick Route Selector accessible directly from the Cockpit, sort and rank candidate routes using multi-stage tie-breaking for shared start locations, and automatically detect matching saved routes during active recording (ATT-1835):
@@ -350,7 +350,7 @@
 
 **Invariants**: Route database schema, GPS recording integrity, and 100% full-suite test pass rate MUST NOT be broken.
 
-### REQ-MAP-025: Automatic DEM Elevation Enrichment for Imported GPX Routes Lacking Altitude Data [`TST-MAP-027`]
+### REQ-MAP-025: Automatic DEM Elevation Enrichment for Imported GPX Routes Lacking Altitude Data [Verified]
 - **Tests**: `GpxRouteImporter.kt`, `ElevationService.kt`, `GpxImportViewModel.kt`
 - **Implementation**: Automatically enrich altitude-deficient GPX routes with DEM elevation data to restore elevation profiles, climb analytics, and gain calculations while providing resilient offline fallback.
 - **Rationale**: The system SHALL detect imported GPX route files lacking altitude data and automatically enrich their track points with authoritative elevation from the Open-Meteo Digital Elevation Model (DEM) API while guaranteeing robust batching, offline fallback resilience, and preservation of embedded GPX altitude (ATT-1502):
@@ -390,7 +390,7 @@
 
 **Invariants**: Existing route database schema, GPX trackpoint ordering, `ElevationService` rate limiting and circuit breaker, and 100% full-suite test pass rate MUST NOT be broken.
 
-### REQ-MAP-026: Support Waypoints, POIs (Benches, Water, Summits) and TCX Course Points [`TST-MAP-028`]
+### REQ-MAP-026: Support Waypoints, POIs (Benches, Water, Summits) and TCX Course Points [Verified]
 - **Tests**: `GpxRouteImporter.kt`, `TcxCourseParser.kt`, `RoutesDatabaseManager.kt`, `RouteWaypoint.kt`, `MapLayers.kt`, `ATrainingTrackerMap.kt`
 - **Implementation**: Support parsing, persisting, projecting, and visualizing waypoints and course points from imported GPX and TCX route files.
 - **Rationale**: The system SHALL support parsing, persisting, projecting, and visualizing waypoints and course points from imported GPX and TCX route files (ATT-58):
@@ -434,7 +434,7 @@
 
 **Invariants**: Route polyline coordinates, DEM elevation enrichment (`REQ-MAP-025`), SQLite cascade deletion, and 100% full-suite test pass rate MUST NOT be broken.
 
-### REQ-MAP-027: Persistent Climbs Database & Live ClimbPro Cockpit Sheet (Route & Free-Riding Support) [`TST-MAP-029`]
+### REQ-MAP-027: Persistent Climbs Database & Live ClimbPro Cockpit Sheet (Route & Free-Riding Support) [Verified]
 - **Tests**: `ClimbDetector.kt`, `ClimbsDatabaseManager.kt`, `LiveClimbsRepository.kt`, `LiveClimbSheet.kt`, `SensorGridScreen.kt`
 - **Implementation**: Support detecting, persisting, tracking, and visualizing climbs with dynamic grade profiles during route navigation and free riding.
 - **Rationale**: The system SHALL detect, persist, track, and visualize climbs with dynamic grade profiles during route navigation and free riding (ATT-1281):
@@ -473,7 +473,7 @@
 
 **Invariants**: Strava Live Segment priority, single-threaded database access, and 100% full-suite test pass rate MUST NOT be broken.
 
-### REQ-MAP-028: Visual & Auditory Turn-by-Turn Navigation Prompts, Battery Saver Wake-Up & Off-Route Alerts [Provide visual countdown prompts, auditory alert chimes, automated AMOLED battery saver display wake-up, and off-route corridor deviation monitoring during active route navigation.]
+### REQ-MAP-028: Visual & Auditory Turn-by-Turn Navigation Prompts, Battery Saver Wake-Up & Off-Route Alerts [Verified]
 - **Tests**: $ with deterministic tie-breaking ($i_{\text{apex}} = i_{\text{start}} + \lfloor (K-1)/2 \rfloor$) and 5° hysteresis buffer, suppressing gentle road bends ($< 25^\circ$), clamping boundaries (10m from start/end, empty list for routes $< 20\text{m}$ or $< 3$ points), and consolidating $180^\circ$ hairpin switchbacks into a single `U_TURN` cue (ATT-3494).
 2. *Real-Time Navigation Engine (`TurnByTurnNavigationEngine.kt`)*:
 • When `RoutesRepository.activeNavigatedRouteId` is non-null, the engine SHALL project the athlete's current location onto the active route polyline, computing distance along the route ($D_{\text{current}}$) and cross-track orthogonal error ($D_{\text{cross}}$).
@@ -517,7 +517,7 @@
 • The system SHALL extract stored course points and waypoints with category `WaypointCategory.TURN_CUE` (`TURN_LEFT`, `TURN_RIGHT`, `TURN_STRAIGHT`) from `RoutesDatabaseManager.getWaypointsForRoute(routeId)` (`REQ-MAP-026`).
 • For routes lacking embedded turn points, `TurnCueDetector` SHALL synthesize directional turn cues (`SLIGHT_LEFT`, `LEFT`, `SHARP_LEFT`, `SLIGHT_RIGHT`, `RIGHT`, `SHARP_RIGHT`, `U_TURN`) by pre-smoothing polyline bearings using a continuous distance-weighted spatial circular vector mean over a 5-meter envelope ($\pm 2.5\text{m}$ along cumulative distance) without coordinate decimation ($(\bar{x}, \bar{y}) = (\sum \Delta s_k \cos \theta_k, \sum \Delta s_k \sin \theta_k)$, falling back to chord bearing when total length $\le 10^{-4}\text{m}$), evaluating curvature across multi-scale forward sliding windows ($W_{\text{short}} = 12\text{--}15\text{m}$, $W_{\text{long}} = 35\text{--}50\text{m}$) in single-pass linear $O(N)$ execution with zero heap object allocation during internal processing (pre-allocated primitive arrays, index loops), anchoring cues at the true curvature apex $\max
 
-### REQ-MAP-029: "Take Me Home" Return Navigation, Remaining Distance & Elevation-Aware ETA HUD [`TST-MAP-031`]
+### REQ-MAP-029: "Take Me Home" Return Navigation, Remaining Distance & Elevation-Aware ETA HUD [Verified]
 - **Tests**: `HomeLocationResolver.kt`, `ReturnCorridorSnapper.kt`, `ElevationAwareEtaCalculator.kt`, `ReturnNavigationHud.kt`, `SensorGridScreen.kt`, `RouteSelectorSheet.kt`
 - **Implementation**: Provide one-tap "Take Me Home" return guidance, calculate remaining distance and elevation-aware ETA factoring in climbing ascents, and display the metrics in the Cockpit HUD.
 - **Rationale**: The system SHALL provide a one-tap "Take Me Home" return guidance mode, calculate remaining distance and elevation-aware ETA, and display the metrics in the Cockpit HUD (ATT-1953):
@@ -570,7 +570,7 @@
 
 **Invariants**: SQLite schemas for `Routes.db` and `StartLocation2Altitude.db` must not be altered, calculations must be 100% offline, and 100% full-suite test pass rate MUST NOT be broken.
 
-### REQ-MAP-030: [SUPERSEDED / REMOVED by ATT-2463 / REQ-MAP-035] Corridor-Based Route Grouping & Differentiating Thumbnail Zoom [`TST-MAP-032`]
+### REQ-MAP-030: [SUPERSEDED / REMOVED by ATT-2463 / REQ-MAP-035] Corridor-Based Route Grouping & Differentiating Thumbnail Zoom [Verified]
 - **Tests**: `GeoUtils.kt`, `RouteTabbedScreen.kt`, `RouteItem.kt`, `RouteList.kt`
 - **Implementation**: Excision of corridor-based route grouping and differentiating thumbnail zoom; migration of geodesic calculation utilities to GeoUtils; restoration of flat route list and full-extent previews.
 - **Rationale**: **SUPERSEDED & REMOVED**: Corridor-based route grouping and differentiating thumbnail zoom capabilities were removed in ATT-2463 per human decision from the Sprint 2026-40.16 Joint Review. Route lists revert to standard flat list presentation, and route card thumbnails revert to standard full-extent route bounding box previews. Geodesic distance and initial bearing calculations required by Fork Navigation (`REQ-MAP-031`) were cleanly extracted into `GeoUtils.kt` (`REQ-MAP-035`).
@@ -581,7 +581,7 @@
 3. *Root Reason for Existing Formulation*: Routes list displayed all routes in flat unorganized order, and full-extent thumbnails compressed unique middle loops into tiny indistinct squiggles.
 4. *Preservation of Core Invariants*: Physical on-device review revealed that departure gateway chips added visual clutter and cropped middle-loop thumbnails lacked sufficient geographical orientation. Reverting to full-extent previews and a clean flat list restores optimal user scanning while preserving all surrounding route management and navigation invariants (`REQ-MAP-024`, `REQ-MAP-028`, `REQ-MAP-029`, `REQ-MAP-031`, `REQ-MAP-033`, `REQ-MAP-034`).
 
-### REQ-MAP-035: Standalone Geodesic Calculation Utilities & Flat Route List Presentation [`TST-MAP-037`]
+### REQ-MAP-035: Standalone Geodesic Calculation Utilities & Flat Route List Presentation [Verified]
 - **Tests**: `GeoUtils.kt`, `RouteTabbedScreen.kt`, `RouteItem.kt`, `RouteList.kt`, `ForkRouteMatcher.kt`, `RouteDivergenceDetector.kt`
 - **Implementation**: Provide standalone geodesic calculation utilities, maintain clean flat route list presentation without gateway direction chips, and render full-extent route bounding box thumbnails.
 - **Rationale**: The system SHALL provide pure standalone geodesic calculation utilities (`GeoUtils.kt`) for great-circle distance and initial azimuth bearing, maintain clean flat route list presentation in `RouteTabbedScreen` without gateway direction chips, and render full-extent route bounding box thumbnails in `RouteItem` (ATT-2463):
@@ -620,7 +620,7 @@
 
 **Invariants**: Pure geodesic mathematical functions with zero Android framework dependencies, offline local operation, and 100% full-suite test pass rate MUST NOT be broken.
 
-### REQ-MAP-031: In-Ride Fork-in-the-Road Route Selection & Decision Alerts [`TST-MAP-033`]
+### REQ-MAP-031: In-Ride Fork-in-the-Road Route Selection & Decision Alerts [Verified]
 - **Tests**: `ForkRouteMatcher.kt`, `RouteDivergenceDetector.kt`, `ForkNavigationRepository.kt`, `TurnByTurnNavigationRepository.kt`, `RoutesRepository.kt`, `ForkDecisionCard.kt`, `SensorGridScreen.kt`, `TuningPreferencesDataStore.kt`
 - **Implementation**: Detect upcoming route divergence points along shared departure corridors during active tracking, present directional decision cards in Cockpit HUD, and provide 1-tap and autonomous route binding with configurable auto-follow and departure auto-unselection.
 - **Rationale**: The system SHALL detect upcoming route divergence points along shared departure corridors during active tracking, present directional decision cards in the Cockpit HUD, provide 1-tap and autonomous route binding with configurable auto-follow, and automatically unselect an auto-bound route when the athlete departs from the route corridor (ATT-1955, ATT-3320, ATT-3326):
@@ -677,7 +677,7 @@
 
 **Invariants**: Pure geodesic calculations without android framework dependencies for unit testability, 100% offline local database operation, and 100% full-suite test pass rate MUST NOT be broken.
 
-### REQ-MAP-032: Domain-Agnostic Scrubber Marker Synchronization & Telemetry Graph Auto-Centering [Guarantee synchronized directional map scrubber marker visibility and camera auto-centering across both TIME and DISTANCE domain charts.]
+### REQ-MAP-032: Domain-Agnostic Scrubber Marker Synchronization & Telemetry Graph Auto-Centering [Verified]
 - **Tests**: point.latLng.longitude != 0.0)` and the coordinate lies outside the 20% safe margin of the current viewport, the camera SHALL smoothly animate to center on `point.latLng`.
 4. *Detailed Layout Integration (`MapDetailLayout.kt`)*:
 • `MapDetailLayout` SHALL pass its resolved `activeScrubPoint` directly to `ATrainingTrackerMap`.
@@ -716,7 +716,7 @@
 • `ScrubberController` SHALL accept optional parameter `activeScrubPoint: PathPoint? = null`.
 • When `point != null && (point.latLng.latitude != 0.0
 
-### REQ-MAP-033: High-Contrast Maki POI Waypoint Badges, Shelter Classification & Substring Disambiguation [Provide high-contrast circular badge markers with category-specific vibrant tinting, crisp white halo rings, outer contrast borders, and centered Maki glyphs across interactive maps and route thumbnails, introduce POI_SHELTER, and disambiguate Kreuzung false positives.]
+### REQ-MAP-033: High-Contrast Maki POI Waypoint Badges, Shelter Classification & Substring Disambiguation [Verified]
 - **Tests**: (text.contains("kreuz") && !text.contains("kreuzung"))`.
 • Shelter keywords ("unterstand", "schutzhütte", "schutzhuette", "shelter", "refuge", "biwak", "bivouac") SHALL be classified as `POI_SHELTER`.
 • In `fromTcx`, `"shelter"` SHALL map to `POI_SHELTER`.
@@ -763,7 +763,7 @@
 2. *GPX / TCX Heuristic Parsing & Disambiguation (`RouteWaypoint.kt`)*:
 • Substring "Kreuzung" (trail intersection / junction) SHALL NOT be classified as mountain summit (`POI_SUMMIT`). Mountain summit cross detection SHALL require: `val hasKreuz = text.contains("gipfelkreuz")
 
-### REQ-MAP-034: Designated Home-Base Selection for Return Navigation & Substring Disambiguation [`TST-MAP-036`]
+### REQ-MAP-034: Designated Home-Base Selection for Return Navigation & Substring Disambiguation [Verified]
 - **Tests**: `KnownLocationsDatabaseManager.java`, `KnownLocationsRepository.kt`, `KnownLocationsViewModel.kt`, `HomeLocationResolver.kt`, `KnownLocationsScreen.kt`, `EditKnownLocationDialog.kt`, `strings.xml` (all 9 locales)
 - **Implementation**: Provide explicit designation of a favorite location as home-base for return navigation, guarantee single-home transactional exclusivity, eliminate substring false positives, and display home visual badges in Known Locations UI.
 - **Rationale**: The system SHALL provide explicit designation of a favorite location (Lieblingsort / Known Location) as the athlete's home-base for return navigation ("Take Me Home"), guarantee single-home transactional exclusivity in `StartLocation2Altitude.db`, eliminate naive substring matching false positives, display prominent visual indicators in the locations list, and maintain 100% 9-language localization parity (ATT-2472):
@@ -817,7 +817,7 @@
 
 **Invariants**: Single-home exclusivity, thread confinement on `KnownLocationsDB-Thread`, non-breaking database migration, and 100% test pass rate MUST NOT be broken.
 
-### REQ-MAP-036: Known Locations: Heim-Basis Redundant Badge Excision & Start-Count Home Resolution Alignment [`TST-MAP-038`]
+### REQ-MAP-036: Known Locations: Heim-Basis Redundant Badge Excision & Start-Count Home Resolution Alignment [Verified]
 - **Tests**: `HomeLocationResolver.kt`, `KnownLocationsRepository.kt`, `KnownLocationsScreen.kt`
 - **Implementation**: Excise redundant Heim-Basis badge chip from KnownLocationCard, unify home location resolution across domain repositories and navigation engines, and default to location with most starts when no home-base set.
 - **Rationale**: The system SHALL excise the redundant "Heim-Basis" badge chip from `KnownLocationCard.kt`, unify home location resolution across domain repositories and navigation engines, and automatically display the Home icon on the effective home-base when no explicit designation exists (ATT-2629):
@@ -874,7 +874,7 @@
 
 **Invariants**: SQLite schema version 6 and column `is_home integer default 0` in `StartLocation2Altitude.db`, return navigation math, and 100% full-suite unit test pass rate MUST NOT be broken.
 
-### REQ-MAP-038: In-Ride Fork Route Detection Performance Optimization: Spatial Bounding-Box Rejection, Sport-Type Pre-Filtering, and Location Evaluation Throttling [`TST-MAP-040`]
+### REQ-MAP-038: In-Ride Fork Route Detection Performance Optimization: Spatial Bounding-Box Rejection, Sport-Type Pre-Filtering, and Location Evaluation Throttling [Verified]
 - **Tests**: `ForkRouteMatcher.kt`, `ForkNavigationRepository.kt`
 - **Implementation**: In-ride fork route detection performance optimization via bounding-box rejection, sport filtering, and GPS throttling.
 - **Rationale**: The system SHALL optimize in-ride fork-in-the-road route detection performance in `ForkRouteMatcher.kt` and `ForkNavigationRepository.kt` by eliminating brute-force polyline projections for geographically distant routes, filtering by workout sport profile, and throttling location candidate evaluation during quiescent tracking (ATT-2873, amending `REQ-MAP-031`):
@@ -917,7 +917,7 @@
 
 **Invariants**: Auto-binding latency, alert accuracy, corridor tolerance, and 100% unit test pass rate MUST NOT be broken.
 
-### REQ-MAP-039: Strict "Take Me Home" Return Navigation Activation Decoupling, Tab Navigation Hints Gating, and Non-Displacing Cockpit Overlay Integration [TST-MAP-041]
+### REQ-MAP-039: Strict "Take Me Home" Return Navigation Activation Decoupling, Tab Navigation Hints Gating, and Non-Displacing Cockpit Overlay Integration [Verified]
 - **Tests**: ReturnNavigationRepository.kt, SensorGridScreen.kt
 - **Implementation**: Strict Take Me Home activation decoupling, tab navigation hints gating, and non-displacing cockpit overlay placement.
 - **Rationale**: The system SHALL strictly decouple "Take Me Home" return navigation from ordinary route navigation in `ReturnNavigationRepository.kt`, conditionally gate `ReturnNavigationHud` behind `state.showNavigationHints` in `SensorGridScreen.kt`, host the HUD as a top-level non-displacing overlay anchored at `Alignment.TopCenter`, and enforce clean lifecycle state reset invariants (ATT-2938, amending `REQ-MAP-029` and `REQ-UI-282`):
@@ -967,7 +967,7 @@
 
 **Invariants**: Explicit "Take Me Home" activation, reverse route return, elevation-aware ETA calculations, and 100% test pass rate MUST NOT be broken.
 
-### REQ-MAP-040: High-Glanceability Route Polyline Scaling and Solid Line Rendering for Actively Navigated Route [`TST-MAP-042`]
+### REQ-MAP-040: High-Glanceability Route Polyline Scaling and Solid Line Rendering for Actively Navigated Route [Verified]
 - **Tests**: `MapModels.kt`, `MapVisualization.kt`, `MapFragmentWithTrackViewModel.kt`, `RouteDetailSheet.kt`
 - **Implementation**: High-glanceability route polyline scaling (26f) and solid ribbon rendering for actively navigated route, preserving 10f dashed baseline for active background routes and propagating through MapFragmentWithTrackViewModel.
 - **Rationale**: The map visualization system SHALL render the actively navigated route (the single selected route followed by the athlete) with an increased polyline stroke width of `26f` and a clean, solid ribbon rendering (`pattern = null`), ensuring effortless glanceability under bright outdoor sunlight and at bicycle handlebar distance. Furthermore, all other active/background visible routes SHALL NOT be altered and SHALL retain their baseline width of `10f` and standard dashed pattern (`Dash(15f)`, `Gap(15f)`), while unselected routes maintain a width of `6f` (ATT-2940, amending `REQ-MAP-023` and `REQ-UI-306`):
@@ -1017,7 +1017,7 @@
 
 **Invariants**: Z-index stacking order, directional chevrons, and 100% test pass rate MUST NOT be broken.
 
-### REQ-MAP-041: Restricting In-Ride Fork Route Candidate Matching to Active Selected Routes & Quiescent Short-Circuit [`TST-MAP-043`]
+### REQ-MAP-041: Restricting In-Ride Fork Route Candidate Matching to Active Selected Routes & Quiescent Short-Circuit [Verified]
 - **Tests**: `ForkNavigationRepository.kt`, `ForkRouteMatcher.kt`
 - **Implementation**: Restrict in-ride fork route candidate matching to active selected routes with O(1) quiescent short-circuit.
 - **Rationale**: The system SHALL restrict in-ride fork-in-the-road route candidate matching in `ForkNavigationRepository.kt` and `ForkRouteMatcher.kt` to only evaluate routes that have been explicitly selected/activated by the athlete (`route.summary.isSelected == true`), and immediately short-circuit candidate matching in $O(1)$ when fewer than 2 active selected routes exist (ATT-2942, amending `REQ-MAP-031` and `REQ-MAP-038`):
@@ -1053,7 +1053,7 @@
 
 **Invariants**: Quiescent GPS throttling, autonomous snapping, 1-tap binding, and 100% unit test pass rate MUST NOT be broken.
 
-### REQ-MAP-042: Calibratable Speed-Dependent Map Zoom Curve, Follow-Me Forward Lookahead Camera Padding & Pitch Tuning [`TST-MAP-044`]
+### REQ-MAP-042: Calibratable Speed-Dependent Map Zoom Curve, Follow-Me Forward Lookahead Camera Padding & Pitch Tuning [Verified]
 - **Tests**: `MapBehaviors.kt`, `ATrainingTrackerMap.kt`, `TuningPreferencesDataStore.kt`, `NavigationSection.kt`, `AdvancedTuningDialog.kt`
 - **Implementation**: Calibrate speed-dependent map zoom curve, apply bottom lookahead padding, and add camera tuning parameters to Advanced Settings.
 - **Rationale**: The system SHALL calibrate the speed-dependent map zoom curve in Follow-Me tracking navigation (`MapZoomFocus.FOLLOW_ME`), apply bottom camera content padding to anchor the rider in the lower third for forward road lookahead, and integrate user-configurable camera tuning parameters into `TuningConfig` and `AdvancedTuningDialog` (ATT-2946, amending `REQ-MAP-004`):
@@ -1103,7 +1103,7 @@
 
 **Invariants**: Bearing smoothing, camera animation, manual zoom override, and 100% test pass rate MUST NOT be broken.
 
-### REQ-NAV-043: In-Ride Fork Decision Alert Direction-Diversity Gating & False-Positive Suppression [`TST-NAV-045`]
+### REQ-NAV-043: In-Ride Fork Decision Alert Direction-Diversity Gating & False-Positive Suppression [Verified]
 - **Tests**: `RouteDivergenceDetector.kt`
 - **Implementation**: Gating in-ride fork decision alerts behind relative direction diversity to suppress false-positive alerts when all routes share the same heading.
 - **Rationale**: The system SHALL gate in-ride fork decision alerts behind relative direction diversity across candidate routes to eliminate false positives at junctions where all candidate routes follow the same relative directional heading (ATT-2964, amending `REQ-NAV-028`):
@@ -1131,7 +1131,7 @@
 
 **Invariants**: Lookahead distances, separation thresholds, angular direction classification math, and 100% test pass rate MUST NOT be broken.
 
-### REQ-MAP-044: Forward Lookahead Camera Top Content Padding Inversion & Settings Zoom Directional Guidance [`TST-MAP-046`]
+### REQ-MAP-044: Forward Lookahead Camera Top Content Padding Inversion & Settings Zoom Directional Guidance [Verified]
 - **Tests**: `ATrainingTrackerMap.kt`, `NavigationSection.kt`, `strings.xml`
 - **Implementation**: Invert map camera lookahead padding to top padding and clarify zoom level direction on camera sliders in settings.
 - **Rationale**: The system SHALL correct the Google Maps camera content padding in `ATrainingTrackerMap.kt` to apply top content padding during follow-me navigation (`MapZoomFocus.FOLLOW_ME`), anchoring the athlete marker in the lower third of the display to maximize forward road visibility, and SHALL clarify the zoom level direction on camera sliders in Advanced Settings across all 9 supported application locales (ATT-3054, amending `REQ-MAP-042` and `REQ-MAP-004`):
@@ -1173,7 +1173,7 @@
 
 **Invariants**: Linear speed-dependent zoom scaling, bearing smoothing, tilt pitch, DataStore persistence, and 100% test pass rate MUST NOT be broken.
 
-### REQ-MAP-045: Automatic Active Workout Sport Type Synchronization on Route Selection (Bike / Run) [`TST-MAP-047`]
+### REQ-MAP-045: Automatic Active Workout Sport Type Synchronization on Route Selection (Bike / Run) [Verified]
 - **Tests**: `RouteSelectorViewModel.kt`, `TrackingTabsScreen.kt`, `BANALServiceRepository.kt`
 - **Implementation**: Automatically set selected workout sport type to Bike or Run when selecting a typed route in RouteSelectorViewModel.
 - **Rationale**: The system SHALL automatically synchronize the active workout sport type in `BANALServiceRepository` and `BANALService` whenever an athlete selects a route tagged as Cycling / Bike or Running, eliminating manual sport switching friction when preparing or navigating workouts (ATT-3092, amending and complementing `REQ-UI-280` and `REQ-TRK-001`):
@@ -1216,7 +1216,7 @@
 
 **Invariants**: Dynamic sensor search, route ranking, candidate auto-detection, and 100% test pass rate MUST NOT be broken.
 
-### REQ-MAP-046: Unified Viewport Anchor Authority for Follow-Me Map Tracking & Analytical Forward Lookahead Calculation [`TST-MAP-048`]
+### REQ-MAP-046: Unified Viewport Anchor Authority for Follow-Me Map Tracking & Analytical Forward Lookahead Calculation [Verified]
 - **Tests**: `MapBehaviors.kt`, `ATrainingTrackerMap.kt`
 - **Implementation**: Unified viewport anchor authority and analytical lookahead camera targeting in followMeController, eliminating GoogleMap content padding conflicts and camera oscillation jitter.
 - **Rationale**: The system SHALL unify camera positioning, forward lookahead offset calculation, and viewport padding under a single spatial authority in `followMeController` (`MapBehaviors.kt`), eliminating competing Google Maps layout recentering loops and camera oscillation jitter during active workout tracking (ATT-3102, amending `REQ-MAP-044` and `REQ-MAP-042` under Rule 33):
@@ -1257,7 +1257,7 @@
 
 **Invariants**: Single spatial authority (Rule 33), speed zoom curve, bearing smoothing, pitch angle, DataStore settings, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-MAP-047: Continuous Linear Polyline Projection & Progress Metric Interpolation for Live Climbs [`TST-MAP-049`]
+### REQ-MAP-047: Continuous Linear Polyline Projection & Progress Metric Interpolation for Live Climbs [Verified]
 - **Tests**: `LiveClimbsRepository.kt`, `LiveClimbsRepositoryTest.kt`
 - **Implementation**: Project athlete position orthogonally onto polyline segments of active climb and continuously interpolate telemetry metrics and rider pin position.
 - **Rationale**: The system SHALL project the athlete's real-time GPS position orthogonally onto polyline segments of the active climb path and continuously interpolate distance, altitude, progress fraction, and instantaneous gradient to prevent UI stutter and eliminate false off-route cancellations between sparse trackpoints (ATT-3174, amending `REQ-MAP-027` and aligning with Design Guidelines §2.4):
@@ -1308,7 +1308,7 @@
 
 **Invariants**: Gate thresholds, approach bearing checks, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-MAP-048: Follow-Me Camera Target Forward Lookahead Projection Scaling, Tilt Foreshortening Compensation & Settings Scale Direction Transparency [`TST-MAP-050`]
+### REQ-MAP-048: Follow-Me Camera Target Forward Lookahead Projection Scaling, Tilt Foreshortening Compensation & Settings Scale Direction Transparency [Verified]
 - **Tests**: `MapBehaviors.kt`, `strings.xml` (all 9 locales)
 - **Implementation**: Follow-Me camera target forward lookahead projection scaling, tilt foreshortening compensation and settings scale direction transparency.
 - **Rationale**: The system SHALL scale and project the forward lookahead camera target coordinate in `calculateFollowMeCameraTarget` (`MapBehaviors.kt`) such that adjusting the "Vorausschau-Kameraabstand" (*Forward Lookahead Padding*) slider produces a proportional, visually distinct shift of the athlete marker between screen center and lower viewport across all camera tilt angles, compensating for 3D perspective tilt foreshortening and providing explanatory scale direction in user settings (ATT-3171, amending `REQ-MAP-046` and aligning with Design Guidelines §3.1 & §6.1):
@@ -1351,7 +1351,7 @@
 
 **Invariants**: Single spatial authority, speed zoom curve, bearing smoothing, pitch angle, DataStore settings, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-GEO-001: Unified Polyline Progress Tracking Engine with Directional Virtual Gates and Orthogonal Segment Projection [Extract unified PolylineProgressTracker engine in geo/ with directional virtual gates, orthogonal projection, and smooth finish blending, delegating from LiveSegmentsRepository and LiveClimbsRepository.]
+### REQ-GEO-001: Unified Polyline Progress Tracking Engine with Directional Virtual Gates and Orthogonal Segment Projection [Verified]
 - **Tests**: \le \theta_{\text{tol}}$ (default $45^\circ$).
 • Off-track deviation SHALL trigger when minimum cross-track error $D_{\text{cross}} > D_{\text{offTrack}}$ (default $50\text{m}$ for segments, $100\text{m}$ for climbs), resetting state to `FAR_FAR_AWAY`.
 6. *Repository Delegation & Migration*:
@@ -1410,7 +1410,7 @@
 5. *Approach Filtering, Heading Alignment & Off-Track Detection*:
 • Approaching state SHALL activate when athlete distance to start gate $D_{\text{start}} \le D_{\text{approach}}$ (default $250\text{m}$) AND bearing difference $
 
-### REQ-MAP-049: Follow-Me Camera Speed Zoom Smoothing, Zoom Hysteresis Deadband, and Configurable Speed/Bearing Filter Calibration [Follow-Me camera speed zoom smoothing, zoom hysteresis deadband, and configurable speed and bearing smoothing filter calibration in Advanced Settings.]
+### REQ-MAP-049: Follow-Me Camera Speed Zoom Smoothing, Zoom Hysteresis Deadband, and Configurable Speed/Bearing Filter Calibration [Verified]
 - **Tests**: \ge 0.10f \implies \text{activeZoom} = \text{targetZoom}$, otherwise retaining `activeZoom` without animation.
 • `activeZoom` SHALL be passed to `calculateFollowMeCameraTarget` and `CameraPosition.builder().zoom(activeZoom)`.
 3. *Configurable Bearing Smoothing Alpha (`MapBehaviors.kt`)*:
@@ -1461,7 +1461,7 @@
 • When `speedZoomEnabled == false`, `activeZoom` SHALL lock strictly to `baseZoom`.
 • When `speedZoomEnabled == true`: if $
 
-### REQ-MAP-050: Calibrated Piecewise Linear-to-Logarithmic Follow-Me High-Speed Zoom and Autonomous Camera Control [`TST-MAP-052`]
+### REQ-MAP-050: Calibrated Piecewise Linear-to-Logarithmic Follow-Me High-Speed Zoom and Autonomous Camera Control [Verified]
 - **Tests**: `MapBehaviors.kt`, `TuningPreferencesDataStore.kt`, `NavigationSection.kt`, `AdvancedTuningScreen.kt`, `AdvancedTuningDialog.kt`, `ATrainingTrackerMap.kt`
 - **Implementation**: Calibrated piecewise linear-to-logarithmic Follow-Me high-speed zoom and autonomous camera control.
 - **Rationale**: The system SHALL calibrate Follow-Me camera zoom using a piecewise linear-to-logarithmic curve, raise minimum zoom to street-level resolution, and streamline Advanced Settings by removing manual camera tuning controls (ATT-3581, amending `REQ-MAP-042` and `REQ-MAP-049`):
@@ -1502,7 +1502,7 @@
 
 **Invariants**: Pure UI presentation and zoom curve calibration; GPS position tracking and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-MAP-051: Referentially Stable Map Polyline Allocation, Static Layer Flow Decoupling, Keyed Layer Composition & Preview Downsampling [`TST-MAP-053`]
+### REQ-MAP-051: Referentially Stable Map Polyline Allocation, Static Layer Flow Decoupling, Keyed Layer Composition & Preview Downsampling [Verified]
 - **Tests**: `TrackingViewModel.kt`, `MapModels.kt`, `MapLayers.kt`, `MapContentScope.kt`, `ATrainingTrackerMap.kt`, `CropWorkoutScreen.kt`, `RoutesDatabaseManager.kt`, `SegmentsRepository.kt`
 - **Implementation**: Referentially stable map polyline allocation, static layer flow decoupling, keyed layer composition & preview downsampling.
 - **Rationale**: The system SHALL prevent `OutOfMemoryError` in Google Maps SDK polyline tessellation (`Polyline.setPoints` / `lib6.phoenix`) by decoupling static map layers from 1-Hz telemetry flows, memoizing `latLngs` and `PatternItem` lists with referential identity (`===`), stabilizing `MapContentScopeImpl` with keyed layer composition, and downsampling workout crop preview polylines (ATT-3690):
@@ -1537,7 +1537,7 @@
 
 **Invariants**: Zero visual change to map polylines; referential identity (`===`) of static `latLngs` and `pattern` lists; 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-MAP-052: Reactive Speed/Bearing Flow Subscription in TrackingViewModel & Continuous Follow-Me Smoothing Convergence [targetSpeed - filteredSpeed]
+### REQ-MAP-052: Reactive Speed/Bearing Flow Subscription in TrackingViewModel & Continuous Follow-Me Smoothing Convergence [Verified]
 - **Tests**: < 0.5f`), exponential speed smoothing (`filteredSpeed += sAlpha * (targetSpeed - filteredSpeed)`, snapping to `targetSpeed` when `
 - **Implementation**: diff
 - **Rationale**: The system SHALL subscribe reactively to `banalServiceRepository.currentSpeed` and `banalServiceRepository.currentBearing` in `TrackingViewModel.observeMapState()` (`liveTelemetryFlow`, Rule 39) and SHALL continuously step Follow-Me camera smoothing (`stepFollowMeSmoothing` in `MapBehaviors.kt`) until `filteredSpeed`, `filteredBearing`, and `activeZoom` converge to their target values even when speed, bearing, or location remain steady across subsequent 1-Hz ticks (ATT-3775, amending `REQ-MAP-049` and `REQ-MAP-050`, and complementing `REQ-MAP-051`):
@@ -1548,7 +1548,7 @@
 • `MapBehaviors.kt` SHALL define pure function `stepFollowMeSmoothing(currentFilteredSpeed: Float, currentFilteredBearing: Float, currentActiveZoom: Float, targetSpeed: Float, targetBearing: Float, baseZoom: Float, speedZoomEnabled: Boolean, cruisingZoom: Float, minZoom: Float, maxZoom: Float, speedSmoothingAlpha: Float, bearingSmoothingAlpha: Float): FollowMeSmoothingStep` returning `FollowMeSmoothingStep(filteredSpeed, filteredBearing, activeZoom, effectiveZoom, isConverged)`.
 • `stepFollowMeSmoothing` SHALL compute shortest-arc angular interpolation for bearing (`[-180f, 180f]`, snapping to `targetBearing` when `
 
-### REQ-MAP-053: Multi-File Route Selection, Batch Import, Sport Type Selection Prompt & External Multi-Share Processing [`TST-MAP-055, TST-MAP-056`]
+### REQ-MAP-053: Multi-File Route Selection, Batch Import, Sport Type Selection Prompt & External Multi-Share Processing [Verified]
 - **Tests**: `RoutesScreen.kt`, `RoutesViewModel.kt`, `GpxImportActivity.kt`, `GpxImportViewModel.kt`, `BatchImportSportTypeDialog.kt`, `AndroidManifest.xml`
 - **Implementation**: Support selecting and importing multiple GPX route files at once with responsive batch sport type selection bottom sheet (AppModalBottomSheet, FlowRow chip wrapping, multi-line centered segmented buttons, neutral Other preselection), sequential review mode, progress dialog, and external share support.
 - **Rationale**: `RoutesScreen.kt` (`app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RoutesScreen.kt`), `RoutesViewModel.kt` (`app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RoutesViewModel.kt`), `GpxImportActivity.kt` (`app/src/main/java/com/atrainingtracker/trainingtracker/activities/GpxImportActivity.kt`), `GpxImportViewModel.kt` (`app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/GpxImportViewModel.kt`), and `BatchImportSportTypeDialog.kt` (`app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/BatchImportSportTypeDialog.kt`) SHALL support multi-file document picking via `ActivityResultContracts.GetMultipleContents()`, prompt the athlete with `BatchImportSportTypeDialog` offering a choice between "Apply to all" (with sport type selection: `BIKE`, `RUN`, `UNKNOWN`) and "Configure individually" (sequential interactive editing via `EditRouteScreen`), preserve single-file interactive editing (`EditRouteScreen`) without intermediate prompts, execute fault-tolerant batch imports with non-dismissible modal progress dialog and localized summary notifications, AND SHALL support external multi-file share intents (`Intent.ACTION_SEND_MULTIPLE`) (ATT-4049, refined by ATT-4284, ATT-4372, and ATT-4430, complementing `REQ-MAP-025`, `REQ-MAP-026`, and `REQ-UI-159`):
@@ -1610,7 +1610,7 @@
 
 **Invariants**: Single-file preview preservation, non-blocking asynchronous I/O, fault tolerance across corrupt files, 9-language translation parity, and 100% clean-room test pass rate.
 
-### REQ-MAP-054: TurnCueDetector Dead Code Cleanup, Unused Circular Smoothing Removal & Continuous Chord Window Boundary Interpolation Architecture [`TST-MAP-057`]
+### REQ-MAP-054: TurnCueDetector Dead Code Cleanup, Unused Circular Smoothing Removal & Continuous Chord Window Boundary Interpolation Architecture [Verified]
 - **Tests**: `TurnCueDetector.kt`, `RouteAutoDetector.kt`
 - **Implementation**: Excise dead smoothing code and buffers in TurnCueDetector and interpolate lookaround chords at exact distance window boundaries to eliminate sparse-vertex angle dilution.
 - **Rationale**: The system SHALL excise unused bearing smoothing buffers, dead trigonometric circular vector mean calculations, nested functions, and unused incoming bearing array allocations from `TurnCueDetector` (`TurnCueDetector.kt`), and SHALL interpolate lookaround chord endpoints continuously at exact distance envelope boundaries ($d_{\text{cur}} \pm W$, where $W_{\text{short}} = 10.0\text{ m}$ and $W_{\text{long}} = 40.0\text{ m}$) on sparse and variable-pitch polylines to prevent discrete vertex overshoot and angle dilution, while maintaining $O(N)$ execution with zero heap object allocation via primitive coordinate bearing computation, preserving public detector APIs, and maintaining 100% test pass rate across all existing turn detection test cases (ATT-4460, refining `REQ-MAP-028`):
@@ -1654,7 +1654,7 @@
 
 **Invariants**: Zero heap allocation during Step 5 loop, thread safety, pure stateless execution, public API backward compatibility, and 100% full-suite test pass rate.
 
-### REQ-GEO-002: Equirectangular Scaled Polyline Projection, Orthogonal Virtual Gates & Windowed Out-and-Back Route Progress Tracking [`TST-GEO-002`]
+### REQ-GEO-002: Equirectangular Scaled Polyline Projection, Orthogonal Virtual Gates & Windowed Out-and-Back Route Progress Tracking [Verified]
 - **Tests**: `PolylineProgressTracker.kt`
 - **Implementation**: Implement equirectangular coordinate scaling and windowed forward segment search in PolylineProgressTracker to eliminate projection skew and prevent out-and-back jumping.
 - **Rationale**: The system SHALL implement local equirectangular $\cos(\text{lat})$ coordinate scaling and windowed forward segment continuity search in `PolylineProgressTracker` to eliminate latitude projection distortion and prevent segment jumping on out-and-back and lollipop routes (ATT-4015, Implemented in: ATT-4015, Status: Verified, amending `REQ-GEO-001`):
@@ -1699,7 +1699,7 @@
 
 **Invariants**: Pure Kotlin JVM execution, 3D altitude/grade interpolation, $\lambda$-finish blending, and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-NAV-056: Stateful Polyline Progress Tracking Continuity, lastSegmentIndex Propagation & Reset Lifecycle Invariants across Production Callers [`TST-NAV-056`]
+### REQ-NAV-056: Stateful Polyline Progress Tracking Continuity, lastSegmentIndex Propagation & Reset Lifecycle Invariants across Production Callers [Verified]
 - **Tests**: `TrackingElevationProfileResolver.kt`, `LiveSegmentsRepository.kt`, `LiveClimbsRepository.kt`
 - **Implementation**: Enforce stateful lastSegmentIndex propagation and lifecycle reset rules across TrackingElevationProfileResolver, LiveSegmentsRepository, and LiveClimbsRepository to eliminate out-and-back route jumping in production.
 - **Rationale**: The system SHALL propagate stateful polyline progress segment indices (`lastSegmentIndex: Int?`) into `PolylineProgressTracker.projectLocation` across all production tracking callers (`TrackingElevationProfileResolver`, `LiveSegmentsRepository`, and `LiveClimbsRepository`) to activate windowed forward continuity search and eliminate progress jumping across opposing legs on out-and-back and lollipop routes, AND SHALL enforce deterministic reset rules across navigation, segment, and climb lifecycle boundaries (ATT-4015, Implemented in: ATT-4015, Status: Verified, complementing `REQ-GEO-002` and `REQ-GEO-001`):

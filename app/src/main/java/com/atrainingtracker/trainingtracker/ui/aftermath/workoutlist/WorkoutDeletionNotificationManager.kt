@@ -59,7 +59,7 @@ class WorkoutDeletionNotificationManager @VisibleForTesting constructor(
         val content = context.getString(R.string.deleting_workout, workoutName) + " ($current/$total)"
 
         val builder = NotificationCompat.Builder(context, TrainingApplication.NOTIFICATION_CHANNEL__EXPORT)
-            .setSmallIcon(R.drawable.logo)
+            .setSmallIcon(R.drawable.ic_stat_notify_logo)
             .setContentTitle(title)
             .setContentText(content)
             .setProgress(total, current, false)
@@ -81,7 +81,7 @@ class WorkoutDeletionNotificationManager @VisibleForTesting constructor(
         val content = context.getString(R.string.please_wait)
 
         val builder = NotificationCompat.Builder(context, TrainingApplication.NOTIFICATION_CHANNEL__EXPORT)
-            .setSmallIcon(R.drawable.logo)
+            .setSmallIcon(R.drawable.ic_stat_notify_logo)
             .setContentTitle(title)
             .setContentText(content)
             .setProgress(0, 0, true)

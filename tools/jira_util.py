@@ -883,6 +883,26 @@ def auto_verify_living_docs_on_stage5(parent_key, repo_root=None):
                 if new_line != line:
                     updated_count += 1
                 new_lines.append(new_line)
+
+            # Multi-line heading block support: if parent_key is present in the section body
+            # (e.g. - **Tickets**: <parent_key> or - **Jira**: <parent_key>) but not on the heading line,
+            # flip the section heading from Planned to Verified (ATT-5431)
+            sec_indices = [
+                idx for idx, l in enumerate(new_lines)
+                if re.match(r"^#{2,4}\s*(?:REQ|TST)-", l)
+            ]
+            sec_indices.append(len(new_lines))
+            for i in range(len(sec_indices) - 1):
+                s_idx = sec_indices[i]
+                e_idx = sec_indices[i + 1]
+                block_text = "".join(new_lines[s_idx:e_idx])
+                if parent_key in block_text:
+                    orig_hdr = new_lines[s_idx]
+                    mod_hdr = heading_planned_gen_re.sub(r"\1Verified\2", orig_hdr)
+                    if mod_hdr != orig_hdr:
+                        new_lines[s_idx] = mod_hdr
+                        updated_count += 1
+
             if updated_count > 0:
                 with open(abs_path, "w", encoding="utf-8") as f:
                     f.writelines(new_lines)
@@ -890,7 +910,83 @@ def auto_verify_living_docs_on_stage5(parent_key, repo_root=None):
                 total_updated += updated_count
         except Exception as e:
             print(f"Warning: Could not auto-update {rel_path} for {parent_key}: {e}", file=sys.stderr)
+
+    recalculate_master_index_tables(repo_root=repo_root)
     return total_updated
+
+def recalculate_master_index_tables(repo_root=None):
+    """
+    Recalculates summary tables ('Total', 'Verified', 'Planned / Open') and total requirement/test
+    counts in docs/requirements.md and docs/tests.md based on actual parsed section headings
+    in the 9 domain shards under docs/requirements/ and docs/tests/ (ATT-5431).
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    specs = [
+        ("docs/requirements.md", "docs/requirements", "REQ"),
+        ("docs/tests.md", "docs/tests", "TST"),
+    ]
+    for master_rel, shard_dir_rel, prefix in specs:
+        abs_shard_dir = os.path.join(repo_root, shard_dir_rel)
+        if not os.path.isdir(abs_shard_dir):
+            continue
+        shard_counts = {}
+        for fn in sorted(os.listdir(abs_shard_dir)):
+            if not fn.endswith(".md"):
+                continue
+            fp = os.path.join(abs_shard_dir, fn)
+            tot = ver = plan = 0
+            with open(fp, "r", encoding="utf-8") as f:
+                for line in f:
+                    m = re.match(r"^(#{2,4})\s*(" + prefix + r"-[A-Z0-9_-]+):?\s*(.*?)$", line.strip())
+                    if not m:
+                        continue
+                    tot += 1
+                    if "[Verified]" in line:
+                        ver += 1
+                    else:
+                        plan += 1
+            shard_counts[fn] = (tot, ver, plan)
+
+        master_fp = os.path.join(repo_root, master_rel)
+        if not os.path.exists(master_fp):
+            continue
+        with open(master_fp, "r", encoding="utf-8") as f:
+            master_lines = f.readlines()
+
+        grand_total = sum(c[0] for c in shard_counts.values())
+        grand_verified = sum(c[1] for c in shard_counts.values())
+        grand_planned = sum(c[2] for c in shard_counts.values())
+
+        new_lines = []
+        changed = False
+        for line in master_lines:
+            new_line = line
+            m_link = re.search(r"\((?:requirements|tests)/((?:req|tst)_[^)]+\.md)\)", line)
+            if m_link:
+                s_name = m_link.group(1)
+                if s_name in shard_counts:
+                    t, v, p = shard_counts[s_name]
+                    new_line = re.sub(
+                        r"\|\s*\d+\s*\|\s*\d+\s*\|\s*\d+\s*\|(\s*)$",
+                        rf"| {t} | {v} | {p} |\1",
+                        line,
+                    )
+            elif "Total Living " in line:
+                new_line = re.sub(
+                    r"(\*\*Total Living (?:Requirements|Tests)\*\*:\s*)\d+(\s*across \d+ domain shards\.)",
+                    rf"\g<1>{grand_total}\g<2>",
+                    line,
+                )
+            if new_line != line:
+                changed = True
+            new_lines.append(new_line)
+
+        if changed:
+            with open(master_fp, "w", encoding="utf-8") as f:
+                f.writelines(new_lines)
+            print(f"Recalculated master index table in {master_rel}: Total={grand_total}, Verified={grand_verified}, Planned={grand_planned}.")
 
 def submit_stage(parent_key, stage_arg, text_or_file, summary_override=None, role="agent1"):
     """
@@ -1588,6 +1684,8 @@ if __name__ == "__main__":
         type_id = explicit_type if explicit_type else (filtered_args[pos_offset] if len(filtered_args) > pos_offset else "10008")
         parent = explicit_parent if explicit_parent else (filtered_args[pos_offset + 1] if len(filtered_args) > pos_offset + 1 else None)
         create_issue(summary, desc, type_id, parent, role=active_role, add_to_sprint=add_sprint, fix_version=fix_ver, priority=priority_arg, labels=labels_arg, rank_top=rank_top, points=points_arg)
+    elif cmd in ("recalculate-living-docs", "recalc-docs"):
+        recalculate_master_index_tables()
     elif cmd == "add-to-sprint" and len(remaining_argv) == 2:
         if active_role in ("agent1", "agent2", "coordinator"):
             print("Error: Agents must not move tickets to sprints! Only the human user assigns tickets to sprints during Sprint-Start Screening.", file=sys.stderr)

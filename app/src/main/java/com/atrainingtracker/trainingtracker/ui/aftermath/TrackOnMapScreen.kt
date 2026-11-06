@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeader
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.GradeZoneDistributionCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneDistributionCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneDistributionCard
@@ -58,10 +59,13 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.Workout
 import com.atrainingtracker.trainingtracker.ui.components.strava.StravaActivitySection
 import android.app.Application
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.CreateLapOnMapSheet
+import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.LapEditBottomSheet
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.MoveLapBoundaryOnMapSheet
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.LapDisplayMode
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.WorkoutLaps
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatus
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.GoogleApiAvailability
 import kotlinx.coroutines.launch
 
 @Composable
@@ -83,6 +87,7 @@ fun TrackOnMapScreen(
     headerActions: @Composable RowScope.() -> Unit = {},
     hrZoneDistribution: ZoneDistributionData? = null,
     powerZoneDistribution: ZoneDistributionData? = null,
+    gradeZoneDistribution: ZoneDistributionData? = null,
     hrZoneThresholds: HeartRateZoneThresholds? = null,
     powerZoneThresholds: PowerZoneThresholds? = null,
     analyticsContent: (@Composable ColumnScope.() -> Unit)? = null,
@@ -112,6 +117,10 @@ fun TrackOnMapScreen(
     var showMoveBoundarySheet by rememberSaveable { mutableStateOf(false) }
     var moveBoundaryLapNr by rememberSaveable { mutableLongStateOf(1L) }
     var candidateSplitIndex by rememberSaveable { mutableStateOf<Int?>(null) }
+    var activeEditingLap by remember { mutableStateOf<LapData?>(null) }
+    val isPlayServiceAvailable = remember(context) {
+        GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context) == ConnectionResult.SUCCESS
+    }
     val lapStartMarkerTitle = stringResource(R.string.marker_lap_start)
     val lapEndMarkerTitle = stringResource(R.string.marker_lap_end)
 
@@ -182,8 +191,10 @@ fun TrackOnMapScreen(
 
     var hrZoneDisplayMode by rememberSaveable(activeDetailPrefs.zoneCardDisplayMode) { mutableStateOf<ZoneCardDisplayMode?>(null) }
     var powerZoneDisplayMode by rememberSaveable(activeDetailPrefs.zoneCardDisplayMode) { mutableStateOf<ZoneCardDisplayMode?>(null) }
+    var gradeZoneDisplayMode by rememberSaveable(activeDetailPrefs.zoneCardDisplayMode) { mutableStateOf<ZoneCardDisplayMode?>(null) }
     val effectiveHrZoneDisplayMode = hrZoneDisplayMode ?: activeDetailPrefs.zoneCardDisplayMode
     val effectivePowerZoneDisplayMode = powerZoneDisplayMode ?: activeDetailPrefs.zoneCardDisplayMode
+    val effectiveGradeZoneDisplayMode = gradeZoneDisplayMode ?: activeDetailPrefs.zoneCardDisplayMode
 
     val isElevationPostMap = postMapSections.contains(WorkoutSectionType.ELEVATION)
     val isChartsPostMap = postMapSections.contains(WorkoutSectionType.CHARTS)
@@ -201,7 +212,7 @@ fun TrackOnMapScreen(
             )
     }
 
-    val hasZonesData = hrZoneDistribution != null || powerZoneDistribution != null
+    val hasZonesData = hrZoneDistribution != null || powerZoneDistribution != null || gradeZoneDistribution != null
     val hasLapsData = workoutData.laps.isNotEmpty()
     val sectionAvailability = remember(
         workoutData,
@@ -269,10 +280,13 @@ fun TrackOnMapScreen(
             onSelectLapNr = { selectedLapNr = it },
             hrZoneDistribution = hrZoneDistribution,
             powerZoneDistribution = powerZoneDistribution,
+            gradeZoneDistribution = gradeZoneDistribution,
             effectiveHrZoneDisplayMode = effectiveHrZoneDisplayMode,
             effectivePowerZoneDisplayMode = effectivePowerZoneDisplayMode,
+            effectiveGradeZoneDisplayMode = effectiveGradeZoneDisplayMode,
             onHrZoneDisplayModeChange = { hrZoneDisplayMode = it },
             onPowerZoneDisplayModeChange = { powerZoneDisplayMode = it },
+            onGradeZoneDisplayModeChange = { gradeZoneDisplayMode = it },
             hrZoneThresholds = hrZoneThresholds,
             powerZoneThresholds = powerZoneThresholds,
             useStatusBarsPadding = useStatusBarsPadding,
@@ -371,6 +385,10 @@ fun TrackOnMapScreen(
             onMoveBoundaryClick = { boundaryLapNr ->
                 moveBoundaryLapNr = boundaryLapNr
                 showMoveBoundarySheet = true
+            },
+            onLapClick = { lap ->
+                activeEditingLap = lap
+                selectedLapNr = lap.lapNr
             },
             modifier = modifier
         )
@@ -540,6 +558,7 @@ fun TrackOnMapScreen(
                                         selectedLapNr = selectedLapNr,
                                         onLapClick = { tappedLapNr ->
                                             selectedLapNr = if (selectedLapNr == tappedLapNr) null else tappedLapNr
+                                            activeEditingLap = workoutData.laps.firstOrNull { it.lapNr == tappedLapNr }
                                         },
                                         onSplitLapClick = {
                                             candidateSplitIndex = null
@@ -698,6 +717,16 @@ fun TrackOnMapScreen(
                                             .padding(horizontal = 16.dp, vertical = 4.dp)
                                     )
                                 }
+                                gradeZoneDistribution?.let { distribution ->
+                                    GradeZoneDistributionCard(
+                                        distribution = distribution,
+                                        displayMode = effectiveGradeZoneDisplayMode,
+                                        onDisplayModeChange = { gradeZoneDisplayMode = it },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                                    )
+                                }
                             }
                         }
                         WorkoutSectionType.EXPORT_STATUS -> {
@@ -739,6 +768,16 @@ fun TrackOnMapScreen(
                                             .padding(horizontal = 16.dp, vertical = 4.dp)
                                     )
                                 }
+                                gradeZoneDistribution?.let { distribution ->
+                                    GradeZoneDistributionCard(
+                                        distribution = distribution,
+                                        displayMode = effectiveGradeZoneDisplayMode,
+                                        onDisplayModeChange = { gradeZoneDisplayMode = it },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                                    )
+                                }
                             }
                         }
                         WorkoutSectionType.LAPS -> {
@@ -749,6 +788,7 @@ fun TrackOnMapScreen(
                                         selectedLapNr = selectedLapNr,
                                         onLapClick = { tappedLapNr ->
                                             selectedLapNr = if (selectedLapNr == tappedLapNr) null else tappedLapNr
+                                            activeEditingLap = workoutData.laps.firstOrNull { it.lapNr == tappedLapNr }
                                         },
                                         onSplitLapClick = {
                                             candidateSplitIndex = null
@@ -811,6 +851,31 @@ fun TrackOnMapScreen(
                 coroutineScope.launch {
                     repository.moveLapBoundary(workoutData.id, boundaryLapNr, newIndex)
                     showMoveBoundarySheet = false
+                }
+            }
+        )
+    }
+
+    activeEditingLap?.let { lap ->
+        LapEditBottomSheet(
+            workoutData = workoutData,
+            initialLapNr = lap.lapNr,
+            isPlayServiceAvailable = isPlayServiceAvailable,
+            onDismissRequest = { activeEditingLap = null },
+            onSaveLap = { lapNr, name, description ->
+                coroutineScope.launch {
+                    repository.updateLapDetails(workoutData.id, lapNr, name, description)
+                }
+            },
+            onMoveBoundaryClick = { boundaryLapNr ->
+                activeEditingLap = null
+                moveBoundaryLapNr = boundaryLapNr
+                showMoveBoundarySheet = true
+            },
+            onDeleteLapClick = { boundaryLapNr ->
+                coroutineScope.launch {
+                    repository.deleteLap(workoutData.id, boundaryLapNr)
+                    activeEditingLap = null
                 }
             }
         )

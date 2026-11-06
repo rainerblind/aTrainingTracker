@@ -88,6 +88,12 @@ android {
         }
     }
 
+    bundle {
+        density {
+            enableSplit = false
+        }
+    }
+
     lint {
         baseline = file('lint-baseline.xml')
         checkReleaseBuilds = true

@@ -42,6 +42,7 @@ import kotlin.math.roundToInt
  */
 data class SensorSearchPreferences(
     val numberOfSearchTries: Int = 3,
+    val btleSearchPeriodSec: Int = TrainingApplication.DEFAULT_BTLE_SEARCH_PERIOD_SEC,
     val startSearchWhenAppStarts: Boolean = true,
     val startSearchWhenResumeFromPaused: Boolean = true,
     val startSearchWhenUserChangesSport: Boolean = true,
@@ -51,11 +52,14 @@ data class SensorSearchPreferences(
 ) {
     companion object {
         const val DEFAULT_NUMBER_OF_SEARCH_TRIES = 3
+        const val DEFAULT_BTLE_SEARCH_PERIOD_SEC = TrainingApplication.DEFAULT_BTLE_SEARCH_PERIOD_SEC
 
         fun load(context: Context): SensorSearchPreferences {
             val prefs = PreferenceManager.getDefaultSharedPreferences(context)
             return SensorSearchPreferences(
                 numberOfSearchTries = prefs.getInt(TrainingApplication.SP_NUMBER_OF_SEARCH_TRIES_INT, DEFAULT_NUMBER_OF_SEARCH_TRIES),
+                btleSearchPeriodSec = prefs.getInt(TrainingApplication.SP_BTLE_SEARCH_PERIOD_SEC, DEFAULT_BTLE_SEARCH_PERIOD_SEC)
+                    .coerceIn(TrainingApplication.MIN_BTLE_SEARCH_PERIOD_SEC, TrainingApplication.MAX_BTLE_SEARCH_PERIOD_SEC),
                 startSearchWhenAppStarts = prefs.getBoolean("startSearchWhenAppStarts", true),
                 startSearchWhenResumeFromPaused = prefs.getBoolean("startSearchWhenResumeFromPaused", true),
                 startSearchWhenUserChangesSport = prefs.getBoolean("startSearchWhenUserChangesSport", true),
@@ -69,6 +73,7 @@ data class SensorSearchPreferences(
             PreferenceManager.getDefaultSharedPreferences(context)
                 .edit()
                 .putInt(TrainingApplication.SP_NUMBER_OF_SEARCH_TRIES_INT, prefs.numberOfSearchTries)
+                .putInt(TrainingApplication.SP_BTLE_SEARCH_PERIOD_SEC, prefs.btleSearchPeriodSec)
                 .putBoolean("startSearchWhenAppStarts", prefs.startSearchWhenAppStarts)
                 .putBoolean("startSearchWhenResumeFromPaused", prefs.startSearchWhenResumeFromPaused)
                 .putBoolean("startSearchWhenUserChangesSport", prefs.startSearchWhenUserChangesSport)
@@ -99,6 +104,8 @@ fun SensorSearchTuningSection(
     SensorSearchTuningSection(
         numberOfSearchTries = prefs.numberOfSearchTries,
         onNumberOfSearchTriesChange = { onPrefsChange(prefs.copy(numberOfSearchTries = it)) },
+        btleSearchPeriodSec = prefs.btleSearchPeriodSec,
+        onBtleSearchPeriodSecChange = { onPrefsChange(prefs.copy(btleSearchPeriodSec = it)) },
         startSearchWhenAppStarts = prefs.startSearchWhenAppStarts,
         onStartSearchWhenAppStartsChange = { onPrefsChange(prefs.copy(startSearchWhenAppStarts = it)) },
         startSearchWhenResumeFromPaused = prefs.startSearchWhenResumeFromPaused,
@@ -120,6 +127,8 @@ fun SensorSearchTuningSection(
 fun SensorSearchTuningSection(
     numberOfSearchTries: Int,
     onNumberOfSearchTriesChange: (Int) -> Unit,
+    btleSearchPeriodSec: Int = SensorSearchPreferences.DEFAULT_BTLE_SEARCH_PERIOD_SEC,
+    onBtleSearchPeriodSecChange: (Int) -> Unit = {},
     startSearchWhenAppStarts: Boolean,
     onStartSearchWhenAppStartsChange: (Boolean) -> Unit,
     startSearchWhenResumeFromPaused: Boolean,
@@ -151,6 +160,21 @@ fun SensorSearchTuningSection(
             onValueChange = { onNumberOfSearchTriesChange(it.roundToInt()) },
             valueRange = 1f..5f,
             steps = 3
+        )
+
+        // BLE search duration slider
+        TuningSliderItem(
+            title = stringResource(R.string.prefs_btle_search_period_title),
+            valueText = stringResource(R.string.tuning_seconds_value_format, btleSearchPeriodSec),
+            helperText = stringResource(R.string.prefs_btle_search_period_summary),
+            defaultText = stringResource(
+                R.string.tuning_default_format,
+                stringResource(R.string.tuning_seconds_value_format, SensorSearchPreferences.DEFAULT_BTLE_SEARCH_PERIOD_SEC)
+            ),
+            value = btleSearchPeriodSec.toFloat(),
+            onValueChange = { onBtleSearchPeriodSecChange(it.roundToInt()) },
+            valueRange = 3f..15f,
+            steps = 11
         )
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))

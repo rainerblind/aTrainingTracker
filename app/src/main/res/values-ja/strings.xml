@@ -518,6 +518,8 @@
 
     <string name="Search_Settings">検索</string>
     <string name="prefsNumberOfSearchTriesTitle">検索ラウンド数</string>
+    <string name="prefs_btle_search_period_title">試行ごとのBLE検索時間</string>
+    <string name="prefs_btle_search_period_summary">次のセンサーへ進むまでのBLE待機時間（秒、3〜15秒）。短い値にするとオフライン時の待機時間が短縮されます。</string>
     <string name="prefStartSearchTitle">検索を開始するタイミング …</string>
     <string name="prefsStartSearchWhenAppStartsTitle">アプリ起動時</string>
     <string name="prefsStartSearchWhenTrackingStartsTitle">記録開始時</string>
@@ -1012,6 +1014,7 @@
     <string name="track_type_network">ネットワーク</string>
     <string name="legend">凡例</string>
     <string name="cluster_statistics_title">ワークアウト統計</string>
+    <string name="cluster_tab_statistics">統計</string>
     <string name="cluster_total_recordings">総記録数</string>
     <string name="cluster_average_distance">平均距離</string>
     <string name="cluster_recordings_format">%1$d 件の記録</string>
@@ -1523,6 +1526,9 @@
 
     <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
     <string name="aftermath_power_zones_title">パワーゾーン</string>
+
+    <!-- Grade / Slope Distribution Card (ATT-5487 / REQ-UI-453) -->
+    <string name="aftermath_grade_zones_title">勾配ゾーン</string>
     <!-- Telemetry Frequency Histogram & Display Modes (ATT-1845 / ATT-3390 / REQ-UI-372) -->
     <string name="zone_mode_5_zones">5ゾーン</string>
     <string name="zone_mode_columns">カラム</string>
@@ -2127,6 +2133,14 @@
     <string name="move_lap_boundary_lap_k_preview">ラップ %1$d (前)</string>
     <string name="move_lap_boundary_lap_k_plus_1_preview">ラップ %1$d (次)</string>
     <string name="move_lap_boundary_select_boundary">境界: ラップ %1$d / ラップ %2$d</string>
+    <string name="delete_lap_action">ラップを削除/結合</string>
+    <string name="delete_lap_dialog_title">ラップを削除/結合</string>
+    <string name="delete_lap_confirm">削除して結合</string>
+    <string name="delete_lap_merge_with_previous">ラップ %1$d + ラップ %2$d (前)</string>
+    <string name="delete_lap_merge_with_next">ラップ %1$d + ラップ %2$d (次)</string>
+    <string name="delete_lap_preview_title">結合ラップのプレビュー</string>
+    <string name="delete_lap_warning_description">ラップ %1$d とラップ %2$d の境界が削除されます。以降のラップは再採番されます。</string>
+    <string name="delete_lap_direction_label">結合方向</string>
     <string name="cd_fastest_split">最速スプリット</string>
     <string name="cd_switch_view_mode">表示モードの切り替え</string>
     <string name="connect_with_strava">Stravaに接続</string>
@@ -2325,4 +2339,9 @@
     <string name="workout_photos_delete_confirm">この写真をワークアウトから削除しますか？</string>
     <string name="workout_photos_share_overlay">トラックオーバーレイで共有</string>
     <string name="workout_photos_marker_title">写真</string>
+    <!-- Workout Photo Time Picker (REQ-UI-455 / ATT-5475) -->
+    <string name="workout_photos_time_picker_title">ワークアウトの写真</string>
+    <string name="workout_photos_time_picker_subtitle">このワークアウト中に撮影された写真</string>
+    <string name="workout_photos_show_all">すべての写真を表示</string>
+    <string name="workout_photos_add_count">%1$d枚の写真を追加</string>
 </resources>

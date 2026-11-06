@@ -18,7 +18,10 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.photos
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -64,28 +67,118 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.database.WorkoutPhotoEntry
+import com.atrainingtracker.trainingtracker.database.WorkoutPhotoManager
 import com.atrainingtracker.trainingtracker.helpers.PhotoTrackOverlayComposer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Horizontal strip displaying workout photo thumbnails and an "Add Photos" trigger (REQ-UI-448.1 / ATT-43).
+ * Horizontal strip displaying workout photo thumbnails and an "Add Photos" trigger (REQ-UI-448.1 / REQ-UI-455 / ATT-43 / ATT-5475).
  */
 @Composable
 fun WorkoutPhotoStrip(
     photos: List<WorkoutPhotoEntry>,
     onPhotoClick: (WorkoutPhotoEntry) -> Unit,
     onAddPhotos: (List<android.net.Uri>) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    startTimeMs: Long = 0L,
+    endTimeMs: Long = 0L
 ) {
+    val context = LocalContext.current
+    var timeFilteredPhotos by remember { mutableStateOf<List<WorkoutPhotoManager.TimeFilteredPhoto>?>(null) }
+    var showTimePickerSheet by remember { mutableStateOf(false) }
+
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia()
     ) { uris ->
         if (uris.isNotEmpty()) {
             onAddPhotos(uris)
         }
+    }
+
+    val launchSystemPicker: () -> Unit = {
+        photoPickerLauncher.launch(
+            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+        )
+    }
+
+    val tryQueryAndShowTimePhotos: () -> Unit = {
+        if (startTimeMs > 0L && endTimeMs >= startTimeMs) {
+            val matching = WorkoutPhotoManager.queryWorkoutTimePhotos(
+                context = context,
+                startTimeMs = startTimeMs,
+                endTimeMs = endTimeMs
+            )
+            if (matching.isNotEmpty()) {
+                timeFilteredPhotos = matching
+                showTimePickerSheet = true
+            } else {
+                launchSystemPicker()
+            }
+        } else {
+            launchSystemPicker()
+        }
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val isGranted = permissions.values.any { it }
+        if (isGranted) {
+            tryQueryAndShowTimePhotos()
+        } else {
+            // Permission denied -> seamless fallback to system picker (REQ-UI-455.3)
+            launchSystemPicker()
+        }
+    }
+
+    val onAddTileClick: () -> Unit = {
+        val hasPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED) == PackageManager.PERMISSION_GRANTED
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED
+        } else {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+        }
+
+        if (hasPermission) {
+            tryQueryAndShowTimePhotos()
+        } else {
+            val permissionsToRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                arrayOf(
+                    Manifest.permission.READ_MEDIA_IMAGES,
+                    Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED
+                )
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                arrayOf(Manifest.permission.READ_MEDIA_IMAGES)
+            } else {
+                arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+            }
+            permissionLauncher.launch(permissionsToRequest)
+        }
+    }
+
+    if (showTimePickerSheet && timeFilteredPhotos != null) {
+        WorkoutTimePhotoPickerSheet(
+            photos = timeFilteredPhotos!!,
+            onAddSelectedPhotos = { uris ->
+                showTimePickerSheet = false
+                if (uris.isNotEmpty()) {
+                    onAddPhotos(uris)
+                }
+            },
+            onShowAllPhotos = {
+                showTimePickerSheet = false
+                launchSystemPicker()
+            },
+            onDismissRequest = {
+                showTimePickerSheet = false
+            }
+        )
     }
 
     Column(
@@ -133,11 +226,7 @@ fun WorkoutPhotoStrip(
             // "Add Photos" Tile
             item(key = "add_photo_tile") {
                 OutlinedCard(
-                    onClick = {
-                        photoPickerLauncher.launch(
-                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                        )
-                    },
+                    onClick = onAddTileClick,
                     modifier = Modifier.size(76.dp),
                     shape = RoundedCornerShape(8.dp),
                     colors = CardDefaults.outlinedCardColors(

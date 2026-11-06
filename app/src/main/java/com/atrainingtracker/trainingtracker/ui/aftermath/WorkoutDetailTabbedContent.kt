@@ -54,6 +54,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.photos.WorkoutPhotoPrev
 import com.atrainingtracker.trainingtracker.ui.aftermath.photos.WorkoutPhotoStrip
 import com.atrainingtracker.trainingtracker.ui.aftermath.splits.LapSplitChartData
 import com.atrainingtracker.trainingtracker.ui.aftermath.splits.LapSplitVisualizerCard
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.GradeZoneDistributionCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneDistributionCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneDistributionCard
@@ -100,10 +101,13 @@ fun WorkoutDetailTabbedContent(
     onSelectLapNr: (Long?) -> Unit,
     hrZoneDistribution: ZoneDistributionData?,
     powerZoneDistribution: ZoneDistributionData?,
+    gradeZoneDistribution: ZoneDistributionData? = null,
     effectiveHrZoneDisplayMode: ZoneCardDisplayMode,
     effectivePowerZoneDisplayMode: ZoneCardDisplayMode,
+    effectiveGradeZoneDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.COLUMNS,
     onHrZoneDisplayModeChange: (ZoneCardDisplayMode) -> Unit,
     onPowerZoneDisplayModeChange: (ZoneCardDisplayMode) -> Unit,
+    onGradeZoneDisplayModeChange: (ZoneCardDisplayMode) -> Unit = {},
     hrZoneThresholds: HeartRateZoneThresholds? = null,
     powerZoneThresholds: PowerZoneThresholds? = null,
     useStatusBarsPadding: Boolean,
@@ -116,6 +120,7 @@ fun WorkoutDetailTabbedContent(
     onSplitLapClick: (() -> Unit)? = null,
     onCreateLapClick: ((Double) -> Unit)? = null,
     onMoveBoundaryClick: ((boundaryLapNr: Long) -> Unit)? = null,
+    onLapClick: ((LapData) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val visibleTabs = remember(tabs, availability, detailPreferences) {
@@ -337,14 +342,18 @@ fun WorkoutDetailTabbedContent(
                                                 onSelectLapNr = onSelectLapNr,
                                                 hrZoneDistribution = hrZoneDistribution,
                                                 powerZoneDistribution = powerZoneDistribution,
+                                                gradeZoneDistribution = gradeZoneDistribution,
                                                 effectiveHrZoneDisplayMode = effectiveHrZoneDisplayMode,
                                                 effectivePowerZoneDisplayMode = effectivePowerZoneDisplayMode,
+                                                effectiveGradeZoneDisplayMode = effectiveGradeZoneDisplayMode,
                                                 onHrZoneDisplayModeChange = onHrZoneDisplayModeChange,
                                                 onPowerZoneDisplayModeChange = onPowerZoneDisplayModeChange,
+                                                onGradeZoneDisplayModeChange = onGradeZoneDisplayModeChange,
                                                 photos = workoutPhotos,
                                                 onPhotoClick = { activePreviewPhoto = it },
                                                 onSplitLapClick = onSplitLapClick,
                                                 onMoveBoundaryClick = onMoveBoundaryClick,
+                                                onLapClick = onLapClick,
                                                 onAddPhotos = { uris ->
                                                     coroutineScope.launch {
                                                         uris.forEach { uri ->
@@ -422,14 +431,18 @@ fun WorkoutDetailTabbedContent(
                                                     onSelectLapNr = onSelectLapNr,
                                                     hrZoneDistribution = hrZoneDistribution,
                                                     powerZoneDistribution = powerZoneDistribution,
+                                                    gradeZoneDistribution = gradeZoneDistribution,
                                                     effectiveHrZoneDisplayMode = effectiveHrZoneDisplayMode,
                                                     effectivePowerZoneDisplayMode = effectivePowerZoneDisplayMode,
+                                                    effectiveGradeZoneDisplayMode = effectiveGradeZoneDisplayMode,
                                                     onHrZoneDisplayModeChange = onHrZoneDisplayModeChange,
                                                     onPowerZoneDisplayModeChange = onPowerZoneDisplayModeChange,
+                                                    onGradeZoneDisplayModeChange = onGradeZoneDisplayModeChange,
                                                     photos = workoutPhotos,
                                                     onPhotoClick = { activePreviewPhoto = it },
                                                     onSplitLapClick = onSplitLapClick,
                                                     onMoveBoundaryClick = onMoveBoundaryClick,
+                                                    onLapClick = onLapClick,
                                                     onAddPhotos = { uris ->
                                                         coroutineScope.launch {
                                                             uris.forEach { uri ->
@@ -473,14 +486,18 @@ fun WorkoutDetailTabbedContent(
                                     onSelectLapNr = onSelectLapNr,
                                     hrZoneDistribution = hrZoneDistribution,
                                     powerZoneDistribution = powerZoneDistribution,
+                                    gradeZoneDistribution = gradeZoneDistribution,
                                     effectiveHrZoneDisplayMode = effectiveHrZoneDisplayMode,
                                     effectivePowerZoneDisplayMode = effectivePowerZoneDisplayMode,
+                                    effectiveGradeZoneDisplayMode = effectiveGradeZoneDisplayMode,
                                     onHrZoneDisplayModeChange = onHrZoneDisplayModeChange,
                                     onPowerZoneDisplayModeChange = onPowerZoneDisplayModeChange,
+                                    onGradeZoneDisplayModeChange = onGradeZoneDisplayModeChange,
                                     photos = workoutPhotos,
                                     onPhotoClick = { activePreviewPhoto = it },
                                     onSplitLapClick = onSplitLapClick,
                                     onMoveBoundaryClick = onMoveBoundaryClick,
+                                    onLapClick = onLapClick,
                                     onAddPhotos = { uris ->
                                         coroutineScope.launch {
                                             uris.forEach { uri ->
@@ -635,15 +652,19 @@ private fun RenderWorkoutDetailCardSections(
     onSelectLapNr: (Long?) -> Unit,
     hrZoneDistribution: ZoneDistributionData?,
     powerZoneDistribution: ZoneDistributionData?,
+    gradeZoneDistribution: ZoneDistributionData? = null,
     effectiveHrZoneDisplayMode: ZoneCardDisplayMode,
     effectivePowerZoneDisplayMode: ZoneCardDisplayMode,
+    effectiveGradeZoneDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.COLUMNS,
     onHrZoneDisplayModeChange: (ZoneCardDisplayMode) -> Unit,
     onPowerZoneDisplayModeChange: (ZoneCardDisplayMode) -> Unit,
+    onGradeZoneDisplayModeChange: (ZoneCardDisplayMode) -> Unit = {},
     photos: List<WorkoutPhotoEntry> = emptyList(),
     onPhotoClick: ((WorkoutPhotoEntry) -> Unit)? = null,
     onAddPhotos: ((List<android.net.Uri>) -> Unit)? = null,
     onSplitLapClick: (() -> Unit)? = null,
-    onMoveBoundaryClick: ((boundaryLapNr: Long) -> Unit)? = null
+    onMoveBoundaryClick: ((boundaryLapNr: Long) -> Unit)? = null,
+    onLapClick: ((LapData) -> Unit)? = null
 ) {
     sections.forEach { section ->
         when (section) {
@@ -659,10 +680,14 @@ private fun RenderWorkoutDetailCardSections(
                     modifier = Modifier.fillMaxWidth()
                 )
                 if (onPhotoClick != null && onAddPhotos != null) {
+                    val startMs = workoutData.startTimeS * 1000L
+                    val endMs = (workoutData.startTimeS + workoutData.totalTimeSec) * 1000L
                     WorkoutPhotoStrip(
                         photos = photos,
                         onPhotoClick = onPhotoClick,
-                        onAddPhotos = onAddPhotos
+                        onAddPhotos = onAddPhotos,
+                        startTimeMs = startMs,
+                        endTimeMs = endMs
                     )
                 }
             }
@@ -705,6 +730,16 @@ private fun RenderWorkoutDetailCardSections(
                             .padding(horizontal = 16.dp, vertical = 4.dp)
                     )
                 }
+                gradeZoneDistribution?.let { distribution ->
+                    GradeZoneDistributionCard(
+                        distribution = distribution,
+                        displayMode = effectiveGradeZoneDisplayMode,
+                        onDisplayModeChange = onGradeZoneDisplayModeChange,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                }
             }
             WorkoutDetailSectionType.LAPS -> {
                 if (workoutData.laps.isNotEmpty()) {
@@ -714,6 +749,7 @@ private fun RenderWorkoutDetailCardSections(
                         lapDisplayMode = if (workoutData.laps.size > 1) LapDisplayMode.VISUALIZER_ONLY else LapDisplayMode.TABLE_ONLY,
                         onLapClick = { lap ->
                             onSelectLapNr(if (selectedLapNr == lap.lapNr) null else lap.lapNr)
+                            onLapClick?.invoke(lap)
                         },
                         onSplitLapClick = onSplitLapClick,
                         onMoveBoundaryClick = onMoveBoundaryClick,

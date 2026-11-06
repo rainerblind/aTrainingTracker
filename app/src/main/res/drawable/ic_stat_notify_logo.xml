@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker: Notification Status Bar Icon (REQ-UI-452.1 / TST-UI-452.1)
+  ~ Dedicated monochrome silhouette on transparent background.
+  -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Stopwatch Ring (Monochrome) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.14"
+        android:pathData="M 7.42,5.06 A 8.23,8.23 0 1,0 7.42,21.52 A 8.23,8.23 0 1,0 7.42,5.06 Z" />
+    <!-- Cyclist Right Leg & Pedal (Depth 62) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.03"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 5.87,11.77 L 7.32,14.54 L 6.45,17.70 L 7.32,18.38" />
+    <!-- Cyclist Arched Back (Depth 58) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.55"
+        android:strokeLineCap="round"
+        android:pathData="M 9.92,10.34 A 4.77,4.77 0 0,0 5.72,11.45" />
+    <!-- Bike Down Tube (Depth 56) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.88"
+        android:pathData="M 9.86,13.99 L 6.34,17.03" />
+    <!-- Bike Seat Tube (Depth 56) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.93"
+        android:pathData="M 6.45,17.14 L 5.34,11.64" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.24"
+        android:pathData="M 3.55,14.56 A 2.16,2.16 0 1,0 3.55,18.88 A 2.16,2.16 0 1,0 3.55,14.56 Z" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.03"
+        android:pathData="M 10.99,14.84 A 2.19,2.19 0 1,0 10.99,19.22 A 2.19,2.19 0 1,0 10.99,14.84 Z" />
+    <!-- Bike Front Head Tube (Depth 55) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.62"
+        android:pathData="M 10.91,17.02 L 9.73,13.43" />
+    <!-- Bike Top Tube (Depth 55) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.26"
+        android:pathData="M 9.80,13.80 L 5.84,13.50" />
+    <!-- Left Pusher Stem (Depth 55) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.06"
+        android:pathData="M 3.21,6.21 L 2.61,5.20" />
+    <!-- Center Pusher Stem (Depth 55) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.06"
+        android:pathData="M 7.42,4.96 L 7.42,3.75" />
+    <!-- Right Pusher Stem (Depth 55) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.06"
+        android:pathData="M 11.53,6.09 L 12.14,5.10" />
+    <!-- Cyclist Left Leg (Depth 54) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.03"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 6.93,16.62 L 6.37,15.52 L 9.28,13.78 L 5.53,12.32" />
+    <!-- Bicycle Saddle Underneath (Depth 53) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.36"
+        android:pathData="M 4.48,12.54 L 5.85,12.54" />
+    <!-- Bike Rear Seat Stay (Depth 50) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.36"
+        android:pathData="M 3.67,16.72 L 5.84,13.50" />
+    <!-- Bike Chain Stay (Depth 50) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.36"
+        android:pathData="M 6.65,17.19 L 3.67,16.72" />
+    <!-- Cyclist Head (Depth 50) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.52"
+        android:pathData="M 11.10,9.49 A 0.87,0.87 0 1,0 11.10,11.24 A 0.87,0.87 0 1,0 11.10,9.49 Z" />
+    <!-- Runner Head (Depth 50) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.52"
+        android:pathData="M 19.50,8.73 A 0.87,0.87 0 1,0 19.50,10.48 A 0.87,0.87 0 1,0 19.50,8.73 Z" />
+    <!-- Cyclist Chin/Neck (Depth 50) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.26"
+        android:pathData="M 9.86,10.34 L 10.42,10.40" />
+    <!-- Cyclist Lower Torso / Chest (Depth 50) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.19"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 6.03,11.61 L 9.59,10.53" />
+    <!-- Cyclist Upper Thigh (Depth 50) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.34"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 8.97,13.47 L 5.57,12.08" />
+    <!-- Cyclist Arm & Aerobar (Depth 50) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.78"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 12.38,13.47 L 9.98,13.25 L 9.86,10.28" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.21"
+        android:strokeLineJoin="round"
+        android:pathData="M 5.10,11.30 C 5.00,11.51 4.97,11.74 5.03,12.00 C 5.07,12.26 5.15,12.31 5.26,12.16 C 5.36,12.00 5.49,11.82 5.64,11.61 C 5.80,11.41 5.77,11.25 5.57,11.15 C 5.36,11.04 5.21,11.10 5.10,11.30 Z" />
+    <!-- Left Navy Blue Pusher (Depth 50) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.58"
+        android:pathData="M 2.78,5.37 L 2.01,4.03" />
+    <!-- Center Red Pusher (Depth 50) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.58"
+        android:pathData="M 7.42,4.03 L 7.42,2.48" />
+    <!-- Right Green Pusher (Depth 50) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.58"
+        android:pathData="M 12.05,5.21 L 12.83,3.87" />
+    <!-- Runner Front Arm (Depth 50) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.88"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 19.41,10.90 L 20.64,13.48 L 21.18,11.31" />
+    <!-- Runner Back Arm (Depth 50) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.88"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 19.41,10.90 L 17.11,11.44 L 18.06,13.35" />
+    <!-- Runner Front Leg (Depth 50) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.44"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 19.14,14.70 L 21.99,15.51 L 20.23,18.77" />
+    <!-- Runner Torso & Back Leg (Depth 50) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.44"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 19.34,11.61 L 19.01,14.70 L 17.17,17.34 L 14.55,19.51" />
+</vector>

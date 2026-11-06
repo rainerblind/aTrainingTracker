@@ -66,6 +66,7 @@ class SensorSearchTuningContractTest {
     fun testDefaultPreferences_matchFactoryDefaults() {
         val defaults = SensorSearchPreferences()
         assertEquals(3, defaults.numberOfSearchTries)
+        assertEquals(5, defaults.btleSearchPeriodSec)
         assertTrue(defaults.startSearchWhenAppStarts)
         assertTrue(defaults.startSearchWhenResumeFromPaused)
         assertTrue(defaults.startSearchWhenUserChangesSport)
@@ -77,6 +78,7 @@ class SensorSearchTuningContractTest {
     @Test
     fun testLoadPreferences_readsFromSharedPreferences() {
         every { mockPrefs.getInt(TrainingApplication.SP_NUMBER_OF_SEARCH_TRIES_INT, 3) } returns 4
+        every { mockPrefs.getInt(TrainingApplication.SP_BTLE_SEARCH_PERIOD_SEC, 5) } returns 7
         every { mockPrefs.getBoolean("startSearchWhenAppStarts", true) } returns false
         every { mockPrefs.getBoolean("startSearchWhenResumeFromPaused", true) } returns true
         every { mockPrefs.getBoolean("startSearchWhenUserChangesSport", true) } returns false
@@ -86,6 +88,7 @@ class SensorSearchTuningContractTest {
 
         val loaded = SensorSearchPreferences.load(mockContext)
         assertEquals(4, loaded.numberOfSearchTries)
+        assertEquals(7, loaded.btleSearchPeriodSec)
         assertFalse(loaded.startSearchWhenAppStarts)
         assertTrue(loaded.startSearchWhenResumeFromPaused)
         assertFalse(loaded.startSearchWhenUserChangesSport)
@@ -95,9 +98,21 @@ class SensorSearchTuningContractTest {
     }
 
     @Test
+    fun testLoadPreferences_clampsToMinMax() {
+        every { mockPrefs.getInt(TrainingApplication.SP_BTLE_SEARCH_PERIOD_SEC, 5) } returns 1
+        var loaded = SensorSearchPreferences.load(mockContext)
+        assertEquals(3, loaded.btleSearchPeriodSec)
+
+        every { mockPrefs.getInt(TrainingApplication.SP_BTLE_SEARCH_PERIOD_SEC, 5) } returns 25
+        loaded = SensorSearchPreferences.load(mockContext)
+        assertEquals(15, loaded.btleSearchPeriodSec)
+    }
+
+    @Test
     fun testSavePreferences_persistsToSharedPreferences() {
         val prefsToSave = SensorSearchPreferences(
             numberOfSearchTries = 5,
+            btleSearchPeriodSec = 8,
             startSearchWhenAppStarts = false,
             startSearchWhenResumeFromPaused = false,
             startSearchWhenUserChangesSport = false,
@@ -109,6 +124,7 @@ class SensorSearchTuningContractTest {
         SensorSearchPreferences.save(mockContext, prefsToSave)
 
         verify { mockEditor.putInt(TrainingApplication.SP_NUMBER_OF_SEARCH_TRIES_INT, 5) }
+        verify { mockEditor.putInt(TrainingApplication.SP_BTLE_SEARCH_PERIOD_SEC, 8) }
         verify { mockEditor.putBoolean("startSearchWhenAppStarts", false) }
         verify { mockEditor.putBoolean("startSearchWhenResumeFromPaused", false) }
         verify { mockEditor.putBoolean("startSearchWhenUserChangesSport", false) }
@@ -123,6 +139,7 @@ class SensorSearchTuningContractTest {
         SensorSearchPreferences.reset(mockContext)
 
         verify { mockEditor.putInt(TrainingApplication.SP_NUMBER_OF_SEARCH_TRIES_INT, 3) }
+        verify { mockEditor.putInt(TrainingApplication.SP_BTLE_SEARCH_PERIOD_SEC, 5) }
         verify { mockEditor.putBoolean("startSearchWhenAppStarts", true) }
         verify { mockEditor.putBoolean("startSearchWhenResumeFromPaused", true) }
         verify { mockEditor.putBoolean("startSearchWhenUserChangesSport", true) }

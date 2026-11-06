@@ -56,6 +56,7 @@ import com.atrainingtracker.trainingtracker.exporter.ExportStatusChangedBroadcas
 import com.atrainingtracker.trainingtracker.exporter.ExportType
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
+import com.atrainingtracker.trainingtracker.routes.GeoUtils
 import com.atrainingtracker.trainingtracker.tracker.TrackerService
 import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutDeletionNotificationManager
@@ -335,14 +336,15 @@ class WorkoutRepository private constructor(private val application: Application
      * @return A list of [PathPoint] objects containing distance, location, and altitude.
      */
     /**
-     * DTO containing consolidated telemetry tracks and zone distributions (ATT-4003 / REQ-DAT-033).
+     * DTO containing consolidated telemetry tracks and zone distributions (ATT-4003 / REQ-DAT-033 / ATT-5487).
      */
-    data class WorkoutDetailTelemetry(
+    data class WorkoutDetailTelemetry @JvmOverloads constructor(
         val tracks: Map<TrackType, List<PathPoint>>,
         val hrZoneDistribution: ZoneDistributionData?,
         val powerZoneDistribution: ZoneDistributionData?,
         val hrThresholds: HeartRateZoneThresholds? = null,
-        val powerThresholds: PowerZoneThresholds? = null
+        val powerThresholds: PowerZoneThresholds? = null,
+        val gradeZoneDistribution: ZoneDistributionData? = null
     )
 
     private fun getExistingColumns(db: android.database.sqlite.SQLiteDatabase, tableName: String): Set<String> {
@@ -744,6 +746,16 @@ class WorkoutRepository private constructor(private val application: Application
     }
 
     /**
+     * Calculates 7-zone slope / grade distribution data for a workout (REQ-UI-453 / ATT-5487).
+     */
+    suspend fun getGradeZoneDistribution(
+        workoutId: Long
+    ): ZoneDistributionData? = withContext(Dispatchers.IO) {
+        val trackPoints = getWorkoutTrackPoints(workoutId, TrackType.BEST)
+        ZoneDistributionCalculator.calculateGradeDistribution(trackPoints)
+    }
+
+    /**
      * ATT-4003 / REQ-DAT-033: Consolidated single-pass extraction of tracks and zone telemetry.
      * Replaces multiple unprojected table scans across track types and zone distributions
      * with a single projected query over the workout's samples table.
@@ -903,12 +915,16 @@ class WorkoutRepository private constructor(private val application: Application
             ZoneDistributionCalculator.calculatePowerDistribution(powerSamples, powerThresholds)
         } else null
 
+        val elevationPoints = enrichedTracks[TrackType.BEST] ?: enrichedTracks.values.firstOrNull() ?: emptyList()
+        val gradeDistribution = ZoneDistributionCalculator.calculateGradeDistribution(elevationPoints)
+
         WorkoutDetailTelemetry(
             tracks = enrichedTracks,
             hrZoneDistribution = hrDistribution,
             powerZoneDistribution = powerDistribution,
             hrThresholds = hrThresholds,
-            powerThresholds = powerThresholds
+            powerThresholds = powerThresholds,
+            gradeZoneDistribution = gradeDistribution
         )
     }
 
@@ -931,7 +947,7 @@ class WorkoutRepository private constructor(private val application: Application
         val markerList = mutableListOf<LocationMarker>()
 
         // 1. Primary spatial markers (Fast, from WorkoutData)
-        workoutData.startLatLng?.let {
+        workoutData.startLatLng?.takeIf { GeoUtils.isValidGpsCoordinate(it.latitude, it.longitude) }?.let {
             val startTitle = if (!workoutData.startLocationName.isNullOrBlank()) {
                 "${application.getString(R.string.Start)}: ${workoutData.startLocationName}"
             } else {
@@ -939,7 +955,7 @@ class WorkoutRepository private constructor(private val application: Application
             }
             markerList.add(LocationMarker(it, R.drawable.control_start, startTitle))
         }
-        workoutData.endLatLng?.let {
+        workoutData.endLatLng?.takeIf { GeoUtils.isValidGpsCoordinate(it.latitude, it.longitude) }?.let {
             val stopTitle = if (!workoutData.endLocationName.isNullOrBlank()) {
                 "${application.getString(R.string.Stop)}: ${workoutData.endLocationName}"
             } else {
@@ -947,7 +963,7 @@ class WorkoutRepository private constructor(private val application: Application
             }
             markerList.add(LocationMarker(it, R.drawable.control_stop, stopTitle))
         }
-        workoutData.maxDisplacementLatLng?.let {
+        workoutData.maxDisplacementLatLng?.takeIf { GeoUtils.isValidGpsCoordinate(it.latitude, it.longitude) }?.let {
             markerList.add(LocationMarker(it, R.drawable.ic_distance, application.getString(R.string.max_line_distance)))
         }
 
@@ -963,14 +979,14 @@ class WorkoutRepository private constructor(private val application: Application
             }
         }
 
-        // 3. Photo Location Markers (REQ-UI-448.3 / ATT-43)
-        val photos = summariesManager.getPhotosForWorkout(workoutId)
+        // 3. Photo Location Markers (REQ-UI-448.3 / ATT-43 / ATT-5479)
+        val photos = getWorkoutPhotos(workoutId)
         photos.forEach { photo ->
-            if (photo.latitude != null && photo.longitude != null) {
+            if (GeoUtils.isValidGpsCoordinate(photo.latitude, photo.longitude)) {
                 val title = photo.caption ?: application.getString(R.string.workout_photos_marker_title)
                 markerList.add(
                     LocationMarker(
-                        position = LatLng(photo.latitude, photo.longitude),
+                        position = LatLng(photo.latitude!!, photo.longitude!!),
                         iconResId = R.drawable.ic_place,
                         title = title
                     )
@@ -982,10 +998,11 @@ class WorkoutRepository private constructor(private val application: Application
     }
 
     /**
-     * Retrieves all photos attached to the given workout (REQ-DAT-038 / ATT-43).
+     * Retrieves all photos attached to the given workout (REQ-DAT-038 / ATT-43 / ATT-5479).
      */
     fun getWorkoutPhotos(workoutId: Long): List<WorkoutPhotoEntry> {
-        return summariesManager.getPhotosForWorkout(workoutId)
+        val rawPhotos = summariesManager.getPhotosForWorkout(workoutId)
+        return WorkoutPhotoManager.selfHealPhotos(application, workoutId, rawPhotos)
     }
 
     /**
@@ -1952,6 +1969,72 @@ class WorkoutRepository private constructor(private val application: Application
             Result.failure(e)
         }
     }
+
+    /**
+     * Deletes a lap boundary and merges the adjacent laps in both WorkoutSamples.db and Laps.db (REQ-UI-454.3 / ATT-5482).
+     *
+     * Removes the boundary between [removedBoundaryLapNr] (Lap k) and Lap k+1, merging them into Lap k,
+     * decrementing LAP_NR for all subsequent samples in WorkoutSamples.db, recalculating contiguous 1..N-1
+     * lap summaries, persisting to Laps.db via replaceCroppedLaps, invalidating export cache, and reloading WorkoutData.
+     *
+     * @param workoutId The ID of the workout.
+     * @param removedBoundaryLapNr The 1-based lap number of the first lap in the merged pair (1 <= k < N).
+     * @return Result.success with updated List<LapData>, or Result.failure with descriptive error.
+     */
+    suspend fun deleteLap(workoutId: Long, removedBoundaryLapNr: Long): Result<List<LapData>> = withContext(Dispatchers.IO) {
+        try {
+            val baseFileName = summariesManager.getBaseFileName(workoutId)
+                ?: return@withContext Result.failure(IllegalStateException("No baseFileName found for workout $workoutId"))
+            if (!samplesManager.existsTable(baseFileName)) {
+                return@withContext Result.failure(IllegalStateException("Samples table does not exist for $baseFileName"))
+            }
+
+            val existingLaps = lapsDatabaseManager.getLaps(workoutId)
+            if (existingLaps.size < 2) {
+                return@withContext Result.failure(IllegalStateException("Cannot delete lap: workout must have at least 2 laps"))
+            }
+            if (removedBoundaryLapNr < 1L || removedBoundaryLapNr >= existingLaps.size.toLong()) {
+                return@withContext Result.failure(IllegalArgumentException("Invalid boundary lap number $removedBoundaryLapNr for ${existingLaps.size} laps"))
+            }
+
+            // 1. Transactional update in WorkoutSamples.db: Decrement LAP_NR for all rows where LAP_NR > removedBoundaryLapNr
+            samplesManager.decrementLapNumbersAbove(baseFileName, removedBoundaryLapNr)
+
+            // 2. Recalculate all laps
+            val newLaps = com.atrainingtracker.trainingtracker.domain.laps.LapSplitAndMoveCalculator.recalculateLapsAfterMerge(
+                workoutId = workoutId,
+                existingLaps = existingLaps,
+                removedBoundaryLapNr = removedBoundaryLapNr
+            )
+
+            // 3. Persist updated laps to Laps.db atomically
+            lapsDatabaseManager.replaceCroppedLaps(workoutId, newLaps)
+
+            // 4. Invalidate export cache
+            try {
+                val updatedWorkout = allWorkouts.value.find { it.id == workoutId }
+                if (updatedWorkout != null) {
+                    exportManager.exportWorkout(updatedWorkout)
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Non-fatal export cache refresh exception after delete lap: ${e.message}")
+            }
+
+            // 5. Refresh in-memory reactive state
+            reloadWorkoutData(workoutId)
+
+            Result.success(newLaps)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to delete lap boundary at lap $removedBoundaryLapNr for workout $workoutId", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Semantic alias for [deleteLap] (REQ-UI-454.3 / ATT-5482).
+     */
+    suspend fun mergeAdjacentLaps(workoutId: Long, removedBoundaryLapNr: Long): Result<List<LapData>> =
+        deleteLap(workoutId, removedBoundaryLapNr)
 
     /**
      * Atomically updates a workout session in memory while handling potential race conditions.

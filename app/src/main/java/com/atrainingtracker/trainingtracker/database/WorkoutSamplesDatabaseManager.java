@@ -604,6 +604,46 @@ public class WorkoutSamplesDatabaseManager {
     }
 
     /**
+     * Atomically decrements LAP_NR by 1 for all samples with LAP_NR > boundaryLapNr (REQ-UI-454.3 / ATT-5482).
+     * This effectively merges Lap (boundaryLapNr + 1) into Lap (boundaryLapNr) and shifts all subsequent laps down by 1.
+     *
+     * @param fileBaseName The workout table base name.
+     * @param boundaryLapNr The boundary lap number above which all sample lap numbers are decremented.
+     * @return The number of rows affected.
+     */
+    public int decrementLapNumbersAbove(@NonNull String fileBaseName, long boundaryLapNr) {
+        SQLiteDatabase db = getDatabase();
+        String table = getTableName(fileBaseName);
+        if (!existsTable(fileBaseName)) {
+            Log.w(TAG, "Table does not exist for " + fileBaseName);
+            return 0;
+        }
+
+        db.beginTransaction();
+        try {
+            boolean hasLapNr = existsColumnInTable(db, table, SensorType.LAP_NR.name());
+            if (!hasLapNr) {
+                // If table has no LAP_NR column, all samples are implicitly Lap 1; nothing to decrement above boundary
+                db.setTransactionSuccessful();
+                return 0;
+            }
+
+            String sql = "UPDATE " + table + " SET " + SensorType.LAP_NR.name() + " = " + SensorType.LAP_NR.name() + " - 1 WHERE " + SensorType.LAP_NR.name() + " > ?";
+            SQLiteStatement stmt = db.compileStatement(sql);
+            stmt.bindLong(1, boundaryLapNr);
+            int rowsAffected = stmt.executeUpdateDelete();
+
+            db.setTransactionSuccessful();
+            return rowsAffected;
+        } catch (Exception e) {
+            Log.e(TAG, "Error decrementing lap numbers above boundary lap " + boundaryLapNr, e);
+            throw e;
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    /**
      * Atomically updates LAP_NR to the specified newLapNr for all samples within [startRowId, endRowId] (inclusive) (REQ-UI-450.4 / ATT-908).
      *
      * @param fileBaseName The workout table base name.

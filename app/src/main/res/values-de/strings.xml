@@ -556,6 +556,8 @@
 
     <string name="Search_Settings">Suche</string>
     <string name="prefsNumberOfSearchTriesTitle">Anzahl der Suchrunden</string>
+    <string name="prefs_btle_search_period_title">BLE-Suchdauer pro Versuch</string>
+    <string name="prefs_btle_search_period_summary">Wartezeit in Sekunden auf einen BLE-Sensor vor dem Weiterschalten (3..15 s). Kürzere Werte verringern Verzögerungen bei Offline-Sensoren.</string>
     <string name="prefStartSearchTitle">Starte Suche wenn …</string>
     <string name="prefsStartSearchWhenAppStartsTitle">App startet</string>
     <string name="prefsStartSearchWhenTrackingStartsTitle">Aufzeichnung startet</string>
@@ -1108,6 +1110,7 @@
     <string name="legend">Legende</string>
 
     <string name="cluster_statistics_title">Einheitenstatistik</string>
+    <string name="cluster_tab_statistics">Statistik</string>
     <string name="cluster_total_recordings">Aufzeichnungen gesamt</string>
     <string name="cluster_average_distance">Mittlere Distanz</string>
     <string name="cluster_recordings_format">%1$d Aufzeichnungen</string>
@@ -1632,6 +1635,9 @@
 
     <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
     <string name="aftermath_power_zones_title">Leistungszonen</string>
+
+    <!-- Grade / Slope Distribution Card (ATT-5487 / REQ-UI-453) -->
+    <string name="aftermath_grade_zones_title">Steigungszonen</string>
     <!-- Telemetry Frequency Histogram & Display Modes (ATT-1845 / ATT-3390 / REQ-UI-372) -->
     <string name="zone_mode_5_zones">5 Zonen</string>
     <string name="zone_mode_columns">Säulen</string>
@@ -2233,6 +2239,14 @@
     <string name="move_lap_boundary_lap_k_preview">Runde %1$d (Vorherige)</string>
     <string name="move_lap_boundary_lap_k_plus_1_preview">Runde %1$d (Nächste)</string>
     <string name="move_lap_boundary_select_boundary">Grenze: Runde %1$d / Runde %2$d</string>
+    <string name="delete_lap_action">Runde löschen / zusammenführen</string>
+    <string name="delete_lap_dialog_title">Runde löschen / zusammenführen</string>
+    <string name="delete_lap_confirm">Löschen &amp; Zusammenführen</string>
+    <string name="delete_lap_merge_with_previous">Runde %1$d + Runde %2$d (Vorherige)</string>
+    <string name="delete_lap_merge_with_next">Runde %1$d + Runde %2$d (Nächste)</string>
+    <string name="delete_lap_preview_title">Vorschau der zusammengeführten Runde</string>
+    <string name="delete_lap_warning_description">Die Grenze zwischen Runde %1$d und Runde %2$d wird entfernt. Nachfolgende Runden werden neu nummeriert.</string>
+    <string name="delete_lap_direction_label">Richtung der Zusammenführung</string>
     <string name="cd_fastest_split">Schnellster Split</string>
     <string name="cd_switch_view_mode">Ansichtsmodus wechseln</string>
     <string name="connect_with_strava">Mit Strava verbinden</string>
@@ -2431,4 +2445,9 @@
     <string name="workout_photos_delete_confirm">Möchtest du dieses Foto aus dem Workout löschen?</string>
     <string name="workout_photos_share_overlay">Mit Track-Overlay teilen</string>
     <string name="workout_photos_marker_title">Foto</string>
+    <!-- Workout Photo Time Picker (REQ-UI-455 / ATT-5475) -->
+    <string name="workout_photos_time_picker_title">Fotos während des Trainings</string>
+    <string name="workout_photos_time_picker_subtitle">Fotos, die während dieser Einheit aufgenommen wurden</string>
+    <string name="workout_photos_show_all">Alle Bilder anzeigen</string>
+    <string name="workout_photos_add_count">%1$d Fotos hinzufügen</string>
 </resources>

@@ -250,10 +250,9 @@ fun WorkoutSummariesTabbedScreen(
     }
 
     // Process-death and configuration change restoration (REQ-UI-427.2)
-    LaunchedEffect(selectedWorkoutIdForDetails, selectedWorkoutForDetails) {
+    LaunchedEffect(selectedWorkoutIdForDetails, selectedWorkoutForDetails != null) {
         if (selectedWorkoutForDetails != null) {
-            val currentTracks = trackOnMapViewModel.uiState.value.tracks
-            val alreadyLoaded = currentTracks.any { it.id == selectedWorkoutForDetails.id }
+            val alreadyLoaded = trackOnMapViewModel.uiState.value.loadedWorkoutId == selectedWorkoutIdForDetails
             if (!alreadyLoaded) {
                 trackOnMapViewModel.loadAftermathData(selectedWorkoutForDetails)
             }
@@ -306,6 +305,7 @@ fun WorkoutSummariesTabbedScreen(
                     onEditWorkout = { id -> selectedWorkoutIdForEdit = id },
                     hrZoneDistribution = aftermathUIState.hrZoneDistribution,
                     powerZoneDistribution = aftermathUIState.powerZoneDistribution,
+                    gradeZoneDistribution = aftermathUIState.gradeZoneDistribution,
                     hrZoneThresholds = aftermathUIState.hrThresholds,
                     powerZoneThresholds = aftermathUIState.powerThresholds,
                     telemetryPath = aftermathUIState.telemetryPath,

@@ -57,9 +57,11 @@ data class AftermathMapUIState(
     val zoomFocus: MapZoomFocus = MapZoomFocus.FIT_PRIMARY,
     val hrZoneDistribution: ZoneDistributionData? = null,
     val powerZoneDistribution: ZoneDistributionData? = null,
+    val gradeZoneDistribution: ZoneDistributionData? = null,
     val telemetryPath: List<PathPoint> = emptyList(),
     val hrThresholds: HeartRateZoneThresholds? = null,
-    val powerThresholds: PowerZoneThresholds? = null
+    val powerThresholds: PowerZoneThresholds? = null,
+    val loadedWorkoutId: Long? = null
 )
 
 class TrackOnMapAftermathViewModel @JvmOverloads constructor(
@@ -103,24 +105,34 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
 
     fun loadAftermathData(workoutData: WorkoutData) {
         loadJob?.cancel()
+        val workoutId = workoutData.id
+        val bSportType = workoutData.bSportType
+        val isSameWorkout = (_uiState.value.loadedWorkoutId == workoutId)
+
+        // --- PHASE 1: Immediate Reset or In-Place Preservation (REQ-UI-427.2) ---
+        // If switching to a different workout, clear previous state to prevent "ghost" data.
+        // If reloading the same workout (e.g. lap split/move, export broadcasts), retain tracks
+        // to prevent visibleTabs collapse and HorizontalPager tab jumping (Rule 73).
+        if (!isSameWorkout) {
+            _uiState.value = AftermathMapUIState(
+                zoomFocus = MapZoomFocus.FIT_PRIMARY,
+                bSportType = bSportType,
+                tracks = emptyList(),
+                markers = emptyList(),
+                loadedWorkoutId = workoutId
+            )
+        } else {
+            _uiState.value = _uiState.value.copy(
+                bSportType = bSportType,
+                loadedWorkoutId = workoutId
+            )
+        }
+
         loadJob = viewModelScope.launch(ioDispatcher) {
-            val workoutId = workoutData.id
-            val bSportType = workoutData.bSportType
-
-            // --- PHASE 1: Immediate Reset ---
-            // Clear previous state so the user doesn't see "ghost" data from another workout
-            withContext(Dispatchers.Main) {
-                _uiState.value = AftermathMapUIState(
-                    zoomFocus = MapZoomFocus.FIT_PRIMARY,
-                    bSportType = bSportType,
-                    tracks = emptyList(),
-                    markers = emptyList()
-                )
-            }
-
             // --- PHASE 2: Fast Track (From WorkoutData Polyline & Streams) ---
             // Decodes the thinned data already present in workoutData for instant UI feedback.
-            if (workoutData.mapPolyline.isNotEmpty()) {
+            // When updating the same workout and tracks are already present, bypass fast-track polyline overwrite
+            if (workoutData.mapPolyline.isNotEmpty() && (!isSameWorkout || _uiState.value.tracks.isEmpty())) {
                 val latLngs = PolyUtil.decode(workoutData.mapPolyline)
 
                 // Decode elevation streams
@@ -265,15 +277,17 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
                 )
             }
 
-            // --- PHASE 7: Zone Analytics (Heart Rate & Power 5-Zone Distribution & Thresholds) ---
+            // --- PHASE 7: Zone Analytics (Heart Rate, Power & Grade Zone Distribution & Thresholds) ---
             val hrDistribution = telemetry?.hrZoneDistribution ?: workoutRepository.getHeartRateZoneDistribution(workoutId, bSportType)
             val powerDistribution = telemetry?.powerZoneDistribution ?: workoutRepository.getPowerZoneDistribution(workoutId)
+            val gradeDistribution = telemetry?.gradeZoneDistribution ?: workoutRepository.getGradeZoneDistribution(workoutId)
             val hrThresholds = telemetry?.hrThresholds ?: TelemetryZoneMath.loadHeartRateThresholds(getApplication(), bSportType)
             val powerThresholds = telemetry?.powerThresholds ?: TelemetryZoneMath.loadPowerThresholds(getApplication())
             withContext(Dispatchers.Main) {
                 _uiState.value = _uiState.value.copy(
                     hrZoneDistribution = hrDistribution,
                     powerZoneDistribution = powerDistribution,
+                    gradeZoneDistribution = gradeDistribution,
                     hrThresholds = hrThresholds,
                     powerThresholds = powerThresholds
                 )

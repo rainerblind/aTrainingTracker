@@ -27,6 +27,8 @@ import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.PolyUtil
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -147,5 +149,66 @@ class TrackOnMapAftermathViewModelTest {
         assertTrue("Second loadJob must be active", job2!!.isActive)
 
         advanceUntilIdle()
+    }
+
+    @Test
+    fun loadAftermathData_populatesLoadedWorkoutId() = runTest(testDispatcher) {
+        val viewModel = TrackOnMapAftermathViewModel(mockApplication, ioDispatcher = testDispatcher)
+        assertNull("Initial loadedWorkoutId must be null", viewModel.uiState.value.loadedWorkoutId)
+
+        val workout = createWorkout(101L)
+        viewModel.loadAftermathData(workout)
+
+        assertEquals("loadedWorkoutId must match workout ID immediately", 101L, viewModel.uiState.value.loadedWorkoutId)
+        advanceUntilIdle()
+        assertEquals("loadedWorkoutId must be retained after completion", 101L, viewModel.uiState.value.loadedWorkoutId)
+    }
+
+    @Test
+    fun loadAftermathData_sameWorkout_preservesTracksWithoutPhase1Wipe() = runTest(testDispatcher) {
+        val viewModel = TrackOnMapAftermathViewModel(mockApplication, ioDispatcher = testDispatcher)
+
+        val polyline = PolyUtil.encode(listOf(LatLng(48.137, 11.575), LatLng(48.138, 11.576)))
+        val workout1 = createWorkout(201L).copy(mapPolyline = polyline)
+
+        // First load populates tracks
+        viewModel.loadAftermathData(workout1)
+        advanceUntilIdle()
+        assertFalse("Tracks should be populated after first load", viewModel.uiState.value.tracks.isEmpty())
+        val initialTracks = viewModel.uiState.value.tracks
+
+        // Updated workout with same ID (e.g. lap split / move / export broadcast)
+        val workout1Updated = workout1.copy(workoutName = "Updated Workout 201")
+        viewModel.loadAftermathData(workout1Updated)
+
+        // Verify tracks were NOT wiped synchronously in Phase 1
+        assertFalse("Tracks must remain populated in Phase 1 for same workout", viewModel.uiState.value.tracks.isEmpty())
+        assertEquals("Tracks instance must be preserved in Phase 1", initialTracks, viewModel.uiState.value.tracks)
+
+        advanceUntilIdle()
+        assertFalse("Tracks must remain populated after reload completion", viewModel.uiState.value.tracks.isEmpty())
+        assertEquals(201L, viewModel.uiState.value.loadedWorkoutId)
+    }
+
+    @Test
+    fun loadAftermathData_differentWorkout_executesPhase1Wipe() = runTest(testDispatcher) {
+        val viewModel = TrackOnMapAftermathViewModel(mockApplication, ioDispatcher = testDispatcher)
+
+        val polyline = PolyUtil.encode(listOf(LatLng(48.137, 11.575), LatLng(48.138, 11.576)))
+        val workoutA = createWorkout(301L).copy(mapPolyline = polyline)
+        val workoutB = createWorkout(302L).copy(mapPolyline = "")
+
+        // Load workout A
+        viewModel.loadAftermathData(workoutA)
+        advanceUntilIdle()
+        assertFalse("Tracks should be populated for workout A", viewModel.uiState.value.tracks.isEmpty())
+
+        // Switching to workout B must wipe tracks synchronously in Phase 1 to prevent ghost data
+        viewModel.loadAftermathData(workoutB)
+        assertTrue("Tracks must be wiped immediately in Phase 1 for different workout", viewModel.uiState.value.tracks.isEmpty())
+        assertEquals(302L, viewModel.uiState.value.loadedWorkoutId)
+
+        advanceUntilIdle()
+        assertTrue("Tracks remain empty for workout B without polyline", viewModel.uiState.value.tracks.isEmpty())
     }
 }

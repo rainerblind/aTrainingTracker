@@ -56,4 +56,28 @@ object GeoUtils {
 
         return (Math.toDegrees(theta) + 360.0) % 360.0
     }
+
+    /**
+     * Evaluates whether the given geographic coordinates represent a valid, authentic GPS fix (REQ-UI-448.3).
+     *
+     * Coordinates are considered valid iff:
+     * 1. Both latitude and longitude are non-null and finite (not NaN or Infinite).
+     * 2. Latitude is within standard WGS-84 bounds [-90.0, 90.0].
+     * 3. Longitude is within standard WGS-84 bounds [-180.0, 180.0].
+     * 4. Coordinates do NOT point to "Null Island" (`abs(lat) < 1e-5 && abs(lng) < 1e-5`), which
+     *    typically results from zeroed EXIF rational tags (0/1, 0/1) or uninitialized SQLite columns.
+     *
+     * @param latitude Latitude in degrees, or null.
+     * @param longitude Longitude in degrees, or null.
+     * @return true if coordinates represent a valid, non-Null-Island position.
+     */
+    @JvmStatic
+    fun isValidGpsCoordinate(latitude: Double?, longitude: Double?): Boolean {
+        if (latitude == null || longitude == null) return false
+        if (!latitude.isFinite() || !longitude.isFinite()) return false
+        if (latitude < -90.0 || latitude > 90.0) return false
+        if (longitude < -180.0 || longitude > 180.0) return false
+        if (Math.abs(latitude) < 1e-5 && Math.abs(longitude) < 1e-5) return false
+        return true
+    }
 }

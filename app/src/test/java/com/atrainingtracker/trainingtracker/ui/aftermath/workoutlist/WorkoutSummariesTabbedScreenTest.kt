@@ -138,7 +138,8 @@ class WorkoutSummariesTabbedScreenTest {
 
         assertTrue(
             "WorkoutSummariesTabbedScreen must observe selectedWorkoutIdForDetails and restore aftermath data (REQ-UI-427.2, TST-UI-392.2)",
-            content.contains("LaunchedEffect(selectedWorkoutIdForDetails, selectedWorkoutForDetails)") &&
+            content.contains("LaunchedEffect(selectedWorkoutIdForDetails, selectedWorkoutForDetails != null)") &&
+            content.contains("trackOnMapViewModel.uiState.value.loadedWorkoutId == selectedWorkoutIdForDetails") &&
             content.contains("trackOnMapViewModel.loadAftermathData(selectedWorkoutForDetails)")
         )
     }

@@ -520,6 +520,8 @@
 
     <string name="Search_Settings">Ricerca</string>
     <string name="prefsNumberOfSearchTriesTitle">Round di ricerca</string>
+    <string name="prefs_btle_search_period_title">Durata della ricerca BLE per tentativo</string>
+    <string name="prefs_btle_search_period_summary">Tempo in secondi di attesa per un sensore BLE prima di avanzare (3..15 s). Valori più brevi riducono l\'attesa per i sensori offline.</string>
     <string name="prefStartSearchTitle">Avvia ricerca quando …</string>
     <string name="prefsStartSearchWhenAppStartsTitle">L\'app si avvia</string>
     <string name="prefsStartSearchWhenTrackingStartsTitle">Il tracking inizia</string>
@@ -1033,6 +1035,7 @@
     <string name="track_type_network">Rete</string>
     <string name="legend">Legenda</string>
     <string name="cluster_statistics_title">Statistiche dell’allenamento</string>
+    <string name="cluster_tab_statistics">Statistiche</string>
     <string name="cluster_total_recordings">Registrazioni totali</string>
     <string name="cluster_average_distance">Distanza media</string>
     <string name="cluster_recordings_format">%1$d registrazioni</string>
@@ -1543,6 +1546,9 @@
 
     <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
     <string name="aftermath_power_zones_title">Zone di potenza</string>
+
+    <!-- Grade / Slope Distribution Card (ATT-5487 / REQ-UI-453) -->
+    <string name="aftermath_grade_zones_title">Zone di pendenza</string>
     <!-- Telemetry Frequency Histogram & Display Modes (ATT-1845 / ATT-3390 / REQ-UI-372) -->
     <string name="zone_mode_5_zones">5 zone</string>
     <string name="zone_mode_columns">Colonne</string>
@@ -2148,6 +2154,14 @@
     <string name="move_lap_boundary_lap_k_preview">Giro %1$d (Precedente)</string>
     <string name="move_lap_boundary_lap_k_plus_1_preview">Giro %1$d (Successivo)</string>
     <string name="move_lap_boundary_select_boundary">Limite: Giro %1$d / Giro %2$d</string>
+    <string name="delete_lap_action">Elimina / unisci giro</string>
+    <string name="delete_lap_dialog_title">Elimina / unisci giro</string>
+    <string name="delete_lap_confirm">Elimina e unisci</string>
+    <string name="delete_lap_merge_with_previous">Giro %1$d + Giro %2$d (Precedente)</string>
+    <string name="delete_lap_merge_with_next">Giro %1$d + Giro %2$d (Successivo)</string>
+    <string name="delete_lap_preview_title">Anteprima giro unito</string>
+    <string name="delete_lap_warning_description">Il confine tra il Giro %1$d e il Giro %2$d verrà rimosso. I giri successivi verranno rinumerati.</string>
+    <string name="delete_lap_direction_label">Direzione di unione</string>
     <string name="cd_fastest_split">Frazione più veloce</string>
     <string name="cd_switch_view_mode">Cambia modalità di visualizzazione</string>
     <string name="connect_with_strava">Connettiti con Strava</string>
@@ -2346,4 +2360,9 @@
     <string name="workout_photos_delete_confirm">Vuoi eliminare questa foto dall\'allenamento?</string>
     <string name="workout_photos_share_overlay">Condividi con traccia in sovrimpressione</string>
     <string name="workout_photos_marker_title">Foto</string>
+    <!-- Workout Photo Time Picker (REQ-UI-455 / ATT-5475) -->
+    <string name="workout_photos_time_picker_title">Foto dell\'allenamento</string>
+    <string name="workout_photos_time_picker_subtitle">Foto scattate durante questo allenamento</string>
+    <string name="workout_photos_show_all">Mostra tutte le foto</string>
+    <string name="workout_photos_add_count">Aggiungi %1$d foto</string>
 </resources>

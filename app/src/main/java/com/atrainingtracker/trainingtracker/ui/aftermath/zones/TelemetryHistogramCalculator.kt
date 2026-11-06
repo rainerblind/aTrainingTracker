@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.zones
 
 import androidx.compose.ui.graphics.Color
+import com.atrainingtracker.trainingtracker.ui.map.getElevationGradeColor
 import com.atrainingtracker.trainingtracker.ui.theme.DarkOutline
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 
@@ -37,6 +38,7 @@ object TelemetryHistogramCalculator {
 
     const val DEFAULT_HR_BIN_WIDTH = 2
     const val DEFAULT_POWER_BIN_WIDTH = 10
+    const val DEFAULT_GRADE_BIN_WIDTH = 1
     private const val MAX_DELTA_T_SEC = 5L
     private const val DEFAULT_LAST_SAMPLE_DURATION_SEC = 1L
 
@@ -179,6 +181,63 @@ object TelemetryHistogramCalculator {
             bins = regularBins + overflowBin,
             tailCutoff = tailCutoff,
             sprintTail = sprintTailData
+        )
+    }
+
+    /**
+     * Calculates a fine-grained frequency histogram for slope / grade telemetry (REQ-UI-453).
+     *
+     * @param gradeSegments List of grade percent and duration in seconds pairs.
+     * @param binWidth Width of each frequency bin in percent (default: 1%).
+     * @return [TelemetryHistogramData] or null if insufficient valid samples.
+     */
+    fun calculateGradeHistogram(
+        gradeSegments: List<Pair<Double, Long>>,
+        binWidth: Int = DEFAULT_GRADE_BIN_WIDTH
+    ): TelemetryHistogramData? {
+        if (gradeSegments.isEmpty()) return null
+        val effectiveBinWidth = binWidth.coerceAtLeast(1)
+
+        val minGrade = gradeSegments.minOf { it.first }
+        val maxGrade = gradeSegments.maxOf { it.first }
+
+        val dataMin = (kotlin.math.floor(minGrade / effectiveBinWidth) * effectiveBinWidth).toInt()
+        val dataMax = ((kotlin.math.floor(maxGrade / effectiveBinWidth) + 1) * effectiveBinWidth).toInt()
+        val numBins = ((dataMax - dataMin) / effectiveBinWidth).coerceAtLeast(1)
+
+        val binDurations = LongArray(numBins)
+        for ((grade, dt) in gradeSegments) {
+            val binIdx = (kotlin.math.floor((grade - dataMin) / effectiveBinWidth).toInt()).coerceIn(0, numBins - 1)
+            binDurations[binIdx] += dt
+        }
+
+        val totalDuration = binDurations.sum()
+        if (totalDuration <= 0L) return null
+
+        val bins = (0 until numBins).map { idx ->
+            val rangeMin = dataMin + idx * effectiveBinWidth
+            val rangeMax = rangeMin + effectiveBinWidth
+            val duration = binDurations[idx]
+            val pct = (duration.toFloat() / totalDuration.toFloat()) * 100f
+            val midpoint = rangeMin + (effectiveBinWidth / 2.0)
+            val zoneIdx = ZoneDistributionCalculator.determineGradeZone(midpoint)
+            TelemetryHistogramBin(
+                binIndex = idx,
+                rangeMin = rangeMin,
+                rangeMax = rangeMax,
+                durationSec = duration,
+                percentage = pct,
+                zoneIndex = zoneIdx + 1,
+                color = getElevationGradeColor(midpoint)
+            )
+        }
+
+        return TelemetryHistogramData(
+            binWidth = effectiveBinWidth,
+            dataMin = dataMin,
+            dataMax = dataMax,
+            totalActiveTimeSec = totalDuration,
+            bins = bins
         )
     }
 

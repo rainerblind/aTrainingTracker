@@ -60,6 +60,9 @@ fun SearchSettingsDialog(
     var numberOfSearchTries by remember {
         mutableIntStateOf(TrainingApplication.getNumberOfSearchTries())
     }
+    var btleSearchPeriodSec by remember {
+        mutableIntStateOf(TrainingApplication.getBtleSearchPeriodSec())
+    }
     var startSearchWhenAppStarts by remember {
         mutableStateOf(TrainingApplication.startSearchWhenAppStarts())
     }
@@ -88,6 +91,7 @@ fun SearchSettingsDialog(
                 onSave = {
                     prefs.edit()
                         .putInt(TrainingApplication.SP_NUMBER_OF_SEARCH_TRIES_INT, numberOfSearchTries)
+                        .putInt(TrainingApplication.SP_BTLE_SEARCH_PERIOD_SEC, btleSearchPeriodSec)
                         .putBoolean("startSearchWhenAppStarts", startSearchWhenAppStarts)
                         .putBoolean("startSearchWhenResumeFromPaused", startSearchWhenResumeFromPaused)
                         .putBoolean("startSearchWhenUserChangesSport", startSearchWhenUserChangesSport)
@@ -140,6 +144,47 @@ fun SearchSettingsDialog(
                     onValueChange = { numberOfSearchTries = it.roundToInt() },
                     valueRange = 1f..5f,
                     steps = 3,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            // BLE search duration
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.prefs_btle_search_period_title),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        modifier = Modifier.padding(start = 8.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.tuning_seconds_value_format, btleSearchPeriodSec),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+                Text(
+                    text = stringResource(R.string.prefs_btle_search_period_summary),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Slider(
+                    value = btleSearchPeriodSec.toFloat(),
+                    onValueChange = { btleSearchPeriodSec = it.roundToInt() },
+                    valueRange = 3f..15f,
+                    steps = 11,
                     modifier = Modifier.fillMaxWidth()
                 )
             }

@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
@@ -447,6 +448,13 @@ fun WorkoutClusterHeatmapScreen(
                     hasChanges = hasChanges
                 )
             },
+            analyticsContent = {
+                WorkoutClusterDetailDashboard(
+                    cluster = cluster,
+                    viewModel = viewModel,
+                    onHitCountClick = { onHitCountClick(cluster) }
+                )
+            },
             overlay = {
                 if (mapState.isLoading) {
                     Box(
@@ -674,10 +682,9 @@ fun WorkoutClusterSummaryHeader(
                 }
 
                 if (!isEditing) {
-                    WorkoutClusterDetailDashboard(
+                    WorkoutClusterMetadataRow(
                         cluster = cluster,
-                        viewModel = viewModel,
-                        onHitCountClick = onHitCountClick
+                        viewModel = viewModel
                     )
                 } else {
 
@@ -786,7 +793,53 @@ fun WorkoutClusterSummaryHeader(
 }
 
 /**
- * 3-Tier Performance, Cumulative Volume, and Recency Dashboard for Workout Cluster Details (REQ-SET-068).
+ * Compact base metadata row for Workout Cluster (REQ-SET-068).
+ * Renders reference distance, sport name, and linked equipment in a single row.
+ */
+@Composable
+fun WorkoutClusterMetadataRow(
+    cluster: WorkoutCluster,
+    viewModel: WorkoutClustersViewModel,
+    modifier: Modifier = Modifier
+) {
+    val distanceFormatter = remember { DistanceFormatter() }
+    val sportName = remember(cluster.probableSportId) { viewModel.getSportName(cluster.probableSportId) }
+    val linkedEquipment = remember(cluster.probableSportId) { viewModel.getLinkedEquipment(cluster.probableSportId) }
+
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        MetricItem(
+            iconRes = R.drawable.ic_distance,
+            value = distanceFormatter.format_with_units(cluster.refDistance),
+            isPrimary = false,
+            valueColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            iconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
+        )
+
+        Text(
+            text = sportName,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        if (linkedEquipment.isNotEmpty()) {
+            Text(
+                text = "•  ${linkedEquipment.joinToString(", ")}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+/**
+ * Split-pane analytics dashboard with bottom detail tabs for Workout Cluster (REQ-SET-068 / REQ-SET-078).
+ * Hosts Tier 1-3 performance and cumulative statistics on Tab 1, and the historical effort progression trend chart on Tab 2.
  */
 @Composable
 fun WorkoutClusterDetailDashboard(
@@ -802,127 +855,242 @@ fun WorkoutClusterDetailDashboard(
     val speedFormatter = remember { SpeedFormatter() }
     val paceFormatter = remember { PaceFormatter() }
 
-    val sportName = remember(cluster.probableSportId) { viewModel.getSportName(cluster.probableSportId) }
     val bSportType = remember(cluster.probableSportId) { viewModel.getBSportType(cluster.probableSportId) }
-    val linkedEquipment = remember(cluster.probableSportId) { viewModel.getLinkedEquipment(cluster.probableSportId) }
 
     val statsMap by viewModel.clusterStats.collectAsState()
     val stats = statsMap[cluster.id] ?: WorkoutClusterStats.EMPTY
     val clusterWorkouts by viewModel.clusterWorkouts.collectAsState()
 
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        // Base metadata row
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            MetricItem(
-                iconRes = R.drawable.ic_distance,
-                value = distanceFormatter.format_with_units(cluster.refDistance),
-                isPrimary = false,
-                valueColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                iconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
-            )
+    val validTrendWorkoutsCount = remember(clusterWorkouts) {
+        clusterWorkouts.count { it.activeTimeSec > 0 && it.avgSpeedMps > 0.0 }
+    }
 
-            Text(
-                text = sportName,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+    var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
 
-            if (linkedEquipment.isNotEmpty()) {
-                Text(
-                    text = "•  ${linkedEquipment.joinToString(", ")}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // --- BOTTOM DETAIL TABS (Mode Switcher) ---
+        if (validTrendWorkoutsCount >= 2) {
+            SingleChoiceSegmentedButtonRow(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                SegmentedButton(
+                    selected = selectedTabIndex == 0,
+                    onClick = { selectedTabIndex = 0 },
+                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+                ) {
+                    Text(
+                        text = stringResource(R.string.cluster_tab_statistics),
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+                SegmentedButton(
+                    selected = selectedTabIndex == 1,
+                    onClick = { selectedTabIndex = 1 },
+                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+                ) {
+                    Text(
+                        text = stringResource(R.string.cluster_trend_title),
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
             }
         }
 
-        // --- TIER 1: Performance Card (Best Time, Average Time, Pace/Speed) ---
-        Surface(
-            shape = RoundedCornerShape(10.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+        if (selectedTabIndex == 0 || validTrendWorkoutsCount < 2) {
+            // --- TAB 1: DETAILS / STATISTIK ---
+            // --- TIER 1: Performance Card (Best Time, Average Time, Pace/Speed) ---
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                // Best Time (PR)
-                Column(horizontalAlignment = Alignment.Start) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(3.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.EmojiEvents,
-                            contentDescription = null,
-                            tint = TTColor.Gold,
-                            modifier = Modifier.size(14.dp)
-                        )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Best Time (PR)
+                    Column(horizontalAlignment = Alignment.Start) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.EmojiEvents,
+                                contentDescription = null,
+                                tint = TTColor.Gold,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = stringResource(R.string.cluster_stats_best_time),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                         Text(
-                            text = stringResource(R.string.cluster_stats_best_time),
+                            text = stats.bestDurationSec?.let { timeFormatter.format(it) } ?: "--:--:--",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+
+                    // Average Time
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "Ø " + stringResource(R.string.cluster_stats_avg_time),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        Text(
+                            text = if (stats.avgDurationSec > 0) timeFormatter.format(stats.avgDurationSec) else "--:--:--",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                     }
-                    Text(
-                        text = stats.bestDurationSec?.let { timeFormatter.format(it) } ?: "--:--:--",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
 
-                // Average Time
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "Ø " + stringResource(R.string.cluster_stats_avg_time),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = if (stats.avgDurationSec > 0) timeFormatter.format(stats.avgDurationSec) else "--:--:--",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                // Sport-Adaptive Velocity (Pace vs Speed)
-                val isRun = bSportType == BSportType.RUN
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = "Ø " + stringResource(if (isRun) R.string.cluster_stats_avg_pace else R.string.cluster_stats_avg_speed),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    val velocityStr = if (stats.avgSpeedMps > 0.0) {
-                        if (isRun) paceFormatter.format_with_units(1.0 / stats.avgSpeedMps)
-                        else speedFormatter.format_with_units(stats.avgSpeedMps)
-                    } else "--"
-                    Text(
-                        text = velocityStr,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    // Sport-Adaptive Velocity (Pace vs Speed)
+                    val isRun = bSportType == BSportType.RUN
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "Ø " + stringResource(if (isRun) R.string.cluster_stats_avg_pace else R.string.cluster_stats_avg_speed),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        val velocityStr = if (stats.avgSpeedMps > 0.0) {
+                            if (isRun) paceFormatter.format_with_units(1.0 / stats.avgSpeedMps)
+                            else speedFormatter.format_with_units(stats.avgSpeedMps)
+                        } else "--"
+                        Text(
+                            text = velocityStr,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                 }
             }
-        }
 
-        // --- TIER 1.5: Historical Effort Progression Trend Chart (REQ-SET-078) ---
-        val validTrendWorkoutsCount = remember(clusterWorkouts) {
-            clusterWorkouts.count { it.activeTimeSec > 0 && it.avgSpeedMps > 0.0 }
-        }
-        if (validTrendWorkoutsCount >= 2) {
+            // --- TIER 2: Cumulative Volume Card (Distance, Ascent, Active Time) ---
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Total Distance
+                    Column(horizontalAlignment = Alignment.Start) {
+                        Text(
+                            text = "Σ " + stringResource(R.string.cluster_stats_total_distance),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = distanceFormatter.format_with_units(stats.totalDistanceMeters),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+
+                    // Total Ascent
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "Σ " + stringResource(R.string.cluster_stats_total_elevation),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = altitudeFormatter.format_with_units(stats.totalAscentMeters),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+
+                    // Total Moving Time
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "Σ " + stringResource(R.string.cluster_stats_total_time),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = timeFormatter.format_with_units(stats.totalActiveTimeSec),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+
+            // --- TIER 3: Activity & Recency Card (Recordings Count Button, Last Activity) ---
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Button(
+                        onClick = onHitCountClick,
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                        modifier = Modifier.height(32.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = TTAlpha.Faint),
+                            contentColor = MaterialTheme.colorScheme.primary
+                        ),
+                        elevation = null
+                    ) {
+                        Text(
+                            text = pluralStringResource(R.plurals.cluster_recordings, cluster.hitCount, cluster.hitCount),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                    val lastActivityStr = remember(stats.lastHitTimestampS) {
+                        WorkoutClusterStats.formatRelativeRecency(context, stats.lastHitTimestampS)
+                    }
+                    if (lastActivityStr.isNotEmpty()) {
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                text = stringResource(R.string.cluster_stats_last_activity),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = lastActivityStr,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+            }
+        } else {
+            // --- TAB 2: LEISTUNGSVERLAUF (EFFORT PROGRESSION) ---
             WorkoutClusterTrendChartCard(
                 workouts = clusterWorkouts,
                 sportType = bSportType,
@@ -930,122 +1098,6 @@ fun WorkoutClusterDetailDashboard(
                     viewModel.selectWorkoutForPeek(workoutId)
                 }
             )
-            HorizontalDivider(
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                modifier = Modifier.padding(vertical = 2.dp)
-            )
-        }
-
-        // --- TIER 2: Cumulative Volume Card (Distance, Ascent, Active Time) ---
-        Surface(
-            shape = RoundedCornerShape(10.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Total Distance
-                Column(horizontalAlignment = Alignment.Start) {
-                    Text(
-                        text = "Σ " + stringResource(R.string.cluster_stats_total_distance),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = distanceFormatter.format_with_units(stats.totalDistanceMeters),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                // Total Ascent
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "Σ " + stringResource(R.string.cluster_stats_total_elevation),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = altitudeFormatter.format_with_units(stats.totalAscentMeters),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                // Total Moving Time
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = "Σ " + stringResource(R.string.cluster_stats_total_time),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = timeFormatter.format_with_units(stats.totalActiveTimeSec),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
-        }
-
-
-        // --- TIER 3: Activity & Recency Card (Recordings Count Button, Last Activity) ---
-        Surface(
-            shape = RoundedCornerShape(10.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Button(
-                    onClick = onHitCountClick,
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                    modifier = Modifier.height(32.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = TTAlpha.Faint),
-                        contentColor = MaterialTheme.colorScheme.primary
-                    ),
-                    elevation = null
-                ) {
-                    Text(
-                        text = pluralStringResource(R.plurals.cluster_recordings, cluster.hitCount, cluster.hitCount),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-
-                val lastActivityStr = remember(stats.lastHitTimestampS) {
-                    WorkoutClusterStats.formatRelativeRecency(context, stats.lastHitTimestampS)
-                }
-                if (lastActivityStr.isNotEmpty()) {
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text(
-                            text = stringResource(R.string.cluster_stats_last_activity),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = lastActivityStr,
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-            }
         }
     }
 }

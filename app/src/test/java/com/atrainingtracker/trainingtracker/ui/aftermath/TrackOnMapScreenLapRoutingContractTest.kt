@@ -85,4 +85,50 @@ class TrackOnMapScreenLapRoutingContractTest {
             analyticsBlock.contains("LapSplitVisualizerCard(")
         )
     }
+
+    @Test
+    fun testTrackOnMapScreen_hostsLapEditBottomSheetOverlayAlongsideOtherSheets() {
+        val file = findTrackOnMapScreenFile()
+        val content = file.readText()
+
+        assertTrue(
+            "TrackOnMapScreen must host LapEditBottomSheet overlay (Rule 47 / REQ-UI-142 / REQ-UI-450 / ATT-5483)",
+            content.contains("activeEditingLap?.let { lap ->") &&
+                content.contains("LapEditBottomSheet(")
+        )
+
+        assertTrue(
+            "TrackOnMapScreen must wire onSaveLap to repository.updateLapDetails",
+            content.contains("repository.updateLapDetails(workoutData.id, lapNr, name, description)")
+        )
+
+        assertTrue(
+            "TrackOnMapScreen must wire onMoveBoundaryClick to dismiss edit sheet and showMoveBoundarySheet = true",
+            content.contains("moveBoundaryLapNr = boundaryLapNr") &&
+                content.contains("showMoveBoundarySheet = true")
+        )
+
+        assertTrue(
+            "TrackOnMapScreen must wire onDeleteLapClick to repository.deleteLap (REQ-UI-454 / ATT-5482)",
+            content.contains("repository.deleteLap(workoutData.id, boundaryLapNr)") &&
+                content.contains("onDeleteLapClick = { boundaryLapNr ->")
+        )
+    }
+
+    @Test
+    fun testTrackOnMapScreen_wiresOnLapClickToTabbedContentAndStoresActiveEditingLap() {
+        val file = findTrackOnMapScreenFile()
+        val content = file.readText()
+
+        assertTrue(
+            "TrackOnMapScreen must declare activeEditingLap state",
+            content.contains("var activeEditingLap by remember { mutableStateOf<LapData?>(null) }")
+        )
+
+        assertTrue(
+            "TrackOnMapScreen must forward onLapClick to WorkoutDetailTabbedContent setting activeEditingLap",
+            content.contains("onLapClick = { lap ->") &&
+                content.contains("activeEditingLap = lap")
+        )
+    }
 }
