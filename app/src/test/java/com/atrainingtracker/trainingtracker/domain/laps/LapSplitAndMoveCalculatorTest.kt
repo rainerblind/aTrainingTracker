@@ -329,4 +329,119 @@ class LapSplitAndMoveCalculatorTest {
         // Lap 4: untouched
         assertEquals(existingLaps[3], updatedLaps[3])
     }
+
+    @Test
+    fun `calculateMergePreview combines metrics and metadata correctly`() {
+        val lapA = LapData(
+            id = 1L,
+            workoutId = 10L,
+            lapNr = 1L,
+            timeStart = "2026-11-06 08:00:00",
+            timeTotalS = 120,
+            distanceTotalM = 600.0,
+            speedAverageMps = 5.0,
+            name = "Warmup",
+            description = "Gentle spin"
+        )
+        val lapB = LapData(
+            id = 2L,
+            workoutId = 10L,
+            lapNr = 2L,
+            timeStart = "2026-11-06 08:02:00",
+            timeTotalS = 180,
+            distanceTotalM = 900.0,
+            speedAverageMps = 5.0,
+            name = "Tempo",
+            description = "High cadence"
+        )
+
+        val merged = LapSplitAndMoveCalculator.calculateMergePreview(lapA, lapB)
+
+        assertEquals(1L, merged.lapNr)
+        assertEquals(300, merged.timeTotalS)
+        assertEquals(1500.0, merged.distanceTotalM, 1e-4)
+        assertEquals(5.0, merged.speedAverageMps, 1e-4)
+        assertEquals("2026-11-06 08:00:00", merged.timeStart)
+        assertEquals("Warmup / Tempo", merged.name)
+        assertEquals("Gentle spin\nHigh cadence", merged.description)
+    }
+
+    @Test
+    fun `recalculateLapsAfterMerge correctly merges interior laps and renumbers subsequent laps`() {
+        val laps = listOf(
+            LapData(id = 1L, workoutId = 10L, lapNr = 1L, timeTotalS = 100, distanceTotalM = 500.0, speedAverageMps = 5.0, name = "Lap 1"),
+            LapData(id = 2L, workoutId = 10L, lapNr = 2L, timeTotalS = 200, distanceTotalM = 1000.0, speedAverageMps = 5.0, name = "Lap 2"),
+            LapData(id = 3L, workoutId = 10L, lapNr = 3L, timeTotalS = 300, distanceTotalM = 1500.0, speedAverageMps = 5.0, name = "Lap 3"),
+            LapData(id = 4L, workoutId = 10L, lapNr = 4L, timeTotalS = 400, distanceTotalM = 2000.0, speedAverageMps = 5.0, name = "Lap 4")
+        )
+
+        // Merge boundary 2 (Lap 2 + Lap 3)
+        val result = LapSplitAndMoveCalculator.recalculateLapsAfterMerge(
+            workoutId = 10L,
+            existingLaps = laps,
+            removedBoundaryLapNr = 2L
+        )
+
+        assertEquals(3, result.size)
+
+        // Lap 1: untouched
+        assertEquals(1L, result[0].lapNr)
+        assertEquals(100, result[0].timeTotalS)
+        assertEquals("Lap 1", result[0].name)
+
+        // Merged Lap 2 (Lap 2 + Lap 3)
+        assertEquals(2L, result[1].lapNr)
+        assertEquals(500, result[1].timeTotalS)
+        assertEquals(2500.0, result[1].distanceTotalM, 1e-4)
+        assertEquals("Lap 2 / Lap 3", result[1].name)
+
+        // Former Lap 4 becomes Lap 3
+        assertEquals(3L, result[2].lapNr)
+        assertEquals(400, result[2].timeTotalS)
+        assertEquals(2000.0, result[2].distanceTotalM, 1e-4)
+        assertEquals("Lap 4", result[2].name)
+    }
+
+    @Test
+    fun `recalculateLapsAfterMerge handles first and last boundary merges`() {
+        val laps = listOf(
+            LapData(id = 1L, workoutId = 10L, lapNr = 1L, timeTotalS = 100, distanceTotalM = 500.0, speedAverageMps = 5.0),
+            LapData(id = 2L, workoutId = 10L, lapNr = 2L, timeTotalS = 200, distanceTotalM = 1000.0, speedAverageMps = 5.0),
+            LapData(id = 3L, workoutId = 10L, lapNr = 3L, timeTotalS = 300, distanceTotalM = 1500.0, speedAverageMps = 5.0)
+        )
+
+        // Merge boundary 1 (Lap 1 + Lap 2)
+        val firstMerge = LapSplitAndMoveCalculator.recalculateLapsAfterMerge(10L, laps, 1L)
+        assertEquals(2, firstMerge.size)
+        assertEquals(1L, firstMerge[0].lapNr)
+        assertEquals(300, firstMerge[0].timeTotalS)
+        assertEquals(2L, firstMerge[1].lapNr)
+        assertEquals(300, firstMerge[1].timeTotalS)
+
+        // Merge boundary 2 (Lap 2 + Lap 3)
+        val lastMerge = LapSplitAndMoveCalculator.recalculateLapsAfterMerge(10L, laps, 2L)
+        assertEquals(2, lastMerge.size)
+        assertEquals(1L, lastMerge[0].lapNr)
+        assertEquals(100, lastMerge[0].timeTotalS)
+        assertEquals(2L, lastMerge[1].lapNr)
+        assertEquals(500, lastMerge[1].timeTotalS)
+    }
+
+    @Test
+    fun `recalculateLapsAfterMerge rejects invalid boundary numbers and single lap lists`() {
+        val laps = listOf(
+            LapData(id = 1L, workoutId = 10L, lapNr = 1L, timeTotalS = 100, distanceTotalM = 500.0, speedAverageMps = 5.0)
+        )
+        // Single lap list
+        assertEquals(laps, LapSplitAndMoveCalculator.recalculateLapsAfterMerge(10L, laps, 1L))
+
+        val twoLaps = listOf(
+            LapData(id = 1L, workoutId = 10L, lapNr = 1L, timeTotalS = 100, distanceTotalM = 500.0, speedAverageMps = 5.0),
+            LapData(id = 2L, workoutId = 10L, lapNr = 2L, timeTotalS = 200, distanceTotalM = 1000.0, speedAverageMps = 5.0)
+        )
+        // Invalid boundary 0
+        assertEquals(twoLaps, LapSplitAndMoveCalculator.recalculateLapsAfterMerge(10L, twoLaps, 0L))
+        // Invalid boundary 2 (there is no Lap 3)
+        assertEquals(twoLaps, LapSplitAndMoveCalculator.recalculateLapsAfterMerge(10L, twoLaps, 2L))
+    }
 }

@@ -2155,6 +2155,14 @@
     <string name="move_lap_boundary_lap_k_preview">Okrążenie %1$d (Poprzednie)</string>
     <string name="move_lap_boundary_lap_k_plus_1_preview">Okrążenie %1$d (Następne)</string>
     <string name="move_lap_boundary_select_boundary">Granica: Okrążenie %1$d / Okrążenie %2$d</string>
+    <string name="delete_lap_action">Usuń / połącz okrążenie</string>
+    <string name="delete_lap_dialog_title">Usuń / połącz okrążenie</string>
+    <string name="delete_lap_confirm">Usuń i połącz</string>
+    <string name="delete_lap_merge_with_previous">Okrążenie %1$d + Okrążenie %2$d (Poprzednie)</string>
+    <string name="delete_lap_merge_with_next">Okrążenie %1$d + Okrążenie %2$d (Następne)</string>
+    <string name="delete_lap_preview_title">Podgląd połączonego okrążenia</string>
+    <string name="delete_lap_warning_description">Granica między okrążeniem %1$d i okrążeniem %2$d zostanie usunięta. Kolejne okrążenia zostaną przenumerowane.</string>
+    <string name="delete_lap_direction_label">Kierunek połączenia</string>
     <string name="cd_fastest_split">Najszybszy międzyczas</string>
     <string name="cd_switch_view_mode">Przełącz tryb widoku</string>
     <string name="connect_with_strava">Połącz ze Strava</string>

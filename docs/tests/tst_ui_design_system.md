@@ -7283,3 +7283,27 @@
   • Verify 100% parity across all 9 supported locales for `aftermath_grade_zones_title` with zero missing entries and zero decorative inline emojis.
   5. *Clean-Room Regression Suite Execution (`TST-UI-453.5`)*:
   • Execute targeted package tests (`com.atrainingtracker.trainingtracker.ui.aftermath.zones.*`, `com.atrainingtracker.trainingtracker.ui.aftermath.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
+
+
+
+### TST-UI-454: **Interactive Aftermath Lap Deletion & Adjacent Lap Merging Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-454`
+- **Component**: `WorkoutSamplesDatabaseManager.java`, `LapsDatabaseManager.java`, `LapSplitAndMoveCalculator.kt`, `WorkoutRepository.kt`, `LapEditBottomSheet.kt`, `DeleteLapConfirmationDialog.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-5482`
+- **Test Description**:
+  1. *Domain Math & Merge Preview Calculation Test (`TST-UI-454.1`, `LapSplitAndMoveCalculatorTest.kt`)*:
+  • Verify `calculateMergePreview` accurately sums active duration and distance and recomputes average speed for adjacent laps $k$ and $k+1$.
+  • Verify `recalculateLapsAfterMerge` renumbers laps contiguously $1 \dots N-1$, combines names/descriptions cleanly, and preserves unaffected laps ($< k$ and $> k+1$).
+  • Verify boundary validation rejects invalid boundary indices ($B < 1$ or $B \ge N$).
+  2. *Database Transactional Decrement & Replace Contract Test (`TST-UI-454.2`, `WorkoutSamplesDatabaseManagerLapDeleteTest.java` / `WorkoutRepositoryLapDeleteTest.kt`)*:
+  • Verify `WorkoutSamplesDatabaseManager.decrementLapNumbersAbove` atomically executes `UPDATE ... SET LAP_NR = LAP_NR - 1 WHERE LAP_NR > ?`.
+  • Verify `WorkoutRepository.deleteLap` updates sample rows, calls `LapsDatabaseManager.replaceCroppedLaps`, refreshes reactive `WorkoutData`, and verifies total session metrics remain identical.
+  • Verify rollback on SQLite exception leaves `WorkoutSamples.db` and `Laps.db` unchanged.
+  3. *UI & Confirmation Dialog Contract Test (`TST-UI-454.3`, `DeleteLapConfirmationDialogTest.kt` / `LapEditBottomSheetTest.kt`)*:
+  • Verify Delete / Merge CTA is displayed in `LapEditBottomSheet` when `totalLaps >= 2` and hidden/disabled when `totalLaps < 2`.
+  • Verify `SingleChoiceSegmentedButtonRow` displays direction toggle for interior laps ($1 < k < N$) and fixed direction for boundary laps ($k=1$ and $k=N$).
+  • Verify confirm button triggers repository delete action with the selected boundary.
+  4. *9-Language Localization & Parity Test (`TST-UI-454.4`, `TranslationParityTest.kt`)*:
+  • Verify 100% parity across all 9 supported locales for all `delete_lap_*` string keys with zero missing entries and zero decorative inline emojis.
+  5. *Clean-Room Regression Suite Execution (`TST-UI-454.5`)*:
+  • Execute targeted package tests (`com.atrainingtracker.trainingtracker.domain.laps.*`, `com.atrainingtracker.trainingtracker.ui.aftermath.*`, `com.atrainingtracker.trainingtracker.database.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.

@@ -871,6 +871,12 @@ fun TrackOnMapScreen(
                 activeEditingLap = null
                 moveBoundaryLapNr = boundaryLapNr
                 showMoveBoundarySheet = true
+            },
+            onDeleteLapClick = { boundaryLapNr ->
+                coroutineScope.launch {
+                    repository.deleteLap(workoutData.id, boundaryLapNr)
+                    activeEditingLap = null
+                }
             }
         )
     }

@@ -2153,6 +2153,14 @@
     <string name="move_lap_boundary_lap_k_preview">Ronde %1$d (Vorige)</string>
     <string name="move_lap_boundary_lap_k_plus_1_preview">Ronde %1$d (Volgende)</string>
     <string name="move_lap_boundary_select_boundary">Grens: Ronde %1$d / Ronde %2$d</string>
+    <string name="delete_lap_action">Ronde verwijderen / samenvoegen</string>
+    <string name="delete_lap_dialog_title">Ronde verwijderen / samenvoegen</string>
+    <string name="delete_lap_confirm">Verwijderen en samenvoegen</string>
+    <string name="delete_lap_merge_with_previous">Ronde %1$d + Ronde %2$d (Vorige)</string>
+    <string name="delete_lap_merge_with_next">Ronde %1$d + Ronde %2$d (Volgende)</string>
+    <string name="delete_lap_preview_title">Voorbeeld samengevoegde ronde</string>
+    <string name="delete_lap_warning_description">De grens tussen Ronde %1$d en Ronde %2$d wordt verwijderd. Opeenvolgende ronden worden hernummerd.</string>
+    <string name="delete_lap_direction_label">Richting van samenvoeging</string>
     <string name="cd_fastest_split">Snelste tussentijd</string>
     <string name="cd_switch_view_mode">Weergavemodus wijzigen</string>
     <string name="connect_with_strava">Verbinden met Strava</string>

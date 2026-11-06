@@ -2154,6 +2154,14 @@
     <string name="move_lap_boundary_lap_k_preview">Vuelta %1$d (Anterior)</string>
     <string name="move_lap_boundary_lap_k_plus_1_preview">Vuelta %1$d (Siguiente)</string>
     <string name="move_lap_boundary_select_boundary">Límite: Vuelta %1$d / Vuelta %2$d</string>
+    <string name="delete_lap_action">Eliminar / combinar vuelta</string>
+    <string name="delete_lap_dialog_title">Eliminar / combinar vuelta</string>
+    <string name="delete_lap_confirm">Eliminar y combinar</string>
+    <string name="delete_lap_merge_with_previous">Vuelta %1$d + Vuelta %2$d (Anterior)</string>
+    <string name="delete_lap_merge_with_next">Vuelta %1$d + Vuelta %2$d (Siguiente)</string>
+    <string name="delete_lap_preview_title">Vista previa de la vuelta combinada</string>
+    <string name="delete_lap_warning_description">Se eliminará el límite entre la Vuelta %1$d y la Vuelta %2$d. Las vueltas posteriores se renumerarán.</string>
+    <string name="delete_lap_direction_label">Dirección de combinación</string>
     <string name="cd_fastest_split">Parcial más rápido</string>
     <string name="cd_switch_view_mode">Cambiar modo de vista</string>
     <string name="connect_with_strava">Conectar con Strava</string>

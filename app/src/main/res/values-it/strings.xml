@@ -2154,6 +2154,14 @@
     <string name="move_lap_boundary_lap_k_preview">Giro %1$d (Precedente)</string>
     <string name="move_lap_boundary_lap_k_plus_1_preview">Giro %1$d (Successivo)</string>
     <string name="move_lap_boundary_select_boundary">Limite: Giro %1$d / Giro %2$d</string>
+    <string name="delete_lap_action">Elimina / unisci giro</string>
+    <string name="delete_lap_dialog_title">Elimina / unisci giro</string>
+    <string name="delete_lap_confirm">Elimina e unisci</string>
+    <string name="delete_lap_merge_with_previous">Giro %1$d + Giro %2$d (Precedente)</string>
+    <string name="delete_lap_merge_with_next">Giro %1$d + Giro %2$d (Successivo)</string>
+    <string name="delete_lap_preview_title">Anteprima giro unito</string>
+    <string name="delete_lap_warning_description">Il confine tra il Giro %1$d e il Giro %2$d verrà rimosso. I giri successivi verranno rinumerati.</string>
+    <string name="delete_lap_direction_label">Direzione di unione</string>
     <string name="cd_fastest_split">Frazione più veloce</string>
     <string name="cd_switch_view_mode">Cambia modalità di visualizzazione</string>
     <string name="connect_with_strava">Connettiti con Strava</string>

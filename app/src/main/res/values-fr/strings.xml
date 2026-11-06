@@ -2153,6 +2153,14 @@
     <string name="move_lap_boundary_lap_k_preview">Tour %1$d (Précédent)</string>
     <string name="move_lap_boundary_lap_k_plus_1_preview">Tour %1$d (Suivant)</string>
     <string name="move_lap_boundary_select_boundary">Limite : Tour %1$d / Tour %2$d</string>
+    <string name="delete_lap_action">Supprimer / fusionner le tour</string>
+    <string name="delete_lap_dialog_title">Supprimer / fusionner le tour</string>
+    <string name="delete_lap_confirm">Supprimer et fusionner</string>
+    <string name="delete_lap_merge_with_previous">Tour %1$d + Tour %2$d (Précédent)</string>
+    <string name="delete_lap_merge_with_next">Tour %1$d + Tour %2$d (Suivant)</string>
+    <string name="delete_lap_preview_title">Aperçu du tour fusionné</string>
+    <string name="delete_lap_warning_description">La limite entre le tour %1$d et le tour %2$d sera supprimée. Les tours suivants seront renumérotés.</string>
+    <string name="delete_lap_direction_label">Direction de fusion</string>
     <string name="cd_fastest_split">Temps intermédiaire le plus rapide</string>
     <string name="cd_switch_view_mode">Changer de mode d\'affichage</string>
     <string name="connect_with_strava">Se connecter à Strava</string>

@@ -107,6 +107,12 @@ class TrackOnMapScreenLapRoutingContractTest {
             content.contains("moveBoundaryLapNr = boundaryLapNr") &&
                 content.contains("showMoveBoundarySheet = true")
         )
+
+        assertTrue(
+            "TrackOnMapScreen must wire onDeleteLapClick to repository.deleteLap (REQ-UI-454 / ATT-5482)",
+            content.contains("repository.deleteLap(workoutData.id, boundaryLapNr)") &&
+                content.contains("onDeleteLapClick = { boundaryLapNr ->")
+        )
     }
 
     @Test

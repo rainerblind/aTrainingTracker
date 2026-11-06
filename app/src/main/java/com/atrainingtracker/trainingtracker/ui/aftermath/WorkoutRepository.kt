@@ -1969,6 +1969,72 @@ class WorkoutRepository private constructor(private val application: Application
     }
 
     /**
+     * Deletes a lap boundary and merges the adjacent laps in both WorkoutSamples.db and Laps.db (REQ-UI-454.3 / ATT-5482).
+     *
+     * Removes the boundary between [removedBoundaryLapNr] (Lap k) and Lap k+1, merging them into Lap k,
+     * decrementing LAP_NR for all subsequent samples in WorkoutSamples.db, recalculating contiguous 1..N-1
+     * lap summaries, persisting to Laps.db via replaceCroppedLaps, invalidating export cache, and reloading WorkoutData.
+     *
+     * @param workoutId The ID of the workout.
+     * @param removedBoundaryLapNr The 1-based lap number of the first lap in the merged pair (1 <= k < N).
+     * @return Result.success with updated List<LapData>, or Result.failure with descriptive error.
+     */
+    suspend fun deleteLap(workoutId: Long, removedBoundaryLapNr: Long): Result<List<LapData>> = withContext(Dispatchers.IO) {
+        try {
+            val baseFileName = summariesManager.getBaseFileName(workoutId)
+                ?: return@withContext Result.failure(IllegalStateException("No baseFileName found for workout $workoutId"))
+            if (!samplesManager.existsTable(baseFileName)) {
+                return@withContext Result.failure(IllegalStateException("Samples table does not exist for $baseFileName"))
+            }
+
+            val existingLaps = lapsDatabaseManager.getLaps(workoutId)
+            if (existingLaps.size < 2) {
+                return@withContext Result.failure(IllegalStateException("Cannot delete lap: workout must have at least 2 laps"))
+            }
+            if (removedBoundaryLapNr < 1L || removedBoundaryLapNr >= existingLaps.size.toLong()) {
+                return@withContext Result.failure(IllegalArgumentException("Invalid boundary lap number $removedBoundaryLapNr for ${existingLaps.size} laps"))
+            }
+
+            // 1. Transactional update in WorkoutSamples.db: Decrement LAP_NR for all rows where LAP_NR > removedBoundaryLapNr
+            samplesManager.decrementLapNumbersAbove(baseFileName, removedBoundaryLapNr)
+
+            // 2. Recalculate all laps
+            val newLaps = com.atrainingtracker.trainingtracker.domain.laps.LapSplitAndMoveCalculator.recalculateLapsAfterMerge(
+                workoutId = workoutId,
+                existingLaps = existingLaps,
+                removedBoundaryLapNr = removedBoundaryLapNr
+            )
+
+            // 3. Persist updated laps to Laps.db atomically
+            lapsDatabaseManager.replaceCroppedLaps(workoutId, newLaps)
+
+            // 4. Invalidate export cache
+            try {
+                val updatedWorkout = allWorkouts.value.find { it.id == workoutId }
+                if (updatedWorkout != null) {
+                    exportManager.exportWorkout(updatedWorkout)
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Non-fatal export cache refresh exception after delete lap: ${e.message}")
+            }
+
+            // 5. Refresh in-memory reactive state
+            reloadWorkoutData(workoutId)
+
+            Result.success(newLaps)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to delete lap boundary at lap $removedBoundaryLapNr for workout $workoutId", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Semantic alias for [deleteLap] (REQ-UI-454.3 / ATT-5482).
+     */
+    suspend fun mergeAdjacentLaps(workoutId: Long, removedBoundaryLapNr: Long): Result<List<LapData>> =
+        deleteLap(workoutId, removedBoundaryLapNr)
+
+    /**
      * Atomically updates a workout session in memory while handling potential race conditions.
      *
      * Implementation: If the workout is already cached, it applies the [block] transform purely in-place

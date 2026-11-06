@@ -13391,3 +13391,58 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Then* `aftermath_grade_zones_title` is present and non-empty across all 9 resource files.
 
 **Invariants**: Zero frame drops on aftermath screen entry (computation on `Dispatchers.IO`), zero SQLite schema modifications, identical color and boundary definitions as `ElevationProfile.kt`, and 100% test pass rate across targeted test suites.
+
+
+
+### REQ-UI-454: Interactive Aftermath Lap Deletion & Adjacent Lap Merging [Verified]
+- **Tests**: `TST-UI-454` | **Tickets**: `ATT-5482`
+- **Implementation**: `WorkoutSamplesDatabaseManager.java`, `LapsDatabaseManager.java`, `LapSplitAndMoveCalculator.kt`, `WorkoutRepository.kt`, `LapEditBottomSheet.kt`, `DeleteLapConfirmationDialog.kt`
+- **Rationale**: When an athlete records unwanted or accidental lap splits, or needs to consolidate adjacent interval segments after tracking in Aftermath, the system SHALL allow deleting a lap boundary and merging adjacent laps whenever $N \ge 2$ laps exist, recomputing combined lap metrics and atomically updating sample records and lap summaries without altering total session metrics.
+- **Description**:
+  1. *UI Entry Point & Boundary Direction Selection (`REQ-UI-454.1`)*:
+     - In `LapEditBottomSheet.kt` and Aftermath Laps (`WorkoutLaps`), when `totalLaps >= 2`, the system SHALL provide a "Delete Lap / Merge Lap" (*Runde löschen / zusammenführen*) action.
+     - When clicked, an interactive confirmation dialog (`DeleteLapConfirmationDialog.kt`) SHALL open.
+     - **Boundary Direction Selection (Option A)**:
+       - For the first lap ($k = 1$), the system SHALL merge Lap 1 with Lap 2 (removing boundary 1).
+       - For the last lap ($k = N$), the system SHALL merge Lap $N-1$ with Lap $N$ (removing boundary $N-1$).
+       - For interior laps ($1 < k < N$), the system SHALL provide a Material 3 `SingleChoiceSegmentedButtonRow` (per `docs/design_guidelines.md` Section 1.1) allowing the athlete to toggle between:
+         - Merging with previous lap: **Lap $k-1$ + Lap $k$** (removing boundary $k-1$)
+         - Merging with next lap: **Lap $k$ + Lap $k+1$** (removing boundary $k$)
+  2. *Interactive Combined Lap Metric Preview (`REQ-UI-454.2`)*:
+     - The confirmation dialog SHALL display live combined metrics preview for the resulting merged lap: active duration, total distance, and average speed/pace calculated via `LapSplitAndMoveCalculator.calculateMergePreview`.
+     - Non-empty custom lap names and descriptions from the merged laps SHALL be cleanly preserved and concatenated.
+  3. *Atomic Multi-Database Transaction (`REQ-UI-454.3`, `WorkoutRepository.deleteLap`)*:
+     - In `WorkoutSamples.db`, `WorkoutSamplesDatabaseManager.decrementLapNumbersAbove` SHALL execute an atomic update `UPDATE <table> SET LAP_NR = LAP_NR - 1 WHERE LAP_NR > ?` with `boundaryLapNr`, reassigning samples so that subsequent lap numbers decrement by 1 and remain strictly contiguous $1 \dots N-1$.
+     - In `Laps.db`, updated lap summaries SHALL be recalculated from samples/merged lap data and persisted atomically via `LapsDatabaseManager.replaceCroppedLaps` in a single SQLite transaction.
+     - Export caches SHALL be invalidated and reactive `WorkoutData` emitted so `WorkoutLaps`, `LapEditBottomSheet`, and map markers refresh immediately without screen reloads.
+  4. *Invariants & Guards (`REQ-UI-454.4`)*:
+     - Zero phantom laps (`REQ-TRK-002`): Resulting merged lap duration $> 0$ and distance $\ge 0.0$.
+     - Minimum 1 lap: Deletion action SHALL be strictly disabled when total laps $N < 2$.
+     - Session totals immutability: Workout total duration, distance, polyline, and extrema remain 100% immutable.
+  5. *9-Language Localization Parity (`REQ-UI-454.5`)*:
+     - All user-facing strings (`delete_lap_action`, `delete_lap_dialog_title`, `delete_lap_confirm`, `delete_lap_merge_with_previous`, `delete_lap_merge_with_next`, `delete_lap_preview_title`, `delete_lap_warning_description`, `delete_lap_direction_label`) SHALL maintain 100% parity across all 9 supported locales (`values`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`) with zero decorative inline Unicode emojis.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-454`, extending `REQ-UI-449` (ATT-907, Map Lap Creation), `REQ-UI-450` (ATT-908, Lap Boundary Moving), `REQ-TRK-002` (Lap lifecycle & zero phantom laps), and `REQ-UI-142` (Lap details editing). Targets `WorkoutRepository.kt`, `LapSplitAndMoveCalculator.kt`, `WorkoutSamplesDatabaseManager.java`, `LapsDatabaseManager.java`, and `LapEditBottomSheet.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-45.6 (`ATT-907`, `ATT-908`), Sprint 2026-44.1 (`ATT-896`, zero phantom laps), and Sprint 2026-42.3 (`ATT-3274`, transactional sample pruning).
+3. *Root Reason for Existing Formulation*: Lap boundaries were historically immutable post-workout to prevent database desynchronization. ATT-907 added splitting and ATT-908 boundary shifting; deleting/merging closes the lifecycle gap by allowing boundary removal.
+4. *Preservation of Core Invariants*: No phantom laps: merged lap duration $> 0$ and distance $\ge 0.0$; contiguous $1 \dots N-1$ lap numbering strictly preserved; total workout duration, distance, polyline, and extrema remain immutable; Rule 47 modal overlay preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a workout with $N \ge 2$ laps,
+• *When* an athlete opens `LapEditBottomSheet` for Lap $k$,
+• *Then* the "Delete / Merge Lap" action button is visible and enabled.
+• *Given* an interior lap $1 < k < N$,
+• *When* the user triggers "Delete / Merge Lap",
+• *Then* the confirmation dialog displays a `SingleChoiceSegmentedButtonRow` offering toggling between merging with Lap $k-1$ and merging with Lap $k+1$, along with a live preview of the combined lap duration, distance, and pace/speed.
+• *Given* the first lap ($k = 1$) or the last lap ($k = N$),
+• *When* the user triggers "Delete / Merge Lap",
+• *Then* the confirmation dialog preselects and fixes the valid adjacent boundary ($1+2$ for $k=1$, $N-1+N$ for $k=N$) without showing ambiguous toggles.
+• *Given* the user confirms deletion of boundary $B$,
+• *When* `WorkoutRepository.deleteLap` executes,
+• *Then* samples with `LAP_NR > B` are decremented by 1 in `WorkoutSamples.db`, updated lap summaries $1 \dots N-1$ are written to `Laps.db` via `replaceCroppedLaps`, reactive `WorkoutData` emits the updated lap list, and overall workout totals remain unchanged.
+• *Given* the 9 supported application locales,
+• *When* `TranslationParityTest` executes,
+• *Then* all `delete_lap_*` string resources exist across all 9 locale directories with matching format specifiers and zero decorative emojis.
+
+**Invariants**: Zero phantom laps (`REQ-TRK-002`), contiguous $1 \dots N-1$ lap numbering, atomic SQLite rollback, session totals invariance, and 100% test pass rate across targeted test suites.

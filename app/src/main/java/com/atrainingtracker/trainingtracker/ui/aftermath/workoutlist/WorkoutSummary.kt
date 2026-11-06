@@ -561,6 +561,13 @@ fun WorkoutSummary(
                 activeEditingLap = null
                 moveBoundaryLapNr = boundaryLapNr
                 showMoveBoundarySheet = true
+            },
+            onDeleteLapClick = { boundaryLapNr ->
+                coroutineScope.launch {
+                    WorkoutRepository.getInstance(context.applicationContext as Application)
+                        .deleteLap(workoutData.id, boundaryLapNr)
+                    activeEditingLap = null
+                }
             }
         )
     }

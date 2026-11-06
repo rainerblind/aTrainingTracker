@@ -2354,6 +2354,14 @@
     <string name="move_lap_boundary_lap_k_preview">Lap %1$d (Previous)</string>
     <string name="move_lap_boundary_lap_k_plus_1_preview">Lap %1$d (Next)</string>
     <string name="move_lap_boundary_select_boundary">Boundary: Lap %1$d / Lap %2$d</string>
+    <string name="delete_lap_action">Delete / Merge Lap</string>
+    <string name="delete_lap_dialog_title">Delete / Merge Lap</string>
+    <string name="delete_lap_confirm">Delete &amp; Merge</string>
+    <string name="delete_lap_merge_with_previous">Lap %1$d + Lap %2$d (Previous)</string>
+    <string name="delete_lap_merge_with_next">Lap %1$d + Lap %2$d (Next)</string>
+    <string name="delete_lap_preview_title">Merged Lap Preview</string>
+    <string name="delete_lap_warning_description">The boundary between Lap %1$d and Lap %2$d will be removed. Subsequent laps will be renumbered.</string>
+    <string name="delete_lap_direction_label">Merge Direction</string>
     <string name="cd_fastest_split">Fastest split</string>
     <string name="cd_switch_view_mode">Switch view mode</string>
     <string name="connect_with_strava">Connect with Strava</string>

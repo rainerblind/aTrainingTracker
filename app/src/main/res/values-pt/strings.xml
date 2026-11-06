@@ -2152,6 +2152,14 @@
     <string name="move_lap_boundary_lap_k_preview">Volta %1$d (Anterior)</string>
     <string name="move_lap_boundary_lap_k_plus_1_preview">Volta %1$d (Seguinte)</string>
     <string name="move_lap_boundary_select_boundary">Limite: Volta %1$d / Volta %2$d</string>
+    <string name="delete_lap_action">Excluir / mesclar volta</string>
+    <string name="delete_lap_dialog_title">Excluir / mesclar volta</string>
+    <string name="delete_lap_confirm">Excluir e mesclar</string>
+    <string name="delete_lap_merge_with_previous">Volta %1$d + Volta %2$d (Anterior)</string>
+    <string name="delete_lap_merge_with_next">Volta %1$d + Volta %2$d (Seguinte)</string>
+    <string name="delete_lap_preview_title">Pré-visualização da volta mesclada</string>
+    <string name="delete_lap_warning_description">O limite entre a Volta %1$d e a Volta %2$d será removido. As voltas seguintes serão renumeradas.</string>
+    <string name="delete_lap_direction_label">Direção de mesclagem</string>
     <string name="cd_fastest_split">Parcial mais rápido</string>
     <string name="cd_switch_view_mode">Alternar modo de exibição</string>
     <string name="connect_with_strava">Conectar ao Strava</string>
