@@ -47,9 +47,9 @@
   * EN, DE, ES, FR, IT, JA, NL, PL, PT
 * **Expected Result**: 100% parity, zero missing entries, zero format specifier mismatches.
 
-### Test Case 3: Clean-Room Regression Suite (`[TST-XXX.3]`)
-* **Command**: `./gradlew testDebugUnitTest`
-* **Goal**: Verify 100% pass rate across the full test suite.
+### Test Case 3: Tier 1 Targeted Regression Suite (`[TST-XXX.3]`)
+* **Command**: `./gradlew testDebugUnitTest --tests "com.atrainingtracker.<modified_package>.*" --tests "com.atrainingtracker.trainingtracker.build.*"`
+* **Goal**: Verify 100% pass rate across all modified and adjacent package unit tests (full suite runs at the Tier 2 Sprint Integration Gate).
 
 ---
 
@@ -59,4 +59,4 @@
 | :--- | :--- | :--- | :--- | :--- |
 | `[TST-XXX.1]` | Unit | `[Class.method]` | `[REQ-XXX]` | Specified |
 | `[TST-XXX.2]` | Localization | `TranslationParityTest` | `[REQ-XXX]`, `REQ-UI-106` | Specified |
-| `[TST-XXX.3]` | Regression | `./gradlew testDebugUnitTest` | `REQ-PRO-001` | Specified |
+| `[TST-XXX.3]` | Regression (Tier 1) | `--tests "com.atrainingtracker.<modified_package>.*"` | `REQ-PRO-001` | Specified |

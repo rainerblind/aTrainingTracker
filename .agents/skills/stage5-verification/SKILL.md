@@ -8,10 +8,10 @@ description: Executes Stage 5 (Verification, Clean-Room Regression & Walkthrough
 ## Overview
 This skill guides the agent through **Stage 5 (Verification & Release Quality Gate)**. It validates the complete implementation across clean-room regression tests, updates living documents, documents the walkthrough, merges the verified feature branch into the sprint integration branch (`sprint/<sprint_id>`), and transitions the parent ticket to human review.
 
-## Subagent Model Pairing ("Zipper Principle" & Persistent Ping-Pong — Core Rule 7)
-Reuse the ticket's two persistent `TypeName: "self"` subagents via `send_message`:
-- **Doing (`--as agent1`)**: **`subagent_flash`** (`send_message` to the ticket's `flash` subagent) — Running `./gradlew testDebugUnitTest`, updating `docs/requirements.md` & `docs/tests.md` to `Verified`, authoring `walkthrough.md`, and submitting Stage 5 via `submit-stage` are deterministic procedural steps.
-- **Gate 5 Review (`--as agent2`)**: **`subagent_pro`** (`send_message` to the ticket's `pro` subagent) — Final autonomous "Chief Inspector" before `Final Review (Human)` (Ceremony 2), executing `python3 tools/jira_util.py --as agent2 gate-verdict <SUBTASK_KEY> PASS ...`. After squashing the branch onto `sprint/<SPRINT_NAME>`, terminate both ticket subagents via `manage_subagents(Action="kill", ConversationIds=[...])`.
+## Subagent Model Pairing ("Zipper Principle" & Epic-Scoped Persistent Ping-Pong — Core Rule 7)
+Reuse the Epic-scoped (or standalone ticket) persistent `TypeName: "self"` subagents via `send_message`:
+- **Doing (`--as agent1`)**: **`subagent_flash`** (`send_message` to the `flash` subagent) — Running Tier 1 targeted unit tests, updating `docs/requirements.md` & `docs/tests.md` to `Verified`, authoring `walkthrough.md`, and submitting Stage 5 via `submit-stage` are deterministic procedural steps.
+- **Gate 5 Review (`--as agent2`)**: **`subagent_pro`** (`send_message` to the `pro` subagent) — Final autonomous "Chief Inspector" before `Final Review (Human)` (Ceremony 2), executing `python3 tools/jira_util.py --as agent2 gate-verdict <SUBTASK_KEY> PASS ...` and squashing `feature/<KEY>` onto `sprint/<SPRINT_NAME>`. Terminate standalone ticket subagents once squashed, or rotate/terminate Epic-scoped subagent pairs after 3 completed tickets (`Rule 62`) or when all sprint tickets in that Epic are complete via `manage_subagents(Action="kill", ConversationIds=[...])`.
 
 ## Key Responsibilities (`subagent_flash` as `agent1` — `flash`)
 1. **Two-Tier Unit Test Execution Strategy (Rule 60 — `ATT-4465`)**:

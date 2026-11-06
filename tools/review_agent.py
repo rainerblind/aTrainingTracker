@@ -91,14 +91,14 @@ GATE_DEFINITIONS = {
     },
     "Gate 5": {
         "prefix": "[Test]",
-        "name": "Gate 5: Clean-Room Full-Suite Regression & Release Review",
+        "name": "Gate 5: Two-Tier Verification & Release Review",
         "default_tier": "pro",
-        "checklist": """1. Full-Suite Regression Execution:
-   - Verify ./gradlew testDebugUnitTest executed with 100% success (0 failures, 0 regressions) across all project modules.
+        "checklist": """1. Two-Tier Regression & Governance Execution:
+   - Verify Tier 1 targeted package/contract unit tests (or full suite for High-Risk tickets), TranslationParityTest (if strings changed), and verify_requirement_governance.py passed with 100% success (0 failures, 0 regressions), and that the executed test scope is explicitly stated in the walkthrough.
 2. Living Documentation Parity:
    - Confirm docs/requirements.md and docs/tests.md status fields are updated to Verified.
 3. Mandatory Lösungsversion (Fix Version/s) Governance Audit:
-   - In accordance with ASPICE Rule 8 ("FixVersion set only upon completion") and sub-tasks never having fixVersions, active in-sprint tickets legitimately have Parent Lösungsversion as 'None' until final acceptance during Joint Review or release. Verify that the deliverable references the target release version (e.g. V4.9.40) and that sub-tasks have no fix version assigned.
+   - In accordance with ASPICE Rule 8 ("FixVersion set only upon completion") and sub-tasks never having fixVersions, active in-sprint tickets legitimately have Parent Lösungsversion as 'None' until final acceptance during Joint Review or release. Verify that the deliverable references the ACTIVE/UNRELEASED target release version from 'jira_util.py versions' and that sub-tasks have no fix version assigned.
 4. Recommendation:
    - Issue an explicit recommendation: RECOMMEND PASS or RECOMMEND REVISION."""
     }

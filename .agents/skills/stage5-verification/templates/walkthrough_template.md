@@ -25,13 +25,13 @@
 | :--- | :--- | :--- | :--- | :--- |
 | `[REQ-XXX]` | `[TST-XXX.1]` | Automated Unit Test | **PASSED** | `Verified` |
 | `[REQ-XXX]` | `[TST-XXX.2]` | 9-Language Localization Audit | **PASSED** | `Verified` |
-| `REQ-PRO-001` | `[TST-XXX.3]` | Full Clean-Room `./gradlew testDebugUnitTest` | **PASSED** (100%) | `Verified` |
+| `REQ-PRO-001` | `[TST-XXX.3]` | Tier 1 Targeted Regression (`--tests "com.atrainingtracker.<modified_package>.*"`) | **PASSED** | `Verified` |
 
 ---
 
 ## 3. Automated Test Evidence
 
-### Clean-Room Regression Suite (`./gradlew testDebugUnitTest`)
+### Tier 1 Targeted Regression Scope (`./gradlew testDebugUnitTest --tests "com.atrainingtracker.<modified_package>.*"`)
 ```text
 BUILD SUCCESSFUL in [X]s
 [N] actionable tasks: [N] executed

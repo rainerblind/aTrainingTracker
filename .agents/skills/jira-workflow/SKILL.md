@@ -11,13 +11,13 @@ This skill provides standardized guidance for interacting with Jira in accordanc
 ## Roles & Persistent `pro` / `flash` Ping-Pong Subagents (Core Rule 7)
 * **`agent1` (Implementer)**: Role used during a stage's Doing turn for authoring deliverables, submitting stages (`--as agent1 submit-stage`), and moving tickets between work states.
 * **`agent2` (Auditor)**: Independent role used during a stage's Gate 1–5 Review turn (`--as agent2 gate-verdict`). Hardwired in `gate-verdict` to prevent impersonation.
-* **Persistent Ping-Pong Pattern**: At ticket start (`ATT-XXXX`), spawn **two persistent `TypeName: "self"` subagents** — `subagent_pro` (`Model: "pro"`) and `subagent_flash` (`Model: "flash"`) — and reuse their `conversationId`s across all 5 stages via `send_message`, alternating which subagent acts as `--as agent1` (Doing) and `--as agent2` (Gate Review):
-  * **Stage 1**: `subagent_pro` (`agent1` Doing) $\rightarrow$ `subagent_flash` (`agent2` Gate 1)
-  * **Stage 2**: `subagent_flash` (`agent1` Doing) $\rightarrow$ `subagent_pro` (`agent2` Gate 2)
-  * **Stage 3**: `subagent_pro` (`agent1` Doing) $\rightarrow$ `subagent_flash` (`agent2` Gate 3)
+* **Epic-Scoped Persistent Ping-Pong Pattern (`Rules 61, 62 & 63`)**: Maintain a dedicated pair of persistent `TypeName: "self"` subagents per **Parent Epic** across the sprint (`epic_agents[epic_key] = (pro_id, flash_id)`), or per ticket when a ticket has no Parent Epic — `subagent_pro` (`Model: "pro"`) and `subagent_flash` (`Model: "flash"`, pre-warmed concurrently in the background during Stage 1). Reuse their `conversationId`s across all 5 stages via `send_message`, alternating which subagent acts as `--as agent1` (Doing) and `--as agent2` (Gate Review) with fused Gate-to-Next-Stage handoffs (`Rule 60`):
+  * **Stage 1**: `subagent_pro` (`agent1` Doing) $\rightarrow$ `subagent_flash` (`agent2` Gate 1 + fused Stage 2 Doing)
+  * **Stage 2**: `subagent_flash` (`agent1` Doing) $\rightarrow$ `subagent_pro` (`agent2` Gate 2 + fused Stage 3 Doing)
+  * **Stage 3**: `subagent_pro` (`agent1` Doing) $\rightarrow$ `subagent_flash` (`agent2` Gate 3 + fused Standard Stage 4 Doing)
   * **Stage 4**: `subagent_flash` (`agent1` Doing) $\rightarrow$ `subagent_pro` (`agent2` Gate 4) *(or `pro`/`flash` for High-Risk)*
-  * **Stage 5**: `subagent_flash` (`agent1` Doing) $\rightarrow$ `subagent_pro` (`agent2` Gate 5)
-  * Terminate both subagents via `manage_subagents` once the ticket reaches `Final Review (Human)`.
+  * **Stage 5**: `subagent_flash` (`agent1` Doing) $\rightarrow$ `subagent_pro` (`agent2` Gate 5 + squash-merge onto `sprint/<SPRINT_NAME>`)
+  * Proactively rotate Epic-scoped subagent pairs after every 3 completed tickets (`Rule 62`), and terminate standalone ticket subagents or completed Epic subagent pairs via `manage_subagents`.
 * **`coordinator` (Orchestrator)**: Backlog grooming, subtask creation, sprint queries. Cannot close tickets or override auditor verdicts.
 * **`human` (User / Gatekeeper)**: Holds exclusive authority for approving release gates and transitioning parent tickets to `Erledigt`.
 
