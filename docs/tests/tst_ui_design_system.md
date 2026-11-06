@@ -7303,8 +7303,8 @@
 
 ### TST-UI-453: **Aftermath Workout Details: Grade / Slope Distribution Card & 1% Telemetry Histogram Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-453`
-- **Component**: `GradeZoneDistributionCard.kt`, `ZoneDistributionCalculator.kt`, `ZoneDistributionColumnChart.kt`, `ZoneDistributionStackedBar.kt`, `ZoneDistributionModels.kt`, `WorkoutMasksAndCardsSection.kt`, `WorkoutDetailPreferences.kt`, `WorkoutCardSectionPreferences.kt`, `GradeZoneDistributionCardTest.kt`, `GradeZoneDistributionCalculatorTest.kt`, `WorkoutDetailPreferencesTest.kt`, `WorkoutMasksAndCardsLayoutTest.kt`, `TrackOnMapScreen.kt`, `WorkoutDetailTabbedContent.kt`, `WorkoutSummary.kt`, `TranslationParityTest.kt`
-- **Jira**: `ATT-5487`, `ATT-5563`
+- **Component**: `GradeZoneDistributionCard.kt`, `ZoneDistributionCalculator.kt`, `ZoneDistributionColumnChart.kt`, `ZoneDistributionStackedBar.kt`, `ZoneDistributionModels.kt`, `WorkoutMasksAndCardsSection.kt`, `WorkoutDetailPreferences.kt`, `WorkoutCardSectionPreferences.kt`, `WorkoutSectionType.kt`, `WorkoutDetailTabConfig.kt`, `GradeZoneDistributionCardTest.kt`, `GradeZoneDistributionCalculatorTest.kt`, `WorkoutDetailPreferencesTest.kt`, `WorkoutMasksAndCardsLayoutTest.kt`, `TrackOnMapScreen.kt`, `WorkoutDetailTabbedContent.kt`, `WorkoutSummary.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-5487`, `ATT-5563`, `ATT-5654`
 - **Test Description**:
   1. *Grade Zone Calculation & Canonical Thresholds Unit Test (`TST-UI-453.1`, `GradeZoneDistributionCalculatorTest.kt`)*:
   • Verify `ZoneDistributionCalculator.calculateGradeDistribution(...)` maps segments into exactly 7 categories matching `getElevationGradeColor` thresholds: `< 2%`, `2–5%`, `5–10%`, `10–15%`, `15–20%`, `20–25%`, `> 25%`.
@@ -7320,11 +7320,13 @@
   • Verify 3-way toggle renders Balken (`STACKED_BAR`), Säulen (`COLUMNS`), and Histogramm (`HISTOGRAM`).
   • Verify Column Chart and Stacked Bar render mathematical threshold labels `<2%`, `≥2%`, `≥5%`, `≥10%`, `≥15%`, `≥20%`, `≥25%` for slope distribution, while HR/Power strictly retain `Z1`..`Z7`.
   • Verify view switching renders `ZoneDistributionStackedBar`, `ZoneDistributionColumnChart`, and `TelemetryHistogramChart` respectively.
-  4. *Visibility Preference & Subordinate Settings Switch Test (`TST-UI-453.4`, `WorkoutDetailPreferencesTest.kt`, `WorkoutMasksAndCardsLayoutTest.kt`)*:
-  • Verify `WorkoutDetailPreferences.showGradeDistribution` defaults to `true`.
-  • Verify `WorkoutCardSectionPreferences.showGradeDistribution` defaults to `false`.
-  • Verify `WorkoutMasksAndCardsSection.kt` renders subordinate switch `settings_workout_card_grade_distribution` under Zone Analysis in both Summary and Details sections when `showZoneAnalysis == true`.
-  • Verify `WorkoutMasksAndCardsSection.kt` strictly respects the `< 400` lines constraint (`TST-UI-377.5`).
+  4. *Independent Section Entry, Reordering & Subordinate Switch Removal Test (`TST-UI-453.4`, `WorkoutDetailPreferencesTest.kt`, `WorkoutMasksAndCardsLayoutTest.kt`, `WorkoutDetailTabsTest.kt`, `WorkoutSummarySectionsTest.kt`)*:
+  • Verify `WorkoutSectionType.GRADE_DISTRIBUTION` is present in `WorkoutSectionType.DEFAULT_ORDER` and serialized cleanly.
+  • Verify `WorkoutDetailSectionType.GRADE_DISTRIBUTION` is present in `DEFAULT_TABS[2]` (`tab_zones`) following `ZONES`.
+  • Verify `WorkoutDetailTabConfig.deserializeTabs` auto-migrates missing `GRADE_DISTRIBUTION` into `tab_zones`.
+  • Verify `WorkoutMasksAndCardsSection.kt` maps `GRADE_DISTRIBUTION` in `buildMatrixFeatureRow` to `showGradeDistribution`.
+  • Verify `WorkoutMasksAndCardsSection.kt` contains zero subordinate switches under `ZoneDisplayModeSelector` and strictly respects the `< 400` lines constraint (`TST-UI-377.5`).
+  • Verify `WorkoutSummary.kt` and `WorkoutDetailTabbedContent.kt` render `GradeZoneDistributionCard` at the decoupled `GRADE_DISTRIBUTION` position.
   5. *9-Language Localization & Parity Test (`TST-UI-453.5`, `TranslationParityTest.kt`)*:
   • Verify 100% parity across all 9 supported locales for `aftermath_grade_zones_title` and `settings_workout_card_grade_distribution` with zero missing entries and zero decorative inline emojis.
   6. *Clean-Room Regression Suite Execution (`TST-UI-453.6`)*:

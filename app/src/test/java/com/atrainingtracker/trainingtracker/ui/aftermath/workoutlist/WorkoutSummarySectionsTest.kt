@@ -119,4 +119,13 @@ class WorkoutSummarySectionsTest {
         assertFalse("WorkoutHeader must remain mandatory and not configurable", fields.contains("showHeader"))
         assertFalse("WorkoutDetails must remain mandatory and not configurable", fields.contains("showDetails"))
     }
+
+    @Test
+    fun gradeDistributionSection_isIndependentSectionInSummary() {
+        val prefs = WorkoutCardSectionPreferences(showGradeDistribution = true)
+        assertTrue(prefs.showGradeDistribution)
+        assertTrue(com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutSectionType.DEFAULT_ORDER.contains(
+            com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutSectionType.GRADE_DISTRIBUTION
+        ))
+    }
 }

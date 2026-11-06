@@ -13443,8 +13443,8 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 
 ### REQ-UI-453: Aftermath Workout Details: Grade / Slope Distribution Card & 1% Telemetry Histogram [Verified]
-- **Tests**: `TST-UI-453` | **Tickets**: `ATT-5487`, `ATT-5563`
-- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/zones/GradeZoneDistributionCard.kt`, `ZoneDistributionCalculator.kt`, `ZoneDistributionColumnChart.kt`, `ZoneDistributionStackedBar.kt`, `ZoneDistributionModels.kt`, `TrackOnMapScreen.kt`, `WorkoutDetailTabbedContent.kt`, `WorkoutSummary.kt`, `WorkoutMasksAndCardsSection.kt`, `MyPreferenceManager.kt`, `WorkoutRepository.kt`, `AftermathMapUIState.kt`
+- **Tests**: `TST-UI-453` | **Tickets**: `ATT-5487`, `ATT-5563`, `ATT-5654`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/zones/GradeZoneDistributionCard.kt`, `ZoneDistributionCalculator.kt`, `ZoneDistributionColumnChart.kt`, `ZoneDistributionStackedBar.kt`, `ZoneDistributionModels.kt`, `TrackOnMapScreen.kt`, `WorkoutDetailTabbedContent.kt`, `WorkoutSummary.kt`, `WorkoutMasksAndCardsSection.kt`, `WorkoutDetailTabConfig.kt`, `WorkoutSectionType.kt`, `MyPreferenceManager.kt`, `WorkoutRepository.kt`, `AftermathMapUIState.kt`
 - **Rationale**: To provide athletes with a dedicated slope distribution visualization in Workout Details and Workout Summary, featuring independent visibility settings, accurate physical terrain nomenclature ("Steigungsverteilung" / "Slope Distribution" instead of physiological "Zonen"), and unambiguous mathematical threshold labels (<2%, ≥2%, ≥5%, ≥10%, ≥15%, ≥20%, ≥25%):
 - **Description**:
   1. *Seven Canonical Slope Categories & Unambiguous Threshold Labels (`REQ-UI-453.1`)*:
@@ -13464,30 +13464,38 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
   3. *`GradeZoneDistributionCard` UI Component & 3-Way Mode Switcher (`REQ-UI-453.3`)*:
      - The UI card SHALL render in `ui/aftermath/zones/GradeZoneDistributionCard.kt` with icon `R.drawable.ic_grade`, localized title `aftermath_grade_zones_title` (*Steigungsverteilung* / *Slope Distribution* across all 9 locales, omitting the word "Zonen" / "Zones"), total active moving/climbing time, and 3-way toggle (`SingleChoiceSegmentedButtonRow`: Balken | Säulen | Histogramm) matching `HeartRateZoneDistributionCard` and `PowerZoneDistributionCard`.
      - In Histogram mode, `TelemetryHistogramChart` SHALL display 1% bins with unit `"%"` and interactive touch scrubbing.
-  4. *Workout Details & Summary Integration with Independent Visibility Switches (`REQ-UI-453.4`)*:
-     - Visibility of `GradeZoneDistributionCard` SHALL be independently configurable via `showGradeDistribution` in `WorkoutDetailPreferences` (default: `true` in Workout Details) and `WorkoutCardSectionPreferences` (default: `false` in Workout Summary list cards).
-     - In Expert Settings (`WorkoutMasksAndCardsSection.kt`), a subordinate toggle (`SubordinateTuningToggleItem`) labeled `settings_workout_card_grade_distribution` SHALL be rendered under Zone Analysis in both Trainingsliste (Summary) and Trainings-Details (Details) when `showZoneAnalysis == true`.
+  4. *Workout Details & Summary Integration as Independent Reorderable Sections (`REQ-UI-453.4`)*:
+     - `WorkoutSectionType.GRADE_DISTRIBUTION` (*Steigungsverteilung*) SHALL be an independent, reorderable section in `WorkoutSectionType` and the Summary Cards section list (`WorkoutMasksAndCardsSection.kt`), rendered in `WorkoutSummary.kt` according to `workoutSectionsOrder` and guarded by `WorkoutCardSectionPreferences.showGradeDistribution` (default: `false`).
+     - `WorkoutDetailSectionType.GRADE_DISTRIBUTION` (*Steigungsverteilung*) SHALL be an independent, reorderable section in `WorkoutDetailSectionType`, configurable per tab in `WorkoutDetailTabsConfigSheet.kt` (enabled by default in `tab_zones` directly after `ZONES`), and rendered in `WorkoutDetailTabbedContent.kt` at its configured position.
+     - In Expert Settings (`WorkoutMasksAndCardsSection.kt`), subordinate toggle items (`SubordinateTuningToggleItem`) for slope distribution under `ZoneDisplayModeSelector` SHALL be removed, consolidating visibility and ordering entirely within the reorderable summary matrix and Detail Tabs configuration sheet.
+     - In `WorkoutDetailTabConfig.deserializeTabs`, stored tab configs lacking `GRADE_DISTRIBUTION` across all tabs SHALL automatically migrate `GRADE_DISTRIBUTION` into `tab_zones` directly following `ZONES`.
      - In `TrackOnMapScreen.kt`, `hasZonesData` check SHALL include `|| (gradeZoneDistribution != null && activeDetailPrefs.showGradeDistribution)` so altitude workouts without HR/power sensors only surface the Zonen tab when grade distribution is enabled.
      - Telemetry computation SHALL run 100% asynchronously on `Dispatchers.IO` via `WorkoutRepository` / `TrackOnMapAftermathViewModel`.
   5. *9-Language Localization Parity (`REQ-UI-453.5`)*:
      - All user-visible strings (`aftermath_grade_zones_title` and `settings_workout_card_grade_distribution`) SHALL be localized across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with 100% parity verified by `TranslationParityTest`. Decorative inline Unicode emojis are prohibited.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: `REQ-UI-453` (Grade / Slope Distribution Card & 1% Telemetry Histogram). Target: `ui/aftermath/zones/`, `WorkoutMasksAndCardsSection.kt`, `MyPreferenceManager.kt`, `TrackOnMapScreen.kt`, `WorkoutDetailTabbedContent.kt`, `WorkoutSummary.kt`.
-2. *Historical Origin & Commit Trace*: Sprint 2026-45.7 (`ATT-5487`, commit `36e00b64ef28827de43f2f04399de442ca9a6898`).
-3. *Root Reason for Existing Formulation*: Reused generic `ZoneDistributionData` and `Z1`..`Z7` strings to establish initial integration without adding preference schema overhead.
-4. *Preservation of Core Invariants*: Retains canonical 7-zone color palette (`TTColor.Zone1..Zone7`), preserves HR/Power zone badges (`Z1`..`Z5`/`Z7`), preserves `WorkoutMasksAndCardsSection.kt` < 400 lines constraint, and ensures DataStore backward compatibility via safe defaults (`true` in Details, `false` in Summary).
+1. *Original Requirement ID & Target*: `REQ-UI-453` (Grade / Slope Distribution Card & 1% Telemetry Histogram). Target: `ui/aftermath/zones/`, `WorkoutMasksAndCardsSection.kt`, `MyPreferenceManager.kt`, `TrackOnMapScreen.kt`, `WorkoutDetailTabbedContent.kt`, `WorkoutSummary.kt`, `WorkoutDetailTabConfig.kt`, `WorkoutSectionType.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-45.7 (`ATT-5487`, commit `36e00b64ef28827de43f2f04399de442ca9a6898`), Sprint 2026-45.8 (`ATT-5563`, commit `7febe360e2`), Sprint 2026-45.9 (`ATT-5654`).
+3. *Root Reason for Existing Formulation*: ATT-5563 placed Steigungsverteilung as a subordinate switch under Zone Card Display Mode as an interim visibility control; ATT-5654 promotes it to a first-class sortable section entry in both Summary Cards and Detail Tabs while removing the competing subordinate switches.
+4. *Preservation of Core Invariants*: Retains canonical 7-zone color palette (`TTColor.Zone1..Zone7`), preserves DataStore backward compatibility (`showGradeDistribution`), preserves single authoritative configuration surface (Design Guidelines Sec 3.2), keeps `WorkoutMasksAndCardsSection.kt` < 400 lines constraint, and ensures safe auto-migration in `WorkoutDetailTabConfig.deserializeTabs`.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* a recorded workout with valid GPS distance and elevation path points,
-• *When* Workout Details opens the Zonen tab and `showGradeDistribution == true`,
+• *When* Workout Details opens the Zonen tab and `WorkoutDetailSectionType.GRADE_DISTRIBUTION` is configured in that tab,
 • *Then* `GradeZoneDistributionCard` is rendered showing title "Steigungsverteilung" (DE) / "Slope Distribution" (EN) and threshold badges `<2%`, `≥2%`, `≥5%`, `≥10%`, `≥15%`, `≥20%`, `≥25%`.
 • *Given* a workout summary list card,
-• *When* `showGradeDistribution` is default (`false`),
-• *Then* `GradeZoneDistributionCard` is NOT rendered in the summary card; when set to `true`, it is rendered.
+• *When* `WorkoutSectionType.GRADE_DISTRIBUTION` is enabled (`preferences.showGradeDistribution == true`) and positioned in `workoutSectionsOrder`,
+• *Then* `GradeZoneDistributionCard` is rendered at its configured order slot; when disabled, it is omitted.
+• *Given* a stored detail tabs configuration lacking `GRADE_DISTRIBUTION`,
+• *When* `WorkoutDetailTabConfig.deserializeTabs` is called,
+• *Then* `GRADE_DISTRIBUTION` is automatically inserted into `tab_zones` directly following `ZONES`.
+• *Given* the Expert Settings screen (`WorkoutMasksAndCardsSection.kt`),
+• *When* viewing Zone Analysis sub-settings,
+• *Then* zero subordinate toggle switches for slope distribution are rendered under `ZoneDisplayModeSelector`.
 • *Given* a workout without heart rate or power sensors but with altitude data,
 • *When* `TrackOnMapScreen` evaluates `hasZonesData`,
-• *Then* `hasZonesData` evaluates to `true` only if `gradeZoneDistribution != null && activeDetailPrefs.showGradeDistribution`.
+• *Then* `hasZonesData` evaluates to `true` if `gradeZoneDistribution != null && activeDetailPrefs.showGradeDistribution`.
 • *Given* the 3-way display mode toggle on `GradeZoneDistributionCard`,
 • *When* the user switches between Stacked Bar, Columns, and Histogram,
 • *Then* the card seamlessly transitions between visualization modes with interactive scrubbing supported on the 1% grade histogram.

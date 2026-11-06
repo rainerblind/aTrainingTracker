@@ -81,7 +81,10 @@ class WorkoutDetailTabsTest {
         assertEquals("tab_zones", defaults[2].id)
         assertEquals(R.string.workout_detail_tab_zones, defaults[2].preset.defaultTitleRes)
         assertEquals(
-            listOf(WorkoutDetailSectionType.ZONES),
+            listOf(
+                WorkoutDetailSectionType.ZONES,
+                WorkoutDetailSectionType.GRADE_DISTRIBUTION
+            ),
             defaults[2].sections
         )
 
@@ -491,6 +494,7 @@ class WorkoutDetailTabsTest {
             hasElevation = true,
             hasCharts = true,
             hasZones = true,
+            hasGradeDistribution = true,
             hasLaps = true,
             hasStrava = true,
             hasExportStatus = true,
@@ -525,5 +529,20 @@ class WorkoutDetailTabsTest {
                 emptyAvailability.isSectionActive(section, disabledPrefs)
             )
         }
+    }
+
+    /**
+     * TST-UI-453.4b: Grade distribution auto-migration into tab_zones (REQ-UI-408.2 / ATT-5654).
+     */
+    @Test
+    fun `TST-UI-453_4b grade distribution auto-migration into tab_zones when missing from wire string`() {
+        val legacyWire = "v2|tab_overview:OVERVIEW::DETAILS,PHOTOS,DESCRIPTION,EXTREMA,EXPORT_STATUS;tab_zones:ZONES::ZONES"
+        val migrated = WorkoutDetailTabConfig.deserializeTabs(legacyWire)
+        assertEquals(2, migrated.size)
+        val zonesTab = migrated[1]
+        assertEquals(
+            listOf(WorkoutDetailSectionType.ZONES, WorkoutDetailSectionType.GRADE_DISTRIBUTION),
+            zonesTab.sections
+        )
     }
 }

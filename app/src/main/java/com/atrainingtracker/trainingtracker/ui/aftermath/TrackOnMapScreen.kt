@@ -212,7 +212,8 @@ fun TrackOnMapScreen(
             )
     }
 
-    val hasZonesData = hrZoneDistribution != null || powerZoneDistribution != null || (gradeZoneDistribution != null && activeDetailPrefs.showGradeDistribution)
+    val hasZonesData = hrZoneDistribution != null || powerZoneDistribution != null
+    val hasGradeDistribution = gradeZoneDistribution != null
     val hasLapsData = workoutData.laps.isNotEmpty()
     val sectionAvailability = remember(
         workoutData,
@@ -222,6 +223,7 @@ fun TrackOnMapScreen(
         hasAltitudeData,
         hasTelemetrySeries,
         hasZonesData,
+        hasGradeDistribution,
         hasLapsData
     ) {
         WorkoutDetailSectionAvailability.fromWorkoutState(
@@ -232,7 +234,8 @@ fun TrackOnMapScreen(
             hasAltitudeData = hasAltitudeData,
             hasTelemetrySeries = hasTelemetrySeries,
             hasZonesData = hasZonesData,
-            hasLapsData = hasLapsData
+            hasLapsData = hasLapsData,
+            hasGradeDistribution = hasGradeDistribution
         )
     }
 
@@ -717,17 +720,19 @@ fun TrackOnMapScreen(
                                             .padding(horizontal = 16.dp, vertical = 4.dp)
                                     )
                                 }
-                                if (activeDetailPrefs.showGradeDistribution) {
-                                    gradeZoneDistribution?.let { distribution ->
-                                        GradeZoneDistributionCard(
-                                            distribution = distribution,
-                                            displayMode = effectiveGradeZoneDisplayMode,
-                                            onDisplayModeChange = { gradeZoneDisplayMode = it },
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 16.dp, vertical = 4.dp)
-                                        )
-                                    }
+                            }
+                        }
+                        WorkoutSectionType.GRADE_DISTRIBUTION -> {
+                            if (activeDetailPrefs.showGradeDistribution) {
+                                gradeZoneDistribution?.let { distribution ->
+                                    GradeZoneDistributionCard(
+                                        distribution = distribution,
+                                        displayMode = effectiveGradeZoneDisplayMode,
+                                        onDisplayModeChange = { gradeZoneDisplayMode = it },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                                    )
                                 }
                             }
                         }
@@ -774,17 +779,19 @@ fun TrackOnMapScreen(
                                             .padding(horizontal = 16.dp, vertical = 4.dp)
                                     )
                                 }
-                                if (activeDetailPrefs.showGradeDistribution) {
-                                    gradeZoneDistribution?.let { distribution ->
-                                        GradeZoneDistributionCard(
-                                            distribution = distribution,
-                                            displayMode = effectiveGradeZoneDisplayMode,
-                                            onDisplayModeChange = { gradeZoneDisplayMode = it },
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 16.dp, vertical = 4.dp)
-                                        )
-                                    }
+                            }
+                        }
+                        WorkoutSectionType.GRADE_DISTRIBUTION -> {
+                            if (activeDetailPrefs.showGradeDistribution) {
+                                gradeZoneDistribution?.let { distribution ->
+                                    GradeZoneDistributionCard(
+                                        distribution = distribution,
+                                        displayMode = effectiveGradeZoneDisplayMode,
+                                        onDisplayModeChange = { gradeZoneDisplayMode = it },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                                    )
                                 }
                             }
                         }

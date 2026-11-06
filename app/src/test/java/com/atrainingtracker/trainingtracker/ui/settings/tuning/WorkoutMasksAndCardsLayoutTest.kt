@@ -276,4 +276,29 @@ class WorkoutMasksAndCardsLayoutTest {
                 compContent.contains("PhotoThumbnailSize.LARGE")
         )
     }
+
+    /**
+     * TST-UI-453.4c: Grade Distribution in Summary Matrix & Absence of Subordinate Switches (REQ-UI-453.4 / ATT-5654).
+     */
+    @Test
+    fun `TST-UI-453_4c grade distribution in summary matrix and removal of subordinate switches`() {
+        val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/WorkoutMasksAndCardsSection.kt")
+        val content = file.readText()
+
+        // 1. Grade distribution row in reorder list
+        assertTrue(
+            "Must support GRADE_DISTRIBUTION feature row",
+            content.contains("WorkoutSectionType.GRADE_DISTRIBUTION")
+        )
+        assertTrue(
+            "Must bind workoutCardPrefs.showGradeDistribution",
+            content.contains("workoutCardPrefs.showGradeDistribution")
+        )
+
+        // 2. Subordinate switches for grade distribution under ZoneDisplayModeSelector must be completely absent
+        assertFalse(
+            "WorkoutMasksAndCardsSection.kt must NOT import or use SubordinateTuningToggleItem",
+            content.contains("SubordinateTuningToggleItem")
+        )
+    }
 }

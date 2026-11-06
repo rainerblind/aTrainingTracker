@@ -58,11 +58,12 @@ class TrackOnMapScreenSectionSlottingContractTest {
             WorkoutSectionType.PHOTOS
         ), preMap)
 
-        // Default: [ELEVATION, CHARTS, ZONES, LAPS, EXPORT_STATUS, STRAVA] after MAP (REQ-UI-285)
+        // Default: [ELEVATION, CHARTS, ZONES, GRADE_DISTRIBUTION, LAPS, EXPORT_STATUS, STRAVA] after MAP (REQ-UI-285)
         assertEquals(listOf(
             WorkoutSectionType.ELEVATION,
             WorkoutSectionType.CHARTS,
             WorkoutSectionType.ZONES,
+            WorkoutSectionType.GRADE_DISTRIBUTION,
             WorkoutSectionType.LAPS,
             WorkoutSectionType.EXPORT_STATUS,
             WorkoutSectionType.STRAVA

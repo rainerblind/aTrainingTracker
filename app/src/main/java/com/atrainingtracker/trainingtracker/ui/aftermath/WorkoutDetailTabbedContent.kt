@@ -723,17 +723,17 @@ private fun RenderWorkoutDetailCardSections(
                             .padding(horizontal = 16.dp, vertical = 4.dp)
                     )
                 }
-                if (detailPreferences.showGradeDistribution) {
-                    gradeZoneDistribution?.let { distribution ->
-                        GradeZoneDistributionCard(
-                            distribution = distribution,
-                            displayMode = effectiveGradeZoneDisplayMode,
-                            onDisplayModeChange = onGradeZoneDisplayModeChange,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 4.dp)
-                        )
-                    }
+            }
+            WorkoutDetailSectionType.GRADE_DISTRIBUTION -> {
+                gradeZoneDistribution?.let { distribution ->
+                    GradeZoneDistributionCard(
+                        distribution = distribution,
+                        displayMode = effectiveGradeZoneDisplayMode,
+                        onDisplayModeChange = onGradeZoneDisplayModeChange,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
                 }
             }
             WorkoutDetailSectionType.LAPS -> {
