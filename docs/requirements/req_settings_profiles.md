@@ -1367,14 +1367,14 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 **Invariants**: Core tracking, telemetry processing, local file exports, and database pairing persistence across app updates MUST NOT be compromised.
 
 ### REQ-SET-084: One-Tap Swap-or-Upgrade Dialog on 3rd Paired Device (REQ-MON-002) [Verified]
-- **Tests**: `TST-SET-084` | **Tickets**: `ATT-51`, `ATT-5399`, `ATT-5398`, `ATT-5469`, `ATT-5470`
+- **Tests**: `TST-SET-084` | **Tickets**: `ATT-51`, `ATT-5399`, `ATT-5398`, `ATT-5469`, `ATT-5470`, `ATT-5490`
 - **Implementation**: `SensorQuotaReconciliationManager.kt`, `DeviceListViewModel.kt`, `ControlTrackingViewModel.kt`, `DeviceManager.java`, `ATrainingTrackerApp.kt`, `MainActivityWithNavigation.kt`, `SwapOrUpgradeDialog.kt`, `KeepTwoSensorsBottomSheet.kt`, `DeviceDataRepository.kt`
 - **Rationale**: Ensure athletes are never blocked by a hard paywall when adding sensors. When attempting to pair a 3rd device in Free tier, athletes can easily unpair a currently active device with a single tap or upgrade to Pro via "Pay what you want". Furthermore, athletes who downgrade from Supporter to Free tier with $> 2$ paired sensors are guided through a non-destructive reconciliation flow to keep 2 sensors.
 - **Description**:
 1. *Quota Interception (`REQ-SET-084.1`)*:
 • When a Free tier athlete (`!isProActive()`) attempts to pair a device that would increase total paired devices beyond `MAX_FREE_PAIRED_DEVICES = 2`, `DeviceListViewModel` SHALL intercept the action and display `SwapOrUpgradeDialog` without changing database pairing state.
 2. *Smart Recommendation Preselection (`REQ-SET-084.2`)*:
-• The dialog SHALL present currently paired devices for 1-tap unpairing, preselecting `ALTITUDE_FROM_PRESSURE` for outdoor profiles (preserving GPS) and `SPEED_AND_LOCATION_GPS` for indoor profiles.
+• In `determineRecommendedUnpairDeviceId`, the system SHALL recommend unpairing `ALTITUDE_FROM_PRESSURE` first if paired. Next, if both `SPEED_AND_LOCATION_GOOGLE_FUSED` and `SPEED_AND_LOCATION_GPS` are paired, it SHALL recommend unpairing `SPEED_AND_LOCATION_GPS` (so Google Fused is retained). Otherwise, it SHALL fall back to the first paired device in list order.
 3. *Atomic Swap Execution (`REQ-SET-084.3`)*:
 • Tapping "Swap" SHALL unpair the selected existing device and pair the new candidate device in a single database operation, maintaining total paired devices $\le 2$.
 4. *Direct Upgrade Path (`REQ-SET-084.4`)*:
@@ -1382,7 +1382,10 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 5. *Subscription Downgrade Sensor Quota Reconciliation & Global Triggers (`REQ-SET-084.5`)*:
 • When an athlete returns to Free tier (`!isProActive()`) with $> 2$ paired sensors in `Devices.db` while not actively recording (`!isTracking()`), the centralized reconciliation manager (`SensorQuotaReconciliationManager`) SHALL present `KeepTwoSensorsBottomSheet` (`AppModalBottomSheet`) globally across the application (`ATrainingTrackerApp`), not solely within `DeviceListViewModel` / `DevicesTabbedScreen`.
 • Reconciliation SHALL be automatically triggered on application start / resume (`MainActivityWithNavigation.onResume`), upon displaying the tracking cockpit (`TrackingTabsScreen` / `SensorGridScreen`), upon reactive transition to Free tier (`!isProActive()`), and prior to dispatching sensor search or workout start in `ControlTrackingViewModel`.
-• The sheet SHALL present all currently paired devices, preselect 2 sensible defaults (`SPEED_AND_LOCATION_GPS` + `ALTITUDE_FROM_PRESSURE` or 2 most recently paired), permit selection of at most 2 active sensors, and offer a 1-tap shortcut to `SupporterScreen`.
+• The sheet SHALL present all currently paired devices, preselect 2 sensible defaults via `SensorQuotaReconciliationManager.determineDefaultKeepDeviceIds`, permit selection of at most 2 active sensors, and offer a 1-tap shortcut to `SupporterScreen`:
+  a. *Slot 1 (Location)*: If both `SPEED_AND_LOCATION_GOOGLE_FUSED` and `SPEED_AND_LOCATION_GPS` are paired, preselect `SPEED_AND_LOCATION_GOOGLE_FUSED`. If only one of the two location sensors is paired, preselect that single paired location sensor.
+  b. *Slot 2 (Active Remote Sensor)*: Preselect the most recently active remote sensor (`protocol != Protocol.SMARTPHONE`), prioritized by `isConnected == true` first, most recent parsed `lastSeen` timestamp second, and original list order third.
+  c. *Fallback*: If $< 2$ sensors are selected (e.g. no remote sensor paired), fall back to `ALTITUDE_FROM_PRESSURE` and remaining paired devices in order.
 • Confirming selection (or dismissing the sheet, applying the 2 defaults to prevent quota bypass) SHALL set `PAIRED = 0` on all unselected devices in `Devices.db`. Unselected sensors MUST NOT be deleted; all custom names, calibration factors, wheel circumferences, and equipment links MUST remain 100% intact.
 6. *Multi-Sensor Swap Hardening (`REQ-SET-084.6`)*:
 • In Free tier, `executeSwapAndPair()` and `DeviceDataRepository` SHALL ensure that even if more than 2 sensors were paired prior to the swap, all excess sensors beyond the newly paired candidate and retained sensor are set to `PAIRED = 0`, guaranteeing total paired count is strictly $\le 2$.
@@ -1391,6 +1394,12 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 8. *Rule 73 Stacked Action Button Ergonomics (`REQ-SET-084.8`)*:
 • In `SwapOrUpgradeDialog.kt`, action controls SHALL follow the Rule 73 stacked button layout for `AppModalBottomSheet`: primary action (*'Tauschen & Koppeln'*, `Button`) and secondary upgrade CTA (*'Unbegrenzte Sensoren freischalten'*, `FilledTonalButton`) SHALL be laid out as vertically stacked full-width buttons (`Modifier.fillMaxWidth()`, `8.dp` spacing) at the bottom of the sheet content column, leaving only a single full-width dismiss action (*'Abbrechen'*, `TextButton`) in `actions`, eliminating horizontal button crowding and broken word wrapping across all 9 locales (Rule 73, ATT-5470).
 
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-SET-084` (`REQ-SET-084.2`, `REQ-SET-084.5`) targeting `SensorQuotaReconciliationManager.kt` and `DeviceListViewModel.kt`.
+2. *Historical Origin & Commit Trace*: `ATT-51` (Initial Free-tier quota), `ATT-5469` (`29251f2d`, global reconciliation manager), refined in `ATT-5490` (Sprint `2026-45.8`).
+3. *Root Reason for Existing Formulation*: GPS and Barometer were historically assumed to be the default smartphone baseline before external remote sensor activity tracking and Google Fused prioritization (`ATT-5491`) were integrated.
+4. *Preservation of Core Invariants*: Free-tier quota ($\le 2$ sensors) is strictly preserved; unselected sensors remain in SQLite with custom names and calibration intact; Barometer remains fallback when no remote sensors are paired.
+
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* a Free tier athlete with 2 paired devices attempting to pair a heart rate monitor,
 • *When* the toggle is clicked,
@@ -1398,6 +1407,15 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • *Given* the Swap dialog with `ALTITUDE_FROM_PRESSURE` preselected,
 • *When* the athlete taps "Swap & Pair",
 • *Then* `ALTITUDE_FROM_PRESSURE` is unpaired, the heart rate monitor is paired, and total paired devices equals 2.
+• *Given* an athlete downgraded to Free tier with both Google Fused and GPS paired plus remote sensors,
+• *When* `KeepTwoSensorsBottomSheet` is evaluated,
+• *Then* Google Fused and the most recently active remote sensor are preselected as the 2 defaults.
+• *Given* an athlete downgraded to Free tier with only GPS (or only Google Fused) paired alongside remote sensors,
+• *When* `KeepTwoSensorsBottomSheet` is evaluated,
+• *Then* that single paired location sensor is preserved alongside the most recently active remote sensor.
+• *Given* an athlete downgraded to Free tier with no remote sensors paired,
+• *When* `KeepTwoSensorsBottomSheet` is evaluated,
+• *Then* `ALTITUDE_FROM_PRESSURE` is preselected as the second default.
 • *Given* an athlete downgraded to Free tier with $> 2$ paired sensors and not actively recording,
 • *When* the app starts, the tracking screen is displayed, or sensor search / tracking is requested,
 • *Then* the Keep-2-Sensors reconciliation bottom sheet is displayed globally with 2 sensible defaults preselected, and hardware connections are clamped to at most 2 paired devices.

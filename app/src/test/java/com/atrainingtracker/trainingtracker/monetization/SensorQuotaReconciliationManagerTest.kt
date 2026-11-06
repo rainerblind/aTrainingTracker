@@ -76,13 +76,21 @@ class SensorQuotaReconciliationManagerTest {
     private fun createUiDevice(
         id: Long,
         deviceType: DeviceType,
-        isPaired: Boolean = true
+        protocol: Protocol = if (deviceType == DeviceType.SPEED_AND_LOCATION_GPS ||
+            deviceType == DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED ||
+            deviceType == DeviceType.SPEED_AND_LOCATION_NETWORK ||
+            deviceType == DeviceType.ALTITUDE_FROM_PRESSURE ||
+            deviceType == DeviceType.ALTITUDE_FROM_POSITION
+        ) Protocol.SMARTPHONE else Protocol.BLUETOOTH_LE,
+        isPaired: Boolean = true,
+        isConnected: Boolean = false,
+        lastSeen: String? = null
     ): DeviceUiData {
         return DeviceUiData(
             id = id,
-            protocol = Protocol.BLUETOOTH_LE,
+            protocol = protocol,
             deviceType = deviceType,
-            lastSeen = null,
+            lastSeen = lastSeen,
             manufacturer = "Polar",
             deviceName = "Test ${deviceType.name}",
             isPaired = isPaired,
@@ -97,7 +105,7 @@ class SensorQuotaReconciliationManagerTest {
             wheelCircumference = null,
             calibrationFactor = null,
             powerFeatures = null,
-            isConnected = false,
+            isConnected = isConnected,
             mainValue = null,
             allValues = null,
             isNewlyDiscovered = false
@@ -127,7 +135,8 @@ class SensorQuotaReconciliationManagerTest {
         val event = manager.keepTwoSensorsDialogEvent.value
         assertNotNull(event)
         assertEquals(4, event?.currentlyPairedDevices?.size)
-        assertEquals(setOf(1L, 2L), event?.defaultKeepDeviceIds)
+        // Defaults must be GPS (Slot 1) + first remote sensor HRM (Slot 2)
+        assertEquals(setOf(1L, 3L), event?.defaultKeepDeviceIds)
     }
 
     @Test
@@ -240,7 +249,112 @@ class SensorQuotaReconciliationManagerTest {
         manager.dismissKeepTwoSensors()
         advanceUntilIdle()
 
-        coVerify(exactly = 1) { mockDeviceRepo.reconcilePairedDevices(setOf(1L, 2L)) }
+        coVerify(exactly = 1) { mockDeviceRepo.reconcilePairedDevices(setOf(1L, 3L)) }
         assertNull("Event must be cleared after dismissal", manager.keepTwoSensorsDialogEvent.value)
+    }
+
+    @Test
+    fun testDetermineDefaultKeepDeviceIds_bothGpsAndFusedPaired_preselectsFusedAndActiveRemote() {
+        val manager = SensorQuotaReconciliationManager(
+            context = mockContext,
+            devicesDBRepository = mockDeviceRepo,
+            proFeatureManager = mockProFeatureManager,
+            isTrackingProvider = { false }
+        )
+
+        val pairedGps = createUiDevice(1L, DeviceType.SPEED_AND_LOCATION_GPS)
+        val pairedFused = createUiDevice(2L, DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED)
+        val pairedHrm = createUiDevice(3L, DeviceType.HRM, isConnected = false, lastSeen = "2026-11-06 10:00:00")
+        val pairedPwr = createUiDevice(4L, DeviceType.BIKE_POWER, isConnected = true, lastSeen = "2026-11-06 09:00:00")
+
+        val result = manager.determineDefaultKeepDeviceIds(listOf(pairedGps, pairedFused, pairedHrm, pairedPwr))
+
+        // Slot 1: Google Fused (2L) preferred over GPS (1L)
+        // Slot 2: Connected BIKE_POWER (4L) preferred over disconnected HRM (3L)
+        assertEquals(setOf(2L, 4L), result)
+    }
+
+    @Test
+    fun testDetermineDefaultKeepDeviceIds_remoteSensorsSortedByLastSeenTimestamp() {
+        val manager = SensorQuotaReconciliationManager(
+            context = mockContext,
+            devicesDBRepository = mockDeviceRepo,
+            proFeatureManager = mockProFeatureManager,
+            isTrackingProvider = { false }
+        )
+
+        val pairedGps = createUiDevice(1L, DeviceType.SPEED_AND_LOCATION_GPS)
+        val pairedHrm = createUiDevice(3L, DeviceType.HRM, isConnected = false, lastSeen = "2026-11-06 12:00:00")
+        val pairedPwr = createUiDevice(4L, DeviceType.BIKE_POWER, isConnected = false, lastSeen = "2026-11-06 08:00:00")
+
+        val result = manager.determineDefaultKeepDeviceIds(listOf(pairedGps, pairedPwr, pairedHrm))
+
+        // Slot 1: GPS (1L)
+        // Slot 2: HRM (3L) with newer lastSeen timestamp over Power (4L)
+        assertEquals(setOf(1L, 3L), result)
+    }
+
+    @Test
+    fun testDetermineDefaultKeepDeviceIds_onlyFusedPaired_preservesFusedAndActiveRemote() {
+        val manager = SensorQuotaReconciliationManager(
+            context = mockContext,
+            devicesDBRepository = mockDeviceRepo,
+            proFeatureManager = mockProFeatureManager,
+            isTrackingProvider = { false }
+        )
+
+        val pairedFused = createUiDevice(2L, DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED)
+        val pairedHrm = createUiDevice(3L, DeviceType.HRM)
+        val pairedBaro = createUiDevice(5L, DeviceType.ALTITUDE_FROM_PRESSURE)
+
+        val result = manager.determineDefaultKeepDeviceIds(listOf(pairedFused, pairedHrm, pairedBaro))
+
+        // Slot 1: Google Fused (2L)
+        // Slot 2: Remote HRM (3L)
+        assertEquals(setOf(2L, 3L), result)
+    }
+
+    @Test
+    fun testDetermineDefaultKeepDeviceIds_noRemoteSensors_fallsBackToBarometer() {
+        val manager = SensorQuotaReconciliationManager(
+            context = mockContext,
+            devicesDBRepository = mockDeviceRepo,
+            proFeatureManager = mockProFeatureManager,
+            isTrackingProvider = { false }
+        )
+
+        val pairedGps = createUiDevice(1L, DeviceType.SPEED_AND_LOCATION_GPS)
+        val pairedFused = createUiDevice(2L, DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED)
+        val pairedBaro = createUiDevice(3L, DeviceType.ALTITUDE_FROM_PRESSURE)
+
+        val result = manager.determineDefaultKeepDeviceIds(listOf(pairedGps, pairedFused, pairedBaro))
+
+        // Slot 1: Google Fused (2L)
+        // Slot 2: Barometer fallback (3L)
+        assertEquals(setOf(2L, 3L), result)
+    }
+
+    @Test
+    fun testDetermineRecommendedUnpairDeviceId_unpairHierarchy() {
+        val manager = SensorQuotaReconciliationManager(
+            context = mockContext,
+            devicesDBRepository = mockDeviceRepo,
+            proFeatureManager = mockProFeatureManager,
+            isTrackingProvider = { false }
+        )
+
+        val pairedGps = createUiDevice(1L, DeviceType.SPEED_AND_LOCATION_GPS)
+        val pairedFused = createUiDevice(2L, DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED)
+        val pairedBaro = createUiDevice(3L, DeviceType.ALTITUDE_FROM_PRESSURE)
+        val pairedHrm = createUiDevice(4L, DeviceType.HRM)
+
+        // 1. Barometer present -> recommend unpairing Barometer first
+        assertEquals(3L, manager.determineRecommendedUnpairDeviceId(listOf(pairedGps, pairedFused, pairedBaro, pairedHrm)))
+
+        // 2. Both Fused and GPS present without Barometer -> recommend unpairing GPS next
+        assertEquals(1L, manager.determineRecommendedUnpairDeviceId(listOf(pairedGps, pairedFused, pairedHrm)))
+
+        // 3. Only Fused + Remote present -> recommend first device
+        assertEquals(2L, manager.determineRecommendedUnpairDeviceId(listOf(pairedFused, pairedHrm)))
     }
 }

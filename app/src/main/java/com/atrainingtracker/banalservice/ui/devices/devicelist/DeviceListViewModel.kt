@@ -248,12 +248,8 @@ class DeviceListViewModel @JvmOverloads constructor(
         return reconciliationManager.determineDefaultKeepDeviceIds(pairedDevices)
     }
 
-    private fun determineRecommendedUnpairDeviceId(pairedDevices: List<DeviceUiData>): Long {
-        val barometer = pairedDevices.firstOrNull { it.deviceType == DeviceType.ALTITUDE_FROM_PRESSURE }
-        if (barometer != null) return barometer.id
-        val gps = pairedDevices.firstOrNull { it.deviceType == DeviceType.SPEED_AND_LOCATION_GPS }
-        if (gps != null) return gps.id
-        return pairedDevices.firstOrNull()?.id ?: -1L
+    fun determineRecommendedUnpairDeviceId(pairedDevices: List<DeviceUiData>): Long {
+        return reconciliationManager.determineRecommendedUnpairDeviceId(pairedDevices)
     }
 
     private suspend fun checkZoneOnboarding(device: DeviceUiData) {
