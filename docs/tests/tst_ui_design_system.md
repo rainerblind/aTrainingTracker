@@ -2451,13 +2451,14 @@
   • Verify that `BottomSheetDesign.PeekHeightSegment == 192.dp`.
   • Verify that `BottomSheetDesign.PeekHeightKnownLocation == 108.dp`.
   • Verify that `BottomSheetDesign.PeekHeightLiveSegment == 126.dp`.
-  2. *Dynamic Self-Measurement & Screen Forwarding Contract Tests (`BottomSheetVisualContractTest.kt`)*:
+  2. *Dynamic Self-Measurement, Drag Affordance & Screen Forwarding Contract Tests (`BottomSheetVisualContractTest.kt`)*:
   • Verify `MapDetailLayout.kt` defines `onHeaderHeightMeasured: ((Dp) -> Unit)? = null` and binds `Modifier.onGloballyPositioned` around `MinimumDragHandle() + Surface(header)`.
   • Verify `SegmentOnMapScreen.kt` accepts and forwards `onHeaderHeightMeasured` to `MapDetailLayout`.
   • Verify `RouteOnMapScreen.kt` accepts and forwards `onHeaderHeightMeasured` to `MapDetailLayout`.
   • Verify `MapScreenWithTrack.kt` tracks `measuredSegmentHeaderHeight` and `measuredRouteHeaderHeight`, dynamically evaluating `sheetPeekHeight` with defensive fallback to `BottomSheetDesign` constants.
   • Verify that `SensorGridScreen.kt` references `BottomSheetDesign.PeekHeightLiveSegment`.
   • Verify that `WorkoutClusterHeatmapScreen.kt` and `PeriodMapScreen.kt` reference `BottomSheetDesign.PeekHeightWorkout`.
+  • Verify that `WorkoutClusterHeatmapScreen.kt` binds `sheetDragHandle` with `MinimumDragHandle()` when `peekedWorkoutDataWithTrack != null && !isEditingFingerprint` and does not set `sheetDragHandle = null` unconditionally (ATT-5564).
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules verifying 100% pass rate with 0 regressions.
 

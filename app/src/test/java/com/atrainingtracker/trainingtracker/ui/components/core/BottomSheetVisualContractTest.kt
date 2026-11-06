@@ -18,9 +18,12 @@
 
 package com.atrainingtracker.trainingtracker.ui.components.core
 
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
+import com.atrainingtracker.trainingtracker.ui.clusters.shouldShowWorkoutPeekDragHandle
 
 /**
  * Visual contract tests verifying that scaffolds, modal sheets, and dialogs consume
@@ -361,5 +364,32 @@ class BottomSheetVisualContractTest {
             "MapScreenWithTrack must pass onHeaderHeightMeasured to RouteOnMapScreen",
             mapWithTrack.contains("onHeaderHeightMeasured = { measuredRouteHeaderHeight = it }")
         )
+    }
+
+    @Test
+    fun testWorkoutClusterHeatmapScreen_dragHandleBehavior() {
+        // Pure behavioral contract test adhering to Section 5.4 (NO File.readText source-grep)
+        // REQ-UI-221, TST-UI-175.7, ATT-5564
+        assertTrue(
+            "Drag handle must be visible when workout is peeked and not editing fingerprint",
+            shouldShowWorkoutPeekDragHandle(hasPeekedWorkout = true, isEditingFingerprint = false)
+        )
+        assertFalse(
+            "Drag handle must be suppressed when no workout is peeked",
+            shouldShowWorkoutPeekDragHandle(hasPeekedWorkout = false, isEditingFingerprint = false)
+        )
+        assertFalse(
+            "Drag handle must be suppressed while editing fingerprint even if workout is peeked",
+            shouldShowWorkoutPeekDragHandle(hasPeekedWorkout = true, isEditingFingerprint = true)
+        )
+        assertFalse(
+            "Drag handle must be suppressed when idle and editing fingerprint",
+            shouldShowWorkoutPeekDragHandle(hasPeekedWorkout = false, isEditingFingerprint = true)
+        )
+
+        // Programmatic reflection verification: ensure shouldShowWorkoutPeekDragHandle exists in WorkoutClusterHeatmapScreenKt
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterHeatmapScreenKt")
+        val method = clazz.declaredMethods.find { it.name == "shouldShowWorkoutPeekDragHandle" }
+        assertNotNull("shouldShowWorkoutPeekDragHandle method must exist in WorkoutClusterHeatmapScreenKt", method)
     }
 }

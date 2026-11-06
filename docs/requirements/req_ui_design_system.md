@@ -4061,10 +4061,11 @@ Specifically:
 2. *System Navigation Bar Inset Factoring*:
 • Every persistent sheet peek height SHALL strictly incorporate the bottom system navigation bar insets: `sheetPeekHeight = BottomSheetDesign.PeekHeight* + navBarHeight` where `navBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()`. When collapsed or unselected, peek height SHALL be `0.dp`.
 • For routes, `MapScreenWithTrack.kt` SHALL dynamically evaluate `routeSummary?.description.isNullOrEmpty()` to select `PeekHeightRoute` or `PeekHeightRouteWithDescription`.
-3. *Screen-Level Token Adoption*:
+3. *Screen-Level Token Adoption & Drag Affordance*:
 • `MapScreenWithTrack.kt` SHALL consume `PeekHeightSegment`, `PeekHeightRoute`, `PeekHeightRouteWithDescription`, and `PeekHeightKnownLocation`.
 • `SensorGridScreen.kt` SHALL consume `PeekHeightLiveSegment`.
 • `WorkoutClusterHeatmapScreen.kt` and `PeriodMapScreen.kt` SHALL consume `PeekHeightWorkout`.
+• In `WorkoutClusterHeatmapScreen.kt`, `BottomSheetScaffold` SHALL display a visual drag handle via `sheetDragHandle = if (peekedWorkoutDataWithTrack != null && !isEditingFingerprint) { { MinimumDragHandle() } } else null`, providing a subtle drag affordance (`MinimumDragHandle`, `REQ-UI-196`) when a workout peek is active, and suppressing it when no workout is peeked or while editing the cluster fingerprint (ATT-5564).
 • Zero hardcoded raw peek height literals SHALL remain in screen composables.
 4. *Dynamic Self-Measuring Header Peek Architecture (`MapDetailLayout.kt` / `MapScreenWithTrack.kt`)*:
 • In `MapDetailLayout.kt`, when `useStatusBarsPadding == false`, the header container (`MinimumDragHandle() + Surface(header)`) SHALL measure its rendered layout height via `Modifier.onGloballyPositioned` and convert to Dp via `LocalDensity.current`.
@@ -4076,15 +4077,21 @@ Specifically:
 • Defensive fallback to `BottomSheetDesign` constants is preserved when dynamic measurement is pending or unavailable.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement (`REQ-UI-221`), refining and centralizing peek height specifications across `REQ-SET-069` and `REQ-UI-180` under Epic `ATT-355` (*Good and consistent UI*).
-2. *Historical Origin & Commit Trace*: Sprint `2026-40.8` (Commit `9c3dd09e`, ATT-1645) and Sprint `2026-40.11` (Dynamic Self-Measuring Peeks).
-3. *Root Reason for Existing Formulation*: Static baseline tokens (156dp/192dp for segments, 112dp/152dp for routes) failed under system font scaling, display zoom, and multi-line titles on physical Pixel 10 hardware, occluding the altitude row or descriptions behind the navigation bar.
-4. *Preservation of Core Invariants*: Status bar boundary constraints (`REQ-SET-069`), navigation bar padding additions, fallback tokens, and sheet gesture handling are 100% strictly preserved.
+1. *Original Requirement ID & Target*: Amends `REQ-UI-221` (*Standardized Bottom Sheet Peek Height Baselines*) targeting `WorkoutClusterHeatmapScreen.kt` and `BottomSheetVisualContractTest.kt`, referencing `REQ-UI-196` (*Subtle Drag Handle Affordance & Unified Sheet Styling*).
+2. *Historical Origin & Commit Trace*: Sprint `2026-40.8` (Commit `9c3dd09e`, ATT-1645), Sprint `2026-40.11` (Dynamic Self-Measuring Peeks), and Sprint Review `2026-45.7` (ATT-5485 / ATT-5564).
+3. *Root Reason for Existing Formulation*: Static baseline tokens failed under system font scaling; `sheetDragHandle = null` was originally set to keep the top of `TrackOnMapScreen` flush, overlooking that athletes need a visual drag affordance to discover expandable workout details.
+4. *Preservation of Core Invariants*: Status bar boundary constraints (`REQ-SET-069`), navigation bar padding additions, fallback tokens, `MinimumDragHandle` design dimensions, and fingerprint editing state transitions remain 100% strictly preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete peeking a workout in `WorkoutClusterHeatmapScreen` or `PeriodMapScreen`,
 • *When* the bottom sheet is in its initial collapsed peek state,
 • *Then* the entire `WorkoutHeader`—including sport icon, workout title, cluster badge, sport name, equipment, and start date/time—SHALL be 100% visible above the system navigation bar without vertical clipping.
+• *Given* an athlete peeking a workout on `WorkoutClusterHeatmapScreen`,
+• *When* the workout bottom sheet peeks or expands,
+• *Then* a visual drag handle (`MinimumDragHandle()`) SHALL be displayed at the top of the sheet.
+• *Given* an athlete on `WorkoutClusterHeatmapScreen` without a peeked workout or while in fingerprint editing mode (`isEditingFingerprint == true`),
+• *When* the bottom sheet is hidden,
+• *Then* `sheetDragHandle` SHALL be `null`.
 • *Given* an athlete selecting a route with description on `MapScreenWithTrack`,
 • *When* the route bottom sheet peeks,
 • *Then* the description text row SHALL be 100% visible above the navigation bar.
