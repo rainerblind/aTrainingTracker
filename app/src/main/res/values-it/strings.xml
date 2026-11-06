@@ -2266,8 +2266,8 @@
     <string name="supporter_tier_free">Gratuito</string>
     <string name="supporter_tier_pioneer">★ Pioniere ★</string>
     <string name="supporter_tier_bronze">Sostenitore Bronzo</string>
-    <string name="supporter_tier_silver">Sostenitore Argento</string>
-    <string name="supporter_tier_gold">Sostenitore Oro</string>
+    <string name="supporter_tier_silver">Pro Sostenitore Argento</string>
+    <string name="supporter_tier_gold">Pro+ Sostenitore Oro</string>
     <string name="supporter_tier_diamond">Sponsor Diamante</string>
     <string name="supporter_screen_title">Paga quanto vuoi</string>
     <string name="supporter_screen_subtitle" formatted="false">Sostieni il tracciamento fitness indipendente e mantieni aTrainingTracker 100% senza pubblicità.</string>
@@ -2293,8 +2293,8 @@
     <string name="keep_two_sensors_action_unlock">Sblocca sensori illimitati</string>
     <string name="drawer_supporter">Sostenitore &amp; Pro</string>
     <string name="drawer_tier_diamond">◆ SPONSOR DIAMANTE • Sensori illimitati</string>
-    <string name="drawer_tier_gold">★ PRO-SUPPORTER ORO</string>
-    <string name="drawer_tier_silver">★ PRO-SUPPORTER ARGENTO</string>
+    <string name="drawer_tier_gold">★ PRO+ SUPPORTER ORO</string>
+    <string name="drawer_tier_silver">★ PRO SUPPORTER ARGENTO</string>
     <string name="drawer_tier_bronze">★ SUPPORTER BRONZO</string>
     <string name="drawer_tier_pioneer_with_year">★ Pioniere (Dal %1$d)</string>
     <string name="drawer_tier_pioneer">★ Pioniere</string>
@@ -2321,7 +2321,7 @@
     <!-- Supporter N+1 Garage Detector (ATT-5299 / REQ-SET-088) -->
     <string name="garage_detector_dialog_title_gold">Garage di Lega Oro rilevato!</string>
     <string name="garage_detector_dialog_title_diamond">Garage Diamante di classe mondiale!</string>
-    <string name="garage_detector_dialog_message_gold">Congratulazioni per le tue %1$d bici, %2$d scarpe e %3$d sensori (inclusi %4$d potenziometri) in aTrainingTracker! La tua attrezzatura è da professionisti, ma il tuo stato è %5$s. Passa al livello Sostenitore Oro!</string>
+    <string name="garage_detector_dialog_message_gold">Congratulazioni per le tue %1$d bici, %2$d scarpe e %3$d sensori (inclusi %4$d potenziometri) in aTrainingTracker! La tua attrezzatura è da professionisti, ma il tuo stato è %5$s. Passa al livello Sostenitore Oro Pro+!</string>
     <string name="garage_detector_dialog_message_diamond">Attrezzatura incredibile: %1$d bici, %2$d scarpe e %3$d sensori (inclusi %4$d potenziometri) in aTrainingTracker! Il tuo garage è di classe mondiale, ma il tuo stato è %5$s. Corona il tuo parco mezzi con Sponsor Diamante!</string>
     <string name="garage_detector_action_upgrade_gold">Passa a Oro Pro (50 € / anno)</string>
     <string name="garage_detector_action_upgrade_diamond">Passa a Sponsor Diamant (100 € / anno)</string>
@@ -2336,8 +2336,8 @@
     <string name="launcher_icon_standard">Standard</string>
     <string name="launcher_icon_pioneer">Edizione Pioneer</string>
     <string name="launcher_icon_bronze">Supporter Bronzo</string>
-    <string name="launcher_icon_silver">Pro-Supporter Argento</string>
-    <string name="launcher_icon_gold">Pro-Supporter Oro</string>
+    <string name="launcher_icon_silver">Pro Sostenitore Argento</string>
+    <string name="launcher_icon_gold">Pro+ Sostenitore Oro</string>
     <string name="launcher_icon_diamond">Sponsor Diamante</string>
     <string name="supporter_status_emblem_cd">Emblema di stato Supporter</string>
     <string name="share_watermark_tracked_with">Registrato con aTrainingTracker</string>

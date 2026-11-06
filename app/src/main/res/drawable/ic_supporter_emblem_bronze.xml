@@ -4,24 +4,28 @@
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-    <!-- 3. Bronze Supporter 24dp Cockpit Emblem (REQ-UI-445) -->
+    <!-- 3. Bronze Supporter 24dp Cockpit Emblem: B5 Participant Rosette Ribbon (ATT-5496) -->
     <path
-        android:fillColor="#1E3A8A"
-        android:pathData="M 5.35,2.30 L 10.25,2.30 L 12.35,10.70 L 8.50,10.70 Z" />
+        android:fillColor="#9A3412"
+        android:strokeColor="#431407"
+        android:strokeWidth="0.85"
+        android:strokeLineJoin="round"
+        android:pathData="M 9.20,12.50 L 6.50,21.80 L 8.80,20.20 L 10.40,22.00 L 11.80,13.00 Z" />
     <path
-        android:fillColor="#B91C1C"
-        android:pathData="M 18.65,2.30 L 13.75,2.30 L 11.65,10.70 L 15.50,10.70 Z" />
+        android:fillColor="#9A3412"
+        android:strokeColor="#431407"
+        android:strokeWidth="0.85"
+        android:strokeLineJoin="round"
+        android:pathData="M 14.80,12.50 L 17.50,21.80 L 15.20,20.20 L 13.60,22.00 L 12.20,13.00 Z" />
     <path
         android:fillColor="#CD7F32"
-        android:strokeColor="#6E3B16"
-        android:strokeWidth="1.14"
-        android:pathData="M 12.00,6.15 A 8.75,8.75 0 1,0 12.00,23.65 A 8.75,8.75 0 1,0 12.00,6.15 Z" />
+        android:strokeColor="#5C2D0C"
+        android:strokeWidth="1.00"
+        android:strokeLineJoin="round"
+        android:pathData="M 18.80,10.00 L 17.41,11.45 L 17.89,13.40 L 15.96,13.96 L 15.40,15.89 L 13.45,15.41 L 12.00,16.80 L 10.55,15.41 L 8.60,15.89 L 8.04,13.96 L 6.11,13.40 L 6.59,11.45 L 5.20,10.00 L 6.59,8.55 L 6.11,6.60 L 8.04,6.04 L 8.60,4.11 L 10.55,4.59 L 12.00,3.20 L 13.45,4.59 L 15.40,4.11 L 15.96,6.04 L 17.89,6.60 L 17.41,8.55 Z" />
     <path
         android:fillColor="#A05A2C"
-        android:strokeColor="#FFE0B2"
-        android:strokeWidth="0.61"
-        android:pathData="M 12.00,8.60 A 6.30,6.30 0 1,0 12.00,21.20 A 6.30,6.30 0 1,0 12.00,8.60 Z" />
-    <path
-        android:fillColor="#FFE0B2"
-        android:pathData="M 12.00,10.70 L 13.03,13.48 L 15.99,13.60 L 13.66,15.44 L 14.47,18.30 L 12.00,16.65 L 9.53,18.30 L 10.34,15.44 L 8.01,13.60 L 10.97,13.48 Z" />
+        android:strokeColor="#FED7AA"
+        android:strokeWidth="0.70"
+        android:pathData="M 8.20,10.00 A 3.80,3.80 0 1,0 15.80,10.00 A 3.80,3.80 0 1,0 8.20,10.00 Z" />
 </vector>

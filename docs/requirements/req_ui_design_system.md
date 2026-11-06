@@ -13029,18 +13029,18 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 ---
 
 ### REQ-UI-445: Supporter Badges: Custom Launcher Icons, Cockpit Status Emblem, Navigation Drawer & Share Watermark [Verified]
-- **Tests**: `TST-UI-445`, `TST-LOC-001` | **Tickets**: `ATT-1406`, `ATT-5372`, `ATT-5397`
-- **Implementation**: `LauncherIconManager.kt`, `SensorStatus.kt`, `AppNavigationDrawer.kt`, `ShareUtils.kt`, `AndroidManifest.xml`, `res/mipmap-anydpi-v26/`, `res/drawable/`
-- **Rationale**: To provide visible recognition for athletes supporting development via Supporter subscriptions (Bronze, Silver, Gold, Diamond) or recognized as Pioneer Early Adopters (ATT-51), the system SHALL introduce customizable homescreen launcher icons (Option A), a live Cockpit status emblem, Navigation Drawer branding, and a workout share watermark, while strictly preserving 100% of authentic Cervélo P3C and classic stopwatch colors (ATT-1482):
-1. *Option A Adaptive Launcher Icons with Safe-Zone Compliance (`REQ-UI-445.1`)*:
+- **Tests**: `TST-UI-445`, `TST-LOC-001` | **Tickets**: `ATT-1406`, `ATT-5372`, `ATT-5397`, `ATT-5496`
+- **Implementation**: `LauncherIconManager.kt`, `SensorStatus.kt`, `AppNavigationDrawer.kt`, `SupporterComponents.kt`, `ShareUtils.kt`, `AndroidManifest.xml`, `res/mipmap-anydpi-v26/`, `res/drawable/`
+- **Rationale**: To provide visible recognition for athletes supporting development via Supporter subscriptions (Bronze, Silver, Gold, Diamond) or recognized as Pioneer Early Adopters (ATT-51), the system SHALL introduce customizable homescreen launcher icons (Option A / Variant C), a live Cockpit status emblem, Navigation Drawer branding, full-color emblems in the Supporter screen, and a workout share watermark, while strictly preserving 100% of authentic Cervélo P3C and classic stopwatch colors (ATT-1482, ATT-5496):
+1. *Variant C Adaptive Launcher Icons with Safe-Zone Compliance (`REQ-UI-445.1` / `ATT-5496`)*:
 • The application SHALL provide 6 adaptive launcher icon variants (`STANDARD`, `PIONEER`, `BRONZE`, `SILVER`, `GOLD`, `DIAMOND`) under `res/mipmap-anydpi-v26/` and `res/drawable/`.
-• Every supporter launcher icon SHALL implement Option A: built directly upon the corrected `ATT-1482` base vector (smooth cubic Béziers `C`/`c` for royal blue `#0000FF` cyclist back/hip at depth 50, black saddle `#000000` at depth 53 with zero protrusion, flush stopwatch pushers on thick `#FFC700` stems, safe zone $33.0 \le r \le 34.5\text{dp}$ on 108dp canvas) combined with a Top-Right Emblem pocket at `cx=67.6, cy=31.8` and a Bottom Tier Ribbon ($y=74.8..83.0$, $|x| \le 15.7\text{dp}$):
+• Every supporter launcher icon SHALL implement Variant C: built directly upon the corrected `ATT-1482` base vector (smooth cubic Béziers `C`/`c` for royal blue `#0000FF` cyclist back/hip at depth 50, black saddle `#000000` at depth 53 with zero protrusion, flush stopwatch pushers on thick `#FFC700` stems, safe zone $33.0 \le r \le 34.5\text{dp}$ on 108dp canvas) with a centered compact colored text stadium block flanked freely on the left and right by full-color tier emblems on the crisp `#FFFFFF` background:
   a. Standard: Authentic Cervélo P3C & classic stopwatch adaptive icon without badge overlays.
-  b. Pioneer Edition: Emerald & Gold Heritage Star emblem at top-right, `★ PIONEER ★` ribbon at bottom, emerald border ring.
-  c. Bronze Supporter: Bronze Medal on neck ribbon at top-right, `SUPPORTER` bronze ribbon at bottom, bronze border ring.
-  d. Silver Pro-Supporter: Silver Medal on neck ribbon at top-right, `PRO-SUPPORTER` silver ribbon at bottom, silver border ring.
-  e. Gold Pro-Supporter: 24K Gold Medal on neck ribbon at top-right, `PRO-SUPPORTER` gold ribbon at bottom, gold border ring.
-  f. Diamond Sponsor: Faceted Brilliant-Cut Cyan/Ice Diamond with sparkle at top-right, `◆ SPONSOR ◆` diamond-blue ribbon at bottom, cyan-blue border ring.
+  b. Pioneer Edition: Emerald `PIONEER` text block flanked by emerald-and-gold Pioneer emblems on `#FFFFFF`, emerald border ring.
+  c. Bronze Supporter: Bronze `SUPPORTER` text block flanked by Variant B5 Participant Rosettes on `#FFFFFF`, bronze border ring.
+  d. Silver Pro Supporter: Silver `PRO SUPPORTER` text block flanked by Variant S4-A Single-Rim 3D Silver Coins on `#FFFFFF`, silver border ring.
+  e. Gold Pro+ Supporter: Gold `PRO+ SUPPORTER` text block flanked by Variant G6 Gold Bar + Coin on `#FFFFFF`, gold border ring.
+  f. Diamond Sponsor: Diamond-blue `SPONSOR` text block flanked by Faceted Brilliant-Cut Diamonds on `#FFFFFF`, cyan-blue border ring.
 • All 6 launcher icon foreground drawables SHALL preserve 100% authentic Cervélo P3C bike (red frame `#FF0000`, carbon wheels/saddle `#000000`), classic stopwatch (golden bezel `#FFC700`, dial `#F0F0F0`, pushers `#000090`, `#FF0000`, `#009000`), and royal blue athletes (`#0000FF`).
 • All vector paths across all 6 icons SHALL fit strictly inside the safe zone ($33.0 \le r \le 34.5\text{dp}$) on the 108dp canvas, guaranteeing zero clipping across Circle, Squircle, Rounded Square, and Teardrop launcher masks.
 2. *Activity-Alias Manifest Architecture & Deferred Automatic Tier Synchronization (`REQ-UI-445.2`)*:
@@ -13048,14 +13048,16 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • The system SHALL provide `LauncherIconManager` observing `ProcessLifecycleOwner` lifecycle.
 • `LauncherIconManager` SHALL automatically synchronize the homescreen launcher icon with `ProFeatureManager.effectiveTier` via `LauncherIconVariant.fromTier(effectiveTier)` (`FREE -> STANDARD`, `PIONEER -> PIONEER`, `BRONZE -> BRONZE`, `SILVER -> SILVER`, `GOLD -> GOLD`, `DIAMOND -> DIAMOND`) (ATT-5397). Manual icon selection and `SettingsDataStore.selectedLauncherIcon` are retired.
 • The system SHALL apply `PackageManager.setComponentEnabledSetting` with `PackageManager.DONT_KILL_APP` deferred until the application transitions to the background (`onStop`) AND no active workout recording is running (`!TrainingApplication.isTracking()`). The app process or active workout SHALL NEVER be killed or restarted.
-3. *Live Cockpit Status Emblem & Retirement of Quick Icon Picker Dialog (`REQ-UI-445.3` / `ATT-5372`, `ATT-5397`)*:
-• In `SensorStatus.kt` (top sensor status bar of the Tracking Cockpit), the system SHALL render a pure 24dp vector emblem (Bronze Medal, Silver Medal, 24K Gold Medal, Faceted Brilliant Diamond, or Pioneer Star — without text) at the right end of the row, symmetrically balancing the 24dp menu button on the left while keeping the 8 sensor icons centered.
+3. *Live Cockpit Status Emblem & Supporter Screen Emblems (`REQ-UI-445.3` / `ATT-5372`, `ATT-5397`, `ATT-5496`)*:
+• In `SensorStatus.kt` (top sensor status bar of the Tracking Cockpit), the system SHALL render a pure 24dp vector emblem (B5 Participant Rosette, S4-A Silver Coins, G6 Gold Bar + Coin, Faceted Brilliant Diamond, or Pioneer Star — without text) at the right end of the row, symmetrically balancing the 24dp menu button on the left while keeping the 8 sensor icons centered.
 • Tapping the emblem in `SensorStatus.kt` SHALL NOT open an icon picker dialog; it renders as a non-modal supporter status emblem (or navigates directly to `SupporterScreen`) (ATT-5397).
+• `SupporterPlanCard` in `SupporterComponents.kt` SHALL display its corresponding full-color tier emblem (`44.dp`, `Color.Unspecified`) on the left, and `ActiveTierBanner` and `PioneerStatusBanner` SHALL display their full-color tier emblem (`36.dp`, `Color.Unspecified`) on the left (ATT-5496).
 • `SupporterQuickIconPickerDialog.kt` and `supporter_quick_picker_*` string resources SHALL be retired and removed from the codebase.
-4. *Navigation Drawer Header Recognition (`REQ-UI-445.4`)*:
+4. *Navigation Drawer Header Recognition & 9-Locale Tier Naming (`REQ-UI-445.4` / `ATT-5496`)*:
 • In `AppNavigationDrawer.DrawerHeader`, the system SHALL preserve the original clean single-line header layout (`46.dp` icon on the left + `"a Training Tracker"` title on the right over `menu_header_background`, without any text pill below the title) and render the active custom Cervélo P3C supporter icon matching `effectiveTier` directly (`foregroundRes` scaled by `1.81f` to compensate for the 108dp adaptive-icon safe-zone margin so its visual size matches `R.drawable.logo_512` at `46.dp` 1:1) without manual icon picking (ATT-5397).
+• All 9 locales SHALL maintain consistent verbal progression: Bronze `SUPPORTER`, Silver `PRO SUPPORTER` (unhyphenated), Gold `PRO+ SUPPORTER` (with `+`), and Diamond `SPONSOR` across `supporter_tier_*`, `drawer_tier_*`, `launcher_icon_*`, and `garage_detector_dialog_message_gold` (ATT-5496).
 5. *Social Share Workout Watermark (`REQ-UI-445.5`)*:
-• In `ShareUtils.kt` (`combineWorkoutAndShare` and `combinePeriodAndShare`), the footer watermark signature bar SHALL render the mini Cervélo P3C icon, "Tracked with aTrainingTracker", and the user's active supporter tier pill (`★ GOLD PRO`, `◆ SPONSOR`, `★ PIONEER`, etc.).
+• In `ShareUtils.kt` (`combineWorkoutAndShare` and `combinePeriodAndShare`), the footer watermark signature bar SHALL render the mini Cervélo P3C icon, "Tracked with aTrainingTracker", and the user's active supporter tier pill (`★ GOLD PRO+`, `◆ SPONSOR`, `★ PIONEER`, etc.).
 6. *Tier Unlock Hierarchy & Debug Override (`REQ-UI-445.6`)*:
 • Higher supporter tiers SHALL automatically unlock all lower-tier launcher icons (and Pioneer early adopters additionally unlock Pioneer Edition).
 • In `AdvancedSettings` when `BuildConfig.DEBUG == true`, the system SHALL expose a developer tier override selector (`AUTO`, `FREE`, `PIONEER`, `BRONZE`, `SILVER`, `GOLD`, `DIAMOND`) allowing instant 1-tap testing of all 6 tiers and badges.

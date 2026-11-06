@@ -2264,8 +2264,8 @@
     <string name="supporter_tier_free">Grátis</string>
     <string name="supporter_tier_pioneer">★ Pioneiro ★</string>
     <string name="supporter_tier_bronze">Apoiador Bronze</string>
-    <string name="supporter_tier_silver">Apoiador Prata</string>
-    <string name="supporter_tier_gold">Apoiador Ouro</string>
+    <string name="supporter_tier_silver">Pro Apoiador Prata</string>
+    <string name="supporter_tier_gold">Pro+ Apoiador Ouro</string>
     <string name="supporter_tier_diamond">Patrocinador Diamante</string>
     <string name="supporter_screen_title">Pague o quanto quiser</string>
     <string name="supporter_screen_subtitle" formatted="false">Apoie o rastreamento independente de fitness e mantenha o aTrainingTracker 100% sem anúncios.</string>
@@ -2291,8 +2291,8 @@
     <string name="keep_two_sensors_action_unlock">Desbloquear sensores ilimitados</string>
     <string name="drawer_supporter">Apoiador e Pro</string>
     <string name="drawer_tier_diamond">◆ PATROCINADOR DIAMANTE • Sensores ilimitados</string>
-    <string name="drawer_tier_gold">★ PRO-SUPPORTER OURO</string>
-    <string name="drawer_tier_silver">★ PRO-SUPPORTER PRATA</string>
+    <string name="drawer_tier_gold">★ PRO+ SUPPORTER OURO</string>
+    <string name="drawer_tier_silver">★ PRO SUPPORTER PRATA</string>
     <string name="drawer_tier_bronze">★ SUPPORTER BRONZE</string>
     <string name="drawer_tier_pioneer_with_year">★ Pioneiro (Desde %1$d)</string>
     <string name="drawer_tier_pioneer">★ Pioneiro</string>
@@ -2319,7 +2319,7 @@
     <!-- Supporter N+1 Garage Detector (ATT-5299 / REQ-SET-088) -->
     <string name="garage_detector_dialog_title_gold">Garagem de nível Ouro detetada!</string>
     <string name="garage_detector_dialog_title_diamond">Garagem Diamante de nível mundial!</string>
-    <string name="garage_detector_dialog_message_gold">Parabéns pelas suas %1$d bicicletas, %2$d sapatilhas e %3$d sensores (incl. %4$d medidores de potência) no aTrainingTracker! A sua garagem joga na liga profissional, mas o seu estado é %5$s. Ofereça ao seu cockpit o nível Apoiante Ouro!</string>
+    <string name="garage_detector_dialog_message_gold">Parabéns pelas suas %1$d bicicletas, %2$d sapatilhas e %3$d sensores (incl. %4$d medidores de potência) no aTrainingTracker! A sua garagem joga na liga profissional, mas o seu estado é %5$s. Ofereça ao seu cockpit o nível Apoiante Ouro Pro+!</string>
     <string name="garage_detector_dialog_message_diamond">Equipamento incrível: %1$d bicicletas, %2$d sapatilhas e %3$d sensores (incl. %4$d medidores de potência) no aTrainingTracker! A sua garagem é de nível mundial, mas o seu estado é %5$s. Coroe a sua frota com Patrocinador Diamante!</string>
     <string name="garage_detector_action_upgrade_gold">Atualizar para Ouro Pro (50 € / ano)</string>
     <string name="garage_detector_action_upgrade_diamond">Atualizar para Patrocinador Diamante (100 € / ano)</string>
@@ -2334,8 +2334,8 @@
     <string name="launcher_icon_standard">Padrão</string>
     <string name="launcher_icon_pioneer">Edição Pioneer</string>
     <string name="launcher_icon_bronze">Supporter Bronze</string>
-    <string name="launcher_icon_silver">Pro-Supporter Prata</string>
-    <string name="launcher_icon_gold">Pro-Supporter Ouro</string>
+    <string name="launcher_icon_silver">Pro Supporter Prata</string>
+    <string name="launcher_icon_gold">Pro+ Supporter Ouro</string>
     <string name="launcher_icon_diamond">Patrocinador Diamante</string>
     <string name="supporter_status_emblem_cd">Emblema de status Supporter</string>
     <string name="share_watermark_tracked_with">Rastreado com aTrainingTracker</string>

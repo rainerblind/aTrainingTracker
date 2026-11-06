@@ -2351,8 +2351,8 @@
     <string name="supporter_tier_free">Free</string>
     <string name="supporter_tier_pioneer">★ Pioneer ★</string>
     <string name="supporter_tier_bronze">Bronze-Unterstützer</string>
-    <string name="supporter_tier_silver">Silber-Unterstützer</string>
-    <string name="supporter_tier_gold">Gold-Unterstützer</string>
+    <string name="supporter_tier_silver">Pro-Unterstützer</string>
+    <string name="supporter_tier_gold">Pro+-Unterstützer</string>
     <string name="supporter_tier_diamond">Diamant-Sponsor</string>
     <string name="supporter_screen_title">Pay what you want</string>
     <string name="supporter_screen_subtitle" formatted="false">Unterstütze unabhängiges Fitnesstracking &amp; halte aTrainingTracker 100% werbefrei.</string>
@@ -2378,8 +2378,8 @@
     <string name="keep_two_sensors_action_unlock">Unbegrenzte Sensoren freischalten</string>
     <string name="drawer_supporter">Unterstützer &amp; Pro</string>
     <string name="drawer_tier_diamond">◆ DIAMOND-SPONSOR • Unbegrenzte Sensoren</string>
-    <string name="drawer_tier_gold">★ GOLD PRO-SUPPORTER</string>
-    <string name="drawer_tier_silver">★ SILBER PRO-SUPPORTER</string>
+    <string name="drawer_tier_gold">★ GOLD PRO+ SUPPORTER</string>
+    <string name="drawer_tier_silver">★ SILBER PRO SUPPORTER</string>
     <string name="drawer_tier_bronze">★ BRONZE-SUPPORTER</string>
     <string name="drawer_tier_pioneer_with_year">★ Pioneer (Seit %1$d)</string>
     <string name="drawer_tier_pioneer">★ Pioneer</string>
@@ -2406,7 +2406,7 @@
     <!-- Supporter N+1 Garage Detector (ATT-5299 / REQ-SET-088) -->
     <string name="garage_detector_dialog_title_gold">Gold-Liga Fuhrpark entdeckt!</string>
     <string name="garage_detector_dialog_title_diamond">Weltklasse Diamant-Fuhrpark!</string>
-    <string name="garage_detector_dialog_message_gold">Glückwunsch zu %1$d Fahrrädern, %2$d Laufschuhen und %3$d Sensoren (inkl. %4$d Powermetern) in aTrainingTracker! Dein Fuhrpark spielt längst in der Profiliga – dein App-Status steht aber noch auf %5$s. Gönn deinem Lenker das Upgrade auf Gold Pro-Supporter!</string>
+    <string name="garage_detector_dialog_message_gold">Glückwunsch zu %1$d Fahrrädern, %2$d Laufschuhen und %3$d Sensoren (inkl. %4$d Powermetern) in aTrainingTracker! Dein Fuhrpark spielt längst in der Profiliga – dein App-Status steht aber noch auf %5$s. Gönn deinem Lenker das Upgrade auf Gold Pro+ Supporter!</string>
     <string name="garage_detector_dialog_message_diamond">Unglaublicher Fuhrpark: %1$d Fahrräder, %2$d Laufschuhe und %3$d Sensoren (inkl. %4$d Powermetern) in aTrainingTracker! Deine Garage spielt in der Weltklasse-Liga – dein App-Status steht aber noch auf %5$s. Kröne deinen Fuhrpark mit dem Diamond Sponsor!</string>
     <string name="garage_detector_action_upgrade_gold">Upgrade auf Gold Pro (50 € / Jahr)</string>
     <string name="garage_detector_action_upgrade_diamond">Upgrade auf Diamond Sponsor (100 € / Jahr)</string>
@@ -2421,8 +2421,8 @@
     <string name="launcher_icon_standard">Standard</string>
     <string name="launcher_icon_pioneer">Pioneer Edition</string>
     <string name="launcher_icon_bronze">Bronze Supporter</string>
-    <string name="launcher_icon_silver">Silber Pro-Supporter</string>
-    <string name="launcher_icon_gold">Gold Pro-Supporter</string>
+    <string name="launcher_icon_silver">Silber Pro Supporter</string>
+    <string name="launcher_icon_gold">Gold Pro+ Supporter</string>
     <string name="launcher_icon_diamond">Diamant Sponsor</string>
     <string name="supporter_status_emblem_cd">Supporter-Statussymbol</string>
     <string name="share_watermark_tracked_with">Aufgezeichnet mit aTrainingTracker</string>
