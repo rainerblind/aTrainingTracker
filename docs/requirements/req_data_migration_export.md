@@ -3004,14 +3004,15 @@
 **Invariants**: WorkManager `MAX_RETRIES = 5` cap preserved; credentials isolated in `auth_credentials_prefs.xml`; permanent errors return `shallRetry = false`.
 
 ### REQ-MIG-048: Strava Bulk Export Archive Ingestion Pipeline, Bilingual CSV Metadata Enrichment, Transparent GZIP Decompression, Tolerant XML Deserialization, Equipment Sync, and Duplicate Re-Upload Prevention [Verified]
-- **Tests**: `TST-MIG-046` | **Tickets**: `ATT-4957`
+- **Tests**: `TST-MIG-046` | **Tickets**: `ATT-4957`, `ATT-5471`
 - **Implementation**: `StravaBulkExportImporter.kt`, `StravaCsvParser.kt`, `LegacyImportEngine.kt`, `ImportBackupTabsScreen.kt`, `TrackpointModels.kt`, `EquipmentDbHelper.java`, `StravaUploadDbHelper.java`
 - **Rationale**: Strava provides users with complete account archives (`export_<id>.zip`) containing an authoritative metadata summary (`activities.csv`), user equipment tables (`bikes.csv`, `shoes.csv`), and compressed activity streams (`activities/*.fit.gz`, `*.tcx.gz`, `*.gpx.gz`). To enable seamless migration into `aTrainingTracker` without gigabyte-scale uncompressed disk bloat or XML parser crashes, the system SHALL ingest Strava export archives via streaming ZIP reading, decode compressed stream files transparently, parse bilingual RFC 4180 metadata, sanitize TCX XML declarations against leading whitespace, synchronize equipment, and register Strava activity IDs to prevent duplicate re-upload loops (ATT-4957, extending `REQ-MIG-030`, `REQ-MIG-031`, `REQ-MIG-037`, `REQ-MIG-038`, and `REQ-MIG-040`):
 1. *Streaming ZIP Archive & Transparent GZIP Decompression (`REQ-MIG-048.1`)*:
 • The system SHALL accept Strava bulk export archives (`.zip`) in `ImportBackupTabsScreen` and process entries on-the-fly via streaming (`ZipFile` / `ZipInputStream` and `GZIPInputStream`), directly feeding decompressed streams into `FitWorkoutParser`, `TcxWorkoutParser`, or `GpxWorkoutParser` without staging uncompressed activity files to disk storage.
 • Every archive entry path SHALL be verified against Zip-Slip path traversal vulnerabilities (`REQ-MIG-040`).
-2. *Bilingual & Multi-Line RFC 4180 CSV Metadata Parser (`REQ-MIG-048.2`)*:
-• The system SHALL stream and parse `activities.csv`, supporting both German (`Aktivitäts-ID`, `Dateiname`, `Name der Aktivität`, `Aktivitätsart`, `Aktivitätsbeschreibung`, `Hinweis zur Privatsphäre für Aktivitäten`, `Pendeln`, `Aktivitätsausrüstung`) and English (`Activity ID`, `Filename`, `Activity Name`, `Activity Type`, `Activity Description`, `Activity Private Note`, `Commute`, `Activity Gear`) column aliases.
+2. *Language-Independent & Multi-Line RFC 4180 CSV Metadata Parser (`REQ-MIG-048.2`)*:
+• The system SHALL parse `activities.csv`, `bikes.csv`, and `shoes.csv` independent of athlete export language (FR, ES, IT, NL, PT, PL, JA, etc.) via hybrid column resolution: matching existing German/English aliases when present, auto-detecting the stream filename column via `(?i)^activities/.*` content pattern, and falling back to Strava's fixed canonical column indices (Col 0 ID, Col 1 Date, Col 2 Name, Col 3 Type, Col 4 Description, Col 9 Commute, Col 10 Private Note, Col 11 Gear, Col 12 Filename, Col 102 Media; Col 0 Name, Col 1 Brand, Col 2 Model for gear) (ATT-5471).
+• Unused summary telemetry metric columns (`elapsedTime`, `movingTime`, `distance`, `elevationGain`, `calories`, `avgHr`, `maxHr`, `avgWatts`, `maxWatts`) SHALL be pruned from `StravaActivityRow` and `StravaCsvParser.kt`.
 • The CSV parser SHALL strictly adhere to RFC 4180, handling multiline quoted fields with embedded commas, newlines, and escaped quotes (`""`).
 • Each activity row SHALL be indexed by its relative stream filename under `activities/`.
 3. *Tolerant XML Stream Whitespace Sanitization (`REQ-MIG-048.3`)*:

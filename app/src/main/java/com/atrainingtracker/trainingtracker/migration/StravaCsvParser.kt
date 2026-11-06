@@ -19,9 +19,13 @@ import java.util.Locale
 /**
  * Data transfer model representing a single activity row parsed from Strava's `activities.csv`.
  *
+ * Telemetry streams, timestamps, and lap records are parsed directly from `.fit.gz`, `.tcx.gz`,
+ * and `.gpx.gz` stream files. This DTO encapsulates user-entered and cloud metadata required
+ * for workout enrichment and duplicate re-upload suppression.
+ *
  * Traceability:
- * - REQ-MIG-048.2: Bilingual & Multi-Line RFC 4180 CSV Metadata Parser.
- * - TST-MIG-046.1: Bilingual & Multi-Line RFC 4180 CSV Metadata Parser Verification.
+ * - REQ-MIG-048.2: Language-Independent & Multi-Line RFC 4180 CSV Metadata Parser.
+ * - TST-MIG-046.1: Language-Independent Strava CSV Parsing & Metric Pruning Contract.
  */
 data class StravaActivityRow(
     val activityId: String,
@@ -34,15 +38,6 @@ data class StravaActivityRow(
     val commute: Boolean = false,
     val gearName: String? = null,
     val filename: String? = null,
-    val elapsedTime: Double? = null,
-    val movingTime: Double? = null,
-    val distance: Double? = null,
-    val elevationGain: Double? = null,
-    val calories: Double? = null,
-    val avgHr: Double? = null,
-    val maxHr: Double? = null,
-    val avgWatts: Double? = null,
-    val maxWatts: Double? = null,
     val media: List<String> = emptyList()
 )
 
@@ -57,10 +52,15 @@ data class StravaGearItem(
 )
 
 /**
- * Streaming RFC 4180 compliant CSV parser supporting German/English header aliases,
- * multi-line quoted fields, escaped quotes, and Strava metadata extraction (REQ-MIG-048.2).
+ * Streaming RFC 4180 compliant CSV parser supporting multi-language header aliases,
+ * content pattern auto-detection, fixed canonical column fallbacks, escaped quotes,
+ * and Strava metadata extraction (REQ-MIG-048.2).
  */
 object StravaCsvParser {
+
+    private val FILENAME_PATTERN = Regex("""^activities/[^\s]+""", RegexOption.IGNORE_CASE)
+    private val MEDIA_PATTERN = Regex("""(?:^|\|)media/[^\s]+""", RegexOption.IGNORE_CASE)
+    private val MEDIA_FILE_PATTERN = Regex("""(?:^|/)(?:media/)?[^/\s]+\.(?:jpg|jpeg|png|webp)""", RegexOption.IGNORE_CASE)
 
     /**
      * Parses arbitrary CSV content adhering to RFC 4180 (handling newlines in quotes and escaped `""`).
@@ -125,32 +125,75 @@ object StravaCsvParser {
     }
 
     /**
-     * Parses `activities.csv` into a list of [StravaActivityRow], handling both English and German header names.
+     * Parses `activities.csv` into a list of [StravaActivityRow], handling multi-language header names,
+     * stream filename pattern auto-detection, and Strava's fixed canonical column indices (REQ-MIG-048.2).
      */
     fun parseActivities(reader: Reader): List<StravaActivityRow> {
         val records = parseCsv(reader)
         if (records.isEmpty()) return emptyList()
 
         val headers = records[0].map { normalize(it) }
-        val idIdx = findFirstHeader(headers, "aktivitäts-id", "activity id", "aktivitaets-id")
-        val dateIdx = findFirstHeader(headers, "aktivitätsdatum", "activity date", "aktivitaetsdatum")
-        val nameIdx = findFirstHeader(headers, "name der aktivität", "activity name", "name der aktivitaet", "name")
-        val typeIdx = findFirstHeader(headers, "aktivitätsart", "activity type", "aktivitaetsart", "sport", "type")
-        val descIdx = findFirstHeader(headers, "aktivitätsbeschreibung", "activity description", "aktivitaetsbeschreibung", "description")
-        val noteIdx = findFirstHeader(headers, "hinweis zur privatsphäre für aktivitäten", "activity private note", "private note", "hinweis zur privatsphaere fuer aktivitaeten")
-        val commuteIdx = findFirstHeader(headers, "pendeln", "commute")
-        val gearIdx = findFirstHeader(headers, "aktivitätsausrüstung", "activity gear", "gear", "ausrüstung", "fahrrad", "aktivitaetsausruestung")
-        val filenameIdx = findFirstHeader(headers, "dateiname", "filename", "file name")
-        val elapsedTimeIdx = findFirstHeader(headers, "verstrichene zeit", "elapsed time")
-        val movingTimeIdx = findFirstHeader(headers, "bewegungszeit", "moving time")
-        val distanceIdx = findFirstHeader(headers, "distanz", "distance")
-        val elevIdx = findFirstHeader(headers, "höhenzunahme", "elevation gain", "hoehenzunahme")
-        val calIdx = findFirstHeader(headers, "kalorien", "calories")
-        val avgHrIdx = findFirstHeader(headers, "durchschnittliche herzfrequenz", "average heart rate")
-        val maxHrIdx = findFirstHeader(headers, "max. herzfrequenz", "max heart rate")
-        val avgWattsIdx = findFirstHeader(headers, "durchschnittliche watt", "average watts")
-        val maxWattsIdx = findFirstHeader(headers, "max. watt", "max watts")
-        val mediaIdx = findFirstHeader(headers, "medien", "media")
+
+        val idIdx = resolveIndex(
+            findFirstHeader(headers, "aktivitäts-id", "activity id", "aktivitaets-id", "identifiant de l'activité", "identifiant de l'activite", "id de la actividad", "id dell'attività", "id dell'attivita", "id"),
+            fallbackIdx = 0,
+            headerCount = headers.size
+        )
+        val dateIdx = resolveIndex(
+            findFirstHeader(headers, "aktivitätsdatum", "activity date", "aktivitaetsdatum", "date de l'activité", "date de l'activite", "fecha de la actividad", "data dell'attività", "data dell'attivita", "date"),
+            fallbackIdx = 1,
+            headerCount = headers.size
+        )
+        val nameIdx = resolveIndex(
+            findFirstHeader(headers, "name der aktivität", "activity name", "name der aktivitaet", "nom de l'activité", "nom de l'activite", "nombre de la actividad", "titolo dell'attività", "titolo dell'attivita", "name", "title"),
+            fallbackIdx = 2,
+            headerCount = headers.size
+        )
+        val typeIdx = resolveIndex(
+            findFirstHeader(headers, "aktivitätsart", "activity type", "aktivitaetsart", "type d'activité", "type d'activite", "tipo de actividad", "tipo di活性", "tipo di attività", "tipo di attivita", "sport", "type"),
+            fallbackIdx = 3,
+            headerCount = headers.size
+        )
+        val descIdx = resolveIndex(
+            findFirstHeader(headers, "aktivitätsbeschreibung", "activity description", "aktivitaetsbeschreibung", "description de l'activité", "description de l'activite", "descripción de la actividad", "descripcion de la actividad", "descrizione dell'attività", "descrizione dell'attivita", "description"),
+            fallbackIdx = 4,
+            headerCount = headers.size
+        )
+        val commuteIdx = resolveIndex(
+            findFirstHeader(headers, "pendeln", "commute", "trajet domicile-travail", "desplazamiento", "pendolare"),
+            fallbackIdx = 9,
+            headerCount = headers.size
+        )
+        val noteIdx = resolveIndex(
+            findFirstHeader(headers, "hinweis zur privatsphäre für aktivitäten", "activity private note", "private note", "hinweis zur privatsphaere fuer aktivitaeten", "note privée", "note privee", "nota privada", "nota privata"),
+            fallbackIdx = 10,
+            headerCount = headers.size
+        )
+        val gearIdx = resolveIndex(
+            findFirstHeader(headers, "aktivitätsausrüstung", "activity gear", "gear", "ausrüstung", "fahrrad", "aktivitaetsausruestung", "équipement de l'activité", "equipement de l'activite", "material de la actividad", "attrezzatura dell'attività", "attrezzatura dell'attivita"),
+            fallbackIdx = 11,
+            headerCount = headers.size
+        )
+
+        // Filename: Alias match -> Regex pattern auto-detection -> Fixed canonical index 12 fallback
+        val rawFilenameIdx = findFirstHeader(headers, "dateiname", "filename", "file name", "nom du fichier", "nombre de archivo", "nome del file")
+        val detectedFilenameIdx = if (rawFilenameIdx != -1) -1 else detectColumnPattern(records, 1, FILENAME_PATTERN)
+        val filenameIdx = when {
+            rawFilenameIdx != -1 -> rawFilenameIdx
+            detectedFilenameIdx != -1 -> detectedFilenameIdx
+            12 < headers.size -> 12
+            else -> -1
+        }
+
+        // Media: Alias match -> Regex pattern auto-detection -> Fixed canonical index 102 fallback
+        val rawMediaIdx = findFirstHeader(headers, "medien", "media", "médias", "medias")
+        val detectedMediaIdx = if (rawMediaIdx != -1) -1 else detectColumnPattern(records, 1, MEDIA_PATTERN)
+        val mediaIdx = when {
+            rawMediaIdx != -1 -> rawMediaIdx
+            detectedMediaIdx != -1 -> detectedMediaIdx
+            102 < headers.size -> 102
+            else -> -1
+        }
 
         val result = mutableListOf<StravaActivityRow>()
         for (i in 1 until records.size) {
@@ -182,15 +225,6 @@ object StravaCsvParser {
                     commute = parseBoolean(getField(row, commuteIdx)),
                     gearName = getField(row, gearIdx)?.trim(),
                     filename = getField(row, filenameIdx)?.trim()?.replace('\\', '/'),
-                    elapsedTime = parseDouble(getField(row, elapsedTimeIdx)),
-                    movingTime = parseDouble(getField(row, movingTimeIdx)),
-                    distance = parseDouble(getField(row, distanceIdx)),
-                    elevationGain = parseDouble(getField(row, elevIdx)),
-                    calories = parseDouble(getField(row, calIdx)),
-                    avgHr = parseDouble(getField(row, avgHrIdx)),
-                    maxHr = parseDouble(getField(row, maxHrIdx)),
-                    avgWatts = parseDouble(getField(row, avgWattsIdx)),
-                    maxWatts = parseDouble(getField(row, maxWattsIdx)),
                     media = mediaList
                 )
             )
@@ -199,16 +233,28 @@ object StravaCsvParser {
     }
 
     /**
-     * Parses `bikes.csv` into a list of [StravaGearItem].
+     * Parses `bikes.csv` into a list of [StravaGearItem] supporting header aliases and canonical fixed indices (0: name, 1: brand, 2: model).
      */
     fun parseBikes(reader: Reader): List<StravaGearItem> {
         val records = parseCsv(reader)
         if (records.isEmpty()) return emptyList()
 
         val headers = records[0].map { normalize(it) }
-        val nameIdx = findFirstHeader(headers, "fahrradname", "bike name", "name")
-        val brandIdx = findFirstHeader(headers, "fahrradmarke", "bike brand", "brand")
-        val modelIdx = findFirstHeader(headers, "fahrradmodell", "bike model", "model")
+        val nameIdx = resolveIndex(
+            findFirstHeader(headers, "fahrradname", "bike name", "name", "nom du vélo", "nom du velo", "nombre de la bicicleta", "nome bicicletta"),
+            fallbackIdx = 0,
+            headerCount = headers.size
+        )
+        val brandIdx = resolveIndex(
+            findFirstHeader(headers, "fahrradmarke", "bike brand", "brand", "marque", "marca"),
+            fallbackIdx = 1,
+            headerCount = headers.size
+        )
+        val modelIdx = resolveIndex(
+            findFirstHeader(headers, "fahrradmodell", "bike model", "model", "modèle", "modele", "modelo"),
+            fallbackIdx = 2,
+            headerCount = headers.size
+        )
 
         val list = mutableListOf<StravaGearItem>()
         for (i in 1 until records.size) {
@@ -231,16 +277,28 @@ object StravaCsvParser {
     }
 
     /**
-     * Parses `shoes.csv` into a list of [StravaGearItem].
+     * Parses `shoes.csv` into a list of [StravaGearItem] supporting header aliases and canonical fixed indices (0: name, 1: brand, 2: model).
      */
     fun parseShoes(reader: Reader): List<StravaGearItem> {
         val records = parseCsv(reader)
         if (records.isEmpty()) return emptyList()
 
         val headers = records[0].map { normalize(it) }
-        val nameIdx = findFirstHeader(headers, "schuhname", "shoe name", "name")
-        val brandIdx = findFirstHeader(headers, "schuhmarke", "shoe brand", "brand")
-        val modelIdx = findFirstHeader(headers, "schuhmodell", "shoe model", "model")
+        val nameIdx = resolveIndex(
+            findFirstHeader(headers, "schuhname", "shoe name", "name", "nom de la chaussure", "nombre de la zapatilla", "nome scarpa"),
+            fallbackIdx = 0,
+            headerCount = headers.size
+        )
+        val brandIdx = resolveIndex(
+            findFirstHeader(headers, "schuhmarke", "shoe brand", "brand", "marque", "marca"),
+            fallbackIdx = 1,
+            headerCount = headers.size
+        )
+        val modelIdx = resolveIndex(
+            findFirstHeader(headers, "schuhmodell", "shoe model", "model", "modèle", "modele", "modelo"),
+            fallbackIdx = 2,
+            headerCount = headers.size
+        )
 
         val list = mutableListOf<StravaGearItem>()
         for (i in 1 until records.size) {
@@ -263,15 +321,27 @@ object StravaCsvParser {
     }
 
     /**
-     * Parses `media.csv` into a map of media filenames to captions (REQ-MIG-048.6 / ATT-43).
+     * Parses `media.csv` into a map of media filenames to captions (REQ-MIG-048.6 / ATT-43),
+     * supporting aliases, content pattern detection, and fixed canonical column fallbacks.
      */
     fun parseMediaCaptions(reader: Reader): Map<String, String> {
         val records = parseCsv(reader)
         if (records.isEmpty()) return emptyMap()
 
         val headers = records[0].map { normalize(it) }
-        val filenameIdx = findFirstHeader(headers, "medien-dateiname", "media filename", "filename", "file name")
-        val captionIdx = findFirstHeader(headers, "medienunterschrift", "media caption", "caption")
+        val rawFilenameIdx = findFirstHeader(headers, "medien-dateiname", "media filename", "filename", "file name", "nom du fichier", "nombre de archivo", "nome del file")
+        val detectedFilenameIdx = if (rawFilenameIdx != -1) -1 else detectColumnPattern(records, 1, MEDIA_FILE_PATTERN)
+        val filenameIdx = when {
+            rawFilenameIdx != -1 -> rawFilenameIdx
+            detectedFilenameIdx != -1 -> detectedFilenameIdx
+            headers.isNotEmpty() -> 0
+            else -> -1
+        }
+        val captionIdx = resolveIndex(
+            findFirstHeader(headers, "medienunterschrift", "media caption", "caption", "légende", "legende", "pie de foto", "didascalia"),
+            fallbackIdx = 1,
+            headerCount = headers.size
+        )
 
         val captions = mutableMapOf<String, String>()
         for (i in 1 until records.size) {
@@ -294,9 +364,20 @@ object StravaCsvParser {
         val lower = type.trim().lowercase(Locale.ROOT)
         return when {
             lower.contains("ride") || lower.contains("radfahrt") || lower.contains("cycling") ||
-                    lower.contains("bike") || lower.contains("velomobile") -> BSportType.BIKE
+                    lower.contains("bike") || lower.contains("velomobile") || lower.contains("vélo") ||
+                    lower.contains("velo") || lower.contains("bicicleta") || lower.contains("ciclismo") ||
+                    lower.contains("pedalata") || lower.contains("fiets") || lower.contains("rower") ||
+                    lower.contains("kolarstwo") || lower.contains("ライド") || lower.contains("サイクリング") -> BSportType.BIKE
+
             lower.contains("run") || lower.contains("lauf") || lower.contains("walk") ||
-                    lower.contains("spaziergang") || lower.contains("hike") || lower.contains("wander") -> BSportType.RUN
+                    lower.contains("spaziergang") || lower.contains("hike") || lower.contains("wander") ||
+                    lower.contains("course") || lower.contains("marche") || lower.contains("randonn") ||
+                    lower.contains("carrera") || lower.contains("caminar") || lower.contains("paseo") ||
+                    lower.contains("senderismo") || lower.contains("corsa") || lower.contains("camminata") ||
+                    lower.contains("escursione") || lower.contains("hardlopen") || lower.contains("bieg") ||
+                    lower.contains("spacer") || lower.contains("corrida") || lower.contains("caminhada") ||
+                    lower.contains("ラン") || lower.contains("ウォーキング") || lower.contains("ハイキング") -> BSportType.RUN
+
             else -> BSportType.UNKNOWN
         }
     }
@@ -313,6 +394,24 @@ object StravaCsvParser {
         return -1
     }
 
+    private fun resolveIndex(matchedIdx: Int, fallbackIdx: Int, headerCount: Int): Int {
+        return if (matchedIdx != -1) matchedIdx else if (fallbackIdx < headerCount) fallbackIdx else -1
+    }
+
+    private fun detectColumnPattern(records: List<List<String>>, startRow: Int, pattern: Regex, maxRowsToScan: Int = 50): Int {
+        val limit = minOf(records.size, startRow + maxRowsToScan)
+        for (i in startRow until limit) {
+            val row = records[i]
+            for (col in row.indices) {
+                val value = row[col].trim()
+                if (value.isNotEmpty() && pattern.containsMatchIn(value)) {
+                    return col
+                }
+            }
+        }
+        return -1
+    }
+
     private fun getField(row: List<String>, index: Int): String? {
         if (index < 0 || index >= row.size) return null
         val v = row[index]
@@ -322,15 +421,8 @@ object StravaCsvParser {
     private fun parseBoolean(value: String?): Boolean {
         if (value.isNullOrBlank()) return false
         val clean = value.trim().lowercase(Locale.ROOT)
-        return clean == "true" || clean == "1" || clean == "ja" || clean == "yes"
-    }
-
-    private fun parseDouble(value: String?): Double? {
-        if (value.isNullOrBlank()) return null
-        return try {
-            value.trim().replace(',', '.').toDouble()
-        } catch (_: NumberFormatException) {
-            null
-        }
+        return clean == "true" || clean == "1" || clean == "ja" || clean == "yes" ||
+                clean == "oui" || clean == "si" || clean == "sí" || clean == "sim" ||
+                clean == "tak" || clean == "waar" || clean == "はい"
     }
 }

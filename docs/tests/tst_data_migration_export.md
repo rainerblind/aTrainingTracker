@@ -1971,10 +1971,12 @@
 ### TST-MIG-046: **Strava Bulk Export Archive Ingestion Pipeline, Bilingual CSV Metadata Enrichment, Transparent GZIP Decompression, Tolerant XML Deserialization, Equipment Sync, and Duplicate Re-Upload Prevention Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-MIG-048`
 - **Component**: `StravaBulkExportImporter.kt`, `StravaCsvParser.kt`, `LegacyImportEngine.kt`, `ImportBackupTabsScreen.kt`, `TrackpointModels.kt`, `EquipmentDbHelper.java`, `StravaUploadDbHelper.java`
-- **Jira**: `ATT-4957`
+- **Jira**: `ATT-4957`, `ATT-5471`
 - **Test Description**:
-  1. *Bilingual & Multi-Line RFC 4180 CSV Metadata Parser (`TST-MIG-046.1`, `StravaActivitiesCsvParserTest.kt`)*:
-  • Verify parsing of `activities.csv` with German headers (`Aktivitäts-ID`, `Dateiname`, `Name der Aktivität`, `Aktivitätsart`, `Aktivitätsbeschreibung`, `Hinweis zur Privatsphäre für Aktivitäten`, `Pendeln`, `Aktivitätsausrüstung`) and English headers (`Activity ID`, `Filename`, `Activity Name`, etc.).
+  1. *Language-Independent & Multi-Line RFC 4180 CSV Metadata Parser (`TST-MIG-046.1`, `StravaCsvParserTest.kt`)*:
+  • Verify parsing of `activities.csv` across German, English, and non-DE/EN Strava exports (French, Spanish, Japanese) via hybrid resolution (header aliases, filename pattern detection `^activities/.*`, and canonical fixed column indices).
+  • Verify gear extraction from `bikes.csv` and `shoes.csv` using fixed canonical column fallbacks (Col 0 Name, Col 1 Brand, Col 2 Model).
+  • Verify pruning of dead summary metric columns from `StravaActivityRow`.
   • Verify correct handling of multiline quoted descriptions containing commas, newlines, and escaped quotes (`""`).
   • Verify indexing and mapping of relative filenames (`activities/*.tcx.gz`, `*.fit.gz`, `*.gpx.gz`).
   2. *XML Leading Whitespace Sanitization & Trackpoint Models (`TST-MIG-046.2`, `TcxLeadingWhitespaceSanitizationTest.kt`)*:
