@@ -7127,8 +7127,8 @@
 
 ### TST-UI-446: **Universal Stacked Workout Details Marginal Histograms & Widened Strip Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-446`
-- **Component**: `TelemetryMetricGraphTest.kt`, `TelemetryMetricGraphLandscapeContractTest.kt`, `ElevationProfileTest.kt`, `ElevationProfileGradeColorTest.kt`, `TranslationParityTest.kt`
-- **Jira**: `ATT-5370`, `ATT-5486`
+- **Component**: `TelemetryMetricGraphTest.kt`, `TelemetryMetricGraphLandscapeContractTest.kt`, `ElevationProfileTest.kt`, `ElevationProfileGradeColorTest.kt`, `MapDetailLayoutTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-5370`, `ATT-5486`, `ATT-5504`
 - **Test Description**:
   1. *Universal Marginal Histogram & Widened Portrait Margin Contract Test (`TST-UI-446.1`)*:
   • Verify `TelemetryMetricGraph` and `ElevationProfile` allocate `endPaddingPx = 52.dp` in portrait mode when aligned with stacked charts, yielding ~44dp bar width within the 52dp margin.
@@ -7141,6 +7141,8 @@
   3. *Landscape 72%/28% Multi-Chart Alignment & Elevation Parity Contract Test (`TST-UI-446.3`)*:
   • Verify all stacked charts in landscape orientation share identical 72%/28% dual-pane horizontal bounds (`chartCanvas` at 0.72f, marginal pane at 0.28f), guaranteeing 1:1 horizontal plot-width and scrubbing cursor alignment per Rule 64.
   • Verify `ElevationProfile(alignWithTelemetryCharts = false)` default preserves clean standalone layout without marginal histogram or extra padding for non-stacked callers (`SensorGridScreen`, `LiveClimbSheet`, `ClimbDetailSheet`, `RouteItem`, `SegmentItem`).
+  • Verify `MapDetailLayout` defaults `showElevationHistogram = (workoutData != null)`, suppressing altitude histograms for non-workout callers (`workoutData == null`) while enabling it for Workout Details (`workoutData != null`) (`ATT-5504`).
+  • Verify `WorkoutSummary` passes `alignWithTelemetryCharts = false` on list card `ElevationProfile` (`ATT-5504`).
   4. *9-Language Localization & Targeted Test Suite (`TST-UI-446.4`)*:
   • Run `TranslationParityTest` verifying 100% parity across all 9 locales.
   • Execute targeted test suite (`--tests "com.atrainingtracker.trainingtracker.ui.map.*"`, `aftermath.zones.*`, `ThemeColorCentralizationAuditTest`, `build.*`) with 100% pass rate.

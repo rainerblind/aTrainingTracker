@@ -116,6 +116,7 @@ fun MapDetailLayout(
     hrZoneThresholds: HeartRateZoneThresholds? = null,
     powerZoneThresholds: PowerZoneThresholds? = null,
     workoutData: WorkoutData? = null,
+    showElevationHistogram: Boolean = workoutData != null,
     onCreateLapClick: ((Double) -> Unit)? = null
 ) {
     val context = LocalContext.current
@@ -386,7 +387,7 @@ fun MapDetailLayout(
                                         hrZoneThresholds = hrThresholds,
                                         powerZoneThresholds = powerThresholds,
                                         climbs = climbs,
-                                        alignWithTelemetryCharts = true,
+                                        alignWithTelemetryCharts = showElevationHistogram,
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                 }
