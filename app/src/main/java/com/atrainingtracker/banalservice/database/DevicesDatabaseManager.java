@@ -903,10 +903,6 @@ public class DevicesDatabaseManager {
         return getSmartphoneDeviceId(DeviceType.SPEED_AND_LOCATION_GPS);
     }
 
-    public long getSpeedAndLocationNetworkDeviceId() {
-        return getSmartphoneDeviceId(DeviceType.SPEED_AND_LOCATION_NETWORK);
-    }
-
     public long getSpeedAndLocationGoogleFusedDeviceId() {
         return getSmartphoneDeviceId(DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED);
     }
@@ -1034,7 +1030,8 @@ public class DevicesDatabaseManager {
         // static final int DB_VERSION = 6;    // upgraded at 30.01.2018 to replace storing of BT features (for Bike Power) to all Bike Power Devices
         // static final int DB_VERSION = 7;    // upgraded at 20.03.2018: added the location devices to this database
         // static final int DB_VERSION = 8;    // upgraded at 01.11.2026: added baselineCircumference for iTPMS
-        public static final int DB_VERSION = 9;    // upgraded at 03.11.2026: renamed legacy ALTITUDE_FROM_PRESSURE default names (ATT-5073)
+        // static final int DB_VERSION = 9;    // upgraded at 03.11.2026: renamed legacy ALTITUDE_FROM_PRESSURE default names (ATT-5073)
+        public static final int DB_VERSION = 10;   // upgraded at 06.11.2026: excised obsolete SPEED_AND_LOCATION_NETWORK (ATT-5492)
         private static final String TAG = "DeviceDbHelper";
         private static final boolean DEBUG = BANALService.getDebug(false);
         private static final String DEVICES_V3 = "Devices";               // in version 3, the table was simply called Devices
@@ -1141,6 +1138,7 @@ public class DevicesDatabaseManager {
 
                 case 8:
                 case 9:
+                case 10:
                     db.execSQL(CREATE_DEVICE_DB_8);
                     if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_DEVICE_DB_8);
                     db.execSQL(CREATE_BIKE_POWER_SENSORS_TABLE_6);
@@ -1277,6 +1275,21 @@ public class DevicesDatabaseManager {
                 if (DEBUG) Log.i(TAG, "onUpgrade: upgrading from Version 8 to 9 (updating legacy ALTITUDE_FROM_PRESSURE default names)");
                 migrateAltitudeFromPressureLegacyNames(db);
             }
+
+            if (oldVersion <= 9) {
+                if (DEBUG) Log.i(TAG, "onUpgrade: upgrading from Version <= 9 to 10 (excising obsolete SPEED_AND_LOCATION_NETWORK)");
+                migrateRemoveSpeedAndLocationNetwork(db);
+            }
+        }
+
+        /**
+         * Idempotent migration deleting obsolete SPEED_AND_LOCATION_NETWORK devices
+         * from Devices4 table (REQ-SEN-027.2, ATT-5492).
+         */
+        public int migrateRemoveSpeedAndLocationNetwork(SQLiteDatabase db) {
+            int deleted = db.delete(DEVICES, DEVICE_TYPE + " = ?", new String[]{"SPEED_AND_LOCATION_NETWORK"});
+            if (DEBUG) Log.i(TAG, "migrateRemoveSpeedAndLocationNetwork: deleted " + deleted + " obsolete network location rows");
+            return deleted;
         }
 
         /**
@@ -1359,14 +1372,6 @@ public class DevicesDatabaseManager {
             contentValues.put(DEVICE_TYPE, DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED.name());
             contentValues.put(PAIRED, playServicesAvailable);
             contentValues.put(NAME, mContext.getString(R.string.devices_location_GoogleFused));
-            contentValues.put(MANUFACTURER_NAME, Build.BRAND);
-            db.insert(DEVICES, null, contentValues);
-
-            contentValues = new ContentValues();
-            contentValues.put(PROTOCOL, Protocol.SMARTPHONE.name());
-            contentValues.put(DEVICE_TYPE, DeviceType.SPEED_AND_LOCATION_NETWORK.name());
-            contentValues.put(PAIRED, false);
-            contentValues.put(NAME, mContext.getString(R.string.devices_location_Network));
             contentValues.put(MANUFACTURER_NAME, Build.BRAND);
             db.insert(DEVICES, null, contentValues);
 

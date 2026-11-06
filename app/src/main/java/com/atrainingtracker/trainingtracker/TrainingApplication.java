@@ -481,10 +481,6 @@ public class TrainingApplication extends Application {
         if (devicesDatabaseManager.isPaired(googleFusedDeviceId)) {
             return true;
         }
-        long networkDeviceId = devicesDatabaseManager.getSpeedAndLocationNetworkDeviceId();
-        if (devicesDatabaseManager.isPaired(networkDeviceId)) {
-            return true;
-        }
 
         return false;
     }

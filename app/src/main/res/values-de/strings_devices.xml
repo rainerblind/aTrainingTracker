@@ -101,7 +101,6 @@
 
     <!-- smartphone devices -->
     <string name="devices_location_GPS">Smartphone GPS (Satellit)</string>
-    <string name="devices_location_Network">Smartphone Standort (Mobilfunk/WLAN)</string>
     <string name="devices_location_GoogleFused">Google Standort (Fused)</string>
     <string name="devices_altitude_from_pressure">Höhe aus Luftdruck</string>
 

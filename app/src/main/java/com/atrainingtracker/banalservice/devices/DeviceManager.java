@@ -90,7 +90,7 @@ public class DeviceManager {
     protected Context mContext;
     protected volatile ClockDevice mClockDevice;
     protected volatile BatteryDevice mBatteryDevice;
-    protected volatile SpeedAndLocationDevice mSpeedAndLocationDevice_GPS, mSpeedAndLocationDevice_GoogleFused, mSpeedAndLocationDevice_Network;
+    protected volatile SpeedAndLocationDevice mSpeedAndLocationDevice_GPS, mSpeedAndLocationDevice_GoogleFused;
     protected volatile AltitudeFromPressureDevice mAltitudeFromPressureDevice;
     protected volatile AltitudeFromPositionDevice mAltitudeFromPositionDevice;
     protected volatile VerticalSpeedAndSlopeDevice mVerticalSpeedAndSlopeDevice;
@@ -382,21 +382,6 @@ public class DeviceManager {
             }
         }
 
-        long networkDeviceId = devicesDatabaseManager.getSpeedAndLocationNetworkDeviceId();
-        if (devicesDatabaseManager.isPaired(networkDeviceId)
-                && TrainingApplication.havePermission(Manifest.permission.ACCESS_COARSE_LOCATION)) {
-            if (isProviderAvailableSafely(locationManager, LocationManager.NETWORK_PROVIDER)) {
-                if (DEBUG) Log.i(TAG, "creating network location device");
-                try {
-                    mSpeedAndLocationDevice_Network = new SpeedAndLocationDevice_Network(mContext, mSensorManager);
-                } catch (Exception e) {
-                    Log.w(TAG, "Could not initialize Network location device: " + e.getMessage());
-                }
-            } else {
-                if (DEBUG) Log.i(TAG, "Skipping Network location device: provider unavailable");
-            }
-        }
-
         // also create paired remote devices and start searching for them
         if (TrainingApplication.startSearchWhenAppStarts()) {
             startSearchForPairedDevices();
@@ -462,19 +447,6 @@ public class DeviceManager {
                 }
             } else {
                 mSpeedAndLocationDevice_GoogleFused.checkOrReRegisterLocationUpdates();
-            }
-        }
-
-        long networkDeviceId = devicesDatabaseManager.getSpeedAndLocationNetworkDeviceId();
-        if (mSpeedAndLocationDevice_Network == null && devicesDatabaseManager.isPaired(networkDeviceId)
-                && TrainingApplication.havePermission(Manifest.permission.ACCESS_COARSE_LOCATION)) {
-            if (isProviderAvailableSafely(locationManager, LocationManager.NETWORK_PROVIDER)) {
-                if (DEBUG) Log.i(TAG, "checkOrInitializeLocationDevices: creating Network location device");
-                try {
-                    mSpeedAndLocationDevice_Network = new SpeedAndLocationDevice_Network(mContext, mSensorManager);
-                } catch (Exception e) {
-                    Log.w(TAG, "Could not initialize Network location device: " + e.getMessage());
-                }
             }
         }
     }
@@ -562,26 +534,6 @@ public class DeviceManager {
                 if (mSpeedAndLocationDevice_GoogleFused != null) {   // if it exists
                     mSpeedAndLocationDevice_GoogleFused.shutDown();
                     mSpeedAndLocationDevice_GoogleFused = null;
-                }
-            }
-            return;
-        }
-        long networkDeviceId = devicesDatabaseManager.getSpeedAndLocationNetworkDeviceId();
-        if (deviceId == networkDeviceId) {
-            if (paired && mSpeedAndLocationDevice_Network == null  // if it does not exist
-                    && TrainingApplication.havePermission(Manifest.permission.ACCESS_COARSE_LOCATION)) {  // and we have the permission to do so
-                if (isProviderAvailableSafely(locationManager, LocationManager.NETWORK_PROVIDER)) {
-                    try {
-                        mSpeedAndLocationDevice_Network = new SpeedAndLocationDevice_Network(mContext, mSensorManager);
-                    } catch (Exception e) {
-                        Log.w(TAG, "Could not create Network location device on pairing change: " + e.getMessage());
-                    }
-                }
-            }
-            else {                                           // destroy
-                if (mSpeedAndLocationDevice_Network != null) {   // if it exists
-                    mSpeedAndLocationDevice_Network.shutDown();
-                    mSpeedAndLocationDevice_Network = null;
                 }
             }
             return;
@@ -781,11 +733,6 @@ public class DeviceManager {
             result.add(fused);
         }
 
-        SpeedAndLocationDevice network = mSpeedAndLocationDevice_Network;
-        if (network != null) {
-            result.add(network);
-        }
-
         return result;
     }
 
@@ -879,10 +826,6 @@ public class DeviceManager {
         SpeedAndLocationDevice gps = mSpeedAndLocationDevice_GPS;
         if (gps != null) {
             myDeviceList.add(gps);
-        }
-        SpeedAndLocationDevice network = mSpeedAndLocationDevice_Network;
-        if (network != null) {
-            myDeviceList.add(network);
         }
         SpeedAndLocationDevice fused = mSpeedAndLocationDevice_GoogleFused;
         if (fused != null) {

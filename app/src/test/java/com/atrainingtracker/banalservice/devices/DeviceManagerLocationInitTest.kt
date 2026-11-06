@@ -59,7 +59,6 @@ class DeviceManagerLocationInitTest {
 
     private val gpsDeviceId = 101L
     private val fusedDeviceId = 102L
-    private val networkDeviceId = 103L
 
     companion object {
         @JvmStatic
@@ -109,10 +108,8 @@ class DeviceManagerLocationInitTest {
         every { DevicesDatabaseManager.getInstance(any()) } returns mockDevicesDbManager
         every { mockDevicesDbManager.getSpeedAndLocationGPSDeviceId() } returns gpsDeviceId
         every { mockDevicesDbManager.getSpeedAndLocationGoogleFusedDeviceId() } returns fusedDeviceId
-        every { mockDevicesDbManager.getSpeedAndLocationNetworkDeviceId() } returns networkDeviceId
         every { mockDevicesDbManager.isPaired(gpsDeviceId) } returns true
         every { mockDevicesDbManager.isPaired(fusedDeviceId) } returns false
-        every { mockDevicesDbManager.isPaired(networkDeviceId) } returns false
 
         mockLocationManager = mockk(relaxed = true)
         every { mockLocationManager.allProviders } returns listOf(LocationManager.GPS_PROVIDER)

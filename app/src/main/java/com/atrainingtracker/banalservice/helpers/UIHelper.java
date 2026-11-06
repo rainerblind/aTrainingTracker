@@ -113,7 +113,6 @@ public class UIHelper {
             case ENVIRONMENT:
                 return R.string.device_type_environment;
             case SPEED_AND_LOCATION_GPS:
-            case SPEED_AND_LOCATION_NETWORK:
             case SPEED_AND_LOCATION_GOOGLE_FUSED:
                 return R.string.device_type_gps_speed_and_location;
             case HRM:
@@ -149,7 +148,6 @@ public class UIHelper {
             case ENVIRONMENT:
                 return R.string.device_type_short_environment;
             case SPEED_AND_LOCATION_GPS:
-            case SPEED_AND_LOCATION_NETWORK:
             case SPEED_AND_LOCATION_GOOGLE_FUSED:
                 return R.string.device_type_short_gps_speed_and_location;
             case HRM:

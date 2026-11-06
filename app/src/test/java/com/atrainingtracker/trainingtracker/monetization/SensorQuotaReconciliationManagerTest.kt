@@ -78,7 +78,6 @@ class SensorQuotaReconciliationManagerTest {
         deviceType: DeviceType,
         protocol: Protocol = if (deviceType == DeviceType.SPEED_AND_LOCATION_GPS ||
             deviceType == DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED ||
-            deviceType == DeviceType.SPEED_AND_LOCATION_NETWORK ||
             deviceType == DeviceType.ALTITUDE_FROM_PRESSURE ||
             deviceType == DeviceType.ALTITUDE_FROM_POSITION
         ) Protocol.SMARTPHONE else Protocol.BLUETOOTH_LE,

@@ -91,7 +91,6 @@
     <string name="devices_equipment_none">- aucun -</string>
 
     <string name="devices_location_GPS">GPS du téléphone (Satellite)</string>
-    <string name="devices_location_Network">Localisation du téléphone (Réseau/WiFi)</string>
     <string name="devices_location_GoogleFused">Localisation Google (Fused)</string>
     <string name="devices_altitude_from_pressure">Altitude par pression</string>
 

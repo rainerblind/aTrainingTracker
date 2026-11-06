@@ -42,7 +42,7 @@ import org.junit.Test
 
 /**
  * Unit tests verifying location provider resilience and exception shielding for
- * SpeedAndLocationDevice_GPS and SpeedAndLocationDevice_Network (REQ-STB-004, TST-STB-004, ATT-623).
+ * SpeedAndLocationDevice_GPS (REQ-STB-004, TST-STB-004, ATT-623, ATT-5492).
  */
 class SpeedAndLocationDeviceResilienceTest {
 
@@ -71,7 +71,6 @@ class SpeedAndLocationDeviceResilienceTest {
         mockDevicesDbManager = mockk(relaxed = true)
         every { DevicesDatabaseManager.getInstance(any()) } returns mockDevicesDbManager
         every { mockDevicesDbManager.getSpeedAndLocationGPSDeviceId() } returns 101L
-        every { mockDevicesDbManager.getSpeedAndLocationNetworkDeviceId() } returns 102L
 
         mockLocationManager = mockk(relaxed = true)
         mockSensorManager = mockk(relaxed = true)
@@ -156,37 +155,6 @@ class SpeedAndLocationDeviceResilienceTest {
     }
 
     @Test
-    fun testNetworkDevice_missingNetworkProvider_initializesCleanlyWithoutCrashing() {
-        // Arrange: "network" provider does not exist
-        every { mockLocationManager.getProvider(LocationManager.NETWORK_PROVIDER) } returns null
-
-        // Act
-        val device = SpeedAndLocationDevice_Network(mockContext, mockSensorManager)
-
-        // Assert: initialized safely without requesting updates
-        assertNotNull(device)
-        verify(exactly = 0) {
-            mockLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, any<Long>(), any<Float>(), any<SpeedAndLocationDevice_Network>())
-        }
-    }
-
-    @Test
-    fun testNetworkDevice_requestLocationUpdatesThrowsIllegalArgumentException_handledCleanly() {
-        // Arrange: provider exists but throws IllegalArgumentException
-        val mockProvider = mockk<LocationProvider>()
-        every { mockLocationManager.getProvider(LocationManager.NETWORK_PROVIDER) } returns mockProvider
-        every {
-            mockLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, any<Long>(), any<Float>(), any<SpeedAndLocationDevice_Network>())
-        } throws IllegalArgumentException("provider \"network\" does not exist")
-
-        // Act
-        val device = SpeedAndLocationDevice_Network(mockContext, mockSensorManager)
-
-        // Assert: caught safely
-        assertNotNull(device)
-    }
-
-    @Test
     fun testGpsDevice_onProviderEnabled_handlesExceptionGracefully() {
         // Arrange: initial creation with provider present
         val mockProvider = mockk<LocationProvider>()
@@ -201,26 +169,6 @@ class SpeedAndLocationDeviceResilienceTest {
 
         // Act: onProviderEnabled
         device.onProviderEnabled(LocationManager.GPS_PROVIDER)
-
-        // Assert: no crash
-        assertNotNull(device)
-    }
-
-    @Test
-    fun testNetworkDevice_onProviderEnabled_handlesExceptionGracefully() {
-        // Arrange: initial creation with provider present
-        val mockProvider = mockk<LocationProvider>()
-        every { mockLocationManager.getProvider(LocationManager.NETWORK_PROVIDER) } returns mockProvider
-
-        val device = SpeedAndLocationDevice_Network(mockContext, mockSensorManager)
-
-        // When provider re-enables, requestLocationUpdates throws IllegalArgumentException
-        every {
-            mockLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, any<Long>(), any<Float>(), any<SpeedAndLocationDevice_Network>())
-        } throws IllegalArgumentException("provider \"network\" does not exist")
-
-        // Act: onProviderEnabled
-        device.onProviderEnabled(LocationManager.NETWORK_PROVIDER)
 
         // Assert: no crash
         assertNotNull(device)
@@ -257,36 +205,6 @@ class SpeedAndLocationDeviceResilienceTest {
     }
 
     @Test
-    fun testNetworkDevice_getProviderThrowsSecurityException_handledCleanly() {
-        // Arrange: LocationManager.getProvider throws SecurityException
-        every { mockLocationManager.getProvider(LocationManager.NETWORK_PROVIDER) } throws SecurityException("Missing ACCESS_COARSE_LOCATION permission")
-
-        // Act
-        val device = SpeedAndLocationDevice_Network(mockContext, mockSensorManager)
-
-        // Assert: device created safely without crashing; requests 0 updates
-        assertNotNull(device)
-        verify(exactly = 0) {
-            mockLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, any<Long>(), any<Float>(), any<SpeedAndLocationDevice_Network>())
-        }
-    }
-
-    @Test
-    fun testNetworkDevice_getProviderThrowsIllegalArgumentException_handledCleanly() {
-        // Arrange: LocationManager.getProvider throws IllegalArgumentException
-        every { mockLocationManager.getProvider(LocationManager.NETWORK_PROVIDER) } throws IllegalArgumentException("Invalid provider network")
-
-        // Act
-        val device = SpeedAndLocationDevice_Network(mockContext, mockSensorManager)
-
-        // Assert: device created safely without crashing; requests 0 updates
-        assertNotNull(device)
-        verify(exactly = 0) {
-            mockLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, any<Long>(), any<Float>(), any<SpeedAndLocationDevice_Network>())
-        }
-    }
-
-    @Test
     fun testGpsDevice_onProviderEnabled_getProviderThrowsSecurityException_handledCleanly() {
         val mockProvider = mockk<LocationProvider>()
         every { mockLocationManager.getProvider(LocationManager.GPS_PROVIDER) } returns mockProvider
@@ -297,21 +215,6 @@ class SpeedAndLocationDeviceResilienceTest {
         every { mockLocationManager.getProvider(LocationManager.GPS_PROVIDER) } throws SecurityException("Permission revoked")
 
         device.onProviderEnabled(LocationManager.GPS_PROVIDER)
-
-        assertNotNull(device)
-    }
-
-    @Test
-    fun testNetworkDevice_onProviderEnabled_getProviderThrowsSecurityException_handledCleanly() {
-        val mockProvider = mockk<LocationProvider>()
-        every { mockLocationManager.getProvider(LocationManager.NETWORK_PROVIDER) } returns mockProvider
-
-        val device = SpeedAndLocationDevice_Network(mockContext, mockSensorManager)
-
-        // When provider re-enables, getProvider throws SecurityException
-        every { mockLocationManager.getProvider(LocationManager.NETWORK_PROVIDER) } throws SecurityException("Permission revoked")
-
-        device.onProviderEnabled(LocationManager.NETWORK_PROVIDER)
 
         assertNotNull(device)
     }
