@@ -411,7 +411,7 @@ fun LapEditBottomSheet(
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Icon(
-                                        painter = painterResource(R.drawable.ic_lap_timer),
+                                        painter = painterResource(R.drawable.ic_lap_move_boundary),
                                         contentDescription = null,
                                         modifier = Modifier.size(16.dp)
                                     )

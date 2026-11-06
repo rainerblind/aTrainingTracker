@@ -87,6 +87,9 @@ class CreateLapOnMapSheetTest {
         // Verify key structural components
         assertTrue("Must use AppModalBottomSheet", content.contains("AppModalBottomSheet("))
         assertTrue("Must use PathPreviewMap for track preview", content.contains("PathPreviewMap("))
+        assertTrue("Must use TrackType.BEST for canonical blue track (ATT-5480)", content.contains("type = TrackType.BEST"))
+        assertTrue("Must pass ic_lap_split_scissors as apexIconRes to PathPreviewMap (ATT-5480)", content.contains("apexIconRes = R.drawable.ic_lap_split_scissors"))
+        assertTrue("Must use ic_lap_split_scissors on confirm button (ATT-5480)", content.contains("R.drawable.ic_lap_split_scissors"))
         assertTrue("Must use Slider for fine scrubber adjustment", content.contains("Slider("))
         assertTrue("Must use LapSplitAndMoveCalculator for validation", content.contains("LapSplitAndMoveCalculator.validateSplit"))
 

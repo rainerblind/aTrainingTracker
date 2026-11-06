@@ -228,7 +228,7 @@ fun MapDetailLayout(
                         )
                     ) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_lap_add),
+                            painter = painterResource(R.drawable.ic_lap_split_scissors),
                             contentDescription = stringResource(R.string.split_lap_action),
                             modifier = Modifier.size(18.dp)
                         )

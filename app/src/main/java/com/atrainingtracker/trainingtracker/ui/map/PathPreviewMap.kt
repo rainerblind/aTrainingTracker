@@ -57,6 +57,9 @@ fun PathPreviewMap(
     apex: LatLng? = null,
     startTitle: String? = null,
     endTitle: String? = null,
+    apexTitle: String? = null,
+    apexIconRes: Int = R.drawable.ic_distance,
+    apexColor: Color = TTColor.ApexPoint,
     targetBounds: LatLngBounds? = null,
     onMapClick: () -> Unit = {}
 ) {
@@ -118,7 +121,8 @@ fun PathPreviewMap(
                 actualApex?.let {
                     Marker(
                         state = remember(it) { MarkerState(position = it) },
-                        icon = remember { createSensorMarker(context, R.drawable.ic_distance, TTColor.ApexPoint) }
+                        title = apexTitle,
+                        icon = remember(apexIconRes, apexColor) { createSensorMarker(context, apexIconRes, apexColor) }
                     )
                 }
 

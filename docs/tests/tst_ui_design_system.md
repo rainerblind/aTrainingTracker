@@ -7185,8 +7185,8 @@
 
 ### TST-UI-449: **Interactive Map Lap Creation & Splitting in Workout Aftermath Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-449`
-- **Component**: `CreateLapOnMapSheet.kt`, `LapEditorMath.kt`, `WorkoutRepository.kt`, `WorkoutSamplesDatabaseManager.java`, `LapsDatabaseManager.java`, `TrackOnMapScreen.kt`, `MapDetailLayout.kt`, `WorkoutLaps.kt`
-- **Jira**: `ATT-907`
+- **Component**: `CreateLapOnMapSheet.kt`, `PathPreviewMap.kt`, `LapEditorMath.kt`, `WorkoutRepository.kt`, `WorkoutSamplesDatabaseManager.java`, `LapsDatabaseManager.java`, `TrackOnMapScreen.kt`, `MapDetailLayout.kt`, `WorkoutLaps.kt`
+- **Jira**: `ATT-907`, `ATT-5480`
 - **Test Description**:
   1. *Domain Math & Split Preview Contract Test (`TST-UI-449.1`, `LapEditorMathTest.kt`)*:
   • Verify `LapEditorMath.calculateSplitLapsPreview` computes duration, distance, and speed correctly for Lap $k$ and Lap $k+1$.
@@ -7195,19 +7195,21 @@
   • Verify `WorkoutSamplesDatabaseManager.splitLapAtSampleRow` atomically increments `LAP_NR` by 1 for all rows with `_id >= splitRowId`.
   • Verify `WorkoutRepository.splitLapAtSample` persists updated lap sequence to `Laps.db` via `replaceCroppedLaps` and reloads `WorkoutData`.
   • Verify rollback on SQLite exception leaves `WorkoutSamples.db` and `Laps.db` unchanged.
-  3. *Compose UI & Sheet Contract Test (`TST-UI-449.3`, `CreateLapOnMapSheetTest.kt`)*:
-  • Verify `CreateLapOnMapSheet` renders full GPS track, movable split pin, slider, and live preview cards.
+  3. *Compose UI, Canonical Blue Track & Split Iconography Contract Test (`TST-UI-449.3`, `CreateLapOnMapSheetTest.kt`, `PathPreviewMapTest.kt`)*:
+  • Verify `CreateLapOnMapSheet` renders full GPS track instantiated via `MapTrack` with `type = TrackType.BEST` (canonical blue `TTColor.TrackBest`).
+  • Verify `PathPreviewMap` receives `apexIconRes = R.drawable.ic_lap_split_scissors` for the split pin marker rather than the Max Line Distance ruler icon (`R.drawable.ic_distance`).
+  • Verify dedicated scissors vector drawable `R.drawable.ic_lap_split_scissors` is rendered for split action buttons across `WorkoutLaps.kt`, `LapSplitVisualizer.kt`, `MapDetailLayout.kt`, and `CreateLapOnMapSheet.kt`.
   • Verify pre-seeding from scrub point index when launched from `MapDetailLayout`.
   • Verify confirmation button invocation dispatches split action with correct sample index.
   4. *9-Language Localization & Parity Test (`TST-UI-449.4`, `TranslationParityTest.kt`)*:
   • Verify 100% parity across all 9 supported locales for new `create_lap_*` string keys with zero missing entries and zero decorative inline emojis.
   5. *Clean-Room Regression Suite (`TST-UI-449.5`)*:
-  • Run targeted package tests (`com.atrainingtracker.trainingtracker.ui.aftermath.*`, `database.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
+  • Run targeted package tests (`com.atrainingtracker.trainingtracker.ui.aftermath.*`, `com.atrainingtracker.trainingtracker.ui.map.*`, `database.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
 
 ### TST-UI-450: **Interactive Map Lap Boundary Moving in Workout Aftermath Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-450`
-- **Component**: `MoveLapBoundaryOnMapSheet.kt`, `LapSplitAndMoveCalculator.kt`, `WorkoutRepository.kt`, `WorkoutSamplesDatabaseManager.java`, `LapsDatabaseManager.java`, `LapEditBottomSheet.kt`, `WorkoutLaps.kt`, `TrackOnMapScreen.kt`
-- **Jira**: `ATT-908`, `ATT-5483`
+- **Component**: `MoveLapBoundaryOnMapSheet.kt`, `PathPreviewMap.kt`, `LapSplitAndMoveCalculator.kt`, `WorkoutRepository.kt`, `WorkoutSamplesDatabaseManager.java`, `LapsDatabaseManager.java`, `LapEditBottomSheet.kt`, `WorkoutLaps.kt`, `TrackOnMapScreen.kt`
+- **Jira**: `ATT-908`, `ATT-5483`, `ATT-5480`
 - **Test Description**:
   1. *Domain Boundary Clamping & Move Preview Contract Test (`TST-UI-450.1`, `LapBoundaryMoveCalculatorTest.kt`)*:
   • Verify `LapSplitAndMoveCalculator.validateBoundaryMove` clamps and rejects boundaries outside $[startIndex(k) + 1, endIndex(k+1) - 1]$.
@@ -7217,15 +7219,17 @@
   • Verify `WorkoutSamplesDatabaseManager.updateLapNumberForSampleRange` selectively updates `LAP_NR` for sample rows between old and new boundaries.
   • Verify `WorkoutRepository.moveLapBoundary` updates `Laps.db` for Lap $k$ and Lap $k+1$ via `replaceCroppedLaps` while leaving all other laps ($1 \dots k-1$ and $k+2 \dots K$) untouched.
   • Verify rollback on SQLite exception preserves data integrity across tables.
-  3. *Compose UI & Boundary Sheet Contract Test (`TST-UI-450.3`, `MoveLapBoundaryOnMapSheetTest.kt`)*:
-  • Verify `MoveLapBoundaryOnMapSheet` renders track segment, boundary markers, precision slider, and live preview cards.
+  3. *Compose UI, Canonical Blue Track & Boundary Iconography Contract Test (`TST-UI-450.3`, `MoveLapBoundaryOnMapSheetTest.kt`, `PathPreviewMapTest.kt`)*:
+  • Verify `MoveLapBoundaryOnMapSheet` renders track segment instantiated via `MapTrack` with `type = TrackType.BEST` (canonical blue `TTColor.TrackBest`).
+  • Verify `PathPreviewMap` receives `apexIconRes = R.drawable.ic_lap_move_boundary` for the boundary pin marker rather than the Max Line Distance ruler icon (`R.drawable.ic_distance`).
+  • Verify dedicated shift boundary vector drawable `R.drawable.ic_lap_move_boundary` is rendered for boundary move action buttons across `WorkoutLaps.kt`, `LapEditBottomSheet.kt`, `LapSplitVisualizer.kt`, and `MoveLapBoundaryOnMapSheet.kt`.
   • Verify pre-seeding from existing boundary index.
   • Verify confirmation button dispatches `onBoundaryConfirmed` with selected sample index.
   • Verify seamless entry point invocation from `LapEditBottomSheet` when opened within Workout Details (`TrackOnMapScreen.kt`), dismissing the edit sheet and opening `MoveLapBoundaryOnMapSheet` as a modal overlay (`Rule 47`).
   4. *9-Language Localization & Parity Test (`TST-UI-450.4`, `TranslationParityTest.kt`)*:
   • Verify 100% parity across all 9 supported locales for new `move_lap_boundary_*` string keys with zero missing entries and zero decorative inline emojis.
   5. *Clean-Room Regression Suite (`TST-UI-450.5`)*:
-  • Run targeted package tests (`com.atrainingtracker.trainingtracker.domain.laps.*`, `ui.aftermath.*`, `database.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
+  • Run targeted package tests (`com.atrainingtracker.trainingtracker.domain.laps.*`, `com.atrainingtracker.trainingtracker.ui.aftermath.*`, `com.atrainingtracker.trainingtracker.ui.map.*`, `database.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
 
 ### TST-UI-451: **Tracking Cockpit SensorStatus Top Bar 16 dp Margin and Symmetrical Centering Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-451`
