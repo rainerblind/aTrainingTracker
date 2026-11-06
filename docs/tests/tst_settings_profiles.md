@@ -863,7 +863,7 @@
 ### TST-SET-084: **One-Tap Swap-or-Upgrade Dialog Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-084`
 - **Component**: `SensorQuotaReconciliationManager.kt`, `DeviceListViewModel.kt`, `ControlTrackingViewModel.kt`, `DeviceManager.java`, `ATrainingTrackerApp.kt`, `MainActivityWithNavigation.kt`, `SwapOrUpgradeDialog.kt`, `SwapOrUpgradeDialogContractTest.kt`, `KeepTwoSensorsBottomSheet.kt`, `DeviceDataRepository.kt`
-- **Jira**: `ATT-51`, `ATT-5399`, `ATT-5398`, `ATT-5469`, `ATT-5470`, `ATT-5490`, `ATT-5661`
+- **Jira**: `ATT-51`, `ATT-5399`, `ATT-5398`, `ATT-5469`, `ATT-5470`, `ATT-5490`, `ATT-5661`, `ATT-5657`
 - **Test Description**:
 1. Trigger pairing of a 3rd device in Free tier; verify `showSwapOrUpgradeDialog` state is set to true.
 2. Verify dialog displays candidate devices and preselects recommendation.
@@ -878,6 +878,7 @@
 11. *Rule 73 Stacked Button Layout Contract (`TST-SET-084.8`, `SwapOrUpgradeDialogContractTest.kt`)*: Verify `SwapOrUpgradeDialog` renders primary 'Tauschen & Koppeln' `Button` and secondary 'Entwicklung unterstützen' `FilledTonalButton` stacked full-width with 8dp spacing in sheet content, and a single full-width 'Abbrechen' `TextButton` in `actions`, eliminating broken word wrapping on German and localized mobile screens.
 12. *Google Fused Preselection & Active Remote Sensor Prioritization Test (`TST-SET-084.2`, `SensorQuotaReconciliationManagerTest.kt`, `DeviceListViewModelQuotaTest.kt`)*: Verify that when downgrading to Free tier with both Google Fused and GPS paired plus remote sensors, `determineDefaultKeepDeviceIds` preselects Google Fused and the most recently active remote sensor (connected first, latest `lastSeen` timestamp second). When only GPS or only Google Fused is paired, that single location sensor is preserved. When no remote sensor is paired, verify fallback to `ALTITUDE_FROM_PRESSURE`. Verify `determineRecommendedUnpairDeviceId` recommends unpairing `ALTITUDE_FROM_PRESSURE` first, then `SPEED_AND_LOCATION_GPS` if both location sensors are paired.
 13. *Appreciative Dialog Copy & 9-Locale Localization Verification (`TST-SET-084.13`, `TranslationParityTest.kt`)*: Verify `SwapOrUpgradeDialog` and `KeepTwoSensorsBottomSheet` strings display appreciative base version copy and "Support Development" CTA across all 9 locales with single `%1$s` placeholder preserved in `swap_dialog_message` and zero decorative emojis.
+14. *Never Recommend Google Fused or Sole Location Sensor for Unpairing Test (`TST-SET-084.14`, `SensorQuotaReconciliationManagerTest.kt`, `DeviceListViewModelQuotaTest.kt`)*: Verify that when Google Fused (or sole Location sensor) is paired alongside one or more non-location sensors (e.g. cadence, HRM, power), `determineRecommendedUnpairDeviceId` recommends the non-location sensor (disconnected first, oldest `lastSeen` second) and NEVER returns the ID of Google Fused or the sole Location sensor. In `SwapOrUpgradeDialog`, verify fallback selection likewise prioritizes non-location devices.
 
 ### TST-SET-085: **Lifetime Pioneer Early Adopter Recognition Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-085`

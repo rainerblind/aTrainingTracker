@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 
@@ -55,7 +56,11 @@ fun SwapOrUpgradeDialog(
             if (currentlyPairedDevices.any { it.id == recommendedUnpairDeviceId }) {
                 recommendedUnpairDeviceId
             } else {
-                currentlyPairedDevices.firstOrNull()?.id ?: -1L
+                val nonLocationDevice = currentlyPairedDevices.firstOrNull {
+                    it.deviceType != DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED &&
+                        it.deviceType != DeviceType.SPEED_AND_LOCATION_GPS
+                }
+                nonLocationDevice?.id ?: currentlyPairedDevices.firstOrNull()?.id ?: -1L
             }
         )
     }

@@ -361,6 +361,12 @@ class DeviceListViewModelQuotaTest {
 
         // 2. Recommends GPS when both Fused and GPS are present without Barometer
         assertEquals(1L, viewModel.determineRecommendedUnpairDeviceId(listOf(pairedGps, pairedFused, pairedHrm)))
+
+        // 3. Recommends remote sensor (HRM) over Google Fused (ATT-5657)
+        assertEquals(4L, viewModel.determineRecommendedUnpairDeviceId(listOf(pairedFused, pairedHrm)))
+
+        // 4. Recommends remote sensor (HRM) over sole GPS (ATT-5657)
+        assertEquals(4L, viewModel.determineRecommendedUnpairDeviceId(listOf(pairedGps, pairedHrm)))
     }
 
     @Test

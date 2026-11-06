@@ -1373,14 +1373,14 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 **Invariants**: Core tracking, telemetry processing, local file exports, and database pairing persistence across app updates MUST NOT be compromised.
 
 ### REQ-SET-084: One-Tap Swap-or-Upgrade Dialog on 3rd Paired Device (REQ-MON-002) [Verified]
-- **Tests**: `TST-SET-084` | **Tickets**: `ATT-51`, `ATT-5399`, `ATT-5398`, `ATT-5469`, `ATT-5470`, `ATT-5490`, `ATT-5661`
+- **Tests**: `TST-SET-084` | **Tickets**: `ATT-51`, `ATT-5399`, `ATT-5398`, `ATT-5469`, `ATT-5470`, `ATT-5490`, `ATT-5661`, `ATT-5657`
 - **Implementation**: `SensorQuotaReconciliationManager.kt`, `DeviceListViewModel.kt`, `ControlTrackingViewModel.kt`, `DeviceManager.java`, `ATrainingTrackerApp.kt`, `MainActivityWithNavigation.kt`, `SwapOrUpgradeDialog.kt`, `KeepTwoSensorsBottomSheet.kt`, `DeviceDataRepository.kt`
 - **Rationale**: Ensure athletes are never blocked by a hard paywall when adding sensors. When attempting to pair a 3rd device in the base version (*Basisversion*), athletes can easily unpair a currently active device with a single tap or support the ongoing development of the app to unlock unlimited sensors (*Entwicklung unterstützen*). Furthermore, athletes who return from Supporter to the base version with $> 2$ paired sensors are guided through a non-destructive reconciliation flow to keep 2 sensors.
 - **Description**:
 1. *Quota Interception (`REQ-SET-084.1`)*:
 • When a Free tier athlete (`!isProActive()`) attempts to pair a device that would increase total paired devices beyond `MAX_FREE_PAIRED_DEVICES = 2`, `DeviceListViewModel` SHALL intercept the action and display `SwapOrUpgradeDialog` without changing database pairing state.
 2. *Smart Recommendation Preselection (`REQ-SET-084.2`)*:
-• In `determineRecommendedUnpairDeviceId`, the system SHALL recommend unpairing `ALTITUDE_FROM_PRESSURE` first if paired. Next, if both `SPEED_AND_LOCATION_GOOGLE_FUSED` and `SPEED_AND_LOCATION_GPS` are paired, it SHALL recommend unpairing `SPEED_AND_LOCATION_GPS` (so Google Fused is retained). Otherwise, it SHALL fall back to the first paired device in list order.
+• In `determineRecommendedUnpairDeviceId`, the system SHALL recommend unpairing `ALTITUDE_FROM_PRESSURE` first if paired. Next, if both `SPEED_AND_LOCATION_GOOGLE_FUSED` and `SPEED_AND_LOCATION_GPS` are paired, it SHALL recommend unpairing `SPEED_AND_LOCATION_GPS` (so Google Fused is retained). Otherwise, if non-location sensors are paired alongside a location sensor, the system SHALL recommend unpairing the non-location sensor (prioritizing disconnected sensors first, oldest last-seen timestamp second) and SHALL NEVER recommend `SPEED_AND_LOCATION_GOOGLE_FUSED` or a sole paired Location sensor for unpairing. In `SwapOrUpgradeDialog`, fallback preselection SHALL likewise filter for non-location devices before defaulting to list order.
 3. *Atomic Swap Execution (`REQ-SET-084.3`)*:
 • Tapping "Swap" SHALL unpair the selected existing device and pair the new candidate device in a single database operation, maintaining total paired devices $\le 2$.
 4. *Direct Upgrade Path & Development Support CTA (`REQ-SET-084.4`)*:
@@ -1401,10 +1401,10 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • In `SwapOrUpgradeDialog.kt`, action controls SHALL follow the Rule 73 stacked button layout for `AppModalBottomSheet`: primary action (*'Tauschen & Koppeln'*, `Button`) and secondary CTA (*'Entwicklung unterstützen'*, `FilledTonalButton`) SHALL be laid out as vertically stacked full-width buttons (`Modifier.fillMaxWidth()`, `8.dp` spacing) at the bottom of the sheet content column, leaving only a single full-width dismiss action (*'Abbrechen'*, `TextButton`) in `actions`, eliminating horizontal button crowding and broken word wrapping across all 9 locales (Rule 73, ATT-5470). Furthermore, dialog titles and messages in `SwapOrUpgradeDialog` and `KeepTwoSensorsBottomSheet` SHALL use appreciative terminology (*"In der Basisversion"* / *"In the base version"*, *"2/2 Plätze"* / *"2/2 Slots"*) rather than transactional SaaS paywall wording (*Free-Tier*, *Free-Plätze*, *Pay what you want*), preserving the single string placeholder (`%1$s`) in `swap_dialog_message` across all 9 supported locales (ATT-5661).
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Amends `REQ-SET-084` (`REQ-SET-084.4`, `REQ-SET-084.8`) targeting `SwapOrUpgradeDialog.kt`, `KeepTwoSensorsBottomSheet.kt`, and `strings.xml`.
-2. *Historical Origin & Commit Trace*: `ATT-51` (Initial quota & swap dialog), `ATT-5398` (`KeepTwoSensorsBottomSheet`), `ATT-5469` (`29251f2d`, global reconciliation manager), `ATT-5470` (Rule 73 stacked action buttons), refined in `ATT-5490` (Sprint `2026-45.8`) and `ATT-5661` (appreciative copy & support CTA).
-3. *Root Reason for Existing Formulation*: Early copy adopted commercial SaaS subscription phrasing (*"Im Free-Tier"*, *"Free-Plätze"*, *"Pay what you want"*, *"Unbegrenzte Sensoren freischalten"*). Framing sensor expansion as supporting independent app development (*"In der Basisversion"*, *"Entwicklung unterstützen"*) reflects community-oriented voluntary appreciation while retaining clarity on the 2-sensor base limit.
-4. *Preservation of Core Invariants*: Base-tier quota ($\le 2$ sensors) is strictly preserved; unselected sensors remain in SQLite with custom names and calibration intact; Rule 73 stacked button layout intact; single `%1$s` placeholder preserved across all 9 locales.
+1. *Original Requirement ID & Target*: Amends `REQ-SET-084` (`REQ-SET-084.2`, `REQ-SET-084.4`, `REQ-SET-084.8`) targeting `SensorQuotaReconciliationManager.kt`, `SwapOrUpgradeDialog.kt`, `KeepTwoSensorsBottomSheet.kt`, and `strings.xml`.
+2. *Historical Origin & Commit Trace*: `ATT-51` (Initial quota & swap dialog), `ATT-5398` (`KeepTwoSensorsBottomSheet`), `ATT-5469` (`29251f2d`, global reconciliation manager), `ATT-5470` (Rule 73 stacked action buttons), refined in `ATT-5490` (Sprint `2026-45.8`), `ATT-5661` (appreciative copy & support CTA), and `ATT-5657` (Sprint `2026-45.9`, sole location sensor unpair protection).
+3. *Root Reason for Existing Formulation*: Early copy adopted commercial SaaS subscription phrasing (*"Im Free-Tier"*, *"Free-Plätze"*, *"Pay what you want"*, *"Unbegrenzte Sensoren freischalten"*). Framing sensor expansion as supporting independent app development (*"In der Basisversion"*, *"Entwicklung unterstützen"*) reflects community-oriented voluntary appreciation while retaining clarity on the 2-sensor base limit. In `determineRecommendedUnpairDeviceId`, falling back to `firstOrNull()` inadvertently selected `Google Fused` or the sole location sensor because internal smartphone sensors reside at index 0.
+4. *Preservation of Core Invariants*: Base-tier quota ($\le 2$ sensors) is strictly preserved; unselected sensors remain in SQLite with custom names and calibration intact; Rule 73 stacked button layout intact; single `%1$s` placeholder preserved across all 9 locales; Barometer unpairing priority preserved; dual-location preference (unpair GPS over Google Fused) preserved; and sole location sensor is protected from unpairing recommendations.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete in the base version with 2 paired devices attempting to pair a heart rate monitor,
@@ -1413,6 +1413,9 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • *Given* the Swap dialog with `ALTITUDE_FROM_PRESSURE` preselected,
 • *When* the athlete taps "Swap & Pair",
 • *Then* `ALTITUDE_FROM_PRESSURE` is unpaired, the heart rate monitor is paired, and total paired devices equals 2.
+• *Given* an athlete in the base version with Google Fused (or sole Location sensor) and an external sensor (e.g. cadence, HRM) paired,
+• *When* attempting to pair a 3rd sensor,
+• *Then* `SwapOrUpgradeDialog` SHALL recommend the external non-location sensor for unpairing and SHALL NEVER recommend Google Fused or the sole Location sensor.
 • *Given* an athlete downgraded to Free tier with both Google Fused and GPS paired plus remote sensors,
 • *When* `KeepTwoSensorsBottomSheet` is evaluated,
 • *Then* Google Fused and the most recently active remote sensor are preselected as the 2 defaults.
