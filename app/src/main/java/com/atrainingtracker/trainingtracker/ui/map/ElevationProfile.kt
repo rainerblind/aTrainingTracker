@@ -495,11 +495,11 @@ fun ElevationProfile(
         hasClimbs = climbs.isNotEmpty()
     ).dp
 
-    val altitudeHistogram = remember(pathPoints, cachedData.minAlt, cachedData.maxAlt, alignWithTelemetryCharts, colorScheme) {
+    val altitudeHistogram = remember(pathPoints, cachedData.minAlt, cachedData.maxAlt, alignWithTelemetryCharts) {
         if (!alignWithTelemetryCharts || pathPoints.isEmpty() || cachedData.maxAlt <= cachedData.minAlt) {
             emptyList()
         } else {
-            val altColor = cachedData.segments.firstOrNull()?.color ?: colorScheme.primary
+            val altColor = TTColor.Zone1
             val altValues = pathPoints.map { it.altitude }
             val timestamps = pathPoints.map { it.timeSec }
             TelemetryHistogramCalculator.computeLinearMarginalHistogram(

@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.map
 
 import androidx.compose.ui.graphics.Color
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.TelemetryHistogramCalculator
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -150,6 +151,56 @@ class ElevationProfileGradeColorTest {
             for (key in requiredKeys) {
                 assertTrue("File $file must contain string name=\"$key\"", text.contains("name=\"$key\""))
             }
+        }
+    }
+
+    @Test
+    fun testElevationProfile_marginalAltitudeHistogramColorIsFixedZone1Green() {
+        val elevationProfileFile = File(projectRoot, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/ElevationProfile.kt")
+        assertTrue("ElevationProfile.kt must exist", elevationProfileFile.exists())
+        val content = elevationProfileFile.readText()
+
+        // Contract verification (REQ-UI-446.2 / ATT-5486):
+        // Marginal altitude histogram must strictly use fixed TTColor.Zone1 green
+        assertTrue(
+            "ElevationProfile must assign val altColor = TTColor.Zone1 for marginal altitude histogram",
+            content.contains("val altColor = TTColor.Zone1")
+        )
+        // Must NOT sample the first segment's slope gradient color
+        assertTrue(
+            "ElevationProfile must not derive altColor from first segment gradient",
+            !content.contains("cachedData.segments.firstOrNull()?.color")
+        )
+    }
+
+    @Test
+    fun testElevationProfile_marginalAltitudeHistogram_steepStartDoesNotColorHistogramRed() {
+        // Construct track where initial segment has a steep incline (+12% grade)
+        val initialGrade = 12.0
+        val segment0Color = getElevationGradeColor(initialGrade)
+        assertEquals("Initial segment color must be Zone 4 Red for +12% slope", TTColor.Zone4, segment0Color)
+
+        // Under REQ-UI-446.2 (ATT-5486), the marginal altitude histogram uses fixed TTColor.Zone1
+        val altColor = TTColor.Zone1
+        val altValues = listOf(400.0, 410.0, 420.0, 430.0, 440.0, 450.0)
+        val timestamps = listOf(0L, 10L, 20L, 30L, 40L, 50L)
+
+        val histogram = TelemetryHistogramCalculator.computeLinearMarginalHistogram(
+            values = altValues,
+            timestamps = timestamps,
+            dataMin = 400.0,
+            dataMax = 450.0,
+            numBins = 10,
+            color = altColor
+        )
+
+        assertTrue("Histogram bins must not be empty", histogram.isNotEmpty())
+        for (bin in histogram) {
+            assertEquals(
+                "Marginal altitude histogram bins must render in TTColor.Zone1 green regardless of steep start gradient",
+                TTColor.Zone1,
+                bin.color
+            )
         }
     }
 }

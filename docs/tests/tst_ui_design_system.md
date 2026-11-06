@@ -7110,14 +7110,14 @@
 
 ### TST-UI-446: **Universal Stacked Workout Details Marginal Histograms & Widened Strip Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-446`
-- **Component**: `TelemetryMetricGraphTest.kt`, `TelemetryMetricGraphLandscapeContractTest.kt`, `ElevationProfileTest.kt`, `TranslationParityTest.kt`
-- **Jira**: `ATT-5370`
+- **Component**: `TelemetryMetricGraphTest.kt`, `TelemetryMetricGraphLandscapeContractTest.kt`, `ElevationProfileTest.kt`, `ElevationProfileGradeColorTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-5370`, `ATT-5486`
 - **Test Description**:
   1. *Universal Marginal Histogram & Widened Portrait Margin Contract Test (`TST-UI-446.1`)*:
   • Verify `TelemetryMetricGraph` and `ElevationProfile` allocate `endPaddingPx = 52.dp` in portrait mode when aligned with stacked charts, yielding ~44dp bar width within the 52dp margin.
   • Verify universal marginal histogram rendering across all stacked telemetry types: `ElevationProfile`, `SPEED`, `PACE`, `HEART_RATE`, `POWER`, and `W_PRIME_BAL`.
   2. *Series-Color Rendering, Track Continuity & Domain Clamping Contract Test (`TST-UI-446.2`)*:
-  • Verify non-zoned charts (`Speed/Pace`, `W'bal`, `Elevation`) render marginal histograms in series color without physiological zone segmentation.
+  • Verify non-zoned charts (`Speed/Pace`, `W'bal`, `Elevation`) render marginal histograms in series color without physiological zone segmentation, specifically asserting that `ElevationProfile` in portrait and landscape `AlignedMarginalZoneDistribution` uses fixed `TTColor.Zone1` green regardless of the initial segment slope gradient.
   • Verify unconditional `alpha = 0.15f` background container tracks across `[dataMin, dataMax]` per Rule 69.
   • Verify strict domain-boundary filtering and clamping (`bin.rangeMax <= dataMin || bin.rangeMin >= dataMax`) preventing out-of-domain bin stacking at `y = 0` per Rule 70.
   • Verify 5/7-zone coloring and threshold alignment are preserved for `HEART_RATE` and `POWER`.
