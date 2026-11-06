@@ -488,10 +488,18 @@ Normalization (`WorkoutClusterEngine.normalizeName`) and hit count stripping (`W
 `SUM(timeActive_s)` as total cumulative active moving time.
 • The system SHALL encapsulate these values in `data class WorkoutClusterStats` and expose them via `WorkoutClusterRepository.clusterStats: StateFlow<Map<Long, WorkoutClusterStats>>` refreshed atomically alongside clusters.
 2. *Semantic Information Architecture & Layout*:
-• *Detail Screen Dashboard (`WorkoutClusterSummaryHeader`)*: The system SHALL present a three-tier structured dashboard:
-a) *Performance Benchmarks*: Best Time (highlighted with trophy accent), Average Time, and Sport-Adaptive Velocity (Pace for running/walking, Speed for cycling/other).
-b) *Cumulative Totals*: Total Distance, Total Climbing, and Total Moving Time.
-c) *Activity & Recency*: Interactive Recordings Count button (tapping navigates to filtered workout list) and Last Activity date with relative recency (e.g., `"06.09.2026 (3 days ago)"`).
+• *Compact 2-Line Identity Header (`MapDetailLayout.header`)*:
+  - Row 1: `WorkoutClusterIdentityRow` (Sport icon + Cluster name) + Top-End Action buttons (Edit Fingerprint `Icons.Default.EditLocationAlt`, Rename `Icons.Default.Edit`, Long-press Delete context menu).
+  - Row 2 (viewing): Compact base metadata row (`RefDistance • SportName • LinkedEquipment`).
+  - Row 2 (editing): Fingerprint marker-type `FilterChip` row (`Start`, `End`, `Apex`, `MinAlt`, `MaxAlt`).
+• *Split-Pane Detail Analytics Dashboard (`MapDetailLayout.analyticsContent`)*:
+  - The three-tier dashboard is hosted in the scrollable lower pane beneath `MapDetailLayout`'s draggable `SplitPaneDivider`, enabling the divider and allocating the central viewport (~60–70% height) to the cluster map.
+  - Detail Content Tabs: A compact tab switcher allows athletes to toggle between:
+    a) *Tab 1 (Statistik / Details)*:
+       - *Performance Benchmarks*: Best Time (highlighted with trophy accent), Average Time, and Sport-Adaptive Velocity (Pace for running/walking, Speed for cycling/other).
+       - *Cumulative Totals*: Total Distance, Total Climbing, and Total Moving Time.
+       - *Activity & Recency*: Interactive Recordings Count button (tapping navigates to filtered workout list) and Last Activity date with relative recency (e.g., `"06.09.2026 (3 days ago)"`).
+    b) *Tab 2 (Leistungsverlauf / Effort Progression)*: Hosts `WorkoutClusterTrendChartCard` when valid trend workouts count $N \ge 2$. (When $N < 2$, Tab 1 is displayed directly without redundant tab bar).
 • *List Card View (`ClusterItem` / `WorkoutClusterMetadataBlock`)*: The card SHALL display a compact metadata block featuring Best Time (🏆), Total Distance, and Last Hit date alongside the square map preview without visual crowding.
 3. *Edge Cases & Invariants*:
 • Clusters with 0 recorded workouts SHALL gracefully display default empty states without NaN, null, or division-by-zero crashes.
@@ -508,6 +516,9 @@ c) *Activity & Recency*: Interactive Recordings Count button (tapping navigates 
 7. *Given* a newly created cluster with no sessions,
 8. *When* viewed in list or detail view,
 9. *Then* the system SHALL display empty/placeholder stats safely without errors.
+10. *Given* `WorkoutClusterHeatmapScreen`,
+11. *When* rendered in standard viewing mode,
+12. *Then* `MapDetailLayout.header` renders only the compact 2-line identity and metadata row, while the 3-tier performance & volume dashboard is hosted in `MapDetailLayout.analyticsContent` below a draggable `SplitPaneDivider`.
 
 **Invariants**: Cluster fingerprinting, apex anchoring, database schema, and existing cluster filtering/sorting MUST NOT be modified.
 
@@ -949,8 +960,8 @@ c) *Activity & Recency*: Interactive Recordings Count button (tapping navigates 
 1. *Chronological Effort Progression & Data Cleansing (`REQ-SET-078.1`)*:
 • The system SHALL sort member workouts in ascending chronological order based on `startTimeS`.
 • Workouts with non-positive duration (`activeTimeSec <= 0`) or velocity (`avgSpeedMps <= 0.0`) SHALL be excluded from the trend plot.
-• When the count of valid member workouts is strictly less than 2 ($N < 2$), the progression chart card SHALL be hidden completely from `WorkoutClusterDetailDashboard`.
-• When $N \ge 2$, the progression chart card SHALL be displayed.
+• When the count of valid member workouts is strictly less than 2 ($N < 2$), the progression chart card SHALL be hidden completely and the analytics pane SHALL display Tab 1 directly without a trend tab option.
+• When $N \ge 2$, the progression chart card SHALL be displayed within Tab 2 (*Leistungsverlauf*) of `MapDetailLayout.analyticsContent`.
 2. *Sport-Aware Dual Metric Modes & Inverted Scaling (`REQ-SET-078.2`)*:
 • The chart SHALL support toggling between Duration and Speed/Pace modes.
 • In Duration mode, `activeTimeSec` SHALL be plotted with inverted vertical scaling such that faster (lower) durations are rendered higher on the canvas, preserving the "higher is better" invariant.
@@ -959,9 +970,9 @@ c) *Activity & Recency*: Interactive Recordings Count button (tapping navigates 
 3. *Cluster Average Reference Line & Personal Best Highlight (`REQ-SET-078.3`)*:
 • The chart SHALL draw a horizontal dashed reference line across the plot representing the cluster average value (duration, speed, or pace).
 • The effort with the fastest time (minimum `activeTimeSec`) SHALL be decorated with a distinctive gold marker and PR badge.
-4. *Interactive Touch Selection & Peek Launch (`REQ-SET-078.4`)*:
-• Tapping a data point within 24dp hit radius SHALL select that effort, drawing an active indicator ring and updating a compact callout card with date, duration, speed/pace, and PR badge.
-• Tapping the selected point or callout card SHALL dispatch `selectWorkoutForPeek(workout.id)`.
+4. *Direct Touch Selection & Peek Launch (`REQ-SET-078.4`)*:
+• Tapping a data point within 24dp hit radius SHALL select that effort, drawing an active indicator ring and directly dispatching `onSelectWorkout(hit.workoutId)` to launch the workout peek sheet.
+• The redundant selected-workout callout banner (`Surface` with date, duration, speed/pace, and arrow icon at the bottom of `WorkoutClusterTrendChartCard`) SHALL be removed, freeing ~50 dp of vertical space.
 5. *9-Language Localization Parity (`REQ-SET-078.5`)*:
 • All new UI strings (`cluster_trend_title`, `cluster_trend_duration`, `cluster_trend_speed`, `cluster_trend_pace`, `cluster_trend_pr`, `cluster_trend_avg`, `cluster_trend_outlier`) SHALL exist across all 9 application locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
 6. *Outlier-Resilient Y-Axis Scaling & Tukey Fencing (`REQ-SET-078.6`)*:
@@ -975,7 +986,7 @@ c) *Activity & Recency*: Interactive Recordings Count button (tapping navigates 
 • When $N > 20$, standard non-PR point radius SHALL dynamically reduce to compact size ($2\text{ dp}$ outer / $1\text{ dp}$ inner) to prevent visual collision.
 • PR efforts SHALL retain prominent gold highlighting ($6\text{ dp}$).
 • Selected effort SHALL retain prominent highlight ring ($5\text{ dp}$ inner / $9\text{ dp}$ halo).
-• Clamped outlier efforts SHALL be visually differentiated at the canvas boundary with an outlier glyph / ring styling and an outlier badge in the callout card.
+• Clamped outlier efforts SHALL be visually differentiated at the canvas boundary with an outlier glyph / ring styling.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
 1. *Original Requirement ID & Target*: Refines `REQ-SET-078` (*Historical Duration and Speed/Pace Trend Chart for Workout Clusters*). Targets `WorkoutClusterTrendChartCard.kt`, `WorkoutClusterTrendMath.kt`, `WorkoutClusterHeatmapScreen.kt`, and `values*/strings.xml`.
@@ -1002,9 +1013,9 @@ c) *Activity & Recency*: Interactive Recordings Count button (tapping navigates 
 • *Given* a cluster with $> 20$ workouts,
 • *When* inspecting data points,
 • *Then* point radii adaptively scale down to 2dp to eliminate crowding.
-• *Given* a rendered chart,
-• *When* the user taps an effort point,
-• *Then* the callout card updates with that effort's metrics (including outlier badge if applicable), and tapping the callout dispatches `selectWorkoutForPeek`.
+• *Given* a rendered chart on `WorkoutClusterHeatmapScreen`,
+• *When* the user taps an effort point on the canvas within the hit radius,
+• *Then* `selectWorkoutForPeek(hit.workoutId)` is dispatched immediately to open the workout peek sheet, and zero redundant callout banner is rendered below the chart.
 
 **Invariants**: Cluster centroid arithmetic mean, route matching, athletic "faster-is-higher" orientation, 9-language localization parity, and 100% clean-room test pass rate.
 

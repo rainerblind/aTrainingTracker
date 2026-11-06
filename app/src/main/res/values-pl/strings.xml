@@ -814,6 +814,7 @@
     <string name="track_type_network">Sieć</string>
     <string name="legend">Legenda</string>
     <string name="cluster_statistics_title">Statystyki treningu</string>
+    <string name="cluster_tab_statistics">Statystyki</string>
     <string name="cluster_total_recordings">Całkowita liczba nagrań</string>
     <string name="cluster_average_distance">Średni dystans</string>
     <string name="cluster_recordings_format">%1$d nagrań</string>

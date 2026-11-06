@@ -1035,6 +1035,7 @@
     <string name="track_type_network">Rete</string>
     <string name="legend">Legenda</string>
     <string name="cluster_statistics_title">Statistiche dell’allenamento</string>
+    <string name="cluster_tab_statistics">Statistiche</string>
     <string name="cluster_total_recordings">Registrazioni totali</string>
     <string name="cluster_average_distance">Distanza media</string>
     <string name="cluster_recordings_format">%1$d registrazioni</string>

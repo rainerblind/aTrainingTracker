@@ -1110,6 +1110,7 @@
     <string name="legend">Legende</string>
 
     <string name="cluster_statistics_title">Einheitenstatistik</string>
+    <string name="cluster_tab_statistics">Statistik</string>
     <string name="cluster_total_recordings">Aufzeichnungen gesamt</string>
     <string name="cluster_average_distance">Mittlere Distanz</string>
     <string name="cluster_recordings_format">%1$d Aufzeichnungen</string>

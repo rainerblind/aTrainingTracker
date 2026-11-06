@@ -109,20 +109,34 @@ class WorkoutClusterTrendLayoutAndVisibilityTest {
     }
 
     @Test
-    fun testWorkoutClusterDetailDashboardVisibilityGuardAndDivider() {
+    fun testWorkoutClusterDetailDashboardSplitPaneAndTabHostingContract() {
         val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClusterHeatmapScreen.kt")
         val content = file.readText()
 
-        // Must contain validTrendWorkoutsCount check before composing card
+        // Must pass analyticsContent to MapDetailLayout
         assertTrue(
-            "WorkoutClusterDetailDashboard must guard WorkoutClusterTrendChartCard with valid count >= 2",
+            "WorkoutClusterHeatmapScreen must pass analyticsContent to MapDetailLayout",
+            content.contains("analyticsContent = {") && content.contains("WorkoutClusterDetailDashboard(")
+        )
+
+        // WorkoutClusterSummaryHeader must render 2-line header with WorkoutClusterMetadataRow when not editing
+        assertTrue(
+            "WorkoutClusterSummaryHeader must render compact WorkoutClusterMetadataRow",
+            content.contains("WorkoutClusterMetadataRow(")
+        )
+
+        // Must contain validTrendWorkoutsCount check before composing tab switcher / card
+        assertTrue(
+            "WorkoutClusterDetailDashboard must guard trend tab switcher with valid count >= 2",
             content.contains("validTrendWorkoutsCount >= 2")
         )
 
-        // Must render HorizontalDivider for visual cadence
+        // Must use SingleChoiceSegmentedButtonRow for Tab 1 / Tab 2 switching
         assertTrue(
-            "WorkoutClusterDetailDashboard must render HorizontalDivider after trend card",
-            content.contains("HorizontalDivider(")
+            "WorkoutClusterDetailDashboard must render SingleChoiceSegmentedButtonRow for detail tabs",
+            content.contains("SingleChoiceSegmentedButtonRow(") &&
+            content.contains("R.string.cluster_tab_statistics") &&
+            content.contains("R.string.cluster_trend_title")
         )
     }
 
@@ -161,10 +175,16 @@ class WorkoutClusterTrendLayoutAndVisibilityTest {
             content.contains("p.isClampedOutlier")
         )
 
-        // Verify outlier badge in callout card
+        // Verify redundant callout card was removed from WorkoutClusterTrendChartCard (ATT-5485 / REQ-SET-078.4)
+        assertFalse(
+            "WorkoutClusterTrendChartCard must remove redundant bottom callout banner",
+            content.contains("Icons.AutoMirrored.Filled.ArrowForward")
+        )
+
+        // Verify direct tap-to-peek launch
         assertTrue(
-            "WorkoutClusterTrendChartCard must display cluster_trend_outlier badge in callout",
-            content.contains("R.string.cluster_trend_outlier")
+            "WorkoutClusterTrendChartCard must directly dispatch onSelectWorkout on point tap",
+            content.contains("onSelectWorkout(hit.workoutId)")
         )
 
         // Verify X and Y axis scale label rendering

@@ -1034,6 +1034,7 @@
     <string name="track_type_network">Réseau</string>
     <string name="legend">Légende</string>
     <string name="cluster_statistics_title">Statistiques de l’itinéraire</string>
+    <string name="cluster_tab_statistics">Statistiques</string>
     <string name="cluster_total_recordings">Total des enregistrements</string>
     <string name="cluster_average_distance">Distance moyenne</string>
     <string name="cluster_recordings_format">%1$d enregistrements</string>

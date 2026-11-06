@@ -1038,6 +1038,7 @@
     <string name="track_type_network">Red</string>
     <string name="legend">Leyenda</string>
     <string name="cluster_statistics_title">Estadísticas de la ruta</string>
+    <string name="cluster_tab_statistics">Estadísticas</string>
     <string name="cluster_total_recordings">Grabaciones totales</string>
     <string name="cluster_average_distance">Distancia promedio</string>
     <string name="cluster_recordings_format">%1$d grabaciones</string>

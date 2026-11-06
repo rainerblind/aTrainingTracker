@@ -331,10 +331,11 @@
   • Unfinished Workout Filter: Include unfinished workout (`finished = 0`) with shorter duration; verify it is excluded from Best Time calculation.
   2. Recency & Relative Time Formatting:
   • Test `lastHitRelativeFormatted` for sessions logged today ("Today"), yesterday ("Yesterday"), 4 days ago ("4 days ago"), and 3 weeks ago ("3 weeks ago").
-  3. Presentation & Sport-Adaptive Verification:
+  3. Presentation, Layout & Sport-Adaptive Verification:
   • Running Sport: Verify velocity formats as Pace (e.g., `min/km`).
   • Cycling Sport: Verify velocity formats as Speed (e.g., `km/h`).
-  • Detail Dashboard (`WorkoutClusterSummaryHeader`): Verify 3-tier card layout renders all metrics with trophy icon for Best Time.
+  • Detail Screen Split Pane (`WorkoutClusterHeatmapScreen`): Verify `MapDetailLayout.header` renders only the compact 2-line header, and `MapDetailLayout.analyticsContent` renders the 3-tier dashboard below `SplitPaneDivider`.
+  • Bottom Tabs: Verify Tab 1 renders 3-tier performance & volume metrics, and Tab 2 renders `WorkoutClusterTrendChartCard` when valid workout count $N \ge 2$.
   • List Card (`ClusterItem`): Verify Best Time, Total Distance, and Last Hit render cleanly without clipping the 100x100 preview map.
   4. Localization & Parity Check:
   • Verify 100% translation coverage for all new stat labels across all 9 supported languages (EN, DE, ES, FR, IT, JA, NL, PL, PT).
@@ -668,9 +669,10 @@
   3. *Boundary & Edge Case Resilience Test (`TST-SET-078.3`, `WorkoutClusterTrendMathTest.kt`)*:
   • Test with $N = 0$, $N = 1$, and identical durations (min == max).
   • Verify safe handling without division-by-zero, NaN, or exceptions; identical values clamp safely to $Y = 0.5f$.
-  4. *PR Determination & Touch Hit Testing Test (`TST-SET-078.4`, `WorkoutClusterTrendMathTest.kt`)*:
+  4. *PR Determination & Direct Touch Selection Test (`TST-SET-078.4`, `WorkoutClusterTrendMathTest.kt`)*:
   • Verify PR index corresponds to minimum duration effort.
   • Verify nearest-point touch detection identifies points within radius $R$ and returns null beyond $R$.
+  • Verify point touch hit triggers `onSelectWorkout(workoutId)` directly without requiring or rendering a bottom callout card.
   5. *9-Language Localization & Format Audit (`TST-SET-078.5`, `WorkoutClusterTrendLocalizationTest.kt`)*:
   • Verify all 6 trend keys (`cluster_trend_title`, `cluster_trend_duration`, `cluster_trend_speed`, `cluster_trend_pace`, `cluster_trend_pr`, `cluster_trend_avg`) exist across all 9 application locales.
   6. *Clean-Room Regression Suite Execution (`TST-SET-078.6`)*:
@@ -688,6 +690,8 @@
   • Verify that when $N > 20$, standard non-PR point radius evaluates to $2\text{ dp}$ (vs. standard $4\text{ dp}$ for $N \le 20$).
   • Verify PR point retains gold $6\text{ dp}$ and selected point retains $5\text{ dp}$ + $9\text{ dp}$ ring.
   • Verify clamped outlier points are rendered with distinct visual cue.
+  • Verify removal of redundant selected-workout bottom callout card banner from `WorkoutClusterTrendChartCard`.
+  • Verify `WorkoutClusterTrendChartCard` is hosted within Tab 2 (*Leistungsverlauf*) of `MapDetailLayout.analyticsContent`.
   10. *9-Language Localization Parity for Outlier String (`TST-SET-078.10`, `WorkoutClusterTrendLocalizationTest.kt` / `TranslationParityTest.kt`)*:
   • Verify string key `cluster_trend_outlier` exists and is non-empty across all 9 application locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
   11. *Clean-Room Regression Suite Execution (`TST-SET-078.11`)*:

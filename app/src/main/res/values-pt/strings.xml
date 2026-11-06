@@ -1035,6 +1035,7 @@
     <string name="track_type_network">Rede</string>
     <string name="legend">Legenda</string>
     <string name="cluster_statistics_title">Estatísticas do treino</string>
+    <string name="cluster_tab_statistics">Estatísticas</string>
     <string name="cluster_total_recordings">Total de gravações</string>
     <string name="cluster_average_distance">Distância média</string>
     <string name="cluster_recordings_format">%1$d gravações</string>

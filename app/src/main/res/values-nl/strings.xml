@@ -1035,6 +1035,7 @@
     <string name="track_type_network">Netwerk</string>
     <string name="legend">Legenda</string>
     <string name="cluster_statistics_title">Workout-statistieken</string>
+    <string name="cluster_tab_statistics">Statistieken</string>
     <string name="cluster_total_recordings">Totaal aantal opnamen</string>
     <string name="cluster_average_distance">Gemiddelde afstand</string>
     <string name="cluster_recordings_format">%1$d opnamen</string>

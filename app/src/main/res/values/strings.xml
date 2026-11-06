@@ -1257,6 +1257,7 @@
     <string name="legend">Legend</string>
 
     <string name="cluster_statistics_title">Workout Statistics</string>
+    <string name="cluster_tab_statistics">Statistics</string>
     <string name="cluster_total_recordings">Total Recordings</string>
     <string name="cluster_average_distance">Average Distance</string>
     <string name="cluster_recordings_format">%1$d recordings</string>
