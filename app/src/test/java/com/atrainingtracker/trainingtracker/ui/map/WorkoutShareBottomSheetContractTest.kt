@@ -106,4 +106,59 @@ class WorkoutShareBottomSheetContractTest {
             primaryIdx != -1 && secondaryIdx != -1 && primaryIdx < secondaryIdx
         )
     }
+
+    @Test
+    fun testWorkoutShareBottomSheet_threeTierPhotoCascadeContract() {
+        val file = java.io.File("src/main/java/com/atrainingtracker/trainingtracker/ui/map/WorkoutShareBottomSheet.kt")
+        val altFile = java.io.File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/WorkoutShareBottomSheet.kt")
+        val targetFile = if (file.exists()) file else altFile
+        assertTrue("WorkoutShareBottomSheet.kt must exist on disk", targetFile.exists())
+
+        val source = targetFile.readText()
+
+        // Verify PhotoCascadeTier enum definition
+        assertTrue("PhotoCascadeTier enum must exist", source.contains("enum class PhotoCascadeTier"))
+        assertTrue("PhotoCascadeTier must define ATTACHED", source.contains("ATTACHED"))
+        assertTrue("PhotoCascadeTier must define TIME_WINDOW", source.contains("TIME_WINDOW"))
+
+        // Verify Tier 1 strings and controls
+        assertTrue(
+            "Must use share_photos_attached_subtitle in Tier 1",
+            source.contains("R.string.share_photos_attached_subtitle")
+        )
+        assertTrue(
+            "Must provide button to expand to time-window photos",
+            source.contains("R.string.share_photos_show_time_window")
+        )
+
+        // Verify Tier 2 strings and controls
+        assertTrue(
+            "Must query time-window photos via WorkoutPhotoManager",
+            source.contains("WorkoutPhotoManager.queryWorkoutTimePhotos")
+        )
+        assertTrue(
+            "Must use workout_photos_time_picker_subtitle in Tier 2",
+            source.contains("R.string.workout_photos_time_picker_subtitle")
+        )
+        assertTrue(
+            "Must provide button to return to attached photos in Tier 2",
+            source.contains("R.string.share_photos_show_attached")
+        )
+
+        // Verify Tier 3 fallback button
+        assertTrue(
+            "Must provide workout_photos_show_all button for Tier 3",
+            source.contains("R.string.workout_photos_show_all")
+        )
+
+        // Verify bounded grid height and scrollable guard
+        assertTrue(
+            "Must configure scrollable based on cascade tier to prevent nested scroll exception",
+            source.contains("scrollable = activePhotoTier == null")
+        )
+        assertTrue(
+            "Must constrain grid height to 120.dp or 240.dp",
+            source.contains("120.dp else 240.dp")
+        )
+    }
 }

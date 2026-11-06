@@ -2358,6 +2358,10 @@
     <string name="share_cta_button">Partager</string>
     <string name="share_error_no_gps">Aucun tracé GPS enregistré pour cet entraînement</string>
     <string name="share_error_photo_load">Échec du chargement de la photo sélectionnée</string>
+    <!-- Workout Share 3-Tier Photo Cascade (REQ-UI-447.6 / ATT-5656) -->
+    <string name="share_photos_attached_subtitle">Photos associées à cet entraînement</string>
+    <string name="share_photos_show_time_window">Afficher les photos prises pendant l\'entraînement</string>
+    <string name="share_photos_show_attached">Retour aux photos associées</string>
     <!-- Workout Photos (REQ-UI-448 / ATT-43) -->
     <string name="workout_photos_title">Photos</string>
     <string name="workout_photos_add">Ajouter des photos</string>

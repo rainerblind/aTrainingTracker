@@ -2559,6 +2559,10 @@
     <string name="share_cta_button">Share</string>
     <string name="share_error_no_gps">No GPS track recorded for this workout</string>
     <string name="share_error_photo_load">Failed to load selected photo</string>
+    <!-- Workout Share 3-Tier Photo Cascade (REQ-UI-447.6 / ATT-5656) -->
+    <string name="share_photos_attached_subtitle">Photos attached to this workout</string>
+    <string name="share_photos_show_time_window">Show photos taken during workout</string>
+    <string name="share_photos_show_attached">Back to attached photos</string>
     <!-- Workout Photos (REQ-UI-448 / ATT-43) -->
     <string name="workout_photos_title">Photos</string>
     <string name="workout_photos_add">Add Photos</string>

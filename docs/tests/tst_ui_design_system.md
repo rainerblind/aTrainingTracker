@@ -7156,7 +7156,7 @@
 ### TST-UI-447: **Workout Share Mode Selection & Photo Track Overlay Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-447`
 - **Component**: `PhotoTrackOverlayComposerTest.kt`, `WorkoutShareBottomSheetContractTest.kt`, `ShareUtilsTest.kt`, `TranslationParityTest.kt`
-- **Jira**: `ATT-30`, `ATT-5479`, `ATT-5472`
+- **Jira**: `ATT-30`, `ATT-5479`, `ATT-5472`, `ATT-5656`
 - **Test Description**:
   1. *Equirectangular Track Projection, Portrait Bounds & Silhouette Geometry (`TST-UI-447.1`)*:
   • Verify `PhotoTrackOverlayComposer` scales GPS polyline points via cosine-latitude projection ($\Delta x = \Delta\lambda \cdot \cos(\phi_{\text{mean}})$, $\Delta y = -\Delta\phi$) preserving true aspect ratio.
@@ -7177,6 +7177,12 @@
   5. *9-Language Localization & Targeted Test Suite (`TST-UI-447.5`)*:
   • Verify 100% parity across all 9 locales via `TranslationParityTest` for all share mode strings.
   • Run targeted test suite (`--tests "com.atrainingtracker.trainingtracker.helpers.*"`, `ui.map.*`, `ThemeColorCentralizationAuditTest`) with 100% pass rate.
+  6. *3-Tier Photo Selection Cascade Contract Test (`TST-UI-447.6`, `WorkoutShareBottomSheetContractTest.kt`)*:
+  • Verify `WorkoutShareBottomSheet` displays Tier 1 (Attached Photos grid) when `attachedPhotos.isNotEmpty()`.
+  • Verify expanding to Tier 2 (Time-Window Photos) queries photos from `WorkoutPhotoManager.queryWorkoutTimePhotos`.
+  • Verify fallback to Tier 3 (System Picker `PickVisualMedia`) when both tiers are empty or when user taps "Alle Fotos anzeigen".
+  • Verify tapping "Foto auswählen" in preview mode returns to the 3-tier cascade.
+  • Verify Rule 73 stacked buttons across all cascade states.
 
 ### TST-UI-448: **Workout Photos Strip, Full-Screen Preview Bottom Sheet with ATT-30 Overlay Share, Map Pin Markers, and Null-Island Coordinate Rejection Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-448`

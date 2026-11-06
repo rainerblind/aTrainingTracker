@@ -2338,6 +2338,10 @@
     <string name="share_cta_button">共有</string>
     <string name="share_error_no_gps">このワークアウトにはGPSトラックが記録されていません</string>
     <string name="share_error_photo_load">選択した写真を読み込めませんでした</string>
+    <!-- Workout Share 3-Tier Photo Cascade (REQ-UI-447.6 / ATT-5656) -->
+    <string name="share_photos_attached_subtitle">このワークアウトに追加された写真</string>
+    <string name="share_photos_show_time_window">ワークアウト中に撮影された写真を表示</string>
+    <string name="share_photos_show_attached">追加された写真に戻る</string>
     <!-- Workout Photos (REQ-UI-448 / ATT-43) -->
     <string name="workout_photos_title">写真</string>
     <string name="workout_photos_add">写真を追加</string>

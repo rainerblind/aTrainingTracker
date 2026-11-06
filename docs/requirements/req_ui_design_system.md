@@ -13165,9 +13165,9 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 
 ### REQ-UI-447: Workout Share Mode Selection Bottom Sheet & Photo Track Overlay Snapshot Composer [Verified]
-- **Tests**: `TST-UI-447` | **Tickets**: `ATT-30`, `ATT-5479`, `ATT-5472`
+- **Tests**: `TST-UI-447` | **Tickets**: `ATT-30`, `ATT-5479`, `ATT-5472`, `ATT-5656`
 - **Implementation**: `MapDetailLayout.kt`, `ShareUtils.kt`, `PhotoTrackOverlayComposer.kt`, `WorkoutShareBottomSheet.kt`, `LauncherIconVariant.kt`
-- **Rationale**: Currently, tapping the Share button in `MapDetailLayout` immediately executes a vertical composite map/graph snapshot (`combineWorkoutAndShare`). Athletes frequently prefer sharing activities using a personal scenery, selfie, or gear photo overlaid with their GPS route silhouette and key stats (Strava/Garmin style). REQ-UI-447 introduces a share mode selection sheet offering the classic analysis snapshot or a photo with track & stats overlay (ATT-30, ATT-5479, ATT-5472):
+- **Rationale**: Currently, tapping the Share button in `MapDetailLayout` immediately executes a vertical composite map/graph snapshot (`combineWorkoutAndShare`). Athletes frequently prefer sharing activities using a personal scenery, selfie, or gear photo overlaid with their GPS route silhouette and key stats (Strava/Garmin style). REQ-UI-447 introduces a share mode selection sheet offering the classic analysis snapshot or a photo with track & stats overlay (ATT-30, ATT-5479, ATT-5472, ATT-5656):
 1. *Share Mode Selection Bottom Sheet (`REQ-UI-447.1`)*:
 • In `MapDetailLayout.kt`, tapping the floating Share button on a completed workout SHALL display `WorkoutShareBottomSheet` (hosted in `AppModalBottomSheet`) presenting two choices:
   - *Option A — Karten- & Analyse-Snapshot*: Executes the existing vertical composite snapshot (`combineWorkoutAndShare`).
@@ -13188,12 +13188,18 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 5. *Interactive Preview, Stacked Sharing CTAs & 9-Language Parity (`REQ-UI-447.5`)*:
 • After photo selection, `WorkoutShareBottomSheet` SHALL display an in-sheet preview of the composed photo with full-width stacked action buttons per Rule 73 (primary "Teilen" `Button` above secondary "Foto auswählen" `OutlinedButton` with 8dp spacing).
 • All user-visible strings SHALL maintain 100% localization parity across all 9 supported application locales (`values`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`).
+6. *3-Tier Photo Selection Cascade (`REQ-UI-447.6`)*:
+• In `WorkoutShareBottomSheet.kt`, selecting Option B ("Foto mit Track & Daten") or tapping "Foto auswählen" in the composed preview SHALL present a 3-tier photo selection cascade:
+  - *Tier 1 — Attached Photos*: When `attachedPhotos.isNotEmpty()`, the sheet SHALL display a thumbnail grid of attached photos with subtitle `share_photos_attached_subtitle`. Stacked full-width buttons below SHALL provide options to expand selection: secondary CTA `share_photos_show_time_window` (switching to Tier 2) and tertiary CTA `workout_photos_show_all` (switching to Tier 3). Tapping any thumbnail SHALL select the photo and advance to the composed preview.
+  - *Tier 2 — Workout Time-Window Photos*: When `attachedPhotos.isEmpty()`, or when the athlete taps `share_photos_show_time_window`, the system SHALL query photos captured during the workout time window (`[startTime - 5m .. endTime + 5m]`) via `WorkoutPhotoManager.queryWorkoutTimePhotos`. If matching photos exist, the sheet SHALL display a thumbnail grid with timestamps (`HH:mm`) and subtitle `workout_photos_time_picker_subtitle`. Stacked full-width buttons below SHALL provide `workout_photos_show_all` (Tier 3), and if `attachedPhotos.isNotEmpty()`, `share_photos_show_attached` (returning to Tier 1). Tapping any thumbnail SHALL select the photo and advance to the composed preview.
+  - *Tier 3 — All Photos (System Picker)*: When both Tier 1 and Tier 2 contain zero photos, or when the athlete taps `workout_photos_show_all`, the system SHALL launch Android's system photo picker (`ActivityResultContracts.PickVisualMedia(ImageOnly)`).
+• In the composed preview, tapping "Foto auswählen" (`share_choose_photo`) SHALL re-enter the 3-tier cascade at Tier 1 if `attachedPhotos.isNotEmpty()`, else Tier 2 if time-window photos exist, else Tier 3.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-447` (amended by `ATT-5479` and `ATT-5472`), extending `REQ-UI-177` (*Theme-Aware Post-Workout & Period Share Snapshot Canvas and Footer*), `REQ-UI-205` (*Workout Snapshot Layout*), and `REQ-UI-445.5` (*Social Share Workout Watermark*). Targets `MapDetailLayout.kt`, `ShareUtils.kt`, `PhotoTrackOverlayComposer.kt`, `WorkoutShareBottomSheet.kt`, and `LauncherIconVariant.kt`.
-2. *Historical Origin & Commit Trace*: Sprint 2026-40.8 (`ATT-1472`, `REQ-UI-177`), Sprint 2026-40.7 (`ATT-1393`, `REQ-UI-205`), `ATT-5397` (`REQ-UI-445.5`), `ATT-30` (`584284ff`), `ATT-5496` (`e5f5c754`), and `ATT-5472`.
-3. *Root Reason for Existing Formulation*: Prior to ATT-30, snapshot sharing only supported stitching layout bitmaps. Prior to ATT-5472, `REQ-UI-445.5` drew text pill badges (`[◆ SPONSOR]`), `PhotoTrackOverlayComposer` was tuned for landscape aspect ratios leaving empty vertical gaps on portrait photos, and share sheet action buttons were packed horizontally.
-4. *Preservation of Core Invariants*: Existing `combineWorkoutAndShare` and `combineAndShare` functions and non-workout callers remain 100% operational under Option A. Safe bitmap decoding (`inSampleSize`) avoids OOM on high-resolution camera photos. Legitimate GPS coordinates, track geometry, WCAG AAA text contrast, and 9-language localization parity are strictly preserved.
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-447` (amended by `ATT-5479`, `ATT-5472`, and `ATT-5656`), extending `REQ-UI-177` (*Theme-Aware Post-Workout & Period Share Snapshot Canvas and Footer*), `REQ-UI-205` (*Workout Snapshot Layout*), and `REQ-UI-445.5` (*Social Share Workout Watermark*). Targets `MapDetailLayout.kt`, `ShareUtils.kt`, `PhotoTrackOverlayComposer.kt`, `WorkoutShareBottomSheet.kt`, and `LauncherIconVariant.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-40.8 (`ATT-1472`, `REQ-UI-177`), Sprint 2026-40.7 (`ATT-1393`, `REQ-UI-205`), `ATT-5397` (`REQ-UI-445.5`), `ATT-30` (`584284ff`), `ATT-5496` (`e5f5c754`), `ATT-5472`, Sprint 2026-45.6 (`ATT-5475`, `c82c8248`), and Sprint 2026-45.9 (`ATT-5656`).
+3. *Root Reason for Existing Formulation*: Prior to ATT-30, snapshot sharing only supported stitching layout bitmaps. Prior to ATT-5472, `REQ-UI-445.5` drew text pill badges, and buttons were packed horizontally. Prior to ATT-5656, Option B launched the system photo picker (`PickVisualMedia`) immediately without stepped preselection from workout-attached photos (`attachedPhotos`) or time-window MediaStore photos.
+4. *Preservation of Core Invariants*: Existing `combineWorkoutAndShare` and `combineAndShare` functions and non-workout callers remain 100% operational under Option A. Safe bitmap decoding (`inSampleSize`) avoids OOM on high-resolution camera photos. Legitimate GPS coordinates, track geometry, WCAG AAA text contrast, Rule 73 stacked buttons, and 9-language localization parity are strictly preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete viewing a completed workout in `MapDetailLayout`,
@@ -13202,12 +13208,18 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Given* the athlete selects Option A,
 • *When* triggered,
 • *Then* `combineWorkoutAndShare` captures Header, Map, Elevation, Analytics, and Footer and dispatches via `FileProvider`.
-• *Given* the athlete selects Option B,
-• *When* selecting a photo via `PickVisualMedia`,
-• *Then* `PhotoTrackOverlayComposer` composites the downsampled photo with the cosine-latitude-scaled GPS track silhouette (excluding any invalid/Null-Island coordinates), bottom gradient scrim, key workout metrics, and branding watermark.
-• *Given* the composed photo preview inside the bottom sheet,
-• *When* the athlete taps the Share CTA,
-• *Then* the image is shared via system send intent.
+• *Given* the athlete selects Option B in `WorkoutShareBottomSheet`,
+• *When* photos are attached to the workout (`attachedPhotos.isNotEmpty()`),
+• *Then* Tier 1 (Attached Photos) is displayed with options to switch to Tier 2 (Time-Window) or Tier 3 (All Photos).
+• *Given* the athlete selects Option B with zero attached photos, or chooses to view time-window photos,
+• *When* photos were taken during the workout time window,
+• *Then* Tier 2 (Time-Window Photos) is displayed with an option to switch to Tier 3 (All Photos).
+• *Given* zero attached and zero time-window photos, or the athlete chooses "Show All Photos",
+• *When* triggered,
+• *Then* the system photo picker (`PickVisualMedia`) is launched.
+• *Given* a photo selected from any tier,
+• *When* the photo is decoded and composited,
+• *Then* `PhotoTrackOverlayComposer` presents the composed preview, and clicking "Foto auswählen" returns to the 3-tier cascade.
 
 **Invariants**: Backward compatibility for all existing `combineWorkoutAndShare` callers, safe bitmap downsampling preventing OOM, WCAG AAA text contrast, 9-language localization parity, and 100% clean-room test pass rate.
 
