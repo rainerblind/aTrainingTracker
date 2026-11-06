@@ -33,6 +33,7 @@ import com.atrainingtracker.banalservice.helpers.UIHelper
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.monetization.SensorQuotaReconciliationManager
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -59,8 +60,9 @@ sealed class ControlNavigation {
     data object ShowRecoveryDialog : ControlNavigation()
 }
 
-class ControlTrackingViewModel(
-    private val application: Application
+class ControlTrackingViewModel @JvmOverloads constructor(
+    private val application: Application,
+    private val reconciliationManager: SensorQuotaReconciliationManager = SensorQuotaReconciliationManager.getInstance(application)
 ) : ViewModel() {
 
     companion object {
@@ -166,6 +168,9 @@ class ControlTrackingViewModel(
     val searchingForDevice = banalServiceRepository.searchingForDevice
 
     fun onSearchClicked() {
+        if (reconciliationManager.checkDowngradeReconciliation()) {
+            return
+        }
         banalServiceRepository.startSearchingForPairedDevices()
     }
 
@@ -176,6 +181,9 @@ class ControlTrackingViewModel(
     // TODO: 1. create a tracking repository which sends these boradcasts.
     // TODO: 2. Replace this sending of Broadcasts.
     fun onStartTracking() {
+        if (reconciliationManager.checkDowngradeReconciliation()) {
+            return
+        }
         val dbManager = WorkoutSummariesDatabaseManager.getInstance(application)
         if (!TrainingApplication.isTracking() && dbManager.hasUnfinishedWorkout()) {
             viewModelScope.launch {

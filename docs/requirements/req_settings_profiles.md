@@ -1367,8 +1367,8 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 **Invariants**: Core tracking, telemetry processing, local file exports, and database pairing persistence across app updates MUST NOT be compromised.
 
 ### REQ-SET-084: One-Tap Swap-or-Upgrade Dialog on 3rd Paired Device (REQ-MON-002) [Verified]
-- **Tests**: `TST-SET-084` | **Tickets**: `ATT-51`, `ATT-5399`, `ATT-5398`
-- **Implementation**: `DeviceListViewModel.kt`, `SwapOrUpgradeDialog.kt`, `KeepTwoSensorsBottomSheet.kt`, `DeviceDataRepository.kt`
+- **Tests**: `TST-SET-084` | **Tickets**: `ATT-51`, `ATT-5399`, `ATT-5398`, `ATT-5469`
+- **Implementation**: `SensorQuotaReconciliationManager.kt`, `DeviceListViewModel.kt`, `ControlTrackingViewModel.kt`, `DeviceManager.java`, `ATrainingTrackerApp.kt`, `MainActivityWithNavigation.kt`, `SwapOrUpgradeDialog.kt`, `KeepTwoSensorsBottomSheet.kt`, `DeviceDataRepository.kt`
 - **Rationale**: Ensure athletes are never blocked by a hard paywall when adding sensors. When attempting to pair a 3rd device in Free tier, athletes can easily unpair a currently active device with a single tap or upgrade to Pro via "Pay what you want". Furthermore, athletes who downgrade from Supporter to Free tier with $> 2$ paired sensors are guided through a non-destructive reconciliation flow to keep 2 sensors.
 - **Description**:
 1. *Quota Interception (`REQ-SET-084.1`)*:
@@ -1379,12 +1379,15 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • Tapping "Swap" SHALL unpair the selected existing device and pair the new candidate device in a single database operation, maintaining total paired devices $\le 2$.
 4. *Direct Upgrade Path (`REQ-SET-084.4`)*:
 • The dialog SHALL offer a prominent "Unlock Unlimited Sensors (Pay What You Want)" action navigating directly to `SupporterScreen`.
-5. *Subscription Downgrade Sensor Quota Reconciliation (`REQ-SET-084.5`)*:
-• When an athlete returns to Free tier (`!isProActive()`) with $> 2$ paired sensors in `Devices.db` while not actively recording (`!isTracking()`), `DeviceListViewModel` SHALL present a Material 3 reconciliation bottom sheet (`KeepTwoSensorsBottomSheet`) to reconcile down to 2 active sensors.
+5. *Subscription Downgrade Sensor Quota Reconciliation & Global Triggers (`REQ-SET-084.5`)*:
+• When an athlete returns to Free tier (`!isProActive()`) with $> 2$ paired sensors in `Devices.db` while not actively recording (`!isTracking()`), the centralized reconciliation manager (`SensorQuotaReconciliationManager`) SHALL present `KeepTwoSensorsBottomSheet` (`AppModalBottomSheet`) globally across the application (`ATrainingTrackerApp`), not solely within `DeviceListViewModel` / `DevicesTabbedScreen`.
+• Reconciliation SHALL be automatically triggered on application start / resume (`MainActivityWithNavigation.onResume`), upon displaying the tracking cockpit (`TrackingTabsScreen` / `SensorGridScreen`), upon reactive transition to Free tier (`!isProActive()`), and prior to dispatching sensor search or workout start in `ControlTrackingViewModel`.
 • The sheet SHALL present all currently paired devices, preselect 2 sensible defaults (`SPEED_AND_LOCATION_GPS` + `ALTITUDE_FROM_PRESSURE` or 2 most recently paired), permit selection of at most 2 active sensors, and offer a 1-tap shortcut to `SupporterScreen`.
 • Confirming selection (or dismissing the sheet, applying the 2 defaults to prevent quota bypass) SHALL set `PAIRED = 0` on all unselected devices in `Devices.db`. Unselected sensors MUST NOT be deleted; all custom names, calibration factors, wheel circumferences, and equipment links MUST remain 100% intact.
 6. *Multi-Sensor Swap Hardening (`REQ-SET-084.6`)*:
 • In Free tier, `executeSwapAndPair()` and `DeviceDataRepository` SHALL ensure that even if more than 2 sensors were paired prior to the swap, all excess sensors beyond the newly paired candidate and retained sensor are set to `PAIRED = 0`, guaranteeing total paired count is strictly $\le 2$.
+7. *BANALService Free Quota Hardware Connection Clamping (`REQ-SET-084.7`)*:
+• In `DeviceManager.startSearchForPairedDevices()` / remote device creation, the system SHALL enforce defense-in-depth hardware connection clamping: on Free tier (`!isProActive()`), connecting remote hardware devices SHALL be clamped to `MAX_FREE_PAIRED_DEVICES = 2` to prevent downgraded athletes from connecting excess sensors even if UI reconciliation has not yet been processed.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* a Free tier athlete with 2 paired devices attempting to pair a heart rate monitor,
@@ -1394,8 +1397,8 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • *When* the athlete taps "Swap & Pair",
 • *Then* `ALTITUDE_FROM_PRESSURE` is unpaired, the heart rate monitor is paired, and total paired devices equals 2.
 • *Given* an athlete downgraded to Free tier with $> 2$ paired sensors and not actively recording,
-• *When* the sensor list screen is opened,
-• *Then* the Keep-2-Sensors reconciliation bottom sheet is displayed with 2 sensible defaults preselected.
+• *When* the app starts, the tracking screen is displayed, or sensor search / tracking is requested,
+• *Then* the Keep-2-Sensors reconciliation bottom sheet is displayed globally with 2 sensible defaults preselected, and hardware connections are clamped to at most 2 paired devices.
 • *Given* the reconciliation bottom sheet,
 • *When* the athlete confirms selection or dismisses the sheet,
 • *Then* all unselected sensors are marked unpaired in `Devices.db` with data intact, and total paired count equals 2.

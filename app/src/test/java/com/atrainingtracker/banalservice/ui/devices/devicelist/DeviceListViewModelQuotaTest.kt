@@ -24,6 +24,7 @@ import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.trainingtracker.monetization.ProFeatureManager
+import com.atrainingtracker.trainingtracker.monetization.SensorQuotaReconciliationManager
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import io.mockk.coEvery
@@ -68,6 +69,7 @@ class DeviceListViewModelQuotaTest {
 
     @Before
     fun setUp() {
+        SensorQuotaReconciliationManager.setInstanceForTesting(null)
         Dispatchers.setMain(testDispatcher)
         mockkObject(DeviceDataRepository.Companion)
         mockkObject(BANALServiceRepository.Companion)
@@ -89,6 +91,7 @@ class DeviceListViewModelQuotaTest {
     fun tearDown() {
         Dispatchers.resetMain()
         unmockkAll()
+        SensorQuotaReconciliationManager.setInstanceForTesting(null)
     }
 
     private fun createUiDevice(

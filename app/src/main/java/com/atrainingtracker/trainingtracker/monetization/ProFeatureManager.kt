@@ -131,6 +131,7 @@ class ProFeatureManager @JvmOverloads constructor(
     companion object {
         private var instance: ProFeatureManager? = null
 
+        @JvmStatic
         @Synchronized
         fun getInstance(context: Context): ProFeatureManager {
             return instance ?: ProFeatureManager(context.applicationContext ?: context).also {
