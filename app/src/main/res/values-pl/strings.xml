@@ -2275,17 +2275,17 @@
     <string name="supporter_tier_gold">Pro+ Wspierający Złoty</string>
     <string name="supporter_tier_diamond">Sponsor diamentowy</string>
     <string name="supporter_screen_title">Płać ile chcesz</string>
-    <string name="supporter_screen_subtitle" formatted="false">Wspieraj niezależne śledzenie treningów i zachowaj aTrainingTracker w 100% bez reklam.</string>
+    <string name="supporter_screen_subtitle">Wesprzyj dalszy rozwój aTrainingTracker.</string>
     <string name="supporter_recommended_badge">Polecane</string>
     <string name="supporter_active_tier_prefix">Aktywny poziom: %1$s</string>
-    <string name="supporter_active_tier_thank_you">Dziękujemy za wspieranie niezależnego rozwoju aplikacji fitness!</string>
+    <string name="supporter_active_tier_thank_you">Dziękujemy za wspieranie rozwoju aTrainingTracker!</string>
     <string name="supporter_plan_button_active">Aktywny</string>
     <string name="supporter_plan_button_support">Wspieraj</string>
     <string name="supporter_period_month">miesiąc</string>
     <string name="supporter_period_year">rok</string>
     <string name="supporter_price_per_period">%1$s / %2$s</string>
     <string name="supporter_core_invariant_title" formatted="false">Podstawowe funkcje w 100% darmowe</string>
-    <string name="supporter_core_invariant_body" formatted="false">Rejestrowanie treningów, mapy, telemetria czujników i eksport GPX/TCX/FIT offline pozostają w 100% darmowe na zawsze. Subskrypcje finansują ciągły, niezależny rozwój.</string>
+    <string name="supporter_core_invariant_body" formatted="false">Rejestrowanie treningów, mapy, telemetria czujników i eksport GPX/TCX/FIT offline pozostają w 100% darmowe na zawsze. Subskrypcje finansują ciągły rozwój aplikacji.</string>
     <string name="swap_dialog_title">Limit urządzeń (zajęte 2/2 miejsca)</string>
     <string name="swap_dialog_select_device_to_unpair">Wybierz urządzenie do odłączenia:</string>
     <string name="swap_dialog_message">W wersji podstawowej można sparować maksymalnie 2 urządzenia jednocześnie (np. GPS + barometr). Aby sparować „%1$s”, odłącz istniejące urządzenie lub wesprzyj dalszy rozwój aplikacji, aby odblokować nielimitowane czujniki.</string>
@@ -2316,8 +2316,8 @@
     <string name="jubilee_feedback_prompt">Podoba Ci się aTrainingTracker? Podziel się swoją opinią, oceniając aplikację w Google Play lub wyślij uwagi bezpośrednio e-mailem do Rainera.</string>
     <string name="jubilee_action_review">Oceń w Google Play</string>
     <string name="jubilee_action_email_feedback">Opinia e-mail do Rainera</string>
-    <string name="jubilee_supporter_appeal_title">Wesprzyj 15+ lat niezależnego rozwoju</string>
-    <string name="jubilee_supporter_appeal_message">aTrainingTracker od 2011 roku jest całkowicie wolny od reklam i dba o prywatność. Jeśli aplikacja Ci pomaga, wesprzyj rozwój wersją Pro.</string>
+    <string name="jubilee_supporter_appeal_title">Wesprzyj rozwój</string>
+    <string name="jubilee_supporter_appeal_message">Możesz także wesprzeć finansowo dalszy rozwój aTrainingTracker:</string>
     <string name="jubilee_action_upgrade_pro">Wesprzyj rozwój</string>
     <string name="jubilee_action_dismiss">Trenuj dalej</string>
     <string name="debug_jubilee_preview_button">Podgląd dialogu jubileuszowego</string>

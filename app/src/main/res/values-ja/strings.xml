@@ -2253,17 +2253,17 @@
     <string name="supporter_tier_gold">ゴールドPro+サポーター</string>
     <string name="supporter_tier_diamond">ダイヤモンドスポンサー</string>
     <string name="supporter_screen_title">お好みの価格で支援</string>
-    <string name="supporter_screen_subtitle" formatted="false">独立したフィットネストラッキングを支援し、aTrainingTrackerの完全広告なしを継続します。</string>
+    <string name="supporter_screen_subtitle">aTrainingTracker の継続的な開発を支援する。</string>
     <string name="supporter_recommended_badge">おすすめ</string>
     <string name="supporter_active_tier_prefix">有効なティア: %1$s</string>
-    <string name="supporter_active_tier_thank_you">独立したフィットネスアプリ開発を支えていただきありがとうございます！</string>
+    <string name="supporter_active_tier_thank_you">aTrainingTracker の開発をご支援いただきありがとうございます！</string>
     <string name="supporter_plan_button_active">有効</string>
     <string name="supporter_plan_button_support">支援する</string>
     <string name="supporter_period_month">月</string>
     <string name="supporter_period_year">年</string>
     <string name="supporter_price_per_period">%1$s / %2$s</string>
     <string name="supporter_core_invariant_title" formatted="false">コア機能100%無料の原則</string>
-    <string name="supporter_core_invariant_body" formatted="false">ワークアウト記録、地図表示、センサーデータ、オフラインGPX/TCX/FIT出力は、今後も永続的に100%無料で利用できます。サブスクリプションは継続的な個人開発の支援に充てられます。</string>
+    <string name="supporter_core_invariant_body" formatted="false">ワークアウト記録、地図表示、センサーデータ、オフラインGPX/TCX/FIT出力は、今後も永続的に100%無料で利用できます。サブスクリプションはアプリの継続的な開発に充てられます。</string>
     <string name="swap_dialog_title">デバイス制限（2/2枠使用中）</string>
     <string name="swap_dialog_select_device_to_unpair">ペアリング解除するデバイスを選択：</string>
     <string name="swap_dialog_message">基本版では最大2台のデバイスを同時接続できます（例：GPS + 気圧計）。「%1$s」を接続するには、既存のデバイスを解除するか、アプリの開発を支援して無制限のセンサー接続を解放してください。</string>
@@ -2294,8 +2294,8 @@
     <string name="jubilee_feedback_prompt">aTrainingTrackerを気に入っていただけましたか？Google Playでの評価や、開発者のRainerへのメールでご意見・ご感想をお寄せください。</string>
     <string name="jubilee_action_review">Google Playで評価</string>
     <string name="jubilee_action_email_feedback">Rainerへメールでフィードバック</string>
-    <string name="jubilee_supporter_appeal_title">15年以上の個人開発を支援</string>
-    <string name="jubilee_supporter_appeal_message">aTrainingTrackerは2011年以来、広告なし・プライバシー重視で開発されています。トレーニングに役立っている場合はProで開発を支援してください。</string>
+    <string name="jubilee_supporter_appeal_title">開発を支援</string>
+    <string name="jubilee_supporter_appeal_message">aTrainingTracker の継続的な開発を財政的に支援することもできます：</string>
     <string name="jubilee_action_upgrade_pro">開発を支援する</string>
     <string name="jubilee_action_dismiss">トレーニングを続ける</string>
     <string name="debug_jubilee_preview_button">記念ダイアログをプレビュー</string>

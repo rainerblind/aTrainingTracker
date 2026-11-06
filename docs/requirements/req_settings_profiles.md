@@ -1464,7 +1464,7 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 **Invariants**: Pioneer status cannot be revoked by app updates or database re-indexes; existing workouts remain unmodified.
 
 ### REQ-SET-086: Five-Tier Google Play Supporter Subscriptions (REQ-MON-004) [Verified]
-- **Tests**: `TST-SET-086`, `TST-LOC-001` | **Tickets**: `ATT-51`, `ATT-5371`
+- **Tests**: `TST-SET-086`, `TST-LOC-001` | **Tickets**: `ATT-51`, `ATT-5371`, `ATT-5659`
 - **Implementation**: `SupporterScreen.kt`, `SupporterComponents.kt`, `BillingClientLifecycle.kt`, `ProFeatureManager.kt`, `AppNavigationDrawer.kt`
 - **Rationale**: Offer transparent, flexible "Pay what you want" subscription tiers capped at max 100 € / year, allowing athletes to fund continuous independent development and feature maintenance without scope liabilities.
 - **Description**:
@@ -1482,9 +1482,15 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 4. *Card Layout & Button Wrap Prevention (`REQ-SET-086.4`)*:
 • In `SupporterPlanCard`, the `"Empfehlung"` / `"Recommended"` badge SHALL be positioned vertically above the tier title.
 • Action buttons in plan cards SHALL enforce `maxLines = 1, softWrap = false` to guarantee zero single-character or mid-word line wrapping (`Rule 38`).
-5. *Typo Correction & 9-Locale Localization Parity (`REQ-SET-086.5`)*:
-• `supporter_screen_subtitle` SHALL render `100%` (single percent sign) across all locales.
-• All user-facing strings in `SupporterComponents.kt`, `SupporterScreen.kt`, and `AppNavigationDrawer.kt` SHALL be localized across all 9 supported application locales.
+5. *Appreciative Wording & 9-Locale Localization Parity (`REQ-SET-086.5`)*:
+• `supporter_screen_subtitle` SHALL invite athletes to support the continuous development of aTrainingTracker (*"Unterstütze die Weiterentwicklung von aTrainingTracker."* / *"Support the ongoing development of aTrainingTracker."*) without defensive marketing buzzwords (*"15+ Jahre"*, *"Indie"*, *"unabhängiges Fitnesstracking"*) (ATT-5659).
+• `supporter_active_tier_thank_you` and `supporter_core_invariant_body` SHALL express appreciation for supporting development plainly and consistently across all 9 supported application locales (ATT-5659).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-SET-086` (`REQ-SET-086.5`), targeting `SupporterScreen.kt`, `SupporterComponents.kt`, and `strings.xml`.
+2. *Historical Origin & Commit Trace*: `ATT-51` (initial supporter model), `ATT-5371` (percent sign fix), refined in `ATT-5659` (appreciative copy without buzzwords).
+3. *Root Reason for Existing Formulation*: Historical marketing copy highlighted developer pedigree and privacy commitments to differentiate from corporate trackers. Direct, simple phrasing (*"Weiterentwicklung unterstützen"*) provides genuine, professional appreciation without defensive jargon.
+4. *Preservation of Core Invariants*: 100% free core invariant body intact; 5 Google Play Billing base plans, prices, and IDs remain 100% preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete navigating to the Supporter screen,

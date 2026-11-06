@@ -2474,17 +2474,17 @@
     <string name="supporter_tier_gold">Pro+ Supporter</string>
     <string name="supporter_tier_diamond">Diamond Sponsor</string>
     <string name="supporter_screen_title">Pay What You Want</string>
-    <string name="supporter_screen_subtitle" formatted="false">Support independent fitness tracking &amp; keep aTrainingTracker 100% ad-free.</string>
+    <string name="supporter_screen_subtitle">Support the ongoing development of aTrainingTracker.</string>
     <string name="supporter_recommended_badge">Recommended</string>
     <string name="supporter_active_tier_prefix">Active Tier: %1$s</string>
-    <string name="supporter_active_tier_thank_you">Thank you for supporting independent fitness development!</string>
+    <string name="supporter_active_tier_thank_you">Thank you for supporting the development of aTrainingTracker!</string>
     <string name="supporter_plan_button_active">Active</string>
     <string name="supporter_plan_button_support">Support</string>
     <string name="supporter_period_month">month</string>
     <string name="supporter_period_year">year</string>
     <string name="supporter_price_per_period">%1$s / %2$s</string>
     <string name="supporter_core_invariant_title" formatted="false">100% Free Core Invariant</string>
-    <string name="supporter_core_invariant_body" formatted="false">Core workout recording, map display, sensor telemetry, and offline GPX/TCX/FIT export remain 100% free and unmonetized forever. Subscriptions fund continuous independent development.</string>
+    <string name="supporter_core_invariant_body" formatted="false">Core workout recording, map display, sensor telemetry, and offline GPX/TCX/FIT export remain 100% free and unmonetized forever. Subscriptions fund continuous development of the app.</string>
     <string name="swap_dialog_title">Device Limit (2/2 Slots Used)</string>
     <string name="swap_dialog_select_device_to_unpair">Select device to unpair:</string>
     <string name="swap_dialog_message">In the base version, up to 2 devices can be paired simultaneously (e.g. GPS + Barometer). To pair \'%1$s\', unpair an existing device — or support the ongoing development of the app to unlock unlimited sensors.</string>
@@ -2515,8 +2515,8 @@
     <string name="jubilee_feedback_prompt">Enjoying aTrainingTracker? Share your experience with a rating on Google Play, or send your feedback directly to Rainer via email.</string>
     <string name="jubilee_action_review">Rate on Google Play</string>
     <string name="jubilee_action_email_feedback">Feedback per E-Mail to Rainer</string>
-    <string name="jubilee_supporter_appeal_title">Support 15+ Years of Indie Development</string>
-    <string name="jubilee_supporter_appeal_message">aTrainingTracker has been completely ad-free and privacy-focused since 2011. If this app helps your training, consider supporting ongoing development by upgrading to Pro.</string>
+    <string name="jubilee_supporter_appeal_title">Support Development</string>
+    <string name="jubilee_supporter_appeal_message">You can also financially support the ongoing development of aTrainingTracker:</string>
     <string name="jubilee_action_upgrade_pro">Support Development</string>
     <string name="jubilee_action_dismiss">Keep Training</string>
     <string name="debug_jubilee_preview_button">Preview Jubilee Dialog</string>

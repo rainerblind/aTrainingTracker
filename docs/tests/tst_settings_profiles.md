@@ -892,6 +892,7 @@
 ### TST-SET-086: **Five-Tier Google Play Supporter Subscriptions Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-086`
 - **Component**: `SupporterScreen.kt`, `SupporterComponents.kt`, `BillingClientLifecycle.kt`, `ProFeatureManager.kt`, `AppNavigationDrawer.kt`
+- **Jira**: `ATT-51`, `ATT-5371`, `ATT-5659`
 - **Test Description**:
 1. Verify 5 base plan IDs (`bronze-monthly`, `bronze-yearly`, `silver-yearly`, `gold-yearly`, `diamond-yearly`) mapped to correct `SupporterTier` enums.
 2. Verify `silver-yearly` is visually highlighted as Recommended with the badge placed vertically above the tier title.
@@ -899,6 +900,7 @@
 4. Verify drawer header reflects active supporter tier and drawer contains Supporter destination.
 5. Verify `HardwareVotingSection` and hardware acquisition promises are completely removed.
 6. Verify `supporter_screen_subtitle` renders `100%` (single percent sign) across all locales and zero hardcoded user-facing strings in supporter UI components.
+7. *Appreciative Wording & Buzzword Elimination Audit*: Verify that `supporter_screen_subtitle`, `supporter_active_tier_thank_you`, and `supporter_core_invariant_body` invite users to support development without defensive marketing phrases (*"15+ Jahre"*, *"Indie"*, *"unabhängiges Fitnesstracking"*) across all 9 locales (ATT-5659).
 
 ### TST-SET-087: **Debug Supporter Tier Override & Pro Feature Manager Governance Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-087`

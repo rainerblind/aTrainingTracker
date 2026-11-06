@@ -2273,17 +2273,17 @@
     <string name="supporter_tier_gold">Goud Pro+ Supporter</string>
     <string name="supporter_tier_diamond">Diamanten sponsor</string>
     <string name="supporter_screen_title">Betaal wat je wilt</string>
-    <string name="supporter_screen_subtitle" formatted="false">Steun onafhankelijke fitnesstracking en houd aTrainingTracker 100% advertentievrij.</string>
+    <string name="supporter_screen_subtitle">Steun de continue ontwikkeling van aTrainingTracker.</string>
     <string name="supporter_recommended_badge">Aanbevolen</string>
     <string name="supporter_active_tier_prefix">Actief niveau: %1$s</string>
-    <string name="supporter_active_tier_thank_you">Bedankt voor het steunen van onafhankelijke fitnessontwikkeling!</string>
+    <string name="supporter_active_tier_thank_you">Bedankt voor het steunen van de ontwikkeling van aTrainingTracker!</string>
     <string name="supporter_plan_button_active">Actief</string>
     <string name="supporter_plan_button_support">Steunen</string>
     <string name="supporter_period_month">maand</string>
     <string name="supporter_period_year">jaar</string>
     <string name="supporter_price_per_period">%1$s / %2$s</string>
     <string name="supporter_core_invariant_title" formatted="false">100% Gratis kernfuncties</string>
-    <string name="supporter_core_invariant_body" formatted="false">Trainingregistratie, kaartweergave, sensortelemetrie en offline GPX/TCX/FIT-export blijven voor altijd 100% gratis. Abonnementen financieren continue onafhankelijke ontwikkeling.</string>
+    <string name="supporter_core_invariant_body" formatted="false">Trainingregistratie, kaartweergave, sensortelemetrie en offline GPX/TCX/FIT-export blijven voor altijd 100% gratis. Abonnementen financieren de continue ontwikkeling van de app.</string>
     <string name="swap_dialog_title">Apparaatlimiet (2/2 plaatsen bezet)</string>
     <string name="swap_dialog_select_device_to_unpair">Selecteer apparaat om te ontkoppelen:</string>
     <string name="swap_dialog_message">In de basisversie kunnen maximaal 2 apparaten tegelijkertijd gekoppeld zijn (bijv. GPS + Barometer). Om \'%1$s\' te koppelen, ontkoppel een bestaand apparaat — of steun de continue ontwikkeling van de app om onbeperkt sensoren te ontgrendelen.</string>
@@ -2314,8 +2314,8 @@
     <string name="jubilee_feedback_prompt">Bevalt aTrainingTracker je? Deel je ervaring met een beoordeling op Google Play of stuur je feedback rechtstreeks per e-mail naar Rainer.</string>
     <string name="jubilee_action_review">Beoordelen op Google Play</string>
     <string name="jubilee_action_email_feedback">Feedback per e-mail naar Rainer</string>
-    <string name="jubilee_supporter_appeal_title">Steun 15+ jaar onafhankelijke ontwikkeling</string>
-    <string name="jubilee_supporter_appeal_message">aTrainingTracker is sinds 2011 volledig advertentievrij en privacygericht. Als de app je helpt, overweeg dan Pro om de ontwikkeling te steunen.</string>
+    <string name="jubilee_supporter_appeal_title">Ontwikkeling ondersteunen</string>
+    <string name="jubilee_supporter_appeal_message">Je kunt de continue ontwikkeling van aTrainingTracker ook financieel ondersteunen:</string>
     <string name="jubilee_action_upgrade_pro">Ontwikkeling steunen</string>
     <string name="jubilee_action_dismiss">Verder trainen</string>
     <string name="debug_jubilee_preview_button">Mijlpaaldialoog testen</string>

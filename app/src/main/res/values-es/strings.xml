@@ -2274,17 +2274,17 @@
     <string name="supporter_tier_gold">Pro+ Supporter Oro</string>
     <string name="supporter_tier_diamond">Patrocinador Diamante</string>
     <string name="supporter_screen_title">Paga lo que quieras</string>
-    <string name="supporter_screen_subtitle" formatted="false">Apoya el seguimiento de fitness independiente y mantén aTrainingTracker 100% sin publicidad.</string>
+    <string name="supporter_screen_subtitle">Apoya el desarrollo continuo de aTrainingTracker.</string>
     <string name="supporter_recommended_badge">Recomendado</string>
     <string name="supporter_active_tier_prefix">Nivel activo: %1$s</string>
-    <string name="supporter_active_tier_thank_you">¡Gracias por apoyar el desarrollo independiente de fitness!</string>
+    <string name="supporter_active_tier_thank_you">¡Gracias por apoyar el desarrollo de aTrainingTracker!</string>
     <string name="supporter_plan_button_active">Activo</string>
     <string name="supporter_plan_button_support">Apoyar</string>
     <string name="supporter_period_month">mes</string>
     <string name="supporter_period_year">año</string>
     <string name="supporter_price_per_period">%1$s / %2$s</string>
     <string name="supporter_core_invariant_title" formatted="false">Invariante central 100% gratuita</string>
-    <string name="supporter_core_invariant_body" formatted="false">El registro de entrenamientos, mapas, telemetría de sensores y exportación GPX/TCX/FIT sin conexión permanecen 100% gratuitos para siempre. Las suscripciones financian el desarrollo independiente continuo.</string>
+    <string name="supporter_core_invariant_body" formatted="false">El registro de entrenamientos, mapas, telemetría de sensores y exportación GPX/TCX/FIT sin conexión permanecen 100% gratuitos para siempre. Las suscripciones financian el desarrollo continuo de la aplicación.</string>
     <string name="swap_dialog_title">Límite de dispositivos (2/2 espacios usados)</string>
     <string name="swap_dialog_select_device_to_unpair">Selecciona el dispositivo a desemparejar:</string>
     <string name="swap_dialog_message">En la versión base se pueden emparejar hasta 2 dispositivos simultáneamente (p. ej. GPS + Barómetro). Para emparejar \'%1$s\', desempareja un dispositivo existente o apoya el desarrollo continuo de la aplicación para desbloquear sensores ilimitados.</string>
@@ -2315,8 +2315,8 @@
     <string name="jubilee_feedback_prompt">¿Te gusta aTrainingTracker? Comparte tu experiencia con una valoración en Google Play o envía tus comentarios directamente por correo electrónico a Rainer.</string>
     <string name="jubilee_action_review">Valorar en Google Play</string>
     <string name="jubilee_action_email_feedback">Comentarios por correo a Rainer</string>
-    <string name="jubilee_supporter_appeal_title">Apoya más de 15 años de desarrollo indie</string>
-    <string name="jubilee_supporter_appeal_message">aTrainingTracker ha sido completamente libre de publicidad y privado desde 2011. Si te ayuda a entrenar, considera apoyar el desarrollo con Pro.</string>
+    <string name="jubilee_supporter_appeal_title">Apoyar el desarrollo</string>
+    <string name="jubilee_supporter_appeal_message">También puedes apoyar económicamente el desarrollo continuo de aTrainingTracker:</string>
     <string name="jubilee_action_upgrade_pro">Apoyar el desarrollo</string>
     <string name="jubilee_action_dismiss">Seguir entrenando</string>
     <string name="debug_jubilee_preview_button">Probar diálogo de aniversario</string>
