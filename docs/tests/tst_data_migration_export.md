@@ -231,12 +231,12 @@
 ### TST-EXP-017: **Decommission Obsolete Runkeeper and TrainingPeaks Legacy Exporters, Activities, and Unused Apache HttpClient Dependencies Verification** [Verified]
 - **Requirement(s)**: `REQ-EXP-020`
 - **Component**: **Decommission Obsolete Runkeeper and TrainingPeaks Legacy Exporters, Activities, and Unused Apache HttpClient Dependencies Verification**
-- **Jira**: ``ATT-3551``
+- **Jira**: `ATT-3551`, `ATT-5561`
 - **Test Description**:
   1. *Static Contract Tests (`LegacyHttpClientPurgeContractTest.kt`)*:
   • Verify 0 occurrences of `org.apache.http` across all `.kt` and `.java` source files in `app/src/main/java/`.
   • Verify 0 occurrences of `org.apache.httpcomponents` dependencies in `app/build.gradle`.
-  • Verify 0 occurrences of `org.apache.http.legacy` in `app/src/main/AndroidManifest.xml`.
+  • Verify presence of `<uses-library android:name="org.apache.http.legacy" android:required="false" />` in `app/src/main/AndroidManifest.xml` preceding Google Maps API key declaration.
   • Verify `<activity>` declarations for `RunkeeperGetAccessTokenActivity` and `TrainingpeaksGetAccessTokenActivity` are absent from `AndroidManifest.xml`.
   • Verify deleted legacy classes (`RunkeeperGetAccessTokenActivity.java`, `RunkeeperTestActivity.java`, `TrainingpeaksGetAccessTokenActivity.java`, `BaseGetAccessTokenActivity.java`, `RunkeeperUploader.java`, `TrainingPeaksUploader.java`, `RunkeeperFileWriter.java`) do not exist on disk.
   • Verify `SportTypeDatabaseManager.SportType.RUNKEEPER_NAME` remains present to preserve SQLite database table schema backward compatibility.

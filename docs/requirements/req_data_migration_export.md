@@ -378,17 +378,17 @@
 
 **Invariants**: Network constraints, battery constraints, exponential backoff, 7-day TTL cache pruning, and 100% test pass rate MUST NOT be broken.
 
-### REQ-EXP-020: Decommission Obsolete Runkeeper and TrainingPeaks Legacy Exporters, Activities, and Unused Apache HttpClient Dependencies [Verified]
-- **Tests**: `app/build.gradle`, `AndroidManifest.xml`, `MyHelper.java`, `ExportManager.java`, `TrainingApplication.java`, `BaseFileWriter.java`
-- **Implementation**: Decommission obsolete Runkeeper and TrainingPeaks classes, manifest entries, dead elevation helpers, and unused Apache HttpClient dependencies.
-- **Rationale**: The system SHALL decommission obsolete, unmaintained Runkeeper and TrainingPeaks integrations, delete dead token extraction activities, uploaders, and file writers, remove unused manifest elements and legacy Apache HttpClient dependencies, and eliminate dead elevation helpers in `MyHelper.java`, enforcing Rule 18 (Dependency Cleanliness), Rule 23 (Dead Code Removal), and Rule 36 (Single Source of Truth & DRY) (ATT-3551):
+### REQ-EXP-020: Decommission Obsolete Runkeeper and TrainingPeaks Legacy Exporters, Activities, and Retain Google Maps Legacy Platform Library [Verified]
+- **Tests**: `app/build.gradle`, `AndroidManifest.xml`, `MyHelper.java`, `ExportManager.java`, `TrainingApplication.java`, `BaseFileWriter.java`, `LegacyHttpClientPurgeContractTest.kt`
+- **Implementation**: Decommission obsolete Runkeeper and TrainingPeaks classes, manifest entries, dead elevation helpers, and unused Apache HttpClient dependencies while retaining the Google Maps legacy platform library.
+- **Rationale**: The system SHALL decommission obsolete, unmaintained Runkeeper and TrainingPeaks integrations, delete dead token extraction activities, uploaders, and file writers, remove unused manifest elements and legacy Apache HttpClient dependencies, and eliminate dead elevation helpers in `MyHelper.java`, enforcing Rule 18 (Dependency Cleanliness), Rule 23 (Dead Code Removal), and Rule 36 (Single Source of Truth & DRY) (ATT-3551, amended in ATT-5561):
 1. *Decommission Dead Runkeeper & TrainingPeaks Classes & Activities*:
 • The system SHALL permanently excise the following obsolete source files: `RunkeeperGetAccessTokenActivity.java`, `RunkeeperTestActivity.java`, `TrainingpeaksGetAccessTokenActivity.java`, `BaseGetAccessTokenActivity.java`, `RunkeeperUploader.java`, `TrainingPeaksUploader.java`, and `RunkeeperFileWriter.java`.
 • The system SHALL remove `<activity>` declarations for `RunkeeperGetAccessTokenActivity` and `TrainingpeaksGetAccessTokenActivity` from `app/src/main/AndroidManifest.xml`.
-2. *Decommission Unused Apache HttpClient Dependencies & Legacy Platform Library*:
-• The system SHALL remove `<uses-library android:name="org.apache.http.legacy" android:required="false" />` from `app/src/main/AndroidManifest.xml`.
+2. *Decommission Unused Apache HttpClient Dependencies & Retain Google Maps Platform Library*:
+• The system SHALL retain `<uses-library android:name="org.apache.http.legacy" android:required="false" />` in `app/src/main/AndroidManifest.xml` within `<application>` directly preceding the Google Maps API key metadata declaration to supply `org.apache.http.ProtocolVersion` for dynamic Google Maps SDK modules (`dynamite_mapsdynamite` Volley `RequestQueue`) on Android 9+ (API 28+).
 • The system SHALL remove all 5 `org.apache.httpcomponents:*` dependencies (`fluent-hc`, `httpclient`, `httpclient-cache`, `httpcore`, `httpmime`) from `app/build.gradle`.
-• The system SHALL remove `-dontwarn org.apache.http.**` from `app/proguard-rules.pro`.
+• The system SHALL retain `-dontwarn org.apache.http.**` in `app/proguard-rules.pro` under `# --- Legacy Dependency Fixes ---`.
 3. *Purge Dead Elevation Helpers and Imports in `MyHelper.java`*:
 • The system SHALL remove dead, uncalled methods `getAltitudeFromUSGS(double, double)` and `getElevationFromGoogleMaps(double, double)` from `MyHelper.java`.
 • The system SHALL remove all unused `org.apache.http.*` imports from `MyHelper.java`.
@@ -405,10 +405,10 @@
 • *Clean-Room Pass Invariant*: The full unit test suite (`./gradlew testDebugUnitTest`) MUST pass with 100% success.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement (`REQ-EXP-020`) targeting dead legacy code excision and dependency pruning across `app/build.gradle`, `AndroidManifest.xml`, `MyHelper.java`, `ExportManager.java`, and `TrainingApplication.java`.
-2. *Historical Origin & Commit Trace*: Early git history (2011–2015). Runkeeper and TrainingPeaks were early upload integrations using Apache HttpClient. In Android 6.0 (API 23), Google removed Apache HttpClient from the platform, prompting the addition of `org.apache.httpcomponents:*` dependencies and `org.apache.http.legacy`. As `aTrainingTracker` adopted OkHttp3 and Coroutines for Strava and modern services, the legacy uploaders were commented out rather than deleted.
-3. *Root Reason for Existing Formulation*: The code and dependencies were left dormant to avoid build breakage when uploaders were deactivated.
-4. *Preservation of Core Invariants*: Retaining SQLite database schema column `SportType.RUNKEEPER_NAME` guarantees zero migration breakage for existing databases. All active exporters remain completely intact.
+1. *Original Requirement ID & Target*: `REQ-EXP-020` (amended in ATT-5561), targeting `AndroidManifest.xml`, `proguard-rules.pro`, and `LegacyHttpClientPurgeContractTest.kt`.
+2. *Historical Origin & Commit Trace*: Early git history (2011–2015). Commit `4818be7f` originally added `<uses-library android:name="org.apache.http.legacy" android:required="false" />` for Google Maps. Commit `8bb3398a` (ATT-3551) mistakenly removed it and `-dontwarn org.apache.http.**` while pruning Runkeeper/TrainingPeaks, causing `NoClassDefFoundError: org.apache.http.ProtocolVersion` in `dynamite_mapsdynamite`.
+3. *Root Reason for Existing Formulation*: ATT-3551 conflated standalone Apache HttpClient library dependencies with the Android platform's optional `org.apache.http.legacy` jar required by the Google Maps SDK on API 28+.
+4. *Preservation of Core Invariants*: Production app source code strictly retains 0 imports of `org.apache.http.*`; `app/build.gradle` retains 0 `org.apache.httpcomponents` dependencies; `android:required="false"` preserves booting on systems lacking the optional library; 100% test pass rate.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* the production source files under `app/src/main/java/`,
@@ -416,7 +416,7 @@
 • *Then* strictly 0 occurrences or imports are found.
 • *Given* `app/build.gradle` and `app/src/main/AndroidManifest.xml`,
 • *When* evaluated for legacy HTTP client entries,
-• *Then* `org.apache.httpcomponents` dependencies and `<uses-library android:name="org.apache.http.legacy"` are completely absent.
+• *Then* `org.apache.httpcomponents` dependencies are completely absent from `app/build.gradle`, and `<uses-library android:name="org.apache.http.legacy" android:required="false" />` is declared in `app/src/main/AndroidManifest.xml`.
 • *Given* the file system under `app/src/main/java/`,
 • *When* checking the locations of `RunkeeperGetAccessTokenActivity.java`, `RunkeeperTestActivity.java`, `TrainingpeaksGetAccessTokenActivity.java`, `BaseGetAccessTokenActivity.java`, `RunkeeperUploader.java`, `TrainingPeaksUploader.java`, and `RunkeeperFileWriter.java`,
 • *Then* none of these files exist on disk.

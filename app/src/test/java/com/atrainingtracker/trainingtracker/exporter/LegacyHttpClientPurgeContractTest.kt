@@ -27,7 +27,8 @@ import java.io.File
 
 /**
  * Contract tests verifying the complete excision of obsolete Runkeeper and TrainingPeaks classes,
- * removal of manifest entries, and elimination of Apache HttpClient dependencies (ATT-3551, REQ-EXP-020, TST-EXP-017).
+ * removal of manifest entries, and elimination of Apache HttpClient dependencies while retaining
+ * the platform's org.apache.http.legacy library for Google Maps (ATT-3551, ATT-5561, REQ-EXP-020, TST-EXP-017).
  */
 class LegacyHttpClientPurgeContractTest {
 
@@ -82,15 +83,19 @@ class LegacyHttpClientPurgeContractTest {
     }
 
     @Test
-    fun verifyNoApacheHttpInAndroidManifest() {
+    fun verifyGoogleMapsApacheHttpLegacyLibraryInAndroidManifest() {
         val root = findProjectRoot()
         val manifest = File(root, "app/src/main/AndroidManifest.xml")
         assertTrue("AndroidManifest.xml must exist", manifest.exists())
 
         val content = manifest.readText()
-        assertFalse(
-            "AndroidManifest.xml must not declare org.apache.http.legacy",
-            content.contains("org.apache.http.legacy")
+        assertTrue(
+            "AndroidManifest.xml must declare org.apache.http.legacy for Google Maps SDK runtime compatibility",
+            content.contains("android:name=\"org.apache.http.legacy\"")
+        )
+        assertTrue(
+            "org.apache.http.legacy must specify android:required=\"false\"",
+            content.contains("android:required=\"false\"")
         )
     }
 
