@@ -137,7 +137,7 @@ class LegacyImportEngineWorkoutNameTest {
         every { SportTypeDatabaseManager.getInstance(any()) } returns mockSportTypeDb
 
         mockClusterEngine = mockk(relaxed = true)
-        every { mockClusterEngine.suggestCluster(any(), any(), any(), any(), any(), any<Set<BSportType>>(), any(), any(), any()) } returns null
+        every { mockClusterEngine.suggestCluster(any(), any(), any(), any(), any(), any<Set<BSportType>>(), any(), any(), any(), any()) } returns null
         every { mockClusterEngine.assignClusterToWorkout(any(), any(), any(), any(), any()) } returns Unit
         WorkoutClusterEngine.resetForTesting(mockClusterEngine)
 
