@@ -1342,6 +1342,7 @@
     <string name="cluster_naming__new_name_prompt">Or give it a new name:</string>
     <string name="cluster_naming__new_route_name_label">New Route Name</string>
     <string name="cluster_naming__leave_unclustered">Leave Unclustered</string>
+    <string name="cluster_naming__workout_name_label">Workout Name</string>
     <string name="migration_phase_label">Phase %1$d: %2$s</string>
 
     <string name="all_sports">+ all sports +</string>

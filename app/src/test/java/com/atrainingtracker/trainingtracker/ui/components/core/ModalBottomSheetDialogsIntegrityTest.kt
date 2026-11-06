@@ -253,6 +253,14 @@ class ModalBottomSheetDialogsIntegrityTest {
     }
 
     @Test
+    fun testClusterNamingDialog_existsAndExposesComposableContract() {
+        val importClass = Class.forName("com.atrainingtracker.trainingtracker.migration.ImportBackupTabsScreenKt")
+        val clusterNamingMethod = importClass.declaredMethods.find { it.name == "ClusterNamingDialog" }
+        assertNotNull("ClusterNamingDialog composable function must exist", clusterNamingMethod)
+        assertTrue(Modifier.isPublic(clusterNamingMethod!!.modifiers))
+    }
+
+    @Test
     fun testExportDetailsDialog_existsAndExposesComposableContract() {
         val exportGroupClass = Class.forName("com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusGroupKt")
         val exportDetailsMethod = exportGroupClass.declaredMethods.find { it.name == "ExportDetailsDialog" }

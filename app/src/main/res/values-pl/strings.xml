@@ -891,6 +891,7 @@
     <string name="cluster_naming__new_name_prompt">LUB podaj nową nazwę:</string>
     <string name="cluster_naming__new_route_name_label">Nazwa nowej trasy</string>
     <string name="cluster_naming__leave_unclustered">Pozostaw niepogrupowane</string>
+    <string name="cluster_naming__workout_name_label">Nazwa treningu</string>
     <string name="migration_phase_label">Faza %1$d: %2$s</string>
 
     <string name="unclustered">Otwarte</string>

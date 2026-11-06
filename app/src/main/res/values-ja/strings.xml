@@ -1088,6 +1088,7 @@
     <string name="cluster_naming__new_name_prompt">または新しい名前を指定:</string>
     <string name="cluster_naming__new_route_name_label">新しいルート名</string>
     <string name="cluster_naming__leave_unclustered">未分類のままにする</string>
+    <string name="cluster_naming__workout_name_label">ワークアウト名</string>
     <string name="migration_phase_label">フェーズ %1$d: %2$s</string>
 
     <string name="unclustered">未分類</string>

@@ -1475,10 +1475,26 @@
 2. *Prohibition of Auto-Clustering*: The system MUST NOT automatically create a new `WorkoutCluster` or assign any cluster to a workout that has been explicitly left unclustered or has `clusterId == -1L`. Specifically, `WorkoutClusterEngine.onWorkoutFinished()` MUST NOT generate fallback clusters (e.g. `@string/cluster_default_name_format`, "Workout at %1$s") or assign clusters to workouts where `w.clusterId == -1L`.
 3. *Import vs. Live Tracking Lifecycle Disambiguation*: When `WorkoutRepository.reloadWorkoutData()` processes a newly loaded or imported workout, it MUST NOT invoke live cluster creation or discovery logic on workouts whose clustering was already finalized or deliberately rejected during import.
 4. *Name & State Preservation*: The imported workout SHALL preserve its original name and file base name, and SHALL appear in the "Unclustered" tab of the Favorite Tracks / Workout Clusters view (`WorkoutClustersTabsScreen`) and in the workout summaries list without an auto-generated cluster name prefix or suffix.
+5. *Custom Workout Name Propagation & Editing during Import Resolution (`ATT-5560`)*:
+• When `ClusterNamingDialog` resolves an imported workout candidate, the system SHALL allow the user to view and edit the imported workout's name (`customWorkoutName`) pre-filled from `state.workoutName ?: ""`.
+• When creating a new route cluster (`selectedCluster == null`), the new cluster name field SHALL pre-fill with `WorkoutClusterEngine.stripHitCount(state.workoutName ?: "")`.
+• The resolution decision payload SHALL propagate as `ClusterDecision(clusterId: Long?, newClusterName: String?, customWorkoutName: String?)` from `BackupRestoreViewModel` to `LegacyImportEngine.ProgressListener.onNewClusterCandidate`.
+• If the user confirms a cluster assignment (existing cluster or newly created cluster), `customWorkoutName` (if non-blank) SHALL be passed to `clusterEngine.assignClusterToWorkout(context, workoutId, clusterId, true, customWorkoutName)` and persisted to `WorkoutSummaries.WORKOUT_NAME`.
+• If the user chooses "Leave Unclustered", `customWorkoutName` (if non-blank) SHALL be updated in `WorkoutSummaries.WORKOUT_NAME` with `clusterId = -1L`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-MIG-025` (*TCX Import Cluster Decision Integrity & Unclustered Workout Preservation*), targeting `LegacyImportEngine.kt`, `BackupRestoreViewModel.kt`, and `ImportBackupTabsScreen.kt`.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-741` (commit `69df0996`), refined in `ATT-5560` (Sprint `2026-45.8`).
+3. *Root Reason for Existing Formulation*: Originally focused strictly on preventing automatic fallback cluster generation when users dismissed naming prompts, leaving workout name editing during import resolution unaddressed.
+4. *Preservation of Core Invariants*: User decision sovereignty (unclustered workouts retain `clusterId = -1L`), `Semaphore(3)` backpressure throttling, and `recalculationMutex.withLock` thread safety remain 100% strictly intact.
+
 **Acceptance Criteria**:
 • *Given* a TCX workout imported via `LegacyImportEngine` that does not match an existing cluster,
 • *When* the user selects "Leave Unclustered" in `ClusterNamingDialog`,
 • *Then* the workout SHALL be saved with `clusterId = -1L`, NO new cluster SHALL be created in `WorkoutClusterDatabaseManager`, the workout name SHALL NOT be altered to a cluster default name, and the workout SHALL appear under the Unclustered tab.
+• *Given* an imported workout requiring manual resolution in `ClusterNamingDialog`,
+• *When* the user edits the workout name and saves (either to an existing cluster, a new cluster, or unclustered),
+• *Then* the edited workout name SHALL be persisted to `WorkoutSummaries.WORKOUT_NAME`.
 **Invariants**: User-confirmed cluster assignments during TCX import (selecting an existing cluster or providing a custom route name) MUST continue to link the cluster and increment its hit count; live tracking sessions completed via `TrackerService` MUST continue to update cluster metrics and spatial bounds when a cluster match is found; periods aggregation in `PeriodsRepository` MUST continue to process all newly imported and finished workouts; existing SQLite database schema for `WorkoutSummaries` and `WorkoutCluster` MUST NOT be altered.
 
 ### REQ-MIG-026: TCX Import Reactive Period Aggregation, Direct Pipeline Notification & Self-Healing Period Sync [Verified]

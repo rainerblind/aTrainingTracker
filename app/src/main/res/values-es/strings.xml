@@ -1113,6 +1113,7 @@
     <string name="cluster_naming__new_name_prompt">O asígnele un nuevo nombre:</string>
     <string name="cluster_naming__new_route_name_label">Nombre de nueva ruta</string>
     <string name="cluster_naming__leave_unclustered">Dejar sin agrupar</string>
+    <string name="cluster_naming__workout_name_label">Nombre del entrenamiento</string>
     <string name="migration_phase_label">Fase %1$d: %2$s</string>
 
     <string name="unclustered">Abierto</string>

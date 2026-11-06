@@ -1135,6 +1135,7 @@ All user-facing action labels and formatting strings SHALL be localized across a
 • `EditDeviceDialog.kt` SHALL compose `AppModalBottomSheet` displaying device technical status LED, name, protocol, calibration, wheel circumference, and unpairing action.
 5. *Workout Clusters & Export Status Modernization*:
 • `WorkoutClusterSelectionDialog` and `EditWorkoutClusterDialog` / `EditWorkoutClusterIdentityDialog` SHALL compose `AppModalBottomSheet` for cluster candidate selection and cluster identity editing.
+• `ClusterNamingDialog` in `ImportBackupTabsScreen.kt` SHALL compose `AppModalBottomSheet` (bottom popup) replacing the centered `AlertDialog`, integrating route preview with `DarkMapAntiFlashOverlay`, queue count badge in header, editable Workout Name (`OutlinedTextField`), and Rule 73 stacked full-width action buttons (Primary "Speichern" / `@string/save` and Secondary `@string/cluster_naming__leave_unclustered`) (ATT-5560).
 • `ClusterInfoDialog.kt` SHALL compose `AppModalBottomSheet` displaying cluster tolerance and tuning parameter guidance.
 • `ExportDetailsDialog` in `ExportStatusGroup.kt` SHALL compose `AppModalBottomSheet` displaying per-service upload status and details.
 6. *AppModalBottomSheet Architectural Enhancement*:

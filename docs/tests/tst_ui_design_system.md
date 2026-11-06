@@ -825,7 +825,8 @@
   • Verify `SensorSourceDialog` and `DeviceTypeSelectionDialog` render as bottom popups utilizing `AppModalBottomSheet`.
   • Verify `EditSensorFieldDialog` and `ConfigureFilterDialog` render as bottom popups utilizing `AppModalBottomSheet`.
   • Verify `EditSportTypeDialog`, `EditEquipmentDialog`, and `EditDeviceDialog` render as bottom popups utilizing `AppModalBottomSheet`.
-  • Verify `WorkoutClusterSelectionDialog`, `EditWorkoutClusterDialog`, and `ClusterInfoDialog` render as bottom popups utilizing `AppModalBottomSheet`.
+  • Verify `WorkoutClusterSelectionDialog`, `EditWorkoutClusterDialog`, `ClusterInfoDialog`, and `ClusterNamingDialog` render as bottom popups utilizing `AppModalBottomSheet`.
+  • Verify `ClusterNamingDialog` composes `AppModalBottomSheet` with Rule 73 stacked full-width action buttons, displays editable Workout Name, and pre-fills stripped cluster name (ATT-5560).
   • Verify `ExportDetailsDialog` renders as a bottom popup utilizing `AppModalBottomSheet`.
   • Verify that `ExportSettingsDialog` preserves toggles for TCX, GPX, Golden Cheetah JSON, and CSV with `TrainingApplication` getters/setters.
   • Verify that `UnitsSettingsDialog` persists Metric vs Imperial selection to `SharedPreferences` under `SP_UNITS`.
