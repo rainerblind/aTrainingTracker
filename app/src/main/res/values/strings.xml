@@ -2485,16 +2485,16 @@
     <string name="supporter_price_per_period">%1$s / %2$s</string>
     <string name="supporter_core_invariant_title" formatted="false">100% Free Core Invariant</string>
     <string name="supporter_core_invariant_body" formatted="false">Core workout recording, map display, sensor telemetry, and offline GPX/TCX/FIT export remain 100% free and unmonetized forever. Subscriptions fund continuous independent development.</string>
-    <string name="swap_dialog_title">Device Limit (2/2 Free Slots Used)</string>
+    <string name="swap_dialog_title">Device Limit (2/2 Slots Used)</string>
     <string name="swap_dialog_select_device_to_unpair">Select device to unpair:</string>
-    <string name="swap_dialog_message">The Free tier supports up to 2 simultaneously paired devices (e.g. GPS + Barometer). To pair \'%1$s\', unpair one existing device or unlock unlimited sensors via \'Pay what you want\'.</string>
+    <string name="swap_dialog_message">In the base version, up to 2 devices can be paired simultaneously (e.g. GPS + Barometer). To pair \'%1$s\', unpair an existing device — or support the ongoing development of the app to unlock unlimited sensors.</string>
     <string name="swap_dialog_action_swap">Swap &amp; Pair</string>
-    <string name="swap_dialog_action_unlock">Unlock Unlimited Sensors</string>
+    <string name="swap_dialog_action_unlock">Support Development</string>
     <string name="keep_two_sensors_title">Keep 2 Active Sensors</string>
-    <string name="keep_two_sensors_message">Your subscription has ended and the Free tier supports up to 2 active sensors. Select 2 sensors to keep active. Excess sensors will be unpaired without deleting any calibration or equipment data.</string>
+    <string name="keep_two_sensors_message">Your subscription has ended and the base version supports up to 2 active sensors. Select 2 sensors to keep active. Excess sensors will be unpaired without deleting any calibration or equipment data.</string>
     <string name="keep_two_sensors_selection_header">Active Sensors (%1$d/%2$d):</string>
     <string name="keep_two_sensors_action_confirm">Keep Selected</string>
-    <string name="keep_two_sensors_action_unlock">Unlock Unlimited Sensors</string>
+    <string name="keep_two_sensors_action_unlock">Support Development</string>
     <string name="drawer_supporter">Supporter &amp; Pro</string>
     <string name="drawer_tier_diamond">◆ DIAMOND SPONSOR • Unlimited Sensors</string>
     <string name="drawer_tier_gold">★ GOLD PRO+ SUPPORTER</string>

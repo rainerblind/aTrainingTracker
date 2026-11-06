@@ -2286,16 +2286,16 @@
     <string name="supporter_price_per_period">%1$s / %2$s</string>
     <string name="supporter_core_invariant_title" formatted="false">Podstawowe funkcje w 100% darmowe</string>
     <string name="supporter_core_invariant_body" formatted="false">Rejestrowanie treningów, mapy, telemetria czujników i eksport GPX/TCX/FIT offline pozostają w 100% darmowe na zawsze. Subskrypcje finansują ciągły, niezależny rozwój.</string>
-    <string name="swap_dialog_title">Limit urządzeń (zajęte 2/2 darmowych miejsc)</string>
+    <string name="swap_dialog_title">Limit urządzeń (zajęte 2/2 miejsca)</string>
     <string name="swap_dialog_select_device_to_unpair">Wybierz urządzenie do odłączenia:</string>
-    <string name="swap_dialog_message">W planie darmowym można sparować maksymalnie 2 urządzenia jednocześnie (np. GPS + barometr). Aby sparować „%1$s”, odłącz istniejące urządzenie lub odblokuj nielimitowane czujniki przez „Płać ile chcesz”.</string>
+    <string name="swap_dialog_message">W wersji podstawowej można sparować maksymalnie 2 urządzenia jednocześnie (np. GPS + barometr). Aby sparować „%1$s”, odłącz istniejące urządzenie lub wesprzyj dalszy rozwój aplikacji, aby odblokować nielimitowane czujniki.</string>
     <string name="swap_dialog_action_swap">Zamień i sparuj</string>
-    <string name="swap_dialog_action_unlock">Odblokuj nielimitowane czujniki</string>
+    <string name="swap_dialog_action_unlock">Wesprzyj rozwój</string>
     <string name="keep_two_sensors_title">Wybierz 2 aktywne czujniki</string>
-    <string name="keep_two_sensors_message">Twoja subskrypcja wygasła, a darmowy plan obsługuje do 2 aktywnych czujników. Wybierz 2 czujniki, które chcesz zachować. Pozostałe czujniki zostaną rozłączone bez usuwania danych kalibracji ani wyposażenia.</string>
+    <string name="keep_two_sensors_message">Twoja subskrypcja wygasła, a wersja podstawowa obsługuje do 2 aktywnych czujników. Wybierz 2 czujniki, które chcesz zachować. Pozostałe czujniki zostaną rozłączone bez usuwania danych kalibracji ani wyposażenia.</string>
     <string name="keep_two_sensors_selection_header">Aktywne czujniki (%1$d/%2$d):</string>
     <string name="keep_two_sensors_action_confirm">Zatwierdź wybór</string>
-    <string name="keep_two_sensors_action_unlock">Odblokuj nielimitowane czujniki</string>
+    <string name="keep_two_sensors_action_unlock">Wesprzyj rozwój</string>
     <string name="drawer_supporter">Wspierający i Pro</string>
     <string name="drawer_tier_diamond">◆ SPONSOR DIAMENTOWY • Czujniki bez limitu</string>
     <string name="drawer_tier_gold">★ ZŁOTY PRO+ SUPPORTER</string>

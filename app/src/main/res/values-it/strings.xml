@@ -2287,14 +2287,14 @@
     <string name="supporter_core_invariant_body" formatted="false">La registrazione degli allenamenti, le mappe, la telemetria dei sensori e l\'esportazione offline GPX/TCX/FIT rimangono gratuiti al 100% per sempre. Gli abbonamenti finanziano lo sviluppo indipendente continuo.</string>
     <string name="swap_dialog_title">Limite dispositivi (2/2 posti utilizzati)</string>
     <string name="swap_dialog_select_device_to_unpair">Seleziona il dispositivo da dissociare:</string>
-    <string name="swap_dialog_message">Nel livello gratuito possono essere associati al massimo 2 dispositivi contemporaneamente (es. GPS + Barometro). Per associare \'%1$s\', deseleziona un dispositivo esistente o sblocca sensori illimitati con \'Paga quanto vuoi\'.</string>
+    <string name="swap_dialog_message">Nella versione base possono essere associati al massimo 2 dispositivi contemporaneamente (es. GPS + Barometro). Per associare \'%1$s\', deseleziona un dispositivo esistente o sostieni lo sviluppo continuo dell\'app per sbloccare sensori illimitati.</string>
     <string name="swap_dialog_action_swap">Sostituisci &amp; associa</string>
-    <string name="swap_dialog_action_unlock">Sblocca sensori illimitati</string>
+    <string name="swap_dialog_action_unlock">Sostieni lo sviluppo</string>
     <string name="keep_two_sensors_title">Seleziona 2 sensori attivi</string>
-    <string name="keep_two_sensors_message">Il tuo abbonamento è scaduto e il piano gratuito supporta fino a 2 sensori attivi. Seleziona 2 sensori da mantenere attivi. I sensori in eccesso verranno dissociati senza cancellare dati di calibrazione o equipaggiamento.</string>
+    <string name="keep_two_sensors_message">Il tuo abbonamento è scaduto e la versione base supporta fino a 2 sensori attivi. Seleziona 2 sensori da mantenere attivi. I sensori in eccesso verranno dissociati senza cancellare dati di calibrazione o equipaggiamento.</string>
     <string name="keep_two_sensors_selection_header">Sensori attivi (%1$d/%2$d):</string>
     <string name="keep_two_sensors_action_confirm">Conferma selezione</string>
-    <string name="keep_two_sensors_action_unlock">Sblocca sensori illimitati</string>
+    <string name="keep_two_sensors_action_unlock">Sostieni lo sviluppo</string>
     <string name="drawer_supporter">Sostenitore &amp; Pro</string>
     <string name="drawer_tier_diamond">◆ SPONSOR DIAMANTE • Sensori illimitati</string>
     <string name="drawer_tier_gold">★ PRO+ SUPPORTER ORO</string>

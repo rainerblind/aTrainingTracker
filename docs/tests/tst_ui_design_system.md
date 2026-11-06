@@ -820,7 +820,7 @@
 ### TST-UI-102: **Modernized Modal Bottom Sheet Dialogs & Selection Flows Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-149`
 - **Component**: **Modernized Modal Bottom Sheet Dialogs & Selection Flows Verification**
-- **Jira**: `ATT-900`, `ATT-1029`, `ATT-1031`, `ATT-1032`, `ATT-5399`
+- **Jira**: `ATT-900`, `ATT-1029`, `ATT-1031`, `ATT-1032`, `ATT-5399`, `ATT-5661`
 - **Test Description**:
   1. *Unit & Contract Verification (`ModalBottomSheetDialogsIntegrityTest.kt`)*:
   • Verify `AppModalBottomSheet` supports both vector icon (`icon: ImageVector?`) and painter icon (`iconPainter: Painter?`) parameters in its composable signature.

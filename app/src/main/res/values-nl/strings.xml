@@ -2284,16 +2284,16 @@
     <string name="supporter_price_per_period">%1$s / %2$s</string>
     <string name="supporter_core_invariant_title" formatted="false">100% Gratis kernfuncties</string>
     <string name="supporter_core_invariant_body" formatted="false">Trainingregistratie, kaartweergave, sensortelemetrie en offline GPX/TCX/FIT-export blijven voor altijd 100% gratis. Abonnementen financieren continue onafhankelijke ontwikkeling.</string>
-    <string name="swap_dialog_title">Apparaatlimiet (2/2 gratis plaatsen bezet)</string>
+    <string name="swap_dialog_title">Apparaatlimiet (2/2 plaatsen bezet)</string>
     <string name="swap_dialog_select_device_to_unpair">Selecteer apparaat om te ontkoppelen:</string>
-    <string name="swap_dialog_message">In het gratis niveau kunnen maximaal 2 apparaten tegelijkertijd gekoppeld zijn (bijv. GPS + Barometer). Om \'%1$s\' te koppelen, ontkoppel een bestaand apparaat of ontgrendel onbeperkt sensoren via \'Betaal wat je wilt\'.</string>
+    <string name="swap_dialog_message">In de basisversie kunnen maximaal 2 apparaten tegelijkertijd gekoppeld zijn (bijv. GPS + Barometer). Om \'%1$s\' te koppelen, ontkoppel een bestaand apparaat — of steun de continue ontwikkeling van de app om onbeperkt sensoren te ontgrendelen.</string>
     <string name="swap_dialog_action_swap">Ruilen &amp; koppelen</string>
-    <string name="swap_dialog_action_unlock">Onbeperkte sensoren ontgrendelen</string>
+    <string name="swap_dialog_action_unlock">Ontwikkeling ondersteunen</string>
     <string name="keep_two_sensors_title">2 actieve sensors behouden</string>
-    <string name="keep_two_sensors_message">Je abonnement is beëindigd en het gratis abonnement ondersteunt maximaal 2 actieve sensors. Selecteer 2 sensors om actief te houden. Overtollige sensors worden ontkoppeld zonder kalibratie- of uitrustingsgegevens te verwijderen.</string>
+    <string name="keep_two_sensors_message">Je abonnement is beëindigd en de basisversie ondersteunt maximaal 2 actieve sensors. Selecteer 2 sensors om actief te houden. Overtollige sensors worden ontkoppeld zonder kalibratie- of uitrustingsgegevens te verwijderen.</string>
     <string name="keep_two_sensors_selection_header">Actieve sensors (%1$d/%2$d):</string>
     <string name="keep_two_sensors_action_confirm">Selectie bevestigen</string>
-    <string name="keep_two_sensors_action_unlock">Onbeperkte sensors ontgrendelen</string>
+    <string name="keep_two_sensors_action_unlock">Ontwikkeling ondersteunen</string>
     <string name="drawer_supporter">Supporter &amp; Pro</string>
     <string name="drawer_tier_diamond">◆ DIAMOND SPONSOR • Onbeperkte sensoren</string>
     <string name="drawer_tier_gold">★ GOUD PRO+ SUPPORTER</string>

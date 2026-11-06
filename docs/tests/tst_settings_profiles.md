@@ -863,20 +863,21 @@
 ### TST-SET-084: **One-Tap Swap-or-Upgrade Dialog Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-084`
 - **Component**: `SensorQuotaReconciliationManager.kt`, `DeviceListViewModel.kt`, `ControlTrackingViewModel.kt`, `DeviceManager.java`, `ATrainingTrackerApp.kt`, `MainActivityWithNavigation.kt`, `SwapOrUpgradeDialog.kt`, `SwapOrUpgradeDialogContractTest.kt`, `KeepTwoSensorsBottomSheet.kt`, `DeviceDataRepository.kt`
-- **Jira**: `ATT-51`, `ATT-5399`, `ATT-5398`, `ATT-5469`, `ATT-5470`, `ATT-5490`
+- **Jira**: `ATT-51`, `ATT-5399`, `ATT-5398`, `ATT-5469`, `ATT-5470`, `ATT-5490`, `ATT-5661`
 - **Test Description**:
 1. Trigger pairing of a 3rd device in Free tier; verify `showSwapOrUpgradeDialog` state is set to true.
 2. Verify dialog displays candidate devices and preselects recommendation.
 3. Execute "Swap & Pair" action; assert atomic database update (unpair existing, pair new) and final paired count $\le 2$.
-4. Verify "Unlock Unlimited Sensors" button triggers navigation to `NavRoutes.SUPPORTER`.
+4. Verify "Support Development" (*"Entwicklung unterstützen"*) button triggers navigation to `NavRoutes.SUPPORTER`.
 5. *Subscription Downgrade Global Reconciliation Test*: Given `!isProActive()` and $> 2$ paired sensors without active tracking, verify reconciliation event is emitted globally on app start, tracking screen entry, and pre-tracking search/start with 2 sensible defaults pre-selected.
 6. *Non-Destructive Batch Pruning Test*: Confirming selection or dismissing applies selection, setting unselected sensors `isPaired = false` in database while preserving custom names, calibration, and equipment links. Total paired devices $\le 2$.
 7. *Multi-Sensor Swap Hardening Test*: When executing swap while $> 2$ sensors are paired, excess devices are pruned so resulting paired count is strictly $\le 2$.
 8. *9-Language Localization Parity Test*: Verify all reconciliation bottom sheet UI strings exist across all 9 locales with matching format specifiers.
 9. *Pre-Tracking Quota Interception Test*: In `ControlTrackingViewModel`, clicking start tracking or search for sensors with $> 2$ paired devices on Free tier triggers reconciliation and blocks tracking start.
 10. *BANALService Free Quota Hardware Connection Clamping Test*: In `DeviceManager.startSearchForPairedDevices()`, verify remote device connections are clamped to at most 2 devices when `!isProActive()`.
-11. *Rule 73 Stacked Button Layout Contract (`TST-SET-084.8`, `SwapOrUpgradeDialogContractTest.kt`)*: Verify `SwapOrUpgradeDialog` renders primary 'Tauschen & Koppeln' `Button` and secondary 'Unbegrenzte Sensoren freischalten' `FilledTonalButton` stacked full-width with 8dp spacing in sheet content, and a single full-width 'Abbrechen' `TextButton` in `actions`, eliminating broken word wrapping on German and localized mobile screens.
+11. *Rule 73 Stacked Button Layout Contract (`TST-SET-084.8`, `SwapOrUpgradeDialogContractTest.kt`)*: Verify `SwapOrUpgradeDialog` renders primary 'Tauschen & Koppeln' `Button` and secondary 'Entwicklung unterstützen' `FilledTonalButton` stacked full-width with 8dp spacing in sheet content, and a single full-width 'Abbrechen' `TextButton` in `actions`, eliminating broken word wrapping on German and localized mobile screens.
 12. *Google Fused Preselection & Active Remote Sensor Prioritization Test (`TST-SET-084.2`, `SensorQuotaReconciliationManagerTest.kt`, `DeviceListViewModelQuotaTest.kt`)*: Verify that when downgrading to Free tier with both Google Fused and GPS paired plus remote sensors, `determineDefaultKeepDeviceIds` preselects Google Fused and the most recently active remote sensor (connected first, latest `lastSeen` timestamp second). When only GPS or only Google Fused is paired, that single location sensor is preserved. When no remote sensor is paired, verify fallback to `ALTITUDE_FROM_PRESSURE`. Verify `determineRecommendedUnpairDeviceId` recommends unpairing `ALTITUDE_FROM_PRESSURE` first, then `SPEED_AND_LOCATION_GPS` if both location sensors are paired.
+13. *Appreciative Dialog Copy & 9-Locale Localization Verification (`TST-SET-084.13`, `TranslationParityTest.kt`)*: Verify `SwapOrUpgradeDialog` and `KeepTwoSensorsBottomSheet` strings display appreciative base version copy and "Support Development" CTA across all 9 locales with single `%1$s` placeholder preserved in `swap_dialog_message` and zero decorative emojis.
 
 ### TST-SET-085: **Lifetime Pioneer Early Adopter Recognition Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-085`

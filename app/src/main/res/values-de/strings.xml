@@ -2370,16 +2370,16 @@
     <string name="supporter_price_per_period">%1$s / %2$s</string>
     <string name="supporter_core_invariant_title" formatted="false">100% Kostenlose Kernfunktionen</string>
     <string name="supporter_core_invariant_body" formatted="false">Trainingsaufzeichnung, Kartenanzeige, Sensordaten und Offline-GPX/TCX/FIT-Exporte bleiben dauerhaft 100% kostenlos und werbefrei. Abonnements finanzieren die kontinuierliche unabhängige Weiterentwicklung.</string>
-    <string name="swap_dialog_title">Geräte-Limit (2/2 Free-Plätze belegt)</string>
+    <string name="swap_dialog_title">Geräte-Limit (2/2 Plätze belegt)</string>
     <string name="swap_dialog_select_device_to_unpair">Abzuwählendes Gerät auswählen:</string>
-    <string name="swap_dialog_message">Im Free-Tier können maximal 2 Geräte gleichzeitig gekoppelt sein (z. B. GPS + Barometer). Um „%1$s“ zu koppeln, wähle ein bestehendes Gerät ab oder schalte unbegrenzte Sensoren über „Pay what you want“ frei.</string>
+    <string name="swap_dialog_message">In der Basisversion können maximal 2 Geräte gleichzeitig gekoppelt sein (z. B. GPS + Barometer). Um „%1$s“ zu koppeln, wähle ein bestehendes Gerät ab – oder unterstütze die Weiterentwicklung der App und schalte damit unbegrenzt viele Sensoren frei.</string>
     <string name="swap_dialog_action_swap">Tauschen &amp; Koppeln</string>
-    <string name="swap_dialog_action_unlock">Unbegrenzte Sensoren freischalten</string>
+    <string name="swap_dialog_action_unlock">Entwicklung unterstützen</string>
     <string name="keep_two_sensors_title">2 aktive Sensoren auswählen</string>
-    <string name="keep_two_sensors_message">Dein Abonnement ist abgelaufen und im Free-Tarif können maximal 2 Sensoren aktiv sein. Wähle 2 Sensoren aus, die aktiv bleiben sollen. Die übrigen Sensoren werden entkoppelt, bleiben aber mit allen Kalibrierungs- und Ausrüstungsdaten erhalten.</string>
+    <string name="keep_two_sensors_message">Dein Abonnement ist abgelaufen und in der Basisversion können maximal 2 Sensoren aktiv sein. Wähle 2 Sensoren aus, die aktiv bleiben sollen. Die übrigen Sensoren werden entkoppelt, bleiben aber mit allen Kalibrierungs- und Ausrüstungsdaten erhalten.</string>
     <string name="keep_two_sensors_selection_header">Aktive Sensoren (%1$d/%2$d):</string>
     <string name="keep_two_sensors_action_confirm">Auswahl bestätigen</string>
-    <string name="keep_two_sensors_action_unlock">Unbegrenzte Sensoren freischalten</string>
+    <string name="keep_two_sensors_action_unlock">Entwicklung unterstützen</string>
     <string name="drawer_supporter">Unterstützer &amp; Pro</string>
     <string name="drawer_tier_diamond">◆ DIAMOND-SPONSOR • Unbegrenzte Sensoren</string>
     <string name="drawer_tier_gold">★ GOLD PRO+ SUPPORTER</string>

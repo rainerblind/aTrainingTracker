@@ -2286,14 +2286,14 @@
     <string name="supporter_core_invariant_body" formatted="false">L\'enregistrement des entraînements, l\'affichage des cartes, la télémétrie des capteurs et l\'exportation hors ligne GPX/TCX/FIT restent 100% gratuits pour toujours. Les abonnements financent le développement indépendant continu.</string>
     <string name="swap_dialog_title">Limite d\'appareils (2/2 emplacements occupés)</string>
     <string name="swap_dialog_select_device_to_unpair">Sélectionnez l\'appareil à dissocier :</string>
-    <string name="swap_dialog_message">Dans l\'offre gratuite, vous pouvez coupler jusqu\'à 2 appareils simultanément (ex. GPS + Baromètre). Pour coupler « %1$s », désélectionnez un appareil existant ou débloquez un nombre illimité de capteurs via « Payez ce que vous voulez ».</string>
+    <string name="swap_dialog_message">Dans la version de base, vous pouvez coupler jusqu\'à 2 appareils simultanément (ex. GPS + Baromètre). Pour coupler « %1$s », désélectionnez un appareil existant — ou soutenez le développement continu de l\'application pour débloquer des capteurs illimités.</string>
     <string name="swap_dialog_action_swap">Remplacer &amp; coupler</string>
-    <string name="swap_dialog_action_unlock">Débloquer des capteurs illimités</string>
+    <string name="swap_dialog_action_unlock">Soutenir le développement</string>
     <string name="keep_two_sensors_title">Sélectionner 2 capteurs actifs</string>
-    <string name="keep_two_sensors_message">Votre abonnement a pris fin et le forfait gratuit prend en charge jusqu\'à 2 capteurs actifs. Sélectionnez 2 capteurs à conserver. Les autres capteurs seront dissociés sans supprimer vos données d\'étalonnage ni d\'équipement.</string>
+    <string name="keep_two_sensors_message">Votre abonnement a pris fin et la version de base prend en charge jusqu\'à 2 capteurs actifs. Sélectionnez 2 capteurs à conserver. Les autres capteurs seront dissociés sans supprimer vos données d\'étalonnage ni d\'équipement.</string>
     <string name="keep_two_sensors_selection_header">Capteurs actifs (%1$d/%2$d) :</string>
     <string name="keep_two_sensors_action_confirm">Confirmer la sélection</string>
-    <string name="keep_two_sensors_action_unlock">Débloquer des capteurs illimités</string>
+    <string name="keep_two_sensors_action_unlock">Soutenir le développement</string>
     <string name="drawer_supporter">Supporter &amp; Pro</string>
     <string name="drawer_tier_diamond">◆ SPONSOR DIAMANT • Capteurs illimités</string>
     <string name="drawer_tier_gold">★ PRO+ SUPPORTER OR</string>

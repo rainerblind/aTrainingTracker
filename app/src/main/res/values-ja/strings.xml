@@ -2264,16 +2264,16 @@
     <string name="supporter_price_per_period">%1$s / %2$s</string>
     <string name="supporter_core_invariant_title" formatted="false">コア機能100%無料の原則</string>
     <string name="supporter_core_invariant_body" formatted="false">ワークアウト記録、地図表示、センサーデータ、オフラインGPX/TCX/FIT出力は、今後も永続的に100%無料で利用できます。サブスクリプションは継続的な個人開発の支援に充てられます。</string>
-    <string name="swap_dialog_title">デバイス制限（無料枠2/2使用中）</string>
+    <string name="swap_dialog_title">デバイス制限（2/2枠使用中）</string>
     <string name="swap_dialog_select_device_to_unpair">ペアリング解除するデバイスを選択：</string>
-    <string name="swap_dialog_message">無料版では最大2台のデバイスを同時接続できます（例：GPS + 気圧計）。「%1$s」を接続するには、既存のデバイスを解除するか、「お好みの価格で支援」で無制限のセンサー接続を解除してください。</string>
+    <string name="swap_dialog_message">基本版では最大2台のデバイスを同時接続できます（例：GPS + 気圧計）。「%1$s」を接続するには、既存のデバイスを解除するか、アプリの開発を支援して無制限のセンサー接続を解放してください。</string>
     <string name="swap_dialog_action_swap">入れ替えて接続</string>
-    <string name="swap_dialog_action_unlock">無制限センサーを解除</string>
+    <string name="swap_dialog_action_unlock">開発を支援</string>
     <string name="keep_two_sensors_title">アクティブなセンサーを2つ選択</string>
-    <string name="keep_two_sensors_message">サブスクリプションが終了しました。無料プランでは最大2つのセンサーをアクティブにできます。維持する2つのセンサーを選択してください。余分なセンサーは解除されますが、キャリブレーションや機材データは保持されます。</string>
+    <string name="keep_two_sensors_message">サブスクリプションが終了しました。基本版では最大2つのセンサーをアクティブにできます。維持する2つのセンサーを選択してください。余分なセンサーは解除されますが、キャリブレーションや機材データは保持されます。</string>
     <string name="keep_two_sensors_selection_header">アクティブなセンサー (%1$d/%2$d):</string>
     <string name="keep_two_sensors_action_confirm">選択を保持</string>
-    <string name="keep_two_sensors_action_unlock">無制限のセンサーを解放</string>
+    <string name="keep_two_sensors_action_unlock">開発を支援</string>
     <string name="drawer_supporter">サポーター＆Pro</string>
     <string name="drawer_tier_diamond">◆ ダイヤモンドスポンサー • センサー無制限</string>
     <string name="drawer_tier_gold">★ ゴールド PRO+サポーター</string>

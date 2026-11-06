@@ -36,9 +36,9 @@ import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 
 /**
- * Bottom popup presented when a Free-tier athlete attempts to pair a 3rd device (REQ-SET-084, REQ-UI-149).
+ * Bottom popup presented when a base version athlete attempts to pair a 3rd device (REQ-SET-084, REQ-UI-149, ATT-5661).
  * Allows a 1-tap atomic swap with a currently paired device (with smart recommendation)
- * or navigation to the Supporter screen ("Pay what you want").
+ * or navigation to the Supporter screen ("Support Development" / REQ-SET-084.4).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
