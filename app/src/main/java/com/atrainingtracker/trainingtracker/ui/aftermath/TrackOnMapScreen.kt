@@ -59,10 +59,13 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.Workout
 import com.atrainingtracker.trainingtracker.ui.components.strava.StravaActivitySection
 import android.app.Application
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.CreateLapOnMapSheet
+import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.LapEditBottomSheet
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.MoveLapBoundaryOnMapSheet
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.LapDisplayMode
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.WorkoutLaps
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatus
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.GoogleApiAvailability
 import kotlinx.coroutines.launch
 
 @Composable
@@ -114,6 +117,10 @@ fun TrackOnMapScreen(
     var showMoveBoundarySheet by rememberSaveable { mutableStateOf(false) }
     var moveBoundaryLapNr by rememberSaveable { mutableLongStateOf(1L) }
     var candidateSplitIndex by rememberSaveable { mutableStateOf<Int?>(null) }
+    var activeEditingLap by remember { mutableStateOf<LapData?>(null) }
+    val isPlayServiceAvailable = remember(context) {
+        GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context) == ConnectionResult.SUCCESS
+    }
     val lapStartMarkerTitle = stringResource(R.string.marker_lap_start)
     val lapEndMarkerTitle = stringResource(R.string.marker_lap_end)
 
@@ -379,6 +386,10 @@ fun TrackOnMapScreen(
                 moveBoundaryLapNr = boundaryLapNr
                 showMoveBoundarySheet = true
             },
+            onLapClick = { lap ->
+                activeEditingLap = lap
+                selectedLapNr = lap.lapNr
+            },
             modifier = modifier
         )
     } else {
@@ -547,6 +558,7 @@ fun TrackOnMapScreen(
                                         selectedLapNr = selectedLapNr,
                                         onLapClick = { tappedLapNr ->
                                             selectedLapNr = if (selectedLapNr == tappedLapNr) null else tappedLapNr
+                                            activeEditingLap = workoutData.laps.firstOrNull { it.lapNr == tappedLapNr }
                                         },
                                         onSplitLapClick = {
                                             candidateSplitIndex = null
@@ -776,6 +788,7 @@ fun TrackOnMapScreen(
                                         selectedLapNr = selectedLapNr,
                                         onLapClick = { tappedLapNr ->
                                             selectedLapNr = if (selectedLapNr == tappedLapNr) null else tappedLapNr
+                                            activeEditingLap = workoutData.laps.firstOrNull { it.lapNr == tappedLapNr }
                                         },
                                         onSplitLapClick = {
                                             candidateSplitIndex = null
@@ -839,6 +852,25 @@ fun TrackOnMapScreen(
                     repository.moveLapBoundary(workoutData.id, boundaryLapNr, newIndex)
                     showMoveBoundarySheet = false
                 }
+            }
+        )
+    }
+
+    activeEditingLap?.let { lap ->
+        LapEditBottomSheet(
+            workoutData = workoutData,
+            initialLapNr = lap.lapNr,
+            isPlayServiceAvailable = isPlayServiceAvailable,
+            onDismissRequest = { activeEditingLap = null },
+            onSaveLap = { lapNr, name, description ->
+                coroutineScope.launch {
+                    repository.updateLapDetails(workoutData.id, lapNr, name, description)
+                }
+            },
+            onMoveBoundaryClick = { boundaryLapNr ->
+                activeEditingLap = null
+                moveBoundaryLapNr = boundaryLapNr
+                showMoveBoundarySheet = true
             }
         )
     }

@@ -673,7 +673,7 @@
 ### TST-UI-095: **Interactive Lap Editing, Quick-Tag Presets, Sequential Navigation, and Full Workout Map Framing Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-142`
 - **Component**: **Interactive Lap Editing, Quick-Tag Presets, Sequential Navigation, and Full Workout Map Framing Verification**
-- **Jira**: ``ATT-511`, `ATT-897`, `ATT-925`, `ATT-947``
+- **Jira**: `ATT-511`, `ATT-897`, `ATT-925`, `ATT-947`, `ATT-5483`
 - **Test Description**:
   1. *Geometry & Slicing Unit Test (`LapSegmentUtilsTest.kt`)*:
   • Given a polyline with 100 `LatLng` points and 100 corresponding cumulative distances ($0 \dots 1000\text{m}$).
@@ -701,7 +701,12 @@
   - Verify `LapsDatabaseManager.updateLapDetails` is invoked with correct arguments.
   - Verify in-memory `WorkoutData.laps` is updated with new name and description.
   - Verify `WorkoutData` emitted by repository reflects updated lap details immediately without full list reload.
-  4. *Regression Verification*:
+  4. *Workout Details Integration & Modal Overlay Contract Test (`WorkoutDetailTabbedLapsTest.kt` / `TrackOnMapScreenTest.kt`)*:
+  • Verify tapping any lap row in `WorkoutDetailTabbedContent` on the "Runden & Segmente" tab invokes `onLapClick(lap)`.
+  • Verify `TrackOnMapScreen` captures `activeEditingLap` and mounts `LapEditBottomSheet` as an `AppModalBottomSheet` overlay alongside the tabbed container (`Rule 47`).
+  • Verify saving lap edits persists name and description to `WorkoutRepository.updateLapDetails`.
+  • Verify tapping "Move Boundary on Map" dismisses `LapEditBottomSheet` and opens `MoveLapBoundaryOnMapSheet`.
+  5. *Regression Verification*:
   • Execute full clean-room unit test suite (`./gradlew testDebugUnitTest`) to ensure zero regressions across all modules.
 
 ### TST-UI-096: **Workout Summary Laps Table Header, Pace Single-Line & Column Width Verification** [Verified]
@@ -6119,7 +6124,7 @@
 ### TST-UI-371: **Individually Configurable Workout Detail Tabs, Conflict-Free Layout Modes, Smart Gesture Isolation, Auto-Hiding Empty Tabs & 9-Language Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-408`
 - **Component**: **Individually Configurable Workout Detail Tabs, Conflict-Free Layout Modes, Smart Gesture Isolation, Auto-Hiding Empty Tabs & 9-Language Parity Verification Suite**
-- **Jira**: ``ATT-3920``
+- **Jira**: `ATT-3920`, `ATT-5483`
 - **Test Description**:
   1. *Domain Model, Default 4-Tab Archetype & Serialization Unit Tests (`WorkoutDetailTabsTest.kt`)*:
   • Verify `WorkoutDetailSectionType.entries.size == 10`, `WorkoutSectionType.entries.size == 9`, and `WorkoutDetailTabConfig.DEFAULT_TABS` defines the 4 default tabs (`OVERVIEW`: `[DETAILS, DESCRIPTION, EXTREMA, EXPORT_STATUS]`, `MAP_AND_GRAPHS`: `[MAP, ELEVATION, CHARTS]`, `ZONES`: `[ZONES]`, `LAPS_AND_SEGMENTS`: `[LAPS, STRAVA]`).
@@ -6131,6 +6136,7 @@
   • Verify `addCustomTab`, `renameTab`, `moveTab`, `deleteTab` (min 1 tab), `toggleSectionInTab`, and `moveSectionInTab` (`MAP` pinned at index `0`).
   3. *UI Integration, Tuning Modularity (`< 400` lines) & 9-Language Parity Audit (`WorkoutDetailTabsTest.kt`)*:
   • Verify `TrackOnMapScreen.kt` routes to `WorkoutDetailTabbedContent` and `WorkoutDetailTabsConfigSheet` while preserving legacy `MapDetailLayout` fallback contracts, `MyPreferenceManager.kt` exposes `workoutDetailTabsOrderFlow`, and every `.kt` file under `ui/settings/tuning/` has `< 400` lines.
+  • Verify that in `WorkoutDetailTabbedContent`, clicking a lap in `WorkoutDetailSectionType.LAPS` propagates `onLapClick(lap)`, triggering `LapEditBottomSheet` as a modal overlay alongside tabbed content without unmounting or resetting the active tab (`Rule 47`).
   • Verify all new `workout_detail_tab_*`, `workout_detail_section_*`, and `workout_detail_tabs_config_*` string resources exist and are non-blank across all 9 locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
@@ -7195,8 +7201,8 @@
 
 ### TST-UI-450: **Interactive Map Lap Boundary Moving in Workout Aftermath Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-450`
-- **Component**: `MoveLapBoundaryOnMapSheet.kt`, `LapSplitAndMoveCalculator.kt`, `WorkoutRepository.kt`, `WorkoutSamplesDatabaseManager.java`, `LapsDatabaseManager.java`, `LapEditBottomSheet.kt`, `WorkoutLaps.kt`
-- **Jira**: `ATT-908`
+- **Component**: `MoveLapBoundaryOnMapSheet.kt`, `LapSplitAndMoveCalculator.kt`, `WorkoutRepository.kt`, `WorkoutSamplesDatabaseManager.java`, `LapsDatabaseManager.java`, `LapEditBottomSheet.kt`, `WorkoutLaps.kt`, `TrackOnMapScreen.kt`
+- **Jira**: `ATT-908`, `ATT-5483`
 - **Test Description**:
   1. *Domain Boundary Clamping & Move Preview Contract Test (`TST-UI-450.1`, `LapBoundaryMoveCalculatorTest.kt`)*:
   • Verify `LapSplitAndMoveCalculator.validateBoundaryMove` clamps and rejects boundaries outside $[startIndex(k) + 1, endIndex(k+1) - 1]$.
@@ -7210,6 +7216,7 @@
   • Verify `MoveLapBoundaryOnMapSheet` renders track segment, boundary markers, precision slider, and live preview cards.
   • Verify pre-seeding from existing boundary index.
   • Verify confirmation button dispatches `onBoundaryConfirmed` with selected sample index.
+  • Verify seamless entry point invocation from `LapEditBottomSheet` when opened within Workout Details (`TrackOnMapScreen.kt`), dismissing the edit sheet and opening `MoveLapBoundaryOnMapSheet` as a modal overlay (`Rule 47`).
   4. *9-Language Localization & Parity Test (`TST-UI-450.4`, `TranslationParityTest.kt`)*:
   • Verify 100% parity across all 9 supported locales for new `move_lap_boundary_*` string keys with zero missing entries and zero decorative inline emojis.
   5. *Clean-Room Regression Suite (`TST-UI-450.5`)*:
