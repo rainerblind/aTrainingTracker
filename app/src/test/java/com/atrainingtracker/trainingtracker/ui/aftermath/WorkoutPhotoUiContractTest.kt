@@ -32,6 +32,7 @@ import io.mockk.unmockkAll
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -223,5 +224,93 @@ class WorkoutPhotoUiContractTest {
             summariesDb.deletePhotosForWorkout(workoutId)
             tempFile.delete()
         }
+    }
+
+    private fun findSourceFile(relativePath: String): File {
+        val candidates = listOf(
+            File(relativePath),
+            File("app/$relativePath"),
+            File("../$relativePath")
+        )
+        return candidates.firstOrNull { it.exists() }
+            ?: error("File not found in candidates: $relativePath")
+    }
+
+    @Test
+    fun testWorkoutPhotoStrip_neutralStylingAndCenteredAddIconContract() {
+        val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/photos/WorkoutPhotoStrip.kt")
+        val content = file.readText()
+
+        // 1. Header camera icon uses onSurfaceVariant (no primary blue)
+        assertTrue(
+            "WorkoutPhotoStrip camera icon must use onSurfaceVariant",
+            content.contains("imageVector = Icons.Default.PhotoCamera") &&
+                    content.contains("tint = MaterialTheme.colorScheme.onSurfaceVariant")
+        )
+
+        // 2. Add photos icon uses onSurfaceVariant
+        assertTrue(
+            "AddPhotoAlternate icon must use onSurfaceVariant",
+            content.contains("imageVector = Icons.Default.AddPhotoAlternate") &&
+                    content.contains("tint = MaterialTheme.colorScheme.onSurfaceVariant")
+        )
+
+        // 3. No primary blue color token in WorkoutPhotoStrip.kt
+        assertFalse(
+            "WorkoutPhotoStrip must not reference MaterialTheme.colorScheme.primary (REQ-UI-448.1)",
+            content.contains("MaterialTheme.colorScheme.primary")
+        )
+
+        // 4. Square add tile must not contain clipped single-line text
+        assertFalse(
+            "Add photos tile must not contain single-line clipped label",
+            content.contains("maxLines = 1")
+        )
+    }
+
+    @Test
+    fun testWorkoutSummary_photoSectionDividerContract() {
+        val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutSummary.kt")
+        val content = file.readText()
+
+        // Photos section block must contain HorizontalDivider
+        val photosBlockIndex = content.indexOf("WorkoutSectionType.PHOTOS ->")
+        assertTrue("WorkoutSummary must contain WorkoutSectionType.PHOTOS", photosBlockIndex != -1)
+
+        val photosBlock = content.substring(photosBlockIndex, photosBlockIndex + 500)
+        assertTrue(
+            "WorkoutSectionType.PHOTOS block must contain HorizontalDivider preceding WorkoutPhotoStrip",
+            photosBlock.contains("HorizontalDivider") && photosBlock.contains("WorkoutPhotoStrip")
+        )
+        assertTrue(
+            "HorizontalDivider must precede WorkoutPhotoStrip",
+            photosBlock.indexOf("HorizontalDivider") < photosBlock.indexOf("WorkoutPhotoStrip")
+        )
+    }
+
+    @Test
+    fun testWorkoutPhotoPreviewBottomSheet_stackedButtonsContract() {
+        val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/photos/WorkoutPhotoPreviewBottomSheet.kt")
+        val content = file.readText()
+
+        // 1. Must not use horizontal actions row with weight(1f)
+        assertFalse(
+            "WorkoutPhotoPreviewBottomSheet must not use horizontal weight(1f) actions row",
+            content.contains("actions = {")
+        )
+
+        // 2. Must render full-width buttons (Rule 73)
+        assertTrue(
+            "WorkoutPhotoPreviewBottomSheet must render fillMaxWidth buttons",
+            content.contains("Button(") &&
+                    content.contains("OutlinedButton(") &&
+                    content.contains("Modifier.fillMaxWidth()")
+        )
+
+        // 3. Must use 8dp vertical spacing between action buttons
+        assertTrue(
+            "Must use 8.dp vertical arrangement for stacked action buttons",
+            content.contains("Arrangement.spacedBy(8.dp)")
+        )
     }
 }

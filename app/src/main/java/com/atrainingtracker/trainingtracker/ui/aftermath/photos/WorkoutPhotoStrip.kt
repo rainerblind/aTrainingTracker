@@ -204,7 +204,7 @@ fun WorkoutPhotoStrip(
                     imageVector = Icons.Default.PhotoCamera,
                     contentDescription = null,
                     modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
@@ -240,23 +240,15 @@ fun WorkoutPhotoStrip(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
                         )
                     ) {
-                        Column(
+                        Box(
                             modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally
+                            contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.AddPhotoAlternate,
                                 contentDescription = stringResource(R.string.workout_photos_add),
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(if (thumbnailSize == PhotoThumbnailSize.SMALL) 20.dp else 26.dp)
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = stringResource(R.string.workout_photos_add),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                maxLines = 1
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(if (thumbnailSize == PhotoThumbnailSize.SMALL) 20.dp else 28.dp)
                             )
                         }
                     }

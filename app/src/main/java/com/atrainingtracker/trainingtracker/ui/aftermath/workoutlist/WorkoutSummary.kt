@@ -530,7 +530,12 @@ fun WorkoutSummary(
                     }
                 }
                 WorkoutSectionType.PHOTOS -> {
-                    if (preferences.showPhotos) {
+                    if (preferences.showPhotos && (workoutPhotos.isNotEmpty() || preferences.showPhotoAddButton)) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 12.dp),
+                            thickness = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant
+                        )
                         WorkoutPhotoStrip(
                             photos = workoutPhotos,
                             onPhotoClick = { photo -> activePreviewPhoto = photo },

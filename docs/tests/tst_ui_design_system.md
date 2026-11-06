@@ -7168,16 +7168,20 @@
 
 ### TST-UI-448: **Workout Photos Strip, Full-Screen Preview Bottom Sheet with ATT-30 Overlay Share, Map Pin Markers, and Null-Island Coordinate Rejection Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-448`
-- **Component**: `WorkoutDetails.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `ATrainingTrackerMap.kt`, `WorkoutPhotoViewerSheet.kt`, `WorkoutShareBottomSheet.kt`, `WorkoutPhotoManager.kt`, `WorkoutRepository.kt`, `MapBehaviors.kt`
-- **Jira**: `ATT-43`, `ATT-5479`
+- **Component**: `WorkoutDetails.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `ATrainingTrackerMap.kt`, `WorkoutPhotoViewerSheet.kt`, `WorkoutPhotoPreviewBottomSheet.kt`, `WorkoutPhotoStrip.kt`, `WorkoutSummary.kt`, `WorkoutShareBottomSheet.kt`, `WorkoutPhotoManager.kt`, `WorkoutRepository.kt`, `MapBehaviors.kt`
+- **Jira**: `ATT-43`, `ATT-5479`, `ATT-5473`
 - **Test Description**:
   1. *Workout Photos Strip & Empty State Contract Test (`TST-UI-448.1`, `WorkoutPhotoUiContractTest.kt`)*:
   • Verify horizontal photo strip renders when photos are attached, displaying thumbnail cards with `RoundedCornerShape(8.dp)`.
+  • Verify neutral `onSurfaceVariant` styling for camera header icon and "Add Photos" tile (no primary electric blue).
+  • Verify centered `AddPhotoAlternate` icon inside square add tile without clipped single-line text.
+  • Verify `HorizontalDivider` preceding `WorkoutPhotoStrip` in `WorkoutSummary.kt`.
   • Verify empty-state "Add Photos" button renders when no photos are attached.
   • Verify photo picker launcher contract invocation on add button click.
   2. *Workout Photo Viewer Bottom Sheet & ATT-30 Share Handoff (`TST-UI-448.2`, `WorkoutPhotoViewerSheetTest.kt`)*:
-  • Verify clicking thumbnail displays `WorkoutPhotoViewerSheet` via `AppModalBottomSheet`.
+  • Verify clicking thumbnail displays `WorkoutPhotoViewerSheet` / `WorkoutPhotoPreviewBottomSheet` via `AppModalBottomSheet`.
   • Verify full image display, formatted capture timestamp, and caption rendering.
+  • Verify stacked full-width action buttons per Rule 73 (primary share overlay button above secondary outlined delete button with 8dp spacing).
   • Verify "Delete Photo" action presents confirmation dialog and triggers photo deletion callback.
   • Verify "Share with Track Overlay" CTA launches `WorkoutShareBottomSheet` pre-populated with the photo Uri.
   3. *Map Photo Pin Markers & Strict Coordinate Validation Contract Test (`TST-UI-448.3`, `WorkoutPhotoUiContractTest.kt`, `WorkoutRepositoryMarkerTest.kt`)*:
