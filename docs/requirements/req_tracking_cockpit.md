@@ -2631,10 +2631,31 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: `TRANSPORT_LE` direct connect, non-leaking scanner lifecycle, and 100% clean-room test pass rate.
 
+### REQ-TRK-052: Zero-Allocation 1-Hz ClockTimeTask Time-of-Day Formatting [Verified]
+- **Tests**: `TST-TRK-052` | **Tickets**: `ATT-5481`
+- **Implementation**: `ClockDevice.java`, `ClockDeviceResilienceTest.kt`
+- **Rationale**: During live tracking, `ClockDevice.ClockTimeTask` executes on the background timer thread at 1 Hz. Calling `Calendar.getInstance().getTime()` on every tick instantiates fresh `GregorianCalendar`, internal `int[]` field arrays, and `Date` instances ($\ge 43,200$ ephemeral objects per 4-hour workout), inducing garbage collection pauses and unnecessary CPU/battery consumption. The system SHALL reuse a pre-allocated `Date` instance mutated via `setTime(System.currentTimeMillis())` to achieve 0-byte heap allocation per 1-Hz tick while 100% preserving localized time-of-day formatting output (ATT-5481, extending `REQ-TRK-027` and `REQ-TRK-039`):
+1. *Pre-Allocated Date Holder (`ClockDevice.java`, `REQ-TRK-052.1`)*:
+• `ClockDevice` SHALL maintain a private final `Date` instance (`private final Date mReusableDate = new Date();`) instantiated once during device initialization.
+2. *Zero-Allocation Time Mutation in ClockTimeTask (`ClockDevice.java`, `REQ-TRK-052.2`)*:
+• In `ClockDevice.ClockTimeTask.run()`, the task SHALL update `mReusableDate.setTime(System.currentTimeMillis())` and format via `df.format(mReusableDate)` directly.
+• Invoking `Calendar.getInstance()` or constructing new `Date` objects in `ClockTimeTask.run()` SHALL be strictly prohibited.
+3. *Output Parity & Confinement Invariance (`REQ-TRK-052.3`)*:
+• The formatted time string emitted via `mTimeOfDaySensor.newValue(...)` SHALL remain identical in content, format, locale, and timezone to the legacy `Calendar` output.
+• Thread safety SHALL be guaranteed by thread confinement to the single-threaded `java.util.Timer` loop (`Timer-0`).
 
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-052`, extending `REQ-TRK-027` (*Clock & Sensor Resilience*) and `REQ-TRK-039` (*Subsystem Resource Hygiene*). Targets `ClockDevice.java` and `ClockDeviceResilienceTest.kt`.
+2. *Historical Origin & Commit Trace*: Initial commit `be30d9a2` (2019) introduced `Calendar.getInstance().getTime()` in `ClockDevice.java` as standard boilerplate without allocation profiling; `ATT-3981` (`REQ-TRK-027`) added top-level `try/catch` exception barriers; `ATT-4032` (`REQ-TRK-039`) added rate-limited error telemetry.
+3. *Root Reason for Existing Formulation*: `Calendar.getInstance()` was standard Java idiom for time queries; individual allocations were negligible in one-shot use cases but became a major churn hotspot when invoked at 1 Hz indefinitely.
+4. *Preservation of Core Invariants*: Time-of-day formatting format (`SimpleDateFormat.getTimeInstance()`), timezone alignment, 1-Hz broadcast cadence (`NEW_TIME_EVENT_INTENT`), active/total/lap sensor increments, and 100% clean-room test pass rate remain strictly preserved.
 
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an active workout tracking session running `ClockDevice`,
+• *When* `ClockTimeTask.run()` executes at 1 Hz,
+• *Then* `mTimeOfDaySensor.newValue(...)` receives the current formatted time of day using `mReusableDate.setTime(System.currentTimeMillis())` without allocating `Calendar` or `Date` instances on the heap.
+• *Given* unit tests in `ClockDeviceResilienceTest.kt`,
+• *When* `ClockTimeTask.run()` is evaluated,
+• *Then* `mTimeOfDaySensor` receives a valid time string matching `df.format(new Date(timestamp))`.
 
-
-
-
-
+**Invariants**: Exact time-of-day format preservation, zero thread-safety contention, and 100% test pass rate.
