@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.photos
 
+import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
 import com.atrainingtracker.trainingtracker.WorkoutDetailPreferences
@@ -75,5 +76,36 @@ class PhotoThumbnailSizeTest {
         assertTrue(detailPrefs.showPhotos)
         assertTrue(detailPrefs.showPhotoAddButton)
         assertEquals(PhotoThumbnailSize.MEDIUM, detailPrefs.photoThumbnailSize)
+    }
+
+    @Test
+    fun testPhotoItemDimensions_responsiveCalculation() {
+        // TST-UI-377.1 / REQ-UI-414.6: Responsive item dimensions
+        // LARGE: full available width, height (width * 0.65).coerceIn(180.dp, 260.dp)
+        val large = calculatePhotoItemDimensions(PhotoThumbnailSize.LARGE, 360.dp)
+        assertEquals(360f, large.width.value, 0.05f)
+        assertEquals(234f, large.height.value, 0.05f)
+
+        // LARGE tablet: 500.dp width -> clamped height to 260.dp
+        val largeTablet = calculatePhotoItemDimensions(PhotoThumbnailSize.LARGE, 500.dp)
+        assertEquals(500f, largeTablet.width.value, 0.05f)
+        assertEquals(260f, largeTablet.height.value, 0.05f)
+
+        // MEDIUM: 2 items side-by-side: (availableWidth - 8.dp) / 2, square aspect ratio
+        val medium = calculatePhotoItemDimensions(PhotoThumbnailSize.MEDIUM, 360.dp)
+        assertEquals(176f, medium.width.value, 0.05f)
+        assertEquals(176f, medium.height.value, 0.05f)
+
+        // SMALL: 3-4 items side-by-side: ((availableWidth - 24.dp) / 3.5f).coerceIn(60.dp, 90.dp)
+        // 360.dp -> (360 - 24) / 3.5 = 96dp -> coerced to 90.dp
+        val small = calculatePhotoItemDimensions(PhotoThumbnailSize.SMALL, 360.dp)
+        assertEquals(90f, small.width.value, 0.05f)
+        assertEquals(90f, small.height.value, 0.05f)
+
+        // SMALL narrow: 280.dp -> (280 - 24) / 3.5 = 73.14.dp
+        val smallNarrow = calculatePhotoItemDimensions(PhotoThumbnailSize.SMALL, 280.dp)
+        val expectedSmallNarrow = (280.dp - 24.dp) / 3.5f
+        assertEquals(expectedSmallNarrow.value, smallNarrow.width.value, 0.05f)
+        assertEquals(smallNarrow.width.value, smallNarrow.height.value, 0.05f)
     }
 }

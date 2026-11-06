@@ -266,11 +266,12 @@ data class WorkoutDetailTabConfig(
     }
 
     companion object {
-        private const val SCHEMA_PREFIX = "v1|"
+        private const val SCHEMA_PREFIX = "v2|"
+        private const val SCHEMA_PREFIX_V1 = "v1|"
 
         /**
-         * Canonical 4-tab default configuration (`REQ-UI-408.1`):
-         * 1. Overview: `[DETAILS, DESCRIPTION, EXTREMA, EXPORT_STATUS]`
+         * Canonical 4-tab default configuration (`REQ-UI-408.1` / `ATT-5655`):
+         * 1. Overview: `[DETAILS, PHOTOS, DESCRIPTION, EXTREMA, EXPORT_STATUS]`
          * 2. Map & Graphs: `[MAP, ELEVATION, CHARTS]`
          * 3. Zones: `[ZONES]`
          * 4. Laps & Segments: `[LAPS, STRAVA]`
@@ -282,6 +283,7 @@ data class WorkoutDetailTabConfig(
                 customTitle = "",
                 sections = listOf(
                     WorkoutDetailSectionType.DETAILS,
+                    WorkoutDetailSectionType.PHOTOS,
                     WorkoutDetailSectionType.DESCRIPTION,
                     WorkoutDetailSectionType.EXTREMA,
                     WorkoutDetailSectionType.EXPORT_STATUS
@@ -389,14 +391,17 @@ data class WorkoutDetailTabConfig(
         /**
          * Deserializes a versioned wire string into a list of [WorkoutDetailTabConfig]s.
          * Safely recovers to [DEFAULT_TABS] on null, blank, truncated, or corrupted inputs (`REQ-UI-408.2`).
+         * For legacy `v1|` payloads lacking [WorkoutDetailSectionType.PHOTOS], automatically migrates
+         * `PHOTOS` into `tab_overview` directly following `DETAILS` (ATT-5655).
          */
         fun deserializeTabs(raw: String?): List<WorkoutDetailTabConfig> {
             if (raw.isNullOrBlank()) return DEFAULT_TABS
             return runCatching {
-                val payload = if (raw.startsWith(SCHEMA_PREFIX)) {
-                    raw.removePrefix(SCHEMA_PREFIX)
-                } else {
-                    raw
+                val isV1 = raw.startsWith(SCHEMA_PREFIX_V1) || (!raw.startsWith(SCHEMA_PREFIX) && !raw.startsWith(SCHEMA_PREFIX_V1))
+                val payload = when {
+                    raw.startsWith(SCHEMA_PREFIX) -> raw.removePrefix(SCHEMA_PREFIX)
+                    raw.startsWith(SCHEMA_PREFIX_V1) -> raw.removePrefix(SCHEMA_PREFIX_V1)
+                    else -> raw
                 }
                 if (payload.isBlank()) return DEFAULT_TABS
 
@@ -423,7 +428,33 @@ data class WorkoutDetailTabConfig(
                             sections = normalized
                         )
                     }
-                parsedTabs.ifEmpty { DEFAULT_TABS }
+                val validTabs = parsedTabs.ifEmpty { DEFAULT_TABS }
+
+                // ATT-5655: If legacy v1 (or unversioned) format and PHOTOS is not present in ANY tab,
+                // auto-migrate PHOTOS into tab_overview directly after DETAILS.
+                if (isV1) {
+                    val hasPhotosAnywhere = validTabs.any { tab -> WorkoutDetailSectionType.PHOTOS in tab.sections }
+                    if (!hasPhotosAnywhere) {
+                        validTabs.map { tab ->
+                            if (tab.id == "tab_overview" || tab.preset == WorkoutDetailTabPreset.OVERVIEW) {
+                                val currentSections = tab.sections.toMutableList()
+                                val detailsIndex = currentSections.indexOf(WorkoutDetailSectionType.DETAILS)
+                                if (detailsIndex >= 0) {
+                                    currentSections.add(detailsIndex + 1, WorkoutDetailSectionType.PHOTOS)
+                                } else {
+                                    currentSections.add(0, WorkoutDetailSectionType.PHOTOS)
+                                }
+                                tab.copy(sections = normalizeTabSections(currentSections))
+                            } else {
+                                tab
+                            }
+                        }
+                    } else {
+                        validTabs
+                    }
+                } else {
+                    validTabs
+                }
             }.getOrElse { DEFAULT_TABS }
         }
 

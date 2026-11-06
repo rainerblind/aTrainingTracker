@@ -132,19 +132,19 @@ fun SummaryPhotoSubSettings(
 }
 
 /**
- * Detail view subordinate photo settings block (REQ-UI-414.6 / TST-UI-377.5).
+ * Detail view subordinate photo settings block (REQ-UI-414.6 / TST-UI-377.5 / ATT-5655).
+ * Tab configuration is the sole authority for section inclusion; photo card sub-settings
+ * (add button toggle, thumbnail size) are unconditionally available.
  */
 @Composable
 fun DetailPhotoSubSettings(
     prefs: WorkoutDetailPreferences,
     onPrefsChange: (WorkoutDetailPreferences) -> Unit
 ) {
-    if (prefs.showPhotos) {
-        PhotoCardSubSettings(
-            showAddButton = prefs.showPhotoAddButton,
-            onShowAddButtonChange = { onPrefsChange(prefs.copy(showPhotoAddButton = it)) },
-            thumbnailSize = prefs.photoThumbnailSize,
-            onThumbnailSizeChange = { onPrefsChange(prefs.copy(photoThumbnailSize = it)) }
-        )
-    }
+    PhotoCardSubSettings(
+        showAddButton = prefs.showPhotoAddButton,
+        onShowAddButtonChange = { onPrefsChange(prefs.copy(showPhotoAddButton = it)) },
+        thumbnailSize = prefs.photoThumbnailSize,
+        onThumbnailSizeChange = { onPrefsChange(prefs.copy(photoThumbnailSize = it)) }
+    )
 }

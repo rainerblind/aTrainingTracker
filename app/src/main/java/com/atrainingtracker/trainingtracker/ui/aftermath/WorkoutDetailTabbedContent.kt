@@ -683,19 +683,6 @@ private fun RenderWorkoutDetailCardSections(
                     showCriticalPowerInWorkoutSummary = tuningConfig.showCriticalPowerInWorkoutSummary,
                     modifier = Modifier.fillMaxWidth()
                 )
-                if (!sections.contains(WorkoutDetailSectionType.PHOTOS) && detailPreferences.showPhotos && onPhotoClick != null && onAddPhotos != null) {
-                    val startMs = workoutData.startTimeS * 1000L
-                    val endMs = (workoutData.startTimeS + workoutData.totalTimeSec) * 1000L
-                    WorkoutPhotoStrip(
-                        photos = photos,
-                        onPhotoClick = onPhotoClick,
-                        onAddPhotos = onAddPhotos,
-                        showAddButton = detailPreferences.showPhotoAddButton,
-                        thumbnailSize = detailPreferences.photoThumbnailSize,
-                        startTimeMs = startMs,
-                        endTimeMs = endMs
-                    )
-                }
             }
             WorkoutDetailSectionType.DESCRIPTION -> {
                 WorkoutDescription(
@@ -783,7 +770,7 @@ private fun RenderWorkoutDetailCardSections(
                 )
             }
             WorkoutDetailSectionType.PHOTOS -> {
-                if (detailPreferences.showPhotos && onPhotoClick != null && onAddPhotos != null) {
+                if (onPhotoClick != null && onAddPhotos != null) {
                     val startMs = workoutData.startTimeS * 1000L
                     val endMs = (workoutData.startTimeS + workoutData.totalTimeSec) * 1000L
                     WorkoutPhotoStrip(

@@ -6131,11 +6131,11 @@
 ### TST-UI-371: **Individually Configurable Workout Detail Tabs, Conflict-Free Layout Modes, Smart Gesture Isolation, Auto-Hiding Empty Tabs & 9-Language Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-408`
 - **Component**: **Individually Configurable Workout Detail Tabs, Conflict-Free Layout Modes, Smart Gesture Isolation, Auto-Hiding Empty Tabs & 9-Language Parity Verification Suite**
-- **Jira**: `ATT-3920`, `ATT-5483`
+- **Jira**: `ATT-3920`, `ATT-5483`, `ATT-5655`
 - **Test Description**:
   1. *Domain Model, Default 4-Tab Archetype & Serialization Unit Tests (`WorkoutDetailTabsTest.kt`)*:
-  • Verify `WorkoutDetailSectionType.entries.size == 10`, `WorkoutSectionType.entries.size == 9`, and `WorkoutDetailTabConfig.DEFAULT_TABS` defines the 4 default tabs (`OVERVIEW`: `[DETAILS, DESCRIPTION, EXTREMA, EXPORT_STATUS]`, `MAP_AND_GRAPHS`: `[MAP, ELEVATION, CHARTS]`, `ZONES`: `[ZONES]`, `LAPS_AND_SEGMENTS`: `[LAPS, STRAVA]`).
-  • Verify `serializeTabs` and `deserializeTabs` round-trip default and custom tabs, escape delimiters, ignore unknown tokens, deduplicate sections, and fall back to `DEFAULT_TABS` on null/blank/invalid inputs.
+  • Verify `WorkoutDetailSectionType.entries.size == 11`, `WorkoutSectionType.entries.size == 10`, and `WorkoutDetailTabConfig.DEFAULT_TABS` defines the 4 default tabs (`OVERVIEW`: `[DETAILS, PHOTOS, DESCRIPTION, EXTREMA, EXPORT_STATUS]`, `MAP_AND_GRAPHS`: `[MAP, ELEVATION, CHARTS]`, `ZONES`: `[ZONES]`, `LAPS_AND_SEGMENTS`: `[LAPS, STRAVA]`).
+  • Verify `serializeTabs` and `deserializeTabs` round-trip default and custom tabs with `v2|` prefix, auto-migrate legacy `v1|` tabs lacking `PHOTOS` by injecting `PHOTOS` into `tab_overview`, escape delimiters, ignore unknown tokens, deduplicate sections, and fall back to `DEFAULT_TABS` on null/blank/invalid inputs.
   2. *Layout Mode, Map Pinning, Gesture Isolation, Auto-Hiding & CRUD Unit Tests (`WorkoutDetailTabsTest.kt`)*:
   • Verify `normalizedSections` pins `MAP` at index `0` whenever `MAP` is present and `layoutMode` resolves to `MODE_A_CARD_SCROLL` (`MAP` absent), `MODE_B_SPLIT_MAP` (`MAP` + other sections), or `MODE_C_FULL_MAP` (`MAP` only).
   • Verify `requiresHorizontalGestureIsolation` returns `true` for tabs containing active `MAP`, `ELEVATION`, or `CHARTS` and `false` for card-only tabs.
@@ -6264,7 +6264,7 @@
 ### TST-UI-377: **Workout Cards & Details Settings Streamlining, Collapsible Section Order, Authoritative Tab Activation, and 9-Language Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-414`
 - **Component**: **Workout Cards & Details Settings Streamlining, Collapsible Section Order, Authoritative Tab Activation, and 9-Language Parity Verification Suite**
-- **Jira**: `ATT-4043`, `ATT-5474`
+- **Jira**: `ATT-4043`, `ATT-5474`, `ATT-5655`
 - **Test Description**:
   1. *Authoritative Tab Data Availability & Section Activation Test (`TST-UI-377.1`, `WorkoutDetailTabsTest.kt`)*:
   • Initialize `WorkoutDetailSectionAvailability` with `hasMap = true` and `hasElevation = true`, alongside `WorkoutDetailPreferences` with `showMap = false` and `showElevationProfile = false`.
@@ -6286,11 +6286,11 @@
   6. *9-Language Localization Parity Audit (`TST-UI-377.6`, `TranslationParityTest.kt`)*:
   • Inspect all 9 supported locale directories (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
   • Verify `workout_card_reorder_toggle` and `settings_workout_details_title` exist in all 9 files with `%1$d` specifier match and no entity issues.
-  7. *Workout Photos Settings & Layout Contract Test (`TST-UI-377.7` / `ATT-5474`, `WorkoutMasksAndCardsLayoutTest.kt`)*:
+  7. *Workout Photos Settings, Responsive Viewport Sizing & Layout Contract Test (`TST-UI-377.7` / `ATT-5474`, `ATT-5655`, `WorkoutMasksAndCardsLayoutTest.kt`, `PhotoThumbnailSizeTest.kt`)*:
   • Verify `WorkoutSectionType.PHOTOS` and `WorkoutDetailSectionType.PHOTOS` inclusion, `DEFAULT_ORDER`, and bidirectional mapping.
   • Verify `WorkoutPhotoPreferencesComponents.kt` modularity maintains `WorkoutMasksAndCardsSection.kt` strictly < 400 lines.
-  • Verify `PhotoThumbnailSize` enum values (`SMALL` 56dp, `MEDIUM` 76dp, `LARGE` 104dp) and DataStore persistence in `WorkoutCardSectionPreferences` and `WorkoutDetailPreferences`.
-  • Verify 9-language translation parity across all 6 new `settings_workout_photos_*` keys via `TranslationParityTest`.
+  • Verify `PhotoThumbnailSize` enum values (`SMALL`, `MEDIUM`, `LARGE`), DataStore persistence in `WorkoutCardSectionPreferences` and `WorkoutDetailPreferences`, and responsive viewport-relative card dimensions in `WorkoutPhotoStrip.kt`.
+  • Verify 9-language translation parity across all `settings_workout_photos_*` keys via `TranslationParityTest`.
   8. *Clean-Room Full Suite Regression Execution (`TST-UI-377.8`)*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 

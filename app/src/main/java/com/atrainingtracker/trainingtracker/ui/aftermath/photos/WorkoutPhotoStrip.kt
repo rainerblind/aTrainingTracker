@@ -29,6 +29,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -66,6 +67,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.atrainingtracker.R
@@ -224,45 +226,89 @@ fun WorkoutPhotoStrip(
             }
         }
 
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+        BoxWithConstraints(
+            modifier = Modifier.fillMaxWidth()
         ) {
-            // "Add Photos" Tile
-            if (showAddButton) {
-                item(key = "add_photo_tile") {
-                    OutlinedCard(
-                        onClick = onAddTileClick,
-                        modifier = Modifier.size(thumbnailSize.dpSize.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = CardDefaults.outlinedCardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-                        )
-                    ) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.AddPhotoAlternate,
-                                contentDescription = stringResource(R.string.workout_photos_add),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(if (thumbnailSize == PhotoThumbnailSize.SMALL) 20.dp else 28.dp)
+            val availableWidth = (maxWidth - 32.dp).coerceAtLeast(100.dp)
+            val dimensions = calculatePhotoItemDimensions(thumbnailSize, availableWidth)
+
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // "Add Photos" Tile
+                if (showAddButton) {
+                    item(key = "add_photo_tile") {
+                        OutlinedCard(
+                            onClick = onAddTileClick,
+                            modifier = Modifier.size(width = dimensions.width, height = dimensions.height),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = CardDefaults.outlinedCardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
                             )
+                        ) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AddPhotoAlternate,
+                                    contentDescription = stringResource(R.string.workout_photos_add),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(if (thumbnailSize == PhotoThumbnailSize.SMALL) 20.dp else 28.dp)
+                                )
+                            }
                         }
                     }
                 }
-            }
 
-            // Photo Thumbnail Items
-            items(photos, key = { it.id }) { photo ->
-                PhotoThumbnailCard(
-                    photo = photo,
-                    onClick = { onPhotoClick(photo) },
-                    thumbnailSize = thumbnailSize
-                )
+                // Photo Thumbnail Items
+                items(photos, key = { it.id }) { photo ->
+                    PhotoThumbnailCard(
+                        photo = photo,
+                        onClick = { onPhotoClick(photo) },
+                        dimensions = dimensions
+                    )
+                }
             }
+        }
+    }
+}
+
+/**
+ * Viewport-relative item dimensions for photo thumbnails and add-photo tile (REQ-UI-414.6 / ATT-5655).
+ */
+data class PhotoItemDimensions(
+    val width: Dp,
+    val height: Dp
+)
+
+/**
+ * Calculates responsive width and height for photo cards based on [thumbnailSize] and [availableWidth] (REQ-UI-414.6 / TST-UI-377.1 / ATT-5655).
+ *
+ * - [PhotoThumbnailSize.LARGE]: 1 full-width photo per row (`width = availableWidth`, `height = (availableWidth * 0.65f).coerceIn(180.dp, 260.dp)`).
+ * - [PhotoThumbnailSize.MEDIUM]: 2 photos side-by-side (`width = (availableWidth - 8.dp) / 2`, square aspect ratio).
+ * - [PhotoThumbnailSize.SMALL]: 3–4 photos side-by-side (`width = ((availableWidth - 24.dp) / 3.5f).coerceIn(60.dp, 90.dp)`, square aspect ratio).
+ */
+fun calculatePhotoItemDimensions(
+    thumbnailSize: PhotoThumbnailSize,
+    availableWidth: Dp
+): PhotoItemDimensions {
+    val safeWidth = availableWidth.coerceAtLeast(100.dp)
+    return when (thumbnailSize) {
+        PhotoThumbnailSize.LARGE -> {
+            val width = safeWidth
+            val height = (safeWidth * 0.65f).coerceIn(180.dp, 260.dp)
+            PhotoItemDimensions(width, height)
+        }
+        PhotoThumbnailSize.MEDIUM -> {
+            val width = (safeWidth - 8.dp) / 2
+            PhotoItemDimensions(width, width)
+        }
+        PhotoThumbnailSize.SMALL -> {
+            val width = ((safeWidth - 24.dp) / 3.5f).coerceIn(60.dp, 90.dp)
+            PhotoItemDimensions(width, width)
         }
     }
 }
@@ -271,7 +317,7 @@ fun WorkoutPhotoStrip(
 private fun PhotoThumbnailCard(
     photo: WorkoutPhotoEntry,
     onClick: () -> Unit,
-    thumbnailSize: PhotoThumbnailSize = PhotoThumbnailSize.MEDIUM
+    dimensions: PhotoItemDimensions
 ) {
     val context = LocalContext.current
     var bitmap by remember(photo.filePath) { mutableStateOf<Bitmap?>(null) }
@@ -279,14 +325,14 @@ private fun PhotoThumbnailCard(
 
     LaunchedEffect(photo.filePath) {
         bitmap = withContext(Dispatchers.IO) {
-            PhotoTrackOverlayComposer.decodeSampledBitmap(context, photo.uri, maxDim = 200)
+            PhotoTrackOverlayComposer.decodeSampledBitmap(context, photo.uri, maxDim = 240)
         }
         isLoading = false
     }
 
     Card(
         modifier = Modifier
-            .size(thumbnailSize.dpSize.dp)
+            .size(width = dimensions.width, height = dimensions.height)
             .clip(RoundedCornerShape(8.dp))
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(8.dp),
