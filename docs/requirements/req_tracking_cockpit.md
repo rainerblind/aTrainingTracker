@@ -1200,53 +1200,59 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 **Invariants**: Immediate live feedback from second 1 (Rule 40); Welford's online 4th-power running mean; pause gating; 100% clean-room test pass rate MUST NOT be broken.
 
 ### REQ-TRK-024: Google Fused Location Provider Inclusion in `MySensorManager.SPEED_PRIORITY`, Enum Declaration Alignment & `LINE_DISTANCE_m` Priority [Verified]
-- **Tests**: `MySensorManager.java`, `DeviceType.java`, `DevicesDatabaseManager.java`, `MySensorManagerPriorityTest.kt`
-- **Implementation**: Enable `SPEED_AND_LOCATION_GOOGLE_FUSED` in `MySensorManager.SPEED_PRIORITY` after `GPS`, align `DeviceType` enum order, register `LINE_DISTANCE_m` in `LOCATION_PRIORITY`, provide canonical rank helper, and align DB insertion order.
-- **Rationale**: `MySensorManager` (`app/src/main/java/com/atrainingtracker/banalservice/sensor/MySensorManager.java`), `DeviceType` (`app/src/main/java/com/atrainingtracker/banalservice/devices/DeviceType.java`), and `DevicesDatabaseManager` (`app/src/main/java/com/atrainingtracker/banalservice/database/DevicesDatabaseManager.java`) SHALL maintain strict, consistent location provider priority ordering across speed, altitude, location, distance, and database storage (ATT-3961, ATT-4375):
-1. *`SPEED_PRIORITY` Ordering (`REQ-TRK-024.1`)*:
-• `MySensorManager.SPEED_PRIORITY` SHALL be ordered `[DeviceType.RUN_SPEED, DeviceType.BIKE_SPEED, DeviceType.BIKE_SPEED_AND_CADENCE, DeviceType.BIKE_POWER, DeviceType.SPEED_AND_LOCATION_GPS, DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED, DeviceType.SPEED_AND_LOCATION_NETWORK]`.
+- **Tests**: `MySensorManager.java`, `DeviceType.java`, `DevicesDatabaseManager.java`, `MySensorManagerPriorityTest.kt`, `DevicesDatabaseManagerOrderingTest.kt`, `SensorSourceDialogPriorityTest.kt`
+- **Implementation**: Prioritize `SPEED_AND_LOCATION_GOOGLE_FUSED` over `SPEED_AND_LOCATION_GPS` in `MySensorManager.SPEED_PRIORITY`, `ALTITUDE_PRIORITY`, and `LOCATION_PRIORITY`, align `DeviceType` enum order, register `LINE_DISTANCE_m` in `LOCATION_PRIORITY`, provide canonical rank helper, and pair Google Fused by default on fresh install in `DevicesDatabaseManager` when Google Play Services is available (falling back to GPS).
+- **Rationale**: `MySensorManager` (`app/src/main/java/com/atrainingtracker/banalservice/sensor/MySensorManager.java`), `DeviceType` (`app/src/main/java/com/atrainingtracker/banalservice/devices/DeviceType.java`), and `DevicesDatabaseManager` (`app/src/main/java/com/atrainingtracker/banalservice/database/DevicesDatabaseManager.java`) SHALL maintain strict, consistent location provider priority ordering across speed, altitude, location, distance, and database storage (ATT-3961, ATT-4375, ATT-5491):
+1. *`SPEED_PRIORITY`, `ALTITUDE_PRIORITY` & `LOCATION_PRIORITY` Ordering (`REQ-TRK-024.1`)*:
+• `MySensorManager.SPEED_PRIORITY` SHALL be ordered `[DeviceType.RUN_SPEED, DeviceType.BIKE_SPEED, DeviceType.BIKE_SPEED_AND_CADENCE, DeviceType.BIKE_POWER, DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED, DeviceType.SPEED_AND_LOCATION_GPS, DeviceType.SPEED_AND_LOCATION_NETWORK]`.
+• `MySensorManager.ALTITUDE_PRIORITY` SHALL be ordered `[DeviceType.ALTITUDE_FROM_PRESSURE, DeviceType.ALTITUDE_FROM_POSITION, DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED, DeviceType.SPEED_AND_LOCATION_GPS, DeviceType.SPEED_AND_LOCATION_NETWORK]`.
+• `MySensorManager.LOCATION_PRIORITY` SHALL be ordered `[DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED, DeviceType.SPEED_AND_LOCATION_GPS, DeviceType.SPEED_AND_LOCATION_NETWORK]`.
 2. *`ProxySensor` Retention, Zero-Latency Update Loop & Dynamic Source Upgrade/Downgrade (`REQ-TRK-024.2`)*:
 • When a `DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED` device registers `SPEED_mps`, `PACE_spm`, `DISTANCE_m`, and `DISTANCE_m_LAP` in `MySensorManager` and no higher-priority speed sensor is registered, `getBestSensor(sensorType)` SHALL return the Google Fused sensor, `getSensor(sensorType)` SHALL retain an active `ProxySensor` (instead of removing it via `removeSensor(sensorType)`), and `mSensorsSensor` (`SensorType.SENSORS` GC string) SHALL mark `'D'` (index `1`) and `'S'` (index `2`).
-• When a higher-priority device (`RUN_SPEED`, `BIKE_SPEED`, `BIKE_SPEED_AND_CADENCE`, `BIKE_POWER`, or `SPEED_AND_LOCATION_GPS`) registers or unregisters, `MySensorManager` SHALL dynamically upgrade or fall back the `ProxySensor` source according to `SPEED_PRIORITY` in bounded $O(1)$ time over the 7-element `EnumMap` priority list without introducing latency spikes in the `ProxySensor` update loop.
+• When a higher-priority device (`RUN_SPEED`, `BIKE_SPEED`, `BIKE_SPEED_AND_CADENCE`, `BIKE_POWER`) or alternate location device (`SPEED_AND_LOCATION_GPS`, `SPEED_AND_LOCATION_NETWORK`) registers or unregisters, `MySensorManager` SHALL dynamically upgrade or fall back the `ProxySensor` source according to `SPEED_PRIORITY` in bounded $O(1)$ time over the 7-element `EnumMap` priority list without introducing latency spikes in the `ProxySensor` update loop.
 3. *`DeviceType.java` Enum Declaration Order Alignment (`REQ-TRK-024.3`)*:
 • In `DeviceType.java`, the declaration order of location enum constants SHALL be `SPEED_AND_LOCATION_GPS`, then `SPEED_AND_LOCATION_GOOGLE_FUSED`, then `SPEED_AND_LOCATION_NETWORK`.
-• This ensures that natural `Enum.ordinal()` order matches the canonical location priority hierarchy, guaranteeing that `EnumMap.keySet()` iteration in `MySensorManager` respects `GOOGLE_FUSED > NETWORK` when no explicit priority list is registered.
+• This ensures that natural `Enum.ordinal()` order maintains determinism across enum sets while explicit priority lists govern telemetry selection.
 4. *`LINE_DISTANCE_m` Location Priority Registration (`REQ-TRK-024.4`)*:
 • In `MySensorManager`'s constructor, `setPriorityList(SensorType.LINE_DISTANCE_m, LOCATION_PRIORITY)` SHALL be registered.
-• `getBestSensor(SensorType.LINE_DISTANCE_m)` SHALL prioritize `SPEED_AND_LOCATION_GOOGLE_FUSED` over `SPEED_AND_LOCATION_NETWORK` when both sensors are active.
+• `getBestSensor(SensorType.LINE_DISTANCE_m)` SHALL prioritize `SPEED_AND_LOCATION_GOOGLE_FUSED` over `SPEED_AND_LOCATION_GPS` and `SPEED_AND_LOCATION_NETWORK` when multiple location sensors are active.
 5. *Canonical Priority Rank Helper (`REQ-TRK-024.5`)*:
 • `MySensorManager` SHALL expose a public static method `getPriorityRank(SensorType sensorType, DeviceType deviceType)` returning the 0-based priority index of `deviceType` for `sensorType` across all sensor types (`SPEED`, `ALTITUDE`, `LOCATION`, `CADENCE`, single-device sensors).
+• For `LOCATION_PRIORITY` metrics, `SPEED_AND_LOCATION_GOOGLE_FUSED` SHALL return rank `0` and `SPEED_AND_LOCATION_GPS` SHALL return rank `1`. For `SPEED_PRIORITY` metrics, `SPEED_AND_LOCATION_GOOGLE_FUSED` SHALL return rank `4` and `SPEED_AND_LOCATION_GPS` SHALL return rank `5`. For `ALTITUDE_PRIORITY`, `SPEED_AND_LOCATION_GOOGLE_FUSED` SHALL return rank `2` and `SPEED_AND_LOCATION_GPS` SHALL return rank `3`.
 • If `deviceType` is not in the priority list, it SHALL return fallback rank `1000 + deviceType.ordinal()`. If `deviceType == null`, it SHALL return `Integer.MAX_VALUE`.
-6. *`DevicesDatabaseManager.java` Location Insertion Order (`REQ-TRK-024.6`)*:
-• In `DevicesDatabaseManager.addLocationDevicesToDb(SQLiteDatabase db)`, location devices SHALL be inserted in the sequence `SPEED_AND_LOCATION_GPS` (paired=true), `SPEED_AND_LOCATION_GOOGLE_FUSED` (paired=true), and `SPEED_AND_LOCATION_NETWORK` (paired=false), guaranteeing autoincrement primary key (`_id`) order aligns with priority hierarchy.
+6. *`DevicesDatabaseManager.java` Location Insertion Order & Fresh Install Default Pairing (`REQ-TRK-024.6`)*:
+• In `DevicesDatabaseManager.addLocationDevicesToDb(SQLiteDatabase db)`, location devices SHALL be inserted in the sequence `SPEED_AND_LOCATION_GPS`, `SPEED_AND_LOCATION_GOOGLE_FUSED`, and `SPEED_AND_LOCATION_NETWORK`.
+• When Google Play Services is available (`GooglePlayServicesUtil.isGooglePlayServicesAvailable(mContext) == ConnectionResult.SUCCESS`), `SPEED_AND_LOCATION_GOOGLE_FUSED` SHALL be initialized as `PAIRED = true` and `SPEED_AND_LOCATION_GPS` as `PAIRED = false`.
+• If Google Play Services is unavailable (de-Googled devices), `SPEED_AND_LOCATION_GPS` SHALL remain `PAIRED = true` and `SPEED_AND_LOCATION_GOOGLE_FUSED` as `PAIRED = false`.
+• Existing database installations and upgrades (`oldVersion > 6`) SHALL NOT alter or overwrite the athlete's existing pairing configuration.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-024` targeting `MySensorManager.java`, extended by `ATT-4375` targeting `DeviceType.java`, `MySensorManager.java`, and `DevicesDatabaseManager.java`.
-2. *Historical Origin & Commit Trace*: Commit `fc28443c` (`ATT-3961`, Sprint `2026-43.1`), refined in `ATT-4375` (Sprint `2026-43.2`).
-3. *Root Reason for Existing Formulation*: In `ATT-3961`, `SPEED_AND_LOCATION_GOOGLE_FUSED` was restored in `SPEED_PRIORITY` to match `LOCATION_PRIORITY` and `ALTITUDE_PRIORITY`. However, `LINE_DISTANCE_m` was omitted from `LOCATION_PRIORITY` registration, and `DeviceType.java` declared `SPEED_AND_LOCATION_NETWORK` before `GOOGLE_FUSED`, causing `getBestSensor(SensorType.LINE_DISTANCE_m)` to select Network over Google Fused via `EnumMap.keySet()` ordinal iteration. Furthermore, `DevicesDatabaseManager.addLocationDevicesToDb` inserted Network before Google Fused in legacy pre-Compose releases.
-4. *Preservation of Core Invariants*: SQLite stores `deviceType` as string (`name()`), so enum reordering has zero impact on deserialization; `RUN_SPEED > BIKE_SPEED > BIKE_SPEED_AND_CADENCE > BIKE_POWER > GPS > GOOGLE_FUSED > NETWORK` precedence and bounded $O(1)$ `ProxySensor` update loop are 100% strictly preserved.
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-024` targeting `MySensorManager.java`, extended by `ATT-4375` targeting `DeviceType.java`, `MySensorManager.java`, and `DevicesDatabaseManager.java`, and amended by `ATT-5491`.
+2. *Historical Origin & Commit Trace*: Commit `fc28443c` (`ATT-3961`, Sprint `2026-43.1`), refined in `ATT-4375` (Sprint `2026-43.2`), and amended in `ATT-5491` (Sprint `2026-45.8`).
+3. *Root Reason for Existing Formulation*: In `ATT-3961` and `ATT-4375`, `SPEED_AND_LOCATION_GPS` was retained ahead of `SPEED_AND_LOCATION_GOOGLE_FUSED` because raw GPS was the historical default on older Android versions and fresh DB initialization did not perform runtime Google Play Services availability checks.
+4. *Preservation of Core Invariants*: Dedicated wheel speed / power sensors (`BIKE_SPEED`, `BIKE_SPEED_AND_CADENCE`, `BIKE_POWER`, `RUN_SPEED`) and barometric pressure sensors (`ALTITUDE_FROM_PRESSURE`) still strictly supersede all location sensors. De-Googled devices without Google Play Services automatically fall back to raw GPS paired out-of-the-box. Existing user databases and pairings are 100% untouched.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* a `MySensorManager` with only a `DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED` device registered,
 • *When* `SPEED_mps`, `PACE_spm`, `DISTANCE_m`, `DISTANCE_m_LAP`, `ALTITUDE`, `LATITUDE`, and `LONGITUDE` are registered,
 • *Then* `getSensor(...)` retains active `ProxySensor` instances for all 7 sensors and `getSensor(SensorType.SENSORS).getValue()` equals `"-DS----AG--"`.
-• *Given* `SPEED_AND_LOCATION_NETWORK`, `SPEED_AND_LOCATION_GOOGLE_FUSED`, `SPEED_AND_LOCATION_GPS`, and `BIKE_SPEED` sensors registered and unregistered,
+• *Given* `SPEED_AND_LOCATION_NETWORK`, `SPEED_AND_LOCATION_GPS`, `SPEED_AND_LOCATION_GOOGLE_FUSED`, and `BIKE_SPEED` sensors registered and unregistered,
 • *When* `getBestSensor(SensorType.SPEED_mps)` and `getBestSensor(SensorType.DISTANCE_m)` are evaluated,
-• *Then* they follow `BIKE_SPEED > SPEED_AND_LOCATION_GPS > SPEED_AND_LOCATION_GOOGLE_FUSED > SPEED_AND_LOCATION_NETWORK`.
-• *Given* `SPEED_AND_LOCATION_GOOGLE_FUSED` and `SPEED_AND_LOCATION_NETWORK` registered for `SensorType.LINE_DISTANCE_m`,
-• *When* `getBestSensor(SensorType.LINE_DISTANCE_m)` is evaluated,
+• *Then* they follow `BIKE_SPEED > SPEED_AND_LOCATION_GOOGLE_FUSED > SPEED_AND_LOCATION_GPS > SPEED_AND_LOCATION_NETWORK`.
+• *Given* `SPEED_AND_LOCATION_GOOGLE_FUSED` and `SPEED_AND_LOCATION_GPS` registered for `SensorType.LATITUDE`, `SensorType.LONGITUDE`, `SensorType.BEARING`, `SensorType.ACCURACY`, or `SensorType.LINE_DISTANCE_m`,
+• *When* `getBestSensor(...)` is evaluated,
 • *Then* it SHALL return `SPEED_AND_LOCATION_GOOGLE_FUSED`.
-• *Given* `DeviceType.java`,
-• *When* inspected,
-• *Then* `SPEED_AND_LOCATION_GOOGLE_FUSED.ordinal() < SPEED_AND_LOCATION_NETWORK.ordinal()`.
-• *Given* `DevicesDatabaseManager.addLocationDevicesToDb`,
-• *When* executed on a new database,
-• *Then* `SPEED_AND_LOCATION_GPS` is inserted first, `SPEED_AND_LOCATION_GOOGLE_FUSED` second, and `SPEED_AND_LOCATION_NETWORK` third.
+• *Given* `DevicesDatabaseManager.addLocationDevicesToDb` executed on a fresh database with Google Play Services available,
+• *When* queried,
+• *Then* `SPEED_AND_LOCATION_GOOGLE_FUSED` is `PAIRED = 1` and `SPEED_AND_LOCATION_GPS` is `PAIRED = 0`.
+• *Given* `DevicesDatabaseManager.addLocationDevicesToDb` executed on a fresh database with Google Play Services unavailable,
+• *When* queried,
+• *Then* `SPEED_AND_LOCATION_GPS` is `PAIRED = 1` and `SPEED_AND_LOCATION_GOOGLE_FUSED` is `PAIRED = 0`.
 • *Given* any `SensorType` and `DeviceType`,
 • *When* `MySensorManager.getPriorityRank(sensorType, deviceType)` is called,
-• *Then* it returns the canonical priority rank index (e.g. 0 for GPS, 1 for GOOGLE_FUSED, 2 for NETWORK in location and altitude metrics).
+• *Then* it returns canonical priority rank 0 for GOOGLE_FUSED and 1 for GPS in location metrics; 4 for GOOGLE_FUSED and 5 for GPS in speed metrics; and 2 for GOOGLE_FUSED and 3 for GPS in altitude metrics.
 
-**Invariants**: SQLite string deserialization backward compatibility, bounded $O(1)$ `ProxySensor` update loop, thread safety of static priority ranks, and 100% clean-room test pass rate MUST NOT be broken.
+**Invariants**: Dedicated physical sensor precedence (`RUN_SPEED > BIKE_SPEED > BIKE_POWER > GNSS`, `PRESSURE > POSITION > GNSS`), zero overwrite of existing user pairings, fallback to raw GPS on de-Googled devices, and 100% clean-room test pass rate MUST NOT be broken.
 
 ### REQ-TRK-025: Deterministic `AdbGpsInjector` Mock Provider Lifecycle Bound to `PLAYING` State in `tools/replay_workout.py` [Verified]
 - **Tests**: `tools/replay_workout.py`, `tools/test_replay_workout.py`

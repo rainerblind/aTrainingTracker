@@ -125,10 +125,10 @@ class SensorSourceDialogPriorityTest {
 
     /**
      * `TST-UI-227.1`: Verifies that `activeBackups` sorting works across speed/distance sensors,
-     * prioritizing BIKE_SPEED > GPS > GOOGLE_FUSED > NETWORK.
+     * prioritizing BIKE_SPEED > GOOGLE_FUSED > GPS > NETWORK (REQ-TRK-024.1, ATT-5491).
      */
     @Test
-    fun activeBackups_speedPriority_ordersWheelSpeedBeforeGpsAndFusedBeforeNetwork() {
+    fun activeBackups_speedPriority_ordersWheelSpeedBeforeFusedAndFusedBeforeGps() {
         val sourceDevice = createDevice(10L, "Stryd Footpod", DeviceType.RUN_SPEED, Protocol.BLUETOOTH_LE)
         val bikeSpeedDevice = createDevice(20L, "Wahoo SPEED", DeviceType.BIKE_SPEED, Protocol.BLUETOOTH_LE)
         val gpsDevice = createDevice(30L, "Smartphone GPS", DeviceType.SPEED_AND_LOCATION_GPS)
@@ -160,10 +160,10 @@ class SensorSourceDialogPriorityTest {
             )
 
         assertEquals(4, activeBackups.size)
-        // Expected order: BIKE_SPEED (rank 1) -> GPS (rank 4) -> GOOGLE_FUSED (rank 5) -> NETWORK (rank 6)
+        // Expected order: BIKE_SPEED (rank 1) -> GOOGLE_FUSED (rank 4) -> GPS (rank 5) -> NETWORK (rank 6)
         assertEquals(20L, activeBackups[0].deviceId)
-        assertEquals(30L, activeBackups[1].deviceId)
-        assertEquals(40L, activeBackups[2].deviceId)
+        assertEquals(40L, activeBackups[1].deviceId)
+        assertEquals(30L, activeBackups[2].deviceId)
         assertEquals(50L, activeBackups[3].deviceId)
     }
 

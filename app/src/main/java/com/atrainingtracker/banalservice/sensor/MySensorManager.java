@@ -42,9 +42,9 @@ public class MySensorManager extends MyDevice {
      * Priority hierarchy for speed and distance sensors ({@link SensorType#SPEED_mps},
      * {@link SensorType#PACE_spm}, {@link SensorType#DISTANCE_m}, {@link SensorType#DISTANCE_m_LAP}).
      * <p>
-     * Dedicated wheel/footpod sensors take precedence over GPS, followed by Google Fused Location
+     * Dedicated wheel/footpod sensors take precedence over Google Fused Location, followed by raw GPS
      * and Network Location, matching {@link #ALTITUDE_PRIORITY} and {@link #LOCATION_PRIORITY}
-     * ({@code REQ-TRK-024} / {@code ATT-3961}).
+     * ({@code REQ-TRK-024} / {@code ATT-3961} / {@code ATT-5491}).
      */
     protected static final DeviceType[] SPEED_PRIORITY
             = new DeviceType[]{
@@ -52,8 +52,8 @@ public class MySensorManager extends MyDevice {
             DeviceType.BIKE_SPEED,
             DeviceType.BIKE_SPEED_AND_CADENCE,
             DeviceType.BIKE_POWER,
-            DeviceType.SPEED_AND_LOCATION_GPS,
             DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED,
+            DeviceType.SPEED_AND_LOCATION_GPS,
             DeviceType.SPEED_AND_LOCATION_NETWORK
     };
     protected static final DeviceType[] CADENCE_PRIORITY
@@ -67,14 +67,14 @@ public class MySensorManager extends MyDevice {
             = new DeviceType[]{
             DeviceType.ALTITUDE_FROM_PRESSURE,
             DeviceType.ALTITUDE_FROM_POSITION,
-            DeviceType.SPEED_AND_LOCATION_GPS,
             DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED,
+            DeviceType.SPEED_AND_LOCATION_GPS,
             DeviceType.SPEED_AND_LOCATION_NETWORK
     };
     protected static final DeviceType[] LOCATION_PRIORITY
             = new DeviceType[]{
-            DeviceType.SPEED_AND_LOCATION_GPS,
             DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED,
+            DeviceType.SPEED_AND_LOCATION_GPS,
             DeviceType.SPEED_AND_LOCATION_NETWORK
     };
     private static final String TAG = "MySensorManager";
