@@ -13129,32 +13129,35 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 
 ### REQ-UI-447: Workout Share Mode Selection Bottom Sheet & Photo Track Overlay Snapshot Composer [Verified]
-- **Tests**: `TST-UI-447` | **Tickets**: `ATT-30`, `ATT-5479`
-- **Implementation**: `MapDetailLayout.kt`, `ShareUtils.kt`, `PhotoTrackOverlayComposer.kt`, `WorkoutShareBottomSheet.kt`
-- **Rationale**: Currently, tapping the Share button in `MapDetailLayout` immediately executes a vertical composite map/graph snapshot (`combineWorkoutAndShare`). Athletes frequently prefer sharing activities using a personal scenery, selfie, or gear photo overlaid with their GPS route silhouette and key stats (Strava/Garmin style). REQ-UI-447 introduces a share mode selection sheet offering the classic analysis snapshot or a photo with track & stats overlay (ATT-30, ATT-5479):
+- **Tests**: `TST-UI-447` | **Tickets**: `ATT-30`, `ATT-5479`, `ATT-5472`
+- **Implementation**: `MapDetailLayout.kt`, `ShareUtils.kt`, `PhotoTrackOverlayComposer.kt`, `WorkoutShareBottomSheet.kt`, `LauncherIconVariant.kt`
+- **Rationale**: Currently, tapping the Share button in `MapDetailLayout` immediately executes a vertical composite map/graph snapshot (`combineWorkoutAndShare`). Athletes frequently prefer sharing activities using a personal scenery, selfie, or gear photo overlaid with their GPS route silhouette and key stats (Strava/Garmin style). REQ-UI-447 introduces a share mode selection sheet offering the classic analysis snapshot or a photo with track & stats overlay (ATT-30, ATT-5479, ATT-5472):
 1. *Share Mode Selection Bottom Sheet (`REQ-UI-447.1`)*:
 • In `MapDetailLayout.kt`, tapping the floating Share button on a completed workout SHALL display `WorkoutShareBottomSheet` (hosted in `AppModalBottomSheet`) presenting two choices:
   - *Option A — Karten- & Analyse-Snapshot*: Executes the existing vertical composite snapshot (`combineWorkoutAndShare`).
   - *Option B — Foto mit Track-Overlay*: Launches the Android Photo Picker (`ActivityResultContracts.PickVisualMedia`) to pick a background photo.
 • For non-workout callers (`RouteOnMapScreen`, `SegmentOnMapScreen`, or when `workoutData == null`), tapping Share SHALL continue executing Option A directly without presenting the mode sheet.
-2. *2D GPS Track Silhouette Projection & Coordinate Sanitization (`REQ-UI-447.2`)*:
+2. *2D GPS Track Silhouette Projection & Portrait Constraint (`REQ-UI-447.2`)*:
 • In `PhotoTrackOverlayComposer.kt`, the workout's GPS polyline (`workoutData.mapPolyline`) SHALL be decoded via `PolyUtil.decode` and projected onto the photo.
 • Projection SHALL apply equirectangular cosine-latitude scaling ($\Delta x = \Delta\lambda \cdot \cos(\phi_{\text{mean}})$, $\Delta y = -\Delta\phi$) to preserve true geometric aspect ratio across all latitudes without distortion. Trackpoints with invalid or Null-Island coordinates (`!isValidGpsCoordinate(lat, lng)`) SHALL be filtered out prior to bounding box and silhouette calculation to prevent track silhouette distortion.
-• The track silhouette SHALL be drawn with a subtle drop shadow, anti-aliased stroke, and distinctive start/finish marker dots in the upper-right or side quadrant of the photo.
-3. *Bottom Gradient Scrim & Key Metrics Typography (`REQ-UI-447.3`)*:
+• On portrait photos (`height > width`), the track bounding box SHALL be constrained to the upper-right quadrant ($\le 22\%$ photo height), ensuring the silhouette remains compact and unobtrusive.
+• The track silhouette SHALL be drawn with a subtle drop shadow, anti-aliased stroke, and distinctive start/finish marker dots.
+3. *Bottom Gradient Scrim, Key Metrics Typography & Compact Anchoring (`REQ-UI-447.3`)*:
 • A vertical translucent gradient scrim (transparent $\rightarrow$ black alpha 0.85) SHALL be drawn across the bottom 25–30% of the photo canvas.
 • Workout title, date, distance, duration, ascent, and average speed/power SHALL be rendered on the scrim in high-contrast white typography, guaranteeing WCAG AAA contrast ratio ($\ge 7.0:1$) over arbitrary bright or dark backgrounds.
-4. *Official Branding & Supporter Tier Watermark (`REQ-UI-447.4`)*:
-• The bottom footer watermark bar SHALL render the Cervélo P3C logo, "Tracked with aTrainingTracker", and the user's active supporter tier pill (`REQ-UI-445.5`) in alignment with standard branding invariants.
-5. *Interactive Preview, Sharing & 9-Language Parity (`REQ-UI-447.5`)*:
-• After photo selection, `WorkoutShareBottomSheet` SHALL display an in-sheet preview of the composed photo with a primary "Teilen" / "Share" CTA dispatching the generated image via `FileProvider`.
+• In `PhotoTrackOverlayComposer.kt`, workout title (scaled to ~48f), date (~26f), and key metrics (~36f) SHALL have increased prominence and anchor compactly directly above `footerTop` (`footerTop - 24f * scaleRef`), eliminating portrait vertical dead space.
+4. *Official Branding & Supporter Emblem Watermark (`REQ-UI-447.4`)*:
+• The bottom footer watermark bar in `ShareUtils.kt` SHALL render the tier-matched launcher icon (`LauncherIconVariant.fromTier`), "Tracked with aTrainingTracker" (`R.string.share_watermark_tracked_with`), and only the standalone supporter vector emblem (`ic_supporter_emblem_*`) when `effectiveTier.isPro`, omitting wide text pill badges (`REQ-UI-445.5`).
+• The footer text SHALL auto-scale dynamically if required to fit cleanly between the launcher icon and right emblem without text collision or truncation.
+5. *Interactive Preview, Stacked Sharing CTAs & 9-Language Parity (`REQ-UI-447.5`)*:
+• After photo selection, `WorkoutShareBottomSheet` SHALL display an in-sheet preview of the composed photo with full-width stacked action buttons per Rule 73 (primary "Teilen" `Button` above secondary "Foto auswählen" `OutlinedButton` with 8dp spacing).
 • All user-visible strings SHALL maintain 100% localization parity across all 9 supported application locales (`values`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`).
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-447` (amended by `ATT-5479`), extending `REQ-UI-177` (*Theme-Aware Post-Workout & Period Share Snapshot Canvas and Footer*), `REQ-UI-205` (*Workout Snapshot Layout*), and `REQ-UI-445.5` (*Social Share Workout Watermark*). Targets `MapDetailLayout.kt`, `ShareUtils.kt`, `PhotoTrackOverlayComposer.kt`, and `WorkoutShareBottomSheet.kt`.
-2. *Historical Origin & Commit Trace*: Sprint 2026-40.8 (`ATT-1472`, `REQ-UI-177`), Sprint 2026-40.7 (`ATT-1393`, `REQ-UI-205`), `ATT-5397` (`REQ-UI-445.5`), and `ATT-30` (`584284ff`).
-3. *Root Reason for Existing Formulation*: Prior to ATT-30, snapshot sharing only supported stitching layout bitmaps (Header, Map, Elevation, Analytics). Prior to ATT-5479, track projection assumed decoded polyline trackpoints were non-zero, risking visual silhouette skewing if raw track logs contained Null Island points.
-4. *Preservation of Core Invariants*: Existing `combineWorkoutAndShare` and `combineAndShare` functions and non-workout callers remain 100% operational and unchanged under Option A. Safe bitmap decoding (`inSampleSize`) avoids OOM on high-resolution camera photos. Legitimate GPS coordinates and track geometry are strictly preserved.
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-447` (amended by `ATT-5479` and `ATT-5472`), extending `REQ-UI-177` (*Theme-Aware Post-Workout & Period Share Snapshot Canvas and Footer*), `REQ-UI-205` (*Workout Snapshot Layout*), and `REQ-UI-445.5` (*Social Share Workout Watermark*). Targets `MapDetailLayout.kt`, `ShareUtils.kt`, `PhotoTrackOverlayComposer.kt`, `WorkoutShareBottomSheet.kt`, and `LauncherIconVariant.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-40.8 (`ATT-1472`, `REQ-UI-177`), Sprint 2026-40.7 (`ATT-1393`, `REQ-UI-205`), `ATT-5397` (`REQ-UI-445.5`), `ATT-30` (`584284ff`), `ATT-5496` (`e5f5c754`), and `ATT-5472`.
+3. *Root Reason for Existing Formulation*: Prior to ATT-30, snapshot sharing only supported stitching layout bitmaps. Prior to ATT-5472, `REQ-UI-445.5` drew text pill badges (`[◆ SPONSOR]`), `PhotoTrackOverlayComposer` was tuned for landscape aspect ratios leaving empty vertical gaps on portrait photos, and share sheet action buttons were packed horizontally.
+4. *Preservation of Core Invariants*: Existing `combineWorkoutAndShare` and `combineAndShare` functions and non-workout callers remain 100% operational under Option A. Safe bitmap decoding (`inSampleSize`) avoids OOM on high-resolution camera photos. Legitimate GPS coordinates, track geometry, WCAG AAA text contrast, and 9-language localization parity are strictly preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete viewing a completed workout in `MapDetailLayout`,

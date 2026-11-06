@@ -7146,24 +7146,27 @@
 
 ### TST-UI-447: **Workout Share Mode Selection & Photo Track Overlay Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-447`
-- **Component**: `PhotoTrackOverlayComposerTest.kt`, `WorkoutShareBottomSheetContractTest.kt`, `TranslationParityTest.kt`
-- **Jira**: `ATT-30`, `ATT-5479`
+- **Component**: `PhotoTrackOverlayComposerTest.kt`, `WorkoutShareBottomSheetContractTest.kt`, `ShareUtilsTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-30`, `ATT-5479`, `ATT-5472`
 - **Test Description**:
-  1. *Equirectangular Track Projection, Coordinate Sanitization & Silhouette Geometry (`TST-UI-447.1`)*:
+  1. *Equirectangular Track Projection, Portrait Bounds & Silhouette Geometry (`TST-UI-447.1`)*:
   • Verify `PhotoTrackOverlayComposer` scales GPS polyline points via cosine-latitude projection ($\Delta x = \Delta\lambda \cdot \cos(\phi_{\text{mean}})$, $\Delta y = -\Delta\phi$) preserving true aspect ratio.
   • Verify `PhotoTrackOverlayComposer` filters out invalid or Null-Island coordinates (`!isValidGpsCoordinate(lat, lng)`) prior to silhouette and bounding box computation.
-  • Verify track silhouette bounds normalization, drop shadow rendering, and start/finish marker dot placement in the upper-right or side quadrant.
-  2. *Metrics Formatting, Gradient Scrim & WCAG AAA Contrast (`TST-UI-447.2`)*:
+  • Verify portrait photo track bounding box is constrained to upper-right quadrant ($\le 22\%$ photo height).
+  2. *Metrics Formatting, Typography Sizing & Compact Anchoring (`TST-UI-447.2`)*:
   • Verify bottom gradient scrim renders with dark translucent gradient (alpha $0.0 \rightarrow 0.85$).
-  • Verify workout metrics (distance, duration, ascent, avg speed/power) render in crisp white typography satisfying WCAG AAA contrast ratio ($\ge 7.0:1$).
-  • Verify footer watermark renders official Cervélo P3C logo, "Tracked with aTrainingTracker", and supporter tier pill per `REQ-UI-445.5`.
-  3. *Mode Switcher & Backward Compatibility Contract (`TST-UI-447.3`)*:
+  • Verify workout title (~48f), date (~26f), and metrics (~36f) render in enlarged white typography satisfying WCAG AAA contrast ratio ($\ge 7.0:1$).
+  • Verify metrics block anchors compactly directly above `footerTop` (`footerTop - 24f * scaleRef`), eliminating portrait vertical dead space.
+  3. *Supporter Emblem Only & Footer Text Auto-Scaling Contract (`TST-UI-447.3`)*:
+  • Verify `ShareUtils.drawFooter` renders standalone vector emblem (`ic_supporter_emblem_*`) without wide text pills when `effectiveTier.isPro`.
+  • Verify footer watermark text auto-scales to prevent collision or truncation across narrow widths and 9 supported locales.
+  • Verify tier-matched launcher icon rendering on left.
+  4. *Rule 73 Stacked Action Buttons & Mode Switcher Contract (`TST-UI-447.4`)*:
+  • Verify `WorkoutShareBottomSheet` renders stacked full-width action buttons per Rule 73 (primary "Teilen" above secondary "Foto auswählen").
   • Verify `MapDetailLayout` with `workoutData != null` launches `WorkoutShareBottomSheet` on Share button tap.
-  • Verify non-workout callers (`workoutData == null`) bypass bottom sheet and directly invoke `combineWorkoutAndShare`.
   • Verify Option A executes existing composite snapshot sharing (`combineWorkoutAndShare`).
-  • Verify `WorkoutShareBottomSheet` conforms to `AppModalBottomSheet` edge-to-edge system insets guidelines.
-  4. *9-Language Localization & Targeted Test Suite (`TST-UI-447.4`)*:
-  • Verify 100% parity across all 9 locales via `TranslationParityTest` for new share mode strings.
+  5. *9-Language Localization & Targeted Test Suite (`TST-UI-447.5`)*:
+  • Verify 100% parity across all 9 locales via `TranslationParityTest` for all share mode strings.
   • Run targeted test suite (`--tests "com.atrainingtracker.trainingtracker.helpers.*"`, `ui.map.*`, `ThemeColorCentralizationAuditTest`) with 100% pass rate.
 
 ### TST-UI-448: **Workout Photos Strip, Full-Screen Preview Bottom Sheet with ATT-30 Overlay Share, Map Pin Markers, and Null-Island Coordinate Rejection Verification Suite** [Verified]

@@ -82,6 +82,34 @@ data class TrackProjectionResult(
 }
 
 /**
+ * Pure geometric 2D rectangle envelope for JVM unit testing without android.graphics dependencies.
+ */
+data class OverlayBoundingRect(
+    val left: Float,
+    val top: Float,
+    val right: Float,
+    val bottom: Float
+) {
+    val width: Float get() = right - left
+    val height: Float get() = bottom - top
+    fun toRectF(): RectF = RectF(left, top, right, bottom)
+}
+
+/**
+ * Geometric layout dimensions for photo overlay composition (REQ-UI-447.3 / ATT-5472).
+ */
+data class OverlayLayoutDimensions(
+    val footerHeight: Int,
+    val footerTop: Float,
+    val metricValueY: Float,
+    val metricLabelY: Float,
+    val dateY: Float,
+    val titleY: Float,
+    val scrimTop: Float,
+    val trackRect: OverlayBoundingRect
+)
+
+/**
  * Engine for composing Strava/Garmin-style photo snapshots with 2D GPS track silhouette,
  * bottom gradient scrim, key workout metrics, and official branding footer (REQ-UI-447 / ATT-30).
  */
@@ -212,6 +240,51 @@ object PhotoTrackOverlayComposer {
         )
     }
 
+    internal fun calculateTrackRect(width: Int, height: Int): OverlayBoundingRect {
+        val isPortrait = height > width
+        return if (isPortrait) {
+            OverlayBoundingRect(
+                left = width * 0.50f,
+                top = height * 0.05f,
+                right = width * 0.92f,
+                bottom = height * 0.25f
+            )
+        } else {
+            OverlayBoundingRect(
+                left = width * 0.45f,
+                top = height * 0.08f,
+                right = width * 0.92f,
+                bottom = height * 0.48f
+            )
+        }
+    }
+
+    internal fun calculateLayoutDimensions(width: Int, height: Int): OverlayLayoutDimensions {
+        val scaleRef = width.toFloat() / 1080f
+        val footerHeight = (125 * scaleRef).roundToInt().coerceAtLeast(100)
+        val footerTop = (height - footerHeight).toFloat()
+
+        val gapAboveFooter = 28f * scaleRef
+        val metricValueY = footerTop - gapAboveFooter
+        val metricLabelY = metricValueY - (46f * scaleRef)
+        val dateY = metricLabelY - (56f * scaleRef)
+        val titleY = dateY - (42f * scaleRef)
+        val scrimTop = (titleY - (80f * scaleRef)).coerceAtLeast(0f)
+
+        val trackRect = calculateTrackRect(width, height)
+
+        return OverlayLayoutDimensions(
+            footerHeight = footerHeight,
+            footerTop = footerTop,
+            metricValueY = metricValueY,
+            metricLabelY = metricLabelY,
+            dateY = dateY,
+            titleY = titleY,
+            scrimTop = scrimTop,
+            trackRect = trackRect
+        )
+    }
+
     /**
      * Composes the photo with 2D GPS track silhouette, translucent bottom gradient scrim,
      * high-contrast metrics, and official branding footer.
@@ -232,6 +305,7 @@ object PhotoTrackOverlayComposer {
         canvas.drawBitmap(sPhoto, 0f, 0f, null)
 
         val scaleRef = width.toFloat() / 1080f
+        val layout = calculateLayoutDimensions(width, height)
 
         // 2. Draw 2D GPS Track Silhouette in Upper-Right / Side Quadrant
         val points = try {
@@ -243,13 +317,7 @@ object PhotoTrackOverlayComposer {
         }
 
         if (points.size >= 2) {
-            val trackRect = RectF(
-                width * 0.45f,
-                height * 0.08f,
-                width * 0.92f,
-                height * 0.48f
-            )
-            val projected = projectTrack(points, trackRect)
+            val projected = projectTrack(points, layout.trackRect.toRectF())
             if (projected != null) {
                 val strokeWidth = (8f * scaleRef).coerceAtLeast(4f)
                 val shadowWidth = strokeWidth + (4f * scaleRef)
@@ -308,13 +376,9 @@ object PhotoTrackOverlayComposer {
         }
 
         // 3. Bottom Gradient Scrim (Transparent -> 85% Dark Black for WCAG AAA compliance)
-        val footerHeight = (125 * scaleRef).roundToInt().coerceAtLeast(100)
-        val scrimHeight = (height * 0.35f).coerceAtLeast((220 * scaleRef) + footerHeight)
-        val scrimTop = height - scrimHeight
-
         val scrimPaint = Paint().apply {
             shader = LinearGradient(
-                0f, scrimTop,
+                0f, layout.scrimTop,
                 0f, height.toFloat(),
                 Color.TRANSPARENT,
                 0xD9000000.toInt(),
@@ -322,46 +386,43 @@ object PhotoTrackOverlayComposer {
             )
             isAntiAlias = true
         }
-        canvas.drawRect(0f, scrimTop, width.toFloat(), height.toFloat(), scrimPaint)
+        canvas.drawRect(0f, layout.scrimTop, width.toFloat(), height.toFloat(), scrimPaint)
 
-        // 4. Key Metrics Typography (WCAG AAA white text over dark scrim)
+        // 4. Key Metrics Typography (WCAG AAA white text over dark scrim, REQ-UI-447.3)
         val padX = 48f * scaleRef
-        var currentY = scrimTop + (40f * scaleRef)
 
         // Title (Workout Name)
         val titlePaint = Paint().apply {
             color = Color.WHITE
-            textSize = 38f * scaleRef
+            textSize = 50f * scaleRef
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
             isAntiAlias = true
         }
         val title = workoutData.workoutName.ifEmpty { workoutData.sportName }
-        canvas.drawText(title, padX, currentY, titlePaint)
+        canvas.drawText(title, padX, layout.titleY, titlePaint)
 
         // Date
-        currentY += 32f * scaleRef
         val datePaint = Paint().apply {
             color = 0xCCFFFFFF.toInt()
-            textSize = 22f * scaleRef
+            textSize = 26f * scaleRef
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
             isAntiAlias = true
         }
         val dateText = "${workoutData.formattedDate}  •  ${workoutData.sportName}"
-        canvas.drawText(dateText, padX, currentY, datePaint)
+        canvas.drawText(dateText, padX, layout.dateY, datePaint)
 
         // Metrics Grid (Distance, Duration, Ascent, Avg Speed/Power)
-        currentY += 46f * scaleRef
         val colWidth = (width - 2 * padX) / 4f
 
         val labelPaint = Paint().apply {
             color = 0xB3FFFFFF.toInt()
-            textSize = 18f * scaleRef
+            textSize = 20f * scaleRef
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
             isAntiAlias = true
         }
         val valuePaint = Paint().apply {
             color = Color.WHITE
-            textSize = 28f * scaleRef
+            textSize = 38f * scaleRef
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
             isAntiAlias = true
         }
@@ -389,18 +450,17 @@ object PhotoTrackOverlayComposer {
 
         statItems.forEachIndexed { idx, (label, valText) ->
             val colX = padX + (idx * colWidth)
-            canvas.drawText(label, colX, currentY, labelPaint)
-            canvas.drawText(valText, colX, currentY + (32f * scaleRef), valuePaint)
+            canvas.drawText(label, colX, layout.metricLabelY, labelPaint)
+            canvas.drawText(valText, colX, layout.metricValueY, valuePaint)
         }
 
         // 5. Official Branding Watermark
-        val footerTop = (height - footerHeight).toFloat()
         val darkFooterColors = ShareThemeColors(
             canvasBackground = Color.BLACK,
             footerBackground = 0xAA000000.toInt(),
             footerTextColor = Color.WHITE
         )
-        drawFooter(context, canvas, width, footerTop, footerHeight, darkFooterColors)
+        drawFooter(context, canvas, width, layout.footerTop, layout.footerHeight, darkFooterColors)
 
         return result
     }

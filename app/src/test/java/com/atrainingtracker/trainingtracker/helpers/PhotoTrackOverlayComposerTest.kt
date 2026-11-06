@@ -131,6 +131,62 @@ class PhotoTrackOverlayComposerTest {
         )
     }
 
+    @Test
+    fun testCalculateTrackRect_portrait_constrainedToUpperRightUnder22Percent() {
+        val width = 1080
+        val height = 2400
+
+        val rect = PhotoTrackOverlayComposer.calculateTrackRect(width, height)
+
+        assertEquals("Portrait track left should be 50% width", width * 0.50f, rect.left, 0.01f)
+        assertEquals("Portrait track right should be 92% width", width * 0.92f, rect.right, 0.01f)
+        assertEquals("Portrait track top should be 5% height", height * 0.05f, rect.top, 0.01f)
+        assertEquals("Portrait track bottom should be 25% height", height * 0.25f, rect.bottom, 0.01f)
+
+        val heightFraction = (rect.bottom - rect.top) / height.toFloat()
+        assertTrue("Portrait track height must be <= 22% of image height, was $heightFraction", heightFraction <= 0.22f)
+    }
+
+    @Test
+    fun testCalculateTrackRect_landscape_standardBounds() {
+        val width = 1920
+        val height = 1080
+
+        val rect = PhotoTrackOverlayComposer.calculateTrackRect(width, height)
+
+        assertEquals("Landscape track left should be 45% width", width * 0.45f, rect.left, 0.01f)
+        assertEquals("Landscape track right should be 92% width", width * 0.92f, rect.right, 0.01f)
+        assertEquals("Landscape track top should be 8% height", height * 0.08f, rect.top, 0.01f)
+        assertEquals("Landscape track bottom should be 48% height", height * 0.48f, rect.bottom, 0.01f)
+    }
+
+    @Test
+    fun testCalculateLayoutDimensions_portrait_compactBottomAnchoring() {
+        val width = 1080
+        val height = 1920
+
+        val layout = PhotoTrackOverlayComposer.calculateLayoutDimensions(width, height)
+
+        assertEquals("Footer height should be 125 for 1080 width", 125, layout.footerHeight)
+        assertEquals("Footer top should be height - footerHeight", 1795f, layout.footerTop, 0.01f)
+
+        // Metrics value anchored compactly above footer
+        assertEquals("Metric values must anchor directly above footerTop", layout.footerTop - 28f, layout.metricValueY, 0.01f)
+        // Metric labels above metric values
+        assertEquals("Metric labels must anchor directly above metric values", layout.metricValueY - 46f, layout.metricLabelY, 0.01f)
+        // Date above metric labels
+        assertEquals("Date must anchor directly above metric labels", layout.metricLabelY - 56f, layout.dateY, 0.01f)
+        // Title above date
+        assertEquals("Title must anchor directly above date", layout.dateY - 42f, layout.titleY, 0.01f)
+
+        // Scrim begins smoothly above title
+        assertEquals("Scrim top must begin above title", layout.titleY - 80f, layout.scrimTop, 0.01f)
+
+        // Total text block from title to footer top is 172px, eliminating large portrait empty gaps
+        val textBlockHeight = layout.footerTop - layout.titleY
+        assertEquals("Text block height should be exactly 172px at scaleRef=1.0", 172f, textBlockHeight, 0.01f)
+    }
+
     private fun Double.roundToInt(): Int = Math.round(this).toInt()
 
     private fun calculateRelativeLuminance(colorInt: Int): Double {
