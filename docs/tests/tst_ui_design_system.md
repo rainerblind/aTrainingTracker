@@ -6696,13 +6696,16 @@
 ### TST-UI-392: **Aftermath Loader Concurrency, Process-Death Detail Restoration, Elevation Gesture State Integrity and Lifecycle Safety Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-427`, `REQ-MAP-032`, `REQ-DAT-011`, `REQ-UI-368`
 - **Component**: **Aftermath Loader Concurrency, Process-Death Detail Restoration, Elevation Gesture State Integrity and Lifecycle Safety Verification Suite**
-- **Jira**: ``ATT-4018``
+- **Jira**: ``ATT-4018``, ``ATT-5478``
 - **Test Description**:
   1. *Aftermath & Peek Loader Coroutine Cancellation Unit Tests (`TST-UI-392.1`, `TrackOnMapAftermathViewModelTest.kt`, `WorkoutClustersViewModelTest.kt`, `PeriodsViewModelTest.kt`)*:
   • Verify that dispatching `loadAftermathData` for a second workout cancels the previous `Job` before completing.
   • Verify that calling `selectWorkoutForPeek` consecutively cancels the previous peek coroutine job in both ViewModels.
-  2. *Process-Death Restoration Reactive Trigger Contract Tests (`TST-UI-392.2`, `WorkoutSummariesTabbedScreenTest.kt`)*:
+  2. *Process-Death Restoration & Idempotent In-Place WorkoutData Contract Tests (`TST-UI-392.2`, `WorkoutSummariesTabbedScreenTest.kt`, `TrackOnMapAftermathViewModelTest.kt`)*:
   • Verify that initializing `selectedWorkoutIdForDetails` without `onMapClick` triggers `loadAftermathData` via `LaunchedEffect`.
+  • Verify `AftermathMapUIState` exposes `loadedWorkoutId: Long?` populated with the loaded workout ID.
+  • Verify that emitting an updated `WorkoutData` instance with the same `id` skips Phase 1 track wipe in `loadAftermathData`, preserving `tracks` and preventing `visibleTabs` tab count shrinkage and `HorizontalPager` tab jumping (`Rule 73`).
+  • Verify that switching to a different workout `id` executes Phase 1 track wipe, clearing previous tracks to prevent ghost data.
   3. *Elevation Profile Gesture Updated State Unit/Contract Tests (`TST-UI-392.3`, `ElevationProfileGestureTest.kt`)*:
   • Verify that `ElevationProfile` pointerInput evaluates `rememberUpdatedState(pathPoints)` and retrieves updated telemetry during ongoing scrub gestures.
   4. *Crop Double-Tap Guard & CancellationException Rethrow Unit Tests (`TST-UI-392.4`, `CropWorkoutViewModelTest.kt`, `WorkoutRepositoryCropTest.kt`)*:
