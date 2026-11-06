@@ -4651,14 +4651,14 @@
 ### TST-UI-294: **Newly Discovered Sensor Prioritization, Visual Highlight Badge & Discovery Feedback Notification Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-334`
 - **Component**: **Newly Discovered Sensor Prioritization, Visual Highlight Badge & Discovery Feedback Notification Verification**
-- **Jira**: ``ATT-3099``
+- **Jira**: `ATT-3099`, `ATT-5660`
 - **Test Description**:
   1. *GetMergedDevicesUseCase Newly Discovered Flagging Unit Tests (`GetMergedDevicesUseCaseTest.kt`)*:
   • Verify `DeviceUiData` mapped for device IDs in `newlyFoundDevicesIds` sets `isNewlyDiscovered = true`.
   • Verify devices not in `newlyFoundDevicesIds` set `isNewlyDiscovered = false`.
   2. *DeviceListViewModel Scan Priority Sorting Unit Tests (`DeviceListViewModelPriorityTest.kt`)*:
-  • Verify newly discovered devices sort at index 0 and 1 ahead of connected and idle devices.
-  • Verify multiple newly discovered devices sort in recency order (most recently discovered first).
+  • Verify newly discovered devices sort at index 0 and 1 ahead of baseline devices in recency order.
+  • Verify baseline devices sort stably and alphabetically by deviceName with id tie-breaker without re-sorting by isConnected.
   3. *DeviceItem Visual Badge & Border Contract Tests (`DeviceItemVisualHighlightTest.kt`)*:
   • Verify `DeviceItem` renders "NEW" badge chip (`devices_newly_discovered_badge`) when `isNewlyDiscovered == true`.
   • Verify `DeviceItem` applies `BorderStroke(1.5.dp, primary.copy(alpha = 0.6f))` when `isNewlyDiscovered == true`.
@@ -4667,7 +4667,9 @@
   • Verify `DevicesTabbedScreen` observes event, shows snackbar (`devices_new_sensor_discovered`), triggers haptic vibration, and auto-scrolls to index 0.
   5. *9-Language Localization Audit (`DeviceDiscoveryLocalizationTest.kt`)*:
   • Verify string keys `devices_newly_discovered_badge` and `devices_new_sensor_discovered` exist and are non-empty across EN, DE, ES, FR, IT, JA, NL, PL, PT with valid `%1$s` specifiers.
-  6. *Clean-Room Full Suite Regression Execution*:
+  6. *Stable Sorting During Pairing / Connection State Changes (`DeviceListViewModelPriorityTest.kt`)*:
+  • Verify that mutating `isConnected` does not alter list index positions in `DeviceListViewModel.getFilteredDevices` across pairing transitions (ATT-5660).
+  7. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
 ### TST-UI-295: **Dynamic Map-Aware Navigation Hints Overlay Anchoring over Embedded Map View Verification** [Verified]

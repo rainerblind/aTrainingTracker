@@ -150,8 +150,8 @@ class DeviceListViewModel @JvmOverloads constructor(
             filtered.sortedWith(
                 compareByDescending<DeviceUiData> { it.isNewlyDiscovered }
                     .thenByDescending { if (it.isNewlyDiscovered) newlyFoundIds.indexOf(it.id) else -1 }
-                    .thenByDescending { it.isConnected }
-                    .thenBy { it.deviceName }
+                    .thenBy(String.CASE_INSENSITIVE_ORDER) { it.deviceName }
+                    .thenBy { it.id }
             )
         }
     }

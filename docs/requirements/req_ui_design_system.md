@@ -8578,17 +8578,16 @@ e. `useStatusBarsPadding = false`.
 **Invariants**: Bounding box calculations, UCI category colors, dismiss behavior, and 100% unit test pass rate MUST NOT be broken.
 
 ### REQ-UI-334: Newly Discovered Sensor Prioritization, Visual Highlight Badge & Discovery Feedback Notification [Verified]
-- **Tests**: `DeviceData.kt`, `GetMergedDevicesUseCase.kt`, `DeviceListViewModel.kt`, `DeviceItem.kt`, `DevicesTabbedScreen.kt`, `DeviceListScreen.kt`, `strings.xml` (all 9 locales)
+- **Tests**: `TST-UI-294` | **Tickets**: `ATT-3099`, `ATT-5660`
 - **Implementation**: Prioritize newly discovered sensors at top of scan list with NEW badge, highlight border, snackbar notification, haptic feedback, and auto-scroll.
 - **Rationale**: The system SHALL prioritize newly discovered wireless sensors at the very top of the scan list during active pairing discovery, distinguish the card with a prominent "NEW" badge chip and primary highlight border, and provide immediate sensory feedback via in-app snackbar notification, haptic vibration, and auto-scroll to the top item (ATT-3099, amending `REQ-UI-291` and complementing `REQ-UI-140`):
 1. *Newly Discovered Sensor Domain Model & Pipeline Flagging (`DeviceData.kt` & `GetMergedDevicesUseCase.kt`)*:
 • The system SHALL extend `DeviceUiData` in `DeviceData.kt` with property `val isNewlyDiscovered: Boolean = false`.
 • In `GetMergedDevicesUseCase.kt`, when mapping devices from `allDevices` and `newlyFoundDevicesIds`: `val isNewlyDiscovered = foundIds.contains(knownDevice.id)`. `DeviceUiData` instances mapped for newly discovered sensors during the active scanning session SHALL have `isNewlyDiscovered = true`.
-2. *Top-Of-List Scan Priority Sorting (`DeviceListViewModel.kt`)*:
+2. *Top-Of-List Scan Priority Sorting & Stable List Ordering (`DeviceListViewModel.kt`)*:
 • In `DeviceListViewModel.getFilteredDevices(spec: DeviceFilterSpec)`, the device list SHALL be ordered using deterministic multi-tier prioritization:
 a. Primary tier: Newly discovered devices (`isNewlyDiscovered == true`) sorted at the top of the list (index 0). Multiple newly discovered devices SHALL be sorted in recency order (most recently discovered first, e.g. reverse index in `foundIds`).
-b. Secondary tier: Connected devices (`isConnected == true`) next.
-c. Baseline tier: Remaining known / idle / paired devices in standard order (by name or ID).
+b. Baseline tier: Remaining known / idle / paired devices SHALL be sorted stably and deterministically by device name (case-insensitive alphabetical order) with device ID as tie-breaker. The system SHALL NOT sort non-new devices by `isConnected`, guaranteeing that cards remain strictly stable and do not jump when pairing or connection states change (ATT-5660).
 3. *Visual Highlighting & "NEW" Badge Chip (`DeviceItem.kt`)*:
 • When `device.isNewlyDiscovered == true`, `DeviceItem` SHALL display:
 a. A prominent "NEW" badge chip (`devices_newly_discovered_badge`) next to the device name/LED indicator.
@@ -8607,10 +8606,10 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 • 100% full clean-room unit test pass rate across all unit tests.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Amends `REQ-UI-291` (*Sensors View Device Inventory Preservation During Active Pairing Scanning*, ATT-2626) and complements `REQ-UI-140` (*Unified Sensors Tabbed Management*).
-2. *Historical Origin & Commit Trace*: Ticket `ATT-2626` (commit `ec62b083`) established tab filter preservation and decoupled hardware pairing scan dispatch. Before that, `DeviceItem.kt` (commit `191ba05d`, Sprint 2026-40.16) and `DeviceListViewModel.kt` ordered devices without distinguishing newly discovered sensors from existing catalog devices.
-3. *Root Reason for Existing Formulation*: Originally, scanning was assumed to occur on clean/sparse lists where only 1 or 2 devices were visible. In real-world usage with extensive sensor histories, new sensors were appended at the end of the list and pushed off-screen, leaving the user with zero visual or tactile confirmation of discovery.
-4. *Preservation of Core Invariants*: Full inventory visibility across tabs (`REQ-UI-291`), pairing state transitions, device rename/calibration, and full-suite test pass rate remain strictly preserved.
+1. *Original Requirement ID & Target*: Amends `REQ-UI-291` (*Sensors View Device Inventory Preservation During Active Pairing Scanning*, ATT-2626) and complements `REQ-UI-140` (*Unified Sensors Tabbed Management*); refined by `REQ-UI-334.2` (ATT-5660).
+2. *Historical Origin & Commit Trace*: Ticket `ATT-2626` (commit `ec62b083`) established tab filter preservation; `ATT-3099` (commit `7df8d5b0`, Sprint `2026-41.8`) introduced newly discovered sensor prioritization and `isConnected` secondary sorting; refined in `ATT-5660` (Sprint `2026-45.9`) to remove `isConnected` sorting.
+3. *Root Reason for Existing Formulation*: Originally, sorting connected sensors ahead was assumed to provide better visibility. However, toggling pairing on internal smartphone sensors (GPS, Barometer, Google Fused) immediately mutates `isConnected`, causing cards to jump across the screen right beneath the user's touch. Dedicated filtering in `DeviceFilterType.CONNECTED` already handles connected-only views.
+4. *Preservation of Core Invariants*: Top-of-list `isNewlyDiscovered` prioritization preserved; `CONNECTED` tab filtering preserved; stable alphabetical sorting guarantees zero jumping.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete in `DevicesTabbedScreen` actively searching for sensors with an existing list of 10 known devices,
@@ -8624,6 +8623,9 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 • *Given* an athlete stopping search or navigating away,
 • *When* viewing the "Bekannt" or "Gekoppelt" tabs,
 • *Then* known and paired devices retain their normal display and ordering once scanning stops.
+• *Given* an athlete in the "Bekannt" or "Gekoppelt" tab,
+• *When* toggling pairing on any device,
+• *Then* the device card remains at its exact position in the list without jumping due to connection state changes (ATT-5660).
 • *Given* all 9 supported application locales,
 • *When* evaluating string resources `devices_newly_discovered_badge` and `devices_new_sensor_discovered`,
 • *Then* all 9 locales contain valid non-empty entries with matching format specifiers.
