@@ -212,7 +212,7 @@ fun TrackOnMapScreen(
             )
     }
 
-    val hasZonesData = hrZoneDistribution != null || powerZoneDistribution != null || gradeZoneDistribution != null
+    val hasZonesData = hrZoneDistribution != null || powerZoneDistribution != null || (gradeZoneDistribution != null && activeDetailPrefs.showGradeDistribution)
     val hasLapsData = workoutData.laps.isNotEmpty()
     val sectionAvailability = remember(
         workoutData,
@@ -717,15 +717,17 @@ fun TrackOnMapScreen(
                                             .padding(horizontal = 16.dp, vertical = 4.dp)
                                     )
                                 }
-                                gradeZoneDistribution?.let { distribution ->
-                                    GradeZoneDistributionCard(
-                                        distribution = distribution,
-                                        displayMode = effectiveGradeZoneDisplayMode,
-                                        onDisplayModeChange = { gradeZoneDisplayMode = it },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                                    )
+                                if (activeDetailPrefs.showGradeDistribution) {
+                                    gradeZoneDistribution?.let { distribution ->
+                                        GradeZoneDistributionCard(
+                                            distribution = distribution,
+                                            displayMode = effectiveGradeZoneDisplayMode,
+                                            onDisplayModeChange = { gradeZoneDisplayMode = it },
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -768,15 +770,17 @@ fun TrackOnMapScreen(
                                             .padding(horizontal = 16.dp, vertical = 4.dp)
                                     )
                                 }
-                                gradeZoneDistribution?.let { distribution ->
-                                    GradeZoneDistributionCard(
-                                        distribution = distribution,
-                                        displayMode = effectiveGradeZoneDisplayMode,
-                                        onDisplayModeChange = { gradeZoneDisplayMode = it },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                                    )
+                                if (activeDetailPrefs.showGradeDistribution) {
+                                    gradeZoneDistribution?.let { distribution ->
+                                        GradeZoneDistributionCard(
+                                            distribution = distribution,
+                                            displayMode = effectiveGradeZoneDisplayMode,
+                                            onDisplayModeChange = { gradeZoneDisplayMode = it },
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                                        )
+                                    }
                                 }
                             }
                         }

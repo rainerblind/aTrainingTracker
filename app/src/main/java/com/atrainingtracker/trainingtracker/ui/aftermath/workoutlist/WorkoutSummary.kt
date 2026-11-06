@@ -193,9 +193,10 @@ fun WorkoutSummary(
     val gradeZoneDistribution by produceState<ZoneDistributionData?>(
         initialValue = null,
         key1 = workoutData.id,
-        key2 = preferences.showZoneAnalysis
+        key2 = preferences.showZoneAnalysis,
+        key3 = preferences.showGradeDistribution
     ) {
-        if (preferences.showZoneAnalysis) {
+        if (preferences.showZoneAnalysis && preferences.showGradeDistribution) {
             value = withContext(Dispatchers.IO) {
                 repository.getGradeZoneDistribution(workoutData.id)
             }
@@ -488,7 +489,7 @@ fun WorkoutSummary(
                 }
                 WorkoutSectionType.ZONES -> {
                     // 9. Zone Distribution Cards
-                    if (preferences.showZoneAnalysis && (hrZoneDistribution != null || powerZoneDistribution != null || gradeZoneDistribution != null)) {
+                    if (preferences.showZoneAnalysis && (hrZoneDistribution != null || powerZoneDistribution != null || (gradeZoneDistribution != null && preferences.showGradeDistribution))) {
                         HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
                             thickness = 0.5.dp,
@@ -518,17 +519,19 @@ fun WorkoutSummary(
                                     .then(mapClickModifier)
                             )
                         }
-                        gradeZoneDistribution?.let { distribution ->
-                            GradeZoneDistributionCard(
-                                distribution = distribution,
-                                displayMode = effectiveGradeZoneDisplayMode,
-                                onDisplayModeChange = { gradeZoneDisplayMode = it },
-                                showModeSelector = false,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 4.dp)
-                                    .then(mapClickModifier)
-                            )
+                        if (preferences.showGradeDistribution) {
+                            gradeZoneDistribution?.let { distribution ->
+                                GradeZoneDistributionCard(
+                                    distribution = distribution,
+                                    displayMode = effectiveGradeZoneDisplayMode,
+                                    onDisplayModeChange = { gradeZoneDisplayMode = it },
+                                    showModeSelector = false,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                                        .then(mapClickModifier)
+                                )
+                            }
                         }
                     }
                 }

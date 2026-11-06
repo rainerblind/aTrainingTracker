@@ -47,6 +47,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabsConfig
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutSectionType
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneCardDisplayMode
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.LapDisplayMode
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.SubordinateTuningToggleItem
 import kotlinx.coroutines.launch
 
 private data class MatrixFeatureRow(
@@ -305,6 +306,11 @@ fun WorkoutMasksAndCardsSection(
                     selectedMode = workoutCardPrefs.zoneCardDisplayMode,
                     onModeSelected = { mode -> onWorkoutCardPrefsChange(workoutCardPrefs.copy(zoneCardDisplayMode = mode)) }
                 )
+                SubordinateTuningToggleItem(
+                    title = stringResource(R.string.settings_workout_card_grade_distribution),
+                    isChecked = workoutCardPrefs.showGradeDistribution,
+                    onCheckedChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showGradeDistribution = it)) }
+                )
             }
         }
 
@@ -358,6 +364,11 @@ fun WorkoutMasksAndCardsSection(
                     label = stringResource(R.string.settings_zone_card_display_mode_title),
                     selectedMode = workoutDetailPrefs.zoneCardDisplayMode,
                     onModeSelected = { mode -> onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(zoneCardDisplayMode = mode)) }
+                )
+                SubordinateTuningToggleItem(
+                    title = stringResource(R.string.settings_workout_card_grade_distribution),
+                    isChecked = workoutDetailPrefs.showGradeDistribution,
+                    onCheckedChange = { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showGradeDistribution = it)) }
                 )
             }
         }

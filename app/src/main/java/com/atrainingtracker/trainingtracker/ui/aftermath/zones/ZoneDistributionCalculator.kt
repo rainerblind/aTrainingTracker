@@ -88,6 +88,16 @@ object ZoneDistributionCalculator {
         TTColor.Zone7
     )
 
+    private val GRADE_BADGE_LABELS = arrayOf(
+        "<2%",
+        "≥2%",
+        "≥5%",
+        "≥10%",
+        "≥15%",
+        "≥20%",
+        "≥25%"
+    )
+
     /**
      * Calculates 5-zone distribution data from heart rate samples and athlete thresholds.
      *
@@ -411,7 +421,8 @@ object ZoneDistributionCalculator {
                 zoneLabelResId = GRADE_ZONE_LABELS[idx],
                 durationSec = duration,
                 percentage = pct,
-                color = GRADE_ZONE_COLORS[idx]
+                color = GRADE_ZONE_COLORS[idx],
+                customBadgeLabel = GRADE_BADGE_LABELS[idx]
             )
         }
 

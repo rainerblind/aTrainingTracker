@@ -269,7 +269,7 @@ private fun StackedBarLegendItem(
         )
         Spacer(modifier = Modifier.width(4.dp))
         Text(
-            text = "Z${entry.zoneIndex}",
+            text = entry.badgeLabel,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
             color = if (isActive) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = textAlpha)
