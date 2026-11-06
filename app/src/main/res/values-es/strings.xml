@@ -2309,6 +2309,7 @@
     <string name="milestone_workout_name_format">%1$d. %2$s: %3$s</string>
     <string name="jubilee_dialog_title">¡Felicidades por tu %1$d.ª %2$s!</string>
     <string name="jubilee_dialog_message">¡Has completado %1$d sesiones de %2$s con aTrainingTracker! Este es un gran hito deportivo.</string>
+    <string name="jubilee_feedback_prompt">¿Te gusta aTrainingTracker? Comparte tu experiencia con una valoración en Google Play o envía tus comentarios directamente por correo electrónico a Rainer.</string>
     <string name="jubilee_action_review">Valorar en Google Play</string>
     <string name="jubilee_action_email_feedback">Comentarios por correo a Rainer</string>
     <string name="jubilee_supporter_appeal_title">Apoya más de 15 años de desarrollo indie</string>

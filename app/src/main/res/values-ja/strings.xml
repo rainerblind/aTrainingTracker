@@ -2288,6 +2288,7 @@
     <string name="milestone_workout_name_format">%1$d. %2$s: %3$s</string>
     <string name="jubilee_dialog_title">%1$d回目の%2$s達成おめでとうございます！</string>
     <string name="jubilee_dialog_message">aTrainingTrackerで%1$d回の%2$sセッションを完了しました！素晴らしいマイルストーンです。</string>
+    <string name="jubilee_feedback_prompt">aTrainingTrackerを気に入っていただけましたか？Google Playでの評価や、開発者のRainerへのメールでご意見・ご感想をお寄せください。</string>
     <string name="jubilee_action_review">Google Playで評価</string>
     <string name="jubilee_action_email_feedback">Rainerへメールでフィードバック</string>
     <string name="jubilee_supporter_appeal_title">15年以上の個人開発を支援</string>
