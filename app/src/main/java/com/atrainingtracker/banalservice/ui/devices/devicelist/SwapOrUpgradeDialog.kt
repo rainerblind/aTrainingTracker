@@ -29,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
@@ -66,29 +67,12 @@ fun SwapOrUpgradeDialog(
         actions = {
             TextButton(
                 onClick = onDismiss,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Text(text = stringResource(R.string.cancel))
-            }
-            FilledTonalButton(
-                onClick = {
-                    onDismiss()
-                    onNavigateToSupporter()
-                },
-                modifier = Modifier.weight(1.5f)
-            ) {
-                Text(text = stringResource(R.string.swap_dialog_action_unlock))
-            }
-            Button(
-                onClick = {
-                    if (selectedUnpairId != -1L) {
-                        onSwapConfirmed(selectedUnpairId, candidateDevice.id)
-                    }
-                },
-                enabled = selectedUnpairId != -1L,
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(text = stringResource(R.string.swap_dialog_action_swap))
+                Text(
+                    text = stringResource(R.string.cancel),
+                    textAlign = TextAlign.Center
+                )
             }
         }
     ) {
@@ -148,6 +132,36 @@ fun SwapOrUpgradeDialog(
                         }
                     }
                 }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // Stacked Full-Width Action Buttons (Rule 73 / REQ-SET-084.8 / ATT-5470)
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Button(
+                onClick = {
+                    if (selectedUnpairId != -1L) {
+                        onSwapConfirmed(selectedUnpairId, candidateDevice.id)
+                    }
+                },
+                enabled = selectedUnpairId != -1L,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(text = stringResource(R.string.swap_dialog_action_swap))
+            }
+
+            FilledTonalButton(
+                onClick = {
+                    onDismiss()
+                    onNavigateToSupporter()
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(text = stringResource(R.string.swap_dialog_action_unlock))
             }
         }
     }

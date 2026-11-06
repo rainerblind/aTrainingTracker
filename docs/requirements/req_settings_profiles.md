@@ -1367,7 +1367,7 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 **Invariants**: Core tracking, telemetry processing, local file exports, and database pairing persistence across app updates MUST NOT be compromised.
 
 ### REQ-SET-084: One-Tap Swap-or-Upgrade Dialog on 3rd Paired Device (REQ-MON-002) [Verified]
-- **Tests**: `TST-SET-084` | **Tickets**: `ATT-51`, `ATT-5399`, `ATT-5398`, `ATT-5469`
+- **Tests**: `TST-SET-084` | **Tickets**: `ATT-51`, `ATT-5399`, `ATT-5398`, `ATT-5469`, `ATT-5470`
 - **Implementation**: `SensorQuotaReconciliationManager.kt`, `DeviceListViewModel.kt`, `ControlTrackingViewModel.kt`, `DeviceManager.java`, `ATrainingTrackerApp.kt`, `MainActivityWithNavigation.kt`, `SwapOrUpgradeDialog.kt`, `KeepTwoSensorsBottomSheet.kt`, `DeviceDataRepository.kt`
 - **Rationale**: Ensure athletes are never blocked by a hard paywall when adding sensors. When attempting to pair a 3rd device in Free tier, athletes can easily unpair a currently active device with a single tap or upgrade to Pro via "Pay what you want". Furthermore, athletes who downgrade from Supporter to Free tier with $> 2$ paired sensors are guided through a non-destructive reconciliation flow to keep 2 sensors.
 - **Description**:
@@ -1388,6 +1388,8 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • In Free tier, `executeSwapAndPair()` and `DeviceDataRepository` SHALL ensure that even if more than 2 sensors were paired prior to the swap, all excess sensors beyond the newly paired candidate and retained sensor are set to `PAIRED = 0`, guaranteeing total paired count is strictly $\le 2$.
 7. *BANALService Free Quota Hardware Connection Clamping (`REQ-SET-084.7`)*:
 • In `DeviceManager.startSearchForPairedDevices()` / remote device creation, the system SHALL enforce defense-in-depth hardware connection clamping: on Free tier (`!isProActive()`), connecting remote hardware devices SHALL be clamped to `MAX_FREE_PAIRED_DEVICES = 2` to prevent downgraded athletes from connecting excess sensors even if UI reconciliation has not yet been processed.
+8. *Rule 73 Stacked Action Button Ergonomics (`REQ-SET-084.8`)*:
+• In `SwapOrUpgradeDialog.kt`, action controls SHALL follow the Rule 73 stacked button layout for `AppModalBottomSheet`: primary action (*'Tauschen & Koppeln'*, `Button`) and secondary upgrade CTA (*'Unbegrenzte Sensoren freischalten'*, `FilledTonalButton`) SHALL be laid out as vertically stacked full-width buttons (`Modifier.fillMaxWidth()`, `8.dp` spacing) at the bottom of the sheet content column, leaving only a single full-width dismiss action (*'Abbrechen'*, `TextButton`) in `actions`, eliminating horizontal button crowding and broken word wrapping across all 9 locales (Rule 73, ATT-5470).
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* a Free tier athlete with 2 paired devices attempting to pair a heart rate monitor,

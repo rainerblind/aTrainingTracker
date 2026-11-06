@@ -66,6 +66,12 @@ import com.atrainingtracker.R
  * 3. Header row featuring an optional leading icon, localized title, and close dismiss button.
  * 4. Content body with optional scrolling support.
  * 5. Optional bottom action bar slot separated by a subtle divider.
+ * 6. Rule 73 Stacked Button Ergonomics: The [actions] slot is a horizontal [RowScope]. Never pack
+ *    3 or more buttons or multi-word German labels (> 15 chars) horizontally inside [actions].
+ *    Instead, place primary and secondary CTAs as vertically stacked full-width buttons ([Button],
+ *    [FilledTonalButton], [OutlinedButton] with `Modifier.fillMaxWidth()`) at the bottom of the
+ *    [content] body, leaving only a single full-width dismiss [TextButton] in [actions] (modeled
+ *    after `FirstJubileeCelebrationDialog`).
  *
  * @param title Localized title text for the sheet.
  * @param onDismissRequest Callback invoked when the sheet is dismissed.
@@ -77,7 +83,9 @@ import com.atrainingtracker.R
  * @param showCloseButton Whether to render a close button in the top right.
  * @param scrollable Whether the content body should automatically provide vertical scrolling.
  * @param headerActions Optional composable slot for actions in the header row.
- * @param actions Optional composable slot for bottom action buttons.
+ * @param actions Optional composable slot for bottom action buttons (horizontal [RowScope]).
+ *        Per Rule 73, whenever a dialog has >= 3 buttons or long localized labels, stack CTAs
+ *        vertically in [content] and place only a single dismiss action in [actions].
  * @param content Composable slot containing the main content.
  */
 @OptIn(ExperimentalMaterial3Api::class)
