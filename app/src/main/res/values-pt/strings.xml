@@ -1106,11 +1106,11 @@
     <string name="cluster_naming__title">Atribuir treino à rota</string>
     <string name="cluster_naming__found_recurring">Encontrada nova rota de %1$s.</string>
     <string name="cluster_naming__task_count">Tarefa %1$d de %2$d</string>
-    <string name="cluster_naming__assignment_label">Atribuição de rota:</string>
+    <string name="cluster_naming__assignment_label">Selecionar rota favorita existente:</string>
     <string name="cluster_naming__create_new">Criar nova…</string>
     <string name="cluster_naming__selected_route_label">Rota selecionada</string>
-    <string name="cluster_naming__new_name_prompt">Ou dê um novo nome:</string>
-    <string name="cluster_naming__new_route_name_label">Nome da nova rota</string>
+    <string name="cluster_naming__new_name_prompt">Ou criar uma nova rota favorita:</string>
+    <string name="cluster_naming__new_route_name_label">Nome da nova rota favorita</string>
     <string name="cluster_naming__leave_unclustered">Deixar não agrupado</string>
     <string name="cluster_naming__workout_name_label">Nome do treino</string>
     <string name="migration_phase_label">Fase %1$d: %2$s</string>

@@ -5620,9 +5620,23 @@ Specifically:
 **Invariants**: SQLite schema stable; cycle immunity guaranteed via read-only invalidation handlers; 100% clean-room test suite pass rate.
 
 ### REQ-UI-123: Localized Cluster Naming Interface [Verified]
-- **Tests**: `TST-UI-078`
-- **Implementation**: `ImportBackupTabsScreen.kt`, `strings.xml`
-- **Rationale**: The cluster candidate naming dialog (`ClusterNamingDialog`) SHALL render all user-facing text labels (titles, route assignment prompts, task counters, field labels, and button actions) using localized string resources. Zero hardcoded string literals SHALL remain in the composable layout. **Invariants**: Formatted placeholders (date strings, task numbers) MUST follow valid Java Formatter syntax across all 9 supported locales.
+- **Tests**: `TST-UI-078` | **Tickets**: `ATT-565`, `ATT-494`, `ATT-5560`, `ATT-5664`
+- **Implementation**: `ImportBackupTabsScreen.kt`, `WorkoutClusterComponents.kt`, `strings.xml`
+- **Rationale**: The cluster candidate naming dialog (`ClusterNamingDialog`) SHALL render all user-facing text labels (titles, route assignment prompts, task counters, field labels, and button actions) using localized string resources. Zero hardcoded string literals SHALL remain in the composable layout. Furthermore, to eliminate visual ambiguity against the separate workout name input field (`cluster_naming__workout_name_label`), the route cluster assignment and creation sections SHALL explicitly indicate that they select an *existing* favorite route (*Lieblingsstrecke*) or create a *new* favorite route (*Lieblingsstrecke*) across all 9 supported locales (`cluster_naming__assignment_label`, `cluster_naming__new_name_prompt`, `cluster_naming__new_route_name_label`) (ATT-5664). **Invariants**: Formatted placeholders (date strings, task numbers) MUST follow valid Java Formatter syntax across all 9 supported locales; resource keys MUST remain strictly unchanged.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: `REQ-UI-123` (*Localized Cluster Naming Interface*), targeting `ImportBackupTabsScreen.kt`, `WorkoutClusterComponents.kt`, and `strings.xml`.
+2. *Historical Origin & Commit Trace*: Introduced in `ATT-494` / `ATT-565` for initial localization of the cluster naming popup, and extended in `ATT-5560` (bottom sheet conversion & inline workout naming).
+3. *Root Reason for Existing Formulation*: Generic labels (*"Oder neuen Namen vergeben:"* / *"Neuer Name"*) were adequate when the dialog only asked for a cluster name. Introducing the workout name field in ATT-5560 created user ambiguity where users perceived the lower field as asking for a duplicate workout name.
+4. *Preservation of Core Invariants*: String resource key names remain 100% backward-compatible; 100% translation parity across all 9 locales; no decorative emojis (`ATT-5400`); no logic mutations.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `ClusterNamingDialog` is presented during workout import or manual cluster assignment,
+• *When* inspecting the route cluster section,
+• *Then* the upper selector is labeled with explicit selection copy (`cluster_naming__assignment_label`: DE *"Bestehende Lieblingsstrecke auswählen:"* / EN *"Select existing favorite route:"*), the creation prompt specifies favorite route creation (`cluster_naming__new_name_prompt`: DE *"Oder neue Lieblingsstrecke anlegen:"* / EN *"Or create a new favorite route:"*), and the text field label specifies favorite route naming (`cluster_naming__new_route_name_label`: DE *"Name der neuen Lieblingsstrecke"* / EN *"New Favorite Route Name"*).
+• *Given* all 9 locale `strings.xml` files,
+• *When* `TranslationParityTest` executes,
+• *Then* all 9 languages maintain 100% string presence and specifier parity.
 
 ### REQ-UI-257: Compact Equipment Card Layout & Harmonized Inter-Card Spacing [Verified]
 - **Tests**: `EquipmentTabsScreen.kt`, `EquipmentItem.kt`

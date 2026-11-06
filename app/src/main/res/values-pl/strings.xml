@@ -887,11 +887,11 @@
     <string name="cluster_naming__title">Przypisz trening do trasy</string>
     <string name="cluster_naming__found_recurring">Znaleziono nową trasę z %1$s.</string>
     <string name="cluster_naming__task_count">Zadanie %1$d z %2$d</string>
-    <string name="cluster_naming__assignment_label">Przypisanie trasy:</string>
+    <string name="cluster_naming__assignment_label">Wybierz istniejącą ulubioną trasę:</string>
     <string name="cluster_naming__create_new">Utwórz nową…</string>
     <string name="cluster_naming__selected_route_label">Wybrana trasa</string>
-    <string name="cluster_naming__new_name_prompt">LUB podaj nową nazwę:</string>
-    <string name="cluster_naming__new_route_name_label">Nazwa nowej trasy</string>
+    <string name="cluster_naming__new_name_prompt">LUB utwórz nową ulubioną trasę:</string>
+    <string name="cluster_naming__new_route_name_label">Nazwa nowej ulubionej trasy</string>
     <string name="cluster_naming__leave_unclustered">Pozostaw niepogrupowane</string>
     <string name="cluster_naming__workout_name_label">Nazwa treningu</string>
     <string name="migration_phase_label">Faza %1$d: %2$s</string>

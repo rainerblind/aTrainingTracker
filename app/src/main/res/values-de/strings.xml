@@ -1191,11 +1191,11 @@
     <string name="cluster_naming__title">Einheit einer Lieblingsstrecke zuweisen</string>
     <string name="cluster_naming__found_recurring">Neue Lieblingsstrecke vom %1$s gefunden.</string>
     <string name="cluster_naming__task_count">Aufgabe %1$d von %2$d</string>
-    <string name="cluster_naming__assignment_label">Lieblingsstrecke:</string>
+    <string name="cluster_naming__assignment_label">Bestehende Lieblingsstrecke auswählen:</string>
     <string name="cluster_naming__create_new">Neu erstellen…</string>
     <string name="cluster_naming__selected_route_label">Lieblingsstrecke</string>
-    <string name="cluster_naming__new_name_prompt">Oder neuen Namen vergeben:</string>
-    <string name="cluster_naming__new_route_name_label">Neuer Name</string>
+    <string name="cluster_naming__new_name_prompt">Oder neue Lieblingsstrecke anlegen:</string>
+    <string name="cluster_naming__new_route_name_label">Name der neuen Lieblingsstrecke</string>
     <string name="cluster_naming__leave_unclustered">Ungruppiert lassen</string>
     <string name="cluster_naming__workout_name_label">Name der Einheit</string>
     <string name="migration_phase_label">Phase %1$d: %2$s</string>

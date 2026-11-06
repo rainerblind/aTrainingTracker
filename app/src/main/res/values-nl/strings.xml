@@ -1106,11 +1106,11 @@
     <string name="cluster_naming__title">Workout aan route toewijzen</string>
     <string name="cluster_naming__found_recurring">Nieuwe route gevonden van %1$s.</string>
     <string name="cluster_naming__task_count">Taak %1$d van %2$d</string>
-    <string name="cluster_naming__assignment_label">Routetoewijzing:</string>
+    <string name="cluster_naming__assignment_label">Bestaande favoriete route selecteren:</string>
     <string name="cluster_naming__create_new">Nieuwe maken…</string>
     <string name="cluster_naming__selected_route_label">Geselecteerde route</string>
-    <string name="cluster_naming__new_name_prompt">Of geef een nieuwe naam:</string>
-    <string name="cluster_naming__new_route_name_label">Nieuwe routenaam</string>
+    <string name="cluster_naming__new_name_prompt">Of een nieuwe favoriete route maken:</string>
+    <string name="cluster_naming__new_route_name_label">Naam van nieuwe favoriete route</string>
     <string name="cluster_naming__leave_unclustered">Niet-gegroepeerd laten</string>
     <string name="cluster_naming__workout_name_label">Naam van training</string>
     <string name="migration_phase_label">Fase %1$d: %2$s</string>
