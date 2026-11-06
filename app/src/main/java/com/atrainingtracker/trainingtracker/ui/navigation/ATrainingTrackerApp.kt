@@ -76,8 +76,10 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ui.devices.ant.AntServicesStatusSheet
+import com.atrainingtracker.banalservice.ui.devices.devicelist.KeepTwoSensorsBottomSheet
 import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedScreen
 import com.atrainingtracker.trainingtracker.monetization.ProFeatureManager
+import com.atrainingtracker.trainingtracker.monetization.SensorQuotaReconciliationManager
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.ui.ant.AntDialogState
 import com.atrainingtracker.trainingtracker.ui.dialogs.FirstJubileeActionHelper
@@ -773,6 +775,34 @@ fun ATrainingTrackerApp(
     if (activity.showAntStatusSheet) {
         AntServicesStatusSheet(
             onDismiss = { activity.showAntStatusSheet = false }
+        )
+    }
+
+    // Subscription Downgrade Keep-2-Sensors Reconciliation Bottom Sheet (REQ-SET-084.5)
+    val reconciliationManager = remember { SensorQuotaReconciliationManager.getInstance(context) }
+    val keepTwoSensorsEvent by reconciliationManager.keepTwoSensorsDialogEvent.collectAsState()
+    val proFeatureManager = remember { ProFeatureManager.getInstance(context) }
+    val isProActive by proFeatureManager.isProActive.collectAsState()
+
+    LaunchedEffect(isProActive) {
+        if (!isProActive) {
+            reconciliationManager.checkDowngradeReconciliation()
+        }
+    }
+
+    keepTwoSensorsEvent?.let { event ->
+        KeepTwoSensorsBottomSheet(
+            currentlyPairedDevices = event.currentlyPairedDevices,
+            defaultKeepDeviceIds = event.defaultKeepDeviceIds,
+            onConfirmSelection = { selectedIds ->
+                reconciliationManager.confirmKeepTwoSensors(selectedIds)
+            },
+            onNavigateToSupporter = {
+                activity.navigateToDrawerItem(R.id.drawer_supporter)
+            },
+            onDismiss = {
+                reconciliationManager.dismissKeepTwoSensors()
+            }
         )
     }
 

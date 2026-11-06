@@ -315,7 +315,7 @@ class TcxImportPeriodAndClusterIntegrationTest {
                 any(), any(), any(), any(),
                 captureNullable(workoutNameSlot),
                 capture(candidateSportsSlot),
-                any(), any()
+                any(), any(), any(), any()
             )
         } returns mockMatchingCluster
 

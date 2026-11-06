@@ -83,6 +83,15 @@ class FirstJubileeCelebrationDialogTest {
     }
 
     @Test
+    fun testJubileeFeedbackPrompt_resourceExists() {
+        // Assert generated R resource identifier exists without source-file text grepping (Section 5.4)
+        assertTrue(
+            "R.string.jubilee_feedback_prompt must exist",
+            com.atrainingtracker.R.string.jubilee_feedback_prompt > 0
+        )
+    }
+
+    @Test
     fun testContext_findActivity_unwrapsContextWrappers() {
         val mockActivity = mockk<Activity>()
         assertEquals(mockActivity, mockActivity.findActivity())

@@ -399,18 +399,20 @@ class WorkoutRepositoryConcurrencyTest {
     }
 
     /**
-     * [TST-STB-018.6] Defensive Deletion Reporting
+     * [TST-STB-018.6] Defensive Deletion Reporting & Rule 74 Completion Ordering
      * Deletion failures and exceptions post Pair(id, false) and unconditionally reset
-     * DeletionProgress to Idle via try/finally.
+     * DeletionProgress to Idle before posting deleteFinishedEvent (Rule 74, ATT-5565).
      */
     @Test
     fun testDefensiveDeletionReporting_failureAndExceptionResetIdle() = runBlocking {
         val events = java.util.concurrent.CopyOnWriteArrayList<Pair<Long, Boolean>>()
+        val progressAtEventTime = java.util.concurrent.CopyOnWriteArrayList<DeletionProgress?>()
         val latchA = CountDownLatch(1)
         val latchB = CountDownLatch(2)
 
         val observer = Observer<Pair<Long, Boolean>> {
             events.add(it)
+            progressAtEventTime.add(repository.deletionProgress.value)
             latchA.countDown()
             latchB.countDown()
         }
@@ -423,6 +425,7 @@ class WorkoutRepositoryConcurrencyTest {
             assertTrue("Timed out waiting for Part A failure event", latchA.await(3, TimeUnit.SECONDS))
             assertEquals(1, events.size)
             assertEquals("Must report false on deletion failure", Pair(201L, false), events[0])
+            assertEquals("Progress must be Idle at the moment deleteFinishedEvent is posted (Rule 74)", DeletionProgress.Idle, progressAtEventTime[0])
             assertEquals("Progress must reset to Idle on failure", DeletionProgress.Idle, repository.deletionProgress.value)
 
             // Part B: Deletion throws SQLiteException
@@ -431,6 +434,7 @@ class WorkoutRepositoryConcurrencyTest {
             assertTrue("Timed out waiting for Part B exception event", latchB.await(3, TimeUnit.SECONDS))
             assertEquals(2, events.size)
             assertEquals("Must report false on deletion exception", Pair(202L, false), events[1])
+            assertEquals("Progress must be Idle at the moment deleteFinishedEvent is posted (Rule 74)", DeletionProgress.Idle, progressAtEventTime[1])
             assertEquals("Progress must reset to Idle on exception", DeletionProgress.Idle, repository.deletionProgress.value)
         } finally {
             repository.deleteFinishedEvent.removeObserver(observer)

@@ -1056,6 +1056,8 @@
     <string name="cluster_tuning_apex_label">Apextolerantie (max. verplaatsing)</string>
     <string name="cluster_tuning_distance_label">Afstandstolerantie</string>
     <string name="cluster_tuning_altitude_pos_label">Tolerantie hoogtepositie</string>
+    <string name="cluster_tuning_score_threshold_label">Score-drempelwaarde voor clustertoewijzing</string>
+    <string name="cluster_tuning_score_threshold_helper">Lager = striktere overeenkomst · Hoger = toleranter</string>
     <string name="cluster_tuning_recalculate_button">Bereken alle clusters opnieuw</string>
     <string name="cluster_tuning_warning">Waarschuwing: Herberekenen wist alle geleerde clusternamen en groeperingen en bouwt ze vervolgens opnieuw op uit de geschiedenis met deze nieuwe parameters.</string>
     <string name="cluster_tuning_recalculating">Clusters opnieuw berekenen…</string>
@@ -1110,6 +1112,7 @@
     <string name="cluster_naming__new_name_prompt">Of geef een nieuwe naam:</string>
     <string name="cluster_naming__new_route_name_label">Nieuwe routenaam</string>
     <string name="cluster_naming__leave_unclustered">Niet-gegroepeerd laten</string>
+    <string name="cluster_naming__workout_name_label">Naam van training</string>
     <string name="migration_phase_label">Fase %1$d: %2$s</string>
 
     <string name="unclustered">Open</string>
@@ -1547,8 +1550,9 @@
     <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
     <string name="aftermath_power_zones_title">Vermogenszones</string>
 
-    <!-- Grade / Slope Distribution Card (ATT-5487 / REQ-UI-453) -->
-    <string name="aftermath_grade_zones_title">Hellingzones</string>
+    <!-- Grade / Slope Distribution Card (ATT-5487 / ATT-5563 / REQ-UI-453) -->
+    <string name="aftermath_grade_zones_title">Hellingverdeling</string>
+    <string name="settings_workout_card_grade_distribution">Hellingverdeling</string>
     <!-- Telemetry Frequency Histogram & Display Modes (ATT-1845 / ATT-3390 / REQ-UI-372) -->
     <string name="zone_mode_5_zones">5 zones</string>
     <string name="zone_mode_columns">Kolommen</string>
@@ -2265,8 +2269,8 @@
     <string name="supporter_tier_free">Gratis</string>
     <string name="supporter_tier_pioneer">★ Pionier ★</string>
     <string name="supporter_tier_bronze">Bronzen supporter</string>
-    <string name="supporter_tier_silver">Zilveren supporter</string>
-    <string name="supporter_tier_gold">Gouden supporter</string>
+    <string name="supporter_tier_silver">Zilver Pro Supporter</string>
+    <string name="supporter_tier_gold">Goud Pro+ Supporter</string>
     <string name="supporter_tier_diamond">Diamanten sponsor</string>
     <string name="supporter_screen_title">Betaal wat je wilt</string>
     <string name="supporter_screen_subtitle" formatted="false">Steun onafhankelijke fitnesstracking en houd aTrainingTracker 100% advertentievrij.</string>
@@ -2292,8 +2296,8 @@
     <string name="keep_two_sensors_action_unlock">Onbeperkte sensors ontgrendelen</string>
     <string name="drawer_supporter">Supporter &amp; Pro</string>
     <string name="drawer_tier_diamond">◆ DIAMOND SPONSOR • Onbeperkte sensoren</string>
-    <string name="drawer_tier_gold">★ GOUD PRO-SUPPORTER</string>
-    <string name="drawer_tier_silver">★ ZILVER PRO-SUPPORTER</string>
+    <string name="drawer_tier_gold">★ GOUD PRO+ SUPPORTER</string>
+    <string name="drawer_tier_silver">★ ZILVER PRO SUPPORTER</string>
     <string name="drawer_tier_bronze">★ BRONS SUPPORTER</string>
     <string name="drawer_tier_pioneer_with_year">★ Pionier (Sinds %1$d)</string>
     <string name="drawer_tier_pioneer">★ Pionier</string>
@@ -2307,6 +2311,7 @@
     <string name="milestone_workout_name_format">%1$d. %2$s: %3$s</string>
     <string name="jubilee_dialog_title">Gefeliciteerd met je %1$de %2$s!</string>
     <string name="jubilee_dialog_message">Je hebt %1$d %2$s-sessies voltooid met aTrainingTracker! Een geweldige sportieve mijlpaal.</string>
+    <string name="jubilee_feedback_prompt">Bevalt aTrainingTracker je? Deel je ervaring met een beoordeling op Google Play of stuur je feedback rechtstreeks per e-mail naar Rainer.</string>
     <string name="jubilee_action_review">Beoordelen op Google Play</string>
     <string name="jubilee_action_email_feedback">Feedback per e-mail naar Rainer</string>
     <string name="jubilee_supporter_appeal_title">Steun 15+ jaar onafhankelijke ontwikkeling</string>
@@ -2320,7 +2325,7 @@
     <!-- Supporter N+1 Garage Detector (ATT-5299 / REQ-SET-088) -->
     <string name="garage_detector_dialog_title_gold">Goud-klasse garage gedetecteerd!</string>
     <string name="garage_detector_dialog_title_diamond">Diamant-klasse wereldgarage!</string>
-    <string name="garage_detector_dialog_message_gold">Gefeliciteerd met je %1$d fietsen, %2$d schoenen en %3$d sensoren (incl. %4$d vermogensmeters) in aTrainingTracker! Je garage speelt in de profcompetitie, maar je app-status is %5$s. Gun je uitrusting de upgrade naar Goud Pro-Supporter!</string>
+    <string name="garage_detector_dialog_message_gold">Gefeliciteerd met je %1$d fietsen, %2$d schoenen en %3$d sensoren (incl. %4$d vermogensmeters) in aTrainingTracker! Je garage speelt in de profcompetitie, maar je app-status is %5$s. Gun je uitrusting de upgrade naar Goud Pro+ Supporter!</string>
     <string name="garage_detector_dialog_message_diamond">Ongelooflijke garage: %1$d fietsen, %2$d schoenen en %3$d sensoren (incl. %4$d vermogensmeters) in aTrainingTracker! Je uitrusting is van wereldklasse, maar je app-status is %5$s. Bekroon je garage met Diamant Sponsor!</string>
     <string name="garage_detector_action_upgrade_gold">Upgrade naar Goud Pro (50 € / jr)</string>
     <string name="garage_detector_action_upgrade_diamond">Upgrade naar Diamant Sponsor (100 € / jr)</string>
@@ -2335,8 +2340,8 @@
     <string name="launcher_icon_standard">Standaard</string>
     <string name="launcher_icon_pioneer">Pioneer Editie</string>
     <string name="launcher_icon_bronze">Brons Supporter</string>
-    <string name="launcher_icon_silver">Zilver Pro-Supporter</string>
-    <string name="launcher_icon_gold">Goud Pro-Supporter</string>
+    <string name="launcher_icon_silver">Zilver Pro Supporter</string>
+    <string name="launcher_icon_gold">Goud Pro+ Supporter</string>
     <string name="launcher_icon_diamond">Diamant Sponsor</string>
     <string name="supporter_status_emblem_cd">Supporter Status Embleem</string>
     <string name="share_watermark_tracked_with">Geregistreerd met aTrainingTracker</string>
@@ -2364,4 +2369,11 @@
     <string name="workout_photos_time_picker_subtitle">Foto\'s gemaakt tijdens deze workout</string>
     <string name="workout_photos_show_all">Alle foto\'s tonen</string>
     <string name="workout_photos_add_count">%1$d foto\'s toevoegen</string>
+    <!-- Workout Photos Settings (REQ-UI-414.6 / ATT-5474) -->
+    <string name="settings_workout_card_photos">Workoutfoto\'s</string>
+    <string name="settings_workout_photos_show_add_button">Knop \"Foto toevoegen\" tonen</string>
+    <string name="settings_workout_photos_thumbnail_size">Grootte van fotovoorbeeld</string>
+    <string name="settings_workout_photos_size_small">Klein</string>
+    <string name="settings_workout_photos_size_medium">Gemiddeld</string>
+    <string name="settings_workout_photos_size_large">Groot</string>
 </resources>

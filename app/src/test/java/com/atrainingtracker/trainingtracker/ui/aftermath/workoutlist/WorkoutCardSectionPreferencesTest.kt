@@ -45,6 +45,7 @@ class WorkoutCardSectionPreferencesTest {
         assertFalse("Elevation profile should be disabled by default for list cards", prefs.showElevationProfile)
         assertFalse("Telemetry charts should be disabled by default", prefs.showTelemetryCharts)
         assertTrue("Zone analysis should be enabled by default", prefs.showZoneAnalysis)
+        assertFalse("Grade distribution should be disabled by default for list cards", prefs.showGradeDistribution)
         assertTrue("Export status should be enabled by default", prefs.showExportStatus)
     }
 

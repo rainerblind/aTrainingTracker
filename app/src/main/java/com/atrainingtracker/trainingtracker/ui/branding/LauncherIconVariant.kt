@@ -24,15 +24,15 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.monetization.SupporterTier
 
 /**
- * Supported homescreen launcher icon variants with Option A badges (REQ-UI-445 / ATT-1406).
+ * Supported homescreen launcher icon variants with Option A badges & Variant C stadium overlays (REQ-UI-445 / ATT-1406 / ATT-5496).
  *
  * Every variant combines authentic Cervélo P3C and classic stopwatch artwork with tier badges:
  * 1. Standard (Free): Modernized classic Cervélo P3C & stopwatch without badge overlays.
- * 2. Pioneer Edition: Emerald & Gold Heritage Star emblem + ribbon + emerald border ring.
- * 3. Bronze Supporter: Bronze Medal on neck ribbon + ribbon + bronze border ring.
- * 4. Silver Pro-Supporter: Silver Medal on neck ribbon + ribbon + silver border ring.
- * 5. Gold Pro-Supporter: 24K Gold Medal on neck ribbon + ribbon + gold border ring.
- * 6. Diamond Sponsor: Faceted Brilliant-Cut Cyan Diamond + ribbon + cyan-blue border ring.
+ * 2. Pioneer Edition: Emerald & Gold Heritage Star emblem + emerald PIONEER capsule on white background.
+ * 3. Bronze Supporter: Variant B5 Participant Rosette + bronze SUPPORTER capsule on white background.
+ * 4. Silver Pro Supporter: Variant S4-A Single-Rim 3D Silver Coins + slate PRO SUPPORTER capsule on white background.
+ * 5. Gold Pro+ Supporter: Variant G6 Single-Rim 3D Gold Bar + Coin + amber PRO+ SUPPORTER capsule on white background.
+ * 6. Diamond Sponsor: Faceted Brilliant-Cut Cyan Diamond + cyan SPONSOR capsule on white background.
  */
 enum class LauncherIconVariant(
     val id: String,

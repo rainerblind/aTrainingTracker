@@ -18,17 +18,24 @@
 
 package com.atrainingtracker.trainingtracker.ui.settings.supporter
 
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsBike
 import androidx.compose.material.icons.filled.Diamond
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.monetization.GarageLeague
 import com.atrainingtracker.trainingtracker.monetization.GarageNudgeEvent
@@ -92,17 +99,14 @@ fun GarageUpgradeNudgeDialog(
         onDismissRequest = onDismiss,
         icon = if (isDiamond) Icons.Default.Diamond else Icons.AutoMirrored.Filled.DirectionsBike,
         actions = {
-            OutlinedButton(
+            TextButton(
                 onClick = onDismiss,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Text(text = stringResource(R.string.garage_detector_action_dismiss))
-            }
-            Button(
-                onClick = { onUpgrade(event.recommendedPlanId) },
-                modifier = Modifier.weight(1.5f)
-            ) {
-                Text(text = upgradeButtonText)
+                Text(
+                    text = stringResource(R.string.garage_detector_action_dismiss),
+                    textAlign = TextAlign.Center
+                )
             }
         }
     ) {
@@ -111,6 +115,21 @@ fun GarageUpgradeNudgeDialog(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Button(
+            onClick = { onUpgrade(event.recommendedPlanId) },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(
+                imageVector = if (isDiamond) Icons.Default.Diamond else Icons.AutoMirrored.Filled.DirectionsBike,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.size(8.dp))
+            Text(text = upgradeButtonText)
+        }
     }
 }
 

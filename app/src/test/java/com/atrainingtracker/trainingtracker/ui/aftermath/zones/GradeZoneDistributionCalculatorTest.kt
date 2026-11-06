@@ -89,9 +89,11 @@ class GradeZoneDistributionCalculatorTest {
         assertNotNull(result)
         assertEquals(7, result!!.entries.size)
 
-        // Verify zone indices 1..7
+        // Verify zone indices 1..7 and badge labels
+        val expectedBadgeLabels = listOf("<2%", "≥2%", "≥5%", "≥10%", "≥15%", "≥20%", "≥25%")
         for (i in 0..6) {
             assertEquals(i + 1, result.entries[i].zoneIndex)
+            assertEquals(expectedBadgeLabels[i], result.entries[i].badgeLabel)
         }
 
         // Verify labels match canonical grade legend string resources

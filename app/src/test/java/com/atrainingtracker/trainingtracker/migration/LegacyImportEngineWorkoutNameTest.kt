@@ -34,6 +34,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
@@ -63,6 +64,8 @@ class LegacyImportEngineWorkoutNameTest {
     private lateinit var mockLapsDb: LapsDatabaseManager
     private lateinit var mockSportTypeDb: SportTypeDatabaseManager
     private lateinit var mockSqlDb: SQLiteDatabase
+    private lateinit var mockClusterEngine: WorkoutClusterEngine
+    private lateinit var mockClusterDb: WorkoutClusterDatabaseManager
 
     private val contentValueStores = java.util.Collections.synchronizedMap(java.util.IdentityHashMap<ContentValues, MutableMap<String, Any?>>())
 
@@ -108,10 +111,12 @@ class LegacyImportEngineWorkoutNameTest {
         }
 
         mockContext = mockk(relaxed = true)
+        every { mockContext.applicationContext } returns mockContext
         mockSqlDb = mockk(relaxed = true)
 
         mockSummariesDb = mockk(relaxed = true)
         every { mockSummariesDb.database } returns mockSqlDb
+        every { mockSummariesDb.getLong(any(), WorkoutSummaries.CLUSTER_ID) } returns -1L
         mockkStatic(WorkoutSummariesDatabaseManager::class)
         every { WorkoutSummariesDatabaseManager.getInstance(any()) } returns mockSummariesDb
 
@@ -130,6 +135,14 @@ class LegacyImportEngineWorkoutNameTest {
         every { mockSportTypeDb.getBSportType(1L) } returns BSportType.RUN
         mockkStatic(SportTypeDatabaseManager::class)
         every { SportTypeDatabaseManager.getInstance(any()) } returns mockSportTypeDb
+
+        mockClusterEngine = mockk(relaxed = true)
+        every { mockClusterEngine.suggestCluster(any(), any(), any(), any(), any(), any<Set<BSportType>>(), any(), any(), any(), any()) } returns null
+        every { mockClusterEngine.assignClusterToWorkout(any(), any(), any(), any(), any()) } returns Unit
+        WorkoutClusterEngine.resetForTesting(mockClusterEngine)
+
+        mockClusterDb = mockk(relaxed = true)
+        WorkoutClusterDatabaseManager.resetForTesting(mockClusterDb)
 
         contentValueStores.clear()
         mockkConstructor(ContentValues::class)
@@ -205,6 +218,8 @@ class LegacyImportEngineWorkoutNameTest {
 
     @After
     fun tearDown() {
+        WorkoutClusterEngine.resetForTesting(null)
+        WorkoutClusterDatabaseManager.resetForTesting(null)
         unmockkAll()
     }
 
@@ -417,6 +432,103 @@ class LegacyImportEngineWorkoutNameTest {
             verify { mockSqlDb.update(WorkoutSummaries.TABLE, capture(updatedValues), any(), any()) }
             assertTrue(updatedValues.any { it.getAsString(WorkoutSummaries.WORKOUT_NAME) == "Interval & Hill" })
             assertTrue(updatedValues.any { it.getAsString(WorkoutSummaries.DESCRIPTION) == "Zone 4 <hard> \"effort\" 'test'" })
+        } finally {
+            tempFile.delete()
+        }
+    }
+
+    @Test
+    fun testImportClusterDecision_persistsCustomWorkoutName_whenClustered() = runBlocking {
+        val tcx = generateTcx(
+            activityNotes = null,
+            activityExtensionName = null,
+            activityExtensionDesc = null
+        )
+
+        val tempFile = File.createTempFile("test_cluster_decision_clustered_", ".tcx")
+        tempFile.writeText(tcx)
+
+        try {
+            val mockListener = mockk<LegacyImportEngine.ProgressListener>(relaxed = true)
+            coEvery {
+                mockListener.onNewClusterCandidate(
+                    date = any(),
+                    start = any(),
+                    end = any(),
+                    apex = any(),
+                    distance = any(),
+                    bSportType = any(),
+                    polyline = any(),
+                    workoutName = any(),
+                    candidateSportTypes = any(),
+                    minAltPos = any(),
+                    maxAltPos = any()
+                )
+            } returns LegacyImportEngine.ClusterDecision(
+                clusterId = 12L,
+                newClusterName = null,
+                customWorkoutName = "My Custom Clustered Workout"
+            )
+
+            val result = LegacyImportEngine.importFromTcx(mockContext, tempFile, listener = mockListener)
+            assertTrue("Import must succeed", result)
+
+            verify {
+                mockClusterEngine.assignClusterToWorkout(
+                    mockContext,
+                    101L,
+                    12L,
+                    true,
+                    "My Custom Clustered Workout"
+                )
+            }
+        } finally {
+            tempFile.delete()
+        }
+    }
+
+    @Test
+    fun testImportClusterDecision_persistsCustomWorkoutName_whenUnclustered() = runBlocking {
+        val tcx = generateTcx(
+            activityNotes = null,
+            activityExtensionName = null,
+            activityExtensionDesc = null
+        )
+
+        val tempFile = File.createTempFile("test_cluster_decision_unclustered_", ".tcx")
+        tempFile.writeText(tcx)
+
+        try {
+            val mockListener = mockk<LegacyImportEngine.ProgressListener>(relaxed = true)
+            coEvery {
+                mockListener.onNewClusterCandidate(
+                    date = any(),
+                    start = any(),
+                    end = any(),
+                    apex = any(),
+                    distance = any(),
+                    bSportType = any(),
+                    polyline = any(),
+                    workoutName = any(),
+                    candidateSportTypes = any(),
+                    minAltPos = any(),
+                    maxAltPos = any()
+                )
+            } returns LegacyImportEngine.ClusterDecision(
+                clusterId = null,
+                newClusterName = null,
+                customWorkoutName = "My Custom Unclustered Workout"
+            )
+
+            val result = LegacyImportEngine.importFromTcx(mockContext, tempFile, listener = mockListener)
+            assertTrue("Import must succeed", result)
+
+            val updatedValues = mutableListOf<ContentValues>()
+            verify { mockSqlDb.update(WorkoutSummaries.TABLE, capture(updatedValues), any(), any()) }
+            assertTrue(
+                "Workout name must be updated with custom workout name",
+                updatedValues.any { it.getAsString(WorkoutSummaries.WORKOUT_NAME) == "My Custom Unclustered Workout" }
+            )
         } finally {
             tempFile.delete()
         }

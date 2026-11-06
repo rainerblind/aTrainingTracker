@@ -46,6 +46,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -56,6 +57,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.monetization.SupporterBasePlan
 import com.atrainingtracker.trainingtracker.monetization.SupporterTier
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
+import com.atrainingtracker.trainingtracker.ui.branding.LauncherIconVariant
 import kotlinx.coroutines.launch
 
 /**
@@ -75,10 +77,10 @@ internal fun PioneerStatusBanner(sinceYear: Int? = null) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                painter = painterResource(id = R.drawable.ic_crown),
+                painter = painterResource(id = R.drawable.ic_supporter_emblem_pioneer),
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(32.dp)
+                tint = Color.Unspecified,
+                modifier = Modifier.size(36.dp)
             )
             Spacer(modifier = Modifier.width(12.dp))
             Column {
@@ -117,12 +119,22 @@ internal fun ActiveTierBanner(tier: SupporterTier) {
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Default.Star,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.size(28.dp)
-            )
+            val emblemRes = LauncherIconVariant.fromTier(tier).emblemRes
+            if (emblemRes != null) {
+                Icon(
+                    painter = painterResource(id = emblemRes),
+                    contentDescription = null,
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(36.dp)
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Star,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.size(36.dp)
+                )
+            }
             Spacer(modifier = Modifier.width(12.dp))
             Column {
                 Text(
@@ -175,6 +187,16 @@ internal fun SupporterPlanCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                val emblemRes = LauncherIconVariant.fromTier(plan.tier).emblemRes
+                if (emblemRes != null) {
+                    Icon(
+                        painter = painterResource(id = emblemRes),
+                        contentDescription = null,
+                        tint = Color.Unspecified,
+                        modifier = Modifier.size(44.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                }
                 Column(modifier = Modifier.weight(1f, fill = false)) {
                     if (plan.isRecommended) {
                         Surface(

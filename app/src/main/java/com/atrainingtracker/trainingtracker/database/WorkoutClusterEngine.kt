@@ -131,13 +131,14 @@ class WorkoutClusterEngine private constructor(context: Context) {
         candidateSportTypes: Set<BSportType>,
         minAltPos: LatLng? = null,
         maxAltPos: LatLng? = null,
-        cachedClusters: List<WorkoutCluster>? = null
+        cachedClusters: List<WorkoutCluster>? = null,
+        scoreThreshold: Double = runCatching { TrainingApplication.getClusterScoreThreshold().toDouble() }.getOrDefault(1.2)
     ): WorkoutCluster? {
         val allClusters = cachedClusters ?: dbManager.getAllClusters()
-        if (DEBUG) Log.d(TAG, "Evaluating ${allClusters.size} clusters for shape [start=$start, dist=$distance, name=$workoutName, sports=$candidateSportTypes, minAlt=$minAltPos, maxAlt=$maxAltPos]")
+        if (DEBUG) Log.d(TAG, "Evaluating ${allClusters.size} clusters for shape [start=$start, dist=$distance, name=$workoutName, sports=$candidateSportTypes, minAlt=$minAltPos, maxAlt=$maxAltPos, threshold=$scoreThreshold]")
 
         return scoreClusters(allClusters, start, end, apex, distance, workoutName, candidateSportTypes, minAltPos, maxAltPos)
-            .firstOrNull { it.second < 1.0 }?.first
+            .firstOrNull { it.second < scoreThreshold }?.first
     }
 
     /**
@@ -150,10 +151,11 @@ class WorkoutClusterEngine private constructor(context: Context) {
         workoutSportType: BSportType = BSportType.UNKNOWN,
         minAltPos: LatLng? = null,
         maxAltPos: LatLng? = null,
-        cachedClusters: List<WorkoutCluster>? = null
+        cachedClusters: List<WorkoutCluster>? = null,
+        scoreThreshold: Double = runCatching { TrainingApplication.getClusterScoreThreshold().toDouble() }.getOrDefault(1.2)
     ): WorkoutCluster? {
         val candidateSports = if (workoutSportType != BSportType.UNKNOWN) setOf(workoutSportType) else emptySet()
-        return suggestCluster(start, end, apex, distance, workoutName, candidateSports, minAltPos, maxAltPos, cachedClusters)
+        return suggestCluster(start, end, apex, distance, workoutName, candidateSports, minAltPos, maxAltPos, cachedClusters, scoreThreshold)
     }
 
     /**

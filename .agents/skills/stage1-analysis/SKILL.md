@@ -8,10 +8,10 @@ description: Executes Stage 1 (Problem Domain & Root Cause Analysis) of the agil
 ## Overview
 This skill guides the agent through **Stage 1 (Analysis)** of the engineering lifecycle. The objective is to understand the problem domain completely before proposing test specifications or implementation code.
 
-## Subagent Model Pairing ("Zipper Principle" & Persistent Ping-Pong — Core Rule 7)
-At Ticket Start (`ATT-XXXX`), spawn two persistent `TypeName: "self"` subagents (`subagent_pro` with `Model: "pro"` and `subagent_flash` with `Model: "flash"`) that will be reused across all 5 stages via `send_message`:
+## Subagent Model Pairing ("Zipper Principle" & Epic-Scoped Persistent Ping-Pong — Core Rule 7)
+Maintain an **Epic-scoped pair** of persistent `TypeName: "self"` subagents (`epic_agents[epic_key] = (subagent_pro, subagent_flash)` with `Model: "pro"` and `Model: "flash"`, or per standalone ticket when no Parent Epic exists) that are reused across up to 3 tickets in the same Epic (`Rule 61 & Rule 62`) and across all 5 stages via `send_message`:
 - **Doing (`--as agent1`)**: **`subagent_pro`** (`TypeName: "self"`, `Model: "pro"`) — Open-ended forensic root-cause investigation, distinguishing symptoms from true causes, concurrency/lifecycle analysis, and blast-radius discovery require deep reasoning.
-- **Gate 1 Review (`--as agent2`)**: **`subagent_flash`** (`TypeName: "self"`, `Model: "flash"`) — Independent verification of cited call sites, all 5 required analysis sections, and scope grounding, followed by executing `python3 tools/jira_util.py --as agent2 gate-verdict <SUBTASK_KEY> PASS ...` (warming `subagent_flash`'s context for Stage 2 Doing!).
+- **Concurrent Background Pre-Warming & Gate 1 Review (`--as agent2`, `Rule 63`)**: **`subagent_flash`** (`TypeName: "self"`, `Model: "flash"`, spawned concurrently in the background at Stage 1 start to pre-warm governance/target files) — Independent verification of cited call sites, all 5 required analysis sections, and scope grounding, followed by executing `python3 tools/jira_util.py --as agent2 gate-verdict <SUBTASK_KEY> PASS ...` and **immediately executing Stage 2 Doing (`--as agent1`) in the same turn** (`Rule 60`).
 
 ## Key Responsibilities (`subagent_pro` as `agent1` — `pro`)
 1. **Forensic Root Cause Analysis (RCA)**:

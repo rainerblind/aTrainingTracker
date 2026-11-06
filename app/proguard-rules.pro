@@ -1,5 +1,6 @@
 # --- Legacy Dependency Fixes ---
 # These libraries reference old Apache or internal classes that R8 can't find.
+-dontwarn org.apache.http.**
 -dontwarn android.net.http.AndroidHttpClient
 -dontwarn com.getpebble.android.kit.**
 -dontwarn com.dsi.ant.**

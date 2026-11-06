@@ -574,10 +574,10 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-SET-077: **Standardized Route Clustering Form Controls via TuningFormControls Verification** [Verified]
-- **Requirement(s)**: `REQ-SET-077`
+### TST-SET-077: **Standardized Route Clustering Form Controls & Configurable Score Threshold Verification** [Verified]
+- **Requirement(s)**: `REQ-SET-075`, `REQ-SET-077`
 - **Component**: **Standardized Route Clustering Form Controls via TuningFormControls Verification**
-- **Jira**: ``ATT-3365``
+- **Jira**: `ATT-3365`, `ATT-5559`
 - **Test Description**:
   1. *Unit & Parameter Tests (`TuningFormControlsTest.kt`)*:
   • Verify `TuningSliderItem` accepts optional `enabled: Boolean` and `onValueChangeFinished: (() -> Unit)?`.
@@ -592,7 +592,15 @@
   • Verify altitude tolerance slider gating logic: asserts `enabled = enabled && useAltitudePosForClustering` across all state combinations.
   3. *Visual & Existing Tuning Section Regression Tests (`AdvancedTuningVisualContractTest.kt`)*:
   • Verify all existing callers in `NavigationSection`, `SensorsGpsFilterSection`, `CockpitTypographySection`, etc., maintain intact rendering and behavior without modification.
-  4. *Clean-Room Full Suite Regression Execution*:
+  4. *Cluster Score Threshold Persistence, Evaluation & UI Coupling Tests (`WorkoutClusterEngineTest.kt`, `TuningPreferencesDataStoreTest.kt`, `ClusterTuningContractTest.kt`, `TranslationParityTest.kt`)*:
+  • Verify `TuningPreferencesDefaults.CLUSTER_SCORE_THRESHOLD` defaults to `1.2f` with range `0.5f..2.5f` and step `0.1f`.
+  • Verify `TuningPreferencesDataStore` persists `cluster_score_threshold` to DataStore and `TrainingApplication.setClusterScoreThreshold` synchronously on save.
+  • Verify `TrainingApplication.getClusterScoreThreshold()` returns default `1.2f` when unset and reads persisted float.
+  • Verify `WorkoutClusterEngine.suggestCluster` accepts candidate clusters when similarity score `< scoreThreshold` (e.g. score `1.15` matches when threshold is `1.2`, rejected when threshold is `1.0`).
+  • Verify defensive fallback `runCatching { TrainingApplication.getClusterScoreThreshold().toDouble() }.getOrDefault(1.2)` executes safely under un-stubbed static mocks.
+  • Verify `ClusterTuningContent.kt` incorporates score threshold into derived master sensitivity average and renders a dedicated `TuningSliderItem`.
+  • Verify 100% 9-language translation parity for `cluster_tuning_score_threshold_label` and `cluster_tuning_score_threshold_helper` across EN, DE, ES, FR, IT, JA, NL, PL, PT.
+  5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
 ### TST-PRI-002: **Contextual Just-in-Time Permission Flow, Zero-Friction Cold Start, Background Location Escalation & Battery Optimization Verification** [Verified]
@@ -854,17 +862,21 @@
 
 ### TST-SET-084: **One-Tap Swap-or-Upgrade Dialog Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-084`
-- **Component**: `DeviceListViewModel.kt`, `SwapOrUpgradeDialog.kt`, `KeepTwoSensorsBottomSheet.kt`, `DeviceDataRepository.kt`
-- **Jira**: `ATT-51`, `ATT-5399`, `ATT-5398`
+- **Component**: `SensorQuotaReconciliationManager.kt`, `DeviceListViewModel.kt`, `ControlTrackingViewModel.kt`, `DeviceManager.java`, `ATrainingTrackerApp.kt`, `MainActivityWithNavigation.kt`, `SwapOrUpgradeDialog.kt`, `SwapOrUpgradeDialogContractTest.kt`, `KeepTwoSensorsBottomSheet.kt`, `DeviceDataRepository.kt`
+- **Jira**: `ATT-51`, `ATT-5399`, `ATT-5398`, `ATT-5469`, `ATT-5470`, `ATT-5490`
 - **Test Description**:
 1. Trigger pairing of a 3rd device in Free tier; verify `showSwapOrUpgradeDialog` state is set to true.
 2. Verify dialog displays candidate devices and preselects recommendation.
 3. Execute "Swap & Pair" action; assert atomic database update (unpair existing, pair new) and final paired count $\le 2$.
 4. Verify "Unlock Unlimited Sensors" button triggers navigation to `NavRoutes.SUPPORTER`.
-5. *Subscription Downgrade Reconciliation Test*: Given `!isProActive()` and $> 2$ paired sensors without active tracking, verify reconciliation event is emitted with 2 sensible defaults pre-selected.
+5. *Subscription Downgrade Global Reconciliation Test*: Given `!isProActive()` and $> 2$ paired sensors without active tracking, verify reconciliation event is emitted globally on app start, tracking screen entry, and pre-tracking search/start with 2 sensible defaults pre-selected.
 6. *Non-Destructive Batch Pruning Test*: Confirming selection or dismissing applies selection, setting unselected sensors `isPaired = false` in database while preserving custom names, calibration, and equipment links. Total paired devices $\le 2$.
 7. *Multi-Sensor Swap Hardening Test*: When executing swap while $> 2$ sensors are paired, excess devices are pruned so resulting paired count is strictly $\le 2$.
 8. *9-Language Localization Parity Test*: Verify all reconciliation bottom sheet UI strings exist across all 9 locales with matching format specifiers.
+9. *Pre-Tracking Quota Interception Test*: In `ControlTrackingViewModel`, clicking start tracking or search for sensors with $> 2$ paired devices on Free tier triggers reconciliation and blocks tracking start.
+10. *BANALService Free Quota Hardware Connection Clamping Test*: In `DeviceManager.startSearchForPairedDevices()`, verify remote device connections are clamped to at most 2 devices when `!isProActive()`.
+11. *Rule 73 Stacked Button Layout Contract (`TST-SET-084.8`, `SwapOrUpgradeDialogContractTest.kt`)*: Verify `SwapOrUpgradeDialog` renders primary 'Tauschen & Koppeln' `Button` and secondary 'Unbegrenzte Sensoren freischalten' `FilledTonalButton` stacked full-width with 8dp spacing in sheet content, and a single full-width 'Abbrechen' `TextButton` in `actions`, eliminating broken word wrapping on German and localized mobile screens.
+12. *Google Fused Preselection & Active Remote Sensor Prioritization Test (`TST-SET-084.2`, `SensorQuotaReconciliationManagerTest.kt`, `DeviceListViewModelQuotaTest.kt`)*: Verify that when downgrading to Free tier with both Google Fused and GPS paired plus remote sensors, `determineDefaultKeepDeviceIds` preselects Google Fused and the most recently active remote sensor (connected first, latest `lastSeen` timestamp second). When only GPS or only Google Fused is paired, that single location sensor is preserved. When no remote sensor is paired, verify fallback to `ALTITUDE_FROM_PRESSURE`. Verify `determineRecommendedUnpairDeviceId` recommends unpairing `ALTITUDE_FROM_PRESSURE` first, then `SPEED_AND_LOCATION_GPS` if both location sensors are paired.
 
 ### TST-SET-085: **Lifetime Pioneer Early Adopter Recognition Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-085`
@@ -897,8 +909,8 @@
 
 ### TST-SET-088: **Supporter N+1 Garage Detector & Upgrade Prompts Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-088`
-- **Component**: `GarageLeagueDetector.kt`, `GarageDetectorDialog.kt`, `DeviceListViewModel.kt`, `EquipmentViewModel.kt`, `SettingsDataStore.kt`, `SupporterDebugSection.kt`
-- **Jira**: `ATT-5299`, `ATT-5400`, `ATT-5399`
+- **Component**: `GarageLeagueDetector.kt`, `GarageDetectorDialog.kt`, `GarageUpgradeNudgeDialog.kt`, `GarageUpgradeNudgeDialogContractTest.kt`, `DeviceListViewModel.kt`, `EquipmentViewModel.kt`, `SettingsDataStore.kt`, `SupporterDebugSection.kt`
+- **Jira**: `ATT-5299`, `ATT-5400`, `ATT-5399`, `ATT-5468`
 - **Test Description**:
 1. Verify `GarageLeagueDetector.evaluateLeague()` resolves to `DIAMOND` when bikes $\ge 4$, sensors $\ge 8$, or power meters $\ge 2$, taking precedence over Gold criteria.
 2. Verify `GarageLeagueDetector.evaluateLeague()` resolves to `GOLD` when bikes $\ge 3$, shoes $\ge 4$, sensors $\ge 5$, or power meters $\ge 1$.
@@ -907,6 +919,7 @@
 5. Verify non-spam persistence: when `hasShownGoldGarageNudge` or `hasShownDiamondGarageNudge` is true, subsequent nudges for that league are suppressed.
 6. Verify debug preview triggers in `SupporterDebugSection` render respective dialogs and reset button clears DataStore flags.
 7. Verify 9-language localization audit (`ATT-5400`): all 4 `garage_detector_dialog_*` string resources across all 9 locales contain zero decorative inline Unicode emojis (`🚴‍♂️`, `💎`, `✨`, `😉`) while strictly preserving positional format specifiers (`%1$d`..`%5$s`).
+8. *Rule 73 Stacked Button Layout Contract (`TST-SET-088.7`, `GarageUpgradeNudgeDialogContractTest.kt`)*: Verify `GarageUpgradeNudgeDialog` (and `GarageDetectorDialog`) renders primary 'Upgrade' `Button` stacked full-width in sheet content, and a single full-width 'Später / Weiter zum Training' `TextButton` in `actions`, eliminating broken 2–3 line button word wrapping on German and localized mobile screens.
 
 ### TST-LOC-001: **Monetization & Supporter 9-Language Localization Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-083`, `REQ-SET-084`, `REQ-SET-085`, `REQ-SET-086`, `REQ-SET-087`, `REQ-SET-088`

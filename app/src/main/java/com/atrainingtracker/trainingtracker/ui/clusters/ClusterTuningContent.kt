@@ -32,6 +32,7 @@ import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSliderItem
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningToggleItem
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 
 /**
  * Reusable, canonical workout route clustering tuning content (REQ-SET-075, Rule 36).
@@ -52,6 +53,8 @@ fun ClusterTuningContent(
     onUseSportTypeChange: (Boolean) -> Unit = {},
     useAltitudePosForClustering: Boolean = true,
     onUseAltitudePosChange: (Boolean) -> Unit = {},
+    clusterScoreThreshold: Float = TuningPreferencesDefaults.CLUSTER_SCORE_THRESHOLD,
+    onClusterScoreThresholdChange: (Float) -> Unit = {},
     onValueChangeFinished: () -> Unit = {},
     isDialog: Boolean = false,
     enabled: Boolean = true
@@ -63,17 +66,19 @@ fun ClusterTuningContent(
     val apexRange = 10f..500f
     val distRange = 0.01f..0.2f
     val altRange = 10f..500f
+    val scoreRange = TuningPreferencesDefaults.MIN_CLUSTER_SCORE_THRESHOLD..TuningPreferencesDefaults.MAX_CLUSTER_SCORE_THRESHOLD
 
     // Derived master sensitivity (average of normalized values)
-    val currentMasterValue = remember(endpointTolerance, apexTolerance, distanceTolerance, altitudePositionTolerance, useAltitudePosForClustering) {
+    val currentMasterValue = remember(endpointTolerance, apexTolerance, distanceTolerance, altitudePositionTolerance, clusterScoreThreshold, useAltitudePosForClustering) {
         val nEnd = (endpointTolerance - endRange.start) / (endRange.endInclusive - endRange.start)
         val nApex = (apexTolerance - apexRange.start) / (apexRange.endInclusive - apexRange.start)
         val nDist = (distanceTolerance - distRange.start) / (distRange.endInclusive - distRange.start)
+        val nScore = (clusterScoreThreshold - scoreRange.start) / (scoreRange.endInclusive - scoreRange.start)
         if (useAltitudePosForClustering) {
             val nAlt = (altitudePositionTolerance - altRange.start) / (altRange.endInclusive - altRange.start)
-            (nEnd + nApex + nDist + nAlt) / 4f
+            (nEnd + nApex + nDist + nAlt + nScore) / 5f
         } else {
-            (nEnd + nApex + nDist) / 3f
+            (nEnd + nApex + nDist + nScore) / 4f
         }
     }
 
@@ -94,6 +99,7 @@ fun ClusterTuningContent(
                     onEndpointToleranceChange(endRange.start + (endRange.endInclusive - endRange.start) * sensitivity)
                     onApexToleranceChange(apexRange.start + (apexRange.endInclusive - apexRange.start) * sensitivity)
                     onDistanceToleranceChange(distRange.start + (distRange.endInclusive - distRange.start) * sensitivity)
+                    onClusterScoreThresholdChange(scoreRange.start + (scoreRange.endInclusive - scoreRange.start) * sensitivity)
                     if (useAltitudePosForClustering) {
                         onAltitudePositionToleranceChange(altRange.start + (altRange.endInclusive - altRange.start) * sensitivity)
                     }
@@ -192,6 +198,19 @@ fun ClusterTuningContent(
                 onValueChangeFinished = onValueChangeFinished,
                 valueRange = altRange,
                 enabled = enabled && useAltitudePosForClustering
+            )
+
+            TuningSliderItem(
+                title = stringResource(R.string.cluster_tuning_score_threshold_label),
+                valueText = String.format(locale, "%.1f", clusterScoreThreshold),
+                helperText = stringResource(R.string.cluster_tuning_score_threshold_helper),
+                defaultText = "",
+                value = clusterScoreThreshold,
+                onValueChange = onClusterScoreThresholdChange,
+                onValueChangeFinished = onValueChangeFinished,
+                valueRange = scoreRange,
+                steps = 19,
+                enabled = enabled
             )
         }
     }

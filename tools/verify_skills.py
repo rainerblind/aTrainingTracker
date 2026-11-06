@@ -18,6 +18,8 @@ EXPECTED_SKILLS = [
     "ui-designer",
     "brainstormer",
     "sprint-planner",
+    "regression-bisect",
+    "release-manager",
 ]
 
 EXPECTED_TEMPLATES = {

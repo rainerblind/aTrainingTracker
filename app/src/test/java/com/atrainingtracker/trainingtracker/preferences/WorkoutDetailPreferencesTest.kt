@@ -44,6 +44,7 @@ class WorkoutDetailPreferencesTest {
         assertTrue("Elevation profile should be enabled by default in details", prefs.showElevationProfile)
         assertTrue("Telemetry charts should be enabled by default in details", prefs.showTelemetryCharts)
         assertTrue("Zone analysis should be enabled by default in details", prefs.showZoneAnalysis)
+        assertTrue("Grade distribution should be enabled by default in details", prefs.showGradeDistribution)
         assertTrue("Export status should be enabled by default in details", prefs.showExportStatus)
     }
 
@@ -60,6 +61,7 @@ class WorkoutDetailPreferencesTest {
         assertFalse("Elevation profile should be disabled by default in list", listPrefs.showElevationProfile)
         assertFalse("Telemetry charts should be disabled by default in list", listPrefs.showTelemetryCharts)
         assertTrue("Zone analysis should be enabled by default in list", listPrefs.showZoneAnalysis)
+        assertFalse("Grade distribution should be disabled by default in list", listPrefs.showGradeDistribution)
         assertTrue("Export status should be enabled by default in list", listPrefs.showExportStatus)
     }
 

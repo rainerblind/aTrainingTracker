@@ -1115,7 +1115,7 @@ All user-facing action labels and formatting strings SHALL be localized across a
 **Invariants**: Filter bottom sheet scaffold behavior (`REQ-UI-133`, `REQ-UI-134`), status bar boundary limits on map bottom sheets (`REQ-SET-069`), live tracking lap summary HUD dialog (`LapSummaryDialog`), and lap table formatting (`REQ-UI-143`) MUST NOT be altered or regressed.
 
 ### REQ-UI-149: Modernized Modal Bottom Sheet Dialogs & Selection Flows [Verified]
-- **Tests**: `TST-UI-102` | **Tickets**: `ATT-900`, `ATT-5399`
+- **Tests**: `TST-UI-102` | **Tickets**: `ATT-900`, `ATT-5399`, `ATT-5470`, `ATT-5468`
 - **Implementation**: Modernize mobile ergonomics by transitioning interactive selection, configuration, nudge, and history popups to edge-to-edge modal bottom sheets (AppModalBottomSheet) while keeping transient HUDs and destructive alerts as centered dialogs.
 - **Rationale**: The system SHALL modernize interactive configuration, settings, editing, and device/sensor selection dialogs into bottom popups backed by `AppModalBottomSheet`, improving one-handed mobile ergonomics and edge-to-edge system navigation support, while strictly preserving transient tracking HUDs and destructive alerts as centered modal dialogs:
 1. *Drawer Settings Modernization*:
@@ -1135,6 +1135,7 @@ All user-facing action labels and formatting strings SHALL be localized across a
 • `EditDeviceDialog.kt` SHALL compose `AppModalBottomSheet` displaying device technical status LED, name, protocol, calibration, wheel circumference, and unpairing action.
 5. *Workout Clusters & Export Status Modernization*:
 • `WorkoutClusterSelectionDialog` and `EditWorkoutClusterDialog` / `EditWorkoutClusterIdentityDialog` SHALL compose `AppModalBottomSheet` for cluster candidate selection and cluster identity editing.
+• `ClusterNamingDialog` in `ImportBackupTabsScreen.kt` SHALL compose `AppModalBottomSheet` (bottom popup) replacing the centered `AlertDialog`, integrating route preview with `DarkMapAntiFlashOverlay`, queue count badge in header, editable Workout Name (`OutlinedTextField`), and Rule 73 stacked full-width action buttons (Primary "Speichern" / `@string/save` and Secondary `@string/cluster_naming__leave_unclustered`) (ATT-5560).
 • `ClusterInfoDialog.kt` SHALL compose `AppModalBottomSheet` displaying cluster tolerance and tuning parameter guidance.
 • `ExportDetailsDialog` in `ExportStatusGroup.kt` SHALL compose `AppModalBottomSheet` displaying per-service upload status and details.
 6. *AppModalBottomSheet Architectural Enhancement*:
@@ -1142,9 +1143,9 @@ All user-facing action labels and formatting strings SHALL be localized across a
 7. *Preserved Modal Dialog Invariants*:
 • `LapSummaryDialog` MUST remain an auto-dismissing (3-second) centered HUD `Dialog` during active tracking.
 • Destructive confirmation dialogs (`DeleteConfirmationDialog`, `WorkoutDeleteDialog`, `DeleteOldWorkoutsDialog`), deletion progress dialogs (`WorkoutDeletionProgressDialog`), and system redirects (`GPSDisabledDialog`, `StartOrResumeDialog`) MUST remain centered `AlertDialog`s.
-8. *Monetization, Nudge & History Dialog Modernization (`ATT-5399`)*:
-• `SwapOrUpgradeDialog.kt` SHALL compose `AppModalBottomSheet` displaying candidate devices for swap, smart recommendation, and upgrade navigation (`NavRoutes.SUPPORTER`) with swap action button and dismiss action.
-• `GarageUpgradeNudgeDialog.kt` SHALL compose `AppModalBottomSheet` displaying dynamic gear counts and upgrade navigation to Gold Pro or Diamond Sponsor with dismiss action.
+8. *Monetization, Nudge & History Dialog Modernization (`ATT-5399`, `ATT-5470`, `ATT-5468`)*:
+• `SwapOrUpgradeDialog.kt` SHALL compose `AppModalBottomSheet` displaying candidate devices for swap, smart recommendation, and upgrade navigation (`NavRoutes.SUPPORTER`) with swap action button and dismiss action (and stacked full-width layout per Rule 73, ATT-5470).
+• `GarageUpgradeNudgeDialog.kt` SHALL compose `AppModalBottomSheet` displaying dynamic gear counts and upgrade navigation to Gold Pro or Diamond Sponsor with dismiss action (and stacked full-width layout per Rule 73, ATT-5468).
 • `FirstJubileeCelebrationDialog.kt` SHALL compose `AppModalBottomSheet` displaying milestone achievements, tier-gated engagement actions, and dismiss action.
 • `ZoneHistoryDialog.kt` SHALL compose `AppModalBottomSheet` with `scrollable = false` for the outer sheet container displaying the zone snapshot list (`LazyColumn`), and `ZoneSnapshotEditDialog` SHALL compose `AppModalBottomSheet(scrollable = true)` for editing individual snapshot boundaries.
 
@@ -4061,10 +4062,11 @@ Specifically:
 2. *System Navigation Bar Inset Factoring*:
 • Every persistent sheet peek height SHALL strictly incorporate the bottom system navigation bar insets: `sheetPeekHeight = BottomSheetDesign.PeekHeight* + navBarHeight` where `navBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()`. When collapsed or unselected, peek height SHALL be `0.dp`.
 • For routes, `MapScreenWithTrack.kt` SHALL dynamically evaluate `routeSummary?.description.isNullOrEmpty()` to select `PeekHeightRoute` or `PeekHeightRouteWithDescription`.
-3. *Screen-Level Token Adoption*:
+3. *Screen-Level Token Adoption & Drag Affordance*:
 • `MapScreenWithTrack.kt` SHALL consume `PeekHeightSegment`, `PeekHeightRoute`, `PeekHeightRouteWithDescription`, and `PeekHeightKnownLocation`.
 • `SensorGridScreen.kt` SHALL consume `PeekHeightLiveSegment`.
 • `WorkoutClusterHeatmapScreen.kt` and `PeriodMapScreen.kt` SHALL consume `PeekHeightWorkout`.
+• In `WorkoutClusterHeatmapScreen.kt`, `BottomSheetScaffold` SHALL display a visual drag handle via `sheetDragHandle = if (peekedWorkoutDataWithTrack != null && !isEditingFingerprint) { { MinimumDragHandle() } } else null`, providing a subtle drag affordance (`MinimumDragHandle`, `REQ-UI-196`) when a workout peek is active, and suppressing it when no workout is peeked or while editing the cluster fingerprint (ATT-5564).
 • Zero hardcoded raw peek height literals SHALL remain in screen composables.
 4. *Dynamic Self-Measuring Header Peek Architecture (`MapDetailLayout.kt` / `MapScreenWithTrack.kt`)*:
 • In `MapDetailLayout.kt`, when `useStatusBarsPadding == false`, the header container (`MinimumDragHandle() + Surface(header)`) SHALL measure its rendered layout height via `Modifier.onGloballyPositioned` and convert to Dp via `LocalDensity.current`.
@@ -4076,15 +4078,21 @@ Specifically:
 • Defensive fallback to `BottomSheetDesign` constants is preserved when dynamic measurement is pending or unavailable.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement (`REQ-UI-221`), refining and centralizing peek height specifications across `REQ-SET-069` and `REQ-UI-180` under Epic `ATT-355` (*Good and consistent UI*).
-2. *Historical Origin & Commit Trace*: Sprint `2026-40.8` (Commit `9c3dd09e`, ATT-1645) and Sprint `2026-40.11` (Dynamic Self-Measuring Peeks).
-3. *Root Reason for Existing Formulation*: Static baseline tokens (156dp/192dp for segments, 112dp/152dp for routes) failed under system font scaling, display zoom, and multi-line titles on physical Pixel 10 hardware, occluding the altitude row or descriptions behind the navigation bar.
-4. *Preservation of Core Invariants*: Status bar boundary constraints (`REQ-SET-069`), navigation bar padding additions, fallback tokens, and sheet gesture handling are 100% strictly preserved.
+1. *Original Requirement ID & Target*: Amends `REQ-UI-221` (*Standardized Bottom Sheet Peek Height Baselines*) targeting `WorkoutClusterHeatmapScreen.kt` and `BottomSheetVisualContractTest.kt`, referencing `REQ-UI-196` (*Subtle Drag Handle Affordance & Unified Sheet Styling*).
+2. *Historical Origin & Commit Trace*: Sprint `2026-40.8` (Commit `9c3dd09e`, ATT-1645), Sprint `2026-40.11` (Dynamic Self-Measuring Peeks), and Sprint Review `2026-45.7` (ATT-5485 / ATT-5564).
+3. *Root Reason for Existing Formulation*: Static baseline tokens failed under system font scaling; `sheetDragHandle = null` was originally set to keep the top of `TrackOnMapScreen` flush, overlooking that athletes need a visual drag affordance to discover expandable workout details.
+4. *Preservation of Core Invariants*: Status bar boundary constraints (`REQ-SET-069`), navigation bar padding additions, fallback tokens, `MinimumDragHandle` design dimensions, and fingerprint editing state transitions remain 100% strictly preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete peeking a workout in `WorkoutClusterHeatmapScreen` or `PeriodMapScreen`,
 • *When* the bottom sheet is in its initial collapsed peek state,
 • *Then* the entire `WorkoutHeader`—including sport icon, workout title, cluster badge, sport name, equipment, and start date/time—SHALL be 100% visible above the system navigation bar without vertical clipping.
+• *Given* an athlete peeking a workout on `WorkoutClusterHeatmapScreen`,
+• *When* the workout bottom sheet peeks or expands,
+• *Then* a visual drag handle (`MinimumDragHandle()`) SHALL be displayed at the top of the sheet.
+• *Given* an athlete on `WorkoutClusterHeatmapScreen` without a peeked workout or while in fingerprint editing mode (`isEditingFingerprint == true`),
+• *When* the bottom sheet is hidden,
+• *Then* `sheetDragHandle` SHALL be `null`.
 • *Given* an athlete selecting a route with description on `MapScreenWithTrack`,
 • *When* the route bottom sheet peeks,
 • *Then* the description text row SHALL be 100% visible above the navigation bar.
@@ -11614,30 +11622,36 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 **Invariants**: Multi-tab isolation, contiguous coordinates, divider alignment, passive onOpen, and 100% clean-room test pass rate.
 
 ### REQ-UI-414: Workout Cards & Details Settings Streamlining: Redundant Details Column Removal, Authoritative Tab Section Activation, Collapsible Summary Reorder List, and Scoped Zone Mode Selectors [Verified]
-- **Tests**: `WorkoutMasksAndCardsSection.kt`, `WorkoutDetailTabConfig.kt`, `strings.xml`
-- **Implementation**: Eliminate redundant Details column, make tab assignments authoritative over section activation, collapse 9-row summary reorder list by default, split zone display mode selectors into respective domain blocks, and enforce < 400 lines modularity.
-- **Rationale**: `WorkoutMasksAndCardsSection.kt` (`app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/WorkoutMasksAndCardsSection.kt`) and `WorkoutDetailSectionAvailability.isSectionActive` (`app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutDetailTabConfig.kt`) SHALL eliminate the redundant "Details" checkbox column and header from the aftermath settings matrix, make detail tab configuration in `WorkoutDetailTabConfig` strictly authoritative over section activation by evaluating solely data presence and tab section inclusion rather than legacy boolean preference flags, partition the settings screen into visually distinct "Trainingsliste" and "Trainings-Details" domain sections, collapse the 9-row summary cards reorder list by default with active count toggle indicator, scope the zone display mode selectors into their respective domain blocks, and enforce strictly < 400 lines modularity (ATT-4043, refining `REQ-UI-240`, `REQ-UI-264`, `REQ-UI-271`, and `REQ-UI-408`):
+- **Tests**: `WorkoutMasksAndCardsSection.kt`, `WorkoutDetailTabConfig.kt`, `strings.xml` | **Tickets**: `ATT-4043`, `ATT-5474`
+- **Implementation**: Eliminate redundant Details column, make tab assignments authoritative over section activation, collapse 10-row summary reorder list by default, split zone display mode selectors into respective domain blocks, integrate Workout Photos configuration, and enforce < 400 lines modularity (`WorkoutMasksAndCardsSection.kt`, `WorkoutPhotoPreferencesComponents.kt`, `WorkoutDetailTabConfig.kt`, `WorkoutSectionType.kt`, `MyPreferenceManager.kt`, `WorkoutPhotoStrip.kt`, `WorkoutSummary.kt`).
+- **Rationale**: `WorkoutMasksAndCardsSection.kt` (`app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/WorkoutMasksAndCardsSection.kt`) and `WorkoutDetailSectionAvailability.isSectionActive` (`app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutDetailTabConfig.kt`) SHALL eliminate the redundant "Details" checkbox column and header from the aftermath settings matrix, make detail tab configuration in `WorkoutDetailTabConfig` strictly authoritative over section activation by evaluating solely data presence and tab section inclusion rather than legacy boolean preference flags, partition the settings screen into visually distinct "Trainingsliste" and "Trainings-Details" domain sections, collapse the reorderable summary cards list by default with active count toggle indicator, scope the zone display mode selectors into their respective domain blocks, integrate full configuration for Workout Photos (visibility, Add-button tile, and thumbnail preview size), and enforce strictly < 400 lines modularity (ATT-4043, ATT-5474, refining `REQ-UI-240`, `REQ-UI-264`, `REQ-UI-271`, `REQ-UI-408`, and `REQ-UI-448`):
 1. *Elimination of Redundant Details Column & Authoritative Tab Assignment (`REQ-UI-414.1`)*:
-• `WorkoutMasksAndCardsSection.kt` SHALL remove the "Details" checkbox column and `tuning_matrix_col_details` header from the 9-row reorderable section table.
-• `WorkoutDetailSectionAvailability.isSectionActive(section, detailPreferences)` SHALL evaluate section activation strictly based on non-empty data presence (`hasDescription`, `hasExtrema`, `hasMap`, `hasElevation`, `hasCharts`, `hasZones`, `hasLaps`, `hasStrava`, `hasExportStatus`) and tab section inclusion in `WorkoutDetailTabConfig`, and SHALL NOT gate section activation on legacy boolean flags in `WorkoutDetailPreferences` (`showDescription`, `showExtrema`, `showMap`, etc.), ensuring tab assignment in `WorkoutDetailTabConfig` is the sole authoritative configuration source for the Workout Details screen.
+• `WorkoutMasksAndCardsSection.kt` SHALL remove the "Details" checkbox column and `tuning_matrix_col_details` header from the 10-row reorderable section table.
+• `WorkoutDetailSectionAvailability.isSectionActive(section, detailPreferences)` SHALL evaluate section activation strictly based on non-empty data presence (`hasDescription`, `hasExtrema`, `hasMap`, `hasElevation`, `hasCharts`, `hasZones`, `hasLaps`, `hasStrava`, `hasExportStatus`, `hasPhotos`) and tab section inclusion in `WorkoutDetailTabConfig`, and SHALL NOT gate section activation on legacy boolean flags in `WorkoutDetailPreferences` (`showDescription`, `showExtrema`, `showMap`, etc.), ensuring tab assignment in `WorkoutDetailTabConfig` is the sole authoritative configuration source for the Workout Details screen.
 2. *Domain Partitioning: Trainingsliste (Summary) vs. Trainings-Details (`REQ-UI-414.2`)*:
 • `WorkoutMasksAndCardsSection.kt` SHALL partition its layout into two distinct visual domain blocks: (a) Trainingsliste (Summary-Karten) dedicated to workout summary cards in the workout list, and (b) Trainings-Details (Detail-Ansicht) dedicated to the full-screen Workout Details screen and its tabs.
 3. *Collapsible Summary Cards Reorder List (`REQ-UI-414.3`)*:
-• The 9-row reorderable summary card section list in the Trainingsliste block SHALL be collapsible by default.
+• The 10-row reorderable summary card section list in the Trainingsliste block SHALL be collapsible by default.
 • A toggle header/button SHALL present the title and active card count (`R.string.workout_card_reorder_toggle`, showing `%1$d active` / `%1$d aktiv`) alongside an expandable chevron icon (`KeyboardArrowDown` when collapsed, `KeyboardArrowUp` when expanded).
-• Tapping the toggle SHALL expand or collapse the 9-row table without disrupting the athlete's current configuration.
+• Tapping the toggle SHALL expand or collapse the 10-row table without disrupting the athlete's current configuration.
 • When expanded, the table header SHALL render a 32dp spacer, Element title (`R.string.tuning_matrix_feature`, weight 1f), and a single 50dp centered header (`R.string.tuning_matrix_col_list`), with each row containing 32dp Up/Down reorder icon buttons, the localized section title, and a centered 50dp Checkbox controlling `workoutCardPrefs` visibility.
 4. *Domain-Scoped Zone Card Display Mode & Lap Display Mode Placement (`REQ-UI-414.4`)*:
 • The *Zonenkarten-Anzeigemodus* (`ZoneDisplayModeSelector`) SHALL be split and placed within its respective domain block: the Summary Zone Display Mode selector SHALL reside within the Trainingsliste block (`workoutCardPrefs.zoneCardDisplayMode`), and the Details Zone Display Mode selector SHALL reside within the Trainings-Details block (`workoutDetailPrefs.zoneCardDisplayMode`), directly alongside the "Detail-Tabs konfigurieren" action button.
 • The *Runden-Anzeigemodus* (`LapDisplayMode`: Table vs Visualizer) SHALL reside within the Trainingsliste block when `workoutCardPrefs.showLaps` is enabled.
 5. *Modularity & File Length Limit (`REQ-UI-414.5`)*:
 • `WorkoutMasksAndCardsSection.kt` SHALL remain strictly under 400 lines in compliance with `REQ-PRO-011`.
+6. *Workout Photos Configuration & Dynamic Summary Slotting (`REQ-UI-414.6` / `ATT-5474`)*:
+• In `WorkoutMasksAndCardsSection.kt`, the system SHALL integrate `WorkoutSectionType.PHOTOS` into the reorderable summary section table and `WorkoutDetailSectionType.PHOTOS` into tab assignments.
+• The system SHALL provide DataStore preferences in `WorkoutCardSectionPreferences` and `WorkoutDetailPreferences` for `showPhotos` (default `true`), `showPhotoAddButton` (default `true`), and `photoThumbnailSize` (`PhotoThumbnailSize`: `SMALL`=56dp, `MEDIUM`=76dp, `LARGE`=104dp, default `MEDIUM`).
+• When `showPhotos` is enabled in `WorkoutMasksAndCardsSection.kt`, subordinate controls SHALL allow toggling `showPhotoAddButton` and selecting `photoThumbnailSize` via a 3-segment `SingleChoiceSegmentedButtonRow`.
+• In `WorkoutSummary.kt`, `WorkoutPhotoStrip` SHALL be dynamically ordered within `workoutSectionsOrder`, respecting `showPhotos`, `showPhotoAddButton`, and `thumbnailSize`.
+• `WorkoutMasksAndCardsSection.kt` SHALL remain strictly under 400 lines via modular `WorkoutPhotoPreferencesComponents.kt`.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-414`, refining `REQ-UI-240` (*Settings/Aftermath: Matrix Table Presentation for Configurable Aftermath Sections*), `REQ-UI-264` (*Workout Cards & Details Tuning Dialog Layout*), `REQ-UI-271` (*Simplified Preposition-Free Column Headers*), and `REQ-UI-408` (*Individually Configurable Workout Details Tabs*). Targets `WorkoutMasksAndCardsSection.kt`, `WorkoutDetailTabConfig.kt`, and `strings.xml`.
-2. *Historical Origin & Commit Trace*: Commit `02f3d414` (Sprint 2026-40.12, initial 2-column matrix), commit `6817b037` (Sprint 2026-40.14, singular headers), and commit `c8939a3f` (Sprint 2026-42.8, ATT-3920 configurable detail tabs).
-3. *Root Reason for Existing Formulation*: When the 2-column matrix was introduced, Workout Details had no tabs, so a single unified matrix was the only place to toggle detail sections. Now that tab configuration has dedicated per-tab section toggles, the Details column in the matrix is an obsolete secondary gating mechanism.
-4. *Preservation of Core Invariants*: Summary card section reordering (`DEFAULT_ORDER`), DataStore persistence (`WorkoutCardSectionPreferences`), and active card visibility in `WorkoutSummary.kt` must remain 100% intact; tab validation rules (Map pinned at index 0, minimum 1-tab fallback) in `WorkoutDetailTabConfig` must remain intact; minimum 48dp touch targets on checkboxes and buttons; 100% 9-language translation parity.
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-414`, refining `REQ-UI-240` (*Settings/Aftermath: Matrix Table Presentation for Configurable Aftermath Sections*), `REQ-UI-264` (*Workout Cards & Details Tuning Dialog Layout*), `REQ-UI-271` (*Simplified Preposition-Free Column Headers*), `REQ-UI-408` (*Individually Configurable Workout Details Tabs*), and `REQ-UI-448` (*Workout Photos Strip*). Targets `WorkoutMasksAndCardsSection.kt`, `WorkoutDetailTabConfig.kt`, `WorkoutPhotoPreferencesComponents.kt`, `WorkoutPhotoStrip.kt`, and `strings.xml`.
+2. *Historical Origin & Commit Trace*: Commit `02f3d414` (Sprint 2026-40.12, initial 2-column matrix), commit `6817b037` (Sprint 2026-40.14, singular headers), commit `c8939a3f` (Sprint 2026-42.8, ATT-3920 configurable detail tabs), and commit `5c9d9653` (Sprint 2026-45.6, ATT-43 workout photos).
+3. *Root Reason for Existing Formulation*: When the 2-column matrix was introduced, Workout Details had no tabs, so a single unified matrix was the only place to toggle detail sections. Now that tab configuration has dedicated per-tab section toggles, the Details column in the matrix is an obsolete secondary gating mechanism. Workout Photos was introduced as an MVP outside the dynamic section loop without configuration entries in Advanced Settings.
+4. *Preservation of Core Invariants*: Summary card section reordering (`DEFAULT_ORDER`), DataStore persistence (`WorkoutCardSectionPreferences`), and active card visibility in `WorkoutSummary.kt` must remain 100% intact; tab validation rules (Map pinned at index 0, minimum 1-tab fallback) in `WorkoutDetailTabConfig` must remain intact; minimum 48dp touch targets on checkboxes and buttons; strictly < 400 lines file length limit preserved via modularity; 100% 9-language translation parity.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete assigning the `MAP` section to a tab in `WorkoutDetailTabsConfigSheet`,
@@ -11645,12 +11659,15 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Then* the Map view SHALL render regardless of legacy `WorkoutDetailPreferences.showMap` boolean state.
 • *Given* an athlete opening *Advanced Settings -> Trainingsliste & Detail-Ansicht*,
 • *When* the screen composes,
-• *Then* the 9-row summary cards list is collapsed by default showing the active count, the "Details" column is absent from the table, and two distinct sections for Summary Cards and Detail-Ansicht are displayed.
+• *Then* the 10-row summary cards list is collapsed by default showing the active count, the "Details" column is absent from the table, and two distinct sections for Summary Cards and Detail-Ansicht are displayed.
 • *When* the collapsible toggle is tapped,
-• *Then* the 9 reorderable rows expand with Up/Down buttons and single-column checkboxes for `WorkoutCardSectionPreferences`.
+• *Then* the 10 reorderable rows expand with Up/Down buttons and single-column checkboxes for `WorkoutCardSectionPreferences` (including `PHOTOS`).
 • *Given* the Summary and Details configuration blocks,
 • *When* adjusting *Zonenkarten-Anzeigemodus*,
 • *Then* the Summary selector updates `workoutCardPrefs.zoneCardDisplayMode` and the Details selector updates `workoutDetailPrefs.zoneCardDisplayMode`.
+• *Given* an athlete configuring Workout Photos in `WorkoutMasksAndCardsSection.kt`,
+• *When* toggling `showPhotos`, `showPhotoAddButton`, or changing `photoThumbnailSize` (Small/Medium/Large),
+• *Then* preferences are persisted immediately in DataStore and dynamically reflected in `WorkoutSummary` and `WorkoutDetailTabbedContent`.
 
 **Invariants**: Summary card reorder persistence, active card visibility in WorkoutSummary, tab validation rules in WorkoutDetailTabConfig, 48dp touch targets, and 100% clean-room test pass rate.
 
@@ -13029,18 +13046,18 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 ---
 
 ### REQ-UI-445: Supporter Badges: Custom Launcher Icons, Cockpit Status Emblem, Navigation Drawer & Share Watermark [Verified]
-- **Tests**: `TST-UI-445`, `TST-LOC-001` | **Tickets**: `ATT-1406`, `ATT-5372`, `ATT-5397`
-- **Implementation**: `LauncherIconManager.kt`, `SensorStatus.kt`, `AppNavigationDrawer.kt`, `ShareUtils.kt`, `AndroidManifest.xml`, `res/mipmap-anydpi-v26/`, `res/drawable/`
-- **Rationale**: To provide visible recognition for athletes supporting development via Supporter subscriptions (Bronze, Silver, Gold, Diamond) or recognized as Pioneer Early Adopters (ATT-51), the system SHALL introduce customizable homescreen launcher icons (Option A), a live Cockpit status emblem, Navigation Drawer branding, and a workout share watermark, while strictly preserving 100% of authentic Cervélo P3C and classic stopwatch colors (ATT-1482):
-1. *Option A Adaptive Launcher Icons with Safe-Zone Compliance (`REQ-UI-445.1`)*:
+- **Tests**: `TST-UI-445`, `TST-LOC-001` | **Tickets**: `ATT-1406`, `ATT-5372`, `ATT-5397`, `ATT-5496`
+- **Implementation**: `LauncherIconManager.kt`, `SensorStatus.kt`, `AppNavigationDrawer.kt`, `SupporterComponents.kt`, `ShareUtils.kt`, `AndroidManifest.xml`, `res/mipmap-anydpi-v26/`, `res/drawable/`
+- **Rationale**: To provide visible recognition for athletes supporting development via Supporter subscriptions (Bronze, Silver, Gold, Diamond) or recognized as Pioneer Early Adopters (ATT-51), the system SHALL introduce customizable homescreen launcher icons (Option A / Variant C), a live Cockpit status emblem, Navigation Drawer branding, full-color emblems in the Supporter screen, and a workout share watermark, while strictly preserving 100% of authentic Cervélo P3C and classic stopwatch colors (ATT-1482, ATT-5496):
+1. *Variant C Adaptive Launcher Icons with Safe-Zone Compliance (`REQ-UI-445.1` / `ATT-5496`)*:
 • The application SHALL provide 6 adaptive launcher icon variants (`STANDARD`, `PIONEER`, `BRONZE`, `SILVER`, `GOLD`, `DIAMOND`) under `res/mipmap-anydpi-v26/` and `res/drawable/`.
-• Every supporter launcher icon SHALL implement Option A: built directly upon the corrected `ATT-1482` base vector (smooth cubic Béziers `C`/`c` for royal blue `#0000FF` cyclist back/hip at depth 50, black saddle `#000000` at depth 53 with zero protrusion, flush stopwatch pushers on thick `#FFC700` stems, safe zone $33.0 \le r \le 34.5\text{dp}$ on 108dp canvas) combined with a Top-Right Emblem pocket at `cx=67.6, cy=31.8` and a Bottom Tier Ribbon ($y=74.8..83.0$, $|x| \le 15.7\text{dp}$):
+• Every supporter launcher icon SHALL implement Variant C: built directly upon the corrected `ATT-1482` base vector (smooth cubic Béziers `C`/`c` for royal blue `#0000FF` cyclist back/hip at depth 50, black saddle `#000000` at depth 53 with zero protrusion, flush stopwatch pushers on thick `#FFC700` stems, safe zone $33.0 \le r \le 34.5\text{dp}$ on 108dp canvas) with a centered compact colored text stadium block flanked freely on the left and right by full-color tier emblems on the crisp `#FFFFFF` background:
   a. Standard: Authentic Cervélo P3C & classic stopwatch adaptive icon without badge overlays.
-  b. Pioneer Edition: Emerald & Gold Heritage Star emblem at top-right, `★ PIONEER ★` ribbon at bottom, emerald border ring.
-  c. Bronze Supporter: Bronze Medal on neck ribbon at top-right, `SUPPORTER` bronze ribbon at bottom, bronze border ring.
-  d. Silver Pro-Supporter: Silver Medal on neck ribbon at top-right, `PRO-SUPPORTER` silver ribbon at bottom, silver border ring.
-  e. Gold Pro-Supporter: 24K Gold Medal on neck ribbon at top-right, `PRO-SUPPORTER` gold ribbon at bottom, gold border ring.
-  f. Diamond Sponsor: Faceted Brilliant-Cut Cyan/Ice Diamond with sparkle at top-right, `◆ SPONSOR ◆` diamond-blue ribbon at bottom, cyan-blue border ring.
+  b. Pioneer Edition: Emerald `PIONEER` text block flanked by emerald-and-gold Pioneer emblems on `#FFFFFF`, emerald border ring.
+  c. Bronze Supporter: Bronze `SUPPORTER` text block flanked by Variant B5 Participant Rosettes on `#FFFFFF`, bronze border ring.
+  d. Silver Pro Supporter: Silver `PRO SUPPORTER` text block flanked by Variant S4-A Single-Rim 3D Silver Coins on `#FFFFFF`, silver border ring.
+  e. Gold Pro+ Supporter: Gold `PRO+ SUPPORTER` text block flanked by Variant G6 Gold Bar + Coin on `#FFFFFF`, gold border ring.
+  f. Diamond Sponsor: Diamond-blue `SPONSOR` text block flanked by Faceted Brilliant-Cut Diamonds on `#FFFFFF`, cyan-blue border ring.
 • All 6 launcher icon foreground drawables SHALL preserve 100% authentic Cervélo P3C bike (red frame `#FF0000`, carbon wheels/saddle `#000000`), classic stopwatch (golden bezel `#FFC700`, dial `#F0F0F0`, pushers `#000090`, `#FF0000`, `#009000`), and royal blue athletes (`#0000FF`).
 • All vector paths across all 6 icons SHALL fit strictly inside the safe zone ($33.0 \le r \le 34.5\text{dp}$) on the 108dp canvas, guaranteeing zero clipping across Circle, Squircle, Rounded Square, and Teardrop launcher masks.
 2. *Activity-Alias Manifest Architecture & Deferred Automatic Tier Synchronization (`REQ-UI-445.2`)*:
@@ -13048,14 +13065,16 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • The system SHALL provide `LauncherIconManager` observing `ProcessLifecycleOwner` lifecycle.
 • `LauncherIconManager` SHALL automatically synchronize the homescreen launcher icon with `ProFeatureManager.effectiveTier` via `LauncherIconVariant.fromTier(effectiveTier)` (`FREE -> STANDARD`, `PIONEER -> PIONEER`, `BRONZE -> BRONZE`, `SILVER -> SILVER`, `GOLD -> GOLD`, `DIAMOND -> DIAMOND`) (ATT-5397). Manual icon selection and `SettingsDataStore.selectedLauncherIcon` are retired.
 • The system SHALL apply `PackageManager.setComponentEnabledSetting` with `PackageManager.DONT_KILL_APP` deferred until the application transitions to the background (`onStop`) AND no active workout recording is running (`!TrainingApplication.isTracking()`). The app process or active workout SHALL NEVER be killed or restarted.
-3. *Live Cockpit Status Emblem & Retirement of Quick Icon Picker Dialog (`REQ-UI-445.3` / `ATT-5372`, `ATT-5397`)*:
-• In `SensorStatus.kt` (top sensor status bar of the Tracking Cockpit), the system SHALL render a pure 24dp vector emblem (Bronze Medal, Silver Medal, 24K Gold Medal, Faceted Brilliant Diamond, or Pioneer Star — without text) at the right end of the row, symmetrically balancing the 24dp menu button on the left while keeping the 8 sensor icons centered.
+3. *Live Cockpit Status Emblem & Supporter Screen Emblems (`REQ-UI-445.3` / `ATT-5372`, `ATT-5397`, `ATT-5496`)*:
+• In `SensorStatus.kt` (top sensor status bar of the Tracking Cockpit), the system SHALL render a pure 24dp vector emblem (B5 Participant Rosette, S4-A Silver Coins, G6 Gold Bar + Coin, Faceted Brilliant Diamond, or Pioneer Star — without text) at the right end of the row, symmetrically balancing the 24dp menu button on the left while keeping the 8 sensor icons centered.
 • Tapping the emblem in `SensorStatus.kt` SHALL NOT open an icon picker dialog; it renders as a non-modal supporter status emblem (or navigates directly to `SupporterScreen`) (ATT-5397).
+• `SupporterPlanCard` in `SupporterComponents.kt` SHALL display its corresponding full-color tier emblem (`44.dp`, `Color.Unspecified`) on the left, and `ActiveTierBanner` and `PioneerStatusBanner` SHALL display their full-color tier emblem (`36.dp`, `Color.Unspecified`) on the left (ATT-5496).
 • `SupporterQuickIconPickerDialog.kt` and `supporter_quick_picker_*` string resources SHALL be retired and removed from the codebase.
-4. *Navigation Drawer Header Recognition (`REQ-UI-445.4`)*:
+4. *Navigation Drawer Header Recognition & 9-Locale Tier Naming (`REQ-UI-445.4` / `ATT-5496`)*:
 • In `AppNavigationDrawer.DrawerHeader`, the system SHALL preserve the original clean single-line header layout (`46.dp` icon on the left + `"a Training Tracker"` title on the right over `menu_header_background`, without any text pill below the title) and render the active custom Cervélo P3C supporter icon matching `effectiveTier` directly (`foregroundRes` scaled by `1.81f` to compensate for the 108dp adaptive-icon safe-zone margin so its visual size matches `R.drawable.logo_512` at `46.dp` 1:1) without manual icon picking (ATT-5397).
+• All 9 locales SHALL maintain consistent verbal progression: Bronze `SUPPORTER`, Silver `PRO SUPPORTER` (unhyphenated), Gold `PRO+ SUPPORTER` (with `+`), and Diamond `SPONSOR` across `supporter_tier_*`, `drawer_tier_*`, `launcher_icon_*`, and `garage_detector_dialog_message_gold` (ATT-5496).
 5. *Social Share Workout Watermark (`REQ-UI-445.5`)*:
-• In `ShareUtils.kt` (`combineWorkoutAndShare` and `combinePeriodAndShare`), the footer watermark signature bar SHALL render the mini Cervélo P3C icon, "Tracked with aTrainingTracker", and the user's active supporter tier pill (`★ GOLD PRO`, `◆ SPONSOR`, `★ PIONEER`, etc.).
+• In `ShareUtils.kt` (`combineWorkoutAndShare` and `combinePeriodAndShare`), the footer watermark signature bar SHALL render the mini Cervélo P3C icon, "Tracked with aTrainingTracker", and the user's active supporter tier pill (`★ GOLD PRO+`, `◆ SPONSOR`, `★ PIONEER`, etc.).
 6. *Tier Unlock Hierarchy & Debug Override (`REQ-UI-445.6`)*:
 • Higher supporter tiers SHALL automatically unlock all lower-tier launcher icons (and Pioneer early adopters additionally unlock Pioneer Edition).
 • In `AdvancedSettings` when `BuildConfig.DEBUG == true`, the system SHALL expose a developer tier override selector (`AUTO`, `FREE`, `PIONEER`, `BRONZE`, `SILVER`, `GOLD`, `DIAMOND`) allowing instant 1-tap testing of all 6 tiers and badges.
@@ -13118,32 +13137,35 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 
 ### REQ-UI-447: Workout Share Mode Selection Bottom Sheet & Photo Track Overlay Snapshot Composer [Verified]
-- **Tests**: `TST-UI-447` | **Tickets**: `ATT-30`, `ATT-5479`
-- **Implementation**: `MapDetailLayout.kt`, `ShareUtils.kt`, `PhotoTrackOverlayComposer.kt`, `WorkoutShareBottomSheet.kt`
-- **Rationale**: Currently, tapping the Share button in `MapDetailLayout` immediately executes a vertical composite map/graph snapshot (`combineWorkoutAndShare`). Athletes frequently prefer sharing activities using a personal scenery, selfie, or gear photo overlaid with their GPS route silhouette and key stats (Strava/Garmin style). REQ-UI-447 introduces a share mode selection sheet offering the classic analysis snapshot or a photo with track & stats overlay (ATT-30, ATT-5479):
+- **Tests**: `TST-UI-447` | **Tickets**: `ATT-30`, `ATT-5479`, `ATT-5472`
+- **Implementation**: `MapDetailLayout.kt`, `ShareUtils.kt`, `PhotoTrackOverlayComposer.kt`, `WorkoutShareBottomSheet.kt`, `LauncherIconVariant.kt`
+- **Rationale**: Currently, tapping the Share button in `MapDetailLayout` immediately executes a vertical composite map/graph snapshot (`combineWorkoutAndShare`). Athletes frequently prefer sharing activities using a personal scenery, selfie, or gear photo overlaid with their GPS route silhouette and key stats (Strava/Garmin style). REQ-UI-447 introduces a share mode selection sheet offering the classic analysis snapshot or a photo with track & stats overlay (ATT-30, ATT-5479, ATT-5472):
 1. *Share Mode Selection Bottom Sheet (`REQ-UI-447.1`)*:
 • In `MapDetailLayout.kt`, tapping the floating Share button on a completed workout SHALL display `WorkoutShareBottomSheet` (hosted in `AppModalBottomSheet`) presenting two choices:
   - *Option A — Karten- & Analyse-Snapshot*: Executes the existing vertical composite snapshot (`combineWorkoutAndShare`).
   - *Option B — Foto mit Track-Overlay*: Launches the Android Photo Picker (`ActivityResultContracts.PickVisualMedia`) to pick a background photo.
 • For non-workout callers (`RouteOnMapScreen`, `SegmentOnMapScreen`, or when `workoutData == null`), tapping Share SHALL continue executing Option A directly without presenting the mode sheet.
-2. *2D GPS Track Silhouette Projection & Coordinate Sanitization (`REQ-UI-447.2`)*:
+2. *2D GPS Track Silhouette Projection & Portrait Constraint (`REQ-UI-447.2`)*:
 • In `PhotoTrackOverlayComposer.kt`, the workout's GPS polyline (`workoutData.mapPolyline`) SHALL be decoded via `PolyUtil.decode` and projected onto the photo.
 • Projection SHALL apply equirectangular cosine-latitude scaling ($\Delta x = \Delta\lambda \cdot \cos(\phi_{\text{mean}})$, $\Delta y = -\Delta\phi$) to preserve true geometric aspect ratio across all latitudes without distortion. Trackpoints with invalid or Null-Island coordinates (`!isValidGpsCoordinate(lat, lng)`) SHALL be filtered out prior to bounding box and silhouette calculation to prevent track silhouette distortion.
-• The track silhouette SHALL be drawn with a subtle drop shadow, anti-aliased stroke, and distinctive start/finish marker dots in the upper-right or side quadrant of the photo.
-3. *Bottom Gradient Scrim & Key Metrics Typography (`REQ-UI-447.3`)*:
+• On portrait photos (`height > width`), the track bounding box SHALL be constrained to the upper-right quadrant ($\le 22\%$ photo height), ensuring the silhouette remains compact and unobtrusive.
+• The track silhouette SHALL be drawn with a subtle drop shadow, anti-aliased stroke, and distinctive start/finish marker dots.
+3. *Bottom Gradient Scrim, Key Metrics Typography & Compact Anchoring (`REQ-UI-447.3`)*:
 • A vertical translucent gradient scrim (transparent $\rightarrow$ black alpha 0.85) SHALL be drawn across the bottom 25–30% of the photo canvas.
 • Workout title, date, distance, duration, ascent, and average speed/power SHALL be rendered on the scrim in high-contrast white typography, guaranteeing WCAG AAA contrast ratio ($\ge 7.0:1$) over arbitrary bright or dark backgrounds.
-4. *Official Branding & Supporter Tier Watermark (`REQ-UI-447.4`)*:
-• The bottom footer watermark bar SHALL render the Cervélo P3C logo, "Tracked with aTrainingTracker", and the user's active supporter tier pill (`REQ-UI-445.5`) in alignment with standard branding invariants.
-5. *Interactive Preview, Sharing & 9-Language Parity (`REQ-UI-447.5`)*:
-• After photo selection, `WorkoutShareBottomSheet` SHALL display an in-sheet preview of the composed photo with a primary "Teilen" / "Share" CTA dispatching the generated image via `FileProvider`.
+• In `PhotoTrackOverlayComposer.kt`, workout title (scaled to ~48f), date (~26f), and key metrics (~36f) SHALL have increased prominence and anchor compactly directly above `footerTop` (`footerTop - 24f * scaleRef`), eliminating portrait vertical dead space.
+4. *Official Branding & Supporter Emblem Watermark (`REQ-UI-447.4`)*:
+• The bottom footer watermark bar in `ShareUtils.kt` SHALL render the tier-matched launcher icon (`LauncherIconVariant.fromTier`), "Tracked with aTrainingTracker" (`R.string.share_watermark_tracked_with`), and only the standalone supporter vector emblem (`ic_supporter_emblem_*`) when `effectiveTier.isPro`, omitting wide text pill badges (`REQ-UI-445.5`).
+• The footer text SHALL auto-scale dynamically if required to fit cleanly between the launcher icon and right emblem without text collision or truncation.
+5. *Interactive Preview, Stacked Sharing CTAs & 9-Language Parity (`REQ-UI-447.5`)*:
+• After photo selection, `WorkoutShareBottomSheet` SHALL display an in-sheet preview of the composed photo with full-width stacked action buttons per Rule 73 (primary "Teilen" `Button` above secondary "Foto auswählen" `OutlinedButton` with 8dp spacing).
 • All user-visible strings SHALL maintain 100% localization parity across all 9 supported application locales (`values`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`).
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-447` (amended by `ATT-5479`), extending `REQ-UI-177` (*Theme-Aware Post-Workout & Period Share Snapshot Canvas and Footer*), `REQ-UI-205` (*Workout Snapshot Layout*), and `REQ-UI-445.5` (*Social Share Workout Watermark*). Targets `MapDetailLayout.kt`, `ShareUtils.kt`, `PhotoTrackOverlayComposer.kt`, and `WorkoutShareBottomSheet.kt`.
-2. *Historical Origin & Commit Trace*: Sprint 2026-40.8 (`ATT-1472`, `REQ-UI-177`), Sprint 2026-40.7 (`ATT-1393`, `REQ-UI-205`), `ATT-5397` (`REQ-UI-445.5`), and `ATT-30` (`584284ff`).
-3. *Root Reason for Existing Formulation*: Prior to ATT-30, snapshot sharing only supported stitching layout bitmaps (Header, Map, Elevation, Analytics). Prior to ATT-5479, track projection assumed decoded polyline trackpoints were non-zero, risking visual silhouette skewing if raw track logs contained Null Island points.
-4. *Preservation of Core Invariants*: Existing `combineWorkoutAndShare` and `combineAndShare` functions and non-workout callers remain 100% operational and unchanged under Option A. Safe bitmap decoding (`inSampleSize`) avoids OOM on high-resolution camera photos. Legitimate GPS coordinates and track geometry are strictly preserved.
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-447` (amended by `ATT-5479` and `ATT-5472`), extending `REQ-UI-177` (*Theme-Aware Post-Workout & Period Share Snapshot Canvas and Footer*), `REQ-UI-205` (*Workout Snapshot Layout*), and `REQ-UI-445.5` (*Social Share Workout Watermark*). Targets `MapDetailLayout.kt`, `ShareUtils.kt`, `PhotoTrackOverlayComposer.kt`, `WorkoutShareBottomSheet.kt`, and `LauncherIconVariant.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-40.8 (`ATT-1472`, `REQ-UI-177`), Sprint 2026-40.7 (`ATT-1393`, `REQ-UI-205`), `ATT-5397` (`REQ-UI-445.5`), `ATT-30` (`584284ff`), `ATT-5496` (`e5f5c754`), and `ATT-5472`.
+3. *Root Reason for Existing Formulation*: Prior to ATT-30, snapshot sharing only supported stitching layout bitmaps. Prior to ATT-5472, `REQ-UI-445.5` drew text pill badges (`[◆ SPONSOR]`), `PhotoTrackOverlayComposer` was tuned for landscape aspect ratios leaving empty vertical gaps on portrait photos, and share sheet action buttons were packed horizontally.
+4. *Preservation of Core Invariants*: Existing `combineWorkoutAndShare` and `combineAndShare` functions and non-workout callers remain 100% operational under Option A. Safe bitmap decoding (`inSampleSize`) avoids OOM on high-resolution camera photos. Legitimate GPS coordinates, track geometry, WCAG AAA text contrast, and 9-language localization parity are strictly preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete viewing a completed workout in `MapDetailLayout`,
@@ -13162,14 +13184,18 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 **Invariants**: Backward compatibility for all existing `combineWorkoutAndShare` callers, safe bitmap downsampling preventing OOM, WCAG AAA text contrast, 9-language localization parity, and 100% clean-room test pass rate.
 
 ### REQ-UI-448: Workout Photos Strip, Full-Screen Preview Bottom Sheet with ATT-30 Overlay Share, Map Pin Markers, and Null-Island Coordinate Rejection [Verified]
-- **Tests**: `TST-UI-448` | **Tickets**: `ATT-43`, `ATT-5479`
-- **Implementation**: `WorkoutDetails.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `ATrainingTrackerMap.kt`, `WorkoutPhotoViewerSheet.kt`, `WorkoutShareBottomSheet.kt`, `WorkoutPhotoManager.kt`, `WorkoutRepository.kt`, `MapBehaviors.kt`
-- **Rationale**: Athletes capture photos during workouts and wish to browse them alongside workout telemetry, inspect them on the workout GPS map, and share them via social media. REQ-UI-448 defines the UI presentation and interaction contracts for workout photos, EXIF coordinate validation, and camera bounds protection (ATT-43, ATT-5479, extending `REQ-UI-447` and `REQ-UI-408`):
-1. *Workout Photos Horizontal Strip (`REQ-UI-448.1`)*:
-• In `WorkoutDetails.kt` (and `WorkoutDetailTabbedContent.kt`), when attached photos exist, the system SHALL render a dedicated horizontal photo strip displaying downsampled thumbnail previews (`RoundedCornerShape(8.dp)`), along with an "Add Photos" action button (`ActivityResultContracts.PickMultipleVisualMedia`).
+- **Tests**: `TST-UI-448` | **Tickets**: `ATT-43`, `ATT-5479`, `ATT-5473`
+- **Implementation**: `WorkoutDetails.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `ATrainingTrackerMap.kt`, `WorkoutPhotoViewerSheet.kt`, `WorkoutPhotoPreviewBottomSheet.kt`, `WorkoutShareBottomSheet.kt`, `WorkoutPhotoStrip.kt`, `WorkoutSummary.kt`, `WorkoutPhotoManager.kt`, `WorkoutRepository.kt`, `MapBehaviors.kt`
+- **Rationale**: Athletes capture photos during workouts and wish to browse them alongside workout telemetry, inspect them on the workout GPS map, and share them via social media. REQ-UI-448 defines the UI presentation and interaction contracts for workout photos, EXIF coordinate validation, and camera bounds protection (ATT-43, ATT-5479, ATT-5473, extending `REQ-UI-447` and `REQ-UI-408`):
+1. *Workout Photos Horizontal Strip & Neutral Summary Styling (`REQ-UI-448.1`)*:
+• In `WorkoutDetails.kt` (and `WorkoutDetailTabbedContent.kt`, `WorkoutSummary.kt`), when attached photos exist, the system SHALL render a dedicated horizontal photo strip displaying downsampled thumbnail previews (`RoundedCornerShape(8.dp)`), along with an "Add Photos" action button (`ActivityResultContracts.PickMultipleVisualMedia`).
+• In `WorkoutPhotoStrip.kt`, the header camera icon (`Icons.Default.PhotoCamera`) and label tint SHALL use neutral `MaterialTheme.colorScheme.onSurfaceVariant` instead of electric blue (`colorScheme.primary`), establishing visual harmony with neighboring summary telemetry rows.
+• In `WorkoutSummary.kt`, a standard `HorizontalDivider` (`colorScheme.outlineVariant`, 0.5.dp thickness, 16.dp horizontal padding) SHALL precede the `WorkoutPhotoStrip` section.
+• The "Add Photos" square tile in `WorkoutPhotoStrip.kt` SHALL render a centered `Icons.Default.AddPhotoAlternate` icon with neutral `onSurfaceVariant` styling and accessible `contentDescription` without truncated single-line text.
 • If no photos are attached, an empty-state action button SHALL allow athletes to attach photos from the system Photo Picker.
 2. *Full-Screen Photo Viewer Bottom Sheet (`REQ-UI-448.2`)*:
-• Tapping a photo thumbnail SHALL open `WorkoutPhotoViewerSheet` (hosted in `AppModalBottomSheet` per ATT-5399), displaying the full image, capture timestamp, caption (if present), an action to delete the photo (with confirmation dialog), and a prominent CTA to share the photo via `WorkoutShareBottomSheet` (ATT-30).
+• Tapping a photo thumbnail SHALL open `WorkoutPhotoViewerSheet` / `WorkoutPhotoPreviewBottomSheet` (hosted in `AppModalBottomSheet` per ATT-5399), displaying the full image, capture timestamp, caption (if present), an action to delete the photo (with confirmation dialog), and a prominent CTA to share the photo via `WorkoutShareBottomSheet` (ATT-30).
+• Per Rule 73, action buttons inside `WorkoutPhotoPreviewBottomSheet.kt` SHALL be arranged as vertically stacked full-width buttons (`fillMaxWidth()`) with 8dp vertical spacing (primary "Mit Track-Overlay teilen" `Button` stacked above secondary "Foto löschen" `OutlinedButton`), eliminating horizontal text squishing in localized languages.
 3. *Map Photo Pin Markers & Strict Coordinate Validation (`REQ-UI-448.3`)*:
 • In `TrackOnMapScreen.kt` and `ATrainingTrackerMap.kt`, photos with valid geographic GPS coordinates SHALL be rendered as distinct photo pin markers (`LocationMarker`) along the workout route.
 • Coordinate validity SHALL be evaluated via `GeoUtils.isValidGpsCoordinate(latitude, longitude)`, requiring finite latitude in `[-90.0, 90.0]`, finite longitude in `[-180.0, 180.0]`, and strictly excluding Null Island (`abs(lat) < 1e-5 && abs(lng) < 1e-5`).
@@ -13184,10 +13210,10 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • All user-visible labels, headers, dialogs, and accessibility descriptions SHALL maintain 100% parity across all 9 supported locales without decorative inline Unicode emojis.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-448` (amended by `ATT-5479`), extending `REQ-UI-447` (*Workout Share Mode Selection & Photo Track Overlay*), `REQ-UI-408` (*Multi-Tab Workout Details*), and `REQ-DAT-038` (*Workout Photo Storage & EXIF Interpolation*). Targets `WorkoutDetails.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `ATrainingTrackerMap.kt`, `WorkoutPhotoViewerSheet.kt`, `WorkoutPhotoManager.kt`, `WorkoutRepository.kt`, and `MapBehaviors.kt`.
-2. *Historical Origin & Commit Trace*: Sprint 2026-45.6 (`ATT-30`, `REQ-UI-447`; `ATT-43`, commit `5c9d9653`), Sprint 2026-44.1 (`ATT-3920`, `REQ-UI-408`).
-3. *Root Reason for Existing Formulation*: Prior to ATT-43, `WorkoutDetails` only rendered tabular telemetry metrics and `TrackOnMapScreen` only rendered start, finish, and lap markers. `ExifInterface.getLatLong()` was trusted to only return true for non-zero coordinates, and `photo.latitude != null` in `WorkoutRepository.getWorkoutMarkers` and `MapBoundsController` was assumed sufficient to ensure spatial validity.
-4. *Preservation of Core Invariants*: Existing metric rows, tab layouts, and legitimate map markers remain invariant; genuine GPS coordinates are untouched; photos taken during workouts without EXIF GPS gain interpolated track coordinates; camera framing remains focused strictly on actual workout trajectories; memory-safe sampled decoding prevents OOM.
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-448` (amended by `ATT-5479` and `ATT-5473`), extending `REQ-UI-447` (*Workout Share Mode Selection & Photo Track Overlay*), `REQ-UI-408` (*Multi-Tab Workout Details*), and `REQ-DAT-038` (*Workout Photo Storage & EXIF Interpolation*). Targets `WorkoutDetails.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `ATrainingTrackerMap.kt`, `WorkoutPhotoViewerSheet.kt`, `WorkoutPhotoPreviewBottomSheet.kt`, `WorkoutPhotoStrip.kt`, `WorkoutSummary.kt`, `WorkoutPhotoManager.kt`, `WorkoutRepository.kt`, and `MapBehaviors.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-45.6 (`ATT-30`, `REQ-UI-447`; `ATT-43`, commit `5c9d9653`), Sprint 2026-44.1 (`ATT-3920`, `REQ-UI-408`), Sprint 2026-45.8 (`ATT-5474`, commit `8aed20fc`; `ATT-5473`).
+3. *Root Reason for Existing Formulation*: Prior to ATT-43, `WorkoutDetails` only rendered tabular telemetry metrics and `TrackOnMapScreen` only rendered start, finish, and lap markers. ATT-43 introduced photos with Material 3 primary tinting and side-by-side action buttons as an initial layout draft prior to Rule 73 stacked button guidelines and before user review of summary card color hierarchy.
+4. *Preservation of Core Invariants*: Existing metric rows, tab layouts, and legitimate map markers remain invariant; genuine GPS coordinates are untouched; photos taken during workouts without EXIF GPS gain interpolated track coordinates; camera framing remains focused strictly on actual workout trajectories; memory-safe sampled decoding prevents OOM; touch targets >= 48dp; 100% 9-language translation parity.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete viewing a workout with attached photos in `WorkoutDetails`,
@@ -13370,55 +13396,60 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 
 
-### REQ-UI-453: Aftermath Workout Details: Grade / Slope Zone Distribution Card & 1% Telemetry Histogram [Verified]
-- **Tests**: `TST-UI-453` | **Tickets**: `ATT-5487`
-- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/zones/GradeZoneDistributionCard.kt`, `ZoneDistributionCalculator.kt`, `TrackOnMapScreen.kt`, `WorkoutDetailTabbedContent.kt`, `WorkoutRepository.kt`, `AftermathMapUIState.kt`
-- **Rationale**: To provide athletes with a dedicated slope distribution visualization in Workout Details' Zonen tab, complementing heart rate and power cards with 7 canonical grade bands matching the elevation profile and an interactive 1% fine-grained histogram:
+### REQ-UI-453: Aftermath Workout Details: Grade / Slope Distribution Card & 1% Telemetry Histogram [Verified]
+- **Tests**: `TST-UI-453` | **Tickets**: `ATT-5487`, `ATT-5563`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/zones/GradeZoneDistributionCard.kt`, `ZoneDistributionCalculator.kt`, `ZoneDistributionColumnChart.kt`, `ZoneDistributionStackedBar.kt`, `ZoneDistributionModels.kt`, `TrackOnMapScreen.kt`, `WorkoutDetailTabbedContent.kt`, `WorkoutSummary.kt`, `WorkoutMasksAndCardsSection.kt`, `MyPreferenceManager.kt`, `WorkoutRepository.kt`, `AftermathMapUIState.kt`
+- **Rationale**: To provide athletes with a dedicated slope distribution visualization in Workout Details and Workout Summary, featuring independent visibility settings, accurate physical terrain nomenclature ("Steigungsverteilung" / "Slope Distribution" instead of physiological "Zonen"), and unambiguous mathematical threshold labels (<2%, ≥2%, ≥5%, ≥10%, ≥15%, ≥20%, ≥25%):
 - **Description**:
-  1. *Seven Canonical Slope Zones & Color Scheme Parity (`REQ-UI-453.1`)*:
-     - The calculation engine and UI card SHALL classify grade into 7 canonical zones consistent with `ElevationProfile.kt` (`getElevationGradeColor` / `GradeLegend`) using `TTColor.Zone1..Zone7`:
-       - Zone 1 (`TTColor.Zone1`, Green): `< 2.0 %` (Flat / Downhill)
-       - Zone 2 (`TTColor.Zone2`, Yellow): `2.0 – 5.0 %`
-       - Zone 3 (`TTColor.Zone3`, Orange): `5.0 – 10.0 %`
-       - Zone 4 (`TTColor.Zone4`, Red): `10.0 – 15.0 %`
-       - Zone 5 (`TTColor.Zone5`, Magenta/Violet): `15.0 – 20.0 %`
-       - Zone 6 (`TTColor.Zone6`, Black): `20.0 – 25.0 %`
-       - Zone 7 (`TTColor.Zone7`, White with dark border): `> 25.0 %`
-     - Zone labels SHALL use pre-existing localized string resources `R.string.grade_legend_under_2` through `R.string.grade_legend_over_25`.
+  1. *Seven Canonical Slope Categories & Unambiguous Threshold Labels (`REQ-UI-453.1`)*:
+     - The calculation engine and UI card SHALL classify grade into 7 canonical categories consistent with `ElevationProfile.kt` (`getElevationGradeColor` / `GradeLegend`) using `TTColor.Zone1..Zone7`:
+       - Category 1 (`TTColor.Zone1`, Green): `< 2.0 %` (Flat / Downhill)
+       - Category 2 (`TTColor.Zone2`, Yellow): `2.0 – 5.0 %`
+       - Category 3 (`TTColor.Zone3`, Orange): `5.0 – 10.0 %`
+       - Category 4 (`TTColor.Zone4`, Red): `10.0 – 15.0 %`
+       - Category 5 (`TTColor.Zone5`, Magenta/Violet): `15.0 – 20.0 %`
+       - Category 6 (`TTColor.Zone6`, Black): `20.0 – 25.0 %`
+       - Category 7 (`TTColor.Zone7`, White with dark border): `> 25.0 %`
+     - In both Column Chart (`ZoneDistributionColumnChart`) and Stacked Bar (`ZoneDistributionStackedBar`), category labels for slope distribution SHALL render mathematical threshold notation `<2%`, `≥2%`, `≥5%`, `≥10%`, `≥15%`, `≥20%`, `≥25%` instead of `Z1`..`Z7`.
+     - Physiological zone cards (Heart Rate, Cycling Power) SHALL strictly retain `Z1`..`Z5` and `Z1`..`Z7` labels.
   2. *Loess-Smoothed Grade Calculation Engine (`REQ-UI-453.2`)*:
      - `ZoneDistributionCalculator.calculateGradeDistribution(...)` SHALL smooth path elevation samples using `ElevationSmoothingMath.smoothAltitudes` ($\sigma = 21.0\text{m}$) before grade calculation to prevent GPS quantization noise and phantom `> 25%` grade spikes.
-     - Segments with valid duration $\Delta t \le 5\text{s}$ and positive distance $\Delta d > 0$ SHALL be categorized into 7 zones and into 1% fine-grained histogram bins across the full workout grade range (`[minGrade, maxGrade]`).
+     - Segments with valid duration $\Delta t \le 5\text{s}$ and positive distance $\Delta d > 0$ SHALL be categorized into 7 categories and into 1% fine-grained histogram bins across the full workout grade range (`[minGrade, maxGrade]`).
   3. *`GradeZoneDistributionCard` UI Component & 3-Way Mode Switcher (`REQ-UI-453.3`)*:
-     - The UI card SHALL render in `ui/aftermath/zones/GradeZoneDistributionCard.kt` with icon `R.drawable.ic_grade`, localized title `aftermath_grade_zones_title`, total active moving/climbing time, and 3-way toggle (`SingleChoiceSegmentedButtonRow`: Balken | Säulen | Histogramm) matching `HeartRateZoneDistributionCard` and `PowerZoneDistributionCard`.
+     - The UI card SHALL render in `ui/aftermath/zones/GradeZoneDistributionCard.kt` with icon `R.drawable.ic_grade`, localized title `aftermath_grade_zones_title` (*Steigungsverteilung* / *Slope Distribution* across all 9 locales, omitting the word "Zonen" / "Zones"), total active moving/climbing time, and 3-way toggle (`SingleChoiceSegmentedButtonRow`: Balken | Säulen | Histogramm) matching `HeartRateZoneDistributionCard` and `PowerZoneDistributionCard`.
      - In Histogram mode, `TelemetryHistogramChart` SHALL display 1% bins with unit `"%"` and interactive touch scrubbing.
-  4. *Workout Details Zonen Tab Integration & Tab Availability (`REQ-UI-453.4`)*:
-     - `GradeZoneDistributionCard` SHALL be displayed in `WorkoutDetailTabbedContent.kt` under `WorkoutDetailSectionType.ZONES` whenever `gradeZoneDistribution != null`.
-     - `TrackOnMapScreen.kt` `hasZonesData` check SHALL include `|| gradeZoneDistribution != null` so altitude-enabled workouts without HR or power sensors surface the Zonen tab.
+  4. *Workout Details & Summary Integration with Independent Visibility Switches (`REQ-UI-453.4`)*:
+     - Visibility of `GradeZoneDistributionCard` SHALL be independently configurable via `showGradeDistribution` in `WorkoutDetailPreferences` (default: `true` in Workout Details) and `WorkoutCardSectionPreferences` (default: `false` in Workout Summary list cards).
+     - In Expert Settings (`WorkoutMasksAndCardsSection.kt`), a subordinate toggle (`SubordinateTuningToggleItem`) labeled `settings_workout_card_grade_distribution` SHALL be rendered under Zone Analysis in both Trainingsliste (Summary) and Trainings-Details (Details) when `showZoneAnalysis == true`.
+     - In `TrackOnMapScreen.kt`, `hasZonesData` check SHALL include `|| (gradeZoneDistribution != null && activeDetailPrefs.showGradeDistribution)` so altitude workouts without HR/power sensors only surface the Zonen tab when grade distribution is enabled.
      - Telemetry computation SHALL run 100% asynchronously on `Dispatchers.IO` via `WorkoutRepository` / `TrackOnMapAftermathViewModel`.
   5. *9-Language Localization Parity (`REQ-UI-453.5`)*:
-     - All user-visible strings (`aftermath_grade_zones_title`) SHALL be localized across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with 100% parity verified by `TranslationParityTest`.
+     - All user-visible strings (`aftermath_grade_zones_title` and `settings_workout_card_grade_distribution`) SHALL be localized across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with 100% parity verified by `TranslationParityTest`. Decorative inline Unicode emojis are prohibited.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-453`, extending `REQ-UI-202` (Heart Rate 5-Zone Distribution Bar), `REQ-UI-203` (Cycling Power 5-Zone Distribution Bar), `REQ-UI-231` (Fine-Grained Telemetry Frequency Histogram), and `REQ-UI-372` (Zone Distribution Cards). Targets `ui/aftermath/zones/`, `TrackOnMapScreen.kt`, and `WorkoutDetailTabbedContent.kt`.
-2. *Historical Origin & Commit Trace*: Sprint 2026-42.5 (`ATT-1389`/`ATT-1390`, commit `7cb10a2f`) introduced HR/Power zone distribution bars; Sprint 2026-42.7 (`ATT-1845`, commit `3ef15b82`) introduced fine-grained histogram charting; Sprint 2026-45.7 (`ATT-5487`) introduces the grade zone distribution card.
-3. *Root Reason for Existing Formulation*: Historical zone cards focused exclusively on physiological telemetry (HR and cycling power), omitting terrain slope despite elevation profiles and grade color coding existing in `ElevationProfile.kt`.
-4. *Preservation of Core Invariants*: Preserves `REQ-UI-371` (Elevation Profile 7-zone color bands and thresholds), preserves `REQ-UI-408` (tabbed aftermath navigation), preserves all existing HR and power zone calculations and cards, zero SQLite schema changes.
+1. *Original Requirement ID & Target*: `REQ-UI-453` (Grade / Slope Distribution Card & 1% Telemetry Histogram). Target: `ui/aftermath/zones/`, `WorkoutMasksAndCardsSection.kt`, `MyPreferenceManager.kt`, `TrackOnMapScreen.kt`, `WorkoutDetailTabbedContent.kt`, `WorkoutSummary.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-45.7 (`ATT-5487`, commit `36e00b64ef28827de43f2f04399de442ca9a6898`).
+3. *Root Reason for Existing Formulation*: Reused generic `ZoneDistributionData` and `Z1`..`Z7` strings to establish initial integration without adding preference schema overhead.
+4. *Preservation of Core Invariants*: Retains canonical 7-zone color palette (`TTColor.Zone1..Zone7`), preserves HR/Power zone badges (`Z1`..`Z5`/`Z7`), preserves `WorkoutMasksAndCardsSection.kt` < 400 lines constraint, and ensures DataStore backward compatibility via safe defaults (`true` in Details, `false` in Summary).
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* a recorded workout with valid GPS distance and elevation path points,
-• *When* Workout Details opens the Zonen tab,
-• *Then* `GradeZoneDistributionCard` is rendered showing 7 canonical slope zones matching `ElevationProfile.kt` color coding and a 3-way toggle (Stacked Bar | Columns | Histogram).
+• *When* Workout Details opens the Zonen tab and `showGradeDistribution == true`,
+• *Then* `GradeZoneDistributionCard` is rendered showing title "Steigungsverteilung" (DE) / "Slope Distribution" (EN) and threshold badges `<2%`, `≥2%`, `≥5%`, `≥10%`, `≥15%`, `≥20%`, `≥25%`.
+• *Given* a workout summary list card,
+• *When* `showGradeDistribution` is default (`false`),
+• *Then* `GradeZoneDistributionCard` is NOT rendered in the summary card; when set to `true`, it is rendered.
 • *Given* a workout without heart rate or power sensors but with altitude data,
 • *When* `TrackOnMapScreen` evaluates `hasZonesData`,
-• *Then* `hasZonesData` evaluates to `true` and the Zonen tab is displayed.
+• *Then* `hasZonesData` evaluates to `true` only if `gradeZoneDistribution != null && activeDetailPrefs.showGradeDistribution`.
 • *Given* the 3-way display mode toggle on `GradeZoneDistributionCard`,
 • *When* the user switches between Stacked Bar, Columns, and Histogram,
 • *Then* the card seamlessly transitions between visualization modes with interactive scrubbing supported on the 1% grade histogram.
 • *Given* the 9 supported application locales,
 • *When* `TranslationParityTest` executes,
-• *Then* `aftermath_grade_zones_title` is present and non-empty across all 9 resource files.
+• *Then* `aftermath_grade_zones_title` and `settings_workout_card_grade_distribution` are present and non-empty across all 9 resource files.
 
-**Invariants**: Zero frame drops on aftermath screen entry (computation on `Dispatchers.IO`), zero SQLite schema modifications, identical color and boundary definitions as `ElevationProfile.kt`, and 100% test pass rate across targeted test suites.
+**Invariants**: Zero frame drops on aftermath screen entry (computation on `Dispatchers.IO`), zero SQLite schema modifications, `WorkoutMasksAndCardsSection.kt` < 400 lines (`TST-UI-377.5`), identical color and boundary definitions as `ElevationProfile.kt`, and 100% test pass rate across targeted test suites.
 
 
 

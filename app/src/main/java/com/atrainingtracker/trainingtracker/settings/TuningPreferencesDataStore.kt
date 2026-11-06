@@ -203,6 +203,11 @@ object TuningPreferencesDefaults {
     const val CLUSTER_USE_SPORT_TYPE = true
     const val CLUSTER_USE_ALTITUDE_POS = true
 
+    const val CLUSTER_SCORE_THRESHOLD = 1.2f
+    const val MIN_CLUSTER_SCORE_THRESHOLD = 0.5f
+    const val MAX_CLUSTER_SCORE_THRESHOLD = 2.5f
+    const val STEP_CLUSTER_SCORE_THRESHOLD = 0.1f
+
     /** First-time stop tracking coachmark banner acknowledgement default (REQ-UI-367 / ATT-3387). */
     const val DEFAULT_HAS_SEEN_STOP_TRACKING_HINT = false
 
@@ -313,6 +318,7 @@ data class TuningConfig(
     val clusterTolAltitudePos: Float = TuningPreferencesDefaults.CLUSTER_TOL_ALTITUDE_POS,
     val clusterUseSportType: Boolean = TuningPreferencesDefaults.CLUSTER_USE_SPORT_TYPE,
     val clusterUseAltitudePos: Boolean = TuningPreferencesDefaults.CLUSTER_USE_ALTITUDE_POS,
+    val clusterScoreThreshold: Float = TuningPreferencesDefaults.CLUSTER_SCORE_THRESHOLD,
     val autoPauseBikeEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_ENABLED,
     val autoPauseRunEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_RUN_ENABLED,
     val autoPauseOtherEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_OTHER_ENABLED,
@@ -452,6 +458,7 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_CLUSTER_TOL_ALTITUDE_POS: Preferences.Key<Float> = floatPreferencesKey("tuning_cluster_tol_altitude_pos")
         val KEY_CLUSTER_USE_SPORT_TYPE: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_cluster_use_sport_type")
         val KEY_CLUSTER_USE_ALTITUDE_POS: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_cluster_use_altitude_pos")
+        val KEY_CLUSTER_SCORE_THRESHOLD: Preferences.Key<Float> = floatPreferencesKey("tuning_cluster_score_threshold")
         val KEY_HAS_SEEN_STOP_TRACKING_HINT: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_has_seen_stop_tracking_hint")
         val KEY_HAS_COMPLETED_PERMISSION_ONBOARDING: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_has_completed_permission_onboarding")
         val KEY_AUTO_PAUSE_BIKE_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_auto_pause_bike_enabled")
@@ -523,6 +530,7 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_CLUSTER_TOL_ALTITUDE_POS,
             KEY_CLUSTER_USE_SPORT_TYPE,
             KEY_CLUSTER_USE_ALTITUDE_POS,
+            KEY_CLUSTER_SCORE_THRESHOLD,
             KEY_HAS_SEEN_STOP_TRACKING_HINT,
             KEY_HAS_COMPLETED_PERMISSION_ONBOARDING,
             KEY_AUTO_PAUSE_BIKE_ENABLED,
@@ -883,6 +891,10 @@ data class AutoPausePreferences(
             ),
             clusterUseSportType = prefs[KEY_CLUSTER_USE_SPORT_TYPE] ?: TrainingApplication.useSportTypeForClustering(),
             clusterUseAltitudePos = prefs[KEY_CLUSTER_USE_ALTITUDE_POS] ?: TrainingApplication.useAltitudePosForClustering(),
+            clusterScoreThreshold = (prefs[KEY_CLUSTER_SCORE_THRESHOLD] ?: TrainingApplication.getClusterScoreThreshold()).coerceIn(
+                TuningPreferencesDefaults.MIN_CLUSTER_SCORE_THRESHOLD,
+                TuningPreferencesDefaults.MAX_CLUSTER_SCORE_THRESHOLD
+            ),
             autoPauseBikeEnabled = autoPausePrefs.bikeEnabled,
             autoPauseRunEnabled = autoPausePrefs.runEnabled,
             autoPauseOtherEnabled = autoPausePrefs.otherEnabled,
@@ -1021,6 +1033,10 @@ data class AutoPausePreferences(
             TuningPreferencesDefaults.MIN_CLUSTER_TOL_ALTITUDE_POS,
             TuningPreferencesDefaults.MAX_CLUSTER_TOL_ALTITUDE_POS
         )
+        val clampedClusterScoreThreshold = config.clusterScoreThreshold.coerceIn(
+            TuningPreferencesDefaults.MIN_CLUSTER_SCORE_THRESHOLD,
+            TuningPreferencesDefaults.MAX_CLUSTER_SCORE_THRESHOLD
+        )
         val clampedBikeSpeedThreshold = config.autoPauseBikeSpeedThreshold.coerceIn(
             TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD,
             TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD
@@ -1108,6 +1124,7 @@ data class AutoPausePreferences(
             prefs[KEY_CLUSTER_TOL_ALTITUDE_POS] = clampedClusterTolAltitudePos
             prefs[KEY_CLUSTER_USE_SPORT_TYPE] = config.clusterUseSportType
             prefs[KEY_CLUSTER_USE_ALTITUDE_POS] = config.clusterUseAltitudePos
+            prefs[KEY_CLUSTER_SCORE_THRESHOLD] = clampedClusterScoreThreshold
             prefs[KEY_AUTO_PAUSE_BIKE_ENABLED] = config.autoPauseBikeEnabled
             prefs[KEY_AUTO_PAUSE_RUN_ENABLED] = config.autoPauseRunEnabled
             prefs[KEY_AUTO_PAUSE_OTHER_ENABLED] = config.autoPauseOtherEnabled
@@ -1132,6 +1149,7 @@ data class AutoPausePreferences(
         TrainingApplication.setClusterTolAltitudePos(clampedClusterTolAltitudePos)
         TrainingApplication.setUseSportTypeForClustering(config.clusterUseSportType)
         TrainingApplication.setUseAltitudePosForClustering(config.clusterUseAltitudePos)
+        TrainingApplication.setClusterScoreThreshold(clampedClusterScoreThreshold)
         TrackerService.invalidateAutoPauseCache()
     }
 
@@ -1502,5 +1520,6 @@ data class AutoPausePreferences(
         TrainingApplication.setClusterTolAltitudePos(TuningPreferencesDefaults.CLUSTER_TOL_ALTITUDE_POS)
         TrainingApplication.setUseSportTypeForClustering(TuningPreferencesDefaults.CLUSTER_USE_SPORT_TYPE)
         TrainingApplication.setUseAltitudePosForClustering(TuningPreferencesDefaults.CLUSTER_USE_ALTITUDE_POS)
+        TrainingApplication.setClusterScoreThreshold(TuningPreferencesDefaults.CLUSTER_SCORE_THRESHOLD)
     }
 }

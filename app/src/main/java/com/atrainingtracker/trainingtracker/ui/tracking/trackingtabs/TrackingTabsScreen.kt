@@ -273,6 +273,15 @@ fun TrackingTabsScreen(
     val hasPairedBluetoothSensors by controlViewModel.hasPairedBluetoothSensors.collectAsState()
     val locationCalibrationStatus by trackingTabsViewModel.locationCalibrationStatus.collectAsState()
 
+    // Subscription Downgrade Quota Reconciliation Check (REQ-SET-084.5)
+    LaunchedEffect(Unit) {
+        try {
+            com.atrainingtracker.trainingtracker.monetization.SensorQuotaReconciliationManager.getInstance(context).checkDowngradeReconciliation()
+        } catch (e: Throwable) {
+            // Defensive guard for testing environments
+        }
+    }
+
     // Battery Saver Telemetry & Event Subscriptions
     val tuningDataStore = remember { com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore(context) }
     val tuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(

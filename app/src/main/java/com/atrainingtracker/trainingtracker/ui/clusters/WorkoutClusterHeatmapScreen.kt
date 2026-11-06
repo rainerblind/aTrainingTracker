@@ -38,6 +38,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
+import com.atrainingtracker.trainingtracker.ui.components.core.MinimumDragHandle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -349,7 +350,9 @@ fun WorkoutClusterHeatmapScreen(
             sheetShadowElevation = BottomSheetDesign.SheetShadowElevation,
             sheetTonalElevation = BottomSheetDesign.SheetTonalElevation,
             sheetPeekHeight = if (peekedWorkoutDataWithTrack != null && !isEditingFingerprint) BottomSheetDesign.PeekHeightWorkout + navBarHeight else 0.dp,
-            sheetDragHandle = null,
+            sheetDragHandle = if (shouldShowWorkoutPeekDragHandle(peekedWorkoutDataWithTrack != null, isEditingFingerprint)) {
+                { MinimumDragHandle() }
+            } else null,
             sheetContent = {
                 if (peekedWorkoutDataWithTrack != null) {
                     Box(modifier = Modifier.fillMaxWidth().height(maxSheetHeight)) {
@@ -1189,3 +1192,13 @@ fun EditWorkoutClusterIdentityDialog(
         }
     }
 }
+
+/**
+ * Resolves whether the visual drag handle should be rendered for the workout peek bottom sheet (REQ-UI-221, ATT-5564).
+ * Returns true if a workout is actively peeked and the screen is not in fingerprint editing mode.
+ */
+internal fun shouldShowWorkoutPeekDragHandle(
+    hasPeekedWorkout: Boolean,
+    isEditingFingerprint: Boolean
+): Boolean = hasPeekedWorkout && !isEditingFingerprint
+

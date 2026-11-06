@@ -29,6 +29,7 @@ import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.trainingtracker.monetization.GarageLeagueDetector
 import com.atrainingtracker.trainingtracker.monetization.GarageNudgeEvent
 import com.atrainingtracker.trainingtracker.monetization.ProFeatureManager
+import com.atrainingtracker.trainingtracker.monetization.SensorQuotaReconciliationManager
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import kotlinx.coroutines.flow.Flow
@@ -71,7 +72,8 @@ class DeviceListViewModel @JvmOverloads constructor(
         } catch (e: Throwable) {
             false
         }
-    }
+    },
+    private val reconciliationManager: SensorQuotaReconciliationManager = SensorQuotaReconciliationManager.getInstance(application)
 ) : AndroidViewModel(application) {
 
     private val useCase = GetMergedDevicesUseCase(
@@ -89,8 +91,7 @@ class DeviceListViewModel @JvmOverloads constructor(
     private val _swapOrUpgradeDialogEvent = MutableStateFlow<SwapOrUpgradeDialogEvent?>(null)
     val swapOrUpgradeDialogEvent: StateFlow<SwapOrUpgradeDialogEvent?> = _swapOrUpgradeDialogEvent.asStateFlow()
 
-    private val _keepTwoSensorsDialogEvent = MutableStateFlow<KeepTwoSensorsDialogEvent?>(null)
-    val keepTwoSensorsDialogEvent: StateFlow<KeepTwoSensorsDialogEvent?> = _keepTwoSensorsDialogEvent.asStateFlow()
+    val keepTwoSensorsDialogEvent: StateFlow<KeepTwoSensorsDialogEvent?> = reconciliationManager.keepTwoSensorsDialogEvent
 
     private val _garageNudgeEvent = MutableStateFlow<GarageNudgeEvent?>(null)
     val garageNudgeEvent: StateFlow<GarageNudgeEvent?> = _garageNudgeEvent.asStateFlow()
@@ -228,63 +229,27 @@ class DeviceListViewModel @JvmOverloads constructor(
 
     /**
      * Reconciles sensor pairing quota when returning to Free tier with > 2 paired sensors (REQ-SET-084.5).
-     * Strictly gated on !isTracking() to avoid in-ride disruption.
+     * Strictly gated on !isTracking() to avoid in-ride disruption. Delegated to [SensorQuotaReconciliationManager].
      */
     fun checkDowngradeReconciliation() {
         if (isTrackingProvider()) return
-        viewModelScope.launch {
-            if (!proFeatureManager.isProActive.value) {
-                val pairedDevices = devicesDBRepository.getPairedDevices()
-                if (pairedDevices.size > 2) {
-                    val defaultKeepIds = determineDefaultKeepDeviceIds(pairedDevices)
-                    _keepTwoSensorsDialogEvent.value = KeepTwoSensorsDialogEvent(
-                        currentlyPairedDevices = pairedDevices,
-                        defaultKeepDeviceIds = defaultKeepIds
-                    )
-                }
-            }
-        }
+        reconciliationManager.checkDowngradeReconciliation()
     }
 
     fun confirmKeepTwoSensors(selectedIds: Set<Long>) {
-        viewModelScope.launch {
-            devicesDBRepository.reconcilePairedDevices(selectedIds)
-            _keepTwoSensorsDialogEvent.value = null
-        }
+        reconciliationManager.confirmKeepTwoSensors(selectedIds)
     }
 
     fun dismissKeepTwoSensors() {
-        val event = _keepTwoSensorsDialogEvent.value
-        viewModelScope.launch {
-            if (event != null) {
-                // To prevent bypassing Free quota by dismissing, automatically apply default keep sensors
-                devicesDBRepository.reconcilePairedDevices(event.defaultKeepDeviceIds)
-            }
-            _keepTwoSensorsDialogEvent.value = null
-        }
+        reconciliationManager.dismissKeepTwoSensors()
     }
 
-    private fun determineDefaultKeepDeviceIds(pairedDevices: List<DeviceUiData>): Set<Long> {
-        val keep = mutableSetOf<Long>()
-        val gps = pairedDevices.firstOrNull { it.deviceType == DeviceType.SPEED_AND_LOCATION_GPS }
-        if (gps != null) keep.add(gps.id)
-        val baro = pairedDevices.firstOrNull { it.deviceType == DeviceType.ALTITUDE_FROM_PRESSURE }
-        if (baro != null && keep.size < 2) keep.add(baro.id)
-        if (keep.size < 2) {
-            for (dev in pairedDevices) {
-                if (keep.size >= 2) break
-                keep.add(dev.id)
-            }
-        }
-        return keep
+    fun determineDefaultKeepDeviceIds(pairedDevices: List<DeviceUiData>): Set<Long> {
+        return reconciliationManager.determineDefaultKeepDeviceIds(pairedDevices)
     }
 
-    private fun determineRecommendedUnpairDeviceId(pairedDevices: List<DeviceUiData>): Long {
-        val barometer = pairedDevices.firstOrNull { it.deviceType == DeviceType.ALTITUDE_FROM_PRESSURE }
-        if (barometer != null) return barometer.id
-        val gps = pairedDevices.firstOrNull { it.deviceType == DeviceType.SPEED_AND_LOCATION_GPS }
-        if (gps != null) return gps.id
-        return pairedDevices.firstOrNull()?.id ?: -1L
+    fun determineRecommendedUnpairDeviceId(pairedDevices: List<DeviceUiData>): Long {
+        return reconciliationManager.determineRecommendedUnpairDeviceId(pairedDevices)
     }
 
     private suspend fun checkZoneOnboarding(device: DeviceUiData) {

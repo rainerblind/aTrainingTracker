@@ -48,6 +48,8 @@ import com.atrainingtracker.banalservice.helpers.BatteryStatusHelper;
 import com.atrainingtracker.banalservice.helpers.HavePressureSensor;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.dsi.ant.plugins.antplus.pcc.defines.BatteryStatus;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GooglePlayServicesUtil;
 
 import java.text.DateFormat;
 import java.util.ArrayList;
@@ -1342,10 +1344,12 @@ public class DevicesDatabaseManager {
         }
 
         void addLocationDevicesToDb(SQLiteDatabase db) {
+            boolean playServicesAvailable = GooglePlayServicesUtil.isGooglePlayServicesAvailable(mContext) == ConnectionResult.SUCCESS;
+
             ContentValues contentValues = new ContentValues();
             contentValues.put(PROTOCOL, Protocol.SMARTPHONE.name());
             contentValues.put(DEVICE_TYPE, DeviceType.SPEED_AND_LOCATION_GPS.name());
-            contentValues.put(PAIRED, true);
+            contentValues.put(PAIRED, !playServicesAvailable);
             contentValues.put(NAME, mContext.getString(R.string.devices_location_GPS));
             contentValues.put(MANUFACTURER_NAME, Build.BRAND);
             db.insert(DEVICES, null, contentValues);
@@ -1353,7 +1357,7 @@ public class DevicesDatabaseManager {
             contentValues = new ContentValues();
             contentValues.put(PROTOCOL, Protocol.SMARTPHONE.name());
             contentValues.put(DEVICE_TYPE, DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED.name());
-            contentValues.put(PAIRED, false);
+            contentValues.put(PAIRED, playServicesAvailable);
             contentValues.put(NAME, mContext.getString(R.string.devices_location_GoogleFused));
             contentValues.put(MANUFACTURER_NAME, Build.BRAND);
             db.insert(DEVICES, null, contentValues);

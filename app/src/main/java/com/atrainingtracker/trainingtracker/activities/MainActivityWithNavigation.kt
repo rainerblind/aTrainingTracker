@@ -578,6 +578,12 @@ class MainActivityWithNavigation :
             com.atrainingtracker.trainingtracker.helpers.ProcessExitReasonHelper.resetBatteryKillCount(this)
         }
 
+        try {
+            com.atrainingtracker.trainingtracker.monetization.SensorQuotaReconciliationManager.getInstance(this).checkDowngradeReconciliation()
+        } catch (e: Throwable) {
+            // Defensive guard for testing environments
+        }
+
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             BANALService.checkOrInitializeLocationDevices()
         }

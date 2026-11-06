@@ -378,17 +378,17 @@
 
 **Invariants**: Network constraints, battery constraints, exponential backoff, 7-day TTL cache pruning, and 100% test pass rate MUST NOT be broken.
 
-### REQ-EXP-020: Decommission Obsolete Runkeeper and TrainingPeaks Legacy Exporters, Activities, and Unused Apache HttpClient Dependencies [Verified]
-- **Tests**: `app/build.gradle`, `AndroidManifest.xml`, `MyHelper.java`, `ExportManager.java`, `TrainingApplication.java`, `BaseFileWriter.java`
-- **Implementation**: Decommission obsolete Runkeeper and TrainingPeaks classes, manifest entries, dead elevation helpers, and unused Apache HttpClient dependencies.
-- **Rationale**: The system SHALL decommission obsolete, unmaintained Runkeeper and TrainingPeaks integrations, delete dead token extraction activities, uploaders, and file writers, remove unused manifest elements and legacy Apache HttpClient dependencies, and eliminate dead elevation helpers in `MyHelper.java`, enforcing Rule 18 (Dependency Cleanliness), Rule 23 (Dead Code Removal), and Rule 36 (Single Source of Truth & DRY) (ATT-3551):
+### REQ-EXP-020: Decommission Obsolete Runkeeper and TrainingPeaks Legacy Exporters, Activities, and Retain Google Maps Legacy Platform Library [Verified]
+- **Tests**: `app/build.gradle`, `AndroidManifest.xml`, `MyHelper.java`, `ExportManager.java`, `TrainingApplication.java`, `BaseFileWriter.java`, `LegacyHttpClientPurgeContractTest.kt`
+- **Implementation**: Decommission obsolete Runkeeper and TrainingPeaks classes, manifest entries, dead elevation helpers, and unused Apache HttpClient dependencies while retaining the Google Maps legacy platform library.
+- **Rationale**: The system SHALL decommission obsolete, unmaintained Runkeeper and TrainingPeaks integrations, delete dead token extraction activities, uploaders, and file writers, remove unused manifest elements and legacy Apache HttpClient dependencies, and eliminate dead elevation helpers in `MyHelper.java`, enforcing Rule 18 (Dependency Cleanliness), Rule 23 (Dead Code Removal), and Rule 36 (Single Source of Truth & DRY) (ATT-3551, amended in ATT-5561):
 1. *Decommission Dead Runkeeper & TrainingPeaks Classes & Activities*:
 • The system SHALL permanently excise the following obsolete source files: `RunkeeperGetAccessTokenActivity.java`, `RunkeeperTestActivity.java`, `TrainingpeaksGetAccessTokenActivity.java`, `BaseGetAccessTokenActivity.java`, `RunkeeperUploader.java`, `TrainingPeaksUploader.java`, and `RunkeeperFileWriter.java`.
 • The system SHALL remove `<activity>` declarations for `RunkeeperGetAccessTokenActivity` and `TrainingpeaksGetAccessTokenActivity` from `app/src/main/AndroidManifest.xml`.
-2. *Decommission Unused Apache HttpClient Dependencies & Legacy Platform Library*:
-• The system SHALL remove `<uses-library android:name="org.apache.http.legacy" android:required="false" />` from `app/src/main/AndroidManifest.xml`.
+2. *Decommission Unused Apache HttpClient Dependencies & Retain Google Maps Platform Library*:
+• The system SHALL retain `<uses-library android:name="org.apache.http.legacy" android:required="false" />` in `app/src/main/AndroidManifest.xml` within `<application>` directly preceding the Google Maps API key metadata declaration to supply `org.apache.http.ProtocolVersion` for dynamic Google Maps SDK modules (`dynamite_mapsdynamite` Volley `RequestQueue`) on Android 9+ (API 28+).
 • The system SHALL remove all 5 `org.apache.httpcomponents:*` dependencies (`fluent-hc`, `httpclient`, `httpclient-cache`, `httpcore`, `httpmime`) from `app/build.gradle`.
-• The system SHALL remove `-dontwarn org.apache.http.**` from `app/proguard-rules.pro`.
+• The system SHALL retain `-dontwarn org.apache.http.**` in `app/proguard-rules.pro` under `# --- Legacy Dependency Fixes ---`.
 3. *Purge Dead Elevation Helpers and Imports in `MyHelper.java`*:
 • The system SHALL remove dead, uncalled methods `getAltitudeFromUSGS(double, double)` and `getElevationFromGoogleMaps(double, double)` from `MyHelper.java`.
 • The system SHALL remove all unused `org.apache.http.*` imports from `MyHelper.java`.
@@ -405,10 +405,10 @@
 • *Clean-Room Pass Invariant*: The full unit test suite (`./gradlew testDebugUnitTest`) MUST pass with 100% success.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement (`REQ-EXP-020`) targeting dead legacy code excision and dependency pruning across `app/build.gradle`, `AndroidManifest.xml`, `MyHelper.java`, `ExportManager.java`, and `TrainingApplication.java`.
-2. *Historical Origin & Commit Trace*: Early git history (2011–2015). Runkeeper and TrainingPeaks were early upload integrations using Apache HttpClient. In Android 6.0 (API 23), Google removed Apache HttpClient from the platform, prompting the addition of `org.apache.httpcomponents:*` dependencies and `org.apache.http.legacy`. As `aTrainingTracker` adopted OkHttp3 and Coroutines for Strava and modern services, the legacy uploaders were commented out rather than deleted.
-3. *Root Reason for Existing Formulation*: The code and dependencies were left dormant to avoid build breakage when uploaders were deactivated.
-4. *Preservation of Core Invariants*: Retaining SQLite database schema column `SportType.RUNKEEPER_NAME` guarantees zero migration breakage for existing databases. All active exporters remain completely intact.
+1. *Original Requirement ID & Target*: `REQ-EXP-020` (amended in ATT-5561), targeting `AndroidManifest.xml`, `proguard-rules.pro`, and `LegacyHttpClientPurgeContractTest.kt`.
+2. *Historical Origin & Commit Trace*: Early git history (2011–2015). Commit `4818be7f` originally added `<uses-library android:name="org.apache.http.legacy" android:required="false" />` for Google Maps. Commit `8bb3398a` (ATT-3551) mistakenly removed it and `-dontwarn org.apache.http.**` while pruning Runkeeper/TrainingPeaks, causing `NoClassDefFoundError: org.apache.http.ProtocolVersion` in `dynamite_mapsdynamite`.
+3. *Root Reason for Existing Formulation*: ATT-3551 conflated standalone Apache HttpClient library dependencies with the Android platform's optional `org.apache.http.legacy` jar required by the Google Maps SDK on API 28+.
+4. *Preservation of Core Invariants*: Production app source code strictly retains 0 imports of `org.apache.http.*`; `app/build.gradle` retains 0 `org.apache.httpcomponents` dependencies; `android:required="false"` preserves booting on systems lacking the optional library; 100% test pass rate.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* the production source files under `app/src/main/java/`,
@@ -416,7 +416,7 @@
 • *Then* strictly 0 occurrences or imports are found.
 • *Given* `app/build.gradle` and `app/src/main/AndroidManifest.xml`,
 • *When* evaluated for legacy HTTP client entries,
-• *Then* `org.apache.httpcomponents` dependencies and `<uses-library android:name="org.apache.http.legacy"` are completely absent.
+• *Then* `org.apache.httpcomponents` dependencies are completely absent from `app/build.gradle`, and `<uses-library android:name="org.apache.http.legacy" android:required="false" />` is declared in `app/src/main/AndroidManifest.xml`.
 • *Given* the file system under `app/src/main/java/`,
 • *When* checking the locations of `RunkeeperGetAccessTokenActivity.java`, `RunkeeperTestActivity.java`, `TrainingpeaksGetAccessTokenActivity.java`, `BaseGetAccessTokenActivity.java`, `RunkeeperUploader.java`, `TrainingPeaksUploader.java`, and `RunkeeperFileWriter.java`,
 • *Then* none of these files exist on disk.
@@ -1475,10 +1475,26 @@
 2. *Prohibition of Auto-Clustering*: The system MUST NOT automatically create a new `WorkoutCluster` or assign any cluster to a workout that has been explicitly left unclustered or has `clusterId == -1L`. Specifically, `WorkoutClusterEngine.onWorkoutFinished()` MUST NOT generate fallback clusters (e.g. `@string/cluster_default_name_format`, "Workout at %1$s") or assign clusters to workouts where `w.clusterId == -1L`.
 3. *Import vs. Live Tracking Lifecycle Disambiguation*: When `WorkoutRepository.reloadWorkoutData()` processes a newly loaded or imported workout, it MUST NOT invoke live cluster creation or discovery logic on workouts whose clustering was already finalized or deliberately rejected during import.
 4. *Name & State Preservation*: The imported workout SHALL preserve its original name and file base name, and SHALL appear in the "Unclustered" tab of the Favorite Tracks / Workout Clusters view (`WorkoutClustersTabsScreen`) and in the workout summaries list without an auto-generated cluster name prefix or suffix.
+5. *Custom Workout Name Propagation & Editing during Import Resolution (`ATT-5560`)*:
+• When `ClusterNamingDialog` resolves an imported workout candidate, the system SHALL allow the user to view and edit the imported workout's name (`customWorkoutName`) pre-filled from `state.workoutName ?: ""`.
+• When creating a new route cluster (`selectedCluster == null`), the new cluster name field SHALL pre-fill with `WorkoutClusterEngine.stripHitCount(state.workoutName ?: "")`.
+• The resolution decision payload SHALL propagate as `ClusterDecision(clusterId: Long?, newClusterName: String?, customWorkoutName: String?)` from `BackupRestoreViewModel` to `LegacyImportEngine.ProgressListener.onNewClusterCandidate`.
+• If the user confirms a cluster assignment (existing cluster or newly created cluster), `customWorkoutName` (if non-blank) SHALL be passed to `clusterEngine.assignClusterToWorkout(context, workoutId, clusterId, true, customWorkoutName)` and persisted to `WorkoutSummaries.WORKOUT_NAME`.
+• If the user chooses "Leave Unclustered", `customWorkoutName` (if non-blank) SHALL be updated in `WorkoutSummaries.WORKOUT_NAME` with `clusterId = -1L`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-MIG-025` (*TCX Import Cluster Decision Integrity & Unclustered Workout Preservation*), targeting `LegacyImportEngine.kt`, `BackupRestoreViewModel.kt`, and `ImportBackupTabsScreen.kt`.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-741` (commit `69df0996`), refined in `ATT-5560` (Sprint `2026-45.8`).
+3. *Root Reason for Existing Formulation*: Originally focused strictly on preventing automatic fallback cluster generation when users dismissed naming prompts, leaving workout name editing during import resolution unaddressed.
+4. *Preservation of Core Invariants*: User decision sovereignty (unclustered workouts retain `clusterId = -1L`), `Semaphore(3)` backpressure throttling, and `recalculationMutex.withLock` thread safety remain 100% strictly intact.
+
 **Acceptance Criteria**:
 • *Given* a TCX workout imported via `LegacyImportEngine` that does not match an existing cluster,
 • *When* the user selects "Leave Unclustered" in `ClusterNamingDialog`,
 • *Then* the workout SHALL be saved with `clusterId = -1L`, NO new cluster SHALL be created in `WorkoutClusterDatabaseManager`, the workout name SHALL NOT be altered to a cluster default name, and the workout SHALL appear under the Unclustered tab.
+• *Given* an imported workout requiring manual resolution in `ClusterNamingDialog`,
+• *When* the user edits the workout name and saves (either to an existing cluster, a new cluster, or unclustered),
+• *Then* the edited workout name SHALL be persisted to `WorkoutSummaries.WORKOUT_NAME`.
 **Invariants**: User-confirmed cluster assignments during TCX import (selecting an existing cluster or providing a custom route name) MUST continue to link the cluster and increment its hit count; live tracking sessions completed via `TrackerService` MUST continue to update cluster metrics and spatial bounds when a cluster match is found; periods aggregation in `PeriodsRepository` MUST continue to process all newly imported and finished workouts; existing SQLite database schema for `WorkoutSummaries` and `WorkoutCluster` MUST NOT be altered.
 
 ### REQ-MIG-026: TCX Import Reactive Period Aggregation, Direct Pipeline Notification & Self-Healing Period Sync [Verified]
@@ -3004,14 +3020,15 @@
 **Invariants**: WorkManager `MAX_RETRIES = 5` cap preserved; credentials isolated in `auth_credentials_prefs.xml`; permanent errors return `shallRetry = false`.
 
 ### REQ-MIG-048: Strava Bulk Export Archive Ingestion Pipeline, Bilingual CSV Metadata Enrichment, Transparent GZIP Decompression, Tolerant XML Deserialization, Equipment Sync, and Duplicate Re-Upload Prevention [Verified]
-- **Tests**: `TST-MIG-046` | **Tickets**: `ATT-4957`
+- **Tests**: `TST-MIG-046` | **Tickets**: `ATT-4957`, `ATT-5471`
 - **Implementation**: `StravaBulkExportImporter.kt`, `StravaCsvParser.kt`, `LegacyImportEngine.kt`, `ImportBackupTabsScreen.kt`, `TrackpointModels.kt`, `EquipmentDbHelper.java`, `StravaUploadDbHelper.java`
 - **Rationale**: Strava provides users with complete account archives (`export_<id>.zip`) containing an authoritative metadata summary (`activities.csv`), user equipment tables (`bikes.csv`, `shoes.csv`), and compressed activity streams (`activities/*.fit.gz`, `*.tcx.gz`, `*.gpx.gz`). To enable seamless migration into `aTrainingTracker` without gigabyte-scale uncompressed disk bloat or XML parser crashes, the system SHALL ingest Strava export archives via streaming ZIP reading, decode compressed stream files transparently, parse bilingual RFC 4180 metadata, sanitize TCX XML declarations against leading whitespace, synchronize equipment, and register Strava activity IDs to prevent duplicate re-upload loops (ATT-4957, extending `REQ-MIG-030`, `REQ-MIG-031`, `REQ-MIG-037`, `REQ-MIG-038`, and `REQ-MIG-040`):
 1. *Streaming ZIP Archive & Transparent GZIP Decompression (`REQ-MIG-048.1`)*:
 • The system SHALL accept Strava bulk export archives (`.zip`) in `ImportBackupTabsScreen` and process entries on-the-fly via streaming (`ZipFile` / `ZipInputStream` and `GZIPInputStream`), directly feeding decompressed streams into `FitWorkoutParser`, `TcxWorkoutParser`, or `GpxWorkoutParser` without staging uncompressed activity files to disk storage.
 • Every archive entry path SHALL be verified against Zip-Slip path traversal vulnerabilities (`REQ-MIG-040`).
-2. *Bilingual & Multi-Line RFC 4180 CSV Metadata Parser (`REQ-MIG-048.2`)*:
-• The system SHALL stream and parse `activities.csv`, supporting both German (`Aktivitäts-ID`, `Dateiname`, `Name der Aktivität`, `Aktivitätsart`, `Aktivitätsbeschreibung`, `Hinweis zur Privatsphäre für Aktivitäten`, `Pendeln`, `Aktivitätsausrüstung`) and English (`Activity ID`, `Filename`, `Activity Name`, `Activity Type`, `Activity Description`, `Activity Private Note`, `Commute`, `Activity Gear`) column aliases.
+2. *Language-Independent & Multi-Line RFC 4180 CSV Metadata Parser (`REQ-MIG-048.2`)*:
+• The system SHALL parse `activities.csv`, `bikes.csv`, and `shoes.csv` independent of athlete export language (FR, ES, IT, NL, PT, PL, JA, etc.) via hybrid column resolution: matching existing German/English aliases when present, auto-detecting the stream filename column via `(?i)^activities/.*` content pattern, and falling back to Strava's fixed canonical column indices (Col 0 ID, Col 1 Date, Col 2 Name, Col 3 Type, Col 4 Description, Col 9 Commute, Col 10 Private Note, Col 11 Gear, Col 12 Filename, Col 102 Media; Col 0 Name, Col 1 Brand, Col 2 Model for gear) (ATT-5471).
+• Unused summary telemetry metric columns (`elapsedTime`, `movingTime`, `distance`, `elevationGain`, `calories`, `avgHr`, `maxHr`, `avgWatts`, `maxWatts`) SHALL be pruned from `StravaActivityRow` and `StravaCsvParser.kt`.
 • The CSV parser SHALL strictly adhere to RFC 4180, handling multiline quoted fields with embedded commas, newlines, and escaped quotes (`""`).
 • Each activity row SHALL be indexed by its relative stream filename under `activities/`.
 3. *Tolerant XML Stream Whitespace Sanitization (`REQ-MIG-048.3`)*:

@@ -337,6 +337,7 @@ fun WorkoutDetailTabbedContent(
                                                 sections = nonMapNonGraphSections,
                                                 workoutData = workoutData,
                                                 tuningConfig = tuningConfig,
+                                                detailPreferences = detailPreferences,
                                                 splitChartData = splitChartData,
                                                 selectedLapNr = selectedLapNr,
                                                 onSelectLapNr = onSelectLapNr,
@@ -426,6 +427,7 @@ fun WorkoutDetailTabbedContent(
                                                     sections = nonMapNonGraphSections,
                                                     workoutData = workoutData,
                                                     tuningConfig = tuningConfig,
+                                                    detailPreferences = detailPreferences,
                                                     splitChartData = splitChartData,
                                                     selectedLapNr = selectedLapNr,
                                                     onSelectLapNr = onSelectLapNr,
@@ -481,6 +483,7 @@ fun WorkoutDetailTabbedContent(
                                     sections = nonMapNonGraphSections,
                                     workoutData = workoutData,
                                     tuningConfig = tuningConfig,
+                                    detailPreferences = detailPreferences,
                                     splitChartData = splitChartData,
                                     selectedLapNr = selectedLapNr,
                                     onSelectLapNr = onSelectLapNr,
@@ -647,6 +650,7 @@ private fun RenderWorkoutDetailCardSections(
     sections: List<WorkoutDetailSectionType>,
     workoutData: WorkoutData,
     tuningConfig: TuningConfig,
+    detailPreferences: WorkoutDetailPreferences = WorkoutDetailPreferences(),
     splitChartData: LapSplitChartData?,
     selectedLapNr: Long?,
     onSelectLapNr: (Long?) -> Unit,
@@ -679,13 +683,15 @@ private fun RenderWorkoutDetailCardSections(
                     showCriticalPowerInWorkoutSummary = tuningConfig.showCriticalPowerInWorkoutSummary,
                     modifier = Modifier.fillMaxWidth()
                 )
-                if (onPhotoClick != null && onAddPhotos != null) {
+                if (!sections.contains(WorkoutDetailSectionType.PHOTOS) && detailPreferences.showPhotos && onPhotoClick != null && onAddPhotos != null) {
                     val startMs = workoutData.startTimeS * 1000L
                     val endMs = (workoutData.startTimeS + workoutData.totalTimeSec) * 1000L
                     WorkoutPhotoStrip(
                         photos = photos,
                         onPhotoClick = onPhotoClick,
                         onAddPhotos = onAddPhotos,
+                        showAddButton = detailPreferences.showPhotoAddButton,
+                        thumbnailSize = detailPreferences.photoThumbnailSize,
                         startTimeMs = startMs,
                         endTimeMs = endMs
                     )
@@ -730,15 +736,17 @@ private fun RenderWorkoutDetailCardSections(
                             .padding(horizontal = 16.dp, vertical = 4.dp)
                     )
                 }
-                gradeZoneDistribution?.let { distribution ->
-                    GradeZoneDistributionCard(
-                        distribution = distribution,
-                        displayMode = effectiveGradeZoneDisplayMode,
-                        onDisplayModeChange = onGradeZoneDisplayModeChange,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                    )
+                if (detailPreferences.showGradeDistribution) {
+                    gradeZoneDistribution?.let { distribution ->
+                        GradeZoneDistributionCard(
+                            distribution = distribution,
+                            displayMode = effectiveGradeZoneDisplayMode,
+                            onDisplayModeChange = onGradeZoneDisplayModeChange,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
+                    }
                 }
             }
             WorkoutDetailSectionType.LAPS -> {
@@ -773,6 +781,21 @@ private fun RenderWorkoutDetailCardSections(
                 ExportStatus(
                     exportStatuses = workoutData.exportStatuses
                 )
+            }
+            WorkoutDetailSectionType.PHOTOS -> {
+                if (detailPreferences.showPhotos && onPhotoClick != null && onAddPhotos != null) {
+                    val startMs = workoutData.startTimeS * 1000L
+                    val endMs = (workoutData.startTimeS + workoutData.totalTimeSec) * 1000L
+                    WorkoutPhotoStrip(
+                        photos = photos,
+                        onPhotoClick = onPhotoClick,
+                        onAddPhotos = onAddPhotos,
+                        showAddButton = detailPreferences.showPhotoAddButton,
+                        thumbnailSize = detailPreferences.photoThumbnailSize,
+                        startTimeMs = startMs,
+                        endTimeMs = endMs
+                    )
+                }
             }
             WorkoutDetailSectionType.MAP,
             WorkoutDetailSectionType.ELEVATION,

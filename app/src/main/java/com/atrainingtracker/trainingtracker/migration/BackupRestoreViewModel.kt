@@ -74,7 +74,7 @@ class BackupRestoreViewModel @JvmOverloads constructor(
         val distance: Double,
         val bSportType: BSportType,
         val polyline: String,
-        val deferred: CompletableDeferred<Pair<Long?, String?>>,
+        val deferred: CompletableDeferred<LegacyImportEngine.ClusterDecision>,
         val workoutName: String? = null,
         val candidateSportTypes: Set<BSportType> = emptySet(),
         val minAltPos: LatLng? = null,
@@ -96,13 +96,17 @@ class BackupRestoreViewModel @JvmOverloads constructor(
     // Backpressure control: Limit pending UI interactions to 3 to ensure prompt naming (ATT-493 / ATT-349)
     private val interactionSemaphore = Semaphore(3)
 
-    fun provideClusterDecision(clusterId: Long?, name: String?) {
+    fun provideClusterDecision(decision: LegacyImportEngine.ClusterDecision) {
         val currentQueue = _interactionQueue.value
         if (currentQueue.isNotEmpty()) {
             val first = currentQueue.first()
-            first.deferred.complete(Pair(clusterId, name))
+            first.deferred.complete(decision)
             _interactionQueue.value = currentQueue.drop(1)
         }
+    }
+
+    fun provideClusterDecision(clusterId: Long?, name: String?, customWorkoutName: String? = null) {
+        provideClusterDecision(LegacyImportEngine.ClusterDecision(clusterId, name, customWorkoutName))
     }
 
     data class LastBackupInfo(
@@ -164,6 +168,7 @@ class BackupRestoreViewModel @JvmOverloads constructor(
     var altitudePositionTolerance by mutableStateOf(TrainingApplication.getClusterTolAltitudePos())
     var useSportTypeForClustering by mutableStateOf(TrainingApplication.useSportTypeForClustering())
     var useAltitudePosForClustering by mutableStateOf(TrainingApplication.useAltitudePosForClustering())
+    var clusterScoreThreshold by mutableStateOf(TrainingApplication.getClusterScoreThreshold())
 
     var uploadToStravaOnImport by mutableStateOf(TrainingApplication.uploadImportedWorkoutsToStrava())
         private set
@@ -193,6 +198,7 @@ class BackupRestoreViewModel @JvmOverloads constructor(
             .putFloat(TrainingApplication.SP_CLUSTER_TOL_ALTITUDE_POS, altitudePositionTolerance)
             .putBoolean(TrainingApplication.SP_CLUSTER_USE_SPORT_TYPE, useSportTypeForClustering)
             .putBoolean(TrainingApplication.SP_CLUSTER_USE_ALTITUDE_POS, useAltitudePosForClustering)
+            .putFloat(TrainingApplication.SP_CLUSTER_SCORE_THRESHOLD, clusterScoreThreshold)
             .apply()
     }
 
@@ -898,11 +904,11 @@ class BackupRestoreViewModel @JvmOverloads constructor(
             candidateSportTypes: Set<BSportType>,
             minAltPos: LatLng?,
             maxAltPos: LatLng?
-        ): Pair<Long?, String?> {
+        ): LegacyImportEngine.ClusterDecision {
             // ATT-349: Throttling. Pause background engine if 10 items are already pending resolution.
             interactionSemaphore.acquire()
 
-            val deferred = CompletableDeferred<Pair<Long?, String?>>()
+            val deferred = CompletableDeferred<LegacyImportEngine.ClusterDecision>()
             
             // ATT-316: Add to queue and wait. 
             // We no longer pre-fetch clusters here to avoid stale data in the queue (ATT-316 Refined)

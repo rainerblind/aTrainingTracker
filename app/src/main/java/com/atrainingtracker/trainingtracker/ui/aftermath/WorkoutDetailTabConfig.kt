@@ -41,10 +41,11 @@ enum class WorkoutDetailSectionType(@StringRes val labelRes: Int) {
     ZONES(R.string.settings_workout_card_zones),
     LAPS(R.string.settings_workout_card_laps),
     STRAVA(R.string.settings_workout_card_strava),
-    EXPORT_STATUS(R.string.export_status);
+    EXPORT_STATUS(R.string.export_status),
+    PHOTOS(R.string.settings_workout_card_photos);
 
     /**
-     * Maps this [WorkoutDetailSectionType] to its corresponding 9-item [WorkoutSectionType],
+     * Maps this [WorkoutDetailSectionType] to its corresponding [WorkoutSectionType],
      * or returns `null` for [DETAILS] (which is permanently anchored at the top of `WorkoutSummary`).
      */
     fun toWorkoutSectionTypeOrNull(): WorkoutSectionType? = when (this) {
@@ -58,11 +59,12 @@ enum class WorkoutDetailSectionType(@StringRes val labelRes: Int) {
         LAPS -> WorkoutSectionType.LAPS
         STRAVA -> WorkoutSectionType.STRAVA
         EXPORT_STATUS -> WorkoutSectionType.EXPORT_STATUS
+        PHOTOS -> WorkoutSectionType.PHOTOS
     }
 }
 
 /**
- * Maps a 9-item [WorkoutSectionType] to its corresponding 10-item [WorkoutDetailSectionType].
+ * Maps a [WorkoutSectionType] to its corresponding [WorkoutDetailSectionType].
  */
 fun WorkoutSectionType.toWorkoutDetailSectionType(): WorkoutDetailSectionType = when (this) {
     WorkoutSectionType.DESCRIPTION -> WorkoutDetailSectionType.DESCRIPTION
@@ -74,6 +76,7 @@ fun WorkoutSectionType.toWorkoutDetailSectionType(): WorkoutDetailSectionType = 
     WorkoutSectionType.CHARTS -> WorkoutDetailSectionType.CHARTS
     WorkoutSectionType.ZONES -> WorkoutDetailSectionType.ZONES
     WorkoutSectionType.EXPORT_STATUS -> WorkoutDetailSectionType.EXPORT_STATUS
+    WorkoutSectionType.PHOTOS -> WorkoutDetailSectionType.PHOTOS
 }
 
 /**
@@ -129,7 +132,8 @@ data class WorkoutDetailSectionAvailability(
     val hasZones: Boolean = false,
     val hasLaps: Boolean = false,
     val hasStrava: Boolean = false,
-    val hasExportStatus: Boolean = false
+    val hasExportStatus: Boolean = false,
+    val hasPhotos: Boolean = false
 ) {
     /**
      * Returns whether [section] has non-empty data for the current workout (`REQ-UI-414.1`).
@@ -150,6 +154,7 @@ data class WorkoutDetailSectionAvailability(
         WorkoutDetailSectionType.LAPS -> hasLaps
         WorkoutDetailSectionType.STRAVA -> hasStrava
         WorkoutDetailSectionType.EXPORT_STATUS -> hasExportStatus
+        WorkoutDetailSectionType.PHOTOS -> hasPhotos
     }
 
     companion object {
@@ -164,7 +169,8 @@ data class WorkoutDetailSectionAvailability(
             hasAltitudeData: Boolean,
             hasTelemetrySeries: Boolean,
             hasZonesData: Boolean,
-            hasLapsData: Boolean
+            hasLapsData: Boolean,
+            hasPhotos: Boolean = true
         ): WorkoutDetailSectionAvailability {
             val desc = workoutData.descriptionData
             val hasDescriptionContent = !desc.description.isNullOrBlank() ||
@@ -180,7 +186,8 @@ data class WorkoutDetailSectionAvailability(
                 hasZones = hasZonesData,
                 hasLaps = hasLapsData,
                 hasStrava = !workoutData.stravaActivityData.isNullOrBlank(),
-                hasExportStatus = workoutData.exportStatuses.any { it.hasContent }
+                hasExportStatus = workoutData.exportStatuses.any { it.hasContent },
+                hasPhotos = hasPhotos
             )
         }
     }

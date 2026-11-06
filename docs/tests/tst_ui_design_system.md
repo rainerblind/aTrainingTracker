@@ -825,7 +825,8 @@
   • Verify `SensorSourceDialog` and `DeviceTypeSelectionDialog` render as bottom popups utilizing `AppModalBottomSheet`.
   • Verify `EditSensorFieldDialog` and `ConfigureFilterDialog` render as bottom popups utilizing `AppModalBottomSheet`.
   • Verify `EditSportTypeDialog`, `EditEquipmentDialog`, and `EditDeviceDialog` render as bottom popups utilizing `AppModalBottomSheet`.
-  • Verify `WorkoutClusterSelectionDialog`, `EditWorkoutClusterDialog`, and `ClusterInfoDialog` render as bottom popups utilizing `AppModalBottomSheet`.
+  • Verify `WorkoutClusterSelectionDialog`, `EditWorkoutClusterDialog`, `ClusterInfoDialog`, and `ClusterNamingDialog` render as bottom popups utilizing `AppModalBottomSheet`.
+  • Verify `ClusterNamingDialog` composes `AppModalBottomSheet` with Rule 73 stacked full-width action buttons, displays editable Workout Name, and pre-fills stripped cluster name (ATT-5560).
   • Verify `ExportDetailsDialog` renders as a bottom popup utilizing `AppModalBottomSheet`.
   • Verify that `ExportSettingsDialog` preserves toggles for TCX, GPX, Golden Cheetah JSON, and CSV with `TrainingApplication` getters/setters.
   • Verify that `UnitsSettingsDialog` persists Metric vs Imperial selection to `SharedPreferences` under `SP_UNITS`.
@@ -2451,13 +2452,14 @@
   • Verify that `BottomSheetDesign.PeekHeightSegment == 192.dp`.
   • Verify that `BottomSheetDesign.PeekHeightKnownLocation == 108.dp`.
   • Verify that `BottomSheetDesign.PeekHeightLiveSegment == 126.dp`.
-  2. *Dynamic Self-Measurement & Screen Forwarding Contract Tests (`BottomSheetVisualContractTest.kt`)*:
+  2. *Dynamic Self-Measurement, Drag Affordance & Screen Forwarding Contract Tests (`BottomSheetVisualContractTest.kt`)*:
   • Verify `MapDetailLayout.kt` defines `onHeaderHeightMeasured: ((Dp) -> Unit)? = null` and binds `Modifier.onGloballyPositioned` around `MinimumDragHandle() + Surface(header)`.
   • Verify `SegmentOnMapScreen.kt` accepts and forwards `onHeaderHeightMeasured` to `MapDetailLayout`.
   • Verify `RouteOnMapScreen.kt` accepts and forwards `onHeaderHeightMeasured` to `MapDetailLayout`.
   • Verify `MapScreenWithTrack.kt` tracks `measuredSegmentHeaderHeight` and `measuredRouteHeaderHeight`, dynamically evaluating `sheetPeekHeight` with defensive fallback to `BottomSheetDesign` constants.
   • Verify that `SensorGridScreen.kt` references `BottomSheetDesign.PeekHeightLiveSegment`.
   • Verify that `WorkoutClusterHeatmapScreen.kt` and `PeriodMapScreen.kt` reference `BottomSheetDesign.PeekHeightWorkout`.
+  • Verify that `WorkoutClusterHeatmapScreen.kt` binds `sheetDragHandle` with `MinimumDragHandle()` when `peekedWorkoutDataWithTrack != null && !isEditingFingerprint` and does not set `sheetDragHandle = null` unconditionally (ATT-5564).
   3. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules verifying 100% pass rate with 0 regressions.
 
@@ -6257,7 +6259,7 @@
 ### TST-UI-377: **Workout Cards & Details Settings Streamlining, Collapsible Section Order, Authoritative Tab Activation, and 9-Language Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-414`
 - **Component**: **Workout Cards & Details Settings Streamlining, Collapsible Section Order, Authoritative Tab Activation, and 9-Language Parity Verification Suite**
-- **Jira**: ``ATT-4043``
+- **Jira**: `ATT-4043`, `ATT-5474`
 - **Test Description**:
   1. *Authoritative Tab Data Availability & Section Activation Test (`TST-UI-377.1`, `WorkoutDetailTabsTest.kt`)*:
   • Initialize `WorkoutDetailSectionAvailability` with `hasMap = true` and `hasElevation = true`, alongside `WorkoutDetailPreferences` with `showMap = false` and `showElevationProfile = false`.
@@ -6279,7 +6281,12 @@
   6. *9-Language Localization Parity Audit (`TST-UI-377.6`, `TranslationParityTest.kt`)*:
   • Inspect all 9 supported locale directories (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
   • Verify `workout_card_reorder_toggle` and `settings_workout_details_title` exist in all 9 files with `%1$d` specifier match and no entity issues.
-  7. *Clean-Room Full Suite Regression Execution (`TST-UI-377.7`)*:
+  7. *Workout Photos Settings & Layout Contract Test (`TST-UI-377.7` / `ATT-5474`, `WorkoutMasksAndCardsLayoutTest.kt`)*:
+  • Verify `WorkoutSectionType.PHOTOS` and `WorkoutDetailSectionType.PHOTOS` inclusion, `DEFAULT_ORDER`, and bidirectional mapping.
+  • Verify `WorkoutPhotoPreferencesComponents.kt` modularity maintains `WorkoutMasksAndCardsSection.kt` strictly < 400 lines.
+  • Verify `PhotoThumbnailSize` enum values (`SMALL` 56dp, `MEDIUM` 76dp, `LARGE` 104dp) and DataStore persistence in `WorkoutCardSectionPreferences` and `WorkoutDetailPreferences`.
+  • Verify 9-language translation parity across all 6 new `settings_workout_photos_*` keys via `TranslationParityTest`.
+  8. *Clean-Room Full Suite Regression Execution (`TST-UI-377.8`)*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
 ### TST-UI-378: **WorkoutDetails Single-Line Power Row Layout, Domain Row Dividers, Priority Resolution, and 9-Language Parity Verification Suite** [Verified]
@@ -7097,25 +7104,26 @@
 
 ### TST-UI-445: **Supporter Badges: Custom Launcher Icons, Cockpit Status Emblem, Navigation Drawer & Share Watermark Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-445`
-- **Component**: `LauncherIconManagerTest.kt`, `SupporterBadgeContractTest.kt`, `SensorStatusTest.kt`, `AppNavigationDrawerTest.kt`, `ShareUtilsTest.kt`, `TranslationParityTest.kt`
-- **Jira**: `ATT-1406`, `ATT-5372`, `ATT-5397`
+- **Component**: `LauncherIconManagerTest.kt`, `SupporterBadgeContractTest.kt`, `SensorStatusTest.kt`, `AppNavigationDrawerTest.kt`, `SupporterComponentsTest.kt`, `ShareUtilsTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-1406`, `ATT-5372`, `ATT-5397`, `ATT-5496`
 - **Test Description**:
-  1. *Adaptive Launcher Icon Safe-Zone & Brand Color Contract Test (`TST-UI-445.1`)*:
+  1. *Variant C Adaptive Launcher Icon Safe-Zone & Brand Color Contract Test (`TST-UI-445.1` / `ATT-5496`)*:
   • Parse all 6 foreground vector drawables (`ic_launcher_foreground.xml` and tier variants).
   • Verify maximum radial distance from canvas center `(54, 54)` is $33.0 \le r \le 34.5\text{dp}$ for all path coordinates, and verify cubic Bézier curves (`C`/`c`) are present for smooth cyclist back/hip geometry.
   • Verify exact color token preservation: Cervélo P3C red frame (`#FF0000`), carbon wheels/saddle (`#000000`), golden bezel (`#FFC700`), pushers (`#000090`, `#FF0000`, `#009000`), and blue athletes (`#0000FF`).
+  • Verify that all 28 base logo paths are identical between standard and all 5 tier foreground drawables, with Variant C emblems positioned on the left and right on `#FFFFFF` ground flanking the centered text stadium.
   2. *Activity-Alias Manifest & Deferred Automatic Tier Synchronization Test (`TST-UI-445.2`)*:
   • Verify `AndroidManifest.xml` declares 6 `<activity-alias>` entries targeting `MainActivityWithNavigation`, with default alias enabled.
   • Verify `LauncherIconManager` automatically synchronizes with `ProFeatureManager.effectiveTier` via `LauncherIconVariant.fromTier(effectiveTier)` and defers alias changes with `PackageManager.DONT_KILL_APP` during active foreground or tracking sessions (`isTracking == true`), executing component state transitions on `ProcessLifecycleOwner` `onStop`.
-  3. *Live Cockpit Status Emblem & Retired Quick-Picker Verification (`TST-UI-445.3` / `ATT-5372`, `ATT-5397`)*:
+  3. *Live Cockpit & Supporter Screen Full-Color Emblem Verification (`TST-UI-445.3` / `ATT-5372`, `ATT-5397`, `ATT-5496`)*:
   • Verify `SensorStatus.kt` renders the right-aligned 24dp emblem symmetrically balancing the 24dp menu button in Portrait and Landscape without opening an icon picker dialog.
-  • Verify `SupporterQuickIconPickerDialog.kt` and `supporter_quick_picker_*` string resources are removed from the codebase.
-  • Verify `SupporterBadgeContractTest.kt` verifies automatic tier matching and non-modal emblem layout.
+  • Verify `SupporterPlanCard` renders the corresponding full-color tier emblem at `44.dp` with `Color.Unspecified`, and `ActiveTierBanner` and `PioneerStatusBanner` render the full-color tier emblem at `36.dp` with `Color.Unspecified`.
+  • Verify 24dp vector drawables `ic_supporter_emblem_bronze.xml` (B5 Rosette), `ic_supporter_emblem_silver.xml` (S4-A Single-Rim Coins), and `ic_supporter_emblem_gold.xml` (G6 Gold Bar+Coin) are valid XML vectors with width/height `24dp`.
   4. *Navigation Drawer Header & Share Watermark Contract Test (`TST-UI-445.4`)*:
   • Verify `AppNavigationDrawer.DrawerHeader` preserves the original single-line header layout without a text pill below the title and renders the active custom Cervélo supporter icon at the original full 46dp visual size (`scale = 1.81f`) matching `effectiveTier` directly.
   • Verify `ShareUtils.drawFooter` renders the Cervélo P3C icon, "Tracked with aTrainingTracker", and supporter tier pill.
-  5. *9-Locale Localization Parity Test (`TST-LOC-001` / `TST-UI-445.5`)*:
-  • Verify zero orphaned strings after removing `supporter_quick_picker_*` across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+  5. *9-Locale Localization Parity Test (`TST-LOC-001` / `TST-UI-445.5` / `ATT-5496`)*:
+  • Verify 100% parity across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) for `supporter_tier_silver`, `drawer_tier_silver`, `launcher_icon_silver`, `supporter_tier_gold`, `drawer_tier_gold`, `launcher_icon_gold`, and `garage_detector_dialog_message_gold` with zero missing keys or specifier mismatches.
 
 ### TST-UI-446: **Universal Stacked Workout Details Marginal Histograms & Widened Strip Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-446`
@@ -7140,38 +7148,45 @@
 
 ### TST-UI-447: **Workout Share Mode Selection & Photo Track Overlay Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-447`
-- **Component**: `PhotoTrackOverlayComposerTest.kt`, `WorkoutShareBottomSheetContractTest.kt`, `TranslationParityTest.kt`
-- **Jira**: `ATT-30`, `ATT-5479`
+- **Component**: `PhotoTrackOverlayComposerTest.kt`, `WorkoutShareBottomSheetContractTest.kt`, `ShareUtilsTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-30`, `ATT-5479`, `ATT-5472`
 - **Test Description**:
-  1. *Equirectangular Track Projection, Coordinate Sanitization & Silhouette Geometry (`TST-UI-447.1`)*:
+  1. *Equirectangular Track Projection, Portrait Bounds & Silhouette Geometry (`TST-UI-447.1`)*:
   • Verify `PhotoTrackOverlayComposer` scales GPS polyline points via cosine-latitude projection ($\Delta x = \Delta\lambda \cdot \cos(\phi_{\text{mean}})$, $\Delta y = -\Delta\phi$) preserving true aspect ratio.
   • Verify `PhotoTrackOverlayComposer` filters out invalid or Null-Island coordinates (`!isValidGpsCoordinate(lat, lng)`) prior to silhouette and bounding box computation.
-  • Verify track silhouette bounds normalization, drop shadow rendering, and start/finish marker dot placement in the upper-right or side quadrant.
-  2. *Metrics Formatting, Gradient Scrim & WCAG AAA Contrast (`TST-UI-447.2`)*:
+  • Verify portrait photo track bounding box is constrained to upper-right quadrant ($\le 22\%$ photo height).
+  2. *Metrics Formatting, Typography Sizing & Compact Anchoring (`TST-UI-447.2`)*:
   • Verify bottom gradient scrim renders with dark translucent gradient (alpha $0.0 \rightarrow 0.85$).
-  • Verify workout metrics (distance, duration, ascent, avg speed/power) render in crisp white typography satisfying WCAG AAA contrast ratio ($\ge 7.0:1$).
-  • Verify footer watermark renders official Cervélo P3C logo, "Tracked with aTrainingTracker", and supporter tier pill per `REQ-UI-445.5`.
-  3. *Mode Switcher & Backward Compatibility Contract (`TST-UI-447.3`)*:
+  • Verify workout title (~48f), date (~26f), and metrics (~36f) render in enlarged white typography satisfying WCAG AAA contrast ratio ($\ge 7.0:1$).
+  • Verify metrics block anchors compactly directly above `footerTop` (`footerTop - 24f * scaleRef`), eliminating portrait vertical dead space.
+  3. *Supporter Emblem Only & Footer Text Auto-Scaling Contract (`TST-UI-447.3`)*:
+  • Verify `ShareUtils.drawFooter` renders standalone vector emblem (`ic_supporter_emblem_*`) without wide text pills when `effectiveTier.isPro`.
+  • Verify footer watermark text auto-scales to prevent collision or truncation across narrow widths and 9 supported locales.
+  • Verify tier-matched launcher icon rendering on left.
+  4. *Rule 73 Stacked Action Buttons & Mode Switcher Contract (`TST-UI-447.4`)*:
+  • Verify `WorkoutShareBottomSheet` renders stacked full-width action buttons per Rule 73 (primary "Teilen" above secondary "Foto auswählen").
   • Verify `MapDetailLayout` with `workoutData != null` launches `WorkoutShareBottomSheet` on Share button tap.
-  • Verify non-workout callers (`workoutData == null`) bypass bottom sheet and directly invoke `combineWorkoutAndShare`.
   • Verify Option A executes existing composite snapshot sharing (`combineWorkoutAndShare`).
-  • Verify `WorkoutShareBottomSheet` conforms to `AppModalBottomSheet` edge-to-edge system insets guidelines.
-  4. *9-Language Localization & Targeted Test Suite (`TST-UI-447.4`)*:
-  • Verify 100% parity across all 9 locales via `TranslationParityTest` for new share mode strings.
+  5. *9-Language Localization & Targeted Test Suite (`TST-UI-447.5`)*:
+  • Verify 100% parity across all 9 locales via `TranslationParityTest` for all share mode strings.
   • Run targeted test suite (`--tests "com.atrainingtracker.trainingtracker.helpers.*"`, `ui.map.*`, `ThemeColorCentralizationAuditTest`) with 100% pass rate.
 
 ### TST-UI-448: **Workout Photos Strip, Full-Screen Preview Bottom Sheet with ATT-30 Overlay Share, Map Pin Markers, and Null-Island Coordinate Rejection Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-448`
-- **Component**: `WorkoutDetails.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `ATrainingTrackerMap.kt`, `WorkoutPhotoViewerSheet.kt`, `WorkoutShareBottomSheet.kt`, `WorkoutPhotoManager.kt`, `WorkoutRepository.kt`, `MapBehaviors.kt`
-- **Jira**: `ATT-43`, `ATT-5479`
+- **Component**: `WorkoutDetails.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `ATrainingTrackerMap.kt`, `WorkoutPhotoViewerSheet.kt`, `WorkoutPhotoPreviewBottomSheet.kt`, `WorkoutPhotoStrip.kt`, `WorkoutSummary.kt`, `WorkoutShareBottomSheet.kt`, `WorkoutPhotoManager.kt`, `WorkoutRepository.kt`, `MapBehaviors.kt`
+- **Jira**: `ATT-43`, `ATT-5479`, `ATT-5473`
 - **Test Description**:
   1. *Workout Photos Strip & Empty State Contract Test (`TST-UI-448.1`, `WorkoutPhotoUiContractTest.kt`)*:
   • Verify horizontal photo strip renders when photos are attached, displaying thumbnail cards with `RoundedCornerShape(8.dp)`.
+  • Verify neutral `onSurfaceVariant` styling for camera header icon and "Add Photos" tile (no primary electric blue).
+  • Verify centered `AddPhotoAlternate` icon inside square add tile without clipped single-line text.
+  • Verify `HorizontalDivider` preceding `WorkoutPhotoStrip` in `WorkoutSummary.kt`.
   • Verify empty-state "Add Photos" button renders when no photos are attached.
   • Verify photo picker launcher contract invocation on add button click.
   2. *Workout Photo Viewer Bottom Sheet & ATT-30 Share Handoff (`TST-UI-448.2`, `WorkoutPhotoViewerSheetTest.kt`)*:
-  • Verify clicking thumbnail displays `WorkoutPhotoViewerSheet` via `AppModalBottomSheet`.
+  • Verify clicking thumbnail displays `WorkoutPhotoViewerSheet` / `WorkoutPhotoPreviewBottomSheet` via `AppModalBottomSheet`.
   • Verify full image display, formatted capture timestamp, and caption rendering.
+  • Verify stacked full-width action buttons per Rule 73 (primary share overlay button above secondary outlined delete button with 8dp spacing).
   • Verify "Delete Photo" action presents confirmation dialog and triggers photo deletion callback.
   • Verify "Share with Track Overlay" CTA launches `WorkoutShareBottomSheet` pre-populated with the photo Uri.
   3. *Map Photo Pin Markers & Strict Coordinate Validation Contract Test (`TST-UI-448.3`, `WorkoutPhotoUiContractTest.kt`, `WorkoutRepositoryMarkerTest.kt`)*:
@@ -7273,27 +7288,33 @@
 
 
 
-### TST-UI-453: **Aftermath Workout Details: Grade / Slope Zone Distribution Card & 1% Telemetry Histogram Verification Suite** [Verified]
+### TST-UI-453: **Aftermath Workout Details: Grade / Slope Distribution Card & 1% Telemetry Histogram Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-453`
-- **Component**: `GradeZoneDistributionCard.kt`, `ZoneDistributionCalculator.kt`, `GradeZoneDistributionCardTest.kt`, `GradeZoneDistributionCalculatorTest.kt`, `TrackOnMapScreen.kt`, `WorkoutDetailTabbedContent.kt`, `TranslationParityTest.kt`
-- **Jira**: `ATT-5487`
+- **Component**: `GradeZoneDistributionCard.kt`, `ZoneDistributionCalculator.kt`, `ZoneDistributionColumnChart.kt`, `ZoneDistributionStackedBar.kt`, `ZoneDistributionModels.kt`, `WorkoutMasksAndCardsSection.kt`, `WorkoutDetailPreferences.kt`, `WorkoutCardSectionPreferences.kt`, `GradeZoneDistributionCardTest.kt`, `GradeZoneDistributionCalculatorTest.kt`, `WorkoutDetailPreferencesTest.kt`, `WorkoutMasksAndCardsLayoutTest.kt`, `TrackOnMapScreen.kt`, `WorkoutDetailTabbedContent.kt`, `WorkoutSummary.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-5487`, `ATT-5563`
 - **Test Description**:
   1. *Grade Zone Calculation & Canonical Thresholds Unit Test (`TST-UI-453.1`, `GradeZoneDistributionCalculatorTest.kt`)*:
-  • Verify `ZoneDistributionCalculator.calculateGradeDistribution(...)` maps segments into exactly 7 zones matching `getElevationGradeColor` thresholds: `< 2%` (Z1), `2–5%` (Z2), `5–10%` (Z3), `10–15%` (Z4), `15–20%` (Z5), `20–25%` (Z6), `> 25%` (Z7).
+  • Verify `ZoneDistributionCalculator.calculateGradeDistribution(...)` maps segments into exactly 7 categories matching `getElevationGradeColor` thresholds: `< 2%`, `2–5%`, `5–10%`, `10–15%`, `15–20%`, `20–25%`, `> 25%`.
   • Verify smoothing eliminates GPS quantization noise and prevents artificial `> 25%` spikes on flat segments.
   • Verify delta time clamping ($\Delta t \le 5\text{s}$) and handling of degenerate/stationary points.
   • Verify null return when path points or elevation data are empty or missing.
   2. *Fine-Grained 1% Grade Histogram Calculation Test (`TST-UI-453.2`, `GradeZoneDistributionCalculatorTest.kt`)*:
   • Verify generation of 1% histogram bins spanning `[minGrade, maxGrade]`.
-  • Verify bin zone indices and colors match `ElevationProfile.kt` color coding.
-  • Verify total active time matches the sum of 7 zone durations.
-  3. *`GradeZoneDistributionCard` UI & 3-Way Mode Switcher Test (`TST-UI-453.3`, `GradeZoneDistributionCardTest.kt`)*:
-  • Verify card renders icon `R.drawable.ic_grade`, localized title, and formatted total duration.
+  • Verify bin category indices and colors match `ElevationProfile.kt` color coding.
+  • Verify total active time matches the sum of 7 category durations.
+  3. *`GradeZoneDistributionCard` UI, Mode Switcher & Category Label Test (`TST-UI-453.3`, `GradeZoneDistributionCardTest.kt`)*:
+  • Verify card renders icon `R.drawable.ic_grade`, localized title `aftermath_grade_zones_title` (*Steigungsverteilung* / *Slope Distribution*), and formatted total duration.
   • Verify 3-way toggle renders Balken (`STACKED_BAR`), Säulen (`COLUMNS`), and Histogramm (`HISTOGRAM`).
+  • Verify Column Chart and Stacked Bar render mathematical threshold labels `<2%`, `≥2%`, `≥5%`, `≥10%`, `≥15%`, `≥20%`, `≥25%` for slope distribution, while HR/Power strictly retain `Z1`..`Z7`.
   • Verify view switching renders `ZoneDistributionStackedBar`, `ZoneDistributionColumnChart`, and `TelemetryHistogramChart` respectively.
-  4. *9-Language Localization & Parity Test (`TST-UI-453.4`, `TranslationParityTest.kt`)*:
-  • Verify 100% parity across all 9 supported locales for `aftermath_grade_zones_title` with zero missing entries and zero decorative inline emojis.
-  5. *Clean-Room Regression Suite Execution (`TST-UI-453.5`)*:
+  4. *Visibility Preference & Subordinate Settings Switch Test (`TST-UI-453.4`, `WorkoutDetailPreferencesTest.kt`, `WorkoutMasksAndCardsLayoutTest.kt`)*:
+  • Verify `WorkoutDetailPreferences.showGradeDistribution` defaults to `true`.
+  • Verify `WorkoutCardSectionPreferences.showGradeDistribution` defaults to `false`.
+  • Verify `WorkoutMasksAndCardsSection.kt` renders subordinate switch `settings_workout_card_grade_distribution` under Zone Analysis in both Summary and Details sections when `showZoneAnalysis == true`.
+  • Verify `WorkoutMasksAndCardsSection.kt` strictly respects the `< 400` lines constraint (`TST-UI-377.5`).
+  5. *9-Language Localization & Parity Test (`TST-UI-453.5`, `TranslationParityTest.kt`)*:
+  • Verify 100% parity across all 9 supported locales for `aftermath_grade_zones_title` and `settings_workout_card_grade_distribution` with zero missing entries and zero decorative inline emojis.
+  6. *Clean-Room Regression Suite Execution (`TST-UI-453.6`)*:
   • Execute targeted package tests (`com.atrainingtracker.trainingtracker.ui.aftermath.zones.*`, `com.atrainingtracker.trainingtracker.ui.aftermath.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
 
 

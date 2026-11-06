@@ -94,42 +94,7 @@ fun WorkoutPhotoPreviewBottomSheet(
     AppModalBottomSheet(
         title = photo.caption?.takeIf { it.isNotBlank() } ?: stringResource(R.string.workout_photos_title),
         icon = Icons.Default.PhotoCamera,
-        onDismissRequest = onDismissRequest,
-        actions = {
-            OutlinedButton(
-                onClick = { showDeleteConfirm = true },
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error
-                ),
-                modifier = Modifier.weight(1f)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(text = stringResource(R.string.workout_photos_delete))
-            }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Button(
-                onClick = {
-                    onDismissRequest()
-                    onShareOverlay(photo)
-                },
-                modifier = Modifier.weight(1f)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Share,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(text = stringResource(R.string.workout_photos_share_overlay))
-            }
-        }
+        onDismissRequest = onDismissRequest
     ) {
         Column(
             modifier = Modifier
@@ -186,6 +151,46 @@ fun WorkoutPhotoPreviewBottomSheet(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Rule 73: Full-width stacked action buttons
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = {
+                        onDismissRequest()
+                        onShareOverlay(photo)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Share,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = stringResource(R.string.workout_photos_share_overlay))
+                }
+
+                OutlinedButton(
+                    onClick = { showDeleteConfirm = true },
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = stringResource(R.string.workout_photos_delete))
+                }
             }
         }
     }

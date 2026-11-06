@@ -60,8 +60,12 @@ data class ZoneTimeEntry(
     val zoneLabelResId: Int,
     val durationSec: Long,
     val percentage: Float,
-    val color: Color
-)
+    val color: Color,
+    val customBadgeLabel: String? = null
+) {
+    val badgeLabel: String
+        get() = customBadgeLabel ?: "Z$zoneIndex"
+}
 
 /**
  * Individual frequency bin for uniform linear marginal histograms on non-zoned telemetry and elevation graphs (REQ-UI-446).

@@ -711,10 +711,11 @@ Normalization (`WorkoutClusterEngine.normalizeName`) and hit count stripping (`W
 
 **Invariants**: Navigation route mapping, DataStore keys, slider clamping, and factory reset behavior MUST be preserved.
 
-### REQ-SET-075: Dedicated Workout Route Clustering Section in Advanced Settings, Single Source of Truth, and Modularity Preservation [Verified]
-- **Tests**: `ClusterTuningSection.kt`, `WorkoutClustersTabsScreen.kt`, `WorkoutClustersScreen.kt`, `ClusterTuningContent.kt`, `AdvancedTuningAccordion.kt`, `AdvancedTuningScreen.kt`, `TuningPreferencesDataStore.kt`
-- **Implementation**: Consolidate workout route clustering algorithmic parameters into Advanced Settings as a dedicated accordion section, eliminating code duplication, excising redundant header tuning from favorite routes, and providing recalculate action with confirmation dialog.
-- **Rationale**: The system SHALL consolidate the canonical configuration of workout route clustering algorithmic parameters into Advanced Settings (`AdvancedTuningScreen.kt` / `AdvancedTuningDialog.kt`) as a dedicated modular accordion section, adhering to the Single Source of Truth and DRY principles (Rule 36), and SHALL preserve existing parameter ranges, keys, defaults, and modularity bounds (ATT-3355, amended by ATT-3452, amending `REQ-SET-010` and `REQ-SET-065`, superseding `REQ-SET-014`, referencing `REQ-UI-357`):
+### REQ-SET-075: Dedicated Workout Route Clustering Section in Advanced Settings, Configurable Score Threshold, Single Source of Truth, and Modularity Preservation [Verified]
+- **Tests**: `ClusterTuningSection.kt`, `WorkoutClustersTabsScreen.kt`, `WorkoutClustersScreen.kt`, `ClusterTuningContent.kt`, `AdvancedTuningAccordion.kt`, `AdvancedTuningScreen.kt`, `TuningPreferencesDataStore.kt`, `WorkoutClusterEngineTest.kt`
+- **Tickets**: `ATT-3355`, `ATT-3452`, `ATT-5559`
+- **Implementation**: Consolidate workout route clustering algorithmic parameters into Advanced Settings as a dedicated accordion section, provide configurable cluster assignment score threshold (default 1.2, range 0.5..2.5), eliminate code duplication, excise redundant header tuning from favorite routes, and provide recalculate action with confirmation dialog.
+- **Rationale**: The system SHALL consolidate the canonical configuration of workout route clustering algorithmic parameters into Advanced Settings (`AdvancedTuningScreen.kt` / `AdvancedTuningDialog.kt`) as a dedicated modular accordion section, adhering to the Single Source of Truth and DRY principles (Rule 36), and SHALL provide a user-configurable cluster assignment score threshold (default 1.2f, range 0.5f..2.5f, step 0.1f) in `ClusterTuningContent.kt` and `PreImportTuningBottomSheet` (ATT-3355, amended by ATT-3452 and ATT-5559, amending `REQ-SET-010` and `REQ-SET-065`, superseding `REQ-SET-014`, referencing `REQ-UI-357`):
 1. *Modular Accordion Section Architecture (`ClusterTuningSection.kt`, `AdvancedTuningAccordion.kt`)*:
 • The system SHALL add `ROUTE_CLUSTERING` to `TuningSection` enum in `AdvancedTuningAccordion.kt`, positioned in Phase C (History, Routes & Post-Workout) between `WORKOUT_MASKS_CARDS` and `AFTERMATH_ANALYSIS`.
 • The system SHALL create `ClusterTuningSection.kt` under `ui.settings.tuning.categories`, hosting the clustering parameters UI.
@@ -724,42 +725,47 @@ Normalization (`WorkoutClusterEngine.normalizeName`) and hit count stripping (`W
 • The shared UI controls and validation logic SHALL be encapsulated in `ClusterTuningContent.kt` (< 250 lines), shared identically with zero code or layout duplication.
 • The cluster tuning settings icon button (`onTuneClick`) SHALL be completely removed from `WorkoutClustersTabsScreen.kt`, and `ClusterTuningScreen.kt` and `isTuning` state handling SHALL be excised from `WorkoutClustersScreen.kt` in favor of centralized Advanced Settings.
 • `ImportBackupTabsScreen.kt` SHALL consume `ClusterTuningContent` for pre-import sensitivity adjustments.
-3. *DataStore, Defaults & Atomic Factory Reset Integration*:
-• `TuningPreferencesDefaults` SHALL define defaults: `CLUSTER_TOL_ENDPOINTS = 200f`, `CLUSTER_TOL_APEX = 400f`, `CLUSTER_TOL_DISTANCE = 0.20f`, `CLUSTER_TOL_ALTITUDE_POS = 400f`, `CLUSTER_USE_SPORT_TYPE = true`, `CLUSTER_USE_ALTITUDE_POS = true`.
-• `TuningConfig` SHALL incorporate these 6 clustering parameters.
-• `TuningPreferencesDataStore` SHALL manage persistence, updating both DataStore and `TrainingApplication.cSharedPreferences` synchronously on save to ensure background services (`WorkoutClusterEngine`, `LegacyImportEngine`, `TrackerService`) read updated values immediately.
-• Invoking "Auf Standardwerte zurücksetzen" (Reset to Defaults) in Advanced Settings SHALL atomically reset clustering tolerances to their canonical factory defaults.
+3. *DataStore, Defaults & Atomic Factory Reset Integration (ATT-5559)*:
+• `TuningPreferencesDefaults` SHALL define defaults: `CLUSTER_TOL_ENDPOINTS = 200f`, `CLUSTER_TOL_APEX = 400f`, `CLUSTER_TOL_DISTANCE = 0.20f`, `CLUSTER_TOL_ALTITUDE_POS = 400f`, `CLUSTER_USE_SPORT_TYPE = true`, `CLUSTER_USE_ALTITUDE_POS = true`, and `CLUSTER_SCORE_THRESHOLD = 1.2f` (range `0.5f..2.5f`, step `0.1f`, ATT-5559).
+• `TuningConfig` SHALL incorporate these 7 clustering parameters.
+• `TuningPreferencesDataStore` SHALL manage persistence, updating both DataStore and `TrainingApplication.cSharedPreferences` (`SP_CLUSTER_SCORE_THRESHOLD = "cluster_score_threshold"`, with `getClusterScoreThreshold()` and `setClusterScoreThreshold(float)`) synchronously on save to ensure background services (`WorkoutClusterEngine`, `LegacyImportEngine`, `TrackerService`) read updated values immediately.
+• Invoking "Auf Standardwerte zurücksetzen" (Reset to Defaults) in Advanced Settings SHALL atomically reset clustering tolerances and the score threshold to their canonical factory defaults.
 4. *Dedicated Recalculate Action, Material 3 Confirmation Guard & Concurrency Isolation (ATT-3452)*:
 • `ClusterTuningSection.kt` SHALL host a dedicated "Recalculate All Clusters" button (`R.string.cluster_tuning_recalculate_button`).
 • Tapping the button opens a modal Material 3 confirmation `AlertDialog` (`containerColor = MaterialTheme.colorScheme.surface`, `tonalElevation = 0.dp`) displaying `R.string.cluster_tuning_warning` with high-contrast error confirmation action and cancel dismissal.
 • Recalculation executes asynchronously via singleton `WorkoutClusterRepository.getInstance(context).recalculateClustersWithProgress()`, decoupled from UI Composable lifecycles.
 • While active (`migrationStatus != null`), the recalculate button is disabled and displays `CircularProgressIndicator` alongside `R.string.cluster_tuning_recalculating`, and all tolerance sliders are disabled (`enabled = false`) to prevent concurrent modification.
 • Process-death recovery is guaranteed by the self-healing bootstrapper in `WorkoutClusterRepository.refreshClusters()`.
-5. *Preservation of Invariants & Modularity*:
-• All 6 parameters, SharedPreferences keys (`clusterTolEndpoints`, `clusterTolApex`, `clusterTolDistance`, `clusterTolAltitudePos`, `clusterUseSportType`, `clusterUseAltitudePos`), default values, and range validations MUST NOT be altered.
+5. *Cluster Assignment Score Threshold & Master Sensitivity Coupling (ATT-5559)*:
+• `WorkoutClusterEngine.suggestCluster` SHALL evaluate candidate clusters against `scoreThreshold` (`it.second < scoreThreshold`), resolving the threshold dynamically via `runCatching { TrainingApplication.getClusterScoreThreshold().toDouble() }.getOrDefault(1.2)` to ensure static mock resilience in testing.
+• `ClusterTuningContent.kt` SHALL incorporate `clusterScoreThreshold` into the derived master sensitivity slider calculation, mapping the threshold across its `0.5f..2.5f` range to normalize sensitivity.
+• `ClusterTuningContent.kt` SHALL render a dedicated `TuningSliderItem` for `clusterScoreThreshold` with localized title `R.string.cluster_tuning_score_threshold_label`, step `0.1f`, formatted value `String.format(locale, "%.1f", scoreThreshold)`, and helper text `R.string.cluster_tuning_score_threshold_helper` ("Lower = stricter matching · Higher = more tolerant").
+• `WorkoutClusterRepository.recalculateClustersAsync` SHALL accept and persist `scoreThreshold: Float? = null` alongside spatial tolerances prior to recalculation.
+6. *Preservation of Invariants & Modularity*:
+• All 7 parameters, SharedPreferences keys (`clusterTolEndpoints`, `clusterTolApex`, `clusterTolDistance`, `clusterTolAltitudePos`, `clusterUseSportType`, `clusterUseAltitudePos`, `cluster_score_threshold`), default values, and range validations MUST NOT be altered.
 • Modularity invariant: Every source file in `ui.settings.tuning` MUST remain strictly < 400 lines of code (`AdvancedTuningModularityTest`).
 • 100% 9-language translation parity maintained across EN, DE, ES, FR, IT, JA, NL, PL, PT.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Amends `REQ-SET-010` (*Tuning Parameters UI*) and `REQ-SET-065` (*Altitude Extrema-Aware 3D Route Clustering & Database Migration*), supersedes `REQ-SET-014` (*Auto-Dismiss Tuning UI*), integrating with `REQ-UI-357` (*Dedicated Full-Screen Advanced Settings Screen Architecture*).
-2. *Historical Origin & Commit Trace*: Sprint 2026-40.2 (`REQ-SET-010`, `REQ-SET-014`), Sprint 2026-40.5 (`ATT-502` / `ATT-503`, `REQ-SET-065`), Sprint 2026-40.8 (`REQ-UI-222`), Sprint 2026-42.1 (`ATT-3344`, `REQ-UI-357`; `ATT-3355`, `REQ-SET-075`).
-3. *Root Reason for Existing Formulation*: Clustering tolerances originally resided inside a standalone screen (`ClusterTuningScreen.kt`) opened from an overflow menu in `WorkoutClustersScreen.kt`. In ATT-3355, the controls were consolidated into Advanced Settings, but the legacy header button in favorite routes was temporarily retained, leaving dual competing paths and omitting full recalculation in Advanced Settings. ATT-3452 eliminates the redundant header trigger and unifies recalculation with a Material 3 confirmation guard.
-4. *Preservation of Core Invariants*: Parameter keys, storage semantics in `TrainingApplication.java`, value ranges, modularity < 400 lines, and 9-language translation parity remain 100% strictly intact.
+1. *Original Requirement ID & Target*: Amends `REQ-SET-010` (*Tuning Parameters UI*), `REQ-SET-065` (*Altitude Extrema-Aware 3D Route Clustering & Database Migration*), `REQ-SET-075` (*Dedicated Route Clustering Section in Advanced Settings*), and `REQ-MIG-012` (*Pre-Import Sensitivity Tuning*), supersedes `REQ-SET-014` (*Auto-Dismiss Tuning UI*), integrating with `REQ-UI-357` (*Dedicated Full-Screen Advanced Settings Screen Architecture*).
+2. *Historical Origin & Commit Trace*: Sprint 2026-40.2 (`REQ-SET-010`, `REQ-SET-014`), Sprint 2026-40.5 (`ATT-502` / `ATT-503`, `REQ-SET-065`), Sprint 2026-40.8 (`REQ-UI-222`), Sprint 2026-42.1 (`ATT-3344`, `REQ-UI-357`; `ATT-3355`, `REQ-SET-075`), Sprint 2026-42.2 (`ATT-3452`), Sprint 2026-45.8 (`ATT-5559`).
+3. *Root Reason for Existing Formulation*: Route clustering originally hardcoded an internal candidate similarity cutoff of `1.0` in `WorkoutClusterEngine.kt`, established during initial route clustering implementation when routes were assumed to be near-identical traces. In practice, slight GPS jitter, elevation variations, or differing recording devices on identical real-world courses regularly produce composite similarity scores between 1.01 and 1.20, causing false-negative cluster rejections and redundant manual naming dialogs. ATT-5559 introduces an overarching configurable score threshold (default 1.2f, range 0.5f..2.5f) to accommodate real-world GPS variance without altering individual component tolerance geometries.
+4. *Preservation of Core Invariants*: Parameter keys, storage semantics in `TrainingApplication.java`, value ranges, spatial normalization bounds, sport type firewall (`REQ-SET-064`), 3D altitude extrema logic (`REQ-SET-065`), modularity < 400 lines, and 9-language translation parity remain 100% strictly intact.
 
 **Acceptance Criteria (Given-When-Then)**:
-• *Given* the athlete browsing Advanced Settings ("Erweiterte Einstellungen"),
-• *When* viewing the category list,
-• *Then* a dedicated section "Routen- & Workout-Clustering" (`ROUTE_CLUSTERING`) appears in Phase C with an active subtitle summarizing current tolerances and toggles.
-• *Given* the athlete modifying clustering tolerances in Advanced Settings,
-• *When* tapping Save,
-• *Then* the values are persisted to DataStore and SharedPreferences and immediately take effect in subsequent workout clustering and import operations.
-• *Given* the athlete tapping "Recalculate All Clusters" in Advanced Settings,
-• *When* tapped,
-• *Then* a modal confirmation `AlertDialog` appears warning of cluster wiping before any recalculation starts.
-• *Given* an active recalculation in progress,
-• *Then* recalculation runs in the repository coroutine scope decoupled from UI navigation, the recalculate button and sliders are disabled with progress feedback, and self-healing bootstrap protects against process death.
-• *Given* an athlete viewing Favorite Routes (`WorkoutClustersTabsScreen`),
-• *Then* zero cluster tuning buttons are present in the top app bar.
+• *Given* the athlete browsing Advanced Settings ("Erweiterte Einstellungen") or Pre-Import Tuning,
+• *When* viewing the route clustering parameters,
+• *Then* a dedicated slider for "Cluster-Zuordnung Schwellenwert" (`cluster_tuning_score_threshold_label`) is rendered with range `0.5` to `2.5`, step `0.1`, default `1.2`, and directional helper text ("Lower = stricter matching · Higher = more tolerant").
+• *Given* an athlete adjusting the cluster score threshold,
+• *When* saving or completing pre-import tuning,
+• *Then* `clusterScoreThreshold` is persisted to DataStore and SharedPreferences (`cluster_score_threshold`) and immediately utilized during workout clustering and import matching.
+• *Given* an imported or completed workout with composite cluster similarity score of `1.15`,
+• *When* evaluated by `WorkoutClusterEngine.suggestCluster` with default threshold `1.2`,
+• *Then* the workout SHALL be matched to the existing cluster candidate instead of being rejected as unclustered.
+• *Given* an active cluster recalculation in progress,
+• *Then* recalculation runs in the repository coroutine scope decoupled from UI navigation, the recalculate button and all sliders (including score threshold) are disabled with progress feedback.
+• *Given* an athlete invoking "Auf Standardwerte zurücksetzen" (Reset to Defaults),
+• *Then* `clusterScoreThreshold` is reset to its canonical default of `1.2f`.
 
 **Invariants**: Parameter ranges, DataStore keys, warning card, factory reset, zero tonal elevation, 400-line file limit, and 9-language localization parity MUST NOT be broken.
 
@@ -920,13 +926,13 @@ Normalization (`WorkoutClusterEngine.normalizeName`) and hit count stripping (`W
 • All existing 15+ call sites across `NavigationSection`, `SensorsGpsFilterSection`, `CockpitTypographySection`, `AmoledBatterySaverSection`, `SensorSearchTuningSection`, and `AftermathAnalysisSection` SHALL retain 100% backward and binary compatibility without signature regressions or source modifications.
 2. *Standardization of `ClusterTuningContent.kt`*:
 • The system SHALL replace hand-crafted `Row` + `Switch` blocks for `showDetails`, `useSportTypeForClustering`, and `useAltitudePosForClustering` with canonical `TuningToggleItem` composables.
-• The system SHALL replace bespoke tolerance slider blocks (`endpointTolerance`, `apexTolerance`, `distanceTolerance`, `altitudePositionTolerance`) with direct invocations of `TuningSliderItem`.
+• The system SHALL replace bespoke tolerance slider blocks (`endpointTolerance`, `apexTolerance`, `distanceTolerance`, `altitudePositionTolerance`, and `clusterScoreThreshold`, ATT-5559) with direct invocations of `TuningSliderItem`.
 • The legacy `TuningSlider` composable in `ClusterTuningContent.kt` SHALL be marked with `@Deprecated` containing a fully-qualified `ReplaceWith(expression = "TuningSliderItem(title = title, valueText = valueText, helperText = \"\", defaultText = \"\", value = value, onValueChange = onValueChange, valueRange = valueRange, steps = steps, enabled = enabled, onValueChangeFinished = onValueChangeFinished)", imports = ["com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSliderItem"])`.
 3. *Multi-Consumer & State Propagation Support*:
 • All consumers of `ClusterTuningContent` (`ClusterTuningScreen.kt`, `ClusterTuningSection.kt`, and `ImportBackupTabsScreen.kt`) SHALL inherit unified visual rhythm, typography, and switch scaling (`scale(0.8f)`).
 • The `enabled` state (e.g. `!isRecalculating`) SHALL cleanly propagate down to all toggles and sliders. The altitude position tolerance slider SHALL be gated to `enabled = enabled && useAltitudePosForClustering`.
 4. *Preservation of System Invariants*:
-• Tolerance bounds (`10..500f`, `0.01..0.2f`), master sensitivity calculation, recalculation domain locking (`isRecalculatingLock`), persistence on drag completion (`onValueChangeFinished`), and 100% full-suite unit test pass rate MUST be strictly preserved.
+• Tolerance bounds (`10..500f`, `0.01..0.2f`), cluster score threshold bounds (`0.5f..2.5f`, ATT-5559), master sensitivity calculation, recalculation domain locking (`isRecalculatingLock`), persistence on drag completion (`onValueChangeFinished`), and 100% full-suite unit test pass rate MUST be strictly preserved.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
 1. *Original Requirement ID & Target*: Net-new requirement (`REQ-SET-077`). Complements and standardizes implementation of `REQ-SET-075` (*Centralized Route Clustering Tuning Controls via ClusterTuningContent*) and `REQ-UI-262` (*Standardized Advanced Tuning Form Controls & Parameter Presentation*). Targets `TuningFormControls.kt`, `ClusterTuningContent.kt`, `ClusterTuningScreen.kt`, and `ClusterTuningSection.kt`.
@@ -1367,24 +1373,38 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 **Invariants**: Core tracking, telemetry processing, local file exports, and database pairing persistence across app updates MUST NOT be compromised.
 
 ### REQ-SET-084: One-Tap Swap-or-Upgrade Dialog on 3rd Paired Device (REQ-MON-002) [Verified]
-- **Tests**: `TST-SET-084` | **Tickets**: `ATT-51`, `ATT-5399`, `ATT-5398`
-- **Implementation**: `DeviceListViewModel.kt`, `SwapOrUpgradeDialog.kt`, `KeepTwoSensorsBottomSheet.kt`, `DeviceDataRepository.kt`
+- **Tests**: `TST-SET-084` | **Tickets**: `ATT-51`, `ATT-5399`, `ATT-5398`, `ATT-5469`, `ATT-5470`, `ATT-5490`
+- **Implementation**: `SensorQuotaReconciliationManager.kt`, `DeviceListViewModel.kt`, `ControlTrackingViewModel.kt`, `DeviceManager.java`, `ATrainingTrackerApp.kt`, `MainActivityWithNavigation.kt`, `SwapOrUpgradeDialog.kt`, `KeepTwoSensorsBottomSheet.kt`, `DeviceDataRepository.kt`
 - **Rationale**: Ensure athletes are never blocked by a hard paywall when adding sensors. When attempting to pair a 3rd device in Free tier, athletes can easily unpair a currently active device with a single tap or upgrade to Pro via "Pay what you want". Furthermore, athletes who downgrade from Supporter to Free tier with $> 2$ paired sensors are guided through a non-destructive reconciliation flow to keep 2 sensors.
 - **Description**:
 1. *Quota Interception (`REQ-SET-084.1`)*:
 • When a Free tier athlete (`!isProActive()`) attempts to pair a device that would increase total paired devices beyond `MAX_FREE_PAIRED_DEVICES = 2`, `DeviceListViewModel` SHALL intercept the action and display `SwapOrUpgradeDialog` without changing database pairing state.
 2. *Smart Recommendation Preselection (`REQ-SET-084.2`)*:
-• The dialog SHALL present currently paired devices for 1-tap unpairing, preselecting `ALTITUDE_FROM_PRESSURE` for outdoor profiles (preserving GPS) and `SPEED_AND_LOCATION_GPS` for indoor profiles.
+• In `determineRecommendedUnpairDeviceId`, the system SHALL recommend unpairing `ALTITUDE_FROM_PRESSURE` first if paired. Next, if both `SPEED_AND_LOCATION_GOOGLE_FUSED` and `SPEED_AND_LOCATION_GPS` are paired, it SHALL recommend unpairing `SPEED_AND_LOCATION_GPS` (so Google Fused is retained). Otherwise, it SHALL fall back to the first paired device in list order.
 3. *Atomic Swap Execution (`REQ-SET-084.3`)*:
 • Tapping "Swap" SHALL unpair the selected existing device and pair the new candidate device in a single database operation, maintaining total paired devices $\le 2$.
 4. *Direct Upgrade Path (`REQ-SET-084.4`)*:
 • The dialog SHALL offer a prominent "Unlock Unlimited Sensors (Pay What You Want)" action navigating directly to `SupporterScreen`.
-5. *Subscription Downgrade Sensor Quota Reconciliation (`REQ-SET-084.5`)*:
-• When an athlete returns to Free tier (`!isProActive()`) with $> 2$ paired sensors in `Devices.db` while not actively recording (`!isTracking()`), `DeviceListViewModel` SHALL present a Material 3 reconciliation bottom sheet (`KeepTwoSensorsBottomSheet`) to reconcile down to 2 active sensors.
-• The sheet SHALL present all currently paired devices, preselect 2 sensible defaults (`SPEED_AND_LOCATION_GPS` + `ALTITUDE_FROM_PRESSURE` or 2 most recently paired), permit selection of at most 2 active sensors, and offer a 1-tap shortcut to `SupporterScreen`.
+5. *Subscription Downgrade Sensor Quota Reconciliation & Global Triggers (`REQ-SET-084.5`)*:
+• When an athlete returns to Free tier (`!isProActive()`) with $> 2$ paired sensors in `Devices.db` while not actively recording (`!isTracking()`), the centralized reconciliation manager (`SensorQuotaReconciliationManager`) SHALL present `KeepTwoSensorsBottomSheet` (`AppModalBottomSheet`) globally across the application (`ATrainingTrackerApp`), not solely within `DeviceListViewModel` / `DevicesTabbedScreen`.
+• Reconciliation SHALL be automatically triggered on application start / resume (`MainActivityWithNavigation.onResume`), upon displaying the tracking cockpit (`TrackingTabsScreen` / `SensorGridScreen`), upon reactive transition to Free tier (`!isProActive()`), and prior to dispatching sensor search or workout start in `ControlTrackingViewModel`.
+• The sheet SHALL present all currently paired devices, preselect 2 sensible defaults via `SensorQuotaReconciliationManager.determineDefaultKeepDeviceIds`, permit selection of at most 2 active sensors, and offer a 1-tap shortcut to `SupporterScreen`:
+  a. *Slot 1 (Location)*: If both `SPEED_AND_LOCATION_GOOGLE_FUSED` and `SPEED_AND_LOCATION_GPS` are paired, preselect `SPEED_AND_LOCATION_GOOGLE_FUSED`. If only one of the two location sensors is paired, preselect that single paired location sensor.
+  b. *Slot 2 (Active Remote Sensor)*: Preselect the most recently active remote sensor (`protocol != Protocol.SMARTPHONE`), prioritized by `isConnected == true` first, most recent parsed `lastSeen` timestamp second, and original list order third.
+  c. *Fallback*: If $< 2$ sensors are selected (e.g. no remote sensor paired), fall back to `ALTITUDE_FROM_PRESSURE` and remaining paired devices in order.
 • Confirming selection (or dismissing the sheet, applying the 2 defaults to prevent quota bypass) SHALL set `PAIRED = 0` on all unselected devices in `Devices.db`. Unselected sensors MUST NOT be deleted; all custom names, calibration factors, wheel circumferences, and equipment links MUST remain 100% intact.
 6. *Multi-Sensor Swap Hardening (`REQ-SET-084.6`)*:
 • In Free tier, `executeSwapAndPair()` and `DeviceDataRepository` SHALL ensure that even if more than 2 sensors were paired prior to the swap, all excess sensors beyond the newly paired candidate and retained sensor are set to `PAIRED = 0`, guaranteeing total paired count is strictly $\le 2$.
+7. *BANALService Free Quota Hardware Connection Clamping (`REQ-SET-084.7`)*:
+• In `DeviceManager.startSearchForPairedDevices()` / remote device creation, the system SHALL enforce defense-in-depth hardware connection clamping: on Free tier (`!isProActive()`), connecting remote hardware devices SHALL be clamped to `MAX_FREE_PAIRED_DEVICES = 2` to prevent downgraded athletes from connecting excess sensors even if UI reconciliation has not yet been processed.
+8. *Rule 73 Stacked Action Button Ergonomics (`REQ-SET-084.8`)*:
+• In `SwapOrUpgradeDialog.kt`, action controls SHALL follow the Rule 73 stacked button layout for `AppModalBottomSheet`: primary action (*'Tauschen & Koppeln'*, `Button`) and secondary upgrade CTA (*'Unbegrenzte Sensoren freischalten'*, `FilledTonalButton`) SHALL be laid out as vertically stacked full-width buttons (`Modifier.fillMaxWidth()`, `8.dp` spacing) at the bottom of the sheet content column, leaving only a single full-width dismiss action (*'Abbrechen'*, `TextButton`) in `actions`, eliminating horizontal button crowding and broken word wrapping across all 9 locales (Rule 73, ATT-5470).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-SET-084` (`REQ-SET-084.2`, `REQ-SET-084.5`) targeting `SensorQuotaReconciliationManager.kt` and `DeviceListViewModel.kt`.
+2. *Historical Origin & Commit Trace*: `ATT-51` (Initial Free-tier quota), `ATT-5469` (`29251f2d`, global reconciliation manager), refined in `ATT-5490` (Sprint `2026-45.8`).
+3. *Root Reason for Existing Formulation*: GPS and Barometer were historically assumed to be the default smartphone baseline before external remote sensor activity tracking and Google Fused prioritization (`ATT-5491`) were integrated.
+4. *Preservation of Core Invariants*: Free-tier quota ($\le 2$ sensors) is strictly preserved; unselected sensors remain in SQLite with custom names and calibration intact; Barometer remains fallback when no remote sensors are paired.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* a Free tier athlete with 2 paired devices attempting to pair a heart rate monitor,
@@ -1393,9 +1413,18 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • *Given* the Swap dialog with `ALTITUDE_FROM_PRESSURE` preselected,
 • *When* the athlete taps "Swap & Pair",
 • *Then* `ALTITUDE_FROM_PRESSURE` is unpaired, the heart rate monitor is paired, and total paired devices equals 2.
+• *Given* an athlete downgraded to Free tier with both Google Fused and GPS paired plus remote sensors,
+• *When* `KeepTwoSensorsBottomSheet` is evaluated,
+• *Then* Google Fused and the most recently active remote sensor are preselected as the 2 defaults.
+• *Given* an athlete downgraded to Free tier with only GPS (or only Google Fused) paired alongside remote sensors,
+• *When* `KeepTwoSensorsBottomSheet` is evaluated,
+• *Then* that single paired location sensor is preserved alongside the most recently active remote sensor.
+• *Given* an athlete downgraded to Free tier with no remote sensors paired,
+• *When* `KeepTwoSensorsBottomSheet` is evaluated,
+• *Then* `ALTITUDE_FROM_PRESSURE` is preselected as the second default.
 • *Given* an athlete downgraded to Free tier with $> 2$ paired sensors and not actively recording,
-• *When* the sensor list screen is opened,
-• *Then* the Keep-2-Sensors reconciliation bottom sheet is displayed with 2 sensible defaults preselected.
+• *When* the app starts, the tracking screen is displayed, or sensor search / tracking is requested,
+• *Then* the Keep-2-Sensors reconciliation bottom sheet is displayed globally with 2 sensible defaults preselected, and hardware connections are clamped to at most 2 paired devices.
 • *Given* the reconciliation bottom sheet,
 • *When* the athlete confirms selection or dismisses the sheet,
 • *Then* all unselected sensors are marked unpaired in `Devices.db` with data intact, and total paired count equals 2.
@@ -1490,8 +1519,8 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 **Invariants**: Release builds must never permit arbitrary tier override; ProFeatureManager resolution must be thread-safe.
 
 ### REQ-SET-088: Supporter N+1 Garage Detector & Upgrade Prompts (REQ-MON-006) [Verified]
-- **Tests**: `TST-SET-088`, `TST-LOC-001` | **Tickets**: `ATT-5299`, `ATT-5400`, `ATT-5399`
-- **Implementation**: `GarageLeagueDetector.kt`, `GarageDetectorDialog.kt`, `EquipmentViewModel.kt`, `DeviceListViewModel.kt`, `SettingsDataStore.kt`, `SupporterDebugSection.kt`
+- **Tests**: `TST-SET-088`, `TST-LOC-001` | **Tickets**: `ATT-5299`, `ATT-5400`, `ATT-5399`, `ATT-5468`
+- **Implementation**: `GarageLeagueDetector.kt`, `GarageDetectorDialog.kt`, `GarageUpgradeNudgeDialog.kt`, `EquipmentViewModel.kt`, `DeviceListViewModel.kt`, `SettingsDataStore.kt`, `SupporterDebugSection.kt`
 - **Rationale**: Athlete equipment expansion reflects escalating engagement. When an athlete adds bikes, shoes, or pairs additional sensors reaching enthusiast ("Gold") or world-class ("Diamond") scale, the system detects their qualified garage league and presents a humorous, non-blocking "N+1 Cyclist Garage" dialog inviting an upgrade to Gold Pro-Supporter (50 € / year) or Diamond Sponsor (100 € / year) with the matching plan pre-selected, while preventing repeated prompt spam and honoring tier monotonicity.
 - **Description**:
 1. *Garage League Qualification Thresholds (`REQ-SET-088.1`)*:
@@ -1518,6 +1547,8 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • The dialog SHALL offer a 1-tap upgrade action navigating to `SupporterScreen` (`NavRoutes.SUPPORTER`) with the recommended plan pre-selected (`gold-yearly` for Gold League, `diamond-yearly` for Diamond League), and a secondary "Später / Weiter zum Training" dismiss action.
 6. *Diagnostic Debug Preview Triggers (`REQ-SET-088.6`)*:
 • `SupporterDebugSection` SHALL expose 1-tap test preview buttons for Gold and Diamond N+1 garage dialogs, and a reset button clearing both nudge flags in DataStore, strictly enclosed within `if (BuildConfig.DEBUG)`.
+7. *Rule 73 Stacked Action Button Ergonomics (`REQ-SET-088.7`)*:
+• In `GarageUpgradeNudgeDialog.kt`, action controls SHALL follow the Rule 73 stacked button layout for `AppModalBottomSheet`: the primary upgrade CTA (*'Upgrade auf Gold Pro / Diamond Sponsor'*, `Button(modifier = Modifier.fillMaxWidth())`) SHALL be placed as a full-width button at the bottom of the sheet content column, leaving only a single full-width dismiss action (*'Später / Weiter zum Training'*, `TextButton(modifier = Modifier.fillMaxWidth())`) in `actions`, eliminating horizontal button crowding and broken 2–3 line word wrapping across all 9 locales (Rule 73, ATT-5468).
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete on Free or Silver tier with 2 bikes,

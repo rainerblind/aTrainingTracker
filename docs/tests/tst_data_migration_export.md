@@ -231,12 +231,12 @@
 ### TST-EXP-017: **Decommission Obsolete Runkeeper and TrainingPeaks Legacy Exporters, Activities, and Unused Apache HttpClient Dependencies Verification** [Verified]
 - **Requirement(s)**: `REQ-EXP-020`
 - **Component**: **Decommission Obsolete Runkeeper and TrainingPeaks Legacy Exporters, Activities, and Unused Apache HttpClient Dependencies Verification**
-- **Jira**: ``ATT-3551``
+- **Jira**: `ATT-3551`, `ATT-5561`
 - **Test Description**:
   1. *Static Contract Tests (`LegacyHttpClientPurgeContractTest.kt`)*:
   • Verify 0 occurrences of `org.apache.http` across all `.kt` and `.java` source files in `app/src/main/java/`.
   • Verify 0 occurrences of `org.apache.httpcomponents` dependencies in `app/build.gradle`.
-  • Verify 0 occurrences of `org.apache.http.legacy` in `app/src/main/AndroidManifest.xml`.
+  • Verify presence of `<uses-library android:name="org.apache.http.legacy" android:required="false" />` in `app/src/main/AndroidManifest.xml` preceding Google Maps API key declaration.
   • Verify `<activity>` declarations for `RunkeeperGetAccessTokenActivity` and `TrainingpeaksGetAccessTokenActivity` are absent from `AndroidManifest.xml`.
   • Verify deleted legacy classes (`RunkeeperGetAccessTokenActivity.java`, `RunkeeperTestActivity.java`, `TrainingpeaksGetAccessTokenActivity.java`, `BaseGetAccessTokenActivity.java`, `RunkeeperUploader.java`, `TrainingPeaksUploader.java`, `RunkeeperFileWriter.java`) do not exist on disk.
   • Verify `SportTypeDatabaseManager.SportType.RUNKEEPER_NAME` remains present to preserve SQLite database table schema backward compatibility.
@@ -432,7 +432,7 @@
 - **Requirement(s)**: `REQ-MIG-025`
 - **Component**: **TCX Import Leave Unclustered Integrity Verification**
 - **Jira**: ``ATT-741``
-- **Test Description**: 1. Construct a spatial workout fixture where `suggestCluster()` finds no existing cluster match. 2. Simulate user selection of "Leave Unclustered" (`Pair(null, null)`). 3. Verify `LegacyImportEngine` leaves `WorkoutSummaries.CLUSTER_ID = -1L`. 4. Trigger `WorkoutRepository.reloadWorkoutData()`. 5. Verify `WorkoutClusterEngine.onWorkoutFinished()` does NOT create an auto-generated fallback cluster, does NOT assign any cluster, and does NOT mutate `WorkoutSummaries.CLUSTER_ID` (it remains `-1L`). 6. Verify the workout name does NOT become "Workout at [date]" / "Einheit bei [date]". 7. Verify the workout is queryable under the Unclustered tab (`clusterId == -1L`).
+- **Test Description**: 1. Construct a spatial workout fixture where `suggestCluster()` finds no existing cluster match. 2. Simulate user selection of "Leave Unclustered" (`ClusterDecision(null, null, customWorkoutName)`). 3. Verify `LegacyImportEngine` leaves `WorkoutSummaries.CLUSTER_ID = -1L`. 4. Trigger `WorkoutRepository.reloadWorkoutData()`. 5. Verify `WorkoutClusterEngine.onWorkoutFinished()` does NOT create an auto-generated fallback cluster, does NOT assign any cluster, and does NOT mutate `WorkoutSummaries.CLUSTER_ID` (it remains `-1L`). 6. Verify the workout name does NOT become "Workout at [date]" / "Einheit bei [date]". 7. Verify the workout is queryable under the Unclustered tab (`clusterId == -1L`). 8. Verify that when `ClusterNamingDialog` resolves an unclustered or clustered workout with an edited `customWorkoutName`, `LegacyImportEngine` persists `customWorkoutName` to `WorkoutSummaries.WORKOUT_NAME` (ATT-5560).
 
 ### TST-MIG-023: **TCX Import Periods Aggregation & Self-Healing Sync** [Verified]
 - **Requirement(s)**: `REQ-MIG-026`
@@ -1971,10 +1971,12 @@
 ### TST-MIG-046: **Strava Bulk Export Archive Ingestion Pipeline, Bilingual CSV Metadata Enrichment, Transparent GZIP Decompression, Tolerant XML Deserialization, Equipment Sync, and Duplicate Re-Upload Prevention Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-MIG-048`
 - **Component**: `StravaBulkExportImporter.kt`, `StravaCsvParser.kt`, `LegacyImportEngine.kt`, `ImportBackupTabsScreen.kt`, `TrackpointModels.kt`, `EquipmentDbHelper.java`, `StravaUploadDbHelper.java`
-- **Jira**: `ATT-4957`
+- **Jira**: `ATT-4957`, `ATT-5471`
 - **Test Description**:
-  1. *Bilingual & Multi-Line RFC 4180 CSV Metadata Parser (`TST-MIG-046.1`, `StravaActivitiesCsvParserTest.kt`)*:
-  • Verify parsing of `activities.csv` with German headers (`Aktivitäts-ID`, `Dateiname`, `Name der Aktivität`, `Aktivitätsart`, `Aktivitätsbeschreibung`, `Hinweis zur Privatsphäre für Aktivitäten`, `Pendeln`, `Aktivitätsausrüstung`) and English headers (`Activity ID`, `Filename`, `Activity Name`, etc.).
+  1. *Language-Independent & Multi-Line RFC 4180 CSV Metadata Parser (`TST-MIG-046.1`, `StravaCsvParserTest.kt`)*:
+  • Verify parsing of `activities.csv` across German, English, and non-DE/EN Strava exports (French, Spanish, Japanese) via hybrid resolution (header aliases, filename pattern detection `^activities/.*`, and canonical fixed column indices).
+  • Verify gear extraction from `bikes.csv` and `shoes.csv` using fixed canonical column fallbacks (Col 0 Name, Col 1 Brand, Col 2 Model).
+  • Verify pruning of dead summary metric columns from `StravaActivityRow`.
   • Verify correct handling of multiline quoted descriptions containing commas, newlines, and escaped quotes (`""`).
   • Verify indexing and mapping of relative filenames (`activities/*.tcx.gz`, `*.fit.gz`, `*.gpx.gz`).
   2. *XML Leading Whitespace Sanitization & Trackpoint Models (`TST-MIG-046.2`, `TcxLeadingWhitespaceSanitizationTest.kt`)*:

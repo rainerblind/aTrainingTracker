@@ -654,24 +654,6 @@ fun DevicesTabbedScreen(
         )
     }
 
-    // Subscription Downgrade Keep-2-Sensors Reconciliation Bottom Sheet (REQ-SET-084.5)
-    val keepTwoSensorsEvent by listViewModel.keepTwoSensorsDialogEvent.collectAsState()
-    keepTwoSensorsEvent?.let { event ->
-        KeepTwoSensorsBottomSheet(
-            currentlyPairedDevices = event.currentlyPairedDevices,
-            defaultKeepDeviceIds = event.defaultKeepDeviceIds,
-            onConfirmSelection = { selectedIds ->
-                listViewModel.confirmKeepTwoSensors(selectedIds)
-            },
-            onNavigateToSupporter = {
-                onNavigateToSupporter?.invoke(null)
-            },
-            onDismiss = {
-                listViewModel.dismissKeepTwoSensors()
-            }
-        )
-    }
-
     // N+1 Garage Upgrade Nudge Dialog (REQ-SET-088.5)
     val garageNudgeEvent by listViewModel.garageNudgeEvent.collectAsState()
     garageNudgeEvent?.let { event ->

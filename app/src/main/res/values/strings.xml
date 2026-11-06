@@ -1279,6 +1279,8 @@
     <string name="cluster_tuning_apex_label">Apex (Max Displacement) Tolerance</string>
     <string name="cluster_tuning_distance_label">Distance Tolerance</string>
     <string name="cluster_tuning_altitude_pos_label">Altitude Position Tolerance</string>
+    <string name="cluster_tuning_score_threshold_label">Cluster Assignment Score Threshold</string>
+    <string name="cluster_tuning_score_threshold_helper">Lower = stricter matching · Higher = more tolerant</string>
     <string name="cluster_tuning_recalculate_button">Recalculate All Clusters</string>
     <string name="cluster_tuning_warning">Warning: Recalculating will wipe all learned cluster names and grouping, then rebuild them from history using these new parameters.</string>
     <string name="cluster_tuning_use_sport_type_label">Take Sport Type into account</string>
@@ -1342,6 +1344,7 @@
     <string name="cluster_naming__new_name_prompt">Or give it a new name:</string>
     <string name="cluster_naming__new_route_name_label">New Route Name</string>
     <string name="cluster_naming__leave_unclustered">Leave Unclustered</string>
+    <string name="cluster_naming__workout_name_label">Workout Name</string>
     <string name="migration_phase_label">Phase %1$d: %2$s</string>
 
     <string name="all_sports">+ all sports +</string>
@@ -1748,8 +1751,9 @@
     <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
     <string name="aftermath_power_zones_title">Power Zones</string>
 
-    <!-- Grade / Slope Distribution Card (ATT-5487 / REQ-UI-453) -->
-    <string name="aftermath_grade_zones_title">Grade Zones</string>
+    <!-- Grade / Slope Distribution Card (ATT-5487 / ATT-5563 / REQ-UI-453) -->
+    <string name="aftermath_grade_zones_title">Slope Distribution</string>
+    <string name="settings_workout_card_grade_distribution">Slope Distribution</string>
     <!-- Telemetry Frequency Histogram & Display Modes (ATT-1845 / ATT-3390 / REQ-UI-372) -->
     <string name="zone_mode_5_zones">5 Zones</string>
     <string name="zone_mode_columns">Columns</string>
@@ -2466,8 +2470,8 @@
     <string name="supporter_tier_free">Free</string>
     <string name="supporter_tier_pioneer">★ Pioneer ★</string>
     <string name="supporter_tier_bronze">Bronze Supporter</string>
-    <string name="supporter_tier_silver">Silver Supporter</string>
-    <string name="supporter_tier_gold">Gold Supporter</string>
+    <string name="supporter_tier_silver">Pro Supporter</string>
+    <string name="supporter_tier_gold">Pro+ Supporter</string>
     <string name="supporter_tier_diamond">Diamond Sponsor</string>
     <string name="supporter_screen_title">Pay What You Want</string>
     <string name="supporter_screen_subtitle" formatted="false">Support independent fitness tracking &amp; keep aTrainingTracker 100% ad-free.</string>
@@ -2493,8 +2497,8 @@
     <string name="keep_two_sensors_action_unlock">Unlock Unlimited Sensors</string>
     <string name="drawer_supporter">Supporter &amp; Pro</string>
     <string name="drawer_tier_diamond">◆ DIAMOND SPONSOR • Unlimited Sensors</string>
-    <string name="drawer_tier_gold">★ GOLD PRO-SUPPORTER</string>
-    <string name="drawer_tier_silver">★ SILVER PRO-SUPPORTER</string>
+    <string name="drawer_tier_gold">★ GOLD PRO+ SUPPORTER</string>
+    <string name="drawer_tier_silver">★ SILVER PRO SUPPORTER</string>
     <string name="drawer_tier_bronze">★ BRONZE SUPPORTER</string>
     <string name="drawer_tier_pioneer_with_year">★ Pioneer (Since %1$d)</string>
     <string name="drawer_tier_pioneer">★ Pioneer</string>
@@ -2508,6 +2512,7 @@
     <string name="milestone_workout_name_format">%1$d. %2$s: %3$s</string>
     <string name="jubilee_dialog_title">Congratulations on your %1$d. %2$s!</string>
     <string name="jubilee_dialog_message">You have completed %1$d %2$s sessions with aTrainingTracker! This is a remarkable athletic milestone.</string>
+    <string name="jubilee_feedback_prompt">Enjoying aTrainingTracker? Share your experience with a rating on Google Play, or send your feedback directly to Rainer via email.</string>
     <string name="jubilee_action_review">Rate on Google Play</string>
     <string name="jubilee_action_email_feedback">Feedback per E-Mail to Rainer</string>
     <string name="jubilee_supporter_appeal_title">Support 15+ Years of Indie Development</string>
@@ -2521,7 +2526,7 @@
     <!-- Supporter N+1 Garage Detector (ATT-5299 / REQ-SET-088) -->
     <string name="garage_detector_dialog_title_gold">Gold-League Garage Detected!</string>
     <string name="garage_detector_dialog_title_diamond">World-Class Diamond Garage!</string>
-    <string name="garage_detector_dialog_message_gold">Congratulations on your %1$d bikes, %2$d shoes, and %3$d sensors (incl. %4$d power meters) in aTrainingTracker! Your garage plays in the pro league, but your app status is %5$s. Treat your setup to Gold Pro-Supporter!</string>
+    <string name="garage_detector_dialog_message_gold">Congratulations on your %1$d bikes, %2$d shoes, and %3$d sensors (incl. %4$d power meters) in aTrainingTracker! Your garage plays in the pro league, but your app status is %5$s. Treat your setup to Gold Pro+ Supporter!</string>
     <string name="garage_detector_dialog_message_diamond">Incredible setup: %1$d bikes, %2$d shoes, and %3$d sensors (incl. %4$d power meters) in aTrainingTracker! Your garage plays in the world-class league, but your app status is %5$s. Match your fleet with Diamond Sponsor!</string>
     <string name="garage_detector_action_upgrade_gold">Upgrade to Gold Pro (50 € / yr)</string>
     <string name="garage_detector_action_upgrade_diamond">Upgrade to Diamond Sponsor (100 € / yr)</string>
@@ -2536,8 +2541,8 @@
     <string name="launcher_icon_standard">Standard</string>
     <string name="launcher_icon_pioneer">Pioneer Edition</string>
     <string name="launcher_icon_bronze">Bronze Supporter</string>
-    <string name="launcher_icon_silver">Silver Pro-Supporter</string>
-    <string name="launcher_icon_gold">Gold Pro-Supporter</string>
+    <string name="launcher_icon_silver">Silver Pro Supporter</string>
+    <string name="launcher_icon_gold">Gold Pro+ Supporter</string>
     <string name="launcher_icon_diamond">Diamond Sponsor</string>
     <string name="supporter_status_emblem_cd">Supporter Status Emblem</string>
     <string name="share_watermark_tracked_with">Tracked with aTrainingTracker</string>
@@ -2565,4 +2570,11 @@
     <string name="workout_photos_time_picker_subtitle">Photos taken during this workout</string>
     <string name="workout_photos_show_all">Show all photos</string>
     <string name="workout_photos_add_count">Add %1$d photos</string>
+    <!-- Workout Photos Settings (REQ-UI-414.6 / ATT-5474) -->
+    <string name="settings_workout_card_photos">Workout Photos</string>
+    <string name="settings_workout_photos_show_add_button">Show \"Add Photo\" Button</string>
+    <string name="settings_workout_photos_thumbnail_size">Photo Preview Size</string>
+    <string name="settings_workout_photos_size_small">Small</string>
+    <string name="settings_workout_photos_size_medium">Medium</string>
+    <string name="settings_workout_photos_size_large">Large</string>
 </resources>

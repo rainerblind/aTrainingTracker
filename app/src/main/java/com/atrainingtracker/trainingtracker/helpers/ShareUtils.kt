@@ -29,12 +29,14 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.Matrix
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.monetization.ProFeatureManager
 import com.atrainingtracker.trainingtracker.monetization.SupporterTier
+import com.atrainingtracker.trainingtracker.ui.branding.LauncherIconVariant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -201,6 +203,32 @@ internal fun ensureSoftwareBitmap(bitmap: Bitmap): Bitmap {
     } else bitmap
 }
 
+internal fun calculateAvailableWatermarkWidth(
+    totalWidth: Int,
+    margin: Float = 24f,
+    logoSize: Int = 80,
+    hasEmblem: Boolean = false,
+    emblemSize: Int = 56
+): Float {
+    val textStartX = margin + logoSize + 20f
+    val textEndX = if (hasEmblem) (totalWidth.toFloat() - margin - emblemSize - 16f) else (totalWidth.toFloat() - margin)
+    return (textEndX - textStartX).coerceAtLeast(0f)
+}
+
+internal fun calculateWatermarkScaledTextSize(
+    measuredWidth: Float,
+    availableWidth: Float,
+    baseTextSize: Float = 38f,
+    minTextSize: Float = 18f
+): Float {
+    return if (measuredWidth > availableWidth && measuredWidth > 0f) {
+        val scaleFactor = availableWidth / measuredWidth
+        (baseTextSize * scaleFactor).coerceAtLeast(minTextSize)
+    } else {
+        baseTextSize
+    }
+}
+
 internal fun drawFooter(
     context: Context,
     canvas: Canvas,
@@ -216,14 +244,77 @@ internal fun drawFooter(
     }
     canvas.drawRect(0f, top, width.toFloat(), top + height, bgPaint)
 
-    // Logo
-    val logo = BitmapFactory.decodeResource(context.resources, R.drawable.logo_512)
-    val logoSize = 80
-    val scaledLogo = logo.scale(logoSize, logoSize)
     val margin = 24f
-    canvas.drawBitmap(scaledLogo, margin, top + (height - logoSize) / 2f, null)
+    val logoSize = 80
+    val emblemSize = 56
 
-    // Text: Tracked with aTrainingTracker
+    val (effectiveTier, variant) = try {
+        val proFeatureManager = ProFeatureManager.getInstance(context)
+        val tier = proFeatureManager.effectiveTier.value
+        tier to LauncherIconVariant.fromTier(tier)
+    } catch (_: Throwable) {
+        SupporterTier.FREE to LauncherIconVariant.STANDARD
+    }
+
+    // 1. Logo / Tier-Matched Icon on the left
+    val logoTop = (top + (height - logoSize) / 2f).toInt()
+    val logoLeft = margin.toInt()
+    val logoRight = logoLeft + logoSize
+    val logoBottom = logoTop + logoSize
+
+    val logoDrawable = try {
+        ContextCompat.getDrawable(context, variant.iconRes)
+    } catch (_: Throwable) {
+        null
+    } ?: try {
+        ContextCompat.getDrawable(context, R.drawable.logo_512)
+    } catch (_: Throwable) {
+        null
+    }
+
+    if (logoDrawable != null) {
+        logoDrawable.setBounds(logoLeft, logoTop, logoRight, logoBottom)
+        logoDrawable.draw(canvas)
+    } else {
+        try {
+            val fallbackLogo = BitmapFactory.decodeResource(context.resources, R.drawable.logo_512)
+            fallbackLogo?.let {
+                val scaledLogo = it.scale(logoSize, logoSize)
+                canvas.drawBitmap(scaledLogo, margin, top + (height - logoSize) / 2f, null)
+            }
+        } catch (_: Throwable) {
+            // Defensive fallback
+        }
+    }
+
+    // 2. Supporter Tier Emblem on the right (REQ-UI-447.4 / ATT-5472)
+    val emblemRes = variant.emblemRes
+    val hasEmblem = effectiveTier.isPro && emblemRes != null
+    if (hasEmblem) {
+        try {
+            val emblemDrawable = ContextCompat.getDrawable(context, emblemRes)
+            if (emblemDrawable != null) {
+                val emblemRight = (width - margin).toInt()
+                val emblemLeft = emblemRight - emblemSize
+                val emblemTop = (top + (height - emblemSize) / 2f).toInt()
+                val emblemBottom = emblemTop + emblemSize
+                emblemDrawable.setBounds(emblemLeft, emblemTop, emblemRight, emblemBottom)
+                emblemDrawable.draw(canvas)
+            }
+        } catch (_: Throwable) {
+            // Defensive fallback
+        }
+    }
+
+    // 3. Watermark Text: Tracked with aTrainingTracker (Auto-Scaling to prevent collision)
+    val availableWidth = calculateAvailableWatermarkWidth(
+        totalWidth = width,
+        margin = margin,
+        logoSize = logoSize,
+        hasEmblem = hasEmblem,
+        emblemSize = emblemSize
+    )
+
     val textPaint = Paint().apply {
         color = colors.footerTextColor
         textSize = 38f
@@ -231,64 +322,13 @@ internal fun drawFooter(
         isAntiAlias = true
     }
     val trackedWith = context.getString(R.string.share_watermark_tracked_with)
+    val measuredWidth = textPaint.measureText(trackedWith)
+    textPaint.textSize = calculateWatermarkScaledTextSize(measuredWidth, availableWidth)
+
     val textBounds = android.graphics.Rect()
     textPaint.getTextBounds(trackedWith, 0, trackedWith.length, textBounds)
     val textY = top + (height / 2f) + (textBounds.height() / 2f)
     canvas.drawText(trackedWith, margin + logoSize + 20f, textY, textPaint)
-
-    // Supporter Tier Pill on the right (REQ-UI-445 / ATT-1406)
-    try {
-        val proFeatureManager = ProFeatureManager.getInstance(context)
-        val effectiveTier = proFeatureManager.effectiveTier.value
-        if (effectiveTier.isPro) {
-            val pillText = when (effectiveTier) {
-                SupporterTier.DIAMOND -> "◆ SPONSOR"
-                SupporterTier.GOLD -> "★ GOLD PRO"
-                SupporterTier.SILVER -> "★ SILVER PRO"
-                SupporterTier.BRONZE -> "★ BRONZE"
-                SupporterTier.PIONEER -> "★ PIONEER"
-                SupporterTier.FREE -> ""
-            }
-            if (pillText.isNotEmpty()) {
-                val pillPaint = Paint().apply {
-                    textSize = 30f
-                    typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-                    isAntiAlias = true
-                }
-                val pillBounds = android.graphics.Rect()
-                pillPaint.getTextBounds(pillText, 0, pillText.length, pillBounds)
-                val pillWidth = pillBounds.width() + 36f
-                val pillHeight = 48f
-                val pillRight = width.toFloat() - margin
-                val pillLeft = pillRight - pillWidth
-                val pillTop = top + (height - pillHeight) / 2f
-
-                val pillBgPaint = Paint().apply {
-                    color = when (effectiveTier) {
-                        SupporterTier.DIAMOND -> android.graphics.Color.rgb(0, 229, 255)
-                        SupporterTier.GOLD -> android.graphics.Color.rgb(255, 215, 0)
-                        SupporterTier.SILVER -> android.graphics.Color.rgb(192, 192, 192)
-                        SupporterTier.BRONZE -> android.graphics.Color.rgb(205, 127, 50)
-                        SupporterTier.PIONEER -> android.graphics.Color.rgb(0, 168, 107)
-                        SupporterTier.FREE -> colors.footerBackground
-                    }
-                    isAntiAlias = true
-                }
-                pillPaint.color = when (effectiveTier) {
-                    SupporterTier.DIAMOND, SupporterTier.GOLD, SupporterTier.SILVER -> android.graphics.Color.BLACK
-                    SupporterTier.BRONZE, SupporterTier.PIONEER -> android.graphics.Color.WHITE
-                    SupporterTier.FREE -> colors.footerTextColor
-                }
-
-                canvas.drawRoundRect(pillLeft, pillTop, pillRight, pillTop + pillHeight, 10f, 10f, pillBgPaint)
-                val pillTextY = pillTop + (pillHeight / 2f) + (pillBounds.height() / 2f) - 2f
-                val pillTextX = pillLeft + 18f
-                canvas.drawText(pillText, pillTextX, pillTextY, pillPaint)
-            }
-        }
-    } catch (_: Throwable) {
-        // Defensive fallback in headless/test environments
-    }
 }
 
 internal suspend fun saveAndShare(context: Context, bitmap: Bitmap, fileName: String) = withContext(Dispatchers.IO) {

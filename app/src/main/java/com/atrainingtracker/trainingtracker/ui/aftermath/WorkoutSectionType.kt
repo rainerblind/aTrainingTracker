@@ -42,12 +42,14 @@ enum class WorkoutSectionType(@StringRes val titleRes: Int) {
     ELEVATION(R.string.settings_workout_card_elevation),
     CHARTS(R.string.settings_workout_card_charts),
     ZONES(R.string.settings_workout_card_zones),
-    EXPORT_STATUS(R.string.export_status);
+    EXPORT_STATUS(R.string.export_status),
+    PHOTOS(R.string.settings_workout_card_photos);
 
     companion object {
         val DEFAULT_ORDER: List<WorkoutSectionType> = listOf(
             DESCRIPTION,
             EXTREMA,
+            PHOTOS,
             MAP,
             ELEVATION,
             CHARTS,

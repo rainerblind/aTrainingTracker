@@ -1055,6 +1055,8 @@
     <string name="cluster_tuning_apex_label">Tolérance de l’apex (déplacement max.)</string>
     <string name="cluster_tuning_distance_label">Tolérance de distance</string>
     <string name="cluster_tuning_altitude_pos_label">Tolérance de position d\'altitude</string>
+    <string name="cluster_tuning_score_threshold_label">Seuil de score d\'attribution de cluster</string>
+    <string name="cluster_tuning_score_threshold_helper">Plus bas = correspondance plus stricte · Plus haut = plus tolérant</string>
     <string name="cluster_tuning_recalculate_button">Recalculer tous les groupes</string>
     <string name="cluster_tuning_warning">Avertissement : Le recalcul effacera tous les noms de groupes appris et les regroupements, puis les reconstruira à partir de l’historique en utilisant ces nouveaux paramètres.</string>
     <string name="cluster_tuning_recalculating">Recalcul des groupes…</string>
@@ -1109,6 +1111,7 @@
     <string name="cluster_naming__new_name_prompt">Ou donnez-lui un nouveau nom :</string>
     <string name="cluster_naming__new_route_name_label">Nom du nouvel itinéraire</string>
     <string name="cluster_naming__leave_unclustered">Laisser non groupé</string>
+    <string name="cluster_naming__workout_name_label">Nom de l\'entraînement</string>
     <string name="migration_phase_label">Phase %1$d : %2$s</string>
 
     <string name="unclustered">Ouvert</string>
@@ -1550,8 +1553,9 @@
     <!-- Cycling Power 5-Zone Distribution Bar (ATT-1390 / REQ-UI-203) -->
     <string name="aftermath_power_zones_title">Zones de puissance</string>
 
-    <!-- Grade / Slope Distribution Card (ATT-5487 / REQ-UI-453) -->
-    <string name="aftermath_grade_zones_title">Zones de pente</string>
+    <!-- Grade / Slope Distribution Card (ATT-5487 / ATT-5563 / REQ-UI-453) -->
+    <string name="aftermath_grade_zones_title">Distribution des pentes</string>
+    <string name="settings_workout_card_grade_distribution">Distribution des pentes</string>
     <!-- Telemetry Frequency Histogram & Display Modes (ATT-1845 / ATT-3390 / REQ-UI-372) -->
     <string name="zone_mode_5_zones">5 zones</string>
     <string name="zone_mode_columns">Colonnes</string>
@@ -2265,8 +2269,8 @@
     <string name="supporter_tier_free">Gratuit</string>
     <string name="supporter_tier_pioneer">★ Pionnier ★</string>
     <string name="supporter_tier_bronze">Supporter Bronze</string>
-    <string name="supporter_tier_silver">Supporter Argent</string>
-    <string name="supporter_tier_gold">Supporter Or</string>
+    <string name="supporter_tier_silver">Pro Supporter Argent</string>
+    <string name="supporter_tier_gold">Pro+ Supporter Or</string>
     <string name="supporter_tier_diamond">Sponsor Diamant</string>
     <string name="supporter_screen_title">Payez ce que vous voulez</string>
     <string name="supporter_screen_subtitle" formatted="false">Soutenez le suivi de fitness indépendant et gardez aTrainingTracker 100% sans publicité.</string>
@@ -2292,8 +2296,8 @@
     <string name="keep_two_sensors_action_unlock">Débloquer des capteurs illimités</string>
     <string name="drawer_supporter">Supporter &amp; Pro</string>
     <string name="drawer_tier_diamond">◆ SPONSOR DIAMANT • Capteurs illimités</string>
-    <string name="drawer_tier_gold">★ PRO-SUPPORTER OR</string>
-    <string name="drawer_tier_silver">★ PRO-SUPPORTER ARGENT</string>
+    <string name="drawer_tier_gold">★ PRO+ SUPPORTER OR</string>
+    <string name="drawer_tier_silver">★ PRO SUPPORTER ARGENT</string>
     <string name="drawer_tier_bronze">★ SUPPORTER BRONZE</string>
     <string name="drawer_tier_pioneer_with_year">★ Pionnier (Depuis %1$d)</string>
     <string name="drawer_tier_pioneer">★ Pionnier</string>
@@ -2307,6 +2311,7 @@
     <string name="milestone_workout_name_format">%1$d. %2$s: %3$s</string>
     <string name="jubilee_dialog_title">Félicitations pour votre %1$dème %2$s !</string>
     <string name="jubilee_dialog_message">Vous avez terminé %1$d séances de %2$s avec aTrainingTracker ! Un exploit sportif remarquable.</string>
+    <string name="jubilee_feedback_prompt">Vous appréciez aTrainingTracker ? Partagez votre expérience avec un avis sur Google Play ou envoyez vos commentaires directement par e-mail à Rainer.</string>
     <string name="jubilee_action_review">Évaluer sur Google Play</string>
     <string name="jubilee_action_email_feedback">Envoyer un e-mail à Rainer</string>
     <string name="jubilee_supporter_appeal_title">Soutenez 15+ ans de développement indépendant</string>
@@ -2320,7 +2325,7 @@
     <!-- Supporter N+1 Garage Detector (ATT-5299 / REQ-SET-088) -->
     <string name="garage_detector_dialog_title_gold">Garage Ligue Or détecté !</string>
     <string name="garage_detector_dialog_title_diamond">Garage Diamant de classe mondiale !</string>
-    <string name="garage_detector_dialog_message_gold">Félicitations pour vos %1$d vélos, %2$d chaussures et %3$d capteurs (dont %4$d capteurs de puissance) dans aTrainingTracker ! Votre équipement est de niveau pro, mais votre statut est %5$s. Offrez-vous la mise à niveau Supporter Or !</string>
+    <string name="garage_detector_dialog_message_gold">Félicitations pour vos %1$d vélos, %2$d chaussures et %3$d capteurs (dont %4$d capteurs de puissance) dans aTrainingTracker ! Votre équipement est de niveau pro, mais votre statut est %5$s. Offrez-vous la mise à niveau Supporter Or Pro+ !</string>
     <string name="garage_detector_dialog_message_diamond">Équipement incroyable : %1$d vélos, %2$d chaussures et %3$d capteurs (dont %4$d capteurs de puissance) dans aTrainingTracker ! Votre garage est de classe mondiale, mais votre statut est %5$s. Couronnez votre flotte avec le Sponsor Diamant !</string>
     <string name="garage_detector_action_upgrade_gold">Passer à Or Pro (50 € / an)</string>
     <string name="garage_detector_action_upgrade_diamond">Passer à Sponsor Diamant (100 € / an)</string>
@@ -2335,8 +2340,8 @@
     <string name="launcher_icon_standard">Standard</string>
     <string name="launcher_icon_pioneer">Édition Pioneer</string>
     <string name="launcher_icon_bronze">Supporter Bronze</string>
-    <string name="launcher_icon_silver">Pro-Supporter Argent</string>
-    <string name="launcher_icon_gold">Pro-Supporter Or</string>
+    <string name="launcher_icon_silver">Pro Supporter Argent</string>
+    <string name="launcher_icon_gold">Pro+ Supporter Or</string>
     <string name="launcher_icon_diamond">Sponsor Diamant</string>
     <string name="supporter_status_emblem_cd">Emblème de statut Supporter</string>
     <string name="share_watermark_tracked_with">Enregistré avec aTrainingTracker</string>
@@ -2364,4 +2369,11 @@
     <string name="workout_photos_time_picker_subtitle">Photos prises pendant cet entraînement</string>
     <string name="workout_photos_show_all">Afficher toutes les photos</string>
     <string name="workout_photos_add_count">Ajouter %1$d photos</string>
+    <!-- Workout Photos Settings (REQ-UI-414.6 / ATT-5474) -->
+    <string name="settings_workout_card_photos">Photos de la séance</string>
+    <string name="settings_workout_photos_show_add_button">Afficher le bouton \"Ajouter une photo\"</string>
+    <string name="settings_workout_photos_thumbnail_size">Taille de prévisualisation</string>
+    <string name="settings_workout_photos_size_small">Petite</string>
+    <string name="settings_workout_photos_size_medium">Moyenne</string>
+    <string name="settings_workout_photos_size_large">Grande</string>
 </resources>

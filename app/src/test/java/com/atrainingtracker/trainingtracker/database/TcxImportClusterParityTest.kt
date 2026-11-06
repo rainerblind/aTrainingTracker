@@ -21,6 +21,7 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.migration.BackupRestoreViewModel
+import com.atrainingtracker.trainingtracker.migration.LegacyImportEngine
 import com.google.android.gms.maps.model.LatLng
 import io.mockk.*
 import kotlinx.coroutines.CompletableDeferred
@@ -171,7 +172,7 @@ class TcxImportClusterParityTest {
         val apex = LatLng(48.05, 11.0)
         val minAlt = LatLng(48.01, 11.01)
         val maxAlt = LatLng(48.04, 11.04)
-        val deferred = CompletableDeferred<Pair<Long?, String?>>()
+        val deferred = CompletableDeferred<LegacyImportEngine.ClusterDecision>()
 
         val interaction = BackupRestoreViewModel.ClusterInteraction(
             date = "2026-09-18 10:00:00",

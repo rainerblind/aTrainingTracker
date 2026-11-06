@@ -26,7 +26,7 @@
   3. Non-milestone sessions SHALL retain standard naming behavior without counter prefixing.
 
 ### REQ-REV-003: First-Jubilee Celebration Dialog & Multi-Channel Engagement [Verified]
-- **Tests**: `TST-REV-003` | **Tickets**: `ATT-2308`, `ATT-5401`, `ATT-5399`
+- **Tests**: `TST-REV-003`, `TST-REV-005` | **Tickets**: `ATT-2308`, `ATT-5401`, `ATT-5399`, `ATT-5467`
 - **Implementation**: `FirstJubileeCelebrationDialog.kt`, `MainActivityWithNavigation.kt`
 - **Rationale**: Reaching the very first milestone across any sport is an athlete's peak emotional moment. The app SHALL present a celebratory Material 3 dialog offering frictionless Google Play review, direct email feedback to Rainer, and an authentic supporter appeal.
 - **Description**:
@@ -34,6 +34,7 @@
   2. The dialog SHALL provide an **In-App Review Action** requesting rating via Google Play's `ReviewManager`. To prevent silent no-ops, clicking 'Bei Google Play bewerten' SHALL guarantee a visible outcome: in `BuildConfig.DEBUG` or when `launchReviewFlow` completes in `< 300ms` without displaying UI (or if `Context` cannot be unwrapped to an `Activity`), the system SHALL immediately fallback to opening the Play Store listing via `market://details?id=com.atrainingtracker` (with HTTPS web fallback).
   3. The dialog SHALL provide a **Direct Feedback Action** launching an email draft to `rainer.blind@gmail.com` with pre-filled subject and diagnostic app version info.
   4. If the athlete is on the Free tier (`!ProFeatureManager.isProActive.value`), the dialog SHALL display a charming indie developer note from Rainer inviting the athlete to upgrade to Pro (`NavRoutes.SUPPORTER`). If already Pro/Pioneer, the upgrade prompt SHALL be cleanly omitted.
+  5. The dialog SHALL display a warm, localized transitional prompt (`jubilee_feedback_prompt`) directly preceding the Google Play rating and email feedback action buttons, introducing the options to leave a store rating or send personal feedback to Rainer. The string SHALL be localized across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) using informal 'Du' in German and free of decorative inline Unicode emojis.
 
 ### REQ-REV-004: Single-Prompt Invariant Persistence & Subsequent Jubilee Non-Intrusiveness [Verified]
 - **Tests**: `TST-REV-004` | **Tickets**: `ATT-2308`

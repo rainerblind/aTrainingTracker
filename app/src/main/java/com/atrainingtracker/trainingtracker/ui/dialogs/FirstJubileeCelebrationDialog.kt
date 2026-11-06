@@ -142,6 +142,15 @@ fun FirstJubileeCelebrationDialog(
             }
         }
 
+        // Transitional Feedback Prompt
+        Text(
+            text = stringResource(R.string.jubilee_feedback_prompt),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
+
         // Primary Review Action
         Button(
             onClick = onRequestInAppReview,

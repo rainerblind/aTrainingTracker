@@ -142,59 +142,7 @@ fun WorkoutShareBottomSheet(
     AppModalBottomSheet(
         title = stringResource(if (composedBitmap != null) R.string.share_preview_title else R.string.share_workout_title),
         icon = Icons.Default.Share,
-        onDismissRequest = onDismissRequest,
-        actions = if (composedBitmap != null) {
-            {
-                OutlinedButton(
-                    onClick = {
-                        photoPickerLauncher.launch(
-                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                        )
-                    },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.AddPhotoAlternate,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = stringResource(R.string.share_choose_photo))
-                }
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                Button(
-                    onClick = {
-                        val bitmapToShare = composedBitmap ?: return@Button
-                        scope.launch {
-                            isSharing = true
-                            saveAndShare(context, bitmapToShare, "workout_photo_${workoutData.id}.png")
-                            isSharing = false
-                            onDismissRequest()
-                        }
-                    },
-                    enabled = !isSharing && !isComposing,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    if (isSharing) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(18.dp),
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = stringResource(R.string.share_cta_button))
-                    }
-                }
-            }
-        } else null
+        onDismissRequest = onDismissRequest
     ) {
         if (isComposing) {
             Box(
@@ -213,7 +161,8 @@ fun WorkoutShareBottomSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Image(
                     bitmap = bitmap.asImageBitmap(),
@@ -223,6 +172,57 @@ fun WorkoutShareBottomSheet(
                         .aspectRatio(aspect)
                         .clip(RoundedCornerShape(12.dp))
                 )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Primary Action: Share (Stacked full-width per Rule 73 / REQ-UI-447.5)
+                Button(
+                    onClick = {
+                        val bitmapToShare = composedBitmap ?: return@Button
+                        scope.launch {
+                            isSharing = true
+                            saveAndShare(context, bitmapToShare, "workout_photo_${workoutData.id}.png")
+                            isSharing = false
+                            onDismissRequest()
+                        }
+                    },
+                    enabled = !isSharing && !isComposing,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    if (isSharing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(text = stringResource(R.string.share_cta_button))
+                    }
+                }
+
+                // Secondary Action: Choose different photo (Stacked full-width per Rule 73 / REQ-UI-447.5)
+                OutlinedButton(
+                    onClick = {
+                        photoPickerLauncher.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AddPhotoAlternate,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(text = stringResource(R.string.share_choose_photo))
+                }
             }
         } else {
             // Mode Selection: Option A (Classic Snapshot) vs Option B (Photo with Track Overlay)

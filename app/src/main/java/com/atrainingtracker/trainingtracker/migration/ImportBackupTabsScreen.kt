@@ -72,6 +72,7 @@ import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import androidx.compose.material.icons.outlined.Info
 import com.atrainingtracker.trainingtracker.ui.components.MetricItem
+import com.atrainingtracker.trainingtracker.ui.map.DarkMapAntiFlashOverlay
 import com.atrainingtracker.trainingtracker.ui.map.DarkMapStyle
 import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
@@ -574,13 +575,13 @@ fun ImportBackupTabsScreen(
         )
     }
 
-    // ATT-316: Foreground Interaction Overlay
+    // ATT-316 / ATT-5560: Foreground Interaction Overlay
     activeInteraction?.let { interaction ->
         ClusterNamingDialog(
             state = interaction,
             queueCount = queueCount,
-            onConfirm = { clusterId, name -> viewModel.provideClusterDecision(clusterId, name) },
-            onDismiss = { viewModel.provideClusterDecision(null, null) }
+            onConfirm = { decision -> viewModel.provideClusterDecision(decision) },
+            onDismiss = { customWorkoutName -> viewModel.provideClusterDecision(null, null, customWorkoutName) }
         )
     }
 
@@ -711,6 +712,8 @@ fun PreImportTuningBottomSheet(
                 viewModel.useAltitudePosForClustering = it
                 viewModel.saveClusteringTolerances()
             },
+            clusterScoreThreshold = viewModel.clusterScoreThreshold,
+            onClusterScoreThresholdChange = { viewModel.clusterScoreThreshold = it },
             onValueChangeFinished = { viewModel.saveClusteringTolerances() },
             isDialog = false
         )
@@ -773,14 +776,15 @@ fun PreImportTuningDialog(
 fun ClusterNamingDialog(
     state: BackupRestoreViewModel.ClusterInteraction,
     queueCount: Int,
-    onConfirm: (Long?, String?) -> Unit,
-    onDismiss: () -> Unit
+    onConfirm: (LegacyImportEngine.ClusterDecision) -> Unit,
+    onDismiss: (String?) -> Unit
 ) {
     val localContext = LocalContext.current
     
     // ATT-316 Refinement: Key the internal state to the 'state' (the interaction object)
     // to ensure the dialog resets when moving to the next item in the queue.
-    var name by remember(state) { mutableStateOf("") }
+    var workoutNameInput by remember(state) { mutableStateOf(state.workoutName ?: "") }
+    var name by remember(state) { mutableStateOf(WorkoutClusterEngine.stripHitCount(state.workoutName ?: "")) }
     var selectedCluster by remember(state) { mutableStateOf<WorkoutCluster?>(null) }
     var showSelectionDialog by remember(state) { mutableStateOf(false) }
 
@@ -857,149 +861,188 @@ fun ClusterNamingDialog(
         )
     }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surface,
-        tonalElevation = 0.dp,
-        title = { 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.cluster_naming__title))
-                if (queueCount > 1) {
-                    Spacer(modifier = Modifier.weight(1f))
-                    Badge { Text("$queueCount") }
-                }
-            }
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(stringResource(R.string.cluster_naming__found_recurring, state.date))
-
-                // --- ATT-304: Show sport type & distance ---
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+    AppModalBottomSheet(
+        onDismissRequest = { onDismiss(workoutNameInput.trim().takeIf { it.isNotEmpty() }) },
+        title = stringResource(R.string.cluster_naming__title),
+        headerActions = if (queueCount > 1) {
+            {
+                Badge(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ) {
-                    val distanceFormatter = remember { DistanceFormatter() }
-                    MetricItem(
-                        iconRes = R.drawable.ic_distance,
-                        value = distanceFormatter.format_with_units(state.distance),
-                        isPrimary = true
+                    Text(
+                        text = stringResource(R.string.cluster_naming__task_count, 1, queueCount),
+                        modifier = Modifier.padding(horizontal = 4.dp)
                     )
-                    
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Icon(
-                            painter = painterResource(id = state.bSportType.iconResId),
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp),
-                            tint = Color.Unspecified
-                        )
-                        val sportName = remember(state.bSportType) {
-                            val sportId = SportTypeDatabaseManager.getSportTypeId(state.bSportType)
-                            SportTypeDatabaseManager.getInstance(localContext).getUIName(sportId)
-                        }
-                        Text(
-                            text = sportName,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
+                }
+            }
+        } else null,
+        scrollable = true
+    ) {
+        Text(stringResource(R.string.cluster_naming__found_recurring, state.date))
 
-                    if (queueCount > 1) {
-                        Badge(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                        ) {
-                            Text(
-                                text = stringResource(R.string.cluster_naming__task_count, 1, queueCount),
-                                modifier = Modifier.padding(horizontal = 4.dp)
-                            )
-                        }
-                    }
-                }
-                
-                val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-                val mapProperties = remember(isDark, localContext) {
-                    DarkMapStyle.resolveMapProperties(isDark, localContext)
-                }
-                
-                Box(modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(8.dp)).background(if (isDark) TTColor.DarkMapCanvas else Color.White)) {
-                    GoogleMap(
-                        modifier = Modifier.fillMaxSize().background(if (isDark) TTColor.DarkMapCanvas else Color.White),
-                        cameraPositionState = cameraPositionState,
-                        properties = mapProperties,
-                        onMapLoaded = { isMapLoaded = true },
-                        uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = false)
-                    ) {
-                        Polyline(
-                            points = decodedPoints,
-                            color = MaterialTheme.colorScheme.primary,
-                            width = 5f,
-                            jointType = JointType.ROUND,
-                            startCap = RoundCap(),
-                            endCap = RoundCap()
-                        )
-                        Marker(
-                            state = remember(state.start) { MarkerState(position = state.start) }, 
-                            title = stringResource(R.string.marker_start),
-                            icon = remember { createSensorMarker(localContext, R.drawable.control_start, TTColor.StartPoint) }
-                        )
-                        Marker(
-                            state = remember(state.end) { MarkerState(position = state.end) }, 
-                            title = stringResource(R.string.marker_end),
-                            icon = remember { createSensorMarker(localContext, R.drawable.control_stop, TTColor.EndPoint) }
-                        )
-                        Marker(
-                            state = remember(state.apex) { MarkerState(position = state.apex) }, 
-                            title = stringResource(R.string.marker_max_distance),
-                            icon = remember { createSensorMarker(localContext, R.drawable.ic_distance, TTColor.ApexPoint) }
-                        )
-                    }
-                }
-
-                // --- ATT-305: Same dropdown (using button + dialog pattern) ---
-                Text(stringResource(R.string.cluster_naming__assignment_label), style = MaterialTheme.typography.labelLarge)
-                
-                OutlinedTextField(
-                    value = selectedCluster?.name ?: stringResource(R.string.cluster_naming__create_new),
-                    onValueChange = {},
-                    readOnly = true,
-                    modifier = Modifier.fillMaxWidth().clickable { showSelectionDialog = true },
-                    label = { Text(stringResource(R.string.cluster_naming__selected_route_label)) },
-                    trailingIcon = {
-                        IconButton(onClick = { showSelectionDialog = true }) {
-                            Icon(painter = painterResource(id = R.drawable.my_locations), contentDescription = stringResource(R.string.select_route))
-                        }
-                    }
+        // --- ATT-304: Show sport type & distance ---
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val distanceFormatter = remember { DistanceFormatter() }
+            MetricItem(
+                iconRes = R.drawable.ic_distance,
+                value = distanceFormatter.format_with_units(state.distance),
+                isPrimary = true
+            )
+            
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Icon(
+                    painter = painterResource(id = state.bSportType.iconResId),
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = Color.Unspecified
                 )
-
-                if (selectedCluster == null) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(stringResource(R.string.cluster_naming__new_name_prompt), style = MaterialTheme.typography.labelLarge)
-                    TextField(
-                        value = name,
-                        onValueChange = { name = it },
-                        label = { Text(stringResource(R.string.cluster_naming__new_route_name_label)) },
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                val sportName = remember(state.bSportType) {
+                    val sportId = SportTypeDatabaseManager.getSportTypeId(state.bSportType)
+                    SportTypeDatabaseManager.getInstance(localContext).getUIName(sportId)
                 }
-            }
-        },
-        confirmButton = {
-            Button(onClick = { 
-                if (selectedCluster != null) {
-                    onConfirm(selectedCluster!!.id, null)
-                } else {
-                    onConfirm(null, name.takeIf { it.isNotBlank() })
-                }
-            }) {
-                Text(stringResource(R.string.OK))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cluster_naming__leave_unclustered))
+                Text(
+                    text = sportName,
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
         }
+        
+        val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+        val mapProperties = remember(isDark, localContext) {
+            DarkMapStyle.resolveMapProperties(isDark, localContext)
+        }
+        
+        Box(modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(8.dp)).background(if (isDark) TTColor.DarkMapCanvas else Color.White)) {
+            GoogleMap(
+                modifier = Modifier.fillMaxSize().background(if (isDark) TTColor.DarkMapCanvas else Color.White),
+                cameraPositionState = cameraPositionState,
+                properties = mapProperties,
+                onMapLoaded = { isMapLoaded = true },
+                uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = false)
+            ) {
+                Polyline(
+                    points = decodedPoints,
+                    color = MaterialTheme.colorScheme.primary,
+                    width = 5f,
+                    jointType = JointType.ROUND,
+                    startCap = RoundCap(),
+                    endCap = RoundCap()
+                )
+                Marker(
+                    state = remember(state.start) { MarkerState(position = state.start) }, 
+                    title = stringResource(R.string.marker_start),
+                    icon = remember { createSensorMarker(localContext, R.drawable.control_start, TTColor.StartPoint) }
+                )
+                Marker(
+                    state = remember(state.end) { MarkerState(position = state.end) }, 
+                    title = stringResource(R.string.marker_end),
+                    icon = remember { createSensorMarker(localContext, R.drawable.control_stop, TTColor.EndPoint) }
+                )
+                Marker(
+                    state = remember(state.apex) { MarkerState(position = state.apex) }, 
+                    title = stringResource(R.string.marker_max_distance),
+                    icon = remember { createSensorMarker(localContext, R.drawable.ic_distance, TTColor.ApexPoint) }
+                )
+            }
+            DarkMapAntiFlashOverlay(isMapLoaded = isMapLoaded, isDark = isDark)
+        }
+
+        // ATT-5560: Workout Name Display & Inline Editing
+        OutlinedTextField(
+            value = workoutNameInput,
+            onValueChange = { workoutNameInput = it },
+            label = { Text(stringResource(R.string.cluster_naming__workout_name_label)) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+
+        // --- ATT-305: Same dropdown (using button + dialog pattern) ---
+        Text(stringResource(R.string.cluster_naming__assignment_label), style = MaterialTheme.typography.labelLarge)
+        
+        OutlinedTextField(
+            value = selectedCluster?.name ?: stringResource(R.string.cluster_naming__create_new),
+            onValueChange = {},
+            readOnly = true,
+            modifier = Modifier.fillMaxWidth().clickable { showSelectionDialog = true },
+            label = { Text(stringResource(R.string.cluster_naming__selected_route_label)) },
+            trailingIcon = {
+                IconButton(onClick = { showSelectionDialog = true }) {
+                    Icon(painter = painterResource(id = R.drawable.my_locations), contentDescription = stringResource(R.string.select_route))
+                }
+            }
+        )
+
+        if (selectedCluster == null) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(stringResource(R.string.cluster_naming__new_name_prompt), style = MaterialTheme.typography.labelLarge)
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text(stringResource(R.string.cluster_naming__new_route_name_label)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+        }
+
+        // ATT-5560 / Rule 73: Vertically stacked full-width action buttons
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(
+            onClick = { 
+                val customWorkoutName = workoutNameInput.trim().takeIf { it.isNotEmpty() }
+                if (selectedCluster != null) {
+                    onConfirm(
+                        LegacyImportEngine.ClusterDecision(
+                            clusterId = selectedCluster!!.id,
+                            newClusterName = null,
+                            customWorkoutName = customWorkoutName
+                        )
+                    )
+                } else {
+                    onConfirm(
+                        LegacyImportEngine.ClusterDecision(
+                            clusterId = null,
+                            newClusterName = name.trim().takeIf { it.isNotEmpty() },
+                            customWorkoutName = customWorkoutName
+                        )
+                    )
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(stringResource(R.string.save))
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedButton(
+            onClick = {
+                onDismiss(workoutNameInput.trim().takeIf { it.isNotEmpty() })
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(stringResource(R.string.cluster_naming__leave_unclustered))
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ClusterNamingDialog(
+    state: BackupRestoreViewModel.ClusterInteraction,
+    queueCount: Int,
+    onConfirm: (Long?, String?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    ClusterNamingDialog(
+        state = state,
+        queueCount = queueCount,
+        onConfirm = { decision -> onConfirm(decision.clusterId, decision.newClusterName) },
+        onDismiss = { onDismiss() }
     )
 }
 

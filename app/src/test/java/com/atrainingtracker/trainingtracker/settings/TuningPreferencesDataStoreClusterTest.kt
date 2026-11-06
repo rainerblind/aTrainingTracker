@@ -38,6 +38,11 @@ class TuningPreferencesDataStoreClusterTest {
         assertEquals(10.0f, TuningPreferencesDefaults.MIN_CLUSTER_TOL_ALTITUDE_POS, 0.001f)
         assertEquals(500.0f, TuningPreferencesDefaults.MAX_CLUSTER_TOL_ALTITUDE_POS, 0.001f)
 
+        assertEquals(1.2f, TuningPreferencesDefaults.CLUSTER_SCORE_THRESHOLD, 0.001f)
+        assertEquals(0.5f, TuningPreferencesDefaults.MIN_CLUSTER_SCORE_THRESHOLD, 0.001f)
+        assertEquals(2.5f, TuningPreferencesDefaults.MAX_CLUSTER_SCORE_THRESHOLD, 0.001f)
+        assertEquals(0.1f, TuningPreferencesDefaults.STEP_CLUSTER_SCORE_THRESHOLD, 0.001f)
+
         assertTrue(TuningPreferencesDefaults.CLUSTER_USE_SPORT_TYPE)
         assertTrue(TuningPreferencesDefaults.CLUSTER_USE_ALTITUDE_POS)
     }
@@ -49,6 +54,7 @@ class TuningPreferencesDataStoreClusterTest {
         assertEquals(400.0f, config.clusterTolApex, 0.001f)
         assertEquals(0.20f, config.clusterTolDistance, 0.001f)
         assertEquals(400.0f, config.clusterTolAltitudePos, 0.001f)
+        assertEquals(1.2f, config.clusterScoreThreshold, 0.001f)
         assertTrue(config.clusterUseSportType)
         assertTrue(config.clusterUseAltitudePos)
     }
@@ -61,12 +67,14 @@ class TuningPreferencesDataStoreClusterTest {
             clusterTolDistance = 0.15f,
             clusterTolAltitudePos = 300f,
             clusterUseSportType = false,
-            clusterUseAltitudePos = false
+            clusterUseAltitudePos = false,
+            clusterScoreThreshold = 1.8f
         )
         assertEquals(150.0f, config.clusterTolEndpoints, 0.001f)
         assertEquals(350.0f, config.clusterTolApex, 0.001f)
         assertEquals(0.15f, config.clusterTolDistance, 0.001f)
         assertEquals(300.0f, config.clusterTolAltitudePos, 0.001f)
+        assertEquals(1.8f, config.clusterScoreThreshold, 0.001f)
         assertEquals(false, config.clusterUseSportType)
         assertEquals(false, config.clusterUseAltitudePos)
     }
@@ -96,5 +104,17 @@ class TuningPreferencesDataStoreClusterTest {
             TuningPreferencesDefaults.MAX_CLUSTER_TOL_ALTITUDE_POS
         )
         assertEquals(10f, clampedAlt, 0.001f)
+
+        val clampedScoreHigh = 3.0f.coerceIn(
+            TuningPreferencesDefaults.MIN_CLUSTER_SCORE_THRESHOLD,
+            TuningPreferencesDefaults.MAX_CLUSTER_SCORE_THRESHOLD
+        )
+        assertEquals(2.5f, clampedScoreHigh, 0.001f)
+
+        val clampedScoreLow = 0.2f.coerceIn(
+            TuningPreferencesDefaults.MIN_CLUSTER_SCORE_THRESHOLD,
+            TuningPreferencesDefaults.MAX_CLUSTER_SCORE_THRESHOLD
+        )
+        assertEquals(0.5f, clampedScoreLow, 0.001f)
     }
 }

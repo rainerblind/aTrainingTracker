@@ -115,4 +115,37 @@ class GradeZoneDistributionCardTest {
             .resolveWithHistogramFallback(withHistogram.histogram != null)
         assertEquals(ZoneCardDisplayMode.HISTOGRAM, resolvedWithHist)
     }
+
+    @Test
+    fun testGradeZoneDistribution_badgeLabelDecouplingAndThresholds() {
+        // 1. Invariant: standard zone entry defaults to Z$zoneIndex
+        val hrEntry = ZoneTimeEntry(
+            zoneIndex = 3,
+            zoneLabelResId = R.string.zone_3_label,
+            durationSec = 60L,
+            percentage = 50f,
+            color = Color.Yellow
+        )
+        assertEquals("Z3", hrEntry.badgeLabel)
+
+        // 2. Custom threshold label overrides default Z$zoneIndex
+        val gradeEntry = ZoneTimeEntry(
+            zoneIndex = 1,
+            zoneLabelResId = R.string.grade_legend_under_2,
+            durationSec = 120L,
+            percentage = 100f,
+            color = Color.Green,
+            customBadgeLabel = "<2%"
+        )
+        assertEquals("<2%", gradeEntry.badgeLabel)
+
+        // 3. Structural verification: ColumnChart and StackedBar use entry.badgeLabel
+        val columnChartContent = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/zones/ZoneDistributionColumnChart.kt").readText()
+        assertTrue("ZoneDistributionColumnChart must render entry.badgeLabel", columnChartContent.contains("entry.badgeLabel"))
+        assertFalse("ZoneDistributionColumnChart must not hardcode Z\${entry.zoneIndex}", columnChartContent.contains("\"Z\${entry.zoneIndex}\""))
+
+        val stackedBarContent = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/zones/ZoneDistributionStackedBar.kt").readText()
+        assertTrue("ZoneDistributionStackedBar must render entry.badgeLabel", stackedBarContent.contains("entry.badgeLabel"))
+        assertFalse("ZoneDistributionStackedBar must not hardcode Z\${entry.zoneIndex}", stackedBarContent.contains("\"Z\${entry.zoneIndex}\""))
+    }
 }

@@ -1367,9 +1367,9 @@ The workflow SHALL mandate that:
 **Invariants**: Normal cold start workout recovery dialog, notification intent routing, `onNewIntent` dispatch, and 100% clean-room test suite pass rate MUST NOT be broken.
 
 ### REQ-STB-018: WorkoutRepository Concurrency Invariants, Conflated Dirty-Flag Reloads, Stale Snapshot Defense & Exception Shielding [Verified]
-- **Tests**: `WorkoutRepository.kt`
-- **Implementation**: Enforce WorkoutRepository concurrency invariants: conflated per-workout dirty-flag reloads, atomic loading guard, stale-snapshot & deletion-resurrection defense, pure CAS updates, and defensive deletion reporting with guaranteed Idle progress reset.
-- **Rationale**: The system SHALL guarantee thread safety, state synchronization, and failure isolation within `WorkoutRepository` across background reloads, progressive history streaming, memory caching, and session deletion (ATT-4002, Implemented in: ATT-4002, Status: Planned, amending `REQ-STB-013`):
+- **Tests**: `WorkoutRepository.kt`, `WorkoutRepositoryConcurrencyTest.kt`
+- **Implementation**: Enforce WorkoutRepository concurrency invariants: conflated per-workout dirty-flag reloads, atomic loading guard, stale-snapshot & deletion-resurrection defense, pure CAS updates, and defensive deletion reporting with guaranteed Idle progress reset prior to terminal completion events (Rule 74).
+- **Rationale**: The system SHALL guarantee thread safety, state synchronization, and failure isolation within `WorkoutRepository` across background reloads, progressive history streaming, memory caching, and session deletion (ATT-4002, amended in ATT-5565, amending `REQ-STB-013`):
 1. *Conflated Per-Workout Reload Pipeline (`reloadWorkoutData` - `REQ-STB-018.1`)*:
 • `WorkoutRepository` SHALL implement a conflated, thread-safe reload pipeline for individual sessions (`reloadWorkoutData(workoutId)`).
 • When a reload request arrives for a `workoutId` that is already actively reloading, the repository SHALL mark the workout ID as dirty (`dirtyReloadIds.add(workoutId)`) rather than dropping the request.
@@ -1388,13 +1388,13 @@ The workflow SHALL mandate that:
 4. *Accurate Deletion Reporting & Guaranteed Progress Teardown (`deleteWorkout` - `REQ-STB-018.4`)*:
 • `WorkoutRepository.deleteWorkout(id)` SHALL post `deleteFinishedEvent.postValue(Pair(id, true))` if and only if database deletion succeeds.
 • If database deletion fails (`deletionHelper.deleteWorkout(id) == false`) or encounters an unhandled runtime/SQLite exception, `deleteFinishedEvent` SHALL post `Pair(id, false)`.
-• The entire body of `deleteWorkout(id)` SHALL be enclosed in a `try ... finally` block guaranteeing that `_deletionProgress.postValue(DeletionProgress.Idle)` executes under all exit paths, preventing stuck progress dialogs.
+• In accordance with Rule 74, `_deletionProgress.postValue(DeletionProgress.Idle)` SHALL execute unconditionally prior to emitting `deleteFinishedEvent.postValue(Pair(id, success))` within the `finally` block under all execution paths, guaranteeing that observers awakened by `deleteFinishedEvent` never observe a stale `InProgress` progress state.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-STB-018` under Epic `ATT-111` (*Aftermath: Compact Post-Workout Visual Analytics & Graphs*), amending `REQ-STB-013` (*Resilient Single-Pass Workout History Streaming & CursorWindow Crash Protection*). Targets `WorkoutRepository.kt`.
-2. *Historical Origin & Commit Trace*: Sprint 2026-40.16 (`ATT-2309`, commit `3e710f3c`) and Sprint 2026-38 (`ATT-318` / `ATT-669`, commit `b7e305e2`). Discovered during independent whole-app architecture review (`feature/ATT-3921` @ `0234bfc0`), tracked in `ATT-4002`.
-3. *Root Reason for Existing Formulation*: `reloadWorkoutData` used `reloadingWorkoutIds.add(workoutId)` to throttle rapid broadcast bursts from spawning parallel database queries on `Dispatchers.IO`, dropping subsequent reloads without scheduling a retry. `loadAllWorkouts` used `_allWorkouts.value = allLoadedWorkouts.toList()` to pump batches progressively to the UI, overwriting concurrent deletions and edits. `updateWorkoutInMemory` launched background database fetching inside `_allWorkouts.update` assuming a simple lock rather than a CAS retry loop. `deleteWorkout` duplicated `postValue(Pair(id, true))` on both branches without `try ... finally`.
-4. *Preservation of Core Invariants*: Monotonic forward-only cursor traversal (`c.moveToNext()`), vectorized batch queries (`extrema`, `stravaData`, `clusterNames`, `laps`), single source of truth in `_allWorkouts`, query deduplication under burst broadcasts, and 100% full-suite test pass rate remain strictly preserved.
+1. *Original Requirement ID & Target*: `REQ-STB-018.4` (amended in ATT-5565), targeting `WorkoutRepository.kt` and `WorkoutRepositoryConcurrencyTest.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-43.3 (`ATT-4002`, commit `1c8e1a68`) introduced `REQ-STB-018.4` to ensure unhandled deletion exceptions do not strand progress dialogs, placing `_deletionProgress.postValue(Idle)` in `finally` while leaving `deleteFinishedEvent.postValue` inside the `try/catch` body.
+3. *Root Reason for Existing Formulation*: Placing `_deletionProgress` reset in `finally` was intended as a catch-all cleanup, but prematurely posting `deleteFinishedEvent` inside the `try/catch` block enabled an observer-wakeup race condition under thread scheduling contention where observers awakened by `deleteFinishedEvent` read `deletionProgress` before the coroutine reached `finally`.
+4. *Preservation of Core Invariants*: Success reporting `Pair(id, true)`, failure reporting `Pair(id, false)`, guaranteed `Idle` reset on all paths, zero stuck progress dialogs, and 100% full-suite test pass rate remain strictly preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* a workout session undergoing active `reloadWorkoutData(workoutId)`,
@@ -1412,7 +1412,9 @@ The workflow SHALL mandate that:
 • *Given* concurrent updates to `_allWorkouts` triggering CAS retries,
 • *When* `updateWorkoutInMemory()` or `saveWorkout()` executes,
 • *Then* zero coroutines are launched, zero I/O is performed, and zero external closure variables are mutated inside the `_allWorkouts.update` block.
-• *Given* a workout deletion that fails in the database or throws an exception,
+• *Given* an observer listening to `deleteFinishedEvent`,
+• *When* `deleteFinishedEvent` posts on deletion completion or failure,
+• *Then* `deletionProgress.value` is guaranteed to be `DeletionProgress.Idle` without race conditions.
 • *When* `deleteWorkout(id)` executes,
 • *Then* `deleteFinishedEvent` posts `Pair(id, false)`, and `_deletionProgress` is guaranteed to reset to `DeletionProgress.Idle`.
 

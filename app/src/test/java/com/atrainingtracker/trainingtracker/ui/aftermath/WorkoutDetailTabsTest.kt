@@ -459,7 +459,8 @@ class WorkoutDetailTabsTest {
             hasZones = true,
             hasLaps = true,
             hasStrava = true,
-            hasExportStatus = true
+            hasExportStatus = true,
+            hasPhotos = true
         )
 
         // All legacy flags explicitly set to false

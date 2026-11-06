@@ -193,9 +193,10 @@ fun WorkoutSummary(
     val gradeZoneDistribution by produceState<ZoneDistributionData?>(
         initialValue = null,
         key1 = workoutData.id,
-        key2 = preferences.showZoneAnalysis
+        key2 = preferences.showZoneAnalysis,
+        key3 = preferences.showGradeDistribution
     ) {
-        if (preferences.showZoneAnalysis) {
+        if (preferences.showZoneAnalysis && preferences.showGradeDistribution) {
             value = withContext(Dispatchers.IO) {
                 repository.getGradeZoneDistribution(workoutData.id)
             }
@@ -252,20 +253,6 @@ fun WorkoutSummary(
 
         val workoutStartMs = workoutData.startTimeS * 1000L
         val workoutEndMs = (workoutData.startTimeS + workoutData.totalTimeSec) * 1000L
-        WorkoutPhotoStrip(
-            photos = workoutPhotos,
-            onPhotoClick = { photo -> activePreviewPhoto = photo },
-            onAddPhotos = { uris ->
-                coroutineScope.launch {
-                    uris.forEach { uri ->
-                        repository.addWorkoutPhoto(workoutData.id, uri, null)
-                    }
-                    photosRefreshKey++
-                }
-            },
-            startTimeMs = workoutStartMs,
-            endTimeMs = workoutEndMs
-        )
 
         // 2. Dynamic Section Rendering Loop (REQ-UI-255)
         val hasMap = isPlayServiceAvailable && workoutData.mapPolyline != ""
@@ -488,7 +475,7 @@ fun WorkoutSummary(
                 }
                 WorkoutSectionType.ZONES -> {
                     // 9. Zone Distribution Cards
-                    if (preferences.showZoneAnalysis && (hrZoneDistribution != null || powerZoneDistribution != null || gradeZoneDistribution != null)) {
+                    if (preferences.showZoneAnalysis && (hrZoneDistribution != null || powerZoneDistribution != null || (gradeZoneDistribution != null && preferences.showGradeDistribution))) {
                         HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
                             thickness = 0.5.dp,
@@ -518,17 +505,19 @@ fun WorkoutSummary(
                                     .then(mapClickModifier)
                             )
                         }
-                        gradeZoneDistribution?.let { distribution ->
-                            GradeZoneDistributionCard(
-                                distribution = distribution,
-                                displayMode = effectiveGradeZoneDisplayMode,
-                                onDisplayModeChange = { gradeZoneDisplayMode = it },
-                                showModeSelector = false,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 4.dp)
-                                    .then(mapClickModifier)
-                            )
+                        if (preferences.showGradeDistribution) {
+                            gradeZoneDistribution?.let { distribution ->
+                                GradeZoneDistributionCard(
+                                    distribution = distribution,
+                                    displayMode = effectiveGradeZoneDisplayMode,
+                                    onDisplayModeChange = { gradeZoneDisplayMode = it },
+                                    showModeSelector = false,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                                        .then(mapClickModifier)
+                                )
+                            }
                         }
                     }
                 }
@@ -537,6 +526,31 @@ fun WorkoutSummary(
                     if (preferences.showExportStatus) {
                         ExportStatus(
                             exportStatuses = workoutData.exportStatuses
+                        )
+                    }
+                }
+                WorkoutSectionType.PHOTOS -> {
+                    if (preferences.showPhotos && (workoutPhotos.isNotEmpty() || preferences.showPhotoAddButton)) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 12.dp),
+                            thickness = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant
+                        )
+                        WorkoutPhotoStrip(
+                            photos = workoutPhotos,
+                            onPhotoClick = { photo -> activePreviewPhoto = photo },
+                            onAddPhotos = { uris ->
+                                coroutineScope.launch {
+                                    uris.forEach { uri ->
+                                        repository.addWorkoutPhoto(workoutData.id, uri, null)
+                                    }
+                                    photosRefreshKey++
+                                }
+                            },
+                            showAddButton = preferences.showPhotoAddButton,
+                            thumbnailSize = preferences.photoThumbnailSize,
+                            startTimeMs = workoutStartMs,
+                            endTimeMs = workoutEndMs
                         )
                     }
                 }

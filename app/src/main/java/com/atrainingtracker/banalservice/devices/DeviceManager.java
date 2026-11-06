@@ -714,6 +714,14 @@ public class DeviceManager {
             mSearchQueue.addFirst(myRemoteDevice);
         }
 
+        // Defense-in-depth hardware connection clamping on Free tier (REQ-SET-084.7)
+        if (isFreeTierQuotaRestricted() && mSearchQueue.size() > com.atrainingtracker.trainingtracker.monetization.SensorQuotaReconciliationManager.MAX_FREE_PAIRED_DEVICES) {
+            Log.i(TAG, "startSearchForPairedDevices(): Clamping search queue from " + mSearchQueue.size() + " to " + com.atrainingtracker.trainingtracker.monetization.SensorQuotaReconciliationManager.MAX_FREE_PAIRED_DEVICES + " on Free tier");
+            while (mSearchQueue.size() > com.atrainingtracker.trainingtracker.monetization.SensorQuotaReconciliationManager.MAX_FREE_PAIRED_DEVICES) {
+                mSearchQueue.removeLast();
+            }
+        }
+
         // give all devices the same number of chances ...
         mMyRemoteDeviceTries.clear();
         for (MyRemoteDevice myRemoteDevice : mSearchQueue) {
@@ -1116,6 +1124,11 @@ public class DeviceManager {
             while (cursor.moveToNext()) {
                 if (cursor.getInt(cursor.getColumnIndexOrThrow(DevicesDbHelper.PAIRED)) > 0) {
 
+                    if (isFreeTierQuotaRestricted() && mMyRemoteDevices.size() >= com.atrainingtracker.trainingtracker.monetization.SensorQuotaReconciliationManager.MAX_FREE_PAIRED_DEVICES) {
+                        Log.i(TAG, "createPairedRemoteDevices(): Free tier sensor quota reached (" + mMyRemoteDevices.size() + "), clamping connection");
+                        break;
+                    }
+
                     long deviceID = cursor.getLong(cursor.getColumnIndexOrThrow(DevicesDbHelper.C_ID));
                     if (mMyRemoteDevices.containsKey(deviceID)) {
                         if (DEBUG) Log.i(TAG, "device with ID " + deviceID + " is already created");
@@ -1147,6 +1160,16 @@ public class DeviceManager {
         }
 
         if (DEBUG) Log.d(TAG, "finished createPairedDevices");
+    }
+
+    private boolean isFreeTierQuotaRestricted() {
+        try {
+            com.atrainingtracker.trainingtracker.monetization.ProFeatureManager proManager =
+                    com.atrainingtracker.trainingtracker.monetization.ProFeatureManager.getInstance(mContext);
+            return !proManager.isProActive().getValue();
+        } catch (Throwable t) {
+            return false;
+        }
     }
 
     public void startSearchForNewRemoteDevices(Protocol protocol, DeviceType deviceType) {
