@@ -1495,8 +1495,8 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 **Invariants**: Release builds must never permit arbitrary tier override; ProFeatureManager resolution must be thread-safe.
 
 ### REQ-SET-088: Supporter N+1 Garage Detector & Upgrade Prompts (REQ-MON-006) [Verified]
-- **Tests**: `TST-SET-088`, `TST-LOC-001` | **Tickets**: `ATT-5299`, `ATT-5400`, `ATT-5399`
-- **Implementation**: `GarageLeagueDetector.kt`, `GarageDetectorDialog.kt`, `EquipmentViewModel.kt`, `DeviceListViewModel.kt`, `SettingsDataStore.kt`, `SupporterDebugSection.kt`
+- **Tests**: `TST-SET-088`, `TST-LOC-001` | **Tickets**: `ATT-5299`, `ATT-5400`, `ATT-5399`, `ATT-5468`
+- **Implementation**: `GarageLeagueDetector.kt`, `GarageDetectorDialog.kt`, `GarageUpgradeNudgeDialog.kt`, `EquipmentViewModel.kt`, `DeviceListViewModel.kt`, `SettingsDataStore.kt`, `SupporterDebugSection.kt`
 - **Rationale**: Athlete equipment expansion reflects escalating engagement. When an athlete adds bikes, shoes, or pairs additional sensors reaching enthusiast ("Gold") or world-class ("Diamond") scale, the system detects their qualified garage league and presents a humorous, non-blocking "N+1 Cyclist Garage" dialog inviting an upgrade to Gold Pro-Supporter (50 € / year) or Diamond Sponsor (100 € / year) with the matching plan pre-selected, while preventing repeated prompt spam and honoring tier monotonicity.
 - **Description**:
 1. *Garage League Qualification Thresholds (`REQ-SET-088.1`)*:
@@ -1523,6 +1523,8 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • The dialog SHALL offer a 1-tap upgrade action navigating to `SupporterScreen` (`NavRoutes.SUPPORTER`) with the recommended plan pre-selected (`gold-yearly` for Gold League, `diamond-yearly` for Diamond League), and a secondary "Später / Weiter zum Training" dismiss action.
 6. *Diagnostic Debug Preview Triggers (`REQ-SET-088.6`)*:
 • `SupporterDebugSection` SHALL expose 1-tap test preview buttons for Gold and Diamond N+1 garage dialogs, and a reset button clearing both nudge flags in DataStore, strictly enclosed within `if (BuildConfig.DEBUG)`.
+7. *Rule 73 Stacked Action Button Ergonomics (`REQ-SET-088.7`)*:
+• In `GarageUpgradeNudgeDialog.kt`, action controls SHALL follow the Rule 73 stacked button layout for `AppModalBottomSheet`: the primary upgrade CTA (*'Upgrade auf Gold Pro / Diamond Sponsor'*, `Button(modifier = Modifier.fillMaxWidth())`) SHALL be placed as a full-width button at the bottom of the sheet content column, leaving only a single full-width dismiss action (*'Später / Weiter zum Training'*, `TextButton(modifier = Modifier.fillMaxWidth())`) in `actions`, eliminating horizontal button crowding and broken 2–3 line word wrapping across all 9 locales (Rule 73, ATT-5468).
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete on Free or Silver tier with 2 bikes,

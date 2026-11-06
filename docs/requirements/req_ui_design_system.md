@@ -1115,7 +1115,7 @@ All user-facing action labels and formatting strings SHALL be localized across a
 **Invariants**: Filter bottom sheet scaffold behavior (`REQ-UI-133`, `REQ-UI-134`), status bar boundary limits on map bottom sheets (`REQ-SET-069`), live tracking lap summary HUD dialog (`LapSummaryDialog`), and lap table formatting (`REQ-UI-143`) MUST NOT be altered or regressed.
 
 ### REQ-UI-149: Modernized Modal Bottom Sheet Dialogs & Selection Flows [Verified]
-- **Tests**: `TST-UI-102` | **Tickets**: `ATT-900`, `ATT-5399`
+- **Tests**: `TST-UI-102` | **Tickets**: `ATT-900`, `ATT-5399`, `ATT-5470`, `ATT-5468`
 - **Implementation**: Modernize mobile ergonomics by transitioning interactive selection, configuration, nudge, and history popups to edge-to-edge modal bottom sheets (AppModalBottomSheet) while keeping transient HUDs and destructive alerts as centered dialogs.
 - **Rationale**: The system SHALL modernize interactive configuration, settings, editing, and device/sensor selection dialogs into bottom popups backed by `AppModalBottomSheet`, improving one-handed mobile ergonomics and edge-to-edge system navigation support, while strictly preserving transient tracking HUDs and destructive alerts as centered modal dialogs:
 1. *Drawer Settings Modernization*:
@@ -1142,9 +1142,9 @@ All user-facing action labels and formatting strings SHALL be localized across a
 7. *Preserved Modal Dialog Invariants*:
 • `LapSummaryDialog` MUST remain an auto-dismissing (3-second) centered HUD `Dialog` during active tracking.
 • Destructive confirmation dialogs (`DeleteConfirmationDialog`, `WorkoutDeleteDialog`, `DeleteOldWorkoutsDialog`), deletion progress dialogs (`WorkoutDeletionProgressDialog`), and system redirects (`GPSDisabledDialog`, `StartOrResumeDialog`) MUST remain centered `AlertDialog`s.
-8. *Monetization, Nudge & History Dialog Modernization (`ATT-5399`)*:
-• `SwapOrUpgradeDialog.kt` SHALL compose `AppModalBottomSheet` displaying candidate devices for swap, smart recommendation, and upgrade navigation (`NavRoutes.SUPPORTER`) with swap action button and dismiss action.
-• `GarageUpgradeNudgeDialog.kt` SHALL compose `AppModalBottomSheet` displaying dynamic gear counts and upgrade navigation to Gold Pro or Diamond Sponsor with dismiss action.
+8. *Monetization, Nudge & History Dialog Modernization (`ATT-5399`, `ATT-5470`, `ATT-5468`)*:
+• `SwapOrUpgradeDialog.kt` SHALL compose `AppModalBottomSheet` displaying candidate devices for swap, smart recommendation, and upgrade navigation (`NavRoutes.SUPPORTER`) with swap action button and dismiss action (and stacked full-width layout per Rule 73, ATT-5470).
+• `GarageUpgradeNudgeDialog.kt` SHALL compose `AppModalBottomSheet` displaying dynamic gear counts and upgrade navigation to Gold Pro or Diamond Sponsor with dismiss action (and stacked full-width layout per Rule 73, ATT-5468).
 • `FirstJubileeCelebrationDialog.kt` SHALL compose `AppModalBottomSheet` displaying milestone achievements, tier-gated engagement actions, and dismiss action.
 • `ZoneHistoryDialog.kt` SHALL compose `AppModalBottomSheet` with `scrollable = false` for the outer sheet container displaying the zone snapshot list (`LazyColumn`), and `ZoneSnapshotEditDialog` SHALL compose `AppModalBottomSheet(scrollable = true)` for editing individual snapshot boundaries.
 
