@@ -82,6 +82,7 @@ import com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricType
 import com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricUtils
 import com.atrainingtracker.trainingtracker.ui.map.toMapTrack
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.GradeZoneDistributionCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneDistributionCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneDistributionCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneCardDisplayMode
@@ -118,8 +119,10 @@ fun WorkoutSummary(
     var activeEditingLap by remember { mutableStateOf<LapData?>(null) }
     var hrZoneDisplayMode by rememberSaveable { mutableStateOf<ZoneCardDisplayMode?>(null) }
     var powerZoneDisplayMode by rememberSaveable { mutableStateOf<ZoneCardDisplayMode?>(null) }
+    var gradeZoneDisplayMode by rememberSaveable { mutableStateOf<ZoneCardDisplayMode?>(null) }
     val effectiveHrZoneDisplayMode = hrZoneDisplayMode ?: preferences.zoneCardDisplayMode
     val effectivePowerZoneDisplayMode = powerZoneDisplayMode ?: preferences.zoneCardDisplayMode
+    val effectiveGradeZoneDisplayMode = gradeZoneDisplayMode ?: preferences.zoneCardDisplayMode
     val context = LocalContext.current
     val repository = remember(context) { WorkoutRepository.getInstance(context.applicationContext as Application) }
     val tuningDataStore = remember(context) { TuningPreferencesDataStore(context.applicationContext) }
@@ -181,6 +184,20 @@ fun WorkoutSummary(
         if (preferences.showZoneAnalysis) {
             value = withContext(Dispatchers.IO) {
                 repository.getPowerZoneDistribution(workoutData.id)
+            }
+        } else {
+            value = null
+        }
+    }
+
+    val gradeZoneDistribution by produceState<ZoneDistributionData?>(
+        initialValue = null,
+        key1 = workoutData.id,
+        key2 = preferences.showZoneAnalysis
+    ) {
+        if (preferences.showZoneAnalysis) {
+            value = withContext(Dispatchers.IO) {
+                repository.getGradeZoneDistribution(workoutData.id)
             }
         } else {
             value = null
@@ -467,7 +484,7 @@ fun WorkoutSummary(
                 }
                 WorkoutSectionType.ZONES -> {
                     // 9. Zone Distribution Cards
-                    if (preferences.showZoneAnalysis && (hrZoneDistribution != null || powerZoneDistribution != null)) {
+                    if (preferences.showZoneAnalysis && (hrZoneDistribution != null || powerZoneDistribution != null || gradeZoneDistribution != null)) {
                         HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
                             thickness = 0.5.dp,
@@ -490,6 +507,18 @@ fun WorkoutSummary(
                                 distribution = distribution,
                                 displayMode = effectivePowerZoneDisplayMode,
                                 onDisplayModeChange = { powerZoneDisplayMode = it },
+                                showModeSelector = false,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                                    .then(mapClickModifier)
+                            )
+                        }
+                        gradeZoneDistribution?.let { distribution ->
+                            GradeZoneDistributionCard(
+                                distribution = distribution,
+                                displayMode = effectiveGradeZoneDisplayMode,
+                                onDisplayModeChange = { gradeZoneDisplayMode = it },
                                 showModeSelector = false,
                                 modifier = Modifier
                                     .fillMaxWidth()

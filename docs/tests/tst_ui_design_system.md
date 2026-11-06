@@ -7252,3 +7252,27 @@
   5. *Clean-Room Regression Suite Execution (`TST-UI-452.5`)*:
   • Execute targeted package tests (`com.atrainingtracker.trainingtracker.resources.*`, `com.atrainingtracker.trainingtracker.notifications.*`, `build.*`) asserting 100% pass rate.
 
+
+
+### TST-UI-453: **Aftermath Workout Details: Grade / Slope Zone Distribution Card & 1% Telemetry Histogram Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-453`
+- **Component**: `GradeZoneDistributionCard.kt`, `ZoneDistributionCalculator.kt`, `GradeZoneDistributionCardTest.kt`, `GradeZoneDistributionCalculatorTest.kt`, `TrackOnMapScreen.kt`, `WorkoutDetailTabbedContent.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-5487`
+- **Test Description**:
+  1. *Grade Zone Calculation & Canonical Thresholds Unit Test (`TST-UI-453.1`, `GradeZoneDistributionCalculatorTest.kt`)*:
+  • Verify `ZoneDistributionCalculator.calculateGradeDistribution(...)` maps segments into exactly 7 zones matching `getElevationGradeColor` thresholds: `< 2%` (Z1), `2–5%` (Z2), `5–10%` (Z3), `10–15%` (Z4), `15–20%` (Z5), `20–25%` (Z6), `> 25%` (Z7).
+  • Verify smoothing eliminates GPS quantization noise and prevents artificial `> 25%` spikes on flat segments.
+  • Verify delta time clamping ($\Delta t \le 5\text{s}$) and handling of degenerate/stationary points.
+  • Verify null return when path points or elevation data are empty or missing.
+  2. *Fine-Grained 1% Grade Histogram Calculation Test (`TST-UI-453.2`, `GradeZoneDistributionCalculatorTest.kt`)*:
+  • Verify generation of 1% histogram bins spanning `[minGrade, maxGrade]`.
+  • Verify bin zone indices and colors match `ElevationProfile.kt` color coding.
+  • Verify total active time matches the sum of 7 zone durations.
+  3. *`GradeZoneDistributionCard` UI & 3-Way Mode Switcher Test (`TST-UI-453.3`, `GradeZoneDistributionCardTest.kt`)*:
+  • Verify card renders icon `R.drawable.ic_grade`, localized title, and formatted total duration.
+  • Verify 3-way toggle renders Balken (`STACKED_BAR`), Säulen (`COLUMNS`), and Histogramm (`HISTOGRAM`).
+  • Verify view switching renders `ZoneDistributionStackedBar`, `ZoneDistributionColumnChart`, and `TelemetryHistogramChart` respectively.
+  4. *9-Language Localization & Parity Test (`TST-UI-453.4`, `TranslationParityTest.kt`)*:
+  • Verify 100% parity across all 9 supported locales for `aftermath_grade_zones_title` with zero missing entries and zero decorative inline emojis.
+  5. *Clean-Room Regression Suite Execution (`TST-UI-453.5`)*:
+  • Execute targeted package tests (`com.atrainingtracker.trainingtracker.ui.aftermath.zones.*`, `com.atrainingtracker.trainingtracker.ui.aftermath.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.

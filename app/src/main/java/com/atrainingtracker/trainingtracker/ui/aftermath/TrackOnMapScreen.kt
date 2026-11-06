@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeader
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.GradeZoneDistributionCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneDistributionCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneDistributionCard
@@ -83,6 +84,7 @@ fun TrackOnMapScreen(
     headerActions: @Composable RowScope.() -> Unit = {},
     hrZoneDistribution: ZoneDistributionData? = null,
     powerZoneDistribution: ZoneDistributionData? = null,
+    gradeZoneDistribution: ZoneDistributionData? = null,
     hrZoneThresholds: HeartRateZoneThresholds? = null,
     powerZoneThresholds: PowerZoneThresholds? = null,
     analyticsContent: (@Composable ColumnScope.() -> Unit)? = null,
@@ -182,8 +184,10 @@ fun TrackOnMapScreen(
 
     var hrZoneDisplayMode by rememberSaveable(activeDetailPrefs.zoneCardDisplayMode) { mutableStateOf<ZoneCardDisplayMode?>(null) }
     var powerZoneDisplayMode by rememberSaveable(activeDetailPrefs.zoneCardDisplayMode) { mutableStateOf<ZoneCardDisplayMode?>(null) }
+    var gradeZoneDisplayMode by rememberSaveable(activeDetailPrefs.zoneCardDisplayMode) { mutableStateOf<ZoneCardDisplayMode?>(null) }
     val effectiveHrZoneDisplayMode = hrZoneDisplayMode ?: activeDetailPrefs.zoneCardDisplayMode
     val effectivePowerZoneDisplayMode = powerZoneDisplayMode ?: activeDetailPrefs.zoneCardDisplayMode
+    val effectiveGradeZoneDisplayMode = gradeZoneDisplayMode ?: activeDetailPrefs.zoneCardDisplayMode
 
     val isElevationPostMap = postMapSections.contains(WorkoutSectionType.ELEVATION)
     val isChartsPostMap = postMapSections.contains(WorkoutSectionType.CHARTS)
@@ -201,7 +205,7 @@ fun TrackOnMapScreen(
             )
     }
 
-    val hasZonesData = hrZoneDistribution != null || powerZoneDistribution != null
+    val hasZonesData = hrZoneDistribution != null || powerZoneDistribution != null || gradeZoneDistribution != null
     val hasLapsData = workoutData.laps.isNotEmpty()
     val sectionAvailability = remember(
         workoutData,
@@ -269,10 +273,13 @@ fun TrackOnMapScreen(
             onSelectLapNr = { selectedLapNr = it },
             hrZoneDistribution = hrZoneDistribution,
             powerZoneDistribution = powerZoneDistribution,
+            gradeZoneDistribution = gradeZoneDistribution,
             effectiveHrZoneDisplayMode = effectiveHrZoneDisplayMode,
             effectivePowerZoneDisplayMode = effectivePowerZoneDisplayMode,
+            effectiveGradeZoneDisplayMode = effectiveGradeZoneDisplayMode,
             onHrZoneDisplayModeChange = { hrZoneDisplayMode = it },
             onPowerZoneDisplayModeChange = { powerZoneDisplayMode = it },
+            onGradeZoneDisplayModeChange = { gradeZoneDisplayMode = it },
             hrZoneThresholds = hrZoneThresholds,
             powerZoneThresholds = powerZoneThresholds,
             useStatusBarsPadding = useStatusBarsPadding,
@@ -698,6 +705,16 @@ fun TrackOnMapScreen(
                                             .padding(horizontal = 16.dp, vertical = 4.dp)
                                     )
                                 }
+                                gradeZoneDistribution?.let { distribution ->
+                                    GradeZoneDistributionCard(
+                                        distribution = distribution,
+                                        displayMode = effectiveGradeZoneDisplayMode,
+                                        onDisplayModeChange = { gradeZoneDisplayMode = it },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                                    )
+                                }
                             }
                         }
                         WorkoutSectionType.EXPORT_STATUS -> {
@@ -734,6 +751,16 @@ fun TrackOnMapScreen(
                                         distribution = distribution,
                                         displayMode = effectivePowerZoneDisplayMode,
                                         onDisplayModeChange = { powerZoneDisplayMode = it },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                                    )
+                                }
+                                gradeZoneDistribution?.let { distribution ->
+                                    GradeZoneDistributionCard(
+                                        distribution = distribution,
+                                        displayMode = effectiveGradeZoneDisplayMode,
+                                        onDisplayModeChange = { gradeZoneDisplayMode = it },
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(horizontal = 16.dp, vertical = 4.dp)

@@ -54,6 +54,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.photos.WorkoutPhotoPrev
 import com.atrainingtracker.trainingtracker.ui.aftermath.photos.WorkoutPhotoStrip
 import com.atrainingtracker.trainingtracker.ui.aftermath.splits.LapSplitChartData
 import com.atrainingtracker.trainingtracker.ui.aftermath.splits.LapSplitVisualizerCard
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.GradeZoneDistributionCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneDistributionCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneDistributionCard
@@ -100,10 +101,13 @@ fun WorkoutDetailTabbedContent(
     onSelectLapNr: (Long?) -> Unit,
     hrZoneDistribution: ZoneDistributionData?,
     powerZoneDistribution: ZoneDistributionData?,
+    gradeZoneDistribution: ZoneDistributionData? = null,
     effectiveHrZoneDisplayMode: ZoneCardDisplayMode,
     effectivePowerZoneDisplayMode: ZoneCardDisplayMode,
+    effectiveGradeZoneDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.COLUMNS,
     onHrZoneDisplayModeChange: (ZoneCardDisplayMode) -> Unit,
     onPowerZoneDisplayModeChange: (ZoneCardDisplayMode) -> Unit,
+    onGradeZoneDisplayModeChange: (ZoneCardDisplayMode) -> Unit = {},
     hrZoneThresholds: HeartRateZoneThresholds? = null,
     powerZoneThresholds: PowerZoneThresholds? = null,
     useStatusBarsPadding: Boolean,
@@ -337,10 +341,13 @@ fun WorkoutDetailTabbedContent(
                                                 onSelectLapNr = onSelectLapNr,
                                                 hrZoneDistribution = hrZoneDistribution,
                                                 powerZoneDistribution = powerZoneDistribution,
+                                                gradeZoneDistribution = gradeZoneDistribution,
                                                 effectiveHrZoneDisplayMode = effectiveHrZoneDisplayMode,
                                                 effectivePowerZoneDisplayMode = effectivePowerZoneDisplayMode,
+                                                effectiveGradeZoneDisplayMode = effectiveGradeZoneDisplayMode,
                                                 onHrZoneDisplayModeChange = onHrZoneDisplayModeChange,
                                                 onPowerZoneDisplayModeChange = onPowerZoneDisplayModeChange,
+                                                onGradeZoneDisplayModeChange = onGradeZoneDisplayModeChange,
                                                 photos = workoutPhotos,
                                                 onPhotoClick = { activePreviewPhoto = it },
                                                 onSplitLapClick = onSplitLapClick,
@@ -422,10 +429,13 @@ fun WorkoutDetailTabbedContent(
                                                     onSelectLapNr = onSelectLapNr,
                                                     hrZoneDistribution = hrZoneDistribution,
                                                     powerZoneDistribution = powerZoneDistribution,
+                                                    gradeZoneDistribution = gradeZoneDistribution,
                                                     effectiveHrZoneDisplayMode = effectiveHrZoneDisplayMode,
                                                     effectivePowerZoneDisplayMode = effectivePowerZoneDisplayMode,
+                                                    effectiveGradeZoneDisplayMode = effectiveGradeZoneDisplayMode,
                                                     onHrZoneDisplayModeChange = onHrZoneDisplayModeChange,
                                                     onPowerZoneDisplayModeChange = onPowerZoneDisplayModeChange,
+                                                    onGradeZoneDisplayModeChange = onGradeZoneDisplayModeChange,
                                                     photos = workoutPhotos,
                                                     onPhotoClick = { activePreviewPhoto = it },
                                                     onSplitLapClick = onSplitLapClick,
@@ -473,10 +483,13 @@ fun WorkoutDetailTabbedContent(
                                     onSelectLapNr = onSelectLapNr,
                                     hrZoneDistribution = hrZoneDistribution,
                                     powerZoneDistribution = powerZoneDistribution,
+                                    gradeZoneDistribution = gradeZoneDistribution,
                                     effectiveHrZoneDisplayMode = effectiveHrZoneDisplayMode,
                                     effectivePowerZoneDisplayMode = effectivePowerZoneDisplayMode,
+                                    effectiveGradeZoneDisplayMode = effectiveGradeZoneDisplayMode,
                                     onHrZoneDisplayModeChange = onHrZoneDisplayModeChange,
                                     onPowerZoneDisplayModeChange = onPowerZoneDisplayModeChange,
+                                    onGradeZoneDisplayModeChange = onGradeZoneDisplayModeChange,
                                     photos = workoutPhotos,
                                     onPhotoClick = { activePreviewPhoto = it },
                                     onSplitLapClick = onSplitLapClick,
@@ -635,10 +648,13 @@ private fun RenderWorkoutDetailCardSections(
     onSelectLapNr: (Long?) -> Unit,
     hrZoneDistribution: ZoneDistributionData?,
     powerZoneDistribution: ZoneDistributionData?,
+    gradeZoneDistribution: ZoneDistributionData? = null,
     effectiveHrZoneDisplayMode: ZoneCardDisplayMode,
     effectivePowerZoneDisplayMode: ZoneCardDisplayMode,
+    effectiveGradeZoneDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.COLUMNS,
     onHrZoneDisplayModeChange: (ZoneCardDisplayMode) -> Unit,
     onPowerZoneDisplayModeChange: (ZoneCardDisplayMode) -> Unit,
+    onGradeZoneDisplayModeChange: (ZoneCardDisplayMode) -> Unit = {},
     photos: List<WorkoutPhotoEntry> = emptyList(),
     onPhotoClick: ((WorkoutPhotoEntry) -> Unit)? = null,
     onAddPhotos: ((List<android.net.Uri>) -> Unit)? = null,
@@ -700,6 +716,16 @@ private fun RenderWorkoutDetailCardSections(
                         distribution = distribution,
                         displayMode = effectivePowerZoneDisplayMode,
                         onDisplayModeChange = onPowerZoneDisplayModeChange,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                }
+                gradeZoneDistribution?.let { distribution ->
+                    GradeZoneDistributionCard(
+                        distribution = distribution,
+                        displayMode = effectiveGradeZoneDisplayMode,
+                        onDisplayModeChange = onGradeZoneDisplayModeChange,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 4.dp)

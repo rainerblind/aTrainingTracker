@@ -57,6 +57,7 @@ data class AftermathMapUIState(
     val zoomFocus: MapZoomFocus = MapZoomFocus.FIT_PRIMARY,
     val hrZoneDistribution: ZoneDistributionData? = null,
     val powerZoneDistribution: ZoneDistributionData? = null,
+    val gradeZoneDistribution: ZoneDistributionData? = null,
     val telemetryPath: List<PathPoint> = emptyList(),
     val hrThresholds: HeartRateZoneThresholds? = null,
     val powerThresholds: PowerZoneThresholds? = null
@@ -265,15 +266,17 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
                 )
             }
 
-            // --- PHASE 7: Zone Analytics (Heart Rate & Power 5-Zone Distribution & Thresholds) ---
+            // --- PHASE 7: Zone Analytics (Heart Rate, Power & Grade Zone Distribution & Thresholds) ---
             val hrDistribution = telemetry?.hrZoneDistribution ?: workoutRepository.getHeartRateZoneDistribution(workoutId, bSportType)
             val powerDistribution = telemetry?.powerZoneDistribution ?: workoutRepository.getPowerZoneDistribution(workoutId)
+            val gradeDistribution = telemetry?.gradeZoneDistribution ?: workoutRepository.getGradeZoneDistribution(workoutId)
             val hrThresholds = telemetry?.hrThresholds ?: TelemetryZoneMath.loadHeartRateThresholds(getApplication(), bSportType)
             val powerThresholds = telemetry?.powerThresholds ?: TelemetryZoneMath.loadPowerThresholds(getApplication())
             withContext(Dispatchers.Main) {
                 _uiState.value = _uiState.value.copy(
                     hrZoneDistribution = hrDistribution,
                     powerZoneDistribution = powerDistribution,
+                    gradeZoneDistribution = gradeDistribution,
                     hrThresholds = hrThresholds,
                     powerThresholds = powerThresholds
                 )

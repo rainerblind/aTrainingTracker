@@ -13327,3 +13327,54 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Zero `RemoteServiceException` / `BadForegroundServiceNotificationException` crashes, standard monochrome status bar icon style, preservation of `R.drawable.logo` for non-notification callers, and 100% test pass rate.
 
+
+
+### REQ-UI-453: Aftermath Workout Details: Grade / Slope Zone Distribution Card & 1% Telemetry Histogram [Verified]
+- **Tests**: `TST-UI-453` | **Tickets**: `ATT-5487`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/zones/GradeZoneDistributionCard.kt`, `ZoneDistributionCalculator.kt`, `TrackOnMapScreen.kt`, `WorkoutDetailTabbedContent.kt`, `WorkoutRepository.kt`, `AftermathMapUIState.kt`
+- **Rationale**: To provide athletes with a dedicated slope distribution visualization in Workout Details' Zonen tab, complementing heart rate and power cards with 7 canonical grade bands matching the elevation profile and an interactive 1% fine-grained histogram:
+- **Description**:
+  1. *Seven Canonical Slope Zones & Color Scheme Parity (`REQ-UI-453.1`)*:
+     - The calculation engine and UI card SHALL classify grade into 7 canonical zones consistent with `ElevationProfile.kt` (`getElevationGradeColor` / `GradeLegend`) using `TTColor.Zone1..Zone7`:
+       - Zone 1 (`TTColor.Zone1`, Green): `< 2.0 %` (Flat / Downhill)
+       - Zone 2 (`TTColor.Zone2`, Yellow): `2.0 – 5.0 %`
+       - Zone 3 (`TTColor.Zone3`, Orange): `5.0 – 10.0 %`
+       - Zone 4 (`TTColor.Zone4`, Red): `10.0 – 15.0 %`
+       - Zone 5 (`TTColor.Zone5`, Magenta/Violet): `15.0 – 20.0 %`
+       - Zone 6 (`TTColor.Zone6`, Black): `20.0 – 25.0 %`
+       - Zone 7 (`TTColor.Zone7`, White with dark border): `> 25.0 %`
+     - Zone labels SHALL use pre-existing localized string resources `R.string.grade_legend_under_2` through `R.string.grade_legend_over_25`.
+  2. *Loess-Smoothed Grade Calculation Engine (`REQ-UI-453.2`)*:
+     - `ZoneDistributionCalculator.calculateGradeDistribution(...)` SHALL smooth path elevation samples using `ElevationSmoothingMath.smoothAltitudes` ($\sigma = 21.0\text{m}$) before grade calculation to prevent GPS quantization noise and phantom `> 25%` grade spikes.
+     - Segments with valid duration $\Delta t \le 5\text{s}$ and positive distance $\Delta d > 0$ SHALL be categorized into 7 zones and into 1% fine-grained histogram bins across the full workout grade range (`[minGrade, maxGrade]`).
+  3. *`GradeZoneDistributionCard` UI Component & 3-Way Mode Switcher (`REQ-UI-453.3`)*:
+     - The UI card SHALL render in `ui/aftermath/zones/GradeZoneDistributionCard.kt` with icon `R.drawable.ic_grade`, localized title `aftermath_grade_zones_title`, total active moving/climbing time, and 3-way toggle (`SingleChoiceSegmentedButtonRow`: Balken | Säulen | Histogramm) matching `HeartRateZoneDistributionCard` and `PowerZoneDistributionCard`.
+     - In Histogram mode, `TelemetryHistogramChart` SHALL display 1% bins with unit `"%"` and interactive touch scrubbing.
+  4. *Workout Details Zonen Tab Integration & Tab Availability (`REQ-UI-453.4`)*:
+     - `GradeZoneDistributionCard` SHALL be displayed in `WorkoutDetailTabbedContent.kt` under `WorkoutDetailSectionType.ZONES` whenever `gradeZoneDistribution != null`.
+     - `TrackOnMapScreen.kt` `hasZonesData` check SHALL include `|| gradeZoneDistribution != null` so altitude-enabled workouts without HR or power sensors surface the Zonen tab.
+     - Telemetry computation SHALL run 100% asynchronously on `Dispatchers.IO` via `WorkoutRepository` / `TrackOnMapAftermathViewModel`.
+  5. *9-Language Localization Parity (`REQ-UI-453.5`)*:
+     - All user-visible strings (`aftermath_grade_zones_title`) SHALL be localized across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with 100% parity verified by `TranslationParityTest`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-453`, extending `REQ-UI-202` (Heart Rate 5-Zone Distribution Bar), `REQ-UI-203` (Cycling Power 5-Zone Distribution Bar), `REQ-UI-231` (Fine-Grained Telemetry Frequency Histogram), and `REQ-UI-372` (Zone Distribution Cards). Targets `ui/aftermath/zones/`, `TrackOnMapScreen.kt`, and `WorkoutDetailTabbedContent.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-42.5 (`ATT-1389`/`ATT-1390`, commit `7cb10a2f`) introduced HR/Power zone distribution bars; Sprint 2026-42.7 (`ATT-1845`, commit `3ef15b82`) introduced fine-grained histogram charting; Sprint 2026-45.7 (`ATT-5487`) introduces the grade zone distribution card.
+3. *Root Reason for Existing Formulation*: Historical zone cards focused exclusively on physiological telemetry (HR and cycling power), omitting terrain slope despite elevation profiles and grade color coding existing in `ElevationProfile.kt`.
+4. *Preservation of Core Invariants*: Preserves `REQ-UI-371` (Elevation Profile 7-zone color bands and thresholds), preserves `REQ-UI-408` (tabbed aftermath navigation), preserves all existing HR and power zone calculations and cards, zero SQLite schema changes.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a recorded workout with valid GPS distance and elevation path points,
+• *When* Workout Details opens the Zonen tab,
+• *Then* `GradeZoneDistributionCard` is rendered showing 7 canonical slope zones matching `ElevationProfile.kt` color coding and a 3-way toggle (Stacked Bar | Columns | Histogram).
+• *Given* a workout without heart rate or power sensors but with altitude data,
+• *When* `TrackOnMapScreen` evaluates `hasZonesData`,
+• *Then* `hasZonesData` evaluates to `true` and the Zonen tab is displayed.
+• *Given* the 3-way display mode toggle on `GradeZoneDistributionCard`,
+• *When* the user switches between Stacked Bar, Columns, and Histogram,
+• *Then* the card seamlessly transitions between visualization modes with interactive scrubbing supported on the 1% grade histogram.
+• *Given* the 9 supported application locales,
+• *When* `TranslationParityTest` executes,
+• *Then* `aftermath_grade_zones_title` is present and non-empty across all 9 resource files.
+
+**Invariants**: Zero frame drops on aftermath screen entry (computation on `Dispatchers.IO`), zero SQLite schema modifications, identical color and boundary definitions as `ElevationProfile.kt`, and 100% test pass rate across targeted test suites.

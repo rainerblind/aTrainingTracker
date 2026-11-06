@@ -154,7 +154,13 @@ fun WorkoutClustersScreen(
                         )
                     }
                 },
-                onEditWorkout = { id -> editedWorkoutId = id }
+                onEditWorkout = { id -> editedWorkoutId = id },
+                hrZoneDistribution = aftermathUIState.hrZoneDistribution,
+                powerZoneDistribution = aftermathUIState.powerZoneDistribution,
+                gradeZoneDistribution = aftermathUIState.gradeZoneDistribution,
+                hrZoneThresholds = aftermathUIState.hrThresholds,
+                powerZoneThresholds = aftermathUIState.powerThresholds,
+                telemetryPath = aftermathUIState.telemetryPath
             )
 
             if (workoutToCluster != null) {

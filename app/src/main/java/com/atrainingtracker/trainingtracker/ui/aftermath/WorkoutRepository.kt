@@ -335,14 +335,15 @@ class WorkoutRepository private constructor(private val application: Application
      * @return A list of [PathPoint] objects containing distance, location, and altitude.
      */
     /**
-     * DTO containing consolidated telemetry tracks and zone distributions (ATT-4003 / REQ-DAT-033).
+     * DTO containing consolidated telemetry tracks and zone distributions (ATT-4003 / REQ-DAT-033 / ATT-5487).
      */
-    data class WorkoutDetailTelemetry(
+    data class WorkoutDetailTelemetry @JvmOverloads constructor(
         val tracks: Map<TrackType, List<PathPoint>>,
         val hrZoneDistribution: ZoneDistributionData?,
         val powerZoneDistribution: ZoneDistributionData?,
         val hrThresholds: HeartRateZoneThresholds? = null,
-        val powerThresholds: PowerZoneThresholds? = null
+        val powerThresholds: PowerZoneThresholds? = null,
+        val gradeZoneDistribution: ZoneDistributionData? = null
     )
 
     private fun getExistingColumns(db: android.database.sqlite.SQLiteDatabase, tableName: String): Set<String> {
@@ -744,6 +745,16 @@ class WorkoutRepository private constructor(private val application: Application
     }
 
     /**
+     * Calculates 7-zone slope / grade distribution data for a workout (REQ-UI-453 / ATT-5487).
+     */
+    suspend fun getGradeZoneDistribution(
+        workoutId: Long
+    ): ZoneDistributionData? = withContext(Dispatchers.IO) {
+        val trackPoints = getWorkoutTrackPoints(workoutId, TrackType.BEST)
+        ZoneDistributionCalculator.calculateGradeDistribution(trackPoints)
+    }
+
+    /**
      * ATT-4003 / REQ-DAT-033: Consolidated single-pass extraction of tracks and zone telemetry.
      * Replaces multiple unprojected table scans across track types and zone distributions
      * with a single projected query over the workout's samples table.
@@ -903,12 +914,16 @@ class WorkoutRepository private constructor(private val application: Application
             ZoneDistributionCalculator.calculatePowerDistribution(powerSamples, powerThresholds)
         } else null
 
+        val elevationPoints = enrichedTracks[TrackType.BEST] ?: enrichedTracks.values.firstOrNull() ?: emptyList()
+        val gradeDistribution = ZoneDistributionCalculator.calculateGradeDistribution(elevationPoints)
+
         WorkoutDetailTelemetry(
             tracks = enrichedTracks,
             hrZoneDistribution = hrDistribution,
             powerZoneDistribution = powerDistribution,
             hrThresholds = hrThresholds,
-            powerThresholds = powerThresholds
+            powerThresholds = powerThresholds,
+            gradeZoneDistribution = gradeDistribution
         )
     }
 
