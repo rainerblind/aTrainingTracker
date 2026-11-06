@@ -7319,3 +7319,25 @@
   • Verify 100% parity across all 9 supported locales for all `delete_lap_*` string keys with zero missing entries and zero decorative inline emojis.
   5. *Clean-Room Regression Suite Execution (`TST-UI-454.5`)*:
   • Execute targeted package tests (`com.atrainingtracker.trainingtracker.domain.laps.*`, `com.atrainingtracker.trainingtracker.ui.aftermath.*`, `com.atrainingtracker.trainingtracker.database.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
+
+### TST-UI-455: **Workout-Time Pre-Filtered Photo Picker with Show All Photos Fallback Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-455`
+- **Component**: `WorkoutPhotoStrip.kt`, `WorkoutTimePhotoPickerSheet.kt`, `WorkoutPhotoManager.kt`, `AndroidManifest.xml`, `TranslationParityTest.kt`
+- **Jira**: `ATT-5475`
+- **Test Description**:
+  1. *MediaStore Query & Temporal Filtering Unit Test (`TST-UI-455.1`, `WorkoutPhotoManagerTest.kt`)*:
+  • Verify `WorkoutPhotoManager.queryWorkoutTimePhotos` queries `MediaStore.Images.Media.EXTERNAL_CONTENT_URI` with temporal bounds `[startTimeMs - 300_000L .. endTimeMs + 300_000L]`.
+  • Verify fallback to `DATE_ADDED * 1000L` when `DATE_TAKEN` is null or $\le 0$.
+  • Verify sorting by `DATE_TAKEN ASC` / `DATE_ADDED ASC`.
+  2. *Runtime Permission & Fallback Decision Contract Test (`TST-UI-455.2`, `WorkoutPhotoPickerContractTest.kt`)*:
+  • Verify clicking "Add Photos" when permission is denied or zero photos match immediately invokes `PickMultipleVisualMedia`.
+  • Verify manifest declares `READ_MEDIA_IMAGES`, `READ_MEDIA_VISUAL_USER_SELECTED`, and `READ_EXTERNAL_STORAGE` (`maxSdkVersion="32"`).
+  3. *`WorkoutTimePhotoPickerSheet` Compose UI & Rule 73 Contract Test (`TST-UI-455.3`, `WorkoutTimePhotoPickerSheetTest.kt`)*:
+  • Verify sheet uses `AppModalBottomSheet(scrollable = false)` hosting a 3-column multi-select grid.
+  • Verify Rule 73 stacked full-width buttons: Primary "Hinzufügen (<count>)" and Secondary "Alle Bilder anzeigen".
+  • Verify thumbnail items render downsampled bitmaps and formatted capture timestamps.
+  4. *9-Language Localization & Parity Test (`TST-UI-455.4`, `TranslationParityTest.kt`)*:
+  • Verify 100% parity across all 9 supported locales for all new `workout_photos_*` strings with zero missing entries and zero decorative inline emojis.
+  5. *Clean-Room Regression Suite Execution (`TST-UI-455.5`)*:
+  • Execute targeted package tests (`com.atrainingtracker.trainingtracker.database.WorkoutPhotoManagerTest`, `com.atrainingtracker.trainingtracker.ui.aftermath.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
+

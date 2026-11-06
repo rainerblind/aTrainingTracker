@@ -2339,4 +2339,9 @@
     <string name="workout_photos_delete_confirm">この写真をワークアウトから削除しますか？</string>
     <string name="workout_photos_share_overlay">トラックオーバーレイで共有</string>
     <string name="workout_photos_marker_title">写真</string>
+    <!-- Workout Photo Time Picker (REQ-UI-455 / ATT-5475) -->
+    <string name="workout_photos_time_picker_title">ワークアウトの写真</string>
+    <string name="workout_photos_time_picker_subtitle">このワークアウト中に撮影された写真</string>
+    <string name="workout_photos_show_all">すべての写真を表示</string>
+    <string name="workout_photos_add_count">%1$d枚の写真を追加</string>
 </resources>

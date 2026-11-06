@@ -2360,4 +2360,9 @@
     <string name="workout_photos_delete_confirm">Vuoi eliminare questa foto dall\'allenamento?</string>
     <string name="workout_photos_share_overlay">Condividi con traccia in sovrimpressione</string>
     <string name="workout_photos_marker_title">Foto</string>
+    <!-- Workout Photo Time Picker (REQ-UI-455 / ATT-5475) -->
+    <string name="workout_photos_time_picker_title">Foto dell\'allenamento</string>
+    <string name="workout_photos_time_picker_subtitle">Foto scattate durante questo allenamento</string>
+    <string name="workout_photos_show_all">Mostra tutte le foto</string>
+    <string name="workout_photos_add_count">Aggiungi %1$d foto</string>
 </resources>

@@ -250,6 +250,8 @@ fun WorkoutSummary(
             showCriticalPowerInWorkoutSummary = effectiveTuningConfig.showCriticalPowerInWorkoutSummary
         )
 
+        val workoutStartMs = workoutData.startTimeS * 1000L
+        val workoutEndMs = (workoutData.startTimeS + workoutData.totalTimeSec) * 1000L
         WorkoutPhotoStrip(
             photos = workoutPhotos,
             onPhotoClick = { photo -> activePreviewPhoto = photo },
@@ -260,7 +262,9 @@ fun WorkoutSummary(
                     }
                     photosRefreshKey++
                 }
-            }
+            },
+            startTimeMs = workoutStartMs,
+            endTimeMs = workoutEndMs
         )
 
         // 2. Dynamic Section Rendering Loop (REQ-UI-255)

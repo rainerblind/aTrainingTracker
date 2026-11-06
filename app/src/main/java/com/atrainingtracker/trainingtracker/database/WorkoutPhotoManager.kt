@@ -18,10 +18,12 @@
 
 package com.atrainingtracker.trainingtracker.database
 
+import android.content.ContentUris
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.media.ExifInterface
 import android.net.Uri
+import android.provider.MediaStore
 import android.util.Log
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.routes.GeoUtils
@@ -52,6 +54,115 @@ object WorkoutPhotoManager {
         val latitude: Double?,
         val longitude: Double?
     )
+
+    /**
+     * DTO representing a photo queried from the device's MediaStore during a workout time window (REQ-UI-455.1).
+     */
+    data class TimeFilteredPhoto(
+        val id: Long,
+        val contentUri: Uri,
+        val dateTakenMs: Long
+    )
+
+    /**
+     * Calculates the chronological time window for a workout with tolerance (REQ-UI-455.1).
+     * Defaults to canonical 5-minute (300,000 ms) tolerance before start and after end.
+     */
+    fun calculateWorkoutTimeWindow(
+        startTimeMs: Long,
+        endTimeMs: Long,
+        toleranceMs: Long = 300_000L
+    ): Pair<Long, Long> {
+        val windowStart = startTimeMs - toleranceMs
+        val windowEnd = endTimeMs + toleranceMs
+        return Pair(windowStart, windowEnd)
+    }
+
+    /**
+     * Queries the device's MediaStore for photos taken within the specified workout time window (REQ-UI-455.1).
+     * Evaluates DATE_TAKEN (ms) with fallback to DATE_ADDED (seconds * 1000).
+     */
+    fun queryWorkoutTimePhotos(
+        context: Context,
+        startTimeMs: Long,
+        endTimeMs: Long,
+        toleranceMs: Long = 300_000L
+    ): List<TimeFilteredPhoto> {
+        if (startTimeMs <= 0L || endTimeMs < startTimeMs) {
+            return emptyList()
+        }
+        val (windowStartMs, windowEndMs) = calculateWorkoutTimeWindow(startTimeMs, endTimeMs, toleranceMs)
+        val windowStartSec = windowStartMs / 1000L
+        val windowEndSec = windowEndMs / 1000L
+
+        val projection = arrayOf(
+            MediaStore.Images.Media._ID,
+            MediaStore.Images.Media.DATE_TAKEN,
+            MediaStore.Images.Media.DATE_ADDED,
+            MediaStore.Images.Media.DATE_MODIFIED
+        )
+
+        val selection = "(${MediaStore.Images.Media.DATE_TAKEN} BETWEEN ? AND ?) OR " +
+                "((${MediaStore.Images.Media.DATE_TAKEN} IS NULL OR ${MediaStore.Images.Media.DATE_TAKEN} <= 0) " +
+                "AND (${MediaStore.Images.Media.DATE_MODIFIED} BETWEEN ? AND ? OR ${MediaStore.Images.Media.DATE_ADDED} BETWEEN ? AND ?))"
+
+        val selectionArgs = arrayOf(
+            windowStartMs.toString(),
+            windowEndMs.toString(),
+            windowStartSec.toString(),
+            windowEndSec.toString(),
+            windowStartSec.toString(),
+            windowEndSec.toString()
+        )
+
+        val sortOrder = "${MediaStore.Images.Media.DATE_TAKEN} ASC, ${MediaStore.Images.Media.DATE_MODIFIED} ASC, ${MediaStore.Images.Media.DATE_ADDED} ASC"
+
+        val matchingPhotos = mutableListOf<TimeFilteredPhoto>()
+        try {
+            context.contentResolver.query(
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                projection,
+                selection,
+                selectionArgs,
+                sortOrder
+            )?.use { cursor ->
+                val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
+                val dateTakenColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_TAKEN)
+                val dateAddedColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_ADDED)
+                val dateModifiedColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_MODIFIED)
+
+                while (cursor.moveToNext()) {
+                    val id = cursor.getLong(idColumn)
+                    val rawDateTaken = cursor.getLong(dateTakenColumn)
+                    val rawDateAdded = cursor.getLong(dateAddedColumn)
+                    val rawDateModified = cursor.getLong(dateModifiedColumn)
+                    val effectiveDateMs = when {
+                        rawDateTaken > 0 -> rawDateTaken
+                        rawDateModified in windowStartSec..windowEndSec -> rawDateModified * 1000L
+                        else -> rawDateAdded * 1000L
+                    }
+
+                    if (effectiveDateMs in windowStartMs..windowEndMs) {
+                        val contentUri = ContentUris.withAppendedId(
+                            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                            id
+                        )
+                        matchingPhotos.add(
+                            TimeFilteredPhoto(
+                                id = id,
+                                contentUri = contentUri,
+                                dateTakenMs = effectiveDateMs
+                            )
+                        )
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Error querying MediaStore photos for workout time window [$windowStartMs..$windowEndMs]", e)
+            return emptyList()
+        }
+        return matchingPhotos
+    }
 
     private data class TrackSamplePoint(
         val seconds: Long,

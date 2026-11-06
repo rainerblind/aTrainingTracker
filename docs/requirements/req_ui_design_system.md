@@ -13474,3 +13474,49 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Then* all `delete_lap_*` string resources exist across all 9 locale directories with matching format specifiers and zero decorative emojis.
 
 **Invariants**: Zero phantom laps (`REQ-TRK-002`), contiguous $1 \dots N-1$ lap numbering, atomic SQLite rollback, session totals invariance, and 100% test pass rate across targeted test suites.
+
+### REQ-UI-455: Workout-Time Pre-Filtered Photo Picker with Show All Photos Fallback Button [Verified]
+- **Tests**: `TST-UI-455`, `TST-LOC-001` | **Tickets**: `ATT-5475`
+- **Implementation**: `WorkoutPhotoStrip.kt`, `WorkoutTimePhotoPickerSheet.kt`, `WorkoutPhotoManager.kt`, `AndroidManifest.xml`
+- **Rationale**: When attaching photos to a completed workout, athletes previously had to browse their entire photo library via Android's generic system photo picker. REQ-UI-455 introduces an in-app bottom sheet pre-filtering photos taken chronologically during the workout time window, while preserving the system picker via a prominent full-width fallback button (Sprint 2026-45.6 user observation, ATT-5475, extending `REQ-UI-448`):
+1. *Workout Time Window Pre-Filtered Selection Sheet (`REQ-UI-455.1`)*:
+• In `WorkoutPhotoStrip.kt`, tapping "Add Photos" SHALL check for storage/media read permissions (`READ_MEDIA_IMAGES` on API 33+, `READ_MEDIA_VISUAL_USER_SELECTED` on API 34+, or `READ_EXTERNAL_STORAGE` on API <= 32).
+• When media read permission is granted, the app SHALL query `MediaStore.Images.Media.EXTERNAL_CONTENT_URI` via `WorkoutPhotoManager.queryWorkoutTimePhotos(context, startMs, endMs, toleranceMs)` for photos taken within `[workoutStartMs - 300_000L .. workoutEndMs + 300_000L]` (matching the canonical 5-minute tolerance from `WorkoutPhotoManager.kt:248`).
+• If matching photos exist, the system SHALL display `WorkoutTimePhotoPickerSheet` (hosted in `AppModalBottomSheet(scrollable = false)` per `docs/design_guidelines.md` Section 5.8), presenting a 3-column `LazyVerticalGrid` of downsampled thumbnail cards (`PhotoTrackOverlayComposer.decodeSampledBitmap`) with capture timestamps (`HH:mm`), selection checkboxes, and multi-select support for 1-tap attachment via `WorkoutPhotoManager.addPhoto`.
+2. *Stacked Full-Width Action Buttons & Rule 73 Compliance (`REQ-UI-455.2`)*:
+• In `WorkoutTimePhotoPickerSheet`, action controls SHALL follow `Rule 73` stacked full-width button layout at the bottom of the sheet content:
+  - Primary CTA: `Button(Modifier.fillMaxWidth())` "Hinzufügen (<count>)" / "Add (<count>)", enabled when selected count $> 0$.
+  - Secondary CTA: Prominent `OutlinedButton(Modifier.fillMaxWidth())` *"Alle Bilder anzeigen"* ("Show all photos") launching the generic system photo picker (`ActivityResultContracts.PickMultipleVisualMedia`).
+• In `actions` slot of `AppModalBottomSheet`: A single full-width secondary text button "Abbrechen" / "Cancel" (`TextButton(Modifier.fillMaxWidth())`).
+3. *Automatic Fallback on Permission Denial or Zero Matches (`REQ-UI-455.3`)*:
+• If media read permissions are not granted or permanently denied, or if `queryWorkoutTimePhotos` returns 0 matching photos for the time window, the system SHALL seamlessly and automatically fall back to launching `ActivityResultContracts.PickMultipleVisualMedia` without dead-ends.
+4. *Runtime Permission Declarations in Manifest (`REQ-UI-455.4`)*:
+• `AndroidManifest.xml` SHALL declare `READ_MEDIA_IMAGES`, `READ_MEDIA_VISUAL_USER_SELECTED`, and `READ_EXTERNAL_STORAGE` (`android:maxSdkVersion="32"`).
+5. *9-Language Localization Parity (`REQ-UI-455.5`)*:
+• All user-visible strings (`workout_photos_time_picker_title`, `workout_photos_show_all`, `workout_photos_add_count`, `workout_photos_no_time_photos`) SHALL maintain 100% parity across all 9 supported application locales (`values`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`) without decorative inline Unicode emojis.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-455`, extending `REQ-UI-448` (*Workout Photos Strip, Full-Screen Preview Bottom Sheet with ATT-30 Overlay Share, Map Pin Markers, and Null-Island Coordinate Rejection*). Targets `WorkoutPhotoStrip.kt`, `WorkoutTimePhotoPickerSheet.kt`, `WorkoutPhotoManager.kt`, and `AndroidManifest.xml`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-45.6 (`ATT-43`, commit `5c9d9653568e`), amended in `ATT-5479`.
+3. *Root Reason for Existing Formulation*: In ATT-43, "Add Photo" in `WorkoutPhotoStrip.kt` was wired directly to Android's generic system picker (`PickMultipleVisualMedia`), which displays the athlete's entire media library without filtering chronologically against the workout time window.
+4. *Preservation of Core Invariants*: Generic system photo picker remains unconditionally accessible at all times via prominent button and automatic fallback; existing photo persistence and SQLite schema v27 remain invariant; safe downsampled bitmap decoding prevents OOM.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete viewing a completed workout with granted media permissions,
+• *When* tapping "Add Photos" and photos were captured during the workout time window ($\pm 5\text{ min}$),
+• *Then* `WorkoutTimePhotoPickerSheet` opens displaying matching photos in a 3-column grid with timestamps and multi-select checkboxes.
+• *Given* the athlete selects $K \ge 1$ photos in `WorkoutTimePhotoPickerSheet`,
+• *When* clicking "Hinzufügen ($K$)",
+• *Then* all $K$ selected photos are persisted via `WorkoutPhotoManager.addPhoto` and the sheet closes.
+• *Given* the athlete in `WorkoutTimePhotoPickerSheet`,
+• *When* clicking *"Alle Bilder anzeigen"*,
+• *Then* the sheet closes and Android's system `PickMultipleVisualMedia` picker is launched.
+• *Given* media permission is denied or 0 photos match the workout time window,
+• *When* the athlete taps "Add Photos",
+• *Then* the app automatically falls back to launching Android's system `PickMultipleVisualMedia` picker without error or dead end.
+• *Given* all 9 supported application locales,
+• *When* `TranslationParityTest` executes,
+• *Then* all `workout_photos_*` strings exist across all 9 locale directories with zero missing entries and zero decorative inline emojis.
+
+**Invariants**: Bottom popup standard via `AppModalBottomSheet(scrollable = false)`, `Rule 73` stacked action buttons, downsampled bitmap decoding, 9-language localization parity, and 100% clean-room test pass rate.
+

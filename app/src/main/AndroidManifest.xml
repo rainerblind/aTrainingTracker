@@ -47,6 +47,12 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <!-- REQ-UI-455: Media permissions for chronological workout photo picker (ATT-5475) -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
     <!-- REQ-TRK-015 / REQ-BLD-003: ACCESS_BACKGROUND_LOCATION is required on Android 14+ (API 34+) when TrackerService is restarted by the OS via START_STICKY (intent == null) to promote to FOREGROUND_SERVICE_TYPE_LOCATION without SecurityException -->
     <uses-feature
         android:name="android.hardware.location.gps"

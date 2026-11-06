@@ -680,10 +680,14 @@ private fun RenderWorkoutDetailCardSections(
                     modifier = Modifier.fillMaxWidth()
                 )
                 if (onPhotoClick != null && onAddPhotos != null) {
+                    val startMs = workoutData.startTimeS * 1000L
+                    val endMs = (workoutData.startTimeS + workoutData.totalTimeSec) * 1000L
                     WorkoutPhotoStrip(
                         photos = photos,
                         onPhotoClick = onPhotoClick,
-                        onAddPhotos = onAddPhotos
+                        onAddPhotos = onAddPhotos,
+                        startTimeMs = startMs,
+                        endTimeMs = endMs
                     )
                 }
             }
