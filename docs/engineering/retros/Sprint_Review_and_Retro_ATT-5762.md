@@ -59,3 +59,9 @@
 * **Permanent Countermeasure (`Rule 77` — `docs/design_guidelines.md` Section 5.19)**:
   * When chaining a selection BottomSheet into a confirmation `AlertDialog`, never gate the confirmation dialog on a state variable cleared by the picker's `onDismiss()` callback. Capture the confirmation state as a self-contained pair (`pendingMergePair = source to target`) inside `onSelect`.
   * Tracked for fix in backlog ticket **`ATT-5824`**.
+
+### Finding 4: Mandatory Tier 2 Unit Test Re-Verification After Dropping/Reverting a Ticket in Sprint Review (`ATT-5665` / `ATT-5762`)
+* **Observation**: The full Tier 2 unit test suite was executed at the end of Phase 2 while `ATT-5665` (`769b80d1`) was still on `sprint/2026-45.10`. After dropping `ATT-5665` during Ceremony 2 (`git reset --hard 76a403d3`), the branch was merged into `develop` before re-running the full Tier 2 unit test suite on the post-drop state.
+* **Root Cause**: `sprint-planner/SKILL.md` treated the end-of-Phase-2 Tier 2 test run as sufficient unless unverified, without explicitly flagging that dropping or reverting a commit during Ceremony 2 mutates the final code tree and invalidates the prior Tier 2 run.
+* **Permanent Countermeasure (`Rule 77` — `.agents/skills/sprint-planner/SKILL.md` Ceremony 2 Step 4)**:
+  * Whenever any commit is dropped (`git reset --hard`) or reverted (`git revert`) from `sprint/<SPRINT_NAME>` during Ceremony 2, a fresh full Tier 2 Sprint Integration Gate (`./gradlew testDebugUnitTest --max-workers=2 && python3 tools/verify_requirement_governance.py`) and `./gradlew installDebug` are strictly mandatory on the post-drop code tree before merging into `develop`.
