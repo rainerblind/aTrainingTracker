@@ -421,7 +421,7 @@ class AdvancedTuningAccordionTest {
     fun testPhysiologyModelsSubtitle_reflectsEnabledSchools() {
         val mockContext = mockk<Context>()
         every { mockContext.getString(R.string.tuning_physiology_coggan_short) } returns "Coggan"
-        every { mockContext.getString(R.string.tuning_physiology_pmc_short) } returns "PMC"
+        every { mockContext.getString(R.string.tuning_physiology_pmc_short) } returns "Load / Form"
         every { mockContext.getString(R.string.tuning_physiology_ef_short) } returns "EF / Decoupling"
         every { mockContext.getString(R.string.tuning_physiology_cp_short) } returns "CP / W'"
         every { mockContext.getString(R.string.tuning_physiology_none_enabled) } returns "None enabled"
@@ -442,7 +442,7 @@ class AdvancedTuningAccordionTest {
             enableCriticalPowerModel = true,
             context = mockContext
         )
-        assertEquals("Coggan, PMC, EF / Decoupling, CP / W'", allSubtitle)
+        assertEquals("Coggan, Load / Form, EF / Decoupling, CP / W'", allSubtitle)
 
         val noneSubtitle = TuningSubtitleFormatter.formatPhysiologyModelsSubtitle(
             enableCogganPowerMetrics = false,

@@ -7377,3 +7377,143 @@
   5. *Clean-Room Regression Suite Execution (`TST-UI-455.5`)*:
   • Execute targeted package tests (`com.atrainingtracker.trainingtracker.database.WorkoutPhotoManagerTest`, `com.atrainingtracker.trainingtracker.ui.aftermath.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
 
+### TST-UI-456: **Drag & Drop Section Reordering and Touch Target Ergonomics Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-456`, `REQ-UI-414.3`, `REQ-UI-408.5`
+- **Component**: `WorkoutMasksAndCardsSection.kt`, `WorkoutDetailTabsConfigSheet.kt`, `WorkoutDetailTabsConfigComponents.kt`, `WorkoutMasksAndCardsLayoutTest.kt`, `WorkoutSectionReorderContractTest.kt`, `WorkoutDetailTabsTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-5761`
+- **Test Description**:
+  1. *Drag-and-Drop Reordering Logic & Boundary Swapping Unit Tests (`TST-UI-456.1`, `WorkoutSectionReorderContractTest.kt`)*:
+  • Verify list swap calculation on synthetic section lists for drag-up and drag-down deltas.
+  • Verify that dragging beyond index bounds (first item upward or last item downward) clamps safely without index corruption.
+  2. *Detail Tabs MAP Pinning Invariant Unit Tests (`TST-UI-456.2`, `WorkoutDetailTabsTest.kt`)*:
+  • Verify that `WorkoutDetailTabConfig.moveSectionInTab` and drag swapping cannot displace `MAP` from index 0 or move another section above `MAP`.
+  3. *Layout Contract & 44dp Touch Target Verification (`TST-UI-456.3`, `WorkoutMasksAndCardsLayoutTest.kt`)*:
+  • Verify that 22dp arrow icon buttons are replaced with drag-handle touch area ($\ge 44\text{dp}$).
+  • Verify `WorkoutMasksAndCardsSection.kt` line count is strictly $< 400$ lines (`REQ-UI-414.5`).
+  4. *9-Language Localization Audit (`TST-UI-456.4`, `TranslationParityTest.kt`)*:
+  • Verify 100% parity across EN, DE, ES, FR, IT, JA, NL, PL, PT for `action_drag_to_reorder` and `workout_detail_tabs_map_pinned_desc` with zero missing entries and zero decorative inline emojis.
+  5. *Clean-Room Targeted Regression Execution (`TST-UI-456.5`)*:
+  • Execute targeted package tests (`com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.*`, `com.atrainingtracker.trainingtracker.ui.aftermath.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
+
+### TST-UI-457: **Dynamic Photo Thumbnail Downsampling Resolution & Dimension-Keyed Reloading Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-457`, `REQ-UI-414.6`
+- **Component**: `WorkoutPhotoStrip.kt`, `PhotoThumbnailSizeTest.kt`
+- **Jira**: `ATT-5760`
+- **Test Description**:
+  1. *Dynamic Decode Max Dimension Calculation Unit Tests (`TST-UI-457.1`, `PhotoThumbnailSizeTest.kt`)*:
+  • Verify `calculatePhotoDecodeMaxDim` across `SMALL`, `MEDIUM`, `LARGE` and multiple densities (1.0x, 2.0x, 2.75x, 3.0x).
+  • Verify lower bound clamping at 256px and upper bound clamping at 1200px.
+  2. *Dimension-Keyed LaunchedEffect Structural Contract Test (`TST-UI-457.2`, `PhotoThumbnailSizeTest.kt`)*:
+  • Verify `PhotoThumbnailCard` computes `targetMaxDim` via `calculatePhotoDecodeMaxDim`.
+  • Verify `remember` and `LaunchedEffect` are keyed on `targetMaxDim` (or `dimensions`) and pass `maxDim = targetMaxDim` to `decodeSampledBitmap`.
+  3. *Clean-Room Targeted Regression Execution (`TST-UI-457.3`)*:
+  • Execute targeted package tests (`com.atrainingtracker.trainingtracker.ui.aftermath.photos.*`, `build.*`) asserting 100% pass rate.
+
+### TST-UI-458: **Uniform Action-Oriented Phrasing for Strava Bulk Export Card Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-458`, `REQ-UI-293`, `REQ-MIG-048`
+- **Component**: `strings.xml` (all 9 locales), `ImportFormatLocalizationTest.kt`, `ImportFormatCardsContractTest.kt`
+- **Jira**: `ATT-5679`
+- **Test Description**:
+  1. *9-Language Action Verb Parity Unit Tests (`TST-UI-458.1`, `ImportFormatLocalizationTest.kt`)*:
+  • Verify that `import_strava_archive_title` exists, is non-empty, and contains the required action verb in EN, DE, ES, FR, IT, JA, NL, PL, PT.
+  • Verify zero decorative inline emojis in string resources across all 9 locales.
+  2. *Layout & Composable Reference Contract Test (`TST-UI-458.2`, `ImportFormatCardsContractTest.kt`)*:
+  • Verify `ImportBackupTabsScreen.kt` binds `StravaArchiveImportCard` title with `R.string.import_strava_archive_title`.
+  3. *Clean-Room Targeted Regression Execution (`TST-UI-458.3`)*:
+  • Execute targeted package tests (`com.atrainingtracker.trainingtracker.migration.*`, `com.atrainingtracker.trainingtracker.localization.*`, `build.*`) asserting 100% pass rate.
+
+### TST-UI-459: **Trademark-Free Physiology & Localization Terminology Parity Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-459`
+- **Component**: `strings.xml` (all 9 locales), `WorkoutDetails.kt`, `AthleteProfileScreen.kt`, `AdvancedTuningAccordion.kt`, `TipsGuideScreen.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-5678`
+- **Test Description**:
+  1. *9-Language Localization & Positional Specifier Audit (`TST-UI-459.1`, `TranslationParityTest.kt`)*:
+  • Verify that all 20 updated physiology string resources exist and are non-empty across all 9 locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
+  • Verify positional format specifier preservation (`%1$+.1f`, `%1$.0f`, `%1$.2f`) and zero decorative inline emojis (`ATT-5400`).
+  • Verify non-translatable badge strings `normalized_power_short` (`WP`), `intensity_factor_short` (`RI`), and `tss_short` (`Load`) are defined exclusively in `values/strings.xml`.
+  2. *Tuning Accordion Subtitle & Model Concatenation Unit Tests (`TST-UI-459.2`, `AdvancedTuningAccordionTest.kt`)*:
+  • Verify `tuning_physiology_pmc_short` is loaded as `"Load / Form"` (or localized) and accordion subtitle concatenates active models cleanly.
+  3. *Sensor Category & Filter Query Contract Tests (`TST-UI-459.3`, `SensorCategoryAndSelectorContractTest.kt`)*:
+  • Verify search filter matching by full name and short abbreviation for `NORMALIZED_POWER` (`"WP"` / `"Weighted Power"`).
+  4. *Mathematical & Schema Invariance Unit Tests (`TST-UI-459.4`, `PowerPhysiologyCalculatorTest.kt`)*:
+  • Verify calculation functions (`calculateHrTss`, `computePerformanceManagementChart`) and DTO mappings (`resolvePowerTrainingSummary`) produce identical results without schema alterations.
+  5. *Clean-Room Targeted Regression Execution (`TST-UI-459.5`)*:
+  • Execute targeted test suites (`com.atrainingtracker.trainingtracker.localization.*`, `com.atrainingtracker.trainingtracker.ui.athleteprofile.*`, `com.atrainingtracker.trainingtracker.ui.settings.tuning.*`, `com.atrainingtracker.trainingtracker.ui.help.*`, `com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.*`) asserting 100% pass rate.
+
+### TST-UI-460: **Brand Compliance & Feature Title Neutralization Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-460`
+- **Component**: `strings.xml` (all 9 locales), `AppNavigationDrawer.kt`, `SegmentsTabsScreen.kt`, `TipsGuideScreen.kt`, `ImportBackupTabsScreen.kt`
+- **Jira**: `ATT-5677`
+- **Test Description**:
+  1. *9-Language Title Neutralization & Brand Absence Audit (`TST-UI-460.1`, `TranslationParityTest.kt`)*:
+  • Verify that `tip_live_segments_title`, `segments`, and `import_fit_description` exist and are non-empty across all 9 locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
+  • Verify that `tip_live_segments_title` and `segments` do NOT contain the "Strava" brand prefix.
+  • Verify that `import_fit_description` does NOT name "Garmin", "Wahoo", or "Hammerhead", and contains zero inline emojis (`ATT-5400`).
+  2. *Navigation Drawer & Live Segments Tip UI Binding Contracts (`TST-UI-460.2`, `AppNavigationDrawerTest.kt`, `TipsGuideScreenContractTest.kt`)*:
+  • Verify `AppNavigationDrawer` binds `R.string.segments` to `R.id.drawer_segments`.
+  • Verify `TipsGuideScreen` binds `R.string.tip_live_segments_title` to Tip 4 card.
+  3. *FIT Import Card Description Binding Contract (`TST-UI-460.3`, `ImportFormatCardsContractTest.kt`)*:
+  • Verify `ImportBackupTabsScreen.kt` binds `R.string.import_fit_description` in `FitFileImportCard`.
+  4. *Clean-Room Targeted Regression Execution (`TST-UI-460.4`)*:
+  • Execute targeted test suites (`com.atrainingtracker.trainingtracker.localization.*`, `com.atrainingtracker.trainingtracker.ui.help.*`, `com.atrainingtracker.trainingtracker.migration.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+### TST-UI-461: **Trademark-Free Live Climb Tuning Title & Brand Hygiene Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-461`
+- **Component**: `strings.xml` (all 9 locales), `LiveClimbSheet.kt`, `TrackingViewsDatabaseManager.java`, `SensorGridLandscapeLayoutTest.kt`
+- **Jira**: `ATT-5675`
+- **Test Description**:
+  1. *9-Language Title Neutralization & Brand Absence Audit (`TST-UI-461.1`, `TranslationParityTest.kt`)*:
+  • Verify that `tuning_show_live_climbs_title` exists and is non-empty across all 9 locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
+  • Verify that `tuning_show_live_climbs_title` across all 9 locales does NOT contain `ClimbPro` or `(ClimbPro)`.
+  • Verify zero inline emojis in localized strings (`ATT-5400`).
+  2. *Codebase Trademark & Comment Hygiene Audit (`TST-UI-461.2`)*:
+  • Verify that `LiveClimbSheet.kt` KDoc contains no `(ClimbPro)` reference.
+  • Verify that `TrackingViewsDatabaseManager.java` Javadoc contains no `ClimbPro` reference.
+  • Verify that `SensorGridLandscapeLayoutTest.kt` KDoc contains no `ClimbPro` reference.
+  3. *Tuning Preferences Contract & Schema Invariant Audit (`TST-UI-461.3`, `TrackingViewsDatabaseManagerTest.kt`)*:
+  • Verify that `KEY_SHOW_LIVE_CLIMBS` ("tuning_show_live_climbs") and SQLite database column `TrackingViewsDbHelper.SHOW_LIVE_CLIMBS` ("show_live_climbs") remain unchanged.
+  4. *Clean-Room Targeted Regression Execution (`TST-UI-461.4`)*:
+  • Execute targeted test suites (`com.atrainingtracker.trainingtracker.localization.*`, `com.atrainingtracker.trainingtracker.ui.climbs.*`, `com.atrainingtracker.trainingtracker.database.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+### TST-UI-462: **Cluster Naming & Selection Dialog Reversion and Clear Action Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-462`
+- **Component**: `ImportBackupTabsScreen.kt`, `WorkoutClusterComponents.kt`, `ClusterNamingDialogEscapeContractTest.kt`, `ClusterNamingDialogLabelsVisualContractTest.kt`
+- **Jira**: `ATT-5674`
+- **Test Description**:
+  1. *Clear Action & Create-New UI Binding Contract Tests (`TST-UI-462.1`, `ClusterNamingDialogEscapeContractTest.kt`)*:
+  • Verify `WorkoutClusterSelectionDialog` declares optional parameter `onCreateNew: (() -> Unit)? = null`.
+  • Verify `WorkoutClusterSelectionDialog` conditionally renders `Icons.Default.Add` and `R.string.cluster_naming__create_new` when `onCreateNew != null`.
+  • Verify `ClusterNamingDialog` passes `onCreateNew` callback resetting `selectedCluster = null`.
+  • Verify `ClusterNamingDialog` binds `Icons.Default.Clear` and `R.string.clear` when `selectedCluster != null`.
+  2. *9-Language Localization & String Resource Audit (`TST-UI-462.2`, `TranslationParityTest.kt`)*:
+  • Verify `cluster_naming__create_new`, `clear`, and `select_route` exist and are non-empty across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) with zero inline emojis (`ATT-5400`).
+  3. *Composable Signature & Reflection Integrity Test (`TST-UI-462.3`, `ModalBottomSheetDialogsIntegrityTest.kt`)*:
+  • Verify `WorkoutClusterSelectionDialog` composable function remains public and callable with default parameter overloads.
+  4. *Clean-Room Targeted Regression Execution (`TST-UI-462.4`)*:
+  • Execute targeted test suites (`com.atrainingtracker.trainingtracker.ui.clusters.*`, `com.atrainingtracker.trainingtracker.migration.*`, `com.atrainingtracker.trainingtracker.localization.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+### TST-UI-463: **Navigation Drawer & Expert Settings Thematic Grouping Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-463`
+- **Component**: `AppNavigationDrawer.kt`, `AdvancedTuningScreen.kt`, `AdvancedTuningDialog.kt`, `AdvancedTuningAccordion.kt`, `strings.xml` (all 9 locales)
+- **Jira**: `ATT-5670`
+- **Test Description**:
+  1. *Navigation Drawer Group Structure & Ordering Contract Tests (`TST-UI-463.1`, `AppNavigationDrawerTest.kt`)*:
+  • Verify `prefsOnlineCommunities` contains `drawer_backup_restore` directly below `drawer_export` (5 items total).
+  • Verify `drawer__settings` contains exactly 6 items ending with `drawer_advanced_tuning`.
+  • Verify new `drawer__info_support` group exists, is collapsible, and contains `drawer_supporter`, `drawer_tips_guide`, and `drawer_privacy_policy`.
+  2. *Expert Settings Thematic Grouping & Accordion Sequence Contract Tests (`TST-UI-463.2`, `AdvancedTuningScreenTest.kt`)*:
+  • Verify presence of 3 group subheaders and the new canonical sequence of 9 accordions across Screen and Dialog.
+  3. *Modularity & File Line Limit Enforcement (`TST-UI-463.3`, `AdvancedTuningModularityTest.kt`)*:
+  • Verify `AdvancedTuningScreen.kt`, `AdvancedTuningDialog.kt`, and `AdvancedTuningAccordion.kt` strictly maintain `< 400` lines.
+  4. *9-Language Localization Audit (`TST-UI-463.4`, `TranslationParityTest.kt`)*:
+  • Verify `drawer__info_support`, `tuning_group_cockpit_tracking`, `tuning_group_sensors_gps`, and `tuning_group_analysis_models` exist and are non-empty across all 9 locales with zero inline emojis (`ATT-5400`) and proper `&amp;` escaping.
+  5. *Clean-Room Targeted Regression Execution (`TST-UI-463.5`)*:
+  • Execute targeted test suites (`com.atrainingtracker.trainingtracker.ui.navigation.*`, `com.atrainingtracker.trainingtracker.ui.settings.tuning.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+
+
+
+
+
+
+

@@ -259,14 +259,14 @@
     <string name="power_short">power</string>
     <string name="power_to_weight">Power-to-weight ratio</string>
     <string name="power_to_weight_short">W/kg</string>
-    <string name="normalized_power">Normalized Power</string>
-    <string name="normalized_power_short" translatable="false">NP</string>
-    <string name="intensity_factor">Intensity Factor</string>
-    <string name="intensity_factor_short" translatable="false">IF</string>
+    <string name="normalized_power">Weighted Power</string>
+    <string name="normalized_power_short" translatable="false">WP</string>
+    <string name="intensity_factor">Relative Intensity</string>
+    <string name="intensity_factor_short" translatable="false">RI</string>
     <string name="work_kj">Mechanical Work</string>
     <string name="work_kj_short" translatable="false">kJ</string>
-    <string name="tss">Training Stress Score</string>
-    <string name="tss_short" translatable="false">TSS</string>
+    <string name="tss">Training Load</string>
+    <string name="tss_short" translatable="false">Load</string>
     <string name="speed">speed</string>
     <string name="speed_short">spd</string>
     <string name="current_sensors">current sensors</string>
@@ -614,6 +614,7 @@
     <string name="end">end</string>
     <string name="my_locations">Favorite Tracks</string>
     <string name="drawer__settings">Settings</string>
+    <string name="drawer__info_support">Info &amp; Support</string>
     <string name="get_extremaType_of_sportType_format">Get %1$s positions of your %2$s workouts.</string>
     <string name="strava" translatable="false">Strava</string>
     <string name="getting_my_locations">Looking for known locations.</string>
@@ -627,7 +628,7 @@
     <string name="starred_run_segments">Run</string>
     <string name="really_delete_format">Do you really want to delete \"%1$s\"?</string>
     <string name="starred_bike_segments">Bike</string>
-    <string name="segments">Strava Segments</string>
+    <string name="segments">Segments</string>
 
     <string name="vertical_ellipsis" translatable="false">&#8942;</string>
     <string name="TODO">prove it!</string>
@@ -1322,6 +1323,10 @@
     <string name="cluster_counter_enabled_description">Append sequential numbers (#2, #3, …) to workout names</string>
     <string name="cluster_delete_title">Delete Workout Cluster</string>
     <string name="cluster_delete_message">Are you sure you want to delete this workout cluster? This will not delete the associated workouts, but they will no longer be grouped under this cluster.</string>
+    <string name="cluster_menu_merge">Merge into another favorite route…</string>
+    <string name="cluster_merge_dialog_title">Merge Favorite Route</string>
+    <string name="cluster_merge_dialog_message">Do you want to merge \'%1$s\' (%2$d recordings) into \'%3$s\'? All associated workouts will be reassigned to \'%3$s\' and \'%1$s\' will be deleted.</string>
+    <string name="cluster_merge_action">Merge</string>
     <string name="cluster_migration_title">Analyzing route families…</string>
     <string name="cluster_migration_loading">Loading route families…</string>
     <string name="cluster_migration_healing">Verifying history integrity…</string>
@@ -1645,6 +1650,9 @@
     <string name="drawer__expert_settings">Expert Settings</string>
     <string name="advanced_tuning_title">Expert Settings</string>
     <string name="advanced_tuning_open">Expert Settings…</string>
+    <string name="tuning_group_cockpit_tracking">Cockpit &amp; Tracking</string>
+    <string name="tuning_group_sensors_gps">Sensors &amp; GPS</string>
+    <string name="tuning_group_analysis_models">Analysis &amp; Models</string>
     <string name="advanced_tuning_warning_title">Expert Settings</string>
     <string name="advanced_tuning_warning_desc">Modifying these parameters alters core tracking heuristics, sensor filtering, and battery saving behavior. You can restore factory defaults at any time.</string>
     <string name="tuning_cat_battery_saver">AMOLED Battery Saver</string>
@@ -1797,6 +1805,8 @@
     <!-- Workout Section Reordering (ATT-2176 / REQ-UI-255) -->
     <string name="action_move_up">Move up</string>
     <string name="action_move_down">Move down</string>
+    <string name="action_drag_to_reorder">Drag to change order</string>
+    <string name="workout_detail_tabs_map_pinned_desc">Map is permanently pinned at top</string>
 
     <!-- Contextual JIT Permission Flow (ATT-2075 / REQ-PRI-003) -->
     <string name="permission_rationale_title">Permissions for Seamless Tracking</string>
@@ -1854,7 +1864,7 @@
 
     <!-- FIT Workout Importer (ATT-1828 / REQ-DAT-019) -->
     <string name="import_fit_title">Import FIT files</string>
-    <string name="import_fit_description">Import workouts from Garmin, Wahoo, Hammerhead, or smartwatches (.fit).</string>
+    <string name="import_fit_description">Import workouts from bike computers, running watches, or smartwatches (.fit).</string>
     <string name="import_fit_button">Select FIT Files</string>
     <string name="import_fit_folder_button">Scan Folder (FIT)</string>
     <string name="import_fit_dropbox_button">Scan Dropbox (FIT)</string>
@@ -1862,7 +1872,7 @@
     <string name="import_fit_summary_success">Successfully imported %1$d workouts (%2$d duplicates skipped).</string>
     <string name="import_fit_summary_with_errors">Imported %1$d workouts, %2$d duplicates skipped, %3$d failed.</string>
     <!-- Strava Bulk Export Importer (ATT-4957 / REQ-MIG-048) -->
-    <string name="import_strava_archive_title">Strava Bulk Export (ZIP)</string>
+    <string name="import_strava_archive_title">Import Strava Bulk Export (ZIP)</string>
     <string name="import_strava_archive_description">Import workouts from a Strava export archive with full metadata, descriptions, and gear (.zip).</string>
     <string name="import_strava_archive_button">Select Strava Archive (ZIP)</string>
     <string name="import_strava_archive_progress">Importing Strava archive (%1$d of %2$d)…</string>
@@ -1974,7 +1984,7 @@
     <string name="route_item_hide">Hide</string>
     <string name="route_item_show">Show</string>
     <string name="segment_routes_containing_title">Routes with this segment (%d)</string>
-    <string name="tuning_show_live_climbs_title">Live Climbs (ClimbPro)</string>
+    <string name="tuning_show_live_climbs_title">Live Climbs</string>
     <string name="tuning_show_live_climbs_summary">Show real-time climb cockpit sheet during routes and free riding</string>
 
     <string name="turn_cue_left">Turn left</string>
@@ -2232,13 +2242,13 @@
     <string name="workout_decoupling_drift">High Drift (≥5%)</string>
 
     <!-- Performance Management Chart (ATT-3859 / REQ-UI-401) -->
-    <string name="athlete_profile_pmc_title">Performance Management (CTL / ATL / TSB)</string>
-    <string name="athlete_profile_pmc_ctl_label">Fitness (CTL)</string>
-    <string name="athlete_profile_pmc_atl_label">Fatigue (ATL)</string>
-    <string name="athlete_profile_pmc_tsb_label">Form (TSB)</string>
+    <string name="athlete_profile_pmc_title">Training Load &amp; Form (Fitness / Fatigue / Form)</string>
+    <string name="athlete_profile_pmc_ctl_label">Fitness (42d)</string>
+    <string name="athlete_profile_pmc_atl_label">Fatigue (7d)</string>
+    <string name="athlete_profile_pmc_tsb_label">Form (Balance)</string>
     <string name="athlete_profile_pmc_acwr_label">Workload Ratio (ACWR)</string>
     <string name="athlete_profile_pmc_ramp_label">7d Ramp Rate</string>
-    <string name="athlete_profile_pmc_ramp_format">%1$+.1f CTL/wk</string>
+    <string name="athlete_profile_pmc_ramp_format">%1$+.1f/wk</string>
     <string name="athlete_profile_pmc_ramp_warning">High Ramp</string>
     <string name="athlete_profile_pmc_zone_fresh">Race-Ready</string>
     <string name="athlete_profile_pmc_zone_neutral">Neutral</string>
@@ -2251,9 +2261,9 @@
     <string name="athlete_profile_pmc_empty">No workout training load data yet.</string>
 
     <!-- Workout Power Training Metrics (ATT-3858 / REQ-UI-402) -->
-    <string name="workout_power_metrics_np_format">NP: %1$.0f W</string>
-    <string name="workout_power_metrics_if_format">IF: %1$.2f</string>
-    <string name="workout_power_metrics_tss_format">TSS: %1$.0f</string>
+    <string name="workout_power_metrics_np_format">WP: %1$.0f W</string>
+    <string name="workout_power_metrics_if_format">RI: %1$.2f</string>
+    <string name="workout_power_metrics_tss_format">Load: %1$.0f</string>
     <string name="workout_power_metrics_work_format">Work: %1$.0f kJ</string>
     <string name="workout_power_metrics_wkg_format">%1$.2f W/kg</string>
     <string name="workout_power_metrics_vi_format">VI: %1$.2f</string>
@@ -2262,13 +2272,13 @@
     <string name="tuning_cat_physiology_models">Physiology &amp; Training Models</string>
     <string name="tuning_physiology_none_enabled">Basic metrics only</string>
     <string name="tuning_physiology_coggan_short">Coggan</string>
-    <string name="tuning_physiology_pmc_short">PMC</string>
+    <string name="tuning_physiology_pmc_short">Load / Form</string>
     <string name="tuning_physiology_ef_short">EF / Pw:Hr</string>
     <string name="tuning_physiology_cp_short">CP / W\'bal</string>
-    <string name="tuning_physiology_coggan_title">Coggan Power Metrics (NP, IF, TSS)</string>
-    <string name="tuning_physiology_coggan_desc">Show Normalized Power, Intensity Factor, Training Stress Score, and Variability Index in workouts and cockpit</string>
-    <string name="tuning_physiology_pmc_title">Performance Management (PMC)</string>
-    <string name="tuning_physiology_pmc_desc">Show Fitness (CTL), Fatigue (ATL), and Form (TSB) chart on the Profile &amp; Zones screen</string>
+    <string name="tuning_physiology_coggan_title">Power Training Metrics (WP, RI, Load)</string>
+    <string name="tuning_physiology_coggan_desc">Show Weighted Power, Relative Intensity, Training Load, and Variability Index in workouts and cockpit</string>
+    <string name="tuning_physiology_pmc_title">Training Load &amp; Form</string>
+    <string name="tuning_physiology_pmc_desc">Show Fitness (42d), Fatigue (7d), and Form (Balance) chart on the Profile &amp; Zones screen</string>
     <string name="tuning_physiology_ef_title">Aerobic Efficiency &amp; Decoupling</string>
     <string name="tuning_physiology_ef_desc">Show Efficiency Factor (EF) and Aerobic Decoupling (Pw:Hr / Pa:Hr) in workout summaries and details</string>
     <string name="tuning_physiology_cp_title">Critical Power &amp; Anaerobic Battery (CP, W\', W\'bal)</string>
@@ -2402,7 +2412,7 @@
     <string name="tip_cockpit_customization_subtitle">Fully customizable telemetry grids</string>
     <string name="tip_cockpit_customization_desc">Configure multiple telemetry pages per sport with live metrics, elevation profile, or map. Add the acoustic Bike Bell button for single-tap or continuous ringing on outdoor rides.</string>
     <string name="tip_cockpit_customization_action">Configure Displays</string>
-    <string name="tip_live_segments_title">Strava Live Segments &amp; Scrubbing</string>
+    <string name="tip_live_segments_title">Live Segments &amp; Scrubbing</string>
     <string name="tip_live_segments_subtitle">Live pacing against PR and KOM</string>
     <string name="tip_live_segments_desc">Synchronize your starred Strava segments for real-time in-ride countdowns, time deltas, and live elevation profiles. Scrub interactively across segment elevation graphs to inspect gradient and distance.</string>
     <string name="tip_live_segments_action">Explore Segments</string>
@@ -2412,7 +2422,7 @@
     <string name="tip_gear_tracking_action">Manage Equipment</string>
     <string name="tip_training_zones_title">Physiology &amp; Training Zones</string>
     <string name="tip_training_zones_subtitle">Coggan Power, Karvonen HR &amp; W\' Balance</string>
-    <string name="tip_training_zones_desc">Leverage advanced athletic metrics including Normalized Power (NP), Intensity Factor (IF), TSS, and real-time W\' balance depletion. Customize 7 power zones and Karvonen heart rate zones in your profile.</string>
+    <string name="tip_training_zones_desc">Leverage advanced athletic metrics including Weighted Power (WP), Relative Intensity (RI), Training Load, and real-time W\' balance depletion. Customize 7 power zones and Karvonen heart rate zones in your profile.</string>
     <string name="tip_training_zones_action">Configure Zones</string>
     <string name="tip_data_backup_title">Data Sovereignty &amp; Offline Backup</string>
     <string name="tip_data_backup_subtitle">Full control without mandatory cloud accounts</string>

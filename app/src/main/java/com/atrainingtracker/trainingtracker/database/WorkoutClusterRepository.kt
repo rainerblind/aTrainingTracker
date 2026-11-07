@@ -427,6 +427,18 @@ class WorkoutClusterRepository internal constructor(
         refreshClusters()
     }
 
+    /**
+     * Merges a source cluster into a target cluster and refreshes cluster state flows (ATT-5666 / REQ-SET-089).
+     */
+    suspend fun mergeClusters(sourceId: Long, targetId: Long): Boolean = withContext(Dispatchers.IO) {
+        val engine = WorkoutClusterEngine.getInstance(context)
+        val success = engine.mergeClusters(context, sourceId, targetId)
+        if (success) {
+            refreshClusters()
+        }
+        success
+    }
+
     suspend fun getWorkoutsForCluster(clusterId: Long): List<WorkoutData> = withContext(Dispatchers.IO) {
         val selection = "${WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID} = ?"
         val args = arrayOf(clusterId.toString())

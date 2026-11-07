@@ -30,8 +30,8 @@ Welcome to the official **aTrainingTracker** User Guide. This comprehensive refe
    - Cluster map overlays & historical progression with outlier detection
 7. [Chapter 7: Physiology, Training Zones & Performance Analytics](07-physiology-training-zones.md)
    - Coggan 7-zone power model, Karvonen heart rate zones, FTP, CP & W'
-   - Advanced metrics: NP, IF, TSS, Skiba W'bal, EF & Aerobic Decoupling (Pw:Hr)
-   - Longitudinal training load via the Performance Management Chart (PMC: CTL, ATL, TSB)
+   - Advanced metrics: WP, RI, Load, Skiba W'bal, EF & Aerobic Decoupling (Pw:Hr)
+   - Longitudinal training load and form tracking (Fitness, Fatigue, Form)
 8. [Chapter 8: Workout Aftermath, Periods 2.0 & Lifetime Statistics](08-workout-aftermath-periods.md)
    - Post-workout telemetry analysis (charts, lap tables, zone histograms)
    - Periods 2.0: Weeks, Months, and Years views

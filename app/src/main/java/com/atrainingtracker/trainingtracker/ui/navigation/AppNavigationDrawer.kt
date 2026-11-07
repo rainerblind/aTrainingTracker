@@ -223,23 +223,29 @@ fun createDrawerGroups(startTrackingTitleRes: Int): List<DrawerGroup> {
                 DrawerItemConfig(R.id.drawer_strava, R.drawable.logo_square_strava, R.string.Strava, tintIcon = false),
                 DrawerItemConfig(R.id.drawer_dropbox, R.drawable.dropbox_logo_blue, R.string.Dropbox, tintIcon = false),
                 DrawerItemConfig(R.id.drawer_google_drive, R.drawable.ic_google_drive, R.string.google_drive, tintIcon = false),
-                DrawerItemConfig(R.id.drawer_export, R.drawable.ic_upload, R.string.prefsExportTitle)
+                DrawerItemConfig(R.id.drawer_export, R.drawable.ic_upload, R.string.prefsExportTitle),
+                DrawerItemConfig(R.id.drawer_backup_restore, R.drawable.ic_save_to_disc, R.string.import_backup)
             )
         ),
         DrawerGroup(
             titleRes = R.string.drawer__settings,
             collapsible = true,
             items = listOf(
-                DrawerItemConfig(R.id.drawer_units, R.drawable.ic_square_foot, R.string.prefsUnitsTitle),
-                DrawerItemConfig(R.id.drawer_display_settings, R.drawable.ic_display_settings, R.string.Display),
                 DrawerItemConfig(R.id.drawer_tracking_layouts, R.drawable.ic_table_edit, R.string.prefsConfigureDisplaysTitle),
                 DrawerItemConfig(R.id.drawer_sport_types, R.drawable.ic_sports_combined, R.string.sport_types),
                 DrawerItemConfig(R.id.drawer_auto_pause, R.drawable.ic_pause_circle, R.string.auto_pause_title),
-                DrawerItemConfig(R.id.drawer_backup_restore, R.drawable.ic_save_to_disc, R.string.import_backup),
-                DrawerItemConfig(R.id.drawer_tips_guide, R.drawable.ic_tips_and_updates, R.string.drawer_tips_guide),
-                DrawerItemConfig(R.id.drawer_supporter, R.drawable.ic_crown, R.string.drawer_supporter),
-                DrawerItemConfig(R.id.drawer_privacy_policy, R.drawable.ic_privacy, R.string.privacy_policy),
+                DrawerItemConfig(R.id.drawer_display_settings, R.drawable.ic_display_settings, R.string.Display),
+                DrawerItemConfig(R.id.drawer_units, R.drawable.ic_square_foot, R.string.prefsUnitsTitle),
                 DrawerItemConfig(R.id.drawer_advanced_tuning, R.drawable.ic_tune, R.string.advanced_tuning_title)
+            )
+        ),
+        DrawerGroup(
+            titleRes = R.string.drawer__info_support,
+            collapsible = true,
+            items = listOf(
+                DrawerItemConfig(R.id.drawer_supporter, R.drawable.ic_crown, R.string.drawer_supporter),
+                DrawerItemConfig(R.id.drawer_tips_guide, R.drawable.ic_tips_and_updates, R.string.drawer_tips_guide),
+                DrawerItemConfig(R.id.drawer_privacy_policy, R.drawable.ic_privacy, R.string.privacy_policy)
             )
         )
     )

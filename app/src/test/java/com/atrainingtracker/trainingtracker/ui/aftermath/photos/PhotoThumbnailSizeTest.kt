@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.photos
 
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
@@ -26,6 +27,7 @@ import com.atrainingtracker.trainingtracker.parsePhotoThumbnailSize
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 /**
  * Unit tests for [PhotoThumbnailSize] presets, fallback parsing, and default preferences
@@ -107,5 +109,91 @@ class PhotoThumbnailSizeTest {
         val expectedSmallNarrow = (280.dp - 24.dp) / 3.5f
         assertEquals(expectedSmallNarrow.value, smallNarrow.width.value, 0.05f)
         assertEquals(smallNarrow.width.value, smallNarrow.height.value, 0.05f)
+    }
+
+    /**
+     * TST-UI-457.1: Dynamic decode max dimension calculation across sizes and screen densities (REQ-UI-457.1 / REQ-UI-457.4).
+     */
+    @Test
+    fun testCalculatePhotoDecodeMaxDim_densityScalingAndClamping() {
+        val density1x = Density(1.0f)
+        val density2x = Density(2.0f)
+        val density275x = Density(2.75f)
+        val density3x = Density(3.0f)
+
+        // LARGE at 360dp width:
+        val large = calculatePhotoItemDimensions(PhotoThumbnailSize.LARGE, 360.dp) // width 360dp, height 234dp
+        // 1.0x -> 360px
+        assertEquals(360, calculatePhotoDecodeMaxDim(large, density1x))
+        // 2.0x -> 720px
+        assertEquals(720, calculatePhotoDecodeMaxDim(large, density2x))
+        // 2.75x -> 990px
+        assertEquals(990, calculatePhotoDecodeMaxDim(large, density275x))
+        // 3.0x -> 1080px
+        assertEquals(1080, calculatePhotoDecodeMaxDim(large, density3x))
+
+        // LARGE on large tablet (500dp width) at 3.0x -> 1500px -> clamped to upper bound 1200px (OOM protection)
+        val largeTablet = calculatePhotoItemDimensions(PhotoThumbnailSize.LARGE, 500.dp)
+        assertEquals(1200, calculatePhotoDecodeMaxDim(largeTablet, density3x))
+
+        // MEDIUM at 360dp width (176dp):
+        val medium = calculatePhotoItemDimensions(PhotoThumbnailSize.MEDIUM, 360.dp)
+        // 1.0x -> 176px -> clamped to lower bound 256px
+        assertEquals(256, calculatePhotoDecodeMaxDim(medium, density1x))
+        // 2.0x -> 352px
+        assertEquals(352, calculatePhotoDecodeMaxDim(medium, density2x))
+        // 2.75x -> 484px
+        assertEquals(484, calculatePhotoDecodeMaxDim(medium, density275x))
+        // 3.0x -> 528px
+        assertEquals(528, calculatePhotoDecodeMaxDim(medium, density3x))
+
+        // SMALL at 360dp width (90dp):
+        val small = calculatePhotoItemDimensions(PhotoThumbnailSize.SMALL, 360.dp)
+        // 1.0x -> 90px -> clamped to 256px
+        assertEquals(256, calculatePhotoDecodeMaxDim(small, density1x))
+        // 2.0x -> 180px -> clamped to 256px
+        assertEquals(256, calculatePhotoDecodeMaxDim(small, density2x))
+        // 2.75x -> 248px -> clamped to 256px
+        assertEquals(256, calculatePhotoDecodeMaxDim(small, density275x))
+        // 3.0x -> 270px
+        assertEquals(270, calculatePhotoDecodeMaxDim(small, density3x))
+    }
+
+    /**
+     * TST-UI-457.2: PhotoThumbnailCard structural contract for dynamic targetMaxDim and LaunchedEffect keying (REQ-UI-457.2).
+     */
+    @Test
+    fun testPhotoThumbnailCard_contractLaunchedEffectKeying() {
+        val candidates = listOf(
+            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/photos/WorkoutPhotoStrip.kt"),
+            File("src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/photos/WorkoutPhotoStrip.kt")
+        )
+        val file = candidates.firstOrNull { it.exists() }
+            ?: error("WorkoutPhotoStrip.kt not found")
+        val content = file.readText()
+
+        // 1. Computes targetMaxDim via calculatePhotoDecodeMaxDim
+        assertTrue(
+            "PhotoThumbnailCard must compute targetMaxDim",
+            content.contains("calculatePhotoDecodeMaxDim(dimensions, density)")
+        )
+
+        // 2. remember state keys on photo.filePath and targetMaxDim
+        assertTrue(
+            "bitmap remember must key on (photo.filePath, targetMaxDim)",
+            content.contains("remember(photo.filePath, targetMaxDim)")
+        )
+
+        // 3. LaunchedEffect keys on (photo.filePath, targetMaxDim)
+        assertTrue(
+            "LaunchedEffect must key on (photo.filePath, targetMaxDim)",
+            content.contains("LaunchedEffect(photo.filePath, targetMaxDim)")
+        )
+
+        // 4. Passes maxDim = targetMaxDim to decodeSampledBitmap
+        assertTrue(
+            "decodeSampledBitmap must pass maxDim = targetMaxDim",
+            content.contains("maxDim = targetMaxDim")
+        )
     }
 }

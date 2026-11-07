@@ -254,6 +254,20 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     /**
+     * Reassigns all workouts linked to source cluster ID to target cluster ID (ATT-5666 / REQ-SET-089).
+     *
+     * @param sourceId the source cluster ID whose workouts should be reassigned
+     * @param targetId the target cluster ID to assign the workouts to
+     * @return the number of updated rows
+     */
+    public int reassignClusterWorkouts(long sourceId, long targetId) {
+        ContentValues values = new ContentValues();
+        values.put(WorkoutSummaries.CLUSTER_ID, targetId);
+        return getDatabase().update(WorkoutSummaries.TABLE, values,
+                WorkoutSummaries.CLUSTER_ID + "=?", new String[]{String.valueOf(sourceId)});
+    }
+
+    /**
      * Calculates comprehensive performance, volume, and recency statistics for all Workout Clusters (REQ-SET-068).
      *
      * @return Map of clusterId to WorkoutClusterStats.

@@ -227,21 +227,10 @@ fun AdvancedTuningScreen(
         ) {
             TuningWarningNotice()
 
-            // Section 1: Navigation & Kartenführung (REQ-UI-357: Promoted to top)
-            TuningAccordionSection(
-                icon = Icons.Default.Navigation, title = stringResource(R.string.tuning_cat_navigation),
-                subtitle = TuningSubtitleFormatter.formatNavigationSubtitle(routeSelectionRadiusKm, navigationCueDismissDurationSec, context),
-                isExpanded = isSectionExpanded(TuningSection.NAVIGATION), onToggle = { toggleSection(TuningSection.NAVIGATION) }
-            ) {
-                NavigationSection(
-                    routeSelectionRadiusKm = routeSelectionRadiusKm, onRadiusChange = { routeSelectionRadiusKm = it },
-                    navigationCueDismissDurationSec = navigationCueDismissDurationSec, onDismissDurationChange = { navigationCueDismissDurationSec = it },
-                    autoFollowUniqueRouteEnabled = autoFollowUniqueRouteEnabled, onAutoFollowUniqueRouteEnabledChange = { autoFollowUniqueRouteEnabled = it },
-                    turnCueCountdownDistanceMeters = turnCueCountdownDistanceMeters, onTurnCueCountdownDistanceChange = { turnCueCountdownDistanceMeters = it }
-                )
-            }
+            // Block 1: Cockpit & Tracking (ATT-5670 / REQ-UI-463)
+            TuningGroupSubheader(R.string.tuning_group_cockpit_tracking)
 
-            // Section 2: Cockpit-Typografie & Sensorfelder
+            // Section 1: Cockpit-Typografie & Sensorfelder
             TuningAccordionSection(
                 icon = Icons.Default.TextFields, title = stringResource(R.string.tuning_cat_cockpit_typography),
                 subtitle = TuningSubtitleFormatter.formatCockpitSubtitle(cockpitFontFamily, cockpitFontWeight, sensorFieldVariant, context),
@@ -254,6 +243,20 @@ fun AdvancedTuningScreen(
                     sensorFieldCornerRadius = sensorFieldCornerRadius, onCornerRadiusChange = { sensorFieldCornerRadius = it },
                     sensorFieldBorderThickness = sensorFieldBorderThickness, onBorderThicknessChange = { sensorFieldBorderThickness = it },
                     sensorFieldBorderContrast = sensorFieldBorderContrast, onBorderContrastChange = { sensorFieldBorderContrast = it }
+                )
+            }
+
+            // Section 2: Navigation & Kartenführung (REQ-UI-357)
+            TuningAccordionSection(
+                icon = Icons.Default.Navigation, title = stringResource(R.string.tuning_cat_navigation),
+                subtitle = TuningSubtitleFormatter.formatNavigationSubtitle(routeSelectionRadiusKm, navigationCueDismissDurationSec, context),
+                isExpanded = isSectionExpanded(TuningSection.NAVIGATION), onToggle = { toggleSection(TuningSection.NAVIGATION) }
+            ) {
+                NavigationSection(
+                    routeSelectionRadiusKm = routeSelectionRadiusKm, onRadiusChange = { routeSelectionRadiusKm = it },
+                    navigationCueDismissDurationSec = navigationCueDismissDurationSec, onDismissDurationChange = { navigationCueDismissDurationSec = it },
+                    autoFollowUniqueRouteEnabled = autoFollowUniqueRouteEnabled, onAutoFollowUniqueRouteEnabledChange = { autoFollowUniqueRouteEnabled = it },
+                    turnCueCountdownDistanceMeters = turnCueCountdownDistanceMeters, onTurnCueCountdownDistanceChange = { turnCueCountdownDistanceMeters = it }
                 )
             }
 
@@ -271,23 +274,10 @@ fun AdvancedTuningScreen(
                 )
             }
 
-            // Section 4: Sensoren & GPS-Filterung
-            TuningAccordionSection(
-                icon = Icons.Default.LocationOn, title = stringResource(R.string.tuning_cat_sensors_gps),
-                subtitle = TuningSubtitleFormatter.formatSensorsGpsSubtitle(gpsAccuracy, altitudeWindowSec, slopeMinSpeed),
-                isExpanded = isSectionExpanded(TuningSection.SENSORS_GPS), onToggle = { toggleSection(TuningSection.SENSORS_GPS) }
-            ) {
-                SensorsGpsFilterSection(
-                    gpsAccuracy = gpsAccuracy,
-                    onGpsAccuracyChange = { gpsAccuracy = it },
-                    altitudeWindowSec = altitudeWindowSec,
-                    onAltitudeWindowChange = { altitudeWindowSec = it },
-                    slopeMinSpeed = slopeMinSpeed,
-                    onSlopeMinSpeedChange = { slopeMinSpeed = it }
-                )
-            }
+            // Block 2: Sensoren & GPS (ATT-5670 / REQ-UI-463)
+            TuningGroupSubheader(R.string.tuning_group_sensors_gps)
 
-            // Section 5: Sensorsuche & Verbindungen
+            // Section 4: Sensorsuche & Verbindungen
             TuningAccordionSection(
                 icon = Icons.Default.Search, title = stringResource(R.string.tuning_cat_sensor_search),
                 subtitle = TuningSubtitleFormatter.formatSensorSearchSubtitle(
@@ -304,6 +294,25 @@ fun AdvancedTuningScreen(
                 )
             }
 
+            // Section 5: Sensoren & GPS-Filterung
+            TuningAccordionSection(
+                icon = Icons.Default.LocationOn, title = stringResource(R.string.tuning_cat_sensors_gps),
+                subtitle = TuningSubtitleFormatter.formatSensorsGpsSubtitle(gpsAccuracy, altitudeWindowSec, slopeMinSpeed),
+                isExpanded = isSectionExpanded(TuningSection.SENSORS_GPS), onToggle = { toggleSection(TuningSection.SENSORS_GPS) }
+            ) {
+                SensorsGpsFilterSection(
+                    gpsAccuracy = gpsAccuracy,
+                    onGpsAccuracyChange = { gpsAccuracy = it },
+                    altitudeWindowSec = altitudeWindowSec,
+                    onAltitudeWindowChange = { altitudeWindowSec = it },
+                    slopeMinSpeed = slopeMinSpeed,
+                    onSlopeMinSpeedChange = { slopeMinSpeed = it }
+                )
+            }
+
+            // Block 3: Analyse & Modelle (ATT-5670 / REQ-UI-463)
+            TuningGroupSubheader(R.string.tuning_group_analysis_models)
+
             // Section 6: Workout-Masken & Detailkarten
             TuningAccordionSection(
                 icon = Icons.AutoMirrored.Filled.ViewList, title = stringResource(R.string.tuning_cat_workout_masks_cards),
@@ -317,7 +326,22 @@ fun AdvancedTuningScreen(
                 )
             }
 
-            // Section 7: Physiologie & Trainingsmodelle (REQ-UI-403)
+            // Section 7: Aftermath & Analyse
+            TuningAccordionSection(
+                icon = Icons.AutoMirrored.Filled.ShowChart, title = stringResource(R.string.tuning_cat_aftermath),
+                subtitle = TuningSubtitleFormatter.formatAftermathSubtitle(elevationXAxisDomain, telemetryXAxisDomain, context, elevationSmoothingSigmaMeters),
+                isExpanded = isSectionExpanded(TuningSection.AFTERMATH_ANALYSIS), onToggle = { toggleSection(TuningSection.AFTERMATH_ANALYSIS) }
+            ) {
+                AftermathAnalysisSection(
+                    elevationXAxisDomain = elevationXAxisDomain, onElevationDomainChange = { elevationXAxisDomain = it },
+                    telemetryXAxisDomain = telemetryXAxisDomain, onTelemetryDomainChange = { telemetryXAxisDomain = it },
+                    paceCeilingMinKm = paceCeilingMinKm, onPaceCeilingChange = { paceCeilingMinKm = it },
+                    elevationSmoothingSigmaMeters = elevationSmoothingSigmaMeters,
+                    onElevationSmoothingSigmaChange = { elevationSmoothingSigmaMeters = it }
+                )
+            }
+
+            // Section 8: Physiologie & Trainingsmodelle (REQ-UI-403)
             TuningAccordionSection(
                 icon = Icons.Default.MonitorHeart, title = stringResource(R.string.tuning_cat_physiology_models),
                 subtitle = TuningSubtitleFormatter.formatPhysiologyModelsSubtitle(
@@ -336,7 +360,7 @@ fun AdvancedTuningScreen(
                 )
             }
 
-            // Section 8: Routen- & Workout-Clustering
+            // Section 9: Routen- & Workout-Clustering
             val isImperial = TrainingApplication.getUnit() == MyUnits.IMPERIAL
             TuningAccordionSection(
                 icon = Icons.Default.Hub, title = stringResource(R.string.tuning_cat_route_clustering),
@@ -354,21 +378,6 @@ fun AdvancedTuningScreen(
                     useSportTypeForClustering = clusterUseSportType, onUseSportTypeChange = { clusterUseSportType = it },
                     useAltitudePosForClustering = clusterUseAltitudePos, onUseAltitudePosChange = { clusterUseAltitudePos = it },
                     clusterScoreThreshold = clusterScoreThreshold, onClusterScoreThresholdChange = { clusterScoreThreshold = it }
-                )
-            }
-
-            // Section 9: Aftermath & Analyse
-            TuningAccordionSection(
-                icon = Icons.AutoMirrored.Filled.ShowChart, title = stringResource(R.string.tuning_cat_aftermath),
-                subtitle = TuningSubtitleFormatter.formatAftermathSubtitle(elevationXAxisDomain, telemetryXAxisDomain, context, elevationSmoothingSigmaMeters),
-                isExpanded = isSectionExpanded(TuningSection.AFTERMATH_ANALYSIS), onToggle = { toggleSection(TuningSection.AFTERMATH_ANALYSIS) }
-            ) {
-                AftermathAnalysisSection(
-                    elevationXAxisDomain = elevationXAxisDomain, onElevationDomainChange = { elevationXAxisDomain = it },
-                    telemetryXAxisDomain = telemetryXAxisDomain, onTelemetryDomainChange = { telemetryXAxisDomain = it },
-                    paceCeilingMinKm = paceCeilingMinKm, onPaceCeilingChange = { paceCeilingMinKm = it },
-                    elevationSmoothingSigmaMeters = elevationSmoothingSigmaMeters,
-                    onElevationSmoothingSigmaChange = { elevationSmoothingSigmaMeters = it }
                 )
             }
 

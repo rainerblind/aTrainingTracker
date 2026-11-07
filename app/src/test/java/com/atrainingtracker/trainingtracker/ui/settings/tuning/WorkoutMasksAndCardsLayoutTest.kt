@@ -44,16 +44,16 @@ class WorkoutMasksAndCardsLayoutTest {
         val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/WorkoutMasksAndCardsSection.kt")
         val content = file.readText()
 
-        // 1. Reorder controls must use a compact 32.dp vertical Column
+        // 1. Reorder controls must use ReorderDragHandle with 44.dp touch target (REQ-UI-456.1 / ATT-5761)
         assertTrue(
-            "Reorder controls must use width(32.dp)",
-            content.contains(".width(32.dp)")
+            "Reorder controls must use ReorderDragHandle",
+            content.contains("ReorderDragHandle(")
         )
 
-        // 2. Header spacer must match reorder controls width (32.dp)
+        // 2. Header spacer must match reorder controls width (44.dp)
         assertTrue(
-            "Header spacer must be 32.dp",
-            content.contains("Spacer(modifier = Modifier.width(32.dp))")
+            "Header spacer must be 44.dp",
+            content.contains("Spacer(modifier = Modifier.width(44.dp))")
         )
 
         // 3. Checkbox column must be 50.dp in width

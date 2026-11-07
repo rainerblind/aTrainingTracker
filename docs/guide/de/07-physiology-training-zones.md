@@ -33,14 +33,14 @@ Wissenschaftlich fundierte Trainingssteuerung erfordert präzise physiologische 
 <tr>
 <td width="65%" valign="top" markdown="1">
 
-## 7.2 Wissenschaftliche Leistungsmetriken: NP, IF, TSS, W'bal & EF
+## 7.2 Wissenschaftliche Leistungsmetriken: WP, RI, Load, W'bal & EF
 
 Während und nach deinen Einheiten berechnet **aTrainingTracker** modernste trainingswissenschaftliche Kennzahlen:
 
-- **Normalized Power ($\text{NP}$)**: Gewichtete Wattleistung, die den physiologischen Stress ungleichmäßiger Belastungen (Antritte, Anstiege, Abfahrten) realistisch abbildet.
-- **Intensity Factor ($\text{IF}$)**: Verhältnis von NP zu deiner aktuellen FTP ($\text{IF} = \text{NP} / \text{FTP}$).
-- **Training Stress Score ($\text{TSS}$)**: Maß für die physiologische Gesamtdosis der Einheit:
-  $$\text{TSS} = \frac{t \times \text{NP} \times \text{IF}}{\text{FTP} \times 3600} \times 100$$
+- **Gewichtete Leistung ($\text{WP}$)**: Gewichtete Wattleistung, die den physiologischen Stress ungleichmäßiger Belastungen (Antritte, Anstiege, Abfahrten) realistisch abbildet.
+- **Relative Intensität ($\text{RI}$)**: Verhältnis von WP zu deiner aktuellen FTP ($\text{RI} = \text{WP} / \text{FTP}$).
+- **Trainingsbelastung ($\text{Load}$)**: Maß für die physiologische Gesamtdosis der Einheit:
+  $$\text{Load} = \frac{t \times \text{WP} \times \text{RI}}{\text{FTP} \times 3600} \times 100$$
 - **Skiba Anaerober Akku ($W'_{\text{bal}}$)**: Zeigt in Echtzeit, wie viele Kilojoule deiner anaeroben Energiereserve aktuell noch verfügbar sind und wie schnell sich dein Akku bei Fahrten unterhalb von CP regeneriert.
 - **Effizienzfaktor ($\text{EF}$) & Aerobe Entkopplung ($\text{Pw:Hr}$)**: Verhältnis von Leistung zu Herzfrequenz. Ein Drift von $\text{Pw:Hr} > 5\%$ signalisiert kardiovaskuläre Ermüdung.
 
@@ -60,19 +60,19 @@ Während und nach deinen Einheiten berechnet **aTrainingTracker** modernste trai
 <tr>
 <td width="65%" valign="top" markdown="1">
 
-## 7.3 Performance Management Chart (PMC)
+## 7.3 Belastungssteuerung & Form (Training Load & Form)
 
-Der integrierte PMC visualisiert deinen langfristigen Formaufbau nach dem Banister-Impuls-Reaktions-Modell:
+Die integrierte Belastungssteuerung visualisiert deinen langfristigen Formaufbau nach dem Banister-Impuls-Reaktions-Modell:
 
-- **Fitness ($\text{CTL}$ - Chronic Training Load)**: Exponentiell geglättete Trainingsbelastung der letzten 42 Tage (blaue Kurve).
-- **Ermüdung ($\text{ATL}$ - Acute Training Load)**: Kurzfristige Erschöpfung der vergangenen 7 Tage (pinke Kurve).
-- **Form ($\text{TSB}$ - Training Stress Balance)**: Differenz zwischen Fitness und Ermüdung ($\text{TSB} = \text{CTL} - \text{ATL}$, orange Kurve). Ein positiver TSB-Wert signalisiert optimale Renntauglichkeit.
+- **Fitness (42 Tage)**: Exponentiell geglättete Trainingsbelastung der letzten 42 Tage (blaue Kurve).
+- **Ermüdung (7 Tage)**: Kurzfristige Erschöpfung der vergangenen 7 Tage (pinke Kurve).
+- **Form (Balance)**: Differenz zwischen Fitness und Ermüdung ($\text{Form} = \text{Fitness} - \text{Ermüdung}$, orange Kurve). Ein positiver Form-Wert signalisiert optimale Renntauglichkeit.
 - **Belastungsquote (ACWR)** & **7-Tage-Steigerungsrate**: Schützen dich vor Übertraining und steuern dein Tapering gezielt zum Saisonhöhepunkt.
 
 </td>
 <td width="35%" valign="top" align="center">
-  <a href="../img/07_telemetry_charts.png"><img src="../img/07_telemetry_charts.png" width="240" alt="Performance Management Chart (PMC)" /></a>
-  <br/><sub><em>PMC-Verlaufskurven (CTL Fitness, ATL Ermüdung, TSB Form)</em></sub>
+  <a href="../img/07_telemetry_charts.png"><img src="../img/07_telemetry_charts.png" width="240" alt="Belastungssteuerung (Training Load & Form)" /></a>
+  <br/><sub><em>Verlaufskurven der Belastungssteuerung (Fitness, Ermüdung, Form)</em></sub>
 </td>
 </tr>
 </table>

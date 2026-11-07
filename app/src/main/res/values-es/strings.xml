@@ -190,10 +190,10 @@
     <string name="power_short">potencia</string>
     <string name="power_to_weight">Relación potencia-peso</string>
     <string name="power_to_weight_short">W/kg</string>
-    <string name="normalized_power">Potencia normalizada</string>
-    <string name="intensity_factor">Factor de intensidad</string>
+    <string name="normalized_power">Potencia ponderada</string>
+    <string name="intensity_factor">Intensidad relativa</string>
     <string name="work_kj">Trabajo mecánico</string>
-    <string name="tss">Puntuación de estrés del entrenamiento</string>
+    <string name="tss">Carga de entrenamiento</string>
     <string name="speed">velocidad</string>
     <string name="speed_short">vel</string>
     <string name="current_sensors">sensores actuales</string>
@@ -484,9 +484,10 @@
     <string name="max_line_distance">más lejano</string>
     <string name="end">final</string>
     <string name="drawer__settings">Ajustes</string>
+    <string name="drawer__info_support">Información y asistencia</string>
     <string name="starred_run_segments">Carrera</string>
     <string name="starred_bike_segments">Bici</string>
-    <string name="segments">Segmentos de Strava</string>
+    <string name="segments">Segmentos</string>
 
     <string name="TODO">demuéstralo!</string>
     <string name="tomorrow">¿mañana?</string>
@@ -1094,6 +1095,10 @@
     <string name="cluster_counter_enabled_description">Añadir números secuenciales (#2, #3, …) a los nombres de entrenamientos</string>
     <string name="cluster_delete_title">Eliminar grupo de entrenamiento</string>
     <string name="cluster_delete_message">¿Estás seguro de que deseas eliminar este grupo de entrenamiento? Esto no eliminará los entrenamientos asociados, pero ya no estarán agrupados bajo este grupo.</string>
+    <string name="cluster_menu_merge">Combinar con otra ruta favorita…</string>
+    <string name="cluster_merge_dialog_title">Combinar ruta favorita</string>
+    <string name="cluster_merge_dialog_message">¿Deseas combinar \'%1$s\' (%2$d grabaciones) en \'%3$s\'? Todos los entrenamientos asociados se reasignarán a \'%3$s\' y luego se eliminará \'%1$s\'.</string>
+    <string name="cluster_merge_action">Combinar</string>
     <string name="cluster_migration_title">Analizando familias de rutas…</string>
     <string name="cluster_migration_loading">Cargando familias de rutas…</string>
     <string name="cluster_migration_healing">Verificando la integridad del historial…</string>
@@ -1448,6 +1453,9 @@
     <string name="drawer__expert_settings">Ajustes de experto</string>
     <string name="advanced_tuning_title">Ajustes de experto</string>
     <string name="advanced_tuning_open">Ajustes de experto…</string>
+    <string name="tuning_group_cockpit_tracking">Cabina y seguimiento</string>
+    <string name="tuning_group_sensors_gps">Sensores y GPS</string>
+    <string name="tuning_group_analysis_models">Análisis y modelos</string>
     <string name="advanced_tuning_warning_title">Ajustes para expertos</string>
     <string name="advanced_tuning_warning_desc">La modificación de estos parámetros altera la heurística de seguimiento, el filtrado de sensores y el ahorro de batería. Puede restablecer los valores predeterminados en cualquier momento.</string>
     <string name="tuning_cat_battery_saver">Ahorro de batería AMOLED</string>
@@ -1600,6 +1608,8 @@
     <!-- Workout Section Reordering (ATT-2176 / REQ-UI-255) -->
     <string name="action_move_up">Mover hacia arriba</string>
     <string name="action_move_down">Mover hacia abajo</string>
+    <string name="action_drag_to_reorder">Arrastrar para cambiar el orden</string>
+    <string name="workout_detail_tabs_map_pinned_desc">El mapa está fijado arriba de forma permanente</string>
 
     <!-- Contextual JIT Permission Flow (ATT-2075 / REQ-PRI-003) -->
     <string name="permission_rationale_title">Permisos para un seguimiento sin interrupciones</string>
@@ -1657,7 +1667,7 @@
 
     <!-- FIT Workout Importer (ATT-1828 / REQ-DAT-019) -->
     <string name="import_fit_title">Importar archivos FIT</string>
-    <string name="import_fit_description">Importar entrenamientos desde Garmin, Wahoo, Hammerhead o relojes inteligentes (.fit).</string>
+    <string name="import_fit_description">Importar entrenamientos de ciclocomputadores, relojes deportivos o smartwatches (.fit).</string>
     <string name="import_fit_button">Seleccionar archivos FIT</string>
     <string name="import_fit_folder_button">Escanear carpeta (FIT)</string>
     <string name="import_fit_dropbox_button">Explorar Dropbox (FIT)</string>
@@ -1665,7 +1675,7 @@
     <string name="import_fit_summary_success">%1$d entrenamientos importados con éxito (%2$d duplicados omitidos).</string>
     <string name="import_fit_summary_with_errors">%1$d entrenamientos importados, %2$d duplicados omitidos, %3$d fallidos.</string>
     <!-- Strava Bulk Export Importer (ATT-4957 / REQ-MIG-048) -->
-    <string name="import_strava_archive_title">Exportación masiva de Strava (ZIP)</string>
+    <string name="import_strava_archive_title">Importar exportación masiva de Strava (ZIP)</string>
     <string name="import_strava_archive_description">Importar entrenamientos desde un archivo de exportación de Strava con metadatos, descripciones y equipamiento (.zip).</string>
     <string name="import_strava_archive_button">Seleccionar archivo de Strava (ZIP)</string>
     <string name="import_strava_archive_progress">Importando archivo de Strava (%1$d de %2$d)…</string>
@@ -1777,7 +1787,7 @@
     <string name="route_item_hide">Ocultar</string>
     <string name="route_item_show">Mostrar</string>
     <string name="segment_routes_containing_title">Rutas con este segmento (%d)</string>
-    <string name="tuning_show_live_climbs_title">Subidas en vivo (ClimbPro)</string>
+    <string name="tuning_show_live_climbs_title">Subidas en vivo</string>
     <string name="tuning_show_live_climbs_summary">Mostrar panel de subida en tiempo real durante rutas y recorrido libre</string>
 
     <string name="turn_cue_left">Girar a la izquierda</string>
@@ -2032,13 +2042,13 @@
     <string name="workout_decoupling_drift">Deriva alta (≥5%)</string>
 
     <!-- Performance Management Chart (ATT-3859 / REQ-UI-401) -->
-    <string name="athlete_profile_pmc_title">Gestión del rendimiento (CTL / ATL / TSB)</string>
-    <string name="athlete_profile_pmc_ctl_label">Forma física (CTL)</string>
-    <string name="athlete_profile_pmc_atl_label">Fatiga (ATL)</string>
-    <string name="athlete_profile_pmc_tsb_label">Estado (TSB)</string>
+    <string name="athlete_profile_pmc_title">Carga de entrenamiento y estado (Forma / Fatiga / Estado)</string>
+    <string name="athlete_profile_pmc_ctl_label">Forma física (42d)</string>
+    <string name="athlete_profile_pmc_atl_label">Fatiga (7d)</string>
+    <string name="athlete_profile_pmc_tsb_label">Estado (Equilibrio)</string>
     <string name="athlete_profile_pmc_acwr_label">Ratio de carga (ACWR)</string>
     <string name="athlete_profile_pmc_ramp_label">Rampa 7d</string>
-    <string name="athlete_profile_pmc_ramp_format">%1$+.1f CTL/sem</string>
+    <string name="athlete_profile_pmc_ramp_format">%1$+.1f/sem</string>
     <string name="athlete_profile_pmc_ramp_warning">Rampa alta</string>
     <string name="athlete_profile_pmc_zone_fresh">Listo para competir</string>
     <string name="athlete_profile_pmc_zone_neutral">Neutral</string>
@@ -2051,9 +2061,9 @@
     <string name="athlete_profile_pmc_empty">Aún no hay datos de carga de entrenamiento.</string>
 
     <!-- Workout Power Training Metrics (ATT-3858 / REQ-UI-402) -->
-    <string name="workout_power_metrics_np_format">NP: %1$.0f W</string>
-    <string name="workout_power_metrics_if_format">IF: %1$.2f</string>
-    <string name="workout_power_metrics_tss_format">TSS: %1$.0f</string>
+    <string name="workout_power_metrics_np_format">WP: %1$.0f W</string>
+    <string name="workout_power_metrics_if_format">RI: %1$.2f</string>
+    <string name="workout_power_metrics_tss_format">Load: %1$.0f</string>
     <string name="workout_power_metrics_work_format">Trabajo: %1$.0f kJ</string>
     <string name="workout_power_metrics_wkg_format">%1$.2f W/kg</string>
     <string name="workout_power_metrics_vi_format">VI: %1$.2f</string>
@@ -2062,13 +2072,13 @@
     <string name="tuning_cat_physiology_models">Fisiología y modelos de entrenamiento</string>
     <string name="tuning_physiology_none_enabled">Solo métricas básicas</string>
     <string name="tuning_physiology_coggan_short">Coggan</string>
-    <string name="tuning_physiology_pmc_short">PMC</string>
+    <string name="tuning_physiology_pmc_short">Carga / Estado</string>
     <string name="tuning_physiology_ef_short">EF / Pw:Hr</string>
     <string name="tuning_physiology_cp_short">CP / W\'bal</string>
-    <string name="tuning_physiology_coggan_title">Métricas de potencia Coggan (NP, IF, TSS)</string>
-    <string name="tuning_physiology_coggan_desc">Mostrar potencia normalizada, factor de intensidad, TSS e índice de variabilidad en entrenamientos y cabina</string>
-    <string name="tuning_physiology_pmc_title">Gestión del rendimiento (PMC)</string>
-    <string name="tuning_physiology_pmc_desc">Mostrar gráfico de forma física (CTL), fatiga (ATL) y forma (TSB) en Perfil y zonas</string>
+    <string name="tuning_physiology_coggan_title">Métricas de potencia (WP, RI, Load)</string>
+    <string name="tuning_physiology_coggan_desc">Mostrar potencia ponderada, intensidad relativa, carga de entrenamiento e índice de variabilidad en entrenamientos y cabina</string>
+    <string name="tuning_physiology_pmc_title">Control de carga y estado</string>
+    <string name="tuning_physiology_pmc_desc">Mostrar gráfico de forma física (42d), fatiga (7d) y estado (equilibrio) en Perfil y zonas</string>
     <string name="tuning_physiology_ef_title">Eficiencia aeróbica y desacoplamiento</string>
     <string name="tuning_physiology_ef_desc">Mostrar factor de eficiencia (EF) y desacoplamiento aeróbico (Pw:Hr / Pa:Hr) en resúmenes y detalles</string>
     <string name="tuning_physiology_cp_title">Potencia crítica y batería anaeróbica (CP, W\', W\'bal)</string>
@@ -2202,7 +2212,7 @@
     <string name="tip_cockpit_customization_subtitle">Cuadrículas de telemetría totalmente personalizables</string>
     <string name="tip_cockpit_customization_desc">Configura páginas de telemetría por deporte con métricas en vivo, altimetría o mapa. Añade el botón de timbre de bicicleta para toques simples o timbre continuo.</string>
     <string name="tip_cockpit_customization_action">Configurar pantallas</string>
-    <string name="tip_live_segments_title">Segmentos en vivo de Strava e interactividad</string>
+    <string name="tip_live_segments_title">Segmentos en vivo e interactividad</string>
     <string name="tip_live_segments_subtitle">Comparación en vivo contra tu récord y KOM</string>
     <string name="tip_live_segments_desc">Sincroniza tus segmentos favoritos de Strava para ver cuentas atrás, diferencias de tiempo y perfiles de elevación en vivo durante la ruta.</string>
     <string name="tip_live_segments_action">Explorar segmentos</string>
@@ -2212,7 +2222,7 @@
     <string name="tip_gear_tracking_action">Administrar equipamiento</string>
     <string name="tip_training_zones_title">Fisiología y zonas de entrenamiento</string>
     <string name="tip_training_zones_subtitle">Potencia Coggan, FC Karvonen y batería W\'</string>
-    <string name="tip_training_zones_desc">Aprovecha métricas avanzadas como Potencia Normalizada (NP), Factor de Intensidad (IF), TSS y batería W\' en vivo. Personaliza tus 7 zonas de potencia y zonas de pulso Karvonen.</string>
+    <string name="tip_training_zones_desc">Aprovecha métricas avanzadas como Potencia Ponderada (WP), Intensidad Relativa (RI), Carga de entrenamiento y batería W\' en vivo. Personaliza tus 7 zonas de potencia y zonas de pulso Karvonen.</string>
     <string name="tip_training_zones_action">Configurar zonas</string>
     <string name="tip_data_backup_title">Soberanía de datos y copias locales</string>
     <string name="tip_data_backup_subtitle">Control total sin cuentas obligatorias en la nube</string>

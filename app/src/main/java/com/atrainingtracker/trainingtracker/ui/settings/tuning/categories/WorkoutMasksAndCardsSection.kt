@@ -43,8 +43,11 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.MyPreferenceManager
 import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
 import com.atrainingtracker.trainingtracker.WorkoutDetailPreferences
+import com.atrainingtracker.trainingtracker.ui.aftermath.ReorderDragHandle
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabsConfigSheet
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutSectionType
+import com.atrainingtracker.trainingtracker.ui.aftermath.rememberReorderDragState
+import com.atrainingtracker.trainingtracker.ui.aftermath.reorderableRowElevation
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneCardDisplayMode
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.LapDisplayMode
 import kotlinx.coroutines.launch
@@ -200,7 +203,7 @@ fun WorkoutMasksAndCardsSection(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Spacer(modifier = Modifier.width(32.dp))
+                    Spacer(modifier = Modifier.width(44.dp))
                     Text(
                         text = stringResource(R.string.tuning_matrix_feature),
                         style = MaterialTheme.typography.labelMedium,
@@ -227,39 +230,49 @@ fun WorkoutMasksAndCardsSection(
                     buildMatrixFeatureRow(type, workoutCardPrefs, onWorkoutCardPrefsChange)
                 }
 
-                features.forEachIndexed { index, feature ->
-                    val rowBg = if (index % 2 == 0) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f) else Color.Transparent
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(rowBg)
-                            .padding(horizontal = 8.dp, vertical = 2.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(
-                            modifier = Modifier.width(32.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            IconButton(onClick = { moveSection(index, index - 1) }, enabled = index > 0, modifier = Modifier.size(22.dp)) {
-                                Icon(Icons.Default.KeyboardArrowUp, stringResource(R.string.action_move_up), Modifier.size(18.dp))
-                            }
-                            IconButton(onClick = { moveSection(index, index + 1) }, enabled = index < features.size - 1, modifier = Modifier.size(22.dp)) {
-                                Icon(Icons.Default.KeyboardArrowDown, stringResource(R.string.action_move_down), Modifier.size(18.dp))
-                            }
-                        }
+                val reorderDragState = rememberReorderDragState(
+                    itemCount = features.size,
+                    rowHeight = 44.dp,
+                    minIndex = 0,
+                    onMoveItem = { from, to -> moveSection(from, to) }
+                )
 
-                        Text(
-                            text = stringResource(feature.titleRes),
-                            style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 18.sp),
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f).padding(horizontal = 4.dp)
-                        )
-                        Box(modifier = Modifier.size(50.dp, 44.dp), contentAlignment = Alignment.Center) {
-                            Checkbox(checked = feature.listChecked, onCheckedChange = feature.onListChange)
+                features.forEachIndexed { index, feature ->
+                    key(feature.sectionType) {
+                        val isDragging = reorderDragState.draggingIndex == index
+                        val rowBg = if (isDragging) {
+                            MaterialTheme.colorScheme.surfaceContainerHighest
+                        } else if (index % 2 == 0) {
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
+                        } else {
+                            Color.Transparent
+                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .reorderableRowElevation(index, reorderDragState)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(rowBg)
+                                .padding(horizontal = 8.dp, vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            ReorderDragHandle(
+                                index = index,
+                                dragState = reorderDragState,
+                                dragContentDescription = stringResource(R.string.action_drag_to_reorder)
+                            )
+
+                            Text(
+                                text = stringResource(feature.titleRes),
+                                style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 18.sp),
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f).padding(horizontal = 4.dp)
+                            )
+                            Box(modifier = Modifier.size(50.dp, 44.dp), contentAlignment = Alignment.Center) {
+                                Checkbox(checked = feature.listChecked, onCheckedChange = feature.onListChange)
+                            }
                         }
                     }
                 }

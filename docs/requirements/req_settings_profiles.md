@@ -1585,3 +1585,33 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 4. *Preservation of Core Invariants*: Rule 75 SharedPreferences null-safety (`cSharedPreferences != null`); complete data purge hygiene (`executeLocalDataPurge` resets subscriber state); tier monotonicity (`< SupporterTier.DIAMOND`, `< SupporterTier.GOLD`); once-in-a-lifetime non-spam persistence (`hasShownGoldGarageNudge`, `hasShownDiamondGarageNudge`); Rule 73 stacked action buttons; zero-emoji localization parity across all 9 languages.
 
 **Invariants**: Equipment and sensor persistence complete before dialog triggering; each league level nudges at most once; tier monotonicity is strictly preserved; release builds compile out debug preview controls.
+
+### REQ-SET-089: Workout Cluster Merge via Similarity-Ranked Target Selection & Confirmation [Verified]
+- **Tests**: `TST-SET-089` | **Tickets**: `ATT-5666`
+- **Implementation**: `WorkoutClusterComponents.kt`, `WorkoutClustersScreen.kt`, `WorkoutClustersViewModel.kt`, `WorkoutClusterEngine.kt`, `WorkoutSummariesDatabaseManager.java`, `RoutesDatabaseManager.kt`
+- **Rationale**: When duplicate Workout Clusters (*Lieblingsstrecken*) exist for the same route, deleting one cluster drops historical cluster association (`clusterId = -1L`). The system SHALL provide a long-press context menu action to merge source cluster `A` into target cluster `B`, ranking candidate clusters by spatial similarity score and requiring explicit confirmation before atomically reassigning all workouts and routes, updating `B`'s weighted centroid, and deleting `A` (ATT-5666):
+1. *Context Menu Action (`REQ-SET-089.1`)*: `ClusterItem` context menu SHALL include an action item *"Mit anderer Lieblingsstrecke zusammenführen…"* (`R.string.cluster_menu_merge`, icon `Icons.Default.CallMerge`) triggering `onMerge(cluster)`.
+2. *Similarity-Ranked Candidate Selection (`REQ-SET-089.2`)*: Target selection SHALL present candidates via `WorkoutClusterSelectionDialog` where candidates (`id != A.id`) are scored against cluster `A`'s spatial fingerprint via `WorkoutClusterEngine.scoreClusters(...)` and sorted ascending by score (lowest score = highest similarity at index 0).
+3. *Explicit Merge Confirmation Dialog (`REQ-SET-089.3`)*: Prior to merge execution, the system SHALL display an `AlertDialog` (`cluster_merge_dialog_title`, `cluster_merge_dialog_message`) with directional explanation showing source name `%1$s`, recording count `%2$d`, target name `%3$s`, confirmation action `cluster_merge_action`, and dismiss action `cancel`.
+4. *Transactional Database Reassignment & Centroid Synthesis (`REQ-SET-089.4`)*:
+• Reassign all workouts with `CLUSTER_ID = A.id` to `B.id` in `WorkoutSummaries.TABLE`.
+• Reassign all routes with `COLUMN_CLUSTER_ID = A.id` to `B.id` in `RoutesDatabaseManager`.
+• Recompute `B`'s weighted centroid:
+  $$\text{coord}_{\text{new}} = \frac{\text{coord}_B \cdot N_B + \text{coord}_A \cdot N_A}{N_B + N_A}$$
+  with new hit count $N_B + N_A$, update spatial bounding box, merge polyline preview paths, and update probable sport type.
+• Delete source cluster `A` from `WorkoutClusterDatabaseManager` and refresh `WorkoutClusterRepository` state flows.
+5. *9-Language Parity & Zero Emojis (`REQ-SET-089.5`)*: All new user-facing strings SHALL maintain 100% parity across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) with zero decorative inline emojis (`ATT-5400`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* two similar Workout Clusters `A` and `B` in the clusters list,
+• *When* the athlete long-presses cluster `A` and selects *"Mit anderer Lieblingsstrecke zusammenführen…"*,
+• *Then* `WorkoutClusterSelectionDialog` opens displaying candidate clusters with `B` ranked at the top.
+• *Given* the athlete selects candidate cluster `B` in the selection dialog,
+• *When* the confirmation dialog appears and the athlete taps *"Zusammenführen"*,
+• *Then* all workouts and routes of `A` are reassigned to `B`, `B`'s hit count and centroid reflect the combined data, cluster `A` is removed from the database and UI, and `WorkoutClusterRepository` emits the updated state.
+• *Given* all 9 locale resource files,
+• *When* `TranslationParityTest` executes,
+• *Then* all merge string keys exist, match format specifiers (`%1$s`, `%2$d`, `%3$s`), and contain zero inline emojis.
+
+**Invariants**: Workouts not belonging to `A` or `B` MUST NOT be altered; SQLite transactional integrity; no duplicate routes; zero hardcoded strings.
+

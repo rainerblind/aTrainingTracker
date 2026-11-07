@@ -152,4 +152,52 @@ class ImportFormatCardsContractTest {
             content.contains("viewModel.importLegacyFile(context, uri, pendingSingleLegacyFormat)")
         )
     }
+
+    @Test
+    fun testImportTabContent_rendersStravaBulkExportCardWithActionTitle() {
+        val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/migration/ImportBackupTabsScreen.kt")
+        val content = file.readText()
+
+        assertTrue(
+            "ImportTabContent must render Strava card with import_strava_archive_title (REQ-UI-458, TST-UI-458)",
+            content.contains("R.string.import_strava_archive_title")
+        )
+        assertTrue(
+            "ImportTabContent must invoke StravaArchiveImportCard",
+            content.contains("StravaArchiveImportCard(")
+        )
+    }
+
+    @Test
+    fun testStravaBulkExportArchiveTitleContainsActionVerbAcrossAllNineLocales() {
+        val expectedVerbsByLocale = mapOf(
+            "values" to "Import",
+            "values-de" to "importieren",
+            "values-es" to "Importar",
+            "values-fr" to "Importer",
+            "values-it" to "Importa",
+            "values-ja" to "インポート",
+            "values-nl" to "importeren",
+            "values-pl" to "Importuj",
+            "values-pt" to "Importar"
+        )
+        val regex = Regex("""<string name="import_strava_archive_title">(.*?)</string>""")
+
+        for ((locale, expectedVerb) in expectedVerbsByLocale) {
+            val file = findSourceFile("src/main/res/$locale/strings.xml")
+            val content = file.readText()
+            val match = regex.find(content)
+            assertTrue("Locale '$locale' must define import_strava_archive_title", match != null)
+            val title = match!!.groupValues[1].trim()
+            assertTrue(
+                "Locale '$locale' title '$title' must contain action verb '$expectedVerb' (REQ-UI-458.1)",
+                title.contains(expectedVerb)
+            )
+            // Prohibition of inline emojis (REQ-UI-458.3 / ATT-5400)
+            assertFalse(
+                "Locale '$locale' title '$title' must not contain emojis",
+                title.any { Character.isSurrogate(it) || it.code in 0x2600..0x27BF }
+            )
+        }
+    }
 }

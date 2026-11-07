@@ -13605,3 +13605,297 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Bottom popup standard via `AppModalBottomSheet(scrollable = false)`, `Rule 73` stacked action buttons, downsampled bitmap decoding, 9-language localization parity, and 100% clean-room test pass rate.
 
+### REQ-UI-456: Drag & Drop Section Reordering via Full-Height Drag-Handle in Summary Cards and Detail Tabs [Verified]
+- **Tests**: `TST-UI-456`, `TST-LOC-001` | **Tickets**: `ATT-5761`
+- **Implementation**: `WorkoutMasksAndCardsSection.kt`, `WorkoutDetailTabsConfigSheet.kt`, `WorkoutDetailTabsConfigComponents.kt`, `WorkoutMasksAndCardsLayoutTest.kt`, `WorkoutSectionReorderContractTest.kt`, `WorkoutDetailTabsTest.kt`
+- **Rationale**: In *Experteneinstellungen* (*Advanced Settings*), athletes configure section display order in two distinct surfaces: Summary-Karten (`WorkoutMasksAndCardsSection.kt`) and Detail-Tabs (`WorkoutDetailTabsConfigSheet.kt`). Currently, reordering relies on stacked 22dp `IconButton`s (`KeyboardArrowUp` / `KeyboardArrowDown`) within a 32dp column, which violate Material 3 touch ergonomics ($\ge 44\text{--}48\text{dp}$) and require tedious discrete tapping. REQ-UI-456 replaces these arrow buttons with a prominent, full-row-height drag-and-drop handle (≡) ensuring fluid vertical drag reordering and strict gesture isolation (Sprint 2026-45.10, ATT-5761, refining `REQ-UI-414.3` and `REQ-UI-408.5`):
+1. *Full-Height Drag Handle Touch Target (`REQ-UI-456.1`)*:
+• In `WorkoutMasksAndCardsSection.kt` and `WorkoutDetailTabsConfigSheet.kt`, section reordering SHALL be triggered via a dedicated drag handle icon (`Icons.Default.DragHandle` / ≡) spanning $\ge 44\text{dp}$ touch target width and full row height, replacing legacy stacked 22dp Up/Down arrow buttons.
+2. *Strict Gesture Isolation & Host Scroll Fluidity (`REQ-UI-456.2`)*:
+• Vertical drag gesture detection SHALL be strictly isolated to the leading drag handle touch area (`detectVerticalDragGestures`).
+• Vertical gestures across the remainder of the row (label, checkbox, spacing) SHALL NOT be intercepted, ensuring natural vertical scrolling of the parent scrollable container (`AdvancedTuningDialog`, `AppModalBottomSheet`) remains completely smooth and unhindered.
+3. *Real-Time Position Swapping & Elevation Feedback (`REQ-UI-456.3`)*:
+• During active drag, the dragged item SHALL be visually elevated (`surfaceContainerHighest` container tint, subtle shadow, and `zIndex(1f)`).
+• When vertical drag translation crosses the adjacent row midpoint threshold, the system SHALL immediately swap positions with the adjacent row in real time and emit updated list ordering for instant DataStore persistence.
+4. *Pinned Map Anchor Invariant in Detail Tabs (`REQ-UI-456.4`)*:
+• In `WorkoutDetailTabsConfigSheet.kt`, `WorkoutDetailSectionType.MAP` SHALL remain permanently pinned at index 0 when active (`normalizedSections`).
+• The MAP row SHALL NOT expose an active drag handle (rendering an immutable pin indicator `Icons.Default.PushPin` or non-draggable handle), and movable rows SHALL NOT be draggable above index 0.
+5. *Modularity & File Length Limit (`REQ-UI-456.5`)*:
+• Reusable drag-and-drop row logic and components SHALL be placed in `WorkoutDetailTabsConfigComponents.kt`, ensuring `WorkoutMasksAndCardsSection.kt` remains strictly $< 400$ lines in compliance with `REQ-UI-414.5` and `REQ-PRO-011`.
+6. *9-Language Accessibility Parity (`REQ-UI-456.6`)*:
+• Accessibility content descriptions (`action_drag_to_reorder`, `workout_detail_tabs_map_pinned_desc`) SHALL exist across all 9 supported application locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) without decorative inline Unicode emojis.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-UI-414.3` (*Collapsible Summary Cards Reorder List*) and `REQ-UI-408.5` (*Workout Detail Tabs Section Reordering*), targeting `WorkoutMasksAndCardsSection.kt`, `WorkoutDetailTabsConfigSheet.kt`, and introducing `WorkoutDetailTabsConfigComponents.kt`.
+2. *Historical Origin & Commit Trace*: `ATT-4043` (`a8e5e356`, Sprint 2026-42.8: 32dp column with 22dp arrows), `ATT-3920` (`ea5fa705`, Sprint 2026-42.8: Up/Down arrows in tab sheet), `ATT-5654` (`c738f195`, Sprint 2026-45.9: `GRADE_DISTRIBUTION` added to both lists).
+3. *Root Reason for Existing Formulation*: Up/Down buttons were the simplest click-based control avoiding gesture interception in vertical scroll containers before isolated touch-target drag handles were designed.
+4. *Preservation of Core Invariants*: Host scroll integrity preserved; `MAP` pinned at index 0 preserved; DataStore persistence preserved; file length limit `< 400` lines preserved via modular `WorkoutDetailTabsConfigComponents.kt`; 100% 9-language translation parity.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete in *Experteneinstellungen* viewing the expanded summary cards list or detail tabs configuration,
+• *When* inspecting the leading edge of any reorderable row,
+• *Then* a prominent drag-handle icon (≡) with a full $\ge 44\text{dp}$ touch target is displayed instead of stacked 22dp arrows.
+• *Given* the athlete touches and drags the drag handle vertically past an adjacent row boundary,
+• *Then* the dragged row elevates visually, swaps position in real time with the adjacent row, and emits the new section order.
+• *Given* the athlete swipes vertically on any part of the row outside the drag handle,
+• *Then* the parent scroll container scrolls normally without initiating a row reorder drag.
+• *Given* `WorkoutDetailSectionType.MAP` enabled in a detail tab,
+• *Then* the MAP row remains permanently anchored at index 0 and cannot be dragged or displaced.
+
+**Invariants**: Zero gesture contention with host vertical scroll; `MAP` pinned at index 0; instant DataStore serialization; `< 400` lines file limit.
+
+### REQ-UI-457: Dynamic Photo Thumbnail Downsampling Resolution & Dimension-Keyed Reloading [Verified]
+- **Tests**: `TST-UI-457` | **Tickets**: `ATT-5760`
+- **Implementation**: `WorkoutPhotoStrip.kt`, `PhotoThumbnailSizeTest.kt`
+- **Rationale**: In `WorkoutPhotoStrip.kt` (`PhotoThumbnailCard`), photos were previously downsampled statically via `PhotoTrackOverlayComposer.decodeSampledBitmap(context, photo.uri, maxDim = 240)`. When displayed across `LARGE` (full card width, ~360–400dp / ~1080px physical) or `MEDIUM` (half width, ~180dp / ~540px physical) responsive tiles, upscaling a 240px bitmap produces severe magnification blur. REQ-UI-457 couples decode resolution dynamically to physical item dimensions and keys reloading on dimension changes while bounding resolution to prevent OOM (Sprint 2026-45.10, ATT-5760, refining `REQ-UI-414.6` and `REQ-UI-448`):
+1. *Dynamic Downsampling Resolution Target (`REQ-UI-457.1`)*:
+• In `WorkoutPhotoStrip.kt`, `calculatePhotoDecodeMaxDim(dimensions: PhotoItemDimensions, density: Density): Int` SHALL calculate the decode resolution based on the item's maximum physical pixel dimension: `(maxOf(dimensions.width, dimensions.height).value * density.density).roundToInt()`.
+• The target resolution SHALL be clamped to `[256 .. 1200]` pixels, guaranteeing crisp display on high-density displays for `LARGE` and `MEDIUM` cards while bounding memory footprint.
+2. *Dimension-Keyed State & Coroutine Reloading (`REQ-UI-457.2`)*:
+• In `PhotoThumbnailCard`, `remember` and `LaunchedEffect` SHALL be keyed on `(photo.filePath, targetMaxDim)` (or `dimensions`), ensuring that switching thumbnail sizes in settings triggers a re-decode at the appropriate resolution without stale blur.
+3. *Asynchronous Background IO Decoding (`REQ-UI-457.3`)*:
+• Downsampled bitmap decoding SHALL execute asynchronously on `Dispatchers.IO` via `PhotoTrackOverlayComposer.decodeSampledBitmap(context, photo.uri, maxDim = targetMaxDim)`, keeping the Compose UI thread unblocked.
+4. *OOM Protection & Layout Stability Invariants (`REQ-UI-457.4`)*:
+• Clamping to $\le 1200\text{px}$ guarantees thumbnail memory footprint remains $< 4\text{MB}$ per decoded bitmap. Responsive layout calculations (`calculatePhotoItemDimensions`) and aspect ratios remain invariant.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-UI-414.6` (*Workout Photos Configuration & Responsive Sizing*), targeting `WorkoutPhotoStrip.kt` and `PhotoThumbnailSizeTest.kt`.
+2. *Historical Origin & Commit Trace*: `5c9d9653` (`ATT-43`, initial photo strip), `8aed20fc` (`ATT-5474`, photo size presets), `9baf915c` (`ATT-5655`, responsive full/half row layout).
+3. *Root Reason for Existing Formulation*: When thumbnail sizes were fixed at 56dp/76dp/104dp in `ATT-5474`, `maxDim = 240` was adequate. When `ATT-5655` expanded `LARGE` to full row width, the downsampling constant was overlooked.
+4. *Preservation of Core Invariants*: OOM protection preserved via 1200px upper clamp; asynchronous decoding on `Dispatchers.IO` preserved; layout dimensions and aspect ratios from `calculatePhotoItemDimensions` remain invariant.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete viewing a workout summary or detail card with `PhotoThumbnailSize.LARGE` on a 2.75x–3.0x density display,
+• *When* `PhotoThumbnailCard` loads the photo bitmap,
+• *Then* `calculatePhotoDecodeMaxDim` computes a target resolution of ~990–1080px (clamped $\le 1200\text{px}$) and displays a sharp, unblurred thumbnail.
+• *Given* the athlete changes photo thumbnail size in settings from `MEDIUM` to `LARGE`,
+• *When* returning to the photo strip,
+• *Then* `LaunchedEffect` detects the dimension change and re-decodes the photo at the higher resolution.
+• *Given* a high-density tablet or large viewport where physical pixels exceed 1200px,
+• *When* `calculatePhotoDecodeMaxDim` evaluates,
+• *Then* the target dimension is capped at 1200px to guarantee OOM safety.
+
+**Invariants**: Clamped resolution $[256 \dots 1200\text{px}]$; zero OOM risk; asynchronous decoding on `Dispatchers.IO`; zero regression on `calculatePhotoItemDimensions`.
+
+### REQ-UI-458: Uniform Action-Oriented Phrasing for Format Import Cards (Strava Bulk Export) [Verified]
+- **Tests**: `TST-UI-458` | **Tickets**: `ATT-5679`
+- **Implementation**: `strings.xml` (all 9 locales), `ImportFormatLocalizationTest.kt`, `ImportFormatCardsContractTest.kt`
+- **Rationale**: On the Import tab of *Import & Backup* (`ImportBackupTabsScreen.kt`), format import cards display actionable titles with explicit action verbs (`import_fit_title`, `import_tcx_title`, `import_gpx_title`). In contrast, `import_strava_archive_title` previously omitted the action verb (*„Strava-Bulk-Export (ZIP)“* / *„Strava Bulk Export (ZIP)“*), confusing athletes into believing the card was an export action. REQ-UI-458 standardizes `import_strava_archive_title` across all 9 supported locales to use active verb phrasing (Sprint 2026-45.10, ATT-5679, refining `REQ-UI-293` and `REQ-MIG-048`):
+1. *9-Language Action Verb Parity (`REQ-UI-458.1`)*:
+• `values/`: *„Import Strava Bulk Export (ZIP)“*
+• `values-de/`: *„Strava-Bulk-Export (ZIP) importieren“*
+• `values-es/`: *„Importar exportación masiva de Strava (ZIP)“*
+• `values-fr/`: *„Importer une exportation en bloc Strava (ZIP)“*
+• `values-it/`: *„Importa esportazione in blocco Strava (ZIP)“*
+• `values-ja/`: *„Strava一括エクスポート (ZIP) をインポート“*
+• `values-nl/`: *„Strava bulk-export (ZIP) importeren“*
+• `values-pl/`: *„Importuj zbiorczy eksport Strava (ZIP)“*
+• `values-pt/`: *„Importar exportação em massa do Strava (ZIP)“*
+2. *Resource Key & Layout Stability (`REQ-UI-458.2`)*: Resource identifier `import_strava_archive_title` remains stable; `StravaArchiveImportCard` composable binding in `ImportBackupTabsScreen.kt` remains invariant.
+3. *Prohibition of Emojis (`REQ-UI-458.3`)*: String resources SHALL NOT contain decorative inline emojis (`ATT-5400`).
+4. *Grammatical Symmetry Across Format Cards (`REQ-UI-458.4`)*: Strava card title phrasing SHALL match the grammatical structure of adjacent FIT, TCX, and GPX format import cards (`REQ-UI-293`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-UI-293` (*Format-Specific Import Tab Architecture with Uniform Multi-Document Source Triad*) and `REQ-MIG-048` (*Strava Bulk Export Ingestion*), targeting `import_strava_archive_title` across all 9 `strings.xml` locales.
+2. *Historical Origin & Commit Trace*: `ATT-2623` (`0f40ce7d`, Sprint 2026-41.1: import format cards) and `ATT-4957` (`d814238e`, Sprint 2026-45.6: Strava bulk archive card introduction).
+3. *Root Reason for Existing Formulation*: In `ATT-4957`, the card was named directly after the archive payload format without considering the verbal action phrasing used across the other cards on the screen.
+4. *Preservation of Core Invariants*: String key stability preserved; ingestion logic unchanged; zero emoji regression; 100% 9-language translation parity.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete viewing the Import tab in German,
+• *When* reading the Strava card title,
+• *Then* it displays *„Strava-Bulk-Export (ZIP) importieren“*.
+• *Given* an athlete viewing the Import tab in English,
+• *When* reading the Strava card title,
+• *Then* it displays *„Import Strava Bulk Export (ZIP)“*.
+• *Given* any of the 9 supported locales,
+• *When* `ImportFormatLocalizationTest` executes,
+• *Then* `import_strava_archive_title` is non-empty, contains the localized action verb, and contains zero emojis.
+
+**Invariants**: String resource key stability (`import_strava_archive_title`); zero logic changes to `StravaBulkExportImporter.kt` or `ImportBackupTabsScreen.kt`; zero regressions on adjacent format cards.
+
+### REQ-UI-459: Trademark-Free Physiology & Localization Terminology Parity Across All 9 Locales [Verified]
+- **Tests**: `TST-UI-459` | **Tickets**: `ATT-5678`
+- **Implementation**: `strings.xml` (all 9 locales), `WorkoutDetails.kt`, `AthleteProfileScreen.kt`, `AdvancedTuningAccordion.kt`, `TipsGuideScreen.kt`, `TranslationParityTest.kt`
+- **Rationale**: Peaksware, LLC (parent company of TrainingPeaks) holds registered trademarks on cycling/endurance terms: Normalized Power® (NP®), Intensity Factor® (IF®), Training Stress Score® (TSS®), and Performance Management Chart® (PMC®), along with CTL, ATL, and TSB. The system SHALL replace all proprietary Peaksware trademarks in UI-visible string resources across all 9 supported locales with trademark-free, descriptive terminology while preserving 100% calculation invariance and database schema compatibility (Sprint 2026-45.10, ATT-5678, refining `REQ-UI-401`, `REQ-UI-402`, and `REQ-UI-403`):
+1. *Power & Training Load Terminology Parity (`REQ-UI-459.1`)*:
+• Across all 9 locales, the system SHALL display **Weighted Power** (**WP**) / DE: **Gewichtete Leistung** for `normalized_power`, **Relative Intensity** (**RI**) / DE: **Relative Intensität** for `intensity_factor`, and **Training Load** (**Load**) / DE: **Trainingsbelastung** for `tss`.
+• Badges `normalized_power_short` (`WP`), `intensity_factor_short` (`RI`), and `tss_short` (`Load`) SHALL reside solely in base `values/strings.xml` with `translatable="false"`.
+2. *Aftermath Workout Detail Formats (`REQ-UI-459.2`)*:
+• In `WorkoutDetails.kt` and summary cards, `workout_power_metrics_*_format` SHALL display `WP: %1$.0f W`, `RI: %1$.2f`, and `Load: %1$.0f` across all 9 locales.
+3. *Training Load & Form (Profile & PMC) (`REQ-UI-459.3`)*:
+• In `AthleteProfileScreen.kt`, the system SHALL display **Training Load & Form** (DE: **Belastungssteuerung**) for `athlete_profile_pmc_title`, **Fitness (42d)** for `athlete_profile_pmc_ctl_label`, **Fatigue (7d)** (DE: **Ermüdung (7d)**) for `athlete_profile_pmc_atl_label`, **Form (Balance)** for `athlete_profile_pmc_tsb_label`, and `%1$+.1f/wk` (DE: `%1$+.1f/Wo.`) for `athlete_profile_pmc_ramp_format`.
+4. *Advanced Settings (Tuning) & Tips Parity (`REQ-UI-459.4`)*:
+• In `PhysiologyModelsSection.kt` and `TipsGuideScreen.kt`, titles and descriptions SHALL use trademark-free terms (`tuning_physiology_coggan_*`, `tuning_physiology_pmc_*`, `tip_training_zones_*`).
+• `tuning_physiology_pmc_short` SHALL be **Load / Form** (DE: **Belastung / Form**).
+5. *System Invariants & Schema Stability (`REQ-UI-459.5`)*:
+• Mathematical calculation functions in `PowerPhysiologyCalculator.kt` and `CyclingPowerMetricsDevice.java` SHALL remain strictly unchanged.
+• Internal SQLite column names, DTO fields (`normalizedPowerWatts`, `intensityFactor`, `tss`), and sensor enums (`SensorType.NORMALIZED_POWER`, `SensorType.TSS`) SHALL remain invariant.
+• All format specifiers (`%1$+.1f`, `%1$.0f`, `%1$.2f`) SHALL remain indexed, and zero decorative inline emojis SHALL be included (`ATT-5400`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines UI string presentation of `REQ-UI-401.3` / `REQ-UI-401.4` (*Performance Management Chart*), `REQ-UI-402.2` (*Power-Based Training Metrics Display*), and `REQ-UI-403.1` / `REQ-UI-403.4` (*Physiology Models Section*), targeting 20 string keys across all 9 `strings.xml` locales.
+2. *Historical Origin & Commit Trace*: Sprint 2026-42.7 (`ATT-3858` / `ATT-3859`, commits `a6289096` and `dc62bb3c`), Sprint 2026-44.1 (`ATT-3929`), and Sprint 2026-44.2 (`ATT-4432`).
+3. *Root Reason for Existing Formulation*: Previous implementations adopted Dr. Andrew Coggan's literature terminology without separating proprietary registered trademarks from open mathematical equations.
+4. *Preservation of Core Invariants*: EWMA impulse-response math ($\tau=42$, $\tau=7$), SQLite schema, backup/restore compatibility, and 9-language translation parity remain 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete viewing workout details or sensor cockpit in German,
+• *When* inspecting power metrics,
+• *Then* labels display *„Gewichtete Leistung“* (`WP`), *„Relative Intensität“* (`RI`), and *„Trainingsbelastung“* (`Load`).
+• *Given* an athlete viewing the Athlete Profile in English,
+• *When* inspecting the training load section,
+• *Then* header displays *„Training Load & Form“* and cards display *„Fitness (42d)“*, *„Fatigue (7d)“*, and *„Form (Balance)“*.
+• *Given* any of the 9 supported locales,
+• *When* `TranslationParityTest` executes,
+• *Then* all 20 updated keys exist with matching positional specifiers and zero inline emojis.
+
+**Invariants**: Zero calculation changes; zero database migrations; zero DTO field renaming; 100% 9-locale parity.
+
+### REQ-UI-460: Brand Compliance & Feature Title Neutralization Across All 9 Locales [Verified]
+- **Tests**: `TST-UI-460` | **Tickets**: `ATT-5677`
+- **Implementation**: `strings.xml` (all 9 locales), `AppNavigationDrawer.kt`, `SegmentsTabsScreen.kt`, `TipsGuideScreen.kt`, `ImportBackupTabsScreen.kt`
+- **Rationale**: To comply strictly with the official Strava API Brand Guidelines (*"Never use Strava in the title of your app or feature"*) and avoid Google Play trademark rejections from listing third-party hardware trademarks (*"Garmin, Wahoo, Hammerhead"*), the system SHALL neutralize feature titles and descriptions across all 9 supported application locales while keeping factual integration references in body texts and preserving existing navigation routes (Sprint 2026-45.10, ATT-5677, refining `REQ-UI-010`, `REQ-UI-293`, and `REQ-UI-432`):
+1. *Live Segments Tip Title Neutralization (`REQ-UI-460.1`)*:
+• `tip_live_segments_title` SHALL omit the "Strava" brand prefix across all 9 locales (e.g. EN: *"Live Segments &amp; Scrubbing"*, DE: *"Live-Segmente &amp; Scrubbing"*).
+• `tip_live_segments_desc` SHALL retain its factual description of Strava segment synchronization.
+2. *Navigation Drawer & Top Bar Title Neutralization (`REQ-UI-460.2`)*:
+• In `AppNavigationDrawer.kt` and `SegmentsTabsScreen.kt`, `segments` SHALL render neutral category titles without the "Strava" prefix across all 9 locales (e.g. EN: *"Segments"*, DE: *"Segmente"*, ES: *"Segmentos"*, JA: *"セグメント"*).
+3. *FIT Hardware Description Neutralization (`REQ-UI-460.3`)*:
+• In `ImportBackupTabsScreen.kt`, `import_fit_description` SHALL replace specific brand names with generic hardware categories across all 9 locales (e.g. EN: *"Import workouts from bike computers, sports watches, or smartwatches (.fit)."*, DE: *"Aktivitäten von Fahrradcomputern, Sportuhren oder Smartwatches importieren (.fit)."*).
+4. *9-Language Parity & Emoji Prohibition (`REQ-UI-460.4`)*:
+• All 3 string resources SHALL exist and be non-blank across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) with zero inline emojis (`ATT-5400`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines user-facing titles and descriptions in `REQ-UI-010` (*Navigation Drawer Architecture*), `REQ-UI-293` (*FIT Import Card Presentation*), and `REQ-UI-432` (*Tips Guide Screen*), targeting `tip_live_segments_title`, `segments`, and `import_fit_description` across all 9 `strings.xml` locales.
+2. *Historical Origin & Commit Trace*: `ATT-2623` (`c89a01f2`, Sprint 2026-41.1: FIT import cards) and `ATT-2276` (`f38b029a`, Sprint 2026-40.16: Tips guide screen).
+3. *Root Reason for Existing Formulation*: Colloquial brand names and third-party feature titles were used for immediate familiarity before formal API trademark compliance reviews.
+4. *Preservation of Core Invariants*: `NavRoutes.SEGMENTS`, drawer navigation contracts, Strava API synchronization flows, and 9-language translation parity remain 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete viewing the Tips & Guide screen,
+• *When* reading the live segments card header,
+• *Then* it displays *"Live Segments & Scrubbing"* (or localized) without *"Strava"*.
+• *Given* an athlete opening the navigation drawer or segments screen,
+• *When* viewing the segments item,
+• *Then* the title displays *"Segments"* (DE: *"Segmente"*) without *"Strava"*.
+• *Given* an athlete viewing the Import tab,
+• *When* inspecting the FIT card subtitle,
+• *Then* it references bike computers, sports watches, or smartwatches without naming Garmin, Wahoo, or Hammerhead.
+• *Given* any of the 9 supported locales,
+• *When* `TranslationParityTest` executes,
+• *Then* all 3 keys are non-empty with zero format errors and zero emojis.
+
+**Invariants**: String key stability; zero route or navigation ID alterations; zero Strava OAuth/sync logic changes.
+
+### REQ-UI-461: Trademark-Free Live Climb Tuning Title Parity Across All 9 Locales [Verified]
+- **Tests**: `TST-UI-461` | **Tickets**: `ATT-5675`
+- **Implementation**: `strings.xml` (all 9 locales), `LiveClimbSheet.kt`, `TrackingViewsDatabaseManager.java`, `SensorGridLandscapeLayoutTest.kt`
+- **Rationale**: To eliminate trademark compliance risks associated with Garmin Ltd.'s registered trademark "ClimbPro" and avoid potential automated Google Play Store rejections under *Unauthorized Use of Third-Party Trademarks*, the system SHALL remove the bracketed suffix `(ClimbPro)` from `tuning_show_live_climbs_title` across all 9 supported application locales, harmonizing the title with existing cockpit toggle phrasing (`config_tracking__show_live_climbs`) while sanitizing codebase comments in production and test files (Sprint 2026-45.10, ATT-5675, refining `REQ-MAP-027` Clause 5, `REQ-UI-383`):
+1. *Tuning String Resource Neutralization (`REQ-UI-461.1`)*:
+• Across all 9 locales in `app/src/main/res/values*/strings.xml`, `tuning_show_live_climbs_title` SHALL omit the `(ClimbPro)` suffix:
+  - `values-de`: `Live-Anstiege`
+  - `values`: `Live Climbs`
+  - `values-es`: `Subidas en vivo`
+  - `values-fr`: `Montées en direct`
+  - `values-it`: `Salite in tempo reale`
+  - `values-ja`: `ライブクライム`
+  - `values-nl`: `Live beklimmingen`
+  - `values-pl`: `Podjazdy na żywo`
+  - `values-pt`: `Subidas ao vivo`
+• `tuning_show_live_climbs_summary` SHALL retain its explanatory description of real-time climb cockpit behavior during routes and free riding.
+2. *Code & Comment Trademark Hygiene (`REQ-UI-461.2`)*:
+• KDoc header in `LiveClimbSheet.kt` (line 60) SHALL describe the component neutrally as real-time climb cockpit bottom sheet without `(ClimbPro)`.
+• Javadoc parameter comment in `TrackingViewsDatabaseManager.java` (line 1517) SHALL refer neutrally to `Live Climb bottom sheets`.
+• Test KDoc in `SensorGridLandscapeLayoutTest.kt` (line 187) SHALL refer neutrally to `Live Climb alerts`.
+3. *9-Language Parity & Emoji Prohibition (`REQ-UI-461.3`)*:
+• `tuning_show_live_climbs_title` SHALL maintain 100% parity across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) with zero inline emojis (`ATT-5400`) and matching casing/semantics.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines user-facing tuning title in `REQ-MAP-027` (Clause 5: Tuning & Localization Parity) and `REQ-UI-383`, targeting `tuning_show_live_climbs_title` across all 9 `strings.xml` locales, `LiveClimbSheet.kt`, and `TrackingViewsDatabaseManager.java`.
+2. *Historical Origin & Commit Trace*: `ATT-1281` (`ef9a1281` / `1e88ef25`, Sprint 2026-40.14: Persistent Climbs Database & Live Climb Bottom Sheet).
+3. *Root Reason for Existing Formulation*: `(ClimbPro)` was parenthesized to provide instant feature recognition for cyclists familiar with Garmin cycling computers before trademark risk audits.
+4. *Preservation of Core Invariants*: DataStore preference key `KEY_SHOW_LIVE_CLIMBS`, SQLite column `SHOW_LIVE_CLIMBS`, climb detection engine (`ClimbDetector`), and live climb state machine (`LiveClimbsRepository`) remain 100% bit- and byte-identical.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete accessing Advanced Tuning in any of the 9 supported locales,
+• *When* viewing the Live Climbs toggle header,
+• *Then* the title displays the localized name (`Live Climbs`, `Live-Anstiege`, etc.) without `(ClimbPro)`.
+• *Given* all 9 `values*/strings.xml` files,
+• *When* `TranslationParityTest` executes,
+• *Then* `tuning_show_live_climbs_title` is non-empty across all locales with zero format errors and zero emojis.
+• *Given* source code files `LiveClimbSheet.kt`, `TrackingViewsDatabaseManager.java`, and `SensorGridLandscapeLayoutTest.kt`,
+• *When* inspected for trademark hygiene,
+• *Then* zero occurrences of `ClimbPro` remain in comments or headers.
+
+**Invariants**: Zero changes to `KEY_SHOW_LIVE_CLIMBS` or database schema; zero changes to climb detection or telemetry calculation logic.
+
+### REQ-UI-462: Cluster Naming & Selection Dialog: Bi-directional Escape from Existing Route to Create New Favorite Route [Verified]
+- **Tests**: `TST-UI-462` | **Tickets**: `ATT-5674`
+- **Implementation**: `ImportBackupTabsScreen.kt` (`ClusterNamingDialog`), `WorkoutClusterComponents.kt` (`WorkoutClusterSelectionDialog`)
+- **Rationale**: In `ClusterNamingDialog`, when the athlete selects an existing favorite route via `WorkoutClusterSelectionDialog`, the UI must provide immediate, discoverable escape routes back to creating a new favorite route (`selectedCluster = null`). The system SHALL provide:
+1. *Escape via Selection Dialog (`REQ-UI-462.1`)*: `WorkoutClusterSelectionDialog` SHALL expose an optional callback `onCreateNew: (() -> Unit)? = null`. When non-null, the dialog SHALL render a highlighted selectable card / row with `Icons.Default.Add` and label `cluster_naming__create_new` above the candidate routes list. Tapping this card SHALL invoke `onCreateNew()`, dismiss the bottom sheet, and revert `selectedCluster = null`.
+2. *Direct Clear Action on Selected Route Field (`REQ-UI-462.2`)*: When `selectedCluster != null`, the `OutlinedTextField` for the selected route in `ClusterNamingDialog` SHALL display a clear action button (`IconButton` with `Icons.Default.Clear` and content description `R.string.clear`) in its `trailingIcon`, enabling the athlete to revert `selectedCluster` to `null` with a single tap without opening the candidate picker dialog.
+3. *State & Form Restoration Invariants (`REQ-UI-462.3`)*: Upon resetting `selectedCluster` to `null` via either mechanism, the new favorite route naming section (`cluster_naming__new_name_prompt` and `name` `OutlinedTextField`) SHALL immediately reappear, preserving any previously entered or pre-filled route name text in `name`. Other callers of `WorkoutClusterSelectionDialog` (`WorkoutClustersScreen`, `WorkoutClusterHeatmapScreen`) where `onCreateNew` is omitted (null) SHALL remain strictly unchanged without showing the creation card.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `ClusterNamingDialog` with an existing favorite route selected (`selectedCluster != null`),
+• *When* the athlete taps the clear button (`X`) in the route field's `trailingIcon`,
+• *Then* `selectedCluster` becomes `null`, the route field reverts to displaying `cluster_naming__create_new`, and the new route name input field reappears preserving previously entered text.
+• *Given* `ClusterNamingDialog` with `WorkoutClusterSelectionDialog` opened,
+• *When* the athlete taps the `+ Neu erstellen...` (`cluster_naming__create_new`) card above candidate suggestions,
+• *Then* `onCreateNew` is invoked, the selection dialog dismisses, and `selectedCluster` is reset to `null`.
+• *Given* callers `WorkoutClustersScreen` or `WorkoutClusterHeatmapScreen` invoking `WorkoutClusterSelectionDialog` without `onCreateNew`,
+• *When* the bottom sheet renders,
+• *Then* the creation card is omitted and only candidate routes are displayed.
+
+**Invariants**: Backward compatibility for `WorkoutClusterSelectionDialog` callers; 9-language localization parity (`TranslationParityTest`); no regression in `ModalBottomSheetDialogsIntegrityTest`.
+
+### REQ-UI-463: Navigation Drawer & Expert Settings Thematic Grouping [Verified]
+- **Tests**: `TST-UI-463` | **Tickets**: `ATT-5670`
+- **Implementation**: `AppNavigationDrawer.kt`, `AdvancedTuningScreen.kt`, `AdvancedTuningDialog.kt`, `AdvancedTuningAccordion.kt`, `strings.xml` (all 9 locales)
+- **Rationale**: To prevent interface clutter as features expand, the system SHALL restructure the navigation drawer and Expert Settings into coherent thematic groups while strictly preserving all existing routes, actions, and DataStore parameters (Sprint 2026-45.10, ATT-5670, refining `REQ-UI-010` and `REQ-UI-222`):
+1. *Navigation Drawer Group Restructuring (`REQ-UI-463.1`)*:
+• In `AppNavigationDrawer.kt`, `drawer_backup_restore` SHALL be moved into `prefsOnlineCommunities` directly below `drawer_export` (yielding 5 items in Online Communities).
+• `drawer__settings` SHALL be streamlined to 6 items in canonical sequence: `drawer_tracking_layouts`, `drawer_sport_types`, `drawer_auto_pause`, `drawer_display_settings`, `drawer_units`, `drawer_advanced_tuning`.
+• A new collapsible bottom group `drawer__info_support` SHALL be introduced containing: `drawer_supporter`, `drawer_tips_guide`, and `drawer_privacy_policy`.
+2. *Expert Settings Thematic Grouping & Subheaders (`REQ-UI-463.2`)*:
+• The 9 accordions in `AdvancedTuningScreen.kt` and `AdvancedTuningDialog.kt` SHALL be organized into 3 logical blocks separated by visual subheaders:
+  - Block 1 (`tuning_group_cockpit_tracking`): Typography & Icons (`COCKPIT_TYPOGRAPHY`), Navigation & Tracking (`NAVIGATION`), Battery & Screen (`BATTERY_SAVER`).
+  - Block 2 (`tuning_group_sensors_gps`): Sensor Search (`SENSOR_SEARCH`), GPS & Filter (`SENSORS_GPS`).
+  - Block 3 (`tuning_group_analysis_models`): Workout Masks & Cards (`WORKOUT_MASKS_CARDS`), Aftermath & Analysis (`AFTERMATH_ANALYSIS`), Physiology & Performance (`PHYSIOLOGY_MODELS`), Route Clustering (`ROUTE_CLUSTERING`).
+3. *Modularity & Subheader Composable Invariants (`REQ-UI-463.3`)*:
+• `TuningGroupSubheader` composable SHALL be implemented in `AdvancedTuningAccordion.kt`.
+• All files in `ui/settings/tuning/` (`AdvancedTuningScreen.kt`, `AdvancedTuningDialog.kt`, `AdvancedTuningAccordion.kt`) SHALL maintain strictly `< 400` lines per `AdvancedTuningModularityTest`.
+4. *9-Language Parity & Zero Emojis (`REQ-UI-463.4`)*:
+• 4 new strings (`drawer__info_support`, `tuning_group_cockpit_tracking`, `tuning_group_sensors_gps`, `tuning_group_analysis_models`) SHALL be defined across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) with XML entity escaping (`&amp;`) and zero inline emojis (`ATT-5400`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-UI-010` (*Navigation Drawer Architecture*, ATT-3851) and `REQ-UI-222` (*Advanced Tuning Accordion Architecture*, ATT-1821 / ATT-1957).
+2. *Historical Origin & Commit Trace*: Introduced in `d7e82cb4` (drawer collapsible groups) and `e2303aa7` (accordion modularity).
+3. *Root Reason for Existing Formulation*: Settings were sequentially added to `drawer__settings` to avoid proliferating top-level categories. Accordions in Expert Settings were sequentially stacked as features grew.
+4. *Preservation of Core Invariants*: All navigation route IDs (`R.id.*`) and destination routes remain identical; DataStore schema and keys remain untouched; modularity rule (`< 400` lines) is strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the navigation drawer opened,
+• *When* inspecting the drawer groups,
+• *Then* `prefsOnlineCommunities` contains `drawer_backup_restore` directly below `drawer_export`, `drawer__settings` contains 6 configuration items ending with `drawer_advanced_tuning`, and `drawer__info_support` forms the bottom collapsible group with supporter, tips guide, and privacy policy.
+• *Given* the Expert Settings screen or dialog rendered,
+• *When* viewing the accordions list,
+• *Then* the 9 accordions are partitioned into 3 blocks preceded by thematic subheaders `tuning_group_cockpit_tracking`, `tuning_group_sensors_gps`, and `tuning_group_analysis_models`.
+• *Given* `AdvancedTuningModularityTest`,
+• *When* auditing file line counts,
+• *Then* `AdvancedTuningScreen.kt`, `AdvancedTuningDialog.kt`, and `AdvancedTuningAccordion.kt` are all `< 400` lines.
+• *Given* `TranslationParityTest`,
+• *When* validating all 9 locales,
+• *Then* all 4 new keys are non-empty with zero format errors and zero emojis.
+
+**Invariants**: Navigation route resolution (`NavRoutes`), DataStore tuning preference keys, and modularity limits MUST NOT be broken.
+
+
+
+
+
+
+
+

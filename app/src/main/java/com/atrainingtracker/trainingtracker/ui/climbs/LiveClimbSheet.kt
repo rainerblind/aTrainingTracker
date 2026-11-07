@@ -57,7 +57,7 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
- * Real-time Climb Cockpit Bottom Sheet (ClimbPro) for active route climbs and free-riding ascents (REQ-MAP-027, REQ-UI-383).
+ * Real-time Climb Cockpit Bottom Sheet for active route climbs and free-riding ascents (REQ-MAP-027, REQ-UI-383).
  *
  * Renders:
  * 1. Header with climb name, category badge, and route climb index counter via [ClimbHeader].

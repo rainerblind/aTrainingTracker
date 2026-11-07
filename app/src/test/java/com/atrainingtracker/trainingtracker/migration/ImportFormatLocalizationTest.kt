@@ -50,7 +50,8 @@ class ImportFormatLocalizationTest {
         "import_gpx_folder_button",
         "import_gpx_dropbox_button",
         "import_directory_scanning",
-        "import_directory_no_files_found"
+        "import_directory_no_files_found",
+        "import_strava_archive_title"
     )
 
     private val removedKeys = listOf(

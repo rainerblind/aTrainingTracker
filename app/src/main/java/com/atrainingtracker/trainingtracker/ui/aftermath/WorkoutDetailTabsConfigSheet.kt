@@ -268,79 +268,69 @@ fun WorkoutDetailTabsConfigSheet(
                 )
             }
 
+            val minMovableIdx = if (WorkoutDetailSectionType.MAP in activeSections) 1 else 0
+            val reorderDragState = rememberReorderDragState(
+                itemCount = activeSections.size,
+                rowHeight = 44.dp,
+                minIndex = minMovableIdx,
+                onMoveItem = { from, to ->
+                    onTabsChange(
+                        WorkoutDetailTabConfig.moveSectionInTab(
+                            effectiveTabs,
+                            safeIndex,
+                            from,
+                            to
+                        )
+                    )
+                }
+            )
+
             // Active Sections (Reorderable, with MAP pinned at index 0)
             activeSections.forEachIndexed { secIdx, section ->
                 val isMap = section == WorkoutDetailSectionType.MAP
-                val minMovableIdx = if (WorkoutDetailSectionType.MAP in activeSections) 1 else 0
-                val canMoveUp = !isMap && secIdx > minMovableIdx
-                val canMoveDown = !isMap && secIdx < activeSections.lastIndex
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Checkbox(
-                        checked = true,
-                        enabled = activeSections.size > 1,
-                        onCheckedChange = {
-                            onTabsChange(
-                                WorkoutDetailTabConfig.toggleSectionInTab(effectiveTabs, safeIndex, section)
-                            )
-                        }
-                    )
-                    Text(
-                        text = stringResource(section.labelRes),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(horizontal = 4.dp)
-                    )
-                    IconButton(
-                        onClick = {
-                            onTabsChange(
-                                WorkoutDetailTabConfig.moveSectionInTab(
-                                    effectiveTabs,
-                                    safeIndex,
-                                    secIdx,
-                                    secIdx - 1
-                                )
-                            )
-                        },
-                        enabled = canMoveUp,
-                        modifier = Modifier.size(28.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.KeyboardArrowUp,
-                            contentDescription = stringResource(R.string.action_move_up),
-                            modifier = Modifier.size(18.dp)
-                        )
+                key(section) {
+                    val isDragging = reorderDragState.draggingIndex == secIdx
+                    val rowBg = if (isDragging) {
+                        MaterialTheme.colorScheme.surfaceContainerHighest
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
                     }
-                    IconButton(
-                        onClick = {
-                            onTabsChange(
-                                WorkoutDetailTabConfig.moveSectionInTab(
-                                    effectiveTabs,
-                                    safeIndex,
-                                    secIdx,
-                                    secIdx + 1
-                                )
-                            )
-                        },
-                        enabled = canMoveDown,
-                        modifier = Modifier.size(28.dp)
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .reorderableRowElevation(secIdx, reorderDragState)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(rowBg)
+                            .padding(horizontal = 4.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.KeyboardArrowDown,
-                            contentDescription = stringResource(R.string.action_move_down),
-                            modifier = Modifier.size(18.dp)
+                        ReorderDragHandle(
+                            index = secIdx,
+                            dragState = reorderDragState,
+                            isPinned = isMap,
+                            pinnedContentDescription = stringResource(R.string.workout_detail_tabs_map_pinned_desc),
+                            dragContentDescription = stringResource(R.string.action_drag_to_reorder)
+                        )
+                        Checkbox(
+                            checked = true,
+                            enabled = activeSections.size > 1,
+                            onCheckedChange = {
+                                onTabsChange(
+                                    WorkoutDetailTabConfig.toggleSectionInTab(effectiveTabs, safeIndex, section)
+                                )
+                            }
+                        )
+                        Text(
+                            text = stringResource(section.labelRes),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(horizontal = 4.dp)
                         )
                     }
                 }
@@ -357,9 +347,10 @@ fun WorkoutDetailTabsConfigSheet(
                                 WorkoutDetailTabConfig.toggleSectionInTab(effectiveTabs, safeIndex, section)
                             )
                         }
-                        .padding(horizontal = 8.dp, vertical = 2.dp),
+                        .padding(horizontal = 4.dp, vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Spacer(modifier = Modifier.width(44.dp))
                     Checkbox(
                         checked = false,
                         onCheckedChange = {

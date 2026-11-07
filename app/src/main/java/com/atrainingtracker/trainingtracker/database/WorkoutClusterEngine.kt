@@ -1119,6 +1119,108 @@ class WorkoutClusterEngine private constructor(context: Context) {
         }
     }
 
+    /**
+     * Atomically merges a source cluster into a target cluster (ATT-5666 / REQ-SET-089).
+     *
+     * 1. Reassigns all workouts and routes with clusterId = sourceId to targetId.
+     * 2. Synthesizes combined weighted centroid, bounds, hit count, and probable sport.
+     * 3. Updates targetCluster and deletes sourceCluster from database.
+     *
+     * @return true if merge succeeded, false if either cluster was not found
+     */
+    fun mergeClusters(context: Context, sourceId: Long, targetId: Long): Boolean {
+        synchronized(clusterLock) {
+            val sourceCluster = dbManager.getClusterById(sourceId) ?: return false
+            val targetCluster = dbManager.getClusterById(targetId) ?: return false
+
+            val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
+            val routesManager = RoutesDatabaseManager.getInstance(context)
+
+            // 1. Reassign workouts & routes
+            summariesManager.reassignClusterWorkouts(sourceId, targetId)
+            routesManager.reassignClusterRoutes(sourceId, targetId)
+
+            // 2. Synthesize combined weighted centroid & statistics
+            val nSource = sourceCluster.hitCount
+            val nTarget = targetCluster.hitCount
+            val totalHits = nSource + nTarget
+
+            val updatedCluster = if (totalHits > 0) {
+                val weightSource = nSource.toDouble() / totalHits
+                val weightTarget = nTarget.toDouble() / totalHits
+
+                val newStartLat = targetCluster.startLat * weightTarget + sourceCluster.startLat * weightSource
+                val newStartLng = targetCluster.startLng * weightTarget + sourceCluster.startLng * weightSource
+                val newEndLat = targetCluster.endLat * weightTarget + sourceCluster.endLat * weightSource
+                val newEndLng = targetCluster.endLng * weightTarget + sourceCluster.endLng * weightSource
+                val newMaxDispLat = targetCluster.maxDispLat * weightTarget + sourceCluster.maxDispLat * weightSource
+                val newMaxDispLng = targetCluster.maxDispLng * weightTarget + sourceCluster.maxDispLng * weightSource
+                val newRefDistance = targetCluster.refDistance * weightTarget + sourceCluster.refDistance * weightSource
+
+                val newMinAltLat = when {
+                    targetCluster.minAltLat != null && sourceCluster.minAltLat != null ->
+                        targetCluster.minAltLat * weightTarget + sourceCluster.minAltLat * weightSource
+                    else -> targetCluster.minAltLat ?: sourceCluster.minAltLat
+                }
+                val newMinAltLng = when {
+                    targetCluster.minAltLng != null && sourceCluster.minAltLng != null ->
+                        targetCluster.minAltLng * weightTarget + sourceCluster.minAltLng * weightSource
+                    else -> targetCluster.minAltLng ?: sourceCluster.minAltLng
+                }
+                val newMaxAltLat = when {
+                    targetCluster.maxAltLat != null && sourceCluster.maxAltLat != null ->
+                        targetCluster.maxAltLat * weightTarget + sourceCluster.maxAltLat * weightSource
+                    else -> targetCluster.maxAltLat ?: sourceCluster.maxAltLat
+                }
+                val newMaxAltLng = when {
+                    targetCluster.maxAltLng != null && sourceCluster.maxAltLng != null ->
+                        targetCluster.maxAltLng * weightTarget + sourceCluster.maxAltLng * weightSource
+                    else -> targetCluster.maxAltLng ?: sourceCluster.maxAltLng
+                }
+
+                val newMinLat = listOfNotNull(targetCluster.minLat, sourceCluster.minLat).minOrNull()
+                val newMaxLat = listOfNotNull(targetCluster.maxLat, sourceCluster.maxLat).maxOrNull()
+                val newMinLng = listOfNotNull(targetCluster.minLng, sourceCluster.minLng).minOrNull()
+                val newMaxLng = listOfNotNull(targetCluster.maxLng, sourceCluster.maxLng).maxOrNull()
+
+                val combinedPreviewPaths = (targetCluster.previewPaths + sourceCluster.previewPaths).distinct().take(10)
+
+                val mostFrequentSport = summariesManager.getMostFrequentSportIdForCluster(targetId)
+                val sportId = if (mostFrequentSport != -1L) mostFrequentSport else targetCluster.probableSportId
+                val bSport = SportTypeDatabaseManager.getInstance(context).getBSportType(sportId)
+
+                targetCluster.copy(
+                    hitCount = totalHits,
+                    startLat = newStartLat,
+                    startLng = newStartLng,
+                    endLat = newEndLat,
+                    endLng = newEndLng,
+                    maxDispLat = newMaxDispLat,
+                    maxDispLng = newMaxDispLng,
+                    refDistance = newRefDistance,
+                    minAltLat = newMinAltLat,
+                    minAltLng = newMinAltLng,
+                    maxAltLat = newMaxAltLat,
+                    maxAltLng = newMaxAltLng,
+                    minLat = newMinLat,
+                    maxLat = newMaxLat,
+                    minLng = newMinLng,
+                    maxLng = newMaxLng,
+                    previewPaths = combinedPreviewPaths,
+                    probableSportId = sportId,
+                    bSportType = bSport
+                )
+            } else {
+                targetCluster
+            }
+
+            dbManager.updateCluster(updatedCluster)
+            dbManager.deleteCluster(sourceId)
+
+            return true
+        }
+    }
+
     fun manuallyCreateCluster(name: String, sportId: Long, start: LatLng, end: LatLng, apex: LatLng, distance: Double): Long {
         synchronized(clusterLock) {
             return dbManager.insertCluster(WorkoutCluster(

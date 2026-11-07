@@ -932,3 +932,23 @@
 - **Component**: `res/values*/strings.xml`, `TranslationParityTest.kt`
 - **Test Description**:
 1. Run `TranslationParityTest` verifying all 9 locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) have identical key sets and parameter specifiers for all new monetization strings.
+
+### TST-SET-089: **Workout Cluster Merge & Similarity-Ranked Target Selection Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-089`
+- **Component**: `WorkoutClusterComponents.kt`, `WorkoutClustersScreen.kt`, `WorkoutClustersViewModel.kt`, `WorkoutClusterEngine.kt`, `WorkoutSummariesDatabaseManager.java`, `RoutesDatabaseManager.kt`, `WorkoutClusterMergeTest.kt`
+- **Jira**: `ATT-5666`
+- **Test Description**:
+  1. *Engine Mathematical & Database Reassignment Unit Tests (`TST-SET-089.1`, `WorkoutClusterMergeTest.kt`)*:
+  • Create source cluster `A` ($N_A = 2$) and target cluster `B` ($N_B = 4$).
+  • Execute `WorkoutClusterEngine.mergeClusters(A.id, B.id)`.
+  • Verify all workouts previously assigned to `A` have `CLUSTER_ID == B.id`.
+  • Verify `B`'s new centroid coordinates match the weighted average $\frac{\text{coord}_B \cdot 4 + \text{coord}_A \cdot 2}{6}$.
+  • Verify `B`'s hit count is updated to 6.
+  • Verify cluster `A` is deleted from `WorkoutClusterDatabaseManager`.
+  2. *Similarity Ranking Candidate Selection Unit Tests (`TST-SET-089.2`, `WorkoutClustersViewModelTest.kt`)*:
+  • Given source cluster `A`, verify candidate list excludes `A`, computes similarity scores via `scoreClusters`, and orders candidates ascending (lowest score = highest similarity at index 0).
+  3. *9-Language Localization & Positional Specifier Audit (`TST-SET-089.3`, `TranslationParityTest.kt`)*:
+  • Verify `cluster_menu_merge`, `cluster_merge_dialog_title`, `cluster_merge_dialog_message` (`%1$s`, `%2$d`, `%3$s`), and `cluster_merge_action` exist across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) with zero inline emojis (`ATT-5400`).
+  4. *Clean-Room Targeted Regression Execution (`TST-SET-089.4`)*:
+  • Execute targeted test suites (`com.atrainingtracker.trainingtracker.database.*`, `com.atrainingtracker.trainingtracker.ui.clusters.*`, `com.atrainingtracker.trainingtracker.localization.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+

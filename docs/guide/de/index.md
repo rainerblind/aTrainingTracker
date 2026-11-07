@@ -30,8 +30,8 @@ Willkommen im offiziellen deutschen Benutzerhandbuch für **aTrainingTracker**. 
    - Cluster-Visualisierung auf der Karte & Leistungsverlauf mit Ausreißer-Erkennung
 7. [Kapitel 7: Physiologie, Trainingszonen & Leistungsanalyse](07-physiology-training-zones.md)
    - Coggan 7-Zonen-Leistungsmodell, Herzfrequenzzonen, FTP, CP & W'
-   - Wissenschaftliche Metriken: NP, IF, TSS, Skiba W'bal, EF & Entkopplung (Pw:Hr)
-   - Performance Management Chart (PMC: CTL Fitness, ATL Ermüdung, TSB Form)
+   - Wissenschaftliche Metriken: WP, RI, Load, Skiba W'bal, EF & Entkopplung (Pw:Hr)
+   - Belastungssteuerung (Training Load & Form: Fitness, Ermüdung, Form)
 8. [Kapitel 8: Workout-Auswertung, Perioden 2.0 & Jahresstatistiken](08-workout-aftermath-periods.md)
    - Detaillierte Nachbereitung (Diagramme, Zonen-Histogramme, Rundenzeiten)
    - Perioden 2.0: Wochen-, Monats- und Jahresansichten

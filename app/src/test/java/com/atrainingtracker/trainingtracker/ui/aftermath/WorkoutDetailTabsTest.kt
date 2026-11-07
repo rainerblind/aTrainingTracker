@@ -463,7 +463,9 @@ class WorkoutDetailTabsTest {
             "workout_detail_tabs_delete_tab",
             "workout_detail_tabs_reset_defaults",
             "workout_detail_tabs_sections_header",
-            "workout_detail_tabs_map_pinned_hint"
+            "workout_detail_tabs_map_pinned_hint",
+            "workout_detail_tabs_map_pinned_desc",
+            "action_drag_to_reorder"
         )
 
         for (dir in localeDirs) {
@@ -544,5 +546,25 @@ class WorkoutDetailTabsTest {
             listOf(WorkoutDetailSectionType.ZONES, WorkoutDetailSectionType.GRADE_DISTRIBUTION),
             zonesTab.sections
         )
+    }
+
+    /**
+     * TST-UI-456.2: Drag handle integration and pinned MAP anchor in tab config sheet (REQ-UI-456.4 / ATT-5761).
+     */
+    @Test
+    fun `TST-UI-456_2 drag handle integration and pinned MAP anchor in tab config sheet`() {
+        val sheetFile = findFile("src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutDetailTabsConfigSheet.kt")
+        val content = sheetFile.readText()
+
+        // 1. ReorderDragHandle is used instead of stacked Up/Down arrow buttons
+        assertTrue("Must use ReorderDragHandle in tab config sheet", content.contains("ReorderDragHandle("))
+        assertFalse("Must not have 22dp Up arrow button in active sections list", content.contains("Icons.Default.KeyboardArrowUp, stringResource(R.string.action_move_up), modifier = Modifier.size(18.dp)"))
+
+        // 2. MAP pinning: isPinned = isMap and pinned content description
+        assertTrue("Must bind isPinned = isMap", content.contains("isPinned = isMap"))
+        assertTrue("Must reference workout_detail_tabs_map_pinned_desc", content.contains("R.string.workout_detail_tabs_map_pinned_desc"))
+
+        // 3. Min movable index enforced when MAP is present
+        assertTrue("Must calculate minMovableIdx based on MAP presence", content.contains("val minMovableIdx = if (WorkoutDetailSectionType.MAP in activeSections) 1 else 0"))
     }
 }

@@ -143,7 +143,7 @@ class SensorCategoryAndSelectorContractTest {
         )
         val shortNames = mapOf(
             SensorType.POWER_TO_WEIGHT to "W/kg",
-            SensorType.NORMALIZED_POWER to "NP",
+            SensorType.NORMALIZED_POWER to "WP",
             SensorType.HR to "HR",
             SensorType.CADENCE to "CAD",
             SensorType.ALTITUDE to "ALT"
@@ -180,12 +180,12 @@ class SensorCategoryAndSelectorContractTest {
             )
         )
 
-        // Match by short name ("NP")
+        // Match by short name ("WP")
         assertEquals(
             listOf(SensorType.NORMALIZED_POWER),
             SensorTypeSearchFilter.filterByQuery(
                 items = sample,
-                query = "np",
+                query = "wp",
                 fullNameResolver = { fullNames[it].orEmpty() },
                 shortNameResolver = { shortNames[it].orEmpty() },
                 unitResolver = { units[it].orEmpty() }

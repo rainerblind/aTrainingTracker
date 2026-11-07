@@ -267,6 +267,8 @@ fun WorkoutClustersScreen(
         }
         else -> {
             var workoutToCluster by remember { mutableStateOf<WorkoutData?>(null) }
+            var clusterToMerge by remember { mutableStateOf<WorkoutCluster?>(null) }
+            var mergeTargetCluster by remember { mutableStateOf<WorkoutCluster?>(null) }
             val migrationStatus by viewModel.migrationStatus.collectAsStateWithLifecycle()
 
             WorkoutClustersTabsScreen(
@@ -283,8 +285,70 @@ fun WorkoutClustersScreen(
                 onAddClick = { isAdding = true },
                 onDeleteRequest = { clusterToDelete = it },
                 migrationStatus = migrationStatus,
-                onNavigateToAdvancedSettings = onNavigateToAdvancedSettings
+                onNavigateToAdvancedSettings = onNavigateToAdvancedSettings,
+                onMergeRequest = { clusterToMerge = it }
             )
+
+            if (clusterToMerge != null && mergeTargetCluster == null) {
+                val candidates = remember(clusterToMerge) {
+                    viewModel.getCandidateClustersForCluster(clusterToMerge!!)
+                }
+                WorkoutClusterSelectionDialog(
+                    title = stringResource(R.string.cluster_menu_merge),
+                    candidates = candidates,
+                    onSelect = { target ->
+                        mergeTargetCluster = target
+                    },
+                    onDismiss = { clusterToMerge = null },
+                    sportNameResolver = { viewModel.getSportName(it) },
+                    bSportTypeResolver = { viewModel.getBSportType(it) }
+                )
+            }
+
+            if (clusterToMerge != null && mergeTargetCluster != null) {
+                val source = clusterToMerge!!
+                val target = mergeTargetCluster!!
+                androidx.compose.material3.AlertDialog(
+                    onDismissRequest = {
+                        clusterToMerge = null
+                        mergeTargetCluster = null
+                    },
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 0.dp,
+                    title = { Text(stringResource(R.string.cluster_merge_dialog_title)) },
+                    text = {
+                        Text(
+                            stringResource(
+                                R.string.cluster_merge_dialog_message,
+                                source.name,
+                                source.hitCount,
+                                target.name
+                            )
+                        )
+                    },
+                    confirmButton = {
+                        androidx.compose.material3.TextButton(
+                            onClick = {
+                                viewModel.mergeClusters(source, target)
+                                clusterToMerge = null
+                                mergeTargetCluster = null
+                            }
+                        ) {
+                            Text(stringResource(R.string.cluster_merge_action))
+                        }
+                    },
+                    dismissButton = {
+                        androidx.compose.material3.TextButton(
+                            onClick = {
+                                clusterToMerge = null
+                                mergeTargetCluster = null
+                            }
+                        ) {
+                            Text(stringResource(R.string.cancel))
+                        }
+                    }
+                )
+            }
 
             if (workoutToCluster != null) {
                 val candidates = remember(workoutToCluster) { viewModel.getCandidateClustersForWorkout(workoutToCluster!!) }
