@@ -142,6 +142,7 @@ fun WorkoutSummary(
     }
     var activePreviewPhoto by remember { mutableStateOf<WorkoutPhotoEntry?>(null) }
     var activeSharePhoto by remember { mutableStateOf<WorkoutPhotoEntry?>(null) }
+    var showShareModeSheet by rememberSaveable { mutableStateOf(false) }
     var showCreateLapSheet by rememberSaveable { mutableStateOf(false) }
     var showMoveBoundarySheet by rememberSaveable { mutableStateOf(false) }
     var moveBoundaryLapNr by rememberSaveable { mutableLongStateOf(1L) }
@@ -231,7 +232,8 @@ fun WorkoutSummary(
             canDelete = canDelete,
             onMarkFinished = if (canMarkFinished && onMarkFinished != null) onMarkFinished else null,
             onClusterClick = onClusterClick,
-            onEditWorkout = onEditWorkout
+            onEditWorkout = onEditWorkout,
+            onShareWorkout = if (workoutData.headerData.finished) { { showShareModeSheet = true } } else null
         )
 
         HorizontalDivider(
@@ -621,6 +623,20 @@ fun WorkoutSummary(
             onDismissRequest = { activeSharePhoto = null },
             onSelectMapSnapshot = { activeSharePhoto = null },
             initialPhotoUri = photo.uri,
+            attachedPhotos = workoutPhotos.map { it.uri }
+        )
+    }
+
+    if (showShareModeSheet) {
+        WorkoutShareBottomSheet(
+            workoutData = workoutData,
+            onDismissRequest = { showShareModeSheet = false },
+            onSelectMapSnapshot = {
+                showShareModeSheet = false
+                if (workoutData.headerData.finished) {
+                    onMapClick()
+                }
+            },
             attachedPhotos = workoutPhotos.map { it.uri }
         )
     }

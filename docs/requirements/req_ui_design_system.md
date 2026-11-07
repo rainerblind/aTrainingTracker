@@ -13182,13 +13182,18 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 
 ### REQ-UI-447: Workout Share Mode Selection Bottom Sheet & Photo Track Overlay Snapshot Composer [Verified]
-- **Tests**: `TST-UI-447` | **Tickets**: `ATT-30`, `ATT-5479`, `ATT-5472`, `ATT-5656`
-- **Implementation**: `MapDetailLayout.kt`, `ShareUtils.kt`, `PhotoTrackOverlayComposer.kt`, `WorkoutShareBottomSheet.kt`, `LauncherIconVariant.kt`
-- **Rationale**: Currently, tapping the Share button in `MapDetailLayout` immediately executes a vertical composite map/graph snapshot (`combineWorkoutAndShare`). Athletes frequently prefer sharing activities using a personal scenery, selfie, or gear photo overlaid with their GPS route silhouette and key stats (Strava/Garmin style). REQ-UI-447 introduces a share mode selection sheet offering the classic analysis snapshot or a photo with track & stats overlay (ATT-30, ATT-5479, ATT-5472, ATT-5656):
-1. *Share Mode Selection Bottom Sheet (`REQ-UI-447.1`)*:
-• In `MapDetailLayout.kt`, tapping the floating Share button on a completed workout SHALL display `WorkoutShareBottomSheet` (hosted in `AppModalBottomSheet`) presenting two choices:
-  - *Option A — Karten- & Analyse-Snapshot*: Executes the existing vertical composite snapshot (`combineWorkoutAndShare`).
-  - *Option B — Foto mit Track-Overlay*: Launches the Android Photo Picker (`ActivityResultContracts.PickVisualMedia`) to pick a background photo.
+- **Tests**: `TST-UI-447` | **Tickets**: `ATT-30`, `ATT-5479`, `ATT-5472`, `ATT-5656`, `ATT-5809`
+- **Implementation**: `MapDetailLayout.kt`, `ShareUtils.kt`, `PhotoTrackOverlayComposer.kt`, `WorkoutShareBottomSheet.kt`, `LauncherIconVariant.kt`, `WorkoutHeader.kt`, `WorkoutSummary.kt`, `WorkoutDetailTabbedContent.kt`
+- **Rationale**: Currently, tapping the Share button in `MapDetailLayout` immediately executes a vertical composite map/graph snapshot (`combineWorkoutAndShare`). Athletes frequently prefer sharing activities using a personal scenery, selfie, or gear photo overlaid with their GPS route silhouette and key stats (Strava/Garmin style). REQ-UI-447 introduces a share mode selection sheet offering the classic analysis snapshot or a photo with track & stats overlay (ATT-30, ATT-5479, ATT-5472, ATT-5656, ATT-5809):
+1. *Share Mode Selection Bottom Sheet & Persistent Header Trigger (`REQ-UI-447.1`)*:
+• In `WorkoutHeader.kt`, the system SHALL expose an `onShareWorkout: (() -> Unit)? = null` callback and render a uniform `IconButton` (`size = 32.dp`, `Icons.Default.Share`, `tint = MaterialTheme.colorScheme.primary`, `contentDescription = stringResource(R.string.share)`) adjacent to `onEditWorkout` across both portrait and landscape orientations.
+• In `WorkoutHeader.kt` portrait mode, the top action button spacer SHALL dynamically expand to ~104dp when both edit and share actions are present (`hasEdit && hasShare`), preventing title text collision and truncation.
+• In `WorkoutSummary.kt` (workout list card) and `WorkoutDetailTabbedContent.kt` (persistent aftermath header), `WorkoutHeader` SHALL wire `onShareWorkout` to open `WorkoutShareBottomSheet` pre-populated with `attachedPhotos`.
+• In `WorkoutSummary.kt`, selecting Option A (*Karten- & Analyse-Snapshot*) SHALL navigate to map details (`onMapClick()`). In `WorkoutDetailTabbedContent.kt`, selecting Option A SHALL supply the `WorkoutHeader` composable into `MapDetailLayout` `header` parameter (capturing it in `headerLayer` snapshot output) and initiate snapshot generation.
+• In `MapDetailLayout.kt`, the floating share button on the map canvas SHALL be suppressed when `workoutData != null` in multi-tab details (where `WorkoutHeader` provides the permanent share trigger), while remaining active for standalone route/segment maps (`workoutData == null`).
+• Tapping the floating Share button on a completed workout (or tapping the header share button) SHALL display `WorkoutShareBottomSheet` (hosted in `AppModalBottomSheet`) presenting two choices:
+  - *Option A — Karten- & Analyse-Snapshot*: Executes the vertical composite snapshot (`combineWorkoutAndShare`).
+  - *Option B — Foto mit Track-Overlay*: Launches the 3-tier photo cascade.
 • For non-workout callers (`RouteOnMapScreen`, `SegmentOnMapScreen`, or when `workoutData == null`), tapping Share SHALL continue executing Option A directly without presenting the mode sheet.
 2. *2D GPS Track Silhouette Projection & Portrait Constraint (`REQ-UI-447.2`)*:
 • In `PhotoTrackOverlayComposer.kt`, the workout's GPS polyline (`workoutData.mapPolyline`) SHALL be decoded via `PolyUtil.decode` and projected onto the photo.
@@ -13213,18 +13218,24 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • In the composed preview, tapping "Foto auswählen" (`share_choose_photo`) SHALL re-enter the 3-tier cascade at Tier 1 if `attachedPhotos.isNotEmpty()`, else Tier 2 if time-window photos exist, else Tier 3.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-447` (amended by `ATT-5479`, `ATT-5472`, and `ATT-5656`), extending `REQ-UI-177` (*Theme-Aware Post-Workout & Period Share Snapshot Canvas and Footer*), `REQ-UI-205` (*Workout Snapshot Layout*), and `REQ-UI-445.5` (*Social Share Workout Watermark*). Targets `MapDetailLayout.kt`, `ShareUtils.kt`, `PhotoTrackOverlayComposer.kt`, `WorkoutShareBottomSheet.kt`, and `LauncherIconVariant.kt`.
-2. *Historical Origin & Commit Trace*: Sprint 2026-40.8 (`ATT-1472`, `REQ-UI-177`), Sprint 2026-40.7 (`ATT-1393`, `REQ-UI-205`), `ATT-5397` (`REQ-UI-445.5`), `ATT-30` (`584284ff`), `ATT-5496` (`e5f5c754`), `ATT-5472`, Sprint 2026-45.6 (`ATT-5475`, `c82c8248`), and Sprint 2026-45.9 (`ATT-5656`).
-3. *Root Reason for Existing Formulation*: Prior to ATT-30, snapshot sharing only supported stitching layout bitmaps. Prior to ATT-5472, `REQ-UI-445.5` drew text pill badges, and buttons were packed horizontally. Prior to ATT-5656, Option B launched the system photo picker (`PickVisualMedia`) immediately without stepped preselection from workout-attached photos (`attachedPhotos`) or time-window MediaStore photos.
-4. *Preservation of Core Invariants*: Existing `combineWorkoutAndShare` and `combineAndShare` functions and non-workout callers remain 100% operational under Option A. Safe bitmap decoding (`inSampleSize`) avoids OOM on high-resolution camera photos. Legitimate GPS coordinates, track geometry, WCAG AAA text contrast, Rule 73 stacked buttons, and 9-language localization parity are strictly preserved.
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-447` (amended by `ATT-5479`, `ATT-5472`, `ATT-5656`, and `ATT-5809`), extending `REQ-UI-177` (*Theme-Aware Post-Workout & Period Share Snapshot Canvas and Footer*), `REQ-UI-205` (*Workout Snapshot Layout*), `REQ-UI-255` (*Header & Primary Metrics Top Identity Anchor*), `REQ-UI-408` (*Multi-Tab Workout Details*), and `REQ-UI-445.5` (*Social Share Workout Watermark*). Targets `WorkoutHeader.kt`, `WorkoutSummary.kt`, `WorkoutDetailTabbedContent.kt`, `MapDetailLayout.kt`, `ShareUtils.kt`, `PhotoTrackOverlayComposer.kt`, `WorkoutShareBottomSheet.kt`, and `LauncherIconVariant.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-40.8 (`ATT-1472`, `REQ-UI-177`), Sprint 2026-40.7 (`ATT-1393`, `REQ-UI-205`), Sprint 2026-42.8 (`ATT-3920`, `REQ-UI-408`), `ATT-5397` (`REQ-UI-445.5`), `ATT-30` (`584284ff`), `ATT-5496` (`e5f5c754`), `ATT-5472`, Sprint 2026-45.6 (`ATT-5475`, `c82c8248`), Sprint 2026-45.9 (`ATT-5656`), and Sprint 2026-45.12 (`ATT-5809`).
+3. *Root Reason for Existing Formulation*: Prior to ATT-30, snapshot sharing only supported stitching layout bitmaps. Prior to ATT-5809, sharing was only initiated from the floating button inside the map container (`MapDetailLayout`) or via attached photos in `WorkoutPhotoPreviewBottomSheet`. Multi-tab details (`ATT-3920`) defaulted to Tab 1 without a map, hiding the floating button, and passed `header = {}` to `MapDetailLayout`, omitting the header from Option A snapshots.
+4. *Preservation of Core Invariants*: Existing `combineWorkoutAndShare` and `combineAndShare` functions and non-workout callers (`RouteOnMapScreen`, `SegmentOnMapScreen`) remain 100% operational under Option A with map-based floating share button; `WorkoutHeader` export menu (FIT/TCX/GPX/CSV/GC), Strava upload, and edit buttons remain intact; safe bitmap decoding (`inSampleSize`) avoids OOM; touch targets >= 32dp; WCAG AAA text contrast; Rule 73 stacked buttons; and 9-language localization parity are strictly preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
-• *Given* an athlete viewing a completed workout in `MapDetailLayout`,
-• *When* the athlete taps the floating Share button,
+• *Given* an athlete viewing a completed workout in `WorkoutSummary` (workout list) or `WorkoutDetailTabbedContent` (workout details),
+• *When* the athlete taps the share button in `WorkoutHeader`,
 • *Then* `WorkoutShareBottomSheet` appears displaying Option A (Classic Analysis Snapshot) and Option B (Photo with Track-Overlay).
-• *Given* the athlete selects Option A,
+• *Given* an athlete in `WorkoutSummary` selecting Option A,
+• *When* tapped,
+• *Then* the system navigates to map details to generate the full composite snapshot.
+• *Given* an athlete in `WorkoutDetailTabbedContent` selecting Option A from any tab,
 • *When* triggered,
-• *Then* `combineWorkoutAndShare` captures Header, Map, Elevation, Analytics, and Footer and dispatches via `FileProvider`.
+• *Then* `combineWorkoutAndShare` captures Header (from `headerLayer`), Map, Elevation, Analytics, and Footer and dispatches via `FileProvider`.
+• *Given* an athlete viewing `MapDetailLayout` in multi-tab workout details (`workoutData != null`),
+• *When* the screen renders,
+• *Then* the floating share button on the map canvas is hidden, while remaining visible for non-workout maps (`workoutData == null`).
 • *Given* the athlete selects Option B in `WorkoutShareBottomSheet`,
 • *When* photos are attached to the workout (`attachedPhotos.isNotEmpty()`),
 • *Then* Tier 1 (Attached Photos) is displayed with options to switch to Tier 2 (Time-Window) or Tier 3 (All Photos).

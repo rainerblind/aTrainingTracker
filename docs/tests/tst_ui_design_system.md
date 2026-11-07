@@ -7164,8 +7164,8 @@
 
 ### TST-UI-447: **Workout Share Mode Selection & Photo Track Overlay Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-447`
-- **Component**: `PhotoTrackOverlayComposerTest.kt`, `WorkoutShareBottomSheetContractTest.kt`, `ShareUtilsTest.kt`, `TranslationParityTest.kt`
-- **Jira**: `ATT-30`, `ATT-5479`, `ATT-5472`, `ATT-5656`
+- **Component**: `PhotoTrackOverlayComposerTest.kt`, `WorkoutShareBottomSheetContractTest.kt`, `ShareUtilsTest.kt`, `TranslationParityTest.kt`, `WorkoutHeader.kt`, `WorkoutSummary.kt`, `WorkoutDetailTabbedContent.kt`, `MapDetailLayout.kt`
+- **Jira**: `ATT-30`, `ATT-5479`, `ATT-5472`, `ATT-5656`, `ATT-5809`
 - **Test Description**:
   1. *Equirectangular Track Projection, Portrait Bounds & Silhouette Geometry (`TST-UI-447.1`)*:
   • Verify `PhotoTrackOverlayComposer` scales GPS polyline points via cosine-latitude projection ($\Delta x = \Delta\lambda \cdot \cos(\phi_{\text{mean}})$, $\Delta y = -\Delta\phi$) preserving true aspect ratio.
@@ -7179,13 +7179,16 @@
   • Verify `ShareUtils.drawFooter` renders standalone vector emblem (`ic_supporter_emblem_*`) without wide text pills when `effectiveTier.isPro`.
   • Verify footer watermark text auto-scales to prevent collision or truncation across narrow widths and 9 supported locales.
   • Verify tier-matched launcher icon rendering on left.
-  4. *Rule 73 Stacked Action Buttons & Mode Switcher Contract (`TST-UI-447.4`)*:
+  4. *Uniform WorkoutHeader Share Action & Rule 73 Stacked Action Buttons Contract (`TST-UI-447.4`, `WorkoutShareBottomSheetContractTest.kt`)*:
+  • Verify `WorkoutHeader.kt` defines `onShareWorkout: (() -> Unit)? = null` parameter and renders 32dp `IconButton` with `Icons.Default.Share`, `MaterialTheme.colorScheme.primary` tint, and `contentDescription = stringResource(R.string.share)` in both portrait and landscape adjacent to `onEditWorkout`.
+  • Verify `WorkoutHeader.kt` portrait layout expands action button spacer to ~104dp when both edit and share actions are present (`hasEdit && hasShare`) to prevent workout title truncation.
+  • Verify `WorkoutSummary.kt` wires `onShareWorkout` callback to launch `WorkoutShareBottomSheet` (Option A routes to `onMapClick()`).
+  • Verify `WorkoutDetailTabbedContent.kt` passes persistent `WorkoutHeader` composable into `MapDetailLayout` `header` parameter for Option A snapshot rendering and wires header `onShareWorkout`.
+  • Verify `MapDetailLayout.kt` suppresses floating share button when `workoutData != null` in multi-tab details, while preserving it for non-workout callers (`workoutData == null`).
   • Verify `WorkoutShareBottomSheet` renders stacked full-width action buttons per Rule 73 (primary "Teilen" above secondary "Foto auswählen").
-  • Verify `MapDetailLayout` with `workoutData != null` launches `WorkoutShareBottomSheet` on Share button tap.
-  • Verify Option A executes existing composite snapshot sharing (`combineWorkoutAndShare`).
   5. *9-Language Localization & Targeted Test Suite (`TST-UI-447.5`)*:
   • Verify 100% parity across all 9 locales via `TranslationParityTest` for all share mode strings.
-  • Run targeted test suite (`--tests "com.atrainingtracker.trainingtracker.helpers.*"`, `ui.map.*`, `ThemeColorCentralizationAuditTest`) with 100% pass rate.
+  • Run targeted test suite (`--tests "com.atrainingtracker.trainingtracker.helpers.*"`, `ui.map.*`, `ui.components.workoutheader.*`, `ui.aftermath.*`, `ThemeColorCentralizationAuditTest`) with 100% pass rate.
   6. *3-Tier Photo Selection Cascade Contract Test (`TST-UI-447.6`, `WorkoutShareBottomSheetContractTest.kt`)*:
   • Verify `WorkoutShareBottomSheet` displays Tier 1 (Attached Photos grid) when `attachedPhotos.isNotEmpty()`.
   • Verify expanding to Tier 2 (Time-Window Photos) queries photos from `WorkoutPhotoManager.queryWorkoutTimePhotos`.

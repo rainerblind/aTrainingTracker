@@ -152,6 +152,23 @@ fun WorkoutDetailTabbedContent(
     }
     var activePreviewPhoto by remember { mutableStateOf<WorkoutPhotoEntry?>(null) }
     var activeSharePhoto by remember { mutableStateOf<WorkoutPhotoEntry?>(null) }
+    var showShareModeSheet by rememberSaveable { mutableStateOf(false) }
+
+    val snapshotHeader: @Composable () -> Unit = {
+        WorkoutHeader(
+            modifier = Modifier.fillMaxWidth(),
+            data = workoutData.headerData,
+            menuEnabled = false,
+            canDelete = false,
+            onClicked = null,
+            onExport = {},
+            onSaveAsRoute = {},
+            onDeleteRequest = {},
+            onClusterClick = null,
+            onEditWorkout = null,
+            onShareWorkout = null
+        )
+    }
 
     // Hit-test & edge-gutter state for gesture arbitration between Map/Chart canvases and lower-pane cards
     var isTouchingInteractiveCanvas by remember { mutableStateOf(false) }
@@ -264,7 +281,7 @@ fun WorkoutDetailTabbedContent(
                             workoutData = workoutData,
                             onCreateLapClick = onCreateLapClick,
                             onInteractiveCanvasTouch = { isTouchingInteractiveCanvas = it },
-                            header = {},
+                            header = snapshotHeader,
                             mapContent = mapContent,
                             overlay = mapOverlay,
                             metadataContent = null,
@@ -294,7 +311,7 @@ fun WorkoutDetailTabbedContent(
                             workoutData = workoutData,
                             onCreateLapClick = onCreateLapClick,
                             onInteractiveCanvasTouch = { isTouchingInteractiveCanvas = it },
-                            header = {},
+                            header = snapshotHeader,
                             mapContent = mapContent,
                             overlay = mapOverlay,
                             metadataContent = null,
@@ -374,7 +391,7 @@ fun WorkoutDetailTabbedContent(
                                 workoutData = workoutData,
                                 onCreateLapClick = onCreateLapClick,
                                 onInteractiveCanvasTouch = { isTouchingInteractiveCanvas = it },
-                                header = {},
+                                header = snapshotHeader,
                                 metadataContent = null,
                                 analyticsContent = if (nonMapNonGraphSections.isNotEmpty()) {
                                     {
@@ -523,6 +540,7 @@ fun WorkoutDetailTabbedContent(
                     onDeleteRequest = {},
                     onClusterClick = onClusterClick,
                     onEditWorkout = onEditWorkout?.let { edit -> { edit(workoutData.id) } },
+                    onShareWorkout = { showShareModeSheet = true },
                     actions = {
                         headerActions()
                         IconButton(
@@ -603,6 +621,23 @@ fun WorkoutDetailTabbedContent(
             onDismissRequest = { activeSharePhoto = null },
             onSelectMapSnapshot = { activeSharePhoto = null },
             initialPhotoUri = photo.uri,
+            attachedPhotos = workoutPhotos.map { it.uri }
+        )
+    }
+
+    if (showShareModeSheet) {
+        WorkoutShareBottomSheet(
+            workoutData = workoutData,
+            onDismissRequest = { showShareModeSheet = false },
+            onSelectMapSnapshot = {
+                showShareModeSheet = false
+                val mapTabIndex = visibleTabs.indexOfFirst { WorkoutDetailSectionType.MAP in it.sections }
+                if (mapTabIndex >= 0 && pagerState.currentPage != mapTabIndex) {
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(mapTabIndex)
+                    }
+                }
+            },
             attachedPhotos = workoutPhotos.map { it.uri }
         )
     }
