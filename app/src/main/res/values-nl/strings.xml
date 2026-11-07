@@ -1596,6 +1596,8 @@
     <!-- Workout Section Reordering (ATT-2176 / REQ-UI-255) -->
     <string name="action_move_up">Omhoog verplaatsen</string>
     <string name="action_move_down">Omlaag verplaatsen</string>
+    <string name="action_drag_to_reorder">Slepen om volgorde te wijzigen</string>
+    <string name="workout_detail_tabs_map_pinned_desc">Kaart is permanent bovenaan vastgezet</string>
 
     <!-- Contextual JIT Permission Flow (ATT-2075 / REQ-PRI-003) -->
     <string name="permission_rationale_title">Machtigingen voor naadloze tracking</string>

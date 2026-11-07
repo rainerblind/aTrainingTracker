@@ -13605,3 +13605,43 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Bottom popup standard via `AppModalBottomSheet(scrollable = false)`, `Rule 73` stacked action buttons, downsampled bitmap decoding, 9-language localization parity, and 100% clean-room test pass rate.
 
+### REQ-UI-456: Drag & Drop Section Reordering via Full-Height Drag-Handle in Summary Cards and Detail Tabs [Verified]
+- **Tests**: `TST-UI-456`, `TST-LOC-001` | **Tickets**: `ATT-5761`
+- **Implementation**: `WorkoutMasksAndCardsSection.kt`, `WorkoutDetailTabsConfigSheet.kt`, `WorkoutDetailTabsConfigComponents.kt`, `WorkoutMasksAndCardsLayoutTest.kt`, `WorkoutSectionReorderContractTest.kt`, `WorkoutDetailTabsTest.kt`
+- **Rationale**: In *Experteneinstellungen* (*Advanced Settings*), athletes configure section display order in two distinct surfaces: Summary-Karten (`WorkoutMasksAndCardsSection.kt`) and Detail-Tabs (`WorkoutDetailTabsConfigSheet.kt`). Currently, reordering relies on stacked 22dp `IconButton`s (`KeyboardArrowUp` / `KeyboardArrowDown`) within a 32dp column, which violate Material 3 touch ergonomics ($\ge 44\text{--}48\text{dp}$) and require tedious discrete tapping. REQ-UI-456 replaces these arrow buttons with a prominent, full-row-height drag-and-drop handle (≡) ensuring fluid vertical drag reordering and strict gesture isolation (Sprint 2026-45.10, ATT-5761, refining `REQ-UI-414.3` and `REQ-UI-408.5`):
+1. *Full-Height Drag Handle Touch Target (`REQ-UI-456.1`)*:
+• In `WorkoutMasksAndCardsSection.kt` and `WorkoutDetailTabsConfigSheet.kt`, section reordering SHALL be triggered via a dedicated drag handle icon (`Icons.Default.DragHandle` / ≡) spanning $\ge 44\text{dp}$ touch target width and full row height, replacing legacy stacked 22dp Up/Down arrow buttons.
+2. *Strict Gesture Isolation & Host Scroll Fluidity (`REQ-UI-456.2`)*:
+• Vertical drag gesture detection SHALL be strictly isolated to the leading drag handle touch area (`detectVerticalDragGestures`).
+• Vertical gestures across the remainder of the row (label, checkbox, spacing) SHALL NOT be intercepted, ensuring natural vertical scrolling of the parent scrollable container (`AdvancedTuningDialog`, `AppModalBottomSheet`) remains completely smooth and unhindered.
+3. *Real-Time Position Swapping & Elevation Feedback (`REQ-UI-456.3`)*:
+• During active drag, the dragged item SHALL be visually elevated (`surfaceContainerHighest` container tint, subtle shadow, and `zIndex(1f)`).
+• When vertical drag translation crosses the adjacent row midpoint threshold, the system SHALL immediately swap positions with the adjacent row in real time and emit updated list ordering for instant DataStore persistence.
+4. *Pinned Map Anchor Invariant in Detail Tabs (`REQ-UI-456.4`)*:
+• In `WorkoutDetailTabsConfigSheet.kt`, `WorkoutDetailSectionType.MAP` SHALL remain permanently pinned at index 0 when active (`normalizedSections`).
+• The MAP row SHALL NOT expose an active drag handle (rendering an immutable pin indicator `Icons.Default.PushPin` or non-draggable handle), and movable rows SHALL NOT be draggable above index 0.
+5. *Modularity & File Length Limit (`REQ-UI-456.5`)*:
+• Reusable drag-and-drop row logic and components SHALL be placed in `WorkoutDetailTabsConfigComponents.kt`, ensuring `WorkoutMasksAndCardsSection.kt` remains strictly $< 400$ lines in compliance with `REQ-UI-414.5` and `REQ-PRO-011`.
+6. *9-Language Accessibility Parity (`REQ-UI-456.6`)*:
+• Accessibility content descriptions (`action_drag_to_reorder`, `workout_detail_tabs_map_pinned_desc`) SHALL exist across all 9 supported application locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) without decorative inline Unicode emojis.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-UI-414.3` (*Collapsible Summary Cards Reorder List*) and `REQ-UI-408.5` (*Workout Detail Tabs Section Reordering*), targeting `WorkoutMasksAndCardsSection.kt`, `WorkoutDetailTabsConfigSheet.kt`, and introducing `WorkoutDetailTabsConfigComponents.kt`.
+2. *Historical Origin & Commit Trace*: `ATT-4043` (`a8e5e356`, Sprint 2026-42.8: 32dp column with 22dp arrows), `ATT-3920` (`ea5fa705`, Sprint 2026-42.8: Up/Down arrows in tab sheet), `ATT-5654` (`c738f195`, Sprint 2026-45.9: `GRADE_DISTRIBUTION` added to both lists).
+3. *Root Reason for Existing Formulation*: Up/Down buttons were the simplest click-based control avoiding gesture interception in vertical scroll containers before isolated touch-target drag handles were designed.
+4. *Preservation of Core Invariants*: Host scroll integrity preserved; `MAP` pinned at index 0 preserved; DataStore persistence preserved; file length limit `< 400` lines preserved via modular `WorkoutDetailTabsConfigComponents.kt`; 100% 9-language translation parity.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete in *Experteneinstellungen* viewing the expanded summary cards list or detail tabs configuration,
+• *When* inspecting the leading edge of any reorderable row,
+• *Then* a prominent drag-handle icon (≡) with a full $\ge 44\text{dp}$ touch target is displayed instead of stacked 22dp arrows.
+• *Given* the athlete touches and drags the drag handle vertically past an adjacent row boundary,
+• *Then* the dragged row elevates visually, swaps position in real time with the adjacent row, and emits the new section order.
+• *Given* the athlete swipes vertically on any part of the row outside the drag handle,
+• *Then* the parent scroll container scrolls normally without initiating a row reorder drag.
+• *Given* `WorkoutDetailSectionType.MAP` enabled in a detail tab,
+• *Then* the MAP row remains permanently anchored at index 0 and cannot be dragged or displaced.
+
+**Invariants**: Zero gesture contention with host vertical scroll; `MAP` pinned at index 0; instant DataStore serialization; `< 400` lines file limit.
+
+

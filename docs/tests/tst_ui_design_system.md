@@ -7377,3 +7377,22 @@
   5. *Clean-Room Regression Suite Execution (`TST-UI-455.5`)*:
   • Execute targeted package tests (`com.atrainingtracker.trainingtracker.database.WorkoutPhotoManagerTest`, `com.atrainingtracker.trainingtracker.ui.aftermath.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
 
+### TST-UI-456: **Drag & Drop Section Reordering and Touch Target Ergonomics Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-456`, `REQ-UI-414.3`, `REQ-UI-408.5`
+- **Component**: `WorkoutMasksAndCardsSection.kt`, `WorkoutDetailTabsConfigSheet.kt`, `WorkoutDetailTabsConfigComponents.kt`, `WorkoutMasksAndCardsLayoutTest.kt`, `WorkoutSectionReorderContractTest.kt`, `WorkoutDetailTabsTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-5761`
+- **Test Description**:
+  1. *Drag-and-Drop Reordering Logic & Boundary Swapping Unit Tests (`TST-UI-456.1`, `WorkoutSectionReorderContractTest.kt`)*:
+  • Verify list swap calculation on synthetic section lists for drag-up and drag-down deltas.
+  • Verify that dragging beyond index bounds (first item upward or last item downward) clamps safely without index corruption.
+  2. *Detail Tabs MAP Pinning Invariant Unit Tests (`TST-UI-456.2`, `WorkoutDetailTabsTest.kt`)*:
+  • Verify that `WorkoutDetailTabConfig.moveSectionInTab` and drag swapping cannot displace `MAP` from index 0 or move another section above `MAP`.
+  3. *Layout Contract & 44dp Touch Target Verification (`TST-UI-456.3`, `WorkoutMasksAndCardsLayoutTest.kt`)*:
+  • Verify that 22dp arrow icon buttons are replaced with drag-handle touch area ($\ge 44\text{dp}$).
+  • Verify `WorkoutMasksAndCardsSection.kt` line count is strictly $< 400$ lines (`REQ-UI-414.5`).
+  4. *9-Language Localization Audit (`TST-UI-456.4`, `TranslationParityTest.kt`)*:
+  • Verify 100% parity across EN, DE, ES, FR, IT, JA, NL, PL, PT for `action_drag_to_reorder` and `workout_detail_tabs_map_pinned_desc` with zero missing entries and zero decorative inline emojis.
+  5. *Clean-Room Targeted Regression Execution (`TST-UI-456.5`)*:
+  • Execute targeted package tests (`com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.*`, `com.atrainingtracker.trainingtracker.ui.aftermath.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
+
+

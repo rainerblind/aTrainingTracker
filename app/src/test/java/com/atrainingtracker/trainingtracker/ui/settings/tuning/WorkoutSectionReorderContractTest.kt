@@ -97,22 +97,14 @@ class WorkoutSectionReorderContractTest {
             content.contains("onWorkoutSectionsOrderChange: (List<WorkoutSectionType>) -> Unit")
         )
 
-        // 3. Move Up and Move Down Icons & Content Descriptions
+        // 3. Drag-to-reorder controls (REQ-UI-456.1 / ATT-5761)
         assertTrue(
-            "Must reference action_move_up string",
-            content.contains("R.string.action_move_up")
+            "Must reference action_drag_to_reorder string",
+            content.contains("R.string.action_drag_to_reorder")
         )
         assertTrue(
-            "Must reference action_move_down string",
-            content.contains("R.string.action_move_down")
-        )
-        assertTrue(
-            "Must use KeyboardArrowUp icon",
-            content.contains("KeyboardArrowUp")
-        )
-        assertTrue(
-            "Must use KeyboardArrowDown icon",
-            content.contains("KeyboardArrowDown")
+            "Must use ReorderDragHandle",
+            content.contains("ReorderDragHandle")
         )
 
         // 4. Persistence call in onSave and reset
@@ -132,6 +124,51 @@ class WorkoutSectionReorderContractTest {
             "WorkoutMasksAndCardsSection must support PHOTOS",
             content.contains("WorkoutSectionType.PHOTOS")
         )
+    }
+
+    /**
+     * TST-UI-456.1: Drag-and-Drop Reordering Logic & Boundary Swapping Unit Test.
+     */
+    @Test
+    fun testReorderDragState_swapLogicAndBoundaryClamping() {
+        var currentOrder = listOf(WorkoutSectionType.DESCRIPTION, WorkoutSectionType.EXTREMA, WorkoutSectionType.LAPS)
+        val state = com.atrainingtracker.trainingtracker.ui.aftermath.ReorderDragState(
+            thresholdPx = 44f,
+            minIndex = 0,
+            maxIndex = 2,
+            onMoveItem = { from, to ->
+                val mutable = currentOrder.toMutableList()
+                val item = mutable.removeAt(from)
+                mutable.add(to, item)
+                currentOrder = mutable
+            }
+        )
+
+        // 1. Drag start at index 0
+        state.onDragStart(0)
+        assertEquals(0, state.draggingIndex)
+
+        // 2. Drag down by 50px (> threshold 44px) -> swaps with index 1
+        state.onVerticalDrag(50f)
+        assertEquals(1, state.draggingIndex)
+        assertEquals(WorkoutSectionType.EXTREMA, currentOrder[0])
+        assertEquals(WorkoutSectionType.DESCRIPTION, currentOrder[1])
+        assertEquals(6f, state.dragOffsetPx, 0.001f)
+
+        // 3. Drag up by 50px (< -44px from 6px = -44px) -> swaps back to index 0
+        state.onVerticalDrag(-50f)
+        assertEquals(0, state.draggingIndex)
+        assertEquals(WorkoutSectionType.DESCRIPTION, currentOrder[0])
+        assertEquals(WorkoutSectionType.EXTREMA, currentOrder[1])
+
+        // 4. Drag up at minIndex 0 -> clamped, no index error
+        state.onVerticalDrag(-100f)
+        assertEquals(0, state.draggingIndex)
+        assertEquals(-44f, state.dragOffsetPx, 0.001f)
+
+        state.onDragEnd()
+        assertEquals(null, state.draggingIndex)
+        assertEquals(0f, state.dragOffsetPx, 0.001f)
     }
 
     @Test
