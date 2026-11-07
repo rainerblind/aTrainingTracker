@@ -7440,6 +7440,24 @@
   5. *Clean-Room Targeted Regression Execution (`TST-UI-459.5`)*:
   • Execute targeted test suites (`com.atrainingtracker.trainingtracker.localization.*`, `com.atrainingtracker.trainingtracker.ui.athleteprofile.*`, `com.atrainingtracker.trainingtracker.ui.settings.tuning.*`, `com.atrainingtracker.trainingtracker.ui.help.*`, `com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.*`) asserting 100% pass rate.
 
+### TST-UI-460: **Brand Compliance & Feature Title Neutralization Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-460`
+- **Component**: `strings.xml` (all 9 locales), `AppNavigationDrawer.kt`, `SegmentsTabsScreen.kt`, `TipsGuideScreen.kt`, `ImportBackupTabsScreen.kt`
+- **Jira**: `ATT-5677`
+- **Test Description**:
+  1. *9-Language Title Neutralization & Brand Absence Audit (`TST-UI-460.1`, `TranslationParityTest.kt`)*:
+  • Verify that `tip_live_segments_title`, `segments`, and `import_fit_description` exist and are non-empty across all 9 locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
+  • Verify that `tip_live_segments_title` and `segments` do NOT contain the "Strava" brand prefix.
+  • Verify that `import_fit_description` does NOT name "Garmin", "Wahoo", or "Hammerhead", and contains zero inline emojis (`ATT-5400`).
+  2. *Navigation Drawer & Live Segments Tip UI Binding Contracts (`TST-UI-460.2`, `AppNavigationDrawerTest.kt`, `TipsGuideScreenContractTest.kt`)*:
+  • Verify `AppNavigationDrawer` binds `R.string.segments` to `R.id.drawer_segments`.
+  • Verify `TipsGuideScreen` binds `R.string.tip_live_segments_title` to Tip 4 card.
+  3. *FIT Import Card Description Binding Contract (`TST-UI-460.3`, `ImportFormatCardsContractTest.kt`)*:
+  • Verify `ImportBackupTabsScreen.kt` binds `R.string.import_fit_description` in `FitFileImportCard`.
+  4. *Clean-Room Targeted Regression Execution (`TST-UI-460.4`)*:
+  • Execute targeted test suites (`com.atrainingtracker.trainingtracker.localization.*`, `com.atrainingtracker.trainingtracker.ui.help.*`, `com.atrainingtracker.trainingtracker.migration.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+
 
 
 

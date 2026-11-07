@@ -484,7 +484,7 @@
     <string name="drawer__settings">Instellingen</string>
     <string name="starred_run_segments">Hardlopen</string>
     <string name="starred_bike_segments">Fietsen</string>
-    <string name="segments">Strava Segmenten</string>
+    <string name="segments">Segmenten</string>
 
     <string name="TODO">bewijs het!</string>
     <string name="tomorrow">morgen?</string>
@@ -1655,7 +1655,7 @@
 
     <!-- FIT Workout Importer (ATT-1828 / REQ-DAT-019) -->
     <string name="import_fit_title">FIT-bestanden importeren</string>
-    <string name="import_fit_description">Importeer trainingen van Garmin, Wahoo, Hammerhead of smartwatches (.fit).</string>
+    <string name="import_fit_description">Trainingen importeren van fietscomputers, sporthorloges of smartwatches (.fit).</string>
     <string name="import_fit_button">Selecteer FIT-bestanden</string>
     <string name="import_fit_folder_button">Map scannen (FIT)</string>
     <string name="import_fit_dropbox_button">Dropbox scannen (FIT)</string>
@@ -2203,7 +2203,7 @@
     <string name="tip_cockpit_customization_subtitle">Volledig aanpasbare telemetrierasters</string>
     <string name="tip_cockpit_customization_desc">Stel meerdere telemetriepagina\'s per sport in met live statistieken, hoogteprofiel of kaart. Voeg de akoestische fietsbelknop toe voor ritten buiten.</string>
     <string name="tip_cockpit_customization_action">Schermen configureren</string>
-    <string name="tip_live_segments_title">Strava Live Segments &amp; scrubbing</string>
+    <string name="tip_live_segments_title">Live Segments &amp; scrubbing</string>
     <string name="tip_live_segments_subtitle">Live vergelijking met je PR en KOM</string>
     <string name="tip_live_segments_desc">Synchroniseer je favoriete Strava-segmenten voor live aftellen, tijdsverschil en hoogteprofielen tijdens je rit.</string>
     <string name="tip_live_segments_action">Segmenten bekijken</string>

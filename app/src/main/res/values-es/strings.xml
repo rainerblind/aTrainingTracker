@@ -486,7 +486,7 @@
     <string name="drawer__settings">Ajustes</string>
     <string name="starred_run_segments">Carrera</string>
     <string name="starred_bike_segments">Bici</string>
-    <string name="segments">Segmentos de Strava</string>
+    <string name="segments">Segmentos</string>
 
     <string name="TODO">demuéstralo!</string>
     <string name="tomorrow">¿mañana?</string>
@@ -1659,7 +1659,7 @@
 
     <!-- FIT Workout Importer (ATT-1828 / REQ-DAT-019) -->
     <string name="import_fit_title">Importar archivos FIT</string>
-    <string name="import_fit_description">Importar entrenamientos desde Garmin, Wahoo, Hammerhead o relojes inteligentes (.fit).</string>
+    <string name="import_fit_description">Importar entrenamientos de ciclocomputadores, relojes deportivos o smartwatches (.fit).</string>
     <string name="import_fit_button">Seleccionar archivos FIT</string>
     <string name="import_fit_folder_button">Escanear carpeta (FIT)</string>
     <string name="import_fit_dropbox_button">Explorar Dropbox (FIT)</string>
@@ -2204,7 +2204,7 @@
     <string name="tip_cockpit_customization_subtitle">Cuadrículas de telemetría totalmente personalizables</string>
     <string name="tip_cockpit_customization_desc">Configura páginas de telemetría por deporte con métricas en vivo, altimetría o mapa. Añade el botón de timbre de bicicleta para toques simples o timbre continuo.</string>
     <string name="tip_cockpit_customization_action">Configurar pantallas</string>
-    <string name="tip_live_segments_title">Segmentos en vivo de Strava e interactividad</string>
+    <string name="tip_live_segments_title">Segmentos en vivo e interactividad</string>
     <string name="tip_live_segments_subtitle">Comparación en vivo contra tu récord y KOM</string>
     <string name="tip_live_segments_desc">Sincroniza tus segmentos favoritos de Strava para ver cuentas atrás, diferencias de tiempo y perfiles de elevación en vivo durante la ruta.</string>
     <string name="tip_live_segments_action">Explorar segmentos</string>

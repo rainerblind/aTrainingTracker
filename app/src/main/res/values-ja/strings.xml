@@ -482,7 +482,7 @@
     <string name="drawer__settings">設定</string>
     <string name="starred_run_segments">ラン</string>
     <string name="starred_bike_segments">バイク</string>
-    <string name="segments">Strava セグメント</string>
+    <string name="segments">セグメント</string>
 
     <string name="TODO">証明してください！</string>
     <string name="tomorrow">明日？</string>
@@ -1635,7 +1635,7 @@
 
     <!-- FIT Workout Importer (ATT-1828 / REQ-DAT-019) -->
     <string name="import_fit_title">FITファイルをインポート</string>
-    <string name="import_fit_description">Garmin、Wahoo、Hammerhead、スマートウォッチからワークアウトをインポート (.fit)。</string>
+    <string name="import_fit_description">サイクルコンピュータ、ランニングウォッチ、スマートウォッチからワークアウトをインポート (.fit)。</string>
     <string name="import_fit_button">FITファイルを選択</string>
     <string name="import_fit_folder_button">フォルダをスキャン (FIT)</string>
     <string name="import_fit_dropbox_button">Dropboxをスキャン (FIT)</string>
@@ -2183,7 +2183,7 @@
     <string name="tip_cockpit_customization_subtitle">自由にカスタマイズ可能な計測タイル</string>
     <string name="tip_cockpit_customization_desc">スポーツごとにライブ数値、高度プロファイル、地図などの画面を構成できます。サイクリング中に鳴らせる自転車ベル機能も追加可能です。</string>
     <string name="tip_cockpit_customization_action">表示を設定</string>
-    <string name="tip_live_segments_title">Strava Live Segmentsと標高スクラブ</string>
+    <string name="tip_live_segments_title">Live Segmentsと標高スクラブ</string>
     <string name="tip_live_segments_subtitle">自己ベストやKOMとのリアルタイム比較</string>
     <string name="tip_live_segments_desc">お気に入りのStravaセグメントを同期し、走行中のタイム差カウントダウンや標高グラフを表示。勾配や距離を指でなぞって確認できます。</string>
     <string name="tip_live_segments_action">セグメントを見る</string>

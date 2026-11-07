@@ -627,7 +627,7 @@
     <string name="starred_run_segments">Run</string>
     <string name="really_delete_format">Do you really want to delete \"%1$s\"?</string>
     <string name="starred_bike_segments">Bike</string>
-    <string name="segments">Strava Segments</string>
+    <string name="segments">Segments</string>
 
     <string name="vertical_ellipsis" translatable="false">&#8942;</string>
     <string name="TODO">prove it!</string>
@@ -1856,7 +1856,7 @@
 
     <!-- FIT Workout Importer (ATT-1828 / REQ-DAT-019) -->
     <string name="import_fit_title">Import FIT files</string>
-    <string name="import_fit_description">Import workouts from Garmin, Wahoo, Hammerhead, or smartwatches (.fit).</string>
+    <string name="import_fit_description">Import workouts from bike computers, running watches, or smartwatches (.fit).</string>
     <string name="import_fit_button">Select FIT Files</string>
     <string name="import_fit_folder_button">Scan Folder (FIT)</string>
     <string name="import_fit_dropbox_button">Scan Dropbox (FIT)</string>
@@ -2404,7 +2404,7 @@
     <string name="tip_cockpit_customization_subtitle">Fully customizable telemetry grids</string>
     <string name="tip_cockpit_customization_desc">Configure multiple telemetry pages per sport with live metrics, elevation profile, or map. Add the acoustic Bike Bell button for single-tap or continuous ringing on outdoor rides.</string>
     <string name="tip_cockpit_customization_action">Configure Displays</string>
-    <string name="tip_live_segments_title">Strava Live Segments &amp; Scrubbing</string>
+    <string name="tip_live_segments_title">Live Segments &amp; Scrubbing</string>
     <string name="tip_live_segments_subtitle">Live pacing against PR and KOM</string>
     <string name="tip_live_segments_desc">Synchronize your starred Strava segments for real-time in-ride countdowns, time deltas, and live elevation profiles. Scrub interactively across segment elevation graphs to inspect gradient and distance.</string>
     <string name="tip_live_segments_action">Explore Segments</string>

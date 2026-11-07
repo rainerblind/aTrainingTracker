@@ -223,7 +223,7 @@
     <string name="pedal_smoothness_r">płynność pedałowania prawa</string>
     <string name="starred_run_segments">Bieg</string>
     <string name="starred_bike_segments">Rower</string>
-    <string name="segments">Segmenty Strava</string>
+    <string name="segments">Segmenty</string>
 
     <string name="TODO">udowodnij to!</string>
     <string name="tomorrow">jutro?</string>
@@ -1658,7 +1658,7 @@
 
     <!-- FIT Workout Importer (ATT-1828 / REQ-DAT-019) -->
     <string name="import_fit_title">Importuj pliki FIT</string>
-    <string name="import_fit_description">Importuj treningi z urządzeń Garmin, Wahoo, Hammerhead lub smartwatchy (.fit).</string>
+    <string name="import_fit_description">Importuj treningi z liczników rowerowych, zegarków biegowych lub smartwatchy (.fit).</string>
     <string name="import_fit_button">Wybierz pliki FIT</string>
     <string name="import_fit_folder_button">Skanuj folder (FIT)</string>
     <string name="import_fit_dropbox_button">Skanuj Dropbox (FIT)</string>
@@ -2205,7 +2205,7 @@
     <string name="tip_cockpit_customization_subtitle">W pełni konfigurowalne panele telemetryczne</string>
     <string name="tip_cockpit_customization_desc">Dostosuj strony telemetryczne dla każdego sportu z danymi na żywo, profilem wysokości lub mapą. Dodaj przycisk dzwonka rowerowego do jazdy na zewnątrz.</string>
     <string name="tip_cockpit_customization_action">Konfiguruj ekrany</string>
-    <string name="tip_live_segments_title">Segmenty na żywo Strava i interaktywność</string>
+    <string name="tip_live_segments_title">Segmenty na żywo i interaktywność</string>
     <string name="tip_live_segments_subtitle">Porównanie na żywo z rekordem życiowym i KOM</string>
     <string name="tip_live_segments_desc">Synchronizuj oznaczone segmenty Strava, aby śledzić odliczanie, różnicę czasu i profil wysokości w czasie rzeczywistym podczas jazdy.</string>
     <string name="tip_live_segments_action">Przeglądaj segmenty</string>

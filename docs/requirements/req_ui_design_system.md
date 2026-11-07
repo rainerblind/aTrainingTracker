@@ -13752,6 +13752,43 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Zero calculation changes; zero database migrations; zero DTO field renaming; 100% 9-locale parity.
 
+### REQ-UI-460: Brand Compliance & Feature Title Neutralization Across All 9 Locales [Verified]
+- **Tests**: `TST-UI-460` | **Tickets**: `ATT-5677`
+- **Implementation**: `strings.xml` (all 9 locales), `AppNavigationDrawer.kt`, `SegmentsTabsScreen.kt`, `TipsGuideScreen.kt`, `ImportBackupTabsScreen.kt`
+- **Rationale**: To comply strictly with the official Strava API Brand Guidelines (*"Never use Strava in the title of your app or feature"*) and avoid Google Play trademark rejections from listing third-party hardware trademarks (*"Garmin, Wahoo, Hammerhead"*), the system SHALL neutralize feature titles and descriptions across all 9 supported application locales while keeping factual integration references in body texts and preserving existing navigation routes (Sprint 2026-45.10, ATT-5677, refining `REQ-UI-010`, `REQ-UI-293`, and `REQ-UI-432`):
+1. *Live Segments Tip Title Neutralization (`REQ-UI-460.1`)*:
+• `tip_live_segments_title` SHALL omit the "Strava" brand prefix across all 9 locales (e.g. EN: *"Live Segments &amp; Scrubbing"*, DE: *"Live-Segmente &amp; Scrubbing"*).
+• `tip_live_segments_desc` SHALL retain its factual description of Strava segment synchronization.
+2. *Navigation Drawer & Top Bar Title Neutralization (`REQ-UI-460.2`)*:
+• In `AppNavigationDrawer.kt` and `SegmentsTabsScreen.kt`, `segments` SHALL render neutral category titles without the "Strava" prefix across all 9 locales (e.g. EN: *"Segments"*, DE: *"Segmente"*, ES: *"Segmentos"*, JA: *"セグメント"*).
+3. *FIT Hardware Description Neutralization (`REQ-UI-460.3`)*:
+• In `ImportBackupTabsScreen.kt`, `import_fit_description` SHALL replace specific brand names with generic hardware categories across all 9 locales (e.g. EN: *"Import workouts from bike computers, sports watches, or smartwatches (.fit)."*, DE: *"Aktivitäten von Fahrradcomputern, Sportuhren oder Smartwatches importieren (.fit)."*).
+4. *9-Language Parity & Emoji Prohibition (`REQ-UI-460.4`)*:
+• All 3 string resources SHALL exist and be non-blank across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) with zero inline emojis (`ATT-5400`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines user-facing titles and descriptions in `REQ-UI-010` (*Navigation Drawer Architecture*), `REQ-UI-293` (*FIT Import Card Presentation*), and `REQ-UI-432` (*Tips Guide Screen*), targeting `tip_live_segments_title`, `segments`, and `import_fit_description` across all 9 `strings.xml` locales.
+2. *Historical Origin & Commit Trace*: `ATT-2623` (`c89a01f2`, Sprint 2026-41.1: FIT import cards) and `ATT-2276` (`f38b029a`, Sprint 2026-40.16: Tips guide screen).
+3. *Root Reason for Existing Formulation*: Colloquial brand names and third-party feature titles were used for immediate familiarity before formal API trademark compliance reviews.
+4. *Preservation of Core Invariants*: `NavRoutes.SEGMENTS`, drawer navigation contracts, Strava API synchronization flows, and 9-language translation parity remain 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete viewing the Tips & Guide screen,
+• *When* reading the live segments card header,
+• *Then* it displays *"Live Segments & Scrubbing"* (or localized) without *"Strava"*.
+• *Given* an athlete opening the navigation drawer or segments screen,
+• *When* viewing the segments item,
+• *Then* the title displays *"Segments"* (DE: *"Segmente"*) without *"Strava"*.
+• *Given* an athlete viewing the Import tab,
+• *When* inspecting the FIT card subtitle,
+• *Then* it references bike computers, sports watches, or smartwatches without naming Garmin, Wahoo, or Hammerhead.
+• *Given* any of the 9 supported locales,
+• *When* `TranslationParityTest` executes,
+• *Then* all 3 keys are non-empty with zero format errors and zero emojis.
+
+**Invariants**: String key stability; zero route or navigation ID alterations; zero Strava OAuth/sync logic changes.
+
+
 
 
 
