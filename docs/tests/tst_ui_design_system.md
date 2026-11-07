@@ -6462,12 +6462,12 @@
   • Test `TrackingViewInfo` reads and maps `showBikeBell` correctly from single-row and batch queries.
   • Test `updateShowBikeBell(tabViewId, show)` persists toggle state accurately.
   3. *BikeBellAudioSynthesizer Built-in Speaker Routing, Alarm Stream, 5-Mode Brass Synthesis & Volume Boost Test (`TST-UI-384.3`, `BikeBellAudioSynthesizerTest.kt`)*:
-  • Verify 16-bit PCM mono buffer synthesis generated at $44.1\text{ kHz}$ with two distinct strikes separated by $\sim 110\text{ ms}$ and exponential decay across 5 resonant modes (sub-octave hum $1020\text{ Hz}$, brass fundamental $2040\text{ Hz}$, tierce $3120\text{ Hz}$, nominal $4280\text{ Hz}$, clapper $6200\text{ Hz}$) with smooth attack window ($1 - e^{-dt / 0.0015}$).
+  • Verify 16-bit PCM mono buffer synthesis generated at $48\text{ kHz}$ with 40 ms SmartPA amplifier lead-in (`LEAD_IN_SEC = 0.040`), strike 1 at $t=0.040\text{ s}$, strike 2 at $t=0.150\text{ s}$ ($\sim 110\text{ ms}$ separation), and $0.95\text{ s}$ duration with $60\text{ ms}$ cosine fade-out across 5 resonant modes (sub-octave hum $1020\text{ Hz}$, brass fundamental $2040\text{ Hz}$, tierce $3120\text{ Hz}$, nominal $4280\text{ Hz}$, clapper $6200\text{ Hz}$) with smooth attack window ($1 - e^{-dt / 0.0015}$) (ATT-5649).
   • Verify roll PCM synthesis incorporates headroom scaling without hard clipping distortion.
   • Verify `AudioAttributes.USAGE_ALARM` and `AudioAttributes.CONTENT_TYPE_SONIFICATION` audio attributes configuration.
-  • Verify `AudioTrack.setPreferredDevice(builtInSpeaker)` where `builtInSpeaker.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER` applied upon creation and prior to playback.
-  • Verify `savedAlarmVolume` capture, hardware volume boost to `getStreamMaxVolume(STREAM_ALARM)` with `flags = 0`, and delayed auto-restore (+650 ms for ring, +150 ms after stopRoll).
-  • Verify static replay contract: `mockTrack.stop()` is invoked prior to `mockTrack.playbackHeadPosition = 0` on every ring and roll start, preventing `ERROR_INVALID_OPERATION`.
+  • Verify conditional speaker routing: `setPreferredDevice(builtInSpeaker)` is invoked only when an external audio device (Bluetooth A2DP/SCO/BLE, wired/USB headset, hearing aid) is detected; sets `setPreferredDevice(null)` when no external devices are connected to prevent port thrashing (ATT-5649).
+  • Verify `savedAlarmVolume` capture, hardware volume boost to `getStreamMaxVolume(STREAM_ALARM)` with `flags = 0` only when `currentVolume < maxVolume`, and delayed auto-restore (+5500 ms for ring matching the 5 s escalation window, +150 ms after stopRoll) (ATT-5649).
+  • Verify static replay contract: `mockTrack.pause()` (never `stop()`) is invoked prior to `mockTrack.playbackHeadPosition = 0` on every ring and roll start, maintaining warm AudioFlinger mixer sessions (ATT-5649).
   • Verify thread safety: concurrent calls to `ring()`, `startRoll()`, `stopRoll()`, and `close()` from multiple threads execute without exceptions or native crashes.
   4. *3-Stage Perceptual Loudness Escalation Logic Test (`TST-UI-384.4`, `TrackingTabsViewModelTest.kt`)*:
   • Test initial ring: verify volume is 0.35f (Stage 1, -9.1 dB).

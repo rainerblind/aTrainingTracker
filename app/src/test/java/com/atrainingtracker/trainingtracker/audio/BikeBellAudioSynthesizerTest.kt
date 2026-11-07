@@ -43,16 +43,23 @@ class BikeBellAudioSynthesizerTest {
 
     @Test
     fun testPcmSynthesis_mathematicalPropertiesAndDuration() {
-        val pcm = BikeBellAudioSynthesizer.synthesizeDoubleStrikePcm(44100)
+        val pcm = BikeBellAudioSynthesizer.synthesizeDoubleStrikePcm(48000)
         assertNotNull(pcm)
-        // 0.6s at 44100Hz 16-bit mono = 26460 samples * 2 bytes = 52920 bytes
-        assertEquals(52920, pcm.size)
+        // 0.95s at 48000Hz 16-bit mono = 45600 samples * 2 bytes = 91200 bytes
+        assertEquals(91200, pcm.size)
 
-        // Sample at t = 0 must be 0 (sin(0) = 0 and attack(0) = 0)
+        // Sample at t = 0 must be 0
         val s0Low = pcm[0].toInt() and 0xFF
         val s0High = pcm[1].toInt()
         val s0 = (s0High shl 8) or s0Low
         assertEquals(0, s0)
+
+        // SmartPA lead-in: at t = 0.02s (sample index 960), amplitude is minimal pilot signal
+        val idx960 = 960 * 2
+        val sPilotLow = pcm[idx960].toInt() and 0xFF
+        val sPilotHigh = pcm[idx960 + 1].toInt()
+        val sPilot = (sPilotHigh shl 8) or sPilotLow
+        assertTrue("Pilot carrier amplitude should be sub-audible", Math.abs(sPilot) <= 10)
 
         // Verify strike sample calculation conforms to physical envelope
         val sampleAtPeak = BikeBellAudioSynthesizer.calculateStrikeSample(0.0001, 2040.0)
@@ -62,11 +69,17 @@ class BikeBellAudioSynthesizerTest {
         val sampleDecayed = BikeBellAudioSynthesizer.calculateStrikeSample(0.5, 2040.0)
         assertTrue("Sample after 0.5s should be decayed", Math.abs(sampleDecayed) < 0.15)
 
-        // Test roll PCM synthesis
-        val rollPcm = BikeBellAudioSynthesizer.synthesizeRollPcm(44100)
+        // Cosine fade-out: last sample at t ~ 0.95s must taper down to 0
+        val lastIdx = (45600 - 1) * 2
+        val sLastLow = pcm[lastIdx].toInt() and 0xFF
+        val sLastHigh = pcm[lastIdx + 1].toInt()
+        val sLast = (sLastHigh shl 8) or sLastLow
+        assertEquals(0, sLast)
+
+        // Test roll PCM synthesis: 2.5s at 48000Hz = 120000 samples * 2 bytes = 240000 bytes
+        val rollPcm = BikeBellAudioSynthesizer.synthesizeRollPcm(48000)
         assertNotNull(rollPcm)
-        // 2.5s at 44100Hz = 110250 samples * 2 bytes = 220500 bytes
-        assertEquals(220500, rollPcm.size)
+        assertEquals(240000, rollPcm.size)
     }
 
     @Test
@@ -95,8 +108,8 @@ class BikeBellAudioSynthesizerTest {
         assertTrue("Roll strike sample at 0.2s should be damped", Math.abs(rollSampleDamped) < 0.05)
 
         // 4. Verify roll PCM linear headroom scaling (no clipping overflow)
-        val rollPcm = BikeBellAudioSynthesizer.synthesizeRollPcm(44100)
-        assertEquals(220500, rollPcm.size)
+        val rollPcm = BikeBellAudioSynthesizer.synthesizeRollPcm(48000)
+        assertEquals(240000, rollPcm.size)
         for (i in 0 until rollPcm.size step 2) {
             val low = rollPcm[i].toInt() and 0xFF
             val high = rollPcm[i + 1].toInt()
@@ -118,29 +131,33 @@ class BikeBellAudioSynthesizerTest {
             }
         )
 
-        // 1. Single ring at polite volume
+        // 1. Single ring at polite volume with warm pause() replay (ATT-5649)
         synthesizer.ring(0.35f)
         verify(exactly = 1) { mockTrack1.setVolume(0.35f) }
-        verify(exactly = 1) { mockTrack1.stop() }
+        verify(exactly = 1) { mockTrack1.pause() }
+        verify(exactly = 0) { mockTrack1.stop() }
         verify(exactly = 1) { mockTrack1.playbackHeadPosition = 0 }
         verify(exactly = 1) { mockTrack1.play() }
 
         // 2. Single ring at escalated volume
         synthesizer.ring(1.0f)
         verify(exactly = 1) { mockTrack1.setVolume(1.0f) }
-        verify(atLeast = 2) { mockTrack1.stop() }
+        verify(atLeast = 2) { mockTrack1.pause() }
+        verify(exactly = 0) { mockTrack1.stop() }
         verify(atLeast = 2) { mockTrack1.play() }
 
-        // 3. Roll start and stop
+        // 3. Roll start and stop with warm pause() replay
         synthesizer.startRoll(1.0f)
         verify(exactly = 1) { mockTrack2.setVolume(1.0f) }
-        verify(exactly = 1) { mockTrack2.stop() }
+        verify(exactly = 1) { mockTrack2.pause() }
+        verify(exactly = 0) { mockTrack2.stop() }
         verify(exactly = 1) { mockTrack2.playbackHeadPosition = 0 }
-        verify(exactly = 1) { mockTrack2.setLoopPoints(0, 110250, -1) }
+        verify(exactly = 1) { mockTrack2.setLoopPoints(0, 120000, -1) }
         verify(exactly = 1) { mockTrack2.play() }
 
         synthesizer.stopRoll()
-        verify(atLeast = 1) { mockTrack2.stop() }
+        verify(atLeast = 1) { mockTrack2.pause() }
+        verify(exactly = 0) { mockTrack2.stop() }
 
         // 4. Concurrent calls from 10 threads
         val threadPool = Executors.newFixedThreadPool(10).asCoroutineDispatcher()
@@ -179,17 +196,18 @@ class BikeBellAudioSynthesizerTest {
         )
 
         val totalFrames = synthesizer.rollPcm.size / 2
-        assertEquals(110250, totalFrames)
+        assertEquals(120000, totalFrames)
 
         synthesizer.startRoll(1.0f)
         verify(exactly = 1) { mockTrack.setVolume(1.0f) }
-        verify(exactly = 1) { mockTrack.stop() }
+        verify(exactly = 1) { mockTrack.pause() }
+        verify(exactly = 0) { mockTrack.stop() }
         verify(exactly = 1) { mockTrack.playbackHeadPosition = 0 }
         verify(exactly = 1) { mockTrack.setLoopPoints(0, totalFrames, -1) }
         verify(exactly = 1) { mockTrack.play() }
 
         synthesizer.stopRoll()
-        verify(atLeast = 2) { mockTrack.stop() }
+        verify(atLeast = 1) { mockTrack.pause() }
         verify(atLeast = 2) { mockTrack.playbackHeadPosition = 0 }
 
         synthesizer.close()
@@ -203,7 +221,7 @@ class BikeBellAudioSynthesizerTest {
     }
 
     @Test
-    fun testBikeBellAudioSynthesizer_routesToBuiltInSpeaker() {
+    fun testBikeBellAudioSynthesizer_routesToBuiltInSpeaker_whenExternalDevicesConnected() {
         val mockSpeaker = mockk<AudioDeviceInfo> {
             every { type } returns AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
         }
@@ -223,7 +241,7 @@ class BikeBellAudioSynthesizerTest {
             audioTrackFactory = { mockTrack }
         )
 
-        // setPreferredDevice must be called with mockSpeaker upon creation
+        // setPreferredDevice must be called with mockSpeaker upon creation because headphones are connected
         verify(atLeast = 1) { mockTrack.setPreferredDevice(mockSpeaker) }
 
         // And again prior to ring()
@@ -233,6 +251,34 @@ class BikeBellAudioSynthesizerTest {
         // And prior to startRoll()
         synthesizer.startRoll(1.0f)
         verify(atLeast = 3) { mockTrack.setPreferredDevice(mockSpeaker) }
+
+        synthesizer.close()
+    }
+
+    @Test
+    fun testBikeBellAudioSynthesizer_conditionalSpeakerRouting_nullWhenNoExternalDevices() {
+        val mockSpeaker = mockk<AudioDeviceInfo> {
+            every { type } returns AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
+        }
+        val mockAudioManager = mockk<AudioManager> {
+            every { getDevices(AudioManager.GET_DEVICES_OUTPUTS) } returns arrayOf(mockSpeaker)
+            every { getStreamVolume(AudioManager.STREAM_ALARM) } returns 3
+            every { getStreamMaxVolume(AudioManager.STREAM_ALARM) } returns 15
+            every { setStreamVolume(any(), any(), any()) } just Runs
+        }
+        val mockTrack = mockk<AudioTrack>(relaxed = true)
+
+        val synthesizer = BikeBellAudioSynthesizer(
+            audioManager = mockAudioManager,
+            audioTrackFactory = { mockTrack }
+        )
+
+        // Without external audio devices, setPreferredDevice(null) must be called to prevent port-thrashing (ATT-5649)
+        verify(atLeast = 1) { mockTrack.setPreferredDevice(null) }
+        verify(exactly = 0) { mockTrack.setPreferredDevice(mockSpeaker) }
+
+        synthesizer.ring(0.35f)
+        verify(atLeast = 2) { mockTrack.setPreferredDevice(null) }
 
         synthesizer.close()
     }
@@ -256,12 +302,13 @@ class BikeBellAudioSynthesizerTest {
             handler = mockHandler
         )
 
-        // 1. Ring triggers volume boost to max and schedules 650ms restore
+        // 1. Ring triggers volume boost to max and schedules 5500ms restore (ATT-5649)
+        assertEquals(5500L, BikeBellAudioSynthesizer.RING_RESTORE_DELAY_MS)
         synthesizer.ring(0.35f)
         verify(exactly = 1) { mockAudioManager.setStreamVolume(AudioManager.STREAM_ALARM, 15, 0) }
-        verify(exactly = 1) { mockHandler.postDelayed(any(), BikeBellAudioSynthesizer.RING_RESTORE_DELAY_MS) }
+        verify(exactly = 1) { mockHandler.postDelayed(any(), 5500L) }
 
-        // Rapid second ring does NOT re-query or overwrite savedAlarmVolume with 15
+        // Rapid second ring within 5s does NOT re-query or overwrite savedAlarmVolume with 15
         synthesizer.ring(0.65f)
         verify(exactly = 1) { mockAudioManager.getStreamVolume(AudioManager.STREAM_ALARM) }
 
@@ -275,6 +322,39 @@ class BikeBellAudioSynthesizerTest {
         verify(exactly = 2) { mockAudioManager.getStreamVolume(AudioManager.STREAM_ALARM) }
 
         synthesizer.close()
+    }
+
+    @Test
+    fun testBikeBellAudioSynthesizer_volumeAlreadyAtMax_skipsSetStreamVolume() {
+        val mockAudioManager = mockk<AudioManager> {
+            every { getDevices(any()) } returns emptyArray()
+            every { getStreamVolume(AudioManager.STREAM_ALARM) } returns 15
+            every { getStreamMaxVolume(AudioManager.STREAM_ALARM) } returns 15
+            every { setStreamVolume(any(), any(), any()) } just Runs
+        }
+        val mockHandler = mockk<Handler>(relaxed = true)
+        val runnableSlot = slot<Runnable>()
+        every { mockHandler.postDelayed(capture(runnableSlot), any()) } returns true
+
+        val mockTrack = mockk<AudioTrack>(relaxed = true)
+        val synthesizer = BikeBellAudioSynthesizer(
+            audioManager = mockAudioManager,
+            audioTrackFactory = { mockTrack },
+            handler = mockHandler
+        )
+
+        // Volume is already at max (15 == 15): setStreamVolume must NOT be called, preventing OS mute events (ATT-5649)
+        synthesizer.ring(0.35f)
+        verify(exactly = 0) { mockAudioManager.setStreamVolume(any(), any(), any()) }
+
+        // Restore runnable runs: setStreamVolume must still NOT be called
+        if (runnableSlot.isCaptured) {
+            runnableSlot.captured.run()
+        }
+        verify(exactly = 0) { mockAudioManager.setStreamVolume(any(), any(), any()) }
+
+        synthesizer.close()
+        verify(exactly = 0) { mockAudioManager.setStreamVolume(any(), any(), any()) }
     }
 
     @Test
