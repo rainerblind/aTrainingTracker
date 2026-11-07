@@ -319,10 +319,11 @@
 ### TST-PER-028: **Periods Sport Type Header Filtering & Multi-Sport Projections Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-PER-022`, `REQ-PER-018`, `REQ-PER-019`
 - **Component**: **Periods Header Sport Filter & ViewModel Projection**
-- **Jira**: `ATT-4770`
+- **Jira**: `ATT-4770, ATT-5828`
 - **Test Description**:
   1. *Default Filter Set & Empty Guard Tests (`TST-PER-028.1`, `PeriodsViewModelTest.kt`)*:
   • Assert initial `selectedSports` contains `setOf(BSportType.BIKE, BSportType.RUN)`.
+  • In `PeriodsViewModelTest.kt`, all `PeriodsViewModel` instantiations use `createViewModel` with injected `testDispatcher` for both `ioDispatcher` and `defaultDispatcher`, preventing `UncaughtExceptionsBeforeTest` (ATT-5828).
   • Toggle `BSportType.RUN`: verify `selectedSports` becomes `setOf(BSportType.BIKE)`.
   • Toggle `BSportType.BIKE`: verify toggle is ignored and `selectedSports` remains `setOf(BSportType.BIKE)` (empty set prevention).
   • Toggle `BSportType.UNKNOWN`: verify `selectedSports` becomes `setOf(BSportType.BIKE, BSportType.UNKNOWN)`.

@@ -29,6 +29,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -175,7 +176,8 @@ class PeriodsRepositorySyncTest {
         WorkoutRepository.resetForTesting(mockWorkoutRepo)
         PeriodsRepository.setInstanceForTesting(mockPeriodsRepo)
 
-        val viewModel = PeriodsViewModel(mockApp)
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val viewModel = PeriodsViewModel(mockApp, testDispatcher, testDispatcher)
         viewModel.loadPeriods()
 
         coVerify(timeout = 2000) { mockWorkoutRepo.loadAllWorkouts() }
