@@ -1323,6 +1323,10 @@
     <string name="cluster_counter_enabled_description">Append sequential numbers (#2, #3, …) to workout names</string>
     <string name="cluster_delete_title">Delete Workout Cluster</string>
     <string name="cluster_delete_message">Are you sure you want to delete this workout cluster? This will not delete the associated workouts, but they will no longer be grouped under this cluster.</string>
+    <string name="cluster_menu_merge">Merge into another favorite route…</string>
+    <string name="cluster_merge_dialog_title">Merge Favorite Route</string>
+    <string name="cluster_merge_dialog_message">Do you want to merge \'%1$s\' (%2$d recordings) into \'%3$s\'? All associated workouts will be reassigned to \'%3$s\' and \'%1$s\' will be deleted.</string>
+    <string name="cluster_merge_action">Merge</string>
     <string name="cluster_migration_title">Analyzing route families…</string>
     <string name="cluster_migration_loading">Loading route families…</string>
     <string name="cluster_migration_healing">Verifying history integrity…</string>

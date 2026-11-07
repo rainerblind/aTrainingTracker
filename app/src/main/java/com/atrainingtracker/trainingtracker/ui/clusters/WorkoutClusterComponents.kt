@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CallMerge
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LocationOn
@@ -230,7 +231,8 @@ fun ClusterItem(
     viewModel: WorkoutClustersViewModel,
     onClick: () -> Unit,
     onDeleteRequest: (WorkoutCluster) -> Unit,
-    onHitCountClick: (WorkoutCluster) -> Unit
+    onHitCountClick: (WorkoutCluster) -> Unit,
+    onMergeRequest: ((WorkoutCluster) -> Unit)? = null
 ) {
     var showContextMenu by remember { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current
@@ -407,6 +409,16 @@ fun ClusterItem(
                 expanded = showContextMenu,
                 onDismissRequest = { showContextMenu = false }
             ) {
+                if (onMergeRequest != null) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.cluster_menu_merge)) },
+                        onClick = {
+                            showContextMenu = false
+                            onMergeRequest(cluster)
+                        },
+                        leadingIcon = { Icon(Icons.Default.CallMerge, contentDescription = null) }
+                    )
+                }
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.delete)) },
                     onClick = {

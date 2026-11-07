@@ -1070,6 +1070,10 @@
     <string name="cluster_counter_enabled_description">ワークアウト名に連番（#2, #3, …）を追加</string>
     <string name="cluster_delete_title">ワークアウトクラスターを削除</string>
     <string name="cluster_delete_message">このワークアウトクラスターを削除してもよろしいですか？関連するワークアウトは削除されませんが、このクラスターの下にはグループ化されなくなります。</string>
+    <string name="cluster_menu_merge">他のルートとお気に入りを結合…</string>
+    <string name="cluster_merge_dialog_title">お気に入りのルートを結合</string>
+    <string name="cluster_merge_dialog_message">「%1$s」（%2$d件の記録）を「%3$s」に統合しますか？関連するすべてのワークアウトが「%3$s」に再割り当てされ、「%1$s」は削除されます。</string>
+    <string name="cluster_merge_action">結合</string>
     <string name="cluster_migration_title">ルートファミリーを分析中…</string>
     <string name="cluster_migration_loading">ルートファミリーを読み込み中…</string>
     <string name="cluster_migration_healing">履歴の整合性を確認中…</string>

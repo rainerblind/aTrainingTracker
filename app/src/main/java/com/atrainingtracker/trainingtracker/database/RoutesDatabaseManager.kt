@@ -769,6 +769,22 @@ class RoutesDatabaseManager private constructor(context: Context) {
     }
 
     /**
+     * Reassigns all routes linked to source cluster ID to target cluster ID (ATT-5666 / REQ-SET-089).
+     */
+    fun reassignClusterRoutes(sourceId: Long, targetId: Long): Int {
+        val db = getDatabase()
+        val values = ContentValues().apply {
+            put(RouteContract.COLUMN_CLUSTER_ID, targetId)
+        }
+        return db.update(
+            RouteContract.TABLE_ROUTES,
+            values,
+            "${RouteContract.COLUMN_CLUSTER_ID} = ?",
+            arrayOf(sourceId.toString())
+        )
+    }
+
+    /**
      * Deletes a route by its internal database ID.
      */
     fun deleteRoute(routeId: Long): Int {

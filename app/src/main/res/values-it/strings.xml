@@ -1092,6 +1092,10 @@
     <string name="cluster_counter_enabled_description">Aggiungi numeri sequenziali (#2, #3, …) ai nomi degli allenamenti</string>
     <string name="cluster_delete_title">Elimina gruppo di allenamenti</string>
     <string name="cluster_delete_message">Sei sicuro di voler eliminare questo gruppo di allenamenti? Questo non eliminerà gli allenamenti associati, ma non saranno più raggruppati sotto questo gruppo.</string>
+    <string name="cluster_menu_merge">Unisci a un altro percorso preferito…</string>
+    <string name="cluster_merge_dialog_title">Unisci percorso preferito</string>
+    <string name="cluster_merge_dialog_message">Vuoi unire \'%1$s\' (%2$d registrazioni) in \'%3$s\'? Tutti gli allenamenti associati verranno riassegnati a \'%3$s\' e \'%1$s\' verrà successivamente eliminato.</string>
+    <string name="cluster_merge_action">Unisci</string>
     <string name="cluster_migration_title">Analisi delle famiglie di percorsi…</string>
     <string name="cluster_migration_loading">Caricamento delle famiglie di percorsi…</string>
     <string name="cluster_migration_healing">Verifica dell\'integrità della cronologia…</string>

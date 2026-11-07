@@ -61,7 +61,8 @@ fun WorkoutClustersTabsScreen(
     onAddClick: () -> Unit,
     onDeleteRequest: (WorkoutCluster) -> Unit,
     migrationStatus: com.atrainingtracker.trainingtracker.ui.util.MigrationStatus? = null,
-    onNavigateToAdvancedSettings: () -> Unit = {}
+    onNavigateToAdvancedSettings: () -> Unit = {},
+    onMergeRequest: (WorkoutCluster) -> Unit = {}
 ) {
     val clusters by viewModel.allClusters.collectAsState()
     val unclusteredWorkouts by viewModel.unclusteredWorkouts.collectAsState()
@@ -188,7 +189,8 @@ fun WorkoutClustersTabsScreen(
 
                         headerHeightDp = headerHeightDp,
                         density = density,
-                        emptyMessage = emptyMessage
+                        emptyMessage = emptyMessage,
+                        onMergeRequest = onMergeRequest
                     )
                 }
             }

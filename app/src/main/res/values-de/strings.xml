@@ -1176,6 +1176,10 @@
     <string name="cluster_counter_enabled_description">Fortlaufende Nummern (#2, #3, …) an Workout-Namen anhängen</string>
     <string name="cluster_delete_title">Workout-Cluster löschen</string>
     <string name="cluster_delete_message">Sind Sie sicher, dass Sie diesen Workout-Cluster löschen möchten? Die zugehörigen Einheiten werden nicht gelöscht, aber sie werden nicht mehr unter diesem Cluster gruppiert.</string>
+    <string name="cluster_menu_merge">Mit anderer Lieblingsstrecke zusammenführen…</string>
+    <string name="cluster_merge_dialog_title">Lieblingsstrecke zusammenführen</string>
+    <string name="cluster_merge_dialog_message">Möchtest du „%1$s“ (%2$d Aufzeichnungen) in „%3$s“ integrieren? Alle zugehörigen Einheiten werden „%3$s“ zugewiesen und „%1$s“ wird anschließend gelöscht.</string>
+    <string name="cluster_merge_action">Zusammenführen</string>
     <string name="cluster_migration_title">Analysiere Streckenfamilien…</string>
     <string name="cluster_migration_loading">Lade Streckenfamilien…</string>
     <string name="cluster_migration_healing">Prüfe Verlaufsintegrität…</string>

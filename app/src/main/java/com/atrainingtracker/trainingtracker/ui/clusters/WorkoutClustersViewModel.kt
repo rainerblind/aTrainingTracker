@@ -424,6 +424,44 @@ class WorkoutClustersViewModel @JvmOverloads constructor(
         }
     }
 
+    /**
+     * Scores all other clusters against the source cluster and returns candidates sorted ascending
+     * by spatial similarity score (best match at index 0) (ATT-5666 / REQ-SET-089.2).
+     */
+    fun getCandidateClustersForCluster(source: WorkoutCluster): List<Pair<WorkoutCluster, Double>> {
+        val allClusters = repository.allClusters.value.filter { it.id != source.id }
+        val engine = WorkoutClusterEngine.getInstance(getApplication())
+        val start = LatLng(source.startLat, source.startLng)
+        val end = LatLng(source.endLat, source.endLng)
+        val apex = LatLng(source.maxDispLat, source.maxDispLng)
+        val candidatesWithScores = engine.scoreClusters(
+            allClusters,
+            start,
+            end,
+            apex,
+            source.refDistance,
+            workoutName = source.name,
+            candidateSportTypes = if (source.bSportType != BSportType.UNKNOWN) setOf(source.bSportType) else emptySet(),
+            minAltPos = source.minAltLatLng,
+            maxAltPos = source.maxAltLatLng
+        )
+        return candidatesWithScores.sortedBy { it.second }
+    }
+
+    /**
+     * Merges source cluster into target cluster in background coroutine (ATT-5666 / REQ-SET-089.4).
+     */
+    fun mergeClusters(source: WorkoutCluster, target: WorkoutCluster) {
+        viewModelScope.launch(ioDispatcher) {
+            val success = repository.mergeClusters(source.id, target.id)
+            if (success) {
+                if (_selectedCluster.value?.id == source.id) {
+                    _selectedCluster.value = target
+                }
+            }
+        }
+    }
+
     fun getCandidateClustersForWorkout(workout: WorkoutData): List<Pair<WorkoutCluster, Double>> {
         val start = workout.startLatLng ?: return emptyList()
         val end = workout.endLatLng ?: return emptyList()

@@ -1092,6 +1092,10 @@
     <string name="cluster_counter_enabled_description">Volgnummers (#2, #3, …) toevoegen aan workoutnamen</string>
     <string name="cluster_delete_title">Workoutcluster verwijderen</string>
     <string name="cluster_delete_message">Weet u zeker dat u dit workoutcluster wilt verwijderen? De bijbehorende trainingen worden nicht verwijderd, maar ze worden niet meer onder dit cluster gegroepeerd.</string>
+    <string name="cluster_menu_merge">Samenvoegen met andere favoriete route…</string>
+    <string name="cluster_merge_dialog_title">Favoriete route samenvoegen</string>
+    <string name="cluster_merge_dialog_message">Wil je \'%1$s\' (%2$d opnamen) samenvoegen in \'%3$s\'? Alle bijbehorende trainingen worden opnieuw toegewezen aan \'%3$s\' en \'%1$s\' wordt vervolgens verwijderd.</string>
+    <string name="cluster_merge_action">Samenvoegen</string>
     <string name="cluster_migration_title">Routefamilies analyseren…</string>
     <string name="cluster_migration_loading">Routefamilies laden…</string>
     <string name="cluster_migration_healing">Geschiedenisintegriteit controleren…</string>
