@@ -13714,6 +13714,45 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: String resource key stability (`import_strava_archive_title`); zero logic changes to `StravaBulkExportImporter.kt` or `ImportBackupTabsScreen.kt`; zero regressions on adjacent format cards.
 
+### REQ-UI-459: Trademark-Free Physiology & Localization Terminology Parity Across All 9 Locales [Verified]
+- **Tests**: `TST-UI-459` | **Tickets**: `ATT-5678`
+- **Implementation**: `strings.xml` (all 9 locales), `WorkoutDetails.kt`, `AthleteProfileScreen.kt`, `AdvancedTuningAccordion.kt`, `TipsGuideScreen.kt`, `TranslationParityTest.kt`
+- **Rationale**: Peaksware, LLC (parent company of TrainingPeaks) holds registered trademarks on cycling/endurance terms: Normalized Power® (NP®), Intensity Factor® (IF®), Training Stress Score® (TSS®), and Performance Management Chart® (PMC®), along with CTL, ATL, and TSB. The system SHALL replace all proprietary Peaksware trademarks in UI-visible string resources across all 9 supported locales with trademark-free, descriptive terminology while preserving 100% calculation invariance and database schema compatibility (Sprint 2026-45.10, ATT-5678, refining `REQ-UI-401`, `REQ-UI-402`, and `REQ-UI-403`):
+1. *Power & Training Load Terminology Parity (`REQ-UI-459.1`)*:
+• Across all 9 locales, the system SHALL display **Weighted Power** (**WP**) / DE: **Gewichtete Leistung** for `normalized_power`, **Relative Intensity** (**RI**) / DE: **Relative Intensität** for `intensity_factor`, and **Training Load** (**Load**) / DE: **Trainingsbelastung** for `tss`.
+• Badges `normalized_power_short` (`WP`), `intensity_factor_short` (`RI`), and `tss_short` (`Load`) SHALL reside solely in base `values/strings.xml` with `translatable="false"`.
+2. *Aftermath Workout Detail Formats (`REQ-UI-459.2`)*:
+• In `WorkoutDetails.kt` and summary cards, `workout_power_metrics_*_format` SHALL display `WP: %1$.0f W`, `RI: %1$.2f`, and `Load: %1$.0f` across all 9 locales.
+3. *Training Load & Form (Profile & PMC) (`REQ-UI-459.3`)*:
+• In `AthleteProfileScreen.kt`, the system SHALL display **Training Load & Form** (DE: **Belastungssteuerung**) for `athlete_profile_pmc_title`, **Fitness (42d)** for `athlete_profile_pmc_ctl_label`, **Fatigue (7d)** (DE: **Ermüdung (7d)**) for `athlete_profile_pmc_atl_label`, **Form (Balance)** for `athlete_profile_pmc_tsb_label`, and `%1$+.1f/wk` (DE: `%1$+.1f/Wo.`) for `athlete_profile_pmc_ramp_format`.
+4. *Advanced Settings (Tuning) & Tips Parity (`REQ-UI-459.4`)*:
+• In `PhysiologyModelsSection.kt` and `TipsGuideScreen.kt`, titles and descriptions SHALL use trademark-free terms (`tuning_physiology_coggan_*`, `tuning_physiology_pmc_*`, `tip_training_zones_*`).
+• `tuning_physiology_pmc_short` SHALL be **Load / Form** (DE: **Belastung / Form**).
+5. *System Invariants & Schema Stability (`REQ-UI-459.5`)*:
+• Mathematical calculation functions in `PowerPhysiologyCalculator.kt` and `CyclingPowerMetricsDevice.java` SHALL remain strictly unchanged.
+• Internal SQLite column names, DTO fields (`normalizedPowerWatts`, `intensityFactor`, `tss`), and sensor enums (`SensorType.NORMALIZED_POWER`, `SensorType.TSS`) SHALL remain invariant.
+• All format specifiers (`%1$+.1f`, `%1$.0f`, `%1$.2f`) SHALL remain indexed, and zero decorative inline emojis SHALL be included (`ATT-5400`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines UI string presentation of `REQ-UI-401.3` / `REQ-UI-401.4` (*Performance Management Chart*), `REQ-UI-402.2` (*Power-Based Training Metrics Display*), and `REQ-UI-403.1` / `REQ-UI-403.4` (*Physiology Models Section*), targeting 20 string keys across all 9 `strings.xml` locales.
+2. *Historical Origin & Commit Trace*: Sprint 2026-42.7 (`ATT-3858` / `ATT-3859`, commits `a6289096` and `dc62bb3c`), Sprint 2026-44.1 (`ATT-3929`), and Sprint 2026-44.2 (`ATT-4432`).
+3. *Root Reason for Existing Formulation*: Previous implementations adopted Dr. Andrew Coggan's literature terminology without separating proprietary registered trademarks from open mathematical equations.
+4. *Preservation of Core Invariants*: EWMA impulse-response math ($\tau=42$, $\tau=7$), SQLite schema, backup/restore compatibility, and 9-language translation parity remain 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete viewing workout details or sensor cockpit in German,
+• *When* inspecting power metrics,
+• *Then* labels display *„Gewichtete Leistung“* (`WP`), *„Relative Intensität“* (`RI`), and *„Trainingsbelastung“* (`Load`).
+• *Given* an athlete viewing the Athlete Profile in English,
+• *When* inspecting the training load section,
+• *Then* header displays *„Training Load & Form“* and cards display *„Fitness (42d)“*, *„Fatigue (7d)“*, and *„Form (Balance)“*.
+• *Given* any of the 9 supported locales,
+• *When* `TranslationParityTest` executes,
+• *Then* all 20 updated keys exist with matching positional specifiers and zero inline emojis.
+
+**Invariants**: Zero calculation changes; zero database migrations; zero DTO field renaming; 100% 9-locale parity.
+
+
 
 
 

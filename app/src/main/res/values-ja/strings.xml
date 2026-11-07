@@ -190,10 +190,10 @@
     <string name="power_short">power</string>
     <string name="power_to_weight">パワーウェイトレシオ</string>
     <string name="power_to_weight_short">W/kg</string>
-    <string name="normalized_power">標準化パワー</string>
-    <string name="intensity_factor">強度係数</string>
+    <string name="normalized_power">加重パワー</string>
+    <string name="intensity_factor">相対強度</string>
     <string name="work_kj">機械的仕事</string>
-    <string name="tss">トレーニングストレススコア</string>
+    <string name="tss">トレーニング負荷</string>
     <string name="speed">速度</string>
     <string name="speed_short">速度</string>
     <string name="current_sensors">現在のセンサー</string>
@@ -2013,13 +2013,13 @@
     <string name="workout_decoupling_drift">高ドリフト (≥5%)</string>
 
     <!-- Performance Management Chart (ATT-3859 / REQ-UI-401) -->
-    <string name="athlete_profile_pmc_title">パフォーマンス管理 (CTL / ATL / TSB)</string>
-    <string name="athlete_profile_pmc_ctl_label">フィットネス (CTL)</string>
-    <string name="athlete_profile_pmc_atl_label">疲労 (ATL)</string>
-    <string name="athlete_profile_pmc_tsb_label">フォーム (TSB)</string>
+    <string name="athlete_profile_pmc_title">トレーニング負荷と調子 (フィットネス / 疲労 / フォーム)</string>
+    <string name="athlete_profile_pmc_ctl_label">フィットネス (42日)</string>
+    <string name="athlete_profile_pmc_atl_label">疲労 (7日)</string>
+    <string name="athlete_profile_pmc_tsb_label">フォーム (バランス)</string>
     <string name="athlete_profile_pmc_acwr_label">負荷比 (ACWR)</string>
     <string name="athlete_profile_pmc_ramp_label">7日ランプ率</string>
-    <string name="athlete_profile_pmc_ramp_format">%1$+.1f CTL/週</string>
+    <string name="athlete_profile_pmc_ramp_format">%1$+.1f/週</string>
     <string name="athlete_profile_pmc_ramp_warning">急上昇</string>
     <string name="athlete_profile_pmc_zone_fresh">レース準備完了</string>
     <string name="athlete_profile_pmc_zone_neutral">ニュートラル</string>
@@ -2032,9 +2032,9 @@
     <string name="athlete_profile_pmc_empty">トレーニング負荷データがまだありません。</string>
 
     <!-- Workout Power Training Metrics (ATT-3858 / REQ-UI-402) -->
-    <string name="workout_power_metrics_np_format">NP: %1$.0f W</string>
-    <string name="workout_power_metrics_if_format">IF: %1$.2f</string>
-    <string name="workout_power_metrics_tss_format">TSS: %1$.0f</string>
+    <string name="workout_power_metrics_np_format">WP: %1$.0f W</string>
+    <string name="workout_power_metrics_if_format">RI: %1$.2f</string>
+    <string name="workout_power_metrics_tss_format">Load: %1$.0f</string>
     <string name="workout_power_metrics_work_format">仕事量: %1$.0f kJ</string>
     <string name="workout_power_metrics_wkg_format">%1$.2f W/kg</string>
     <string name="workout_power_metrics_vi_format">VI: %1$.2f</string>
@@ -2043,13 +2043,13 @@
     <string name="tuning_cat_physiology_models">生理学・トレーニングモデル</string>
     <string name="tuning_physiology_none_enabled">基本指標のみ</string>
     <string name="tuning_physiology_coggan_short">Coggan</string>
-    <string name="tuning_physiology_pmc_short">PMC</string>
+    <string name="tuning_physiology_pmc_short">負荷 / 調子</string>
     <string name="tuning_physiology_ef_short">EF / Pw:Hr</string>
     <string name="tuning_physiology_cp_short">CP / W\'bal</string>
-    <string name="tuning_physiology_coggan_title">Cogganパワー指標 (NP, IF, TSS)</string>
-    <string name="tuning_physiology_coggan_desc">Normalized Power、Intensity Factor、TSS、Variability Indexをワークアウトとコックピットに表示します</string>
-    <string name="tuning_physiology_pmc_title">パフォーマンス管理 (PMC)</string>
-    <string name="tuning_physiology_pmc_desc">プロフィールとゾーン画面にフィットネス (CTL)、疲労 (ATL)、フォーム (TSB) チャートを表示します</string>
+    <string name="tuning_physiology_coggan_title">パワー指標 (WP, RI, Load)</string>
+    <string name="tuning_physiology_coggan_desc">Weighted Power、Relative Intensity、Training Load、Variability Indexをワークアウトとコックピットに表示します</string>
+    <string name="tuning_physiology_pmc_title">トレーニング負荷と調子</string>
+    <string name="tuning_physiology_pmc_desc">プロフィールとゾーン画面にフィットネス (42日)、疲労 (7日)、フォーム (バランス) チャートを表示します</string>
     <string name="tuning_physiology_ef_title">有酸素効率とデカップリング</string>
     <string name="tuning_physiology_ef_desc">効率係数 (EF) と有酸素デカップリング (Pw:Hr / Pa:Hr) をワークアウト概要と詳細に表示します</string>
     <string name="tuning_physiology_cp_title">クリティカルパワー＆無酸素バッテリー (CP, W\', W\'bal)</string>
@@ -2193,7 +2193,7 @@
     <string name="tip_gear_tracking_action">機材を管理</string>
     <string name="tip_training_zones_title">生理学的指標とトレーニングゾーン</string>
     <string name="tip_training_zones_subtitle">Cogganパワー、Karvonen心拍、W\'バッテリー</string>
-    <string name="tip_training_zones_desc">Normalized Power (NP)、Intensity Factor (IF)、TSS、リアルタイムW\'バッテリー残量などの高度な指標を活用。7段階パワーゾーンや心拍ゾーンを設定できます。</string>
+    <string name="tip_training_zones_desc">Weighted Power (WP)、Relative Intensity (RI)、Training Load、リアルタイムW\'バッテリー残量などの高度な指標を活用。7段階パワーゾーンや心拍ゾーンを設定できます。</string>
     <string name="tip_training_zones_action">ゾーンを設定</string>
     <string name="tip_data_backup_title">データ主権とオフラインバックアップ</string>
     <string name="tip_data_backup_subtitle">クラウド登録不要、すべてのデータを手元で保持</string>

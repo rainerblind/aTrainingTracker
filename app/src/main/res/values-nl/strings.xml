@@ -190,10 +190,10 @@
     <string name="power_short">pwr</string>
     <string name="power_to_weight">Vermogen-gewichtsverhouding</string>
     <string name="power_to_weight_short">W/kg</string>
-    <string name="normalized_power">Genormaliseerd vermogen</string>
-    <string name="intensity_factor">Intensiteitsfactor</string>
+    <string name="normalized_power">Gewogen vermogen</string>
+    <string name="intensity_factor">Relatieve intensiteit</string>
     <string name="work_kj">Mechanische arbeid</string>
-    <string name="tss">Training Stress Score</string>
+    <string name="tss">Trainingsbelasting</string>
     <string name="speed">snelheid</string>
     <string name="speed_short">snelh</string>
     <string name="current_sensors">huidige sensoren</string>
@@ -2033,13 +2033,13 @@
     <string name="workout_decoupling_drift">Hoge drift (≥5%)</string>
 
     <!-- Performance Management Chart (ATT-3859 / REQ-UI-401) -->
-    <string name="athlete_profile_pmc_title">Prestatiemanagement (CTL / ATL / TSB)</string>
-    <string name="athlete_profile_pmc_ctl_label">Conditie (CTL)</string>
-    <string name="athlete_profile_pmc_atl_label">Vermoeidheid (ATL)</string>
-    <string name="athlete_profile_pmc_tsb_label">Vorm (TSB)</string>
+    <string name="athlete_profile_pmc_title">Trainingsbelasting &amp; vorm (Conditie / Vermoeidheid / Vorm)</string>
+    <string name="athlete_profile_pmc_ctl_label">Conditie (42d)</string>
+    <string name="athlete_profile_pmc_atl_label">Vermoeidheid (7d)</string>
+    <string name="athlete_profile_pmc_tsb_label">Vorm (Balans)</string>
     <string name="athlete_profile_pmc_acwr_label">Belastingsratio (ACWR)</string>
     <string name="athlete_profile_pmc_ramp_label">7d opbouw</string>
-    <string name="athlete_profile_pmc_ramp_format">%1$+.1f CTL/wk</string>
+    <string name="athlete_profile_pmc_ramp_format">%1$+.1f/wk</string>
     <string name="athlete_profile_pmc_ramp_warning">Snelle opbouw</string>
     <string name="athlete_profile_pmc_zone_fresh">Wedstrijdklaar</string>
     <string name="athlete_profile_pmc_zone_neutral">Neutraal</string>
@@ -2052,9 +2052,9 @@
     <string name="athlete_profile_pmc_empty">Nog geen trainingsbelastingsgegevens beschikbaar.</string>
 
     <!-- Workout Power Training Metrics (ATT-3858 / REQ-UI-402) -->
-    <string name="workout_power_metrics_np_format">NP: %1$.0f W</string>
-    <string name="workout_power_metrics_if_format">IF: %1$.2f</string>
-    <string name="workout_power_metrics_tss_format">TSS: %1$.0f</string>
+    <string name="workout_power_metrics_np_format">WP: %1$.0f W</string>
+    <string name="workout_power_metrics_if_format">RI: %1$.2f</string>
+    <string name="workout_power_metrics_tss_format">Load: %1$.0f</string>
     <string name="workout_power_metrics_work_format">Arbeid: %1$.0f kJ</string>
     <string name="workout_power_metrics_wkg_format">%1$.2f W/kg</string>
     <string name="workout_power_metrics_vi_format">VI: %1$.2f</string>
@@ -2063,13 +2063,13 @@
     <string name="tuning_cat_physiology_models">Fysiologie &amp; trainingsmodellen</string>
     <string name="tuning_physiology_none_enabled">Alleen basisstatistieken</string>
     <string name="tuning_physiology_coggan_short">Coggan</string>
-    <string name="tuning_physiology_pmc_short">PMC</string>
+    <string name="tuning_physiology_pmc_short">Belasting / Vorm</string>
     <string name="tuning_physiology_ef_short">EF / Pw:Hr</string>
     <string name="tuning_physiology_cp_short">CP / W\'bal</string>
-    <string name="tuning_physiology_coggan_title">Coggan-vermogensmetrieken (NP, IF, TSS)</string>
-    <string name="tuning_physiology_coggan_desc">Toon Normalized Power, Intensity Factor, TSS en Variability Index in trainingen en cockpit</string>
-    <string name="tuning_physiology_pmc_title">Prestatiemanagement (PMC)</string>
-    <string name="tuning_physiology_pmc_desc">Toon grafiek voor Fitness (CTL), Vermoeidheid (ATL) en Vorm (TSB) bij Profiel &amp; zones</string>
+    <string name="tuning_physiology_coggan_title">Vermogensmetrieken (WP, RI, Load)</string>
+    <string name="tuning_physiology_coggan_desc">Toon gewogen vermogen, relatieve intensiteit, trainingsbelasting en Variability Index in trainingen en cockpit</string>
+    <string name="tuning_physiology_pmc_title">Trainingsbelasting &amp; vorm</string>
+    <string name="tuning_physiology_pmc_desc">Toon grafiek voor Conditie (42d), Vermoeidheid (7d) en Vorm (balans) bij Profiel &amp; zones</string>
     <string name="tuning_physiology_ef_title">Aerobe efficiëntie &amp; ontkoppeling</string>
     <string name="tuning_physiology_ef_desc">Toon efficiëntiefactor (EF) en aerobe ontkoppeling (Pw:Hr / Pa:Hr) in overzichten en details</string>
     <string name="tuning_physiology_cp_title">Critical Power &amp; anaerobe batterij (CP, W\', W\'bal)</string>
@@ -2213,7 +2213,7 @@
     <string name="tip_gear_tracking_action">Uitrusting beheren</string>
     <string name="tip_training_zones_title">Fysiologie &amp; trainingszones</string>
     <string name="tip_training_zones_subtitle">Coggan Power, Karvonen HS &amp; W\'-batterij</string>
-    <string name="tip_training_zones_desc">Profiteer van geavanceerde statistieken zoals Normalized Power (NP), Intensity Factor (IF), TSS en live W\'-batterij. Pas je 7 vermogenszones en hartslagzones aan in je profiel.</string>
+    <string name="tip_training_zones_desc">Profiteer van geavanceerde statistieken zoals Gewogen Vermogen (WP), Relatieve Intensiteit (RI), Trainingsbelasting en live W\'-batterij. Pas je 7 vermogenszones en hartslagzones aan in je profiel.</string>
     <string name="tip_training_zones_action">Zones configureren</string>
     <string name="tip_data_backup_title">Datasoevereiniteit &amp; offline back-up</string>
     <string name="tip_data_backup_subtitle">Volledige controle zonder verplichte cloudaccounts</string>

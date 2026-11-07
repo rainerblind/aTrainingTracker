@@ -371,7 +371,7 @@ class TranslationParityTest {
         // 1. German translations
         val deStrings = parseStrings(File(resDir, "values-de"))
         assertEquals("Integrierte Pebble-App", deStrings["pebble_build_in"]?.text)
-        assertEquals("Trainingsbelastungs-Score (TSS)", deStrings["tss"]?.text)
+        assertEquals("Trainingsbelastung", deStrings["tss"]?.text)
         assertEquals("Pedal-Leistungsbalance", deStrings["pedal_power_balance"]?.text)
 
         // 2. Dutch translations

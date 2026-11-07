@@ -7422,6 +7422,25 @@
   3. *Clean-Room Targeted Regression Execution (`TST-UI-458.3`)*:
   • Execute targeted package tests (`com.atrainingtracker.trainingtracker.migration.*`, `com.atrainingtracker.trainingtracker.localization.*`, `build.*`) asserting 100% pass rate.
 
+### TST-UI-459: **Trademark-Free Physiology & Localization Terminology Parity Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-459`
+- **Component**: `strings.xml` (all 9 locales), `WorkoutDetails.kt`, `AthleteProfileScreen.kt`, `AdvancedTuningAccordion.kt`, `TipsGuideScreen.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-5678`
+- **Test Description**:
+  1. *9-Language Localization & Positional Specifier Audit (`TST-UI-459.1`, `TranslationParityTest.kt`)*:
+  • Verify that all 20 updated physiology string resources exist and are non-empty across all 9 locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
+  • Verify positional format specifier preservation (`%1$+.1f`, `%1$.0f`, `%1$.2f`) and zero decorative inline emojis (`ATT-5400`).
+  • Verify non-translatable badge strings `normalized_power_short` (`WP`), `intensity_factor_short` (`RI`), and `tss_short` (`Load`) are defined exclusively in `values/strings.xml`.
+  2. *Tuning Accordion Subtitle & Model Concatenation Unit Tests (`TST-UI-459.2`, `AdvancedTuningAccordionTest.kt`)*:
+  • Verify `tuning_physiology_pmc_short` is loaded as `"Load / Form"` (or localized) and accordion subtitle concatenates active models cleanly.
+  3. *Sensor Category & Filter Query Contract Tests (`TST-UI-459.3`, `SensorCategoryAndSelectorContractTest.kt`)*:
+  • Verify search filter matching by full name and short abbreviation for `NORMALIZED_POWER` (`"WP"` / `"Weighted Power"`).
+  4. *Mathematical & Schema Invariance Unit Tests (`TST-UI-459.4`, `PowerPhysiologyCalculatorTest.kt`)*:
+  • Verify calculation functions (`calculateHrTss`, `computePerformanceManagementChart`) and DTO mappings (`resolvePowerTrainingSummary`) produce identical results without schema alterations.
+  5. *Clean-Room Targeted Regression Execution (`TST-UI-459.5`)*:
+  • Execute targeted test suites (`com.atrainingtracker.trainingtracker.localization.*`, `com.atrainingtracker.trainingtracker.ui.athleteprofile.*`, `com.atrainingtracker.trainingtracker.ui.settings.tuning.*`, `com.atrainingtracker.trainingtracker.ui.help.*`, `com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.*`) asserting 100% pass rate.
+
+
 
 
 

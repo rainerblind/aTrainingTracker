@@ -33,14 +33,14 @@ Rigorous training prescription demands mathematically grounded physiological thr
 <tr>
 <td width="65%" valign="top" markdown="1">
 
-## 7.2 Scientific Telemetry Metrics: NP, IF, TSS, W'bal & EF
+## 7.2 Scientific Telemetry Metrics: WP, RI, Load, W'bal & EF
 
 During and after your sessions, **aTrainingTracker** computes state-of-the-art exercise physiology metrics:
 
-- **Normalized Power ($\text{NP}$)**: Weighted power reflecting the true physiological cost of non-steady efforts (surges, hills, descents).
-- **Intensity Factor ($\text{IF}$)**: Ratio of NP to your current FTP ($\text{IF} = \text{NP} / \text{FTP}$).
-- **Training Stress Score ($\text{TSS}$)**: Holistic physiological dose of the session:
-  $$\text{TSS} = \frac{t \times \text{NP} \times \text{IF}}{\text{FTP} \times 3600} \times 100$$
+- **Weighted Power ($\text{WP}$)**: Weighted power reflecting the true physiological cost of non-steady efforts (surges, hills, descents).
+- **Relative Intensity ($\text{RI}$)**: Ratio of WP to your current FTP ($\text{RI} = \text{WP} / \text{FTP}$).
+- **Training Load ($\text{Load}$)**: Holistic physiological dose of the session:
+  $$\text{Load} = \frac{t \times \text{WP} \times \text{RI}}{\text{FTP} \times 3600} \times 100$$
 - **Skiba Anaerobic Battery ($W'_{\text{bal}}$)**: Real-time estimate of remaining anaerobic work capacity and replenishment rates during sub-CP recoveries.
 - **Efficiency Factor ($\text{EF}$) & Aerobic Decoupling ($\text{Pw:Hr}$)**: Work rate to cardiac output ratio. Cardiac drift ($\text{Pw:Hr} > 5\%$) indicates cardiovascular fatigue.
 
@@ -60,19 +60,19 @@ During and after your sessions, **aTrainingTracker** computes state-of-the-art e
 <tr>
 <td width="65%" valign="top" markdown="1">
 
-## 7.3 Performance Management Chart (PMC)
+## 7.3 Training Load & Form
 
-The integrated PMC models your longitudinal athletic development based on the Banister impulse-response model:
+The integrated load & form tracker models your longitudinal athletic development based on the Banister impulse-response model:
 
-- **Fitness ($\text{CTL}$ - Chronic Training Load)**: Exponentially weighted training load across the past 42 days (blue curve).
-- **Fatigue ($\text{ATL}$ - Acute Training Load)**: Acute fatigue accrued over the past 7 days (pink curve).
-- **Form ($\text{TSB}$ - Training Stress Balance)**: Balance between fitness and fatigue ($\text{TSB} = \text{CTL} - \text{ATL}$, orange curve). Positive TSB values indicate race readiness.
+- **Fitness (42 days)**: Exponentially weighted training load across the past 42 days (blue curve).
+- **Fatigue (7 days)**: Acute fatigue accrued over the past 7 days (pink curve).
+- **Form (Balance)**: Balance between fitness and fatigue ($\text{Form} = \text{Fitness} - \text{Fatigue}$, orange curve). Positive form values indicate race readiness.
 - **Acute:Chronic Workload Ratio (ACWR)** & **7-Day Ramp Rate**: Safeguard against overtraining injuries and guide peak performance tapering.
 
 </td>
 <td width="35%" valign="top" align="center">
-  <a href="../img/07_telemetry_charts.png"><img src="../img/07_telemetry_charts.png" width="240" alt="Performance Management Chart" /></a>
-  <br/><sub><em>PMC fitness (CTL), fatigue (ATL), and form (TSB) curves</em></sub>
+  <a href="../img/07_telemetry_charts.png"><img src="../img/07_telemetry_charts.png" width="240" alt="Training Load & Form" /></a>
+  <br/><sub><em>Training load and form curves (Fitness, Fatigue, Form)</em></sub>
 </td>
 </tr>
 </table>

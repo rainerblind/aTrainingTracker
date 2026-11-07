@@ -259,14 +259,14 @@
     <string name="power_short">power</string>
     <string name="power_to_weight">Power-to-weight ratio</string>
     <string name="power_to_weight_short">W/kg</string>
-    <string name="normalized_power">Normalized Power</string>
-    <string name="normalized_power_short" translatable="false">NP</string>
-    <string name="intensity_factor">Intensity Factor</string>
-    <string name="intensity_factor_short" translatable="false">IF</string>
+    <string name="normalized_power">Weighted Power</string>
+    <string name="normalized_power_short" translatable="false">WP</string>
+    <string name="intensity_factor">Relative Intensity</string>
+    <string name="intensity_factor_short" translatable="false">RI</string>
     <string name="work_kj">Mechanical Work</string>
     <string name="work_kj_short" translatable="false">kJ</string>
-    <string name="tss">Training Stress Score</string>
-    <string name="tss_short" translatable="false">TSS</string>
+    <string name="tss">Training Load</string>
+    <string name="tss_short" translatable="false">Load</string>
     <string name="speed">speed</string>
     <string name="speed_short">spd</string>
     <string name="current_sensors">current sensors</string>
@@ -2234,13 +2234,13 @@
     <string name="workout_decoupling_drift">High Drift (≥5%)</string>
 
     <!-- Performance Management Chart (ATT-3859 / REQ-UI-401) -->
-    <string name="athlete_profile_pmc_title">Performance Management (CTL / ATL / TSB)</string>
-    <string name="athlete_profile_pmc_ctl_label">Fitness (CTL)</string>
-    <string name="athlete_profile_pmc_atl_label">Fatigue (ATL)</string>
-    <string name="athlete_profile_pmc_tsb_label">Form (TSB)</string>
+    <string name="athlete_profile_pmc_title">Training Load &amp; Form (Fitness / Fatigue / Form)</string>
+    <string name="athlete_profile_pmc_ctl_label">Fitness (42d)</string>
+    <string name="athlete_profile_pmc_atl_label">Fatigue (7d)</string>
+    <string name="athlete_profile_pmc_tsb_label">Form (Balance)</string>
     <string name="athlete_profile_pmc_acwr_label">Workload Ratio (ACWR)</string>
     <string name="athlete_profile_pmc_ramp_label">7d Ramp Rate</string>
-    <string name="athlete_profile_pmc_ramp_format">%1$+.1f CTL/wk</string>
+    <string name="athlete_profile_pmc_ramp_format">%1$+.1f/wk</string>
     <string name="athlete_profile_pmc_ramp_warning">High Ramp</string>
     <string name="athlete_profile_pmc_zone_fresh">Race-Ready</string>
     <string name="athlete_profile_pmc_zone_neutral">Neutral</string>
@@ -2253,9 +2253,9 @@
     <string name="athlete_profile_pmc_empty">No workout training load data yet.</string>
 
     <!-- Workout Power Training Metrics (ATT-3858 / REQ-UI-402) -->
-    <string name="workout_power_metrics_np_format">NP: %1$.0f W</string>
-    <string name="workout_power_metrics_if_format">IF: %1$.2f</string>
-    <string name="workout_power_metrics_tss_format">TSS: %1$.0f</string>
+    <string name="workout_power_metrics_np_format">WP: %1$.0f W</string>
+    <string name="workout_power_metrics_if_format">RI: %1$.2f</string>
+    <string name="workout_power_metrics_tss_format">Load: %1$.0f</string>
     <string name="workout_power_metrics_work_format">Work: %1$.0f kJ</string>
     <string name="workout_power_metrics_wkg_format">%1$.2f W/kg</string>
     <string name="workout_power_metrics_vi_format">VI: %1$.2f</string>
@@ -2264,13 +2264,13 @@
     <string name="tuning_cat_physiology_models">Physiology &amp; Training Models</string>
     <string name="tuning_physiology_none_enabled">Basic metrics only</string>
     <string name="tuning_physiology_coggan_short">Coggan</string>
-    <string name="tuning_physiology_pmc_short">PMC</string>
+    <string name="tuning_physiology_pmc_short">Load / Form</string>
     <string name="tuning_physiology_ef_short">EF / Pw:Hr</string>
     <string name="tuning_physiology_cp_short">CP / W\'bal</string>
-    <string name="tuning_physiology_coggan_title">Coggan Power Metrics (NP, IF, TSS)</string>
-    <string name="tuning_physiology_coggan_desc">Show Normalized Power, Intensity Factor, Training Stress Score, and Variability Index in workouts and cockpit</string>
-    <string name="tuning_physiology_pmc_title">Performance Management (PMC)</string>
-    <string name="tuning_physiology_pmc_desc">Show Fitness (CTL), Fatigue (ATL), and Form (TSB) chart on the Profile &amp; Zones screen</string>
+    <string name="tuning_physiology_coggan_title">Power Training Metrics (WP, RI, Load)</string>
+    <string name="tuning_physiology_coggan_desc">Show Weighted Power, Relative Intensity, Training Load, and Variability Index in workouts and cockpit</string>
+    <string name="tuning_physiology_pmc_title">Training Load &amp; Form</string>
+    <string name="tuning_physiology_pmc_desc">Show Fitness (42d), Fatigue (7d), and Form (Balance) chart on the Profile &amp; Zones screen</string>
     <string name="tuning_physiology_ef_title">Aerobic Efficiency &amp; Decoupling</string>
     <string name="tuning_physiology_ef_desc">Show Efficiency Factor (EF) and Aerobic Decoupling (Pw:Hr / Pa:Hr) in workout summaries and details</string>
     <string name="tuning_physiology_cp_title">Critical Power &amp; Anaerobic Battery (CP, W\', W\'bal)</string>
@@ -2414,7 +2414,7 @@
     <string name="tip_gear_tracking_action">Manage Equipment</string>
     <string name="tip_training_zones_title">Physiology &amp; Training Zones</string>
     <string name="tip_training_zones_subtitle">Coggan Power, Karvonen HR &amp; W\' Balance</string>
-    <string name="tip_training_zones_desc">Leverage advanced athletic metrics including Normalized Power (NP), Intensity Factor (IF), TSS, and real-time W\' balance depletion. Customize 7 power zones and Karvonen heart rate zones in your profile.</string>
+    <string name="tip_training_zones_desc">Leverage advanced athletic metrics including Weighted Power (WP), Relative Intensity (RI), Training Load, and real-time W\' balance depletion. Customize 7 power zones and Karvonen heart rate zones in your profile.</string>
     <string name="tip_training_zones_action">Configure Zones</string>
     <string name="tip_data_backup_title">Data Sovereignty &amp; Offline Backup</string>
     <string name="tip_data_backup_subtitle">Full control without mandatory cloud accounts</string>

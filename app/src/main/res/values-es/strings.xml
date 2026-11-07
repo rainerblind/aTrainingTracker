@@ -190,10 +190,10 @@
     <string name="power_short">potencia</string>
     <string name="power_to_weight">Relación potencia-peso</string>
     <string name="power_to_weight_short">W/kg</string>
-    <string name="normalized_power">Potencia normalizada</string>
-    <string name="intensity_factor">Factor de intensidad</string>
+    <string name="normalized_power">Potencia ponderada</string>
+    <string name="intensity_factor">Intensidad relativa</string>
     <string name="work_kj">Trabajo mecánico</string>
-    <string name="tss">Puntuación de estrés del entrenamiento</string>
+    <string name="tss">Carga de entrenamiento</string>
     <string name="speed">velocidad</string>
     <string name="speed_short">vel</string>
     <string name="current_sensors">sensores actuales</string>
@@ -2034,13 +2034,13 @@
     <string name="workout_decoupling_drift">Deriva alta (≥5%)</string>
 
     <!-- Performance Management Chart (ATT-3859 / REQ-UI-401) -->
-    <string name="athlete_profile_pmc_title">Gestión del rendimiento (CTL / ATL / TSB)</string>
-    <string name="athlete_profile_pmc_ctl_label">Forma física (CTL)</string>
-    <string name="athlete_profile_pmc_atl_label">Fatiga (ATL)</string>
-    <string name="athlete_profile_pmc_tsb_label">Estado (TSB)</string>
+    <string name="athlete_profile_pmc_title">Carga de entrenamiento y estado (Forma / Fatiga / Estado)</string>
+    <string name="athlete_profile_pmc_ctl_label">Forma física (42d)</string>
+    <string name="athlete_profile_pmc_atl_label">Fatiga (7d)</string>
+    <string name="athlete_profile_pmc_tsb_label">Estado (Equilibrio)</string>
     <string name="athlete_profile_pmc_acwr_label">Ratio de carga (ACWR)</string>
     <string name="athlete_profile_pmc_ramp_label">Rampa 7d</string>
-    <string name="athlete_profile_pmc_ramp_format">%1$+.1f CTL/sem</string>
+    <string name="athlete_profile_pmc_ramp_format">%1$+.1f/sem</string>
     <string name="athlete_profile_pmc_ramp_warning">Rampa alta</string>
     <string name="athlete_profile_pmc_zone_fresh">Listo para competir</string>
     <string name="athlete_profile_pmc_zone_neutral">Neutral</string>
@@ -2053,9 +2053,9 @@
     <string name="athlete_profile_pmc_empty">Aún no hay datos de carga de entrenamiento.</string>
 
     <!-- Workout Power Training Metrics (ATT-3858 / REQ-UI-402) -->
-    <string name="workout_power_metrics_np_format">NP: %1$.0f W</string>
-    <string name="workout_power_metrics_if_format">IF: %1$.2f</string>
-    <string name="workout_power_metrics_tss_format">TSS: %1$.0f</string>
+    <string name="workout_power_metrics_np_format">WP: %1$.0f W</string>
+    <string name="workout_power_metrics_if_format">RI: %1$.2f</string>
+    <string name="workout_power_metrics_tss_format">Load: %1$.0f</string>
     <string name="workout_power_metrics_work_format">Trabajo: %1$.0f kJ</string>
     <string name="workout_power_metrics_wkg_format">%1$.2f W/kg</string>
     <string name="workout_power_metrics_vi_format">VI: %1$.2f</string>
@@ -2064,13 +2064,13 @@
     <string name="tuning_cat_physiology_models">Fisiología y modelos de entrenamiento</string>
     <string name="tuning_physiology_none_enabled">Solo métricas básicas</string>
     <string name="tuning_physiology_coggan_short">Coggan</string>
-    <string name="tuning_physiology_pmc_short">PMC</string>
+    <string name="tuning_physiology_pmc_short">Carga / Estado</string>
     <string name="tuning_physiology_ef_short">EF / Pw:Hr</string>
     <string name="tuning_physiology_cp_short">CP / W\'bal</string>
-    <string name="tuning_physiology_coggan_title">Métricas de potencia Coggan (NP, IF, TSS)</string>
-    <string name="tuning_physiology_coggan_desc">Mostrar potencia normalizada, factor de intensidad, TSS e índice de variabilidad en entrenamientos y cabina</string>
-    <string name="tuning_physiology_pmc_title">Gestión del rendimiento (PMC)</string>
-    <string name="tuning_physiology_pmc_desc">Mostrar gráfico de forma física (CTL), fatiga (ATL) y forma (TSB) en Perfil y zonas</string>
+    <string name="tuning_physiology_coggan_title">Métricas de potencia (WP, RI, Load)</string>
+    <string name="tuning_physiology_coggan_desc">Mostrar potencia ponderada, intensidad relativa, carga de entrenamiento e índice de variabilidad en entrenamientos y cabina</string>
+    <string name="tuning_physiology_pmc_title">Control de carga y estado</string>
+    <string name="tuning_physiology_pmc_desc">Mostrar gráfico de forma física (42d), fatiga (7d) y estado (equilibrio) en Perfil y zonas</string>
     <string name="tuning_physiology_ef_title">Eficiencia aeróbica y desacoplamiento</string>
     <string name="tuning_physiology_ef_desc">Mostrar factor de eficiencia (EF) y desacoplamiento aeróbico (Pw:Hr / Pa:Hr) en resúmenes y detalles</string>
     <string name="tuning_physiology_cp_title">Potencia crítica y batería anaeróbica (CP, W\', W\'bal)</string>
@@ -2214,7 +2214,7 @@
     <string name="tip_gear_tracking_action">Administrar equipamiento</string>
     <string name="tip_training_zones_title">Fisiología y zonas de entrenamiento</string>
     <string name="tip_training_zones_subtitle">Potencia Coggan, FC Karvonen y batería W\'</string>
-    <string name="tip_training_zones_desc">Aprovecha métricas avanzadas como Potencia Normalizada (NP), Factor de Intensidad (IF), TSS y batería W\' en vivo. Personaliza tus 7 zonas de potencia y zonas de pulso Karvonen.</string>
+    <string name="tip_training_zones_desc">Aprovecha métricas avanzadas como Potencia Ponderada (WP), Intensidad Relativa (RI), Carga de entrenamiento y batería W\' en vivo. Personaliza tus 7 zonas de potencia y zonas de pulso Karvonen.</string>
     <string name="tip_training_zones_action">Configurar zonas</string>
     <string name="tip_data_backup_title">Soberanía de datos y copias locales</string>
     <string name="tip_data_backup_subtitle">Control total sin cuentas obligatorias en la nube</string>
