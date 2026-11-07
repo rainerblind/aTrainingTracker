@@ -106,4 +106,48 @@ class NavigationDrawerLocalizationTest {
             )
         }
     }
+
+    @Test
+    fun testInfoSupportTitle_allLocalesParityAndEscaping() {
+        val resDir = findResDir()
+        val expectedInfoSupport = mapOf(
+            "" to "Info & Support",
+            "-de" to "Info & Unterstützung",
+            "-es" to "Información y asistencia",
+            "-fr" to "Info et assistance",
+            "-it" to "Info e supporto",
+            "-ja" to "情報とサポート",
+            "-nl" to "Info & ondersteuning",
+            "-pl" to "Informacje i wsparcie",
+            "-pt" to "Informações e suporte"
+        )
+
+        expectedInfoSupport.forEach { (localeSuffix, expectedValue) ->
+            val stringsFile = File(resDir, "values$localeSuffix/strings.xml")
+            assertTrue("strings.xml must exist for locale values$localeSuffix", stringsFile.exists())
+
+            val rawContent = stringsFile.readText()
+            val line = rawContent.lines().firstOrNull { it.contains("name=\"drawer__info_support\"") }
+            assertNotNull("drawer__info_support must exist in values$localeSuffix/strings.xml", line)
+
+            if (line!!.contains("&")) {
+                assertTrue(
+                    "Ampersand must be escaped as &amp; in values$localeSuffix/strings.xml: $line",
+                    line.contains("&amp;")
+                )
+                assertFalse(
+                    "Raw unescaped ampersand forbidden in values$localeSuffix/strings.xml: $line",
+                    line.replace("&amp;", "").contains("&")
+                )
+            }
+
+            val parsedValue = parseStringResource(stringsFile, "drawer__info_support")
+            assertNotNull("Parsed value must not be null for locale values$localeSuffix", parsedValue)
+            assertEquals(
+                "Localized text mismatch for values$localeSuffix/strings.xml",
+                expectedValue,
+                parsedValue
+            )
+        }
+    }
 }

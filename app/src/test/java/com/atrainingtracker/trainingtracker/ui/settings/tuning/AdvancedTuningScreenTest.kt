@@ -70,32 +70,52 @@ class AdvancedTuningScreenTest {
         val file = findScreenSourceFile()
         val content = file.readText()
 
-        // Verify index of each section to ensure correct 3-phase athletic lifecycle sequence
-        val navIndex = content.indexOf("TuningSection.NAVIGATION")
+        // Verify subheaders exist (ATT-5670 / REQ-UI-463)
+        val block1Header = content.indexOf("R.string.tuning_group_cockpit_tracking")
+        val block2Header = content.indexOf("R.string.tuning_group_sensors_gps")
+        val block3Header = content.indexOf("R.string.tuning_group_analysis_models")
+
+        assertTrue("Block 1 header must exist", block1Header >= 0)
+        assertTrue("Block 2 header must exist", block2Header >= 0)
+        assertTrue("Block 3 header must exist", block3Header >= 0)
+
+        // Verify index of each section to ensure correct 3-block sequence (REQ-UI-463.2)
         val cockpitIndex = content.indexOf("TuningSection.COCKPIT_TYPOGRAPHY")
+        val navIndex = content.indexOf("TuningSection.NAVIGATION")
         val batteryIndex = content.indexOf("TuningSection.BATTERY_SAVER")
-        val sensorsIndex = content.indexOf("TuningSection.SENSORS_GPS")
         val searchIndex = content.indexOf("TuningSection.SENSOR_SEARCH")
+        val sensorsIndex = content.indexOf("TuningSection.SENSORS_GPS")
         val workoutMasksIndex = content.indexOf("TuningSection.WORKOUT_MASKS_CARDS")
         val aftermathIndex = content.indexOf("TuningSection.AFTERMATH_ANALYSIS")
         val physiologyIndex = content.indexOf("TuningSection.PHYSIOLOGY_MODELS")
+        val routeClusteringIndex = content.indexOf("TuningSection.ROUTE_CLUSTERING")
 
-        assertTrue("Navigation must exist", navIndex >= 0)
         assertTrue("Cockpit Typography must exist", cockpitIndex >= 0)
+        assertTrue("Navigation must exist", navIndex >= 0)
         assertTrue("Battery Saver must exist", batteryIndex >= 0)
-        assertTrue("Sensors GPS must exist", sensorsIndex >= 0)
         assertTrue("Sensor Search must exist", searchIndex >= 0)
+        assertTrue("Sensors GPS must exist", sensorsIndex >= 0)
         assertTrue("Workout Masks must exist", workoutMasksIndex >= 0)
         assertTrue("Aftermath Analysis must exist", aftermathIndex >= 0)
         assertTrue("Physiology Models must exist", physiologyIndex >= 0)
+        assertTrue("Route Clustering must exist", routeClusteringIndex >= 0)
 
-        assertTrue("Navigation must precede Cockpit", navIndex < cockpitIndex)
-        assertTrue("Cockpit must precede Battery Saver", cockpitIndex < batteryIndex)
-        assertTrue("Battery Saver must precede Sensors GPS", batteryIndex < sensorsIndex)
-        assertTrue("Sensors GPS must precede Sensor Search", sensorsIndex < searchIndex)
-        assertTrue("Sensor Search must precede Workout Masks", searchIndex < workoutMasksIndex)
-        assertTrue("Workout Masks must precede Physiology Models", workoutMasksIndex < physiologyIndex)
-        assertTrue("Physiology Models must precede Aftermath Analysis", physiologyIndex < aftermathIndex)
+        // Block 1 sequence
+        assertTrue("Block 1 header precedes Cockpit", block1Header < cockpitIndex)
+        assertTrue("Cockpit must precede Navigation", cockpitIndex < navIndex)
+        assertTrue("Navigation must precede Battery Saver", navIndex < batteryIndex)
+
+        // Block 2 sequence
+        assertTrue("Battery Saver must precede Block 2 header", batteryIndex < block2Header)
+        assertTrue("Block 2 header precedes Sensor Search", block2Header < searchIndex)
+        assertTrue("Sensor Search must precede Sensors GPS", searchIndex < sensorsIndex)
+
+        // Block 3 sequence
+        assertTrue("Sensors GPS must precede Block 3 header", sensorsIndex < block3Header)
+        assertTrue("Block 3 header precedes Workout Masks", block3Header < workoutMasksIndex)
+        assertTrue("Workout Masks must precede Aftermath Analysis", workoutMasksIndex < aftermathIndex)
+        assertTrue("Aftermath Analysis must precede Physiology Models", aftermathIndex < physiologyIndex)
+        assertTrue("Physiology Models must precede Route Clustering", physiologyIndex < routeClusteringIndex)
     }
 
     @Test

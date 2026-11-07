@@ -13851,6 +13851,47 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Backward compatibility for `WorkoutClusterSelectionDialog` callers; 9-language localization parity (`TranslationParityTest`); no regression in `ModalBottomSheetDialogsIntegrityTest`.
 
+### REQ-UI-463: Navigation Drawer & Expert Settings Thematic Grouping [Verified]
+- **Tests**: `TST-UI-463` | **Tickets**: `ATT-5670`
+- **Implementation**: `AppNavigationDrawer.kt`, `AdvancedTuningScreen.kt`, `AdvancedTuningDialog.kt`, `AdvancedTuningAccordion.kt`, `strings.xml` (all 9 locales)
+- **Rationale**: To prevent interface clutter as features expand, the system SHALL restructure the navigation drawer and Expert Settings into coherent thematic groups while strictly preserving all existing routes, actions, and DataStore parameters (Sprint 2026-45.10, ATT-5670, refining `REQ-UI-010` and `REQ-UI-222`):
+1. *Navigation Drawer Group Restructuring (`REQ-UI-463.1`)*:
+• In `AppNavigationDrawer.kt`, `drawer_backup_restore` SHALL be moved into `prefsOnlineCommunities` directly below `drawer_export` (yielding 5 items in Online Communities).
+• `drawer__settings` SHALL be streamlined to 6 items in canonical sequence: `drawer_tracking_layouts`, `drawer_sport_types`, `drawer_auto_pause`, `drawer_display_settings`, `drawer_units`, `drawer_advanced_tuning`.
+• A new collapsible bottom group `drawer__info_support` SHALL be introduced containing: `drawer_supporter`, `drawer_tips_guide`, and `drawer_privacy_policy`.
+2. *Expert Settings Thematic Grouping & Subheaders (`REQ-UI-463.2`)*:
+• The 9 accordions in `AdvancedTuningScreen.kt` and `AdvancedTuningDialog.kt` SHALL be organized into 3 logical blocks separated by visual subheaders:
+  - Block 1 (`tuning_group_cockpit_tracking`): Typography & Icons (`COCKPIT_TYPOGRAPHY`), Navigation & Tracking (`NAVIGATION`), Battery & Screen (`BATTERY_SAVER`).
+  - Block 2 (`tuning_group_sensors_gps`): Sensor Search (`SENSOR_SEARCH`), GPS & Filter (`SENSORS_GPS`).
+  - Block 3 (`tuning_group_analysis_models`): Workout Masks & Cards (`WORKOUT_MASKS_CARDS`), Aftermath & Analysis (`AFTERMATH_ANALYSIS`), Physiology & Performance (`PHYSIOLOGY_MODELS`), Route Clustering (`ROUTE_CLUSTERING`).
+3. *Modularity & Subheader Composable Invariants (`REQ-UI-463.3`)*:
+• `TuningGroupSubheader` composable SHALL be implemented in `AdvancedTuningAccordion.kt`.
+• All files in `ui/settings/tuning/` (`AdvancedTuningScreen.kt`, `AdvancedTuningDialog.kt`, `AdvancedTuningAccordion.kt`) SHALL maintain strictly `< 400` lines per `AdvancedTuningModularityTest`.
+4. *9-Language Parity & Zero Emojis (`REQ-UI-463.4`)*:
+• 4 new strings (`drawer__info_support`, `tuning_group_cockpit_tracking`, `tuning_group_sensors_gps`, `tuning_group_analysis_models`) SHALL be defined across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) with XML entity escaping (`&amp;`) and zero inline emojis (`ATT-5400`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-UI-010` (*Navigation Drawer Architecture*, ATT-3851) and `REQ-UI-222` (*Advanced Tuning Accordion Architecture*, ATT-1821 / ATT-1957).
+2. *Historical Origin & Commit Trace*: Introduced in `d7e82cb4` (drawer collapsible groups) and `e2303aa7` (accordion modularity).
+3. *Root Reason for Existing Formulation*: Settings were sequentially added to `drawer__settings` to avoid proliferating top-level categories. Accordions in Expert Settings were sequentially stacked as features grew.
+4. *Preservation of Core Invariants*: All navigation route IDs (`R.id.*`) and destination routes remain identical; DataStore schema and keys remain untouched; modularity rule (`< 400` lines) is strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the navigation drawer opened,
+• *When* inspecting the drawer groups,
+• *Then* `prefsOnlineCommunities` contains `drawer_backup_restore` directly below `drawer_export`, `drawer__settings` contains 6 configuration items ending with `drawer_advanced_tuning`, and `drawer__info_support` forms the bottom collapsible group with supporter, tips guide, and privacy policy.
+• *Given* the Expert Settings screen or dialog rendered,
+• *When* viewing the accordions list,
+• *Then* the 9 accordions are partitioned into 3 blocks preceded by thematic subheaders `tuning_group_cockpit_tracking`, `tuning_group_sensors_gps`, and `tuning_group_analysis_models`.
+• *Given* `AdvancedTuningModularityTest`,
+• *When* auditing file line counts,
+• *Then* `AdvancedTuningScreen.kt`, `AdvancedTuningDialog.kt`, and `AdvancedTuningAccordion.kt` are all `< 400` lines.
+• *Given* `TranslationParityTest`,
+• *When* validating all 9 locales,
+• *Then* all 4 new keys are non-empty with zero format errors and zero emojis.
+
+**Invariants**: Navigation route resolution (`NavRoutes`), DataStore tuning preference keys, and modularity limits MUST NOT be broken.
+
 
 
 

@@ -21,6 +21,8 @@ package com.atrainingtracker.trainingtracker.ui.settings.tuning
 import android.content.Context
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
+import androidx.annotation.StringRes
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
@@ -330,3 +332,23 @@ fun TuningAccordionSection(
         }
     }
 }
+
+/**
+ * Thematic group subheader separating accordion blocks in Expert Settings (ATT-5670 / REQ-UI-463).
+ */
+@Composable
+fun TuningGroupSubheader(
+    @StringRes titleRes: Int,
+    modifier: Modifier = Modifier
+) {
+    Text(
+        text = stringResource(titleRes),
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
+        fontWeight = FontWeight.Bold,
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp, vertical = 4.dp)
+    )
+}
+

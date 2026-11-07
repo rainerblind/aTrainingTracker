@@ -7492,6 +7492,24 @@
   4. *Clean-Room Targeted Regression Execution (`TST-UI-462.4`)*:
   • Execute targeted test suites (`com.atrainingtracker.trainingtracker.ui.clusters.*`, `com.atrainingtracker.trainingtracker.migration.*`, `com.atrainingtracker.trainingtracker.localization.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
+### TST-UI-463: **Navigation Drawer & Expert Settings Thematic Grouping Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-463`
+- **Component**: `AppNavigationDrawer.kt`, `AdvancedTuningScreen.kt`, `AdvancedTuningDialog.kt`, `AdvancedTuningAccordion.kt`, `strings.xml` (all 9 locales)
+- **Jira**: `ATT-5670`
+- **Test Description**:
+  1. *Navigation Drawer Group Structure & Ordering Contract Tests (`TST-UI-463.1`, `AppNavigationDrawerTest.kt`)*:
+  • Verify `prefsOnlineCommunities` contains `drawer_backup_restore` directly below `drawer_export` (5 items total).
+  • Verify `drawer__settings` contains exactly 6 items ending with `drawer_advanced_tuning`.
+  • Verify new `drawer__info_support` group exists, is collapsible, and contains `drawer_supporter`, `drawer_tips_guide`, and `drawer_privacy_policy`.
+  2. *Expert Settings Thematic Grouping & Accordion Sequence Contract Tests (`TST-UI-463.2`, `AdvancedTuningScreenTest.kt`)*:
+  • Verify presence of 3 group subheaders and the new canonical sequence of 9 accordions across Screen and Dialog.
+  3. *Modularity & File Line Limit Enforcement (`TST-UI-463.3`, `AdvancedTuningModularityTest.kt`)*:
+  • Verify `AdvancedTuningScreen.kt`, `AdvancedTuningDialog.kt`, and `AdvancedTuningAccordion.kt` strictly maintain `< 400` lines.
+  4. *9-Language Localization Audit (`TST-UI-463.4`, `TranslationParityTest.kt`)*:
+  • Verify `drawer__info_support`, `tuning_group_cockpit_tracking`, `tuning_group_sensors_gps`, and `tuning_group_analysis_models` exist and are non-empty across all 9 locales with zero inline emojis (`ATT-5400`) and proper `&amp;` escaping.
+  5. *Clean-Room Targeted Regression Execution (`TST-UI-463.5`)*:
+  • Execute targeted test suites (`com.atrainingtracker.trainingtracker.ui.navigation.*`, `com.atrainingtracker.trainingtracker.ui.settings.tuning.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
 
 
 

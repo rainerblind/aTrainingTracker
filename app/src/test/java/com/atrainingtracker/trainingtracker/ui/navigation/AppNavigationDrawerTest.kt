@@ -288,14 +288,10 @@ class AppNavigationDrawerTest {
             groups.any { it.titleRes == R.string.drawer__expert_settings }
         )
 
-        val lastGroup = groups.last()
-        assertEquals(
-            "Final drawer group must be Settings",
-            R.string.drawer__settings,
-            lastGroup.titleRes
-        )
+        val settingsGroup = groups.firstOrNull { it.titleRes == R.string.drawer__settings }
+        assertTrue("Settings group must exist", settingsGroup != null)
 
-        val advancedTuningItem = lastGroup.items.lastOrNull()
+        val advancedTuningItem = settingsGroup!!.items.lastOrNull()
         assertTrue("Settings group must have items", advancedTuningItem != null)
         assertEquals(
             "Final item of Settings group must be drawer_advanced_tuning",
@@ -306,6 +302,13 @@ class AppNavigationDrawerTest {
             "Advanced tuning item must reference advanced_tuning_title",
             R.string.advanced_tuning_title,
             advancedTuningItem?.titleRes
+        )
+
+        val lastGroup = groups.last()
+        assertEquals(
+            "Final drawer group must be Info & Support (ATT-5670 / REQ-UI-463)",
+            R.string.drawer__info_support,
+            lastGroup.titleRes
         )
     }
 
@@ -325,16 +328,16 @@ class AppNavigationDrawerTest {
     @Test
     fun testDrawerGroups_settingsContainsTipsGuide() {
         val groups = createDrawerGroups(R.string.tab_start)
-        val settingsGroup = groups.firstOrNull { it.titleRes == R.string.drawer__settings }
-        assertTrue("Settings group must exist", settingsGroup != null)
+        val infoSupportGroup = groups.firstOrNull { it.titleRes == R.string.drawer__info_support }
+        assertTrue("Info & Support group must exist (ATT-5670 / REQ-UI-463)", infoSupportGroup != null)
 
-        val tipsGuideItem = settingsGroup!!.items.firstOrNull { it.id == R.id.drawer_tips_guide }
-        assertTrue("Settings group must contain drawer_tips_guide (REQ-UI-432)", tipsGuideItem != null)
+        val tipsGuideItem = infoSupportGroup!!.items.firstOrNull { it.id == R.id.drawer_tips_guide }
+        assertTrue("Info & Support group must contain drawer_tips_guide (REQ-UI-432)", tipsGuideItem != null)
         assertEquals(R.drawable.ic_tips_and_updates, tipsGuideItem?.iconRes)
         assertEquals(R.string.drawer_tips_guide, tipsGuideItem?.titleRes)
 
-        val tipsIndex = settingsGroup.items.indexOfFirst { it.id == R.id.drawer_tips_guide }
-        val privacyIndex = settingsGroup.items.indexOfFirst { it.id == R.id.drawer_privacy_policy }
+        val tipsIndex = infoSupportGroup.items.indexOfFirst { it.id == R.id.drawer_tips_guide }
+        val privacyIndex = infoSupportGroup.items.indexOfFirst { it.id == R.id.drawer_privacy_policy }
         assertTrue("Tips guide must be placed before privacy policy", tipsIndex < privacyIndex)
     }
 }

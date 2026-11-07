@@ -614,6 +614,7 @@
     <string name="end">end</string>
     <string name="my_locations">Favorite Tracks</string>
     <string name="drawer__settings">Settings</string>
+    <string name="drawer__info_support">Info &amp; Support</string>
     <string name="get_extremaType_of_sportType_format">Get %1$s positions of your %2$s workouts.</string>
     <string name="strava" translatable="false">Strava</string>
     <string name="getting_my_locations">Looking for known locations.</string>
@@ -1645,6 +1646,9 @@
     <string name="drawer__expert_settings">Expert Settings</string>
     <string name="advanced_tuning_title">Expert Settings</string>
     <string name="advanced_tuning_open">Expert Settings…</string>
+    <string name="tuning_group_cockpit_tracking">Cockpit &amp; Tracking</string>
+    <string name="tuning_group_sensors_gps">Sensors &amp; GPS</string>
+    <string name="tuning_group_analysis_models">Analysis &amp; Models</string>
     <string name="advanced_tuning_warning_title">Expert Settings</string>
     <string name="advanced_tuning_warning_desc">Modifying these parameters alters core tracking heuristics, sensor filtering, and battery saving behavior. You can restore factory defaults at any time.</string>
     <string name="tuning_cat_battery_saver">AMOLED Battery Saver</string>

@@ -480,6 +480,7 @@
     <string name="max_line_distance">最遠地点</string>
     <string name="end">ゴール</string>
     <string name="drawer__settings">設定</string>
+    <string name="drawer__info_support">情報とサポート</string>
     <string name="starred_run_segments">ラン</string>
     <string name="starred_bike_segments">バイク</string>
     <string name="segments">セグメント</string>
@@ -1426,6 +1427,9 @@
     <string name="drawer__expert_settings">エキスパート設定</string>
     <string name="advanced_tuning_title">エキスパート設定</string>
     <string name="advanced_tuning_open">エキスパート設定…</string>
+    <string name="tuning_group_cockpit_tracking">コックピットと記録</string>
+    <string name="tuning_group_sensors_gps">センサーとGPS</string>
+    <string name="tuning_group_analysis_models">分析とモデル</string>
     <string name="advanced_tuning_warning_title">エキスパート設定</string>
     <string name="advanced_tuning_warning_desc">これらのパラメータを変更すると、トラッキングのヒューリスティック、センサーフィルタリング、およびバッテリー節約動作が変更されます。いつでも工場出荷時のデフォルトに戻すことができます。</string>
     <string name="tuning_cat_battery_saver">AMOLEDバッテリーセーバー</string>

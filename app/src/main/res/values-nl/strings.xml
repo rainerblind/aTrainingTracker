@@ -482,6 +482,7 @@
     <string name="max_line_distance">verste punt</string>
     <string name="end">stop</string>
     <string name="drawer__settings">Instellingen</string>
+    <string name="drawer__info_support">Info &amp; ondersteuning</string>
     <string name="starred_run_segments">Hardlopen</string>
     <string name="starred_bike_segments">Fietsen</string>
     <string name="segments">Segmenten</string>
@@ -1446,6 +1447,9 @@
     <string name="drawer__expert_settings">Expertinstellingen</string>
     <string name="advanced_tuning_title">Expertinstellingen</string>
     <string name="advanced_tuning_open">Expertinstellingen…</string>
+    <string name="tuning_group_cockpit_tracking">Cockpit &amp; registratie</string>
+    <string name="tuning_group_sensors_gps">Sensoren &amp; gps</string>
+    <string name="tuning_group_analysis_models">Analyse &amp; modellen</string>
     <string name="advanced_tuning_warning_title">Expertinstellingen</string>
     <string name="advanced_tuning_warning_desc">Het wijzigen van deze parameters beïnvloedt trackingheuristieken, sensorfiltering en batterijbesparing. U kunt te allen tijde de fabrieksinstellingen herstellen.</string>
     <string name="tuning_cat_battery_saver">AMOLED-batterijbesparing</string>

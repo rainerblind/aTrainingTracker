@@ -949,6 +949,7 @@
     <string name="end">koniec</string>
     <string name="my_locations">Ulubione trasy</string>
     <string name="drawer__settings">Ustawienia</string>
+    <string name="drawer__info_support">Informacje i wsparcie</string>
     <string name="getting_my_locations">Szukanie znanych lokalizacji.</string>
     <string name="editLocationName">Nazwa:</string>
     <string name="LocationAltitude">Wysokość:</string>
@@ -1449,6 +1450,9 @@
     <string name="drawer__expert_settings">Ustawienia eksperckie</string>
     <string name="advanced_tuning_title">Ustawienia eksperckie</string>
     <string name="advanced_tuning_open">Ustawienia eksperckie…</string>
+    <string name="tuning_group_cockpit_tracking">Kokpit i rejestrowanie</string>
+    <string name="tuning_group_sensors_gps">Czujniki i GPS</string>
+    <string name="tuning_group_analysis_models">Analiza i modele</string>
     <string name="advanced_tuning_warning_title">Ustawienia eksperckie</string>
     <string name="advanced_tuning_warning_desc">Zmiana tych parametrów wpływa na heurystykę śledzenia, filtrowanie czujników i oszczędzanie baterii. W każdej chwili możesz przywrócić ustawienia fabryczne.</string>
     <string name="tuning_cat_battery_saver">Oszczędzanie baterii AMOLED</string>

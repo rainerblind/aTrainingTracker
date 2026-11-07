@@ -482,6 +482,7 @@
     <string name="max_line_distance">mais distante</string>
     <string name="end">chegada</string>
     <string name="drawer__settings">Ajustes</string>
+    <string name="drawer__info_support">Informações e suporte</string>
     <string name="starred_run_segments">Corrida</string>
     <string name="starred_bike_segments">Bike</string>
     <string name="segments">Segmentos</string>
@@ -1446,6 +1447,9 @@
     <string name="drawer__expert_settings">Configurações de especialista</string>
     <string name="advanced_tuning_title">Configurações de especialista</string>
     <string name="advanced_tuning_open">Configurações de especialista…</string>
+    <string name="tuning_group_cockpit_tracking">Painel e rastreamento</string>
+    <string name="tuning_group_sensors_gps">Sensores e GPS</string>
+    <string name="tuning_group_analysis_models">Análise e modelos</string>
     <string name="advanced_tuning_warning_title">Configurações avançadas</string>
     <string name="advanced_tuning_warning_desc">A modificação destes parâmetros altera a heurística de rastreamento, a filtragem de sensores e a economia de bateria. Você pode restaurar os padrões de fábrica a qualquer momento.</string>
     <string name="tuning_cat_battery_saver">Economia de bateria AMOLED</string>
