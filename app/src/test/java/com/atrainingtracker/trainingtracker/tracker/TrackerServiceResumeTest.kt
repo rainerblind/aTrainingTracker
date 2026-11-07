@@ -406,6 +406,8 @@ class TrackerServiceResumeTest {
 
         // 1. onStartCommand runs while mBanalService == null
         service.onStartCommand(intent, 0, 1)
+        // ATT-5827: Cancel background 1 Hz scheduler handle to eliminate timing races under load
+        service.cancelTrackerHandle()
 
         // mSamplesTableName must NOT be "\"null\"", and future must remain pending until BANALService connects
         assertNotEquals("\"null\"", service.samplesTableName)
@@ -415,6 +417,7 @@ class TrackerServiceResumeTest {
         // Idempotency check: a second rapid onStartCommand preserves the same pending future instance
         val firstPendingFuture = service.tableInitializationFuture
         service.onStartCommand(intent, 0, 1)
+        service.cancelTrackerHandle()
         assertSame("Repeated onStartCommand must preserve active pending future idempotently", firstPendingFuture, service.tableInitializationFuture)
 
         // 2. BANALService connects asynchronously
@@ -472,6 +475,8 @@ class TrackerServiceResumeTest {
         every { intent.getStringExtra(TrackerService.START_TYPE) } returns TrackerService.StartType.RESUME_BY_USER.name
 
         service.onStartCommand(intent, 0, 1)
+        // ATT-5827: Cancel background 1 Hz scheduler handle to eliminate background thread leakage
+        service.cancelTrackerHandle()
 
         assertNull(service.samplesTableName)
         assertFalse(service.tableInitializationFuture.isDone)

@@ -665,12 +665,12 @@
 ### TST-TRK-018: **Resumed Workout Sample Table Resolution, Asynchronous BANAL Binding Barrier & Sample Write Error Surfacing Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-026`
 - **Component**: **Resumed Workout Sample Table Resolution, Asynchronous BANAL Binding Barrier & Sample Write Error Surfacing Verification Suite**
-- **Jira**: ``ATT-3980``
+- **Jira**: ``ATT-3980, ATT-5827``
 - **Test Description**:
   1. *`applyResumedState` Table Name & Barrier Synchronization Test (`TrackerServiceResumeTest.kt`)*:
   • Verify `applyResumedState(state)` updates `mBaseFileName`, recomputes `mSamplesTableName = "\"<baseFileName>\""`, and completes `mTableInitializationFuture`.
   2. *Asynchronous Deferred `RESUME_SERVICE_RECREATION` & `RESUME_BY_USER` End-to-End Tests (`TrackerServiceResumeTest.kt`)*:
-  • Simulate `onStartCommand()` with `mBanalService == null` followed by `mBanalConnection.onServiceConnected()`; verify `mSamplesTableName` is never `"\"null\""`, `mTableInitializationFuture` remains incomplete until `applyResumedState()` runs, `recreateValuesWhenResuming()` executes before `createNewLap()` and `onSearchingFinished()`, and subsequent `sampleAndWriteToDb()` ticks insert rows into the resumed workout's SQLite sample table.
+  • Simulate `onStartCommand()` with `mBanalService == null` followed by `mBanalConnection.onServiceConnected()`; verify `mSamplesTableName` is never `"\"null\""`, `mTableInitializationFuture` remains incomplete until `applyResumedState()` runs, `recreateValuesWhenResuming()` executes before `createNewLap()` and `onSearchingFinished()`, and subsequent `sampleAndWriteToDb()` ticks insert rows into the resumed workout's SQLite sample table. Verify that cancelling `mTrackerHandle` via `cancelTrackerHandle()` halts background 1 Hz sampling immediately after `onStartCommand()`, eliminating timing races and ensuring deterministic single-execution assertions (`verify(exactly = 1) { mockSamplesDb.setTransactionSuccessful() }`) without thread leakage (ATT-5827).
   3. *Invalid Table Name Guard & SQLite Error Surfacing Tests (`TrackerServiceResumeTest.kt`)*:
   • Verify `WorkoutSamplesDatabaseManager.getTableName()` throws `IllegalArgumentException` for `null`, empty/blank, or `"null"` input.
   • Verify `TrackerService.handleMissingColumns()` rethrows non-column `SQLiteException` errors instead of silently swallowing them.
