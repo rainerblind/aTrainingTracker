@@ -672,7 +672,8 @@ fun WorkoutClusterSelectionDialog(
     onSelect: (WorkoutCluster) -> Unit,
     onDismiss: () -> Unit,
     sportNameResolver: (Long) -> String,
-    bSportTypeResolver: (Long) -> BSportType
+    bSportTypeResolver: (Long) -> BSportType,
+    onCreateNew: (() -> Unit)? = null
 ) {
     AppModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -687,6 +688,42 @@ fun WorkoutClusterSelectionDialog(
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp, vertical = 8.dp)
         ) {
+            // ATT-5674: Optional escape hatch to create a new favorite route from selection dialog
+            if (onCreateNew != null) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            onCreateNew()
+                            onDismiss()
+                        },
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = stringResource(R.string.cluster_naming__create_new),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
             Text(
                 text = stringResource(R.string.cluster_suggestions_title),
                 style = MaterialTheme.typography.labelSmall,

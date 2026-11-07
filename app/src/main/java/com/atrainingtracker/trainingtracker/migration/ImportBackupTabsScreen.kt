@@ -857,7 +857,11 @@ fun ClusterNamingDialog(
             },
             onDismiss = { showSelectionDialog = false },
             sportNameResolver = { SportTypeDatabaseManager.getInstance(localContext).getUIName(it) },
-            bSportTypeResolver = { SportTypeDatabaseManager.getInstance(localContext).getBSportType(it) }
+            bSportTypeResolver = { SportTypeDatabaseManager.getInstance(localContext).getBSportType(it) },
+            onCreateNew = {
+                selectedCluster = null
+                showSelectionDialog = false
+            }
         )
     }
 
@@ -971,8 +975,18 @@ fun ClusterNamingDialog(
             modifier = Modifier.fillMaxWidth().clickable { showSelectionDialog = true },
             label = { Text(stringResource(R.string.cluster_naming__selected_route_label)) },
             trailingIcon = {
-                IconButton(onClick = { showSelectionDialog = true }) {
-                    Icon(painter = painterResource(id = R.drawable.my_locations), contentDescription = stringResource(R.string.select_route))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (selectedCluster != null) {
+                        IconButton(onClick = { selectedCluster = null }) {
+                            Icon(
+                                imageVector = Icons.Default.Clear,
+                                contentDescription = stringResource(R.string.clear)
+                            )
+                        }
+                    }
+                    IconButton(onClick = { showSelectionDialog = true }) {
+                        Icon(painter = painterResource(id = R.drawable.my_locations), contentDescription = stringResource(R.string.select_route))
+                    }
                 }
             }
         )

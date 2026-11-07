@@ -7475,6 +7475,24 @@
   4. *Clean-Room Targeted Regression Execution (`TST-UI-461.4`)*:
   • Execute targeted test suites (`com.atrainingtracker.trainingtracker.localization.*`, `com.atrainingtracker.trainingtracker.ui.climbs.*`, `com.atrainingtracker.trainingtracker.database.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
+### TST-UI-462: **Cluster Naming & Selection Dialog Reversion and Clear Action Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-462`
+- **Component**: `ImportBackupTabsScreen.kt`, `WorkoutClusterComponents.kt`, `ClusterNamingDialogEscapeContractTest.kt`, `ClusterNamingDialogLabelsVisualContractTest.kt`
+- **Jira**: `ATT-5674`
+- **Test Description**:
+  1. *Clear Action & Create-New UI Binding Contract Tests (`TST-UI-462.1`, `ClusterNamingDialogEscapeContractTest.kt`)*:
+  • Verify `WorkoutClusterSelectionDialog` declares optional parameter `onCreateNew: (() -> Unit)? = null`.
+  • Verify `WorkoutClusterSelectionDialog` conditionally renders `Icons.Default.Add` and `R.string.cluster_naming__create_new` when `onCreateNew != null`.
+  • Verify `ClusterNamingDialog` passes `onCreateNew` callback resetting `selectedCluster = null`.
+  • Verify `ClusterNamingDialog` binds `Icons.Default.Clear` and `R.string.clear` when `selectedCluster != null`.
+  2. *9-Language Localization & String Resource Audit (`TST-UI-462.2`, `TranslationParityTest.kt`)*:
+  • Verify `cluster_naming__create_new`, `clear`, and `select_route` exist and are non-empty across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) with zero inline emojis (`ATT-5400`).
+  3. *Composable Signature & Reflection Integrity Test (`TST-UI-462.3`, `ModalBottomSheetDialogsIntegrityTest.kt`)*:
+  • Verify `WorkoutClusterSelectionDialog` composable function remains public and callable with default parameter overloads.
+  4. *Clean-Room Targeted Regression Execution (`TST-UI-462.4`)*:
+  • Execute targeted test suites (`com.atrainingtracker.trainingtracker.ui.clusters.*`, `com.atrainingtracker.trainingtracker.migration.*`, `com.atrainingtracker.trainingtracker.localization.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+
 
 
 

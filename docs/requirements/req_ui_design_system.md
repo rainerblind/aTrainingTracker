@@ -13830,6 +13830,28 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Zero changes to `KEY_SHOW_LIVE_CLIMBS` or database schema; zero changes to climb detection or telemetry calculation logic.
 
+### REQ-UI-462: Cluster Naming & Selection Dialog: Bi-directional Escape from Existing Route to Create New Favorite Route [Verified]
+- **Tests**: `TST-UI-462` | **Tickets**: `ATT-5674`
+- **Implementation**: `ImportBackupTabsScreen.kt` (`ClusterNamingDialog`), `WorkoutClusterComponents.kt` (`WorkoutClusterSelectionDialog`)
+- **Rationale**: In `ClusterNamingDialog`, when the athlete selects an existing favorite route via `WorkoutClusterSelectionDialog`, the UI must provide immediate, discoverable escape routes back to creating a new favorite route (`selectedCluster = null`). The system SHALL provide:
+1. *Escape via Selection Dialog (`REQ-UI-462.1`)*: `WorkoutClusterSelectionDialog` SHALL expose an optional callback `onCreateNew: (() -> Unit)? = null`. When non-null, the dialog SHALL render a highlighted selectable card / row with `Icons.Default.Add` and label `cluster_naming__create_new` above the candidate routes list. Tapping this card SHALL invoke `onCreateNew()`, dismiss the bottom sheet, and revert `selectedCluster = null`.
+2. *Direct Clear Action on Selected Route Field (`REQ-UI-462.2`)*: When `selectedCluster != null`, the `OutlinedTextField` for the selected route in `ClusterNamingDialog` SHALL display a clear action button (`IconButton` with `Icons.Default.Clear` and content description `R.string.clear`) in its `trailingIcon`, enabling the athlete to revert `selectedCluster` to `null` with a single tap without opening the candidate picker dialog.
+3. *State & Form Restoration Invariants (`REQ-UI-462.3`)*: Upon resetting `selectedCluster` to `null` via either mechanism, the new favorite route naming section (`cluster_naming__new_name_prompt` and `name` `OutlinedTextField`) SHALL immediately reappear, preserving any previously entered or pre-filled route name text in `name`. Other callers of `WorkoutClusterSelectionDialog` (`WorkoutClustersScreen`, `WorkoutClusterHeatmapScreen`) where `onCreateNew` is omitted (null) SHALL remain strictly unchanged without showing the creation card.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `ClusterNamingDialog` with an existing favorite route selected (`selectedCluster != null`),
+• *When* the athlete taps the clear button (`X`) in the route field's `trailingIcon`,
+• *Then* `selectedCluster` becomes `null`, the route field reverts to displaying `cluster_naming__create_new`, and the new route name input field reappears preserving previously entered text.
+• *Given* `ClusterNamingDialog` with `WorkoutClusterSelectionDialog` opened,
+• *When* the athlete taps the `+ Neu erstellen...` (`cluster_naming__create_new`) card above candidate suggestions,
+• *Then* `onCreateNew` is invoked, the selection dialog dismisses, and `selectedCluster` is reset to `null`.
+• *Given* callers `WorkoutClustersScreen` or `WorkoutClusterHeatmapScreen` invoking `WorkoutClusterSelectionDialog` without `onCreateNew`,
+• *When* the bottom sheet renders,
+• *Then* the creation card is omitted and only candidate routes are displayed.
+
+**Invariants**: Backward compatibility for `WorkoutClusterSelectionDialog` callers; 9-language localization parity (`TranslationParityTest`); no regression in `ModalBottomSheetDialogsIntegrityTest`.
+
+
 
 
 
