@@ -1,0 +1,48 @@
+{
+  "project_key": "PROJ",
+  "board_id": 1,
+  "transitions": {
+    "todo": "11",
+    "in_progress": "21",
+    "in_review": "31",
+    "done": "41"
+  },
+  "roles": {
+    "agent1": "agent1_account_id",
+    "agent2": "agent2_account_id",
+    "coordinator": "coordinator_account_id",
+    "human": "human_account_id"
+  },
+  "custom_fields": {
+    "story_points": "customfield_10016",
+    "sprint": "customfield_10020"
+  },
+  "requirements": {
+    "prefixes": [
+      "ARC", "BLD", "BUG", "INT", "LIV", "LOG", "MAN", "NFR", "PRO", "REG", "SEC", "STB", "STR", "TOOL", "TST", "UI"
+    ],
+    "mandatory_archaeology_fields": [
+      "Original Requirement ID & Target",
+      "Historical Origin & Commit Trace",
+      "Root Reason for Existing Formulation",
+      "Preservation of Core Invariants"
+    ]
+  },
+  "paths": {
+    "engineering_dir": "docs/engineering",
+    "requirements_master": "docs/requirements.md",
+    "requirements_shard_dir": "docs/requirements",
+    "tests_master": "docs/tests.md",
+    "tests_shard_dir": "docs/tests",
+    "allowed_engineering_entries": [
+      "analysis",
+      "plans",
+      "retros",
+      "test_specs",
+      "walkthroughs",
+      "test_results",
+      "rule_history_archive.md",
+      "workflow_overview.html"
+    ]
+  }
+}

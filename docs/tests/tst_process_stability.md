@@ -1322,6 +1322,23 @@
   4. *Clean-Room Governance & Regression Execution (`TST-PRO-035.4`)*:
   • Execute `python3 tools/verify_requirement_governance.py` (exit 0) and targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.*"`.
 
+### TST-PRO-036: **Parameterized Issue Tracker Automation & Requirement Governance Tooling Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-036`
+- **Component**: **Höchstmaß Parameterized Tooling**
+- **Jira**: `ATT-5667`
+- **Test Description**:
+  1. *Declarative Configuration Schema & Template Audit (`TST-PRO-036.1`, `HoechstmassToolingContractTest.kt`)*:
+  • Verify existence and non-emptiness of `tools/hoechstmass/tools/hoechstmass_config.json` and `.env.jira.example`.
+  • Assert `hoechstmass_config.json` declares `project_key`, `board_id`, `transitions`, `roles`, and `paths`.
+  2. *Parameterized Tooling Source & Decoupling Contract (`TST-PRO-036.2`, `HoechstmassToolingContractTest.kt`)*:
+  • Verify existence and non-emptiness of `tools/hoechstmass/tools/jira_util.py` and `tools/hoechstmass/tools/verify_requirement_governance.py`.
+  • Assert neither tool contains hardcoded `ATT-` or proprietary developer account IDs.
+  3. *Python Automated Tooling Unit Test Suite (`TST-PRO-036.3`, `test_hoechstmass_tools.py`)*:
+  • Execute `python3 tools/hoechstmass/tools/test_hoechstmass_tools.py` verifying config loading, role resolution, secret masking, and governance validation pass 100%.
+  4. *Clean-Room Governance & Regression Execution (`TST-PRO-036.4`)*:
+  • Execute `python3 tools/verify_requirement_governance.py` (exit 0) and targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.*"`.
+
+
 
 
 

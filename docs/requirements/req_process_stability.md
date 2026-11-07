@@ -1996,6 +1996,45 @@ The workflow SHALL mandate that:
 
 **Invariants**: Active project rules and runtime code remain untouched; zero regression in test suite or governance.
 
+### REQ-PRO-036: Parameterized Issue Tracker Automation & Requirement Governance Tooling [Verified]
+- **Tests**: `TST-PRO-036` | **Tickets**: `ATT-5667`
+- **Implementation**: `tools/hoechstmass/tools/hoechstmass_config.json`, `tools/hoechstmass/tools/.env.jira.example`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/HoechstmassToolingContractTest.kt`
+- **Rationale**: Extract, parameterize, and harden the core Agile Agentic ASPICE (AAA) automation tooling into `tools/hoechstmass/tools/` using a declarative configuration schema (`hoechstmass_config.json` and `.env.jira.example`), decoupling project constants from the automation engine (ATT-5667, Part 2 of 3, extending `REQ-PRO-019`, `REQ-PRO-020`, `REQ-PRO-021`, `REQ-PRO-022`, `REQ-PRO-034`, and `REQ-PRO-035`):
+1. *Declarative Configuration Schema & Multi-Account Template (`REQ-PRO-036.1`)*:
+• `tools/hoechstmass/tools/hoechstmass_config.json` SHALL provide a declarative JSON schema specifying project key, board ID, transition name-to-ID mappings, custom field IDs (story points, sprint), role account ID mappings (`agent1`, `agent2`, `coordinator`, `human`), requirement prefix list, and canonical engineering paths.
+• `tools/hoechstmass/tools/.env.jira.example` SHALL provide an environment variable template for multi-account credentials (`JIRA_URL`, `JIRA_AGENT1_*`, `JIRA_AGENT2_*`, `JIRA_COORDINATOR_*`, `JIRA_HUMAN_ACCOUNT_ID`), ensuring secrets remain externalized.
+2. *Parameterized Jira CLI Automation (`REQ-PRO-036.2`)*:
+• `tools/hoechstmass/tools/jira_util.py` SHALL read configuration dynamically from `hoechstmass_config.json` and `.env.jira`.
+• The tool SHALL provide composite stage commands (`submit-stage`, `gate-verdict`, `check-gate`, `ensure-retro`), role segregation, token secret masking, and automated context injection without hardcoded `ATT` strings or account IDs.
+3. *Parameterized Requirement Governance Tool (`REQ-PRO-036.3`)*:
+• `tools/hoechstmass/tools/verify_requirement_governance.py` SHALL validate Chesterton's Fence 4-field audit, canonical `docs/engineering/` directory structure, and living documentation master index counter parity dynamically using paths and prefixes from `hoechstmass_config.json`.
+4. *Automated Tooling Unit & Contract Verification (`REQ-PRO-036.4`)*:
+• Python unit test suite `tools/hoechstmass/tools/test_hoechstmass_tools.py` SHALL verify configuration parsing, role resolution, secret masking, and governance verification logic.
+• JUnit contract test `HoechstmassToolingContractTest.kt` SHALL assert 100% presence, non-emptiness, and execution contracts for all exported tools under `tools/hoechstmass/tools/`. Zero runtime code modifications in `app/src/main/`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-036` under Epic Standalone / Framework Initiative (*Clean Code & Developer Tools*), extending `REQ-PRO-019`, `REQ-PRO-020`, `REQ-PRO-021`, `REQ-PRO-022`, `REQ-PRO-034`, and `REQ-PRO-035`. Targets `tools/hoechstmass/tools/` and `app/src/test/java/com/atrainingtracker/trainingtracker/build/HoechstmassToolingContractTest.kt`.
+2. *Historical Origin & Commit Trace*: Evolved across sprints: `ATT-103` (initial CLI), `ATT-4290` (composite stage commands), `ATT-4520` (multi-account authentication), `ATT-5431` (living doc counter parity), and `ATT-3922` (Part 1 core framework).
+3. *Root Reason for Existing Formulation*: Tooling in root `tools/` was built directly for *aTrainingTracker*. Hardcoding project constants allowed rapid sprint execution but prevents open-source, project-agnostic adoption.
+4. *Preservation of Core Invariants*: Zero changes to existing production code in `app/src/main/` or active tooling in `tools/`; active `.agents/` and `docs/` remain untouched; Human Decision Gate on parent tickets remains inviolable; clean-room test suite passes 100%.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `tools/hoechstmass/tools/`,
+• *When* inspected,
+• *Then* `hoechstmass_config.json` and `.env.jira.example` define all project, transition, role, and path configurations.
+• *Given* `jira_util.py` and `verify_requirement_governance.py` in `tools/hoechstmass/tools/`,
+• *When* inspected,
+• *Then* neither tool contains hardcoded `ATT` project keys or proprietary account IDs, and both load dynamically from configuration.
+• *Given* `test_hoechstmass_tools.py`,
+• *When* executed with `python3`,
+• *Then* all unit tests for config loading, role resolution, secret masking, and governance logic pass 100%.
+• *Given* `HoechstmassToolingContractTest`,
+• *When* executed via Gradle,
+• *Then* all tooling presence and contract assertions pass 100%.
+
+**Invariants**: Active root tools in `tools/` and runtime code in `app/src/main/` remain untouched; zero regression in test suite or governance.
+
+
 
 
 
