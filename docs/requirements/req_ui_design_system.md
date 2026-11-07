@@ -13892,6 +13892,41 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Navigation route resolution (`NavRoutes`), DataStore tuning preference keys, and modularity limits MUST NOT be broken.
 
+### REQ-UI-464: WorkoutDetailTabbedContent Horizontal Tab Swipe & Gesture Arbitration [Verified]
+- **Tests**: `TST-UI-464` | **Tickets**: `ATT-5826`
+- **Implementation**: `WorkoutDetailTabbedContent.kt`, `WorkoutDetailTabConfig.kt`, `MapDetailLayout.kt`, `WorkoutDetailTabsTest.kt`
+- **Rationale**: To prevent athletes from being trapped on the "Map & Graphs" tab (`tab_map_graphs`) and map/chart areas across all tabs, the system SHALL arbitrate horizontal touch gestures so that horizontal tab swiping is only isolated when touching actively inside the 2D map viewport or within the active scrubbing plot area of a chart, and SHALL permit unhindered tab switching from edge gutters, dividers, zoom toolbars, chart headers, and margin strips (Sprint 2026-45.10, ATT-5826, refining `REQ-UI-408.4`):
+1. *Initial Down Edge-Swipe Gutter Lock (`REQ-UI-464.1`)*:
+• In `WorkoutDetailTabConfig.kt` and `WorkoutDetailTabbedContent.kt`, the edge-swipe gutter SHALL be configured to `32.dp` (`edgeSwipeGutterDp = 32f`).
+• The touch X-coordinate evaluation for edge swipe SHALL be latched exclusively from the initial `ACTION_DOWN` (`awaitFirstDown`) event. Once an edge swipe starts within `[0..32.dp]` or `[width - 32.dp..width]`, `userScrollEnabled` on `HorizontalPager` SHALL remain locked to `true` across all subsequent `ACTION_MOVE` events until touch release, regardless of whether the finger travels into the center of the screen.
+2. *Granular Interactive Canvas Bounding (`REQ-UI-464.2`)*:
+• In `WorkoutDetailTabbedContent.kt` and `MapDetailLayout.kt`, blanket touch capture wrapping the entire `MapDetailLayout` with `isTouchingInteractiveCanvas = true` SHALL be excised.
+• `isTouchingInteractiveCanvas = true` SHALL be asserted strictly when touch events originate inside the interactive map viewport (`mapBox`) or inside the active plot area of a chart (`50.dp` from the left edge to `52.dp` from the right edge in portrait, or `0.dp` from the right edge in landscape with docked marginal distributions).
+3. *Non-Interactive Strip Pass-Through (`REQ-UI-464.3`)*:
+• Touching the `SplitPaneDivider`, the `GlobalTelemetryZoomToolbar` control row, diagram title text headers (e.g., *Höhenprofil*, *Geschwindigkeit*, *Herzfrequenz*, *Leistung*, *W'bal*), inter-chart spacing, left Y-axis labels/margin (`0..50.dp`), or right histogram margin strip (`52.dp`) SHALL set `isTouchingInteractiveCanvas = false`.
+• When `isTouchingInteractiveCanvas` is `false`, `requiresHorizontalGestureIsolation` SHALL evaluate to `false`, allowing horizontal swiping to navigate seamlessly between tabs.
+4. *Zero 1-Frame Recomposition Lag (`REQ-UI-464.4`)*:
+• Gesture arbitration state SHALL synchronize upon the initial `ACTION_DOWN` pass so `HorizontalPager` receives and processes the down event without dropped gestures or 1-frame latency.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-UI-408.4` (*Gesture Isolation in WorkoutDetailTabConfig.kt and WorkoutDetailTabbedContent.kt*, ATT-3920).
+2. *Historical Origin & Commit Trace*: Introduced in commit `ea5fa705` (ATT-3920) to isolate 2D map panning and horizontal telemetry scrubbing from triggering unintended tab switches.
+3. *Root Reason for Existing Formulation*: Blanket `isTouchingInteractiveCanvas = true` was placed around `MapDetailLayout` as a coarse heuristic because non-map tabs hosted scrollable cards, assuming `analyticsContent` would clear the flag. On `tab_map_graphs`, `analyticsContent == null`, which inadvertently covered 100% of the screen. Additionally, `lastTouchXDp` was updated during `MOVE`, causing edge swipes to cancel as soon as the finger moved past 24 dp.
+4. *Preservation of Core Invariants*: Chart scrubbing within plot bounds, chart zoom/pan mode, 2D map navigation, and vertical scrolling via `ChartGestureDisambiguator` remain 100% unimpeded.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the athlete is on the "Map & Graphs" tab (`tab_map_graphs`),
+• *When* performing a horizontal swipe starting within the left or right 32 dp edge gutter,
+• *Then* the pager switches to the adjacent tab smoothly without gesture abortion as the finger moves across the screen.
+• *Given* the athlete touching the `SplitPaneDivider`, `GlobalTelemetryZoomToolbar`, a chart header, or chart Y-axis/histogram margins,
+• *When* swiping horizontally,
+• *Then* `isTouchingInteractiveCanvas` evaluates to `false` and the tab switches.
+• *Given* the athlete touching inside the 2D map canvas or within the active plot area of a telemetry chart away from the edge gutters,
+• *When* swiping horizontally,
+• *Then* gesture isolation is enforced, preserving 2D map panning and chart scrubbing.
+
+**Invariants**: Map 2D panning, chart scrubbing within plot bounds, vertical scrolling, and tab persistence schemas MUST NOT be degraded.
+
 
 
 

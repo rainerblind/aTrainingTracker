@@ -254,7 +254,7 @@ data class WorkoutDetailTabConfig(
         isTouchingInteractiveCanvas: Boolean = true,
         touchXDp: Float? = null,
         screenWidthDp: Float? = null,
-        edgeSwipeGutterDp: Float = 24f
+        edgeSwipeGutterDp: Float = 32f
     ): Boolean {
         if (touchXDp != null && screenWidthDp != null && screenWidthDp > edgeSwipeGutterDp * 2f) {
             if (touchXDp <= edgeSwipeGutterDp || touchXDp >= screenWidthDp - edgeSwipeGutterDp) {

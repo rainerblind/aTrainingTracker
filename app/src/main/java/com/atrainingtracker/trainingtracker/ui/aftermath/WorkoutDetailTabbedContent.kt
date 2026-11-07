@@ -21,6 +21,8 @@ package com.atrainingtracker.trainingtracker.ui.aftermath
 import android.app.Application
 import android.content.res.Configuration
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -152,7 +154,7 @@ fun WorkoutDetailTabbedContent(
     var activeSharePhoto by remember { mutableStateOf<WorkoutPhotoEntry?>(null) }
 
     // Hit-test & edge-gutter state for gesture arbitration between Map/Chart canvases and lower-pane cards
-    var isTouchingInteractiveCanvas by remember { mutableStateOf(true) }
+    var isTouchingInteractiveCanvas by remember { mutableStateOf(false) }
     var lastTouchXDp by remember { mutableStateOf<Float?>(null) }
 
     val currentPageIndex = pagerState.currentPage.coerceIn(0, (visibleTabs.size - 1).coerceAtLeast(0))
@@ -206,14 +208,14 @@ fun WorkoutDetailTabbedContent(
                 .then(if (useStatusBarsPadding) Modifier.statusBarsPadding() else Modifier)
                 .nestedScroll(connection)
                 .pointerInput(density) {
-                    awaitPointerEventScope {
-                        while (true) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown(pass = PointerEventPass.Initial, requireUnconsumed = false)
+                        lastTouchXDp = with(density) { down.position.x.toDp().value }
+                        do {
                             val event = awaitPointerEvent(PointerEventPass.Initial)
-                            val firstChange = event.changes.firstOrNull()
-                            if (firstChange != null) {
-                                lastTouchXDp = with(density) { firstChange.position.x.toDp().value }
-                            }
-                        }
+                        } while (event.changes.any { it.pressed })
+                        lastTouchXDp = null
+                        isTouchingInteractiveCanvas = false
                     }
                 }
         ) {
@@ -243,60 +245,116 @@ fun WorkoutDetailTabbedContent(
                 when (effectiveMode) {
                     WorkoutDetailTabLayoutMode.MODE_C_FULL_MAP -> {
                         // Mode C: Full-height Map (100% of tab viewport, zero SplitPaneDivider)
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .pointerInput(Unit) {
-                                    awaitPointerEventScope {
-                                        while (true) {
-                                            awaitPointerEvent(PointerEventPass.Initial)
-                                            isTouchingInteractiveCanvas = true
-                                        }
-                                    }
-                                }
-                        ) {
-                            MapDetailLayout(
-                                bSportType = workoutData.bSportType,
-                                zoomFocus = MapZoomFocus.FIT_PRIMARY,
-                                activeScrubPath = activeScrubPath,
-                                minAltitudeOverride = workoutData.minAltitude,
-                                maxAltitudeOverride = workoutData.maxAltitude,
-                                useStatusBarsPadding = false,
-                                showMap = true,
-                                showElevationProfile = false,
-                                showTelemetryCharts = false,
-                                hrZoneDistribution = hrZoneDistribution,
-                                powerZoneDistribution = powerZoneDistribution,
-                                hrZoneDisplayMode = effectiveHrZoneDisplayMode,
-                                powerZoneDisplayMode = effectivePowerZoneDisplayMode,
-                                hrZoneThresholds = hrZoneThresholds,
-                                powerZoneThresholds = powerZoneThresholds,
-                                workoutData = workoutData,
-                                onCreateLapClick = onCreateLapClick,
-                                header = {},
-                                mapContent = mapContent,
-                                overlay = mapOverlay,
-                                metadataContent = null,
-                                analyticsContent = null,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
+                        MapDetailLayout(
+                            bSportType = workoutData.bSportType,
+                            zoomFocus = MapZoomFocus.FIT_PRIMARY,
+                            activeScrubPath = activeScrubPath,
+                            minAltitudeOverride = workoutData.minAltitude,
+                            maxAltitudeOverride = workoutData.maxAltitude,
+                            useStatusBarsPadding = false,
+                            showMap = true,
+                            showElevationProfile = false,
+                            showTelemetryCharts = false,
+                            hrZoneDistribution = hrZoneDistribution,
+                            powerZoneDistribution = powerZoneDistribution,
+                            hrZoneDisplayMode = effectiveHrZoneDisplayMode,
+                            powerZoneDisplayMode = effectivePowerZoneDisplayMode,
+                            hrZoneThresholds = hrZoneThresholds,
+                            powerZoneThresholds = powerZoneThresholds,
+                            workoutData = workoutData,
+                            onCreateLapClick = onCreateLapClick,
+                            onInteractiveCanvasTouch = { isTouchingInteractiveCanvas = it },
+                            header = {},
+                            mapContent = mapContent,
+                            overlay = mapOverlay,
+                            metadataContent = null,
+                            analyticsContent = null,
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
 
                     WorkoutDetailTabLayoutMode.MODE_B_SPLIT_MAP -> {
                         // Mode B: Map pinned at top + SplitPaneDivider + single lower scrollable pane
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .pointerInput(Unit) {
-                                    awaitPointerEventScope {
-                                        while (true) {
-                                            awaitPointerEvent(PointerEventPass.Initial)
-                                            isTouchingInteractiveCanvas = true
-                                        }
+                        MapDetailLayout(
+                            bSportType = workoutData.bSportType,
+                            zoomFocus = MapZoomFocus.FIT_PRIMARY,
+                            activeScrubPath = activeScrubPath,
+                            minAltitudeOverride = workoutData.minAltitude,
+                            maxAltitudeOverride = workoutData.maxAltitude,
+                            useStatusBarsPadding = false,
+                            showMap = true,
+                            showElevationProfile = tabHasElevation,
+                            showTelemetryCharts = tabHasCharts,
+                            hrZoneDistribution = hrZoneDistribution,
+                            powerZoneDistribution = powerZoneDistribution,
+                            hrZoneDisplayMode = effectiveHrZoneDisplayMode,
+                            powerZoneDisplayMode = effectivePowerZoneDisplayMode,
+                            hrZoneThresholds = hrZoneThresholds,
+                            powerZoneThresholds = powerZoneThresholds,
+                            workoutData = workoutData,
+                            onCreateLapClick = onCreateLapClick,
+                            onInteractiveCanvasTouch = { isTouchingInteractiveCanvas = it },
+                            header = {},
+                            mapContent = mapContent,
+                            overlay = mapOverlay,
+                            metadataContent = null,
+                            analyticsContent = if (nonMapNonGraphSections.isNotEmpty()) {
+                                {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .pointerInput(Unit) {
+                                                awaitPointerEventScope {
+                                                    while (true) {
+                                                        awaitPointerEvent(PointerEventPass.Initial)
+                                                        isTouchingInteractiveCanvas = false
+                                                    }
+                                                }
+                                            }
+                                    ) {
+                                        RenderWorkoutDetailCardSections(
+                                            sections = nonMapNonGraphSections,
+                                            workoutData = workoutData,
+                                            tuningConfig = tuningConfig,
+                                            detailPreferences = detailPreferences,
+                                            splitChartData = splitChartData,
+                                            selectedLapNr = selectedLapNr,
+                                            onSelectLapNr = onSelectLapNr,
+                                            hrZoneDistribution = hrZoneDistribution,
+                                            powerZoneDistribution = powerZoneDistribution,
+                                            gradeZoneDistribution = gradeZoneDistribution,
+                                            effectiveHrZoneDisplayMode = effectiveHrZoneDisplayMode,
+                                            effectivePowerZoneDisplayMode = effectivePowerZoneDisplayMode,
+                                            effectiveGradeZoneDisplayMode = effectiveGradeZoneDisplayMode,
+                                            onHrZoneDisplayModeChange = onHrZoneDisplayModeChange,
+                                            onPowerZoneDisplayModeChange = onPowerZoneDisplayModeChange,
+                                            onGradeZoneDisplayModeChange = onGradeZoneDisplayModeChange,
+                                            photos = workoutPhotos,
+                                            onPhotoClick = { activePreviewPhoto = it },
+                                            onSplitLapClick = onSplitLapClick,
+                                            onMoveBoundaryClick = onMoveBoundaryClick,
+                                            onLapClick = onLapClick,
+                                            onAddPhotos = { uris ->
+                                                coroutineScope.launch {
+                                                    uris.forEach { uri ->
+                                                        repository.addWorkoutPhoto(workoutData.id, uri, null)
+                                                    }
+                                                    photosRefreshKey++
+                                                }
+                                            }
+                                        )
                                     }
                                 }
-                        ) {
+                            } else {
+                                null
+                            },
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+
+                    WorkoutDetailTabLayoutMode.MODE_A_CARD_SCROLL -> {
+                        // Mode A: No Map in tab -> Single unified vertical scroll container
+                        if (tabHasElevation || tabHasCharts) {
                             MapDetailLayout(
                                 bSportType = workoutData.bSportType,
                                 zoomFocus = MapZoomFocus.FIT_PRIMARY,
@@ -304,7 +362,7 @@ fun WorkoutDetailTabbedContent(
                                 minAltitudeOverride = workoutData.minAltitude,
                                 maxAltitudeOverride = workoutData.maxAltitude,
                                 useStatusBarsPadding = false,
-                                showMap = true,
+                                showMap = false,
                                 showElevationProfile = tabHasElevation,
                                 showTelemetryCharts = tabHasCharts,
                                 hrZoneDistribution = hrZoneDistribution,
@@ -315,9 +373,8 @@ fun WorkoutDetailTabbedContent(
                                 powerZoneThresholds = powerZoneThresholds,
                                 workoutData = workoutData,
                                 onCreateLapClick = onCreateLapClick,
+                                onInteractiveCanvasTouch = { isTouchingInteractiveCanvas = it },
                                 header = {},
-                                mapContent = mapContent,
-                                overlay = mapOverlay,
                                 metadataContent = null,
                                 analyticsContent = if (nonMapNonGraphSections.isNotEmpty()) {
                                     {
@@ -371,97 +428,6 @@ fun WorkoutDetailTabbedContent(
                                 },
                                 modifier = Modifier.fillMaxSize()
                             )
-                        }
-                    }
-
-                    WorkoutDetailTabLayoutMode.MODE_A_CARD_SCROLL -> {
-                        // Mode A: No Map in tab -> Single unified vertical scroll container
-                        if (tabHasElevation || tabHasCharts) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .pointerInput(Unit) {
-                                        awaitPointerEventScope {
-                                            while (true) {
-                                                awaitPointerEvent(PointerEventPass.Initial)
-                                                isTouchingInteractiveCanvas = true
-                                            }
-                                        }
-                                    }
-                            ) {
-                                MapDetailLayout(
-                                    bSportType = workoutData.bSportType,
-                                    zoomFocus = MapZoomFocus.FIT_PRIMARY,
-                                    activeScrubPath = activeScrubPath,
-                                    minAltitudeOverride = workoutData.minAltitude,
-                                    maxAltitudeOverride = workoutData.maxAltitude,
-                                    useStatusBarsPadding = false,
-                                    showMap = false,
-                                    showElevationProfile = tabHasElevation,
-                                    showTelemetryCharts = tabHasCharts,
-                                    hrZoneDistribution = hrZoneDistribution,
-                                    powerZoneDistribution = powerZoneDistribution,
-                                    hrZoneDisplayMode = effectiveHrZoneDisplayMode,
-                                    powerZoneDisplayMode = effectivePowerZoneDisplayMode,
-                                    hrZoneThresholds = hrZoneThresholds,
-                                    powerZoneThresholds = powerZoneThresholds,
-                                    workoutData = workoutData,
-                                    onCreateLapClick = onCreateLapClick,
-                                    header = {},
-                                    metadataContent = null,
-                                    analyticsContent = if (nonMapNonGraphSections.isNotEmpty()) {
-                                        {
-                                            Column(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .pointerInput(Unit) {
-                                                        awaitPointerEventScope {
-                                                            while (true) {
-                                                                awaitPointerEvent(PointerEventPass.Initial)
-                                                                isTouchingInteractiveCanvas = false
-                                                            }
-                                                        }
-                                                    }
-                                            ) {
-                                                RenderWorkoutDetailCardSections(
-                                                    sections = nonMapNonGraphSections,
-                                                    workoutData = workoutData,
-                                                    tuningConfig = tuningConfig,
-                                                    detailPreferences = detailPreferences,
-                                                    splitChartData = splitChartData,
-                                                    selectedLapNr = selectedLapNr,
-                                                    onSelectLapNr = onSelectLapNr,
-                                                    hrZoneDistribution = hrZoneDistribution,
-                                                    powerZoneDistribution = powerZoneDistribution,
-                                                    gradeZoneDistribution = gradeZoneDistribution,
-                                                    effectiveHrZoneDisplayMode = effectiveHrZoneDisplayMode,
-                                                    effectivePowerZoneDisplayMode = effectivePowerZoneDisplayMode,
-                                                    effectiveGradeZoneDisplayMode = effectiveGradeZoneDisplayMode,
-                                                    onHrZoneDisplayModeChange = onHrZoneDisplayModeChange,
-                                                    onPowerZoneDisplayModeChange = onPowerZoneDisplayModeChange,
-                                                    onGradeZoneDisplayModeChange = onGradeZoneDisplayModeChange,
-                                                    photos = workoutPhotos,
-                                                    onPhotoClick = { activePreviewPhoto = it },
-                                                    onSplitLapClick = onSplitLapClick,
-                                                    onMoveBoundaryClick = onMoveBoundaryClick,
-                                                    onLapClick = onLapClick,
-                                                    onAddPhotos = { uris ->
-                                                        coroutineScope.launch {
-                                                            uris.forEach { uri ->
-                                                                repository.addWorkoutPhoto(workoutData.id, uri, null)
-                                                            }
-                                                            photosRefreshKey++
-                                                        }
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    } else {
-                                        null
-                                    },
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
                         } else {
                             Column(
                                 modifier = Modifier

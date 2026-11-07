@@ -7510,6 +7510,24 @@
   5. *Clean-Room Targeted Regression Execution (`TST-UI-463.5`)*:
   • Execute targeted test suites (`com.atrainingtracker.trainingtracker.ui.navigation.*`, `com.atrainingtracker.trainingtracker.ui.settings.tuning.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
+### TST-UI-464: **WorkoutDetailTabbedContent Horizontal Tab Swipe & Gesture Arbitration Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-464`
+- **Component**: `WorkoutDetailTabbedContent.kt`, `WorkoutDetailTabConfig.kt`, `MapDetailLayout.kt`, `WorkoutDetailTabsTest.kt`
+- **Jira**: `ATT-5826`
+- **Test Description**:
+  1. *Edge Gutter Initial Down Lock Contract Tests (`TST-UI-464.1`, `WorkoutDetailTabsTest.kt`)*:
+  • Verify `WorkoutDetailTabConfig.requiresHorizontalGestureIsolation` uses default `edgeSwipeGutterDp = 32f`.
+  • Verify touches starting within `32.dp` of left or right screen boundary return `false` (pager swipe enabled) regardless of interactive canvas flag.
+  • Verify that touch X is evaluated from initial down and locked across subsequent motion.
+  2. *Granular Interactive Canvas & Strip Pass-Through Contract Tests (`TST-UI-464.2`, `WorkoutDetailTabsTest.kt`)*:
+  • Verify `requiresHorizontalGestureIsolation` returns `false` when `isTouchingInteractiveCanvas = false` even on `tab_map_graphs` where `MAP`, `ELEVATION`, and `CHARTS` are all active.
+  • Verify that non-interactive surfaces (`SplitPaneDivider`, `GlobalTelemetryZoomToolbar`, chart headings, Y-axis margin `0..50.dp`, and right histogram margin `52.dp`) do not assert canvas touch.
+  3. *Active Map & Chart Plot Scrubbing Isolation Contract Tests (`TST-UI-464.3`, `WorkoutDetailTabsTest.kt`)*:
+  • Verify `requiresHorizontalGestureIsolation` returns `true` when touching inside the map viewport or chart plot area (`touchXDp` between `50.dp` and `width - 52.dp`) away from edge gutters.
+  4. *Clean-Room Targeted Regression Execution (`TST-UI-464.4`)*:
+  • Execute targeted unit test suites (`com.atrainingtracker.trainingtracker.ui.aftermath.*`, `com.atrainingtracker.trainingtracker.ui.map.*`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+
 
 
 
