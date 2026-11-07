@@ -268,7 +268,7 @@ fun WorkoutClustersScreen(
         else -> {
             var workoutToCluster by remember { mutableStateOf<WorkoutData?>(null) }
             var clusterToMerge by remember { mutableStateOf<WorkoutCluster?>(null) }
-            var mergeTargetCluster by remember { mutableStateOf<WorkoutCluster?>(null) }
+            var pendingMergePair by remember { mutableStateOf<Pair<WorkoutCluster, WorkoutCluster>?>(null) }
             val migrationStatus by viewModel.migrationStatus.collectAsStateWithLifecycle()
 
             WorkoutClustersTabsScreen(
@@ -289,15 +289,16 @@ fun WorkoutClustersScreen(
                 onMergeRequest = { clusterToMerge = it }
             )
 
-            if (clusterToMerge != null && mergeTargetCluster == null) {
+            if (clusterToMerge != null && pendingMergePair == null) {
+                val source = clusterToMerge!!
                 val candidates = remember(clusterToMerge) {
-                    viewModel.getCandidateClustersForCluster(clusterToMerge!!)
+                    viewModel.getCandidateClustersForCluster(source)
                 }
                 WorkoutClusterSelectionDialog(
                     title = stringResource(R.string.cluster_menu_merge),
                     candidates = candidates,
                     onSelect = { target ->
-                        mergeTargetCluster = target
+                        pendingMergePair = source to target
                     },
                     onDismiss = { clusterToMerge = null },
                     sportNameResolver = { viewModel.getSportName(it) },
@@ -305,13 +306,11 @@ fun WorkoutClustersScreen(
                 )
             }
 
-            if (clusterToMerge != null && mergeTargetCluster != null) {
-                val source = clusterToMerge!!
-                val target = mergeTargetCluster!!
+            if (pendingMergePair != null) {
+                val (source, target) = pendingMergePair!!
                 androidx.compose.material3.AlertDialog(
                     onDismissRequest = {
-                        clusterToMerge = null
-                        mergeTargetCluster = null
+                        pendingMergePair = null
                     },
                     containerColor = MaterialTheme.colorScheme.surface,
                     tonalElevation = 0.dp,
@@ -330,8 +329,7 @@ fun WorkoutClustersScreen(
                         androidx.compose.material3.TextButton(
                             onClick = {
                                 viewModel.mergeClusters(source, target)
-                                clusterToMerge = null
-                                mergeTargetCluster = null
+                                pendingMergePair = null
                             }
                         ) {
                             Text(stringResource(R.string.cluster_merge_action))
@@ -340,8 +338,7 @@ fun WorkoutClustersScreen(
                     dismissButton = {
                         androidx.compose.material3.TextButton(
                             onClick = {
-                                clusterToMerge = null
-                                mergeTargetCluster = null
+                                pendingMergePair = null
                             }
                         ) {
                             Text(stringResource(R.string.cancel))

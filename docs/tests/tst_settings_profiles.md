@@ -936,7 +936,7 @@
 ### TST-SET-089: **Workout Cluster Merge & Similarity-Ranked Target Selection Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-089`
 - **Component**: `WorkoutClusterComponents.kt`, `WorkoutClustersScreen.kt`, `WorkoutClustersViewModel.kt`, `WorkoutClusterEngine.kt`, `WorkoutSummariesDatabaseManager.java`, `RoutesDatabaseManager.kt`, `WorkoutClusterMergeTest.kt`
-- **Jira**: `ATT-5666`
+- **Jira**: `ATT-5666`, `ATT-5824`
 - **Test Description**:
   1. *Engine Mathematical & Database Reassignment Unit Tests (`TST-SET-089.1`, `WorkoutClusterMergeTest.kt`)*:
   • Create source cluster `A` ($N_A = 2$) and target cluster `B` ($N_B = 4$).
@@ -947,8 +947,12 @@
   • Verify cluster `A` is deleted from `WorkoutClusterDatabaseManager`.
   2. *Similarity Ranking Candidate Selection Unit Tests (`TST-SET-089.2`, `WorkoutClustersViewModelTest.kt`)*:
   • Given source cluster `A`, verify candidate list excludes `A`, computes similarity scores via `scoreClusters`, and orders candidates ascending (lowest score = highest similarity at index 0).
-  3. *9-Language Localization & Positional Specifier Audit (`TST-SET-089.3`, `TranslationParityTest.kt`)*:
+  3. *Two-Step Transition State Independence Contract Test (`TST-SET-089.3`, `WorkoutClusterMergeDialogContractTest.kt`)*:
+  • In `WorkoutClustersScreen`, verify selecting candidate cluster `B` in `WorkoutClusterSelectionDialog` transitions to merge confirmation dialog immediately on the first attempt even when `onDismiss` executes immediately upon selection.
+  • Verify that dismissing the selection dialog (`onDismiss`) without selection resets state cleanly and does not open confirmation dialog.
+  • Verify that confirming or dismissing the confirmation dialog resets `pendingMergePair` to `null`.
+  4. *9-Language Localization & Positional Specifier Audit (`TST-SET-089.4`, `TranslationParityTest.kt`)*:
   • Verify `cluster_menu_merge`, `cluster_merge_dialog_title`, `cluster_merge_dialog_message` (`%1$s`, `%2$d`, `%3$s`), and `cluster_merge_action` exist across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) with zero inline emojis (`ATT-5400`).
-  4. *Clean-Room Targeted Regression Execution (`TST-SET-089.4`)*:
+  5. *Clean-Room Targeted Regression Execution (`TST-SET-089.5`)*:
   • Execute targeted test suites (`com.atrainingtracker.trainingtracker.database.*`, `com.atrainingtracker.trainingtracker.ui.clusters.*`, `com.atrainingtracker.trainingtracker.localization.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
