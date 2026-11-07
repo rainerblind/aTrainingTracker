@@ -13927,6 +13927,41 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Map 2D panning, chart scrubbing within plot bounds, vertical scrolling, and tab persistence schemas MUST NOT be degraded.
 
+### REQ-UI-465: KnownLocationCard UI Polish, 48dp Gap Elimination & Compact Map Thumbnail [Verified]
+- **Tests**: `TST-UI-465` | **Tickets**: `ATT-5825`
+- **Implementation**: `KnownLocationsScreen.kt`, `KnownLocationCardLayoutTest.kt`
+- **Rationale**: To eliminate visual clutter, vertical bloating, and misleading hierarchy in the "Lieblingsorte" list, `KnownLocationCard` SHALL eliminate the 48dp minimum interactive component padding gap on wrapped drill-down badges, replace the prominent primary blue ascent climbing arrow with a semantic mountain altitude icon in secondary styling, and resize the preview thumbnail map from a 100x100dp square to a compact 116x80dp landscape aspect ratio (Sprint 2026-45.11, ATT-5825, refining `REQ-UI-195`, `REQ-UI-217`, `REQ-UI-244`):
+1. *48dp Minimum Touch Target Gap Elimination (`REQ-UI-465.1`)*:
+• In `KnownLocationCard` within `KnownLocationsScreen.kt`, the compact drill-down badge `Surface` components ("Starts" and "Routes") inside the `FlowRow` SHALL be scoped under `CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified)` to eliminate the unintended 48dp touch target padding that causes massive vertical whitespace/gaps when badges wrap next to the map thumbnail.
+• The "Starts" badge SHALL receive subtle visual emphasis (e.g. `FontWeight.SemiBold`, `secondaryContainer` tint) to clearly distinguish it from secondary metadata chips.
+2. *Semantic Altitude Icon & Secondary Hierarchy (`REQ-UI-465.2`)*:
+• The reference elevation display SHALL replace the misleading ascent climbing arrow (`R.drawable.ic_ascent` / `↑`) with the standard terrain/mountain icon (`Icons.Default.Terrain` or semantic altitude vector).
+• The altitude icon and text SHALL use secondary styling (`MaterialTheme.colorScheme.onSurfaceVariant`, `FontWeight.Normal` or `Medium`) instead of prominent primary blue, maintaining clean visual hierarchy.
+3. *Compact Landscape Map Thumbnail (`REQ-UI-465.3`)*:
+• In `KnownLocationThumbnailMap`, the preview thumbnail dimensions SHALL be updated from `100.dp × 100.dp` square to a compact 4:3 landscape ratio of `116.dp` width × `80.dp` height.
+• The compact landscape thumbnail SHALL preserve horizontal geographic context around the location pin and Google watermark while reducing card vertical footprint.
+4. *Contract & Layout Test Parity (`REQ-UI-465.4`)*:
+• `KnownLocationCardLayoutTest.kt` SHALL be updated to assert the `116.dp` × `80.dp` dimensions and the replacement of `ic_ascent` with `Terrain`, ensuring regressions in size or icon semantics are caught at compile/test time.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-UI-195` (Badges row in KnownLocationCard), `REQ-UI-217` (Thumbnail preview in KnownLocationCard), and `REQ-UI-244` (100dp harmonization with cluster cards).
+2. *Historical Origin & Commit Trace*: `ATT-1643` (`REQ-UI-195`), `ATT-1813` (`REQ-UI-217`), `ATT-2051` (`REQ-UI-244`, commit `e29c614b`).
+3. *Root Reason for Existing Formulation*: `REQ-UI-244` harmonized the 100dp square map with route cluster cards; `REQ-UI-195` decoupled badges from altitude but did not account for Material 3's implicit `LocalMinimumInteractiveComponentSize` (48dp), causing massive gaps when badges wrapped next to the 100dp map; `ic_ascent` was used as a quick visual placeholder for altitude.
+4. *Preservation of Core Invariants*: Single-tap edit, long-press context menu (`REQ-UI-061`), starts and routes drill-down actions, Google Maps Lite Mode preview, dark theme styling, `LocalInspectionMode` preview fallback, and `KnownLocationZoomMath.calculateThumbnailZoom` invariant are 100% strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the athlete is viewing the "Lieblingsorte" (Known Locations) screen,
+• *When* inspecting the "Starts" and "Routes" drill-down badges on any `KnownLocationCard`,
+• *Then* the badges render without the phantom 48dp minimum touch target gap, fitting compactly with neat vertical spacing when wrapped, and the "Starts" badge is visually distinct.
+• *Given* any `KnownLocationCard` with configured reference altitude,
+• *When* the altitude line is rendered,
+• *Then* it displays `Icons.Default.Terrain` (mountain icon) in `onSurfaceVariant` rather than `ic_ascent` in `primary` blue.
+• *Given* the map thumbnail in `KnownLocationCard`,
+• *When* rendered on screen or in Compose previews,
+• *Then* its dimensions are `116.dp` width by `80.dp` height.
+
+**Invariants**: Single-tap edit, long-press menu, badge drill-down click listeners, Google Maps Lite Mode, test tags (`location_starts_badge_*`, `location_map_preview_*`), and zoom calculation MUST NOT be degraded.
+
 
 
 

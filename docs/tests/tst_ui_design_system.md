@@ -7527,6 +7527,23 @@
   4. *Clean-Room Targeted Regression Execution (`TST-UI-464.4`)*:
   • Execute targeted unit test suites (`com.atrainingtracker.trainingtracker.ui.aftermath.*`, `com.atrainingtracker.trainingtracker.ui.map.*`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
+### TST-UI-465: **KnownLocationCard UI Polish Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-465`
+- **Component**: `KnownLocationsScreen.kt`, `KnownLocationCardLayoutTest.kt`
+- **Jira**: `ATT-5825`
+- **Test Description**:
+  1. *48dp Minimum Touch Target Gap Elimination Contract Tests (`TST-UI-465.1`, `KnownLocationCardLayoutTest.kt`)*:
+  • Verify `KnownLocationsScreen.kt` scopes drill-down badges under `CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified)` or equivalent to prevent 48dp vertical padding bloat in `FlowRow`.
+  • Verify "Starts" badge maintains distinct styling and clickability (`location_starts_badge_*`).
+  2. *Semantic Altitude Icon Contract Tests (`TST-UI-465.2`, `KnownLocationCardLayoutTest.kt`)*:
+  • Verify `KnownLocationsScreen.kt` references `Icons.Default.Terrain` for altitude and does not use `ic_ascent`.
+  • Verify altitude styling uses `onSurfaceVariant` secondary tint instead of `primary`.
+  3. *Compact Landscape Map Thumbnail Contract Tests (`TST-UI-465.3`, `KnownLocationCardLayoutTest.kt`)*:
+  • Verify `KnownLocationThumbnailMap` specifies `width = 116.dp` and `height = 80.dp`.
+  • Verify `KnownLocationCardLayoutTest` assertions updated from `.size(100.dp)` to `.size(width = 116.dp, height = 80.dp)`.
+  4. *Clean-Room Targeted Regression Execution (`TST-UI-465.4`)*:
+  • Execute targeted unit test suites (`com.atrainingtracker.trainingtracker.ui.knownlocations.*`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
 
 
 

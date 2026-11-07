@@ -47,21 +47,31 @@ class KnownLocationCardLayoutTest {
         // Verify altitude metric comment / structure exists
         assertTrue(
             "KnownLocationCard must contain dedicated altitude metric section",
-            content.contains("// Prominent Altitude Metric")
+            content.contains("// Altitude Metric")
         )
 
         // Verify dedicated badges row comment exists
         assertTrue(
             "KnownLocationCard must contain dedicated badges row",
-            content.contains("// Dedicated Badges Row (Starts and Routes, REQ-UI-195)")
+            content.contains("// Dedicated Badges Row (Starts and Routes")
         )
 
         // Verify altitude metric appears BEFORE the dedicated badges row
-        val altitudeIndex = content.indexOf("// Prominent Altitude Metric")
-        val badgesIndex = content.indexOf("// Dedicated Badges Row (Starts and Routes, REQ-UI-195)")
+        val altitudeIndex = content.indexOf("// Altitude Metric")
+        val badgesIndex = content.indexOf("// Dedicated Badges Row (Starts and Routes")
         assertTrue(
             "Altitude metric must appear before dedicated badges row",
             altitudeIndex in 0 until badgesIndex
+        )
+
+        // REQ-UI-465.2: Verify semantic Terrain icon and elimination of ic_ascent
+        assertTrue(
+            "KnownLocationCard must use Icons.Default.Terrain for altitude metric",
+            content.contains("imageVector = Icons.Default.Terrain")
+        )
+        assertFalse(
+            "KnownLocationCard must eliminate misleading ic_ascent arrow",
+            content.contains("R.drawable.ic_ascent")
         )
     }
 
@@ -85,6 +95,12 @@ class KnownLocationCardLayoutTest {
         assertFalse(
             "Badges must not force 48dp minimum container height",
             content.contains("defaultMinSize(minHeight = 48.dp)")
+        )
+
+        // REQ-UI-465.1: Badges must be scoped under LocalMinimumInteractiveComponentSize provides Dp.Unspecified
+        assertTrue(
+            "Badges must eliminate 48dp minimum interactive size gap via LocalMinimumInteractiveComponentSize provides Dp.Unspecified",
+            content.contains("LocalMinimumInteractiveComponentSize provides Dp.Unspecified")
         )
 
         // Both test tags must be preserved
@@ -167,8 +183,9 @@ class KnownLocationCardLayoutTest {
     }
 
     /**
-     * REQ-UI-217 / REQ-UI-244: Verify that KnownLocationCard contains a compact 100dp map preview
-     * thumbnail in Google Maps lite mode on the right side, wired to onShowOnMap with offline inspection safety.
+     * REQ-UI-217 / REQ-UI-244 / REQ-UI-465.3: Verify that KnownLocationCard contains a compact
+     * 116x80dp landscape map preview thumbnail in Google Maps lite mode on the right side,
+     * wired to onShowOnMap with offline inspection safety.
      */
     @Test
     fun testMapPreviewThumbnailLayoutAndLiteMode() {
@@ -186,10 +203,10 @@ class KnownLocationCardLayoutTest {
             content.contains("location_map_preview_\${item.id}")
         )
 
-        // Map preview thumbnail must use 100dp square dimensions (REQ-UI-244)
+        // Map preview thumbnail must use 116x80dp landscape dimensions (REQ-UI-465.3)
         assertTrue(
-            "Map preview thumbnail must be 100.dp",
-            content.contains(".size(100.dp)")
+            "Map preview thumbnail must be 116.dp width by 80.dp height",
+            content.contains(".size(width = 116.dp, height = 80.dp)")
         )
 
         // Map preview thumbnail must use 12dp rounded corner shape
