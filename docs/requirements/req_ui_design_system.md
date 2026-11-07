@@ -13892,6 +13892,154 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Navigation route resolution (`NavRoutes`), DataStore tuning preference keys, and modularity limits MUST NOT be broken.
 
+### REQ-UI-464: WorkoutDetailTabbedContent Horizontal Tab Swipe & Gesture Arbitration [Verified]
+- **Tests**: `TST-UI-464` | **Tickets**: `ATT-5826`
+- **Implementation**: `WorkoutDetailTabbedContent.kt`, `WorkoutDetailTabConfig.kt`, `MapDetailLayout.kt`, `WorkoutDetailTabsTest.kt`
+- **Rationale**: To prevent athletes from being trapped on the "Map & Graphs" tab (`tab_map_graphs`) and map/chart areas across all tabs, the system SHALL arbitrate horizontal touch gestures so that horizontal tab swiping is only isolated when touching actively inside the 2D map viewport or within the active scrubbing plot area of a chart, and SHALL permit unhindered tab switching from edge gutters, dividers, zoom toolbars, chart headers, and margin strips (Sprint 2026-45.10, ATT-5826, refining `REQ-UI-408.4`):
+1. *Initial Down Edge-Swipe Gutter Lock (`REQ-UI-464.1`)*:
+• In `WorkoutDetailTabConfig.kt` and `WorkoutDetailTabbedContent.kt`, the edge-swipe gutter SHALL be configured to `32.dp` (`edgeSwipeGutterDp = 32f`).
+• The touch X-coordinate evaluation for edge swipe SHALL be latched exclusively from the initial `ACTION_DOWN` (`awaitFirstDown`) event. Once an edge swipe starts within `[0..32.dp]` or `[width - 32.dp..width]`, `userScrollEnabled` on `HorizontalPager` SHALL remain locked to `true` across all subsequent `ACTION_MOVE` events until touch release, regardless of whether the finger travels into the center of the screen.
+2. *Granular Interactive Canvas Bounding (`REQ-UI-464.2`)*:
+• In `WorkoutDetailTabbedContent.kt` and `MapDetailLayout.kt`, blanket touch capture wrapping the entire `MapDetailLayout` with `isTouchingInteractiveCanvas = true` SHALL be excised.
+• `isTouchingInteractiveCanvas = true` SHALL be asserted strictly when touch events originate inside the interactive map viewport (`mapBox`) or inside the active plot area of a chart (`50.dp` from the left edge to `52.dp` from the right edge in portrait, or `0.dp` from the right edge in landscape with docked marginal distributions).
+3. *Non-Interactive Strip Pass-Through (`REQ-UI-464.3`)*:
+• Touching the `SplitPaneDivider`, the `GlobalTelemetryZoomToolbar` control row, diagram title text headers (e.g., *Höhenprofil*, *Geschwindigkeit*, *Herzfrequenz*, *Leistung*, *W'bal*), inter-chart spacing, left Y-axis labels/margin (`0..50.dp`), or right histogram margin strip (`52.dp`) SHALL set `isTouchingInteractiveCanvas = false`.
+• When `isTouchingInteractiveCanvas` is `false`, `requiresHorizontalGestureIsolation` SHALL evaluate to `false`, allowing horizontal swiping to navigate seamlessly between tabs.
+4. *Zero 1-Frame Recomposition Lag (`REQ-UI-464.4`)*:
+• Gesture arbitration state SHALL synchronize upon the initial `ACTION_DOWN` pass so `HorizontalPager` receives and processes the down event without dropped gestures or 1-frame latency.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-UI-408.4` (*Gesture Isolation in WorkoutDetailTabConfig.kt and WorkoutDetailTabbedContent.kt*, ATT-3920).
+2. *Historical Origin & Commit Trace*: Introduced in commit `ea5fa705` (ATT-3920) to isolate 2D map panning and horizontal telemetry scrubbing from triggering unintended tab switches.
+3. *Root Reason for Existing Formulation*: Blanket `isTouchingInteractiveCanvas = true` was placed around `MapDetailLayout` as a coarse heuristic because non-map tabs hosted scrollable cards, assuming `analyticsContent` would clear the flag. On `tab_map_graphs`, `analyticsContent == null`, which inadvertently covered 100% of the screen. Additionally, `lastTouchXDp` was updated during `MOVE`, causing edge swipes to cancel as soon as the finger moved past 24 dp.
+4. *Preservation of Core Invariants*: Chart scrubbing within plot bounds, chart zoom/pan mode, 2D map navigation, and vertical scrolling via `ChartGestureDisambiguator` remain 100% unimpeded.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the athlete is on the "Map & Graphs" tab (`tab_map_graphs`),
+• *When* performing a horizontal swipe starting within the left or right 32 dp edge gutter,
+• *Then* the pager switches to the adjacent tab smoothly without gesture abortion as the finger moves across the screen.
+• *Given* the athlete touching the `SplitPaneDivider`, `GlobalTelemetryZoomToolbar`, a chart header, or chart Y-axis/histogram margins,
+• *When* swiping horizontally,
+• *Then* `isTouchingInteractiveCanvas` evaluates to `false` and the tab switches.
+• *Given* the athlete touching inside the 2D map canvas or within the active plot area of a telemetry chart away from the edge gutters,
+• *When* swiping horizontally,
+• *Then* gesture isolation is enforced, preserving 2D map panning and chart scrubbing.
+
+**Invariants**: Map 2D panning, chart scrubbing within plot bounds, vertical scrolling, and tab persistence schemas MUST NOT be degraded.
+
+### REQ-UI-465: KnownLocationCard UI Polish, 48dp Gap Elimination & Compact Map Thumbnail [Verified]
+- **Tests**: `TST-UI-465` | **Tickets**: `ATT-5825`
+- **Implementation**: `KnownLocationsScreen.kt`, `KnownLocationCardLayoutTest.kt`
+- **Rationale**: To eliminate visual clutter, vertical bloating, and misleading hierarchy in the "Lieblingsorte" list, `KnownLocationCard` SHALL eliminate the 48dp minimum interactive component padding gap on wrapped drill-down badges, replace the prominent primary blue ascent climbing arrow with a semantic mountain altitude icon in secondary styling, and resize the preview thumbnail map from a 100x100dp square to a compact 116x80dp landscape aspect ratio (Sprint 2026-45.11, ATT-5825, refining `REQ-UI-195`, `REQ-UI-217`, `REQ-UI-244`):
+1. *48dp Minimum Touch Target Gap Elimination (`REQ-UI-465.1`)*:
+• In `KnownLocationCard` within `KnownLocationsScreen.kt`, the compact drill-down badge `Surface` components ("Starts" and "Routes") inside the `FlowRow` SHALL be scoped under `CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified)` to eliminate the unintended 48dp touch target padding that causes massive vertical whitespace/gaps when badges wrap next to the map thumbnail.
+• The "Starts" badge SHALL receive subtle visual emphasis (e.g. `FontWeight.SemiBold`, `secondaryContainer` tint) to clearly distinguish it from secondary metadata chips.
+2. *Semantic Altitude Icon & Secondary Hierarchy (`REQ-UI-465.2`)*:
+• The reference elevation display SHALL replace the misleading ascent climbing arrow (`R.drawable.ic_ascent` / `↑`) with the standard terrain/mountain icon (`Icons.Default.Terrain` or semantic altitude vector).
+• The altitude icon and text SHALL use secondary styling (`MaterialTheme.colorScheme.onSurfaceVariant`, `FontWeight.Normal` or `Medium`) instead of prominent primary blue, maintaining clean visual hierarchy.
+3. *Compact Landscape Map Thumbnail (`REQ-UI-465.3`)*:
+• In `KnownLocationThumbnailMap`, the preview thumbnail dimensions SHALL be updated from `100.dp × 100.dp` square to a compact 4:3 landscape ratio of `116.dp` width × `80.dp` height.
+• The compact landscape thumbnail SHALL preserve horizontal geographic context around the location pin and Google watermark while reducing card vertical footprint.
+4. *Contract & Layout Test Parity (`REQ-UI-465.4`)*:
+• `KnownLocationCardLayoutTest.kt` SHALL be updated to assert the `116.dp` × `80.dp` dimensions and the replacement of `ic_ascent` with `Terrain`, ensuring regressions in size or icon semantics are caught at compile/test time.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-UI-195` (Badges row in KnownLocationCard), `REQ-UI-217` (Thumbnail preview in KnownLocationCard), and `REQ-UI-244` (100dp harmonization with cluster cards).
+2. *Historical Origin & Commit Trace*: `ATT-1643` (`REQ-UI-195`), `ATT-1813` (`REQ-UI-217`), `ATT-2051` (`REQ-UI-244`, commit `e29c614b`).
+3. *Root Reason for Existing Formulation*: `REQ-UI-244` harmonized the 100dp square map with route cluster cards; `REQ-UI-195` decoupled badges from altitude but did not account for Material 3's implicit `LocalMinimumInteractiveComponentSize` (48dp), causing massive gaps when badges wrapped next to the 100dp map; `ic_ascent` was used as a quick visual placeholder for altitude.
+4. *Preservation of Core Invariants*: Single-tap edit, long-press context menu (`REQ-UI-061`), starts and routes drill-down actions, Google Maps Lite Mode preview, dark theme styling, `LocalInspectionMode` preview fallback, and `KnownLocationZoomMath.calculateThumbnailZoom` invariant are 100% strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the athlete is viewing the "Lieblingsorte" (Known Locations) screen,
+• *When* inspecting the "Starts" and "Routes" drill-down badges on any `KnownLocationCard`,
+• *Then* the badges render without the phantom 48dp minimum touch target gap, fitting compactly with neat vertical spacing when wrapped, and the "Starts" badge is visually distinct.
+• *Given* any `KnownLocationCard` with configured reference altitude,
+• *When* the altitude line is rendered,
+• *Then* it displays `Icons.Default.Terrain` (mountain icon) in `onSurfaceVariant` rather than `ic_ascent` in `primary` blue.
+• *Given* the map thumbnail in `KnownLocationCard`,
+• *When* rendered on screen or in Compose previews,
+• *Then* its dimensions are `116.dp` width by `80.dp` height.
+
+**Invariants**: Single-tap edit, long-press menu, badge drill-down click listeners, Google Maps Lite Mode, test tags (`location_starts_badge_*`, `location_map_preview_*`), and zoom calculation MUST NOT be degraded.
+
+### REQ-UI-466: KnownLocationsScreen Multi-Dimensional Filter UI & Default Threshold [Verified]
+- **Tests**: `TST-UI-466` | **Tickets**: `ATT-5823`
+- **Implementation**: `KnownLocationsViewModel.kt`, `KnownLocationsScreen.kt`, `KnownLocationsFilterBottomSheet.kt`, `ActiveKnownLocationsFilterChipsRow.kt`, `KnownLocationsViewModelTest.kt`
+- **Rationale**: To prevent visual clutter from incidental GPS start coordinates (1–4 starts) while keeping all locations accessible on demand, the system SHALL filter known locations on screen entry to $\ge 5$ starts by default (`minStarts = 5`) and provide Material 3 filter controls (header action button with badge, active filter chip strip with 1-tap removal, and modal bottom sheet with keyword search and starts presets) rendering filtered locations in the main list (Sprint 2026-45.11, ATT-5823, extending `REQ-UI-165`, `REQ-UI-180`, `REQ-UI-186`, `REQ-DAT-011`):
+1. *Default Start Count Filter Contract (`REQ-UI-466.1`)*:
+• On initialization of `KnownLocationsViewModel` / entry to `KnownLocationsScreen`, the filter criteria SHALL always default to `minStarts = 5` (`KnownLocationsFilterCriteria(query = "", minStarts = 5)`).
+• The starts threshold predicate SHALL evaluate against the authoritative effective start count (`startsByLocationId[item.id] ?: item.hitCount`) to maintain 1:1 consistency with the card badges.
+2. *Header Filter Action Button with Active Badge (`REQ-UI-466.2`)*:
+• In the top header of `KnownLocationsScreen`, a `FilterActionButton` SHALL be positioned adjacent to the sort button.
+• When any filter dimension is active (`isFilterActive == true`), the button SHALL display a `BadgedBox` badge indicating `activeFilterCount`.
+3. *Active Filter Chips Row (`REQ-UI-466.3`)*:
+• Directly beneath the header, when filters are active, an `ActiveKnownLocationsFilterChipsRow` SHALL display removable chips (`RemovableFilterChip`) for active dimensions (e.g., `"≥ 5 Starts"`, keyword query) and a "Clear all" button.
+• Tapping a chip's remove icon (`×`) SHALL immediately clear that criterion without opening the bottom sheet. Clearing starts threshold resets `minStarts = null`, showing all locations (including 1–4 starts).
+4. *Modal Filter Bottom Sheet (`REQ-UI-466.4`)*:
+• Tapping the filter action button SHALL open `KnownLocationsFilterBottomSheet` (built on `FilterBottomSheetScaffold`).
+• The sheet SHALL include text search for location name/coordinates and filter chip presets for minimum starts: $\ge 3$, $\ge 5$, $\ge 10$, $\ge 25$, plus "Reset all" and "OK" actions.
+5. *Filtered List Content & Fallback (`REQ-UI-466.5`)*:
+• `KnownLocationsListContent` SHALL render `uiState.filteredLocations` rather than unfiltered `uiState.locations`.
+• When `filteredLocations` is empty while filters are active, an informative empty-state message (`filter_no_matching_locations`) with a reset button SHALL be displayed.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Extending `REQ-UI-165` (Locations Management), `REQ-UI-180` (Streamlined management & search), `REQ-DAT-011` (Dynamic starts count).
+2. *Historical Origin & Commit Trace*: `ATT-1382` (`REQ-UI-165`), `ATT-1871`/`ATT-2051` (`REQ-UI-180`), `ATT-2134` (`REQ-DAT-011`).
+3. *Root Reason for Existing Formulation*: Originally designed as an administrative table displaying all detected locations without thresholding. Clutter from 1–4 starts was unaddressed.
+4. *Preservation of Core Invariants*: Stored SQLite locations are never permanently removed or mutated; clearing filter reveals all records; authoritative starts formula (`startsByLocationId[item.id] ?: item.hitCount`) and all item click/edit/context-menu handlers are strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the athlete opens the "Lieblingsorte" screen,
+• *When* the list renders initially,
+• *Then* only locations with $\ge 5$ effective starts are displayed, and an active filter chip `"≥ 5 Starts"` is visible.
+• *Given* active filters on "Lieblingsorte",
+• *When* the athlete taps the `×` on the `"≥ 5 Starts"` chip or chooses "Reset all",
+• *Then* `minStarts` is cleared to `null` and all locations (including 1–4 starts) are displayed.
+• *Given* the athlete tapping the filter button in the header,
+• *When* the bottom sheet opens,
+• *Then* it displays `FilterBottomSheetScaffold` with search query input and presets for $\ge 3$, $\ge 5$, $\ge 10$, $\ge 25$ starts.
+
+**Invariants**: SQLite database schema, location records, click handlers, delete dialog, and unit conversion invariants MUST NOT be degraded.
+
+### REQ-UI-467: Favorite Routes & Filter Sheets Hit Count Default and Starts-Filtered Location Selection [Verified]
+- **Tests**: `TST-UI-467` | **Tickets**: `ATT-5822`
+- **Implementation**: `WorkoutClustersViewModel.kt`, `ClusterFilterCriteria.kt`, `ClusterFilterBottomSheet.kt`, `WorkoutFilterBottomSheet.kt`, `ActiveClusterFilterChipsRow.kt`, `WorkoutClustersViewModelTest.kt`, `ClusterFilterBottomSheetTest.kt`, `WorkoutFilterBottomSheetTest.kt`
+- **Rationale**: Routes recorded only 1–4 times do not constitute genuine "Lieblingsstrecken" (Favorite Routes), and locations with 1–4 starts flood the "Startet bei (Lieblingsorte)" selection in filter dialogs. The system SHALL default Favorite Routes filtering to $\ge 5$ recordings on screen entry and filter start locations to $\ge 5$ starts with a compact toggle chip (Sprint 2026-45.11, ATT-5822, extending `REQ-UI-187`, `REQ-UI-417`, `REQ-UI-466`):
+1. *Favorite Routes Default Minimum Hit Count (`REQ-UI-467.1`)*:
+• On initialization of `WorkoutClustersViewModel` / entry to `WorkoutClustersScreen`, the active cluster filter criteria SHALL default to `minHitCount = 5` (`ClusterFilterCriteria(minHitCount = 5)`) as a transparent session default.
+• In `ActiveClusterFilterChipsRow`, the active filter chip (*"≥ 5 Aufzeichnungen"*) SHALL immediately display, allowing the athlete to 1-tap remove (`×`) or clear all filters (`minHitCount = null`) to show routes with $< 5$ recordings.
+2. *Start Location Selection Filtering in Bottom Sheets (`REQ-UI-467.2`)*:
+• In `ClusterFilterBottomSheet` and `WorkoutFilterBottomSheet`, the "Startet bei (Lieblingsorte)" chip group SHALL filter displayed `knownLocations` by default to items with `loc.hitCount >= 5` or any currently active selection (`loc == selectedLocation`).
+3. *Show All / Frequent Locations Toggle (`REQ-UI-467.3`)*:
+• When known locations with $< 5$ starts exist, a toggle chip (`FilterChip`) SHALL be presented:
+  - When collapsed: displaying `"Alle anzeigen"` (`R.string.filter_locations_show_all`)
+  - When expanded: displaying `"Nur ≥ 5 Starts"` (`R.string.filter_locations_show_frequent`)
+• Tapping the chip toggles between displaying all locations and only locations with $\ge 5$ starts (plus active selection).
+4. *9-Language Localization Parity & Zero Emojis (`REQ-UI-467.4`)*:
+• All newly introduced string resources (`filter_locations_show_all`, `filter_locations_show_frequent`) SHALL maintain 100% parity across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with zero inline emojis (`ATT-5400`).
+
+### Requirement Archaeology & Chesterton's Fence Audit
+1. *Original Requirement ID & Target*: Extending `REQ-UI-187` (*Filter Bottom Sheets*), `REQ-UI-417` (*Filter Criteria Distance Range & Hit Count*), and `REQ-UI-466` (*Known Locations Starts Threshold*).
+2. *Historical Origin & Commit Trace*: `ATT-1402` (commit `91acde33`), `ATT-5823` (commit `3b1f3b33`).
+3. *Root Reason for Existing Formulation*: Filter sheets previously rendered all locations unconditionally because datasets were initially small. As athletes recorded hundreds of workouts, incidental single-start vacation coordinates flooded the filter sheets. Similarly, Workout Clusters displayed all clusters including 1-time trips.
+4. *Preservation of Core Invariants*: Full dataset remains accessible via 1-tap toggle or chip removal; active selection is never omitted; clearing cluster filter reveals all clusters; 100% 9-language parity with zero emojis (`ATT-5400`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the athlete opens the Favorite Routes (*Lieblingsstrecken*) screen,
+• *When* the screen loads initially,
+• *Then* `WorkoutClustersViewModel` initializes with `minHitCount = 5`, only routes with $\ge 5$ recordings are shown, and `"≥ 5 Aufzeichnungen"` is visible in the active chips row.
+• *Given* active `minHitCount = 5` on Favorite Routes,
+• *When* the athlete taps `×` on the chip or clears all filters,
+• *Then* `minHitCount` is set to `null` and all routes (including 1–4 recordings) are displayed.
+• *Given* the athlete opens `ClusterFilterBottomSheet` or `WorkoutFilterBottomSheet` with known locations having $< 5$ starts,
+• *When* viewing the "Startet bei" section,
+• *Then* only locations with $\ge 5$ starts (and any currently selected location) are shown, along with an `"Alle anzeigen"` toggle chip.
+• *Given* the `"Alle anzeigen"` toggle chip,
+• *When* tapped,
+• *Then* all known locations are displayed and the toggle changes to `"Nur ≥ 5 Starts"`.
+
+**Invariants**: Saved DataStore preference criteria are not corrupted; toggling locations does not alter or deselect the active filter coordinate; zero regressions in `ClusterFilterCriteria` or `matches()` logic; zero hardcoded strings; 9-language translation parity.
+
 
 
 

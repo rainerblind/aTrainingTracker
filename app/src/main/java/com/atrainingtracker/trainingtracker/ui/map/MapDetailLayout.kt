@@ -67,7 +67,10 @@ import com.atrainingtracker.trainingtracker.ui.components.core.GlobalTelemetryZo
 import com.atrainingtracker.trainingtracker.ui.components.core.MinimumDragHandle
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.zIndex
 import com.atrainingtracker.trainingtracker.ui.components.core.SplitPaneDivider
@@ -79,6 +82,32 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+private fun Modifier.chartInteractiveTouchDetector(
+    density: Density,
+    isLandscape: Boolean,
+    alignWithHistogram: Boolean = true,
+    onInteractiveCanvasTouch: ((Boolean) -> Unit)?
+): Modifier {
+    if (onInteractiveCanvasTouch == null) return this
+    return this.pointerInput(density, isLandscape, alignWithHistogram) {
+        val startPaddingPx = with(density) { 50.dp.toPx() }
+        val endPaddingPx = if (isLandscape) 0f else with(density) { (if (alignWithHistogram) 52.dp else 25.dp).toPx() }
+        awaitPointerEventScope {
+            while (true) {
+                val event = awaitPointerEvent(PointerEventPass.Initial)
+                val firstChange = event.changes.firstOrNull()
+                if (firstChange != null) {
+                    val x = firstChange.position.x
+                    val plotStart = startPaddingPx
+                    val plotEnd = size.width - endPaddingPx
+                    val isInPlot = x in plotStart..plotEnd
+                    onInteractiveCanvasTouch(isInPlot)
+                }
+            }
+        }
+    }
+}
 
 /**
  * A unified layout for screen-level map details (Aftermath, Routes, Segments).
@@ -117,10 +146,26 @@ fun MapDetailLayout(
     powerZoneThresholds: PowerZoneThresholds? = null,
     workoutData: WorkoutData? = null,
     showElevationHistogram: Boolean = workoutData != null,
-    onCreateLapClick: ((Double) -> Unit)? = null
+    onCreateLapClick: ((Double) -> Unit)? = null,
+    onInteractiveCanvasTouch: ((Boolean) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    val zoomToolbarTouchModifier = remember(onInteractiveCanvasTouch) {
+        if (onInteractiveCanvasTouch != null) {
+            Modifier.pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        awaitPointerEvent(PointerEventPass.Initial)
+                        onInteractiveCanvasTouch(false)
+                    }
+                }
+            }
+        } else {
+            Modifier
+        }
+    }
 
     val tuningDataStore = remember { TuningPreferencesDataStore(context) }
     val tuningConfig by tuningDataStore.tuningConfigFlow.collectAsState(
@@ -253,7 +298,20 @@ fun MapDetailLayout(
     }
 
     val mapBox: @Composable (Modifier) -> Unit = { boxModifier ->
-        Box(modifier = boxModifier) {
+        Box(
+            modifier = boxModifier.then(
+                if (onInteractiveCanvasTouch != null) {
+                    Modifier.pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                awaitPointerEvent(PointerEventPass.Initial)
+                                onInteractiveCanvasTouch(true)
+                            }
+                        }
+                    }
+                } else Modifier
+            )
+        ) {
             ATrainingTrackerMap(
                 zoomFocus = zoomFocus,
                 initialBounds = initialBounds,
@@ -339,7 +397,21 @@ fun MapDetailLayout(
     }
 
     val lowerColumn: @Composable (Modifier) -> Unit = { colModifier ->
-        Column(modifier = colModifier) {
+        val density = LocalDensity.current
+        Column(
+            modifier = colModifier.then(
+                if (onInteractiveCanvasTouch != null) {
+                    Modifier.pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                awaitPointerEvent(PointerEventPass.Initial)
+                                onInteractiveCanvasTouch(false)
+                            }
+                        }
+                    }
+                } else Modifier
+            )
+        ) {
             if (showElevationProfile || hasTelemetryGraphs) {
                 activeScrubPath?.let { path ->
                     Surface(
@@ -388,7 +460,14 @@ fun MapDetailLayout(
                                         powerZoneThresholds = powerThresholds,
                                         climbs = climbs,
                                         alignWithTelemetryCharts = showElevationHistogram,
-                                        modifier = Modifier.fillMaxWidth()
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .chartInteractiveTouchDetector(
+                                                density = density,
+                                                isLandscape = isLandscape,
+                                                alignWithHistogram = showElevationHistogram,
+                                                onInteractiveCanvasTouch = onInteractiveCanvasTouch
+                                            )
                                     )
                                 }
 
@@ -420,7 +499,14 @@ fun MapDetailLayout(
                                                 viewportStartFraction = MapDetailViewportMath.domainToFraction(s, telemetryTotalSpan, z)
                                             },
                                             paceCeilingMinKm = tuningConfig.paceCeilingMinKm,
-                                            modifier = Modifier.fillMaxWidth()
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .chartInteractiveTouchDetector(
+                                                    density = density,
+                                                    isLandscape = isLandscape,
+                                                    alignWithHistogram = true,
+                                                    onInteractiveCanvasTouch = onInteractiveCanvasTouch
+                                                )
                                         )
                                     }
 
@@ -468,7 +554,14 @@ fun MapDetailLayout(
                                             hrZoneThresholds = hrThresholds,
                                             zoneDistribution = hrZoneDistribution,
                                             zoneDisplayMode = hrZoneDisplayMode,
-                                            modifier = Modifier.fillMaxWidth()
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .chartInteractiveTouchDetector(
+                                                    density = density,
+                                                    isLandscape = isLandscape,
+                                                    alignWithHistogram = true,
+                                                    onInteractiveCanvasTouch = onInteractiveCanvasTouch
+                                                )
                                         )
                                     }
 
@@ -516,7 +609,14 @@ fun MapDetailLayout(
                                             powerZoneThresholds = powerThresholds,
                                             zoneDistribution = powerZoneDistribution,
                                             zoneDisplayMode = powerZoneDisplayMode,
-                                            modifier = Modifier.fillMaxWidth()
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .chartInteractiveTouchDetector(
+                                                    density = density,
+                                                    isLandscape = isLandscape,
+                                                    alignWithHistogram = true,
+                                                    onInteractiveCanvasTouch = onInteractiveCanvasTouch
+                                                )
                                         )
                                     }
 
@@ -557,7 +657,14 @@ fun MapDetailLayout(
                                                 profileZoomScale = z
                                                 viewportStartFraction = MapDetailViewportMath.domainToFraction(s, telemetryTotalSpan, z)
                                             },
-                                            modifier = Modifier.fillMaxWidth()
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .chartInteractiveTouchDetector(
+                                                    density = density,
+                                                    isLandscape = isLandscape,
+                                                    alignWithHistogram = true,
+                                                    onInteractiveCanvasTouch = onInteractiveCanvasTouch
+                                                )
                                         )
                                     }
                                 }
@@ -722,7 +829,17 @@ fun MapDetailLayout(
                                 },
                                 onReset = {
                                     splitFraction = SplitPaneMath.DEFAULT_SPLIT_FRACTION
-                                }
+                                },
+                                modifier = if (onInteractiveCanvasTouch != null) {
+                                    Modifier.pointerInput(Unit) {
+                                        awaitPointerEventScope {
+                                            while (true) {
+                                                awaitPointerEvent(PointerEventPass.Initial)
+                                                onInteractiveCanvasTouch(false)
+                                            }
+                                        }
+                                    }
+                                } else Modifier
                             )
 
                             // PERSISTENT STICKY LOWER VIEWPORT CONTAINER (REQ-UI-246 / ATT-2113)
@@ -743,7 +860,7 @@ fun MapDetailLayout(
                                             },
                                             isPanMode = isPanMode,
                                             onPanModeToggle = { isPanMode = !isPanMode },
-                                            modifier = Modifier.fillMaxWidth()
+                                            modifier = Modifier.fillMaxWidth().then(zoomToolbarTouchModifier)
                                         )
                                     }
                                     lowerColumn(
@@ -767,6 +884,7 @@ fun MapDetailLayout(
                                         modifier = Modifier
                                             .align(Alignment.TopEnd)
                                             .padding(top = 4.dp, end = 8.dp)
+                                            .then(zoomToolbarTouchModifier)
                                     )
                                 }
                                 scrubbingOverlay()
@@ -800,7 +918,7 @@ fun MapDetailLayout(
                                         },
                                         isPanMode = isPanMode,
                                         onPanModeToggle = { isPanMode = !isPanMode },
-                                        modifier = Modifier.fillMaxWidth()
+                                        modifier = Modifier.fillMaxWidth().then(zoomToolbarTouchModifier)
                                     )
                                 }
                                 lowerColumn(
@@ -823,6 +941,7 @@ fun MapDetailLayout(
                                     modifier = Modifier
                                         .align(Alignment.TopEnd)
                                         .padding(top = 4.dp, end = 8.dp)
+                                        .then(zoomToolbarTouchModifier)
                                 )
                             }
                             scrubbingOverlay()
@@ -854,7 +973,7 @@ fun MapDetailLayout(
                                     },
                                     isPanMode = isPanMode,
                                     onPanModeToggle = { isPanMode = !isPanMode },
-                                    modifier = Modifier.fillMaxWidth()
+                                    modifier = Modifier.fillMaxWidth().then(zoomToolbarTouchModifier)
                                 )
                             }
                             lowerColumn(
@@ -878,6 +997,7 @@ fun MapDetailLayout(
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
                                     .padding(top = 4.dp, end = 8.dp)
+                                    .then(zoomToolbarTouchModifier)
                             )
                         }
                         scrubbingOverlay()
@@ -896,7 +1016,7 @@ fun MapDetailLayout(
                             },
                             isPanMode = isPanMode,
                             onPanModeToggle = { isPanMode = !isPanMode },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth().then(zoomToolbarTouchModifier)
                         )
                     }
                     Box(
@@ -923,6 +1043,7 @@ fun MapDetailLayout(
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
                                     .padding(top = 4.dp, end = 8.dp)
+                                    .then(zoomToolbarTouchModifier)
                             )
                         }
                         scrubbingOverlay()

@@ -7,6 +7,7 @@ description: Executes Stage 1 (Problem Domain & Root Cause Analysis) of the agil
 
 ## Overview
 This skill guides the agent through **Stage 1 (Analysis)** of the engineering lifecycle. The objective is to understand the problem domain completely before proposing test specifications or implementation code.
+- **Just-In-Time Transition to `Analysis` (`Rule 78` — `ATT-5829`)**: A sprint ticket remains in `Zu erledigen` until Stage 1 actually begins for that ticket. Transition the ticket to `Analysis` (`python3 tools/jira_util.py move <TICKET_KEY> "analysis"`) right when starting Stage 1 (never batch-move future tickets in advance).
 
 ## Subagent Model Pairing ("Zipper Principle" & Epic-Scoped Persistent Ping-Pong — Core Rule 7)
 Maintain an **Epic-scoped pair** of persistent `TypeName: "self"` subagents (`epic_agents[epic_key] = (subagent_pro, subagent_flash)` with `Model: "pro"` and `Model: "flash"`, or per standalone ticket when no Parent Epic exists) that are reused across up to 3 tickets in the same Epic (`Rule 61 & Rule 62`) and across all 5 stages via `send_message`:

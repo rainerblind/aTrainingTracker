@@ -1587,12 +1587,12 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 **Invariants**: Equipment and sensor persistence complete before dialog triggering; each league level nudges at most once; tier monotonicity is strictly preserved; release builds compile out debug preview controls.
 
 ### REQ-SET-089: Workout Cluster Merge via Similarity-Ranked Target Selection & Confirmation [Verified]
-- **Tests**: `TST-SET-089` | **Tickets**: `ATT-5666`
+- **Tests**: `TST-SET-089` | **Tickets**: `ATT-5666`, `ATT-5824`
 - **Implementation**: `WorkoutClusterComponents.kt`, `WorkoutClustersScreen.kt`, `WorkoutClustersViewModel.kt`, `WorkoutClusterEngine.kt`, `WorkoutSummariesDatabaseManager.java`, `RoutesDatabaseManager.kt`
-- **Rationale**: When duplicate Workout Clusters (*Lieblingsstrecken*) exist for the same route, deleting one cluster drops historical cluster association (`clusterId = -1L`). The system SHALL provide a long-press context menu action to merge source cluster `A` into target cluster `B`, ranking candidate clusters by spatial similarity score and requiring explicit confirmation before atomically reassigning all workouts and routes, updating `B`'s weighted centroid, and deleting `A` (ATT-5666):
+- **Rationale**: When duplicate Workout Clusters (*Lieblingsstrecken*) exist for the same route, deleting one cluster drops historical cluster association (`clusterId = -1L`). The system SHALL provide a long-press context menu action to merge source cluster `A` into target cluster `B`, ranking candidate clusters by spatial similarity score and requiring explicit confirmation before atomically reassigning all workouts and routes, updating `B`'s weighted centroid, and deleting `A` (ATT-5666, ATT-5824):
 1. *Context Menu Action (`REQ-SET-089.1`)*: `ClusterItem` context menu SHALL include an action item *"Mit anderer Lieblingsstrecke zusammenführen…"* (`R.string.cluster_menu_merge`, icon `Icons.Default.CallMerge`) triggering `onMerge(cluster)`.
 2. *Similarity-Ranked Candidate Selection (`REQ-SET-089.2`)*: Target selection SHALL present candidates via `WorkoutClusterSelectionDialog` where candidates (`id != A.id`) are scored against cluster `A`'s spatial fingerprint via `WorkoutClusterEngine.scoreClusters(...)` and sorted ascending by score (lowest score = highest similarity at index 0).
-3. *Explicit Merge Confirmation Dialog (`REQ-SET-089.3`)*: Prior to merge execution, the system SHALL display an `AlertDialog` (`cluster_merge_dialog_title`, `cluster_merge_dialog_message`) with directional explanation showing source name `%1$s`, recording count `%2$d`, target name `%3$s`, confirmation action `cluster_merge_action`, and dismiss action `cancel`.
+3. *Explicit Merge Confirmation Dialog & Two-Step Transition Independence (`REQ-SET-089.3`)*: Selecting a candidate cluster in `WorkoutClusterSelectionDialog` SHALL immediately trigger the confirmation `AlertDialog` (`cluster_merge_dialog_title`, `cluster_merge_dialog_message`) on the first selection attempt without requiring a second context menu invocation. The confirmation dialog payload (`pendingMergePair`) SHALL remain decoupled from the selection bottom sheet dismissal lifecycle (Rule 77 / Design Guidelines §5.19), displaying source name `%1$s`, recording count `%2$d`, target name `%3$s`, confirmation action `cluster_merge_action`, and dismiss action `cancel`.
 4. *Transactional Database Reassignment & Centroid Synthesis (`REQ-SET-089.4`)*:
 • Reassign all workouts with `CLUSTER_ID = A.id` to `B.id` in `WorkoutSummaries.TABLE`.
 • Reassign all routes with `COLUMN_CLUSTER_ID = A.id` to `B.id` in `RoutesDatabaseManager`.
@@ -1606,12 +1606,21 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • *Given* two similar Workout Clusters `A` and `B` in the clusters list,
 • *When* the athlete long-presses cluster `A` and selects *"Mit anderer Lieblingsstrecke zusammenführen…"*,
 • *Then* `WorkoutClusterSelectionDialog` opens displaying candidate clusters with `B` ranked at the top.
-• *Given* the athlete selects candidate cluster `B` in the selection dialog,
-• *When* the confirmation dialog appears and the athlete taps *"Zusammenführen"*,
-• *Then* all workouts and routes of `A` are reassigned to `B`, `B`'s hit count and centroid reflect the combined data, cluster `A` is removed from the database and UI, and `WorkoutClusterRepository` emits the updated state.
+• *Given* the athlete selects candidate cluster `B` in `WorkoutClusterSelectionDialog`,
+• *When* the candidate row is tapped on the first attempt,
+• *Then* `WorkoutClusterSelectionDialog` dismisses and the merge confirmation dialog appears immediately with source `A` and target `B` without requiring a second context menu interaction.
+• *Given* the merge confirmation dialog with candidate `B`,
+• *When* the athlete taps *"Zusammenführen"*,
+• *Then* all workouts and routes of `A` are reassigned to `B`, `B`'s hit count and centroid reflect the combined data, cluster `A` is removed from the database and UI, `WorkoutClusterRepository` emits the updated state, and `pendingMergePair` is cleared.
 • *Given* all 9 locale resource files,
 • *When* `TranslationParityTest` executes,
 • *Then* all merge string keys exist, match format specifiers (`%1$s`, `%2$d`, `%3$s`), and contain zero inline emojis.
+
+### Requirement Archaeology & Chesterton's Fence Audit
+1. *Original Requirement ID & Target*: Amends `REQ-SET-089` (`REQ-SET-089.3`), targeting `WorkoutClustersScreen.kt` and `WorkoutClusterComponents.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-45.10 (`ATT-5666`, commit `76a403d3`).
+3. *Root Reason for Existing Formulation*: ATT-5666 modeled the transition using two separate mutable state variables (`clusterToMerge` and `mergeTargetCluster`), incorrectly assuming `onSelect` would transition states while `onDismiss` would execute only on explicit sheet dismissal. Because `WorkoutClusterSelectionDialog` calls `onSelect(cluster)` followed immediately by `onDismiss()`, `clusterToMerge` was cleared upon selection, suppressing the confirmation dialog until a second context menu tap restored `clusterToMerge`.
+4. *Preservation of Core Invariants*: Decoupling selection sheet dismissal from confirmation dialog state via `pendingMergePair` ensures the confirmation dialog appears reliably on the first attempt; sheet dismissal without selection (`onDismiss` without `onSelect`) cleanly closes without triggering confirmation; backend transactional merge, centroid calculations, and 9-language localization remain 100% intact.
 
 **Invariants**: Workouts not belonging to `A` or `B` MUST NOT be altered; SQLite transactional integrity; no duplicate routes; zero hardcoded strings.
 

@@ -1304,6 +1304,15 @@
     <string name="filter_section_recordings">Registrazioni</string>
     <string name="filter_min_recordings_chip_format">≥ %1$d registrazioni</string>
     <string name="filter_no_matching_clusters">Nessun percorso preferito corrisponde ai filtri attivi</string>
+    <!-- Favorite Locations Filtering (ATT-5823) -->
+    <string name="filter_known_locations_title">Filtra posizioni preferite</string>
+    <string name="filter_search_known_locations_hint">Cerca nome della posizione…</string>
+    <string name="filter_section_starts">Partenze</string>
+    <string name="filter_min_starts_chip_format">≥ %1$d partenze</string>
+    <string name="filter_no_matching_locations">Nessuna posizione preferita corrisponde ai filtri attivi</string>
+    <!-- Favorite Locations Filtering in Filter Sheets (ATT-5822) -->
+    <string name="filter_locations_show_all">Mostra tutti</string>
+    <string name="filter_locations_show_frequent">Solo ≥ 5 partenze</string>
     <string name="filter_sensors_title">Filtra sensori</string>
     <string name="filter_section_protocol">Protocollo</string>
     <string name="filter_section_category">Categoria sensore</string>

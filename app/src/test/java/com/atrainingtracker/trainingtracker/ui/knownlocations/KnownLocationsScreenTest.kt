@@ -23,6 +23,7 @@ import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
 import com.google.android.gms.maps.model.LatLng
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.w3c.dom.Element
@@ -250,6 +251,128 @@ class KnownLocationsScreenTest {
                 "Value for 'really_delete_format' in $dirName/strings.xml must contain '%1\$s'",
                 formatStr.contains("%1\$s") || formatStr.contains("%s")
             )
+        }
+    }
+
+    /**
+     * TST-UI-466.2: Header Filter Action Button & Badge Contract Test (REQ-UI-466.2).
+     *
+     * Verifies semantic state properties and composable existence via reflection/state model (no UI source-grep).
+     */
+    @Test
+    fun testFilterActionButtonAndBadgeContract_REQ_UI_466_2() {
+        // 1. Programmatic reflection verifying FilterActionButton composable exists
+        val filterBtnClass = Class.forName("com.atrainingtracker.trainingtracker.ui.common.filters.FilterActionButtonKt")
+        assertNotNull("FilterActionButtonKt must exist", filterBtnClass)
+        val filterBtnMethod = filterBtnClass.declaredMethods.find { it.name.startsWith("FilterActionButton") }
+        assertNotNull("FilterActionButton composable must exist", filterBtnMethod)
+
+        // 2. Behavioral state contract verifying KnownLocationsUiState activeFilterCount derivation
+        val defaultState = KnownLocationsUiState()
+        assertTrue("Default UI state must have isFilterActive = true (minStarts=5)", defaultState.isFilterActive)
+        assertEquals("Default UI state must have activeFilterCount = 1", 1, defaultState.activeFilterCount)
+
+        // Cleared state has 0 active filters
+        val clearedState = defaultState.copy(
+            filterCriteria = KnownLocationsFilterCriteria(query = "", minStarts = null)
+        )
+        assertFalse("Cleared state must have isFilterActive = false", clearedState.isFilterActive)
+        assertEquals("Cleared state must have activeFilterCount = 0", 0, clearedState.activeFilterCount)
+
+        // Combined state has 2 active filters
+        val combinedState = defaultState.copy(
+            filterCriteria = KnownLocationsFilterCriteria(query = "Marienplatz", minStarts = 10)
+        )
+        assertTrue("Combined state must have isFilterActive = true", combinedState.isFilterActive)
+        assertEquals("Combined state must have activeFilterCount = 2", 2, combinedState.activeFilterCount)
+    }
+
+    /**
+     * TST-UI-466.3: Active Filter Chips Row & Dismissal Contract Test (REQ-UI-466.3, REQ-UI-466.5).
+     *
+     * Verifies composable components and dismissal semantics via reflection and state models (no UI source-grep).
+     */
+    @Test
+    fun testActiveFilterChipsRowContract_REQ_UI_466_3() {
+        // 1. Programmatic reflection verifying ActiveKnownLocationsFilterChipsRow and sheet composables exist
+        val chipsRowClass = Class.forName("com.atrainingtracker.trainingtracker.ui.knownlocations.ActiveKnownLocationsFilterChipsRowKt")
+        assertNotNull("ActiveKnownLocationsFilterChipsRowKt must exist", chipsRowClass)
+        val chipsRowMethod = chipsRowClass.declaredMethods.find { it.name.startsWith("ActiveKnownLocationsFilterChipsRow") }
+        assertNotNull("ActiveKnownLocationsFilterChipsRow composable must exist", chipsRowMethod)
+
+        val sheetClass = Class.forName("com.atrainingtracker.trainingtracker.ui.knownlocations.KnownLocationsFilterBottomSheetKt")
+        assertNotNull("KnownLocationsFilterBottomSheetKt must exist", sheetClass)
+        val sheetMethod = sheetClass.declaredMethods.find { it.name.startsWith("KnownLocationsFilterBottomSheet") }
+        assertNotNull("KnownLocationsFilterBottomSheet composable must exist", sheetMethod)
+
+        // 2. Behavioral contract: chip dismissal semantics
+        val activeCriteria = KnownLocationsFilterCriteria(query = "Trail", minStarts = 5)
+        assertEquals(2, activeCriteria.activeFilterCount)
+
+        // onRemoveQuery clears query while preserving minStarts
+        val queryRemoved = activeCriteria.copy(query = "")
+        assertEquals(1, queryRemoved.activeFilterCount)
+        assertEquals(5, queryRemoved.minStarts)
+
+        // onRemoveMinStarts clears minStarts while preserving query
+        val startsRemoved = activeCriteria.copy(minStarts = null)
+        assertEquals(1, startsRemoved.activeFilterCount)
+        assertEquals("Trail", startsRemoved.query)
+
+        // onClearAll resets all filter dimensions
+        val allCleared = KnownLocationsFilterCriteria(query = "", minStarts = null)
+        assertEquals(0, allCleared.activeFilterCount)
+        assertTrue(allCleared.isEmpty)
+
+        // 3. Behavioral contract: filtered list and empty-filter state modeling
+        val item1 = sampleItems[0] // hitCount 42
+        val itemLow = KnownLocationItem(3L, "Incidental Spot", 500.0, 200, LatLng(48.0, 11.0), 2, false, ElevationSource.INTERNET_DEM)
+        val allItems = listOf(item1, itemLow)
+
+        // Default minStarts=5 filters incidental spot
+        val defaultCriteria = KnownLocationsFilterCriteria()
+        val defaultFiltered = allItems.filter { defaultCriteria.matches(it, it.hitCount) }
+        assertEquals(1, defaultFiltered.size)
+        assertEquals(1L, defaultFiltered[0].id)
+
+        // Empty filter fallback: when no locations match filter
+        val nonMatchingCriteria = KnownLocationsFilterCriteria(query = "NonExistentLocation", minStarts = 100)
+        val noneFiltered = allItems.filter { nonMatchingCriteria.matches(it, it.hitCount) }
+        assertTrue("Non-matching criteria yields empty filtered locations", noneFiltered.isEmpty())
+        assertTrue("Total locations remains populated for empty-filter UI state distinction", allItems.isNotEmpty())
+    }
+
+    /**
+     * TST-UI-466.4: 9-language localization audit for new filter keys across all 9 locales.
+     */
+    @Test
+    fun testFilterKnownLocationsStringKeysExistAcrossAll9Locales() {
+        val requiredKeys = listOf(
+            "filter_known_locations_title",
+            "filter_search_known_locations_hint",
+            "filter_section_starts",
+            "filter_min_starts_chip_format",
+            "filter_no_matching_locations"
+        )
+        val locales = listOf("", "de", "es", "fr", "it", "ja", "nl", "pl", "pt")
+        val resDir = findResDirectory()
+
+        for (locale in locales) {
+            val dirName = if (locale.isEmpty()) "values" else "values-$locale"
+            val file = File(resDir, "$dirName/strings.xml")
+            assertTrue("strings.xml must exist for locale $dirName", file.exists())
+
+            val stringMap = parseStringsFile(file)
+            for (key in requiredKeys) {
+                assertTrue(
+                    "Filter key '$key' must exist in $dirName/strings.xml",
+                    stringMap.containsKey(key)
+                )
+                assertFalse(
+                    "Filter value for '$key' in $dirName/strings.xml must not be blank",
+                    stringMap[key].isNullOrBlank()
+                )
+            }
         }
     }
 

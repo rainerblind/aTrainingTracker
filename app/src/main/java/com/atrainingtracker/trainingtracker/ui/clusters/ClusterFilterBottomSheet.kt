@@ -38,6 +38,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.tooling.preview.Preview
+import com.atrainingtracker.trainingtracker.elevation.ElevationSource
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.google.android.gms.maps.model.LatLng
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -357,8 +361,22 @@ fun ClusterFilterBottomSheet(
             }
         }
 
-        // 5. Favorite Locations Selection (Start at / Lieblingsorte, REQ-UI-187, REQ-UI-194, REQ-UI-208)
+        // 5. Favorite Locations Selection (Start at / Lieblingsorte, REQ-UI-187, REQ-UI-194, REQ-UI-208, REQ-UI-467)
         if (knownLocations.isNotEmpty()) {
+            var showAllLocations by remember { mutableStateOf(false) }
+            val hasInfrequentLocations = remember(knownLocations) {
+                knownLocations.any { it.hitCount < 5 }
+            }
+            val displayedLocations = remember(knownLocations, localStartLocationLat, localStartLocationLng, showAllLocations) {
+                if (showAllLocations || !hasInfrequentLocations) {
+                    knownLocations
+                } else {
+                    knownLocations.filter { loc ->
+                        loc.hitCount >= 5 || (localStartLocationLat == loc.latLng.latitude && localStartLocationLng == loc.latLng.longitude)
+                    }
+                }
+            }
+
             Column {
                 Text(
                     text = stringResource(R.string.filter_section_start_at),
@@ -370,7 +388,7 @@ fun ClusterFilterBottomSheet(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    knownLocations.forEach { loc ->
+                    displayedLocations.forEach { loc ->
                         val isSelected = localStartLocationLat == loc.latLng.latitude &&
                                 localStartLocationLng == loc.latLng.longitude
                         FilterChip(
@@ -391,8 +409,41 @@ fun ClusterFilterBottomSheet(
                             label = { Text(loc.name) }
                         )
                     }
+
+                    if (hasInfrequentLocations) {
+                        FilterChip(
+                            selected = showAllLocations,
+                            onClick = { showAllLocations = !showAllLocations },
+                            label = {
+                                Text(
+                                    stringResource(
+                                        if (showAllLocations) R.string.filter_locations_show_frequent
+                                        else R.string.filter_locations_show_all
+                                    )
+                                )
+                            }
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+@Preview(name = "Cluster Filter Bottom Sheet - Light", showBackground = true)
+@Composable
+private fun ClusterFilterBottomSheetLightPreview() {
+    ATrainingTrackerTheme(darkTheme = false) {
+        ClusterFilterBottomSheet(
+            criteria = ClusterFilterCriteria(minHitCount = 5),
+            availableEquipment = listOf("Bike", "Running Shoes"),
+            onApplyCriteria = {},
+            onClearAll = {},
+            onDismissRequest = {},
+            knownLocations = listOf(
+                KnownLocationItem(1L, "Home Base", 500.0, 100, LatLng(48.0, 11.5), 12, false, ElevationSource.GPS_FALLBACK),
+                KnownLocationItem(2L, "Vacation Spot", 500.0, 100, LatLng(47.5, 12.0), 2, false, ElevationSource.GPS_FALLBACK)
+            )
+        )
     }
 }

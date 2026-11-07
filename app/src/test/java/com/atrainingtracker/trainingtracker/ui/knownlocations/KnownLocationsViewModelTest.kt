@@ -105,6 +105,9 @@ class KnownLocationsViewModelTest {
         val state = viewModel.uiState.value
         assertTrue(state.isMetric)
         assertEquals("", state.searchQuery)
+        assertEquals(5, state.filterCriteria.minStarts)
+        assertTrue(state.isFilterActive)
+        assertEquals(1, state.activeFilterCount)
         assertTrue(state.locations.isEmpty())
         assertNull(state.selectedLocationForEdit)
     }
@@ -264,6 +267,7 @@ class KnownLocationsViewModelTest {
         fakeLocationsFlow.value = listOf(bloatedSpot, activeSpot)
         fakeWorkoutsFlow.value = workouts
         viewModel.setSortOrder(KnownLocationSortOrder.STARTS)
+        viewModel.setMinStarts(null)
         testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -273,6 +277,109 @@ class KnownLocationsViewModelTest {
         assertEquals("Active Spot", state.filteredLocations[0].name)
         assertEquals(10L, state.filteredLocations[1].id)
         assertEquals("Bloated Spot", state.filteredLocations[1].name)
+    }
+
+    /**
+     * TST-UI-466.1: Verifies that default minStarts=5 filter excludes locations with < 5 starts.
+     */
+    @Test
+    fun testDefaultStartsFilter_excludesLocationsWithLessThanFiveStarts() = runTest {
+        val locLow1 = KnownLocationItem(1L, "Vacation Spot", 500.0, 200, LatLng(48.1, 11.1), 1, false, ElevationSource.INTERNET_DEM)
+        val locLow4 = KnownLocationItem(2L, "Single Tour", 510.0, 200, LatLng(48.2, 11.2), 4, false, ElevationSource.INTERNET_DEM)
+        val locMin5 = KnownLocationItem(3L, "Local Loop", 520.0, 200, LatLng(48.3, 11.3), 5, false, ElevationSource.INTERNET_DEM)
+        val locHigh12 = KnownLocationItem(4L, "Home Base", 530.0, 200, LatLng(48.4, 11.4), 12, true, ElevationSource.MANUAL_USER)
+
+        fakeLocationsFlow.value = listOf(locLow1, locLow4, locMin5, locHigh12)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(4, state.locations.size)
+        // Default filter minStarts = 5
+        assertEquals(5, state.filterCriteria.minStarts)
+        assertTrue(state.isFilterActive)
+        assertEquals(1, state.activeFilterCount)
+        assertEquals(2, state.filteredLocations.size)
+        assertEquals(listOf(4L, 3L), state.filteredLocations.map { it.id })
+    }
+
+    /**
+     * TST-UI-466.1: Verifies that clearing filter sets minStarts = null and reveals all locations.
+     */
+    @Test
+    fun testClearFilter_revealsAllLocations() = runTest {
+        val locLow1 = KnownLocationItem(1L, "Vacation Spot", 500.0, 200, LatLng(48.1, 11.1), 1, false, ElevationSource.INTERNET_DEM)
+        val locMin5 = KnownLocationItem(2L, "Local Loop", 520.0, 200, LatLng(48.3, 11.3), 5, false, ElevationSource.INTERNET_DEM)
+
+        fakeLocationsFlow.value = listOf(locLow1, locMin5)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(1, viewModel.uiState.value.filteredLocations.size)
+
+        // Clear all filters
+        viewModel.clearFilters()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val clearedState = viewModel.uiState.value
+        assertNull(clearedState.filterCriteria.minStarts)
+        assertEquals("", clearedState.filterCriteria.query)
+        assertFalse(clearedState.isFilterActive)
+        assertEquals(0, clearedState.activeFilterCount)
+        assertEquals(2, clearedState.filteredLocations.size)
+    }
+
+    /**
+     * TST-UI-466.1: Verifies that setting custom minStarts thresholds (e.g. 3, 10, 25) filters correctly.
+     */
+    @Test
+    fun testSetMinStarts_filtersByCustomThreshold() = runTest {
+        val loc1 = KnownLocationItem(1L, "Spot 1", 500.0, 200, LatLng(48.1, 11.1), 1, false, ElevationSource.INTERNET_DEM)
+        val loc3 = KnownLocationItem(2L, "Spot 3", 510.0, 200, LatLng(48.2, 11.2), 3, false, ElevationSource.INTERNET_DEM)
+        val loc5 = KnownLocationItem(3L, "Spot 5", 520.0, 200, LatLng(48.3, 11.3), 5, false, ElevationSource.INTERNET_DEM)
+        val loc10 = KnownLocationItem(4L, "Spot 10", 530.0, 200, LatLng(48.4, 11.4), 10, false, ElevationSource.INTERNET_DEM)
+        val loc25 = KnownLocationItem(5L, "Spot 25", 540.0, 200, LatLng(48.5, 11.5), 25, false, ElevationSource.INTERNET_DEM)
+
+        fakeLocationsFlow.value = listOf(loc1, loc3, loc5, loc10, loc25)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Threshold >= 3
+        viewModel.setMinStarts(3)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(4, viewModel.uiState.value.filteredLocations.size)
+
+        // Threshold >= 10
+        viewModel.setMinStarts(10)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(2, viewModel.uiState.value.filteredLocations.size)
+        assertEquals(listOf(5L, 4L), viewModel.uiState.value.filteredLocations.map { it.id })
+
+        // Threshold >= 25
+        viewModel.setMinStarts(25)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(1, viewModel.uiState.value.filteredLocations.size)
+        assertEquals(5L, viewModel.uiState.value.filteredLocations[0].id)
+    }
+
+    /**
+     * TST-UI-466.1: Verifies multi-dimensional combination of search query and minStarts threshold.
+     */
+    @Test
+    fun testSearchQueryCombinedWithMinStarts() = runTest {
+        val locOlympia10 = KnownLocationItem(1L, "Olympiazentrum", 515.0, 200, LatLng(48.175, 11.554), 10, true, ElevationSource.MANUAL_USER)
+        val locOlympia3 = KnownLocationItem(2L, "Olympiapark Trail", 515.0, 200, LatLng(48.176, 11.555), 3, false, ElevationSource.INTERNET_DEM)
+        val locGarten15 = KnownLocationItem(3L, "Englischer Garten", 505.0, 200, LatLng(48.155, 11.590), 15, false, ElevationSource.INTERNET_DEM)
+
+        fakeLocationsFlow.value = listOf(locOlympia10, locOlympia3, locGarten15)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Set criteria: query = "Olymp", minStarts = 5
+        viewModel.setFilterCriteria(KnownLocationsFilterCriteria(query = "Olymp", minStarts = 5))
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(2, state.activeFilterCount)
+        assertTrue(state.isFilterActive)
+        assertEquals(1, state.filteredLocations.size)
+        assertEquals("Olympiazentrum", state.filteredLocations[0].name)
     }
 
     @Test

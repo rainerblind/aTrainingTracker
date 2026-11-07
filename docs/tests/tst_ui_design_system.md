@@ -7510,6 +7510,84 @@
   5. *Clean-Room Targeted Regression Execution (`TST-UI-463.5`)*:
   • Execute targeted test suites (`com.atrainingtracker.trainingtracker.ui.navigation.*`, `com.atrainingtracker.trainingtracker.ui.settings.tuning.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
+### TST-UI-464: **WorkoutDetailTabbedContent Horizontal Tab Swipe & Gesture Arbitration Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-464`
+- **Component**: `WorkoutDetailTabbedContent.kt`, `WorkoutDetailTabConfig.kt`, `MapDetailLayout.kt`, `WorkoutDetailTabsTest.kt`
+- **Jira**: `ATT-5826`
+- **Test Description**:
+  1. *Edge Gutter Initial Down Lock Contract Tests (`TST-UI-464.1`, `WorkoutDetailTabsTest.kt`)*:
+  • Verify `WorkoutDetailTabConfig.requiresHorizontalGestureIsolation` uses default `edgeSwipeGutterDp = 32f`.
+  • Verify touches starting within `32.dp` of left or right screen boundary return `false` (pager swipe enabled) regardless of interactive canvas flag.
+  • Verify that touch X is evaluated from initial down and locked across subsequent motion.
+  2. *Granular Interactive Canvas & Strip Pass-Through Contract Tests (`TST-UI-464.2`, `WorkoutDetailTabsTest.kt`)*:
+  • Verify `requiresHorizontalGestureIsolation` returns `false` when `isTouchingInteractiveCanvas = false` even on `tab_map_graphs` where `MAP`, `ELEVATION`, and `CHARTS` are all active.
+  • Verify that non-interactive surfaces (`SplitPaneDivider`, `GlobalTelemetryZoomToolbar`, chart headings, Y-axis margin `0..50.dp`, and right histogram margin `52.dp`) do not assert canvas touch.
+  3. *Active Map & Chart Plot Scrubbing Isolation Contract Tests (`TST-UI-464.3`, `WorkoutDetailTabsTest.kt`)*:
+  • Verify `requiresHorizontalGestureIsolation` returns `true` when touching inside the map viewport or chart plot area (`touchXDp` between `50.dp` and `width - 52.dp`) away from edge gutters.
+  4. *Clean-Room Targeted Regression Execution (`TST-UI-464.4`)*:
+  • Execute targeted unit test suites (`com.atrainingtracker.trainingtracker.ui.aftermath.*`, `com.atrainingtracker.trainingtracker.ui.map.*`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+### TST-UI-465: **KnownLocationCard UI Polish Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-465`
+- **Component**: `KnownLocationsScreen.kt`, `KnownLocationCardLayoutTest.kt`
+- **Jira**: `ATT-5825`
+- **Test Description**:
+  1. *48dp Minimum Touch Target Gap Elimination Contract Tests (`TST-UI-465.1`, `KnownLocationCardLayoutTest.kt`)*:
+  • Verify `KnownLocationsScreen.kt` scopes drill-down badges under `CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified)` or equivalent to prevent 48dp vertical padding bloat in `FlowRow`.
+  • Verify "Starts" badge maintains distinct styling and clickability (`location_starts_badge_*`).
+  2. *Semantic Altitude Icon Contract Tests (`TST-UI-465.2`, `KnownLocationCardLayoutTest.kt`)*:
+  • Verify `KnownLocationsScreen.kt` references `Icons.Default.Terrain` for altitude and does not use `ic_ascent`.
+  • Verify altitude styling uses `onSurfaceVariant` secondary tint instead of `primary`.
+  3. *Compact Landscape Map Thumbnail Contract Tests (`TST-UI-465.3`, `KnownLocationCardLayoutTest.kt`)*:
+  • Verify `KnownLocationThumbnailMap` specifies `width = 116.dp` and `height = 80.dp`.
+  • Verify `KnownLocationCardLayoutTest` assertions updated from `.size(100.dp)` to `.size(width = 116.dp, height = 80.dp)`.
+  4. *Clean-Room Targeted Regression Execution (`TST-UI-465.4`)*:
+  • Execute targeted unit test suites (`com.atrainingtracker.trainingtracker.ui.knownlocations.*`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+### TST-UI-466: **KnownLocationsScreen Multi-Dimensional Filter Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-466`
+- **Component**: `KnownLocationsViewModel.kt`, `KnownLocationsScreen.kt`, `KnownLocationsFilterBottomSheet.kt`, `ActiveKnownLocationsFilterChipsRow.kt`, `KnownLocationsViewModelTest.kt`
+- **Jira**: `ATT-5823`
+- **Test Description**:
+  1. *Default Starts Threshold & Query Unit Tests (`TST-UI-466.1`, `KnownLocationsViewModelTest.kt`)*:
+  • Verify `KnownLocationsViewModel` initializes with `minStarts = 5`.
+  • Verify locations with $< 5$ starts are filtered out by default, while locations with $\ge 5$ starts are retained.
+  • Verify filtering with `minStarts = null` includes all locations.
+  • Verify combining query search with `minStarts` threshold.
+  2. *Filter Action Button & Badge Contract Tests (`TST-UI-466.2`, `KnownLocationsScreenTest.kt`)*:
+  • Verify `FilterActionButton` is present in `KnownLocationsScreen` top app bar with `known_locations_filter_button` test tag.
+  • Verify active filter badge renders when criteria are active.
+  3. *Active Filter Chips Row & Dismissal Contract Tests (`TST-UI-466.3`, `KnownLocationsScreenTest.kt`)*:
+  • Verify active chip `"≥ 5 Starts"` is displayed when `minStarts = 5`.
+  • Verify tapping remove dismisses the threshold and updates `filteredLocations`.
+  4. *9-Language Localization Audit (`TST-UI-466.4`, `TranslationParityTest.kt`)*:
+  • Verify `filter_known_locations_title`, `filter_min_starts_label`, `filter_min_starts_chip_format`, and `filter_no_matching_locations` exist across all 9 locales with zero format specifier mismatches.
+  5. *Targeted Regression Execution (`TST-UI-466.5`)*:
+  • Execute targeted unit test suites (`com.atrainingtracker.trainingtracker.ui.knownlocations.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+### TST-UI-467: **Workout Clusters & Filter Sheets Starts and Hit Count Default Filtering Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-467`
+- **Component**: `WorkoutClustersViewModel.kt`, `ClusterFilterCriteria.kt`, `ClusterFilterBottomSheet.kt`, `WorkoutFilterBottomSheet.kt`, `WorkoutClustersViewModelTest.kt`, `ClusterFilterBottomSheetTest.kt`, `WorkoutFilterBottomSheetTest.kt`
+- **Jira**: `ATT-5822`
+- **Test Description**:
+  1. *WorkoutClustersViewModel Default Hit Count Session Filter Tests (`TST-UI-467.1`, `WorkoutClustersViewModelTest.kt`)*:
+  • Verify `WorkoutClustersViewModel` initializes with `minHitCount = 5`.
+  • Verify clearing filter sets `minHitCount = null`.
+  • Verify updating other filter criteria preserves or modifies `minHitCount` cleanly.
+  2. *ClusterFilterBottomSheet Location Starts Filtering & Toggle Contract Tests (`TST-UI-467.2`, `ClusterFilterBottomSheetTest.kt`)*:
+  • Verify locations with $< 5$ starts are hidden by default when unselected.
+  • Verify currently selected location with $< 5$ starts is preserved in the list.
+  • Verify toggle chip `"Alle anzeigen"` / `"Nur ≥ 5 Starts"` toggles display of all locations.
+  3. *WorkoutFilterBottomSheet Location Starts Filtering & Toggle Contract Tests (`TST-UI-467.3`, `WorkoutFilterBottomSheetTest.kt`)*:
+  • Verify locations with $< 5$ starts are hidden by default when unselected.
+  • Verify currently selected location with $< 5$ starts is preserved.
+  • Verify toggle chip correctly expands and collapses infrequent locations.
+  4. *9-Language Localization Audit (`TST-UI-467.4`, `TranslationParityTest.kt`)*:
+  • Verify `filter_locations_show_all` and `filter_locations_show_frequent` exist across all 9 locales with zero format specifier mismatches and zero emojis (`ATT-5400`).
+  5. *Tier 1 Targeted Regression Execution (`TST-UI-467.5`)*:
+  • Execute targeted test suites (`com.atrainingtracker.trainingtracker.ui.clusters.*`, `com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+
 
 
 

@@ -440,7 +440,7 @@
 **Invariants**: Zero changes to `PeriodSummaries.db`, memory safety without OOMs, and 100% clean-room test pass rate.
 
 ### REQ-PER-022: Periods Sport Type Header Filtering & Multi-Sport Projections [Verified]
-- **Tests**: `TST-PER-028`
+- **Tests**: `TST-PER-028` | **Tickets**: `ATT-4770`, `ATT-5828`
 - **Implementation**: `PeriodsTabsScreen.kt`, `PeriodsViewModel.kt`, `PeriodData.kt`, `PeriodsRepository.kt`
 - **Rationale**: The system SHALL provide toggleable sport filter icon buttons in the Periods header row to allow athletes to isolate specific disciplines (`Bike`, `Run`, `Other`) across the entire Periods view (Day, Week, Month, Year), dynamically filtering `PeriodBarGraph`, `PeriodSummaryCard`, and map previews while preserving non-empty filter invariants and database integrity (ATT-4770, refining `REQ-PER-018` and `REQ-PER-019`):
 1. *Canonical Sport Type Icon Buttons & Placement (`REQ-PER-022.1`)*:
@@ -467,13 +467,13 @@
 • Zero alterations or migrations to `PeriodSummaries.db` (schema remains on v27).
 • 60 fps `LazyColumn` scrolling smoothness and Douglas-Peucker simplification pipelines (`REQ-PER-019`) remain strictly preserved.
 • 9-language localization parity maintained for all sport strings.
-• 100% clean-room test suite pass rate under `./gradlew testDebugUnitTest`.
+• 100% clean-room test suite pass rate under `./gradlew testDebugUnitTest`; all `PeriodsViewModel` instances in `PeriodsViewModelTest.kt` SHALL inject `testDispatcher` for both `ioDispatcher` and `defaultDispatcher` to eliminate background coroutine leakage and prevent `UncaughtExceptionsBeforeTest` in subsequent tests (ATT-5828).
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-PER-022` (*Periods Sport Type Header Filtering & Multi-Sport Projections*), refining `REQ-PER-018` (*Timeline Continuity & Bar Graph Visualization*) and `REQ-PER-019` (*Full-Period Asynchronous Mini-Map Preview*). Targets `PeriodsTabsScreen.kt`, `PeriodsViewModel.kt`, `PeriodData.kt`, `PeriodsRepository.kt`.
-2. *Historical Origin & Commit Trace*: Sprint 2026-43.9 Review (`ATT-4478`), Sprint 2026-43.2 (Rule 57, commit `d5a81e3a` / `ATT-4372`), and `PeriodMapScreen.kt:133-157` (`ATT-440`).
-3. *Root Reason for Existing Formulation*: Prior to ATT-4770, `PeriodsTabsScreen.kt` displayed all sports unconditionally; sport filtering was only available within the full-screen `PeriodMapScreen`. The Periods header had unused horizontal whitespace, while athletes requested a high-level toggle to isolate Bike and Run from other activities without clunky modal dialogs.
-4. *Preservation of Core Invariants*: In-memory StateFlow projection avoids SQLite v28 migrations, keeps `PeriodSummaries.db` read-only during filtering, preserves timeline bar graph gap interpolation (`REQ-PER-018`), and maintains 100% clean-room test pass rate.
+1. *Original Requirement ID & Target*: `REQ-PER-022.5` (*Preservation of System Invariants*), amending `REQ-PER-022` (*Periods Sport Type Header Filtering & Multi-Sport Projections*). Targets `PeriodsViewModelTest.kt`, `PeriodsViewModel.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-43.9 (`ATT-4478`), Sprint 2026-43.2 (Rule 57, commit `d5a81e3a` / `ATT-4372`), `ATT-4770`, and `ATT-5828`.
+3. *Root Reason for Existing Formulation*: Early unit tests in `PeriodsViewModelTest.kt` omitted explicit dispatcher arguments and defaulted to `Dispatchers.IO` and `Dispatchers.Default`. Lingering background coroutines under JVM runner contention caused sporadic `UncaughtExceptionsBeforeTest` errors in subsequent test runs.
+4. *Preservation of Core Invariants*: All existing test assertions, sport filter logic, and 100% clean-room pass rate under `./gradlew testDebugUnitTest` remain strictly preserved without production code changes.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* the athlete opens `PeriodsTabsScreen`,

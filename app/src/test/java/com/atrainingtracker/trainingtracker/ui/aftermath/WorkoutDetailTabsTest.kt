@@ -567,4 +567,159 @@ class WorkoutDetailTabsTest {
         // 3. Min movable index enforced when MAP is present
         assertTrue("Must calculate minMovableIdx based on MAP presence", content.contains("val minMovableIdx = if (WorkoutDetailSectionType.MAP in activeSections) 1 else 0"))
     }
+
+    /**
+     * TST-UI-464.1: Edge Gutter Default 32dp and Initial Down Lock Contract (REQ-UI-464.1 / ATT-5826).
+     */
+    @Test
+    fun `TST-UI-464_1 edge gutter default 32dp and initial down lock contract`() {
+        val mapTab = WorkoutDetailTabConfig.DEFAULT_TABS[1] // tab_map_graphs
+        val fullAvailability = WorkoutDetailSectionAvailability(
+            hasMap = true,
+            hasElevation = true,
+            hasCharts = true,
+            hasZones = true
+        )
+
+        // 1. Default edgeSwipeGutterDp is 32f:
+        // Inside left 32dp gutter (e.g. 30f): returns false (swipe enabled)
+        assertFalse(
+            "Inside 32dp left gutter must permit pager swipe",
+            mapTab.requiresHorizontalGestureIsolation(
+                availability = fullAvailability,
+                isTouchingInteractiveCanvas = true,
+                touchXDp = 30f,
+                screenWidthDp = 360f
+            )
+        )
+        // Just outside left 32dp gutter (e.g. 33f): returns true (isolation active)
+        assertTrue(
+            "Outside 32dp left gutter must isolate horizontal gesture",
+            mapTab.requiresHorizontalGestureIsolation(
+                availability = fullAvailability,
+                isTouchingInteractiveCanvas = true,
+                touchXDp = 33f,
+                screenWidthDp = 360f
+            )
+        )
+        // Inside right 32dp gutter (360 - 30 = 330f): returns false (swipe enabled)
+        assertFalse(
+            "Inside 32dp right gutter must permit pager swipe",
+            mapTab.requiresHorizontalGestureIsolation(
+                availability = fullAvailability,
+                isTouchingInteractiveCanvas = true,
+                touchXDp = 330f,
+                screenWidthDp = 360f
+            )
+        )
+        // Just outside right 32dp gutter (360 - 33 = 327f): returns true (isolation active)
+        assertTrue(
+            "Outside 32dp right gutter must isolate horizontal gesture",
+            mapTab.requiresHorizontalGestureIsolation(
+                availability = fullAvailability,
+                isTouchingInteractiveCanvas = true,
+                touchXDp = 327f,
+                screenWidthDp = 360f
+            )
+        )
+
+        // 2. Source contract: WorkoutDetailTabbedContent.kt latches initial down touch
+        val tabbedContentSource = findFile(
+            "src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutDetailTabbedContent.kt"
+        ).readText()
+        assertTrue(
+            "WorkoutDetailTabbedContent must use awaitEachGesture for touch lifecycle",
+            tabbedContentSource.contains("awaitEachGesture")
+        )
+        assertTrue(
+            "WorkoutDetailTabbedContent must latch touch from awaitFirstDown",
+            tabbedContentSource.contains("awaitFirstDown(pass = PointerEventPass.Initial")
+        )
+        assertTrue(
+            "WorkoutDetailTabbedContent must initialize isTouchingInteractiveCanvas to false at rest",
+            tabbedContentSource.contains("var isTouchingInteractiveCanvas by remember { mutableStateOf(false) }")
+        )
+    }
+
+    /**
+     * TST-UI-464.2: Granular Interactive Canvas & Non-Interactive Strip Pass-Through Contract (REQ-UI-464.2, REQ-UI-464.3 / ATT-5826).
+     */
+    @Test
+    fun `TST-UI-464_2 granular interactive canvas and non-interactive strip pass-through contract`() {
+        val mapTab = WorkoutDetailTabConfig.DEFAULT_TABS[1] // tab_map_graphs
+        val fullAvailability = WorkoutDetailSectionAvailability(
+            hasMap = true,
+            hasElevation = true,
+            hasCharts = true,
+            hasZones = true
+        )
+
+        // When touching a non-interactive surface (isTouchingInteractiveCanvas = false):
+        // Isolation is false regardless of touch position
+        assertFalse(
+            "Non-interactive strip touch must never isolate horizontal pager swipe",
+            mapTab.requiresHorizontalGestureIsolation(
+                availability = fullAvailability,
+                isTouchingInteractiveCanvas = false,
+                touchXDp = 180f,
+                screenWidthDp = 360f
+            )
+        )
+
+        // Source contract: MapDetailLayout.kt exposes onInteractiveCanvasTouch callback
+        val mapDetailLayoutSource = findFile(
+            "src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapDetailLayout.kt"
+        ).readText()
+        assertTrue(
+            "MapDetailLayout must declare onInteractiveCanvasTouch parameter",
+            mapDetailLayoutSource.contains("onInteractiveCanvasTouch: ((Boolean) -> Unit)? = null")
+        )
+        assertTrue(
+            "MapDetailLayout must use chartInteractiveTouchDetector for plot area isolation",
+            mapDetailLayoutSource.contains("chartInteractiveTouchDetector")
+        )
+        assertTrue(
+            "SplitPaneDivider must set onInteractiveCanvasTouch(false)",
+            mapDetailLayoutSource.contains("onInteractiveCanvasTouch(false)")
+        )
+    }
+
+    /**
+     * TST-UI-464.3: Active Map & Chart Plot Scrubbing Isolation Contract (REQ-UI-464.2 / ATT-5826).
+     */
+    @Test
+    fun `TST-UI-464_3 active map and chart plot scrubbing isolation contract`() {
+        val mapTab = WorkoutDetailTabConfig.DEFAULT_TABS[1] // tab_map_graphs
+        val fullAvailability = WorkoutDetailSectionAvailability(
+            hasMap = true,
+            hasElevation = true,
+            hasCharts = true,
+            hasZones = true
+        )
+
+        // When touching inside active map/chart plot area away from edges:
+        // Isolation is true (pager swipe disabled to protect scrubbing/pan)
+        assertTrue(
+            "Active plot area touch must isolate horizontal pager swipe",
+            mapTab.requiresHorizontalGestureIsolation(
+                availability = fullAvailability,
+                isTouchingInteractiveCanvas = true,
+                touchXDp = 180f,
+                screenWidthDp = 360f
+            )
+        )
+
+        // Source contract: WorkoutDetailTabbedContent wires onInteractiveCanvasTouch without outer blanket Box interceptors
+        val tabbedContentSource = findFile(
+            "src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutDetailTabbedContent.kt"
+        ).readText()
+        assertTrue(
+            "WorkoutDetailTabbedContent must wire onInteractiveCanvasTouch in Mode C",
+            tabbedContentSource.contains("onInteractiveCanvasTouch = { isTouchingInteractiveCanvas = it }")
+        )
+        assertFalse(
+            "WorkoutDetailTabbedContent must NOT wrap MapDetailLayout in blanket isTouchingInteractiveCanvas = true",
+            tabbedContentSource.contains("isTouchingInteractiveCanvas = true\n                                        }\n                                    }\n                                }\n                        ) {\n                            MapDetailLayout(")
+        )
+    }
 }

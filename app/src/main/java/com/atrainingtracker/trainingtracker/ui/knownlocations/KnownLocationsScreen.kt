@@ -49,16 +49,19 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Terrain
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -79,12 +82,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.elevation.ElevationSource
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
+import com.atrainingtracker.trainingtracker.ui.common.filters.FilterActionButton
 import com.atrainingtracker.trainingtracker.ui.components.DeleteConfirmationDialog
 import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
 import com.atrainingtracker.trainingtracker.ui.map.DarkMapAntiFlashOverlay
@@ -123,6 +128,7 @@ fun KnownLocationsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var locationPendingDeletion by remember { mutableStateOf<KnownLocationItem?>(null) }
+    var showFilterSheet by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier.fillMaxSize()
@@ -146,22 +152,33 @@ fun KnownLocationsScreen(
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
                     )
 
-                    var showSortMenu by remember { mutableStateOf(false) }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        FilterActionButton(
+                            onClick = { showFilterSheet = true },
+                            isFilterActive = uiState.filterCriteria.isNotEmpty,
+                            activeFilterCount = uiState.filterCriteria.activeFilterCount,
+                            modifier = Modifier.testTag("known_locations_filter_button")
+                        )
 
-                    Box {
-                        IconButton(
-                            onClick = { showSortMenu = true },
-                            modifier = Modifier.testTag("known_locations_sort_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.Sort,
-                                contentDescription = stringResource(R.string.sort),
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
+                        var showSortMenu by remember { mutableStateOf(false) }
+
+                        Box {
+                            IconButton(
+                                onClick = { showSortMenu = true },
+                                modifier = Modifier.testTag("known_locations_sort_button")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.Sort,
+                                    contentDescription = stringResource(R.string.sort),
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
 
                         DropdownMenu(
                             containerColor = MaterialTheme.colorScheme.surface,
@@ -204,7 +221,23 @@ fun KnownLocationsScreen(
                             }
                         }
                     }
+                    }
                 }
+            }
+        }
+
+        // Active Filter Chips Strip (REQ-UI-466.3)
+        if (uiState.filterCriteria.isNotEmpty) {
+            Surface(
+                color = MaterialTheme.colorScheme.surface,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                ActiveKnownLocationsFilterChipsRow(
+                    criteria = uiState.filterCriteria,
+                    onRemoveQuery = { viewModel.setSearchQuery("") },
+                    onRemoveMinStarts = { viewModel.setMinStarts(null) },
+                    onClearAll = { viewModel.clearFilters() }
+                )
             }
         }
 
@@ -220,6 +253,16 @@ fun KnownLocationsScreen(
             onClearHome = { viewModel.clearHomeLocation() },
             onDelete = { locationPendingDeletion = it },
             modifier = Modifier.fillMaxSize()
+        )
+    }
+
+    // Modal Filter Bottom Sheet (REQ-UI-466.4)
+    if (showFilterSheet) {
+        KnownLocationsFilterBottomSheet(
+            criteria = uiState.filterCriteria,
+            onApplyCriteria = { viewModel.setFilterCriteria(it) },
+            onClearAll = { viewModel.clearFilters() },
+            onDismissRequest = { showFilterSheet = false }
         )
     }
 
@@ -297,6 +340,29 @@ private fun KnownLocationsListContent(
                 )
             }
         }
+    } else if (uiState.filteredLocations.isEmpty()) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(32.dp)
+                .padding(bottom = bottomNavPadding),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    imageVector = Icons.Default.Place,
+                    contentDescription = null,
+                    modifier = Modifier.size(64.dp),
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = stringResource(R.string.filter_no_matching_locations),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
     } else {
         LazyColumn(
             modifier = modifier
@@ -311,7 +377,7 @@ private fun KnownLocationsListContent(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(
-                items = uiState.locations,
+                items = uiState.filteredLocations,
                 key = { it.id }
             ) { item ->
                 KnownLocationCard(
@@ -346,7 +412,7 @@ private fun KnownLocationThumbnailMap(
 ) {
     Surface(
         modifier = modifier
-            .size(100.dp)
+            .size(width = 116.dp, height = 80.dp)
             .testTag("location_map_preview_${item.id}"),
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh
@@ -525,74 +591,39 @@ private fun KnownLocationCard(
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        // Prominent Altitude Metric
+                        // Altitude Metric (REQ-UI-465.2)
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Icon(
-                                painter = painterResource(R.drawable.ic_ascent),
+                                imageVector = Icons.Default.Terrain,
                                 contentDescription = null,
                                 modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.primary
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
                                 text = KnownLocationsUnitConversions.formatAltitude(item.altitude, isMetric),
                                 style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
 
-                        // Dedicated Badges Row (Starts and Routes, REQ-UI-195)
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            // Number of Starts (Interactive Drill-Down Touch Target)
-                            Surface(
-                                onClick = onShowWorkouts,
-                                shape = RoundedCornerShape(8.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
-                                modifier = Modifier.testTag("location_starts_badge_${item.id}")
+                        // Dedicated Badges Row (Starts and Routes, REQ-UI-195, REQ-UI-465.1)
+                        CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Place,
-                                        contentDescription = stringResource(R.string.known_locations_view_workouts),
-                                        modifier = Modifier.size(13.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Text(
-                                        text = pluralStringResource(R.plurals.known_locations_starts, startsCount, startsCount),
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.Medium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(11.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
-                                    )
-                                }
-                            }
-
-                            // Number of Routes (Interactive Drill-Down Touch Target per REQ-UI-188, REQ-UI-195, REQ-UI-207)
-                            if (linkedClusters.isNotEmpty()) {
+                                // Number of Starts (Interactive Drill-Down Touch Target)
                                 Surface(
-                                    onClick = onShowRoutes,
+                                    onClick = onShowWorkouts,
                                     shape = RoundedCornerShape(8.dp),
-                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
+                                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                                     border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
-                                    modifier = Modifier.testTag("location_routes_badge_${item.id}")
+                                    modifier = Modifier.testTag("location_starts_badge_${item.id}")
                                 ) {
                                     Row(
                                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -600,23 +631,60 @@ private fun KnownLocationCard(
                                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
                                         Icon(
-                                            painter = painterResource(R.drawable.ic_favorite_route),
-                                            contentDescription = stringResource(R.string.known_locations_view_routes),
+                                            imageVector = Icons.Default.Place,
+                                            contentDescription = stringResource(R.string.known_locations_view_workouts),
                                             modifier = Modifier.size(13.dp),
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            tint = MaterialTheme.colorScheme.onSecondaryContainer
                                         )
                                         Text(
-                                            text = pluralStringResource(R.plurals.known_locations_routes, linkedClusters.size, linkedClusters.size),
+                                            text = pluralStringResource(R.plurals.known_locations_starts, startsCount, startsCount),
                                             style = MaterialTheme.typography.labelMedium,
-                                            fontWeight = FontWeight.Medium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSecondaryContainer
                                         )
                                         Icon(
                                             imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                                             contentDescription = null,
                                             modifier = Modifier.size(11.dp),
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
+                                            tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = TTAlpha.Medium)
                                         )
+                                    }
+                                }
+
+                                // Number of Routes (Interactive Drill-Down Touch Target per REQ-UI-188, REQ-UI-195, REQ-UI-207)
+                                if (linkedClusters.isNotEmpty()) {
+                                    Surface(
+                                        onClick = onShowRoutes,
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
+                                        modifier = Modifier.testTag("location_routes_badge_${item.id}")
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(R.drawable.ic_favorite_route),
+                                                contentDescription = stringResource(R.string.known_locations_view_routes),
+                                                modifier = Modifier.size(13.dp),
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            Text(
+                                                text = pluralStringResource(R.plurals.known_locations_routes, linkedClusters.size, linkedClusters.size),
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.Medium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            Icon(
+                                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(11.dp),
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
+                                            )
+                                        }
                                     }
                                 }
                             }

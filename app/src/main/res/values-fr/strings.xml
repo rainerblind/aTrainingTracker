@@ -1305,6 +1305,15 @@
     <string name="filter_section_recordings">Enregistrements</string>
     <string name="filter_min_recordings_chip_format">≥ %1$d enregistrements</string>
     <string name="filter_no_matching_clusters">Aucun parcours favori ne correspond aux filtres actifs</string>
+    <!-- Favorite Locations Filtering (ATT-5823) -->
+    <string name="filter_known_locations_title">Filtrer les lieux favoris</string>
+    <string name="filter_search_known_locations_hint">Rechercher le nom du lieu…</string>
+    <string name="filter_section_starts">Départs</string>
+    <string name="filter_min_starts_chip_format">≥ %1$d départs</string>
+    <string name="filter_no_matching_locations">Aucun lieu favori ne correspond aux filtres actifs</string>
+    <!-- Favorite Locations Filtering in Filter Sheets (ATT-5822) -->
+    <string name="filter_locations_show_all">Tout afficher</string>
+    <string name="filter_locations_show_frequent">Seulement ≥ 5 départs</string>
     <string name="filter_sensors_title">Filtrer les capteurs</string>
     <string name="filter_section_protocol">Protocole</string>
     <string name="filter_section_category">Catégorie de capteur</string>

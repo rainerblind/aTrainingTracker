@@ -248,6 +248,18 @@ public class TrackerService extends Service {
     }
 
     /**
+     * Cancels the active 1 Hz sampling tracker handle and clears the reference ({@code REQ-TRK-026.3}, {@code REQ-TRK-033.1}).
+     */
+    @VisibleForTesting
+    void cancelTrackerHandle() {
+        ScheduledFuture<?> handle = mTrackerHandle;
+        if (handle != null) {
+            handle.cancel(true);
+            mTrackerHandle = null;
+        }
+    }
+
+    /**
      * Returns whether an instance of {@link TrackerService} is currently active ({@code REQ-TRK-034.1}).
      */
     public static boolean isRunning() {
@@ -852,11 +864,7 @@ public class TrackerService extends Service {
                         Log.e(TAG, "Fatal error initializing workout database asynchronously", t);
                         initFuture.completeExceptionally(t);
                         mTrackingInterrupted = true;
-                        ScheduledFuture<?> handle = mTrackerHandle;
-                        if (handle != null) {
-                            handle.cancel(true);
-                            mTrackerHandle = null;
-                        }
+                        cancelTrackerHandle();
                         runOnMainThread(this::handleTrackingAborted);
                         showTrackingInterruptedNotification();
                         performStopSelf();
@@ -936,10 +944,7 @@ public class TrackerService extends Service {
                 if (mTableInitializationFuture != null && !mTableInitializationFuture.isDone()) {
                     mTableInitializationFuture.cancel(false);
                 }
-                if (mTrackerHandle != null) {
-                    mTrackerHandle.cancel(true);
-                    mTrackerHandle = null;
-                }
+                cancelTrackerHandle();
                 showTrackingInterruptedNotification();
                 performStopSelf();
                 return Service.START_STICKY;
@@ -1004,11 +1009,7 @@ public class TrackerService extends Service {
         mIsStopping = true;
         if (DEBUG) Log.d(TAG, "handleActionStop: initiating foreground-protected async finalization");
 
-        ScheduledFuture<?> handle = mTrackerHandle;
-        if (handle != null) {
-            handle.cancel(true);
-            mTrackerHandle = null;
-        }
+        cancelTrackerHandle();
         mScheduler.shutdownNow();
 
         mAutoPauseManager.release();
@@ -1192,11 +1193,7 @@ public class TrackerService extends Service {
         }
 
         // Stop the periodic 1 Hz tracker task and shut down the scheduler pool (REQ-TRK-033.1)
-        ScheduledFuture<?> handle = mTrackerHandle;
-        if (handle != null) {
-            handle.cancel(true);
-            mTrackerHandle = null;
-        }
+        cancelTrackerHandle();
         mScheduler.shutdownNow();
 
         // Release main-thread resources immediately while keeping mBanalService and wakeLock

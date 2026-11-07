@@ -1306,6 +1306,15 @@
     <string name="filter_section_recordings">Grabaciones</string>
     <string name="filter_min_recordings_chip_format">≥ %1$d grabaciones</string>
     <string name="filter_no_matching_clusters">Ninguna ruta favorita coincide con los filtros activos</string>
+    <!-- Favorite Locations Filtering (ATT-5823) -->
+    <string name="filter_known_locations_title">Filtrar ubicaciones favoritas</string>
+    <string name="filter_search_known_locations_hint">Buscar nombre de ubicación…</string>
+    <string name="filter_section_starts">Inicios</string>
+    <string name="filter_min_starts_chip_format">≥ %1$d inicios</string>
+    <string name="filter_no_matching_locations">Ninguna ubicación favorita coincide con los filtros activos</string>
+    <!-- Favorite Locations Filtering in Filter Sheets (ATT-5822) -->
+    <string name="filter_locations_show_all">Mostrar todos</string>
+    <string name="filter_locations_show_frequent">Solo ≥ 5 inicios</string>
     <string name="filter_sensors_title">Filtrar sensores</string>
     <string name="filter_section_protocol">Protocolo</string>
     <string name="filter_section_category">Categoría de sensor</string>

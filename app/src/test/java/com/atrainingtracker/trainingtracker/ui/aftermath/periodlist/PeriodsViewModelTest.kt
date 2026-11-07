@@ -24,6 +24,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
 import io.mockk.*
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -87,6 +88,12 @@ class PeriodsViewModelTest {
         unmockkAll()
     }
 
+    private fun createViewModel(
+        app: Application = mockApplication,
+        ioDispatcher: CoroutineDispatcher = testDispatcher,
+        defaultDispatcher: CoroutineDispatcher = testDispatcher
+    ): PeriodsViewModel = PeriodsViewModel(app, ioDispatcher, defaultDispatcher)
+
     private fun createPeriodSummary(
         label: String = "Week 42, 2026",
         sportStats: Map<BSportType, SportStats>,
@@ -127,7 +134,7 @@ class PeriodsViewModelTest {
      */
     @Test
     fun testDefaultFilterSet_andEmptyGuard() {
-        val viewModel = PeriodsViewModel(mockApplication)
+        val viewModel = createViewModel()
 
         // 1. Initial default is [BIKE, RUN]
         assertEquals(setOf(BSportType.BIKE, BSportType.RUN), viewModel.selectedSports.value)
@@ -164,7 +171,7 @@ class PeriodsViewModelTest {
      */
     @Test
     fun testFilterPeriodSummary_recalculatesTotals_andOmitsZeroWorkouts() {
-        val viewModel = PeriodsViewModel(mockApplication)
+        val viewModel = createViewModel()
 
         val bikeStats = SportStats(count = 2, totalDurationSec = 3600L, totalDistanceMeters = 20000.0, totalAscentMeters = 200L, detailedSportStats = emptyMap(), longestWorkout = null)
         val runStats = SportStats(count = 1, totalDurationSec = 1800L, totalDistanceMeters = 5000.0, totalAscentMeters = 50L, detailedSportStats = emptyMap(), longestWorkout = null)
@@ -218,7 +225,7 @@ class PeriodsViewModelTest {
      */
     @Test
     fun testFilterPeriodSummary_filtersPolylinesAndExtremaMarkers() {
-        val viewModel = PeriodsViewModel(mockApplication)
+        val viewModel = createViewModel()
 
         val bikeStats = SportStats(count = 1, totalDurationSec = 3600L, totalDistanceMeters = 20000.0, totalAscentMeters = 200L, detailedSportStats = emptyMap(), longestWorkout = null)
         val runStats = SportStats(count = 1, totalDurationSec = 1800L, totalDistanceMeters = 5000.0, totalAscentMeters = 50L, detailedSportStats = emptyMap(), longestWorkout = null)
@@ -287,7 +294,7 @@ class PeriodsViewModelTest {
             emptyList()     // Years
         )
 
-        val viewModel = PeriodsViewModel(mockApplication)
+        val viewModel = createViewModel()
         testScheduler.advanceUntilIdle()
 
         // Default [BIKE, RUN]: p1 retained, p2 omitted from Days
@@ -310,7 +317,7 @@ class PeriodsViewModelTest {
     fun testShowPeriodMap_withInitialRegionId_setsSelectedRegionId() = runTest {
         coEvery { mockPeriodsRepo.getWorkoutsForRange(any(), any()) } returns emptyList()
 
-        val viewModel = PeriodsViewModel(mockApplication, testDispatcher, testDispatcher)
+        val viewModel = createViewModel()
         val summary = createPeriodSummary("Test Period", emptyMap())
 
         viewModel.showPeriodMap(summary, initialRegionId = "region_custom_42")
@@ -327,7 +334,7 @@ class PeriodsViewModelTest {
      */
     @Test
     fun testSelectedMetric_defaultAndHoisting() {
-        val viewModel = PeriodsViewModel(mockApplication)
+        val viewModel = createViewModel()
         assertEquals(PeriodBarMetric.DURATION, viewModel.selectedMetric.value)
 
         viewModel.selectMetric(PeriodBarMetric.DISTANCE)
@@ -342,7 +349,7 @@ class PeriodsViewModelTest {
      */
     @Test
     fun testFilterPeriodSummary_filtersYearlySportContributions() {
-        val viewModel = PeriodsViewModel(mockApplication)
+        val viewModel = createViewModel()
 
         val bikeContribution = YearlySportContribution(sportType = BSportType.BIKE, year = 2026)
         val runContribution = YearlySportContribution(sportType = BSportType.RUN, year = 2026)
@@ -389,7 +396,7 @@ class PeriodsViewModelTest {
      */
     @Test
     fun testFilterPeriodSummary_filtersDailySportContributions_TST_PER_035_4() {
-        val viewModel = PeriodsViewModel(mockApplication)
+        val viewModel = createViewModel()
 
         val bikeContribution = DailySportContribution(sportType = BSportType.BIKE)
         val runContribution = DailySportContribution(sportType = BSportType.RUN)
@@ -438,7 +445,7 @@ class PeriodsViewModelTest {
      */
     @Test
     fun testSymmetricDtoPolylineSportFiltering_TST_PER_032_1() {
-        val viewModel = PeriodsViewModel(mockApplication)
+        val viewModel = createViewModel()
 
         val bikeStats = SportStats(count = 1, totalDurationSec = 3600L, totalDistanceMeters = 25000.0, totalAscentMeters = 300L, detailedSportStats = emptyMap(), longestWorkout = null)
         val runStats = SportStats(count = 1, totalDurationSec = 1800L, totalDistanceMeters = 5000.0, totalAscentMeters = 50L, detailedSportStats = emptyMap(), longestWorkout = null)
@@ -513,7 +520,7 @@ class PeriodsViewModelTest {
 
         coEvery { mockPeriodsRepo.getWorkoutsForRange(any(), any()) } returns listOf(bikeWorkout, runWorkout)
 
-        val viewModel = PeriodsViewModel(mockApplication, testDispatcher, testDispatcher)
+        val viewModel = createViewModel()
         // Deselect RUN -> only BIKE is active
         viewModel.toggleSportFilter(BSportType.RUN)
         assertEquals(setOf(BSportType.BIKE), viewModel.selectedSports.value)
@@ -574,7 +581,7 @@ class PeriodsViewModelTest {
 
         coEvery { mockPeriodsRepo.getWorkoutsForRange(any(), any()) } returns listOf(stuttgartBike, berlinRun)
 
-        val viewModel = PeriodsViewModel(mockApplication, testDispatcher, testDispatcher)
+        val viewModel = createViewModel()
 
         // 1. When filtered to BIKE only: only 1 region (Stuttgart) detected, Berlin excluded
         viewModel.toggleSportFilter(BSportType.RUN)
