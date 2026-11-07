@@ -1,15 +1,15 @@
 ---
 name: sprint-planner
-description: Facilitates the agile Sprint lifecycle ceremonies. Conducts interactive ticket-by-ticket Sprint-Start Screening with the human user (clarifying ambiguous requirements and moving ready tickets to Analysis) and facilitates the Sprint-End Joint Review (evaluating tickets in Final Review, merging accepted tickets, or bouncing back to Analysis).
+description: Facilitates the agile Sprint lifecycle ceremonies. Conducts upfront Coordinator batch audit and exception-based clarification at Sprint-Start (moving approved tickets to Analysis) and facilitates the one-by-one Sprint-End Joint Review (evaluating tickets in Final Review, merging accepted tickets, or bouncing back to Analysis).
 ---
 
 # Skill: sprint-planner
 
 ## Overview
 This skill acts as the **Agile Sprint Facilitator & Scrum Master**. It orchestrates the two human-in-the-loop anchor points of every sprint and governs the **Strategy A (Sprint Integration Branch)** continuous integration model:
-1. **Phase 1: Sprint-Start & Interaktives Ticket-Screening** (Establishing `sprint/<sprint_id>` and aligning requirements).
+1. **Phase 1: Sprint-Start & Coordinator Ticket-Screening** (Establishing `sprint/<sprint_id>`, auditing all sprint tickets in detail upfront, and resolving any open questions before moving the batch to `Analysis`).
 2. **Phase 2: Autonome In-Sprint Pipeline mit Continuous Sprint Integration** (Agents work autonomously, merging verified tickets directly into `sprint/<sprint_id>` to eliminate merge conflicts).
-3. **Phase 3: Sprint-Ende & Joint Review** (Joint evaluation on the integrated sprint build, release sign-off, and final merge to `develop`).
+3. **Phase 3: Sprint-Ende & Joint Review** (Strict one-by-one evaluation on the integrated sprint build, release sign-off, and final merge to `develop`).
 
 ---
 
@@ -47,38 +47,16 @@ Ensure that every ticket committed to the active sprint has clear, unambiguous a
    git pull origin develop
    git checkout -b sprint/<SPRINT_NAME>  # e.g. sprint/2026-40.1
    ```
-3. **Ticket-by-Ticket Walkthrough with the Human User**:
-   * **Duplicate / Overlapping Ticket Detection (`Rule 63` — `ATT-4670`)**: When inspecting the active sprint backlog at the start of Ceremony 1, proactively check whether any two tickets in the sprint address the same root cause or overlapping scope (e.g., `ATT-4667` and `ATT-4663`). When a duplicate is detected, immediately flag it to the human user, propose consolidating any unique acceptance criteria into the primary ticket, and move the duplicate directly to `Final Review (Human)` with a cross-reference comment so it does not consume a redundant 5-stage pipeline cycle.
-   For each feature/bug/improvement ticket in sequence (skipping the `Review & Retro` ceremony ticket, which remains as the sprint's continuous retro logging and Ceremony 2 retrospective container rather than entering `Analysis` or spawning `[Analysis]..[Test]` subtasks):
-   * **Present Summary & Context**: Present the ticket key, title, and current description to the user.
-   * **Story Point Estimation & Complexity Split Guardrail (`REQ-PRO-029`)**:
-     * Propose a Story Point estimate (`1`, `2`, `3`, or `5+ -> split`) based on the AAA scale:
-       * **1 SP** (*Trivial / Isolated*): Single-file bugfix, copy/localization adjustment, icon color/layout tweak, simple guard clause, no schema or architectural change (~20–30 min pipeline, ~1–2 min human review).
-       * **2 SP** (*Standard Atomic Ticket*): Well-bounded feature or bugfix across 2–4 files (e.g. ViewModel + Compose Screen + Unit Test + 9-locale strings) (~35–45 min pipeline, ~3–5 min human review).
-       * **3 SP** (*Complex / Cross-Layer*): Multi-layer change touching Repository/SQLite migration, hardware sensor state machine, or complex Canvas/chart math with extensive edge-case testing (~50–65 min pipeline, ~5–8 min human review; max 2–3 per sprint).
-       * **>= 5 SP** (*Too Large / Multi-Concern*): Mini-epic combining multiple screens, DB migrations, and services (> 75 min pipeline, > 10 min human review). **MANDATORY SPLIT into atomic child tickets (1–3 SP) before entering an active sprint!**
-     * Record approved story points in Jira via:
-       ```bash
-       python3 tools/jira_util.py set-points <KEY> <POINTS>
-       ```
-   * **Strict Turn Boundary Before Moving to `Analysis` (Rule 7)**: Never call `python3 tools/jira_util.py move <KEY> "analysis"` in the same turn in which `<KEY>` is first presented to the user. Wait for the user's explicit approval of `<KEY>` before moving it to `Analysis`.
-   * **Human Prerequisite Detection (Rule 22)**: Explicitly check whether the ticket depends on actions only the human can perform (e.g. Google Cloud Console / OAuth client registration, SHA-1 fingerprints, API keys, Play Console settings, third-party accounts, test hardware/sensors, outdoor rides). If so, name each action to the user, record them in the ticket description under a `Human Prerequisites` section, and agree whether they are completed before development starts (`"Tickets that need actions by me should be detected during the sprint planning."` — Retro 2026-40.16, ATT-1306).
-   * **Screening Evaluation**:
-     * *Case A: Clean & Unambiguous*: If the ticket description clearly articulates the goal, scope, and expected outcome, confirm with the user and advance the ticket to `Analysis` after receiving the user's approval:
-       ```bash
-       python3 tools/jira_util.py move <KEY> "analysis"
-       ```
-     * *Case B: Ambiguous / Incomplete / Questions Open*:
-       * Ask targeted, Socratic questions to resolve open design decisions, edge cases, and user expectations.
-       * Jointly formulate clean requirements, acceptance criteria, and scope boundaries.
-       * Update the Jira ticket description:
-         ```bash
-         python3 tools/jira_util.py update-desc <KEY> "<UPDATED_SPECIFICATION>"
-         ```
-       * Once aligned, advance the ticket to `Analysis`:
-         ```bash
-         python3 tools/jira_util.py move <KEY> "analysis"
-         ```
+3. **Upfront Coordinator Batch Audit & Exception-Based Clarification (`Rule 77` — `ATT-5762`, `"At the sprint start, we do not have to go through each ticket in Detail. All tickets are approved by the human by moving the ticket into the sprint. Nevertheless, the coordinating Agent should critically check each ticket in detail and ask questions before the sprint is started."`)**:
+   * **No Mandatory One-by-One Walkthrough at Sprint-Start**: Because only the human user assigns tickets to an active sprint, placing a ticket into the sprint already constitutes human pre-approval. Do **NOT** force a slow ticket-by-ticket walkthrough at Sprint-Start (note: strict one-by-one review `Rule 68` applies exclusively to **Ceremony 2: Sprint Review**).
+   * **Mandatory Deep Coordinator Audit of Every Sprint Ticket**: Before starting Phase 2, the Coordinator MUST inspect every regular sprint ticket (`python3 tools/jira_util.py show <KEY>`, skipping `Review & Retro`) in detail:
+     * **Duplicate / Overlapping Ticket Detection (`Rule 63` — `ATT-4670`)**: Check whether any two tickets in the sprint address the same root cause or overlapping scope. Flag any duplicate immediately and propose consolidating into the primary ticket.
+     * **Story Point Estimation & Complexity Split Guardrail (`REQ-PRO-029`)**: Check that every ticket has a Story Point estimate (`1`, `2`, `3`, or `>= 5 -> mandatory split` on the AAA scale). Propose and set (`python3 tools/jira_util.py set-points <KEY> <POINTS>`) estimates for any unestimated tickets.
+     * **Human Prerequisite Detection (`Rule 22`)**: Check whether any ticket depends on actions only the human can perform (OAuth registration, Play Console, external hardware).
+     * **Ambiguity & Edge-Case Audit**: Critically verify that the problem statement, acceptance criteria, and architectural boundaries are unambiguous.
+   * **Consolidated Presentation & Approval Before Moving to `Analysis` (`Rule 7`)**:
+     * Present a compact overview table of all sprint tickets (Rank, Key, Summary, Story Points, Audit Status) together with any specific clarifying questions or proposed estimates in a single turn.
+     * Wait for the user's confirmation (and answers to any open questions), update any refined descriptions (`python3 tools/jira_util.py update-desc <KEY> ...`), and then batch-transition all approved regular sprint tickets to `Analysis` (`python3 tools/jira_util.py move <KEY> "analysis"`).
 4. **Handoff to Autonomous Execution (Phase 2)**:
    Once all regular sprint tickets are in status `Analysis` (with the `Review & Retro` ticket retained for in-sprint anomaly logging and Ceremony 2 retrospective documentation), Phase 1 concludes. The agent runs `python3 tools/jira_util.py list` and verifies that the total sprint story point load aligns with the target capacity envelope (~24–30 SP for ~12–15 atomic tickets and ~30–45 min of focused human on-device verification). The implementation agents (`agent1`, `agent2`) take over Phase 2:
    * **Continuous Unattended Execution & Full-Sprint Mandate**: The sprint pipeline runs continuously and autonomously across the entire sprint backlog without stopping the console, pausing between tickets, or asking whether to continue (`"Again, I was asked if we should continue. → Agents should do the entire Sprint."`).

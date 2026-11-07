@@ -425,6 +425,14 @@ Row(
 * **Grounded, Modest Copy for Milestones & App Development Support (`ATT-5658`, `ATT-5659`)**:
   * Milestone dialogs (`FirstJubileeCelebrationDialog`) and Supporter screens (`SupporterScreen`) must use modest, grounded wording focused simply on supporting the ongoing development of the app — avoiding marketing slogans (*"15+ years of development"*, *"indie developer"*, *"privacy-first / no ads"*), treating 100 workouts as a nice milestone with more to come, and ordering feedback prompts logically (*Email Feedback $\rightarrow$ Play Store Review $\rightarrow$ Financial Support at the bottom*, visible to both Free and Pioneer users).
 
+### 5.19 Read-Only Picker `OutlinedTextField` Tap Handling & Two-Step Dialog Transition State Independence (`Rule 77` — `ATT-5674` $\rightarrow$ `ATT-5818`, `ATT-5666` $\rightarrow$ `ATT-5824` / `ATT-5762`)
+* **Never Rely on Outer `Modifier.clickable` on an `enabled = true` `OutlinedTextField(readOnly = true)` (`ATT-5674` $\rightarrow$ `ATT-5818`)**:
+  * In Jetpack Compose Material 3, an `OutlinedTextField` with `enabled = true` (even when `readOnly = true`) attaches an internal pointer-input focus handler inside `BasicTextField` that **consumes tap events** before they bubble up to an outer `Modifier.clickable { ... }` — causing taps on the text field body to be swallowed while only a `trailingIcon` `IconButton` responds.
+  * Whenever a read-only `OutlinedTextField` acts as a selector/picker trigger, either wrap it in an `ExposedDropdownMenuBox` (`Modifier.menuAnchor()`) or pass a `MutableInteractionSource` to `OutlinedTextField(interactionSource = interactionSource, ...)` and observe `PressInteraction.Release` in a `LaunchedEffect(interactionSource)` to open the selection dialog.
+* **Two-Step Dialog Transition State Independence (`SelectionSheet` $\rightarrow$ `ConfirmationDialog`, `ATT-5666` $\rightarrow$ `ATT-5824`)**:
+  * Reusable selection bottom sheets (such as `WorkoutClusterSelectionDialog`) invoke `onSelect(item)` followed immediately by `onDismiss()` when a candidate row is tapped.
+  * Therefore, when chaining a second dialog (e.g. a confirmation `AlertDialog`) after candidate selection, the caller **MUST NOT** gate the confirmation dialog on a state variable that `onDismiss()` resets to `null` (such as `if (clusterToMerge != null && mergeTargetCluster != null)` with `onDismiss = { clusterToMerge = null }`). Instead, capture the confirmation payload into an independent state variable inside `onSelect` (`pendingMergePair = source to target`) so `onDismiss` cleanly closes the picker sheet while the confirmation `AlertDialog` opens on the first tap.
+
 ---
 
 ## 6. Map Viewport & Camera Guidelines
