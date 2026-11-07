@@ -7457,6 +7457,25 @@
   4. *Clean-Room Targeted Regression Execution (`TST-UI-460.4`)*:
   • Execute targeted test suites (`com.atrainingtracker.trainingtracker.localization.*`, `com.atrainingtracker.trainingtracker.ui.help.*`, `com.atrainingtracker.trainingtracker.migration.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
+### TST-UI-461: **Trademark-Free Live Climb Tuning Title & Brand Hygiene Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-461`
+- **Component**: `strings.xml` (all 9 locales), `LiveClimbSheet.kt`, `TrackingViewsDatabaseManager.java`, `SensorGridLandscapeLayoutTest.kt`
+- **Jira**: `ATT-5675`
+- **Test Description**:
+  1. *9-Language Title Neutralization & Brand Absence Audit (`TST-UI-461.1`, `TranslationParityTest.kt`)*:
+  • Verify that `tuning_show_live_climbs_title` exists and is non-empty across all 9 locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
+  • Verify that `tuning_show_live_climbs_title` across all 9 locales does NOT contain `ClimbPro` or `(ClimbPro)`.
+  • Verify zero inline emojis in localized strings (`ATT-5400`).
+  2. *Codebase Trademark & Comment Hygiene Audit (`TST-UI-461.2`)*:
+  • Verify that `LiveClimbSheet.kt` KDoc contains no `(ClimbPro)` reference.
+  • Verify that `TrackingViewsDatabaseManager.java` Javadoc contains no `ClimbPro` reference.
+  • Verify that `SensorGridLandscapeLayoutTest.kt` KDoc contains no `ClimbPro` reference.
+  3. *Tuning Preferences Contract & Schema Invariant Audit (`TST-UI-461.3`, `TrackingViewsDatabaseManagerTest.kt`)*:
+  • Verify that `KEY_SHOW_LIVE_CLIMBS` ("tuning_show_live_climbs") and SQLite database column `TrackingViewsDbHelper.SHOW_LIVE_CLIMBS` ("show_live_climbs") remain unchanged.
+  4. *Clean-Room Targeted Regression Execution (`TST-UI-461.4`)*:
+  • Execute targeted test suites (`com.atrainingtracker.trainingtracker.localization.*`, `com.atrainingtracker.trainingtracker.ui.climbs.*`, `com.atrainingtracker.trainingtracker.database.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+
 
 
 

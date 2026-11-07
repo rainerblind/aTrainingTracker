@@ -1775,7 +1775,7 @@
     <string name="route_item_hide">Verbergen</string>
     <string name="route_item_show">Tonen</string>
     <string name="segment_routes_containing_title">Routes met dit segment (%d)</string>
-    <string name="tuning_show_live_climbs_title">Live beklimmingen (ClimbPro)</string>
+    <string name="tuning_show_live_climbs_title">Live beklimmingen</string>
     <string name="tuning_show_live_climbs_summary">Toon realtime klimcockpit tijdens routes en vrij rijden</string>
 
     <string name="turn_cue_left">Linksaf slaan</string>

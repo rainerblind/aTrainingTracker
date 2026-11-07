@@ -1864,7 +1864,7 @@
     <string name="route_item_hide">Ausblenden</string>
     <string name="route_item_show">Einblenden</string>
     <string name="segment_routes_containing_title">Routen mit diesem Segment (%d)</string>
-    <string name="tuning_show_live_climbs_title">Live-Anstiege (ClimbPro)</string>
+    <string name="tuning_show_live_climbs_title">Live-Anstiege</string>
     <string name="tuning_show_live_climbs_summary">Echtzeit-Anstiegs-Cockpit bei Strecken und freier Fahrt einblenden</string>
 
     <string name="turn_cue_left">Links abbiegen</string>

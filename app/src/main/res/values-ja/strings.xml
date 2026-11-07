@@ -1755,7 +1755,7 @@
     <string name="route_item_hide">非表示</string>
     <string name="route_item_show">表示</string>
     <string name="segment_routes_containing_title">このセグメントを含むルート (%d)</string>
-    <string name="tuning_show_live_climbs_title">ライブクライム (ClimbPro)</string>
+    <string name="tuning_show_live_climbs_title">ライブクライム</string>
     <string name="tuning_show_live_climbs_summary">ルートおよびフリー走行中にリアルタイム登坂コックピットを表示</string>
 
     <string name="turn_cue_left">左折</string>

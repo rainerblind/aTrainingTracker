@@ -1778,7 +1778,7 @@
     <string name="route_item_hide">Ukryj</string>
     <string name="route_item_show">Pokaż</string>
     <string name="segment_routes_containing_title">Trasy z tym segmentem (%d)</string>
-    <string name="tuning_show_live_climbs_title">Podjazdy na żywo (ClimbPro)</string>
+    <string name="tuning_show_live_climbs_title">Podjazdy na żywo</string>
     <string name="tuning_show_live_climbs_summary">Pokazuj kokpit podjazdu w czasie rzeczywistym na trasach i podczas swobodnej jazdy</string>
 
     <string name="turn_cue_left">Skręć w lewo</string>

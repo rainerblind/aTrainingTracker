@@ -1779,7 +1779,7 @@
     <string name="route_item_hide">Ocultar</string>
     <string name="route_item_show">Mostrar</string>
     <string name="segment_routes_containing_title">Rutas con este segmento (%d)</string>
-    <string name="tuning_show_live_climbs_title">Subidas en vivo (ClimbPro)</string>
+    <string name="tuning_show_live_climbs_title">Subidas en vivo</string>
     <string name="tuning_show_live_climbs_summary">Mostrar panel de subida en tiempo real durante rutas y recorrido libre</string>
 
     <string name="turn_cue_left">Girar a la izquierda</string>

@@ -13788,6 +13788,49 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: String key stability; zero route or navigation ID alterations; zero Strava OAuth/sync logic changes.
 
+### REQ-UI-461: Trademark-Free Live Climb Tuning Title Parity Across All 9 Locales [Verified]
+- **Tests**: `TST-UI-461` | **Tickets**: `ATT-5675`
+- **Implementation**: `strings.xml` (all 9 locales), `LiveClimbSheet.kt`, `TrackingViewsDatabaseManager.java`, `SensorGridLandscapeLayoutTest.kt`
+- **Rationale**: To eliminate trademark compliance risks associated with Garmin Ltd.'s registered trademark "ClimbPro" and avoid potential automated Google Play Store rejections under *Unauthorized Use of Third-Party Trademarks*, the system SHALL remove the bracketed suffix `(ClimbPro)` from `tuning_show_live_climbs_title` across all 9 supported application locales, harmonizing the title with existing cockpit toggle phrasing (`config_tracking__show_live_climbs`) while sanitizing codebase comments in production and test files (Sprint 2026-45.10, ATT-5675, refining `REQ-MAP-027` Clause 5, `REQ-UI-383`):
+1. *Tuning String Resource Neutralization (`REQ-UI-461.1`)*:
+• Across all 9 locales in `app/src/main/res/values*/strings.xml`, `tuning_show_live_climbs_title` SHALL omit the `(ClimbPro)` suffix:
+  - `values-de`: `Live-Anstiege`
+  - `values`: `Live Climbs`
+  - `values-es`: `Subidas en vivo`
+  - `values-fr`: `Montées en direct`
+  - `values-it`: `Salite in tempo reale`
+  - `values-ja`: `ライブクライム`
+  - `values-nl`: `Live beklimmingen`
+  - `values-pl`: `Podjazdy na żywo`
+  - `values-pt`: `Subidas ao vivo`
+• `tuning_show_live_climbs_summary` SHALL retain its explanatory description of real-time climb cockpit behavior during routes and free riding.
+2. *Code & Comment Trademark Hygiene (`REQ-UI-461.2`)*:
+• KDoc header in `LiveClimbSheet.kt` (line 60) SHALL describe the component neutrally as real-time climb cockpit bottom sheet without `(ClimbPro)`.
+• Javadoc parameter comment in `TrackingViewsDatabaseManager.java` (line 1517) SHALL refer neutrally to `Live Climb bottom sheets`.
+• Test KDoc in `SensorGridLandscapeLayoutTest.kt` (line 187) SHALL refer neutrally to `Live Climb alerts`.
+3. *9-Language Parity & Emoji Prohibition (`REQ-UI-461.3`)*:
+• `tuning_show_live_climbs_title` SHALL maintain 100% parity across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) with zero inline emojis (`ATT-5400`) and matching casing/semantics.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines user-facing tuning title in `REQ-MAP-027` (Clause 5: Tuning & Localization Parity) and `REQ-UI-383`, targeting `tuning_show_live_climbs_title` across all 9 `strings.xml` locales, `LiveClimbSheet.kt`, and `TrackingViewsDatabaseManager.java`.
+2. *Historical Origin & Commit Trace*: `ATT-1281` (`ef9a1281` / `1e88ef25`, Sprint 2026-40.14: Persistent Climbs Database & Live Climb Bottom Sheet).
+3. *Root Reason for Existing Formulation*: `(ClimbPro)` was parenthesized to provide instant feature recognition for cyclists familiar with Garmin cycling computers before trademark risk audits.
+4. *Preservation of Core Invariants*: DataStore preference key `KEY_SHOW_LIVE_CLIMBS`, SQLite column `SHOW_LIVE_CLIMBS`, climb detection engine (`ClimbDetector`), and live climb state machine (`LiveClimbsRepository`) remain 100% bit- and byte-identical.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete accessing Advanced Tuning in any of the 9 supported locales,
+• *When* viewing the Live Climbs toggle header,
+• *Then* the title displays the localized name (`Live Climbs`, `Live-Anstiege`, etc.) without `(ClimbPro)`.
+• *Given* all 9 `values*/strings.xml` files,
+• *When* `TranslationParityTest` executes,
+• *Then* `tuning_show_live_climbs_title` is non-empty across all locales with zero format errors and zero emojis.
+• *Given* source code files `LiveClimbSheet.kt`, `TrackingViewsDatabaseManager.java`, and `SensorGridLandscapeLayoutTest.kt`,
+• *When* inspected for trademark hygiene,
+• *Then* zero occurrences of `ClimbPro` remain in comments or headers.
+
+**Invariants**: Zero changes to `KEY_SHOW_LIVE_CLIMBS` or database schema; zero changes to climb detection or telemetry calculation logic.
+
+
 
 
 

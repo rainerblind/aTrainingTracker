@@ -184,7 +184,7 @@ class SensorGridLandscapeLayoutTest {
      * TST-TRK-040.3: Right-Pane Bottom Sheet Docking Invariant
      * Asserts that in landscape mode with map, BottomSheetScaffold is anchored strictly
      * inside the right (map) pane, guaranteeing that left telemetry metrics remain 100%
-     * visible and unmasked during Live Segment or ClimbPro alerts.
+     * visible and unmasked during Live Segment or Live Climb alerts.
      */
     @Test
     fun testRightPaneBottomSheetDockingInvariant_TST_TRK_040_3() {

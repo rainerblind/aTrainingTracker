@@ -1514,7 +1514,7 @@ public class TrackingViewsDatabaseManager {
          * @param showLapButton Whether the lap split button is visible.
          * @param showMap Whether the map canvas and elevation profile are enabled.
          * @param showLiveSegments Whether Strava live segment bottom sheets are enabled.
-         * @param showLiveClimbs Whether Live ClimbPro bottom sheets are enabled.
+         * @param showLiveClimbs Whether Live Climb bottom sheets are enabled.
          * @param showNavigationHints Whether turn prompts and navigation cues are enabled.
          * @param showBikeBell Whether the electronic bike bell is enabled.
          * @param rowDataList Initial sensor grid field layout.

@@ -1778,7 +1778,7 @@
     <string name="route_item_hide">Masquer</string>
     <string name="route_item_show">Afficher</string>
     <string name="segment_routes_containing_title">Itinéraires avec ce segment (%d)</string>
-    <string name="tuning_show_live_climbs_title">Montées en direct (ClimbPro)</string>
+    <string name="tuning_show_live_climbs_title">Montées en direct</string>
     <string name="tuning_show_live_climbs_summary">Afficher le cockpit de montée en temps réel sur les parcours et en conduite libre</string>
 
     <string name="turn_cue_left">Tourner à gauche</string>

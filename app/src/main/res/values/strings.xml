@@ -1976,7 +1976,7 @@
     <string name="route_item_hide">Hide</string>
     <string name="route_item_show">Show</string>
     <string name="segment_routes_containing_title">Routes with this segment (%d)</string>
-    <string name="tuning_show_live_climbs_title">Live Climbs (ClimbPro)</string>
+    <string name="tuning_show_live_climbs_title">Live Climbs</string>
     <string name="tuning_show_live_climbs_summary">Show real-time climb cockpit sheet during routes and free riding</string>
 
     <string name="turn_cue_left">Turn left</string>
