@@ -1338,6 +1338,21 @@
   4. *Clean-Room Governance & Regression Execution (`TST-PRO-036.4`)*:
   • Execute `python3 tools/verify_requirement_governance.py` (exit 0) and targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.*"`.
 
+### TST-PRO-037: **Real-World Reference Showcase & Developer Community Launch Posts Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-037`
+- **Component**: **Höchstmaß Showcase & Community Documentation**
+- **Jira**: `ATT-5668`
+- **Test Description**:
+  1. *Real-World Reference Showcase & Case Studies Audit (`TST-PRO-037.1`, `HoechstmassShowcaseAndCommunityContractTest.kt`)*:
+  • Verify existence of `coding_standards.md`, `design_guidelines.md`, and `CASE_STUDIES.md` under `tools/hoechstmass/examples/android-jetpack-compose/`.
+  • Assert `CASE_STUDIES.md` details the 3 adversarial reviews (Mader-Heck Metabolic Model, DFA alpha-1 HRV, Radar bytecode audit).
+  2. *Developer Community Launch Posts Integrity Audit (`TST-PRO-037.2`, `HoechstmassShowcaseAndCommunityContractTest.kt`)*:
+  • Verify existence of all 5 community articles in `tools/hoechstmass/docs/community/` (`r_softwareengineering.md`, `r_androiddev.md`, `r_google_antigravity.md`, `r_vibecoding.md`, `hackernews_show_hn.md`).
+  • Assert all 5 articles contain the ChatGPT epigraph, dual attribution reasons (provenance and cross-model Gemini + ChatGPT UI review), and Höchst·maß etymology box.
+  3. *Clean-Room Governance & Regression Execution (`TST-PRO-037.3`)*:
+  • Execute `python3 tools/verify_requirement_governance.py` (exit 0) and targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.*"`.
+
+
 
 
 
