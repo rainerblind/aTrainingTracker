@@ -13644,4 +13644,38 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Zero gesture contention with host vertical scroll; `MAP` pinned at index 0; instant DataStore serialization; `< 400` lines file limit.
 
+### REQ-UI-457: Dynamic Photo Thumbnail Downsampling Resolution & Dimension-Keyed Reloading [Verified]
+- **Tests**: `TST-UI-457` | **Tickets**: `ATT-5760`
+- **Implementation**: `WorkoutPhotoStrip.kt`, `PhotoThumbnailSizeTest.kt`
+- **Rationale**: In `WorkoutPhotoStrip.kt` (`PhotoThumbnailCard`), photos were previously downsampled statically via `PhotoTrackOverlayComposer.decodeSampledBitmap(context, photo.uri, maxDim = 240)`. When displayed across `LARGE` (full card width, ~360–400dp / ~1080px physical) or `MEDIUM` (half width, ~180dp / ~540px physical) responsive tiles, upscaling a 240px bitmap produces severe magnification blur. REQ-UI-457 couples decode resolution dynamically to physical item dimensions and keys reloading on dimension changes while bounding resolution to prevent OOM (Sprint 2026-45.10, ATT-5760, refining `REQ-UI-414.6` and `REQ-UI-448`):
+1. *Dynamic Downsampling Resolution Target (`REQ-UI-457.1`)*:
+• In `WorkoutPhotoStrip.kt`, `calculatePhotoDecodeMaxDim(dimensions: PhotoItemDimensions, density: Density): Int` SHALL calculate the decode resolution based on the item's maximum physical pixel dimension: `(maxOf(dimensions.width, dimensions.height).value * density.density).roundToInt()`.
+• The target resolution SHALL be clamped to `[256 .. 1200]` pixels, guaranteeing crisp display on high-density displays for `LARGE` and `MEDIUM` cards while bounding memory footprint.
+2. *Dimension-Keyed State & Coroutine Reloading (`REQ-UI-457.2`)*:
+• In `PhotoThumbnailCard`, `remember` and `LaunchedEffect` SHALL be keyed on `(photo.filePath, targetMaxDim)` (or `dimensions`), ensuring that switching thumbnail sizes in settings triggers a re-decode at the appropriate resolution without stale blur.
+3. *Asynchronous Background IO Decoding (`REQ-UI-457.3`)*:
+• Downsampled bitmap decoding SHALL execute asynchronously on `Dispatchers.IO` via `PhotoTrackOverlayComposer.decodeSampledBitmap(context, photo.uri, maxDim = targetMaxDim)`, keeping the Compose UI thread unblocked.
+4. *OOM Protection & Layout Stability Invariants (`REQ-UI-457.4`)*:
+• Clamping to $\le 1200\text{px}$ guarantees thumbnail memory footprint remains $< 4\text{MB}$ per decoded bitmap. Responsive layout calculations (`calculatePhotoItemDimensions`) and aspect ratios remain invariant.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-UI-414.6` (*Workout Photos Configuration & Responsive Sizing*), targeting `WorkoutPhotoStrip.kt` and `PhotoThumbnailSizeTest.kt`.
+2. *Historical Origin & Commit Trace*: `5c9d9653` (`ATT-43`, initial photo strip), `8aed20fc` (`ATT-5474`, photo size presets), `9baf915c` (`ATT-5655`, responsive full/half row layout).
+3. *Root Reason for Existing Formulation*: When thumbnail sizes were fixed at 56dp/76dp/104dp in `ATT-5474`, `maxDim = 240` was adequate. When `ATT-5655` expanded `LARGE` to full row width, the downsampling constant was overlooked.
+4. *Preservation of Core Invariants*: OOM protection preserved via 1200px upper clamp; asynchronous decoding on `Dispatchers.IO` preserved; layout dimensions and aspect ratios from `calculatePhotoItemDimensions` remain invariant.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete viewing a workout summary or detail card with `PhotoThumbnailSize.LARGE` on a 2.75x–3.0x density display,
+• *When* `PhotoThumbnailCard` loads the photo bitmap,
+• *Then* `calculatePhotoDecodeMaxDim` computes a target resolution of ~990–1080px (clamped $\le 1200\text{px}$) and displays a sharp, unblurred thumbnail.
+• *Given* the athlete changes photo thumbnail size in settings from `MEDIUM` to `LARGE`,
+• *When* returning to the photo strip,
+• *Then* `LaunchedEffect` detects the dimension change and re-decodes the photo at the higher resolution.
+• *Given* a high-density tablet or large viewport where physical pixels exceed 1200px,
+• *When* `calculatePhotoDecodeMaxDim` evaluates,
+• *Then* the target dimension is capped at 1200px to guarantee OOM safety.
+
+**Invariants**: Clamped resolution $[256 \dots 1200\text{px}]$; zero OOM risk; asynchronous decoding on `Dispatchers.IO`; zero regression on `calculatePhotoItemDimensions`.
+
+
 

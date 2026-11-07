@@ -65,8 +65,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -76,6 +78,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutPhotoManager
 import com.atrainingtracker.trainingtracker.helpers.PhotoTrackOverlayComposer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
 
 /**
  * Horizontal strip displaying workout photo thumbnails and an "Add Photos" trigger (REQ-UI-448.1 / REQ-UI-455 / ATT-43 / ATT-5475).
@@ -313,6 +316,23 @@ fun calculatePhotoItemDimensions(
     }
 }
 
+/**
+ * Calculates the dynamic downsample target resolution (max dimension in physical pixels)
+ * for decoding a photo thumbnail based on its [dimensions] and device screen [density]
+ * (REQ-UI-457.1 / REQ-UI-457.4 / ATT-5760).
+ *
+ * Clamped to `[256 .. 1200]` pixels to guarantee crisp rendering across SMALL, MEDIUM,
+ * and LARGE sizes while strictly bounding memory consumption (< 4MB per bitmap) to prevent OOM.
+ */
+fun calculatePhotoDecodeMaxDim(
+    dimensions: PhotoItemDimensions,
+    density: Density
+): Int {
+    val maxDp = maxOf(dimensions.width, dimensions.height).value
+    val targetPx = (maxDp * density.density).roundToInt()
+    return targetPx.coerceIn(256, 1200)
+}
+
 @Composable
 private fun PhotoThumbnailCard(
     photo: WorkoutPhotoEntry,
@@ -320,12 +340,17 @@ private fun PhotoThumbnailCard(
     dimensions: PhotoItemDimensions
 ) {
     val context = LocalContext.current
-    var bitmap by remember(photo.filePath) { mutableStateOf<Bitmap?>(null) }
-    var isLoading by remember(photo.filePath) { mutableStateOf(true) }
+    val density = LocalDensity.current
+    val targetMaxDim = remember(dimensions, density) {
+        calculatePhotoDecodeMaxDim(dimensions, density)
+    }
 
-    LaunchedEffect(photo.filePath) {
+    var bitmap by remember(photo.filePath, targetMaxDim) { mutableStateOf<Bitmap?>(null) }
+    var isLoading by remember(photo.filePath, targetMaxDim) { mutableStateOf(true) }
+
+    LaunchedEffect(photo.filePath, targetMaxDim) {
         bitmap = withContext(Dispatchers.IO) {
-            PhotoTrackOverlayComposer.decodeSampledBitmap(context, photo.uri, maxDim = 240)
+            PhotoTrackOverlayComposer.decodeSampledBitmap(context, photo.uri, maxDim = targetMaxDim)
         }
         isLoading = false
     }

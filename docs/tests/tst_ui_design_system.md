@@ -7395,4 +7395,19 @@
   5. *Clean-Room Targeted Regression Execution (`TST-UI-456.5`)*:
   • Execute targeted package tests (`com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.*`, `com.atrainingtracker.trainingtracker.ui.aftermath.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
 
+### TST-UI-457: **Dynamic Photo Thumbnail Downsampling Resolution & Dimension-Keyed Reloading Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-457`, `REQ-UI-414.6`
+- **Component**: `WorkoutPhotoStrip.kt`, `PhotoThumbnailSizeTest.kt`
+- **Jira**: `ATT-5760`
+- **Test Description**:
+  1. *Dynamic Decode Max Dimension Calculation Unit Tests (`TST-UI-457.1`, `PhotoThumbnailSizeTest.kt`)*:
+  • Verify `calculatePhotoDecodeMaxDim` across `SMALL`, `MEDIUM`, `LARGE` and multiple densities (1.0x, 2.0x, 2.75x, 3.0x).
+  • Verify lower bound clamping at 256px and upper bound clamping at 1200px.
+  2. *Dimension-Keyed LaunchedEffect Structural Contract Test (`TST-UI-457.2`, `PhotoThumbnailSizeTest.kt`)*:
+  • Verify `PhotoThumbnailCard` computes `targetMaxDim` via `calculatePhotoDecodeMaxDim`.
+  • Verify `remember` and `LaunchedEffect` are keyed on `targetMaxDim` (or `dimensions`) and pass `maxDim = targetMaxDim` to `decodeSampledBitmap`.
+  3. *Clean-Room Targeted Regression Execution (`TST-UI-457.3`)*:
+  • Execute targeted package tests (`com.atrainingtracker.trainingtracker.ui.aftermath.photos.*`, `build.*`) asserting 100% pass rate.
+
+
 
