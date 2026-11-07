@@ -7484,10 +7484,10 @@
   4. *Clean-Room Targeted Regression Execution (`TST-UI-461.4`)*:
   • Execute targeted test suites (`com.atrainingtracker.trainingtracker.localization.*`, `com.atrainingtracker.trainingtracker.ui.climbs.*`, `com.atrainingtracker.trainingtracker.database.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
-### TST-UI-462: **Cluster Naming & Selection Dialog Reversion and Clear Action Verification Suite** [Verified]
+### TST-UI-462: **Cluster Naming & Selection Dialog Reversion, Clear Action, and Tap Interaction Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-462`
 - **Component**: `ImportBackupTabsScreen.kt`, `WorkoutClusterComponents.kt`, `ClusterNamingDialogEscapeContractTest.kt`, `ClusterNamingDialogLabelsVisualContractTest.kt`
-- **Jira**: `ATT-5674`
+- **Jira**: `ATT-5674`, `ATT-5818`
 - **Test Description**:
   1. *Clear Action & Create-New UI Binding Contract Tests (`TST-UI-462.1`, `ClusterNamingDialogEscapeContractTest.kt`)*:
   • Verify `WorkoutClusterSelectionDialog` declares optional parameter `onCreateNew: (() -> Unit)? = null`.
@@ -7500,6 +7500,9 @@
   • Verify `WorkoutClusterSelectionDialog` composable function remains public and callable with default parameter overloads.
   4. *Clean-Room Targeted Regression Execution (`TST-UI-462.4`)*:
   • Execute targeted test suites (`com.atrainingtracker.trainingtracker.ui.clusters.*`, `com.atrainingtracker.trainingtracker.migration.*`, `com.atrainingtracker.trainingtracker.localization.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+  5. *Read-Only Route Picker Field Tap Handling Contract Test (`TST-UI-462.5`, `ClusterNamingDialogEscapeContractTest.kt`, ATT-5818)*:
+  • Verify `ClusterNamingDialog` binds a `MutableInteractionSource` observing `PressInteraction.Release` to trigger `showSelectionDialog = true`.
+  • Verify `OutlinedTextField` does not attach outer dead `Modifier.clickable` (Rule 77 / Design Guidelines §5.19).
 
 ### TST-UI-463: **Navigation Drawer & Expert Settings Thematic Grouping Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-463`

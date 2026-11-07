@@ -33,6 +33,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
@@ -788,6 +790,17 @@ fun ClusterNamingDialog(
     var selectedCluster by remember(state) { mutableStateOf<WorkoutCluster?>(null) }
     var showSelectionDialog by remember(state) { mutableStateOf(false) }
 
+    // ATT-5818 / Rule 77 / REQ-UI-462.4: Read-only OutlinedTextField consumes taps before bubbling to outer Modifier.clickable.
+    // Use MutableInteractionSource to trigger selection sheet on PressInteraction.Release.
+    val routePickerInteractionSource = remember(state) { MutableInteractionSource() }
+    LaunchedEffect(routePickerInteractionSource) {
+        routePickerInteractionSource.interactions.collect { interaction ->
+            if (interaction is PressInteraction.Release) {
+                showSelectionDialog = true
+            }
+        }
+    }
+
     val clusterRepo = remember { WorkoutClusterRepository.getInstance(localContext) }
     val existingClusters by clusterRepo.allClusters.collectAsState()
 
@@ -972,7 +985,8 @@ fun ClusterNamingDialog(
             value = selectedCluster?.name ?: stringResource(R.string.cluster_naming__create_new),
             onValueChange = {},
             readOnly = true,
-            modifier = Modifier.fillMaxWidth().clickable { showSelectionDialog = true },
+            modifier = Modifier.fillMaxWidth(),
+            interactionSource = routePickerInteractionSource,
             label = { Text(stringResource(R.string.cluster_naming__selected_route_label)) },
             trailingIcon = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
