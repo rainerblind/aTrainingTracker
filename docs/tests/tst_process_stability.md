@@ -1352,10 +1352,10 @@
   3. *Clean-Room Governance & Regression Execution (`TST-PRO-037.3`)*:
   • Execute `python3 tools/verify_requirement_governance.py` (exit 0) and targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.*"`.
 
-### TST-PRO-038: **Automated Quantitative Sprint Metrics (PA 4.1) & Statistical Process Control (PA 4.2) Verification Suite** [PASS]
+### TST-PRO-038: **Automated Quantitative Sprint Metrics (PA 4.1), Statistical Process Control (PA 4.2) & Ceremony 2 Governance Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-038`
-- **Component**: **Jira Process Tooling & Metrics Aggregator**
-- **Jira**: `ATT-5765`
+- **Component**: **Jira Process Tooling, Sprint Retrospective Governance & Höchstmaß Framework**
+- **Jira**: `ATT-5765`, `ATT-5764`
 - **Test Description**:
   1. *Sprint Metrics Computation & Parsing (`TST-PRO-038.1`, `test_sprint_metrics.py`)*:
   • Verify parsing of subtask comments with `[ROLE: agent2]` and computation of Gate 1–5 FTPR, Swiss Cheese escape rates ($p_1 \dots p_5$), and Human Acceptance Rate.
@@ -1365,6 +1365,12 @@
   • Verify computation of rolling mean $\mu$ and standard deviation $\sigma$, and assertion of warnings for metric variations exceeding $\mu \pm 2\sigma$.
   4. *Governance Whitelist & Directory Parity Contract (`TST-PRO-038.4`, `verify_requirement_governance.py`)*:
   • Assert `docs/engineering/metrics/` is whitelisted in `ALLOWED_ENGINEERING_ENTRIES` and passes `verify_requirement_governance.py`.
+  5. *Ceremony 2 Scorecard & Retro Template Verification (`TST-PRO-038.5`)*:
+  • Verify that `.agents/skills/sprint-planner/SKILL.md` (and hoechstmass mirror) mandates `sprint-metrics --record --post-to-retro` in Step 4.
+  • Verify that `templates/sprint_retro_template.md` and `tools/hoechstmass/templates/sprint_retro_template.md` contain the Quantitative Sprint Scorecard section and `PA 4.2 -> PA 5.2` corrective action trigger.
+  6. *ASPICE Level 1–5 Capability Matrix & Contract Verification (`TST-PRO-038.6`)*:
+  • Verify `docs/project_protocol.md`, `tools/hoechstmass/docs/project_protocol.md`, and `tools/hoechstmass/README.md` codify `PA 1.1` through `PA 5.2`.
+  • Assert `HoechstmassCoreFrameworkContractTest.kt` verifies the ASPICE Level 1–5 matrix and retro template parity.
 
 
 

@@ -73,7 +73,25 @@ When the human engineer wants to review or annotate **source code** (`.kt`, `.ja
 
 ---
 
-## 4. Repository Structure & Starter Toolkit
+## 4. ASPICE Process Capability Level 1–5 Governance Matrix (ISO/IEC 33020 / PAM)
+
+Höchstmaß systematically maps Automotive SPICE Process Attributes (`PA 1.1` through `PA 5.2`) to deterministic AI pair-programming and verification mechanisms:
+
+| Capability Level | Process Attribute (PA) | ISO/IEC 33020 Definition | Höchstmaß Operational Implementation |
+| :--- | :--- | :--- | :--- |
+| **Level 1: Performed** | **PA 1.1: Process Performance** | The process achieves its defined outcomes. | **5-Stage ASPICE Lifecycle**: Strict execution of SWE.1 through SWE.6 stages; atomic squash-merge per ticket; verifiable artifact deliverables at each stage boundary. |
+| **Level 2: Managed** | **PA 2.1: Performance Management** | Process performance is planned, monitored, and adjusted. | **Sprint Capacity Envelope**: Capacity bounding (~24–30 SP across 12–15 atomic tickets); story point estimation split guardrail ($\le 3$ SP); autonomous in-sprint zipper ping-pong; velocity monitoring. |
+| | **PA 2.2: Work Product Management** | Work products are documented, controlled, and integrity is maintained. | **Rule 67 Canonical Deliverables**: Standardized `docs/engineering/` directories; living documentation sharding and master index parity (`verify_requirement_governance.py`); strict branch isolation (`feature/` $\rightarrow$ `sprint/` $\rightarrow$ `develop`). |
+| **Level 3: Established** | **PA 3.1: Process Definition** | A standard process is established across the organization. | **Document Triad & Skills**: Universal 8 Core In-Sprint Governance Rules (`aspice_governance.md`); 10 parameterized agent skills (`SKILL.md`); standardized deliverable templates; coding standards and design guidelines. |
+| | **PA 3.2: Process Deployment** | The standard process is systematically deployed and enforced. | **Tooling Enforcement & Role Isolation**: Automated CLI enforcement (`tools/jira_util.py`); pre-warmed prompt injection; separate role accounts and API tokens (`agent1`, `agent2`, `coordinator`, `human`). |
+| **Level 4: Predictable** | **PA 4.1: Quantitative Analysis** | Quantitative objectives are established and measured. | **Quantitative Sprint Scorecard**: Automated aggregation of Gate 1–5 First-Time-Pass-Rates (FTPR); empirical Swiss Cheese escape rates ($p_1 \dots p_5$, $P_{\text{escape}} = \prod p_i$); Human Acceptance Rate; historical persistence in `docs/engineering/metrics/process_metrics.jsonl`. |
+| | **PA 4.2: Quantitative Control** | Process is statistically controlled to achieve predictability. | **Statistical Process Control (SPC)**: 3-sprint moving baseline $\mu \pm 2\sigma$ control bands ($UCL$, $LCL$); automated detection and warning of out-of-control conditions (Special Cause Variations) in Ceremony 2. |
+| **Level 5: Innovating** | **PA 5.1: Process Innovation** | Continuous, systematic evaluation of process innovations. | **AI Architectural Innovations**: Multi-model adversarial reviews (intra-sprint `pro` $\leftrightarrow$ `flash` plus cross-vendor **Claude** & **ChatGPT**); isolated in-place `.reviews/` Emacs sandbox; dynamic contract tests. |
+| | **PA 5.2: Process Optimization** | Continuous closed-loop improvement based on quantitative feedback. | **Closed-Loop Ceremony 2 Retro Countermeasures**: Mandatory root-cause analysis (RCA) and concrete process/skill adjustments in the Retrospective prior to sprint merge whenever a PA 4.2 Special Cause Variation is detected. |
+
+---
+
+## 5. Repository Structure & Starter Toolkit
 
 This repository supplies the foundational building blocks to instantiate **Höchstmaß** in any software engineering project:
 
@@ -113,7 +131,7 @@ tools/hoechstmass/
 
 ---
 
-## 5. Entry Barrier & Human Discipline: Why *Höchstmaß* Is Not for Everyone
+## 6. Entry Barrier & Human Discipline: Why *Höchstmaß* Is Not for Everyone
 
 While **Höchstmaß** delivers extraordinarily high development velocity and near-zero regression rates once established, it is **not** a zero-effort plug-and-play toy and is deliberately not for everyone:
 
@@ -127,7 +145,7 @@ For engineers and teams willing to invest in that setup and discipline, the payo
 
 ---
 
-## 6. Quick Start: Adopting Höchstmaß in Your Project
+## 7. Quick Start: Adopting Höchstmaß in Your Project
 
 1. Copy `.agents/` and `templates/` into your repository root.
 2. Adapt `docs/coding_standards.md` and `docs/design_guidelines.md` to your technology stack.

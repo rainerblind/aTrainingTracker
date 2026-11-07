@@ -2078,15 +2078,15 @@ The workflow SHALL mandate that:
 
 **Invariants**: Active project rules and runtime code in `app/src/main/` remain untouched; zero regression in test suite or governance.
 
-### REQ-PRO-038: Automated Quantitative Sprint Metrics (PA 4.1) & Statistical Process Control (PA 4.2) [Verified]
-- **Tests**: `TST-PRO-038` | **Tickets**: `ATT-5765`
-- **Implementation**: `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/verify_requirement_governance.py`, `docs/engineering/metrics/process_metrics.jsonl`
-- **Rationale**: Fulfill ASPICE Level 4 (Predictable) process attributes `PA 4.1` (Quantitative Analysis) and `PA 4.2` (Quantitative Control) by automatically aggregating Gate 1–5 First-Time-Pass-Rates (FTPR), empirical Swiss Cheese layer defect escape probabilities, and Human Acceptance Rate directly from Jira comment attribution and persisting historical metrics for statistical process control.
+### REQ-PRO-038: Automated Quantitative Sprint Metrics (PA 4.1), Statistical Process Control (PA 4.2) & Ceremony 2 Governance [Verified]
+- **Tests**: `TST-PRO-038` | **Tickets**: `ATT-5765`, `ATT-5764`
+- **Implementation**: `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/verify_requirement_governance.py`, `docs/engineering/metrics/process_metrics.jsonl`, `.agents/skills/sprint-planner/SKILL.md`, `tools/hoechstmass/.agents/skills/sprint-planner/SKILL.md`, `templates/sprint_retro_template.md`, `tools/hoechstmass/templates/sprint_retro_template.md`, `docs/project_protocol.md`, `tools/hoechstmass/docs/project_protocol.md`, `tools/hoechstmass/README.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/HoechstmassCoreFrameworkContractTest.kt`
+- **Rationale**: Fulfill ASPICE Level 4 (Predictable) and Level 5 (Innovating) process attributes `PA 4.1` (Quantitative Analysis), `PA 4.2` (Quantitative Control), `PA 5.1` (Process Innovation), and `PA 5.2` (Process Optimization) by automatically aggregating Gate 1–5 First-Time-Pass-Rates (FTPR), empirical Swiss Cheese layer defect escape probabilities, and Human Acceptance Rate directly from Jira comment attribution, embedding scorecards into Ceremony 2 Retrospectives, closing the loop with mandatory corrective actions on Special Cause Variations, and codifying the complete ASPICE Capability Level 1–5 Matrix across framework documentation.
 - **Description**:
   1. The CLI tool `tools/jira_util.py` (and export mirror `tools/hoechstmass/tools/jira_util.py`) SHALL provide a `sprint-metrics` subcommand to quantitatively audit active or specified sprints (`--sprint <NAME_OR_ID>`).
   2. The tool SHALL automatically parse subtask review comments (`[ROLE: agent2]`) to compute:
      - **Gate 1–5 First-Time-Pass-Rates (FTPR)**: Percentage of stage sub-tasks passing on first submission without `REVISION`.
-     - **Empirical Swiss Cheese Escape Rates**: Cumulative and per-layer escape frequencies ($p_1 \dots p_5$).
+     - **Empirical Swiss Cheese Escape Rates**: Cumulative and per-layer escape frequencies ($p_1 \dots p_5$, $P_{\text{escape}} = \prod p_i$).
      - **Human Acceptance Rate**: Percentage of parent tickets accepted at Final Review without rework.
      - **Throughput & Risk Mix**: Closed ticket count, story point velocity, and breakdown of low/medium/high risk tickets.
   3. The tool SHALL support `--record` to append or idempotently update the quantitative sprint record in `docs/engineering/metrics/process_metrics.jsonl`.
@@ -2094,22 +2094,29 @@ The workflow SHALL mandate that:
   5. The tool SHALL support `--post-to-retro` to automatically format and comment the quantitative metric summary onto the sprint's `Review & Retro` ticket.
   6. The tool SHALL implement `PA 4.2` Statistical Process Control (SPC) evaluating rolling mean $\mu$ and standard deviation $\sigma$ across recorded history, flagging any Gate FTPR or escape rate outside $\mu \pm 2\sigma$ as a Special Cause Variation.
   7. `tools/verify_requirement_governance.py` (and `tools/hoechstmass/hoechstmass_config.json`) SHALL whitelist `metrics` in `ALLOWED_ENGINEERING_ENTRIES` to permit time-series persistence in `docs/engineering/metrics/`.
+  8. **Ceremony 2 Retrospective Integration**: `.agents/skills/sprint-planner/SKILL.md` and `tools/hoechstmass/.agents/skills/sprint-planner/SKILL.md` SHALL mandate execution of `python3 tools/jira_util.py --as coordinator sprint-metrics --record --post-to-retro` at the start of Ceremony 2 Step 4 (Retrospective), ensuring the Quantitative Sprint Scorecard is embedded into the retrospective deliverable.
+  9. **Closed-Loop Improvement (`PA 4.2` $\rightarrow$ `PA 5.2`)**: Whenever an out-of-control condition (`⚠️ PA 4.2 Special Cause Variation`) is detected during Ceremony 2, the Retrospective deliverable SHALL define a concrete root-cause analysis (RCA) and actionable process/skill improvement prior to sprint merge.
+  10. **ASPICE Capability Level 1–5 Governance Matrix**: The framework SHALL formalize the complete capability model mapping Process Attributes (`PA 1.1` to `PA 5.2`) to concrete Höchstmaß operational mechanisms across `docs/project_protocol.md`, `tools/hoechstmass/docs/project_protocol.md`, and `tools/hoechstmass/README.md`.
+  11. **Contract Test Enforcement**: `HoechstmassCoreFrameworkContractTest.kt` SHALL assert the existence and content parity of the ASPICE Level 1–5 Capability Matrix and the Quantitative Sprint Scorecard section in retrospective templates.
 
 **Acceptance Criteria (Given-When-Then)**:
-• *Given* an active or completed sprint in Jira with subtasks audited by `agent2`,
-• *When* `python3 tools/jira_util.py sprint-metrics` is executed,
-• *Then* the tool outputs a structured table containing Gate 1–5 FTPR, Swiss Cheese escape rates ($p_1 \dots p_5$), Human Acceptance Rate, and velocity.
-• *Given* the `--record` flag,
-• *When* executed for sprint `2026-45.12`,
-• *Then* a valid JSON object is recorded in `docs/engineering/metrics/process_metrics.jsonl` with idempotent overwrite for the same sprint ID.
-• *Given* historical records in `process_metrics.jsonl`,
-• *When* current sprint metrics deviate beyond $\mu \pm 2\sigma$,
-• *Then* the tool flags a `[PA 4.2 Outlier / Special Cause Variation]` warning.
-• *Given* `python3 tools/verify_requirement_governance.py`,
-• *When* executed with `docs/engineering/metrics/process_metrics.jsonl` present,
-• *Then* directory verification passes without error.
+• *Given* Ceremony 2 Step 4 (Retrospective before merge),
+• *When* the coordinator initiates the sprint retrospective,
+• *Then* `python3 tools/jira_util.py --as coordinator sprint-metrics --record --post-to-retro` SHALL execute automatically and post the quantitative scorecard to Jira.
+• *Given* a metric exceeding $\mu \pm 2\sigma$ control limits during Ceremony 2,
+• *When* the retrospective report is compiled,
+• *Then* the report SHALL document a root-cause analysis and actionable `PA 5.2` corrective countermeasure.
+• *Given* `docs/project_protocol.md`, `tools/hoechstmass/docs/project_protocol.md`, and `tools/hoechstmass/README.md`,
+• *When* inspected,
+• *Then* all 9 ASPICE process attributes from Level 1 (`PA 1.1`) through Level 5 (`PA 5.2`) SHALL be explicitly codified.
+• *Given* `templates/sprint_retro_template.md` and `tools/hoechstmass/templates/sprint_retro_template.md`,
+• *When* inspected,
+• *Then* they SHALL contain the standardized `Quantitative Sprint Process Metrics (PA 4.1 & PA 4.2)` section.
+• *Given* `HoechstmassCoreFrameworkContractTest`,
+• *When* executed via Gradle,
+• *Then* all ASPICE Level 1–5 capability matrix assertions and template contract checks SHALL pass 100%.
 
-**Invariants**: Zero runtime app modifications in `app/src/main/`; backwards compatibility of existing `jira_util.py` commands; 100% test pass rate.
+**Invariants**: Zero runtime app modifications in `app/src/main/`; backwards compatibility of existing `jira_util.py` commands; strict sprint retro-before-merge invariant preserved; 100% test pass rate.
 
 
 

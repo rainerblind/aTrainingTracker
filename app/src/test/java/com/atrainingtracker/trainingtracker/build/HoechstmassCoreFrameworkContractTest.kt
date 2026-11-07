@@ -198,6 +198,71 @@ class HoechstmassCoreFrameworkContractTest {
     }
 
     @Test
+    fun testAspiceCapabilityLevelMatrix_presentInReadmeAndProtocol() {
+        val targets = listOf(
+            "tools/hoechstmass/README.md",
+            "tools/hoechstmass/docs/project_protocol.md",
+            "docs/project_protocol.md"
+        )
+        val expectedPAs = listOf(
+            "PA 1.1", "PA 2.1", "PA 2.2",
+            "PA 3.1", "PA 3.2",
+            "PA 4.1", "PA 4.2",
+            "PA 5.1", "PA 5.2"
+        )
+        val expectedLevels = listOf(
+            "Level 1: Performed",
+            "Level 2: Managed",
+            "Level 3: Established",
+            "Level 4: Predictable",
+            "Level 5: Innovating"
+        )
+
+        for (targetRel in targets) {
+            val file = findRepoRootFile(targetRel)
+            assertTrue("$targetRel must exist", file.exists())
+            val text = file.readText()
+            for (pa in expectedPAs) {
+                assertTrue("$targetRel must contain $pa", text.contains(pa))
+            }
+            for (lvl in expectedLevels) {
+                assertTrue("$targetRel must contain $lvl", text.contains(lvl))
+            }
+        }
+    }
+
+    @Test
+    fun testSprintPlannerSkillAndRetroTemplate_containScorecardAndSpcCorrectiveTrigger() {
+        val skillTargets = listOf(
+            ".agents/skills/sprint-planner/SKILL.md",
+            "tools/hoechstmass/.agents/skills/sprint-planner/SKILL.md"
+        )
+        for (st in skillTargets) {
+            val f = findRepoRootFile(st)
+            assertTrue("$st must exist", f.exists())
+            val text = f.readText()
+            assertTrue("$st must mandate sprint-metrics CLI execution",
+                text.contains("sprint-metrics --record --post-to-retro"))
+            assertTrue("$st must include PA 4.2 -> PA 5.2 closed-loop trigger",
+                text.contains("PA 4.2") && text.contains("PA 5.2"))
+        }
+
+        val retroTemplate = findRepoRootFile("tools/hoechstmass/templates/sprint_retro_template.md")
+        assertTrue("sprint_retro_template.md must exist", retroTemplate.exists())
+        val retroText = retroTemplate.readText()
+        assertTrue("sprint_retro_template.md must contain PA 4.1 & PA 4.2 section",
+            retroText.contains("Quantitative Sprint Process Metrics (PA 4.1 & PA 4.2)"))
+        assertTrue("sprint_retro_template.md must contain FTPR table",
+            retroText.contains("FTPR"))
+        assertTrue("sprint_retro_template.md must contain Swiss Cheese model",
+            retroText.contains("Swiss Cheese"))
+        assertTrue("sprint_retro_template.md must contain SPC control limits",
+            retroText.contains("Statistical Process Control"))
+        assertTrue("sprint_retro_template.md must contain PA 5.2 corrective action trigger",
+            retroText.contains("PA 5.2"))
+    }
+
+    @Test
     fun testScaffoldDirectoriesForSubsequentParts_exist() {
         val toolsDir = findRepoRootFile("tools/hoechstmass/tools")
         assertTrue("tools/hoechstmass/tools directory must exist for Part 2", toolsDir.exists() && toolsDir.isDirectory)

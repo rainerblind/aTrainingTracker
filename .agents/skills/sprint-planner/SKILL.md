@@ -140,9 +140,17 @@ Jointly review all completed sprint tickets with the human user against expectat
          ```
 4. **Sprint Retrospective, Tier 2 Sprint Integration Gate & Process Hardening ("Retro Before Merge")**:
    * **Mandate**: Conduct the Retrospective, run the Tier 2 Sprint Integration Gate (`./gradlew testDebugUnitTest --max-workers=2 && python3 tools/verify_requirement_governance.py` if not already verified on the exact final code tree of `sprint/<SPRINT_NAME>`), and update governance documents on `sprint/<SPRINT_NAME>` **BEFORE** merging into `develop`.
+   * **Mandatory Quantitative Sprint Metrics & Scorecard Generation (PA 4.1 & PA 4.2 — `REQ-PRO-038`, `ATT-5764`)**:
+     At the very start of Step 4, the Coordinator **MUST** execute:
+     ```bash
+     python3 tools/jira_util.py --as coordinator sprint-metrics --record --post-to-retro
+     ```
+     This calculates Gate 1–5 First-Time-Pass-Rates (FTPR), Reason Swiss Cheese defect escape rates ($p_1 \dots p_5$, $P_{\text{escape}} = \prod p_i$), and Statistical Process Control (SPC) moving baseline limits ($\mu \pm 2\sigma$), idempotently updates `docs/engineering/metrics/process_metrics.jsonl`, and posts the markdown scorecard directly as a comment on the sprint's `Review & Retro` ticket.
+   * **Closed-Loop Process Improvement Trigger (PA 4.2 $\rightarrow$ PA 5.2)**:
+     Whenever the scorecard detects an out-of-control condition (`⚠️ PA 4.2 Special Cause Variation` where any metric falls outside $\mu \pm 2\sigma$), the Retrospective document (`docs/engineering/retros/Sprint_Review_and_Retro_<KEY>.md`) **MUST** contain an explicit Root-Cause Analysis (RCA) and concrete process/skill countermeasure prior to sprint merge.
    * **Mandatory Tier 2 Re-Verification When Any Ticket Is Dropped or Reverted During Review (`Rule 77` — `ATT-5762`)**: If any ticket commit is removed (`git reset --hard`) or reverted (`git revert`) from `sprint/<SPRINT_NAME>` during Ceremony 2 (e.g., `ATT-5665`), the pre-review Tier 2 test run is invalidated because the code state at Sprint-End has changed. You **MUST** re-execute the full Tier 2 Sprint Integration Gate (`./gradlew testDebugUnitTest --max-workers=2 && python3 tools/verify_requirement_governance.py`) and `./gradlew installDebug` on the post-drop sprint branch **before** merging into `develop`.
    * Synthesize real-time comments logged during the sprint in the `Review & Retro` ticket into actionable root cause analyses.
-   * Document insights in `docs/engineering/retros/Sprint_Review_and_Retro_<KEY>.md`, including the Planned vs. Completed Story Points velocity metric table alongside ticket counts (`REQ-PRO-029`).
+   * Document insights in `docs/engineering/retros/Sprint_Review_and_Retro_<KEY>.md`, including the Quantitative Sprint Scorecard section (`PA 4.1 & PA 4.2`) and the Planned vs. Completed Story Points velocity metric table alongside ticket counts (`REQ-PRO-029`).
    * Update `.agents/rules/aspice_governance.md`, relevant skills, `docs/coding_standards.md`, `docs/design_guidelines.md`, and `docs/engineering/rule_history_archive.md` with permanent countermeasures.
    * Commit retrospective deliverables to `sprint/<SPRINT_NAME>`.
 5. **Sprint Closure, Milestone Tagging & Merge to `develop`**:
