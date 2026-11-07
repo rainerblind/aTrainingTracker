@@ -455,6 +455,38 @@ class AdvancedTuningAccordionTest {
     }
 
     @Test
+    fun testAutoPauseSubtitle_formatsSpeedAndDebounceDelays() {
+        val mockContext = mockk<Context>()
+
+        every {
+            mockContext.getString(R.string.tuning_speed_value_format, 3, "km/h")
+        } returns "3 km/h"
+        every {
+            mockContext.getString(R.string.tuning_seconds_value_format, 5)
+        } returns "5 s"
+        every {
+            mockContext.getString(R.string.tuning_seconds_value_format, 2)
+        } returns "2 s"
+        every {
+            mockContext.getString(
+                R.string.tuning_auto_pause_subtitle_format,
+                "3 km/h",
+                "5 s",
+                "2 s"
+            )
+        } returns "3 km/h · Pause: 5 s · Resume: 2 s"
+
+        val subtitle = TuningSubtitleFormatter.formatAutoPauseSubtitle(
+            speedThreshold = 3,
+            speedUnit = "km/h",
+            debounceSec = 5,
+            resumeDebounceSec = 2,
+            context = mockContext
+        )
+        assertEquals("3 km/h · Pause: 5 s · Resume: 2 s", subtitle)
+    }
+
+    @Test
     fun testTuningSectionEnum_canonicalLifecycleSequence() {
         val expected = listOf(
             TuningSection.NAVIGATION,

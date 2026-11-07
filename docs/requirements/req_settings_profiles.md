@@ -1241,8 +1241,8 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 ---
 
 ### REQ-SET-080: Dedicated Auto-Pause Settings Cockpit & Navigation Drawer Entry [Verified]
-- **Tests**: `TST-SET-080` | **Tickets**: `ATT-4836`, `ATT-4924`
-- **Rationale**: The system SHALL provide a dedicated, first-class Auto-Pause configuration cockpit in the Navigation Drawer's Settings section with sport-specific tabs, retiring scattered controls from Advanced Tuning to ensure high discoverability, intuitive customization, and an extensible foundation for upcoming auto-pause enhancements (ATT-4836, ATT-4924):
+- **Tests**: `TST-SET-080` | **Tickets**: `ATT-4836`, `ATT-4924`, `ATT-5820`
+- **Rationale**: The system SHALL provide a dedicated, first-class Auto-Pause configuration cockpit in the Navigation Drawer's Settings section with sport-specific tabs, retiring scattered controls from Advanced Tuning to ensure high discoverability, intuitive customization, and an extensible foundation for upcoming auto-pause enhancements (ATT-4836, ATT-4924, ATT-5820):
 1. *Navigation Drawer Entry & Route Resolution (`REQ-SET-080.1`)*:
 • An *Auto-Pause* item (`drawer_auto_pause`) SHALL be included in the Navigation Drawer within the Settings group directly below *Sport Types* (`AppNavigationDrawer.kt`, `ids.xml`).
 • `NavRoutes.toRoute(R.id.drawer_auto_pause)` SHALL resolve to `NavRoutes.AUTO_PAUSE`, and `NavRoutes.toDrawerItemId(NavRoutes.AUTO_PAUSE)` SHALL resolve to `R.id.drawer_auto_pause`.
@@ -1261,26 +1261,33 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • In accordance with Design Guidelines Section 3.2, Auto-Pause controls SHALL be excised from `SensorsGpsFilterSection.kt`, `AdvancedTuningScreen.kt`, and `AdvancedTuningDialog.kt` so that Auto-Pause maintains a single unambiguous configuration home.
 5. *9-Language Localization Parity (`REQ-SET-080.5`)*:
 • All new drawer and screen string resources SHALL be localized with 100% parity across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+6. *Collapsible Calibration Accordion with Live Active Values Subtitle (`AutoPauseTabsScreen.kt`, `TuningSubtitleFormatter`, `REQ-SET-080.6`)*:
+• In accordance with Design Guidelines Section 3 (*Settings & Accordion Structure*), whenever Auto-Pause is enabled for a sport tab, the three technical calibration sliders (Speed Threshold, Pause Debounce Delay, Resume Debounce Delay) SHALL be encapsulated inside an expandable accordion section (`TuningAccordionSection`) titled `tuning_auto_pause_custom_thresholds_title` ("Schwellenwerte & Verzögerung anpassen" / "Customize thresholds & delays").
+• The accordion section SHALL default to initially collapsed (`isExpanded = false` via `rememberSaveable`) per sport tab, keeping the primary enable toggle prominent and scannable without scrolling.
+• The accordion header SHALL render a dynamic subtitle reflecting active configured values (`TuningSubtitleFormatter.formatAutoPauseSubtitle`, e.g., `"%1$s · Pause: %2$s · Fortsetzen: %3$s"` / `"%1$s · Pause: %2$s · Resume: %3$s"`).
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
 1. *Original Requirement ID & Target*: Net-new requirement `REQ-SET-080`, refining `REQ-UI-036` and `REQ-TRK-018`. Targets `AutoPauseTabsScreen.kt`, `AutoPauseViewModel.kt`, `strings.xml`.
-2. *Historical Origin & Commit Trace*: Ticket `ATT-4836` (commit `69e9d6d3`), Sprint `2026-44.1`, and `ATT-4924`, Sprint `2026-44.2`.
-3. *Root Reason for Existing Formulation*: Collapsing header was copied directly from `SportTypesTabsScreen.kt` to satisfy generic tab guidelines, and sport title was reused as toggle label from flat tuning screen. However, on short settings forms collapsing hides tabs and reset actions, and tab names already identify the active sport.
-4. *Preservation of Core Invariants*: Reactive persistence, per-sport reset to defaults, Drawer navigation, and True-Black AMOLED compliance are 100% preserved.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-4836` (commit `69e9d6d3`), Sprint `2026-44.1`, `ATT-4924` (Sprint `2026-44.2`), and `ATT-5820` (Sprint `2026-45.12`).
+3. *Root Reason for Existing Formulation*: Collapsing header was copied directly from `SportTypesTabsScreen.kt` to satisfy generic tab guidelines, and calibration sliders were rendered openly inside the tab card. However, displaying three technical sliders openly pushed options off-screen; bundling them into a default-collapsed accordion adheres to progressive disclosure (Design Guidelines Section 3).
+4. *Preservation of Core Invariants*: Reactive persistence to DataStore, slider step ranges, per-sport reset to defaults, Drawer navigation, and True-Black AMOLED compliance are 100% preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* the athlete opens the Auto-Pause settings screen,
 • *When* the screen renders,
 • *Then* a fixed header containing the title row, a single global *Start in Auto-Paused* card, and the sport tabs row is visible and does not collapse on scroll.
-• *Given* any sport tab,
-• *When* inspecting the main toggle,
-• *Then* the label reads "Enable Auto-Pause" (`tuning_auto_pause_enable_title`) rather than the redundant sport name.
-• *Given* any sport tab,
-• *When* inspecting the speed threshold slider,
-• *Then* the title and summary reflect both pause and resume (`tuning_auto_pause_speed_threshold_title` and `_desc`).
+• *Given* any sport tab with Auto-Pause enabled,
+• *When* inspecting the content card,
+• *Then* the calibration sliders are encapsulated inside an accordion section titled "Schwellenwerte & Verzögerung anpassen" (`tuning_auto_pause_custom_thresholds_title`), defaulting to collapsed (`isExpanded = false`).
+• *Given* the collapsed accordion header,
+• *When* inspecting its subtitle,
+• *Then* it displays the active speed threshold, pause debounce delay, and resume debounce delay formatted with units.
+• *Given* the collapsed accordion section,
+• *When* the athlete taps the accordion header,
+• *Then* it smoothly expands to reveal the three calibration sliders.
 • *Given* the athlete triggers *Reset to Defaults*,
 • *When* confirmed,
-• *Then* the active sport's auto-pause settings revert to default values.
+• *Then* the active sport's auto-pause settings revert to default values and the accordion subtitle updates reactively.
 
 **Invariants**: Backward compatibility of `TuningPreferencesDataStore` keys and default values, `TrackerService` auto-pause calculation integrity, 100% 9-language translation parity.
 

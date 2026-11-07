@@ -1967,6 +1967,8 @@
     <string name="tuning_auto_pause_start_in_auto_pause_desc">Bij het starten van een training in stilstand direct beginnen in automatische pauze totdat beweging wordt gedetecteerd. Geldt voor alle sporten.</string>
     <string name="tuning_speed_value_format">%1$d %2$s</string>
     <string name="tuning_seconds_value_format">%1$d s</string>
+    <string name="tuning_auto_pause_custom_thresholds_title">Drempelwaarden en vertragingen aanpassen</string>
+    <string name="tuning_auto_pause_subtitle_format">%1$s · Pauze: %2$s · Hervatten: %3$s</string>
     <string name="cockpit_auto_pause_badge">Automatisch pauzeren</string>
     <string name="cockpit_auto_pause_resume">Nu hervatten</string>
     <string name="cockpit_status_not_started">Niet gestart</string>

@@ -2053,6 +2053,8 @@
     <string name="tuning_auto_pause_start_in_auto_pause_desc">Beginnt beim Starten einer Aufzeichnung im Stillstand direkt in der Auto-Pause, bis Bewegung erkannt wird. Gilt für alle Sportarten.</string>
     <string name="tuning_speed_value_format">%1$d %2$s</string>
     <string name="tuning_seconds_value_format">%1$d s</string>
+    <string name="tuning_auto_pause_custom_thresholds_title">Schwellenwerte &amp; Verzögerung anpassen</string>
+    <string name="tuning_auto_pause_subtitle_format">%1$s · Pause: %2$s · Fortsetzen: %3$s</string>
     <string name="cockpit_auto_pause_badge">Auto-Pause</string>
     <string name="cockpit_auto_pause_resume">Jetzt fortsetzen</string>
     <string name="cockpit_status_not_started">Nicht gestartet</string>

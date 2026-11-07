@@ -238,6 +238,22 @@ object TuningSubtitleFormatter {
             "End: $endStr · Apex: $apexStr · Dist: $distPctStr"
         }
     }
+
+    /**
+     * Formats live active Auto-Pause threshold and debounce values for the collapsible accordion header (REQ-SET-080.6).
+     */
+    fun formatAutoPauseSubtitle(
+        speedThreshold: Int,
+        speedUnit: String,
+        debounceSec: Int,
+        resumeDebounceSec: Int,
+        context: Context
+    ): String {
+        val speedStr = context.getString(R.string.tuning_speed_value_format, speedThreshold, speedUnit)
+        val pauseStr = context.getString(R.string.tuning_seconds_value_format, debounceSec)
+        val resumeStr = context.getString(R.string.tuning_seconds_value_format, resumeDebounceSec)
+        return context.getString(R.string.tuning_auto_pause_subtitle_format, speedStr, pauseStr, resumeStr)
+    }
 }
 
 /**

@@ -783,7 +783,7 @@
 ### TST-SET-080: **Dedicated Auto-Pause Settings Cockpit & Navigation Drawer Entry Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-080`
 - **Component**: **Dedicated Auto-Pause Settings Cockpit & Navigation Drawer Entry Verification Suite**
-- **Jira**: `ATT-4836`, `ATT-4924`
+- **Jira**: `ATT-4836`, `ATT-4924`, `ATT-5820`
 - **Test Description**:
   1. *Navigation Drawer & Route Resolution Contract Test (`TST-SET-080.1`, `AutoPauseNavigationTest.kt`)*:
   • Verify `NavRoutes.toRoute(R.id.drawer_auto_pause)` returns `NavRoutes.AUTO_PAUSE`.
@@ -804,6 +804,11 @@
   • Verify `tuning_auto_pause_enable_title`, updated `tuning_auto_pause_speed_threshold_title`, `tuning_auto_pause_speed_threshold_desc`, and `tuning_auto_pause_start_in_auto_pause_desc` exist across all 9 canonical locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
   6. *Clean-Room Regression Execution (`TST-SET-080.6`)*:
   • Execute targeted unit tests and AAPT2 resources with 100% success.
+  7. *Collapsible Calibration Accordion & Subtitle Format Contract Test (`TST-SET-080.7`, `AutoPauseTabsScreenContractTest.kt`, `TuningSubtitleFormatterTest.kt`)*:
+  • Verify `AutoPauseTabsScreen.kt` source contract: encapsulates `TuningSliderItem` inside `TuningAccordionSection`.
+  • Verify default collapsed state (`isExpanded = false` via `rememberSaveable`).
+  • Verify `TuningSubtitleFormatter.formatAutoPauseSubtitle` formats active threshold and debounce delays with units.
+  • Verify localization parity across all 9 languages for accordion title and subtitle strings.
 
 
 ---

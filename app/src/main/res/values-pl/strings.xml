@@ -1969,6 +1969,8 @@
     <string name="tuning_auto_pause_start_in_auto_pause_desc">Podczas rozpoczynania treningu w miejscu natychmiast przejdź do automatycznej pauzy do momentu wykrycia ruchu. Dotyczy wszystkich sportów.</string>
     <string name="tuning_speed_value_format">%1$d %2$s</string>
     <string name="tuning_seconds_value_format">%1$d s</string>
+    <string name="tuning_auto_pause_custom_thresholds_title">Dostosuj progi i opóźnienia</string>
+    <string name="tuning_auto_pause_subtitle_format">%1$s · Pauza: %2$s · Wznowienie: %3$s</string>
     <string name="cockpit_auto_pause_badge">Autopauza</string>
     <string name="cockpit_auto_pause_resume">Wznów teraz</string>
     <string name="cockpit_status_not_started">Nie rozpoczęto</string>

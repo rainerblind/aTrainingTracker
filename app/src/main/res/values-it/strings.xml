@@ -1968,6 +1968,8 @@
     <string name="tuning_auto_pause_start_in_auto_pause_desc">All\'avvio di un allenamento da fermo, inizia direttamente in pausa automatica finché non viene rilevato il movimento. Si applica a tutti gli sport.</string>
     <string name="tuning_speed_value_format">%1$d %2$s</string>
     <string name="tuning_seconds_value_format">%1$d s</string>
+    <string name="tuning_auto_pause_custom_thresholds_title">Personalizza soglie e ritardi</string>
+    <string name="tuning_auto_pause_subtitle_format">%1$s · Pausa: %2$s · Riprendi: %3$s</string>
     <string name="cockpit_auto_pause_badge">Pausa automatica</string>
     <string name="cockpit_auto_pause_resume">Riprendi ora</string>
     <string name="cockpit_status_not_started">Non avviato</string>

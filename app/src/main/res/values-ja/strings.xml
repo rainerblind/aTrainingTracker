@@ -1947,6 +1947,8 @@
     <string name="tuning_auto_pause_start_in_auto_pause_desc">静止状態でワークアウトを開始した際、動きが検出されるまで自動一時停止状態で開始します。すべてのスポーツに適用されます。</string>
     <string name="tuning_speed_value_format">%1$d %2$s</string>
     <string name="tuning_seconds_value_format">%1$d s</string>
+    <string name="tuning_auto_pause_custom_thresholds_title">しきい値と遅延のカスタマイズ</string>
+    <string name="tuning_auto_pause_subtitle_format">%1$s · 一時停止: %2$s · 再開: %3$s</string>
     <string name="cockpit_auto_pause_badge">オートポーズ</string>
     <string name="cockpit_auto_pause_resume">今すぐ再開</string>
     <string name="cockpit_status_not_started">未開始</string>
