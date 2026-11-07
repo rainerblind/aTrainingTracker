@@ -14066,6 +14066,43 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Saved DataStore preference criteria are not corrupted; toggling locations does not alter or deselect the active filter coordinate; zero regressions in `ClusterFilterCriteria` or `matches()` logic; zero hardcoded strings; 9-language translation parity.
 
+### REQ-UI-468: Uniform 'Clear all' Action Across Active Filter Chips Rows [Verified]
+- **Tests**: `TST-UI-468` | **Tickets**: `ATT-5888`
+- **Implementation**: `ActiveFilterChipsRow.kt`, `ActiveSegmentFilterChipsRow.kt`, `ActiveRouteFilterChipsRow.kt`, `ActiveClusterFilterChipsRow.kt`, `ActiveDeviceFilterChipsRow.kt`, `ActiveKnownLocationsFilterChipsRow.kt`
+- **Rationale**: Across filterable list views, gating the "Clear all" button behind a plural check (`activeFilterCount > 1` or `>= 2`) created inconsistency with Favorite Locations (`ActiveKnownLocationsFilterChipsRow.kt`) and prevented athletes from resetting single default filters (such as `minHitCount = 5` on Favorite Routes) in one tap. The system SHALL display the "Clear all" (`R.string.filter_clear_all`) action button unconditionally whenever any filter criterion is active (Sprint 2026-45.12, ATT-5888, refining `REQ-UI-132`, `REQ-UI-351`, `REQ-UI-431`, `REQ-UI-466`, `REQ-UI-467`):
+1. *Unconditional Clear All Visibility when Filter Active (`REQ-UI-468.1`)*:
+• In `ActiveFilterChipsRow.kt` (Workouts), `ActiveSegmentFilterChipsRow.kt` (Segments), `ActiveRouteFilterChipsRow.kt` (Routes), `ActiveClusterFilterChipsRow.kt` (Favorite Routes), `ActiveDeviceFilterChipsRow.kt` (Sensors/Devices), and `ActiveKnownLocationsFilterChipsRow.kt` (Favorite Locations), the "Clear all" action button SHALL be displayed unconditionally in the `LazyRow` whenever `!criteria.isEmpty` (i.e. `activeFilterCount >= 1`).
+• The legacy conditional guards `if (criteria.activeFilterCount > 1)` and `if (criteria.activeFilterCount >= 2)` MUST NOT be present.
+2. *Row Suppression on Empty State (`REQ-UI-468.2`)*:
+• When `criteria.isEmpty` is true (`activeFilterCount == 0`), the entire composable row SHALL return immediately without rendering any layout, spacer, or "Clear all" button.
+3. *Action Styling & Padding Invariants (`REQ-UI-468.3`)*:
+• The button SHALL be rendered as a `TextButton(onClick = onClearAll)` with `Modifier.padding(start = 4.dp)` containing `Text(stringResource(R.string.filter_clear_all), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)`.
+4. *9-Language Localization & Accessibility (`REQ-UI-468.4`)*:
+• The `filter_clear_all` string resource SHALL maintain 100% parity across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with touch target $\ge 32\text{dp}$ and zero inline emojis (`ATT-5400`).
+
+### Requirement Archaeology & Chesterton's Fence Audit
+1. *Original Requirement ID & Target*: Net-new `REQ-UI-468` refining `REQ-UI-132` (*Workout Filter Chips*), `REQ-UI-351` (*Segment Filter Chips*), `REQ-UI-431` (*Route Filter Chips*), `REQ-UI-466` (*Known Location Filter Chips*), and `REQ-UI-467` (*Favorite Routes Filter Chips*).
+2. *Historical Origin & Commit Trace*: `ATT-1402` (commit `91acde33`), `ATT-3166` (commit `a9d4791c`), `ATT-5822` (commit `9fa4429e`), `ATT-5823` (commit `3b1f3b33`).
+3. *Root Reason for Existing Formulation*: A legacy plural heuristic (`activeFilterCount > 1`) assumed a "Clear all" button was semantically redundant when only a single filter dimension was active, expecting athletes to use the individual chip's remove button. In practice, default filters (such as `minHitCount = 5` on Favorite Routes) left athletes without a prominent reset button.
+4. *Preservation of Core Invariants*: `criteria.isEmpty` remains the sole visibility gate for the row; individual chip removal callbacks (`onRemove*`) and full reset (`onClearAll`) remain intact; zero empty-state leakage; 100% 9-language translation parity.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* exactly 1 active filter criterion on any filterable list (Workouts, Segments, Routes, Favorite Routes, Sensors, Favorite Locations),
+• *When* the active filter chips row renders,
+• *Then* both the individual filter chip and the "Alle zurücksetzen" / "Clear all" button are visible in the `LazyRow`.
+• *Given* multiple ($\ge 2$) active filter criteria,
+• *When* the active filter chips row renders,
+• *Then* all active chips and the "Alle zurücksetzen" / "Clear all" button are visible.
+• *Given* zero active filters (`criteria.isEmpty`),
+• *When* the active filter chips row renders,
+• *Then* the entire row is suppressed and zero content is emitted.
+• *Given* the athlete tapping the "Alle zurücksetzen" / "Clear all" button,
+• *When* clicked,
+• *Then* `onClearAll` is invoked, resetting all filter criteria.
+
+**Invariants**: Filter criteria data structures, ViewModel filtering logic, and `matches()` predicates MUST NOT be altered; zero regression in individual chip deletion; 100% 9-language localization parity.
+
+
 
 
 

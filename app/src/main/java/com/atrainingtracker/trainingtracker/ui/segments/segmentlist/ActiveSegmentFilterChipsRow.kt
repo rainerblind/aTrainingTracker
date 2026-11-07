@@ -122,19 +122,17 @@ fun ActiveSegmentFilterChipsRow(
             }
         }
 
-        // Clear All Action Button (shown when ≥2 filters active)
-        if (criteria.activeFilterCount > 1) {
-            item("clearAll") {
-                TextButton(
-                    onClick = onClearAll,
-                    modifier = Modifier.padding(start = 4.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.filter_clear_all),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
+        // Clear All Action Button
+        item("clearAll") {
+            TextButton(
+                onClick = onClearAll,
+                modifier = Modifier.padding(start = 4.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.filter_clear_all),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
         }
     }

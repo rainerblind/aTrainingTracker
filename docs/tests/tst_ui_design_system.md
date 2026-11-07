@@ -7603,6 +7603,21 @@
   5. *Tier 1 Targeted Regression Execution (`TST-UI-467.5`)*:
   • Execute targeted test suites (`com.atrainingtracker.trainingtracker.ui.clusters.*`, `com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
+### TST-UI-468: **Active Filter Chips Row Uniform 'Clear all' Action Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-468`
+- **Component**: `ActiveFilterChipsRow.kt`, `ActiveSegmentFilterChipsRow.kt`, `ActiveRouteFilterChipsRow.kt`, `ActiveClusterFilterChipsRow.kt`, `ActiveDeviceFilterChipsRow.kt`, `ActiveKnownLocationsFilterChipsRow.kt`, `ActiveFilterChipsRowClearAllContractTest.kt`
+- **Jira**: `ATT-5888`
+- **Test Description**:
+  1. *Structural Contract Test (`TST-UI-468.1`, `ActiveFilterChipsRowClearAllContractTest.kt`)*:
+  • Verify that none of the 6 `Active*FilterChipsRow` implementations contain conditional guards `activeFilterCount > 1` or `activeFilterCount >= 2`.
+  • Verify that all 6 implementations reference `R.string.filter_clear_all`.
+  • Verify that all 6 implementations enforce `if (criteria.isEmpty) return`.
+  2. *9-Language Localization Audit (`TST-UI-468.2`, `TranslationParityTest.kt`)*:
+  • Verify `filter_clear_all` exists across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with zero format specifier mismatches.
+  3. *Tier 1 Targeted Regression Execution (`TST-UI-468.3`)*:
+  • Execute targeted unit test suites (`com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.*`, `com.atrainingtracker.trainingtracker.ui.segments.segmentlist.*`, `com.atrainingtracker.trainingtracker.ui.routes.*`, `com.atrainingtracker.trainingtracker.ui.clusters.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+
 
 
 
