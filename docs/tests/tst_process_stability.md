@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 101
+**Total Tests**: 107
 
 ---
 
@@ -1351,6 +1351,21 @@
   • Assert all 5 articles contain the ChatGPT epigraph, dual attribution reasons (provenance and cross-model Gemini + ChatGPT UI review), and Höchst·maß etymology box.
   3. *Clean-Room Governance & Regression Execution (`TST-PRO-037.3`)*:
   • Execute `python3 tools/verify_requirement_governance.py` (exit 0) and targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.*"`.
+
+### TST-PRO-038: **Automated Quantitative Sprint Metrics (PA 4.1) & Statistical Process Control (PA 4.2) Verification Suite** [PASS]
+- **Requirement(s)**: `REQ-PRO-038`
+- **Component**: **Jira Process Tooling & Metrics Aggregator**
+- **Jira**: `ATT-5765`
+- **Test Description**:
+  1. *Sprint Metrics Computation & Parsing (`TST-PRO-038.1`, `test_sprint_metrics.py`)*:
+  • Verify parsing of subtask comments with `[ROLE: agent2]` and computation of Gate 1–5 FTPR, Swiss Cheese escape rates ($p_1 \dots p_5$), and Human Acceptance Rate.
+  2. *Time-Series Persistence & Idempotent Upsert (`TST-PRO-038.2`, `test_sprint_metrics.py`)*:
+  • Verify `--record` writes structured JSON lines to `docs/engineering/metrics/process_metrics.jsonl` and updates existing records idempotently.
+  3. *Statistical Process Control (SPC) Outlier Detection (`TST-PRO-038.3`, `test_sprint_metrics.py`)*:
+  • Verify computation of rolling mean $\mu$ and standard deviation $\sigma$, and assertion of warnings for metric variations exceeding $\mu \pm 2\sigma$.
+  4. *Governance Whitelist & Directory Parity Contract (`TST-PRO-038.4`, `verify_requirement_governance.py`)*:
+  • Assert `docs/engineering/metrics/` is whitelisted in `ALLOWED_ENGINEERING_ENTRIES` and passes `verify_requirement_governance.py`.
+
 
 
 

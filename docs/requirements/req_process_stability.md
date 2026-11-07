@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 72
+**Total Requirements**: 78
 
 ---
 
@@ -2077,6 +2077,40 @@ The workflow SHALL mandate that:
 • *Then* all assertions pass 100%.
 
 **Invariants**: Active project rules and runtime code in `app/src/main/` remain untouched; zero regression in test suite or governance.
+
+### REQ-PRO-038: Automated Quantitative Sprint Metrics (PA 4.1) & Statistical Process Control (PA 4.2) [Verified]
+- **Tests**: `TST-PRO-038` | **Tickets**: `ATT-5765`
+- **Implementation**: `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/verify_requirement_governance.py`, `docs/engineering/metrics/process_metrics.jsonl`
+- **Rationale**: Fulfill ASPICE Level 4 (Predictable) process attributes `PA 4.1` (Quantitative Analysis) and `PA 4.2` (Quantitative Control) by automatically aggregating Gate 1–5 First-Time-Pass-Rates (FTPR), empirical Swiss Cheese layer defect escape probabilities, and Human Acceptance Rate directly from Jira comment attribution and persisting historical metrics for statistical process control.
+- **Description**:
+  1. The CLI tool `tools/jira_util.py` (and export mirror `tools/hoechstmass/tools/jira_util.py`) SHALL provide a `sprint-metrics` subcommand to quantitatively audit active or specified sprints (`--sprint <NAME_OR_ID>`).
+  2. The tool SHALL automatically parse subtask review comments (`[ROLE: agent2]`) to compute:
+     - **Gate 1–5 First-Time-Pass-Rates (FTPR)**: Percentage of stage sub-tasks passing on first submission without `REVISION`.
+     - **Empirical Swiss Cheese Escape Rates**: Cumulative and per-layer escape frequencies ($p_1 \dots p_5$).
+     - **Human Acceptance Rate**: Percentage of parent tickets accepted at Final Review without rework.
+     - **Throughput & Risk Mix**: Closed ticket count, story point velocity, and breakdown of low/medium/high risk tickets.
+  3. The tool SHALL support `--record` to append or idempotently update the quantitative sprint record in `docs/engineering/metrics/process_metrics.jsonl`.
+  4. The tool SHALL support `--backfill=N` to query the last $N$ closed sprints and record their baseline metrics sequentially.
+  5. The tool SHALL support `--post-to-retro` to automatically format and comment the quantitative metric summary onto the sprint's `Review & Retro` ticket.
+  6. The tool SHALL implement `PA 4.2` Statistical Process Control (SPC) evaluating rolling mean $\mu$ and standard deviation $\sigma$ across recorded history, flagging any Gate FTPR or escape rate outside $\mu \pm 2\sigma$ as a Special Cause Variation.
+  7. `tools/verify_requirement_governance.py` (and `tools/hoechstmass/hoechstmass_config.json`) SHALL whitelist `metrics` in `ALLOWED_ENGINEERING_ENTRIES` to permit time-series persistence in `docs/engineering/metrics/`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an active or completed sprint in Jira with subtasks audited by `agent2`,
+• *When* `python3 tools/jira_util.py sprint-metrics` is executed,
+• *Then* the tool outputs a structured table containing Gate 1–5 FTPR, Swiss Cheese escape rates ($p_1 \dots p_5$), Human Acceptance Rate, and velocity.
+• *Given* the `--record` flag,
+• *When* executed for sprint `2026-45.12`,
+• *Then* a valid JSON object is recorded in `docs/engineering/metrics/process_metrics.jsonl` with idempotent overwrite for the same sprint ID.
+• *Given* historical records in `process_metrics.jsonl`,
+• *When* current sprint metrics deviate beyond $\mu \pm 2\sigma$,
+• *Then* the tool flags a `[PA 4.2 Outlier / Special Cause Variation]` warning.
+• *Given* `python3 tools/verify_requirement_governance.py`,
+• *When* executed with `docs/engineering/metrics/process_metrics.jsonl` present,
+• *Then* directory verification passes without error.
+
+**Invariants**: Zero runtime app modifications in `app/src/main/`; backwards compatibility of existing `jira_util.py` commands; 100% test pass rate.
+
 
 
 

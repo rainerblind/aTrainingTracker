@@ -49,4 +49,5 @@ These **8 Core Rules** operationalize **Agile Agentic ASPICE (AAA)** (Tripwires,
 ## Rule 8: One Atomic Commit per Ticket & Clean Issue Tracker Hygiene
 * **Composite Stage CLI**: Use composite commands to submit stages and record gate verdicts in single calls.
 * **One Commit per Ticket**: Integrate each verified ticket onto the sprint branch as **strictly one squashed atomic commit** (`git merge --squash feature/<KEY> && git commit -m "<KEY>: <Summary>"`).
+* **Canonical Directory Structure**: Canonical engineering artifacts are restricted to `analysis/`, `plans/`, `retros/`, `test_specs/`, `walkthroughs/`, and `metrics/` (`process_metrics.jsonl`).
 * **Issue Tracker Hygiene**: Sub-tasks never receive a release version; parent tickets receive release version only when accepted by the human user.

@@ -7,6 +7,18 @@ import re
 import sys
 from urllib.parse import urlencode
 
+_tools_dir = os.path.dirname(os.path.abspath(__file__))
+if _tools_dir not in sys.path:
+    sys.path.insert(0, _tools_dir)
+
+from sprint_metrics import (
+    calculate_spc_limits,
+    format_metrics_markdown,
+    load_historical_metrics,
+    parse_sprint_gate_metrics,
+    record_sprint_metrics,
+)
+
 # Transitions for ATT project
 TRANSITIONS = {
     "todo": "11",
@@ -1504,6 +1516,128 @@ def ensure_retro_ticket(role="agent1"):
     print(f"Created Review & Retro ticket {new_key} for {display_sprint} (id {sprint_id}).")
     return new_key
 
+
+def collect_sprint_metrics_for_id(sprint_id, sprint_name, board_id, role="coordinator"):
+    config = get_config()
+    base = config['JIRA_URL'].rstrip('/')
+    url = f"{base}/rest/agile/1.0/sprint/{sprint_id}/issue?fields=summary,status,issuetype,priority,subtasks,{STORY_POINTS_FIELD}&maxResults=100"
+    res = jira_request(url, role=role)
+    issues = res.get("issues", [])
+
+    parent_issues = [i for i in issues if not i.get("fields", {}).get("issuetype", {}).get("subtask", False)]
+    for p in parent_issues:
+        subtasks = p.get("fields", {}).get("subtasks", [])
+        for st in subtasks:
+            st_key = st.get("key")
+            if st_key:
+                try:
+                    c_res = jira_request(f"{base}/rest/api/2/issue/{st_key}/comment", role=role)
+                    st["comments"] = c_res.get("comments", [])
+                except Exception:
+                    st["comments"] = []
+
+    sprint_info = {"id": sprint_id, "name": sprint_name}
+    return parse_sprint_gate_metrics(parent_issues, sprint_info)
+
+
+def cmd_sprint_metrics(sprint_arg=None, record=False, post_to_retro=False, backfill=None, role="coordinator"):
+    config = get_config()
+    base = config['JIRA_URL'].rstrip('/')
+    boards = jira_request(f"{base}/rest/agile/1.0/board", role=role)["values"]
+    if not boards:
+        print("Error: No Agile board found.", file=sys.stderr)
+        sys.exit(1)
+    board_id = boards[0]["id"]
+
+    if backfill is not None:
+        try:
+            n_backfill = int(backfill)
+        except ValueError:
+            n_backfill = 3
+        print(f"Backfilling metrics for the last {n_backfill} closed sprints...")
+        all_closed = []
+        start_at = 0
+        while True:
+            s_page = jira_request(f"{base}/rest/agile/1.0/board/{board_id}/sprint?state=closed&startAt={start_at}&maxResults=50", role=role)
+            vals = s_page.get("values", [])
+            all_closed.extend(vals)
+            if s_page.get("isLast", True) or not vals:
+                break
+            start_at += len(vals)
+        dev_sprints = [s for s in all_closed if s.get("name", "").strip().lower() != "human review"]
+        target_sprints = dev_sprints[-n_backfill:] if len(dev_sprints) >= n_backfill else dev_sprints
+        for s in target_sprints:
+            s_id = s["id"]
+            s_name = s["name"]
+            print(f"\nCollecting metrics for closed Sprint '{s_name}' (ID: {s_id})...")
+            m = collect_sprint_metrics_for_id(s_id, s_name, board_id, role=role)
+            record_sprint_metrics(m)
+        print("\nBackfill complete.")
+        return
+
+    target_sprint = None
+    if sprint_arg:
+        # Check active sprint first
+        active = resolve_active_sprint(board_id, role=role)
+        if active and (str(active["id"]) == str(sprint_arg) or active["name"].strip() == str(sprint_arg).strip()):
+            target_sprint = active
+        elif str(sprint_arg).isdigit():
+            try:
+                s_obj = jira_request(f"{base}/rest/agile/1.0/sprint/{sprint_arg}", role=role)
+                if s_obj and "id" in s_obj:
+                    target_sprint = s_obj
+            except Exception:
+                pass
+
+        if not target_sprint:
+            start_at = 0
+            while True:
+                s_page = jira_request(f"{base}/rest/agile/1.0/board/{board_id}/sprint?startAt={start_at}&maxResults=50", role=role)
+                vals = s_page.get("values", [])
+                for s in vals:
+                    if str(s["id"]) == str(sprint_arg) or s["name"].strip() == str(sprint_arg).strip():
+                        target_sprint = s
+                        break
+                if target_sprint or s_page.get("isLast", True) or not vals:
+                    break
+                start_at += len(vals)
+
+        if not target_sprint:
+            print(f"Error: Sprint '{sprint_arg}' not found on board {board_id}.", file=sys.stderr)
+            sys.exit(1)
+    else:
+        target_sprint = resolve_active_sprint(board_id, role=role)
+        if not target_sprint:
+            print("Error: No active sprint found.", file=sys.stderr)
+            sys.exit(1)
+
+    s_id = target_sprint["id"]
+    s_name = target_sprint["name"]
+    print(f"Collecting quantitative metrics for Sprint '{s_name}' (ID: {s_id})...")
+    metrics = collect_sprint_metrics_for_id(s_id, s_name, board_id, role=role)
+    history = load_historical_metrics()
+    spc = calculate_spc_limits(history, current_metrics=metrics)
+
+    report_md = format_metrics_markdown(metrics, spc)
+    print("\n" + report_md + "\n")
+
+    if record:
+        record_sprint_metrics(metrics)
+
+    if post_to_retro:
+        retro_key = None
+        sprint_issues = jira_request(f"{base}/rest/agile/1.0/sprint/{s_id}/issue?fields=summary", role=role)["issues"]
+        for i in sprint_issues:
+            s_lower = i["fields"]["summary"].lower()
+            if "review & retro" in s_lower or "retro" in s_lower:
+                retro_key = i["key"]
+                break
+        if retro_key:
+            add_comment(retro_key, report_md, role=role)
+            print(f"Posted quantitative sprint scorecard to {retro_key}.")
+        else:
+            print("Warning: No 'Review & Retro' ticket found in this sprint to post metrics to.", file=sys.stderr)
+
 USAGE_TEXT = (
     "Usage: jira_util.py [--as agent1|agent2|coordinator] <command> [args]\n"
     "Commands:\n"
@@ -1531,6 +1665,8 @@ USAGE_TEXT = (
     "  clear-fixversion KEY                                  Clear Lösungsversion on issue\n"
     "  rank-top KEY                                          Rank issue at the very top of the backlog\n"
     "  create-subtask PARENT_KEY SUMMARY DESC [--add-to-sprint]\n"
+    "  sprint-metrics [--sprint <ID|NAME>] [--record] [--post-to-retro] [--backfill=N]\n"
+    "                                                        Calculate PA 4.1 sprint metrics and PA 4.2 SPC control limits\n"
     "  create-issue SUMMARY DESC [TYPE_ID|Bug|Feature|Verbesserung] [PARENT_KEY] [--type=...] [--parent=...] [--bottom] [--points=N]"
 )
 
@@ -1701,6 +1837,32 @@ if __name__ == "__main__":
         create_issue(summary, desc, type_id, parent, role=active_role, add_to_sprint=add_sprint, fix_version=fix_ver, priority=priority_arg, labels=labels_arg, rank_top=rank_top, points=points_arg)
     elif cmd in ("recalculate-living-docs", "recalc-docs"):
         recalculate_master_index_tables()
+    elif cmd in ("sprint-metrics", "sprint_metrics"):
+        sprint_arg = None
+        record = False
+        post_to_retro = False
+        backfill = None
+        idx = 1
+        while idx < len(remaining_argv):
+            a = remaining_argv[idx]
+            if a == "--record":
+                record = True
+            elif a in ("--post-to-retro", "--retro"):
+                post_to_retro = True
+            elif a.startswith("--sprint="):
+                sprint_arg = a.split("=", 1)[1]
+            elif a == "--sprint" and idx + 1 < len(remaining_argv):
+                sprint_arg = remaining_argv[idx + 1]
+                idx += 1
+            elif a.startswith("--backfill="):
+                backfill = a.split("=", 1)[1]
+            elif a == "--backfill" and idx + 1 < len(remaining_argv):
+                backfill = remaining_argv[idx + 1]
+                idx += 1
+            elif not a.startswith("--") and not sprint_arg:
+                sprint_arg = a
+            idx += 1
+        cmd_sprint_metrics(sprint_arg=sprint_arg, record=record, post_to_retro=post_to_retro, backfill=backfill, role=active_role)
     elif cmd == "add-to-sprint" and len(remaining_argv) == 2:
         if active_role in ("agent1", "agent2", "coordinator"):
             print("Error: Agents must not move tickets to sprints! Only the human user assigns tickets to sprints during Sprint-Start Screening.", file=sys.stderr)

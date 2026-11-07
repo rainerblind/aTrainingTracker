@@ -50,6 +50,7 @@ def load_config(custom_path=None):
             "tests_shard_dir": "docs/tests",
             "allowed_engineering_entries": [
                 "analysis",
+                "metrics",
                 "plans",
                 "retros",
                 "test_specs",

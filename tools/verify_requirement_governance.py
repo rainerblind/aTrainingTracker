@@ -222,6 +222,7 @@ def validate_archaeology_section(text):
 
 ALLOWED_ENGINEERING_ENTRIES = {
     "analysis",
+    "metrics",
     "plans",
     "retros",
     "test_specs",
