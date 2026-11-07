@@ -411,9 +411,12 @@ def set_fix_version(issue_key, version_name, role="agent1"):
         sys.exit(1)
 
     status_name = issue_data.get('fields', {}).get('status', {}).get('name', '')
-    premature_statuses = ["Zu erledigen", "In Arbeit", "Analysis", "Open", "To Do", "In Progress", "In Specification"]
-    if status_name in premature_statuses and role in ("agent1", "agent2", "coordinator"):
-        print(f"Error: Premature Fix Version assignment blocked on {issue_key}! Status is '{status_name}'. Mandate: 'Add version when ticket is finished, not when started' (Rule 19).", file=sys.stderr)
+    if role in ("agent1", "agent2"):
+        print(f"Error: Subagents ({role}) must never set Fix Version ('Lösungsversion') on {issue_key}! Fix Version is set exclusively by the Coordinator/Human upon review acceptance in Ceremony 2 (Rule 19 / Rule 76).", file=sys.stderr)
+        sys.exit(1)
+    allowed_statuses = {"Final Review (Human)", "Erledigt", "Done", "Closed"}
+    if status_name not in allowed_statuses:
+        print(f"Error: Premature Fix Version assignment blocked on {issue_key}! Status is '{status_name}' (must be in {sorted(allowed_statuses)}). Mandate: 'Add version when ticket is finished, not when started' (Rule 19 / Rule 76).", file=sys.stderr)
         sys.exit(1)
 
     url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}"
