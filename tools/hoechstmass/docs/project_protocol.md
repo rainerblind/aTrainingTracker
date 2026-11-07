@@ -67,3 +67,26 @@ Engineering standards in a Höchstmaß repository are structured into three dist
 1. **In-Sprint Core Governance Rules** (`.agents/rules/aspice_governance.md`): Binding operational rules governing agent behavior, subagent topologies, gate transitions, and git hygiene during active sprint execution.
 2. **Coding Standards & Architectural Invariants** (`docs/coding_standards.md`): Core software engineering construction standards, DRY principles, memory safety, and thread-safety invariants.
 3. **Design & Interaction Guidelines** (`docs/design_guidelines.md`): UI/UX component selection heuristics, modal dialog hierarchies, accessibility standards, and visual consistency rules.
+
+---
+
+## 5. The 5-Layer Swiss Cheese Defense Model & Statistical Decorrelation
+
+Defects and hallucinations are prevented by stacking five statistically decorrelated defensive layers ($P(\text{escaped defect}) = \prod_{i=1}^5 p_i = p_1 \cdot p_2 \cdot p_3 \cdot p_4 \cdot p_5$):
+
+1. **Layer 1 ($p_1$) — Executing Agent (Sub-Task Level)**: Bounded stage prompt + local compiler, unit tests, and static linters (`agent1`).
+2. **Layer 2 ($p_2$) — Reviewing Agent (Sub-Task Gate Level)**: Asymmetric model tier (`pro` $\leftrightarrow$ `flash`) auditing deliverables at Gates 1–5 (`agent2`).
+3. **Layer 3 ($p_3$) — Ticket-Wide Verification Session (Stage 5)**: Clean-room full regression suite, requirement-test parity, and visual walkthrough verification.
+4. **Layer 4 ($p_4$) — Human Engineer (Final Review Gate)**: Hands-on testing and exclusive parent ticket closure authority.
+5. **Layer 5 ($p_5$) — Periodic Cross-Vendor Audits**: Independent codebase reviews by **Claude** and UI screenshot/UX critiques by **ChatGPT** to break vendor-level blind spots.
+
+---
+
+## 6. Isolated In-Place Code & Document Review Sandbox (`.reviews/` + Emacs)
+
+To allow frictionless human review of source code (`.kt`, `.java`, `.py`, `.xml`) and documentation (`.md`) while autonomous agents compile code and switch Git branches in the main workspace:
+
+1. **Isolated Sandbox**: `.reviews/` is excluded from the main repository via `.git/info/exclude` and maintains its own standalone Git repository (`git init`).
+2. **Editor Integration (`emacsclient`)**: The agent or CLI helper (`tools/review_tool.py`) stages files into `.reviews/`, commits the baseline, and launches `emacsclient -n`.
+3. **Direct Edits & Inline Directives (`>>`)**: The human directly edits lines or writes inline review instructions (`>> ...` or `// >> ...`) without risk of breaking parallel builds.
+4. **Automated Harvesting**: The agent inspects `git -C .reviews diff`, applies edits and directives to the authentic codebase, runs tests, and live-reloads the Emacs buffer.

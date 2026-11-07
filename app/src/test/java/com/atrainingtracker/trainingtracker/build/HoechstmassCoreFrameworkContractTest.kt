@@ -79,16 +79,51 @@ class HoechstmassCoreFrameworkContractTest {
         assertTrue("README must formalize Swiss Cheese model", readmeContent.contains("Swiss Cheese"))
         assertTrue("README must include mathematical formula for defect probability product",
             readmeContent.contains("P(\\text{escaped defect})") || readmeContent.contains("p_1 \\cdot p_2"))
-        assertTrue("README must list Context Isolation layer", readmeContent.contains("Context Isolation"))
-        assertTrue("README must list Cross-Model Diversity layer", readmeContent.contains("Cross-Model Diversity"))
-        assertTrue("README must list Deterministic Ground-Truth Oracles layer", readmeContent.contains("Deterministic Ground-Truth Oracles"))
-        assertTrue("README must list Human Final Gate layer", readmeContent.contains("Human Final Gate"))
+        assertTrue("README must embed Swiss Cheese SVG asset",
+            readmeContent.contains("assets/swiss_cheese_layers.svg"))
+        assertTrue("Swiss Cheese SVG asset must exist in tools/hoechstmass/assets/",
+            findRepoRootFile("tools/hoechstmass/assets/swiss_cheese_layers.svg").exists())
+
+        // 5 Layers & Decorrelation
+        assertTrue("README must list Layer 1 (Executing Agent)", readmeContent.contains("Layer 1"))
+        assertTrue("README must list Layer 2 (Reviewing Agent)", readmeContent.contains("Layer 2"))
+        assertTrue("README must list Layer 3 (Ticket Verification)", readmeContent.contains("Layer 3"))
+        assertTrue("README must list Layer 4 (Human Engineer)", readmeContent.contains("Layer 4"))
+        assertTrue("README must list Layer 5 (Cross-Vendor Audits)", readmeContent.contains("Layer 5"))
+        assertTrue("README must mention Claude", readmeContent.contains("Claude"))
+        assertTrue("README must include 5-layer decorrelation product",
+            readmeContent.contains("p_1 \\cdot p_2 \\cdot p_3 \\cdot p_4 \\cdot p_5"))
 
         // 5. 5-Stage Agile ASPICE Lifecycle
         assertTrue("README must document Stage 1 through Stage 5",
             readmeContent.contains("Stage 1") && readmeContent.contains("Stage 2") &&
             readmeContent.contains("Stage 3") && readmeContent.contains("Stage 4") &&
             readmeContent.contains("Stage 5"))
+
+        // 6. Isolated In-Place Review Workflow (.reviews/)
+        assertTrue("README must document .reviews/ in-place review workflow",
+            readmeContent.contains(".reviews/") && readmeContent.contains("Emacs"))
+
+        // 7. Entry Barrier Chapter
+        assertTrue("README must contain Chapter 5 Entry Barrier & Human Discipline",
+            readmeContent.contains("Entry Barrier") && readmeContent.contains("Human Discipline"))
+    }
+
+    @Test
+    fun testIsolatedReviewWorkflow_assetsAndHelperExist() {
+        val rootReviewTool = findRepoRootFile("tools/review_tool.py")
+        assertTrue("tools/review_tool.py must exist", rootReviewTool.exists())
+        assertTrue("tools/review_tool.py must have content", rootReviewTool.length() > 500L)
+
+        val hoechstmassReviewTool = findRepoRootFile("tools/hoechstmass/tools/review_tool.py")
+        assertTrue("tools/hoechstmass/tools/review_tool.py must exist", hoechstmassReviewTool.exists())
+        assertTrue("tools/hoechstmass/tools/review_tool.py must have content", hoechstmassReviewTool.length() > 500L)
+
+        val svgAsset = findRepoRootFile("tools/hoechstmass/assets/swiss_cheese_layers.svg")
+        assertTrue("tools/hoechstmass/assets/swiss_cheese_layers.svg must exist", svgAsset.exists())
+        val svgContent = svgAsset.readText()
+        assertTrue("SVG must define 5 layers", svgContent.contains("Layer 1") && svgContent.contains("Layer 5"))
+        assertTrue("SVG must reference Claude & ChatGPT", svgContent.contains("Claude") && svgContent.contains("ChatGPT"))
     }
 
     @Test

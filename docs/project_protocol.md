@@ -17,3 +17,18 @@ Authoritative engineering governance and living standards are decoupled into the
 * **Multi-Account Credentials (`.env.jira`)**: `tools/jira_util.py` resolves role-specific credentials for `agent1` (`JIRA_AGENT1_USER` / `JIRA_AGENT1_TOKEN`), `agent2` (`JIRA_AGENT2_USER` / `JIRA_AGENT2_TOKEN`), and `coordinator` (`JIRA_COORDINATOR_USER` / `JIRA_COORDINATOR_TOKEN`).
 * **Coordinator Role Boundaries**: The **Coordinator** orchestrates sprint backlog queries and sub-task creation, **cannot override** independent Auditor (`agent2`) verdicts, cannot skip quality gates, and cannot transition parent tickets to `Erledigt` (reserved exclusively for the human user).
 * **Requirement Archaeology (Chesterton's Fence — `REQ-PRO-022`)**: Any Stage 2 deliverable that modifies, relaxes, or replaces an existing requirement in `docs/requirements.md` must include a 4-field `Requirement Archaeology & Chesterton's Fence Audit` section (`Original Requirement ID & Target`, `Historical Origin & Commit Trace`, `Root Reason for Existing Formulation`, `Preservation of Core Invariants`), verified by `tools/verify_requirement_governance.py`.
+
+## 5-Layer Swiss Cheese Defense Model & Statistical Decorrelation
+Defects are prevented by stacking 5 statistically decorrelated defensive layers ($P(\text{escaped defect}) = \prod_{i=1}^5 p_i = p_1 \cdot p_2 \cdot p_3 \cdot p_4 \cdot p_5$):
+1. **Layer 1 ($p_1$) — Executing Agent (Sub-Task Level)**: Bounded stage prompt + local compiler, unit tests, and static analyzers (`agent1`).
+2. **Layer 2 ($p_2$) — Reviewing Agent (Sub-Task Gate Level)**: Asymmetric model tier (`pro` $\leftrightarrow$ `flash`) auditing deliverables at Gates 1–5 (`agent2`).
+3. **Layer 3 ($p_3$) — Ticket-Wide Verification Session (Stage 5)**: Clean-room full regression suite, requirement-test parity, and visual walkthrough verification.
+4. **Layer 4 ($p_4$) — Human Engineer (Final Review Gate)**: Live application testing and exclusive parent ticket closure authority.
+5. **Layer 5 ($p_5$) — Periodic Cross-Vendor Audits**: Independent codebase reviews by **Claude** and UI screenshot/UX critiques by **ChatGPT** to break vendor-level blind spots.
+
+## Isolated In-Place Code & Document Review Workflow (`.reviews/` + Emacs)
+To allow frictionless human review of source code (`.kt`, `.java`, `.py`, `.xml`) and documentation (`.md`) while autonomous agents compile code and switch Git branches in the main workspace:
+1. **Isolated Sandbox**: `.reviews/` is excluded from the main repository via `.git/info/exclude` and maintains its own standalone Git repository (`git init`).
+2. **Editor Integration (`emacsclient`)**: The agent or CLI helper (`tools/review_tool.py`) stages files into `.reviews/`, commits the baseline, and launches `emacsclient -n`.
+3. **Direct Edits & Inline Directives (`>>`)**: The human directly edits lines or writes inline review instructions (`>> ...` or `// >> ...`) without risk of breaking parallel builds.
+4. **Automated Harvesting**: The agent inspects `git -C .reviews diff`, applies edits and directives to the authentic codebase, runs tests, and live-reloads the Emacs buffer.

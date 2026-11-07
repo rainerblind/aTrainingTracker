@@ -10,12 +10,10 @@
 > **Höchst·maß** `/ˈhøːçstˌmaːs/` *(noun, neuter)*  
 > Origin: German. Composed of ***Höchst-*** (*highest / supreme / maximum*) + ***-maß*** (*measure / standard / precision*, as in *Maßarbeit* = bespoke precision craftsmanship).  
 > **Definition**: The utmost degree of engineering precision, rigor, and reliability.  
-> 
-> *Note on Orthography*: We deliberately chose a classic German term — complete with its authentic special characters (**ö** and **ß**) — to reflect the methodology's heritage in German engineering standards, specifically **Automotive SPICE (ASPICE)**.
 
 ---
 
-## 1. Why We Explicitly Quote an AI (Provenance & Cross-Model Review)
+## 1. Foundational Principles: Role Provenance & Multi-Model Adversarial Review
 
 Modern AI-assisted development is frequently plagued by two extremes: **"Vibe Coding"** (unverified, hallucination-prone code generated without engineering discipline) and **unattributed AI prose** (passing off machine-generated text as human work). **Höchstmaß** establishes an entirely different paradigm based on two foundational principles:
 
@@ -25,50 +23,32 @@ Unlike vibe coding or masquerading AI prose, **Höchstmaß** never passes off AI
 ### 1.2 Live Cross-Model Adversarial Review (Breaking Shared Tunnel Vision)
 A cornerstone of **Höchstmaß** is that whenever an AI model creates or designs something, a **different** model must audit it:
 - **Intra-Sprint Diversity**: Alternating between distinct model tiers (e.g. `pro` for architectural reasoning and `flash` for specification and execution) ensures that the reviewing agent does not share the authoring agent's blind spots.
-- **Cross-Vendor Adversarial Critique**: In real-world engineering workflows, pairing different model families breaks shared context tunnel vision. For example, when iterating on a UI component with **Gemini** until both the human engineer and Gemini are satisfied with the screenshot, handing that exact screenshot to **ChatGPT** for a cold, critical evaluation consistently surfaces subtle ergonomic flaws, accessibility oversights, and visual clutter that shared session context missed.
-- **Attribution of the Framework Epigraph**: We applied this exact cross-vendor review to the name and philosophy of **Höchstmaß** itself: co-developed with **Gemini**, independently challenged and reviewed by **ChatGPT** — which synthesized the quote opening this document.
+- **Cross-Vendor Adversarial Critique**: In real-world engineering workflows, pairing different model families breaks shared context tunnel vision:
+  - When iterating on a UI component with **Gemini** until both the human engineer and Gemini are satisfied with the screenshot, handing that exact screenshot to **ChatGPT** for a cold, critical evaluation consistently surfaces subtle ergonomic flaws, accessibility oversights, and visual clutter that shared session context missed.
+  - Beyond day-to-day sprint work, we conduct periodic independent codebase and architectural reviews using **Claude** to uncover systemic blind spots from a third model family's perspective.
+- **Multi-Vendor Provenance in Practice**: We apply this multi-vendor review across code, UI, and methodology alike — co-developing in-sprint with **Gemini**, challenging designs and concepts with **ChatGPT**, and running recurring independent codebase audits with **Claude**.
 
 ---
 
 ## 2. The Swiss Cheese Multiplicative Defect Reduction Model
 
-In safety-critical systems, James Reason's **Swiss Cheese Model** posits that catastrophic hazards are prevented by stacking multiple defensive barriers, each with imperfect holes. In **Höchstmaß**, defects can only escape into production if they penetrate every defensive layer simultaneously.
+In safety-critical systems, James Reason's **Swiss Cheese Model** posits that catastrophic hazards are prevented by stacking multiple defensive barriers, each with imperfect holes. In **Höchstmaß**, defects can only escape into production if they penetrate all five defensive layers simultaneously:
 
-```
-       Defect Hazard
-            │
-            ▼
-     ┌─────────────┐   Layer 1: Context Isolation (Clean stage boundaries)
-     │   █ █ █ █   │   P(defect bypass) = p₁
-     └──────┬──────┘
-            ▼
-     ┌─────────────┐   Layer 2: Cross-Model Adversarial Review (pro ↔ flash / Gemini ↔ ChatGPT)
-     │   █ █ █ █   │   P(defect bypass) = p₂
-     └──────┬──────┘
-            ▼
-     ┌─────────────┐   Layer 3: Deterministic Ground-Truth Oracles (Compilers, Linters, Contracts)
-     │   █ █ █ █   │   P(defect bypass) = p₃
-     └──────┬──────┘
-            ▼
-     ┌─────────────┐   Layer 4: Human Final Gate (Exclusive parent ticket sign-off)
-     │   █ █ █ █   │   P(defect bypass) = p₄
-     └──────┬──────┘
-            │
-            ▼
-      Production Merge
-```
+![Höchstmaß 5-Layer Swiss Cheese Defense Model](assets/swiss_cheese_layers.svg)
 
-Mathematically, the probability of an escaped defect is the product of individual layer failure rates:
+### The 5 Defensive Layers in *Höchstmaß*:
+1. **Layer 1 ($p_1$) — The Executing Agent (Sub-Task Level)**: Authors the stage deliverable (Analysis, Test Spec, Impl-Plan, Implementation, or Verification) within a clean, bounded context and validates it against local compilers, unit tests, and static linters.
+2. **Layer 2 ($p_2$) — The Reviewing Agent (Sub-Task Gate Level)**: Audits every individual sub-task deliverable at Gates 1–5 before the next stage unlocks, using a different model tier (`pro` $\leftrightarrow$ `flash`) than the executing agent.
+3. **Layer 3 ($p_3$) — Holistic Ticket Verification (Stage 5 Review Session)**: Verifies the entire ticket end-to-end across all stages — executing the full clean-room regression suite, checking requirement-to-test traceability parity, and compiling visual walkthrough evidence.
+4. **Layer 4 ($p_4$) — The Human Engineer (Final Review Gate)**: Tests the integrated feature hands-on in the live application and holds exclusive authority to approve and close parent tickets during the Sprint-End Joint Review.
+5. **Layer 5 ($p_5$) — Periodic Cross-Vendor Audits (Claude & ChatGPT)**: Independent codebase and architecture reviews by **Claude** alongside cold-eye UI/UX critiques by **ChatGPT** catch systemic issues that might otherwise persist across sprints.
 
-$$P(\text{escaped defect}) = \prod_{i=1}^{n} p_i = p_1 \cdot p_2 \cdot p_3 \cdot p_4$$
+### Why Model Alternation Is Essential for Statistical Decorrelation
+Mathematically, the probability of an escaped defect is the product of individual layer failure rates — **but only if the layers are statistically uncorrelated**:
 
-Because the defensive layers are **statistically decorrelated**, compounding even modest layer rejection rates (e.g., $p_i \approx 0.1$) yields near-zero defect escape probabilities ($P \approx 10^{-4}$).
+$$P(\text{escaped defect}) = \prod_{i=1}^{5} p_i = p_1 \cdot p_2 \cdot p_3 \cdot p_4 \cdot p_5$$
 
-### The 4 Decorrelation Mechanisms:
-1. **Context Isolation**: Each lifecycle stage starts with a bounded, focused prompt and explicit input deliverables, eliminating conversational context drift and hallucinations.
-2. **Cross-Model Diversity**: Authoring (`agent1`) and gate auditing (`agent2`) are performed by asymmetric model tiers (`pro` vs. `flash`) or different model families. No model tier audits its own work.
-3. **Deterministic Ground-Truth Oracles**: Mathematical and programmatic verifiers (unit test suites, static analyzers, linters, requirement governance parity scripts) enforce objective, binary pass/fail criteria that AI models cannot talk their way out of.
-4. **Human Final Gate**: Moving parent feature or bugfix tickets to completed status is strictly and exclusively reserved for the human engineer.
+If the exact same model tier reviews content that it just generated itself, the authoring error and the reviewing error are **strongly correlated** ($P(\text{miss}_2 \mid \text{miss}_1) \gg p_2$), because the reviewer shares the exact same weights, biases, and blind spots as the author. That is one of the primary reasons why **Höchstmaß** strictly alternates between **Pro** and **Flash** models across every sub-task of a ticket, isolates conversational context between stages, and brings in external model families (**Claude** and **ChatGPT**) for cross-vendor reviews. When the layers are genuinely decorrelated, compounding even modest per-layer failure rates (e.g., $p_i \approx 0.1$) yields near-zero defect escape probabilities.
 
 ---
 
@@ -83,6 +63,13 @@ Höchstmaß translates Automotive SPICE (ISO/IEC 33061 / VDA Scope) into a fast-
 | **Stage 3** | **Implementation Plan** | `subagent_pro` | `subagent_flash` | **Gate 3 PASS**: Verifies atomic construction steps, invariants, and architectural design. Releases Code Lock. |
 | **Stage 4** | **Software Construction & Implementation** | `subagent_flash` / `subagent_pro` | `subagent_pro` / `subagent_flash` | **Gate 4 PASS**: Audits `git diff`, code quality, KDoc, and targeted tests against Stage 3 plan. Advances to Test. |
 | **Stage 5** | **Verification & Walkthrough** | `subagent_flash` | `subagent_pro` | **Gate 5 PASS**: Full clean-room test suite, image inspection, and squashed atomic merge $\rightarrow$ Advances to **Final Review (Human)**. |
+
+### Frictionless Human Code & Document Review During Parallel Agent Execution (`.reviews/` + Emacs)
+When the human engineer wants to review or annotate **source code** (`.kt`, `.java`, `.py`, `.xml`) or **markdown documents** (specifications, architecture plans, presentations, or documentation) while autonomous agents are concurrently compiling code and switching Git branches in the main workspace, editing files directly inside the main working tree would cause build breaks or Git checkout/merge collisions. **Höchstmaß** resolves this via an **Isolated In-Place Review Sandbox (`.reviews/`)**:
+1. **Isolated Mini-Git Repository**: `.reviews/` is excluded from the main repository via `.git/info/exclude` (making it 100% invisible to parallel code agents and Gradle/compiler runs) and maintains its own standalone Git repository (`git init`).
+2. **Live Editor Integration (`emacsclient`) for Code & Docs**: The agent stages the target source files (e.g., all files modified by a ticket `ATT-XXXX` or specific `.kt`/`.md` files) into `.reviews/`, commits the baseline, and opens them directly in the human's running **Emacs** instance (`emacsclient -n` with full syntax highlighting, `gfm-mode`, and inline SVG rendering).
+3. **In-Place Direct Edits & Inline Directives (`>>`)**: Right inside the code or text in Emacs, the human can directly modify lines *and* hammer in inline review directives (`>> ...` or `// >> ...`) at the exact line of interest without worrying about breaking a running build, then save (`C-x C-s`).
+4. **Automated Diff Harvesting & Synchronization**: The agent inspects `git -C .reviews diff`, applies all direct human edits and executes every `>>` review directive against the actual codebase or document, runs verification tests, commits the updated state in `.reviews/`, and live-reloads the Emacs buffer.
 
 ---
 
@@ -126,7 +113,21 @@ tools/hoechstmass/
 
 ---
 
-## 5. Quick Start: Adopting Höchstmaß in Your Project
+## 5. Entry Barrier & Human Discipline: Why *Höchstmaß* Is Not for Everyone
+
+While **Höchstmaß** delivers extraordinarily high development velocity and near-zero regression rates once established, it is **not** a zero-effort plug-and-play toy and is deliberately not for everyone:
+
+1. **Significant Setup & Infrastructure Barrier**: Adopting **Höchstmaß** requires setting up a dedicated issue-tracking environment (such as a Jira project with custom stage transitions, sub-task types, dedicated role accounts for `agent1`, `agent2`, and `coordinator`, and CLI automation scripts).
+2. **Demands Human Discipline & Patience**: Paradoxically, even though the workflow makes overall feature delivery remarkably fast, it demands strict discipline and patience from the human engineer:
+   - Resisting the urge to "just quickly hack a line of code" outside an active sprint ticket.
+   - Respecting the **Code Lock** until Analysis (Gate 1), Test Spec (Gate 2), and Implementation Plan (Gate 3) have been formally written and audited.
+   - Investing focused human attention into Sprint-Start Screening (clarifying requirements upfront) and Sprint-End Final Review (testing every ticket before sign-off).
+
+For engineers and teams willing to invest in that setup and discipline, the payoff is a deterministic, auditable, and remarkably fast engineering engine.
+
+---
+
+## 6. Quick Start: Adopting Höchstmaß in Your Project
 
 1. Copy `.agents/` and `templates/` into your repository root.
 2. Adapt `docs/coding_standards.md` and `docs/design_guidelines.md` to your technology stack.
