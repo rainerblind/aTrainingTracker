@@ -2328,7 +2328,9 @@
     <string name="garage_detector_dialog_title_gold">Garage Ligue Or détecté !</string>
     <string name="garage_detector_dialog_title_diamond">Garage Diamant de classe mondiale !</string>
     <string name="garage_detector_dialog_message_gold">Félicitations pour vos %1$d vélos, %2$d chaussures et %3$d capteurs (dont %4$d capteurs de puissance) dans aTrainingTracker ! Votre équipement est de niveau pro, mais votre statut est %5$s. Offrez-vous la mise à niveau Supporter Or Pro+ !</string>
+    <string name="garage_detector_dialog_message_gold_strava">En tant qu\'athlète actif Strava Pro avec %1$d vélos, %2$d chaussures et %3$d capteurs (dont %4$d capteurs de puissance), vous prenez votre entraînement au sérieux ! Votre statut est encore %5$s. Complétez votre écosystème pro avec Supporter Or Pro+ !</string>
     <string name="garage_detector_dialog_message_diamond">Équipement incroyable : %1$d vélos, %2$d chaussures et %3$d capteurs (dont %4$d capteurs de puissance) dans aTrainingTracker ! Votre garage est de classe mondiale, mais votre statut est %5$s. Couronnez votre flotte avec le Sponsor Diamant !</string>
+    <string name="garage_detector_dialog_message_diamond_strava">Athlète actif Strava Pro avec un garage de classe mondiale : %1$d vélos, %2$d chaussures et %3$d capteurs (dont %4$d capteurs de puissance) ! Votre statut est %5$s. Complétez votre configuration pro avec le Sponsor Diamant !</string>
     <string name="garage_detector_action_upgrade_gold">Passer à Or Pro (50 € / an)</string>
     <string name="garage_detector_action_upgrade_diamond">Passer à Sponsor Diamant (100 € / an)</string>
     <string name="garage_detector_action_dismiss">Plus tard / Continuer l\'entraînement</string>

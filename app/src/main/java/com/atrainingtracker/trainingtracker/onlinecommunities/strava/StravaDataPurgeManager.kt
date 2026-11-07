@@ -97,8 +97,9 @@ object StravaDataPurgeManager {
     fun executeLocalDataPurge(context: Context) {
         Log.i(TAG, "Initiating full Strava local data purge...")
 
-        // 1. SharedPreferences: Clear tokens, athlete ID, and toggles
+        // 1. SharedPreferences: Clear tokens, athlete ID, subscriber status, and toggles
         TrainingApplication.deleteStravaToken()
+        TrainingApplication.setStravaSubscriber(false)
 
         // 2. StravaUpload.db: Purge activity JSON, segment efforts, and Strava IDs, and flush WAL pages (REQ-EXP-013)
         try {

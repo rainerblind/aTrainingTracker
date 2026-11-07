@@ -146,6 +146,7 @@ public class TrainingApplication extends Application {
     public static final String SP_STRAVA_TOKEN = "stravaToken";
     public static final String SP_STRAVA_REFRESH_TOKEN = "stravaRefreshToken";
     public static final String SP_STRAVA_TOKEN_EXPIRES_AT = "stravaTokenExpiresAt";
+    public static final String SP_STRAVA_IS_SUBSCRIBER = "SP_STRAVA_IS_SUBSCRIBER";
     public static final String SP_STRAVA_OAUTH_STATE = "SP_STRAVA_OAUTH_STATE";
     public static final String SP_STRAVA_OAUTH_STATE_TIMESTAMP = "SP_STRAVA_OAUTH_STATE_TIMESTAMP";
     public static final String SP_STRAVA_DEMO_MODE = "stravaDemoMode";
@@ -990,6 +991,7 @@ public class TrainingApplication extends Application {
                     .remove(SP_STRAVA_REFRESH_TOKEN)
                     .remove(SP_STRAVA_TOKEN_EXPIRES_AT)
                     .remove(SP_STRAVA_ATHLETE_ID)
+                    .remove(SP_STRAVA_IS_SUBSCRIBER)
                     .remove(SP_STRAVA_OAUTH_STATE)
                     .remove(SP_STRAVA_OAUTH_STATE_TIMESTAMP)
                     .putBoolean(SP_UPLOAD_TO_STRAVA, false)
@@ -1004,6 +1006,29 @@ public class TrainingApplication extends Application {
 
     public static boolean isStravaDemoMode() {
         return cSharedPreferences.getBoolean(SP_STRAVA_DEMO_MODE, false);
+    }
+
+    /**
+     * Returns whether the connected Strava athlete has an active Pro subscription (summit or premium) (REQ-SET-088.1 / ATT-5570).
+     * Rule 75 null-safety guard applied.
+     */
+    public static boolean isStravaSubscriber() {
+        if (cSharedPreferences == null) {
+            return false;
+        }
+        return cSharedPreferences.getBoolean(SP_STRAVA_IS_SUBSCRIBER, false);
+    }
+
+    /**
+     * Persists whether the connected Strava athlete has an active Pro subscription (summit or premium) (REQ-SET-088.1 / ATT-5570).
+     * Rule 75 null-safety guard applied.
+     */
+    public static void setStravaSubscriber(boolean isSubscriber) {
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit()
+                    .putBoolean(SP_STRAVA_IS_SUBSCRIBER, isSubscriber)
+                    .apply();
+        }
     }
 
     public static void injectMockStravaAccount() {

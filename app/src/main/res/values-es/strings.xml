@@ -2329,7 +2329,9 @@
     <string name="garage_detector_dialog_title_gold">¡Garaje de liga Oro detectado!</string>
     <string name="garage_detector_dialog_title_diamond">¡Garaje Diamante de clase mundial!</string>
     <string name="garage_detector_dialog_message_gold">¡Enhorabuena por tus %1$d bicicletas, %2$d zapatillas y %3$d sensores (incl. %4$d potenciómetros) en aTrainingTracker! Tu garaje juega en la liga profesional, pero tu estado es %5$s. ¡Regálate la mejora a Partidario Oro Pro+!</string>
+    <string name="garage_detector_dialog_message_gold_strava">Como atleta activo de Strava Pro con %1$d bicicletas, %2$d zapatillas y %3$d sensores (incl. %4$d potenciómetros), ¡te tomas tu entrenamiento en serio! Tu estado en la app es %5$s. ¡Completa tu ecosistema profesional con Partidario Oro Pro+!</string>
     <string name="garage_detector_dialog_message_diamond">¡Equipamiento increíble: %1$d bicicletas, %2$d zapatillas y %3$d sensores (incl. %4$d potenciómetros) en aTrainingTracker! Tu garaje es de clase mundial, pero tu estado es %5$s. ¡Corona tu flota con Patrocinador Diamante!</string>
+    <string name="garage_detector_dialog_message_diamond_strava">¡Atleta activo de Strava Pro con un garaje de clase mundial: %1$d bicicletas, %2$d zapatillas y %3$d sensores (incl. %4$d potenciómetros)! Tu estado es %5$s. ¡Complementa tu equipamiento profesional con Patrocinador Diamante!</string>
     <string name="garage_detector_action_upgrade_gold">Mejorar a Oro Pro (50 € / año)</string>
     <string name="garage_detector_action_upgrade_diamond">Mejorar a Patrocinador Diamante (100 € / año)</string>
     <string name="garage_detector_action_dismiss">Más tarde / Seguir entrenando</string>

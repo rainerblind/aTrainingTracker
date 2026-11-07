@@ -416,4 +416,79 @@ class StravaHelperTest {
         assertTrue("URL must contain client_id", url.contains("client_id="))
         assertTrue("URL must contain response_type=code", url.contains("response_type=code"))
     }
+
+    /**
+     * TST-SET-088.1: Ingestion of Strava subscriber status (summit/premium) (ATT-5570).
+     */
+    @Test
+    fun testStoreJSONData_parsesStravaSubscriberSummit() {
+        every { TrainingApplication.setStravaAthleteId(any()) } just Runs
+        every { TrainingApplication.setStravaAccessToken(any()) } just Runs
+        every { TrainingApplication.setStravaRefreshToken(any()) } just Runs
+        every { TrainingApplication.setStravaTokenExpiresAt(any()) } just Runs
+        every { TrainingApplication.setStravaSubscriber(any()) } just Runs
+
+        val jsonWithSummit = org.json.JSONObject("""
+            {
+                "access_token": "token123",
+                "refresh_token": "refresh123",
+                "expires_at": 1700000000,
+                "athlete": {
+                    "id": 99999,
+                    "summit": true,
+                    "premium": false
+                }
+            }
+        """.trimIndent())
+        StravaHelper.storeJSONData(jsonWithSummit)
+        verify { TrainingApplication.setStravaSubscriber(true) }
+    }
+
+    @Test
+    fun testStoreJSONData_parsesStravaSubscriberPremium() {
+        every { TrainingApplication.setStravaAthleteId(any()) } just Runs
+        every { TrainingApplication.setStravaAccessToken(any()) } just Runs
+        every { TrainingApplication.setStravaRefreshToken(any()) } just Runs
+        every { TrainingApplication.setStravaTokenExpiresAt(any()) } just Runs
+        every { TrainingApplication.setStravaSubscriber(any()) } just Runs
+
+        val jsonWithPremium = org.json.JSONObject("""
+            {
+                "access_token": "token123",
+                "refresh_token": "refresh123",
+                "expires_at": 1700000000,
+                "athlete": {
+                    "id": 99999,
+                    "summit": false,
+                    "premium": true
+                }
+            }
+        """.trimIndent())
+        StravaHelper.storeJSONData(jsonWithPremium)
+        verify { TrainingApplication.setStravaSubscriber(true) }
+    }
+
+    @Test
+    fun testStoreJSONData_nonSubscriber() {
+        every { TrainingApplication.setStravaAthleteId(any()) } just Runs
+        every { TrainingApplication.setStravaAccessToken(any()) } just Runs
+        every { TrainingApplication.setStravaRefreshToken(any()) } just Runs
+        every { TrainingApplication.setStravaTokenExpiresAt(any()) } just Runs
+        every { TrainingApplication.setStravaSubscriber(any()) } just Runs
+
+        val jsonNonSubscriber = org.json.JSONObject("""
+            {
+                "access_token": "token123",
+                "refresh_token": "refresh123",
+                "expires_at": 1700000000,
+                "athlete": {
+                    "id": 99999,
+                    "summit": false,
+                    "premium": false
+                }
+            }
+        """.trimIndent())
+        StravaHelper.storeJSONData(jsonNonSubscriber)
+        verify { TrainingApplication.setStravaSubscriber(false) }
+    }
 }

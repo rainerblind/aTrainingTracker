@@ -1528,15 +1528,16 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 **Invariants**: Release builds must never permit arbitrary tier override; ProFeatureManager resolution must be thread-safe.
 
 ### REQ-SET-088: Supporter N+1 Garage Detector & Upgrade Prompts (REQ-MON-006) [Verified]
-- **Tests**: `TST-SET-088`, `TST-LOC-001` | **Tickets**: `ATT-5299`, `ATT-5400`, `ATT-5399`, `ATT-5468`
-- **Implementation**: `GarageLeagueDetector.kt`, `GarageDetectorDialog.kt`, `GarageUpgradeNudgeDialog.kt`, `EquipmentViewModel.kt`, `DeviceListViewModel.kt`, `SettingsDataStore.kt`, `SupporterDebugSection.kt`
-- **Rationale**: Athlete equipment expansion reflects escalating engagement. When an athlete adds bikes, shoes, or pairs additional sensors reaching enthusiast ("Gold") or world-class ("Diamond") scale, the system detects their qualified garage league and presents a humorous, non-blocking "N+1 Cyclist Garage" dialog inviting an upgrade to Gold Pro-Supporter (50 € / year) or Diamond Sponsor (100 € / year) with the matching plan pre-selected, while preventing repeated prompt spam and honoring tier monotonicity.
+- **Tests**: `TST-SET-088`, `TST-LOC-001` | **Tickets**: `ATT-5299`, `ATT-5400`, `ATT-5399`, `ATT-5468`, `ATT-5570`
+- **Implementation**: `GarageLeagueDetector.kt`, `GarageDetectorDialog.kt`, `GarageUpgradeNudgeDialog.kt`, `TrainingApplication.java`, `StravaHelper.kt`, `StravaEquipmentSynchronizeThread.java`, `StravaDataPurgeManager.kt`, `EquipmentViewModel.kt`, `DeviceListViewModel.kt`, `SettingsDataStore.kt`, `SupporterDebugSection.kt`
+- **Rationale**: Athlete equipment expansion reflects escalating engagement. When an athlete adds bikes, shoes, or pairs additional sensors reaching enthusiast ("Gold") or world-class ("Diamond") scale, the system detects their qualified garage league and presents a humorous, non-blocking "N+1 Cyclist Garage" dialog inviting an upgrade to Gold Pro-Supporter (50 € / year) or Diamond Sponsor (100 € / year) with the matching plan pre-selected, while preventing repeated prompt spam and honoring tier monotonicity. Furthermore, athletes with an active Strava Pro subscription (`summit == true` or `premium == true`) already invest in premium fitness software; detecting this status qualifies them for Gold League (or boosts Gold hardware to Diamond League) with tailored copy acknowledging their Strava Pro commitment (ATT-5570).
 - **Description**:
 1. *Garage League Qualification Thresholds (`REQ-SET-088.1`)*:
 • The system SHALL classify athlete equipment and sensors into two garage leagues:
-  - **Diamond League**: $\ge 4$ bikes OR $\ge 8$ remote sensors (paired or registered in `Devices.db`) OR $\ge 2$ power meters (`DeviceType.BIKE_POWER`).
-  - **Gold League**: $\ge 3$ bikes OR $\ge 4$ running shoes OR $\ge 5$ remote sensors OR $\ge 1$ power meter (`DeviceType.BIKE_POWER`).
+  - **Diamond League**: $\ge 4$ bikes OR $\ge 8$ remote sensors (paired or registered in `Devices.db`) OR $\ge 2$ power meters (`DeviceType.BIKE_POWER`) OR (Gold hardware qualification + active Strava Pro subscription: `summit == true || premium == true`).
+  - **Gold League**: $\ge 3$ bikes OR $\ge 4$ running shoes OR $\ge 5$ remote sensors OR $\ge 1$ power meter (`DeviceType.BIKE_POWER`) OR active Strava Pro subscription (`summit == true || premium == true`).
 • Diamond League evaluation SHALL strictly take precedence over Gold League evaluation.
+• Strava subscriber status SHALL be ingested via `StravaHelper.storeJSONData` and `StravaEquipmentSynchronizeThread.fillDbFromJsonObject` (`summit || premium`), persisted in SharedPreferences via `TrainingApplication.setStravaSubscriber` (with `cSharedPreferences != null` guards per Rule 75), and unconditionally cleared on disconnect/purge via `TrainingApplication.deleteStravaToken` and `StravaDataPurgeManager.executeLocalDataPurge`.
 2. *Tier Monotonicity Gating (`REQ-SET-088.2`)*:
 • The system SHALL compare the qualified garage league against the athlete's current effective `SupporterTier`:
   - Diamond League prompt SHALL only trigger if effective tier is `< SupporterTier.DIAMOND`.
@@ -1553,6 +1554,7 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • Showing or dismissing the dialog SHALL set the respective league flag to `true`.
 5. *Humorous N+1 Dialog & Pre-Selected Navigation (`REQ-SET-088.5`)*:
 • When qualified, `GarageDetectorDialog` SHALL render a Material 3 dialog presenting dynamic gear counts (bikes, shoes, sensors, power meters) and good-humored cyclist/runner copy without decorative inline Unicode emojis (relying on the dialog's vector header icon).
+• When qualified as an active Strava subscriber (`isStravaSubscriber == true`), `GarageUpgradeNudgeDialog` SHALL present tailored dialog copy referencing their Strava Pro status (`garage_detector_dialog_message_gold_strava`, `garage_detector_dialog_message_diamond_strava`) across all 9 languages without inline Unicode emojis and strictly preserving 5 positional specifiers (`%1$d`..`%5$s`).
 • The dialog SHALL offer a 1-tap upgrade action navigating to `SupporterScreen` (`NavRoutes.SUPPORTER`) with the recommended plan pre-selected (`gold-yearly` for Gold League, `diamond-yearly` for Diamond League), and a secondary "Später / Weiter zum Training" dismiss action.
 6. *Diagnostic Debug Preview Triggers (`REQ-SET-088.6`)*:
 • `SupporterDebugSection` SHALL expose 1-tap test preview buttons for Gold and Diamond N+1 garage dialogs, and a reset button clearing both nudge flags in DataStore, strictly enclosed within `if (BuildConfig.DEBUG)`.
@@ -1566,8 +1568,20 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • *Given* an athlete on Gold tier with 3 bikes and 7 sensors,
 • *When* an 8th sensor is paired,
 • *Then* Diamond League is detected, and `GarageDetectorDialog` is triggered with the Diamond Sponsor upgrade path pre-selected.
+• *Given* an athlete on Free or Silver tier with 0 bikes and 0 sensors connected to Strava with an active subscription (`summit == true || premium == true`),
+• *When* garage league evaluation runs,
+• *Then* Gold League is detected and `GarageUpgradeNudgeDialog` displays `garage_detector_dialog_message_gold_strava`.
+• *Given* an athlete with Gold hardware (e.g. 3 bikes) and an active Strava Pro subscription,
+• *When* garage league evaluation runs,
+• *Then* Diamond League is detected and `GarageUpgradeNudgeDialog` displays `garage_detector_dialog_message_diamond_strava`.
 • *Given* an athlete who has already dismissed the Gold League dialog (`hasShownGoldGarageNudge == true`),
 • *When* an additional bike is added,
 • *Then* the Gold upgrade dialog is NOT re-triggered.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-SET-088` (`REQ-SET-088.1`, `REQ-SET-088.5`), targeting `TrainingApplication.java`, `StravaHelper.kt`, `StravaEquipmentSynchronizeThread.java`, `StravaDataPurgeManager.kt`, `GarageLeagueDetector.kt`, `GarageUpgradeNudgeDialog.kt`, and `strings.xml` across all 9 locales.
+2. *Historical Origin & Commit Trace*: Sprint 2026-45.1 (`ATT-5299`, initial detector), Sprint 2026-45.3 (`ATT-5400`, zero-emoji copy), Sprint 2026-45.6 (`ATT-5468`, Rule 73 stacked buttons), Sprint 2026-45.9 (`ATT-5570`).
+3. *Root Reason for Existing Formulation*: In ATT-5299, qualification relied solely on local hardware counts because Strava account subscription telemetry had not yet been ingested into application preferences.
+4. *Preservation of Core Invariants*: Rule 75 SharedPreferences null-safety (`cSharedPreferences != null`); complete data purge hygiene (`executeLocalDataPurge` resets subscriber state); tier monotonicity (`< SupporterTier.DIAMOND`, `< SupporterTier.GOLD`); once-in-a-lifetime non-spam persistence (`hasShownGoldGarageNudge`, `hasShownDiamondGarageNudge`); Rule 73 stacked action buttons; zero-emoji localization parity across all 9 languages.
 
 **Invariants**: Equipment and sensor persistence complete before dialog triggering; each league level nudges at most once; tier monotonicity is strictly preserved; release builds compile out debug preview controls.

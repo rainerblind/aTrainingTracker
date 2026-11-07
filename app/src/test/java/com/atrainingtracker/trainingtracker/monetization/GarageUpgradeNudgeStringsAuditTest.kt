@@ -39,7 +39,9 @@ class GarageUpgradeNudgeStringsAuditTest {
         "garage_detector_dialog_title_gold",
         "garage_detector_dialog_title_diamond",
         "garage_detector_dialog_message_gold",
-        "garage_detector_dialog_message_diamond"
+        "garage_detector_dialog_message_diamond",
+        "garage_detector_dialog_message_gold_strava",
+        "garage_detector_dialog_message_diamond_strava"
     )
 
     private lateinit var resDir: File
@@ -96,7 +98,12 @@ class GarageUpgradeNudgeStringsAuditTest {
     @Test
     fun testGarageUpgradeNudgeMessages_preservePositionalFormatSpecifiersAcrossAllNineLocales() {
         val expectedSpecifiers = listOf("%1\$d", "%2\$d", "%3\$d", "%4\$d", "%5\$s")
-        val messageKeys = listOf("garage_detector_dialog_message_gold", "garage_detector_dialog_message_diamond")
+        val messageKeys = listOf(
+            "garage_detector_dialog_message_gold",
+            "garage_detector_dialog_message_diamond",
+            "garage_detector_dialog_message_gold_strava",
+            "garage_detector_dialog_message_diamond_strava"
+        )
 
         for (localeSuffix in locales) {
             val stringsFile = File(resDir, "values$localeSuffix/strings.xml")

@@ -2308,7 +2308,9 @@
     <string name="garage_detector_dialog_title_gold">ゴールドリーグの機材を発見！</string>
     <string name="garage_detector_dialog_title_diamond">ワールドクラスのダイヤモンド機材！</string>
     <string name="garage_detector_dialog_message_gold">aTrainingTrackerでの%1$d台のバイク、%2$d足のシューズ、%3$d個のセンサー（うち%4$d個のパワーメーター）の登録おめでとうございます！ ガレージはすでにプロ級ですが、ステータスは%5$sのままです。ぜひゴールドPro+サポーターへのアップグレードをご検討ください！</string>
+    <string name="garage_detector_dialog_message_gold_strava">アクティブなStrava Proアスリートとして%1$d台のバイク、%2$d足のシューズ、%3$d個のセンサー（うち%4$d個のパワーメーター）を使いこなす本気度が伝わります！ アプリのステータスはまだ%5$sです。ゴールドPro+サポーターでプロ仕様の環境を完成させましょう！</string>
     <string name="garage_detector_dialog_message_diamond">驚異的な機材数です：%1$d台のバイク、%2$d足のシューズ、%3$d個のセンサー（うち%4$d個のパワーメーター）！ ガレージはすでにワールドクラスですが、ステータスは%5$sです。ダイヤモンドスポンサーへのアップグレードで完璧に仕上げましょう！</string>
+    <string name="garage_detector_dialog_message_diamond_strava">ワールドクラスの機材を持つアクティブなStrava Proアスリート：%1$d台のバイク、%2$d足のシューズ、%3$d個のセンサー（うち%4$d個のパワーメーター）！ ステータスはまだ%5$sです。ダイヤモンドスポンサーでプロのトレーニング環境を完璧に整えましょう！</string>
     <string name="garage_detector_action_upgrade_gold">ゴールドプロにアップグレード（年額50€）</string>
     <string name="garage_detector_action_upgrade_diamond">ダイヤモンドスポンサーにアップグレード（年額100€）</string>
     <string name="garage_detector_action_dismiss">後で / トレーニングを続ける</string>

@@ -913,8 +913,8 @@
 
 ### TST-SET-088: **Supporter N+1 Garage Detector & Upgrade Prompts Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-088`
-- **Component**: `GarageLeagueDetector.kt`, `GarageDetectorDialog.kt`, `GarageUpgradeNudgeDialog.kt`, `GarageUpgradeNudgeDialogContractTest.kt`, `DeviceListViewModel.kt`, `EquipmentViewModel.kt`, `SettingsDataStore.kt`, `SupporterDebugSection.kt`
-- **Jira**: `ATT-5299`, `ATT-5400`, `ATT-5399`, `ATT-5468`
+- **Component**: `GarageLeagueDetector.kt`, `GarageDetectorDialog.kt`, `GarageUpgradeNudgeDialog.kt`, `GarageUpgradeNudgeDialogContractTest.kt`, `TrainingApplication.java`, `StravaHelper.kt`, `StravaEquipmentSynchronizeThread.java`, `StravaDataPurgeManager.kt`, `DeviceListViewModel.kt`, `EquipmentViewModel.kt`, `SettingsDataStore.kt`, `SupporterDebugSection.kt`
+- **Jira**: `ATT-5299`, `ATT-5400`, `ATT-5399`, `ATT-5468`, `ATT-5570`
 - **Test Description**:
 1. Verify `GarageLeagueDetector.evaluateLeague()` resolves to `DIAMOND` when bikes $\ge 4$, sensors $\ge 8$, or power meters $\ge 2$, taking precedence over Gold criteria.
 2. Verify `GarageLeagueDetector.evaluateLeague()` resolves to `GOLD` when bikes $\ge 3$, shoes $\ge 4$, sensors $\ge 5$, or power meters $\ge 1$.
@@ -924,6 +924,8 @@
 6. Verify debug preview triggers in `SupporterDebugSection` render respective dialogs and reset button clears DataStore flags.
 7. Verify 9-language localization audit (`ATT-5400`): all 4 `garage_detector_dialog_*` string resources across all 9 locales contain zero decorative inline Unicode emojis (`🚴‍♂️`, `💎`, `✨`, `😉`) while strictly preserving positional format specifiers (`%1$d`..`%5$s`).
 8. *Rule 73 Stacked Button Layout Contract (`TST-SET-088.7`, `GarageUpgradeNudgeDialogContractTest.kt`)*: Verify `GarageUpgradeNudgeDialog` (and `GarageDetectorDialog`) renders primary 'Upgrade' `Button` stacked full-width in sheet content, and a single full-width 'Später / Weiter zum Training' `TextButton` in `actions`, eliminating broken 2–3 line button word wrapping on German and localized mobile screens.
+9. *Strava Subscriber League Qualification & Ingestion (`TST-SET-088.1`, `ATT-5570`)*: Verify `GarageLeagueDetector.evaluateLeague()` resolves to `GOLD` when athlete is a Strava subscriber even with 0 hardware; resolves to `DIAMOND` when athlete has Gold hardware AND is a Strava subscriber; verify `StravaHelper.storeJSONData` and `StravaEquipmentSynchronizeThread.fillDbFromJsonObject` ingest `summit`/`premium`; verify `StravaDataPurgeManager` and `TrainingApplication.deleteStravaToken` reset subscriber status.
+10. *Strava-Specific Dialog Copy & 9-Language Parity (`TST-SET-088.5`, `ATT-5570`)*: Verify `garage_detector_dialog_message_gold_strava` and `garage_detector_dialog_message_diamond_strava` are used when `isStravaSubscriber == true`, contain 0 emojis, retain all positional specifiers, and maintain 100% parity across all 9 locales.
 
 ### TST-LOC-001: **Monetization & Supporter 9-Language Localization Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-083`, `REQ-SET-084`, `REQ-SET-085`, `REQ-SET-086`, `REQ-SET-087`, `REQ-SET-088`

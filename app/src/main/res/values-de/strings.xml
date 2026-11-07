@@ -2414,7 +2414,9 @@
     <string name="garage_detector_dialog_title_gold">Gold-Liga Fuhrpark entdeckt!</string>
     <string name="garage_detector_dialog_title_diamond">Weltklasse Diamant-Fuhrpark!</string>
     <string name="garage_detector_dialog_message_gold">Glückwunsch zu %1$d Fahrrädern, %2$d Laufschuhen und %3$d Sensoren (inkl. %4$d Powermetern) in aTrainingTracker! Dein Fuhrpark spielt längst in der Profiliga – dein App-Status steht aber noch auf %5$s. Gönn deinem Lenker das Upgrade auf Gold Pro+ Supporter!</string>
+    <string name="garage_detector_dialog_message_gold_strava">Als aktiver Strava-Pro-Athlet mit %1$d Fahrrädern, %2$d Laufschuhen und %3$d Sensoren (inkl. %4$d Powermetern) nimmst du dein Training ernst! Dein App-Status steht aber noch auf %5$s. Komplettiere dein Profi-Setup mit Gold Pro+ Supporter!</string>
     <string name="garage_detector_dialog_message_diamond">Unglaublicher Fuhrpark: %1$d Fahrräder, %2$d Laufschuhe und %3$d Sensoren (inkl. %4$d Powermetern) in aTrainingTracker! Deine Garage spielt in der Weltklasse-Liga – dein App-Status steht aber noch auf %5$s. Kröne deinen Fuhrpark mit dem Diamond Sponsor!</string>
+    <string name="garage_detector_dialog_message_diamond_strava">Aktiver Strava-Pro-Athlet mit einem Weltklasse-Fuhrpark: %1$d Fahrräder, %2$d Laufschuhe und %3$d Sensoren (inkl. %4$d Powermetern)! Dein App-Status steht noch auf %5$s. Perfektioniere dein Profi-Setup mit dem Diamond Sponsor!</string>
     <string name="garage_detector_action_upgrade_gold">Upgrade auf Gold Pro (50 € / Jahr)</string>
     <string name="garage_detector_action_upgrade_diamond">Upgrade auf Diamond Sponsor (100 € / Jahr)</string>
     <string name="garage_detector_action_dismiss">Später / Weiter zum Training</string>

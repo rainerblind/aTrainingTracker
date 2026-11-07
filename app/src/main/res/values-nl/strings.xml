@@ -2328,7 +2328,9 @@
     <string name="garage_detector_dialog_title_gold">Goud-klasse garage gedetecteerd!</string>
     <string name="garage_detector_dialog_title_diamond">Diamant-klasse wereldgarage!</string>
     <string name="garage_detector_dialog_message_gold">Gefeliciteerd met je %1$d fietsen, %2$d schoenen en %3$d sensoren (incl. %4$d vermogensmeters) in aTrainingTracker! Je garage speelt in de profcompetitie, maar je app-status is %5$s. Gun je uitrusting de upgrade naar Goud Pro+ Supporter!</string>
+    <string name="garage_detector_dialog_message_gold_strava">Als actieve Strava Pro-atleet met %1$d fietsen, %2$d schoenen en %3$d sensoren (incl. %4$d vermogensmeters) neem je je training serieus! Je app-status is nog %5$s. Maak je prof-ecosysteem compleet met Goud Pro+ Supporter!</string>
     <string name="garage_detector_dialog_message_diamond">Ongelooflijke garage: %1$d fietsen, %2$d schoenen en %3$d sensoren (incl. %4$d vermogensmeters) in aTrainingTracker! Je uitrusting is van wereldklasse, maar je app-status is %5$s. Bekroon je garage met Diamant Sponsor!</string>
+    <string name="garage_detector_dialog_message_diamond_strava">Actieve Strava Pro-atleet met een garage van wereldklasse: %1$d fietsen, %2$d schoenen en %3$d sensoren (incl. %4$d vermogensmeters)! Je app-status is %5$s. Vervoeg je professionele uitrusting met Diamant Sponsor!</string>
     <string name="garage_detector_action_upgrade_gold">Upgrade naar Goud Pro (50 € / jr)</string>
     <string name="garage_detector_action_upgrade_diamond">Upgrade naar Diamant Sponsor (100 € / jr)</string>
     <string name="garage_detector_action_dismiss">Later / Verder trainen</string>

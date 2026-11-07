@@ -109,6 +109,11 @@ object StravaHelper {
                 val athlete = jsonObject.getJSONObject("athlete")
                 val athleteId = athlete.getInt("id")
                 TrainingApplication.setStravaAthleteId(athleteId)
+                val isSubscriber = athlete.optBoolean("summit", false) || athlete.optBoolean("premium", false)
+                TrainingApplication.setStravaSubscriber(isSubscriber)
+            } else if (jsonObject.has("summit") || jsonObject.has("premium")) {
+                val isSubscriber = jsonObject.optBoolean("summit", false) || jsonObject.optBoolean("premium", false)
+                TrainingApplication.setStravaSubscriber(isSubscriber)
             }
             TrainingApplication.setStravaAccessToken(jsonObject.getString(ACCESS_TOKEN))
             TrainingApplication.setStravaRefreshToken(jsonObject.getString(REFRESH_TOKEN))
