@@ -5339,10 +5339,10 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-328: **Centralized Speed Unit Conversion and Formatter Harmonization via MyHelper Verification** [Verified]
+### TST-UI-328: **Centralized Speed Unit Conversion, Formatter Harmonization and Progressive Disclosure Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-365`
-- **Component**: **Centralized Speed Unit Conversion and Formatter Harmonization via MyHelper Verification**
-- **Jira**: ``ATT-3363``
+- **Component**: **Centralized Speed Unit Conversion, Formatter Harmonization and Progressive Disclosure Verification**
+- **Jira**: `ATT-3363`, `ATT-5821`
 - **Test Description**:
   1. *Unit & Precision Tests for MyHelper Conversions (`MyHelperSpeedConversionTest.kt`)*:
   • Verify bidirectional conversion `mps2userUnit(speed, unit)` and `UserUnit2mps(speed, unit)` across `MyUnits.METRIC` (factor 3.6) and `MyUnits.IMPERIAL` (factor 2.23693629).
@@ -5359,6 +5359,11 @@
   • Verify `SpeedFormatter.format_with_units()` delegates conversion to `MyHelper.mps2userUnit()`, matching canonical speeds across metric and imperial settings.
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
+  6. *Progressive Disclosure & Advanced Options Encapsulation Contract Test (`TST-UI-328.6`, `EditSportTypeDialogContractTest.kt`)*:
+  • Verify `EditSportTypeDialog.kt` source contract: Name, Base Sport, Equipment, and Strava are rendered before the Advanced Options accordion.
+  • Verify Min/Max speed fields, speed detection hint, TCX dropdown, and GoldenCheetah dropdown are encapsulated inside the accordion.
+  • Verify default collapsed state (`isAdvancedExpanded = false` via `rememberSaveable`).
+  • Verify 100% 9-language translation parity for `sport_type_advanced_options`, `sport_type_advanced_options_desc`, and `sport_type_speed_detection_hint`.
 
 ### TST-UI-329: **Harmonized Live Segment and Live Climb Tracking Bottom Sheet Architecture & Container Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-366`

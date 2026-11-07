@@ -1001,6 +1001,9 @@
     <string name="mapping_format_strava">Strava: %1$s</string>
     <string name="mapping_format_tcx">TCX: %1$s</string>
     <string name="mapping_format_gc">GC: %1$s</string>
+    <string name="sport_type_advanced_options">Advanced Options</string>
+    <string name="sport_type_advanced_options_desc">Speed thresholds for auto-detection and third-party export mappings</string>
+    <string name="sport_type_speed_detection_hint">Speed thresholds are used for automatic sport type detection during tracking.</string>
 
     <!-- drawer -->
     <string name="drawer__training">Training</string>

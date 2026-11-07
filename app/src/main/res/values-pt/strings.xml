@@ -788,6 +788,9 @@
     <string name="mapping_format_strava">Strava: %1$s</string>
     <string name="mapping_format_tcx">TCX: %1$s</string>
     <string name="mapping_format_gc">GC: %1$s</string>
+    <string name="sport_type_advanced_options">Opções avançadas</string>
+    <string name="sport_type_advanced_options_desc">Limites de velocidade para detecção automática e mapeamentos de exportação de terceiros</string>
+    <string name="sport_type_speed_detection_hint">Os limites de velocidade são usados para detecção automática da modalidade esportiva durante a gravação.</string>
 
     <!-- drawer -->
     <string name="drawer__training">Treino</string>

@@ -788,6 +788,9 @@
     <string name="mapping_format_strava">Strava: %1$s</string>
     <string name="mapping_format_tcx">TCX: %1$s</string>
     <string name="mapping_format_gc">GC: %1$s</string>
+    <string name="sport_type_advanced_options">Opzioni avanzate</string>
+    <string name="sport_type_advanced_options_desc">Soglie di velocità per il rilevamento automatico e mappature di esportazione</string>
+    <string name="sport_type_speed_detection_hint">Le soglie di velocità vengono utilizzate per il rilevamento automatico dello sport durante la registrazione.</string>
 
     <!-- drawer -->
     <string name="drawer__training">Allenamento</string>

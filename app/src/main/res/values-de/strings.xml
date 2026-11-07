@@ -1235,6 +1235,9 @@
     <string name="getting_my_locations">Suche nach bekannten Orten.</string>
     <string name="invalid_date">\???</string>
     <string name="mapping_format_gc">GC: %1$s</string>
+    <string name="sport_type_advanced_options">Erweiterte Optionen</string>
+    <string name="sport_type_advanced_options_desc">Geschwindigkeitsschwellen für automatische Erkennung und Drittanbieter-Export</string>
+    <string name="sport_type_speed_detection_hint">Geschwindigkeitsschwellen dienen der automatischen Sportarterkennung während der Aufzeichnung.</string>
     <string name="mapping_format_strava">Strava: %1$s</string>
     <string name="mapping_format_tcx">TCX: %1$s</string>
     <string name="max_line_distance">weiteste Entfernung</string>

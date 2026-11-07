@@ -791,6 +791,9 @@
     <string name="mapping_format_strava">Strava: %1$s</string>
     <string name="mapping_format_tcx">TCX: %1$s</string>
     <string name="mapping_format_gc">GC: %1$s</string>
+    <string name="sport_type_advanced_options">Opciones avanzadas</string>
+    <string name="sport_type_advanced_options_desc">Umbrales de velocidad para detección automática y mapeos de exportación</string>
+    <string name="sport_type_speed_detection_hint">Los umbrales de velocidad se utilizan para la detección automática del tipo de deporte durante la grabación.</string>
 
     <!-- drawer -->
     <string name="drawer__training">Entrenamiento</string>

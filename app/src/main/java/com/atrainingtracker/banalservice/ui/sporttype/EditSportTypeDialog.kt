@@ -36,6 +36,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenuItem
@@ -53,6 +54,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -63,6 +65,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningAccordionSection
 
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.TrainingApplication
@@ -117,6 +120,7 @@ fun EditSportTypeDialog(
         availableEquipment = equip
     }
     var selectedEquipIds by remember { mutableStateOf(item.linkedEquipmentIds.toSet()) }
+    var isAdvancedExpanded by rememberSaveable { mutableStateOf(false) }
 
     val speedUnit = stringResource(MyHelper.getSpeedUnitNameId())
 
@@ -248,30 +252,6 @@ fun EditSportTypeDialog(
                 }
             }
 
-            // Speeds Row
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = minSpeed,
-                    onValueChange = { input ->
-                        val sanitized = input.replace(',', '.')
-                        if (input.isEmpty() || sanitized.toDoubleOrNull() != null) minSpeed = input
-                    },
-                    label = { Text("${stringResource(R.string.min)} ($speedUnit)") },
-                    modifier = Modifier.weight(1f),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
-                )
-                OutlinedTextField(
-                    value = maxSpeed,
-                    onValueChange = { input ->
-                        val sanitized = input.replace(',', '.')
-                        if (input.isEmpty() || sanitized.toDoubleOrNull() != null) maxSpeed = input
-                    },
-                    label = { Text("${stringResource(R.string.max)} ($speedUnit)") },
-                    modifier = Modifier.weight(1f),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
-                )
-            }
-
             // linked equipment
             if (availableEquipment.isNotEmpty()) {
                 MultiSelectEquipmentSpinner(
@@ -291,9 +271,6 @@ fun EditSportTypeDialog(
                     }
                 )
             }
-
-            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-            Text(stringResource(R.string.prefs_Export), style = MaterialTheme.typography.labelLarge)
 
             // Strava Mapping
             SportTypeDropdown(
@@ -318,23 +295,62 @@ fun EditSportTypeDialog(
                 }
             )
 
-            // TCX Mapping
-            SportTypeDropdown(
-                label = "TCX Sport Name",
-                selectedOption = tcxName,
-                options = tcxNames.toList(),
-                onOptionSelected = { tcxName = it },
-                leadingIcon = { Icon(Icons.Default.Save, null) }
-            )
+            // Advanced Options: Speed thresholds for auto-detection and third-party export mappings
+            TuningAccordionSection(
+                icon = Icons.Default.Tune,
+                title = stringResource(R.string.sport_type_advanced_options),
+                subtitle = stringResource(R.string.sport_type_advanced_options_desc),
+                isExpanded = isAdvancedExpanded,
+                onToggle = { isAdvancedExpanded = !isAdvancedExpanded }
+            ) {
+                Text(
+                    text = stringResource(R.string.sport_type_speed_detection_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
 
-            // GoldenCheetah Mapping
-            SportTypeDropdown(
-                label = "GoldenCheetah Name",
-                selectedOption = gcName,
-                options = gcNames.toList(),
-                onOptionSelected = { gcName = it },
-                leadingIcon = { Icon(Icons.Default.Save, null) }
-            )
+                // Speeds Row
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = minSpeed,
+                        onValueChange = { input ->
+                            val sanitized = input.replace(',', '.')
+                            if (input.isEmpty() || sanitized.toDoubleOrNull() != null) minSpeed = input
+                        },
+                        label = { Text("${stringResource(R.string.min)} ($speedUnit)") },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                    )
+                    OutlinedTextField(
+                        value = maxSpeed,
+                        onValueChange = { input ->
+                            val sanitized = input.replace(',', '.')
+                            if (input.isEmpty() || sanitized.toDoubleOrNull() != null) maxSpeed = input
+                        },
+                        label = { Text("${stringResource(R.string.max)} ($speedUnit)") },
+                        modifier = Modifier.weight(1f),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                    )
+                }
+
+                // TCX Mapping
+                SportTypeDropdown(
+                    label = "TCX Sport Name",
+                    selectedOption = tcxName,
+                    options = tcxNames.toList(),
+                    onOptionSelected = { tcxName = it },
+                    leadingIcon = { Icon(Icons.Default.Save, null) }
+                )
+
+                // GoldenCheetah Mapping
+                SportTypeDropdown(
+                    label = "GoldenCheetah Name",
+                    selectedOption = gcName,
+                    options = gcNames.toList(),
+                    onOptionSelected = { gcName = it },
+                    leadingIcon = { Icon(Icons.Default.Save, null) }
+                )
+            }
 
             Spacer(Modifier.height(8.dp))
         }

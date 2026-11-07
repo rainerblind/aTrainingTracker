@@ -788,6 +788,9 @@
     <string name="mapping_format_strava">Strava: %1$s</string>
     <string name="mapping_format_tcx">TCX: %1$s</string>
     <string name="mapping_format_gc">GC: %1$s</string>
+    <string name="sport_type_advanced_options">Geavanceerde opties</string>
+    <string name="sport_type_advanced_options_desc">Snelheidsdrempels voor automatische detectie en exporttoewijzingen van derden</string>
+    <string name="sport_type_speed_detection_hint">Snelheidsdrempels worden gebruikt voor automatische sporttype-detectie tijdens het opnemen.</string>
 
     <!-- drawer -->
     <string name="drawer__training">Training</string>

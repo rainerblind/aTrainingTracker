@@ -787,6 +787,9 @@
     <string name="mapping_format_strava">Strava : %1$s</string>
     <string name="mapping_format_tcx">TCX : %1$s</string>
     <string name="mapping_format_gc">GC : %1$s</string>
+    <string name="sport_type_advanced_options">Options avancées</string>
+    <string name="sport_type_advanced_options_desc">Seuils de vitesse pour la détection automatique et mappages d\'exportation</string>
+    <string name="sport_type_speed_detection_hint">Les seuils de vitesse servent à la détection automatique du sport pendant l\'enregistrement.</string>
 
     <!-- drawer -->
     <string name="drawer__training">Entraînement</string>

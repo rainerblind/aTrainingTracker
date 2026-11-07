@@ -9909,10 +9909,10 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Pure Compose architecture, Single Source of Truth (Rule 36), and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-365: Centralized Speed Unit Conversion and Formatter Harmonization via MyHelper (Rule 36) [Verified]
-- **Tests**: `MyHelper.java`, `TelemetryMetricUtils.kt`, `EditSportTypeDialog.kt`, `SpeedFormatter.java`
-- **Implementation**: Centralized speed unit conversion and formatter harmonization via MyHelper (Rule 36).
-- **Rationale**: The system SHALL centralize all speed unit conversions and eliminate manual inline conversion formulas (e.g. `mps * 3.6`, `value / 3.6`, `2.236936`) across telemetry graph utilities, sport type dialogs, and speed formatters by routing all conversions strictly through `MyHelper`, enforcing Rule 36 (Single Source of Truth & DRY) and guaranteeing mathematical parity and locale-resilient numeric parsing (ATT-3363, complementing `REQ-UI-015`, `REQ-UI-016`, and `REQ-UI-364`):
+### REQ-UI-365: Centralized Speed Unit Conversion, Formatter Harmonization and Progressive Disclosure in Sport Type Editor (Rule 36) [Verified]
+- **Tests**: `MyHelper.java`, `TelemetryMetricUtils.kt`, `EditSportTypeDialog.kt`, `SpeedFormatter.java` | **Tickets**: `ATT-3363`, `ATT-5821`
+- **Implementation**: Centralized speed unit conversion, formatter harmonization via MyHelper, and progressive disclosure under Advanced Options.
+- **Rationale**: The system SHALL centralize all speed unit conversions and eliminate manual inline conversion formulas across telemetry graph utilities, sport type dialogs, and speed formatters by routing all conversions strictly through `MyHelper`, and SHALL simplify the sport type configuration dialog by bundling speed thresholds (with auto-detection guidance) and export mappings under an initially collapsed Advanced Options accordion, enforcing Rule 36 (Single Source of Truth) and Design Guidelines Section 3 (*Settings & Accordion Structure*) (ATT-3363, ATT-5821, complementing `REQ-UI-015`, `REQ-UI-016`, and `REQ-UI-364`):
 1. *Authoritative Mathematical Conversions in `MyHelper.java`*:
 • `MyHelper` SHALL provide symmetrical overloaded methods for bidirectional conversion:
 - `mps2userUnit(double speed)` and `mps2userUnit(double speed, @NonNull MyUnits myUnits)`
@@ -9927,25 +9927,32 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 • In `EditSportTypeDialog.kt`, user input parsing for minimum and maximum speed thresholds SHALL accept both dot and comma decimal delimiters (`it.replace(',', '.').toDoubleOrNull()`), preventing user entry rejection in European/comma-decimal locales.
 4. *Formatter DRY Consolidation (`SpeedFormatter.java`)*:
 • In `SpeedFormatter.java`, internal unit conversion logic SHALL delegate directly to `MyHelper.mps2userUnit(speed_mps.doubleValue())` instead of duplicating switch-case conversion logic.
-5. *Preservation of System Invariants*:
-• Pure Compose UI responsiveness, telemetry chart scrub precision, and 100% clean-room test pass rate MUST NOT be broken.
+5. *Progressive Disclosure & Advanced Options Encapsulation in Sport Type Editor (`EditSportTypeDialog.kt`, `REQ-UI-365.4`)*:
+• In `EditSportTypeDialog.kt`, the primary dialog surface SHALL present only everyday configuration fields: Sport Name, Base Sport Type (`bSportType`), Linked Equipment (`MultiSelectEquipmentSpinner`), and Strava Sport Mapping (`stravaName`).
+• Technical minimum and maximum speed thresholds (`minSpeed`, `maxSpeed`) SHALL be accompanied by an explanatory hint informing the athlete that these thresholds govern automatic sport type detection during recording (`sport_type_speed_detection_hint`).
+• Min/Max speed fields and niche export mappings (TCX Export Name `tcxName`, GoldenCheetah Export Name `gcName`) SHALL be encapsulated inside an expandable accordion section titled `sport_type_advanced_options` ("Erweiterte Optionen") at the bottom of the dialog.
+• The accordion section SHALL default to initially collapsed (`isAdvancedExpanded = false` via `rememberSaveable`) to keep the dialog uncluttered and focused on primary settings.
+• All new titles, descriptions, and detection hints SHALL maintain 100% localization parity across all 9 supported application locales.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
 1. *Original Requirement ID & Target*: Net-new requirement (`REQ-UI-365`). Complements `REQ-UI-015` (*Unified Metric component system*), `REQ-UI-016` (*Centralized metric formatting context*), and `REQ-UI-364` (*Centralized metric distance and altitude formatting enforcement*). Targets `MyHelper.java`, `TelemetryMetricUtils.kt`, `EditSportTypeDialog.kt`, and `SpeedFormatter.java`.
-2. *Historical Origin & Commit Trace*: `TelemetryMetricUtils.kt` was authored during Sprint 2026-40.16 (`ATT-2031`) for interactive elevation and telemetry profile scrubbing. To avoid dependency coupling during initial graph prototyping, speed conversions were written inline with hardcoded constants (`* 3.6`, `* 2.236936`). `EditSportTypeDialog.kt` was written during Sprint 2026-41.4 (`ATT-2751`), where `replace(",", ".")` was added as a quick fix for German locale comma issues.
-3. *Root Reason for Existing Formulation*: Expedient local development led to magic constants and ad-hoc string replacements bypassing the existing `MyHelper` conversion functions.
-4. *Preservation of Core Invariants*: Exact conversion precision, Imperial and Metric parity, and 100% full-suite unit test pass rate strictly preserved.
+2. *Historical Origin & Commit Trace*: `TelemetryMetricUtils.kt` was authored during Sprint 2026-40.16 (`ATT-2031`) for interactive elevation and telemetry profile scrubbing. `EditSportTypeDialog.kt` was written during Sprint 2026-41.4 (`ATT-2751`), where speed fields and export mappings were added linearly. Refined in Sprint 2026-42.3 (`ATT-3363`) and Sprint 2026-45.12 (`ATT-5821`).
+3. *Root Reason for Existing Formulation*: Expedient local development led to magic constants and flat dialog forms without progressive disclosure.
+4. *Preservation of Core Invariants*: Exact conversion precision, Imperial and Metric parity, decimal input robustness, and database update persistence strictly preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* speed telemetry points displayed on a workout map scrub graph,
 • *When* converting speed values between m/s and user display units in Metric or Imperial modes,
 • *Then* conversions execute via `MyHelper.mps2userUnit` and `MyHelper.UserUnit2mps` with zero magic constants in `TelemetryMetricUtils.kt`.
 • *Given* the sport type editor dialog (`EditSportTypeDialog`) opened in any language locale,
-• *When* displaying or editing minimum and maximum speed thresholds,
-• *Then* speed values format properly without ad-hoc string character replacement, and user inputs accepting comma or dot decimal separators parse without error.
-• *Given* pure JVM unit tests verifying speed conversions,
-• *When* executing `MyHelper` and `TelemetryMetricUtils` unit tests under both `MyUnits.METRIC` and `MyUnits.IMPERIAL`,
-• *Then* conversions match expected mathematical values within $10^{-6}$ tolerance.
+• *When* viewing the primary dialog surface,
+• *Then* only Sport Name, Base Sport Type, Linked Equipment, and Strava Sport Name are visible, while speed fields and TCX/GoldenCheetah mappings are collapsed inside "Erweiterte Optionen".
+• *Given* the Advanced Options accordion in `EditSportTypeDialog`,
+• *When* expanded,
+• *Then* an explanatory text explains that speed bounds are used for automatic sport type detection (`sport_type_speed_detection_hint`), followed by the Min/Max speed row and TCX/GoldenCheetah export dropdowns.
+• *Given* user input into minimum and maximum speed thresholds,
+• *When* typing with comma or dot decimal separators,
+• *Then* speed values parse without error and persist correctly on save.
 
 **Invariants**: Mathematical precision, Single Source of Truth (Rule 36), locale robustness, and 100% clean-room test pass rate MUST NOT be broken.
 
