@@ -1311,6 +1311,9 @@
     <string name="filter_section_starts">Départs</string>
     <string name="filter_min_starts_chip_format">≥ %1$d départs</string>
     <string name="filter_no_matching_locations">Aucun lieu favori ne correspond aux filtres actifs</string>
+    <!-- Favorite Locations Filtering in Filter Sheets (ATT-5822) -->
+    <string name="filter_locations_show_all">Tout afficher</string>
+    <string name="filter_locations_show_frequent">Seulement ≥ 5 départs</string>
     <string name="filter_sensors_title">Filtrer les capteurs</string>
     <string name="filter_section_protocol">Protocole</string>
     <string name="filter_section_category">Catégorie de capteur</string>

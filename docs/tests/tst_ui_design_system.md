@@ -7565,6 +7565,28 @@
   5. *Targeted Regression Execution (`TST-UI-466.5`)*:
   • Execute targeted unit test suites (`com.atrainingtracker.trainingtracker.ui.knownlocations.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
+### TST-UI-467: **Workout Clusters & Filter Sheets Starts and Hit Count Default Filtering Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-467`
+- **Component**: `WorkoutClustersViewModel.kt`, `ClusterFilterCriteria.kt`, `ClusterFilterBottomSheet.kt`, `WorkoutFilterBottomSheet.kt`, `WorkoutClustersViewModelTest.kt`, `ClusterFilterBottomSheetTest.kt`, `WorkoutFilterBottomSheetTest.kt`
+- **Jira**: `ATT-5822`
+- **Test Description**:
+  1. *WorkoutClustersViewModel Default Hit Count Session Filter Tests (`TST-UI-467.1`, `WorkoutClustersViewModelTest.kt`)*:
+  • Verify `WorkoutClustersViewModel` initializes with `minHitCount = 5`.
+  • Verify clearing filter sets `minHitCount = null`.
+  • Verify updating other filter criteria preserves or modifies `minHitCount` cleanly.
+  2. *ClusterFilterBottomSheet Location Starts Filtering & Toggle Contract Tests (`TST-UI-467.2`, `ClusterFilterBottomSheetTest.kt`)*:
+  • Verify locations with $< 5$ starts are hidden by default when unselected.
+  • Verify currently selected location with $< 5$ starts is preserved in the list.
+  • Verify toggle chip `"Alle anzeigen"` / `"Nur ≥ 5 Starts"` toggles display of all locations.
+  3. *WorkoutFilterBottomSheet Location Starts Filtering & Toggle Contract Tests (`TST-UI-467.3`, `WorkoutFilterBottomSheetTest.kt`)*:
+  • Verify locations with $< 5$ starts are hidden by default when unselected.
+  • Verify currently selected location with $< 5$ starts is preserved.
+  • Verify toggle chip correctly expands and collapses infrequent locations.
+  4. *9-Language Localization Audit (`TST-UI-467.4`, `TranslationParityTest.kt`)*:
+  • Verify `filter_locations_show_all` and `filter_locations_show_frequent` exist across all 9 locales with zero format specifier mismatches and zero emojis (`ATT-5400`).
+  5. *Tier 1 Targeted Regression Execution (`TST-UI-467.5`)*:
+  • Execute targeted test suites (`com.atrainingtracker.trainingtracker.ui.clusters.*`, `com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
 
 
 

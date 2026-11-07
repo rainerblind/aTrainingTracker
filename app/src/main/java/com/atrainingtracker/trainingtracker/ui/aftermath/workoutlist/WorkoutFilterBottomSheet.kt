@@ -45,6 +45,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.tooling.preview.Preview
+import com.atrainingtracker.trainingtracker.elevation.ElevationSource
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import com.google.android.gms.maps.model.LatLng
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -814,8 +818,22 @@ fun WorkoutFilterBottomSheet(
             }
         }
 
-        // 8. Favorite Locations (Start at / Lieblingsorte, REQ-UI-187, REQ-UI-194, REQ-UI-208)
+        // 8. Favorite Locations (Start at / Lieblingsorte, REQ-UI-187, REQ-UI-194, REQ-UI-208, REQ-UI-467)
         if (knownLocations.isNotEmpty()) {
+            var showAllLocations by remember { mutableStateOf(false) }
+            val hasInfrequentLocations = remember(knownLocations) {
+                knownLocations.any { it.hitCount < 5 }
+            }
+            val displayedLocations = remember(knownLocations, localStartLocationLat, localStartLocationLng, showAllLocations) {
+                if (showAllLocations || !hasInfrequentLocations) {
+                    knownLocations
+                } else {
+                    knownLocations.filter { loc ->
+                        loc.hitCount >= 5 || (localStartLocationLat == loc.latLng.latitude && localStartLocationLng == loc.latLng.longitude)
+                    }
+                }
+            }
+
             Column {
                 Text(
                     text = stringResource(R.string.filter_section_start_at),
@@ -827,7 +845,7 @@ fun WorkoutFilterBottomSheet(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    knownLocations.forEach { loc ->
+                    displayedLocations.forEach { loc ->
                         val isSelected = localStartLocationLat == loc.latLng.latitude &&
                                 localStartLocationLng == loc.latLng.longitude
                         FilterChip(
@@ -846,6 +864,21 @@ fun WorkoutFilterBottomSheet(
                                 }
                             },
                             label = { Text(loc.name) }
+                        )
+                    }
+
+                    if (hasInfrequentLocations) {
+                        FilterChip(
+                            selected = showAllLocations,
+                            onClick = { showAllLocations = !showAllLocations },
+                            label = {
+                                Text(
+                                    stringResource(
+                                        if (showAllLocations) R.string.filter_locations_show_frequent
+                                        else R.string.filter_locations_show_all
+                                    )
+                                )
+                            }
                         )
                     }
                 }
@@ -880,5 +913,23 @@ private fun EquipmentSection(
                 )
             }
         }
+    }
+}
+
+@Preview(name = "Workout Filter Bottom Sheet - Light", showBackground = true)
+@Composable
+private fun WorkoutFilterBottomSheetLightPreview() {
+    ATrainingTrackerTheme(darkTheme = false) {
+        WorkoutFilterBottomSheet(
+            criteria = WorkoutFilterCriteria(),
+            allWorkouts = emptyList(),
+            onApplyCriteria = {},
+            onClearAll = {},
+            onDismissRequest = {},
+            knownLocations = listOf(
+                KnownLocationItem(1L, "Home Base", 500.0, 100, LatLng(48.0, 11.5), 10, false, ElevationSource.GPS_FALLBACK),
+                KnownLocationItem(2L, "Vacation Spot", 500.0, 100, LatLng(47.5, 12.0), 2, false, ElevationSource.GPS_FALLBACK)
+            )
+        )
     }
 }

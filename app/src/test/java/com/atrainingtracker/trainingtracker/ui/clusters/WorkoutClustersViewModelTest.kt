@@ -392,5 +392,52 @@ class WorkoutClustersViewModelTest {
         // Cached accessor returns precomputed set
         assertEquals(setOf("Road Bike"), viewModel.getLinkedEquipmentSetCached(3L))
     }
+
+    @Test
+    fun filterCriteria_defaultsToMinHitCount5OnInitialization() = runTest(testDispatcher) {
+        val viewModel = WorkoutClustersViewModel(mockApplication, testDispatcher)
+        activeViewModel = viewModel
+        advanceUntilIdle()
+
+        // REQ-UI-467.1 / ATT-5822: WorkoutClustersViewModel defaults to minHitCount = 5 on screen entry
+        assertEquals(5, viewModel.filterCriteria.value.minHitCount)
+        assertTrue(viewModel.filterCriteria.value.isNotEmpty)
+    }
+
+    @Test
+    fun clearFilterCriteria_resetsCriteriaToEmptyWithNullMinHitCount() = runTest(testDispatcher) {
+        val viewModel = WorkoutClustersViewModel(mockApplication, testDispatcher)
+        activeViewModel = viewModel
+        advanceUntilIdle()
+
+        assertEquals(5, viewModel.filterCriteria.value.minHitCount)
+
+        viewModel.clearFilterCriteria()
+        advanceUntilIdle()
+
+        assertNull(viewModel.filterCriteria.value.minHitCount)
+        assertTrue(viewModel.filterCriteria.value.isEmpty)
+    }
+
+    @Test
+    fun updateFilterCriteria_preservesOrModifiesCriteriaState() = runTest(testDispatcher) {
+        val viewModel = WorkoutClustersViewModel(mockApplication, testDispatcher)
+        activeViewModel = viewModel
+        advanceUntilIdle()
+
+        assertEquals(5, viewModel.filterCriteria.value.minHitCount)
+
+        viewModel.updateFilterCriteria { it.copy(query = "Trail") }
+        advanceUntilIdle()
+
+        assertEquals("Trail", viewModel.filterCriteria.value.query)
+        assertEquals(5, viewModel.filterCriteria.value.minHitCount)
+
+        viewModel.updateFilterCriteria { it.copy(minHitCount = null) }
+        advanceUntilIdle()
+
+        assertEquals("Trail", viewModel.filterCriteria.value.query)
+        assertNull(viewModel.filterCriteria.value.minHitCount)
+    }
 }
 

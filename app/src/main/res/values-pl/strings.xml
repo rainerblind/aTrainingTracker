@@ -1309,6 +1309,9 @@
     <string name="filter_section_starts">Starty</string>
     <string name="filter_min_starts_chip_format">≥ %1$d startów</string>
     <string name="filter_no_matching_locations">Żadne ulubione lokalizacje nie pasują do aktywnych filtrów</string>
+    <!-- Favorite Locations Filtering in Filter Sheets (ATT-5822) -->
+    <string name="filter_locations_show_all">Pokaż wszystkie</string>
+    <string name="filter_locations_show_frequent">Tylko ≥ 5 startów</string>
     <string name="filter_sensors_title">Filtruj czujniki</string>
     <string name="filter_section_protocol">Protokół</string>
     <string name="filter_section_category">Kategoria czujnika</string>

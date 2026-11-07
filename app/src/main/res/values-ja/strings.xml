@@ -1292,6 +1292,9 @@
     <string name="filter_section_starts">開始回数</string>
     <string name="filter_min_starts_chip_format">≥ %1$d 回開始</string>
     <string name="filter_no_matching_locations">一致するお気に入りの場所はありません</string>
+    <!-- Favorite Locations Filtering in Filter Sheets (ATT-5822) -->
+    <string name="filter_locations_show_all">すべて表示</string>
+    <string name="filter_locations_show_frequent">5回以上の開始のみ</string>
     <string name="filter_sensors_title">センサーを絞り込む</string>
     <string name="filter_section_protocol">プロトコル</string>
     <string name="filter_section_category">センサーのカテゴリ</string>

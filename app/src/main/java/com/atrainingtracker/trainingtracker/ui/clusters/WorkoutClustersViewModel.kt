@@ -153,12 +153,8 @@ class WorkoutClustersViewModel @JvmOverloads constructor(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ClusterMarkerType.entries.toSet())
 
-    val filterCriteria: StateFlow<ClusterFilterCriteria> = preferenceManager.clusterFilterCriteriaFlow
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = ClusterFilterCriteria()
-        )
+    private val _filterCriteria = MutableStateFlow(ClusterFilterCriteria(minHitCount = 5))
+    val filterCriteria: StateFlow<ClusterFilterCriteria> = _filterCriteria.asStateFlow()
 
     private val _sortOrder = MutableStateFlow(ClusterSortOrder.RECORDINGS)
     val sortOrder: StateFlow<ClusterSortOrder> = _sortOrder.asStateFlow()
@@ -234,13 +230,11 @@ class WorkoutClustersViewModel @JvmOverloads constructor(
         )
 
     fun setFilterCriteria(criteria: ClusterFilterCriteria) {
-        viewModelScope.launch {
-            preferenceManager.setClusterFilterCriteria(criteria)
-        }
+        _filterCriteria.value = criteria
     }
 
     fun clearFilterCriteria() {
-        preferenceManager.clearClusterFilterCriteria()
+        _filterCriteria.value = ClusterFilterCriteria()
     }
 
     fun updateFilterCriteria(transform: (ClusterFilterCriteria) -> ClusterFilterCriteria) {

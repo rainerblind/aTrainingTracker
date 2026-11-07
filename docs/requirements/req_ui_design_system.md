@@ -14001,6 +14001,45 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: SQLite database schema, location records, click handlers, delete dialog, and unit conversion invariants MUST NOT be degraded.
 
+### REQ-UI-467: Favorite Routes & Filter Sheets Hit Count Default and Starts-Filtered Location Selection [Verified]
+- **Tests**: `TST-UI-467` | **Tickets**: `ATT-5822`
+- **Implementation**: `WorkoutClustersViewModel.kt`, `ClusterFilterCriteria.kt`, `ClusterFilterBottomSheet.kt`, `WorkoutFilterBottomSheet.kt`, `ActiveClusterFilterChipsRow.kt`, `WorkoutClustersViewModelTest.kt`, `ClusterFilterBottomSheetTest.kt`, `WorkoutFilterBottomSheetTest.kt`
+- **Rationale**: Routes recorded only 1–4 times do not constitute genuine "Lieblingsstrecken" (Favorite Routes), and locations with 1–4 starts flood the "Startet bei (Lieblingsorte)" selection in filter dialogs. The system SHALL default Favorite Routes filtering to $\ge 5$ recordings on screen entry and filter start locations to $\ge 5$ starts with a compact toggle chip (Sprint 2026-45.11, ATT-5822, extending `REQ-UI-187`, `REQ-UI-417`, `REQ-UI-466`):
+1. *Favorite Routes Default Minimum Hit Count (`REQ-UI-467.1`)*:
+• On initialization of `WorkoutClustersViewModel` / entry to `WorkoutClustersScreen`, the active cluster filter criteria SHALL default to `minHitCount = 5` (`ClusterFilterCriteria(minHitCount = 5)`) as a transparent session default.
+• In `ActiveClusterFilterChipsRow`, the active filter chip (*"≥ 5 Aufzeichnungen"*) SHALL immediately display, allowing the athlete to 1-tap remove (`×`) or clear all filters (`minHitCount = null`) to show routes with $< 5$ recordings.
+2. *Start Location Selection Filtering in Bottom Sheets (`REQ-UI-467.2`)*:
+• In `ClusterFilterBottomSheet` and `WorkoutFilterBottomSheet`, the "Startet bei (Lieblingsorte)" chip group SHALL filter displayed `knownLocations` by default to items with `loc.hitCount >= 5` or any currently active selection (`loc == selectedLocation`).
+3. *Show All / Frequent Locations Toggle (`REQ-UI-467.3`)*:
+• When known locations with $< 5$ starts exist, a toggle chip (`FilterChip`) SHALL be presented:
+  - When collapsed: displaying `"Alle anzeigen"` (`R.string.filter_locations_show_all`)
+  - When expanded: displaying `"Nur ≥ 5 Starts"` (`R.string.filter_locations_show_frequent`)
+• Tapping the chip toggles between displaying all locations and only locations with $\ge 5$ starts (plus active selection).
+4. *9-Language Localization Parity & Zero Emojis (`REQ-UI-467.4`)*:
+• All newly introduced string resources (`filter_locations_show_all`, `filter_locations_show_frequent`) SHALL maintain 100% parity across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with zero inline emojis (`ATT-5400`).
+
+### Requirement Archaeology & Chesterton's Fence Audit
+1. *Original Requirement ID & Target*: Extending `REQ-UI-187` (*Filter Bottom Sheets*), `REQ-UI-417` (*Filter Criteria Distance Range & Hit Count*), and `REQ-UI-466` (*Known Locations Starts Threshold*).
+2. *Historical Origin & Commit Trace*: `ATT-1402` (commit `91acde33`), `ATT-5823` (commit `3b1f3b33`).
+3. *Root Reason for Existing Formulation*: Filter sheets previously rendered all locations unconditionally because datasets were initially small. As athletes recorded hundreds of workouts, incidental single-start vacation coordinates flooded the filter sheets. Similarly, Workout Clusters displayed all clusters including 1-time trips.
+4. *Preservation of Core Invariants*: Full dataset remains accessible via 1-tap toggle or chip removal; active selection is never omitted; clearing cluster filter reveals all clusters; 100% 9-language parity with zero emojis (`ATT-5400`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the athlete opens the Favorite Routes (*Lieblingsstrecken*) screen,
+• *When* the screen loads initially,
+• *Then* `WorkoutClustersViewModel` initializes with `minHitCount = 5`, only routes with $\ge 5$ recordings are shown, and `"≥ 5 Aufzeichnungen"` is visible in the active chips row.
+• *Given* active `minHitCount = 5` on Favorite Routes,
+• *When* the athlete taps `×` on the chip or clears all filters,
+• *Then* `minHitCount` is set to `null` and all routes (including 1–4 recordings) are displayed.
+• *Given* the athlete opens `ClusterFilterBottomSheet` or `WorkoutFilterBottomSheet` with known locations having $< 5$ starts,
+• *When* viewing the "Startet bei" section,
+• *Then* only locations with $\ge 5$ starts (and any currently selected location) are shown, along with an `"Alle anzeigen"` toggle chip.
+• *Given* the `"Alle anzeigen"` toggle chip,
+• *When* tapped,
+• *Then* all known locations are displayed and the toggle changes to `"Nur ≥ 5 Starts"`.
+
+**Invariants**: Saved DataStore preference criteria are not corrupted; toggling locations does not alter or deselect the active filter coordinate; zero regressions in `ClusterFilterCriteria` or `matches()` logic; zero hardcoded strings; 9-language translation parity.
+
 
 
 
