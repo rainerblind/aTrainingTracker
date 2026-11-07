@@ -29,6 +29,7 @@ import com.atrainingtracker.trainingtracker.elevation.ElevationSource
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository
+import com.atrainingtracker.trainingtracker.database.KnownLocationsGeometryMath
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
@@ -344,6 +345,35 @@ class KnownLocationsViewModel @JvmOverloads constructor(
         viewModelScope.launch {
             repository.deleteLocation(id)
             if (_uiState.value.selectedLocationForEdit?.id == id) {
+                dismissEditDialog()
+            }
+        }
+    }
+
+    /**
+     * ATT-5889 / REQ-SET-095.2: Retrieves candidate locations for merging with [source],
+     * filtering to those within 2,000 meters geodetic distance and sorting ascending by raw
+     * numeric distance (ATT-3324).
+     */
+    fun getCandidateLocationsForMerge(source: KnownLocationItem): List<Pair<KnownLocationItem, Double>> {
+        val all = repository.locationsFlow.value
+        return all.filter { it.id != source.id }
+            .map { candidate ->
+                val dist = KnownLocationsGeometryMath.calculateDistanceMeters(source.latLng, candidate.latLng)
+                Pair(candidate, dist)
+            }
+            .filter { it.second <= 2000.0 }
+            .sortedBy { it.second }
+    }
+
+    /**
+     * ATT-5889 / REQ-SET-095.5: Dispatches merging of [source] location into [target] location.
+     */
+    fun mergeLocations(source: KnownLocationItem, target: KnownLocationItem) {
+        viewModelScope.launch {
+            repository.mergeLocations(source, target)
+            clusterRepository.refreshClusters()
+            if (_uiState.value.selectedLocationForEdit?.id == source.id) {
                 dismissEditDialog()
             }
         }

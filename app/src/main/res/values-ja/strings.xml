@@ -1438,6 +1438,14 @@
     <string name="known_locations_home_badge">ホーム拠点</string>
     <string name="known_locations_set_home">ホーム拠点に設定</string>
     <string name="known_locations_remove_home">ホーム拠点を解除</string>
+    <string name="known_locations_menu_merge">別の場所と結合…</string>
+    <string name="known_locations_merge_select_target_title">結合先の場所を選択</string>
+    <string name="known_locations_merge_distance_away">%1$s 離れています</string>
+    <string name="known_locations_merge_no_candidates">2 km 以内に他の場所はありません。</string>
+    <string name="known_locations_merge_dialog_title">お気に入りの場所を結合</string>
+    <string name="known_locations_merge_dialog_message">\'%1$s\' を \'%2$s\' に結合しますか？\n\n新しい検出半径: %3$s。\n関連するすべてのワークアウトとルートは \'%2$s\' に再割り当てされ、\'%1$s\' は削除されます。</string>
+    <string name="known_locations_merge_pinned_notice">\'%1$s\' の座標は固定されたままです（ホーム拠点または固定高度）。</string>
+    <string name="known_locations_merge_action">結合</string>
 
     <!-- Advanced / Expert Settings Preferences (ATT-1304, ATT-1646 / REQ-SET-074) -->
     <string name="drawer__expert_settings">エキスパート設定</string>

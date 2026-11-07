@@ -1453,6 +1453,14 @@
     <string name="known_locations_home_badge">Base principal</string>
     <string name="known_locations_set_home">Definir como base principal</string>
     <string name="known_locations_remove_home">Remover base principal</string>
+    <string name="known_locations_menu_merge">Mesclar com outro local…</string>
+    <string name="known_locations_merge_select_target_title">Selecionar local de destino</string>
+    <string name="known_locations_merge_distance_away">A %1$s de distância</string>
+    <string name="known_locations_merge_no_candidates">Nenhum outro local em um raio de 2 km.</string>
+    <string name="known_locations_merge_dialog_title">Mesclar local favorito</string>
+    <string name="known_locations_merge_dialog_message">Deseja mesclar \'%1$s\' em \'%2$s\'?\n\nNovo raio de detecção: %3$s.\nTodos os treinos e rotas associados serão reatribuídos a \'%2$s\' e \'%1$s\' será excluído.</string>
+    <string name="known_locations_merge_pinned_notice">A coordenada de \'%1$s\' permanece inalterada (base inicial ou altitude fixa).</string>
+    <string name="known_locations_merge_action">Mesclar</string>
     <plurals name="known_locations_routes">
         <item quantity="one">%1$d rota</item>
         <item quantity="other">%1$d rotas</item>

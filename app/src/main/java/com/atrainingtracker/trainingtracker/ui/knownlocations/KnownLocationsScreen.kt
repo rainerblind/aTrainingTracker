@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -44,6 +45,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.CallMerge
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
@@ -86,12 +88,16 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
+import com.atrainingtracker.trainingtracker.database.KnownLocationsGeometryMath
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.elevation.ElevationSource
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
 import com.atrainingtracker.trainingtracker.ui.common.filters.FilterActionButton
 import com.atrainingtracker.trainingtracker.ui.components.DeleteConfirmationDialog
 import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
+import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
+import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import com.atrainingtracker.trainingtracker.ui.map.DarkMapAntiFlashOverlay
 import com.atrainingtracker.trainingtracker.ui.map.DarkMapStyle
 import com.atrainingtracker.trainingtracker.ui.map.createHeartPinMarker
@@ -128,6 +134,8 @@ fun KnownLocationsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var locationPendingDeletion by remember { mutableStateOf<KnownLocationItem?>(null) }
+    var locationToMerge by remember { mutableStateOf<KnownLocationItem?>(null) }
+    var pendingMergePair by remember { mutableStateOf<Pair<KnownLocationItem, KnownLocationItem>?>(null) }
     var showFilterSheet by remember { mutableStateOf(false) }
 
     Column(
@@ -251,6 +259,7 @@ fun KnownLocationsScreen(
             onShowRoutes = onShowRoutes,
             onSetHome = { item -> viewModel.setHomeLocation(item.id) },
             onClearHome = { viewModel.clearHomeLocation() },
+            onMerge = { locationToMerge = it },
             onDelete = { locationPendingDeletion = it },
             modifier = Modifier.fillMaxSize()
         )
@@ -276,6 +285,37 @@ fun KnownLocationsScreen(
                 viewModel.updateLocation(id, name, altitude, radius, source, isHome)
             },
             onDismiss = { viewModel.dismissEditDialog() }
+        )
+    }
+
+    // Candidate Selection Bottom Sheet (REQ-SET-095.2)
+    locationToMerge?.let { sourceItem ->
+        val candidates = remember(sourceItem, uiState.locations) {
+            viewModel.getCandidateLocationsForMerge(sourceItem)
+        }
+        KnownLocationMergeSelectionDialog(
+            source = sourceItem,
+            candidates = candidates,
+            onSelectTarget = { targetItem ->
+                pendingMergePair = Pair(sourceItem, targetItem)
+            },
+            onDismiss = { locationToMerge = null }
+        )
+    }
+
+    // Merge Confirmation Dialog (REQ-SET-095.3)
+    pendingMergePair?.let { (source, target) ->
+        KnownLocationMergeConfirmationDialog(
+            source = source,
+            target = target,
+            onConfirm = {
+                viewModel.mergeLocations(source, target)
+                pendingMergePair = null
+                locationToMerge = null
+            },
+            onDismiss = {
+                pendingMergePair = null
+            }
         )
     }
 
@@ -306,6 +346,7 @@ private fun KnownLocationsListContent(
     onShowRoutes: (KnownLocationItem) -> Unit = { },
     onSetHome: (KnownLocationItem) -> Unit = { },
     onClearHome: () -> Unit = { },
+    onMerge: (KnownLocationItem) -> Unit = { },
     onDelete: (KnownLocationItem) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -392,11 +433,185 @@ private fun KnownLocationsListContent(
                     onShowRoutes = { onShowRoutes(item) },
                     onSetHome = { onSetHome(item) },
                     onClearHome = onClearHome,
+                    onMerge = { onMerge(item) },
                     onDelete = { onDelete(item) }
                 )
             }
         }
     }
+}
+
+/**
+ * Bottom sheet dialog to select a target location for merge (REQ-SET-095.2).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun KnownLocationMergeSelectionDialog(
+    source: KnownLocationItem,
+    candidates: List<Pair<KnownLocationItem, Double>>,
+    onSelectTarget: (KnownLocationItem) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AppModalBottomSheet(
+        onDismissRequest = onDismiss,
+        title = stringResource(R.string.known_locations_merge_select_target_title),
+        icon = Icons.AutoMirrored.Filled.CallMerge,
+        actions = {
+            AppDialogActions.CancelOnly(onCancel = onDismiss)
+        }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 8.dp)
+        ) {
+            if (candidates.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = stringResource(R.string.known_locations_merge_no_candidates),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                val distanceFormatter = remember { DistanceFormatter() }
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 400.dp)
+                        .testTag("location_merge_candidates_list"),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(
+                        items = candidates,
+                        key = { it.first.id }
+                    ) { (candidate, distanceMeters) ->
+                        Surface(
+                            onClick = {
+                                onSelectTarget(candidate)
+                                onDismiss()
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("location_merge_candidate_${candidate.id}")
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = candidate.name,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        if (candidate.isHome) {
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Icon(
+                                                imageVector = Icons.Default.Home,
+                                                contentDescription = stringResource(R.string.known_locations_home_base),
+                                                modifier = Modifier.size(16.dp),
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = stringResource(
+                                            R.string.known_locations_merge_distance_away,
+                                            distanceFormatter.format_with_units(distanceMeters)
+                                        ),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Confirmation dialog for merging two known locations (REQ-SET-095.3).
+ */
+@Composable
+fun KnownLocationMergeConfirmationDialog(
+    source: KnownLocationItem,
+    target: KnownLocationItem,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val geofence = remember(source, target) {
+        KnownLocationsGeometryMath.calculateMergedGeofence(source, target)
+    }
+    val distanceFormatter = remember { DistanceFormatter() }
+    val formattedRadius = distanceFormatter.format_with_units(geofence.radius.toDouble())
+
+    val message = stringResource(
+        R.string.known_locations_merge_dialog_message,
+        source.name,
+        target.name,
+        formattedRadius
+    )
+    val fullMessage = if (geofence.isPinned) {
+        message + "\n\n" + stringResource(R.string.known_locations_merge_pinned_notice, target.name)
+    } else {
+        message
+    }
+
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 0.dp,
+        title = {
+            Text(stringResource(R.string.known_locations_merge_dialog_title))
+        },
+        text = {
+            Text(fullMessage)
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(
+                onClick = {
+                    onConfirm()
+                    onDismiss()
+                },
+                modifier = Modifier.testTag("location_merge_confirm_button")
+            ) {
+                Text(stringResource(R.string.known_locations_merge_action))
+            }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.testTag("location_merge_cancel_button")
+            ) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
 }
 
 /**
@@ -538,6 +753,7 @@ private fun KnownLocationCard(
     onShowRoutes: () -> Unit = {},
     onSetHome: () -> Unit = {},
     onClearHome: () -> Unit = {},
+    onMerge: () -> Unit = {},
     onDelete: () -> Unit,
     initialShowContextMenu: Boolean = false
 ) {
@@ -743,6 +959,21 @@ private fun KnownLocationCard(
                         modifier = Modifier.testTag("location_set_home_action_${item.id}")
                     )
                 }
+
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.known_locations_menu_merge)) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.CallMerge,
+                            contentDescription = null
+                        )
+                    },
+                    onClick = {
+                        showContextMenu = false
+                        onMerge()
+                    },
+                    modifier = Modifier.testTag("location_merge_action_${item.id}")
+                )
 
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.delete)) },

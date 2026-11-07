@@ -1458,6 +1458,14 @@
     <string name="known_locations_home_badge">Thuisbasis</string>
     <string name="known_locations_set_home">Instellen als thuisbasis</string>
     <string name="known_locations_remove_home">Thuisbasis verwijderen</string>
+    <string name="known_locations_menu_merge">Samenvoegen met andere locatie…</string>
+    <string name="known_locations_merge_select_target_title">Doellocatie selecteren</string>
+    <string name="known_locations_merge_distance_away">%1$s afstand</string>
+    <string name="known_locations_merge_no_candidates">Geen andere locaties binnen 2 km.</string>
+    <string name="known_locations_merge_dialog_title">Favoriete locatie samenvoegen</string>
+    <string name="known_locations_merge_dialog_message">Wil je \'%1$s\' samenvoegen in \'%2$s\'?\n\nNieuwe detectiestraal: %3$s.\nAlle gekoppelde workouts en routes worden opnieuw toegewezen aan \'%2$s\' en \'%1$s\' wordt verwijderd.</string>
+    <string name="known_locations_merge_pinned_notice">De coördinaat van \'%1$s\' blijft ongewijzigd (thuisbasis of vaste hoogte).</string>
+    <string name="known_locations_merge_action">Samenvoegen</string>
 
     <!-- Advanced / Expert Settings Preferences (ATT-1304, ATT-1646 / REQ-SET-074) -->
     <string name="drawer__expert_settings">Expertinstellingen</string>

@@ -22,6 +22,7 @@ import android.content.Context
 import android.util.Log
 import androidx.annotation.VisibleForTesting
 import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager
+import com.atrainingtracker.trainingtracker.database.KnownLocationsGeometryMath
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.elevation.ElevationResult
 import com.atrainingtracker.trainingtracker.elevation.ElevationService
@@ -184,6 +185,37 @@ open class KnownLocationsRepository @VisibleForTesting constructor(
     open suspend fun deleteLocation(id: Long) = withContext(dbDispatcher) {
         databaseManager.deleteId(id)
         loadLocations()
+    }
+
+    /**
+     * ATT-5889 / REQ-SET-095.5: Merges [source] into [target] on [dbDispatcher].
+     * Computes the merged geofence geometry, consolidates altitude, locked, and home status,
+     * executes atomic SQLite merge, reconciles authoritative start counts, and refreshes locations.
+     */
+    open suspend fun mergeLocations(source: KnownLocationItem, target: KnownLocationItem): Boolean = withContext(dbDispatcher) {
+        val geofence = KnownLocationsGeometryMath.calculateMergedGeofence(source, target)
+        val newIsHome = target.isHome || source.isHome
+        val (newAltitude, newIsLocked, newSource) = when {
+            target.isLocked -> Triple(target.altitude, true, target.source)
+            source.isLocked -> Triple(source.altitude, true, source.source)
+            else -> Triple(target.altitude, false, target.source)
+        }
+
+        databaseManager.mergeLocations(
+            target.id,
+            source.id,
+            geofence.center.latitude,
+            geofence.center.longitude,
+            geofence.radius,
+            newAltitude,
+            newIsLocked,
+            newSource,
+            newIsHome
+        )
+
+        reconcileHitCounts()
+        loadLocations()
+        true
     }
 
     /**

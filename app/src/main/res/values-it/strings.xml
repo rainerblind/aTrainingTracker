@@ -1458,6 +1458,14 @@
     <string name="known_locations_home_badge">Base di partenza</string>
     <string name="known_locations_set_home">Imposta come base di partenza</string>
     <string name="known_locations_remove_home">Rimuovi base di partenza</string>
+    <string name="known_locations_menu_merge">Unisci con un\'altra posizione…</string>
+    <string name="known_locations_merge_select_target_title">Seleziona posizione di destinazione</string>
+    <string name="known_locations_merge_distance_away">A %1$s di distanza</string>
+    <string name="known_locations_merge_no_candidates">Nessun\'altra posizione nel raggio di 2 km.</string>
+    <string name="known_locations_merge_dialog_title">Unisci posizione preferita</string>
+    <string name="known_locations_merge_dialog_message">Vuoi unire \'%1$s\' in \'%2$s\'?\n\nNuovo raggio di rilevamento: %3$s.\nTutti gli allenamenti e i percorsi associati verranno riassegnati a \'%2$s\' e \'%1$s\' verrà eliminata.</string>
+    <string name="known_locations_merge_pinned_notice">La coordinata di \'%1$s\' rimane invariata (base di partenza o altitudine bloccata).</string>
+    <string name="known_locations_merge_action">Unisci</string>
 
     <!-- Advanced / Expert Settings Preferences (ATT-1304, ATT-1646 / REQ-SET-074) -->
     <string name="drawer__expert_settings">Impostazioni per esperti</string>

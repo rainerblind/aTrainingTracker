@@ -1545,6 +1545,14 @@
     <string name="known_locations_home_badge">Heim-Basis</string>
     <string name="known_locations_set_home">Als Heim-Basis festlegen</string>
     <string name="known_locations_remove_home">Heim-Basis aufheben</string>
+    <string name="known_locations_menu_merge">Mit anderem Ort zusammenführen…</string>
+    <string name="known_locations_merge_select_target_title">Zielort auswählen</string>
+    <string name="known_locations_merge_distance_away">%1$s entfernt</string>
+    <string name="known_locations_merge_no_candidates">Keine weiteren Orte im Umkreis von 2 km.</string>
+    <string name="known_locations_merge_dialog_title">Lieblingsort zusammenführen</string>
+    <string name="known_locations_merge_dialog_message">Möchtest du \'%1$s\' in \'%2$s\' zusammenführen?\n\nNeuer Erfassungsradius: %3$s.\nAlle zugehörigen Workouts und Strecken werden \'%2$s\' zugeordnet und \'%1$s\' wird gelöscht.</string>
+    <string name="known_locations_merge_pinned_notice">Die Koordinate von \'%1$s\' bleibt unverändert erhalten (Heim-Basis oder feste Höhe).</string>
+    <string name="known_locations_merge_action">Zusammenführen</string>
 
     <!-- Advanced / Expert Settings Preferences (ATT-1304, ATT-1646 / REQ-SET-074) -->
     <string name="drawer__expert_settings">Experten-Einstellungen</string>

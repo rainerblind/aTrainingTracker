@@ -885,5 +885,68 @@ class KnownLocationsDatabaseManagerTest {
             anyConstructed<ContentValues>().put(KnownLocationsDatabaseManager.KnownLocationsDbHelper.SOURCE, "INTERNET_DEM")
         }
     }
+
+    /**
+     * TST-SET-095.2: Atomic SQLite Location Merge Test.
+     * Verifies that mergeLocations updates target's coordinates, radius, altitude,
+     * lock flag, source, and isHome, and deletes source within a single transaction.
+     */
+    @Test
+    fun testMergeLocations_atomicTransactionUpdatesTargetAndDeletesSource() {
+        resetSingleton()
+        val manager = KnownLocationsDatabaseManager.getInstance(mockContext)
+        injectMockDatabase(manager, mockDb)
+
+        every {
+            mockDb.update(
+                KnownLocationsDatabaseManager.KnownLocationsDbHelper.TABLE,
+                any<ContentValues>(),
+                eq("${KnownLocationsDatabaseManager.KnownLocationsDbHelper.C_ID}=?"),
+                eq(arrayOf("101"))
+            )
+        } returns 1
+
+        every {
+            mockDb.delete(
+                KnownLocationsDatabaseManager.KnownLocationsDbHelper.TABLE,
+                eq("${KnownLocationsDatabaseManager.KnownLocationsDbHelper.C_ID}=?"),
+                eq(arrayOf("102"))
+            )
+        } returns 1
+
+        manager.mergeLocations(
+            101L,
+            102L,
+            48.138,
+            11.577,
+            350,
+            520.0,
+            true,
+            ElevationSource.MANUAL_USER,
+            true
+        )
+
+        verify(exactly = 1) { mockDb.beginTransaction() }
+        verify(exactly = 1) { mockDb.setTransactionSuccessful() }
+        verify(exactly = 1) { mockDb.endTransaction() }
+
+        verify(exactly = 1) {
+            anyConstructed<ContentValues>().put(KnownLocationsDatabaseManager.KnownLocationsDbHelper.LATITUDE, 48.138)
+            anyConstructed<ContentValues>().put(KnownLocationsDatabaseManager.KnownLocationsDbHelper.LONGITUDE, 11.577)
+            anyConstructed<ContentValues>().put(KnownLocationsDatabaseManager.KnownLocationsDbHelper.RADIUS, 350)
+            anyConstructed<ContentValues>().put(KnownLocationsDatabaseManager.KnownLocationsDbHelper.ALTITUDE, 520.0)
+            anyConstructed<ContentValues>().put(KnownLocationsDatabaseManager.KnownLocationsDbHelper.IS_LOCKED, 1)
+            anyConstructed<ContentValues>().put(KnownLocationsDatabaseManager.KnownLocationsDbHelper.SOURCE, "MANUAL_USER")
+            anyConstructed<ContentValues>().put(KnownLocationsDatabaseManager.KnownLocationsDbHelper.IS_HOME, 1)
+        }
+
+        verify(exactly = 1) {
+            mockDb.delete(
+                KnownLocationsDatabaseManager.KnownLocationsDbHelper.TABLE,
+                "${KnownLocationsDatabaseManager.KnownLocationsDbHelper.C_ID}=?",
+                arrayOf("102")
+            )
+        }
+    }
 }
 

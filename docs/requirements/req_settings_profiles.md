@@ -1631,3 +1631,40 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 
 **Invariants**: Workouts not belonging to `A` or `B` MUST NOT be altered; SQLite transactional integrity; no duplicate routes; zero hardcoded strings.
 
+### REQ-SET-095: Known Locations Merge with Hybrid Geofence Geometry & Cross-Database Reconciliation [Verified]
+- **Tests**: `TST-SET-095` | **Tickets**: `ATT-5889`
+- **Implementation**: `KnownLocationsScreen.kt`, `KnownLocationsViewModel.kt`, `KnownLocationsRepository.kt`, `KnownLocationsDatabaseManager.java`, `KnownLocationsGeometryMath.kt`
+- **Rationale**: When GPS fix acquisition varies across workout sessions, multiple duplicate `KnownLocation` (*Lieblingsorte*) entries are created for semantically the same physical location. Simply deleting a duplicate location drops its geofence coverage, causing workouts and route clusters started there to lose their location association. The system SHALL provide a directional merge action ($S \rightarrow T$) from the location card context menu, filtering candidate targets within a proximity threshold ($d \le 2\,000\text{ m}$), calculating an enclosing hybrid geofence radius preview, preserving `isHome` and locked altitudes, atomically updating SQLite storage, reconciling authoritative workout start counts without double-counting, and refreshing linked route clusters:
+1. *Context Menu Action (`REQ-SET-095.1`)*: Each `KnownLocationCard` context menu SHALL include an action item *"Mit anderem Ort zusammenführen…"* (`R.string.known_locations_menu_merge`, icon `Icons.Default.CallMerge`) triggering candidate target selection for source location $S$.
+2. *Proximity Candidate Selection Dialog (`REQ-SET-095.2`)*: Target selection dialog SHALL present candidates ($T \ne S$) filtered strictly by geodetic center distance $d = \text{distanceBetween}(C_S, C_T) \le 2\,000\text{ m}$, sorted ascending by raw numeric distance primitive (`ATT-3324`), displaying the formatted distance label (`R.string.known_locations_merge_distance_away`). If no candidate locations exist within $2\,000\text{ m}$, a descriptive empty notice (`R.string.known_locations_merge_no_candidates`) SHALL be displayed.
+3. *Explicit Merge Confirmation Dialog & Radius Preview (`REQ-SET-095.3`)*: Selecting target $T$ SHALL display an explicit confirmation dialog (`ATT-3355`, `R.string.known_locations_merge_dialog_title`, `R.string.known_locations_merge_dialog_message`) displaying $S.\text{name}$, $T.\text{name}$, previewing the calculated hybrid geofence radius $r_{\text{new}}$, and displaying a pinned-target notice (`R.string.known_locations_merge_pinned_notice`) whenever $T$ has `isHome == true` or `isLocked == true`.
+4. *Hybrid Geofence Geometry Calculation (`REQ-SET-095.4`)*:
+   • *Pinned-Target Mode (when $T.\text{isHome} == \text{true}$ or $T.\text{isLocked} == \text{true}$)*: The target coordinate remains fixed ($C_{\text{new}} = C_T$) and the radius expands to fully enclose the source geofence:
+     $$r_{\text{new}} = \max\left(r_T,\; \lceil d + r_S \rceil\right)$$
+   • *Minimum Bounding Circle Mode (default when $T$ is neither home nor locked)*: If one circle already encloses the other ($d + r_S \le r_T$ or $d + r_T \le r_S$), the enclosing circle is adopted; otherwise, the center shifts along the geodesic from $C_T$ toward $C_S$ by $\frac{d + r_S - r_T}{2}$ and the radius is computed as:
+     $$r_{\text{new}} = \left\lceil \frac{d + r_T + r_S}{2} \right\rceil$$
+5. *Transactional Database Reassignment & State Reconciliation (`REQ-SET-095.5`)*:
+   • Inside an atomic SQLite transaction in `StartLocation2Altitude.db`:
+     - Update $T$ with new center $C_{\text{new}}$, radius $r_{\text{new}}$, consolidated `isHome = T.isHome || S.isHome`, and altitude: if $T.\text{isLocked}$, retain $T$'s altitude; else if $S.\text{isLocked}$, adopt $S$'s altitude and lock status; otherwise retain $T$'s altitude.
+     - Delete source location $S$ (`deleteId(S.id)`).
+   • Authoritatively recompute $T.\text{hitCount}$ via `reconcileHitCountsWithWorkoutSummaries` against all workout start locations falling within $(C_{\text{new}}, r_{\text{new}})$ without double-counting.
+   • Refresh `KnownLocationsRepository.loadLocations()` so active StateFlows, workout headers, and route clusters immediately reflect target $T$.
+6. *9-Language Parity & Zero Emojis (`REQ-SET-095.6`)*: All new user-facing strings SHALL maintain 100% parity across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) with zero decorative inline emojis (`ATT-5400`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* two unlocked, non-home locations $S$ and $T$ with $r_S = 200\text{ m}$, $r_T = 200\text{ m}$ at distance $d = 200\text{ m}$,
+• *When* the user merges $S$ into $T$,
+• *Then* $T$'s center shifts to the midpoint between $S$ and $T$, $T$'s radius becomes $300\text{ m}$, and $S$ is deleted.
+• *Given* target location $T$ has `isHome = true` (or `isLocked = true`) with $r_T = 200\text{ m}$ and source $S$ ($r_S = 200\text{ m}$) is at distance $d = 150\text{ m}$,
+• *When* $S$ is merged into $T$,
+• *Then* $T$'s coordinate remains unchanged, $T$'s radius expands to $350\text{ m}$, and `isHome = true` is preserved.
+• *Given* workouts and route clusters started within $S$ and $T$,
+• *When* $S$ is merged into $T$,
+• *Then* `target.hitCount` is authoritatively reconciled against `WorkoutSummaries`, and all affected workouts and `Lieblingsstrecken` immediately resolve to $T$.
+• *Given* the user initiates a merge for location $S$,
+• *When* candidate selection and confirmation dialogs are presented,
+• *Then* only candidates within $2\,000\text{ m}$ are displayed (sorted ascending by raw distance) and the confirmation dialog previews the resulting radius $r_{\text{new}}$ before committing.
+
+**Invariants**: Single-home exclusivity (`isHome`); user-locked altitude immutability; authoritative hit counts derived from actual workouts; strict raw numeric sorting (`ATT-3324`); explicit user confirmation (`ATT-3355`); thread confinement to `KnownLocationsDB-Thread`.
+
+

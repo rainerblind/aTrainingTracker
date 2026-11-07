@@ -1459,6 +1459,14 @@
     <string name="known_locations_home_badge">Base de départ</string>
     <string name="known_locations_set_home">Définir comme base de départ</string>
     <string name="known_locations_remove_home">Supprimer la base de départ</string>
+    <string name="known_locations_menu_merge">Fusionner avec un autre lieu…</string>
+    <string name="known_locations_merge_select_target_title">Sélectionner le lieu de destination</string>
+    <string name="known_locations_merge_distance_away">À %1$s</string>
+    <string name="known_locations_merge_no_candidates">Aucun autre lieu dans un rayon de 2 km.</string>
+    <string name="known_locations_merge_dialog_title">Fusionner le lieu favori</string>
+    <string name="known_locations_merge_dialog_message">Voulez-vous fusionner \'%1$s\' dans \'%2$s\' ?\n\nNouveau rayon de détection : %3$s.\nTous les entraînements et parcours associés seront réassignés à \'%2$s\' et \'%1$s\' sera supprimé.</string>
+    <string name="known_locations_merge_pinned_notice">La coordonnée de \'%1$s\' reste inchangée (base de départ ou altitude verrouillée).</string>
+    <string name="known_locations_merge_action">Fusionner</string>
 
     <!-- Advanced / Expert Settings Preferences (ATT-1304, ATT-1646 / REQ-SET-074) -->
     <string name="drawer__expert_settings">Paramètres d\'expert</string>

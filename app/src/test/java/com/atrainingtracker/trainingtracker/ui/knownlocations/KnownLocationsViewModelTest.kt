@@ -387,4 +387,57 @@ class KnownLocationsViewModelTest {
         val constructor = KnownLocationsViewModel::class.java.getConstructor(Application::class.java)
         assertNotNull(constructor)
     }
+
+    /**
+     * TST-SET-095.3: Verifies candidate locations for merge are filtered to <= 2,000m
+     * and sorted ascending by raw numeric distance primitive (ATT-3324).
+     */
+    @Test
+    fun testGetCandidateLocationsForMerge_filtersTo2000mAndSortsAscending() = runTest {
+        val source = KnownLocationItem(1L, "Home Base", 500.0, 200, LatLng(48.0, 11.0), 10, true, ElevationSource.MANUAL_USER, isHome = true)
+        val candidateNear = KnownLocationItem(2L, "Driveway", 500.0, 200, LatLng(48.001, 11.0), 5, false, ElevationSource.AUTO_LEARNED)
+        val candidateMid = KnownLocationItem(3L, "Park Entrance", 502.0, 200, LatLng(48.010, 11.0), 8, false, ElevationSource.AUTO_LEARNED)
+        val candidateFar = KnownLocationItem(4L, "Distant Peak", 650.0, 200, LatLng(48.030, 11.0), 2, false, ElevationSource.AUTO_LEARNED)
+
+        fakeLocationsFlow.value = listOf(source, candidateNear, candidateMid, candidateFar)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val candidates = viewModel.getCandidateLocationsForMerge(source)
+        assertEquals(2, candidates.size)
+        assertFalse(candidates.any { it.first.id == source.id })
+        assertFalse(candidates.any { it.first.id == candidateFar.id })
+        assertEquals(candidateNear.id, candidates[0].first.id)
+        assertEquals(candidateMid.id, candidates[1].first.id)
+        assertTrue(candidates[0].second < candidates[1].second)
+    }
+
+    /**
+     * TST-SET-095.3: Verifies getCandidateLocationsForMerge returns empty list when no locations are within 2,000m.
+     */
+    @Test
+    fun testGetCandidateLocationsForMerge_noNearbyCandidates_returnsEmptyList() = runTest {
+        val source = KnownLocationItem(1L, "Isolated Cabin", 1200.0, 200, LatLng(47.5, 11.0), 1, false, ElevationSource.AUTO_LEARNED)
+        val farLocation = KnownLocationItem(2L, "Valley Town", 600.0, 200, LatLng(47.7, 11.0), 5, false, ElevationSource.AUTO_LEARNED)
+
+        fakeLocationsFlow.value = listOf(source, farLocation)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val candidates = viewModel.getCandidateLocationsForMerge(source)
+        assertTrue(candidates.isEmpty())
+    }
+
+    /**
+     * TST-SET-095.5: Verifies mergeLocations calls repository.mergeLocations and refreshes clusters.
+     */
+    @Test
+    fun testMergeLocations_delegatesToRepositoryAndRefreshesClusters() = runTest {
+        val source = KnownLocationItem(1L, "Source", 500.0, 200, LatLng(48.0, 11.0), 3, false, ElevationSource.AUTO_LEARNED)
+        val target = KnownLocationItem(2L, "Target", 500.0, 200, LatLng(48.001, 11.0), 10, true, ElevationSource.MANUAL_USER)
+
+        viewModel.mergeLocations(source, target)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify { mockRepository.mergeLocations(source, target) }
+        coVerify { mockClusterRepository.refreshClusters() }
+    }
 }

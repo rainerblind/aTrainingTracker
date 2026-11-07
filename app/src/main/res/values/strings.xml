@@ -1657,6 +1657,14 @@
     <string name="known_locations_home_badge">Home Base</string>
     <string name="known_locations_set_home">Set as home base</string>
     <string name="known_locations_remove_home">Remove home base</string>
+    <string name="known_locations_menu_merge">Merge with another location…</string>
+    <string name="known_locations_merge_select_target_title">Select Target Location</string>
+    <string name="known_locations_merge_distance_away">%1$s away</string>
+    <string name="known_locations_merge_no_candidates">No other locations within 2 km.</string>
+    <string name="known_locations_merge_dialog_title">Merge Favorite Location</string>
+    <string name="known_locations_merge_dialog_message">Do you want to merge \'%1$s\' into \'%2$s\'?\n\nNew detection radius: %3$s.\nAll associated workouts and routes will be reassigned to \'%2$s\' and \'%1$s\' will be deleted.</string>
+    <string name="known_locations_merge_pinned_notice">The coordinate of \'%1$s\' remains pinned (home base or locked altitude).</string>
+    <string name="known_locations_merge_action">Merge</string>
 
     <!-- Advanced / Expert Settings Preferences (ATT-1304, ATT-1646 / REQ-SET-074) -->
     <string name="drawer__expert_settings">Expert Settings</string>

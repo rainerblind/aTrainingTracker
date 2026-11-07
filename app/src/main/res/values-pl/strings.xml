@@ -1454,6 +1454,14 @@
     <string name="known_locations_home_badge">Baza domowa</string>
     <string name="known_locations_set_home">Ustaw jako bazę domową</string>
     <string name="known_locations_remove_home">Usuń bazę domową</string>
+    <string name="known_locations_menu_merge">Połącz z inną lokalizacją…</string>
+    <string name="known_locations_merge_select_target_title">Wybierz lokalizację docelową</string>
+    <string name="known_locations_merge_distance_away">%1$s stąd</string>
+    <string name="known_locations_merge_no_candidates">Brak innych lokalizacji w promieniu 2 km.</string>
+    <string name="known_locations_merge_dialog_title">Połącz ulubioną lokalizację</string>
+    <string name="known_locations_merge_dialog_message">Czy chcesz połączyć \'%1$s\' z \'%2$s\'?\n\nNowy promień wykrywania: %3$s.\nWszystkie powiązane treningi i trasy zostaną przypisane do \'%2$s\', a \'%1$s\' zostanie usunięta.</string>
+    <string name="known_locations_merge_pinned_notice">Współrzędna \'%1$s\' pozostaje bez zmian (baza domowa lub zablokowana wysokość).</string>
+    <string name="known_locations_merge_action">Połącz</string>
     <plurals name="known_locations_routes">
         <item quantity="one">%1$d trasa</item>
         <item quantity="few">%1$d trasy</item>
