@@ -7196,14 +7196,15 @@
 ### TST-UI-448: **Workout Photos Strip, Full-Screen Preview Bottom Sheet with ATT-30 Overlay Share, Map Pin Markers, and Null-Island Coordinate Rejection Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-448`
 - **Component**: `WorkoutDetails.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `ATrainingTrackerMap.kt`, `WorkoutPhotoViewerSheet.kt`, `WorkoutPhotoPreviewBottomSheet.kt`, `WorkoutPhotoStrip.kt`, `WorkoutSummary.kt`, `WorkoutShareBottomSheet.kt`, `WorkoutPhotoManager.kt`, `WorkoutRepository.kt`, `MapBehaviors.kt`
-- **Jira**: `ATT-43`, `ATT-5479`, `ATT-5473`
+- **Jira**: `ATT-43`, `ATT-5479`, `ATT-5473`, `ATT-5811`
 - **Test Description**:
   1. *Workout Photos Strip & Empty State Contract Test (`TST-UI-448.1`, `WorkoutPhotoUiContractTest.kt`)*:
   • Verify horizontal photo strip renders when photos are attached, displaying thumbnail cards with `RoundedCornerShape(8.dp)`.
-  • Verify neutral `onSurfaceVariant` styling for camera header icon and "Add Photos" tile (no primary electric blue).
-  • Verify centered `AddPhotoAlternate` icon inside square add tile without clipped single-line text.
+  • Verify neutral `onSurfaceVariant` styling for camera header icon and "Add Photos" header icon button (no primary electric blue).
+  • Verify "Add Photos" action is rendered in the section header row (`Icons.Default.AddPhotoAlternate`) when `showAddButton` is true.
+  • Verify `LazyRow` renders only when `photos.isNotEmpty()`, starting with photo thumbnails at index 0 without an oversized empty tile.
+  • Verify compact single-line header row renders when `photos.isEmpty()` and `showAddButton` is true.
   • Verify `HorizontalDivider` preceding `WorkoutPhotoStrip` in `WorkoutSummary.kt`.
-  • Verify empty-state "Add Photos" button renders when no photos are attached.
   • Verify photo picker launcher contract invocation on add button click.
   2. *Workout Photo Viewer Bottom Sheet & ATT-30 Share Handoff (`TST-UI-448.2`, `WorkoutPhotoViewerSheetTest.kt`)*:
   • Verify clicking thumbnail displays `WorkoutPhotoViewerSheet` / `WorkoutPhotoPreviewBottomSheet` via `AppModalBottomSheet`.
