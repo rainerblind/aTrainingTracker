@@ -1454,12 +1454,24 @@ def ensure_retro_ticket(role="agent1"):
     total_sp_disp = int(total_sp) if total_sp.is_integer() else total_sp
     print(f"Active Sprint Story Points: {total_sp_disp} SP ({unestimated_sp} unestimated)")
 
+    # Pass 1: Match dedicated 'Review & Retro' ceremony ticket summary specifically (ATT-5829)
     for issue in issues:
         itype = issue.get("fields", {}).get("issuetype", {}).get("name", "")
         if itype.lower() in ("sub-task", "subtask"):
             continue
         summary = issue.get("fields", {}).get("summary", "")
-        if re.search(r'\bretro(?:spective)?\b', summary, re.IGNORECASE):
+        if re.search(r'^\s*(?:\[[^\]]+\]\s*)?(?:sprint\s+)?review\s*(?:&|and)\s*retro(?:spective)?\b', summary, re.IGNORECASE):
+            status = issue.get("fields", {}).get("status", {}).get("name", "Unknown")
+            print(f"Review & Retro ticket already exists in {display_sprint} (id {sprint_id}): {issue['key']} — {summary} [{status}]")
+            return issue["key"]
+
+    # Pass 2: Fallback to standalone Retrospective title if not a regular ticket referencing 'Retro' mid-sentence
+    for issue in issues:
+        itype = issue.get("fields", {}).get("issuetype", {}).get("name", "")
+        if itype.lower() in ("sub-task", "subtask"):
+            continue
+        summary = issue.get("fields", {}).get("summary", "")
+        if re.search(r'^\s*(?:\[[^\]]+\]\s*)?(?:sprint\s+)?retro(?:spective)?\b', summary, re.IGNORECASE):
             status = issue.get("fields", {}).get("status", {}).get("name", "Unknown")
             print(f"Review & Retro ticket already exists in {display_sprint} (id {sprint_id}): {issue['key']} — {summary} [{status}]")
             return issue["key"]
