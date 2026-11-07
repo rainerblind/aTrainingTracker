@@ -1286,6 +1286,12 @@
     <string name="filter_section_recordings">記録</string>
     <string name="filter_min_recordings_chip_format">≥ %1$d 件の記録</string>
     <string name="filter_no_matching_clusters">一致するお気に入りトラックはありません</string>
+    <!-- Favorite Locations Filtering (ATT-5823) -->
+    <string name="filter_known_locations_title">お気に入りの場所を絞り込み</string>
+    <string name="filter_search_known_locations_hint">場所名を検索…</string>
+    <string name="filter_section_starts">開始回数</string>
+    <string name="filter_min_starts_chip_format">≥ %1$d 回開始</string>
+    <string name="filter_no_matching_locations">一致するお気に入りの場所はありません</string>
     <string name="filter_sensors_title">センサーを絞り込む</string>
     <string name="filter_section_protocol">プロトコル</string>
     <string name="filter_section_category">センサーのカテゴリ</string>

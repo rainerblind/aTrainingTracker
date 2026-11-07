@@ -1304,6 +1304,12 @@
     <string name="filter_section_recordings">Opnamen</string>
     <string name="filter_min_recordings_chip_format">≥ %1$d opnamen</string>
     <string name="filter_no_matching_clusters">Geen favoriete tracks komen overeen met de actieve filters</string>
+    <!-- Favorite Locations Filtering (ATT-5823) -->
+    <string name="filter_known_locations_title">Favoriete locaties filteren</string>
+    <string name="filter_search_known_locations_hint">Zoek locatienaam…</string>
+    <string name="filter_section_starts">Starts</string>
+    <string name="filter_min_starts_chip_format">≥ %1$d starts</string>
+    <string name="filter_no_matching_locations">Geen favoriete locaties komen overeen met de actieve filters</string>
     <string name="filter_sensors_title">Sensoren filteren</string>
     <string name="filter_section_protocol">Protocol</string>
     <string name="filter_section_category">Sensorcategorie</string>

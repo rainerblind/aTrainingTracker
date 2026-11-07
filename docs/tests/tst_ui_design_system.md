@@ -7544,6 +7544,27 @@
   4. *Clean-Room Targeted Regression Execution (`TST-UI-465.4`)*:
   • Execute targeted unit test suites (`com.atrainingtracker.trainingtracker.ui.knownlocations.*`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
+### TST-UI-466: **KnownLocationsScreen Multi-Dimensional Filter Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-466`
+- **Component**: `KnownLocationsViewModel.kt`, `KnownLocationsScreen.kt`, `KnownLocationsFilterBottomSheet.kt`, `ActiveKnownLocationsFilterChipsRow.kt`, `KnownLocationsViewModelTest.kt`
+- **Jira**: `ATT-5823`
+- **Test Description**:
+  1. *Default Starts Threshold & Query Unit Tests (`TST-UI-466.1`, `KnownLocationsViewModelTest.kt`)*:
+  • Verify `KnownLocationsViewModel` initializes with `minStarts = 5`.
+  • Verify locations with $< 5$ starts are filtered out by default, while locations with $\ge 5$ starts are retained.
+  • Verify filtering with `minStarts = null` includes all locations.
+  • Verify combining query search with `minStarts` threshold.
+  2. *Filter Action Button & Badge Contract Tests (`TST-UI-466.2`, `KnownLocationsScreenTest.kt`)*:
+  • Verify `FilterActionButton` is present in `KnownLocationsScreen` top app bar with `known_locations_filter_button` test tag.
+  • Verify active filter badge renders when criteria are active.
+  3. *Active Filter Chips Row & Dismissal Contract Tests (`TST-UI-466.3`, `KnownLocationsScreenTest.kt`)*:
+  • Verify active chip `"≥ 5 Starts"` is displayed when `minStarts = 5`.
+  • Verify tapping remove dismisses the threshold and updates `filteredLocations`.
+  4. *9-Language Localization Audit (`TST-UI-466.4`, `TranslationParityTest.kt`)*:
+  • Verify `filter_known_locations_title`, `filter_min_starts_label`, `filter_min_starts_chip_format`, and `filter_no_matching_locations` exist across all 9 locales with zero format specifier mismatches.
+  5. *Targeted Regression Execution (`TST-UI-466.5`)*:
+  • Execute targeted unit test suites (`com.atrainingtracker.trainingtracker.ui.knownlocations.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
 
 
 

@@ -13962,6 +13962,45 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Single-tap edit, long-press menu, badge drill-down click listeners, Google Maps Lite Mode, test tags (`location_starts_badge_*`, `location_map_preview_*`), and zoom calculation MUST NOT be degraded.
 
+### REQ-UI-466: KnownLocationsScreen Multi-Dimensional Filter UI & Default Threshold [Verified]
+- **Tests**: `TST-UI-466` | **Tickets**: `ATT-5823`
+- **Implementation**: `KnownLocationsViewModel.kt`, `KnownLocationsScreen.kt`, `KnownLocationsFilterBottomSheet.kt`, `ActiveKnownLocationsFilterChipsRow.kt`, `KnownLocationsViewModelTest.kt`
+- **Rationale**: To prevent visual clutter from incidental GPS start coordinates (1–4 starts) while keeping all locations accessible on demand, the system SHALL filter known locations on screen entry to $\ge 5$ starts by default (`minStarts = 5`) and provide Material 3 filter controls (header action button with badge, active filter chip strip with 1-tap removal, and modal bottom sheet with keyword search and starts presets) rendering filtered locations in the main list (Sprint 2026-45.11, ATT-5823, extending `REQ-UI-165`, `REQ-UI-180`, `REQ-UI-186`, `REQ-DAT-011`):
+1. *Default Start Count Filter Contract (`REQ-UI-466.1`)*:
+• On initialization of `KnownLocationsViewModel` / entry to `KnownLocationsScreen`, the filter criteria SHALL always default to `minStarts = 5` (`KnownLocationsFilterCriteria(query = "", minStarts = 5)`).
+• The starts threshold predicate SHALL evaluate against the authoritative effective start count (`startsByLocationId[item.id] ?: item.hitCount`) to maintain 1:1 consistency with the card badges.
+2. *Header Filter Action Button with Active Badge (`REQ-UI-466.2`)*:
+• In the top header of `KnownLocationsScreen`, a `FilterActionButton` SHALL be positioned adjacent to the sort button.
+• When any filter dimension is active (`isFilterActive == true`), the button SHALL display a `BadgedBox` badge indicating `activeFilterCount`.
+3. *Active Filter Chips Row (`REQ-UI-466.3`)*:
+• Directly beneath the header, when filters are active, an `ActiveKnownLocationsFilterChipsRow` SHALL display removable chips (`RemovableFilterChip`) for active dimensions (e.g., `"≥ 5 Starts"`, keyword query) and a "Clear all" button.
+• Tapping a chip's remove icon (`×`) SHALL immediately clear that criterion without opening the bottom sheet. Clearing starts threshold resets `minStarts = null`, showing all locations (including 1–4 starts).
+4. *Modal Filter Bottom Sheet (`REQ-UI-466.4`)*:
+• Tapping the filter action button SHALL open `KnownLocationsFilterBottomSheet` (built on `FilterBottomSheetScaffold`).
+• The sheet SHALL include text search for location name/coordinates and filter chip presets for minimum starts: $\ge 3$, $\ge 5$, $\ge 10$, $\ge 25$, plus "Reset all" and "OK" actions.
+5. *Filtered List Content & Fallback (`REQ-UI-466.5`)*:
+• `KnownLocationsListContent` SHALL render `uiState.filteredLocations` rather than unfiltered `uiState.locations`.
+• When `filteredLocations` is empty while filters are active, an informative empty-state message (`filter_no_matching_locations`) with a reset button SHALL be displayed.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Extending `REQ-UI-165` (Locations Management), `REQ-UI-180` (Streamlined management & search), `REQ-DAT-011` (Dynamic starts count).
+2. *Historical Origin & Commit Trace*: `ATT-1382` (`REQ-UI-165`), `ATT-1871`/`ATT-2051` (`REQ-UI-180`), `ATT-2134` (`REQ-DAT-011`).
+3. *Root Reason for Existing Formulation*: Originally designed as an administrative table displaying all detected locations without thresholding. Clutter from 1–4 starts was unaddressed.
+4. *Preservation of Core Invariants*: Stored SQLite locations are never permanently removed or mutated; clearing filter reveals all records; authoritative starts formula (`startsByLocationId[item.id] ?: item.hitCount`) and all item click/edit/context-menu handlers are strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the athlete opens the "Lieblingsorte" screen,
+• *When* the list renders initially,
+• *Then* only locations with $\ge 5$ effective starts are displayed, and an active filter chip `"≥ 5 Starts"` is visible.
+• *Given* active filters on "Lieblingsorte",
+• *When* the athlete taps the `×` on the `"≥ 5 Starts"` chip or chooses "Reset all",
+• *Then* `minStarts` is cleared to `null` and all locations (including 1–4 starts) are displayed.
+• *Given* the athlete tapping the filter button in the header,
+• *When* the bottom sheet opens,
+• *Then* it displays `FilterBottomSheetScaffold` with search query input and presets for $\ge 3$, $\ge 5$, $\ge 10$, $\ge 25$ starts.
+
+**Invariants**: SQLite database schema, location records, click handlers, delete dialog, and unit conversion invariants MUST NOT be degraded.
+
 
 
 

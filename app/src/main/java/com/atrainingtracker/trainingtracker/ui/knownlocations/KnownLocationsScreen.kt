@@ -89,6 +89,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.elevation.ElevationSource
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
+import com.atrainingtracker.trainingtracker.ui.common.filters.FilterActionButton
 import com.atrainingtracker.trainingtracker.ui.components.DeleteConfirmationDialog
 import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
 import com.atrainingtracker.trainingtracker.ui.map.DarkMapAntiFlashOverlay
@@ -127,6 +128,7 @@ fun KnownLocationsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var locationPendingDeletion by remember { mutableStateOf<KnownLocationItem?>(null) }
+    var showFilterSheet by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier.fillMaxSize()
@@ -150,22 +152,33 @@ fun KnownLocationsScreen(
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
                     )
 
-                    var showSortMenu by remember { mutableStateOf(false) }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        FilterActionButton(
+                            onClick = { showFilterSheet = true },
+                            isFilterActive = uiState.filterCriteria.isNotEmpty,
+                            activeFilterCount = uiState.filterCriteria.activeFilterCount,
+                            modifier = Modifier.testTag("known_locations_filter_button")
+                        )
 
-                    Box {
-                        IconButton(
-                            onClick = { showSortMenu = true },
-                            modifier = Modifier.testTag("known_locations_sort_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.Sort,
-                                contentDescription = stringResource(R.string.sort),
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
+                        var showSortMenu by remember { mutableStateOf(false) }
+
+                        Box {
+                            IconButton(
+                                onClick = { showSortMenu = true },
+                                modifier = Modifier.testTag("known_locations_sort_button")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.Sort,
+                                    contentDescription = stringResource(R.string.sort),
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
 
                         DropdownMenu(
                             containerColor = MaterialTheme.colorScheme.surface,
@@ -208,7 +221,23 @@ fun KnownLocationsScreen(
                             }
                         }
                     }
+                    }
                 }
+            }
+        }
+
+        // Active Filter Chips Strip (REQ-UI-466.3)
+        if (uiState.filterCriteria.isNotEmpty) {
+            Surface(
+                color = MaterialTheme.colorScheme.surface,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                ActiveKnownLocationsFilterChipsRow(
+                    criteria = uiState.filterCriteria,
+                    onRemoveQuery = { viewModel.setSearchQuery("") },
+                    onRemoveMinStarts = { viewModel.setMinStarts(null) },
+                    onClearAll = { viewModel.clearFilters() }
+                )
             }
         }
 
@@ -224,6 +253,16 @@ fun KnownLocationsScreen(
             onClearHome = { viewModel.clearHomeLocation() },
             onDelete = { locationPendingDeletion = it },
             modifier = Modifier.fillMaxSize()
+        )
+    }
+
+    // Modal Filter Bottom Sheet (REQ-UI-466.4)
+    if (showFilterSheet) {
+        KnownLocationsFilterBottomSheet(
+            criteria = uiState.filterCriteria,
+            onApplyCriteria = { viewModel.setFilterCriteria(it) },
+            onClearAll = { viewModel.clearFilters() },
+            onDismissRequest = { showFilterSheet = false }
         )
     }
 
@@ -301,6 +340,29 @@ private fun KnownLocationsListContent(
                 )
             }
         }
+    } else if (uiState.filteredLocations.isEmpty()) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(32.dp)
+                .padding(bottom = bottomNavPadding),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    imageVector = Icons.Default.Place,
+                    contentDescription = null,
+                    modifier = Modifier.size(64.dp),
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = stringResource(R.string.filter_no_matching_locations),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
     } else {
         LazyColumn(
             modifier = modifier
@@ -315,7 +377,7 @@ private fun KnownLocationsListContent(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(
-                items = uiState.locations,
+                items = uiState.filteredLocations,
                 key = { it.id }
             ) { item ->
                 KnownLocationCard(

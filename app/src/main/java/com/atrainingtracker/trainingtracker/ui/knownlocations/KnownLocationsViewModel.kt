@@ -56,11 +56,15 @@ data class KnownLocationsUiState(
     val isLocationAvailable: Boolean = false,
     val userLocation: LatLng? = null,
     val searchQuery: String = "",
+    val filterCriteria: KnownLocationsFilterCriteria = KnownLocationsFilterCriteria(),
     val isMetric: Boolean = true,
     val isLoading: Boolean = false,
     val selectedLocationForEdit: KnownLocationItem? = null,
     val showMapInEditDialog: Boolean = false
-)
+) {
+    val isFilterActive: Boolean get() = filterCriteria.isNotEmpty
+    val activeFilterCount: Int get() = filterCriteria.activeFilterCount
+}
 
 /**
  * ViewModel orchestrating Known Start Locations screen state, search filtering,
@@ -115,7 +119,7 @@ class KnownLocationsViewModel @JvmOverloads constructor(
                 }
                 _uiState.update { state ->
                     val sorted = applySort(items, state.sortOrder, state.userLocation, startsMapping)
-                    val filtered = applyFilter(sorted, state.searchQuery)
+                    val filtered = applyFilter(sorted, state.filterCriteria, startsMapping)
                     state.copy(
                         locations = sorted,
                         filteredLocations = filtered,
@@ -154,7 +158,7 @@ class KnownLocationsViewModel @JvmOverloads constructor(
                         } else {
                             state.locations
                         }
-                        val filtered = applyFilter(sorted, state.searchQuery)
+                        val filtered = applyFilter(sorted, state.filterCriteria, startsMapping)
                         state.copy(
                             startsByLocationId = startsMapping,
                             locations = sorted,
@@ -179,7 +183,7 @@ class KnownLocationsViewModel @JvmOverloads constructor(
                             userLocation = loc,
                             isLocationAvailable = locationAvailable,
                             locations = sorted,
-                            filteredLocations = applyFilter(sorted, state.searchQuery)
+                            filteredLocations = applyFilter(sorted, state.filterCriteria, state.startsByLocationId)
                         )
                     }
                 }
@@ -197,7 +201,7 @@ class KnownLocationsViewModel @JvmOverloads constructor(
     fun setSortOrder(order: KnownLocationSortOrder) {
         _uiState.update { state ->
             val sorted = applySort(state.locations, order, state.userLocation, state.startsByLocationId)
-            val filtered = applyFilter(sorted, state.searchQuery)
+            val filtered = applyFilter(sorted, state.filterCriteria, state.startsByLocationId)
             state.copy(
                 sortOrder = order,
                 locations = sorted,
@@ -211,12 +215,49 @@ class KnownLocationsViewModel @JvmOverloads constructor(
      */
     fun setSearchQuery(query: String) {
         _uiState.update { state ->
-            val filtered = applyFilter(state.locations, query)
+            val newCriteria = state.filterCriteria.copy(query = query)
+            val filtered = applyFilter(state.locations, newCriteria, state.startsByLocationId)
             state.copy(
                 searchQuery = query,
+                filterCriteria = newCriteria,
                 filteredLocations = filtered
             )
         }
+    }
+
+    /**
+     * Applies new multi-dimensional filter criteria (REQ-UI-466).
+     */
+    fun setFilterCriteria(criteria: KnownLocationsFilterCriteria) {
+        _uiState.update { state ->
+            val filtered = applyFilter(state.locations, criteria, state.startsByLocationId)
+            state.copy(
+                searchQuery = criteria.query,
+                filterCriteria = criteria,
+                filteredLocations = filtered
+            )
+        }
+    }
+
+    /**
+     * Updates minimum starts threshold without affecting active query (REQ-UI-466.1, REQ-UI-466.3).
+     */
+    fun setMinStarts(minStarts: Int?) {
+        _uiState.update { state ->
+            val newCriteria = state.filterCriteria.copy(minStarts = minStarts)
+            val filtered = applyFilter(state.locations, newCriteria, state.startsByLocationId)
+            state.copy(
+                filterCriteria = newCriteria,
+                filteredLocations = filtered
+            )
+        }
+    }
+
+    /**
+     * Resets all filter criteria to empty (minStarts = null, query = "").
+     */
+    fun clearFilters() {
+        setFilterCriteria(KnownLocationsFilterCriteria(query = "", minStarts = null))
     }
 
     /**
@@ -409,14 +450,21 @@ class KnownLocationsViewModel @JvmOverloads constructor(
         return result
     }
 
-    private fun applyFilter(items: List<KnownLocationItem>, query: String): List<KnownLocationItem> {
-        val trimmed = query.trim().lowercase()
-        if (trimmed.isEmpty()) return items
+    private fun applyFilter(
+        items: List<KnownLocationItem>,
+        criteria: KnownLocationsFilterCriteria,
+        startsMapping: Map<Long, Int>
+    ): List<KnownLocationItem> {
         return items.filter { item ->
-            item.name.lowercase().contains(trimmed) ||
-            item.latLng.latitude.toString().contains(trimmed) ||
-            item.latLng.longitude.toString().contains(trimmed)
+            val effectiveStarts = startsMapping[item.id] ?: item.hitCount
+            criteria.matches(item, effectiveStarts)
         }
+    }
+
+    @VisibleForTesting
+    internal fun applyFilter(items: List<KnownLocationItem>, query: String): List<KnownLocationItem> {
+        val criteria = KnownLocationsFilterCriteria(query = query, minStarts = null)
+        return applyFilter(items, criteria, emptyMap())
     }
 
     private fun groupClustersByLocation(

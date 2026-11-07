@@ -1503,6 +1503,12 @@
     <string name="filter_section_recordings">Recordings</string>
     <string name="filter_min_recordings_chip_format">≥ %1$d recordings</string>
     <string name="filter_no_matching_clusters">No favorite tracks match the active filters</string>
+    <!-- Favorite Locations Filtering (ATT-5823) -->
+    <string name="filter_known_locations_title">Filter Favorite Locations</string>
+    <string name="filter_search_known_locations_hint">Search location name…</string>
+    <string name="filter_section_starts">Starts</string>
+    <string name="filter_min_starts_chip_format">≥ %1$d starts</string>
+    <string name="filter_no_matching_locations">No favorite locations match the active filters</string>
     <string name="filter_sensors_title">Filter Sensors</string>
     <string name="filter_section_protocol">Protocol</string>
     <string name="filter_section_category">Sensor Category</string>
