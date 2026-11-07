@@ -1308,5 +1308,20 @@
   5. *Clean-Room Governance & Regression Execution (`TST-PRO-034.5`)*:
   • Execute `python3 tools/verify_requirement_governance.py` (exit 0) and targeted build tests.
 
+### TST-PRO-035: **Standalone Agile Agentic ASPICE (AAA) Core Framework, Swiss Cheese Reliability & Starter Templates Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-035`
+- **Component**: **Höchstmaß Core Framework & Starter Templates**
+- **Jira**: `ATT-3922`
+- **Test Description**:
+  1. *README, Project Protocol, Epigraph & Etymology Callout Verification (`TST-PRO-035.1`, `HoechstmassCoreFrameworkContractTest.kt`)*:
+  • Verify `tools/hoechstmass/README.md` and `tools/hoechstmass/docs/project_protocol.md` exist and contain the ChatGPT epigraph quote, human/AI boundary attribution, cross-model review principle, Höchstmaß etymology callout (`/ˈhøːçstˌmaːs/`), and Swiss Cheese formula ($P = p_1 \cdot p_2 \cdots p_n$).
+  2. *Generalized Document Triad Templates Contract Verification (`TST-PRO-035.2`, `HoechstmassCoreFrameworkContractTest.kt`)*:
+  • Verify existence and content of generalized `.agents/rules/aspice_governance.md` (8 Core Rules), `docs/coding_standards.md` (§1.1–§1.5 invariants), and `docs/design_guidelines.md` (component heuristics).
+  3. *10 Generalized Skills & Deliverable Templates Verification (`TST-PRO-035.3`, `HoechstmassCoreFrameworkContractTest.kt`)*:
+  • Verify existence of all 10 project-agnostic `SKILL.md` files under `tools/hoechstmass/.agents/skills/` and all 6 markdown templates under `tools/hoechstmass/templates/`.
+  4. *Clean-Room Governance & Regression Execution (`TST-PRO-035.4`)*:
+  • Execute `python3 tools/verify_requirement_governance.py` (exit 0) and targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.*"`.
+
+
 
 

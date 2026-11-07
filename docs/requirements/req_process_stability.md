@@ -1952,5 +1952,50 @@ The workflow SHALL mandate that:
 
 **Invariants**: Zero runtime app code modifications; backwards-compatible CLI tooling; 100% clean-room test suite pass rate.
 
+### REQ-PRO-035: Standalone Agile Agentic ASPICE (AAA) Core Framework, Swiss Cheese Reliability & Starter Templates [Verified]
+- **Tests**: `TST-PRO-035` | **Tickets**: `ATT-3922`
+- **Implementation**: `tools/hoechstmass/README.md`, `tools/hoechstmass/docs/project_protocol.md`, `tools/hoechstmass/.agents/`, `tools/hoechstmass/docs/`, `tools/hoechstmass/templates/`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/HoechstmassCoreFrameworkContractTest.kt`
+- **Rationale**: Extract and package the Agile Agentic ASPICE (AAA) methodology forged across 53+ sprints and 1,100+ tickets into a standalone, project-agnostic open-source skill set under `tools/hoechstmass/` (ATT-3922, Part 1 of 3, extending `REQ-PRO-014`, `REQ-PRO-024`, `REQ-PRO-026`, `REQ-PRO-027`, and `REQ-PRO-034`):
+1. *Branded README, Protocol, Epigraph Quote & Etymology (`REQ-PRO-035.1`)*:
+• `tools/hoechstmass/README.md` and `tools/hoechstmass/docs/project_protocol.md` SHALL prominently feature the opening epigraph quote: *„Power without control can become destructive. Power guided by intelligence becomes excellence.“* — **ChatGPT**.
+• The documentation SHALL define the transparent attribution principle and crystal-clear human/AI boundary (`agent1`, `agent2`, `coordinator`, `human`), rejecting unattributed vibe coding.
+• The documentation SHALL codify cross-model adversarial review (both intra-sprint `pro` $\leftrightarrow$ `flash` ping-pong and cross-vendor UI screenshot review via Gemini + ChatGPT).
+• The documentation SHALL provide an etymology callout box for German **Höchst·maß** (`/ˈhøːçstˌmaːs/` = *Höchst-* supreme/highest + *-maß* precision standard / *Maßarbeit*), deliberately retaining German special characters (`ö` and `ß`) to honor Automotive SPICE engineering roots.
+• The documentation SHALL formalize the Swiss Cheese Multiplicative Defect Reduction Model ($P(\text{escaped defect}) = p_1 \cdot p_2 \cdots p_n$) across 4 decorrelation layers: Context Isolation, Cross-Model Diversity, Deterministic Ground-Truth Oracles, and Human Final Gate.
+• The documentation SHALL specify the 5-Stage Agile ASPICE Lifecycle with role-separated gate governance.
+2. *Universal Document Triad Starter Templates (`REQ-PRO-035.2`)*:
+• `tools/hoechstmass/.agents/rules/aspice_governance.md` SHALL supply project-agnostic 8 Core Rules.
+• `tools/hoechstmass/docs/coding_standards.md` SHALL supply universal software construction invariants (1.1 Reuse Before Create/DRY, 1.2 Chesterton's Fence for Empty Callbacks, 1.3 Never Sort on Formatted Display Strings, 1.4 Confirmation for Destructive Ops, 1.5 Reactive Stream Subscription Over Static Snapshot Reads) with extensible project placeholder sections.
+• `tools/hoechstmass/docs/design_guidelines.md` SHALL supply universal UI/UX component selection heuristics (1.1 Segmented Buttons for binary choices, 1.2 Categorical FilterChips with 'Other' on far right, 1.3 Dropdowns for >4 options, 1.4 Discrete Sliders for >=5 scalars, 2.1 Dialog Hierarchy & Edge Padding).
+3. *Generalized Stage & Ceremony Skills and Deliverable Templates (`REQ-PRO-035.3`)*:
+• `tools/hoechstmass/.agents/skills/` SHALL contain parameterized, project-agnostic `SKILL.md` files for all 10 skills: `stage1-analysis`, `stage2-req-test-spec`, `stage3-impl-plan`, `stage4-implementation`, `stage5-verification`, `sprint-planner`, `jira-workflow`, `regression-bisect`, `brainstormer`, and `release-manager`.
+• `tools/hoechstmass/templates/` SHALL supply deliverable templates (`analysis_template.md`, `test_spec_template.md`, `plan_template.md`, `walkthrough_template.md`, `backlog_ticket_template.md`, `sprint_retro_template.md`).
+4. *Automated Framework Integrity Contract Test (`REQ-PRO-035.4`)*:
+• `app/src/test/java/com/atrainingtracker/trainingtracker/build/HoechstmassCoreFrameworkContractTest.kt` SHALL verify presence, non-emptiness, epigraph quote, etymology callout, mathematical model, 8 core rules, 10 skills, and deliverable templates under `tools/hoechstmass/`.
+• Zero modifications to active runtime source code in `app/src/main/` or active governance in `.agents/` and `docs/`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-035` under Epic Standalone / Framework Initiative (*Clean Code & Developer Tools*), extending `REQ-PRO-014`, `REQ-PRO-024`, `REQ-PRO-026`, `REQ-PRO-027`, and `REQ-PRO-034`. Targets `tools/hoechstmass/` and `app/src/test/java/com/atrainingtracker/trainingtracker/build/HoechstmassCoreFrameworkContractTest.kt`.
+2. *Historical Origin & Commit Trace*: Evolved across 53+ sprints: Sprint 2026-39.1 (`ATT-728`), Sprint 2026-42.1 (`ATT-3323`), Sprint 2026-44.1 (`ATT-4864`), Sprint 2026-45.1 (`ATT-5431`), and Sprint 2026-45.9 (`ATT-3922`).
+3. *Root Reason for Existing Formulation*: Existing rules and skills in `.agents/` and `docs/` are tightly coupled to *aTrainingTracker* (`ATT-` prefix, fitness telemetry, Android specifics), preventing reuse in general software engineering projects.
+4. *Preservation of Core Invariants*: Zero changes to existing production code in `app/src/main/`; active governance in `.agents/` and `docs/` remains untouched; Human Decision Gate on parent tickets remains inviolable; clean-room test suite passes 100%.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the `tools/hoechstmass/` directory structure,
+• *When* inspected,
+• *Then* `README.md` and `docs/project_protocol.md` contain the ChatGPT quote, cross-model review rationale, German Höchstmaß etymology callout, Swiss Cheese mathematical defect model, and 5-stage lifecycle.
+• *Given* the Document Triad templates in `tools/hoechstmass/`,
+• *When* inspected,
+• *Then* `.agents/rules/aspice_governance.md`, `docs/coding_standards.md`, and `docs/design_guidelines.md` are generalized and project-agnostic.
+• *Given* the skills and templates in `tools/hoechstmass/`,
+• *When* inspected,
+• *Then* all 10 `SKILL.md` files and 6 deliverable markdown templates exist and are parameterized.
+• *Given* `HoechstmassCoreFrameworkContractTest`,
+• *When* executed via Gradle,
+• *Then* all framework structural and content assertions pass 100%.
+
+**Invariants**: Active project rules and runtime code remain untouched; zero regression in test suite or governance.
+
+
 
 
