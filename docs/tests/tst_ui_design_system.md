@@ -7409,5 +7409,19 @@
   3. *Clean-Room Targeted Regression Execution (`TST-UI-457.3`)*:
   • Execute targeted package tests (`com.atrainingtracker.trainingtracker.ui.aftermath.photos.*`, `build.*`) asserting 100% pass rate.
 
+### TST-UI-458: **Uniform Action-Oriented Phrasing for Strava Bulk Export Card Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-458`, `REQ-UI-293`, `REQ-MIG-048`
+- **Component**: `strings.xml` (all 9 locales), `ImportFormatLocalizationTest.kt`, `ImportFormatCardsContractTest.kt`
+- **Jira**: `ATT-5679`
+- **Test Description**:
+  1. *9-Language Action Verb Parity Unit Tests (`TST-UI-458.1`, `ImportFormatLocalizationTest.kt`)*:
+  • Verify that `import_strava_archive_title` exists, is non-empty, and contains the required action verb in EN, DE, ES, FR, IT, JA, NL, PL, PT.
+  • Verify zero decorative inline emojis in string resources across all 9 locales.
+  2. *Layout & Composable Reference Contract Test (`TST-UI-458.2`, `ImportFormatCardsContractTest.kt`)*:
+  • Verify `ImportBackupTabsScreen.kt` binds `StravaArchiveImportCard` title with `R.string.import_strava_archive_title`.
+  3. *Clean-Room Targeted Regression Execution (`TST-UI-458.3`)*:
+  • Execute targeted package tests (`com.atrainingtracker.trainingtracker.migration.*`, `com.atrainingtracker.trainingtracker.localization.*`, `build.*`) asserting 100% pass rate.
+
+
 
 

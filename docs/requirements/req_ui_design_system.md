@@ -13677,5 +13677,43 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Clamped resolution $[256 \dots 1200\text{px}]$; zero OOM risk; asynchronous decoding on `Dispatchers.IO`; zero regression on `calculatePhotoItemDimensions`.
 
+### REQ-UI-458: Uniform Action-Oriented Phrasing for Format Import Cards (Strava Bulk Export) [Verified]
+- **Tests**: `TST-UI-458` | **Tickets**: `ATT-5679`
+- **Implementation**: `strings.xml` (all 9 locales), `ImportFormatLocalizationTest.kt`, `ImportFormatCardsContractTest.kt`
+- **Rationale**: On the Import tab of *Import & Backup* (`ImportBackupTabsScreen.kt`), format import cards display actionable titles with explicit action verbs (`import_fit_title`, `import_tcx_title`, `import_gpx_title`). In contrast, `import_strava_archive_title` previously omitted the action verb (*„Strava-Bulk-Export (ZIP)“* / *„Strava Bulk Export (ZIP)“*), confusing athletes into believing the card was an export action. REQ-UI-458 standardizes `import_strava_archive_title` across all 9 supported locales to use active verb phrasing (Sprint 2026-45.10, ATT-5679, refining `REQ-UI-293` and `REQ-MIG-048`):
+1. *9-Language Action Verb Parity (`REQ-UI-458.1`)*:
+• `values/`: *„Import Strava Bulk Export (ZIP)“*
+• `values-de/`: *„Strava-Bulk-Export (ZIP) importieren“*
+• `values-es/`: *„Importar exportación masiva de Strava (ZIP)“*
+• `values-fr/`: *„Importer une exportation en bloc Strava (ZIP)“*
+• `values-it/`: *„Importa esportazione in blocco Strava (ZIP)“*
+• `values-ja/`: *„Strava一括エクスポート (ZIP) をインポート“*
+• `values-nl/`: *„Strava bulk-export (ZIP) importeren“*
+• `values-pl/`: *„Importuj zbiorczy eksport Strava (ZIP)“*
+• `values-pt/`: *„Importar exportação em massa do Strava (ZIP)“*
+2. *Resource Key & Layout Stability (`REQ-UI-458.2`)*: Resource identifier `import_strava_archive_title` remains stable; `StravaArchiveImportCard` composable binding in `ImportBackupTabsScreen.kt` remains invariant.
+3. *Prohibition of Emojis (`REQ-UI-458.3`)*: String resources SHALL NOT contain decorative inline emojis (`ATT-5400`).
+4. *Grammatical Symmetry Across Format Cards (`REQ-UI-458.4`)*: Strava card title phrasing SHALL match the grammatical structure of adjacent FIT, TCX, and GPX format import cards (`REQ-UI-293`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-UI-293` (*Format-Specific Import Tab Architecture with Uniform Multi-Document Source Triad*) and `REQ-MIG-048` (*Strava Bulk Export Ingestion*), targeting `import_strava_archive_title` across all 9 `strings.xml` locales.
+2. *Historical Origin & Commit Trace*: `ATT-2623` (`0f40ce7d`, Sprint 2026-41.1: import format cards) and `ATT-4957` (`d814238e`, Sprint 2026-45.6: Strava bulk archive card introduction).
+3. *Root Reason for Existing Formulation*: In `ATT-4957`, the card was named directly after the archive payload format without considering the verbal action phrasing used across the other cards on the screen.
+4. *Preservation of Core Invariants*: String key stability preserved; ingestion logic unchanged; zero emoji regression; 100% 9-language translation parity.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete viewing the Import tab in German,
+• *When* reading the Strava card title,
+• *Then* it displays *„Strava-Bulk-Export (ZIP) importieren“*.
+• *Given* an athlete viewing the Import tab in English,
+• *When* reading the Strava card title,
+• *Then* it displays *„Import Strava Bulk Export (ZIP)“*.
+• *Given* any of the 9 supported locales,
+• *When* `ImportFormatLocalizationTest` executes,
+• *Then* `import_strava_archive_title` is non-empty, contains the localized action verb, and contains zero emojis.
+
+**Invariants**: String resource key stability (`import_strava_archive_title`); zero logic changes to `StravaBulkExportImporter.kt` or `ImportBackupTabsScreen.kt`; zero regressions on adjacent format cards.
+
+
 
 

@@ -1864,7 +1864,7 @@
     <string name="import_fit_summary_success">Successfully imported %1$d workouts (%2$d duplicates skipped).</string>
     <string name="import_fit_summary_with_errors">Imported %1$d workouts, %2$d duplicates skipped, %3$d failed.</string>
     <!-- Strava Bulk Export Importer (ATT-4957 / REQ-MIG-048) -->
-    <string name="import_strava_archive_title">Strava Bulk Export (ZIP)</string>
+    <string name="import_strava_archive_title">Import Strava Bulk Export (ZIP)</string>
     <string name="import_strava_archive_description">Import workouts from a Strava export archive with full metadata, descriptions, and gear (.zip).</string>
     <string name="import_strava_archive_button">Select Strava Archive (ZIP)</string>
     <string name="import_strava_archive_progress">Importing Strava archive (%1$d of %2$d)…</string>
