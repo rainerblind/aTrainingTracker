@@ -1666,7 +1666,7 @@
     <string name="tuning_group_sensors_gps">Sensors &amp; GPS</string>
     <string name="tuning_group_analysis_models">Analysis &amp; Models</string>
     <string name="advanced_tuning_warning_title">Expert Settings</string>
-    <string name="advanced_tuning_warning_desc">Modifying these parameters alters core tracking heuristics, sensor filtering, and battery saving behavior. You can restore factory defaults at any time.</string>
+    <string name="advanced_tuning_warning_desc">Customize advanced layout, model, and sensor parameters here. You can restore factory defaults at any time using the reset icon.</string>
     <string name="tuning_cat_battery_saver">AMOLED Battery Saver</string>
     <string name="tuning_cat_gps">GPS &amp; Location Filtering</string>
     <string name="tuning_cat_elevation">Elevation &amp; Gradient Dynamics</string>

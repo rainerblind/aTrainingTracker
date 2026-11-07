@@ -1447,7 +1447,7 @@
     <string name="tuning_group_sensors_gps">センサーとGPS</string>
     <string name="tuning_group_analysis_models">分析とモデル</string>
     <string name="advanced_tuning_warning_title">エキスパート設定</string>
-    <string name="advanced_tuning_warning_desc">これらのパラメータを変更すると、トラッキングのヒューリスティック、センサーフィルタリング、およびバッテリー節約動作が変更されます。いつでも工場出荷時のデフォルトに戻すことができます。</string>
+    <string name="advanced_tuning_warning_desc">ここでは高度なレイアウト、モデル、センサーのパラメータをカスタマイズできます。リセットアイコンを使用していつでも初期設定に戻すことができます。</string>
     <string name="tuning_cat_battery_saver">AMOLEDバッテリーセーバー</string>
     <string name="tuning_cat_gps">GPS・位置フィルタリング</string>
     <string name="tuning_cat_elevation">高度・勾配ダイナミクス</string>

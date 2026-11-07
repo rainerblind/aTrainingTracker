@@ -4109,7 +4109,7 @@ Specifically:
 
 **Invariants**: Status bar boundary constraints (`REQ-SET-069`), MinimumDragHandle dimensions, and system navigation bar padding additions MUST NOT be broken.
 
-### REQ-UI-222: Settings/UI: Modular, Collapsible Subsection Accordion Architecture for Advanced Settings [Verified]
+### REQ-UI-222: Settings/UI: Modular, Collapsible Subsection Accordion Architecture and Advisory Notice for Advanced Settings [Verified]
 - **Tests**: `AdvancedTuningDialog.kt`
 - **Implementation**: Structure Advanced Settings into a modular, collapsible subsection architecture featuring Material 3 accordion cards with live active-value summary subtitles, initial collapsed state, and animated expand/collapse mechanics.
 - **Rationale**: The system SHALL structure the Advanced Settings dialog (`AdvancedTuningDialog.kt`) into a modular, collapsible subsection architecture featuring Material 3 accordion cards with live active-value summary subtitles and animated expand/collapse mechanics (ATT-1821, ATT-1957):
@@ -4140,17 +4140,21 @@ Specifically:
 4. *Extensible & Decoupled Architecture*:
 • Individual subsection composables SHALL be declared as separate, focused composable functions (`CockpitTypographySection`, `AmoledBatterySaverSection`, `SensorsGpsFilterSection`, `AftermathAnalysisSection`, `WorkoutMasksAndCardsSection`) with typed parameters or state callbacks, decoupled from the outer bottom sheet layout.
 5. *Preservation of Core Invariants*:
-• Top advisory warning card (`Icons.Default.Warning`, `errorContainer` tint) SHALL remain visible at the top of the dialog.
+• Top advisory notice (`TuningWarningNotice`) SHALL remain visible at the top of the dialog and screen.
 • Factory reset action (`R.string.reset_to_defaults`) SHALL atomically restore all 25+ parameters to defaults and immediately update all 5 subtitle summaries.
 • `AppBottomSheetContent` header title, icon (`Icons.Default.Tune`), and Save/Cancel footer actions remain 100% strictly preserved.
 • DataStore persistence keys, default values, and downstream reactive consumers remain 100% unchanged.
 • 100% 9-language localization parity across all 9 supported locales.
+6. *Friendly Advisory Notice Formulation & Component Modernization (`REQ-UI-222.6`, `ATT-5819`)*:
+• In `TuningFormControls.kt`, `TuningWarningNotice` SHALL be presented as a constructive advisory notice utilizing an informative container (`surfaceVariant` or `secondaryContainer` styling with `Icons.Default.Tune` or `Icons.Default.Info`), eliminating alarmist error-red styling (`errorContainer` and `Icons.Default.Warning`).
+• The advisory description (`R.string.advanced_tuning_warning_desc`) SHALL matter-of-factly explain that advanced parameters for layouts, models, and sensors are configured here, and that factory defaults can be restored at any time via the reset action.
+• 100% 9-language translation parity SHALL be maintained across EN, DE, ES, FR, IT, JA, NL, PL, PT with zero inline emojis and valid entity formatting.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: `REQ-UI-222`, refining and restructuring the UI presentation layer of `REQ-SET-073`, `REQ-UI-201`, `REQ-UI-212`, and `REQ-UI-216` under Epic `ATT-355` (*Good and consistent UI*).
-2. *Historical Origin & Commit Trace*: Sprint 2026-40.8 (Commit `e2303aa7`, ATT-1821 / ATT-1871) and Sprint 2026-40.9 (`ATT-1957`).
-3. *Root Reason for Existing Formulation*: Appending settings sequentially into a flat `Column` created an unmanageable 768-line file and 25+ option scroll list lacking category summaries and discoverability. In ATT-1821, the first section (`COCKPIT_TYPOGRAPHY`) was initialized as expanded by default (`setOf(TuningSection.COCKPIT_TYPOGRAPHY.name)`) to immediately showcase the new typography HUD preview feature. However, this forced athletes wanting to adjust Battery Saver, GPS/Sensors, or Workout Cards to scroll through the entire cockpit preview every time they opened the dialog. In ATT-1957, all 5 sections are initially collapsed (`emptySet()`).
-4. *Preservation of Core Invariants*: All parameter schemas, slider ranges, DataStore keys, advisory warning card, reset button, and zero tonal elevation (`REQ-UI-218`) are 100% strictly preserved.
+1. *Original Requirement ID & Target*: `REQ-UI-222`, refining and restructuring the UI presentation layer of `REQ-SET-073`, `REQ-UI-201`, `REQ-UI-212`, and `REQ-UI-216` under Epic `ATT-355` (*Good and consistent UI*). Amends `TuningWarningNotice` under `ATT-5819`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-40.8 (Commit `e2303aa7`, ATT-1821 / ATT-1871), Sprint 2026-40.9 (`ATT-1957`), and Sprint 2026-45.12 (`ATT-5819`).
+3. *Root Reason for Existing Formulation*: Defensive error-red warning styling and alarming copy focusing strictly on tracking heuristics and sensor corruption were established when Expert Settings only housed experimental GPS and battery dimming options. With the addition of workout cards, cockpit typography, and training models, the alarmist tone became counter-productive and intimidating.
+4. *Preservation of Core Invariants*: Top advisory notice remains permanently visible at the top of Expert Settings; factory reset reassurance and reset button functionality strictly preserved; 100% 9-language parity maintained; DataStore schemas and accordion mechanics strictly unchanged.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete opening Advanced Settings (`AdvancedTuningDialog`),

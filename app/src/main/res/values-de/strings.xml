@@ -1554,7 +1554,7 @@
     <string name="tuning_group_sensors_gps">Sensoren &amp; GPS</string>
     <string name="tuning_group_analysis_models">Analyse &amp; Modelle</string>
     <string name="advanced_tuning_warning_title">Experteneinstellungen</string>
-    <string name="advanced_tuning_warning_desc">Das Ändern dieser Parameter beeinflusst die Tracking-Heuristik, Sensorfilterung und das Energiesparverhalten. Werkseinstellungen können jederzeit wiederhergestellt werden.</string>
+    <string name="advanced_tuning_warning_desc">Hier können fortgeschrittene Layout-, Modell- und Sensor-Parameter angepasst werden. Über das Reset-Icon können die Einstellungen jederzeit auf die Standardwerte zurückgesetzt werden.</string>
     <string name="tuning_cat_battery_saver">AMOLED-Energiesparmodus</string>
     <string name="tuning_cat_gps">GPS- &amp; Standortfilterung</string>
     <string name="tuning_cat_elevation">Höhen- &amp; Steigungsdynamik</string>

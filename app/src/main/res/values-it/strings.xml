@@ -1467,7 +1467,7 @@
     <string name="tuning_group_sensors_gps">Sensori e GPS</string>
     <string name="tuning_group_analysis_models">Analisi e modelli</string>
     <string name="advanced_tuning_warning_title">Impostazioni avanzate</string>
-    <string name="advanced_tuning_warning_desc">La modifica di questi parametri influisce sulle euristiche di tracciamento, sul filtraggio dei sensori e sul risparmio energetico. È possibile ripristinare i valori predefiniti in qualsiasi momento.</string>
+    <string name="advanced_tuning_warning_desc">Personalizza qui i parametri avanzati di layout, modelli e sensori. È possibile ripristinare i valori predefiniti in qualsiasi momento utilizzando l\'icona di ripristino.</string>
     <string name="tuning_cat_battery_saver">Risparmio batteria AMOLED</string>
     <string name="tuning_cat_gps">Filtraggio GPS e posizione</string>
     <string name="tuning_cat_elevation">Dinamica di altitudine e pendenza</string>

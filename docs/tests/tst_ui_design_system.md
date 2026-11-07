@@ -2487,6 +2487,10 @@
   • Verify string resources `tuning_cat_sensors_gps`, `tuning_cat_workout_masks_cards`, and `tuning_summary_masks_cards_format` are defined identically across all 9 resource directories (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules verifying 100% pass rate with 0 regressions.
+  5. *Advisory Notice Modernization Contract & Localization Tests (`ATT-5819`, `AdvancedTuningVisualContractTest.kt`, `TranslationParityTest.kt`)*:
+  • Verify `TuningWarningNotice` in `TuningFormControls.kt` binds `R.string.advanced_tuning_warning_title` and `R.string.advanced_tuning_warning_desc`.
+  • Verify `TuningWarningNotice` renders an advisory container (`surfaceVariant` or `secondaryContainer` styling with `Icons.Default.Tune` or `Icons.Default.Info`), eliminating alarming error-red styling (`errorContainer` and `Icons.Default.Warning`).
+  • Verify `advanced_tuning_warning_desc` across all 9 locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) conveys constructive customization guidance for layouts, models, and sensors with factory reset reassurance.
 
 ### TST-UI-177: **MapDetailLayout Interactive Draggable Splitter & Viewport Resizing Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-223`

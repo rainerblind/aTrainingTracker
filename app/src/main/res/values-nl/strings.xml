@@ -1467,7 +1467,7 @@
     <string name="tuning_group_sensors_gps">Sensoren &amp; gps</string>
     <string name="tuning_group_analysis_models">Analyse &amp; modellen</string>
     <string name="advanced_tuning_warning_title">Expertinstellingen</string>
-    <string name="advanced_tuning_warning_desc">Het wijzigen van deze parameters beïnvloedt trackingheuristieken, sensorfiltering en batterijbesparing. U kunt te allen tijde de fabrieksinstellingen herstellen.</string>
+    <string name="advanced_tuning_warning_desc">Pas hier geavanceerde lay-out-, model- en sensorparameters aan. U kunt te allen tijde de standaardwaarden herstellen met het herstelpictogram.</string>
     <string name="tuning_cat_battery_saver">AMOLED-batterijbesparing</string>
     <string name="tuning_cat_gps">GPS- &amp; locatiefiltering</string>
     <string name="tuning_cat_elevation">Hoogte- en hellingsdynamiek</string>

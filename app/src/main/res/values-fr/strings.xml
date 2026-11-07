@@ -1468,7 +1468,7 @@
     <string name="tuning_group_sensors_gps">Capteurs et GPS</string>
     <string name="tuning_group_analysis_models">Analyse et modèles</string>
     <string name="advanced_tuning_warning_title">Paramètres experts</string>
-    <string name="advanced_tuning_warning_desc">La modification de ces paramètres altère les heuristiques de suivi, le filtrage des capteurs et l\'économie de batterie. Vous pouvez restaurer les valeurs par défaut à tout moment.</string>
+    <string name="advanced_tuning_warning_desc">Personnalisez ici les paramètres avancés de mise en page, de modèles et de capteurs. Vous pouvez restaurer les valeurs par défaut à tout moment à l\'aide de l\'icône de réinitialisation.</string>
     <string name="tuning_cat_battery_saver">Économiseur de batterie AMOLED</string>
     <string name="tuning_cat_gps">Filtrage GPS et localisation</string>
     <string name="tuning_cat_elevation">Dynamique d\'altitude et de pente</string>
