@@ -885,13 +885,13 @@
     <string name="legacy_import__finished_with_failed">Import zakończony: %1$d zaimportowanych, %2$d pominiętych, %3$d nieudanych z %4$d zeskanowanych plików.</string>
     <string name="cluster_naming__select_existing_route">Wybierz istniejącą trasę</string>
     <string name="cluster_naming__title">Przypisz trening do trasy</string>
-    <string name="cluster_naming__found_recurring">Znaleziono nową trasę z %1$s.</string>
+    <string name="cluster_naming__found_recurring">Nieprzypisana trasa z %1$s.</string>
     <string name="cluster_naming__task_count">Zadanie %1$d z %2$d</string>
-    <string name="cluster_naming__assignment_label">Przypisanie trasy:</string>
+    <string name="cluster_naming__assignment_label">Wybierz istniejącą ulubioną trasę:</string>
     <string name="cluster_naming__create_new">Utwórz nową…</string>
     <string name="cluster_naming__selected_route_label">Wybrana trasa</string>
-    <string name="cluster_naming__new_name_prompt">LUB podaj nową nazwę:</string>
-    <string name="cluster_naming__new_route_name_label">Nazwa nowej trasy</string>
+    <string name="cluster_naming__new_name_prompt">LUB utwórz nową ulubioną trasę:</string>
+    <string name="cluster_naming__new_route_name_label">Nazwa nowej ulubionej trasy</string>
     <string name="cluster_naming__leave_unclustered">Pozostaw niepogrupowane</string>
     <string name="cluster_naming__workout_name_label">Nazwa treningu</string>
     <string name="migration_phase_label">Faza %1$d: %2$s</string>
@@ -2275,27 +2275,27 @@
     <string name="supporter_tier_gold">Pro+ Wspierający Złoty</string>
     <string name="supporter_tier_diamond">Sponsor diamentowy</string>
     <string name="supporter_screen_title">Płać ile chcesz</string>
-    <string name="supporter_screen_subtitle" formatted="false">Wspieraj niezależne śledzenie treningów i zachowaj aTrainingTracker w 100% bez reklam.</string>
+    <string name="supporter_screen_subtitle">Wesprzyj dalszy rozwój aTrainingTracker.</string>
     <string name="supporter_recommended_badge">Polecane</string>
     <string name="supporter_active_tier_prefix">Aktywny poziom: %1$s</string>
-    <string name="supporter_active_tier_thank_you">Dziękujemy za wspieranie niezależnego rozwoju aplikacji fitness!</string>
+    <string name="supporter_active_tier_thank_you">Dziękujemy za wspieranie rozwoju aTrainingTracker!</string>
     <string name="supporter_plan_button_active">Aktywny</string>
     <string name="supporter_plan_button_support">Wspieraj</string>
     <string name="supporter_period_month">miesiąc</string>
     <string name="supporter_period_year">rok</string>
     <string name="supporter_price_per_period">%1$s / %2$s</string>
     <string name="supporter_core_invariant_title" formatted="false">Podstawowe funkcje w 100% darmowe</string>
-    <string name="supporter_core_invariant_body" formatted="false">Rejestrowanie treningów, mapy, telemetria czujników i eksport GPX/TCX/FIT offline pozostają w 100% darmowe na zawsze. Subskrypcje finansują ciągły, niezależny rozwój.</string>
-    <string name="swap_dialog_title">Limit urządzeń (zajęte 2/2 darmowych miejsc)</string>
+    <string name="supporter_core_invariant_body" formatted="false">Rejestrowanie treningów, mapy, telemetria czujników i eksport GPX/TCX/FIT offline pozostają w 100% darmowe na zawsze. Subskrypcje finansują ciągły rozwój aplikacji.</string>
+    <string name="swap_dialog_title">Limit urządzeń (zajęte 2/2 miejsca)</string>
     <string name="swap_dialog_select_device_to_unpair">Wybierz urządzenie do odłączenia:</string>
-    <string name="swap_dialog_message">W planie darmowym można sparować maksymalnie 2 urządzenia jednocześnie (np. GPS + barometr). Aby sparować „%1$s”, odłącz istniejące urządzenie lub odblokuj nielimitowane czujniki przez „Płać ile chcesz”.</string>
+    <string name="swap_dialog_message">W wersji podstawowej można sparować maksymalnie 2 urządzenia jednocześnie (np. GPS + barometr). Aby sparować „%1$s”, odłącz istniejące urządzenie lub wesprzyj dalszy rozwój aplikacji, aby odblokować nielimitowane czujniki.</string>
     <string name="swap_dialog_action_swap">Zamień i sparuj</string>
-    <string name="swap_dialog_action_unlock">Odblokuj nielimitowane czujniki</string>
+    <string name="swap_dialog_action_unlock">Wesprzyj rozwój</string>
     <string name="keep_two_sensors_title">Wybierz 2 aktywne czujniki</string>
-    <string name="keep_two_sensors_message">Twoja subskrypcja wygasła, a darmowy plan obsługuje do 2 aktywnych czujników. Wybierz 2 czujniki, które chcesz zachować. Pozostałe czujniki zostaną rozłączone bez usuwania danych kalibracji ani wyposażenia.</string>
+    <string name="keep_two_sensors_message">Twoja subskrypcja wygasła, a wersja podstawowa obsługuje do 2 aktywnych czujników. Wybierz 2 czujniki, które chcesz zachować. Pozostałe czujniki zostaną rozłączone bez usuwania danych kalibracji ani wyposażenia.</string>
     <string name="keep_two_sensors_selection_header">Aktywne czujniki (%1$d/%2$d):</string>
     <string name="keep_two_sensors_action_confirm">Zatwierdź wybór</string>
-    <string name="keep_two_sensors_action_unlock">Odblokuj nielimitowane czujniki</string>
+    <string name="keep_two_sensors_action_unlock">Wesprzyj rozwój</string>
     <string name="drawer_supporter">Wspierający i Pro</string>
     <string name="drawer_tier_diamond">◆ SPONSOR DIAMENTOWY • Czujniki bez limitu</string>
     <string name="drawer_tier_gold">★ ZŁOTY PRO+ SUPPORTER</string>
@@ -2312,12 +2312,14 @@
     <!-- Milestone Workout Auto-Naming & First Jubilee Celebration (ATT-2308 / REQ-REV-001..005) -->
     <string name="milestone_workout_name_format">%1$d. %2$s: %3$s</string>
     <string name="jubilee_dialog_title">Gratulacje z okazji %1$d. %2$s!</string>
-    <string name="jubilee_dialog_message">Ukończyłeś %1$d treningów (%2$s) w aTrainingTracker! To wspaniały kamień milowy.</string>
+    <string name="jubilee_dialog_message">Ukończyłeś %1$d treningów w dyscyplinie %2$s z aTrainingTracker – to wspaniały kamień milowy! Na pewno będzie ich jeszcze więcej.</string>
+    <string name="jubilee_email_feedback_prompt">Jeśli podoba Ci się aplikacja lub masz pomysły, jak ją ulepszyć, z chęcią poznam Twoją opinię:</string>
+    <string name="jubilee_review_prompt">Podoba Ci się aTrainingTracker? W takim razie szczególnie ucieszy mnie pozytywna ocena w Google Play:</string>
     <string name="jubilee_feedback_prompt">Podoba Ci się aTrainingTracker? Podziel się swoją opinią, oceniając aplikację w Google Play lub wyślij uwagi bezpośrednio e-mailem do Rainera.</string>
     <string name="jubilee_action_review">Oceń w Google Play</string>
     <string name="jubilee_action_email_feedback">Opinia e-mail do Rainera</string>
-    <string name="jubilee_supporter_appeal_title">Wesprzyj 15+ lat niezależnego rozwoju</string>
-    <string name="jubilee_supporter_appeal_message">aTrainingTracker od 2011 roku jest całkowicie wolny od reklam i dba o prywatność. Jeśli aplikacja Ci pomaga, wesprzyj rozwój wersją Pro.</string>
+    <string name="jubilee_supporter_appeal_title">Wesprzyj rozwój</string>
+    <string name="jubilee_supporter_appeal_message">Możesz także wesprzeć finansowo dalszy rozwój aTrainingTracker:</string>
     <string name="jubilee_action_upgrade_pro">Wesprzyj rozwój</string>
     <string name="jubilee_action_dismiss">Trenuj dalej</string>
     <string name="debug_jubilee_preview_button">Podgląd dialogu jubileuszowego</string>
@@ -2328,7 +2330,9 @@
     <string name="garage_detector_dialog_title_gold">Wykryto garaż ligi złotej!</string>
     <string name="garage_detector_dialog_title_diamond">Światowej klasy garaż diamentowy!</string>
     <string name="garage_detector_dialog_message_gold">Gratulacje z okazji posiadania %1$d rowerów, %2$d par butów i %3$d czujników (w tym %4$d mierników mocy) w aTrainingTracker! Twój garaż to liga mistrzowska, ale Twój status to %5$s. Zrób krok naprzód ze statusem Złoty Wspierający Pro+!</string>
+    <string name="garage_detector_dialog_message_gold_strava">Jako aktywny sportowiec Strava Pro z %1$d rowerami, %2$d parami butów i %3$d czujnikami (w tym %4$d miernikami mocy) traktujesz trening poważnie! Twój status w aplikacji to wciąż %5$s. Dopełnij swój profesjonalny zestaw statusem Złoty Wspierający Pro+!</string>
     <string name="garage_detector_dialog_message_diamond">Niesamowite wyposażenie: %1$d rowerów, %2$d par butów i %3$d czujników (w tym %4$d mierników mocy) w aTrainingTracker! Twój garaż to absolutna klasa światowa, ale Twój status to %5$s. Zwieńcz swoją kolekcję statusem Sponsor Diamentowy!</string>
+    <string name="garage_detector_dialog_message_diamond_strava">Aktywny sportowiec Strava Pro ze sprzętem światowej klasy: %1$d rowerów, %2$d par butów i %3$d czujników (w tym %4$d mierników mocy)! Twój status w aplikacji to %5$s. Uzupełnij swój profesjonalny zestaw statusem Sponsor Diamentowy!</string>
     <string name="garage_detector_action_upgrade_gold">Uaktualnij do Złotego Pro (50 € / rok)</string>
     <string name="garage_detector_action_upgrade_diamond">Uaktualnij do Sponsora Diamentowego (100 € / rok)</string>
     <string name="garage_detector_action_dismiss">Później / Kontynuuj trening</string>
@@ -2358,6 +2362,10 @@
     <string name="share_cta_button">Udostępnij</string>
     <string name="share_error_no_gps">Brak zarejestrowanej trasy GPS dla tego treningu</string>
     <string name="share_error_photo_load">Nie udało się załadować wybranego zdjęcia</string>
+    <!-- Workout Share 3-Tier Photo Cascade (REQ-UI-447.6 / ATT-5656) -->
+    <string name="share_photos_attached_subtitle">Zdjęcia dołączone do tego treningu</string>
+    <string name="share_photos_show_time_window">Pokaż zdjęcia zrobione podczas treningu</string>
+    <string name="share_photos_show_attached">Powrót do dołączonych zdjęć</string>
     <!-- Workout Photos (REQ-UI-448 / ATT-43) -->
     <string name="workout_photos_title">Zdjęcia</string>
     <string name="workout_photos_add">Dodaj zdjęcia</string>

@@ -1308,5 +1308,52 @@
   5. *Clean-Room Governance & Regression Execution (`TST-PRO-034.5`)*:
   • Execute `python3 tools/verify_requirement_governance.py` (exit 0) and targeted build tests.
 
+### TST-PRO-035: **Standalone Agile Agentic ASPICE (AAA) Core Framework, Swiss Cheese Reliability & Starter Templates Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-035`
+- **Component**: **Höchstmaß Core Framework & Starter Templates**
+- **Jira**: `ATT-3922`
+- **Test Description**:
+  1. *README, Project Protocol, Epigraph & Etymology Callout Verification (`TST-PRO-035.1`, `HoechstmassCoreFrameworkContractTest.kt`)*:
+  • Verify `tools/hoechstmass/README.md` and `tools/hoechstmass/docs/project_protocol.md` exist and contain the ChatGPT epigraph quote, human/AI boundary attribution, cross-model review principle, Höchstmaß etymology callout (`/ˈhøːçstˌmaːs/`), and Swiss Cheese formula ($P = p_1 \cdot p_2 \cdots p_n$).
+  2. *Generalized Document Triad Templates Contract Verification (`TST-PRO-035.2`, `HoechstmassCoreFrameworkContractTest.kt`)*:
+  • Verify existence and content of generalized `.agents/rules/aspice_governance.md` (8 Core Rules), `docs/coding_standards.md` (§1.1–§1.5 invariants), and `docs/design_guidelines.md` (component heuristics).
+  3. *10 Generalized Skills & Deliverable Templates Verification (`TST-PRO-035.3`, `HoechstmassCoreFrameworkContractTest.kt`)*:
+  • Verify existence of all 10 project-agnostic `SKILL.md` files under `tools/hoechstmass/.agents/skills/` and all 6 markdown templates under `tools/hoechstmass/templates/`.
+  4. *Clean-Room Governance & Regression Execution (`TST-PRO-035.4`)*:
+  • Execute `python3 tools/verify_requirement_governance.py` (exit 0) and targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.*"`.
+
+### TST-PRO-036: **Parameterized Issue Tracker Automation & Requirement Governance Tooling Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-036`
+- **Component**: **Höchstmaß Parameterized Tooling**
+- **Jira**: `ATT-5667`
+- **Test Description**:
+  1. *Declarative Configuration Schema & Template Audit (`TST-PRO-036.1`, `HoechstmassToolingContractTest.kt`)*:
+  • Verify existence and non-emptiness of `tools/hoechstmass/tools/hoechstmass_config.json` and `.env.jira.example`.
+  • Assert `hoechstmass_config.json` declares `project_key`, `board_id`, `transitions`, `roles`, and `paths`.
+  2. *Parameterized Tooling Source & Decoupling Contract (`TST-PRO-036.2`, `HoechstmassToolingContractTest.kt`)*:
+  • Verify existence and non-emptiness of `tools/hoechstmass/tools/jira_util.py` and `tools/hoechstmass/tools/verify_requirement_governance.py`.
+  • Assert neither tool contains hardcoded `ATT-` or proprietary developer account IDs.
+  3. *Python Automated Tooling Unit Test Suite (`TST-PRO-036.3`, `test_hoechstmass_tools.py`)*:
+  • Execute `python3 tools/hoechstmass/tools/test_hoechstmass_tools.py` verifying config loading, role resolution, secret masking, and governance validation pass 100%.
+  4. *Clean-Room Governance & Regression Execution (`TST-PRO-036.4`)*:
+  • Execute `python3 tools/verify_requirement_governance.py` (exit 0) and targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.*"`.
+
+### TST-PRO-037: **Real-World Reference Showcase & Developer Community Launch Posts Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-037`
+- **Component**: **Höchstmaß Showcase & Community Documentation**
+- **Jira**: `ATT-5668`
+- **Test Description**:
+  1. *Real-World Reference Showcase & Case Studies Audit (`TST-PRO-037.1`, `HoechstmassShowcaseAndCommunityContractTest.kt`)*:
+  • Verify existence of `coding_standards.md`, `design_guidelines.md`, and `CASE_STUDIES.md` under `tools/hoechstmass/examples/android-jetpack-compose/`.
+  • Assert `CASE_STUDIES.md` details the 3 adversarial reviews (Mader-Heck Metabolic Model, DFA alpha-1 HRV, Radar bytecode audit).
+  2. *Developer Community Launch Posts Integrity Audit (`TST-PRO-037.2`, `HoechstmassShowcaseAndCommunityContractTest.kt`)*:
+  • Verify existence of all 5 community articles in `tools/hoechstmass/docs/community/` (`r_softwareengineering.md`, `r_androiddev.md`, `r_google_antigravity.md`, `r_vibecoding.md`, `hackernews_show_hn.md`).
+  • Assert all 5 articles contain the ChatGPT epigraph, dual attribution reasons (provenance and cross-model Gemini + ChatGPT UI review), and Höchst·maß etymology box.
+  3. *Clean-Room Governance & Regression Execution (`TST-PRO-037.3`)*:
+  • Execute `python3 tools/verify_requirement_governance.py` (exit 0) and targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.*"`.
+
+
+
+
 
 

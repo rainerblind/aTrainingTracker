@@ -51,12 +51,13 @@ class WorkoutDetailTabsTest {
         val defaults = WorkoutDetailTabConfig.DEFAULT_TABS
         assertEquals(4, defaults.size)
 
-        // Tab 1: Overview
+        // Tab 1: Overview (REQ-UI-408.1 / ATT-5655)
         assertEquals("tab_overview", defaults[0].id)
         assertEquals(R.string.workout_detail_tab_overview, defaults[0].preset.defaultTitleRes)
         assertEquals(
             listOf(
                 WorkoutDetailSectionType.DETAILS,
+                WorkoutDetailSectionType.PHOTOS,
                 WorkoutDetailSectionType.DESCRIPTION,
                 WorkoutDetailSectionType.EXTREMA,
                 WorkoutDetailSectionType.EXPORT_STATUS
@@ -80,7 +81,10 @@ class WorkoutDetailTabsTest {
         assertEquals("tab_zones", defaults[2].id)
         assertEquals(R.string.workout_detail_tab_zones, defaults[2].preset.defaultTitleRes)
         assertEquals(
-            listOf(WorkoutDetailSectionType.ZONES),
+            listOf(
+                WorkoutDetailSectionType.ZONES,
+                WorkoutDetailSectionType.GRADE_DISTRIBUTION
+            ),
             defaults[2].sections
         )
 
@@ -133,8 +137,8 @@ class WorkoutDetailTabsTest {
 
         val serialized = WorkoutDetailTabConfig.serializeTabs(customTabs)
         assertTrue(
-            "Serialized payload must start with version prefix v1|",
-            serialized.startsWith("v1|")
+            "Serialized payload must start with version prefix v2|",
+            serialized.startsWith("v2|")
         )
 
         val deserialized = WorkoutDetailTabConfig.deserializeTabs(serialized)
@@ -174,6 +178,39 @@ class WorkoutDetailTabsTest {
         assertEquals(
             WorkoutDetailTabConfig.DEFAULT_TABS,
             WorkoutDetailTabConfig.deserializeTabs("v1|broken_entry_no_delimiters")
+        )
+    }
+
+    /**
+     * TST-UI-371.2b: Wire v1-to-v2 Migration auto-injects PHOTOS into Overview (REQ-UI-408.2 / ATT-5655).
+     */
+    @Test
+    fun `TST-UI-371_2b legacy v1 wire migration auto-injects PHOTOS into overview`() {
+        val legacyV1Payload = "v1|tab_overview:OVERVIEW::DETAILS,DESCRIPTION,EXTREMA,EXPORT_STATUS;tab_map_graphs:MAP_AND_GRAPHS::MAP,ELEVATION,CHARTS;tab_zones:ZONES::ZONES;tab_laps_segments:LAPS_AND_SEGMENTS::LAPS,STRAVA"
+        val migrated = WorkoutDetailTabConfig.deserializeTabs(legacyV1Payload)
+        assertEquals(4, migrated.size)
+        assertEquals(
+            listOf(
+                WorkoutDetailSectionType.DETAILS,
+                WorkoutDetailSectionType.PHOTOS,
+                WorkoutDetailSectionType.DESCRIPTION,
+                WorkoutDetailSectionType.EXTREMA,
+                WorkoutDetailSectionType.EXPORT_STATUS
+            ),
+            migrated[0].sections
+        )
+
+        // But v2 payload without PHOTOS honors athlete's deliberate choice
+        val v2PayloadWithoutPhotos = "v2|tab_overview:OVERVIEW::DETAILS,DESCRIPTION,EXTREMA,EXPORT_STATUS;tab_map_graphs:MAP_AND_GRAPHS::MAP,ELEVATION,CHARTS;tab_zones:ZONES::ZONES;tab_laps_segments:LAPS_AND_SEGMENTS::LAPS,STRAVA"
+        val v2Parsed = WorkoutDetailTabConfig.deserializeTabs(v2PayloadWithoutPhotos)
+        assertEquals(
+            listOf(
+                WorkoutDetailSectionType.DETAILS,
+                WorkoutDetailSectionType.DESCRIPTION,
+                WorkoutDetailSectionType.EXTREMA,
+                WorkoutDetailSectionType.EXPORT_STATUS
+            ),
+            v2Parsed[0].sections
         )
     }
 
@@ -239,10 +276,10 @@ class WorkoutDetailTabsTest {
         assertEquals(WorkoutDetailSectionType.MAP, tabs[0].sections.first())
         assertEquals(WorkoutDetailSectionType.DETAILS, tabs[0].sections[1])
 
-        // Moving non-MAP sections among indices >= 1 succeeds while keeping MAP at index 0
+        // Moving non-MAP sections among indices >= 1 succeeds while keeping MAP at index 0 (moves DETAILS to index 2, displacing PHOTOS to index 1)
         tabs = WorkoutDetailTabConfig.moveSectionInTab(tabs, 0, 1, 2)
         assertEquals(WorkoutDetailSectionType.MAP, tabs[0].sections[0])
-        assertEquals(WorkoutDetailSectionType.DESCRIPTION, tabs[0].sections[1])
+        assertEquals(WorkoutDetailSectionType.PHOTOS, tabs[0].sections[1])
         assertEquals(WorkoutDetailSectionType.DETAILS, tabs[0].sections[2])
 
         // Toggling MAP OFF removes MAP cleanly
@@ -457,6 +494,7 @@ class WorkoutDetailTabsTest {
             hasElevation = true,
             hasCharts = true,
             hasZones = true,
+            hasGradeDistribution = true,
             hasLaps = true,
             hasStrava = true,
             hasExportStatus = true,
@@ -491,5 +529,20 @@ class WorkoutDetailTabsTest {
                 emptyAvailability.isSectionActive(section, disabledPrefs)
             )
         }
+    }
+
+    /**
+     * TST-UI-453.4b: Grade distribution auto-migration into tab_zones (REQ-UI-408.2 / ATT-5654).
+     */
+    @Test
+    fun `TST-UI-453_4b grade distribution auto-migration into tab_zones when missing from wire string`() {
+        val legacyWire = "v2|tab_overview:OVERVIEW::DETAILS,PHOTOS,DESCRIPTION,EXTREMA,EXPORT_STATUS;tab_zones:ZONES::ZONES"
+        val migrated = WorkoutDetailTabConfig.deserializeTabs(legacyWire)
+        assertEquals(2, migrated.size)
+        val zonesTab = migrated[1]
+        assertEquals(
+            listOf(WorkoutDetailSectionType.ZONES, WorkoutDetailSectionType.GRADE_DISTRIBUTION),
+            zonesTab.sections
+        )
     }
 }

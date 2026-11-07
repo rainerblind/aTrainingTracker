@@ -1104,13 +1104,13 @@
     <string name="legacy_import__finished_with_failed">Import voltooid: %1$d geïmporteerd, %2$d overgeslagen, %3$d mislukt van %4$d gescande bestanden.</string>
     <string name="cluster_naming__select_existing_route">Bestaande route selecteren</string>
     <string name="cluster_naming__title">Workout aan route toewijzen</string>
-    <string name="cluster_naming__found_recurring">Nieuwe route gevonden van %1$s.</string>
+    <string name="cluster_naming__found_recurring">Niet-toegewezen route van %1$s.</string>
     <string name="cluster_naming__task_count">Taak %1$d van %2$d</string>
-    <string name="cluster_naming__assignment_label">Routetoewijzing:</string>
+    <string name="cluster_naming__assignment_label">Bestaande favoriete route selecteren:</string>
     <string name="cluster_naming__create_new">Nieuwe maken…</string>
     <string name="cluster_naming__selected_route_label">Geselecteerde route</string>
-    <string name="cluster_naming__new_name_prompt">Of geef een nieuwe naam:</string>
-    <string name="cluster_naming__new_route_name_label">Nieuwe routenaam</string>
+    <string name="cluster_naming__new_name_prompt">Of een nieuwe favoriete route maken:</string>
+    <string name="cluster_naming__new_route_name_label">Naam van nieuwe favoriete route</string>
     <string name="cluster_naming__leave_unclustered">Niet-gegroepeerd laten</string>
     <string name="cluster_naming__workout_name_label">Naam van training</string>
     <string name="migration_phase_label">Fase %1$d: %2$s</string>
@@ -2273,27 +2273,27 @@
     <string name="supporter_tier_gold">Goud Pro+ Supporter</string>
     <string name="supporter_tier_diamond">Diamanten sponsor</string>
     <string name="supporter_screen_title">Betaal wat je wilt</string>
-    <string name="supporter_screen_subtitle" formatted="false">Steun onafhankelijke fitnesstracking en houd aTrainingTracker 100% advertentievrij.</string>
+    <string name="supporter_screen_subtitle">Steun de continue ontwikkeling van aTrainingTracker.</string>
     <string name="supporter_recommended_badge">Aanbevolen</string>
     <string name="supporter_active_tier_prefix">Actief niveau: %1$s</string>
-    <string name="supporter_active_tier_thank_you">Bedankt voor het steunen van onafhankelijke fitnessontwikkeling!</string>
+    <string name="supporter_active_tier_thank_you">Bedankt voor het steunen van de ontwikkeling van aTrainingTracker!</string>
     <string name="supporter_plan_button_active">Actief</string>
     <string name="supporter_plan_button_support">Steunen</string>
     <string name="supporter_period_month">maand</string>
     <string name="supporter_period_year">jaar</string>
     <string name="supporter_price_per_period">%1$s / %2$s</string>
     <string name="supporter_core_invariant_title" formatted="false">100% Gratis kernfuncties</string>
-    <string name="supporter_core_invariant_body" formatted="false">Trainingregistratie, kaartweergave, sensortelemetrie en offline GPX/TCX/FIT-export blijven voor altijd 100% gratis. Abonnementen financieren continue onafhankelijke ontwikkeling.</string>
-    <string name="swap_dialog_title">Apparaatlimiet (2/2 gratis plaatsen bezet)</string>
+    <string name="supporter_core_invariant_body" formatted="false">Trainingregistratie, kaartweergave, sensortelemetrie en offline GPX/TCX/FIT-export blijven voor altijd 100% gratis. Abonnementen financieren de continue ontwikkeling van de app.</string>
+    <string name="swap_dialog_title">Apparaatlimiet (2/2 plaatsen bezet)</string>
     <string name="swap_dialog_select_device_to_unpair">Selecteer apparaat om te ontkoppelen:</string>
-    <string name="swap_dialog_message">In het gratis niveau kunnen maximaal 2 apparaten tegelijkertijd gekoppeld zijn (bijv. GPS + Barometer). Om \'%1$s\' te koppelen, ontkoppel een bestaand apparaat of ontgrendel onbeperkt sensoren via \'Betaal wat je wilt\'.</string>
+    <string name="swap_dialog_message">In de basisversie kunnen maximaal 2 apparaten tegelijkertijd gekoppeld zijn (bijv. GPS + Barometer). Om \'%1$s\' te koppelen, ontkoppel een bestaand apparaat — of steun de continue ontwikkeling van de app om onbeperkt sensoren te ontgrendelen.</string>
     <string name="swap_dialog_action_swap">Ruilen &amp; koppelen</string>
-    <string name="swap_dialog_action_unlock">Onbeperkte sensoren ontgrendelen</string>
+    <string name="swap_dialog_action_unlock">Ontwikkeling ondersteunen</string>
     <string name="keep_two_sensors_title">2 actieve sensors behouden</string>
-    <string name="keep_two_sensors_message">Je abonnement is beëindigd en het gratis abonnement ondersteunt maximaal 2 actieve sensors. Selecteer 2 sensors om actief te houden. Overtollige sensors worden ontkoppeld zonder kalibratie- of uitrustingsgegevens te verwijderen.</string>
+    <string name="keep_two_sensors_message">Je abonnement is beëindigd en de basisversie ondersteunt maximaal 2 actieve sensors. Selecteer 2 sensors om actief te houden. Overtollige sensors worden ontkoppeld zonder kalibratie- of uitrustingsgegevens te verwijderen.</string>
     <string name="keep_two_sensors_selection_header">Actieve sensors (%1$d/%2$d):</string>
     <string name="keep_two_sensors_action_confirm">Selectie bevestigen</string>
-    <string name="keep_two_sensors_action_unlock">Onbeperkte sensors ontgrendelen</string>
+    <string name="keep_two_sensors_action_unlock">Ontwikkeling ondersteunen</string>
     <string name="drawer_supporter">Supporter &amp; Pro</string>
     <string name="drawer_tier_diamond">◆ DIAMOND SPONSOR • Onbeperkte sensoren</string>
     <string name="drawer_tier_gold">★ GOUD PRO+ SUPPORTER</string>
@@ -2310,12 +2310,14 @@
     <!-- Milestone Workout Auto-Naming & First Jubilee Celebration (ATT-2308 / REQ-REV-001..005) -->
     <string name="milestone_workout_name_format">%1$d. %2$s: %3$s</string>
     <string name="jubilee_dialog_title">Gefeliciteerd met je %1$de %2$s!</string>
-    <string name="jubilee_dialog_message">Je hebt %1$d %2$s-sessies voltooid met aTrainingTracker! Een geweldige sportieve mijlpaal.</string>
+    <string name="jubilee_dialog_message">Je hebt %1$d %2$s-sessies voltooid met aTrainingTracker – een mooie mijlpaal! Daar komen er vast nog meer bij.</string>
+    <string name="jubilee_email_feedback_prompt">Als de app je bevalt of als je ideeën hebt om hem nog beter te maken, hoor ik heel graag je feedback:</string>
+    <string name="jubilee_review_prompt">Bevalt aTrainingTracker je? Dan stel ik een positieve beoordeling op Google Play bijzonder op prijs:</string>
     <string name="jubilee_feedback_prompt">Bevalt aTrainingTracker je? Deel je ervaring met een beoordeling op Google Play of stuur je feedback rechtstreeks per e-mail naar Rainer.</string>
     <string name="jubilee_action_review">Beoordelen op Google Play</string>
     <string name="jubilee_action_email_feedback">Feedback per e-mail naar Rainer</string>
-    <string name="jubilee_supporter_appeal_title">Steun 15+ jaar onafhankelijke ontwikkeling</string>
-    <string name="jubilee_supporter_appeal_message">aTrainingTracker is sinds 2011 volledig advertentievrij en privacygericht. Als de app je helpt, overweeg dan Pro om de ontwikkeling te steunen.</string>
+    <string name="jubilee_supporter_appeal_title">Ontwikkeling ondersteunen</string>
+    <string name="jubilee_supporter_appeal_message">Je kunt de continue ontwikkeling van aTrainingTracker ook financieel ondersteunen:</string>
     <string name="jubilee_action_upgrade_pro">Ontwikkeling steunen</string>
     <string name="jubilee_action_dismiss">Verder trainen</string>
     <string name="debug_jubilee_preview_button">Mijlpaaldialoog testen</string>
@@ -2326,7 +2328,9 @@
     <string name="garage_detector_dialog_title_gold">Goud-klasse garage gedetecteerd!</string>
     <string name="garage_detector_dialog_title_diamond">Diamant-klasse wereldgarage!</string>
     <string name="garage_detector_dialog_message_gold">Gefeliciteerd met je %1$d fietsen, %2$d schoenen en %3$d sensoren (incl. %4$d vermogensmeters) in aTrainingTracker! Je garage speelt in de profcompetitie, maar je app-status is %5$s. Gun je uitrusting de upgrade naar Goud Pro+ Supporter!</string>
+    <string name="garage_detector_dialog_message_gold_strava">Als actieve Strava Pro-atleet met %1$d fietsen, %2$d schoenen en %3$d sensoren (incl. %4$d vermogensmeters) neem je je training serieus! Je app-status is nog %5$s. Maak je prof-ecosysteem compleet met Goud Pro+ Supporter!</string>
     <string name="garage_detector_dialog_message_diamond">Ongelooflijke garage: %1$d fietsen, %2$d schoenen en %3$d sensoren (incl. %4$d vermogensmeters) in aTrainingTracker! Je uitrusting is van wereldklasse, maar je app-status is %5$s. Bekroon je garage met Diamant Sponsor!</string>
+    <string name="garage_detector_dialog_message_diamond_strava">Actieve Strava Pro-atleet met een garage van wereldklasse: %1$d fietsen, %2$d schoenen en %3$d sensoren (incl. %4$d vermogensmeters)! Je app-status is %5$s. Vervoeg je professionele uitrusting met Diamant Sponsor!</string>
     <string name="garage_detector_action_upgrade_gold">Upgrade naar Goud Pro (50 € / jr)</string>
     <string name="garage_detector_action_upgrade_diamond">Upgrade naar Diamant Sponsor (100 € / jr)</string>
     <string name="garage_detector_action_dismiss">Later / Verder trainen</string>
@@ -2356,6 +2360,10 @@
     <string name="share_cta_button">Delen</string>
     <string name="share_error_no_gps">Geen GPS-route geregistreerd voor deze workout</string>
     <string name="share_error_photo_load">Geselecteerde foto laden mislukt</string>
+    <!-- Workout Share 3-Tier Photo Cascade (REQ-UI-447.6 / ATT-5656) -->
+    <string name="share_photos_attached_subtitle">Foto\'s toegevoegd aan deze workout</string>
+    <string name="share_photos_show_time_window">Foto\'s gemaakt tijdens de workout tonen</string>
+    <string name="share_photos_show_attached">Terug naar toegevoegde foto\'s</string>
     <!-- Workout Photos (REQ-UI-448 / ATT-43) -->
     <string name="workout_photos_title">Foto\'s</string>
     <string name="workout_photos_add">Foto\'s toevoegen</string>

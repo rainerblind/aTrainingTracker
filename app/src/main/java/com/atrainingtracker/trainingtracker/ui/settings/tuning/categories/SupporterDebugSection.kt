@@ -250,12 +250,12 @@ fun SupporterDebugSection() {
 
     if (showPreviewJubileeDialog) {
         val proFeatureManager = remember { ProFeatureManager(context) }
-        val isProActive by proFeatureManager.isProActive.collectAsState()
+        val effectiveTier by proFeatureManager.effectiveTier.collectAsState()
 
         FirstJubileeCelebrationDialog(
             count = 100,
             sportName = stringResource(R.string.sport_types),
-            isProActive = isProActive,
+            supporterTier = effectiveTier,
             onRequestInAppReview = {
                 showPreviewJubileeDialog = false
                 FirstJubileeActionHelper.launchInAppReviewOrStore(context)

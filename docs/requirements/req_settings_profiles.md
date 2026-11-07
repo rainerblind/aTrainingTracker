@@ -1373,18 +1373,18 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 **Invariants**: Core tracking, telemetry processing, local file exports, and database pairing persistence across app updates MUST NOT be compromised.
 
 ### REQ-SET-084: One-Tap Swap-or-Upgrade Dialog on 3rd Paired Device (REQ-MON-002) [Verified]
-- **Tests**: `TST-SET-084` | **Tickets**: `ATT-51`, `ATT-5399`, `ATT-5398`, `ATT-5469`, `ATT-5470`, `ATT-5490`
+- **Tests**: `TST-SET-084` | **Tickets**: `ATT-51`, `ATT-5399`, `ATT-5398`, `ATT-5469`, `ATT-5470`, `ATT-5490`, `ATT-5661`, `ATT-5657`
 - **Implementation**: `SensorQuotaReconciliationManager.kt`, `DeviceListViewModel.kt`, `ControlTrackingViewModel.kt`, `DeviceManager.java`, `ATrainingTrackerApp.kt`, `MainActivityWithNavigation.kt`, `SwapOrUpgradeDialog.kt`, `KeepTwoSensorsBottomSheet.kt`, `DeviceDataRepository.kt`
-- **Rationale**: Ensure athletes are never blocked by a hard paywall when adding sensors. When attempting to pair a 3rd device in Free tier, athletes can easily unpair a currently active device with a single tap or upgrade to Pro via "Pay what you want". Furthermore, athletes who downgrade from Supporter to Free tier with $> 2$ paired sensors are guided through a non-destructive reconciliation flow to keep 2 sensors.
+- **Rationale**: Ensure athletes are never blocked by a hard paywall when adding sensors. When attempting to pair a 3rd device in the base version (*Basisversion*), athletes can easily unpair a currently active device with a single tap or support the ongoing development of the app to unlock unlimited sensors (*Entwicklung unterstützen*). Furthermore, athletes who return from Supporter to the base version with $> 2$ paired sensors are guided through a non-destructive reconciliation flow to keep 2 sensors.
 - **Description**:
 1. *Quota Interception (`REQ-SET-084.1`)*:
 • When a Free tier athlete (`!isProActive()`) attempts to pair a device that would increase total paired devices beyond `MAX_FREE_PAIRED_DEVICES = 2`, `DeviceListViewModel` SHALL intercept the action and display `SwapOrUpgradeDialog` without changing database pairing state.
 2. *Smart Recommendation Preselection (`REQ-SET-084.2`)*:
-• In `determineRecommendedUnpairDeviceId`, the system SHALL recommend unpairing `ALTITUDE_FROM_PRESSURE` first if paired. Next, if both `SPEED_AND_LOCATION_GOOGLE_FUSED` and `SPEED_AND_LOCATION_GPS` are paired, it SHALL recommend unpairing `SPEED_AND_LOCATION_GPS` (so Google Fused is retained). Otherwise, it SHALL fall back to the first paired device in list order.
+• In `determineRecommendedUnpairDeviceId`, the system SHALL recommend unpairing `ALTITUDE_FROM_PRESSURE` first if paired. Next, if both `SPEED_AND_LOCATION_GOOGLE_FUSED` and `SPEED_AND_LOCATION_GPS` are paired, it SHALL recommend unpairing `SPEED_AND_LOCATION_GPS` (so Google Fused is retained). Otherwise, if non-location sensors are paired alongside a location sensor, the system SHALL recommend unpairing the non-location sensor (prioritizing disconnected sensors first, oldest last-seen timestamp second) and SHALL NEVER recommend `SPEED_AND_LOCATION_GOOGLE_FUSED` or a sole paired Location sensor for unpairing. In `SwapOrUpgradeDialog`, fallback preselection SHALL likewise filter for non-location devices before defaulting to list order.
 3. *Atomic Swap Execution (`REQ-SET-084.3`)*:
 • Tapping "Swap" SHALL unpair the selected existing device and pair the new candidate device in a single database operation, maintaining total paired devices $\le 2$.
-4. *Direct Upgrade Path (`REQ-SET-084.4`)*:
-• The dialog SHALL offer a prominent "Unlock Unlimited Sensors (Pay What You Want)" action navigating directly to `SupporterScreen`.
+4. *Direct Upgrade Path & Development Support CTA (`REQ-SET-084.4`)*:
+• The dialog SHALL offer a prominent "Support Development" action (*"Entwicklung unterstützen"*, `@string/swap_dialog_action_unlock` / `@string/keep_two_sensors_action_unlock`) navigating directly to `SupporterScreen` to support independent app development and unlock unlimited sensors (ATT-5661).
 5. *Subscription Downgrade Sensor Quota Reconciliation & Global Triggers (`REQ-SET-084.5`)*:
 • When an athlete returns to Free tier (`!isProActive()`) with $> 2$ paired sensors in `Devices.db` while not actively recording (`!isTracking()`), the centralized reconciliation manager (`SensorQuotaReconciliationManager`) SHALL present `KeepTwoSensorsBottomSheet` (`AppModalBottomSheet`) globally across the application (`ATrainingTrackerApp`), not solely within `DeviceListViewModel` / `DevicesTabbedScreen`.
 • Reconciliation SHALL be automatically triggered on application start / resume (`MainActivityWithNavigation.onResume`), upon displaying the tracking cockpit (`TrackingTabsScreen` / `SensorGridScreen`), upon reactive transition to Free tier (`!isProActive()`), and prior to dispatching sensor search or workout start in `ControlTrackingViewModel`.
@@ -1397,22 +1397,25 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • In Free tier, `executeSwapAndPair()` and `DeviceDataRepository` SHALL ensure that even if more than 2 sensors were paired prior to the swap, all excess sensors beyond the newly paired candidate and retained sensor are set to `PAIRED = 0`, guaranteeing total paired count is strictly $\le 2$.
 7. *BANALService Free Quota Hardware Connection Clamping (`REQ-SET-084.7`)*:
 • In `DeviceManager.startSearchForPairedDevices()` / remote device creation, the system SHALL enforce defense-in-depth hardware connection clamping: on Free tier (`!isProActive()`), connecting remote hardware devices SHALL be clamped to `MAX_FREE_PAIRED_DEVICES = 2` to prevent downgraded athletes from connecting excess sensors even if UI reconciliation has not yet been processed.
-8. *Rule 73 Stacked Action Button Ergonomics (`REQ-SET-084.8`)*:
-• In `SwapOrUpgradeDialog.kt`, action controls SHALL follow the Rule 73 stacked button layout for `AppModalBottomSheet`: primary action (*'Tauschen & Koppeln'*, `Button`) and secondary upgrade CTA (*'Unbegrenzte Sensoren freischalten'*, `FilledTonalButton`) SHALL be laid out as vertically stacked full-width buttons (`Modifier.fillMaxWidth()`, `8.dp` spacing) at the bottom of the sheet content column, leaving only a single full-width dismiss action (*'Abbrechen'*, `TextButton`) in `actions`, eliminating horizontal button crowding and broken word wrapping across all 9 locales (Rule 73, ATT-5470).
+8. *Rule 73 Stacked Action Button Ergonomics & Appreciative Wording (`REQ-SET-084.8`)*:
+• In `SwapOrUpgradeDialog.kt`, action controls SHALL follow the Rule 73 stacked button layout for `AppModalBottomSheet`: primary action (*'Tauschen & Koppeln'*, `Button`) and secondary CTA (*'Entwicklung unterstützen'*, `FilledTonalButton`) SHALL be laid out as vertically stacked full-width buttons (`Modifier.fillMaxWidth()`, `8.dp` spacing) at the bottom of the sheet content column, leaving only a single full-width dismiss action (*'Abbrechen'*, `TextButton`) in `actions`, eliminating horizontal button crowding and broken word wrapping across all 9 locales (Rule 73, ATT-5470). Furthermore, dialog titles and messages in `SwapOrUpgradeDialog` and `KeepTwoSensorsBottomSheet` SHALL use appreciative terminology (*"In der Basisversion"* / *"In the base version"*, *"2/2 Plätze"* / *"2/2 Slots"*) rather than transactional SaaS paywall wording (*Free-Tier*, *Free-Plätze*, *Pay what you want*), preserving the single string placeholder (`%1$s`) in `swap_dialog_message` across all 9 supported locales (ATT-5661).
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Amends `REQ-SET-084` (`REQ-SET-084.2`, `REQ-SET-084.5`) targeting `SensorQuotaReconciliationManager.kt` and `DeviceListViewModel.kt`.
-2. *Historical Origin & Commit Trace*: `ATT-51` (Initial Free-tier quota), `ATT-5469` (`29251f2d`, global reconciliation manager), refined in `ATT-5490` (Sprint `2026-45.8`).
-3. *Root Reason for Existing Formulation*: GPS and Barometer were historically assumed to be the default smartphone baseline before external remote sensor activity tracking and Google Fused prioritization (`ATT-5491`) were integrated.
-4. *Preservation of Core Invariants*: Free-tier quota ($\le 2$ sensors) is strictly preserved; unselected sensors remain in SQLite with custom names and calibration intact; Barometer remains fallback when no remote sensors are paired.
+1. *Original Requirement ID & Target*: Amends `REQ-SET-084` (`REQ-SET-084.2`, `REQ-SET-084.4`, `REQ-SET-084.8`) targeting `SensorQuotaReconciliationManager.kt`, `SwapOrUpgradeDialog.kt`, `KeepTwoSensorsBottomSheet.kt`, and `strings.xml`.
+2. *Historical Origin & Commit Trace*: `ATT-51` (Initial quota & swap dialog), `ATT-5398` (`KeepTwoSensorsBottomSheet`), `ATT-5469` (`29251f2d`, global reconciliation manager), `ATT-5470` (Rule 73 stacked action buttons), refined in `ATT-5490` (Sprint `2026-45.8`), `ATT-5661` (appreciative copy & support CTA), and `ATT-5657` (Sprint `2026-45.9`, sole location sensor unpair protection).
+3. *Root Reason for Existing Formulation*: Early copy adopted commercial SaaS subscription phrasing (*"Im Free-Tier"*, *"Free-Plätze"*, *"Pay what you want"*, *"Unbegrenzte Sensoren freischalten"*). Framing sensor expansion as supporting independent app development (*"In der Basisversion"*, *"Entwicklung unterstützen"*) reflects community-oriented voluntary appreciation while retaining clarity on the 2-sensor base limit. In `determineRecommendedUnpairDeviceId`, falling back to `firstOrNull()` inadvertently selected `Google Fused` or the sole location sensor because internal smartphone sensors reside at index 0.
+4. *Preservation of Core Invariants*: Base-tier quota ($\le 2$ sensors) is strictly preserved; unselected sensors remain in SQLite with custom names and calibration intact; Rule 73 stacked button layout intact; single `%1$s` placeholder preserved across all 9 locales; Barometer unpairing priority preserved; dual-location preference (unpair GPS over Google Fused) preserved; and sole location sensor is protected from unpairing recommendations.
 
 **Acceptance Criteria (Given-When-Then)**:
-• *Given* a Free tier athlete with 2 paired devices attempting to pair a heart rate monitor,
+• *Given* an athlete in the base version with 2 paired devices attempting to pair a heart rate monitor,
 • *When* the toggle is clicked,
-• *Then* the Swap-or-Upgrade dialog appears showing currently paired devices and the "Unlock Unlimited Sensors" button.
+• *Then* the Swap-or-Upgrade dialog appears showing currently paired devices and the "Support Development" button (*"Entwicklung unterstützen"*).
 • *Given* the Swap dialog with `ALTITUDE_FROM_PRESSURE` preselected,
 • *When* the athlete taps "Swap & Pair",
 • *Then* `ALTITUDE_FROM_PRESSURE` is unpaired, the heart rate monitor is paired, and total paired devices equals 2.
+• *Given* an athlete in the base version with Google Fused (or sole Location sensor) and an external sensor (e.g. cadence, HRM) paired,
+• *When* attempting to pair a 3rd sensor,
+• *Then* `SwapOrUpgradeDialog` SHALL recommend the external non-location sensor for unpairing and SHALL NEVER recommend Google Fused or the sole Location sensor.
 • *Given* an athlete downgraded to Free tier with both Google Fused and GPS paired plus remote sensors,
 • *When* `KeepTwoSensorsBottomSheet` is evaluated,
 • *Then* Google Fused and the most recently active remote sensor are preselected as the 2 defaults.
@@ -1464,7 +1467,7 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 **Invariants**: Pioneer status cannot be revoked by app updates or database re-indexes; existing workouts remain unmodified.
 
 ### REQ-SET-086: Five-Tier Google Play Supporter Subscriptions (REQ-MON-004) [Verified]
-- **Tests**: `TST-SET-086`, `TST-LOC-001` | **Tickets**: `ATT-51`, `ATT-5371`
+- **Tests**: `TST-SET-086`, `TST-LOC-001` | **Tickets**: `ATT-51`, `ATT-5371`, `ATT-5659`
 - **Implementation**: `SupporterScreen.kt`, `SupporterComponents.kt`, `BillingClientLifecycle.kt`, `ProFeatureManager.kt`, `AppNavigationDrawer.kt`
 - **Rationale**: Offer transparent, flexible "Pay what you want" subscription tiers capped at max 100 € / year, allowing athletes to fund continuous independent development and feature maintenance without scope liabilities.
 - **Description**:
@@ -1482,9 +1485,15 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 4. *Card Layout & Button Wrap Prevention (`REQ-SET-086.4`)*:
 • In `SupporterPlanCard`, the `"Empfehlung"` / `"Recommended"` badge SHALL be positioned vertically above the tier title.
 • Action buttons in plan cards SHALL enforce `maxLines = 1, softWrap = false` to guarantee zero single-character or mid-word line wrapping (`Rule 38`).
-5. *Typo Correction & 9-Locale Localization Parity (`REQ-SET-086.5`)*:
-• `supporter_screen_subtitle` SHALL render `100%` (single percent sign) across all locales.
-• All user-facing strings in `SupporterComponents.kt`, `SupporterScreen.kt`, and `AppNavigationDrawer.kt` SHALL be localized across all 9 supported application locales.
+5. *Appreciative Wording & 9-Locale Localization Parity (`REQ-SET-086.5`)*:
+• `supporter_screen_subtitle` SHALL invite athletes to support the continuous development of aTrainingTracker (*"Unterstütze die Weiterentwicklung von aTrainingTracker."* / *"Support the ongoing development of aTrainingTracker."*) without defensive marketing buzzwords (*"15+ Jahre"*, *"Indie"*, *"unabhängiges Fitnesstracking"*) (ATT-5659).
+• `supporter_active_tier_thank_you` and `supporter_core_invariant_body` SHALL express appreciation for supporting development plainly and consistently across all 9 supported application locales (ATT-5659).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-SET-086` (`REQ-SET-086.5`), targeting `SupporterScreen.kt`, `SupporterComponents.kt`, and `strings.xml`.
+2. *Historical Origin & Commit Trace*: `ATT-51` (initial supporter model), `ATT-5371` (percent sign fix), refined in `ATT-5659` (appreciative copy without buzzwords).
+3. *Root Reason for Existing Formulation*: Historical marketing copy highlighted developer pedigree and privacy commitments to differentiate from corporate trackers. Direct, simple phrasing (*"Weiterentwicklung unterstützen"*) provides genuine, professional appreciation without defensive jargon.
+4. *Preservation of Core Invariants*: 100% free core invariant body intact; 5 Google Play Billing base plans, prices, and IDs remain 100% preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete navigating to the Supporter screen,
@@ -1519,15 +1528,16 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 **Invariants**: Release builds must never permit arbitrary tier override; ProFeatureManager resolution must be thread-safe.
 
 ### REQ-SET-088: Supporter N+1 Garage Detector & Upgrade Prompts (REQ-MON-006) [Verified]
-- **Tests**: `TST-SET-088`, `TST-LOC-001` | **Tickets**: `ATT-5299`, `ATT-5400`, `ATT-5399`, `ATT-5468`
-- **Implementation**: `GarageLeagueDetector.kt`, `GarageDetectorDialog.kt`, `GarageUpgradeNudgeDialog.kt`, `EquipmentViewModel.kt`, `DeviceListViewModel.kt`, `SettingsDataStore.kt`, `SupporterDebugSection.kt`
-- **Rationale**: Athlete equipment expansion reflects escalating engagement. When an athlete adds bikes, shoes, or pairs additional sensors reaching enthusiast ("Gold") or world-class ("Diamond") scale, the system detects their qualified garage league and presents a humorous, non-blocking "N+1 Cyclist Garage" dialog inviting an upgrade to Gold Pro-Supporter (50 € / year) or Diamond Sponsor (100 € / year) with the matching plan pre-selected, while preventing repeated prompt spam and honoring tier monotonicity.
+- **Tests**: `TST-SET-088`, `TST-LOC-001` | **Tickets**: `ATT-5299`, `ATT-5400`, `ATT-5399`, `ATT-5468`, `ATT-5570`
+- **Implementation**: `GarageLeagueDetector.kt`, `GarageDetectorDialog.kt`, `GarageUpgradeNudgeDialog.kt`, `TrainingApplication.java`, `StravaHelper.kt`, `StravaEquipmentSynchronizeThread.java`, `StravaDataPurgeManager.kt`, `EquipmentViewModel.kt`, `DeviceListViewModel.kt`, `SettingsDataStore.kt`, `SupporterDebugSection.kt`
+- **Rationale**: Athlete equipment expansion reflects escalating engagement. When an athlete adds bikes, shoes, or pairs additional sensors reaching enthusiast ("Gold") or world-class ("Diamond") scale, the system detects their qualified garage league and presents a humorous, non-blocking "N+1 Cyclist Garage" dialog inviting an upgrade to Gold Pro-Supporter (50 € / year) or Diamond Sponsor (100 € / year) with the matching plan pre-selected, while preventing repeated prompt spam and honoring tier monotonicity. Furthermore, athletes with an active Strava Pro subscription (`summit == true` or `premium == true`) already invest in premium fitness software; detecting this status qualifies them for Gold League (or boosts Gold hardware to Diamond League) with tailored copy acknowledging their Strava Pro commitment (ATT-5570).
 - **Description**:
 1. *Garage League Qualification Thresholds (`REQ-SET-088.1`)*:
 • The system SHALL classify athlete equipment and sensors into two garage leagues:
-  - **Diamond League**: $\ge 4$ bikes OR $\ge 8$ remote sensors (paired or registered in `Devices.db`) OR $\ge 2$ power meters (`DeviceType.BIKE_POWER`).
-  - **Gold League**: $\ge 3$ bikes OR $\ge 4$ running shoes OR $\ge 5$ remote sensors OR $\ge 1$ power meter (`DeviceType.BIKE_POWER`).
+  - **Diamond League**: $\ge 4$ bikes OR $\ge 8$ remote sensors (paired or registered in `Devices.db`) OR $\ge 2$ power meters (`DeviceType.BIKE_POWER`) OR (Gold hardware qualification + active Strava Pro subscription: `summit == true || premium == true`).
+  - **Gold League**: $\ge 3$ bikes OR $\ge 4$ running shoes OR $\ge 5$ remote sensors OR $\ge 1$ power meter (`DeviceType.BIKE_POWER`) OR active Strava Pro subscription (`summit == true || premium == true`).
 • Diamond League evaluation SHALL strictly take precedence over Gold League evaluation.
+• Strava subscriber status SHALL be ingested via `StravaHelper.storeJSONData` and `StravaEquipmentSynchronizeThread.fillDbFromJsonObject` (`summit || premium`), persisted in SharedPreferences via `TrainingApplication.setStravaSubscriber` (with `cSharedPreferences != null` guards per Rule 75), and unconditionally cleared on disconnect/purge via `TrainingApplication.deleteStravaToken` and `StravaDataPurgeManager.executeLocalDataPurge`.
 2. *Tier Monotonicity Gating (`REQ-SET-088.2`)*:
 • The system SHALL compare the qualified garage league against the athlete's current effective `SupporterTier`:
   - Diamond League prompt SHALL only trigger if effective tier is `< SupporterTier.DIAMOND`.
@@ -1544,6 +1554,7 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • Showing or dismissing the dialog SHALL set the respective league flag to `true`.
 5. *Humorous N+1 Dialog & Pre-Selected Navigation (`REQ-SET-088.5`)*:
 • When qualified, `GarageDetectorDialog` SHALL render a Material 3 dialog presenting dynamic gear counts (bikes, shoes, sensors, power meters) and good-humored cyclist/runner copy without decorative inline Unicode emojis (relying on the dialog's vector header icon).
+• When qualified as an active Strava subscriber (`isStravaSubscriber == true`), `GarageUpgradeNudgeDialog` SHALL present tailored dialog copy referencing their Strava Pro status (`garage_detector_dialog_message_gold_strava`, `garage_detector_dialog_message_diamond_strava`) across all 9 languages without inline Unicode emojis and strictly preserving 5 positional specifiers (`%1$d`..`%5$s`).
 • The dialog SHALL offer a 1-tap upgrade action navigating to `SupporterScreen` (`NavRoutes.SUPPORTER`) with the recommended plan pre-selected (`gold-yearly` for Gold League, `diamond-yearly` for Diamond League), and a secondary "Später / Weiter zum Training" dismiss action.
 6. *Diagnostic Debug Preview Triggers (`REQ-SET-088.6`)*:
 • `SupporterDebugSection` SHALL expose 1-tap test preview buttons for Gold and Diamond N+1 garage dialogs, and a reset button clearing both nudge flags in DataStore, strictly enclosed within `if (BuildConfig.DEBUG)`.
@@ -1557,8 +1568,20 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • *Given* an athlete on Gold tier with 3 bikes and 7 sensors,
 • *When* an 8th sensor is paired,
 • *Then* Diamond League is detected, and `GarageDetectorDialog` is triggered with the Diamond Sponsor upgrade path pre-selected.
+• *Given* an athlete on Free or Silver tier with 0 bikes and 0 sensors connected to Strava with an active subscription (`summit == true || premium == true`),
+• *When* garage league evaluation runs,
+• *Then* Gold League is detected and `GarageUpgradeNudgeDialog` displays `garage_detector_dialog_message_gold_strava`.
+• *Given* an athlete with Gold hardware (e.g. 3 bikes) and an active Strava Pro subscription,
+• *When* garage league evaluation runs,
+• *Then* Diamond League is detected and `GarageUpgradeNudgeDialog` displays `garage_detector_dialog_message_diamond_strava`.
 • *Given* an athlete who has already dismissed the Gold League dialog (`hasShownGoldGarageNudge == true`),
 • *When* an additional bike is added,
 • *Then* the Gold upgrade dialog is NOT re-triggered.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-SET-088` (`REQ-SET-088.1`, `REQ-SET-088.5`), targeting `TrainingApplication.java`, `StravaHelper.kt`, `StravaEquipmentSynchronizeThread.java`, `StravaDataPurgeManager.kt`, `GarageLeagueDetector.kt`, `GarageUpgradeNudgeDialog.kt`, and `strings.xml` across all 9 locales.
+2. *Historical Origin & Commit Trace*: Sprint 2026-45.1 (`ATT-5299`, initial detector), Sprint 2026-45.3 (`ATT-5400`, zero-emoji copy), Sprint 2026-45.6 (`ATT-5468`, Rule 73 stacked buttons), Sprint 2026-45.9 (`ATT-5570`).
+3. *Root Reason for Existing Formulation*: In ATT-5299, qualification relied solely on local hardware counts because Strava account subscription telemetry had not yet been ingested into application preferences.
+4. *Preservation of Core Invariants*: Rule 75 SharedPreferences null-safety (`cSharedPreferences != null`); complete data purge hygiene (`executeLocalDataPurge` resets subscriber state); tier monotonicity (`< SupporterTier.DIAMOND`, `< SupporterTier.GOLD`); once-in-a-lifetime non-spam persistence (`hasShownGoldGarageNudge`, `hasShownDiamondGarageNudge`); Rule 73 stacked action buttons; zero-emoji localization parity across all 9 languages.
 
 **Invariants**: Equipment and sensor persistence complete before dialog triggering; each league level nudges at most once; tier monotonicity is strictly preserved; release builds compile out debug preview controls.

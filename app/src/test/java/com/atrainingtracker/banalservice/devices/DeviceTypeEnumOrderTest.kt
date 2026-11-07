@@ -23,29 +23,26 @@ import org.junit.Test
 
 /**
  * Architectural unit verification for [DeviceType] enum declaration order invariants
- * (REQ-TRK-024.3, TST-TRK-016.1, ATT-4375).
+ * (REQ-TRK-024.3, REQ-SEN-027.1, TST-TRK-016.4, TST-SEN-027.1, ATT-4375, ATT-5492).
  *
  * Verifies that the declaration order (natural ordinal ordering) places
- * [DeviceType.SPEED_AND_LOCATION_GPS] before [DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED]
- * and [DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED] before [DeviceType.SPEED_AND_LOCATION_NETWORK],
- * ensuring that fallback iterations over [java.util.EnumMap.keySet] or [java.util.EnumSet]
- * without explicit priority lists deterministically prefer Google Fused over Network.
+ * [DeviceType.SPEED_AND_LOCATION_GPS] before [DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED],
+ * and confirms that obsolete [SPEED_AND_LOCATION_NETWORK] is completely excised.
  */
 class DeviceTypeEnumOrderTest {
 
     @Test
-    fun locationEnumOrder_gpsPrecedesGoogleFusedPrecedesNetwork() {
+    fun locationEnumOrder_gpsPrecedesGoogleFused_andNetworkExcised() {
         val gpsOrdinal = DeviceType.SPEED_AND_LOCATION_GPS.ordinal
         val fusedOrdinal = DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED.ordinal
-        val networkOrdinal = DeviceType.SPEED_AND_LOCATION_NETWORK.ordinal
 
         assertTrue(
             "SPEED_AND_LOCATION_GPS ($gpsOrdinal) must precede SPEED_AND_LOCATION_GOOGLE_FUSED ($fusedOrdinal)",
             gpsOrdinal < fusedOrdinal
         )
         assertTrue(
-            "SPEED_AND_LOCATION_GOOGLE_FUSED ($fusedOrdinal) must precede SPEED_AND_LOCATION_NETWORK ($networkOrdinal)",
-            fusedOrdinal < networkOrdinal
+            "SPEED_AND_LOCATION_NETWORK must be completely excised from DeviceType",
+            DeviceType.values().none { it.name == "SPEED_AND_LOCATION_NETWORK" }
         )
     }
 }

@@ -156,14 +156,64 @@ class DeviceListViewModelPriorityTest {
         assertEquals(3L, resultList[1].id)
         assertTrue(resultList[1].isNewlyDiscovered)
 
-        // Beta Sensor (id 2, connected) must be at index 2
-        assertEquals(2L, resultList[2].id)
+        // Alpha Sensor (id 1, alphabetical order) must be at index 2
+        assertEquals(1L, resultList[2].id)
         assertFalse(resultList[2].isNewlyDiscovered)
-        assertTrue(resultList[2].isConnected)
+        assertFalse(resultList[2].isConnected)
 
-        // Alpha Sensor (id 1, disconnected) must be at index 3
-        assertEquals(1L, resultList[3].id)
+        // Beta Sensor (id 2, alphabetical order) must be at index 3
+        assertEquals(2L, resultList[3].id)
         assertFalse(resultList[3].isNewlyDiscovered)
-        assertFalse(resultList[3].isConnected)
+        assertTrue(resultList[3].isConnected)
+    }
+
+    @Test
+    fun testPairingToggle_sortingRemainsStableWithoutConnectionJumping() = runTest {
+        // Given 4 sensors with distinct names in ALL_KNOWN tab
+        val dev1 = createDevice(id = 10L, name = "Barometer", isPaired = false)
+        val dev2 = createDevice(id = 20L, name = "Cadence Sensor", isPaired = true)
+        val dev3 = createDevice(id = 30L, name = "Google Fused", isPaired = false)
+        val dev4 = createDevice(id = 40L, name = "Heart Rate Monitor", isPaired = true)
+
+        allDevicesFlow.value = listOf(dev1, dev2, dev3, dev4)
+        // Only Cadence Sensor and HRM have telemetry currently
+        telemetryFlow.value = listOf(
+            DeviceTelemetry(deviceId = 20L, mainValue = null, allValues = emptyList()),
+            DeviceTelemetry(deviceId = 40L, mainValue = null, allValues = emptyList())
+        )
+        newlyFoundFlow.value = emptyList()
+
+        val viewModel = DeviceListViewModel(mockApplication)
+        val spec = DeviceFilterSpec(DeviceFilterType.ALL_KNOWN, Protocol.ALL, DeviceType.ALL)
+
+        val initialList = viewModel.getFilteredDevices(spec).first()
+        val initialOrder = initialList.map { it.id }
+
+        // Expected alphabetical order: Barometer (10), Cadence Sensor (20), Google Fused (30), Heart Rate Monitor (40)
+        assertEquals(listOf(10L, 20L, 30L, 40L), initialOrder)
+
+        // When: Google Fused is paired and instantly connects (e.g. internal smartphone sensor)
+        val updatedDev3 = dev3.copy(isPaired = true)
+        allDevicesFlow.value = listOf(dev1, dev2, updatedDev3, dev4)
+        telemetryFlow.value = listOf(
+            DeviceTelemetry(deviceId = 20L, mainValue = null, allValues = emptyList()),
+            DeviceTelemetry(deviceId = 30L, mainValue = null, allValues = emptyList()), // Now connected!
+            DeviceTelemetry(deviceId = 40L, mainValue = null, allValues = emptyList())
+        )
+
+        val updatedList = viewModel.getFilteredDevices(spec).first()
+        val updatedOrder = updatedList.map { it.id }
+
+        // Then: List order must remain completely stable without jumping!
+        assertEquals(
+            "List ordering must remain stable regardless of connection status changes (ATT-5660)",
+            initialOrder,
+            updatedOrder
+        )
+
+        // And verify that Google Fused is indeed marked as connected without changing position
+        val googleFusedItem = updatedList.first { it.id == 30L }
+        assertTrue(googleFusedItem.isConnected)
+        assertEquals(2, updatedList.indexOf(googleFusedItem))
     }
 }

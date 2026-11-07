@@ -23,6 +23,7 @@ import androidx.annotation.VisibleForTesting
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import kotlinx.coroutines.CoroutineDispatcher
@@ -46,7 +47,8 @@ data class GarageStats(
     val bikeCount: Int,
     val shoeCount: Int,
     val sensorCount: Int,
-    val powerMeterCount: Int
+    val powerMeterCount: Int,
+    val isStravaSubscriber: Boolean = false
 )
 
 /**
@@ -68,28 +70,33 @@ object GarageNudgeEvaluator {
     const val PLAN_DIAMOND = "diamond-yearly"
 
     /**
-     * Evaluates garage league qualification based on threshold hierarchy (REQ-SET-088.1).
+     * Evaluates garage league qualification based on threshold hierarchy (REQ-SET-088.1 / ATT-5570).
      * Diamond League takes strict precedence over Gold League.
+     * Strava Pro subscribers qualify for Gold League unconditionally, or boost Gold hardware to Diamond League.
      */
     fun evaluateLeague(
         bikeCount: Int,
         shoeCount: Int,
         sensorCount: Int,
-        powerMeterCount: Int
+        powerMeterCount: Int,
+        isStravaSubscriber: Boolean = false
     ): GarageLeague {
-        // Diamond League: >= 4 bikes OR >= 8 remote sensors OR >= 2 power meters
-        if (bikeCount >= 4 || sensorCount >= 8 || powerMeterCount >= 2) {
+        val hardwareDiamond = bikeCount >= 4 || sensorCount >= 8 || powerMeterCount >= 2
+        val hardwareGold = bikeCount >= 3 || shoeCount >= 4 || sensorCount >= 5 || powerMeterCount >= 1
+
+        // Diamond League: hardwareDiamond OR (hardwareGold && isStravaSubscriber)
+        if (hardwareDiamond || (hardwareGold && isStravaSubscriber)) {
             return GarageLeague.DIAMOND
         }
-        // Gold League: >= 3 bikes OR >= 4 shoes OR >= 5 remote sensors OR >= 1 power meter
-        if (bikeCount >= 3 || shoeCount >= 4 || sensorCount >= 5 || powerMeterCount >= 1) {
+        // Gold League: hardwareGold OR isStravaSubscriber
+        if (hardwareGold || isStravaSubscriber) {
             return GarageLeague.GOLD
         }
         return GarageLeague.NONE
     }
 
     fun evaluateLeague(stats: GarageStats): GarageLeague =
-        evaluateLeague(stats.bikeCount, stats.shoeCount, stats.sensorCount, stats.powerMeterCount)
+        evaluateLeague(stats.bikeCount, stats.shoeCount, stats.sensorCount, stats.powerMeterCount, stats.isStravaSubscriber)
 
     /**
      * Determines whether an upgrade nudge dialog should trigger based on league qualification,
@@ -152,7 +159,8 @@ class GarageLeagueDetector @JvmOverloads constructor(
             bikeCount = bikes.size,
             shoeCount = shoes.size,
             sensorCount = remoteSensors.size,
-            powerMeterCount = powerMeters
+            powerMeterCount = powerMeters,
+            isStravaSubscriber = TrainingApplication.isStravaSubscriber()
         )
     }
 

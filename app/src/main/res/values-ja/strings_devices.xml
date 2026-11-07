@@ -90,7 +90,6 @@
     <string name="devices_last_seen_never">未検出</string>
 
     <string name="devices_location_GPS">端末 GPS (衛星)</string>
-    <string name="devices_location_Network">端末位置情報 (ネットワーク/WiFi)</string>
     <string name="devices_location_GoogleFused">Google 位置情報 (Fused)</string>
     <string name="devices_altitude_from_pressure">気圧からの高度</string>
 

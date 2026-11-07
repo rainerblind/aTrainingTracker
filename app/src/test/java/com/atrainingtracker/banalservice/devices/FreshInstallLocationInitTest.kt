@@ -60,7 +60,6 @@ class FreshInstallLocationInitTest {
 
     private val gpsDeviceId = 201L
     private val fusedDeviceId = 202L
-    private val networkDeviceId = 203L
 
     @Before
     fun setUp() {
@@ -91,10 +90,8 @@ class FreshInstallLocationInitTest {
         every { DevicesDatabaseManager.getInstance(any()) } returns mockDevicesDbManager
         every { mockDevicesDbManager.getSpeedAndLocationGPSDeviceId() } returns gpsDeviceId
         every { mockDevicesDbManager.getSpeedAndLocationGoogleFusedDeviceId() } returns fusedDeviceId
-        every { mockDevicesDbManager.getSpeedAndLocationNetworkDeviceId() } returns networkDeviceId
         every { mockDevicesDbManager.isPaired(gpsDeviceId) } returns true
         every { mockDevicesDbManager.isPaired(fusedDeviceId) } returns false
-        every { mockDevicesDbManager.isPaired(networkDeviceId) } returns false
 
         mockLocationManager = mockk(relaxed = true)
         every { mockLocationManager.allProviders } returns listOf(LocationManager.GPS_PROVIDER)

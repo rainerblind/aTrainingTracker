@@ -164,6 +164,13 @@ public class StravaEquipmentSynchronizeThread extends Thread {
             return "No gear returned (missing profile:read_all permission)";
         }
 
+        boolean isSubscriber = jsonObject.optBoolean("summit", false) || jsonObject.optBoolean("premium", false);
+        JSONObject athleteObj = jsonObject.optJSONObject("athlete");
+        if (athleteObj != null) {
+            isSubscriber = isSubscriber || athleteObj.optBoolean("summit", false) || athleteObj.optBoolean("premium", false);
+        }
+        TrainingApplication.setStravaSubscriber(isSubscriber);
+
         try {
             SQLiteDatabase equipmentDb = EquipmentDbHelper.getInstance(mContext).getWritableDatabase();
             ContentValues values = new ContentValues();

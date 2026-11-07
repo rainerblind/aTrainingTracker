@@ -56,29 +56,34 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.BuildConfig
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.monetization.SupporterTier
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import com.google.android.play.core.review.ReviewManagerFactory
 
 /**
  * Celebratory Material 3 dialog presented upon reaching the athlete's very first
- * workout milestone ever (e.g. 100th ride or run) (REQ-REV-003 / ATT-2308).
+ * workout milestone ever (e.g. 100th ride or run) (REQ-REV-003 / ATT-2308, ATT-5658).
  *
  * Features:
- * 1. Google Play In-App Review launch with store URI fallback.
- * 2. Direct feedback email draft to Rainer.
- * 3. Authentic indie supporter appeal note for Free-tier athletes (omitted for Pro/Pioneers).
+ * 1. Grounded celebratory milestone message.
+ * 2. Section 1 (Top): Personal feedback email draft to Rainer.
+ * 3. Section 2 (Middle): Google Play In-App Review launch with store URI fallback.
+ * 4. Section 3 (Bottom): Appreciative supporter appeal note for Free-tier and Pioneer athletes
+ *    (cleanly omitted when an active paid supporter tier is active).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FirstJubileeCelebrationDialog(
     count: Int,
     sportName: String,
-    isProActive: Boolean,
+    supporterTier: SupporterTier,
     onRequestInAppReview: () -> Unit,
     onSendFeedbackEmail: () -> Unit,
     onNavigateToSupporter: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val showFinancialSupport = supporterTier == SupporterTier.FREE || supporterTier == SupporterTier.PIONEER
+
     AppModalBottomSheet(
         title = stringResource(R.string.jubilee_dialog_title, count, sportName),
         onDismissRequest = onDismiss,
@@ -102,8 +107,52 @@ fun FirstJubileeCelebrationDialog(
             textAlign = TextAlign.Center
         )
 
-        // Indie Supporter / Pro Appeal Note (Free Tier Only)
-        if (!isProActive) {
+        // Section 1 (Top): Personal Feedback via Email
+        Text(
+            text = stringResource(R.string.jubilee_email_feedback_prompt),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        OutlinedButton(
+            onClick = onSendFeedbackEmail,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Email,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.size(8.dp))
+            Text(text = stringResource(R.string.jubilee_action_email_feedback))
+        }
+
+        // Section 2 (Middle): Google Play Store Review
+        Text(
+            text = stringResource(R.string.jubilee_review_prompt),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Button(
+            onClick = onRequestInAppReview,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Star,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.size(8.dp))
+            Text(text = stringResource(R.string.jubilee_action_review))
+        }
+
+        // Section 3 (Bottom): Financial Support Card (Free & Pioneer Tiers)
+        if (showFinancialSupport) {
             Card(
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.45f)
@@ -141,45 +190,30 @@ fun FirstJubileeCelebrationDialog(
                 }
             }
         }
-
-        // Transitional Feedback Prompt
-        Text(
-            text = stringResource(R.string.jubilee_feedback_prompt),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        // Primary Review Action
-        Button(
-            onClick = onRequestInAppReview,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Star,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.size(8.dp))
-            Text(text = stringResource(R.string.jubilee_action_review))
-        }
-
-        // Secondary Email Feedback Action
-        OutlinedButton(
-            onClick = onSendFeedbackEmail,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Email,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.size(8.dp))
-            Text(text = stringResource(R.string.jubilee_action_email_feedback))
-        }
     }
 }
+
+/**
+ * Backward compatibility overload forwarding [isProActive] to [FirstJubileeCelebrationDialog].
+ */
+@Composable
+fun FirstJubileeCelebrationDialog(
+    count: Int,
+    sportName: String,
+    isProActive: Boolean,
+    onRequestInAppReview: () -> Unit,
+    onSendFeedbackEmail: () -> Unit,
+    onNavigateToSupporter: () -> Unit,
+    onDismiss: () -> Unit
+) = FirstJubileeCelebrationDialog(
+    count = count,
+    sportName = sportName,
+    supporterTier = if (isProActive) SupporterTier.SILVER else SupporterTier.FREE,
+    onRequestInAppReview = onRequestInAppReview,
+    onSendFeedbackEmail = onSendFeedbackEmail,
+    onNavigateToSupporter = onNavigateToSupporter,
+    onDismiss = onDismiss
+)
 
 /**
  * Unwraps nested [ContextWrapper] instances (e.g. from Compose theming or dependency injection)

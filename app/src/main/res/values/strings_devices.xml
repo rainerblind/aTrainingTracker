@@ -130,7 +130,6 @@
 
     <!-- smartphone devices -->
     <string name="devices_location_GPS">Phone GPS (Satellite)</string>
-    <string name="devices_location_Network">Phone Location (Cell/WiFi)</string>
     <string name="devices_location_GoogleFused">Google Location (Fused)</string>
     <string name="devices_altitude_from_pressure">Altitude from Pressure</string>
 

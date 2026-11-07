@@ -57,7 +57,7 @@ class WorkoutSectionReorderContractTest {
         val afterMoveUp = moveSection(initialOrder, 1, 0)
         assertEquals(WorkoutSectionType.EXTREMA, afterMoveUp[0])
         assertEquals(WorkoutSectionType.DESCRIPTION, afterMoveUp[1])
-        assertEquals(10, afterMoveUp.size)
+        assertEquals(11, afterMoveUp.size)
 
         // 2. Move Down on first element (EXTREMA at index 0 -> index 1)
         val afterMoveDown = moveSection(afterMoveUp, 0, 1)

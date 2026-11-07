@@ -90,7 +90,6 @@
     <string name="devices_last_seen_never">nog niet</string>
 
     <string name="devices_location_GPS">Telefoon GPS (Satelliet)</string>
-    <string name="devices_location_Network">Telefoonlocatie (Netwerk/WiFi)</string>
     <string name="devices_location_GoogleFused">Google Locatie (Fused)</string>
     <string name="devices_altitude_from_pressure">Hoogte uit luchtdruk</string>
 

@@ -69,8 +69,13 @@ fun GarageUpgradeNudgeDialog(
     val currentTierName = stringResource(event.currentTier.titleRes)
 
     val message = if (isDiamond) {
+        val messageRes = if (event.stats.isStravaSubscriber) {
+            R.string.garage_detector_dialog_message_diamond_strava
+        } else {
+            R.string.garage_detector_dialog_message_diamond
+        }
         stringResource(
-            R.string.garage_detector_dialog_message_diamond,
+            messageRes,
             event.stats.bikeCount,
             event.stats.shoeCount,
             event.stats.sensorCount,
@@ -78,8 +83,13 @@ fun GarageUpgradeNudgeDialog(
             currentTierName
         )
     } else {
+        val messageRes = if (event.stats.isStravaSubscriber) {
+            R.string.garage_detector_dialog_message_gold_strava
+        } else {
+            R.string.garage_detector_dialog_message_gold
+        }
         stringResource(
-            R.string.garage_detector_dialog_message_gold,
+            messageRes,
             event.stats.bikeCount,
             event.stats.shoeCount,
             event.stats.sensorCount,

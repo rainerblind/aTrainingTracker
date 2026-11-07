@@ -206,10 +206,12 @@ class SensorQuotaReconciliationManager @JvmOverloads constructor(
     }
 
     /**
-     * Determines the recommended device to unpair when pairing a 3rd device on Free tier (REQ-SET-084.2, ATT-5490):
+     * Determines the recommended device to unpair when pairing a 3rd device on Free tier (REQ-SET-084.2, ATT-5490, ATT-5657):
      * 1. Recommends [DeviceType.ALTITUDE_FROM_PRESSURE] first if paired.
      * 2. If both Google Fused and GPS are paired, recommends [DeviceType.SPEED_AND_LOCATION_GPS] (retaining Google Fused).
-     * 3. Otherwise falls back to the first paired device in list order.
+     * 3. Prioritizes non-location sensors (disconnected first, oldest [parseLastSeenTimestamp] second, list order third)
+     *    and NEVER recommends [DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED] or a sole location sensor if any non-location sensor exists.
+     * 4. Otherwise falls back to the first paired device in list order.
      */
     fun determineRecommendedUnpairDeviceId(pairedDevices: List<DeviceUiData>): Long {
         val barometer = pairedDevices.firstOrNull { it.deviceType == DeviceType.ALTITUDE_FROM_PRESSURE }
@@ -218,6 +220,18 @@ class SensorQuotaReconciliationManager @JvmOverloads constructor(
         val hasFused = pairedDevices.any { it.deviceType == DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED }
         val gps = pairedDevices.firstOrNull { it.deviceType == DeviceType.SPEED_AND_LOCATION_GPS }
         if (hasFused && gps != null) return gps.id
+
+        val nonLocationDevices = pairedDevices.filter {
+            it.deviceType != DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED &&
+                it.deviceType != DeviceType.SPEED_AND_LOCATION_GPS
+        }
+        if (nonLocationDevices.isNotEmpty()) {
+            val candidate = nonLocationDevices.sortedWith(
+                compareBy<DeviceUiData> { it.isConnected }
+                    .thenBy { parseLastSeenTimestamp(it.lastSeen) }
+            ).firstOrNull()
+            if (candidate != null) return candidate.id
+        }
 
         return pairedDevices.firstOrNull()?.id ?: -1L
     }

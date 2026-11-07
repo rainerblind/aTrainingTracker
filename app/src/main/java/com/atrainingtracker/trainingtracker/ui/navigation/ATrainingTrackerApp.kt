@@ -731,17 +731,17 @@ fun ATrainingTrackerApp(
         null -> Unit
     }
 
-    // Material 3 First-Jubilee Celebration Dialog (REQ-REV-003, REQ-REV-004 / ATT-2308)
+    // Material 3 First-Jubilee Celebration Dialog (REQ-REV-003, REQ-REV-004 / ATT-2308, ATT-5658)
     activity.firstJubileeCelebrationState?.let { jubileeData ->
         val proFeatureManager = remember { ProFeatureManager(context) }
-        val isProActive by proFeatureManager.isProActive.collectAsState()
+        val effectiveTier by proFeatureManager.effectiveTier.collectAsState()
         val settingsDataStore = remember { SettingsDataStore.getInstance(context) }
         val jubileeScope = rememberCoroutineScope()
 
         FirstJubileeCelebrationDialog(
             count = jubileeData.count,
             sportName = jubileeData.sportName,
-            isProActive = isProActive,
+            supporterTier = effectiveTier,
             onRequestInAppReview = {
                 activity.firstJubileeCelebrationState = null
                 jubileeScope.launch {

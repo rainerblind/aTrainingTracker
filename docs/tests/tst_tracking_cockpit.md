@@ -621,27 +621,27 @@
 ### TST-TRK-016: **MySensorManager Priority Hierarchy, DeviceType Enum Alignment, LINE_DISTANCE_m, Default Pairing & Canonical Rank Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-024`
 - **Component**: **`MySensorManager` Priority Hierarchy, `DeviceType` Enum Alignment, `LINE_DISTANCE_m`, Default Pairing & Canonical Rank Verification Suite**
-- **Jira**: ``ATT-3961`, `ATT-4375`, `ATT-5491``
+- **Jira**: ``ATT-3961`, `ATT-4375`, `ATT-5491`, `ATT-5492``
 - **Test Description**:
   1. *`SPEED_PRIORITY`, `ALTITUDE_PRIORITY` & `LOCATION_PRIORITY` Ordering Invariant Test (`MySensorManagerPriorityTest.kt`)*:
-  • Verify `MySensorManager.SPEED_PRIORITY` equals `[RUN_SPEED, BIKE_SPEED, BIKE_SPEED_AND_CADENCE, BIKE_POWER, SPEED_AND_LOCATION_GOOGLE_FUSED, SPEED_AND_LOCATION_GPS, SPEED_AND_LOCATION_NETWORK]`, with `SPEED_AND_LOCATION_GOOGLE_FUSED` strictly preceding `SPEED_AND_LOCATION_GPS`.
+  • Verify `MySensorManager.SPEED_PRIORITY` equals `[RUN_SPEED, BIKE_SPEED, BIKE_SPEED_AND_CADENCE, BIKE_POWER, SPEED_AND_LOCATION_GOOGLE_FUSED, SPEED_AND_LOCATION_GPS]`, with `SPEED_AND_LOCATION_GOOGLE_FUSED` strictly preceding `SPEED_AND_LOCATION_GPS`.
   • Verify `MySensorManager.ALTITUDE_PRIORITY` and `LOCATION_PRIORITY` order `SPEED_AND_LOCATION_GOOGLE_FUSED` ahead of `SPEED_AND_LOCATION_GPS`.
   2. *Google Fused `ProxySensor` Retention & GC String Test (`MySensorManagerPriorityTest.kt`)*:
   • Verify that registering `SPEED_mps`, `PACE_spm`, `DISTANCE_m`, `DISTANCE_m_LAP`, `ALTITUDE`, `LATITUDE`, and `LONGITUDE` from a `DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED` device retains non-null `ProxySensor` instances in `MySensorManager`, propagates live values (`6.5 m/s`, `2896.48 m`), and sets `'D'` and `'S'` in `SensorType.SENSORS` (`"-DS----AG--"`).
   3. *Priority Upgrade & Fallback Test (`MySensorManagerPriorityTest.kt`)*:
-  • Verify that registering and unregistering `SPEED_AND_LOCATION_NETWORK`, `SPEED_AND_LOCATION_GPS`, `SPEED_AND_LOCATION_GOOGLE_FUSED`, and `BIKE_SPEED` dynamically upgrades and falls back `getBestSensor` and `ProxySensor` values according to `BIKE_SPEED > SPEED_AND_LOCATION_GOOGLE_FUSED > SPEED_AND_LOCATION_GPS > SPEED_AND_LOCATION_NETWORK`.
+  • Verify that registering and unregistering `SPEED_AND_LOCATION_GPS`, `SPEED_AND_LOCATION_GOOGLE_FUSED`, and `BIKE_SPEED` dynamically upgrades and falls back `getBestSensor` and `ProxySensor` values according to `BIKE_SPEED > SPEED_AND_LOCATION_GOOGLE_FUSED > SPEED_AND_LOCATION_GPS`.
   4. *`DeviceType` Enum Declaration Order Test (`DeviceTypeEnumOrderTest.kt`)*:
-  • Verify that in `DeviceType.java`, `SPEED_AND_LOCATION_GPS.ordinal() < SPEED_AND_LOCATION_GOOGLE_FUSED.ordinal()` and `SPEED_AND_LOCATION_GOOGLE_FUSED.ordinal() < SPEED_AND_LOCATION_NETWORK.ordinal()`.
+  • Verify that in `DeviceType.java`, `SPEED_AND_LOCATION_GPS.ordinal() < SPEED_AND_LOCATION_GOOGLE_FUSED.ordinal()`.
   5. *`LINE_DISTANCE_m` Priority Mapping & `getBestSensor` Fallback Test (`MySensorManagerPriorityTest.kt`)*:
   • Verify `MySensorManager.getPriorityList(SensorType.LINE_DISTANCE_m)` equals `LOCATION_PRIORITY`.
-  • Verify that when both `SPEED_AND_LOCATION_GOOGLE_FUSED` and `SPEED_AND_LOCATION_GPS` (or `NETWORK`) are registered for `LINE_DISTANCE_m`, `getBestSensor(SensorType.LINE_DISTANCE_m)` selects `SPEED_AND_LOCATION_GOOGLE_FUSED`.
+  • Verify that when both `SPEED_AND_LOCATION_GOOGLE_FUSED` and `SPEED_AND_LOCATION_GPS` are registered for `LINE_DISTANCE_m`, `getBestSensor(SensorType.LINE_DISTANCE_m)` selects `SPEED_AND_LOCATION_GOOGLE_FUSED`.
   6. *Canonical Priority Rank Helper Test (`MySensorManagerPriorityTest.kt`)*:
-  • Verify `MySensorManager.getPriorityRank(sensorType, deviceType)` returns 0 for `SPEED_AND_LOCATION_GOOGLE_FUSED`, 1 for `SPEED_AND_LOCATION_GPS`, and 2 for `SPEED_AND_LOCATION_NETWORK` across location sensor types.
-  • Verify speed ranks: `BIKE_SPEED (1) -> SPEED_AND_LOCATION_GOOGLE_FUSED (4) -> SPEED_AND_LOCATION_GPS (5) -> SPEED_AND_LOCATION_NETWORK (6)`.
-  • Verify altitude ranks: `PRESSURE (0) -> POSITION (1) -> SPEED_AND_LOCATION_GOOGLE_FUSED (2) -> SPEED_AND_LOCATION_GPS (3) -> SPEED_AND_LOCATION_NETWORK (4)`.
+  • Verify `MySensorManager.getPriorityRank(sensorType, deviceType)` returns 0 for `SPEED_AND_LOCATION_GOOGLE_FUSED` and 1 for `SPEED_AND_LOCATION_GPS` across location sensor types.
+  • Verify speed ranks: `BIKE_SPEED (1) -> SPEED_AND_LOCATION_GOOGLE_FUSED (4) -> SPEED_AND_LOCATION_GPS (5)`.
+  • Verify altitude ranks: `PRESSURE (0) -> POSITION (1) -> SPEED_AND_LOCATION_GOOGLE_FUSED (2) -> SPEED_AND_LOCATION_GPS (3)`.
   • Verify fallback ranks `1000 + deviceType.ordinal()` for unmapped devices and `Integer.MAX_VALUE` for null `deviceType`.
   7. *`DevicesDatabaseManager.addLocationDevicesToDb` Insertion Sequence & Default Pairing Tests (`DevicesDatabaseManagerOrderingTest.kt`)*:
-  • Verify insertion sequence `_id = 1` for `SPEED_AND_LOCATION_GPS`, `_id = 2` for `SPEED_AND_LOCATION_GOOGLE_FUSED`, and `_id = 3` for `SPEED_AND_LOCATION_NETWORK`.
+  • Verify insertion sequence `_id = 1` for `SPEED_AND_LOCATION_GPS` and `_id = 2` for `SPEED_AND_LOCATION_GOOGLE_FUSED`.
   • Verify that when Google Play Services is available, `SPEED_AND_LOCATION_GOOGLE_FUSED` is paired (`PAIRED = 1`) and `SPEED_AND_LOCATION_GPS` is unpaired (`PAIRED = 0`).
   • Verify that when Google Play Services is unavailable (de-Googled fallback), `SPEED_AND_LOCATION_GPS` is paired (`PAIRED = 1`) and `SPEED_AND_LOCATION_GOOGLE_FUSED` is unpaired (`PAIRED = 0`).
   8. *SensorSourceDialog Priority Sorting Test (`SensorSourceDialogPriorityTest.kt`)*:
@@ -1485,3 +1485,25 @@
   • Verify that `ClockDevice.java` contains `private final Date mReusableDate` and `ClockTimeTask.run()` uses `mReusableDate.setTime(...)` without calling `Calendar.getInstance()`.
   3. *Clean-Room Regression Suite Execution (`TST-TRK-052.3`)*:
   • Run targeted package tests (`com.atrainingtracker.banalservice.*`, `com.atrainingtracker.trainingtracker.tracker.*`, `build.*`) asserting 100% pass rate.
+
+### TST-SEN-027: **Obsolete Network Location Excision & Devices.db Version 10 Migration Test Suite** [Verified]
+- **Requirement(s)**: `REQ-SEN-027`
+- **Component**: `DeviceType.java`, `SpeedAndLocationDevice_Network.java` (deleted), `DevicesDatabaseManager.java`, `MySensorManager.java`, `DatabaseSchemaRegistry.kt`, `DeviceData.kt`
+- **Jira**: `ATT-5492`
+- **Test Description**:
+  1. *DeviceType Enum Declaration & Excision Contract Test (`TST-SEN-027.1`)*:
+  • Verify `SpeedAndLocationDevice_Network.java` does not exist on disk.
+  • Verify `DeviceType.values()` does not contain `SPEED_AND_LOCATION_NETWORK`.
+  • Verify `DeviceTypeEnumOrderTest.kt` asserts `SPEED_AND_LOCATION_GPS.ordinal < SPEED_AND_LOCATION_GOOGLE_FUSED.ordinal`.
+  2. *Devices Database Version 10 Migration & Cleanup Test (`TST-SEN-027.2`)*:
+  • Verify in `DevicesDatabaseManagerTest.kt` that upgrading a v9 database containing a `SPEED_AND_LOCATION_NETWORK` entry removes that row completely upon migration to v10.
+  • Verify fresh install (`addLocationDevicesToDb`) inserts only `SPEED_AND_LOCATION_GPS` and `SPEED_AND_LOCATION_GOOGLE_FUSED`.
+  • Verify `DatabaseSchemaRegistry` asserts `DevicesDbHelper.DB_VERSION == 10`.
+  3. *Priority Hierarchy Array Length & Rank Test (`TST-SEN-027.3`)*:
+  • Verify `MySensorManager.SPEED_PRIORITY` has length 6, `ALTITUDE_PRIORITY` has length 4, and `LOCATION_PRIORITY` has length 2.
+  • Verify `getPriorityRank` returns ranks 0 for `GOOGLE_FUSED` and 1 for `GPS` across location sensors.
+  4. *9-Language Clean Removal Audit Test (`TST-SEN-027.4`)*:
+  • Verify `TranslationParityTest` passes without `devices_location_Network` in `strings_devices.xml` across all 9 locales.
+  5. *Clean-Room Targeted Test Suite Execution (`TST-SEN-027.5`)*:
+  • Execute targeted unit tests verifying 100% pass rate.
+

@@ -110,6 +110,70 @@ class GarageLeagueDetectorTest {
     }
 
     @Test
+    fun evaluateLeague_stravaSubscriber_qualifiesGoldAndBoostsToDiamond() {
+        // TST-SET-088.1 / ATT-5570
+        // 1. Zero hardware + Strava subscriber -> GOLD
+        val zeroHardwareSubscriber = GarageStats(
+            bikeCount = 0,
+            shoeCount = 0,
+            sensorCount = 0,
+            powerMeterCount = 0,
+            isStravaSubscriber = true
+        )
+        assertEquals(GarageLeague.GOLD, GarageNudgeEvaluator.evaluateLeague(zeroHardwareSubscriber))
+
+        // 2. Sub-threshold hardware + Strava subscriber -> GOLD
+        val subThresholdSubscriber = GarageStats(
+            bikeCount = 1,
+            shoeCount = 2,
+            sensorCount = 2,
+            powerMeterCount = 0,
+            isStravaSubscriber = true
+        )
+        assertEquals(GarageLeague.GOLD, GarageNudgeEvaluator.evaluateLeague(subThresholdSubscriber))
+
+        // 3. Gold hardware (3 bikes) + Strava subscriber -> boosted to DIAMOND
+        val goldHardwareSubscriber = GarageStats(
+            bikeCount = 3,
+            shoeCount = 0,
+            sensorCount = 0,
+            powerMeterCount = 0,
+            isStravaSubscriber = true
+        )
+        assertEquals(GarageLeague.DIAMOND, GarageNudgeEvaluator.evaluateLeague(goldHardwareSubscriber))
+
+        // 4. Gold hardware (4 shoes) + Strava subscriber -> boosted to DIAMOND
+        val shoesHardwareSubscriber = GarageStats(
+            bikeCount = 0,
+            shoeCount = 4,
+            sensorCount = 0,
+            powerMeterCount = 0,
+            isStravaSubscriber = true
+        )
+        assertEquals(GarageLeague.DIAMOND, GarageNudgeEvaluator.evaluateLeague(shoesHardwareSubscriber))
+
+        // 5. Gold hardware (3 bikes) without Strava subscription -> remains GOLD
+        val goldHardwareNonSubscriber = GarageStats(
+            bikeCount = 3,
+            shoeCount = 0,
+            sensorCount = 0,
+            powerMeterCount = 0,
+            isStravaSubscriber = false
+        )
+        assertEquals(GarageLeague.GOLD, GarageNudgeEvaluator.evaluateLeague(goldHardwareNonSubscriber))
+
+        // 6. Zero hardware without Strava subscription -> remains NONE
+        val zeroHardwareNonSubscriber = GarageStats(
+            bikeCount = 0,
+            shoeCount = 0,
+            sensorCount = 0,
+            powerMeterCount = 0,
+            isStravaSubscriber = false
+        )
+        assertEquals(GarageLeague.NONE, GarageNudgeEvaluator.evaluateLeague(zeroHardwareNonSubscriber))
+    }
+
+    @Test
     fun shouldTriggerNudge_goldMonotonicity() {
         val goldStats = GarageStats(bikeCount = 3, shoeCount = 1, sensorCount = 2, powerMeterCount = 0)
 

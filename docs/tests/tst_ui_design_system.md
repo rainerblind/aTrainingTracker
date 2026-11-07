@@ -400,8 +400,11 @@
 ### TST-UI-078: **Cluster Naming Dialog Localization Audit** [Verified]
 - **Requirement(s)**: `REQ-UI-123`
 - **Component**: **Cluster Naming Dialog Localization Audit**
-- **Jira**: ``ATT-565``
-- **Test Description**: 1. Set app locale to non-English (e.g., German/DE). 2. Trigger a TCX import to launch `ClusterNamingDialog`. 3. Inspect all text elements in the dialog.
+- **Jira**: `ATT-565`, `ATT-5664`, `ATT-5662`
+- **Test Description**:
+  1. Inspect `ClusterNamingDialog` strings across all 9 locales: verify `cluster_naming__assignment_label`, `cluster_naming__new_name_prompt`, and `cluster_naming__new_route_name_label` explicitly reference existing and new favorite routes (*Lieblingsstrecken*), and verify `cluster_naming__found_recurring` provides neutral unassigned route copy with `%1$s` placeholder.
+  2. Run `TranslationParityTest` and `ClusterNamingDialogLabelsVisualContractTest` to confirm 100% string presence, copy correctness, and parity across `values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, and `values-pt/`.
+  3. Verify `verify_requirement_governance.py` passes cleanly.
 
 ### TST-UI-076: **Period UI Layout Integrity** [Verified]
 - **Requirement(s)**: `REQ-UI-104`
@@ -817,7 +820,7 @@
 ### TST-UI-102: **Modernized Modal Bottom Sheet Dialogs & Selection Flows Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-149`
 - **Component**: **Modernized Modal Bottom Sheet Dialogs & Selection Flows Verification**
-- **Jira**: `ATT-900`, `ATT-1029`, `ATT-1031`, `ATT-1032`, `ATT-5399`
+- **Jira**: `ATT-900`, `ATT-1029`, `ATT-1031`, `ATT-1032`, `ATT-5399`, `ATT-5661`
 - **Test Description**:
   1. *Unit & Contract Verification (`ModalBottomSheetDialogsIntegrityTest.kt`)*:
   • Verify `AppModalBottomSheet` supports both vector icon (`icon: ImageVector?`) and painter icon (`iconPainter: Painter?`) parameters in its composable signature.
@@ -4648,14 +4651,14 @@
 ### TST-UI-294: **Newly Discovered Sensor Prioritization, Visual Highlight Badge & Discovery Feedback Notification Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-334`
 - **Component**: **Newly Discovered Sensor Prioritization, Visual Highlight Badge & Discovery Feedback Notification Verification**
-- **Jira**: ``ATT-3099``
+- **Jira**: `ATT-3099`, `ATT-5660`
 - **Test Description**:
   1. *GetMergedDevicesUseCase Newly Discovered Flagging Unit Tests (`GetMergedDevicesUseCaseTest.kt`)*:
   • Verify `DeviceUiData` mapped for device IDs in `newlyFoundDevicesIds` sets `isNewlyDiscovered = true`.
   • Verify devices not in `newlyFoundDevicesIds` set `isNewlyDiscovered = false`.
   2. *DeviceListViewModel Scan Priority Sorting Unit Tests (`DeviceListViewModelPriorityTest.kt`)*:
-  • Verify newly discovered devices sort at index 0 and 1 ahead of connected and idle devices.
-  • Verify multiple newly discovered devices sort in recency order (most recently discovered first).
+  • Verify newly discovered devices sort at index 0 and 1 ahead of baseline devices in recency order.
+  • Verify baseline devices sort stably and alphabetically by deviceName with id tie-breaker without re-sorting by isConnected.
   3. *DeviceItem Visual Badge & Border Contract Tests (`DeviceItemVisualHighlightTest.kt`)*:
   • Verify `DeviceItem` renders "NEW" badge chip (`devices_newly_discovered_badge`) when `isNewlyDiscovered == true`.
   • Verify `DeviceItem` applies `BorderStroke(1.5.dp, primary.copy(alpha = 0.6f))` when `isNewlyDiscovered == true`.
@@ -4664,7 +4667,9 @@
   • Verify `DevicesTabbedScreen` observes event, shows snackbar (`devices_new_sensor_discovered`), triggers haptic vibration, and auto-scrolls to index 0.
   5. *9-Language Localization Audit (`DeviceDiscoveryLocalizationTest.kt`)*:
   • Verify string keys `devices_newly_discovered_badge` and `devices_new_sensor_discovered` exist and are non-empty across EN, DE, ES, FR, IT, JA, NL, PL, PT with valid `%1$s` specifiers.
-  6. *Clean-Room Full Suite Regression Execution*:
+  6. *Stable Sorting During Pairing / Connection State Changes (`DeviceListViewModelPriorityTest.kt`)*:
+  • Verify that mutating `isConnected` does not alter list index positions in `DeviceListViewModel.getFilteredDevices` across pairing transitions (ATT-5660).
+  7. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
 ### TST-UI-295: **Dynamic Map-Aware Navigation Hints Overlay Anchoring over Embedded Map View Verification** [Verified]
@@ -6126,11 +6131,11 @@
 ### TST-UI-371: **Individually Configurable Workout Detail Tabs, Conflict-Free Layout Modes, Smart Gesture Isolation, Auto-Hiding Empty Tabs & 9-Language Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-408`
 - **Component**: **Individually Configurable Workout Detail Tabs, Conflict-Free Layout Modes, Smart Gesture Isolation, Auto-Hiding Empty Tabs & 9-Language Parity Verification Suite**
-- **Jira**: `ATT-3920`, `ATT-5483`
+- **Jira**: `ATT-3920`, `ATT-5483`, `ATT-5655`
 - **Test Description**:
   1. *Domain Model, Default 4-Tab Archetype & Serialization Unit Tests (`WorkoutDetailTabsTest.kt`)*:
-  • Verify `WorkoutDetailSectionType.entries.size == 10`, `WorkoutSectionType.entries.size == 9`, and `WorkoutDetailTabConfig.DEFAULT_TABS` defines the 4 default tabs (`OVERVIEW`: `[DETAILS, DESCRIPTION, EXTREMA, EXPORT_STATUS]`, `MAP_AND_GRAPHS`: `[MAP, ELEVATION, CHARTS]`, `ZONES`: `[ZONES]`, `LAPS_AND_SEGMENTS`: `[LAPS, STRAVA]`).
-  • Verify `serializeTabs` and `deserializeTabs` round-trip default and custom tabs, escape delimiters, ignore unknown tokens, deduplicate sections, and fall back to `DEFAULT_TABS` on null/blank/invalid inputs.
+  • Verify `WorkoutDetailSectionType.entries.size == 11`, `WorkoutSectionType.entries.size == 10`, and `WorkoutDetailTabConfig.DEFAULT_TABS` defines the 4 default tabs (`OVERVIEW`: `[DETAILS, PHOTOS, DESCRIPTION, EXTREMA, EXPORT_STATUS]`, `MAP_AND_GRAPHS`: `[MAP, ELEVATION, CHARTS]`, `ZONES`: `[ZONES]`, `LAPS_AND_SEGMENTS`: `[LAPS, STRAVA]`).
+  • Verify `serializeTabs` and `deserializeTabs` round-trip default and custom tabs with `v2|` prefix, auto-migrate legacy `v1|` tabs lacking `PHOTOS` by injecting `PHOTOS` into `tab_overview`, escape delimiters, ignore unknown tokens, deduplicate sections, and fall back to `DEFAULT_TABS` on null/blank/invalid inputs.
   2. *Layout Mode, Map Pinning, Gesture Isolation, Auto-Hiding & CRUD Unit Tests (`WorkoutDetailTabsTest.kt`)*:
   • Verify `normalizedSections` pins `MAP` at index `0` whenever `MAP` is present and `layoutMode` resolves to `MODE_A_CARD_SCROLL` (`MAP` absent), `MODE_B_SPLIT_MAP` (`MAP` + other sections), or `MODE_C_FULL_MAP` (`MAP` only).
   • Verify `requiresHorizontalGestureIsolation` returns `true` for tabs containing active `MAP`, `ELEVATION`, or `CHARTS` and `false` for card-only tabs.
@@ -6259,7 +6264,7 @@
 ### TST-UI-377: **Workout Cards & Details Settings Streamlining, Collapsible Section Order, Authoritative Tab Activation, and 9-Language Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-414`
 - **Component**: **Workout Cards & Details Settings Streamlining, Collapsible Section Order, Authoritative Tab Activation, and 9-Language Parity Verification Suite**
-- **Jira**: `ATT-4043`, `ATT-5474`
+- **Jira**: `ATT-4043`, `ATT-5474`, `ATT-5655`
 - **Test Description**:
   1. *Authoritative Tab Data Availability & Section Activation Test (`TST-UI-377.1`, `WorkoutDetailTabsTest.kt`)*:
   • Initialize `WorkoutDetailSectionAvailability` with `hasMap = true` and `hasElevation = true`, alongside `WorkoutDetailPreferences` with `showMap = false` and `showElevationProfile = false`.
@@ -6281,11 +6286,11 @@
   6. *9-Language Localization Parity Audit (`TST-UI-377.6`, `TranslationParityTest.kt`)*:
   • Inspect all 9 supported locale directories (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
   • Verify `workout_card_reorder_toggle` and `settings_workout_details_title` exist in all 9 files with `%1$d` specifier match and no entity issues.
-  7. *Workout Photos Settings & Layout Contract Test (`TST-UI-377.7` / `ATT-5474`, `WorkoutMasksAndCardsLayoutTest.kt`)*:
+  7. *Workout Photos Settings, Responsive Viewport Sizing & Layout Contract Test (`TST-UI-377.7` / `ATT-5474`, `ATT-5655`, `WorkoutMasksAndCardsLayoutTest.kt`, `PhotoThumbnailSizeTest.kt`)*:
   • Verify `WorkoutSectionType.PHOTOS` and `WorkoutDetailSectionType.PHOTOS` inclusion, `DEFAULT_ORDER`, and bidirectional mapping.
   • Verify `WorkoutPhotoPreferencesComponents.kt` modularity maintains `WorkoutMasksAndCardsSection.kt` strictly < 400 lines.
-  • Verify `PhotoThumbnailSize` enum values (`SMALL` 56dp, `MEDIUM` 76dp, `LARGE` 104dp) and DataStore persistence in `WorkoutCardSectionPreferences` and `WorkoutDetailPreferences`.
-  • Verify 9-language translation parity across all 6 new `settings_workout_photos_*` keys via `TranslationParityTest`.
+  • Verify `PhotoThumbnailSize` enum values (`SMALL`, `MEDIUM`, `LARGE`), DataStore persistence in `WorkoutCardSectionPreferences` and `WorkoutDetailPreferences`, and responsive viewport-relative card dimensions in `WorkoutPhotoStrip.kt`.
+  • Verify 9-language translation parity across all `settings_workout_photos_*` keys via `TranslationParityTest`.
   8. *Clean-Room Full Suite Regression Execution (`TST-UI-377.8`)*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
@@ -6457,12 +6462,12 @@
   • Test `TrackingViewInfo` reads and maps `showBikeBell` correctly from single-row and batch queries.
   • Test `updateShowBikeBell(tabViewId, show)` persists toggle state accurately.
   3. *BikeBellAudioSynthesizer Built-in Speaker Routing, Alarm Stream, 5-Mode Brass Synthesis & Volume Boost Test (`TST-UI-384.3`, `BikeBellAudioSynthesizerTest.kt`)*:
-  • Verify 16-bit PCM mono buffer synthesis generated at $44.1\text{ kHz}$ with two distinct strikes separated by $\sim 110\text{ ms}$ and exponential decay across 5 resonant modes (sub-octave hum $1020\text{ Hz}$, brass fundamental $2040\text{ Hz}$, tierce $3120\text{ Hz}$, nominal $4280\text{ Hz}$, clapper $6200\text{ Hz}$) with smooth attack window ($1 - e^{-dt / 0.0015}$).
+  • Verify 16-bit PCM mono buffer synthesis generated at $48\text{ kHz}$ with 40 ms SmartPA amplifier lead-in (`LEAD_IN_SEC = 0.040`), strike 1 at $t=0.040\text{ s}$, strike 2 at $t=0.150\text{ s}$ ($\sim 110\text{ ms}$ separation), and $0.95\text{ s}$ duration with $60\text{ ms}$ cosine fade-out across 5 resonant modes (sub-octave hum $1020\text{ Hz}$, brass fundamental $2040\text{ Hz}$, tierce $3120\text{ Hz}$, nominal $4280\text{ Hz}$, clapper $6200\text{ Hz}$) with smooth attack window ($1 - e^{-dt / 0.0015}$) (ATT-5649).
   • Verify roll PCM synthesis incorporates headroom scaling without hard clipping distortion.
   • Verify `AudioAttributes.USAGE_ALARM` and `AudioAttributes.CONTENT_TYPE_SONIFICATION` audio attributes configuration.
-  • Verify `AudioTrack.setPreferredDevice(builtInSpeaker)` where `builtInSpeaker.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER` applied upon creation and prior to playback.
-  • Verify `savedAlarmVolume` capture, hardware volume boost to `getStreamMaxVolume(STREAM_ALARM)` with `flags = 0`, and delayed auto-restore (+650 ms for ring, +150 ms after stopRoll).
-  • Verify static replay contract: `mockTrack.stop()` is invoked prior to `mockTrack.playbackHeadPosition = 0` on every ring and roll start, preventing `ERROR_INVALID_OPERATION`.
+  • Verify conditional speaker routing: `setPreferredDevice(builtInSpeaker)` is invoked only when an external audio device (Bluetooth A2DP/SCO/BLE, wired/USB headset, hearing aid) is detected; sets `setPreferredDevice(null)` when no external devices are connected to prevent port thrashing (ATT-5649).
+  • Verify `savedAlarmVolume` capture, hardware volume boost to `getStreamMaxVolume(STREAM_ALARM)` with `flags = 0` only when `currentVolume < maxVolume`, and delayed auto-restore (+5500 ms for ring matching the 5 s escalation window, +150 ms after stopRoll) (ATT-5649).
+  • Verify static replay contract: `mockTrack.pause()` (never `stop()`) is invoked prior to `mockTrack.playbackHeadPosition = 0` on every ring and roll start, maintaining warm AudioFlinger mixer sessions (ATT-5649).
   • Verify thread safety: concurrent calls to `ring()`, `startRoll()`, `stopRoll()`, and `close()` from multiple threads execute without exceptions or native crashes.
   4. *3-Stage Perceptual Loudness Escalation Logic Test (`TST-UI-384.4`, `TrackingTabsViewModelTest.kt`)*:
   • Test initial ring: verify volume is 0.35f (Stage 1, -9.1 dB).
@@ -7127,8 +7132,8 @@
 
 ### TST-UI-446: **Universal Stacked Workout Details Marginal Histograms & Widened Strip Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-446`
-- **Component**: `TelemetryMetricGraphTest.kt`, `TelemetryMetricGraphLandscapeContractTest.kt`, `ElevationProfileTest.kt`, `ElevationProfileGradeColorTest.kt`, `TranslationParityTest.kt`
-- **Jira**: `ATT-5370`, `ATT-5486`
+- **Component**: `TelemetryMetricGraphTest.kt`, `TelemetryMetricGraphLandscapeContractTest.kt`, `ElevationProfileTest.kt`, `ElevationProfileGradeColorTest.kt`, `MapDetailLayoutTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-5370`, `ATT-5486`, `ATT-5504`
 - **Test Description**:
   1. *Universal Marginal Histogram & Widened Portrait Margin Contract Test (`TST-UI-446.1`)*:
   • Verify `TelemetryMetricGraph` and `ElevationProfile` allocate `endPaddingPx = 52.dp` in portrait mode when aligned with stacked charts, yielding ~44dp bar width within the 52dp margin.
@@ -7141,6 +7146,8 @@
   3. *Landscape 72%/28% Multi-Chart Alignment & Elevation Parity Contract Test (`TST-UI-446.3`)*:
   • Verify all stacked charts in landscape orientation share identical 72%/28% dual-pane horizontal bounds (`chartCanvas` at 0.72f, marginal pane at 0.28f), guaranteeing 1:1 horizontal plot-width and scrubbing cursor alignment per Rule 64.
   • Verify `ElevationProfile(alignWithTelemetryCharts = false)` default preserves clean standalone layout without marginal histogram or extra padding for non-stacked callers (`SensorGridScreen`, `LiveClimbSheet`, `ClimbDetailSheet`, `RouteItem`, `SegmentItem`).
+  • Verify `MapDetailLayout` defaults `showElevationHistogram = (workoutData != null)`, suppressing altitude histograms for non-workout callers (`workoutData == null`) while enabling it for Workout Details (`workoutData != null`) (`ATT-5504`).
+  • Verify `WorkoutSummary` passes `alignWithTelemetryCharts = false` on list card `ElevationProfile` (`ATT-5504`).
   4. *9-Language Localization & Targeted Test Suite (`TST-UI-446.4`)*:
   • Run `TranslationParityTest` verifying 100% parity across all 9 locales.
   • Execute targeted test suite (`--tests "com.atrainingtracker.trainingtracker.ui.map.*"`, `aftermath.zones.*`, `ThemeColorCentralizationAuditTest`, `build.*`) with 100% pass rate.
@@ -7149,7 +7156,7 @@
 ### TST-UI-447: **Workout Share Mode Selection & Photo Track Overlay Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-447`
 - **Component**: `PhotoTrackOverlayComposerTest.kt`, `WorkoutShareBottomSheetContractTest.kt`, `ShareUtilsTest.kt`, `TranslationParityTest.kt`
-- **Jira**: `ATT-30`, `ATT-5479`, `ATT-5472`
+- **Jira**: `ATT-30`, `ATT-5479`, `ATT-5472`, `ATT-5656`
 - **Test Description**:
   1. *Equirectangular Track Projection, Portrait Bounds & Silhouette Geometry (`TST-UI-447.1`)*:
   • Verify `PhotoTrackOverlayComposer` scales GPS polyline points via cosine-latitude projection ($\Delta x = \Delta\lambda \cdot \cos(\phi_{\text{mean}})$, $\Delta y = -\Delta\phi$) preserving true aspect ratio.
@@ -7170,6 +7177,12 @@
   5. *9-Language Localization & Targeted Test Suite (`TST-UI-447.5`)*:
   • Verify 100% parity across all 9 locales via `TranslationParityTest` for all share mode strings.
   • Run targeted test suite (`--tests "com.atrainingtracker.trainingtracker.helpers.*"`, `ui.map.*`, `ThemeColorCentralizationAuditTest`) with 100% pass rate.
+  6. *3-Tier Photo Selection Cascade Contract Test (`TST-UI-447.6`, `WorkoutShareBottomSheetContractTest.kt`)*:
+  • Verify `WorkoutShareBottomSheet` displays Tier 1 (Attached Photos grid) when `attachedPhotos.isNotEmpty()`.
+  • Verify expanding to Tier 2 (Time-Window Photos) queries photos from `WorkoutPhotoManager.queryWorkoutTimePhotos`.
+  • Verify fallback to Tier 3 (System Picker `PickVisualMedia`) when both tiers are empty or when user taps "Alle Fotos anzeigen".
+  • Verify tapping "Foto auswählen" in preview mode returns to the 3-tier cascade.
+  • Verify Rule 73 stacked buttons across all cascade states.
 
 ### TST-UI-448: **Workout Photos Strip, Full-Screen Preview Bottom Sheet with ATT-30 Overlay Share, Map Pin Markers, and Null-Island Coordinate Rejection Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-448`
@@ -7290,8 +7303,8 @@
 
 ### TST-UI-453: **Aftermath Workout Details: Grade / Slope Distribution Card & 1% Telemetry Histogram Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-453`
-- **Component**: `GradeZoneDistributionCard.kt`, `ZoneDistributionCalculator.kt`, `ZoneDistributionColumnChart.kt`, `ZoneDistributionStackedBar.kt`, `ZoneDistributionModels.kt`, `WorkoutMasksAndCardsSection.kt`, `WorkoutDetailPreferences.kt`, `WorkoutCardSectionPreferences.kt`, `GradeZoneDistributionCardTest.kt`, `GradeZoneDistributionCalculatorTest.kt`, `WorkoutDetailPreferencesTest.kt`, `WorkoutMasksAndCardsLayoutTest.kt`, `TrackOnMapScreen.kt`, `WorkoutDetailTabbedContent.kt`, `WorkoutSummary.kt`, `TranslationParityTest.kt`
-- **Jira**: `ATT-5487`, `ATT-5563`
+- **Component**: `GradeZoneDistributionCard.kt`, `ZoneDistributionCalculator.kt`, `ZoneDistributionColumnChart.kt`, `ZoneDistributionStackedBar.kt`, `ZoneDistributionModels.kt`, `WorkoutMasksAndCardsSection.kt`, `WorkoutDetailPreferences.kt`, `WorkoutCardSectionPreferences.kt`, `WorkoutSectionType.kt`, `WorkoutDetailTabConfig.kt`, `GradeZoneDistributionCardTest.kt`, `GradeZoneDistributionCalculatorTest.kt`, `WorkoutDetailPreferencesTest.kt`, `WorkoutMasksAndCardsLayoutTest.kt`, `TrackOnMapScreen.kt`, `WorkoutDetailTabbedContent.kt`, `WorkoutSummary.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-5487`, `ATT-5563`, `ATT-5654`
 - **Test Description**:
   1. *Grade Zone Calculation & Canonical Thresholds Unit Test (`TST-UI-453.1`, `GradeZoneDistributionCalculatorTest.kt`)*:
   • Verify `ZoneDistributionCalculator.calculateGradeDistribution(...)` maps segments into exactly 7 categories matching `getElevationGradeColor` thresholds: `< 2%`, `2–5%`, `5–10%`, `10–15%`, `15–20%`, `20–25%`, `> 25%`.
@@ -7307,11 +7320,13 @@
   • Verify 3-way toggle renders Balken (`STACKED_BAR`), Säulen (`COLUMNS`), and Histogramm (`HISTOGRAM`).
   • Verify Column Chart and Stacked Bar render mathematical threshold labels `<2%`, `≥2%`, `≥5%`, `≥10%`, `≥15%`, `≥20%`, `≥25%` for slope distribution, while HR/Power strictly retain `Z1`..`Z7`.
   • Verify view switching renders `ZoneDistributionStackedBar`, `ZoneDistributionColumnChart`, and `TelemetryHistogramChart` respectively.
-  4. *Visibility Preference & Subordinate Settings Switch Test (`TST-UI-453.4`, `WorkoutDetailPreferencesTest.kt`, `WorkoutMasksAndCardsLayoutTest.kt`)*:
-  • Verify `WorkoutDetailPreferences.showGradeDistribution` defaults to `true`.
-  • Verify `WorkoutCardSectionPreferences.showGradeDistribution` defaults to `false`.
-  • Verify `WorkoutMasksAndCardsSection.kt` renders subordinate switch `settings_workout_card_grade_distribution` under Zone Analysis in both Summary and Details sections when `showZoneAnalysis == true`.
-  • Verify `WorkoutMasksAndCardsSection.kt` strictly respects the `< 400` lines constraint (`TST-UI-377.5`).
+  4. *Independent Section Entry, Reordering & Subordinate Switch Removal Test (`TST-UI-453.4`, `WorkoutDetailPreferencesTest.kt`, `WorkoutMasksAndCardsLayoutTest.kt`, `WorkoutDetailTabsTest.kt`, `WorkoutSummarySectionsTest.kt`)*:
+  • Verify `WorkoutSectionType.GRADE_DISTRIBUTION` is present in `WorkoutSectionType.DEFAULT_ORDER` and serialized cleanly.
+  • Verify `WorkoutDetailSectionType.GRADE_DISTRIBUTION` is present in `DEFAULT_TABS[2]` (`tab_zones`) following `ZONES`.
+  • Verify `WorkoutDetailTabConfig.deserializeTabs` auto-migrates missing `GRADE_DISTRIBUTION` into `tab_zones`.
+  • Verify `WorkoutMasksAndCardsSection.kt` maps `GRADE_DISTRIBUTION` in `buildMatrixFeatureRow` to `showGradeDistribution`.
+  • Verify `WorkoutMasksAndCardsSection.kt` contains zero subordinate switches under `ZoneDisplayModeSelector` and strictly respects the `< 400` lines constraint (`TST-UI-377.5`).
+  • Verify `WorkoutSummary.kt` and `WorkoutDetailTabbedContent.kt` render `GradeZoneDistributionCard` at the decoupled `GRADE_DISTRIBUTION` position.
   5. *9-Language Localization & Parity Test (`TST-UI-453.5`, `TranslationParityTest.kt`)*:
   • Verify 100% parity across all 9 supported locales for `aftermath_grade_zones_title` and `settings_workout_card_grade_distribution` with zero missing entries and zero decorative inline emojis.
   6. *Clean-Room Regression Suite Execution (`TST-UI-453.6`)*:

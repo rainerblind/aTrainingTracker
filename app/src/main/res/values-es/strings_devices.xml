@@ -90,7 +90,6 @@
     <string name="devices_last_seen_never">aún no</string>
 
     <string name="devices_location_GPS">GPS del teléfono (Satélite)</string>
-    <string name="devices_location_Network">Ubicación del teléfono (Red/WiFi)</string>
     <string name="devices_location_GoogleFused">Ubicación de Google (Fused)</string>
     <string name="devices_altitude_from_pressure">Altitud por presión</string>
 

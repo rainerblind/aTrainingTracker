@@ -1952,5 +1952,129 @@ The workflow SHALL mandate that:
 
 **Invariants**: Zero runtime app code modifications; backwards-compatible CLI tooling; 100% clean-room test suite pass rate.
 
+### REQ-PRO-035: Standalone Agile Agentic ASPICE (AAA) Core Framework, Swiss Cheese Reliability & Starter Templates [Verified]
+- **Tests**: `TST-PRO-035` | **Tickets**: `ATT-3922`
+- **Implementation**: `tools/hoechstmass/README.md`, `tools/hoechstmass/docs/project_protocol.md`, `tools/hoechstmass/.agents/`, `tools/hoechstmass/docs/`, `tools/hoechstmass/templates/`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/HoechstmassCoreFrameworkContractTest.kt`
+- **Rationale**: Extract and package the Agile Agentic ASPICE (AAA) methodology forged across 53+ sprints and 1,100+ tickets into a standalone, project-agnostic open-source skill set under `tools/hoechstmass/` (ATT-3922, Part 1 of 3, extending `REQ-PRO-014`, `REQ-PRO-024`, `REQ-PRO-026`, `REQ-PRO-027`, and `REQ-PRO-034`):
+1. *Branded README, Protocol, Epigraph Quote & Etymology (`REQ-PRO-035.1`)*:
+• `tools/hoechstmass/README.md` and `tools/hoechstmass/docs/project_protocol.md` SHALL prominently feature the opening epigraph quote: *„Power without control can become destructive. Power guided by intelligence becomes excellence.“* — **ChatGPT**.
+• The documentation SHALL define the transparent attribution principle and crystal-clear human/AI boundary (`agent1`, `agent2`, `coordinator`, `human`), rejecting unattributed vibe coding.
+• The documentation SHALL codify cross-model adversarial review (both intra-sprint `pro` $\leftrightarrow$ `flash` ping-pong and cross-vendor UI screenshot review via Gemini + ChatGPT).
+• The documentation SHALL provide an etymology callout box for German **Höchst·maß** (`/ˈhøːçstˌmaːs/` = *Höchst-* supreme/highest + *-maß* precision standard / *Maßarbeit*), deliberately retaining German special characters (`ö` and `ß`) to honor Automotive SPICE engineering roots.
+• The documentation SHALL formalize the Swiss Cheese Multiplicative Defect Reduction Model ($P(\text{escaped defect}) = p_1 \cdot p_2 \cdots p_n$) across 4 decorrelation layers: Context Isolation, Cross-Model Diversity, Deterministic Ground-Truth Oracles, and Human Final Gate.
+• The documentation SHALL specify the 5-Stage Agile ASPICE Lifecycle with role-separated gate governance.
+2. *Universal Document Triad Starter Templates (`REQ-PRO-035.2`)*:
+• `tools/hoechstmass/.agents/rules/aspice_governance.md` SHALL supply project-agnostic 8 Core Rules.
+• `tools/hoechstmass/docs/coding_standards.md` SHALL supply universal software construction invariants (1.1 Reuse Before Create/DRY, 1.2 Chesterton's Fence for Empty Callbacks, 1.3 Never Sort on Formatted Display Strings, 1.4 Confirmation for Destructive Ops, 1.5 Reactive Stream Subscription Over Static Snapshot Reads) with extensible project placeholder sections.
+• `tools/hoechstmass/docs/design_guidelines.md` SHALL supply universal UI/UX component selection heuristics (1.1 Segmented Buttons for binary choices, 1.2 Categorical FilterChips with 'Other' on far right, 1.3 Dropdowns for >4 options, 1.4 Discrete Sliders for >=5 scalars, 2.1 Dialog Hierarchy & Edge Padding).
+3. *Generalized Stage & Ceremony Skills and Deliverable Templates (`REQ-PRO-035.3`)*:
+• `tools/hoechstmass/.agents/skills/` SHALL contain parameterized, project-agnostic `SKILL.md` files for all 10 skills: `stage1-analysis`, `stage2-req-test-spec`, `stage3-impl-plan`, `stage4-implementation`, `stage5-verification`, `sprint-planner`, `jira-workflow`, `regression-bisect`, `brainstormer`, and `release-manager`.
+• `tools/hoechstmass/templates/` SHALL supply deliverable templates (`analysis_template.md`, `test_spec_template.md`, `plan_template.md`, `walkthrough_template.md`, `backlog_ticket_template.md`, `sprint_retro_template.md`).
+4. *Automated Framework Integrity Contract Test (`REQ-PRO-035.4`)*:
+• `app/src/test/java/com/atrainingtracker/trainingtracker/build/HoechstmassCoreFrameworkContractTest.kt` SHALL verify presence, non-emptiness, epigraph quote, etymology callout, mathematical model, 8 core rules, 10 skills, and deliverable templates under `tools/hoechstmass/`.
+• Zero modifications to active runtime source code in `app/src/main/` or active governance in `.agents/` and `docs/`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-035` under Epic Standalone / Framework Initiative (*Clean Code & Developer Tools*), extending `REQ-PRO-014`, `REQ-PRO-024`, `REQ-PRO-026`, `REQ-PRO-027`, and `REQ-PRO-034`. Targets `tools/hoechstmass/` and `app/src/test/java/com/atrainingtracker/trainingtracker/build/HoechstmassCoreFrameworkContractTest.kt`.
+2. *Historical Origin & Commit Trace*: Evolved across 53+ sprints: Sprint 2026-39.1 (`ATT-728`), Sprint 2026-42.1 (`ATT-3323`), Sprint 2026-44.1 (`ATT-4864`), Sprint 2026-45.1 (`ATT-5431`), and Sprint 2026-45.9 (`ATT-3922`).
+3. *Root Reason for Existing Formulation*: Existing rules and skills in `.agents/` and `docs/` are tightly coupled to *aTrainingTracker* (`ATT-` prefix, fitness telemetry, Android specifics), preventing reuse in general software engineering projects.
+4. *Preservation of Core Invariants*: Zero changes to existing production code in `app/src/main/`; active governance in `.agents/` and `docs/` remains untouched; Human Decision Gate on parent tickets remains inviolable; clean-room test suite passes 100%.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the `tools/hoechstmass/` directory structure,
+• *When* inspected,
+• *Then* `README.md` and `docs/project_protocol.md` contain the ChatGPT quote, cross-model review rationale, German Höchstmaß etymology callout, Swiss Cheese mathematical defect model, and 5-stage lifecycle.
+• *Given* the Document Triad templates in `tools/hoechstmass/`,
+• *When* inspected,
+• *Then* `.agents/rules/aspice_governance.md`, `docs/coding_standards.md`, and `docs/design_guidelines.md` are generalized and project-agnostic.
+• *Given* the skills and templates in `tools/hoechstmass/`,
+• *When* inspected,
+• *Then* all 10 `SKILL.md` files and 6 deliverable markdown templates exist and are parameterized.
+• *Given* `HoechstmassCoreFrameworkContractTest`,
+• *When* executed via Gradle,
+• *Then* all framework structural and content assertions pass 100%.
+
+**Invariants**: Active project rules and runtime code remain untouched; zero regression in test suite or governance.
+
+### REQ-PRO-036: Parameterized Issue Tracker Automation & Requirement Governance Tooling [Verified]
+- **Tests**: `TST-PRO-036` | **Tickets**: `ATT-5667`
+- **Implementation**: `tools/hoechstmass/tools/hoechstmass_config.json`, `tools/hoechstmass/tools/.env.jira.example`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/HoechstmassToolingContractTest.kt`
+- **Rationale**: Extract, parameterize, and harden the core Agile Agentic ASPICE (AAA) automation tooling into `tools/hoechstmass/tools/` using a declarative configuration schema (`hoechstmass_config.json` and `.env.jira.example`), decoupling project constants from the automation engine (ATT-5667, Part 2 of 3, extending `REQ-PRO-019`, `REQ-PRO-020`, `REQ-PRO-021`, `REQ-PRO-022`, `REQ-PRO-034`, and `REQ-PRO-035`):
+1. *Declarative Configuration Schema & Multi-Account Template (`REQ-PRO-036.1`)*:
+• `tools/hoechstmass/tools/hoechstmass_config.json` SHALL provide a declarative JSON schema specifying project key, board ID, transition name-to-ID mappings, custom field IDs (story points, sprint), role account ID mappings (`agent1`, `agent2`, `coordinator`, `human`), requirement prefix list, and canonical engineering paths.
+• `tools/hoechstmass/tools/.env.jira.example` SHALL provide an environment variable template for multi-account credentials (`JIRA_URL`, `JIRA_AGENT1_*`, `JIRA_AGENT2_*`, `JIRA_COORDINATOR_*`, `JIRA_HUMAN_ACCOUNT_ID`), ensuring secrets remain externalized.
+2. *Parameterized Jira CLI Automation (`REQ-PRO-036.2`)*:
+• `tools/hoechstmass/tools/jira_util.py` SHALL read configuration dynamically from `hoechstmass_config.json` and `.env.jira`.
+• The tool SHALL provide composite stage commands (`submit-stage`, `gate-verdict`, `check-gate`, `ensure-retro`), role segregation, token secret masking, and automated context injection without hardcoded `ATT` strings or account IDs.
+3. *Parameterized Requirement Governance Tool (`REQ-PRO-036.3`)*:
+• `tools/hoechstmass/tools/verify_requirement_governance.py` SHALL validate Chesterton's Fence 4-field audit, canonical `docs/engineering/` directory structure, and living documentation master index counter parity dynamically using paths and prefixes from `hoechstmass_config.json`.
+4. *Automated Tooling Unit & Contract Verification (`REQ-PRO-036.4`)*:
+• Python unit test suite `tools/hoechstmass/tools/test_hoechstmass_tools.py` SHALL verify configuration parsing, role resolution, secret masking, and governance verification logic.
+• JUnit contract test `HoechstmassToolingContractTest.kt` SHALL assert 100% presence, non-emptiness, and execution contracts for all exported tools under `tools/hoechstmass/tools/`. Zero runtime code modifications in `app/src/main/`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-036` under Epic Standalone / Framework Initiative (*Clean Code & Developer Tools*), extending `REQ-PRO-019`, `REQ-PRO-020`, `REQ-PRO-021`, `REQ-PRO-022`, `REQ-PRO-034`, and `REQ-PRO-035`. Targets `tools/hoechstmass/tools/` and `app/src/test/java/com/atrainingtracker/trainingtracker/build/HoechstmassToolingContractTest.kt`.
+2. *Historical Origin & Commit Trace*: Evolved across sprints: `ATT-103` (initial CLI), `ATT-4290` (composite stage commands), `ATT-4520` (multi-account authentication), `ATT-5431` (living doc counter parity), and `ATT-3922` (Part 1 core framework).
+3. *Root Reason for Existing Formulation*: Tooling in root `tools/` was built directly for *aTrainingTracker*. Hardcoding project constants allowed rapid sprint execution but prevents open-source, project-agnostic adoption.
+4. *Preservation of Core Invariants*: Zero changes to existing production code in `app/src/main/` or active tooling in `tools/`; active `.agents/` and `docs/` remain untouched; Human Decision Gate on parent tickets remains inviolable; clean-room test suite passes 100%.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `tools/hoechstmass/tools/`,
+• *When* inspected,
+• *Then* `hoechstmass_config.json` and `.env.jira.example` define all project, transition, role, and path configurations.
+• *Given* `jira_util.py` and `verify_requirement_governance.py` in `tools/hoechstmass/tools/`,
+• *When* inspected,
+• *Then* neither tool contains hardcoded `ATT` project keys or proprietary account IDs, and both load dynamically from configuration.
+• *Given* `test_hoechstmass_tools.py`,
+• *When* executed with `python3`,
+• *Then* all unit tests for config loading, role resolution, secret masking, and governance logic pass 100%.
+• *Given* `HoechstmassToolingContractTest`,
+• *When* executed via Gradle,
+• *Then* all tooling presence and contract assertions pass 100%.
+
+**Invariants**: Active root tools in `tools/` and runtime code in `app/src/main/` remain untouched; zero regression in test suite or governance.
+
+### REQ-PRO-037: Real-World Reference Showcase & Developer Community Launch Posts [Verified]
+- **Tests**: `TST-PRO-037` | **Tickets**: `ATT-5668`
+- **Implementation**: `tools/hoechstmass/examples/android-jetpack-compose/`, `tools/hoechstmass/docs/community/`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/HoechstmassShowcaseAndCommunityContractTest.kt`
+- **Rationale**: Establish an empirical reference showcase and technical developer community articles demonstrating the effectiveness of the Agile Agentic ASPICE (AAA) methodology in preventing LLM hallucinations, regressions, and simulation drift in production software engineering (ATT-5668, Part 3 of 3, concluding the Höchstmaß trilogy, extending `REQ-PRO-034`, `REQ-PRO-035`, and `REQ-PRO-036`):
+1. *Production Android & Compose Reference Showcase (`REQ-PRO-037.1`)*:
+• `tools/hoechstmass/examples/android-jetpack-compose/` SHALL provide genuine, battle-tested standards (`coding_standards.md`, `design_guidelines.md`) evolved across 53+ sprints of production Jetpack Compose development.
+• The showcase SHALL include representative Stage 1–5 lifecycle deliverables and sprint retrospective artifacts illustrating authentic in-sprint ASPICE execution.
+2. *Adversarial Epic Review Case Studies (`REQ-PRO-037.2`)*:
+• `tools/hoechstmass/examples/android-jetpack-compose/CASE_STUDIES.md` SHALL document 3 authentic case studies where cross-model adversarial review caught critical errors missed by solo LLM generation:
+  1. *Mader-Heck Metabolic Simulation Drift* (`ATT-4786` / `ATT-4785`): Mathematical precision verification catching floating-point equation drift.
+  2. *Beat-to-Beat RR Intervals & DFA alpha-1 HRV* (`ATT-3539`): Real-time physiological signal processing under tight memory constraints.
+  3. *Cycling Rearview Radar Bytecode Auditing* (`ATT-1286`, `ATT-5111`, `ATT-5117`): Ground-truth bytecode verification (`javap`) exposing LLM SDK method hallucinations.
+3. *Technical Developer Community Launch Posts (`REQ-PRO-037.3`)*:
+• `tools/hoechstmass/docs/community/` SHALL provide 5 technical articles tailored for developer communities: `r_softwareengineering.md`, `r_androiddev.md`, `r_google_antigravity.md`, `r_vibecoding.md`, and `hackernews_show_hn.md`.
+• All community posts SHALL feature the ChatGPT epigraph quote (*„Power without control can become destructive. Power guided by intelligence becomes excellence.“*).
+• All community posts SHALL document the 2 deliberate attribution reasons (radical provenance/human boundary and cross-model adversarial review with Gemini + ChatGPT UI screenshot review).
+• All community posts SHALL feature the German **Höchst·maß** etymology box (`/ˈhøːçstˌmaːs/` = *Höchst-* supreme + *-maß* precision standard / *Maßarbeit*).
+4. *Automated Showcase & Community Contract Verification (`REQ-PRO-037.4`)*:
+• JUnit contract test `HoechstmassShowcaseAndCommunityContractTest.kt` SHALL assert 100% presence, non-emptiness, case study contents, epigraph quote, etymology callout, and community post invariants. Zero runtime modifications in `app/src/main/`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-037` under Epic Standalone / Framework Initiative (*Clean Code & Developer Tools*), concluding the Höchstmaß trilogy (`REQ-PRO-035`, `REQ-PRO-036`). Targets `tools/hoechstmass/examples/android-jetpack-compose/`, `tools/hoechstmass/docs/community/`, and `HoechstmassShowcaseAndCommunityContractTest.kt`.
+2. *Historical Origin & Commit Trace*: Evolved across 53+ sprints: Sprint 2026-39.1 through Sprint 2026-45.9, synthesizing 1,100+ closed tickets and tripartite initiative `ATT-3922`, `ATT-5667`, and `ATT-5668`.
+3. *Root Reason for Existing Formulation*: Abstract engineering methodologies fail without empirical evidence and accessible launch articles explaining why defensive engineering gates are necessary.
+4. *Preservation of Core Invariants*: Zero changes to existing production code in `app/src/main/`; active governance in `.agents/` and `docs/` remains untouched; clean-room test suite passes 100%.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `tools/hoechstmass/examples/android-jetpack-compose/`,
+• *When* inspected,
+• *Then* `coding_standards.md`, `design_guidelines.md`, and `CASE_STUDIES.md` document the 3 adversarial review cases (Metabolic Model, DFA alpha-1 HRV, Radar Bytecode).
+• *Given* `tools/hoechstmass/docs/community/`,
+• *When* inspected,
+• *Then* all 5 community launch articles exist and contain the ChatGPT quote, dual attribution reasons, and Höchst·maß etymology box.
+• *Given* `HoechstmassShowcaseAndCommunityContractTest`,
+• *When* executed via Gradle,
+• *Then* all assertions pass 100%.
+
+**Invariants**: Active project rules and runtime code in `app/src/main/` remain untouched; zero regression in test suite or governance.
+
+
+
+
 
 

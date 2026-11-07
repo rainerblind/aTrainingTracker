@@ -147,12 +147,13 @@ This document serves as the authoritative living source of truth for software en
 * **Orphan Defense in UI ViewModels**:
   * ViewModels **MUST** defensively discard orphaned IDs that do not exist in the database rather than constructing invalid fallback data models (`DeviceType.DUMMY`) that open broken, empty, or dimmed modal dialogs.
 
-### 3.4 Audible Outdoor Safety Alerts (`USAGE_MEDIA`) & Static `AudioTrack` Replay (Rule 53 — ATT-4371)
-* **Media Stream Routing Over Sonification**:
-  * Explicit user-triggered outdoor audio utilities (such as the Cockpit Bike Bell or acoustic safety warnings) **MUST** configure `AudioAttributes` with `AudioAttributes.USAGE_MEDIA` (or `AudioAttributes.USAGE_ALARM`), **NEVER** `AudioAttributes.USAGE_ASSISTANCE_SONIFICATION`.
+### 3.4 Audible Outdoor Safety Alerts (`USAGE_MEDIA` / `USAGE_ALARM`) & Static `AudioTrack` Replay (Rules 53 & 76 — ATT-4371, ATT-5649)
+* **Media & Alarm Stream Routing Over Sonification**:
+  * Explicit user-triggered outdoor audio utilities (such as the Cockpit Bike Bell or acoustic safety warnings) **MUST** configure `AudioAttributes` with `AudioAttributes.USAGE_ALARM` or `AudioAttributes.USAGE_MEDIA`, **NEVER** `AudioAttributes.USAGE_ASSISTANCE_SONIFICATION`.
   * Android routes `USAGE_ASSISTANCE_SONIFICATION` to the system ringer/notification stream, which is completely silenced whenever the phone is on Vibrate or Silent mode.
-* **Reliable `MODE_STATIC` Replay**:
-  * When re-triggering a `MODE_STATIC` `AudioTrack` (or overlapping rapid chimes), always call `stop()` and `reloadStaticData()` (or instantiate a fresh `AudioTrack` per strike and release on completion) so subsequent taps never silently no-op.
+* **Reliable Warm `MODE_STATIC` Replay**:
+  * When re-triggering a persistent `MODE_STATIC` `AudioTrack` (such as `BikeBellAudioSynthesizer`), always use warm replay: `track.pause()` + `track.playbackHeadPosition = 0` + `track.play()`.
+  * **Prohibition**: Never call `track.stop()` prior to `play()` on persistent static tracks. Calling `stop()` moves the track to `STATE_STOPPED`, prompting Android AudioFlinger to tear down the active mixer port and send hardware SmartPA amplifiers into standby, which incurs 200–385 ms port renegotiation latency and truncates initial attack transients (ATT-5649). `track.pause()` preserves the warm AudioFlinger mixer port in `STATE_PAUSED` without renegotiation latency.
 
 ### 3.5 Mandatory `@JvmOverloads constructor` for Reflective Android Framework Classes (`AndroidViewModel`, `ViewModel`, `Fragment`) (Rule 62 — ATT-4667 / ATT-4596)
 * **Bytecode Constructor Generation for Default Parameters**:

@@ -47,7 +47,6 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabsConfig
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutSectionType
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneCardDisplayMode
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.LapDisplayMode
-import com.atrainingtracker.trainingtracker.ui.settings.tuning.SubordinateTuningToggleItem
 import kotlinx.coroutines.launch
 
 private data class MatrixFeatureRow(
@@ -67,6 +66,7 @@ private fun buildMatrixFeatureRow(
     WorkoutSectionType.ELEVATION -> MatrixFeatureRow(type, R.string.settings_workout_card_elevation, prefs.showElevationProfile) { onPrefsChange(prefs.copy(showElevationProfile = it)) }
     WorkoutSectionType.CHARTS -> MatrixFeatureRow(type, R.string.settings_workout_card_charts, prefs.showTelemetryCharts) { onPrefsChange(prefs.copy(showTelemetryCharts = it)) }
     WorkoutSectionType.ZONES -> MatrixFeatureRow(type, R.string.settings_workout_card_zones, prefs.showZoneAnalysis) { onPrefsChange(prefs.copy(showZoneAnalysis = it)) }
+    WorkoutSectionType.GRADE_DISTRIBUTION -> MatrixFeatureRow(type, R.string.settings_workout_card_grade_distribution, prefs.showGradeDistribution) { onPrefsChange(prefs.copy(showGradeDistribution = it)) }
     WorkoutSectionType.EXPORT_STATUS -> MatrixFeatureRow(type, R.string.export_status, prefs.showExportStatus) { onPrefsChange(prefs.copy(showExportStatus = it)) }
     WorkoutSectionType.PHOTOS -> MatrixFeatureRow(type, R.string.settings_workout_card_photos, prefs.showPhotos) { onPrefsChange(prefs.copy(showPhotos = it)) }
 }
@@ -135,7 +135,7 @@ fun WorkoutMasksAndCardsSection(
         listOf(
             workoutCardPrefs.showDescription, workoutCardPrefs.showExtrema, workoutCardPrefs.showLaps, workoutCardPrefs.showStrava,
             workoutCardPrefs.showMapPreview, workoutCardPrefs.showElevationProfile, workoutCardPrefs.showTelemetryCharts,
-            workoutCardPrefs.showZoneAnalysis, workoutCardPrefs.showExportStatus, workoutCardPrefs.showPhotos
+            workoutCardPrefs.showZoneAnalysis, workoutCardPrefs.showGradeDistribution, workoutCardPrefs.showExportStatus, workoutCardPrefs.showPhotos
         ).count { it }
     }
 
@@ -304,11 +304,6 @@ fun WorkoutMasksAndCardsSection(
                     selectedMode = workoutCardPrefs.zoneCardDisplayMode,
                     onModeSelected = { mode -> onWorkoutCardPrefsChange(workoutCardPrefs.copy(zoneCardDisplayMode = mode)) }
                 )
-                SubordinateTuningToggleItem(
-                    title = stringResource(R.string.settings_workout_card_grade_distribution),
-                    isChecked = workoutCardPrefs.showGradeDistribution,
-                    onCheckedChange = { onWorkoutCardPrefsChange(workoutCardPrefs.copy(showGradeDistribution = it)) }
-                )
             }
         }
 
@@ -365,11 +360,6 @@ fun WorkoutMasksAndCardsSection(
                     label = stringResource(R.string.settings_zone_card_display_mode_title),
                     selectedMode = workoutDetailPrefs.zoneCardDisplayMode,
                     onModeSelected = { mode -> onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(zoneCardDisplayMode = mode)) }
-                )
-                SubordinateTuningToggleItem(
-                    title = stringResource(R.string.settings_workout_card_grade_distribution),
-                    isChecked = workoutDetailPrefs.showGradeDistribution,
-                    onCheckedChange = { onWorkoutDetailPrefsChange(workoutDetailPrefs.copy(showGradeDistribution = it)) }
                 )
             }
         }

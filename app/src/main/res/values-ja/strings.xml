@@ -1082,13 +1082,13 @@
     <string name="legacy_import__finished_with_failed">インポート完了: %4$d個のスキャン済みファイルのうち、%1$d個をインポート、%2$d個をスキップ、%3$d個が失敗しました。</string>
     <string name="cluster_naming__select_existing_route">既存のルートを選択</string>
     <string name="cluster_naming__title">ワークアウトをルートに割り当て</string>
-    <string name="cluster_naming__found_recurring">%1$s からの新しいルートが見つかりました。</string>
+    <string name="cluster_naming__found_recurring">%1$s からの未割り当てルート。</string>
     <string name="cluster_naming__task_count">タスク %1$d / %2$d</string>
-    <string name="cluster_naming__assignment_label">ルートの割り当て:</string>
+    <string name="cluster_naming__assignment_label">既存のお気に入りルートを選択:</string>
     <string name="cluster_naming__create_new">新規作成…</string>
     <string name="cluster_naming__selected_route_label">選択されたルート</string>
-    <string name="cluster_naming__new_name_prompt">または新しい名前を指定:</string>
-    <string name="cluster_naming__new_route_name_label">新しいルート名</string>
+    <string name="cluster_naming__new_name_prompt">または新しいお気に入りルートを作成:</string>
+    <string name="cluster_naming__new_route_name_label">新しいお気に入りルート名</string>
     <string name="cluster_naming__leave_unclustered">未分類のままにする</string>
     <string name="cluster_naming__workout_name_label">ワークアウト名</string>
     <string name="migration_phase_label">フェーズ %1$d: %2$s</string>
@@ -2253,27 +2253,27 @@
     <string name="supporter_tier_gold">ゴールドPro+サポーター</string>
     <string name="supporter_tier_diamond">ダイヤモンドスポンサー</string>
     <string name="supporter_screen_title">お好みの価格で支援</string>
-    <string name="supporter_screen_subtitle" formatted="false">独立したフィットネストラッキングを支援し、aTrainingTrackerの完全広告なしを継続します。</string>
+    <string name="supporter_screen_subtitle">aTrainingTracker の継続的な開発を支援する。</string>
     <string name="supporter_recommended_badge">おすすめ</string>
     <string name="supporter_active_tier_prefix">有効なティア: %1$s</string>
-    <string name="supporter_active_tier_thank_you">独立したフィットネスアプリ開発を支えていただきありがとうございます！</string>
+    <string name="supporter_active_tier_thank_you">aTrainingTracker の開発をご支援いただきありがとうございます！</string>
     <string name="supporter_plan_button_active">有効</string>
     <string name="supporter_plan_button_support">支援する</string>
     <string name="supporter_period_month">月</string>
     <string name="supporter_period_year">年</string>
     <string name="supporter_price_per_period">%1$s / %2$s</string>
     <string name="supporter_core_invariant_title" formatted="false">コア機能100%無料の原則</string>
-    <string name="supporter_core_invariant_body" formatted="false">ワークアウト記録、地図表示、センサーデータ、オフラインGPX/TCX/FIT出力は、今後も永続的に100%無料で利用できます。サブスクリプションは継続的な個人開発の支援に充てられます。</string>
-    <string name="swap_dialog_title">デバイス制限（無料枠2/2使用中）</string>
+    <string name="supporter_core_invariant_body" formatted="false">ワークアウト記録、地図表示、センサーデータ、オフラインGPX/TCX/FIT出力は、今後も永続的に100%無料で利用できます。サブスクリプションはアプリの継続的な開発に充てられます。</string>
+    <string name="swap_dialog_title">デバイス制限（2/2枠使用中）</string>
     <string name="swap_dialog_select_device_to_unpair">ペアリング解除するデバイスを選択：</string>
-    <string name="swap_dialog_message">無料版では最大2台のデバイスを同時接続できます（例：GPS + 気圧計）。「%1$s」を接続するには、既存のデバイスを解除するか、「お好みの価格で支援」で無制限のセンサー接続を解除してください。</string>
+    <string name="swap_dialog_message">基本版では最大2台のデバイスを同時接続できます（例：GPS + 気圧計）。「%1$s」を接続するには、既存のデバイスを解除するか、アプリの開発を支援して無制限のセンサー接続を解放してください。</string>
     <string name="swap_dialog_action_swap">入れ替えて接続</string>
-    <string name="swap_dialog_action_unlock">無制限センサーを解除</string>
+    <string name="swap_dialog_action_unlock">開発を支援</string>
     <string name="keep_two_sensors_title">アクティブなセンサーを2つ選択</string>
-    <string name="keep_two_sensors_message">サブスクリプションが終了しました。無料プランでは最大2つのセンサーをアクティブにできます。維持する2つのセンサーを選択してください。余分なセンサーは解除されますが、キャリブレーションや機材データは保持されます。</string>
+    <string name="keep_two_sensors_message">サブスクリプションが終了しました。基本版では最大2つのセンサーをアクティブにできます。維持する2つのセンサーを選択してください。余分なセンサーは解除されますが、キャリブレーションや機材データは保持されます。</string>
     <string name="keep_two_sensors_selection_header">アクティブなセンサー (%1$d/%2$d):</string>
     <string name="keep_two_sensors_action_confirm">選択を保持</string>
-    <string name="keep_two_sensors_action_unlock">無制限のセンサーを解放</string>
+    <string name="keep_two_sensors_action_unlock">開発を支援</string>
     <string name="drawer_supporter">サポーター＆Pro</string>
     <string name="drawer_tier_diamond">◆ ダイヤモンドスポンサー • センサー無制限</string>
     <string name="drawer_tier_gold">★ ゴールド PRO+サポーター</string>
@@ -2290,12 +2290,14 @@
     <!-- Milestone Workout Auto-Naming & First Jubilee Celebration (ATT-2308 / REQ-REV-001..005) -->
     <string name="milestone_workout_name_format">%1$d. %2$s: %3$s</string>
     <string name="jubilee_dialog_title">%1$d回目の%2$s達成おめでとうございます！</string>
-    <string name="jubilee_dialog_message">aTrainingTrackerで%1$d回の%2$sセッションを完了しました！素晴らしいマイルストーンです。</string>
+    <string name="jubilee_dialog_message">aTrainingTracker で %1$d 回の%2$sセッションを達成しました。素晴らしい節目です！これからもぜひ続けていきましょう。</string>
+    <string name="jubilee_email_feedback_prompt">アプリを気に入っていただけた場合や、改善のアイデアがありましたら、ぜひご意見をお寄せください：</string>
+    <string name="jubilee_review_prompt">aTrainingTracker を気に入っていただけましたか？Google Play での高評価をいただけると大変励みになります：</string>
     <string name="jubilee_feedback_prompt">aTrainingTrackerを気に入っていただけましたか？Google Playでの評価や、開発者のRainerへのメールでご意見・ご感想をお寄せください。</string>
     <string name="jubilee_action_review">Google Playで評価</string>
     <string name="jubilee_action_email_feedback">Rainerへメールでフィードバック</string>
-    <string name="jubilee_supporter_appeal_title">15年以上の個人開発を支援</string>
-    <string name="jubilee_supporter_appeal_message">aTrainingTrackerは2011年以来、広告なし・プライバシー重視で開発されています。トレーニングに役立っている場合はProで開発を支援してください。</string>
+    <string name="jubilee_supporter_appeal_title">開発を支援</string>
+    <string name="jubilee_supporter_appeal_message">aTrainingTracker の継続的な開発を財政的に支援することもできます：</string>
     <string name="jubilee_action_upgrade_pro">開発を支援する</string>
     <string name="jubilee_action_dismiss">トレーニングを続ける</string>
     <string name="debug_jubilee_preview_button">記念ダイアログをプレビュー</string>
@@ -2306,7 +2308,9 @@
     <string name="garage_detector_dialog_title_gold">ゴールドリーグの機材を発見！</string>
     <string name="garage_detector_dialog_title_diamond">ワールドクラスのダイヤモンド機材！</string>
     <string name="garage_detector_dialog_message_gold">aTrainingTrackerでの%1$d台のバイク、%2$d足のシューズ、%3$d個のセンサー（うち%4$d個のパワーメーター）の登録おめでとうございます！ ガレージはすでにプロ級ですが、ステータスは%5$sのままです。ぜひゴールドPro+サポーターへのアップグレードをご検討ください！</string>
+    <string name="garage_detector_dialog_message_gold_strava">アクティブなStrava Proアスリートとして%1$d台のバイク、%2$d足のシューズ、%3$d個のセンサー（うち%4$d個のパワーメーター）を使いこなす本気度が伝わります！ アプリのステータスはまだ%5$sです。ゴールドPro+サポーターでプロ仕様の環境を完成させましょう！</string>
     <string name="garage_detector_dialog_message_diamond">驚異的な機材数です：%1$d台のバイク、%2$d足のシューズ、%3$d個のセンサー（うち%4$d個のパワーメーター）！ ガレージはすでにワールドクラスですが、ステータスは%5$sです。ダイヤモンドスポンサーへのアップグレードで完璧に仕上げましょう！</string>
+    <string name="garage_detector_dialog_message_diamond_strava">ワールドクラスの機材を持つアクティブなStrava Proアスリート：%1$d台のバイク、%2$d足のシューズ、%3$d個のセンサー（うち%4$d個のパワーメーター）！ ステータスはまだ%5$sです。ダイヤモンドスポンサーでプロのトレーニング環境を完璧に整えましょう！</string>
     <string name="garage_detector_action_upgrade_gold">ゴールドプロにアップグレード（年額50€）</string>
     <string name="garage_detector_action_upgrade_diamond">ダイヤモンドスポンサーにアップグレード（年額100€）</string>
     <string name="garage_detector_action_dismiss">後で / トレーニングを続ける</string>
@@ -2336,6 +2340,10 @@
     <string name="share_cta_button">共有</string>
     <string name="share_error_no_gps">このワークアウトにはGPSトラックが記録されていません</string>
     <string name="share_error_photo_load">選択した写真を読み込めませんでした</string>
+    <!-- Workout Share 3-Tier Photo Cascade (REQ-UI-447.6 / ATT-5656) -->
+    <string name="share_photos_attached_subtitle">このワークアウトに追加された写真</string>
+    <string name="share_photos_show_time_window">ワークアウト中に撮影された写真を表示</string>
+    <string name="share_photos_show_attached">追加された写真に戻る</string>
     <!-- Workout Photos (REQ-UI-448 / ATT-43) -->
     <string name="workout_photos_title">写真</string>
     <string name="workout_photos_add">写真を追加</string>

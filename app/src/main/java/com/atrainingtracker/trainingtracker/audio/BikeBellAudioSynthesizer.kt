@@ -50,13 +50,29 @@ class BikeBellAudioSynthesizer(
 
     companion object {
         private const val TAG = "BikeBellAudioSynth"
-        const val SAMPLE_RATE: Int = 44100
-        const val DOUBLE_STRIKE_DURATION_SEC: Double = 0.6
+        const val SAMPLE_RATE: Int = 48000
+        const val LEAD_IN_SEC: Double = 0.040
+        const val DOUBLE_STRIKE_DURATION_SEC: Double = 0.95
+        const val FADE_OUT_SEC: Double = 0.060
         const val STRIKE_2_DELAY_SEC: Double = 0.110
         const val ROLL_DURATION_SEC: Double = 2.5
         const val ROLL_STRIKE_INTERVAL_SEC: Double = 0.077
-        const val RING_RESTORE_DELAY_MS: Long = 650L
+        const val RING_RESTORE_DELAY_MS: Long = 5500L
         const val ROLL_RESTORE_DELAY_MS: Long = 150L
+
+        /** External audio output device types requiring explicit routing to built-in speaker. */
+        val EXTERNAL_DEVICE_TYPES: Set<Int> = setOf(
+            AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
+            AudioDeviceInfo.TYPE_BLUETOOTH_SCO,
+            AudioDeviceInfo.TYPE_BLE_HEADSET,
+            AudioDeviceInfo.TYPE_BLE_SPEAKER,
+            AudioDeviceInfo.TYPE_BLE_BROADCAST,
+            AudioDeviceInfo.TYPE_WIRED_HEADSET,
+            AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
+            AudioDeviceInfo.TYPE_USB_HEADSET,
+            AudioDeviceInfo.TYPE_USB_DEVICE,
+            AudioDeviceInfo.TYPE_HEARING_AID
+        )
 
         // Resonant modal frequencies for authentic brass bell dome (REQ-UI-421.4, ATT-5282)
         const val HUM_FREQ: Double = 1020.0
@@ -180,13 +196,27 @@ class BikeBellAudioSynthesizer(
         fun synthesizeDoubleStrikePcm(sampleRate: Int = SAMPLE_RATE): ByteArray {
             val totalSamples = (DOUBLE_STRIKE_DURATION_SEC * sampleRate).toInt()
             val pcmBytes = ByteArray(totalSamples * 2)
+            val fadeStartSec = DOUBLE_STRIKE_DURATION_SEC - FADE_OUT_SEC
 
             for (i in 0 until totalSamples) {
                 val t = i.toDouble() / sampleRate
-                val s1 = calculateStrikeSample(t, FUNDAMENTAL_FREQ)
-                val s2 = calculateStrikeSample(t - STRIKE_2_DELAY_SEC, STRIKE_2_FUNDAMENTAL)
-                val combined = ((s1 + s2) * 0.95).coerceIn(-1.0, 1.0)
-                val pcmValue = (combined * Short.MAX_VALUE).toInt().toShort()
+                val s1 = calculateStrikeSample(t - LEAD_IN_SEC, FUNDAMENTAL_FREQ)
+                val s2 = calculateStrikeSample(t - LEAD_IN_SEC - STRIKE_2_DELAY_SEC, STRIKE_2_FUNDAMENTAL)
+                var combined = (s1 + s2) * 0.95
+
+                if (t < LEAD_IN_SEC) {
+                    // Minimal inaudible pilot carrier (20 Hz, ~-80 dBFS) to wake up SmartPA amplifier
+                    combined += 0.0001 * Math.sin(2.0 * Math.PI * 20.0 * t)
+                }
+
+                if (t >= fadeStartSec) {
+                    val fadeProgress = ((t - fadeStartSec) / FADE_OUT_SEC).coerceIn(0.0, 1.0)
+                    val fade = 0.5 * (1.0 + Math.cos(Math.PI * fadeProgress))
+                    combined *= fade
+                }
+
+                val clamped = combined.coerceIn(-1.0, 1.0)
+                val pcmValue = (clamped * Short.MAX_VALUE).toInt().toShort()
 
                 val byteIndex = i * 2
                 pcmBytes[byteIndex] = (pcmValue.toInt() and 0xFF).toByte()
@@ -251,6 +281,7 @@ class BikeBellAudioSynthesizer(
     }
 
     private var savedAlarmVolume: Int? = null
+    private var isVolumeBoosted = false
 
     private val restoreRunnable = Runnable {
         synchronized(lock) {
@@ -263,22 +294,31 @@ class BikeBellAudioSynthesizer(
         val am = audioManager ?: return
         try {
             val devices = am.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
-            val builtInSpeaker = devices?.firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
-            if (builtInSpeaker != null) {
-                track.setPreferredDevice(builtInSpeaker)
+            val hasExternalDevice = devices?.any { it.type in EXTERNAL_DEVICE_TYPES } == true
+            if (hasExternalDevice) {
+                val builtInSpeaker = devices.firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+                if (builtInSpeaker != null) {
+                    track.setPreferredDevice(builtInSpeaker)
+                }
+            } else {
+                track.setPreferredDevice(null)
             }
         } catch (t: Throwable) {
-            Log.w(TAG, "Failed to setPreferredDevice(TYPE_BUILTIN_SPEAKER)", t)
+            Log.w(TAG, "Failed to configure speaker routing", t)
         }
     }
 
     private fun boostAlarmVolumeLocked() {
         val am = audioManager ?: return
         try {
-            if (savedAlarmVolume == null) {
-                savedAlarmVolume = am.getStreamVolume(AudioManager.STREAM_ALARM)
+            if (savedAlarmVolume == null && !isVolumeBoosted) {
+                val currentVolume = am.getStreamVolume(AudioManager.STREAM_ALARM)
                 val maxVolume = am.getStreamMaxVolume(AudioManager.STREAM_ALARM)
-                am.setStreamVolume(AudioManager.STREAM_ALARM, maxVolume, 0)
+                if (currentVolume < maxVolume) {
+                    savedAlarmVolume = currentVolume
+                    am.setStreamVolume(AudioManager.STREAM_ALARM, maxVolume, 0)
+                }
+                isVolumeBoosted = true
             }
         } catch (t: Throwable) {
             Log.w(TAG, "Failed to boost STREAM_ALARM volume", t)
@@ -286,13 +326,16 @@ class BikeBellAudioSynthesizer(
     }
 
     private fun restoreAlarmVolumeLocked() {
-        val original = savedAlarmVolume ?: return
+        val original = savedAlarmVolume
         try {
-            audioManager?.setStreamVolume(AudioManager.STREAM_ALARM, original, 0)
+            if (original != null) {
+                audioManager?.setStreamVolume(AudioManager.STREAM_ALARM, original, 0)
+            }
         } catch (t: Throwable) {
             Log.w(TAG, "Failed to restore STREAM_ALARM volume", t)
         } finally {
             savedAlarmVolume = null
+            isVolumeBoosted = false
         }
     }
 
@@ -357,7 +400,7 @@ class BikeBellAudioSynthesizer(
 
                 val clamped = volume.coerceIn(0.0f, 1.0f)
                 track.setVolume(clamped)
-                track.stop()
+                track.pause()
                 track.playbackHeadPosition = 0
                 track.play()
             } catch (e: Exception) {
@@ -383,7 +426,7 @@ class BikeBellAudioSynthesizer(
 
                 val clamped = volume.coerceIn(0.0f, 1.0f)
                 track.setVolume(clamped)
-                track.stop()
+                track.pause()
                 track.playbackHeadPosition = 0
                 val totalFrames = rollPcm.size / 2
                 track.setLoopPoints(0, totalFrames, -1)
@@ -402,7 +445,7 @@ class BikeBellAudioSynthesizer(
         synchronized(lock) {
             if (isClosed) return
             try {
-                rollTrack?.stop()
+                rollTrack?.pause()
                 rollTrack?.playbackHeadPosition = 0
                 handler?.removeCallbacks(restoreRunnable)
                 handler?.postDelayed(restoreRunnable, ROLL_RESTORE_DELAY_MS)

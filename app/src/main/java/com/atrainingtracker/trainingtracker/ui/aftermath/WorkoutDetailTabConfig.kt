@@ -39,6 +39,7 @@ enum class WorkoutDetailSectionType(@StringRes val labelRes: Int) {
     ELEVATION(R.string.settings_workout_card_elevation),
     CHARTS(R.string.settings_workout_card_charts),
     ZONES(R.string.settings_workout_card_zones),
+    GRADE_DISTRIBUTION(R.string.settings_workout_card_grade_distribution),
     LAPS(R.string.settings_workout_card_laps),
     STRAVA(R.string.settings_workout_card_strava),
     EXPORT_STATUS(R.string.export_status),
@@ -56,6 +57,7 @@ enum class WorkoutDetailSectionType(@StringRes val labelRes: Int) {
         ELEVATION -> WorkoutSectionType.ELEVATION
         CHARTS -> WorkoutSectionType.CHARTS
         ZONES -> WorkoutSectionType.ZONES
+        GRADE_DISTRIBUTION -> WorkoutSectionType.GRADE_DISTRIBUTION
         LAPS -> WorkoutSectionType.LAPS
         STRAVA -> WorkoutSectionType.STRAVA
         EXPORT_STATUS -> WorkoutSectionType.EXPORT_STATUS
@@ -75,6 +77,7 @@ fun WorkoutSectionType.toWorkoutDetailSectionType(): WorkoutDetailSectionType = 
     WorkoutSectionType.ELEVATION -> WorkoutDetailSectionType.ELEVATION
     WorkoutSectionType.CHARTS -> WorkoutDetailSectionType.CHARTS
     WorkoutSectionType.ZONES -> WorkoutDetailSectionType.ZONES
+    WorkoutSectionType.GRADE_DISTRIBUTION -> WorkoutDetailSectionType.GRADE_DISTRIBUTION
     WorkoutSectionType.EXPORT_STATUS -> WorkoutDetailSectionType.EXPORT_STATUS
     WorkoutSectionType.PHOTOS -> WorkoutDetailSectionType.PHOTOS
 }
@@ -130,6 +133,7 @@ data class WorkoutDetailSectionAvailability(
     val hasElevation: Boolean = false,
     val hasCharts: Boolean = false,
     val hasZones: Boolean = false,
+    val hasGradeDistribution: Boolean = false,
     val hasLaps: Boolean = false,
     val hasStrava: Boolean = false,
     val hasExportStatus: Boolean = false,
@@ -151,6 +155,7 @@ data class WorkoutDetailSectionAvailability(
         WorkoutDetailSectionType.ELEVATION -> hasElevation
         WorkoutDetailSectionType.CHARTS -> hasCharts
         WorkoutDetailSectionType.ZONES -> hasZones
+        WorkoutDetailSectionType.GRADE_DISTRIBUTION -> hasGradeDistribution
         WorkoutDetailSectionType.LAPS -> hasLaps
         WorkoutDetailSectionType.STRAVA -> hasStrava
         WorkoutDetailSectionType.EXPORT_STATUS -> hasExportStatus
@@ -170,7 +175,8 @@ data class WorkoutDetailSectionAvailability(
             hasTelemetrySeries: Boolean,
             hasZonesData: Boolean,
             hasLapsData: Boolean,
-            hasPhotos: Boolean = true
+            hasPhotos: Boolean = true,
+            hasGradeDistribution: Boolean = false
         ): WorkoutDetailSectionAvailability {
             val desc = workoutData.descriptionData
             val hasDescriptionContent = !desc.description.isNullOrBlank() ||
@@ -184,6 +190,7 @@ data class WorkoutDetailSectionAvailability(
                 hasElevation = (hasGpsTrack || hasTracklessAltitude) && hasAltitudeData,
                 hasCharts = hasTelemetrySeries,
                 hasZones = hasZonesData,
+                hasGradeDistribution = hasGradeDistribution,
                 hasLaps = hasLapsData,
                 hasStrava = !workoutData.stravaActivityData.isNullOrBlank(),
                 hasExportStatus = workoutData.exportStatuses.any { it.hasContent },
@@ -266,11 +273,12 @@ data class WorkoutDetailTabConfig(
     }
 
     companion object {
-        private const val SCHEMA_PREFIX = "v1|"
+        private const val SCHEMA_PREFIX = "v2|"
+        private const val SCHEMA_PREFIX_V1 = "v1|"
 
         /**
-         * Canonical 4-tab default configuration (`REQ-UI-408.1`):
-         * 1. Overview: `[DETAILS, DESCRIPTION, EXTREMA, EXPORT_STATUS]`
+         * Canonical 4-tab default configuration (`REQ-UI-408.1` / `ATT-5655`):
+         * 1. Overview: `[DETAILS, PHOTOS, DESCRIPTION, EXTREMA, EXPORT_STATUS]`
          * 2. Map & Graphs: `[MAP, ELEVATION, CHARTS]`
          * 3. Zones: `[ZONES]`
          * 4. Laps & Segments: `[LAPS, STRAVA]`
@@ -282,6 +290,7 @@ data class WorkoutDetailTabConfig(
                 customTitle = "",
                 sections = listOf(
                     WorkoutDetailSectionType.DETAILS,
+                    WorkoutDetailSectionType.PHOTOS,
                     WorkoutDetailSectionType.DESCRIPTION,
                     WorkoutDetailSectionType.EXTREMA,
                     WorkoutDetailSectionType.EXPORT_STATUS
@@ -302,7 +311,8 @@ data class WorkoutDetailTabConfig(
                 preset = WorkoutDetailTabPreset.ZONES,
                 customTitle = "",
                 sections = listOf(
-                    WorkoutDetailSectionType.ZONES
+                    WorkoutDetailSectionType.ZONES,
+                    WorkoutDetailSectionType.GRADE_DISTRIBUTION
                 )
             ),
             WorkoutDetailTabConfig(
@@ -389,14 +399,17 @@ data class WorkoutDetailTabConfig(
         /**
          * Deserializes a versioned wire string into a list of [WorkoutDetailTabConfig]s.
          * Safely recovers to [DEFAULT_TABS] on null, blank, truncated, or corrupted inputs (`REQ-UI-408.2`).
+         * For legacy `v1|` payloads lacking [WorkoutDetailSectionType.PHOTOS], automatically migrates
+         * `PHOTOS` into `tab_overview` directly following `DETAILS` (ATT-5655).
          */
         fun deserializeTabs(raw: String?): List<WorkoutDetailTabConfig> {
             if (raw.isNullOrBlank()) return DEFAULT_TABS
             return runCatching {
-                val payload = if (raw.startsWith(SCHEMA_PREFIX)) {
-                    raw.removePrefix(SCHEMA_PREFIX)
-                } else {
-                    raw
+                val isV1 = raw.startsWith(SCHEMA_PREFIX_V1) || (!raw.startsWith(SCHEMA_PREFIX) && !raw.startsWith(SCHEMA_PREFIX_V1))
+                val payload = when {
+                    raw.startsWith(SCHEMA_PREFIX) -> raw.removePrefix(SCHEMA_PREFIX)
+                    raw.startsWith(SCHEMA_PREFIX_V1) -> raw.removePrefix(SCHEMA_PREFIX_V1)
+                    else -> raw
                 }
                 if (payload.isBlank()) return DEFAULT_TABS
 
@@ -423,7 +436,55 @@ data class WorkoutDetailTabConfig(
                             sections = normalized
                         )
                     }
-                parsedTabs.ifEmpty { DEFAULT_TABS }
+                val validTabs = parsedTabs.ifEmpty { DEFAULT_TABS }
+
+                // ATT-5655: If legacy v1 (or unversioned) format and PHOTOS is not present in ANY tab,
+                // auto-migrate PHOTOS into tab_overview directly after DETAILS.
+                val withPhotos = if (isV1) {
+                    val hasPhotosAnywhere = validTabs.any { tab -> WorkoutDetailSectionType.PHOTOS in tab.sections }
+                    if (!hasPhotosAnywhere) {
+                        validTabs.map { tab ->
+                            if (tab.id == "tab_overview" || tab.preset == WorkoutDetailTabPreset.OVERVIEW) {
+                                val currentSections = tab.sections.toMutableList()
+                                val detailsIndex = currentSections.indexOf(WorkoutDetailSectionType.DETAILS)
+                                if (detailsIndex >= 0) {
+                                    currentSections.add(detailsIndex + 1, WorkoutDetailSectionType.PHOTOS)
+                                } else {
+                                    currentSections.add(0, WorkoutDetailSectionType.PHOTOS)
+                                }
+                                tab.copy(sections = normalizeTabSections(currentSections))
+                            } else {
+                                tab
+                            }
+                        }
+                    } else {
+                        validTabs
+                    }
+                } else {
+                    validTabs
+                }
+
+                // ATT-5654: If GRADE_DISTRIBUTION is not present in ANY tab,
+                // auto-migrate GRADE_DISTRIBUTION into tab_zones directly after ZONES.
+                val withGrade = if (withPhotos.none { tab -> WorkoutDetailSectionType.GRADE_DISTRIBUTION in tab.sections }) {
+                    withPhotos.map { tab ->
+                        if (tab.id == "tab_zones" || tab.preset == WorkoutDetailTabPreset.ZONES) {
+                            val currentSections = tab.sections.toMutableList()
+                            val zonesIndex = currentSections.indexOf(WorkoutDetailSectionType.ZONES)
+                            if (zonesIndex >= 0) {
+                                currentSections.add(zonesIndex + 1, WorkoutDetailSectionType.GRADE_DISTRIBUTION)
+                            } else {
+                                currentSections.add(WorkoutDetailSectionType.GRADE_DISTRIBUTION)
+                            }
+                            tab.copy(sections = normalizeTabSections(currentSections))
+                        } else {
+                            tab
+                        }
+                    }
+                } else {
+                    withPhotos
+                }
+                withGrade
             }.getOrElse { DEFAULT_TABS }
         }
 

@@ -78,7 +78,6 @@ class SensorQuotaReconciliationManagerTest {
         deviceType: DeviceType,
         protocol: Protocol = if (deviceType == DeviceType.SPEED_AND_LOCATION_GPS ||
             deviceType == DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED ||
-            deviceType == DeviceType.SPEED_AND_LOCATION_NETWORK ||
             deviceType == DeviceType.ALTITUDE_FROM_PRESSURE ||
             deviceType == DeviceType.ALTITUDE_FROM_POSITION
         ) Protocol.SMARTPHONE else Protocol.BLUETOOTH_LE,
@@ -354,7 +353,34 @@ class SensorQuotaReconciliationManagerTest {
         // 2. Both Fused and GPS present without Barometer -> recommend unpairing GPS next
         assertEquals(1L, manager.determineRecommendedUnpairDeviceId(listOf(pairedGps, pairedFused, pairedHrm)))
 
-        // 3. Only Fused + Remote present -> recommend first device
-        assertEquals(2L, manager.determineRecommendedUnpairDeviceId(listOf(pairedFused, pairedHrm)))
+        // 3. Fused + Remote present -> NEVER recommend Fused; recommend remote sensor (REQ-SET-084.2, ATT-5657)
+        assertEquals(4L, manager.determineRecommendedUnpairDeviceId(listOf(pairedFused, pairedHrm)))
+
+        // 4. Sole GPS + Remote present -> NEVER recommend GPS; recommend remote sensor (ATT-5657)
+        assertEquals(4L, manager.determineRecommendedUnpairDeviceId(listOf(pairedGps, pairedHrm)))
+    }
+
+    @Test
+    fun testDetermineRecommendedUnpairDeviceId_remoteSensorPrioritization() {
+        val manager = SensorQuotaReconciliationManager(
+            context = mockContext,
+            devicesDBRepository = mockDeviceRepo,
+            proFeatureManager = mockProFeatureManager,
+            isTrackingProvider = { false }
+        )
+
+        val pairedFused = createUiDevice(2L, DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED)
+        val connectedHrm = createUiDevice(3L, DeviceType.HRM, isConnected = true, lastSeen = "2026-11-06 10:00:00")
+        val disconnectedPwr = createUiDevice(4L, DeviceType.BIKE_POWER, isConnected = false, lastSeen = "2026-11-06 11:00:00")
+
+        // Disconnected sensor preferred over connected sensor for unpairing
+        assertEquals(4L, manager.determineRecommendedUnpairDeviceId(listOf(pairedFused, connectedHrm, disconnectedPwr)))
+
+        // Between disconnected sensors, oldest lastSeen timestamp preferred for unpairing
+        val olderCad = createUiDevice(5L, DeviceType.BIKE_CADENCE, isConnected = false, lastSeen = "2026-11-06 08:00:00")
+        assertEquals(5L, manager.determineRecommendedUnpairDeviceId(listOf(pairedFused, disconnectedPwr, olderCad)))
+
+        // When only location sensor present, fallback to location sensor
+        assertEquals(2L, manager.determineRecommendedUnpairDeviceId(listOf(pairedFused)))
     }
 }

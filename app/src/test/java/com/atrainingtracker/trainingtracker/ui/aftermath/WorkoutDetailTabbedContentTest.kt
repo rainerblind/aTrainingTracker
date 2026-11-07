@@ -139,4 +139,41 @@ class WorkoutDetailTabbedContentTest {
             content.contains("onLapClick?.invoke(lap)")
         )
     }
+
+    /**
+     * TST-UI-377.2: Tab section assignment is the single authoritative configuration surface (REQ-UI-408.1 / ATT-5655).
+     * Confirms the legacy fallback under DETAILS has been completely excised and WorkoutPhotoStrip is rendered
+     * exclusively via WorkoutDetailSectionType.PHOTOS.
+     */
+    @Test
+    fun testWorkoutDetailTabbedContent_photosRenderExclusivelyViaTabSection() {
+        assertTrue("WorkoutDetailTabbedContent.kt must exist", sourceFile.exists())
+        val content = sourceFile.readText()
+
+        // 1. Conflicting legacy fallback under DETAILS is excised
+        org.junit.Assert.assertFalse(
+            "WorkoutDetailTabbedContent must not contain legacy fallback !sections.contains(WorkoutDetailSectionType.PHOTOS)",
+            content.contains("!sections.contains(WorkoutDetailSectionType.PHOTOS)")
+        )
+
+        // 2. DETAILS block does not call WorkoutPhotoStrip
+        val detailsIndex = content.indexOf("WorkoutDetailSectionType.DETAILS ->")
+        assertTrue("DETAILS section block must exist", detailsIndex != -1)
+        val descriptionIndex = content.indexOf("WorkoutDetailSectionType.DESCRIPTION ->")
+        assertTrue("DESCRIPTION section block must exist", descriptionIndex != -1)
+        val detailsBlock = content.substring(detailsIndex, descriptionIndex)
+        org.junit.Assert.assertFalse(
+            "DETAILS block must not render WorkoutPhotoStrip",
+            detailsBlock.contains("WorkoutPhotoStrip")
+        )
+
+        // 3. PHOTOS block exists and is the sole rendering site
+        val photosIndex = content.indexOf("WorkoutDetailSectionType.PHOTOS ->")
+        assertTrue("PHOTOS section block must exist", photosIndex != -1)
+        val photosBlock = content.substring(photosIndex, photosIndex + 600)
+        assertTrue(
+            "PHOTOS section block must render WorkoutPhotoStrip",
+            photosBlock.contains("WorkoutPhotoStrip(")
+        )
+    }
 }

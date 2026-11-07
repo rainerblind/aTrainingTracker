@@ -84,6 +84,7 @@ class WorkoutSummaryDynamicOrderContractTest {
         val customOrder = listOf(
             WorkoutSectionType.CHARTS,
             WorkoutSectionType.ZONES,
+            WorkoutSectionType.GRADE_DISTRIBUTION,
             WorkoutSectionType.MAP,
             WorkoutSectionType.PHOTOS,
             WorkoutSectionType.ELEVATION,
@@ -99,6 +100,7 @@ class WorkoutSummaryDynamicOrderContractTest {
             showElevationProfile = true,
             showTelemetryCharts = true,
             showZoneAnalysis = true,
+            showGradeDistribution = true,
             showExportStatus = true,
             showPhotos = true
         )
@@ -114,6 +116,7 @@ class WorkoutSummaryDynamicOrderContractTest {
                 WorkoutSectionType.ELEVATION -> prefs.showElevationProfile
                 WorkoutSectionType.CHARTS -> prefs.showTelemetryCharts
                 WorkoutSectionType.ZONES -> prefs.showZoneAnalysis
+                WorkoutSectionType.GRADE_DISTRIBUTION -> prefs.showGradeDistribution
                 WorkoutSectionType.EXPORT_STATUS -> prefs.showExportStatus
                 WorkoutSectionType.PHOTOS -> prefs.showPhotos
             }
@@ -126,6 +129,7 @@ class WorkoutSummaryDynamicOrderContractTest {
         assertEquals(customOrder, renderedSections)
         assertEquals(WorkoutSectionType.CHARTS, renderedSections[0])
         assertEquals(WorkoutSectionType.ZONES, renderedSections[1])
-        assertEquals(WorkoutSectionType.MAP, renderedSections[2])
+        assertEquals(WorkoutSectionType.GRADE_DISTRIBUTION, renderedSections[2])
+        assertEquals(WorkoutSectionType.MAP, renderedSections[3])
     }
 }

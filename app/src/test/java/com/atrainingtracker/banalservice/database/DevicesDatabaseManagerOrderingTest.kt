@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.banalservice.database
 
+import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.util.Log
@@ -213,7 +214,7 @@ class DevicesDatabaseManagerOrderingTest {
         assertEquals(1, devices[1].third) // Paired by default when Play Services is available (REQ-TRK-024.6, ATT-5491)
 
         assertEquals(3L, devices[2].first)
-        assertEquals(DeviceType.SPEED_AND_LOCATION_NETWORK.name, devices[2].second)
+        assertEquals(DeviceType.ALTITUDE_FROM_POSITION.name, devices[2].second)
         assertEquals(0, devices[2].third)
     }
 
@@ -272,7 +273,56 @@ class DevicesDatabaseManagerOrderingTest {
         assertEquals(0, devices[1].third) // Unpaired when Play Services is missing
 
         assertEquals(3L, devices[2].first)
-        assertEquals(DeviceType.SPEED_AND_LOCATION_NETWORK.name, devices[2].second)
+        assertEquals(DeviceType.ALTITUDE_FROM_POSITION.name, devices[2].second)
         assertEquals(0, devices[2].third)
+    }
+
+    /**
+     * `TST-SEN-027.2`: Verifies that [DevicesDatabaseManager.DevicesDbHelper.onUpgrade]
+     * at version 10 executes [migrateRemoveSpeedAndLocationNetwork] and cleanly removes
+     * any obsolete SPEED_AND_LOCATION_NETWORK rows from existing databases (REQ-SEN-027.2, ATT-5492).
+     */
+    @Test
+    fun testDevicesDbUpgrade_v9ToV10_removesSpeedAndLocationNetworkRow() {
+        mockkStatic(GooglePlayServicesUtil::class)
+        every { GooglePlayServicesUtil.isGooglePlayServicesAvailable(any()) } returns ConnectionResult.SUCCESS
+
+        mockkStatic(com.atrainingtracker.banalservice.helpers.HavePressureSensor::class)
+        every { com.atrainingtracker.banalservice.helpers.HavePressureSensor.havePressureSensor(any()) } returns false
+
+        val testContext = mockk<Context>(relaxed = true)
+        every { testContext.getString(any()) } returns "MockDevice"
+
+        val db = SQLiteDatabase.create(null)
+        val helper = DevicesDatabaseManager.DevicesDbHelper(testContext)
+
+        helper.onCreate(db)
+
+        // Insert a legacy SPEED_AND_LOCATION_NETWORK row manually
+        val legacyRow = ContentValues().apply {
+            put(DevicesDatabaseManager.DevicesDbHelper.PROTOCOL, Protocol.SMARTPHONE.name)
+            put(DevicesDatabaseManager.DevicesDbHelper.DEVICE_TYPE, "SPEED_AND_LOCATION_NETWORK")
+            put(DevicesDatabaseManager.DevicesDbHelper.PAIRED, 0)
+            put(DevicesDatabaseManager.DevicesDbHelper.NAME, "Legacy Network Location")
+        }
+        val insertedId = db.insert(DevicesDatabaseManager.DevicesDbHelper.DEVICES, null, legacyRow)
+        assertTrue(insertedId > 0)
+
+        // Upgrade from v9 to v10
+        helper.onUpgrade(db, 9, 10)
+
+        // Assert obsolete row is deleted
+        val cursor = db.query(
+            DevicesDatabaseManager.DevicesDbHelper.DEVICES,
+            arrayOf(DevicesDatabaseManager.DevicesDbHelper.C_ID),
+            "${DevicesDatabaseManager.DevicesDbHelper.DEVICE_TYPE} = ?",
+            arrayOf("SPEED_AND_LOCATION_NETWORK"),
+            null,
+            null,
+            null
+        )
+        cursor.use {
+            assertEquals(0, it.count)
+        }
     }
 }

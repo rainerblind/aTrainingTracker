@@ -85,20 +85,20 @@ class SensorSourceDialogPriorityTest {
     /**
      * `TST-UI-227.1`: Verifies that [SensorSourceDialog] sorts `activeBackups` using
      * [MySensorManager.getPriorityRank], ensuring [DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED]
-     * appears before [DeviceType.SPEED_AND_LOCATION_NETWORK] when GPS is the primary source.
+     * appears before [DeviceType.SPEED_AND_LOCATION_GPS] when another sensor is primary.
      */
     @Test
-    fun activeBackups_sortedByPriority_googleFusedBeforeNetwork() {
-        val sourceDevice = createDevice(1L, "Smartphone GPS", DeviceType.SPEED_AND_LOCATION_GPS)
-        val networkDevice = createDevice(2L, "Network Location", DeviceType.SPEED_AND_LOCATION_NETWORK)
-        val fusedDevice = createDevice(3L, "Google Fused Location", DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED)
-        val allDevices = listOf(sourceDevice, networkDevice, fusedDevice)
+    fun activeBackups_sortedByPriority_googleFusedBeforeGps() {
+        val sourceDevice = createDevice(100L, "External GNSS", DeviceType.SPEED_AND_LOCATION_GPS)
+        val gpsDevice = createDevice(1L, "Smartphone GPS", DeviceType.SPEED_AND_LOCATION_GPS)
+        val fusedDevice = createDevice(2L, "Google Fused Location", DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED)
+        val allDevices = listOf(sourceDevice, gpsDevice, fusedDevice)
 
-        // Intentionally provide active telemetries in reversed order (Network before Google Fused)
+        // Intentionally provide active telemetries in reversed order (GPS before Google Fused)
         val allActiveTelemetries = listOf(
+            createTelemetry(1L, SensorType.LATITUDE, SensorType.LONGITUDE),
             createTelemetry(2L, SensorType.LATITUDE, SensorType.LONGITUDE),
-            createTelemetry(3L, SensorType.LATITUDE, SensorType.LONGITUDE),
-            createTelemetry(1L, SensorType.LATITUDE, SensorType.LONGITUDE)
+            createTelemetry(100L, SensorType.LATITUDE, SensorType.LONGITUDE)
         )
 
         val sensorType = SensorType.LATITUDE
@@ -118,14 +118,14 @@ class SensorSourceDialogPriorityTest {
             )
 
         assertEquals(2, activeBackups.size)
-        // Google Fused (rank 1) must precede Network (rank 2)
-        assertEquals(3L, activeBackups[0].deviceId)
-        assertEquals(2L, activeBackups[1].deviceId)
+        // Google Fused (rank 0) must precede GPS (rank 1)
+        assertEquals(2L, activeBackups[0].deviceId)
+        assertEquals(1L, activeBackups[1].deviceId)
     }
 
     /**
      * `TST-UI-227.1`: Verifies that `activeBackups` sorting works across speed/distance sensors,
-     * prioritizing BIKE_SPEED > GOOGLE_FUSED > GPS > NETWORK (REQ-TRK-024.1, ATT-5491).
+     * prioritizing BIKE_SPEED > GOOGLE_FUSED > GPS (REQ-TRK-024.1, ATT-5491, ATT-5492).
      */
     @Test
     fun activeBackups_speedPriority_ordersWheelSpeedBeforeFusedAndFusedBeforeGps() {
@@ -133,11 +133,9 @@ class SensorSourceDialogPriorityTest {
         val bikeSpeedDevice = createDevice(20L, "Wahoo SPEED", DeviceType.BIKE_SPEED, Protocol.BLUETOOTH_LE)
         val gpsDevice = createDevice(30L, "Smartphone GPS", DeviceType.SPEED_AND_LOCATION_GPS)
         val fusedDevice = createDevice(40L, "Google Fused", DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED)
-        val netDevice = createDevice(50L, "Network", DeviceType.SPEED_AND_LOCATION_NETWORK)
-        val allDevices = listOf(sourceDevice, bikeSpeedDevice, gpsDevice, fusedDevice, netDevice)
+        val allDevices = listOf(sourceDevice, bikeSpeedDevice, gpsDevice, fusedDevice)
 
         val allActiveTelemetries = listOf(
-            createTelemetry(50L, SensorType.SPEED_mps),
             createTelemetry(30L, SensorType.SPEED_mps),
             createTelemetry(40L, SensorType.SPEED_mps),
             createTelemetry(20L, SensorType.SPEED_mps),
@@ -159,26 +157,25 @@ class SensorSourceDialogPriorityTest {
                 .thenBy { it.deviceId }
             )
 
-        assertEquals(4, activeBackups.size)
-        // Expected order: BIKE_SPEED (rank 1) -> GOOGLE_FUSED (rank 4) -> GPS (rank 5) -> NETWORK (rank 6)
+        assertEquals(3, activeBackups.size)
+        // Expected order: BIKE_SPEED (rank 1) -> GOOGLE_FUSED (rank 4) -> GPS (rank 5)
         assertEquals(20L, activeBackups[0].deviceId)
         assertEquals(40L, activeBackups[1].deviceId)
         assertEquals(30L, activeBackups[2].deviceId)
-        assertEquals(50L, activeBackups[3].deviceId)
     }
 
     /**
      * `TST-UI-227.2`: Verifies that [SensorSourceDialog] sorts `notConnected` devices using
      * [MySensorManager.getPriorityRank], ensuring [DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED]
-     * is rendered before [DeviceType.SPEED_AND_LOCATION_NETWORK] even when database cursor order
-     * presents Network first (lower _id).
+     * is rendered before [DeviceType.SPEED_AND_LOCATION_GPS] even when database cursor order
+     * presents GPS first (lower _id).
      */
     @Test
-    fun notConnected_sortedByPriority_googleFusedBeforeNetwork() {
-        // Simulating legacy DB cursor order where Network had _id=2 and Google Fused had _id=3
-        val netDevice = createDevice(2L, "Network Location", DeviceType.SPEED_AND_LOCATION_NETWORK)
-        val fusedDevice = createDevice(3L, "Google Fused Location", DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED)
-        val allDevices = listOf(netDevice, fusedDevice)
+    fun notConnected_sortedByPriority_googleFusedBeforeGps() {
+        // Simulating DB cursor order where GPS has _id=1 and Google Fused has _id=2
+        val gpsDevice = createDevice(1L, "Smartphone GPS", DeviceType.SPEED_AND_LOCATION_GPS)
+        val fusedDevice = createDevice(2L, "Google Fused Location", DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED)
+        val allDevices = listOf(gpsDevice, fusedDevice)
 
         val potentialTypes = DeviceType.getDeviceTypeList(SensorType.LATITUDE) ?: emptySet()
         val activeDeviceIds = emptySet<Long>() // Both disconnected
@@ -194,9 +191,9 @@ class SensorSourceDialogPriorityTest {
             )
 
         assertEquals(2, notConnected.size)
-        // Google Fused (rank 1) must be rendered above Network (rank 2)
-        assertEquals(3L, notConnected[0].id)
-        assertEquals(2L, notConnected[1].id)
+        // Google Fused (rank 0) must be rendered above GPS (rank 1)
+        assertEquals(2L, notConnected[0].id)
+        assertEquals(1L, notConnected[1].id)
     }
 
     /**

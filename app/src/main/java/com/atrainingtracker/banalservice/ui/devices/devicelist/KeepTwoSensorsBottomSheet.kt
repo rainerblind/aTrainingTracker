@@ -55,7 +55,7 @@ import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomShe
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 /**
- * Bottom popup presented when an athlete returns to Free tier with > 2 paired sensors (REQ-SET-084.5, REQ-UI-149).
+ * Bottom popup presented when an athlete returns to the base version with > 2 paired sensors (REQ-SET-084.5, REQ-UI-149, ATT-5661).
  * Guides athlete to select up to 2 active sensors to keep, non-destructively unpairing excess devices while
  * preserving calibration and equipment data.
  */

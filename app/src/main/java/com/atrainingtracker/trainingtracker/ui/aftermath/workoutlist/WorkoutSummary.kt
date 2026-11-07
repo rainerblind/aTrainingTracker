@@ -339,7 +339,7 @@ fun WorkoutSummary(
                             currentDistance = null,
                             minAltitudeOverride = workoutData.minAltitude,
                             maxAltitudeOverride = workoutData.maxAltitude,
-                            alignWithTelemetryCharts = preferences.showTelemetryCharts && telemetryPoints.isNotEmpty(),
+                            alignWithTelemetryCharts = false,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(100.dp)
@@ -475,7 +475,7 @@ fun WorkoutSummary(
                 }
                 WorkoutSectionType.ZONES -> {
                     // 9. Zone Distribution Cards
-                    if (preferences.showZoneAnalysis && (hrZoneDistribution != null || powerZoneDistribution != null || (gradeZoneDistribution != null && preferences.showGradeDistribution))) {
+                    if (preferences.showZoneAnalysis && (hrZoneDistribution != null || powerZoneDistribution != null)) {
                         HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
                             thickness = 0.5.dp,
@@ -505,19 +505,26 @@ fun WorkoutSummary(
                                     .then(mapClickModifier)
                             )
                         }
-                        if (preferences.showGradeDistribution) {
-                            gradeZoneDistribution?.let { distribution ->
-                                GradeZoneDistributionCard(
-                                    distribution = distribution,
-                                    displayMode = effectiveGradeZoneDisplayMode,
-                                    onDisplayModeChange = { gradeZoneDisplayMode = it },
-                                    showModeSelector = false,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                                        .then(mapClickModifier)
-                                )
-                            }
+                    }
+                }
+                WorkoutSectionType.GRADE_DISTRIBUTION -> {
+                    if (preferences.showGradeDistribution && gradeZoneDistribution != null) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                            thickness = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant
+                        )
+                        gradeZoneDistribution?.let { distribution ->
+                            GradeZoneDistributionCard(
+                                distribution = distribution,
+                                displayMode = effectiveGradeZoneDisplayMode,
+                                onDisplayModeChange = { gradeZoneDisplayMode = it },
+                                showModeSelector = false,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                                    .then(mapClickModifier)
+                            )
                         }
                     }
                 }
