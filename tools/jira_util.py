@@ -1975,12 +1975,26 @@ def cmd_sprint_metrics(sprint_arg=None, record=False, post_to_retro=False, backf
 
     if post_to_retro:
         retro_key = None
-        sprint_issues = jira_request(f"{base}/rest/agile/1.0/sprint/{s_id}/issue?fields=summary", role=role)["issues"]
+        sprint_issues = jira_request(f"{base}/rest/agile/1.0/sprint/{s_id}/issue?fields=summary,issuetype", role=role)["issues"]
+        # Pass 1: Match dedicated 'Review & Retro' ceremony ticket summary specifically (ATT-5829 / ATT-5890)
         for i in sprint_issues:
-            s_lower = i["fields"]["summary"].lower()
-            if "review & retro" in s_lower or "retro" in s_lower:
+            itype = i.get("fields", {}).get("issuetype", {}).get("name", "")
+            if itype.lower() in ("sub-task", "subtask"):
+                continue
+            summary = i.get("fields", {}).get("summary", "")
+            if re.search(r'^\s*(?:\[[^\]]+\]\s*)?(?:sprint\s+)?review\s*(?:&|and)\s*retro(?:spective)?\b', summary, re.IGNORECASE):
                 retro_key = i["key"]
                 break
+        # Pass 2: Fallback to standalone Retrospective title if not a regular ticket referencing 'Retro' mid-sentence
+        if not retro_key:
+            for i in sprint_issues:
+                itype = i.get("fields", {}).get("issuetype", {}).get("name", "")
+                if itype.lower() in ("sub-task", "subtask"):
+                    continue
+                summary = i.get("fields", {}).get("summary", "")
+                if re.search(r'^\s*(?:\[[^\]]+\]\s*)?(?:sprint\s+)?retro(?:spective)?\b', summary, re.IGNORECASE):
+                    retro_key = i["key"]
+                    break
         if retro_key:
             add_comment(retro_key, report_md, role=role)
             print(f"Posted quantitative sprint scorecard to {retro_key}.")

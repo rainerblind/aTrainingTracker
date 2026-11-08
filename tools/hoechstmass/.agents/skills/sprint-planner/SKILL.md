@@ -32,18 +32,18 @@ This skill acts as the **Agile Sprint Facilitator & Scrum Master**. It orchestra
    - *Strict Invariant*: AI agents MUST NEVER move backlog tickets into active sprints autonomously. Only the human user assigns backlog tickets to sprints.
 2. **Establish Sprint Integration Branch**:
    - Create and push `sprint/<SPRINT_NAME>` from the main development branch.
-3. **Interactive Ticket-by-Ticket Walkthrough**:
-   - Walk through each committed ticket with the human user.
-   - Propose Story Point estimates (1, 2, 3 SP). Enforce the $\ge 5\text{ SP}$ split guardrail: any ticket estimated at $\ge 5\text{ SP}$ must be decomposed into smaller atomic tickets.
-   - Clarify ambiguous requirements, confirm acceptance criteria, and move screened tickets to `Analysis`.
+3. **Upfront Coordinator Batch Audit & Just-In-Time `Analysis` Transition (`Rule 77` & `Rule 78`)**:
+   - Inspect each committed ticket in detail upfront (checking for duplicates, human prerequisites, and Story Point estimates 1, 2, 3 SP; split any $\ge 5\text{ SP}$ ticket).
+   - Clarify any ambiguous requirements in a consolidated turn, keeping approved tickets in `To Do` / `Zu erledigen` until Stage 1 (`[Analysis]`) actually begins for each ticket.
 
 ---
 
 ## Ceremony 2: Sprint-End & Joint Review
 1. **Full Integration Verification**:
    - Execute the complete test suite and requirement governance check across the integrated sprint branch.
-2. **Ticket-by-Ticket Acceptance**:
-   - Present each completed ticket in `Final Review (Human)` to the user with its walkthrough summary and test results.
+2. **Ticket-by-Ticket Acceptance (`Rule 68` & `Rule 79`)**:
+   - Present each completed ticket in `Final Review (Human)` strictly one-by-one in rank order with its walkthrough summary, code diff review, and proactive recommendation.
+   - Complete all preparatory tool calls (`set-fixversion` for Ticket $N-1$, `read_file` / `git show` for Ticket $N$) **before** emitting the presentation response for Ticket $N$, and include **zero tool calls** in the presentation message itself so the turn terminates immediately and waits for the user's verdict.
    - Human accepts (`Erledigt` / Done) or rejects back to `Analysis` with feedback.
 3. **Milestone Epic Review & Human-Confirmed Closure (`REQ-PRO-040`)**:
    - Inspect project Epics via CLI:

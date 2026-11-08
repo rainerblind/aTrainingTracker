@@ -16,9 +16,9 @@ Reuse the Epic-scoped (or standalone ticket) persistent `TypeName: "self"` subag
 ## Key Responsibilities (`subagent_flash` as `agent1` — `flash`)
 1. **Two-Tier Unit Test Execution Strategy (Rule 60 — `ATT-4465`)**:
    - **Tier 1 — Per-Ticket Verification (Stage 4 & Stage 5, ~10–20s)**:
-     - Run targeted unit and contract tests covering all modified and directly adjacent packages/classes (plus `ThemeColorCentralizationAuditTest` whenever any UI/Compose file is modified, `Rule 64` — `ATT-4718`):
+     - Run targeted unit and contract tests covering all modified and directly adjacent packages/classes (plus `ThemeColorCentralizationAuditTest` and `ui.components.core.*` whenever any UI/Compose/Map/Sheet file is modified, `Rules 64 & 79` — `ATT-4718`, `ATT-5890`):
        ```bash
-       ./gradlew testDebugUnitTest --tests "com.atrainingtracker.<modified_package>.*" --tests "com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest"
+       ./gradlew testDebugUnitTest --tests "com.atrainingtracker.<modified_package>.*" --tests "com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest" --tests "com.atrainingtracker.trainingtracker.ui.components.core.*"
        ```
      - Run `TranslationParityTest` whenever any `strings.xml` resource file is modified (~3s):
        ```bash
