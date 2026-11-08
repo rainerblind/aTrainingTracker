@@ -2755,19 +2755,11 @@ public class TrackerService extends Service {
                 }
             }
 
-            // REQ-MAP-020 (ATT-528): Authoritative deterministic calculation of max line distance and apex from recorded track
+            // REQ-MAP-020 (ATT-528), REQ-SET-097 (ATT-5899): Non-degenerate elliptical apex calculation from recorded track
             if (startPos != null && mLiveSession.getSampledLatLngs() != null && !mLiveSession.getSampledLatLngs().isEmpty()) {
-                double calculatedMaxDisp = 0.0;
-                LatLng calculatedApex = startPos;
-                for (LatLng pt : mLiveSession.getSampledLatLngs()) {
-                    if (pt != null) {
-                        float dist = WorkoutClusterEngine.Companion.distanceBetween(startPos, pt);
-                        if (dist > calculatedMaxDisp) {
-                            calculatedMaxDisp = dist;
-                            calculatedApex = pt;
-                        }
-                    }
-                }
+                List<LatLng> sampledPoints = mLiveSession.getSampledLatLngs();
+                LatLng calculatedApex = WorkoutClusterEngine.getInstance(this).findApexFromPoints(startPos, sampledPoints, endPos);
+                double calculatedMaxDisp = WorkoutClusterEngine.Companion.distanceBetween(startPos, calculatedApex);
                 summariesManager.updateExtremaValue(mWorkoutID, SensorType.LINE_DISTANCE_m, ExtremaType.MAX, calculatedMaxDisp, calculatedApex);
                 if (repository != null) {
                     repository.updateExtremaValue(mWorkoutID, SensorType.LINE_DISTANCE_m, ExtremaType.MAX, calculatedMaxDisp, calculatedApex);

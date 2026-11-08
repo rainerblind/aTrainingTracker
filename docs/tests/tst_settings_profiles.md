@@ -1014,4 +1014,22 @@
   5. *Clean-Room Targeted Regression Execution (`TST-SET-096.5`)*:
   • Execute targeted test suites (`com.atrainingtracker.trainingtracker.database.*`, `com.atrainingtracker.trainingtracker.ui.clusters.*`, `com.atrainingtracker.trainingtracker.localization.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
+### TST-SET-097: **Point-to-Point Route Corridor Discrimination & Elliptical Apex Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-097`
+- **Component**: `WorkoutClusterEngine.kt`, `TrackerService.java`, `WorkoutClusterCorridorDetector.kt`
+- **Jira**: `ATT-5899`
+- **Test Description**:
+  1. *Elliptical Apex Calculation Unit Tests (`TST-SET-097.1`, `WorkoutClusterPointToPointApexTest.kt`)*:
+  • Verify that for an A -> B route with lateral deflection (e.g. northern arc between Sindelfingen and Schönaich), the apex is located at the point of maximum $d(\text{start}, P) + d(P, \text{end})$, separated from `end` by > 1 km.
+  • Verify that for a straight A -> B line, the apex falls on the 50% distance midpoint.
+  • Verify that for closed loops ($d(\text{start}, \text{end}) < 150\text{ m}$), apex coordinates are 100% identical to legacy `findApexFromPoints(start, points, null)`.
+  2. *Parallel Corridor Scoring & Discrimination Tests (`TST-SET-097.2`, `WorkoutClusterCorridorScoringTest.kt`)*:
+  • Given two clusters sharing identical start (Sindelfingen) and end (Schönaich) coordinates with similar distance (~9.4 km) but separated laterally by 1.5 km (forest corridor vs. city corridor).
+  • When a new workout matching the forest corridor is evaluated by `scoreClusters()`, verify that the forest cluster achieves a significantly lower similarity cost and is suggested over the city corridor cluster.
+  • When a new workout matching the city corridor is evaluated, verify that the city cluster is suggested.
+  3. *TrackerService Integration & Persistence Audit (`TST-SET-097.3`)*:
+  • Verify that session finalization in `TrackerService` passes `endPos` into `findApexFromPoints()` and persists non-degenerate apex coordinates into `WorkoutSummaries`.
+  4. *Clean-Room Targeted Regression Execution (`TST-SET-097.4`)*:
+  • Run targeted unit tests (`com.atrainingtracker.trainingtracker.clusters.*`, `com.atrainingtracker.trainingtracker.database.WorkoutCluster*`, `com.atrainingtracker.trainingtracker.ui.clusters.*`) ensuring zero regressions.
+
 

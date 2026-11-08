@@ -25,8 +25,10 @@ import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
+import io.mockk.mockk
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -171,5 +173,32 @@ class MaxLineDistanceIntegrityTest {
         val healedDistToApex = WorkoutClusterEngine.distanceBetween(startPos, trueApex).toDouble()
         val retrigger = trueMaxDisp > healedDistToApex + 25.0
         assertFalse("System must not trigger unnecessary updates once healed", retrigger)
+    }
+
+    /**
+     * Verifies non-degenerate elliptical apex calculation for point-to-point routes as invoked
+     * during session finalization in TrackerService (REQ-SET-097.2, TST-SET-097.3, ATT-5899).
+     */
+    @Test
+    fun testPointToPointApexCalculationWithEndPosition() {
+        val startPos = LatLng(48.7083, 9.0028)
+        val endPos = LatLng(48.6570, 9.0640)
+        val lateralApex = LatLng(48.6950, 9.0450)
+
+        val points = listOf(
+            startPos,
+            LatLng(48.7050, 9.0150),
+            lateralApex,
+            LatLng(48.6750, 9.0550),
+            endPos
+        )
+
+        val mockContext = mockk<android.content.Context>(relaxed = true)
+        val engine = WorkoutClusterEngine.getInstance(mockContext)
+
+        val apex = engine.findApexFromPoints(startPos, points, endPos)
+        assertEquals(lateralApex.latitude, apex.latitude, 1e-6)
+        assertEquals(lateralApex.longitude, apex.longitude, 1e-6)
+        assertNotEquals("Apex must not collapse onto destination end on point-to-point route", endPos, apex)
     }
 }
