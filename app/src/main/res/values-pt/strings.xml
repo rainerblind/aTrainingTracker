@@ -2453,4 +2453,7 @@
     <string name="workout_diagnostic_action_clear_warning">Limpar aviso</string>
     <string name="workout_diagnostic_clear_confirm_title">Limpar aviso?</string>
     <string name="workout_diagnostic_clear_confirm_message">O aviso de diagnóstico para este treino será removido permanentemente.</string>
+    <!-- Hardware Volume Keys Cockpit Tab Cycling (REQ-TRK-054 / ATT-5905) -->
+    <string name="prefs_volume_keys_switch_cockpit_tabs_title">Botões de volume para abas</string>
+    <string name="prefs_volume_keys_switch_cockpit_tabs_summary">Alternar ciclicamente as abas no cockpit com volume +/-</string>
 </resources>

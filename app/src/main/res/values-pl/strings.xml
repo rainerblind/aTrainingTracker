@@ -2456,4 +2456,7 @@
     <string name="workout_diagnostic_action_clear_warning">Usuń ostrzeżenie</string>
     <string name="workout_diagnostic_clear_confirm_title">Usunąć ostrzeżenie?</string>
     <string name="workout_diagnostic_clear_confirm_message">Ostrzeżenie diagnostyczne dla tego treningu zostanie trwale usunięte.</string>
+    <!-- Hardware Volume Keys Cockpit Tab Cycling (REQ-TRK-054 / ATT-5905) -->
+    <string name="prefs_volume_keys_switch_cockpit_tabs_title">Klawisze głośności do zakładek</string>
+    <string name="prefs_volume_keys_switch_cockpit_tabs_summary">Przełączaj zakładki w kokpicie za pomocą głośności +/-</string>
 </resources>

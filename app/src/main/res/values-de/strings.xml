@@ -2540,4 +2540,7 @@
     <string name="workout_diagnostic_action_clear_warning">Warnung löschen</string>
     <string name="workout_diagnostic_clear_confirm_title">Warnung löschen?</string>
     <string name="workout_diagnostic_clear_confirm_message">Die Diagnosewarnung für diese Einheit wird dauerhaft entfernt.</string>
+    <!-- Hardware Volume Keys Cockpit Tab Cycling (REQ-TRK-054 / ATT-5905) -->
+    <string name="prefs_volume_keys_switch_cockpit_tabs_title">Lautstärketasten für Cockpit-Tabs</string>
+    <string name="prefs_volume_keys_switch_cockpit_tabs_summary">Im Cockpit mit Lautstärke +/- zyklisch durch die Tabs blättern</string>
 </resources>

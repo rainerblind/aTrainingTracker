@@ -2454,4 +2454,7 @@
     <string name="workout_diagnostic_action_clear_warning">Effacer l\'avertissement</string>
     <string name="workout_diagnostic_clear_confirm_title">Effacer l\'avertissement ?</string>
     <string name="workout_diagnostic_clear_confirm_message">L\'avertissement de diagnostic pour cet entraînement sera définitivement supprimé.</string>
+    <!-- Hardware Volume Keys Cockpit Tab Cycling (REQ-TRK-054 / ATT-5905) -->
+    <string name="prefs_volume_keys_switch_cockpit_tabs_title">Touches de volume pour onglets</string>
+    <string name="prefs_volume_keys_switch_cockpit_tabs_summary">Faire défiler les onglets du cockpit avec volume +/-</string>
 </resources>

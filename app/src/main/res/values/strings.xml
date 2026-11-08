@@ -2655,4 +2655,7 @@
     <string name="workout_diagnostic_action_clear_warning">Clear warning</string>
     <string name="workout_diagnostic_clear_confirm_title">Clear warning?</string>
     <string name="workout_diagnostic_clear_confirm_message">The diagnostic warning for this workout will be removed permanently.</string>
+    <!-- Hardware Volume Keys Cockpit Tab Cycling (REQ-TRK-054 / ATT-5905) -->
+    <string name="prefs_volume_keys_switch_cockpit_tabs_title">Hardware volume keys cycle tabs</string>
+    <string name="prefs_volume_keys_switch_cockpit_tabs_summary">Cycle Cockpit tabs with volume +/- in live tracking</string>
 </resources>

@@ -40,6 +40,7 @@ import android.os.Looper
 import android.os.PowerManager
 import android.provider.Settings
 import android.util.Log
+import android.view.KeyEvent
 import android.view.MenuItem
 import android.view.View
 import android.view.WindowManager
@@ -700,6 +701,19 @@ class MainActivityWithNavigation :
             }
         }
         window.attributes = lp
+    }
+
+    /**
+     * Optional hardware key event interceptor (REQ-TRK-054.2, ATT-5905).
+     * When registered and returns true, event consumption is complete and system handling is bypassed.
+     */
+    var hardwareKeyInterceptor: ((KeyEvent) -> Boolean)? = null
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (hardwareKeyInterceptor?.invoke(event) == true) {
+            return true
+        }
+        return super.dispatchKeyEvent(event)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

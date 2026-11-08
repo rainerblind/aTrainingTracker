@@ -2762,3 +2762,52 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Clean workouts incur zero storage and zero UI overhead; sample failure handling never blocks the live tracking foreground thread; `WorkoutSummaries` schema migration to version 28 is safe and idempotent; `fromCursor` and `readCursorSnapshot` mapping is 100% symmetrical (`Rule 20`).
 
+### REQ-TRK-054: Hardware Volume Keys Cockpit Tab Cycling with Cyclic Wrap-Around [Verified]
+- **Tests**: `TST-TRK-054` | **Tickets**: `ATT-5905`
+- **Implementation**: `TrackingTabsPageResolver.kt`, `MainActivityWithNavigation.kt`, `TrackingTabsScreen.kt`, `DisplaySettingsDialog.kt`, `TrainingApplication.java`
+- **Rationale**: When riding or running in rain, cold weather, or with thick gloves, capacitive touch-screen swipes between Cockpit tabs (`Standard`, `Karte`, `Runden`, `Live Segments`) in `TrackingTabsScreen` can be unreliable or hazardous. Utilizing physical hardware volume buttons (`KEYCODE_VOLUME_UP`, `KEYCODE_VOLUME_DOWN`) provides dedicated bike computer-like physical ergonomics. Cyclic wrap-around ensures athletes can navigate through all configured Cockpit tabs even if handlebar mounts block one physical volume button.
+- **Description**:
+1. *Pure Domain Tab Mathematics & Cyclic Wrap-Around (`REQ-TRK-054.1`)*:
+• `TrackingTabsPageResolver` SHALL provide `resolveNextPage(currentPage: Int, pageCount: Int, forward: Boolean): Int`.
+• When `forward` is `true` (`Volume Up`), target page SHALL be `(currentPage + 1) % pageCount`.
+• When `forward` is `false` (`Volume Down`), target page SHALL be `(currentPage - 1 + pageCount) % pageCount`.
+• Boundary guard: When `pageCount <= 1`, target page SHALL be `0`.
+2. *Window-Level Volume Key Interception & Audio HUD Suppression (`REQ-TRK-054.2`)*:
+• `MainActivityWithNavigation` SHALL intercept `KEYCODE_VOLUME_UP` and `KEYCODE_VOLUME_DOWN` before system volume processing.
+• When an active volume key interceptor is registered, consuming both `ACTION_DOWN` and `ACTION_UP` SHALL return `true`, completely preventing the Android system volume slider HUD from appearing.
+3. *Lifecycle-Bound Registration in TrackingTabsScreen (`REQ-TRK-054.3`)*:
+• `TrackingTabsScreen` SHALL register the volume key interceptor via `DisposableEffect` ONLY when `screenMode == ScreenMode.TRACKING` AND `TrainingApplication.volumeKeysSwitchCockpitTabs()` is enabled.
+• When a volume key event is handled in `ScreenMode.TRACKING`, the screen SHALL animate the pager state to `resolveNextPage(...)`.
+• When `screenMode != ScreenMode.TRACKING` (e.g. `ScreenMode.CONFIGURATION`), when navigating away from Cockpit, or when the setting is disabled, the interceptor SHALL be unregistered so volume keys immediately perform standard Android audio volume control.
+4. *Display Settings Integration & Preference Persistence (`REQ-TRK-054.4`)*:
+• `TrainingApplication.DEFAULT_DISPLAY_OPTIONS` SHALL include `"volumeKeysSwitchCockpitTabs"`.
+• `TrainingApplication` SHALL expose static helper `boolean volumeKeysSwitchCockpitTabs()` returning `getDisplayOptions().contains("volumeKeysSwitchCockpitTabs")`.
+• `DisplaySettingsDialog.kt` SHALL render a toggle for `volumeKeysSwitchCockpitTabs` alongside existing display options (`forcePortrait`, `keepScreenOn`, `noUnlocking`).
+5. *9-Language Localization Parity (`REQ-TRK-054.5`)*:
+• Toggle title `prefs_volume_keys_switch_cockpit_tabs_title` and subtitle `prefs_volume_keys_switch_cockpit_tabs_summary` SHALL be localized across all 9 supported languages (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with 100% parity.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-054`, extending `REQ-SET-052` (*Display Settings Modal Dialog & Preferences*) and `REQ-UI-435` (*TrackingTabs Pager Resolution*). Targets `TrackingTabsPageResolver.kt`, `MainActivityWithNavigation.kt`, `TrackingTabsScreen.kt`, `DisplaySettingsDialog.kt`, and `TrainingApplication.java`.
+2. *Historical Origin & Commit Trace*: `ATT-261` / `ATT-1016` (DisplaySettings modal), `ATT-4838` (`TrackingTabsPageResolver`), and `ATT-5879` (Cockpit layout refinements).
+3. *Root Reason for Existing Formulation*: Volume keys were previously left unintercepted because Compose views do not request key events by default, leaving volume handling to Android's default audio stream manager.
+4. *Preservation of Core Invariants*: Existing display preferences (`forcePortrait`, `keepScreenOn`, `noUnlocking`) remain unchanged; volume buttons function normally on all other screens and in configuration mode; 9-language localization parity is maintained.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `volumeKeysSwitchCockpitTabs` is enabled and `TrackingTabsScreen` is displayed in `ScreenMode.TRACKING` with 3 tabs (0, 1, 2) on tab 0,
+• *When* `KEYCODE_VOLUME_UP` is pressed,
+• *Then* the pager smoothly navigates to tab 1, and no audio volume HUD appears.
+• *Given* the athlete is on tab 0,
+• *When* `KEYCODE_VOLUME_DOWN` is pressed,
+• *Then* the pager wraps around and smoothly navigates to tab 2 (last tab).
+• *Given* the athlete is on tab 2 (last tab),
+• *When* `KEYCODE_VOLUME_UP` is pressed,
+• *Then* the pager wraps around and smoothly navigates to tab 0.
+• *Given* `volumeKeysSwitchCockpitTabs` is disabled, or the screen mode is `ScreenMode.CONFIGURATION`, or the app is on a non-Cockpit screen,
+• *When* `KEYCODE_VOLUME_UP` or `KEYCODE_VOLUME_DOWN` is pressed,
+• *Then* system audio volume adjusts normally.
+• *Given* `DisplaySettingsDialog` is opened,
+• *When* viewed in any of the 9 supported languages,
+• *Then* the hardware volume keys toggle title and summary are rendered with 100% localization parity.
+
+**Invariants**: Hardware volume buttons MUST function normally on all non-Cockpit screens and in `ScreenMode.CONFIGURATION`; both `ACTION_DOWN` and `ACTION_UP` MUST be consumed in `TRACKING` mode to avoid audio HUD flicker; cyclic wrap-around MUST handle `pageCount <= 1` gracefully without `IndexOutOfBoundsException`.
+

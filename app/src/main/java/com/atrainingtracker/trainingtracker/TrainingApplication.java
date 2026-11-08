@@ -110,7 +110,8 @@ public class TrainingApplication extends Application {
     public static final Set<String> DEFAULT_DISPLAY_OPTIONS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
             "forcePortrait",
             "keepScreenOn",
-            "noUnlocking"
+            "noUnlocking",
+            "volumeKeysSwitchCockpitTabs"
     )));
     public static final String SP_COCKPIT_THEME_MODE = "cockpit_theme_mode";
     public static final String DEFAULT_COCKPIT_THEME_MODE = "system";
@@ -530,6 +531,10 @@ public class TrainingApplication extends Application {
 
     public static boolean NoUnlocking() {
         return getDisplayOptions().contains("noUnlocking");
+    }
+
+    public static boolean volumeKeysSwitchCockpitTabs() {
+        return getDisplayOptions().contains("volumeKeysSwitchCockpitTabs");
     }
 
     @NonNull

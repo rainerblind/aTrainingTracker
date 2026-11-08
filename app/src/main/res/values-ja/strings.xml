@@ -2434,4 +2434,7 @@
     <string name="workout_diagnostic_action_clear_warning">警告を削除</string>
     <string name="workout_diagnostic_clear_confirm_title">警告を削除しますか？</string>
     <string name="workout_diagnostic_clear_confirm_message">このワークアウトの診断警告は完全に削除されます。</string>
+    <!-- Hardware Volume Keys Cockpit Tab Cycling (REQ-TRK-054 / ATT-5905) -->
+    <string name="prefs_volume_keys_switch_cockpit_tabs_title">音量ボタンでタブ切り替え</string>
+    <string name="prefs_volume_keys_switch_cockpit_tabs_summary">コックピットで音量+/-ボタンを使ってタブを循環切り替え</string>
 </resources>

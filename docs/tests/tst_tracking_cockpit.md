@@ -1535,4 +1535,25 @@
   6. *Targeted & Full Suite Regression Execution (`TST-TRK-053.6`)*:
   • Execute targeted package tests (`com.atrainingtracker.trainingtracker.database.*`, `com.atrainingtracker.trainingtracker.tracker.*`, `com.atrainingtracker.trainingtracker.ui.aftermath.*`) and full test suite asserting 100% pass rate.
 
+### TST-TRK-054: **Hardware Volume Keys Cockpit Tab Cycling with Cyclic Wrap-Around Test Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-054`
+- **Component**: `TrackingTabsPageResolverTest.kt`, `DisplaySettingsTest.kt`, `MainActivityWithNavigation.kt`, `TrackingTabsScreen.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-5905`
+- **Test Description**:
+  1. *Cyclic Wrap-Around Page Index Calculation Unit Tests (`TST-TRK-054.1`, `TrackingTabsPageResolverTest.kt`)*:
+  • Verify `resolveNextPage(currentPage, pageCount, forward = true)` advances sequentially from 0 to `pageCount - 1` and wraps around from `pageCount - 1` to 0.
+  • Verify `resolveNextPage(currentPage, pageCount, forward = false)` decrements sequentially and wraps around from 0 to `pageCount - 1`.
+  • Verify boundary behavior for `pageCount = 1` (returns 0) and `pageCount <= 0` (returns 0) without exceptions.
+  2. *Display Settings & Persistence Unit Tests (`TST-TRK-054.2`, `DisplaySettingsTest.kt`)*:
+  • Verify `TrainingApplication.DEFAULT_DISPLAY_OPTIONS` contains `"volumeKeysSwitchCockpitTabs"`.
+  • Verify `TrainingApplication.volumeKeysSwitchCockpitTabs()` returns `true` by default and reflects mutations via `setDisplayOptions`.
+  3. *Window Key Interception & Lifecycle Guard Unit/Source Tests (`TST-TRK-054.3`)*:
+  • Verify `MainActivityWithNavigation` provides a volume key interceptor hook consuming both `ACTION_DOWN` and `ACTION_UP` for `KEYCODE_VOLUME_UP` and `KEYCODE_VOLUME_DOWN`.
+  • Verify `TrackingTabsScreen` registers the interceptor only when `screenMode == ScreenMode.TRACKING` and setting is enabled, releasing on dispose.
+  4. *9-Language Localization Parity Verification (`TST-TRK-054.4`, `TranslationParityTest.kt`)*:
+  • Verify `TranslationParityTest` passes asserting `prefs_volume_keys_switch_cockpit_tabs_title` and `prefs_volume_keys_switch_cockpit_tabs_summary` exist with 100% parity across all 9 locales.
+  5. *Targeted Regression Suite Execution (`TST-TRK-054.5`)*:
+  • Execute targeted package tests (`com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.*`, `com.atrainingtracker.trainingtracker.ui.settings.display.*`) asserting 100% pass rate.
+
+
 

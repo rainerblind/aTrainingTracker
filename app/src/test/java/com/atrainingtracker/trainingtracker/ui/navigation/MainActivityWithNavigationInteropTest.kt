@@ -128,4 +128,18 @@ class MainActivityWithNavigationInteropTest {
         assertNotNull("navigateToDrawerItem method must be present", navigateMethod)
         assertTrue(Modifier.isPublic(navigateMethod.modifiers))
     }
+
+    @Test
+    fun testHardwareKeyInterceptor_presenceAndDispatchKeyEvent() {
+        val clazz = MainActivityWithNavigation::class.java
+
+        // hardwareKeyInterceptor getter/setter must exist (REQ-TRK-054.2, TST-TRK-054.3)
+        val interceptorGetter = clazz.methods.find { it.name == "getHardwareKeyInterceptor" }
+        assertNotNull("getHardwareKeyInterceptor getter must exist", interceptorGetter)
+
+        // dispatchKeyEvent method must be overridden
+        val dispatchMethod = clazz.getMethod("dispatchKeyEvent", android.view.KeyEvent::class.java)
+        assertNotNull("dispatchKeyEvent method must be present", dispatchMethod)
+        assertEquals(Boolean::class.javaPrimitiveType, dispatchMethod.returnType)
+    }
 }

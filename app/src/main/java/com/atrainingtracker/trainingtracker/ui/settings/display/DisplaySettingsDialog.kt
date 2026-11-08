@@ -96,6 +96,14 @@ fun DisplaySettingsDialog(
                         currentOptions = if (checked) currentOptions + "noUnlocking" else currentOptions - "noUnlocking"
                     }
                 )
+                DisplayOptionToggle(
+                    label = stringResource(R.string.prefs_volume_keys_switch_cockpit_tabs_title),
+                    subtitle = stringResource(R.string.prefs_volume_keys_switch_cockpit_tabs_summary),
+                    isChecked = currentOptions.contains("volumeKeysSwitchCockpitTabs"),
+                    onCheckedChange = { checked ->
+                        currentOptions = if (checked) currentOptions + "volumeKeysSwitchCockpitTabs" else currentOptions - "volumeKeysSwitchCockpitTabs"
+                    }
+                )
             }
 
             HorizontalDivider()
@@ -252,14 +260,29 @@ fun DisplaySettingsDialog(
 private fun DisplayOptionToggle(
     label: String, 
     isChecked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
+    subtitle: String? = null
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(text = label, style = MaterialTheme.typography.bodyLarge)
+        Column(
+            modifier = Modifier
+                .weight(1f, fill = false)
+                .padding(end = 16.dp)
+        ) {
+            Text(text = label, style = MaterialTheme.typography.bodyLarge)
+            if (subtitle != null) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
         Switch(
             checked = isChecked,
             onCheckedChange = onCheckedChange,

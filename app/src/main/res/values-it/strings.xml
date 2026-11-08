@@ -2455,4 +2455,7 @@
     <string name="workout_diagnostic_action_clear_warning">Cancella avviso</string>
     <string name="workout_diagnostic_clear_confirm_title">Cancellare l\'avviso?</string>
     <string name="workout_diagnostic_clear_confirm_message">L\'avviso di diagnostica per questo allenamento verrà rimosso in modo permanente.</string>
+    <!-- Hardware Volume Keys Cockpit Tab Cycling (REQ-TRK-054 / ATT-5905) -->
+    <string name="prefs_volume_keys_switch_cockpit_tabs_title">Tasti volume per schede cockpit</string>
+    <string name="prefs_volume_keys_switch_cockpit_tabs_summary">Sfoglia ciclicamente le schede nel cockpit con volume +/-</string>
 </resources>

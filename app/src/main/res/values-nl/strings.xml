@@ -2454,4 +2454,7 @@
     <string name="workout_diagnostic_action_clear_warning">Waarschuwing wissen</string>
     <string name="workout_diagnostic_clear_confirm_title">Waarschuwing wissen?</string>
     <string name="workout_diagnostic_clear_confirm_message">De diagnostische waarschuwing voor deze training wordt permanent verwijderd.</string>
+    <!-- Hardware Volume Keys Cockpit Tab Cycling (REQ-TRK-054 / ATT-5905) -->
+    <string name="prefs_volume_keys_switch_cockpit_tabs_title">Volumeknoppen voor cockpit-tabbladen</string>
+    <string name="prefs_volume_keys_switch_cockpit_tabs_summary">In het cockpit met volume +/- cyclisch door tabbladen bladeren</string>
 </resources>

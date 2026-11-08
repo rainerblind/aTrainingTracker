@@ -111,10 +111,11 @@ class DisplaySettingsTest {
     @Test
     fun testDefaultDisplayOptionsContainsAllRequiredKeys() {
         val defaults = TrainingApplication.DEFAULT_DISPLAY_OPTIONS
-        assertEquals(3, defaults.size)
+        assertEquals(4, defaults.size)
         assertTrue(defaults.contains("forcePortrait"))
         assertTrue(defaults.contains("keepScreenOn"))
         assertTrue(defaults.contains("noUnlocking"))
+        assertTrue(defaults.contains("volumeKeysSwitchCockpitTabs"))
     }
 
     @Test
@@ -126,10 +127,11 @@ class DisplaySettingsTest {
         val options = TrainingApplication.getDisplayOptions()
         assertEquals(TrainingApplication.DEFAULT_DISPLAY_OPTIONS, options)
 
-        // And all three boolean getters evaluate to true
+        // And all four boolean getters evaluate to true
         assertTrue(TrainingApplication.forcePortrait())
         assertTrue(TrainingApplication.keepScreenOn())
         assertTrue(TrainingApplication.NoUnlocking())
+        assertTrue(TrainingApplication.volumeKeysSwitchCockpitTabs())
     }
 
     @Test
@@ -146,6 +148,7 @@ class DisplaySettingsTest {
         assertFalse(TrainingApplication.forcePortrait())
         assertTrue(TrainingApplication.keepScreenOn())
         assertTrue(TrainingApplication.NoUnlocking())
+        assertFalse(TrainingApplication.volumeKeysSwitchCockpitTabs())
     }
 
     @Test
@@ -169,6 +172,15 @@ class DisplaySettingsTest {
         assertFalse(TrainingApplication.keepScreenOn())
         assertFalse(TrainingApplication.NoUnlocking())
         assertTrue(TrainingApplication.forcePortrait())
+        assertTrue(TrainingApplication.volumeKeysSwitchCockpitTabs())
+        assertEquals(setOf("forcePortrait", "volumeKeysSwitchCockpitTabs"), TrainingApplication.getDisplayOptions())
+
+        // Next, turn off volumeKeysSwitchCockpitTabs
+        current = TrainingApplication.getDisplayOptions().toMutableSet()
+        current.remove("volumeKeysSwitchCockpitTabs")
+        TrainingApplication.setDisplayOptions(current)
+
+        assertFalse(TrainingApplication.volumeKeysSwitchCockpitTabs())
         assertEquals(setOf("forcePortrait"), TrainingApplication.getDisplayOptions())
     }
 
@@ -179,12 +191,14 @@ class DisplaySettingsTest {
         assertFalse(TrainingApplication.forcePortrait())
         assertFalse(TrainingApplication.keepScreenOn())
         assertFalse(TrainingApplication.NoUnlocking())
+        assertFalse(TrainingApplication.volumeKeysSwitchCockpitTabs())
 
         // Re-enable defaults
         TrainingApplication.setDisplayOptions(TrainingApplication.DEFAULT_DISPLAY_OPTIONS)
         assertTrue(TrainingApplication.forcePortrait())
         assertTrue(TrainingApplication.keepScreenOn())
         assertTrue(TrainingApplication.NoUnlocking())
+        assertTrue(TrainingApplication.volumeKeysSwitchCockpitTabs())
     }
 
     @Test

@@ -2455,4 +2455,7 @@
     <string name="workout_diagnostic_action_clear_warning">Borrar advertencia</string>
     <string name="workout_diagnostic_clear_confirm_title">¿Borrar advertencia?</string>
     <string name="workout_diagnostic_clear_confirm_message">La advertencia de diagnóstico para este entrenamiento se eliminará de forma permanente.</string>
+    <!-- Hardware Volume Keys Cockpit Tab Cycling (REQ-TRK-054 / ATT-5905) -->
+    <string name="prefs_volume_keys_switch_cockpit_tabs_title">Teclas de volumen para pestañas</string>
+    <string name="prefs_volume_keys_switch_cockpit_tabs_summary">Cambiar cíclicamente de pestaña en el cockpit con volumen +/-</string>
 </resources>
