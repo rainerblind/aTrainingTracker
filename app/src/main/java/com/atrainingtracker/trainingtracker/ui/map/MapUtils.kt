@@ -108,8 +108,68 @@ fun createHeartPinMarker(
 }
 
 /**
- * Creates a compact, semi-transparent centered heart glyph marker with a subtle white halo (REQ-UI-470.2).
+ * Canonical Material Design Favorite vector icon path specification (24x24 coordinate grid).
+ * Matches Icons.Default.Favorite / Icons.Filled.Favorite (REQ-UI-470.2).
+ */
+const val CANONICAL_MATERIAL_HEART_PATH_DATA =
+    "M12,21.35l-1.45,-1.32C5.4,15.36 2,12.28 2,8.5 2,5.42 4.42,3 7.5,3c1.74,0 3.41,0.81 4.5,2.09C13.09,3.81 14.76,3 16.5,3 19.58,3 22,5.42 22,8.5c0,3.78 -3.4,6.86 -8.55,11.54L12,21.35z"
+
+/**
+ * Builds an android.graphics.Path following the canonical Material Design Favorite heart geometry,
+ * centered at ([centerX], [centerY]) and scaled by [scale] (REQ-UI-470.2).
+ */
+fun buildCanonicalMaterialHeartPath(
+    centerX: Float,
+    centerY: Float,
+    scale: Float
+): Path {
+    val path = Path()
+    fun x(v: Float) = centerX + (v - 12f) * scale
+    fun y(v: Float) = centerY + (v - 12.175f) * scale
+
+    path.moveTo(x(12f), y(21.35f))
+    path.lineTo(x(10.55f), y(20.03f))
+    path.cubicTo(
+        x(5.4f), y(15.36f),
+        x(2f), y(12.28f),
+        x(2f), y(8.5f)
+    )
+    path.cubicTo(
+        x(2f), y(5.42f),
+        x(4.42f), y(3f),
+        x(7.5f), y(3f)
+    )
+    path.cubicTo(
+        x(9.24f), y(3f),
+        x(10.91f), y(3.81f),
+        x(12f), y(5.09f)
+    )
+    path.cubicTo(
+        x(13.09f), y(3.81f),
+        x(14.76f), y(3f),
+        x(16.5f), y(3f)
+    )
+    path.cubicTo(
+        x(19.58f), y(3f),
+        x(22f), y(5.42f),
+        x(22f), y(8.5f)
+    )
+    path.cubicTo(
+        x(22f), y(12.28f),
+        x(18.6f), y(15.36f),
+        x(13.45f), y(20.04f)
+    )
+    path.lineTo(x(12f), y(21.35f))
+    path.close()
+    return path
+}
+
+/**
+ * Creates a compact, semi-transparent centered heart glyph marker with an opaque white halo (REQ-UI-470.2).
  * Used for KnownLocation thumbnail maps to center inside the geofence circle without standing pin occlusion.
+ *
+ * Geometry is constructed from canonical Material Favorite icon coordinates scaled and centered concentrically.
+ * The white halo outline is drawn fully opaque (alpha = 1.0f) to isolate the marker from geofence circle strokes.
  */
 fun createCenteredHeartGlyphMarker(
     context: Context,
@@ -120,47 +180,22 @@ fun createCenteredHeartGlyphMarker(
 ): BitmapDescriptor? {
     val density = context.resources.displayMetrics.density
     val glyphSize = (sizeDp * density).toInt()
-    val padding = (2 * density).toInt()
+    val padding = (3 * density).toInt()
     val totalSize = glyphSize + (padding * 2)
 
     val bitmap = Bitmap.createBitmap(totalSize, totalSize, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
 
-    val path = Path().apply {
-        val left = padding.toFloat()
-        val top = padding.toFloat()
-        val width = glyphSize.toFloat()
-        val height = glyphSize.toFloat()
-        val right = left + width
+    val centerX = totalSize / 2f
+    val centerY = totalSize / 2f
+    val scale = glyphSize / 22f
+    val path = buildCanonicalMaterialHeartPath(centerX, centerY, scale)
 
-        moveTo(left + width * 0.5f, top + height * 0.85f)
-        cubicTo(
-            left + width * 0.15f, top + height * 0.60f,
-            left, top + height * 0.38f,
-            left, top + height * 0.22f
-        )
-        cubicTo(
-            left, top + height * 0.05f,
-            left + width * 0.28f, top,
-            left + width * 0.5f, top + height * 0.22f
-        )
-        cubicTo(
-            left + width * 0.72f, top,
-            right, top + height * 0.05f,
-            right, top + height * 0.22f
-        )
-        cubicTo(
-            right, top + height * 0.38f,
-            left + width * 0.85f, top + height * 0.60f,
-            left + width * 0.5f, top + height * 0.85f
-        )
-        close()
-    }
-
+    // Opaque white halo outline to cleanly isolate marker from geofence stroke (ATT-6211)
     val outlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 2.5f * density
-        color = outlineColor.copy(alpha = alpha).toArgb()
+        strokeWidth = 3f * density
+        color = outlineColor.toArgb() // 100% opaque white halo barrier
         strokeCap = Paint.Cap.ROUND
         strokeJoin = Paint.Join.ROUND
     }

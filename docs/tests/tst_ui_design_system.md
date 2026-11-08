@@ -7640,7 +7640,7 @@
 ### TST-UI-470: **Known Locations Map Orientation, FAB & Description Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-470`
 - **Component**: `KnownLocationZoomMath.kt`, `KnownLocationsScreen.kt`, `EditKnownLocationDialog.kt`, `KnownLocationsViewModel.kt`, `KnownLocationsRepository.kt`, `MapUtils.kt`, `KnownLocationZoomMathTest.kt`, `EditKnownLocationDialogTest.kt`, `KnownLocationsScreenTest.kt`
-- **Jira**: `ATT-5884`
+- **Jira**: `ATT-5884, ATT-6211`
 - **Test Description**:
   1. *Zoom Math Clamping & Shift Unit Tests (`TST-UI-470.1`, `KnownLocationZoomMathTest.kt`)*:
   • Verify `MIN_ZOOM = 9.7f`, `DEFAULT_THUMBNAIL_ZOOM = 11.2f`, `MAX_ZOOM = 11.7f`.
@@ -7650,9 +7650,11 @@
   2. *FAB & Creation Flow Contract Tests (`TST-UI-470.2`, `KnownLocationsScreenTest.kt`)*:
   • Verify `FloatingActionButton` exists in `KnownLocationsScreen` with test tag `known_locations_add_fab`.
   • Verify tapping FAB triggers new location creation dialog flow.
-  3. *Centered Heart Glyph Marker & Thumbnail Alignment Tests (`TST-UI-470.3`, `KnownLocationsScreenTest.kt`)*:
-  • Verify `KnownLocationThumbnailMap` uses `createCenteredHeartGlyphMarker` with `anchor = Offset(0.5f, 0.5f)`.
+  3. *Canonical Material Heart Glyph Marker & Thumbnail Alignment Tests (`TST-UI-470.3`, `KnownLocationsScreenTest.kt`, `MapUtils.kt`)*:
+  • Verify `createCenteredHeartGlyphMarker` renders canonical Material Favorite path geometry centered with an opaque white halo (`Color.White`, 100% opacity, stroke width >= 2.5dp).
+  • Verify `KnownLocationThumbnailMap` in `KnownLocationsScreen` uses `createCenteredHeartGlyphMarker` with concentric `anchor = Offset(0.5f, 0.5f)`.
   • Verify absence of standing pin `R.drawable.my_locations` in thumbnail map.
+  • Verify preview mode in `KnownLocationsScreen` continues to use `Icons.Default.Favorite`.
   4. *Home Base Subtitle & Edit Dialog Contract Tests (`TST-UI-470.4`, `EditKnownLocationDialogTest.kt`)*:
   • Verify `EditKnownLocationDialog` displays `R.string.known_locations_home_base_desc` instead of `known_locations_set_home` in the home toggle row.
   5. *9-Language Localization Audit (`TST-UI-470.5`, `TranslationParityTest.kt`)*:

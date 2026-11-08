@@ -14143,13 +14143,15 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 **Invariants**: Zero regressions in 1-tap navigation to workouts or routes; test tags `location_starts_badge_*` and `location_routes_badge_*` preserved; long-press menu options (Home, Merge, Delete) intact; map thumbnail dimensions (116x80dp) preserved; 100% 9-language localization parity.
 
 ### REQ-UI-470: Known Locations Map Orientation, FAB & Description Parity [Verified]
-- **Tests**: `TST-UI-470` | **Tickets**: `ATT-5884`
+- **Tests**: `TST-UI-470` | **Tickets**: `ATT-5884, ATT-6211`
 - **Implementation**: `KnownLocationZoomMath.kt`, `KnownLocationsScreen.kt`, `EditKnownLocationDialog.kt`, `KnownLocationsViewModel.kt`, `KnownLocationsRepository.kt`, `MapUtils.kt`
-- **Rationale**: To provide superior regional orientation, zero map pin occlusion, one-tap manual creation, immediate starts count hydration, and clear home base utility explanation on "Lieblingsorte" (Sprint 2026-45.12, ATT-5884, refining `REQ-UI-165`, `REQ-UI-224`, and `REQ-SET-095`):
+- **Rationale**: To provide superior regional orientation, zero map pin occlusion, one-tap manual creation, immediate starts count hydration, and clear home base utility explanation on "Lieblingsorte" (Sprint 2026-45.12, ATT-5884, refining `REQ-UI-165`, `REQ-UI-224`, and `REQ-SET-095`; refined in Sprint 2026-45.13, ATT-6211):
 1. *Broadened Map Thumbnail Zoom Range (`REQ-UI-470.1`)*:
 • In `KnownLocationZoomMath.kt`, the thumbnail zoom calculation constants SHALL be adjusted to `MIN_ZOOM = 9.7f`, `DEFAULT_THUMBNAIL_ZOOM = 11.2f`, and `MAX_ZOOM = 11.7f` (reducing zoom by approximately 0.8 levels) to preserve surrounding road and town labels for regional context while ensuring geofences remain fully framed.
-2. *Centered Heart Glyph Marker Without Pin Body (`REQ-UI-470.2`)*:
-• In `KnownLocationThumbnailMap` within `KnownLocationsScreen.kt`, the 36dp standing pin (`R.drawable.my_locations`, `anchor = Offset(0.5f, 1.0f)`) SHALL be replaced by a compact, semi-transparent centered heart glyph marker (`anchor = Offset(0.5f, 0.5f)`, `createCenteredHeartGlyphMarker` with ~14–16dp glyph, subtle white border/halo, and `alpha ≈ 0.8f`) sitting concentrically inside the geofence circle without occluding upper map terrain.
+2. *Canonical Material Heart Glyph Marker & Opaque Halo (`REQ-UI-470.2`)*:
+• In `createCenteredHeartGlyphMarker` within `MapUtils.kt` and `KnownLocationThumbnailMap` within `KnownLocationsScreen.kt`, the heart glyph geometry SHALL be rendered using the canonical Material Design Favorite path specification (`M12,21.35l-1.45,-1.32C5.4,15.36 2,12.28 2,8.5 2,5.42 4.42,3 7.5,3c1.74,0 3.41,0.81 4.5,2.09C13.09,3.81 14.76,3 16.5,3 19.58,3 22,5.42 22,8.5c0,3.78 -3.4,6.86 -8.55,11.54L12,21.35z` on a 24x24 coordinate grid, scaled and centered within the bitmap canvas), replacing the ad-hoc flattened Bézier curves.
+• To eliminate blue-on-blue stroke bleed-through where larger geofence radii coincide with the marker lobes, the white halo outline SHALL be rendered solid and fully opaque (`Color.White`, alpha = 1.0f, stroke width $\ge 2.5\text{dp}$, `Paint.Cap.ROUND`, `Paint.Join.ROUND`) underneath the filled heart, cleanly isolating the marker from `TTColor.GeofenceStroke` and map canvas terrain.
+• The concentric anchor `Offset(0.5f, 0.5f)` and compact 16dp size SHALL be preserved.
 3. *Floating Action Button for Manual Location Creation (`REQ-UI-470.3`)*:
 • `KnownLocationsScreen` SHALL provide a `FloatingActionButton` (`Icons.Default.Add`, test tag `known_locations_add_fab`) anchored at the bottom-end, aligning with Routes, Workout Clusters, and Equipment screens.
 • Tapping the FAB SHALL open `EditKnownLocationDialog` with a new location template (`id = 0L`), allowing athletes to manually create and name a favorite location.
@@ -14159,15 +14161,15 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • In `EditKnownLocationDialog`, the "Heim-Basis" switch row subtitle SHALL replace the tautological string `known_locations_set_home` ("Als Heim-Basis festlegen") with the descriptive explanation `known_locations_home_base_desc` ("Automatische Benennung & barometrische Kalibrierung" / "Automatic workout naming & barometric altitude calibration"), localized across all 9 supported locales with 100% translation parity.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new `REQ-UI-470` refining `REQ-UI-165` (*Known Locations Management Screen*), `REQ-UI-224` (*Calibrated Zoom Math for KnownLocationCard*), and `REQ-SET-095` (*Home Base Location Tagging*).
-2. *Historical Origin & Commit Trace*: `44d51eac` (ATT-1816), `d7b00bf8` (ATT-1878), `c6f65b71` (ATT-5889).
-3. *Root Reason for Existing Formulation*: Conservative zoom (`MAX_ZOOM = 12.5f`) and standing pin (`36dp`) were carried over from full-screen maps before the 116x80dp thumbnail was introduced; FAB was omitted because locations originally relied solely on automatic GPS discovery; subtitle reused the dropdown action text.
-4. *Preservation of Core Invariants*: Harmonized unboxed card layout (ATT-5887), context menu (`Home`, `Merge`, `Delete`), geofence radius adjustment, altitude editing with automatic write-protection (`isLocked = 1`), and 100% 9-language translation parity are strictly preserved.
+1. *Original Requirement ID & Target*: Net-new `REQ-UI-470` refining `REQ-UI-165` (*Known Locations Management Screen*), `REQ-UI-224` (*Calibrated Zoom Math for KnownLocationCard*), and `REQ-SET-095` (*Home Base Location Tagging*); refined by `ATT-6211` (`REQ-UI-470.2`).
+2. *Historical Origin & Commit Trace*: `44d51eac` (ATT-1816), `d7b00bf8` (ATT-1878), `c6f65b71` (ATT-5889), `ce73d561` (ATT-5884).
+3. *Root Reason for Existing Formulation*: Conservative zoom (`MAX_ZOOM = 12.5f`) and standing pin (`36dp`) were carried over from full-screen maps before the 116x80dp thumbnail was introduced; ad-hoc Bézier curves in ATT-5884 approximated a heart without SVG data and coupled halo alpha to marker alpha; FAB was omitted because locations originally relied solely on automatic GPS discovery; subtitle reused the dropdown action text.
+4. *Preservation of Core Invariants*: Harmonized unboxed card layout (ATT-5887), context menu (`Home`, `Merge`, `Delete`), geofence radius adjustment, altitude editing with automatic write-protection (`isLocked = 1`), concentric anchor `Offset(0.5f, 0.5f)`, and 100% 9-language translation parity are strictly preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* `KnownLocationThumbnailMap` on `KnownLocationsScreen`,
 • *When* rendered for a location with 200m radius,
-• *Then* the camera zoom level is clamped to `11.7f` (showing surrounding road/regional context), and the marker is a centered heart glyph (`anchor = Offset(0.5f, 0.5f)`) without a standing pin body.
+• *Then* the camera zoom level is clamped to `11.7f` (showing surrounding road/regional context), and the marker is a centered heart glyph (`anchor = Offset(0.5f, 0.5f)`) with canonical Material `Favorite` geometry and an opaque white halo (`alpha = 1.0f`) preventing geofence stroke bleed-through.
 • *Given* `KnownLocationsScreen`,
 • *When* the screen is displayed,
 • *Then* a `+` FAB (`known_locations_add_fab`) is visible at the bottom-end, and tapping it opens `EditKnownLocationDialog` to create a new location (`id = 0L`).
