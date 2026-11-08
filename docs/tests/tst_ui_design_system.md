@@ -7617,6 +7617,27 @@
   3. *Tier 1 Targeted Regression Execution (`TST-UI-468.3`)*:
   • Execute targeted unit test suites (`com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.*`, `com.atrainingtracker.trainingtracker.ui.segments.segmentlist.*`, `com.atrainingtracker.trainingtracker.ui.routes.*`, `com.atrainingtracker.trainingtracker.ui.clusters.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
+### TST-UI-469: **KnownLocationCard Harmonized Unboxed Layout & Typography Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-469`
+- **Component**: `KnownLocationsScreen.kt`, `KnownLocationCardLayoutTest.kt`, `KnownLocationCardRoutesBadgeTest.kt`
+- **Jira**: `ATT-5887`
+- **Test Description**:
+  1. *Structural Contract & Layout Tests (`TST-UI-469.1`, `KnownLocationCardLayoutTest.kt`)*:
+  • Verify that `KnownLocationCard` uses `Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), verticalAlignment = Alignment.Bottom)`.
+  • Verify that the left column takes `Modifier.weight(1f).fillMaxHeight()` and contains a vertical spring `Spacer(Modifier.weight(1f))`.
+  • Verify that the starts metric renders with `Icons.AutoMirrored.Filled.DirectionsRun` and bold primary blue typography (`bodyMedium`, `FontWeight.Bold`, `primary`).
+  • Verify that the routes cross-link renders with `R.drawable.ic_favorite_route` and primary blue link styling (`bodySmall`, `FontWeight.Medium`, `primary`).
+  • Verify the elimination of bordered `Surface` pill badges (`RoundedCornerShape(8.dp)`) in the metadata column.
+  • Verify preservation of test tags `location_starts_badge_${item.id}` and `location_routes_badge_${item.id}`.
+  2. *Routes Badge Interaction & Filtering Invariant Tests (`TST-UI-469.2`, `KnownLocationCardRoutesBadgeTest.kt`)*:
+  • Verify independent click callback invocations for `onShowWorkouts` and `onShowRoutes`.
+  • Verify spatial cluster filter criteria construction from location item.
+  3. *9-Language Localization Audit (`TST-UI-469.3`, `TranslationParityTest.kt`)*:
+  • Verify `known_locations_starts` and `known_locations_routes` plurals exist across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with zero format specifier mismatches.
+  4. *Tier 1 Targeted Regression Execution (`TST-UI-469.4`)*:
+  • Execute targeted unit test suites (`com.atrainingtracker.trainingtracker.ui.knownlocations.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+
 
 
 

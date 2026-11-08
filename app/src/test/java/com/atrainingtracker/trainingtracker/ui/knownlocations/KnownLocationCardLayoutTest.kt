@@ -50,18 +50,18 @@ class KnownLocationCardLayoutTest {
             content.contains("// Altitude Metric")
         )
 
-        // Verify dedicated badges row comment exists
+        // Verify dedicated starts section exists
         assertTrue(
-            "KnownLocationCard must contain dedicated badges row",
-            content.contains("// Dedicated Badges Row (Starts and Routes")
+            "KnownLocationCard must contain dedicated starts section",
+            content.contains("// Number of Starts")
         )
 
-        // Verify altitude metric appears BEFORE the dedicated badges row
+        // Verify altitude metric appears BEFORE the starts metric
         val altitudeIndex = content.indexOf("// Altitude Metric")
-        val badgesIndex = content.indexOf("// Dedicated Badges Row (Starts and Routes")
+        val startsIndex = content.indexOf("// Number of Starts")
         assertTrue(
-            "Altitude metric must appear before dedicated badges row",
-            altitudeIndex in 0 until badgesIndex
+            "Altitude metric must appear before starts metric",
+            altitudeIndex in 0 until startsIndex
         )
 
         // REQ-UI-465.2: Verify semantic Terrain icon and elimination of ic_ascent
@@ -75,81 +75,128 @@ class KnownLocationCardLayoutTest {
         )
     }
 
+    /**
+     * REQ-UI-469.1 / TST-UI-469.1: Harmonized bottom-anchored column architecture with IntrinsicSize.Min.
+     */
     @Test
-    fun testCompactBadgeDimensionsAndStyling() {
+    fun testHarmonizedBottomAnchoredColumnArchitecture() {
         val content = loadScreenSource()
 
-        // Badges must use RoundedCornerShape(8.dp) rather than 12.dp
+        // Row container must enforce height(IntrinsicSize.Min) and bottom alignment
         assertTrue(
-            "Badges must use compact RoundedCornerShape(8.dp)",
-            content.contains("shape = RoundedCornerShape(8.dp)")
+            "KnownLocationCard row must enforce height(IntrinsicSize.Min)",
+            content.contains(".height(IntrinsicSize.Min)")
+        )
+        assertTrue(
+            "KnownLocationCard row must align to bottom",
+            content.contains("verticalAlignment = Alignment.Bottom")
         )
 
-        // Badges must use compact internal padding (8.dp horizontal, 4.dp vertical)
+        // Left metadata column must use fillMaxHeight() and vertical spring spacer
         assertTrue(
-            "Badges must use compact padding (horizontal = 8.dp, vertical = 4.dp)",
-            content.contains("padding(horizontal = 8.dp, vertical = 4.dp)")
+            "Metadata column must use fillMaxHeight()",
+            content.contains(".fillMaxHeight()")
+        )
+        assertTrue(
+            "Metadata column must contain vertical spring Spacer(modifier = Modifier.weight(1f))",
+            content.contains("Spacer(modifier = Modifier.weight(1f))")
+        )
+    }
+
+    /**
+     * REQ-UI-469.2 / TST-UI-469.1: Unboxed primary starts metric with DirectionsRun icon and bold primary typography.
+     */
+    @Test
+    fun testUnboxedPrimaryStartsMetric() {
+        val content = loadScreenSource()
+
+        // Starts metric must use DirectionsRun icon
+        assertTrue(
+            "Starts metric must use Icons.AutoMirrored.Filled.DirectionsRun",
+            content.contains("Icons.AutoMirrored.Filled.DirectionsRun")
         )
 
-        // Badges must NOT enforce defaultMinSize(minHeight = 48.dp) on their visual surface container
-        assertFalse(
-            "Badges must not force 48dp minimum container height",
-            content.contains("defaultMinSize(minHeight = 48.dp)")
+        // Starts metric must use bold primary blue typography
+        assertTrue(
+            "Starts metric must use bodyMedium typography",
+            content.contains("style = MaterialTheme.typography.bodyMedium")
+        )
+        assertTrue(
+            "Starts metric must use FontWeight.Bold",
+            content.contains("fontWeight = FontWeight.Bold")
+        )
+        assertTrue(
+            "Starts metric must use colorScheme.primary",
+            content.contains("color = MaterialTheme.colorScheme.primary")
         )
 
-        // REQ-UI-465.1: Badges must be scoped under LocalMinimumInteractiveComponentSize provides Dp.Unspecified
+        // Starts metric click target tag must be preserved
         assertTrue(
-            "Badges must eliminate 48dp minimum interactive size gap via LocalMinimumInteractiveComponentSize provides Dp.Unspecified",
-            content.contains("LocalMinimumInteractiveComponentSize provides Dp.Unspecified")
-        )
-
-        // Both test tags must be preserved
-        assertTrue(
-            "Starts badge test tag must be preserved",
+            "Starts test tag must be preserved",
             content.contains("location_starts_badge_\${item.id}")
         )
+    }
+
+    /**
+     * REQ-UI-469.3 / TST-UI-469.1: Unboxed secondary routes cross-link with ic_favorite_route.
+     */
+    @Test
+    fun testUnboxedSecondaryRoutesCrossLink() {
+        val content = loadScreenSource()
+
+        // Routes cross-link must use ic_favorite_route
         assertTrue(
-            "Routes badge test tag must be preserved",
+            "Routes cross-link must use ic_favorite_route",
+            content.contains("R.drawable.ic_favorite_route")
+        )
+
+        // Routes cross-link must use bodySmall and primary color
+        assertTrue(
+            "Routes cross-link must use bodySmall typography",
+            content.contains("style = MaterialTheme.typography.bodySmall")
+        )
+        assertTrue(
+            "Routes cross-link must use colorScheme.primary",
+            content.contains("color = MaterialTheme.colorScheme.primary")
+        )
+
+        // Routes test tag must be preserved
+        assertTrue(
+            "Routes test tag must be preserved",
             content.contains("location_routes_badge_\${item.id}")
         )
     }
 
+    /**
+     * REQ-UI-469 / TST-UI-469.1: Boxed/bordered Surface pill badges must be eliminated from metadata column.
+     */
     @Test
-    fun testSubtleGhostBadgeStylingAndTokens() {
+    fun testEliminationOfBoxedPillContainersInMetadataColumn() {
         val content = loadScreenSource()
 
-        // Saturated primaryContainer pill background must be eliminated (REQ-UI-207)
+        val cardIndex = content.indexOf("private fun KnownLocationCard(")
+        val cardContent = if (cardIndex != -1) content.substring(cardIndex) else content
+
+        // Saturated or tinted pill backgrounds must be eliminated
         assertFalse(
-            "Badges must not use saturated primaryContainer background",
-            content.contains("primaryContainer.copy(alpha = 0.5f)")
+            "Card must eliminate secondaryContainer pill background",
+            cardContent.contains("secondaryContainer")
+        )
+        assertFalse(
+            "Card must eliminate surfaceVariant pill background",
+            cardContent.contains("surfaceVariant.copy(alpha = 0.35f)")
         )
 
-        // Badges must use subtle ghost container background
-        assertTrue(
-            "Badges must use subtle surfaceVariant background",
-            content.contains("color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)")
+        // BorderStroke on badges must be eliminated
+        assertFalse(
+            "Card must eliminate BorderStroke pill borders",
+            cardContent.contains("BorderStroke(")
         )
 
-        // Badges must use onSurfaceVariant for contentColor
-        assertTrue(
-            "Badges must use onSurfaceVariant for contentColor",
-            content.contains("contentColor = MaterialTheme.colorScheme.onSurfaceVariant")
-        )
-
-        // Badges must use subtle outline border
-        assertTrue(
-            "Badges must use subtle outlineVariant border stroke",
-            content.contains("border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))")
-        )
-
-        // Badges must use labelMedium typography and medium font weight
-        assertTrue(
-            "Badges must use labelMedium typography",
-            content.contains("style = MaterialTheme.typography.labelMedium")
-        )
-        assertTrue(
-            "Badges must use FontWeight.Medium",
-            content.contains("fontWeight = FontWeight.Medium")
+        // Arrow chevrons on badges must be eliminated
+        assertFalse(
+            "Card must eliminate ArrowForward chevrons on badges",
+            cardContent.contains("Icons.AutoMirrored.Filled.ArrowForward")
         )
     }
 

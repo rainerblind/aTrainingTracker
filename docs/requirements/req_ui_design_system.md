@@ -14102,6 +14102,47 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Filter criteria data structures, ViewModel filtering logic, and `matches()` predicates MUST NOT be altered; zero regression in individual chip deletion; 100% 9-language localization parity.
 
+### REQ-UI-469: Harmonized KnownLocationCard Layout & Unboxed Typography [Verified]
+- **Tests**: `TST-UI-469` | **Tickets**: `ATT-5887`
+- **Implementation**: `KnownLocationsScreen.kt`, `KnownLocationCardLayoutTest.kt`
+- **Rationale**: To eliminate visual discordance with the rest of the application (specifically `WorkoutClustersScreen` / `ClusterItem`), `KnownLocationCard` SHALL harmonize its card layout and typography hierarchy by removing boxed/bordered `Surface` pill containers for starts and routes, anchoring the primary starts count to the bottom baseline in bold primary typography with an activity icon, rendering linked routes as an unboxed primary cross-link, and aligning vertical dimensions with the map thumbnail via `IntrinsicSize.Min` (Sprint 2026-45.12, ATT-5887, refining `REQ-UI-195` and `REQ-UI-465.1`):
+1. *Harmonized Bottom-Anchored Column Architecture (`REQ-UI-469.1`)*:
+• In `KnownLocationCard` within `KnownLocationsScreen.kt`, the content row below the location title SHALL use `Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), verticalAlignment = Alignment.Bottom)`.
+• The left metadata column SHALL occupy `Modifier.weight(1f).fillMaxHeight()` and integrate a vertical spring `Spacer(Modifier.weight(1f))` that pins the primary starts count to the bottom baseline, visually aligning with the bottom edge of the map preview thumbnail.
+2. *Unboxed Primary Starts Metric (`REQ-UI-469.2`)*:
+• The starts metric SHALL eliminate boxed `Surface` pill containers, background tints, border strokes, and trailing chevron icons.
+• It SHALL render as an unboxed clickable text row (`onShowWorkouts`, test tag `location_starts_badge_${item.id}`) anchored at the bottom baseline displaying an activity vector (`Icons.AutoMirrored.Filled.DirectionsRun`, 16.dp) and the localized plural count (`R.plurals.known_locations_starts`) in bold primary blue typography (`MaterialTheme.typography.bodyMedium`, `FontWeight.Bold`, `MaterialTheme.colorScheme.primary`).
+3. *Unboxed Routes Cross-Link (`REQ-UI-469.3`)*:
+• When `linkedClusters.isNotEmpty()`, the routes count SHALL eliminate boxed `Surface` pill containers, border strokes, and trailing chevron icons.
+• It SHALL render as an unboxed cross-link row (`onShowRoutes`, test tag `location_routes_badge_${item.id}`) positioned directly beneath the altitude metric, displaying `ic_favorite_route` (14.dp) and the localized plural count (`R.plurals.known_locations_routes`) in primary blue link styling (`MaterialTheme.typography.bodySmall`, `FontWeight.Medium`, `MaterialTheme.colorScheme.primary`).
+4. *Header, Map & Context Menu Invariants (`REQ-UI-469.4`)*:
+• The top location title row with Home base indicator (`Icons.Default.Home`), the altitude metric row in `onSurfaceVariant` with `Icons.Default.Terrain`, the compact landscape map preview thumbnail (`116.dp × 80.dp`), and the long-press context menu (Home base toggle, Merge action, Delete confirmation) SHALL remain 100% strictly intact and functional.
+5. *Contract & Layout Test Parity (`REQ-UI-469.5`)*:
+• `KnownLocationCardLayoutTest.kt` SHALL be synchronized to assert `IntrinsicSize.Min` vertical alignment, the unboxed primary/secondary typography hierarchy, and the elimination of bordered `Surface` pills in the metadata column.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-UI-469` refining `REQ-UI-195` (*Badges row in KnownLocationCard*) and `REQ-UI-465.1` (*48dp Minimum Touch Target Gap Elimination on pill badges*).
+2. *Historical Origin & Commit Trace*: `ATT-1643` (`REQ-UI-195`), `ATT-5825` (`REQ-UI-465.1`, commit `4c095473`).
+3. *Root Reason for Existing Formulation*: In ATT-1816 and ATT-5825, starts and routes were enclosed in explicit `Surface` pill shapes (`RoundedCornerShape(8.dp)`) with background tints and borders to signal clickability. In user review (Sprint 2026-45.11 Review of ATT-5825), the user identified that boxed pills visually clash with the rest of the app, particularly the clean unboxed layout of `WorkoutClustersScreen` (`ClusterItem`), where links and primary hit counts use clean typography with icons without enclosing boxes.
+4. *Preservation of Core Invariants*: Independent tap targets for `onShowWorkouts` and `onShowRoutes` preserved; test tags (`location_starts_badge_${item.id}`, `location_routes_badge_${item.id}`) preserved; universal long-press context menu (`REQ-UI-061`, `onMerge`) intact; 100% 9-language localization parity preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the athlete viewing `KnownLocationCard` on `KnownLocationsScreen`,
+• *When* the starts metric is rendered,
+• *Then* it displays as an unboxed row anchored at the bottom baseline with `DirectionsRun` and bold primary blue typography (`bodyMedium`, `FontWeight.Bold`), invoking `onShowWorkouts` on tap.
+• *Given* a known location with associated route clusters (`linkedClusters.isNotEmpty()`),
+• *When* the card is rendered,
+• *Then* the routes count renders as an unboxed cross-link below the altitude metric in `primary` blue (`bodySmall`, `FontWeight.Medium`) with `ic_favorite_route`, invoking `onShowRoutes` on tap.
+• *Given* `KnownLocationCard` metadata column,
+• *When* inspected for container styling,
+• *Then* zero bordered or tinted `Surface` pill containers wrap the starts or routes text.
+• *Given* the bottom row of `KnownLocationCard`,
+• *When* measured by Compose layout,
+• *Then* it enforces `height(IntrinsicSize.Min)` with `verticalAlignment = Alignment.Bottom`, aligning the bottom of the metadata column with the bottom of the map preview thumbnail.
+
+**Invariants**: Zero regressions in 1-tap navigation to workouts or routes; test tags `location_starts_badge_*` and `location_routes_badge_*` preserved; long-press menu options (Home, Merge, Delete) intact; map thumbnail dimensions (116x80dp) preserved; 100% 9-language localization parity.
+
+
 
 
 

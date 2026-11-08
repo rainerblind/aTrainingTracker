@@ -18,19 +18,19 @@
 
 package com.atrainingtracker.trainingtracker.ui.knownlocations
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -46,6 +46,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.CallMerge
+import androidx.compose.material.icons.automirrored.filled.DirectionsRun
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
@@ -799,13 +800,19 @@ private fun KnownLocationCard(
                     }
                 }
 
+                // --- 2. BOTTOM AREA: Details on left, Map on right (REQ-UI-469) ---
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(IntrinsicSize.Min),
+                    verticalAlignment = Alignment.Bottom
                 ) {
+                    // LEFT SIDE: Metadata & Metrics
                     Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight(),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         // Altitude Metric (REQ-UI-465.2)
                         Row(
@@ -826,90 +833,62 @@ private fun KnownLocationCard(
                             )
                         }
 
-                        // Dedicated Badges Row (Starts and Routes, REQ-UI-195, REQ-UI-465.1)
-                        CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
-                            FlowRow(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                        // Routes Cross-Link (Unboxed, REQ-UI-188, REQ-UI-469.3)
+                        if (linkedClusters.isNotEmpty()) {
+                            Row(
+                                modifier = Modifier
+                                    .clickable(onClick = onShowRoutes)
+                                    .testTag("location_routes_badge_${item.id}"),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                // Number of Starts (Interactive Drill-Down Touch Target)
-                                Surface(
-                                    onClick = onShowWorkouts,
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
-                                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
-                                    modifier = Modifier.testTag("location_starts_badge_${item.id}")
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Place,
-                                            contentDescription = stringResource(R.string.known_locations_view_workouts),
-                                            modifier = Modifier.size(13.dp),
-                                            tint = MaterialTheme.colorScheme.onSecondaryContainer
-                                        )
-                                        Text(
-                                            text = pluralStringResource(R.plurals.known_locations_starts, startsCount, startsCount),
-                                            style = MaterialTheme.typography.labelMedium,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                                        )
-                                        Icon(
-                                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(11.dp),
-                                            tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = TTAlpha.Medium)
-                                        )
-                                    }
-                                }
-
-                                // Number of Routes (Interactive Drill-Down Touch Target per REQ-UI-188, REQ-UI-195, REQ-UI-207)
-                                if (linkedClusters.isNotEmpty()) {
-                                    Surface(
-                                        onClick = onShowRoutes,
-                                        shape = RoundedCornerShape(8.dp),
-                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
-                                        modifier = Modifier.testTag("location_routes_badge_${item.id}")
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                        ) {
-                                            Icon(
-                                                painter = painterResource(R.drawable.ic_favorite_route),
-                                                contentDescription = stringResource(R.string.known_locations_view_routes),
-                                                modifier = Modifier.size(13.dp),
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                            Text(
-                                                text = pluralStringResource(R.plurals.known_locations_routes, linkedClusters.size, linkedClusters.size),
-                                                style = MaterialTheme.typography.labelMedium,
-                                                fontWeight = FontWeight.Medium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                            Icon(
-                                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(11.dp),
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
-                                            )
-                                        }
-                                    }
-                                }
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_favorite_route),
+                                    contentDescription = stringResource(R.string.known_locations_view_routes),
+                                    modifier = Modifier.size(14.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = pluralStringResource(R.plurals.known_locations_routes, linkedClusters.size, linkedClusters.size),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                             }
+                        }
+
+                        Spacer(modifier = Modifier.weight(1f))
+
+                        // Number of Starts (Unboxed Bottom-Anchored Primary Count, REQ-UI-195, REQ-UI-469.2)
+                        Row(
+                            modifier = Modifier
+                                .clickable(onClick = onShowWorkouts)
+                                .testTag("location_starts_badge_${item.id}"),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.DirectionsRun,
+                                contentDescription = stringResource(R.string.known_locations_view_workouts),
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = pluralStringResource(R.plurals.known_locations_starts, startsCount, startsCount),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
                     }
 
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
 
-                    // Map Preview Thumbnail (right side, REQ-UI-217, REQ-UI-244)
+                    // Map Preview Thumbnail (right side, REQ-UI-217, REQ-UI-244, REQ-UI-465.3)
                     KnownLocationThumbnailMap(
                         item = item,
                         onShowOnMap = onShowOnMap
