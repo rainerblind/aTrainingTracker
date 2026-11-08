@@ -3,7 +3,7 @@
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Requirements**: 88
+**Total Requirements**: 89
 
 ---
 
@@ -1746,5 +1746,37 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • *Then* the apex coordinate is identical to legacy $\max d(\text{start}, P)$ calculation.
 
 **Invariants**: Closed-loop apex and similarity calculations MUST remain identical; thread safety under `clusterLock`; zero regressions on existing cluster test suites.
+
+### REQ-SET-098: Equipment Lookup Normalization, Strava Import Integrity & Automatic Deduplication Reconciliation [Verified]
+- **Tests**: `TST-SET-098` | **Tickets**: `ATT-6215`
+- **Implementation**: `EquipmentDbHelper.java`, `StravaBulkExportImporter.kt`, `StravaEquipmentSynchronizeThread.java`, `WorkoutSummariesDatabaseManager.java`, `SportTypeEquipmentLinkManager.kt`
+- **Rationale**: Discrepancies in casing, trailing whitespace, and Strava ZIP import gear name pollution cause duplicate equipment records in `Equipment.db` (e.g. `'Endurance'`, `'endurance '`, `'endurance'`), fracturing workout odometer tracking and corrupting gear linkages. The system SHALL normalize gear lookups, eliminate StravaId pollution during bulk import, and automatically reconcile existing duplicate records:
+1. *Case-Insensitive & Whitespace-Trimmed Lookup (`REQ-SET-098.1`)*:
+   - `EquipmentDbHelper.getEquipmentId(db, equipmentName)` and `addOrUpdateStravaGear(...)` SHALL evaluate equipment matching using trimmed, case-insensitive comparison across both `Name` and `StravaName`: `TRIM(Name) = TRIM(?) COLLATE NOCASE OR TRIM(StravaName) = TRIM(?) COLLATE NOCASE`.
+2. *User-Customized Name Preservation (`REQ-SET-098.2`)*:
+   - When synchronizing gear from Strava API or updating existing equipment, the system SHALL preserve existing user-defined `NAME` casing and formatting, updating only `STRAVA_ID`, `STRAVA_NAME`, `FRAME_TYPE`, and `RETIRED`. `NAME` SHALL NOT be overwritten by remote casing or whitespace variants.
+3. *StravaId Pollution Prevention in Bulk Archive Ingestion (`REQ-SET-098.3`)*:
+   - `StravaBulkExportImporter` SHALL NOT persist plaintext gear names into `StravaId`. `StravaId` MUST remain `null` (or empty) for items created from `bikes.csv`, `shoes.csv`, or activity gear names until populated by an authentic Strava API synchronization with a valid identifier (`b...` / `g...`).
+4. *Automatic Deduplication & Cascade Reconciliation Migration (`REQ-SET-098.4`)*:
+   - `EquipmentDbHelper` SHALL perform an automatic deduplication migration on existing databases (`DB_VERSION` upgrade 2 -> 3) and provide an idempotent reconciliation mechanism.
+   - For all equipment sharing identical `SportType` and matching normalized name (`TRIM(Name) COLLATE NOCASE` or `TRIM(StravaName) COLLATE NOCASE` or `StravaId == Name`):
+     - The canonical record SHALL retain the user-preferred capitalized `Name`, authentic `StravaId` (e.g. `b...`/`g...`), non-retired status if any variant is active, and frame type.
+     - All hardware sensor pairings (`Links.EQUIPMENT_ID`) and sport type associations (`SportTypeEquipmentLink.equipment_id`) pointing to duplicate IDs SHALL be reassigned to the canonical ID, discarding duplicate link pairs.
+     - All historical workout records in `WorkoutSummaries.db` (`WorkoutSummaries.equipmentId`) referencing duplicate IDs SHALL be atomically reassigned to the canonical ID.
+     - Orphaned duplicate equipment rows SHALL be removed from `Equipment.db`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an existing local bike `'Endurance'` (`_id=13`) with no Strava ID,
+• *When* Strava API synchronization processes a bike named `'endurance '` with Strava ID `'b16080279'`,
+• *Then* `_id=13` is matched, `StravaId` is set to `'b16080279'`, `StravaName` is set to `'endurance '`, the local `Name` remains `'Endurance'`, and no duplicate row is created.
+• *Given* a Strava ZIP export with `bikes.csv` or `shoes.csv`,
+• *When* `StravaBulkExportImporter` ingests gear,
+• *Then* `StravaId` remains `null`, `StravaName` is set to the trimmed gear name, and no plaintext names are written into `StravaId`.
+• *Given* an existing database containing duplicate equipment records for `'Endurance'` (`_id=13`, `StravaId=null`), `'endurance '` (`_id=20`, `StravaId='b16080279'`), and `'endurance'` (`_id=22`, `StravaId='endurance'`), with workouts referencing all three IDs,
+• *When* the deduplication migration executes,
+• *Then* rows merge into `_id=13` with `Name='Endurance'` and `StravaId='b16080279'`, all `WorkoutSummaries.equipmentId` references to IDs 20 and 22 are updated to 13, and duplicate rows 20 and 22 are deleted.
+
+**Invariants**: Zero historical workout data loss; total workout odometer and summary stats remain consistent; sensor links and sport type mappings preserved without orphans; all DB operations execute within atomic SQLite transactions.
+
 
 

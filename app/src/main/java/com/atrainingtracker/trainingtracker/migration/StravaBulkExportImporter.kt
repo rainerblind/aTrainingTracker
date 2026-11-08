@@ -322,10 +322,11 @@ object StravaBulkExportImporter {
                     }
                 }
                 bikes.forEach { bike ->
-                    if (equipmentDb.getEquipmentId(bike.name) == -1L) {
+                    val trimmed = bike.name.trim()
+                    if (equipmentDb.getEquipmentId(trimmed) == -1L) {
                         equipmentDb.addOrUpdateStravaGear(
-                            bike.name,
-                            bike.name,
+                            null,
+                            trimmed,
                             EquipmentDbHelper.ROAD,
                             BSportType.BIKE.name,
                             false
@@ -347,10 +348,11 @@ object StravaBulkExportImporter {
                     }
                 }
                 shoes.forEach { shoe ->
-                    if (equipmentDb.getEquipmentId(shoe.name) == -1L) {
+                    val trimmed = shoe.name.trim()
+                    if (equipmentDb.getEquipmentId(trimmed) == -1L) {
                         equipmentDb.addOrUpdateStravaGear(
-                            shoe.name,
-                            shoe.name,
+                            null,
+                            trimmed,
                             0,
                             BSportType.RUN.name,
                             false
@@ -369,10 +371,10 @@ object StravaBulkExportImporter {
         val existingId = equipmentDb.getEquipmentId(trimmed)
         if (existingId > 0) return existingId
 
-        // Auto-create gear if not found
+        // Auto-create gear if not found (keep StravaId null to prevent name pollution)
         return try {
             equipmentDb.addOrUpdateStravaGear(
-                trimmed,
+                null,
                 trimmed,
                 if (sportType == BSportType.BIKE) EquipmentDbHelper.ROAD else 0,
                 sportType.name,

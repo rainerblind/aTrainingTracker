@@ -3,7 +3,7 @@
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Tests**: 75
+**Total Tests**: 76
 
 ---
 
@@ -1031,5 +1031,26 @@
   • Verify that session finalization in `TrackerService` passes `endPos` into `findApexFromPoints()` and persists non-degenerate apex coordinates into `WorkoutSummaries`.
   4. *Clean-Room Targeted Regression Execution (`TST-SET-097.4`)*:
   • Run targeted unit tests (`com.atrainingtracker.trainingtracker.clusters.*`, `com.atrainingtracker.trainingtracker.database.WorkoutCluster*`, `com.atrainingtracker.trainingtracker.ui.clusters.*`) ensuring zero regressions.
+
+### TST-SET-098: **Equipment Lookup Normalization, Strava Ingestion & Deduplication Reconciliation Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-098`
+- **Component**: `EquipmentDbHelper.java`, `StravaBulkExportImporter.kt`, `StravaEquipmentSynchronizeThread.java`, `WorkoutSummariesDatabaseManager.java`, `SportTypeEquipmentLinkManager.kt`
+- **Jira**: `ATT-6215`
+- **Test Description**:
+  1. *Case-Insensitive & Trimmed Lookup Unit Tests (`TST-SET-098.1`, `EquipmentDbHelperNormalizationTest.kt`)*:
+  • Verify `getEquipmentId` matches `'Endurance'`, `'endurance '`, `' ENDURANCE '` to the same ID.
+  • Verify `addOrUpdateStravaGear` matches existing gear regardless of case or whitespace and preserves existing user-customized `Name`.
+  2. *Strava Bulk Import Gear Ingestion Audit (`TST-SET-098.2`, `StravaBulkExportImporterGearTest.kt`)*:
+  • Verify importing `bikes.csv` and `shoes.csv` leaves `StravaId` as `null` and populates `StravaName`.
+  • Verify subsequent Strava API sync successfully matches and enriches the bulk-imported items without creating duplicates.
+  3. *Strava Equipment Synchronize Thread Contract Tests (`TST-SET-098.3`, `StravaEquipmentSyncTest.kt`)*:
+  • Verify that syncing remote gear with trailing whitespace or lowercase characters links to existing uppercase local equipment without overwriting `Name`.
+  4. *Real SQLite Deduplication & Cascade Reconciliation Migration Tests (`TST-SET-098.4`, `EquipmentDeduplicationMigrationTest.kt`)*:
+  • Seed SQLite with duplicate bike/shoe rows (including name-polluted `StravaId`), linked sensors in `Links`, sport associations in `SportTypeLinks.db`, and workouts in `WorkoutSummaries.db`.
+  • Execute migration/reconciliation.
+  • Assert that surviving row retains capitalized name and valid Strava ID, workouts are repointed to surviving ID, links are consolidated without primary key errors, and duplicate rows are deleted.
+  5. *Tier 1 Targeted Regression Suite (`TST-SET-098.5`)*:
+  • Run targeted test suites (`com.atrainingtracker.trainingtracker.database.*`, `com.atrainingtracker.trainingtracker.migration.*`, `com.atrainingtracker.trainingtracker.onlinecommunities.strava.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
 
 

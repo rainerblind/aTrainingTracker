@@ -56,6 +56,8 @@ def get_git_diff(base_ref="develop", target_paths=None):
                 ["git", "for-each-ref", "--format=%(refname:short)", "refs/heads/sprint/*"],
                 stderr=subprocess.DEVNULL,
             ).decode("utf-8").strip().splitlines()
+            best_sb = None
+            best_commit_time = -1
             for sb in sprint_branches:
                 ret = subprocess.call(
                     ["git", "merge-base", "--is-ancestor", sb, "HEAD"],
@@ -63,7 +65,25 @@ def get_git_diff(base_ref="develop", target_paths=None):
                 )
                 if ret == 0:
                     base_ref = sb
+                    best_sb = None
                     break
+                try:
+                    mb = subprocess.check_output(
+                        ["git", "merge-base", sb, "HEAD"],
+                        stderr=subprocess.DEVNULL,
+                    ).decode("utf-8").strip()
+                    if mb:
+                        ts = int(subprocess.check_output(
+                            ["git", "log", "-1", "--format=%ct", mb],
+                            stderr=subprocess.DEVNULL,
+                        ).decode("utf-8").strip())
+                        if ts > best_commit_time:
+                            best_commit_time = ts
+                            best_sb = sb
+                except Exception:
+                    pass
+            if best_sb:
+                base_ref = best_sb
         except Exception:
             pass
 

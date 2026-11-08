@@ -63,7 +63,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     public static final String ANT_DEVICE_ID = "ANTDeviceId";
     public static final String RETIRED = "Retired";
     static final String DB_NAME = "Equipment.db";
-    static final int DB_VERSION = 2;
+    public static final int DB_VERSION = 3;
     private static final String TAG = "EquipmentDbHelper";
     private static final boolean DEBUG = com.atrainingtracker.BuildConfig.DEBUG;
     private static final String CREATE_EQUIPMENT_TABLE = "create table " + EQUIPMENT + " ("
@@ -596,9 +596,18 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     }
 
     private long getEquipmentId(@NonNull SQLiteDatabase db, @NonNull String equipmentName) {
-        equipmentName.isEmpty();  // throw an exception when equipmentName is null
+        if (equipmentName == null) {
+            return -1L;
+        }
+        String trimmed = equipmentName.trim();
+        if (trimmed.isEmpty()) {
+            return -1L;
+        }
 
-        try (Cursor cursor = db.query(EQUIPMENT, null, NAME + "=?", new String[]{equipmentName}, null, null, null)) {
+        String selection = "TRIM(" + NAME + ") = TRIM(?) COLLATE NOCASE OR TRIM(" + STRAVA_NAME + ") = TRIM(?) COLLATE NOCASE";
+        String[] selectionArgs = new String[]{trimmed, trimmed};
+
+        try (Cursor cursor = db.query(EQUIPMENT, new String[]{C_ID}, selection, selectionArgs, null, null, C_ID + " ASC")) {
             Long equipmentId = CursorUtils.mapFirst(cursor, c -> {
                 int colIdx = c.getColumnIndex(C_ID);
                 return colIdx != -1 ? c.getLong(colIdx) : -1L;
@@ -606,7 +615,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
             if (equipmentId != null && equipmentId != -1L) {
                 return equipmentId;
             } else {
-                Log.e(TAG, "ERROR: in getEquipmentId: no id to name: " + equipmentName);
+                if (DEBUG) Log.d(TAG, "getEquipmentId: no id to name: " + equipmentName);
                 return -1L;
             }
         }
@@ -677,31 +686,46 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         return -1;
     }
 
-    public long addOrUpdateStravaGear(@NonNull String stravaId, @NonNull String name, int frameType, @NonNull String sportType, boolean retired) {
+    public long addOrUpdateStravaGear(@Nullable String stravaId, @NonNull String name, int frameType, @NonNull String sportType, boolean retired) {
         SQLiteDatabase db = this.getWritableDatabase();
+        String trimmedName = name.trim();
+        String trimmedStravaId = (stravaId != null && !stravaId.trim().isEmpty()) ? stravaId.trim() : null;
+
         ContentValues values = new ContentValues();
-        values.put(NAME, name);
-        values.put(STRAVA_NAME, name);
-        values.put(STRAVA_ID, stravaId);
+        values.put(STRAVA_NAME, trimmedName);
+        if (trimmedStravaId != null) {
+            values.put(STRAVA_ID, trimmedStravaId);
+        } else {
+            values.putNull(STRAVA_ID);
+        }
         values.put(FRAME_TYPE, frameType);
         values.put(SPORT_TYPE, sportType);
         values.put(RETIRED, retired ? 1 : 0);
+        // Note: values intentionally omits NAME for update calls to preserve user-customized local NAME!
 
-        int updated = db.update(EQUIPMENT, values, STRAVA_ID + "=?", new String[]{stravaId});
-        if (updated > 0) {
-            return getIdFromStravaId(stravaId);
+        if (trimmedStravaId != null) {
+            int updated = db.update(EQUIPMENT, values, STRAVA_ID + "=?", new String[]{trimmedStravaId});
+            if (updated > 0) {
+                return getIdFromStravaId(trimmedStravaId);
+            }
         }
 
-        // Try updating existing unlinked equipment with matching name
-        int unlinkedUpdated = db.update(EQUIPMENT, values,
-                NAME + "=? AND (" + STRAVA_ID + " IS NULL OR " + STRAVA_ID + "='')",
-                new String[]{name});
+        // Try updating existing unlinked equipment with matching name (case-insensitive & trimmed)
+        String unlinkedSelection = "(TRIM(" + NAME + ") = TRIM(?) COLLATE NOCASE OR TRIM(" + STRAVA_NAME + ") = TRIM(?) COLLATE NOCASE) AND ("
+                + STRAVA_ID + " IS NULL OR " + STRAVA_ID + "='' OR TRIM(" + STRAVA_ID + ") = TRIM(" + NAME + ") COLLATE NOCASE OR TRIM(" + STRAVA_ID + ") = TRIM(?) COLLATE NOCASE)";
+        int unlinkedUpdated = db.update(EQUIPMENT, values, unlinkedSelection, new String[]{trimmedName, trimmedName, trimmedName});
         if (unlinkedUpdated > 0) {
-            return getIdFromStravaId(stravaId);
+            if (trimmedStravaId != null) {
+                long idFromStrava = getIdFromStravaId(trimmedStravaId);
+                if (idFromStrava > 0) return idFromStrava;
+            }
+            return getEquipmentId(db, trimmedName);
         }
 
+        // Insert new row: populate NAME for the newly created row
+        values.put(NAME, trimmedName);
         long newId = db.insert(EQUIPMENT, null, values);
-        if (DEBUG) Log.i(TAG, "addOrUpdateStravaGear inserted id: " + newId + " for stravaId: " + stravaId);
+        if (DEBUG) Log.i(TAG, "addOrUpdateStravaGear inserted id: " + newId + " for stravaId: " + trimmedStravaId);
         return newId;
     }
 
@@ -762,7 +786,14 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         if (oldVersion < 2) {
             db.execSQL("ALTER TABLE " + EQUIPMENT + " ADD COLUMN " + RETIRED + " INTEGER DEFAULT 0");
         }
+        if (oldVersion < 3) {
+            EquipmentReconciliationHelper.reconcileDuplicates(mContext, db, null, null);
+        }
         if (DEBUG) Log.d(TAG, "onUpgraded from " + oldVersion + " to " + newVersion);
+    }
+
+    public int reconcileEquipmentDuplicates() {
+        return EquipmentReconciliationHelper.reconcileDuplicates(mContext, getWritableDatabase(), null, null);
     }
 
     /**

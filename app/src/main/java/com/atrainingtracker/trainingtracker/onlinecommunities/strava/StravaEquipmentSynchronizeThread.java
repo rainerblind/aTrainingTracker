@@ -172,8 +172,7 @@ public class StravaEquipmentSynchronizeThread extends Thread {
         TrainingApplication.setStravaSubscriber(isSubscriber);
 
         try {
-            SQLiteDatabase equipmentDb = EquipmentDbHelper.getInstance(mContext).getWritableDatabase();
-            ContentValues values = new ContentValues();
+            EquipmentDbHelper equipmentDbHelper = EquipmentDbHelper.getInstance(mContext);
 
             if (DEBUG) Log.d(TAG, "checking strava shoes");
 
@@ -186,31 +185,13 @@ public class StravaEquipmentSynchronizeThread extends Thread {
 
                     if (DEBUG) Log.d(TAG, "got shoe: " + name + " id: " + id);
 
-                    values.clear();
-                    values.put(EquipmentDbHelper.STRAVA_NAME, name);
-                    values.put(EquipmentDbHelper.SPORT_TYPE, BSportType.RUN.name());
-                    values.put(EquipmentDbHelper.RETIRED, 0);
-
-                    int updates = equipmentDb.update(EquipmentDbHelper.EQUIPMENT,
-                            values,
-                            EquipmentDbHelper.STRAVA_ID + "=?",
-                            new String[]{id});
-
-                    if (updates < 1) {
-                        // Check if an unlinked shoe with matching name already exists locally
-                        values.put(EquipmentDbHelper.STRAVA_ID, id);
-                        updates = equipmentDb.update(EquipmentDbHelper.EQUIPMENT,
-                                values,
-                                EquipmentDbHelper.NAME + "=? AND (" + EquipmentDbHelper.STRAVA_ID + " IS NULL OR " + EquipmentDbHelper.STRAVA_ID + "='')",
-                                new String[]{name});
-                    }
-
-                    if (updates < 1) {
-                        if (DEBUG) Log.d(TAG, "adding shoe: " + name + " id: " + id);
-                        values.put(EquipmentDbHelper.NAME, name);
-                        values.put(EquipmentDbHelper.STRAVA_ID, id);
-                        equipmentDb.insert(EquipmentDbHelper.EQUIPMENT, null, values);
-                    }
+                    equipmentDbHelper.addOrUpdateStravaGear(
+                            id,
+                            name,
+                            0,
+                            BSportType.RUN.name(),
+                            false
+                    );
                 }
             }
 
@@ -225,32 +206,13 @@ public class StravaEquipmentSynchronizeThread extends Thread {
                     int frameType = getStravaFrameType(id);
                     if (DEBUG) Log.d(TAG, "got frameType for bike " + name + ": " + frameType);
 
-                    values.clear();
-                    values.put(EquipmentDbHelper.STRAVA_NAME, name);
-                    values.put(EquipmentDbHelper.FRAME_TYPE, frameType);
-                    values.put(EquipmentDbHelper.SPORT_TYPE, BSportType.BIKE.name());
-                    values.put(EquipmentDbHelper.RETIRED, 0);
-
-                    int updates = equipmentDb.update(EquipmentDbHelper.EQUIPMENT,
-                            values,
-                            EquipmentDbHelper.STRAVA_ID + "=?",
-                            new String[]{id});
-
-                    if (updates < 1) {
-                        // Check if an unlinked bike with matching name already exists locally
-                        values.put(EquipmentDbHelper.STRAVA_ID, id);
-                        updates = equipmentDb.update(EquipmentDbHelper.EQUIPMENT,
-                                values,
-                                EquipmentDbHelper.NAME + "=? AND (" + EquipmentDbHelper.STRAVA_ID + " IS NULL OR " + EquipmentDbHelper.STRAVA_ID + "='')",
-                                new String[]{name});
-                    }
-
-                    if (updates < 1) {
-                        if (DEBUG) Log.d(TAG, "creating bike: " + name);
-                        values.put(EquipmentDbHelper.NAME, name);
-                        values.put(EquipmentDbHelper.STRAVA_ID, id);
-                        equipmentDb.insert(EquipmentDbHelper.EQUIPMENT, null, values);
-                    }
+                    equipmentDbHelper.addOrUpdateStravaGear(
+                            id,
+                            name,
+                            frameType,
+                            BSportType.BIKE.name(),
+                            false
+                    );
                 }
             }
         } catch (Exception e) {
