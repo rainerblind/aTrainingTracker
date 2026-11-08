@@ -14731,23 +14731,23 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 **Invariants**: `Constraints.Infinity` crash prevention per Design Guideline 5.14 via `IntrinsicSize.Min`; complete historical EWMA integrity for CTL/ATL/TSB (slicing post-EWMA); metric input parsing supports both `,` and `.`; 9-language localization parity preserved; 100% test pass rate.
 
 ### REQ-UI-496: Navigation Drawer Header Height Compactness & Vertical Clearance Guard [Verified]
-- **Tests**: `TST-UI-496` | **Tickets**: `ATT-5839`
+- **Tests**: `TST-UI-496` | **Tickets**: `ATT-5839`, `ATT-6216`
 - **Implementation**: `AppNavigationDrawer.kt` (`DrawerHeader`)
-- **Rationale**: In `AppNavigationDrawer.kt`, visual audits (`audit_02_drawer.png`) revealed that the bottom-most navigation entry `Info & Unterstützung` (`drawer__info_support`) is vertically clipped on standard portrait mobile screens, forcing users to scroll the drawer to read the final support/privacy rows. Meanwhile, `DrawerHeader()` allocated an oversized `92.dp + statusBarHeight`, leaving a wide empty band of plain sky above the app branding. Reducing the net header height by 16dp (from `92.dp` to `76.dp`) trims the unneeded top sky while keeping the bottom landscape motif intact.
+- **Rationale**: In `AppNavigationDrawer.kt`, visual audits (`audit_02_drawer.png`) revealed that the bottom-most navigation entry `Info & Unterstützung` (`drawer__info_support`) is vertically clipped on standard portrait mobile screens, forcing users to scroll the drawer to read the final support/privacy rows. Meanwhile, `DrawerHeader()` allocated an oversized `92.dp + statusBarHeight`, leaving a wide empty band of plain sky above the app branding. Reducing the net header height by 16dp (from `92.dp` to `76.dp`) trims the unneeded top sky while keeping the bottom landscape motif intact (ATT-5839). However, placing the branding row with `bottom = 6.dp` positioned the app icon and blue title directly on top of the dark forest treeline; elevating the branding row into the upper sky area (`bottom = 24.dp`) ensures optimal text contrast against the light sky while keeping the treeline and meadow clear below (ATT-6216).
 - **Description**:
 1. *Compact Header Height Bounding (`REQ-UI-496.1`)*:
    • In `AppNavigationDrawer.kt`, `DrawerHeader()` SHALL specify a total height of `76.dp + statusBarHeight` (reduced from `92.dp + statusBarHeight`).
 2. *Bottom Landscape Motif Preservation (`REQ-UI-496.2`)*:
    • The background image `R.drawable.menu_header_background` SHALL remain anchored at `Alignment.BottomCenter` with `ContentScale.FillWidth`, preserving 100% of the meadow, trees, hills, and road landscape motif at the bottom edge while trimming only the empty blue sky at the top.
-3. *Branding Row Centration & Rule 72 Icon Invariant (`REQ-UI-496.3`)*:
-   • The branding row containing the app launcher icon and title SHALL apply `padding(start = 16.dp, end = 16.dp, top = statusBarHeight, bottom = 6.dp)` with `verticalAlignment = Alignment.CenterVertically`.
+3. *Branding Row Sky Placement & Rule 72 Icon Invariant (`REQ-UI-496.3`)*:
+   • The branding row containing the app launcher icon and title SHALL apply `padding(start = 16.dp, end = 16.dp, top = statusBarHeight, bottom = 24.dp)` with `verticalAlignment = Alignment.CenterVertically`, elevating the icon and title into the open sky area above the dark forest treeline.
    • The Cervélo P3C launcher icon slot SHALL preserve its `46.dp` size and `1.81f` adaptive icon safe-zone scale factor per Rule 72 (`REQ-UI-445.4`), remaining single-line alongside the title without clipping.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
 1. *Original Requirement ID & Target*: Refines `REQ-UI-445.4` (*Navigation Drawer Header Recognition & 9-Locale Tier Naming*) and `REQ-UI-159` (*Navigation Drawer*).
-2. *Historical Origin & Commit Trace*: Introduced in `ATT-1083` (legacy header) and refined in `ATT-5371` / `ATT-5397` / `ATT-5496` (Cervélo P3C launcher branding).
-3. *Root Reason for Existing Formulation*: `92.dp + statusBarHeight` was a generous default carried over from early drawer prototypes before additional everyday items (`Info & Unterstützung`, `Pioneer/Supporter`) expanded the drawer content height.
-4. *Preservation of Core Invariants*: `Alignment.BottomCenter` landscape anchoring, single-line branding layout, `46.dp` icon size, `1.81f` safe-zone scaling, dynamic status bar handling, and 9-language localization parity MUST remain strictly preserved.
+2. *Historical Origin & Commit Trace*: Introduced in `ATT-1083` (legacy header), refined in `ATT-5371` / `ATT-5397` / `ATT-5496` (Cervélo P3C launcher branding), and adjusted in `ATT-5839` (commit `d22358e188150d59fccc929b78015a33d5a365de`) and `ATT-6216`.
+3. *Root Reason for Existing Formulation*: `ATT-5839` specified `bottom = 6.dp` with naive vertical centering within the 76dp net height band, which unintentionally pushed the branding row down into the dark treeline at the bottom of the 4:3 background image.
+4. *Preservation of Core Invariants*: `Alignment.BottomCenter` landscape anchoring, single-line branding layout, `46.dp` icon size, `1.81f` safe-zone scaling, `76.dp + statusBarHeight` overall height bounding (preserving *Info & Unterstützung* clearance), dynamic status bar handling, and 9-language localization parity MUST remain strictly preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* the Navigation Drawer on a standard portrait mobile screen,
@@ -14756,11 +14756,14 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Given* `DrawerHeader` with `R.drawable.menu_header_background`,
 • *When* the header is drawn,
 • *Then* `alignment = Alignment.BottomCenter` anchors the bottom landscape artwork (trees, hills, meadow) at the bottom edge, trimming only top sky.
+• *Given* the Navigation Drawer opened in `AppNavigationDrawer`,
+• *When* `DrawerHeader` renders the branding row,
+• *Then* the launcher icon and title are positioned vertically in the open sky area above the dark forest treeline with `bottom = 24.dp` padding, providing clear text contrast against the light sky background.
 • *Given* any supporter tier icon,
 • *When* rendered in `DrawerHeader`,
 • *Then* the launcher icon retains `46.dp` size and `1.81f` scaling without mid-row distortion.
 
-**Invariants**: `Alignment.BottomCenter` preserved; `46.dp` / `1.81f` icon scaling preserved; edge-to-edge status bar padding preserved; 100% test pass rate.
+**Invariants**: `Alignment.BottomCenter` preserved; `46.dp` / `1.81f` icon scaling preserved; edge-to-edge status bar padding preserved; *Info & Unterstützung* vertical clearance preserved; 100% test pass rate.
 
 ### REQ-UI-497: EditWorkoutScreen Hint Localization, Punctuation Normalization, Label Capitalization & Strava Row Layout Parity [Verified]
 - **Tests**: `TST-UI-497` | **Tickets**: `ATT-5838`

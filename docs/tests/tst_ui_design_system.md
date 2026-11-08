@@ -7936,12 +7936,13 @@
 ### TST-UI-496: **Navigation Drawer Header Height Compactness & Vertical Clearance Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-496`
 - **Component**: `AppNavigationDrawer.kt`, `AppNavigationDrawerContractTest.kt`
-- **Jira**: `ATT-5839`
+- **Jira**: `ATT-5839`, `ATT-6216`
 - **Test Description**:
   1. *Drawer Header Height & Alignment Contract Test (`TST-UI-496.1`)*:
   • Verify `AppNavigationDrawer.kt` source declares `.height(76.dp + statusBarHeight)` in `DrawerHeader()`.
   • Verify `menu_header_background` image is anchored with `Alignment.BottomCenter` and `ContentScale.FillWidth`.
   2. *Rule 72 Branding Row & Icon Invariant Contract Test (`TST-UI-496.2`)*:
+  • Verify `AppNavigationDrawer.kt` branding row specifies `padding(start = 16.dp, end = 16.dp, top = statusBarHeight, bottom = 24.dp)`.
   • Verify launcher icon slot retains `Modifier.size(46.dp)` and `scaleX = 1.81f; scaleY = 1.81f`.
   • Verify single-line title layout without extra subtitle/pill rows below `"a Training Tracker"`.
   3. *Tier 1 Targeted Unit Test Regression (`TST-UI-496.3`)*:

@@ -180,8 +180,8 @@ class AppNavigationDrawerContractTest {
         val content = drawerFile.readText()
 
         assertTrue(
-            "DrawerHeader Row padding must be top = statusBarHeight, bottom = 6.dp (REQ-UI-496.3)",
-            content.contains("padding(start = 16.dp, end = 16.dp, top = statusBarHeight, bottom = 6.dp)")
+            "DrawerHeader Row padding must be top = statusBarHeight, bottom = 24.dp (REQ-UI-496.3)",
+            content.contains("padding(start = 16.dp, end = 16.dp, top = statusBarHeight, bottom = 24.dp)")
         )
         assertTrue(
             "Launcher icon slot must preserve 46.dp size invariant (REQ-UI-496.3, Rule 72)",

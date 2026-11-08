@@ -345,7 +345,7 @@ fun DrawerHeader() {
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(start = 16.dp, end = 16.dp, top = statusBarHeight, bottom = 6.dp),
+                .padding(start = 16.dp, end = 16.dp, top = statusBarHeight, bottom = 24.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Start
         ) {
