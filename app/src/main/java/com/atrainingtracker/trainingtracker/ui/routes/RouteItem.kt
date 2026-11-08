@@ -109,15 +109,20 @@ fun RouteItem(
                     )
                 }
 
-                // 3. BOTTOM: Elevation Profile
-                ElevationProfile(
-                    pathPoints = pathPoints,
-                    currentDistance = null, // No seeker in list view
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onMapClick(summary.id) }
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                )
+                // 3. BOTTOM: Elevation Profile (REQ-UI-494.3: suppress on zero-elevation routes)
+                val hasElevationData = remember(pathPoints, summary.elevationGain) {
+                    hasValidElevationData(pathPoints, summary.elevationGain)
+                }
+                if (hasElevationData) {
+                    ElevationProfile(
+                        pathPoints = pathPoints,
+                        currentDistance = null, // No seeker in list view
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onMapClick(summary.id) }
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
             }
         }
 
@@ -216,4 +221,12 @@ private fun PreviewUnselectedRoute() {
             onDeleteConfirmed = {}
         )
     }
+}
+
+/**
+ * Evaluates whether a route has authentic elevation data to render [ElevationProfile]
+ * without displaying a synthetic flat vertical span (REQ-UI-494.3 / ATT-5845).
+ */
+fun hasValidElevationData(pathPoints: List<PathPoint>, elevationGain: Double): Boolean {
+    return pathPoints.any { it.altitude != null && !it.altitude.isNaN() && Math.abs(it.altitude) > 1e-3 } || elevationGain > 0.0
 }

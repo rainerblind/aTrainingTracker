@@ -14654,6 +14654,41 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: MapView liteMode and dark map styling preserved; auto-naming counter integrity preserved; 9-language localization parity across EN, DE, ES, FR, IT, JA, NL, PL, PT without emojis; 100% test pass rate.
 
+### REQ-UI-494: ElevationProfile Y-Axis Grid Clearance & Zero-Altitude Profile Suppression in RouteItem [Verified]
+- **Tests**: `TST-UI-494` | **Tickets**: `ATT-5845`
+- **Implementation**: `ElevationProfile.kt`, `RouteItem.kt`
+- **Rationale**: In `ElevationProfile` and `RouteItem`, UI audits of the Routes screen (`screen_04_routen.png`) identified two presentation defects: (1) intermediate Y-axis elevation grid labels (e.g. `400`) overlap the bottom minimum altitude label (`383 m`) due to omitting the `+ 10f` baseline offset in vertical clearance calculations and using a fixed hardcoded `-110f` X-offset; and (2) flat GPX routes lacking altitude data (e.g. `bike2work`, `↑ 0 m`) render a meaningless synthetic `-10 m` to `10 m` flat green elevation profile in `RouteItem`.
+- **Description**:
+1. *Y-Axis Intermediate Label Baseline Clearance Guard (`REQ-UI-494.1`)*:
+   • In `ElevationProfile.kt`, the vertical clearance evaluation for intermediate Y-axis labels SHALL incorporate the drawn label baseline offset (`labelBaselineY = y + 10f`).
+   • An intermediate altitude label SHALL only be rendered if its baseline maintains a clearance of at least `textPaint.textSize * 1.35f` from the bottom canvas boundary (`height`), from the top `maxAltLabel` boundary (`highlightPaint.textSize`), and from the previously rendered intermediate tick (`Math.abs(y - lastY)`).
+2. *Right-Aligned Intermediate Elevation Labels (`REQ-UI-494.2`)*:
+   • Intermediate Y-axis elevation labels SHALL NOT use a fixed `-110f` X-offset.
+   • Intermediate labels SHALL be right-aligned dynamically to `-textPaint.measureText(altText) - 10f`, matching the visual right alignment of `minAltLabel` and `maxAltLabel`.
+3. *Zero-Altitude Elevation Profile Suppression in RouteItem (`REQ-UI-494.3`)*:
+   • In `RouteItem.kt`, `ElevationProfile` SHALL only be rendered when authentic altitude data is available (`hasElevationData = pathPoints.any { it.altitude != null && !it.altitude.isNaN() && Math.abs(it.altitude) > 1e-3 } || summary.elevationGain > 0.0`).
+   • For flat GPX routes or tracks with zero elevation gain and null/zero altitude points, the `ElevationProfile` composable SHALL be suppressed, preventing display of the synthetic minimum vertical span (`-10 m` to `10 m`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-494`, refining `REQ-UI-197` (*Elevation Profile Layout Architecture*) and `REQ-UI-225` (*Route Item Layout*).
+2. *Historical Origin & Commit Trace*: Introduced in `ATT-508` (bounds calculation) and `ATT-2463` (`RouteItem` layout).
+3. *Root Reason for Existing Formulation*: The clearance check in `ElevationProfile` checked `height - y` before the `+ 10f` baseline shift was introduced for vertical text centration on grid lines; `RouteItem` assumed all imported GPX routes would contain elevation data.
+4. *Preservation of Core Invariants*: `ATT-5853` top padding (`24.dp` / `16.dp`) and climb badge clearance invariants, chart zoom/pan math, full-screen route detail elevation analysis (`MapDetailLayout`), and authentic route elevation visualization MUST NOT be compromised.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an elevation profile with minimum altitude `383 m` and an intermediate tick at `400 m` whose drawn baseline would fall within `textPaint.textSize * 1.35f` of `height`,
+• *When* the profile canvas is drawn,
+• *Then* the colliding intermediate label `400` is suppressed, leaving `383 m` legible without overlap.
+• *Given* intermediate altitude labels rendered on the Y-axis,
+• *When* drawn on the canvas,
+• *Then* each label is right-aligned to `-textPaint.measureText(altText) - 10f`.
+• *Given* a route item with zero elevation gain (`elevationGain == 0.0`) and path points with null or zero altitude,
+• *When* the route card is rendered in the routes list,
+• *Then* the elevation profile is hidden completely rather than showing a `-10 m` to `10 m` synthetic bar.
+
+**Invariants**: `ATT-5853` top padding and climb badge clearance invariants preserved; full-screen elevation detail inspection in `MapDetailLayout` preserved; authentic elevation profiles render without regression; 100% test pass rate.
+
+
 
 
 

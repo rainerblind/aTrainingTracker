@@ -147,6 +147,38 @@ object ElevationProfileZoomMath {
     }
 
     /**
+     * Determines whether an intermediate Y-axis altitude grid label satisfies vertical boundary clearance
+     * (against bottom minimum altitude label at [canvasHeight] and top maximum altitude label at [maxLabelBaselineY])
+     * and minimum spacing from the previously rendered intermediate tick ([lastY]).
+     * (REQ-UI-494.1 / ATT-5845)
+     *
+     * @param y Raw tick line Y-coordinate
+     * @param canvasHeight Total plot canvas height
+     * @param maxLabelBaselineY Baseline Y-coordinate of the top maximum altitude label
+     * @param lastY Y-coordinate of the previously rendered intermediate tick line (or negative initial value)
+     * @param textSize Text size of intermediate label paint
+     * @param clearanceMultiplier Multiplier applied to [textSize] (default 1.35f)
+     * @param baselineOffset Downward offset applied from [y] to draw baseline (default 10f)
+     */
+    fun shouldRenderYTickLabel(
+        y: Float,
+        canvasHeight: Float,
+        maxLabelBaselineY: Float,
+        lastY: Float,
+        textSize: Float,
+        clearanceMultiplier: Float = 1.35f,
+        baselineOffset: Float = 10f
+    ): Boolean {
+        val labelBaselineY = y + baselineOffset
+        val minClearance = textSize * clearanceMultiplier
+        val bottomClearance = (canvasHeight - labelBaselineY) >= minClearance
+        val topClearance = (labelBaselineY - maxLabelBaselineY) >= minClearance
+        val spacingClearance = lastY < 0f || Math.abs(y - lastY) >= minClearance
+        return bottomClearance && topClearance && spacingClearance
+    }
+
+
+    /**
      * Determines an adaptive time tick interval in seconds based on visible time span in seconds.
      * (REQ-UI-201 / ATT-1391)
      */

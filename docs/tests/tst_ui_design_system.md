@@ -7894,6 +7894,26 @@
   5. *Tier 1 Targeted Unit Test Regression (`TST-UI-493.5`)*:
   • Execute targeted test suite (`ui.clusters.*`, `database.*Cluster*`, `ui.common.filters.*`, `localization.*`, `build.*`) asserting 100% pass rate.
 
+### TST-UI-494: **ElevationProfile Y-Axis Grid Clearance & Zero-Altitude Profile Suppression Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-494`
+- **Component**: `ElevationProfile.kt`, `RouteItem.kt`, `ElevationProfileClearanceContractTest.kt`, `RouteItemZeroElevationContractTest.kt`
+- **Jira**: `ATT-5845`
+- **Test Description**:
+  1. *Y-Axis Intermediate Label Baseline Clearance Guard Contract Tests (`TST-UI-494.1`, `ElevationProfileClearanceContractTest.kt`)*:
+  • Verify that when `labelBaselineY = y + 10f` is within `textPaint.textSize * 1.35f` of `height` (e.g. `400` near `383 m`), the intermediate tick label is suppressed.
+  • Verify that when clearance from `height`, `highlightPaint.textSize`, and adjacent ticks exceeds `textPaint.textSize * 1.35f`, the tick label is drawn.
+  2. *Right-Aligned Intermediate Elevation Labels Contract Tests (`TST-UI-494.2`, `ElevationProfileClearanceContractTest.kt`)*:
+  • Verify intermediate altitude text X position is dynamically computed as `-textPaint.measureText(altText) - 10f` rather than hardcoded `-110f`.
+  3. *Zero-Altitude Elevation Profile Suppression in RouteItem Contract Tests (`TST-UI-494.3`, `RouteItemZeroElevationContractTest.kt`)*:
+  • Verify `RouteItem` evaluates `hasElevationData = pathPoints.any { it.altitude != null && !it.altitude.isNaN() && Math.abs(it.altitude) > 1e-3 } || summary.elevationGain > 0.0`.
+  • Verify `ElevationProfile` is hidden when a route has 0 altitude data and 0 elevation gain (e.g. `bike2work`).
+  • Verify `ElevationProfile` is rendered when a route has authentic altitude points or positive elevation gain.
+  4. *ATT-5853 Invariant & Layout Non-Regression Tests (`TST-UI-494.4`, `ElevationProfileLayoutTest.kt`, `ElevationProfileClimbBadgeClippingTest.kt`)*:
+  • Verify `ATT-5853` top padding (`24.dp` / `16.dp`) and climb badge clearance tests pass with 0 regressions.
+  5. *Tier 1 Targeted Unit Test Regression (`TST-UI-494.5`)*:
+  • Execute targeted test suite (`ui.map.*`, `ui.routes.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
+
+
 
 
 

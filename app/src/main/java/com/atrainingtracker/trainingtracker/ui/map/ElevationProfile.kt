@@ -800,10 +800,19 @@ fun ElevationProfile(
                 var lastY = -1000f
                 while (currentA < cachedData.maxAlt) {
                     val y = height - ((currentA - cachedData.minAlt) / cachedData.altRange).toFloat() * height
-                    if ((height - y) > (textPaint.textSize * 1.2f) && Math.abs(y - textPaint.textSize) > (textPaint.textSize * 1.2f) && Math.abs(y - lastY) > (textPaint.textSize * 1.2f)) {
+                    if (ElevationProfileZoomMath.shouldRenderYTickLabel(
+                            y = y,
+                            canvasHeight = height,
+                            maxLabelBaselineY = highlightPaint.textSize,
+                            lastY = lastY,
+                            textSize = textPaint.textSize
+                        )
+                    ) {
                         canvas.nativeCanvas.drawLine(-10f, y, 0f, y, textPaint)
                         drawLine(colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Ghost), Offset(0f, y), Offset(width, y), 1.dp.toPx())
-                        canvas.nativeCanvas.drawText(altitudeFormatter.format(currentA.toDouble()), -110f, y + 10f, textPaint)
+                        val altText = altitudeFormatter.format(currentA.toDouble())
+                        val altWidth = textPaint.measureText(altText)
+                        canvas.nativeCanvas.drawText(altText, -altWidth - 10f, y + 10f, textPaint)
                         lastY = y
                     }
                     currentA += cachedData.altStep
