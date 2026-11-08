@@ -1236,6 +1236,7 @@
     <string name="filter_workouts_title">Filtrer les entraînements</string>
     <string name="filter_action">Filtrer</string>
     <string name="filter_clear_all">Tout effacer</string>
+    <string name="filter_reset">Réinitialiser</string>
     <string name="filter_search_hint">Rechercher titre, notes, description…</string>
     <string name="filter_section_time">Temps et période</string>
     <string name="filter_section_sport">Type de sport</string>

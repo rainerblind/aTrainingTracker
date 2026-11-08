@@ -555,9 +555,9 @@ class WorkoutClustersViewModel @JvmOverloads constructor(
     }
 
     /**
-     * Resolves the recognized start location name for a cluster's start coordinates (REQ-UI-186, ATT-1402).
+     * Resolves the recognized location name for given coordinates (REQ-UI-493.2, ATT-5846).
      */
-    fun getStartLocationName(lat: Double, lng: Double): String? {
+    fun getLocationName(lat: Double, lng: Double): String? {
         return try {
             val loc = com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager.getInstance(getApplication()).getMyLocation(LatLng(lat, lng))
             loc?.name
@@ -565,4 +565,9 @@ class WorkoutClustersViewModel @JvmOverloads constructor(
             null
         }
     }
+
+    /**
+     * Resolves the recognized start location name for a cluster's start coordinates (REQ-UI-186, ATT-1402).
+     */
+    fun getStartLocationName(lat: Double, lng: Double): String? = getLocationName(lat, lng)
 }

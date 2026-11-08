@@ -1235,6 +1235,7 @@
     <string name="filter_workouts_title">Filtra allenamenti</string>
     <string name="filter_action">Filtra</string>
     <string name="filter_clear_all">Cancella tutto</string>
+    <string name="filter_reset">Reimposta</string>
     <string name="filter_search_hint">Cerca titolo, note, descrizione…</string>
     <string name="filter_section_time">Tempo e periodo</string>
     <string name="filter_section_sport">Tipo di sport</string>

@@ -97,15 +97,37 @@ class WorkoutClusterRepository internal constructor(
         lightweightLoadMutex.withLock {
             val cached = clusterDb.getAllClusters()
             if (cached.isNotEmpty()) {
-                val sorted = cached.sortedByDescending { it.hitCount }
-                _allClusters.value = sorted
-                if (_clusterStats.value.isEmpty()) {
+                val stats = if (_clusterStats.value.isEmpty()) {
                     try {
-                        _clusterStats.value = summariesManager.getWorkoutClusterStatsForAllClusters()
+                        summariesManager.getWorkoutClusterStatsForAllClusters().also {
+                            _clusterStats.value = it
+                        }
                     } catch (t: Throwable) {
                         if (DEBUG) runCatching { android.util.Log.w("WorkoutClusterRepo", "Failed to hydrate cluster stats in lightweight load: ${t.message}") }
+                        emptyMap()
+                    }
+                } else {
+                    _clusterStats.value
+                }
+
+                // Self-heal clusters with desynchronized hitCount (REQ-UI-493.1, ATT-5846)
+                val healed = cached.map { cluster ->
+                    val statCount = stats[cluster.id]?.workoutCount ?: 0
+                    if (cluster.hitCount == 0 && statCount > 0) {
+                        val updated = cluster.copy(hitCount = statCount)
+                        try {
+                            clusterDb.updateCluster(updated)
+                        } catch (t: Throwable) {
+                            if (DEBUG) runCatching { android.util.Log.w("WorkoutClusterRepo", "Failed to heal cluster hitCount: ${t.message}") }
+                        }
+                        updated
+                    } else {
+                        cluster
                     }
                 }
+
+                val sorted = healed.sortedByDescending { it.hitCount }
+                _allClusters.value = sorted
                 sorted
             } else {
                 emptyList()

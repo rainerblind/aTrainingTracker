@@ -14609,6 +14609,52 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Equipment and sensor database schemas remain unchanged; Bluetooth/ANT+ background connectivity pipelines remain unaffected; 9-language localization parity across EN, DE, ES, FR, IT, JA, NL, PL, PT; 100% test pass rate.
 
+### REQ-UI-493: ClusterItem & Filter (Lieblingsstrecken): Hit Count Display Healing, Bidirectional Location Context, Landscape Thumbnail & Filter Sheet Reset Action [Verified]
+- **Tests**: `TST-UI-493` | **Tickets**: `ATT-5846`
+- **Implementation**: `WorkoutClusterComponents.kt`, `WorkoutClustersViewModel.kt`, `WorkoutClusterRepository.kt`, `FilterBottomSheetScaffold.kt`, `strings.xml` (all 9 locales)
+- **Rationale**: In `Lieblingsstrecken` cluster management (`WorkoutClusterComponents.kt`, `WorkoutClusterRepository.kt`, and `FilterBottomSheetScaffold.kt`), UI audits revealed four presentation and telemetry defects: (1) cluster cards display `0 Aufzeichnungen` when `RouteClusters.hitCount` is desynchronized from `WorkoutSummaries`; (2) cluster cards only display start locations and fail to resolve destination coordinates (`endLat`, `endLng`); (3) square 100x100dp map thumbnails force excessive vertical whitespace beside metadata, and multi-gear equipment lists wrap unbounded; and (4) the filter bottom sheet reset button label ("Alle zurücksetzen") wraps onto two lines in the 50% split button row.
+- **Description**:
+1. *Hit Count Display Healing & Repository Reconciliation (`REQ-UI-493.1`)*:
+   • In `WorkoutClusterComponents.kt` (`WorkoutClusterMetadataBlock`), the displayed recordings count SHALL be calculated from `maxOf(cluster.hitCount, stats?.workoutCount ?: 0)` (falling back to `cluster.hitCount`), guaranteeing that cluster cards display the accurate number of recorded workouts even if the cached `hitCount` in SQLite is zero.
+   • In `WorkoutClusterRepository.kt` (`loadAllClustersLightweight`), when clusters are loaded and `_clusterStats` is hydrated from `WorkoutSummaries`, any cluster with `hitCount == 0` that has associated workouts in summary stats SHALL have its `hitCount` healed and updated.
+2. *Bidirectional Route Endpoint Location Context (`REQ-UI-493.2`)*:
+   • `WorkoutClustersViewModel` SHALL expose a general location lookup `getLocationName(lat: Double, lng: Double): String?` resolving recognized locations via `KnownLocationsDatabaseManager`.
+   • In `WorkoutClusterComponents.kt` (`WorkoutClusterMetadataBlock`), both start coordinates (`startLat`, `startLng`) and destination coordinates (`endLat`, `endLng`) SHALL be resolved.
+   • If start and destination resolve to the same known location, the UI SHALL display `Start & Ziel: [Location]` (`R.string.workout_start_and_destination`).
+   • If start and destination resolve to different known locations, the UI SHALL display `[Start] → [Ziel]`.
+   • If only one endpoint resolves to a known location, the UI SHALL display `Start: [Start]` (`R.string.cluster_start_location`) or `Ziel: [Ziel]` (`R.string.workout_destination_location`).
+3. *Landscape Map Thumbnail & Equipment Text Constraining (`REQ-UI-493.3`)*:
+   • In `WorkoutClusterComponents.kt` (`ClusterItem`), the route preview map thumbnail SHALL use a 3:2 landscape geometry of `width = 110.dp, height = 75.dp` with rounded corners (12dp), eliminating vertical whitespace next to metadata while preserving `liteMode(true)` and `DarkMapAntiFlashOverlay`.
+   • In `WorkoutClusterMetadataBlock`, the linked equipment string SHALL enforce `maxLines = 1` and `overflow = TextOverflow.Ellipsis`.
+4. *Single-Line Filter Sheet Reset Button Action (`REQ-UI-493.4`)*:
+   • In `FilterBottomSheetScaffold.kt`, the reset action button SHALL use the concise localized resource `R.string.filter_reset` ("Zurücksetzen" / "Reset") with `maxLines = 1` across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT), guaranteeing a uniform single-line height matching the adjacent "OK" button in 50% split button rows.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-493`, refining `REQ-SET-067` (*Auto-Naming & Hit Counting*), `REQ-UI-186` (*Recognized Start Location Badges*), `REQ-UI-244` (*Cluster Map Thumbnails*), and `REQ-UI-149` (*Filter Bottom Sheets*).
+2. *Historical Origin & Commit Trace*: Introduced in `ATT-714`, `ATT-1402`, and `ATT-2276`.
+3. *Root Reason for Existing Formulation*: Initial cluster items only anticipated start locations; square 100dp maps were adapted from route cards before 3:2 aspect ratios; and filter sheets used horizontal chip copy `filter_clear_all` ("Alle zurücksetzen") without considering narrow 50% button widths.
+4. *Preservation of Core Invariants*: `GoogleMapOptions().liteMode(true)`, `DarkMapAntiFlashOverlay`, horizontal filter chips `filter_clear_all` contract, zero-touch auto-naming counter integrity, and 9-locale parity without emojis (`ATT-5400`) MUST NOT be compromised.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a cluster with `hitCount = 0` but having matching workouts in `WorkoutSummaries`,
+• *When* displayed in `ClusterItem` or `WorkoutClusterDetailDashboard`,
+• *Then* the recordings badge displays the non-zero count matching `stats.workoutCount`.
+• *Given* a cluster where start and end coordinates match the same known location (e.g. "Home"),
+• *When* rendered in `WorkoutClusterMetadataBlock`,
+• *Then* the location badge reads "Start & Ziel: Home".
+• *Given* a cluster where start coordinates resolve to "Home" and destination coordinates resolve to "Work",
+• *When* rendered in `WorkoutClusterMetadataBlock`,
+• *Then* the location badge reads "Home → Work".
+• *Given* a cluster item rendered in `WorkoutClustersScreen`,
+• *When* the map preview is displayed,
+• *Then* its dimensions are 110.dp width by 75.dp height, and multi-gear equipment strings are truncated with an ellipsis on a single line.
+• *Given* `FilterBottomSheetScaffold` displayed in German locale,
+• *When* inspecting the bottom action bar,
+• *Then* the reset button displays "Zurücksetzen" on a single line with uniform height matching the "OK" button.
+
+**Invariants**: MapView liteMode and dark map styling preserved; auto-naming counter integrity preserved; 9-language localization parity across EN, DE, ES, FR, IT, JA, NL, PL, PT without emojis; 100% test pass rate.
+
+
 
 
 

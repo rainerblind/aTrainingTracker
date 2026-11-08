@@ -7873,6 +7873,28 @@
   6. *Tier 1 Targeted Unit Test Regression (`TST-UI-492.6`)*:
   • Execute targeted test suite (`com.atrainingtracker.trainingtracker.ui.equipment.*`, `com.atrainingtracker.banalservice.ui.devices.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
+### TST-UI-493: **ClusterItem & Filter (Lieblingsstrecken) Presentation Polish Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-493`
+- **Component**: `WorkoutClusterComponents.kt`, `WorkoutClustersViewModel.kt`, `WorkoutClusterRepository.kt`, `FilterBottomSheetScaffold.kt`, `WorkoutClusterItemPolishContractTest.kt`, `WorkoutClusterRepositoryTest.kt`
+- **Jira**: `ATT-5846`
+- **Test Description**:
+  1. *Hit Count Display Healing & Reconciliation Contract Tests (`TST-UI-493.1`, `WorkoutClusterItemPolishContractTest.kt`, `WorkoutClusterRepositoryTest.kt`)*:
+  • Verify `effectiveWorkoutCount` resolves `maxOf(cluster.hitCount, stats?.workoutCount ?: 0)` so clusters with `hitCount = 0` but `workoutCount = 3` display 3 recordings.
+  • Verify `WorkoutClusterRepository.loadAllClustersLightweight()` heals `hitCount` from summary stats when cluster has 0.
+  2. *Bidirectional Location Resolution Contract Tests (`TST-UI-493.2`, `WorkoutClusterItemPolishContractTest.kt`)*:
+  • Verify identical start and destination location displays `"Start & Ziel: [Location]"`.
+  • Verify distinct start and destination locations display `"[Start] → [Ziel]"`.
+  • Verify single start or destination falls back to `"Start: ..."` or `"Ziel: ..."`.
+  3. *Landscape Map Thumbnail & Equipment Ellipsis Contract Tests (`TST-UI-493.3`, `WorkoutClusterItemPolishContractTest.kt`)*:
+  • Verify map thumbnail dimensions are 110.dp width and 75.dp height.
+  • Verify equipment text has `maxLines = 1` and `TextOverflow.Ellipsis`.
+  4. *Filter Sheet Reset Button Single-Line & 9-Locale Parity Tests (`TST-UI-493.4`, `TranslationParityTest.kt`)*:
+  • Verify `R.string.filter_reset` exists across all 9 locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) with zero inline emojis (`ATT-5400`).
+  • Verify `FilterBottomSheetScaffold` binds `filter_reset` with `maxLines = 1`.
+  5. *Tier 1 Targeted Unit Test Regression (`TST-UI-493.5`)*:
+  • Execute targeted test suite (`ui.clusters.*`, `database.*Cluster*`, `ui.common.filters.*`, `localization.*`, `build.*`) asserting 100% pass rate.
+
+
 
 
 

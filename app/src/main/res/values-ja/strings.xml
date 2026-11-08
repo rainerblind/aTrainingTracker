@@ -1217,6 +1217,7 @@
     <string name="filter_workouts_title">ワークアウトをフィルター</string>
     <string name="filter_action">フィルター</string>
     <string name="filter_clear_all">すべてクリア</string>
+    <string name="filter_reset">リセット</string>
     <string name="filter_search_hint">タイトル、メモ、説明を検索…</string>
     <string name="filter_section_time">期間と日時</string>
     <string name="filter_section_sport">スポーツの種類</string>

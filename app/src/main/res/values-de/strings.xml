@@ -1322,6 +1322,7 @@
     <string name="filter_workouts_title">Workouts filtern</string>
     <string name="filter_action">Filter</string>
     <string name="filter_clear_all">Alle zurücksetzen</string>
+    <string name="filter_reset">Zurücksetzen</string>
     <string name="filter_search_hint">Titel, Notizen, Beschreibung suchen…</string>
     <string name="filter_section_time">Zeit &amp; Zeitraum</string>
     <string name="filter_section_sport">Sportart</string>

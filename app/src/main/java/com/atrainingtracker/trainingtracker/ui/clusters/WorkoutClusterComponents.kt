@@ -122,7 +122,10 @@ fun WorkoutClusterMetadataBlock(
     val statsMap by viewModel.clusterStats.collectAsState()
     val stats = statsMap[cluster.id]
     val startLocationName = remember(cluster.startLat, cluster.startLng) {
-        viewModel.getStartLocationName(cluster.startLat, cluster.startLng)
+        viewModel.getLocationName(cluster.startLat, cluster.startLng)
+    }
+    val endLocationName = remember(cluster.endLat, cluster.endLng) {
+        viewModel.getLocationName(cluster.endLat, cluster.endLng)
     }
 
     Column(modifier = modifier) {
@@ -160,8 +163,21 @@ fun WorkoutClusterMetadataBlock(
             }
         }
 
-        // 1b. Recognized Start Location Badge (REQ-UI-186, ATT-1402)
-        if (startLocationName != null) {
+        // 1b. Recognized Location Badge (REQ-UI-186, REQ-UI-493.2, ATT-5846)
+        val locationBadgeText = when {
+            startLocationName != null && endLocationName != null -> {
+                if (startLocationName == endLocationName) {
+                    stringResource(R.string.workout_start_and_destination, startLocationName)
+                } else {
+                    "$startLocationName → $endLocationName"
+                }
+            }
+            startLocationName != null -> stringResource(R.string.cluster_start_location, startLocationName)
+            endLocationName != null -> stringResource(R.string.workout_destination_location, endLocationName)
+            else -> null
+        }
+
+        if (locationBadgeText != null) {
             Spacer(modifier = Modifier.height(2.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -174,7 +190,7 @@ fun WorkoutClusterMetadataBlock(
                     tint = MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    text = stringResource(R.string.cluster_start_location, startLocationName),
+                    text = locationBadgeText,
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.primary,
@@ -194,12 +210,14 @@ fun WorkoutClusterMetadataBlock(
         )
 
 
-        // 3. Resulting Equipment
+        // 3. Resulting Equipment (REQ-UI-493.3)
         if (linkedEquipment.isNotEmpty()) {
             Text(
                 text = stringResource(R.string.cluster_equipment_mapping_format, linkedEquipment.joinToString(", ")),
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
 
@@ -209,9 +227,10 @@ fun WorkoutClusterMetadataBlock(
             Spacer(modifier = Modifier.height(4.dp))
         }
 
-        // 4. Hit Count
+        // 4. Hit Count (Self-healing display, REQ-UI-493.1)
+        val effectiveHitCount = maxOf(cluster.hitCount, stats?.workoutCount ?: 0)
         Text(
-            text = pluralStringResource(R.plurals.cluster_recordings, cluster.hitCount, cluster.hitCount),
+            text = pluralStringResource(R.plurals.cluster_recordings, effectiveHitCount, effectiveHitCount),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary,
@@ -272,9 +291,9 @@ fun ClusterItem(
 
                         Spacer(modifier = Modifier.width(16.dp))
 
-                        // RIGHT SIDE: SMALL SQUARE MAP
+                        // RIGHT SIDE: LANDSCAPE MAP THUMBNAIL (REQ-UI-493.3, ATT-5846)
                         Surface(
-                            modifier = Modifier.size(100.dp),
+                            modifier = Modifier.size(width = 110.dp, height = 75.dp),
                             shape = RoundedCornerShape(12.dp),
                             color = MaterialTheme.colorScheme.surfaceContainerHigh
                         ) {
@@ -497,7 +516,9 @@ fun UnclusteredWorkoutItem(
                                 Text(
                                     text = stringResource(R.string.cluster_equipment_mapping_format, workout.equipmentName),
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                             Spacer(modifier = Modifier.weight(1f))
@@ -510,9 +531,9 @@ fun UnclusteredWorkoutItem(
 
                         Spacer(modifier = Modifier.width(16.dp))
 
-                        // RIGHT SIDE: SMALL SQUARE MAP
+                        // RIGHT SIDE: LANDSCAPE MAP THUMBNAIL (REQ-UI-493.3, ATT-5846)
                         Surface(
-                            modifier = Modifier.size(100.dp),
+                            modifier = Modifier.size(width = 110.dp, height = 75.dp),
                             shape = RoundedCornerShape(12.dp),
                             color = MaterialTheme.colorScheme.surfaceContainerHigh
                         ) {

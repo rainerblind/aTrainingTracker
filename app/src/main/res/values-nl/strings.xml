@@ -1235,6 +1235,7 @@
     <string name="filter_workouts_title">Workouts filteren</string>
     <string name="filter_action">Filteren</string>
     <string name="filter_clear_all">Alles wissen</string>
+    <string name="filter_reset">Resetten</string>
     <string name="filter_search_hint">Zoek titel, notities, beschrijving…</string>
     <string name="filter_section_time">Tijd &amp; periode</string>
     <string name="filter_section_sport">Sporttype</string>

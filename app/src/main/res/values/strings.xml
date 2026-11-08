@@ -1434,6 +1434,7 @@
     <string name="filter_workouts_title">Filter Workouts</string>
     <string name="filter_action">Filter</string>
     <string name="filter_clear_all">Clear all</string>
+    <string name="filter_reset">Reset</string>
     <string name="filter_search_hint">Search title, notes, description…</string>
     <string name="filter_section_time">Time &amp; Period</string>
     <string name="filter_section_sport">Sport Type</string>
