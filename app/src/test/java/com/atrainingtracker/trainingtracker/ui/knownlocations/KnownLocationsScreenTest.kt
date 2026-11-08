@@ -65,6 +65,28 @@ class KnownLocationsScreenTest {
     )
 
     /**
+     * REQ-UI-470.6 / TST-UI-470.7a: Verifies SportStartsCount aggregation logic and invariants.
+     */
+    @Test
+    fun testSportStartsCount_aggregationAndInvariants() {
+        val empty = SportStartsCount()
+        assertEquals(0, empty.bike)
+        assertEquals(0, empty.run)
+        assertEquals(0, empty.other)
+        assertEquals(0, empty.total)
+
+        val count = SportStartsCount(bike = 5, run = 3, other = 2)
+        assertEquals(5, count.bike)
+        assertEquals(3, count.run)
+        assertEquals(2, count.other)
+        assertEquals(10, count.total)
+
+        val updated = count.copy(bike = count.bike + 1)
+        assertEquals(6, updated.bike)
+        assertEquals(11, updated.total)
+    }
+
+    /**
      * TST-UI-117.6: Verify that card presentation data contains accurate Name,
      * Altitude formatting (metric and imperial), Source badge mapping, Hit Count, and Coordinates.
      */

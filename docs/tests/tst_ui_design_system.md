@@ -7639,8 +7639,8 @@
 
 ### TST-UI-470: **Known Locations Map Orientation, FAB & Description Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-470`
-- **Component**: `KnownLocationZoomMath.kt`, `KnownLocationsScreen.kt`, `EditKnownLocationDialog.kt`, `KnownLocationsViewModel.kt`, `KnownLocationsRepository.kt`, `MapUtils.kt`, `KnownLocationZoomMathTest.kt`, `EditKnownLocationDialogTest.kt`, `KnownLocationsScreenTest.kt`
-- **Jira**: `ATT-5884, ATT-6211`
+- **Component**: `KnownLocationZoomMath.kt`, `KnownLocationsScreen.kt`, `EditKnownLocationDialog.kt`, `KnownLocationsViewModel.kt`, `KnownLocationsRepository.kt`, `MapUtils.kt`, `KnownLocationZoomMathTest.kt`, `EditKnownLocationDialogTest.kt`, `KnownLocationsScreenTest.kt`, `KnownLocationCardLayoutTest.kt`
+- **Jira**: `ATT-5884, ATT-6211, ATT-6210`
 - **Test Description**:
   1. *Zoom Math Clamping & Shift Unit Tests (`TST-UI-470.1`, `KnownLocationZoomMathTest.kt`)*:
   • Verify `MIN_ZOOM = 9.7f`, `DEFAULT_THUMBNAIL_ZOOM = 11.2f`, `MAX_ZOOM = 11.7f`.
@@ -7661,6 +7661,9 @@
   • Verify `known_locations_home_base_desc`, `known_locations_add_location`, and `known_locations_new_location` exist across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with zero format specifier mismatches and zero unescaped characters.
   6. *Tier 1 Targeted Regression Execution (`TST-UI-470.6`)*:
   • Execute targeted unit test suites (`com.atrainingtracker.trainingtracker.ui.knownlocations.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+  7. *Sport Type Starts Breakdown Unit & Contract Tests (`TST-UI-470.7`, `KnownLocationCardLayoutTest.kt`, `KnownLocationsViewModelTest.kt`)*:
+  • Verify `KnownLocationsViewModel` partitions workout starts by `BSportType` into `SportStartsCount(bike, run, other)`.
+  • Verify `KnownLocationCard` renders sport drawables in canonical order `[Bike, Run, Other]` with `Color.Unspecified`, and test tag `location_starts_badge_${item.id}` remains present.
 
 ### TST-UI-471: **Cockpit Edit-Mode Typography, Localization Parity & FAB Layout Polish Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-471`

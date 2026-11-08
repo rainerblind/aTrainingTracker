@@ -14143,9 +14143,9 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 **Invariants**: Zero regressions in 1-tap navigation to workouts or routes; test tags `location_starts_badge_*` and `location_routes_badge_*` preserved; long-press menu options (Home, Merge, Delete) intact; map thumbnail dimensions (116x80dp) preserved; 100% 9-language localization parity.
 
 ### REQ-UI-470: Known Locations Map Orientation, FAB & Description Parity [Verified]
-- **Tests**: `TST-UI-470` | **Tickets**: `ATT-5884, ATT-6211`
+- **Tests**: `TST-UI-470` | **Tickets**: `ATT-5884, ATT-6211, ATT-6210`
 - **Implementation**: `KnownLocationZoomMath.kt`, `KnownLocationsScreen.kt`, `EditKnownLocationDialog.kt`, `KnownLocationsViewModel.kt`, `KnownLocationsRepository.kt`, `MapUtils.kt`
-- **Rationale**: To provide superior regional orientation, zero map pin occlusion, one-tap manual creation, immediate starts count hydration, and clear home base utility explanation on "Lieblingsorte" (Sprint 2026-45.12, ATT-5884, refining `REQ-UI-165`, `REQ-UI-224`, and `REQ-SET-095`; refined in Sprint 2026-45.13, ATT-6211):
+- **Rationale**: To provide superior regional orientation, zero map pin occlusion, one-tap manual creation, immediate starts count hydration, and clear home base utility explanation on "Lieblingsorte" (Sprint 2026-45.12, ATT-5884, refining `REQ-UI-165`, `REQ-UI-224`, and `REQ-SET-095`; refined in Sprint 2026-45.13, ATT-6211 and ATT-6210):
 1. *Broadened Map Thumbnail Zoom Range (`REQ-UI-470.1`)*:
 • In `KnownLocationZoomMath.kt`, the thumbnail zoom calculation constants SHALL be adjusted to `MIN_ZOOM = 9.7f`, `DEFAULT_THUMBNAIL_ZOOM = 11.2f`, and `MAX_ZOOM = 11.7f` (reducing zoom by approximately 0.8 levels) to preserve surrounding road and town labels for regional context while ensuring geofences remain fully framed.
 2. *Canonical Material Heart Glyph Marker & Opaque Halo (`REQ-UI-470.2`)*:
@@ -14159,12 +14159,16 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • In `KnownLocationsViewModel.init`, the system SHALL proactively invoke `repository.reconcileHitCounts()` and `workoutRepo?.loadAllWorkouts()`, ensuring the starts count is populated from historical workouts and SQLite hit counts immediately upon screen entry rather than displaying stale "0 Starts".
 5. *Informative Home Base Subtitle & 9-Language Parity (`REQ-UI-470.5`)*:
 • In `EditKnownLocationDialog`, the "Heim-Basis" switch row subtitle SHALL replace the tautological string `known_locations_set_home` ("Als Heim-Basis festlegen") with the descriptive explanation `known_locations_home_base_desc` ("Automatische Benennung & barometrische Kalibrierung" / "Automatic workout naming & barometric altitude calibration"), localized across all 9 supported locales with 100% translation parity.
+6. *Workout Starts Breakdown by Sport Type (`REQ-UI-470.6`)*:
+• In `KnownLocationsViewModel`, the system SHALL compute `sportStartsByLocationId: Map<Long, SportStartsCount>` by partitioning workouts starting at each location into `SportStartsCount(bike: Int, run: Int, other: Int)`.
+• In `KnownLocationCard` (`KnownLocationsScreen.kt`), the starts metric row (`onShowWorkouts`, test tag `location_starts_badge_${item.id}`) SHALL replace the static runner icon (`Icons.AutoMirrored.Filled.DirectionsRun`) with a dynamic breakdown of sports having `count > 0`, ordered canonically per design guidelines: Bike (`R.drawable.bsport_bike`), Run (`R.drawable.bsport_run`), and Other (`R.drawable.bsport_other` on far right). Each sport item SHALL display its authentic multi-color vector drawable (`tint = Color.Unspecified`, 16.dp) adjacent to its formatted count in bold primary typography (`MaterialTheme.typography.bodyMedium`, `FontWeight.Bold`, `MaterialTheme.colorScheme.primary`).
+• When `total == 0` (no historical workouts matched), it SHALL display `0 Starts` (`R.plurals.known_locations_starts`) with default styling as a fallback.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new `REQ-UI-470` refining `REQ-UI-165` (*Known Locations Management Screen*), `REQ-UI-224` (*Calibrated Zoom Math for KnownLocationCard*), and `REQ-SET-095` (*Home Base Location Tagging*); refined by `ATT-6211` (`REQ-UI-470.2`).
-2. *Historical Origin & Commit Trace*: `44d51eac` (ATT-1816), `d7b00bf8` (ATT-1878), `c6f65b71` (ATT-5889), `ce73d561` (ATT-5884).
-3. *Root Reason for Existing Formulation*: Conservative zoom (`MAX_ZOOM = 12.5f`) and standing pin (`36dp`) were carried over from full-screen maps before the 116x80dp thumbnail was introduced; ad-hoc Bézier curves in ATT-5884 approximated a heart without SVG data and coupled halo alpha to marker alpha; FAB was omitted because locations originally relied solely on automatic GPS discovery; subtitle reused the dropdown action text.
-4. *Preservation of Core Invariants*: Harmonized unboxed card layout (ATT-5887), context menu (`Home`, `Merge`, `Delete`), geofence radius adjustment, altitude editing with automatic write-protection (`isLocked = 1`), concentric anchor `Offset(0.5f, 0.5f)`, and 100% 9-language translation parity are strictly preserved.
+1. *Original Requirement ID & Target*: Net-new `REQ-UI-470` refining `REQ-UI-165` (*Known Locations Management Screen*), `REQ-UI-224` (*Calibrated Zoom Math for KnownLocationCard*), and `REQ-SET-095` (*Home Base Location Tagging*); refined by `ATT-6211` (`REQ-UI-470.2`) and `ATT-6210` (`REQ-UI-470.6`, refining `REQ-UI-469.2`).
+2. *Historical Origin & Commit Trace*: `44d51eac` (ATT-1816), `d7b00bf8` (ATT-1878), `c6f65b71` (ATT-5889), `ce73d561` (ATT-5884), `e14d805f` (ATT-5887).
+3. *Root Reason for Existing Formulation*: Conservative zoom (`MAX_ZOOM = 12.5f`) and standing pin (`36dp`) were carried over from full-screen maps before the 116x80dp thumbnail was introduced; static runner icon was an interim placeholder when unboxing cards before sport aggregation was introduced; subtitle reused the dropdown action text.
+4. *Preservation of Core Invariants*: Harmonized unboxed card layout (ATT-5887), context menu (`Home`, `Merge`, `Delete`), geofence radius adjustment, altitude editing with automatic write-protection (`isLocked = 1`), concentric anchor `Offset(0.5f, 0.5f)`, drill-down navigation `onShowWorkouts`, and 100% 9-language translation parity are strictly preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* `KnownLocationThumbnailMap` on `KnownLocationsScreen`,
@@ -14179,8 +14183,9 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Given* `EditKnownLocationDialog`,
 • *When* viewing the "Heim-Basis" toggle row,
 • *Then* the subtitle displays `known_locations_home_base_desc` explaining automatic naming and barometric calibration instead of repeating "Als Heim-Basis festlegen".
-
-**Invariants**: Harmonized card layout and unboxed typography (REQ-UI-469); context menu options (Merge, Home, Delete); altitude edit validation and write-protection; 9-language localization parity with zero missing strings.
+• *Given* `KnownLocationCard` with historical workouts,
+• *When* the card is displayed,
+• *Then* workout starts are broken down by sport in canonical order `[Bike, Run, Other]` with multi-color vector drawables (`tint = Color.Unspecified`), or displays `0 Starts` when no workouts match.
 
 ### REQ-UI-471: Cockpit Edit-Mode Typography, Localization Parity & FAB Layout Polish [Verified]
 - **Tests**: `TST-UI-471` | **Tickets**: `ATT-5879`
