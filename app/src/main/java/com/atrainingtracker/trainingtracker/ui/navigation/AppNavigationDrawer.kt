@@ -311,7 +311,7 @@ fun DrawerHeader() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(92.dp + statusBarHeight)
+            .height(76.dp + statusBarHeight)
     ) {
         val context = LocalContext.current
         val headerDrawable = remember(context) {
@@ -345,7 +345,7 @@ fun DrawerHeader() {
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(start = 16.dp, end = 16.dp, top = statusBarHeight + 2.dp, bottom = 14.dp),
+                .padding(start = 16.dp, end = 16.dp, top = statusBarHeight, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Start
         ) {

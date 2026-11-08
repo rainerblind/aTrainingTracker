@@ -135,4 +135,61 @@ class AppNavigationDrawerContractTest {
             ActivityType.BIKE_SPEED_AND_CADENCE.logoId
         )
     }
+
+    private fun resolveAppNavigationDrawerFile(): File {
+        val projectDir = File(System.getProperty("user.dir") ?: ".")
+        val candidates = listOf(
+            File(projectDir, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/navigation/AppNavigationDrawer.kt"),
+            File(projectDir, "src/main/java/com/atrainingtracker/trainingtracker/ui/navigation/AppNavigationDrawer.kt"),
+            File(projectDir, "../app/src/main/java/com/atrainingtracker/trainingtracker/ui/navigation/AppNavigationDrawer.kt")
+        )
+        return candidates.firstOrNull { it.exists() }
+            ?: throw IllegalStateException("Cannot find AppNavigationDrawer.kt in candidate paths: $candidates")
+    }
+
+    /**
+     * TST-UI-496.1: Verify DrawerHeader specifies height 76.dp + statusBarHeight and anchors
+     * background image with Alignment.BottomCenter and ContentScale.FillWidth (REQ-UI-496.1, REQ-UI-496.2).
+     */
+    @Test
+    fun testDrawerHeaderHeightAndAlignmentContract_REQ_UI_496_1() {
+        val drawerFile = resolveAppNavigationDrawerFile()
+        assertTrue("AppNavigationDrawer.kt must exist", drawerFile.exists())
+        val content = drawerFile.readText()
+
+        assertTrue(
+            "DrawerHeader must specify total height 76.dp + statusBarHeight (REQ-UI-496.1)",
+            content.contains(".height(76.dp + statusBarHeight)")
+        )
+        assertTrue(
+            "DrawerHeader must anchor menu_header_background with Alignment.BottomCenter (REQ-UI-496.2)",
+            content.contains("alignment = Alignment.BottomCenter")
+        )
+        assertTrue(
+            "DrawerHeader background image must use ContentScale.FillWidth (REQ-UI-496.2)",
+            content.contains("contentScale = ContentScale.FillWidth")
+        )
+    }
+
+    /**
+     * TST-UI-496.2: Verify DrawerHeader branding row padding and Rule 72 launcher icon invariant (REQ-UI-496.3).
+     */
+    @Test
+    fun testDrawerHeaderBrandingRowAndRule72Invariant_REQ_UI_496_2() {
+        val drawerFile = resolveAppNavigationDrawerFile()
+        val content = drawerFile.readText()
+
+        assertTrue(
+            "DrawerHeader Row padding must be top = statusBarHeight, bottom = 6.dp (REQ-UI-496.3)",
+            content.contains("padding(start = 16.dp, end = 16.dp, top = statusBarHeight, bottom = 6.dp)")
+        )
+        assertTrue(
+            "Launcher icon slot must preserve 46.dp size invariant (REQ-UI-496.3, Rule 72)",
+            content.contains("Modifier.size(46.dp)")
+        )
+        assertTrue(
+            "Supporter tier launcher icon must preserve 1.81f safe-zone scaling invariant (REQ-UI-496.3, Rule 72)",
+            content.contains("scaleX = 1.81f") && content.contains("scaleY = 1.81f")
+        )
+    }
 }
