@@ -1363,6 +1363,9 @@
     <string name="cluster_trend_pr">Record</string>
     <string name="cluster_trend_avg">Med</string>
     <string name="cluster_trend_outlier">Anomalo</string>
+    <string name="cluster_trend_range_all">Tutto</string>
+    <string name="cluster_trend_range_1y">1A</string>
+    <string name="cluster_trend_range_3y">3A</string>
 
     <!-- ATT-510: Lap Overview & Performance Highlights -->
     <string name="laps_header">Giri (%1$d)</string>

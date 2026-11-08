@@ -1365,6 +1365,9 @@
     <string name="cluster_trend_pr">Récord</string>
     <string name="cluster_trend_avg">Med</string>
     <string name="cluster_trend_outlier">Atípico</string>
+    <string name="cluster_trend_range_all">Todo</string>
+    <string name="cluster_trend_range_1y">1A</string>
+    <string name="cluster_trend_range_3y">3A</string>
 
     <!-- ATT-510: Lap Overview & Performance Highlights -->
     <string name="laps_header">Vueltas (%1$d)</string>

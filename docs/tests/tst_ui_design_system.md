@@ -7808,6 +7808,29 @@
   5. *Tier 1 Targeted Unit Test Regression (`TST-UI-489.5`)*:
   • Execute targeted test suite (`com.atrainingtracker.trainingtracker.climbs.*`, `com.atrainingtracker.trainingtracker.ui.map.*`, `com.atrainingtracker.trainingtracker.ui.routes.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
+### TST-UI-490: **Workout Cluster Trend Chart & Dashboard Polish Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-490`
+- **Component**: `WorkoutClusterTrendChartCard.kt`, `WorkoutClusterHeatmapScreen.kt`, `DistanceFormatter.java`, `AltitudeFormatter.java`, `WorkoutClusterTrendMath.kt`, `WorkoutClusterTrendCardPolishTest.kt`
+- **Jira**: `ATT-5852`
+- **Test Description**:
+  1. *Canvas Text Separation & Left Gutter Contract Tests (`TST-UI-490.1`, `WorkoutClusterTrendCardPolishTest.kt`)*:
+  • Verify `WorkoutClusterTrendChartCard.kt` positions Y-axis labels in dedicated left gutter (`leftPadding = 48.dp.toPx()`).
+  • Verify `yAxisBottomLabel` and `xAxisStartLabel` do not collide horizontally or vertically.
+  2. *Average Badge Legibility Contract Tests (`TST-UI-490.2`, `WorkoutClusterTrendCardPolishTest.kt`)*:
+  • Verify `WorkoutClusterTrendChartCard.kt` draws a rounded surface background badge behind `formattedAverage`.
+  3. *Time-Range Filtering & Header Deduplication Contract Tests (`TST-UI-490.3`, `WorkoutClusterTrendCardPolishTest.kt`)*:
+  • Verify redundant `📈 Leistungsverlauf` heading is removed from the card header row.
+  • Verify time-range filter chips (`1J | 3J | Alle`) are bound and filter points relative to latest workout timestamp.
+  • Verify fallback to full dataset when $< 2$ points match time-range.
+  4. *Thousands Grouping Formatter Unit Tests (`TST-UI-490.4`, `DistanceFormatterTest.java`, `AltitudeFormatterTest.java`)*:
+  • Verify `DistanceFormatter.format_with_units(4_226_000)` formats as `"4.226 km"` in German locale and `"4,226 km"` in US locale.
+  • Verify `AltitudeFormatter.format_with_units(136_730)` formats as `"136.730 m"` in German locale and `"136,730 m"` in US locale.
+  5. *9-Language Localization & Format Audit (`TST-UI-490.5`, `TranslationParityTest.kt`)*:
+  • Verify `cluster_trend_range_all`, `cluster_trend_range_1y`, and `cluster_trend_range_3y` exist across all 9 locales with zero inline emojis (`ATT-5400`).
+  6. *Tier 1 Targeted Unit Test Regression (`TST-UI-490.6`)*:
+  • Execute targeted test suite (`com.atrainingtracker.trainingtracker.ui.clusters.*`, `com.atrainingtracker.banalservice.sensor.formater.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+
 
 
 

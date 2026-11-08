@@ -1363,6 +1363,9 @@
     <string name="cluster_trend_pr">Record</string>
     <string name="cluster_trend_avg">Gem</string>
     <string name="cluster_trend_outlier">Uitschieter</string>
+    <string name="cluster_trend_range_all">Alles</string>
+    <string name="cluster_trend_range_1y">1J</string>
+    <string name="cluster_trend_range_3y">3J</string>
 
     <!-- ATT-510: Lap Overview & Performance Highlights -->
     <string name="laps_header">Ronden (%1$d)</string>

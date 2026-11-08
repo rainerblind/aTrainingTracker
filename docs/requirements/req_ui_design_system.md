@@ -14499,6 +14499,45 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Climb categorization thresholds (`CAT_4`..`HC`), route point coordinates, split-pane dragging, scrubbing overlay synchronization, 9-language localization parity across EN, DE, ES, FR, IT, JA, NL, PL, PT, and 100% test pass rate MUST NOT be broken.
 
+### REQ-UI-490: Workout Cluster Trend Chart & Dashboard Polish: Label Collision Resolution, Average Background Badge, Time-Range Filtering & Thousands Grouping [Verified]
+- **Tests**: `TST-UI-490` | **Tickets**: `ATT-5852`
+- **Implementation**: `WorkoutClusterTrendChartCard.kt`, `WorkoutClusterHeatmapScreen.kt`, `DistanceFormatter.java`, `AltitudeFormatter.java`
+- **Rationale**: In `WorkoutClusterDetailDashboard` (`WorkoutClusterHeatmapScreen.kt` & `WorkoutClusterTrendChartCard.kt`), UI audits of high-volume clusters (e.g. `Bike2Work`) revealed five readability and layout defects: (1) average label `Ø ...` drawn without a background pill directly over dense trend lines and data markers; (2) bottom Y-axis boundary label colliding vertically with X-axis start date at `x = leftPadding`; (3) redundant card title `📈 Leistungsverlauf` repeating the selected tab button; (4) lack of time-range filtering for multi-year clusters; and (5) lack of localized thousands separators on cumulative statistics totals (`136730 m`, `4226 km`).
+- **Description**:
+1. *Canvas Text Separation & Left Gutter (`REQ-UI-490.1`)*:
+   • In `WorkoutClusterTrendChartCard.kt`, Y-axis boundary labels (`yAxisTopLabel` and `yAxisBottomLabel`) SHALL be positioned in a dedicated left gutter (`leftPadding = 48.dp.toPx()`) rather than overlapping the start date.
+   • `xAxisStartLabel` and `xAxisEndLabel` SHALL be drawn exclusively along the bottom margin below the plot canvas.
+2. *Average Reference Line Badge (`REQ-UI-490.2`)*:
+   • The average label `Ø ...` SHALL be rendered with a rounded background container badge (`surfaceColor` with subtle fill) drawn on top of the trend lines and points, guaranteeing text readability regardless of underlying data marker density.
+3. *Header Deduplication & Time-Range Filter Chips (`REQ-UI-490.3`)*:
+   • The redundant text header `📈 Leistungsverlauf` inside `WorkoutClusterTrendChartCard` SHALL be replaced with a compact time-range filter chip group (`FilterChip` for `1J` / `3J` / `Alle`, localized across all 9 locales without emojis) docked to the left of the `[Dauer | Tempo]` selector row.
+   • When a time range is selected, the chart points SHALL filter relative to the latest workout timestamp (`latestTimeS - spanS`), automatically falling back to all points if fewer than 2 workouts match the selected window.
+4. *Cumulative Volume Localized Thousands Grouping (`REQ-UI-490.4`)*:
+   • Large integer meter/kilometer totals formatted via `DistanceFormatter.java` and `AltitudeFormatter.java` SHALL use locale-aware grouping formats (`%,.0f`) so cumulative totals render with localized grouping separators (e.g. `136.730 m`, `4.226 km` in German).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-SET-078` (*Historical Duration and Speed/Pace Trend Chart for Workout Clusters*), `REQ-UI-225`, and Rule 36 formatters (`DistanceFormatter`, `AltitudeFormatter`).
+2. *Historical Origin & Commit Trace*: Commit `feat(ATT-4067)` (Sprint 2026-42.10) and `feat(ATT-4287)`.
+3. *Root Reason for Existing Formulation*: Initial trend card placed both `yAxisBottomLabel` and `xAxisStartLabel` at `x = leftPadding`, without anticipating collision or time-range filtering on clusters with hundreds of workouts; formatters used `%.0f` without grouping specifier `,`.
+4. *Preservation of Core Invariants*: "Faster-is-higher" coordinate inversion, PR markers, nearest-point touch selection, $N \ge 2$ threshold, and 9-language localization parity without decorative emojis (`ATT-5400`) MUST remain strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `WorkoutClusterTrendChartCard` rendering a cluster with multiple workouts,
+• *When* the average label `Ø ...` is drawn on canvas,
+• *Then* it renders on top of a rounded surface background badge, ensuring complete text legibility over dense trend lines and data markers.
+• *Given* `WorkoutClusterTrendChartCard` with start date and bottom Y-axis label,
+• *When* rendered on canvas,
+• *Then* the bottom Y-axis label is rendered in the left gutter and the start date along the bottom margin without visual collision.
+• *Given* the toolbar header row of `WorkoutClusterTrendChartCard`,
+• *When* viewed in `WorkoutClusterDetailDashboard`,
+• *Then* the redundant `📈 Leistungsverlauf` heading is replaced by time-range filter chips (`1J | 3J | Alle`) docked left of the `[Dauer | Tempo]` toggle.
+• *Given* the cumulative volume card in the Statistics tab,
+• *When* displaying totals $\ge 1.000$,
+• *Then* cumulative distance and elevation are formatted with locale-aware thousands grouping (e.g., `4.226 km` and `136.730 m` in German).
+
+**Invariants**: 9-language localization parity across EN, DE, ES, FR, IT, JA, NL, PL, PT; cluster similarity calculations; database schema backward compatibility; 100% test pass rate.
+
+
 
 
 

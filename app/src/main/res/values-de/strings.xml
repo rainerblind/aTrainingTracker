@@ -1450,6 +1450,9 @@
     <string name="cluster_trend_pr">Bestzeit</string>
     <string name="cluster_trend_avg">Ø</string>
     <string name="cluster_trend_outlier">Ausreißer</string>
+    <string name="cluster_trend_range_all">Alle</string>
+    <string name="cluster_trend_range_1y">1J</string>
+    <string name="cluster_trend_range_3y">3J</string>
 
     <!-- ATT-510: Lap Overview & Performance Highlights -->
     <string name="laps_header">Runden (%1$d)</string>

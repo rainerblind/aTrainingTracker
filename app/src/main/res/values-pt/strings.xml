@@ -1363,6 +1363,9 @@
     <string name="cluster_trend_pr">Recorde</string>
     <string name="cluster_trend_avg">Méd</string>
     <string name="cluster_trend_outlier">Ponto discrepante</string>
+    <string name="cluster_trend_range_all">Tudo</string>
+    <string name="cluster_trend_range_1y">1A</string>
+    <string name="cluster_trend_range_3y">3A</string>
 
     <!-- ATT-510: Lap Overview & Performance Highlights -->
     <string name="laps_header">Voltas (%1$d)</string>

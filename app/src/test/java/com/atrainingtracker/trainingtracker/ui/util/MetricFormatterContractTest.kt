@@ -23,6 +23,7 @@ import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.routes.ReturnNavigationState
+import java.util.Locale
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -66,6 +67,32 @@ class MetricFormatterContractTest {
         // Altitude
         assertEquals("420 m", altitudeFormatter.format_with_units(420.0))
         assertEquals("0 m", altitudeFormatter.format_with_units(0.0))
+    }
+
+    @Test
+    fun metricFormatting_largeTotalsUseThousandsGroupingSeparators() {
+        val originalLocale = Locale.getDefault()
+        try {
+            Locale.setDefault(Locale.GERMANY)
+            TrainingApplication.setUnitForTesting(MyUnits.METRIC)
+
+            // 4,226 km in German should be 4.226 km (REQ-UI-490.4)
+            val formattedDist = distanceFormatter.format_with_units(4_226_000.0)
+            assertEquals("4.226 km", formattedDist)
+
+            // 136,730 m in German should be 136.730 m (REQ-UI-490.4)
+            val formattedAlt = altitudeFormatter.format_with_units(136_730.0)
+            assertEquals("136.730 m", formattedAlt)
+
+            Locale.setDefault(Locale.US)
+            val formattedDistUS = distanceFormatter.format_with_units(4_226_000.0)
+            assertEquals("4,226 km", formattedDistUS)
+
+            val formattedAltUS = altitudeFormatter.format_with_units(136_730.0)
+            assertEquals("136,730 m", formattedAltUS)
+        } finally {
+            Locale.setDefault(originalLocale)
+        }
     }
 
     @Test

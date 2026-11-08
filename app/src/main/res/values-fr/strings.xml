@@ -1364,6 +1364,9 @@
     <string name="cluster_trend_pr">Record</string>
     <string name="cluster_trend_avg">Moy</string>
     <string name="cluster_trend_outlier">Valeur aberrante</string>
+    <string name="cluster_trend_range_all">Tout</string>
+    <string name="cluster_trend_range_1y">1A</string>
+    <string name="cluster_trend_range_3y">3A</string>
 
     <!-- ATT-510: Lap Overview & Performance Highlights -->
     <string name="laps_header">Tours (%1$d)</string>

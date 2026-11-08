@@ -1562,6 +1562,9 @@
     <string name="cluster_trend_pr">PR</string>
     <string name="cluster_trend_avg">Avg</string>
     <string name="cluster_trend_outlier">Outlier</string>
+    <string name="cluster_trend_range_all">All</string>
+    <string name="cluster_trend_range_1y">1Y</string>
+    <string name="cluster_trend_range_3y">3Y</string>
 
     <!-- ATT-510: Lap Overview & Performance Highlights -->
     <string name="laps_header">Laps (%1$d)</string>
