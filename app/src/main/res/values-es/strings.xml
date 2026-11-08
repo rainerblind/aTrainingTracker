@@ -356,7 +356,7 @@
 
     <!-- update_workout -->
     <string name="ExportName">Nombre exportación:</string>
-    <string name="Sport">Deporte:</string>
+    <string name="Sport">Deporte</string>
     <string name="Goal">Objetivo:</string>
     <string name="GoalHint">editar objetivo</string>
     <string name="Method">Método:</string>
@@ -379,7 +379,7 @@
     <string name="tcxWrite">exportar a TCX</string>
     <string name="gpxWrite">exportar a GPX</string>
     <string name="fitWrite">exportar a FIT</string>
-    <string name="stravaUpload">subir a Strava</string>
+    <string name="stravaUpload">Subir a Strava</string>
     <string name="runkeeperUpload">subir a Runkeeper</string>
     <string name="trainingPeaksUpload">subir a TrainingPeaks</string>
 
@@ -768,9 +768,9 @@
     <!-- workout summary description-->
 
     <!-- Edit workout description -->
-    <string name="hint_workout_description">descripción</string>
-    <string name="hint_workout_goal">objetivo</string>
-    <string name="hint_workout_method">método</string>
+    <string name="hint_workout_description">Descripción</string>
+    <string name="hint_workout_goal">Objetivo</string>
+    <string name="hint_workout_method">Método</string>
 
     <!-- workout details -->
     <string name="total_time_format">(total: %1$s)</string>

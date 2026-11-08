@@ -57,6 +57,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -304,21 +305,23 @@ fun EditWorkoutDialog(
                         }
                     } else false
 
-                    Icon(
-                        painter = painterResource(R.drawable.logo_square_strava),
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = if (stravaMappingAvailable) Color.Unspecified else Color.Gray
-                    )
-
                     Checkbox(
                         checked = isChecked,
                         onCheckedChange = { viewModel.updateUploadToStrava(it) },
                         enabled = stravaMappingAvailable
                     )
+                    Icon(
+                        painter = painterResource(R.drawable.logo_square_strava),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(18.dp)
+                            .alpha(if (stravaMappingAvailable) 1f else 0.38f),
+                        tint = Color.Unspecified
+                    )
+                    Spacer(Modifier.width(8.dp))
                     Text(
                         text = stringResource(R.string.stravaUpload),
-                        color = if (stravaMappingAvailable) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        color = if (stravaMappingAvailable) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
                     )
                 }
             }

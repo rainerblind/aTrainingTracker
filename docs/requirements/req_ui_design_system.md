@@ -14762,6 +14762,44 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: `Alignment.BottomCenter` preserved; `46.dp` / `1.81f` icon scaling preserved; edge-to-edge status bar padding preserved; 100% test pass rate.
 
+### REQ-UI-497: EditWorkoutScreen Hint Localization, Punctuation Normalization, Label Capitalization & Strava Row Layout Parity [Verified]
+- **Tests**: `TST-UI-497` | **Tickets**: `ATT-5838`
+- **Implementation**: `EditWorkoutScreen.kt`, `strings.xml` (all 9 locales)
+- **Rationale**: In `EditWorkoutScreen.kt`, visual audits (`audit_04_einheiten.png`) revealed untranslated lowercase placeholders (`description`, `goal`, `method` in `values-de`), a trailing colon on `R.string.Sport` clashing with borderless floating labels, uncapitalized `stravaUpload` ("hochladen zu Strava"), and a Strava row layout bug where the logo placed before the checkbox turns solid grey (`■`) when disabled due to `tint = Color.Gray` and shifts the checkbox out of vertical alignment with sibling options (`Commute`, `Race`).
+- **Description**:
+1. *Workout Hint Localization & Capitalization (`REQ-UI-497.1`)*:
+   • In `res/values-de/strings.xml`, `hint_workout_description`, `hint_workout_goal`, and `hint_workout_method` SHALL be localized to `Beschreibung`, `Ziel`, and `Methode`.
+   • Across all 9 supported application locales (EN, DE, ES, FR, IT, JA, NL, PL, PT), initial letters of workout hint strings SHALL be capitalized to match Title/Sentence Case conventions.
+2. *Sport Punctuation Normalization & Strava Upload Label Capitalization (`REQ-UI-497.2`)*:
+   • `R.string.Sport` SHALL NOT contain trailing colons across any of the 9 locales (e.g. `Sport`, `Deporte`, `スポーツ`, `Desporto`), providing clean container labels in `EditWorkoutScreen`, `ManualClusterScreen`, and `WorkoutClusterHeatmapScreen`.
+   • `R.string.stravaUpload` SHALL be capitalized across all 9 locales (e.g. German: `Zu Strava hochladen`, English: `Upload to Strava`).
+3. *Strava Row Layout Ordering & Disabled Alpha (`REQ-UI-497.3`)*:
+   • In `EditWorkoutScreen.kt`, the Strava row SHALL place `Checkbox` first (left-aligned with `commute` and `race`), followed by Strava logo `Icon` (`size = 18.dp`, `tint = Color.Unspecified`, `Modifier.alpha(if (stravaMappingAvailable) 1f else 0.38f)`), `Spacer(width = 8.dp)`, and label `Text`.
+   • When Strava mapping is unavailable (`!stravaMappingAvailable`), the logo SHALL be dimmed via alpha without masking raster pixels into a solid square (`■`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-LOC-001` (*9-Language Localization Parity*), `REQ-UI-122` (*Translation Coverage*), and `REQ-UI-239` (*Workout Metadata & Checkbox Presentation*).
+2. *Historical Origin & Commit Trace*: Introduced in `ATT-2005` (workout metadata fields) and updated in `ATT-4801` (Strava upload integration).
+3. *Root Reason for Existing Formulation*: Placeholder strings were left untranslated during rapid prototyping; trailing colon on `Sport:` was inherited from legacy pre-Compose layouts; `tint = Color.Gray` was applied generically without accounting for multi-color raster drawables.
+4. *Preservation of Core Invariants*: Strava upload state binding (`uploadToStrava`), enablement guard (`stravaMappingAvailable`), and dropdown functionality across all screens consuming `R.string.Sport` MUST remain strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the Edit Workout screen in German locale (`de`),
+• *When* the workout metadata fields render,
+• *Then* hint labels display `Beschreibung`, `Ziel`, and `Methode` with proper capitalization.
+• *Given* `R.string.Sport` and `R.string.stravaUpload` in any of the 9 locales,
+• *When* rendered,
+• *Then* `Sport` contains no trailing colon and `stravaUpload` begins with a capital letter.
+• *Given* the Strava upload option in `EditWorkoutScreen`,
+• *When* rendered,
+• *Then* `Checkbox` is the first element in the row (aligned with `Commute` and `Race`), followed by the Strava icon.
+• *Given* Strava mapping is unavailable (`!stravaMappingAvailable`),
+• *When* the Strava row renders,
+• *Then* the logo is dimmed via `0.38f` alpha with the white chevron visible, and zero solid grey squares (`■`) appear.
+
+**Invariants**: Strava upload enablement strictly tied to `stravaMappingAvailable`; 9-language localization parity preserved; 100% test pass rate.
+
+
 
 
 

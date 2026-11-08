@@ -355,7 +355,7 @@
 
     <!-- update_workout -->
     <string name="ExportName">エクスポート名:</string>
-    <string name="Sport">スポーツ:</string>
+    <string name="Sport">スポーツ</string>
     <string name="Goal">目標:</string>
     <string name="GoalHint">目標を編集</string>
     <string name="Method">方法:</string>

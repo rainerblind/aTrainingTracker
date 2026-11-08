@@ -537,9 +537,9 @@
     <!-- workout summary description-->
 
     <!-- Edit workout description -->
-    <string name="hint_workout_description">opis</string>
-    <string name="hint_workout_goal">cel</string>
-    <string name="hint_workout_method">metoda</string>
+    <string name="hint_workout_description">Opis</string>
+    <string name="hint_workout_goal">Cel</string>
+    <string name="hint_workout_method">Metoda</string>
 
     <!-- workout details -->
     <string name="total_time_format">(łącznie: %1$s)</string>
@@ -923,7 +923,7 @@
     <string name="tcxWrite">eksportuj do TCX</string>
     <string name="gpxWrite">eksportuj do GPX</string>
     <string name="fitWrite">eksportuj do FIT</string>
-    <string name="stravaUpload">prześlij do Strava</string>
+    <string name="stravaUpload">Prześlij do Strava</string>
     <string name="runkeeperUpload">prześlij do Runkeeper</string>
     <string name="trainingPeaksUpload">prześlij do TrainingPeaks</string>
     <string name="Is_not_an_integer">%1$s nie jest liczbą całkowitą</string>
@@ -979,7 +979,7 @@
     <string name="Method">Metoda:</string>
     <string name="MethodHint">edytuj metodę</string>
     <string name="PebbleConfigActivityLabel">Edytuj widok Pebble</string>
-    <string name="Sport">Sport:</string>
+    <string name="Sport">Sport</string>
     <string name="all_bikes">+ wszystkie rowery +</string>
     <string name="all_equipment">+ cały sprzęt +</string>
     <string name="all_shoes">+ wszystkie buty +</string>

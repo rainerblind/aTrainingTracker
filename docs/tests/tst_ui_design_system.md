@@ -7947,6 +7947,23 @@
   3. *Tier 1 Targeted Unit Test Regression (`TST-UI-496.3`)*:
   • Execute targeted test suite (`ui.navigation.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
 
+### TST-UI-497: **EditWorkoutScreen Hint Localization, Punctuation Normalization, Label Capitalization & Strava Row Layout Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-497`
+- **Component**: `EditWorkoutScreen.kt`, `res/values*/strings.xml`
+- **Jira**: `ATT-5838`
+- **Test Description**:
+  1. *9-Locale Hint, Sport & Strava Upload String Parity Contract Test (`TST-UI-497.1`)*:
+  • Verify `hint_workout_description`, `hint_workout_goal`, `hint_workout_method` are localized in German as `Beschreibung`, `Ziel`, `Methode` and capitalized across all 9 locales.
+  • Verify `Sport` contains zero trailing colons across all 9 locales.
+  • Verify `stravaUpload` is capitalized across all 9 locales.
+  2. *Strava Row Component Ordering & Non-Destructive Alpha Contract Test (`TST-UI-497.2`)*:
+  • Verify in `EditWorkoutScreen.kt` source that `Checkbox` precedes `Icon` in the Strava row.
+  • Verify Strava logo uses `tint = Color.Unspecified` and applies `Modifier.alpha` for disabled dimming instead of `Color.Gray`.
+  3. *9-Language Localization & Translation Parity Suite (`TST-UI-497.3`)*:
+  • Execute `TranslationParityTest` verifying 100% parity across all 9 supported locales with 0 missing keys.
+  4. *Tier 1 Targeted Unit Test Regression (`TST-UI-497.4`)*:
+  • Execute targeted test suite (`ui.aftermath.editworkout.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
+
 
 
 
