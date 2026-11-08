@@ -101,7 +101,7 @@
 
     <!-- Units -->
     <string name="units_type_metric">メートル法 (m)</string>
-    <string name="units_type_imperial">ヤードポンド法 (mile)</string>
+    <string name="units_type_imperial">ヤードポンド法 (マイル)</string>
 
     <string name="value_unit_float_string">%1$.2f %2$s</string>
     <string name="value_unit_string_string">%1$s %2$s</string>

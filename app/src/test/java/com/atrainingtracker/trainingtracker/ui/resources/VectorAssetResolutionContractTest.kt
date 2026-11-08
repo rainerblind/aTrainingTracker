@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.resources
 
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
@@ -39,6 +40,7 @@ class VectorAssetResolutionContractTest {
 
     private val migratedVectorNames = listOf(
         "bsport_bike",
+        "bsport_bike_power",
         "bsport_run",
         "bsport_other",
         "bike_cad",
@@ -344,5 +346,35 @@ class VectorAssetResolutionContractTest {
         assertEquals(R.drawable.bt_bike_speed_and_cadence, UIHelper.getIconId(DeviceType.BIKE_SPEED_AND_CADENCE, Protocol.BLUETOOTH_LE))
         assertEquals(R.drawable.bt_bike_pwr, UIHelper.getIconId(DeviceType.BIKE_POWER, Protocol.BLUETOOTH_LE))
         assertEquals(R.drawable.bt_run, UIHelper.getIconId(DeviceType.RUN_SPEED, Protocol.BLUETOOTH_LE))
+    }
+
+    /**
+     * TST-UI-487.3: Verify distinct bike power vector asset and ActivityType.BIKE_POWER logo mapping.
+     */
+    @Test
+    fun testActivityTypeBikePowerVectorAssetAndIconMapping() {
+        val drawableDir = File(resolveResDir(), "drawable")
+        val pwrBikeFile = File(drawableDir, "bsport_bike_power.xml")
+        assertTrue("bsport_bike_power.xml must exist in res/drawable/", pwrBikeFile.exists())
+
+        val content = pwrBikeFile.readText()
+        assertTrue("bsport_bike_power.xml must contain power_bolt group", content.contains("power_bolt"))
+        assertTrue("bsport_bike_power.xml must embed canonical lightning bolt path", content.contains("M 280,880 L 440,580"))
+
+        assertEquals(
+            "ActivityType.BIKE_POWER must bind R.drawable.bsport_bike_power",
+            R.drawable.bsport_bike_power,
+            ActivityType.BIKE_POWER.logoId
+        )
+        assertEquals(
+            "ActivityType.BIKE_SPEED_AND_CADENCE must bind R.drawable.bsport_bike",
+            R.drawable.bsport_bike,
+            ActivityType.BIKE_SPEED_AND_CADENCE.logoId
+        )
+        assertNotEquals(
+            "ActivityType.BIKE_POWER and BIKE_SPEED_AND_CADENCE must have distinct icons",
+            ActivityType.BIKE_POWER.logoId,
+            ActivityType.BIKE_SPEED_AND_CADENCE.logoId
+        )
     }
 }

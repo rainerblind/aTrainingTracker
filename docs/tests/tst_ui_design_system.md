@@ -7753,5 +7753,25 @@
   5. *Tier 1 Targeted Unit Test Regression (`TST-UI-475.5`)*:
   • Execute targeted test suite (`com.atrainingtracker.trainingtracker.ui.common.*`, `com.atrainingtracker.trainingtracker.ui.settings.sporttypes.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
+### TST-UI-487: **Navigation Drawer Units Disambiguation & Distinct Power Cockpit Iconography Test Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-487`
+- **Component**: `AppNavigationDrawer.kt`, `UnitsSettingsDialog.kt`, `ActivityTypeSelectionDialog.kt`, `CopyTrackingTabDialog.kt`, `ActivityType.java`, `res/values-de/strings.xml`, `res/values-ja/strings.xml`, `res/drawable/bsport_bike_power.xml`
+- **Jira**: `ATT-5871`
+- **Test Description**:
+  1. *German Navigation Drawer Disambiguation Contract (`TST-UI-487.1`)*:
+  • Verify `prefsUnitsTitle` in `values-de` resolves to `"Maßeinheiten"`, eliminating duplicate label collision with `tab_workouts` (`"Einheiten"`).
+  • Verify `AppNavigationDrawer.kt` Settings group binds `R.string.prefsUnitsTitle` to `drawer_units`.
+  2. *Units Settings Dialog Imperial Localization Parity (`TST-UI-487.2`, `TranslationParityTest.kt`)*:
+  • Verify `units_type_imperial` in `values-de` resolves to `"Imperial (Meilen)"`.
+  • Verify `units_type_imperial` in `values-ja` resolves to `"ヤードポンド法 (マイル)"`.
+  • Verify 100% string translation and placeholder parity across all 9 locales.
+  3. *Distinct Bike Power Iconography Contract (`TST-UI-487.3`)*:
+  • Verify `ActivityType.BIKE_POWER.logoId` equals `R.drawable.bsport_bike_power`.
+  • Verify `ActivityType.BIKE_SPEED_AND_CADENCE.logoId` equals `R.drawable.bsport_bike`.
+  • Verify `bsport_bike_power.xml` is present, parses cleanly as a VectorDrawable with 192x192 viewport, contains both cyclist geometry and canonical lightning bolt badge paths.
+  4. *Tier 1 Targeted Unit Test Regression (`TST-UI-487.4`)*:
+  • Execute targeted test suite (`com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+
 
 

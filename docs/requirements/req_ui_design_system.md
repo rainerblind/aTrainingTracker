@@ -14393,4 +14393,41 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Technical export keys in SQLite and exporter payloads are completely unaffected; custom user-defined sport types retain their exact user-specified names; `formatIsoDate` is fail-safe; 100% clean-room test pass rate.
 
+### REQ-UI-487: Navigation Drawer Units Disambiguation & Distinct Power Cockpit Iconography [Verified]
+- **Tests**: `TST-UI-487` | **Tickets**: `ATT-5871`
+- **Implementation**: `res/values-de/strings.xml`, `res/values-ja/strings.xml`, `res/drawable/bsport_bike_power.xml`, `ActivityType.java`, `AppNavigationDrawer.kt`, `UnitsSettingsDialog.kt`, `ActivityTypeSelectionDialog.kt`, `CopyTrackingTabDialog.kt`
+- **Rationale**: In the German navigation drawer, both `tab_workouts` (*Training -> Einheiten*) and `prefsUnitsTitle` (*Einstellungen -> Einheiten*) resolved to `"Einheiten"`, causing homonym ambiguity. In the units settings dialog (`UnitsSettingsDialog.kt`), German and Japanese retained untranslated English unit `"mile"` in `units_type_imperial` (`"Imperial (mile)"`). Furthermore, in activity type selection dialogs (`ActivityTypeSelectionDialog.kt`, `CopyTrackingTabDialog.kt`), `ActivityType.BIKE_SPEED_AND_CADENCE` and `ActivityType.BIKE_POWER` both referenced `R.drawable.bsport_bike`, rendering them visually indistinguishable.
+- **Description**:
+1. *Drawer & Dialog Label Disambiguation (`REQ-UI-487.1`)*:
+   • In `res/values-de/strings.xml`, `prefsUnitsTitle` SHALL resolve to `"Maßeinheiten"`, eliminating navigation drawer label collision with `tab_workouts` (`"Einheiten"`).
+   • In `AppNavigationDrawer.kt` (under Settings -> `drawer_units`) and `UnitsSettingsDialog.kt` header, the displayed title SHALL bind `R.string.prefsUnitsTitle` (`"Maßeinheiten"` in DE, `"Units"` in EN).
+2. *Units Dialog Imperial Localization Parity (`REQ-UI-487.2`)*:
+   • In `res/values-de/strings.xml`, `units_type_imperial` SHALL resolve to `"Imperial (Meilen)"`.
+   • In `res/values-ja/strings.xml`, `units_type_imperial` SHALL resolve to `"ヤードポンド法 (マイル)"`.
+   • In `UnitsSettingsDialog.kt`, selecting between `MyUnits.METRIC` and `MyUnits.IMPERIAL` SHALL render fully localized labels across all 9 supported locales without untranslated English unit fragments.
+3. *Distinct Bike Power Iconography (`REQ-UI-487.3`)*:
+   • Vector asset `res/drawable/bsport_bike_power.xml` SHALL be authored matching the `192x192` viewport / `48dp` geometry of `bsport_bike.xml`, incorporating a distinct power lightning bolt badge in the top-left quadrant using canonical `ic_power` vector geometry.
+   • `ActivityType.BIKE_POWER` enum in `com.atrainingtracker.banalservice.ActivityType` SHALL bind `logoId = R.drawable.bsport_bike_power`.
+   • `ActivityTypeSelectionDialog.kt` and `CopyTrackingTabDialog.kt` SHALL render `bsport_bike_power` for `ActivityType.BIKE_POWER` and `bsport_bike` for `ActivityType.BIKE_SPEED_AND_CADENCE`, ensuring visual distinction.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-UI-122` (*9-Language Localization & Translation Parity*) and `REQ-UI-149` (*Activity Type Selection Dialog*); establishes `REQ-UI-487` (*Navigation Drawer Units Disambiguation & Distinct Power Cockpit Iconography*).
+2. *Historical Origin & Commit Trace*: Commit `2ef1bbdf` (navigation drawer migration) and commit `0e17d2a5` (Compose settings sheets).
+3. *Root Reason for Existing Formulation*: Literal 1:1 translation of "Units" -> "Einheiten" created homonym collision with workout sessions; `BIKE_POWER` reused `bsport_bike` because no dedicated multi-color sport vector existed at creation time.
+4. *Preservation of Core Invariants*: SQLite table contracts (`TrackingViewsDatabaseManager`), preference keys (`SP_UNITS`), enum names (`ActivityType.BIKE_POWER.name()`), and drawer routes (`NavRoutes.fromDrawerItemId(R.id.drawer_units)`) remain 100% byte-for-byte identical.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the Navigation Drawer open in German locale (`de`),
+• *When* viewing drawer items under "Einstellungen",
+• *Then* the units item displays `"Maßeinheiten"` instead of `"Einheiten"`.
+• *Given* `UnitsSettingsDialog` open in German locale (`de`),
+• *When* inspecting unit selection options,
+• *Then* the dialog title is `"Maßeinheiten"`, metric is `"Metrisch (m)"`, and imperial is `"Imperial (Meilen)"`.
+• *Given* `ActivityTypeSelectionDialog` or `CopyTrackingTabDialog` open,
+• *When* inspecting the sport icon for `BIKE_POWER` ("Rad Leistung"),
+• *Then* it renders `R.drawable.bsport_bike_power` with a prominent power lightning bolt badge, visually distinct from `BIKE_SPEED_AND_CADENCE` ("Radeln").
+
+**Invariants**: SQLite database schema (`TrackingViewsDbHelper`), preference keys (`SP_UNITS`), enum names (`ActivityType.BIKE_POWER.name()`), and 100% test pass rate MUST NOT be broken.
+
+
 

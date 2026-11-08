@@ -102,7 +102,7 @@
 
     <!-- Units -->
     <string name="units_type_metric">Metrisch (m)</string>
-    <string name="units_type_imperial">Imperial (mile)</string>
+    <string name="units_type_imperial">Imperial (Meilen)</string>
     <string name="value_unit_float_string">%1$.2f %2$s</string>
     <!-- TODO: correct??? -->
     <string name="value_unit_string_string">%1$s %2$s</string>
@@ -285,7 +285,7 @@
     <string name="prefsKeepScreenOnTitle">Display an lassen</string>
     <string name="prefsNoUnlockingTitle">Display entsperrt lassen</string>
     <string name="prefZoomDependingOnSpeedTitle">Zoom basierend auf Geschwindigkeit</string>
-    <string name="prefsUnitsTitle">Einheiten</string>
+    <string name="prefsUnitsTitle">Maßeinheiten</string>
     <string name="prefsUnitsSummary">Metrisch</string>
     <string name="prefShowUnitsTitle">Einheiten anzeigen</string>
 
