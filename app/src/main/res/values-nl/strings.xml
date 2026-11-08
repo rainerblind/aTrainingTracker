@@ -1103,6 +1103,14 @@
     <string name="cluster_merge_dialog_title">Favoriete route samenvoegen</string>
     <string name="cluster_merge_dialog_message">Wil je \'%1$s\' (%2$d opnamen) samenvoegen in \'%3$s\'? Alle bijbehorende trainingen worden opnieuw toegewezen aan \'%3$s\' en \'%1$s\' wordt vervolgens verwijderd.</string>
     <string name="cluster_merge_action">Samenvoegen</string>
+    <string name="cluster_split_action">Favoriete route splitsen…</string>
+    <string name="cluster_split_dialog_title">Favoriete route splitsen</string>
+    <string name="cluster_split_corridor_threshold">Corridorgevoeligheid: %1$s</string>
+    <string name="cluster_split_no_variants">Geen afzonderlijke routevarianten gedetecteerd bij deze gevoeligheid.</string>
+    <string name="cluster_split_primary_label">Hoofdroute (%1$d workouts, Ø %2$s)</string>
+    <string name="cluster_split_variant_label">Variant %1$d (%2$d workouts, Ø %3$s)</string>
+    <string name="cluster_split_rename_workouts">Workoutnamen bijwerken naar nieuwe favoriete route</string>
+    <string name="cluster_split_action_confirm">Splitsen</string>
     <string name="cluster_migration_title">Routefamilies analyseren…</string>
     <string name="cluster_migration_loading">Routefamilies laden…</string>
     <string name="cluster_migration_healing">Geschiedenisintegriteit controleren…</string>

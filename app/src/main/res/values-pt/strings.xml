@@ -1103,6 +1103,14 @@
     <string name="cluster_merge_dialog_title">Mesclar rota favorita</string>
     <string name="cluster_merge_dialog_message">Deseja mesclar \'%1$s\' (%2$d gravações) em \'%3$s\'? Todos os treinos associados serão reatribuídos a \'%3$s\' e \'%1$s\' será excluído em seguida.</string>
     <string name="cluster_merge_action">Mesclar</string>
+    <string name="cluster_split_action">Dividir rota favorita…</string>
+    <string name="cluster_split_dialog_title">Dividir rota favorita</string>
+    <string name="cluster_split_corridor_threshold">Sensibilidade do corredor: %1$s</string>
+    <string name="cluster_split_no_variants">Nenhuma variante de rota distinta detectada nesta sensibilidade.</string>
+    <string name="cluster_split_primary_label">Rota principal (%1$d treinos, Ø %2$s)</string>
+    <string name="cluster_split_variant_label">Variante %1$d (%2$d treinos, Ø %3$s)</string>
+    <string name="cluster_split_rename_workouts">Atualizar nomes dos treinos para corresponder à nova rota</string>
+    <string name="cluster_split_action_confirm">Dividir</string>
     <string name="cluster_migration_title">Analisando famílias de rotas…</string>
     <string name="cluster_migration_loading">Carregando famílias de rotas…</string>
     <string name="cluster_migration_healing">Verificando a integridade do histórico…</string>

@@ -1081,6 +1081,14 @@
     <string name="cluster_merge_dialog_title">お気に入りのルートを結合</string>
     <string name="cluster_merge_dialog_message">「%1$s」（%2$d件の記録）を「%3$s」に統合しますか？関連するすべてのワークアウトが「%3$s」に再割り当てされ、「%1$s」は削除されます。</string>
     <string name="cluster_merge_action">結合</string>
+    <string name="cluster_split_action">お気に入りのルートを分割…</string>
+    <string name="cluster_split_dialog_title">お気に入りのルートを分割</string>
+    <string name="cluster_split_corridor_threshold">回廊感度: %1$s</string>
+    <string name="cluster_split_no_variants">この感度では別のルートバリアントは検出されませんでした。</string>
+    <string name="cluster_split_primary_label">メインルート (%1$d ワークアウト, 平均 %2$s)</string>
+    <string name="cluster_split_variant_label">バリアント %1$d (%2$d ワークアウト, 平均 %3$s)</string>
+    <string name="cluster_split_rename_workouts">新しいルートに合わせてワークアウト名を更新</string>
+    <string name="cluster_split_action_confirm">分割</string>
     <string name="cluster_migration_title">ルートファミリーを分析中…</string>
     <string name="cluster_migration_loading">ルートファミリーを読み込み中…</string>
     <string name="cluster_migration_healing">履歴の整合性を確認中…</string>

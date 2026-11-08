@@ -28,6 +28,10 @@ import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterStats
+import com.atrainingtracker.trainingtracker.database.ClusterCorridorVariant
+import com.atrainingtracker.trainingtracker.database.ColoredPolylinePath
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterCorridorDetector
+import com.atrainingtracker.trainingtracker.database.getVariantColor
 import com.atrainingtracker.util.safeEnumValueOfOrNull
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
@@ -158,6 +162,37 @@ class WorkoutClustersViewModel @JvmOverloads constructor(
 
     private val _sortOrder = MutableStateFlow(ClusterSortOrder.RECORDINGS)
     val sortOrder: StateFlow<ClusterSortOrder> = _sortOrder.asStateFlow()
+
+    // --- SPLIT CLUSTER STATE (REQ-SET-096, ATT-5900) ---
+    private val _splitCorridorThreshold = MutableStateFlow(500.0)
+    val splitCorridorThreshold: StateFlow<Double> = _splitCorridorThreshold.asStateFlow()
+
+    private val _detectedVariants = MutableStateFlow<List<ClusterCorridorVariant>>(emptyList())
+    val detectedVariants: StateFlow<List<ClusterCorridorVariant>> = _detectedVariants.asStateFlow()
+
+    private val _isSplitPreviewActive = MutableStateFlow(false)
+    val isSplitPreviewActive: StateFlow<Boolean> = _isSplitPreviewActive.asStateFlow()
+
+    val splitVariantPaths: StateFlow<List<ColoredPolylinePath>> = combine(
+        _isSplitPreviewActive,
+        _detectedVariants
+    ) { active, variants ->
+        if (!active || variants.isEmpty()) {
+            emptyList()
+        } else {
+            variants.flatMapIndexed { groupIndex, variant ->
+                val color = getVariantColor(groupIndex)
+                variant.allPaths.mapIndexed { pathIndex, points ->
+                    ColoredPolylinePath(
+                        id = (variant.groupId * 10000L) + pathIndex,
+                        latLngs = points,
+                        color = color,
+                        width = 8f
+                    )
+                }
+            }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val isLocationAvailable: StateFlow<Boolean> = currentLocation
         .map { it != null }
@@ -570,4 +605,58 @@ class WorkoutClustersViewModel @JvmOverloads constructor(
      * Resolves the recognized start location name for a cluster's start coordinates (REQ-UI-186, ATT-1402).
      */
     fun getStartLocationName(lat: Double, lng: Double): String? = getLocationName(lat, lng)
+
+    // --- SPLIT CLUSTER ACTIONS (REQ-SET-096, ATT-5900) ---
+    private var corridorJob: Job? = null
+
+    fun openSplitPreview() {
+        _isSplitPreviewActive.value = true
+        recalculateSplitCorridors()
+    }
+
+    fun closeSplitPreview() {
+        corridorJob?.cancel()
+        _isSplitPreviewActive.value = false
+        _detectedVariants.value = emptyList()
+    }
+
+    fun setSplitCorridorThreshold(threshold: Double) {
+        _splitCorridorThreshold.value = threshold
+        recalculateSplitCorridors()
+    }
+
+    fun recalculateSplitCorridors() {
+        corridorJob?.cancel()
+        val cluster = _selectedCluster.value ?: return
+        val workouts = _clusterWorkouts.value
+        val threshold = _splitCorridorThreshold.value
+
+        corridorJob = viewModelScope.launch(Dispatchers.Default) {
+            val variants = WorkoutClusterCorridorDetector.detectCorridors(
+                workouts = workouts,
+                baseClusterName = cluster.name,
+                corridorThresholdMeters = threshold
+            )
+            _detectedVariants.value = variants
+        }
+    }
+
+    fun executeClusterSplit(
+        variantsToSplit: List<Pair<String, List<WorkoutData>>>,
+        renameWorkouts: Boolean
+    ) {
+        val cluster = _selectedCluster.value ?: return
+        viewModelScope.launch(ioDispatcher) {
+            WorkoutClusterEngine.getInstance(getApplication()).splitCluster(
+                context = getApplication(),
+                primaryClusterId = cluster.id,
+                variantsToSplit = variantsToSplit,
+                renameWorkouts = renameWorkouts
+            )
+            repository.refreshClusters()
+            _isSplitPreviewActive.value = false
+            _detectedVariants.value = emptyList()
+            selectClusterById(cluster.id)
+        }
+    }
 }

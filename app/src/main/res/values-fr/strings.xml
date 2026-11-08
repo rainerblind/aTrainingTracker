@@ -1102,6 +1102,14 @@
     <string name="cluster_merge_dialog_title">Fusionner l\'itinéraire favori</string>
     <string name="cluster_merge_dialog_message">Voulez-vous fusionner \'%1$s\' (%2$d enregistrements) dans \'%3$s\' ? Toutes les séances associées seront réattribuées à \'%3$s\' et \'%1$s\' sera ensuite supprimé.</string>
     <string name="cluster_merge_action">Fusionner</string>
+    <string name="cluster_split_action">Diviser l\'itinéraire favori…</string>
+    <string name="cluster_split_dialog_title">Diviser l\'itinéraire favori</string>
+    <string name="cluster_split_corridor_threshold">Sensibilité du couloir : %1$s</string>
+    <string name="cluster_split_no_variants">Aucune variante d\'itinéraire distincte détectée à cette sensibilité.</string>
+    <string name="cluster_split_primary_label">Itinéraire principal (%1$d séances, Ø %2$s)</string>
+    <string name="cluster_split_variant_label">Variante %1$d (%2$d séances, Ø %3$s)</string>
+    <string name="cluster_split_rename_workouts">Mettre à jour les noms des séances selon le nouvel itinéraire</string>
+    <string name="cluster_split_action_confirm">Diviser</string>
     <string name="cluster_migration_title">Analyse des familles d\'itinéraires…</string>
     <string name="cluster_migration_loading">Chargement des familles d\'itinéraires…</string>
     <string name="cluster_migration_healing">Vérification de l\'intégrité de l\'historique…</string>

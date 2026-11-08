@@ -286,6 +286,27 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     /**
+     * Reassigns specific workouts to a new cluster (REQ-SET-096.5, ATT-5900).
+     *
+     * @param workoutIds list of workout IDs to reassign
+     * @param newClusterId the target cluster ID
+     * @return the number of updated rows
+     */
+    public int reassignWorkoutsToCluster(@NonNull List<Long> workoutIds, long newClusterId) {
+        if (workoutIds.isEmpty()) {
+            return 0;
+        }
+        ContentValues values = new ContentValues();
+        values.put(WorkoutSummaries.CLUSTER_ID, newClusterId);
+        int updated = 0;
+        for (Long id : workoutIds) {
+            updated += getDatabase().update(WorkoutSummaries.TABLE, values,
+                    WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(id)});
+        }
+        return updated;
+    }
+
+    /**
      * Calculates comprehensive performance, volume, and recency statistics for all Workout Clusters (REQ-SET-068).
      *
      * @return Map of clusterId to WorkoutClusterStats.

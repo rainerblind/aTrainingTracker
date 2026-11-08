@@ -1667,4 +1667,52 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 
 **Invariants**: Single-home exclusivity (`isHome`); user-locked altitude immutability; authoritative hit counts derived from actual workouts; strict raw numeric sorting (`ATT-3324`); explicit user confirmation (`ATT-3355`); thread confinement to `KnownLocationsDB-Thread`.
 
+### REQ-SET-096: Workout Cluster Split via Polyline Sub-Corridor Detection & Interactive Map Preview [Verified]
+- **Tests**: `TST-SET-096` | **Tickets**: `ATT-5900`
+- **Implementation**: `WorkoutClusterHeatmapScreen.kt`, `WorkoutClusterSplitSheet.kt`, `WorkoutClustersViewModel.kt`, `WorkoutClusterEngine.kt`, `WorkoutClusterCorridorDetector.kt`, `WorkoutSummariesDatabaseManager.java`, `WorkoutClusterDatabaseManager.kt`
+- **Rationale**: Large historical route clusters aggregate multiple distinct route variants sharing endpoints and total distance. Blending these variants distorts performance metrics (`Bestzeit`, `Ø Zeit`, `Ø Geschwindigkeit`) and trend analysis. The system SHALL provide an interactive "Split Cluster" (`Cluster aufteilen`) action with polyline sub-corridor clustering, color-coded preview map, adjustable sensitivity slider (`250 m – 1500 m`), editable variant names, workout renaming option, and atomic database split with centroid and statistics reconciliation (ATT-5900):
+1. *Split Action Entry Point (`REQ-SET-096.1`)*: When viewing a cluster in `WorkoutClusterHeatmapScreen` with `hitCount >= 2`, the top header action row SHALL provide a `Split Cluster` button (`R.string.cluster_split_action`, `Icons.Default.CallSplit`, `contentDescription = R.string.cluster_split_action`).
+2. *Polyline Sub-Corridor Detection Algorithm (`REQ-SET-096.2`)*:
+   - For all member workouts having valid `mapPolyline`, decode track coordinates and sample each polyline at fractional distance stations $s \in \{0.15, 0.30, 0.50, 0.70, 0.85\}$ of total distance.
+   - For any pair of polylines $P_i, P_j$, compute corridor deviation as the maximum geodesic station distance:
+     $$D(P_i, P_j) = \max_{k=1..5} \text{distanceBetween}(P_i(s_k), P_j(s_k))$$
+   - Partition workouts into sub-corridor clusters using greedy medoid clustering against a corridor width threshold $W \in [250\text{ m}, 1500\text{ m}]$ (default $W = 500\text{ m}$).
+   - The largest partition SHALL be designated Group 1 (Primary Cluster), and all other partitions sorted descending by member count as candidate split variants (Groups $2..N$).
+3. *Interactive Preview Sheet (`REQ-SET-096.3`)*:
+   - Tapping `Split Cluster` SHALL open `WorkoutClusterSplitSheet` (`AppModalBottomSheet`).
+   - The map behind the sheet SHALL render each detected corridor's member polylines in distinct palette colors (`TTColor.VariantPalette` / high-contrast distinct hues) matching the badge colors in the variant list.
+   - A Material 3 `Slider` SHALL allow live adjustment of corridor width threshold $W$ from $250\text{ m}$ to $1500\text{ m}$ in $50\text{ m}$ steps, dynamically recalculating the detected variant groups and updating map colors without blocking the UI thread.
+   - If only 1 group is detected at the current threshold, an informative notice (`R.string.cluster_split_no_variants`) SHALL be displayed and the split confirmation button disabled.
+4. *Variant List & Customization (`REQ-SET-096.4`)*:
+   - Group 1 SHALL be displayed as an unmodifiable primary row indicating it remains under the existing cluster name.
+   - Each secondary variant (Groups $2..N$) SHALL display a checkbox (checked by default), a color indicator pill matching its map polyline color, workout count, average distance, and an editable `OutlinedTextField` for cluster name pre-filled with `findUniqueClusterName(baseName)`.
+   - A checkbox option *"Workouts passend zur neuen Lieblingsstrecke umbenennen"* (`R.string.cluster_split_rename_workouts`, default `true`) SHALL allow athletes to automatically rename member workouts to match the new cluster name upon split.
+5. *Atomic Database Split & Reconciliation (`REQ-SET-096.5`)*:
+   - Upon confirming the split (`R.string.cluster_split_action_confirm`), `WorkoutClusterEngine.splitCluster(...)` SHALL execute inside an atomic SQLite transaction:
+     - For each selected variant group: insert a new `WorkoutCluster` with the customized name, probable sport ID, and weighted centroid (start, end, apex, distance, altitude extrema, bounds) calculated from its member workouts.
+     - Reassign corresponding workout rows in `WorkoutSummaries` to the new cluster ID (and update workout names if renaming is checked).
+     - Recalculate remaining weighted centroid, bounds, hit count, and preview paths for the primary cluster.
+     - Recalculate `WorkoutClusterStats` for all affected clusters.
+     - Refresh `WorkoutClusterRepository` state flows and UI map state, selecting the primary cluster without leaving broken or phantom tracks.
+6. *9-Language Parity & Zero Emojis (`REQ-SET-096.6`)*: All new user-facing strings SHALL maintain 100% parity across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) with zero decorative inline emojis (`ATT-5400`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a workout cluster with `hitCount >= 2` containing distinct route variants,
+• *When* the user taps `Split Cluster` in `WorkoutClusterHeatmapScreen`,
+• *Then* `WorkoutClusterSplitSheet` opens, displays a sensitivity slider defaulting to $500\text{ m}$, and colors variant polylines on the map according to their detected group.
+• *Given* detected variants in `WorkoutClusterSplitSheet`,
+• *When* the user drags the corridor slider from $500\text{ m}$ to $300\text{ m}$,
+• *Then* sub-corridors are recalculated dynamically, splitting or merging variant groups and updating map colors immediately without blocking the UI.
+• *Given* secondary variant groups in the split sheet,
+• *When* the user edits a variant cluster name and leaves *"Workouts passend zur neuen Lieblingsstrecke umbenennen"* checked,
+• *Then* the edited name is validated as non-blank and unique, and member workouts will be renamed upon split.
+• *Given* the user confirms the split by tapping *"Aufteilen"*,
+• *When* the atomic transaction completes,
+• *Then* new `WorkoutCluster` records are inserted, member workouts in `WorkoutSummaries` are reassigned to their respective new clusters, original and new cluster centroids and `WorkoutClusterStats` are recalculated, and the map refreshes without phantom tracks.
+• *Given* all 9 locale resource files,
+• *When* `TranslationParityTest` executes,
+• *Then* all split string keys exist, match format specifiers (`%1$s`, `%1$d`, `%2$s`, `%3$s`), and contain zero inline emojis.
+
+**Invariants**: Workouts not belonging to the cluster MUST NOT be affected; primary cluster retains unselected variants; SQLite transactional atomicity; single-source-of-truth hit count reconciliation; 9-language localization parity.
+
 

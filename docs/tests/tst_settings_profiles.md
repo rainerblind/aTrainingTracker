@@ -986,4 +986,32 @@
   5. *9-Language Localization & Positional Specifier Audit (`TST-SET-095.5`, `TranslationParityTest.kt`)*:
   • Verify `known_locations_menu_merge`, `known_locations_merge_select_target_title`, `known_locations_merge_distance_away` (`%1$s`), `known_locations_merge_no_candidates`, `known_locations_merge_dialog_title`, `known_locations_merge_dialog_message` (`%1$s`, `%2$s`, `%3$s`), `known_locations_merge_pinned_notice` (`%1$s`), and `known_locations_merge_action` exist across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) with zero inline emojis (`ATT-5400`).
 
+### TST-SET-096: **Workout Cluster Split & Sub-Corridor Detection Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-096`
+- **Component**: `WorkoutClusterHeatmapScreen.kt`, `WorkoutClusterSplitSheet.kt`, `WorkoutClustersViewModel.kt`, `WorkoutClusterEngine.kt`, `WorkoutClusterCorridorDetector.kt`, `WorkoutClusterSplitTest.kt`
+- **Jira**: `ATT-5900`
+- **Test Description**:
+  1. *Sub-Corridor Detection Algorithm Unit Tests (`TST-SET-096.1`, `WorkoutClusterCorridorDetectorTest.kt`)*:
+  • Verify polyline station sampling at fractional distances 15%, 30%, 50%, 70%, 85%.
+  • Verify pairwise corridor deviation metric correctly separates two parallel corridors diverging by > 500 m while grouping nearly identical tracks.
+  • Verify threshold sensitivity modulation: tighter threshold (250 m) produces finer sub-groups; wider threshold (1500 m) merges into fewer groups.
+  • Verify that identical tracks yield a deviation distance of 0.0 m.
+  2. *Transactional Database Split & Centroid Reconciliation Unit Tests (`TST-SET-096.2`, `WorkoutClusterSplitTest.kt`)*:
+  • Given cluster with 10 member workouts (6 on Corridor A, 4 on Corridor B), execute split for Corridor B.
+  • Verify new `WorkoutCluster` created with `hitCount == 4`, centroid matching Corridor B member workouts, and correct spatial bounds.
+  • Verify original cluster updated with `hitCount == 6` and centroid matching Corridor A member workouts.
+  • Verify all 4 Corridor B workouts in `WorkoutSummaries` have `CLUSTER_ID == newClusterId`.
+  • Verify member workouts renamed according to new cluster name when `renameWorkouts == true`.
+  • Verify `WorkoutClusterStats` recalculated for both original and new clusters.
+  3. *UI & Interaction Contract Tests (`TST-SET-096.3`, `WorkoutClusterSplitDialogContractTest.kt`)*:
+  • In `WorkoutClusterHeatmapScreen`, verify `CallSplit` button appears in header when `hitCount >= 2` and is hidden when `hitCount < 2`.
+  • Verify clicking `CallSplit` opens `WorkoutClusterSplitSheet`.
+  • Verify slider adjustment updates detected variant groups and associated map polyline colors.
+  • Verify variant checkbox toggling and editable cluster name field pre-filled with unique candidate name.
+  • Verify confirm button disabled when no secondary variant is selected or when only 1 group is detected.
+  4. *9-Language Localization & Positional Specifier Audit (`TST-SET-096.4`, `TranslationParityTest.kt`)*:
+  • Verify `cluster_split_action`, `cluster_split_dialog_title`, `cluster_split_corridor_threshold` (`%1$s`), `cluster_split_no_variants`, `cluster_split_primary_label` (`%1$d`, `%2$s`), `cluster_split_variant_label` (`%1$d`, `%2$d`, `%3$s`), `cluster_split_rename_workouts`, and `cluster_split_action_confirm` exist across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) with zero inline emojis (`ATT-5400`).
+  5. *Clean-Room Targeted Regression Execution (`TST-SET-096.5`)*:
+  • Execute targeted test suites (`com.atrainingtracker.trainingtracker.database.*`, `com.atrainingtracker.trainingtracker.ui.clusters.*`, `com.atrainingtracker.trainingtracker.localization.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
 

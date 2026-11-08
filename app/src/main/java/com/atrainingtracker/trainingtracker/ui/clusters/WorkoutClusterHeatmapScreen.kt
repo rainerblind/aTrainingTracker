@@ -24,6 +24,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CallSplit
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.EditLocationAlt
@@ -86,6 +87,8 @@ fun WorkoutClusterHeatmapScreen(
     val peekedWorkoutDataWithTrack by viewModel.peekedWorkoutDataWithTrack.collectAsState()
     val mapState by viewModel.mapState.collectAsState()
     val enabledMarkerTypes by viewModel.enabledMarkerTypes.collectAsState()
+    val isSplitPreviewActive by viewModel.isSplitPreviewActive.collectAsState()
+    val splitVariantPaths by viewModel.splitVariantPaths.collectAsState()
     
     val sportType = remember(cluster.probableSportId) { viewModel.getBSportType(cluster.probableSportId) }
 
@@ -259,8 +262,20 @@ fun WorkoutClusterHeatmapScreen(
     }
 
     var showEditDialog by remember { mutableStateOf(false) }
+    var showSplitSheet by remember { mutableStateOf(false) }
     var workoutToMove by remember { mutableStateOf<WorkoutData?>(null) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
+
+    if (showSplitSheet) {
+        WorkoutClusterSplitSheet(
+            cluster = cluster,
+            viewModel = viewModel,
+            onDismiss = {
+                showSplitSheet = false
+                viewModel.closeSplitPreview()
+            }
+        )
+    }
 
     if (showEditDialog) {
         EditWorkoutClusterIdentityDialog(
@@ -437,6 +452,10 @@ fun WorkoutClusterHeatmapScreen(
                         }
                     },
                     onRename = { showEditDialog = true },
+                    onSplit = {
+                        viewModel.openSplitPreview()
+                        showSplitSheet = true
+                    },
                     onEditFingerprint = {
                         isEditingFingerprint = true
                         selectedEditMarkerType = ClusterMarkerType.START
@@ -568,32 +587,38 @@ fun WorkoutClusterHeatmapScreen(
                 }
             },
             mapContent = {
-                heatmap(
-                    allPaths = mapState.heatmapPaths,
-                    opacity = heatmapOpacity,
-                    colorLut = ThermalColorLut.CLASSIC_BLUE,
-                    normalizeCorridors = false,
-                    useClassicStepIntensity = true
-                )
+                if (isSplitPreviewActive) {
+                    splitVariantPaths.forEach { variantPath ->
+                        path(variantPath, alpha = 0.85f)
+                    }
+                } else {
+                    heatmap(
+                        allPaths = mapState.heatmapPaths,
+                        opacity = heatmapOpacity,
+                        colorLut = ThermalColorLut.CLASSIC_BLUE,
+                        normalizeCorridors = false,
+                        useClassicStepIntensity = true
+                    )
 
-                // 1. Authoritative Route (If linked - SCRUM-216)
-                linkedRoute?.let { route ->
-                    path(route.toMapRoute().copy(isSelected = true), alpha = 1.0f)
-                }
+                    // 1. Authoritative Route (If linked - SCRUM-216)
+                    linkedRoute?.let { route ->
+                        path(route.toMapRoute().copy(isSelected = true), alpha = 1.0f)
+                    }
 
-                // 2. Member traces
-                // Only allow path clicks if not editing fingerprint
-                mapState.tracks.forEach { track ->
-                    path(track, alpha = 0.3f, onPathClick = { id ->
-                        if (!isEditingFingerprint) {
-                            viewModel.selectWorkoutForPeek(id)
-                        }
-                    })
-                }
-                
-                // 3. Show distribution of markers for all cluster members (SCRUM-199)
-                if (!isEditingFingerprint) {
-                    markers(filteredMemberMarkers)
+                    // 2. Member traces
+                    // Only allow path clicks if not editing fingerprint
+                    mapState.tracks.forEach { track ->
+                        path(track, alpha = 0.3f, onPathClick = { id ->
+                            if (!isEditingFingerprint) {
+                                viewModel.selectWorkoutForPeek(id)
+                            }
+                        })
+                    }
+                    
+                    // 3. Show distribution of markers for all cluster members (SCRUM-199)
+                    if (!isEditingFingerprint) {
+                        markers(filteredMemberMarkers)
+                    }
                 }
                 
                 // Primary cluster signature
@@ -605,7 +630,10 @@ fun WorkoutClusterHeatmapScreen(
     }
 
     BackHandler {
-        if (peekedWorkoutDataWithTrack != null) {
+        if (showSplitSheet) {
+            showSplitSheet = false
+            viewModel.closeSplitPreview()
+        } else if (peekedWorkoutDataWithTrack != null) {
             viewModel.clearPeekSelection()
         } else if (isEditingFingerprint) {
             isEditingFingerprint = false
@@ -630,6 +658,7 @@ fun WorkoutClusterSummaryHeader(
     onSelectMarkerType: (ClusterMarkerType) -> Unit = {},
     onBack: () -> Unit,
     onRename: () -> Unit,
+    onSplit: () -> Unit = {},
     onEditFingerprint: () -> Unit,
     onSaveFingerprint: () -> Unit,
     onDeleteRequest: () -> Unit,
@@ -681,7 +710,7 @@ fun WorkoutClusterSummaryHeader(
                     )
 
                     // Spacer for actions area
-                    Spacer(modifier = Modifier.width(72.dp))
+                    Spacer(modifier = Modifier.width(if (isEditing) 48.dp else if (cluster.hitCount >= 2) 120.dp else 80.dp))
                 }
 
                 if (!isEditing) {
@@ -762,6 +791,15 @@ fun WorkoutClusterSummaryHeader(
                         )
                     }
                 } else {
+                    if (cluster.hitCount >= 2) {
+                        IconButton(onClick = onSplit) {
+                            Icon(
+                                imageVector = Icons.Default.CallSplit,
+                                contentDescription = stringResource(R.string.cluster_split_action),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
                     IconButton(onClick = onEditFingerprint) {
                         Icon(
                             imageVector = Icons.Default.EditLocationAlt,
@@ -785,6 +823,16 @@ fun WorkoutClusterSummaryHeader(
                 onDismissRequest = { showContextMenu = false },
                 containerColor = MaterialTheme.colorScheme.surface
             ) {
+                if (cluster.hitCount >= 2) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.cluster_split_dialog_title)) },
+                        onClick = {
+                            showContextMenu = false
+                            onSplit()
+                        },
+                        leadingIcon = { Icon(Icons.Default.CallSplit, contentDescription = null) }
+                    )
+                }
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.delete)) },
                     onClick = { showContextMenu = false; onDeleteRequest() },
