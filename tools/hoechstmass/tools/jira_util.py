@@ -11,6 +11,7 @@ import base64
 import json
 import os
 import re
+import ssl
 import sys
 import urllib.request
 from urllib.parse import urlencode
@@ -69,6 +70,7 @@ def load_hoechstmass_config(custom_path=None):
     return {
         "project_key": "PROJ",
         "board_id": 1,
+        "deployment_type": "cloud",
         "transitions": {
             "todo": "11",
             "in_progress": "21",
@@ -83,9 +85,66 @@ def load_hoechstmass_config(custom_path=None):
         },
         "custom_fields": {
             "story_points": "customfield_10016",
+            "epic_link": "customfield_10014",
             "sprint": "customfield_10020"
         }
     }
+
+
+def is_datacenter(config=None, h_config=None):
+    """Determines whether active deployment is Jira Data Center (or Server) vs Jira Cloud."""
+    if config is None:
+        config = load_env_config()
+    env_deploy = config.get("JIRA_DEPLOYMENT") or config.get("JIRA_DEPLOYMENT_TYPE")
+    if env_deploy:
+        return env_deploy.strip().lower() in ("datacenter", "data_center", "server", "onprem", "on_premise")
+    if h_config is None:
+        h_config = load_hoechstmass_config()
+    cfg_deploy = h_config.get("deployment_type") or h_config.get("deployment")
+    if cfg_deploy:
+        return str(cfg_deploy).strip().lower() in ("datacenter", "data_center", "server", "onprem", "on_premise")
+    return False
+
+
+def get_epic_link_field(config=None, h_config=None):
+    """Resolves Epic Link custom field key for Jira Data Center (defaults to customfield_10014)."""
+    if config is None:
+        config = load_env_config()
+    env_field = config.get("JIRA_EPIC_LINK_FIELD") or config.get("JIRA_CUSTOMFIELD_EPIC_LINK")
+    if env_field:
+        return env_field.strip()
+    if h_config is None:
+        h_config = load_hoechstmass_config()
+    custom_fields = h_config.get("custom_fields", {})
+    if "epic_link" in custom_fields:
+        return custom_fields["epic_link"]
+    return "customfield_10014"
+
+
+def get_search_endpoint(config=None, h_config=None):
+    """Returns REST API endpoint for JQL searches based on deployment type."""
+    if config is None:
+        config = load_env_config()
+    base_url = config.get("JIRA_URL", "").rstrip("/")
+    if is_datacenter(config, h_config):
+        return f"{base_url}/rest/api/2/search"
+    return f"{base_url}/rest/api/3/search/jql"
+
+
+def get_ssl_context(config=None):
+    """Constructs SSLContext supporting corporate CA bundles and verification toggles."""
+    if config is None:
+        config = load_env_config()
+    ca_bundle = config.get("JIRA_CA_BUNDLE") or config.get("ca_bundle")
+    ssl_verify = str(config.get("JIRA_SSL_VERIFY", config.get("ssl_verify", "true"))).lower() not in ("false", "0", "no")
+    if not ssl_verify:
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        return ctx
+    elif ca_bundle and os.path.exists(ca_bundle):
+        return ssl.create_default_context(cafile=ca_bundle)
+    return None
 
 
 def load_env_config(custom_path=None):
@@ -104,6 +163,10 @@ def load_env_config(custom_path=None):
     return config
 
 
+# Alias for cross-tool parity
+get_config = load_env_config
+
+
 def mask_secret(text):
     """Masks tokens or passwords in log output or error strings."""
     if not text:
@@ -111,6 +174,34 @@ def mask_secret(text):
     if len(text) <= 6:
         return "***"
     return text[:2] + "***" + text[-2:]
+
+
+def resolve_assignee_identifier(role_or_id, config=None, h_config=None):
+    """Resolves assignee identifier: username for Jira Data Center, accountId for Jira Cloud."""
+    if not role_or_id:
+        return None
+    if config is None:
+        config = load_env_config()
+    if h_config is None:
+        h_config = load_hoechstmass_config()
+
+    role_key = str(role_or_id).lower().strip()
+    if is_datacenter(config, h_config):
+        env_name_key = f"JIRA_{role_key.upper()}_NAME"
+        if env_name_key in config and config[env_name_key]:
+            return config[env_name_key]
+        env_user_key = f"JIRA_{role_key.upper()}_USER"
+        if env_user_key in config and config[env_user_key]:
+            return config[env_user_key]
+        env_acc_key = f"JIRA_{role_key.upper()}_ACCOUNT_ID"
+        if env_acc_key in config and config[env_acc_key]:
+            return config[env_acc_key]
+        roles = h_config.get("roles", {})
+        if role_key in roles:
+            return roles[role_key]
+        return role_or_id
+    else:
+        return get_account_id_for_role(role_or_id, config=config, h_config=h_config)
 
 
 def get_account_id_for_role(role_or_id, config=None, h_config=None):
@@ -134,10 +225,12 @@ def get_account_id_for_role(role_or_id, config=None, h_config=None):
     return role_or_id
 
 
-def resolve_account(role="agent1", config=None):
-    """Resolves (username, token) for a role with fallback to default credentials."""
+def resolve_account(role="agent1", config=None, h_config=None):
+    """Resolves (username, token) for a role with fallback to default credentials or Bearer PAT in Data Center."""
     if config is None:
         config = load_env_config()
+    if h_config is None:
+        h_config = load_hoechstmass_config()
 
     role_map = {
         "agent1": ("JIRA_AGENT1_USER", "JIRA_AGENT1_TOKEN"),
@@ -151,33 +244,63 @@ def resolve_account(role="agent1", config=None):
     if user and token:
         return user, token
 
+    auth_type = (config.get("JIRA_AUTH_TYPE") or "").lower()
+    if token and (is_datacenter(config, h_config) or auth_type == "bearer"):
+        return user or "", token
+
     default_user = config.get("JIRA_USER")
-    default_token = config.get("JIRA_TOKEN")
+    default_token = config.get("JIRA_TOKEN") or config.get("JIRA_API_TOKEN")
     if default_user and default_token:
         return default_user, default_token
+
+    if default_token and (is_datacenter(config, h_config) or auth_type == "bearer"):
+        return default_user or "", default_token
 
     print(f"Error: Missing Jira credentials for role '{role}' and no default credentials found.", file=sys.stderr)
     sys.exit(1)
 
 
-def jira_request(url, method="GET", payload=None, role="agent1", config=None):
-    """Executes an authenticated HTTP request to the Jira REST API."""
+def get_headers(config=None, role="agent1", h_config=None):
+    """Builds HTTP headers supporting Basic Auth or Bearer PAT in Jira Data Center."""
     if config is None:
         config = load_env_config()
+    if h_config is None:
+        h_config = load_hoechstmass_config()
 
-    user, token = resolve_account(role, config)
-    auth_header = "Basic " + base64.b64encode(f"{user}:{token}".encode("utf-8")).decode("utf-8")
+    user, token = resolve_account(role, config, h_config)
+    auth_type = (config.get("JIRA_AUTH_TYPE") or "").lower()
+    is_dc = is_datacenter(config, h_config)
 
-    headers = {
+    if auth_type == "bearer" or (is_dc and not user) or (auth_type != "basic" and is_dc and token and not user):
+        auth_header = f"Bearer {token}"
+    elif auth_type == "bearer":
+        auth_header = f"Bearer {token}"
+    else:
+        auth_str = f"{user}:{token}" if user else f":{token}"
+        encoded_auth = base64.b64encode(auth_str.encode("utf-8")).decode("utf-8")
+        auth_header = f"Basic {encoded_auth}"
+
+    return {
         "Authorization": auth_header,
         "Content-Type": "application/json",
         "Accept": "application/json",
     }
+
+
+def jira_request(url, method="GET", payload=None, role="agent1", config=None, h_config=None):
+    """Executes an authenticated HTTP request to the Jira REST API."""
+    if config is None:
+        config = load_env_config()
+    if h_config is None:
+        h_config = load_hoechstmass_config()
+
+    headers = get_headers(config=config, role=role, h_config=h_config)
     data = json.dumps(payload).encode("utf-8") if payload is not None else None
     req = urllib.request.Request(url, data=data, headers=headers, method=method)
+    ssl_context = get_ssl_context(config)
 
     try:
-        with urllib.request.urlopen(req) as resp:
+        with urllib.request.urlopen(req, context=ssl_context) as resp:
             resp_data = resp.read().decode("utf-8")
             return json.loads(resp_data) if resp_data else {}
     except urllib.error.HTTPError as e:
@@ -201,16 +324,47 @@ def check_gate(subtask_key):
 
 
 def assign_issue(issue_key, role_or_id, as_role="agent1"):
-    """Assigns an issue to an accountId resolved for the role."""
+    """Assigns an issue to username in Data Center or accountId in Cloud."""
     h_config = load_hoechstmass_config()
     config = load_env_config()
-    account_id = get_account_id_for_role(role_or_id, config=config, h_config=h_config)
-    if not account_id:
-        print(f"Error: Could not resolve account ID for '{role_or_id}'.", file=sys.stderr)
-        return
+    if is_datacenter(config, h_config):
+        username = resolve_assignee_identifier(role_or_id, config=config, h_config=h_config)
+        if not username:
+            print(f"Error: Could not resolve username for '{role_or_id}'.", file=sys.stderr)
+            return
+        payload = {"name": username}
+        target_disp = f"{role_or_id} ({username})"
+    else:
+        account_id = get_account_id_for_role(role_or_id, config=config, h_config=h_config)
+        if not account_id:
+            print(f"Error: Could not resolve account ID for '{role_or_id}'.", file=sys.stderr)
+            return
+        payload = {"accountId": account_id}
+        target_disp = f"{role_or_id} ({account_id})"
+
     url = f"{config.get('JIRA_URL', '')}/rest/api/2/issue/{issue_key}/assignee"
-    jira_request(url, method="PUT", payload={"accountId": account_id}, role=as_role, config=config)
-    print(f"Assigned {issue_key} to {role_or_id} ({account_id}).")
+    jira_request(url, method="PUT", payload=payload, role=as_role, config=config, h_config=h_config)
+    print(f"Assigned {issue_key} to {target_disp}.")
+
+
+def search_issues(jql, as_role="agent1"):
+    """Searches issues using JQL across Cloud (/rest/api/3/search/jql) or Data Center (/rest/api/2/search)."""
+    config = load_env_config()
+    h_config = load_hoechstmass_config()
+    url = get_search_endpoint(config, h_config)
+    payload = {
+        "jql": jql,
+        "fields": ["summary", "status", "issuetype"]
+    }
+    data = jira_request(url, method="POST", payload=payload, role=as_role, config=config, h_config=h_config)
+    issues = data.get("issues", [])
+    for i in issues:
+        fields = i.get("fields", {})
+        itype = fields.get("issuetype", {}).get("name", "Unknown")
+        status = fields.get("status", {}).get("name", "Unknown")
+        summary = fields.get("summary", "")
+        print(f"{i.get('key')}: [{itype}] {summary} [{status}]")
+    return issues
 
 
 def add_comment(issue_key, comment_text, as_role="agent1"):
@@ -488,6 +642,11 @@ def main():
             print("Usage: jira_util.py comment <KEY> <TEXT>", file=sys.stderr)
             sys.exit(1)
         add_comment(args[1], args[2], as_role=as_role)
+    elif cmd == "search":
+        if len(args) < 2:
+            print("Usage: jira_util.py search <JQL>", file=sys.stderr)
+            sys.exit(1)
+        search_issues(args[1], as_role=as_role)
     elif cmd in ("sprint-metrics", "sprint_metrics"):
         sprint_arg = None
         record = False

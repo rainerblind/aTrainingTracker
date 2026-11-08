@@ -44,3 +44,12 @@ python3 tools/workflow_util.py search "sprint = <SPRINT_ID> ORDER BY rank ASC"
 # Check gate status before Stage 4 implementation
 python3 tools/workflow_util.py check-gate <SUBTASK_KEY>
 ```
+
+## Deployment Modes: Jira Cloud vs. Jira Data Center (REQ-PRO-039)
+The tooling supports both **Jira Cloud** (default) and enterprise on-premise **Jira Data Center** / **Jira Server**:
+* **Configuration**: Set `deployment_type: "datacenter"` in `hoechstmass_config.json` or `JIRA_DEPLOYMENT=datacenter` in `.env.jira`.
+* **Authentication**: In Data Center mode, configure Personal Access Tokens (PAT) via `Authorization: Bearer <PAT>` using `JIRA_API_TOKEN` / `JIRA_TOKEN` without username, or Basic auth when `JIRA_USER` is configured.
+* **Corporate CA Bundles**: Support custom corporate CA certificates via `JIRA_CA_BUNDLE=/path/to/ca.crt` and toggle verification via `JIRA_SSL_VERIFY=true|false`.
+* **Assignee Dispatch**: Data Center assignment emits `{"name": "<username>"}` (via `JIRA_<ROLE>_NAME` or username) instead of `{"accountId": "..."}`.
+* **Epic Link Custom Field**: In Data Center mode, top-level issues link to Epics via custom field (default `customfield_10014`, configurable via `JIRA_EPIC_LINK_FIELD`), while sub-tasks strictly retain `fields.parent`.
+* **JQL Search Routing**: Automatically queries `/rest/api/2/search` in Data Center mode vs `/rest/api/3/search/jql` in Cloud mode.

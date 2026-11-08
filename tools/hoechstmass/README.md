@@ -150,4 +150,5 @@ For engineers and teams willing to invest in that setup and discipline, the payo
 1. Copy `.agents/` and `templates/` into your repository root.
 2. Adapt `docs/coding_standards.md` and `docs/design_guidelines.md` to your technology stack.
 3. Configure your project management CLI or issue tracker using `.agents/skills/jira-workflow/SKILL.md` (or your preferred ticketing integration).
+   - **Jira Cloud vs. Data Center Support**: Höchstmaß natively supports both Atlassian Jira Cloud and enterprise on-premise **Jira Data Center** / **Jira Server** (`hoechstmass_config.json: "deployment_type": "datacenter" | "cloud"` or `JIRA_DEPLOYMENT=datacenter`). Provides automated PAT Bearer authentication, corporate TLS CA bundles (`JIRA_CA_BUNDLE`), username assignment, Epic Link custom field dispatch (`customfield_10014`), and REST API v2 search routing.
 4. Run sprints using the asymmetric zipper pair (`subagent_pro` and `subagent_flash`) across Stages 1–5.

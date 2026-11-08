@@ -1372,6 +1372,30 @@
   • Verify `docs/project_protocol.md`, `tools/hoechstmass/docs/project_protocol.md`, and `tools/hoechstmass/README.md` codify `PA 1.1` through `PA 5.2`.
   • Assert `HoechstmassCoreFrameworkContractTest.kt` verifies the ASPICE Level 1–5 matrix and retro template parity.
 
+### TST-PRO-039: **Jira Data Center & Enterprise On-Premise Tooling Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-039`
+- **Component**: **Jira Process Tooling, Höchstmaß Framework & Deployment Adapters**
+- **Jira**: `ATT-5830`
+- **Test Description**:
+  1. *Deployment Mode Configuration & Environment Parsing (`TST-PRO-039.1`, `test_jira_datacenter.py`)*:
+  • Verify config parser correctly detects `deployment_type` from `hoechstmass_config.json` and overrides with `JIRA_DEPLOYMENT`.
+  • Assert default deployment falls back to `cloud`.
+  2. *Bearer PAT & Corporate CA Bundle Verification (`TST-PRO-039.2`, `test_jira_datacenter.py`)*:
+  • Mock HTTP calls under Data Center mode and assert `Authorization: Bearer <token>` header.
+  • Assert SSL context configuration passes `JIRA_CA_BUNDLE` path to urllib3 / requests or creates custom SSLContext.
+  3. *Assignee Payload Username vs AccountId Dispatch (`TST-PRO-039.3`, `test_jira_datacenter.py`)*:
+  • Assert `assign_issue` sends `{"name": "agent1"}` in Data Center mode and `{"accountId": "..."}` in Cloud mode.
+  • Assert `get_issue` parses `fields.assignee.name` in Data Center mode.
+  4. *Epic Link Custom Field vs Parent Payload Dispatch (`TST-PRO-039.4`, `test_jira_datacenter.py`)*:
+  • Assert creating/linking top-level issues in Data Center mode populates `customfield_10014` (or configured custom field) and omits `fields.parent`.
+  • Assert creating subtasks in Data Center mode populates `fields.parent` without `customfield_10014`.
+  5. *JQL Search REST API v2 Routing (`TST-PRO-039.5`, `test_jira_datacenter.py`)*:
+  • Assert `search_issues` dispatches to `/rest/api/2/search` in Data Center mode and `/rest/api/3/search/jql` in Cloud mode.
+  6. *Tooling Mirror Synchronization & Regression Suite (`TST-PRO-039.6`)*:
+  • Verify identical logic and hashes for shared functions between `tools/jira_util.py` and `tools/hoechstmass/tools/jira_util.py`.
+  • Execute `python3 tools/verify_requirement_governance.py` (exit 0) and Python unit tests.
+
+
 
 
 

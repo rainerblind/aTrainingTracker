@@ -1,6 +1,7 @@
 {
   "project_key": "PROJ",
   "board_id": 1,
+  "deployment_type": "cloud",
   "transitions": {
     "todo": "11",
     "in_progress": "21",
@@ -15,6 +16,7 @@
   },
   "custom_fields": {
     "story_points": "customfield_10016",
+    "epic_link": "customfield_10014",
     "sprint": "customfield_10020"
   },
   "requirements": {

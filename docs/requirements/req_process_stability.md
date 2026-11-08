@@ -2118,6 +2118,46 @@ The workflow SHALL mandate that:
 
 **Invariants**: Zero runtime app modifications in `app/src/main/`; backwards compatibility of existing `jira_util.py` commands; strict sprint retro-before-merge invariant preserved; 100% test pass rate.
 
+### REQ-PRO-039: Jira Data Center & Enterprise On-Premise Support for Höchstmaß Automation Tooling [Verified]
+- **Tests**: `TST-PRO-039` | **Tickets**: `ATT-5830`
+- **Implementation**: `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/hoechstmass_config.json`, `.env.jira.example`, `tools/hoechstmass/.env.jira.example`, `.agents/skills/jira-workflow/SKILL.md`, `tools/hoechstmass/.agents/skills/jira-workflow/SKILL.md`, `tools/hoechstmass/README.md`, `tools/hoechstmass/tests/test_jira_datacenter.py`
+- **Rationale**: Support enterprise on-premise Jira Data Center (and Jira Server) deployments for automotive ASPICE development environments where Jira Cloud is restricted, accommodating Personal Access Token (PAT) authentication, corporate custom CA certificates, username-based assignee payloads, Epic Link custom fields for top-level issues, and REST API v2 JQL search routing while maintaining 100% backward compatibility with Jira Cloud.
+- **Description**:
+  1. The CLI tools `tools/jira_util.py` and `tools/hoechstmass/tools/jira_util.py` SHALL support declarative deployment type configuration (`deployment_type: "datacenter" | "cloud"` in `hoechstmass_config.json` and `JIRA_DEPLOYMENT` env var), defaulting strictly to `"cloud"`.
+  2. In Data Center mode, the tooling SHALL support Personal Access Token authentication via `Authorization: Bearer <token>` when `JIRA_API_TOKEN` is supplied without username, while continuing to support Basic Auth when `JIRA_USER` is configured.
+  3. In Data Center mode, the tooling SHALL support corporate CA certificate bundles via `JIRA_CA_BUNDLE` / `ca_bundle` and an optional `ssl_verify` toggle for internal TLS termination contexts.
+  4. In Data Center mode, issue and subtask assignment SHALL emit `{"name": "<username>"}` in the assignee payload instead of `{"accountId": "..."}`, and parse `fields.assignee.name` when inspecting active assignments.
+  5. In Data Center mode, linking top-level issues (Stories, Tasks, Bugs) to Epics SHALL populate the configured Epic Link custom field (default `customfield_10014`, configurable via `hoechstmass_config.json: epic_link_field`) instead of `fields.parent`, while sub-tasks SHALL strictly continue using `fields.parent` in both deployments.
+  6. In Data Center mode, JQL searches SHALL route to the `/rest/api/2/search` endpoint instead of Cloud `/rest/api/3/search/jql`.
+  7. Parity between `tools/jira_util.py` and `tools/hoechstmass/tools/jira_util.py` SHALL be maintained identically (`Rule 36`).
+  8. Automated unit and contract tests in `tools/hoechstmass/tests/test_jira_datacenter.py` SHALL verify Bearer auth headers, CA bundle passing, assignee format dispatch, Epic Link custom field routing, and API v2 search query generation.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `deployment_type: "datacenter"` configured in `hoechstmass_config.json` or `JIRA_DEPLOYMENT=datacenter`,
+• *When* an HTTP request is dispatched with `JIRA_API_TOKEN`,
+• *Then* the request SHALL include `Authorization: Bearer <token>` header without Basic Auth base64 encoding.
+• *Given* `JIRA_CA_BUNDLE` pointing to a corporate CA certificate file,
+• *When* HTTPS requests are sent to the Jira server,
+• *Then* the custom SSL context SHALL load and verify against the specified CA bundle.
+• *Given* a task assignment action under Data Center mode,
+• *When* updating the assignee,
+• *Then* the request payload SHALL contain `{"name": "<username>"}`.
+• *Given* an issue creation or edit linking a Story or Bug to an Epic under Data Center mode,
+• *When* the payload is generated,
+• *Then* it SHALL set the Epic Link custom field (`customfield_10014`) and omit `fields.parent`.
+• *Given* subtask creation under Data Center mode,
+• *When* the subtask payload is generated,
+• *Then* it SHALL strictly retain `fields.parent = {"key": "<PARENT_KEY>"}`.
+• *Given* a JQL query under Data Center mode,
+• *When* executed via `search_issues`,
+• *Then* the request SHALL target `/rest/api/2/search`.
+• *Given* existing Jira Cloud configuration (`deployment_type: "cloud"`),
+• *When* commands are executed,
+• *Then* 100% existing behavior, Basic Auth, accountId assignment, and `/rest/api/3/search/jql` endpoints SHALL be preserved.
+
+**Invariants**: Zero runtime changes to `app/src/main/`; existing Jira Cloud workflows remain 100% backward-compatible; composite commands (`submit-stage`, `gate-verdict`) maintain identical subtask transitions; secret masking (`REQ-PRO-021`) strictly enforced.
+
+
 
 
 

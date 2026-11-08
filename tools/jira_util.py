@@ -4,6 +4,7 @@ import base64
 import json
 import os
 import re
+import ssl
 import sys
 from urllib.parse import urlencode
 
@@ -40,30 +41,143 @@ ROLE_ACCOUNT_IDS = {
 
 STORY_POINTS_FIELD = "customfield_10016"
 
-def get_account_id_for_role(role_or_account_id, config=None):
+DEFAULT_CONFIG_LOCATIONS = [
+    os.path.join(os.path.dirname(__file__), "hoechstmass", "hoechstmass_config.json"),
+    os.path.join(os.path.dirname(__file__), "hoechstmass_config.json"),
+    os.path.join(os.path.dirname(__file__), "..", "tools", "hoechstmass", "hoechstmass_config.json"),
+]
+
+def load_hoechstmass_config(custom_path=None):
+    paths = [custom_path] if custom_path else DEFAULT_CONFIG_LOCATIONS
+    for p in paths:
+        if p and os.path.exists(p):
+            with open(p, "r", encoding="utf-8") as f:
+                return json.load(f)
+    return {
+        "deployment_type": "cloud",
+        "custom_fields": {
+            "story_points": "customfield_10016",
+            "epic_link": "customfield_10014",
+            "sprint": "customfield_10020"
+        }
+    }
+
+def is_datacenter(config=None, h_config=None):
+    """Determines whether active deployment is Jira Data Center (or Server) vs Jira Cloud."""
+    if config is None:
+        config = get_config()
+    env_deploy = config.get("JIRA_DEPLOYMENT") or config.get("JIRA_DEPLOYMENT_TYPE")
+    if env_deploy:
+        return env_deploy.strip().lower() in ("datacenter", "data_center", "server", "onprem", "on_premise")
+    if h_config is None:
+        h_config = load_hoechstmass_config()
+    cfg_deploy = h_config.get("deployment_type") or h_config.get("deployment")
+    if cfg_deploy:
+        return str(cfg_deploy).strip().lower() in ("datacenter", "data_center", "server", "onprem", "on_premise")
+    return False
+
+def get_epic_link_field(config=None, h_config=None):
+    """Resolves Epic Link custom field key for Jira Data Center (defaults to customfield_10014)."""
+    if config is None:
+        config = get_config()
+    env_field = config.get("JIRA_EPIC_LINK_FIELD") or config.get("JIRA_CUSTOMFIELD_EPIC_LINK")
+    if env_field:
+        return env_field.strip()
+    if h_config is None:
+        h_config = load_hoechstmass_config()
+    custom_fields = h_config.get("custom_fields", {})
+    if "epic_link" in custom_fields:
+        return custom_fields["epic_link"]
+    return "customfield_10014"
+
+def get_search_endpoint(config=None, h_config=None):
+    """Returns REST API endpoint for JQL searches based on deployment type."""
+    if config is None:
+        config = get_config()
+    base_url = config.get("JIRA_URL", "").rstrip("/")
+    if is_datacenter(config, h_config):
+        return f"{base_url}/rest/api/2/search"
+    return f"{base_url}/rest/api/3/search/jql"
+
+def get_ssl_context(config=None):
+    """Constructs SSLContext supporting corporate CA bundles and verification toggles."""
+    if config is None:
+        config = get_config()
+    ca_bundle = config.get("JIRA_CA_BUNDLE") or config.get("ca_bundle")
+    ssl_verify = str(config.get("JIRA_SSL_VERIFY", config.get("ssl_verify", "true"))).lower() not in ("false", "0", "no")
+    if not ssl_verify:
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        return ctx
+    elif ca_bundle and os.path.exists(ca_bundle):
+        return ssl.create_default_context(cafile=ca_bundle)
+    return None
+
+def resolve_assignee_identifier(role_or_account_id, config=None, h_config=None):
+    """Resolves assignee identifier: username for Jira Data Center, accountId for Jira Cloud."""
+    if not role_or_account_id:
+        return None
+    if config is None:
+        config = get_config()
+    if h_config is None:
+        h_config = load_hoechstmass_config()
+    role_key = str(role_or_account_id).lower().strip()
+    if is_datacenter(config, h_config):
+        env_name_key = f"JIRA_{role_key.upper()}_NAME"
+        if env_name_key in config and config[env_name_key]:
+            return config[env_name_key]
+        env_user_key = f"JIRA_{role_key.upper()}_USER"
+        if env_user_key in config and config[env_user_key]:
+            return config[env_user_key]
+        env_acc_key = f"JIRA_{role_key.upper()}_ACCOUNT_ID"
+        if env_acc_key in config and config[env_acc_key]:
+            return config[env_acc_key]
+        roles = h_config.get("roles", {})
+        if role_key in roles:
+            return roles[role_key]
+        return role_or_account_id
+    else:
+        return get_account_id_for_role(role_or_account_id, config=config)
+
+def get_account_id_for_role(role_or_account_id, config=None, h_config=None):
     if not role_or_account_id:
         return None
     if config is None:
         config = get_config()
     role_key = str(role_or_account_id).lower().strip()
     env_key = f"JIRA_{role_key.upper()}_ACCOUNT_ID"
-    if env_key in config:
+    if env_key in config and config[env_key]:
         return config[env_key]
+    if h_config is not None and "roles" in h_config:
+        roles = h_config.get("roles", {})
+        if role_key in roles:
+            return roles[role_key]
     if role_key in ROLE_ACCOUNT_IDS:
         return ROLE_ACCOUNT_IDS[role_key]
     return role_or_account_id
 
 def assign_issue(issue_key, target_role_or_account_id, role="agent1"):
-    account_id = get_account_id_for_role(target_role_or_account_id)
-    if not account_id:
-        print(f"Error: Could not resolve account ID for '{target_role_or_account_id}'.", file=sys.stderr)
-        return
     config = get_config()
-    url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}/assignee"
-    payload = {"accountId": account_id}
+    if is_datacenter(config):
+        username = resolve_assignee_identifier(target_role_or_account_id, config=config)
+        if not username:
+            print(f"Error: Could not resolve username for '{target_role_or_account_id}'.", file=sys.stderr)
+            return
+        url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}/assignee"
+        payload = {"name": username}
+        target_disp = f"{target_role_or_account_id} ({username})"
+    else:
+        account_id = get_account_id_for_role(target_role_or_account_id, config=config)
+        if not account_id:
+            print(f"Error: Could not resolve account ID for '{target_role_or_account_id}'.", file=sys.stderr)
+            return
+        url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}/assignee"
+        payload = {"accountId": account_id}
+        target_disp = f"{target_role_or_account_id} ({account_id})"
     try:
         jira_request(url, method="PUT", payload=payload, role=role)
-        print(f"Assigned {issue_key} to {target_role_or_account_id} ({account_id}).")
+        print(f"Assigned {issue_key} to {target_disp}.")
     except Exception as e:
         print(f"Warning: Failed to assign {issue_key} to {target_role_or_account_id}: {e}", file=sys.stderr)
 
@@ -79,6 +193,9 @@ def get_config():
                 k, v = line.strip().split("=", 1)
                 config[k.strip()] = v.strip()
     return config
+
+def load_env_config(custom_path=None):
+    return get_config()
 
 def resolve_account(role="agent1", config=None):
     """
@@ -103,6 +220,11 @@ def resolve_account(role="agent1", config=None):
     if role_user and role_token:
         return role_user, role_token
 
+    # In Data Center or when Bearer PAT is enabled, role token alone is sufficient
+    auth_type = (config.get("JIRA_AUTH_TYPE") or "").lower()
+    if role_token and (is_datacenter(config) or auth_type == "bearer"):
+        return role_user or "", role_token
+
     # If partial definition (one is present, other is empty/missing), advise and fallback
     if role_user or role_token:
         missing = role_token_key if role_user else role_user_key
@@ -110,12 +232,22 @@ def resolve_account(role="agent1", config=None):
               f"Falling back atomically to default (JIRA_USER, JIRA_TOKEN).", file=sys.stderr)
 
     default_user = config.get("JIRA_USER")
-    default_token = config.get("JIRA_TOKEN")
+    default_token = config.get("JIRA_TOKEN") or config.get("JIRA_API_TOKEN")
     if default_user and default_token:
         return default_user, default_token
 
+    if default_token and (is_datacenter(config) or auth_type == "bearer"):
+        return default_user or "", default_token
+
     print(f"Error: No Jira credentials found for role '{role}' and no default JIRA_USER/JIRA_TOKEN in config.", file=sys.stderr)
     sys.exit(1)
+
+def mask_secret(text):
+    if not text:
+        return ""
+    if len(text) <= 6:
+        return "***"
+    return text[:2] + "***" + text[-2:]
 
 def sanitize_secrets(text, secrets_to_mask=None):
     """Sanitizes sensitive tokens and Basic Auth credentials from text before printing."""
@@ -138,10 +270,18 @@ def sanitize_secrets(text, secrets_to_mask=None):
 
 def get_headers(config, role="agent1"):
     user, token = resolve_account(role, config)
-    auth_str = f"{user}:{token}"
-    encoded_auth = base64.b64encode(auth_str.encode("ascii")).decode("ascii")
+    auth_type = (config.get("JIRA_AUTH_TYPE") or "").lower()
+    is_dc = is_datacenter(config)
+    if auth_type == "bearer" or (is_dc and not user) or (auth_type != "basic" and is_dc and token and not user):
+        auth_header = f"Bearer {token}"
+    elif auth_type == "bearer":
+        auth_header = f"Bearer {token}"
+    else:
+        auth_str = f"{user}:{token}" if user else f":{token}"
+        encoded_auth = base64.b64encode(auth_str.encode("utf-8")).decode("utf-8")
+        auth_header = f"Basic {encoded_auth}"
     return {
-        "Authorization": f"Basic {encoded_auth}",
+        "Authorization": auth_header,
         "Accept": "application/json",
         "Content-Type": "application/json"
     }
@@ -202,9 +342,10 @@ def jira_request(url, method="GET", payload=None, is_binary=False, role="agent1"
         req.add_header(k, v)
 
     user, token = resolve_account(role, config)
+    ssl_context = get_ssl_context(config)
 
     try:
-        with urllib.request.urlopen(req) as response:
+        with urllib.request.urlopen(req, context=ssl_context) as response:
             if is_binary:
                 return response.read()
             body = response.read().decode("utf-8")
@@ -300,7 +441,7 @@ def show_issue(issue_key, role="agent1"):
     print(f"\n*Status*: {status}")
 
     assignee = issue['fields'].get('assignee')
-    assignee_name = assignee.get('displayName', 'Unassigned') if assignee else 'Unassigned'
+    assignee_name = (assignee.get('displayName') or assignee.get('name') or 'Unassigned') if assignee else 'Unassigned'
     print(f"\n*Assignee*: {assignee_name}")
 
     priority = issue['fields'].get('priority')
@@ -1125,7 +1266,7 @@ def add_comment(issue_key, text, role="agent1"):
 
 def search_issues(jql, role="agent1"):
     config = get_config()
-    url = f"{config['JIRA_URL']}/rest/api/3/search/jql"
+    url = get_search_endpoint(config)
     payload = {
         "jql": jql,
         "fields": ["summary", "status", "issuetype"]
@@ -1164,11 +1305,18 @@ def update_issue_summary(issue_key, summary, role="agent1"):
 def set_parent(issue_key, parent_key, role="agent1"):
     config = get_config()
     url = f"{config['JIRA_URL']}/rest/api/2/issue/{issue_key}"
-    payload = {
-        "fields": {
-            "parent": {"key": parent_key}
+    if is_datacenter(config):
+        payload = {
+            "fields": {
+                get_epic_link_field(config): parent_key
+            }
         }
-    }
+    else:
+        payload = {
+            "fields": {
+                "parent": {"key": parent_key}
+            }
+        }
     jira_request(url, method="PUT", payload=payload, role=role)
     print(f"Parent of {issue_key} updated to {parent_key}.")
 
@@ -1271,7 +1419,7 @@ def rank_at_top_of_backlog(issue_key, role="agent1"):
                     break
         if not top_key:
             data = jira_request(
-                f"{base}/rest/api/3/search/jql",
+                get_search_endpoint(config),
                 method="POST",
                 payload={
                     "jql": f"project = ATT AND sprint is EMPTY AND issuetype != Sub-task AND key != {issue_key} ORDER BY rank ASC",
@@ -1371,7 +1519,10 @@ def create_issue(summary, description, issuetype_id="10007", parent_key=None, ro
     }
     valid_epic_key = resolve_valid_epic_key(parent_key, role=role) if parent_key else None
     if valid_epic_key:
-        fields["parent"] = {"key": valid_epic_key}
+        if is_datacenter(config):
+            fields[get_epic_link_field(config)] = valid_epic_key
+        else:
+            fields["parent"] = {"key": valid_epic_key}
     if fix_version:
         fields["fixVersions"] = [{"name": fix_version}]
     if priority:

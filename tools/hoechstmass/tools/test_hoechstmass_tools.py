@@ -16,6 +16,11 @@ from jira_util import (
     mask_secret,
     get_account_id_for_role,
     resolve_account,
+    is_datacenter,
+    get_epic_link_field,
+    get_search_endpoint,
+    get_headers,
+    resolve_assignee_identifier,
 )
 from verify_requirement_governance import (
     load_config,
@@ -73,6 +78,21 @@ class TestHoechstmassConfig(unittest.TestCase):
         u2, t2 = resolve_account("coordinator", config=env_config)
         self.assertEqual(u2, "fallback@example.com")
         self.assertEqual(t2, "fallback_token")
+
+    def test_datacenter_helpers_and_auth(self):
+        dc_config = {
+            "JIRA_URL": "https://jira.internal.corp",
+            "JIRA_DEPLOYMENT": "datacenter",
+            "JIRA_AGENT1_NAME": "dc_agent1_user",
+            "JIRA_TOKEN": "datacenter_pat_token_abc"
+        }
+        self.assertTrue(is_datacenter(dc_config))
+        self.assertEqual(get_search_endpoint(dc_config), "https://jira.internal.corp/rest/api/2/search")
+        self.assertEqual(get_epic_link_field(dc_config), "customfield_10014")
+        self.assertEqual(resolve_assignee_identifier("agent1", config=dc_config), "dc_agent1_user")
+
+        headers = get_headers(dc_config, role="agent1")
+        self.assertEqual(headers["Authorization"], "Bearer datacenter_pat_token_abc")
 
 
 class TestGovernanceVerification(unittest.TestCase):
