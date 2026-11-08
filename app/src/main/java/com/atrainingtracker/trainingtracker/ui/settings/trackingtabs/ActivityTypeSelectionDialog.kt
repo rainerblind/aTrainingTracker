@@ -37,7 +37,6 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.ActivityType
 
 import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetContent
-import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 
 @Composable
 fun ActivityTypeSelectionDialog(
@@ -47,10 +46,7 @@ fun ActivityTypeSelectionDialog(
     AppBottomSheetContent(
         title = stringResource(R.string.choose_activity_type),
         icon = Icons.Default.Edit,
-        onDismissRequest = onDismiss,
-        actions = {
-            AppDialogActions.CancelOnly(onCancel = onDismiss)
-        }
+        onDismissRequest = onDismiss
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),

@@ -7701,6 +7701,22 @@
   4. *Tier 1 Targeted Unit Test Regression (`TST-UI-472.4`)*:
   • Execute targeted test suites (`com.atrainingtracker.trainingtracker.ui.settings.tuning.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`) asserting 100% pass rate.
 
+### TST-UI-473: **Modal Bottom Sheet Close Button Default Contract & Activity Type Selection Test Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-473`
+- **Component**: `AppModalBottomSheet.kt`, `ActivityTypeSelectionDialog.kt`, `AppModalBottomSheetTest.kt`
+- **Jira**: `ATT-5873`
+- **Test Description**:
+  1. *Default Close Button Contract Reflection / Logic Test (`TST-UI-473.1`, `AppModalBottomSheetTest.kt`)*:
+  • Verify `AppModalBottomSheet` and `AppBottomSheetContent` function signatures declare parameter `actions` before `showCloseButton`.
+  • Verify contract behavior: when `actions == null`, default close button is enabled (`showCloseButton = true`); when `actions != null`, default close button is suppressed (`showCloseButton = false`).
+  2. *Activity Type Selection Dialog Simplification Audit (`TST-UI-473.2`)*:
+  • Verify `ActivityTypeSelectionDialog` does not configure bottom actions (`actions == null`), presenting only the header close icon alongside item tap selection.
+  3. *Cross-Caller Source Compatibility Audit (`TST-UI-473.3`)*:
+  • Verify compilation and source compatibility across all existing modal bottom sheet callers (`StravaSettingsDialog`, `DropboxSyncDialog`, `GDriveSyncDialog`, etc.).
+  4. *Tier 1 Targeted Unit Test Regression (`TST-UI-473.4`)*:
+  • Execute targeted test suite (`com.atrainingtracker.trainingtracker.ui.components.core.*`, `com.atrainingtracker.trainingtracker.ui.settings.trackingtabs.*`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+
 
 
 

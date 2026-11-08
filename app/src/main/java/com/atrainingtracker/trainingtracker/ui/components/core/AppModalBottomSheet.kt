@@ -80,12 +80,12 @@ import com.atrainingtracker.R
  * @param icon Optional leading icon (vector) displayed before the title.
  * @param iconPainter Optional leading icon (painter/drawable) displayed before the title.
  * @param iconTint Tint applied to the leading icon (defaults to primary; use [Color.Unspecified] for multi-color sport logos).
- * @param showCloseButton Whether to render a close button in the top right.
  * @param scrollable Whether the content body should automatically provide vertical scrolling.
  * @param headerActions Optional composable slot for actions in the header row.
  * @param actions Optional composable slot for bottom action buttons (horizontal [RowScope]).
  *        Per Rule 73, whenever a dialog has >= 3 buttons or long localized labels, stack CTAs
  *        vertically in [content] and place only a single dismiss action in [actions].
+ * @param showCloseButton Whether to render a close button in the top right (defaults to `true` when [actions] is null, and `false` when [actions] is provided; can be explicitly overridden).
  * @param content Composable slot containing the main content.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -98,10 +98,10 @@ fun AppModalBottomSheet(
     icon: ImageVector? = null,
     iconPainter: Painter? = null,
     iconTint: Color = MaterialTheme.colorScheme.primary,
-    showCloseButton: Boolean = true,
     scrollable: Boolean = true,
     headerActions: (@Composable RowScope.() -> Unit)? = null,
     actions: (@Composable RowScope.() -> Unit)? = null,
+    showCloseButton: Boolean = (actions == null),
     content: @Composable ColumnScope.() -> Unit
 ) {
     ModalBottomSheet(
@@ -119,10 +119,10 @@ fun AppModalBottomSheet(
             icon = icon,
             iconPainter = iconPainter,
             iconTint = iconTint,
-            showCloseButton = showCloseButton,
             scrollable = scrollable,
             headerActions = headerActions,
             actions = actions,
+            showCloseButton = showCloseButton,
             content = content
         )
     }
@@ -138,10 +138,10 @@ fun AppModalBottomSheet(
  * @param icon Optional leading icon (vector) displayed before the title.
  * @param iconPainter Optional leading icon (painter/drawable) displayed before the title.
  * @param iconTint Tint applied to the leading icon (defaults to primary; use [Color.Unspecified] for multi-color sport logos).
- * @param showCloseButton Whether to render a close button in the top right.
  * @param scrollable Whether the content body should automatically provide vertical scrolling.
  * @param headerActions Optional composable slot for actions in the header row.
  * @param actions Optional composable slot for bottom action buttons.
+ * @param showCloseButton Whether to render a close button in the top right (defaults to `true` when [actions] is null, and `false` when [actions] is provided; can be explicitly overridden).
  * @param content Composable slot containing the main content.
  */
 @Composable
@@ -152,10 +152,10 @@ fun AppBottomSheetContent(
     icon: ImageVector? = null,
     iconPainter: Painter? = null,
     iconTint: Color = MaterialTheme.colorScheme.primary,
-    showCloseButton: Boolean = true,
     scrollable: Boolean = true,
     headerActions: (@Composable RowScope.() -> Unit)? = null,
     actions: (@Composable RowScope.() -> Unit)? = null,
+    showCloseButton: Boolean = (actions == null),
     content: @Composable ColumnScope.() -> Unit
 ) {
     Surface(
@@ -175,10 +175,10 @@ fun AppBottomSheetContent(
                 icon = icon,
                 iconPainter = iconPainter,
                 iconTint = iconTint,
-                showCloseButton = showCloseButton,
                 scrollable = scrollable,
                 headerActions = headerActions,
                 actions = actions,
+                showCloseButton = showCloseButton,
                 content = content
             )
         }
@@ -192,10 +192,10 @@ private fun AppBottomSheetBody(
     icon: ImageVector? = null,
     iconPainter: Painter? = null,
     iconTint: Color = MaterialTheme.colorScheme.primary,
-    showCloseButton: Boolean = true,
     scrollable: Boolean = true,
     headerActions: (@Composable RowScope.() -> Unit)? = null,
     actions: (@Composable RowScope.() -> Unit)? = null,
+    showCloseButton: Boolean = (actions == null),
     content: @Composable ColumnScope.() -> Unit
 ) {
     Column(

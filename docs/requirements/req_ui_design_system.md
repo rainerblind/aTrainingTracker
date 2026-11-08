@@ -14277,6 +14277,45 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: 100% 9-language localization parity across all resource files; zero regressions in preferences persistence or tuning computations; 100% clean-room test pass rate.
 
+### REQ-UI-473: Modal Bottom Sheet Close Button Elimination for Bottom Action Bar Dialogs & Activity Type Selection Polish [Verified]
+- **Tests**: `TST-UI-473` | **Tickets**: `ATT-5873`
+- **Implementation**: `AppModalBottomSheet.kt`, `ActivityTypeSelectionDialog.kt`, `AppModalBottomSheetTest.kt`
+- **Rationale**: In `AppModalBottomSheet.kt`, `showCloseButton: Boolean = true` was statically defaulted regardless of whether a bottom action bar (`actions != null`, e.g. `AppDialogActions.SaveCancel`) was present. This created redundant dismissal controls (both a top-right `✕` and a bottom `Abbrechen` / Cancel button) across settings and sync sheets (`Dropbox`, `Google Drive`, `Export`, `Display`, `Units`, `Strava`, `EditEquipmentDialog`). Furthermore, `ActivityTypeSelectionDialog.kt` unnecessarily rendered both a top-right `✕` and a bottom `AppDialogActions.CancelOnly` row for single-tap list selections.
+- **Description**:
+1. *Dynamic Default for Modal Bottom Sheet Close Button (`REQ-UI-473.1`)*:
+   • In `AppModalBottomSheet.kt`, `AppModalBottomSheet`, `AppBottomSheetContent`, and private `AppBottomSheetBody` SHALL position `actions: (@Composable RowScope.() -> Unit)? = null` before `showCloseButton` in their parameter lists and SHALL dynamically default `showCloseButton: Boolean = (actions == null)`.
+   • When a bottom action bar is supplied (`actions != null`), the top-right `✕` close button SHALL NOT render by default.
+   • When no bottom action bar is supplied (`actions == null`), the top-right `✕` close button SHALL render by default.
+   • Callers SHALL retain the ability to explicitly override `showCloseButton` (`true` or `false`) via named arguments.
+2. *Activity Type Selection Dialog Simplification (`REQ-UI-473.2`)*:
+   • In `ActivityTypeSelectionDialog.kt`, the redundant bottom action bar (`actions = { AppDialogActions.CancelOnly(onCancel = onDismiss) }`) SHALL be removed.
+   • The dialog SHALL present solely the header `✕` close button (`actions == null`) alongside list item selection taps (`onTypeSelected(type)` + `onDismiss()`).
+3. *Strava Settings Dialog Synergy (`REQ-UI-473.3`)*:
+   • In `StravaSettingsDialog.kt`, the presence of bottom action buttons (`actions = { ... }`) SHALL automatically eliminate the duplicate top-right `✕` button via `AppModalBottomSheet`'s dynamic default, without requiring bespoke call-site parameter overrides.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-UI-473`, refining `REQ-UI-148` (*Universal Modal Bottom Sheet*) and `REQ-UI-149` (*Modernized Modal Bottom Sheet Dialogs & Selection Flows*).
+2. *Historical Origin & Commit Trace*: Commit `e8c7a75c` (ATT-1034, 2026-09-15) and commit `fceafd16` (ATT-1072, 2026-09-16).
+3. *Root Reason for Existing Formulation*: Early modal bottom sheets had no bottom action bar, requiring an explicit top-right close icon. When bottom action rows were added, `showCloseButton = true` remained an unconditioned static default.
+4. *Preservation of Core Invariants*: Sheets with `actions == null` (e.g. `PairingProtocolBottomSheet`, `AntServicesStatusSheet`, `ClusterInfoDialog`) continue showing top-right `✕` by default; explicit parameter overrides (`showCloseButton = true/false`) remain fully supported; named argument caller source compatibility is 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `AppModalBottomSheet` or `AppBottomSheetContent` rendered with `actions != null`,
+• *When* `showCloseButton` is not explicitly specified,
+• *Then* `showCloseButton` defaults to `false` and no top-right `✕` button is rendered.
+• *Given* `AppModalBottomSheet` or `AppBottomSheetContent` rendered with `actions == null`,
+• *When* `showCloseButton` is not explicitly specified,
+• *Then* `showCloseButton` defaults to `true` and the top-right `✕` button is rendered.
+• *Given* `AppModalBottomSheet` or `AppBottomSheetContent`,
+• *When* `showCloseButton` is explicitly passed as `true` or `false`,
+• *Then* the explicit parameter value SHALL be respected regardless of `actions`.
+• *Given* `ActivityTypeSelectionDialog`,
+• *When* rendered,
+• *Then* it displays the header `✕` close button and no bottom action bar.
+
+**Invariants**: Named argument caller source compatibility across all existing sheets; edge-to-edge window insets (`navigationBarsPadding()`, `imePadding()`) and drag handles preserved; 100% clean-room test pass rate.
+
+
 
 
 
