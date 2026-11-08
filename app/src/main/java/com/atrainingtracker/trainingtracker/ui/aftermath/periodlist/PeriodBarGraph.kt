@@ -68,6 +68,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
+import java.text.DecimalFormatSymbols
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -244,15 +245,17 @@ fun calculateSportSegments(
 }
 
 /**
- * Formats metric values into compact top-bar labels with sub-hour precision (REQ-PER-018.2, REQ-PER-023).
+ * Formats metric values into compact top-bar labels with sub-hour precision (REQ-PER-018.2, REQ-PER-023, REQ-PER-028.3).
  */
 fun formatMetricValue(
     value: Double,
     metric: PeriodBarMetric,
     periodType: PeriodType,
-    unit: MyUnits = TrainingApplication.getUnit()
+    unit: MyUnits = TrainingApplication.getUnit(),
+    locale: Locale = Locale.getDefault()
 ): String {
     if (value <= 0.0) return ""
+    val decimalSep = DecimalFormatSymbols.getInstance(locale).decimalSeparator
     return when (metric) {
         PeriodBarMetric.DURATION -> {
             val totalSec = value.toLong()
@@ -268,7 +271,7 @@ fun formatMetricValue(
                         val frac = (minutes / 60.0 * 10).roundToInt()
                         if (frac >= 10) "${hours + 1}h"
                         else if (frac == 0) "${hours}h"
-                        else String.format(Locale.US, "%d.%dh", hours, frac)
+                        else "${hours}${decimalSep}${frac}h"
                     }
                 }
                 else -> "${(totalSec / 3600.0).roundToInt()}h"
@@ -278,15 +281,15 @@ fun formatMetricValue(
             if (unit == MyUnits.IMPERIAL) {
                 val miles = value / BANALService.METER_PER_MILE
                 when {
-                    miles < 0.1 -> "<0.1mi"
-                    miles < 10.0 -> String.format(Locale.US, "%.1fmi", miles)
+                    miles < 0.1 -> "<0${decimalSep}1mi"
+                    miles < 10.0 -> String.format(locale, "%.1fmi", miles)
                     else -> "${miles.roundToInt()}mi"
                 }
             } else {
                 val meters = value
                 when {
                     meters < 1000.0 -> "${meters.roundToInt()}m"
-                    meters < 10000.0 -> String.format(Locale.US, "%.1fkm", meters / 1000.0)
+                    meters < 10000.0 -> String.format(locale, "%.1fkm", meters / 1000.0)
                     else -> "${(meters / 1000.0).roundToInt()}km"
                 }
             }

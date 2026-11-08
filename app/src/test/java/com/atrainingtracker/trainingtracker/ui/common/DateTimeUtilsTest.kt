@@ -58,4 +58,38 @@ class DateTimeUtilsTest {
         assertEquals("invalid-date-string", DateTimeUtils.formatIsoDate("invalid-date-string"))
         assertEquals("2024-99-99", DateTimeUtils.formatIsoDate("2024-99-99"))
     }
+
+    @Test
+    fun formatPeriodDateRange_germanLocale_formatsDayFirst_TST_PER_036_1() {
+        // Monday Nov 2, 2026 00:00:00 UTC = 1793577600
+        val startS = 1793577600L
+        val endS = startS + 7 * 86400 - 1
+        val result = DateTimeUtils.formatPeriodDateRange(startS, endS, Locale.GERMANY, java.time.ZoneOffset.UTC)
+        assertEquals("2. Nov. - 8. Nov.", result)
+    }
+
+    @Test
+    fun formatPeriodDateRange_usLocale_formatsMonthFirst_TST_PER_036_1() {
+        // Monday Nov 2, 2026 00:00:00 UTC = 1793577600
+        val startS = 1793577600L
+        val endS = startS + 7 * 86400 - 1
+        val result = DateTimeUtils.formatPeriodDateRange(startS, endS, Locale.US, java.time.ZoneOffset.UTC)
+        assertEquals("Nov 2 - Nov 8", result)
+    }
+
+    @Test
+    fun formatPeriodDateRange_invalidOrZeroTimestamps_returnsEmpty() {
+        assertEquals("", DateTimeUtils.formatPeriodDateRange(0L, 0L))
+        assertEquals("", DateTimeUtils.formatPeriodDateRange(-1L, 1000L))
+        assertEquals("", DateTimeUtils.formatPeriodDateRange(1000L, -1L))
+    }
+
+    @Test
+    fun resolveDateRangePattern_supportsMultipleLocales() {
+        assertEquals("d. MMM", DateTimeUtils.resolveDateRangePattern(Locale.GERMANY))
+        assertEquals("M月d日", DateTimeUtils.resolveDateRangePattern(Locale.JAPAN))
+        assertEquals("d MMM", DateTimeUtils.resolveDateRangePattern(Locale.FRANCE))
+        assertEquals("d MMM", DateTimeUtils.resolveDateRangePattern(Locale.forLanguageTag("es-ES")))
+        assertEquals("MMM d", DateTimeUtils.resolveDateRangePattern(Locale.US))
+    }
 }

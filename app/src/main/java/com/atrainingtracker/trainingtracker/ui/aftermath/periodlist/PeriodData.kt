@@ -130,6 +130,22 @@ data class PeriodSummary(
     val sortKey: String // Used for sorting
 )
 
+/**
+ * Resolves the localized date range dynamically for weekly periods according to [locale],
+ * falling back to stored [periodDateRange] (REQ-PER-028.2).
+ */
+fun PeriodSummary.getLocalizedDateRange(locale: java.util.Locale = java.util.Locale.getDefault()): String {
+    if (periodType == PeriodType.WEEK && startTimestampS > 0 && endTimestampS > 0) {
+        val formatted = com.atrainingtracker.trainingtracker.ui.common.DateTimeUtils.formatPeriodDateRange(
+            startTimestampS,
+            endTimestampS,
+            locale
+        )
+        if (formatted.isNotBlank()) return formatted
+    }
+    return periodDateRange
+}
+
 data class PeriodPeakMarker(
     val workoutId: Long,
     val pos: com.google.android.gms.maps.model.LatLng,
