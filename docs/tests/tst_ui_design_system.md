@@ -7716,6 +7716,25 @@
   4. *Tier 1 Targeted Unit Test Regression (`TST-UI-473.4`)*:
   • Execute targeted test suite (`com.atrainingtracker.trainingtracker.ui.components.core.*`, `com.atrainingtracker.trainingtracker.ui.settings.trackingtabs.*`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
+### TST-UI-474: **Import & Backup UI Polish, Strava Archive Tuning & Heading Deduplication Test Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-474`
+- **Component**: `ImportBackupTabsScreen.kt`, `BackupTabContent.kt`, `RestoreTabContent.kt`, `res/values*/strings.xml`, `RestoreCardContractTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-5874`
+- **Test Description**:
+  1. *9-Language Localization Audit (`TST-UI-474.1`, `TranslationParityTest.kt`)*:
+  • Verify zero missing entries across all 9 supported locales for `merge_from_backup_file` and `backup_now`.
+  2. *Restore Card Iconography & Deduplication Contract (`TST-UI-474.2`, `RestoreCardContractTest.kt`)*:
+  • Verify Dropbox restore button renders `dropbox_logo_blue` with `tint = Color.Unspecified`.
+  • Verify Google Drive restore button renders `ic_google_drive` with `tint = Color.Unspecified`.
+  • Verify incremental import button renders `Icons.Default.CallMerge` and binds `R.string.merge_from_backup_file`.
+  3. *Backup Tab Header & Switch Layout Contract (`TST-UI-474.3`)*:
+  • Verify `BackupTabContentLayout` renders `R.string.backup_now` on backup button and header row contains `Switch` for automated backups.
+  4. *Strava Archive Pre-Import Tuning Contract (`TST-UI-474.4`)*:
+  • Verify `PreImportTuningBottomSheet` supports `showStravaUploadOption` and suppresses Strava upload toggle when false.
+  5. *Tier 1 Targeted Unit Test Regression (`TST-UI-474.5`)*:
+  • Execute targeted test suite (`com.atrainingtracker.trainingtracker.migration.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+
 
 
 

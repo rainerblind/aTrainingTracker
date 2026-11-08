@@ -14315,6 +14315,45 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Named argument caller source compatibility across all existing sheets; edge-to-edge window insets (`navigationBarsPadding()`, `imePadding()`) and drag handles preserved; 100% clean-room test pass rate.
 
+### REQ-UI-474: Import & Backup UI Polish, Strava Archive Tuning & Heading Deduplication [Verified]
+- **Tests**: `TST-UI-474` | **Tickets**: `ATT-5874`
+- **Implementation**: `ImportBackupTabsScreen.kt`, `BackupTabContent.kt`, `RestoreTabContent.kt`, `res/values*/strings.xml`, `RestoreCardContractTest.kt`
+- **Rationale**: On `ImportBackupTabsScreen.kt` and its child composables (`BackupTabContent.kt`, `RestoreTabContent.kt`), workflow and UI consistency gaps existed: (1) Strava archive picker bypassed `PreImportTuningBottomSheet`, preventing tuning review and leaking re-upload options; (2) format import and restore buttons lacked authentic brand icons; (3) incremental import in `RestoreTabContent` inappropriately used an upward backup icon (`Icons.Default.Backup`); and (4) duplicate headings were displayed immediately above identical action buttons.
+- **Description**:
+1. *Strava Archive Pre-Import Tuning Integration (`REQ-UI-474.1`)*:
+   • In `ImportBackupTabsScreen.kt`, selecting a valid Strava export archive (`.zip`) SHALL store the URI in `pendingStravaArchiveUri` and display `PreImportTuningBottomSheet`.
+   • `PreImportTuningBottomSheet` SHALL support `showStravaUploadOption: Boolean = true`. For Strava archive imports (`pendingStravaArchiveUri != null`), `showStravaUploadOption` SHALL be `false` to prohibit re-uploading Strava data back to Strava.
+2. *Authentic Cloud Brand Iconography & Merge Icon (`REQ-UI-474.2`)*:
+   • In `FormatImportCard`, Dropbox scan buttons SHALL render leading `R.drawable.dropbox_logo_blue` with `tint = Color.Unspecified`.
+   • In `RestoreTabContent.kt`, Dropbox restore SHALL render `R.drawable.dropbox_logo_blue` and Google Drive restore SHALL render `R.drawable.ic_google_drive`, both with `tint = Color.Unspecified`.
+   • In `RestoreTabContent.kt`, the incremental import action button SHALL display `Icons.Default.CallMerge` (replacing `Icons.Default.Backup`).
+3. *Heading Deduplication & Action Button Phrasing Parity (`REQ-UI-474.3`)*:
+   • In `BackupTabContent.kt`, the primary backup button SHALL use `R.string.backup_now` ("Jetzt sichern" / "Backup Now"), deduplicating it from the card title `R.string.create_backup`.
+   • In `BackupTabContent.kt`, the automated backup card SHALL integrate the `Switch` directly into the card header row alongside `R.string.automated_backups`, eliminating the duplicate inner row title.
+   • In `RestoreTabContent.kt`, the incremental import button SHALL use `R.string.merge_from_backup_file` across all 9 supported locales (`EN, DE, ES, FR, IT, JA, NL, PL, PT`), deduplicating it from the card title `R.string.import_workouts`.
+4. *Contract Test Synchronization (`REQ-UI-474.4`)*:
+   • `RestoreCardContractTest.kt` SHALL verify authentic brand drawables (`dropbox_logo_blue`, `ic_google_drive`) and `CallMerge` icon contracts.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-UI-474`, refining `REQ-MIG-036` (*Automated Backups & Restore*) and `REQ-UI-458` (*Format Import Cards*).
+2. *Historical Origin & Commit Trace*: Commit `8020d902` (ATT-4664, 2026-10-22) and commit `523194a2` (ATT-5679, 2026-11-05).
+3. *Root Reason for Existing Formulation*: Early iterations utilized generic Material icons and duplicated card titles as quick button labels before brand icons and UI deduplication patterns were established.
+4. *Preservation of Core Invariants*: 100% 9-language translation parity without emojis; archive safety validation before tuning launch; destructive restore confirmation dialogs strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete selects a Strava `.zip` export file,
+• *When* the archive is validated,
+• *Then* `PreImportTuningBottomSheet` is displayed with cluster tolerance sliders and without the Strava upload toggle (`showStravaUploadOption = false`).
+• *Given* `RestoreTabContent`,
+• *When* rendered,
+• *Then* Dropbox restore displays `dropbox_logo_blue`, Google Drive restore displays `ic_google_drive`, and incremental merge displays `Icons.Default.CallMerge` with label `merge_from_backup_file`.
+• *Given* `BackupTabContent`,
+• *When* rendered,
+• *Then* the backup button displays `backup_now` and the automated backup switch is positioned in the card header without duplicate row text.
+
+**Invariants**: Archive validation strictly enforced; 100% 9-language parity without emojis; WorkManager background backup scheduling preserved; 100% clean-room test pass rate.
+
+
 
 
 

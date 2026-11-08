@@ -137,17 +137,17 @@ class RestoreCardContractTest {
             )
         }
 
-        // 2. Dropbox restore uses Icons.Default.CloudDownload and not Icons.Default.CloudUpload
+        // 2. Dropbox restore uses authentic R.drawable.dropbox_logo_blue and not Icons.Default.CloudUpload
         assertFalse(
             "RestoreTabContent must NOT use Icons.Default.CloudUpload",
             content.contains("Icons.Default.CloudUpload")
         )
 
-        // Check Dropbox button block has CloudDownload
+        // Check Dropbox button block has dropbox_logo_blue
         val dropboxBlock = content.substringAfter("// 3. Dropbox Restore").substringBefore("// 4. Google Drive Restore")
         assertTrue(
-            "Dropbox restore block must use Icons.Default.CloudDownload",
-            dropboxBlock.contains("Icons.Default.CloudDownload")
+            "Dropbox restore block must use R.drawable.dropbox_logo_blue",
+            dropboxBlock.contains("R.drawable.dropbox_logo_blue")
         )
         assertTrue(
             "Dropbox restore block must reference restore_from_dropbox",
@@ -169,12 +169,53 @@ class RestoreCardContractTest {
             gdriveBlock.contains("border = googleDriveRestoreBorder")
         )
         assertTrue(
-            "Google Drive restore block must use Icons.Default.CloudDownload",
-            gdriveBlock.contains("Icons.Default.CloudDownload")
+            "Google Drive restore block must use R.drawable.ic_google_drive",
+            gdriveBlock.contains("R.drawable.ic_google_drive")
         )
         assertTrue(
             "Google Drive restore block must reference restore_from_google_drive",
             gdriveBlock.contains("R.string.restore_from_google_drive")
+        )
+
+        // 4. Incremental Import block uses Icons.Default.CallMerge and merge_from_backup_file (REQ-UI-474.2 / REQ-UI-474.3)
+        val incrementalBlock = content.substringAfter("// --- Import Card").substringBefore("// --- Restore Card")
+        assertTrue(
+            "Incremental import block must use Icons.Default.CallMerge",
+            incrementalBlock.contains("Icons.Default.CallMerge")
+        )
+        assertTrue(
+            "Incremental import block must reference merge_from_backup_file",
+            incrementalBlock.contains("R.string.merge_from_backup_file")
+        )
+    }
+
+    @Test
+    fun testBackupTabContent_contract_headingDeduplication_TST_UI_474_3() {
+        val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/migration/BackupTabContent.kt")
+        val content = file.readText()
+
+        assertTrue(
+            "BackupTabContent must use R.string.backup_now on backup button to deduplicate from create_backup card title",
+            content.contains("R.string.backup_now")
+        )
+    }
+
+    @Test
+    fun testImportBackupTabsScreen_contract_stravaTuningAndDropboxBrandIcon_TST_UI_474_4() {
+        val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/migration/ImportBackupTabsScreen.kt")
+        val content = file.readText()
+
+        assertTrue(
+            "ImportBackupTabsScreen must declare pendingStravaArchiveUri state",
+            content.contains("var pendingStravaArchiveUri by remember { mutableStateOf<Uri?>(null) }")
+        )
+        assertTrue(
+            "FormatImportCard must render R.drawable.dropbox_logo_blue for Dropbox scan button",
+            content.contains("R.drawable.dropbox_logo_blue")
+        )
+        assertTrue(
+            "PreImportTuningBottomSheet must support showStravaUploadOption parameter",
+            content.contains("showStravaUploadOption: Boolean = true")
         )
     }
 

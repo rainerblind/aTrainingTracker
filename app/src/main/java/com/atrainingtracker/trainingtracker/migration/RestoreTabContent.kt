@@ -16,14 +16,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Backup
-import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.CallMerge
 import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -101,9 +102,9 @@ internal fun RestoreTabContent(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !isBusy
                 ) {
-                    Icon(Icons.Default.Backup, contentDescription = null)
+                    Icon(Icons.Default.CallMerge, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.import_workouts))
+                    Text(stringResource(R.string.merge_from_backup_file))
                 }
             }
         }
@@ -178,7 +179,12 @@ internal fun RestoreTabContent(
                     border = dropboxRestoreBorder,
                     enabled = !isBusy
                 ) {
-                    Icon(Icons.Default.CloudDownload, contentDescription = null)
+                    Icon(
+                        painter = painterResource(R.drawable.dropbox_logo_blue),
+                        contentDescription = null,
+                        tint = Color.Unspecified,
+                        modifier = Modifier.size(20.dp)
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(stringResource(R.string.restore_from_dropbox))
                 }
@@ -193,7 +199,12 @@ internal fun RestoreTabContent(
                     border = googleDriveRestoreBorder,
                     enabled = !isBusy
                 ) {
-                    Icon(Icons.Default.CloudDownload, contentDescription = null)
+                    Icon(
+                        painter = painterResource(R.drawable.ic_google_drive),
+                        contentDescription = null,
+                        tint = Color.Unspecified,
+                        modifier = Modifier.size(20.dp)
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(stringResource(R.string.restore_from_google_drive))
                 }

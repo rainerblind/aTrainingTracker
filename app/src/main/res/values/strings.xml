@@ -1376,6 +1376,7 @@
     <string name="create_backup">Create Backup</string>
     <string name="restore_backup">Full Restore (Migration)</string>
     <string name="import_workouts">Incremental Import (Merge)</string>
+    <string name="merge_from_backup_file">Merge from Backup File</string>
     <string name="backup_success">Backup created successfully.</string>
     <string name="backup_failed">Failed to create backup.</string>
     <string name="restore_success">Restore successful. The app will now restart.</string>

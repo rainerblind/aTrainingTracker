@@ -1144,6 +1144,7 @@
     <string name="create_backup">バックアップを作成</string>
     <string name="restore_backup">全復元（移行）</string>
     <string name="import_workouts">差分インポート（統合）</string>
+    <string name="merge_from_backup_file">バックアップファイルから結合</string>
     <string name="backup_success">バックアップを作成しました。</string>
     <string name="backup_failed">バックアップの作成に失敗しました。</string>
     <string name="restore_success">復元が完了しました。アプリを再起動します。</string>

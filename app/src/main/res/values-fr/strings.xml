@@ -1163,6 +1163,7 @@
     <string name="create_backup">Créer une sauvegarde</string>
     <string name="restore_backup">Restauration complète (Migration)</string>
     <string name="import_workouts">Importation incrémentielle (Fusion)</string>
+    <string name="merge_from_backup_file">Fusionner depuis le fichier de sauvegarde</string>
     <string name="backup_success">Sauvegarde créée avec succès.</string>
     <string name="backup_failed">Échec de la création de la sauvegarde.</string>
     <string name="restore_success">Restauration réussie. L\'application va redémarrer.</string>

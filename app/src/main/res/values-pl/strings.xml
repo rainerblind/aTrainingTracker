@@ -1161,6 +1161,7 @@
     <string name="create_backup">Utwórz kopię zapasową</string>
     <string name="restore_backup">Pełne przywracanie (Migracja)</string>
     <string name="import_workouts">Import przyrostowy (Scalanie)</string>
+    <string name="merge_from_backup_file">Scal z pliku kopii zapasowej</string>
     <string name="backup_success">Kopia zapasowa utworzona pomyślnie.</string>
     <string name="backup_failed">Nie udało się utworzyć kopii zapasowej.</string>
     <string name="restore_success">Przywracanie zakończone sukcesem. Aplikacja zostanie uruchomiona ponownie.</string>

@@ -1162,6 +1162,7 @@
     <string name="create_backup">Crea backup</string>
     <string name="restore_backup">Ripristino totale (Migrazione)</string>
     <string name="import_workouts">Importazione incrementale (Merge)</string>
+    <string name="merge_from_backup_file">Unisci da file di backup</string>
     <string name="backup_success">Backup creato con successo.</string>
     <string name="backup_failed">Errore nella creazione del backup.</string>
     <string name="restore_success">Ripristino riuscito. L\'app verrà riavviata.</string>

@@ -1162,6 +1162,7 @@
     <string name="create_backup">Back-up maken</string>
     <string name="restore_backup">Volledig herstel (Migratie)</string>
     <string name="import_workouts">Incrementele import (Samenvoegen)</string>
+    <string name="merge_from_backup_file">Samenvoegen vanuit back-upbestand</string>
     <string name="backup_success">Back-up succesvol gemaakt.</string>
     <string name="backup_failed">Back-up maken mislukt.</string>
     <string name="restore_success">Herstel succesvol. De app wordt nu herstart.</string>

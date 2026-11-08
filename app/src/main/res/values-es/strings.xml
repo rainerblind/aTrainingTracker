@@ -1164,6 +1164,7 @@
     <string name="create_backup">Crear copia</string>
     <string name="restore_backup">Restauración total (Migración)</string>
     <string name="import_workouts">Importación incremental (Fusión)</string>
+    <string name="merge_from_backup_file">Combinar desde archivo de copia</string>
     <string name="backup_success">Copia creada con éxito.</string>
     <string name="backup_failed">Error al crear la copia.</string>
     <string name="restore_success">Restauración con éxito. La aplicación se reiniciará.</string>
