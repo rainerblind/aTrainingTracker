@@ -46,7 +46,7 @@ class WorkoutSummaryDynamicOrderContractTest {
         val file = findWorkoutSummaryFile()
         val content = file.readText()
 
-        // Verify WorkoutHeader and WorkoutDetails are rendered before dynamic section iteration
+        // Verify WorkoutHeader is the permanent top identity anchor rendered before dynamic section iteration
         val headerIndex = content.indexOf("WorkoutHeader(")
         val detailsIndex = content.indexOf("WorkoutDetails(")
         val loopIndex = content.indexOf("workoutSectionsOrder.forEach")
@@ -55,8 +55,9 @@ class WorkoutSummaryDynamicOrderContractTest {
         assertTrue("WorkoutDetails must be present", detailsIndex != -1)
         assertTrue("Dynamic section loop must be present", loopIndex != -1)
 
-        assertTrue("WorkoutHeader must precede details", headerIndex < detailsIndex)
-        assertTrue("WorkoutDetails must precede dynamic section loop", detailsIndex < loopIndex)
+        // WorkoutHeader permanently precedes loop; WorkoutDetails is rendered inside the dynamic loop (REQ-UI-499)
+        assertTrue("WorkoutHeader must precede dynamic section loop", headerIndex < loopIndex)
+        assertTrue("WorkoutDetails must be inside dynamic section loop", detailsIndex > loopIndex)
     }
 
     @Test
@@ -70,7 +71,7 @@ class WorkoutSummaryDynamicOrderContractTest {
             content.contains("workoutSectionsOrder: List<WorkoutSectionType>")
         )
 
-        // Verify loop handles all 8 customizable section types
+        // Verify loop handles all customizable section types
         WorkoutSectionType.values().forEach { sectionType ->
             assertTrue(
                 "Dynamic loop must handle section type $sectionType",
@@ -82,11 +83,12 @@ class WorkoutSummaryDynamicOrderContractTest {
     @Test
     fun testOrderResolution_customSequence() {
         val customOrder = listOf(
+            WorkoutSectionType.PHOTOS,
+            WorkoutSectionType.DETAILS,
             WorkoutSectionType.CHARTS,
             WorkoutSectionType.ZONES,
             WorkoutSectionType.GRADE_DISTRIBUTION,
             WorkoutSectionType.MAP,
-            WorkoutSectionType.PHOTOS,
             WorkoutSectionType.ELEVATION,
             WorkoutSectionType.LAPS,
             WorkoutSectionType.EXPORT_STATUS,
@@ -96,6 +98,7 @@ class WorkoutSummaryDynamicOrderContractTest {
         )
 
         val prefs = WorkoutCardSectionPreferences(
+            showDetails = true,
             showLaps = true,
             showElevationProfile = true,
             showTelemetryCharts = true,
@@ -108,6 +111,7 @@ class WorkoutSummaryDynamicOrderContractTest {
 
         customOrder.forEach { type ->
             val isEnabled = when (type) {
+                WorkoutSectionType.DETAILS -> prefs.showDetails
                 WorkoutSectionType.DESCRIPTION -> prefs.showDescription
                 WorkoutSectionType.EXTREMA -> prefs.showExtrema
                 WorkoutSectionType.LAPS -> prefs.showLaps
@@ -127,9 +131,8 @@ class WorkoutSummaryDynamicOrderContractTest {
 
         // When all are enabled by default, rendered sequence matches customOrder exactly
         assertEquals(customOrder, renderedSections)
-        assertEquals(WorkoutSectionType.CHARTS, renderedSections[0])
-        assertEquals(WorkoutSectionType.ZONES, renderedSections[1])
-        assertEquals(WorkoutSectionType.GRADE_DISTRIBUTION, renderedSections[2])
-        assertEquals(WorkoutSectionType.MAP, renderedSections[3])
+        assertEquals(WorkoutSectionType.PHOTOS, renderedSections[0])
+        assertEquals(WorkoutSectionType.DETAILS, renderedSections[1])
+        assertEquals(WorkoutSectionType.CHARTS, renderedSections[2])
     }
 }

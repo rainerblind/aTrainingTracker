@@ -35,7 +35,8 @@ class WorkoutCardSectionPreferencesTest {
     fun defaultPreferences_haveExpectedValues() {
         val prefs = WorkoutCardSectionPreferences()
 
-        // High-density standard card defaults (REQ-UI-285)
+        // High-density standard card defaults (REQ-UI-285 / REQ-UI-499)
+        assertTrue("Workout details should be enabled by default", prefs.showDetails)
         assertTrue("Description should be enabled by default", prefs.showDescription)
         assertTrue("Extrema should be enabled by default", prefs.showExtrema)
         assertFalse("Laps should be disabled by default for list cards", prefs.showLaps)
@@ -72,6 +73,7 @@ class WorkoutCardSectionPreferencesTest {
     @Test
     fun customAllDisabledConfiguration_maintainsFidelity() {
         val allDisabled = WorkoutCardSectionPreferences(
+            showDetails = false,
             showDescription = false,
             showExtrema = false,
             showLaps = false,
@@ -82,6 +84,7 @@ class WorkoutCardSectionPreferencesTest {
             showZoneAnalysis = false
         )
 
+        assertFalse(allDisabled.showDetails)
         assertFalse(allDisabled.showDescription)
         assertFalse(allDisabled.showExtrema)
         assertFalse(allDisabled.showLaps)

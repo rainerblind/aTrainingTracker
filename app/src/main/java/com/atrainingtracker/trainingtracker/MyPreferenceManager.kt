@@ -75,6 +75,7 @@ internal fun parsePhotoThumbnailSize(
  * Configurable section visibility preferences for detailed workout journal cards (REQ-UI-210 / ATT-1714 / REQ-UI-229 / REQ-UI-240 / REQ-UI-388 / REQ-UI-414.6).
  */
 data class WorkoutCardSectionPreferences(
+    val showDetails: Boolean = true,
     val showDescription: Boolean = true,
     val showExtrema: Boolean = true,
     val showLaps: Boolean = false,
@@ -139,6 +140,7 @@ class MyPreferenceManager(context: Context) {
         val SEGMENT_FILTER_CRITERIA_JSON = stringPreferencesKey("segment_filter_criteria_json")
         val CLUSTER_FILTER_CRITERIA_JSON = stringPreferencesKey("cluster_filter_criteria_json")
 
+        val WORKOUT_CARD_SHOW_DETAILS = booleanPreferencesKey("workout_card_show_details")
         val WORKOUT_CARD_SHOW_DESCRIPTION = booleanPreferencesKey("workout_card_show_description")
         val WORKOUT_CARD_SHOW_EXTREMA = booleanPreferencesKey("workout_card_show_extrema")
         val WORKOUT_CARD_SHOW_LAPS = booleanPreferencesKey("workout_card_show_laps")
@@ -183,6 +185,7 @@ class MyPreferenceManager(context: Context) {
 
     val workoutCardPreferencesFlow: Flow<WorkoutCardSectionPreferences> = dataStore.data.map { preferences ->
         WorkoutCardSectionPreferences(
+            showDetails = preferences[WORKOUT_CARD_SHOW_DETAILS] ?: true,
             showDescription = preferences[WORKOUT_CARD_SHOW_DESCRIPTION] ?: true,
             showExtrema = preferences[WORKOUT_CARD_SHOW_EXTREMA] ?: true,
             showLaps = preferences[WORKOUT_CARD_SHOW_LAPS] ?: false,
@@ -212,6 +215,7 @@ class MyPreferenceManager(context: Context) {
 
     suspend fun setWorkoutCardPreferences(prefs: WorkoutCardSectionPreferences) {
         dataStore.edit { preferences ->
+            preferences[WORKOUT_CARD_SHOW_DETAILS] = prefs.showDetails
             preferences[WORKOUT_CARD_SHOW_DESCRIPTION] = prefs.showDescription
             preferences[WORKOUT_CARD_SHOW_EXTREMA] = prefs.showExtrema
             preferences[WORKOUT_CARD_SHOW_LAPS] = prefs.showLaps

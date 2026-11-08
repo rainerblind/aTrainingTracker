@@ -99,8 +99,8 @@ class WorkoutDetailTabsTest {
             defaults[3].sections
         )
 
-        // Verify bidirectional enum mapping (WorkoutDetailSectionType <-> WorkoutSectionType)
-        assertNull(WorkoutDetailSectionType.DETAILS.toWorkoutSectionTypeOrNull())
+        // Verify bidirectional enum mapping (WorkoutDetailSectionType <-> WorkoutSectionType, REQ-UI-499.1)
+        assertEquals(WorkoutSectionType.DETAILS, WorkoutDetailSectionType.DETAILS.toWorkoutSectionTypeOrNull())
         for (legacyType in WorkoutSectionType.values()) {
             val detailType = legacyType.toWorkoutDetailSectionType()
             assertEquals(legacyType, detailType.toWorkoutSectionTypeOrNull())

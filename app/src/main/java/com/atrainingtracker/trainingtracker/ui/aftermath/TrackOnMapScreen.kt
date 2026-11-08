@@ -744,6 +744,7 @@ fun TrackOnMapScreen(
                                 )
                             }
                         }
+                        WorkoutSectionType.DETAILS,
                         WorkoutSectionType.PHOTOS,
                         WorkoutSectionType.MAP -> {
                             // Handled in Tabbed content / MapDetailLayout

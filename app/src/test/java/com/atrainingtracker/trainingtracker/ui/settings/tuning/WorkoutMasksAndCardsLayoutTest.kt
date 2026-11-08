@@ -301,4 +301,26 @@ class WorkoutMasksAndCardsLayoutTest {
             content.contains("SubordinateTuningToggleItem")
         )
     }
+
+    /**
+     * TST-UI-499.5: Workout Details Configuration in Summary Matrix (REQ-UI-499.5 / ATT-6213).
+     */
+    @Test
+    fun `TST-UI-499_5 workout details in summary matrix contract`() {
+        val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/WorkoutMasksAndCardsSection.kt")
+        val content = file.readText()
+
+        assertTrue(
+            "Must support DETAILS feature row",
+            content.contains("WorkoutSectionType.DETAILS")
+        )
+        assertTrue(
+            "Must bind workoutCardPrefs.showDetails",
+            content.contains("prefs.showDetails")
+        )
+        assertTrue(
+            "Must reference workout_detail_section_details",
+            content.contains("R.string.workout_detail_section_details")
+        )
+    }
 }

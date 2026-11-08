@@ -7981,6 +7981,32 @@
   4. *Tier 1 Targeted Unit Test Regression (`TST-UI-498.4`)*:
   • Execute targeted test suite (`ui.aftermath.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
 
+### TST-UI-499: **WorkoutSummary & WorkoutSectionType: Reorderable WorkoutDetails & Photos-First Ordering Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-499`, `REQ-UI-255`
+- **Component**: `WorkoutSectionType.kt`, `WorkoutDetailTabConfig.kt`, `MyPreferenceManager.kt`, `WorkoutSummary.kt`, `WorkoutMasksAndCardsSection.kt`, `TrackOnMapScreen.kt`
+- **Jira**: `ATT-6213`
+- **Test Description**:
+  1. *Domain Model & Enum Parity Contract Test (`WorkoutSectionOrderPersistenceTest.kt`)*:
+  • Verify `WorkoutSectionType` contains `DETAILS(R.string.workout_detail_section_details)`.
+  • Verify `WorkoutSectionType.DEFAULT_ORDER` contains 12 elements with `DETAILS` at index 0.
+  • Verify bidirectional mapping between `WorkoutSectionType.DETAILS` and `WorkoutDetailSectionType.DETAILS`.
+  2. *Backwards-Compatible Preference Migration Tests (`WorkoutSectionOrderPersistenceTest.kt`)*:
+  • Verify `fromSerializedString` without `DETAILS` inserts `DETAILS` at index 1 when `PHOTOS` is at index 0.
+  • Verify `fromSerializedString` without `DETAILS` inserts `DETAILS` at index 0 when `PHOTOS` is not at index 0.
+  • Verify round-trip serialization and deserialization with `DETAILS`.
+  3. *Summary Rendering & Dynamic Ordering Structural Contract (`WorkoutSummaryDynamicOrderContractTest.kt` & `WorkoutSummarySectionsTest.kt`)*:
+  • Verify `WorkoutSummary.kt` renders `WorkoutDetails` within the dynamic section loop under `WorkoutSectionType.DETAILS` gated by `showDetails`.
+  • Verify `WorkoutHeader` remains the sole anchor preceding the dynamic loop.
+  • Verify `WorkoutCardSectionPreferences` contains `showDetails` (defaulting to `true`).
+  4. *Settings UI Modularity & Line Limit Audit*:
+  • Verify `WorkoutMasksAndCardsSection.kt` maps `WorkoutSectionType.DETAILS` to `MatrixFeatureRow` with `R.string.workout_detail_section_details`.
+  • Verify `WorkoutMasksAndCardsSection.kt` total line count remains strictly `< 400` lines.
+  5. *9-Language Localization Parity Audit (`TranslationParityTest`)*:
+  • Verify `R.string.workout_detail_section_details` exists across all 9 locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) with 100% translation parity and zero formatting mismatches.
+  6. *Tier 1 Targeted Unit Test Regression Suite*:
+  • Command: `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.*" --tests "com.atrainingtracker.trainingtracker.settings.*" --tests "com.atrainingtracker.trainingtracker.build.*"`
+
+
 
 
 

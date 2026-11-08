@@ -61,6 +61,7 @@ private fun buildMatrixFeatureRow(
     prefs: WorkoutCardSectionPreferences,
     onPrefsChange: (WorkoutCardSectionPreferences) -> Unit
 ): MatrixFeatureRow = when (type) {
+    WorkoutSectionType.DETAILS -> MatrixFeatureRow(type, R.string.workout_detail_section_details, prefs.showDetails) { onPrefsChange(prefs.copy(showDetails = it)) }
     WorkoutSectionType.DESCRIPTION -> MatrixFeatureRow(type, R.string.settings_workout_card_description, prefs.showDescription) { onPrefsChange(prefs.copy(showDescription = it)) }
     WorkoutSectionType.EXTREMA -> MatrixFeatureRow(type, R.string.settings_workout_card_extrema, prefs.showExtrema) { onPrefsChange(prefs.copy(showExtrema = it)) }
     WorkoutSectionType.LAPS -> MatrixFeatureRow(type, R.string.settings_workout_card_laps, prefs.showLaps) { onPrefsChange(prefs.copy(showLaps = it)) }
@@ -136,7 +137,7 @@ fun WorkoutMasksAndCardsSection(
 
     val activeCardCount = remember(workoutCardPrefs) {
         listOf(
-            workoutCardPrefs.showDescription, workoutCardPrefs.showExtrema, workoutCardPrefs.showLaps, workoutCardPrefs.showStrava,
+            workoutCardPrefs.showDetails, workoutCardPrefs.showDescription, workoutCardPrefs.showExtrema, workoutCardPrefs.showLaps, workoutCardPrefs.showStrava,
             workoutCardPrefs.showMapPreview, workoutCardPrefs.showElevationProfile, workoutCardPrefs.showTelemetryCharts,
             workoutCardPrefs.showZoneAnalysis, workoutCardPrefs.showGradeDistribution, workoutCardPrefs.showExportStatus, workoutCardPrefs.showPhotos
         ).count { it }

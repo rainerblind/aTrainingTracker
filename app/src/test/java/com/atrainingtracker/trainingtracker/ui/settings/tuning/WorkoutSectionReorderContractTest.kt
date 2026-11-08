@@ -53,13 +53,13 @@ class WorkoutSectionReorderContractTest {
     fun testReorderingLogic_moveUpAndDown() {
         val initialOrder = WorkoutSectionType.DEFAULT_ORDER
 
-        // 1. Move Up on second element (EXTREMA at index 1 -> index 0)
+        // 1. Move Up on second element (DESCRIPTION at index 1 -> index 0)
         val afterMoveUp = moveSection(initialOrder, 1, 0)
-        assertEquals(WorkoutSectionType.EXTREMA, afterMoveUp[0])
-        assertEquals(WorkoutSectionType.DESCRIPTION, afterMoveUp[1])
-        assertEquals(11, afterMoveUp.size)
+        assertEquals(WorkoutSectionType.DESCRIPTION, afterMoveUp[0])
+        assertEquals(WorkoutSectionType.DETAILS, afterMoveUp[1])
+        assertEquals(12, afterMoveUp.size)
 
-        // 2. Move Down on first element (EXTREMA at index 0 -> index 1)
+        // 2. Move Down on first element (DESCRIPTION at index 0 -> index 1)
         val afterMoveDown = moveSection(afterMoveUp, 0, 1)
         assertEquals(initialOrder, afterMoveDown)
     }
@@ -123,6 +123,12 @@ class WorkoutSectionReorderContractTest {
         assertTrue(
             "WorkoutMasksAndCardsSection must support PHOTOS",
             content.contains("WorkoutSectionType.PHOTOS")
+        )
+
+        // 7. Must support DETAILS row in WorkoutMasksAndCardsSection (REQ-UI-499.5)
+        assertTrue(
+            "WorkoutMasksAndCardsSection must support DETAILS",
+            content.contains("WorkoutSectionType.DETAILS")
         )
     }
 
@@ -191,6 +197,14 @@ class WorkoutSectionReorderContractTest {
             assertTrue(
                 "WorkoutSummary.kt must check preferences.showPhotos",
                 content.contains("preferences.showPhotos")
+            )
+            assertTrue(
+                "WorkoutSummary.kt must handle WorkoutSectionType.DETAILS inside loop",
+                content.contains("WorkoutSectionType.DETAILS ->")
+            )
+            assertTrue(
+                "WorkoutSummary.kt must check preferences.showDetails",
+                content.contains("preferences.showDetails")
             )
         }
 

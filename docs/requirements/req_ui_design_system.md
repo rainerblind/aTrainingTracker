@@ -14838,6 +14838,57 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Dedicated edit pencil button functional; Rule 74 bottom sheet drag handles preserved; ATT-5851 floating controls clearance intact; 100% test pass rate.
 
+### REQ-UI-499: WorkoutSummary & WorkoutSectionType: Reorderable WorkoutDetails & Photos-First Card Ordering [Verified]
+- **Tests**: `TST-UI-499` | **Tickets**: `ATT-6213`
+- **Implementation**: `WorkoutSectionType.kt`, `WorkoutDetailTabConfig.kt`, `MyPreferenceManager.kt`, `WorkoutSummary.kt`, `WorkoutMasksAndCardsSection.kt`, `TrackOnMapScreen.kt`
+- **Rationale**: In the Workout Summary list card (`WorkoutSummary.kt`), `WorkoutDetails` (*Zeit aktiv / Distanz / Höhenmeter*) was previously hardcoded above the dynamic section loop alongside `WorkoutHeader`. This prevented athletes from placing Photos (`PHOTOS`) or other sections directly below `WorkoutHeader` and above `WorkoutDetails`. The system SHALL unify `WorkoutSectionType` with `WorkoutDetailSectionType`, making `WorkoutDetails` an independent, reorderable section in `WorkoutSectionType` while keeping `WorkoutHeader` as the sole permanent top identity anchor (ATT-6213):
+- **Description**:
+1. *Section Domain Model Unification (`REQ-UI-499.1`)*:
+   • `WorkoutSectionType` SHALL define enum constant `DETAILS(R.string.workout_detail_section_details)`.
+   • In `WorkoutDetailTabConfig.kt`, `WorkoutDetailSectionType.toWorkoutSectionTypeOrNull()` SHALL map `WorkoutDetailSectionType.DETAILS` to `WorkoutSectionType.DETAILS`.
+   • `WorkoutSectionType.toWorkoutDetailSectionType()` SHALL map `WorkoutSectionType.DETAILS` to `WorkoutDetailSectionType.DETAILS`.
+   • `WorkoutSectionType.DEFAULT_ORDER` SHALL contain 12 elements with `DETAILS` at index 0: `[DETAILS, DESCRIPTION, EXTREMA, PHOTOS, MAP, ELEVATION, CHARTS, ZONES, GRADE_DISTRIBUTION, LAPS, EXPORT_STATUS, STRAVA]`.
+2. *Backwards-Compatible Preference Migration (`REQ-UI-499.2`)*:
+   • In `WorkoutSectionType.fromSerializedString(serialized: String?)`, if the deserialized list does not contain `DETAILS`:
+     - If the first element is `PHOTOS` (`parsed.firstOrNull() == WorkoutSectionType.PHOTOS`), `DETAILS` SHALL be inserted at index 1 (preserving `PHOTOS` above `DETAILS`).
+     - Otherwise, `DETAILS` SHALL be inserted at index 0 (preserving the classic layout where details precede all secondary sections).
+3. *Visibility Preference Persistence (`REQ-UI-499.3`)*:
+   • `WorkoutCardSectionPreferences` SHALL include `val showDetails: Boolean = true`.
+   • `MyPreferenceManager` SHALL persist `WORKOUT_CARD_SHOW_DETAILS` to DataStore (defaulting to `true`).
+4. *Dynamic Section Loop & Divider Execution (`REQ-UI-499.4`)*:
+   • In `WorkoutSummary.kt`, `WorkoutHeader` SHALL remain permanently anchored at the top of the card.
+   • The hardcoded `WorkoutDetails(...)` invocation above `workoutSectionsOrder.forEach` SHALL be removed.
+   • `WorkoutDetails(...)` SHALL be rendered dynamically within `workoutSectionsOrder.forEach` under branch `WorkoutSectionType.DETAILS`, gated by `preferences.showDetails`.
+   • Exactly one `HorizontalDivider` SHALL separate `WorkoutHeader` from the first visible section; sections rendering first SHALL NOT produce duplicate consecutive dividers.
+5. *Settings Matrix Feature Row & Modularity (`REQ-UI-499.5`)*:
+   • `WorkoutMasksAndCardsSection.kt` SHALL map `WorkoutSectionType.DETAILS` to `MatrixFeatureRow` with localized title `R.string.workout_detail_section_details` and checkbox bound to `showDetails`.
+   • `WorkoutMasksAndCardsSection.kt` SHALL remain strictly under 400 lines of code.
+6. *Exhaustive Caller Handling (`REQ-UI-499.6`)*:
+   • In `TrackOnMapScreen.kt`, `WorkoutSectionType.DETAILS` SHALL be handled in `preMapSections` and `postMapSections` `when` blocks to ensure exhaustive enum coverage without runtime exception.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines and amends `REQ-UI-255` (*Customizable Section Reordering for Workout Summaries and Details*) and `REQ-UI-210` (*Workout Card Section Visibility Matrix*). Targets `WorkoutSectionType.kt`, `WorkoutDetailTabConfig.kt`, `MyPreferenceManager.kt`, `WorkoutSummary.kt`, `WorkoutMasksAndCardsSection.kt`, and `TrackOnMapScreen.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-40.11 (`ATT-1714`, commit `56375eeb7c13`) established `WorkoutHeader` and `WorkoutDetails` as mandatory non-configurable anchors; `ATT-2176` added dynamic reordering for secondary sections but kept `WorkoutDetails` pinned above the loop; `ATT-5474` added `PHOTOS` to `WorkoutSectionType`.
+3. *Root Reason for Existing Formulation*: Core summary metrics (`WorkoutDetails`) were originally viewed as inseparable from workout identity and required to be immediately visible at the top of every card.
+4. *Preservation of Core Invariants*: `WorkoutHeader` remains permanently and non-configurably anchored at the top of every summary card. `showDetails` defaults to `true` and `DETAILS` defaults to index 0, ensuring 100% visual layout preservation for existing installs while unlocking user reordering (e.g. photos above details).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a workout with attached photos and `workoutSectionsOrder` where `PHOTOS` precedes `DETAILS`,
+• *When* `WorkoutSummary` renders the workout card,
+• *Then* `WorkoutHeader` appears at the top, followed immediately by `WorkoutPhotoStrip` (`PHOTOS`), and `WorkoutDetails` renders below the photos.
+• *Given* the Workout Card configuration in `WorkoutMasksAndCardsSection`,
+• *When* the user inspects the reorderable section list,
+• *Then* `DETAILS` (`R.string.workout_detail_section_details`) appears with a visibility checkbox (`showDetails`) and drag handle, allowing drag-and-drop reordering.
+• *Given* a legacy serialized order string without `DETAILS` where `PHOTOS` was placed at index 0,
+• *When* `WorkoutSectionType.fromSerializedString` deserializes the string,
+• *Then* `DETAILS` is inserted at index 1, preserving `PHOTOS` at index 0 above `DETAILS`.
+• *Given* a legacy serialized order string without `DETAILS` where `DESCRIPTION` or other sections were at index 0,
+• *When* `WorkoutSectionType.fromSerializedString` deserializes the string,
+• *Then* `DETAILS` is inserted at index 0, maintaining the details-first layout.
+
+**Invariants**: `WorkoutHeader` permanently anchored at top; backward-compatible preference migration; `WorkoutMasksAndCardsSection.kt` < 400 lines; 100% 9-language localization parity; 100% clean-room test suite pass rate.
+
+
 
 
 

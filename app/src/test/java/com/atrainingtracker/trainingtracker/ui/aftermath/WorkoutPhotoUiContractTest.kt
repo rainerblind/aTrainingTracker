@@ -294,7 +294,7 @@ class WorkoutPhotoUiContractTest {
         val photosBlockIndex = content.indexOf("WorkoutSectionType.PHOTOS ->")
         assertTrue("WorkoutSummary must contain WorkoutSectionType.PHOTOS", photosBlockIndex != -1)
 
-        val photosBlock = content.substring(photosBlockIndex, photosBlockIndex + 500)
+        val photosBlock = content.substring(photosBlockIndex, photosBlockIndex + 600)
         assertTrue(
             "WorkoutSectionType.PHOTOS block must contain HorizontalDivider preceding WorkoutPhotoStrip",
             photosBlock.contains("HorizontalDivider") && photosBlock.contains("WorkoutPhotoStrip")
