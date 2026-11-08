@@ -61,7 +61,7 @@ fun MapBoundsController(
     var lastTrigger by remember(zoomFocus) { mutableStateOf(0L) }
     var hasFittedInitialBounds by remember(zoomFocus, initialBounds != null) { mutableStateOf(false) }
 
-    LaunchedEffect(tracks, markers, segments, routes, isMapLoaded, hasFittedInitialBounds, initialBounds, boundsFocusTrigger) {
+    LaunchedEffect(tracks, markers, segments, routes, isMapLoaded, hasFittedInitialBounds, initialBounds, boundsFocusTrigger, currentLocation) {
         // --- ATT-352 & ATT-1151: Explicit bounds camera fitting & dynamic region switching ---
         if (zoomFocus == MapZoomFocus.EXPLICIT_BOUNDS && initialBounds != null) {
             val needsRefit = initialBounds != lastFittedExplicitBounds || (boundsFocusTrigger > 0L && boundsFocusTrigger != lastTrigger)
@@ -191,7 +191,7 @@ fun MapBoundsController(
                     // Silently fail if map not laid out
                 }
             } else if (userPos != null) {
-                cameraPositionState.move(CameraUpdateFactory.newLatLngZoom(userPos, 12f))
+                cameraPositionState.move(CameraUpdateFactory.newLatLngZoom(userPos, MapInitialLocationResolver.DEFAULT_INITIAL_ZOOM))
                 hasFittedInitialBounds = true
             }
         }

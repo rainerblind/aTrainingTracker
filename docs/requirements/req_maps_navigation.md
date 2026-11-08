@@ -1939,3 +1939,47 @@
 • *Then* `ThermalColorLut.HOT` with zoom-adaptive stroke scaling and logarithmic corridor normalization continues to render without visual regression.
 
 **Invariants**: Zero database changes, thread safety on `Dispatchers.Default`, compliance with theme tokens, and 100% clean-room test pass rate.
+
+### REQ-MAP-059: Initial Map Camera Centering, Fallback Cascade & Navigation Bar Insets [Verified]
+- **Tests**: `TST-MAP-061` | **Tickets**: `ATT-5880`
+- **Implementation**: `MapInitialLocationResolver.kt`, `ATrainingTrackerMap.kt`, `MapScreenWithTrack.kt`, `MapBehaviors.kt`, `TrackingMapContainer.kt`
+- **Rationale**: To prevent disorientation caused by initial map cameras defaulting to world zoom or `(0.0, 0.0)` Null Island in the Gulf of Guinea, and to prevent Google attribution logo clipping behind the system navigation bar in edge-to-edge mode (Sprint 2026-45.12, ATT-5880, refining `REQ-MAP-006`, `REQ-MAP-046`, and `REQ-UI-326`):
+1. *Defensive Fallback Cascade (`REQ-MAP-059.1`)*:
+• The system SHALL provide `MapInitialLocationResolver` resolving initial coordinates through a prioritized defensive fallback cascade:
+  1. Live GPS fix / current location (`BANALServiceRepository` or `LocationManager.getLastKnownLocation` with permission and nullability checks).
+  2. Designated Home Base known location (`databaseManager.homeLocation`).
+  3. Most visited known location ($\operatorname{argmax}(\text{hitCount})$).
+  4. Most recent workout start location (`WorkoutSummariesDatabaseManager`).
+  5. Default fallback location if no locations exist.
+• All system location queries SHALL be enclosed in try-catch blocks to guarantee zero crashes on ungranted permissions or dead system services.
+2. *Initial Camera Centering & Deferred Fix Alignment (`REQ-MAP-059.2`)*:
+• `ATrainingTrackerMap` and `TrackingMapContainer` SHALL initialize `CameraPositionState` to the resolved initial location at zoom `14.0f` instead of `(0.0, 0.0)` at zoom 0.
+• In `MapBoundsController` (`MapBehaviors.kt`), `currentLocation` SHALL be included in the `LaunchedEffect` keys so that when opening `Karten -> Karte` without an active track or route, arrival of the first live GPS fix automatically moves the camera to the athlete's current location.
+3. *System Navigation Bar Inset Forwarding (`REQ-MAP-059.3`)*:
+• `ATrainingTrackerMap` SHALL accept a configurable `contentPadding: PaddingValues = PaddingValues()` and pass it to `GoogleMap`, lifting the Google logo and map controls above the edge-to-edge system navigation bar.
+• In `MapScreenWithTrack.kt`, `ATrainingTrackerMap` SHALL pass `WindowInsets.navigationBars.asPaddingValues()` (or equivalent bottom navigation padding).
+• In Cockpit tracking, `contentPadding` SHALL respect fixed layout insets without dynamic lookahead padding oscillation loops (Rule 33).
+4. *Top-Start Navigation Button on Global Map (`REQ-MAP-059.4`)*:
+• In `MapScreenWithTrack.kt`, when displayed as the standalone `Karten -> Karte` screen, a top-start circular surface button (44dp × 44dp, `SurfaceContainerHigh`) SHALL be anchored at `Alignment.TopStart.padding(start = 16.dp, top = 16.dp).statusBarsPadding()`, providing a navigation entry point (`Menu` or `Back`) complementing the top-end layers FAB.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new refinement `REQ-MAP-059` refining `REQ-MAP-006` (*Global Map Screen*), `REQ-MAP-046` (*Map Bounds & Follow-Me Invariants*), and `REQ-UI-326` (*Edge-to-Edge System Bar Handling*).
+2. *Historical Origin & Commit Trace*: Sprint 2026-41.6 (`ATT-3102`, commits `d7b00bf8`, `c6f65b71`): Rule 33 established single spatial authority in `followMeController`, zeroing dynamic content padding. Applying static window insets (`WindowInsets.navigationBars`) fully respects Rule 33.
+3. *Root Reason for Existing Formulation*: `rememberCameraPositionState()` default was used without fallback coordinate resolution, resulting in Null Island when GPS fix was delayed; `ATrainingTrackerMap` hardcoded `0.dp` padding.
+4. *Preservation of Core Invariants*: Rule 33 analytical lookahead preserved; `@Immutable TrackingMapState` contract tests (`TrackingMapIsolationContractTest`) preserved; zero regression to 1-Hz sensor performance.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `Karten -> Karte` or Cockpit map opened with no live GPS fix acquired yet,
+• *When* the map camera initializes,
+• *Then* the camera centers on the athlete's last known location (home base, most visited location, or recent workout start) at zoom 14.0f rather than `(0.0, 0.0)` at world zoom.
+• *Given* `Karten -> Karte` opened with no track or route loaded,
+• *When* the first live GPS fix is received,
+• *Then* `MapBoundsController` animates/moves the camera to center on the new live location.
+• *Given* `MapScreenWithTrack` in edge-to-edge display mode,
+• *When* rendered on a device with a gesture or 3-button system navigation bar,
+• *Then* the Google attribution logo is positioned above the navigation bar via bottom insets.
+• *Given* `MapScreenWithTrack`,
+• *When* rendered as `Karten -> Karte`,
+• *Then* a 44dp circular Surface navigation button is anchored at the top-left with status bar padding.
+
+**Invariants**: Rule 33 single spatial authority; `@Immutable TrackingMapState` isolation; zero reflection violations; zero database schema alterations.

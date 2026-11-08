@@ -1014,3 +1014,24 @@
   • Verify `WorkoutClusterHeatmapScreen.kt` configures `CLASSIC_BLUE` and `normalizeCorridors = false`, ensuring Periods changes do not impact Workout Clusters.
   5. *Targeted Regression Verification Suite (`TST-MAP-060.5`)*:
   • Execute targeted tests across `ui.map.*`, `ui.clusters.*`, and `ui.aftermath.periodlist.*` verifying 100% clean-room test pass rate.
+
+### TST-MAP-061: **Initial Map Camera Centering, Fallback Cascade & Navigation Bar Insets Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-MAP-059` (`REQ-MAP-059.1`..`REQ-MAP-059.4`)
+- **Component**: `MapInitialLocationResolverTest.kt`, `ATrainingTrackerMapTest.kt`, `MapScreenWithTrackTest.kt`, `MapBehaviorsTest.kt`
+- **Jira**: `ATT-5880`
+- **Test Description**:
+  1. *Defensive Fallback Cascade Unit Tests (`TST-MAP-061.1`, `MapInitialLocationResolverTest.kt`)*:
+  • Verify cascade priority: Live GPS fix -> Home Base -> Most Visited Location -> Recent Workout Start -> Default coordinates.
+  • Verify security exceptions and null returns from `LocationManager` are caught defensively without crashing.
+  2. *Initial Camera Position & Zoom Verification (`TST-MAP-061.2`, `ATrainingTrackerMapTest.kt`)*:
+  • Verify `CameraPositionState` initializes to resolved coordinates with zoom 14.0f when initialBounds is null.
+  • Verify absence of `(0.0, 0.0)` Null Island default when fallback locations exist.
+  3. *Deferred Live Fix Camera Update (`TST-MAP-061.3`, `MapBehaviorsTest.kt`)*:
+  • Verify `MapBoundsController` triggers camera update when `currentLocation` transitions from null to non-null with empty track bounds.
+  4. *Window Insets & Logo Visibility Contract (`TST-MAP-061.4`, `MapScreenWithTrackTest.kt`)*:
+  • Verify `ATrainingTrackerMap` accepts and applies `contentPadding` with bottom navigation bar padding.
+  • Verify top-start navigation surface button exists with status bar padding and test tag `map_navigation_button`.
+  5. *Rule 33 & TrackingMap Isolation Contract Tests (`TST-MAP-061.5`)*:
+  • Run `TrackingMapIsolationContractTest` to ensure zero reflection violations and strict `@Immutable` isolation.
+  6. *Targeted Regression Verification Suite (`TST-MAP-061.6`)*:
+  • Execute targeted tests across `ui.map.*` and `ui.tracking.*` asserting 100% pass rate.

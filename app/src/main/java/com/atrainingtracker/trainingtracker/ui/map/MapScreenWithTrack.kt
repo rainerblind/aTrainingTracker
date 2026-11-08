@@ -39,9 +39,12 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.ui.platform.testTag
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -110,7 +113,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 fun MapScreenWithTrack(
     viewModel: MapFragmentWithTrackViewModel = viewModel(),
     targetLocationId: Long? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onMenuClick: (() -> Unit)? = null,
+    onNavigateBack: (() -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val currentLocation by viewModel.currentLocation.collectAsStateWithLifecycle()
@@ -306,6 +311,7 @@ fun MapScreenWithTrack(
                     initialBounds = initialBounds,
                     bSportType = uiState.bSportType,
                     currentLocationFlow = MutableStateFlow(currentLocation),
+                    contentPadding = WindowInsets.navigationBars.asPaddingValues(),
                     onMapClick = {
                         selectedSegmentId = null
                         selectedRouteId = null
@@ -349,6 +355,39 @@ fun MapScreenWithTrack(
                     if (GeneralMapLayer.TRACK in enabledLayers) {
                         markers(uiState.markers)
                         liveTrack(uiState.currentTrack)
+                    }
+                }
+
+                // Top-Start Navigation Button (REQ-MAP-059.4)
+                if (onMenuClick != null || onNavigateBack != null) {
+                    val isBack = onNavigateBack != null && onMenuClick == null
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .statusBarsPadding()
+                            .padding(top = 16.dp, start = 16.dp)
+                    ) {
+                        Surface(
+                            onClick = {
+                                if (isBack) onNavigateBack() else onMenuClick?.invoke()
+                            },
+                            modifier = Modifier
+                                .size(44.dp)
+                                .testTag("map_navigation_button"),
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay),
+                            shadowElevation = 6.dp,
+                            tonalElevation = 2.dp
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = if (isBack) Icons.AutoMirrored.Filled.ArrowBack else Icons.Default.Menu,
+                                    contentDescription = if (isBack) stringResource(R.string.back) else null,
+                                    modifier = Modifier.size(22.dp),
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
                     }
                 }
 

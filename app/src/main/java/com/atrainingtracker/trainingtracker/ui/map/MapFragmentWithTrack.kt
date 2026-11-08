@@ -89,7 +89,10 @@ class MapFragmentWithTrack : Fragment() {
         return ComposeView(requireContext()).apply {
             setContent {
                 ATrainingTrackerTheme {
-                    MapScreenWithTrack(viewModel = viewModel)
+                    MapScreenWithTrack(
+                        viewModel = viewModel,
+                        onMenuClick = { (activity as? com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation)?.openDrawer() }
+                    )
                 }
             }
         }

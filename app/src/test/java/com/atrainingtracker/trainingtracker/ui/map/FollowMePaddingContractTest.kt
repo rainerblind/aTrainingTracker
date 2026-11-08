@@ -60,8 +60,8 @@ class FollowMePaddingContractTest {
             content.contains("val topPadding = 0.dp")
         )
         assertTrue(
-            "GoogleMap must receive PaddingValues(top = topPadding) as contentPadding",
-            content.contains("contentPadding = PaddingValues(top = topPadding)")
+            "GoogleMap must receive contentPadding parameter (REQ-MAP-059.3)",
+            content.contains("contentPadding = contentPadding")
         )
         assertTrue(
             "ATrainingTrackerMap must pass viewportHeightDp to followMeController",
