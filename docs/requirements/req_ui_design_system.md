@@ -7501,7 +7501,7 @@ d. *Isolated Zoomed Elevation Profile*: An `ElevatedCard` rendering `ElevationPr
 • The selected route polyline (`TTColor.RouteSelected`, Royal Blue `#1565C0`) SHALL be rendered unconditionally in `mapContent`.
 • The selected route polyline MUST NOT be included in the Layers menu and CANNOT be toggled off or hidden under any circumstances.
 2. *Route Map Layers Menu UI & Ergonomic Parity (`RouteOnMapScreen.kt`)*:
-• `RouteOnMapScreen.kt` SHALL provide a floating circular Layers button in the `overlay` slot of `MapDetailLayout` at `Alignment.TopEnd` with `padding(top = 76.dp, end = 16.dp)` (offset vertically to avoid overlapping the Share button).
+• `RouteOnMapScreen.kt` SHALL supply the floating circular Layers button via the unified `topEndActions` slot of `MapDetailLayout` (`REQ-UI-500`), where it automatically stacks beneath the Share button (`top = 76.dp`) without hardcoding `padding(top = 76.dp)` in the caller.
 • The button SHALL display `Icons.Default.Layers` (`size = 22.dp`) with tint dynamically resolving to `MaterialTheme.colorScheme.primary` if any layer is toggled off (or `onSurface` when all are visible).
 • Clicking the button SHALL open a Material 3 `DropdownMenu` styled 1:1 with `TrackOnMapScreen.kt`, containing entries for:
 - **Climbs** (`R.string.route_layer_climbs`): Checkbox, climb category color swatch/chip, enabled only if `climbs.isNotEmpty()`.
@@ -7521,10 +7521,10 @@ d. *Isolated Zoomed Elevation Profile*: An `ElevatedCard` rendering `ElevationPr
 • Selected route polyline, Start and End navigation markers, and 100% unit test pass rate MUST NOT be broken.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement (`REQ-UI-308`), complementing `REQ-UI-298`, `REQ-UI-299`, `REQ-UI-302`, `REQ-UI-303`, `REQ-UI-307`, and `REQ-MAP-026`.
-2. *Historical Origin & Commit Trace*: Ticket `ATT-2763`, Sprint `2026-41.4`, Epic `ATT-66` (*Improve Routes*).
-3. *Root Reason for Existing Formulation*: Route entity overlays were historically added in isolation without layer visibility controls. Combining multiple overlays on dense routes produced visual clutter.
-4. *Preservation of Core Invariants*: Permanent route line anchoring, navigation pins, and 100% test pass rate remain preserved.
+1. *Original Requirement ID & Target*: Net-new requirement (`REQ-UI-308`), complementing `REQ-UI-298`, `REQ-UI-299`, `REQ-UI-302`, `REQ-UI-303`, `REQ-UI-307`, and `REQ-MAP-026`. Amended under `ATT-6214` (`REQ-UI-500`) to delegate TopEnd action positioning to `MapDetailLayout.topEndActions` rather than hardcoding `top = 76.dp` in `RouteOnMapScreen.kt`.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-2763`, Sprint `2026-41.4`, Epic `ATT-66` (*Improve Routes*); amended in `ATT-6214`.
+3. *Root Reason for Existing Formulation*: Route entity overlays were historically added in isolation without layer visibility controls. Combining multiple overlays on dense routes produced visual clutter. `top = 76.dp` was hardcoded in `RouteOnMapScreen.kt` to dodge the 44.dp Share button + 16.dp padding.
+4. *Preservation of Core Invariants*: Permanent route line anchoring, navigation pins, automatic `76.dp` stacking when Share is present, and 100% test pass rate remain preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete on `RouteOnMapScreen`,
@@ -14890,6 +14890,60 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Then* `DETAILS` is inserted at index 0, maintaining the details-first layout.
 
 **Invariants**: `WorkoutHeader` permanently anchored at top; backward-compatible preference migration; `WorkoutMasksAndCardsSection.kt` < 400 lines; 100% 9-language localization parity; 100% clean-room test suite pass rate.
+
+### REQ-UI-500: MapDetailLayout Unified Top-End Floating Actions Stacking & Adaptive Layers Button Placement [Verified]
+- **Tests**: `TST-UI-500` | **Tickets**: `ATT-6214`
+- **Implementation**: `MapDetailLayout.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `RouteOnMapScreen.kt`
+- **Rationale**: In `MapDetailLayout.kt`, the floating Share FAB was previously placed as an independent `Surface` at `Alignment.TopEnd` with `padding(16.dp)`, while callers with secondary actions (`TrackOnMapScreen.kt` and `RouteOnMapScreen.kt`) independently positioned their Layers buttons via hardcoded `padding(top = 76.dp, end = 16.dp)` inside `overlay`. When ATT-5809 suppressed the floating Share button for workouts (`showFloatingShareButton = workoutData == null`), a 60dp empty gap was left above the Layers button on `TrackOnMapScreen.kt`. The system SHALL unify top-end floating action stacking in `MapDetailLayout`, enabling the Layers button to adaptively dock at `top = 16.dp` when the Share button is absent, and naturally stack at `top = 76.dp` when the Share button is present, without hardcoded offsets in caller screens (ATT-6214):
+- **Description**:
+1. *MapDetailLayout Unified Top-End Actions Slot (`REQ-UI-500.1`)*:
+   • `MapDetailLayout` SHALL accept a parameter `topEndActions: @Composable (ColumnScope.() -> Unit)? = null`.
+   • Inside the floating controls `Box(Modifier.fillMaxSize().padding(top = controlsTopOffsetDp))`, all top-end actions SHALL be rendered within a single `Column`:
+     ```kotlin
+     Column(
+         modifier = Modifier
+             .align(Alignment.TopEnd)
+             .padding(16.dp),
+         verticalArrangement = Arrangement.spacedBy(16.dp),
+         horizontalAlignment = Alignment.End
+     ) {
+         if (showFloatingShareButton) {
+             // Share button Surface (44.dp)
+         }
+         topEndActions?.invoke(this)
+     }
+     ```
+2. *WorkoutDetailTabbedContent Top-End Actions Forwarding (`REQ-UI-500.2`)*:
+   • `WorkoutDetailTabbedContent` SHALL accept parameter `mapTopEndActions: @Composable (ColumnScope.() -> Unit)? = null` (defaulting to `null`) and forward it directly to `MapDetailLayout.topEndActions` across both single-pane and split-pane configurations.
+3. *TrackOnMapScreen Adaptive Layers Placement (`REQ-UI-500.3`)*:
+   • In `TrackOnMapScreen.kt` (single-pane and split-pane layouts), the technical tracks Layers button SHALL be migrated from `mapOverlay` to `mapTopEndActions` without caller-side `align(Alignment.TopEnd)` or hardcoded `padding(top = 76.dp, end = 16.dp)`.
+   • When viewing a workout map (`showFloatingShareButton == false`), the Layers button SHALL dock at `top = 16.dp` (plus `controlsTopOffsetDp` status bar inset).
+4. *RouteOnMapScreen Top-End Action Migration (`REQ-UI-500.4`)*:
+   • In `RouteOnMapScreen.kt`, the route overlay Layers button SHALL be passed via `topEndActions` to `MapDetailLayout` without hardcoded `padding(top = 76.dp, end = 16.dp)`.
+   • When the route Share button is visible (`showFloatingShareButton == true`), the Layers button SHALL automatically stack 16dp below the 44dp Share button, maintaining `top = 76.dp` layout parity with zero hardcoding.
+5. *Preservation of System Invariants (`REQ-UI-500.5`)*:
+   • REQ-UI-491 status bar inset clearance (`controlsTopOffsetDp`) SHALL govern the top offset of both the Share button and all `topEndActions`.
+   • 44dp touch target sizing, `CircleShape`, 6dp shadow elevation, `TTAlpha.Overlay` surface styling, and dropdown menu functionality MUST remain strictly preserved.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-UI-308` (Clause 2, *Route Map Layers Menu UI & Ergonomic Parity*) and complements `REQ-UI-491` (*Status Bar Clearance for Floating Map Controls*). Targets `MapDetailLayout.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, and `RouteOnMapScreen.kt`.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-2763` (`REQ-UI-308`, hardcoded `76.dp` in `RouteOnMapScreen`), `ATT-5809` (suppressed floating Share FAB for workouts), and `ATT-5851` (`REQ-UI-491`, `controlsTopOffsetDp`).
+3. *Root Reason for Existing Formulation*: `top = 76.dp` was originally hardcoded in individual caller screens as a static offset (`16.dp top + 44.dp share + 16.dp space = 76.dp`) before `showFloatingShareButton` became dynamic in ATT-5809.
+4. *Preservation of Core Invariants*: Status bar inset clearance (`controlsTopOffsetDp`), 44dp button sizes, layer dropdown toggle logic, permanent route polyline anchoring, and 100% test pass rate remain strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `TrackOnMapScreen` displaying a workout track where `showFloatingShareButton == false`,
+• *When* the map canvas is rendered,
+• *Then* the technical tracks Layers button docks at `top = 16.dp` (plus `controlsTopOffsetDp`), leaving zero empty gap above it.
+• *Given* `RouteOnMapScreen` displaying a route where `showFloatingShareButton == true`,
+• *When* the map canvas is rendered,
+• *Then* the Share button renders at `top = 16.dp` and the route Layers button stacks directly below it at `top = 76.dp` via `Arrangement.spacedBy(16.dp)`.
+• *Given* `MapDetailLayout` with both Share button and `topEndActions`,
+• *When* system status bars are present,
+• *Then* both Share and `topEndActions` are padded by `controlsTopOffsetDp`, preserving REQ-UI-491 status bar clearance.
+
+**Invariants**: `controlsTopOffsetDp` status bar clearance; 44dp button touch targets; `CircleShape` with `TTAlpha.Overlay`; dropdown menus interactive; 100% test pass rate.
+
 
 
 

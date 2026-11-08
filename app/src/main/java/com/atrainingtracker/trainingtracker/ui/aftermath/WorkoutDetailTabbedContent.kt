@@ -123,6 +123,7 @@ fun WorkoutDetailTabbedContent(
     onOpenTabsConfig: () -> Unit,
     mapContent: MapContentScope.() -> Unit,
     mapOverlay: @Composable BoxScope.() -> Unit,
+    mapTopEndActions: (@Composable ColumnScope.() -> Unit)? = null,
     onSplitLapClick: (() -> Unit)? = null,
     onCreateLapClick: ((Double) -> Unit)? = null,
     onMoveBoundaryClick: ((boundaryLapNr: Long) -> Unit)? = null,
@@ -289,6 +290,7 @@ fun WorkoutDetailTabbedContent(
                             header = snapshotHeader,
                             mapContent = mapContent,
                             overlay = mapOverlay,
+                            topEndActions = mapTopEndActions,
                             metadataContent = null,
                             analyticsContent = null,
                             modifier = Modifier.fillMaxSize()
@@ -320,6 +322,7 @@ fun WorkoutDetailTabbedContent(
                             header = snapshotHeader,
                             mapContent = mapContent,
                             overlay = mapOverlay,
+                            topEndActions = mapTopEndActions,
                             metadataContent = null,
                             analyticsContent = if (nonMapNonGraphSections.isNotEmpty()) {
                                 {

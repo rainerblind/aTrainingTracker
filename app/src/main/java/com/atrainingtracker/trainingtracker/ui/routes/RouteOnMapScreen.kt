@@ -347,18 +347,15 @@ fun RouteOnMapScreen(
                 contextualPaths(visibleBackgroundPaths, sameSportAlpha = TTAlpha.Medium)
             }
         },
-        overlay = {
+        overlay = {},
+        topEndActions = {
             val hasClimbs = climbs.isNotEmpty()
             val hasSegments = matchedSegments.isNotEmpty() || backgroundPaths.any { it is MapSegment }
             val hasWaypoints = route?.waypoints?.isNotEmpty() == true
             val hasAnyOverlays = hasClimbs || hasSegments || hasWaypoints
 
             if (hasAnyOverlays) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = 76.dp, end = 16.dp)
-                ) {
+                Box {
                     Surface(
                         onClick = { showLayersMenu = true },
                         modifier = Modifier.size(44.dp),

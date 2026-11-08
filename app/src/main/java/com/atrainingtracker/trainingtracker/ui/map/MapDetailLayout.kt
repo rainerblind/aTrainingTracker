@@ -148,6 +148,7 @@ fun MapDetailLayout(
     workoutData: WorkoutData? = null,
     showElevationHistogram: Boolean = workoutData != null,
     showFloatingShareButton: Boolean = workoutData == null,
+    topEndActions: (@Composable ColumnScope.() -> Unit)? = null,
     onCreateLapClick: ((Double) -> Unit)? = null,
     onInteractiveCanvasTouch: ((Boolean) -> Unit)? = null
 ) {
@@ -364,44 +365,51 @@ fun MapDetailLayout(
             ) {
                 overlay()
 
-                // SHARE BUTTON (ATT-5809: suppressed when workoutData != null, as WorkoutHeader hosts the uniform share action)
-                if (showFloatingShareButton) {
-                    Surface(
-                        onClick = {
-                            if (!isSharing) {
-                                if (workoutData != null) {
-                                    showShareModeSheet = true
-                                } else {
-                                    isSharing = true
+                // TOP-END ACTIONS (Share FAB & dynamic actions, e.g. Layers button - REQ-UI-500 / ATT-6214)
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalAlignment = Alignment.End
+                ) {
+                    // SHARE BUTTON (ATT-5809: suppressed when workoutData != null, as WorkoutHeader hosts the uniform share action)
+                    if (showFloatingShareButton) {
+                        Surface(
+                            onClick = {
+                                if (!isSharing) {
+                                    if (workoutData != null) {
+                                        showShareModeSheet = true
+                                    } else {
+                                        isSharing = true
+                                    }
                                 }
-                            }
-                        },
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(16.dp)
-                            .size(44.dp),
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay),
-                        shadowElevation = 6.dp,
-                        tonalElevation = 2.dp
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            if (isSharing) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    strokeWidth = 2.dp,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Default.Share,
-                                    contentDescription = stringResource(R.string.share),
-                                    modifier = Modifier.size(22.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
+                            },
+                            modifier = Modifier.size(44.dp),
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay),
+                            shadowElevation = 6.dp,
+                            tonalElevation = 2.dp
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                if (isSharing) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Default.Share,
+                                        contentDescription = stringResource(R.string.share),
+                                        modifier = Modifier.size(22.dp),
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
                             }
                         }
                     }
+                    topEndActions?.invoke(this)
                 }
             }
         }

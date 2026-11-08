@@ -8007,6 +8007,23 @@
   6. *Tier 1 Targeted Unit Test Regression Suite*:
   • Command: `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.*" --tests "com.atrainingtracker.trainingtracker.settings.*" --tests "com.atrainingtracker.trainingtracker.build.*"`
 
+### TST-UI-500: **MapDetailLayout Unified Top-End Floating Actions Stacking & Adaptive Layers Placement Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-500`, `REQ-UI-308`, `REQ-UI-491`
+- **Component**: `MapDetailLayout.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `RouteOnMapScreen.kt`, `MapDetailLayoutTest.kt`
+- **Jira**: `ATT-6214`
+- **Test Description**:
+  1. *MapDetailLayout Top-End Actions Column Stacking Contract Test (`TST-UI-500.1`)*:
+  • Verify `MapDetailLayout.kt` declares `topEndActions: @Composable (ColumnScope.() -> Unit)? = null`.
+  • Verify `MapDetailLayout.kt` encapsulates `showFloatingShareButton` and `topEndActions` inside a single `Column` with `Alignment.TopEnd`, `padding(16.dp)`, and `verticalArrangement = Arrangement.spacedBy(16.dp)`.
+  2. *WorkoutDetailTabbedContent mapTopEndActions Delegation Contract Test (`TST-UI-500.2`)*:
+  • Verify `WorkoutDetailTabbedContent.kt` declares `mapTopEndActions: @Composable (ColumnScope.() -> Unit)? = null` and forwards it to `MapDetailLayout` across both single-pane and split-pane branches.
+  3. *TrackOnMapScreen & RouteOnMapScreen Zero Hardcoded 76dp Offset Audit (`TST-UI-500.3`)*:
+  • Verify in `TrackOnMapScreen.kt` source that the Layers button uses `mapTopEndActions` and contains zero occurrences of `padding(top = 76.dp)`.
+  • Verify in `RouteOnMapScreen.kt` source that the Layers button uses `topEndActions` and contains zero occurrences of `padding(top = 76.dp)`.
+  4. *Tier 1 Targeted Unit Test Regression Suite (`TST-UI-500.4`)*:
+  • Execute targeted test suite (`ui.map.*`, `ui.aftermath.*`, `ui.routes.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
+
+
 
 
 
