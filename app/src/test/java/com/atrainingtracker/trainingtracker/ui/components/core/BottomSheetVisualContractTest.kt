@@ -83,8 +83,8 @@ class BottomSheetVisualContractTest {
         val content = file.readText()
 
         assertTrue(
-            "MapDetailLayout must use BottomSheetDesign.SheetShape when !useStatusBarsPadding",
-            content.contains("shape = if (useStatusBarsPadding) RectangleShape else BottomSheetDesign.SheetShape")
+            "MapDetailLayout must use BottomSheetDesign.SheetShape when isBottomSheet",
+            content.contains("shape = if (isBottomSheet) BottomSheetDesign.SheetShape else RectangleShape")
         )
         assertTrue(
             "MapDetailLayout must apply surface background when !useStatusBarsPadding",
