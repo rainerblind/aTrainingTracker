@@ -55,16 +55,51 @@
   3. Screenshots SHALL capture both Light and AMOLED Dark modes from connected Android hardware (Pixel 10, $1080 \times 2424$).
   4. Updating store listings and screenshots in the Google Play Console is designated as a Human Prerequisite (Rule 22).
 
-### REQ-STP-005: Repository README Google Play Store Badge & User Guide Navigation Integration [Verified]
-- **Tests**: `TST-STP-005` | **Tickets**: `ATT-2371`
-- **Implementation**: `README.md`, `images/google-play-badge.svg`, `ReadmePlayStoreBadgeContractTest.kt`
-- **Rationale**: The repository root `README.md` is the primary entry point on GitHub for athletes and developers. A prominent, brand-compliant Google Play Store badge with canonical application ID targeting (`id=com.atrainingtracker`), coupled with direct navigation to the bilingual Online User Guide (`ATT-2275`) and V5.0 feature highlights, ensures immediate installation conversion and documentation discoverability while avoiding broken external CDN dependencies.
+### REQ-STP-005: Repository README Google Play Store Badge, Feature Accuracy & Screenshot Showcase [Verified]
+- **Tests**: `TST-STP-005` | **Tickets**: `ATT-2371`, `ATT-6096`
+- **Implementation**: `README.md`, `.reviews/README.md`, `images/google-play-badge.svg`, `docs/guide/img/*.png`, `ReadmePlayStoreBadgeContractTest.kt`
+- **Rationale**: The repository root `README.md` is the primary entry point on GitHub for athletes and developers. A prominent, brand-compliant Google Play Store badge with canonical application ID targeting (`id=com.atrainingtracker`), direct navigation to the bilingual Online User Guide (`ATT-2275`), verified modern Compose screenshot showcases, and strict trademark-free sports science terminology (`ATT-5678`) ensure installation conversion and accurate product perception without broken asset dependencies.
 - **Description**:
-  1. The repository root `README.md` SHALL feature a centered hero section embedding the application logo (`images/logo_512.png`), application title, subtitle, and an official clickable Google Play Store badge.
-  2. The Google Play badge SHALL be hosted locally within the repository as a vector asset at `images/google-play-badge.svg` and SHALL link directly to the canonical store listing `https://play.google.com/store/apps/details?id=com.atrainingtracker`.
-  3. The hero section SHALL provide direct navigation links to the Online User Guide (`docs/index.md`) including both English (`docs/guide/en/index.md`) and German (`docs/guide/de/index.md`) editions.
-  4. `README.md` SHALL present an updated summary of key V5.0 features including .FIT export/import, Strava/Dropbox/Google Drive cloud sync, Skiba $W'_{\text{bal}}$ and Coggan power analytics, and Lieblingsstrecken navigation.
-  5. All linked asset and documentation targets referenced in `README.md` MUST resolve to valid existing local repository files or valid canonical external URLs.
+1. *Hero Identity, Play Store Badge & User Guide Navigation (`REQ-STP-005.1`)*:
+   • The repository root `README.md` (and its `.reviews/README.md` mirror) SHALL feature a centered hero section embedding the application logo (`images/logo_512.png`), application title, subtitle, and an official clickable Google Play Store badge.
+   • The Google Play badge SHALL be hosted locally within the repository as a vector asset at `images/google-play-badge.svg` and SHALL link directly to the canonical store listing `https://play.google.com/store/apps/details?id=com.atrainingtracker`.
+   • The hero section SHALL provide direct navigation links to the Online User Guide (`docs/index.md`) including both English (`docs/guide/en/index.md`) and German (`docs/guide/de/index.md`) editions.
+2. *Modern Jetpack Compose Material 3 Screenshot Showcase (`REQ-STP-005.2`)*:
+   • `README.md` SHALL feature a responsive 4-screenshot showcase row referencing authentic modern Compose UI screenshots from `docs/guide/img/`:
+     - Live Cockpit (`docs/guide/img/01_cockpit_standard.png`)
+     - Workout Details & Zones (`docs/guide/img/08_workout_detail.png`)
+     - Favorite Routes / Lieblingsstrecken (`docs/guide/img/06_cluster_expanded.png`)
+     - Athlete Profile / Training Load & Form (`docs/guide/img/07_telemetry_charts.png`)
+   • All 4 embedded screenshot links MUST resolve to existing, verified image files under `docs/guide/img/` visually inspected via `read_file` (`Rule 71`).
+3. *Trademark-Free Physiology Terminology (`REQ-STP-005.3`)*:
+   • `README.md` SHALL strictly maintain 100% trademark-free physiology terminology per `ATT-5678`.
+   • Peaksware/TrainingPeaks registered trademarks (`Normalized Power`, `NP`, `Intensity Factor`, `IF`, `Training Stress Score`, `TSS`, `PMC`, `CTL`, `ATL`, `TSB`) MUST NOT appear.
+   • Terminology SHALL use: Weighted Power (`WP`), Relative Intensity (`RI`), Training Load (`Load`), Variability Index (`VI`), Skiba Anaerobic Work Capacity balance ($W'_{\text{bal}}$), Efficiency Factor (`EF`), Aerobic Decoupling (`Pw:Hr`), and Training Load & Form (`Fitness 42d`, `Fatigue 7d`, `Form`).
+4. *Accurate Hardware Telemetry, File Formats & Cloud Synchronization (`REQ-STP-005.4`)*:
+   • Bluetooth LE sensor capabilities SHALL explicitly list Cycling Power Meters (`0x1818`, including Pedal Power Balance).
+   • Data import/export formats SHALL cite native `.FIT`, `.TCX`, `.GPX`, `.CSV`, Strava Bulk Archive (`.zip`), and Full-App ZIP Backup & Restore (`.attbackup`), and omit deprecated `.gc` format. External analysis platforms SHALL cite modern tools (*Intervals.icu*, *GoldenCheetah*) rather than legacy *WKO+*.
+5. *Navigation, Live Segments, Climbs & Known Locations (`REQ-STP-005.5`)*:
+   • Navigation SHALL describe on-device & imported Live Segments with interactive pacing, automatic Climb Detection, and Known Locations (*Lieblingsorte*) with geofenced workout auto-naming.
+   • All linked asset and documentation targets referenced in `README.md` MUST resolve to valid existing local repository files or valid canonical external URLs.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines and amends `REQ-STP-005` (*Repository README Google Play Store Badge & User Guide Navigation Integration*). Targets `README.md`, `.reviews/README.md`, `images/google-play-badge.svg`, and `ReadmePlayStoreBadgeContractTest.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-44.1 (`ATT-2371`, commit `0bcdf317`) established `REQ-STP-005` to enforce the official Play Store badge and User Guide links. `ATT-5678` purged trademarks across app strings and user guides but left root `README.md` untouched.
+3. *Root Reason for Existing Formulation*: The original requirement focused strictly on install conversion (Google Play badge) and documentation discovery (User Guide links) after migrating to V5.0.0.
+4. *Preservation of Core Invariants*: The centered hero section, `images/logo_512.png`, local SVG `images/google-play-badge.svg` linking to canonical package ID `com.atrainingtracker`, and links to `docs/index.md`, `docs/guide/en/index.md`, and `docs/guide/de/index.md` remain 100% intact and enforced by `ReadmePlayStoreBadgeContractTest`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the root `README.md` and `.reviews/README.md`,
+• *When* inspecting the markdown text,
+• *Then* zero occurrences of Peaksware/TrainingPeaks trademarks (`Normalized Power`, `NP`, `Intensity Factor`, `IF`, `Training Stress Score`, `TSS`, `PMC`, `CTL`, `ATL`, `TSB`) or removed `.gc` format claims are found.
+• *Given* the sensor and format sections in `README.md`,
+• *When* checking Bluetooth LE and import/export capabilities,
+• *Then* BLE Power Meters (`0x1818`), Strava Bulk Archive (`.zip`), Full-App ZIP Backup & Restore (`.attbackup`), Known Locations (*Lieblingsorte*), and Climb Detection are accurately described.
+• *Given* the screenshot showcase in `README.md`,
+• *When* resolving the embedded image URLs,
+• *Then* all 4 screenshots reference `docs/guide/img/` (`01_cockpit_standard.png`, `08_workout_detail.png`, `06_cluster_expanded.png`, `07_telemetry_charts.png`) and resolve to valid files on disk.
+
+**Invariants**: Zero broken links; Google Play badge URL strictly `id=com.atrainingtracker`; 100% contract test pass rate in CI.
 
 ### REQ-STP-006: Google Play Store Promo Video Storyboard, Composite Generator & Showcase Pipeline [Verified]
 - **Tests**: `TST-STP-006` | **Tickets**: `ATT-2274`

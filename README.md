@@ -21,9 +21,30 @@
   🇬🇧 <a href="docs/guide/en/index.md">User Guide (English)</a>
 </p>
 
+<table align="center">
+  <tr>
+    <td align="center" width="25%">
+      <a href="docs/guide/img/01_cockpit_standard.png"><img src="docs/guide/img/01_cockpit_standard.png" alt="Live Telemetry Cockpit" width="220" /></a><br />
+      <em>Live Cockpit</em>
+    </td>
+    <td align="center" width="25%">
+      <a href="docs/guide/img/08_workout_detail.png"><img src="docs/guide/img/08_workout_detail.png" alt="Workout Details &amp; Zones" width="220" /></a><br />
+      <em>Workout Details &amp; Zones</em>
+    </td>
+    <td align="center" width="25%">
+      <a href="docs/guide/img/06_cluster_expanded.png"><img src="docs/guide/img/06_cluster_expanded.png" alt="Favorite Routes (Lieblingsstrecken)" width="220" /></a><br />
+      <em>Favorite Routes (Lieblingsstrecken)</em>
+    </td>
+    <td align="center" width="25%">
+      <a href="docs/guide/img/07_telemetry_charts.png"><img src="docs/guide/img/07_telemetry_charts.png" alt="Athlete Profile, Training Load &amp; Form" width="220" /></a><br />
+      <em>Training Load &amp; Form</em>
+    </td>
+  </tr>
+</table>
+
 ---
 
-aTrainingTracker is an open-source, high-performance sports tracking cockpit designed for endurance athletes who demand precision, deep physiological telemetry, and zero-touch automation. While the primary focus is providing a solid, glanceable cockpit experience during your session, the app also includes comprehensive post-workout analytics, Skiba $W'_{\text{bal}}$ and Coggan power metrics, long-term volume tracking (Periods 2.0 & PMC), and automatic route clustering (*Lieblingsstrecken*). By leveraging simultaneous multi-sensor connectivity (ANT+ and Bluetooth LE), it transforms your smartphone into a dedicated training computer.
+aTrainingTracker is an open-source, high-performance sports tracking cockpit designed for endurance athletes who demand precision, deep physiological telemetry, and zero-touch automation. While the primary focus is providing a solid, glanceable cockpit experience during your session, the app also includes comprehensive post-workout analytics, Skiba $W'_{\text{bal}}$ and power metrics (Weighted Power, Relative Intensity, Training Load), long-term volume tracking (Periods 2.0, Training Load & Form: Fitness 42d, Fatigue 7d, Form), and automatic route clustering (*Lieblingsstrecken*). By leveraging simultaneous multi-sensor connectivity (ANT+ and Bluetooth LE), it transforms your smartphone into a dedicated training computer.
 
 <p align="center">
   <img src="images/ANT+logo.png" alt="ANT+ logo" width="80" height="80"/> <img src="images/HR.jpeg" alt="ANT+ HR logo" width="40" height="40"/> <img src="images/run_spd.jpeg" alt="ANT+ run speed logo" width="40" height="40" /> <img src="images/bike_spd.jpeg" alt="ANT+ bike speed logo" width="40" height="40"/> <img src="images/bike_cad.jpeg" alt="ANT+ bike cadence logo" width="40" height="40"/> <img src="images/bike_speed_and_cadence.jpeg" alt="ANT+ bike speed & cadence logo" width="40" height="40"/> <img src="images/bike_pwr.jpeg" alt="ANT+ bike power logo" width="40" height="40"/> <img src="images/temp.jpeg" alt="ANT+ temperature logo" width="40" height="40"/>  
@@ -36,20 +57,20 @@ aTrainingTracker is an open-source, high-performance sports tracking cockpit des
 For those who want to track every detail of their training without wasting time on their phone. aTrainingTracker is powerful yet simple:
 *   **Zero-Touch Automation**: Once configured, just press **Start**. The app automagically determines the sport (Run/Bike) and the specific equipment (bike or shoes) based on the remote sensors detected during the session.
 *   **Best-Sensor Logic**: Intelligent priority system selects the highest quality data source (e.g., preferring a dedicated ANT+ or BTLE speed sensor over GPS-based speed for superior precision).
-*   **Cloud Ready**: Automatic synchronization with **Strava**, **Dropbox**, and **Google Drive**. Your data is ready for analysis on your computer (WKO+, Golden Cheetah) by the time you've finished your post-workout shower.
+*   **Cloud Ready**: Automatic synchronization with **Strava**, **Dropbox**, and **Google Drive**. Your data is ready for analysis on your computer (Intervals.icu, GoldenCheetah) by the time you've finished your post-workout shower.
 *   **Privacy First & Local Sovereignty**: 100% ad-free, no mandatory account or proprietary cloud backend. All tracked workouts and metrics remain stored exclusively in your local on-device SQLite database.
 
 ## Main Features:
 
 *   **Extensive Sensor Support**:
     *   **ANT+**: Heart Rate, Run Speed/Cadence, Bike Speed, Bike Cadence, Combined Speed & Cadence, Power Meters, and Temperature.
-    *   **Bluetooth LE**: Heart Rate, Cycling Speed/Cadence, Running Speed/Cadence.
+    *   **Bluetooth LE**: Heart Rate, Cycling Speed/Cadence, Running Speed/Cadence, and Cycling Power Meters (0x1818, including Pedal Power Balance).
 *   **Multi-Sensor Pairing**: Pair an unlimited number of sensors; the app automatically connects to what is available when you start.
-*   **Advanced Sports Physiology**: Real-time Coggan Normalized Power ($\text{NP}$), Intensity Factor ($\text{IF}$), Training Stress Score ($\text{TSS}$), Variability Index ($\text{VI}$), Skiba Anaerobic Work Capacity balance ($W'_{\text{bal}}$), Efficiency Factor ($\text{EF}$), Aerobic Decoupling ($\text{Pw:Hr}$), and longitudinal Performance Management Chart ($\text{PMC}$: CTL, ATL, TSB).
+*   **Advanced Sports Physiology**: Real-time Weighted Power ($\text{WP}$), Relative Intensity ($\text{RI}$), Training Load ($\text{Load}$), Variability Index ($\text{VI}$), Skiba Anaerobic Work Capacity balance ($W'_{\text{bal}}$), Efficiency Factor ($\text{EF}$), Aerobic Decoupling ($\text{Pw:Hr}$), and longitudinal Training Load & Form ($\text{Fitness 42d}$, $\text{Fatigue 7d}$, $\text{Form}$).
 *   **Highly Customizable Cockpits**: Build your perfect dashboard by swiping through multiple configurable views. Cockpits are sport-type dependent, ensuring you always see the exact metrics relevant to your current activity (e.g., Power/Cadence for cycling vs. Pace for running).
-*   **Versatile Export & Import**: Native support for **.FIT** (flexible binary format), **.TCX**, **.GPX**, **.CSV**, and Golden Cheetah formats.
+*   **Versatile Export & Import**: Native support for **.FIT** (flexible binary format), **.TCX**, **.GPX**, **.CSV**, **Strava Bulk Archive (.zip)**, and full-app **ZIP Backup & Restore** (.attbackup).
 *   **Cloud Integration**: Automatic synchronization triad with **Strava**, **Dropbox**, and **Google Drive** for seamless data backup and cross-platform analysis.
-*   **Navigation & Lieblingsstrecken**: Automatic spatial route clustering into named favorite courses (*Lieblingsstrecken*), GPX route imports, Strava segment racing, and live map follow-me navigation with elevation profile scrubbers.
+*   **Navigation, Segments & Known Locations**: Automatic spatial route clustering into named favorite courses (*Lieblingsstrecken*), GPX route imports, on-device & imported **Live Segments** with pacing, automatic **Climb Detection**, and **Known Locations (*Lieblingsorte*)** with geofenced workout auto-naming.
 *   **Social Sharing**: Generate and share high-resolution workout snapshots that combine your map, elevation profile, and key physiological metrics into a single image.
 *   **Multilingual**: 100% localized in 9 languages: English, German, Spanish, French, Italian, Portuguese, Dutch, Polish, and Japanese.
 *   **Periods 2.0 & Training History**: Multi-year summaries, yearly activity contribution heatmaps, and customizable training volume periods.
