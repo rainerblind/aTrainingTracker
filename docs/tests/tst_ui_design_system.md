@@ -7849,6 +7849,31 @@
   4. *Tier 1 Targeted Unit Test Regression (`TST-UI-491.4`)*:
   • Execute targeted test suite (`com.atrainingtracker.trainingtracker.ui.map.*`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
+### TST-UI-492: **Equipment & Sensors UI Polish Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-492`
+- **Component**: `EquipmentTabsScreen.kt`, `BikeTypeSelector.kt`, `EditEquipmentDialog.kt`, `EditDeviceDialog.kt`, `DeviceData.kt`, `EquipmentSensorsUiPolishContractTest.kt`
+- **Jira**: `ATT-5847`
+- **Test Description**:
+  1. *Strava Gear Name Deduplication Contract (`TST-UI-492.1`, `EquipmentSensorsUiPolishContractTest.kt`)*:
+  • Verify `EquipmentTabsScreen.kt` checks equality between `item.stravaName` and `item.name`.
+  • Verify inline `StravaOriginalLogo` is rendered in title row when identical.
+  • Verify subtitle row is suppressed when identical and shown when different.
+  2. *Usage Date & Frame Type Localization Contract (`TST-UI-492.2`, `EquipmentSensorsUiPolishContractTest.kt`)*:
+  • Verify `UsageItem` formats dates via `DateTimeUtils.formatIsoDate(date)`.
+  • Verify `BikeTypeSelector.kt` and `EquipmentTabsScreen.kt` use string resources `equipment_bike_type_mtb`, `cross`, `road`, `tt`.
+  3. *Spelling & Placeholder Harmonization Contract (`TST-UI-492.3`, `EquipmentSensorsUiPolishContractTest.kt`)*:
+  • Verify `values-de/strings.xml` defines `Radtyp` and `Radtyp auswählen`.
+  • Verify `EditEquipmentDialog.kt` binds `equipment_no_sports_linked` ("Keine" / "None") for sensor placeholder.
+  4. *Sensor Detail Status LED, Capitalization & Dropdown Contract (`TST-UI-492.4`, `EquipmentSensorsUiPolishContractTest.kt`)*:
+  • Verify `EditDeviceDialog.kt` binds LED dot color to `isConnected` matching `DeviceStatusRow`.
+  • Verify `DeviceData.kt:raw2UiDeviceData` capitalizes `manufacturer` (`replaceFirstChar`).
+  • Verify `EquipmentSection` renders `OutlinedTextField` with dropdown affordance.
+  5. *9-Language Localization Parity Audit (`TST-UI-492.5`, `TranslationParityTest.kt`)*:
+  • Verify `equipment_bike_type_mtb`, `equipment_bike_type_cross`, `equipment_bike_type_road`, and `equipment_bike_type_tt` exist with identical keys across all 9 locales.
+  6. *Tier 1 Targeted Unit Test Regression (`TST-UI-492.6`)*:
+  • Execute targeted test suite (`com.atrainingtracker.trainingtracker.ui.equipment.*`, `com.atrainingtracker.banalservice.ui.devices.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+
 
 
 

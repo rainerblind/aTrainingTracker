@@ -827,6 +827,10 @@
     <string name="equipment_configure_equipment">Configurer équipement</string>
     <string name="equipment_bike_type">Type de vélo</string>
     <string name="equipment_select_bike_type">Sélectionner type vélo</string>
+    <string name="equipment_bike_type_mtb">VTT</string>
+    <string name="equipment_bike_type_cross">Cyclo-cross</string>
+    <string name="equipment_bike_type_road">Route</string>
+    <string name="equipment_bike_type_tt">Contre-la-montre</string>
     <string name="equipment_linked_sensors">Capteurs liés</string>
     <string name="equipment_no_sensors_linked">Aucun capteur lié</string>
     <string name="equipment_sport_types">Sports :</string>

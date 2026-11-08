@@ -810,6 +810,10 @@
     <string name="equipment_configure_equipment">装備を設定</string>
     <string name="equipment_bike_type">バイクの種類</string>
     <string name="equipment_select_bike_type">バイクの種類を選択</string>
+    <string name="equipment_bike_type_mtb">MTB</string>
+    <string name="equipment_bike_type_cross">クロス</string>
+    <string name="equipment_bike_type_road">ロード</string>
+    <string name="equipment_bike_type_tt">タイムトライアル</string>
     <string name="equipment_linked_sensors">リンク済みセンサー</string>
     <string name="equipment_no_sensors_linked">リンクなし</string>
     <string name="equipment_sport_types">種目:</string>

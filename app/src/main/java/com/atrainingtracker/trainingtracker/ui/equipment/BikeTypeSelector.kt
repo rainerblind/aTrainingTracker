@@ -45,14 +45,12 @@ fun BikeTypeSelector(
     modifier: Modifier = Modifier
 ) {
     // Map of internal IDs to Display Labels
-    val bikeTypes = remember {
-        listOf(
-            1 to "MTB",
-            2 to "Cross",
-            3 to "Road",
-            4 to "Time Trial"
-        )
-    }
+    val bikeTypes = listOf(
+        1 to stringResource(R.string.equipment_bike_type_mtb),
+        2 to stringResource(R.string.equipment_bike_type_cross),
+        3 to stringResource(R.string.equipment_bike_type_road),
+        4 to stringResource(R.string.equipment_bike_type_tt)
+    )
 
     // State for the Dropdown expansion
     var expanded by remember { mutableStateOf(false) }

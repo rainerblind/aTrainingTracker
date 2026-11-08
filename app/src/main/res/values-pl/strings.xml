@@ -600,6 +600,10 @@
     <string name="equipment_configure_equipment">Konfiguruj sprzęt</string>
     <string name="equipment_bike_type">Typ roweru</string>
     <string name="equipment_select_bike_type">Wybierz typ roweru</string>
+    <string name="equipment_bike_type_mtb">MTB</string>
+    <string name="equipment_bike_type_cross">Przełaj</string>
+    <string name="equipment_bike_type_road">Szosa</string>
+    <string name="equipment_bike_type_tt">Jazda na czas</string>
     <string name="equipment_linked_sensors">Powiązane czujniki</string>
     <string name="equipment_no_sensors_linked">Brak powiązanych czujników</string>
     <string name="equipment_sport_types">Sporty:</string>

@@ -828,6 +828,10 @@
     <string name="equipment_configure_equipment">Materiaal configureren</string>
     <string name="equipment_bike_type">Type fiets</string>
     <string name="equipment_select_bike_type">Type fiets selecteren</string>
+    <string name="equipment_bike_type_mtb">MTB</string>
+    <string name="equipment_bike_type_cross">Cross</string>
+    <string name="equipment_bike_type_road">Racefiets</string>
+    <string name="equipment_bike_type_tt">Tijdrit</string>
     <string name="equipment_linked_sensors">Gekoppelde sensoren</string>
     <string name="equipment_no_sensors_linked">Geen sensoren gekoppeld</string>
     <string name="equipment_sport_types">Sporten:</string>

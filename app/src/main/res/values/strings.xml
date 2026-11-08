@@ -1041,6 +1041,10 @@
     <string name="equipment_configure_equipment">Configure Equipment</string>
     <string name="equipment_bike_type">Bike Type</string>
     <string name="equipment_select_bike_type">Select Bike Type</string>
+    <string name="equipment_bike_type_mtb">MTB</string>
+    <string name="equipment_bike_type_cross">Cross</string>
+    <string name="equipment_bike_type_road">Road</string>
+    <string name="equipment_bike_type_tt">Time Trial</string>
     <string name="equipment_linked_sensors">Linked Sensors</string>
     <string name="equipment_no_sensors_linked">No sensors linked</string>
     <string name="equipment_sport_types">Sport Types:</string>

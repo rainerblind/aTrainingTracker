@@ -227,7 +227,7 @@ fun MultiSelectSensorSpinner(
     val displayText = allSensors
         .filter { selectedIds.contains(it.id) }
         .joinToString(", ") { it.name }
-        .ifEmpty { stringResource(R.string.equipment_no_sensors_linked) }
+        .ifEmpty { stringResource(R.string.equipment_no_sports_linked) }
 
     ExposedDropdownMenuBox(
         expanded = expanded,

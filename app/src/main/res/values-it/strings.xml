@@ -828,6 +828,10 @@
     <string name="equipment_configure_equipment">Configura attrezzatura</string>
     <string name="equipment_bike_type">Tipo bici</string>
     <string name="equipment_select_bike_type">Scegli tipo bici</string>
+    <string name="equipment_bike_type_mtb">MTB</string>
+    <string name="equipment_bike_type_cross">Cross</string>
+    <string name="equipment_bike_type_road">Corsa</string>
+    <string name="equipment_bike_type_tt">Cronometro</string>
     <string name="equipment_linked_sensors">Sensori collegati</string>
     <string name="equipment_no_sensors_linked">Nessun sensore collegato</string>
     <string name="equipment_sport_types">Sport:</string>

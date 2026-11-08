@@ -14568,6 +14568,48 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Edge-to-edge map bleed under status bar is preserved; no changes to public API of `MapDetailLayout`; bottom sheet mode behavior is preserved; 100% test pass rate.
 
+### REQ-UI-492: Equipment & Sensors UI: Strava Gear Deduplication, Date/Frame-Type Localization, Placeholder Harmonization & Sensor Detail Status Dot Alignment [Verified]
+- **Tests**: `TST-UI-492` | **Tickets**: `ATT-5847`
+- **Implementation**: `EquipmentTabsScreen.kt`, `BikeTypeSelector.kt`, `EditEquipmentDialog.kt`, `EditDeviceDialog.kt`, `DeviceData.kt`, `values*/strings.xml`
+- **Rationale**: Live audits of `Räder & Schuhe` and `Sensoren` identified four user-facing defects: (1) redundant repetition of identical Strava gear names in subtitle rows, (2) unlocalized raw ISO usage dates (`YYYY-MM-DD`) and hardcoded English bike frame types ("Road", "Time Trial"), (3) German compounding typo `Rad Typ` and asymmetric dropdown placeholders ("Keine" vs. "Keine verknüpften Sensoren"), and (4) sensor detail dialog showing a green status LED while displaying "100% (nicht verbunden)", uncapitalized internal smartphone manufacturers ("samsung", "google"), and an unstyled bare `TextButton` for equipment linking.
+- **Description**:
+1. *Strava Gear Name Deduplication (`REQ-UI-492.1`)*:
+   • In `EquipmentTabsScreen.kt`, when an equipment item's `stravaName` is non-blank and identical (case-insensitive) to its primary `name`, the card SHALL render an inline `StravaOriginalLogo` badge in the title row and SHALL suppress the duplicate subtitle line.
+   • When `stravaName` differs from `name`, the distinct Strava gear name SHALL continue to render in the subtitle row with `StravaOriginalLogo`.
+2. *Usage Date & Frame-Type Localization (`REQ-UI-492.2`)*:
+   • In `UsageItem`, `firstUsed` and `lastUsed` date strings SHALL be formatted via `DateTimeUtils.formatIsoDate(date)` adhering to the active locale (`FormatStyle.MEDIUM`).
+   • Bike frame types (1: MTB, 2: Cross, 3: Road, 4: Time Trial) SHALL be resolved via localized string resources (`equipment_bike_type_mtb`, `cross`, `road`, `tt`) across all 9 locales (e.g. "Rennrad", "Zeitfahrrad" in German) in both `EquipmentTabsScreen.kt` and `BikeTypeSelector.kt`.
+3. *Spelling & Dropdown Placeholder Harmonization (`REQ-UI-492.3`)*:
+   • In `values-de/strings.xml`, `equipment_bike_type` SHALL be corrected to `Radtyp` and `equipment_select_bike_type` to `Radtyp auswählen`.
+   • In `EditEquipmentDialog.kt`, the empty placeholder for linked sensors SHALL be harmonized with linked sport types to display compact "Keine" / "None" (`R.string.equipment_no_sports_linked`).
+4. *Sensor Detail Dialog Status Dot, Capitalization & Dropdown Styling (`REQ-UI-492.4`)*:
+   • In `EditDeviceDialog.kt`, the technical status LED dot color SHALL be strictly synchronized with `DeviceStatusRow` connection state (`liveData?.isConnected ?: data.isConnected`), displaying `TTColor.ConnectionStatusGreen` when connected and neutral gray (`Color.LightGray`) when disconnected.
+   • In `DeviceData.kt:raw2UiDeviceData`, raw Android manufacturer strings (e.g. `Build.BRAND`) SHALL be capitalized (e.g. "Samsung", "Google") via titlecase formatting.
+   • In `EditDeviceDialog.kt:EquipmentSection`, the linked equipment selector SHALL be styled as an `OutlinedTextField` with dropdown affordance (`trailingIcon`) matching standard dialog inputs.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-492`, refining `REQ-UI-061` (*Universal List Card Contracts*), `REQ-UI-149` (*Modal Bottom Sheet Dialogs*), `REQ-UI-256` (*Equipment Management UI*), and `REQ-UI-283` (*Sensor Management*).
+2. *Historical Origin & Commit Trace*: Introduced in `ATT-2126` (`commit fc10ad81`) and `ATT-2382` during equipment card and sensor management implementation.
+3. *Root Reason for Existing Formulation*: Strava subtitle was unconditionally rendered to confirm external provenance, overlooking 1:1 name matches; frame types were hardcoded during rapid prototyping; and status LED was bound independently from `DeviceStatusRow`.
+4. *Preservation of Core Invariants*: Equipment-to-sensor relationships (`REQ-UI-256`), database schemas (`Equipment.db`, `Devices.db`), swipe-to-delete card gestures (`REQ-UI-061`), 9-locale parity (`REQ-LOC-001`), and 100% test pass rate MUST NOT be compromised.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an equipment item where `stravaName` matches `name` (e.g. "Brooks Green Silence"),
+• *When* rendered in `EquipmentTabsScreen`,
+• *Then* an inline Strava logo badge is displayed next to the title and no duplicate subtitle line is shown.
+• *Given* an equipment item with `firstUsed` or `lastUsed` ISO dates,
+• *When* rendered in German locale,
+• *Then* dates are formatted as `DD.MM.YYYY` (e.g. `10.01.2019`) rather than raw ISO `YYYY-MM-DD`.
+• *Given* a bike with frame type 3 (Road) or 4 (Time Trial) in German locale,
+• *When* viewed in `EquipmentTabsScreen` or `BikeTypeSelector`,
+• *Then* the frame type displays as "Rennrad" or "Zeitfahrrad" and the selector label reads "Radtyp".
+• *Given* a sensor that is disconnected in `EditDeviceDialog`,
+• *When* the dialog is displayed,
+• *Then* the status indicator dot is gray (`Color.LightGray`), the status text reads `(nicht verbunden)`, and smartphone manufacturers like "samsung" or "google" are capitalized to "Samsung" or "Google".
+
+**Invariants**: Equipment and sensor database schemas remain unchanged; Bluetooth/ANT+ background connectivity pipelines remain unaffected; 9-language localization parity across EN, DE, ES, FR, IT, JA, NL, PL, PT; 100% test pass rate.
+
+
 
 
 

@@ -828,6 +828,10 @@
     <string name="equipment_configure_equipment">Configurar material</string>
     <string name="equipment_bike_type">Tipo bike</string>
     <string name="equipment_select_bike_type">Escolher tipo bike</string>
+    <string name="equipment_bike_type_mtb">MTB</string>
+    <string name="equipment_bike_type_cross">Cross</string>
+    <string name="equipment_bike_type_road">Estrada</string>
+    <string name="equipment_bike_type_tt">Contra-relógio</string>
     <string name="equipment_linked_sensors">Captores ligados</string>
     <string name="equipment_no_sensors_linked">Nenhum captor ligado</string>
     <string name="equipment_sport_types">Desportos:</string>
