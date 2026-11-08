@@ -403,6 +403,7 @@ fun TrackOnMapScreen(
         minAltitudeOverride = workoutData.minAltitude,
         maxAltitudeOverride = workoutData.maxAltitude,
         useStatusBarsPadding = useStatusBarsPadding,
+        isBottomSheet = false,
         showMap = showMap && hasGpsTrack && activeDetailPrefs.showMap,
         showElevationProfile = (hasGpsTrack || hasTracklessAltitude) && activeDetailPrefs.showElevationProfile && isElevationPostMap && hasAltitudeData,
         showTelemetryCharts = activeDetailPrefs.showTelemetryCharts && isChartsPostMap,

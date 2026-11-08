@@ -128,6 +128,7 @@ fun MapDetailLayout(
     overlay: @Composable BoxScope.() -> Unit = {},
     modifier: Modifier = Modifier,
     useStatusBarsPadding: Boolean = true,
+    isBottomSheet: Boolean = !useStatusBarsPadding,
     showMap: Boolean = true,
     showElevationProfile: Boolean = true,
     showZoomControls: Boolean = true,
@@ -749,8 +750,8 @@ fun MapDetailLayout(
                     }
                 }
         ) {
-            // DRAG HANDLE (For sheets - REQ-UI-148, REQ-UI-189, REQ-UI-196, ATT-1644)
-            if (!useStatusBarsPadding) {
+            // DRAG HANDLE (For sheets - REQ-UI-148, REQ-UI-189, REQ-UI-196, ATT-1644, REQ-UI-498.2)
+            if (isBottomSheet) {
                 MinimumDragHandle()
             }
 
@@ -758,7 +759,7 @@ fun MapDetailLayout(
             Surface(
                 color = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.onSurface,
-                shape = if (useStatusBarsPadding) RectangleShape else BottomSheetDesign.SheetShape,
+                shape = if (isBottomSheet) BottomSheetDesign.SheetShape else RectangleShape,
                 modifier = if (useStatusBarsPadding) Modifier.statusBarsPadding() else Modifier
             ) {
                 Box(modifier = Modifier.drawWithContent {

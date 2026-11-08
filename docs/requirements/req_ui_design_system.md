@@ -14799,6 +14799,45 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Strava upload enablement strictly tied to `stravaMappingAvailable`; 9-language localization parity preserved; 100% test pass rate.
 
+### REQ-UI-498: WorkoutDetailTabbedContent Header Click Decoupling & MapDetailLayout Sheet Chrome Suppression [Verified]
+- **Tests**: `TST-UI-498` | **Tickets**: `ATT-5835`
+- **Implementation**: `WorkoutDetailTabbedContent.kt`, `MapDetailLayout.kt`, `TrackOnMapScreen.kt`
+- **Rationale**: In `WorkoutDetailTabbedContent.kt`, clicking anywhere on the header card surface inadvertently triggered the Edit Workout dialog (`Trainingseinheit überarbeiten`), creating accidental triggers when inspecting details or switching tabs. In addition, `MapDetailLayout` conflated `!useStatusBarsPadding` with bottom-sheet presentation, rendering an orphan bottom-sheet drag handle pill (`—`) and rounded top corners in full-screen tabbed layouts (`audit_05_under_edit.png`):
+- **Description**:
+1. *WorkoutDetailTabbedContent Header Click Decoupling (`REQ-UI-498.1`)*:
+   • In `WorkoutDetailTabbedContent.kt`, `WorkoutHeader` SHALL receive `onClicked = null`, disabling whole-card click navigation and reserving edit actions strictly to the dedicated Edit pencil icon button (`onEditWorkout`).
+2. *MapDetailLayout Bottom-Sheet Chrome Decoupling (`REQ-UI-498.2`)*:
+   • `MapDetailLayout` SHALL accept `isBottomSheet: Boolean = !useStatusBarsPadding`.
+   • The drag handle pill (`MinimumDragHandle()`) and rounded top sheet shape (`BottomSheetDesign.SheetShape`) SHALL be rendered strictly when `isBottomSheet == true`.
+   • When `isBottomSheet == false`, the drag handle SHALL be suppressed and the surface container SHALL use flat top corners (`RectangleShape`).
+3. *Full-Screen Tabbed Content Chrome Suppression (`REQ-UI-498.3`)*:
+   • In `WorkoutDetailTabbedContent.kt` (overview, map/charts, and full tabs) and `TrackOnMapScreen.kt`, `MapDetailLayout` invocations SHALL explicitly pass `isBottomSheet = false`, ensuring no drag handle pill or rounded sheet corners appear beneath tab bars.
+4. *Preservation of System Invariants (`REQ-UI-498.4`)*:
+   • Modal bottom-sheet callers (`MapScreenWithTrack.kt:763`, `LiveSegmentSheet.kt:49`) SHALL preserve visible drag handles and `BottomSheetDesign.SheetShape` per Rule 74 (`isBottomSheet = true`).
+   • `ATT-5851` floating controls status bar offset (`floatingControlsTopOffsetPx`) calculation SHALL remain strictly tied to `useStatusBarsPadding` and unaffected by `isBottomSheet`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-UI-408` (*Multi-Tab Workout Details*), `REQ-UI-148` & `Rule 74` (*Bottom Sheet Drag Handle Contract*), and `REQ-UI-491` (*MapDetailLayout Status Bar Inset Clearance*). Targets `WorkoutDetailTabbedContent.kt`, `MapDetailLayout.kt`, and `TrackOnMapScreen.kt`.
+2. *Historical Origin & Commit Trace*: `WorkoutHeader` click binding inherited from `WorkoutSummariesWithMapCard` in `ATT-4081`; `MapDetailLayout` drag handle and sheet shape heuristic (`!useStatusBarsPadding`) introduced in `ATT-5485` and refined in `ATT-5851`.
+3. *Root Reason for Existing Formulation*: `WorkoutHeader` originally supported whole-card click for list drill-down; `MapDetailLayout` assumed any layout not needing status bar padding was a modal/peek bottom sheet.
+4. *Preservation of Core Invariants*: Dedicated edit pencil icon continues opening `EditWorkoutScreen`; modal bottom sheets in `MapScreenWithTrack` retain Rule 74 drag handles; `ATT-5851` floating controls clearance is 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete viewing Workout Details in `WorkoutDetailTabbedContent`,
+• *When* tapping anywhere on the `WorkoutHeader` card surface,
+• *Then* no Edit Workout dialog opens.
+• *Given* an athlete viewing Workout Details,
+• *When* tapping the dedicated Edit pencil icon button on `WorkoutHeader`,
+• *Then* `EditWorkoutScreen` opens as expected.
+• *Given* full-screen tabbed layouts in `WorkoutDetailTabbedContent` or `TrackOnMapScreen`,
+• *When* rendered,
+• *Then* no drag handle pill (`—`) appears below the tab bar, and the sheet surface uses flat top corners.
+• *Given* modal bottom sheets in `MapScreenWithTrack`,
+• *When* rendered,
+• *Then* the Rule 74 drag handle pill is visible and top corners are rounded per `BottomSheetDesign.SheetShape`.
+
+**Invariants**: Dedicated edit pencil button functional; Rule 74 bottom sheet drag handles preserved; ATT-5851 floating controls clearance intact; 100% test pass rate.
+
 
 
 

@@ -7964,6 +7964,23 @@
   4. *Tier 1 Targeted Unit Test Regression (`TST-UI-497.4`)*:
   • Execute targeted test suite (`ui.aftermath.editworkout.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
 
+### TST-UI-498: **WorkoutDetailTabbedContent Header Click Decoupling & MapDetailLayout Sheet Chrome Suppression Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-498`
+- **Component**: `WorkoutDetailTabbedContent.kt`, `MapDetailLayout.kt`, `TrackOnMapScreen.kt`
+- **Jira**: `ATT-5835`
+- **Test Description**:
+  1. *WorkoutDetailTabbedContent Header Click Decoupling Contract Test (`TST-UI-498.1`)*:
+  • Verify that `WorkoutDetailTabbedContent.kt` binds `onClicked = null` on `WorkoutHeader`, reserving edit execution strictly to the dedicated `onEditWorkout` pencil icon button.
+  2. *MapDetailLayout isBottomSheet Parameter & Drag Handle Gating Contract Test (`TST-UI-498.2`)*:
+  • Verify that `MapDetailLayout` supports `isBottomSheet: Boolean` parameter with default `!useStatusBarsPadding`.
+  • Verify that `MinimumDragHandle()` and `BottomSheetDesign.SheetShape` are rendered strictly when `isBottomSheet == true`.
+  • Verify that when `isBottomSheet == false`, the drag handle is suppressed and `shape = RectangleShape` is used.
+  3. *Full-Screen Tabbed Callers isBottomSheet Parity Contract Test (`TST-UI-498.3`)*:
+  • Verify that all `MapDetailLayout` invocations in `WorkoutDetailTabbedContent.kt` and `TrackOnMapScreen.kt` explicitly pass `isBottomSheet = false`.
+  • Verify modal bottom sheets in `MapScreenWithTrack.kt` and `LiveSegmentSheet.kt` maintain `isBottomSheet = true` (or default to true when `useStatusBarsPadding == false`).
+  4. *Tier 1 Targeted Unit Test Regression (`TST-UI-498.4`)*:
+  • Execute targeted test suite (`ui.aftermath.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
+
 
 
 
