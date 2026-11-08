@@ -120,6 +120,16 @@ class MapScreenWithTrackTest {
     }
 
     @Test
+    fun testATrainingTrackerMap_forwardsInitialLocationToMapBoundsController_TST_MAP_062_4() {
+        val content = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/ATrainingTrackerMap.kt").readText()
+
+        assertTrue(
+            "ATrainingTrackerMap must pass initialLocation to MapBoundsController (REQ-MAP-060.2)",
+            content.contains("initialLocation = initialLocation")
+        )
+    }
+
+    @Test
     fun testATrainingTrackerApp_wiresMapNavigationCallbacks() {
         val content = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/navigation/ATrainingTrackerApp.kt").readText()
 

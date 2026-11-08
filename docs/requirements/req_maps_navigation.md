@@ -1983,3 +1983,37 @@
 • *Then* a 44dp circular Surface navigation button is anchored at the top-left with status bar padding.
 
 **Invariants**: Rule 33 single spatial authority; `@Immutable TrackingMapState` isolation; zero reflection violations; zero database schema alterations.
+
+
+### REQ-MAP-060: Local Bounds Proximity Guard & Initial Location Fallback [Verified]
+- **Tests**: `TST-MAP-062` | **Tickets**: `ATT-6212`
+- **Implementation**: `MapBehaviors.kt`, `ATrainingTrackerMap.kt`, `MapScreenWithTrack.kt`
+- **Rationale**: To prevent multi-continent or hemisphere-wide bounding box fitting when opening the global map (`MapScreenWithTrack`) outside an active workout recording (`currentLocation == null`), avoiding disorientation caused by fitting segments worldwide (e.g. Europe and Cuba/Americas) (Sprint 2026-45.13, ATT-6212, refining `REQ-MAP-059` and `REQ-MAP-046`):
+1. *Local Proximity Evaluation Guard (`REQ-MAP-060.1`)*:
+• In `MapBoundsController` (`MapBehaviors.kt`), when evaluating whether a segment or route is local (`isLocal(target: LatLng)`) under `MapZoomFocus.LOCAL_SEGMENTS` or `MapZoomFocus.LOCAL_ROUTES`, the system SHALL evaluate proximity against `userPos = currentLocation ?: initialLocation`.
+• If `userPos == null`, `isLocal(...)` SHALL return `false` (rather than `true`), preventing unanchored multi-continent or global bounds fitting across disparate geographic regions.
+2. *Initial Location Forwarding & Fallback Anchoring (`REQ-MAP-060.2`)*:
+• `MapBoundsController` SHALL accept an optional `initialLocation: LatLng? = null` parameter.
+• `ATrainingTrackerMap` SHALL forward its resolved `initialLocation` (computed via `MapInitialLocationResolver.resolveInitialLocation`) to `MapBoundsController`, ensuring a stable geographic anchor exists prior to live GPS fix acquisition.
+3. *Single-Shot Initial Bounds Fitting State Guard (`REQ-MAP-060.3`)*:
+• In `MapBoundsController`, when `hasPoints` is false (no local segments or routes within the 1000m proximity threshold), the system SHALL only set `hasFittedInitialBounds = true` if `currentLocation != null`.
+• If `currentLocation == null` (operating on `initialLocation` fallback), `hasFittedInitialBounds` SHALL remain false so that deferred live GPS fix arrival retains the ability to auto-align the camera once GPS fix is acquired (REQ-MAP-059.2).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new refinement `REQ-MAP-060` refining `REQ-MAP-059` (*Initial Map Camera Centering*) and `REQ-MAP-046` (*Map Bounds & Follow-Me Invariants*).
+2. *Historical Origin & Commit Trace*: Sprint 2026-41.6 (`0101e12e` introduced `MapBoundsController` with `if (userPos == null) return true`) and Sprint 2026-45.12 (`8f8f959a`, `ATT-5880` resolved initial camera location but left `MapBoundsController` without `initialLocation` forwarding).
+3. *Root Reason for Existing Formulation*: `isLocal` naively assumed showing all segments was preferable when user position was unknown; real-world multi-continent Strava segment datasets broke this assumption by creating transatlantic bounding boxes.
+4. *Preservation of Core Invariants*: `MapInitialLocationResolver` cascade (`REQ-MAP-059.1`), deferred live GPS fix alignment (`REQ-MAP-059.2`), 1000m local threshold, and Rule 33 single spatial authority remain preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `MapScreenWithTrack` opened without active tracking or live GPS fix (`currentLocation == null`) and segments existing across multiple continents (e.g. Europe and Cuba),
+• *When* `MapBoundsController` processes `MapZoomFocus.LOCAL_SEGMENTS`,
+• *Then* `isLocal` returns `false` for segments not within 1000m of `initialLocation` (or `false` if `userPos == null`), preventing `LatLngBounds.Builder` from constructing a hemisphere-wide bounding box.
+• *Given* `MapBoundsController` with `currentLocation == null` and valid `initialLocation`,
+• *When* segments exist within 1000m of `initialLocation`,
+• *Then* only those local segments are fitted in `LatLngBounds`.
+• *Given* `MapBoundsController` with `currentLocation == null` and no segments within 1000m of `initialLocation`,
+• *When* `isMapLoaded == true`,
+• *Then* camera remains anchored at `initialLocation` at zoom 14.0f and does not fit world bounds.
+
+**Invariants**: Rule 33 single spatial authority; `MapInitialLocationResolver` priority cascade; zero reflection violations; zero database schema alterations.

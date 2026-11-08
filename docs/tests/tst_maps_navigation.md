@@ -1035,3 +1035,21 @@
   • Run `TrackingMapIsolationContractTest` to ensure zero reflection violations and strict `@Immutable` isolation.
   6. *Targeted Regression Verification Suite (`TST-MAP-061.6`)*:
   • Execute targeted tests across `ui.map.*` and `ui.tracking.*` asserting 100% pass rate.
+
+
+### TST-MAP-062: **Local Bounds Proximity & User Position Fallback Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-MAP-060` (`REQ-MAP-060.1`..`REQ-MAP-060.3`)
+- **Component**: `MapBehaviorsTest.kt`, `ATrainingTrackerMapTest.kt`, `MapScreenWithTrackTest.kt`
+- **Jira**: `ATT-6212`
+- **Test Description**:
+  1. *Null User Position Proximity Guard (`TST-MAP-062.1`, `MapBehaviorsTest.kt`)*:
+  • Verify that when `userPos == null`, `isLocal(target)` returns `false`, preventing unanchored segment inclusion.
+  2. *Initial Location Fallback & 1000m Proximity Filtering (`TST-MAP-062.2`, `MapBehaviorsTest.kt`)*:
+  • Verify that `userPos` resolves to `currentLocation ?: initialLocation`.
+  • Verify that points within 1000m are included while distant/intercontinental points (> 1000m) are excluded.
+  3. *Deferred Fix Preservation Guard (`TST-MAP-062.3`, `MapBehaviorsTest.kt`)*:
+  • Verify that when `currentLocation == null` and no points match, `hasFittedInitialBounds` is not set to true, preserving deferred fix camera centering.
+  4. *ATrainingTrackerMap Wiring Contract (`TST-MAP-062.4`, `ATrainingTrackerMapTest.kt` / `MapScreenWithTrackTest.kt`)*:
+  • Verify `ATrainingTrackerMap` accepts and forwards `initialLocation` to `MapBoundsController`.
+  5. *Targeted Regression Verification Suite (`TST-MAP-062.5`)*:
+  • Execute targeted tests across `ui.map.*` and `build.*` asserting 100% pass rate.
