@@ -29,6 +29,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import com.atrainingtracker.trainingtracker.ui.components.FastScrollableBox
+import com.atrainingtracker.trainingtracker.ui.common.DateTimeUtils
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -417,14 +418,15 @@ fun EquipmentItem(
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
-    // Using your corrected frameType mapping
+    // Using localized frameType mapping (REQ-UI-492.2)
     val frameDesc = when (item.frameType) {
-        1 -> "MTB"
-        2 -> "Cross"
-        3 -> "Road"
-        4 -> "Time Trial"
+        1 -> stringResource(R.string.equipment_bike_type_mtb)
+        2 -> stringResource(R.string.equipment_bike_type_cross)
+        3 -> stringResource(R.string.equipment_bike_type_road)
+        4 -> stringResource(R.string.equipment_bike_type_tt)
         else -> ""
     }
+    val isStravaIdentical = !item.stravaName.isNullOrBlank() && item.stravaName.trim().equals(item.name.trim(), ignoreCase = true)
 
     val isCompact = item.statsData.totalWorkouts == 0
     val cardAlpha = if (item.isRetired) EquipmentLayoutConstants.RETIRED_ALPHA else 1.0f
@@ -464,6 +466,11 @@ fun EquipmentItem(
                             style = if (isCompact) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge
                         )
 
+                        if (isStravaIdentical) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            StravaOriginalLogo(modifier = Modifier.height(14.dp))
+                        }
+
                         if (item.isRetired) {
                             Spacer(modifier = Modifier.width(8.dp))
                             Surface(
@@ -489,8 +496,8 @@ fun EquipmentItem(
                     }
                 }
 
-                // Strava Line (with Original Logo)
-                if (!item.stravaName.isNullOrBlank()) {
+                // Strava Line (with Original Logo) - Suppressed when identical to local name (REQ-UI-492.1)
+                if (!item.stravaName.isNullOrBlank() && !isStravaIdentical) {
                     Spacer(modifier = Modifier.height(EquipmentLayoutConstants.SUBTITLE_SPACING))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         StravaOriginalLogo()
@@ -599,9 +606,9 @@ fun EquipmentItem(
 @Composable
 fun UsageItem(label: String, date: String, alignEnd: Boolean = false) {
     Column(horizontalAlignment = if (alignEnd) Alignment.End else Alignment.Start) {
-        // Value on Top
+        // Value on Top (Localized date formatting - REQ-UI-492.2)
         Text(
-            text = date,
+            text = DateTimeUtils.formatIsoDate(date),
             style = MaterialTheme.typography.bodyMedium, // Match importance of stats
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -615,12 +622,11 @@ fun UsageItem(label: String, date: String, alignEnd: Boolean = false) {
 }
 
 @Composable
-fun StravaOriginalLogo() {
-    // Increased height to 18.dp to match the increased bodySmall/bodyMedium text scale
+fun StravaOriginalLogo(modifier: Modifier = Modifier.height(14.dp)) {
     Image(
         painter = painterResource(id = R.drawable.logo_square_strava),
         contentDescription = "Strava",
-        modifier = Modifier.height(12.dp),
+        modifier = modifier,
         contentScale = ContentScale.Fit
     )
 }

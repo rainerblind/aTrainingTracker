@@ -355,7 +355,7 @@
 
     <!-- update_workout -->
     <string name="ExportName">Export naam:</string>
-    <string name="Sport">Sport:</string>
+    <string name="Sport">Sport</string>
     <string name="Goal">Doel:</string>
     <string name="GoalHint">doel bewerken</string>
     <string name="Method">Methode:</string>
@@ -378,7 +378,7 @@
     <string name="tcxWrite">naar TCX exporteren</string>
     <string name="gpxWrite">naar GPX exporteren</string>
     <string name="fitWrite">naar FIT exporteren</string>
-    <string name="stravaUpload">naar Strava uploaden</string>
+    <string name="stravaUpload">Naar Strava uploaden</string>
     <string name="runkeeperUpload">naar Runkeeper uploaden</string>
     <string name="trainingPeaksUpload">naar TrainingPeaks uploaden</string>
 
@@ -502,7 +502,7 @@
     <string name="prefs_battery_saver_title">Dynamisch scherm dimmen</string>
     <string name="prefs_battery_saver_summary">Past de schermhelderheid dynamisch aan op basis van helling en trainingszones</string>
     <string name="cockpit_theme_title">Cockpitthema (tijdens training)</string>
-    <string name="cockpit_theme_description">Geldt uitsluitend voor de telemetrie- en sensorweergaven tijdens actieve workouts. Het hoofdmenu en \'Control Tracking\' behouden het standaardthema.</string>
+    <string name="cockpit_theme_description">Geldt uitsluitend voor de telemetrie- en sensorweergaven tijdens actieve workouts. Het hoofdmenu en \'Start\' behouden het standaardthema.</string>
     <string name="cockpit_theme_system">Systeem</string>
     <string name="cockpit_theme_always_dark">Altijd donker</string>
     <string name="display_brightness_title">Schermhelderheid (tijdens training)</string>
@@ -765,9 +765,9 @@
     <!-- workout summary description-->
 
     <!-- Edit workout description -->
-    <string name="hint_workout_description">beschrijving</string>
-    <string name="hint_workout_goal">doel</string>
-    <string name="hint_workout_method">methode</string>
+    <string name="hint_workout_description">Beschrijving</string>
+    <string name="hint_workout_goal">Doel</string>
+    <string name="hint_workout_method">Methode</string>
 
     <!-- workout details -->
     <string name="total_time_format">(totaal: %1$s)</string>
@@ -788,6 +788,9 @@
     <string name="mapping_format_strava">Strava: %1$s</string>
     <string name="mapping_format_tcx">TCX: %1$s</string>
     <string name="mapping_format_gc">GC: %1$s</string>
+    <string name="sport_type_advanced_options">Geavanceerde opties</string>
+    <string name="sport_type_advanced_options_desc">Snelheidsdrempels voor automatische detectie en exporttoewijzingen van derden</string>
+    <string name="sport_type_speed_detection_hint">Snelheidsdrempels worden gebruikt voor automatische sporttype-detectie tijdens het opnemen.</string>
 
     <!-- drawer -->
     <string name="drawer__training">Training</string>
@@ -825,6 +828,10 @@
     <string name="equipment_configure_equipment">Materiaal configureren</string>
     <string name="equipment_bike_type">Type fiets</string>
     <string name="equipment_select_bike_type">Type fiets selecteren</string>
+    <string name="equipment_bike_type_mtb">MTB</string>
+    <string name="equipment_bike_type_cross">Cross</string>
+    <string name="equipment_bike_type_road">Racefiets</string>
+    <string name="equipment_bike_type_tt">Tijdrit</string>
     <string name="equipment_linked_sensors">Gekoppelde sensoren</string>
     <string name="equipment_no_sensors_linked">Geen sensoren gekoppeld</string>
     <string name="equipment_sport_types">Sporten:</string>
@@ -1159,6 +1166,7 @@
     <string name="create_backup">Back-up maken</string>
     <string name="restore_backup">Volledig herstel (Migratie)</string>
     <string name="import_workouts">Incrementele import (Samenvoegen)</string>
+    <string name="merge_from_backup_file">Samenvoegen vanuit back-upbestand</string>
     <string name="backup_success">Back-up succesvol gemaakt.</string>
     <string name="backup_failed">Back-up maken mislukt.</string>
     <string name="restore_success">Herstel succesvol. De app wordt nu herstart.</string>
@@ -1227,6 +1235,7 @@
     <string name="filter_workouts_title">Workouts filteren</string>
     <string name="filter_action">Filteren</string>
     <string name="filter_clear_all">Alles wissen</string>
+    <string name="filter_reset">Resetten</string>
     <string name="filter_search_hint">Zoek titel, notities, beschrijving…</string>
     <string name="filter_section_time">Tijd &amp; periode</string>
     <string name="filter_section_sport">Sporttype</string>
@@ -1359,6 +1368,9 @@
     <string name="cluster_trend_pr">Record</string>
     <string name="cluster_trend_avg">Gem</string>
     <string name="cluster_trend_outlier">Uitschieter</string>
+    <string name="cluster_trend_range_all">Alles</string>
+    <string name="cluster_trend_range_1y">1J</string>
+    <string name="cluster_trend_range_3y">3J</string>
 
     <!-- ATT-510: Lap Overview & Performance Highlights -->
     <string name="laps_header">Ronden (%1$d)</string>
@@ -1452,9 +1464,20 @@
     <string name="known_location_routes_header">Routes vanaf hier (%d):</string>
     <string name="filter_by_start_location">Filteren op startlocatie</string>
     <string name="known_locations_home_base">Thuisbasis</string>
+    <string name="known_locations_home_base_desc">Automatische workoutnaamgeving &amp; barometrische hoogtekalibratie</string>
+    <string name="known_locations_add_location">Favoriete locatie toevoegen</string>
+    <string name="known_locations_new_location">Nieuwe favoriete locatie</string>
     <string name="known_locations_home_badge">Thuisbasis</string>
     <string name="known_locations_set_home">Instellen als thuisbasis</string>
     <string name="known_locations_remove_home">Thuisbasis verwijderen</string>
+    <string name="known_locations_menu_merge">Samenvoegen met andere locatie…</string>
+    <string name="known_locations_merge_select_target_title">Doellocatie selecteren</string>
+    <string name="known_locations_merge_distance_away">%1$s afstand</string>
+    <string name="known_locations_merge_no_candidates">Geen andere locaties binnen 2 km.</string>
+    <string name="known_locations_merge_dialog_title">Favoriete locatie samenvoegen</string>
+    <string name="known_locations_merge_dialog_message">Wil je \'%1$s\' samenvoegen in \'%2$s\'?\n\nNieuwe detectiestraal: %3$s.\nAlle gekoppelde workouts en routes worden opnieuw toegewezen aan \'%2$s\' en \'%1$s\' wordt verwijderd.</string>
+    <string name="known_locations_merge_pinned_notice">De coördinaat van \'%1$s\' blijft ongewijzigd (thuisbasis of vaste hoogte).</string>
+    <string name="known_locations_merge_action">Samenvoegen</string>
 
     <!-- Advanced / Expert Settings Preferences (ATT-1304, ATT-1646 / REQ-SET-074) -->
     <string name="drawer__expert_settings">Expertinstellingen</string>
@@ -1463,8 +1486,8 @@
     <string name="tuning_group_cockpit_tracking">Cockpit &amp; registratie</string>
     <string name="tuning_group_sensors_gps">Sensoren &amp; gps</string>
     <string name="tuning_group_analysis_models">Analyse &amp; modellen</string>
-    <string name="advanced_tuning_warning_title">Expertinstellingen</string>
-    <string name="advanced_tuning_warning_desc">Het wijzigen van deze parameters beïnvloedt trackingheuristieken, sensorfiltering en batterijbesparing. U kunt te allen tijde de fabrieksinstellingen herstellen.</string>
+    <string name="advanced_tuning_warning_title">Let op</string>
+    <string name="advanced_tuning_warning_desc">Pas hier geavanceerde lay-out-, model- en sensorparameters aan. U kunt te allen tijde de standaardwaarden herstellen met het herstelpictogram.</string>
     <string name="tuning_cat_battery_saver">AMOLED-batterijbesparing</string>
     <string name="tuning_cat_gps">GPS- &amp; locatiefiltering</string>
     <string name="tuning_cat_elevation">Hoogte- en hellingsdynamiek</string>
@@ -1555,6 +1578,14 @@
     <string name="tuning_matrix_col_details">Details</string>
     <string name="tuning_matrix_feature">Onderdeel</string>
     <string name="tuning_summary_matrix_format">%1$d/8 in lijst, %2$d/8 in details</string>
+    <string name="tuning_battery_saver_flat_short">Vlak</string>
+    <string name="tuning_battery_saver_steep_short">Steil</string>
+    <string name="tuning_sensors_alt_short">Hoogte</string>
+    <string name="tuning_sensors_speed_short">Snelheid</string>
+    <string name="tuning_cluster_end_short">Einde</string>
+    <string name="tuning_cluster_apex_short">Apex</string>
+    <string name="tuning_cluster_dist_short">Afst.</string>
+    <string name="tuning_cluster_alt_short">Hoogte</string>
     <string name="map_splitter_content_description">Verdeellijn voor kaart en telemetrie. Sleep verticaal om het formaat te wijzigen, dubbeltik om te herstellen.</string>
 
     <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->
@@ -1967,6 +1998,8 @@
     <string name="tuning_auto_pause_start_in_auto_pause_desc">Bij het starten van een training in stilstand direct beginnen in automatische pauze totdat beweging wordt gedetecteerd. Geldt voor alle sporten.</string>
     <string name="tuning_speed_value_format">%1$d %2$s</string>
     <string name="tuning_seconds_value_format">%1$d s</string>
+    <string name="tuning_auto_pause_custom_thresholds_title">Drempelwaarden en vertragingen aanpassen</string>
+    <string name="tuning_auto_pause_subtitle_format">%1$s · Pauze: %2$s · Hervatten: %3$s</string>
     <string name="cockpit_auto_pause_badge">Automatisch pauzeren</string>
     <string name="cockpit_auto_pause_resume">Nu hervatten</string>
     <string name="cockpit_status_not_started">Niet gestart</string>
@@ -2195,6 +2228,8 @@
     <string name="cd_copy_tab">Tabblad kopiëren</string>
     <string name="cd_move_tab_left">Tabblad naar links verplaatsen</string>
     <string name="cd_move_tab_right">Tabblad naar rechts verplaatsen</string>
+    <string name="cd_move_field">Veld verplaatsen</string>
+    <string name="cd_delete_field">Veld verwijderen</string>
     <string name="copy_tab_title">Tabblad kopiëren</string>
     <string name="copy_tab_action">Kopiëren</string>
     <string name="back">Terug</string>
@@ -2403,4 +2438,23 @@
     <string name="settings_workout_photos_size_small">Klein</string>
     <string name="settings_workout_photos_size_medium">Gemiddeld</string>
     <string name="settings_workout_photos_size_large">Groot</string>
+    <!-- Workout Diagnostic Recording Errors & Actionable Report (REQ-TRK-053 / ATT-5886) -->
+    <string name="workout_diagnostic_banner_title">Opnamewaarschuwing gedetecteerd</string>
+    <string name="workout_diagnostic_banner_action">Details weergeven</string>
+    <string name="workout_diagnostic_dialog_title">Opnamediagnostiek</string>
+    <string name="workout_diagnostic_explanation_storage_full">Het apparaatgeheugen was vol. Maak opslagruimte vrij op je smartphone.</string>
+    <string name="workout_diagnostic_explanation_sample_write">Sommige gegevens per seconde konden tijdens de training niet worden opgeslagen. Het totale overzicht van je training is echter bewaard gebleven.</string>
+    <string name="workout_diagnostic_explanation_finalize">Je trainingsopname is volledig opgeslagen, maar er is een interne fout opgetreden tijdens de daaropvolgende analyse.</string>
+    <string name="workout_diagnostic_explanation_generic">Er is een onverwachte fout opgetreden tijdens de opname of analyse.</string>
+    <string name="workout_diagnostic_technical_details_title">Technische details</string>
+    <string name="workout_diagnostic_action_copy">Kopiëren naar klembord</string>
+    <string name="workout_diagnostic_copied_toast">Technische details gekopieerd naar klembord</string>
+    <string name="workout_diagnostic_action_send_email">Foutrapport per e-mail verzenden</string>
+    <string name="workout_diagnostic_email_subject">aTrainingTracker-foutrapport (%1$s)</string>
+    <string name="workout_diagnostic_action_clear_warning">Waarschuwing wissen</string>
+    <string name="workout_diagnostic_clear_confirm_title">Waarschuwing wissen?</string>
+    <string name="workout_diagnostic_clear_confirm_message">De diagnostische waarschuwing voor deze training wordt permanent verwijderd.</string>
+    <!-- Hardware Volume Keys Cockpit Tab Cycling (REQ-TRK-054 / ATT-5905) -->
+    <string name="prefs_volume_keys_switch_cockpit_tabs_title">Volumeknoppen voor cockpit-tabbladen</string>
+    <string name="prefs_volume_keys_switch_cockpit_tabs_summary">In het cockpit met volume +/- cyclisch door tabbladen bladeren</string>
 </resources>

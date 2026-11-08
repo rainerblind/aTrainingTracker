@@ -133,7 +133,7 @@ internal fun BackupTabContentLayout(
                 ) {
                     Icon(Icons.Default.Save, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.create_backup))
+                    Text(stringResource(R.string.backup_now))
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
@@ -159,31 +159,28 @@ internal fun BackupTabContentLayout(
             elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = stringResource(R.string.automated_backups),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.automated_backups))
-                        Text(
-                            text = stringResource(automatedBackupSummaryRes),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    Text(
+                        text = stringResource(R.string.automated_backups),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
                     Switch(
                         checked = automatedBackupsEnabled,
                         onCheckedChange = onUpdateAutomatedBackupsEnabled,
                         modifier = Modifier.scale(0.8f)
                     )
                 }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = stringResource(automatedBackupSummaryRes),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
 
                 if (automatedBackupsEnabled) {
                     Spacer(modifier = Modifier.height(16.dp))

@@ -1241,8 +1241,8 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 ---
 
 ### REQ-SET-080: Dedicated Auto-Pause Settings Cockpit & Navigation Drawer Entry [Verified]
-- **Tests**: `TST-SET-080` | **Tickets**: `ATT-4836`, `ATT-4924`
-- **Rationale**: The system SHALL provide a dedicated, first-class Auto-Pause configuration cockpit in the Navigation Drawer's Settings section with sport-specific tabs, retiring scattered controls from Advanced Tuning to ensure high discoverability, intuitive customization, and an extensible foundation for upcoming auto-pause enhancements (ATT-4836, ATT-4924):
+- **Tests**: `TST-SET-080` | **Tickets**: `ATT-4836`, `ATT-4924`, `ATT-5820`
+- **Rationale**: The system SHALL provide a dedicated, first-class Auto-Pause configuration cockpit in the Navigation Drawer's Settings section with sport-specific tabs, retiring scattered controls from Advanced Tuning to ensure high discoverability, intuitive customization, and an extensible foundation for upcoming auto-pause enhancements (ATT-4836, ATT-4924, ATT-5820):
 1. *Navigation Drawer Entry & Route Resolution (`REQ-SET-080.1`)*:
 • An *Auto-Pause* item (`drawer_auto_pause`) SHALL be included in the Navigation Drawer within the Settings group directly below *Sport Types* (`AppNavigationDrawer.kt`, `ids.xml`).
 • `NavRoutes.toRoute(R.id.drawer_auto_pause)` SHALL resolve to `NavRoutes.AUTO_PAUSE`, and `NavRoutes.toDrawerItemId(NavRoutes.AUTO_PAUSE)` SHALL resolve to `R.id.drawer_auto_pause`.
@@ -1261,26 +1261,33 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • In accordance with Design Guidelines Section 3.2, Auto-Pause controls SHALL be excised from `SensorsGpsFilterSection.kt`, `AdvancedTuningScreen.kt`, and `AdvancedTuningDialog.kt` so that Auto-Pause maintains a single unambiguous configuration home.
 5. *9-Language Localization Parity (`REQ-SET-080.5`)*:
 • All new drawer and screen string resources SHALL be localized with 100% parity across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+6. *Collapsible Calibration Accordion with Live Active Values Subtitle (`AutoPauseTabsScreen.kt`, `TuningSubtitleFormatter`, `REQ-SET-080.6`)*:
+• In accordance with Design Guidelines Section 3 (*Settings & Accordion Structure*), whenever Auto-Pause is enabled for a sport tab, the three technical calibration sliders (Speed Threshold, Pause Debounce Delay, Resume Debounce Delay) SHALL be encapsulated inside an expandable accordion section (`TuningAccordionSection`) titled `tuning_auto_pause_custom_thresholds_title` ("Schwellenwerte & Verzögerung anpassen" / "Customize thresholds & delays").
+• The accordion section SHALL default to initially collapsed (`isExpanded = false` via `rememberSaveable`) per sport tab, keeping the primary enable toggle prominent and scannable without scrolling.
+• The accordion header SHALL render a dynamic subtitle reflecting active configured values (`TuningSubtitleFormatter.formatAutoPauseSubtitle`, e.g., `"%1$s · Pause: %2$s · Fortsetzen: %3$s"` / `"%1$s · Pause: %2$s · Resume: %3$s"`).
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
 1. *Original Requirement ID & Target*: Net-new requirement `REQ-SET-080`, refining `REQ-UI-036` and `REQ-TRK-018`. Targets `AutoPauseTabsScreen.kt`, `AutoPauseViewModel.kt`, `strings.xml`.
-2. *Historical Origin & Commit Trace*: Ticket `ATT-4836` (commit `69e9d6d3`), Sprint `2026-44.1`, and `ATT-4924`, Sprint `2026-44.2`.
-3. *Root Reason for Existing Formulation*: Collapsing header was copied directly from `SportTypesTabsScreen.kt` to satisfy generic tab guidelines, and sport title was reused as toggle label from flat tuning screen. However, on short settings forms collapsing hides tabs and reset actions, and tab names already identify the active sport.
-4. *Preservation of Core Invariants*: Reactive persistence, per-sport reset to defaults, Drawer navigation, and True-Black AMOLED compliance are 100% preserved.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-4836` (commit `69e9d6d3`), Sprint `2026-44.1`, `ATT-4924` (Sprint `2026-44.2`), and `ATT-5820` (Sprint `2026-45.12`).
+3. *Root Reason for Existing Formulation*: Collapsing header was copied directly from `SportTypesTabsScreen.kt` to satisfy generic tab guidelines, and calibration sliders were rendered openly inside the tab card. However, displaying three technical sliders openly pushed options off-screen; bundling them into a default-collapsed accordion adheres to progressive disclosure (Design Guidelines Section 3).
+4. *Preservation of Core Invariants*: Reactive persistence to DataStore, slider step ranges, per-sport reset to defaults, Drawer navigation, and True-Black AMOLED compliance are 100% preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* the athlete opens the Auto-Pause settings screen,
 • *When* the screen renders,
 • *Then* a fixed header containing the title row, a single global *Start in Auto-Paused* card, and the sport tabs row is visible and does not collapse on scroll.
-• *Given* any sport tab,
-• *When* inspecting the main toggle,
-• *Then* the label reads "Enable Auto-Pause" (`tuning_auto_pause_enable_title`) rather than the redundant sport name.
-• *Given* any sport tab,
-• *When* inspecting the speed threshold slider,
-• *Then* the title and summary reflect both pause and resume (`tuning_auto_pause_speed_threshold_title` and `_desc`).
+• *Given* any sport tab with Auto-Pause enabled,
+• *When* inspecting the content card,
+• *Then* the calibration sliders are encapsulated inside an accordion section titled "Schwellenwerte & Verzögerung anpassen" (`tuning_auto_pause_custom_thresholds_title`), defaulting to collapsed (`isExpanded = false`).
+• *Given* the collapsed accordion header,
+• *When* inspecting its subtitle,
+• *Then* it displays the active speed threshold, pause debounce delay, and resume debounce delay formatted with units.
+• *Given* the collapsed accordion section,
+• *When* the athlete taps the accordion header,
+• *Then* it smoothly expands to reveal the three calibration sliders.
 • *Given* the athlete triggers *Reset to Defaults*,
 • *When* confirmed,
-• *Then* the active sport's auto-pause settings revert to default values.
+• *Then* the active sport's auto-pause settings revert to default values and the accordion subtitle updates reactively.
 
 **Invariants**: Backward compatibility of `TuningPreferencesDataStore` keys and default values, `TrackerService` auto-pause calculation integrity, 100% 9-language translation parity.
 
@@ -1623,4 +1630,41 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 4. *Preservation of Core Invariants*: Decoupling selection sheet dismissal from confirmation dialog state via `pendingMergePair` ensures the confirmation dialog appears reliably on the first attempt; sheet dismissal without selection (`onDismiss` without `onSelect`) cleanly closes without triggering confirmation; backend transactional merge, centroid calculations, and 9-language localization remain 100% intact.
 
 **Invariants**: Workouts not belonging to `A` or `B` MUST NOT be altered; SQLite transactional integrity; no duplicate routes; zero hardcoded strings.
+
+### REQ-SET-095: Known Locations Merge with Hybrid Geofence Geometry & Cross-Database Reconciliation [Verified]
+- **Tests**: `TST-SET-095` | **Tickets**: `ATT-5889`
+- **Implementation**: `KnownLocationsScreen.kt`, `KnownLocationsViewModel.kt`, `KnownLocationsRepository.kt`, `KnownLocationsDatabaseManager.java`, `KnownLocationsGeometryMath.kt`
+- **Rationale**: When GPS fix acquisition varies across workout sessions, multiple duplicate `KnownLocation` (*Lieblingsorte*) entries are created for semantically the same physical location. Simply deleting a duplicate location drops its geofence coverage, causing workouts and route clusters started there to lose their location association. The system SHALL provide a directional merge action ($S \rightarrow T$) from the location card context menu, filtering candidate targets within a proximity threshold ($d \le 2\,000\text{ m}$), calculating an enclosing hybrid geofence radius preview, preserving `isHome` and locked altitudes, atomically updating SQLite storage, reconciling authoritative workout start counts without double-counting, and refreshing linked route clusters:
+1. *Context Menu Action (`REQ-SET-095.1`)*: Each `KnownLocationCard` context menu SHALL include an action item *"Mit anderem Ort zusammenführen…"* (`R.string.known_locations_menu_merge`, icon `Icons.Default.CallMerge`) triggering candidate target selection for source location $S$.
+2. *Proximity Candidate Selection Dialog (`REQ-SET-095.2`)*: Target selection dialog SHALL present candidates ($T \ne S$) filtered strictly by geodetic center distance $d = \text{distanceBetween}(C_S, C_T) \le 2\,000\text{ m}$, sorted ascending by raw numeric distance primitive (`ATT-3324`), displaying the formatted distance label (`R.string.known_locations_merge_distance_away`). If no candidate locations exist within $2\,000\text{ m}$, a descriptive empty notice (`R.string.known_locations_merge_no_candidates`) SHALL be displayed.
+3. *Explicit Merge Confirmation Dialog & Radius Preview (`REQ-SET-095.3`)*: Selecting target $T$ SHALL display an explicit confirmation dialog (`ATT-3355`, `R.string.known_locations_merge_dialog_title`, `R.string.known_locations_merge_dialog_message`) displaying $S.\text{name}$, $T.\text{name}$, previewing the calculated hybrid geofence radius $r_{\text{new}}$, and displaying a pinned-target notice (`R.string.known_locations_merge_pinned_notice`) whenever $T$ has `isHome == true` or `isLocked == true`.
+4. *Hybrid Geofence Geometry Calculation (`REQ-SET-095.4`)*:
+   • *Pinned-Target Mode (when $T.\text{isHome} == \text{true}$ or $T.\text{isLocked} == \text{true}$)*: The target coordinate remains fixed ($C_{\text{new}} = C_T$) and the radius expands to fully enclose the source geofence:
+     $$r_{\text{new}} = \max\left(r_T,\; \lceil d + r_S \rceil\right)$$
+   • *Minimum Bounding Circle Mode (default when $T$ is neither home nor locked)*: If one circle already encloses the other ($d + r_S \le r_T$ or $d + r_T \le r_S$), the enclosing circle is adopted; otherwise, the center shifts along the geodesic from $C_T$ toward $C_S$ by $\frac{d + r_S - r_T}{2}$ and the radius is computed as:
+     $$r_{\text{new}} = \left\lceil \frac{d + r_T + r_S}{2} \right\rceil$$
+5. *Transactional Database Reassignment & State Reconciliation (`REQ-SET-095.5`)*:
+   • Inside an atomic SQLite transaction in `StartLocation2Altitude.db`:
+     - Update $T$ with new center $C_{\text{new}}$, radius $r_{\text{new}}$, consolidated `isHome = T.isHome || S.isHome`, and altitude: if $T.\text{isLocked}$, retain $T$'s altitude; else if $S.\text{isLocked}$, adopt $S$'s altitude and lock status; otherwise retain $T$'s altitude.
+     - Delete source location $S$ (`deleteId(S.id)`).
+   • Authoritatively recompute $T.\text{hitCount}$ via `reconcileHitCountsWithWorkoutSummaries` against all workout start locations falling within $(C_{\text{new}}, r_{\text{new}})$ without double-counting.
+   • Refresh `KnownLocationsRepository.loadLocations()` so active StateFlows, workout headers, and route clusters immediately reflect target $T$.
+6. *9-Language Parity & Zero Emojis (`REQ-SET-095.6`)*: All new user-facing strings SHALL maintain 100% parity across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) with zero decorative inline emojis (`ATT-5400`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* two unlocked, non-home locations $S$ and $T$ with $r_S = 200\text{ m}$, $r_T = 200\text{ m}$ at distance $d = 200\text{ m}$,
+• *When* the user merges $S$ into $T$,
+• *Then* $T$'s center shifts to the midpoint between $S$ and $T$, $T$'s radius becomes $300\text{ m}$, and $S$ is deleted.
+• *Given* target location $T$ has `isHome = true` (or `isLocked = true`) with $r_T = 200\text{ m}$ and source $S$ ($r_S = 200\text{ m}$) is at distance $d = 150\text{ m}$,
+• *When* $S$ is merged into $T$,
+• *Then* $T$'s coordinate remains unchanged, $T$'s radius expands to $350\text{ m}$, and `isHome = true` is preserved.
+• *Given* workouts and route clusters started within $S$ and $T$,
+• *When* $S$ is merged into $T$,
+• *Then* `target.hitCount` is authoritatively reconciled against `WorkoutSummaries`, and all affected workouts and `Lieblingsstrecken` immediately resolve to $T$.
+• *Given* the user initiates a merge for location $S$,
+• *When* candidate selection and confirmation dialogs are presented,
+• *Then* only candidates within $2\,000\text{ m}$ are displayed (sorted ascending by raw distance) and the confirmation dialog previews the resulting radius $r_{\text{new}}$ before committing.
+
+**Invariants**: Single-home exclusivity (`isHome`); user-locked altitude immutability; authoritative hit counts derived from actual workouts; strict raw numeric sorting (`ATT-3324`); explicit user confirmation (`ATT-3355`); thread confinement to `KnownLocationsDB-Thread`.
+
 

@@ -936,10 +936,11 @@ fun SensorGridScreen(
                     // the user swipes the Live Segment / Climb sheet down to SheetValue.Hidden (skipHiddenState = false),
                     // which creates a permanent 174dp blank whitespace below the ElevationProfile.
                     if (state.showElevationProfile) {
+                        val fabBottomClearance = if (!isLandscape && (state.showBikeBell || state.showLapButton) && screenMode != ScreenMode.CONFIGURATION) 68.dp else 0.dp
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(top = 8.dp)
+                                .padding(top = 8.dp, bottom = fabBottomClearance)
                         ) {
                             ElevationProfile(
                                 pathPoints = resolvedProfile.pathPoints,

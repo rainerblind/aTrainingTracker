@@ -142,16 +142,17 @@ fun ActiveClusterFilterChipsRow(
             }
         }
 
-        // 5. "Clear all" button (when ≥ 2 filters active)
-        if (criteria.activeFilterCount >= 2) {
-            item(key = "clear_all") {
-                TextButton(onClick = onClearAll) {
-                    Text(
-                        text = stringResource(R.string.filter_clear_all),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
+        // 5. "Clear all" button
+        item(key = "clear_all") {
+            TextButton(
+                onClick = onClearAll,
+                modifier = Modifier.padding(start = 4.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.filter_clear_all),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
         }
     }

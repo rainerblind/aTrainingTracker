@@ -385,7 +385,9 @@ fun ATrainingTrackerApp(
                     val mapViewModel: MapFragmentWithTrackViewModel = viewModel(activity)
                     MapScreenWithTrack(
                         viewModel = mapViewModel,
-                        targetLocationId = locationIdArg
+                        targetLocationId = locationIdArg,
+                        onMenuClick = if (locationIdArg == null) { { drawerController.openDrawer() } } else null,
+                        onNavigateBack = if (locationIdArg != null) { { navController.popBackStack() } } else null
                     )
                 }
 

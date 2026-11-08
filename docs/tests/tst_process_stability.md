@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 101
+**Total Tests**: 107
 
 ---
 
@@ -1311,12 +1311,12 @@
 ### TST-PRO-035: **Standalone Agile Agentic ASPICE (AAA) Core Framework, Swiss Cheese Reliability & Starter Templates Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-035`
 - **Component**: **Höchstmaß Core Framework & Starter Templates**
-- **Jira**: `ATT-3922`
+- **Jira**: `ATT-3922`, `ATT-5817`
 - **Test Description**:
-  1. *README, Project Protocol, Epigraph & Etymology Callout Verification (`TST-PRO-035.1`, `HoechstmassCoreFrameworkContractTest.kt`)*:
-  • Verify `tools/hoechstmass/README.md` and `tools/hoechstmass/docs/project_protocol.md` exist and contain the ChatGPT epigraph quote, human/AI boundary attribution, cross-model review principle, Höchstmaß etymology callout (`/ˈhøːçstˌmaːs/`), and Swiss Cheese formula ($P = p_1 \cdot p_2 \cdots p_n$).
-  2. *Generalized Document Triad Templates Contract Verification (`TST-PRO-035.2`, `HoechstmassCoreFrameworkContractTest.kt`)*:
-  • Verify existence and content of generalized `.agents/rules/aspice_governance.md` (8 Core Rules), `docs/coding_standards.md` (§1.1–§1.5 invariants), and `docs/design_guidelines.md` (component heuristics).
+  1. *README, Project Protocol, Epigraph, Etymology, 5-Layer SVG & Entry Barrier Verification (`TST-PRO-035.1`, `HoechstmassCoreFrameworkContractTest.kt`)*:
+  • Verify `tools/hoechstmass/README.md` and `tools/hoechstmass/docs/project_protocol.md` exist and contain the ChatGPT epigraph quote, human/AI boundary attribution, multi-model review (Claude, Gemini, ChatGPT), Höchstmaß etymology callout (`/ˈhøːçstˌmaːs/`), 5-layer Swiss Cheese SVG asset (`tools/hoechstmass/assets/swiss_cheese_layers.svg`), 5-layer decorrelation formula ($P = p_1 \cdot p_2 \cdot p_3 \cdot p_4 \cdot p_5$), and Chapter 5 Entry Barrier.
+  2. *Generalized Document Triad & Isolated In-Place Review Workflow Contract Verification (`TST-PRO-035.2`, `HoechstmassCoreFrameworkContractTest.kt`)*:
+  • Verify existence and content of generalized `.agents/rules/aspice_governance.md` (8 Core Rules), `docs/coding_standards.md` (§1.1–§1.5 invariants), `docs/design_guidelines.md` (component heuristics), `tools/review_tool.py`, and `.reviews/` isolation via `.git/info/exclude`.
   3. *10 Generalized Skills & Deliverable Templates Verification (`TST-PRO-035.3`, `HoechstmassCoreFrameworkContractTest.kt`)*:
   • Verify existence of all 10 project-agnostic `SKILL.md` files under `tools/hoechstmass/.agents/skills/` and all 6 markdown templates under `tools/hoechstmass/templates/`.
   4. *Clean-Room Governance & Regression Execution (`TST-PRO-035.4`)*:
@@ -1351,6 +1351,91 @@
   • Assert all 5 articles contain the ChatGPT epigraph, dual attribution reasons (provenance and cross-model Gemini + ChatGPT UI review), and Höchst·maß etymology box.
   3. *Clean-Room Governance & Regression Execution (`TST-PRO-037.3`)*:
   • Execute `python3 tools/verify_requirement_governance.py` (exit 0) and targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.*"`.
+
+### TST-PRO-038: **Automated Quantitative Sprint Metrics (PA 4.1), Statistical Process Control (PA 4.2) & Ceremony 2 Governance Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-038`
+- **Component**: **Jira Process Tooling, Sprint Retrospective Governance & Höchstmaß Framework**
+- **Jira**: `ATT-5765`, `ATT-5764`
+- **Test Description**:
+  1. *Sprint Metrics Computation & Parsing (`TST-PRO-038.1`, `test_sprint_metrics.py`)*:
+  • Verify parsing of subtask comments with `[ROLE: agent2]` and computation of Gate 1–5 FTPR, Swiss Cheese escape rates ($p_1 \dots p_5$), and Human Acceptance Rate.
+  2. *Time-Series Persistence & Idempotent Upsert (`TST-PRO-038.2`, `test_sprint_metrics.py`)*:
+  • Verify `--record` writes structured JSON lines to `docs/engineering/metrics/process_metrics.jsonl` and updates existing records idempotently.
+  3. *Statistical Process Control (SPC) Outlier Detection (`TST-PRO-038.3`, `test_sprint_metrics.py`)*:
+  • Verify computation of rolling mean $\mu$ and standard deviation $\sigma$, and assertion of warnings for metric variations exceeding $\mu \pm 2\sigma$.
+  4. *Governance Whitelist & Directory Parity Contract (`TST-PRO-038.4`, `verify_requirement_governance.py`)*:
+  • Assert `docs/engineering/metrics/` is whitelisted in `ALLOWED_ENGINEERING_ENTRIES` and passes `verify_requirement_governance.py`.
+  5. *Ceremony 2 Scorecard & Retro Template Verification (`TST-PRO-038.5`)*:
+  • Verify that `.agents/skills/sprint-planner/SKILL.md` (and hoechstmass mirror) mandates `sprint-metrics --record --post-to-retro` in Step 4.
+  • Verify that `templates/sprint_retro_template.md` and `tools/hoechstmass/templates/sprint_retro_template.md` contain the Quantitative Sprint Scorecard section and `PA 4.2 -> PA 5.2` corrective action trigger.
+  6. *ASPICE Level 1–5 Capability Matrix & Contract Verification (`TST-PRO-038.6`)*:
+  • Verify `docs/project_protocol.md`, `tools/hoechstmass/docs/project_protocol.md`, and `tools/hoechstmass/README.md` codify `PA 1.1` through `PA 5.2`.
+  • Assert `HoechstmassCoreFrameworkContractTest.kt` verifies the ASPICE Level 1–5 matrix and retro template parity.
+
+### TST-PRO-039: **Jira Data Center & Enterprise On-Premise Tooling Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-039`
+- **Component**: **Jira Process Tooling, Höchstmaß Framework & Deployment Adapters**
+- **Jira**: `ATT-5830`
+- **Test Description**:
+  1. *Deployment Mode Configuration & Environment Parsing (`TST-PRO-039.1`, `test_jira_datacenter.py`)*:
+  • Verify config parser correctly detects `deployment_type` from `hoechstmass_config.json` and overrides with `JIRA_DEPLOYMENT`.
+  • Assert default deployment falls back to `cloud`.
+  2. *Bearer PAT & Corporate CA Bundle Verification (`TST-PRO-039.2`, `test_jira_datacenter.py`)*:
+  • Mock HTTP calls under Data Center mode and assert `Authorization: Bearer <token>` header.
+  • Assert SSL context configuration passes `JIRA_CA_BUNDLE` path to urllib3 / requests or creates custom SSLContext.
+  3. *Assignee Payload Username vs AccountId Dispatch (`TST-PRO-039.3`, `test_jira_datacenter.py`)*:
+  • Assert `assign_issue` sends `{"name": "agent1"}` in Data Center mode and `{"accountId": "..."}` in Cloud mode.
+  • Assert `get_issue` parses `fields.assignee.name` in Data Center mode.
+  4. *Epic Link Custom Field vs Parent Payload Dispatch (`TST-PRO-039.4`, `test_jira_datacenter.py`)*:
+  • Assert creating/linking top-level issues in Data Center mode populates `customfield_10014` (or configured custom field) and omits `fields.parent`.
+  • Assert creating subtasks in Data Center mode populates `fields.parent` without `customfield_10014`.
+  5. *JQL Search REST API v2 Routing (`TST-PRO-039.5`, `test_jira_datacenter.py`)*:
+  • Assert `search_issues` dispatches to `/rest/api/2/search` in Data Center mode and `/rest/api/3/search/jql` in Cloud mode.
+  6. *Tooling Mirror Synchronization & Regression Suite (`TST-PRO-039.6`)*:
+  • Verify identical logic and hashes for shared functions between `tools/jira_util.py` and `tools/hoechstmass/tools/jira_util.py`.
+  • Execute `python3 tools/verify_requirement_governance.py` (exit 0) and Python unit tests.
+
+### TST-PRO-040: **Epic Lifecycle Management, 'list-epics' / 'close-epic' CLI Commands, and Taxonomy Governance Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-040`
+- **Component**: `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `.agents/skills/{brainstormer,sprint-planner,jira-workflow}/SKILL.md`
+- **Jira**: `ATT-5911`
+- **Test Description**:
+  1. *List Epics Command & Child Status Aggregation (`TST-PRO-040.1`, `test_jira_epics.py`)*:
+  • Mock JQL search returning Epics and child tickets across Cloud (`parent = ...`) and Data Center (`cf[10014] = ...`).
+  • Verify `list-epics` computes open and done child ticket counts accurately and formats output.
+  2. *Close Epic Triple Guardrail Enforcement (`TST-PRO-040.2`, `test_jira_epics.py`)*:
+  • Role Guard: Verify non-coordinator/non-human roles (`--as agent1`, `--as agent2`) abort with exit code 1.
+  • Issue Type Guard: Verify passing a standard Story/Bug/Task aborts with exit code 1 and Human Gate notice.
+  • Completeness Guard: Verify passing an Epic with open child tickets aborts with exit code 1 listing the open tickets.
+  • Success: Verify passing an Epic with 0 open child tickets under `--as coordinator` successfully executes transition to `Erledigt`.
+  3. *Tooling Mirror Synchronization & Hoechstmass Parity (`TST-PRO-040.3`, `test_hoechstmass_tools.py`)*:
+  • Verify `tools/hoechstmass/tools/jira_util.py` implements identical `list-epics` and `close-epic` subcommands with identical guardrails.
+  4. *Skill Documentation & Canonical Epic Taxonomy Audit (`TST-PRO-040.4`)*:
+  • Verify `.agents/skills/brainstormer/SKILL.md`, `.agents/skills/sprint-planner/SKILL.md`, and `.agents/skills/jira-workflow/SKILL.md` (and their hoechstmass mirrors) define the Canonical Epic Taxonomy and human consultation requirement.
+  5. *Clean-Room Governance & Verification Execution (`TST-PRO-040.5`)*:
+  • Execute `python3 tools/verify_requirement_governance.py` (exit 0) and `python3 -m unittest tools/test_jira_epics.py`.
+
+### TST-PRO-041: **Parallel Sprint Execution Protocol for Disjoint Epics, Flock Serialization & Partitioned Localization Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-041`
+- **Component**: `.agents/rules/aspice_governance.md`, `.agents/skills/{jira-workflow,stage4-implementation,stage5-verification,sprint-planner}/SKILL.md`, `tools/run_serialized.sh`, `tools/jira_util.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/localization/TranslationParityTest.kt`
+- **Jira**: `ATT-5914`
+- **Test Description**:
+  1. *Subagent Worktree Isolation & Disjoint Epic Guardrail (`TST-PRO-041.1`)*:
+  • Verify `Workspace: "share"` subagent pairs execute in independent worktrees without branch or working-tree collisions.
+  • Verify governance enforces strict disjoint Parent Epic constraint (rejecting parallel execution within the same Epic).
+  2. *POSIX Flock Build & Merge Mutual Exclusion (`TST-PRO-041.2`, `test_flock_serialization.py`)*:
+  • Simulate concurrent processes competing for `/tmp/att_build_merge.lock`.
+  • Verify mutual exclusion: exactly one process holds the lock at a time, subsequent processes queue deterministically, and lock releases reliably upon completion or failure.
+  3. *Dynamic Multi-File String Discovery & Parity Test Suite (`TST-PRO-041.3`, `TranslationParityTest.kt`)*:
+  • Verify `TranslationParityTest.kt` dynamically scans all `strings*.xml` across `res/values*/`.
+  • Assert partitioned domain string files (`strings_<domain>.xml`) maintain 100% key and placeholder parity across all 9 supported locales.
+  4. *Rebase-then-Recalculate Living Docs Governance (`TST-PRO-041.4`)*:
+  • Verify `recalculate_master_index_tables()` under merge lock after rebase maintains 100% parity across living doc tables with zero Git merge conflicts.
+  5. *Clean-Room Governance & Verification Execution (`TST-PRO-041.5`)*:
+  • Execute `python3 tools/verify_requirement_governance.py` (exit 0) and `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest"`.
+
+
+
 
 
 

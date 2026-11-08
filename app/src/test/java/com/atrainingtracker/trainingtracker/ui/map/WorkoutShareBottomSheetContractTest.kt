@@ -161,4 +161,91 @@ class WorkoutShareBottomSheetContractTest {
             source.contains("120.dp else 240.dp")
         )
     }
+
+    @Test
+    fun testWorkoutHeader_uniformShareActionAndDynamicSpacerContract() {
+        val file = java.io.File("src/main/java/com/atrainingtracker/trainingtracker/ui/components/workoutheader/WorkoutHeader.kt")
+        val altFile = java.io.File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/workoutheader/WorkoutHeader.kt")
+        val targetFile = if (file.exists()) file else altFile
+        assertTrue("WorkoutHeader.kt must exist on disk", targetFile.exists())
+
+        val source = targetFile.readText()
+
+        // 1. Parameter onShareWorkout
+        assertTrue(
+            "WorkoutHeader must declare onShareWorkout parameter",
+            source.contains("onShareWorkout: (() -> Unit)? = null")
+        )
+
+        // 2. Share IconButton rendering with primary tint and 32dp size
+        assertTrue(
+            "WorkoutHeader must render Share IconButton with primary tint",
+            source.contains("imageVector = Icons.Default.Share") &&
+                    source.contains("tint = MaterialTheme.colorScheme.primary") &&
+                    source.contains("contentDescription = stringResource(R.string.share)")
+        )
+
+        // 3. Dynamic portrait spacer
+        assertTrue(
+            "WorkoutHeader must calculate dynamic action spacer width in portrait",
+            source.contains("val actionSpacerWidth =") &&
+                    source.contains("onShareWorkout != null")
+        )
+    }
+
+    private fun findSourceFile(relativePath: String): java.io.File {
+        val candidates = listOf(
+            java.io.File(relativePath),
+            java.io.File("app", relativePath),
+            java.io.File("..", relativePath),
+            java.io.File("../app", relativePath)
+        )
+        return candidates.firstOrNull { it.exists() } ?: java.io.File(relativePath)
+    }
+
+    @Test
+    fun testWorkoutSummary_andDetailTabbedContent_wireShareWorkoutContract() {
+        val summaryFile = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutSummary.kt")
+        val tabbedFile = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutDetailTabbedContent.kt")
+        val mapLayoutFile = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapDetailLayout.kt")
+
+        assertTrue("WorkoutSummary.kt must exist", summaryFile.exists())
+        assertTrue("WorkoutDetailTabbedContent.kt must exist", tabbedFile.exists())
+        assertTrue("MapDetailLayout.kt must exist", mapLayoutFile.exists())
+
+        val summarySource = summaryFile.readText()
+        val tabbedSource = tabbedFile.readText()
+        val mapLayoutSource = mapLayoutFile.readText()
+
+        // WorkoutSummary wires onShareWorkout and WorkoutShareBottomSheet
+        assertTrue(
+            "WorkoutSummary must wire onShareWorkout to show share sheet",
+            summarySource.contains("onShareWorkout = if (workoutData.headerData.finished)")
+        )
+        assertTrue(
+            "WorkoutSummary must host WorkoutShareBottomSheet with attachedPhotos",
+            summarySource.contains("WorkoutShareBottomSheet(") &&
+                    summarySource.contains("showShareModeSheet")
+        )
+
+        // WorkoutDetailTabbedContent wires onShareWorkout and passes non-empty header to MapDetailLayout
+        assertTrue(
+            "WorkoutDetailTabbedContent must wire onShareWorkout on persistent header",
+            tabbedSource.contains("onShareWorkout = { showShareModeSheet = true }")
+        )
+        assertTrue(
+            "WorkoutDetailTabbedContent must supply snapshotHeader to MapDetailLayout",
+            tabbedSource.contains("header = snapshotHeader")
+        )
+
+        // MapDetailLayout suppresses floating share button when workoutData != null
+        assertTrue(
+            "MapDetailLayout must default showFloatingShareButton to workoutData == null",
+            mapLayoutSource.contains("showFloatingShareButton: Boolean = workoutData == null")
+        )
+        assertTrue(
+            "MapDetailLayout must guard floating share button with showFloatingShareButton",
+            mapLayoutSource.contains("if (showFloatingShareButton)")
+        )
+    }
 }

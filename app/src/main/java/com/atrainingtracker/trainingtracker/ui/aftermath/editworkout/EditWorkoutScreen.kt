@@ -35,6 +35,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.WarningAmber
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -43,6 +47,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.ui.platform.testTag
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -52,6 +57,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -110,6 +116,63 @@ fun EditWorkoutDialog(
                 .padding(horizontal = 4.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Diagnostic Warning Card (REQ-TRK-053.4)
+            val recordingErrors = workoutData?.recordingErrors
+            if (!recordingErrors.isNullOrBlank()) {
+                var showEditDiagnosticSheet by remember { mutableStateOf(false) }
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showEditDiagnosticSheet = true }
+                        .testTag(com.atrainingtracker.trainingtracker.ui.dialogs.WorkoutDiagnosticTestTags.CARD)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.WarningAmber,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Text(
+                            text = stringResource(R.string.workout_diagnostic_banner_title),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(
+                            text = stringResource(R.string.workout_diagnostic_banner_action),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+
+                if (showEditDiagnosticSheet) {
+                    com.atrainingtracker.trainingtracker.ui.dialogs.WorkoutDiagnosticBottomSheet(
+                        recordingErrorsJson = recordingErrors,
+                        workoutName = workoutData?.workoutName ?: "",
+                        sportName = workoutData?.sportName ?: "",
+                        onClearWarning = {
+                            viewModel.clearRecordingErrors()
+                            showEditDiagnosticSheet = false
+                        },
+                        onDismiss = { showEditDiagnosticSheet = false }
+                    )
+                }
+            }
+
             // 1. Workout Name (Mandatory Core Anchor)
             OutlinedTextField(
                 value = workoutData?.workoutName ?: "",
@@ -242,21 +305,23 @@ fun EditWorkoutDialog(
                         }
                     } else false
 
-                    Icon(
-                        painter = painterResource(R.drawable.logo_square_strava),
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = if (stravaMappingAvailable) Color.Unspecified else Color.Gray
-                    )
-
                     Checkbox(
                         checked = isChecked,
                         onCheckedChange = { viewModel.updateUploadToStrava(it) },
                         enabled = stravaMappingAvailable
                     )
+                    Icon(
+                        painter = painterResource(R.drawable.logo_square_strava),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(18.dp)
+                            .alpha(if (stravaMappingAvailable) 1f else 0.38f),
+                        tint = Color.Unspecified
+                    )
+                    Spacer(Modifier.width(8.dp))
                     Text(
                         text = stringResource(R.string.stravaUpload),
-                        color = if (stravaMappingAvailable) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        color = if (stravaMappingAvailable) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
                     )
                 }
             }

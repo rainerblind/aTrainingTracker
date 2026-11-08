@@ -62,9 +62,9 @@ public class AltitudeFormatter implements MyFormatter<Number> {
 
         switch (TrainingApplication.getUnit()) {
             case METRIC:
-                return String.format(Locale.getDefault(), "%.0f %s", altitude_m.doubleValue(), units);
+                return String.format(Locale.getDefault(), "%,.0f %s", altitude_m.doubleValue(), units);
             case IMPERIAL:
-                return String.format(Locale.getDefault(), "%.0f %s", altitude_m.doubleValue() / BANALService.METER_PER_FOOT, units);
+                return String.format(Locale.getDefault(), "%,.0f %s", altitude_m.doubleValue() / BANALService.METER_PER_FOOT, units);
             default:
                 return "--";
         }

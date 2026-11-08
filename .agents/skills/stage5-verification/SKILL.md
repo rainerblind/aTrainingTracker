@@ -16,9 +16,9 @@ Reuse the Epic-scoped (or standalone ticket) persistent `TypeName: "self"` subag
 ## Key Responsibilities (`subagent_flash` as `agent1` — `flash`)
 1. **Two-Tier Unit Test Execution Strategy (Rule 60 — `ATT-4465`)**:
    - **Tier 1 — Per-Ticket Verification (Stage 4 & Stage 5, ~10–20s)**:
-     - Run targeted unit and contract tests covering all modified and directly adjacent packages/classes (plus `ThemeColorCentralizationAuditTest` whenever any UI/Compose file is modified, `Rule 64` — `ATT-4718`):
+     - Run targeted unit and contract tests covering all modified and directly adjacent packages/classes (plus `ThemeColorCentralizationAuditTest` and `ui.components.core.*` whenever any UI/Compose/Map/Sheet file is modified, `Rules 64 & 79` — `ATT-4718`, `ATT-5890`):
        ```bash
-       ./gradlew testDebugUnitTest --tests "com.atrainingtracker.<modified_package>.*" --tests "com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest"
+       ./gradlew testDebugUnitTest --tests "com.atrainingtracker.<modified_package>.*" --tests "com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest" --tests "com.atrainingtracker.trainingtracker.ui.components.core.*"
        ```
      - Run `TranslationParityTest` whenever any `strings.xml` resource file is modified (~3s):
        ```bash
@@ -62,7 +62,7 @@ Message the ticket's persistent `subagent_pro` (`send_message`) to audit the Sta
      python3 tools/jira_util.py --as agent2 gate-verdict <TEST_SUBTASK_KEY> PASS "<Audit Report>"
      ```
    - Note: AI agents are strictly forbidden from transitioning parent tickets to `Erledigt`.
-6. **Single Atomic Commit per Ticket & Continuous Sprint Branch Integration (Core Rule 8)**:
+6. **Single Atomic Commit per Ticket & Continuous Sprint Branch Integration (Core Rule 8 & Rule 9 — `REQ-PRO-041`)**:
    - Each ticket MUST result in **strictly one atomic commit** on `sprint/<SPRINT_NAME>` containing the complete Stage 1–5 deliverables (`analysis`, `test_spec`, `plan`, `walkthrough`), living documentation (`docs/requirements.md`, `docs/tests.md`), production code, and unit tests:
      ```bash
      git add -A
@@ -71,6 +71,21 @@ Message the ticket's persistent `subagent_pro` (`send_message`) to audit the Sta
      git merge --squash feature/<KEY>
      git commit -m "<KEY>: <Concise Ticket Summary>"
      git branch -D feature/<KEY>
+     ```
+   - **Parallel Sprint Execution Merge Protocol (`REQ-PRO-041.2`, `REQ-PRO-041.4`)**: When parallel sprint execution is active, serialize git rebase, living docs recalculation, and squash-merging under POSIX `flock` (`/tmp/att_build_merge.lock`):
+     ```bash
+     python3 tools/parallel_sprint_lock.py bash -c '
+       git add -A && git commit -m "<KEY>: <Concise Ticket Summary>" || true
+       git fetch origin
+       git rebase origin/sprint/<SPRINT_NAME>
+       python3 tools/verify_requirement_governance.py --sync-indexes
+       git add docs/requirements.md docs/tests.md
+       git commit --amend --no-edit || true
+       git checkout sprint/<SPRINT_NAME>
+       git merge --squash feature/<KEY>
+       git commit -m "<KEY>: <Concise Ticket Summary>"
+       git branch -D feature/<KEY>
+     '
      ```
 
 ## Deliverable Template

@@ -136,4 +136,39 @@ class AutoPauseTabsScreenContractTest {
             tabContentDecl.contains("tuning_auto_pause_start_in_auto_pause_title")
         )
     }
+
+    @Test
+    fun testAutoPauseSportTabContent_encapsulatesSlidersInsideDefaultCollapsedAccordion() {
+        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/autopause/AutoPauseTabsScreen.kt")
+        assertTrue("AutoPauseTabsScreen.kt must exist", file.exists())
+        val content = file.readText()
+
+        val tabContentBody = content.substringAfter("private fun AutoPauseSportTabContent(")
+            .substringBefore("@Preview")
+
+        assertTrue(
+            "AutoPauseSportTabContent must declare isSlidersExpanded initialized to false via rememberSaveable",
+            tabContentBody.contains("var isSlidersExpanded by rememberSaveable { mutableStateOf(false) }")
+        )
+
+        assertTrue(
+            "AutoPauseSportTabContent must render TuningAccordionSection",
+            tabContentBody.contains("TuningAccordionSection(")
+        )
+        assertTrue(
+            "AutoPauseSportTabContent must bind R.string.tuning_auto_pause_custom_thresholds_title",
+            tabContentBody.contains("R.string.tuning_auto_pause_custom_thresholds_title")
+        )
+        assertTrue(
+            "AutoPauseSportTabContent must call TuningSubtitleFormatter.formatAutoPauseSubtitle",
+            tabContentBody.contains("TuningSubtitleFormatter.formatAutoPauseSubtitle(")
+        )
+
+        assertTrue(
+            "Accordion must encompass speed threshold, pause debounce, and resume debounce sliders",
+            tabContentBody.indexOf("TuningAccordionSection(") < tabContentBody.indexOf("tuning_auto_pause_speed_threshold_title") &&
+                tabContentBody.indexOf("tuning_auto_pause_speed_threshold_title") < tabContentBody.indexOf("tuning_auto_pause_debounce_title") &&
+                tabContentBody.indexOf("tuning_auto_pause_debounce_title") < tabContentBody.indexOf("tuning_auto_pause_resume_debounce_title")
+        )
+    }
 }

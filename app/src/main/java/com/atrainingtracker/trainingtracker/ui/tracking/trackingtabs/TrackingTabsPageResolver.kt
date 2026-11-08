@@ -86,4 +86,29 @@ object TrackingTabsPageResolver {
             }
         }
     }
+
+    /**
+     * Resolves the next page index when cycling tabs via hardware buttons with cyclic wrap-around
+     * (REQ-TRK-054.1, TST-TRK-054.1, ATT-5905).
+     *
+     * @param currentPage The current active page index.
+     * @param pageCount The total number of pages in the pager.
+     * @param forward True to advance (e.g. Volume Up), false to step back (e.g. Volume Down).
+     * @return The next target page index within bounds [0, pageCount - 1], wrapping around cyclically.
+     */
+    fun resolveNextPage(
+        currentPage: Int,
+        pageCount: Int,
+        forward: Boolean
+    ): Int {
+        if (pageCount <= 1) {
+            return 0
+        }
+        val clampedCurrent = currentPage.coerceIn(0, pageCount - 1)
+        return if (forward) {
+            (clampedCurrent + 1) % pageCount
+        } else {
+            (clampedCurrent - 1 + pageCount) % pageCount
+        }
+    }
 }

@@ -79,16 +79,51 @@ class HoechstmassCoreFrameworkContractTest {
         assertTrue("README must formalize Swiss Cheese model", readmeContent.contains("Swiss Cheese"))
         assertTrue("README must include mathematical formula for defect probability product",
             readmeContent.contains("P(\\text{escaped defect})") || readmeContent.contains("p_1 \\cdot p_2"))
-        assertTrue("README must list Context Isolation layer", readmeContent.contains("Context Isolation"))
-        assertTrue("README must list Cross-Model Diversity layer", readmeContent.contains("Cross-Model Diversity"))
-        assertTrue("README must list Deterministic Ground-Truth Oracles layer", readmeContent.contains("Deterministic Ground-Truth Oracles"))
-        assertTrue("README must list Human Final Gate layer", readmeContent.contains("Human Final Gate"))
+        assertTrue("README must embed Swiss Cheese SVG asset",
+            readmeContent.contains("assets/swiss_cheese_layers.svg"))
+        assertTrue("Swiss Cheese SVG asset must exist in tools/hoechstmass/assets/",
+            findRepoRootFile("tools/hoechstmass/assets/swiss_cheese_layers.svg").exists())
+
+        // 5 Layers & Decorrelation
+        assertTrue("README must list Layer 1 (Executing Agent)", readmeContent.contains("Layer 1"))
+        assertTrue("README must list Layer 2 (Reviewing Agent)", readmeContent.contains("Layer 2"))
+        assertTrue("README must list Layer 3 (Ticket Verification)", readmeContent.contains("Layer 3"))
+        assertTrue("README must list Layer 4 (Human Engineer)", readmeContent.contains("Layer 4"))
+        assertTrue("README must list Layer 5 (Cross-Vendor Audits)", readmeContent.contains("Layer 5"))
+        assertTrue("README must mention Claude", readmeContent.contains("Claude"))
+        assertTrue("README must include 5-layer decorrelation product",
+            readmeContent.contains("p_1 \\cdot p_2 \\cdot p_3 \\cdot p_4 \\cdot p_5"))
 
         // 5. 5-Stage Agile ASPICE Lifecycle
         assertTrue("README must document Stage 1 through Stage 5",
             readmeContent.contains("Stage 1") && readmeContent.contains("Stage 2") &&
             readmeContent.contains("Stage 3") && readmeContent.contains("Stage 4") &&
             readmeContent.contains("Stage 5"))
+
+        // 6. Isolated In-Place Review Workflow (.reviews/)
+        assertTrue("README must document .reviews/ in-place review workflow",
+            readmeContent.contains(".reviews/") && readmeContent.contains("Emacs"))
+
+        // 7. Entry Barrier Chapter
+        assertTrue("README must contain Chapter 5 Entry Barrier & Human Discipline",
+            readmeContent.contains("Entry Barrier") && readmeContent.contains("Human Discipline"))
+    }
+
+    @Test
+    fun testIsolatedReviewWorkflow_assetsAndHelperExist() {
+        val rootReviewTool = findRepoRootFile("tools/review_tool.py")
+        assertTrue("tools/review_tool.py must exist", rootReviewTool.exists())
+        assertTrue("tools/review_tool.py must have content", rootReviewTool.length() > 500L)
+
+        val hoechstmassReviewTool = findRepoRootFile("tools/hoechstmass/tools/review_tool.py")
+        assertTrue("tools/hoechstmass/tools/review_tool.py must exist", hoechstmassReviewTool.exists())
+        assertTrue("tools/hoechstmass/tools/review_tool.py must have content", hoechstmassReviewTool.length() > 500L)
+
+        val svgAsset = findRepoRootFile("tools/hoechstmass/assets/swiss_cheese_layers.svg")
+        assertTrue("tools/hoechstmass/assets/swiss_cheese_layers.svg must exist", svgAsset.exists())
+        val svgContent = svgAsset.readText()
+        assertTrue("SVG must define 5 layers", svgContent.contains("Layer 1") && svgContent.contains("Layer 5"))
+        assertTrue("SVG must reference Claude & ChatGPT", svgContent.contains("Claude") && svgContent.contains("ChatGPT"))
     }
 
     @Test
@@ -160,6 +195,71 @@ class HoechstmassCoreFrameworkContractTest {
             assertTrue("Template $templateName must exist", templateFile.exists())
             assertTrue("Template $templateName must not be empty", templateFile.length() > 100L)
         }
+    }
+
+    @Test
+    fun testAspiceCapabilityLevelMatrix_presentInReadmeAndProtocol() {
+        val targets = listOf(
+            "tools/hoechstmass/README.md",
+            "tools/hoechstmass/docs/project_protocol.md",
+            "docs/project_protocol.md"
+        )
+        val expectedPAs = listOf(
+            "PA 1.1", "PA 2.1", "PA 2.2",
+            "PA 3.1", "PA 3.2",
+            "PA 4.1", "PA 4.2",
+            "PA 5.1", "PA 5.2"
+        )
+        val expectedLevels = listOf(
+            "Level 1: Performed",
+            "Level 2: Managed",
+            "Level 3: Established",
+            "Level 4: Predictable",
+            "Level 5: Innovating"
+        )
+
+        for (targetRel in targets) {
+            val file = findRepoRootFile(targetRel)
+            assertTrue("$targetRel must exist", file.exists())
+            val text = file.readText()
+            for (pa in expectedPAs) {
+                assertTrue("$targetRel must contain $pa", text.contains(pa))
+            }
+            for (lvl in expectedLevels) {
+                assertTrue("$targetRel must contain $lvl", text.contains(lvl))
+            }
+        }
+    }
+
+    @Test
+    fun testSprintPlannerSkillAndRetroTemplate_containScorecardAndSpcCorrectiveTrigger() {
+        val skillTargets = listOf(
+            ".agents/skills/sprint-planner/SKILL.md",
+            "tools/hoechstmass/.agents/skills/sprint-planner/SKILL.md"
+        )
+        for (st in skillTargets) {
+            val f = findRepoRootFile(st)
+            assertTrue("$st must exist", f.exists())
+            val text = f.readText()
+            assertTrue("$st must mandate sprint-metrics CLI execution",
+                text.contains("sprint-metrics --record --post-to-retro"))
+            assertTrue("$st must include PA 4.2 -> PA 5.2 closed-loop trigger",
+                text.contains("PA 4.2") && text.contains("PA 5.2"))
+        }
+
+        val retroTemplate = findRepoRootFile("tools/hoechstmass/templates/sprint_retro_template.md")
+        assertTrue("sprint_retro_template.md must exist", retroTemplate.exists())
+        val retroText = retroTemplate.readText()
+        assertTrue("sprint_retro_template.md must contain PA 4.1 & PA 4.2 section",
+            retroText.contains("Quantitative Sprint Process Metrics (PA 4.1 & PA 4.2)"))
+        assertTrue("sprint_retro_template.md must contain FTPR table",
+            retroText.contains("FTPR"))
+        assertTrue("sprint_retro_template.md must contain Swiss Cheese model",
+            retroText.contains("Swiss Cheese"))
+        assertTrue("sprint_retro_template.md must contain SPC control limits",
+            retroText.contains("Statistical Process Control"))
+        assertTrue("sprint_retro_template.md must contain PA 5.2 corrective action trigger",
+            retroText.contains("PA 5.2"))
     }
 
     @Test

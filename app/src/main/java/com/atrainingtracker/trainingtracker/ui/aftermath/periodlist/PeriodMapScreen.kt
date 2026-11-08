@@ -280,7 +280,7 @@ fun PeriodMapScreen(
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = summary.periodDateRange,
+                                text = summary.getLocalizedDateRange(),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

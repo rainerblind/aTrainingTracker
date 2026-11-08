@@ -276,6 +276,50 @@ class AdvancedTuningVisualContractTest {
         assertFalse("Must not contain speed smoothing slider", content.contains("tuning_map_follow_me_speed_smoothing_title"))
         assertFalse("Must not contain bearing smoothing slider", content.contains("tuning_map_follow_me_bearing_smoothing_title"))
     }
+
+    @Test
+    fun testTuningWarningNotice_advisoryContainerAndInformativeIcon() {
+        val formControlsFile = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/TuningFormControls.kt")
+        val content = formControlsFile.readText()
+
+        val noticeStartIndex = content.indexOf("fun TuningWarningNotice(")
+        assertTrue("TuningWarningNotice must exist in TuningFormControls.kt", noticeStartIndex >= 0)
+        val noticeContent = content.substring(noticeStartIndex, content.indexOf("fun TuningResetDefaultsButton", noticeStartIndex))
+
+        // 1. Informative container styling (surfaceVariant, no errorContainer)
+        assertTrue(
+            "TuningWarningNotice must use surfaceVariant container color",
+            noticeContent.contains("MaterialTheme.colorScheme.surfaceVariant")
+        )
+        assertFalse(
+            "TuningWarningNotice must NOT use errorContainer color",
+            noticeContent.contains("errorContainer")
+        )
+
+        // 2. Informative icon (Icons.Default.Tune, no Icons.Default.Warning)
+        assertTrue(
+            "TuningWarningNotice must use Icons.Default.Tune",
+            noticeContent.contains("Icons.Default.Tune")
+        )
+        assertFalse(
+            "TuningWarningNotice must NOT use Icons.Default.Warning",
+            noticeContent.contains("Icons.Default.Warning")
+        )
+
+        // 3. Informative typography and string binding
+        assertTrue(
+            "TuningWarningNotice must bind advanced_tuning_warning_title",
+            noticeContent.contains("R.string.advanced_tuning_warning_title")
+        )
+        assertTrue(
+            "TuningWarningNotice must bind advanced_tuning_warning_desc",
+            noticeContent.contains("R.string.advanced_tuning_warning_desc")
+        )
+        assertTrue(
+            "TuningWarningNotice must use onSurfaceVariant text color",
+            noticeContent.contains("MaterialTheme.colorScheme.onSurfaceVariant")
+        )
+    }
 }
 
 

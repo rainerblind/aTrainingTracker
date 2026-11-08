@@ -333,12 +333,21 @@ class PeriodSummariesDatabaseManager private constructor(context: Context) {
     }
 
     private fun mapCursorToPeriod(cursor: Cursor, sportStats: Map<BSportType, SportStats>): PeriodSummary {
+        val type = safeEnumValueOf(cursor.getString(cursor.getColumnIndexOrThrow(PeriodSummariesContract.COLUMN_PERIOD_TYPE)), PeriodType.WEEK, TAG)
+        val startS = cursor.getLong(cursor.getColumnIndexOrThrow(PeriodSummariesContract.COLUMN_START_TIMESTAMP))
+        val endS = cursor.getLong(cursor.getColumnIndexOrThrow(PeriodSummariesContract.COLUMN_END_TIMESTAMP))
+        val rawRange = cursor.getString(cursor.getColumnIndexOrThrow(PeriodSummariesContract.COLUMN_DATE_RANGE))
+        val dateRange = if (type == PeriodType.WEEK && startS > 0 && endS > 0) {
+            com.atrainingtracker.trainingtracker.ui.common.DateTimeUtils.formatPeriodDateRange(startS, endS).ifBlank { rawRange }
+        } else {
+            rawRange
+        }
         return PeriodSummary(
             periodLabel = cursor.getString(cursor.getColumnIndexOrThrow(PeriodSummariesContract.COLUMN_LABEL)),
-            periodDateRange = cursor.getString(cursor.getColumnIndexOrThrow(PeriodSummariesContract.COLUMN_DATE_RANGE)),
-            periodType = safeEnumValueOf(cursor.getString(cursor.getColumnIndexOrThrow(PeriodSummariesContract.COLUMN_PERIOD_TYPE)), PeriodType.WEEK, TAG),
-            startTimestampS = cursor.getLong(cursor.getColumnIndexOrThrow(PeriodSummariesContract.COLUMN_START_TIMESTAMP)),
-            endTimestampS = cursor.getLong(cursor.getColumnIndexOrThrow(PeriodSummariesContract.COLUMN_END_TIMESTAMP)),
+            periodDateRange = dateRange,
+            periodType = type,
+            startTimestampS = startS,
+            endTimestampS = endS,
             totalWorkouts = cursor.getInt(cursor.getColumnIndexOrThrow(PeriodSummariesContract.COLUMN_TOTAL_WORKOUTS)),
             totalDurationSec = cursor.getLong(cursor.getColumnIndexOrThrow(PeriodSummariesContract.COLUMN_TOTAL_DURATION)),
             totalDistance = cursor.getDouble(cursor.getColumnIndexOrThrow(PeriodSummariesContract.COLUMN_TOTAL_DISTANCE)),

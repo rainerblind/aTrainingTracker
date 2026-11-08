@@ -91,12 +91,16 @@ object TuningSubtitleFormatter {
         return "$familyName, $weightName"
     }
 
-    fun formatBatterySaverSubtitle(fullDim: Float, mediumDim: Float, flatSlope: Float, steepSlope: Float): String {
+    fun formatBatterySaverSubtitle(
+        fullDim: Float, mediumDim: Float, flatSlope: Float, steepSlope: Float, context: Context? = null
+    ): String {
         val fullPercent = (fullDim * 100).roundToInt()
         val mediumPercent = (mediumDim * 100).roundToInt()
         val flatStr = String.format(Locale.getDefault(), "%.1f%%", flatSlope)
         val steepStr = String.format(Locale.getDefault(), "%.1f%%", steepSlope)
-        return "$fullPercent% / $mediumPercent%, Flat: $flatStr, Steep: $steepStr"
+        val flatLabel = context?.getString(R.string.tuning_battery_saver_flat_short) ?: "Flat"
+        val steepLabel = context?.getString(R.string.tuning_battery_saver_steep_short) ?: "Steep"
+        return "$fullPercent% / $mediumPercent%, $flatLabel: $flatStr, $steepLabel: $steepStr"
     }
 
     fun formatNavigationSubtitle(
@@ -114,10 +118,14 @@ object TuningSubtitleFormatter {
         return "$dismissStr, $radiusStr"
     }
 
-    fun formatSensorsGpsSubtitle(gpsAccuracy: Float, altitudeWindowSec: Int, slopeMinSpeed: Float): String {
+    fun formatSensorsGpsSubtitle(
+        gpsAccuracy: Float, altitudeWindowSec: Int, slopeMinSpeed: Float, context: Context? = null
+    ): String {
         val gpsMeters = gpsAccuracy.roundToInt()
         val speedStr = String.format(Locale.getDefault(), "%.1f m/s", slopeMinSpeed)
-        return "GPS: ${gpsMeters}m, Alt: ${altitudeWindowSec}s, Speed: $speedStr"
+        val altLabel = context?.getString(R.string.tuning_sensors_alt_short) ?: "Alt"
+        val speedLabel = context?.getString(R.string.tuning_sensors_speed_short) ?: "Speed"
+        return "GPS: ${gpsMeters}m, $altLabel: ${altitudeWindowSec}s, $speedLabel: $speedStr"
     }
 
     fun formatSensorSearchSubtitle(
@@ -219,24 +227,53 @@ object TuningSubtitleFormatter {
         useSportTypeForClustering: Boolean, useAltitudePosForClustering: Boolean, isImperial: Boolean, context: Context
     ): String {
         val locale = Locale.getDefault()
-        val distUnit = if (isImperial) {
-            context.getString(R.string.units_distance_imperial)
-        } else {
-            context.getString(R.string.units_distance_metric)
-        }
-        val multiplier = if (isImperial) (1.0 / BANALService.METER_PER_MILE).toFloat() else 0.001f
-        val decPlaces = 3
+        val endLabel = context.getString(R.string.tuning_cluster_end_short)
+        val apexLabel = context.getString(R.string.tuning_cluster_apex_short)
+        val distLabel = context.getString(R.string.tuning_cluster_dist_short)
+        val altLabel = context.getString(R.string.tuning_cluster_alt_short)
 
-        val endStr = String.format(locale, "%.${decPlaces}f%s", endpointTolerance * multiplier, distUnit)
-        val apexStr = String.format(locale, "%.${decPlaces}f%s", apexTolerance * multiplier, distUnit)
+        fun formatTolerance(meters: Float): String {
+            return if (isImperial) {
+                val distUnit = context.getString(R.string.units_distance_imperial)
+                val multiplier = (1.0 / BANALService.METER_PER_MILE).toFloat()
+                String.format(locale, "%.3f%s", meters * multiplier, distUnit)
+            } else {
+                if (meters <= 1000f) {
+                    val mUnit = context.getString(R.string.units_distance_basic)
+                    "${meters.roundToInt()} $mUnit"
+                } else {
+                    val distUnit = context.getString(R.string.units_distance_metric)
+                    String.format(locale, "%.3f%s", meters * 0.001f, distUnit)
+                }
+            }
+        }
+
+        val endStr = formatTolerance(endpointTolerance)
+        val apexStr = formatTolerance(apexTolerance)
         val distPctStr = "${(distanceTolerance * 100).roundToInt()}%"
 
         return if (useAltitudePosForClustering) {
-            val altStr = String.format(locale, "%.${decPlaces}f%s", altitudePositionTolerance * multiplier, distUnit)
-            "End: $endStr · Apex: $apexStr · Dist: $distPctStr · Alt: $altStr"
+            val altStr = formatTolerance(altitudePositionTolerance)
+            "$endLabel: $endStr · $apexLabel: $apexStr · $distLabel: $distPctStr · $altLabel: $altStr"
         } else {
-            "End: $endStr · Apex: $apexStr · Dist: $distPctStr"
+            "$endLabel: $endStr · $apexLabel: $apexStr · $distLabel: $distPctStr"
         }
+    }
+
+    /**
+     * Formats live active Auto-Pause threshold and debounce values for the collapsible accordion header (REQ-SET-080.6).
+     */
+    fun formatAutoPauseSubtitle(
+        speedThreshold: Int,
+        speedUnit: String,
+        debounceSec: Int,
+        resumeDebounceSec: Int,
+        context: Context
+    ): String {
+        val speedStr = context.getString(R.string.tuning_speed_value_format, speedThreshold, speedUnit)
+        val pauseStr = context.getString(R.string.tuning_seconds_value_format, debounceSec)
+        val resumeStr = context.getString(R.string.tuning_seconds_value_format, resumeDebounceSec)
+        return context.getString(R.string.tuning_auto_pause_subtitle_format, speedStr, pauseStr, resumeStr)
     }
 }
 

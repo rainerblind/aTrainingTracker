@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 72
+**Total Requirements**: 78
 
 ---
 
@@ -1953,16 +1953,17 @@ The workflow SHALL mandate that:
 **Invariants**: Zero runtime app code modifications; backwards-compatible CLI tooling; 100% clean-room test suite pass rate.
 
 ### REQ-PRO-035: Standalone Agile Agentic ASPICE (AAA) Core Framework, Swiss Cheese Reliability & Starter Templates [Verified]
-- **Tests**: `TST-PRO-035` | **Tickets**: `ATT-3922`
-- **Implementation**: `tools/hoechstmass/README.md`, `tools/hoechstmass/docs/project_protocol.md`, `tools/hoechstmass/.agents/`, `tools/hoechstmass/docs/`, `tools/hoechstmass/templates/`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/HoechstmassCoreFrameworkContractTest.kt`
-- **Rationale**: Extract and package the Agile Agentic ASPICE (AAA) methodology forged across 53+ sprints and 1,100+ tickets into a standalone, project-agnostic open-source skill set under `tools/hoechstmass/` (ATT-3922, Part 1 of 3, extending `REQ-PRO-014`, `REQ-PRO-024`, `REQ-PRO-026`, `REQ-PRO-027`, and `REQ-PRO-034`):
+- **Tests**: `TST-PRO-035` | **Tickets**: `ATT-3922`, `ATT-5817`
+- **Implementation**: `tools/hoechstmass/README.md`, `tools/hoechstmass/docs/project_protocol.md`, `tools/hoechstmass/assets/swiss_cheese_layers.svg`, `tools/review_tool.py`, `tools/hoechstmass/.agents/`, `tools/hoechstmass/docs/`, `tools/hoechstmass/templates/`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/HoechstmassCoreFrameworkContractTest.kt`
+- **Rationale**: Extract and package the Agile Agentic ASPICE (AAA) methodology forged across 53+ sprints and 1,100+ tickets into a standalone, project-agnostic open-source skill set under `tools/hoechstmass/` (ATT-3922, Part 1 of 3, extended and refined in ATT-5817 to incorporate the 5-Layer Swiss Cheese vector model, statistical decorrelation derivation, multi-vendor adversarial review including Claude alongside Gemini and ChatGPT, the Entry Barrier chapter, and the isolated `.reviews/` Emacs in-place Code & Document Review workflow):
 1. *Branded README, Protocol, Epigraph Quote & Etymology (`REQ-PRO-035.1`)*:
 • `tools/hoechstmass/README.md` and `tools/hoechstmass/docs/project_protocol.md` SHALL prominently feature the opening epigraph quote: *„Power without control can become destructive. Power guided by intelligence becomes excellence.“* — **ChatGPT**.
 • The documentation SHALL define the transparent attribution principle and crystal-clear human/AI boundary (`agent1`, `agent2`, `coordinator`, `human`), rejecting unattributed vibe coding.
-• The documentation SHALL codify cross-model adversarial review (both intra-sprint `pro` $\leftrightarrow$ `flash` ping-pong and cross-vendor UI screenshot review via Gemini + ChatGPT).
+• The documentation SHALL codify multi-model adversarial review: intra-sprint `pro` $\leftrightarrow$ `flash` alternation, UI screenshot evaluation with **ChatGPT**, and periodic independent codebase and architecture audits with **Claude**.
 • The documentation SHALL provide an etymology callout box for German **Höchst·maß** (`/ˈhøːçstˌmaːs/` = *Höchst-* supreme/highest + *-maß* precision standard / *Maßarbeit*), deliberately retaining German special characters (`ö` and `ß`) to honor Automotive SPICE engineering roots.
-• The documentation SHALL formalize the Swiss Cheese Multiplicative Defect Reduction Model ($P(\text{escaped defect}) = p_1 \cdot p_2 \cdots p_n$) across 4 decorrelation layers: Context Isolation, Cross-Model Diversity, Deterministic Ground-Truth Oracles, and Human Final Gate.
+• The documentation SHALL formalize the 5-Layer Swiss Cheese Defense Model with vector graphics (`assets/swiss_cheese_layers.svg`) and explicit statistical decorrelation derivation ($P(\text{escaped defect}) = \prod_{i=1}^5 p_i = p_1 \cdot p_2 \cdot p_3 \cdot p_4 \cdot p_5$) across Layer 1 (Executing Agent / $p_1$), Layer 2 (Reviewing Agent Pro $\leftrightarrow$ Flash / $p_2$), Layer 3 (Holistic Ticket Verification / $p_3$), Layer 4 (Human Final Gate / $p_4$), and Layer 5 (Cross-Vendor Audits via Claude & ChatGPT / $p_5$).
 • The documentation SHALL specify the 5-Stage Agile ASPICE Lifecycle with role-separated gate governance.
+• The documentation SHALL include Chapter 5: *„Entry Barrier & Human Discipline: Why Höchstmaß Is Not for Everyone“* detailing the setup barrier and required human discipline and patience.
 2. *Universal Document Triad Starter Templates (`REQ-PRO-035.2`)*:
 • `tools/hoechstmass/.agents/rules/aspice_governance.md` SHALL supply project-agnostic 8 Core Rules.
 • `tools/hoechstmass/docs/coding_standards.md` SHALL supply universal software construction invariants (1.1 Reuse Before Create/DRY, 1.2 Chesterton's Fence for Empty Callbacks, 1.3 Never Sort on Formatted Display Strings, 1.4 Confirmation for Destructive Ops, 1.5 Reactive Stream Subscription Over Static Snapshot Reads) with extensible project placeholder sections.
@@ -1971,30 +1972,34 @@ The workflow SHALL mandate that:
 • `tools/hoechstmass/.agents/skills/` SHALL contain parameterized, project-agnostic `SKILL.md` files for all 10 skills: `stage1-analysis`, `stage2-req-test-spec`, `stage3-impl-plan`, `stage4-implementation`, `stage5-verification`, `sprint-planner`, `jira-workflow`, `regression-bisect`, `brainstormer`, and `release-manager`.
 • `tools/hoechstmass/templates/` SHALL supply deliverable templates (`analysis_template.md`, `test_spec_template.md`, `plan_template.md`, `walkthrough_template.md`, `backlog_ticket_template.md`, `sprint_retro_template.md`).
 4. *Automated Framework Integrity Contract Test (`REQ-PRO-035.4`)*:
-• `app/src/test/java/com/atrainingtracker/trainingtracker/build/HoechstmassCoreFrameworkContractTest.kt` SHALL verify presence, non-emptiness, epigraph quote, etymology callout, mathematical model, 8 core rules, 10 skills, and deliverable templates under `tools/hoechstmass/`.
-• Zero modifications to active runtime source code in `app/src/main/` or active governance in `.agents/` and `docs/`.
+• `app/src/test/java/com/atrainingtracker/trainingtracker/build/HoechstmassCoreFrameworkContractTest.kt` SHALL verify presence, non-emptiness, epigraph quote, etymology callout, 5-layer Swiss Cheese SVG asset, mathematical decorrelation model, 8 core rules, 10 skills, and deliverable templates under `tools/hoechstmass/`.
+5. *Isolated In-Place Code & Document Review Workflow (`REQ-PRO-035.5`)*:
+• The system SHALL provide an isolated in-place review sandbox in `.reviews/` backed by a dedicated Git repository and excluded from the main repository via `.git/info/exclude`.
+• The system SHALL codify the in-place Code & Document Review workflow across `docs/project_protocol.md`, `tools/hoechstmass/README.md`, `tools/hoechstmass/docs/project_protocol.md`, and active skills, allowing concurrent, conflict-free human reviews in `emacsclient` with direct edits and inline `>>` review directives during active background agent compilation and branch switches.
+• The project SHALL provide a helper script `tools/review_tool.py` (and export scaffold `tools/hoechstmass/tools/review_tool.py`) supporting file staging, Emacs launching, diff inspection (`git -C .reviews diff`), and live reload.
+• Zero modifications to active runtime source code in `app/src/main/`.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-035` under Epic Standalone / Framework Initiative (*Clean Code & Developer Tools*), extending `REQ-PRO-014`, `REQ-PRO-024`, `REQ-PRO-026`, `REQ-PRO-027`, and `REQ-PRO-034`. Targets `tools/hoechstmass/` and `app/src/test/java/com/atrainingtracker/trainingtracker/build/HoechstmassCoreFrameworkContractTest.kt`.
-2. *Historical Origin & Commit Trace*: Evolved across 53+ sprints: Sprint 2026-39.1 (`ATT-728`), Sprint 2026-42.1 (`ATT-3323`), Sprint 2026-44.1 (`ATT-4864`), Sprint 2026-45.1 (`ATT-5431`), and Sprint 2026-45.9 (`ATT-3922`).
-3. *Root Reason for Existing Formulation*: Existing rules and skills in `.agents/` and `docs/` are tightly coupled to *aTrainingTracker* (`ATT-` prefix, fitness telemetry, Android specifics), preventing reuse in general software engineering projects.
-4. *Preservation of Core Invariants*: Zero changes to existing production code in `app/src/main/`; active governance in `.agents/` and `docs/` remains untouched; Human Decision Gate on parent tickets remains inviolable; clean-room test suite passes 100%.
+1. *Original Requirement ID & Target*: `REQ-PRO-035` (`tools/hoechstmass/`, `docs/project_protocol.md`, `tools/review_tool.py`, `HoechstmassCoreFrameworkContractTest.kt`).
+2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-45.9 (`ATT-3922`, commit `54f85e4`); extended in Sprint 2026-45.12 (`ATT-5817`).
+3. *Root Reason for Existing Formulation*: Initial export codified 4 abstract layers and lacked visual SVG representation, explicit statistical decorrelation derivation, cross-vendor model coverage (Claude), and isolated concurrent human review facilities.
+4. *Preservation of Core Invariants*: Extends defect reduction math ($P = \prod_{i=1}^5 p_i$), decorrelation rigor, zero runtime app impact, and 100% contract test suite pass rate.
 
 **Acceptance Criteria (Given-When-Then)**:
-• *Given* the `tools/hoechstmass/` directory structure,
+• *Given* `tools/hoechstmass/README.md` and `tools/hoechstmass/assets/swiss_cheese_layers.svg`,
 • *When* inspected,
-• *Then* `README.md` and `docs/project_protocol.md` contain the ChatGPT quote, cross-model review rationale, German Höchstmaß etymology callout, Swiss Cheese mathematical defect model, and 5-stage lifecycle.
-• *Given* the Document Triad templates in `tools/hoechstmass/`,
+• *Then* `README.md` embeds `assets/swiss_cheese_layers.svg`, derives the 5-layer decorrelation formula ($P = \prod_{i=1}^5 p_i$), includes Claude and ChatGPT alongside Gemini, details Chapter 5 Entry Barrier, and documents the `.reviews/` Emacs workflow.
+• *Given* `docs/project_protocol.md` and `tools/hoechstmass/docs/project_protocol.md`,
 • *When* inspected,
-• *Then* `.agents/rules/aspice_governance.md`, `docs/coding_standards.md`, and `docs/design_guidelines.md` are generalized and project-agnostic.
-• *Given* the skills and templates in `tools/hoechstmass/`,
-• *When* inspected,
-• *Then* all 10 `SKILL.md` files and 6 deliverable markdown templates exist and are parameterized.
+• *Then* the 5-layer Swiss Cheese model and the `.reviews/` in-place Code & Document Review workflow are codified.
+• *Given* `tools/review_tool.py`,
+• *When* executed (`stage`, `diff`, `apply`),
+• *Then* files are safely managed in the isolated `.reviews/` repository without polluting the main Git index or interfering with parallel builds.
 • *Given* `HoechstmassCoreFrameworkContractTest`,
 • *When* executed via Gradle,
 • *Then* all framework structural and content assertions pass 100%.
 
-**Invariants**: Active project rules and runtime code remain untouched; zero regression in test suite or governance.
+**Invariants**: Active project rules and runtime code in `app/src/main/` remain untouched; zero regression in test suite or governance.
 
 ### REQ-PRO-036: Parameterized Issue Tracker Automation & Requirement Governance Tooling [Verified]
 - **Tests**: `TST-PRO-036` | **Tickets**: `ATT-5667`
@@ -2072,6 +2077,169 @@ The workflow SHALL mandate that:
 • *Then* all assertions pass 100%.
 
 **Invariants**: Active project rules and runtime code in `app/src/main/` remain untouched; zero regression in test suite or governance.
+
+### REQ-PRO-038: Automated Quantitative Sprint Metrics (PA 4.1), Statistical Process Control (PA 4.2) & Ceremony 2 Governance [Verified]
+- **Tests**: `TST-PRO-038` | **Tickets**: `ATT-5765`, `ATT-5764`
+- **Implementation**: `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/verify_requirement_governance.py`, `docs/engineering/metrics/process_metrics.jsonl`, `.agents/skills/sprint-planner/SKILL.md`, `tools/hoechstmass/.agents/skills/sprint-planner/SKILL.md`, `templates/sprint_retro_template.md`, `tools/hoechstmass/templates/sprint_retro_template.md`, `docs/project_protocol.md`, `tools/hoechstmass/docs/project_protocol.md`, `tools/hoechstmass/README.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/HoechstmassCoreFrameworkContractTest.kt`
+- **Rationale**: Fulfill ASPICE Level 4 (Predictable) and Level 5 (Innovating) process attributes `PA 4.1` (Quantitative Analysis), `PA 4.2` (Quantitative Control), `PA 5.1` (Process Innovation), and `PA 5.2` (Process Optimization) by automatically aggregating Gate 1–5 First-Time-Pass-Rates (FTPR), empirical Swiss Cheese layer defect escape probabilities, and Human Acceptance Rate directly from Jira comment attribution, embedding scorecards into Ceremony 2 Retrospectives, closing the loop with mandatory corrective actions on Special Cause Variations, and codifying the complete ASPICE Capability Level 1–5 Matrix across framework documentation.
+- **Description**:
+  1. The CLI tool `tools/jira_util.py` (and export mirror `tools/hoechstmass/tools/jira_util.py`) SHALL provide a `sprint-metrics` subcommand to quantitatively audit active or specified sprints (`--sprint <NAME_OR_ID>`).
+  2. The tool SHALL automatically parse subtask review comments (`[ROLE: agent2]`) to compute:
+     - **Gate 1–5 First-Time-Pass-Rates (FTPR)**: Percentage of stage sub-tasks passing on first submission without `REVISION`.
+     - **Empirical Swiss Cheese Escape Rates**: Cumulative and per-layer escape frequencies ($p_1 \dots p_5$, $P_{\text{escape}} = \prod p_i$).
+     - **Human Acceptance Rate**: Percentage of parent tickets accepted at Final Review without rework.
+     - **Throughput & Risk Mix**: Closed ticket count, story point velocity, and breakdown of low/medium/high risk tickets.
+  3. The tool SHALL support `--record` to append or idempotently update the quantitative sprint record in `docs/engineering/metrics/process_metrics.jsonl`.
+  4. The tool SHALL support `--backfill=N` to query the last $N$ closed sprints and record their baseline metrics sequentially.
+  5. The tool SHALL support `--post-to-retro` to automatically format and comment the quantitative metric summary onto the sprint's `Review & Retro` ticket.
+  6. The tool SHALL implement `PA 4.2` Statistical Process Control (SPC) evaluating rolling mean $\mu$ and standard deviation $\sigma$ across recorded history, flagging any Gate FTPR or escape rate outside $\mu \pm 2\sigma$ as a Special Cause Variation.
+  7. `tools/verify_requirement_governance.py` (and `tools/hoechstmass/hoechstmass_config.json`) SHALL whitelist `metrics` in `ALLOWED_ENGINEERING_ENTRIES` to permit time-series persistence in `docs/engineering/metrics/`.
+  8. **Ceremony 2 Retrospective Integration**: `.agents/skills/sprint-planner/SKILL.md` and `tools/hoechstmass/.agents/skills/sprint-planner/SKILL.md` SHALL mandate execution of `python3 tools/jira_util.py --as coordinator sprint-metrics --record --post-to-retro` at the start of Ceremony 2 Step 4 (Retrospective), ensuring the Quantitative Sprint Scorecard is embedded into the retrospective deliverable.
+  9. **Closed-Loop Improvement (`PA 4.2` $\rightarrow$ `PA 5.2`)**: Whenever an out-of-control condition (`⚠️ PA 4.2 Special Cause Variation`) is detected during Ceremony 2, the Retrospective deliverable SHALL define a concrete root-cause analysis (RCA) and actionable process/skill improvement prior to sprint merge.
+  10. **ASPICE Capability Level 1–5 Governance Matrix**: The framework SHALL formalize the complete capability model mapping Process Attributes (`PA 1.1` to `PA 5.2`) to concrete Höchstmaß operational mechanisms across `docs/project_protocol.md`, `tools/hoechstmass/docs/project_protocol.md`, and `tools/hoechstmass/README.md`.
+  11. **Contract Test Enforcement**: `HoechstmassCoreFrameworkContractTest.kt` SHALL assert the existence and content parity of the ASPICE Level 1–5 Capability Matrix and the Quantitative Sprint Scorecard section in retrospective templates.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* Ceremony 2 Step 4 (Retrospective before merge),
+• *When* the coordinator initiates the sprint retrospective,
+• *Then* `python3 tools/jira_util.py --as coordinator sprint-metrics --record --post-to-retro` SHALL execute automatically and post the quantitative scorecard to Jira.
+• *Given* a metric exceeding $\mu \pm 2\sigma$ control limits during Ceremony 2,
+• *When* the retrospective report is compiled,
+• *Then* the report SHALL document a root-cause analysis and actionable `PA 5.2` corrective countermeasure.
+• *Given* `docs/project_protocol.md`, `tools/hoechstmass/docs/project_protocol.md`, and `tools/hoechstmass/README.md`,
+• *When* inspected,
+• *Then* all 9 ASPICE process attributes from Level 1 (`PA 1.1`) through Level 5 (`PA 5.2`) SHALL be explicitly codified.
+• *Given* `templates/sprint_retro_template.md` and `tools/hoechstmass/templates/sprint_retro_template.md`,
+• *When* inspected,
+• *Then* they SHALL contain the standardized `Quantitative Sprint Process Metrics (PA 4.1 & PA 4.2)` section.
+• *Given* `HoechstmassCoreFrameworkContractTest`,
+• *When* executed via Gradle,
+• *Then* all ASPICE Level 1–5 capability matrix assertions and template contract checks SHALL pass 100%.
+
+**Invariants**: Zero runtime app modifications in `app/src/main/`; backwards compatibility of existing `jira_util.py` commands; strict sprint retro-before-merge invariant preserved; 100% test pass rate.
+
+### REQ-PRO-039: Jira Data Center & Enterprise On-Premise Support for Höchstmaß Automation Tooling [Verified]
+- **Tests**: `TST-PRO-039` | **Tickets**: `ATT-5830`
+- **Implementation**: `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/hoechstmass_config.json`, `.env.jira.example`, `tools/hoechstmass/.env.jira.example`, `.agents/skills/jira-workflow/SKILL.md`, `tools/hoechstmass/.agents/skills/jira-workflow/SKILL.md`, `tools/hoechstmass/README.md`, `tools/hoechstmass/tests/test_jira_datacenter.py`
+- **Rationale**: Support enterprise on-premise Jira Data Center (and Jira Server) deployments for automotive ASPICE development environments where Jira Cloud is restricted, accommodating Personal Access Token (PAT) authentication, corporate custom CA certificates, username-based assignee payloads, Epic Link custom fields for top-level issues, and REST API v2 JQL search routing while maintaining 100% backward compatibility with Jira Cloud.
+- **Description**:
+  1. The CLI tools `tools/jira_util.py` and `tools/hoechstmass/tools/jira_util.py` SHALL support declarative deployment type configuration (`deployment_type: "datacenter" | "cloud"` in `hoechstmass_config.json` and `JIRA_DEPLOYMENT` env var), defaulting strictly to `"cloud"`.
+  2. In Data Center mode, the tooling SHALL support Personal Access Token authentication via `Authorization: Bearer <token>` when `JIRA_API_TOKEN` is supplied without username, while continuing to support Basic Auth when `JIRA_USER` is configured.
+  3. In Data Center mode, the tooling SHALL support corporate CA certificate bundles via `JIRA_CA_BUNDLE` / `ca_bundle` and an optional `ssl_verify` toggle for internal TLS termination contexts.
+  4. In Data Center mode, issue and subtask assignment SHALL emit `{"name": "<username>"}` in the assignee payload instead of `{"accountId": "..."}`, and parse `fields.assignee.name` when inspecting active assignments.
+  5. In Data Center mode, linking top-level issues (Stories, Tasks, Bugs) to Epics SHALL populate the configured Epic Link custom field (default `customfield_10014`, configurable via `hoechstmass_config.json: epic_link_field`) instead of `fields.parent`, while sub-tasks SHALL strictly continue using `fields.parent` in both deployments.
+  6. In Data Center mode, JQL searches SHALL route to the `/rest/api/2/search` endpoint instead of Cloud `/rest/api/3/search/jql`.
+  7. Parity between `tools/jira_util.py` and `tools/hoechstmass/tools/jira_util.py` SHALL be maintained identically (`Rule 36`).
+  8. Automated unit and contract tests in `tools/hoechstmass/tests/test_jira_datacenter.py` SHALL verify Bearer auth headers, CA bundle passing, assignee format dispatch, Epic Link custom field routing, and API v2 search query generation.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `deployment_type: "datacenter"` configured in `hoechstmass_config.json` or `JIRA_DEPLOYMENT=datacenter`,
+• *When* an HTTP request is dispatched with `JIRA_API_TOKEN`,
+• *Then* the request SHALL include `Authorization: Bearer <token>` header without Basic Auth base64 encoding.
+• *Given* `JIRA_CA_BUNDLE` pointing to a corporate CA certificate file,
+• *When* HTTPS requests are sent to the Jira server,
+• *Then* the custom SSL context SHALL load and verify against the specified CA bundle.
+• *Given* a task assignment action under Data Center mode,
+• *When* updating the assignee,
+• *Then* the request payload SHALL contain `{"name": "<username>"}`.
+• *Given* an issue creation or edit linking a Story or Bug to an Epic under Data Center mode,
+• *When* the payload is generated,
+• *Then* it SHALL set the Epic Link custom field (`customfield_10014`) and omit `fields.parent`.
+• *Given* subtask creation under Data Center mode,
+• *When* the subtask payload is generated,
+• *Then* it SHALL strictly retain `fields.parent = {"key": "<PARENT_KEY>"}`.
+• *Given* a JQL query under Data Center mode,
+• *When* executed via `search_issues`,
+• *Then* the request SHALL target `/rest/api/2/search`.
+• *Given* existing Jira Cloud configuration (`deployment_type: "cloud"`),
+• *When* commands are executed,
+• *Then* 100% existing behavior, Basic Auth, accountId assignment, and `/rest/api/3/search/jql` endpoints SHALL be preserved.
+
+**Invariants**: Zero runtime changes to `app/src/main/`; existing Jira Cloud workflows remain 100% backward-compatible; composite commands (`submit-stage`, `gate-verdict`) maintain identical subtask transitions; secret masking (`REQ-PRO-021`) strictly enforced.
+
+### REQ-PRO-040: Project-Wide Epic Lifecycle Governance, 'list-epics' / 'close-epic' CLI Commands, and Controlled Epic Creation & Closure [Verified]
+- **Tests**: `TST-PRO-040` | **Tickets**: `ATT-5911`
+- **Implementation**: `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `.agents/skills/brainstormer/SKILL.md`, `.agents/skills/sprint-planner/SKILL.md`, `.agents/skills/jira-workflow/SKILL.md`, `tools/hoechstmass/.agents/skills/brainstormer/SKILL.md`, `tools/hoechstmass/.agents/skills/sprint-planner/SKILL.md`, `tools/hoechstmass/.agents/skills/jira-workflow/SKILL.md`
+- **Rationale**: Support project-wide Epic lifecycle management by providing visibility into active Epics and child ticket completion states via `list-epics`, offering a guarded `close-epic` CLI command with a triple guardrail (role check, issue type check, zero-open-child completeness check), codifying the Canonical Epic Taxonomy across agent skills, and empowering agents to create and close Epics after explicit human confirmation without violating the Human Decision Gate on standard tickets (ATT-5911, extending `REQ-PRO-016`, `REQ-PRO-024`, and `REQ-PRO-036`):
+1. *CLI Support for Epic Inspection (`REQ-PRO-040.1`, `list-epics`)*:
+• `tools/jira_util.py` and `tools/hoechstmass/tools/jira_util.py` SHALL implement a `list-epics` subcommand.
+• The command SHALL query all Epics in the project via JQL (`issuetype = Epic ORDER BY key ASC`) across both Cloud and Data Center deployments.
+• For each Epic, it SHALL compute and display: Epic Key, Summary, Status, Done child tickets count, and Open child tickets count.
+2. *CLI Support for Guarded Epic Closure (`REQ-PRO-040.2`, `close-epic`)*:
+• `tools/jira_util.py` and `tools/hoechstmass/tools/jira_util.py` SHALL implement a `close-epic <EPIC_KEY>` subcommand enforcing a triple guardrail:
+  1. *Role Guard*: Restricted strictly to `--as coordinator` or `human`. Standard agent roles (`agent1`, `agent2`) SHALL be rejected.
+  2. *Issue Type Guard*: Verified via issue lookup that the issue type is `Epic`. Attempting to close standard parent tickets (`Feature`, `Bug`, `Verbesserung`) SHALL abort to preserve the Human Gate (`REQ-PRO-016`).
+  3. *Completeness Guard*: Verified that all child tickets linked to the Epic are in status `Erledigt` (0 open child tickets). If any open child ticket remains, the command SHALL abort with an explicit list of unfinished tickets.
+• Upon satisfying all guardrails, `close-epic` SHALL transition the Epic to `Erledigt`.
+3. *Skill Documentation & Canonical Epic Taxonomy (`REQ-PRO-040.3`)*:
+• `.agents/skills/brainstormer/SKILL.md`, `.agents/skills/sprint-planner/SKILL.md`, and `.agents/skills/jira-workflow/SKILL.md` (and their `tools/hoechstmass` mirrors) SHALL codify the Canonical Epic Taxonomy:
+  - Distinguishing **Evergreen Epics** (permanent domain/drawer areas) from **Milestone Epics** (scoped multi-sprint initiatives).
+  - Empowering AI agents during product discovery (`brainstormer`) or sprint reviews (`sprint-planner`) to propose creating new Milestone Epics or closing completed Milestone Epics, subject to explicit human confirmation before execution.
+4. *Tooling Synchronization & Automated Test Enforcement (`REQ-PRO-040.4`)*:
+• Tooling logic and CLI handling SHALL remain 100% synchronized between root `tools/jira_util.py` and mirror `tools/hoechstmass/tools/jira_util.py` (Rule 36 DRY).
+• Automated unit tests in `tools/test_jira_epics.py` and `tools/hoechstmass/tools/test_hoechstmass_tools.py` SHALL verify `list-epics` aggregation, `close-epic` role rejection, non-Epic rejection, open child ticket blocking, and successful closure transition.
+• Zero production code in `app/src/main/` SHALL be modified.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-040` extending `REQ-PRO-016` (*Human Decision Gate*), `REQ-PRO-024` (*Modular Skills*), and `REQ-PRO-036` (*Parameterized Tooling*). Targets `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, and agent skill markdown documentation.
+2. *Historical Trace*: `ATT-3323` (commit `6925d864` - Inviolable Human Decision Gates), `ATT-5830` (Data Center Support).
+3. *Root Reason for Existing Formulation*: `REQ-PRO-016` blocked non-subtask completion to prevent agents from closing in-sprint parent tickets before Ceremony 2 Joint Review. It did not distinguish between sprint child tickets and overarching Milestone Epics.
+4. *Preservation of Core Invariants*: Standard sprint tickets remain 100% protected by the Human Gate; `close-epic` requires explicit human consultation, coordinator role, and 0 open child tickets.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* project Epics with child tickets,
+• *When* `jira_util.py list-epics` executes,
+• *Then* it outputs a structured table with keys, summaries, status, and done/open child counts.
+• *Given* an invocation of `close-epic` with non-coordinator role, or on a non-Epic issue, or on an Epic with open child tickets,
+• *When* executed,
+• *Then* the command aborts with exit code 1 and a descriptive error message.
+• *Given* a completed Milestone Epic (0 open children) and explicit human approval,
+• *When* `jira_util.py --as coordinator close-epic <KEY>` executes,
+• *Then* the Epic transitions to `Erledigt`.
+
+**Invariants**: Human Decision Gate on standard sprint tickets (`Feature`, `Bug`, `Verbesserung`) remains inviolable; zero changes to Android runtime code in `app/src/main/`.
+
+### REQ-PRO-041: Parallel Sprint Execution Protocol for Disjoint Epics ('Workspace: share' Worktrees, Conflict-Free Strings/Docs & Flock Build/Merge Serialization) [Verified]
+- **Tests**: `TST-PRO-041` | **Tickets**: `ATT-5914`
+- **Implementation**: `.agents/rules/aspice_governance.md`, `.agents/skills/jira-workflow/SKILL.md`, `.agents/skills/stage4-implementation/SKILL.md`, `.agents/skills/stage5-verification/SKILL.md`, `.agents/skills/sprint-planner/SKILL.md`, `tools/run_serialized.sh`, `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/localization/TranslationParityTest.kt`
+- **Rationale**: Eliminate the throughput bottleneck of single-ticket sequential Phase 2 execution by enabling concurrent execution of up to 2 tickets belonging to disjoint Parent Epics. Resolves git branch collisions, strings.xml EOF append conflicts, living doc counter merge races, and Gradle test contention through worktree isolation, domain-partitioned strings, POSIX file locking, and rebase-then-recalculate sync (ATT-5914, extending `REQ-PRO-014`, `REQ-PRO-015`, `REQ-PRO-024`, and `REQ-PRO-025`):
+1. *Subagent Worktree Isolation (`REQ-PRO-041.1`, Workspace: "share")*:
+• Coordinator SHALL orchestrate parallel sprint ticket execution using `invoke_subagent(..., Workspace="share")` for persistent subagent pairs.
+• Each subagent pair SHALL operate in an isolated Git worktree linked to the primary repository, possessing independent working directories, `HEAD` pointers, and index states.
+• Concurrency is strictly bounded: at most 2 concurrent tickets, and ONLY tickets belonging to disjoint Parent Epics (zero package, screen, or living-doc shard overlap). Parallel execution of tickets within the same Epic remains prohibited.
+2. *POSIX File Lock Mutual Exclusion (`REQ-PRO-041.2`, flock)*:
+• Tooling and governance SHALL provide a serialized execution wrapper using POSIX `flock` (exclusive lock on `/tmp/att_build_merge.lock`) for:
+  a) Heavy Gradle test execution (`./gradlew testDebugUnitTest`).
+  b) Stage 5 Git squash-merging and branch deletion on `sprint/<SPRINT_NAME>`.
+• Stages 1–3 (Analysis, Test Spec, Impl Plan) and Stage 4 code authoring SHALL proceed 100% concurrently without lock contention.
+3. *Domain-Scoped Localization Partitioning (`REQ-PRO-041.3`, strings_<domain>.xml)*:
+• String additions for independent domain features SHALL support creation and editing of domain-partitioned files: `res/values*/strings_<domain>.xml` (e.g. `strings_process.xml`, `strings_cockpit.xml`) across all 9 supported locales.
+• `TranslationParityTest.kt` SHALL dynamically discover all XML files matching `strings*.xml` across each `values*/` directory, guaranteeing 100% translation parity, placeholder format safety, and missing key detection across partitioned string files.
+4. *Deterministic Living Documentation Synchronization (`REQ-PRO-041.4`, Rebase-then-Recalculate)*:
+• Living documentation master index updates (`recalculate_master_index_tables()` / `python3 tools/jira_util.py recalc-docs`) for parallel tickets SHALL be serialized under the merge lock during Stage 5.
+• Subagents SHALL fetch/rebase against latest `sprint/<SPRINT_NAME>` before recalculating and committing living documentation counters, preventing Git merge conflicts on `docs/requirements.md` and `docs/tests.md`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-041` extending `REQ-PRO-014` (*ASPICE Dual-Agent Quality Gates*), `REQ-PRO-015` (*Branching & Commits*), `REQ-PRO-024` (*Modular Skills*), and `REQ-PRO-025` (*Test Parallelism & Acceleration*). Targets `.agents/rules/aspice_governance.md`, `.agents/skills/`, tooling, and test infrastructure.
+2. *Historical Trace*: `ATT-3323` (ASPICE Dual-Agent Lifecycle), `ATT-4520` (Persistent Epic Pairs), `ATT-4776` (Robolectric `--max-workers=2` limit), `ATT-5431` (Sharded living docs).
+3. *Root Reason for Existing Formulation*: Strict sequential execution was established when all subagents ran under `Workspace: "inherit"`, sharing a single `HEAD` and worktree.
+4. *Preservation of Core Invariants*: Dual-agent 5-stage quality gates, one atomic squash commit per ticket, and human review gates remain 100% inviolable. Concurrency is strictly capped at 2 disjoint Epics.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* two tickets from disjoint Epics in an active sprint,
+• *When* dispatched concurrently by Coordinator using `Workspace: "share"`,
+• *Then* both subagent pairs operate in isolated worktrees without Git branch conflicts.
+• *Given* concurrent test execution or Stage 5 squash-merges,
+• *When* executing under `flock /tmp/att_build_merge.lock`,
+• *Then* heavy operations serialize cleanly without worker collision or merge races.
+• *Given* localized strings added in `strings_<domain>.xml`,
+• *When* `TranslationParityTest.kt` executes,
+• *Then* it discovers all partitioned string files across 9 locales and enforces 100% parity.
+
+**Invariants**: Human Decision Gate (`REQ-PRO-016`) remains inviolable; max 2 concurrent tickets across strictly disjoint Epics; zero Android runtime changes in `app/src/main/java/`.
+
+
+
 
 
 

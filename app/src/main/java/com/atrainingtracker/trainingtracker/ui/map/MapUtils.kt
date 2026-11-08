@@ -22,6 +22,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import android.graphics.Typeface
@@ -102,6 +103,74 @@ fun createHeartPinMarker(
         it.setBounds(0, 0, size, size)
         it.draw(canvas)
     }
+
+    return saveBitmapDescriptorFactoryFromBitmap(bitmap)
+}
+
+/**
+ * Creates a compact, semi-transparent centered heart glyph marker with a subtle white halo (REQ-UI-470.2).
+ * Used for KnownLocation thumbnail maps to center inside the geofence circle without standing pin occlusion.
+ */
+fun createCenteredHeartGlyphMarker(
+    context: Context,
+    heartColor: Color,
+    outlineColor: Color = Color.White,
+    alpha: Float = 0.8f,
+    sizeDp: Int = 16
+): BitmapDescriptor? {
+    val density = context.resources.displayMetrics.density
+    val glyphSize = (sizeDp * density).toInt()
+    val padding = (2 * density).toInt()
+    val totalSize = glyphSize + (padding * 2)
+
+    val bitmap = Bitmap.createBitmap(totalSize, totalSize, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+
+    val path = Path().apply {
+        val left = padding.toFloat()
+        val top = padding.toFloat()
+        val width = glyphSize.toFloat()
+        val height = glyphSize.toFloat()
+        val right = left + width
+
+        moveTo(left + width * 0.5f, top + height * 0.85f)
+        cubicTo(
+            left + width * 0.15f, top + height * 0.60f,
+            left, top + height * 0.38f,
+            left, top + height * 0.22f
+        )
+        cubicTo(
+            left, top + height * 0.05f,
+            left + width * 0.28f, top,
+            left + width * 0.5f, top + height * 0.22f
+        )
+        cubicTo(
+            left + width * 0.72f, top,
+            right, top + height * 0.05f,
+            right, top + height * 0.22f
+        )
+        cubicTo(
+            right, top + height * 0.38f,
+            left + width * 0.85f, top + height * 0.60f,
+            left + width * 0.5f, top + height * 0.85f
+        )
+        close()
+    }
+
+    val outlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 2.5f * density
+        color = outlineColor.copy(alpha = alpha).toArgb()
+        strokeCap = Paint.Cap.ROUND
+        strokeJoin = Paint.Join.ROUND
+    }
+    canvas.drawPath(path, outlinePaint)
+
+    val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        color = heartColor.copy(alpha = alpha).toArgb()
+    }
+    canvas.drawPath(path, fillPaint)
 
     return saveBitmapDescriptorFactoryFromBitmap(bitmap)
 }

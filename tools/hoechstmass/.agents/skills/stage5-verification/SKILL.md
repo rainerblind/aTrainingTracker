@@ -39,7 +39,7 @@ Audit the Stage 5 walkthrough and repository state against this checklist:
      python3 tools/workflow_util.py --as agent2 gate-verdict <TEST_SUBTASK_KEY> PASS "<Audit Report>"
      ```
    - Advances parent ticket to `Final Review (Human)` and assigns it to `human`. AI agents are strictly forbidden from transitioning parent tickets to completed.
-6. **Single Atomic Commit per Ticket & Sprint Branch Integration (Core Rule 8)**:
+6. **Single Atomic Commit per Ticket & Sprint Branch Integration (Core Rule 8 & Rule 9 — `REQ-PRO-041`)**:
    - Integrate verified ticket into the sprint branch as **strictly one squashed atomic commit**:
      ```bash
      git add -A
@@ -48,4 +48,19 @@ Audit the Stage 5 walkthrough and repository state against this checklist:
      git merge --squash feature/<KEY>
      git commit -m "<KEY>: <Concise Ticket Summary>"
      git branch -D feature/<KEY>
+     ```
+   - **Parallel Sprint Execution Merge Protocol (`REQ-PRO-041.2`, `REQ-PRO-041.4`)**: Under parallel sprint execution, serialize rebase, living docs recalculation, and squash-merging under POSIX `flock` (`/tmp/att_build_merge.lock`):
+     ```bash
+     python3 tools/parallel_sprint_lock.py bash -c '
+       git add -A && git commit -m "<KEY>: <Concise Ticket Summary>" || true
+       git fetch origin
+       git rebase origin/sprint/<SPRINT_NAME>
+       python3 tools/verify_requirement_governance.py --sync-indexes
+       git add docs/requirements.md docs/tests.md
+       git commit --amend --no-edit || true
+       git checkout sprint/<SPRINT_NAME>
+       git merge --squash feature/<KEY>
+       git commit -m "<KEY>: <Concise Ticket Summary>"
+       git branch -D feature/<KEY>
+     '
      ```

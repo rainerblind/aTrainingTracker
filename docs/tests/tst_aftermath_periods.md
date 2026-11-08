@@ -500,6 +500,24 @@
   8. *Targeted Regression Verification (`TST-PER-035.8`)*:
   • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"` to verify 100% clean-room test pass rate.
 
+### TST-PER-036: **Period Date Range & Bar Graph Metric Decimal Localization Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PER-028` (`REQ-PER-028.1`..`REQ-PER-028.4`)
+- **Component**: `PeriodBarGraphTest.kt`, `DateTimeUtilsTest.kt`, `PeriodsRepositoryTest.kt`, `PeriodSummaryCardTest.kt`
+- **Jira**: `ATT-5836`
+- **Test Description**:
+  1. *Weekly Date Range Active Locale Formatting Unit Test (`TST-PER-036.1`, `DateTimeUtilsTest.kt` / `PeriodsRepositoryTest.kt`)*:
+  • Verify that weekly date range formatting outputs day before month for German (`de_DE`, e.g. `"2. Nov. – 8. Nov."` or `"2. Nov. - 8. Nov."`) and month before day for US English (`en_US`, e.g. `"Nov 2 – Nov 8"` or `"Nov. 2 - Nov. 8"`).
+  2. *PeriodBarGraph Metric Value Decimal Localization Unit Test (`TST-PER-036.2`, `PeriodBarGraphTest.kt`)*:
+  • Verify that `formatMetricValue` with duration (e.g. 6120s = 1.7h) produces localized decimal comma `"1,7h"` for `Locale.GERMANY` and dot `"1.7h"` for `Locale.US`.
+  • Verify that `formatMetricValue` with distance (e.g. 5400m = 5.4km / 8530m = 5.3mi) produces localized decimal comma (`"5,4km"`, `"5,3mi"`) for `Locale.GERMANY` and dot (`"5.4km"`, `"5.3mi"`) for `Locale.US`.
+  3. *Dynamic Date Range Resolution for Cached Periods (`TST-PER-036.3`, `PeriodSummaryCardTest.kt` / `PeriodsRepositoryTest.kt`)*:
+  • Verify that cached `PeriodSummary` instances with valid start/end timestamps dynamically resolve and render localized date ranges when evaluated under German vs US English locales.
+  4. *Non-Decimal & Edge Duration Preserving Unit Test (`TST-PER-036.4`, `PeriodBarGraphTest.kt`)*:
+  • Verify that non-decimal durations (`<1m`, `45m`, `12h`) and exact integer distances/ascents (`250m`, `820ft`, `15km`) preserve existing formatting across all locales.
+  5. *Clean-Room Targeted Regression Execution (`TST-PER-036.5`)*:
+  • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*" --tests "com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest"` verifying 100% clean-room test pass rate.
+
+
 
 
 

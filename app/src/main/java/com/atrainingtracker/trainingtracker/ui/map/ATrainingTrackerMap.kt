@@ -48,6 +48,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.google.android.gms.maps.model.BitmapDescriptor
+import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.maps.android.compose.GoogleMap
@@ -118,6 +119,7 @@ fun ATrainingTrackerMap(
 
     // UI & Callbacks
     modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(),
     onMapClick: ((LatLng) -> Unit)? = null,
     shouldTakeSnapshot: Boolean = false,
     onSnapshotReady: (Bitmap) -> Unit = {},
@@ -132,7 +134,17 @@ fun ATrainingTrackerMap(
 
     // 1. Initial State & Controllers
     var isMapLoaded by remember { mutableStateOf(false) }
-    val cameraPositionState = rememberCameraPositionState()
+    val initialLocation = remember(context) {
+        MapInitialLocationResolver.resolveInitialLocation(context, currentLocationFlow.value)
+    }
+    val cameraPositionState = rememberCameraPositionState {
+        if (initialBounds == null) {
+            position = CameraPosition.fromLatLngZoom(
+                initialLocation,
+                MapInitialLocationResolver.DEFAULT_INITIAL_ZOOM
+            )
+        }
+    }
 
     // 2. Icon & Resource Cache
     var locationIcon by remember { mutableStateOf<BitmapDescriptor?>(null) }
@@ -206,7 +218,8 @@ fun ATrainingTrackerMap(
         BoxWithConstraints(modifier = modifier) {
             // REQ-MAP-046 / Rule 33: Unified Viewport Anchor Authority
             // Forward lookahead is handled directly by followMeController via analytical target projection,
-            // completely decoupling GoogleMap content padding to eliminate competing layout recentering loops.
+            // completely decoupling dynamic lookahead padding to eliminate competing layout recentering loops.
+            // REQ-MAP-059.3: Forward static contentPadding (e.g. system navigation bar insets) to GoogleMap.
             val topPadding = 0.dp
 
             GoogleMap(
@@ -214,7 +227,7 @@ fun ATrainingTrackerMap(
                     .fillMaxSize()
                     .background(if (isDark) TTColor.DarkMapCanvas else Color.White),
                 cameraPositionState = cameraPositionState,
-                contentPadding = PaddingValues(top = topPadding),
+                contentPadding = contentPadding,
                 onMapClick = { latLng -> onMapClick?.invoke(latLng) },
                 properties = mapProperties,
                 uiSettings = MapUiSettings(zoomControlsEnabled = false, tiltGesturesEnabled = true),

@@ -29,6 +29,8 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -37,6 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -70,6 +73,7 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
  * @param canDelete Whether the workout deletion context menu is enabled (ATT-917).
  * @param onClusterClick Optional callback invoked when the user clicks the cluster navigation button.
  * @param onEditWorkout Optional callback invoked when the user clicks the dedicated edit workout action.
+ * @param onShareWorkout Optional callback invoked when the user clicks the dedicated share workout action (ATT-5809).
  * @param actions Optional slot for trailing action buttons.
  */
 @Composable
@@ -85,11 +89,14 @@ fun WorkoutHeader(
     onMarkFinished: (() -> Unit)? = null,
     onClusterClick: ((Long) -> Unit)? = null,
     onEditWorkout: (() -> Unit)? = null,
+    onShareWorkout: (() -> Unit)? = null,
+    onClearRecordingErrors: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     // State to control menu visibility
     var showMenu by remember { mutableStateOf(false) }
     var showContextMenu by remember { mutableStateOf(false) }
+    var showDiagnosticSheet by remember { mutableStateOf(false) }
 
     val hasLongClick = canDelete || (!data.finished && onMarkFinished != null)
 
@@ -115,6 +122,21 @@ fun WorkoutHeader(
                 // Custom actions provided by caller
                 actions()
 
+                if (!data.recordingErrors.isNullOrBlank()) {
+                    IconButton(
+                        onClick = { showDiagnosticSheet = true },
+                        modifier = Modifier
+                            .size(32.dp)
+                            .testTag(com.atrainingtracker.trainingtracker.ui.dialogs.WorkoutDiagnosticTestTags.BADGE)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.WarningAmber,
+                            contentDescription = stringResource(R.string.workout_diagnostic_banner_title),
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+
                 if (onEditWorkout != null) {
                     IconButton(
                         onClick = onEditWorkout,
@@ -123,6 +145,19 @@ fun WorkoutHeader(
                         Icon(
                             imageVector = Icons.Default.Edit,
                             contentDescription = stringResource(R.string.edit_workout),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+
+                if (onShareWorkout != null) {
+                    IconButton(
+                        onClick = onShareWorkout,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = stringResource(R.string.share),
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -330,8 +365,13 @@ fun WorkoutHeader(
                             modifier = Modifier.weight(1f)
                         )
 
-                        // Spacer for the Action / Menu Button area
-                        Spacer(modifier = Modifier.width(72.dp))
+                        // Dynamic Spacer for the Action / Menu Button area to prevent title overlap (ATT-5809)
+                        val actionSpacerWidth = (if (menuEnabled) 36.dp else 0.dp) +
+                            (if (onEditWorkout != null) 36.dp else 0.dp) +
+                            (if (onShareWorkout != null) 36.dp else 0.dp)
+                        if (actionSpacerWidth > 0.dp) {
+                            Spacer(modifier = Modifier.width(actionSpacerWidth.coerceAtLeast(40.dp)))
+                        }
                     }
 
                     // --- Workout Cluster Info (ATT-388 / ATT-503): Positioned directly below the name ---
@@ -573,6 +613,19 @@ fun WorkoutHeader(
             }
         }
     }
+
+    if (showDiagnosticSheet && !data.recordingErrors.isNullOrBlank()) {
+        com.atrainingtracker.trainingtracker.ui.dialogs.WorkoutDiagnosticBottomSheet(
+            recordingErrorsJson = data.recordingErrors!!,
+            workoutName = data.workoutName,
+            sportName = data.sportName,
+            onClearWarning = {
+                onClearRecordingErrors?.invoke()
+                showDiagnosticSheet = false
+            },
+            onDismiss = { showDiagnosticSheet = false }
+        )
+    }
 }
 
 /**
@@ -710,5 +763,37 @@ private fun PreviewCommuteHeader() {
             onSaveAsRoute = {},
             onDeleteRequest = {}
         )
+    }
+}
+
+@Preview(name = "Edit and Share Buttons Active - Light", showBackground = true)
+@Preview(name = "Edit and Share Buttons Active - Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun PreviewWorkoutHeaderWithEditAndShare() {
+    ATrainingTrackerTheme {
+        Surface(color = MaterialTheme.colorScheme.background) {
+            WorkoutHeader(
+                data = WorkoutHeaderData(
+                    workoutName = "Morning Tempo Ride with Clustered Intervals",
+                    formattedDate = "Today",
+                    formattedTime = "07:30",
+                    sportName = "Cycling",
+                    bSportType = BSportType.BIKE,
+                    finished = true,
+                    commute = false,
+                    trainer = false,
+                    startTimeS = 0,
+                    equipmentName = null,
+                    uploadToStrava = 1,
+                    stravaSportName = "Ride"
+                ),
+                onClicked = {},
+                onExport = {},
+                onSaveAsRoute = {},
+                onDeleteRequest = {},
+                onEditWorkout = {},
+                onShareWorkout = {}
+            )
+        }
     }
 }

@@ -29,6 +29,8 @@ import com.atrainingtracker.trainingtracker.elevation.ElevationSource
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository
+import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager
+import com.atrainingtracker.trainingtracker.database.KnownLocationsGeometryMath
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
@@ -191,7 +193,9 @@ class KnownLocationsViewModel @JvmOverloads constructor(
         }
 
         viewModelScope.launch {
+            repository.reconcileHitCounts()
             repository.healLegacyNames()
+            workoutRepo?.loadAllWorkouts()
         }
     }
 
@@ -273,10 +277,65 @@ class KnownLocationsViewModel @JvmOverloads constructor(
     }
 
     /**
+     * Opens modal edit dialog with a new location template for athlete creation (REQ-UI-470.3).
+     */
+    fun openCreateDialog() {
+        val userLoc = _uiState.value.userLocation
+        val defaultLatLng = if (userLoc != null) {
+            LatLng(userLoc.latitude, userLoc.longitude)
+        } else {
+            _uiState.value.locations.firstOrNull()?.latLng ?: LatLng(0.0, 0.0)
+        }
+        val defaultAltitude = _uiState.value.locations.firstOrNull()?.altitude ?: 0.0
+
+        val newTemplate = KnownLocationItem(
+            id = 0L,
+            name = "",
+            altitude = defaultAltitude,
+            radius = KnownLocationsDatabaseManager.DEFAULT_RADIUS,
+            latLng = defaultLatLng,
+            hitCount = 0,
+            isLocked = true,
+            source = ElevationSource.MANUAL_USER,
+            isHome = false
+        )
+        _uiState.update {
+            it.copy(
+                selectedLocationForEdit = newTemplate,
+                showMapInEditDialog = false
+            )
+        }
+    }
+
+    /**
      * Dismisses modal edit dialog.
      */
     fun dismissEditDialog() {
         _uiState.update { it.copy(selectedLocationForEdit = null) }
+    }
+
+    /**
+     * Creates a new known location manually via repository (REQ-UI-470.3).
+     */
+    fun createLocation(
+        name: String,
+        altitude: Double,
+        radius: Int,
+        latLng: LatLng,
+        source: ElevationSource = ElevationSource.MANUAL_USER,
+        isHome: Boolean = false
+    ) {
+        viewModelScope.launch {
+            repository.addLocation(
+                name = name,
+                altitude = altitude,
+                radius = radius,
+                latLng = latLng,
+                source = source,
+                isHome = isHome
+            )
+            dismissEditDialog()
+        }
     }
 
     /**
@@ -305,6 +364,12 @@ class KnownLocationsViewModel @JvmOverloads constructor(
      * Commits edited location changes including custom geofence radius and home base status (REQ-MAP-034).
      */
     fun updateLocation(id: Long, name: String, altitude: Double, radius: Int, source: ElevationSource, isHome: Boolean) {
+        if (id == 0L) {
+            val template = _uiState.value.selectedLocationForEdit
+            val latLng = template?.latLng ?: LatLng(0.0, 0.0)
+            createLocation(name, altitude, radius, latLng, source, isHome)
+            return
+        }
         viewModelScope.launch {
             repository.updateLocation(id, name, altitude, radius, source)
             if (isHome) {
@@ -344,6 +409,35 @@ class KnownLocationsViewModel @JvmOverloads constructor(
         viewModelScope.launch {
             repository.deleteLocation(id)
             if (_uiState.value.selectedLocationForEdit?.id == id) {
+                dismissEditDialog()
+            }
+        }
+    }
+
+    /**
+     * ATT-5889 / REQ-SET-095.2: Retrieves candidate locations for merging with [source],
+     * filtering to those within 2,000 meters geodetic distance and sorting ascending by raw
+     * numeric distance (ATT-3324).
+     */
+    fun getCandidateLocationsForMerge(source: KnownLocationItem): List<Pair<KnownLocationItem, Double>> {
+        val all = repository.locationsFlow.value
+        return all.filter { it.id != source.id }
+            .map { candidate ->
+                val dist = KnownLocationsGeometryMath.calculateDistanceMeters(source.latLng, candidate.latLng)
+                Pair(candidate, dist)
+            }
+            .filter { it.second <= 2000.0 }
+            .sortedBy { it.second }
+    }
+
+    /**
+     * ATT-5889 / REQ-SET-095.5: Dispatches merging of [source] location into [target] location.
+     */
+    fun mergeLocations(source: KnownLocationItem, target: KnownLocationItem) {
+        viewModelScope.launch {
+            repository.mergeLocations(source, target)
+            clusterRepository.refreshClusters()
+            if (_uiState.value.selectedLocationForEdit?.id == source.id) {
                 dismissEditDialog()
             }
         }

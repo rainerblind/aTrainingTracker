@@ -85,14 +85,14 @@ class ElevationProfileClimbBadgeClippingTest {
 
     @Test
     fun testClimbBadge_zeroTopClearance_inDetailView() {
-        // In detail view, showZoomControls == true, so topPadding = 44.dp
-        val topPadding = 44f
+        // In detail view, showZoomControls == true, so topPadding = 24.dp (calibrated in REQ-UI-489)
+        val topPadding = 24f
         val requiredClearance = 24f // At 1.0x font scale
 
         val overhead = (requiredClearance - topPadding).coerceAtLeast(0f)
-        assertEquals("Zero clearance overhead in detail view since 44dp >= 24dp", 0f, overhead, 0.001f)
+        assertEquals("Zero clearance overhead in detail view since 24dp >= 24dp", 0f, overhead, 0.001f)
         val effectivePadding = topPadding + overhead
-        assertEquals("Effective top padding must remain strictly 44dp in detail view", 44f, effectivePadding, 0.001f)
+        assertEquals("Effective top padding must remain strictly 24dp in detail view", 24f, effectivePadding, 0.001f)
     }
 
     @Test
@@ -103,7 +103,7 @@ class ElevationProfileClimbBadgeClippingTest {
         // Contract verification: totalCanvasHeight must NOT be modified by climb presence
         assertTrue(
             "ElevationProfile must maintain exact totalCanvasHeight formula preserving container stability",
-            content.contains("val totalCanvasHeight = fixedHeight ?: if (showZoomControls) cachedData.adaptiveHeight + 28.dp else cachedData.adaptiveHeight")
+            content.contains("val totalCanvasHeight = fixedHeight ?: if (showZoomControls) cachedData.adaptiveHeight + 8.dp else cachedData.adaptiveHeight")
         )
     }
 
@@ -219,7 +219,7 @@ class ElevationProfileClimbBadgeClippingTest {
         // 1. Verbatim topPadding baseline check for ElevationProfileLayoutTest line 59
         assertTrue(
             "Must preserve exact verbatim topPadding declaration",
-            content.contains("val topPadding = if (showZoomControls) 44.dp else 16.dp")
+            content.contains("val topPadding = if (showZoomControls) 24.dp else 16.dp")
         )
 
         // 2. Verbatim pin stem drawing check for ElevationProfileClimbSpanContractTest line 146
@@ -251,16 +251,16 @@ class ElevationProfileClimbBadgeClippingTest {
         )
         assertEquals(24f, effectiveCompact, 0.001f)
 
-        // Detail view (44dp base -> 44dp effective, 0dp overhead)
+        // Detail view (24dp base -> 24dp effective, 0dp overhead, REQ-UI-489)
         val effectiveDetail = ElevationProfileZoomMath.calculateEffectiveTopPadding(
             fixedHeightDp = null,
-            baseTopPaddingDp = 44f,
+            baseTopPaddingDp = 24f,
             bottomPaddingDp = 24f,
             requiredClearanceDp = 24f,
             isTimeDomain = false,
             hasClimbs = true
         )
-        assertEquals(44f, effectiveDetail, 0.001f)
+        assertEquals(24f, effectiveDetail, 0.001f)
 
         // Constrained view (50dp container: reserves 32dp chart, clamps top padding to 8dp)
         val effectiveConstrained = ElevationProfileZoomMath.calculateEffectiveTopPadding(

@@ -161,7 +161,7 @@ object ClimbDetector {
         val appContext = context ?: TrainingApplication.getAppContext()
         val climbTitle = appContext?.getString(R.string.climb_title) ?: "Climb"
         val formattedDistance = DistanceFormatter().format_with_units(dist)
-        val name = "$climbTitle $formattedDistance @ ${String.format(Locale.US, "%.1f%%", avgGrade)}"
+        val name = "$climbTitle $formattedDistance @ ${String.format(Locale.getDefault(), "%.1f%%", avgGrade)}"
 
         return Climb(
             name = name,

@@ -177,7 +177,7 @@ object AthleteMetricsPlotMath {
     /**
      * Formats a canonical weight in `kg` for display (`%.1f kg` or `%.1f lbs`).
      */
-    fun formatWeightValue(weightKg: Double, isImperial: Boolean, locale: Locale = Locale.US): String {
+    fun formatWeightValue(weightKg: Double, isImperial: Boolean, locale: Locale = Locale.getDefault()): String {
         val displayVal = if (isImperial) weightKg * SettingsDataStore.LBS_PER_KG else weightKg
         return String.format(locale, "%.1f", displayVal)
     }
@@ -205,13 +205,13 @@ object AthleteMetricsPlotMath {
     /**
      * Formats Anaerobic Work Capacity ($W'$) in `kJ` (`%.1f`).
      */
-    fun formatWPrimeValue(wPrimeKj: Double, locale: Locale = Locale.US): String =
+    fun formatWPrimeValue(wPrimeKj: Double, locale: Locale = Locale.getDefault()): String =
         String.format(locale, "%.1f", wPrimeKj)
 
     /**
      * Formats derived Power-to-Weight (`W/kg`) to 2 decimal places (`%.2f`) per `REQ-TRK-019` and `REQ-UI-391.4`.
      */
-    fun formatPowerToWeightValue(wPerKg: Double, locale: Locale = Locale.US): String =
+    fun formatPowerToWeightValue(wPerKg: Double, locale: Locale = Locale.getDefault()): String =
         String.format(locale, "%.2f", wPerKg)
 
     /**

@@ -76,8 +76,40 @@ class ClimbDetectorTest {
         assertEquals(6.0, climb.avgGradePercent, 0.1)
         assertEquals(ClimbCategory.CAT_4, climb.category)
         val expectedDist = DistanceFormatter().format_with_units(2000.0)
-        assertEquals("Climb $expectedDist @ 6.0%", climb.name)
+        val expectedGrade = String.format(java.util.Locale.getDefault(), "%.1f%%", 6.0)
+        assertEquals("Climb $expectedDist @ $expectedGrade", climb.name)
         assertEquals(21, climb.pathPoints.size)
+    }
+
+    @Test
+    fun detectClimbs_usesLocaleAwareGradeFormattingInClimbTitle() {
+        val points = mutableListOf<PathPoint>()
+        for (i in 0..10) {
+            points.add(
+                PathPoint(
+                    distance = i * 100.0,
+                    latLng = LatLng(48.0 + i * 0.001, 11.0),
+                    altitude = 100.0 + i * 7.5 // 7.5% grade, 75m gain over 1000m
+                )
+            )
+        }
+
+        val originalLocale = java.util.Locale.getDefault()
+        try {
+            // 1. German locale (comma decimal separator)
+            java.util.Locale.setDefault(java.util.Locale.GERMANY)
+            val deClimbs = ClimbDetector.detectClimbs(points)
+            assertEquals(1, deClimbs.size)
+            assertTrue("German climb title must contain comma in grade: ${deClimbs[0].name}", deClimbs[0].name.contains("7,5%"))
+
+            // 2. US locale (dot decimal separator)
+            java.util.Locale.setDefault(java.util.Locale.US)
+            val usClimbs = ClimbDetector.detectClimbs(points)
+            assertEquals(1, usClimbs.size)
+            assertTrue("US climb title must contain dot in grade: ${usClimbs[0].name}", usClimbs[0].name.contains("7.5%"))
+        } finally {
+            java.util.Locale.setDefault(originalLocale)
+        }
     }
 
     @Test

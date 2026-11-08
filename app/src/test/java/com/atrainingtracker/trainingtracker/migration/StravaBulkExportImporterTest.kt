@@ -229,4 +229,67 @@ class StravaBulkExportImporterTest {
             tempZip.delete()
         }
     }
+
+    @Test
+    fun testImportArchive_sortsActivitiesAscendingByActivityId() = runBlocking {
+        val tempZip = File.createTempFile("strava_sort_test", ".zip")
+        try {
+            // Strava exports activities newest first (descending IDs)
+            val activitiesCsv = """
+                Activity ID,Filename,Activity Name,Activity Type
+                3000,activities/3000.tcx.gz,Newest Workout,Ride
+                2000,activities/2000.tcx.gz,Middle Workout,Ride
+                1000,activities/1000.tcx.gz,Oldest Workout,Ride
+            """.trimIndent()
+
+            val baos = ByteArrayOutputStream()
+            GZIPOutputStream(baos).use { gzip ->
+                gzip.write("<TrainingCenterDatabase/>".toByteArray(Charsets.UTF_8))
+            }
+            val streamBytes = baos.toByteArray()
+
+            ZipOutputStream(FileOutputStream(tempZip)).use { zip ->
+                zip.putNextEntry(ZipEntry("activities.csv"))
+                zip.write(activitiesCsv.toByteArray(Charsets.UTF_8))
+                zip.closeEntry()
+
+                for (id in listOf("3000", "2000", "1000")) {
+                    zip.putNextEntry(ZipEntry("activities/$id.tcx.gz"))
+                    zip.write(streamBytes)
+                    zip.closeEntry()
+                }
+            }
+
+            val processedIds = mutableListOf<String>()
+            val progressSteps = mutableListOf<String>()
+
+            coEvery {
+                LegacyImportEngine.persistParsedWorkout(
+                    any(), any(), any(), any(), any(), any()
+                )
+            } answers {
+                val baseName = secondArg<String>()
+                processedIds.add(baseName)
+                LegacyImportEngine.ImportResult(LegacyImportEngine.ImportStatus.SUCCESS, 1L)
+            }
+
+            val listener = mockk<LegacyImportEngine.ProgressListener>(relaxed = true)
+            every { listener.onProgress(any(), any(), any()) } answers {
+                val name = thirdArg<String>()
+                progressSteps.add(name)
+            }
+
+            val result = StravaBulkExportImporter.importArchive(mockContext, tempZip, listener)
+
+            assertEquals(3, result.importedCount)
+            assertEquals(0, result.skippedCount)
+            assertEquals(0, result.failedCount)
+
+            // Must process chronologically ascending: 1000 (oldest) first, then 2000, then 3000 (newest)
+            assertEquals(listOf("1000", "2000", "3000"), processedIds)
+            assertEquals(listOf("Oldest Workout", "Middle Workout", "Newest Workout"), progressSteps)
+        } finally {
+            tempZip.delete()
+        }
+    }
 }

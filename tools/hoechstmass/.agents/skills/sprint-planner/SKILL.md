@@ -17,6 +17,7 @@ This skill acts as the **Agile Sprint Facilitator & Scrum Master**. It orchestra
 * **Sprint Branch**: Created at Sprint-Start from the main development branch: `sprint/<SPRINT_NAME>`.
 * **Feature Branches**: Each sprint ticket branches from `sprint/<SPRINT_NAME>`: `feature/<KEY>`.
 * **Single Atomic Commit per Ticket**: As soon as a ticket completes Stage 5, the agent integrates `feature/<KEY>` into `sprint/<SPRINT_NAME>` as **strictly one atomic commit** via squash-merge, deletes `feature/<KEY>`, and transitions the parent ticket to `Final Review (Human)`.
+* **Parallel Sprint Execution Across Disjoint Epics (`Rule 9`, `REQ-PRO-041`)**: Up to 2 tickets may run concurrently across disjoint Epics using `Workspace: "share"` worktrees. All heavy Gradle test runs and Stage 5 squash-merges serialize under POSIX `flock` on `/tmp/att_build_merge.lock` (`python3 tools/parallel_sprint_lock.py <cmd>`). Stage 5 rebases execute `python3 tools/verify_requirement_governance.py --sync-indexes` under the merge lock prior to squashing.
 * **Sprint-End Integration**: At Sprint-End, the human user validates the entire sprint build. Upon final sign-off, `sprint/<SPRINT_NAME>` is merged into the main development branch and deleted.
 
 ---
@@ -31,21 +32,39 @@ This skill acts as the **Agile Sprint Facilitator & Scrum Master**. It orchestra
    - *Strict Invariant*: AI agents MUST NEVER move backlog tickets into active sprints autonomously. Only the human user assigns backlog tickets to sprints.
 2. **Establish Sprint Integration Branch**:
    - Create and push `sprint/<SPRINT_NAME>` from the main development branch.
-3. **Interactive Ticket-by-Ticket Walkthrough**:
-   - Walk through each committed ticket with the human user.
-   - Propose Story Point estimates (1, 2, 3 SP). Enforce the $\ge 5\text{ SP}$ split guardrail: any ticket estimated at $\ge 5\text{ SP}$ must be decomposed into smaller atomic tickets.
-   - Clarify ambiguous requirements, confirm acceptance criteria, and move screened tickets to `Analysis`.
+3. **Upfront Coordinator Batch Audit & Just-In-Time `Analysis` Transition (`Rule 77` & `Rule 78`)**:
+   - Inspect each committed ticket in detail upfront (checking for duplicates, human prerequisites, and Story Point estimates 1, 2, 3 SP; split any $\ge 5\text{ SP}$ ticket).
+   - Clarify any ambiguous requirements in a consolidated turn, keeping approved tickets in `To Do` / `Zu erledigen` until Stage 1 (`[Analysis]`) actually begins for each ticket.
 
 ---
 
 ## Ceremony 2: Sprint-End & Joint Review
 1. **Full Integration Verification**:
    - Execute the complete test suite and requirement governance check across the integrated sprint branch.
-2. **Ticket-by-Ticket Acceptance**:
-   - Present each completed ticket in `Final Review (Human)` to the user with its walkthrough summary and test results.
+2. **Ticket-by-Ticket Acceptance (`Rule 68` & `Rule 79`)**:
+   - Present each completed ticket in `Final Review (Human)` strictly one-by-one in rank order with its walkthrough summary, code diff review, and proactive recommendation.
+   - Complete all preparatory tool calls (`set-fixversion` for Ticket $N-1$, `read_file` / `git show` for Ticket $N$) **before** emitting the presentation response for Ticket $N$, and include **zero tool calls** in the presentation message itself so the turn terminates immediately and waits for the user's verdict.
    - Human accepts (`Erledigt` / Done) or rejects back to `Analysis` with feedback.
-3. **Sprint Retrospective**:
-   - Author retrospective deliverable `docs/engineering/retros/Sprint_Review_and_Retro_<SPRINT_NAME>.md` using `templates/sprint_retro_template.md`.
+3. **Milestone Epic Review & Human-Confirmed Closure (`REQ-PRO-040`)**:
+   - Inspect project Epics via CLI:
+     ```bash
+     python3 tools/jira_util.py list-epics
+     ```
+   - If any **Milestone Epic** has **0 open child tickets** remaining and all intended scope is verified:
+     1. Proactively present the Epic completion status to the human user.
+     2. Recommend closing the Milestone Epic (Evergreen Epics remain open indefinitely).
+     3. Upon explicit human confirmation, close the Epic:
+        ```bash
+        python3 tools/jira_util.py --as coordinator close-epic <EPIC_KEY>
+        ```
+     4. *Strict Invariant*: Standard parent tickets remain strictly under the Human Decision Gate. Only Milestone Epics with 0 open child tickets may be closed via `close-epic` after human confirmation.
+4. **Sprint Retrospective & Quantitative Process Control (PA 4.1 & PA 4.2)**:
+   - Execute automated scorecard generation before merging:
+     ```bash
+     python3 tools/jira_util.py --as coordinator sprint-metrics --record --post-to-retro
+     ```
+   - Embed the quantitative scorecard (Gate 1–5 FTPR, Swiss Cheese defect escape rates $p_1 \dots p_5$, and Statistical Process Control limits $\mu \pm 2\sigma$) into the retrospective deliverable `docs/engineering/retros/Sprint_Review_and_Retro_<SPRINT_NAME>.md` using `templates/sprint_retro_template.md`.
+   - **Closed-Loop Trigger (PA 4.2 $\rightarrow$ PA 5.2)**: If any metric triggers an out-of-control condition (`⚠️ PA 4.2 Special Cause Variation` outside $\mu \pm 2\sigma$), the retrospective report MUST define an explicit Root-Cause Analysis (RCA) and concrete process/skill countermeasure prior to sprint merge.
    - Calculate planned vs. completed velocity (tickets and story points).
-4. **Final Branch Integration**:
+5. **Final Branch Integration**:
    - Merge `sprint/<SPRINT_NAME>` into develop/main (`--no-ff`), delete the sprint branch, and close the sprint.

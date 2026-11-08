@@ -36,7 +36,7 @@ public enum ActivityType {
     RUN_SPEED_AND_CADENCE(BSportType.RUN, R.string.activity_type_run_speed_and_cadence, R.drawable.bsport_run),
     // BIKE_SPEED(BSportType.BIKE, R.string.activity_type_bike_speed),
     BIKE_SPEED_AND_CADENCE(BSportType.BIKE, R.string.activity_type_bike_speed_and_cadence, R.drawable.bsport_bike),
-    BIKE_POWER(BSportType.BIKE, R.string.activity_type_bike_power, R.drawable.bsport_bike);
+    BIKE_POWER(BSportType.BIKE, R.string.activity_type_bike_power, R.drawable.bsport_bike_power);
 
 
     private final BSportType sportType;

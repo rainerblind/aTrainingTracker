@@ -16,8 +16,21 @@ This skill acts as a **Product & Architectural Ideation Partner**. It helps the 
 2. **User Story & Acceptance Criteria Formulation**:
    - Structure ideas into agile User Stories (*As a... I want... So that...*).
    - Formulate Given-When-Then acceptance criteria.
-   - Identify relevant Parent Epics (e.g. `ATT-232` Process, `ATT-1396` Lieblingsorte, `ATT-1454` Cockpit).
-3. **Automated Jira Backlog Ticket Creation & Complexity Estimation (`REQ-PRO-029`)**:
+   - Identify relevant Parent Epics (e.g. `ATT-232` Process, `ATT-1396` Lieblingsorte, `ATT-5908` Cockpit).
+3. **Canonical Epic Taxonomy (Evergreen vs. Milestone Epics) & Epic Creation (`REQ-PRO-040`)**:
+   - Jira Epics are categorized into two architectural classes:
+     | Epic Class | Definition & Lifecycle | Examples in Project ATT |
+     | :--- | :--- | :--- |
+     | **Evergreen Epics** | Permanent architectural and domain areas that endure across the entire app lifecycle. **Never closed.** | `Process` (`ATT-232`), `Cockpit & Live-Tracking UX` (`ATT-5908`), `Karten & Routen` (`ATT-66`), `Workouts & Aftermath` (`ATT-68`), `Import, Export & Backup` (`ATT-281`), `Global UI & Design System` (`ATT-355`), `Crash-Free Resilience` (`ATT-235`), `Clean Code` (`ATT-431`) |
+     | **Milestone Epics** | Scoped, outcome-oriented multi-sprint initiatives with a defined completion boundary. Can be closed once all child tickets are `Erledigt`. | `Periods 2.0` (`ATT-4474`), `Cycling Power Dynamics` (`ATT-6075`), `Structured Workouts & Training Plan` (`ATT-6064`), `Cycling Rearview Radar` (`ATT-1286`), `Mader-Heck Metabolic Model` (`ATT-4786`) |
+   - **Guided Epic Creation Workflow**: During discovery, if an initiative represents a cohesive multi-sprint capability requiring a dedicated Epic, the agent may formulate the Epic summary and scope.
+   - **Human Confirmation Gate**: Agents MUST NEVER create an Epic autonomously without explicit human confirmation.
+   - Upon receiving explicit human approval, create the Epic ranked at the bottom of the backlog:
+     ```bash
+     python3 tools/jira_util.py create-issue "<Epic Summary>" "@scratch/epic_desc.txt" Epic --bottom
+     ```
+   - *Strict Invariant*: Report the new Epic key and STOP immediately. Creating an Epic must NEVER trigger implementation.
+4. **Automated Jira Backlog Ticket Creation & Complexity Estimation (`REQ-PRO-029`)**:
    - Propose an initial Story Point estimate using the AAA scale (`1`, `2`, `3` SP). If an idea is estimated at `\ge 5 SP` (combines multiple screens, migrations, and services), **decompose it immediately into atomic child tickets (1–3 SP)** rather than creating an oversized backlog item.
    - Format description using `templates/backlog_ticket_template.md`.
    - File the ticket cleanly in Jira via CLI with optional `--points=N` (Rule 18: Summaries MUST NOT contain category prefixes or Epic names in brackets):

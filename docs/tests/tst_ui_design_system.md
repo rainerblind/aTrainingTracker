@@ -2487,6 +2487,10 @@
   • Verify string resources `tuning_cat_sensors_gps`, `tuning_cat_workout_masks_cards`, and `tuning_summary_masks_cards_format` are defined identically across all 9 resource directories (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` across all modules verifying 100% pass rate with 0 regressions.
+  5. *Advisory Notice Modernization Contract & Localization Tests (`ATT-5819`, `AdvancedTuningVisualContractTest.kt`, `TranslationParityTest.kt`)*:
+  • Verify `TuningWarningNotice` in `TuningFormControls.kt` binds `R.string.advanced_tuning_warning_title` and `R.string.advanced_tuning_warning_desc`.
+  • Verify `TuningWarningNotice` renders an advisory container (`surfaceVariant` or `secondaryContainer` styling with `Icons.Default.Tune` or `Icons.Default.Info`), eliminating alarming error-red styling (`errorContainer` and `Icons.Default.Warning`).
+  • Verify `advanced_tuning_warning_desc` across all 9 locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) conveys constructive customization guidance for layouts, models, and sensors with factory reset reassurance.
 
 ### TST-UI-177: **MapDetailLayout Interactive Draggable Splitter & Viewport Resizing Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-223`
@@ -5339,10 +5343,10 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-UI-328: **Centralized Speed Unit Conversion and Formatter Harmonization via MyHelper Verification** [Verified]
+### TST-UI-328: **Centralized Speed Unit Conversion, Formatter Harmonization and Progressive Disclosure Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-365`
-- **Component**: **Centralized Speed Unit Conversion and Formatter Harmonization via MyHelper Verification**
-- **Jira**: ``ATT-3363``
+- **Component**: **Centralized Speed Unit Conversion, Formatter Harmonization and Progressive Disclosure Verification**
+- **Jira**: `ATT-3363`, `ATT-5821`
 - **Test Description**:
   1. *Unit & Precision Tests for MyHelper Conversions (`MyHelperSpeedConversionTest.kt`)*:
   • Verify bidirectional conversion `mps2userUnit(speed, unit)` and `UserUnit2mps(speed, unit)` across `MyUnits.METRIC` (factor 3.6) and `MyUnits.IMPERIAL` (factor 2.23693629).
@@ -5359,6 +5363,11 @@
   • Verify `SpeedFormatter.format_with_units()` delegates conversion to `MyHelper.mps2userUnit()`, matching canonical speeds across metric and imperial settings.
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
+  6. *Progressive Disclosure & Advanced Options Encapsulation Contract Test (`TST-UI-328.6`, `EditSportTypeDialogContractTest.kt`)*:
+  • Verify `EditSportTypeDialog.kt` source contract: Name, Base Sport, Equipment, and Strava are rendered before the Advanced Options accordion.
+  • Verify Min/Max speed fields, speed detection hint, TCX dropdown, and GoldenCheetah dropdown are encapsulated inside the accordion.
+  • Verify default collapsed state (`isAdvancedExpanded = false` via `rememberSaveable`).
+  • Verify 100% 9-language translation parity for `sport_type_advanced_options`, `sport_type_advanced_options_desc`, and `sport_type_speed_detection_hint`.
 
 ### TST-UI-329: **Harmonized Live Segment and Live Climb Tracking Bottom Sheet Architecture & Container Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-366`
@@ -7155,8 +7164,8 @@
 
 ### TST-UI-447: **Workout Share Mode Selection & Photo Track Overlay Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-447`
-- **Component**: `PhotoTrackOverlayComposerTest.kt`, `WorkoutShareBottomSheetContractTest.kt`, `ShareUtilsTest.kt`, `TranslationParityTest.kt`
-- **Jira**: `ATT-30`, `ATT-5479`, `ATT-5472`, `ATT-5656`
+- **Component**: `PhotoTrackOverlayComposerTest.kt`, `WorkoutShareBottomSheetContractTest.kt`, `ShareUtilsTest.kt`, `TranslationParityTest.kt`, `WorkoutHeader.kt`, `WorkoutSummary.kt`, `WorkoutDetailTabbedContent.kt`, `MapDetailLayout.kt`
+- **Jira**: `ATT-30`, `ATT-5479`, `ATT-5472`, `ATT-5656`, `ATT-5809`
 - **Test Description**:
   1. *Equirectangular Track Projection, Portrait Bounds & Silhouette Geometry (`TST-UI-447.1`)*:
   • Verify `PhotoTrackOverlayComposer` scales GPS polyline points via cosine-latitude projection ($\Delta x = \Delta\lambda \cdot \cos(\phi_{\text{mean}})$, $\Delta y = -\Delta\phi$) preserving true aspect ratio.
@@ -7170,13 +7179,16 @@
   • Verify `ShareUtils.drawFooter` renders standalone vector emblem (`ic_supporter_emblem_*`) without wide text pills when `effectiveTier.isPro`.
   • Verify footer watermark text auto-scales to prevent collision or truncation across narrow widths and 9 supported locales.
   • Verify tier-matched launcher icon rendering on left.
-  4. *Rule 73 Stacked Action Buttons & Mode Switcher Contract (`TST-UI-447.4`)*:
+  4. *Uniform WorkoutHeader Share Action & Rule 73 Stacked Action Buttons Contract (`TST-UI-447.4`, `WorkoutShareBottomSheetContractTest.kt`)*:
+  • Verify `WorkoutHeader.kt` defines `onShareWorkout: (() -> Unit)? = null` parameter and renders 32dp `IconButton` with `Icons.Default.Share`, `MaterialTheme.colorScheme.primary` tint, and `contentDescription = stringResource(R.string.share)` in both portrait and landscape adjacent to `onEditWorkout`.
+  • Verify `WorkoutHeader.kt` portrait layout expands action button spacer to ~104dp when both edit and share actions are present (`hasEdit && hasShare`) to prevent workout title truncation.
+  • Verify `WorkoutSummary.kt` wires `onShareWorkout` callback to launch `WorkoutShareBottomSheet` (Option A routes to `onMapClick()`).
+  • Verify `WorkoutDetailTabbedContent.kt` passes persistent `WorkoutHeader` composable into `MapDetailLayout` `header` parameter for Option A snapshot rendering and wires header `onShareWorkout`.
+  • Verify `MapDetailLayout.kt` suppresses floating share button when `workoutData != null` in multi-tab details, while preserving it for non-workout callers (`workoutData == null`).
   • Verify `WorkoutShareBottomSheet` renders stacked full-width action buttons per Rule 73 (primary "Teilen" above secondary "Foto auswählen").
-  • Verify `MapDetailLayout` with `workoutData != null` launches `WorkoutShareBottomSheet` on Share button tap.
-  • Verify Option A executes existing composite snapshot sharing (`combineWorkoutAndShare`).
   5. *9-Language Localization & Targeted Test Suite (`TST-UI-447.5`)*:
   • Verify 100% parity across all 9 locales via `TranslationParityTest` for all share mode strings.
-  • Run targeted test suite (`--tests "com.atrainingtracker.trainingtracker.helpers.*"`, `ui.map.*`, `ThemeColorCentralizationAuditTest`) with 100% pass rate.
+  • Run targeted test suite (`--tests "com.atrainingtracker.trainingtracker.helpers.*"`, `ui.map.*`, `ui.components.workoutheader.*`, `ui.aftermath.*`, `ThemeColorCentralizationAuditTest`) with 100% pass rate.
   6. *3-Tier Photo Selection Cascade Contract Test (`TST-UI-447.6`, `WorkoutShareBottomSheetContractTest.kt`)*:
   • Verify `WorkoutShareBottomSheet` displays Tier 1 (Attached Photos grid) when `attachedPhotos.isNotEmpty()`.
   • Verify expanding to Tier 2 (Time-Window Photos) queries photos from `WorkoutPhotoManager.queryWorkoutTimePhotos`.
@@ -7187,14 +7199,15 @@
 ### TST-UI-448: **Workout Photos Strip, Full-Screen Preview Bottom Sheet with ATT-30 Overlay Share, Map Pin Markers, and Null-Island Coordinate Rejection Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-448`
 - **Component**: `WorkoutDetails.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `ATrainingTrackerMap.kt`, `WorkoutPhotoViewerSheet.kt`, `WorkoutPhotoPreviewBottomSheet.kt`, `WorkoutPhotoStrip.kt`, `WorkoutSummary.kt`, `WorkoutShareBottomSheet.kt`, `WorkoutPhotoManager.kt`, `WorkoutRepository.kt`, `MapBehaviors.kt`
-- **Jira**: `ATT-43`, `ATT-5479`, `ATT-5473`
+- **Jira**: `ATT-43`, `ATT-5479`, `ATT-5473`, `ATT-5811`
 - **Test Description**:
   1. *Workout Photos Strip & Empty State Contract Test (`TST-UI-448.1`, `WorkoutPhotoUiContractTest.kt`)*:
   • Verify horizontal photo strip renders when photos are attached, displaying thumbnail cards with `RoundedCornerShape(8.dp)`.
-  • Verify neutral `onSurfaceVariant` styling for camera header icon and "Add Photos" tile (no primary electric blue).
-  • Verify centered `AddPhotoAlternate` icon inside square add tile without clipped single-line text.
+  • Verify neutral `onSurfaceVariant` styling for camera header icon and "Add Photos" header icon button (no primary electric blue).
+  • Verify "Add Photos" action is rendered in the section header row (`Icons.Default.AddPhotoAlternate`) when `showAddButton` is true.
+  • Verify `LazyRow` renders only when `photos.isNotEmpty()`, starting with photo thumbnails at index 0 without an oversized empty tile.
+  • Verify compact single-line header row renders when `photos.isEmpty()` and `showAddButton` is true.
   • Verify `HorizontalDivider` preceding `WorkoutPhotoStrip` in `WorkoutSummary.kt`.
-  • Verify empty-state "Add Photos" button renders when no photos are attached.
   • Verify photo picker launcher contract invocation on add button click.
   2. *Workout Photo Viewer Bottom Sheet & ATT-30 Share Handoff (`TST-UI-448.2`, `WorkoutPhotoViewerSheetTest.kt`)*:
   • Verify clicking thumbnail displays `WorkoutPhotoViewerSheet` / `WorkoutPhotoPreviewBottomSheet` via `AppModalBottomSheet`.
@@ -7475,10 +7488,10 @@
   4. *Clean-Room Targeted Regression Execution (`TST-UI-461.4`)*:
   • Execute targeted test suites (`com.atrainingtracker.trainingtracker.localization.*`, `com.atrainingtracker.trainingtracker.ui.climbs.*`, `com.atrainingtracker.trainingtracker.database.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
-### TST-UI-462: **Cluster Naming & Selection Dialog Reversion and Clear Action Verification Suite** [Verified]
+### TST-UI-462: **Cluster Naming & Selection Dialog Reversion, Clear Action, and Tap Interaction Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-462`
 - **Component**: `ImportBackupTabsScreen.kt`, `WorkoutClusterComponents.kt`, `ClusterNamingDialogEscapeContractTest.kt`, `ClusterNamingDialogLabelsVisualContractTest.kt`
-- **Jira**: `ATT-5674`
+- **Jira**: `ATT-5674`, `ATT-5818`
 - **Test Description**:
   1. *Clear Action & Create-New UI Binding Contract Tests (`TST-UI-462.1`, `ClusterNamingDialogEscapeContractTest.kt`)*:
   • Verify `WorkoutClusterSelectionDialog` declares optional parameter `onCreateNew: (() -> Unit)? = null`.
@@ -7491,6 +7504,9 @@
   • Verify `WorkoutClusterSelectionDialog` composable function remains public and callable with default parameter overloads.
   4. *Clean-Room Targeted Regression Execution (`TST-UI-462.4`)*:
   • Execute targeted test suites (`com.atrainingtracker.trainingtracker.ui.clusters.*`, `com.atrainingtracker.trainingtracker.migration.*`, `com.atrainingtracker.trainingtracker.localization.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+  5. *Read-Only Route Picker Field Tap Handling Contract Test (`TST-UI-462.5`, `ClusterNamingDialogEscapeContractTest.kt`, ATT-5818)*:
+  • Verify `ClusterNamingDialog` binds a `MutableInteractionSource` observing `PressInteraction.Release` to trigger `showSelectionDialog = true`.
+  • Verify `OutlinedTextField` does not attach outer dead `Modifier.clickable` (Rule 77 / Design Guidelines §5.19).
 
 ### TST-UI-463: **Navigation Drawer & Expert Settings Thematic Grouping Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-463`
@@ -7586,6 +7602,387 @@
   • Verify `filter_locations_show_all` and `filter_locations_show_frequent` exist across all 9 locales with zero format specifier mismatches and zero emojis (`ATT-5400`).
   5. *Tier 1 Targeted Regression Execution (`TST-UI-467.5`)*:
   • Execute targeted test suites (`com.atrainingtracker.trainingtracker.ui.clusters.*`, `com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+### TST-UI-468: **Active Filter Chips Row Uniform 'Clear all' Action Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-468`
+- **Component**: `ActiveFilterChipsRow.kt`, `ActiveSegmentFilterChipsRow.kt`, `ActiveRouteFilterChipsRow.kt`, `ActiveClusterFilterChipsRow.kt`, `ActiveDeviceFilterChipsRow.kt`, `ActiveKnownLocationsFilterChipsRow.kt`, `ActiveFilterChipsRowClearAllContractTest.kt`
+- **Jira**: `ATT-5888`
+- **Test Description**:
+  1. *Structural Contract Test (`TST-UI-468.1`, `ActiveFilterChipsRowClearAllContractTest.kt`)*:
+  • Verify that none of the 6 `Active*FilterChipsRow` implementations contain conditional guards `activeFilterCount > 1` or `activeFilterCount >= 2`.
+  • Verify that all 6 implementations reference `R.string.filter_clear_all`.
+  • Verify that all 6 implementations enforce `if (criteria.isEmpty) return`.
+  2. *9-Language Localization Audit (`TST-UI-468.2`, `TranslationParityTest.kt`)*:
+  • Verify `filter_clear_all` exists across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with zero format specifier mismatches.
+  3. *Tier 1 Targeted Regression Execution (`TST-UI-468.3`)*:
+  • Execute targeted unit test suites (`com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.*`, `com.atrainingtracker.trainingtracker.ui.segments.segmentlist.*`, `com.atrainingtracker.trainingtracker.ui.routes.*`, `com.atrainingtracker.trainingtracker.ui.clusters.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+### TST-UI-469: **KnownLocationCard Harmonized Unboxed Layout & Typography Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-469`
+- **Component**: `KnownLocationsScreen.kt`, `KnownLocationCardLayoutTest.kt`, `KnownLocationCardRoutesBadgeTest.kt`
+- **Jira**: `ATT-5887`
+- **Test Description**:
+  1. *Structural Contract & Layout Tests (`TST-UI-469.1`, `KnownLocationCardLayoutTest.kt`)*:
+  • Verify that `KnownLocationCard` uses `Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), verticalAlignment = Alignment.Bottom)`.
+  • Verify that the left column takes `Modifier.weight(1f).fillMaxHeight()` and contains a vertical spring `Spacer(Modifier.weight(1f))`.
+  • Verify that the starts metric renders with `Icons.AutoMirrored.Filled.DirectionsRun` and bold primary blue typography (`bodyMedium`, `FontWeight.Bold`, `primary`).
+  • Verify that the routes cross-link renders with `R.drawable.ic_favorite_route` and primary blue link styling (`bodySmall`, `FontWeight.Medium`, `primary`).
+  • Verify the elimination of bordered `Surface` pill badges (`RoundedCornerShape(8.dp)`) in the metadata column.
+  • Verify preservation of test tags `location_starts_badge_${item.id}` and `location_routes_badge_${item.id}`.
+  2. *Routes Badge Interaction & Filtering Invariant Tests (`TST-UI-469.2`, `KnownLocationCardRoutesBadgeTest.kt`)*:
+  • Verify independent click callback invocations for `onShowWorkouts` and `onShowRoutes`.
+  • Verify spatial cluster filter criteria construction from location item.
+  3. *9-Language Localization Audit (`TST-UI-469.3`, `TranslationParityTest.kt`)*:
+  • Verify `known_locations_starts` and `known_locations_routes` plurals exist across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with zero format specifier mismatches.
+  4. *Tier 1 Targeted Regression Execution (`TST-UI-469.4`)*:
+  • Execute targeted unit test suites (`com.atrainingtracker.trainingtracker.ui.knownlocations.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+### TST-UI-470: **Known Locations Map Orientation, FAB & Description Parity Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-470`
+- **Component**: `KnownLocationZoomMath.kt`, `KnownLocationsScreen.kt`, `EditKnownLocationDialog.kt`, `KnownLocationsViewModel.kt`, `KnownLocationsRepository.kt`, `MapUtils.kt`, `KnownLocationZoomMathTest.kt`, `EditKnownLocationDialogTest.kt`, `KnownLocationsScreenTest.kt`
+- **Jira**: `ATT-5884`
+- **Test Description**:
+  1. *Zoom Math Clamping & Shift Unit Tests (`TST-UI-470.1`, `KnownLocationZoomMathTest.kt`)*:
+  • Verify `MIN_ZOOM = 9.7f`, `DEFAULT_THUMBNAIL_ZOOM = 11.2f`, `MAX_ZOOM = 11.7f`.
+  • Verify small radii (50m, 100m, 200m) clamp to `11.7f`.
+  • Verify medium radii (300m, 500m) scale proportionally within `[9.7f, 11.7f]`.
+  • Verify large radii (1000m+) clamp to `9.7f`.
+  2. *FAB & Creation Flow Contract Tests (`TST-UI-470.2`, `KnownLocationsScreenTest.kt`)*:
+  • Verify `FloatingActionButton` exists in `KnownLocationsScreen` with test tag `known_locations_add_fab`.
+  • Verify tapping FAB triggers new location creation dialog flow.
+  3. *Centered Heart Glyph Marker & Thumbnail Alignment Tests (`TST-UI-470.3`, `KnownLocationsScreenTest.kt`)*:
+  • Verify `KnownLocationThumbnailMap` uses `createCenteredHeartGlyphMarker` with `anchor = Offset(0.5f, 0.5f)`.
+  • Verify absence of standing pin `R.drawable.my_locations` in thumbnail map.
+  4. *Home Base Subtitle & Edit Dialog Contract Tests (`TST-UI-470.4`, `EditKnownLocationDialogTest.kt`)*:
+  • Verify `EditKnownLocationDialog` displays `R.string.known_locations_home_base_desc` instead of `known_locations_set_home` in the home toggle row.
+  5. *9-Language Localization Audit (`TST-UI-470.5`, `TranslationParityTest.kt`)*:
+  • Verify `known_locations_home_base_desc`, `known_locations_add_location`, and `known_locations_new_location` exist across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with zero format specifier mismatches and zero unescaped characters.
+  6. *Tier 1 Targeted Regression Execution (`TST-UI-470.6`)*:
+  • Execute targeted unit test suites (`com.atrainingtracker.trainingtracker.ui.knownlocations.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+### TST-UI-471: **Cockpit Edit-Mode Typography, Localization Parity & FAB Layout Polish Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-471`
+- **Component**: `SensorFieldView.kt`, `SensorGridScreen.kt`, `EditSensorFieldDialog.kt`, `TrackingTabsScreen.kt`, `TrackingTabPreviewHeader.kt`, `TrackingTabConfigHeader.kt`, `FilterType.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-5879`
+- **Test Description**:
+  1. *Edit-Mode Typography & Single-Line Constraints (`TST-UI-471.1`, `SensorFieldViewTest.kt`)*:
+  • Verify `SensorFieldView` renders 8-character time values (`18:29:15`) on a single line (`maxLines = 1`) without multi-line wrapping in edit mode.
+  • Verify filter badges with `MOVING_AVERAGE_TIME` render single-line `2 s Ø` with SI unit `s` instead of `sec` and do not wrap into 3 vertical lines.
+  2. *9-Language Localization Audit (`TST-UI-471.2`, `TranslationParityTest.kt`)*:
+  • Verify zero missing entries across all 9 locales for `cd_move_field` and `cd_delete_field`.
+  • Verify German strings: `time_active_short` = "Aktiv", `time_lap_short` = "Runde", `time_lap` = "Rundenzeit", `lap_number_short` = "Runde Nr.", `distance_lap_short` = "Dist. Runde", `config_tracking__showLiveSegments` = "Live-Segmente", `config_tracking__showLapButton` = "Runden-Button", `edit_field` = "Anzeige anpassen", `Done` = "Fertig", `filter_moving_average` = "gleitender Durchschnitt", and `units_seconds` = "s".
+  3. *Field Configuration Dialog Polish Contract Tests (`TST-UI-471.3`, `EditSensorFieldDialogTest.kt`)*:
+  • Verify `EditSensorFieldDialog` title is sentence-case `Anzeige anpassen`.
+  • Verify `Relative Breite` header uses `Modifier.fillMaxWidth()` aligning with left-aligned chips.
+  • Verify category breadcrumb supports `maxLines = 2` without ellipsis truncation.
+  • Verify smoothing selector button renders leading `Icons.Default.Tune` icon, trailing chevron, and formatted summary.
+  4. *Elevation Profile Bottom Clearance for FAB Overlay (`TST-UI-471.4`, `SensorGridScreenTest.kt`)*:
+  • Verify `ElevationProfile` on `Karte` tab applies bottom clearance (68dp) in portrait mode when `showBikeBell` or `showLapButton` is enabled, preventing bell FAB overlap on placeholder text.
+  5. *Header Sport Context Verification (`TST-UI-471.5`, `TrackingTabHeaderTest.kt`)*:
+  • Verify `TrackingTabPreviewHeader` and `TrackingTabConfigHeader` accept `sportName` and render it above the tab title.
+  6. *Tier 1 Targeted Unit Test Regression (`TST-UI-471.6`)*:
+  • Execute targeted test suites (`com.atrainingtracker.trainingtracker.ui.tracking.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+### TST-UI-472: **Display & Expert Settings Terminology, Subtitle Localization & Warning Deduplication Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-472`
+- **Component**: `AdvancedTuningAccordion.kt`, `TuningFormControls.kt`, `AdvancedTuningScreen.kt`, `AdvancedTuningDialog.kt`, `res/values*/strings.xml`, `TranslationParityTest.kt`, `AdvancedTuningAccordionTest.kt`
+- **Jira**: `ATT-5875`
+- **Test Description**:
+  1. *9-Language Localization Audit (`TST-UI-472.1`, `TranslationParityTest.kt`)*:
+  • Verify zero missing entries across all 9 supported locales for `tuning_battery_saver_flat_short`, `tuning_battery_saver_steep_short`, `tuning_sensors_alt_short`, `tuning_sensors_speed_short`, `tuning_cluster_end_short`, `tuning_cluster_apex_short`, `tuning_cluster_dist_short`, and `tuning_cluster_alt_short`.
+  • Verify `cockpit_theme_description` does not contain `Control Tracking` in any locale and references localized tab name.
+  • Verify German `advanced_tuning_warning_title` is `Hinweis`, `tuning_cat_aftermath` is `Nachbereitung & Profil-Analytik`, and `tuning_sensor_search_active` is `Aktive`.
+  2. *Accordion Subtitle Formatter Contract Tests (`TST-UI-472.2`, `AdvancedTuningAccordionTest.kt`)*:
+  • Verify `formatBatterySaverSubtitle()` renders localized `Flach`/`Steil` when German context is provided and falls back to `Flat`/`Steep` without context.
+  • Verify `formatSensorsGpsSubtitle()` renders localized `Höhe`/`Geschw.` when German context is provided and falls back to `Alt`/`Speed` without context.
+  • Verify `formatClusterTuningSubtitle()` formats metric tolerances $\le 1000\text{ m}$ as integer meters (`200 m`, `400 m`) and uses localized labels (`Ende:`, `Apex:`, `Dist.:`, `Höhe:`).
+  3. *Advisory Banner Deduplication Contract Tests (`TST-UI-472.3`, `AdvancedTuningVisualContractTest.kt`)*:
+  • Verify `TuningWarningNotice` continues to bind `R.string.advanced_tuning_warning_title` and `R.string.advanced_tuning_warning_desc`.
+  4. *Tier 1 Targeted Unit Test Regression (`TST-UI-472.4`)*:
+  • Execute targeted test suites (`com.atrainingtracker.trainingtracker.ui.settings.tuning.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`) asserting 100% pass rate.
+
+### TST-UI-473: **Modal Bottom Sheet Close Button Default Contract & Activity Type Selection Test Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-473`
+- **Component**: `AppModalBottomSheet.kt`, `ActivityTypeSelectionDialog.kt`, `AppModalBottomSheetTest.kt`
+- **Jira**: `ATT-5873`
+- **Test Description**:
+  1. *Default Close Button Contract Reflection / Logic Test (`TST-UI-473.1`, `AppModalBottomSheetTest.kt`)*:
+  • Verify `AppModalBottomSheet` and `AppBottomSheetContent` function signatures declare parameter `actions` before `showCloseButton`.
+  • Verify contract behavior: when `actions == null`, default close button is enabled (`showCloseButton = true`); when `actions != null`, default close button is suppressed (`showCloseButton = false`).
+  2. *Activity Type Selection Dialog Simplification Audit (`TST-UI-473.2`)*:
+  • Verify `ActivityTypeSelectionDialog` does not configure bottom actions (`actions == null`), presenting only the header close icon alongside item tap selection.
+  3. *Cross-Caller Source Compatibility Audit (`TST-UI-473.3`)*:
+  • Verify compilation and source compatibility across all existing modal bottom sheet callers (`StravaSettingsDialog`, `DropboxSyncDialog`, `GDriveSyncDialog`, etc.).
+  4. *Tier 1 Targeted Unit Test Regression (`TST-UI-473.4`)*:
+  • Execute targeted test suite (`com.atrainingtracker.trainingtracker.ui.components.core.*`, `com.atrainingtracker.trainingtracker.ui.settings.trackingtabs.*`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+### TST-UI-474: **Import & Backup UI Polish, Strava Archive Tuning & Heading Deduplication Test Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-474`
+- **Component**: `ImportBackupTabsScreen.kt`, `BackupTabContent.kt`, `RestoreTabContent.kt`, `res/values*/strings.xml`, `RestoreCardContractTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-5874`
+- **Test Description**:
+  1. *9-Language Localization Audit (`TST-UI-474.1`, `TranslationParityTest.kt`)*:
+  • Verify zero missing entries across all 9 supported locales for `merge_from_backup_file` and `backup_now`.
+  2. *Restore Card Iconography & Deduplication Contract (`TST-UI-474.2`, `RestoreCardContractTest.kt`)*:
+  • Verify Dropbox restore button renders `dropbox_logo_blue` with `tint = Color.Unspecified`.
+  • Verify Google Drive restore button renders `ic_google_drive` with `tint = Color.Unspecified`.
+  • Verify incremental import button renders `Icons.Default.CallMerge` and binds `R.string.merge_from_backup_file`.
+  3. *Backup Tab Header & Switch Layout Contract (`TST-UI-474.3`)*:
+  • Verify `BackupTabContentLayout` renders `R.string.backup_now` on backup button and header row contains `Switch` for automated backups.
+  4. *Strava Archive Pre-Import Tuning Contract (`TST-UI-474.4`)*:
+  • Verify `PreImportTuningBottomSheet` supports `showStravaUploadOption` and suppresses Strava upload toggle when false.
+  5. *Tier 1 Targeted Unit Test Regression (`TST-UI-474.5`)*:
+  • Execute targeted test suite (`com.atrainingtracker.trainingtracker.migration.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+### TST-UI-475: **Sport Type Card Presentation, Localized Mappings & Locale-Aware Usage Dates Test Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-475`
+- **Component**: `SportTypesTabsScreen.kt`, `DateTimeUtils.kt`, `DateTimeUtilsTest.kt`, `SportTypesTabsScreenContractTest.kt`, `res/values*/strings.xml`, `arrays.xml`
+- **Jira**: `ATT-5872`
+- **Test Description**:
+  1. *Locale-Aware ISO Date Formatting Test (`TST-UI-475.1`, `DateTimeUtilsTest.kt`)*:
+  • Verify `formatIsoDate` correctly formats ISO-8601 `LocalDate` strings into medium localized date format across `de_DE` (`12.08.2018`), `en_US` (`Aug 12, 2018`), and `ja_JP`.
+  • Verify graceful fallback handling for null, blank, and malformed date strings without throwing runtime exceptions.
+  2. *Sport Type Card Presentation & Conditional GC Mapping Contract (`TST-UI-475.2`, `SportTypesTabsScreenContractTest.kt`)*:
+  • Verify empty or null `gcName` suppresses `mapping_format_gc` and renders only `mapping_format_tcx`.
+  • Verify non-empty `gcName` renders combined `sport_type_file_mapping_format`.
+  3. *Default Sport Type & Export Key Localization Contract (`TST-UI-475.3`, `SportTypesTabsScreenContractTest.kt`)*:
+  • Verify locked default sport types (`!item.isEditable`) bind localized display names via `bSportType.stringResId` (`R.string.sport_type_other`).
+  • Verify Strava, TCX, and GC export identifiers map to localized UI array strings.
+  4. *Usage Date Formatting Integration Contract (`TST-UI-475.4`)*:
+  • Verify `UsageItem` receives formatted date strings instead of raw ISO dates.
+  5. *Tier 1 Targeted Unit Test Regression (`TST-UI-475.5`)*:
+  • Execute targeted test suite (`com.atrainingtracker.trainingtracker.ui.common.*`, `com.atrainingtracker.trainingtracker.ui.settings.sporttypes.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+### TST-UI-487: **Navigation Drawer Units Disambiguation & Distinct Power Cockpit Iconography Test Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-487`
+- **Component**: `AppNavigationDrawer.kt`, `UnitsSettingsDialog.kt`, `ActivityTypeSelectionDialog.kt`, `CopyTrackingTabDialog.kt`, `ActivityType.java`, `res/values-de/strings.xml`, `res/values-ja/strings.xml`, `res/drawable/bsport_bike_power.xml`
+- **Jira**: `ATT-5871`
+- **Test Description**:
+  1. *German Navigation Drawer Disambiguation Contract (`TST-UI-487.1`)*:
+  • Verify `prefsUnitsTitle` in `values-de` resolves to `"Maßeinheiten"`, eliminating duplicate label collision with `tab_workouts` (`"Einheiten"`).
+  • Verify `AppNavigationDrawer.kt` Settings group binds `R.string.prefsUnitsTitle` to `drawer_units`.
+  2. *Units Settings Dialog Imperial Localization Parity (`TST-UI-487.2`, `TranslationParityTest.kt`)*:
+  • Verify `units_type_imperial` in `values-de` resolves to `"Imperial (Meilen)"`.
+  • Verify `units_type_imperial` in `values-ja` resolves to `"ヤードポンド法 (マイル)"`.
+  • Verify 100% string translation and placeholder parity across all 9 locales.
+  3. *Distinct Bike Power Iconography Contract (`TST-UI-487.3`)*:
+  • Verify `ActivityType.BIKE_POWER.logoId` equals `R.drawable.bsport_bike_power`.
+  • Verify `ActivityType.BIKE_SPEED_AND_CADENCE.logoId` equals `R.drawable.bsport_bike`.
+  • Verify `bsport_bike_power.xml` is present, parses cleanly as a VectorDrawable with 192x192 viewport, contains both cyclist geometry and canonical lightning bolt badge paths.
+  4. *Tier 1 Targeted Unit Test Regression (`TST-UI-487.4`)*:
+  • Execute targeted test suite (`com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+### TST-UI-488: **Strava Settings Dialog Close Button Elimination & Sync Card Action Icons Test Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-488`
+- **Component**: `StravaSettingsDialog.kt`, `StravaSettingsDialogContractTest.kt`, `AppModalBottomSheet.kt`
+- **Jira**: `ATT-5854`
+- **Test Description**:
+  1. *Close Button Suppression Contract (`TST-UI-488.1`, `StravaSettingsDialogContractTest.kt`)*:
+  • Verify `StravaSettingsDialog` invokes `AppBottomSheetContent` with non-null `actions` and without overriding `showCloseButton = true`, guaranteeing automatic `✕` close button suppression.
+  2. *Sync Card Layout & Refresh Icon Affordance (`TST-UI-488.2`, `StravaSettingsDialogContractTest.kt`)*:
+  • Verify each of the three sync cards (*Equipment*, *Routes*, *Segments*) formats content in a horizontal `Row` containing a `weight(1f)` text column and trailing action slot.
+  • Verify trailing slot renders `Icons.Default.Refresh` with `size = 20.dp` and `colorScheme.primary` tint when idle.
+  3. *Syncing State Circular Progress Indicator (`TST-UI-488.3`, `StravaSettingsDialogContractTest.kt`)*:
+  • Verify when syncing state is true, the trailing action slot renders `CircularProgressIndicator` with `size = 20.dp` and `strokeWidth = 2.dp`.
+  4. *Tier 1 Targeted Unit Test Regression (`TST-UI-488.4`)*:
+  • Execute targeted test suite (`com.atrainingtracker.trainingtracker.ui.settings.strava.*`, `com.atrainingtracker.trainingtracker.ui.components.*`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+### TST-UI-489: **Route Details Climb Badges, Header Iconography, Section Deduplication & Localized Grade Formatting Test Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-489`
+- **Component**: `ElevationProfile.kt`, `RouteSummaryHeader.kt`, `RouteOnMapScreen.kt`, `RouteSegmentsBreakdownSection.kt`, `ClimbDetector.kt`, `ElevationProfileLayoutTest.kt`, `ElevationProfileClimbBadgeClippingTest.kt`, `ClimbDetectorTest.kt`, `RouteDetailsContractTest.kt`
+- **Jira**: `ATT-5853`
+- **Test Description**:
+  1. *Elevation Profile Top Padding & Clearance Calibration Contract (`TST-UI-489.1`, `ElevationProfileLayoutTest.kt`, `ElevationProfileClimbBadgeClippingTest.kt`)*:
+  • Verify `ElevationProfile.kt` declares `val topPadding = if (showZoomControls) 24.dp else 16.dp`.
+  • Verify `totalCanvasHeight` adds `8.dp` when `showZoomControls == true` and `fixedHeight == null`.
+  • Verify summit badge clearance math ensures at least 24dp clearance at 1.0x font scale without container clipping.
+  2. *Route Summary Header Iconography Contract (`TST-UI-489.2`, `RouteDetailsContractTest.kt`)*:
+  • Verify `RouteSummaryHeader.kt` binds `R.drawable.ic_ascent` for elevation gain and `R.drawable.ic_altitude` for climb count.
+  3. *Section Header Deduplication Contract (`TST-UI-489.3`, `RouteDetailsContractTest.kt`)*:
+  • Verify `RouteClimbsBreakdownSection` and `RouteSegmentsBreakdownSection` accept `showHeader: Boolean = true`.
+  • Verify `RouteOnMapScreen.kt` passes `showHeader = !(climbs.isNotEmpty() && matchedSegments.isNotEmpty())` when dual tabs are active.
+  • Verify section title `Text` is omitted when `showHeader == false`.
+  4. *Locale-Aware Climb Title Grade Formatting Unit Tests (`TST-UI-489.4`, `ClimbDetectorTest.kt`)*:
+  • Verify `ClimbDetector.buildClimb` uses `Locale.getDefault()` for grade percentage formatting.
+  • Verify German locale produces localized decimal comma (e.g. `6,0%`) and US locale produces decimal point (e.g. `6.0%`).
+  5. *Tier 1 Targeted Unit Test Regression (`TST-UI-489.5`)*:
+  • Execute targeted test suite (`com.atrainingtracker.trainingtracker.climbs.*`, `com.atrainingtracker.trainingtracker.ui.map.*`, `com.atrainingtracker.trainingtracker.ui.routes.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+### TST-UI-490: **Workout Cluster Trend Chart & Dashboard Polish Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-490`
+- **Component**: `WorkoutClusterTrendChartCard.kt`, `WorkoutClusterHeatmapScreen.kt`, `DistanceFormatter.java`, `AltitudeFormatter.java`, `WorkoutClusterTrendMath.kt`, `WorkoutClusterTrendCardPolishTest.kt`
+- **Jira**: `ATT-5852`
+- **Test Description**:
+  1. *Canvas Text Separation & Left Gutter Contract Tests (`TST-UI-490.1`, `WorkoutClusterTrendCardPolishTest.kt`)*:
+  • Verify `WorkoutClusterTrendChartCard.kt` positions Y-axis labels in dedicated left gutter (`leftPadding = 48.dp.toPx()`).
+  • Verify `yAxisBottomLabel` and `xAxisStartLabel` do not collide horizontally or vertically.
+  2. *Average Badge Legibility Contract Tests (`TST-UI-490.2`, `WorkoutClusterTrendCardPolishTest.kt`)*:
+  • Verify `WorkoutClusterTrendChartCard.kt` draws a rounded surface background badge behind `formattedAverage`.
+  3. *Time-Range Filtering & Header Deduplication Contract Tests (`TST-UI-490.3`, `WorkoutClusterTrendCardPolishTest.kt`)*:
+  • Verify redundant `📈 Leistungsverlauf` heading is removed from the card header row.
+  • Verify time-range filter chips (`1J | 3J | Alle`) are bound and filter points relative to latest workout timestamp.
+  • Verify fallback to full dataset when $< 2$ points match time-range.
+  4. *Thousands Grouping Formatter Unit Tests (`TST-UI-490.4`, `DistanceFormatterTest.java`, `AltitudeFormatterTest.java`)*:
+  • Verify `DistanceFormatter.format_with_units(4_226_000)` formats as `"4.226 km"` in German locale and `"4,226 km"` in US locale.
+  • Verify `AltitudeFormatter.format_with_units(136_730)` formats as `"136.730 m"` in German locale and `"136,730 m"` in US locale.
+  5. *9-Language Localization & Format Audit (`TST-UI-490.5`, `TranslationParityTest.kt`)*:
+  • Verify `cluster_trend_range_all`, `cluster_trend_range_1y`, and `cluster_trend_range_3y` exist across all 9 locales with zero inline emojis (`ATT-5400`).
+  6. *Tier 1 Targeted Unit Test Regression (`TST-UI-490.6`)*:
+  • Execute targeted test suite (`com.atrainingtracker.trainingtracker.ui.clusters.*`, `com.atrainingtracker.banalservice.sensor.formater.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+### TST-UI-491: **MapDetailLayout Floating Controls Status Bar Clearance Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-491`
+- **Component**: `MapDetailLayout.kt`, `MapDetailLayoutCollapsingHeaderContractTest.kt`, `MapDetailLayoutTest.kt`
+- **Jira**: `ATT-5851`
+- **Test Description**:
+  1. *Dynamic Floating Controls Clearance Math Contract (`TST-UI-491.1`, `MapDetailLayoutCollapsingHeaderContractTest.kt`)*:
+  • Verify `MapDetailLayout.kt` computes `statusBarHeightPx` conditioned on `useStatusBarsPadding`.
+  • Verify dynamic `floatingControlsTopOffsetDp` computation `(statusBarHeightPx - currentTopPaddingPx).coerceAtLeast(0).toDp()`.
+  • Verify `floatingControlsTopOffsetDp` evaluates to `0.dp` when `useStatusBarsPadding == false`.
+  2. *Floating Controls Container Padding Contract (`TST-UI-491.2`, `MapDetailLayoutCollapsingHeaderContractTest.kt`)*:
+  • Verify `overlay()` and the floating Share button Surface inside `mapBox` are enclosed in a container applying `Modifier.fillMaxSize().padding(top = floatingControlsTopOffsetDp)`.
+  • Verify `ATrainingTrackerMap` remains outside this padding container, preserving edge-to-edge bleed.
+  3. *Unit Tests for Clearance Offset Calculations (`TST-UI-491.3`, `MapDetailLayoutCollapsingHeaderContractTest.kt`)*:
+  • Test offset calculation when header is fully expanded: `currentTopPaddingPx > statusBarHeightPx` yields `0.dp` additional offset.
+  • Test offset calculation when header is fully collapsed: `currentTopPaddingPx == 0` yields `statusBarHeightPx.toDp()`.
+  • Test offset calculation when `useStatusBarsPadding == false`: yields `0.dp` regardless of scroll offset.
+  4. *Tier 1 Targeted Unit Test Regression (`TST-UI-491.4`)*:
+  • Execute targeted test suite (`com.atrainingtracker.trainingtracker.ui.map.*`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+### TST-UI-492: **Equipment & Sensors UI Polish Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-492`
+- **Component**: `EquipmentTabsScreen.kt`, `BikeTypeSelector.kt`, `EditEquipmentDialog.kt`, `EditDeviceDialog.kt`, `DeviceData.kt`, `EquipmentSensorsUiPolishContractTest.kt`
+- **Jira**: `ATT-5847`
+- **Test Description**:
+  1. *Strava Gear Name Deduplication Contract (`TST-UI-492.1`, `EquipmentSensorsUiPolishContractTest.kt`)*:
+  • Verify `EquipmentTabsScreen.kt` checks equality between `item.stravaName` and `item.name`.
+  • Verify inline `StravaOriginalLogo` is rendered in title row when identical.
+  • Verify subtitle row is suppressed when identical and shown when different.
+  2. *Usage Date & Frame Type Localization Contract (`TST-UI-492.2`, `EquipmentSensorsUiPolishContractTest.kt`)*:
+  • Verify `UsageItem` formats dates via `DateTimeUtils.formatIsoDate(date)`.
+  • Verify `BikeTypeSelector.kt` and `EquipmentTabsScreen.kt` use string resources `equipment_bike_type_mtb`, `cross`, `road`, `tt`.
+  3. *Spelling & Placeholder Harmonization Contract (`TST-UI-492.3`, `EquipmentSensorsUiPolishContractTest.kt`)*:
+  • Verify `values-de/strings.xml` defines `Radtyp` and `Radtyp auswählen`.
+  • Verify `EditEquipmentDialog.kt` binds `equipment_no_sports_linked` ("Keine" / "None") for sensor placeholder.
+  4. *Sensor Detail Status LED, Capitalization & Dropdown Contract (`TST-UI-492.4`, `EquipmentSensorsUiPolishContractTest.kt`)*:
+  • Verify `EditDeviceDialog.kt` binds LED dot color to `isConnected` matching `DeviceStatusRow`.
+  • Verify `DeviceData.kt:raw2UiDeviceData` capitalizes `manufacturer` (`replaceFirstChar`).
+  • Verify `EquipmentSection` renders `OutlinedTextField` with dropdown affordance.
+  5. *9-Language Localization Parity Audit (`TST-UI-492.5`, `TranslationParityTest.kt`)*:
+  • Verify `equipment_bike_type_mtb`, `equipment_bike_type_cross`, `equipment_bike_type_road`, and `equipment_bike_type_tt` exist with identical keys across all 9 locales.
+  6. *Tier 1 Targeted Unit Test Regression (`TST-UI-492.6`)*:
+  • Execute targeted test suite (`com.atrainingtracker.trainingtracker.ui.equipment.*`, `com.atrainingtracker.banalservice.ui.devices.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+### TST-UI-493: **ClusterItem & Filter (Lieblingsstrecken) Presentation Polish Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-493`
+- **Component**: `WorkoutClusterComponents.kt`, `WorkoutClustersViewModel.kt`, `WorkoutClusterRepository.kt`, `FilterBottomSheetScaffold.kt`, `WorkoutClusterItemPolishContractTest.kt`, `WorkoutClusterRepositoryTest.kt`
+- **Jira**: `ATT-5846`
+- **Test Description**:
+  1. *Hit Count Display Healing & Reconciliation Contract Tests (`TST-UI-493.1`, `WorkoutClusterItemPolishContractTest.kt`, `WorkoutClusterRepositoryTest.kt`)*:
+  • Verify `effectiveWorkoutCount` resolves `maxOf(cluster.hitCount, stats?.workoutCount ?: 0)` so clusters with `hitCount = 0` but `workoutCount = 3` display 3 recordings.
+  • Verify `WorkoutClusterRepository.loadAllClustersLightweight()` heals `hitCount` from summary stats when cluster has 0.
+  2. *Bidirectional Location Resolution Contract Tests (`TST-UI-493.2`, `WorkoutClusterItemPolishContractTest.kt`)*:
+  • Verify identical start and destination location displays `"Start & Ziel: [Location]"`.
+  • Verify distinct start and destination locations display `"[Start] → [Ziel]"`.
+  • Verify single start or destination falls back to `"Start: ..."` or `"Ziel: ..."`.
+  3. *Landscape Map Thumbnail & Equipment Ellipsis Contract Tests (`TST-UI-493.3`, `WorkoutClusterItemPolishContractTest.kt`)*:
+  • Verify map thumbnail dimensions are 110.dp width and 75.dp height.
+  • Verify equipment text has `maxLines = 1` and `TextOverflow.Ellipsis`.
+  4. *Filter Sheet Reset Button Single-Line & 9-Locale Parity Tests (`TST-UI-493.4`, `TranslationParityTest.kt`)*:
+  • Verify `R.string.filter_reset` exists across all 9 locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) with zero inline emojis (`ATT-5400`).
+  • Verify `FilterBottomSheetScaffold` binds `filter_reset` with `maxLines = 1`.
+  5. *Tier 1 Targeted Unit Test Regression (`TST-UI-493.5`)*:
+  • Execute targeted test suite (`ui.clusters.*`, `database.*Cluster*`, `ui.common.filters.*`, `localization.*`, `build.*`) asserting 100% pass rate.
+
+### TST-UI-494: **ElevationProfile Y-Axis Grid Clearance & Zero-Altitude Profile Suppression Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-494`
+- **Component**: `ElevationProfile.kt`, `RouteItem.kt`, `ElevationProfileClearanceContractTest.kt`, `RouteItemZeroElevationContractTest.kt`
+- **Jira**: `ATT-5845`
+- **Test Description**:
+  1. *Y-Axis Intermediate Label Baseline Clearance Guard Contract Tests (`TST-UI-494.1`, `ElevationProfileClearanceContractTest.kt`)*:
+  • Verify that when `labelBaselineY = y + 10f` is within `textPaint.textSize * 1.35f` of `height` (e.g. `400` near `383 m`), the intermediate tick label is suppressed.
+  • Verify that when clearance from `height`, `highlightPaint.textSize`, and adjacent ticks exceeds `textPaint.textSize * 1.35f`, the tick label is drawn.
+  2. *Right-Aligned Intermediate Elevation Labels Contract Tests (`TST-UI-494.2`, `ElevationProfileClearanceContractTest.kt`)*:
+  • Verify intermediate altitude text X position is dynamically computed as `-textPaint.measureText(altText) - 10f` rather than hardcoded `-110f`.
+  3. *Zero-Altitude Elevation Profile Suppression in RouteItem Contract Tests (`TST-UI-494.3`, `RouteItemZeroElevationContractTest.kt`)*:
+  • Verify `RouteItem` evaluates `hasElevationData = pathPoints.any { it.altitude != null && !it.altitude.isNaN() && Math.abs(it.altitude) > 1e-3 } || summary.elevationGain > 0.0`.
+  • Verify `ElevationProfile` is hidden when a route has 0 altitude data and 0 elevation gain (e.g. `bike2work`).
+  • Verify `ElevationProfile` is rendered when a route has authentic altitude points or positive elevation gain.
+  4. *ATT-5853 Invariant & Layout Non-Regression Tests (`TST-UI-494.4`, `ElevationProfileLayoutTest.kt`, `ElevationProfileClimbBadgeClippingTest.kt`)*:
+  • Verify `ATT-5853` top padding (`24.dp` / `16.dp`) and climb badge clearance tests pass with 0 regressions.
+  5. *Tier 1 Targeted Unit Test Regression (`TST-UI-494.5`)*:
+  • Execute targeted test suite (`ui.map.*`, `ui.routes.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
+
+### TST-UI-495: **AthleteProfileScreen Filter Pill Layout, Decimal Localization, PMC Card Heights & Time-Range Selector Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-495`
+- **Component**: `AthleteProfileScreen.kt`, `AthleteMetricsPlotMath.kt`, `AthleteProfileViewModel.kt`
+- **Jira**: `ATT-5844`
+- **Test Description**:
+  1. *Proportional Pill Width Allocation Contract Test (`TST-UI-495.1`)*:
+  • Verify that label length proportional weighting (`coerceIn(3, 9)`) allocates sufficient width for `Gewicht` and `Ruhe-HF` alongside short abbreviations (`FTP`, `CP`, `W'`) without ellipsis truncation.
+  2. *Active Locale Decimal Formatting Contract Test (`TST-UI-495.2`)*:
+  • Verify `formatWeightValue`, `formatWPrimeValue`, and `formatPowerToWeightValue` format with commas under `Locale.GERMANY` (`80,0`, `20,0`, `3,44`) and dots under `Locale.US` (`80.0`, `20.0`, `3.44`).
+  • Verify decimal points in PMC stat badge format strings conform to `Locale.getDefault()`.
+  3. *PMC Card Heights & Intrinsic Layout Contract Test (`TST-UI-495.3`)*:
+  • Verify `PmcStatBadge` applies `.fillMaxHeight()` and enclosing `Row` layouts use `Modifier.height(IntrinsicSize.Min)` per Design Guideline 5.14.
+  4. *PMC Time-Range Filtering & EWMA Preservation Test (`TST-UI-495.4`)*:
+  • Verify `PerformanceManagementChartCard` defaults to `MetricsTimeRange.SIX_MONTHS`.
+  • Verify selecting a range slices plotted points correctly without modifying historical EWMA calculations.
+  5. *9-Language Localization & Specifier Audit (`TST-UI-495.5`)*:
+  • Verify 100% parity across all 9 locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) for all athlete profile strings via `TranslationParityTest`.
+  6. *Tier 1 Targeted Unit Test Regression (`TST-UI-495.6`)*:
+  • Execute targeted test suite (`ui.athleteprofile.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
+
+### TST-UI-496: **Navigation Drawer Header Height Compactness & Vertical Clearance Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-496`
+- **Component**: `AppNavigationDrawer.kt`, `AppNavigationDrawerContractTest.kt`
+- **Jira**: `ATT-5839`
+- **Test Description**:
+  1. *Drawer Header Height & Alignment Contract Test (`TST-UI-496.1`)*:
+  • Verify `AppNavigationDrawer.kt` source declares `.height(76.dp + statusBarHeight)` in `DrawerHeader()`.
+  • Verify `menu_header_background` image is anchored with `Alignment.BottomCenter` and `ContentScale.FillWidth`.
+  2. *Rule 72 Branding Row & Icon Invariant Contract Test (`TST-UI-496.2`)*:
+  • Verify launcher icon slot retains `Modifier.size(46.dp)` and `scaleX = 1.81f; scaleY = 1.81f`.
+  • Verify single-line title layout without extra subtitle/pill rows below `"a Training Tracker"`.
+  3. *Tier 1 Targeted Unit Test Regression (`TST-UI-496.3`)*:
+  • Execute targeted test suite (`ui.navigation.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
+
+### TST-UI-497: **EditWorkoutScreen Hint Localization, Punctuation Normalization, Label Capitalization & Strava Row Layout Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-497`
+- **Component**: `EditWorkoutScreen.kt`, `res/values*/strings.xml`
+- **Jira**: `ATT-5838`
+- **Test Description**:
+  1. *9-Locale Hint, Sport & Strava Upload String Parity Contract Test (`TST-UI-497.1`)*:
+  • Verify `hint_workout_description`, `hint_workout_goal`, `hint_workout_method` are localized in German as `Beschreibung`, `Ziel`, `Methode` and capitalized across all 9 locales.
+  • Verify `Sport` contains zero trailing colons across all 9 locales.
+  • Verify `stravaUpload` is capitalized across all 9 locales.
+  2. *Strava Row Component Ordering & Non-Destructive Alpha Contract Test (`TST-UI-497.2`)*:
+  • Verify in `EditWorkoutScreen.kt` source that `Checkbox` precedes `Icon` in the Strava row.
+  • Verify Strava logo uses `tint = Color.Unspecified` and applies `Modifier.alpha` for disabled dimming instead of `Color.Gray`.
+  3. *9-Language Localization & Translation Parity Suite (`TST-UI-497.3`)*:
+  • Execute `TranslationParityTest` verifying 100% parity across all 9 supported locales with 0 missing keys.
+  4. *Tier 1 Targeted Unit Test Regression (`TST-UI-497.4`)*:
+  • Execute targeted test suite (`ui.aftermath.editworkout.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
+
+### TST-UI-498: **WorkoutDetailTabbedContent Header Click Decoupling & MapDetailLayout Sheet Chrome Suppression Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-498`
+- **Component**: `WorkoutDetailTabbedContent.kt`, `MapDetailLayout.kt`, `TrackOnMapScreen.kt`
+- **Jira**: `ATT-5835`
+- **Test Description**:
+  1. *WorkoutDetailTabbedContent Header Click Decoupling Contract Test (`TST-UI-498.1`)*:
+  • Verify that `WorkoutDetailTabbedContent.kt` binds `onClicked = null` on `WorkoutHeader`, reserving edit execution strictly to the dedicated `onEditWorkout` pencil icon button.
+  2. *MapDetailLayout isBottomSheet Parameter & Drag Handle Gating Contract Test (`TST-UI-498.2`)*:
+  • Verify that `MapDetailLayout` supports `isBottomSheet: Boolean` parameter with default `!useStatusBarsPadding`.
+  • Verify that `MinimumDragHandle()` and `BottomSheetDesign.SheetShape` are rendered strictly when `isBottomSheet == true`.
+  • Verify that when `isBottomSheet == false`, the drag handle is suppressed and `shape = RectangleShape` is used.
+  3. *Full-Screen Tabbed Callers isBottomSheet Parity Contract Test (`TST-UI-498.3`)*:
+  • Verify that all `MapDetailLayout` invocations in `WorkoutDetailTabbedContent.kt` and `TrackOnMapScreen.kt` explicitly pass `isBottomSheet = false`.
+  • Verify modal bottom sheets in `MapScreenWithTrack.kt` and `LiveSegmentSheet.kt` maintain `isBottomSheet = true` (or default to true when `useStatusBarsPadding == false`).
+  4. *Tier 1 Targeted Unit Test Regression (`TST-UI-498.4`)*:
+  • Execute targeted test suite (`ui.aftermath.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
+
+
+
 
 
 

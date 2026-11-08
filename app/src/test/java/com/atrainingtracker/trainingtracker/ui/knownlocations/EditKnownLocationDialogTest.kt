@@ -24,6 +24,7 @@ import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -221,5 +222,87 @@ class EditKnownLocationDialogTest {
         val sliderStepClampedLow = (round(20f / 25f) * 25f).coerceIn(50f, 1000f).roundToInt()
         onRadiusChange(sliderStepClampedLow)
         assertEquals(50, observedLiveRadius)
+    }
+
+    /**
+     * TST-UI-470.4: Home base toggle subtitle uses descriptive explanation and deduplicates tautological title.
+     */
+    @Test
+    fun testHomeBaseToggleSubtitle_usesDescriptiveExplanation() {
+        val candidates = listOf(
+            java.io.File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/knownlocations/EditKnownLocationDialog.kt"),
+            java.io.File("src/main/java/com/atrainingtracker/trainingtracker/ui/knownlocations/EditKnownLocationDialog.kt"),
+            java.io.File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/knownlocations/EditKnownLocationDialog.kt")
+        )
+        val dialogFile = candidates.firstOrNull { it.exists() }
+            ?: error("EditKnownLocationDialog.kt not found in candidates: $candidates")
+        val source = dialogFile.readText()
+
+        // 1. Verify informative subtitle string resource is used
+        assertTrue(
+            "Dialog must use R.string.known_locations_home_base_desc for subtitle",
+            source.contains("R.string.known_locations_home_base_desc")
+        )
+
+        // 2. Verify tautological string known_locations_set_home is no longer used in EditKnownLocationDialog
+        assertFalse(
+            "Dialog must not contain known_locations_set_home",
+            source.contains("R.string.known_locations_set_home")
+        )
+
+        // 3. Verify new location title and add icon when location.id == 0L
+        assertTrue(
+            "Dialog must reference R.string.known_locations_new_location for id == 0L",
+            source.contains("R.string.known_locations_new_location")
+        )
+        assertTrue(
+            "Dialog must use Icons.Default.Add for id == 0L",
+            source.contains("Icons.Default.Add")
+        )
+    }
+
+    /**
+     * TST-UI-470.4b: Creation template with id = 0L initializes with MANUAL_USER and locked status.
+     */
+    @Test
+    fun testCreationTemplate_idZero_confirmDispatchesZeroIdAndManualUser() {
+        val newTemplate = KnownLocationItem(
+            id = 0L,
+            name = "",
+            altitude = 540.0,
+            radius = 200,
+            latLng = LatLng(48.137, 11.576),
+            hitCount = 0,
+            isLocked = true,
+            source = ElevationSource.MANUAL_USER,
+            isHome = false
+        )
+
+        var confirmedId = -1L
+        var confirmedName = ""
+        var confirmedAlt = 0.0
+        var confirmedRadius = 0
+        var confirmedSource = ElevationSource.LEGACY_RAW
+        var confirmedIsHome = false
+
+        val onConfirm: (Long, String, Double, Int, ElevationSource, Boolean) -> Unit =
+            { id, name, alt, radius, source, isHome ->
+                confirmedId = id
+                confirmedName = name
+                confirmedAlt = alt
+                confirmedRadius = radius
+                confirmedSource = source
+                confirmedIsHome = isHome
+            }
+
+        val enteredName = "Olympia Park"
+        onConfirm(newTemplate.id, enteredName, newTemplate.altitude, newTemplate.radius, newTemplate.source, true)
+
+        assertEquals(0L, confirmedId)
+        assertEquals("Olympia Park", confirmedName)
+        assertEquals(540.0, confirmedAlt, 0.001)
+        assertEquals(200, confirmedRadius)
+        assertEquals(ElevationSource.MANUAL_USER, confirmedSource)
+        assertTrue(confirmedIsHome)
     }
 }

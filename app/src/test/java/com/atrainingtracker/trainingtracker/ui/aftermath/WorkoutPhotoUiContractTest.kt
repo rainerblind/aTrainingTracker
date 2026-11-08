@@ -237,7 +237,7 @@ class WorkoutPhotoUiContractTest {
     }
 
     @Test
-    fun testWorkoutPhotoStrip_neutralStylingAndCenteredAddIconContract() {
+    fun testWorkoutPhotoStrip_neutralStylingAndHeaderAddButtonContract() {
         val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/photos/WorkoutPhotoStrip.kt")
         val content = file.readText()
 
@@ -248,23 +248,40 @@ class WorkoutPhotoUiContractTest {
                     content.contains("tint = MaterialTheme.colorScheme.onSurfaceVariant")
         )
 
-        // 2. Add photos icon uses onSurfaceVariant
+        // 2. Add photos icon uses onSurfaceVariant in compact header IconButton
         assertTrue(
             "AddPhotoAlternate icon must use onSurfaceVariant",
             content.contains("imageVector = Icons.Default.AddPhotoAlternate") &&
                     content.contains("tint = MaterialTheme.colorScheme.onSurfaceVariant")
         )
 
-        // 3. No primary blue color token in WorkoutPhotoStrip.kt
+        // 3. Header contains compact IconButton for Add Photo action (ATT-5811)
+        assertTrue(
+            "Add photo action must be hosted in a compact header IconButton",
+            content.contains("IconButton(") &&
+                    content.contains("contentDescription = stringResource(R.string.workout_photos_add)")
+        )
+
+        // 4. LazyRow is rendered conditionally only when photos exist (ATT-5811)
+        assertTrue(
+            "LazyRow must be guarded by photos.isNotEmpty() to prevent empty tile bloat",
+            content.contains("if (photos.isNotEmpty())")
+        )
+
+        // 5. Oversized add_photo_tile OutlinedCard is completely removed from LazyRow (ATT-5811)
+        assertFalse(
+            "add_photo_tile must be removed from LazyRow",
+            content.contains("add_photo_tile")
+        )
+        assertFalse(
+            "OutlinedCard must not be used for add photo tile",
+            content.contains("OutlinedCard")
+        )
+
+        // 6. No primary blue color token in WorkoutPhotoStrip.kt
         assertFalse(
             "WorkoutPhotoStrip must not reference MaterialTheme.colorScheme.primary (REQ-UI-448.1)",
             content.contains("MaterialTheme.colorScheme.primary")
-        )
-
-        // 4. Square add tile must not contain clipped single-line text
-        assertFalse(
-            "Add photos tile must not contain single-line clipped label",
-            content.contains("maxLines = 1")
         )
     }
 

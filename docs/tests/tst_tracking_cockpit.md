@@ -1507,3 +1507,53 @@
   5. *Clean-Room Targeted Test Suite Execution (`TST-SEN-027.5`)*:
   • Execute targeted unit tests verifying 100% pass rate.
 
+### TST-TRK-053: **Persisted Deduplicated Workout Diagnostic Errors & Actionable Report Dialog Test Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-053`
+- **Component**: `TrackerService.java`, `WorkoutSummariesDatabaseManager.java`, `WorkoutDataMapper.kt`, `WorkoutRepository.kt`, `WorkoutDetailTabbedContent.kt`, `WorkoutDiagnosticBottomSheet.kt`
+- **Jira**: `ATT-5886`
+- **Test Description**:
+  1. *WorkoutSummaries Database Schema Version 28 Migration & Helper Contract Test (`TST-TRK-053.1`, `WorkoutSummariesRealSqliteMigrationTest.kt`, `WorkoutSummariesDatabaseManagerTest.kt`)*:
+  • Verify that `WorkoutSummariesDbHelper.DB_VERSION` equals `28`.
+  • Verify that migrating an existing SQLite database from version 27 to 28 adds nullable `RECORDING_ERRORS` text column without data loss.
+  • Verify that `clearRecordingErrors(workoutId)` sets `RECORDING_ERRORS` to `NULL`.
+  • Verify that `DatabaseSchemaRegistry` validates schema version 28.
+  2. *TrackerService Exception Collector & 1-Hz Deduplication Unit Tests (`TST-TRK-053.2`, `WorkoutDiagnosticCollectorTest.kt`)*:
+  • Verify that 100 repeated sample insert exceptions produce a single deduplicated entry with `count = 100` and updated last-occurrence timestamp.
+  • Verify that distinct exceptions across `INIT`, `SAMPLE_WRITE`, and `FINALIZE` stages are preserved independently.
+  • Verify that payload serialization enforces the 8 KB size cap and does not throw on null/empty inputs.
+  3. *WorkoutData & WorkoutDataMapper Symmetry Contract Test (`TST-TRK-053.3`, `WorkoutDataMapperTest.kt`)*:
+  • Verify `Rule 20` mapping symmetry: `fromCursor(Cursor)` and `readCursorSnapshot(Cursor)` -> `fromSnapshot(...)` populate identical `recordingErrors` strings for identical cursor rows.
+  4. *Diagnostic Dialog Plain-Language & Action Flow UI Tests (`TST-TRK-053.4`, `WorkoutDiagnosticBottomSheetTest.kt`)*:
+  • Verify that `recordingErrors == null` displays zero warning banners or icons.
+  • Verify that non-null `recordingErrors` containing `SQLiteFullException` renders `R.string.workout_diagnostic_explanation_storage_full`.
+  • Verify that non-null `recordingErrors` containing `SAMPLE_WRITE` renders `R.string.workout_diagnostic_explanation_sample_write`.
+  • Verify that non-null `recordingErrors` containing only `FINALIZE` renders `R.string.workout_diagnostic_explanation_finalize`.
+  • Verify that tapping the email action creates a `mailto:rainer.blind@gmail.com` intent with app version, device model, and error details.
+  • Verify that confirming "Warnung löschen" invokes `repository.clearRecordingErrors(...)`.
+  5. *9-Language Localization Parity Verification (`TST-TRK-053.5`, `TranslationParityTest.kt`)*:
+  • Verify in `TranslationParityTest` that all 15 diagnostic string resources exist with 100% parity across all 9 locales without decorative emojis (`ATT-5400`) or missing placeholders.
+  6. *Targeted & Full Suite Regression Execution (`TST-TRK-053.6`)*:
+  • Execute targeted package tests (`com.atrainingtracker.trainingtracker.database.*`, `com.atrainingtracker.trainingtracker.tracker.*`, `com.atrainingtracker.trainingtracker.ui.aftermath.*`) and full test suite asserting 100% pass rate.
+
+### TST-TRK-054: **Hardware Volume Keys Cockpit Tab Cycling with Cyclic Wrap-Around Test Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-054`
+- **Component**: `TrackingTabsPageResolverTest.kt`, `DisplaySettingsTest.kt`, `MainActivityWithNavigation.kt`, `TrackingTabsScreen.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-5905`
+- **Test Description**:
+  1. *Cyclic Wrap-Around Page Index Calculation Unit Tests (`TST-TRK-054.1`, `TrackingTabsPageResolverTest.kt`)*:
+  • Verify `resolveNextPage(currentPage, pageCount, forward = true)` advances sequentially from 0 to `pageCount - 1` and wraps around from `pageCount - 1` to 0.
+  • Verify `resolveNextPage(currentPage, pageCount, forward = false)` decrements sequentially and wraps around from 0 to `pageCount - 1`.
+  • Verify boundary behavior for `pageCount = 1` (returns 0) and `pageCount <= 0` (returns 0) without exceptions.
+  2. *Display Settings & Persistence Unit Tests (`TST-TRK-054.2`, `DisplaySettingsTest.kt`)*:
+  • Verify `TrainingApplication.DEFAULT_DISPLAY_OPTIONS` contains `"volumeKeysSwitchCockpitTabs"`.
+  • Verify `TrainingApplication.volumeKeysSwitchCockpitTabs()` returns `true` by default and reflects mutations via `setDisplayOptions`.
+  3. *Window Key Interception & Lifecycle Guard Unit/Source Tests (`TST-TRK-054.3`)*:
+  • Verify `MainActivityWithNavigation` provides a volume key interceptor hook consuming both `ACTION_DOWN` and `ACTION_UP` for `KEYCODE_VOLUME_UP` and `KEYCODE_VOLUME_DOWN`.
+  • Verify `TrackingTabsScreen` registers the interceptor only when `screenMode == ScreenMode.TRACKING` and setting is enabled, releasing on dispose.
+  4. *9-Language Localization Parity Verification (`TST-TRK-054.4`, `TranslationParityTest.kt`)*:
+  • Verify `TranslationParityTest` passes asserting `prefs_volume_keys_switch_cockpit_tabs_title` and `prefs_volume_keys_switch_cockpit_tabs_summary` exist with 100% parity across all 9 locales.
+  5. *Targeted Regression Suite Execution (`TST-TRK-054.5`)*:
+  • Execute targeted package tests (`com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.*`, `com.atrainingtracker.trainingtracker.ui.settings.display.*`) asserting 100% pass rate.
+
+
+

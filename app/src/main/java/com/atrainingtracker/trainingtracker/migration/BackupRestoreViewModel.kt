@@ -686,7 +686,22 @@ class BackupRestoreViewModel @JvmOverloads constructor(
         }
         _uiState.value = UiState.Loading(progressFormatString)
 
-        uris.forEachIndexed { index, uri ->
+        // Pre-sort URIs chronologically ascending by resolved filename (REQ-MIG-049.3, ATT-6039, Rule 36 DRY)
+        val sortedUris = if (uris.size > 1) {
+            uris.map { uri ->
+                val name = ImportFileValidator.resolveDisplayName(context, uri)
+                    ?: runCatching { uri.lastPathSegment }.getOrNull()
+                    ?: runCatching { uri.toString() }.getOrDefault("")
+                name to uri
+            }.sortedWith { a, b ->
+                val cmp = String.CASE_INSENSITIVE_ORDER.compare(a.first, b.first)
+                if (cmp != 0) cmp else runCatching { a.second.toString().compareTo(b.second.toString()) }.getOrDefault(0)
+            }.map { it.second }
+        } else {
+            uris
+        }
+
+        sortedUris.forEachIndexed { index, uri ->
             val progressStepString = if (format.lowercase() == "fit") {
                 context.getString(R.string.import_fit_progress, index + 1, totalFiles)
             } else {
@@ -694,16 +709,7 @@ class BackupRestoreViewModel @JvmOverloads constructor(
             }
             _uiState.value = UiState.Loading(progressStepString)
 
-            val displayName = try {
-                context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
-                    if (cursor.moveToFirst()) {
-                        val idx = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
-                        if (idx != -1) cursor.getString(idx) else null
-                    } else null
-                }
-            } catch (e: Exception) {
-                null
-            }
+            val displayName = ImportFileValidator.resolveDisplayName(context, uri)
             val fileName = displayName?.takeIf { it.isNotBlank() } ?: "import_${System.currentTimeMillis()}_$index.$format"
             val tempFile = File(context.cacheDir, fileName)
             try {

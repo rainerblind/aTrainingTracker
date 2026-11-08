@@ -128,18 +128,16 @@ fun ActiveRouteFilterChipsRow(
         }
 
         // Clear All Action Button
-        if (criteria.activeFilterCount > 1) {
-            item("clearAll") {
-                TextButton(
-                    onClick = onClearAll,
-                    modifier = Modifier.padding(start = 4.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.filter_clear_all),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
+        item("clearAll") {
+            TextButton(
+                onClick = onClearAll,
+                modifier = Modifier.padding(start = 4.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.filter_clear_all),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
         }
     }

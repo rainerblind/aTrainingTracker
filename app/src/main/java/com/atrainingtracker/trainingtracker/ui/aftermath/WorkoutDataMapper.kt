@@ -225,6 +225,9 @@ class WorkoutDataMapper(
             stravaSportName = sportTypeDatabaseManager.getStravaName(sportId),
 
             stravaActivityData = stravaActivityData,
+            recordingErrors = cursor.getColumnIndex(WorkoutSummaries.RECORDING_ERRORS).takeIf { it >= 0 }?.let {
+                if (cursor.isNull(it)) null else cursor.getString(it)
+            },
 
             extremaRows = sensorsToCheck.flatMap { sensorType ->
                 val rows = mutableListOf<ExtremaDataRow>()
@@ -555,7 +558,8 @@ class WorkoutDataMapper(
         val descentMeters: Long,
         val description: String?,
         val goal: String?,
-        val method: String?
+        val method: String?,
+        val recordingErrors: String? = null
     )
 
     /**
@@ -594,6 +598,9 @@ class WorkoutDataMapper(
         val description = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.DESCRIPTION))
         val goal = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.GOAL))
         val method = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.METHOD))
+        val recordingErrors = cursor.getColumnIndex(WorkoutSummaries.RECORDING_ERRORS).takeIf { it >= 0 }?.let {
+            if (cursor.isNull(it)) null else cursor.getString(it)
+        }
 
         return RawCursorSnapshot(
             workoutId = workoutId,
@@ -627,7 +634,8 @@ class WorkoutDataMapper(
             descentMeters = descentMeters,
             description = description,
             goal = goal,
-            method = method
+            method = method,
+            recordingErrors = recordingErrors
         )
     }
 
@@ -804,6 +812,7 @@ class WorkoutDataMapper(
 
             stravaSportName = sportInfo?.stravaSportName ?: sportTypeDatabaseManager.getStravaName(snapshot.sportId),
             stravaActivityData = stravaActivityData,
+            recordingErrors = snapshot.recordingErrors,
 
             extremaRows = sensorsToCheck.flatMap { sensorType ->
                 val rows = mutableListOf<ExtremaDataRow>()

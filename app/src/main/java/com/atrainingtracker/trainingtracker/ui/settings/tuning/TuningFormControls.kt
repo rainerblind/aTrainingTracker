@@ -22,7 +22,7 @@ import android.content.res.Configuration
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.RestartAlt
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -152,12 +152,12 @@ fun TuningToggleItem(
 }
 
 /**
- * Advisory warning banner for advanced tuning and experimental settings.
+ * Advisory notice banner for advanced tuning and experimental settings.
  */
 @Composable
 fun TuningWarningNotice(modifier: Modifier = Modifier) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
         modifier = modifier.fillMaxWidth()
     ) {
         Row(
@@ -166,9 +166,9 @@ fun TuningWarningNotice(modifier: Modifier = Modifier) {
             verticalAlignment = Alignment.Top
         ) {
             Icon(
-                imageVector = Icons.Default.Warning,
+                imageVector = Icons.Default.Tune,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.error,
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(24.dp)
             )
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -176,13 +176,26 @@ fun TuningWarningNotice(modifier: Modifier = Modifier) {
                     text = stringResource(R.string.advanced_tuning_warning_title),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onErrorContainer
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     text = stringResource(R.string.advanced_tuning_warning_desc),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onErrorContainer
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+        }
+    }
+}
+
+@Preview(name = "TuningWarningNotice - Light", showBackground = true)
+@Preview(name = "TuningWarningNotice - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
+@Composable
+private fun TuningWarningNoticePreview() {
+    ATrainingTrackerTheme {
+        Surface {
+            Box(modifier = Modifier.padding(16.dp)) {
+                TuningWarningNotice()
             }
         }
     }

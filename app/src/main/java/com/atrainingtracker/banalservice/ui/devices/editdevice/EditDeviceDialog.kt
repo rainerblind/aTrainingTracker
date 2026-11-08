@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
@@ -104,9 +105,10 @@ fun EditDeviceDialog(
                     .padding(horizontal = 24.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Technical Status LED & Protocol details
+                // Technical Status LED & Protocol details (Synchronized - REQ-UI-492.4)
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    val isConnected = liveData?.isConnected ?: data.isConnected
+                    val currentDevice = liveData ?: data
+                    val isConnected = currentDevice.isConnected
                     Box(
                         modifier = Modifier.size(18.dp),
                         contentAlignment = Alignment.Center
@@ -120,15 +122,17 @@ fun EditDeviceDialog(
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     DeviceStatusRow(
-                        device = data,
+                        device = currentDevice,
                         alpha = TTAlpha.Medium,
-                        textStyle = MaterialTheme.typography.bodySmall
+                        textStyle = MaterialTheme.typography.bodySmall,
+                        isConnected = isConnected
                     )
                 }
 
-                if (data.manufacturer.isNotBlank()) {
+                val currentDevice = liveData ?: data
+                if (currentDevice.manufacturer.isNotBlank()) {
                     Text(
-                        text = data.manufacturer,
+                        text = currentDevice.manufacturer,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
                     )
@@ -200,27 +204,37 @@ private fun ReadOnlyField(label: String, value: String) {
 private fun EquipmentSection(data: DeviceUiData, viewModel: EditDeviceViewModel) {
     var showDialog by remember { mutableStateOf(false) }
 
-    Column {
-        Text(
-            text = stringResource(data.onEquipmentResId),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        TextButton(
-            onClick = { showDialog = true },
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(0.dp)
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        val displayText = if (data.linkedEquipment.isEmpty()) {
+            stringResource(R.string.devices_equipment_none)
+        } else {
+            data.linkedEquipment.joinToString(", ")
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { showDialog = true }
         ) {
-            Text(
-                text = if (data.linkedEquipment.isEmpty()) {
-                    stringResource(R.string.devices_equipment_none)
-                } else {
-                    data.linkedEquipment.joinToString(", ")
+            OutlinedTextField(
+                value = displayText,
+                onValueChange = {},
+                readOnly = true,
+                enabled = false,
+                label = { Text(stringResource(data.onEquipmentResId)) },
+                trailingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.ArrowDropDown,
+                        contentDescription = null
+                    )
                 },
-                modifier = Modifier.fillMaxWidth(),
-                style = MaterialTheme.typography.bodyLarge,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Start
+                colors = OutlinedTextFieldDefaults.colors(
+                    disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                    disabledBorderColor = MaterialTheme.colorScheme.outline,
+                    disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                ),
+                modifier = Modifier.fillMaxWidth()
             )
         }
 
@@ -230,7 +244,7 @@ private fun EquipmentSection(data: DeviceUiData, viewModel: EditDeviceViewModel)
                 text = "→ ${data.linkedSportTypes.joinToString(", ")}",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium),
-                modifier = Modifier.padding(start = 12.dp) // Align slightly with text inside button
+                modifier = Modifier.padding(start = 12.dp)
             )
         }
     }

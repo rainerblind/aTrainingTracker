@@ -26,9 +26,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
@@ -50,7 +53,16 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 
 /**
- * Historical duration and speed/pace progression trend chart for Workout Clusters (REQ-SET-078).
+ * Time-range filter options for workout cluster trend charts (REQ-UI-490.3).
+ */
+enum class ClusterTrendTimeRange(val stringResId: Int, val spanDays: Int?) {
+    ALL(R.string.cluster_trend_range_all, null),
+    THREE_YEARS(R.string.cluster_trend_range_3y, 3 * 365),
+    ONE_YEAR(R.string.cluster_trend_range_1y, 365)
+}
+
+/**
+ * Historical duration and speed/pace progression trend chart for Workout Clusters (REQ-SET-078, REQ-UI-490).
  * Renders an athletic trend line where higher vertical placement represents better performance.
  */
 @Composable
@@ -60,11 +72,24 @@ fun WorkoutClusterTrendChartCard(
     onSelectWorkout: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var selectedMode by remember { mutableStateOf(ClusterTrendMetricMode.DURATION) }
+    var selectedMode by rememberSaveable { mutableStateOf(ClusterTrendMetricMode.DURATION) }
+    var selectedTimeRange by rememberSaveable { mutableStateOf(ClusterTrendTimeRange.ALL) }
 
-    val trendSeries = remember(workouts, sportType, selectedMode) {
+    val filteredWorkouts = remember(workouts, selectedTimeRange) {
+        if (selectedTimeRange.spanDays == null || workouts.isEmpty()) {
+            workouts
+        } else {
+            val latestTimeS = workouts.maxOfOrNull { it.startTimeS } ?: 0L
+            val thresholdS = latestTimeS - (selectedTimeRange.spanDays!!.toLong() * 86400L)
+            val inRange = workouts.filter { it.startTimeS >= thresholdS }
+            val validCount = inRange.count { it.activeTimeSec > 0 && it.avgSpeedMps > 0.0 }
+            if (validCount >= 2) inRange else workouts
+        }
+    }
+
+    val trendSeries = remember(filteredWorkouts, sportType, selectedMode) {
         WorkoutClusterTrendMath.buildTrendSeries(
-            workouts = workouts,
+            workouts = filteredWorkouts,
             clusterSportType = sportType,
             metricMode = selectedMode
         )
@@ -108,28 +133,35 @@ fun WorkoutClusterTrendChartCard(
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Header: Title & Metric Toggle
+            // Header: Time Range Filter Chips & Metric Toggle (REQ-UI-490.3)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Time Range Filter Chips
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ShowChart,
-                        contentDescription = null,
-                        tint = primaryColor,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Text(
-                        text = stringResource(R.string.cluster_trend_title),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = onSurfaceColor
-                    )
+                    ClusterTrendTimeRange.values().forEach { range ->
+                        val isSelected = selectedTimeRange == range
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = { selectedTimeRange = range },
+                            label = {
+                                Text(
+                                    text = stringResource(range.stringResId),
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            },
+                            modifier = Modifier.height(28.dp),
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = primaryColor.copy(alpha = TTAlpha.Faint),
+                                selectedLabelColor = primaryColor
+                            )
+                        )
+                    }
                 }
 
                 // Dual Metric Toggle Chips
@@ -187,17 +219,22 @@ fun WorkoutClusterTrendChartCard(
                     .fillMaxWidth()
                     .height(150.dp)
             ) {
+                val leftGutter = 48.dp
                 Canvas(
                     modifier = Modifier
                         .fillMaxSize()
                         .pointerInput(points) {
                             detectTapGestures { offset ->
+                                val leftPadPx = leftGutter.toPx()
+                                val topPadPx = 16.dp.toPx()
+                                val rightPadPx = 12.dp.toPx()
+                                val bottomPadPx = 24.dp.toPx()
                                 val hit = WorkoutClusterTrendMath.findNearestPoint(
                                     points = points,
-                                    touchX = offset.x - 12.dp.toPx(),
-                                    touchY = offset.y - 16.dp.toPx(),
-                                    widthPx = (size.width - 24.dp.toPx()).coerceAtLeast(1f),
-                                    heightPx = (size.height - 44.dp.toPx()).coerceAtLeast(1f),
+                                    touchX = offset.x - leftPadPx,
+                                    touchY = offset.y - topPadPx,
+                                    widthPx = (size.width - leftPadPx - rightPadPx).coerceAtLeast(1f),
+                                    heightPx = (size.height - topPadPx - bottomPadPx).coerceAtLeast(1f),
                                     maxDistancePx = 36.dp.toPx()
                                 )
                                 if (hit != null) {
@@ -207,10 +244,10 @@ fun WorkoutClusterTrendChartCard(
                             }
                         }
                 ) {
-                    val leftPadding = 12.dp.toPx()
+                    val leftPadding = leftGutter.toPx()
                     val rightPadding = 12.dp.toPx()
                     val topPadding = 16.dp.toPx()
-                    val bottomPadding = 28.dp.toPx()
+                    val bottomPadding = 24.dp.toPx()
                     val plotWidth = (size.width - leftPadding - rightPadding).coerceAtLeast(1f)
                     val plotHeight = (size.height - topPadding - bottomPadding).coerceAtLeast(1f)
 
@@ -261,19 +298,13 @@ fun WorkoutClusterTrendChartCard(
                         drawPath(path = linePath, color = primaryColor, style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
                     }
 
-                    // Native canvas text rendering for X/Y axis labels (REQ-SET-078.7)
+                    // Native canvas text rendering for X/Y axis labels in dedicated gutter (REQ-UI-490.1)
                     drawContext.canvas.nativeCanvas.apply {
                         if (trendSeries.yAxisTopLabel.isNotEmpty()) {
-                            drawText(trendSeries.yAxisTopLabel, leftPadding, topPadding - 4.dp.toPx(), textPaint)
+                            drawText(trendSeries.yAxisTopLabel, 2.dp.toPx(), topPadding + 4.dp.toPx(), textPaint)
                         }
                         if (trendSeries.yAxisBottomLabel.isNotEmpty()) {
-                            drawText(trendSeries.yAxisBottomLabel, leftPadding, topPadding + plotHeight + 12.dp.toPx(), textPaint)
-                        }
-                        if (trendSeries.formattedAverage.isNotEmpty()) {
-                            val avgText = "$avgPrefix ${trendSeries.formattedAverage}"
-                            val avgWidth = textPaint.measureText(avgText)
-                            val avgTextY = if (avgCanvasY - 4.dp.toPx() < topPadding + 10.dp.toPx()) avgCanvasY + 12.dp.toPx() else avgCanvasY - 4.dp.toPx()
-                            drawText(avgText, size.width - rightPadding - avgWidth, avgTextY, textPaint)
+                            drawText(trendSeries.yAxisBottomLabel, 2.dp.toPx(), topPadding + plotHeight, textPaint)
                         }
                         if (trendSeries.xAxisStartLabel.isNotEmpty()) {
                             drawText(trendSeries.xAxisStartLabel, leftPadding, size.height - 4.dp.toPx(), textPaint)
@@ -308,6 +339,35 @@ fun WorkoutClusterTrendChartCard(
                             drawCircle(color = primaryColor, radius = pointRadius, center = c)
                             drawCircle(color = surfaceColor, radius = innerRadius, center = c)
                         }
+                    }
+
+                    // Average label with rounded surface badge (drawn on top of lines & points for legibility, REQ-UI-490.2)
+                    if (trendSeries.formattedAverage.isNotEmpty()) {
+                        val avgText = "$avgPrefix ${trendSeries.formattedAverage}"
+                        val avgWidth = textPaint.measureText(avgText)
+                        val avgTextY = if (avgCanvasY - 4.dp.toPx() < topPadding + 10.dp.toPx()) {
+                            avgCanvasY + 12.dp.toPx()
+                        } else {
+                            avgCanvasY - 4.dp.toPx()
+                        }
+                        val badgeLeft = size.width - rightPadding - avgWidth - 5.dp.toPx()
+                        val badgeTop = avgTextY - axisTextSizePx - 1.dp.toPx()
+                        val badgeWidth = avgWidth + 10.dp.toPx()
+                        val badgeHeight = axisTextSizePx + 4.dp.toPx()
+
+                        drawRoundRect(
+                            color = surfaceColor.copy(alpha = 0.92f),
+                            topLeft = Offset(badgeLeft, badgeTop),
+                            size = Size(badgeWidth, badgeHeight),
+                            cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx())
+                        )
+
+                        drawContext.canvas.nativeCanvas.drawText(
+                            avgText,
+                            size.width - rightPadding - avgWidth,
+                            avgTextY,
+                            textPaint
+                        )
                     }
                 }
             }

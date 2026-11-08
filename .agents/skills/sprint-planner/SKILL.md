@@ -71,6 +71,7 @@ Ensure that every ticket committed to the active sprint has clear, unambiguous a
    * Each ticket branches from the active `sprint/<SPRINT_NAME>` branch.
    * **Mandatory Rules & Skills Refresh ("Obey the Rules")**: At the start of handling each ticket, the agent MUST explicitly re-read `.agents/rules/aspice_governance.md` and the skill for the active stage using `view_file` to reload constraints into active working memory and prevent context drift across compactions.
    * **One Commit per Ticket (Rule 44)**: Upon completing Stage 5 verification, the ticket is integrated back into `sprint/<SPRINT_NAME>` as a **single atomic commit** (`git merge --squash feature/<KEY> && git commit -m "<KEY>: <Summary>"`).
+   * **Parallel Sprint Execution Across Disjoint Epics (`Rule 9`, `REQ-PRO-041`)**: The Coordinator MAY dispatch up to two tickets concurrently (`concurrency = 2`) ONLY when the tickets belong to completely disjoint Parent Epics with zero package and zero living-doc shard overlap. Persistent subagents for parallel tickets MUST be spawned with `Workspace: "share"` to ensure isolated Git worktrees. Heavy Gradle test runs and Stage 5 squash-merges onto `sprint/<SPRINT_NAME>` serialize under POSIX `flock` on `/tmp/att_build_merge.lock` (`python3 tools/parallel_sprint_lock.py <cmd>`). Stage 5 rebases onto `sprint/<SPRINT_NAME>` execute `python3 tools/verify_requirement_governance.py --sync-indexes` under the merge lock prior to squashing.
    * **Pre-Build Debug APK at Very End of Phase 2 (`Rule 64` — `ATT-4718`, `"Build debug APK at very end of phase 2."`)**: Immediately after the final sprint ticket is squashed onto `sprint/<SPRINT_NAME>` at the end of Phase 2, run `./gradlew assembleDebug` (or `./gradlew installDebug` if the test device is connected) so the integrated sprint debug APK is already compiled and verified before Ceremony 2 begins.
    * **Tier 2 Sprint Integration Gate at the Very End of Phase 2 (`Rule 66` — `ATT-4864`, `"Maybe, the agents should do this before the sprint review."`)**: Before the APK pre-build, run `./gradlew testDebugUnitTest --max-workers=2 && python3 tools/verify_requirement_governance.py` on `sprint/<SPRINT_NAME>` and fix all failures as separate attributed commits, so Ceremony 2 starts from a green suite (Sprint 2026-44.1: 4 failures from stale tests and a cross-test coroutine leak surfaced only in the human review).
    * **Lost-Wakeup Watchdog (`Rule 66` — `ATT-4864`)**: After every subagent dispatch, set one `schedule` watchdog (`DurationSeconds=1200`, `TimerCondition=<subagent id>`); if it fires, re-derive the state from Jira/git and continue. Never end a Phase 2 Coordinator turn with only a status report while tickets remain, and never let a subagent take over the Coordinator role (see `aspice_governance.md` Core Rule 7).
@@ -105,7 +106,7 @@ Jointly review all completed sprint tickets with the human user against expectat
 3. **Collaborative Ticket Inspection**:
    Ensure git is checked out on `sprint/<SPRINT_NAME>` (which contains all integrated sprint changes).
    * **Rule (Strict Rank Order)**: Review tickets strictly in backlog rank order (`ORDER BY rank ASC`) (`"During the sprint planning and the sprint review, always respect the rank of the tickets."`). No ticket may jump ahead of a higher-ranked ticket.
-   * **Rule (Single-Ticket Focus — `Rule 68` / `ATT-5082`)**: Evaluate tickets **strictly one-by-one** (`"Please make one ticket after the other. Please also keep this in mind for the retro."` / `"During Review: Only one ticket at each time. 🙂"`). Never batch or present multiple tickets simultaneously. Complete verification and human acceptance for the current ticket before proceeding to the next. If a turn during Ceremony 2 revisits a *previous* ticket (e.g., to create or update a follow-up ticket) while ticket $N$ is pending review, and the user says *"Let's go to the next one"*, that means returning to ticket $N$ — **never** marking ticket $N$ approved or jumping to ticket $N+1$ before the user has explicitly evaluated ticket $N$.
+   * **Rule (Single-Ticket Focus & Zero Tool Calls in Presentation Turn — `Rule 68` / `Rule 79`, `ATT-5082`, `ATT-5890`)**: Evaluate tickets **strictly one-by-one** (`"Please make one ticket after the other. Please also keep this in mind for the retro."` / `"During Review: Only one ticket at each time. 🙂"` / `"Gerade wurden irgendwie zwei Tickets vermischt. Ich ahbe nur das erste angenommen."`). Never batch or present multiple tickets simultaneously. Complete all preparatory tool calls (`set-fixversion` for Ticket $N-1$, `read_file` / `git show` for Ticket $N$) **before** emitting the presentation response for Ticket $N$, and ensure the response presenting Ticket $N$ contains **zero tool calls** so the agent turn terminates immediately and never continues after a trailing tool call to output Ticket $N+1$ before the user has responded to Ticket $N$. If a turn during Ceremony 2 revisits a *previous* ticket (e.g., to create or update a follow-up ticket) while ticket $N$ is pending review, and the user says *"Let's go to the next one"*, that means returning to ticket $N$ — **never** marking ticket $N$ approved or jumping to ticket $N+1$ before the user has explicitly evaluated ticket $N$.
    For each ticket in `Final Review (Human)`:
    * Present the walkthrough deliverable (`docs/engineering/walkthroughs/<KEY>_walkthrough.md`), a summary of changes, and a concise **Code Review of the actual git diff** (`git show` / key modified files, verifying edge-case handling, resource safety, and adherence to architectural invariants) (`"Within the last tickets, you also did a review of the code-changes. I would like to keep this."` — Sprint Retro 2026-42.4 / ATT-3679).
    * **Critical Co-Reviewer Completeness Sweep (ATT-3534)**: On refactoring, API modernization, cleanup, or migration tickets, run a targeted codebase completeness sweep (`grep -rn` or `rg` across `app/src/main`) to verify that no deprecated patterns, legacy helper calls, or orphaned references were missed in unmentioned files across the repository.
@@ -138,14 +139,35 @@ Jointly review all completed sprint tickets with the human user against expectat
          python3 tools/jira_util.py comment <KEY> "Revision needed: [Human feedback]"
          python3 tools/jira_util.py move <KEY> "analysis"
          ```
-4. **Sprint Retrospective, Tier 2 Sprint Integration Gate & Process Hardening ("Retro Before Merge")**:
+4. **Milestone Epic Review & Human-Confirmed Closure (`REQ-PRO-040`)**:
+   * Inspect project Epics via CLI:
+     ```bash
+     python3 tools/jira_util.py list-epics
+     ```
+   * If any **Milestone Epic** (e.g. `Periods 2.0`, `Cycling Dynamics`) has **0 open child tickets** remaining and all intended scope is verified:
+     1. Proactively present the Epic completion status to the human user.
+     2. Recommend closing the Milestone Epic (Evergreen Epics remain open indefinitely).
+     3. Upon explicit human confirmation, close the Epic:
+        ```bash
+        python3 tools/jira_util.py --as coordinator close-epic <EPIC_KEY>
+        ```
+     4. *Strict Invariant*: Standard sprint tickets (`Feature`, `Bug`, `Verbesserung`) remain strictly under the Human Decision Gate. Only Milestone Epics with 0 open child tickets may be closed via `close-epic` after human confirmation.
+5. **Sprint Retrospective, Tier 2 Sprint Integration Gate & Process Hardening ("Retro Before Merge")**:
    * **Mandate**: Conduct the Retrospective, run the Tier 2 Sprint Integration Gate (`./gradlew testDebugUnitTest --max-workers=2 && python3 tools/verify_requirement_governance.py` if not already verified on the exact final code tree of `sprint/<SPRINT_NAME>`), and update governance documents on `sprint/<SPRINT_NAME>` **BEFORE** merging into `develop`.
+   * **Mandatory Quantitative Sprint Metrics & Scorecard Generation (PA 4.1 & PA 4.2 — `REQ-PRO-038`, `ATT-5764`)**:
+     At the very start of Step 4, the Coordinator **MUST** execute:
+     ```bash
+     python3 tools/jira_util.py --as coordinator sprint-metrics --record --post-to-retro
+     ```
+     This calculates Gate 1–5 First-Time-Pass-Rates (FTPR), Reason Swiss Cheese defect escape rates ($p_1 \dots p_5$, $P_{\text{escape}} = \prod p_i$), and Statistical Process Control (SPC) moving baseline limits ($\mu \pm 2\sigma$), idempotently updates `docs/engineering/metrics/process_metrics.jsonl`, and posts the markdown scorecard directly as a comment on the sprint's `Review & Retro` ticket.
+   * **Closed-Loop Process Improvement Trigger (PA 4.2 $\rightarrow$ PA 5.2)**:
+     Whenever the scorecard detects an out-of-control condition (`⚠️ PA 4.2 Special Cause Variation` where any metric falls outside $\mu \pm 2\sigma$), the Retrospective document (`docs/engineering/retros/Sprint_Review_and_Retro_<KEY>.md`) **MUST** contain an explicit Root-Cause Analysis (RCA) and concrete process/skill countermeasure prior to sprint merge.
    * **Mandatory Tier 2 Re-Verification When Any Ticket Is Dropped or Reverted During Review (`Rule 77` — `ATT-5762`)**: If any ticket commit is removed (`git reset --hard`) or reverted (`git revert`) from `sprint/<SPRINT_NAME>` during Ceremony 2 (e.g., `ATT-5665`), the pre-review Tier 2 test run is invalidated because the code state at Sprint-End has changed. You **MUST** re-execute the full Tier 2 Sprint Integration Gate (`./gradlew testDebugUnitTest --max-workers=2 && python3 tools/verify_requirement_governance.py`) and `./gradlew installDebug` on the post-drop sprint branch **before** merging into `develop`.
    * Synthesize real-time comments logged during the sprint in the `Review & Retro` ticket into actionable root cause analyses.
-   * Document insights in `docs/engineering/retros/Sprint_Review_and_Retro_<KEY>.md`, including the Planned vs. Completed Story Points velocity metric table alongside ticket counts (`REQ-PRO-029`).
+   * Document insights in `docs/engineering/retros/Sprint_Review_and_Retro_<KEY>.md`, including the Quantitative Sprint Scorecard section (`PA 4.1 & PA 4.2`) and the Planned vs. Completed Story Points velocity metric table alongside ticket counts (`REQ-PRO-029`).
    * Update `.agents/rules/aspice_governance.md`, relevant skills, `docs/coding_standards.md`, `docs/design_guidelines.md`, and `docs/engineering/rule_history_archive.md` with permanent countermeasures.
    * Commit retrospective deliverables to `sprint/<SPRINT_NAME>`.
-5. **Sprint Closure, Milestone Tagging & Merge to `develop`**:
+6. **Sprint Closure, Milestone Tagging & Merge to `develop`**:
    * Once all tickets and the Retrospective are signed off, merge `sprint/<SPRINT_NAME>` into `develop`, delete the local sprint branch (to keep the active branch list clean), and create an immutable `sprint/<SPRINT_NAME>` Git tag on the `--no-ff` merge commit so every completed sprint remains directly addressable by name (`git checkout sprint/<SPRINT_NAME>`, `git diff`, `regression-bisect`):
    ```bash
    git checkout develop

@@ -161,4 +161,60 @@ class TrackingTabsPageResolverTest {
         )
         assertEquals("Tracking mode clamps page 10 to pageCount 3", 3, trackingClamped)
     }
+
+    // --- TST-TRK-054.1: Hardware Volume Key Tab Cycling with Cyclic Wrap-Around (ATT-5905) ---
+
+    @Test
+    fun resolveNextPage_forwardCyclingWithWrapAround_advancesAndWrapsToStart() {
+        // Given 3 pages (indices 0, 1, 2)
+        val pageCount = 3
+
+        // When pressing Volume Up from page 0
+        assertEquals(1, TrackingTabsPageResolver.resolveNextPage(currentPage = 0, pageCount = pageCount, forward = true))
+
+        // When pressing Volume Up from page 1
+        assertEquals(2, TrackingTabsPageResolver.resolveNextPage(currentPage = 1, pageCount = pageCount, forward = true))
+
+        // When pressing Volume Up from last page 2 -> wraps around to 0
+        assertEquals(0, TrackingTabsPageResolver.resolveNextPage(currentPage = 2, pageCount = pageCount, forward = true))
+    }
+
+    @Test
+    fun resolveNextPage_backwardCyclingWithWrapAround_decrementsAndWrapsToEnd() {
+        // Given 3 pages (indices 0, 1, 2)
+        val pageCount = 3
+
+        // When pressing Volume Down from page 0 -> wraps around to last page (2)
+        assertEquals(2, TrackingTabsPageResolver.resolveNextPage(currentPage = 0, pageCount = pageCount, forward = false))
+
+        // When pressing Volume Down from page 2 -> steps to page 1
+        assertEquals(1, TrackingTabsPageResolver.resolveNextPage(currentPage = 2, pageCount = pageCount, forward = false))
+
+        // When pressing Volume Down from page 1 -> steps to page 0
+        assertEquals(0, TrackingTabsPageResolver.resolveNextPage(currentPage = 1, pageCount = pageCount, forward = false))
+    }
+
+    @Test
+    fun resolveNextPage_singleOrEmptyPage_alwaysSafelyReturnsZero() {
+        // Given single page (pageCount = 1)
+        assertEquals(0, TrackingTabsPageResolver.resolveNextPage(currentPage = 0, pageCount = 1, forward = true))
+        assertEquals(0, TrackingTabsPageResolver.resolveNextPage(currentPage = 0, pageCount = 1, forward = false))
+
+        // Given empty or invalid page count (pageCount <= 0)
+        assertEquals(0, TrackingTabsPageResolver.resolveNextPage(currentPage = 0, pageCount = 0, forward = true))
+        assertEquals(0, TrackingTabsPageResolver.resolveNextPage(currentPage = 0, pageCount = -1, forward = false))
+    }
+
+    @Test
+    fun resolveNextPage_outOfBoundsCurrentPage_clampsSafely() {
+        val pageCount = 4
+
+        // Negative currentPage clamped to 0
+        assertEquals(1, TrackingTabsPageResolver.resolveNextPage(currentPage = -3, pageCount = pageCount, forward = true))
+        assertEquals(3, TrackingTabsPageResolver.resolveNextPage(currentPage = -3, pageCount = pageCount, forward = false))
+
+        // Exceeding currentPage clamped to pageCount - 1 (3)
+        assertEquals(0, TrackingTabsPageResolver.resolveNextPage(currentPage = 99, pageCount = pageCount, forward = true))
+        assertEquals(2, TrackingTabsPageResolver.resolveNextPage(currentPage = 99, pageCount = pageCount, forward = false))
+    }
 }

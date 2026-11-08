@@ -42,6 +42,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import android.content.res.Configuration
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddPhotoAlternate
@@ -50,8 +51,8 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -68,6 +69,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -76,6 +78,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.database.WorkoutPhotoEntry
 import com.atrainingtracker.trainingtracker.database.WorkoutPhotoManager
 import com.atrainingtracker.trainingtracker.helpers.PhotoTrackOverlayComposer
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
@@ -227,52 +230,42 @@ fun WorkoutPhotoStrip(
                     )
                 }
             }
+
+            if (showAddButton) {
+                IconButton(
+                    onClick = onAddTileClick,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AddPhotoAlternate,
+                        contentDescription = stringResource(R.string.workout_photos_add),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
         }
 
-        BoxWithConstraints(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            val availableWidth = (maxWidth - 32.dp).coerceAtLeast(100.dp)
-            val dimensions = calculatePhotoItemDimensions(thumbnailSize, availableWidth)
-
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+        if (photos.isNotEmpty()) {
+            BoxWithConstraints(
+                modifier = Modifier.fillMaxWidth()
             ) {
-                // "Add Photos" Tile
-                if (showAddButton) {
-                    item(key = "add_photo_tile") {
-                        OutlinedCard(
-                            onClick = onAddTileClick,
-                            modifier = Modifier.size(width = dimensions.width, height = dimensions.height),
-                            shape = RoundedCornerShape(8.dp),
-                            colors = CardDefaults.outlinedCardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-                            )
-                        ) {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.AddPhotoAlternate,
-                                    contentDescription = stringResource(R.string.workout_photos_add),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(if (thumbnailSize == PhotoThumbnailSize.SMALL) 20.dp else 28.dp)
-                                )
-                            }
-                        }
-                    }
-                }
+                val availableWidth = (maxWidth - 32.dp).coerceAtLeast(100.dp)
+                val dimensions = calculatePhotoItemDimensions(thumbnailSize, availableWidth)
 
-                // Photo Thumbnail Items
-                items(photos, key = { it.id }) { photo ->
-                    PhotoThumbnailCard(
-                        photo = photo,
-                        onClick = { onPhotoClick(photo) },
-                        dimensions = dimensions
-                    )
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Photo Thumbnail Items
+                    items(photos, key = { it.id }) { photo ->
+                        PhotoThumbnailCard(
+                            photo = photo,
+                            onClick = { onPhotoClick(photo) },
+                            dimensions = dimensions
+                        )
+                    }
                 }
             }
         }
@@ -280,7 +273,7 @@ fun WorkoutPhotoStrip(
 }
 
 /**
- * Viewport-relative item dimensions for photo thumbnails and add-photo tile (REQ-UI-414.6 / ATT-5655).
+ * Viewport-relative item dimensions for photo thumbnails (REQ-UI-414.6 / ATT-5655 / ATT-5811).
  */
 data class PhotoItemDimensions(
     val width: Dp,
@@ -388,5 +381,31 @@ private fun PhotoThumbnailCard(
                 )
             }
         }
+    }
+}
+
+@Preview(name = "Empty Photos Strip with Add Button - Light", showBackground = true)
+@Composable
+private fun WorkoutPhotoStripEmptyPreview() {
+    ATrainingTrackerTheme {
+        WorkoutPhotoStrip(
+            photos = emptyList(),
+            onPhotoClick = {},
+            onAddPhotos = {},
+            showAddButton = true
+        )
+    }
+}
+
+@Preview(name = "Empty Photos Strip with Add Button - Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun WorkoutPhotoStripEmptyDarkPreview() {
+    ATrainingTrackerTheme(darkTheme = true) {
+        WorkoutPhotoStrip(
+            photos = emptyList(),
+            onPhotoClick = {},
+            onAddPhotos = {},
+            showAddButton = true
+        )
     }
 }

@@ -55,8 +55,8 @@ class FollowMeUnifiedAnchorContractTest {
             content.contains("val topPadding = 0.dp")
         )
         assertTrue(
-            "GoogleMap must receive PaddingValues(top = topPadding) where topPadding is 0.dp",
-            content.contains("contentPadding = PaddingValues(top = topPadding)")
+            "GoogleMap must receive contentPadding parameter (REQ-MAP-059.3)",
+            content.contains("contentPadding = contentPadding")
         )
         assertTrue(
             "ATrainingTrackerMap must pass viewportHeightDp = maxHeight.value to followMeController",

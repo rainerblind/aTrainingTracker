@@ -208,10 +208,12 @@ fun RouteOnMapScreen(
                     else -> false
                 }
 
+                val hasDualTabs = climbs.isNotEmpty() && matchedSegments.isNotEmpty()
                 if (showClimbs) {
                     RouteClimbsBreakdownSection(
                         climbs = climbs,
                         hiddenClimbIds = hiddenClimbIds,
+                        showHeader = !hasDualTabs,
                         onToggleClimbVisibility = { climbKey ->
                             hiddenClimbIds = if (climbKey in hiddenClimbIds) {
                                 hiddenClimbIds - climbKey
@@ -225,6 +227,7 @@ fun RouteOnMapScreen(
                     RouteSegmentsBreakdownSection(
                         segments = matchedSegments,
                         hiddenSegmentIds = hiddenSegmentIds,
+                        showHeader = !hasDualTabs,
                         onToggleSegmentVisibility = { segId ->
                             hiddenSegmentIds = if (segId in hiddenSegmentIds) {
                                 hiddenSegmentIds - segId
@@ -470,7 +473,8 @@ fun RouteClimbsBreakdownSection(
     modifier: Modifier = Modifier,
     hiddenClimbIds: Set<Long> = emptySet(),
     onToggleClimbVisibility: ((Long) -> Unit)? = null,
-    onClimbClick: ((Climb) -> Unit)? = null
+    onClimbClick: ((Climb) -> Unit)? = null,
+    showHeader: Boolean = true
 ) {
     val formatters = com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter.current
 
@@ -480,12 +484,14 @@ fun RouteClimbsBreakdownSection(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text(
-            text = stringResource(R.string.routes_climbs_section_title, climbs.size),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
+        if (showHeader) {
+            Text(
+                text = stringResource(R.string.routes_climbs_section_title, climbs.size),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
 
         climbs.forEachIndexed { index, climb ->
             ElevatedCard(
@@ -514,8 +520,18 @@ fun RouteClimbsBreakdownSection(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             ClimbCategoryChip(category = climb.category)
+                            val climbTitle = stringResource(R.string.climb_title)
+                            val climbDisplayName = if (climb.name.isBlank()) {
+                                stringResource(R.string.climb_route_counter, index + 1, climbs.size)
+                            } else if (climb.name.contains(" @ ")) {
+                                val distFormatted = formatters.distance.format_with_units(climb.distanceMeters)
+                                val gradeFormatted = String.format(java.util.Locale.getDefault(), "%.1f%%", climb.avgGradePercent)
+                                "$climbTitle $distFormatted @ $gradeFormatted"
+                            } else {
+                                climb.name
+                            }
                             Text(
-                                text = climb.name.ifBlank { stringResource(R.string.climb_route_counter, index + 1, climbs.size) },
+                                text = climbDisplayName,
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface,

@@ -4109,7 +4109,7 @@ Specifically:
 
 **Invariants**: Status bar boundary constraints (`REQ-SET-069`), MinimumDragHandle dimensions, and system navigation bar padding additions MUST NOT be broken.
 
-### REQ-UI-222: Settings/UI: Modular, Collapsible Subsection Accordion Architecture for Advanced Settings [Verified]
+### REQ-UI-222: Settings/UI: Modular, Collapsible Subsection Accordion Architecture and Advisory Notice for Advanced Settings [Verified]
 - **Tests**: `AdvancedTuningDialog.kt`
 - **Implementation**: Structure Advanced Settings into a modular, collapsible subsection architecture featuring Material 3 accordion cards with live active-value summary subtitles, initial collapsed state, and animated expand/collapse mechanics.
 - **Rationale**: The system SHALL structure the Advanced Settings dialog (`AdvancedTuningDialog.kt`) into a modular, collapsible subsection architecture featuring Material 3 accordion cards with live active-value summary subtitles and animated expand/collapse mechanics (ATT-1821, ATT-1957):
@@ -4140,17 +4140,21 @@ Specifically:
 4. *Extensible & Decoupled Architecture*:
 • Individual subsection composables SHALL be declared as separate, focused composable functions (`CockpitTypographySection`, `AmoledBatterySaverSection`, `SensorsGpsFilterSection`, `AftermathAnalysisSection`, `WorkoutMasksAndCardsSection`) with typed parameters or state callbacks, decoupled from the outer bottom sheet layout.
 5. *Preservation of Core Invariants*:
-• Top advisory warning card (`Icons.Default.Warning`, `errorContainer` tint) SHALL remain visible at the top of the dialog.
+• Top advisory notice (`TuningWarningNotice`) SHALL remain visible at the top of the dialog and screen.
 • Factory reset action (`R.string.reset_to_defaults`) SHALL atomically restore all 25+ parameters to defaults and immediately update all 5 subtitle summaries.
 • `AppBottomSheetContent` header title, icon (`Icons.Default.Tune`), and Save/Cancel footer actions remain 100% strictly preserved.
 • DataStore persistence keys, default values, and downstream reactive consumers remain 100% unchanged.
 • 100% 9-language localization parity across all 9 supported locales.
+6. *Friendly Advisory Notice Formulation & Component Modernization (`REQ-UI-222.6`, `ATT-5819`)*:
+• In `TuningFormControls.kt`, `TuningWarningNotice` SHALL be presented as a constructive advisory notice utilizing an informative container (`surfaceVariant` or `secondaryContainer` styling with `Icons.Default.Tune` or `Icons.Default.Info`), eliminating alarmist error-red styling (`errorContainer` and `Icons.Default.Warning`).
+• The advisory description (`R.string.advanced_tuning_warning_desc`) SHALL matter-of-factly explain that advanced parameters for layouts, models, and sensors are configured here, and that factory defaults can be restored at any time via the reset action.
+• 100% 9-language translation parity SHALL be maintained across EN, DE, ES, FR, IT, JA, NL, PL, PT with zero inline emojis and valid entity formatting.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: `REQ-UI-222`, refining and restructuring the UI presentation layer of `REQ-SET-073`, `REQ-UI-201`, `REQ-UI-212`, and `REQ-UI-216` under Epic `ATT-355` (*Good and consistent UI*).
-2. *Historical Origin & Commit Trace*: Sprint 2026-40.8 (Commit `e2303aa7`, ATT-1821 / ATT-1871) and Sprint 2026-40.9 (`ATT-1957`).
-3. *Root Reason for Existing Formulation*: Appending settings sequentially into a flat `Column` created an unmanageable 768-line file and 25+ option scroll list lacking category summaries and discoverability. In ATT-1821, the first section (`COCKPIT_TYPOGRAPHY`) was initialized as expanded by default (`setOf(TuningSection.COCKPIT_TYPOGRAPHY.name)`) to immediately showcase the new typography HUD preview feature. However, this forced athletes wanting to adjust Battery Saver, GPS/Sensors, or Workout Cards to scroll through the entire cockpit preview every time they opened the dialog. In ATT-1957, all 5 sections are initially collapsed (`emptySet()`).
-4. *Preservation of Core Invariants*: All parameter schemas, slider ranges, DataStore keys, advisory warning card, reset button, and zero tonal elevation (`REQ-UI-218`) are 100% strictly preserved.
+1. *Original Requirement ID & Target*: `REQ-UI-222`, refining and restructuring the UI presentation layer of `REQ-SET-073`, `REQ-UI-201`, `REQ-UI-212`, and `REQ-UI-216` under Epic `ATT-355` (*Good and consistent UI*). Amends `TuningWarningNotice` under `ATT-5819`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-40.8 (Commit `e2303aa7`, ATT-1821 / ATT-1871), Sprint 2026-40.9 (`ATT-1957`), and Sprint 2026-45.12 (`ATT-5819`).
+3. *Root Reason for Existing Formulation*: Defensive error-red warning styling and alarming copy focusing strictly on tracking heuristics and sensor corruption were established when Expert Settings only housed experimental GPS and battery dimming options. With the addition of workout cards, cockpit typography, and training models, the alarmist tone became counter-productive and intimidating.
+4. *Preservation of Core Invariants*: Top advisory notice remains permanently visible at the top of Expert Settings; factory reset reassurance and reset button functionality strictly preserved; 100% 9-language parity maintained; DataStore schemas and accordion mechanics strictly unchanged.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete opening Advanced Settings (`AdvancedTuningDialog`),
@@ -9909,10 +9913,10 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 
 **Invariants**: Pure Compose architecture, Single Source of Truth (Rule 36), and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-UI-365: Centralized Speed Unit Conversion and Formatter Harmonization via MyHelper (Rule 36) [Verified]
-- **Tests**: `MyHelper.java`, `TelemetryMetricUtils.kt`, `EditSportTypeDialog.kt`, `SpeedFormatter.java`
-- **Implementation**: Centralized speed unit conversion and formatter harmonization via MyHelper (Rule 36).
-- **Rationale**: The system SHALL centralize all speed unit conversions and eliminate manual inline conversion formulas (e.g. `mps * 3.6`, `value / 3.6`, `2.236936`) across telemetry graph utilities, sport type dialogs, and speed formatters by routing all conversions strictly through `MyHelper`, enforcing Rule 36 (Single Source of Truth & DRY) and guaranteeing mathematical parity and locale-resilient numeric parsing (ATT-3363, complementing `REQ-UI-015`, `REQ-UI-016`, and `REQ-UI-364`):
+### REQ-UI-365: Centralized Speed Unit Conversion, Formatter Harmonization and Progressive Disclosure in Sport Type Editor (Rule 36) [Verified]
+- **Tests**: `MyHelper.java`, `TelemetryMetricUtils.kt`, `EditSportTypeDialog.kt`, `SpeedFormatter.java` | **Tickets**: `ATT-3363`, `ATT-5821`
+- **Implementation**: Centralized speed unit conversion, formatter harmonization via MyHelper, and progressive disclosure under Advanced Options.
+- **Rationale**: The system SHALL centralize all speed unit conversions and eliminate manual inline conversion formulas across telemetry graph utilities, sport type dialogs, and speed formatters by routing all conversions strictly through `MyHelper`, and SHALL simplify the sport type configuration dialog by bundling speed thresholds (with auto-detection guidance) and export mappings under an initially collapsed Advanced Options accordion, enforcing Rule 36 (Single Source of Truth) and Design Guidelines Section 3 (*Settings & Accordion Structure*) (ATT-3363, ATT-5821, complementing `REQ-UI-015`, `REQ-UI-016`, and `REQ-UI-364`):
 1. *Authoritative Mathematical Conversions in `MyHelper.java`*:
 • `MyHelper` SHALL provide symmetrical overloaded methods for bidirectional conversion:
 - `mps2userUnit(double speed)` and `mps2userUnit(double speed, @NonNull MyUnits myUnits)`
@@ -9927,25 +9931,32 @@ c. Smoothly auto-scroll the `LazyListState` to index 0 (`scrollState.animateScro
 • In `EditSportTypeDialog.kt`, user input parsing for minimum and maximum speed thresholds SHALL accept both dot and comma decimal delimiters (`it.replace(',', '.').toDoubleOrNull()`), preventing user entry rejection in European/comma-decimal locales.
 4. *Formatter DRY Consolidation (`SpeedFormatter.java`)*:
 • In `SpeedFormatter.java`, internal unit conversion logic SHALL delegate directly to `MyHelper.mps2userUnit(speed_mps.doubleValue())` instead of duplicating switch-case conversion logic.
-5. *Preservation of System Invariants*:
-• Pure Compose UI responsiveness, telemetry chart scrub precision, and 100% clean-room test pass rate MUST NOT be broken.
+5. *Progressive Disclosure & Advanced Options Encapsulation in Sport Type Editor (`EditSportTypeDialog.kt`, `REQ-UI-365.4`)*:
+• In `EditSportTypeDialog.kt`, the primary dialog surface SHALL present only everyday configuration fields: Sport Name, Base Sport Type (`bSportType`), Linked Equipment (`MultiSelectEquipmentSpinner`), and Strava Sport Mapping (`stravaName`).
+• Technical minimum and maximum speed thresholds (`minSpeed`, `maxSpeed`) SHALL be accompanied by an explanatory hint informing the athlete that these thresholds govern automatic sport type detection during recording (`sport_type_speed_detection_hint`).
+• Min/Max speed fields and niche export mappings (TCX Export Name `tcxName`, GoldenCheetah Export Name `gcName`) SHALL be encapsulated inside an expandable accordion section titled `sport_type_advanced_options` ("Erweiterte Optionen") at the bottom of the dialog.
+• The accordion section SHALL default to initially collapsed (`isAdvancedExpanded = false` via `rememberSaveable`) to keep the dialog uncluttered and focused on primary settings.
+• All new titles, descriptions, and detection hints SHALL maintain 100% localization parity across all 9 supported application locales.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
 1. *Original Requirement ID & Target*: Net-new requirement (`REQ-UI-365`). Complements `REQ-UI-015` (*Unified Metric component system*), `REQ-UI-016` (*Centralized metric formatting context*), and `REQ-UI-364` (*Centralized metric distance and altitude formatting enforcement*). Targets `MyHelper.java`, `TelemetryMetricUtils.kt`, `EditSportTypeDialog.kt`, and `SpeedFormatter.java`.
-2. *Historical Origin & Commit Trace*: `TelemetryMetricUtils.kt` was authored during Sprint 2026-40.16 (`ATT-2031`) for interactive elevation and telemetry profile scrubbing. To avoid dependency coupling during initial graph prototyping, speed conversions were written inline with hardcoded constants (`* 3.6`, `* 2.236936`). `EditSportTypeDialog.kt` was written during Sprint 2026-41.4 (`ATT-2751`), where `replace(",", ".")` was added as a quick fix for German locale comma issues.
-3. *Root Reason for Existing Formulation*: Expedient local development led to magic constants and ad-hoc string replacements bypassing the existing `MyHelper` conversion functions.
-4. *Preservation of Core Invariants*: Exact conversion precision, Imperial and Metric parity, and 100% full-suite unit test pass rate strictly preserved.
+2. *Historical Origin & Commit Trace*: `TelemetryMetricUtils.kt` was authored during Sprint 2026-40.16 (`ATT-2031`) for interactive elevation and telemetry profile scrubbing. `EditSportTypeDialog.kt` was written during Sprint 2026-41.4 (`ATT-2751`), where speed fields and export mappings were added linearly. Refined in Sprint 2026-42.3 (`ATT-3363`) and Sprint 2026-45.12 (`ATT-5821`).
+3. *Root Reason for Existing Formulation*: Expedient local development led to magic constants and flat dialog forms without progressive disclosure.
+4. *Preservation of Core Invariants*: Exact conversion precision, Imperial and Metric parity, decimal input robustness, and database update persistence strictly preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* speed telemetry points displayed on a workout map scrub graph,
 • *When* converting speed values between m/s and user display units in Metric or Imperial modes,
 • *Then* conversions execute via `MyHelper.mps2userUnit` and `MyHelper.UserUnit2mps` with zero magic constants in `TelemetryMetricUtils.kt`.
 • *Given* the sport type editor dialog (`EditSportTypeDialog`) opened in any language locale,
-• *When* displaying or editing minimum and maximum speed thresholds,
-• *Then* speed values format properly without ad-hoc string character replacement, and user inputs accepting comma or dot decimal separators parse without error.
-• *Given* pure JVM unit tests verifying speed conversions,
-• *When* executing `MyHelper` and `TelemetryMetricUtils` unit tests under both `MyUnits.METRIC` and `MyUnits.IMPERIAL`,
-• *Then* conversions match expected mathematical values within $10^{-6}$ tolerance.
+• *When* viewing the primary dialog surface,
+• *Then* only Sport Name, Base Sport Type, Linked Equipment, and Strava Sport Name are visible, while speed fields and TCX/GoldenCheetah mappings are collapsed inside "Erweiterte Optionen".
+• *Given* the Advanced Options accordion in `EditSportTypeDialog`,
+• *When* expanded,
+• *Then* an explanatory text explains that speed bounds are used for automatic sport type detection (`sport_type_speed_detection_hint`), followed by the Min/Max speed row and TCX/GoldenCheetah export dropdowns.
+• *Given* user input into minimum and maximum speed thresholds,
+• *When* typing with comma or dot decimal separators,
+• *Then* speed values parse without error and persist correctly on save.
 
 **Invariants**: Mathematical precision, Single Source of Truth (Rule 36), locale robustness, and 100% clean-room test pass rate MUST NOT be broken.
 
@@ -13171,13 +13182,18 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 
 ### REQ-UI-447: Workout Share Mode Selection Bottom Sheet & Photo Track Overlay Snapshot Composer [Verified]
-- **Tests**: `TST-UI-447` | **Tickets**: `ATT-30`, `ATT-5479`, `ATT-5472`, `ATT-5656`
-- **Implementation**: `MapDetailLayout.kt`, `ShareUtils.kt`, `PhotoTrackOverlayComposer.kt`, `WorkoutShareBottomSheet.kt`, `LauncherIconVariant.kt`
-- **Rationale**: Currently, tapping the Share button in `MapDetailLayout` immediately executes a vertical composite map/graph snapshot (`combineWorkoutAndShare`). Athletes frequently prefer sharing activities using a personal scenery, selfie, or gear photo overlaid with their GPS route silhouette and key stats (Strava/Garmin style). REQ-UI-447 introduces a share mode selection sheet offering the classic analysis snapshot or a photo with track & stats overlay (ATT-30, ATT-5479, ATT-5472, ATT-5656):
-1. *Share Mode Selection Bottom Sheet (`REQ-UI-447.1`)*:
-• In `MapDetailLayout.kt`, tapping the floating Share button on a completed workout SHALL display `WorkoutShareBottomSheet` (hosted in `AppModalBottomSheet`) presenting two choices:
-  - *Option A — Karten- & Analyse-Snapshot*: Executes the existing vertical composite snapshot (`combineWorkoutAndShare`).
-  - *Option B — Foto mit Track-Overlay*: Launches the Android Photo Picker (`ActivityResultContracts.PickVisualMedia`) to pick a background photo.
+- **Tests**: `TST-UI-447` | **Tickets**: `ATT-30`, `ATT-5479`, `ATT-5472`, `ATT-5656`, `ATT-5809`
+- **Implementation**: `MapDetailLayout.kt`, `ShareUtils.kt`, `PhotoTrackOverlayComposer.kt`, `WorkoutShareBottomSheet.kt`, `LauncherIconVariant.kt`, `WorkoutHeader.kt`, `WorkoutSummary.kt`, `WorkoutDetailTabbedContent.kt`
+- **Rationale**: Currently, tapping the Share button in `MapDetailLayout` immediately executes a vertical composite map/graph snapshot (`combineWorkoutAndShare`). Athletes frequently prefer sharing activities using a personal scenery, selfie, or gear photo overlaid with their GPS route silhouette and key stats (Strava/Garmin style). REQ-UI-447 introduces a share mode selection sheet offering the classic analysis snapshot or a photo with track & stats overlay (ATT-30, ATT-5479, ATT-5472, ATT-5656, ATT-5809):
+1. *Share Mode Selection Bottom Sheet & Persistent Header Trigger (`REQ-UI-447.1`)*:
+• In `WorkoutHeader.kt`, the system SHALL expose an `onShareWorkout: (() -> Unit)? = null` callback and render a uniform `IconButton` (`size = 32.dp`, `Icons.Default.Share`, `tint = MaterialTheme.colorScheme.primary`, `contentDescription = stringResource(R.string.share)`) adjacent to `onEditWorkout` across both portrait and landscape orientations.
+• In `WorkoutHeader.kt` portrait mode, the top action button spacer SHALL dynamically expand to ~104dp when both edit and share actions are present (`hasEdit && hasShare`), preventing title text collision and truncation.
+• In `WorkoutSummary.kt` (workout list card) and `WorkoutDetailTabbedContent.kt` (persistent aftermath header), `WorkoutHeader` SHALL wire `onShareWorkout` to open `WorkoutShareBottomSheet` pre-populated with `attachedPhotos`.
+• In `WorkoutSummary.kt`, selecting Option A (*Karten- & Analyse-Snapshot*) SHALL navigate to map details (`onMapClick()`). In `WorkoutDetailTabbedContent.kt`, selecting Option A SHALL supply the `WorkoutHeader` composable into `MapDetailLayout` `header` parameter (capturing it in `headerLayer` snapshot output) and initiate snapshot generation.
+• In `MapDetailLayout.kt`, the floating share button on the map canvas SHALL be suppressed when `workoutData != null` in multi-tab details (where `WorkoutHeader` provides the permanent share trigger), while remaining active for standalone route/segment maps (`workoutData == null`).
+• Tapping the floating Share button on a completed workout (or tapping the header share button) SHALL display `WorkoutShareBottomSheet` (hosted in `AppModalBottomSheet`) presenting two choices:
+  - *Option A — Karten- & Analyse-Snapshot*: Executes the vertical composite snapshot (`combineWorkoutAndShare`).
+  - *Option B — Foto mit Track-Overlay*: Launches the 3-tier photo cascade.
 • For non-workout callers (`RouteOnMapScreen`, `SegmentOnMapScreen`, or when `workoutData == null`), tapping Share SHALL continue executing Option A directly without presenting the mode sheet.
 2. *2D GPS Track Silhouette Projection & Portrait Constraint (`REQ-UI-447.2`)*:
 • In `PhotoTrackOverlayComposer.kt`, the workout's GPS polyline (`workoutData.mapPolyline`) SHALL be decoded via `PolyUtil.decode` and projected onto the photo.
@@ -13202,18 +13218,24 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • In the composed preview, tapping "Foto auswählen" (`share_choose_photo`) SHALL re-enter the 3-tier cascade at Tier 1 if `attachedPhotos.isNotEmpty()`, else Tier 2 if time-window photos exist, else Tier 3.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-447` (amended by `ATT-5479`, `ATT-5472`, and `ATT-5656`), extending `REQ-UI-177` (*Theme-Aware Post-Workout & Period Share Snapshot Canvas and Footer*), `REQ-UI-205` (*Workout Snapshot Layout*), and `REQ-UI-445.5` (*Social Share Workout Watermark*). Targets `MapDetailLayout.kt`, `ShareUtils.kt`, `PhotoTrackOverlayComposer.kt`, `WorkoutShareBottomSheet.kt`, and `LauncherIconVariant.kt`.
-2. *Historical Origin & Commit Trace*: Sprint 2026-40.8 (`ATT-1472`, `REQ-UI-177`), Sprint 2026-40.7 (`ATT-1393`, `REQ-UI-205`), `ATT-5397` (`REQ-UI-445.5`), `ATT-30` (`584284ff`), `ATT-5496` (`e5f5c754`), `ATT-5472`, Sprint 2026-45.6 (`ATT-5475`, `c82c8248`), and Sprint 2026-45.9 (`ATT-5656`).
-3. *Root Reason for Existing Formulation*: Prior to ATT-30, snapshot sharing only supported stitching layout bitmaps. Prior to ATT-5472, `REQ-UI-445.5` drew text pill badges, and buttons were packed horizontally. Prior to ATT-5656, Option B launched the system photo picker (`PickVisualMedia`) immediately without stepped preselection from workout-attached photos (`attachedPhotos`) or time-window MediaStore photos.
-4. *Preservation of Core Invariants*: Existing `combineWorkoutAndShare` and `combineAndShare` functions and non-workout callers remain 100% operational under Option A. Safe bitmap decoding (`inSampleSize`) avoids OOM on high-resolution camera photos. Legitimate GPS coordinates, track geometry, WCAG AAA text contrast, Rule 73 stacked buttons, and 9-language localization parity are strictly preserved.
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-447` (amended by `ATT-5479`, `ATT-5472`, `ATT-5656`, and `ATT-5809`), extending `REQ-UI-177` (*Theme-Aware Post-Workout & Period Share Snapshot Canvas and Footer*), `REQ-UI-205` (*Workout Snapshot Layout*), `REQ-UI-255` (*Header & Primary Metrics Top Identity Anchor*), `REQ-UI-408` (*Multi-Tab Workout Details*), and `REQ-UI-445.5` (*Social Share Workout Watermark*). Targets `WorkoutHeader.kt`, `WorkoutSummary.kt`, `WorkoutDetailTabbedContent.kt`, `MapDetailLayout.kt`, `ShareUtils.kt`, `PhotoTrackOverlayComposer.kt`, `WorkoutShareBottomSheet.kt`, and `LauncherIconVariant.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-40.8 (`ATT-1472`, `REQ-UI-177`), Sprint 2026-40.7 (`ATT-1393`, `REQ-UI-205`), Sprint 2026-42.8 (`ATT-3920`, `REQ-UI-408`), `ATT-5397` (`REQ-UI-445.5`), `ATT-30` (`584284ff`), `ATT-5496` (`e5f5c754`), `ATT-5472`, Sprint 2026-45.6 (`ATT-5475`, `c82c8248`), Sprint 2026-45.9 (`ATT-5656`), and Sprint 2026-45.12 (`ATT-5809`).
+3. *Root Reason for Existing Formulation*: Prior to ATT-30, snapshot sharing only supported stitching layout bitmaps. Prior to ATT-5809, sharing was only initiated from the floating button inside the map container (`MapDetailLayout`) or via attached photos in `WorkoutPhotoPreviewBottomSheet`. Multi-tab details (`ATT-3920`) defaulted to Tab 1 without a map, hiding the floating button, and passed `header = {}` to `MapDetailLayout`, omitting the header from Option A snapshots.
+4. *Preservation of Core Invariants*: Existing `combineWorkoutAndShare` and `combineAndShare` functions and non-workout callers (`RouteOnMapScreen`, `SegmentOnMapScreen`) remain 100% operational under Option A with map-based floating share button; `WorkoutHeader` export menu (FIT/TCX/GPX/CSV/GC), Strava upload, and edit buttons remain intact; safe bitmap decoding (`inSampleSize`) avoids OOM; touch targets >= 32dp; WCAG AAA text contrast; Rule 73 stacked buttons; and 9-language localization parity are strictly preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
-• *Given* an athlete viewing a completed workout in `MapDetailLayout`,
-• *When* the athlete taps the floating Share button,
+• *Given* an athlete viewing a completed workout in `WorkoutSummary` (workout list) or `WorkoutDetailTabbedContent` (workout details),
+• *When* the athlete taps the share button in `WorkoutHeader`,
 • *Then* `WorkoutShareBottomSheet` appears displaying Option A (Classic Analysis Snapshot) and Option B (Photo with Track-Overlay).
-• *Given* the athlete selects Option A,
+• *Given* an athlete in `WorkoutSummary` selecting Option A,
+• *When* tapped,
+• *Then* the system navigates to map details to generate the full composite snapshot.
+• *Given* an athlete in `WorkoutDetailTabbedContent` selecting Option A from any tab,
 • *When* triggered,
-• *Then* `combineWorkoutAndShare` captures Header, Map, Elevation, Analytics, and Footer and dispatches via `FileProvider`.
+• *Then* `combineWorkoutAndShare` captures Header (from `headerLayer`), Map, Elevation, Analytics, and Footer and dispatches via `FileProvider`.
+• *Given* an athlete viewing `MapDetailLayout` in multi-tab workout details (`workoutData != null`),
+• *When* the screen renders,
+• *Then* the floating share button on the map canvas is hidden, while remaining visible for non-workout maps (`workoutData == null`).
 • *Given* the athlete selects Option B in `WorkoutShareBottomSheet`,
 • *When* photos are attached to the workout (`attachedPhotos.isNotEmpty()`),
 • *Then* Tier 1 (Attached Photos) is displayed with options to switch to Tier 2 (Time-Window) or Tier 3 (All Photos).
@@ -13230,15 +13252,15 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 **Invariants**: Backward compatibility for all existing `combineWorkoutAndShare` callers, safe bitmap downsampling preventing OOM, WCAG AAA text contrast, 9-language localization parity, and 100% clean-room test pass rate.
 
 ### REQ-UI-448: Workout Photos Strip, Full-Screen Preview Bottom Sheet with ATT-30 Overlay Share, Map Pin Markers, and Null-Island Coordinate Rejection [Verified]
-- **Tests**: `TST-UI-448` | **Tickets**: `ATT-43`, `ATT-5479`, `ATT-5473`
+- **Tests**: `TST-UI-448` | **Tickets**: `ATT-43`, `ATT-5479`, `ATT-5473`, `ATT-5811`
 - **Implementation**: `WorkoutDetails.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `ATrainingTrackerMap.kt`, `WorkoutPhotoViewerSheet.kt`, `WorkoutPhotoPreviewBottomSheet.kt`, `WorkoutShareBottomSheet.kt`, `WorkoutPhotoStrip.kt`, `WorkoutSummary.kt`, `WorkoutPhotoManager.kt`, `WorkoutRepository.kt`, `MapBehaviors.kt`
-- **Rationale**: Athletes capture photos during workouts and wish to browse them alongside workout telemetry, inspect them on the workout GPS map, and share them via social media. REQ-UI-448 defines the UI presentation and interaction contracts for workout photos, EXIF coordinate validation, and camera bounds protection (ATT-43, ATT-5479, ATT-5473, extending `REQ-UI-447` and `REQ-UI-408`):
+- **Rationale**: Athletes capture photos during workouts and wish to browse them alongside workout telemetry, inspect them on the workout GPS map, and share them via social media. REQ-UI-448 defines the UI presentation and interaction contracts for workout photos, EXIF coordinate validation, and camera bounds protection (ATT-43, ATT-5479, ATT-5473, ATT-5811, extending `REQ-UI-447` and `REQ-UI-408`):
 1. *Workout Photos Horizontal Strip & Neutral Summary Styling (`REQ-UI-448.1`)*:
-• In `WorkoutDetails.kt` (and `WorkoutDetailTabbedContent.kt`, `WorkoutSummary.kt`), when attached photos exist, the system SHALL render a dedicated horizontal photo strip displaying downsampled thumbnail previews (`RoundedCornerShape(8.dp)`), along with an "Add Photos" action button (`ActivityResultContracts.PickMultipleVisualMedia`).
+• In `WorkoutDetails.kt` (and `WorkoutDetailTabbedContent.kt`, `WorkoutSummary.kt`), when attached photos exist or `showAddButton == true`, the system SHALL render a dedicated horizontal photo strip section.
 • In `WorkoutPhotoStrip.kt`, the header camera icon (`Icons.Default.PhotoCamera`) and label tint SHALL use neutral `MaterialTheme.colorScheme.onSurfaceVariant` instead of electric blue (`colorScheme.primary`), establishing visual harmony with neighboring summary telemetry rows.
 • In `WorkoutSummary.kt`, a standard `HorizontalDivider` (`colorScheme.outlineVariant`, 0.5.dp thickness, 16.dp horizontal padding) SHALL precede the `WorkoutPhotoStrip` section.
-• The "Add Photos" square tile in `WorkoutPhotoStrip.kt` SHALL render a centered `Icons.Default.AddPhotoAlternate` icon with neutral `onSurfaceVariant` styling and accessible `contentDescription` without truncated single-line text.
-• If no photos are attached, an empty-state action button SHALL allow athletes to attach photos from the system Photo Picker.
+• In `WorkoutPhotoStrip.kt`, the "Add Photos" action SHALL be rendered in the section header row (as a compact `IconButton` with `Icons.Default.AddPhotoAlternate` and neutral `onSurfaceVariant` tinting, `contentDescription = stringResource(R.string.workout_photos_add)`) when `showAddButton == true`; the `LazyRow` SHALL be rendered only when `photos.isNotEmpty()` and SHALL display photo thumbnails starting from index 0 without an oversized empty tile.
+• If `photos.isEmpty()` and `showAddButton == true`, `WorkoutPhotoStrip` SHALL render only the compact single-line header row.
 2. *Full-Screen Photo Viewer Bottom Sheet (`REQ-UI-448.2`)*:
 • Tapping a photo thumbnail SHALL open `WorkoutPhotoViewerSheet` / `WorkoutPhotoPreviewBottomSheet` (hosted in `AppModalBottomSheet` per ATT-5399), displaying the full image, capture timestamp, caption (if present), an action to delete the photo (with confirmation dialog), and a prominent CTA to share the photo via `WorkoutShareBottomSheet` (ATT-30).
 • Per Rule 73, action buttons inside `WorkoutPhotoPreviewBottomSheet.kt` SHALL be arranged as vertically stacked full-width buttons (`fillMaxWidth()`) with 8dp vertical spacing (primary "Mit Track-Overlay teilen" `Button` stacked above secondary "Foto löschen" `OutlinedButton`), eliminating horizontal text squishing in localized languages.
@@ -13256,10 +13278,10 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • All user-visible labels, headers, dialogs, and accessibility descriptions SHALL maintain 100% parity across all 9 supported locales without decorative inline Unicode emojis.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-448` (amended by `ATT-5479` and `ATT-5473`), extending `REQ-UI-447` (*Workout Share Mode Selection & Photo Track Overlay*), `REQ-UI-408` (*Multi-Tab Workout Details*), and `REQ-DAT-038` (*Workout Photo Storage & EXIF Interpolation*). Targets `WorkoutDetails.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `ATrainingTrackerMap.kt`, `WorkoutPhotoViewerSheet.kt`, `WorkoutPhotoPreviewBottomSheet.kt`, `WorkoutPhotoStrip.kt`, `WorkoutSummary.kt`, `WorkoutPhotoManager.kt`, `WorkoutRepository.kt`, and `MapBehaviors.kt`.
-2. *Historical Origin & Commit Trace*: Sprint 2026-45.6 (`ATT-30`, `REQ-UI-447`; `ATT-43`, commit `5c9d9653`), Sprint 2026-44.1 (`ATT-3920`, `REQ-UI-408`), Sprint 2026-45.8 (`ATT-5474`, commit `8aed20fc`; `ATT-5473`).
-3. *Root Reason for Existing Formulation*: Prior to ATT-43, `WorkoutDetails` only rendered tabular telemetry metrics and `TrackOnMapScreen` only rendered start, finish, and lap markers. ATT-43 introduced photos with Material 3 primary tinting and side-by-side action buttons as an initial layout draft prior to Rule 73 stacked button guidelines and before user review of summary card color hierarchy.
-4. *Preservation of Core Invariants*: Existing metric rows, tab layouts, and legitimate map markers remain invariant; genuine GPS coordinates are untouched; photos taken during workouts without EXIF GPS gain interpolated track coordinates; camera framing remains focused strictly on actual workout trajectories; memory-safe sampled decoding prevents OOM; touch targets >= 48dp; 100% 9-language translation parity.
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-448` (amended by `ATT-5479`, `ATT-5473`, and `ATT-5811`), extending `REQ-UI-447` (*Workout Share Mode Selection & Photo Track Overlay*), `REQ-UI-408` (*Multi-Tab Workout Details*), and `REQ-DAT-038` (*Workout Photo Storage & EXIF Interpolation*). Targets `WorkoutDetails.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `ATrainingTrackerMap.kt`, `WorkoutPhotoViewerSheet.kt`, `WorkoutPhotoPreviewBottomSheet.kt`, `WorkoutPhotoStrip.kt`, `WorkoutSummary.kt`, `WorkoutPhotoManager.kt`, `WorkoutRepository.kt`, and `MapBehaviors.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-45.6 (`ATT-30`, `REQ-UI-447`; `ATT-43`, commit `5c9d9653`), Sprint 2026-44.1 (`ATT-3920`, `REQ-UI-408`), Sprint 2026-45.8 (`ATT-5474`, commit `8aed20fc`; `ATT-5473`), Sprint 2026-45.12 (`ATT-5811`).
+3. *Root Reason for Existing Formulation*: Prior to ATT-43, `WorkoutDetails` only rendered tabular telemetry metrics. ATT-43 and ATT-5474 introduced the "Add Photos" action as an `OutlinedCard` square tile inside the `LazyRow` carousel. Following responsive thumbnail scaling in ATT-5655 (`MEDIUM` ~175dp, `LARGE` ~360dp), this tile became an oversized empty box that wasted screen height and displaced photos.
+4. *Preservation of Core Invariants*: Relocating the "Add Photos" trigger into the compact header row preserves full photo-adding functionality (`REQ-UI-455`), neutral color styling (`onSurfaceVariant`), accessibility descriptions, and downsampling/preview behavior while eliminating layout bloat and unblocking photo visibility.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete viewing a workout with attached photos in `WorkoutDetails`,
@@ -13831,12 +13853,13 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 **Invariants**: Zero changes to `KEY_SHOW_LIVE_CLIMBS` or database schema; zero changes to climb detection or telemetry calculation logic.
 
 ### REQ-UI-462: Cluster Naming & Selection Dialog: Bi-directional Escape from Existing Route to Create New Favorite Route [Verified]
-- **Tests**: `TST-UI-462` | **Tickets**: `ATT-5674`
+- **Tests**: `TST-UI-462` | **Tickets**: `ATT-5674`, `ATT-5818`
 - **Implementation**: `ImportBackupTabsScreen.kt` (`ClusterNamingDialog`), `WorkoutClusterComponents.kt` (`WorkoutClusterSelectionDialog`)
-- **Rationale**: In `ClusterNamingDialog`, when the athlete selects an existing favorite route via `WorkoutClusterSelectionDialog`, the UI must provide immediate, discoverable escape routes back to creating a new favorite route (`selectedCluster = null`). The system SHALL provide:
+- **Rationale**: In `ClusterNamingDialog`, when the athlete selects an existing favorite route via `WorkoutClusterSelectionDialog`, the UI must provide immediate, discoverable escape routes back to creating a new favorite route (`selectedCluster = null`). Furthermore, the read-only route assignment field must reliably respond to taps anywhere across its bounds to open the selection bottom sheet (Rule 77 / Design Guidelines §5.19). The system SHALL provide:
 1. *Escape via Selection Dialog (`REQ-UI-462.1`)*: `WorkoutClusterSelectionDialog` SHALL expose an optional callback `onCreateNew: (() -> Unit)? = null`. When non-null, the dialog SHALL render a highlighted selectable card / row with `Icons.Default.Add` and label `cluster_naming__create_new` above the candidate routes list. Tapping this card SHALL invoke `onCreateNew()`, dismiss the bottom sheet, and revert `selectedCluster = null`.
 2. *Direct Clear Action on Selected Route Field (`REQ-UI-462.2`)*: When `selectedCluster != null`, the `OutlinedTextField` for the selected route in `ClusterNamingDialog` SHALL display a clear action button (`IconButton` with `Icons.Default.Clear` and content description `R.string.clear`) in its `trailingIcon`, enabling the athlete to revert `selectedCluster` to `null` with a single tap without opening the candidate picker dialog.
 3. *State & Form Restoration Invariants (`REQ-UI-462.3`)*: Upon resetting `selectedCluster` to `null` via either mechanism, the new favorite route naming section (`cluster_naming__new_name_prompt` and `name` `OutlinedTextField`) SHALL immediately reappear, preserving any previously entered or pre-filled route name text in `name`. Other callers of `WorkoutClusterSelectionDialog` (`WorkoutClustersScreen`, `WorkoutClusterHeatmapScreen`) where `onCreateNew` is omitted (null) SHALL remain strictly unchanged without showing the creation card.
+4. *Read-Only Route Picker Field Tap Handling via InteractionSource (`REQ-UI-462.4`, ATT-5818)*: The read-only route assignment `OutlinedTextField` (`cluster_naming__selected_route_label`) SHALL bind a `MutableInteractionSource` and observe `PressInteraction.Release` inside a `LaunchedEffect` to trigger `showSelectionDialog = true` on any tap across the field surface. The composable MUST NOT rely on outer `Modifier.clickable` (which is consumed by Compose's internal `BasicTextField` pointer handler on `enabled = true` fields) and MUST preserve `readOnly = true` state.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* `ClusterNamingDialog` with an existing favorite route selected (`selectedCluster != null`),
@@ -13848,8 +13871,11 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Given* callers `WorkoutClustersScreen` or `WorkoutClusterHeatmapScreen` invoking `WorkoutClusterSelectionDialog` without `onCreateNew`,
 • *When* the bottom sheet renders,
 • *Then* the creation card is omitted and only candidate routes are displayed.
+• *Given* `ClusterNamingDialog` in `ImportBackupTabsScreen.kt`,
+• *When* the athlete taps anywhere on the text body of the read-only route assignment `OutlinedTextField`,
+• *Then* `WorkoutClusterSelectionDialog` opens without requiring the athlete to hit the trailing `my_locations` icon.
 
-**Invariants**: Backward compatibility for `WorkoutClusterSelectionDialog` callers; 9-language localization parity (`TranslationParityTest`); no regression in `ModalBottomSheetDialogsIntegrityTest`.
+**Invariants**: Backward compatibility for `WorkoutClusterSelectionDialog` callers; 9-language localization parity (`TranslationParityTest`); no regression in `ModalBottomSheetDialogsIntegrityTest`; `readOnly = true` preserved on route picker text field.
 
 ### REQ-UI-463: Navigation Drawer & Expert Settings Thematic Grouping [Verified]
 - **Tests**: `TST-UI-463` | **Tickets**: `ATT-5670`
@@ -14039,6 +14065,780 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Then* all known locations are displayed and the toggle changes to `"Nur ≥ 5 Starts"`.
 
 **Invariants**: Saved DataStore preference criteria are not corrupted; toggling locations does not alter or deselect the active filter coordinate; zero regressions in `ClusterFilterCriteria` or `matches()` logic; zero hardcoded strings; 9-language translation parity.
+
+### REQ-UI-468: Uniform 'Clear all' Action Across Active Filter Chips Rows [Verified]
+- **Tests**: `TST-UI-468` | **Tickets**: `ATT-5888`
+- **Implementation**: `ActiveFilterChipsRow.kt`, `ActiveSegmentFilterChipsRow.kt`, `ActiveRouteFilterChipsRow.kt`, `ActiveClusterFilterChipsRow.kt`, `ActiveDeviceFilterChipsRow.kt`, `ActiveKnownLocationsFilterChipsRow.kt`
+- **Rationale**: Across filterable list views, gating the "Clear all" button behind a plural check (`activeFilterCount > 1` or `>= 2`) created inconsistency with Favorite Locations (`ActiveKnownLocationsFilterChipsRow.kt`) and prevented athletes from resetting single default filters (such as `minHitCount = 5` on Favorite Routes) in one tap. The system SHALL display the "Clear all" (`R.string.filter_clear_all`) action button unconditionally whenever any filter criterion is active (Sprint 2026-45.12, ATT-5888, refining `REQ-UI-132`, `REQ-UI-351`, `REQ-UI-431`, `REQ-UI-466`, `REQ-UI-467`):
+1. *Unconditional Clear All Visibility when Filter Active (`REQ-UI-468.1`)*:
+• In `ActiveFilterChipsRow.kt` (Workouts), `ActiveSegmentFilterChipsRow.kt` (Segments), `ActiveRouteFilterChipsRow.kt` (Routes), `ActiveClusterFilterChipsRow.kt` (Favorite Routes), `ActiveDeviceFilterChipsRow.kt` (Sensors/Devices), and `ActiveKnownLocationsFilterChipsRow.kt` (Favorite Locations), the "Clear all" action button SHALL be displayed unconditionally in the `LazyRow` whenever `!criteria.isEmpty` (i.e. `activeFilterCount >= 1`).
+• The legacy conditional guards `if (criteria.activeFilterCount > 1)` and `if (criteria.activeFilterCount >= 2)` MUST NOT be present.
+2. *Row Suppression on Empty State (`REQ-UI-468.2`)*:
+• When `criteria.isEmpty` is true (`activeFilterCount == 0`), the entire composable row SHALL return immediately without rendering any layout, spacer, or "Clear all" button.
+3. *Action Styling & Padding Invariants (`REQ-UI-468.3`)*:
+• The button SHALL be rendered as a `TextButton(onClick = onClearAll)` with `Modifier.padding(start = 4.dp)` containing `Text(stringResource(R.string.filter_clear_all), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)`.
+4. *9-Language Localization & Accessibility (`REQ-UI-468.4`)*:
+• The `filter_clear_all` string resource SHALL maintain 100% parity across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with touch target $\ge 32\text{dp}$ and zero inline emojis (`ATT-5400`).
+
+### Requirement Archaeology & Chesterton's Fence Audit
+1. *Original Requirement ID & Target*: Net-new `REQ-UI-468` refining `REQ-UI-132` (*Workout Filter Chips*), `REQ-UI-351` (*Segment Filter Chips*), `REQ-UI-431` (*Route Filter Chips*), `REQ-UI-466` (*Known Location Filter Chips*), and `REQ-UI-467` (*Favorite Routes Filter Chips*).
+2. *Historical Origin & Commit Trace*: `ATT-1402` (commit `91acde33`), `ATT-3166` (commit `a9d4791c`), `ATT-5822` (commit `9fa4429e`), `ATT-5823` (commit `3b1f3b33`).
+3. *Root Reason for Existing Formulation*: A legacy plural heuristic (`activeFilterCount > 1`) assumed a "Clear all" button was semantically redundant when only a single filter dimension was active, expecting athletes to use the individual chip's remove button. In practice, default filters (such as `minHitCount = 5` on Favorite Routes) left athletes without a prominent reset button.
+4. *Preservation of Core Invariants*: `criteria.isEmpty` remains the sole visibility gate for the row; individual chip removal callbacks (`onRemove*`) and full reset (`onClearAll`) remain intact; zero empty-state leakage; 100% 9-language translation parity.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* exactly 1 active filter criterion on any filterable list (Workouts, Segments, Routes, Favorite Routes, Sensors, Favorite Locations),
+• *When* the active filter chips row renders,
+• *Then* both the individual filter chip and the "Alle zurücksetzen" / "Clear all" button are visible in the `LazyRow`.
+• *Given* multiple ($\ge 2$) active filter criteria,
+• *When* the active filter chips row renders,
+• *Then* all active chips and the "Alle zurücksetzen" / "Clear all" button are visible.
+• *Given* zero active filters (`criteria.isEmpty`),
+• *When* the active filter chips row renders,
+• *Then* the entire row is suppressed and zero content is emitted.
+• *Given* the athlete tapping the "Alle zurücksetzen" / "Clear all" button,
+• *When* clicked,
+• *Then* `onClearAll` is invoked, resetting all filter criteria.
+
+**Invariants**: Filter criteria data structures, ViewModel filtering logic, and `matches()` predicates MUST NOT be altered; zero regression in individual chip deletion; 100% 9-language localization parity.
+
+### REQ-UI-469: Harmonized KnownLocationCard Layout & Unboxed Typography [Verified]
+- **Tests**: `TST-UI-469` | **Tickets**: `ATT-5887`
+- **Implementation**: `KnownLocationsScreen.kt`, `KnownLocationCardLayoutTest.kt`
+- **Rationale**: To eliminate visual discordance with the rest of the application (specifically `WorkoutClustersScreen` / `ClusterItem`), `KnownLocationCard` SHALL harmonize its card layout and typography hierarchy by removing boxed/bordered `Surface` pill containers for starts and routes, anchoring the primary starts count to the bottom baseline in bold primary typography with an activity icon, rendering linked routes as an unboxed primary cross-link, and aligning vertical dimensions with the map thumbnail via `IntrinsicSize.Min` (Sprint 2026-45.12, ATT-5887, refining `REQ-UI-195` and `REQ-UI-465.1`):
+1. *Harmonized Bottom-Anchored Column Architecture (`REQ-UI-469.1`)*:
+• In `KnownLocationCard` within `KnownLocationsScreen.kt`, the content row below the location title SHALL use `Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), verticalAlignment = Alignment.Bottom)`.
+• The left metadata column SHALL occupy `Modifier.weight(1f).fillMaxHeight()` and integrate a vertical spring `Spacer(Modifier.weight(1f))` that pins the primary starts count to the bottom baseline, visually aligning with the bottom edge of the map preview thumbnail.
+2. *Unboxed Primary Starts Metric (`REQ-UI-469.2`)*:
+• The starts metric SHALL eliminate boxed `Surface` pill containers, background tints, border strokes, and trailing chevron icons.
+• It SHALL render as an unboxed clickable text row (`onShowWorkouts`, test tag `location_starts_badge_${item.id}`) anchored at the bottom baseline displaying an activity vector (`Icons.AutoMirrored.Filled.DirectionsRun`, 16.dp) and the localized plural count (`R.plurals.known_locations_starts`) in bold primary blue typography (`MaterialTheme.typography.bodyMedium`, `FontWeight.Bold`, `MaterialTheme.colorScheme.primary`).
+3. *Unboxed Routes Cross-Link (`REQ-UI-469.3`)*:
+• When `linkedClusters.isNotEmpty()`, the routes count SHALL eliminate boxed `Surface` pill containers, border strokes, and trailing chevron icons.
+• It SHALL render as an unboxed cross-link row (`onShowRoutes`, test tag `location_routes_badge_${item.id}`) positioned directly beneath the altitude metric, displaying `ic_favorite_route` (14.dp) and the localized plural count (`R.plurals.known_locations_routes`) in primary blue link styling (`MaterialTheme.typography.bodySmall`, `FontWeight.Medium`, `MaterialTheme.colorScheme.primary`).
+4. *Header, Map & Context Menu Invariants (`REQ-UI-469.4`)*:
+• The top location title row with Home base indicator (`Icons.Default.Home`), the altitude metric row in `onSurfaceVariant` with `Icons.Default.Terrain`, the compact landscape map preview thumbnail (`116.dp × 80.dp`), and the long-press context menu (Home base toggle, Merge action, Delete confirmation) SHALL remain 100% strictly intact and functional.
+5. *Contract & Layout Test Parity (`REQ-UI-469.5`)*:
+• `KnownLocationCardLayoutTest.kt` SHALL be synchronized to assert `IntrinsicSize.Min` vertical alignment, the unboxed primary/secondary typography hierarchy, and the elimination of bordered `Surface` pills in the metadata column.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-UI-469` refining `REQ-UI-195` (*Badges row in KnownLocationCard*) and `REQ-UI-465.1` (*48dp Minimum Touch Target Gap Elimination on pill badges*).
+2. *Historical Origin & Commit Trace*: `ATT-1643` (`REQ-UI-195`), `ATT-5825` (`REQ-UI-465.1`, commit `4c095473`).
+3. *Root Reason for Existing Formulation*: In ATT-1816 and ATT-5825, starts and routes were enclosed in explicit `Surface` pill shapes (`RoundedCornerShape(8.dp)`) with background tints and borders to signal clickability. In user review (Sprint 2026-45.11 Review of ATT-5825), the user identified that boxed pills visually clash with the rest of the app, particularly the clean unboxed layout of `WorkoutClustersScreen` (`ClusterItem`), where links and primary hit counts use clean typography with icons without enclosing boxes.
+4. *Preservation of Core Invariants*: Independent tap targets for `onShowWorkouts` and `onShowRoutes` preserved; test tags (`location_starts_badge_${item.id}`, `location_routes_badge_${item.id}`) preserved; universal long-press context menu (`REQ-UI-061`, `onMerge`) intact; 100% 9-language localization parity preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the athlete viewing `KnownLocationCard` on `KnownLocationsScreen`,
+• *When* the starts metric is rendered,
+• *Then* it displays as an unboxed row anchored at the bottom baseline with `DirectionsRun` and bold primary blue typography (`bodyMedium`, `FontWeight.Bold`), invoking `onShowWorkouts` on tap.
+• *Given* a known location with associated route clusters (`linkedClusters.isNotEmpty()`),
+• *When* the card is rendered,
+• *Then* the routes count renders as an unboxed cross-link below the altitude metric in `primary` blue (`bodySmall`, `FontWeight.Medium`) with `ic_favorite_route`, invoking `onShowRoutes` on tap.
+• *Given* `KnownLocationCard` metadata column,
+• *When* inspected for container styling,
+• *Then* zero bordered or tinted `Surface` pill containers wrap the starts or routes text.
+• *Given* the bottom row of `KnownLocationCard`,
+• *When* measured by Compose layout,
+• *Then* it enforces `height(IntrinsicSize.Min)` with `verticalAlignment = Alignment.Bottom`, aligning the bottom of the metadata column with the bottom of the map preview thumbnail.
+
+**Invariants**: Zero regressions in 1-tap navigation to workouts or routes; test tags `location_starts_badge_*` and `location_routes_badge_*` preserved; long-press menu options (Home, Merge, Delete) intact; map thumbnail dimensions (116x80dp) preserved; 100% 9-language localization parity.
+
+### REQ-UI-470: Known Locations Map Orientation, FAB & Description Parity [Verified]
+- **Tests**: `TST-UI-470` | **Tickets**: `ATT-5884`
+- **Implementation**: `KnownLocationZoomMath.kt`, `KnownLocationsScreen.kt`, `EditKnownLocationDialog.kt`, `KnownLocationsViewModel.kt`, `KnownLocationsRepository.kt`, `MapUtils.kt`
+- **Rationale**: To provide superior regional orientation, zero map pin occlusion, one-tap manual creation, immediate starts count hydration, and clear home base utility explanation on "Lieblingsorte" (Sprint 2026-45.12, ATT-5884, refining `REQ-UI-165`, `REQ-UI-224`, and `REQ-SET-095`):
+1. *Broadened Map Thumbnail Zoom Range (`REQ-UI-470.1`)*:
+• In `KnownLocationZoomMath.kt`, the thumbnail zoom calculation constants SHALL be adjusted to `MIN_ZOOM = 9.7f`, `DEFAULT_THUMBNAIL_ZOOM = 11.2f`, and `MAX_ZOOM = 11.7f` (reducing zoom by approximately 0.8 levels) to preserve surrounding road and town labels for regional context while ensuring geofences remain fully framed.
+2. *Centered Heart Glyph Marker Without Pin Body (`REQ-UI-470.2`)*:
+• In `KnownLocationThumbnailMap` within `KnownLocationsScreen.kt`, the 36dp standing pin (`R.drawable.my_locations`, `anchor = Offset(0.5f, 1.0f)`) SHALL be replaced by a compact, semi-transparent centered heart glyph marker (`anchor = Offset(0.5f, 0.5f)`, `createCenteredHeartGlyphMarker` with ~14–16dp glyph, subtle white border/halo, and `alpha ≈ 0.8f`) sitting concentrically inside the geofence circle without occluding upper map terrain.
+3. *Floating Action Button for Manual Location Creation (`REQ-UI-470.3`)*:
+• `KnownLocationsScreen` SHALL provide a `FloatingActionButton` (`Icons.Default.Add`, test tag `known_locations_add_fab`) anchored at the bottom-end, aligning with Routes, Workout Clusters, and Equipment screens.
+• Tapping the FAB SHALL open `EditKnownLocationDialog` with a new location template (`id = 0L`), allowing athletes to manually create and name a favorite location.
+4. *Proactive Starts Count Hydration (`REQ-UI-470.4`)*:
+• In `KnownLocationsViewModel.init`, the system SHALL proactively invoke `repository.reconcileHitCounts()` and `workoutRepo?.loadAllWorkouts()`, ensuring the starts count is populated from historical workouts and SQLite hit counts immediately upon screen entry rather than displaying stale "0 Starts".
+5. *Informative Home Base Subtitle & 9-Language Parity (`REQ-UI-470.5`)*:
+• In `EditKnownLocationDialog`, the "Heim-Basis" switch row subtitle SHALL replace the tautological string `known_locations_set_home` ("Als Heim-Basis festlegen") with the descriptive explanation `known_locations_home_base_desc` ("Automatische Benennung & barometrische Kalibrierung" / "Automatic workout naming & barometric altitude calibration"), localized across all 9 supported locales with 100% translation parity.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-UI-470` refining `REQ-UI-165` (*Known Locations Management Screen*), `REQ-UI-224` (*Calibrated Zoom Math for KnownLocationCard*), and `REQ-SET-095` (*Home Base Location Tagging*).
+2. *Historical Origin & Commit Trace*: `44d51eac` (ATT-1816), `d7b00bf8` (ATT-1878), `c6f65b71` (ATT-5889).
+3. *Root Reason for Existing Formulation*: Conservative zoom (`MAX_ZOOM = 12.5f`) and standing pin (`36dp`) were carried over from full-screen maps before the 116x80dp thumbnail was introduced; FAB was omitted because locations originally relied solely on automatic GPS discovery; subtitle reused the dropdown action text.
+4. *Preservation of Core Invariants*: Harmonized unboxed card layout (ATT-5887), context menu (`Home`, `Merge`, `Delete`), geofence radius adjustment, altitude editing with automatic write-protection (`isLocked = 1`), and 100% 9-language translation parity are strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `KnownLocationThumbnailMap` on `KnownLocationsScreen`,
+• *When* rendered for a location with 200m radius,
+• *Then* the camera zoom level is clamped to `11.7f` (showing surrounding road/regional context), and the marker is a centered heart glyph (`anchor = Offset(0.5f, 0.5f)`) without a standing pin body.
+• *Given* `KnownLocationsScreen`,
+• *When* the screen is displayed,
+• *Then* a `+` FAB (`known_locations_add_fab`) is visible at the bottom-end, and tapping it opens `EditKnownLocationDialog` to create a new location (`id = 0L`).
+• *Given* historical workouts exist at a known location,
+• *When* `KnownLocationsScreen` is opened,
+• *Then* `reconcileHitCounts()` and `loadAllWorkouts()` run proactively, displaying accurate start counts instead of stale "0 Starts".
+• *Given* `EditKnownLocationDialog`,
+• *When* viewing the "Heim-Basis" toggle row,
+• *Then* the subtitle displays `known_locations_home_base_desc` explaining automatic naming and barometric calibration instead of repeating "Als Heim-Basis festlegen".
+
+**Invariants**: Harmonized card layout and unboxed typography (REQ-UI-469); context menu options (Merge, Home, Delete); altitude edit validation and write-protection; 9-language localization parity with zero missing strings.
+
+### REQ-UI-471: Cockpit Edit-Mode Typography, Localization Parity & FAB Layout Polish [Verified]
+- **Tests**: `TST-UI-471` | **Tickets**: `ATT-5879`
+- **Implementation**: `SensorFieldView.kt`, `SensorGridScreen.kt`, `EditSensorFieldDialog.kt`, `TrackingTabsScreen.kt`, `TrackingTabPreviewHeader.kt`, `TrackingTabConfigHeader.kt`, `strings.xml`, `strings_filters.xml`
+- **Rationale**: During live UI walkthroughs of the tracking tabs editor, preview modes, and field configuration dialog, 6 distinct layout, localization, and FAB overlap issues were identified:
+1. *Edit-Mode Telemetry & Filter Typography (`REQ-UI-471.1`)*:
+• In `SensorFieldView.kt`, telemetry value text SHALL enforce `maxLines = 1` and apply responsive font size scaling or truncation prevention in edit mode to guarantee that 8-character strings (`18:29:15`) remain on a single line.
+• Top-right filter badge SHALL enforce `maxLines = 1` with localized unit `s` instead of `sec` (e.g. `2 s Ø`), preventing 3-line vertical stacks.
+2. *German Localization & Action Parity (`REQ-UI-471.2`)*:
+• Active duration field label SHALL be capitalized as `Aktiv` (`R.string.time_active_short`).
+• German lap telemetry labels SHALL be localized: `Rundenzeit` (`time_lap`), `Runde` (`time_lap_short`), `Rundennummer` (`lap_number`), `Runde Nr.` (`lap_number_short`), `Rundendistanz` (`distance_lap`), `Dist. Runde` (`distance_lap_short`).
+• Tracking editor bottom toggle rows SHALL display `Live-Segmente` (`config_tracking__showLiveSegments`) and `Runden-Button` (`config_tracking__showLapButton`).
+• Editor header checkmark button SHALL display localized `Fertig` (`R.string.Done`).
+• Field edit actions SHALL use localized content descriptions `cd_move_field` ("Move field" / "Feld verschieben") and `cd_delete_field` ("Delete field" / "Feld löschen") across all 9 supported locales.
+3. *Field Configuration Dialog Polish (`REQ-UI-471.3`)*:
+• In `EditSensorFieldDialog.kt`, the dialog title SHALL use sentence-case `Anzeige anpassen` (`R.string.edit_field`).
+• Category breadcrumb inside the top metric selector card SHALL support `maxLines = 2` to prevent truncation.
+• The `Relative Breite` header SHALL be start-aligned (`Modifier.fillMaxWidth()`) with the `1x`, `2x`, `3x` chips below it.
+• The smoothing selector button SHALL render a leading `Icons.Default.Tune` icon, trailing dropdown chevron, and localized text (`2 s gleitender Durchschnitt`).
+4. *Bicycle Bell FAB & Elevation Profile Clearance (`REQ-UI-471.4`)*:
+• On `Karte` and cockpit tabs, when `showBikeBell` or `showLapButton` is enabled and docked at the bottom in portrait mode, `ElevationProfile` in `SensorGridScreen.kt` SHALL allocate adequate bottom clearance (e.g. `68.dp` bottom padding) so floating action buttons do not obscure the elevation profile placeholder banner or canvas text.
+5. *Sport Context in Tab Headers (`REQ-UI-471.5`)*:
+• `TrackingTabPreviewHeader` and `TrackingTabConfigHeader` SHALL accept and display the active sport discipline name (e.g. `Radeln`) as a context label above the tab title, ensuring continuous athletic context during configuration.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-UI-471` refining `REQ-TRK-046` (*Cockpit Tile Typography*), `REQ-UI-395` (*Sensor Picker Dialog*), `REQ-UI-421` (*Bike Bell Button*), `REQ-UI-435` (*Tracking Tabs Configuration*), and `REQ-UI-437` (*Relative Width Chips*).
+2. *Historical Origin & Commit Trace*: `4dc064a684` (ATT-52, bell button alignment), `ATT-3852` (REQ-UI-395 sensor picker), `ATT-5192` (REQ-UI-437 relative width chips), `ATT-4371` / `ATT-4447` (REQ-UI-421 Bike Bell Button).
+3. *Root Reason for Existing Formulation*: Rapid iterative additions left English strings in localized XMLs, unconstrained line wrapping in reduced-width edit cards, and lacked bottom clearance between floating action buttons and docked elevation profile.
+4. *Preservation of Core Invariants*: 100% test pass rate; zero layout oscillation; 9-language translation parity maintained.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a 2-column sensor grid in edit mode with `Uhrzeit` (`18:29:15`),
+• *When* rendered,
+• *Then* the time value remains strictly on a single line (`maxLines = 1`) without vertical wrapping.
+• *Given* a sensor field with moving average smoothing (e.g. speed),
+• *When* rendered in edit mode,
+• *Then* the filter badge displays `2 s Ø` on a single line without wrapping into 3 lines.
+• *Given* the German locale,
+• *When* viewing active duration and lap fields,
+• *Then* labels display `Aktiv`, `Runde`, `Runde Nr.`, and `Dist. Runde`, and editor toggles display `Live-Segmente` and `Runden-Button`.
+• *Given* the `EditSensorFieldDialog`,
+• *When* opened,
+• *Then* the title displays `Anzeige anpassen`, `Relative Breite` is start-aligned, category breadcrumb does not truncate, and the smoothing button includes leading tune icon and trailing chevron.
+• *Given* the `Karte` tab in portrait mode with `showBikeBell = true` and `showElevationProfile = true`,
+• *When* rendered,
+• *Then* the bicycle bell FAB does not obscure the elevation profile empty state placeholder banner.
+• *Given* `TrackingTabPreviewHeader` and `TrackingTabConfigHeader`,
+• *When* displayed,
+• *Then* the active sport type name (e.g. `Radeln`) is rendered as a context label.
+
+**Invariants**: Zero regressions in landscape dual-pane tracking; 9-language localization parity strictly maintained; 100% clean-room test pass rate.
+
+### REQ-UI-472: Display & Expert Settings Terminology, Subtitle Localization & Warning Deduplication [Verified]
+- **Tests**: `TST-UI-472` | **Tickets**: `ATT-5875`
+- **Implementation**: `AdvancedTuningAccordion.kt`, `TuningFormControls.kt`, `AdvancedTuningScreen.kt`, `AdvancedTuningDialog.kt`, `res/values*/strings.xml`
+- **Rationale**: User walkthroughs and automated visual audits of Display and Expert Settings uncovered five localization, terminology, and layout defects: (1) internal developer jargon `'Control Tracking'` exposed in user-facing theme descriptions; (2) untranslated developer keyword `Aftermath` in German category headers; (3) redundant header duplication between TopAppBar (`Experten-Einstellungen`) and advisory card (`Experteneinstellungen`); (4) uninflected adjective `Aktiv` causing broken German declension in sensor search summary; and (5) hardcoded English summary fragments and inappropriate kilometer conversion (`0,200km`, `0,400km`) in accordion subtitles.
+- **Description**:
+1. *Display Settings Tab Terminology (`REQ-UI-472.1`)*:
+   • In `cockpit_theme_description`, the system SHALL refer to the localized tab title (`'Start'` in German/English/Dutch/Polish, `'Inicio'` in Spanish, `'Démarrer'` in French, `'Avvia'` in Italian, `'スタート'` in Japanese, `'Iniciar'` in Portuguese) and SHALL NOT leak the internal identifier `'Control Tracking'`.
+2. *German Category Terminology Parity (`REQ-UI-472.2`)*:
+   • In German `res/values-de/strings.xml`, `tuning_cat_aftermath` SHALL be localized as `Nachbereitung & Profil-Analytik`, eliminating developer jargon.
+3. *Advisory Banner Heading Deduplication (`REQ-UI-472.3`)*:
+   • `advanced_tuning_warning_title` SHALL be deduplicated from repeating the screen title, displaying a concise non-redundant advisory label across all 9 locales: German `Hinweis`, English `Notice`, Spanish `Aviso`, French `Remarque`, Italian `Avviso`, Japanese `注意`, Dutch `Let op`, Polish `Uwaga`, Portuguese `Aviso`.
+4. *Sensor Search Declension Grammar (`REQ-UI-472.4`)*:
+   • In German `res/values-de/strings.xml`, `tuning_sensor_search_active` SHALL be inflected as `Aktive`, yielding grammatically correct `Aktive Autosuche`.
+5. *Accordion Subtitle Localization & Metric Meter Formatting (`REQ-UI-472.5`)*:
+   • `formatBatterySaverSubtitle()` SHALL load localized slope labels (`Flach`/`Steil`) when `Context` is available.
+   • `formatSensorsGpsSubtitle()` SHALL load localized labels (`Höhe`/`Geschw.`) when `Context` is available.
+   • `formatClusterTuningSubtitle()` SHALL format metric tolerances $\le 1000\text{ m}$ as integer meters (`"${tolerance.roundToInt()} m"` instead of `0,xxxkm`) and bind localized labels (`Ende`/`Apex`/`Dist.`/`Höhe` in German).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-UI-472` refining `REQ-UI-122` (*Display Settings*) and `REQ-UI-222` (*Tuning Accordion*).
+2. *Historical Origin & Commit Trace*: `ATT-2746` (REQ-UI-122 Display settings), `ATT-2940` (REQ-UI-222 Tuning accordion), and `ATT-5819` (REQ-UI-469 TuningWarningNotice styling).
+3. *Root Reason for Existing Formulation*: Early rapid prototyping reused internal code identifiers and hardcoded English formatters; additions prioritized function over localization parity.
+4. *Preservation of Core Invariants*: 100% 9-language translation parity maintained; zero regressions in Settings persistence and reset mechanisms.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* German locale active,
+• *When* viewing Display settings `cockpit_theme_description`,
+• *Then* the text references `'Start'` and does not contain `'Control Tracking'`.
+• *Given* German locale active,
+• *When* viewing Expert Settings categories,
+• *Then* the aftermath section header displays `Nachbereitung & Profil-Analytik`.
+• *Given* the Expert Settings screen,
+• *When* viewing the top advisory warning card,
+• *Then* the title displays `Hinweis` (DE) / `Notice` (EN) without duplicating the TopAppBar title `Experten-Einstellungen`.
+• *Given* German locale active,
+• *When* viewing sensor search accordion summary,
+• *Then* the text displays `Aktive Autosuche`.
+• *Given* AMOLED battery saver and sensors accordion summaries with German locale,
+• *When* rendered with context,
+• *Then* the summaries display `Flach`/`Steil` and `Höhe`/`Geschw.`.
+• *Given* workout cluster tuning summary with metric tolerances $\le 1000\text{ m}$,
+• *When* rendered,
+• *Then* tolerances are formatted as integer meters (e.g. `200 m`, `400 m`) rather than fractional kilometers (`0,200km`, `0,400km`).
+
+**Invariants**: 100% 9-language localization parity across all resource files; zero regressions in preferences persistence or tuning computations; 100% clean-room test pass rate.
+
+### REQ-UI-473: Modal Bottom Sheet Close Button Elimination for Bottom Action Bar Dialogs & Activity Type Selection Polish [Verified]
+- **Tests**: `TST-UI-473` | **Tickets**: `ATT-5873`
+- **Implementation**: `AppModalBottomSheet.kt`, `ActivityTypeSelectionDialog.kt`, `AppModalBottomSheetTest.kt`
+- **Rationale**: In `AppModalBottomSheet.kt`, `showCloseButton: Boolean = true` was statically defaulted regardless of whether a bottom action bar (`actions != null`, e.g. `AppDialogActions.SaveCancel`) was present. This created redundant dismissal controls (both a top-right `✕` and a bottom `Abbrechen` / Cancel button) across settings and sync sheets (`Dropbox`, `Google Drive`, `Export`, `Display`, `Units`, `Strava`, `EditEquipmentDialog`). Furthermore, `ActivityTypeSelectionDialog.kt` unnecessarily rendered both a top-right `✕` and a bottom `AppDialogActions.CancelOnly` row for single-tap list selections.
+- **Description**:
+1. *Dynamic Default for Modal Bottom Sheet Close Button (`REQ-UI-473.1`)*:
+   • In `AppModalBottomSheet.kt`, `AppModalBottomSheet`, `AppBottomSheetContent`, and private `AppBottomSheetBody` SHALL position `actions: (@Composable RowScope.() -> Unit)? = null` before `showCloseButton` in their parameter lists and SHALL dynamically default `showCloseButton: Boolean = (actions == null)`.
+   • When a bottom action bar is supplied (`actions != null`), the top-right `✕` close button SHALL NOT render by default.
+   • When no bottom action bar is supplied (`actions == null`), the top-right `✕` close button SHALL render by default.
+   • Callers SHALL retain the ability to explicitly override `showCloseButton` (`true` or `false`) via named arguments.
+2. *Activity Type Selection Dialog Simplification (`REQ-UI-473.2`)*:
+   • In `ActivityTypeSelectionDialog.kt`, the redundant bottom action bar (`actions = { AppDialogActions.CancelOnly(onCancel = onDismiss) }`) SHALL be removed.
+   • The dialog SHALL present solely the header `✕` close button (`actions == null`) alongside list item selection taps (`onTypeSelected(type)` + `onDismiss()`).
+3. *Strava Settings Dialog Synergy (`REQ-UI-473.3`)*:
+   • In `StravaSettingsDialog.kt`, the presence of bottom action buttons (`actions = { ... }`) SHALL automatically eliminate the duplicate top-right `✕` button via `AppModalBottomSheet`'s dynamic default, without requiring bespoke call-site parameter overrides.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-UI-473`, refining `REQ-UI-148` (*Universal Modal Bottom Sheet*) and `REQ-UI-149` (*Modernized Modal Bottom Sheet Dialogs & Selection Flows*).
+2. *Historical Origin & Commit Trace*: Commit `e8c7a75c` (ATT-1034, 2026-09-15) and commit `fceafd16` (ATT-1072, 2026-09-16).
+3. *Root Reason for Existing Formulation*: Early modal bottom sheets had no bottom action bar, requiring an explicit top-right close icon. When bottom action rows were added, `showCloseButton = true` remained an unconditioned static default.
+4. *Preservation of Core Invariants*: Sheets with `actions == null` (e.g. `PairingProtocolBottomSheet`, `AntServicesStatusSheet`, `ClusterInfoDialog`) continue showing top-right `✕` by default; explicit parameter overrides (`showCloseButton = true/false`) remain fully supported; named argument caller source compatibility is 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `AppModalBottomSheet` or `AppBottomSheetContent` rendered with `actions != null`,
+• *When* `showCloseButton` is not explicitly specified,
+• *Then* `showCloseButton` defaults to `false` and no top-right `✕` button is rendered.
+• *Given* `AppModalBottomSheet` or `AppBottomSheetContent` rendered with `actions == null`,
+• *When* `showCloseButton` is not explicitly specified,
+• *Then* `showCloseButton` defaults to `true` and the top-right `✕` button is rendered.
+• *Given* `AppModalBottomSheet` or `AppBottomSheetContent`,
+• *When* `showCloseButton` is explicitly passed as `true` or `false`,
+• *Then* the explicit parameter value SHALL be respected regardless of `actions`.
+• *Given* `ActivityTypeSelectionDialog`,
+• *When* rendered,
+• *Then* it displays the header `✕` close button and no bottom action bar.
+
+**Invariants**: Named argument caller source compatibility across all existing sheets; edge-to-edge window insets (`navigationBarsPadding()`, `imePadding()`) and drag handles preserved; 100% clean-room test pass rate.
+
+### REQ-UI-474: Import & Backup UI Polish, Strava Archive Tuning & Heading Deduplication [Verified]
+- **Tests**: `TST-UI-474` | **Tickets**: `ATT-5874`
+- **Implementation**: `ImportBackupTabsScreen.kt`, `BackupTabContent.kt`, `RestoreTabContent.kt`, `res/values*/strings.xml`, `RestoreCardContractTest.kt`
+- **Rationale**: On `ImportBackupTabsScreen.kt` and its child composables (`BackupTabContent.kt`, `RestoreTabContent.kt`), workflow and UI consistency gaps existed: (1) Strava archive picker bypassed `PreImportTuningBottomSheet`, preventing tuning review and leaking re-upload options; (2) format import and restore buttons lacked authentic brand icons; (3) incremental import in `RestoreTabContent` inappropriately used an upward backup icon (`Icons.Default.Backup`); and (4) duplicate headings were displayed immediately above identical action buttons.
+- **Description**:
+1. *Strava Archive Pre-Import Tuning Integration (`REQ-UI-474.1`)*:
+   • In `ImportBackupTabsScreen.kt`, selecting a valid Strava export archive (`.zip`) SHALL store the URI in `pendingStravaArchiveUri` and display `PreImportTuningBottomSheet`.
+   • `PreImportTuningBottomSheet` SHALL support `showStravaUploadOption: Boolean = true`. For Strava archive imports (`pendingStravaArchiveUri != null`), `showStravaUploadOption` SHALL be `false` to prohibit re-uploading Strava data back to Strava.
+2. *Authentic Cloud Brand Iconography & Merge Icon (`REQ-UI-474.2`)*:
+   • In `FormatImportCard`, Dropbox scan buttons SHALL render leading `R.drawable.dropbox_logo_blue` with `tint = Color.Unspecified`.
+   • In `RestoreTabContent.kt`, Dropbox restore SHALL render `R.drawable.dropbox_logo_blue` and Google Drive restore SHALL render `R.drawable.ic_google_drive`, both with `tint = Color.Unspecified`.
+   • In `RestoreTabContent.kt`, the incremental import action button SHALL display `Icons.Default.CallMerge` (replacing `Icons.Default.Backup`).
+3. *Heading Deduplication & Action Button Phrasing Parity (`REQ-UI-474.3`)*:
+   • In `BackupTabContent.kt`, the primary backup button SHALL use `R.string.backup_now` ("Jetzt sichern" / "Backup Now"), deduplicating it from the card title `R.string.create_backup`.
+   • In `BackupTabContent.kt`, the automated backup card SHALL integrate the `Switch` directly into the card header row alongside `R.string.automated_backups`, eliminating the duplicate inner row title.
+   • In `RestoreTabContent.kt`, the incremental import button SHALL use `R.string.merge_from_backup_file` across all 9 supported locales (`EN, DE, ES, FR, IT, JA, NL, PL, PT`), deduplicating it from the card title `R.string.import_workouts`.
+4. *Contract Test Synchronization (`REQ-UI-474.4`)*:
+   • `RestoreCardContractTest.kt` SHALL verify authentic brand drawables (`dropbox_logo_blue`, `ic_google_drive`) and `CallMerge` icon contracts.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-UI-474`, refining `REQ-MIG-036` (*Automated Backups & Restore*) and `REQ-UI-458` (*Format Import Cards*).
+2. *Historical Origin & Commit Trace*: Commit `8020d902` (ATT-4664, 2026-10-22) and commit `523194a2` (ATT-5679, 2026-11-05).
+3. *Root Reason for Existing Formulation*: Early iterations utilized generic Material icons and duplicated card titles as quick button labels before brand icons and UI deduplication patterns were established.
+4. *Preservation of Core Invariants*: 100% 9-language translation parity without emojis; archive safety validation before tuning launch; destructive restore confirmation dialogs strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete selects a Strava `.zip` export file,
+• *When* the archive is validated,
+• *Then* `PreImportTuningBottomSheet` is displayed with cluster tolerance sliders and without the Strava upload toggle (`showStravaUploadOption = false`).
+• *Given* `RestoreTabContent`,
+• *When* rendered,
+• *Then* Dropbox restore displays `dropbox_logo_blue`, Google Drive restore displays `ic_google_drive`, and incremental merge displays `Icons.Default.CallMerge` with label `merge_from_backup_file`.
+• *Given* `BackupTabContent`,
+• *When* rendered,
+• *Then* the backup button displays `backup_now` and the automated backup switch is positioned in the card header without duplicate row text.
+
+**Invariants**: Archive validation strictly enforced; 100% 9-language parity without emojis; WorkManager background backup scheduling preserved; 100% clean-room test pass rate.
+
+### REQ-UI-475: Sport Type Card Presentation, Localized Mappings & Locale-Aware Usage Dates [Verified]
+- **Tests**: `TST-UI-475` | **Tickets**: `ATT-5872`
+- **Implementation**: `SportTypesTabsScreen.kt`, `DateTimeUtils.kt`, `res/values*/strings.xml`, `arrays.xml`
+- **Rationale**: On `SportTypesTabsScreen.kt`, visual formatting, mapping, and localization gaps existed: (1) sport cards with empty GoldenCheetah mappings unconditionally formatted `TCX: %1$s, %2$s` with `mapping_format_gc`, producing dangling trailing text (`"💾 TCX: Other, GC:"`); (2) default locked sport types displayed raw English database names (`"Other"`) rather than localized string resources (`"Andere"` in German), and export identifiers displayed unlocalized technical keys; and (3) first and last activity usage dates displayed raw ISO-8601 strings (`"YYYY-MM-DD"`) instead of locale-formatted dates.
+- **Description**:
+1. *Conditional GoldenCheetah Mapping & File Export Format (`REQ-UI-475.1`)*:
+   • On sport type cards, when `item.gcName.isNullOrBlank()`, the UI SHALL display only the localized TCX mapping (`stringResource(R.string.mapping_format_tcx, localizedTcx)`), completely omitting `, GC:` and trailing empty colons.
+   • When `item.gcName` is present and non-blank, the UI SHALL format both mappings via `sport_type_file_mapping_format`.
+2. *Default Sport Localization & Export Identifier Mapping (`REQ-UI-475.2`)*:
+   • For system default / locked sport types (`!item.isEditable`), the sport card header SHALL resolve the display name via `item.bSportType.stringResId` (e.g. `R.string.sport_type_other` for `BSportType.UNKNOWN`, `R.string.sport_type_running` for `BSportType.RUNNING`, `R.string.sport_type_biking` for `BSportType.CYCLING`) rather than displaying raw database `item.name`.
+   • Strava export keys SHALL be mapped to localized UI names via `Strava_Sport_Types_Strava_Names` and `Strava_Sport_Types_UI_Names` array pairs.
+   • TCX and GC export keys SHALL be resolved to localized UI strings via array lookups (`R.array.TCX_Sport_Types` and `R.array.GC_Sport_Types`) with fallback to raw values if unmapped.
+3. *Locale-Aware ISO-8601 Date Formatting (`REQ-UI-475.3`)*:
+   • `DateTimeUtils.kt` in `com.atrainingtracker.trainingtracker.ui.common` SHALL provide pure helper `formatIsoDate(dateString: String?, locale: Locale = Locale.getDefault()): String`.
+   • Valid ISO-8601 dates (e.g. `"2018-08-12"`) SHALL be parsed via `LocalDate.parse()` and formatted with `DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale)` (e.g. `"12.08.2018"` in `de_DE`, `"Aug 12, 2018"` in `en_US`).
+   • Null, blank, or malformed strings SHALL fail-safely return an empty string or the raw fallback string without throwing runtime exceptions.
+   • In `SportTypesTabsScreen.kt`, first and last activity dates SHALL be rendered using `DateTimeUtils.formatIsoDate(it)`.
+4. *Contract & Unit Test Regression (`REQ-UI-475.4`)*:
+   • `DateTimeUtilsTest.kt` SHALL verify date parsing across locales (`de_DE`, `en_US`, `ja_JP`) and error tolerance.
+   • `SportTypesTabsScreenContractTest.kt` SHALL verify empty GC suppression, default sport localization, and formatted usage date rendering.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-UI-475`, refining `REQ-UI-061` (*Sport Types Management Screen*).
+2. *Historical Origin & Commit Trace*: Commit `2ef1bbdf` (2026-02-23) simplified file mapping labels; commit `0e17d2a5` migrated sport types list to Jetpack Compose.
+3. *Root Reason for Existing Formulation*: Early Compose migration replicated legacy `SimpleCursorAdapter` text-concatenation where TCX and GC were assumed to always have non-empty pairs, and raw database strings were displayed directly.
+4. *Preservation of Core Invariants*: Technical export keys sent to Strava, TCX, and FIT exporters remain strictly unchanged in SQLite and export payloads; custom user-defined sport types with `isEditable == true` retain user-defined names; 100% 9-language translation parity maintained.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a sport type with empty `gcName` (e.g. default "Other"),
+• *When* rendered in `SportTypesTabsScreen`,
+• *Then* the file format row displays `"💾 TCX: Andere"` (or locale equivalent) without trailing `, GC:`.
+• *Given* a locked default sport type (`!item.isEditable`),
+• *When* rendered in `SportTypesTabsScreen`,
+• *Then* the header title displays the localized name (`"Andere"` in German) instead of raw `"Other"`, and export identifiers display localized UI names.
+• *Given* sport usage dates `"2018-08-12"` and `"2024-05-01"`,
+• *When* rendered in `SportTypesTabsScreen` in locale `de_DE`,
+• *Then* `UsageItem` displays `"12.08.2018"` and `"01.05.2024"`.
+
+**Invariants**: Technical export keys in SQLite and exporter payloads are completely unaffected; custom user-defined sport types retain their exact user-specified names; `formatIsoDate` is fail-safe; 100% clean-room test pass rate.
+
+### REQ-UI-487: Navigation Drawer Units Disambiguation & Distinct Power Cockpit Iconography [Verified]
+- **Tests**: `TST-UI-487` | **Tickets**: `ATT-5871`
+- **Implementation**: `res/values-de/strings.xml`, `res/values-ja/strings.xml`, `res/drawable/bsport_bike_power.xml`, `ActivityType.java`, `AppNavigationDrawer.kt`, `UnitsSettingsDialog.kt`, `ActivityTypeSelectionDialog.kt`, `CopyTrackingTabDialog.kt`
+- **Rationale**: In the German navigation drawer, both `tab_workouts` (*Training -> Einheiten*) and `prefsUnitsTitle` (*Einstellungen -> Einheiten*) resolved to `"Einheiten"`, causing homonym ambiguity. In the units settings dialog (`UnitsSettingsDialog.kt`), German and Japanese retained untranslated English unit `"mile"` in `units_type_imperial` (`"Imperial (mile)"`). Furthermore, in activity type selection dialogs (`ActivityTypeSelectionDialog.kt`, `CopyTrackingTabDialog.kt`), `ActivityType.BIKE_SPEED_AND_CADENCE` and `ActivityType.BIKE_POWER` both referenced `R.drawable.bsport_bike`, rendering them visually indistinguishable.
+- **Description**:
+1. *Drawer & Dialog Label Disambiguation (`REQ-UI-487.1`)*:
+   • In `res/values-de/strings.xml`, `prefsUnitsTitle` SHALL resolve to `"Maßeinheiten"`, eliminating navigation drawer label collision with `tab_workouts` (`"Einheiten"`).
+   • In `AppNavigationDrawer.kt` (under Settings -> `drawer_units`) and `UnitsSettingsDialog.kt` header, the displayed title SHALL bind `R.string.prefsUnitsTitle` (`"Maßeinheiten"` in DE, `"Units"` in EN).
+2. *Units Dialog Imperial Localization Parity (`REQ-UI-487.2`)*:
+   • In `res/values-de/strings.xml`, `units_type_imperial` SHALL resolve to `"Imperial (Meilen)"`.
+   • In `res/values-ja/strings.xml`, `units_type_imperial` SHALL resolve to `"ヤードポンド法 (マイル)"`.
+   • In `UnitsSettingsDialog.kt`, selecting between `MyUnits.METRIC` and `MyUnits.IMPERIAL` SHALL render fully localized labels across all 9 supported locales without untranslated English unit fragments.
+3. *Distinct Bike Power Iconography (`REQ-UI-487.3`)*:
+   • Vector asset `res/drawable/bsport_bike_power.xml` SHALL be authored matching the `192x192` viewport / `48dp` geometry of `bsport_bike.xml`, incorporating a distinct power lightning bolt badge in the top-left quadrant using canonical `ic_power` vector geometry.
+   • `ActivityType.BIKE_POWER` enum in `com.atrainingtracker.banalservice.ActivityType` SHALL bind `logoId = R.drawable.bsport_bike_power`.
+   • `ActivityTypeSelectionDialog.kt` and `CopyTrackingTabDialog.kt` SHALL render `bsport_bike_power` for `ActivityType.BIKE_POWER` and `bsport_bike` for `ActivityType.BIKE_SPEED_AND_CADENCE`, ensuring visual distinction.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-UI-122` (*9-Language Localization & Translation Parity*) and `REQ-UI-149` (*Activity Type Selection Dialog*); establishes `REQ-UI-487` (*Navigation Drawer Units Disambiguation & Distinct Power Cockpit Iconography*).
+2. *Historical Origin & Commit Trace*: Commit `2ef1bbdf` (navigation drawer migration) and commit `0e17d2a5` (Compose settings sheets).
+3. *Root Reason for Existing Formulation*: Literal 1:1 translation of "Units" -> "Einheiten" created homonym collision with workout sessions; `BIKE_POWER` reused `bsport_bike` because no dedicated multi-color sport vector existed at creation time.
+4. *Preservation of Core Invariants*: SQLite table contracts (`TrackingViewsDatabaseManager`), preference keys (`SP_UNITS`), enum names (`ActivityType.BIKE_POWER.name()`), and drawer routes (`NavRoutes.fromDrawerItemId(R.id.drawer_units)`) remain 100% byte-for-byte identical.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the Navigation Drawer open in German locale (`de`),
+• *When* viewing drawer items under "Einstellungen",
+• *Then* the units item displays `"Maßeinheiten"` instead of `"Einheiten"`.
+• *Given* `UnitsSettingsDialog` open in German locale (`de`),
+• *When* inspecting unit selection options,
+• *Then* the dialog title is `"Maßeinheiten"`, metric is `"Metrisch (m)"`, and imperial is `"Imperial (Meilen)"`.
+• *Given* `ActivityTypeSelectionDialog` or `CopyTrackingTabDialog` open,
+• *When* inspecting the sport icon for `BIKE_POWER` ("Rad Leistung"),
+• *Then* it renders `R.drawable.bsport_bike_power` with a prominent power lightning bolt badge, visually distinct from `BIKE_SPEED_AND_CADENCE` ("Radeln").
+
+**Invariants**: SQLite database schema (`TrackingViewsDbHelper`), preference keys (`SP_UNITS`), enum names (`ActivityType.BIKE_POWER.name()`), and 100% test pass rate MUST NOT be broken.
+
+### REQ-UI-488: Strava Settings Dialog Close Button Elimination & Sync Card Action Icons [Verified]
+- **Tests**: `TST-UI-488` | **Tickets**: `ATT-5854`
+- **Implementation**: `StravaSettingsDialog.kt`, `AppModalBottomSheet.kt`
+- **Rationale**: In `StravaSettingsDialog.kt`, two visual and interaction defects were identified: (1) redundant top-right `✕` close button in the header alongside sticky bottom `Abbrechen` and `Speichern` action buttons (addressed via `AppBottomSheetContent`'s `showCloseButton = (actions == null)` default introduced in `REQ-UI-473`); and (2) manual sync cards (*Equipment*, *Routes*, *Segments*) were rendered as static text blocks in a bare `Column` without trailing action indicators or progress spinners, making interactive triggers look like read-only status displays.
+- **Description**:
+1. *Close Button Elimination (`REQ-UI-488.1`)*:
+   • In `StravaSettingsDialog.kt`, because `actions` is provided (`AppDialogActions.SaveCancel`), `AppBottomSheetContent` SHALL automatically suppress the top-right `✕` close button, leaving the bottom action row as the sole dismissal/confirmation mechanism.
+2. *Interactive Manual Sync Card Feedback (`REQ-UI-488.2`)*:
+   • The three manual sync `OutlinedCard`s (*Ausrüstung aktualisieren*, *Routen aktualisieren*, *Segmente aktualisieren*) SHALL format their content using a horizontal `Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp))`.
+   • The left child SHALL be a `Column(modifier = Modifier.weight(1f))` holding the title (`MaterialTheme.typography.titleMedium`) and the timestamp / status subtitle (`MaterialTheme.typography.bodySmall`, `onSurfaceVariant`).
+   • The right child SHALL be a trailing feedback container rendering `CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.primary)` when actively syncing (`isEquipmentSyncing`, `isRoutesSyncing`, or `isSegmentsSyncing` is `true`), or `Icon(imageVector = Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)` when idle.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Builds on `REQ-UI-473` (*Modal Bottom Sheet Close Button Elimination*); establishes `REQ-UI-488` (*Strava Settings Dialog Close Button Elimination & Sync Card Action Icons*).
+2. *Historical Origin & Commit Trace*: Commit `8058c49e` (ATT-1083 / `REQ-UI-149`) and commit `d92469ec` (ATT-5873).
+3. *Root Reason for Existing Formulation*: Manual sync cards initially rendered simple vertical text columns; reactive sync StateFlows only swapped subtitle text without visual icon affordances.
+4. *Preservation of Core Invariants*: Manual sync click callbacks, concurrency guards (`if (!isSyncing)`), background sync workers (`StravaEquipmentSyncWorker`, `StravaRoutesSyncWorker`, `StravaSegmentsSyncWorker`), and selective upload preferences remain 100% strictly intact.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `StravaSettingsDialog` open with bottom `Abbrechen` and `Speichern` buttons,
+• *When* inspecting the header row,
+• *Then* zero `✕` close buttons are rendered.
+• *Given* an idle Strava sync card (*Equipment*, *Routes*, or *Segments*),
+• *When* rendered in `StravaSettingsDialog`,
+• *Then* it displays `Icons.Default.Refresh` as a trailing action icon on the right.
+• *Given* an active synchronization operation in progress,
+• *When* rendered in `StravaSettingsDialog`,
+• *Then* the corresponding card displays a 20.dp `CircularProgressIndicator` instead of the refresh icon.
+
+**Invariants**: Strava OAuth 2.0 authentication, worker scheduling, repository sync algorithms, and 100% test pass rate MUST NOT be broken.
+
+### REQ-UI-489: Route Details Climb Badges, Header Iconography, Section Deduplication & Localized Grade Formatting [Verified]
+- **Tests**: `TST-UI-489` | **Tickets**: `ATT-5853`
+- **Implementation**: `ElevationProfile.kt`, `RouteSummaryHeader.kt`, `RouteOnMapScreen.kt`, `RouteSegmentsBreakdownSection.kt`, `ClimbDetector.kt`
+- **Rationale**: In the Route Details screen (`RouteOnMapScreen.kt`), UI and localization audits identified four presentation defects: (1) excessive legacy top padding (`44.dp`) in `ElevationProfile.kt` creating an unneeded gap and causing summit climb badges to clip under the toolbar boundary; (2) duplicate upward arrow icon (`ic_ascent`) for both elevation gain and climb count in `RouteSummaryHeader.kt`; (3) redundant breakdown section headers (`Anstiege (N)` / `Segmente (M)`) rendered directly beneath active tab filter chips; and (4) hardcoded `Locale.US` decimal points (`0.7 km @ 3.7%`) in climb titles generated by `ClimbDetector.kt` conflicting with German comma conventions (`3,7%`).
+- **Description**:
+1. *Elevation Profile Top Clearance & Height Calibration (`REQ-UI-489.1`)*:
+   • In `ElevationProfile.kt`, `topPadding` SHALL be declared as `if (showZoomControls) 24.dp else 16.dp`, and `totalCanvasHeight` SHALL be declared as `fixedHeight ?: if (showZoomControls) cachedData.adaptiveHeight + 8.dp else cachedData.adaptiveHeight`. This eliminates the legacy 20dp white space gap reserved for decoupled zoom controls while maintaining at least 24dp top clearance for summit climb category badges (`UC`, `Cat 4`, etc.) at 1.0x font scale without vertical boundary clipping during split-pane scrolling.
+2. *Route Summary Header Climb Icon Disambiguation (`REQ-UI-489.2`)*:
+   • In `RouteSummaryHeader.kt`, the metric item for climb count (`climbs.size`) SHALL bind `iconRes = R.drawable.ic_altitude` (mountain silhouette) instead of `R.drawable.ic_ascent` (upward arrow), cleanly distinguishing total climb count from cumulative elevation gain.
+3. *Route Details Section Heading Deduplication (`REQ-UI-489.3`)*:
+   • `RouteClimbsBreakdownSection` and `RouteSegmentsBreakdownSection` SHALL declare an optional parameter `showHeader: Boolean = true`.
+   • In both breakdown composables, the section heading `Text` component SHALL be wrapped in `if (showHeader)`.
+   • In `RouteOnMapScreen.kt`, when rendering the breakdown sections under the dual-tab filter chip row (`climbs.isNotEmpty() && matchedSegments.isNotEmpty()`), `showHeader` SHALL be passed as `!(climbs.isNotEmpty() && matchedSegments.isNotEmpty())`, suppressing the redundant duplicate section heading beneath the active filter chip.
+4. *Locale-Aware Climb Title Grade Formatting (`REQ-UI-489.4`)*:
+   • In `ClimbDetector.kt` (`buildClimb`), the generated default climb name SHALL format average grade using `String.format(Locale.getDefault(), "%.1f%%", avgGrade)` instead of hardcoded `Locale.US`.
+   • In `RouteClimbsBreakdownSection` in `RouteOnMapScreen.kt`, default generated climb titles SHALL dynamically format the average gradient matching the active runtime locale and user preferences.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-UI-225` (*Decoupled Global Telemetry Zoom Toolbar & Chart Spacing*), `REQ-UI-274` (*Dynamic Elevation Profile Top Clearance & Container Height Stability*), `REQ-UI-302` (*Route Details Segment & Climb Tabs*), `REQ-UI-308` (*Route POI Overlay & Waypoint Filtering*), and `REQ-UI-387` (*Localized Climb Titles & Metric Formatter Parity*); establishes `REQ-UI-489` (*Route Details Climb Badges, Header Iconography, Section Deduplication & Localized Grade Formatting*).
+2. *Historical Origin & Commit Trace*: Commit `2b3cb559` (ATT-2386 zoom decoupling), commit `6eaeb507` (ATT-3453 climb badge clearance), commit `0937a091` (ATT-3575 climb title localization), and commit `b24a3e9c` (ATT-2583 / ATT-2763 route tabs).
+3. *Root Reason for Existing Formulation*: Legacy 44dp topPadding accommodated internal on-canvas zoom buttons prior to external toolbar extraction; duplicate `ic_ascent` was reused for climb count because no dedicated terrain icon was assigned; unconditional breakdown headers were authored prior to the introduction of dual-tab filter chips; hardcoded `Locale.US` in `ClimbDetector` was left during initial detector prototyping.
+4. *Preservation of Core Invariants*: Climb detection algorithms (`REQ-MAP-027`), segment matching, map polyline overlays, scrubbing overlay synchronization, 9-language localization parity across EN, DE, ES, FR, IT, JA, NL, PL, PT, and 100% test pass rate remain strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the Elevation Profile rendered in detail view (`showZoomControls = true`),
+• *When* inspecting `topPadding` and `totalCanvasHeight`,
+• *Then* `topPadding` is `24.dp` and `totalCanvasHeight` adds `8.dp` over `cachedData.adaptiveHeight`, eliminating the 20dp empty white gap while keeping summit climb badges completely visible without clipping.
+• *Given* the Route Details summary header with climbs present,
+• *When* rendered on screen,
+• *Then* total elevation gain displays `R.drawable.ic_ascent` (upward arrow) and climb count displays `R.drawable.ic_altitude` (mountain silhouette).
+• *Given* a route with both climbs and matched segments (`climbs.isNotEmpty() && matchedSegments.isNotEmpty()`),
+• *When* the user views the route details screen,
+• *Then* the breakdown section displays filter chips `[Anstiege (N)] [Segmente (M)]` and suppresses the duplicate text heading immediately below the chips.
+• *Given* the application running in German locale (`de`),
+• *When* an automated climb is detected or displayed,
+• *Then* its grade in the title row is formatted with a localized comma (e.g., `3,7%`) rather than an English dot (`3.7%`).
+
+**Invariants**: Climb categorization thresholds (`CAT_4`..`HC`), route point coordinates, split-pane dragging, scrubbing overlay synchronization, 9-language localization parity across EN, DE, ES, FR, IT, JA, NL, PL, PT, and 100% test pass rate MUST NOT be broken.
+
+### REQ-UI-490: Workout Cluster Trend Chart & Dashboard Polish: Label Collision Resolution, Average Background Badge, Time-Range Filtering & Thousands Grouping [Verified]
+- **Tests**: `TST-UI-490` | **Tickets**: `ATT-5852`
+- **Implementation**: `WorkoutClusterTrendChartCard.kt`, `WorkoutClusterHeatmapScreen.kt`, `DistanceFormatter.java`, `AltitudeFormatter.java`
+- **Rationale**: In `WorkoutClusterDetailDashboard` (`WorkoutClusterHeatmapScreen.kt` & `WorkoutClusterTrendChartCard.kt`), UI audits of high-volume clusters (e.g. `Bike2Work`) revealed five readability and layout defects: (1) average label `Ø ...` drawn without a background pill directly over dense trend lines and data markers; (2) bottom Y-axis boundary label colliding vertically with X-axis start date at `x = leftPadding`; (3) redundant card title `📈 Leistungsverlauf` repeating the selected tab button; (4) lack of time-range filtering for multi-year clusters; and (5) lack of localized thousands separators on cumulative statistics totals (`136730 m`, `4226 km`).
+- **Description**:
+1. *Canvas Text Separation & Left Gutter (`REQ-UI-490.1`)*:
+   • In `WorkoutClusterTrendChartCard.kt`, Y-axis boundary labels (`yAxisTopLabel` and `yAxisBottomLabel`) SHALL be positioned in a dedicated left gutter (`leftPadding = 48.dp.toPx()`) rather than overlapping the start date.
+   • `xAxisStartLabel` and `xAxisEndLabel` SHALL be drawn exclusively along the bottom margin below the plot canvas.
+2. *Average Reference Line Badge (`REQ-UI-490.2`)*:
+   • The average label `Ø ...` SHALL be rendered with a rounded background container badge (`surfaceColor` with subtle fill) drawn on top of the trend lines and points, guaranteeing text readability regardless of underlying data marker density.
+3. *Header Deduplication & Time-Range Filter Chips (`REQ-UI-490.3`)*:
+   • The redundant text header `📈 Leistungsverlauf` inside `WorkoutClusterTrendChartCard` SHALL be replaced with a compact time-range filter chip group (`FilterChip` for `1J` / `3J` / `Alle`, localized across all 9 locales without emojis) docked to the left of the `[Dauer | Tempo]` selector row.
+   • When a time range is selected, the chart points SHALL filter relative to the latest workout timestamp (`latestTimeS - spanS`), automatically falling back to all points if fewer than 2 workouts match the selected window.
+4. *Cumulative Volume Localized Thousands Grouping (`REQ-UI-490.4`)*:
+   • Large integer meter/kilometer totals formatted via `DistanceFormatter.java` and `AltitudeFormatter.java` SHALL use locale-aware grouping formats (`%,.0f`) so cumulative totals render with localized grouping separators (e.g. `136.730 m`, `4.226 km` in German).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-SET-078` (*Historical Duration and Speed/Pace Trend Chart for Workout Clusters*), `REQ-UI-225`, and Rule 36 formatters (`DistanceFormatter`, `AltitudeFormatter`).
+2. *Historical Origin & Commit Trace*: Commit `feat(ATT-4067)` (Sprint 2026-42.10) and `feat(ATT-4287)`.
+3. *Root Reason for Existing Formulation*: Initial trend card placed both `yAxisBottomLabel` and `xAxisStartLabel` at `x = leftPadding`, without anticipating collision or time-range filtering on clusters with hundreds of workouts; formatters used `%.0f` without grouping specifier `,`.
+4. *Preservation of Core Invariants*: "Faster-is-higher" coordinate inversion, PR markers, nearest-point touch selection, $N \ge 2$ threshold, and 9-language localization parity without decorative emojis (`ATT-5400`) MUST remain strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `WorkoutClusterTrendChartCard` rendering a cluster with multiple workouts,
+• *When* the average label `Ø ...` is drawn on canvas,
+• *Then* it renders on top of a rounded surface background badge, ensuring complete text legibility over dense trend lines and data markers.
+• *Given* `WorkoutClusterTrendChartCard` with start date and bottom Y-axis label,
+• *When* rendered on canvas,
+• *Then* the bottom Y-axis label is rendered in the left gutter and the start date along the bottom margin without visual collision.
+• *Given* the toolbar header row of `WorkoutClusterTrendChartCard`,
+• *When* viewed in `WorkoutClusterDetailDashboard`,
+• *Then* the redundant `📈 Leistungsverlauf` heading is replaced by time-range filter chips (`1J | 3J | Alle`) docked left of the `[Dauer | Tempo]` toggle.
+• *Given* the cumulative volume card in the Statistics tab,
+• *When* displaying totals $\ge 1.000$,
+• *Then* cumulative distance and elevation are formatted with locale-aware thousands grouping (e.g., `4.226 km` and `136.730 m` in German).
+
+**Invariants**: 9-language localization parity across EN, DE, ES, FR, IT, JA, NL, PL, PT; cluster similarity calculations; database schema backward compatibility; 100% test pass rate.
+
+### REQ-UI-491: MapDetailLayout Status Bar Inset Clearance for Collapsed Header Floating Controls [Verified]
+- **Tests**: `TST-UI-491` | **Tickets**: `ATT-5851`
+- **Implementation**: `MapDetailLayout.kt`, `MapDetailLayoutCollapsingHeaderContractTest.kt`
+- **Rationale**: In full-screen detail views utilizing `MapDetailLayout` with `useStatusBarsPadding == true` (Favorite Routes, Route Details, Segment Details, Climbs), scrolling down collapses the top header offscreen, causing `currentTopPaddingPx` to reach `0`. While `ATrainingTrackerMap` bleeds edge-to-edge behind the status bar, top-aligned floating action buttons (the Share button and `overlay()` composables) translate into the system status bar, overlapping system status bar indicators (clock, 5G, battery).
+- **Description**:
+1. *Dynamic Floating Controls Top Inset (`REQ-UI-491.1`)*:
+   • In `MapDetailLayout.kt`, when `useStatusBarsPadding == true`, dynamic status bar clearance `floatingControlsTopOffsetDp = with(density) { (statusBarHeightPx - currentTopPaddingPx).coerceAtLeast(0).toDp() }` SHALL be computed, where `statusBarHeightPx = WindowInsets.statusBars.getTop(density)`.
+   • When `useStatusBarsPadding == false` (e.g. bottom sheets), `statusBarHeightPx` MUST evaluate to `0`, ensuring `floatingControlsTopOffsetDp == 0.dp`.
+2. *Floating Controls Container Clearance (`REQ-UI-491.2`)*:
+   • In `mapBox`, the slotted `overlay()` content and the floating Share button SHALL be wrapped in a container applying `Modifier.fillMaxSize().padding(top = floatingControlsTopOffsetDp)`.
+   • When the header collapses (`currentTopPaddingPx == 0`), floating action controls SHALL remain offset below the status bar (`statusBarHeight + defaultPadding`), while `ATrainingTrackerMap` continues to render edge-to-edge behind the translucent status bar.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-UI-250` (*Collapsing Upper Metadata Architecture & Map Squashing Prevention via NestedScroll in MapDetailLayout*).
+2. *Historical Origin & Commit Trace*: Introduced in `ATT-2150` (commit `e2b80b2d`) for collapsing header behavior in `MapDetailLayout`.
+3. *Root Reason for Existing Formulation*: `currentTopPaddingPx` was allowed to drop to `0` to give the map full-screen bleed, but overlooked status bar collision for top-aligned floating action buttons inside `mapBox`.
+4. *Preservation of Core Invariants*: Full-screen map bleed under the transparent status bar is 100% preserved; uncollapsed `16.dp` button spacing below header is preserved; bottom sheet layouts (`useStatusBarsPadding == false`) remain unaltered (`floatingControlsTopOffsetDp == 0.dp`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `MapDetailLayout` with `useStatusBarsPadding == true` and an expanded header,
+• *When* the header is fully expanded (`connection.appBarOffset == 0`),
+• *Then* `floatingControlsTopOffsetDp` evaluates to `0.dp`, preserving the default `16.dp` spacing below the header bottom edge.
+• *Given* `MapDetailLayout` with `useStatusBarsPadding == true`,
+• *When* the user scrolls and the header collapses completely (`connection.appBarOffset == -headerHeightPx`),
+• *Then* `floatingControlsTopOffsetDp` evaluates to `statusBarHeightDp`, preventing the Share button and overlay action buttons from colliding with Android system status bar icons.
+• *Given* `MapDetailLayout` configured as a bottom sheet (`useStatusBarsPadding == false`),
+• *When* scrolling or expanding,
+• *Then* `floatingControlsTopOffsetDp` remains strictly `0.dp`.
+
+**Invariants**: Edge-to-edge map bleed under status bar is preserved; no changes to public API of `MapDetailLayout`; bottom sheet mode behavior is preserved; 100% test pass rate.
+
+### REQ-UI-492: Equipment & Sensors UI: Strava Gear Deduplication, Date/Frame-Type Localization, Placeholder Harmonization & Sensor Detail Status Dot Alignment [Verified]
+- **Tests**: `TST-UI-492` | **Tickets**: `ATT-5847`
+- **Implementation**: `EquipmentTabsScreen.kt`, `BikeTypeSelector.kt`, `EditEquipmentDialog.kt`, `EditDeviceDialog.kt`, `DeviceData.kt`, `values*/strings.xml`
+- **Rationale**: Live audits of `Räder & Schuhe` and `Sensoren` identified four user-facing defects: (1) redundant repetition of identical Strava gear names in subtitle rows, (2) unlocalized raw ISO usage dates (`YYYY-MM-DD`) and hardcoded English bike frame types ("Road", "Time Trial"), (3) German compounding typo `Rad Typ` and asymmetric dropdown placeholders ("Keine" vs. "Keine verknüpften Sensoren"), and (4) sensor detail dialog showing a green status LED while displaying "100% (nicht verbunden)", uncapitalized internal smartphone manufacturers ("samsung", "google"), and an unstyled bare `TextButton` for equipment linking.
+- **Description**:
+1. *Strava Gear Name Deduplication (`REQ-UI-492.1`)*:
+   • In `EquipmentTabsScreen.kt`, when an equipment item's `stravaName` is non-blank and identical (case-insensitive) to its primary `name`, the card SHALL render an inline `StravaOriginalLogo` badge in the title row and SHALL suppress the duplicate subtitle line.
+   • When `stravaName` differs from `name`, the distinct Strava gear name SHALL continue to render in the subtitle row with `StravaOriginalLogo`.
+2. *Usage Date & Frame-Type Localization (`REQ-UI-492.2`)*:
+   • In `UsageItem`, `firstUsed` and `lastUsed` date strings SHALL be formatted via `DateTimeUtils.formatIsoDate(date)` adhering to the active locale (`FormatStyle.MEDIUM`).
+   • Bike frame types (1: MTB, 2: Cross, 3: Road, 4: Time Trial) SHALL be resolved via localized string resources (`equipment_bike_type_mtb`, `cross`, `road`, `tt`) across all 9 locales (e.g. "Rennrad", "Zeitfahrrad" in German) in both `EquipmentTabsScreen.kt` and `BikeTypeSelector.kt`.
+3. *Spelling & Dropdown Placeholder Harmonization (`REQ-UI-492.3`)*:
+   • In `values-de/strings.xml`, `equipment_bike_type` SHALL be corrected to `Radtyp` and `equipment_select_bike_type` to `Radtyp auswählen`.
+   • In `EditEquipmentDialog.kt`, the empty placeholder for linked sensors SHALL be harmonized with linked sport types to display compact "Keine" / "None" (`R.string.equipment_no_sports_linked`).
+4. *Sensor Detail Dialog Status Dot, Capitalization & Dropdown Styling (`REQ-UI-492.4`)*:
+   • In `EditDeviceDialog.kt`, the technical status LED dot color SHALL be strictly synchronized with `DeviceStatusRow` connection state (`liveData?.isConnected ?: data.isConnected`), displaying `TTColor.ConnectionStatusGreen` when connected and neutral gray (`Color.LightGray`) when disconnected.
+   • In `DeviceData.kt:raw2UiDeviceData`, raw Android manufacturer strings (e.g. `Build.BRAND`) SHALL be capitalized (e.g. "Samsung", "Google") via titlecase formatting.
+   • In `EditDeviceDialog.kt:EquipmentSection`, the linked equipment selector SHALL be styled as an `OutlinedTextField` with dropdown affordance (`trailingIcon`) matching standard dialog inputs.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-492`, refining `REQ-UI-061` (*Universal List Card Contracts*), `REQ-UI-149` (*Modal Bottom Sheet Dialogs*), `REQ-UI-256` (*Equipment Management UI*), and `REQ-UI-283` (*Sensor Management*).
+2. *Historical Origin & Commit Trace*: Introduced in `ATT-2126` (`commit fc10ad81`) and `ATT-2382` during equipment card and sensor management implementation.
+3. *Root Reason for Existing Formulation*: Strava subtitle was unconditionally rendered to confirm external provenance, overlooking 1:1 name matches; frame types were hardcoded during rapid prototyping; and status LED was bound independently from `DeviceStatusRow`.
+4. *Preservation of Core Invariants*: Equipment-to-sensor relationships (`REQ-UI-256`), database schemas (`Equipment.db`, `Devices.db`), swipe-to-delete card gestures (`REQ-UI-061`), 9-locale parity (`REQ-LOC-001`), and 100% test pass rate MUST NOT be compromised.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an equipment item where `stravaName` matches `name` (e.g. "Brooks Green Silence"),
+• *When* rendered in `EquipmentTabsScreen`,
+• *Then* an inline Strava logo badge is displayed next to the title and no duplicate subtitle line is shown.
+• *Given* an equipment item with `firstUsed` or `lastUsed` ISO dates,
+• *When* rendered in German locale,
+• *Then* dates are formatted as `DD.MM.YYYY` (e.g. `10.01.2019`) rather than raw ISO `YYYY-MM-DD`.
+• *Given* a bike with frame type 3 (Road) or 4 (Time Trial) in German locale,
+• *When* viewed in `EquipmentTabsScreen` or `BikeTypeSelector`,
+• *Then* the frame type displays as "Rennrad" or "Zeitfahrrad" and the selector label reads "Radtyp".
+• *Given* a sensor that is disconnected in `EditDeviceDialog`,
+• *When* the dialog is displayed,
+• *Then* the status indicator dot is gray (`Color.LightGray`), the status text reads `(nicht verbunden)`, and smartphone manufacturers like "samsung" or "google" are capitalized to "Samsung" or "Google".
+
+**Invariants**: Equipment and sensor database schemas remain unchanged; Bluetooth/ANT+ background connectivity pipelines remain unaffected; 9-language localization parity across EN, DE, ES, FR, IT, JA, NL, PL, PT; 100% test pass rate.
+
+### REQ-UI-493: ClusterItem & Filter (Lieblingsstrecken): Hit Count Display Healing, Bidirectional Location Context, Landscape Thumbnail & Filter Sheet Reset Action [Verified]
+- **Tests**: `TST-UI-493` | **Tickets**: `ATT-5846`
+- **Implementation**: `WorkoutClusterComponents.kt`, `WorkoutClustersViewModel.kt`, `WorkoutClusterRepository.kt`, `FilterBottomSheetScaffold.kt`, `strings.xml` (all 9 locales)
+- **Rationale**: In `Lieblingsstrecken` cluster management (`WorkoutClusterComponents.kt`, `WorkoutClusterRepository.kt`, and `FilterBottomSheetScaffold.kt`), UI audits revealed four presentation and telemetry defects: (1) cluster cards display `0 Aufzeichnungen` when `RouteClusters.hitCount` is desynchronized from `WorkoutSummaries`; (2) cluster cards only display start locations and fail to resolve destination coordinates (`endLat`, `endLng`); (3) square 100x100dp map thumbnails force excessive vertical whitespace beside metadata, and multi-gear equipment lists wrap unbounded; and (4) the filter bottom sheet reset button label ("Alle zurücksetzen") wraps onto two lines in the 50% split button row.
+- **Description**:
+1. *Hit Count Display Healing & Repository Reconciliation (`REQ-UI-493.1`)*:
+   • In `WorkoutClusterComponents.kt` (`WorkoutClusterMetadataBlock`), the displayed recordings count SHALL be calculated from `maxOf(cluster.hitCount, stats?.workoutCount ?: 0)` (falling back to `cluster.hitCount`), guaranteeing that cluster cards display the accurate number of recorded workouts even if the cached `hitCount` in SQLite is zero.
+   • In `WorkoutClusterRepository.kt` (`loadAllClustersLightweight`), when clusters are loaded and `_clusterStats` is hydrated from `WorkoutSummaries`, any cluster with `hitCount == 0` that has associated workouts in summary stats SHALL have its `hitCount` healed and updated.
+2. *Bidirectional Route Endpoint Location Context (`REQ-UI-493.2`)*:
+   • `WorkoutClustersViewModel` SHALL expose a general location lookup `getLocationName(lat: Double, lng: Double): String?` resolving recognized locations via `KnownLocationsDatabaseManager`.
+   • In `WorkoutClusterComponents.kt` (`WorkoutClusterMetadataBlock`), both start coordinates (`startLat`, `startLng`) and destination coordinates (`endLat`, `endLng`) SHALL be resolved.
+   • If start and destination resolve to the same known location, the UI SHALL display `Start & Ziel: [Location]` (`R.string.workout_start_and_destination`).
+   • If start and destination resolve to different known locations, the UI SHALL display `[Start] → [Ziel]`.
+   • If only one endpoint resolves to a known location, the UI SHALL display `Start: [Start]` (`R.string.cluster_start_location`) or `Ziel: [Ziel]` (`R.string.workout_destination_location`).
+3. *Landscape Map Thumbnail & Equipment Text Constraining (`REQ-UI-493.3`)*:
+   • In `WorkoutClusterComponents.kt` (`ClusterItem`), the route preview map thumbnail SHALL use a 3:2 landscape geometry of `width = 110.dp, height = 75.dp` with rounded corners (12dp), eliminating vertical whitespace next to metadata while preserving `liteMode(true)` and `DarkMapAntiFlashOverlay`.
+   • In `WorkoutClusterMetadataBlock`, the linked equipment string SHALL enforce `maxLines = 1` and `overflow = TextOverflow.Ellipsis`.
+4. *Single-Line Filter Sheet Reset Button Action (`REQ-UI-493.4`)*:
+   • In `FilterBottomSheetScaffold.kt`, the reset action button SHALL use the concise localized resource `R.string.filter_reset` ("Zurücksetzen" / "Reset") with `maxLines = 1` across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT), guaranteeing a uniform single-line height matching the adjacent "OK" button in 50% split button rows.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-493`, refining `REQ-SET-067` (*Auto-Naming & Hit Counting*), `REQ-UI-186` (*Recognized Start Location Badges*), `REQ-UI-244` (*Cluster Map Thumbnails*), and `REQ-UI-149` (*Filter Bottom Sheets*).
+2. *Historical Origin & Commit Trace*: Introduced in `ATT-714`, `ATT-1402`, and `ATT-2276`.
+3. *Root Reason for Existing Formulation*: Initial cluster items only anticipated start locations; square 100dp maps were adapted from route cards before 3:2 aspect ratios; and filter sheets used horizontal chip copy `filter_clear_all` ("Alle zurücksetzen") without considering narrow 50% button widths.
+4. *Preservation of Core Invariants*: `GoogleMapOptions().liteMode(true)`, `DarkMapAntiFlashOverlay`, horizontal filter chips `filter_clear_all` contract, zero-touch auto-naming counter integrity, and 9-locale parity without emojis (`ATT-5400`) MUST NOT be compromised.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a cluster with `hitCount = 0` but having matching workouts in `WorkoutSummaries`,
+• *When* displayed in `ClusterItem` or `WorkoutClusterDetailDashboard`,
+• *Then* the recordings badge displays the non-zero count matching `stats.workoutCount`.
+• *Given* a cluster where start and end coordinates match the same known location (e.g. "Home"),
+• *When* rendered in `WorkoutClusterMetadataBlock`,
+• *Then* the location badge reads "Start & Ziel: Home".
+• *Given* a cluster where start coordinates resolve to "Home" and destination coordinates resolve to "Work",
+• *When* rendered in `WorkoutClusterMetadataBlock`,
+• *Then* the location badge reads "Home → Work".
+• *Given* a cluster item rendered in `WorkoutClustersScreen`,
+• *When* the map preview is displayed,
+• *Then* its dimensions are 110.dp width by 75.dp height, and multi-gear equipment strings are truncated with an ellipsis on a single line.
+• *Given* `FilterBottomSheetScaffold` displayed in German locale,
+• *When* inspecting the bottom action bar,
+• *Then* the reset button displays "Zurücksetzen" on a single line with uniform height matching the "OK" button.
+
+**Invariants**: MapView liteMode and dark map styling preserved; auto-naming counter integrity preserved; 9-language localization parity across EN, DE, ES, FR, IT, JA, NL, PL, PT without emojis; 100% test pass rate.
+
+### REQ-UI-494: ElevationProfile Y-Axis Grid Clearance & Zero-Altitude Profile Suppression in RouteItem [Verified]
+- **Tests**: `TST-UI-494` | **Tickets**: `ATT-5845`
+- **Implementation**: `ElevationProfile.kt`, `RouteItem.kt`
+- **Rationale**: In `ElevationProfile` and `RouteItem`, UI audits of the Routes screen (`screen_04_routen.png`) identified two presentation defects: (1) intermediate Y-axis elevation grid labels (e.g. `400`) overlap the bottom minimum altitude label (`383 m`) due to omitting the `+ 10f` baseline offset in vertical clearance calculations and using a fixed hardcoded `-110f` X-offset; and (2) flat GPX routes lacking altitude data (e.g. `bike2work`, `↑ 0 m`) render a meaningless synthetic `-10 m` to `10 m` flat green elevation profile in `RouteItem`.
+- **Description**:
+1. *Y-Axis Intermediate Label Baseline Clearance Guard (`REQ-UI-494.1`)*:
+   • In `ElevationProfile.kt`, the vertical clearance evaluation for intermediate Y-axis labels SHALL incorporate the drawn label baseline offset (`labelBaselineY = y + 10f`).
+   • An intermediate altitude label SHALL only be rendered if its baseline maintains a clearance of at least `textPaint.textSize * 1.35f` from the bottom canvas boundary (`height`), from the top `maxAltLabel` boundary (`highlightPaint.textSize`), and from the previously rendered intermediate tick (`Math.abs(y - lastY)`).
+2. *Right-Aligned Intermediate Elevation Labels (`REQ-UI-494.2`)*:
+   • Intermediate Y-axis elevation labels SHALL NOT use a fixed `-110f` X-offset.
+   • Intermediate labels SHALL be right-aligned dynamically to `-textPaint.measureText(altText) - 10f`, matching the visual right alignment of `minAltLabel` and `maxAltLabel`.
+3. *Zero-Altitude Elevation Profile Suppression in RouteItem (`REQ-UI-494.3`)*:
+   • In `RouteItem.kt`, `ElevationProfile` SHALL only be rendered when authentic altitude data is available (`hasElevationData = pathPoints.any { it.altitude != null && !it.altitude.isNaN() && Math.abs(it.altitude) > 1e-3 } || summary.elevationGain > 0.0`).
+   • For flat GPX routes or tracks with zero elevation gain and null/zero altitude points, the `ElevationProfile` composable SHALL be suppressed, preventing display of the synthetic minimum vertical span (`-10 m` to `10 m`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-494`, refining `REQ-UI-197` (*Elevation Profile Layout Architecture*) and `REQ-UI-225` (*Route Item Layout*).
+2. *Historical Origin & Commit Trace*: Introduced in `ATT-508` (bounds calculation) and `ATT-2463` (`RouteItem` layout).
+3. *Root Reason for Existing Formulation*: The clearance check in `ElevationProfile` checked `height - y` before the `+ 10f` baseline shift was introduced for vertical text centration on grid lines; `RouteItem` assumed all imported GPX routes would contain elevation data.
+4. *Preservation of Core Invariants*: `ATT-5853` top padding (`24.dp` / `16.dp`) and climb badge clearance invariants, chart zoom/pan math, full-screen route detail elevation analysis (`MapDetailLayout`), and authentic route elevation visualization MUST NOT be compromised.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an elevation profile with minimum altitude `383 m` and an intermediate tick at `400 m` whose drawn baseline would fall within `textPaint.textSize * 1.35f` of `height`,
+• *When* the profile canvas is drawn,
+• *Then* the colliding intermediate label `400` is suppressed, leaving `383 m` legible without overlap.
+• *Given* intermediate altitude labels rendered on the Y-axis,
+• *When* drawn on the canvas,
+• *Then* each label is right-aligned to `-textPaint.measureText(altText) - 10f`.
+• *Given* a route item with zero elevation gain (`elevationGain == 0.0`) and path points with null or zero altitude,
+• *When* the route card is rendered in the routes list,
+• *Then* the elevation profile is hidden completely rather than showing a `-10 m` to `10 m` synthetic bar.
+
+**Invariants**: `ATT-5853` top padding and climb badge clearance invariants preserved; full-screen elevation detail inspection in `MapDetailLayout` preserved; authentic elevation profiles render without regression; 100% test pass rate.
+
+### REQ-UI-495: AthleteProfileScreen Filter Pill Layout, Decimal Localization, PMC Card Heights & Time-Range Selector [Verified]
+- **Tests**: `TST-UI-495` | **Tickets**: `ATT-5844`
+- **Implementation**: `AthleteProfileScreen.kt`, `AthleteMetricsPlotMath.kt`, `AthleteProfileViewModel.kt`
+- **Rationale**: In `AthleteProfileScreen.kt`, live UI audits (`screen_02_profil_zonen.png`, `screen_08_profil_pmc.png`) identified 4 presentation, layout, and localization defects: (1) filter pills in Verlauf and Messwert-Historie use uniform `weight(1f)`, truncating longer labels `Gewicht` and `Ruhe-HF` to `Gewi...` and `Ruhe...`; (2) hardcoded `Locale.US` decimal formatting renders dots (e.g. `80.0 kg`, `3.44 W/kg`, `2.4`, `0.8`, `+1.5`, `0.34`) inconsistent with the German active locale and adjacent localized strings (`-0,4/Wo.`); (3) unequal card heights in the PMC stat badge row because TSB contains 3 text lines while CTL/ATL contain 2 lines; and (4) absence of a time-range selector on `PerformanceManagementChartCard`, plotting all 10 historical years and compressing recent training curves into an unreadable sliver.
+- **Description**:
+1. *Proportional Filter Pill Width Allocation & Non-Truncation (`REQ-UI-495.1`)*:
+   • In `AthleteProfileScreen.kt`, `CompactSelectorPill` items in both the *Verlauf* metric row and the *Messwert-Historie* filter row SHALL be weighted proportionally based on label text length (`Modifier.weight(label.length.coerceIn(3, 9).toFloat())`).
+   • `CompactSelectorPill` horizontal padding SHALL be bounded to `3.dp` to ensure all 6 pills (`Gewicht`, `Ruhe-HF`, `FTP`, `CP`, `W'`, `W/kg`) fit on a single line on standard mobile screen widths ($\ge 360\,\text{dp}$) without ellipsis (`...`) truncation.
+2. *Active Locale Decimal Formatting (`REQ-UI-495.2`)*:
+   • In `AthleteMetricsPlotMath.kt`, format functions (`formatWeightValue`, `formatWPrimeValue`, `formatPowerToWeightValue`) SHALL default `locale` to `Locale.getDefault()`.
+   • In `AthleteProfileScreen.kt`, value formatting across chart Y-axis ticks, estimate dialogs, and PMC stat badges (`CTL`, `ATL`, `TSB`, `ACWR`) SHALL format decimals according to `Locale.getDefault()`.
+   • Canonical input parsing in `parseToCanonicalValue` SHALL preserve comma/dot-agnostic tolerance (`replace(',', '.')`).
+3. *Uniform PMC Stat Badge Row Heights (`REQ-UI-495.3`)*:
+   • In `AthleteProfileScreen.kt`, enclosing `Row` layouts for PMC stat cards SHALL specify `Modifier.height(IntrinsicSize.Min)` per Design Guideline 5.14.
+   • `PmcStatBadge` SHALL apply `Modifier.fillMaxHeight()` to ensure all cards in the row (`CTL | ATL | TSB` in Row 1; `ACWR | Ramp Rate` in Row 2) match the height of the tallest card without vertical asymmetry.
+4. *Dedicated PMC Chart Time-Range Selector (`REQ-UI-495.4`)*:
+   • `AthleteProfileViewModel` and `AthleteProfileUiState` SHALL provide independent PMC time-range state (`selectedPmcTimeRange: MetricsTimeRange`), defaulting to `MetricsTimeRange.SIX_MONTHS`.
+   • `PerformanceManagementChartCard` SHALL render a dedicated time-range selector row (`1M | 3M | 6M | 1J | Alle`) driving `onSelectPmcTimeRange(range)`.
+   • Physiological CTL/ATL/TSB EWMA calculation SHALL retain full multi-year history, and time-range filtering via `filterPmcPointsByTimeRange` SHALL be executed strictly post-calculation.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-UI-391.5` (*Dedicated AthleteProfileScreen UI, Locale Date Formatting & 9-Language Parity*) and `REQ-UI-401.3` (*PMC UI & Charting*).
+2. *Historical Origin & Commit Trace*: Introduced in `ATT-3704` (commit `b660ef43`) and `ATT-3859` (commit `e5d9225e`).
+3. *Root Reason for Existing Formulation*: Uniform `Modifier.weight(1f)` was a naive placeholder assuming short 2-3 char abbreviations; `Locale.US` was hardcoded during initial prototyping without auditing German decimal separators; PMC was initially launched without a dedicated range selector.
+4. *Preservation of Core Invariants*: Metric input parsing preserves comma and dot tolerance (`replace(',', '.')`); EWMA continues calculating over full history prior to range windowing; `IntrinsicSize.Min` protects against `Constraints.Infinity` crash in scroll containers.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the *Verlauf* metric selector and *Messwert-Historie* filter rows on a $\ge 360\,\text{dp}$ screen,
+• *When* rendered in German locale (`Gewicht`, `Ruhe-HF`),
+• *Then* all 6 filter pills display complete text on a single line without ellipsis (`...`) truncation.
+• *Given* an active German locale (`de_DE`),
+• *When* weight, W/kg, W', Y-axis ticks, and PMC badges (CTL, ATL, TSB, ACWR) are formatted,
+• *Then* numbers display comma decimal separators (e.g. `80,0 kg`, `3,44 W/kg`, `2,4`, `0,8`, `+1,5`, `0,34`).
+• *Given* the PMC stat badges in `PerformanceManagementChartCard`,
+• *When* rendered in `Row(Modifier.height(IntrinsicSize.Min))` with `PmcStatBadge(Modifier.fillMaxHeight())`,
+• *Then* all badges within Row 1 (CTL, ATL, TSB) and Row 2 (ACWR, Ramp Rate) have matching heights.
+• *Given* `PerformanceManagementChartCard` displayed with default `6M` time range,
+• *When* the user taps `1M`, `3M`, `1J`, or `Alle`,
+• *Then* the displayed PMC curve updates to the chosen date window while CTL, ATL, and TSB values retain full-history EWMA mathematical accuracy.
+
+**Invariants**: `Constraints.Infinity` crash prevention per Design Guideline 5.14 via `IntrinsicSize.Min`; complete historical EWMA integrity for CTL/ATL/TSB (slicing post-EWMA); metric input parsing supports both `,` and `.`; 9-language localization parity preserved; 100% test pass rate.
+
+### REQ-UI-496: Navigation Drawer Header Height Compactness & Vertical Clearance Guard [Verified]
+- **Tests**: `TST-UI-496` | **Tickets**: `ATT-5839`
+- **Implementation**: `AppNavigationDrawer.kt` (`DrawerHeader`)
+- **Rationale**: In `AppNavigationDrawer.kt`, visual audits (`audit_02_drawer.png`) revealed that the bottom-most navigation entry `Info & Unterstützung` (`drawer__info_support`) is vertically clipped on standard portrait mobile screens, forcing users to scroll the drawer to read the final support/privacy rows. Meanwhile, `DrawerHeader()` allocated an oversized `92.dp + statusBarHeight`, leaving a wide empty band of plain sky above the app branding. Reducing the net header height by 16dp (from `92.dp` to `76.dp`) trims the unneeded top sky while keeping the bottom landscape motif intact.
+- **Description**:
+1. *Compact Header Height Bounding (`REQ-UI-496.1`)*:
+   • In `AppNavigationDrawer.kt`, `DrawerHeader()` SHALL specify a total height of `76.dp + statusBarHeight` (reduced from `92.dp + statusBarHeight`).
+2. *Bottom Landscape Motif Preservation (`REQ-UI-496.2`)*:
+   • The background image `R.drawable.menu_header_background` SHALL remain anchored at `Alignment.BottomCenter` with `ContentScale.FillWidth`, preserving 100% of the meadow, trees, hills, and road landscape motif at the bottom edge while trimming only the empty blue sky at the top.
+3. *Branding Row Centration & Rule 72 Icon Invariant (`REQ-UI-496.3`)*:
+   • The branding row containing the app launcher icon and title SHALL apply `padding(start = 16.dp, end = 16.dp, top = statusBarHeight, bottom = 6.dp)` with `verticalAlignment = Alignment.CenterVertically`.
+   • The Cervélo P3C launcher icon slot SHALL preserve its `46.dp` size and `1.81f` adaptive icon safe-zone scale factor per Rule 72 (`REQ-UI-445.4`), remaining single-line alongside the title without clipping.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-UI-445.4` (*Navigation Drawer Header Recognition & 9-Locale Tier Naming*) and `REQ-UI-159` (*Navigation Drawer*).
+2. *Historical Origin & Commit Trace*: Introduced in `ATT-1083` (legacy header) and refined in `ATT-5371` / `ATT-5397` / `ATT-5496` (Cervélo P3C launcher branding).
+3. *Root Reason for Existing Formulation*: `92.dp + statusBarHeight` was a generous default carried over from early drawer prototypes before additional everyday items (`Info & Unterstützung`, `Pioneer/Supporter`) expanded the drawer content height.
+4. *Preservation of Core Invariants*: `Alignment.BottomCenter` landscape anchoring, single-line branding layout, `46.dp` icon size, `1.81f` safe-zone scaling, dynamic status bar handling, and 9-language localization parity MUST remain strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the Navigation Drawer on a standard portrait mobile screen,
+• *When* the drawer is opened,
+• *Then* `DrawerHeader` renders with net height `76.dp` below `statusBarHeight`, and all navigation groups down to and including `Info & Unterstützung` are fully visible without bottom vertical clipping.
+• *Given* `DrawerHeader` with `R.drawable.menu_header_background`,
+• *When* the header is drawn,
+• *Then* `alignment = Alignment.BottomCenter` anchors the bottom landscape artwork (trees, hills, meadow) at the bottom edge, trimming only top sky.
+• *Given* any supporter tier icon,
+• *When* rendered in `DrawerHeader`,
+• *Then* the launcher icon retains `46.dp` size and `1.81f` scaling without mid-row distortion.
+
+**Invariants**: `Alignment.BottomCenter` preserved; `46.dp` / `1.81f` icon scaling preserved; edge-to-edge status bar padding preserved; 100% test pass rate.
+
+### REQ-UI-497: EditWorkoutScreen Hint Localization, Punctuation Normalization, Label Capitalization & Strava Row Layout Parity [Verified]
+- **Tests**: `TST-UI-497` | **Tickets**: `ATT-5838`
+- **Implementation**: `EditWorkoutScreen.kt`, `strings.xml` (all 9 locales)
+- **Rationale**: In `EditWorkoutScreen.kt`, visual audits (`audit_04_einheiten.png`) revealed untranslated lowercase placeholders (`description`, `goal`, `method` in `values-de`), a trailing colon on `R.string.Sport` clashing with borderless floating labels, uncapitalized `stravaUpload` ("hochladen zu Strava"), and a Strava row layout bug where the logo placed before the checkbox turns solid grey (`■`) when disabled due to `tint = Color.Gray` and shifts the checkbox out of vertical alignment with sibling options (`Commute`, `Race`).
+- **Description**:
+1. *Workout Hint Localization & Capitalization (`REQ-UI-497.1`)*:
+   • In `res/values-de/strings.xml`, `hint_workout_description`, `hint_workout_goal`, and `hint_workout_method` SHALL be localized to `Beschreibung`, `Ziel`, and `Methode`.
+   • Across all 9 supported application locales (EN, DE, ES, FR, IT, JA, NL, PL, PT), initial letters of workout hint strings SHALL be capitalized to match Title/Sentence Case conventions.
+2. *Sport Punctuation Normalization & Strava Upload Label Capitalization (`REQ-UI-497.2`)*:
+   • `R.string.Sport` SHALL NOT contain trailing colons across any of the 9 locales (e.g. `Sport`, `Deporte`, `スポーツ`, `Desporto`), providing clean container labels in `EditWorkoutScreen`, `ManualClusterScreen`, and `WorkoutClusterHeatmapScreen`.
+   • `R.string.stravaUpload` SHALL be capitalized across all 9 locales (e.g. German: `Zu Strava hochladen`, English: `Upload to Strava`).
+3. *Strava Row Layout Ordering & Disabled Alpha (`REQ-UI-497.3`)*:
+   • In `EditWorkoutScreen.kt`, the Strava row SHALL place `Checkbox` first (left-aligned with `commute` and `race`), followed by Strava logo `Icon` (`size = 18.dp`, `tint = Color.Unspecified`, `Modifier.alpha(if (stravaMappingAvailable) 1f else 0.38f)`), `Spacer(width = 8.dp)`, and label `Text`.
+   • When Strava mapping is unavailable (`!stravaMappingAvailable`), the logo SHALL be dimmed via alpha without masking raster pixels into a solid square (`■`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-LOC-001` (*9-Language Localization Parity*), `REQ-UI-122` (*Translation Coverage*), and `REQ-UI-239` (*Workout Metadata & Checkbox Presentation*).
+2. *Historical Origin & Commit Trace*: Introduced in `ATT-2005` (workout metadata fields) and updated in `ATT-4801` (Strava upload integration).
+3. *Root Reason for Existing Formulation*: Placeholder strings were left untranslated during rapid prototyping; trailing colon on `Sport:` was inherited from legacy pre-Compose layouts; `tint = Color.Gray` was applied generically without accounting for multi-color raster drawables.
+4. *Preservation of Core Invariants*: Strava upload state binding (`uploadToStrava`), enablement guard (`stravaMappingAvailable`), and dropdown functionality across all screens consuming `R.string.Sport` MUST remain strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the Edit Workout screen in German locale (`de`),
+• *When* the workout metadata fields render,
+• *Then* hint labels display `Beschreibung`, `Ziel`, and `Methode` with proper capitalization.
+• *Given* `R.string.Sport` and `R.string.stravaUpload` in any of the 9 locales,
+• *When* rendered,
+• *Then* `Sport` contains no trailing colon and `stravaUpload` begins with a capital letter.
+• *Given* the Strava upload option in `EditWorkoutScreen`,
+• *When* rendered,
+• *Then* `Checkbox` is the first element in the row (aligned with `Commute` and `Race`), followed by the Strava icon.
+• *Given* Strava mapping is unavailable (`!stravaMappingAvailable`),
+• *When* the Strava row renders,
+• *Then* the logo is dimmed via `0.38f` alpha with the white chevron visible, and zero solid grey squares (`■`) appear.
+
+**Invariants**: Strava upload enablement strictly tied to `stravaMappingAvailable`; 9-language localization parity preserved; 100% test pass rate.
+
+### REQ-UI-498: WorkoutDetailTabbedContent Header Click Decoupling & MapDetailLayout Sheet Chrome Suppression [Verified]
+- **Tests**: `TST-UI-498` | **Tickets**: `ATT-5835`
+- **Implementation**: `WorkoutDetailTabbedContent.kt`, `MapDetailLayout.kt`, `TrackOnMapScreen.kt`
+- **Rationale**: In `WorkoutDetailTabbedContent.kt`, clicking anywhere on the header card surface inadvertently triggered the Edit Workout dialog (`Trainingseinheit überarbeiten`), creating accidental triggers when inspecting details or switching tabs. In addition, `MapDetailLayout` conflated `!useStatusBarsPadding` with bottom-sheet presentation, rendering an orphan bottom-sheet drag handle pill (`—`) and rounded top corners in full-screen tabbed layouts (`audit_05_under_edit.png`):
+- **Description**:
+1. *WorkoutDetailTabbedContent Header Click Decoupling (`REQ-UI-498.1`)*:
+   • In `WorkoutDetailTabbedContent.kt`, `WorkoutHeader` SHALL receive `onClicked = null`, disabling whole-card click navigation and reserving edit actions strictly to the dedicated Edit pencil icon button (`onEditWorkout`).
+2. *MapDetailLayout Bottom-Sheet Chrome Decoupling (`REQ-UI-498.2`)*:
+   • `MapDetailLayout` SHALL accept `isBottomSheet: Boolean = !useStatusBarsPadding`.
+   • The drag handle pill (`MinimumDragHandle()`) and rounded top sheet shape (`BottomSheetDesign.SheetShape`) SHALL be rendered strictly when `isBottomSheet == true`.
+   • When `isBottomSheet == false`, the drag handle SHALL be suppressed and the surface container SHALL use flat top corners (`RectangleShape`).
+3. *Full-Screen Tabbed Content Chrome Suppression (`REQ-UI-498.3`)*:
+   • In `WorkoutDetailTabbedContent.kt` (overview, map/charts, and full tabs) and `TrackOnMapScreen.kt`, `MapDetailLayout` invocations SHALL explicitly pass `isBottomSheet = false`, ensuring no drag handle pill or rounded sheet corners appear beneath tab bars.
+4. *Preservation of System Invariants (`REQ-UI-498.4`)*:
+   • Modal bottom-sheet callers (`MapScreenWithTrack.kt:763`, `LiveSegmentSheet.kt:49`) SHALL preserve visible drag handles and `BottomSheetDesign.SheetShape` per Rule 74 (`isBottomSheet = true`).
+   • `ATT-5851` floating controls status bar offset (`floatingControlsTopOffsetPx`) calculation SHALL remain strictly tied to `useStatusBarsPadding` and unaffected by `isBottomSheet`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-UI-408` (*Multi-Tab Workout Details*), `REQ-UI-148` & `Rule 74` (*Bottom Sheet Drag Handle Contract*), and `REQ-UI-491` (*MapDetailLayout Status Bar Inset Clearance*). Targets `WorkoutDetailTabbedContent.kt`, `MapDetailLayout.kt`, and `TrackOnMapScreen.kt`.
+2. *Historical Origin & Commit Trace*: `WorkoutHeader` click binding inherited from `WorkoutSummariesWithMapCard` in `ATT-4081`; `MapDetailLayout` drag handle and sheet shape heuristic (`!useStatusBarsPadding`) introduced in `ATT-5485` and refined in `ATT-5851`.
+3. *Root Reason for Existing Formulation*: `WorkoutHeader` originally supported whole-card click for list drill-down; `MapDetailLayout` assumed any layout not needing status bar padding was a modal/peek bottom sheet.
+4. *Preservation of Core Invariants*: Dedicated edit pencil icon continues opening `EditWorkoutScreen`; modal bottom sheets in `MapScreenWithTrack` retain Rule 74 drag handles; `ATT-5851` floating controls clearance is 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete viewing Workout Details in `WorkoutDetailTabbedContent`,
+• *When* tapping anywhere on the `WorkoutHeader` card surface,
+• *Then* no Edit Workout dialog opens.
+• *Given* an athlete viewing Workout Details,
+• *When* tapping the dedicated Edit pencil icon button on `WorkoutHeader`,
+• *Then* `EditWorkoutScreen` opens as expected.
+• *Given* full-screen tabbed layouts in `WorkoutDetailTabbedContent` or `TrackOnMapScreen`,
+• *When* rendered,
+• *Then* no drag handle pill (`—`) appears below the tab bar, and the sheet surface uses flat top corners.
+• *Given* modal bottom sheets in `MapScreenWithTrack`,
+• *When* rendered,
+• *Then* the Rule 74 drag handle pill is visible and top corners are rounded per `BottomSheetDesign.SheetShape`.
+
+**Invariants**: Dedicated edit pencil button functional; Rule 74 bottom sheet drag handles preserved; ATT-5851 floating controls clearance intact; 100% test pass rate.
+
+
 
 
 

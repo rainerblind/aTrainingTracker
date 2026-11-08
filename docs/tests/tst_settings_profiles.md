@@ -783,7 +783,7 @@
 ### TST-SET-080: **Dedicated Auto-Pause Settings Cockpit & Navigation Drawer Entry Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-080`
 - **Component**: **Dedicated Auto-Pause Settings Cockpit & Navigation Drawer Entry Verification Suite**
-- **Jira**: `ATT-4836`, `ATT-4924`
+- **Jira**: `ATT-4836`, `ATT-4924`, `ATT-5820`
 - **Test Description**:
   1. *Navigation Drawer & Route Resolution Contract Test (`TST-SET-080.1`, `AutoPauseNavigationTest.kt`)*:
   • Verify `NavRoutes.toRoute(R.id.drawer_auto_pause)` returns `NavRoutes.AUTO_PAUSE`.
@@ -804,6 +804,11 @@
   • Verify `tuning_auto_pause_enable_title`, updated `tuning_auto_pause_speed_threshold_title`, `tuning_auto_pause_speed_threshold_desc`, and `tuning_auto_pause_start_in_auto_pause_desc` exist across all 9 canonical locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
   6. *Clean-Room Regression Execution (`TST-SET-080.6`)*:
   • Execute targeted unit tests and AAPT2 resources with 100% success.
+  7. *Collapsible Calibration Accordion & Subtitle Format Contract Test (`TST-SET-080.7`, `AutoPauseTabsScreenContractTest.kt`, `TuningSubtitleFormatterTest.kt`)*:
+  • Verify `AutoPauseTabsScreen.kt` source contract: encapsulates `TuningSliderItem` inside `TuningAccordionSection`.
+  • Verify default collapsed state (`isExpanded = false` via `rememberSaveable`).
+  • Verify `TuningSubtitleFormatter.formatAutoPauseSubtitle` formats active threshold and debounce delays with units.
+  • Verify localization parity across all 9 languages for accordion title and subtitle strings.
 
 
 ---
@@ -955,4 +960,30 @@
   • Verify `cluster_menu_merge`, `cluster_merge_dialog_title`, `cluster_merge_dialog_message` (`%1$s`, `%2$d`, `%3$s`), and `cluster_merge_action` exist across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) with zero inline emojis (`ATT-5400`).
   5. *Clean-Room Targeted Regression Execution (`TST-SET-089.5`)*:
   • Execute targeted test suites (`com.atrainingtracker.trainingtracker.database.*`, `com.atrainingtracker.trainingtracker.ui.clusters.*`, `com.atrainingtracker.trainingtracker.localization.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+### TST-SET-095: **Known Locations Merge, Hybrid Geofence Geometry & Database Reconciliation Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-095`
+- **Component**: `KnownLocationsScreen.kt`, `KnownLocationsViewModel.kt`, `KnownLocationsRepository.kt`, `KnownLocationsDatabaseManager.java`, `KnownLocationsGeometryMath.kt`, `KnownLocationsMergeTest.kt`
+- **Jira**: `ATT-5889`
+- **Test Description**:
+  1. *Hybrid Geofence Geometry Mathematical Unit Tests (`TST-SET-095.1`, `KnownLocationsGeometryMathTest.kt`)*:
+  • Given two unlocked, non-home locations $S$ and $T$ with $r_S = 200\text{ m}$, $r_T = 200\text{ m}$ at distance $d = 200\text{ m}$, verify center moves to midpoint and radius equals $300\text{ m}$.
+  • Given enclosing circles ($d + r_S \le r_T$), verify larger circle is adopted without center drift.
+  • Given target $T$ with `isHome == true` or `isLocked == true`, verify target center remains pinned and radius expands to $\max(r_T, \lceil d + r_S \rceil)$.
+  2. *Database Transaction & Reconciliation Unit Tests (`TST-SET-095.2`, `KnownLocationsDatabaseManagerTest.kt`)*:
+  • Given location $S$ and target $T$ in `StartLocation2Altitude.db`, execute `mergeLocations(sourceId, targetId)`.
+  • Verify atomic update of $T$ with new coordinates, radius, consolidated `isHome`, and altitude precedence.
+  • Verify $S$ is deleted from SQLite.
+  • Verify `reconcileHitCountsWithWorkoutSummaries` correctly tallies workout starts within merged geofence without double-counting.
+  3. *Candidate Filtering & Sorting ViewModel Unit Tests (`TST-SET-095.3`, `KnownLocationsViewModelTest.kt`)*:
+  • Given source $S$, verify `getCandidateLocationsForMerge(S)` filters out $S$, excludes locations with $d > 2\,000\text{ m}$, and sorts remaining candidates ascending by raw numeric distance primitive (`ATT-3324`).
+  • Verify empty list is returned when no candidates exist within $2\,000\text{ m}$.
+  4. *Two-Step Merge Dialog UI Contract Tests (`TST-SET-095.4`, `KnownLocationsMergeDialogContractTest.kt`)*:
+  • Verify context menu item *"Mit anderem Ort zusammenführen…"* triggers candidate picker dialog.
+  • Verify candidate selection opens confirmation dialog with radius preview and pinned target notice.
+  • Verify confirming merge calls `viewModel.mergeLocations(source, target)` and clears dialog state.
+  • Verify cancelling either dialog resets merge state cleanly.
+  5. *9-Language Localization & Positional Specifier Audit (`TST-SET-095.5`, `TranslationParityTest.kt`)*:
+  • Verify `known_locations_menu_merge`, `known_locations_merge_select_target_title`, `known_locations_merge_distance_away` (`%1$s`), `known_locations_merge_no_candidates`, `known_locations_merge_dialog_title`, `known_locations_merge_dialog_message` (`%1$s`, `%2$s`, `%3$s`), `known_locations_merge_pinned_notice` (`%1$s`), and `known_locations_merge_action` exist across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) with zero inline emojis (`ATT-5400`).
+
 

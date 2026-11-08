@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.aftermath
 import android.app.Application
 import android.content.res.Configuration
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
@@ -30,10 +31,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -152,6 +156,23 @@ fun WorkoutDetailTabbedContent(
     }
     var activePreviewPhoto by remember { mutableStateOf<WorkoutPhotoEntry?>(null) }
     var activeSharePhoto by remember { mutableStateOf<WorkoutPhotoEntry?>(null) }
+    var showShareModeSheet by rememberSaveable { mutableStateOf(false) }
+
+    val snapshotHeader: @Composable () -> Unit = {
+        WorkoutHeader(
+            modifier = Modifier.fillMaxWidth(),
+            data = workoutData.headerData,
+            menuEnabled = false,
+            canDelete = false,
+            onClicked = null,
+            onExport = {},
+            onSaveAsRoute = {},
+            onDeleteRequest = {},
+            onClusterClick = null,
+            onEditWorkout = null,
+            onShareWorkout = null
+        )
+    }
 
     // Hit-test & edge-gutter state for gesture arbitration between Map/Chart canvases and lower-pane cards
     var isTouchingInteractiveCanvas by remember { mutableStateOf(false) }
@@ -252,6 +273,7 @@ fun WorkoutDetailTabbedContent(
                             minAltitudeOverride = workoutData.minAltitude,
                             maxAltitudeOverride = workoutData.maxAltitude,
                             useStatusBarsPadding = false,
+                            isBottomSheet = false,
                             showMap = true,
                             showElevationProfile = false,
                             showTelemetryCharts = false,
@@ -264,7 +286,7 @@ fun WorkoutDetailTabbedContent(
                             workoutData = workoutData,
                             onCreateLapClick = onCreateLapClick,
                             onInteractiveCanvasTouch = { isTouchingInteractiveCanvas = it },
-                            header = {},
+                            header = snapshotHeader,
                             mapContent = mapContent,
                             overlay = mapOverlay,
                             metadataContent = null,
@@ -282,6 +304,7 @@ fun WorkoutDetailTabbedContent(
                             minAltitudeOverride = workoutData.minAltitude,
                             maxAltitudeOverride = workoutData.maxAltitude,
                             useStatusBarsPadding = false,
+                            isBottomSheet = false,
                             showMap = true,
                             showElevationProfile = tabHasElevation,
                             showTelemetryCharts = tabHasCharts,
@@ -294,7 +317,7 @@ fun WorkoutDetailTabbedContent(
                             workoutData = workoutData,
                             onCreateLapClick = onCreateLapClick,
                             onInteractiveCanvasTouch = { isTouchingInteractiveCanvas = it },
-                            header = {},
+                            header = snapshotHeader,
                             mapContent = mapContent,
                             overlay = mapOverlay,
                             metadataContent = null,
@@ -362,6 +385,7 @@ fun WorkoutDetailTabbedContent(
                                 minAltitudeOverride = workoutData.minAltitude,
                                 maxAltitudeOverride = workoutData.maxAltitude,
                                 useStatusBarsPadding = false,
+                                isBottomSheet = false,
                                 showMap = false,
                                 showElevationProfile = tabHasElevation,
                                 showTelemetryCharts = tabHasCharts,
@@ -374,7 +398,7 @@ fun WorkoutDetailTabbedContent(
                                 workoutData = workoutData,
                                 onCreateLapClick = onCreateLapClick,
                                 onInteractiveCanvasTouch = { isTouchingInteractiveCanvas = it },
-                                header = {},
+                                header = snapshotHeader,
                                 metadataContent = null,
                                 analyticsContent = if (nonMapNonGraphSections.isNotEmpty()) {
                                     {
@@ -517,12 +541,13 @@ fun WorkoutDetailTabbedContent(
                     data = workoutData.headerData,
                     menuEnabled = false,
                     canDelete = false,
-                    onClicked = onEditWorkout?.let { edit -> { edit(workoutData.id) } },
+                    onClicked = null,
                     onExport = {},
                     onSaveAsRoute = {},
                     onDeleteRequest = {},
                     onClusterClick = onClusterClick,
                     onEditWorkout = onEditWorkout?.let { edit -> { edit(workoutData.id) } },
+                    onShareWorkout = { showShareModeSheet = true },
                     actions = {
                         headerActions()
                         IconButton(
@@ -537,6 +562,63 @@ fun WorkoutDetailTabbedContent(
                         }
                     }
                 )
+
+                // 1b. Diagnostic Warning Banner (REQ-TRK-053.4)
+                if (!workoutData.recordingErrors.isNullOrBlank()) {
+                    var showDetailDiagnosticSheet by remember { mutableStateOf(false) }
+                    Surface(
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showDetailDiagnosticSheet = true }
+                            .testTag(com.atrainingtracker.trainingtracker.ui.dialogs.WorkoutDiagnosticTestTags.BANNER)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.WarningAmber,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = stringResource(R.string.workout_diagnostic_banner_title),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Text(
+                                text = stringResource(R.string.workout_diagnostic_banner_action),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+
+                    if (showDetailDiagnosticSheet) {
+                        val coroutineScope = rememberCoroutineScope()
+                        val repository = remember(context) { WorkoutRepository.getInstance(context.applicationContext as Application) }
+                        com.atrainingtracker.trainingtracker.ui.dialogs.WorkoutDiagnosticBottomSheet(
+                            recordingErrorsJson = workoutData.recordingErrors!!,
+                            workoutName = workoutData.workoutName,
+                            sportName = workoutData.sportName,
+                            onClearWarning = {
+                                coroutineScope.launch {
+                                    repository.clearRecordingErrors(workoutData.id)
+                                }
+                                showDetailDiagnosticSheet = false
+                            },
+                            onDismiss = { showDetailDiagnosticSheet = false }
+                        )
+                    }
+                }
 
                 // 2. Material 3 Tab Bar (shown when > 1 visible tab)
                 if (visibleTabs.size > 1) {
@@ -603,6 +685,23 @@ fun WorkoutDetailTabbedContent(
             onDismissRequest = { activeSharePhoto = null },
             onSelectMapSnapshot = { activeSharePhoto = null },
             initialPhotoUri = photo.uri,
+            attachedPhotos = workoutPhotos.map { it.uri }
+        )
+    }
+
+    if (showShareModeSheet) {
+        WorkoutShareBottomSheet(
+            workoutData = workoutData,
+            onDismissRequest = { showShareModeSheet = false },
+            onSelectMapSnapshot = {
+                showShareModeSheet = false
+                val mapTabIndex = visibleTabs.indexOfFirst { WorkoutDetailSectionType.MAP in it.sections }
+                if (mapTabIndex >= 0 && pagerState.currentPage != mapTabIndex) {
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(mapTabIndex)
+                    }
+                }
+            },
             attachedPhotos = workoutPhotos.map { it.uri }
         )
     }

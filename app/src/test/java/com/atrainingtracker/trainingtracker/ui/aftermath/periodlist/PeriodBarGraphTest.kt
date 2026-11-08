@@ -22,6 +22,7 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.MyUnits
 import org.junit.After
+import org.junit.Before
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -33,10 +34,18 @@ import java.util.Locale
 class PeriodBarGraphTest {
 
     private val utcZone = ZoneOffset.UTC
+    private var defaultLocale: Locale? = null
+
+    @Before
+    fun setUp() {
+        defaultLocale = Locale.getDefault()
+        Locale.setDefault(Locale.US)
+    }
 
     @After
     fun tearDown() {
         TrainingApplication.setUnitForTesting(null)
+        defaultLocale?.let { Locale.setDefault(it) }
     }
 
     private fun createSamplePeriod(
@@ -271,5 +280,74 @@ class PeriodBarGraphTest {
         assertEquals(1, items.size)
         assertFalse(items[0].isRest)
         assertEquals(0, items[0].originalIndex)
+    }
+
+    @Test
+    fun testMetricValueDecimalLocalization_TST_PER_036_2() {
+        // German Locale (de_DE) -> comma decimal separator
+        // Duration: 1.7h (6120s)
+        assertEquals("1,7h", formatMetricValue(6120.0, PeriodBarMetric.DURATION, PeriodType.DAY, MyUnits.METRIC, Locale.GERMANY))
+        // Distance (Metric): 8.5km (8500m)
+        assertEquals("8,5km", formatMetricValue(8500.0, PeriodBarMetric.DISTANCE, PeriodType.DAY, MyUnits.METRIC, Locale.GERMANY))
+        // Distance (Imperial): 5.3mi (8530m)
+        assertEquals("5,3mi", formatMetricValue(8530.0, PeriodBarMetric.DISTANCE, PeriodType.DAY, MyUnits.IMPERIAL, Locale.GERMANY))
+        // Distance < 0.1mi
+        assertEquals("<0,1mi", formatMetricValue(100.0, PeriodBarMetric.DISTANCE, PeriodType.DAY, MyUnits.IMPERIAL, Locale.GERMANY))
+
+        // US Locale (en_US) -> dot decimal separator
+        assertEquals("1.7h", formatMetricValue(6120.0, PeriodBarMetric.DURATION, PeriodType.DAY, MyUnits.METRIC, Locale.US))
+        assertEquals("8.5km", formatMetricValue(8500.0, PeriodBarMetric.DISTANCE, PeriodType.DAY, MyUnits.METRIC, Locale.US))
+        assertEquals("5.3mi", formatMetricValue(8530.0, PeriodBarMetric.DISTANCE, PeriodType.DAY, MyUnits.IMPERIAL, Locale.US))
+        assertEquals("<0.1mi", formatMetricValue(100.0, PeriodBarMetric.DISTANCE, PeriodType.DAY, MyUnits.IMPERIAL, Locale.US))
+    }
+
+    @Test
+    fun testNonDecimalAndEdgeMetricValues_TST_PER_036_4() {
+        for (locale in listOf(Locale.GERMANY, Locale.US, Locale.FRANCE)) {
+            // Duration non-decimal formats
+            assertEquals("<1m", formatMetricValue(45.0, PeriodBarMetric.DURATION, PeriodType.DAY, MyUnits.METRIC, locale))
+            assertEquals("45m", formatMetricValue(2700.0, PeriodBarMetric.DURATION, PeriodType.DAY, MyUnits.METRIC, locale))
+            assertEquals("2h", formatMetricValue(7200.0, PeriodBarMetric.DURATION, PeriodType.DAY, MyUnits.METRIC, locale))
+            assertEquals("12h", formatMetricValue(43200.0, PeriodBarMetric.DURATION, PeriodType.DAY, MyUnits.METRIC, locale))
+
+            // Distance integers
+            assertEquals("500m", formatMetricValue(500.0, PeriodBarMetric.DISTANCE, PeriodType.DAY, MyUnits.METRIC, locale))
+            assertEquals("10km", formatMetricValue(10000.0, PeriodBarMetric.DISTANCE, PeriodType.DAY, MyUnits.METRIC, locale))
+            assertEquals("26mi", formatMetricValue(42195.0, PeriodBarMetric.DISTANCE, PeriodType.DAY, MyUnits.IMPERIAL, locale))
+
+            // Ascent integers
+            assertEquals("250m", formatMetricValue(250.0, PeriodBarMetric.ASCENT, PeriodType.DAY, MyUnits.METRIC, locale))
+            assertEquals("820ft", formatMetricValue(250.0, PeriodBarMetric.ASCENT, PeriodType.DAY, MyUnits.IMPERIAL, locale))
+        }
+    }
+
+    @Test
+    fun testPeriodSummaryGetLocalizedDateRange_TST_PER_036_3() {
+        // Monday Nov 2, 2026 00:00:00 UTC = 1793577600
+        val startS = 1793577600L
+        val endS = startS + 7 * 86400 - 1
+
+        val summary = createSamplePeriod(
+            label = "2026-W45",
+            type = PeriodType.WEEK,
+            startS = startS,
+            endS = endS,
+            durationS = 3600L,
+            distanceM = 10000.0,
+            ascentM = 100L
+        ).copy(periodDateRange = "Nov. 2 - Nov. 8") // simulated cached legacy string
+
+        // In German locale, dynamically resolves day-first
+        val germanRange = summary.getLocalizedDateRange(Locale.GERMANY)
+        assertTrue("Expected day-first format in German, got: $germanRange", germanRange.startsWith("2."))
+        assertTrue("Expected Nov in German, got: $germanRange", germanRange.contains("Nov"))
+
+        // In US locale, dynamically resolves month-first
+        val usRange = summary.getLocalizedDateRange(Locale.US)
+        assertTrue("Expected month-first format in US, got: $usRange", usRange.startsWith("Nov"))
+
+        // Non-week period returns original periodDateRange unchanged
+        val monthSummary = summary.copy(periodType = PeriodType.MONTH, periodDateRange = "November 2026")
+        assertEquals("November 2026", monthSummary.getLocalizedDateRange(Locale.GERMANY))
     }
 }

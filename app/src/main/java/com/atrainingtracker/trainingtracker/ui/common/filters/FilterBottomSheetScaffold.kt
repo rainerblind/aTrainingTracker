@@ -45,6 +45,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
@@ -145,14 +146,22 @@ fun FilterBottomSheetScaffold(
                     onClick = onClearAll,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text(stringResource(R.string.filter_clear_all))
+                    Text(
+                        text = stringResource(R.string.filter_reset),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
 
                 Button(
                     onClick = onApply,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text(stringResource(R.string.OK))
+                    Text(
+                        text = stringResource(R.string.OK),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
         }

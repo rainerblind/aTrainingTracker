@@ -108,6 +108,7 @@ data class WorkoutData(
     val stravaSportName: String?,
 
     val stravaActivityData: String? = null,
+    val recordingErrors: String? = null,
     val clusterId: Long = -1,
     val clusterName: String? = null,
     val startLocationName: String? = null,
@@ -164,7 +165,8 @@ data class WorkoutData(
             clusterId = clusterId,
             clusterName = clusterName,
             startLocationName = startLocationName,
-            endLocationName = endLocationName
+            endLocationName = endLocationName,
+            recordingErrors = recordingErrors
         )
 
 

@@ -35,6 +35,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -47,8 +48,11 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -63,7 +67,9 @@ import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningAccordionSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSliderItem
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSubtitleFormatter
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningToggleItem
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
@@ -279,8 +285,10 @@ private fun AutoPauseSportTabContent(
     defaultResumeDebounce: Int,
     contentPadding: PaddingValues
 ) {
+    val context = LocalContext.current
     val speedUnit = stringResource(MyHelper.getShortUnitsId(SensorType.SPEED_mps))
     val isMetric = (TrainingApplication.getUnit() == MyUnits.METRIC)
+    var isSlidersExpanded by rememberSaveable { mutableStateOf(false) }
 
     val defaultThreshold = when (sportType) {
         BSportType.BIKE -> if (isMetric) TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_SPEED_THRESHOLD_METRIC else TuningPreferencesDefaults.DEFAULT_AUTO_PAUSE_BIKE_SPEED_THRESHOLD_IMPERIAL
@@ -320,47 +328,63 @@ private fun AutoPauseSportTabContent(
                     )
 
                     if (enabled) {
-                        TuningSliderItem(
-                            title = stringResource(R.string.tuning_auto_pause_speed_threshold_title),
-                            valueText = stringResource(R.string.tuning_speed_value_format, speedThreshold, speedUnit),
-                            helperText = stringResource(R.string.tuning_auto_pause_speed_threshold_desc),
-                            defaultText = stringResource(
-                                R.string.tuning_default_format,
-                                stringResource(R.string.tuning_speed_value_format, defaultThreshold, speedUnit)
-                            ),
-                            value = speedThreshold.toFloat(),
-                            onValueChange = { onSpeedThresholdChange(it.roundToInt()) },
-                            valueRange = TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD.toFloat()..TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD.toFloat(),
-                            steps = 3
+                        val subtitle = TuningSubtitleFormatter.formatAutoPauseSubtitle(
+                            speedThreshold = speedThreshold,
+                            speedUnit = speedUnit,
+                            debounceSec = debounceSec,
+                            resumeDebounceSec = resumeDebounceSec,
+                            context = context
                         )
 
-                        TuningSliderItem(
-                            title = stringResource(R.string.tuning_auto_pause_debounce_title),
-                            valueText = stringResource(R.string.tuning_seconds_value_format, debounceSec),
-                            helperText = stringResource(R.string.tuning_auto_pause_debounce_desc),
-                            defaultText = stringResource(
-                                R.string.tuning_default_format,
-                                stringResource(R.string.tuning_seconds_value_format, defaultDebounce)
-                            ),
-                            value = debounceSec.toFloat(),
-                            onValueChange = { onDebounceSecChange(it.roundToInt()) },
-                            valueRange = minDebounce.toFloat()..maxDebounce.toFloat(),
-                            steps = debounceSteps
-                        )
+                        TuningAccordionSection(
+                            icon = Icons.Default.Tune,
+                            title = stringResource(R.string.tuning_auto_pause_custom_thresholds_title),
+                            subtitle = subtitle,
+                            isExpanded = isSlidersExpanded,
+                            onToggle = { isSlidersExpanded = !isSlidersExpanded }
+                        ) {
+                            TuningSliderItem(
+                                title = stringResource(R.string.tuning_auto_pause_speed_threshold_title),
+                                valueText = stringResource(R.string.tuning_speed_value_format, speedThreshold, speedUnit),
+                                helperText = stringResource(R.string.tuning_auto_pause_speed_threshold_desc),
+                                defaultText = stringResource(
+                                    R.string.tuning_default_format,
+                                    stringResource(R.string.tuning_speed_value_format, defaultThreshold, speedUnit)
+                                ),
+                                value = speedThreshold.toFloat(),
+                                onValueChange = { onSpeedThresholdChange(it.roundToInt()) },
+                                valueRange = TuningPreferencesDefaults.MIN_AUTO_PAUSE_SPEED_THRESHOLD.toFloat()..TuningPreferencesDefaults.MAX_AUTO_PAUSE_SPEED_THRESHOLD.toFloat(),
+                                steps = 3
+                            )
 
-                        TuningSliderItem(
-                            title = stringResource(R.string.tuning_auto_pause_resume_debounce_title),
-                            valueText = stringResource(R.string.tuning_seconds_value_format, resumeDebounceSec),
-                            helperText = stringResource(R.string.tuning_auto_pause_resume_debounce_desc),
-                            defaultText = stringResource(
-                                R.string.tuning_default_format,
-                                stringResource(R.string.tuning_seconds_value_format, defaultResumeDebounce)
-                            ),
-                            value = resumeDebounceSec.toFloat(),
-                            onValueChange = { onResumeDebounceSecChange(it.roundToInt()) },
-                            valueRange = minDebounce.toFloat()..maxDebounce.toFloat(),
-                            steps = debounceSteps
-                        )
+                            TuningSliderItem(
+                                title = stringResource(R.string.tuning_auto_pause_debounce_title),
+                                valueText = stringResource(R.string.tuning_seconds_value_format, debounceSec),
+                                helperText = stringResource(R.string.tuning_auto_pause_debounce_desc),
+                                defaultText = stringResource(
+                                    R.string.tuning_default_format,
+                                    stringResource(R.string.tuning_seconds_value_format, defaultDebounce)
+                                ),
+                                value = debounceSec.toFloat(),
+                                onValueChange = { onDebounceSecChange(it.roundToInt()) },
+                                valueRange = minDebounce.toFloat()..maxDebounce.toFloat(),
+                                steps = debounceSteps
+                            )
+
+                            TuningSliderItem(
+                                title = stringResource(R.string.tuning_auto_pause_resume_debounce_title),
+                                valueText = stringResource(R.string.tuning_seconds_value_format, resumeDebounceSec),
+                                helperText = stringResource(R.string.tuning_auto_pause_resume_debounce_desc),
+                                defaultText = stringResource(
+                                    R.string.tuning_default_format,
+                                    stringResource(R.string.tuning_seconds_value_format, defaultResumeDebounce)
+                                ),
+                                value = resumeDebounceSec.toFloat(),
+                                onValueChange = { onResumeDebounceSecChange(it.roundToInt()) },
+                                valueRange = minDebounce.toFloat()..maxDebounce.toFloat(),
+                                steps = debounceSteps
+                            )
+                        }
                     }
                 }
             }

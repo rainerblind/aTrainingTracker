@@ -58,7 +58,7 @@ def find_sprint_milestones(limit: int = 30) -> List[Dict[str, str]]:
         sha, date, subject = parts[0].strip(), parts[1].strip(), parts[2].strip()
 
         # Match sprint identifier, e.g., sprint/2026-45.6, Sprint 2026-41.5, or 2026-40.16
-        sprint_match = re.search(r'(?:Sprint\s+|sprint/)(202[0-9]-[0-9]+(?:\.[0-9]+)?)', subject, re.IGNORECASE)
+        sprint_match = re.search(r'(?:Sprint\s+|sprint/|\bfor\s+)(202[0-9]-[0-9]+(?:\.[0-9]+)?)', subject, re.IGNORECASE)
         # Match release tag identifier, e.g., V4.9.38
         release_match = re.search(r'(V[0-9]+\.[0-9]+(?:\.[0-9]+)*(?:\.[0-9]+)?)', subject)
 

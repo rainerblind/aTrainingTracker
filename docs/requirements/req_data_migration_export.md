@@ -3099,5 +3099,42 @@
 
 **Invariants**: Symmetrical SQLite evolution, safe file deletion, memory-safe bitmap sampling, 100% clean-room test pass rate.
 
+### REQ-MIG-049: Unified Chronological Ascending Ingestion Order for Bulk Imports & Cloud Recovery [Verified]
+- **Tests**: `TST-MIG-047` | **Tickets**: `ATT-6039`
+- **Implementation**: `StravaBulkExportImporter.kt`, `SafDirectoryScanner.kt`, `BackupRestoreViewModel.kt`, `LegacyImportEngine.kt`
+- **Rationale**: Historical activities ingested through bulk import pipelines (Strava bulk ZIP export, SAF directory scanning, multi-URI file selection, and Dropbox/Google Drive cloud recovery) must be processed in deterministic chronological ascending order (oldest first). Ingesting newest first causes inverted sequential cluster counter numbering (`#1` assigned to modern workouts and `#350` to older ones in `WorkoutClusterEngine`) and SQLite autoincrement `_id` inversion. The system SHALL re-order activities/URIs/entries across all bulk pipelines prior to sequential processing (ATT-6039, extending `REQ-MIG-048`, `REQ-UI-363`, `REQ-MIG-031`, `REQ-MIG-034`, and `REQ-MIG-035`):
+1. *Strava Bulk Export Chronological Re-Ordering (`REQ-MIG-049.1`)*:
+• `StravaBulkExportImporter` SHALL sort parsed activities from `activities.csv` ascending by numeric `activityId.toLongOrNull() ?: Long.MAX_VALUE` (falling back to `reversed()` when non-numeric) prior to the sequential import loop, ensuring historical activities are processed from oldest to newest.
+2. *SAF Directory Scan Lexicographical/Chronological Order (`REQ-MIG-049.2`)*:
+• `SafDirectoryScanner.scanDocumentFile` SHALL sort discovered matching URIs ascending by document filename using `String.CASE_INSENSITIVE_ORDER` before returning the list, guaranteeing deterministic oldest-to-newest processing for standard timestamp-formatted workout files (`YYYY-MM-DD_HHMM...`).
+3. *Multi-File Import Pre-Sorting (`REQ-MIG-049.3`)*:
+• `BackupRestoreViewModel.importWorkoutFilesInternal` SHALL pre-sort incoming file URIs ascending by resolved display name via `ImportFileValidator.resolveDisplayName` or content resolver query using `String.CASE_INSENSITIVE_ORDER` prior to launching sequential file imports.
+4. *Cloud Recovery Entry Chronological Order (`REQ-MIG-049.4`)*:
+• `LegacyImportEngine.bulkRecoverFromDropbox` and `LegacyImportEngine.bulkRecoverFromGoogleDrive` SHALL sort deduplicated cloud entries ascending by filename using `String.CASE_INSENSITIVE_ORDER` prior to enqueuing into the worker channel.
+5. *Invariants & Cluster Numbering Preservation (`REQ-MIG-049.5`)*:
+• Sequential cluster numbering `#1..#N` in `WorkoutClusterEngine.assignClusterToWorkout` SHALL assign `#1` to the oldest ingested workout and increment monotonically towards the newest workout.
+• SQLite autoincrement `_id` order in `WorkoutSummaries.db` SHALL align naturally with chronological workout progression.
+• Core deduplication (`isWorkoutExisting`), Zip-Slip security (`REQ-MIG-040`), equipment matching, and coroutine cooperative cancellation MUST remain fully intact and unregressed.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-MIG-049` under Ticket `ATT-6039` (Sprint `2026-45.12`), extending `REQ-MIG-048` (*Strava Bulk Export*), `REQ-UI-363` (*SAF Directory Scanner*), and `REQ-MIG-031`/`034`/`035` (*Cloud Recovery & Deduplication*). Targets `StravaBulkExportImporter.kt`, `SafDirectoryScanner.kt`, `BackupRestoreViewModel.kt`, and `LegacyImportEngine.kt`.
+2. *Historical Origin & Commit Trace*: `ATT-4957` (commit `69e6b41` - Strava Bulk Export), `ATT-3491` (SAF Directory Scanner), `ATT-2341` (FIT Cloud Recovery).
+3. *Root Reason for Existing Formulation*: Prior implementations focused on streaming format decoding and memory efficiency, leaving entry dispatch ordering implicit and dependent on filesystem traversal or export CSV generation order (reverse-chronological in Strava).
+4. *Preservation of Core Invariants*: Deduplication logic, Zip-Slip path traversal defense, coroutine cooperative cancellation, and cluster spatial tolerances remain 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an official Strava bulk export archive with `activities.csv` listing activities in reverse chronological order (newest first),
+• *When* the archive is ingested via `StravaBulkExportImporter`,
+• *Then* activities are processed chronologically ascending (oldest first), assigning `#1` to the earliest workout in newly formed clusters.
+• *Given* multiple workout files in a SAF directory or multi-file picker selection,
+• *When* imported via `SafDirectoryScanner` or `BackupRestoreViewModel`,
+• *Then* URIs are processed in ascending filename order.
+• *Given* discovered files in Dropbox or Google Drive recovery,
+• *When* recovery executes in `LegacyImportEngine`,
+• *Then* deduplicated entries are enqueued and processed in ascending filename order.
+
+**Invariants**: Standalone imports unregressed, cluster spatial matching untouched, non-blocking coroutine cancellation preserved.
+
+
 
 

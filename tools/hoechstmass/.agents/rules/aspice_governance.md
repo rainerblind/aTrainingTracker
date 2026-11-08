@@ -1,6 +1,6 @@
 # Agile Agentic ASPICE (AAA) Core In-Sprint Governance Rules
 
-These **8 Core Rules** operationalize **Agile Agentic ASPICE (AAA)** (Tripwires, Infinite Context, and Constructive Resistance) and are strictly binding on all AI agents during in-sprint execution.
+These **9 Core Rules** operationalize **Agile Agentic ASPICE (AAA)** (Tripwires, Infinite Context, and Constructive Resistance) and are strictly binding on all AI agents during in-sprint execution.
 
 * **Domain Standards**: See [`docs/coding_standards.md`](file://docs/coding_standards.md) (Architecture/DRY/Lifecycles) and [`docs/design_guidelines.md`](file://docs/design_guidelines.md) (UI/Component Selection).
 * **Sprint Ceremonies**: See [`.agents/skills/sprint-planner/SKILL.md`](file://.agents/skills/sprint-planner/SKILL.md) and [`.agents/skills/release-manager/SKILL.md`](file://.agents/skills/release-manager/SKILL.md).
@@ -49,4 +49,15 @@ These **8 Core Rules** operationalize **Agile Agentic ASPICE (AAA)** (Tripwires,
 ## Rule 8: One Atomic Commit per Ticket & Clean Issue Tracker Hygiene
 * **Composite Stage CLI**: Use composite commands to submit stages and record gate verdicts in single calls.
 * **One Commit per Ticket**: Integrate each verified ticket onto the sprint branch as **strictly one squashed atomic commit** (`git merge --squash feature/<KEY> && git commit -m "<KEY>: <Summary>"`).
+* **Canonical Directory Structure**: Canonical engineering artifacts are restricted to `analysis/`, `plans/`, `retros/`, `test_specs/`, `walkthroughs/`, and `metrics/` (`process_metrics.jsonl`).
 * **Issue Tracker Hygiene**: Sub-tasks never receive a release version; parent tickets receive release version only when accepted by the human user.
+
+## Rule 9: Parallel Sprint Execution Across Disjoint Epics
+* **Strict Concurrency Bounding & Disjoint Epics Only**: The Coordinator MAY dispatch up to two tickets concurrently (`concurrency = 2`) ONLY when the tickets belong to completely disjoint Parent Epics with zero package and zero living-doc shard overlap. Concurrent execution within the same Epic is strictly prohibited.
+* **Worktree Isolation via `Workspace: "share"`**: Persistent subagent pairs for parallel tickets MUST be spawned using `Workspace: "share"`, ensuring each pair operates in an isolated Git worktree backed by the shared repository without branch checkout collisions or dirty tree overwrites.
+* **POSIX `flock` Mutual Exclusion (`/tmp/att_build_merge.lock`)**: Heavy resource operations MUST be serialized using `python3 tools/parallel_sprint_lock.py <command>` (or `tools/locked_build_merge.py`):
+  1. Unit test execution: `python3 tools/parallel_sprint_lock.py ./gradlew testDebugUnitTest ...`
+  2. Stage 5 living documentation index synchronization and squash-merges onto `sprint/<SPRINT_NAME>`:
+     `python3 tools/parallel_sprint_lock.py git rebase origin/sprint/<SPRINT_NAME> && python3 tools/verify_requirement_governance.py --sync-indexes && git merge --squash feature/<KEY>`
+* **Domain-Partitioned Localization**: String resources MAY be partitioned into domain-scoped files to prevent end-of-file merge conflicts during concurrent additions.
+* **Deterministic Living Docs Recalculation**: Whenever a parallel branch rebases onto the sprint branch, execute `python3 tools/verify_requirement_governance.py --sync-indexes` under the merge lock prior to squashing.

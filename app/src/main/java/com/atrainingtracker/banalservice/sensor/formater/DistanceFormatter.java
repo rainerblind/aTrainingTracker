@@ -65,7 +65,7 @@ public class DistanceFormatter implements MyFormatter<Number> {
                     return String.format(Locale.getDefault(), "%.1f km", distance_m.doubleValue() / 1000);
                 }
                 else { // larger than 1.000 km -> no digit
-                    return String.format(Locale.getDefault(), "%.0f km", distance_m.doubleValue() / 1000);
+                    return String.format(Locale.getDefault(), "%,.0f km", distance_m.doubleValue() / 1000);
                 }
                 // return NumberFormat.getInstance().format(distance_m.doubleValue()/1000);
             case IMPERIAL:
@@ -76,7 +76,7 @@ public class DistanceFormatter implements MyFormatter<Number> {
                     return String.format(Locale.getDefault(), "%.2f mile", distance_m.doubleValue() / BANALService.METER_PER_MILE);
                 }
                 else {
-                    return String.format(Locale.getDefault(), "%.0f mile", distance_m.doubleValue() / BANALService.METER_PER_MILE);
+                    return String.format(Locale.getDefault(), "%,.0f mile", distance_m.doubleValue() / BANALService.METER_PER_MILE);
                 }
             // return NumberFormat.getInstance().format(distance_m.doubleValue()/BANALService.METER_PER_MILE);
             default:

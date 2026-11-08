@@ -248,6 +248,45 @@ public class KnownLocationsDatabaseManager {
                 new String[]{id + ""});
     }
 
+    /**
+     * ATT-5889 / REQ-SET-095.5: Atomically merges source location into target location.
+     * Updates target's coordinates, radius, altitude, lock status, and home base status,
+     * and deletes the source location within a single SQLite transaction.
+     *
+     * @param targetId Primary key of target location.
+     * @param sourceId Primary key of source location to be deleted.
+     * @param newLat Updated latitude for target.
+     * @param newLng Updated longitude for target.
+     * @param newRadius Updated radius for target.
+     * @param newAltitude Consolidated reference altitude.
+     * @param newIsLocked Consolidated altitude lock flag.
+     * @param newSource Consolidated elevation provenance.
+     * @param newIsHome Consolidated home base status.
+     */
+    public void mergeLocations(long targetId, long sourceId, double newLat, double newLng,
+                               int newRadius, double newAltitude, boolean newIsLocked,
+                               @NonNull ElevationSource newSource, boolean newIsHome) {
+        SQLiteDatabase db = getDatabase();
+        db.beginTransaction();
+        try {
+            ContentValues values = new ContentValues();
+            values.put(KnownLocationsDbHelper.LATITUDE, newLat);
+            values.put(KnownLocationsDbHelper.LONGITUDE, newLng);
+            values.put(KnownLocationsDbHelper.RADIUS, newRadius);
+            values.put(KnownLocationsDbHelper.ALTITUDE, newAltitude);
+            values.put(KnownLocationsDbHelper.IS_LOCKED, newIsLocked ? 1 : 0);
+            values.put(KnownLocationsDbHelper.SOURCE, newSource.name());
+            values.put(KnownLocationsDbHelper.IS_HOME, newIsHome ? 1 : 0);
+
+            updateId(targetId, values);
+            deleteId(sourceId);
+
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
     public void updateLocation(long id, @NonNull LatLng latLng) {
         ContentValues contentValues = new ContentValues();
         contentValues.put(KnownLocationsDbHelper.LATITUDE, latLng.latitude);

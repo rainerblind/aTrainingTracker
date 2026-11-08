@@ -23,6 +23,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.res.Configuration
 import android.util.Log
+import android.view.KeyEvent
 import androidx.activity.compose.BackHandler
 import androidx.core.content.ContextCompat
 import com.atrainingtracker.util.safeUnregisterReceiver
@@ -580,6 +581,38 @@ fun TrackingTabsScreen(
         }
     }
 
+    // Hardware Volume Button Cockpit Tab Cycling (REQ-TRK-054.2, REQ-TRK-054.3, ATT-5905)
+    val mainActivity = activity as? MainActivityWithNavigation
+    DisposableEffect(mainActivity, screenMode, pageCount) {
+        if (mainActivity != null && screenMode == ScreenMode.TRACKING && pageCount > 0) {
+            mainActivity.hardwareKeyInterceptor = { event ->
+                if (TrainingApplication.volumeKeysSwitchCockpitTabs() &&
+                    (event.keyCode == KeyEvent.KEYCODE_VOLUME_UP || event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN)
+                ) {
+                    if (event.action == KeyEvent.ACTION_DOWN) {
+                        val forward = event.keyCode == KeyEvent.KEYCODE_VOLUME_UP
+                        val target = TrackingTabsPageResolver.resolveNextPage(
+                            currentPage = pagerState.targetPage,
+                            pageCount = pageCount,
+                            forward = forward
+                        )
+                        scope.launch {
+                            pagerState.animateScrollToPage(target)
+                        }
+                    }
+                    true // Consume both ACTION_DOWN and ACTION_UP to suppress Android's audio volume slider HUD
+                } else {
+                    false
+                }
+            }
+        }
+        onDispose {
+            if (mainActivity?.hardwareKeyInterceptor != null) {
+                mainActivity.hardwareKeyInterceptor = null
+            }
+        }
+    }
+
     ATrainingTrackerTheme(
         darkTheme = cockpitThemeState.darkTheme,
         amoled = cockpitThemeState.amoled
@@ -761,10 +794,12 @@ fun TrackingTabsScreen(
                                 ScreenMode.CONFIGURATION -> {
                                     // -- The full configuration screen for editing the name of the tab, checkboxes for lap button, map, and live segments, as well as the add/delete buttons
                                     if (currentViewInfo != null) {
+                                        val sportName = stringResource(id = activityType.titleId)
                                         TrackingTabConfigHeader(
                                             viewInfo = currentViewInfo,
                                             tabIndex = pagerState.currentPage,
                                             tabCount = trackingViews.size,
+                                            sportName = sportName,
                                             onUpdateTabName = { id, name -> trackingTabsViewModel.onUpdateTabName(id, name) },
                                             onAddTabRelative = { id, after -> trackingTabsViewModel.onAddTabRelative(id, after) },
                                             onDeleteTab = { id -> trackingTabsViewModel.onDeleteTab(id) },
@@ -777,10 +812,12 @@ fun TrackingTabsScreen(
 
                                 ScreenMode.PREVIEW -> {
                                     if (currentViewInfo != null) {
+                                        val sportName = stringResource(id = activityType.titleId)
                                         TrackingTabPreviewHeader(
                                             viewInfo = currentViewInfo,
                                             onToggleMode = { trackingTabsViewModel.toggleScreenMode() },
-                                            onExitConfig = { trackingTabsViewModel.exitConfiguration() }
+                                            onExitConfig = { trackingTabsViewModel.exitConfiguration() },
+                                            sportName = sportName
                                         )
                                     }
                                 }

@@ -190,9 +190,11 @@ object LegacyImportEngine {
             }
         }
 
-        // Deduplicate entries by base name across scanned paths (REQ-MIG-031)
+        // Deduplicate entries by base name across scanned paths (REQ-MIG-031) and sort ascending by filename (REQ-MIG-049.4, ATT-6039)
         val entries = allEntries.distinctBy {
             it.name.substringBeforeLast(".").removeSuffix("-TMP").removeSuffix("~").lowercase()
+        }.sortedWith { a, b ->
+            String.CASE_INSENSITIVE_ORDER.compare(a.name, b.name)
         }
         if (entries.isEmpty()) return RecoveryResult(0, 0, 0, 0)
         
@@ -404,9 +406,11 @@ object LegacyImportEngine {
             }
         }
 
-        // Deduplicate entries by base name across scanned paths (REQ-MIG-031 / REQ-MIG-034)
+        // Deduplicate entries by base name across scanned paths (REQ-MIG-031 / REQ-MIG-034) and sort ascending by filename (REQ-MIG-049.4, ATT-6039)
         val entries = allEntries.distinctBy {
             it.name.substringBeforeLast(".").removeSuffix("-TMP").removeSuffix("~").lowercase()
+        }.sortedWith { a, b ->
+            String.CASE_INSENSITIVE_ORDER.compare(a.name, b.name)
         }
         if (entries.isEmpty()) return RecoveryResult(0, 0, 0, 0)
 

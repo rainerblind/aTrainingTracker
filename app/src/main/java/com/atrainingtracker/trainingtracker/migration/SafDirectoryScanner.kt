@@ -44,7 +44,7 @@ object SafDirectoryScanner {
     ): List<Uri> {
         if (root == null || !root.isDirectory) return emptyList()
 
-        val matchingUris = mutableListOf<Uri>()
+        val matchingEntries = mutableListOf<Pair<String, Uri>>()
         val visitedUris = mutableSetOf<Uri>()
 
         scanDirectoryRecursive(
@@ -53,11 +53,15 @@ object SafDirectoryScanner {
             currentDepth = 0,
             maxDepth = maxDepth,
             visitedUris = visitedUris,
-            result = matchingUris,
+            result = matchingEntries,
             cancelSignal = cancelSignal
         )
 
-        return matchingUris
+        // Sort discovered URIs chronologically ascending by filename (REQ-MIG-049.2, ATT-6039)
+        return matchingEntries.sortedWith { a, b ->
+            val cmp = String.CASE_INSENSITIVE_ORDER.compare(a.first, b.first)
+            if (cmp != 0) cmp else runCatching { a.second.toString().compareTo(b.second.toString()) }.getOrDefault(0)
+        }.map { it.second }
     }
 
     private suspend fun scanDirectoryRecursive(
@@ -66,7 +70,7 @@ object SafDirectoryScanner {
         currentDepth: Int,
         maxDepth: Int,
         visitedUris: MutableSet<Uri>,
-        result: MutableList<Uri>,
+        result: MutableList<Pair<String, Uri>>,
         cancelSignal: (() -> Boolean)?
     ) {
         if (!currentCoroutineContext().isActive || (cancelSignal != null && cancelSignal())) {
@@ -113,7 +117,7 @@ object SafDirectoryScanner {
                 }
             } else if (child.isFile) {
                 if (isMatchingFormat(name, targetFormat)) {
-                    result.add(child.uri)
+                    result.add(name to child.uri)
                 }
             }
         }

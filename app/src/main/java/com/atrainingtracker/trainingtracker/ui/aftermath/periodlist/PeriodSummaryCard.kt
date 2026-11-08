@@ -166,7 +166,7 @@ fun PeriodSummaryCard(
                                     overflow = TextOverflow.Ellipsis
                                 )
                                 Text(
-                                    text = summary.periodDateRange,
+                                    text = summary.getLocalizedDateRange(),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

@@ -197,6 +197,24 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     /**
+     * Persists or updates the deduplicated JSON diagnostic recording errors payload for a workout (REQ-TRK-053.1).
+     */
+    public void updateRecordingErrors(long workoutId, String errorsJson) {
+        ContentValues values = new ContentValues();
+        values.put(WorkoutSummaries.RECORDING_ERRORS, errorsJson);
+        getDatabase().update(WorkoutSummaries.TABLE, values, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(workoutId)});
+    }
+
+    /**
+     * Clears any persisted diagnostic recording errors for a workout, setting it to NULL (REQ-TRK-053.1).
+     */
+    public void clearRecordingErrors(long workoutId) {
+        ContentValues values = new ContentValues();
+        values.putNull(WorkoutSummaries.RECORDING_ERRORS);
+        getDatabase().update(WorkoutSummaries.TABLE, values, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(workoutId)});
+    }
+
+    /**
      * Applies an inferred identity (Equipment, Strava) to a workout based on its SportType.
      * Use this during learning or cluster assignment (SCRUM-200).
      */
@@ -1909,6 +1927,7 @@ public class WorkoutSummariesDatabaseManager {
         public static final String BOUND_MAX_LNG = "boundMaxLng"; // added in Version 21
         public static final String RACE = "race"; // added in Version 23 (02.10.2026, ATT-2005)
         public static final String SOURCE = "source"; // added in Version 24 (03.10.2026, ATT-2186)
+        public static final String RECORDING_ERRORS = "recordingErrors"; // added in Version 28 (08.11.2026, ATT-5886)
         // new entries in version 5 of the DB
         @Deprecated
         public static final String EXTREMA_VALUES_CALCULATED = "extremumValuesCalculated";
@@ -1973,7 +1992,8 @@ public class WorkoutSummariesDatabaseManager {
         // public static final int DB_VERSION = 23; // 02.10.2026 Added race column (ATT-2005)
         // public static final int DB_VERSION = 25; // 18.10.2026 Added count column to extrema table (ATT-3987)
         // public static final int DB_VERSION = 26; // 21.10.2026 Added missing indexes on extrema and summaries tables (REQ-DAT-034, ATT-4008)
-        public static final int DB_VERSION = 27; // 04.11.2026 Added workout_photos table (ATT-43)
+        // public static final int DB_VERSION = 27; // 04.11.2026 Added workout_photos table (ATT-43)
+        public static final int DB_VERSION = 28; // 08.11.2026 Added recordingErrors column (ATT-5886)
         
 
 
@@ -2015,7 +2035,8 @@ public class WorkoutSummariesDatabaseManager {
                 + WorkoutSummaries.BOUND_MAX_LAT + " real,"   // added in Version 21
                 + WorkoutSummaries.BOUND_MAX_LNG + " real,"   // added in Version 21
                 + WorkoutSummaries.RACE + " int DEFAULT 0, "  // added in Version 23
-                + WorkoutSummaries.SOURCE + " text DEFAULT 'TRACKED')";  // added in Version 24
+                + WorkoutSummaries.SOURCE + " text DEFAULT 'TRACKED', "  // added in Version 24
+                + WorkoutSummaries.RECORDING_ERRORS + " text)";  // added in Version 28
 
         protected static final String CREATE_TABLE_EXTREMA_VALUES = "create table " + WorkoutSummaries.TABLE_EXTREMA_VALUES + " ("
                 + WorkoutSummaries.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -2359,6 +2380,11 @@ public class WorkoutSummariesDatabaseManager {
                 } catch (Exception e) {
                     Log.e(TAG, "Error creating workout_photos table in onUpgrade to v27", e);
                 }
+            }
+
+            if (oldVersion < 28) {
+                Log.i(TAG, "upgrading to DB version 28 (Adding recordingErrors column)");
+                addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.RECORDING_ERRORS, "text", null);
             }
         }
 

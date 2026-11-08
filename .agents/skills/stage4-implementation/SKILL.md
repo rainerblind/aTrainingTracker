@@ -20,20 +20,25 @@ Reuse the ticket's two persistent `TypeName: "self"` subagents via `send_message
      python3 tools/jira_util.py check-gate <Impl-Plan-Subtask-Key>
      ```
    - If exit code is not 0, halt immediately.
-2. **Software Construction, Universal Image Audit & Code-Grounding (`ATT-5431`)**:
+2. **Isolated In-Place Code & Document Review Workflow (`.reviews/` + Emacs)**:
+   - For concurrent, conflict-free human review of code (`.kt`, `.java`, `.py`, `.xml`) or documents (`.md`) while agents compile or switch branches:
+     - Stage target files: `python3 tools/review_tool.py stage <file...>` or `python3 tools/review_tool.py stage-ticket <TICKET_KEY>`.
+     - Human edits lines in Emacs or inserts inline review directives (`>> ...` / `// >> ...`).
+     - Harvest diffs and synchronize: `python3 tools/review_tool.py diff` and `python3 tools/review_tool.py apply`.
+3. **Software Construction, Universal Image Audit & Code-Grounding (`ATT-5431`)**:
    - Execute the planned atomic steps sequentially.
    - Follow clean architecture and Kotlin/Java best practices (`docs/coding_standards.md` and `docs/design_guidelines.md`).
    - Add comprehensive internal documentation (KDoc/JavaDoc) for all new or modified public methods and classes (`REQ-PRO-011`).
-   - For string additions: ensure entries exist across all 9 supported language directories (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with consistent format specifiers.
+   - For string additions: ensure entries exist across all 9 supported language directories (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with consistent format specifiers. String additions may be partitioned into domain-scoped `strings_<domain>.xml` files (`REQ-PRO-041.3`) to prevent git merge conflicts during parallel sprint execution.
    - **Universal `read_file` Image Inspection (`Rule 71`, `ATT-5431`)**: Visually inspect every created, modified, or referenced image asset (`.png`, `.jpg`, `.svg` across `docs/guide/img/*`, `docs/store_presence/*`, drawables) via `read_file`.
    - **Documentation Code-Grounding (`ATT-5431`)**: Every statement in guides or docs must be verified against actual code (`AndroidManifest.xml`, Compose screens, Strings, Repositories).
-3. **Targeted Unit Testing**:
-   - Run exclusively targeted unit tests for modified packages/classes (5–15s runtime) to verify logic rapidly during development:
+4. **Targeted Unit Testing**:
+   - Run exclusively targeted unit tests for modified packages/classes (5–15s runtime) to verify logic rapidly during development. When running under parallel sprint execution (Core Rule 9 / `REQ-PRO-041.2`), wrap Gradle test executions with `python3 tools/parallel_sprint_lock.py`:
      ```bash
-     ./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.knownlocations.*"
+     python3 tools/parallel_sprint_lock.py ./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.knownlocations.*"
      ```
    - Defer full test suite execution (`./gradlew testDebugUnitTest`) to Stage 5.
-4. **Single-Turn Stage Submission (`submit-stage`)**:
+5. **Single-Turn Stage Submission (`submit-stage`)**:
    - Submit Stage 4 summary and targeted test results in a single composite CLI call (creates/updates `[Implementation]` sub-task and moves it to `In Überprüfung`). **Never** create markdown files or folders inside `docs/engineering/` (such as `summaries/` or `implementation/`) for Stage 4 (Rule 67 — `ATT-4936`):
      ```bash
      python3 tools/jira_util.py --as agent1 submit-stage <TICKET_KEY> 4 "<Implementation Summary & Targeted Test Results>"

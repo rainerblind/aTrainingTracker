@@ -55,4 +55,22 @@ object MapDetailViewportMath {
         val maxFraction = (1.0 - 1.0 / safeZoom).coerceAtLeast(0.0)
         return (domainVal / totalSpan).coerceIn(0.0, maxFraction)
     }
+
+    /**
+     * Calculates the dynamic status bar clearance top offset (in pixels) for floating map controls
+     * (e.g. Share FAB and overlay buttons) when the collapsing header moves offscreen (REQ-UI-491).
+     *
+     * @param useStatusBarsPadding Whether the layout is in full-screen mode applying status bars padding.
+     * @param statusBarHeightPx Height of the Android system status bar in pixels.
+     * @param currentTopPaddingPx Current uncollapsed top padding of the layout viewport in pixels.
+     * @return Extra top clearance offset in pixels needed to prevent controls colliding with status bar.
+     */
+    fun calculateFloatingControlsTopOffsetPx(
+        useStatusBarsPadding: Boolean,
+        statusBarHeightPx: Int,
+        currentTopPaddingPx: Int
+    ): Int {
+        if (!useStatusBarsPadding) return 0
+        return (statusBarHeightPx - currentTopPaddingPx).coerceAtLeast(0)
+    }
 }

@@ -2699,3 +2699,115 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Then* only `SPEED_AND_LOCATION_GPS` and `SPEED_AND_LOCATION_GOOGLE_FUSED` are present.
 
 **Invariants**: Dedicated physical sensor precedence (`BIKE_SPEED > GOOGLE_FUSED > GPS`) is 100% maintained; raw GPS fallback on de-Googled devices is 100% preserved; existing user device pairings are untouched; `DatabaseSchemaRegistry` matches `DevicesDbHelper.DB_VERSION` (Rule 62).
+
+### REQ-TRK-053: Persisted Deduplicated Workout Diagnostic Errors & Actionable Report Dialog [Verified]
+- **Tests**: `TST-TRK-053` | **Tickets**: `ATT-5886`
+- **Implementation**: `TrackerService.java`, `WorkoutSummariesDatabaseManager.java`, `WorkoutData.kt`, `WorkoutHeaderData.kt`, `WorkoutDataMapper.kt`, `WorkoutRepository.kt`, `WorkoutSummary.kt`, `WorkoutDetailTabbedContent.kt`, `EditWorkoutScreen.kt`, `WorkoutDiagnosticBottomSheet.kt`
+- **Rationale**: Runtime exceptions during table initialization, 1-Hz sample recording, or post-workout finalization are caught defensively in `TrackerService` to prevent foreground service crashes. Currently, these caught exceptions are logged exclusively to volatile Android logcat, which rolls over outdoors before an athlete can inspect or export diagnostics. Persisting a compact, deduplicated diagnostic log in `WorkoutSummaries.TABLE` (which commits independently from sample insertion) guarantees error capture across the entire workout lifecycle, preserves zero storage/UI overhead on clean workouts, and empowers athletes to report or clear actionable diagnostics.
+- **Description**:
+1. *WorkoutSummaries Database Schema & Helper API (`REQ-TRK-053.1`)*:
+• `WorkoutSummariesDbHelper.DB_VERSION` SHALL be incremented to `28`.
+• `WorkoutSummaries.TABLE` SHALL include a nullable `TEXT` column `RECORDING_ERRORS` (`"recordingErrors"`, default `NULL`).
+• Both fresh database initialization (`onCreate`) and incremental upgrade (`onUpgrade`, for `oldVersion < 28`) SHALL create/alter the table symmetrically (`Rule 64`).
+• `DatabaseSchemaRegistry` SHALL automatically validate schema version 28 via its direct reference to `WorkoutSummariesDbHelper.DB_VERSION` (`Rule 62`).
+• `WorkoutSummariesDatabaseManager` SHALL provide `clearRecordingErrors(long workoutId)` to reset `RECORDING_ERRORS` to `NULL`.
+• When a workout records and finalizes with zero caught exceptions, `RECORDING_ERRORS` SHALL remain `NULL`.
+2. *Bounded Lifecycle Exception Capture & 1-Hz Deduplication (`REQ-TRK-053.2`)*:
+• `TrackerService` SHALL maintain an in-memory `WorkoutDiagnosticCollector` per active workout session.
+• Caught exceptions across table initialization (`mTableInitializationFuture`), 1-Hz sample recording/schema healing (`logSampleInsertFailure`, `handleMissingColumns`, async write failures), and post-workout finalization (`finalizeLiveSession`: map polyline, extrema, aerobic efficiency, commute/trainer, clustering, milestone auto-naming) SHALL be recorded into the collector.
+• The collector SHALL deduplicate repeated exceptions by `(stage, exceptionClass, message)`. For each distinct entry, the collector SHALL record: stage (`INIT`, `SAMPLE_WRITE`, `FINALIZE`), first occurrence timestamp, last occurrence timestamp, total occurrence count, exception class, message, and compact sanitized stack trace.
+• Total persisted error payload length SHALL be capped at a maximum of 8 KB to prevent database bloat during extended workouts.
+• `TrackerService` SHALL persist/update `WorkoutSummaries.RECORDING_ERRORS` when a new distinct error occurs and commit the final aggregated summary counts during `finalizeLiveSession`.
+3. *Symmetrical DTO & Repository Mapping (`REQ-TRK-053.3`)*:
+• `WorkoutData` and `WorkoutHeaderData` SHALL expose nullable `recordingErrors: String?`.
+• `WorkoutDataMapper.fromCursor(Cursor)` and batch mapper `fromSnapshot(CursorSnapshot)` SHALL map `recordingErrors` symmetrically (`Rule 20`).
+• `WorkoutRepository` SHALL expose `clearRecordingErrors(workoutId: Long)` delegating to the database manager.
+4. *Actionable User-Facing UI & Non-Intrusive Option C Presentation (`REQ-TRK-053.4`)*:
+• When `recordingErrors` is `NULL` or blank, all error badges, warning banners, and diagnostic cards SHALL remain 100% invisible across the application.
+• When `recordingErrors` is non-empty:
+  - The workout card in the workout list (`WorkoutSummary` / `WorkoutHeader`) SHALL display a warning icon/badge.
+  - `WorkoutDetailTabbedContent` SHALL display a prominent, tappable warning banner at the top of the detail view.
+  - `EditWorkoutScreen` SHALL display a diagnostic warning card.
+• Tapping the warning badge, banner, or card SHALL open `WorkoutDiagnosticBottomSheet` containing:
+  - Plain-language explanation dynamically categorized by failure cause:
+    - `SQLiteFullException`: storage full guidance (`R.string.workout_diagnostic_explanation_storage_full`).
+    - `SAMPLE_WRITE`: per-second data write failure notice with summary preservation confirmation (`R.string.workout_diagnostic_explanation_sample_write`).
+    - `FINALIZE`: post-workout calculation warning (`R.string.workout_diagnostic_explanation_finalize`).
+    - Generic/other: fallback explanation (`R.string.workout_diagnostic_explanation_generic`).
+  - Collapsible "Technische Details" accordion displaying formatted diagnostic JSON/text with a 1-tap "In Zwischenablage kopieren" action.
+  - Primary action: "Fehlerbericht per E-Mail senden" opening an `Intent.ACTION_SENDTO` (`mailto:rainer.blind@gmail.com`) with pre-filled subject (`aTrainingTracker Fehlerbericht (${BuildConfig.VERSION_NAME})`), device metadata (model, Android OS version, app version, sport type), and the diagnostic error payload.
+  - Secondary action: "Warnung löschen" with confirmation dialog, which resets `RECORDING_ERRORS` to `NULL` via `WorkoutRepository.clearRecordingErrors`, immediately dismissing and hiding all warning indicators.
+5. *9-Language Localization Parity (`REQ-TRK-053.5`)*:
+• All user-visible strings for banners, dialogs, plain explanations, technical details, email subject, copy toast, and clear actions SHALL be translated across all 9 application locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with 100% parity and zero inline emojis (`ATT-5400`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-053`, extending `REQ-TRK-029` (*Sample Insert Failure Telemetry*), `REQ-TRK-051.2` (*Decoupled Summary Persistence*), and `REQ-REV-003` (*Jubilee Action Flow*). Targets `TrackerService.java`, `WorkoutSummariesDatabaseManager.java`, and aftermath UI screens.
+2. *Historical Origin & Commit Trace*: Initial rate-limiting in `ATT-3985` (`f4650d74`) protected logcat from 1-Hz floods; `ATT-4968` decoupled summary database transactions from sample table insertions.
+3. *Root Reason for Existing Formulation*: Logging to logcat was minimal and lightweight, but field failures without attached ADB hosts suffered silent data loss due to logcat ringbuffer eviction.
+4. *Preservation of Core Invariants*: Zero UI clutter on successful clean workouts, decoupled summary commits, non-blocking asynchronous persistence, and 100% test pass rate remain strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a workout recorded without any caught exceptions,
+• *When* `WorkoutSummaries` is queried and viewed in `Einheiten`, `WorkoutDetailTabbedContent`, or `EditWorkoutScreen`,
+• *Then* `RECORDING_ERRORS` is `NULL` and zero warning icons, banners, or cards are displayed.
+• *Given* 100 consecutive 1-Hz sample insertion failures throw `SQLiteException` in `TrackerService`,
+• *When* the service handles the exceptions,
+• *Then* the service does not crash, deduplicates the failure into a single entry with `count = 100`, records first/last timestamps, bounds total text payload $\le 8\text{ KB}$, and persists it to `WorkoutSummaries.RECORDING_ERRORS`.
+• *Given* an exception during table init or any block in `finalizeLiveSession`,
+• *When* the exception is caught,
+• *Then* it is captured with stage `INIT` or `FINALIZE` and persisted to `WorkoutSummaries.RECORDING_ERRORS`.
+• *Given* a workout with non-null `RECORDING_ERRORS`,
+• *When* the athlete taps the warning banner in `WorkoutDetailTabbedContent`,
+• *Then* `WorkoutDiagnosticBottomSheet` opens displaying the plain-language explanation, expandable technical details, 1-tap email report button pre-filling `mailto:rainer.blind@gmail.com`, and "Warnung löschen" button that resets `RECORDING_ERRORS` to `NULL` and hides the warning.
+
+**Invariants**: Clean workouts incur zero storage and zero UI overhead; sample failure handling never blocks the live tracking foreground thread; `WorkoutSummaries` schema migration to version 28 is safe and idempotent; `fromCursor` and `readCursorSnapshot` mapping is 100% symmetrical (`Rule 20`).
+
+### REQ-TRK-054: Hardware Volume Keys Cockpit Tab Cycling with Cyclic Wrap-Around [Verified]
+- **Tests**: `TST-TRK-054` | **Tickets**: `ATT-5905`
+- **Implementation**: `TrackingTabsPageResolver.kt`, `MainActivityWithNavigation.kt`, `TrackingTabsScreen.kt`, `DisplaySettingsDialog.kt`, `TrainingApplication.java`
+- **Rationale**: When riding or running in rain, cold weather, or with thick gloves, capacitive touch-screen swipes between Cockpit tabs (`Standard`, `Karte`, `Runden`, `Live Segments`) in `TrackingTabsScreen` can be unreliable or hazardous. Utilizing physical hardware volume buttons (`KEYCODE_VOLUME_UP`, `KEYCODE_VOLUME_DOWN`) provides dedicated bike computer-like physical ergonomics. Cyclic wrap-around ensures athletes can navigate through all configured Cockpit tabs even if handlebar mounts block one physical volume button.
+- **Description**:
+1. *Pure Domain Tab Mathematics & Cyclic Wrap-Around (`REQ-TRK-054.1`)*:
+• `TrackingTabsPageResolver` SHALL provide `resolveNextPage(currentPage: Int, pageCount: Int, forward: Boolean): Int`.
+• When `forward` is `true` (`Volume Up`), target page SHALL be `(currentPage + 1) % pageCount`.
+• When `forward` is `false` (`Volume Down`), target page SHALL be `(currentPage - 1 + pageCount) % pageCount`.
+• Boundary guard: When `pageCount <= 1`, target page SHALL be `0`.
+2. *Window-Level Volume Key Interception & Audio HUD Suppression (`REQ-TRK-054.2`)*:
+• `MainActivityWithNavigation` SHALL intercept `KEYCODE_VOLUME_UP` and `KEYCODE_VOLUME_DOWN` before system volume processing.
+• When an active volume key interceptor is registered, consuming both `ACTION_DOWN` and `ACTION_UP` SHALL return `true`, completely preventing the Android system volume slider HUD from appearing.
+3. *Lifecycle-Bound Registration in TrackingTabsScreen (`REQ-TRK-054.3`)*:
+• `TrackingTabsScreen` SHALL register the volume key interceptor via `DisposableEffect` ONLY when `screenMode == ScreenMode.TRACKING` AND `TrainingApplication.volumeKeysSwitchCockpitTabs()` is enabled.
+• When a volume key event is handled in `ScreenMode.TRACKING`, the screen SHALL animate the pager state to `resolveNextPage(...)`.
+• When `screenMode != ScreenMode.TRACKING` (e.g. `ScreenMode.CONFIGURATION`), when navigating away from Cockpit, or when the setting is disabled, the interceptor SHALL be unregistered so volume keys immediately perform standard Android audio volume control.
+4. *Display Settings Integration & Preference Persistence (`REQ-TRK-054.4`)*:
+• `TrainingApplication.DEFAULT_DISPLAY_OPTIONS` SHALL include `"volumeKeysSwitchCockpitTabs"`.
+• `TrainingApplication` SHALL expose static helper `boolean volumeKeysSwitchCockpitTabs()` returning `getDisplayOptions().contains("volumeKeysSwitchCockpitTabs")`.
+• `DisplaySettingsDialog.kt` SHALL render a toggle for `volumeKeysSwitchCockpitTabs` alongside existing display options (`forcePortrait`, `keepScreenOn`, `noUnlocking`).
+5. *9-Language Localization Parity (`REQ-TRK-054.5`)*:
+• Toggle title `prefs_volume_keys_switch_cockpit_tabs_title` and subtitle `prefs_volume_keys_switch_cockpit_tabs_summary` SHALL be localized across all 9 supported languages (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with 100% parity.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-054`, extending `REQ-SET-052` (*Display Settings Modal Dialog & Preferences*) and `REQ-UI-435` (*TrackingTabs Pager Resolution*). Targets `TrackingTabsPageResolver.kt`, `MainActivityWithNavigation.kt`, `TrackingTabsScreen.kt`, `DisplaySettingsDialog.kt`, and `TrainingApplication.java`.
+2. *Historical Origin & Commit Trace*: `ATT-261` / `ATT-1016` (DisplaySettings modal), `ATT-4838` (`TrackingTabsPageResolver`), and `ATT-5879` (Cockpit layout refinements).
+3. *Root Reason for Existing Formulation*: Volume keys were previously left unintercepted because Compose views do not request key events by default, leaving volume handling to Android's default audio stream manager.
+4. *Preservation of Core Invariants*: Existing display preferences (`forcePortrait`, `keepScreenOn`, `noUnlocking`) remain unchanged; volume buttons function normally on all other screens and in configuration mode; 9-language localization parity is maintained.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `volumeKeysSwitchCockpitTabs` is enabled and `TrackingTabsScreen` is displayed in `ScreenMode.TRACKING` with 3 tabs (0, 1, 2) on tab 0,
+• *When* `KEYCODE_VOLUME_UP` is pressed,
+• *Then* the pager smoothly navigates to tab 1, and no audio volume HUD appears.
+• *Given* the athlete is on tab 0,
+• *When* `KEYCODE_VOLUME_DOWN` is pressed,
+• *Then* the pager wraps around and smoothly navigates to tab 2 (last tab).
+• *Given* the athlete is on tab 2 (last tab),
+• *When* `KEYCODE_VOLUME_UP` is pressed,
+• *Then* the pager wraps around and smoothly navigates to tab 0.
+• *Given* `volumeKeysSwitchCockpitTabs` is disabled, or the screen mode is `ScreenMode.CONFIGURATION`, or the app is on a non-Cockpit screen,
+• *When* `KEYCODE_VOLUME_UP` or `KEYCODE_VOLUME_DOWN` is pressed,
+• *Then* system audio volume adjusts normally.
+• *Given* `DisplaySettingsDialog` is opened,
+• *When* viewed in any of the 9 supported languages,
+• *Then* the hardware volume keys toggle title and summary are rendered with 100% localization parity.
+
+**Invariants**: Hardware volume buttons MUST function normally on all non-Cockpit screens and in `ScreenMode.CONFIGURATION`; both `ACTION_DOWN` and `ACTION_UP` MUST be consumed in `TRACKING` mode to avoid audio HUD flicker; cyclic wrap-around MUST handle `pageCount <= 1` gracefully without `IndexOutOfBoundsException`.
+

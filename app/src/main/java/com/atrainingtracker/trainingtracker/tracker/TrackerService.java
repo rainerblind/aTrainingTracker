@@ -483,11 +483,17 @@ public class TrackerService extends Service {
     private volatile LiveWorkoutSession mLiveSession;
     private volatile boolean mIsRehydrating = false;
     private volatile CompletableFuture<Void> mTableInitializationFuture = CompletableFuture.completedFuture(null);
+    private final WorkoutRecordingErrorCollector mDiagnosticCollector = new WorkoutRecordingErrorCollector();
     private volatile StartType mStartType;
     private volatile boolean mWorkoutStartLocationRecorded = false;
 
     public CompletableFuture<Void> getTableInitializationFuture() {
         return mTableInitializationFuture;
+    }
+
+    @VisibleForTesting
+    public WorkoutRecordingErrorCollector getDiagnosticCollector() {
+        return mDiagnosticCollector;
     }
     final BroadcastReceiver mLapSummaryReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, @NonNull Intent intent) {
@@ -836,6 +842,7 @@ public class TrackerService extends Service {
         switch (startType) {
             case START_NORMAL:
                 if (DEBUG) Log.d(TAG, "starting a new workout");
+                mDiagnosticCollector.clear();
                 if (TrainingApplication.isAutoPaused()) {
                     mAutoPauseManager.setState(AutoPauseState.AUTO_PAUSED);
                     mAutoPauseManager.resetDebounceCounter();
@@ -862,6 +869,16 @@ public class TrackerService extends Service {
                         notifyTrackingStarted(mWorkoutID);
                     } catch (Throwable t) {
                         Log.e(TAG, "Fatal error initializing workout database asynchronously", t);
+                        mDiagnosticCollector.record(DiagnosticStage.INIT, t, "Fatal error initializing workout database asynchronously");
+                        if (mWorkoutID > 0) {
+                            String errorJson = mDiagnosticCollector.toJson();
+                            if (errorJson != null) {
+                                try {
+                                    WorkoutSummariesDatabaseManager.getInstance(TrackerService.this).updateRecordingErrors(mWorkoutID, errorJson);
+                                } catch (Throwable ignored) {
+                                }
+                            }
+                        }
                         initFuture.completeExceptionally(t);
                         mTrackingInterrupted = true;
                         cancelTrackerHandle();
@@ -2505,6 +2522,16 @@ public class TrackerService extends Service {
                 Log.e(TAG, formattedMessage);
             }
         }
+        boolean shouldSync = mDiagnosticCollector.record(DiagnosticStage.SAMPLE_WRITE, cause, message);
+        if (shouldSync && mWorkoutID > 0) {
+            String errorJson = mDiagnosticCollector.toJson();
+            if (errorJson != null) {
+                try {
+                    WorkoutSummariesDatabaseManager.getInstance(this).updateRecordingErrors(mWorkoutID, errorJson);
+                } catch (Throwable ignored) {
+                }
+            }
+        }
     }
 
     /**
@@ -2668,6 +2695,7 @@ public class TrackerService extends Service {
             }
         } catch (Throwable t) {
             Log.e(TAG, "finalizeLiveSession: Error persisting map polyline and elevation/distance streams", t);
+            mDiagnosticCollector.record(DiagnosticStage.FINALIZE, t, "Error persisting map polyline and elevation/distance streams");
         }
 
         // 2. Save START and END locations, Sensor Extrema, and Max Line Distance (REQ-TRK-030.4)
@@ -2747,6 +2775,7 @@ public class TrackerService extends Service {
             }
         } catch (Throwable t) {
             Log.e(TAG, "finalizeLiveSession: Error persisting start/end locations and sensor extrema", t);
+            mDiagnosticCollector.record(DiagnosticStage.FINALIZE, t, "Error persisting start/end locations and sensor extrema");
         }
 
         // 3. Calculate and persist Efficiency Factor (EF), Aerobic Decoupling, and Power Training Metrics from recorded samples (REQ-UI-400.2, REQ-MIG-039.4)
@@ -2863,6 +2892,7 @@ public class TrackerService extends Service {
             }
         } catch (Throwable t) {
             Log.w(TAG, "finalizeLiveSession: Could not compute Aerobic Efficiency / Decoupling or Power Training extrema", t);
+            mDiagnosticCollector.record(DiagnosticStage.FINALIZE, t, "Could not compute Aerobic Efficiency / Decoupling or Power Training extrema");
         }
 
         // 4. Guess Commute and Trainer (REQ-TRK-030.4)
@@ -2870,6 +2900,7 @@ public class TrackerService extends Service {
             guessCommuteAndTrainer();
         } catch (Throwable t) {
             Log.e(TAG, "finalizeLiveSession: Error in guessCommuteAndTrainer", t);
+            mDiagnosticCollector.record(DiagnosticStage.FINALIZE, t, "Error in guessCommuteAndTrainer");
         }
 
         // 5. Identity Determination, Route Clustering & Auto-Naming (SCRUM-200, ATT-1398, REQ-TRK-030.4)
@@ -2978,9 +3009,24 @@ public class TrackerService extends Service {
                 );
             } catch (Throwable t) {
                 Log.e(TAG, "finalizeLiveSession: Error evaluating milestone auto-naming", t);
+                mDiagnosticCollector.record(DiagnosticStage.FINALIZE, t, "Error evaluating milestone auto-naming");
             }
         } catch (Throwable t) {
             Log.e(TAG, "finalizeLiveSession: Error in identity determination, clustering, or auto-naming", t);
+            mDiagnosticCollector.record(DiagnosticStage.FINALIZE, t, "Error in identity determination, clustering, or auto-naming");
+        }
+
+        // 7. Persist final diagnostic recording errors summary (REQ-TRK-053.2)
+        try {
+            String finalErrorJson = mDiagnosticCollector.toJson();
+            if (finalErrorJson != null && mWorkoutID > 0) {
+                summariesManager.updateRecordingErrors(mWorkoutID, finalErrorJson);
+                if (repository != null) {
+                    repository.setRecordingErrors(mWorkoutID, finalErrorJson);
+                }
+            }
+        } catch (Throwable t) {
+            Log.e(TAG, "finalizeLiveSession: Error persisting diagnostic errors payload", t);
         }
     }
 

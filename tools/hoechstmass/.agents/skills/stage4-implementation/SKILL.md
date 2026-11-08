@@ -23,13 +23,19 @@ Reuse the persistent subagent pair via messages:
      python3 tools/workflow_util.py check-gate <Impl-Plan-Subtask-Key>
      ```
    - If exit code is not 0 (`GATE_PASSED`), halt immediately.
-2. **Software Construction & Code Standards**:
+2. **Isolated In-Place Code & Document Review Workflow (`.reviews/` + Emacs)**:
+   - For concurrent, conflict-free human review of code or documents while agents compile or switch branches:
+     - Stage target files: `python3 tools/review_tool.py stage <file...>` or `python3 tools/review_tool.py stage-ticket <TICKET_KEY>`.
+     - Human edits lines in Emacs or inserts inline review directives (`>> ...` / `// >> ...`).
+     - Harvest diffs and synchronize: `python3 tools/review_tool.py diff` and `python3 tools/review_tool.py apply`.
+3. **Software Construction & Code Standards**:
    - Execute the planned atomic steps sequentially.
    - Follow clean architecture and coding standards (`docs/coding_standards.md` and `docs/design_guidelines.md`).
    - Add comprehensive documentation (docstrings/comments) for all new public interfaces and classes.
-3. **Targeted Unit Testing**:
-   - Run targeted unit tests for modified packages/classes to verify logic rapidly during development. Defer full test suite execution to Stage 5.
-4. **Single-Turn Stage Submission (`submit-stage`)**:
+   - Partition localization strings into domain-scoped files (`strings_<domain>.xml`) where appropriate to prevent merge conflicts during concurrent execution (`REQ-PRO-041.3`).
+4. **Targeted Unit Testing**:
+   - Run targeted unit tests for modified packages/classes to verify logic rapidly during development. Wrap heavy test suites with `python3 tools/parallel_sprint_lock.py` under parallel execution (`REQ-PRO-041.2`). Defer full test suite execution to Stage 5.
+5. **Single-Turn Stage Submission (`submit-stage`)**:
    - Submit Stage 4 summary and test results in a single composite CLI call:
      ```bash
      python3 tools/workflow_util.py --as agent1 submit-stage <TICKET_KEY> 4 "<Implementation Summary & Targeted Test Results>"

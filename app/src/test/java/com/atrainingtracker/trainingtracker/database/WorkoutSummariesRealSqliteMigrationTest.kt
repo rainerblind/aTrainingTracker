@@ -490,8 +490,54 @@ class WorkoutSummariesRealSqliteMigrationTest {
     }
 
     @Test
-    fun testSchemaRegistryMatchesV27() {
-        assertEquals(27, DatabaseSchemaRegistry.getMaxSupportedVersion("WorkoutSummaries.db"))
+    fun testIncrementalUpgradeV27ToV28AddsRecordingErrorsColumn() {
+        val database = checkNotNull(db)
+        scaffoldV22Schema(database)
+        helper.onUpgrade(database, 22, 27)
+        database.version = 27
+
+        // Insert workout at v27
+        val cv = ContentValues().apply {
+            put(WorkoutSummaries.WORKOUT_NAME, "Trail Run v27")
+            put(WorkoutSummaries.DISTANCE_TOTAL_m, 12000.0)
+        }
+        val insertedId = database.insertOrThrow(WorkoutSummaries.TABLE, null, cv)
+        assertEquals(1L, insertedId)
+
+        // Upgrade v27 -> v28
+        helper.onUpgrade(database, 27, 28)
+        database.version = 28
+
+        // Verify column exists in real SQLite
+        assertTrue("Column recordingErrors must exist after v28 upgrade", RealSqliteTestHelper.hasColumn(database, WorkoutSummaries.TABLE, WorkoutSummaries.RECORDING_ERRORS))
+        val col = RealSqliteTestHelper.getColumn(database, WorkoutSummaries.TABLE, WorkoutSummaries.RECORDING_ERRORS)
+        assertNotNull(col)
+        assertNull("Default value should be null", col?.dfltValue)
+
+        // Verify existing workout has null recordingErrors
+        database.query(WorkoutSummaries.TABLE, null, "${WorkoutSummaries.C_ID} = ?", arrayOf("1"), null, null, null).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            val errIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.RECORDING_ERRORS)
+            assertTrue("Existing row must have null recordingErrors", cursor.isNull(errIdx))
+        }
+
+        // Test updating recordingErrors
+        val errPayload = """[{"stage":"SAMPLE_WRITE","count":5}]"""
+        val updateCv = ContentValues().apply {
+            put(WorkoutSummaries.RECORDING_ERRORS, errPayload)
+        }
+        database.update(WorkoutSummaries.TABLE, updateCv, "${WorkoutSummaries.C_ID} = ?", arrayOf("1"))
+
+        database.query(WorkoutSummaries.TABLE, null, "${WorkoutSummaries.C_ID} = ?", arrayOf("1"), null, null, null).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            val errIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.RECORDING_ERRORS)
+            assertEquals(errPayload, cursor.getString(errIdx))
+        }
+    }
+
+    @Test
+    fun testSchemaRegistryMatchesV28() {
+        assertEquals(28, DatabaseSchemaRegistry.getMaxSupportedVersion("WorkoutSummaries.db"))
     }
 }
 

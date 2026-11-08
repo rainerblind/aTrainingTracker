@@ -102,7 +102,7 @@
 
     <!-- Units -->
     <string name="units_type_metric">Metrisch (m)</string>
-    <string name="units_type_imperial">Imperial (mile)</string>
+    <string name="units_type_imperial">Imperial (Meilen)</string>
     <string name="value_unit_float_string">%1$.2f %2$s</string>
     <!-- TODO: correct??? -->
     <string name="value_unit_string_string">%1$s %2$s</string>
@@ -175,12 +175,12 @@
     <string name="descent_short">Runter</string>
     <string name="distance">Distanz</string>
     <string name="distance_short">Dist.</string>
-    <string name="distance_lap">Distanz Lap</string>
-    <string name="distance_lap_short">Dist. Lap</string>
+    <string name="distance_lap">Rundendistanz</string>
+    <string name="distance_lap_short">Dist. Runde</string>
     <string name="heart_rate">Herzfrequenz</string>
     <string name="heart_rate_short">HF</string>
-    <string name="lap_number">Lap Nummer</string>
-    <string name="lap_number_short">Lap Nr</string>
+    <string name="lap_number">Rundennummer</string>
+    <string name="lap_number_short">Runde Nr.</string>
     <string name="line_distance">Luftlinie</string>
     <string name="line_distance_short">Luftlinie</string>
     <string name="pace">Tempo</string>
@@ -208,9 +208,9 @@
     <string name="temperature_min">Minimale Temperatur</string>
     <string name="temperature_min_short">Min Temp</string>
     <string name="time_active">Zeit aktiv</string>
-    <string name="time_active_short">aktiv</string>
-    <string name="time_lap">Zeit Lap</string>
-    <string name="time_lap_short">Lap</string>
+    <string name="time_active_short">Aktiv</string>
+    <string name="time_lap">Rundenzeit</string>
+    <string name="time_lap_short">Runde</string>
     <string name="time_of_day">Uhrzeit</string>
     <string name="time_of_day_short">Uhrzeit</string>
     <string name="time_total">Zeit gesamt</string>
@@ -285,7 +285,7 @@
     <string name="prefsKeepScreenOnTitle">Display an lassen</string>
     <string name="prefsNoUnlockingTitle">Display entsperrt lassen</string>
     <string name="prefZoomDependingOnSpeedTitle">Zoom basierend auf Geschwindigkeit</string>
-    <string name="prefsUnitsTitle">Einheiten</string>
+    <string name="prefsUnitsTitle">Maßeinheiten</string>
     <string name="prefsUnitsSummary">Metrisch</string>
     <string name="prefShowUnitsTitle">Einheiten anzeigen</string>
 
@@ -366,7 +366,7 @@
 
     <!-- update_workout -->
     <string name="ExportName">Export Name:</string>
-    <string name="Sport">Sport:</string>
+    <string name="Sport">Sport</string>
     <string name="Goal">Ziel:</string>
     <string name="GoalHint">Ziel eingeben</string>
     <string name="Method">Methode:</string>
@@ -390,7 +390,7 @@
     <string name="tcxWrite">export nach TCX</string>
     <string name="gpxWrite">export nach GPX</string>
     <string name="fitWrite">export nach FIT</string>
-    <string name="stravaUpload">hochladen zu Strava</string>
+    <string name="stravaUpload">Zu Strava hochladen</string>
     <string name="runkeeperUpload">hochladen zu Runkeeper</string>
     <string name="trainingPeaksUpload">hochladen zu TrainingPeaks</string>
 
@@ -526,7 +526,7 @@
     <string name="TODO">Beweise es!</string>
     <string name="tomorrow">morgen?</string>
     <string name="updating_starred_segments_failed">"Updaten der gekennzeichneten Segmente ist fehlgeschlagen: "</string>
-    <string name="edit_field">Anzeige Anpassen</string>
+    <string name="edit_field">Anzeige anpassen</string>
     <string name="ANT_Installation">ANT+ Installation</string>
     <string name="install">installieren</string>
     <string name="do_not_check_again">nicht mehr überprüfen</string>
@@ -538,7 +538,7 @@
     <string name="prefs_battery_saver_title">Dynamisches Display-Dimming</string>
     <string name="prefs_battery_saver_summary">Passt die Bildschirmhelligkeit dynamisch an Steigung und Trainingszonen an</string>
     <string name="cockpit_theme_title">Cockpit-Design (während des Trainings)</string>
-    <string name="cockpit_theme_description">Gilt nur für die Daten- und Sensoranzeigen des aktiven Workouts. Das restliche Menü und \'Control Tracking\' behalten das Standarddesign.</string>
+    <string name="cockpit_theme_description">Gilt nur für die Daten- und Sensoranzeigen des aktiven Workouts. Das restliche Menü und \'Start\' behalten das Standarddesign.</string>
     <string name="cockpit_theme_system">Systemstandard</string>
     <string name="cockpit_theme_always_dark">Immer Dunkel</string>
     <string name="display_brightness_title">Display-Helligkeit (während des Trainings)</string>
@@ -628,8 +628,8 @@
     <string name="notification_channel_name__export">Export</string>
     <string name="notification_channel_description__export">Benachrichtigungen während dem Export von Einheiten</string>
     <string name="config_tracking__show_map">Karte</string>
-    <string name="config_tracking__showLiveSegments">Live Segments</string>
-    <string name="config_tracking__showLapButton">Lap Knopf</string>
+    <string name="config_tracking__showLiveSegments">Live-Segmente</string>
+    <string name="config_tracking__showLapButton">Runden-Button</string>
     <string name="config_tracking__showBikeBell">Fahrradklingel anzeigen</string>
     <string name="config_tracking__showBikeBell_subtitle">Klingel-Button tippen/halten oder doppelt auf das Cockpit tippen</string>
     <string name="config_tracking__show_navigation_hints">Abbiegehinweise</string>
@@ -849,9 +849,9 @@
 
 
     <!-- Edit workout description -->
-    <string name="hint_workout_description">description</string>
-    <string name="hint_workout_goal">goal</string>
-    <string name="hint_workout_method">method</string>
+    <string name="hint_workout_description">Beschreibung</string>
+    <string name="hint_workout_goal">Ziel</string>
+    <string name="hint_workout_method">Methode</string>
 
 
     <!-- workout details -->
@@ -895,8 +895,12 @@
     <string name="prefs_manage_shoes_title">Schuhe</string>
     <string name="prefs_manage_shoes_summary">Konfiguriere all deine Schuhe</string>
     <string name="equipment_configure_equipment">Ausrüstung konfigurieren</string>
-    <string name="equipment_bike_type">Rad Typ</string>
-    <string name="equipment_select_bike_type">Wähle Rad Typ</string>
+    <string name="equipment_bike_type">Radtyp</string>
+    <string name="equipment_select_bike_type">Radtyp auswählen</string>
+    <string name="equipment_bike_type_mtb">MTB</string>
+    <string name="equipment_bike_type_cross">Cross</string>
+    <string name="equipment_bike_type_road">Rennrad</string>
+    <string name="equipment_bike_type_tt">Zeitfahrrad</string>
     <string name="equipment_linked_sensors">Verknüpfte Sensoren</string>
     <string name="equipment_no_sensors_linked">Keine verknüpften Sensoren</string>
     <string name="equipment_sport_types">Sportarten:</string>
@@ -974,7 +978,7 @@
     <string name="ant_missing_dependency_title">Fehlende Abhängigkeit</string>
     <string name="ant_missing_dependency_message">Die notwendige Application\n\"%1$s\"\n ist nicht installiert.  Sollen wir im Play Store nach dieser suchen?</string>
     <string name="go_to_store">Zum Play Store</string>
-    <string name="Done">Done</string>
+    <string name="Done">Fertig</string>
 
     <!-- Segment / Route / Workout Sorting -->
     <string name="sort_closest">Entfernung</string>
@@ -1235,6 +1239,9 @@
     <string name="getting_my_locations">Suche nach bekannten Orten.</string>
     <string name="invalid_date">\???</string>
     <string name="mapping_format_gc">GC: %1$s</string>
+    <string name="sport_type_advanced_options">Erweiterte Optionen</string>
+    <string name="sport_type_advanced_options_desc">Geschwindigkeitsschwellen für automatische Erkennung und Drittanbieter-Export</string>
+    <string name="sport_type_speed_detection_hint">Geschwindigkeitsschwellen dienen der automatischen Sportarterkennung während der Aufzeichnung.</string>
     <string name="mapping_format_strava">Strava: %1$s</string>
     <string name="mapping_format_tcx">TCX: %1$s</string>
     <string name="max_line_distance">weiteste Entfernung</string>
@@ -1261,6 +1268,7 @@
     <string name="create_backup">Backup erstellen</string>
     <string name="restore_backup">Vollständige Wiederherstellung (Migration)</string>
     <string name="import_workouts">Inkrementeller Import (Zusammenführen)</string>
+    <string name="merge_from_backup_file">Aus Sicherungsdatei zusammenführen</string>
     <string name="backup_success">Backup erfolgreich erstellt.</string>
     <string name="backup_failed">Backup-Erstellung fehlgeschlagen.</string>
     <string name="restore_success">Wiederherstellung erfolgreich. Die App wird nun neu gestartet.</string>
@@ -1314,6 +1322,7 @@
     <string name="filter_workouts_title">Workouts filtern</string>
     <string name="filter_action">Filter</string>
     <string name="filter_clear_all">Alle zurücksetzen</string>
+    <string name="filter_reset">Zurücksetzen</string>
     <string name="filter_search_hint">Titel, Notizen, Beschreibung suchen…</string>
     <string name="filter_section_time">Zeit &amp; Zeitraum</string>
     <string name="filter_section_sport">Sportart</string>
@@ -1446,6 +1455,9 @@
     <string name="cluster_trend_pr">Bestzeit</string>
     <string name="cluster_trend_avg">Ø</string>
     <string name="cluster_trend_outlier">Ausreißer</string>
+    <string name="cluster_trend_range_all">Alle</string>
+    <string name="cluster_trend_range_1y">1J</string>
+    <string name="cluster_trend_range_3y">3J</string>
 
     <!-- ATT-510: Lap Overview & Performance Highlights -->
     <string name="laps_header">Runden (%1$d)</string>
@@ -1539,9 +1551,20 @@
     <string name="known_location_routes_header">Lieblingsstrecken ab hier (%d):</string>
     <string name="filter_by_start_location">Nach Startort filtern</string>
     <string name="known_locations_home_base">Heim-Basis</string>
+    <string name="known_locations_home_base_desc">Automatische Benennung &amp; barometrische Kalibrierung</string>
+    <string name="known_locations_add_location">Lieblingsort hinzufügen</string>
+    <string name="known_locations_new_location">Neuer Lieblingsort</string>
     <string name="known_locations_home_badge">Heim-Basis</string>
     <string name="known_locations_set_home">Als Heim-Basis festlegen</string>
     <string name="known_locations_remove_home">Heim-Basis aufheben</string>
+    <string name="known_locations_menu_merge">Mit anderem Ort zusammenführen…</string>
+    <string name="known_locations_merge_select_target_title">Zielort auswählen</string>
+    <string name="known_locations_merge_distance_away">%1$s entfernt</string>
+    <string name="known_locations_merge_no_candidates">Keine weiteren Orte im Umkreis von 2 km.</string>
+    <string name="known_locations_merge_dialog_title">Lieblingsort zusammenführen</string>
+    <string name="known_locations_merge_dialog_message">Möchtest du \'%1$s\' in \'%2$s\' zusammenführen?\n\nNeuer Erfassungsradius: %3$s.\nAlle zugehörigen Workouts und Strecken werden \'%2$s\' zugeordnet und \'%1$s\' wird gelöscht.</string>
+    <string name="known_locations_merge_pinned_notice">Die Koordinate von \'%1$s\' bleibt unverändert erhalten (Heim-Basis oder feste Höhe).</string>
+    <string name="known_locations_merge_action">Zusammenführen</string>
 
     <!-- Advanced / Expert Settings Preferences (ATT-1304, ATT-1646 / REQ-SET-074) -->
     <string name="drawer__expert_settings">Experten-Einstellungen</string>
@@ -1550,8 +1573,8 @@
     <string name="tuning_group_cockpit_tracking">Cockpit &amp; Aufzeichnung</string>
     <string name="tuning_group_sensors_gps">Sensoren &amp; GPS</string>
     <string name="tuning_group_analysis_models">Analyse &amp; Modelle</string>
-    <string name="advanced_tuning_warning_title">Experteneinstellungen</string>
-    <string name="advanced_tuning_warning_desc">Das Ändern dieser Parameter beeinflusst die Tracking-Heuristik, Sensorfilterung und das Energiesparverhalten. Werkseinstellungen können jederzeit wiederhergestellt werden.</string>
+    <string name="advanced_tuning_warning_title">Hinweis</string>
+    <string name="advanced_tuning_warning_desc">Hier können fortgeschrittene Layout-, Modell- und Sensor-Parameter angepasst werden. Über das Reset-Icon können die Einstellungen jederzeit auf die Standardwerte zurückgesetzt werden.</string>
     <string name="tuning_cat_battery_saver">AMOLED-Energiesparmodus</string>
     <string name="tuning_cat_gps">GPS- &amp; Standortfilterung</string>
     <string name="tuning_cat_elevation">Höhen- &amp; Steigungsdynamik</string>
@@ -1575,7 +1598,7 @@
     <string name="tuning_slope_min_speed_desc">Erforderliche Mindestgeschwindigkeit zur Berechnung der Echtzeit-Steigung.</string>
     <string name="tuning_show_ant_missing_adapter_warnings_title">Warnung bei fehlendem ANT+ Adapter</string>
     <string name="tuning_show_ant_missing_adapter_warnings_desc">Hinweisdialog anzeigen, wenn nach ANT+ Sensoren gesucht wird, aber kein Adapter erkannt wurde</string>
-    <string name="tuning_cat_aftermath">Aftermath &amp; Profil-Analytik</string>
+    <string name="tuning_cat_aftermath">Nachbereitung &amp; Profil-Analytik</string>
     <string name="tuning_profile_x_axis_title">Höhenprofil X-Achse</string>
     <string name="tuning_profile_x_axis_desc">Horizontale Achsenmetrik für Höhenprofildiagramme auswählen.</string>
     <string name="tuning_profile_x_axis_distance">Distanz</string>
@@ -1629,7 +1652,7 @@
     <string name="reset_to_defaults_success">Abstimmungseinstellungen auf Werkseinstellungen zurückgesetzt.</string>
     <string name="tuning_cat_sensor_search">Sensorsuche &amp; Verhalten</string>
     <string name="tuning_sensor_search_subtitle">%1$d Suchrunden, %2$s Autosuche</string>
-    <string name="tuning_sensor_search_active">Aktiv</string>
+    <string name="tuning_sensor_search_active">Aktive</string>
     <string name="tuning_sensor_search_disabled">Deaktiviert</string>
     <string name="tuning_cat_sensors_gps">Sensoren, GPS &amp; Filter</string>
     <string name="tuning_cat_workout_masks_cards">Trainingsliste &amp; Details</string>
@@ -1644,6 +1667,14 @@
     <string name="tuning_matrix_col_details">Details</string>
     <string name="tuning_matrix_feature">Bereich</string>
     <string name="tuning_summary_matrix_format">%1$d/8 Liste, %2$d/8 Details</string>
+    <string name="tuning_battery_saver_flat_short">Flach</string>
+    <string name="tuning_battery_saver_steep_short">Steil</string>
+    <string name="tuning_sensors_alt_short">Höhe</string>
+    <string name="tuning_sensors_speed_short">Geschw.</string>
+    <string name="tuning_cluster_end_short">Ende</string>
+    <string name="tuning_cluster_apex_short">Apex</string>
+    <string name="tuning_cluster_dist_short">Dist.</string>
+    <string name="tuning_cluster_alt_short">Höhe</string>
     <string name="map_splitter_content_description">Teiler für Karte und Telemetrie. Vertikal ziehen zum Anpassen der Größe, doppelt tippen zum Zurücksetzen.</string>
 
     <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->
@@ -2053,6 +2084,8 @@
     <string name="tuning_auto_pause_start_in_auto_pause_desc">Beginnt beim Starten einer Aufzeichnung im Stillstand direkt in der Auto-Pause, bis Bewegung erkannt wird. Gilt für alle Sportarten.</string>
     <string name="tuning_speed_value_format">%1$d %2$s</string>
     <string name="tuning_seconds_value_format">%1$d s</string>
+    <string name="tuning_auto_pause_custom_thresholds_title">Schwellenwerte &amp; Verzögerung anpassen</string>
+    <string name="tuning_auto_pause_subtitle_format">%1$s · Pause: %2$s · Fortsetzen: %3$s</string>
     <string name="cockpit_auto_pause_badge">Auto-Pause</string>
     <string name="cockpit_auto_pause_resume">Jetzt fortsetzen</string>
     <string name="cockpit_status_not_started">Nicht gestartet</string>
@@ -2281,6 +2314,8 @@
     <string name="cd_copy_tab">Tab kopieren</string>
     <string name="cd_move_tab_left">Tab nach links verschieben</string>
     <string name="cd_move_tab_right">Tab nach rechts verschieben</string>
+    <string name="cd_move_field">Feld verschieben</string>
+    <string name="cd_delete_field">Feld löschen</string>
     <string name="copy_tab_title">Tab kopieren</string>
     <string name="copy_tab_action">Kopieren</string>
     <string name="back">Zurück</string>
@@ -2489,4 +2524,23 @@
     <string name="settings_workout_photos_size_small">Klein</string>
     <string name="settings_workout_photos_size_medium">Mittel</string>
     <string name="settings_workout_photos_size_large">Groß</string>
+    <!-- Workout Diagnostic Recording Errors & Actionable Report (REQ-TRK-053 / ATT-5886) -->
+    <string name="workout_diagnostic_banner_title">Aufzeichnungswarnung vorhanden</string>
+    <string name="workout_diagnostic_banner_action">Details anzeigen</string>
+    <string name="workout_diagnostic_dialog_title">Aufzeichnungs-Diagnose</string>
+    <string name="workout_diagnostic_explanation_storage_full">Der Gerätespeicher war voll. Bitte gib Speicherplatz auf deinem Smartphone frei.</string>
+    <string name="workout_diagnostic_explanation_sample_write">Einige Sekundendaten konnten während des Trainings nicht gespeichert werden. Die Gesamtzusammenfassung deines Trainings wurde jedoch gesichert.</string>
+    <string name="workout_diagnostic_explanation_finalize">Deine Trainingsaufzeichnung ist vollständig gespeichert, aber bei der anschließenden Auswertung trat ein interner Fehler auf.</string>
+    <string name="workout_diagnostic_explanation_generic">Während der Aufzeichnung oder Auswertung trat ein unerwarteter Fehler auf.</string>
+    <string name="workout_diagnostic_technical_details_title">Technische Details</string>
+    <string name="workout_diagnostic_action_copy">In Zwischenablage kopieren</string>
+    <string name="workout_diagnostic_copied_toast">Technische Details in die Zwischenablage kopiert</string>
+    <string name="workout_diagnostic_action_send_email">Fehlerbericht per E-Mail senden</string>
+    <string name="workout_diagnostic_email_subject">aTrainingTracker Fehlerbericht (%1$s)</string>
+    <string name="workout_diagnostic_action_clear_warning">Warnung löschen</string>
+    <string name="workout_diagnostic_clear_confirm_title">Warnung löschen?</string>
+    <string name="workout_diagnostic_clear_confirm_message">Die Diagnosewarnung für diese Einheit wird dauerhaft entfernt.</string>
+    <!-- Hardware Volume Keys Cockpit Tab Cycling (REQ-TRK-054 / ATT-5905) -->
+    <string name="prefs_volume_keys_switch_cockpit_tabs_title">Lautstärketasten für Cockpit-Tabs</string>
+    <string name="prefs_volume_keys_switch_cockpit_tabs_summary">Im Cockpit mit Lautstärke +/- zyklisch durch die Tabs blättern</string>
 </resources>

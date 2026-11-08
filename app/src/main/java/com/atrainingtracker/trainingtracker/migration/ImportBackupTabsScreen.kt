@@ -33,6 +33,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
@@ -128,6 +130,7 @@ fun ImportBackupTabsScreen(
     var pendingSingleLegacyUri by remember { mutableStateOf<Uri?>(null) }
     var pendingLegacyUris by remember { mutableStateOf<List<Uri>?>(null) }
     var pendingFitUris by remember { mutableStateOf<List<Uri>?>(null) }
+    var pendingStravaArchiveUri by remember { mutableStateOf<Uri?>(null) }
     var pendingSingleLegacyFormat by remember { mutableStateOf("auto") }
     var pendingDirectoryUri by remember { mutableStateOf<Uri?>(null) }
     var pendingDirectoryFormat by remember { mutableStateOf("fit") }
@@ -249,7 +252,7 @@ fun ImportBackupTabsScreen(
         if (uri != null) {
             val fileName = ImportFileValidator.resolveDisplayName(context, uri)
             if (ImportFileValidator.isMatchingFormat(fileName, "zip")) {
-                viewModel.importStravaArchive(context, uri)
+                pendingStravaArchiveUri = uri
             } else {
                 Toast.makeText(
                     context,
@@ -635,6 +638,18 @@ fun ImportBackupTabsScreen(
         )
     }
 
+    pendingStravaArchiveUri?.let { uri ->
+        PreImportTuningBottomSheet(
+            viewModel = viewModel,
+            showStravaUploadOption = false,
+            onConfirm = {
+                viewModel.importStravaArchive(context, uri)
+                pendingStravaArchiveUri = null
+            },
+            onDismiss = { pendingStravaArchiveUri = null }
+        )
+    }
+
     pendingDirectoryUri?.let { uri ->
         PreImportTuningBottomSheet(
             viewModel = viewModel,
@@ -651,6 +666,7 @@ fun ImportBackupTabsScreen(
 @Composable
 fun PreImportTuningBottomSheet(
     viewModel: BackupRestoreViewModel,
+    showStravaUploadOption: Boolean = true,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -718,7 +734,7 @@ fun PreImportTuningBottomSheet(
             isDialog = false
         )
 
-        if (TrainingApplication.uploadToStrava()) {
+        if (showStravaUploadOption && TrainingApplication.uploadToStrava()) {
             HorizontalDivider(
                 modifier = Modifier.padding(vertical = 4.dp),
                 color = MaterialTheme.colorScheme.outlineVariant
@@ -761,11 +777,13 @@ fun PreImportTuningBottomSheet(
 @Composable
 fun PreImportTuningDialog(
     viewModel: BackupRestoreViewModel,
+    showStravaUploadOption: Boolean = true,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
     PreImportTuningBottomSheet(
         viewModel = viewModel,
+        showStravaUploadOption = showStravaUploadOption,
         onConfirm = onConfirm,
         onDismiss = onDismiss
     )
@@ -787,6 +805,17 @@ fun ClusterNamingDialog(
     var name by remember(state) { mutableStateOf(WorkoutClusterEngine.stripHitCount(state.workoutName ?: "")) }
     var selectedCluster by remember(state) { mutableStateOf<WorkoutCluster?>(null) }
     var showSelectionDialog by remember(state) { mutableStateOf(false) }
+
+    // ATT-5818 / Rule 77 / REQ-UI-462.4: Read-only OutlinedTextField consumes taps before bubbling to outer Modifier.clickable.
+    // Use MutableInteractionSource to trigger selection sheet on PressInteraction.Release.
+    val routePickerInteractionSource = remember(state) { MutableInteractionSource() }
+    LaunchedEffect(routePickerInteractionSource) {
+        routePickerInteractionSource.interactions.collect { interaction ->
+            if (interaction is PressInteraction.Release) {
+                showSelectionDialog = true
+            }
+        }
+    }
 
     val clusterRepo = remember { WorkoutClusterRepository.getInstance(localContext) }
     val existingClusters by clusterRepo.allClusters.collectAsState()
@@ -972,7 +1001,8 @@ fun ClusterNamingDialog(
             value = selectedCluster?.name ?: stringResource(R.string.cluster_naming__create_new),
             onValueChange = {},
             readOnly = true,
-            modifier = Modifier.fillMaxWidth().clickable { showSelectionDialog = true },
+            modifier = Modifier.fillMaxWidth(),
+            interactionSource = routePickerInteractionSource,
             label = { Text(stringResource(R.string.cluster_naming__selected_route_label)) },
             trailingIcon = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1324,6 +1354,13 @@ private fun FormatImportCard(
                 colors = scanButtonColors,
                 border = scanBorder
             ) {
+                Icon(
+                    painter = painterResource(R.drawable.dropbox_logo_blue),
+                    contentDescription = null,
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
                 Text(dropboxButtonText)
             }
         }

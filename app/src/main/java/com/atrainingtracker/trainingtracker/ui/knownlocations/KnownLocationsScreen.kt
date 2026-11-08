@@ -18,23 +18,25 @@
 
 package com.atrainingtracker.trainingtracker.ui.knownlocations
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -44,15 +46,20 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.CallMerge
+import androidx.compose.material.icons.automirrored.filled.DirectionsRun
 import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Terrain
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
@@ -86,15 +93,19 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
+import com.atrainingtracker.trainingtracker.database.KnownLocationsGeometryMath
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.elevation.ElevationSource
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
 import com.atrainingtracker.trainingtracker.ui.common.filters.FilterActionButton
 import com.atrainingtracker.trainingtracker.ui.components.DeleteConfirmationDialog
 import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
+import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
+import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import com.atrainingtracker.trainingtracker.ui.map.DarkMapAntiFlashOverlay
 import com.atrainingtracker.trainingtracker.ui.map.DarkMapStyle
-import com.atrainingtracker.trainingtracker.ui.map.createHeartPinMarker
+import com.atrainingtracker.trainingtracker.ui.map.createCenteredHeartGlyphMarker
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
@@ -128,6 +139,8 @@ fun KnownLocationsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var locationPendingDeletion by remember { mutableStateOf<KnownLocationItem?>(null) }
+    var locationToMerge by remember { mutableStateOf<KnownLocationItem?>(null) }
+    var pendingMergePair by remember { mutableStateOf<Pair<KnownLocationItem, KnownLocationItem>?>(null) }
     var showFilterSheet by remember { mutableStateOf(false) }
 
     Column(
@@ -241,19 +254,40 @@ fun KnownLocationsScreen(
             }
         }
 
-        // Streamlined Single-Perspective List Content
-        KnownLocationsListContent(
-            uiState = uiState,
-            onEdit = { viewModel.openEditDialog(it, showMap = true) },
-            onShowOnMap = { item -> onShowOnMap(item.id) },
-            onShowWorkouts = onShowWorkouts,
-            onSelectCluster = onSelectCluster,
-            onShowRoutes = onShowRoutes,
-            onSetHome = { item -> viewModel.setHomeLocation(item.id) },
-            onClearHome = { viewModel.clearHomeLocation() },
-            onDelete = { locationPendingDeletion = it },
-            modifier = Modifier.fillMaxSize()
-        )
+        // Streamlined Single-Perspective List Content with FloatingActionButton (REQ-UI-470.3)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .weight(1f)
+        ) {
+            KnownLocationsListContent(
+                uiState = uiState,
+                onEdit = { viewModel.openEditDialog(it, showMap = true) },
+                onShowOnMap = { item -> onShowOnMap(item.id) },
+                onShowWorkouts = onShowWorkouts,
+                onSelectCluster = onSelectCluster,
+                onShowRoutes = onShowRoutes,
+                onSetHome = { item -> viewModel.setHomeLocation(item.id) },
+                onClearHome = { viewModel.clearHomeLocation() },
+                onMerge = { locationToMerge = it },
+                onDelete = { locationPendingDeletion = it },
+                modifier = Modifier.fillMaxSize()
+            )
+
+            FloatingActionButton(
+                onClick = { viewModel.openCreateDialog() },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp)
+                    .navigationBarsPadding()
+                    .testTag("known_locations_add_fab")
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = stringResource(R.string.known_locations_add_location)
+                )
+            }
+        }
     }
 
     // Modal Filter Bottom Sheet (REQ-UI-466.4)
@@ -273,9 +307,44 @@ fun KnownLocationsScreen(
             isMetric = uiState.isMetric,
             showMap = uiState.showMapInEditDialog,
             onConfirm = { id, name, altitude, radius, source, isHome ->
-                viewModel.updateLocation(id, name, altitude, radius, source, isHome)
+                if (id == 0L) {
+                    viewModel.createLocation(name, altitude, radius, itemToEdit.latLng, source, isHome)
+                } else {
+                    viewModel.updateLocation(id, name, altitude, radius, source, isHome)
+                }
             },
             onDismiss = { viewModel.dismissEditDialog() }
+        )
+    }
+
+    // Candidate Selection Bottom Sheet (REQ-SET-095.2)
+    locationToMerge?.let { sourceItem ->
+        val candidates = remember(sourceItem, uiState.locations) {
+            viewModel.getCandidateLocationsForMerge(sourceItem)
+        }
+        KnownLocationMergeSelectionDialog(
+            source = sourceItem,
+            candidates = candidates,
+            onSelectTarget = { targetItem ->
+                pendingMergePair = Pair(sourceItem, targetItem)
+            },
+            onDismiss = { locationToMerge = null }
+        )
+    }
+
+    // Merge Confirmation Dialog (REQ-SET-095.3)
+    pendingMergePair?.let { (source, target) ->
+        KnownLocationMergeConfirmationDialog(
+            source = source,
+            target = target,
+            onConfirm = {
+                viewModel.mergeLocations(source, target)
+                pendingMergePair = null
+                locationToMerge = null
+            },
+            onDismiss = {
+                pendingMergePair = null
+            }
         )
     }
 
@@ -306,6 +375,7 @@ private fun KnownLocationsListContent(
     onShowRoutes: (KnownLocationItem) -> Unit = { },
     onSetHome: (KnownLocationItem) -> Unit = { },
     onClearHome: () -> Unit = { },
+    onMerge: (KnownLocationItem) -> Unit = { },
     onDelete: (KnownLocationItem) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -372,7 +442,7 @@ private fun KnownLocationsListContent(
                 start = 16.dp,
                 end = 16.dp,
                 top = 8.dp,
-                bottom = bottomNavPadding + 16.dp
+                bottom = bottomNavPadding + 80.dp
             ),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -392,11 +462,185 @@ private fun KnownLocationsListContent(
                     onShowRoutes = { onShowRoutes(item) },
                     onSetHome = { onSetHome(item) },
                     onClearHome = onClearHome,
+                    onMerge = { onMerge(item) },
                     onDelete = { onDelete(item) }
                 )
             }
         }
     }
+}
+
+/**
+ * Bottom sheet dialog to select a target location for merge (REQ-SET-095.2).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun KnownLocationMergeSelectionDialog(
+    source: KnownLocationItem,
+    candidates: List<Pair<KnownLocationItem, Double>>,
+    onSelectTarget: (KnownLocationItem) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AppModalBottomSheet(
+        onDismissRequest = onDismiss,
+        title = stringResource(R.string.known_locations_merge_select_target_title),
+        icon = Icons.AutoMirrored.Filled.CallMerge,
+        actions = {
+            AppDialogActions.CancelOnly(onCancel = onDismiss)
+        }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 8.dp)
+        ) {
+            if (candidates.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = stringResource(R.string.known_locations_merge_no_candidates),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                val distanceFormatter = remember { DistanceFormatter() }
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 400.dp)
+                        .testTag("location_merge_candidates_list"),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(
+                        items = candidates,
+                        key = { it.first.id }
+                    ) { (candidate, distanceMeters) ->
+                        Surface(
+                            onClick = {
+                                onSelectTarget(candidate)
+                                onDismiss()
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("location_merge_candidate_${candidate.id}")
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = candidate.name,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        if (candidate.isHome) {
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Icon(
+                                                imageVector = Icons.Default.Home,
+                                                contentDescription = stringResource(R.string.known_locations_home_base),
+                                                modifier = Modifier.size(16.dp),
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = stringResource(
+                                            R.string.known_locations_merge_distance_away,
+                                            distanceFormatter.format_with_units(distanceMeters)
+                                        ),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Confirmation dialog for merging two known locations (REQ-SET-095.3).
+ */
+@Composable
+fun KnownLocationMergeConfirmationDialog(
+    source: KnownLocationItem,
+    target: KnownLocationItem,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val geofence = remember(source, target) {
+        KnownLocationsGeometryMath.calculateMergedGeofence(source, target)
+    }
+    val distanceFormatter = remember { DistanceFormatter() }
+    val formattedRadius = distanceFormatter.format_with_units(geofence.radius.toDouble())
+
+    val message = stringResource(
+        R.string.known_locations_merge_dialog_message,
+        source.name,
+        target.name,
+        formattedRadius
+    )
+    val fullMessage = if (geofence.isPinned) {
+        message + "\n\n" + stringResource(R.string.known_locations_merge_pinned_notice, target.name)
+    } else {
+        message
+    }
+
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 0.dp,
+        title = {
+            Text(stringResource(R.string.known_locations_merge_dialog_title))
+        },
+        text = {
+            Text(fullMessage)
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(
+                onClick = {
+                    onConfirm()
+                    onDismiss()
+                },
+                modifier = Modifier.testTag("location_merge_confirm_button")
+            ) {
+                Text(stringResource(R.string.known_locations_merge_action))
+            }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.testTag("location_merge_cancel_button")
+            ) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
 }
 
 /**
@@ -441,10 +685,10 @@ private fun KnownLocationThumbnailMap(
                     )
                 }
                 Icon(
-                    imageVector = Icons.Default.Place,
+                    imageVector = Icons.Default.Favorite,
                     contentDescription = null,
-                    modifier = Modifier.size(24.dp),
-                    tint = MaterialTheme.colorScheme.primary
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f)
                 )
             }
             return@Surface
@@ -456,10 +700,11 @@ private fun KnownLocationThumbnailMap(
             DarkMapStyle.resolveMapProperties(isDark, context)
         }
         val heartMarkerIcon = remember(context) {
-            createHeartPinMarker(
+            createCenteredHeartGlyphMarker(
                 context = context,
-                pinColor = TTColor.GeofencePin,
-                heartColor = Color.White
+                heartColor = TTColor.GeofencePin,
+                outlineColor = Color.White,
+                alpha = 0.85f
             )
         }
         val targetZoom = remember(item.radius, item.latLng.latitude) {
@@ -504,6 +749,7 @@ private fun KnownLocationThumbnailMap(
                 Marker(
                     state = remember(item.latLng) { MarkerState(position = item.latLng) },
                     icon = heartMarkerIcon,
+                    anchor = Offset(0.5f, 0.5f),
                     onClick = {
                         onShowOnMap()
                         true
@@ -538,6 +784,7 @@ private fun KnownLocationCard(
     onShowRoutes: () -> Unit = {},
     onSetHome: () -> Unit = {},
     onClearHome: () -> Unit = {},
+    onMerge: () -> Unit = {},
     onDelete: () -> Unit,
     initialShowContextMenu: Boolean = false
 ) {
@@ -583,13 +830,19 @@ private fun KnownLocationCard(
                     }
                 }
 
+                // --- 2. BOTTOM AREA: Details on left, Map on right (REQ-UI-469) ---
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(IntrinsicSize.Min),
+                    verticalAlignment = Alignment.Bottom
                 ) {
+                    // LEFT SIDE: Metadata & Metrics
                     Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight(),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         // Altitude Metric (REQ-UI-465.2)
                         Row(
@@ -610,90 +863,62 @@ private fun KnownLocationCard(
                             )
                         }
 
-                        // Dedicated Badges Row (Starts and Routes, REQ-UI-195, REQ-UI-465.1)
-                        CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
-                            FlowRow(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                        // Routes Cross-Link (Unboxed, REQ-UI-188, REQ-UI-469.3)
+                        if (linkedClusters.isNotEmpty()) {
+                            Row(
+                                modifier = Modifier
+                                    .clickable(onClick = onShowRoutes)
+                                    .testTag("location_routes_badge_${item.id}"),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                // Number of Starts (Interactive Drill-Down Touch Target)
-                                Surface(
-                                    onClick = onShowWorkouts,
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f),
-                                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
-                                    modifier = Modifier.testTag("location_starts_badge_${item.id}")
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Place,
-                                            contentDescription = stringResource(R.string.known_locations_view_workouts),
-                                            modifier = Modifier.size(13.dp),
-                                            tint = MaterialTheme.colorScheme.onSecondaryContainer
-                                        )
-                                        Text(
-                                            text = pluralStringResource(R.plurals.known_locations_starts, startsCount, startsCount),
-                                            style = MaterialTheme.typography.labelMedium,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                                        )
-                                        Icon(
-                                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(11.dp),
-                                            tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = TTAlpha.Medium)
-                                        )
-                                    }
-                                }
-
-                                // Number of Routes (Interactive Drill-Down Touch Target per REQ-UI-188, REQ-UI-195, REQ-UI-207)
-                                if (linkedClusters.isNotEmpty()) {
-                                    Surface(
-                                        onClick = onShowRoutes,
-                                        shape = RoundedCornerShape(8.dp),
-                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
-                                        modifier = Modifier.testTag("location_routes_badge_${item.id}")
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                        ) {
-                                            Icon(
-                                                painter = painterResource(R.drawable.ic_favorite_route),
-                                                contentDescription = stringResource(R.string.known_locations_view_routes),
-                                                modifier = Modifier.size(13.dp),
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                            Text(
-                                                text = pluralStringResource(R.plurals.known_locations_routes, linkedClusters.size, linkedClusters.size),
-                                                style = MaterialTheme.typography.labelMedium,
-                                                fontWeight = FontWeight.Medium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                            Icon(
-                                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(11.dp),
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = TTAlpha.Medium)
-                                            )
-                                        }
-                                    }
-                                }
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_favorite_route),
+                                    contentDescription = stringResource(R.string.known_locations_view_routes),
+                                    modifier = Modifier.size(14.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = pluralStringResource(R.plurals.known_locations_routes, linkedClusters.size, linkedClusters.size),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                             }
+                        }
+
+                        Spacer(modifier = Modifier.weight(1f))
+
+                        // Number of Starts (Unboxed Bottom-Anchored Primary Count, REQ-UI-195, REQ-UI-469.2)
+                        Row(
+                            modifier = Modifier
+                                .clickable(onClick = onShowWorkouts)
+                                .testTag("location_starts_badge_${item.id}"),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.DirectionsRun,
+                                contentDescription = stringResource(R.string.known_locations_view_workouts),
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = pluralStringResource(R.plurals.known_locations_starts, startsCount, startsCount),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
                     }
 
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
 
-                    // Map Preview Thumbnail (right side, REQ-UI-217, REQ-UI-244)
+                    // Map Preview Thumbnail (right side, REQ-UI-217, REQ-UI-244, REQ-UI-465.3)
                     KnownLocationThumbnailMap(
                         item = item,
                         onShowOnMap = onShowOnMap
@@ -743,6 +968,21 @@ private fun KnownLocationCard(
                         modifier = Modifier.testTag("location_set_home_action_${item.id}")
                     )
                 }
+
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.known_locations_menu_merge)) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.CallMerge,
+                            contentDescription = null
+                        )
+                    },
+                    onClick = {
+                        showContextMenu = false
+                        onMerge()
+                    },
+                    modifier = Modifier.testTag("location_merge_action_${item.id}")
+                )
 
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.delete)) },

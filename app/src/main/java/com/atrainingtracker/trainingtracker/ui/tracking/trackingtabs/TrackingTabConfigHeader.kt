@@ -59,6 +59,7 @@ fun TrackingTabConfigHeader(
     viewInfo: TrackingViewInfo,
     tabIndex: Int = 0,
     tabCount: Int = 1,
+    sportName: String = "",
     // Callbacks to ViewModel
     onUpdateTabName: (Long, String) -> Unit,
     onAddTabRelative: (Long, Boolean) -> Unit,
@@ -77,6 +78,14 @@ fun TrackingTabConfigHeader(
             .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
         Column {
+            if (sportName.isNotEmpty()) {
+                Text(
+                    text = sportName,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                )
+            }
             // Row 1: Tab Name Input & Done Button
             Row(modifier = Modifier) {
                 OutlinedTextField(

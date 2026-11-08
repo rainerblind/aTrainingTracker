@@ -101,7 +101,7 @@
 
     <!-- Units -->
     <string name="units_type_metric">メートル法 (m)</string>
-    <string name="units_type_imperial">ヤードポンド法 (mile)</string>
+    <string name="units_type_imperial">ヤードポンド法 (マイル)</string>
 
     <string name="value_unit_float_string">%1$.2f %2$s</string>
     <string name="value_unit_string_string">%1$s %2$s</string>
@@ -355,7 +355,7 @@
 
     <!-- update_workout -->
     <string name="ExportName">エクスポート名:</string>
-    <string name="Sport">スポーツ:</string>
+    <string name="Sport">スポーツ</string>
     <string name="Goal">目標:</string>
     <string name="GoalHint">目標を編集</string>
     <string name="Method">方法:</string>
@@ -500,7 +500,7 @@
     <string name="prefs_battery_saver_title">動的画面減光</string>
     <string name="prefs_battery_saver_summary">勾配とトレーニングゾーンに基づいて画面の明るさを動的に調整します</string>
     <string name="cockpit_theme_title">コックピットテーマ（ワークアウト中）</string>
-    <string name="cockpit_theme_description">アクティブなワークアウト中のテレメトリとセンサー画面にのみ適用されます。メインメニューと「Control Tracking」は標準テーマのままです。</string>
+    <string name="cockpit_theme_description">アクティブなワークアウト中のテレメトリとセンサー画面にのみ適用されます。メインメニューと「スタート」は標準テーマのままです。</string>
     <string name="cockpit_theme_system">システム</string>
     <string name="cockpit_theme_always_dark">常にダーク</string>
     <string name="display_brightness_title">画面の明るさ（ワークアウト中）</string>
@@ -770,6 +770,9 @@
     <string name="mapping_format_strava">Strava: %1$s</string>
     <string name="mapping_format_tcx">TCX: %1$s</string>
     <string name="mapping_format_gc">GC: %1$s</string>
+    <string name="sport_type_advanced_options">高度なオプション</string>
+    <string name="sport_type_advanced_options_desc">自動検出用の速度しきい値とサードパーティのエクスポートマッピング</string>
+    <string name="sport_type_speed_detection_hint">速度しきい値は、記録中のスポーツ種別の自動検出に使用されます。</string>
 
     <!-- drawer -->
     <string name="drawer__training">トレーニング</string>
@@ -807,6 +810,10 @@
     <string name="equipment_configure_equipment">装備を設定</string>
     <string name="equipment_bike_type">バイクの種類</string>
     <string name="equipment_select_bike_type">バイクの種類を選択</string>
+    <string name="equipment_bike_type_mtb">MTB</string>
+    <string name="equipment_bike_type_cross">クロス</string>
+    <string name="equipment_bike_type_road">ロード</string>
+    <string name="equipment_bike_type_tt">タイムトライアル</string>
     <string name="equipment_linked_sensors">リンク済みセンサー</string>
     <string name="equipment_no_sensors_linked">リンクなし</string>
     <string name="equipment_sport_types">種目:</string>
@@ -1141,6 +1148,7 @@
     <string name="create_backup">バックアップを作成</string>
     <string name="restore_backup">全復元（移行）</string>
     <string name="import_workouts">差分インポート（統合）</string>
+    <string name="merge_from_backup_file">バックアップファイルから結合</string>
     <string name="backup_success">バックアップを作成しました。</string>
     <string name="backup_failed">バックアップの作成に失敗しました。</string>
     <string name="restore_success">復元が完了しました。アプリを再起動します。</string>
@@ -1209,6 +1217,7 @@
     <string name="filter_workouts_title">ワークアウトをフィルター</string>
     <string name="filter_action">フィルター</string>
     <string name="filter_clear_all">すべてクリア</string>
+    <string name="filter_reset">リセット</string>
     <string name="filter_search_hint">タイトル、メモ、説明を検索…</string>
     <string name="filter_section_time">期間と日時</string>
     <string name="filter_section_sport">スポーツの種類</string>
@@ -1341,6 +1350,9 @@
     <string name="cluster_trend_pr">自己ベスト</string>
     <string name="cluster_trend_avg">平均</string>
     <string name="cluster_trend_outlier">外れ値</string>
+    <string name="cluster_trend_range_all">すべて</string>
+    <string name="cluster_trend_range_1y">1年</string>
+    <string name="cluster_trend_range_3y">3年</string>
 
     <!-- ATT-510: Lap Overview & Performance Highlights -->
     <string name="laps_header">ラップ (%1$d)</string>
@@ -1432,9 +1444,20 @@
     <string name="known_location_routes_header">ここからのルート (%d):</string>
     <string name="filter_by_start_location">開始地点で絞り込む</string>
     <string name="known_locations_home_base">ホーム拠点</string>
+    <string name="known_locations_home_base_desc">自動ワークアウト命名と気圧高度校正</string>
+    <string name="known_locations_add_location">お気に入りの場所を追加</string>
+    <string name="known_locations_new_location">新しいお気に入りの場所</string>
     <string name="known_locations_home_badge">ホーム拠点</string>
     <string name="known_locations_set_home">ホーム拠点に設定</string>
     <string name="known_locations_remove_home">ホーム拠点を解除</string>
+    <string name="known_locations_menu_merge">別の場所と結合…</string>
+    <string name="known_locations_merge_select_target_title">結合先の場所を選択</string>
+    <string name="known_locations_merge_distance_away">%1$s 離れています</string>
+    <string name="known_locations_merge_no_candidates">2 km 以内に他の場所はありません。</string>
+    <string name="known_locations_merge_dialog_title">お気に入りの場所を結合</string>
+    <string name="known_locations_merge_dialog_message">\'%1$s\' を \'%2$s\' に結合しますか？\n\n新しい検出半径: %3$s。\n関連するすべてのワークアウトとルートは \'%2$s\' に再割り当てされ、\'%1$s\' は削除されます。</string>
+    <string name="known_locations_merge_pinned_notice">\'%1$s\' の座標は固定されたままです（ホーム拠点または固定高度）。</string>
+    <string name="known_locations_merge_action">結合</string>
 
     <!-- Advanced / Expert Settings Preferences (ATT-1304, ATT-1646 / REQ-SET-074) -->
     <string name="drawer__expert_settings">エキスパート設定</string>
@@ -1443,8 +1466,8 @@
     <string name="tuning_group_cockpit_tracking">コックピットと記録</string>
     <string name="tuning_group_sensors_gps">センサーとGPS</string>
     <string name="tuning_group_analysis_models">分析とモデル</string>
-    <string name="advanced_tuning_warning_title">エキスパート設定</string>
-    <string name="advanced_tuning_warning_desc">これらのパラメータを変更すると、トラッキングのヒューリスティック、センサーフィルタリング、およびバッテリー節約動作が変更されます。いつでも工場出荷時のデフォルトに戻すことができます。</string>
+    <string name="advanced_tuning_warning_title">注意</string>
+    <string name="advanced_tuning_warning_desc">ここでは高度なレイアウト、モデル、センサーのパラメータをカスタマイズできます。リセットアイコンを使用していつでも初期設定に戻すことができます。</string>
     <string name="tuning_cat_battery_saver">AMOLEDバッテリーセーバー</string>
     <string name="tuning_cat_gps">GPS・位置フィルタリング</string>
     <string name="tuning_cat_elevation">高度・勾配ダイナミクス</string>
@@ -1535,6 +1558,14 @@
     <string name="tuning_matrix_col_details">詳細</string>
     <string name="tuning_matrix_feature">項目</string>
     <string name="tuning_summary_matrix_format">%1$d/8 一覧, %2$d/8 詳細</string>
+    <string name="tuning_battery_saver_flat_short">平坦</string>
+    <string name="tuning_battery_saver_steep_short">急勾配</string>
+    <string name="tuning_sensors_alt_short">高度</string>
+    <string name="tuning_sensors_speed_short">速度</string>
+    <string name="tuning_cluster_end_short">終了</string>
+    <string name="tuning_cluster_apex_short">頂点</string>
+    <string name="tuning_cluster_dist_short">距離</string>
+    <string name="tuning_cluster_alt_short">高度</string>
     <string name="map_splitter_content_description">マップとテレメトリの分割バー。上下にドラッグしてサイズ変更、ダブルタップでリセット。</string>
 
     <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->
@@ -1947,6 +1978,8 @@
     <string name="tuning_auto_pause_start_in_auto_pause_desc">静止状態でワークアウトを開始した際、動きが検出されるまで自動一時停止状態で開始します。すべてのスポーツに適用されます。</string>
     <string name="tuning_speed_value_format">%1$d %2$s</string>
     <string name="tuning_seconds_value_format">%1$d s</string>
+    <string name="tuning_auto_pause_custom_thresholds_title">しきい値と遅延のカスタマイズ</string>
+    <string name="tuning_auto_pause_subtitle_format">%1$s · 一時停止: %2$s · 再開: %3$s</string>
     <string name="cockpit_auto_pause_badge">オートポーズ</string>
     <string name="cockpit_auto_pause_resume">今すぐ再開</string>
     <string name="cockpit_status_not_started">未開始</string>
@@ -2175,6 +2208,8 @@
     <string name="cd_copy_tab">タブをコピー</string>
     <string name="cd_move_tab_left">タブを左へ移動</string>
     <string name="cd_move_tab_right">タブを右へ移動</string>
+    <string name="cd_move_field">フィールドを移動</string>
+    <string name="cd_delete_field">フィールドを削除</string>
     <string name="copy_tab_title">タブをコピー</string>
     <string name="copy_tab_action">コピー</string>
     <string name="back">戻る</string>
@@ -2383,4 +2418,23 @@
     <string name="settings_workout_photos_size_small">小</string>
     <string name="settings_workout_photos_size_medium">中</string>
     <string name="settings_workout_photos_size_large">大</string>
+    <!-- Workout Diagnostic Recording Errors & Actionable Report (REQ-TRK-053 / ATT-5886) -->
+    <string name="workout_diagnostic_banner_title">記録に関する警告が検出されました</string>
+    <string name="workout_diagnostic_banner_action">詳細を表示</string>
+    <string name="workout_diagnostic_dialog_title">記録診断</string>
+    <string name="workout_diagnostic_explanation_storage_full">端末の空き容量が不足していました。スマートフォンの空き容量を確保してください。</string>
+    <string name="workout_diagnostic_explanation_sample_write">ワークアウト中の一部の秒単位データを保存できませんでした。ただし、ワークアウト全体の概要は保持されています。</string>
+    <string name="workout_diagnostic_explanation_finalize">ワークアウトの記録は完全に保存されましたが、その後の分析中に内部エラーが発生しました。</string>
+    <string name="workout_diagnostic_explanation_generic">記録または分析中に予期しないエラーが発生しました。</string>
+    <string name="workout_diagnostic_technical_details_title">技術的な詳細</string>
+    <string name="workout_diagnostic_action_copy">クリップボードにコピー</string>
+    <string name="workout_diagnostic_copied_toast">技術的な詳細をクリップボードにコピーしました</string>
+    <string name="workout_diagnostic_action_send_email">バグ報告をメールで送信</string>
+    <string name="workout_diagnostic_email_subject">aTrainingTracker バグ報告 (%1$s)</string>
+    <string name="workout_diagnostic_action_clear_warning">警告を削除</string>
+    <string name="workout_diagnostic_clear_confirm_title">警告を削除しますか？</string>
+    <string name="workout_diagnostic_clear_confirm_message">このワークアウトの診断警告は完全に削除されます。</string>
+    <!-- Hardware Volume Keys Cockpit Tab Cycling (REQ-TRK-054 / ATT-5905) -->
+    <string name="prefs_volume_keys_switch_cockpit_tabs_title">音量ボタンでタブ切り替え</string>
+    <string name="prefs_volume_keys_switch_cockpit_tabs_summary">コックピットで音量+/-ボタンを使ってタブを循環切り替え</string>
 </resources>

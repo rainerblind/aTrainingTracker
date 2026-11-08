@@ -26,6 +26,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.BikePowerSensorsHelper
 import com.atrainingtracker.banalservice.devices.DeviceType
+import java.util.Locale
 
 
 /**
@@ -123,7 +124,8 @@ fun raw2UiDeviceData(rawData: DeviceRawData, context: Context): DeviceUiData {
         protocol = rawData.protocol,
         deviceType = rawData.deviceType,
         lastSeen = rawData.lastSeen,
-        manufacturer = rawData.manufacturer ?: context.getString(R.string.devices_unknown_manufacturer),
+        manufacturer = (rawData.manufacturer ?: context.getString(R.string.devices_unknown_manufacturer))
+            .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() },
         deviceName = rawData.deviceName ?: context.getString(R.string.devices_unknown_device),
         isPaired = rawData.isPaired,
         linkedEquipment = rawData.linkedEquipment,

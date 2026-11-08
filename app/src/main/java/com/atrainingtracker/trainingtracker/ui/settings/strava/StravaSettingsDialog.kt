@@ -21,6 +21,8 @@ package com.atrainingtracker.trainingtracker.ui.settings.strava
 import android.app.Application
 import android.content.SharedPreferences
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -241,92 +243,50 @@ fun StravaSettingsDialog(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    OutlinedCard(
+                    StravaManualSyncCard(
+                        title = stringResource(R.string.updateStravaEquipment),
+                        subtitle = if (isEquipmentSyncing) {
+                            stringResource(R.string.lastUpdateOfEquipmentNow)
+                        } else {
+                            equipmentLastUpdate
+                        },
+                        isSyncing = isEquipmentSyncing,
                         onClick = {
                             if (!isEquipmentSyncing) {
                                 StravaEquipmentSynchronizeThread(context).start()
                             }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.updateStravaEquipment),
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            Text(
-                                text = if (isEquipmentSyncing) {
-                                    stringResource(R.string.lastUpdateOfEquipmentNow)
-                                } else {
-                                    equipmentLastUpdate
-                                },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
                         }
-                    }
+                    )
 
-                    OutlinedCard(
+                    StravaManualSyncCard(
+                        title = stringResource(R.string.updateStravaRoutes),
+                        subtitle = if (isRoutesSyncing) {
+                            stringResource(R.string.lastUpdateOfRoutesNow)
+                        } else {
+                            routesLastUpdate
+                        },
+                        isSyncing = isRoutesSyncing,
                         onClick = {
                             if (!isRoutesSyncing) {
                                 routesRepo.syncRoutesFromStravaAsync()
                             }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.updateStravaRoutes),
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            Text(
-                                text = if (isRoutesSyncing) {
-                                    stringResource(R.string.lastUpdateOfRoutesNow)
-                                } else {
-                                    routesLastUpdate
-                                },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
                         }
-                    }
+                    )
 
-                    OutlinedCard(
+                    StravaManualSyncCard(
+                        title = stringResource(R.string.updateStravaSegments),
+                        subtitle = if (isSegmentsSyncing) {
+                            stringResource(R.string.lastUpdateOfSegmentsNow)
+                        } else {
+                            segmentsLastUpdate
+                        },
+                        isSyncing = isSegmentsSyncing,
                         onClick = {
                             if (!isSegmentsSyncing) {
                                 segmentsRepo.syncSegmentsAsync(BSportType.UNKNOWN)
                             }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.updateStravaSegments),
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            Text(
-                                text = if (isSegmentsSyncing) {
-                                    stringResource(R.string.lastUpdateOfSegmentsNow)
-                                } else {
-                                    segmentsLastUpdate
-                                },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
                         }
-                    }
+                    )
                 }
 
                 HorizontalDivider()
@@ -404,5 +364,55 @@ private fun SelectiveUploadToggleRow(
             onCheckedChange = onCheckedChange,
             modifier = Modifier.scale(0.8f)
         )
+    }
+}
+
+@Composable
+private fun StravaManualSyncCard(
+    title: String,
+    subtitle: String,
+    isSyncing: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedCard(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            if (isSyncing) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
     }
 }

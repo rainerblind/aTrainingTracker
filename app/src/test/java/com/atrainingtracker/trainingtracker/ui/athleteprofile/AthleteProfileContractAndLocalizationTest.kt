@@ -22,6 +22,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.navigation.NavRoutes
 import com.atrainingtracker.trainingtracker.ui.navigation.createDrawerGroups
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -289,6 +290,59 @@ class AthleteProfileContractAndLocalizationTest {
                 detailsSource.contains("R.string.workout_power_metrics_vi_format") &&
                 !detailsSource.contains("R.string.workout_power_value_work_format") &&
                 !detailsSource.contains("R.string.workout_power_metrics_wkg_format")
+        )
+    }
+
+    @Test
+    fun `AthleteProfileScreen adheres to REQ-UI-495 layout, localization, and PMC height contracts (TST-UI-495)`() {
+        val screenFile = File(
+            resolveModuleRoot(),
+            "src/main/java/com/atrainingtracker/trainingtracker/ui/athleteprofile/AthleteProfileScreen.kt"
+        )
+        assertTrue("AthleteProfileScreen.kt must exist", screenFile.exists())
+        val source = screenFile.readText()
+
+        // TST-UI-495.1: Proportional pill weighting & 3.dp padding
+        assertTrue(
+            "Filter pills must use proportional length weighting to prevent truncation",
+            source.contains("Modifier.weight(label.length.coerceIn(3, 9).toFloat())")
+        )
+        assertTrue(
+            "CompactSelectorPill must bound horizontal padding to 3.dp",
+            source.contains("modifier = Modifier.padding(horizontal = 3.dp, vertical = 6.dp)")
+        )
+
+        // TST-UI-495.2: Locale.getDefault() formatting without hardcoded Locale.US
+        assertFalse(
+            "AthleteProfileScreen must not hardcode Locale.US for decimal number display",
+            source.contains("Locale.US")
+        )
+        assertTrue(
+            "AthleteProfileScreen must use Locale.getDefault() for value formatting",
+            source.contains("Locale.getDefault()")
+        )
+
+        // TST-UI-495.3: Uniform PMC stat badge heights via IntrinsicSize.Min and .fillMaxHeight()
+        assertTrue(
+            "PMC stat badge rows must apply Modifier.height(IntrinsicSize.Min)",
+            source.contains("height(IntrinsicSize.Min)")
+        )
+        assertTrue(
+            "PmcStatBadge root Surface must apply fillMaxHeight()",
+            source.contains("modifier.fillMaxHeight()")
+        )
+
+        // TST-UI-495.4: Dedicated PMC time-range selector
+        assertTrue(
+            "PerformanceManagementChartCard must render dedicated time-range selector",
+            source.contains("selectedPmcTimeRange: MetricsTimeRange") &&
+                source.contains("onSelectPmcTimeRange: (MetricsTimeRange) -> Unit")
+        )
+        val defaultUiState = AthleteProfileUiState()
+        assertEquals(
+            "AthleteProfileUiState must default selectedPmcTimeRange to SIX_MONTHS",
+            MetricsTimeRange.SIX_MONTHS,
+            defaultUiState.selectedPmcTimeRange
         )
     }
 }

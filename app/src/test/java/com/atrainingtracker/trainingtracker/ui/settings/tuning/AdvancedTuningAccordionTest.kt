@@ -136,6 +136,19 @@ class AdvancedTuningAccordionTest {
                 steepSlope = 6.2f
             )
             assertEquals("10% / 80%, Flat: 1.5%, Steep: 6.2%", subtitleEdge)
+
+            // Localized context test (German labels)
+            val mockContextDe = mockk<Context>()
+            every { mockContextDe.getString(R.string.tuning_battery_saver_flat_short) } returns "Flach"
+            every { mockContextDe.getString(R.string.tuning_battery_saver_steep_short) } returns "Steil"
+            val subtitleLocalized = TuningSubtitleFormatter.formatBatterySaverSubtitle(
+                fullDim = 0.25f,
+                mediumDim = 0.50f,
+                flatSlope = 2.0f,
+                steepSlope = 5.0f,
+                context = mockContextDe
+            )
+            assertEquals("25% / 50%, Flach: 2.0%, Steil: 5.0%", subtitleLocalized)
         } finally {
             Locale.setDefault(defaultLocale)
         }
@@ -159,6 +172,18 @@ class AdvancedTuningAccordionTest {
                 slopeMinSpeed = 1.2f
             )
             assertEquals("GPS: 50m, Alt: 10s, Speed: 1.2 m/s", subtitleCustom)
+
+            // Localized context test (German labels)
+            val mockContextDe = mockk<Context>()
+            every { mockContextDe.getString(R.string.tuning_sensors_alt_short) } returns "Höhe"
+            every { mockContextDe.getString(R.string.tuning_sensors_speed_short) } returns "Geschw."
+            val subtitleLocalized = TuningSubtitleFormatter.formatSensorsGpsSubtitle(
+                gpsAccuracy = 200f,
+                altitudeWindowSec = 21,
+                slopeMinSpeed = 0.5f,
+                context = mockContextDe
+            )
+            assertEquals("GPS: 200m, Höhe: 21s, Geschw.: 0.5 m/s", subtitleLocalized)
         } finally {
             Locale.setDefault(defaultLocale)
         }
@@ -388,6 +413,11 @@ class AdvancedTuningAccordionTest {
             val mockContext = mockk<Context>()
             every { mockContext.getString(R.string.units_distance_metric) } returns "km"
             every { mockContext.getString(R.string.units_distance_imperial) } returns "mi"
+            every { mockContext.getString(R.string.units_distance_basic) } returns "m"
+            every { mockContext.getString(R.string.tuning_cluster_end_short) } returns "End"
+            every { mockContext.getString(R.string.tuning_cluster_apex_short) } returns "Apex"
+            every { mockContext.getString(R.string.tuning_cluster_dist_short) } returns "Dist"
+            every { mockContext.getString(R.string.tuning_cluster_alt_short) } returns "Alt"
 
             val metricSubtitle = TuningSubtitleFormatter.formatClusterTuningSubtitle(
                 endpointTolerance = 200f,
@@ -399,7 +429,7 @@ class AdvancedTuningAccordionTest {
                 isImperial = false,
                 context = mockContext
             )
-            assertEquals("End: 0.200km · Apex: 0.400km · Dist: 20% · Alt: 0.400km", metricSubtitle)
+            assertEquals("End: 200 m · Apex: 400 m · Dist: 20% · Alt: 400 m", metricSubtitle)
 
             val metricSubtitleNoAlt = TuningSubtitleFormatter.formatClusterTuningSubtitle(
                 endpointTolerance = 200f,
@@ -411,7 +441,53 @@ class AdvancedTuningAccordionTest {
                 isImperial = false,
                 context = mockContext
             )
-            assertEquals("End: 0.200km · Apex: 0.400km · Dist: 20%", metricSubtitleNoAlt)
+            assertEquals("End: 200 m · Apex: 400 m · Dist: 20%", metricSubtitleNoAlt)
+
+            // Localized German context test
+            val mockContextDe = mockk<Context>()
+            every { mockContextDe.getString(R.string.units_distance_basic) } returns "m"
+            every { mockContextDe.getString(R.string.tuning_cluster_end_short) } returns "Ende"
+            every { mockContextDe.getString(R.string.tuning_cluster_apex_short) } returns "Apex"
+            every { mockContextDe.getString(R.string.tuning_cluster_dist_short) } returns "Dist."
+            every { mockContextDe.getString(R.string.tuning_cluster_alt_short) } returns "Höhe"
+
+            val deSubtitle = TuningSubtitleFormatter.formatClusterTuningSubtitle(
+                endpointTolerance = 200f,
+                apexTolerance = 400f,
+                distanceTolerance = 0.20f,
+                altitudePositionTolerance = 400f,
+                useSportTypeForClustering = true,
+                useAltitudePosForClustering = true,
+                isImperial = false,
+                context = mockContextDe
+            )
+            assertEquals("Ende: 200 m · Apex: 400 m · Dist.: 20% · Höhe: 400 m", deSubtitle)
+
+            // Large tolerance (> 1000m) uses kilometer formatting
+            val largeMetricSubtitle = TuningSubtitleFormatter.formatClusterTuningSubtitle(
+                endpointTolerance = 1500f,
+                apexTolerance = 2000f,
+                distanceTolerance = 0.20f,
+                altitudePositionTolerance = 1500f,
+                useSportTypeForClustering = true,
+                useAltitudePosForClustering = true,
+                isImperial = false,
+                context = mockContext
+            )
+            assertEquals("End: 1.500km · Apex: 2.000km · Dist: 20% · Alt: 1.500km", largeMetricSubtitle)
+
+            // Imperial formatting
+            val imperialSubtitle = TuningSubtitleFormatter.formatClusterTuningSubtitle(
+                endpointTolerance = 1609.344f,
+                apexTolerance = 1609.344f,
+                distanceTolerance = 0.20f,
+                altitudePositionTolerance = 1609.344f,
+                useSportTypeForClustering = true,
+                useAltitudePosForClustering = true,
+                isImperial = true,
+                context = mockContext
+            )
+            assertEquals("End: 1.000mi · Apex: 1.000mi · Dist: 20% · Alt: 1.000mi", imperialSubtitle)
         } finally {
             Locale.setDefault(defaultLocale)
         }
@@ -452,6 +528,38 @@ class AdvancedTuningAccordionTest {
             context = mockContext
         )
         assertEquals("None enabled", noneSubtitle)
+    }
+
+    @Test
+    fun testAutoPauseSubtitle_formatsSpeedAndDebounceDelays() {
+        val mockContext = mockk<Context>()
+
+        every {
+            mockContext.getString(R.string.tuning_speed_value_format, 3, "km/h")
+        } returns "3 km/h"
+        every {
+            mockContext.getString(R.string.tuning_seconds_value_format, 5)
+        } returns "5 s"
+        every {
+            mockContext.getString(R.string.tuning_seconds_value_format, 2)
+        } returns "2 s"
+        every {
+            mockContext.getString(
+                R.string.tuning_auto_pause_subtitle_format,
+                "3 km/h",
+                "5 s",
+                "2 s"
+            )
+        } returns "3 km/h · Pause: 5 s · Resume: 2 s"
+
+        val subtitle = TuningSubtitleFormatter.formatAutoPauseSubtitle(
+            speedThreshold = 3,
+            speedUnit = "km/h",
+            debounceSec = 5,
+            resumeDebounceSec = 2,
+            context = mockContext
+        )
+        assertEquals("3 km/h · Pause: 5 s · Resume: 2 s", subtitle)
     }
 
     @Test
