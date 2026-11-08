@@ -19,12 +19,16 @@ import android.util.Log
 import androidx.preference.PreferenceManager
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -52,6 +56,8 @@ class BackupRestoreViewModelFitTest {
     private lateinit var mockContext: Context
     private lateinit var mockPrefs: SharedPreferences
     private lateinit var mockContentResolver: ContentResolver
+    private lateinit var mockSummaryDb: WorkoutSummariesDatabaseManager
+    private lateinit var mockStravaDb: StravaUploadDbHelper
 
     @Before
     fun setUp() {
@@ -68,6 +74,14 @@ class BackupRestoreViewModelFitTest {
         mockContext = mockk(relaxed = true)
         mockPrefs = mockk(relaxed = true)
         mockContentResolver = mockk(relaxed = true)
+        mockSummaryDb = mockk(relaxed = true)
+        mockStravaDb = mockk(relaxed = true)
+
+        every { mockSummaryDb.allFileBaseNames } returns emptySet()
+        every { mockStravaDb.allActivityIds } returns emptySet()
+
+        WorkoutSummariesDatabaseManager.setInstanceForTesting(mockSummaryDb)
+        StravaUploadDbHelper.resetForTesting(mockStravaDb)
 
         mockkStatic(PreferenceManager::class)
         every { PreferenceManager.getDefaultSharedPreferences(any()) } returns mockPrefs
@@ -109,6 +123,8 @@ class BackupRestoreViewModelFitTest {
     @After
     fun tearDown() {
         Dispatchers.resetMain()
+        WorkoutSummariesDatabaseManager.setInstanceForTesting(null)
+        StravaUploadDbHelper.resetForTesting(null)
         unmockkAll()
     }
 
@@ -207,5 +223,42 @@ class BackupRestoreViewModelFitTest {
         job.join()
 
         assertEquals(listOf("2024-05-01_1000.fit", "2024-05-15_1000.fit"), processedFiles)
+    }
+
+    @Test
+    fun importFitFiles_skipsExistingFilesWithoutCopyingToCacheDir() = runTest(testDispatcher) {
+        val uriExisting = mockk<Uri>(relaxed = true)
+        val uris = listOf(uriExisting)
+
+        val cursorExisting = mockk<android.database.Cursor>(relaxed = true) {
+            every { moveToFirst() } returns true
+            every { getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME) } returns 0
+            every { getString(0) } returns "existing_ride.fit"
+        }
+        every { mockContentResolver.query(uriExisting, any(), any(), any(), any()) } returns cursorExisting
+
+        // Mock snapshot to indicate existing_ride is already present in DB
+        every { mockSummaryDb.allFileBaseNames } returns setOf("existing_ride")
+
+        mockkObject(LegacyImportEngine)
+
+        val viewModel = BackupRestoreViewModel(mockApp)
+        val job = viewModel.importFitFiles(mockContext, uris, testDispatcher)
+        job.join()
+
+        // Verify openInputStream was NEVER called for the duplicate file!
+        verify(exactly = 0) {
+            mockContentResolver.openInputStream(uriExisting)
+        }
+
+        // Verify importFromFitResult was NEVER called!
+        coVerify(exactly = 0) {
+            LegacyImportEngine.importFromFitResult(any(), any(), any(), any())
+        }
+
+        val state = viewModel.uiState.value
+        assertTrue("State should be Success when duplicate skipped", state is BackupRestoreViewModel.UiState.Success)
+        val msg = (state as BackupRestoreViewModel.UiState.Success).message
+        assertTrue(msg.contains("1 duplicates skipped"))
     }
 }

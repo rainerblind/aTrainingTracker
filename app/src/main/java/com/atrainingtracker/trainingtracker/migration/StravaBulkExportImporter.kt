@@ -150,6 +150,7 @@ object StravaBulkExportImporter {
             Log.i(TAG, "Parsed ${activities.size} activity rows from activities.csv")
 
             val equipmentDb = EquipmentDbHelper.getInstance(context)
+            val existingSnapshot = ExistingWorkoutsSnapshot.create(context)
 
             // 3. Process each activity
             activities.forEachIndexed { index, row ->
@@ -159,6 +160,15 @@ object StravaBulkExportImporter {
                 val filename = row.filename
                 if (filename.isNullOrBlank()) {
                     // Manual activity without recording stream
+                    skippedCount++
+                    return@forEachIndexed
+                }
+
+                val baseFileName = resolveBaseFileName(filename, row.activityId)
+                if (existingSnapshot.isDuplicate(baseFileName, row.activityId)) {
+                    if (com.atrainingtracker.trainingtracker.TrainingApplication.getDebug(true)) {
+                        Log.d(TAG, "Fast-forwarding duplicate Strava activity: $baseFileName (id: ${row.activityId})")
+                    }
                     skippedCount++
                     return@forEachIndexed
                 }
@@ -179,7 +189,6 @@ object StravaBulkExportImporter {
                         rawStream
                     }
 
-                    val baseFileName = resolveBaseFileName(filename, row.activityId)
                     val source: WorkoutSource
                     val parseResult: Result<ParsedWorkoutData>
 
@@ -256,6 +265,7 @@ object StravaBulkExportImporter {
                     when (importResult.status) {
                         LegacyImportEngine.ImportStatus.SUCCESS -> {
                             importedCount++
+                            existingSnapshot.register(baseFileName, row.activityId)
                             if (importResult.workoutId != null) {
                                 lastWorkoutId = importResult.workoutId
                                 if (row.media.isNotEmpty()) {
@@ -272,6 +282,7 @@ object StravaBulkExportImporter {
                         }
                         LegacyImportEngine.ImportStatus.DUPLICATE_SKIPPED -> {
                             skippedCount++
+                            existingSnapshot.register(baseFileName, row.activityId)
                         }
                         LegacyImportEngine.ImportStatus.FAILED -> {
                             failedCount++

@@ -562,6 +562,33 @@ public class WorkoutSummariesDatabaseManager {
 
     }
 
+    /**
+     * Returns a set of all non-null, lowercased fileBaseNames stored in WorkoutSummaries (REQ-MIG-050.1).
+     * Used for zero-I/O in-memory deduplication during bulk import operations.
+     */
+    @NonNull
+    public java.util.Set<String> getAllFileBaseNames() {
+        java.util.Set<String> baseNames = new java.util.HashSet<>();
+        try (Cursor cursor = getDatabase().query(
+                WorkoutSummaries.TABLE,
+                new String[]{WorkoutSummaries.FILE_BASE_NAME},
+                WorkoutSummaries.FILE_BASE_NAME + " IS NOT NULL",
+                null,
+                null, null, null)) {
+            int colIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.FILE_BASE_NAME);
+            while (cursor.moveToNext()) {
+                String name = cursor.getString(colIdx);
+                if (name != null && !name.trim().isEmpty()) {
+                    baseNames.add(name.trim().toLowerCase(java.util.Locale.ROOT));
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error fetching all fileBaseNames: " + e.getMessage(), e);
+        }
+        return baseNames;
+    }
+
+
     @Nullable
     public Double getDouble(long workoutId, String key) {
         if (DEBUG) Log.i(TAG, "getDouble for workoutId: " + workoutId + ", " + key);
