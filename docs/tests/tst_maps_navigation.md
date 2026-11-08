@@ -396,9 +396,9 @@
   • Execute `./gradlew testDebugUnitTest` asserting 100% pass rate.
 
 ### TST-MAP-036: **Designated Home-Base Selection, Database Migration & Substring Disambiguation Verification** [Verified]
-- **Requirement(s)**: `REQ-MAP-034`
+- **Requirement(s)**: `REQ-MAP-034`, `REQ-MAP-036`
 - **Component**: **Designated Home-Base Selection, Database Migration & Substring Disambiguation Verification**
-- **Jira**: ``ATT-2472``
+- **Jira**: ``ATT-2472, ATT-6209``
 - **Test Description**:
   1. *Database Migration & Transactional Exclusivity (`KnownLocationsDatabaseManagerHomeTest.kt`)*:
   • Verify DB upgrade from v5 to v6 creates column `is_home`.
@@ -412,9 +412,9 @@
   • Verify fallback to first location when all hitCounts are 0.
   3. *Repository Reactive StateFlow Tests (`KnownLocationsRepositoryTest.kt`)*:
   • Verify `setHomeLocation(id)` and `clearHomeLocation()` update reactive `locationsFlow`.
-  4. *UI & Dialog Contract Tests (`KnownLocationHomeContractTest.kt`)*:
-  • Verify `KnownLocationsScreen.kt` renders Home icon and Home badge when `item.isHome == true`.
-  • Verify `KnownLocationCard` context menu contains set/clear home actions.
+  4. *UI & Dialog Contract Tests (`KnownLocationHomeContractTest.kt`, `KnownLocationsScreenTest.kt`)*:
+  • Verify `KnownLocationsScreen.kt` renders Home icon next to title and NO redundant badge when `item.isHome == true`.
+  • Verify `KnownLocationCard` context menu does NOT contain set/clear home actions (`known_locations_set_home` and `known_locations_remove_home` cleanly excised per ATT-6209).
   • Verify `EditKnownLocationDialog.kt` contains Home Base toggle switch.
   5. *9-Language Localization Parity Audit (`TranslationParityTest.kt`)*:
   • Verify `known_locations_home_base`, `known_locations_home_badge`, `known_locations_set_home`, `known_locations_remove_home` across all 9 locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).

@@ -819,8 +819,8 @@
 
 ### REQ-MAP-036: Known Locations: Heim-Basis Redundant Badge Excision & Start-Count Home Resolution Alignment [Verified]
 - **Tests**: `HomeLocationResolver.kt`, `KnownLocationsRepository.kt`, `KnownLocationsScreen.kt`
-- **Implementation**: Excise redundant Heim-Basis badge chip from KnownLocationCard, unify home location resolution across domain repositories and navigation engines, and default to location with most starts when no home-base set.
-- **Rationale**: The system SHALL excise the redundant "Heim-Basis" badge chip from `KnownLocationCard.kt`, unify home location resolution across domain repositories and navigation engines, and automatically display the Home icon on the effective home-base when no explicit designation exists (ATT-2629):
+- **Implementation**: Excise redundant Heim-Basis badge chip from KnownLocationCard, excise redundant home toggle actions from card context menu, unify home location resolution across domain repositories and navigation engines, and default to location with most starts when no home-base set.
+- **Rationale**: The system SHALL excise the redundant "Heim-Basis" badge chip from `KnownLocationCard.kt`, excise redundant home toggle actions from the card context menu, unify home location resolution across domain repositories and navigation engines, and automatically display the Home icon on the effective home-base when no explicit designation exists (ATT-2629, ATT-6209):
 1. *Unified Home Location Resolution Engine (`HomeLocationResolver.kt`)*:
 • `HomeLocationResolver` SHALL expose `fun resolveHomeLocationId(locations: List<MyLocation>): Long?`.
 • It SHALL evaluate candidate locations according to a strict 3-tier priority hierarchy:
@@ -843,12 +843,16 @@
 5. *100% 9-Language Localization & String Resource Integrity*:
 • String resource `known_locations_home_base` SHALL be preserved for the Home icon's accessibility description across all 9 supported application locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
 • String resource `known_locations_home_badge` MAY be retained to prevent breaking legacy references or translations, but MUST NOT be rendered in `KnownLocationCard`.
+6. *Card Context Menu Home-Base Action Excision (`REQ-MAP-036.6` / `ATT-6209`)*:
+• In `KnownLocationsScreen.kt` (`KnownLocationCard`), the `DropdownMenuItem` entries for "Als Heim-Basis festlegen" (`known_locations_set_home`) and "Heim-Basis aufheben" (`known_locations_remove_home`) SHALL be excised from the card long-press context menu (`DropdownMenu`).
+• Home-Base designation SHALL be configured exclusively via `EditKnownLocationDialog` (Heim-Basis switch with `known_locations_home_base_desc`).
+• Contextual operations in `KnownLocationCard` context menu SHALL be restricted to "Zusammenführen..." (`REQ-SET-095`) and "Löschen" (`REQ-UI-061`).
 
-**Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Refines Clause 3 of `REQ-MAP-034` (*Designated Home-Base Selection for Return Navigation & Substring Disambiguation*).
-2. *Historical Origin & Commit Trace*: Ticket `ATT-2472`, Sprint `2026-41.1`, commit `0994f794`.
-3. *Root Reason for Existing Formulation*: In ATT-2472, both the title icon and a dedicated metadata badge chip were introduced to ensure maximum visual discoverability when home-base designation was first launched. At the time, `KnownLocationsRepository` mapped `isHome = loc.isHome` directly from the raw database query, omitting the fallback logic in `HomeLocationResolver` and leaving the UI without an active indicator when no explicit home was designated.
-4. *Preservation of Core Invariants*: Single-home transactional exclusivity in SQLite (`StartLocation2Altitude.db`), explicit user designation strictly overriding start-count heuristics, context menu and edit dialog actions (`setHomeLocation`, `clearHomeLocation`), return navigation routing integrity, thread safety on `KnownLocationsDB-Thread`, and 100% full-suite clean-room unit test pass rate MUST NOT be broken.
+### Requirement Archaeology & Chesterton's Fence Audit
+1. *Original Requirement ID & Target*: Refines Clause 3 of `REQ-MAP-034` (*Designated Home-Base Selection for Return Navigation & Substring Disambiguation*) and `REQ-MAP-036` (*Known Locations: Heim-Basis Redundant Badge Excision*); refined by `ATT-6209` (`REQ-MAP-036.6`).
+2. *Historical Origin & Commit Trace*: Ticket `ATT-2472` (Sprint `2026-41.1`), `ATT-2629`, `ATT-5884` (`REQ-UI-470.5`), `ATT-6209`.
+3. *Root Reason for Existing Formulation*: In ATT-2472, home actions were added directly to the card context menu before `EditKnownLocationDialog` was enhanced with a dedicated, informative toggle switch (`known_locations_home_base_desc`). Exposing home actions in both places created redundant, competing mutation surfaces violating Design Guidelines §3.2.
+4. *Preservation of Core Invariants*: Single-home transactional exclusivity in SQLite (`StartLocation2Altitude.db`), Home icon indicator in card title (`Icons.Default.Home`), home configuration in `EditKnownLocationDialog`, merge action (`location_merge_action_`), and delete action (`location_delete_action_`) remain strictly intact.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* a location item with `isHome == true`,

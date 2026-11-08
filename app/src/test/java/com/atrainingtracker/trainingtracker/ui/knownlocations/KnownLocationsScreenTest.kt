@@ -243,7 +243,23 @@ class KnownLocationsScreenTest {
             content.contains("location_edit_action_")
         )
 
-        // 4. Delete action must be present
+        // 4. Set/clear home actions must not exist in context menu (REQ-MAP-036.6 / ATT-6209)
+        assertFalse(
+            "KnownLocationCard context menu must not contain 'location_set_home_action_' test tag",
+            content.contains("location_set_home_action_")
+        )
+        assertFalse(
+            "KnownLocationCard context menu must not contain 'location_clear_home_action_' test tag",
+            content.contains("location_clear_home_action_")
+        )
+
+        // 5. Merge action must be present (REQ-SET-095)
+        assertTrue(
+            "KnownLocationCard context menu must contain 'location_merge_action_' test tag",
+            content.contains("location_merge_action_")
+        )
+
+        // 6. Delete action must be present
         assertTrue(
             "KnownLocationCard context menu must contain 'location_delete_action_' test tag",
             content.contains("location_delete_action_")

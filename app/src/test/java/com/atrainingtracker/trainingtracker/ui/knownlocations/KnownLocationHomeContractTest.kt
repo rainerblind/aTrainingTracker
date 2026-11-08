@@ -64,14 +64,32 @@ class KnownLocationHomeContractTest {
             content.contains("location_home_badge_\${item.id}")
         )
 
-        // Verifies context menu contains set and remove home actions
-        assertTrue(
-            "KnownLocationsScreen must offer known_locations_set_home in dropdown",
+        // REQ-MAP-036.6 / ATT-6209: Verifies context menu no longer contains redundant set/remove home actions
+        assertFalse(
+            "KnownLocationsScreen must NOT offer known_locations_set_home in dropdown",
             content.contains("R.string.known_locations_set_home")
         )
-        assertTrue(
-            "KnownLocationsScreen must offer known_locations_remove_home in dropdown",
+        assertFalse(
+            "KnownLocationsScreen must NOT offer known_locations_remove_home in dropdown",
             content.contains("R.string.known_locations_remove_home")
+        )
+        assertFalse(
+            "KnownLocationsScreen must NOT render location_set_home_action_ test tag",
+            content.contains("location_set_home_action_")
+        )
+        assertFalse(
+            "KnownLocationsScreen must NOT render location_clear_home_action_ test tag",
+            content.contains("location_clear_home_action_")
+        )
+
+        // Context menu must retain merge and delete actions (REQ-SET-095, REQ-UI-061)
+        assertTrue(
+            "KnownLocationsScreen must retain merge action in context menu",
+            content.contains("location_merge_action_\${item.id}")
+        )
+        assertTrue(
+            "KnownLocationsScreen must retain delete action in context menu",
+            content.contains("location_delete_action_\${item.id}")
         )
     }
 

@@ -268,8 +268,6 @@ fun KnownLocationsScreen(
                 onShowWorkouts = onShowWorkouts,
                 onSelectCluster = onSelectCluster,
                 onShowRoutes = onShowRoutes,
-                onSetHome = { item -> viewModel.setHomeLocation(item.id) },
-                onClearHome = { viewModel.clearHomeLocation() },
                 onMerge = { locationToMerge = it },
                 onDelete = { locationPendingDeletion = it },
                 modifier = Modifier.fillMaxSize()
@@ -374,8 +372,6 @@ private fun KnownLocationsListContent(
     onShowWorkouts: (KnownLocationItem) -> Unit = { },
     onSelectCluster: (Long) -> Unit = { },
     onShowRoutes: (KnownLocationItem) -> Unit = { },
-    onSetHome: (KnownLocationItem) -> Unit = { },
-    onClearHome: () -> Unit = { },
     onMerge: (KnownLocationItem) -> Unit = { },
     onDelete: (KnownLocationItem) -> Unit,
     modifier: Modifier = Modifier
@@ -462,8 +458,6 @@ private fun KnownLocationsListContent(
                     onShowWorkouts = { onShowWorkouts(item) },
                     onSelectCluster = onSelectCluster,
                     onShowRoutes = { onShowRoutes(item) },
-                    onSetHome = { onSetHome(item) },
-                    onClearHome = onClearHome,
                     onMerge = { onMerge(item) },
                     onDelete = { onDelete(item) }
                 )
@@ -816,8 +810,6 @@ private fun KnownLocationCard(
     onShowWorkouts: () -> Unit = {},
     onSelectCluster: (Long) -> Unit = {},
     onShowRoutes: () -> Unit = {},
-    onSetHome: () -> Unit = {},
-    onClearHome: () -> Unit = {},
     onMerge: () -> Unit = {},
     onDelete: () -> Unit,
     initialShowContextMenu: Boolean = false
@@ -992,38 +984,6 @@ private fun KnownLocationCard(
                 expanded = showContextMenu,
                 onDismissRequest = { showContextMenu = false }
             ) {
-                if (item.isHome) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.known_locations_remove_home)) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Home,
-                                contentDescription = null
-                            )
-                        },
-                        onClick = {
-                            showContextMenu = false
-                            onClearHome()
-                        },
-                        modifier = Modifier.testTag("location_clear_home_action_${item.id}")
-                    )
-                } else {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.known_locations_set_home)) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Home,
-                                contentDescription = null
-                            )
-                        },
-                        onClick = {
-                            showContextMenu = false
-                            onSetHome()
-                        },
-                        modifier = Modifier.testTag("location_set_home_action_${item.id}")
-                    )
-                }
-
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.known_locations_menu_merge)) },
                     leadingIcon = {
