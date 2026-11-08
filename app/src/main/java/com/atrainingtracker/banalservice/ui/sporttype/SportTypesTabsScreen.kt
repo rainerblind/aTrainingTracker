@@ -79,6 +79,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -91,6 +92,7 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
+import com.atrainingtracker.trainingtracker.ui.common.DateTimeUtils
 import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
 import com.atrainingtracker.trainingtracker.ui.components.EmptyStatePlaceholder
 import com.atrainingtracker.trainingtracker.ui.components.DeleteConfirmationDialog
@@ -357,6 +359,33 @@ fun SportTypeCard(
 
     var showMenu by remember { mutableStateOf(false) }
 
+    // Strava mapping
+    val stravaUiNames = stringArrayResource(R.array.Strava_Sport_Types_UI_Names)
+    val stravaDbValues = stringArrayResource(R.array.Strava_Sport_Types_Strava_Names)
+    val stravaMap = remember(stravaUiNames, stravaDbValues) {
+        stravaDbValues.zip(stravaUiNames).toMap()
+    }
+    val localizedStrava = item.stravaName?.let { stravaMap[it] ?: it } ?: stringResource(R.string.no_upload)
+
+    // TCX mapping
+    val tcxNames = stringArrayResource(R.array.TCX_Sport_Types)
+    val tcxCanonicalKeys = remember { listOf("Other", "Walking", "Running", "Biking") }
+    val tcxIndex = tcxCanonicalKeys.indexOf(item.tcxName)
+    val localizedTcx = if (tcxIndex >= 0 && tcxIndex < tcxNames.size) tcxNames[tcxIndex] else item.tcxName
+
+    // GoldenCheetah mapping
+    val gcNames = stringArrayResource(R.array.GC_Sport_Types)
+    val gcCanonicalKeys = remember { listOf("walk", "run", "mtb", "bike") }
+    val gcIndex = gcCanonicalKeys.indexOf(item.gcName)
+    val localizedGc = if (gcIndex >= 0 && gcIndex < gcNames.size) gcNames[gcIndex] else item.gcName
+
+    // Display Name: Localize default locked sport types via BSportType.stringResId
+    val displayName = if (!item.isEditable) {
+        stringResource(item.bSportType.stringResId)
+    } else {
+        item.name
+    }
+
     Box {
         MappableListItem(
             modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
@@ -393,7 +422,7 @@ fun SportTypeCard(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = item.name,
+                            text = displayName,
                             style = MaterialTheme.typography.titleLarge,
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -472,7 +501,7 @@ fun SportTypeCard(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = stringResource(R.string.mapping_format_strava, item.stravaName ?: stringResource(R.string.no_upload)),
+                            text = stringResource(R.string.mapping_format_strava, localizedStrava),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -488,11 +517,15 @@ fun SportTypeCard(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = stringResource(
-                                R.string.sport_type_file_mapping_format,
-                                stringResource(R.string.mapping_format_tcx, item.tcxName),
-                                stringResource(R.string.mapping_format_gc, item.gcName)
-                            ),
+                            text = if (item.gcName.isNullOrBlank()) {
+                                stringResource(R.string.mapping_format_tcx, localizedTcx)
+                            } else {
+                                stringResource(
+                                    R.string.sport_type_file_mapping_format,
+                                    stringResource(R.string.mapping_format_tcx, localizedTcx),
+                                    stringResource(R.string.mapping_format_gc, localizedGc)
+                                )
+                            },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -523,13 +556,13 @@ fun SportTypeCard(
                             item.firstUsed?.let {
                                 UsageItem(
                                     label = stringResource(R.string.stats_first_activity),
-                                    date = it
+                                    date = DateTimeUtils.formatIsoDate(it)
                                 )
                             }
                             item.lastUsed?.let {
                                 UsageItem(
                                     label = stringResource(R.string.stats_last_activity),
-                                    date = it,
+                                    date = DateTimeUtils.formatIsoDate(it),
                                     alignEnd = true
                                 )
                             }

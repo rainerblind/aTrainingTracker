@@ -7734,18 +7734,24 @@
   5. *Tier 1 Targeted Unit Test Regression (`TST-UI-474.5`)*:
   • Execute targeted test suite (`com.atrainingtracker.trainingtracker.migration.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
-
-
-
-
-
-
-
-
-
-
-
-
+### TST-UI-475: **Sport Type Card Presentation, Localized Mappings & Locale-Aware Usage Dates Test Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-475`
+- **Component**: `SportTypesTabsScreen.kt`, `DateTimeUtils.kt`, `DateTimeUtilsTest.kt`, `SportTypesTabsScreenContractTest.kt`, `res/values*/strings.xml`, `arrays.xml`
+- **Jira**: `ATT-5872`
+- **Test Description**:
+  1. *Locale-Aware ISO Date Formatting Test (`TST-UI-475.1`, `DateTimeUtilsTest.kt`)*:
+  • Verify `formatIsoDate` correctly formats ISO-8601 `LocalDate` strings into medium localized date format across `de_DE` (`12.08.2018`), `en_US` (`Aug 12, 2018`), and `ja_JP`.
+  • Verify graceful fallback handling for null, blank, and malformed date strings without throwing runtime exceptions.
+  2. *Sport Type Card Presentation & Conditional GC Mapping Contract (`TST-UI-475.2`, `SportTypesTabsScreenContractTest.kt`)*:
+  • Verify empty or null `gcName` suppresses `mapping_format_gc` and renders only `mapping_format_tcx`.
+  • Verify non-empty `gcName` renders combined `sport_type_file_mapping_format`.
+  3. *Default Sport Type & Export Key Localization Contract (`TST-UI-475.3`, `SportTypesTabsScreenContractTest.kt`)*:
+  • Verify locked default sport types (`!item.isEditable`) bind localized display names via `bSportType.stringResId` (`R.string.sport_type_other`).
+  • Verify Strava, TCX, and GC export identifiers map to localized UI array strings.
+  4. *Usage Date Formatting Integration Contract (`TST-UI-475.4`)*:
+  • Verify `UsageItem` receives formatted date strings instead of raw ISO dates.
+  5. *Tier 1 Targeted Unit Test Regression (`TST-UI-475.5`)*:
+  • Execute targeted test suite (`com.atrainingtracker.trainingtracker.ui.common.*`, `com.atrainingtracker.trainingtracker.ui.settings.sporttypes.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
 
 
