@@ -139,7 +139,7 @@ fun RouteSummaryHeader(
 
                     if (climbs.isNotEmpty()) {
                         MetricItem(
-                            iconRes = R.drawable.ic_ascent,
+                            iconRes = R.drawable.ic_altitude,
                             value = stringResource(R.string.routes_climb_count, climbs.size),
                             isPrimary = true
                         )

@@ -51,7 +51,8 @@ fun RouteSegmentsBreakdownSection(
     modifier: Modifier = Modifier,
     hiddenSegmentIds: Set<Long> = emptySet(),
     onToggleSegmentVisibility: ((Long) -> Unit)? = null,
-    onSegmentClick: ((MatchedRouteSegment) -> Unit)? = null
+    onSegmentClick: ((MatchedRouteSegment) -> Unit)? = null,
+    showHeader: Boolean = true
 ) {
     val formatters = LocalMetricFormatter.current
 
@@ -61,12 +62,14 @@ fun RouteSegmentsBreakdownSection(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text(
-            text = stringResource(R.string.routes_segments_section_title, segments.size),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
+        if (showHeader) {
+            Text(
+                text = stringResource(R.string.routes_segments_section_title, segments.size),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
 
         segments.forEach { matched ->
             val summary = matched.segment.summary

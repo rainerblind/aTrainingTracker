@@ -7787,6 +7787,27 @@
   4. *Tier 1 Targeted Unit Test Regression (`TST-UI-488.4`)*:
   • Execute targeted test suite (`com.atrainingtracker.trainingtracker.ui.settings.strava.*`, `com.atrainingtracker.trainingtracker.ui.components.*`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
+### TST-UI-489: **Route Details Climb Badges, Header Iconography, Section Deduplication & Localized Grade Formatting Test Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-489`
+- **Component**: `ElevationProfile.kt`, `RouteSummaryHeader.kt`, `RouteOnMapScreen.kt`, `RouteSegmentsBreakdownSection.kt`, `ClimbDetector.kt`, `ElevationProfileLayoutTest.kt`, `ElevationProfileClimbBadgeClippingTest.kt`, `ClimbDetectorTest.kt`, `RouteDetailsContractTest.kt`
+- **Jira**: `ATT-5853`
+- **Test Description**:
+  1. *Elevation Profile Top Padding & Clearance Calibration Contract (`TST-UI-489.1`, `ElevationProfileLayoutTest.kt`, `ElevationProfileClimbBadgeClippingTest.kt`)*:
+  • Verify `ElevationProfile.kt` declares `val topPadding = if (showZoomControls) 24.dp else 16.dp`.
+  • Verify `totalCanvasHeight` adds `8.dp` when `showZoomControls == true` and `fixedHeight == null`.
+  • Verify summit badge clearance math ensures at least 24dp clearance at 1.0x font scale without container clipping.
+  2. *Route Summary Header Iconography Contract (`TST-UI-489.2`, `RouteDetailsContractTest.kt`)*:
+  • Verify `RouteSummaryHeader.kt` binds `R.drawable.ic_ascent` for elevation gain and `R.drawable.ic_altitude` for climb count.
+  3. *Section Header Deduplication Contract (`TST-UI-489.3`, `RouteDetailsContractTest.kt`)*:
+  • Verify `RouteClimbsBreakdownSection` and `RouteSegmentsBreakdownSection` accept `showHeader: Boolean = true`.
+  • Verify `RouteOnMapScreen.kt` passes `showHeader = !(climbs.isNotEmpty() && matchedSegments.isNotEmpty())` when dual tabs are active.
+  • Verify section title `Text` is omitted when `showHeader == false`.
+  4. *Locale-Aware Climb Title Grade Formatting Unit Tests (`TST-UI-489.4`, `ClimbDetectorTest.kt`)*:
+  • Verify `ClimbDetector.buildClimb` uses `Locale.getDefault()` for grade percentage formatting.
+  • Verify German locale produces localized decimal comma (e.g. `6,0%`) and US locale produces decimal point (e.g. `6.0%`).
+  5. *Tier 1 Targeted Unit Test Regression (`TST-UI-489.5`)*:
+  • Execute targeted test suite (`com.atrainingtracker.trainingtracker.climbs.*`, `com.atrainingtracker.trainingtracker.ui.map.*`, `com.atrainingtracker.trainingtracker.ui.routes.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
 
 
 

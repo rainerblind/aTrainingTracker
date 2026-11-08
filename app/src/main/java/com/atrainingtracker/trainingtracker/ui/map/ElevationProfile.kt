@@ -472,9 +472,9 @@ fun ElevationProfile(
         }
     }
 
-    val topPadding = if (showZoomControls) 44.dp else 16.dp
+    val topPadding = if (showZoomControls) 24.dp else 16.dp
     val bottomPadding = if (fixedHeight != null) 18.dp else 24.dp
-    val totalCanvasHeight = fixedHeight ?: if (showZoomControls) cachedData.adaptiveHeight + 28.dp else cachedData.adaptiveHeight
+    val totalCanvasHeight = fixedHeight ?: if (showZoomControls) cachedData.adaptiveHeight + 8.dp else cachedData.adaptiveHeight
 
     val density = LocalDensity.current
     val badgeTextSizeDp: Dp = with(density) { 10.sp.toDp() }

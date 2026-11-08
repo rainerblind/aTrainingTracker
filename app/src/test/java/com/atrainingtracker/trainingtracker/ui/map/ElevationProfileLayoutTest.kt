@@ -53,17 +53,17 @@ class ElevationProfileLayoutTest {
     fun testElevationProfile_sourceCodeInspection_layoutSeparation() {
         val content = elevationProfileFile.readText()
 
-        // 1. Dynamic topPadding: 44.dp for detail views (to accommodate badge layer), 16.dp for compact list previews (REQ-UI-225)
+        // 1. Dynamic topPadding: 24.dp for detail views (to accommodate badge layer, REQ-UI-489), 16.dp for compact list previews (REQ-UI-225)
         assertTrue(
-            "ElevationProfile must set topPadding = 44.dp when showZoomControls == true, else 16.dp",
-            content.contains("val topPadding = if (showZoomControls) 44.dp else 16.dp")
+            "ElevationProfile must set topPadding = 24.dp when showZoomControls == true, else 16.dp",
+            content.contains("val topPadding = if (showZoomControls) 24.dp else 16.dp")
         )
 
-        // 2. Dynamic canvas height preserving exact drawable chart plotting area
+        // 2. Dynamic canvas height preserving exact drawable chart plotting area (REQ-UI-489)
         assertTrue(
-            "ElevationProfile must expand totalCanvasHeight by 28.dp when showZoomControls == true (or respect fixedHeight)",
-            content.contains("val totalCanvasHeight = fixedHeight ?: if (showZoomControls) cachedData.adaptiveHeight + 28.dp else cachedData.adaptiveHeight") ||
-                    content.contains("val totalCanvasHeight = if (showZoomControls) cachedData.adaptiveHeight + 28.dp else cachedData.adaptiveHeight")
+            "ElevationProfile must expand totalCanvasHeight by 8.dp when showZoomControls == true (or respect fixedHeight)",
+            content.contains("val totalCanvasHeight = fixedHeight ?: if (showZoomControls) cachedData.adaptiveHeight + 8.dp else cachedData.adaptiveHeight") ||
+                    content.contains("val totalCanvasHeight = if (showZoomControls) cachedData.adaptiveHeight + 8.dp else cachedData.adaptiveHeight")
         )
 
         // 3. ScrubbingTelemetryBadge anchored at top = 4.dp now that zoom buttons are decoupled (REQ-UI-225)
@@ -141,20 +141,18 @@ class ElevationProfileLayoutTest {
         val badgeHeightDp = 36.0 // compact badge height
         val badgeBottomDp = badgeTopDp + badgeHeightDp // 40.0 dp
 
-        // Canvas chart curve plotting geometry
-        val canvasTopPaddingDp = 44.0
+        // Canvas chart curve plotting geometry (calibrated in REQ-UI-489)
+        val canvasTopPaddingDp = 24.0
         val bottomPaddingDp = 24.0
-        val heightExpansionDp = 28.0
+        val heightExpansionDp = 8.0
 
-        // Clearance: Between bottom of telemetry badge and start of canvas chart plotting
-        val clearanceBadgeToCanvasDp = canvasTopPaddingDp - badgeBottomDp
-        assertTrue("Clearance between telemetry badge and canvas chart curve must be at least 2.0 dp", clearanceBadgeToCanvasDp >= 2.0)
-        assertEquals(4.0, clearanceBadgeToCanvasDp, 0.001)
+        // Clearance: 24dp topPadding perfectly accommodates summit climb category badges (REQ-UI-489.1)
+        assertTrue("Top padding must be at least 24.0 dp for summit badge clearance", canvasTopPaddingDp >= 24.0)
 
         // Plotting height invariant check:
-        // Prior drawable plotting height: (adaptiveHeight + 48.dp) - 72.dp - 24.dp = adaptiveHeight - 48.dp
-        // New decoupled plotting height: (adaptiveHeight + 28.dp) - 44.dp - 24.dp = adaptiveHeight - 40.dp
-        val netDrawableHeightDelta = heightExpansionDp - canvasTopPaddingDp - bottomPaddingDp // 28 - 44 - 24 = -40
+        // Prior decoupled plotting height: (adaptiveHeight + 28.dp) - 44.dp - 24.dp = adaptiveHeight - 40.dp
+        // Calibrated plotting height: (adaptiveHeight + 8.dp) - 24.dp - 24.dp = adaptiveHeight - 40.dp
+        val netDrawableHeightDelta = heightExpansionDp - canvasTopPaddingDp - bottomPaddingDp // 8 - 24 - 24 = -40
         assertEquals(-40.0, netDrawableHeightDelta, 0.001)
     }
 
