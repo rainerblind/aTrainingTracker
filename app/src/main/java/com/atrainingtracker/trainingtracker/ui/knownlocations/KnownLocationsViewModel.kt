@@ -29,6 +29,7 @@ import com.atrainingtracker.trainingtracker.elevation.ElevationSource
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository
+import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.KnownLocationsGeometryMath
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
@@ -192,7 +193,9 @@ class KnownLocationsViewModel @JvmOverloads constructor(
         }
 
         viewModelScope.launch {
+            repository.reconcileHitCounts()
             repository.healLegacyNames()
+            workoutRepo?.loadAllWorkouts()
         }
     }
 
@@ -274,10 +277,65 @@ class KnownLocationsViewModel @JvmOverloads constructor(
     }
 
     /**
+     * Opens modal edit dialog with a new location template for athlete creation (REQ-UI-470.3).
+     */
+    fun openCreateDialog() {
+        val userLoc = _uiState.value.userLocation
+        val defaultLatLng = if (userLoc != null) {
+            LatLng(userLoc.latitude, userLoc.longitude)
+        } else {
+            _uiState.value.locations.firstOrNull()?.latLng ?: LatLng(0.0, 0.0)
+        }
+        val defaultAltitude = _uiState.value.locations.firstOrNull()?.altitude ?: 0.0
+
+        val newTemplate = KnownLocationItem(
+            id = 0L,
+            name = "",
+            altitude = defaultAltitude,
+            radius = KnownLocationsDatabaseManager.DEFAULT_RADIUS,
+            latLng = defaultLatLng,
+            hitCount = 0,
+            isLocked = true,
+            source = ElevationSource.MANUAL_USER,
+            isHome = false
+        )
+        _uiState.update {
+            it.copy(
+                selectedLocationForEdit = newTemplate,
+                showMapInEditDialog = false
+            )
+        }
+    }
+
+    /**
      * Dismisses modal edit dialog.
      */
     fun dismissEditDialog() {
         _uiState.update { it.copy(selectedLocationForEdit = null) }
+    }
+
+    /**
+     * Creates a new known location manually via repository (REQ-UI-470.3).
+     */
+    fun createLocation(
+        name: String,
+        altitude: Double,
+        radius: Int,
+        latLng: LatLng,
+        source: ElevationSource = ElevationSource.MANUAL_USER,
+        isHome: Boolean = false
+    ) {
+        viewModelScope.launch {
+            repository.addLocation(
+                name = name,
+                altitude = altitude,
+                radius = radius,
+                latLng = latLng,
+                source = source,
+                isHome = isHome
+            )
+            dismissEditDialog()
+        }
     }
 
     /**
@@ -306,6 +364,12 @@ class KnownLocationsViewModel @JvmOverloads constructor(
      * Commits edited location changes including custom geofence radius and home base status (REQ-MAP-034).
      */
     fun updateLocation(id: Long, name: String, altitude: Double, radius: Int, source: ElevationSource, isHome: Boolean) {
+        if (id == 0L) {
+            val template = _uiState.value.selectedLocationForEdit
+            val latLng = template?.latLng ?: LatLng(0.0, 0.0)
+            createLocation(name, altitude, radius, latLng, source, isHome)
+            return
+        }
         viewModelScope.launch {
             repository.updateLocation(id, name, altitude, radius, source)
             if (isHome) {

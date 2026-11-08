@@ -29,10 +29,10 @@ import org.junit.Test
 class KnownLocationZoomMathTest {
 
     @Test
-    fun testDefaultZoom_isTwelve() {
-        assertEquals(12.0f, KnownLocationZoomMath.DEFAULT_THUMBNAIL_ZOOM, 0.0001f)
-        assertEquals(10.5f, KnownLocationZoomMath.MIN_ZOOM, 0.0001f)
-        assertEquals(12.5f, KnownLocationZoomMath.MAX_ZOOM, 0.0001f)
+    fun testDefaultZoom_isElevenPointTwo() {
+        assertEquals(11.2f, KnownLocationZoomMath.DEFAULT_THUMBNAIL_ZOOM, 0.0001f)
+        assertEquals(9.7f, KnownLocationZoomMath.MIN_ZOOM, 0.0001f)
+        assertEquals(11.7f, KnownLocationZoomMath.MAX_ZOOM, 0.0001f)
         assertEquals(0.35f, KnownLocationZoomMath.TARGET_GEOFENCE_DIAMETER_RATIO, 0.0001f)
     }
 
@@ -40,7 +40,7 @@ class KnownLocationZoomMathTest {
     fun testSmallRadii_clampedToMaxZoom() {
         val latMunich = 48.137
 
-        // Radii 50m, 100m, and 200m must clamp to MAX_ZOOM (12.5f) to ensure rich neighborhood context (>= 1.4km)
+        // Radii 50m, 100m, and 200m must clamp to MAX_ZOOM (11.7f) to ensure rich neighborhood context (REQ-UI-470.1)
         val zoom50 = KnownLocationZoomMath.calculateThumbnailZoom(50, latMunich)
         assertEquals(KnownLocationZoomMath.MAX_ZOOM, zoom50, 0.0001f)
 
@@ -55,31 +55,31 @@ class KnownLocationZoomMathTest {
     fun testMediumRadii_scalesProportionally() {
         val latMunich = 48.137
 
-        // 300m radius: unclamped raw zoom is ~12.26f
-        val zoom300 = KnownLocationZoomMath.calculateThumbnailZoom(300, latMunich)
-        assertTrue("Zoom for 300m should be between 12.0f and 12.4f, was $zoom300", zoom300 in 12.0f..12.4f)
-
-        // 500m radius: unclamped raw zoom is ~11.52f
+        // 500m radius: unclamped raw zoom is ~11.51f
         val zoom500 = KnownLocationZoomMath.calculateThumbnailZoom(500, latMunich)
         assertTrue("Zoom for 500m should be between 11.3f and 11.7f, was $zoom500", zoom500 in 11.3f..11.7f)
 
+        // 1000m radius: unclamped raw zoom is ~10.51f
+        val zoom1000 = KnownLocationZoomMath.calculateThumbnailZoom(1000, latMunich)
+        assertTrue("Zoom for 1000m should be between 10.4f and 10.7f, was $zoom1000", zoom1000 in 10.4f..10.7f)
+
         // Monotonic progression: larger radius must yield smaller zoom (zoomed out further)
-        assertTrue("300m zoom must be greater than 500m zoom", zoom300 > zoom500)
+        assertTrue("500m zoom must be greater than 1000m zoom", zoom500 > zoom1000)
     }
 
     @Test
     fun testLargeRadii_clampedToMinZoom() {
         val latMunich = 48.137
 
-        // 1000m radius: unclamped raw zoom is ~10.52f
-        val zoom1000 = KnownLocationZoomMath.calculateThumbnailZoom(1000, latMunich)
-        assertTrue("Zoom for 1000m should be near MIN_ZOOM", zoom1000 in 10.5f..10.6f)
-
-        // 1500m radius: clamped to MIN_ZOOM (10.5f)
+        // 1500m radius: unclamped raw zoom is ~9.93f
         val zoom1500 = KnownLocationZoomMath.calculateThumbnailZoom(1500, latMunich)
-        assertEquals(KnownLocationZoomMath.MIN_ZOOM, zoom1500, 0.0001f)
+        assertTrue("Zoom for 1500m should be near 9.9f", zoom1500 in 9.8f..10.1f)
 
-        // 5000m radius: clamped to MIN_ZOOM (10.5f)
+        // 2000m radius: clamped to MIN_ZOOM (9.7f)
+        val zoom2000 = KnownLocationZoomMath.calculateThumbnailZoom(2000, latMunich)
+        assertEquals(KnownLocationZoomMath.MIN_ZOOM, zoom2000, 0.0001f)
+
+        // 5000m radius: clamped to MIN_ZOOM (9.7f)
         val zoom5000 = KnownLocationZoomMath.calculateThumbnailZoom(5000, latMunich)
         assertEquals(KnownLocationZoomMath.MIN_ZOOM, zoom5000, 0.0001f)
     }

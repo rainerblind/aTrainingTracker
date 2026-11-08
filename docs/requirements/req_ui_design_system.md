@@ -14142,6 +14142,45 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Zero regressions in 1-tap navigation to workouts or routes; test tags `location_starts_badge_*` and `location_routes_badge_*` preserved; long-press menu options (Home, Merge, Delete) intact; map thumbnail dimensions (116x80dp) preserved; 100% 9-language localization parity.
 
+### REQ-UI-470: Known Locations Map Orientation, FAB & Description Parity [Verified]
+- **Tests**: `TST-UI-470` | **Tickets**: `ATT-5884`
+- **Implementation**: `KnownLocationZoomMath.kt`, `KnownLocationsScreen.kt`, `EditKnownLocationDialog.kt`, `KnownLocationsViewModel.kt`, `KnownLocationsRepository.kt`, `MapUtils.kt`
+- **Rationale**: To provide superior regional orientation, zero map pin occlusion, one-tap manual creation, immediate starts count hydration, and clear home base utility explanation on "Lieblingsorte" (Sprint 2026-45.12, ATT-5884, refining `REQ-UI-165`, `REQ-UI-224`, and `REQ-SET-095`):
+1. *Broadened Map Thumbnail Zoom Range (`REQ-UI-470.1`)*:
+• In `KnownLocationZoomMath.kt`, the thumbnail zoom calculation constants SHALL be adjusted to `MIN_ZOOM = 9.7f`, `DEFAULT_THUMBNAIL_ZOOM = 11.2f`, and `MAX_ZOOM = 11.7f` (reducing zoom by approximately 0.8 levels) to preserve surrounding road and town labels for regional context while ensuring geofences remain fully framed.
+2. *Centered Heart Glyph Marker Without Pin Body (`REQ-UI-470.2`)*:
+• In `KnownLocationThumbnailMap` within `KnownLocationsScreen.kt`, the 36dp standing pin (`R.drawable.my_locations`, `anchor = Offset(0.5f, 1.0f)`) SHALL be replaced by a compact, semi-transparent centered heart glyph marker (`anchor = Offset(0.5f, 0.5f)`, `createCenteredHeartGlyphMarker` with ~14–16dp glyph, subtle white border/halo, and `alpha ≈ 0.8f`) sitting concentrically inside the geofence circle without occluding upper map terrain.
+3. *Floating Action Button for Manual Location Creation (`REQ-UI-470.3`)*:
+• `KnownLocationsScreen` SHALL provide a `FloatingActionButton` (`Icons.Default.Add`, test tag `known_locations_add_fab`) anchored at the bottom-end, aligning with Routes, Workout Clusters, and Equipment screens.
+• Tapping the FAB SHALL open `EditKnownLocationDialog` with a new location template (`id = 0L`), allowing athletes to manually create and name a favorite location.
+4. *Proactive Starts Count Hydration (`REQ-UI-470.4`)*:
+• In `KnownLocationsViewModel.init`, the system SHALL proactively invoke `repository.reconcileHitCounts()` and `workoutRepo?.loadAllWorkouts()`, ensuring the starts count is populated from historical workouts and SQLite hit counts immediately upon screen entry rather than displaying stale "0 Starts".
+5. *Informative Home Base Subtitle & 9-Language Parity (`REQ-UI-470.5`)*:
+• In `EditKnownLocationDialog`, the "Heim-Basis" switch row subtitle SHALL replace the tautological string `known_locations_set_home` ("Als Heim-Basis festlegen") with the descriptive explanation `known_locations_home_base_desc` ("Automatische Benennung & barometrische Kalibrierung" / "Automatic workout naming & barometric altitude calibration"), localized across all 9 supported locales with 100% translation parity.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-UI-470` refining `REQ-UI-165` (*Known Locations Management Screen*), `REQ-UI-224` (*Calibrated Zoom Math for KnownLocationCard*), and `REQ-SET-095` (*Home Base Location Tagging*).
+2. *Historical Origin & Commit Trace*: `44d51eac` (ATT-1816), `d7b00bf8` (ATT-1878), `c6f65b71` (ATT-5889).
+3. *Root Reason for Existing Formulation*: Conservative zoom (`MAX_ZOOM = 12.5f`) and standing pin (`36dp`) were carried over from full-screen maps before the 116x80dp thumbnail was introduced; FAB was omitted because locations originally relied solely on automatic GPS discovery; subtitle reused the dropdown action text.
+4. *Preservation of Core Invariants*: Harmonized unboxed card layout (ATT-5887), context menu (`Home`, `Merge`, `Delete`), geofence radius adjustment, altitude editing with automatic write-protection (`isLocked = 1`), and 100% 9-language translation parity are strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `KnownLocationThumbnailMap` on `KnownLocationsScreen`,
+• *When* rendered for a location with 200m radius,
+• *Then* the camera zoom level is clamped to `11.7f` (showing surrounding road/regional context), and the marker is a centered heart glyph (`anchor = Offset(0.5f, 0.5f)`) without a standing pin body.
+• *Given* `KnownLocationsScreen`,
+• *When* the screen is displayed,
+• *Then* a `+` FAB (`known_locations_add_fab`) is visible at the bottom-end, and tapping it opens `EditKnownLocationDialog` to create a new location (`id = 0L`).
+• *Given* historical workouts exist at a known location,
+• *When* `KnownLocationsScreen` is opened,
+• *Then* `reconcileHitCounts()` and `loadAllWorkouts()` run proactively, displaying accurate start counts instead of stale "0 Starts".
+• *Given* `EditKnownLocationDialog`,
+• *When* viewing the "Heim-Basis" toggle row,
+• *Then* the subtitle displays `known_locations_home_base_desc` explaining automatic naming and barometric calibration instead of repeating "Als Heim-Basis festlegen".
+
+**Invariants**: Harmonized card layout and unboxed typography (REQ-UI-469); context menu options (Merge, Home, Delete); altitude edit validation and write-protection; 9-language localization parity with zero missing strings.
+
+
 
 
 

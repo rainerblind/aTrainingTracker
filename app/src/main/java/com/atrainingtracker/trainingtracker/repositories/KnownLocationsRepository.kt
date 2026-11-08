@@ -180,6 +180,40 @@ open class KnownLocationsRepository @VisibleForTesting constructor(
     }
 
     /**
+     * Manually adds a new known location and refreshes reactive state (REQ-UI-470.3).
+     */
+    open suspend fun addLocation(
+        name: String,
+        altitude: Double,
+        radius: Int,
+        latLng: LatLng,
+        source: ElevationSource = ElevationSource.MANUAL_USER,
+        isHome: Boolean = false
+    ): KnownLocationItem? = withContext(dbDispatcher) {
+        val isLocked = (source == ElevationSource.MANUAL_USER)
+        val created = databaseManager.addNewLocation(
+            name, altitude, radius, latLng.latitude, latLng.longitude,
+            com.atrainingtracker.trainingtracker.database.ExtremaType.START,
+            isLocked, source
+        ) ?: return@withContext null
+        if (isHome) {
+            databaseManager.setHomeLocation(created.id)
+        }
+        loadLocations()
+        KnownLocationItem(
+            id = created.id,
+            name = created.name ?: name,
+            altitude = created.altitude,
+            radius = created.radius,
+            latLng = created.latLng,
+            hitCount = created.hitCount,
+            isLocked = created.isLocked,
+            source = created.source,
+            isHome = isHome
+        )
+    }
+
+    /**
      * Deletes a location by id and refreshes reactive state.
      */
     open suspend fun deleteLocation(id: Long) = withContext(dbDispatcher) {

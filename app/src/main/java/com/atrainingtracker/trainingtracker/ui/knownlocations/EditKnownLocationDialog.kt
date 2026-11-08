@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -69,6 +70,7 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.elevation.ElevationResult
 import com.atrainingtracker.trainingtracker.elevation.ElevationSource
+import com.atrainingtracker.trainingtracker.location.LocationNameResolver
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
 import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetContent
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
@@ -127,18 +129,29 @@ fun EditKnownLocationDialog(
     var isHome by remember { mutableStateOf(location.isHome) }
     var isAltitudeError by remember { mutableStateOf(false) }
 
+    val context = LocalContext.current
     val unitSuffix = if (isMetric) "m" else "ft"
 
     AppModalBottomSheet(
-        title = stringResource(id = R.string.known_location_edit_title),
+        title = if (location.id == 0L) {
+            stringResource(id = R.string.known_locations_new_location)
+        } else {
+            stringResource(id = R.string.known_location_edit_title)
+        },
         onDismissRequest = onDismiss,
-        icon = Icons.Default.Edit,
+        icon = if (location.id == 0L) Icons.Default.Add else Icons.Default.Edit,
         actions = {
             AppDialogActions.SaveCancel(
                 onSave = {
                     val parsed = KnownLocationsUnitConversions.parseInputToMeters(altitudeText, isMetric)
                     if (parsed != null) {
-                        val finalName = if (name.isNotBlank()) name.trim() else location.name
+                        val finalName = if (name.isNotBlank()) {
+                            name.trim()
+                        } else if (location.name.isNotBlank()) {
+                            location.name
+                        } else {
+                            LocationNameResolver.formatFallback(context, location.latLng.latitude, location.latLng.longitude)
+                        }
                         onConfirm(location.id, finalName, parsed, radiusMeters.roundToInt(), currentSource, isHome)
                     } else {
                         isAltitudeError = true
@@ -222,7 +235,7 @@ fun EditKnownLocationDialog(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = stringResource(R.string.known_locations_set_home),
+                            text = stringResource(R.string.known_locations_home_base_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -339,18 +352,29 @@ fun EditKnownLocationSheetContent(
     var isHome by remember { mutableStateOf(location.isHome) }
     var isAltitudeError by remember { mutableStateOf(false) }
 
+    val context = LocalContext.current
     val unitSuffix = if (isMetric) "m" else "ft"
 
     AppBottomSheetContent(
-        title = stringResource(id = R.string.known_location_edit_title),
+        title = if (location.id == 0L) {
+            stringResource(id = R.string.known_locations_new_location)
+        } else {
+            stringResource(id = R.string.known_location_edit_title)
+        },
         onDismissRequest = onDismiss,
-        icon = Icons.Default.Edit,
+        icon = if (location.id == 0L) Icons.Default.Add else Icons.Default.Edit,
         actions = {
             AppDialogActions.SaveCancel(
                 onSave = {
                     val parsed = KnownLocationsUnitConversions.parseInputToMeters(altitudeText, isMetric)
                     if (parsed != null) {
-                        val finalName = if (name.isNotBlank()) name.trim() else location.name
+                        val finalName = if (name.isNotBlank()) {
+                            name.trim()
+                        } else if (location.name.isNotBlank()) {
+                            location.name
+                        } else {
+                            LocationNameResolver.formatFallback(context, location.latLng.latitude, location.latLng.longitude)
+                        }
                         onConfirm(location.id, finalName, parsed, radiusMeters.roundToInt(), currentSource, isHome)
                     } else {
                         isAltitudeError = true
@@ -435,7 +459,7 @@ fun EditKnownLocationSheetContent(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = stringResource(R.string.known_locations_set_home),
+                            text = stringResource(R.string.known_locations_home_base_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

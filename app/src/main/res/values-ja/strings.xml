@@ -1435,6 +1435,9 @@
     <string name="known_location_routes_header">ここからのルート (%d):</string>
     <string name="filter_by_start_location">開始地点で絞り込む</string>
     <string name="known_locations_home_base">ホーム拠点</string>
+    <string name="known_locations_home_base_desc">自動ワークアウト命名と気圧高度校正</string>
+    <string name="known_locations_add_location">お気に入りの場所を追加</string>
+    <string name="known_locations_new_location">新しいお気に入りの場所</string>
     <string name="known_locations_home_badge">ホーム拠点</string>
     <string name="known_locations_set_home">ホーム拠点に設定</string>
     <string name="known_locations_remove_home">ホーム拠点を解除</string>

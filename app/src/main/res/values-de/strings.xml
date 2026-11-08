@@ -1542,6 +1542,9 @@
     <string name="known_location_routes_header">Lieblingsstrecken ab hier (%d):</string>
     <string name="filter_by_start_location">Nach Startort filtern</string>
     <string name="known_locations_home_base">Heim-Basis</string>
+    <string name="known_locations_home_base_desc">Automatische Benennung &amp; barometrische Kalibrierung</string>
+    <string name="known_locations_add_location">Lieblingsort hinzufügen</string>
+    <string name="known_locations_new_location">Neuer Lieblingsort</string>
     <string name="known_locations_home_badge">Heim-Basis</string>
     <string name="known_locations_set_home">Als Heim-Basis festlegen</string>
     <string name="known_locations_remove_home">Heim-Basis aufheben</string>

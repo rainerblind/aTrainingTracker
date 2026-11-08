@@ -1455,6 +1455,9 @@
     <string name="known_location_routes_header">Percorsi da qui (%d):</string>
     <string name="filter_by_start_location">Filtra per luogo di partenza</string>
     <string name="known_locations_home_base">Base di partenza</string>
+    <string name="known_locations_home_base_desc">Denominazione automatica e calibrazione altimetrica barometrica</string>
+    <string name="known_locations_add_location">Aggiungi luogo preferito</string>
+    <string name="known_locations_new_location">Nuovo luogo preferito</string>
     <string name="known_locations_home_badge">Base di partenza</string>
     <string name="known_locations_set_home">Imposta come base di partenza</string>
     <string name="known_locations_remove_home">Rimuovi base di partenza</string>

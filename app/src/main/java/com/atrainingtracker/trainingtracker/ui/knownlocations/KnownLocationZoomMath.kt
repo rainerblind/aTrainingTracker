@@ -29,9 +29,9 @@ import kotlin.math.ln
  * and displays rich regional neighborhood context (~1.4 km - 5.8 km visible span) across all geofence radii (50m - 1000m).
  */
 object KnownLocationZoomMath {
-    const val DEFAULT_THUMBNAIL_ZOOM: Float = 12.0f
-    const val MIN_ZOOM: Float = 10.5f
-    const val MAX_ZOOM: Float = 12.5f
+    const val DEFAULT_THUMBNAIL_ZOOM: Float = 11.2f
+    const val MIN_ZOOM: Float = 9.7f
+    const val MAX_ZOOM: Float = 11.7f
     const val TARGET_GEOFENCE_DIAMETER_RATIO: Float = 0.35f
 
     /**

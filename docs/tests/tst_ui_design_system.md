@@ -7637,6 +7637,30 @@
   4. *Tier 1 Targeted Regression Execution (`TST-UI-469.4`)*:
   • Execute targeted unit test suites (`com.atrainingtracker.trainingtracker.ui.knownlocations.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
+### TST-UI-470: **Known Locations Map Orientation, FAB & Description Parity Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-470`
+- **Component**: `KnownLocationZoomMath.kt`, `KnownLocationsScreen.kt`, `EditKnownLocationDialog.kt`, `KnownLocationsViewModel.kt`, `KnownLocationsRepository.kt`, `MapUtils.kt`, `KnownLocationZoomMathTest.kt`, `EditKnownLocationDialogTest.kt`, `KnownLocationsScreenTest.kt`
+- **Jira**: `ATT-5884`
+- **Test Description**:
+  1. *Zoom Math Clamping & Shift Unit Tests (`TST-UI-470.1`, `KnownLocationZoomMathTest.kt`)*:
+  • Verify `MIN_ZOOM = 9.7f`, `DEFAULT_THUMBNAIL_ZOOM = 11.2f`, `MAX_ZOOM = 11.7f`.
+  • Verify small radii (50m, 100m, 200m) clamp to `11.7f`.
+  • Verify medium radii (300m, 500m) scale proportionally within `[9.7f, 11.7f]`.
+  • Verify large radii (1000m+) clamp to `9.7f`.
+  2. *FAB & Creation Flow Contract Tests (`TST-UI-470.2`, `KnownLocationsScreenTest.kt`)*:
+  • Verify `FloatingActionButton` exists in `KnownLocationsScreen` with test tag `known_locations_add_fab`.
+  • Verify tapping FAB triggers new location creation dialog flow.
+  3. *Centered Heart Glyph Marker & Thumbnail Alignment Tests (`TST-UI-470.3`, `KnownLocationsScreenTest.kt`)*:
+  • Verify `KnownLocationThumbnailMap` uses `createCenteredHeartGlyphMarker` with `anchor = Offset(0.5f, 0.5f)`.
+  • Verify absence of standing pin `R.drawable.my_locations` in thumbnail map.
+  4. *Home Base Subtitle & Edit Dialog Contract Tests (`TST-UI-470.4`, `EditKnownLocationDialogTest.kt`)*:
+  • Verify `EditKnownLocationDialog` displays `R.string.known_locations_home_base_desc` instead of `known_locations_set_home` in the home toggle row.
+  5. *9-Language Localization Audit (`TST-UI-470.5`, `TranslationParityTest.kt`)*:
+  • Verify `known_locations_home_base_desc`, `known_locations_add_location`, and `known_locations_new_location` exist across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with zero format specifier mismatches and zero unescaped characters.
+  6. *Tier 1 Targeted Regression Execution (`TST-UI-470.6`)*:
+  • Execute targeted unit test suites (`com.atrainingtracker.trainingtracker.ui.knownlocations.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+
 
 
 

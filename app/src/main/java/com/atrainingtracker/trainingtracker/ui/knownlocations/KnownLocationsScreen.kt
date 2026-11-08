@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -48,14 +49,17 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.CallMerge
 import androidx.compose.material.icons.automirrored.filled.DirectionsRun
 import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Terrain
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
@@ -101,7 +105,7 @@ import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import com.atrainingtracker.trainingtracker.ui.map.DarkMapAntiFlashOverlay
 import com.atrainingtracker.trainingtracker.ui.map.DarkMapStyle
-import com.atrainingtracker.trainingtracker.ui.map.createHeartPinMarker
+import com.atrainingtracker.trainingtracker.ui.map.createCenteredHeartGlyphMarker
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
@@ -250,20 +254,40 @@ fun KnownLocationsScreen(
             }
         }
 
-        // Streamlined Single-Perspective List Content
-        KnownLocationsListContent(
-            uiState = uiState,
-            onEdit = { viewModel.openEditDialog(it, showMap = true) },
-            onShowOnMap = { item -> onShowOnMap(item.id) },
-            onShowWorkouts = onShowWorkouts,
-            onSelectCluster = onSelectCluster,
-            onShowRoutes = onShowRoutes,
-            onSetHome = { item -> viewModel.setHomeLocation(item.id) },
-            onClearHome = { viewModel.clearHomeLocation() },
-            onMerge = { locationToMerge = it },
-            onDelete = { locationPendingDeletion = it },
-            modifier = Modifier.fillMaxSize()
-        )
+        // Streamlined Single-Perspective List Content with FloatingActionButton (REQ-UI-470.3)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .weight(1f)
+        ) {
+            KnownLocationsListContent(
+                uiState = uiState,
+                onEdit = { viewModel.openEditDialog(it, showMap = true) },
+                onShowOnMap = { item -> onShowOnMap(item.id) },
+                onShowWorkouts = onShowWorkouts,
+                onSelectCluster = onSelectCluster,
+                onShowRoutes = onShowRoutes,
+                onSetHome = { item -> viewModel.setHomeLocation(item.id) },
+                onClearHome = { viewModel.clearHomeLocation() },
+                onMerge = { locationToMerge = it },
+                onDelete = { locationPendingDeletion = it },
+                modifier = Modifier.fillMaxSize()
+            )
+
+            FloatingActionButton(
+                onClick = { viewModel.openCreateDialog() },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp)
+                    .navigationBarsPadding()
+                    .testTag("known_locations_add_fab")
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = stringResource(R.string.known_locations_add_location)
+                )
+            }
+        }
     }
 
     // Modal Filter Bottom Sheet (REQ-UI-466.4)
@@ -283,7 +307,11 @@ fun KnownLocationsScreen(
             isMetric = uiState.isMetric,
             showMap = uiState.showMapInEditDialog,
             onConfirm = { id, name, altitude, radius, source, isHome ->
-                viewModel.updateLocation(id, name, altitude, radius, source, isHome)
+                if (id == 0L) {
+                    viewModel.createLocation(name, altitude, radius, itemToEdit.latLng, source, isHome)
+                } else {
+                    viewModel.updateLocation(id, name, altitude, radius, source, isHome)
+                }
             },
             onDismiss = { viewModel.dismissEditDialog() }
         )
@@ -414,7 +442,7 @@ private fun KnownLocationsListContent(
                 start = 16.dp,
                 end = 16.dp,
                 top = 8.dp,
-                bottom = bottomNavPadding + 16.dp
+                bottom = bottomNavPadding + 80.dp
             ),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -657,10 +685,10 @@ private fun KnownLocationThumbnailMap(
                     )
                 }
                 Icon(
-                    imageVector = Icons.Default.Place,
+                    imageVector = Icons.Default.Favorite,
                     contentDescription = null,
-                    modifier = Modifier.size(24.dp),
-                    tint = MaterialTheme.colorScheme.primary
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f)
                 )
             }
             return@Surface
@@ -672,10 +700,11 @@ private fun KnownLocationThumbnailMap(
             DarkMapStyle.resolveMapProperties(isDark, context)
         }
         val heartMarkerIcon = remember(context) {
-            createHeartPinMarker(
+            createCenteredHeartGlyphMarker(
                 context = context,
-                pinColor = TTColor.GeofencePin,
-                heartColor = Color.White
+                heartColor = TTColor.GeofencePin,
+                outlineColor = Color.White,
+                alpha = 0.85f
             )
         }
         val targetZoom = remember(item.radius, item.latLng.latitude) {
@@ -720,6 +749,7 @@ private fun KnownLocationThumbnailMap(
                 Marker(
                     state = remember(item.latLng) { MarkerState(position = item.latLng) },
                     icon = heartMarkerIcon,
+                    anchor = Offset(0.5f, 0.5f),
                     onClick = {
                         onShowOnMap()
                         true

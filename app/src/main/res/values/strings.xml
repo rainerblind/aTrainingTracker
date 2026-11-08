@@ -1654,6 +1654,9 @@
     <string name="known_location_routes_header">Routes starting here (%d):</string>
     <string name="filter_by_start_location">Filter by Start Location</string>
     <string name="known_locations_home_base">Home base</string>
+    <string name="known_locations_home_base_desc">Automatic workout naming &amp; barometric altitude calibration</string>
+    <string name="known_locations_add_location">Add favorite location</string>
+    <string name="known_locations_new_location">New Favorite Location</string>
     <string name="known_locations_home_badge">Home Base</string>
     <string name="known_locations_set_home">Set as home base</string>
     <string name="known_locations_remove_home">Remove home base</string>

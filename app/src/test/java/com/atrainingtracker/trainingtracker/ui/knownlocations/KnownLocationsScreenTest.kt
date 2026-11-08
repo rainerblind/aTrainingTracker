@@ -376,6 +376,106 @@ class KnownLocationsScreenTest {
         }
     }
 
+    /**
+     * TST-UI-470.2: Contract verification for FloatingActionButton and location creation flow.
+     */
+    @Test
+    fun testKnownLocationsScreen_fabAndCreationFlowContract() {
+        val screenFile = findSourceFile("com/atrainingtracker/trainingtracker/ui/knownlocations/KnownLocationsScreen.kt")
+        assertTrue("KnownLocationsScreen.kt must exist", screenFile.exists())
+        val source = screenFile.readText()
+
+        // 1. Verify FloatingActionButton with test tag known_locations_add_fab
+        assertTrue("Screen must render FloatingActionButton", source.contains("FloatingActionButton("))
+        assertTrue("FAB must declare test tag 'known_locations_add_fab'", source.contains("\"known_locations_add_fab\""))
+
+        // 2. Verify icon and content description
+        assertTrue("FAB must use Icons.Default.Add", source.contains("Icons.Default.Add"))
+        assertTrue("FAB must reference R.string.known_locations_add_location", source.contains("R.string.known_locations_add_location"))
+
+        // 3. Verify click handler triggers openCreateDialog
+        assertTrue("FAB click must invoke openCreateDialog", source.contains("viewModel.openCreateDialog()"))
+
+        // 4. Verify onConfirm delegates to createLocation when id == 0L
+        assertTrue("onConfirm must call createLocation for id == 0L", source.contains("viewModel.createLocation("))
+    }
+
+    /**
+     * TST-UI-470.3: Centered heart glyph marker and thumbnail alignment verification.
+     */
+    @Test
+    fun testKnownLocationsThumbnailMap_usesCenteredHeartGlyphMarker() {
+        val screenFile = findSourceFile("com/atrainingtracker/trainingtracker/ui/knownlocations/KnownLocationsScreen.kt")
+        assertTrue("KnownLocationsScreen.kt must exist", screenFile.exists())
+        val source = screenFile.readText()
+
+        // 1. Verify createCenteredHeartGlyphMarker is used
+        assertTrue(
+            "Thumbnail map must use createCenteredHeartGlyphMarker",
+            source.contains("createCenteredHeartGlyphMarker(")
+        )
+
+        // 2. Verify standing pin createHeartPinMarker is no longer used in KnownLocationsScreen
+        assertFalse(
+            "KnownLocationsScreen must not use standing pin createHeartPinMarker",
+            source.contains("createHeartPinMarker(")
+        )
+
+        // 3. Verify concentric anchor = Offset(0.5f, 0.5f) is specified for Marker
+        assertTrue(
+            "Thumbnail Marker must specify concentric anchor Offset(0.5f, 0.5f)",
+            source.contains("anchor = Offset(0.5f, 0.5f)")
+        )
+
+        // 4. Verify LocalInspectionMode preview uses Icons.Default.Favorite
+        assertTrue(
+            "Preview mode must use Icons.Default.Favorite glyph",
+            source.contains("Icons.Default.Favorite")
+        )
+    }
+
+    /**
+     * TST-UI-470.5: 9-language localization parity for ATT-5884 string resources.
+     */
+    @Test
+    fun testAtt5884StringKeysExistAcrossAll9Locales() {
+        val requiredKeys = listOf(
+            "known_locations_home_base_desc",
+            "known_locations_add_location",
+            "known_locations_new_location"
+        )
+        val locales = listOf("", "de", "es", "fr", "it", "ja", "nl", "pl", "pt")
+        val resDir = findResDirectory()
+
+        for (locale in locales) {
+            val dirName = if (locale.isEmpty()) "values" else "values-$locale"
+            val file = File(resDir, "$dirName/strings.xml")
+            assertTrue("strings.xml must exist for locale $dirName", file.exists())
+
+            val stringMap = parseStringsFile(file)
+            for (key in requiredKeys) {
+                assertTrue(
+                    "Key '$key' must exist in $dirName/strings.xml",
+                    stringMap.containsKey(key)
+                )
+                assertFalse(
+                    "Value for '$key' in $dirName/strings.xml must not be blank",
+                    stringMap[key].isNullOrBlank()
+                )
+            }
+        }
+    }
+
+    private fun findSourceFile(relativePath: String): File {
+        val candidates = listOf(
+            File("app/src/main/java", relativePath),
+            File("src/main/java", relativePath),
+            File("../app/src/main/java", relativePath)
+        )
+        return candidates.firstOrNull { it.exists() }
+            ?: error("Source file $relativePath not found in $candidates")
+    }
+
     private fun findResDirectory(): File {
         val candidates = listOf(
             File("src/main/res"),
