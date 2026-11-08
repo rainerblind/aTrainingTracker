@@ -128,6 +128,7 @@ fun WorkoutDetailTabbedContent(
     onCreateLapClick: ((Double) -> Unit)? = null,
     onMoveBoundaryClick: ((boundaryLapNr: Long) -> Unit)? = null,
     onLapClick: ((LapData) -> Unit)? = null,
+    initialAutoShareSnapshot: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val visibleTabs = remember(tabs, availability, detailPreferences) {
@@ -158,6 +159,30 @@ fun WorkoutDetailTabbedContent(
     var activePreviewPhoto by remember { mutableStateOf<WorkoutPhotoEntry?>(null) }
     var activeSharePhoto by remember { mutableStateOf<WorkoutPhotoEntry?>(null) }
     var showShareModeSheet by rememberSaveable { mutableStateOf(false) }
+
+    var triggerMapSnapshot by remember { mutableStateOf(false) }
+    var pendingAutoShare by remember(workoutData.id, initialAutoShareSnapshot) {
+        mutableStateOf(initialAutoShareSnapshot)
+    }
+
+    val mapTabIndex = remember(visibleTabs) {
+        val idx = visibleTabs.indexOfFirst { WorkoutDetailSectionType.MAP in it.sections }
+        if (idx >= 0) idx else visibleTabs.indexOfFirst {
+            WorkoutDetailSectionType.ELEVATION in it.sections || WorkoutDetailSectionType.CHARTS in it.sections
+        }
+    }
+
+    LaunchedEffect(pendingAutoShare, pagerState.currentPage, mapTabIndex) {
+        if (pendingAutoShare && mapTabIndex >= 0) {
+            if (pagerState.currentPage != mapTabIndex) {
+                pagerState.animateScrollToPage(mapTabIndex)
+            } else {
+                kotlinx.coroutines.delay(350L)
+                pendingAutoShare = false
+                triggerMapSnapshot = true
+            }
+        }
+    }
 
     val snapshotHeader: @Composable () -> Unit = {
         WorkoutHeader(
@@ -293,6 +318,8 @@ fun WorkoutDetailTabbedContent(
                             topEndActions = mapTopEndActions,
                             metadataContent = null,
                             analyticsContent = null,
+                            externalSnapshotTrigger = (pageIndex == mapTabIndex) && triggerMapSnapshot,
+                            onSnapshotComplete = { triggerMapSnapshot = false },
                             modifier = Modifier.fillMaxSize()
                         )
                     }
@@ -320,6 +347,8 @@ fun WorkoutDetailTabbedContent(
                             onCreateLapClick = onCreateLapClick,
                             onInteractiveCanvasTouch = { isTouchingInteractiveCanvas = it },
                             header = snapshotHeader,
+                            externalSnapshotTrigger = (pageIndex == mapTabIndex) && triggerMapSnapshot,
+                            onSnapshotComplete = { triggerMapSnapshot = false },
                             mapContent = mapContent,
                             overlay = mapOverlay,
                             topEndActions = mapTopEndActions,
@@ -402,6 +431,8 @@ fun WorkoutDetailTabbedContent(
                                 onCreateLapClick = onCreateLapClick,
                                 onInteractiveCanvasTouch = { isTouchingInteractiveCanvas = it },
                                 header = snapshotHeader,
+                                externalSnapshotTrigger = (pageIndex == mapTabIndex) && triggerMapSnapshot,
+                                onSnapshotComplete = { triggerMapSnapshot = false },
                                 metadataContent = null,
                                 analyticsContent = if (nonMapNonGraphSections.isNotEmpty()) {
                                     {
@@ -698,11 +729,8 @@ fun WorkoutDetailTabbedContent(
             onDismissRequest = { showShareModeSheet = false },
             onSelectMapSnapshot = {
                 showShareModeSheet = false
-                val mapTabIndex = visibleTabs.indexOfFirst { WorkoutDetailSectionType.MAP in it.sections }
-                if (mapTabIndex >= 0 && pagerState.currentPage != mapTabIndex) {
-                    coroutineScope.launch {
-                        pagerState.animateScrollToPage(mapTabIndex)
-                    }
+                if (mapTabIndex >= 0) {
+                    pendingAutoShare = true
                 }
             },
             attachedPhotos = workoutPhotos.map { it.uri }

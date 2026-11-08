@@ -97,7 +97,8 @@ fun TrackOnMapScreen(
     sectionsOrder: List<WorkoutSectionType>? = null,
     tabsConfig: List<WorkoutDetailTabConfig>? = null,
     onSaveTabsConfig: ((List<WorkoutDetailTabConfig>) -> Unit)? = null,
-    useTabbedLayout: Boolean = true
+    useTabbedLayout: Boolean = true,
+    initialAutoShareSnapshot: Boolean = false
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -297,6 +298,7 @@ fun TrackOnMapScreen(
             onEditWorkout = onEditWorkout,
             headerActions = headerActions,
             onOpenTabsConfig = { showTabsConfigSheet = true },
+            initialAutoShareSnapshot = initialAutoShareSnapshot,
             mapContent = {
                 tracks(filteredTracks)
                 contextualPaths(segments)

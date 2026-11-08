@@ -106,6 +106,7 @@ fun WorkoutSummary(
     onDeleteRequest: () -> Unit,
     onEditWorkout: () -> Unit,
     onMapClick: () -> Unit,
+    onShareMapSnapshot: ((WorkoutData) -> Unit)? = null,
     modifier: Modifier = Modifier,
     onClusterClick: ((Long) -> Unit)? = null,
     onMarkFinished: (() -> Unit)? = null,
@@ -652,7 +653,11 @@ fun WorkoutSummary(
             onSelectMapSnapshot = {
                 showShareModeSheet = false
                 if (workoutData.headerData.finished) {
-                    onMapClick()
+                    if (onShareMapSnapshot != null) {
+                        onShareMapSnapshot(workoutData)
+                    } else {
+                        onMapClick()
+                    }
                 }
             },
             attachedPhotos = workoutPhotos.map { it.uri }

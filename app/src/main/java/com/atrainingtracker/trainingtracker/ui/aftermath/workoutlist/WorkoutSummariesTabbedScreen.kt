@@ -235,6 +235,7 @@ fun WorkoutSummariesTabbedScreen(
 
     var selectedWorkoutIdForDetails by rememberSaveable { mutableStateOf<Long?>(null) }
     var selectedWorkoutIdForEdit by rememberSaveable { mutableStateOf<Long?>(null) }
+    var autoShareSnapshotOnOpen by rememberSaveable { mutableStateOf(false) }
 
     // Observe the event stream
     LaunchedEffect(Unit) {
@@ -309,12 +310,14 @@ fun WorkoutSummariesTabbedScreen(
                     hrZoneThresholds = aftermathUIState.hrThresholds,
                     powerZoneThresholds = aftermathUIState.powerThresholds,
                     telemetryPath = aftermathUIState.telemetryPath,
+                    initialAutoShareSnapshot = autoShareSnapshotOnOpen,
                     modifier = Modifier
                 )
 
                 // 4. Handle System Back Button
                 BackHandler {
                     selectedWorkoutIdForDetails = null
+                    autoShareSnapshotOnOpen = false
                 }
             } else {
                 // 3. Render the Tabbed UI
@@ -339,6 +342,12 @@ fun WorkoutSummariesTabbedScreen(
                     },
                     onMapClick = { workoutData ->
                         selectedWorkoutIdForDetails = workoutData.id
+                        autoShareSnapshotOnOpen = false
+                        trackOnMapViewModel.loadAftermathData(workoutData)
+                    },
+                    onShareMapSnapshot = { workoutData ->
+                        selectedWorkoutIdForDetails = workoutData.id
+                        autoShareSnapshotOnOpen = true
                         trackOnMapViewModel.loadAftermathData(workoutData)
                     },
                     isPlayServiceAvailable = isPlayAvailable,

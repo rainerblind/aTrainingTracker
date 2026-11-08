@@ -150,7 +150,9 @@ fun MapDetailLayout(
     showFloatingShareButton: Boolean = workoutData == null,
     topEndActions: (@Composable ColumnScope.() -> Unit)? = null,
     onCreateLapClick: ((Double) -> Unit)? = null,
-    onInteractiveCanvasTouch: ((Boolean) -> Unit)? = null
+    onInteractiveCanvasTouch: ((Boolean) -> Unit)? = null,
+    externalSnapshotTrigger: Boolean = false,
+    onSnapshotComplete: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -180,6 +182,12 @@ fun MapDetailLayout(
     val analyticsLayer = rememberGraphicsLayer()
 
     var isSharing by remember { mutableStateOf(false) }
+
+    LaunchedEffect(externalSnapshotTrigger) {
+        if (externalSnapshotTrigger && !isSharing) {
+            isSharing = true
+        }
+    }
     var showShareModeSheet by remember { mutableStateOf(false) }
     var selectedDistance by remember { mutableStateOf<Double?>(null) }
 
@@ -348,10 +356,12 @@ fun MapDetailLayout(
 
                         combineWorkoutAndShare(context, hBmp, mapBitmap, eBmp, aBmp)
                         isSharing = false
+                        onSnapshotComplete?.invoke()
                     }
                 },
                 onSnapshotError = {
                     isSharing = false
+                    onSnapshotComplete?.invoke()
                     android.widget.Toast.makeText(context, R.string.error_sharing_failed, android.widget.Toast.LENGTH_SHORT).show()
                 },
                 content = mapContent
