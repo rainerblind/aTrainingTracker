@@ -53,6 +53,12 @@ class HoechstmassCoreFrameworkContractTest {
         val readmeContent = readme.readText()
         val protocolContent = protocol.readText()
 
+        // 0. Primary Title & Subtitle
+        assertTrue("README must have the title '# Höchstmaß — The AAA Coding Framework'",
+            readmeContent.contains("# Höchstmaß — The AAA Coding Framework"))
+        assertTrue("README must have subtitle referencing Autonomous AI Pairs",
+            readmeContent.contains("Agile · Agentic · ASPICE — Precision Software Engineering with Autonomous AI Pairs"))
+
         // 1. Opening Epigraph Quote
         val epigraph = "Power without control can become destructive. Power guided by intelligence becomes excellence."
         assertTrue("README must feature the ChatGPT epigraph quote", readmeContent.contains(epigraph))
@@ -66,7 +72,14 @@ class HoechstmassCoreFrameworkContractTest {
         assertTrue("README must explain -maß / Maßarbeit", readmeContent.contains("-maß") && readmeContent.contains("Maßarbeit"))
         assertTrue("README must preserve German special characters ö and ß", readmeContent.contains("ö") && readmeContent.contains("ß"))
 
-        // 3. Provenance & Cross-Model Review
+        // 3. Inside-Out AAA Paradigm & Provenance
+        assertTrue("README must present the AAA Paradigm from the inside out",
+            readmeContent.contains("The AAA Paradigm: Where Agile, Agentic, and ASPICE Meet") &&
+            readmeContent.contains("inside out"))
+        assertTrue("README Section 1 must describe ASPICE, Agentic, and Agile concentric layers",
+            readmeContent.contains("ASPICE (The Core Task Structure") &&
+            readmeContent.contains("Agentic (The Execution Loop") &&
+            readmeContent.contains("Agile (The Outer Cadence"))
         assertTrue("README must define transparent attribution for agent1, agent2, coordinator, human",
             readmeContent.contains("agent1") && readmeContent.contains("agent2") &&
             readmeContent.contains("coordinator") && readmeContent.contains("human"))
@@ -100,9 +113,9 @@ class HoechstmassCoreFrameworkContractTest {
             readmeContent.contains("Stage 3") && readmeContent.contains("Stage 4") &&
             readmeContent.contains("Stage 5"))
 
-        // 6. Isolated In-Place Review Workflow (.reviews/)
-        assertTrue("README must document .reviews/ in-place review workflow",
-            readmeContent.contains(".reviews/") && readmeContent.contains("Emacs"))
+        // 6. Isolated In-Place Review Workflow (.reviews/) in Project Protocol
+        assertTrue("Protocol must document .reviews/ in-place review workflow with Emacs",
+            protocolContent.contains(".reviews/") && protocolContent.contains("Emacs"))
 
         // 7. Entry Barrier Chapter
         assertTrue("README must contain Chapter 5 Entry Barrier & Human Discipline",
@@ -124,6 +137,10 @@ class HoechstmassCoreFrameworkContractTest {
         val svgContent = svgAsset.readText()
         assertTrue("SVG must define 5 layers", svgContent.contains("Layer 1") && svgContent.contains("Layer 5"))
         assertTrue("SVG must reference Claude & ChatGPT", svgContent.contains("Claude") && svgContent.contains("ChatGPT"))
+        assertTrue("SVG must define 2-column layout with barrier plates L1..L5",
+            svgContent.contains("L1") && svgContent.contains("L2") && svgContent.contains("L3") &&
+            svgContent.contains("L4") && svgContent.contains("L5"))
+        assertTrue("SVG must include blocked defect markers ✕", svgContent.contains("✕"))
     }
 
     @Test
