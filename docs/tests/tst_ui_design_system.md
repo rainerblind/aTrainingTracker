@@ -7683,6 +7683,25 @@
   6. *Tier 1 Targeted Unit Test Regression (`TST-UI-471.6`)*:
   • Execute targeted test suites (`com.atrainingtracker.trainingtracker.ui.tracking.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
+### TST-UI-472: **Display & Expert Settings Terminology, Subtitle Localization & Warning Deduplication Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-472`
+- **Component**: `AdvancedTuningAccordion.kt`, `TuningFormControls.kt`, `AdvancedTuningScreen.kt`, `AdvancedTuningDialog.kt`, `res/values*/strings.xml`, `TranslationParityTest.kt`, `AdvancedTuningAccordionTest.kt`
+- **Jira**: `ATT-5875`
+- **Test Description**:
+  1. *9-Language Localization Audit (`TST-UI-472.1`, `TranslationParityTest.kt`)*:
+  • Verify zero missing entries across all 9 supported locales for `tuning_battery_saver_flat_short`, `tuning_battery_saver_steep_short`, `tuning_sensors_alt_short`, `tuning_sensors_speed_short`, `tuning_cluster_end_short`, `tuning_cluster_apex_short`, `tuning_cluster_dist_short`, and `tuning_cluster_alt_short`.
+  • Verify `cockpit_theme_description` does not contain `Control Tracking` in any locale and references localized tab name.
+  • Verify German `advanced_tuning_warning_title` is `Hinweis`, `tuning_cat_aftermath` is `Nachbereitung & Profil-Analytik`, and `tuning_sensor_search_active` is `Aktive`.
+  2. *Accordion Subtitle Formatter Contract Tests (`TST-UI-472.2`, `AdvancedTuningAccordionTest.kt`)*:
+  • Verify `formatBatterySaverSubtitle()` renders localized `Flach`/`Steil` when German context is provided and falls back to `Flat`/`Steep` without context.
+  • Verify `formatSensorsGpsSubtitle()` renders localized `Höhe`/`Geschw.` when German context is provided and falls back to `Alt`/`Speed` without context.
+  • Verify `formatClusterTuningSubtitle()` formats metric tolerances $\le 1000\text{ m}$ as integer meters (`200 m`, `400 m`) and uses localized labels (`Ende:`, `Apex:`, `Dist.:`, `Höhe:`).
+  3. *Advisory Banner Deduplication Contract Tests (`TST-UI-472.3`, `AdvancedTuningVisualContractTest.kt`)*:
+  • Verify `TuningWarningNotice` continues to bind `R.string.advanced_tuning_warning_title` and `R.string.advanced_tuning_warning_desc`.
+  4. *Tier 1 Targeted Unit Test Regression (`TST-UI-472.4`)*:
+  • Execute targeted test suites (`com.atrainingtracker.trainingtracker.ui.settings.tuning.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`) asserting 100% pass rate.
+
+
 
 
 

@@ -502,7 +502,7 @@
     <string name="prefs_battery_saver_title">Dynamisch scherm dimmen</string>
     <string name="prefs_battery_saver_summary">Past de schermhelderheid dynamisch aan op basis van helling en trainingszones</string>
     <string name="cockpit_theme_title">Cockpitthema (tijdens training)</string>
-    <string name="cockpit_theme_description">Geldt uitsluitend voor de telemetrie- en sensorweergaven tijdens actieve workouts. Het hoofdmenu en \'Control Tracking\' behouden het standaardthema.</string>
+    <string name="cockpit_theme_description">Geldt uitsluitend voor de telemetrie- en sensorweergaven tijdens actieve workouts. Het hoofdmenu en \'Start\' behouden het standaardthema.</string>
     <string name="cockpit_theme_system">Systeem</string>
     <string name="cockpit_theme_always_dark">Altijd donker</string>
     <string name="display_brightness_title">Schermhelderheid (tijdens training)</string>
@@ -1477,7 +1477,7 @@
     <string name="tuning_group_cockpit_tracking">Cockpit &amp; registratie</string>
     <string name="tuning_group_sensors_gps">Sensoren &amp; gps</string>
     <string name="tuning_group_analysis_models">Analyse &amp; modellen</string>
-    <string name="advanced_tuning_warning_title">Expertinstellingen</string>
+    <string name="advanced_tuning_warning_title">Let op</string>
     <string name="advanced_tuning_warning_desc">Pas hier geavanceerde lay-out-, model- en sensorparameters aan. U kunt te allen tijde de standaardwaarden herstellen met het herstelpictogram.</string>
     <string name="tuning_cat_battery_saver">AMOLED-batterijbesparing</string>
     <string name="tuning_cat_gps">GPS- &amp; locatiefiltering</string>
@@ -1569,6 +1569,14 @@
     <string name="tuning_matrix_col_details">Details</string>
     <string name="tuning_matrix_feature">Onderdeel</string>
     <string name="tuning_summary_matrix_format">%1$d/8 in lijst, %2$d/8 in details</string>
+    <string name="tuning_battery_saver_flat_short">Vlak</string>
+    <string name="tuning_battery_saver_steep_short">Steil</string>
+    <string name="tuning_sensors_alt_short">Hoogte</string>
+    <string name="tuning_sensors_speed_short">Snelheid</string>
+    <string name="tuning_cluster_end_short">Einde</string>
+    <string name="tuning_cluster_apex_short">Apex</string>
+    <string name="tuning_cluster_dist_short">Afst.</string>
+    <string name="tuning_cluster_alt_short">Hoogte</string>
     <string name="map_splitter_content_description">Verdeellijn voor kaart en telemetrie. Sleep verticaal om het formaat te wijzigen, dubbeltik om te herstellen.</string>
 
     <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->

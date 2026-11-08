@@ -502,7 +502,7 @@
     <string name="prefs_battery_saver_title">Oscuramento dinamico dello schermo</string>
     <string name="prefs_battery_saver_summary">Regola dinamicamente la luminosità dello schermo in base a pendenza e zone di allenamento</string>
     <string name="cockpit_theme_title">Tema del cockpit (durante l\'allenamento)</string>
-    <string name="cockpit_theme_description">Si applica esclusivamente alle visualizzazioni di telemetria e sensori durante gli allenamenti attivi. Il menu principale e \'Control Tracking\' mantengono il design standard.</string>
+    <string name="cockpit_theme_description">Si applica esclusivamente alle visualizzazioni di telemetria e sensori durante gli allenamenti attivi. Il menu principale e \'Avvia\' mantengono il design standard.</string>
     <string name="cockpit_theme_system">Sistema</string>
     <string name="cockpit_theme_always_dark">Sempre scuro</string>
     <string name="display_brightness_title">Luminosità schermo (durante l\'allenamento)</string>
@@ -1477,7 +1477,7 @@
     <string name="tuning_group_cockpit_tracking">Cruscotto e tracciamento</string>
     <string name="tuning_group_sensors_gps">Sensori e GPS</string>
     <string name="tuning_group_analysis_models">Analisi e modelli</string>
-    <string name="advanced_tuning_warning_title">Impostazioni avanzate</string>
+    <string name="advanced_tuning_warning_title">Avviso</string>
     <string name="advanced_tuning_warning_desc">Personalizza qui i parametri avanzati di layout, modelli e sensori. È possibile ripristinare i valori predefiniti in qualsiasi momento utilizzando l\'icona di ripristino.</string>
     <string name="tuning_cat_battery_saver">Risparmio batteria AMOLED</string>
     <string name="tuning_cat_gps">Filtraggio GPS e posizione</string>
@@ -1569,6 +1569,14 @@
     <string name="tuning_matrix_col_details">Dettagli</string>
     <string name="tuning_matrix_feature">Elemento</string>
     <string name="tuning_summary_matrix_format">%1$d/8 in elenco, %2$d/8 nei dettagli</string>
+    <string name="tuning_battery_saver_flat_short">Pianura</string>
+    <string name="tuning_battery_saver_steep_short">Ripido</string>
+    <string name="tuning_sensors_alt_short">Alt.</string>
+    <string name="tuning_sensors_speed_short">Vel.</string>
+    <string name="tuning_cluster_end_short">Fine</string>
+    <string name="tuning_cluster_apex_short">Apice</string>
+    <string name="tuning_cluster_dist_short">Dist.</string>
+    <string name="tuning_cluster_alt_short">Alt.</string>
     <string name="map_splitter_content_description">Barra di divisione mappa e telemetria. Trascina verticalmente per ridimensionare, tocca due volte per ripristinare.</string>
 
     <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->

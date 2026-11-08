@@ -502,7 +502,7 @@
     <string name="prefs_battery_saver_title">Atténuation dynamique de l\'écran</string>
     <string name="prefs_battery_saver_summary">Ajuste dynamiquement la luminosité de l\'écran en fonction de la pente et des zones d\'entraînement</string>
     <string name="cockpit_theme_title">Thème du cockpit (pendant l\'entraînement)</string>
-    <string name="cockpit_theme_description">S\'applique exclusivement aux affichages de télémétrie et de capteurs pendant les entraînements actifs. Le menu principal et \'Control Tracking\' conservent le thème standard.</string>
+    <string name="cockpit_theme_description">S\'applique exclusivement aux affichages de télémétrie et de capteurs pendant les entraînements actifs. Le menu principal et \'Démarrer\' conservent le thème standard.</string>
     <string name="cockpit_theme_system">Système</string>
     <string name="cockpit_theme_always_dark">Toujours sombre</string>
     <string name="display_brightness_title">Luminosité de l\'écran (pendant l\'entraînement)</string>
@@ -1478,7 +1478,7 @@
     <string name="tuning_group_cockpit_tracking">Poste de pilotage et suivi</string>
     <string name="tuning_group_sensors_gps">Capteurs et GPS</string>
     <string name="tuning_group_analysis_models">Analyse et modèles</string>
-    <string name="advanced_tuning_warning_title">Paramètres experts</string>
+    <string name="advanced_tuning_warning_title">Remarque</string>
     <string name="advanced_tuning_warning_desc">Personnalisez ici les paramètres avancés de mise en page, de modèles et de capteurs. Vous pouvez restaurer les valeurs par défaut à tout moment à l\'aide de l\'icône de réinitialisation.</string>
     <string name="tuning_cat_battery_saver">Économiseur de batterie AMOLED</string>
     <string name="tuning_cat_gps">Filtrage GPS et localisation</string>
@@ -1572,6 +1572,14 @@
     <string name="tuning_matrix_col_details">Détails</string>
     <string name="tuning_matrix_feature">Élément</string>
     <string name="tuning_summary_matrix_format">%1$d/8 en liste, %2$d/8 en détails</string>
+    <string name="tuning_battery_saver_flat_short">Plat</string>
+    <string name="tuning_battery_saver_steep_short">Raide</string>
+    <string name="tuning_sensors_alt_short">Alt.</string>
+    <string name="tuning_sensors_speed_short">Vitesse</string>
+    <string name="tuning_cluster_end_short">Fin</string>
+    <string name="tuning_cluster_apex_short">Sommet</string>
+    <string name="tuning_cluster_dist_short">Dist.</string>
+    <string name="tuning_cluster_alt_short">Alt.</string>
     <string name="map_splitter_content_description">Barre de séparation de la carte et de la télémétrie. Glissez verticalement pour redimensionner, appuyez deux fois pour réinitialiser.</string>
 
     <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->

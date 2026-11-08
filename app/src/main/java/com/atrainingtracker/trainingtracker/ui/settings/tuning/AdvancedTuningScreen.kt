@@ -263,7 +263,7 @@ fun AdvancedTuningScreen(
             // Section 3: AMOLED & Akkuschoner
             TuningAccordionSection(
                 icon = Icons.Default.BrightnessMedium, title = stringResource(R.string.tuning_cat_battery_saver),
-                subtitle = TuningSubtitleFormatter.formatBatterySaverSubtitle(fullDimFactor, mediumDimFactor, slopeFlat, slopeSteep),
+                subtitle = TuningSubtitleFormatter.formatBatterySaverSubtitle(fullDimFactor, mediumDimFactor, slopeFlat, slopeSteep, context),
                 isExpanded = isSectionExpanded(TuningSection.BATTERY_SAVER), onToggle = { toggleSection(TuningSection.BATTERY_SAVER) }
             ) {
                 AmoledBatterySaverSection(
@@ -297,7 +297,7 @@ fun AdvancedTuningScreen(
             // Section 5: Sensoren & GPS-Filterung
             TuningAccordionSection(
                 icon = Icons.Default.LocationOn, title = stringResource(R.string.tuning_cat_sensors_gps),
-                subtitle = TuningSubtitleFormatter.formatSensorsGpsSubtitle(gpsAccuracy, altitudeWindowSec, slopeMinSpeed),
+                subtitle = TuningSubtitleFormatter.formatSensorsGpsSubtitle(gpsAccuracy, altitudeWindowSec, slopeMinSpeed, context),
                 isExpanded = isSectionExpanded(TuningSection.SENSORS_GPS), onToggle = { toggleSection(TuningSection.SENSORS_GPS) }
             ) {
                 SensorsGpsFilterSection(

@@ -14231,6 +14231,53 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Zero regressions in landscape dual-pane tracking; 9-language localization parity strictly maintained; 100% clean-room test pass rate.
 
+### REQ-UI-472: Display & Expert Settings Terminology, Subtitle Localization & Warning Deduplication [Verified]
+- **Tests**: `TST-UI-472` | **Tickets**: `ATT-5875`
+- **Implementation**: `AdvancedTuningAccordion.kt`, `TuningFormControls.kt`, `AdvancedTuningScreen.kt`, `AdvancedTuningDialog.kt`, `res/values*/strings.xml`
+- **Rationale**: User walkthroughs and automated visual audits of Display and Expert Settings uncovered five localization, terminology, and layout defects: (1) internal developer jargon `'Control Tracking'` exposed in user-facing theme descriptions; (2) untranslated developer keyword `Aftermath` in German category headers; (3) redundant header duplication between TopAppBar (`Experten-Einstellungen`) and advisory card (`Experteneinstellungen`); (4) uninflected adjective `Aktiv` causing broken German declension in sensor search summary; and (5) hardcoded English summary fragments and inappropriate kilometer conversion (`0,200km`, `0,400km`) in accordion subtitles.
+- **Description**:
+1. *Display Settings Tab Terminology (`REQ-UI-472.1`)*:
+   • In `cockpit_theme_description`, the system SHALL refer to the localized tab title (`'Start'` in German/English/Dutch/Polish, `'Inicio'` in Spanish, `'Démarrer'` in French, `'Avvia'` in Italian, `'スタート'` in Japanese, `'Iniciar'` in Portuguese) and SHALL NOT leak the internal identifier `'Control Tracking'`.
+2. *German Category Terminology Parity (`REQ-UI-472.2`)*:
+   • In German `res/values-de/strings.xml`, `tuning_cat_aftermath` SHALL be localized as `Nachbereitung & Profil-Analytik`, eliminating developer jargon.
+3. *Advisory Banner Heading Deduplication (`REQ-UI-472.3`)*:
+   • `advanced_tuning_warning_title` SHALL be deduplicated from repeating the screen title, displaying a concise non-redundant advisory label across all 9 locales: German `Hinweis`, English `Notice`, Spanish `Aviso`, French `Remarque`, Italian `Avviso`, Japanese `注意`, Dutch `Let op`, Polish `Uwaga`, Portuguese `Aviso`.
+4. *Sensor Search Declension Grammar (`REQ-UI-472.4`)*:
+   • In German `res/values-de/strings.xml`, `tuning_sensor_search_active` SHALL be inflected as `Aktive`, yielding grammatically correct `Aktive Autosuche`.
+5. *Accordion Subtitle Localization & Metric Meter Formatting (`REQ-UI-472.5`)*:
+   • `formatBatterySaverSubtitle()` SHALL load localized slope labels (`Flach`/`Steil`) when `Context` is available.
+   • `formatSensorsGpsSubtitle()` SHALL load localized labels (`Höhe`/`Geschw.`) when `Context` is available.
+   • `formatClusterTuningSubtitle()` SHALL format metric tolerances $\le 1000\text{ m}$ as integer meters (`"${tolerance.roundToInt()} m"` instead of `0,xxxkm`) and bind localized labels (`Ende`/`Apex`/`Dist.`/`Höhe` in German).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-UI-472` refining `REQ-UI-122` (*Display Settings*) and `REQ-UI-222` (*Tuning Accordion*).
+2. *Historical Origin & Commit Trace*: `ATT-2746` (REQ-UI-122 Display settings), `ATT-2940` (REQ-UI-222 Tuning accordion), and `ATT-5819` (REQ-UI-469 TuningWarningNotice styling).
+3. *Root Reason for Existing Formulation*: Early rapid prototyping reused internal code identifiers and hardcoded English formatters; additions prioritized function over localization parity.
+4. *Preservation of Core Invariants*: 100% 9-language translation parity maintained; zero regressions in Settings persistence and reset mechanisms.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* German locale active,
+• *When* viewing Display settings `cockpit_theme_description`,
+• *Then* the text references `'Start'` and does not contain `'Control Tracking'`.
+• *Given* German locale active,
+• *When* viewing Expert Settings categories,
+• *Then* the aftermath section header displays `Nachbereitung & Profil-Analytik`.
+• *Given* the Expert Settings screen,
+• *When* viewing the top advisory warning card,
+• *Then* the title displays `Hinweis` (DE) / `Notice` (EN) without duplicating the TopAppBar title `Experten-Einstellungen`.
+• *Given* German locale active,
+• *When* viewing sensor search accordion summary,
+• *Then* the text displays `Aktive Autosuche`.
+• *Given* AMOLED battery saver and sensors accordion summaries with German locale,
+• *When* rendered with context,
+• *Then* the summaries display `Flach`/`Steil` and `Höhe`/`Geschw.`.
+• *Given* workout cluster tuning summary with metric tolerances $\le 1000\text{ m}$,
+• *When* rendered,
+• *Then* tolerances are formatted as integer meters (e.g. `200 m`, `400 m`) rather than fractional kilometers (`0,200km`, `0,400km`).
+
+**Invariants**: 100% 9-language localization parity across all resource files; zero regressions in preferences persistence or tuning computations; 100% clean-room test pass rate.
+
+
 
 
 

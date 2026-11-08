@@ -500,7 +500,7 @@
     <string name="prefs_battery_saver_title">動的画面減光</string>
     <string name="prefs_battery_saver_summary">勾配とトレーニングゾーンに基づいて画面の明るさを動的に調整します</string>
     <string name="cockpit_theme_title">コックピットテーマ（ワークアウト中）</string>
-    <string name="cockpit_theme_description">アクティブなワークアウト中のテレメトリとセンサー画面にのみ適用されます。メインメニューと「Control Tracking」は標準テーマのままです。</string>
+    <string name="cockpit_theme_description">アクティブなワークアウト中のテレメトリとセンサー画面にのみ適用されます。メインメニューと「スタート」は標準テーマのままです。</string>
     <string name="cockpit_theme_system">システム</string>
     <string name="cockpit_theme_always_dark">常にダーク</string>
     <string name="display_brightness_title">画面の明るさ（ワークアウト中）</string>
@@ -1457,7 +1457,7 @@
     <string name="tuning_group_cockpit_tracking">コックピットと記録</string>
     <string name="tuning_group_sensors_gps">センサーとGPS</string>
     <string name="tuning_group_analysis_models">分析とモデル</string>
-    <string name="advanced_tuning_warning_title">エキスパート設定</string>
+    <string name="advanced_tuning_warning_title">注意</string>
     <string name="advanced_tuning_warning_desc">ここでは高度なレイアウト、モデル、センサーのパラメータをカスタマイズできます。リセットアイコンを使用していつでも初期設定に戻すことができます。</string>
     <string name="tuning_cat_battery_saver">AMOLEDバッテリーセーバー</string>
     <string name="tuning_cat_gps">GPS・位置フィルタリング</string>
@@ -1549,6 +1549,14 @@
     <string name="tuning_matrix_col_details">詳細</string>
     <string name="tuning_matrix_feature">項目</string>
     <string name="tuning_summary_matrix_format">%1$d/8 一覧, %2$d/8 詳細</string>
+    <string name="tuning_battery_saver_flat_short">平坦</string>
+    <string name="tuning_battery_saver_steep_short">急勾配</string>
+    <string name="tuning_sensors_alt_short">高度</string>
+    <string name="tuning_sensors_speed_short">速度</string>
+    <string name="tuning_cluster_end_short">終了</string>
+    <string name="tuning_cluster_apex_short">頂点</string>
+    <string name="tuning_cluster_dist_short">距離</string>
+    <string name="tuning_cluster_alt_short">高度</string>
     <string name="map_splitter_content_description">マップとテレメトリの分割バー。上下にドラッグしてサイズ変更、ダブルタップでリセット。</string>
 
     <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->

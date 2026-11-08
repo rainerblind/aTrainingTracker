@@ -538,7 +538,7 @@
     <string name="prefs_battery_saver_title">Dynamisches Display-Dimming</string>
     <string name="prefs_battery_saver_summary">Passt die Bildschirmhelligkeit dynamisch an Steigung und Trainingszonen an</string>
     <string name="cockpit_theme_title">Cockpit-Design (während des Trainings)</string>
-    <string name="cockpit_theme_description">Gilt nur für die Daten- und Sensoranzeigen des aktiven Workouts. Das restliche Menü und \'Control Tracking\' behalten das Standarddesign.</string>
+    <string name="cockpit_theme_description">Gilt nur für die Daten- und Sensoranzeigen des aktiven Workouts. Das restliche Menü und \'Start\' behalten das Standarddesign.</string>
     <string name="cockpit_theme_system">Systemstandard</string>
     <string name="cockpit_theme_always_dark">Immer Dunkel</string>
     <string name="display_brightness_title">Display-Helligkeit (während des Trainings)</string>
@@ -1564,7 +1564,7 @@
     <string name="tuning_group_cockpit_tracking">Cockpit &amp; Aufzeichnung</string>
     <string name="tuning_group_sensors_gps">Sensoren &amp; GPS</string>
     <string name="tuning_group_analysis_models">Analyse &amp; Modelle</string>
-    <string name="advanced_tuning_warning_title">Experteneinstellungen</string>
+    <string name="advanced_tuning_warning_title">Hinweis</string>
     <string name="advanced_tuning_warning_desc">Hier können fortgeschrittene Layout-, Modell- und Sensor-Parameter angepasst werden. Über das Reset-Icon können die Einstellungen jederzeit auf die Standardwerte zurückgesetzt werden.</string>
     <string name="tuning_cat_battery_saver">AMOLED-Energiesparmodus</string>
     <string name="tuning_cat_gps">GPS- &amp; Standortfilterung</string>
@@ -1589,7 +1589,7 @@
     <string name="tuning_slope_min_speed_desc">Erforderliche Mindestgeschwindigkeit zur Berechnung der Echtzeit-Steigung.</string>
     <string name="tuning_show_ant_missing_adapter_warnings_title">Warnung bei fehlendem ANT+ Adapter</string>
     <string name="tuning_show_ant_missing_adapter_warnings_desc">Hinweisdialog anzeigen, wenn nach ANT+ Sensoren gesucht wird, aber kein Adapter erkannt wurde</string>
-    <string name="tuning_cat_aftermath">Aftermath &amp; Profil-Analytik</string>
+    <string name="tuning_cat_aftermath">Nachbereitung &amp; Profil-Analytik</string>
     <string name="tuning_profile_x_axis_title">Höhenprofil X-Achse</string>
     <string name="tuning_profile_x_axis_desc">Horizontale Achsenmetrik für Höhenprofildiagramme auswählen.</string>
     <string name="tuning_profile_x_axis_distance">Distanz</string>
@@ -1643,7 +1643,7 @@
     <string name="reset_to_defaults_success">Abstimmungseinstellungen auf Werkseinstellungen zurückgesetzt.</string>
     <string name="tuning_cat_sensor_search">Sensorsuche &amp; Verhalten</string>
     <string name="tuning_sensor_search_subtitle">%1$d Suchrunden, %2$s Autosuche</string>
-    <string name="tuning_sensor_search_active">Aktiv</string>
+    <string name="tuning_sensor_search_active">Aktive</string>
     <string name="tuning_sensor_search_disabled">Deaktiviert</string>
     <string name="tuning_cat_sensors_gps">Sensoren, GPS &amp; Filter</string>
     <string name="tuning_cat_workout_masks_cards">Trainingsliste &amp; Details</string>
@@ -1658,6 +1658,14 @@
     <string name="tuning_matrix_col_details">Details</string>
     <string name="tuning_matrix_feature">Bereich</string>
     <string name="tuning_summary_matrix_format">%1$d/8 Liste, %2$d/8 Details</string>
+    <string name="tuning_battery_saver_flat_short">Flach</string>
+    <string name="tuning_battery_saver_steep_short">Steil</string>
+    <string name="tuning_sensors_alt_short">Höhe</string>
+    <string name="tuning_sensors_speed_short">Geschw.</string>
+    <string name="tuning_cluster_end_short">Ende</string>
+    <string name="tuning_cluster_apex_short">Apex</string>
+    <string name="tuning_cluster_dist_short">Dist.</string>
+    <string name="tuning_cluster_alt_short">Höhe</string>
     <string name="map_splitter_content_description">Teiler für Karte und Telemetrie. Vertikal ziehen zum Anpassen der Größe, doppelt tippen zum Zurücksetzen.</string>
 
     <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->

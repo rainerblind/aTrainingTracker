@@ -646,7 +646,7 @@
     <string name="prefs_battery_saver_title">Dynamic Display Dimming</string>
     <string name="prefs_battery_saver_summary">Dynamically adjusts screen brightness based on grade and training zones</string>
     <string name="cockpit_theme_title">Cockpit Theme (During Workout)</string>
-    <string name="cockpit_theme_description">Applies exclusively to telemetry and sensor views during active workouts. The main menu and \'Control Tracking\' keep the standard theme.</string>
+    <string name="cockpit_theme_description">Applies exclusively to telemetry and sensor views during active workouts. The main menu and \'Start\' keep the standard theme.</string>
     <string name="cockpit_theme_system">System</string>
     <string name="cockpit_theme_always_dark">Always Dark</string>
     <string name="display_brightness_title">Display Brightness (During Workout)</string>
@@ -1676,7 +1676,7 @@
     <string name="tuning_group_cockpit_tracking">Cockpit &amp; Tracking</string>
     <string name="tuning_group_sensors_gps">Sensors &amp; GPS</string>
     <string name="tuning_group_analysis_models">Analysis &amp; Models</string>
-    <string name="advanced_tuning_warning_title">Expert Settings</string>
+    <string name="advanced_tuning_warning_title">Notice</string>
     <string name="advanced_tuning_warning_desc">Customize advanced layout, model, and sensor parameters here. You can restore factory defaults at any time using the reset icon.</string>
     <string name="tuning_cat_battery_saver">AMOLED Battery Saver</string>
     <string name="tuning_cat_gps">GPS &amp; Location Filtering</string>
@@ -1770,6 +1770,14 @@
     <string name="tuning_matrix_col_details">Details</string>
     <string name="tuning_matrix_feature">Feature</string>
     <string name="tuning_summary_matrix_format">%1$d/8 List, %2$d/8 Details</string>
+    <string name="tuning_battery_saver_flat_short">Flat</string>
+    <string name="tuning_battery_saver_steep_short">Steep</string>
+    <string name="tuning_sensors_alt_short">Alt</string>
+    <string name="tuning_sensors_speed_short">Speed</string>
+    <string name="tuning_cluster_end_short">End</string>
+    <string name="tuning_cluster_apex_short">Apex</string>
+    <string name="tuning_cluster_dist_short">Dist</string>
+    <string name="tuning_cluster_alt_short">Alt</string>
     <string name="map_splitter_content_description">Map and telemetry splitter bar. Drag vertically to resize, double-tap to reset.</string>
 
     <!-- Pick & Place Sensor Tile Reordering (ATT-1629 / REQ-UI-200) -->
