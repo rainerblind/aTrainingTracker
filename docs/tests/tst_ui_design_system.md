@@ -7772,6 +7772,22 @@
   4. *Tier 1 Targeted Unit Test Regression (`TST-UI-487.4`)*:
   • Execute targeted test suite (`com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
+### TST-UI-488: **Strava Settings Dialog Close Button Elimination & Sync Card Action Icons Test Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-488`
+- **Component**: `StravaSettingsDialog.kt`, `StravaSettingsDialogContractTest.kt`, `AppModalBottomSheet.kt`
+- **Jira**: `ATT-5854`
+- **Test Description**:
+  1. *Close Button Suppression Contract (`TST-UI-488.1`, `StravaSettingsDialogContractTest.kt`)*:
+  • Verify `StravaSettingsDialog` invokes `AppBottomSheetContent` with non-null `actions` and without overriding `showCloseButton = true`, guaranteeing automatic `✕` close button suppression.
+  2. *Sync Card Layout & Refresh Icon Affordance (`TST-UI-488.2`, `StravaSettingsDialogContractTest.kt`)*:
+  • Verify each of the three sync cards (*Equipment*, *Routes*, *Segments*) formats content in a horizontal `Row` containing a `weight(1f)` text column and trailing action slot.
+  • Verify trailing slot renders `Icons.Default.Refresh` with `size = 20.dp` and `colorScheme.primary` tint when idle.
+  3. *Syncing State Circular Progress Indicator (`TST-UI-488.3`, `StravaSettingsDialogContractTest.kt`)*:
+  • Verify when syncing state is true, the trailing action slot renders `CircularProgressIndicator` with `size = 20.dp` and `strokeWidth = 2.dp`.
+  4. *Tier 1 Targeted Unit Test Regression (`TST-UI-488.4`)*:
+  • Execute targeted test suite (`com.atrainingtracker.trainingtracker.ui.settings.strava.*`, `com.atrainingtracker.trainingtracker.ui.components.*`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+
 
 
 

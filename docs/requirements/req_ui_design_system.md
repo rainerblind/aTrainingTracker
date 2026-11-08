@@ -14429,5 +14429,37 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: SQLite database schema (`TrackingViewsDbHelper`), preference keys (`SP_UNITS`), enum names (`ActivityType.BIKE_POWER.name()`), and 100% test pass rate MUST NOT be broken.
 
+### REQ-UI-488: Strava Settings Dialog Close Button Elimination & Sync Card Action Icons [Verified]
+- **Tests**: `TST-UI-488` | **Tickets**: `ATT-5854`
+- **Implementation**: `StravaSettingsDialog.kt`, `AppModalBottomSheet.kt`
+- **Rationale**: In `StravaSettingsDialog.kt`, two visual and interaction defects were identified: (1) redundant top-right `✕` close button in the header alongside sticky bottom `Abbrechen` and `Speichern` action buttons (addressed via `AppBottomSheetContent`'s `showCloseButton = (actions == null)` default introduced in `REQ-UI-473`); and (2) manual sync cards (*Equipment*, *Routes*, *Segments*) were rendered as static text blocks in a bare `Column` without trailing action indicators or progress spinners, making interactive triggers look like read-only status displays.
+- **Description**:
+1. *Close Button Elimination (`REQ-UI-488.1`)*:
+   • In `StravaSettingsDialog.kt`, because `actions` is provided (`AppDialogActions.SaveCancel`), `AppBottomSheetContent` SHALL automatically suppress the top-right `✕` close button, leaving the bottom action row as the sole dismissal/confirmation mechanism.
+2. *Interactive Manual Sync Card Feedback (`REQ-UI-488.2`)*:
+   • The three manual sync `OutlinedCard`s (*Ausrüstung aktualisieren*, *Routen aktualisieren*, *Segmente aktualisieren*) SHALL format their content using a horizontal `Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp))`.
+   • The left child SHALL be a `Column(modifier = Modifier.weight(1f))` holding the title (`MaterialTheme.typography.titleMedium`) and the timestamp / status subtitle (`MaterialTheme.typography.bodySmall`, `onSurfaceVariant`).
+   • The right child SHALL be a trailing feedback container rendering `CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.primary)` when actively syncing (`isEquipmentSyncing`, `isRoutesSyncing`, or `isSegmentsSyncing` is `true`), or `Icon(imageVector = Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)` when idle.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Builds on `REQ-UI-473` (*Modal Bottom Sheet Close Button Elimination*); establishes `REQ-UI-488` (*Strava Settings Dialog Close Button Elimination & Sync Card Action Icons*).
+2. *Historical Origin & Commit Trace*: Commit `8058c49e` (ATT-1083 / `REQ-UI-149`) and commit `d92469ec` (ATT-5873).
+3. *Root Reason for Existing Formulation*: Manual sync cards initially rendered simple vertical text columns; reactive sync StateFlows only swapped subtitle text without visual icon affordances.
+4. *Preservation of Core Invariants*: Manual sync click callbacks, concurrency guards (`if (!isSyncing)`), background sync workers (`StravaEquipmentSyncWorker`, `StravaRoutesSyncWorker`, `StravaSegmentsSyncWorker`), and selective upload preferences remain 100% strictly intact.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `StravaSettingsDialog` open with bottom `Abbrechen` and `Speichern` buttons,
+• *When* inspecting the header row,
+• *Then* zero `✕` close buttons are rendered.
+• *Given* an idle Strava sync card (*Equipment*, *Routes*, or *Segments*),
+• *When* rendered in `StravaSettingsDialog`,
+• *Then* it displays `Icons.Default.Refresh` as a trailing action icon on the right.
+• *Given* an active synchronization operation in progress,
+• *When* rendered in `StravaSettingsDialog`,
+• *Then* the corresponding card displays a 20.dp `CircularProgressIndicator` instead of the refresh icon.
+
+**Invariants**: Strava OAuth 2.0 authentication, worker scheduling, repository sync algorithms, and 100% test pass rate MUST NOT be broken.
+
+
 
 
