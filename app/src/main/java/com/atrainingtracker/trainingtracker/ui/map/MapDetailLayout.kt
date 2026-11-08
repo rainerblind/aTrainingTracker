@@ -298,7 +298,7 @@ fun MapDetailLayout(
         }
     }
 
-    val mapBox: @Composable (Modifier) -> Unit = { boxModifier ->
+    val mapBox: @Composable (Modifier, Dp) -> Unit = { boxModifier, controlsTopOffsetDp ->
         Box(
             modifier = boxModifier.then(
                 if (onInteractiveCanvasTouch != null) {
@@ -355,43 +355,50 @@ fun MapDetailLayout(
                 content = mapContent
             )
 
-            overlay()
+            // FLOATING CONTROLS (Overlay & Share Button - REQ-UI-491 / ATT-5851: padded to avoid status bar collision)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = controlsTopOffsetDp)
+            ) {
+                overlay()
 
-            // SHARE BUTTON (ATT-5809: suppressed when workoutData != null, as WorkoutHeader hosts the uniform share action)
-            if (showFloatingShareButton) {
-                Surface(
-                    onClick = {
-                        if (!isSharing) {
-                            if (workoutData != null) {
-                                showShareModeSheet = true
-                            } else {
-                                isSharing = true
+                // SHARE BUTTON (ATT-5809: suppressed when workoutData != null, as WorkoutHeader hosts the uniform share action)
+                if (showFloatingShareButton) {
+                    Surface(
+                        onClick = {
+                            if (!isSharing) {
+                                if (workoutData != null) {
+                                    showShareModeSheet = true
+                                } else {
+                                    isSharing = true
+                                }
                             }
-                        }
-                    },
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(16.dp)
-                        .size(44.dp),
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay),
-                    shadowElevation = 6.dp,
-                    tonalElevation = 2.dp
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        if (isSharing) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.Share,
-                                contentDescription = stringResource(R.string.share),
-                                modifier = Modifier.size(22.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
+                        },
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(16.dp)
+                            .size(44.dp),
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = TTAlpha.Overlay),
+                        shadowElevation = 6.dp,
+                        tonalElevation = 2.dp
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            if (isSharing) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Share,
+                                    contentDescription = stringResource(R.string.share),
+                                    modifier = Modifier.size(22.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                     }
                 }
@@ -716,6 +723,13 @@ fun MapDetailLayout(
         val screenHeightPx = constraints.maxHeight
         val currentTopPaddingPx = (headerHeightPx + connection.appBarOffset).coerceAtLeast(0)
         val currentTopPaddingDp = with(density) { currentTopPaddingPx.toDp() }
+        val statusBarHeightPx = if (useStatusBarsPadding) WindowInsets.statusBars.getTop(density) else 0
+        val floatingControlsTopOffsetPx = MapDetailViewportMath.calculateFloatingControlsTopOffsetPx(
+            useStatusBarsPadding = useStatusBarsPadding,
+            statusBarHeightPx = statusBarHeightPx,
+            currentTopPaddingPx = currentTopPaddingPx
+        )
+        val floatingControlsTopOffsetDp = with(density) { floatingControlsTopOffsetPx.toDp() }
 
         // 1. UPPER METADATA & HEADER (Slotted - REQ-UI-245, REQ-UI-250 / ATT-2112, ATT-2150)
         Column(
@@ -816,7 +830,8 @@ fun MapDetailLayout(
                                 Modifier
                                     .weight(splitFraction)
                                     .heightIn(min = SplitPaneMath.MIN_MAP_HEIGHT)
-                                    .fillMaxWidth()
+                                    .fillMaxWidth(),
+                                floatingControlsTopOffsetDp
                             )
 
                             // INTERACTIVE DRAGGABLE SPLITTER (REQ-UI-223 / ATT-1890)
@@ -901,7 +916,8 @@ fun MapDetailLayout(
                             Modifier
                                 .weight(1f)
                                 .heightIn(min = SplitPaneMath.MIN_MAP_HEIGHT)
-                                .fillMaxWidth()
+                                .fillMaxWidth(),
+                            floatingControlsTopOffsetDp
                         )
 
                         Box(
@@ -955,7 +971,8 @@ fun MapDetailLayout(
             // When hasLowerSection is false (Heatmap / Empty map), or when showMap is false (LiveSegmentSheet / Trackless)
             if (showMap) {
                 mapBox(
-                    Modifier.fillMaxSize()
+                    Modifier.fillMaxSize(),
+                    floatingControlsTopOffsetDp
                 )
             } else if (!showMap && hasScrollableContent) {
                 Column(modifier = Modifier.fillMaxSize()) {

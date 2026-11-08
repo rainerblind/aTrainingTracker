@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.map
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -113,5 +114,54 @@ class MapDetailLayoutCollapsingHeaderContractTest {
             content.contains(".heightIn(max = maxMetadataHeightDp)") &&
                     content.contains(".verticalScroll(rememberScrollState())")
         )
+    }
+
+    @Test
+    fun testMapDetailLayout_computesDynamicStatusBarClearance() {
+        assertTrue("MapDetailLayout.kt must exist", mapDetailLayoutFile.exists())
+        val content = mapDetailLayoutFile.readText()
+
+        assertTrue(
+            "MapDetailLayout must compute statusBarHeightPx based on useStatusBarsPadding",
+            content.contains("val statusBarHeightPx = if (useStatusBarsPadding)") &&
+                    content.contains("WindowInsets.statusBars.getTop(density)")
+        )
+        assertTrue(
+            "MapDetailLayout must calculate dynamic floatingControlsTopOffset",
+            content.contains("floatingControlsTopOffset")
+        )
+    }
+
+    @Test
+    fun testMapDetailLayout_appliesTopOffsetToFloatingControlsContainer() {
+        assertTrue("MapDetailLayout.kt must exist", mapDetailLayoutFile.exists())
+        val content = mapDetailLayoutFile.readText()
+
+        assertTrue(
+            "mapBox must enclose overlay and Share button in a container with controlsTopOffset padding",
+            content.contains(".padding(top = controlsTopOffsetDp)")
+        )
+        assertTrue(
+            "mapBox must pass floatingControlsTopOffsetDp to its invocations",
+            content.contains("floatingControlsTopOffsetDp")
+        )
+    }
+
+    @Test
+    fun testMapDetailLayout_floatingControlsOffsetCalculationLogic() {
+        // When useStatusBarsPadding is false (bottom sheet), offset is always 0
+        assertEquals(0, MapDetailViewportMath.calculateFloatingControlsTopOffsetPx(false, 80, 0))
+        assertEquals(0, MapDetailViewportMath.calculateFloatingControlsTopOffsetPx(false, 80, 200))
+
+        // When useStatusBarsPadding is true:
+        // 1. Header fully expanded: currentTopPaddingPx (250) >= statusBarHeightPx (80) -> 0 extra offset
+        assertEquals(0, MapDetailViewportMath.calculateFloatingControlsTopOffsetPx(true, 80, 250))
+        assertEquals(0, MapDetailViewportMath.calculateFloatingControlsTopOffsetPx(true, 80, 80))
+
+        // 2. Header partially collapsed: currentTopPaddingPx (50) < statusBarHeightPx (80) -> 30px offset
+        assertEquals(30, MapDetailViewportMath.calculateFloatingControlsTopOffsetPx(true, 80, 50))
+
+        // 3. Header fully collapsed: currentTopPaddingPx == 0 -> full statusBarHeightPx (80px)
+        assertEquals(80, MapDetailViewportMath.calculateFloatingControlsTopOffsetPx(true, 80, 0))
     }
 }

@@ -7830,6 +7830,26 @@
   6. *Tier 1 Targeted Unit Test Regression (`TST-UI-490.6`)*:
   • Execute targeted test suite (`com.atrainingtracker.trainingtracker.ui.clusters.*`, `com.atrainingtracker.banalservice.sensor.formater.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
+### TST-UI-491: **MapDetailLayout Floating Controls Status Bar Clearance Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-491`
+- **Component**: `MapDetailLayout.kt`, `MapDetailLayoutCollapsingHeaderContractTest.kt`, `MapDetailLayoutTest.kt`
+- **Jira**: `ATT-5851`
+- **Test Description**:
+  1. *Dynamic Floating Controls Clearance Math Contract (`TST-UI-491.1`, `MapDetailLayoutCollapsingHeaderContractTest.kt`)*:
+  • Verify `MapDetailLayout.kt` computes `statusBarHeightPx` conditioned on `useStatusBarsPadding`.
+  • Verify dynamic `floatingControlsTopOffsetDp` computation `(statusBarHeightPx - currentTopPaddingPx).coerceAtLeast(0).toDp()`.
+  • Verify `floatingControlsTopOffsetDp` evaluates to `0.dp` when `useStatusBarsPadding == false`.
+  2. *Floating Controls Container Padding Contract (`TST-UI-491.2`, `MapDetailLayoutCollapsingHeaderContractTest.kt`)*:
+  • Verify `overlay()` and the floating Share button Surface inside `mapBox` are enclosed in a container applying `Modifier.fillMaxSize().padding(top = floatingControlsTopOffsetDp)`.
+  • Verify `ATrainingTrackerMap` remains outside this padding container, preserving edge-to-edge bleed.
+  3. *Unit Tests for Clearance Offset Calculations (`TST-UI-491.3`, `MapDetailLayoutCollapsingHeaderContractTest.kt`)*:
+  • Test offset calculation when header is fully expanded: `currentTopPaddingPx > statusBarHeightPx` yields `0.dp` additional offset.
+  • Test offset calculation when header is fully collapsed: `currentTopPaddingPx == 0` yields `statusBarHeightPx.toDp()`.
+  • Test offset calculation when `useStatusBarsPadding == false`: yields `0.dp` regardless of scroll offset.
+  4. *Tier 1 Targeted Unit Test Regression (`TST-UI-491.4`)*:
+  • Execute targeted test suite (`com.atrainingtracker.trainingtracker.ui.map.*`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+
 
 
 

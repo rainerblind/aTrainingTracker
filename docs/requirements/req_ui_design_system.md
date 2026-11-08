@@ -14537,6 +14537,37 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: 9-language localization parity across EN, DE, ES, FR, IT, JA, NL, PL, PT; cluster similarity calculations; database schema backward compatibility; 100% test pass rate.
 
+### REQ-UI-491: MapDetailLayout Status Bar Inset Clearance for Collapsed Header Floating Controls [Verified]
+- **Tests**: `TST-UI-491` | **Tickets**: `ATT-5851`
+- **Implementation**: `MapDetailLayout.kt`, `MapDetailLayoutCollapsingHeaderContractTest.kt`
+- **Rationale**: In full-screen detail views utilizing `MapDetailLayout` with `useStatusBarsPadding == true` (Favorite Routes, Route Details, Segment Details, Climbs), scrolling down collapses the top header offscreen, causing `currentTopPaddingPx` to reach `0`. While `ATrainingTrackerMap` bleeds edge-to-edge behind the status bar, top-aligned floating action buttons (the Share button and `overlay()` composables) translate into the system status bar, overlapping system status bar indicators (clock, 5G, battery).
+- **Description**:
+1. *Dynamic Floating Controls Top Inset (`REQ-UI-491.1`)*:
+   • In `MapDetailLayout.kt`, when `useStatusBarsPadding == true`, dynamic status bar clearance `floatingControlsTopOffsetDp = with(density) { (statusBarHeightPx - currentTopPaddingPx).coerceAtLeast(0).toDp() }` SHALL be computed, where `statusBarHeightPx = WindowInsets.statusBars.getTop(density)`.
+   • When `useStatusBarsPadding == false` (e.g. bottom sheets), `statusBarHeightPx` MUST evaluate to `0`, ensuring `floatingControlsTopOffsetDp == 0.dp`.
+2. *Floating Controls Container Clearance (`REQ-UI-491.2`)*:
+   • In `mapBox`, the slotted `overlay()` content and the floating Share button SHALL be wrapped in a container applying `Modifier.fillMaxSize().padding(top = floatingControlsTopOffsetDp)`.
+   • When the header collapses (`currentTopPaddingPx == 0`), floating action controls SHALL remain offset below the status bar (`statusBarHeight + defaultPadding`), while `ATrainingTrackerMap` continues to render edge-to-edge behind the translucent status bar.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-UI-250` (*Collapsing Upper Metadata Architecture & Map Squashing Prevention via NestedScroll in MapDetailLayout*).
+2. *Historical Origin & Commit Trace*: Introduced in `ATT-2150` (commit `e2b80b2d`) for collapsing header behavior in `MapDetailLayout`.
+3. *Root Reason for Existing Formulation*: `currentTopPaddingPx` was allowed to drop to `0` to give the map full-screen bleed, but overlooked status bar collision for top-aligned floating action buttons inside `mapBox`.
+4. *Preservation of Core Invariants*: Full-screen map bleed under the transparent status bar is 100% preserved; uncollapsed `16.dp` button spacing below header is preserved; bottom sheet layouts (`useStatusBarsPadding == false`) remain unaltered (`floatingControlsTopOffsetDp == 0.dp`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `MapDetailLayout` with `useStatusBarsPadding == true` and an expanded header,
+• *When* the header is fully expanded (`connection.appBarOffset == 0`),
+• *Then* `floatingControlsTopOffsetDp` evaluates to `0.dp`, preserving the default `16.dp` spacing below the header bottom edge.
+• *Given* `MapDetailLayout` with `useStatusBarsPadding == true`,
+• *When* the user scrolls and the header collapses completely (`connection.appBarOffset == -headerHeightPx`),
+• *Then* `floatingControlsTopOffsetDp` evaluates to `statusBarHeightDp`, preventing the Share button and overlay action buttons from colliding with Android system status bar icons.
+• *Given* `MapDetailLayout` configured as a bottom sheet (`useStatusBarsPadding == false`),
+• *When* scrolling or expanding,
+• *Then* `floatingControlsTopOffsetDp` remains strictly `0.dp`.
+
+**Invariants**: Edge-to-edge map bleed under status bar is preserved; no changes to public API of `MapDetailLayout`; bottom sheet mode behavior is preserved; 100% test pass rate.
+
 
 
 
