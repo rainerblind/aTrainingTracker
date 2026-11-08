@@ -2191,6 +2191,8 @@
     <string name="cd_copy_tab">タブをコピー</string>
     <string name="cd_move_tab_left">タブを左へ移動</string>
     <string name="cd_move_tab_right">タブを右へ移動</string>
+    <string name="cd_move_field">フィールドを移動</string>
+    <string name="cd_delete_field">フィールドを削除</string>
     <string name="copy_tab_title">タブをコピー</string>
     <string name="copy_tab_action">コピー</string>
     <string name="back">戻る</string>

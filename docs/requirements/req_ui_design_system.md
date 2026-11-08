@@ -14180,6 +14180,58 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Harmonized card layout and unboxed typography (REQ-UI-469); context menu options (Merge, Home, Delete); altitude edit validation and write-protection; 9-language localization parity with zero missing strings.
 
+### REQ-UI-471: Cockpit Edit-Mode Typography, Localization Parity & FAB Layout Polish [Verified]
+- **Tests**: `TST-UI-471` | **Tickets**: `ATT-5879`
+- **Implementation**: `SensorFieldView.kt`, `SensorGridScreen.kt`, `EditSensorFieldDialog.kt`, `TrackingTabsScreen.kt`, `TrackingTabPreviewHeader.kt`, `TrackingTabConfigHeader.kt`, `strings.xml`, `strings_filters.xml`
+- **Rationale**: During live UI walkthroughs of the tracking tabs editor, preview modes, and field configuration dialog, 6 distinct layout, localization, and FAB overlap issues were identified:
+1. *Edit-Mode Telemetry & Filter Typography (`REQ-UI-471.1`)*:
+• In `SensorFieldView.kt`, telemetry value text SHALL enforce `maxLines = 1` and apply responsive font size scaling or truncation prevention in edit mode to guarantee that 8-character strings (`18:29:15`) remain on a single line.
+• Top-right filter badge SHALL enforce `maxLines = 1` with localized unit `s` instead of `sec` (e.g. `2 s Ø`), preventing 3-line vertical stacks.
+2. *German Localization & Action Parity (`REQ-UI-471.2`)*:
+• Active duration field label SHALL be capitalized as `Aktiv` (`R.string.time_active_short`).
+• German lap telemetry labels SHALL be localized: `Rundenzeit` (`time_lap`), `Runde` (`time_lap_short`), `Rundennummer` (`lap_number`), `Runde Nr.` (`lap_number_short`), `Rundendistanz` (`distance_lap`), `Dist. Runde` (`distance_lap_short`).
+• Tracking editor bottom toggle rows SHALL display `Live-Segmente` (`config_tracking__showLiveSegments`) and `Runden-Button` (`config_tracking__showLapButton`).
+• Editor header checkmark button SHALL display localized `Fertig` (`R.string.Done`).
+• Field edit actions SHALL use localized content descriptions `cd_move_field` ("Move field" / "Feld verschieben") and `cd_delete_field` ("Delete field" / "Feld löschen") across all 9 supported locales.
+3. *Field Configuration Dialog Polish (`REQ-UI-471.3`)*:
+• In `EditSensorFieldDialog.kt`, the dialog title SHALL use sentence-case `Anzeige anpassen` (`R.string.edit_field`).
+• Category breadcrumb inside the top metric selector card SHALL support `maxLines = 2` to prevent truncation.
+• The `Relative Breite` header SHALL be start-aligned (`Modifier.fillMaxWidth()`) with the `1x`, `2x`, `3x` chips below it.
+• The smoothing selector button SHALL render a leading `Icons.Default.Tune` icon, trailing dropdown chevron, and localized text (`2 s gleitender Durchschnitt`).
+4. *Bicycle Bell FAB & Elevation Profile Clearance (`REQ-UI-471.4`)*:
+• On `Karte` and cockpit tabs, when `showBikeBell` or `showLapButton` is enabled and docked at the bottom in portrait mode, `ElevationProfile` in `SensorGridScreen.kt` SHALL allocate adequate bottom clearance (e.g. `68.dp` bottom padding) so floating action buttons do not obscure the elevation profile placeholder banner or canvas text.
+5. *Sport Context in Tab Headers (`REQ-UI-471.5`)*:
+• `TrackingTabPreviewHeader` and `TrackingTabConfigHeader` SHALL accept and display the active sport discipline name (e.g. `Radeln`) as a context label above the tab title, ensuring continuous athletic context during configuration.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new `REQ-UI-471` refining `REQ-TRK-046` (*Cockpit Tile Typography*), `REQ-UI-395` (*Sensor Picker Dialog*), `REQ-UI-421` (*Bike Bell Button*), `REQ-UI-435` (*Tracking Tabs Configuration*), and `REQ-UI-437` (*Relative Width Chips*).
+2. *Historical Origin & Commit Trace*: `4dc064a684` (ATT-52, bell button alignment), `ATT-3852` (REQ-UI-395 sensor picker), `ATT-5192` (REQ-UI-437 relative width chips), `ATT-4371` / `ATT-4447` (REQ-UI-421 Bike Bell Button).
+3. *Root Reason for Existing Formulation*: Rapid iterative additions left English strings in localized XMLs, unconstrained line wrapping in reduced-width edit cards, and lacked bottom clearance between floating action buttons and docked elevation profile.
+4. *Preservation of Core Invariants*: 100% test pass rate; zero layout oscillation; 9-language translation parity maintained.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a 2-column sensor grid in edit mode with `Uhrzeit` (`18:29:15`),
+• *When* rendered,
+• *Then* the time value remains strictly on a single line (`maxLines = 1`) without vertical wrapping.
+• *Given* a sensor field with moving average smoothing (e.g. speed),
+• *When* rendered in edit mode,
+• *Then* the filter badge displays `2 s Ø` on a single line without wrapping into 3 lines.
+• *Given* the German locale,
+• *When* viewing active duration and lap fields,
+• *Then* labels display `Aktiv`, `Runde`, `Runde Nr.`, and `Dist. Runde`, and editor toggles display `Live-Segmente` and `Runden-Button`.
+• *Given* the `EditSensorFieldDialog`,
+• *When* opened,
+• *Then* the title displays `Anzeige anpassen`, `Relative Breite` is start-aligned, category breadcrumb does not truncate, and the smoothing button includes leading tune icon and trailing chevron.
+• *Given* the `Karte` tab in portrait mode with `showBikeBell = true` and `showElevationProfile = true`,
+• *When* rendered,
+• *Then* the bicycle bell FAB does not obscure the elevation profile empty state placeholder banner.
+• *Given* `TrackingTabPreviewHeader` and `TrackingTabConfigHeader`,
+• *When* displayed,
+• *Then* the active sport type name (e.g. `Radeln`) is rendered as a context label.
+
+**Invariants**: Zero regressions in landscape dual-pane tracking; 9-language localization parity strictly maintained; 100% clean-room test pass rate.
+
+
 
 
 

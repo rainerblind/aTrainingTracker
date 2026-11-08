@@ -7660,6 +7660,30 @@
   6. *Tier 1 Targeted Regression Execution (`TST-UI-470.6`)*:
   • Execute targeted unit test suites (`com.atrainingtracker.trainingtracker.ui.knownlocations.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
+### TST-UI-471: **Cockpit Edit-Mode Typography, Localization Parity & FAB Layout Polish Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-471`
+- **Component**: `SensorFieldView.kt`, `SensorGridScreen.kt`, `EditSensorFieldDialog.kt`, `TrackingTabsScreen.kt`, `TrackingTabPreviewHeader.kt`, `TrackingTabConfigHeader.kt`, `FilterType.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-5879`
+- **Test Description**:
+  1. *Edit-Mode Typography & Single-Line Constraints (`TST-UI-471.1`, `SensorFieldViewTest.kt`)*:
+  • Verify `SensorFieldView` renders 8-character time values (`18:29:15`) on a single line (`maxLines = 1`) without multi-line wrapping in edit mode.
+  • Verify filter badges with `MOVING_AVERAGE_TIME` render single-line `2 s Ø` with SI unit `s` instead of `sec` and do not wrap into 3 vertical lines.
+  2. *9-Language Localization Audit (`TST-UI-471.2`, `TranslationParityTest.kt`)*:
+  • Verify zero missing entries across all 9 locales for `cd_move_field` and `cd_delete_field`.
+  • Verify German strings: `time_active_short` = "Aktiv", `time_lap_short` = "Runde", `time_lap` = "Rundenzeit", `lap_number_short` = "Runde Nr.", `distance_lap_short` = "Dist. Runde", `config_tracking__showLiveSegments` = "Live-Segmente", `config_tracking__showLapButton` = "Runden-Button", `edit_field` = "Anzeige anpassen", `Done` = "Fertig", `filter_moving_average` = "gleitender Durchschnitt", and `units_seconds` = "s".
+  3. *Field Configuration Dialog Polish Contract Tests (`TST-UI-471.3`, `EditSensorFieldDialogTest.kt`)*:
+  • Verify `EditSensorFieldDialog` title is sentence-case `Anzeige anpassen`.
+  • Verify `Relative Breite` header uses `Modifier.fillMaxWidth()` aligning with left-aligned chips.
+  • Verify category breadcrumb supports `maxLines = 2` without ellipsis truncation.
+  • Verify smoothing selector button renders leading `Icons.Default.Tune` icon, trailing chevron, and formatted summary.
+  4. *Elevation Profile Bottom Clearance for FAB Overlay (`TST-UI-471.4`, `SensorGridScreenTest.kt`)*:
+  • Verify `ElevationProfile` on `Karte` tab applies bottom clearance (68dp) in portrait mode when `showBikeBell` or `showLapButton` is enabled, preventing bell FAB overlap on placeholder text.
+  5. *Header Sport Context Verification (`TST-UI-471.5`, `TrackingTabHeaderTest.kt`)*:
+  • Verify `TrackingTabPreviewHeader` and `TrackingTabConfigHeader` accept `sportName` and render it above the tab title.
+  6. *Tier 1 Targeted Unit Test Regression (`TST-UI-471.6`)*:
+  • Execute targeted test suites (`com.atrainingtracker.trainingtracker.ui.tracking.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+
 
 
 

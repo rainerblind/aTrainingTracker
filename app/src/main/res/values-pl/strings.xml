@@ -2213,6 +2213,8 @@
     <string name="cd_copy_tab">Kopiuj kartę</string>
     <string name="cd_move_tab_left">Przesuń kartę w lewo</string>
     <string name="cd_move_tab_right">Przesuń kartę w prawo</string>
+    <string name="cd_move_field">Przesuń pole</string>
+    <string name="cd_delete_field">Usuń pole</string>
     <string name="copy_tab_title">Kopiuj kartę</string>
     <string name="copy_tab_action">Kopiuj</string>
     <string name="back">Wstecz</string>

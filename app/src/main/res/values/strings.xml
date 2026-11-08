@@ -738,7 +738,7 @@
     <string name="bestSensor">best</string>
     <string name="format_sensorType_and_DeviceName" translatable="false">%1$s (%2$s):</string>
 
-    <string name="units_seconds" translatable="false">sec</string>
+    <string name="units_seconds" translatable="false">s</string>
     <string name="units_seconds_long">seconds</string>
     <string name="units_minutes" translatable="false">min</string>
     <string name="units_minutes_long">minutes</string>
@@ -2412,6 +2412,8 @@
     <string name="cd_copy_tab">Copy tab</string>
     <string name="cd_move_tab_left">Move tab left</string>
     <string name="cd_move_tab_right">Move tab right</string>
+    <string name="cd_move_field">Move field</string>
+    <string name="cd_delete_field">Delete field</string>
     <string name="copy_tab_title">Copy Tab</string>
     <string name="copy_tab_action">Copy</string>
     <string name="back">Back</string>

@@ -2211,6 +2211,8 @@
     <string name="cd_copy_tab">Tabblad kopiëren</string>
     <string name="cd_move_tab_left">Tabblad naar links verplaatsen</string>
     <string name="cd_move_tab_right">Tabblad naar rechts verplaatsen</string>
+    <string name="cd_move_field">Veld verplaatsen</string>
+    <string name="cd_delete_field">Veld verwijderen</string>
     <string name="copy_tab_title">Tabblad kopiëren</string>
     <string name="copy_tab_action">Kopiëren</string>
     <string name="back">Terug</string>

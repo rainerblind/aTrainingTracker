@@ -175,12 +175,12 @@
     <string name="descent_short">Runter</string>
     <string name="distance">Distanz</string>
     <string name="distance_short">Dist.</string>
-    <string name="distance_lap">Distanz Lap</string>
-    <string name="distance_lap_short">Dist. Lap</string>
+    <string name="distance_lap">Rundendistanz</string>
+    <string name="distance_lap_short">Dist. Runde</string>
     <string name="heart_rate">Herzfrequenz</string>
     <string name="heart_rate_short">HF</string>
-    <string name="lap_number">Lap Nummer</string>
-    <string name="lap_number_short">Lap Nr</string>
+    <string name="lap_number">Rundennummer</string>
+    <string name="lap_number_short">Runde Nr.</string>
     <string name="line_distance">Luftlinie</string>
     <string name="line_distance_short">Luftlinie</string>
     <string name="pace">Tempo</string>
@@ -208,9 +208,9 @@
     <string name="temperature_min">Minimale Temperatur</string>
     <string name="temperature_min_short">Min Temp</string>
     <string name="time_active">Zeit aktiv</string>
-    <string name="time_active_short">aktiv</string>
-    <string name="time_lap">Zeit Lap</string>
-    <string name="time_lap_short">Lap</string>
+    <string name="time_active_short">Aktiv</string>
+    <string name="time_lap">Rundenzeit</string>
+    <string name="time_lap_short">Runde</string>
     <string name="time_of_day">Uhrzeit</string>
     <string name="time_of_day_short">Uhrzeit</string>
     <string name="time_total">Zeit gesamt</string>
@@ -526,7 +526,7 @@
     <string name="TODO">Beweise es!</string>
     <string name="tomorrow">morgen?</string>
     <string name="updating_starred_segments_failed">"Updaten der gekennzeichneten Segmente ist fehlgeschlagen: "</string>
-    <string name="edit_field">Anzeige Anpassen</string>
+    <string name="edit_field">Anzeige anpassen</string>
     <string name="ANT_Installation">ANT+ Installation</string>
     <string name="install">installieren</string>
     <string name="do_not_check_again">nicht mehr überprüfen</string>
@@ -628,8 +628,8 @@
     <string name="notification_channel_name__export">Export</string>
     <string name="notification_channel_description__export">Benachrichtigungen während dem Export von Einheiten</string>
     <string name="config_tracking__show_map">Karte</string>
-    <string name="config_tracking__showLiveSegments">Live Segments</string>
-    <string name="config_tracking__showLapButton">Lap Knopf</string>
+    <string name="config_tracking__showLiveSegments">Live-Segmente</string>
+    <string name="config_tracking__showLapButton">Runden-Button</string>
     <string name="config_tracking__showBikeBell">Fahrradklingel anzeigen</string>
     <string name="config_tracking__showBikeBell_subtitle">Klingel-Button tippen/halten oder doppelt auf das Cockpit tippen</string>
     <string name="config_tracking__show_navigation_hints">Abbiegehinweise</string>
@@ -974,7 +974,7 @@
     <string name="ant_missing_dependency_title">Fehlende Abhängigkeit</string>
     <string name="ant_missing_dependency_message">Die notwendige Application\n\"%1$s\"\n ist nicht installiert.  Sollen wir im Play Store nach dieser suchen?</string>
     <string name="go_to_store">Zum Play Store</string>
-    <string name="Done">Done</string>
+    <string name="Done">Fertig</string>
 
     <!-- Segment / Route / Workout Sorting -->
     <string name="sort_closest">Entfernung</string>
@@ -2297,6 +2297,8 @@
     <string name="cd_copy_tab">Tab kopieren</string>
     <string name="cd_move_tab_left">Tab nach links verschieben</string>
     <string name="cd_move_tab_right">Tab nach rechts verschieben</string>
+    <string name="cd_move_field">Feld verschieben</string>
+    <string name="cd_delete_field">Feld löschen</string>
     <string name="copy_tab_title">Tab kopieren</string>
     <string name="copy_tab_action">Kopieren</string>
     <string name="back">Zurück</string>

@@ -2210,6 +2210,8 @@
     <string name="cd_copy_tab">Copiar separador</string>
     <string name="cd_move_tab_left">Mover separador para a esquerda</string>
     <string name="cd_move_tab_right">Mover separador para a direita</string>
+    <string name="cd_move_field">Mover campo</string>
+    <string name="cd_delete_field">Excluir campo</string>
     <string name="copy_tab_title">Copiar separador</string>
     <string name="copy_tab_action">Copiar</string>
     <string name="back">Voltar</string>

@@ -2212,6 +2212,8 @@
     <string name="cd_copy_tab">Copia scheda</string>
     <string name="cd_move_tab_left">Sposta scheda a sinistra</string>
     <string name="cd_move_tab_right">Sposta scheda a destra</string>
+    <string name="cd_move_field">Sposta campo</string>
+    <string name="cd_delete_field">Elimina campo</string>
     <string name="copy_tab_title">Copia scheda</string>
     <string name="copy_tab_action">Copia</string>
     <string name="back">Indietro</string>

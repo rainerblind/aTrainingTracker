@@ -227,12 +227,24 @@ fun SensorFieldView(
 
     val cockpitTypography = LocalCockpitTypography.current
     // Determine text styles based on the size parameter and configured cockpit typography.
-    val valueStyle = getSensorValueTextStyle(
+    val baseValueStyle = getSensorValueTextStyle(
         viewSize = fieldState.viewSize,
         typography = MaterialTheme.typography,
         fontFamily = cockpitTypography.resolvedFontFamily,
         fontWeight = cockpitTypography.weight.asFontWeight()
     )
+    val valueStyle = remember(baseValueStyle, screenMode, fieldState.value.length) {
+        if (screenMode == ScreenMode.CONFIGURATION && fieldState.value.length >= 6) {
+            val scaleFactor = when {
+                fieldState.value.length >= 8 -> 0.72f
+                fieldState.value.length >= 7 -> 0.80f
+                else -> 0.88f
+            }
+            baseValueStyle.copy(fontSize = baseValueStyle.fontSize * scaleFactor)
+        } else {
+            baseValueStyle
+        }
+    }
     val unitStyle = getSensorUnitTextStyle(
         viewSize = fieldState.viewSize,
         typography = MaterialTheme.typography,
@@ -317,16 +329,23 @@ fun SensorFieldView(
                     Text(
                         text = fieldState.label,
                         style = labelStyle,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        maxLines = 1,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
-                    // Filter info on the top-right
-                    Text(
-                        text = fieldState.filterDescription,
-                        style = filterStyle,
-                        fontStyle = FontStyle.Italic,
-                        textAlign = TextAlign.End,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    if (fieldState.filterDescription.isNotEmpty()) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        // Filter info on the top-right
+                        Text(
+                            text = fieldState.filterDescription,
+                            style = filterStyle,
+                            fontStyle = FontStyle.Italic,
+                            textAlign = TextAlign.End,
+                            maxLines = 1,
+                            softWrap = false,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
 
                 // Centered telemetry content column (REQ-UI-438.3)
@@ -352,6 +371,8 @@ fun SensorFieldView(
                             Text(
                                 text = fieldState.value,
                                 style = valueStyle,
+                                maxLines = 1,
+                                softWrap = false,
                                 color = if (fieldState.zoneColor != Color.Transparent && fieldState.zoneDisplayOptions.showTextColor) {
                                     fieldState.zoneColor
                                 } else {
@@ -419,7 +440,7 @@ fun SensorFieldView(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.SwapHoriz,
-                                contentDescription = "Move Field",
+                                contentDescription = stringResource(R.string.cd_move_field),
                                 tint = if (isSelectedForMove) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -430,7 +451,7 @@ fun SensorFieldView(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
-                                contentDescription = "Delete Field", // For accessibility
+                                contentDescription = stringResource(R.string.cd_delete_field), // For accessibility
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }

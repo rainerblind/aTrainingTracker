@@ -2211,6 +2211,8 @@
     <string name="cd_copy_tab">Copier l\'onglet</string>
     <string name="cd_move_tab_left">Déplacer l\'onglet vers la gauche</string>
     <string name="cd_move_tab_right">Déplacer l\'onglet vers la droite</string>
+    <string name="cd_move_field">Déplacer le champ</string>
+    <string name="cd_delete_field">Supprimer le champ</string>
     <string name="copy_tab_title">Copier l\'onglet</string>
     <string name="copy_tab_action">Copier</string>
     <string name="back">Retour</string>

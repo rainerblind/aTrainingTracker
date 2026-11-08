@@ -761,10 +761,12 @@ fun TrackingTabsScreen(
                                 ScreenMode.CONFIGURATION -> {
                                     // -- The full configuration screen for editing the name of the tab, checkboxes for lap button, map, and live segments, as well as the add/delete buttons
                                     if (currentViewInfo != null) {
+                                        val sportName = stringResource(id = activityType.titleId)
                                         TrackingTabConfigHeader(
                                             viewInfo = currentViewInfo,
                                             tabIndex = pagerState.currentPage,
                                             tabCount = trackingViews.size,
+                                            sportName = sportName,
                                             onUpdateTabName = { id, name -> trackingTabsViewModel.onUpdateTabName(id, name) },
                                             onAddTabRelative = { id, after -> trackingTabsViewModel.onAddTabRelative(id, after) },
                                             onDeleteTab = { id -> trackingTabsViewModel.onDeleteTab(id) },
@@ -777,10 +779,12 @@ fun TrackingTabsScreen(
 
                                 ScreenMode.PREVIEW -> {
                                     if (currentViewInfo != null) {
+                                        val sportName = stringResource(id = activityType.titleId)
                                         TrackingTabPreviewHeader(
                                             viewInfo = currentViewInfo,
                                             onToggleMode = { trackingTabsViewModel.toggleScreenMode() },
-                                            onExitConfig = { trackingTabsViewModel.exitConfiguration() }
+                                            onExitConfig = { trackingTabsViewModel.exitConfiguration() },
+                                            sportName = sportName
                                         )
                                     }
                                 }

@@ -68,6 +68,7 @@ fun TrackingTabPreviewHeader(
     viewInfo: TrackingViewInfo,
     onToggleMode: () -> Unit,
     onExitConfig: () -> Unit = {},
+    sportName: String = "",
 ) {
     Surface(
         color = Color.Transparent,
@@ -84,11 +85,19 @@ fun TrackingTabPreviewHeader(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
-                text = viewInfo.name.ifEmpty { stringResource(R.string.app_name) },
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.weight(1f)
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                if (sportName.isNotEmpty()) {
+                    Text(
+                        text = sportName,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                Text(
+                    text = viewInfo.name.ifEmpty { stringResource(R.string.app_name) },
+                    style = MaterialTheme.typography.titleLarge
+                )
+            }
 
             // EDIT BUTTON
             IconButton(onClick = onToggleMode) {
