@@ -14688,6 +14688,49 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: `ATT-5853` top padding and climb badge clearance invariants preserved; full-screen elevation detail inspection in `MapDetailLayout` preserved; authentic elevation profiles render without regression; 100% test pass rate.
 
+### REQ-UI-495: AthleteProfileScreen Filter Pill Layout, Decimal Localization, PMC Card Heights & Time-Range Selector [Verified]
+- **Tests**: `TST-UI-495` | **Tickets**: `ATT-5844`
+- **Implementation**: `AthleteProfileScreen.kt`, `AthleteMetricsPlotMath.kt`, `AthleteProfileViewModel.kt`
+- **Rationale**: In `AthleteProfileScreen.kt`, live UI audits (`screen_02_profil_zonen.png`, `screen_08_profil_pmc.png`) identified 4 presentation, layout, and localization defects: (1) filter pills in Verlauf and Messwert-Historie use uniform `weight(1f)`, truncating longer labels `Gewicht` and `Ruhe-HF` to `Gewi...` and `Ruhe...`; (2) hardcoded `Locale.US` decimal formatting renders dots (e.g. `80.0 kg`, `3.44 W/kg`, `2.4`, `0.8`, `+1.5`, `0.34`) inconsistent with the German active locale and adjacent localized strings (`-0,4/Wo.`); (3) unequal card heights in the PMC stat badge row because TSB contains 3 text lines while CTL/ATL contain 2 lines; and (4) absence of a time-range selector on `PerformanceManagementChartCard`, plotting all 10 historical years and compressing recent training curves into an unreadable sliver.
+- **Description**:
+1. *Proportional Filter Pill Width Allocation & Non-Truncation (`REQ-UI-495.1`)*:
+   • In `AthleteProfileScreen.kt`, `CompactSelectorPill` items in both the *Verlauf* metric row and the *Messwert-Historie* filter row SHALL be weighted proportionally based on label text length (`Modifier.weight(label.length.coerceIn(3, 9).toFloat())`).
+   • `CompactSelectorPill` horizontal padding SHALL be bounded to `3.dp` to ensure all 6 pills (`Gewicht`, `Ruhe-HF`, `FTP`, `CP`, `W'`, `W/kg`) fit on a single line on standard mobile screen widths ($\ge 360\,\text{dp}$) without ellipsis (`...`) truncation.
+2. *Active Locale Decimal Formatting (`REQ-UI-495.2`)*:
+   • In `AthleteMetricsPlotMath.kt`, format functions (`formatWeightValue`, `formatWPrimeValue`, `formatPowerToWeightValue`) SHALL default `locale` to `Locale.getDefault()`.
+   • In `AthleteProfileScreen.kt`, value formatting across chart Y-axis ticks, estimate dialogs, and PMC stat badges (`CTL`, `ATL`, `TSB`, `ACWR`) SHALL format decimals according to `Locale.getDefault()`.
+   • Canonical input parsing in `parseToCanonicalValue` SHALL preserve comma/dot-agnostic tolerance (`replace(',', '.')`).
+3. *Uniform PMC Stat Badge Row Heights (`REQ-UI-495.3`)*:
+   • In `AthleteProfileScreen.kt`, enclosing `Row` layouts for PMC stat cards SHALL specify `Modifier.height(IntrinsicSize.Min)` per Design Guideline 5.14.
+   • `PmcStatBadge` SHALL apply `Modifier.fillMaxHeight()` to ensure all cards in the row (`CTL | ATL | TSB` in Row 1; `ACWR | Ramp Rate` in Row 2) match the height of the tallest card without vertical asymmetry.
+4. *Dedicated PMC Chart Time-Range Selector (`REQ-UI-495.4`)*:
+   • `AthleteProfileViewModel` and `AthleteProfileUiState` SHALL provide independent PMC time-range state (`selectedPmcTimeRange: MetricsTimeRange`), defaulting to `MetricsTimeRange.SIX_MONTHS`.
+   • `PerformanceManagementChartCard` SHALL render a dedicated time-range selector row (`1M | 3M | 6M | 1J | Alle`) driving `onSelectPmcTimeRange(range)`.
+   • Physiological CTL/ATL/TSB EWMA calculation SHALL retain full multi-year history, and time-range filtering via `filterPmcPointsByTimeRange` SHALL be executed strictly post-calculation.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-UI-391.5` (*Dedicated AthleteProfileScreen UI, Locale Date Formatting & 9-Language Parity*) and `REQ-UI-401.3` (*PMC UI & Charting*).
+2. *Historical Origin & Commit Trace*: Introduced in `ATT-3704` (commit `b660ef43`) and `ATT-3859` (commit `e5d9225e`).
+3. *Root Reason for Existing Formulation*: Uniform `Modifier.weight(1f)` was a naive placeholder assuming short 2-3 char abbreviations; `Locale.US` was hardcoded during initial prototyping without auditing German decimal separators; PMC was initially launched without a dedicated range selector.
+4. *Preservation of Core Invariants*: Metric input parsing preserves comma and dot tolerance (`replace(',', '.')`); EWMA continues calculating over full history prior to range windowing; `IntrinsicSize.Min` protects against `Constraints.Infinity` crash in scroll containers.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the *Verlauf* metric selector and *Messwert-Historie* filter rows on a $\ge 360\,\text{dp}$ screen,
+• *When* rendered in German locale (`Gewicht`, `Ruhe-HF`),
+• *Then* all 6 filter pills display complete text on a single line without ellipsis (`...`) truncation.
+• *Given* an active German locale (`de_DE`),
+• *When* weight, W/kg, W', Y-axis ticks, and PMC badges (CTL, ATL, TSB, ACWR) are formatted,
+• *Then* numbers display comma decimal separators (e.g. `80,0 kg`, `3,44 W/kg`, `2,4`, `0,8`, `+1,5`, `0,34`).
+• *Given* the PMC stat badges in `PerformanceManagementChartCard`,
+• *When* rendered in `Row(Modifier.height(IntrinsicSize.Min))` with `PmcStatBadge(Modifier.fillMaxHeight())`,
+• *Then* all badges within Row 1 (CTL, ATL, TSB) and Row 2 (ACWR, Ramp Rate) have matching heights.
+• *Given* `PerformanceManagementChartCard` displayed with default `6M` time range,
+• *When* the user taps `1M`, `3M`, `1J`, or `Alle`,
+• *Then* the displayed PMC curve updates to the chosen date window while CTL, ATL, and TSB values retain full-history EWMA mathematical accuracy.
+
+**Invariants**: `Constraints.Infinity` crash prevention per Design Guideline 5.14 via `IntrinsicSize.Min`; complete historical EWMA integrity for CTL/ATL/TSB (slicing post-EWMA); metric input parsing supports both `,` and `.`; 9-language localization parity preserved; 100% test pass rate.
+
+
 
 
 

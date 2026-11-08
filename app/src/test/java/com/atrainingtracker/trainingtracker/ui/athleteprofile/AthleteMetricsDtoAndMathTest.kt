@@ -268,4 +268,33 @@ class AthleteMetricsDtoAndMathTest {
         assertEquals(1, wPrimePoints.size)
         assertEquals("21.6", AthleteMetricsPlotMath.formatWPrimeValue(wPrimePoints[0].value, Locale.US))
     }
+
+    @Test
+    fun `format functions use default locale and support German comma and US dot (REQ-UI-495_2, TST-UI-495_2)`() {
+        // Test German comma formatting
+        assertEquals("80,0", AthleteMetricsPlotMath.formatWeightValue(80.0, isImperial = false, locale = Locale.GERMANY))
+        assertEquals("21,6", AthleteMetricsPlotMath.formatWPrimeValue(21.6, locale = Locale.GERMANY))
+        assertEquals("3,44", AthleteMetricsPlotMath.formatPowerToWeightValue(3.442, locale = Locale.GERMANY))
+
+        // Test US dot formatting
+        assertEquals("80.0", AthleteMetricsPlotMath.formatWeightValue(80.0, isImperial = false, locale = Locale.US))
+        assertEquals("21.6", AthleteMetricsPlotMath.formatWPrimeValue(21.6, locale = Locale.US))
+        assertEquals("3.44", AthleteMetricsPlotMath.formatPowerToWeightValue(3.442, locale = Locale.US))
+
+        // Verify default parameter delegates to Locale.getDefault()
+        val origLocale = Locale.getDefault()
+        try {
+            Locale.setDefault(Locale.GERMANY)
+            assertEquals("80,0", AthleteMetricsPlotMath.formatWeightValue(80.0, isImperial = false))
+            assertEquals("21,6", AthleteMetricsPlotMath.formatWPrimeValue(21.6))
+            assertEquals("3,44", AthleteMetricsPlotMath.formatPowerToWeightValue(3.442))
+
+            Locale.setDefault(Locale.US)
+            assertEquals("80.0", AthleteMetricsPlotMath.formatWeightValue(80.0, isImperial = false))
+            assertEquals("21.6", AthleteMetricsPlotMath.formatWPrimeValue(21.6))
+            assertEquals("3.44", AthleteMetricsPlotMath.formatPowerToWeightValue(3.442))
+        } finally {
+            Locale.setDefault(origLocale)
+        }
+    }
 }

@@ -110,6 +110,7 @@ data class AthleteProfileUiState(
     val latestPowerToWeightTimestampMs: Long? = null,
     val selectedPlotMetric: PlotMetricType = PlotMetricType.WEIGHT,
     val selectedTimeRange: MetricsTimeRange = MetricsTimeRange.ALL,
+    val selectedPmcTimeRange: MetricsTimeRange = MetricsTimeRange.SIX_MONTHS,
     val plotPoints: List<MetricPlotPoint> = emptyList(),
     val pmcSummary: PmcSummaryResult = PmcSummaryResult(),
     val pmcPlotPoints: List<PmcDailyPoint> = emptyList(),
@@ -131,6 +132,7 @@ class AthleteProfileViewModel(application: Application) : AndroidViewModel(appli
 
     private val _selectedPlotMetric = MutableStateFlow(PlotMetricType.WEIGHT)
     private val _selectedTimeRange = MutableStateFlow(MetricsTimeRange.ALL)
+    private val _selectedPmcTimeRange = MutableStateFlow(MetricsTimeRange.SIX_MONTHS)
     private val _historyFilterMetric = MutableStateFlow<AthleteMetricType?>(null)
     private val _workoutLoadSamples = MutableStateFlow<List<WorkoutTrainingLoadSample>>(emptyList())
     private val _hrMaxBpm = MutableStateFlow<Int?>(null)
@@ -138,12 +140,12 @@ class AthleteProfileViewModel(application: Application) : AndroidViewModel(appli
     val uiState: StateFlow<AthleteProfileUiState> = combine(
         repository.entriesFlow,
         _selectedPlotMetric,
-        _selectedTimeRange,
+        combine(_selectedTimeRange, _selectedPmcTimeRange) { tr, pmcTr -> tr to pmcTr },
         _historyFilterMetric,
         combine(_workoutLoadSamples, tuningDataStore.tuningConfigFlow) { samples, tuning ->
             samples to tuning
         }
-    ) { entries, rawPlotMetric, timeRange, rawHistoryFilter, (workoutSamples, tuningConfig) ->
+    ) { entries, rawPlotMetric, (timeRange, pmcTimeRange), rawHistoryFilter, (workoutSamples, tuningConfig) ->
         val isImperial = try {
             TrainingApplication.getUnit() == MyUnits.IMPERIAL
         } catch (_: Throwable) {
@@ -189,7 +191,7 @@ class AthleteProfileViewModel(application: Application) : AndroidViewModel(appli
         )
         val pmcPlotPoints = AthleteMetricsPlotMath.filterPmcPointsByTimeRange(
             points = pmcSummary.dailyPoints,
-            timeRange = timeRange,
+            timeRange = pmcTimeRange,
             nowMs = nowMs
         )
 
@@ -217,6 +219,7 @@ class AthleteProfileViewModel(application: Application) : AndroidViewModel(appli
             latestPowerToWeightTimestampMs = latestWPerKgTs,
             selectedPlotMetric = plotMetric,
             selectedTimeRange = timeRange,
+            selectedPmcTimeRange = pmcTimeRange,
             plotPoints = plotPoints,
             pmcSummary = pmcSummary,
             pmcPlotPoints = pmcPlotPoints,
@@ -257,6 +260,10 @@ class AthleteProfileViewModel(application: Application) : AndroidViewModel(appli
 
     fun selectTimeRange(range: MetricsTimeRange) {
         _selectedTimeRange.value = range
+    }
+
+    fun selectPmcTimeRange(range: MetricsTimeRange) {
+        _selectedPmcTimeRange.value = range
     }
 
     fun selectHistoryFilter(metric: AthleteMetricType?) {

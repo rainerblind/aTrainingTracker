@@ -7913,6 +7913,27 @@
   5. *Tier 1 Targeted Unit Test Regression (`TST-UI-494.5`)*:
   • Execute targeted test suite (`ui.map.*`, `ui.routes.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
 
+### TST-UI-495: **AthleteProfileScreen Filter Pill Layout, Decimal Localization, PMC Card Heights & Time-Range Selector Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-495`
+- **Component**: `AthleteProfileScreen.kt`, `AthleteMetricsPlotMath.kt`, `AthleteProfileViewModel.kt`
+- **Jira**: `ATT-5844`
+- **Test Description**:
+  1. *Proportional Pill Width Allocation Contract Test (`TST-UI-495.1`)*:
+  • Verify that label length proportional weighting (`coerceIn(3, 9)`) allocates sufficient width for `Gewicht` and `Ruhe-HF` alongside short abbreviations (`FTP`, `CP`, `W'`) without ellipsis truncation.
+  2. *Active Locale Decimal Formatting Contract Test (`TST-UI-495.2`)*:
+  • Verify `formatWeightValue`, `formatWPrimeValue`, and `formatPowerToWeightValue` format with commas under `Locale.GERMANY` (`80,0`, `20,0`, `3,44`) and dots under `Locale.US` (`80.0`, `20.0`, `3.44`).
+  • Verify decimal points in PMC stat badge format strings conform to `Locale.getDefault()`.
+  3. *PMC Card Heights & Intrinsic Layout Contract Test (`TST-UI-495.3`)*:
+  • Verify `PmcStatBadge` applies `.fillMaxHeight()` and enclosing `Row` layouts use `Modifier.height(IntrinsicSize.Min)` per Design Guideline 5.14.
+  4. *PMC Time-Range Filtering & EWMA Preservation Test (`TST-UI-495.4`)*:
+  • Verify `PerformanceManagementChartCard` defaults to `MetricsTimeRange.SIX_MONTHS`.
+  • Verify selecting a range slices plotted points correctly without modifying historical EWMA calculations.
+  5. *9-Language Localization & Specifier Audit (`TST-UI-495.5`)*:
+  • Verify 100% parity across all 9 locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) for all athlete profile strings via `TranslationParityTest`.
+  6. *Tier 1 Targeted Unit Test Regression (`TST-UI-495.6`)*:
+  • Execute targeted test suite (`ui.athleteprofile.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
+
+
 
 
 

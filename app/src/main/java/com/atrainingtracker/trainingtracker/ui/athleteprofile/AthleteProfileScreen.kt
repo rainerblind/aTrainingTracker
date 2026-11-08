@@ -27,9 +27,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -131,6 +133,7 @@ fun AthleteProfileScreen(
         uiState = uiState,
         onSelectPlotMetric = viewModel::selectPlotMetric,
         onSelectTimeRange = viewModel::selectTimeRange,
+        onSelectPmcTimeRange = viewModel::selectPmcTimeRange,
         onSelectHistoryFilter = viewModel::selectHistoryFilter,
         onAddEntry = viewModel::addEntry,
         onUpdateEntry = viewModel::updateEntry,
@@ -155,6 +158,7 @@ fun AthleteProfileContent(
     uiState: AthleteProfileUiState,
     onSelectPlotMetric: (PlotMetricType) -> Unit,
     onSelectTimeRange: (MetricsTimeRange) -> Unit,
+    onSelectPmcTimeRange: (MetricsTimeRange) -> Unit = {},
     onSelectHistoryFilter: (AthleteMetricType?) -> Unit,
     onAddEntry: (AthleteMetricType, Double, Long) -> Unit,
     onUpdateEntry: (Long, AthleteMetricType, Double, Long) -> Unit,
@@ -453,7 +457,7 @@ fun AthleteProfileContent(
                                         label = label,
                                         selected = uiState.selectedPlotMetric == type,
                                         onClick = { onSelectPlotMetric(type) },
-                                        modifier = Modifier.weight(1f)
+                                        modifier = Modifier.weight(label.length.coerceIn(3, 9).toFloat())
                                     )
                                 }
                             }
@@ -498,7 +502,9 @@ fun AthleteProfileContent(
                     item {
                         PerformanceManagementChartCard(
                             pmcSummary = uiState.pmcSummary,
-                            pmcPlotPoints = uiState.pmcPlotPoints
+                            pmcPlotPoints = uiState.pmcPlotPoints,
+                            selectedPmcTimeRange = uiState.selectedPmcTimeRange,
+                            onSelectPmcTimeRange = onSelectPmcTimeRange
                         )
                     }
                 }
@@ -531,7 +537,7 @@ fun AthleteProfileContent(
                                     label = label,
                                     selected = uiState.historyFilterMetric == filterType,
                                     onClick = { onSelectHistoryFilter(filterType) },
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(label.length.coerceIn(3, 9).toFloat())
                                 )
                             }
                         }
@@ -799,7 +805,7 @@ fun CompactSelectorPill(
     ) {
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp)
+            modifier = Modifier.padding(horizontal = 3.dp, vertical = 6.dp)
         ) {
             Text(
                 text = label,
@@ -893,9 +899,9 @@ fun AthleteMetricTimeSeriesChart(
             )
             val v = yMin + frac * yRange
             val label = when (metricType) {
-                PlotMetricType.WEIGHT, PlotMetricType.W_PRIME -> String.format(Locale.US, "%.1f", v)
+                PlotMetricType.WEIGHT, PlotMetricType.W_PRIME -> String.format(Locale.getDefault(), "%.1f", v)
                 PlotMetricType.HR_REST, PlotMetricType.FTP, PlotMetricType.CP -> v.roundToInt().toString()
-                PlotMetricType.POWER_TO_WEIGHT -> String.format(Locale.US, "%.2f", v)
+                PlotMetricType.POWER_TO_WEIGHT -> String.format(Locale.getDefault(), "%.2f", v)
             }
             drawContext.canvas.nativeCanvas.drawText(
                 label,
@@ -1232,7 +1238,7 @@ fun AthleteMetricEntryDialog(
                                         textValue = if (selectedMetric == AthleteMetricType.CP_WATTS) {
                                             est.cpWattsRounded.toString()
                                         } else {
-                                            String.format(Locale.US, "%.1f", est.wPrimeKj)
+                                            String.format(Locale.getDefault(), "%.1f", est.wPrimeKj)
                                         }
                                         hasValidationError = false
                                     },
@@ -1349,6 +1355,8 @@ private fun formatEntryValueWithUnit(entry: AthleteMetricEntry, isImperial: Bool
 fun PerformanceManagementChartCard(
     pmcSummary: PmcSummaryResult,
     pmcPlotPoints: List<PmcDailyPoint>,
+    selectedPmcTimeRange: MetricsTimeRange = MetricsTimeRange.SIX_MONTHS,
+    onSelectPmcTimeRange: (MetricsTimeRange) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -1386,26 +1394,28 @@ fun PerformanceManagementChartCard(
             }
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Min),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 PmcStatBadge(
                     label = stringResource(R.string.athlete_profile_pmc_ctl_label),
-                    valueText = String.format(Locale.US, "%.1f", pmcSummary.currentCtl),
+                    valueText = String.format(Locale.getDefault(), "%.1f", pmcSummary.currentCtl),
                     badgeText = null,
                     accentColor = TTColor.PmcCtlBlue,
                     modifier = Modifier.weight(1f)
                 )
                 PmcStatBadge(
                     label = stringResource(R.string.athlete_profile_pmc_atl_label),
-                    valueText = String.format(Locale.US, "%.1f", pmcSummary.currentAtl),
+                    valueText = String.format(Locale.getDefault(), "%.1f", pmcSummary.currentAtl),
                     badgeText = null,
                     accentColor = TTColor.PmcAtlMagenta,
                     modifier = Modifier.weight(1f)
                 )
                 PmcStatBadge(
                     label = stringResource(R.string.athlete_profile_pmc_tsb_label),
-                    valueText = String.format(Locale.US, "%+.1f", pmcSummary.currentTsb),
+                    valueText = String.format(Locale.getDefault(), "%+.1f", pmcSummary.currentTsb),
                     badgeText = tsbZoneText,
                     accentColor = tsbColor,
                     modifier = Modifier.weight(1f)
@@ -1428,12 +1438,14 @@ fun PerformanceManagementChartCard(
             }
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Min),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 PmcStatBadge(
                     label = stringResource(R.string.athlete_profile_pmc_acwr_label),
-                    valueText = pmcSummary.currentAcwr?.let { String.format(Locale.US, "%.2f", it) } ?: "—",
+                    valueText = pmcSummary.currentAcwr?.let { String.format(Locale.getDefault(), "%.2f", it) } ?: "—",
                     badgeText = acwrZoneText,
                     accentColor = acwrColor,
                     modifier = Modifier.weight(1f)
@@ -1458,6 +1470,28 @@ fun PerformanceManagementChartCard(
                 )
             }
 
+            // Time Range Selector Pills (Rule 38: compact non-wrapping single-line pills)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                val rangeOptions = listOf(
+                    MetricsTimeRange.ONE_MONTH to stringResource(R.string.athlete_profile_range_1m),
+                    MetricsTimeRange.THREE_MONTHS to stringResource(R.string.athlete_profile_range_3m),
+                    MetricsTimeRange.SIX_MONTHS to stringResource(R.string.athlete_profile_range_6m),
+                    MetricsTimeRange.ONE_YEAR to stringResource(R.string.athlete_profile_range_1y),
+                    MetricsTimeRange.ALL to stringResource(R.string.athlete_profile_range_all)
+                )
+                rangeOptions.forEach { (range, label) ->
+                    CompactSelectorPill(
+                        label = label,
+                        selected = selectedPmcTimeRange == range,
+                        onClick = { onSelectPmcTimeRange(range) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
             PerformanceManagementChartCanvas(
                 points = pmcPlotPoints,
                 modifier = Modifier
@@ -1477,7 +1511,7 @@ private fun PmcStatBadge(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        modifier = modifier,
+        modifier = modifier.fillMaxHeight(),
         shape = RoundedCornerShape(8.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.55f),
         border = BorderStroke(1.dp, accentColor.copy(alpha = 0.45f))
