@@ -32,8 +32,9 @@ Reuse the persistent subagent pair via messages:
    - Execute the planned atomic steps sequentially.
    - Follow clean architecture and coding standards (`docs/coding_standards.md` and `docs/design_guidelines.md`).
    - Add comprehensive documentation (docstrings/comments) for all new public interfaces and classes.
+   - Partition localization strings into domain-scoped files (`strings_<domain>.xml`) where appropriate to prevent merge conflicts during concurrent execution (`REQ-PRO-041.3`).
 4. **Targeted Unit Testing**:
-   - Run targeted unit tests for modified packages/classes to verify logic rapidly during development. Defer full test suite execution to Stage 5.
+   - Run targeted unit tests for modified packages/classes to verify logic rapidly during development. Wrap heavy test suites with `python3 tools/parallel_sprint_lock.py` under parallel execution (`REQ-PRO-041.2`). Defer full test suite execution to Stage 5.
 5. **Single-Turn Stage Submission (`submit-stage`)**:
    - Submit Stage 4 summary and test results in a single composite CLI call:
      ```bash

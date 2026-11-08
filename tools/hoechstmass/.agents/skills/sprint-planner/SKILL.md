@@ -17,6 +17,7 @@ This skill acts as the **Agile Sprint Facilitator & Scrum Master**. It orchestra
 * **Sprint Branch**: Created at Sprint-Start from the main development branch: `sprint/<SPRINT_NAME>`.
 * **Feature Branches**: Each sprint ticket branches from `sprint/<SPRINT_NAME>`: `feature/<KEY>`.
 * **Single Atomic Commit per Ticket**: As soon as a ticket completes Stage 5, the agent integrates `feature/<KEY>` into `sprint/<SPRINT_NAME>` as **strictly one atomic commit** via squash-merge, deletes `feature/<KEY>`, and transitions the parent ticket to `Final Review (Human)`.
+* **Parallel Sprint Execution Across Disjoint Epics (`Rule 9`, `REQ-PRO-041`)**: Up to 2 tickets may run concurrently across disjoint Epics using `Workspace: "share"` worktrees. All heavy Gradle test runs and Stage 5 squash-merges serialize under POSIX `flock` on `/tmp/att_build_merge.lock` (`python3 tools/parallel_sprint_lock.py <cmd>`). Stage 5 rebases execute `python3 tools/verify_requirement_governance.py --sync-indexes` under the merge lock prior to squashing.
 * **Sprint-End Integration**: At Sprint-End, the human user validates the entire sprint build. Upon final sign-off, `sprint/<SPRINT_NAME>` is merged into the main development branch and deleted.
 
 ---

@@ -29,13 +29,13 @@ Reuse the ticket's two persistent `TypeName: "self"` subagents via `send_message
    - Execute the planned atomic steps sequentially.
    - Follow clean architecture and Kotlin/Java best practices (`docs/coding_standards.md` and `docs/design_guidelines.md`).
    - Add comprehensive internal documentation (KDoc/JavaDoc) for all new or modified public methods and classes (`REQ-PRO-011`).
-   - For string additions: ensure entries exist across all 9 supported language directories (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with consistent format specifiers.
+   - For string additions: ensure entries exist across all 9 supported language directories (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with consistent format specifiers. String additions may be partitioned into domain-scoped `strings_<domain>.xml` files (`REQ-PRO-041.3`) to prevent git merge conflicts during parallel sprint execution.
    - **Universal `read_file` Image Inspection (`Rule 71`, `ATT-5431`)**: Visually inspect every created, modified, or referenced image asset (`.png`, `.jpg`, `.svg` across `docs/guide/img/*`, `docs/store_presence/*`, drawables) via `read_file`.
    - **Documentation Code-Grounding (`ATT-5431`)**: Every statement in guides or docs must be verified against actual code (`AndroidManifest.xml`, Compose screens, Strings, Repositories).
 4. **Targeted Unit Testing**:
-   - Run exclusively targeted unit tests for modified packages/classes (5–15s runtime) to verify logic rapidly during development:
+   - Run exclusively targeted unit tests for modified packages/classes (5–15s runtime) to verify logic rapidly during development. When running under parallel sprint execution (Core Rule 9 / `REQ-PRO-041.2`), wrap Gradle test executions with `python3 tools/parallel_sprint_lock.py`:
      ```bash
-     ./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.knownlocations.*"
+     python3 tools/parallel_sprint_lock.py ./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.knownlocations.*"
      ```
    - Defer full test suite execution (`./gradlew testDebugUnitTest`) to Stage 5.
 5. **Single-Turn Stage Submission (`submit-stage`)**:

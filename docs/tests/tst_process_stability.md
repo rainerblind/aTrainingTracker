@@ -1415,6 +1415,25 @@
   5. *Clean-Room Governance & Verification Execution (`TST-PRO-040.5`)*:
   • Execute `python3 tools/verify_requirement_governance.py` (exit 0) and `python3 -m unittest tools/test_jira_epics.py`.
 
+### TST-PRO-041: **Parallel Sprint Execution Protocol for Disjoint Epics, Flock Serialization & Partitioned Localization Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-041`
+- **Component**: `.agents/rules/aspice_governance.md`, `.agents/skills/{jira-workflow,stage4-implementation,stage5-verification,sprint-planner}/SKILL.md`, `tools/run_serialized.sh`, `tools/jira_util.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/localization/TranslationParityTest.kt`
+- **Jira**: `ATT-5914`
+- **Test Description**:
+  1. *Subagent Worktree Isolation & Disjoint Epic Guardrail (`TST-PRO-041.1`)*:
+  • Verify `Workspace: "share"` subagent pairs execute in independent worktrees without branch or working-tree collisions.
+  • Verify governance enforces strict disjoint Parent Epic constraint (rejecting parallel execution within the same Epic).
+  2. *POSIX Flock Build & Merge Mutual Exclusion (`TST-PRO-041.2`, `test_flock_serialization.py`)*:
+  • Simulate concurrent processes competing for `/tmp/att_build_merge.lock`.
+  • Verify mutual exclusion: exactly one process holds the lock at a time, subsequent processes queue deterministically, and lock releases reliably upon completion or failure.
+  3. *Dynamic Multi-File String Discovery & Parity Test Suite (`TST-PRO-041.3`, `TranslationParityTest.kt`)*:
+  • Verify `TranslationParityTest.kt` dynamically scans all `strings*.xml` across `res/values*/`.
+  • Assert partitioned domain string files (`strings_<domain>.xml`) maintain 100% key and placeholder parity across all 9 supported locales.
+  4. *Rebase-then-Recalculate Living Docs Governance (`TST-PRO-041.4`)*:
+  • Verify `recalculate_master_index_tables()` under merge lock after rebase maintains 100% parity across living doc tables with zero Git merge conflicts.
+  5. *Clean-Room Governance & Verification Execution (`TST-PRO-041.5`)*:
+  • Execute `python3 tools/verify_requirement_governance.py` (exit 0) and `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest"`.
+
 
 
 

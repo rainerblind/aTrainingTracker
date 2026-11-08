@@ -37,7 +37,6 @@ import javax.xml.parsers.DocumentBuilderFactory
 class TranslationParityTest {
 
     private val locales = listOf("de", "es", "fr", "it", "ja", "nl", "pl", "pt")
-    private val resXmlFiles = listOf("strings.xml", "strings_devices.xml", "strings_filters.xml", "arrays.xml")
 
     private val formatSpecifierPattern = Pattern.compile("%(\\d+\\\$)?([-#+ 0,(\\<]*)?(\\d+)?(\\.\\d+)?([tT])?([a-zA-Z%])")
 
@@ -64,6 +63,13 @@ class TranslationParityTest {
         val sourceFile: String
     )
 
+    private fun getXmlFiles(dir: File, prefix: String): List<File> {
+        if (!dir.exists() || !dir.isDirectory) return emptyList()
+        return dir.listFiles { file ->
+            file.isFile && file.name.endsWith(".xml") && file.name.startsWith(prefix)
+        }?.sortedBy { it.name } ?: emptyList()
+    }
+
     @Before
     fun setUp() {
         resDir = File("src/main/res").takeIf { it.exists() }
@@ -76,11 +82,10 @@ class TranslationParityTest {
     private fun parseStrings(dir: File): Map<String, StringResource> {
         val result = mutableMapOf<String, StringResource>()
         val docBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder()
+        val xmlFiles = getXmlFiles(dir, "strings") + getXmlFiles(dir, "arrays")
 
-        for (fileName in resXmlFiles) {
-            val file = File(dir, fileName)
-            if (!file.exists()) continue
-
+        for (file in xmlFiles) {
+            val fileName = file.name
             val doc = docBuilder.parse(file)
             val stringNodes = doc.getElementsByTagName("string")
             for (i in 0 until stringNodes.length) {
@@ -103,11 +108,10 @@ class TranslationParityTest {
     private fun parseArrays(dir: File): Map<String, ArrayResource> {
         val result = mutableMapOf<String, ArrayResource>()
         val docBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder()
+        val xmlFiles = getXmlFiles(dir, "arrays") + getXmlFiles(dir, "strings")
 
-        for (fileName in resXmlFiles) {
-            val file = File(dir, fileName)
-            if (!file.exists()) continue
-
+        for (file in xmlFiles) {
+            val fileName = file.name
             val doc = docBuilder.parse(file)
             val arrayNodes = doc.getElementsByTagName("string-array")
             for (i in 0 until arrayNodes.length) {
@@ -129,11 +133,10 @@ class TranslationParityTest {
     private fun parsePlurals(dir: File): Map<String, PluralResource> {
         val result = mutableMapOf<String, PluralResource>()
         val docBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder()
+        val xmlFiles = getXmlFiles(dir, "strings") + getXmlFiles(dir, "plurals")
 
-        for (fileName in resXmlFiles) {
-            val file = File(dir, fileName)
-            if (!file.exists()) continue
-
+        for (file in xmlFiles) {
+            val fileName = file.name
             val doc = docBuilder.parse(file)
             val pluralNodes = doc.getElementsByTagName("plurals")
             for (i in 0 until pluralNodes.length) {
@@ -423,6 +426,27 @@ class TranslationParityTest {
                 "Locale '$locale' should not redeclare structural string-arrays: $presentForbidden",
                 presentForbidden.isEmpty()
             )
+        }
+    }
+
+    /**
+     * TST-PRO-041.3 (REQ-PRO-041.3): Verify that partitioned string files (strings*.xml)
+     * are dynamically discovered without hardcoded filename lists, and all discovered domain shards
+     * are present and checked across all locales.
+     */
+    @Test
+    fun testDynamicStringsDiscovery_detectsAllDomainShardedFiles() {
+        val baseStringFiles = getXmlFiles(File(resDir, "values"), "strings")
+        assertTrue("Base values directory must contain at least strings.xml", baseStringFiles.any { it.name == "strings.xml" })
+        assertTrue("Base values directory must contain strings_devices.xml", baseStringFiles.any { it.name == "strings_devices.xml" })
+        assertTrue("Base values directory must contain strings_filters.xml", baseStringFiles.any { it.name == "strings_filters.xml" })
+
+        val discoveredFileNames = baseStringFiles.map { it.name }.toSet()
+        for (locale in locales) {
+            val locFiles = getXmlFiles(File(resDir, "values-$locale"), "strings").map { it.name }.toSet()
+            for (shard in discoveredFileNames) {
+                assertTrue("Locale '$locale' must contain domain shard '$shard'", locFiles.contains(shard))
+            }
         }
     }
 }

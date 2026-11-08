@@ -208,7 +208,112 @@ def verify_master_table_parity(repo_root=None, config=None):
     return len(errors) == 0, errors
 
 
+def recalculate_master_index_tables(repo_root=None, config=None):
+    """
+    Recalculates summary tables ('Total', 'Verified', 'Planned / Open') and total requirement/test
+    counts in docs/requirements.md and docs/tests.md based on actual parsed section headings
+    in the 9 domain shards under docs/requirements/ and docs/tests/ (ATT-5431, REQ-PRO-041.4).
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+    if config is None:
+        config = load_config()
+
+    p = config.get("paths", {})
+    specs = [
+        (p.get("requirements_master", "docs/requirements.md"), p.get("requirements_shard_dir", "docs/requirements"), "REQ"),
+        (p.get("tests_master", "docs/tests.md"), p.get("tests_shard_dir", "docs/tests"), "TST"),
+    ]
+    recalculated = []
+    for master_rel, shard_dir_rel, prefix in specs:
+        abs_shard_dir = os.path.join(repo_root, shard_dir_rel)
+        if not os.path.isdir(abs_shard_dir):
+            continue
+        shard_counts = {}
+        for fn in sorted(os.listdir(abs_shard_dir)):
+            if not fn.endswith(".md"):
+                continue
+            fp = os.path.join(abs_shard_dir, fn)
+            tot = ver = plan = 0
+            with open(fp, "r", encoding="utf-8") as f:
+                for line in f:
+                    m = re.match(r"^(#{2,4})\s*(" + prefix + r"-[A-Z0-9_-]+):?\s*(.*?)$", line.strip())
+                    if not m:
+                        continue
+                    tot += 1
+                    if "[Verified]" in line:
+                        ver += 1
+                    else:
+                        plan += 1
+            shard_counts[fn] = (tot, ver, plan)
+
+        master_fp = os.path.join(repo_root, master_rel)
+        if not os.path.exists(master_fp):
+            continue
+        with open(master_fp, "r", encoding="utf-8") as f:
+            master_lines = f.readlines()
+
+        grand_total = sum(c[0] for c in shard_counts.values())
+        grand_verified = sum(c[1] for c in shard_counts.values())
+        grand_planned = sum(c[2] for c in shard_counts.values())
+
+        new_lines = []
+        changed = False
+        for line in master_lines:
+            new_line = line
+            m_link = re.search(r"\((?:requirements|tests)/((?:req|tst)_[^)]+\.md)\)", line)
+            if m_link:
+                s_name = m_link.group(1)
+                if s_name in shard_counts:
+                    t, v, p_count = shard_counts[s_name]
+                    new_line = re.sub(
+                        r"\|\s*\d+\s*\|\s*\d+\s*\|\s*\d+\s*\|(\s*)$",
+                        rf"| {t} | {v} | {p_count} |\1",
+                        line,
+                    )
+            elif "Total Living " in line:
+                new_line = re.sub(
+                    r"(\*\*Total Living (?:Requirements|Tests)\*\*:\s*)\d+(\s*across \d+ domain shards\.)",
+                    rf"\g<1>{grand_total}\g<2>",
+                    line,
+                )
+            if new_line != line:
+                changed = True
+            new_lines.append(new_line)
+
+        if changed:
+            with open(master_fp, "w", encoding="utf-8") as f:
+                f.writelines(new_lines)
+            msg = f"Recalculated master index table in {master_rel}: Total={grand_total}, Verified={grand_verified}, Planned={grand_planned}."
+            print(msg)
+            recalculated.append(msg)
+        else:
+            recalculated.append(f"Master index table in {master_rel} is already up to date.")
+    return recalculated
+
+
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(
+        description="Verify Requirement Archaeology & Governance (hoechstmass)."
+    )
+    parser.add_argument(
+        "--sync-indexes",
+        action="store_true",
+        help="Recalculate and synchronize master index tables in docs/requirements.md and docs/tests.md.",
+    )
+    args = parser.parse_args()
+
+    if args.sync_indexes:
+        recalculate_master_index_tables()
+        parity_ok, parity_errs = verify_master_table_parity()
+        if not parity_ok:
+            for e in parity_errs:
+                print(f"ERROR: {e}", file=sys.stderr)
+            sys.exit(1)
+        print("PASS: Master index tables successfully synchronized with 100% parity.")
+        sys.exit(0)
+
     dir_ok, dir_errs = verify_engineering_directory_structure()
     if not dir_ok:
         for e in dir_errs:

@@ -2199,6 +2199,45 @@ The workflow SHALL mandate that:
 
 **Invariants**: Human Decision Gate on standard sprint tickets (`Feature`, `Bug`, `Verbesserung`) remains inviolable; zero changes to Android runtime code in `app/src/main/`.
 
+### REQ-PRO-041: Parallel Sprint Execution Protocol for Disjoint Epics ('Workspace: share' Worktrees, Conflict-Free Strings/Docs & Flock Build/Merge Serialization) [Verified]
+- **Tests**: `TST-PRO-041` | **Tickets**: `ATT-5914`
+- **Implementation**: `.agents/rules/aspice_governance.md`, `.agents/skills/jira-workflow/SKILL.md`, `.agents/skills/stage4-implementation/SKILL.md`, `.agents/skills/stage5-verification/SKILL.md`, `.agents/skills/sprint-planner/SKILL.md`, `tools/run_serialized.sh`, `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/localization/TranslationParityTest.kt`
+- **Rationale**: Eliminate the throughput bottleneck of single-ticket sequential Phase 2 execution by enabling concurrent execution of up to 2 tickets belonging to disjoint Parent Epics. Resolves git branch collisions, strings.xml EOF append conflicts, living doc counter merge races, and Gradle test contention through worktree isolation, domain-partitioned strings, POSIX file locking, and rebase-then-recalculate sync (ATT-5914, extending `REQ-PRO-014`, `REQ-PRO-015`, `REQ-PRO-024`, and `REQ-PRO-025`):
+1. *Subagent Worktree Isolation (`REQ-PRO-041.1`, Workspace: "share")*:
+• Coordinator SHALL orchestrate parallel sprint ticket execution using `invoke_subagent(..., Workspace="share")` for persistent subagent pairs.
+• Each subagent pair SHALL operate in an isolated Git worktree linked to the primary repository, possessing independent working directories, `HEAD` pointers, and index states.
+• Concurrency is strictly bounded: at most 2 concurrent tickets, and ONLY tickets belonging to disjoint Parent Epics (zero package, screen, or living-doc shard overlap). Parallel execution of tickets within the same Epic remains prohibited.
+2. *POSIX File Lock Mutual Exclusion (`REQ-PRO-041.2`, flock)*:
+• Tooling and governance SHALL provide a serialized execution wrapper using POSIX `flock` (exclusive lock on `/tmp/att_build_merge.lock`) for:
+  a) Heavy Gradle test execution (`./gradlew testDebugUnitTest`).
+  b) Stage 5 Git squash-merging and branch deletion on `sprint/<SPRINT_NAME>`.
+• Stages 1–3 (Analysis, Test Spec, Impl Plan) and Stage 4 code authoring SHALL proceed 100% concurrently without lock contention.
+3. *Domain-Scoped Localization Partitioning (`REQ-PRO-041.3`, strings_<domain>.xml)*:
+• String additions for independent domain features SHALL support creation and editing of domain-partitioned files: `res/values*/strings_<domain>.xml` (e.g. `strings_process.xml`, `strings_cockpit.xml`) across all 9 supported locales.
+• `TranslationParityTest.kt` SHALL dynamically discover all XML files matching `strings*.xml` across each `values*/` directory, guaranteeing 100% translation parity, placeholder format safety, and missing key detection across partitioned string files.
+4. *Deterministic Living Documentation Synchronization (`REQ-PRO-041.4`, Rebase-then-Recalculate)*:
+• Living documentation master index updates (`recalculate_master_index_tables()` / `python3 tools/jira_util.py recalc-docs`) for parallel tickets SHALL be serialized under the merge lock during Stage 5.
+• Subagents SHALL fetch/rebase against latest `sprint/<SPRINT_NAME>` before recalculating and committing living documentation counters, preventing Git merge conflicts on `docs/requirements.md` and `docs/tests.md`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-041` extending `REQ-PRO-014` (*ASPICE Dual-Agent Quality Gates*), `REQ-PRO-015` (*Branching & Commits*), `REQ-PRO-024` (*Modular Skills*), and `REQ-PRO-025` (*Test Parallelism & Acceleration*). Targets `.agents/rules/aspice_governance.md`, `.agents/skills/`, tooling, and test infrastructure.
+2. *Historical Trace*: `ATT-3323` (ASPICE Dual-Agent Lifecycle), `ATT-4520` (Persistent Epic Pairs), `ATT-4776` (Robolectric `--max-workers=2` limit), `ATT-5431` (Sharded living docs).
+3. *Root Reason for Existing Formulation*: Strict sequential execution was established when all subagents ran under `Workspace: "inherit"`, sharing a single `HEAD` and worktree.
+4. *Preservation of Core Invariants*: Dual-agent 5-stage quality gates, one atomic squash commit per ticket, and human review gates remain 100% inviolable. Concurrency is strictly capped at 2 disjoint Epics.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* two tickets from disjoint Epics in an active sprint,
+• *When* dispatched concurrently by Coordinator using `Workspace: "share"`,
+• *Then* both subagent pairs operate in isolated worktrees without Git branch conflicts.
+• *Given* concurrent test execution or Stage 5 squash-merges,
+• *When* executing under `flock /tmp/att_build_merge.lock`,
+• *Then* heavy operations serialize cleanly without worker collision or merge races.
+• *Given* localized strings added in `strings_<domain>.xml`,
+• *When* `TranslationParityTest.kt` executes,
+• *Then* it discovers all partitioned string files across 9 locales and enforces 100% parity.
+
+**Invariants**: Human Decision Gate (`REQ-PRO-016`) remains inviolable; max 2 concurrent tickets across strictly disjoint Epics; zero Android runtime changes in `app/src/main/java/`.
+
 
 
 

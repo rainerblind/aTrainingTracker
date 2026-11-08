@@ -49,11 +49,18 @@ python3 tools/jira_util.py list-epics
 
 # Close a completed Milestone Epic with triple guardrail enforcement (coordinator/human only, requires 0 open children)
 python3 tools/jira_util.py --as coordinator close-epic <EPIC_KEY>
+
+# Recalculate living documentation master index tables (or use verify_requirement_governance.py --sync-indexes)
+python3 tools/jira_util.py recalc-docs
+
+# Run commands under the sprint mutual exclusion lock (REQ-PRO-041.2)
+python3 tools/parallel_sprint_lock.py <command>
 ```
 
 ## Critical Governance Invariants
 1. **Parent Final Review Gate & Completion Prohibition**: Parent tickets mandate human evaluation. AI agents are strictly forbidden from transitioning parent tickets to completed / done.
 2. **Triple Guardrail on Epic Closure (`REQ-PRO-040`)**: Milestone Epics can be closed via `close-epic <KEY>` only under `--as coordinator` or `human`, only if the issue type is `Epic`, and only if exactly 0 open child tickets remain. Standard parent tickets remain 100% blocked from completion by AI agents.
+3. **Parallel Sprint Execution Across Disjoint Epics (`REQ-PRO-041`)**: Up to 2 tickets may run concurrently across disjoint Parent Epics using `Workspace: "share"` worktrees. All heavy Gradle test runs and Stage 5 squash-merges + index recalculations serialize under POSIX `flock` on `/tmp/att_build_merge.lock` (`python3 tools/parallel_sprint_lock.py <cmd>`).
 
 ## Deployment Modes: Jira Cloud vs. Jira Data Center (REQ-PRO-039)
 The tooling supports both **Jira Cloud** (default) and enterprise on-premise **Jira Data Center** / **Jira Server**:

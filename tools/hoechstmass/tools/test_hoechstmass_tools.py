@@ -31,6 +31,11 @@ from verify_requirement_governance import (
     validate_archaeology_section,
     verify_engineering_directory_structure,
 )
+from parallel_sprint_lock import (
+    sprint_lock,
+    is_lock_busy,
+    run_locked,
+)
 
 
 class TestHoechstmassConfig(unittest.TestCase):
@@ -168,6 +173,42 @@ class TestEpicCommands(unittest.TestCase):
                     transition_issue("PROJ-100", "erledigt", as_role="agent1", allow_epic_close=False)
             self.assertEqual(cm.exception.code, 1)
             self.assertIn("strictly prohibited for AI agents", err.getvalue())
+
+
+class TestHoechstmassFlock(unittest.TestCase):
+    """TST-PRO-041.2: Hoechstmass flock serialization tests."""
+
+    def setUp(self):
+        import tempfile
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.lock_file = os.path.join(self.temp_dir.name, "test_hoechstmass.lock")
+
+    def tearDown(self):
+        self.temp_dir.cleanup()
+
+    def test_run_locked_success(self):
+        import sys
+        ret = run_locked([sys.executable, "-c", "import sys; sys.exit(0)"], lock_path=self.lock_file)
+        self.assertEqual(ret, 0)
+        self.assertFalse(is_lock_busy(self.lock_file))
+
+    def test_run_locked_exit_code_propagation(self):
+        import sys
+        ret = run_locked([sys.executable, "-c", "import sys; sys.exit(17)"], lock_path=self.lock_file)
+        self.assertEqual(ret, 17)
+        self.assertFalse(is_lock_busy(self.lock_file))
+
+    def test_context_manager_lifecycle(self):
+        self.assertFalse(is_lock_busy(self.lock_file))
+        with sprint_lock(lock_path=self.lock_file):
+            self.assertTrue(is_lock_busy(self.lock_file))
+        self.assertFalse(is_lock_busy(self.lock_file))
+
+    def test_timeout_on_contention(self):
+        import sys
+        with sprint_lock(lock_path=self.lock_file):
+            with self.assertRaises(TimeoutError):
+                run_locked([sys.executable, "-c", "pass"], lock_path=self.lock_file, timeout_sec=0.3)
 
 
 if __name__ == "__main__":
