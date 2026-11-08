@@ -1395,6 +1395,27 @@
   • Verify identical logic and hashes for shared functions between `tools/jira_util.py` and `tools/hoechstmass/tools/jira_util.py`.
   • Execute `python3 tools/verify_requirement_governance.py` (exit 0) and Python unit tests.
 
+### TST-PRO-040: **Epic Lifecycle Management, 'list-epics' / 'close-epic' CLI Commands, and Taxonomy Governance Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-040`
+- **Component**: `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `.agents/skills/{brainstormer,sprint-planner,jira-workflow}/SKILL.md`
+- **Jira**: `ATT-5911`
+- **Test Description**:
+  1. *List Epics Command & Child Status Aggregation (`TST-PRO-040.1`, `test_jira_epics.py`)*:
+  • Mock JQL search returning Epics and child tickets across Cloud (`parent = ...`) and Data Center (`cf[10014] = ...`).
+  • Verify `list-epics` computes open and done child ticket counts accurately and formats output.
+  2. *Close Epic Triple Guardrail Enforcement (`TST-PRO-040.2`, `test_jira_epics.py`)*:
+  • Role Guard: Verify non-coordinator/non-human roles (`--as agent1`, `--as agent2`) abort with exit code 1.
+  • Issue Type Guard: Verify passing a standard Story/Bug/Task aborts with exit code 1 and Human Gate notice.
+  • Completeness Guard: Verify passing an Epic with open child tickets aborts with exit code 1 listing the open tickets.
+  • Success: Verify passing an Epic with 0 open child tickets under `--as coordinator` successfully executes transition to `Erledigt`.
+  3. *Tooling Mirror Synchronization & Hoechstmass Parity (`TST-PRO-040.3`, `test_hoechstmass_tools.py`)*:
+  • Verify `tools/hoechstmass/tools/jira_util.py` implements identical `list-epics` and `close-epic` subcommands with identical guardrails.
+  4. *Skill Documentation & Canonical Epic Taxonomy Audit (`TST-PRO-040.4`)*:
+  • Verify `.agents/skills/brainstormer/SKILL.md`, `.agents/skills/sprint-planner/SKILL.md`, and `.agents/skills/jira-workflow/SKILL.md` (and their hoechstmass mirrors) define the Canonical Epic Taxonomy and human consultation requirement.
+  5. *Clean-Room Governance & Verification Execution (`TST-PRO-040.5`)*:
+  • Execute `python3 tools/verify_requirement_governance.py` (exit 0) and `python3 -m unittest tools/test_jira_epics.py`.
+
+
 
 
 

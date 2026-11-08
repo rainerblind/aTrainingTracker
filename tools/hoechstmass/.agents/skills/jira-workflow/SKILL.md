@@ -43,7 +43,17 @@ python3 tools/workflow_util.py search "sprint = <SPRINT_ID> ORDER BY rank ASC"
 
 # Check gate status before Stage 4 implementation
 python3 tools/workflow_util.py check-gate <SUBTASK_KEY>
+
+# List all project Epics with Done/Open child ticket counts (Canonical Epic Taxonomy)
+python3 tools/jira_util.py list-epics
+
+# Close a completed Milestone Epic with triple guardrail enforcement (coordinator/human only, requires 0 open children)
+python3 tools/jira_util.py --as coordinator close-epic <EPIC_KEY>
 ```
+
+## Critical Governance Invariants
+1. **Parent Final Review Gate & Completion Prohibition**: Parent tickets mandate human evaluation. AI agents are strictly forbidden from transitioning parent tickets to completed / done.
+2. **Triple Guardrail on Epic Closure (`REQ-PRO-040`)**: Milestone Epics can be closed via `close-epic <KEY>` only under `--as coordinator` or `human`, only if the issue type is `Epic`, and only if exactly 0 open child tickets remain. Standard parent tickets remain 100% blocked from completion by AI agents.
 
 ## Deployment Modes: Jira Cloud vs. Jira Data Center (REQ-PRO-039)
 The tooling supports both **Jira Cloud** (default) and enterprise on-premise **Jira Data Center** / **Jira Server**:

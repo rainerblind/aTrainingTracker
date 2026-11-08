@@ -2157,6 +2157,49 @@ The workflow SHALL mandate that:
 
 **Invariants**: Zero runtime changes to `app/src/main/`; existing Jira Cloud workflows remain 100% backward-compatible; composite commands (`submit-stage`, `gate-verdict`) maintain identical subtask transitions; secret masking (`REQ-PRO-021`) strictly enforced.
 
+### REQ-PRO-040: Project-Wide Epic Lifecycle Governance, 'list-epics' / 'close-epic' CLI Commands, and Controlled Epic Creation & Closure [Verified]
+- **Tests**: `TST-PRO-040` | **Tickets**: `ATT-5911`
+- **Implementation**: `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `.agents/skills/brainstormer/SKILL.md`, `.agents/skills/sprint-planner/SKILL.md`, `.agents/skills/jira-workflow/SKILL.md`, `tools/hoechstmass/.agents/skills/brainstormer/SKILL.md`, `tools/hoechstmass/.agents/skills/sprint-planner/SKILL.md`, `tools/hoechstmass/.agents/skills/jira-workflow/SKILL.md`
+- **Rationale**: Support project-wide Epic lifecycle management by providing visibility into active Epics and child ticket completion states via `list-epics`, offering a guarded `close-epic` CLI command with a triple guardrail (role check, issue type check, zero-open-child completeness check), codifying the Canonical Epic Taxonomy across agent skills, and empowering agents to create and close Epics after explicit human confirmation without violating the Human Decision Gate on standard tickets (ATT-5911, extending `REQ-PRO-016`, `REQ-PRO-024`, and `REQ-PRO-036`):
+1. *CLI Support for Epic Inspection (`REQ-PRO-040.1`, `list-epics`)*:
+• `tools/jira_util.py` and `tools/hoechstmass/tools/jira_util.py` SHALL implement a `list-epics` subcommand.
+• The command SHALL query all Epics in the project via JQL (`issuetype = Epic ORDER BY key ASC`) across both Cloud and Data Center deployments.
+• For each Epic, it SHALL compute and display: Epic Key, Summary, Status, Done child tickets count, and Open child tickets count.
+2. *CLI Support for Guarded Epic Closure (`REQ-PRO-040.2`, `close-epic`)*:
+• `tools/jira_util.py` and `tools/hoechstmass/tools/jira_util.py` SHALL implement a `close-epic <EPIC_KEY>` subcommand enforcing a triple guardrail:
+  1. *Role Guard*: Restricted strictly to `--as coordinator` or `human`. Standard agent roles (`agent1`, `agent2`) SHALL be rejected.
+  2. *Issue Type Guard*: Verified via issue lookup that the issue type is `Epic`. Attempting to close standard parent tickets (`Feature`, `Bug`, `Verbesserung`) SHALL abort to preserve the Human Gate (`REQ-PRO-016`).
+  3. *Completeness Guard*: Verified that all child tickets linked to the Epic are in status `Erledigt` (0 open child tickets). If any open child ticket remains, the command SHALL abort with an explicit list of unfinished tickets.
+• Upon satisfying all guardrails, `close-epic` SHALL transition the Epic to `Erledigt`.
+3. *Skill Documentation & Canonical Epic Taxonomy (`REQ-PRO-040.3`)*:
+• `.agents/skills/brainstormer/SKILL.md`, `.agents/skills/sprint-planner/SKILL.md`, and `.agents/skills/jira-workflow/SKILL.md` (and their `tools/hoechstmass` mirrors) SHALL codify the Canonical Epic Taxonomy:
+  - Distinguishing **Evergreen Epics** (permanent domain/drawer areas) from **Milestone Epics** (scoped multi-sprint initiatives).
+  - Empowering AI agents during product discovery (`brainstormer`) or sprint reviews (`sprint-planner`) to propose creating new Milestone Epics or closing completed Milestone Epics, subject to explicit human confirmation before execution.
+4. *Tooling Synchronization & Automated Test Enforcement (`REQ-PRO-040.4`)*:
+• Tooling logic and CLI handling SHALL remain 100% synchronized between root `tools/jira_util.py` and mirror `tools/hoechstmass/tools/jira_util.py` (Rule 36 DRY).
+• Automated unit tests in `tools/test_jira_epics.py` and `tools/hoechstmass/tools/test_hoechstmass_tools.py` SHALL verify `list-epics` aggregation, `close-epic` role rejection, non-Epic rejection, open child ticket blocking, and successful closure transition.
+• Zero production code in `app/src/main/` SHALL be modified.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-040` extending `REQ-PRO-016` (*Human Decision Gate*), `REQ-PRO-024` (*Modular Skills*), and `REQ-PRO-036` (*Parameterized Tooling*). Targets `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, and agent skill markdown documentation.
+2. *Historical Trace*: `ATT-3323` (commit `6925d864` - Inviolable Human Decision Gates), `ATT-5830` (Data Center Support).
+3. *Root Reason for Existing Formulation*: `REQ-PRO-016` blocked non-subtask completion to prevent agents from closing in-sprint parent tickets before Ceremony 2 Joint Review. It did not distinguish between sprint child tickets and overarching Milestone Epics.
+4. *Preservation of Core Invariants*: Standard sprint tickets remain 100% protected by the Human Gate; `close-epic` requires explicit human consultation, coordinator role, and 0 open child tickets.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* project Epics with child tickets,
+• *When* `jira_util.py list-epics` executes,
+• *Then* it outputs a structured table with keys, summaries, status, and done/open child counts.
+• *Given* an invocation of `close-epic` with non-coordinator role, or on a non-Epic issue, or on an Epic with open child tickets,
+• *When* executed,
+• *Then* the command aborts with exit code 1 and a descriptive error message.
+• *Given* a completed Milestone Epic (0 open children) and explicit human approval,
+• *When* `jira_util.py --as coordinator close-epic <KEY>` executes,
+• *Then* the Epic transitions to `Erledigt`.
+
+**Invariants**: Human Decision Gate on standard sprint tickets (`Feature`, `Bug`, `Verbesserung`) remains inviolable; zero changes to Android runtime code in `app/src/main/`.
+
+
 
 
 

@@ -21,6 +21,10 @@ from jira_util import (
     get_search_endpoint,
     get_headers,
     resolve_assignee_identifier,
+    list_epics,
+    close_epic,
+    paged_jql_search,
+    transition_issue,
 )
 from verify_requirement_governance import (
     load_config,
@@ -131,6 +135,39 @@ class TestGovernanceVerification(unittest.TestCase):
         is_valid, errors = validate_archaeology_section(placeholder_text)
         self.assertFalse(is_valid)
         self.assertTrue(len(errors) >= 3)
+
+
+class TestEpicCommands(unittest.TestCase):
+    """TST-PRO-040.3: Hoechstmass parameterized epic commands."""
+
+    def test_close_epic_role_guard_rejects_agent(self):
+        import io
+        from unittest.mock import patch
+        for role in ["agent1", "agent2"]:
+            with self.assertRaises(SystemExit) as cm:
+                err = io.StringIO()
+                with patch("sys.stderr", err):
+                    close_epic("PROJ-100", role=role)
+            self.assertEqual(cm.exception.code, 1)
+            self.assertIn(f"Role '{role}' is not authorized to close Epics", err.getvalue())
+
+    def test_transition_issue_blocks_parent_to_erledigt(self):
+        import io
+        from unittest.mock import patch
+        with patch("jira_util.jira_request") as mock_req:
+            mock_req.return_value = {
+                "key": "PROJ-100",
+                "fields": {
+                    "issuetype": {"name": "Story", "subtask": False},
+                    "status": {"name": "In Progress"}
+                }
+            }
+            with self.assertRaises(SystemExit) as cm:
+                err = io.StringIO()
+                with patch("sys.stderr", err):
+                    transition_issue("PROJ-100", "erledigt", as_role="agent1", allow_epic_close=False)
+            self.assertEqual(cm.exception.code, 1)
+            self.assertIn("strictly prohibited for AI agents", err.getvalue())
 
 
 if __name__ == "__main__":

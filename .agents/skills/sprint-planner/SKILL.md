@@ -138,7 +138,20 @@ Jointly review all completed sprint tickets with the human user against expectat
          python3 tools/jira_util.py comment <KEY> "Revision needed: [Human feedback]"
          python3 tools/jira_util.py move <KEY> "analysis"
          ```
-4. **Sprint Retrospective, Tier 2 Sprint Integration Gate & Process Hardening ("Retro Before Merge")**:
+4. **Milestone Epic Review & Human-Confirmed Closure (`REQ-PRO-040`)**:
+   * Inspect project Epics via CLI:
+     ```bash
+     python3 tools/jira_util.py list-epics
+     ```
+   * If any **Milestone Epic** (e.g. `Periods 2.0`, `Cycling Dynamics`) has **0 open child tickets** remaining and all intended scope is verified:
+     1. Proactively present the Epic completion status to the human user.
+     2. Recommend closing the Milestone Epic (Evergreen Epics remain open indefinitely).
+     3. Upon explicit human confirmation, close the Epic:
+        ```bash
+        python3 tools/jira_util.py --as coordinator close-epic <EPIC_KEY>
+        ```
+     4. *Strict Invariant*: Standard sprint tickets (`Feature`, `Bug`, `Verbesserung`) remain strictly under the Human Decision Gate. Only Milestone Epics with 0 open child tickets may be closed via `close-epic` after human confirmation.
+5. **Sprint Retrospective, Tier 2 Sprint Integration Gate & Process Hardening ("Retro Before Merge")**:
    * **Mandate**: Conduct the Retrospective, run the Tier 2 Sprint Integration Gate (`./gradlew testDebugUnitTest --max-workers=2 && python3 tools/verify_requirement_governance.py` if not already verified on the exact final code tree of `sprint/<SPRINT_NAME>`), and update governance documents on `sprint/<SPRINT_NAME>` **BEFORE** merging into `develop`.
    * **Mandatory Quantitative Sprint Metrics & Scorecard Generation (PA 4.1 & PA 4.2 — `REQ-PRO-038`, `ATT-5764`)**:
      At the very start of Step 4, the Coordinator **MUST** execute:
@@ -153,7 +166,7 @@ Jointly review all completed sprint tickets with the human user against expectat
    * Document insights in `docs/engineering/retros/Sprint_Review_and_Retro_<KEY>.md`, including the Quantitative Sprint Scorecard section (`PA 4.1 & PA 4.2`) and the Planned vs. Completed Story Points velocity metric table alongside ticket counts (`REQ-PRO-029`).
    * Update `.agents/rules/aspice_governance.md`, relevant skills, `docs/coding_standards.md`, `docs/design_guidelines.md`, and `docs/engineering/rule_history_archive.md` with permanent countermeasures.
    * Commit retrospective deliverables to `sprint/<SPRINT_NAME>`.
-5. **Sprint Closure, Milestone Tagging & Merge to `develop`**:
+6. **Sprint Closure, Milestone Tagging & Merge to `develop`**:
    * Once all tickets and the Retrospective are signed off, merge `sprint/<SPRINT_NAME>` into `develop`, delete the local sprint branch (to keep the active branch list clean), and create an immutable `sprint/<SPRINT_NAME>` Git tag on the `--no-ff` merge commit so every completed sprint remains directly addressable by name (`git checkout sprint/<SPRINT_NAME>`, `git diff`, `regression-bisect`):
    ```bash
    git checkout develop

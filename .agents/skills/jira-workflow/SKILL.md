@@ -75,6 +75,12 @@ python3 tools/jira_util.py move <PARENT_KEY> "final review" # Assigns to human f
 
 # Check Gate 3 prerequisite before modifying production code
 python3 tools/jira_util.py check-gate <IMPL_PLAN_SUBTASK_KEY>
+
+# List all project Epics with Done/Open child ticket counts (Canonical Epic Taxonomy)
+python3 tools/jira_util.py list-epics
+
+# Close a completed Milestone Epic with triple guardrail enforcement (coordinator/human only, requires 0 open children)
+python3 tools/jira_util.py --as coordinator close-epic <EPIC_KEY>
 ```
 
 ## Critical Governance Invariants
@@ -84,6 +90,7 @@ python3 tools/jira_util.py check-gate <IMPL_PLAN_SUBTASK_KEY>
 4. **Separation of Ticket Creation vs. Implementation**: Creating a ticket (`create-issue`) is strictly an ideation/logging step. Report the new issue key and STOP immediately.
 5. **Fix Version Hygiene**: Sub-tasks must NEVER receive a `Lösungsversion` (`fixVersions`). Parent tickets receive `Lösungsversion` only upon completion/acceptance during Sprint Review or release.
 6. **Unattended Autonomous In-Sprint Escalation**: When a decision requires human input mid-sprint, assign the blocked sub-task to `human`, post the question as a comment, and immediately continue with the next sprint ticket.
+7. **Triple Guardrail on Epic Closure (`REQ-PRO-040`)**: Milestone Epics can be closed via `close-epic <KEY>` only under `--as coordinator` or `human`, only if the issue type is `Epic`, and only if exactly 0 open child tickets remain. Standard parent tickets (`Feature`, `Bug`, `Verbesserung`) remain 100% blocked from `Erledigt` transition by AI agents.
 
 ## Deployment Modes: Jira Cloud vs. Jira Data Center (REQ-PRO-039)
 The tooling supports both **Jira Cloud** (default) and enterprise on-premise **Jira Data Center** / **Jira Server**:

@@ -44,7 +44,20 @@ This skill acts as the **Agile Sprint Facilitator & Scrum Master**. It orchestra
 2. **Ticket-by-Ticket Acceptance**:
    - Present each completed ticket in `Final Review (Human)` to the user with its walkthrough summary and test results.
    - Human accepts (`Erledigt` / Done) or rejects back to `Analysis` with feedback.
-3. **Sprint Retrospective & Quantitative Process Control (PA 4.1 & PA 4.2)**:
+3. **Milestone Epic Review & Human-Confirmed Closure (`REQ-PRO-040`)**:
+   - Inspect project Epics via CLI:
+     ```bash
+     python3 tools/jira_util.py list-epics
+     ```
+   - If any **Milestone Epic** has **0 open child tickets** remaining and all intended scope is verified:
+     1. Proactively present the Epic completion status to the human user.
+     2. Recommend closing the Milestone Epic (Evergreen Epics remain open indefinitely).
+     3. Upon explicit human confirmation, close the Epic:
+        ```bash
+        python3 tools/jira_util.py --as coordinator close-epic <EPIC_KEY>
+        ```
+     4. *Strict Invariant*: Standard parent tickets remain strictly under the Human Decision Gate. Only Milestone Epics with 0 open child tickets may be closed via `close-epic` after human confirmation.
+4. **Sprint Retrospective & Quantitative Process Control (PA 4.1 & PA 4.2)**:
    - Execute automated scorecard generation before merging:
      ```bash
      python3 tools/jira_util.py --as coordinator sprint-metrics --record --post-to-retro
@@ -52,5 +65,5 @@ This skill acts as the **Agile Sprint Facilitator & Scrum Master**. It orchestra
    - Embed the quantitative scorecard (Gate 1–5 FTPR, Swiss Cheese defect escape rates $p_1 \dots p_5$, and Statistical Process Control limits $\mu \pm 2\sigma$) into the retrospective deliverable `docs/engineering/retros/Sprint_Review_and_Retro_<SPRINT_NAME>.md` using `templates/sprint_retro_template.md`.
    - **Closed-Loop Trigger (PA 4.2 $\rightarrow$ PA 5.2)**: If any metric triggers an out-of-control condition (`⚠️ PA 4.2 Special Cause Variation` outside $\mu \pm 2\sigma$), the retrospective report MUST define an explicit Root-Cause Analysis (RCA) and concrete process/skill countermeasure prior to sprint merge.
    - Calculate planned vs. completed velocity (tickets and story points).
-4. **Final Branch Integration**:
+5. **Final Branch Integration**:
    - Merge `sprint/<SPRINT_NAME>` into develop/main (`--no-ff`), delete the sprint branch, and close the sprint.

@@ -38,6 +38,7 @@ DEFAULT_ENV_LOCATIONS = [
     os.path.join(os.path.dirname(__file__), ".env.jira"),
     os.path.join(os.path.dirname(__file__), "..", ".env.jira"),
     os.path.join(os.path.dirname(__file__), "..", "..", ".env.jira"),
+    os.path.join(os.path.dirname(__file__), "..", "..", "..", ".env.jira"),
 ]
 
 STAGE_NAMES = {
@@ -367,6 +368,229 @@ def search_issues(jql, as_role="agent1"):
     return issues
 
 
+def paged_jql_search(jql, fields, role="agent1", config=None, h_config=None, max_total=5000):
+    """
+    Executes a paginated JQL search supporting both Jira Cloud (nextPageToken)
+    and Jira Data Center (startAt). Returns a list of issue dictionaries.
+    """
+    if config is None:
+        config = load_env_config()
+    if h_config is None:
+        h_config = load_hoechstmass_config()
+    url = get_search_endpoint(config, h_config)
+    is_dc = is_datacenter(config, h_config)
+    results = []
+    start_at = 0
+    next_token = None
+    page_size = 100
+
+    while True:
+        payload = {
+            "jql": jql,
+            "fields": fields,
+            "maxResults": page_size
+        }
+        if is_dc:
+            payload["startAt"] = start_at
+        elif next_token:
+            payload["nextPageToken"] = next_token
+
+        data = jira_request(url, method="POST", payload=payload, role=role, config=config, h_config=h_config)
+        issues = data.get("issues", [])
+        if not issues:
+            break
+        results.extend(issues)
+        if len(results) >= max_total:
+            break
+
+        if is_dc:
+            start_at += len(issues)
+            total = data.get("total", 0)
+            if start_at >= total or len(issues) < page_size:
+                break
+        else:
+            if data.get("isLast", True):
+                break
+            next_token = data.get("nextPageToken")
+            if not next_token:
+                break
+
+    return results
+
+
+def list_epics(role="agent1", config=None, h_config=None):
+    """
+    REQ-PRO-040.1 / TST-PRO-040.1:
+    Lists all Epics in the project with Done/Open child ticket counts.
+    Supports both Jira Cloud and Jira Data Center deployments.
+    """
+    if config is None:
+        config = load_env_config()
+    if h_config is None:
+        h_config = load_hoechstmass_config()
+
+    jql = "issuetype = Epic ORDER BY key ASC"
+    fields = ["summary", "status", "issuetype"]
+    epics = paged_jql_search(jql, fields, role=role, config=config, h_config=h_config)
+
+    if not epics:
+        print("No Epics found in project.")
+        return
+
+    epic_keys = [e["key"] for e in epics]
+    done_counts = {k: 0 for k in epic_keys}
+    open_counts = {k: 0 for k in epic_keys}
+
+    is_dc = is_datacenter(config, h_config)
+    epic_field = get_epic_link_field(config, h_config) if is_dc else None
+    fields_to_fetch = ["status", "parent"]
+    if epic_field:
+        fields_to_fetch.append(epic_field)
+
+    chunk_size = 50
+    for idx in range(0, len(epic_keys), chunk_size):
+        chunk = epic_keys[idx:idx + chunk_size]
+        keys_str = ",".join(chunk)
+        if is_dc:
+            child_jql = f'"{epic_field}" in ({keys_str}) OR parent in ({keys_str})'
+        else:
+            child_jql = f'parent in ({keys_str})'
+
+        children = paged_jql_search(child_jql, fields_to_fetch, role=role, config=config, h_config=h_config)
+        for ch in children:
+            f = ch.get("fields", {})
+            pk = f.get("parent", {}).get("key")
+            if not pk and epic_field:
+                pval = f.get(epic_field)
+                pk = pval.get("key") if isinstance(pval, dict) else pval
+
+            if pk in done_counts:
+                st_name = f.get("status", {}).get("name", "").lower().strip()
+                if st_name in ("erledigt", "done", "closed", "geschlossen", "resolved"):
+                    done_counts[pk] += 1
+                else:
+                    open_counts[pk] += 1
+
+    total_epics = len(epics)
+    closed_epics = 0
+    open_epics = 0
+
+    header_line = f"{'Key':<10} {'Status':<16} {'Done':>5} {'Open':>5}   {'Summary'}"
+    sep = "-" * max(len(header_line), 95)
+    print("=" * len(sep))
+    print("Project Epics & Completion Overview (Canonical Epic Taxonomy)")
+    print("=" * len(sep))
+    print(header_line)
+    print(sep)
+
+    for e in epics:
+        k = e["key"]
+        st = e.get("fields", {}).get("status", {}).get("name", "")
+        sm = e.get("fields", {}).get("summary", "")
+        st_lower = st.lower().strip()
+        if st_lower in ("erledigt", "done", "closed", "geschlossen", "resolved"):
+            closed_epics += 1
+        else:
+            open_epics += 1
+        print(f"{k:<10} {st:<16} {done_counts[k]:>5} {open_counts[k]:>5}   {sm}")
+
+    print(sep)
+    print(f"Total Epics: {total_epics} ({closed_epics} Erledigt, {open_epics} Open)")
+    print("=" * len(sep))
+
+
+def close_epic(epic_key, role="coordinator", config=None, h_config=None):
+    """
+    REQ-PRO-040.2 / TST-PRO-040.2:
+    Closes an Epic to 'Erledigt' under triple guardrail enforcement:
+    1. Role Guard: Restricted strictly to 'coordinator' or 'human' (rejects 'agent1', 'agent2').
+    2. Issue Type Guard: Verifies target issue is an 'Epic' (rejects standard parent tickets).
+    3. Completeness Guard: Verifies 0 open child tickets (aborts with list of unfinished tickets).
+    """
+    if config is None:
+        config = load_env_config()
+    if h_config is None:
+        h_config = load_hoechstmass_config()
+
+    # Guard 1: Role check
+    if role not in ("coordinator", "human"):
+        print(f"ERROR: Role '{role}' is not authorized to close Epics.\n"
+              f"Closing an Epic is restricted strictly to '--as coordinator' or 'human'.",
+              file=sys.stderr)
+        sys.exit(1)
+
+    # Fetch issue details
+    url = f"{config.get('JIRA_URL', '')}/rest/api/2/issue/{epic_key}?fields=issuetype,status,summary"
+    issue_info = jira_request(url, role=role, config=config, h_config=h_config)
+    fields = issue_info.get("fields", {})
+    itype_name = fields.get("issuetype", {}).get("name", "")
+    summary = fields.get("summary", "")
+
+    # Guard 2: Issue Type check
+    if itype_name.lower() != "epic":
+        print(f"ERROR: '{epic_key}' is not an Epic (issue type is '{itype_name}').\n"
+              f"Standard parent tickets (Feature, Bug, Verbesserung) cannot be closed by agents (REQ-PRO-016 Human Decision Gate).",
+              file=sys.stderr)
+        sys.exit(1)
+
+    # Guard 3: Completeness check
+    is_dc = is_datacenter(config, h_config)
+    if is_dc:
+        epic_field = get_epic_link_field(config, h_config)
+        child_jql = f'"{epic_field}" = "{epic_key}" OR parent = "{epic_key}"'
+        fields_to_fetch = ["summary", "status", "issuetype", epic_field, "parent"]
+    else:
+        child_jql = f'parent = "{epic_key}"'
+        fields_to_fetch = ["summary", "status", "issuetype", "parent"]
+
+    child_issues = paged_jql_search(child_jql, fields_to_fetch, role=role, config=config, h_config=h_config)
+
+    open_children = []
+    for c in child_issues:
+        st_name = c.get("fields", {}).get("status", {}).get("name", "")
+        st_lower = st_name.lower().strip()
+        is_done = st_lower in ("erledigt", "done", "closed", "geschlossen", "resolved")
+        if not is_done:
+            open_children.append((c.get("key"), st_name, c.get("fields", {}).get("summary", "")))
+
+    if open_children:
+        print(f"ERROR: Cannot close Epic '{epic_key}': {len(open_children)} open child ticket(s) remain:\n", file=sys.stderr)
+        for k, st, sm in open_children:
+            print(f"  - {k}: [{st}] {sm}", file=sys.stderr)
+        print(f"\nAll child tickets must be in 'Erledigt' before an Epic can be closed.", file=sys.stderr)
+        sys.exit(1)
+
+    # All guardrails passed -> transition Epic to Erledigt
+    transition_issue(epic_key, "erledigt", as_role=role, allow_epic_close=True, config=config, h_config=h_config)
+    print(f"Epic '{epic_key}' ({summary}) successfully verified and closed.")
+
+
+def transition_issue(issue_key, status_name, as_role="agent1", allow_epic_close=False, config=None, h_config=None):
+    if config is None:
+        config = load_env_config()
+    if h_config is None:
+        h_config = load_hoechstmass_config()
+
+    url = f"{config.get('JIRA_URL', '')}/rest/api/2/issue/{issue_key}?fields=issuetype,status,summary"
+    issue_info = jira_request(url, role=as_role, config=config, h_config=h_config)
+    fields_data = issue_info.get("fields", {})
+    is_subtask = fields_data.get("issuetype", {}).get("subtask", False)
+    is_epic = fields_data.get("issuetype", {}).get("name", "").lower() == "epic"
+    normalized_input = status_name.lower().strip()
+
+    if not is_subtask and normalized_input in ["erledigt", "done", "freigabe erteilt"]:
+        if not (allow_epic_close and is_epic):
+            print(f"ERROR: Transitioning parent ticket '{issue_key}' to '{status_name}' is strictly prohibited for AI agents.\n"
+                  f"Moving parent tickets to 'Erledigt' is a Human Decision Gate reserved exclusively for the human user.",
+                  file=sys.stderr)
+            sys.exit(1)
+
+    t_url = f"{config.get('JIRA_URL', '')}/rest/api/2/issue/{issue_key}/transitions"
+    done_id = h_config.get("transitions", {}).get("done", "41")
+    jira_request(t_url, method="POST", payload={"transition": {"id": done_id}}, role=as_role, config=config, h_config=h_config)
+    print(f"Successfully moved {issue_key} to Done via transition '{done_id}'.")
+
+
 def add_comment(issue_key, comment_text, as_role="agent1"):
     """Adds a comment to an issue."""
     config = load_env_config()
@@ -647,6 +871,13 @@ def main():
             print("Usage: jira_util.py search <JQL>", file=sys.stderr)
             sys.exit(1)
         search_issues(args[1], as_role=as_role)
+    elif cmd in ("list-epics", "list_epics"):
+        list_epics(role=as_role)
+    elif cmd in ("close-epic", "close_epic"):
+        if len(args) < 2:
+            print("Usage: jira_util.py close-epic <EPIC_KEY>", file=sys.stderr)
+            sys.exit(1)
+        close_epic(args[1], role=as_role)
     elif cmd in ("sprint-metrics", "sprint_metrics"):
         sprint_arg = None
         record = False
