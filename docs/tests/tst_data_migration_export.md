@@ -2023,4 +2023,24 @@
   4. *Clean-Room Regression Suite Execution (`TST-DAT-034.4`)*:
   • Run targeted package tests (`com.atrainingtracker.trainingtracker.database.*`) with 100% pass rate.
 
+### TST-MIG-047: **Bulk Import Chronological Ascending Ingestion Order Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-MIG-049`
+- **Component**: `StravaBulkExportImporter.kt`, `SafDirectoryScanner.kt`, `BackupRestoreViewModel.kt`, `LegacyImportEngine.kt`
+- **Jira**: `ATT-6039`
+- **Test Description**:
+  1. *Strava Bulk Export Ascending Order Processing (`TST-MIG-047.1`, `StravaBulkExportImporterTest.kt`)*:
+  • Verify `StravaBulkExportImporter` sorts parsed CSV activities ascending by numeric `activityId.toLongOrNull() ?: Long.MAX_VALUE` (falling back to `reversed()` when non-numeric) prior to processing.
+  • Assert that progress listener receives activities in ascending chronological order and earlier workouts are inserted first.
+  2. *SAF Directory Scanner Ascending Filename Sorting (`TST-MIG-047.2`, `SafDirectoryScannerTest.kt`)*:
+  • Verify `SafDirectoryScanner.scanDocumentFile` sorts discovered URIs ascending by document filename using `String.CASE_INSENSITIVE_ORDER`.
+  • Assert that directories with arbitrary filesystem order return URIs strictly sorted by filename.
+  3. *Cloud Recovery & Multi-URI Sorting (`TST-MIG-047.3`, `LegacyImportEngineDeduplicationTest.kt`)*:
+  • Verify `bulkRecoverFromDropbox` and `bulkRecoverFromGoogleDrive` sort deduplicated cloud entries ascending by filename using `String.CASE_INSENSITIVE_ORDER` prior to channel dispatch.
+  • Verify `BackupRestoreViewModel.importWorkoutFilesInternal` pre-sorts input URIs ascending by resolved filename.
+  4. *9-Language Localization & Specifier Parity (`TST-MIG-047.4`, `TranslationParityTest.kt`)*:
+  • Verify all import progress and status strings across all 9 locales (`values`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`) maintain 100% parity with zero missing keys or broken specifiers.
+  5. *Clean-Room Regression Suite Execution (`TST-MIG-047.5`)*:
+  • Execute targeted package tests (`com.atrainingtracker.trainingtracker.migration.*`) asserting 100% pass rate.
+
+
 

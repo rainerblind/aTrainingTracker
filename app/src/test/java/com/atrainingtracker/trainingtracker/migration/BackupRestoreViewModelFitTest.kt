@@ -166,4 +166,46 @@ class BackupRestoreViewModelFitTest {
         val msg = (state as BackupRestoreViewModel.UiState.Error).message
         assertTrue(msg.contains("1 failed"))
     }
+
+    @Test
+    fun importFitFiles_sortsUrisAscendingByResolvedDisplayName() = runTest(testDispatcher) {
+        val uriLater = mockk<Uri>(relaxed = true) {
+            every { lastPathSegment } returns "2024-05-15.fit"
+        }
+        val uriEarlier = mockk<Uri>(relaxed = true) {
+            every { lastPathSegment } returns "2024-05-01.fit"
+        }
+        val uris = listOf(uriLater, uriEarlier)
+
+        every { mockContentResolver.openInputStream(any()) } answers { ByteArrayInputStream(byteArrayOf(1, 2, 3)) }
+
+        val cursorLater = mockk<android.database.Cursor>(relaxed = true) {
+            every { moveToFirst() } returns true
+            every { getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME) } returns 0
+            every { getString(0) } returns "2024-05-15_1000.fit"
+        }
+        val cursorEarlier = mockk<android.database.Cursor>(relaxed = true) {
+            every { moveToFirst() } returns true
+            every { getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME) } returns 0
+            every { getString(0) } returns "2024-05-01_1000.fit"
+        }
+        every { mockContentResolver.query(uriLater, any(), any(), any(), any()) } returns cursorLater
+        every { mockContentResolver.query(uriEarlier, any(), any(), any(), any()) } returns cursorEarlier
+
+        val processedFiles = mutableListOf<String>()
+        mockkObject(LegacyImportEngine)
+        coEvery {
+            LegacyImportEngine.importFromFitResult(mockContext, any(), any(), any())
+        } answers {
+            val file = secondArg<File>()
+            processedFiles.add(file.name)
+            LegacyImportEngine.ImportResult(LegacyImportEngine.ImportStatus.SUCCESS, 101L)
+        }
+
+        val viewModel = BackupRestoreViewModel(mockApp)
+        val job = viewModel.importFitFiles(mockContext, uris, testDispatcher)
+        job.join()
+
+        assertEquals(listOf("2024-05-01_1000.fit", "2024-05-15_1000.fit"), processedFiles)
+    }
 }

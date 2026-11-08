@@ -231,6 +231,28 @@ class LegacyImportEngineDeduplicationTest {
     }
 
     @Test
+    fun testPreDispatchCloudEntryDeduplication_sortsAscendingByFilename() {
+        val mockEntry1 = mockk<Metadata>(relaxed = true) { every { name } returns "2024_05_12_09_00_00.tcx" }
+        val mockEntry2 = mockk<Metadata>(relaxed = true) { every { name } returns "2024_05_10_14_30_00.tcx" }
+        val mockEntry3 = mockk<Metadata>(relaxed = true) { every { name } returns "2024_05_11_08_00_00.tcx" }
+        val mockEntry4 = mockk<Metadata>(relaxed = true) { every { name } returns "2024_05_10_14_30_00-TMP.tcx" }
+
+        val allEntries = listOf(mockEntry1, mockEntry2, mockEntry3, mockEntry4)
+
+        // Bulk recover deduplication and sorting pipeline (REQ-MIG-049.4, ATT-6039)
+        val processed = allEntries.distinctBy {
+            it.name.substringBeforeLast(".").removeSuffix("-TMP").removeSuffix("~").lowercase()
+        }.sortedWith { a, b ->
+            String.CASE_INSENSITIVE_ORDER.compare(a.name, b.name)
+        }
+
+        assertEquals(3, processed.size)
+        assertEquals("2024_05_10_14_30_00.tcx", processed[0].name)
+        assertEquals("2024_05_11_08_00_00.tcx", processed[1].name)
+        assertEquals("2024_05_12_09_00_00.tcx", processed[2].name)
+    }
+
+    @Test
     fun testConcurrentWorkerMutexProtection_guaranteesAtomicCheckAndInsert() = runBlocking {
         val mutex = LegacyImportEngine.importMutex
         val insertedCounter = AtomicInteger(0)

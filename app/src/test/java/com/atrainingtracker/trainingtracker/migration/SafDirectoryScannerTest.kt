@@ -241,4 +241,45 @@ class SafDirectoryScannerTest {
         )
         assertTrue(results.isEmpty())
     }
+
+    @Test
+    fun testScanDocumentFile_sortsUrisAscendingByName() = runBlocking {
+        val rootUri = mockk<Uri>()
+        val uriA = mockk<Uri>()
+        val uriB = mockk<Uri>()
+        val uriC = mockk<Uri>()
+
+        val mockFileC = mockk<DocumentFile>(relaxed = true) {
+            every { isDirectory } returns false
+            every { isFile } returns true
+            every { name } returns "2024-03-01_1000.fit"
+            every { uri } returns uriC
+        }
+        val mockFileA = mockk<DocumentFile>(relaxed = true) {
+            every { isDirectory } returns false
+            every { isFile } returns true
+            every { name } returns "2024-01-01_1000.fit"
+            every { uri } returns uriA
+        }
+        val mockFileB = mockk<DocumentFile>(relaxed = true) {
+            every { isDirectory } returns false
+            every { isFile } returns true
+            every { name } returns "2024-02-01_1000.fit"
+            every { uri } returns uriB
+        }
+
+        val mockRootDir = mockk<DocumentFile>(relaxed = true) {
+            every { isDirectory } returns true
+            every { isFile } returns false
+            every { name } returns "root"
+            every { uri } returns rootUri
+            every { listFiles() } returns arrayOf(mockFileC, mockFileA, mockFileB)
+        }
+
+        val results = SafDirectoryScanner.scanDocumentFile(mockRootDir, "fit")
+        assertEquals(3, results.size)
+        assertEquals(uriA, results[0])
+        assertEquals(uriB, results[1])
+        assertEquals(uriC, results[2])
+    }
 }

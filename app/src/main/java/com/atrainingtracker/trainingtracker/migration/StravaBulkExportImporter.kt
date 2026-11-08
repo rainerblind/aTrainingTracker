@@ -133,10 +133,17 @@ object StravaBulkExportImporter {
             }
 
             validateZipEntry(activitiesEntry.name)
-            val activities = zip.getInputStream(activitiesEntry).use { stream ->
+            val rawActivities = zip.getInputStream(activitiesEntry).use { stream ->
                 InputStreamReader(stream, Charsets.UTF_8).use { reader ->
                     StravaCsvParser.parseActivities(reader)
                 }
+            }
+
+            // Unify bulk import processing order to chronological ascending (oldest first, REQ-MIG-049.1, ATT-6039)
+            val activities = if (rawActivities.any { it.activityId.toLongOrNull() != null }) {
+                rawActivities.sortedBy { it.activityId.toLongOrNull() ?: Long.MAX_VALUE }
+            } else {
+                rawActivities.reversed()
             }
 
             val totalScanned = activities.size
