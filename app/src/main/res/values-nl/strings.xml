@@ -2416,4 +2416,20 @@
     <string name="settings_workout_photos_size_small">Klein</string>
     <string name="settings_workout_photos_size_medium">Gemiddeld</string>
     <string name="settings_workout_photos_size_large">Groot</string>
+    <!-- Workout Diagnostic Recording Errors & Actionable Report (REQ-TRK-053 / ATT-5886) -->
+    <string name="workout_diagnostic_banner_title">Opnamewaarschuwing gedetecteerd</string>
+    <string name="workout_diagnostic_banner_action">Details weergeven</string>
+    <string name="workout_diagnostic_dialog_title">Opnamediagnostiek</string>
+    <string name="workout_diagnostic_explanation_storage_full">Het apparaatgeheugen was vol. Maak opslagruimte vrij op je smartphone.</string>
+    <string name="workout_diagnostic_explanation_sample_write">Sommige gegevens per seconde konden tijdens de training niet worden opgeslagen. Het totale overzicht van je training is echter bewaard gebleven.</string>
+    <string name="workout_diagnostic_explanation_finalize">Je trainingsopname is volledig opgeslagen, maar er is een interne fout opgetreden tijdens de daaropvolgende analyse.</string>
+    <string name="workout_diagnostic_explanation_generic">Er is een onverwachte fout opgetreden tijdens de opname of analyse.</string>
+    <string name="workout_diagnostic_technical_details_title">Technische details</string>
+    <string name="workout_diagnostic_action_copy">Kopiëren naar klembord</string>
+    <string name="workout_diagnostic_copied_toast">Technische details gekopieerd naar klembord</string>
+    <string name="workout_diagnostic_action_send_email">Foutrapport per e-mail verzenden</string>
+    <string name="workout_diagnostic_email_subject">aTrainingTracker-foutrapport (%1$s)</string>
+    <string name="workout_diagnostic_action_clear_warning">Waarschuwing wissen</string>
+    <string name="workout_diagnostic_clear_confirm_title">Waarschuwing wissen?</string>
+    <string name="workout_diagnostic_clear_confirm_message">De diagnostische waarschuwing voor deze training wordt permanent verwijderd.</string>
 </resources>

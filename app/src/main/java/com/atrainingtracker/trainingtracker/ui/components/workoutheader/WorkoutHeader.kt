@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -38,6 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -88,11 +90,13 @@ fun WorkoutHeader(
     onClusterClick: ((Long) -> Unit)? = null,
     onEditWorkout: (() -> Unit)? = null,
     onShareWorkout: (() -> Unit)? = null,
+    onClearRecordingErrors: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     // State to control menu visibility
     var showMenu by remember { mutableStateOf(false) }
     var showContextMenu by remember { mutableStateOf(false) }
+    var showDiagnosticSheet by remember { mutableStateOf(false) }
 
     val hasLongClick = canDelete || (!data.finished && onMarkFinished != null)
 
@@ -117,6 +121,21 @@ fun WorkoutHeader(
             ) {
                 // Custom actions provided by caller
                 actions()
+
+                if (!data.recordingErrors.isNullOrBlank()) {
+                    IconButton(
+                        onClick = { showDiagnosticSheet = true },
+                        modifier = Modifier
+                            .size(32.dp)
+                            .testTag(com.atrainingtracker.trainingtracker.ui.dialogs.WorkoutDiagnosticTestTags.BADGE)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.WarningAmber,
+                            contentDescription = stringResource(R.string.workout_diagnostic_banner_title),
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
 
                 if (onEditWorkout != null) {
                     IconButton(
@@ -593,6 +612,19 @@ fun WorkoutHeader(
                 }
             }
         }
+    }
+
+    if (showDiagnosticSheet && !data.recordingErrors.isNullOrBlank()) {
+        com.atrainingtracker.trainingtracker.ui.dialogs.WorkoutDiagnosticBottomSheet(
+            recordingErrorsJson = data.recordingErrors!!,
+            workoutName = data.workoutName,
+            sportName = data.sportName,
+            onClearWarning = {
+                onClearRecordingErrors?.invoke()
+                showDiagnosticSheet = false
+            },
+            onDismiss = { showDiagnosticSheet = false }
+        )
     }
 }
 

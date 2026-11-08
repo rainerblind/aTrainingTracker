@@ -2617,4 +2617,20 @@
     <string name="settings_workout_photos_size_small">Small</string>
     <string name="settings_workout_photos_size_medium">Medium</string>
     <string name="settings_workout_photos_size_large">Large</string>
+    <!-- Workout Diagnostic Recording Errors & Actionable Report (REQ-TRK-053 / ATT-5886) -->
+    <string name="workout_diagnostic_banner_title">Recording warning detected</string>
+    <string name="workout_diagnostic_banner_action">View details</string>
+    <string name="workout_diagnostic_dialog_title">Recording Diagnostics</string>
+    <string name="workout_diagnostic_explanation_storage_full">Device storage was full. Please free up storage space on your smartphone.</string>
+    <string name="workout_diagnostic_explanation_sample_write">Some per-second data points could not be saved during the workout. However, the overall summary of your workout was preserved.</string>
+    <string name="workout_diagnostic_explanation_finalize">Your workout recording was fully saved, but an internal error occurred during subsequent post-workout analysis.</string>
+    <string name="workout_diagnostic_explanation_generic">An unexpected error occurred during recording or post-workout analysis.</string>
+    <string name="workout_diagnostic_technical_details_title">Technical details</string>
+    <string name="workout_diagnostic_action_copy">Copy to clipboard</string>
+    <string name="workout_diagnostic_copied_toast">Technical details copied to clipboard</string>
+    <string name="workout_diagnostic_action_send_email">Send bug report via email</string>
+    <string name="workout_diagnostic_email_subject">aTrainingTracker Bug Report (%1$s)</string>
+    <string name="workout_diagnostic_action_clear_warning">Clear warning</string>
+    <string name="workout_diagnostic_clear_confirm_title">Clear warning?</string>
+    <string name="workout_diagnostic_clear_confirm_message">The diagnostic warning for this workout will be removed permanently.</string>
 </resources>

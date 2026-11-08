@@ -2417,4 +2417,20 @@
     <string name="settings_workout_photos_size_small">Pequeño</string>
     <string name="settings_workout_photos_size_medium">Mediano</string>
     <string name="settings_workout_photos_size_large">Grande</string>
+    <!-- Workout Diagnostic Recording Errors & Actionable Report (REQ-TRK-053 / ATT-5886) -->
+    <string name="workout_diagnostic_banner_title">Advertencia de grabación detectada</string>
+    <string name="workout_diagnostic_banner_action">Ver detalles</string>
+    <string name="workout_diagnostic_dialog_title">Diagnóstico de grabación</string>
+    <string name="workout_diagnostic_explanation_storage_full">El almacenamiento del dispositivo estaba lleno. Libera espacio en tu teléfono inteligente.</string>
+    <string name="workout_diagnostic_explanation_sample_write">No se pudieron guardar algunos datos por segundo durante el entrenamiento. Sin embargo, se conservó el resumen general de tu entrenamiento.</string>
+    <string name="workout_diagnostic_explanation_finalize">Tu entrenamiento se guardó por completo, pero ocurrió un error interno durante el análisis posterior al entrenamiento.</string>
+    <string name="workout_diagnostic_explanation_generic">Ocurrió un error inesperado durante la grabación o el análisis posterior al entrenamiento.</string>
+    <string name="workout_diagnostic_technical_details_title">Detalles técnicos</string>
+    <string name="workout_diagnostic_action_copy">Copiar al portapapeles</string>
+    <string name="workout_diagnostic_copied_toast">Detalles técnicos copiados al portapapeles</string>
+    <string name="workout_diagnostic_action_send_email">Enviar informe de error por correo electrónico</string>
+    <string name="workout_diagnostic_email_subject">Informe de error de aTrainingTracker (%1$s)</string>
+    <string name="workout_diagnostic_action_clear_warning">Borrar advertencia</string>
+    <string name="workout_diagnostic_clear_confirm_title">¿Borrar advertencia?</string>
+    <string name="workout_diagnostic_clear_confirm_message">La advertencia de diagnóstico para este entrenamiento se eliminará de forma permanente.</string>
 </resources>

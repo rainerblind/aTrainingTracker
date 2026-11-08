@@ -1733,6 +1733,23 @@ class WorkoutRepository private constructor(private val application: Application
     }
 
     /**
+     * Updates the diagnostic recording errors payload for a workout in memory (REQ-TRK-053.3).
+     */
+    fun setRecordingErrors(workoutId: Long, recordingErrors: String?) {
+        updateWorkoutInMemory(workoutId) { it.copy(recordingErrors = recordingErrors) }
+    }
+
+    /**
+     * Clears diagnostic recording errors for a workout both in database and in memory (REQ-TRK-053.1, REQ-TRK-053.3).
+     */
+    suspend fun clearRecordingErrors(workoutId: Long) {
+        withContext(Dispatchers.IO) {
+            summariesManager.clearRecordingErrors(workoutId)
+        }
+        updateWorkoutInMemory(workoutId) { it.copy(recordingErrors = null) }
+    }
+
+    /**
      * Marks an old unfinished workout as finished in database and memory,
      * and rolls its metrics into historical period summaries (ATT-987 / REQ-UI-146).
      */

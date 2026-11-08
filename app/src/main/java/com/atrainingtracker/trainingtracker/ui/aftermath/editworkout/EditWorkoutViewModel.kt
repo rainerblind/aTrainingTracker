@@ -392,6 +392,16 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         _workoutData.update { it?.copy(race = isChecked) }
     }
 
+    /**
+     * Clears diagnostic recording errors for this workout session (REQ-TRK-053.4).
+     */
+    fun clearRecordingErrors() {
+        viewModelScope.launch {
+            repository.clearRecordingErrors(workoutId)
+            _workoutData.update { it?.copy(recordingErrors = null) }
+        }
+    }
+
 
     /**
      * Saves the current state of the WorkoutData object to the database.

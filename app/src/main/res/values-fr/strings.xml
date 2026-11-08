@@ -2416,4 +2416,20 @@
     <string name="settings_workout_photos_size_small">Petite</string>
     <string name="settings_workout_photos_size_medium">Moyenne</string>
     <string name="settings_workout_photos_size_large">Grande</string>
+    <!-- Workout Diagnostic Recording Errors & Actionable Report (REQ-TRK-053 / ATT-5886) -->
+    <string name="workout_diagnostic_banner_title">Avertissement d\'enregistrement détecté</string>
+    <string name="workout_diagnostic_banner_action">Voir les détails</string>
+    <string name="workout_diagnostic_dialog_title">Diagnostic d\'enregistrement</string>
+    <string name="workout_diagnostic_explanation_storage_full">L\'espace de stockage de l\'appareil était plein. Veuillez libérer de l\'espace sur votre smartphone.</string>
+    <string name="workout_diagnostic_explanation_sample_write">Certaines données par seconde n\'ont pas pu être enregistrées pendant l\'entraînement. Cependant, le résumé global de votre entraînement a été préservé.</string>
+    <string name="workout_diagnostic_explanation_finalize">Votre enregistrement d\'entraînement a été entièrement sauvegardé, mais une erreur interne s\'est produite lors de l\'analyse ultérieure.</string>
+    <string name="workout_diagnostic_explanation_generic">Une erreur inattendue s\'est produite pendant l\'enregistrement ou l\'analyse.</string>
+    <string name="workout_diagnostic_technical_details_title">Détails techniques</string>
+    <string name="workout_diagnostic_action_copy">Copier dans le presse-papiers</string>
+    <string name="workout_diagnostic_copied_toast">Détails techniques copiés dans le presse-papiers</string>
+    <string name="workout_diagnostic_action_send_email">Envoyer un rapport d\'erreur par e-mail</string>
+    <string name="workout_diagnostic_email_subject">Rapport d\'erreur aTrainingTracker (%1$s)</string>
+    <string name="workout_diagnostic_action_clear_warning">Effacer l\'avertissement</string>
+    <string name="workout_diagnostic_clear_confirm_title">Effacer l\'avertissement ?</string>
+    <string name="workout_diagnostic_clear_confirm_message">L\'avertissement de diagnostic pour cet entraînement sera définitivement supprimé.</string>
 </resources>

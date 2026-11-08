@@ -2417,4 +2417,20 @@
     <string name="settings_workout_photos_size_small">Piccola</string>
     <string name="settings_workout_photos_size_medium">Media</string>
     <string name="settings_workout_photos_size_large">Grande</string>
+    <!-- Workout Diagnostic Recording Errors & Actionable Report (REQ-TRK-053 / ATT-5886) -->
+    <string name="workout_diagnostic_banner_title">Avviso di registrazione rilevato</string>
+    <string name="workout_diagnostic_banner_action">Visualizza dettagli</string>
+    <string name="workout_diagnostic_dialog_title">Diagnostica di registrazione</string>
+    <string name="workout_diagnostic_explanation_storage_full">La memoria del dispositivo era piena. Libera spazio sul tuo smartphone.</string>
+    <string name="workout_diagnostic_explanation_sample_write">Alcuni dati al secondo non sono stati salvati durante l\'allenamento. Tuttavia, il riepilogo complessivo del tuo allenamento è stato preservato.</string>
+    <string name="workout_diagnostic_explanation_finalize">La registrazione dell\'allenamento è stata salvata completamente, ma si è verificato un errore interno durante l\'analisi successiva.</string>
+    <string name="workout_diagnostic_explanation_generic">Si è verificato un errore imprevisto durante la registrazione o l\'analisi.</string>
+    <string name="workout_diagnostic_technical_details_title">Dettagli tecnici</string>
+    <string name="workout_diagnostic_action_copy">Copia negli appunti</string>
+    <string name="workout_diagnostic_copied_toast">Dettagli tecnici copiati negli appunti</string>
+    <string name="workout_diagnostic_action_send_email">Invia segnalazione di bug via email</string>
+    <string name="workout_diagnostic_email_subject">Segnalazione di bug aTrainingTracker (%1$s)</string>
+    <string name="workout_diagnostic_action_clear_warning">Cancella avviso</string>
+    <string name="workout_diagnostic_clear_confirm_title">Cancellare l\'avviso?</string>
+    <string name="workout_diagnostic_clear_confirm_message">L\'avviso di diagnostica per questo allenamento verrà rimosso in modo permanente.</string>
 </resources>

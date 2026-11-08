@@ -2415,4 +2415,20 @@
     <string name="settings_workout_photos_size_small">Pequeno</string>
     <string name="settings_workout_photos_size_medium">Médio</string>
     <string name="settings_workout_photos_size_large">Grande</string>
+    <!-- Workout Diagnostic Recording Errors & Actionable Report (REQ-TRK-053 / ATT-5886) -->
+    <string name="workout_diagnostic_banner_title">Aviso de gravação detetado</string>
+    <string name="workout_diagnostic_banner_action">Ver detalhes</string>
+    <string name="workout_diagnostic_dialog_title">Diagnóstico de gravação</string>
+    <string name="workout_diagnostic_explanation_storage_full">O armazenamento do dispositivo estava cheio. Liberte espaço no seu smartphone.</string>
+    <string name="workout_diagnostic_explanation_sample_write">Alguns dados por segundo não puderam ser guardados durante o treino. No entanto, o resumo geral do seu treino foi preservado.</string>
+    <string name="workout_diagnostic_explanation_finalize">A gravação do seu treino foi guardada com sucesso, mas ocorreu um erro interno durante a análise pós-treino.</string>
+    <string name="workout_diagnostic_explanation_generic">Ocorreu um erro inesperado durante a gravação ou análise.</string>
+    <string name="workout_diagnostic_technical_details_title">Detalhes técnicos</string>
+    <string name="workout_diagnostic_action_copy">Copiar para a área de transferência</string>
+    <string name="workout_diagnostic_copied_toast">Detalhes técnicos copiados para a área de transferência</string>
+    <string name="workout_diagnostic_action_send_email">Enviar relatório de erro por e-mail</string>
+    <string name="workout_diagnostic_email_subject">Relatório de erro do aTrainingTracker (%1$s)</string>
+    <string name="workout_diagnostic_action_clear_warning">Limpar aviso</string>
+    <string name="workout_diagnostic_clear_confirm_title">Limpar aviso?</string>
+    <string name="workout_diagnostic_clear_confirm_message">O aviso de diagnóstico para este treino será removido permanentemente.</string>
 </resources>

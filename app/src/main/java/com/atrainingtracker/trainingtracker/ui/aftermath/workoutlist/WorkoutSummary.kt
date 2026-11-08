@@ -233,7 +233,8 @@ fun WorkoutSummary(
             onMarkFinished = if (canMarkFinished && onMarkFinished != null) onMarkFinished else null,
             onClusterClick = onClusterClick,
             onEditWorkout = onEditWorkout,
-            onShareWorkout = if (workoutData.headerData.finished) { { showShareModeSheet = true } } else null
+            onShareWorkout = if (workoutData.headerData.finished) { { showShareModeSheet = true } } else null,
+            onClearRecordingErrors = { coroutineScope.launch { repository.clearRecordingErrors(workoutData.id) } }
         )
 
         HorizontalDivider(

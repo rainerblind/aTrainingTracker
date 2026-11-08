@@ -2396,4 +2396,20 @@
     <string name="settings_workout_photos_size_small">小</string>
     <string name="settings_workout_photos_size_medium">中</string>
     <string name="settings_workout_photos_size_large">大</string>
+    <!-- Workout Diagnostic Recording Errors & Actionable Report (REQ-TRK-053 / ATT-5886) -->
+    <string name="workout_diagnostic_banner_title">記録に関する警告が検出されました</string>
+    <string name="workout_diagnostic_banner_action">詳細を表示</string>
+    <string name="workout_diagnostic_dialog_title">記録診断</string>
+    <string name="workout_diagnostic_explanation_storage_full">端末の空き容量が不足していました。スマートフォンの空き容量を確保してください。</string>
+    <string name="workout_diagnostic_explanation_sample_write">ワークアウト中の一部の秒単位データを保存できませんでした。ただし、ワークアウト全体の概要は保持されています。</string>
+    <string name="workout_diagnostic_explanation_finalize">ワークアウトの記録は完全に保存されましたが、その後の分析中に内部エラーが発生しました。</string>
+    <string name="workout_diagnostic_explanation_generic">記録または分析中に予期しないエラーが発生しました。</string>
+    <string name="workout_diagnostic_technical_details_title">技術的な詳細</string>
+    <string name="workout_diagnostic_action_copy">クリップボードにコピー</string>
+    <string name="workout_diagnostic_copied_toast">技術的な詳細をクリップボードにコピーしました</string>
+    <string name="workout_diagnostic_action_send_email">バグ報告をメールで送信</string>
+    <string name="workout_diagnostic_email_subject">aTrainingTracker バグ報告 (%1$s)</string>
+    <string name="workout_diagnostic_action_clear_warning">警告を削除</string>
+    <string name="workout_diagnostic_clear_confirm_title">警告を削除しますか？</string>
+    <string name="workout_diagnostic_clear_confirm_message">このワークアウトの診断警告は完全に削除されます。</string>
 </resources>

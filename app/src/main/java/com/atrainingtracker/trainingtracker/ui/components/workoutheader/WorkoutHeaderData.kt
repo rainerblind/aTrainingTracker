@@ -59,5 +59,6 @@ data class WorkoutHeaderData(
     val clusterName: String? = null,
     val finished: Boolean,
     val startLocationName: String? = null,
-    val endLocationName: String? = null
+    val endLocationName: String? = null,
+    val recordingErrors: String? = null
 )
