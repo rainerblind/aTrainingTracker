@@ -279,7 +279,9 @@
     <string name="prefsDisplayTitle">表示</string>
     <string name="prefsDisplaySummary">画面と向きの設定</string>
     <string name="prefsKeepScreenOnTitle">画面を常時点灯</string>
+    <string name="prefsKeepScreenOnSummary">アクティブな記録中に画面が自動的に消灯するのを防ぎます</string>
     <string name="prefsNoUnlockingTitle">ロック解除を維持</string>
+    <string name="prefsNoUnlockingSummary">ロック画面の上にコックピットを表示し、PINやパターンの入力を不要にします</string>
     <string name="prefZoomDependingOnSpeedTitle">速度に応じてズーム</string>
     <string name="prefsUnitsTitle">単位</string>
     <string name="prefsUnitsSummary">メートル法</string>
@@ -494,6 +496,7 @@
     <string name="do_not_check_again">再確認しない</string>
     <string name="check_ANT_installation">ANTのインストール状況を確認</string>
     <string name="forcePortrait">縦向き固定</string>
+    <string name="forcePortraitSummary">画面を縦向きに固定し、横向きへの自動回転を防止します</string>
     <string name="Display">画面</string>
     <string name="settings_category_savings">バッテリー節約</string>
     <string name="settings_category_savings_desc">バッテリー駆動時間を延ばし、より長時間のトラッキングを可能にします</string>

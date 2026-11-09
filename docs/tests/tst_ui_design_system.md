@@ -3,7 +3,7 @@
 **Domain**: `ui_design_system`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 391
+**Total Tests**: 392
 
 ---
 
@@ -8055,6 +8055,21 @@
   • Execute `TranslationParityTest` asserting that `pioneer_thank_you_body` exists in all 9 supported locales with 100% parity.
   3. *Tier 1 Targeted Unit Test Regression (`TST-UI-502.3`)*:
   • Execute targeted test suite (`ui.settings.supporter.*`, `ui.branding.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
+
+### TST-UI-503: **DisplaySettingsDialog Display Option Subtitles Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-503`
+- **Component**: `DisplaySettingsDialog.kt`, `res/values*/strings.xml`, `DisplaySettingsTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-6282`
+- **Test Description**:
+  1. *Display Option Subtitle Resource Contract Test (`TST-UI-503.1`)*:
+  • Verify in `DisplaySettingsTest.kt` that `forcePortraitSummary`, `prefsKeepScreenOnSummary`, and `prefsNoUnlockingSummary` exist across all 9 locales, are non-blank, contain zero format specifiers, and contain zero decorative emojis (`ATT-5400`).
+  • Verify that `prefsKeepScreenOnTitle` and `prefsNoUnlockingTitle` start with a capitalized letter across all applicable locales.
+  2. *9-Language Localization Parity Suite (`TST-UI-503.2`)*:
+  • Execute `TranslationParityTest` asserting that all 3 new string resources exist across all 9 supported locales with 100% parity.
+  3. *Tier 1 Targeted Unit Test Regression (`TST-UI-503.3`)*:
+  • Execute targeted test suite (`ui.settings.display.*`, `ui.branding.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
+
 
 
 

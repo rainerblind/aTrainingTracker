@@ -278,8 +278,10 @@
 
     <string name="prefsDisplayTitle">Scherm</string>
     <string name="prefsDisplaySummary">Scherm- en oriëntatie-instellingen</string>
-    <string name="prefsKeepScreenOnTitle">scherm aanhouden</string>
-    <string name="prefsNoUnlockingTitle">scherm ontgrendeld houden</string>
+    <string name="prefsKeepScreenOnTitle">Scherm aanhouden</string>
+    <string name="prefsKeepScreenOnSummary">Voorkomt dat het scherm automatisch uitschakelt tijdens actieve registratie</string>
+    <string name="prefsNoUnlockingTitle">Scherm ontgrendeld houden</string>
+    <string name="prefsNoUnlockingSummary">Toont de cockpit boven het vergrendelscherm zonder pincode of patroon</string>
     <string name="prefZoomDependingOnSpeedTitle">zoom op basis van snelheid</string>
     <string name="prefsUnitsTitle">Eenheden</string>
     <string name="prefsUnitsSummary">metrisch</string>
@@ -496,6 +498,7 @@
     <string name="do_not_check_again">niet meer controleren</string>
     <string name="check_ANT_installation">ANT installatie controleren</string>
     <string name="forcePortrait">Staande oriëntatie</string>
+    <string name="forcePortraitSummary">Vergrendelt het scherm in staande modus en voorkomt automatisch draaien naar liggend</string>
     <string name="Display">Scherm</string>
     <string name="settings_category_savings">Batterijbesparing</string>
     <string name="settings_category_savings_desc">Verlengt de batterijduur voor langere trainingssessies</string>

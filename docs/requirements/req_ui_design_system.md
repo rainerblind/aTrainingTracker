@@ -3,7 +3,7 @@
 **Domain**: `ui_design_system`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Requirements**: 371
+**Total Requirements**: 372
 
 ---
 
@@ -15015,6 +15015,37 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Then* all 9 locales pass with 100% translation parity and zero format specifier errors.
 
 **Invariants**: Lifetime Pro privileges (`isProActive() == true`); dynamic since-year badge formatting; 36dp tier emblem; zero format specifier mismatches; 100% test pass rate.
+
+### REQ-UI-503: DisplaySettingsDialog: Descriptive Subtitles and Capitalized Titles for Top Display Toggles [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-503`
+- **Implementation**: `DisplaySettingsDialog.kt`, `res/values*/strings.xml`, `DisplaySettingsTest.kt`
+- **Rationale**: In `DisplaySettingsDialog.kt`, the top three display option toggles (`forcePortrait`, `keepScreenOn`, and `noUnlocking`) historically lacked explanatory subtitle descriptions, while legacy title strings started with lowercase letters in multiple locales. The system SHALL display clear, localized subtitle descriptions for all four top display toggles and ensure consistent title capitalization across all 9 supported locales.
+- **Description**:
+  1. *Descriptive Subtitle Wiring (`REQ-UI-503.1`)*:
+     - `DisplaySettingsDialog.kt` SHALL supply descriptive subtitles to the top three `DisplayOptionToggle` instances via `forcePortraitSummary`, `prefsKeepScreenOnSummary`, and `prefsNoUnlockingSummary`.
+     - Subtitles SHALL explain vertical portrait orientation lock, active tracking wake-lock retention, and lock-screen overlay access.
+  2. *Consistent Title Capitalization (`REQ-UI-503.2`)*:
+     - `prefsKeepScreenOnTitle` and `prefsNoUnlockingTitle` SHALL begin with a capital letter across all supported locales (e.g., EN: *"Keep screen on"*, *"Keep screen unlocked"*).
+  3. *9-Language Localization Parity (`REQ-UI-503.3`)*:
+     - All 3 summary strings SHALL be defined across all 9 supported application locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with 100% parity, zero format specifiers, and zero decorative emojis (`ATT-5400`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-UI-149.1` (`DisplaySettingsDialog` presentation). Targets `DisplaySettingsDialog.kt` and `res/values*/strings.xml`.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-1016` (commit `3aa0845a`) and `ATT-3549` (commit `f9d7842e`).
+3. *Root Reason for Existing Formulation*: Direct initial port of legacy XML preference entries where summaries were omitted and titles had lowercase casing in older Android versions.
+4. *Preservation of Core Invariants*: Preference keys (`DEFAULT_DISPLAY_OPTIONS`), SharedPreferences storage, boolean getters in `TrainingApplication`, and Material 3 `DisplayOptionToggle` structure remain 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the athlete opens `DisplaySettingsDialog`,
+• *When* inspecting the top four display option switches,
+• *Then* all four toggles (`forcePortrait`, `keepScreenOn`, `noUnlocking`, `volumeKeysSwitchCockpitTabs`) render a capitalized title and a helpful, localized subtitle description.
+• *Given* the localization parity test suite (`TST-LOC-001` / `TST-UI-503.2`),
+• *When* executed,
+• *Then* all 9 locales pass with 100% parity and zero format specifier errors.
+
+**Invariants**: SharedPreferences key string set `DEFAULT_DISPLAY_OPTIONS`; `TrainingApplication` display getters; Material 3 typography and token hierarchy; zero format specifiers; 100% test pass rate.
+
 
 
 

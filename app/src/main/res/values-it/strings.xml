@@ -278,8 +278,10 @@
 
     <string name="prefsDisplayTitle">Schermo</string>
     <string name="prefsDisplaySummary">Regolazioni schermo e orientamento</string>
-    <string name="prefsKeepScreenOnTitle">tieni schermo acceso</string>
-    <string name="prefsNoUnlockingTitle">tieni schermo sbloccato</string>
+    <string name="prefsKeepScreenOnTitle">Tieni schermo acceso</string>
+    <string name="prefsKeepScreenOnSummary">Impedisce lo spegnimento automatico dello schermo durante la registrazione attiva</string>
+    <string name="prefsNoUnlockingTitle">Tieni schermo sbloccato</string>
+    <string name="prefsNoUnlockingSummary">Mostra il cockpit sopra la schermata di blocco senza richiedere PIN o sequenza</string>
     <string name="prefZoomDependingOnSpeedTitle">zoom in base a velocità</string>
     <string name="prefsUnitsTitle">Unità</string>
     <string name="prefsUnitsSummary">metrico</string>
@@ -496,6 +498,7 @@
     <string name="do_not_check_again">non controllare più</string>
     <string name="check_ANT_installation">controlla installazione ANT</string>
     <string name="forcePortrait">Orientamento verticale</string>
+    <string name="forcePortraitSummary">Blocca la visualizzazione in verticale e impedisce la rotazione automatica in orizzontale</string>
     <string name="Display">Schermo</string>
     <string name="settings_category_savings">Risparmio batteria</string>
     <string name="settings_category_savings_desc">Prolunga la durata della batteria per allenamenti più lunghi</string>

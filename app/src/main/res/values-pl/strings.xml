@@ -234,6 +234,7 @@
     <string name="do_not_check_again">nie sprawdzaj ponownie</string>
     <string name="check_ANT_installation">sprawdź instalację ANT</string>
     <string name="forcePortrait">Orientacja pionowa</string>
+    <string name="forcePortraitSummary">Blokuje ekran w orientacji pionowej i zapobiega automatycznemu obracaniu do poziomu</string>
     <string name="Display">Ekran</string>
     <string name="settings_category_savings">Oszczędzanie baterii</string>
     <string name="settings_category_savings_desc">Wydłuża czas pracy baterii na dłuższe sesje treningowe</string>
@@ -1102,8 +1103,10 @@
     <string name="prefsTrackingTitle">Śledzenie</string>
     <string name="prefsDisplayTitle">Ekran</string>
     <string name="prefsDisplaySummary">Skonfiguruj zachowanie ekranu i orientację</string>
-    <string name="prefsKeepScreenOnTitle">utrzymuj włączony ekran</string>
-    <string name="prefsNoUnlockingTitle">utrzymuj odblokowany ekran</string>
+    <string name="prefsKeepScreenOnTitle">Utrzymuj włączony ekran</string>
+    <string name="prefsKeepScreenOnSummary">Zapobiega automatycznemu wyłączaniu ekranu podczas aktywnego rejestrowania</string>
+    <string name="prefsNoUnlockingTitle">Utrzymuj odblokowany ekran</string>
+    <string name="prefsNoUnlockingSummary">Wyświetla kokpit nad ekranem blokady bez konieczności wprowadzania kodu PIN lub wzoru</string>
     <string name="prefZoomDependingOnSpeedTitle">zoom zależny od prędkości</string>
     <string name="prefsUnitsTitle">Jednostki</string>
     <string name="prefsUnitsSummary">metryczne</string>

@@ -278,8 +278,10 @@
 
     <string name="prefsDisplayTitle">Pantalla</string>
     <string name="prefsDisplaySummary">Configurar pantalla y orientación</string>
-    <string name="prefsKeepScreenOnTitle">mantener pantalla encendida</string>
-    <string name="prefsNoUnlockingTitle">mantener pantalla desbloqueada</string>
+    <string name="prefsKeepScreenOnTitle">Mantener pantalla encendida</string>
+    <string name="prefsKeepScreenOnSummary">Evita que la pantalla se apague automáticamente durante el seguimiento activo</string>
+    <string name="prefsNoUnlockingTitle">Mantener pantalla desbloqueada</string>
+    <string name="prefsNoUnlockingSummary">Muestra el panel sobre la pantalla de bloqueo sin necesidad de introducir PIN o patrón</string>
     <string name="prefZoomDependingOnSpeedTitle">zoom depende de la velocidad</string>
     <string name="prefsUnitsTitle">Unidades</string>
     <string name="prefsUnitsSummary">métrico</string>
@@ -498,6 +500,7 @@
     <string name="do_not_check_again">no volver a comprobar</string>
     <string name="check_ANT_installation">comprobar instalación ANT</string>
     <string name="forcePortrait">Orientación vertical</string>
+    <string name="forcePortraitSummary">Bloquea la pantalla en modo vertical e impide el giro automático a horizontal</string>
     <string name="Display">Pantalla</string>
     <string name="settings_category_savings">Ahorro de batería</string>
     <string name="settings_category_savings_desc">Prolonga la duración de la batería para entrenamientos más largos</string>

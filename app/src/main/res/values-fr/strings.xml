@@ -278,8 +278,10 @@
 
     <string name="prefsDisplayTitle">Affichage</string>
     <string name="prefsDisplaySummary">Réglages écran et orientation</string>
-    <string name="prefsKeepScreenOnTitle">garder l\'écran allumé</string>
-    <string name="prefsNoUnlockingTitle">garder l\'écran déverrouillé</string>
+    <string name="prefsKeepScreenOnTitle">Garder l\'écran allumé</string>
+    <string name="prefsKeepScreenOnSummary">Empêche l\'écran de s\'éteindre automatiquement pendant l\'enregistrement actif</string>
+    <string name="prefsNoUnlockingTitle">Garder l\'écran déverrouillé</string>
+    <string name="prefsNoUnlockingSummary">Affiche le cockpit sur l\'écran de verrouillage sans nécessiter de déverrouillage</string>
     <string name="prefZoomDependingOnSpeedTitle">zoom selon la vitesse</string>
     <string name="prefsUnitsTitle">Unités</string>
     <string name="prefsUnitsSummary">métrique</string>
@@ -496,6 +498,7 @@
     <string name="do_not_check_again">ne plus vérifier</string>
     <string name="check_ANT_installation">vérifier installation ANT</string>
     <string name="forcePortrait">Orientation portrait</string>
+    <string name="forcePortraitSummary">Verrouille l\'affichage en mode portrait et empêche la rotation automatique en paysage</string>
     <string name="Display">Affichage</string>
     <string name="settings_category_savings">Économie de batterie</string>
     <string name="settings_category_savings_desc">Prolonge l\'autonomie de la batterie pour des entraînements plus longs</string>

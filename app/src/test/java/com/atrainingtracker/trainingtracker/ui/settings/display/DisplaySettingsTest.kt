@@ -28,11 +28,14 @@ import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import java.io.File
 import java.lang.reflect.Field
+import java.util.regex.Pattern
 
 /**
  * Unit test suite verifying Display Settings state parity, default synchronization,
- * and preference updates (REQ-SET-052, TST-NAV-004, ATT-1016).
+ * preference updates, and display option subtitle and capitalization parity
+ * (REQ-SET-052, REQ-UI-503, TST-NAV-004, TST-UI-503, ATT-1016, ATT-6282).
  */
 class DisplaySettingsTest {
 
@@ -359,5 +362,107 @@ class DisplaySettingsTest {
             field.set(null, value)
         } catch (_: Exception) {
         }
+    }
+
+    /**
+     * Verifies pursuant to REQ-UI-503 and TST-UI-503 (ATT-6282):
+     * 1. forcePortraitSummary, prefsKeepScreenOnSummary, and prefsNoUnlockingSummary exist across all 9 locales.
+     * 2. Zero format specifiers and zero decorative emojis (ATT-5400).
+     * 3. prefsKeepScreenOnTitle and prefsNoUnlockingTitle begin with an uppercase letter across all applicable locales.
+     * 4. Exact copy match for German and English summary strings.
+     */
+    @Test
+    fun testDisplayOptionSubtitlesAndCapitalizationParity() {
+        val candidates = listOf(
+            File("src/main/res"),
+            File("app/src/main/res"),
+            File("../app/src/main/res")
+        )
+        val resDir = candidates.firstOrNull { it.exists() && it.isDirectory }
+            ?: error("res directory not found in candidate paths: $candidates")
+
+        val supportedLocales = listOf("", "de", "es", "fr", "it", "ja", "nl", "pl", "pt")
+        val targetSummaries = listOf(
+            "forcePortraitSummary",
+            "prefsKeepScreenOnSummary",
+            "prefsNoUnlockingSummary"
+        )
+        val targetTitles = listOf(
+            "prefsKeepScreenOnTitle",
+            "prefsNoUnlockingTitle"
+        )
+
+        val formatArgPattern = Pattern.compile("%(?:\\d+\\$)?[sdfoxXeEgGaA]")
+        val emojiPattern = Pattern.compile("[\\x{1F300}-\\x{1F64F}\\x{1F680}-\\x{1F6FF}\\x{2600}-\\x{26FF}\\x{2700}-\\x{27BF}]")
+
+        fun extractString(stringsFile: File, key: String): String? {
+            val content = stringsFile.readText()
+            val regex = Pattern.compile("<string\\s+name=[\"']$key[\"'][^>]*>(.*?)</string>", Pattern.DOTALL)
+            val matcher = regex.matcher(content)
+            return if (matcher.find()) matcher.group(1).trim() else null
+        }
+
+        for (locale in supportedLocales) {
+            val dirName = if (locale.isEmpty()) "values" else "values-$locale"
+            val stringsFile = File(resDir, "$dirName/strings.xml")
+            assertTrue("strings.xml must exist for locale '$locale'", stringsFile.exists())
+
+            // 1 & 2: Subtitle presence, non-blank, zero format specifiers, zero emojis
+            for (key in targetSummaries) {
+                val rawValue = extractString(stringsFile, key)
+                assertNotNull("Summary key '$key' must exist in locale '$locale'", rawValue)
+                assertFalse("Summary key '$key' must not be blank in locale '$locale'", rawValue!!.isEmpty())
+                assertFalse(
+                    "Summary key '$key' in locale '$locale' must not contain format specifiers (found '$rawValue')",
+                    formatArgPattern.matcher(rawValue).find()
+                )
+                assertFalse(
+                    "Summary key '$key' in locale '$locale' must not contain emojis per ATT-5400 (found '$rawValue')",
+                    emojiPattern.matcher(rawValue).find()
+                )
+            }
+
+            // 3: Titles must start with a capital letter (except Japanese which has no grammatical case)
+            if (locale != "ja") {
+                for (titleKey in targetTitles) {
+                    val titleVal = extractString(stringsFile, titleKey)
+                    assertNotNull("Title key '$titleKey' must exist in locale '$locale'", titleVal)
+                    val firstChar = titleVal!!.first()
+                    assertTrue(
+                        "Title key '$titleKey' in locale '$locale' must begin with a capital letter (found '$titleVal')",
+                        firstChar.isUpperCase()
+                    )
+                }
+            }
+        }
+
+        // 4: Exact copy match verification for German and English
+        val deFile = File(resDir, "values-de/strings.xml")
+        assertEquals(
+            "Sperrt die Anzeige im Hochformat und verhindert automatisches Drehen ins Querformat",
+            extractString(deFile, "forcePortraitSummary")
+        )
+        assertEquals(
+            "Verhindert, dass sich das Display während einer Aufzeichnung automatisch abschaltet",
+            extractString(deFile, "prefsKeepScreenOnSummary")
+        )
+        assertEquals(
+            "Zeigt das Cockpit über dem Sperrbildschirm an, sodass beim Aufwecken kein Entsperren nötig ist",
+            extractString(deFile, "prefsNoUnlockingSummary")
+        )
+
+        val enFile = File(resDir, "values/strings.xml")
+        assertEquals(
+            "Lock the display to vertical portrait mode and prevent rotation to landscape",
+            extractString(enFile, "forcePortraitSummary")
+        )
+        assertEquals(
+            "Prevent the screen from turning off automatically during active tracking",
+            extractString(enFile, "prefsKeepScreenOnSummary")
+        )
+        assertEquals(
+            "Show the cockpit above the lock screen without requiring PIN or pattern unlock",
+            extractString(enFile, "prefsNoUnlockingSummary")
+        )
     }
 }
