@@ -2021,3 +2021,43 @@
 • *Then* camera remains anchored at `initialLocation` at zoom 14.0f and does not fit world bounds.
 
 **Invariants**: Rule 33 single spatial authority; `MapInitialLocationResolver` priority cascade; zero reflection violations; zero database schema alterations.
+
+### REQ-MAP-061: Strava Segment Synchronization Exception Containment & Coroutine Safety [Verified]
+- **Tests**: `TST-MAP-063` | **Tickets**: `ATT-6165`
+- **Implementation**: `SegmentsRepository.kt`, `SegmentListViewModel.kt`
+- **Rationale**: The system SHALL catch and log unhandled exceptions during background and pull-to-refresh Strava segment synchronizations to prevent fatal application crashes during network dropouts, API timeouts, or malformed payload parsing, while strictly preserving coroutine cancellation semantics and guaranteeing background worker retry mechanisms (Sprint 2026-46.1, ATT-6165, refining `REQ-MAP-005` and `REQ-EXP-014`):
+1. *Repository Async Synchronization Scope & Error Containment (`SegmentsRepository.kt`, `REQ-MAP-061.1`)*:
+• In `SegmentsRepository.syncSegmentsAsync(bSportType)`, the system SHALL execute segment synchronization within the existing instance `repositoryScope` (`SupervisorJob() + Dispatchers.IO`) instead of creating an unmanaged, unhandled `CoroutineScope`.
+• The synchronization invocation SHALL be enclosed in a `try ... catch (e: Exception)` block.
+• If `e is CancellationException`, it SHALL be immediately rethrown to preserve structured coroutine cancellation.
+• All other non-cancellation exceptions SHALL be caught and logged via `Log.e(TAG, ...)`, preventing uncaught coroutine exceptions from crashing the process.
+2. *ViewModel Pull-to-Refresh Exception Containment (`SegmentListViewModel.kt`, `REQ-MAP-061.2`)*:
+• In `SegmentListViewModel.onRefresh(sport)`, the call to `segmentsRepository.syncStarredSegments(sport)` within `viewModelScope.launch` SHALL be enclosed in a `try ... catch (e: Exception)` block.
+• If `e is CancellationException`, it SHALL be immediately rethrown to ensure proper ViewModel lifecycle cancellation.
+• All other non-cancellation exceptions SHALL be caught and logged, preventing pull-to-refresh gestures from crashing the app during offline or transient error states.
+3. *Worker Retry & Invariant Preservation (`REQ-MAP-061.3`)*:
+• `SegmentsRepository.syncStarredSegments(bSportType)` SHALL strictly retain its rethrow behavior (`throw e`) for non-cancellation exceptions to ensure calling WorkManager workers (such as `StravaSegmentsSyncWorker`) receive the failure and return `ListenableWorker.Result.retry()`.
+• `SegmentsRepository.syncStarredSegments(bSportType)` SHALL guarantee that `_isSyncing.value = false` is executed in its `finally` block under both normal completion and exceptional termination.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new refinement `REQ-MAP-061` refining `REQ-MAP-005` (*Strava Segments and Routes as map overlays*) and `REQ-EXP-014` (*Reactive Strava Segment Synchronization Progress*).
+2. *Historical Origin & Commit Trace*: Ticket `ATT-1078` introduced `syncSegmentsAsync` and `syncStarredSegments`. `SegmentListViewModel` added in Compose migration.
+3. *Root Reason for Existing Formulation*: `syncStarredSegments` rethrows so `StravaSegmentsSyncWorker` can detect failures and trigger `Result.retry()`. `syncSegmentsAsync` was an asynchronous fire-and-forget helper where error handling was temporarily commented out during development.
+4. *Preservation of Core Invariants*: Retaining `throw e` in `syncStarredSegments` preserves worker retry; preserving `CancellationException` maintains structured coroutine cancellation; `_isSyncing` always resets to `false` in `finally`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `SegmentsRepository.syncSegmentsAsync` invoked while offline or when Strava API fails,
+• *When* `syncStarredSegments` throws an `IOException` or `SerializationException`,
+• *Then* the exception is caught, logged, and does not crash the application process, and `isSyncing` resets to `false`.
+• *Given* an athlete triggering pull-to-refresh via `SegmentListViewModel.onRefresh` during a network failure,
+• *When* `syncStarredSegments` throws an exception,
+• *Then* the exception is caught and logged within `viewModelScope`, the app does not crash, and `isSyncing` resets to `false`.
+• *Given* `StravaSegmentsSyncWorker` invoking `syncStarredSegments`,
+• *When* a network or synchronization failure occurs,
+• *Then* `syncStarredSegments` rethrows the exception, allowing `StravaSegmentsSyncWorker` to catch it and return `Result.retry()`.
+• *Given* an active synchronization coroutine in `syncSegmentsAsync` or `onRefresh`,
+• *When* the coroutine is cancelled,
+• *Then* `CancellationException` is rethrown and not swallowed.
+
+**Invariants**: Zero changes to SQLite database schemas; zero UI layout mutations; 100% full-suite unit test pass rate; structured coroutine cancellation strictly preserved.
+

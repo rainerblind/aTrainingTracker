@@ -33,6 +33,7 @@ import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaStrea
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.google.android.gms.maps.model.LatLng
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -200,16 +201,16 @@ class SegmentsRepository private constructor(context: Context) {
 
     /**
      * Java-friendly method to trigger a sync without dealing with Coroutines in Java code.
+     * Executes on [repositoryScope] and catches unhandled non-cancellation exceptions to prevent crashes (REQ-MAP-061.1, ATT-6165).
      */
     fun syncSegmentsAsync(bSportType: BSportType) {
-        // Use GlobalScope or pass a scope in. For a one-time sync after login,
-        // a background scope is appropriate.
-        CoroutineScope(Dispatchers.IO).launch {
-            // try {
+        repositoryScope.launch {
+            try {
                 syncStarredSegments(bSportType)
-            //} catch (e: Exception) {
-            //    Log.e("SegmentsRepository", "Async sync failed", e)
-            //}
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e(TAG, "Async segment sync failed", e)
+            }
         }
     }
 

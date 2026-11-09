@@ -1053,3 +1053,29 @@
   • Verify `ATrainingTrackerMap` accepts and forwards `initialLocation` to `MapBoundsController`.
   5. *Targeted Regression Verification Suite (`TST-MAP-062.5`)*:
   • Execute targeted tests across `ui.map.*` and `build.*` asserting 100% pass rate.
+
+### TST-MAP-063: **Strava Segment Synchronization Exception Containment & Coroutine Safety Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-MAP-061` (`REQ-MAP-061.1`..`REQ-MAP-061.3`)
+- **Component**: `SegmentsRepositorySyncTest.kt`, `SegmentListViewModelTest.kt`, `StravaSegmentsSyncWorkerTest.kt`
+- **Jira**: `ATT-6165`
+- **Test Description**:
+  1. *SegmentsRepository syncSegmentsAsync Exception Containment Test (`TST-MAP-063.1`, `SegmentsRepositorySyncTest.kt`)*:
+  • Mock failure during sync; invoke `repository.syncSegmentsAsync(BSportType.UNKNOWN)`.
+  • Verify coroutine completes without uncaught exception crash on `repositoryScope`.
+  • Verify `isSyncing` resets to `false`.
+  2. *SegmentsRepository syncStarredSegments Exception Rethrow & Finally Reset Test (`TST-MAP-063.2`, `SegmentsRepositorySyncTest.kt`)*:
+  • Mock `pruneExpiredSegments` to throw `IOException`.
+  • Invoke `repository.syncStarredSegments(BSportType.UNKNOWN)` inside `runBlocking`.
+  • Assert `IOException` is thrown to caller (preserving Worker retry contract).
+  • Assert `isSyncing.value == false` via `finally` execution.
+  3. *SegmentListViewModel onRefresh Exception Containment Test (`TST-MAP-063.3`, `SegmentListViewModelTest.kt`)*:
+  • Mock `segmentsRepository.syncStarredSegments(any())` to throw `IOException("Network timeout")`.
+  • Invoke `viewModel.onRefresh(BSportType.BIKE)`.
+  • Assert no uncaught exception is thrown to caller or `viewModelScope`.
+  4. *CancellationException Propagation Invariant Test (`TST-MAP-063.4`, `SegmentsRepositorySyncTest.kt` / `SegmentListViewModelTest.kt`)*:
+  • Assert that when a `CancellationException` is thrown during sync, it is rethrown and not swallowed by catch-all blocks.
+  5. *StravaSegmentsSyncWorker Retry Preservation Test (`TST-MAP-063.5`, `StravaSegmentsSyncWorkerTest.kt`)*:
+  • Run `StravaSegmentsSyncWorkerTest` asserting that worker returns `Result.retry()` on segment sync failure.
+  6. *Targeted Tier 1 Unit Test Suite (`TST-MAP-063.6`)*:
+  • Run `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.segments.*" --tests "com.atrainingtracker.trainingtracker.ui.segments.segmentlist.*" --tests "com.atrainingtracker.trainingtracker.build.*"` asserting 100% pass rate.
+
