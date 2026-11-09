@@ -1474,6 +1474,29 @@
   6. *Targeted Suite Regression Execution (`TST-CON-023.6`)*:
   • Execute targeted unit tests verifying 100% test pass rate across modified packages without regressions.
 
+### TST-CON-024: **BLE Crank Revolution 16-Bit Rollover, Precision & State Reset Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-CON-024` (`REQ-CON-024.1`..`REQ-CON-024.4`)
+- **Component**: `BTLEBikeDevice.java`, `BTLEBikePowerDevice.java`, `BTLEMeasurementParsingTest.kt`
+- **Jira**: `ATT-6162`
+- **Test Description**:
+  1. *BTLEBikeDevice 16-Bit Rollover & Float Division Unit Test (`TST-CON-024.1`, `BTLEMeasurementParsingTest.kt`)*:
+  • Seed baseline packet (`cumulativeCrankRevolutions = 65535`, `crankEventTime = 1000`).
+  • Send rollover packet (`cumulativeCrankRevolutions = 1`, `crankEventTime = 2024`).
+  • Verify `mCadenceSensor` receives `120.0 rpm` without negative spike or integer truncation.
+  2. *BTLEBikePowerDevice 16-Bit Rollover & Float Division Unit Test (`TST-CON-024.2`, `BTLEMeasurementParsingTest.kt`)*:
+  • Seed baseline power packet with crank data (`revolutions = 65535`, `time = 1000`).
+  • Send rollover packet (`revolutions = 1`, `time = 2024`).
+  • Verify `mCadenceSensor` receives `120.0 rpm`.
+  3. *Plausibility Guard > 250.0 rpm Discard Unit Test (`TST-CON-024.3`, `BTLEMeasurementParsingTest.kt`)*:
+  • Send packet calculating cadence > 250.0 rpm (e.g. 50 revs in 1024 ticks -> 3000 rpm).
+  • Verify sample is discarded and `mCadenceSensor` does not receive the unplausible value.
+  4. *Disconnect State Reset Unit Test (`TST-CON-024.4`, `BTLEMeasurementParsingTest.kt`)*:
+  • Initialize device with valid crank and wheel state (`mLastCrankRevolutionsValid = true`).
+  • Invoke `device.unregisterSensors()`.
+  • Verify `mLastCrankRevolutionsValid`, `mLastWheelRevolutionsValid`, and identical counters are reset.
+  5. *Targeted Regression Verification Suite (`TST-CON-024.5`)*:
+  • Run targeted package tests across `com.atrainingtracker.banalservice.devices.bluetooth_le.*` and `com.atrainingtracker.trainingtracker.build.*` asserting 100% pass rate.
+
 ### TST-TRK-052: **Zero-Allocation 1-Hz ClockTimeTask Time-of-Day Formatting Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-052`
 - **Component**: `ClockDevice.java`, `ClockDeviceResilienceTest.kt`

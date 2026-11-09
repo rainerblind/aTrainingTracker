@@ -22,6 +22,7 @@ import android.Manifest
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Handler
 import android.os.Looper
@@ -65,6 +66,14 @@ class BTLEMeasurementParsingTest {
             super.measurementCharacteristicUpdate(gatt, characteristic)
         }
 
+        public override fun registerSensors() {
+            super.registerSensors()
+        }
+
+        public override fun unregisterSensors() {
+            super.unregisterSensors()
+        }
+
         fun getPowerSensor() = mPowerSensor
         fun getCadenceSensor() = mCadenceSensor
         fun getSpeedSensor() = mSpeedSensor
@@ -83,6 +92,14 @@ class BTLEMeasurementParsingTest {
             characteristic: BluetoothGattCharacteristic?
         ) {
             super.measurementCharacteristicUpdate(gatt, characteristic)
+        }
+
+        public override fun registerSensors() {
+            super.registerSensors()
+        }
+
+        public override fun unregisterSensors() {
+            super.unregisterSensors()
         }
 
         fun getCadenceSensor() = mCadenceSensor
@@ -165,6 +182,9 @@ class BTLEMeasurementParsingTest {
         every { anyConstructed<Handler>().postDelayed(any(), any()) } answers { true }
         every { anyConstructed<Handler>().removeCallbacks(any<Runnable>()) } answers { }
         every { anyConstructed<Handler>().removeCallbacksAndMessages(any()) } answers { }
+
+        mockkConstructor(Intent::class)
+        every { anyConstructed<Intent>().setPackage(any()) } answers { self as Intent }
 
         mockContext = mockk(relaxed = true)
         val mockLooper = mockk<Looper>(relaxed = true)
@@ -350,14 +370,14 @@ class BTLEMeasurementParsingTest {
 
         // Packet 2: advancing revs and time
         // Wheel: 1010 revs (+10 revs), event time 4096 (+2048) -> speed = mCalibrationFactor * 10 * 2048 / 2048
-        // Crank: 520 revs (+20 revs), event time 2048 (+1024) -> cadence = 60 * 20 * 1024 / 1024 = 1200 rpm
+        // Crank: 502 revs (+2 revs), event time 2048 (+1024) -> cadence = 60 * 2 * 1024 / 1024 = 120.0 rpm
         val packet2 = byteArrayOf(
             0x31.toByte(), 0x00.toByte(),
             0x2C.toByte(), 0x01.toByte(), // Power: 300
             0x5A.toByte(),                // Balance: 90 -> 45.0%
             0xF2.toByte(), 0x03.toByte(), 0x00.toByte(), 0x00.toByte(), // Wheel revs: 1010
             0x00.toByte(), 0x10.toByte(), // Wheel time: 4096
-            0x08.toByte(), 0x02.toByte(), // Crank revs: 520
+            0xF6.toByte(), 0x01.toByte(), // Crank revs: 502 (0x01F6)
             0x00.toByte(), 0x08.toByte()  // Crank time: 2048
         )
         val char2 = createMockCharacteristic(packet2)
@@ -368,7 +388,7 @@ class BTLEMeasurementParsingTest {
         assertNotNull(device.getSpeedSensor().value)
         assertTrue(device.getSpeedSensor().value > 0.0)
         assertNotNull(device.getCadenceSensor().value)
-        assertEquals(1200.0, device.getCadenceSensor().value, 0.001)
+        assertEquals(120.0, device.getCadenceSensor().value, 0.001)
     }
 
     /**
@@ -518,6 +538,142 @@ class BTLEMeasurementParsingTest {
         val rightFullBytes = byteArrayOf(0x01.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 200.toByte())
         device.measurementCharacteristicUpdate(mockGatt, createMockCharacteristic(rightFullBytes))
         assertEquals(100.0, device.getPowerBalanceSensor().value, 0.001)
+    }
+
+    /**
+     * TST-CON-024.1: BTLEBikeDevice 16-Bit Crank Rollover & Precision Verification.
+     * Verifies that counter wrap from 65535 to 1 yields positive revDiff (2) and 120.0 rpm without negative spikes.
+     */
+    @Test
+    fun testBikeDevice_crankRollover_calculates120RpmWithoutNegativeSpike() {
+        val device = TestBikeSpeedAndCadenceDevice(mockContext, mockSensorManager, 112L, "AA:BB:CC:DD:EE:12")
+
+        // Packet 1: Flags = 0x02 (Crank present), revs = 65535 (0xFFFF), time = 1000 (0x03E8)
+        val packet1 = byteArrayOf(
+            0x02.toByte(),
+            0xFF.toByte(), 0xFF.toByte(), // revs: 65535
+            0xE8.toByte(), 0x03.toByte()  // time: 1000
+        )
+        device.measurementCharacteristicUpdate(mockGatt, createMockCharacteristic(packet1))
+        assertNull(device.getCadenceSensor().value)
+
+        // Packet 2: revs = 1 (0x0001), time = 2024 (0x07E8 -> +1024 ticks)
+        val packet2 = byteArrayOf(
+            0x02.toByte(),
+            0x01.toByte(), 0x00.toByte(), // revs: 1 (wrapped from 65535 -> revDiff = 2)
+            0xE8.toByte(), 0x07.toByte()  // time: 2024 (+1024 ticks = 1.0 s)
+        )
+        device.measurementCharacteristicUpdate(mockGatt, createMockCharacteristic(packet2))
+
+        assertNotNull(device.getCadenceSensor().value)
+        assertEquals(120.0, device.getCadenceSensor().value, 0.001)
+    }
+
+    /**
+     * TST-CON-024.2: BTLEBikePowerDevice 16-Bit Crank Rollover & Precision Verification.
+     * Verifies that Cycling Power characteristic crank rollover from 65535 to 1 yields 120.0 rpm.
+     */
+    @Test
+    fun testBikePower_crankRollover_calculates120RpmWithoutNegativeSpike() {
+        val device = TestBikePowerDevice(mockContext, mockSensorManager, 113L, "AA:BB:CC:DD:EE:13")
+
+        // Packet 1: Flags = 0x0020 (Crank present), Power = 200 W, revs = 65535, time = 1000
+        val packet1 = byteArrayOf(
+            0x20.toByte(), 0x00.toByte(),
+            0xC8.toByte(), 0x00.toByte(), // Power: 200
+            0xFF.toByte(), 0xFF.toByte(), // revs: 65535
+            0xE8.toByte(), 0x03.toByte()  // time: 1000
+        )
+        device.measurementCharacteristicUpdate(mockGatt, createMockCharacteristic(packet1))
+        assertNull(device.getCadenceSensor().value)
+
+        // Packet 2: revs = 1, time = 2024 (+1024 ticks -> 120.0 rpm)
+        val packet2 = byteArrayOf(
+            0x20.toByte(), 0x00.toByte(),
+            0xC8.toByte(), 0x00.toByte(), // Power: 200
+            0x01.toByte(), 0x00.toByte(), // revs: 1
+            0xE8.toByte(), 0x07.toByte()  // time: 2024
+        )
+        device.measurementCharacteristicUpdate(mockGatt, createMockCharacteristic(packet2))
+
+        assertNotNull(device.getCadenceSensor().value)
+        assertEquals(120.0, device.getCadenceSensor().value, 0.001)
+    }
+
+    /**
+     * TST-CON-024.3: Cadence Plausibility Guard (> 250.0 rpm) Verification.
+     * Verifies that samples with calculated cadence > 250.0 rpm are discarded in both CSC and CPS.
+     */
+    @Test
+    fun testBikeDevice_and_BikePower_implausibleCadenceOver250Rpm_isDiscarded() {
+        val cscDevice = TestBikeSpeedAndCadenceDevice(mockContext, mockSensorManager, 114L, "AA:BB:CC:DD:EE:14")
+        val pwrDevice = TestBikePowerDevice(mockContext, mockSensorManager, 115L, "AA:BB:CC:DD:EE:15")
+
+        // Baseline: revs = 100, time = 1000
+        cscDevice.measurementCharacteristicUpdate(
+            mockGatt,
+            createMockCharacteristic(byteArrayOf(0x02, 0x64, 0x00, 0xE8.toByte(), 0x03))
+        )
+        pwrDevice.measurementCharacteristicUpdate(
+            mockGatt,
+            createMockCharacteristic(byteArrayOf(0x20, 0x00, 0xC8.toByte(), 0x00, 0x64, 0x00, 0xE8.toByte(), 0x03))
+        )
+
+        // Implausible packet: revs = 150 (+50 revs in 1024 ticks = 3000 rpm > 250 rpm)
+        val cscOver = byteArrayOf(0x02, 0x96.toByte(), 0x00, 0xE8.toByte(), 0x07)
+        val pwrOver = byteArrayOf(0x20, 0x00, 0xC8.toByte(), 0x00, 0x96.toByte(), 0x00, 0xE8.toByte(), 0x07)
+
+        cscDevice.measurementCharacteristicUpdate(mockGatt, createMockCharacteristic(cscOver))
+        pwrDevice.measurementCharacteristicUpdate(mockGatt, createMockCharacteristic(pwrOver))
+
+        assertNull("CSC cadence > 250 rpm MUST be discarded", cscDevice.getCadenceSensor().value)
+        assertNull("CPS cadence > 250 rpm MUST be discarded", pwrDevice.getCadenceSensor().value)
+    }
+
+    /**
+     * TST-CON-024.4: Disconnect State Reset Verification.
+     * Verifies that unregisterSensors() resets mLastCrankRevolutionsValid and mLastWheelRevolutionsValid.
+     */
+    @Test
+    fun testBikeDevice_and_BikePower_disconnect_resetsRevolutionValidFlags() {
+        val cscDevice = TestBikeSpeedAndCadenceDevice(mockContext, mockSensorManager, 116L, "AA:BB:CC:DD:EE:16")
+        val pwrDevice = TestBikePowerDevice(mockContext, mockSensorManager, 117L, "AA:BB:CC:DD:EE:17")
+
+        // Establish active state
+        val p1 = byteArrayOf(0x02, 0x0A, 0x00, 0xE8.toByte(), 0x03)
+        cscDevice.measurementCharacteristicUpdate(mockGatt, createMockCharacteristic(p1))
+        val p2 = byteArrayOf(0x02, 0x0C, 0x00, 0xE8.toByte(), 0x07)
+        cscDevice.measurementCharacteristicUpdate(mockGatt, createMockCharacteristic(p2))
+        assertEquals(120.0, cscDevice.getCadenceSensor().value, 0.001)
+
+        val pw1 = byteArrayOf(0x20, 0x00, 0xC8.toByte(), 0x00, 0x0A, 0x00, 0xE8.toByte(), 0x03)
+        pwrDevice.measurementCharacteristicUpdate(mockGatt, createMockCharacteristic(pw1))
+        val pw2 = byteArrayOf(0x20, 0x00, 0xC8.toByte(), 0x00, 0x0C, 0x00, 0xE8.toByte(), 0x07)
+        pwrDevice.measurementCharacteristicUpdate(mockGatt, createMockCharacteristic(pw2))
+        assertEquals(120.0, pwrDevice.getCadenceSensor().value, 0.001)
+
+        // Trigger disconnect teardown (resets mLastCrankRevolutionsValid and deactivates sensors)
+        cscDevice.unregisterSensors()
+        pwrDevice.unregisterSensors()
+
+        // Reconnect establishes session (reactivates sensors)
+        cscDevice.registerSensors()
+        pwrDevice.registerSensors()
+
+        // After disconnect/reconnect, first packet MUST re-initialize baseline without emitting delta
+        val reconnectPacket = byteArrayOf(0x02, 0x14, 0x00, 0xD0.toByte(), 0x07) // revs = 20, time = 2000
+        cscDevice.measurementCharacteristicUpdate(mockGatt, createMockCharacteristic(reconnectPacket))
+        // Prior cadence was 120.0; reconnected baseline packet must NOT compute new cadence against pre-disconnect state
+        assertEquals(120.0, cscDevice.getCadenceSensor().value, 0.001)
+
+        val pwReconnect = byteArrayOf(0x20, 0x00, 0xC8.toByte(), 0x00, 0x14, 0x00, 0xD0.toByte(), 0x07)
+        pwrDevice.measurementCharacteristicUpdate(mockGatt, createMockCharacteristic(pwReconnect))
+        assertEquals(120.0, pwrDevice.getCadenceSensor().value, 0.001)
+
+        // Subsequent post-reconnect packet computes cadence accurately against new baseline (revs = 22, time = 3024 -> 120 rpm)
+        val p4 = byteArrayOf(0x02, 0x16, 0x00, 0xD0.toByte(), 0x0B) // revs = 22, time = 3024
+        cscDevice.measurementCharacteristicUpdate(mockGatt, createMockCharacteristic(p4))
+        assertEquals(120.0, cscDevice.getCadenceSensor().value, 0.001)
     }
 }
 

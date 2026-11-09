@@ -7,7 +7,7 @@ Living test specifications use multi-line Markdown headings (`### TST-XXX: Title
 
 | Domain Shard | Scope & Functional Areas | Prefixes | Total | Verified | Planned / Open |
 | :--- | :--- | :--- | :---: | :---: | :---: |
-| [Tracking & Live Sensor Cockpit](tests/tst_tracking_cockpit.md) | Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle. | `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA` | 73 | 73 | 0 |
+| [Tracking & Live Sensor Cockpit](tests/tst_tracking_cockpit.md) | Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle. | `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA` | 74 | 74 | 0 |
 | [Post-Workout Analytics & Periods](tests/tst_aftermath_periods.md) | Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers. | `PER`, `PERF` | 38 | 38 | 0 |
 | [Maps, Polylines & Navigation](tests/tst_maps_navigation.md) | Map rendering, polylines, navigation overlays, GPX track follow-me, and routing. | `GEO`, `MAP`, `NAV`, `ROU` | 58 | 58 | 0 |
 | [Persistence, Migration & Cloud Export](tests/tst_data_migration_export.md) | Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export. | `DAT`, `EXP`, `EXT`, `MIG` | 111 | 111 | 0 |
@@ -20,15 +20,15 @@ Living test specifications use multi-line Markdown headings (`### TST-XXX: Title
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
-**Total Living Tests**: 937 across 9 domain shards.
+**Total Living Tests**: 938 across 9 domain shards.
 =======
-**Total Living Tests**: 937 across 9 domain shards.
+**Total Living Tests**: 938 across 9 domain shards.
 >>>>>>> df7a881f (wip(ATT-6165): stage 2 req & test spec)
 =======
-**Total Living Tests**: 937 across 9 domain shards.
+**Total Living Tests**: 938 across 9 domain shards.
 >>>>>>> 69bc10b8 (wip(ATT-6322): stage 2 req & test spec)
 =======
-**Total Living Tests**: 937 across 9 domain shards.
+**Total Living Tests**: 938 across 9 domain shards.
 >>>>>>> a52b538a (wip(ATT-6265): stage 2 req & test spec)
 
 ---

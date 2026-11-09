@@ -286,6 +286,15 @@ public class BTLEBikePowerDevice extends MyBTLEDevice {
         }
     }
 
+    @Override
+    protected void unregisterSensors() {
+        super.unregisterSensors();
+        mLastCrankRevolutionsValid = false;
+        mLastWheelRevolutionsValid = false;
+        mIdenticalCrankTime = 0;
+        mIdenticalWheelTime = 0;
+    }
+
     // TODO: also check whether the corresponding features are supported
     @Override
     protected void measurementCharacteristicUpdate(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
@@ -433,13 +442,17 @@ public class BTLEBikePowerDevice extends MyBTLEDevice {
                                 if (crankEventTime > mLastCrankEventTime) { // avoiding negative values
                                     mIdenticalCrankTime = 0;
 
-                                    long revDiff = cumulativeCrankRevolutions - mLastCrankRevolutions;
+                                    long revDiff = (cumulativeCrankRevolutions - mLastCrankRevolutions) & 0xFFFFL;
                                     long timeDiff = crankEventTime - mLastCrankEventTime;
                                     if (DEBUG) Log.i(TAG, "revDiff=" + revDiff + ", timeDiff=" + timeDiff);
 
-                                    double cadence = 60 * revDiff * 1024 / timeDiff;         // Furthermore, note that this time multiplier is different from the one for the speed
+                                    double cadence = (60.0 * revDiff * 1024.0) / timeDiff;         // Furthermore, note that this time multiplier is different from the one for the speed
                                     if (DEBUG) Log.i(TAG, "got new cadence: " + cadence);
-                                    mCadenceSensor.newValue(cadence);
+                                    if (cadence >= 0.0 && cadence <= 250.0) {
+                                        mCadenceSensor.newValue(cadence);
+                                    } else {
+                                        Log.w(TAG, "Discarded unplausible cadence value: " + cadence + " rpm (revDiff=" + revDiff + ", timeDiff=" + timeDiff + ")");
+                                    }
                                 } else {
                                     mIdenticalCrankTime++;
                                     if (mIdenticalCrankTime >= MAX_IDENTICAL) {

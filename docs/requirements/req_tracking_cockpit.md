@@ -2637,6 +2637,41 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: `TRANSPORT_LE` direct connect, non-leaking scanner lifecycle, and 100% clean-room test pass rate.
 
+### REQ-CON-024: BLE Crank Revolution 16-Bit Rollover, Precision & Disconnect State Reset [Verified]
+- **Tests**: `TST-CON-024` | **Tickets**: `ATT-6162`
+- **Implementation**: `BTLEBikeDevice.java`, `BTLEBikePowerDevice.java`
+- **Rationale**: The system SHALL handle 16-bit UINT16 counter rollover for cumulative crank revolutions in BLE CSC and CPS GATT measurements, prevent integer division truncation, discard non-physiological cadence samples, and reset state on sensor unregistration (Sprint 2026-46.1, ATT-6162, refining `REQ-CON-002` and `REQ-CON-014`):
+1. *16-Bit Crank Revolution Rollover Masking (`REQ-CON-024.1`)*:
+• In `BTLEBikeDevice.java` and `BTLEBikePowerDevice.java`, revolution difference SHALL be calculated with 16-bit UINT16 modular arithmetic: `long revDiff = (cumulativeCrankRevolutions - mLastCrankRevolutions) & 0xFFFFL;`.
+• Subtraction resulting in negative values during counter rollover from 65535 to 0 or 1 SHALL be normalized into a non-negative delta, preventing negative cadence spikes (~ -3.9 million rpm).
+2. *Floating-Point Precision Division (`REQ-CON-024.2`)*:
+• Cadence RPM SHALL be computed using floating-point arithmetic: `double cadence = (60.0 * revDiff * 1024.0) / timeDiff;`, eliminating integer truncation of fractional RPM values.
+3. *Physiological Cadence Plausibility Guard (`REQ-CON-024.3`)*:
+• Recomputed cadence samples SHALL be gated by a physiological plausibility check: `if (cadence >= 0.0 && cadence <= 250.0)`.
+• Samples exceeding 250.0 rpm or negative values SHALL be discarded and NOT forwarded to `mCadenceSensor.newValue(...)`.
+4. *Sensor Disconnect State Reset (`REQ-CON-024.4`)*:
+• `BTLEBikeDevice` and `BTLEBikePowerDevice` SHALL override `unregisterSensors()` (invoking `super.unregisterSensors()`).
+• On unregistration/disconnect, both classes SHALL reset revolution tracking flags: `mLastCrankRevolutionsValid = false`, `mLastWheelRevolutionsValid = false`, `mIdenticalCrankTime = 0`, and `mIdenticalWheelTime = 0`, ensuring reconnected sensors cleanly reinitialize without false deltas.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new refinement `REQ-CON-024` refining `REQ-CON-002` (*Bluetooth LE Sensor Support*) and `REQ-CON-014` (*BLE GATT Measurement Packet Parsing Resilience*).
+2. *Historical Origin & Commit Trace*: Introduced in initial BLE CSC (`c89e2113`) and CPS (`49b5df12`). Subtraction assumed monotonic counters without accounting for 16-bit UINT16 rollover.
+3. *Root Reason for Existing Formulation*: `crankEventTime > mLastCrankEventTime` guarded against reverse time jumps, but omitted counter wrap-around handling.
+4. *Preservation of Core Invariants*: Wheel revolution processing and distance/speed math remain intact; GATT connection lifecycles remain unchanged; 100% test pass rate.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* last crank count `mLastCrankRevolutions = 65535` and new crank count `cumulativeCrankRevolutions = 1` with `timeDiff = 1024` ticks (1.0 s),
+• *When* processed by `BTLEBikeDevice` or `BTLEBikePowerDevice`,
+• *Then* `revDiff` evaluates to 2 and cadence evaluates to `120.0 rpm` with zero negative spikes and zero integer truncation.
+• *Given* a parsed packet yielding cadence `> 250.0 rpm` or `< 0.0 rpm`,
+• *When* evaluated,
+• *Then* the implausible sample is discarded and not emitted to `mCadenceSensor`.
+• *Given* a BLE device disconnect (`unregisterSensors()`),
+• *When* executed,
+• *Then* `mLastCrankRevolutionsValid` and `mLastWheelRevolutionsValid` are reset to `false`, and `mIdenticalCrankTime`/`mIdenticalWheelTime` are reset to `0`.
+
+**Invariants**: Wheel speed/distance calculations remain completely unaffected; zero UI or database schema changes; 100% full-suite test pass rate.
+
 ### REQ-TRK-052: Zero-Allocation 1-Hz ClockTimeTask Time-of-Day Formatting [Verified]
 - **Tests**: `TST-TRK-052` | **Tickets**: `ATT-5481`
 - **Implementation**: `ClockDevice.java`, `ClockDeviceResilienceTest.kt`
