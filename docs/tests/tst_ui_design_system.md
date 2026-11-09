@@ -3,7 +3,7 @@
 **Domain**: `ui_design_system`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 390
+**Total Tests**: 391
 
 ---
 
@@ -8041,6 +8041,21 @@
   • Execute `TranslationParityTest` asserting that `supporter_plan_button_switch` exists in `strings_monetization.xml` across all 9 locales with 100% parity.
   4. *Tier 1 Targeted Unit Test Regression (`TST-UI-501.4`)*:
   • Execute targeted test suite (`ui.settings.supporter.*`, `ui.branding.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
+
+### TST-UI-502: **SupporterScreen PioneerStatusBanner Neutral Copy Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-502`
+- **Component**: `SupporterComponents.kt`, `res/values*/strings.xml`, `SupporterCopyContractTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-6290`
+- **Test Description**:
+  1. *Pioneer Copy Contract & ANT+ Elimination Test (`TST-UI-502.1`)*:
+  • Verify in `SupporterCopyContractTest.kt` across all 9 locales (`values`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`) that `pioneer_thank_you_body` exists, has non-blank content, contains zero references to "ANT+" (case-insensitive), contains zero decorative emojis (`ATT-5400`), and contains zero format specifiers.
+  • Verify exact appreciative wording match in German (`values-de`) and English (`values`).
+  2. *9-Language Localization & Translation Parity Suite (`TST-UI-502.2`)*:
+  • Execute `TranslationParityTest` asserting that `pioneer_thank_you_body` exists in all 9 supported locales with 100% parity.
+  3. *Tier 1 Targeted Unit Test Regression (`TST-UI-502.3`)*:
+  • Execute targeted test suite (`ui.settings.supporter.*`, `ui.branding.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
+
 
 
 

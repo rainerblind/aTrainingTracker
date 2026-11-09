@@ -2365,7 +2365,7 @@
     <string name="drawer_tier_pioneer">★ Pionier</string>
     <string name="pioneer_badge_label_with_year">★ Pionier (Sinds %1$d)</string>
     <string name="pioneer_badge_label">★ Pionier</string>
-    <string name="pioneer_thank_you_body">Bedankt voor het steunen van aTrainingTracker sinds de vroege ANT+-dagen! Onbeperkte sensoren en alle toekomstige functies zijn permanent ontgrendeld.</string>
+    <string name="pioneer_thank_you_body">Bedankt voor het vastleggen van je trainingen met een eerdere versie van aTrainingTracker! Onbeperkte sensoren en alle toekomstige functies zijn permanent voor jou ontgrendeld.</string>
     <string name="debug_supporter_override_title">Supporter-niveau overschrijven (Debug)</string>
     <string name="debug_supporter_override_subtitle">Simuleert licentieniveaus lokaal zonder Google Play Billing inloggegevens</string>
 

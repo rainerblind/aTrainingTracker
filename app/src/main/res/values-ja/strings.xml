@@ -2345,7 +2345,7 @@
     <string name="drawer_tier_pioneer">★ パイオニア</string>
     <string name="pioneer_badge_label_with_year">★ パイオニア（%1$d年より）</string>
     <string name="pioneer_badge_label">★ パイオニア</string>
-    <string name="pioneer_thank_you_body">初期のANT+時代からaTrainingTrackerを支えていただきありがとうございます！無制限のセンサー接続と今後の全機能が永続的にアンロックされています。</string>
+    <string name="pioneer_thank_you_body">以前のバージョンのaTrainingTrackerでワークアウトを記録していただきありがとうございます！無制限のセンサー接続と今後の全機能が永続的にアンロックされています。</string>
     <string name="debug_supporter_override_title">サポーターティア上書き（デバッグ）</string>
     <string name="debug_supporter_override_subtitle">Google Play Billing認証情報なしでローカルにライセンス層をシミュレート</string>
 

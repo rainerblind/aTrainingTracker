@@ -2566,7 +2566,7 @@
     <string name="drawer_tier_pioneer">★ Pioneer</string>
     <string name="pioneer_badge_label_with_year">★ Pioneer (Since %1$d)</string>
     <string name="pioneer_badge_label">★ Pioneer</string>
-    <string name="pioneer_thank_you_body">Thank you for supporting aTrainingTracker since the early ANT+ days! Unlimited sensors and all future features are permanently unlocked.</string>
+    <string name="pioneer_thank_you_body">Thank you for recording your workouts with an earlier version of aTrainingTracker! Unlimited sensors and all future features are permanently unlocked for you.</string>
     <string name="debug_supporter_override_title">Supporter Tier Override (Debug)</string>
     <string name="debug_supporter_override_subtitle">Simulates license tiers locally without Google Play Billing credentials</string>
 

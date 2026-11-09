@@ -2451,7 +2451,7 @@
     <string name="drawer_tier_pioneer">★ Pioneer</string>
     <string name="pioneer_badge_label_with_year">★ Pioneer (Seit %1$d)</string>
     <string name="pioneer_badge_label">★ Pioneer</string>
-    <string name="pioneer_thank_you_body">Danke, dass du aTrainingTracker seit den frühen ANT+-Tagen unterstützt! Unbegrenzte Sensoren und alle zukünftigen Funktionen sind dauerhaft freigeschaltet.</string>
+    <string name="pioneer_thank_you_body">Danke, dass du bereits mit einer früheren Version von aTrainingTracker deine Trainings aufgezeichnet hast! Unbegrenzte Sensoren und alle zukünftigen Funktionen sind für dich dauerhaft freigeschaltet.</string>
     <string name="debug_supporter_override_title">Supporter-Stufe überschreiben (Debug)</string>
     <string name="debug_supporter_override_subtitle">Simuliert Lizenz-Stufen lokal ohne Google Play Billing Zugangsdaten</string>
 

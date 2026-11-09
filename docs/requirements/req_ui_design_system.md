@@ -3,7 +3,7 @@
 **Domain**: `ui_design_system`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Requirements**: 370
+**Total Requirements**: 371
 
 ---
 
@@ -14985,6 +14985,37 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Then* Silver renders the "Empfehlung" badge and container highlight, and all non-current plans render primary `Button` ("Fördern").
 
 **Invariants**: Full-color 44dp tier emblems (`REQ-UI-445.4`); single-line buttons without text wrapping (`Rule 38`); 9-locale translation parity; 100% test pass rate.
+
+### REQ-UI-502: SupporterScreen: Neutral Pioneer Early Adopter Recognition Copy [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-502`
+- **Implementation**: `res/values*/strings.xml`, `SupporterComponents.kt`, `SupporterCopyContractTest.kt`
+- **Rationale**: In `SupporterComponents.kt` (`PioneerStatusBanner`), `R.string.pioneer_thank_you_body` specifically referenced "the early ANT+ days" across all 9 locales. Early adopters who used Bluetooth LE, GPS, or internal phone sensors before V5.0.0 were alienated by ANT+-specific phrasing. The copy SHALL express neutral, appreciative gratitude for tracking workouts with an earlier version of the app.
+- **Description**:
+  1. *Neutral Pioneer Gratitude Copy (`REQ-UI-502.1`)*:
+     - `pioneer_thank_you_body` SHALL express appreciation for recording workouts with an earlier version of `aTrainingTracker` and state that unlimited sensors and all future features are permanently unlocked for the athlete.
+     - The copy SHALL contain zero references to "ANT+" across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+  2. *Prohibition of Decorative Inline Emojis (`REQ-UI-502.2`)*:
+     - Pursuant to `ATT-5400`, `pioneer_thank_you_body` SHALL NOT contain decorative inline Unicode emojis.
+  3. *9-Language Localization Parity (`REQ-UI-502.3`)*:
+     - The updated string SHALL maintain 100% localization parity across all 9 supported application locales without format specifiers (`%s`, `%d`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-SET-085.3` / `REQ-UI-445.3` (`PioneerStatusBanner` copy). Targets `res/values*/strings.xml` and `SupporterComponents.kt`.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-5371` (commit `31da409a`), which extracted `pioneer_thank_you_body` and added dynamic since-year formatting.
+3. *Root Reason for Existing Formulation*: Early copy colloquially assumed early adopters used ANT+ because of the app's historical origin. However, many athletes tracked with BLE/GPS in early versions.
+4. *Preservation of Core Invariants*: Lifetime Pro privileges (`isProActive() == true`), unlimited sensor pairing, dynamic `pioneerSinceYear` badge, 36dp vector emblem, and 9-locale parity remain 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete with Pioneer status opening `SupporterScreen`,
+• *When* `PioneerStatusBanner` is displayed,
+• *Then* `pioneer_thank_you_body` expresses appreciation for recording workouts with an earlier version of `aTrainingTracker` and contains zero references to "ANT+" and zero decorative emojis across all 9 supported locales.
+• *Given* the localization parity test suite (`TST-LOC-001` / `TST-UI-502.2`),
+• *When* executed,
+• *Then* all 9 locales pass with 100% translation parity and zero format specifier errors.
+
+**Invariants**: Lifetime Pro privileges (`isProActive() == true`); dynamic since-year badge formatting; 36dp tier emblem; zero format specifier mismatches; 100% test pass rate.
+
 
 
 

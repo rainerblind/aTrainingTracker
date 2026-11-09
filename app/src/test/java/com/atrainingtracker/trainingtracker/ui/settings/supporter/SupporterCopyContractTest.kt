@@ -28,7 +28,7 @@ import java.util.regex.Pattern
 
 /**
  * Architectural and copy contract test for supporter and jubilee support appeals
- * (REQ-SET-086, REQ-REV-003, TST-SET-086, TST-REV-003, TST-REV-005 / ATT-5659).
+ * (REQ-SET-086, REQ-REV-003, REQ-UI-502, TST-SET-086, TST-REV-003, TST-REV-005, TST-UI-502 / ATT-5659, ATT-6290).
  *
  * Verifies across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT):
  * 1. 5 required string keys exist with 100% parity.
@@ -36,6 +36,7 @@ import java.util.regex.Pattern
  * 3. Zero decorative emojis (ATT-5400).
  * 4. Elimination of buzzwords ("15+ Jahre", "Indie", "seit 2011", "Datenschutz", "unabhängig", etc.).
  * 5. Appreciative development support copy matches 1:1 in DE and EN.
+ * 6. PioneerStatusBanner thank-you copy (pioneer_thank_you_body) eliminates "ANT+", has zero emojis/specifiers, and matches 1:1.
  */
 class SupporterCopyContractTest {
 
@@ -205,6 +206,57 @@ class SupporterCopyContractTest {
         assertEquals(
             "You can also financially support the ongoing development of aTrainingTracker:",
             unescapeXml(extractStringTagRawContent(stringsFile, "jubilee_supporter_appeal_message")!!)
+        )
+    }
+
+    /**
+     * Verifies pursuant to REQ-UI-502 and TST-UI-502 (ATT-6290):
+     * 1. pioneer_thank_you_body exists across all 9 supported locales without format specifiers or emojis.
+     * 2. The string contains zero references to "ANT+" (case-insensitive).
+     * 3. Exact matching of appreciative copy in German and English.
+     */
+    @Test
+    fun testPioneerThankYouBodyEliminatesAntPlusAndMatchesExactCopy() {
+        val resDir = findResDirectory()
+        val formatArgPattern = Pattern.compile("%(?:\\d+\\$)?[sdfoxXeEgGaA]")
+        val emojiPattern = Pattern.compile("[\\x{1F300}-\\x{1F64F}\\x{1F680}-\\x{1F6FF}\\x{2600}-\\x{26FF}\\x{2700}-\\x{27BF}]")
+
+        for (locale in supportedLocales) {
+            val dirName = if (locale.isEmpty()) "values" else "values-$locale"
+            val stringsFile = File(resDir, "$dirName/strings.xml")
+            assertTrue("strings.xml must exist for locale '$locale' at ${stringsFile.path}", stringsFile.exists())
+
+            val rawValue = extractStringTagRawContent(stringsFile, "pioneer_thank_you_body")
+            assertNotNull("pioneer_thank_you_body must exist in locale '$locale'", rawValue)
+            assertFalse("pioneer_thank_you_body must not be blank in locale '$locale'", rawValue!!.trim().isEmpty())
+
+            assertFalse(
+                "pioneer_thank_you_body in locale '$locale' must not contain format specifiers (found in '$rawValue')",
+                formatArgPattern.matcher(rawValue).find()
+            )
+
+            assertFalse(
+                "pioneer_thank_you_body in locale '$locale' must not contain decorative emojis per ATT-5400 (found in '$rawValue')",
+                emojiPattern.matcher(rawValue).find()
+            )
+
+            assertFalse(
+                "pioneer_thank_you_body in locale '$locale' must NOT contain 'ANT+' reference (found in '$rawValue')",
+                rawValue.lowercase().contains("ant+")
+            )
+        }
+
+        // Exact match verification for German and English
+        val deStringsFile = File(resDir, "values-de/strings.xml")
+        assertEquals(
+            "Danke, dass du bereits mit einer früheren Version von aTrainingTracker deine Trainings aufgezeichnet hast! Unbegrenzte Sensoren und alle zukünftigen Funktionen sind für dich dauerhaft freigeschaltet.",
+            unescapeXml(extractStringTagRawContent(deStringsFile, "pioneer_thank_you_body")!!)
+        )
+
+        val enStringsFile = File(resDir, "values/strings.xml")
+        assertEquals(
+            "Thank you for recording your workouts with an earlier version of aTrainingTracker! Unlimited sensors and all future features are permanently unlocked for you.",
+            unescapeXml(extractStringTagRawContent(enStringsFile, "pioneer_thank_you_body")!!)
         )
     }
 }
