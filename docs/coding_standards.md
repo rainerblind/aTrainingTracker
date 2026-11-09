@@ -86,6 +86,15 @@ This document serves as the authoritative living source of truth for software en
   * ✅ Cache values that only need to survive between calculations in a **plain holder object** (`private class SegmentIndexHolder(var index: Int? = null)`, `val holder = remember(key) { SegmentIndexHolder() }`), or move the write into a `SideEffect` / `LaunchedEffect` / ViewModel.
 * Sprint 2026-44.1 removed this pattern from `SensorGridScreen` (ATT-4863) and re-introduced it in `TrackingTabsScreen` (ATT-4838) in the same sprint — Gate 4 explicitly checks for it.
 
+### 1.11 No Pager/Scroll State Keys in Self-Animating `LaunchedEffect`s & Cross-Surface Marker Parity (Rule 80 — ATT-6208 / ATT-6322, ATT-6211 / ATT-6320, ATT-6286 / ATT-6323)
+* **Never Include `pagerState.currentPage` in a `LaunchedEffect` Key List That Scrolls the Pager (`ATT-6208` $\rightarrow$ `ATT-6322`)**:
+  * A `LaunchedEffect` whose body calls `pagerState.animateScrollToPage(targetPage)` or `pagerState.scrollToPage(targetPage)` **MUST NOT** include `pagerState.currentPage` (or `scrollState.value`) in its `LaunchedEffect(...)` key list.
+  * During `animateScrollToPage`, `pagerState.currentPage` updates as soon as the scroll crosses the 50% midpoint, which immediately cancels and restarts the `LaunchedEffect` coroutine mid-animation and leaves the `HorizontalPager` visually frozen at 50% between tabs.
+  * When switching tabs programmatically for an automated snapshot (`pendingAutoShare`), use `pagerState.scrollToPage(targetPage)` (instant jump without intermediate transition frames), never inject a duplicate visible `WorkoutHeader` into the child tab layout, and always restore the caller's original tab/screen state in `onSnapshotComplete`.
+* **Cross-Surface Map Marker Parity (`ATT-6211` $\rightarrow$ `ATT-6320`) & Title Row Budget When Replacing Icon Badges With Text Buttons (`ATT-6286` $\rightarrow$ `ATT-6323`)**:
+  * Whenever a domain entity's map marker geometry or icon is updated (e.g. *Lieblingsorte* heart marker in `KnownLocationThumbnailMap`), Stage 1–4 **MUST** audit all 3 map contexts: (1) list card thumbnail, (2) detail/edit screen map (`EditKnownLocationScreen`), and (3) global inspection map (`MapScreenWithTrack`).
+  * When replacing a compact `32.dp` icon badge with a text `OutlinedButton` (e.g. `"Wechseln"` on `SupporterPlanCard`), audit the remaining horizontal width budget for long German compound titles (`"Bronze-Unterstützer"`) so single-letter line wraps (`Unterstütze\nr`) cannot occur.
+
 ---
 
 ## 2. Database & Data Transfer Object (DTO) Architecture
@@ -115,6 +124,13 @@ This document serves as the authoritative living source of truth for software en
   * Adding a `NOT NULL` column without a `DEFAULT` constraint causes SQLite migrations to crash with `SQLiteException: Cannot add a NOT NULL column with default value NULL` on existing user databases.
 * **Automated Migration Contract Unit Tests**:
   * Every database schema version increment **MUST** be accompanied by an automated migration contract unit test verifying that a database upgraded incrementally through all `onUpgrade()` steps produces identical table schemas and columns as a fresh database initialized via `onCreate()`.
+
+### 2.4 Three-Way Parity for Spatial Fingerprint & Summary Metric Formula Changes: Live + Import + DB Migration (Rule 80 — ATT-5899 / ATT-6319)
+* **Live Recording + Bulk/File Import + Historical Database Self-Healing**:
+  * Whenever a persisted spatial fingerprint or summary metric calculation is changed (such as `WorkoutClusterEngine.findApexFromPoints(start, points, end)` switching point-to-point $A \to B$ workouts from `apex = end` to true path-midpoint / cross-track deviation apex), Stage 1–4 **MUST** enforce 3-way parity across:
+    1. **Live Recording**: `TrackerService` / live summary finalization.
+    2. **File & Bulk Import**: `LegacyImportEngine` / `StravaBulkExportImporter` (`grep` all callers computing `APEX_LAT`/`APEX_LON` or `EXTREMA_VALUES`).
+    3. **Historical Database Migration**: A background/startup migration or re-clustering pass updating existing rows in `WorkoutSummaries.db` (`EXTREMA_VALUES`) and `WorkoutClusters.db` so newly recorded workouts and historical workouts share a single consistent coordinate convention.
 
 ---
 
