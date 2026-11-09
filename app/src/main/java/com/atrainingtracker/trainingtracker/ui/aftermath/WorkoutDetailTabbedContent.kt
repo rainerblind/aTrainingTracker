@@ -129,6 +129,7 @@ fun WorkoutDetailTabbedContent(
     onMoveBoundaryClick: ((boundaryLapNr: Long) -> Unit)? = null,
     onLapClick: ((LapData) -> Unit)? = null,
     initialAutoShareSnapshot: Boolean = false,
+    onSnapshotComplete: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val visibleTabs = remember(tabs, availability, detailPreferences) {
@@ -164,6 +165,7 @@ fun WorkoutDetailTabbedContent(
     var pendingAutoShare by remember(workoutData.id, initialAutoShareSnapshot) {
         mutableStateOf(initialAutoShareSnapshot)
     }
+    var originPageIndex by rememberSaveable(workoutData.id) { mutableStateOf<Int?>(null) }
 
     val mapTabIndex = remember(visibleTabs) {
         val idx = visibleTabs.indexOfFirst { WorkoutDetailSectionType.MAP in it.sections }
@@ -172,15 +174,27 @@ fun WorkoutDetailTabbedContent(
         }
     }
 
-    LaunchedEffect(pendingAutoShare, pagerState.currentPage, mapTabIndex) {
+    LaunchedEffect(pendingAutoShare, mapTabIndex) {
         if (pendingAutoShare && mapTabIndex >= 0) {
             if (pagerState.currentPage != mapTabIndex) {
-                pagerState.animateScrollToPage(mapTabIndex)
-            } else {
-                kotlinx.coroutines.delay(350L)
-                pendingAutoShare = false
-                triggerMapSnapshot = true
+                pagerState.scrollToPage(mapTabIndex)
             }
+            kotlinx.coroutines.delay(350L)
+            pendingAutoShare = false
+            triggerMapSnapshot = true
+        }
+    }
+
+    val handleSnapshotComplete = {
+        triggerMapSnapshot = false
+        coroutineScope.launch {
+            originPageIndex?.let { targetPage ->
+                if (targetPage in 0 until visibleTabs.size) {
+                    pagerState.scrollToPage(targetPage)
+                }
+                originPageIndex = null
+            }
+            onSnapshotComplete?.invoke()
         }
     }
 
@@ -300,6 +314,7 @@ fun WorkoutDetailTabbedContent(
                             maxAltitudeOverride = workoutData.maxAltitude,
                             useStatusBarsPadding = false,
                             isBottomSheet = false,
+                            showHeader = false,
                             showMap = true,
                             showElevationProfile = false,
                             showTelemetryCharts = false,
@@ -319,7 +334,7 @@ fun WorkoutDetailTabbedContent(
                             metadataContent = null,
                             analyticsContent = null,
                             externalSnapshotTrigger = (pageIndex == mapTabIndex) && triggerMapSnapshot,
-                            onSnapshotComplete = { triggerMapSnapshot = false },
+                            onSnapshotComplete = { handleSnapshotComplete() },
                             modifier = Modifier.fillMaxSize()
                         )
                     }
@@ -334,6 +349,7 @@ fun WorkoutDetailTabbedContent(
                             maxAltitudeOverride = workoutData.maxAltitude,
                             useStatusBarsPadding = false,
                             isBottomSheet = false,
+                            showHeader = false,
                             showMap = true,
                             showElevationProfile = tabHasElevation,
                             showTelemetryCharts = tabHasCharts,
@@ -348,7 +364,7 @@ fun WorkoutDetailTabbedContent(
                             onInteractiveCanvasTouch = { isTouchingInteractiveCanvas = it },
                             header = snapshotHeader,
                             externalSnapshotTrigger = (pageIndex == mapTabIndex) && triggerMapSnapshot,
-                            onSnapshotComplete = { triggerMapSnapshot = false },
+                            onSnapshotComplete = { handleSnapshotComplete() },
                             mapContent = mapContent,
                             overlay = mapOverlay,
                             topEndActions = mapTopEndActions,
@@ -418,6 +434,7 @@ fun WorkoutDetailTabbedContent(
                                 maxAltitudeOverride = workoutData.maxAltitude,
                                 useStatusBarsPadding = false,
                                 isBottomSheet = false,
+                                showHeader = false,
                                 showMap = false,
                                 showElevationProfile = tabHasElevation,
                                 showTelemetryCharts = tabHasCharts,
@@ -432,7 +449,7 @@ fun WorkoutDetailTabbedContent(
                                 onInteractiveCanvasTouch = { isTouchingInteractiveCanvas = it },
                                 header = snapshotHeader,
                                 externalSnapshotTrigger = (pageIndex == mapTabIndex) && triggerMapSnapshot,
-                                onSnapshotComplete = { triggerMapSnapshot = false },
+                                onSnapshotComplete = { handleSnapshotComplete() },
                                 metadataContent = null,
                                 analyticsContent = if (nonMapNonGraphSections.isNotEmpty()) {
                                     {
@@ -730,6 +747,7 @@ fun WorkoutDetailTabbedContent(
             onSelectMapSnapshot = {
                 showShareModeSheet = false
                 if (mapTabIndex >= 0) {
+                    originPageIndex = pagerState.currentPage
                     pendingAutoShare = true
                 }
             },

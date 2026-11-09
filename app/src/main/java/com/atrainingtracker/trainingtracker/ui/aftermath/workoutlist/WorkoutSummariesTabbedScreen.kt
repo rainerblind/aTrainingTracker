@@ -311,6 +311,12 @@ fun WorkoutSummariesTabbedScreen(
                     powerZoneThresholds = aftermathUIState.powerThresholds,
                     telemetryPath = aftermathUIState.telemetryPath,
                     initialAutoShareSnapshot = autoShareSnapshotOnOpen,
+                    onSnapshotComplete = {
+                        if (autoShareSnapshotOnOpen) {
+                            selectedWorkoutIdForDetails = null
+                            autoShareSnapshotOnOpen = false
+                        }
+                    },
                     modifier = Modifier
                 )
 

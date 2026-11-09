@@ -43,6 +43,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -129,6 +130,7 @@ fun MapDetailLayout(
     modifier: Modifier = Modifier,
     useStatusBarsPadding: Boolean = true,
     isBottomSheet: Boolean = !useStatusBarsPadding,
+    showHeader: Boolean = true,
     showMap: Boolean = true,
     showElevationProfile: Boolean = true,
     showZoomControls: Boolean = true,
@@ -774,19 +776,40 @@ fun MapDetailLayout(
             }
 
             // 1. HEADER (Slotted)
-            Surface(
-                color = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.onSurface,
-                shape = if (isBottomSheet) BottomSheetDesign.SheetShape else RectangleShape,
-                modifier = if (useStatusBarsPadding) Modifier.statusBarsPadding() else Modifier
-            ) {
-                Box(modifier = Modifier.drawWithContent {
-                    headerLayer.record {
-                        this@drawWithContent.drawContent()
+            if (showHeader) {
+                Surface(
+                    color = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    shape = if (isBottomSheet) BottomSheetDesign.SheetShape else RectangleShape,
+                    modifier = if (useStatusBarsPadding) Modifier.statusBarsPadding() else Modifier
+                ) {
+                    Box(modifier = Modifier.drawWithContent {
+                        headerLayer.record {
+                            this@drawWithContent.drawContent()
+                        }
+                        drawLayer(headerLayer)
+                    }) {
+                        header()
                     }
-                    drawLayer(headerLayer)
-                }) {
-                    header()
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .layout { measurable, constraints ->
+                            val placeable = measurable.measure(constraints)
+                            layout(0, 0) {
+                                placeable.place(0, 0)
+                            }
+                        }
+                ) {
+                    Box(modifier = Modifier.drawWithContent {
+                        headerLayer.record {
+                            this@drawWithContent.drawContent()
+                        }
+                    }) {
+                        header()
+                    }
                 }
             }
 

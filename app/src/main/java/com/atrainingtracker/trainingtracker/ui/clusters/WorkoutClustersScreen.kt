@@ -145,6 +145,13 @@ fun WorkoutClustersScreen(
                 onToggleTrackType = { trackOnMapViewModel.toggleTrackTypeEnabled(it) },
                 showTechnicalTracks = true,
                 initialAutoShareSnapshot = autoShareSnapshotOnOpen,
+                onSnapshotComplete = {
+                    if (autoShareSnapshotOnOpen) {
+                        viewModel.clearPeekSelection()
+                        inspectedWorkout = null
+                        autoShareSnapshotOnOpen = false
+                    }
+                },
                 onClusterClick = { clusterId ->
                     viewModel.selectClusterById(clusterId)
                     inspectedWorkout = null
