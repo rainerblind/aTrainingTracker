@@ -1595,6 +1595,28 @@
   5. *Clean-Room Targeted Test Suite Execution (`TST-TRK-056.5`)*:
   • Execute targeted package tests (`com.atrainingtracker.banalservice.devices.*`) asserting 100% pass rate.
 
+### TST-TRK-057: **Barometer Altitude Pocket-Compression Spike Rejection & Sourced DB Sync Test Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-057`
+- **Component**: `AltitudeFromPressureDevice.java`, `BarometricAltitudeFilter.kt`, `WorkoutSamplesDatabaseManager.java`
+- **Jira**: `ATT-6265`
+- **Test Description**:
+  1. *Pocket-Compression Pulse Rejection Unit Test (`TST-TRK-057.1`, `BarometricAltitudeFilterTest.kt`)*:
+  • Deliver synthetic 1-Hz altitude data with isolated 1–2s transient pulses ($\pm 20\text{--}80\text{ m}$).
+  • Verify single-step output changes are clamped $\le 1.2\text{ m/s}$, transient pulses are rejected by the sliding median, and total phantom hysteresis gain is $\le 1.0\text{ m}$.
+  2. *High-Gradient Climb Preservation Unit Test (`TST-TRK-057.2`, `BarometricAltitudeFilterTest.kt`)*:
+  • Deliver continuous 300-second ascent climbing at $0.80\text{ m/s}$ (2,880 m/h).
+  • Verify output tracks ground-truth ascent with $< 0.5\text{ m}$ phase lag and zero slope attenuation.
+  3. *Calibration Baseline Spike Immunity Unit Test (`TST-TRK-057.3`, `AltitudeFromPressureDeviceTest.kt`)*:
+  • Inject a $+40\text{ m}$ pocket spike during barometric sensor warmup/sampling immediately before `calibrate(500.0)`.
+  • Verify `mAltitudeCorrection` anchors to the filtered baseline ($< 1.5\text{ m}$ error from true ground truth), rejecting the $40\text{ m}$ transient offset.
+  4. *Sourced-Column Retroactive Altitude Drift Synchronization Unit Test (`TST-TRK-057.4`, `WorkoutSamplesDatabaseManagerTest.kt`)*:
+  • Populate a workout sample table with both `ALTITUDE` and `"ALTITUDE (Höhe aus Luftdruck)"`.
+  • Execute `applyAltitudeDriftCorrection()` for Case A (uniform shift) and Case B (piecewise-linear interpolation).
+  • Verify both `ALTITUDE` and `"ALTITUDE (Höhe aus Luftdruck)"` are updated with 100% numerical parity across all target sample rows.
+  5. *Clean-Room Targeted Test Suite Execution (`TST-TRK-057.5`)*:
+  • Execute targeted package tests (`com.atrainingtracker.banalservice.devices.*` and `com.atrainingtracker.trainingtracker.database.*`) asserting 100% pass rate.
+
+
 
 
 

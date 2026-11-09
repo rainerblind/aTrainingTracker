@@ -75,6 +75,9 @@ public class AltitudeFromPressureDevice extends MyDevice
     private final String TAG = "AltitudeFromPressureDev";
     private double mAltitudeCorrection = 0;
     private double mLastRawAltitude = Double.NaN;
+    // REQ-TRK-057.1 & REQ-TRK-057.2: Non-linear outlier-filtered barometric altitude baseline
+    private final BarometricAltitudeFilter mAltitudeFilter = new BarometricAltitudeFilter();
+    private double mFilteredRawAltitude = Double.NaN;
     private double mPendingReferenceAltitude = Double.NaN;
     private boolean mPressureSensorInitialized = false;
     private boolean mIsCalibrated = false;
@@ -124,6 +127,8 @@ public class AltitudeFromPressureDevice extends MyDevice
         mPendingReferenceAltitude = Double.NaN;
         mIsCalibrated = false;
         mLastCalibrationTimeMs = -1L;
+        mAltitudeFilter.reset();
+        mFilteredRawAltitude = Double.NaN;
     }
 
 
@@ -133,7 +138,8 @@ public class AltitudeFromPressureDevice extends MyDevice
     private void initPressureSensor() {
         if (DEBUG) Log.d(TAG, "initPressureSensor");
 
-        if (!Double.isNaN(mLastRawAltitude)
+        double baseAltitude = !Double.isNaN(mFilteredRawAltitude) ? mFilteredRawAltitude : mLastRawAltitude;
+        if (!Double.isNaN(baseAltitude)
                 && mMySensorManager.getSensor(SensorType.LATITUDE) != null
                 && mMySensorManager.getSensor(SensorType.LONGITUDE) != null
                 && mMySensorManager.getSensor(SensorType.LATITUDE).getValue() != null
@@ -215,16 +221,17 @@ public class AltitudeFromPressureDevice extends MyDevice
      */
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
     void setAltitudeCorrection(double correctAltitude) {
-        if (DEBUG) Log.d(TAG, "setAltitudeCorrection: target=" + correctAltitude + ", raw=" + mLastRawAltitude + ", currentCorr=" + mAltitudeCorrection);
+        double baseAltitude = !Double.isNaN(mFilteredRawAltitude) ? mFilteredRawAltitude : mLastRawAltitude;
+        if (DEBUG) Log.d(TAG, "setAltitudeCorrection: target=" + correctAltitude + ", base=" + baseAltitude + ", currentCorr=" + mAltitudeCorrection);
 
-        if (Double.isNaN(mLastRawAltitude)) {
-            Log.w(TAG, "Cannot set altitude correction: last raw altitude is NaN, caching pending target.");
+        if (Double.isNaN(baseAltitude)) {
+            Log.w(TAG, "Cannot set altitude correction: base altitude is NaN, caching pending target.");
             mPendingReferenceAltitude = correctAltitude;
             return;
         }
 
-        // 1. Calculate new absolute correction strictly relative to raw barometric pressure
-        double newCorrection = correctAltitude - mLastRawAltitude;
+        // 1. Calculate new absolute correction strictly relative to filtered barometric baseline (REQ-TRK-057.2)
+        double newCorrection = correctAltitude - baseAltitude;
 
         // 2. Calculate delta shift to broadcast to ongoing session
         double deltaOffset = newCorrection - mAltitudeCorrection;
@@ -235,7 +242,7 @@ public class AltitudeFromPressureDevice extends MyDevice
 
         // 4. Update published sensor reading
         if (mAltitudeSensor != null) {
-            mAltitudeSensor.newValue(mLastRawAltitude + mAltitudeCorrection);
+            mAltitudeSensor.newValue(baseAltitude + mAltitudeCorrection);
         }
 
         long prevCalTimeMs = mLastCalibrationTimeMs;
@@ -258,7 +265,7 @@ public class AltitudeFromPressureDevice extends MyDevice
      * If the raw barometric pressure reading is ready, computes the correction offset immediately,
      * updates the sensor value, sets the calibrated state, and broadcasts ALTITUDE_CORRECTION_INTENT.
      * If the sensor is already calibrated within 0.5m of referenceAltitude, returns true immediately (idempotent).
-     * If the sensor is still in warmup (mLastRawAltitude is NaN), stores the target elevation as pending
+     * If the sensor is still in warmup (base altitude is NaN), stores the target elevation as pending
      * and automatically applies it upon receiving the first pressure event.
      *
      * @param referenceAltitude Target ground-truth elevation in meters.
@@ -269,21 +276,23 @@ public class AltitudeFromPressureDevice extends MyDevice
             return false;
         }
 
-        if (isCalibrated() && !Double.isNaN(mLastRawAltitude)) {
-            double currentAltitude = mLastRawAltitude + mAltitudeCorrection;
+        double baseAltitude = !Double.isNaN(mFilteredRawAltitude) ? mFilteredRawAltitude : mLastRawAltitude;
+
+        if (isCalibrated() && !Double.isNaN(baseAltitude)) {
+            double currentAltitude = baseAltitude + mAltitudeCorrection;
             if (Math.abs(currentAltitude - referenceAltitude) < 0.5) {
                 if (DEBUG) Log.d(TAG, "calibrate: already calibrated to " + currentAltitude + " m (target: " + referenceAltitude + " m), skipping redundant work.");
                 return true;
             }
         }
 
-        if (!Double.isNaN(mLastRawAltitude)) {
+        if (!Double.isNaN(baseAltitude)) {
             setAltitudeCorrection(referenceAltitude);
             mPressureSensorInitialized = true;
             mIsCalibrated = true;
             mPendingReferenceAltitude = Double.NaN;
             if (mAltitudeSensor != null) {
-                mAltitudeSensor.newValue(mLastRawAltitude + mAltitudeCorrection);
+                mAltitudeSensor.newValue(baseAltitude + mAltitudeCorrection);
             }
             return true;
         } else {
@@ -331,6 +340,8 @@ public class AltitudeFromPressureDevice extends MyDevice
         mIsCalibrated = false;
         mAltitudeCorrection = 0.0;
         mPendingReferenceAltitude = Double.NaN;
+        mAltitudeFilter.reset();
+        mFilteredRawAltitude = Double.NaN;
     }
 
     public synchronized long getLastCalibrationTimeMs() {
@@ -340,6 +351,21 @@ public class AltitudeFromPressureDevice extends MyDevice
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
     void setLastCalibrationTimeMs(long timeMs) {
         mLastCalibrationTimeMs = timeMs;
+    }
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    double getFilteredRawAltitude() {
+        return mFilteredRawAltitude;
+    }
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    void setFilteredRawAltitude(double filteredAltitude) {
+        mFilteredRawAltitude = filteredAltitude;
+    }
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    BarometricAltitudeFilter getAltitudeFilter() {
+        return mAltitudeFilter;
     }
 
 
@@ -367,12 +393,15 @@ public class AltitudeFromPressureDevice extends MyDevice
     @VisibleForTesting(otherwise = VisibleForTesting.PACKAGE_PRIVATE)
     void handlePressureMeasurement(float pressureHpa) {
         mLastRawAltitude = SensorManager.getAltitude(SensorManager.PRESSURE_STANDARD_ATMOSPHERE, pressureHpa);
+        // REQ-TRK-057.1: Apply non-linear outlier rejection to raw altitude stream
+        mFilteredRawAltitude = mAltitudeFilter.filter(mLastRawAltitude, System.currentTimeMillis());
+
         if (!Double.isNaN(mPendingReferenceAltitude)) {
             calibrate(mPendingReferenceAltitude);
         } else if (!mPressureSensorInitialized) {
             initPressureSensor();
         }
-        mAltitudeSensor.newValue(mLastRawAltitude + mAltitudeCorrection);
+        mAltitudeSensor.newValue(mFilteredRawAltitude + mAltitudeCorrection);
     }
 
 //    protected double getAltitude(double p0, double p)

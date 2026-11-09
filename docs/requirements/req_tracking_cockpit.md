@@ -2882,4 +2882,40 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: True standstill immediately pinned with zero speed and zero distance creep (`REQ-TRK-048`); teleportation spike protection ($\le 70\text{ m/s}$, `REQ-TRK-041.1`) preserved; 100% test pass rate maintained.
 
+### REQ-TRK-057: Barometer Altitude Pocket-Compression Spike Rejection & Sourced DB Sync [Verified]
+- **Tests**: `TST-TRK-057` | **Tickets**: `ATT-6265`
+- **Implementation**: `AltitudeFromPressureDevice.java`, `BarometricAltitudeFilter.kt`, `WorkoutSamplesDatabaseManager.java`
+- **Rationale**: Carrying a smartphone in a jacket or trouser pocket causes abrupt 1-second pressure transients of ±20m to ±96m due to body movement and fabric compression. Linear moving averages fail because single-second pulses smear into multi-second waves that trip the 5m hysteresis elevation accumulator, creating massive phantom elevation gain (>1,500m on flat rides). A causal non-linear filter (physical slew-rate limiter + sliding median + EMA) eliminates pocket noise while preserving genuine mountain climbs up to 3,000 m/h with zero attenuation. Additionally, anchoring calibration to the filtered baseline and synchronizing retroactive drift corrections across all source-attributed altitude columns ensures database and sensor consistency (ATT-6265, Parent Epic ATT-166, extending `REQ-CON-017` and `REQ-TRK-047`).
+- **Description**:
+1. *Causal Non-Linear Outlier Rejection (`REQ-TRK-057.1`)*:
+• In `AltitudeFromPressureDevice.java`, raw pressure-derived altitude samples SHALL be filtered through a causal non-linear filter (`BarometricAltitudeFilter`) consisting of a physical vertical slew-rate limiter ($|\Delta h| \le 1.2\text{ m/s} \cdot \Delta t$), a 7-sample sliding median window, and an exponential moving average ($\alpha = 0.18$) before publishing to `mAltitudeSensor`.
+• The filter SHALL reject isolated 1–2s transient compression spikes ($\pm 20\text{--}96\text{ m}$) while tracking continuous mountain climbs up to $0.83\text{ m/s}$ (3,000 m/h) with $< 0.5\text{ m}$ phase lag and zero attenuation.
+2. *Calibration Baseline Stabilization (`REQ-TRK-057.2`)*:
+• `AltitudeFromPressureDevice.setAltitudeCorrection()` and `calibrate()` SHALL compute `mAltitudeCorrection` strictly relative to the outlier-filtered baseline (`mFilteredRawAltitude`) rather than a single raw pressure sample, preventing pocket-compression pulses at workout start from permanently corrupting the activity calibration offset.
+3. *Sourced-Column Retroactive Altitude Drift Synchronization (`REQ-TRK-057.3`)*:
+• In `WorkoutSamplesDatabaseManager.applyAltitudeDriftCorrection()`, when shifting `SensorType.ALTITUDE.name()`, the database manager SHALL dynamically discover and apply the identical uniform (Case A) or piecewise-linear (Case B) shift to all existing source-attributed altitude columns matching `^ALTITUDE($| \(.*\)$)` (e.g. `"ALTITUDE (Höhe aus Luftdruck)"`) within the same atomic SQLite transaction.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-057`, extending `REQ-CON-017` (*Barometric Calibration Limiting*) and `REQ-TRK-047` (*Piecewise-Linear Drift Correction*). Targets `AltitudeFromPressureDevice.java` and `WorkoutSamplesDatabaseManager.java`.
+2. *Historical Origin & Commit Trace*: `ATT-1810` / `ATT-3990` (Sprint 2026-38.2) established `REQ-CON-017` to stop runaway oscillations ($|\Delta h| > 500\text{ m}$). `ATT-4845` established `REQ-TRK-047` for two-point drift correction.
+3. *Root Reason for Existing Formulation*: Prior tickets addressed macroscopic weather drift over hours. High-frequency 1-second pocket-pumping transients and source-attributed database columns were unmodeled.
+4. *Preservation of Core Invariants*: The 500 m sanity limit (`REQ-CON-017`), idempotent calibration, and two-point linear interpolation (`REQ-TRK-047`) remain strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a 1-Hz barometric altitude stream with an isolated 1-second $+50\text{ m}$ pocket-compression pulse,
+• *When* processed by `AltitudeFromPressureDevice`,
+• *Then* single-step output change is clamped $\le 1.2\text{ m/s}$, the spike is rejected by the sliding median, and total phantom elevation gain remains $\le 1.0\text{ m}$.
+• *Given* a continuous 300-second mountain ascent at $0.80\text{ m/s}$ (2,880 m/h, total $+240.0\text{ m}$ climb),
+• *When* processed,
+• *Then* the final elevation matches ground truth within $\pm 0.5\text{ m}$ with zero gradient attenuation.
+• *Given* a barometric sensor experiencing a $+40\text{ m}$ pocket-compression spike,
+• *When* `calibrate(500.0)` is invoked,
+• *Then* `mAltitudeCorrection` anchors to the filtered baseline, differing from true ground truth by $< 1.5\text{ m}$ rather than $40\text{ m}$.
+• *Given* a workout sample table containing both `ALTITUDE` and `"ALTITUDE (Höhe aus Luftdruck)"`,
+• *When* `applyAltitudeDriftCorrection()` executes with `deltaOffset = +20.0 m`,
+• *Then* both `ALTITUDE` and `"ALTITUDE (Höhe aus Luftdruck)"` are shifted by $+20.0\text{ m}$ across all target rows.
+
+**Invariants**: True mountain climbs track without attenuation; IPC contract (`ALTITUDE_CORRECTION_INTENT`) payload and $|\Delta h| \le 500\text{ m}$ guard preserved; database updates remain atomic.
+
+
 
