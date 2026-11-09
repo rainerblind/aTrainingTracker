@@ -314,6 +314,8 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
 
                 // REQ-TRK-048.2: Dynamic accuracy-scaled deadband radius R = max(3.0m, 0.6 * accuracy)
                 double deadbandRadius = Math.max(3.0, 0.6 * location.getAccuracy());
+                // REQ-TRK-056.1: Dynamic accuracy-scaled escape radius for unpinning and movement gating
+                double escapeRadius = Math.max(3.0, 1.5 * location.getAccuracy());
                 boolean wasPinned = mIsStationaryPinned;
                 boolean hasSpeed = location.hasSpeed() || location.getSpeed() > 0.0f;
                 float rawSpeed = hasSpeed ? location.getSpeed() : -1.0f;
@@ -330,7 +332,6 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
                 // REQ-TRK-048.1, REQ-TRK-048.2, REQ-TRK-048.4: Anchor pinning, deadband gating, and Doppler zero preservation
                 if (mIsStationaryPinned && mStationaryAnchor != null) {
                     float distFromAnchor = mStationaryAnchor.distanceTo(location);
-                    double escapeRadius = Math.max(3.0, 1.5 * location.getAccuracy());
                     boolean shouldUnpin = false;
                     if (distFromAnchor > deadbandRadius) {
                         // Unpin if Doppler reports motion, provider lacks Doppler, OR displacement escapes accuracy noise floor
@@ -345,22 +346,17 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
                         mStationaryAnchor = null;
 
                         // REQ-TRK-041.1: Guard against implausible multipath teleportation spikes (speed > 70.0 m/s = 252 km/h)
-                        if (dt_ms > 0 && dt_ms < 30000) {
-                            double calcSpeed = delta_distance / (dt_ms / 1000.0);
-                            if (calcSpeed > 70.0) {
-                                delta_distance = 0.0;
-                            }
+                        double calcSpeed = (dt_ms > 0 && dt_ms < 30000) ? (delta_distance / (dt_ms / 1000.0)) : 0.0;
+                        if (calcSpeed > 70.0) {
+                            delta_distance = 0.0;
+                            calcSpeed = 0.0;
                         }
 
-                        if (hasSpeed && rawSpeed > SPEED_ZERO_THRESHOLD) {
+                        // REQ-TRK-056.2: Fall back to geometric speed if provider reports zero or damped speed (< 0.2 * calcSpeed)
+                        if (hasSpeed && rawSpeed > SPEED_ZERO_THRESHOLD && (calcSpeed <= 1.0 || rawSpeed >= 0.2 * calcSpeed)) {
                             speed = rawSpeed;
-                        } else {
-                            if (dt_ms > 0 && dt_ms < 30000) {
-                                double calcSpeed = delta_distance / (dt_ms / 1000.0);
-                                if (calcSpeed <= 70.0) {
-                                    speed = calcSpeed;
-                                }
-                            }
+                        } else if (calcSpeed > 0.0 && calcSpeed <= 70.0) {
+                            speed = calcSpeed;
                         }
                     } else {
                         // Suppress distance creep and zero speed while pinned
@@ -370,8 +366,10 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
                 } else {
                     double rawDelta = (mPrevLocation != null) ? mPrevLocation.distanceTo(location) : 0.0;
 
-                    if (isDopplerStationary) {
-                        // REQ-TRK-048.1 & REQ-TRK-048.2: Doppler reports zero speed; pin anchor immediately
+                    // REQ-TRK-056.1 & REQ-TRK-048.1: Only pin on Doppler zero if displacement remains within escape radius
+                    // or if initial location fix (mPrevLocation == null). If rawDelta > escapeRadius, provider Doppler speed is
+                    // damped/suppressed (e.g. Google Fused motionless phone in mock/replay) during active movement.
+                    if (isDopplerStationary && (mPrevLocation == null || rawDelta <= escapeRadius)) {
                         mStationaryAnchor = location;
                         mIsStationaryPinned = true;
                         delta_distance = 0.0;
@@ -387,22 +385,17 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
                         delta_distance = rawDelta;
 
                         // REQ-TRK-041.1: Guard against implausible multipath teleportation spikes (speed > 70.0 m/s = 252 km/h)
-                        if (dt_ms > 0 && dt_ms < 30000) {
-                            double calcSpeed = delta_distance / (dt_ms / 1000.0);
-                            if (calcSpeed > 70.0) {
-                                delta_distance = 0.0;
-                            }
+                        double calcSpeed = (dt_ms > 0 && dt_ms < 30000) ? (delta_distance / (dt_ms / 1000.0)) : 0.0;
+                        if (calcSpeed > 70.0) {
+                            delta_distance = 0.0;
+                            calcSpeed = 0.0;
                         }
 
-                        if (hasSpeed) {
+                        // REQ-TRK-056.2: Fall back to geometric speed if provider reports zero or damped speed (< 0.2 * calcSpeed)
+                        if (hasSpeed && rawSpeed > SPEED_ZERO_THRESHOLD && (calcSpeed <= 1.0 || rawSpeed >= 0.2 * calcSpeed)) {
                             speed = rawSpeed;
-                        } else {
-                            if (dt_ms > 0 && dt_ms < 30000) {
-                                double calcSpeed = delta_distance / (dt_ms / 1000.0);
-                                if (calcSpeed <= 70.0) {
-                                    speed = calcSpeed;
-                                }
-                            }
+                        } else if (calcSpeed > 0.0 && calcSpeed <= 70.0) {
+                            speed = calcSpeed;
                         }
                     }
                 }

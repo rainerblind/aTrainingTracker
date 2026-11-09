@@ -302,7 +302,7 @@ class SpeedAndLocationDeviceStationaryJitterTest {
         assertEquals(10.0, device.getSpeedSensor().value ?: 0.0, 0.001)
 
         // Step 2: Athlete halts at red light (Doppler speed = 0.0f)
-        val loc2 = createMockFix(lat = 48.00008, lon = 11.0, timeMs = 2000L, speed = 0.0f, bearing = 45.0f)
+        val loc2 = createMockFix(lat = 48.00008, lon = 11.0, timeMs = 2000L, speed = 0.0f, accuracy = 6.0f, bearing = 45.0f)
         every { loc1.distanceTo(loc2) } returns 8.0f
         device.onNewLocation(loc2)
 
@@ -347,5 +347,137 @@ class SpeedAndLocationDeviceStationaryJitterTest {
         // Geometric speed: 12.0m / 1s = 12.0 m/s, smoothed with 0.0 -> (0.0 + 12.0) / 2 = 6.0 m/s
         assertEquals(6.0, device.getSpeedSensor().value ?: 0.0, 0.001)
         assertEquals(12.0, device.getDistanceSensor().value ?: 0.0, 0.001)
+    }
+
+    /**
+     * TST-TRK-056.1: Continuous movement with Google Fused provider reporting speed = 0.0f (hasSpeed=true).
+     * Device must NOT toggle between 0.0 km/h and movement speed; it must stay unpinned, calculate geometric speed,
+     * and steadily accumulate distance.
+     */
+    @Test
+    fun testGoogleFusedZeroSpeedDuringMovement_preventsTogglingAndCalculatesVelocity() {
+        // Fix 1: Initial moving fix at 8.0 m/s (accuracy = 3.0m -> escapeRadius = 4.5m)
+        val loc1 = createMockFix(lat = 48.0, lon = 11.0, timeMs = 1000L, speed = 8.0f, accuracy = 3.0f, bearing = 90.0f)
+        device.onNewLocation(loc1)
+        assertFalse(device.isStationaryPinned)
+        assertEquals(8.0, device.getSpeedSensor().value ?: 0.0, 0.001)
+
+        // Fix 2: 1s later, Google Fused IMU damping reports speed = 0.0f, but coordinates advanced 8.0m (> 4.5m escape radius)
+        val loc2 = createMockFix(lat = 48.00007, lon = 11.0, timeMs = 2000L, speed = 0.0f, accuracy = 3.0f, bearing = 90.0f)
+        every { loc1.distanceTo(loc2) } returns 8.0f
+        device.onNewLocation(loc2)
+
+        assertFalse("Device must NOT pin on zero speed when displacement exceeds escape radius", device.isStationaryPinned)
+        assertEquals(8.0, device.getDistanceSensor().value ?: 0.0, 0.001)
+        // Geometric speed: 8.0 m/s; smoothed: (8.0 + 8.0) / 2 = 8.0 m/s
+        assertEquals(8.0, device.getSpeedSensor().value ?: 0.0, 0.001)
+
+        // Fix 3: 1s later, another 8.0m advance with speed = 0.0f
+        val loc3 = createMockFix(lat = 48.00014, lon = 11.0, timeMs = 3000L, speed = 0.0f, accuracy = 3.0f, bearing = 90.0f)
+        every { loc2.distanceTo(loc3) } returns 8.0f
+        device.onNewLocation(loc3)
+
+        assertFalse("Device must remain unpinned on consecutive zero-speed movement fixes", device.isStationaryPinned)
+        assertEquals(16.0, device.getDistanceSensor().value ?: 0.0, 0.001)
+        assertEquals(8.0, device.getSpeedSensor().value ?: 0.0, 0.001)
+
+        // Fix 4: 1s later, another 8.0m advance with speed = 0.0f
+        val loc4 = createMockFix(lat = 48.00021, lon = 11.0, timeMs = 4000L, speed = 0.0f, accuracy = 3.0f, bearing = 90.0f)
+        every { loc3.distanceTo(loc4) } returns 8.0f
+        device.onNewLocation(loc4)
+
+        assertFalse(device.isStationaryPinned)
+        assertEquals(24.0, device.getDistanceSensor().value ?: 0.0, 0.001)
+        assertEquals(8.0, device.getSpeedSensor().value ?: 0.0, 0.001)
+    }
+
+    /**
+     * TST-TRK-056.2: Damped Doppler speed fallback when provider reports speed < 0.2 * calcSpeed during active movement.
+     */
+    @Test
+    fun testGoogleFusedDampedSpeedDuringMovement_fallsBackToGeometricSpeed() {
+        // Fix 1: Movement at 8.0 m/s
+        val loc1 = createMockFix(lat = 48.0, lon = 11.0, timeMs = 1000L, speed = 8.0f, accuracy = 3.0f, bearing = 90.0f)
+        device.onNewLocation(loc1)
+        assertEquals(8.0, device.getSpeedSensor().value ?: 0.0, 0.001)
+
+        // Fix 2: Google Fused reports damped speed = 0.15 m/s, but displacement is 8.0m in 1s (calcSpeed = 8.0 m/s)
+        // rawSpeed (0.15) < 0.2 * calcSpeed (1.6) -> fallback to calcSpeed (8.0 m/s)
+        val loc2 = createMockFix(lat = 48.00007, lon = 11.0, timeMs = 2000L, speed = 0.15f, accuracy = 3.0f, bearing = 90.0f)
+        every { loc1.distanceTo(loc2) } returns 8.0f
+        device.onNewLocation(loc2)
+
+        assertFalse(device.isStationaryPinned)
+        assertEquals(8.0, device.getDistanceSensor().value ?: 0.0, 0.001)
+        // Smoothed speed: (8.0 + 8.0) / 2 = 8.0 m/s (NOT 0.15 m/s or 0.5 km/h)
+        assertEquals(8.0, device.getSpeedSensor().value ?: 0.0, 0.001)
+
+        // Fix 3: Next fix with damped speed = 0.15 m/s
+        val loc3 = createMockFix(lat = 48.00014, lon = 11.0, timeMs = 3000L, speed = 0.15f, accuracy = 3.0f, bearing = 90.0f)
+        every { loc2.distanceTo(loc3) } returns 8.0f
+        device.onNewLocation(loc3)
+
+        assertFalse(device.isStationaryPinned)
+        assertEquals(16.0, device.getDistanceSensor().value ?: 0.0, 0.001)
+        assertEquals(8.0, device.getSpeedSensor().value ?: 0.0, 0.001)
+    }
+
+    /**
+     * TST-TRK-056.3: Standstill jitter within escape radius pins immediately, locks bearing, and unpins upon movement.
+     */
+    @Test
+    fun testStandstillJitterWithinEscapeRadius_pinsImmediatelyAndLocksBearing() {
+        // Fix 1: Initial moving fix at 8.0 m/s
+        val loc1 = createMockFix(lat = 48.0, lon = 11.0, timeMs = 1000L, speed = 8.0f, accuracy = 4.0f, bearing = 45.0f)
+        device.onNewLocation(loc1)
+        assertFalse(device.isStationaryPinned)
+        assertEquals(8.0, device.getSpeedSensor().value ?: 0.0, 0.001)
+
+        // Fix 2: Halt at stop sign (accuracy = 4.0m -> escapeRadius = 6.0m), displacement = 2.0m <= 6.0m, speed = 0.0f
+        val loc2 = createMockFix(lat = 48.00002, lon = 11.0, timeMs = 2000L, speed = 0.0f, accuracy = 4.0f, bearing = 45.0f)
+        every { loc1.distanceTo(loc2) } returns 2.0f
+        device.onNewLocation(loc2)
+
+        assertTrue("Must pin immediately when Doppler speed is 0.0 within escape radius", device.isStationaryPinned)
+        assertEquals(0.0, device.getSpeedSensor().value ?: -1.0, 0.001)
+        assertEquals(0.0, device.getDistanceSensor().value ?: -1.0, 0.001)
+        assertEquals(45.0, device.getBearingSensor().value ?: -1.0, 0.001)
+
+        // Fix 3: Jitter while waiting at stop sign (1.5m jitter from anchor, bearing spins to 200 deg)
+        val loc3 = createMockFix(lat = 48.00003, lon = 11.0, timeMs = 3000L, speed = 0.0f, accuracy = 4.0f, bearing = 200.0f)
+        every { loc2.distanceTo(loc3) } returns 1.5f
+        device.onNewLocation(loc3)
+
+        assertTrue(device.isStationaryPinned)
+        assertEquals(0.0, device.getDistanceSensor().value ?: -1.0, 0.001)
+        assertEquals(0.0, device.getSpeedSensor().value ?: -1.0, 0.001)
+        assertEquals(45.0, device.getBearingSensor().value ?: -1.0, 0.001) // Bearing locked!
+
+        // Fix 4: Movement resumes! Displacement from anchor = 10.0m (> 6.0m escape radius), speed = 5.0 m/s, bearing = 90 deg
+        val loc4 = createMockFix(lat = 48.00010, lon = 11.0, timeMs = 4000L, speed = 5.0f, accuracy = 4.0f, bearing = 90.0f)
+        every { loc2.distanceTo(loc4) } returns 10.0f
+        device.onNewLocation(loc4)
+
+        assertFalse("Must unpin cleanly when movement exceeds escape radius", device.isStationaryPinned)
+        assertEquals(10.0, device.getDistanceSensor().value ?: 0.0, 0.001)
+        assertEquals(2.5, device.getSpeedSensor().value ?: 0.0, 0.001) // Smoothed (0.0 + 5.0) / 2
+        assertEquals(90.0, device.getBearingSensor().value ?: 0.0, 0.001)
+    }
+
+    /**
+     * TST-TRK-056.4: Teleportation spike protection clamps displacement > 70.0 m/s to delta_distance = 0.0.
+     */
+    @Test
+    fun testTeleportationSpikeDuringMovement_clampedToZeroDistance() {
+        val loc1 = createMockFix(lat = 48.0, lon = 11.0, timeMs = 1000L, speed = 8.0f, accuracy = 3.0f)
+        device.onNewLocation(loc1)
+
+        // Fix 2: 1s later, multipath spike jumps 100m (> 70.0 m/s)
+        val loc2 = createMockFix(lat = 48.001, lon = 11.0, timeMs = 2000L, speed = 0.0f, accuracy = 3.0f)
+        every { loc1.distanceTo(loc2) } returns 100.0f
+        device.onNewLocation(loc2)
+
+        // Clamped: distance should NOT increment by 100m
+        assertEquals(0.0, device.getDistanceSensor().value ?: -1.0, 0.001)
     }
 }

@@ -1576,6 +1576,26 @@
   5. *Targeted Regression Suite Execution (`TST-TRK-055.5`)*:
   • Execute targeted package tests (`com.atrainingtracker.banalservice.filters.*`, `com.atrainingtracker.banalservice.sensor.*`, `com.atrainingtracker.banalservice.devices.*`) asserting 100% pass rate.
 
+### TST-TRK-056: **Google Fused Doppler Velocity Plausibility & Stationary Pinning Prevention Test Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-056`
+- **Component**: `SpeedAndLocationDevice.java`, `SpeedAndLocationDeviceStationaryJitterTest.kt`
+- **Jira**: `ATT-6256`
+- **Test Description**:
+  1. *Continuous Movement with Zero-Speed Provider Unit Test (`TST-TRK-056.1`, `SpeedAndLocationDeviceStationaryJitterTest.kt`)*:
+  • Deliver continuous 1-Hz location fixes advancing 8 m/s (accuracy = 3.0 m, escapeRadius = 4.5 m) with `hasSpeed() == true` and `getSpeed() == 0.0f`.
+  • Verify speed never toggles to 0.0 m/s across successive fixes ($t=1, 2, 3\dots$), distance accumulates steadily (~8 m per fix), and no stationary anchor is pinned.
+  2. *Damped Doppler Speed Fallback Unit Test (`TST-TRK-056.2`, `SpeedAndLocationDeviceStationaryJitterTest.kt`)*:
+  • Deliver continuous 1-Hz location fixes advancing 8 m/s with `hasSpeed() == true` and `getSpeed() == 0.15f` (damped Google Fused sub-case).
+  • Verify geometric fallback activates, reporting ~8 m/s instead of 0.15 m/s, and distance accumulates steadily.
+  3. *Genuine Standstill Pinning & Unpinning Multi-Cycle Test (`TST-TRK-056.3`, `SpeedAndLocationDeviceStationaryJitterTest.kt`)*:
+  • Deliver jitter fixes within 1.5 m accuracy deadband with Doppler zero speed; verify anchor pins immediately with `speed = 0.0 m/s` and zero distance creep (`REQ-TRK-048`).
+  • Advance position past escape radius; verify anchor unpins smoothly and resumes movement without re-pinning on subsequent zero/damped fixes.
+  4. *Teleportation Spike Guard Continuity Test (`TST-TRK-056.4`, `SpeedAndLocationDeviceStationaryJitterTest.kt`)*:
+  • Verify sudden large position jumps (> 70 m/s = 252 km/h) are clamped with `delta_distance = 0.0` preserving `REQ-TRK-041.1`.
+  5. *Clean-Room Targeted Test Suite Execution (`TST-TRK-056.5`)*:
+  • Execute targeted package tests (`com.atrainingtracker.banalservice.devices.*`) asserting 100% pass rate.
+
+
 
 
 

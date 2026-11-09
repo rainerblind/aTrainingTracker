@@ -2849,4 +2849,37 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: `ProxySensor` listener migration MUST NOT execute inside monitor locks; sensor priorities MUST be strictly respected; accumulator filters MUST preserve baseline zero seeding; no UI layout changes.
 
+### REQ-TRK-056: Google Fused Doppler Velocity Plausibility & Movement Pinning Prevention [Verified]
+- **Tests**: `TST-TRK-056` | **Tickets**: `ATT-6256`
+- **Implementation**: `SpeedAndLocationDevice.java`
+- **Rationale**: When tracking with Google Fused (`SpeedAndLocationDevice_GoogleFused`), Android's location provider fuses GNSS coordinates with smartphone IMU motion sensors. When the phone is mounted steadily or in mock/replay runs, the provider frequently outputs location fixes with Doppler speed damped near or at zero (`rawSpeed <= 0.1 m/s` or `0.10 < rawSpeed <= 0.25 m/s`) despite true coordinate displacement exceeding 7–10 m/s. Prior implementations checked Doppler zero speed unconditionally before testing displacement, causing an oscillation loop where the device toggled between pinned (0.0 km/h) and unpinned (~25–30 km/h) every second, or stuck at 0.5 km/h while distance accumulated steadily. Requiring spatial displacement to be within the escape radius before pinning on Doppler zero and falling back to geometric displacement speed when Doppler speed is unplausibly suppressed eliminates toggling while preserving true stationary jitter suppression (ATT-6256, Parent Epic ATT-166, refining `REQ-TRK-048`):
+- **Description**:
+1. *Movement-Aware Stationary Pinning Gating (`REQ-TRK-056.1`)*:
+• In `SpeedAndLocationDevice.onNewLocation()`, when `isDopplerStationary` is true (`hasSpeed && rawSpeed <= SPEED_ZERO_THRESHOLD`), the device SHALL establish or maintain stationary pinning ONLY IF `mPrevLocation == null` or spatial displacement `rawDelta <= escapeRadius` where `escapeRadius = Math.max(3.0, 1.5 * location.getAccuracy())`.
+• If `rawDelta > escapeRadius`, the device SHALL NOT pin the stationary anchor and SHALL treat the fix as active movement.
+2. *Damped Doppler & Zero-Speed Geometric Fallback (`REQ-TRK-056.2`)*:
+• When unpinned or when displacement exceeds the escape radius (`rawDelta > escapeRadius`), and the provider reports zero or implausibly damped speed (`!hasSpeed || rawSpeed <= SPEED_ZERO_THRESHOLD || (rawSpeed < 0.2 * calcSpeed && calcSpeed > 1.0)`), `SpeedAndLocationDevice` SHALL calculate geometric speed `calcSpeed = delta_distance / (dt_ms / 1000.0)` and assign `speed = calcSpeed` (subject to the $\le 70.0\text{ m/s}$ teleportation spike guard in `REQ-TRK-041.1`).
+• This eliminates 1-Hz toggling between 0.0 km/h and plausible velocity and prevents stuck 0.5 km/h readings when coordinates advance steadily.
+3. *True Standstill & Chesterton's Fence Preservation (`REQ-TRK-056.3`)*:
+• When an athlete is genuinely stationary at an intersection, café, or rest stop (`rawDelta <= escapeRadius`), `SpeedAndLocationDevice` SHALL continue to immediately clamp speed to 0.0 m/s, pin the anchor coordinates, suppress distance increments, and lock compass bearing, fully preserving all invariants of `REQ-TRK-048.1`..`REQ-TRK-048.3`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-056`, refining `REQ-TRK-048` (*Stationary GPS Jitter Suppression, Doppler Zero Preservation & Anchor Pinning*). Targets `SpeedAndLocationDevice.java`.
+2. *Historical Origin & Commit Trace*: `ATT-4850` (Sprint 2026-44.2). Introduced Doppler zero velocity priority to eliminate GPS multipath jitter wander while stopped at traffic lights.
+3. *Root Reason for Existing Formulation*: Pure GNSS chips reliably report Doppler zero velocity only when stopped. However, Google Fused combines hardware IMUs which damp or zero Doppler velocity during smooth steady movement or playback testing while coordinate deltas advance by 7–10 m/s.
+4. *Preservation of Core Invariants*: True stationary jitter within the accuracy noise floor (`rawDelta <= escapeRadius`) continues to pin immediately with zero speed and distance suppression (`REQ-TRK-048.1`..`REQ-TRK-048.3`); teleportation spike limit $\le 70\text{ m/s}$ (`REQ-TRK-041.1`) is strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* consecutive 1-Hz location fixes advancing 8 m/s with `hasSpeed() == true` and `getSpeed() == 0.0f` (accuracy = 3.0 m, escapeRadius = 4.5 m),
+• *When* `SpeedAndLocationDevice.onNewLocation()` processes the fixes,
+• *Then* published `SPEED_mps` SHALL calculate geometric velocity (~8 m/s), `DISTANCE_m` SHALL increment steadily, and no stationary anchor SHALL be pinned.
+• *Given* consecutive 1-Hz location fixes advancing 8 m/s with `hasSpeed() == true` and `getSpeed() == 0.15f` (damped Doppler speed),
+• *When* `SpeedAndLocationDevice.onNewLocation()` processes the fixes,
+• *Then* published `SPEED_mps` SHALL calculate geometric velocity (~8 m/s) instead of staying damped at 0.15 m/s.
+• *Given* location fixes with Doppler zero speed where displacement remains within the escape radius (`rawDelta <= escapeRadius`),
+• *When* `SpeedAndLocationDevice.onNewLocation()` processes the fixes,
+• *Then* `SpeedAndLocationDevice` SHALL pin the stationary anchor, clamp speed to 0.0 m/s, suppress distance increments, and lock bearing.
+
+**Invariants**: True standstill immediately pinned with zero speed and zero distance creep (`REQ-TRK-048`); teleportation spike protection ($\le 70\text{ m/s}$, `REQ-TRK-041.1`) preserved; 100% test pass rate maintained.
+
 
