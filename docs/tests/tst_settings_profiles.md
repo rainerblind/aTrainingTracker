@@ -3,7 +3,7 @@
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Tests**: 76
+**Total Tests**: 77
 
 ---
 
@@ -1051,6 +1051,24 @@
   • Assert that surviving row retains capitalized name and valid Strava ID, workouts are repointed to surviving ID, links are consolidated without primary key errors, and duplicate rows are deleted.
   5. *Tier 1 Targeted Regression Suite (`TST-SET-098.5`)*:
   • Run targeted test suites (`com.atrainingtracker.trainingtracker.database.*`, `com.atrainingtracker.trainingtracker.migration.*`, `com.atrainingtracker.trainingtracker.onlinecommunities.strava.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+### TST-SET-099: **Paired BLE Peripheral Scan-Assisted Connection & Public/Random MAC Address Test Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-099`
+- **Component**: `MyBTLEDevice.java`, `MyBTLEDeviceAddressAndSearchTest.kt`
+- **Jira**: `ATT-6245`
+- **Test Description**:
+  1. *Public IEEE MAC (0xC0..0xFC OUI) Scan Discovery & Connection Unit Test (`TST-SET-099.1`, `MyBTLEDeviceAddressAndSearchTest.kt`)*:
+  • Verify that a peripheral with Public IEEE MAC having OUI in `0xC0..0xFC` (e.g. `D0:C6:37:33:67:AA`) is discovered via scan assistance and connects via `result.getDevice().connectGatt(...)` during `State.SEARCHING`.
+  2. *Random Static MAC Scan Discovery & Connection Unit Test (`TST-SET-099.2`, `MyBTLEDeviceAddressAndSearchTest.kt`)*:
+  • Verify that a peripheral with Random Static MAC (e.g. `C6:CC:E3:F5:F0:37`) is discovered via scan assistance and connects via `result.getDevice().connectGatt(...)` during `State.SEARCHING`.
+  3. *Active Speculative GATT Supersede & Stale Callback Guard Unit Test (`TST-SET-099.3`, `MyBTLEDeviceAddressAndSearchTest.kt`)*:
+  • Verify that when `onScanResult()` fires with an existing non-null `mBluetoothGatt` handle, the prior GATT is closed and replaced with `result.getDevice().connectGatt(...)`.
+  • Verify that `onConnectionStateChange` ignores callbacks from non-current GATT instances (`gatt != mBluetoothGatt`).
+  4. *Scan Fallback Direct Connect Unit Test (`TST-SET-099.4`, `MyBTLEDeviceAddressAndSearchTest.kt`)*:
+  • Verify that when scan assistance cannot be started (e.g. missing scan permission or null scanner), `startSearching()` falls back to direct `connectGatt(...)`.
+  5. *Tier 1 Targeted BLE Regression Suite (`TST-SET-099.5`)*:
+  • Run targeted test suites (`com.atrainingtracker.banalservice.devices.bluetooth_le.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
 
 
 

@@ -3,7 +3,7 @@
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Requirements**: 89
+**Total Requirements**: 90
 
 ---
 
@@ -1777,6 +1777,33 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • *Then* rows merge into `_id=13` with `Name='Endurance'` and `StravaId='b16080279'`, all `WorkoutSummaries.equipmentId` references to IDs 20 and 22 are updated to 13, and duplicate rows 20 and 22 are deleted.
 
 **Invariants**: Zero historical workout data loss; total workout odometer and summary stats remain consistent; sensor links and sport type mappings preserved without orphans; all DB operations execute within atomic SQLite transactions.
+
+### REQ-SET-099: Paired BLE Peripheral Scan-Assisted Connection & Public/Random MAC Address Classification [Verified]
+- **Tests**: `TST-SET-099` | **Tickets**: `ATT-6245`
+- **Implementation**: `MyBTLEDevice.java`, `MyBTLEDeviceAddressAndSearchTest.kt`
+- **Rationale**: Per Bluetooth Core Specification Vol 6 Part B §1.3 & §2.3, BLE address type (`Public` vs `Random`) is transmitted out-of-band in the 1-bit `TxAdd` link layer header flag rather than encoded in the MAC address string. The bitwise check `(firstOctet & 0xC0) == 0xC0` misclassifies 25% of IEEE Public MAC-48 addresses (OUI `0xC0..0xFC`, e.g. Intel `D0:C6:37`) as `ADDRESS_TYPE_RANDOM`, which causes peripherals advertising as Public to ignore connection requests on API 33+. Furthermore, speculative direct `connectGatt` populated `mBluetoothGatt` before scan assistance discovered the device, blocking `onScanResult` from utilizing the hardware-resolved `BluetoothDevice` handle. The system SHALL prioritize scan-assisted connection resolution for paired BLE peripherals and prevent conflicting unverified connections:
+1. *Authoritative Scan-Resolved GATT Connection (`REQ-SET-099.1`)*:
+   - When `MyBTLEDevice.startSearching()` initiates search, if `startScanAssistance(btAdapter)` successfully starts scanning (`mIsScanning == true`), the system SHALL defer direct `connectGatt` and allow `onScanResult()` to establish connection via `result.getDevice().connectGatt(mContext, false, mGattCallback, BluetoothDevice.TRANSPORT_LE)` using the hardware-verified `BluetoothDevice` handle.
+   - If scan assistance cannot be started (e.g. missing `BLUETOOTH_SCAN` permission), the system SHALL fall back to direct `connectGatt(...)`.
+2. *Scan Discovery GATT Handoff & Stale Guard (`REQ-SET-099.2`)*:
+   - When `mScanCallback.onScanResult()` discovers a `ScanResult` matching `mAddress` while `mState == State.SEARCHING`, the system SHALL connect using `result.getDevice().connectGatt(...)`. If a speculative or fallback `mBluetoothGatt` handle already exists, it SHALL be cleanly closed prior to connecting the new handle.
+   - `mGattCallback.onConnectionStateChange()` SHALL verify instance identity (`if (gatt != mBluetoothGatt) return;`) to ensure closing a superseded speculative GATT instance cannot clobber the active connection or trigger premature disconnection teardown.
+3. *Public and Random Address Connection Interoperability (`REQ-SET-099.3`)*:
+   - The connection pipeline SHALL establish reliable GATT connection for both Public IEEE MAC addresses with OUI in `0xC0..0xFC` (e.g. `D0:C6:37:33:67:AA`) and Random Static MAC addresses (e.g. `C6:CC:E3:F5:F0:37`, `E8:4D:74:07:F4:DD`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an unbonded paired BLE peripheral advertising with a Public IEEE MAC address whose first octet is in `0xC0..0xFC` (e.g. `D0:C6:37:33:67:AA`),
+• *When* `startSearching()` is invoked with granted scan permissions,
+• *Then* scan assistance discovers the advertisement and connects using `result.getDevice().connectGatt(...)` without timing out on a misclassified `[random]` filter.
+• *Given* an unbonded paired BLE peripheral with a Random Static MAC address (e.g. `C6:CC:E3:F5:F0:37`),
+• *When* `startSearching()` is invoked with granted scan permissions,
+• *Then* scan assistance discovers the advertisement and establishes connection via `result.getDevice().connectGatt(...)`.
+• *Given* an active search where a speculative `mBluetoothGatt` is open when `onScanResult()` matches `mAddress`,
+• *When* `onScanResult()` executes,
+• *Then* the speculative GATT instance is cleanly closed and replaced by `result.getDevice().connectGatt(...)`, and disconnection callbacks from the superseded instance are ignored.
+
+**Invariants**: Sensor data streaming, configurable search timeout, and scan lifecycle teardown (disconnect, search timeout, and shutdown) remain strictly preserved; zero regression in BLE reconnection backoff.
+
 
 
 

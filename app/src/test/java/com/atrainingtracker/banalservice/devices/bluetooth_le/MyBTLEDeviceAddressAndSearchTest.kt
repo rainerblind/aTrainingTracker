@@ -75,6 +75,9 @@ class MyBTLEDeviceAddressAndSearchTest {
         fun invokeDisconnectFromGatt() = disconnectFromGatt()
         fun getSearchTimeoutRunnableRef(): Runnable = searchTimeoutRunnable
         fun setGatt(gatt: BluetoothGatt?) { mBluetoothGatt = gatt }
+        fun getGatt(): BluetoothGatt? = mBluetoothGatt
+        fun getGattCallback(): BluetoothGattCallback = gattCallbackForTesting
+        fun getState(): State = mState
     }
 
     @Before
@@ -241,8 +244,28 @@ class MyBTLEDeviceAddressAndSearchTest {
         device.startSearching()
         assertTrue(device.isScanning())
 
-        // Simulate that direct connect hasn't set mBluetoothGatt yet
-        device.setGatt(null)
+        val callback = device.getScanCallback()
+        assertNotNull(callback)
+
+        val mockScanResult = mockk<ScanResult>(relaxed = true)
+        val mockDiscoveredDevice = mockk<BluetoothDevice>(relaxed = true)
+        every { mockScanResult.device } returns mockDiscoveredDevice
+        every { mockDiscoveredDevice.address } returns address
+        every { mockDiscoveredDevice.connectGatt(any(), any(), any(), any()) } returns mockk(relaxed = true)
+
+        callback!!.onScanResult(0, mockScanResult)
+
+        assertFalse(device.isScanning())
+        verify { mockDiscoveredDevice.connectGatt(mockContext, false, any<BluetoothGattCallback>(), BluetoothDevice.TRANSPORT_LE) }
+    }
+
+    @Test
+    fun testScanAssistance_connectsPublicAddressWithC0ToFCOui() {
+        // Public IEEE MAC with 0xD0 OUI (e.g. Intel controller D0:C6:37:33:67:AA) - REQ-SET-099.1, TST-SET-099.1
+        val address = "D0:C6:37:33:67:AA"
+        val device = ConcreteBTLEDevice(mockContext, mockSensorManager, address)
+        device.startSearching()
+        assertTrue(device.isScanning())
 
         val callback = device.getScanCallback()
         assertNotNull(callback)
@@ -257,5 +280,79 @@ class MyBTLEDeviceAddressAndSearchTest {
 
         assertFalse(device.isScanning())
         verify { mockDiscoveredDevice.connectGatt(mockContext, false, any<BluetoothGattCallback>(), BluetoothDevice.TRANSPORT_LE) }
+    }
+
+    @Test
+    fun testScanAssistance_connectsRandomStaticAddress() {
+        // Random Static MAC - REQ-SET-099.1, TST-SET-099.2
+        val address = "E8:4D:74:07:F4:DD"
+        val device = ConcreteBTLEDevice(mockContext, mockSensorManager, address)
+        device.startSearching()
+        assertTrue(device.isScanning())
+
+        val callback = device.getScanCallback()
+        assertNotNull(callback)
+
+        val mockScanResult = mockk<ScanResult>(relaxed = true)
+        val mockDiscoveredDevice = mockk<BluetoothDevice>(relaxed = true)
+        every { mockScanResult.device } returns mockDiscoveredDevice
+        every { mockDiscoveredDevice.address } returns address
+        every { mockDiscoveredDevice.connectGatt(any(), any(), any(), any()) } returns mockk(relaxed = true)
+
+        callback!!.onScanResult(0, mockScanResult)
+
+        assertFalse(device.isScanning())
+        verify { mockDiscoveredDevice.connectGatt(mockContext, false, any<BluetoothGattCallback>(), BluetoothDevice.TRANSPORT_LE) }
+    }
+
+    @Test
+    fun testScanAssistance_replacesExistingGattAndIgnoresStaleCallbacks() {
+        // REQ-SET-099.2, REQ-SET-099.4, TST-SET-099.3
+        val address = "D0:C6:37:33:67:AA"
+        val device = ConcreteBTLEDevice(mockContext, mockSensorManager, address)
+        device.startSearching()
+        assertTrue(device.isScanning())
+
+        // Simulate an existing speculative GATT handle
+        val mockSpeculativeGatt = mockk<BluetoothGatt>(relaxed = true)
+        device.setGatt(mockSpeculativeGatt)
+
+        val callback = device.getScanCallback()
+        assertNotNull(callback)
+
+        val mockScanResult = mockk<ScanResult>(relaxed = true)
+        val mockDiscoveredDevice = mockk<BluetoothDevice>(relaxed = true)
+        val mockNewGatt = mockk<BluetoothGatt>(relaxed = true)
+        every { mockScanResult.device } returns mockDiscoveredDevice
+        every { mockDiscoveredDevice.address } returns address
+        every { mockDiscoveredDevice.connectGatt(any(), any(), any(), any()) } returns mockNewGatt
+
+        callback!!.onScanResult(0, mockScanResult)
+
+        // Speculative GATT was closed and replaced
+        verify { mockSpeculativeGatt.disconnect() }
+        verify { mockSpeculativeGatt.close() }
+        assertEquals(mockNewGatt, device.getGatt())
+
+        // Stale callback from old speculative GATT must be ignored
+        val gattCallback = device.getGattCallback()
+        gattCallback.onConnectionStateChange(mockSpeculativeGatt, 0, android.bluetooth.BluetoothProfile.STATE_DISCONNECTED)
+
+        // Device should NOT transition to DISCONNECTED or clobber mBluetoothGatt
+        assertEquals(mockNewGatt, device.getGatt())
+        assertNotEquals(MyBTLEDevice.State.DISCONNECTED, device.getState())
+    }
+
+    @Test
+    fun testStartSearching_scanFailsToStart_fallsBackToDirectConnect() {
+        // REQ-SET-099.1, TST-SET-099.4
+        every { mockAdapter.bluetoothLeScanner } returns null
+
+        val address = "D0:C6:37:33:67:AA"
+        val device = ConcreteBTLEDevice(mockContext, mockSensorManager, address)
+        device.startSearching()
+
+        assertFalse(device.isScanning())
+        verify { mockDevice.connectGatt(mockContext, false, any<BluetoothGattCallback>(), BluetoothDevice.TRANSPORT_LE) }
     }
 }
