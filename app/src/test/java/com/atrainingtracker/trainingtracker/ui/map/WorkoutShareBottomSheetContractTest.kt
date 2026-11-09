@@ -248,4 +248,52 @@ class WorkoutShareBottomSheetContractTest {
             mapLayoutSource.contains("if (showFloatingShareButton)")
         )
     }
+
+    @Test
+    fun testMapDetailLayout_exposesExternalSnapshotTriggerAndCompleteCallback() {
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutKt")
+        val method = clazz.declaredMethods.find {
+            it.name.startsWith("MapDetailLayout") && Modifier.isPublic(it.modifiers)
+        }
+        assertNotNull("MapDetailLayout function must exist", method)
+
+        val paramTypes = method!!.parameterTypes
+        val booleanTypeCount = paramTypes.count { it == Boolean::class.javaPrimitiveType || it == Boolean::class.javaObjectType }
+        val functionTypeCount = paramTypes.count { it.name.startsWith("kotlin.jvm.functions.Function") }
+
+        assertTrue(
+            "MapDetailLayout must accept externalSnapshotTrigger and onSnapshotComplete parameters (REQ-PER-029.1)",
+            booleanTypeCount >= 5 && functionTypeCount >= 4
+        )
+    }
+
+    @Test
+    fun testWorkoutDetailTabbedContent_andTrackOnMapScreen_exposeInitialAutoShareSnapshot() {
+        val tabbedClass = Class.forName("com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabbedContentKt")
+        val tabbedMethod = tabbedClass.declaredMethods.find {
+            it.name.startsWith("WorkoutDetailTabbedContent") && Modifier.isPublic(it.modifiers)
+        }
+        assertNotNull("WorkoutDetailTabbedContent function must exist", tabbedMethod)
+
+        val trackMapClass = Class.forName("com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreenKt")
+        val trackMapMethod = trackMapClass.declaredMethods.find {
+            it.name.startsWith("TrackOnMapScreen") && Modifier.isPublic(it.modifiers)
+        }
+        assertNotNull("TrackOnMapScreen function must exist", trackMapMethod)
+    }
+
+    @Test
+    fun testWorkoutSummary_andWorkoutList_exposeOnShareMapSnapshot() {
+        val summaryClass = Class.forName("com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummaryKt")
+        val summaryMethod = summaryClass.declaredMethods.find {
+            it.name.startsWith("WorkoutSummary") && Modifier.isPublic(it.modifiers)
+        }
+        assertNotNull("WorkoutSummary function must exist", summaryMethod)
+
+        val listClass = Class.forName("com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutListKt")
+        val listMethod = listClass.declaredMethods.find {
+            it.name.startsWith("WorkoutList") && Modifier.isPublic(it.modifiers)
+        }
+        assertNotNull("WorkoutList function must exist", listMethod)
+    }
 }

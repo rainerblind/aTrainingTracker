@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.knownlocations
 
 import android.app.Application
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.elevation.ElevationSource
@@ -242,6 +243,45 @@ class KnownLocationsViewModelTest {
         assertEquals(2, state.startsByLocationId[1L])
         assertEquals(1, state.startsByLocationId[2L])
         assertNull(state.startsByLocationId[999L])
+    }
+
+    /**
+     * TST-UI-470.7a / REQ-UI-470.6: Verifies that groupSportStartsByLocation and sportStartsByLocationId
+     * partition workout starts into Bike, Run, and Other athletic sport types.
+     */
+    @Test
+    fun testSportStartsByLocationId_partitionsByBSportTypeInCanonicalOrder() = runTest {
+        val loc = KnownLocationItem(1L, "Home Base", 515.0, 200, LatLng(48.175, 11.554), 0, true, ElevationSource.MANUAL_USER)
+
+        val bikeWorkout1 = mockk<WorkoutData>(relaxed = true) {
+            every { startLatLng } returns LatLng(48.1751, 11.5541)
+            every { bSportType } returns BSportType.BIKE
+        }
+        val bikeWorkout2 = mockk<WorkoutData>(relaxed = true) {
+            every { startLatLng } returns LatLng(48.1752, 11.5542)
+            every { bSportType } returns BSportType.BIKE
+        }
+        val runWorkout = mockk<WorkoutData>(relaxed = true) {
+            every { startLatLng } returns LatLng(48.1753, 11.5543)
+            every { bSportType } returns BSportType.RUN
+        }
+        val otherWorkout = mockk<WorkoutData>(relaxed = true) {
+            every { startLatLng } returns LatLng(48.1754, 11.5544)
+            every { bSportType } returns BSportType.UNKNOWN
+        }
+
+        fakeLocationsFlow.value = listOf(loc)
+        fakeWorkoutsFlow.value = listOf(bikeWorkout1, bikeWorkout2, runWorkout, otherWorkout)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        val sportStarts = state.sportStartsByLocationId[1L]
+        assertNotNull(sportStarts)
+        assertEquals(2, sportStarts?.bike)
+        assertEquals(1, sportStarts?.run)
+        assertEquals(1, sportStarts?.other)
+        assertEquals(4, sportStarts?.total)
+        assertEquals(4, state.startsByLocationId[1L])
     }
 
     /**

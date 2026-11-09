@@ -686,6 +686,8 @@ class BackupRestoreViewModel @JvmOverloads constructor(
         }
         _uiState.value = UiState.Loading(progressFormatString)
 
+        val existingSnapshot = ExistingWorkoutsSnapshot.create(context)
+
         // Pre-sort URIs chronologically ascending by resolved filename (REQ-MIG-049.3, ATT-6039, Rule 36 DRY)
         val sortedUris = if (uris.size > 1) {
             uris.map { uri ->
@@ -710,6 +712,20 @@ class BackupRestoreViewModel @JvmOverloads constructor(
             _uiState.value = UiState.Loading(progressStepString)
 
             val displayName = ImportFileValidator.resolveDisplayName(context, uri)
+            val candidateBaseName = if (!displayName.isNullOrBlank() && !displayName.startsWith("legacy_import", ignoreCase = true)) {
+                displayName.substringBeforeLast(".").removeSuffix("-TMP").removeSuffix("~")
+            } else {
+                null
+            }
+
+            if (candidateBaseName != null && existingSnapshot.containsFileBaseName(candidateBaseName)) {
+                if (TrainingApplication.getDebug(true)) {
+                    Log.d("BackupRestoreVM", "Fast-forwarding duplicate workout file: $candidateBaseName")
+                }
+                skippedCount++
+                return@forEachIndexed
+            }
+
             val fileName = displayName?.takeIf { it.isNotBlank() } ?: "import_${System.currentTimeMillis()}_$index.$format"
             val tempFile = File(context.cacheDir, fileName)
             try {
@@ -728,11 +744,19 @@ class BackupRestoreViewModel @JvmOverloads constructor(
                 when (result.status) {
                     LegacyImportEngine.ImportStatus.SUCCESS -> {
                         importedCount++
+                        if (candidateBaseName != null) {
+                            existingSnapshot.register(candidateBaseName)
+                        }
                         if (result.workoutId != null) {
                             lastImportedWorkoutId = result.workoutId
                         }
                     }
-                    LegacyImportEngine.ImportStatus.DUPLICATE_SKIPPED -> skippedCount++
+                    LegacyImportEngine.ImportStatus.DUPLICATE_SKIPPED -> {
+                        skippedCount++
+                        if (candidateBaseName != null) {
+                            existingSnapshot.register(candidateBaseName)
+                        }
+                    }
                     LegacyImportEngine.ImportStatus.FAILED -> failedCount++
                 }
             } catch (e: Exception) {

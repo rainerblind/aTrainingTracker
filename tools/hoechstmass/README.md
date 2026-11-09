@@ -1,4 +1,5 @@
-# Höchstmaß — The Agile Agentic ASPICE (AAA) Skill Set
+# Höchstmaß — The AAA Coding Framework
+**Agile · Agentic · ASPICE — Precision Software Engineering with Autonomous AI Pairs**
 
 > *„Power without control can become destructive. Power guided by intelligence becomes excellence.“*  
 > — **ChatGPT**
@@ -13,20 +14,26 @@
 
 ---
 
-## 1. Foundational Principles: Role Provenance & Multi-Model Adversarial Review
+## 1. The AAA Paradigm: Where Agile, Agentic, and ASPICE Meet
 
-Modern AI-assisted development is frequently plagued by two extremes: **"Vibe Coding"** (unverified, hallucination-prone code generated without engineering discipline) and **unattributed AI prose** (passing off machine-generated text as human work). **Höchstmaß** establishes an entirely different paradigm based on two foundational principles:
+Modern AI-assisted software development is frequently caught between two extremes: chaotic **"Vibe Coding"** (prompting an LLM to generate thousands of lines of unverified, hallucination-prone code without architectural discipline) and **heavyweight waterfall bureaucracy** that slows iteration to a crawl.
 
-### 1.1 Transparent Attribution & Clear Boundary
-Unlike vibe coding or masquerading AI prose, **Höchstmaß** never passes off AI output as human authorship. Just as every transition, audit report, and commit in our workflow is strictly attributed to its true actor (`agent1`, `agent2`, `coordinator`, or `human`), we explicitly name the AI model as the source when quoting it. This establishes a crystal-clear boundary between the human engineer and the machine: the AI proposes and audits, but the human governs and signs off.
+**Höchstmaß** resolves this tension through the **AAA (Agile · Agentic · ASPICE)** coding framework — uniting three concentric engineering layers (whose initials also reflect the **Triple-A** quality standard it targets), best understood from the **inside out**:
 
-### 1.2 Live Cross-Model Adversarial Review (Breaking Shared Tunnel Vision)
+1. **ASPICE (The Core Task Structure — 5 Gated Sub-Tasks + Final Human Review)**: Inspired by safety-critical **Automotive SPICE (ISO/IEC 33061)**, every individual ticket is decomposed into **five engineering phases** (*Analysis*, *Requirement & Test Spec*, *Implementation Plan*, *Software Construction*, and *Verification*) — each represented by its own dedicated **Sub-Task** — followed by a mandatory **Final Review (Human)** gate, with bidirectional traceability and a strict **Code Lock** that prohibits touching production code until Stage 3 is approved.
+2. **Agentic (The Execution Loop — One Agent Authors, Another Agent Reviews)**: Each of those five Sub-Tasks is executed autonomously by an authoring agent (`agent1`) in an isolated context and audited at its stage gate by a separate reviewing agent (`agent2`) running on a different model tier (`pro` $\leftrightarrow$ `flash`), ensuring that no AI model ever grades its own homework.
+3. **Agile (The Outer Cadence — Sprint Bundling & Continuous Improvement)**: So the human engineer does not have to hand off and test every single ticket individually, atomic tasks ($\le 3\text{ SP}$) are bundled into **Sprints**. After upfront requirement alignment at **Sprint-Start**, the agents process the sprint backlog autonomously; at **Sprint-End**, the human evaluates every change against a unified sprint build and continuously refines the process in the **Sprint Retrospective**.
+
+### 1.1 Live Cross-Model Adversarial Review (Breaking Shared Tunnel Vision)
 A cornerstone of **Höchstmaß** is that whenever an AI model creates or designs something, a **different** model must audit it:
 - **Intra-Sprint Diversity**: Alternating between distinct model tiers (e.g. `pro` for architectural reasoning and `flash` for specification and execution) ensures that the reviewing agent does not share the authoring agent's blind spots.
 - **Cross-Vendor Adversarial Critique**: In real-world engineering workflows, pairing different model families breaks shared context tunnel vision:
   - When iterating on a UI component with **Gemini** until both the human engineer and Gemini are satisfied with the screenshot, handing that exact screenshot to **ChatGPT** for a cold, critical evaluation consistently surfaces subtle ergonomic flaws, accessibility oversights, and visual clutter that shared session context missed.
   - Beyond day-to-day sprint work, we conduct periodic independent codebase and architectural reviews using **Claude** to uncover systemic blind spots from a third model family's perspective.
 - **Multi-Vendor Provenance in Practice**: We apply this multi-vendor review across code, UI, and methodology alike — co-developing in-sprint with **Gemini**, challenging designs and concepts with **ChatGPT**, and running recurring independent codebase audits with **Claude**.
+
+### 1.2 Role Provenance & Clear Human–AI Boundary
+Unlike vibe coding or masquerading AI prose, **Höchstmaß** never passes off AI output as human authorship. Just as every stage transition, gate audit report, and commit in the workflow is strictly attributed to its true actor (`agent1`, `agent2`, `coordinator`, or `human`), we explicitly name the AI model as the source when quoting it. This establishes a crystal-clear boundary between the human engineer and the machine: the AI proposes and audits, while the human governs and signs off.
 
 ---
 
@@ -64,29 +71,22 @@ Höchstmaß translates Automotive SPICE (ISO/IEC 33061 / VDA Scope) into a fast-
 | **Stage 4** | **Software Construction & Implementation** | `subagent_flash` / `subagent_pro` | `subagent_pro` / `subagent_flash` | **Gate 4 PASS**: Audits `git diff`, code quality, KDoc, and targeted tests against Stage 3 plan. Advances to Test. |
 | **Stage 5** | **Verification & Walkthrough** | `subagent_flash` | `subagent_pro` | **Gate 5 PASS**: Full clean-room test suite, image inspection, and squashed atomic merge $\rightarrow$ Advances to **Final Review (Human)**. |
 
-### Frictionless Human Code & Document Review During Parallel Agent Execution (`.reviews/` + Emacs)
-When the human engineer wants to review or annotate **source code** (`.kt`, `.java`, `.py`, `.xml`) or **markdown documents** (specifications, architecture plans, presentations, or documentation) while autonomous agents are concurrently compiling code and switching Git branches in the main workspace, editing files directly inside the main working tree would cause build breaks or Git checkout/merge collisions. **Höchstmaß** resolves this via an **Isolated In-Place Review Sandbox (`.reviews/`)**:
-1. **Isolated Mini-Git Repository**: `.reviews/` is excluded from the main repository via `.git/info/exclude` (making it 100% invisible to parallel code agents and Gradle/compiler runs) and maintains its own standalone Git repository (`git init`).
-2. **Live Editor Integration (`emacsclient`) for Code & Docs**: The agent stages the target source files (e.g., all files modified by a ticket `ATT-XXXX` or specific `.kt`/`.md` files) into `.reviews/`, commits the baseline, and opens them directly in the human's running **Emacs** instance (`emacsclient -n` with full syntax highlighting, `gfm-mode`, and inline SVG rendering).
-3. **In-Place Direct Edits & Inline Directives (`>>`)**: Right inside the code or text in Emacs, the human can directly modify lines *and* hammer in inline review directives (`>> ...` or `// >> ...`) at the exact line of interest without worrying about breaking a running build, then save (`C-x C-s`).
-4. **Automated Diff Harvesting & Synchronization**: The agent inspects `git -C .reviews diff`, applies all direct human edits and executes every `>>` review directive against the actual codebase or document, runs verification tests, commits the updated state in `.reviews/`, and live-reloads the Emacs buffer.
-
 ---
 
-## 4. ASPICE Process Capability Level 1–5 Governance Matrix (ISO/IEC 33020 / PAM)
+## 4. Mapping AAA to the ASPICE Capability Model (ISO/IEC 33020)
 
-Höchstmaß systematically maps Automotive SPICE Process Attributes (`PA 1.1` through `PA 5.2`) to deterministic AI pair-programming and verification mechanisms:
+Rather than claiming formal automotive certification, **Höchstmaß** uses the **Automotive SPICE Process Assessment Model (ISO/IEC 33020)** (`PA 1.1` through `PA 5.2`) as a structured maturity roadmap — allowing teams to start with the core 5-stage gate loop (Levels 1–2) and progressively adopt quantitative process control and closed-loop retrospectives (Levels 3–5):
 
 | Capability Level | Process Attribute (PA) | ISO/IEC 33020 Definition | Höchstmaß Operational Implementation |
 | :--- | :--- | :--- | :--- |
 | **Level 1: Performed** | **PA 1.1: Process Performance** | The process achieves its defined outcomes. | **5-Stage ASPICE Lifecycle**: Strict execution of SWE.1 through SWE.6 stages; atomic squash-merge per ticket; verifiable artifact deliverables at each stage boundary. |
 | **Level 2: Managed** | **PA 2.1: Performance Management** | Process performance is planned, monitored, and adjusted. | **Sprint Capacity Envelope**: Capacity bounding (~24–30 SP across 12–15 atomic tickets); story point estimation split guardrail ($\le 3$ SP); autonomous in-sprint zipper ping-pong; velocity monitoring. |
-| | **PA 2.2: Work Product Management** | Work products are documented, controlled, and integrity is maintained. | **Rule 67 Canonical Deliverables**: Standardized `docs/engineering/` directories; living documentation sharding and master index parity (`verify_requirement_governance.py`); strict branch isolation (`feature/` $\rightarrow$ `sprint/` $\rightarrow$ `develop`). |
+| | **PA 2.2: Work Product Management** | Work products are documented, controlled, and integrity is maintained. | **Canonical Deliverables**: Standardized `docs/engineering/` directories; living documentation sharding and master index parity (`verify_requirement_governance.py`); strict branch isolation (`feature/` $\rightarrow$ `sprint/` $\rightarrow$ `develop`). |
 | **Level 3: Established** | **PA 3.1: Process Definition** | A standard process is established across the organization. | **Document Triad & Skills**: Universal 8 Core In-Sprint Governance Rules (`aspice_governance.md`); 10 parameterized agent skills (`SKILL.md`); standardized deliverable templates; coding standards and design guidelines. |
 | | **PA 3.2: Process Deployment** | The standard process is systematically deployed and enforced. | **Tooling Enforcement & Role Isolation**: Automated CLI enforcement (`tools/jira_util.py`); pre-warmed prompt injection; separate role accounts and API tokens (`agent1`, `agent2`, `coordinator`, `human`). |
 | **Level 4: Predictable** | **PA 4.1: Quantitative Analysis** | Quantitative objectives are established and measured. | **Quantitative Sprint Scorecard**: Automated aggregation of Gate 1–5 First-Time-Pass-Rates (FTPR); empirical Swiss Cheese escape rates ($p_1 \dots p_5$, $P_{\text{escape}} = \prod p_i$); Human Acceptance Rate; historical persistence in `docs/engineering/metrics/process_metrics.jsonl`. |
 | | **PA 4.2: Quantitative Control** | Process is statistically controlled to achieve predictability. | **Statistical Process Control (SPC)**: 3-sprint moving baseline $\mu \pm 2\sigma$ control bands ($UCL$, $LCL$); automated detection and warning of out-of-control conditions (Special Cause Variations) in Ceremony 2. |
-| **Level 5: Innovating** | **PA 5.1: Process Innovation** | Continuous, systematic evaluation of process innovations. | **AI Architectural Innovations**: Multi-model adversarial reviews (intra-sprint `pro` $\leftrightarrow$ `flash` plus cross-vendor **Claude** & **ChatGPT**); isolated in-place `.reviews/` Emacs sandbox; dynamic contract tests. |
+| **Level 5: Innovating** | **PA 5.1: Process Innovation** | Continuous, systematic evaluation of process innovations. | **AI Architectural Innovations**: Multi-model adversarial reviews (intra-sprint `pro` $\leftrightarrow$ `flash` plus cross-vendor **Claude** & **ChatGPT**); continuous prompt/skill evolution; dynamic contract tests. |
 | | **PA 5.2: Process Optimization** | Continuous closed-loop improvement based on quantitative feedback. | **Closed-Loop Ceremony 2 Retro Countermeasures**: Mandatory root-cause analysis (RCA) and concrete process/skill adjustments in the Retrospective prior to sprint merge whenever a PA 4.2 Special Cause Variation is detected. |
 
 ---
@@ -150,5 +150,4 @@ For engineers and teams willing to invest in that setup and discipline, the payo
 1. Copy `.agents/` and `templates/` into your repository root.
 2. Adapt `docs/coding_standards.md` and `docs/design_guidelines.md` to your technology stack.
 3. Configure your project management CLI or issue tracker using `.agents/skills/jira-workflow/SKILL.md` (or your preferred ticketing integration).
-   - **Jira Cloud vs. Data Center Support**: Höchstmaß natively supports both Atlassian Jira Cloud and enterprise on-premise **Jira Data Center** / **Jira Server** (`hoechstmass_config.json: "deployment_type": "datacenter" | "cloud"` or `JIRA_DEPLOYMENT=datacenter`). Provides automated PAT Bearer authentication, corporate TLS CA bundles (`JIRA_CA_BUNDLE`), username assignment, Epic Link custom field dispatch (`customfield_10014`), and REST API v2 search routing.
 4. Run sprints using the asymmetric zipper pair (`subagent_pro` and `subagent_flash`) across Stages 1–5.

@@ -47,6 +47,7 @@ public class FilterManager {
     private static final boolean DEBUG = BANALService.getDebug(false);
 
     protected final Map<String, FilterData> mRequiredButNotAvailableFilters = new ConcurrentHashMap<>();
+    protected final Map<String, FilterData> mAllFilterData = new ConcurrentHashMap<>();
 
     protected final Map<String, MyFilter> myFilterMap = new ConcurrentHashMap<>();
     protected final Map<MyFilter, MySensor> mMapFilter2Sensor = new ConcurrentHashMap<>();
@@ -59,6 +60,7 @@ public class FilterManager {
     protected BroadcastReceiver mSensorsChangedReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
+            rebindExistingFilters();
             // try to create the filters that were not yet ready
             for (FilterData filterData : mRequiredButNotAvailableFilters.values()) {
                 createFilter(filterData);
@@ -96,26 +98,24 @@ public class FilterManager {
         }
 
         String hashKey = filterData.getHashKey();
+        mAllFilterData.put(hashKey, filterData);
 
-        // if the requested filter is already there, we simply return
-        if (myFilterMap.containsKey(hashKey)) {
-            if (DEBUG) Log.i(TAG, "filter already there");
+        // if the requested filter is already there, check if its sensor changed and rebind (REQ-TRK-055.2)
+        MyFilter existingFilter = myFilterMap.get(hashKey);
+        if (existingFilter != null) {
+            if (DEBUG) Log.i(TAG, "filter already exists, checking backing sensor re-binding");
+            MySensor currentSensor = resolveSensor(filterData);
+            if (currentSensor != null) {
+                MySensor boundSensor = mMapFilter2Sensor.get(existingFilter);
+                if (boundSensor != currentSensor) {
+                    rebindFilter(existingFilter, boundSensor, currentSensor);
+                }
+            }
             return;
         }
 
-
         // first of all, we try to get the sensor
-        MySensor mySensor = null;
-
-        // when deviceName is null, we try to get the best sensor
-        if (filterData.deviceName == null) {
-            mySensor = mMySensorManager.getSensor(filterData.sensorType);
-        } else {
-            MyDevice myDevice = mDeviceManager.getMyDeviceByName(filterData.deviceName);
-            if (myDevice != null) {        // check if device exists
-                mySensor = myDevice.getSensor(filterData.sensorType);
-            }
-        }
+        MySensor mySensor = resolveSensor(filterData);
 
         if (mySensor == null) {  // sensor not (yet) available
             if (DEBUG) Log.i(TAG, "sensor not (yet) available");
@@ -163,7 +163,60 @@ public class FilterManager {
             mMapFilter2Sensor.put(myFilter, mySensor);
             mySensor.addSensorListener(myFilter);
             mRequiredButNotAvailableFilters.remove(hashKey);
-            if (DEBUG) Log.i(TAG, "filter " + hashKey + "created");
+            if (DEBUG) Log.i(TAG, "filter " + hashKey + " created");
+        } else {
+            MySensor boundSensor = mMapFilter2Sensor.get(existing);
+            if (boundSensor != mySensor) {
+                rebindFilter(existing, boundSensor, mySensor);
+            }
+        }
+    }
+
+    public MySensor resolveSensor(FilterData filterData) {
+        if (filterData == null) return null;
+        if (filterData.deviceName == null) {
+            return mMySensorManager != null ? mMySensorManager.getSensor(filterData.sensorType) : null;
+        } else {
+            if (mDeviceManager != null) {
+                MyDevice myDevice = mDeviceManager.getMyDeviceByName(filterData.deviceName);
+                if (myDevice != null) {
+                    return myDevice.getSensor(filterData.sensorType);
+                }
+            }
+            return null;
+        }
+    }
+
+    public synchronized void rebindFilter(MyFilter myFilter, MySensor oldSensor, MySensor newSensor) {
+        if (myFilter == null) return;
+        if (DEBUG) Log.i(TAG, "rebindFilter: oldSensor=" + oldSensor + ", newSensor=" + newSensor);
+        if (oldSensor != null) {
+            oldSensor.removeSensorListener(myFilter);
+        }
+        if (newSensor != null) {
+            mMapFilter2Sensor.put(myFilter, newSensor);
+            newSensor.addSensorListener(myFilter);
+            Object currentValue = newSensor.getValue();
+            if (currentValue != null) {
+                myFilter.newValue(currentValue);
+            }
+        } else {
+            mMapFilter2Sensor.remove(myFilter);
+        }
+    }
+
+    public void rebindExistingFilters() {
+        if (DEBUG) Log.i(TAG, "rebindExistingFilters()");
+        for (FilterData filterData : mAllFilterData.values()) {
+            String hashKey = filterData.getHashKey();
+            MyFilter filter = myFilterMap.get(hashKey);
+            if (filter != null) {
+                MySensor currentSensor = resolveSensor(filterData);
+                MySensor boundSensor = mMapFilter2Sensor.get(filter);
+                if (currentSensor != null && boundSensor != currentSensor) {
+                    rebindFilter(filter, boundSensor, currentSensor);
+                }
+            }
         }
     }
 
@@ -177,6 +230,7 @@ public class FilterManager {
         myFilterMap.clear();
         mMapFilter2Sensor.clear();
         mRequiredButNotAvailableFilters.clear();
+        mAllFilterData.clear();
 
         LifecycleUtils.safeUnregisterReceiver(mContext, mSensorsChangedReceiver, TAG);
         LifecycleUtils.safeUnregisterReceiver(mContext, mResetAccumulatorsReceiver, TAG);

@@ -141,6 +141,7 @@ class WorkoutSummariesListFragment : Fragment() {
 
                     var selectedWorkoutForDetails by rememberSaveable { mutableStateOf<Long?>(null) }
                     var selectedWorkoutIdForEdit by rememberSaveable { mutableStateOf<Long?>(null) }
+                    var autoShareSnapshotOnOpen by rememberSaveable { mutableStateOf(false) }
 
                     val scrollState = rememberLazyListState()
 
@@ -202,12 +203,14 @@ class WorkoutSummariesListFragment : Fragment() {
                                     hrZoneThresholds = aftermathUIState.hrThresholds,
                                     powerZoneThresholds = aftermathUIState.powerThresholds,
                                     telemetryPath = aftermathUIState.telemetryPath,
+                                    initialAutoShareSnapshot = autoShareSnapshotOnOpen,
                                     modifier = Modifier
                                 )
 
                                 // 4. Handle System Back Button
                                 BackHandler {
                                     selectedWorkoutForDetails = null
+                                    autoShareSnapshotOnOpen = false
                                 }
                             } else {
                                 Box(
@@ -264,6 +267,12 @@ class WorkoutSummariesListFragment : Fragment() {
                                         },
                                         onMapClick = { workoutData ->
                                             selectedWorkoutForDetails = workoutData.id
+                                            autoShareSnapshotOnOpen = false
+                                            trackOnMapViewModel.loadAftermathData(workoutData)
+                                        },
+                                        onShareMapSnapshot = { workoutData ->
+                                            selectedWorkoutForDetails = workoutData.id
+                                            autoShareSnapshotOnOpen = true
                                             trackOnMapViewModel.loadAftermathData(workoutData)
                                         },
                                         isCompactView = viewModel.isCompactView.collectAsStateWithLifecycle().value,

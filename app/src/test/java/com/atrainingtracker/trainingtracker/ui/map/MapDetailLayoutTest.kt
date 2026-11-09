@@ -250,5 +250,69 @@ class MapDetailLayoutTest {
             content.contains("if (showMap && hasLowerSection)")
         )
     }
+
+    /**
+     * TST-UI-500.1: Verify MapDetailLayout declares topEndActions and encapsulates floating share
+     * and custom top-end actions inside an adaptive Column(Alignment.TopEnd) with spacedBy(16.dp).
+     */
+    @Test
+    fun testMapDetailLayout_unifiesTopEndActionsColumnStacking_REQ_UI_500_1() {
+        assertTrue("MapDetailLayout.kt must exist", mapDetailLayoutFile.exists())
+        val content = mapDetailLayoutFile.readText()
+
+        assertTrue(
+            "MapDetailLayout must declare topEndActions parameter with default null (REQ-UI-500.1)",
+            content.contains("topEndActions: (@Composable ColumnScope.() -> Unit)? = null")
+        )
+
+        assertTrue(
+            "MapDetailLayout must align top-end actions Column at Alignment.TopEnd with 16.dp padding (REQ-UI-500.1)",
+            content.contains(".align(Alignment.TopEnd)") &&
+                    content.contains(".padding(16.dp)")
+        )
+
+        assertTrue(
+            "MapDetailLayout must use verticalArrangement = Arrangement.spacedBy(16.dp) for top-end action stacking (REQ-UI-500.1)",
+            content.contains("verticalArrangement = Arrangement.spacedBy(16.dp)")
+        )
+
+        assertTrue(
+            "MapDetailLayout must invoke topEndActions?.invoke(this) within the top-end Column (REQ-UI-500.1)",
+            content.contains("topEndActions?.invoke(this)")
+        )
+    }
+
+    /**
+     * TST-UI-500.3: Verify TrackOnMapScreen and RouteOnMapScreen eliminate hardcoded top=76.dp padding.
+     */
+    @Test
+    fun testTrackOnMapScreenAndRouteOnMapScreen_zeroHardcoded76dpOffsets_REQ_UI_500_3() {
+        val trackOnMapFile = File(projectRoot, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/TrackOnMapScreen.kt")
+        val routeOnMapFile = File(projectRoot, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RouteOnMapScreen.kt")
+
+        assertTrue("TrackOnMapScreen.kt must exist", trackOnMapFile.exists())
+        assertTrue("RouteOnMapScreen.kt must exist", routeOnMapFile.exists())
+
+        val trackContent = trackOnMapFile.readText()
+        val routeContent = routeOnMapFile.readText()
+
+        assertTrue(
+            "TrackOnMapScreen must contain zero occurrences of hardcoded padding(top = 76.dp) (REQ-UI-500.3)",
+            !trackContent.contains("76.dp")
+        )
+        assertTrue(
+            "TrackOnMapScreen must use mapTopEndActions and topEndActions (REQ-UI-500.3)",
+            trackContent.contains("mapTopEndActions =") && trackContent.contains("topEndActions =")
+        )
+
+        assertTrue(
+            "RouteOnMapScreen must contain zero occurrences of hardcoded padding(top = 76.dp) (REQ-UI-500.4)",
+            !routeContent.contains("76.dp")
+        )
+        assertTrue(
+            "RouteOnMapScreen must use topEndActions for route layers button (REQ-UI-500.4)",
+            routeContent.contains("topEndActions =")
+        )
+    }
 }
 

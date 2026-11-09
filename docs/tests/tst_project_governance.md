@@ -47,18 +47,25 @@
   3. Confirm all 6 primary screenshot files (`01_cockpit_tracking.png` through `06_periods_analytics.png`) have distinct SHA-256 hashes (zero duplicate files) and visually verify via `read_file` that each displays its intended screen without mislabeling (Rule 71).
   4. Confirm images are saved in `docs/store_presence/screenshots/` and reflected in `images/Screenshots/`.
 
-### TST-STP-005: README Play Store Badge Asset, Link Integrity & Navigation Contract Test [Verified]
+### TST-STP-005: README Play Store Badge Asset, Link Integrity, Trademark-Free & Screenshot Showcase Contract Test [Verified]
 - **Requirement(s)**: `REQ-STP-005`
-- **Component**: `README.md`, `images/google-play-badge.svg`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReadmePlayStoreBadgeContractTest.kt`
-- **Jira**: `ATT-2371`
+- **Component**: `README.md`, `.reviews/README.md`, `images/google-play-badge.svg`, `docs/guide/img/*.png`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReadmePlayStoreBadgeContractTest.kt`
+- **Jira**: `ATT-2371`, `ATT-6096`
 - **Test Description**:
-  1. Execute JUnit 4 contract test `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.ReadmePlayStoreBadgeContractTest"`.
-  2. Test verifies that root `README.md` exists and contains a markdown or HTML image link referencing `images/google-play-badge.svg`.
-  3. Test verifies that the Play Store badge links directly to `https://play.google.com/store/apps/details?id=com.atrainingtracker` (and asserts absence of the erroneous `.trainingtracker` package suffix).
-  4. Test verifies that `images/google-play-badge.svg` exists locally and contains valid XML root `<svg` and Google Play branding text.
-  5. Test verifies that `images/logo_512.png` is embedded in `README.md` and exists on disk.
-  6. Test verifies that `README.md` contains valid relative links to `docs/index.md`, `docs/guide/en/index.md`, and `docs/guide/de/index.md`, and that all target files exist on disk.
-  7. Ensure 100% pass rate in CI.
+  1. *Play Store Badge & Logo Integrity (`TST-STP-005.1`)*:
+     • Verify root `README.md` and `.reviews/README.md` exist and contain a markdown/HTML image link referencing `images/google-play-badge.svg`.
+     • Verify Play Store badge links directly to canonical `https://play.google.com/store/apps/details?id=com.atrainingtracker` without `.trainingtracker` suffix.
+     • Verify `images/google-play-badge.svg` exists and contains valid SVG structure and branding.
+     • Verify `images/logo_512.png` is embedded and exists on disk.
+  2. *User Guide Navigation & Disk Resolution (`TST-STP-005.2`)*:
+     • Verify `README.md` links to `docs/index.md`, `docs/guide/en/index.md`, and `docs/guide/de/index.md`, and all target files exist on disk.
+  3. *Modern Screenshot Showcase Verification (`TST-STP-005.3`)*:
+     • Verify `README.md` embeds the 4 modern Compose screenshots (`01_cockpit_standard.png`, `08_workout_detail.png`, `06_cluster_expanded.png`, `07_telemetry_charts.png`) referencing `docs/guide/img/`, and all 4 files exist on disk with valid PNG headers.
+  4. *Trademark-Free & Capability Accuracy Audit (`TST-STP-005.4`)*:
+     • Verify zero occurrences of Peaksware trademarks (`Normalized Power`, `NP`, `Intensity Factor`, `IF`, `Training Stress Score`, `TSS`, `PMC`, `CTL`, `ATL`, `TSB`) in `README.md`.
+     • Verify presence of BLE Power Meter (`0x1818`), Strava `.zip` import, Full-App ZIP backup, Known Locations (*Lieblingsorte*), and Climb Detection mentions.
+  5. *CI Contract Test Execution (`TST-STP-005.5`)*:
+     • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.ReadmePlayStoreBadgeContractTest"` asserting 100% pass rate.
 
 ### TST-STP-006: Play Store Promo Video Assets, Storyboard & Generator Contract Test [Verified]
 - **Requirement(s)**: `REQ-STP-006`

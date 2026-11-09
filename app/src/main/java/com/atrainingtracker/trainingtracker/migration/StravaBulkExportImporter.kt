@@ -150,6 +150,7 @@ object StravaBulkExportImporter {
             Log.i(TAG, "Parsed ${activities.size} activity rows from activities.csv")
 
             val equipmentDb = EquipmentDbHelper.getInstance(context)
+            val existingSnapshot = ExistingWorkoutsSnapshot.create(context)
 
             // 3. Process each activity
             activities.forEachIndexed { index, row ->
@@ -159,6 +160,15 @@ object StravaBulkExportImporter {
                 val filename = row.filename
                 if (filename.isNullOrBlank()) {
                     // Manual activity without recording stream
+                    skippedCount++
+                    return@forEachIndexed
+                }
+
+                val baseFileName = resolveBaseFileName(filename, row.activityId)
+                if (existingSnapshot.isDuplicate(baseFileName, row.activityId)) {
+                    if (com.atrainingtracker.trainingtracker.TrainingApplication.getDebug(true)) {
+                        Log.d(TAG, "Fast-forwarding duplicate Strava activity: $baseFileName (id: ${row.activityId})")
+                    }
                     skippedCount++
                     return@forEachIndexed
                 }
@@ -179,7 +189,6 @@ object StravaBulkExportImporter {
                         rawStream
                     }
 
-                    val baseFileName = resolveBaseFileName(filename, row.activityId)
                     val source: WorkoutSource
                     val parseResult: Result<ParsedWorkoutData>
 
@@ -256,6 +265,7 @@ object StravaBulkExportImporter {
                     when (importResult.status) {
                         LegacyImportEngine.ImportStatus.SUCCESS -> {
                             importedCount++
+                            existingSnapshot.register(baseFileName, row.activityId)
                             if (importResult.workoutId != null) {
                                 lastWorkoutId = importResult.workoutId
                                 if (row.media.isNotEmpty()) {
@@ -272,6 +282,7 @@ object StravaBulkExportImporter {
                         }
                         LegacyImportEngine.ImportStatus.DUPLICATE_SKIPPED -> {
                             skippedCount++
+                            existingSnapshot.register(baseFileName, row.activityId)
                         }
                         LegacyImportEngine.ImportStatus.FAILED -> {
                             failedCount++
@@ -311,10 +322,11 @@ object StravaBulkExportImporter {
                     }
                 }
                 bikes.forEach { bike ->
-                    if (equipmentDb.getEquipmentId(bike.name) == -1L) {
+                    val trimmed = bike.name.trim()
+                    if (equipmentDb.getEquipmentId(trimmed) == -1L) {
                         equipmentDb.addOrUpdateStravaGear(
-                            bike.name,
-                            bike.name,
+                            null,
+                            trimmed,
                             EquipmentDbHelper.ROAD,
                             BSportType.BIKE.name,
                             false
@@ -336,10 +348,11 @@ object StravaBulkExportImporter {
                     }
                 }
                 shoes.forEach { shoe ->
-                    if (equipmentDb.getEquipmentId(shoe.name) == -1L) {
+                    val trimmed = shoe.name.trim()
+                    if (equipmentDb.getEquipmentId(trimmed) == -1L) {
                         equipmentDb.addOrUpdateStravaGear(
-                            shoe.name,
-                            shoe.name,
+                            null,
+                            trimmed,
                             0,
                             BSportType.RUN.name,
                             false
@@ -358,10 +371,10 @@ object StravaBulkExportImporter {
         val existingId = equipmentDb.getEquipmentId(trimmed)
         if (existingId > 0) return existingId
 
-        // Auto-create gear if not found
+        // Auto-create gear if not found (keep StravaId null to prevent name pollution)
         return try {
             equipmentDb.addOrUpdateStravaGear(
-                trimmed,
+                null,
                 trimmed,
                 if (sportType == BSportType.BIKE) EquipmentDbHelper.ROAD else 0,
                 sportType.name,

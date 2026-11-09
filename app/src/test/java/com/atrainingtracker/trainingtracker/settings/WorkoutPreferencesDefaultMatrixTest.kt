@@ -36,6 +36,7 @@ class WorkoutPreferencesDefaultMatrixTest {
         val cardPrefs = WorkoutCardSectionPreferences()
 
         // Visible in list card
+        assertTrue("Workout details should be visible in list by default", cardPrefs.showDetails)
         assertTrue("Description should be visible in list by default", cardPrefs.showDescription)
         assertTrue("Extrema should be visible in list by default", cardPrefs.showExtrema)
         assertTrue("Map preview should be visible in list by default", cardPrefs.showMapPreview)

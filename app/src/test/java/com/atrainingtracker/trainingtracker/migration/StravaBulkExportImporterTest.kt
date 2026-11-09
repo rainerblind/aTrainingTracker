@@ -15,9 +15,12 @@ import android.util.Log
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSource
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
 import com.atrainingtracker.trainingtracker.migration.parsers.ParsedWorkoutData
 import com.atrainingtracker.trainingtracker.migration.parsers.TcxWorkoutParser
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
@@ -48,6 +51,8 @@ class StravaBulkExportImporterTest {
     private lateinit var mockContext: Context
     private lateinit var mockEquipmentDb: EquipmentDbHelper
     private lateinit var mockSportTypeDb: com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
+    private lateinit var mockSummaryDb: WorkoutSummariesDatabaseManager
+    private lateinit var mockStravaDb: StravaUploadDbHelper
 
     @Before
     fun setUp() {
@@ -61,12 +66,18 @@ class StravaBulkExportImporterTest {
         mockContext = mockk(relaxed = true)
         mockEquipmentDb = mockk(relaxed = true)
         mockSportTypeDb = mockk(relaxed = true)
+        mockSummaryDb = mockk(relaxed = true)
+        mockStravaDb = mockk(relaxed = true)
 
         every { mockSportTypeDb.getSportTypeIdFromTcxName(any()) } returns 1L
         every { mockSportTypeDb.getBSportType(any()) } returns BSportType.BIKE
+        every { mockSummaryDb.allFileBaseNames } returns emptySet()
+        every { mockStravaDb.allActivityIds } returns emptySet()
 
         EquipmentDbHelper.resetForTesting(mockEquipmentDb)
         com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.resetForTesting(mockSportTypeDb)
+        WorkoutSummariesDatabaseManager.setInstanceForTesting(mockSummaryDb)
+        StravaUploadDbHelper.resetForTesting(mockStravaDb)
 
         mockkObject(LegacyImportEngine)
     }
@@ -75,6 +86,8 @@ class StravaBulkExportImporterTest {
     fun tearDown() {
         EquipmentDbHelper.resetForTesting(null)
         com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.resetForTesting(null)
+        WorkoutSummariesDatabaseManager.setInstanceForTesting(null)
+        StravaUploadDbHelper.resetForTesting(null)
         unmockkAll()
     }
 
@@ -288,6 +301,44 @@ class StravaBulkExportImporterTest {
             // Must process chronologically ascending: 1000 (oldest) first, then 2000, then 3000 (newest)
             assertEquals(listOf("1000", "2000", "3000"), processedIds)
             assertEquals(listOf("Oldest Workout", "Middle Workout", "Newest Workout"), progressSteps)
+        } finally {
+            tempZip.delete()
+        }
+    }
+
+    @Test
+    fun testImportArchive_zeroIoFastForwardDuplicates() = runBlocking {
+        // Configure snapshot to know about baseName "21975890558" and Strava Activity ID "20811350233"
+        every { mockSummaryDb.allFileBaseNames } returns setOf("21975890558")
+        every { mockStravaDb.allActivityIds } returns setOf("20811350233")
+
+        val tempZip = File.createTempFile("strava_zero_io_test", ".zip")
+        try {
+            val activitiesCsv = """
+                Aktivitäts-ID,Aktivitätsdatum,Name der Aktivität,Aktivitätsart,Aktivitätsbeschreibung,Pendeln,Hinweis zur Privatsphäre für Aktivitäten,Aktivitätsausrüstung,Dateiname
+                20811350233,"01.11.2026, 01:46:43",Runde ab Zu Hause,Radfahrt,"Sonnige Runde",false,Intervalltraining,Endurace AL,activities/21975890558.tcx.gz
+            """.trimIndent()
+
+            ZipOutputStream(FileOutputStream(tempZip)).use { zip ->
+                zip.putNextEntry(ZipEntry("activities.csv"))
+                zip.write(activitiesCsv.toByteArray(Charsets.UTF_8))
+                zip.closeEntry()
+
+                // Deliberately DO NOT add "activities/21975890558.tcx.gz" entry.
+                // If zero-I/O pre-filtering works, it fast-forwards immediately without opening streams!
+            }
+
+            val result = StravaBulkExportImporter.importArchive(mockContext, tempZip, null)
+
+            assertEquals(0, result.importedCount)
+            assertEquals(1, result.skippedCount)
+            assertEquals(0, result.failedCount)
+            assertEquals(1, result.totalScanned)
+
+            // Verify persistParsedWorkout was NEVER invoked!
+            coVerify(exactly = 0) {
+                LegacyImportEngine.persistParsedWorkout(any(), any(), any(), any(), any(), any())
+            }
         } finally {
             tempZip.delete()
         }

@@ -2042,5 +2042,28 @@
   5. *Clean-Room Regression Suite Execution (`TST-MIG-047.5`)*:
   • Execute targeted package tests (`com.atrainingtracker.trainingtracker.migration.*`) asserting 100% pass rate.
 
+### TST-MIG-048: **In-Memory Existing Workout Deduplication Snapshot & Zero-I/O Fast-Forward Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-MIG-050`
+- **Component**: `ExistingWorkoutsSnapshot.kt`, `StravaBulkExportImporter.kt`, `BackupRestoreViewModel.kt`, `LegacyImportEngine.kt`
+- **Jira**: `ATT-5902`
+- **Test Description**:
+  1. *ExistingWorkoutsSnapshot Creation & Case-Insensitive Matching (`TST-MIG-048.1`, `ExistingWorkoutsSnapshotTest.kt`)*:
+  • Verify snapshot loads `FILE_BASE_NAME` set from `WorkoutSummaries` and `ActivityId` set from `StravaUploadDbHelper` in a single pass.
+  • Assert `containsFileBaseName` matches case-insensitively (`"Track_01"` matches `"track_01"`).
+  • Assert `containsStravaActivityId` correctly identifies registered Strava IDs.
+  2. *Strava Bulk Export Zero-I/O Fast-Forward Verification (`TST-MIG-048.2`, `StravaBulkExportImporterTest.kt`)*:
+  • Given a Strava export ZIP containing duplicate activities whose base name or activity ID exists in the snapshot.
+  • Verify `zip.getInputStream` is never invoked for duplicates, GZIP streams are not decompressed, and FIT/TCX/GPX parsers are never called.
+  • Assert `skippedCount` is incremented and import finishes in memory.
+  3. *BackupRestoreViewModel Zero-Copy Duplicate Elimination (`TST-MIG-048.3`, `BackupRestoreViewModelImportTest.kt`)*:
+  • Given SAF URIs for files whose resolved display names exist in the snapshot.
+  • Verify `contentResolver.openInputStream` is never called and temporary files are not written into `cacheDir`.
+  • Assert `skippedCount` matches duplicate count.
+  4. *Cloud Recovery In-Memory Deduplication (`TST-MIG-048.4`, `LegacyImportEngineDeduplicationTest.kt`)*:
+  • Verify `bulkRecoverFromDropbox` and `bulkRecoverFromGoogleDrive` filter duplicate entries in memory using `ExistingWorkoutsSnapshot` without executing per-entry SQLite `SELECT` queries.
+  5. *Clean-Room Regression Suite Execution (`TST-MIG-048.5`)*:
+  • Execute targeted package tests (`com.atrainingtracker.trainingtracker.migration.*`) asserting 100% pass rate.
+
+
 
 

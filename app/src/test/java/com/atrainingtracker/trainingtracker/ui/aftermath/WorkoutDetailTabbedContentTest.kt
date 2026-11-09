@@ -176,4 +176,24 @@ class WorkoutDetailTabbedContentTest {
             photosBlock.contains("WorkoutPhotoStrip(")
         )
     }
+
+    /**
+     * TST-UI-500.2: Verify WorkoutDetailTabbedContent declares mapTopEndActions and forwards it to MapDetailLayout.
+     */
+    @Test
+    fun testWorkoutDetailTabbedContent_forwardsMapTopEndActions_REQ_UI_500_2() {
+        assertTrue("WorkoutDetailTabbedContent.kt must exist", sourceFile.exists())
+        val content = sourceFile.readText()
+
+        assertTrue(
+            "WorkoutDetailTabbedContent must declare mapTopEndActions parameter with default null (REQ-UI-500.2)",
+            content.contains("mapTopEndActions: (@Composable ColumnScope.() -> Unit)? = null")
+        )
+
+        val occurrences = Regex("""topEndActions\s*=\s*mapTopEndActions""").findAll(content).count()
+        assertTrue(
+            "WorkoutDetailTabbedContent must forward topEndActions = mapTopEndActions across MapDetailLayout invocations (count >= 2) (REQ-UI-500.2)",
+            occurrences >= 2
+        )
+    }
 }

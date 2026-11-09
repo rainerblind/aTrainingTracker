@@ -3,7 +3,7 @@
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Tests**: 75
+**Total Tests**: 77
 
 ---
 
@@ -985,5 +985,90 @@
   • Verify cancelling either dialog resets merge state cleanly.
   5. *9-Language Localization & Positional Specifier Audit (`TST-SET-095.5`, `TranslationParityTest.kt`)*:
   • Verify `known_locations_menu_merge`, `known_locations_merge_select_target_title`, `known_locations_merge_distance_away` (`%1$s`), `known_locations_merge_no_candidates`, `known_locations_merge_dialog_title`, `known_locations_merge_dialog_message` (`%1$s`, `%2$s`, `%3$s`), `known_locations_merge_pinned_notice` (`%1$s`), and `known_locations_merge_action` exist across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) with zero inline emojis (`ATT-5400`).
+
+### TST-SET-096: **Workout Cluster Split & Sub-Corridor Detection Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-096`
+- **Component**: `WorkoutClusterHeatmapScreen.kt`, `WorkoutClusterSplitSheet.kt`, `WorkoutClustersViewModel.kt`, `WorkoutClusterEngine.kt`, `WorkoutClusterCorridorDetector.kt`, `WorkoutClusterSplitTest.kt`
+- **Jira**: `ATT-5900`
+- **Test Description**:
+  1. *Sub-Corridor Detection Algorithm Unit Tests (`TST-SET-096.1`, `WorkoutClusterCorridorDetectorTest.kt`)*:
+  • Verify polyline station sampling at fractional distances 15%, 30%, 50%, 70%, 85%.
+  • Verify pairwise corridor deviation metric correctly separates two parallel corridors diverging by > 500 m while grouping nearly identical tracks.
+  • Verify threshold sensitivity modulation: tighter threshold (250 m) produces finer sub-groups; wider threshold (1500 m) merges into fewer groups.
+  • Verify that identical tracks yield a deviation distance of 0.0 m.
+  2. *Transactional Database Split & Centroid Reconciliation Unit Tests (`TST-SET-096.2`, `WorkoutClusterSplitTest.kt`)*:
+  • Given cluster with 10 member workouts (6 on Corridor A, 4 on Corridor B), execute split for Corridor B.
+  • Verify new `WorkoutCluster` created with `hitCount == 4`, centroid matching Corridor B member workouts, and correct spatial bounds.
+  • Verify original cluster updated with `hitCount == 6` and centroid matching Corridor A member workouts.
+  • Verify all 4 Corridor B workouts in `WorkoutSummaries` have `CLUSTER_ID == newClusterId`.
+  • Verify member workouts renamed according to new cluster name when `renameWorkouts == true`.
+  • Verify `WorkoutClusterStats` recalculated for both original and new clusters.
+  3. *UI & Interaction Contract Tests (`TST-SET-096.3`, `WorkoutClusterSplitDialogContractTest.kt`)*:
+  • In `WorkoutClusterHeatmapScreen`, verify `CallSplit` button appears in header when `hitCount >= 2` and is hidden when `hitCount < 2`.
+  • Verify clicking `CallSplit` opens `WorkoutClusterSplitSheet`.
+  • Verify slider adjustment updates detected variant groups and associated map polyline colors.
+  • Verify variant checkbox toggling and editable cluster name field pre-filled with unique candidate name.
+  • Verify confirm button disabled when no secondary variant is selected or when only 1 group is detected.
+  4. *9-Language Localization & Positional Specifier Audit (`TST-SET-096.4`, `TranslationParityTest.kt`)*:
+  • Verify `cluster_split_action`, `cluster_split_dialog_title`, `cluster_split_corridor_threshold` (`%1$s`), `cluster_split_no_variants`, `cluster_split_primary_label` (`%1$d`, `%2$s`), `cluster_split_variant_label` (`%1$d`, `%2$d`, `%3$s`), `cluster_split_rename_workouts`, and `cluster_split_action_confirm` exist across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) with zero inline emojis (`ATT-5400`).
+  5. *Clean-Room Targeted Regression Execution (`TST-SET-096.5`)*:
+  • Execute targeted test suites (`com.atrainingtracker.trainingtracker.database.*`, `com.atrainingtracker.trainingtracker.ui.clusters.*`, `com.atrainingtracker.trainingtracker.localization.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+### TST-SET-097: **Point-to-Point Route Corridor Discrimination & Elliptical Apex Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-097`
+- **Component**: `WorkoutClusterEngine.kt`, `TrackerService.java`, `WorkoutClusterCorridorDetector.kt`
+- **Jira**: `ATT-5899`
+- **Test Description**:
+  1. *Elliptical Apex Calculation Unit Tests (`TST-SET-097.1`, `WorkoutClusterPointToPointApexTest.kt`)*:
+  • Verify that for an A -> B route with lateral deflection (e.g. northern arc between Sindelfingen and Schönaich), the apex is located at the point of maximum $d(\text{start}, P) + d(P, \text{end})$, separated from `end` by > 1 km.
+  • Verify that for a straight A -> B line, the apex falls on the 50% distance midpoint.
+  • Verify that for closed loops ($d(\text{start}, \text{end}) < 150\text{ m}$), apex coordinates are 100% identical to legacy `findApexFromPoints(start, points, null)`.
+  2. *Parallel Corridor Scoring & Discrimination Tests (`TST-SET-097.2`, `WorkoutClusterCorridorScoringTest.kt`)*:
+  • Given two clusters sharing identical start (Sindelfingen) and end (Schönaich) coordinates with similar distance (~9.4 km) but separated laterally by 1.5 km (forest corridor vs. city corridor).
+  • When a new workout matching the forest corridor is evaluated by `scoreClusters()`, verify that the forest cluster achieves a significantly lower similarity cost and is suggested over the city corridor cluster.
+  • When a new workout matching the city corridor is evaluated, verify that the city cluster is suggested.
+  3. *TrackerService Integration & Persistence Audit (`TST-SET-097.3`)*:
+  • Verify that session finalization in `TrackerService` passes `endPos` into `findApexFromPoints()` and persists non-degenerate apex coordinates into `WorkoutSummaries`.
+  4. *Clean-Room Targeted Regression Execution (`TST-SET-097.4`)*:
+  • Run targeted unit tests (`com.atrainingtracker.trainingtracker.clusters.*`, `com.atrainingtracker.trainingtracker.database.WorkoutCluster*`, `com.atrainingtracker.trainingtracker.ui.clusters.*`) ensuring zero regressions.
+
+### TST-SET-098: **Equipment Lookup Normalization, Strava Ingestion & Deduplication Reconciliation Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-098`
+- **Component**: `EquipmentDbHelper.java`, `StravaBulkExportImporter.kt`, `StravaEquipmentSynchronizeThread.java`, `WorkoutSummariesDatabaseManager.java`, `SportTypeEquipmentLinkManager.kt`
+- **Jira**: `ATT-6215`
+- **Test Description**:
+  1. *Case-Insensitive & Trimmed Lookup Unit Tests (`TST-SET-098.1`, `EquipmentDbHelperNormalizationTest.kt`)*:
+  • Verify `getEquipmentId` matches `'Endurance'`, `'endurance '`, `' ENDURANCE '` to the same ID.
+  • Verify `addOrUpdateStravaGear` matches existing gear regardless of case or whitespace and preserves existing user-customized `Name`.
+  2. *Strava Bulk Import Gear Ingestion Audit (`TST-SET-098.2`, `StravaBulkExportImporterGearTest.kt`)*:
+  • Verify importing `bikes.csv` and `shoes.csv` leaves `StravaId` as `null` and populates `StravaName`.
+  • Verify subsequent Strava API sync successfully matches and enriches the bulk-imported items without creating duplicates.
+  3. *Strava Equipment Synchronize Thread Contract Tests (`TST-SET-098.3`, `StravaEquipmentSyncTest.kt`)*:
+  • Verify that syncing remote gear with trailing whitespace or lowercase characters links to existing uppercase local equipment without overwriting `Name`.
+  4. *Real SQLite Deduplication & Cascade Reconciliation Migration Tests (`TST-SET-098.4`, `EquipmentDeduplicationMigrationTest.kt`)*:
+  • Seed SQLite with duplicate bike/shoe rows (including name-polluted `StravaId`), linked sensors in `Links`, sport associations in `SportTypeLinks.db`, and workouts in `WorkoutSummaries.db`.
+  • Execute migration/reconciliation.
+  • Assert that surviving row retains capitalized name and valid Strava ID, workouts are repointed to surviving ID, links are consolidated without primary key errors, and duplicate rows are deleted.
+  5. *Tier 1 Targeted Regression Suite (`TST-SET-098.5`)*:
+  • Run targeted test suites (`com.atrainingtracker.trainingtracker.database.*`, `com.atrainingtracker.trainingtracker.migration.*`, `com.atrainingtracker.trainingtracker.onlinecommunities.strava.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+### TST-SET-099: **Paired BLE Peripheral Scan-Assisted Connection & Public/Random MAC Address Test Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-099`
+- **Component**: `MyBTLEDevice.java`, `MyBTLEDeviceAddressAndSearchTest.kt`
+- **Jira**: `ATT-6245`
+- **Test Description**:
+  1. *Public IEEE MAC (0xC0..0xFC OUI) Scan Discovery & Connection Unit Test (`TST-SET-099.1`, `MyBTLEDeviceAddressAndSearchTest.kt`)*:
+  • Verify that a peripheral with Public IEEE MAC having OUI in `0xC0..0xFC` (e.g. `D0:C6:37:33:67:AA`) is discovered via scan assistance and connects via `result.getDevice().connectGatt(...)` during `State.SEARCHING`.
+  2. *Random Static MAC Scan Discovery & Connection Unit Test (`TST-SET-099.2`, `MyBTLEDeviceAddressAndSearchTest.kt`)*:
+  • Verify that a peripheral with Random Static MAC (e.g. `C6:CC:E3:F5:F0:37`) is discovered via scan assistance and connects via `result.getDevice().connectGatt(...)` during `State.SEARCHING`.
+  3. *Active Speculative GATT Supersede & Stale Callback Guard Unit Test (`TST-SET-099.3`, `MyBTLEDeviceAddressAndSearchTest.kt`)*:
+  • Verify that when `onScanResult()` fires with an existing non-null `mBluetoothGatt` handle, the prior GATT is closed and replaced with `result.getDevice().connectGatt(...)`.
+  • Verify that `onConnectionStateChange` ignores callbacks from non-current GATT instances (`gatt != mBluetoothGatt`).
+  4. *Scan Fallback Direct Connect Unit Test (`TST-SET-099.4`, `MyBTLEDeviceAddressAndSearchTest.kt`)*:
+  • Verify that when scan assistance cannot be started (e.g. missing scan permission or null scanner), `startSearching()` falls back to direct `connectGatt(...)`.
+  5. *Tier 1 Targeted BLE Regression Suite (`TST-SET-099.5`)*:
+  • Run targeted test suites (`com.atrainingtracker.banalservice.devices.bluetooth_le.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+
 
 

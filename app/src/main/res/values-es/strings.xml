@@ -1106,6 +1106,14 @@
     <string name="cluster_merge_dialog_title">Combinar ruta favorita</string>
     <string name="cluster_merge_dialog_message">¿Deseas combinar \'%1$s\' (%2$d grabaciones) en \'%3$s\'? Todos los entrenamientos asociados se reasignarán a \'%3$s\' y luego se eliminará \'%1$s\'.</string>
     <string name="cluster_merge_action">Combinar</string>
+    <string name="cluster_split_action">Dividir ruta favorita…</string>
+    <string name="cluster_split_dialog_title">Dividir ruta favorita</string>
+    <string name="cluster_split_corridor_threshold">Sensibilidad del corredor: %1$s</string>
+    <string name="cluster_split_no_variants">No se detectaron variantes de ruta distintas con esta sensibilidad.</string>
+    <string name="cluster_split_primary_label">Ruta principal (%1$d entrenamientos, Ø %2$s)</string>
+    <string name="cluster_split_variant_label">Variante %1$d (%2$d entrenamientos, Ø %3$s)</string>
+    <string name="cluster_split_rename_workouts">Actualizar nombres de entrenamientos para que coincidan con la nueva ruta</string>
+    <string name="cluster_split_action_confirm">Dividir</string>
     <string name="cluster_migration_title">Analizando familias de rutas…</string>
     <string name="cluster_migration_loading">Cargando familias de rutas…</string>
     <string name="cluster_migration_healing">Verificando la integridad del historial…</string>

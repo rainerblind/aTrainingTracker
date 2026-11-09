@@ -290,4 +290,18 @@ class LegacyImportEngineDeduplicationTest {
         assertEquals("DUPLICATE_SKIPPED", LegacyImportEngine.ImportStatus.DUPLICATE_SKIPPED.name)
         assertEquals("FAILED", LegacyImportEngine.ImportStatus.FAILED.name)
     }
+
+    @Test
+    fun testExistingWorkoutsSnapshot_filtersDuplicateCloudEntriesInMemory() {
+        val snapshot = ExistingWorkoutsSnapshot(
+            initialBaseNames = setOf("2024_05_10_14_30_00", "old_ride"),
+            initialStravaIds = emptySet()
+        )
+
+        val entry1 = "2024_05_10_14_30_00.tcx".substringBeforeLast(".").removeSuffix("-TMP").removeSuffix("~")
+        val entry2 = "2024_05_11_08_00_00.tcx".substringBeforeLast(".").removeSuffix("-TMP").removeSuffix("~")
+
+        assertTrue(snapshot.containsFileBaseName(entry1))
+        assertFalse(snapshot.containsFileBaseName(entry2))
+    }
 }

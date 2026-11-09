@@ -3135,6 +3135,47 @@
 
 **Invariants**: Standalone imports unregressed, cluster spatial matching untouched, non-blocking coroutine cancellation preserved.
 
+### REQ-MIG-050: In-Memory Existing Workout Deduplication Snapshot & Zero-I/O Fast-Forward for Bulk Importers [Verified]
+- **Tests**: `TST-MIG-048` | **Tickets**: `ATT-5902`
+- **Implementation**: `ExistingWorkoutsSnapshot.kt`, `StravaBulkExportImporter.kt`, `BackupRestoreViewModel.kt`, `LegacyImportEngine.kt`, `WorkoutSummariesDatabaseManager.java`, `StravaUploadDbHelper.java`
+- **Rationale**: When resuming or repeating large bulk imports (Strava bulk ZIP archives, local multi-file/SAF folders, or Dropbox/Google Drive recovery), importers currently perform expensive I/O, file copying to `cacheDir`, and full stream decompression/parsing on already-imported workouts before discovering they already exist in downstream database checks (`isWorkoutExisting`). The system SHALL pre-load an in-memory snapshot of existing workout identifiers and execute zero-I/O upstream pre-filtering to fast-forward bulk imports without stream parsing or file copying (ATT-5902, extending `REQ-MIG-031`, `REQ-MIG-048.5`, and `REQ-MIG-049.5`):
+1. *Single-Pass In-Memory Deduplication Snapshot (`REQ-MIG-050.1`)*:
+• The system SHALL load an in-memory `ExistingWorkoutsSnapshot` in a single query pass (< 3 ms) prior to executing bulk import batches.
+• The snapshot SHALL contain a case-insensitive set of existing `FILE_BASE_NAME`s from `WorkoutSummaries` and existing Strava `ActivityId`s from `StravaUploadDbHelper`.
+• Lookups against the snapshot (`containsFileBaseName`, `containsStravaActivityId`) SHALL execute in $O(1)$ time using normalized lowercase comparisons.
+2. *Zero-I/O Pre-Filtering & Fast-Forward in Strava Bulk Export (`REQ-MIG-050.2`)*:
+• `StravaBulkExportImporter.importArchive` SHALL evaluate `baseFileName` (resolved from filename and activity ID) and `row.activityId` against `ExistingWorkoutsSnapshot` prior to opening archive stream entries, decompressing GZIP (`.gz`) streams, or invoking FIT/TCX/GPX stream parsers.
+• Matching pre-existing activities SHALL be fast-forwarded immediately by incrementing `skippedCount` without opening stream I/O or allocating parser buffers.
+3. *Zero-Copy Pre-Filtering in Local Multi-File & Folder Imports (`REQ-MIG-050.3`)*:
+• `BackupRestoreViewModel.importWorkoutFilesInternal` SHALL evaluate candidate `baseFileName`s resolved from URI display names against `ExistingWorkoutsSnapshot` prior to opening `contentResolver.openInputStream` or writing temporary files into `context.cacheDir`.
+• Matching pre-existing files SHALL be skipped immediately without disk I/O, except where filenames start with `legacy_import` (which require stream parsing to determine timestamp-based base names).
+4. *In-Memory Deduplication in Cloud Recovery Pipelines (`REQ-MIG-050.4`)*:
+• `LegacyImportEngine.bulkRecoverFromDropbox` and `LegacyImportEngine.bulkRecoverFromGoogleDrive` SHALL evaluate entry `baseFileName`s against `ExistingWorkoutsSnapshot` in memory, eliminating per-entry SQLite queries during cloud recovery.
+5. *Defense-in-Depth & Non-Regression Invariants (`REQ-MIG-050.5`)*:
+• Downstream transactional deduplication (`isWorkoutExisting(summaryDb, ...)`) inside `importMutex.withLock` in `LegacyImportEngine.persistParsedWorkout` MUST remain 100% intact as a defense-in-depth safety net.
+• Resuming a bulk import containing 1,000+ already-imported workouts SHALL fast-forward in under 50 ms in memory.
+• Deduplication accuracy MUST remain 100% identical to transactional SQLite checks, with zero legitimate workouts erroneously skipped and zero duplicates inserted.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-MIG-050` under Ticket `ATT-5902` (Sprint `2026-45.13`), extending `REQ-MIG-031` (*Multi-Dimensional Workout Deduplication*), `REQ-MIG-048.5` (*Strava Bulk Export Deduplication*), and `REQ-MIG-049.5` (*Bulk Import Invariants*). Targets `ExistingWorkoutsSnapshot.kt`, `StravaBulkExportImporter.kt`, `BackupRestoreViewModel.kt`, `LegacyImportEngine.kt`, `WorkoutSummariesDatabaseManager.java`, and `StravaUploadDbHelper.java`.
+2. *Historical Origin & Commit Trace*: `ATT-2023` (commit `9b32948` - 3-min same-sport tolerance), `ATT-4957` (commit `33856f04` - Strava bulk export), `ATT-6039` (commit `163e83a6` - chronological ascending order).
+3. *Root Reason for Existing Formulation*: Prior deduplication was localized entirely inside `LegacyImportEngine.persistParsedWorkout` to guarantee atomicity and handle fallback derivations (such as timestamps from parsed streams). Pre-filtering was omitted to avoid maintaining cached state across varied entry points.
+4. *Preservation of Core Invariants*: Downstream `isWorkoutExisting` in `persistParsedWorkout` is preserved intact. Upstream in-memory snapshot acts as a pure read-only acceleration layer. Workouts requiring stream-derived names (`legacy_import`) safely bypass filename-only pre-filtering.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a Strava bulk export archive containing already-imported activities,
+• *When* `StravaBulkExportImporter.importArchive` processes the archive,
+• *Then* already-imported activities are fast-forwarded in memory without opening ZIP entry streams, decompressing GZIP streams, or invoking FIT/TCX/GPX parsers.
+• *Given* local workout files that already exist in `WorkoutSummaries`,
+• *When* imported via `BackupRestoreViewModel.importWorkoutFilesInternal`,
+• *Then* duplicate files are identified and skipped via `baseFileName` pre-check without copying bytes into `cacheDir`.
+• *Given* Dropbox or Google Drive recovery with previously recovered files,
+• *When* recovery executes in `LegacyImportEngine`,
+• *Then* known files are filtered in memory using `ExistingWorkoutsSnapshot` without executing per-entry SQLite queries.
+
+**Invariants**: Downstream transactional `isWorkoutExisting` intact, no false-positive skipping of `legacy_import` files, zero duplicate workout rows created.
+
+
 
 
 

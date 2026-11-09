@@ -40,6 +40,7 @@ import com.google.maps.android.compose.CameraPositionState
  * @param zoomFocus The desired camera strategy (e.g., center on user vs. fit all markers).
  * @param initialBounds Explicit boundaries to snap to immediately (bypassing auto-calculation).
  * @param currentLocation The user's current GPS location, used for proximity filtering.
+ * @param initialLocation Fallback anchor location when [currentLocation] is null (REQ-MAP-060.2).
  */
 @Composable
 fun MapBoundsController(
@@ -53,7 +54,8 @@ fun MapBoundsController(
     cameraPositionState: CameraPositionState,
     isMapLoaded: Boolean,
     context: Context,
-    boundsFocusTrigger: Long = 0L
+    boundsFocusTrigger: Long = 0L,
+    initialLocation: LatLng? = null
 ) {
     // Flag to ensure we only fit the bounds once per session/focus change.
     // ATT-440 & ATT-1151: Track explicit bounds and trigger to allow dynamic region switching and refitting.
@@ -61,7 +63,7 @@ fun MapBoundsController(
     var lastTrigger by remember(zoomFocus) { mutableStateOf(0L) }
     var hasFittedInitialBounds by remember(zoomFocus, initialBounds != null) { mutableStateOf(false) }
 
-    LaunchedEffect(tracks, markers, segments, routes, isMapLoaded, hasFittedInitialBounds, initialBounds, boundsFocusTrigger, currentLocation) {
+    LaunchedEffect(tracks, markers, segments, routes, isMapLoaded, hasFittedInitialBounds, initialBounds, boundsFocusTrigger, currentLocation, initialLocation) {
         // --- ATT-352 & ATT-1151: Explicit bounds camera fitting & dynamic region switching ---
         if (zoomFocus == MapZoomFocus.EXPLICIT_BOUNDS && initialBounds != null) {
             val needsRefit = initialBounds != lastFittedExplicitBounds || (boundsFocusTrigger > 0L && boundsFocusTrigger != lastTrigger)
@@ -95,13 +97,13 @@ fun MapBoundsController(
             zoomFocus == MapZoomFocus.LOCAL_ROUTES ||
             zoomFocus == MapZoomFocus.FIT_PRIMARY) {
             
-            val userPos = currentLocation
+            val userPos = currentLocation ?: initialLocation
             val builder = LatLngBounds.Builder()
             var hasPoints = false
             val maxDistanceMeters = 1000.0
 
             fun isLocal(target: LatLng): Boolean {
-                if (userPos == null) return true
+                if (userPos == null) return false
                 val results = FloatArray(1)
                 android.location.Location.distanceBetween(
                     userPos.latitude, userPos.longitude,
@@ -190,7 +192,7 @@ fun MapBoundsController(
                 } catch (e: Exception) {
                     // Silently fail if map not laid out
                 }
-            } else if (userPos != null) {
+            } else if (currentLocation != null && userPos != null) {
                 cameraPositionState.move(CameraUpdateFactory.newLatLngZoom(userPos, MapInitialLocationResolver.DEFAULT_INITIAL_ZOOM))
                 hasFittedInitialBounds = true
             }

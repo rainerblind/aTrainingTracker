@@ -22,6 +22,7 @@ import android.app.Application
 import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.elevation.ElevationResult
@@ -47,6 +48,17 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
+ * Workout starts partitioned by athletic sport type (REQ-UI-470.6).
+ */
+data class SportStartsCount(
+    val bike: Int = 0,
+    val run: Int = 0,
+    val other: Int = 0
+) {
+    val total: Int get() = bike + run + other
+}
+
+/**
  * Unified UI State for Known Start Locations management (REQ-UI-165, REQ-UI-180, REQ-UI-186).
  */
 data class KnownLocationsUiState(
@@ -54,6 +66,7 @@ data class KnownLocationsUiState(
     val filteredLocations: List<KnownLocationItem> = emptyList(),
     val clustersByLocationId: Map<Long, List<WorkoutCluster>> = emptyMap(),
     val startsByLocationId: Map<Long, Int> = emptyMap(),
+    val sportStartsByLocationId: Map<Long, SportStartsCount> = emptyMap(),
     val sortOrder: KnownLocationSortOrder = KnownLocationSortOrder.STARTS,
     val isLocationAvailable: Boolean = false,
     val userLocation: LatLng? = null,
@@ -113,12 +126,13 @@ class KnownLocationsViewModel @JvmOverloads constructor(
             repository.locationsFlow.collect { items ->
                 val currentWorkouts = workoutRepo?.allWorkouts?.value ?: emptyList()
                 val currentClusters = clusterRepository.allClusters.value
-                val (startsMapping, mapping) = withContext(defaultDispatcher) {
+                val (sportStartsMapping, mapping) = withContext(defaultDispatcher) {
                     Pair(
-                        groupStartsByLocation(items, currentWorkouts),
+                        groupSportStartsByLocation(items, currentWorkouts),
                         groupClustersByLocation(items, currentClusters)
                     )
                 }
+                val startsMapping = sportStartsMapping.mapValues { it.value.total }
                 _uiState.update { state ->
                     val sorted = applySort(items, state.sortOrder, state.userLocation, startsMapping)
                     val filtered = applyFilter(sorted, state.filterCriteria, startsMapping)
@@ -127,6 +141,7 @@ class KnownLocationsViewModel @JvmOverloads constructor(
                         filteredLocations = filtered,
                         clustersByLocationId = mapping,
                         startsByLocationId = startsMapping,
+                        sportStartsByLocationId = sportStartsMapping,
                         isLoading = false,
                         selectedLocationForEdit = items.find { it.id == state.selectedLocationForEdit?.id }
                     )
@@ -148,12 +163,13 @@ class KnownLocationsViewModel @JvmOverloads constructor(
                 workoutsFlow.collect { workouts ->
                     val currentLocations = repository.locationsFlow.value
                     if (currentLocations.isEmpty()) {
-                        _uiState.update { it.copy(startsByLocationId = emptyMap()) }
+                        _uiState.update { it.copy(startsByLocationId = emptyMap(), sportStartsByLocationId = emptyMap()) }
                         return@collect
                     }
-                    val startsMapping = withContext(defaultDispatcher) {
-                        groupStartsByLocation(currentLocations, workouts)
+                    val sportStartsMapping = withContext(defaultDispatcher) {
+                        groupSportStartsByLocation(currentLocations, workouts)
                     }
+                    val startsMapping = sportStartsMapping.mapValues { it.value.total }
                     _uiState.update { state ->
                         val sorted = if (state.sortOrder == KnownLocationSortOrder.STARTS) {
                             applySort(currentLocations, state.sortOrder, state.userLocation, startsMapping)
@@ -163,6 +179,7 @@ class KnownLocationsViewModel @JvmOverloads constructor(
                         val filtered = applyFilter(sorted, state.filterCriteria, startsMapping)
                         state.copy(
                             startsByLocationId = startsMapping,
+                            sportStartsByLocationId = sportStartsMapping,
                             locations = sorted,
                             filteredLocations = filtered
                         )
@@ -509,10 +526,11 @@ class KnownLocationsViewModel @JvmOverloads constructor(
         val maxLng: Double
     )
 
-    private fun groupStartsByLocation(
+    @VisibleForTesting
+    internal fun groupSportStartsByLocation(
         locations: List<KnownLocationItem>,
         workouts: List<WorkoutData>
-    ): Map<Long, Int> {
+    ): Map<Long, SportStartsCount> {
         if (locations.isEmpty() || workouts.isEmpty()) return emptyMap()
         val boundsList = locations.map { loc ->
             val latDelta = loc.radius / 111139.0
@@ -526,7 +544,7 @@ class KnownLocationsViewModel @JvmOverloads constructor(
                 maxLng = loc.latLng.longitude + lngDelta
             )
         }
-        val result = mutableMapOf<Long, Int>()
+        val result = mutableMapOf<Long, SportStartsCount>()
         for (workout in workouts) {
             val start = workout.startLatLng ?: continue
             for (bounds in boundsList) {
@@ -537,11 +555,25 @@ class KnownLocationsViewModel @JvmOverloads constructor(
                 }
                 val distance = WorkoutClusterEngine.distanceBetween(bounds.item.latLng, start)
                 if (distance <= bounds.item.radius) {
-                    result[bounds.item.id] = (result[bounds.item.id] ?: 0) + 1
+                    val current = result[bounds.item.id] ?: SportStartsCount()
+                    val updated = when (workout.bSportType) {
+                        BSportType.BIKE -> current.copy(bike = current.bike + 1)
+                        BSportType.RUN -> current.copy(run = current.run + 1)
+                        else -> current.copy(other = current.other + 1)
+                    }
+                    result[bounds.item.id] = updated
                 }
             }
         }
         return result
+    }
+
+    @VisibleForTesting
+    internal fun groupStartsByLocation(
+        locations: List<KnownLocationItem>,
+        workouts: List<WorkoutData>
+    ): Map<Long, Int> {
+        return groupSportStartsByLocation(locations, workouts).mapValues { it.value.total }
     }
 
     private fun applyFilter(

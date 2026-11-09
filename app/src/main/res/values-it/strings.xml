@@ -1103,6 +1103,14 @@
     <string name="cluster_merge_dialog_title">Unisci percorso preferito</string>
     <string name="cluster_merge_dialog_message">Vuoi unire \'%1$s\' (%2$d registrazioni) in \'%3$s\'? Tutti gli allenamenti associati verranno riassegnati a \'%3$s\' e \'%1$s\' verrà successivamente eliminato.</string>
     <string name="cluster_merge_action">Unisci</string>
+    <string name="cluster_split_action">Dividi percorso preferito…</string>
+    <string name="cluster_split_dialog_title">Dividi percorso preferito</string>
+    <string name="cluster_split_corridor_threshold">Sensibilità del corridoio: %1$s</string>
+    <string name="cluster_split_no_variants">Nessuna variante di percorso distinta rilevata con questa sensibilità.</string>
+    <string name="cluster_split_primary_label">Percorso principale (%1$d allenamenti, Ø %2$s)</string>
+    <string name="cluster_split_variant_label">Variante %1$d (%2$d allenamenti, Ø %3$s)</string>
+    <string name="cluster_split_rename_workouts">Aggiorna i nomi degli allenamenti in base al nuovo percorso</string>
+    <string name="cluster_split_action_confirm">Dividi</string>
     <string name="cluster_migration_title">Analisi delle famiglie di percorsi…</string>
     <string name="cluster_migration_loading">Caricamento delle famiglie di percorsi…</string>
     <string name="cluster_migration_healing">Verifica dell\'integrità della cronologia…</string>

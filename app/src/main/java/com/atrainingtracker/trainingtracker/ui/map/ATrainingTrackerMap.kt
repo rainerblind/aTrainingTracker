@@ -189,7 +189,8 @@ fun ATrainingTrackerMap(
         cameraPositionState = cameraPositionState,
         isMapLoaded = isMapLoaded,
         context = context,
-        boundsFocusTrigger = boundsFocusTrigger
+        boundsFocusTrigger = boundsFocusTrigger,
+        initialLocation = initialLocation
     )
     
     // Render Preview Check

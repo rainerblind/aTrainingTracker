@@ -138,6 +138,46 @@ class KnownLocationCardLayoutTest {
     }
 
     /**
+     * REQ-UI-470.6 / TST-UI-470.7b: Dynamic sport breakdown in canonical order [Bike, Run, Other]
+     * using authentic multi-color vector drawables with Color.Unspecified.
+     */
+    @Test
+    fun testSportTypeStartsBreakdownInCanonicalOrder() {
+        val content = loadScreenSource()
+
+        // Must define SportStartsItem composable with Color.Unspecified to protect multi-color vectors
+        assertTrue(
+            "Must define SportStartsItem composable",
+            content.contains("private fun SportStartsItem(")
+        )
+        assertTrue(
+            "SportStartsItem must render with tint = Color.Unspecified",
+            content.contains("tint = Color.Unspecified")
+        )
+
+        // Must reference authentic sport vector drawables
+        assertTrue(
+            "Starts breakdown must reference R.drawable.bsport_bike",
+            content.contains("R.drawable.bsport_bike")
+        )
+        assertTrue(
+            "Starts breakdown must reference R.drawable.bsport_run",
+            content.contains("R.drawable.bsport_run")
+        )
+        assertTrue(
+            "Starts breakdown must reference R.drawable.bsport_other",
+            content.contains("R.drawable.bsport_other")
+        )
+
+        // Canonical ordering [Bike -> Run -> Other] in layout source
+        val bikeIdx = content.indexOf("R.drawable.bsport_bike")
+        val runIdx = content.indexOf("R.drawable.bsport_run")
+        val otherIdx = content.indexOf("R.drawable.bsport_other")
+        assertTrue("Bike must precede Run in canonical layout order", bikeIdx in 0 until runIdx)
+        assertTrue("Run must precede Other in canonical layout order", runIdx in 0 until otherIdx)
+    }
+
+    /**
      * REQ-UI-469.3 / TST-UI-469.1: Unboxed secondary routes cross-link with ic_favorite_route.
      */
     @Test

@@ -7501,7 +7501,7 @@ d. *Isolated Zoomed Elevation Profile*: An `ElevatedCard` rendering `ElevationPr
 • The selected route polyline (`TTColor.RouteSelected`, Royal Blue `#1565C0`) SHALL be rendered unconditionally in `mapContent`.
 • The selected route polyline MUST NOT be included in the Layers menu and CANNOT be toggled off or hidden under any circumstances.
 2. *Route Map Layers Menu UI & Ergonomic Parity (`RouteOnMapScreen.kt`)*:
-• `RouteOnMapScreen.kt` SHALL provide a floating circular Layers button in the `overlay` slot of `MapDetailLayout` at `Alignment.TopEnd` with `padding(top = 76.dp, end = 16.dp)` (offset vertically to avoid overlapping the Share button).
+• `RouteOnMapScreen.kt` SHALL supply the floating circular Layers button via the unified `topEndActions` slot of `MapDetailLayout` (`REQ-UI-500`), where it automatically stacks beneath the Share button (`top = 76.dp`) without hardcoding `padding(top = 76.dp)` in the caller.
 • The button SHALL display `Icons.Default.Layers` (`size = 22.dp`) with tint dynamically resolving to `MaterialTheme.colorScheme.primary` if any layer is toggled off (or `onSurface` when all are visible).
 • Clicking the button SHALL open a Material 3 `DropdownMenu` styled 1:1 with `TrackOnMapScreen.kt`, containing entries for:
 - **Climbs** (`R.string.route_layer_climbs`): Checkbox, climb category color swatch/chip, enabled only if `climbs.isNotEmpty()`.
@@ -7521,10 +7521,10 @@ d. *Isolated Zoomed Elevation Profile*: An `ElevatedCard` rendering `ElevationPr
 • Selected route polyline, Start and End navigation markers, and 100% unit test pass rate MUST NOT be broken.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement (`REQ-UI-308`), complementing `REQ-UI-298`, `REQ-UI-299`, `REQ-UI-302`, `REQ-UI-303`, `REQ-UI-307`, and `REQ-MAP-026`.
-2. *Historical Origin & Commit Trace*: Ticket `ATT-2763`, Sprint `2026-41.4`, Epic `ATT-66` (*Improve Routes*).
-3. *Root Reason for Existing Formulation*: Route entity overlays were historically added in isolation without layer visibility controls. Combining multiple overlays on dense routes produced visual clutter.
-4. *Preservation of Core Invariants*: Permanent route line anchoring, navigation pins, and 100% test pass rate remain preserved.
+1. *Original Requirement ID & Target*: Net-new requirement (`REQ-UI-308`), complementing `REQ-UI-298`, `REQ-UI-299`, `REQ-UI-302`, `REQ-UI-303`, `REQ-UI-307`, and `REQ-MAP-026`. Amended under `ATT-6214` (`REQ-UI-500`) to delegate TopEnd action positioning to `MapDetailLayout.topEndActions` rather than hardcoding `top = 76.dp` in `RouteOnMapScreen.kt`.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-2763`, Sprint `2026-41.4`, Epic `ATT-66` (*Improve Routes*); amended in `ATT-6214`.
+3. *Root Reason for Existing Formulation*: Route entity overlays were historically added in isolation without layer visibility controls. Combining multiple overlays on dense routes produced visual clutter. `top = 76.dp` was hardcoded in `RouteOnMapScreen.kt` to dodge the 44.dp Share button + 16.dp padding.
+4. *Preservation of Core Invariants*: Permanent route line anchoring, navigation pins, automatic `76.dp` stacking when Share is present, and 100% test pass rate remain preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete on `RouteOnMapScreen`,
@@ -14143,13 +14143,15 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 **Invariants**: Zero regressions in 1-tap navigation to workouts or routes; test tags `location_starts_badge_*` and `location_routes_badge_*` preserved; long-press menu options (Home, Merge, Delete) intact; map thumbnail dimensions (116x80dp) preserved; 100% 9-language localization parity.
 
 ### REQ-UI-470: Known Locations Map Orientation, FAB & Description Parity [Verified]
-- **Tests**: `TST-UI-470` | **Tickets**: `ATT-5884`
+- **Tests**: `TST-UI-470` | **Tickets**: `ATT-5884, ATT-6211, ATT-6210`
 - **Implementation**: `KnownLocationZoomMath.kt`, `KnownLocationsScreen.kt`, `EditKnownLocationDialog.kt`, `KnownLocationsViewModel.kt`, `KnownLocationsRepository.kt`, `MapUtils.kt`
-- **Rationale**: To provide superior regional orientation, zero map pin occlusion, one-tap manual creation, immediate starts count hydration, and clear home base utility explanation on "Lieblingsorte" (Sprint 2026-45.12, ATT-5884, refining `REQ-UI-165`, `REQ-UI-224`, and `REQ-SET-095`):
+- **Rationale**: To provide superior regional orientation, zero map pin occlusion, one-tap manual creation, immediate starts count hydration, and clear home base utility explanation on "Lieblingsorte" (Sprint 2026-45.12, ATT-5884, refining `REQ-UI-165`, `REQ-UI-224`, and `REQ-SET-095`; refined in Sprint 2026-45.13, ATT-6211 and ATT-6210):
 1. *Broadened Map Thumbnail Zoom Range (`REQ-UI-470.1`)*:
 • In `KnownLocationZoomMath.kt`, the thumbnail zoom calculation constants SHALL be adjusted to `MIN_ZOOM = 9.7f`, `DEFAULT_THUMBNAIL_ZOOM = 11.2f`, and `MAX_ZOOM = 11.7f` (reducing zoom by approximately 0.8 levels) to preserve surrounding road and town labels for regional context while ensuring geofences remain fully framed.
-2. *Centered Heart Glyph Marker Without Pin Body (`REQ-UI-470.2`)*:
-• In `KnownLocationThumbnailMap` within `KnownLocationsScreen.kt`, the 36dp standing pin (`R.drawable.my_locations`, `anchor = Offset(0.5f, 1.0f)`) SHALL be replaced by a compact, semi-transparent centered heart glyph marker (`anchor = Offset(0.5f, 0.5f)`, `createCenteredHeartGlyphMarker` with ~14–16dp glyph, subtle white border/halo, and `alpha ≈ 0.8f`) sitting concentrically inside the geofence circle without occluding upper map terrain.
+2. *Canonical Material Heart Glyph Marker & Opaque Halo (`REQ-UI-470.2`)*:
+• In `createCenteredHeartGlyphMarker` within `MapUtils.kt` and `KnownLocationThumbnailMap` within `KnownLocationsScreen.kt`, the heart glyph geometry SHALL be rendered using the canonical Material Design Favorite path specification (`M12,21.35l-1.45,-1.32C5.4,15.36 2,12.28 2,8.5 2,5.42 4.42,3 7.5,3c1.74,0 3.41,0.81 4.5,2.09C13.09,3.81 14.76,3 16.5,3 19.58,3 22,5.42 22,8.5c0,3.78 -3.4,6.86 -8.55,11.54L12,21.35z` on a 24x24 coordinate grid, scaled and centered within the bitmap canvas), replacing the ad-hoc flattened Bézier curves.
+• To eliminate blue-on-blue stroke bleed-through where larger geofence radii coincide with the marker lobes, the white halo outline SHALL be rendered solid and fully opaque (`Color.White`, alpha = 1.0f, stroke width $\ge 2.5\text{dp}$, `Paint.Cap.ROUND`, `Paint.Join.ROUND`) underneath the filled heart, cleanly isolating the marker from `TTColor.GeofenceStroke` and map canvas terrain.
+• The concentric anchor `Offset(0.5f, 0.5f)` and compact 16dp size SHALL be preserved.
 3. *Floating Action Button for Manual Location Creation (`REQ-UI-470.3`)*:
 • `KnownLocationsScreen` SHALL provide a `FloatingActionButton` (`Icons.Default.Add`, test tag `known_locations_add_fab`) anchored at the bottom-end, aligning with Routes, Workout Clusters, and Equipment screens.
 • Tapping the FAB SHALL open `EditKnownLocationDialog` with a new location template (`id = 0L`), allowing athletes to manually create and name a favorite location.
@@ -14157,17 +14159,21 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • In `KnownLocationsViewModel.init`, the system SHALL proactively invoke `repository.reconcileHitCounts()` and `workoutRepo?.loadAllWorkouts()`, ensuring the starts count is populated from historical workouts and SQLite hit counts immediately upon screen entry rather than displaying stale "0 Starts".
 5. *Informative Home Base Subtitle & 9-Language Parity (`REQ-UI-470.5`)*:
 • In `EditKnownLocationDialog`, the "Heim-Basis" switch row subtitle SHALL replace the tautological string `known_locations_set_home` ("Als Heim-Basis festlegen") with the descriptive explanation `known_locations_home_base_desc` ("Automatische Benennung & barometrische Kalibrierung" / "Automatic workout naming & barometric altitude calibration"), localized across all 9 supported locales with 100% translation parity.
+6. *Workout Starts Breakdown by Sport Type (`REQ-UI-470.6`)*:
+• In `KnownLocationsViewModel`, the system SHALL compute `sportStartsByLocationId: Map<Long, SportStartsCount>` by partitioning workouts starting at each location into `SportStartsCount(bike: Int, run: Int, other: Int)`.
+• In `KnownLocationCard` (`KnownLocationsScreen.kt`), the starts metric row (`onShowWorkouts`, test tag `location_starts_badge_${item.id}`) SHALL replace the static runner icon (`Icons.AutoMirrored.Filled.DirectionsRun`) with a dynamic breakdown of sports having `count > 0`, ordered canonically per design guidelines: Bike (`R.drawable.bsport_bike`), Run (`R.drawable.bsport_run`), and Other (`R.drawable.bsport_other` on far right). Each sport item SHALL display its authentic multi-color vector drawable (`tint = Color.Unspecified`, 16.dp) adjacent to its formatted count in bold primary typography (`MaterialTheme.typography.bodyMedium`, `FontWeight.Bold`, `MaterialTheme.colorScheme.primary`).
+• When `total == 0` (no historical workouts matched), it SHALL display `0 Starts` (`R.plurals.known_locations_starts`) with default styling as a fallback.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new `REQ-UI-470` refining `REQ-UI-165` (*Known Locations Management Screen*), `REQ-UI-224` (*Calibrated Zoom Math for KnownLocationCard*), and `REQ-SET-095` (*Home Base Location Tagging*).
-2. *Historical Origin & Commit Trace*: `44d51eac` (ATT-1816), `d7b00bf8` (ATT-1878), `c6f65b71` (ATT-5889).
-3. *Root Reason for Existing Formulation*: Conservative zoom (`MAX_ZOOM = 12.5f`) and standing pin (`36dp`) were carried over from full-screen maps before the 116x80dp thumbnail was introduced; FAB was omitted because locations originally relied solely on automatic GPS discovery; subtitle reused the dropdown action text.
-4. *Preservation of Core Invariants*: Harmonized unboxed card layout (ATT-5887), context menu (`Home`, `Merge`, `Delete`), geofence radius adjustment, altitude editing with automatic write-protection (`isLocked = 1`), and 100% 9-language translation parity are strictly preserved.
+1. *Original Requirement ID & Target*: Net-new `REQ-UI-470` refining `REQ-UI-165` (*Known Locations Management Screen*), `REQ-UI-224` (*Calibrated Zoom Math for KnownLocationCard*), and `REQ-SET-095` (*Home Base Location Tagging*); refined by `ATT-6211` (`REQ-UI-470.2`) and `ATT-6210` (`REQ-UI-470.6`, refining `REQ-UI-469.2`).
+2. *Historical Origin & Commit Trace*: `44d51eac` (ATT-1816), `d7b00bf8` (ATT-1878), `c6f65b71` (ATT-5889), `ce73d561` (ATT-5884), `e14d805f` (ATT-5887).
+3. *Root Reason for Existing Formulation*: Conservative zoom (`MAX_ZOOM = 12.5f`) and standing pin (`36dp`) were carried over from full-screen maps before the 116x80dp thumbnail was introduced; static runner icon was an interim placeholder when unboxing cards before sport aggregation was introduced; subtitle reused the dropdown action text.
+4. *Preservation of Core Invariants*: Harmonized unboxed card layout (ATT-5887), context menu (`Home`, `Merge`, `Delete`), geofence radius adjustment, altitude editing with automatic write-protection (`isLocked = 1`), concentric anchor `Offset(0.5f, 0.5f)`, drill-down navigation `onShowWorkouts`, and 100% 9-language translation parity are strictly preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* `KnownLocationThumbnailMap` on `KnownLocationsScreen`,
 • *When* rendered for a location with 200m radius,
-• *Then* the camera zoom level is clamped to `11.7f` (showing surrounding road/regional context), and the marker is a centered heart glyph (`anchor = Offset(0.5f, 0.5f)`) without a standing pin body.
+• *Then* the camera zoom level is clamped to `11.7f` (showing surrounding road/regional context), and the marker is a centered heart glyph (`anchor = Offset(0.5f, 0.5f)`) with canonical Material `Favorite` geometry and an opaque white halo (`alpha = 1.0f`) preventing geofence stroke bleed-through.
 • *Given* `KnownLocationsScreen`,
 • *When* the screen is displayed,
 • *Then* a `+` FAB (`known_locations_add_fab`) is visible at the bottom-end, and tapping it opens `EditKnownLocationDialog` to create a new location (`id = 0L`).
@@ -14177,8 +14183,9 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Given* `EditKnownLocationDialog`,
 • *When* viewing the "Heim-Basis" toggle row,
 • *Then* the subtitle displays `known_locations_home_base_desc` explaining automatic naming and barometric calibration instead of repeating "Als Heim-Basis festlegen".
-
-**Invariants**: Harmonized card layout and unboxed typography (REQ-UI-469); context menu options (Merge, Home, Delete); altitude edit validation and write-protection; 9-language localization parity with zero missing strings.
+• *Given* `KnownLocationCard` with historical workouts,
+• *When* the card is displayed,
+• *Then* workout starts are broken down by sport in canonical order `[Bike, Run, Other]` with multi-color vector drawables (`tint = Color.Unspecified`), or displays `0 Starts` when no workouts match.
 
 ### REQ-UI-471: Cockpit Edit-Mode Typography, Localization Parity & FAB Layout Polish [Verified]
 - **Tests**: `TST-UI-471` | **Tickets**: `ATT-5879`
@@ -14731,23 +14738,23 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 **Invariants**: `Constraints.Infinity` crash prevention per Design Guideline 5.14 via `IntrinsicSize.Min`; complete historical EWMA integrity for CTL/ATL/TSB (slicing post-EWMA); metric input parsing supports both `,` and `.`; 9-language localization parity preserved; 100% test pass rate.
 
 ### REQ-UI-496: Navigation Drawer Header Height Compactness & Vertical Clearance Guard [Verified]
-- **Tests**: `TST-UI-496` | **Tickets**: `ATT-5839`
+- **Tests**: `TST-UI-496` | **Tickets**: `ATT-5839`, `ATT-6216`
 - **Implementation**: `AppNavigationDrawer.kt` (`DrawerHeader`)
-- **Rationale**: In `AppNavigationDrawer.kt`, visual audits (`audit_02_drawer.png`) revealed that the bottom-most navigation entry `Info & Unterstützung` (`drawer__info_support`) is vertically clipped on standard portrait mobile screens, forcing users to scroll the drawer to read the final support/privacy rows. Meanwhile, `DrawerHeader()` allocated an oversized `92.dp + statusBarHeight`, leaving a wide empty band of plain sky above the app branding. Reducing the net header height by 16dp (from `92.dp` to `76.dp`) trims the unneeded top sky while keeping the bottom landscape motif intact.
+- **Rationale**: In `AppNavigationDrawer.kt`, visual audits (`audit_02_drawer.png`) revealed that the bottom-most navigation entry `Info & Unterstützung` (`drawer__info_support`) is vertically clipped on standard portrait mobile screens, forcing users to scroll the drawer to read the final support/privacy rows. Meanwhile, `DrawerHeader()` allocated an oversized `92.dp + statusBarHeight`, leaving a wide empty band of plain sky above the app branding. Reducing the net header height by 16dp (from `92.dp` to `76.dp`) trims the unneeded top sky while keeping the bottom landscape motif intact (ATT-5839). However, placing the branding row with `bottom = 6.dp` positioned the app icon and blue title directly on top of the dark forest treeline; elevating the branding row into the upper sky area (`bottom = 24.dp`) ensures optimal text contrast against the light sky while keeping the treeline and meadow clear below (ATT-6216).
 - **Description**:
 1. *Compact Header Height Bounding (`REQ-UI-496.1`)*:
    • In `AppNavigationDrawer.kt`, `DrawerHeader()` SHALL specify a total height of `76.dp + statusBarHeight` (reduced from `92.dp + statusBarHeight`).
 2. *Bottom Landscape Motif Preservation (`REQ-UI-496.2`)*:
    • The background image `R.drawable.menu_header_background` SHALL remain anchored at `Alignment.BottomCenter` with `ContentScale.FillWidth`, preserving 100% of the meadow, trees, hills, and road landscape motif at the bottom edge while trimming only the empty blue sky at the top.
-3. *Branding Row Centration & Rule 72 Icon Invariant (`REQ-UI-496.3`)*:
-   • The branding row containing the app launcher icon and title SHALL apply `padding(start = 16.dp, end = 16.dp, top = statusBarHeight, bottom = 6.dp)` with `verticalAlignment = Alignment.CenterVertically`.
+3. *Branding Row Sky Placement & Rule 72 Icon Invariant (`REQ-UI-496.3`)*:
+   • The branding row containing the app launcher icon and title SHALL apply `padding(start = 16.dp, end = 16.dp, top = statusBarHeight, bottom = 24.dp)` with `verticalAlignment = Alignment.CenterVertically`, elevating the icon and title into the open sky area above the dark forest treeline.
    • The Cervélo P3C launcher icon slot SHALL preserve its `46.dp` size and `1.81f` adaptive icon safe-zone scale factor per Rule 72 (`REQ-UI-445.4`), remaining single-line alongside the title without clipping.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
 1. *Original Requirement ID & Target*: Refines `REQ-UI-445.4` (*Navigation Drawer Header Recognition & 9-Locale Tier Naming*) and `REQ-UI-159` (*Navigation Drawer*).
-2. *Historical Origin & Commit Trace*: Introduced in `ATT-1083` (legacy header) and refined in `ATT-5371` / `ATT-5397` / `ATT-5496` (Cervélo P3C launcher branding).
-3. *Root Reason for Existing Formulation*: `92.dp + statusBarHeight` was a generous default carried over from early drawer prototypes before additional everyday items (`Info & Unterstützung`, `Pioneer/Supporter`) expanded the drawer content height.
-4. *Preservation of Core Invariants*: `Alignment.BottomCenter` landscape anchoring, single-line branding layout, `46.dp` icon size, `1.81f` safe-zone scaling, dynamic status bar handling, and 9-language localization parity MUST remain strictly preserved.
+2. *Historical Origin & Commit Trace*: Introduced in `ATT-1083` (legacy header), refined in `ATT-5371` / `ATT-5397` / `ATT-5496` (Cervélo P3C launcher branding), and adjusted in `ATT-5839` (commit `d22358e188150d59fccc929b78015a33d5a365de`) and `ATT-6216`.
+3. *Root Reason for Existing Formulation*: `ATT-5839` specified `bottom = 6.dp` with naive vertical centering within the 76dp net height band, which unintentionally pushed the branding row down into the dark treeline at the bottom of the 4:3 background image.
+4. *Preservation of Core Invariants*: `Alignment.BottomCenter` landscape anchoring, single-line branding layout, `46.dp` icon size, `1.81f` safe-zone scaling, `76.dp + statusBarHeight` overall height bounding (preserving *Info & Unterstützung* clearance), dynamic status bar handling, and 9-language localization parity MUST remain strictly preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* the Navigation Drawer on a standard portrait mobile screen,
@@ -14756,11 +14763,14 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Given* `DrawerHeader` with `R.drawable.menu_header_background`,
 • *When* the header is drawn,
 • *Then* `alignment = Alignment.BottomCenter` anchors the bottom landscape artwork (trees, hills, meadow) at the bottom edge, trimming only top sky.
+• *Given* the Navigation Drawer opened in `AppNavigationDrawer`,
+• *When* `DrawerHeader` renders the branding row,
+• *Then* the launcher icon and title are positioned vertically in the open sky area above the dark forest treeline with `bottom = 24.dp` padding, providing clear text contrast against the light sky background.
 • *Given* any supporter tier icon,
 • *When* rendered in `DrawerHeader`,
 • *Then* the launcher icon retains `46.dp` size and `1.81f` scaling without mid-row distortion.
 
-**Invariants**: `Alignment.BottomCenter` preserved; `46.dp` / `1.81f` icon scaling preserved; edge-to-edge status bar padding preserved; 100% test pass rate.
+**Invariants**: `Alignment.BottomCenter` preserved; `46.dp` / `1.81f` icon scaling preserved; edge-to-edge status bar padding preserved; *Info & Unterstützung* vertical clearance preserved; 100% test pass rate.
 
 ### REQ-UI-497: EditWorkoutScreen Hint Localization, Punctuation Normalization, Label Capitalization & Strava Row Layout Parity [Verified]
 - **Tests**: `TST-UI-497` | **Tickets**: `ATT-5838`
@@ -14837,6 +14847,147 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Then* the Rule 74 drag handle pill is visible and top corners are rounded per `BottomSheetDesign.SheetShape`.
 
 **Invariants**: Dedicated edit pencil button functional; Rule 74 bottom sheet drag handles preserved; ATT-5851 floating controls clearance intact; 100% test pass rate.
+
+### REQ-UI-499: WorkoutSummary & WorkoutSectionType: Reorderable WorkoutDetails & Photos-First Card Ordering [Verified]
+- **Tests**: `TST-UI-499` | **Tickets**: `ATT-6213`
+- **Implementation**: `WorkoutSectionType.kt`, `WorkoutDetailTabConfig.kt`, `MyPreferenceManager.kt`, `WorkoutSummary.kt`, `WorkoutMasksAndCardsSection.kt`, `TrackOnMapScreen.kt`
+- **Rationale**: In the Workout Summary list card (`WorkoutSummary.kt`), `WorkoutDetails` (*Zeit aktiv / Distanz / Höhenmeter*) was previously hardcoded above the dynamic section loop alongside `WorkoutHeader`. This prevented athletes from placing Photos (`PHOTOS`) or other sections directly below `WorkoutHeader` and above `WorkoutDetails`. The system SHALL unify `WorkoutSectionType` with `WorkoutDetailSectionType`, making `WorkoutDetails` an independent, reorderable section in `WorkoutSectionType` while keeping `WorkoutHeader` as the sole permanent top identity anchor (ATT-6213):
+- **Description**:
+1. *Section Domain Model Unification (`REQ-UI-499.1`)*:
+   • `WorkoutSectionType` SHALL define enum constant `DETAILS(R.string.workout_detail_section_details)`.
+   • In `WorkoutDetailTabConfig.kt`, `WorkoutDetailSectionType.toWorkoutSectionTypeOrNull()` SHALL map `WorkoutDetailSectionType.DETAILS` to `WorkoutSectionType.DETAILS`.
+   • `WorkoutSectionType.toWorkoutDetailSectionType()` SHALL map `WorkoutSectionType.DETAILS` to `WorkoutDetailSectionType.DETAILS`.
+   • `WorkoutSectionType.DEFAULT_ORDER` SHALL contain 12 elements with `DETAILS` at index 0: `[DETAILS, DESCRIPTION, EXTREMA, PHOTOS, MAP, ELEVATION, CHARTS, ZONES, GRADE_DISTRIBUTION, LAPS, EXPORT_STATUS, STRAVA]`.
+2. *Backwards-Compatible Preference Migration (`REQ-UI-499.2`)*:
+   • In `WorkoutSectionType.fromSerializedString(serialized: String?)`, if the deserialized list does not contain `DETAILS`:
+     - If the first element is `PHOTOS` (`parsed.firstOrNull() == WorkoutSectionType.PHOTOS`), `DETAILS` SHALL be inserted at index 1 (preserving `PHOTOS` above `DETAILS`).
+     - Otherwise, `DETAILS` SHALL be inserted at index 0 (preserving the classic layout where details precede all secondary sections).
+3. *Visibility Preference Persistence (`REQ-UI-499.3`)*:
+   • `WorkoutCardSectionPreferences` SHALL include `val showDetails: Boolean = true`.
+   • `MyPreferenceManager` SHALL persist `WORKOUT_CARD_SHOW_DETAILS` to DataStore (defaulting to `true`).
+4. *Dynamic Section Loop & Divider Execution (`REQ-UI-499.4`)*:
+   • In `WorkoutSummary.kt`, `WorkoutHeader` SHALL remain permanently anchored at the top of the card.
+   • The hardcoded `WorkoutDetails(...)` invocation above `workoutSectionsOrder.forEach` SHALL be removed.
+   • `WorkoutDetails(...)` SHALL be rendered dynamically within `workoutSectionsOrder.forEach` under branch `WorkoutSectionType.DETAILS`, gated by `preferences.showDetails`.
+   • Exactly one `HorizontalDivider` SHALL separate `WorkoutHeader` from the first visible section; sections rendering first SHALL NOT produce duplicate consecutive dividers.
+5. *Settings Matrix Feature Row & Modularity (`REQ-UI-499.5`)*:
+   • `WorkoutMasksAndCardsSection.kt` SHALL map `WorkoutSectionType.DETAILS` to `MatrixFeatureRow` with localized title `R.string.workout_detail_section_details` and checkbox bound to `showDetails`.
+   • `WorkoutMasksAndCardsSection.kt` SHALL remain strictly under 400 lines of code.
+6. *Exhaustive Caller Handling (`REQ-UI-499.6`)*:
+   • In `TrackOnMapScreen.kt`, `WorkoutSectionType.DETAILS` SHALL be handled in `preMapSections` and `postMapSections` `when` blocks to ensure exhaustive enum coverage without runtime exception.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines and amends `REQ-UI-255` (*Customizable Section Reordering for Workout Summaries and Details*) and `REQ-UI-210` (*Workout Card Section Visibility Matrix*). Targets `WorkoutSectionType.kt`, `WorkoutDetailTabConfig.kt`, `MyPreferenceManager.kt`, `WorkoutSummary.kt`, `WorkoutMasksAndCardsSection.kt`, and `TrackOnMapScreen.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-40.11 (`ATT-1714`, commit `56375eeb7c13`) established `WorkoutHeader` and `WorkoutDetails` as mandatory non-configurable anchors; `ATT-2176` added dynamic reordering for secondary sections but kept `WorkoutDetails` pinned above the loop; `ATT-5474` added `PHOTOS` to `WorkoutSectionType`.
+3. *Root Reason for Existing Formulation*: Core summary metrics (`WorkoutDetails`) were originally viewed as inseparable from workout identity and required to be immediately visible at the top of every card.
+4. *Preservation of Core Invariants*: `WorkoutHeader` remains permanently and non-configurably anchored at the top of every summary card. `showDetails` defaults to `true` and `DETAILS` defaults to index 0, ensuring 100% visual layout preservation for existing installs while unlocking user reordering (e.g. photos above details).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a workout with attached photos and `workoutSectionsOrder` where `PHOTOS` precedes `DETAILS`,
+• *When* `WorkoutSummary` renders the workout card,
+• *Then* `WorkoutHeader` appears at the top, followed immediately by `WorkoutPhotoStrip` (`PHOTOS`), and `WorkoutDetails` renders below the photos.
+• *Given* the Workout Card configuration in `WorkoutMasksAndCardsSection`,
+• *When* the user inspects the reorderable section list,
+• *Then* `DETAILS` (`R.string.workout_detail_section_details`) appears with a visibility checkbox (`showDetails`) and drag handle, allowing drag-and-drop reordering.
+• *Given* a legacy serialized order string without `DETAILS` where `PHOTOS` was placed at index 0,
+• *When* `WorkoutSectionType.fromSerializedString` deserializes the string,
+• *Then* `DETAILS` is inserted at index 1, preserving `PHOTOS` at index 0 above `DETAILS`.
+• *Given* a legacy serialized order string without `DETAILS` where `DESCRIPTION` or other sections were at index 0,
+• *When* `WorkoutSectionType.fromSerializedString` deserializes the string,
+• *Then* `DETAILS` is inserted at index 0, maintaining the details-first layout.
+
+**Invariants**: `WorkoutHeader` permanently anchored at top; backward-compatible preference migration; `WorkoutMasksAndCardsSection.kt` < 400 lines; 100% 9-language localization parity; 100% clean-room test suite pass rate.
+
+### REQ-UI-500: MapDetailLayout Unified Top-End Floating Actions Stacking & Adaptive Layers Button Placement [Verified]
+- **Tests**: `TST-UI-500` | **Tickets**: `ATT-6214`
+- **Implementation**: `MapDetailLayout.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `RouteOnMapScreen.kt`
+- **Rationale**: In `MapDetailLayout.kt`, the floating Share FAB was previously placed as an independent `Surface` at `Alignment.TopEnd` with `padding(16.dp)`, while callers with secondary actions (`TrackOnMapScreen.kt` and `RouteOnMapScreen.kt`) independently positioned their Layers buttons via hardcoded `padding(top = 76.dp, end = 16.dp)` inside `overlay`. When ATT-5809 suppressed the floating Share button for workouts (`showFloatingShareButton = workoutData == null`), a 60dp empty gap was left above the Layers button on `TrackOnMapScreen.kt`. The system SHALL unify top-end floating action stacking in `MapDetailLayout`, enabling the Layers button to adaptively dock at `top = 16.dp` when the Share button is absent, and naturally stack at `top = 76.dp` when the Share button is present, without hardcoded offsets in caller screens (ATT-6214):
+- **Description**:
+1. *MapDetailLayout Unified Top-End Actions Slot (`REQ-UI-500.1`)*:
+   • `MapDetailLayout` SHALL accept a parameter `topEndActions: @Composable (ColumnScope.() -> Unit)? = null`.
+   • Inside the floating controls `Box(Modifier.fillMaxSize().padding(top = controlsTopOffsetDp))`, all top-end actions SHALL be rendered within a single `Column`:
+     ```kotlin
+     Column(
+         modifier = Modifier
+             .align(Alignment.TopEnd)
+             .padding(16.dp),
+         verticalArrangement = Arrangement.spacedBy(16.dp),
+         horizontalAlignment = Alignment.End
+     ) {
+         if (showFloatingShareButton) {
+             // Share button Surface (44.dp)
+         }
+         topEndActions?.invoke(this)
+     }
+     ```
+2. *WorkoutDetailTabbedContent Top-End Actions Forwarding (`REQ-UI-500.2`)*:
+   • `WorkoutDetailTabbedContent` SHALL accept parameter `mapTopEndActions: @Composable (ColumnScope.() -> Unit)? = null` (defaulting to `null`) and forward it directly to `MapDetailLayout.topEndActions` across both single-pane and split-pane configurations.
+3. *TrackOnMapScreen Adaptive Layers Placement (`REQ-UI-500.3`)*:
+   • In `TrackOnMapScreen.kt` (single-pane and split-pane layouts), the technical tracks Layers button SHALL be migrated from `mapOverlay` to `mapTopEndActions` without caller-side `align(Alignment.TopEnd)` or hardcoded `padding(top = 76.dp, end = 16.dp)`.
+   • When viewing a workout map (`showFloatingShareButton == false`), the Layers button SHALL dock at `top = 16.dp` (plus `controlsTopOffsetDp` status bar inset).
+4. *RouteOnMapScreen Top-End Action Migration (`REQ-UI-500.4`)*:
+   • In `RouteOnMapScreen.kt`, the route overlay Layers button SHALL be passed via `topEndActions` to `MapDetailLayout` without hardcoded `padding(top = 76.dp, end = 16.dp)`.
+   • When the route Share button is visible (`showFloatingShareButton == true`), the Layers button SHALL automatically stack 16dp below the 44dp Share button, maintaining `top = 76.dp` layout parity with zero hardcoding.
+5. *Preservation of System Invariants (`REQ-UI-500.5`)*:
+   • REQ-UI-491 status bar inset clearance (`controlsTopOffsetDp`) SHALL govern the top offset of both the Share button and all `topEndActions`.
+   • 44dp touch target sizing, `CircleShape`, 6dp shadow elevation, `TTAlpha.Overlay` surface styling, and dropdown menu functionality MUST remain strictly preserved.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-UI-308` (Clause 2, *Route Map Layers Menu UI & Ergonomic Parity*) and complements `REQ-UI-491` (*Status Bar Clearance for Floating Map Controls*). Targets `MapDetailLayout.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, and `RouteOnMapScreen.kt`.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-2763` (`REQ-UI-308`, hardcoded `76.dp` in `RouteOnMapScreen`), `ATT-5809` (suppressed floating Share FAB for workouts), and `ATT-5851` (`REQ-UI-491`, `controlsTopOffsetDp`).
+3. *Root Reason for Existing Formulation*: `top = 76.dp` was originally hardcoded in individual caller screens as a static offset (`16.dp top + 44.dp share + 16.dp space = 76.dp`) before `showFloatingShareButton` became dynamic in ATT-5809.
+4. *Preservation of Core Invariants*: Status bar inset clearance (`controlsTopOffsetDp`), 44dp button sizes, layer dropdown toggle logic, permanent route polyline anchoring, and 100% test pass rate remain strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `TrackOnMapScreen` displaying a workout track where `showFloatingShareButton == false`,
+• *When* the map canvas is rendered,
+• *Then* the technical tracks Layers button docks at `top = 16.dp` (plus `controlsTopOffsetDp`), leaving zero empty gap above it.
+• *Given* `RouteOnMapScreen` displaying a route where `showFloatingShareButton == true`,
+• *When* the map canvas is rendered,
+• *Then* the Share button renders at `top = 16.dp` and the route Layers button stacks directly below it at `top = 76.dp` via `Arrangement.spacedBy(16.dp)`.
+• *Given* `MapDetailLayout` with both Share button and `topEndActions`,
+• *When* system status bars are present,
+• *Then* both Share and `topEndActions` are padded by `controlsTopOffsetDp`, preserving REQ-UI-491 status bar clearance.
+
+**Invariants**: `controlsTopOffsetDp` status bar clearance; 44dp button touch targets; `CircleShape` with `TTAlpha.Overlay`; dropdown menus interactive; 100% test pass rate.
+
+### REQ-UI-501: SupporterScreen & SupporterComponents: Tier Hierarchy & Lower Tier De-Emphasis [Verified]
+- **Tests**: `TST-UI-501` | **Tickets**: `ATT-6286`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/supporter/SupporterComponents.kt`, `SupporterScreen.kt`, `SupporterTier.kt`, `res/values*/strings_monetization.xml`, `SupporterPlanCardHierarchyTest.kt`
+- **Rationale**: In `SupporterScreen.kt` and `SupporterComponents.kt` (`SupporterPlanCard`), lower tiers (Bronze) currently render a filled primary `Button` ("Fördern") when a higher tier (Silver/Gold/Diamond) is active, causing visual competition. Furthermore, the "Empfehlung" badge on Silver is rendered unconditionally, cluttering the view for existing Silver/Gold/Diamond athletes.
+- **Description**:
+  1. *Effective Tier Parameter & Visual Plan Hierarchy (`REQ-UI-501.1`)*:
+     - `SupporterPlanCard` in `SupporterComponents.kt` SHALL accept `effectiveTier: SupporterTier` (passed from `SupporterScreen.kt`). Based on `plan.tier.rank` vs `effectiveTier.rank`, cards SHALL render in one of three mutually exclusive visual states:
+       a. *Lower Tier / Downgrade* (`effectiveTier.isPro && effectiveTier != SupporterTier.PIONEER && plan.tier.rank < effectiveTier.rank`): standard `surface` container, thin `0.5.dp` `outlineVariant` border, slightly muted typography, suppressed recommendation badge, and subtle `OutlinedButton` labeled "Wechseln" / "Switch" (`R.string.supporter_plan_button_switch`).
+       b. *Current Active Tier* (`plan.tier == effectiveTier`): highlighted `1.5.dp` `primary` border, subtle container tint (`MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)`), suppressed recommendation badge, and disabled `OutlinedButton` labeled "Aktiv" / "Active" (`R.string.supporter_plan_button_active`).
+       c. *Higher Tier / Upgrade* (or `effectiveTier in (FREE, PIONEER)`): filled primary `Button` labeled "Fördern" / "Support" (`R.string.supporter_plan_button_support`).
+  2. *Conditional Recommendation Badge Suppression (`REQ-UI-501.2`)*:
+     - The "Empfehlung" badge (`R.string.supporter_recommended_badge`) and recommendation container highlight on `silver-yearly` (`plan.isRecommended == true`) SHALL be rendered strictly when `effectiveTier.rank < SupporterTier.SILVER.rank` (Free, Pioneer, Bronze).
+     - For athletes with `effectiveTier.rank >= SupporterTier.SILVER.rank` (Silver, Gold, Diamond), the badge and recommendation highlight SHALL be suppressed.
+  3. *Domain-Partitioned 9-Language Localization Parity (`REQ-UI-501.3`)*:
+     - `supporter_plan_button_switch` SHALL be partitioned into domain resource `strings_monetization.xml` across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with 100% translation parity.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-SET-086` / `REQ-UI-445.4` (`SupporterPlanCard` presentation). Targets `SupporterComponents.kt`, `SupporterScreen.kt`, and `strings_monetization.xml`.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-5371` (`REQ-SET-086.4`), `ATT-5496` (`REQ-UI-445.4`, 44dp tier emblems).
+3. *Root Reason for Existing Formulation*: Recommendation highlights were created to guide prospective subscribers. Suppressing them once Silver is attained preserves conversion intent while eliminating noise. Downgrades remain possible via subtle "Wechseln" without competing with upgrades.
+4. *Preservation of Core Invariants*: Full-color 44dp emblems remain visible on all cards; existing purchase action handlers and Google Play subscription linking remain unaffected; 100% test pass rate.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an active Silver supporter (`effectiveTier == SupporterTier.SILVER`),
+• *When* opening `SupporterScreen`,
+• *Then* Bronze cards render subtle `OutlinedButton` ("Wechseln") with surface container, Silver renders disabled `OutlinedButton` ("Aktiv") without "Empfehlung" badge, and Gold/Diamond render primary `Button` ("Fördern").
+• *Given* an active Gold or Diamond supporter,
+• *When* opening `SupporterScreen`,
+• *Then* Silver renders subtle `OutlinedButton` ("Wechseln") without "Empfehlung" badge or primary highlight.
+• *Given* a Free or Pioneer athlete,
+• *When* opening `SupporterScreen`,
+• *Then* Silver renders the "Empfehlung" badge and container highlight, and all non-current plans render primary `Button` ("Fördern").
+
+**Invariants**: Full-color 44dp tier emblems (`REQ-UI-445.4`); single-line buttons without text wrapping (`Rule 38`); 9-locale translation parity; 100% test pass rate.
+
+
+
 
 
 

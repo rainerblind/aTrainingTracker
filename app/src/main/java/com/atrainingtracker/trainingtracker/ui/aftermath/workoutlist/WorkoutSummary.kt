@@ -106,6 +106,7 @@ fun WorkoutSummary(
     onDeleteRequest: () -> Unit,
     onEditWorkout: () -> Unit,
     onMapClick: () -> Unit,
+    onShareMapSnapshot: ((WorkoutData) -> Unit)? = null,
     modifier: Modifier = Modifier,
     onClusterClick: ((Long) -> Unit)? = null,
     onMarkFinished: (() -> Unit)? = null,
@@ -243,32 +244,45 @@ fun WorkoutSummary(
             color = MaterialTheme.colorScheme.outlineVariant
         )
 
-        WorkoutDetails(
-            data = workoutData.detailsData,
-            modifier = mapClickModifier,
-            enableCogganPowerMetrics = effectiveTuningConfig.enableCogganPowerMetrics,
-            showCogganPowerInWorkoutSummary = effectiveTuningConfig.showCogganPowerInWorkoutSummary,
-            enableAerobicEfficiencyModel = effectiveTuningConfig.enableAerobicEfficiencyModel,
-            showAerobicEfficiencyInWorkoutSummary = effectiveTuningConfig.showAerobicEfficiencyInWorkoutSummary,
-            enableCriticalPowerModel = effectiveTuningConfig.enableCriticalPowerModel,
-            showCriticalPowerInWorkoutSummary = effectiveTuningConfig.showCriticalPowerInWorkoutSummary
-        )
-
         val workoutStartMs = workoutData.startTimeS * 1000L
         val workoutEndMs = (workoutData.startTimeS + workoutData.totalTimeSec) * 1000L
 
-        // 2. Dynamic Section Rendering Loop (REQ-UI-255)
+        // 2. Dynamic Section Rendering Loop (REQ-UI-255 / REQ-UI-499)
         val hasMap = isPlayServiceAvailable && workoutData.mapPolyline != ""
         val hasElevation = workoutData.encodedAltitudes.isNotEmpty() || hasMap
+        var renderedAnySection = false
 
         workoutSectionsOrder.forEach { sectionType ->
             when (sectionType) {
+                WorkoutSectionType.DETAILS -> {
+                    if (preferences.showDetails) {
+                        if (renderedAnySection) {
+                            HorizontalDivider(
+                                modifier = Modifier.fillMaxWidth(),
+                                thickness = 0.5.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant
+                            )
+                        }
+                        WorkoutDetails(
+                            data = workoutData.detailsData,
+                            modifier = mapClickModifier,
+                            enableCogganPowerMetrics = effectiveTuningConfig.enableCogganPowerMetrics,
+                            showCogganPowerInWorkoutSummary = effectiveTuningConfig.showCogganPowerInWorkoutSummary,
+                            enableAerobicEfficiencyModel = effectiveTuningConfig.enableAerobicEfficiencyModel,
+                            showAerobicEfficiencyInWorkoutSummary = effectiveTuningConfig.showAerobicEfficiencyInWorkoutSummary,
+                            enableCriticalPowerModel = effectiveTuningConfig.enableCriticalPowerModel,
+                            showCriticalPowerInWorkoutSummary = effectiveTuningConfig.showCriticalPowerInWorkoutSummary
+                        )
+                        renderedAnySection = true
+                    }
+                }
                 WorkoutSectionType.DESCRIPTION -> {
                     if (preferences.showDescription) {
                         WorkoutDescription(
                             data = workoutData.descriptionData,
                             modifier = mapClickModifier
                         )
+                        renderedAnySection = true
                     }
                 }
                 WorkoutSectionType.EXTREMA -> {
@@ -277,6 +291,7 @@ fun WorkoutSummary(
                             data = workoutData.extremaData,
                             modifier = mapClickModifier
                         )
+                        renderedAnySection = true
                     }
                 }
                 WorkoutSectionType.LAPS -> {
@@ -297,6 +312,7 @@ fun WorkoutSummary(
                                 showMoveBoundarySheet = true
                             }
                         )
+                        renderedAnySection = true
                     }
                 }
                 WorkoutSectionType.STRAVA -> {
@@ -309,6 +325,7 @@ fun WorkoutSummary(
                         StravaActivitySection(
                             rawActivityJson = workoutData.stravaActivityData
                         )
+                        renderedAnySection = true
                     }
                 }
                 WorkoutSectionType.MAP -> {
@@ -332,6 +349,7 @@ fun WorkoutSummary(
                             endTitle = endTitle,
                             onMapClick = { onMapClick() }
                         )
+                        renderedAnySection = true
                     }
                 }
                 WorkoutSectionType.ELEVATION -> {
@@ -348,6 +366,7 @@ fun WorkoutSummary(
                                 .height(100.dp)
                                 .clickable { onMapClick() }
                         )
+                        renderedAnySection = true
                     }
                 }
                 WorkoutSectionType.CHARTS -> {
@@ -541,11 +560,9 @@ fun WorkoutSummary(
                 }
                 WorkoutSectionType.PHOTOS -> {
                     if (preferences.showPhotos && (workoutPhotos.isNotEmpty() || preferences.showPhotoAddButton)) {
-                        HorizontalDivider(
-                            modifier = Modifier.padding(horizontal = 12.dp),
-                            thickness = 0.5.dp,
-                            color = MaterialTheme.colorScheme.outlineVariant
-                        )
+                        if (renderedAnySection) {
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 12.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                        }
                         WorkoutPhotoStrip(
                             photos = workoutPhotos,
                             onPhotoClick = { photo -> activePreviewPhoto = photo },
@@ -562,6 +579,7 @@ fun WorkoutSummary(
                             startTimeMs = workoutStartMs,
                             endTimeMs = workoutEndMs
                         )
+                        renderedAnySection = true
                     }
                 }
             }
@@ -635,7 +653,11 @@ fun WorkoutSummary(
             onSelectMapSnapshot = {
                 showShareModeSheet = false
                 if (workoutData.headerData.finished) {
-                    onMapClick()
+                    if (onShareMapSnapshot != null) {
+                        onShareMapSnapshot(workoutData)
+                    } else {
+                        onMapClick()
+                    }
                 }
             },
             attachedPhotos = workoutPhotos.map { it.uri }

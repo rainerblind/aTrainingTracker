@@ -84,10 +84,10 @@ class RouteOverlayLayersContractTest {
             content.contains("var hiddenSegmentIds by rememberSaveable")
         )
 
-        // 2. Overlay slot implementation in MapDetailLayout
+        // 2. Overlay / TopEndActions slot implementation in MapDetailLayout (REQ-UI-500 amending REQ-UI-308)
         assertTrue(
-            "RouteOnMapScreen must provide overlay slot to MapDetailLayout",
-            content.contains("overlay = {")
+            "RouteOnMapScreen must provide topEndActions or overlay slot to MapDetailLayout",
+            content.contains("topEndActions = {") || content.contains("overlay = {")
         )
         assertTrue(
             "RouteOnMapScreen overlay must render layers button with Icons.Default.Layers",

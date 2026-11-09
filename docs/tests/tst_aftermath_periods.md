@@ -517,6 +517,23 @@
   5. *Clean-Room Targeted Regression Execution (`TST-PER-036.5`)*:
   • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*" --tests "com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest"` verifying 100% clean-room test pass rate.
 
+### TST-PER-037: **WorkoutShareBottomSheet Option A Automated Snapshot & Share Delegation Suite** [Verified]
+- **Requirement(s)**: `REQ-PER-029` (`REQ-PER-029.1`..`REQ-PER-029.4`)
+- **Component**: `WorkoutShareBottomSheetTest.kt`, `WorkoutDetailTabbedContentTest.kt`, `MapDetailLayoutTest.kt`, `WorkoutSummaryTest.kt`
+- **Jira**: `ATT-6208`
+- **Test Description**:
+  1. *MapDetailLayout Programmatic Snapshot Trigger Contract Test (`TST-PER-037.1`, `MapDetailLayoutTest.kt`)*:
+  • Verify that `MapDetailLayout` accepts `externalSnapshotTrigger` and `onSnapshotComplete`, triggering `shouldTakeSnapshot = true` and invoking `onSnapshotComplete` after capture.
+  2. *WorkoutDetailTabbedContent Option A Automated Handoff Contract Test (`TST-PER-037.2`, `WorkoutDetailTabbedContentTest.kt`)*:
+  • Verify that selecting Option A in `WorkoutShareBottomSheet` navigates/scrolls to `mapTabIndex` and activates `externalSnapshotTrigger = true`.
+  3. *WorkoutSummary List-to-Detail Auto-Share Bridge Contract Test (`TST-PER-037.3`, `WorkoutSummaryTest.kt`)*:
+  • Verify that `WorkoutSummary` Option A selection invokes `onShareMapSnapshot` with `initialAutoShareSnapshot = true` for seamless detail navigation and automated snapshot capture.
+  4. *Floating Share Button & Top-End Actions Invariant Audit (`TST-PER-037.4`, `MapDetailLayoutTest.kt`)*:
+  • Verify that `showFloatingShareButton: Boolean = workoutData == null` is preserved intact and top-end actions dock at `16.dp` without duplicate buttons or layout regressions (REQ-UI-500).
+  5. *Clean-Room Targeted Regression Execution (`TST-PER-037.5`)*:
+  • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.map.*" --tests "com.atrainingtracker.trainingtracker.ui.aftermath.*" --tests "com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest"` verifying 100% clean-room test pass rate.
+
+
 
 
 

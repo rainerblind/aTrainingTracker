@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.knownlocations
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -267,8 +268,6 @@ fun KnownLocationsScreen(
                 onShowWorkouts = onShowWorkouts,
                 onSelectCluster = onSelectCluster,
                 onShowRoutes = onShowRoutes,
-                onSetHome = { item -> viewModel.setHomeLocation(item.id) },
-                onClearHome = { viewModel.clearHomeLocation() },
                 onMerge = { locationToMerge = it },
                 onDelete = { locationPendingDeletion = it },
                 modifier = Modifier.fillMaxSize()
@@ -373,8 +372,6 @@ private fun KnownLocationsListContent(
     onShowWorkouts: (KnownLocationItem) -> Unit = { },
     onSelectCluster: (Long) -> Unit = { },
     onShowRoutes: (KnownLocationItem) -> Unit = { },
-    onSetHome: (KnownLocationItem) -> Unit = { },
-    onClearHome: () -> Unit = { },
     onMerge: (KnownLocationItem) -> Unit = { },
     onDelete: (KnownLocationItem) -> Unit,
     modifier: Modifier = Modifier
@@ -455,13 +452,12 @@ private fun KnownLocationsListContent(
                     isMetric = uiState.isMetric,
                     linkedClusters = uiState.clustersByLocationId[item.id] ?: emptyList(),
                     startsCount = uiState.startsByLocationId[item.id] ?: item.hitCount,
+                    sportStarts = uiState.sportStartsByLocationId[item.id] ?: SportStartsCount(),
                     onEdit = { onEdit(item) },
                     onShowOnMap = { onShowOnMap(item) },
                     onShowWorkouts = { onShowWorkouts(item) },
                     onSelectCluster = onSelectCluster,
                     onShowRoutes = { onShowRoutes(item) },
-                    onSetHome = { onSetHome(item) },
-                    onClearHome = onClearHome,
                     onMerge = { onMerge(item) },
                     onDelete = { onDelete(item) }
                 )
@@ -769,6 +765,37 @@ private fun KnownLocationThumbnailMap(
 }
 
 /**
+ * Single sport type breakdown badge item with authentic multi-color vector graphic and bold primary count (REQ-UI-470.6).
+ */
+@Composable
+private fun SportStartsItem(
+    @DrawableRes iconResId: Int,
+    count: Int,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(3.dp)
+    ) {
+        Icon(
+            painter = painterResource(id = iconResId),
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+            tint = Color.Unspecified
+        )
+        Text(
+            text = count.toString(),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+/**
  * Modern location card with icon badge, inline metrics, and universal delete-only long-press context menu.
  */
 @Composable
@@ -777,13 +804,12 @@ private fun KnownLocationCard(
     isMetric: Boolean,
     linkedClusters: List<WorkoutCluster> = emptyList(),
     startsCount: Int = item.hitCount,
+    sportStarts: SportStartsCount = SportStartsCount(),
     onEdit: () -> Unit,
     onShowOnMap: () -> Unit = {},
     onShowWorkouts: () -> Unit = {},
     onSelectCluster: (Long) -> Unit = {},
     onShowRoutes: () -> Unit = {},
-    onSetHome: () -> Unit = {},
-    onClearHome: () -> Unit = {},
     onMerge: () -> Unit = {},
     onDelete: () -> Unit,
     initialShowContextMenu: Boolean = false
@@ -891,28 +917,49 @@ private fun KnownLocationCard(
 
                         Spacer(modifier = Modifier.weight(1f))
 
-                        // Number of Starts (Unboxed Bottom-Anchored Primary Count, REQ-UI-195, REQ-UI-469.2)
+                        // Number of Starts (Unboxed Bottom-Anchored Primary Count & Sport Breakdown, REQ-UI-195, REQ-UI-469.2, REQ-UI-470.6)
                         Row(
                             modifier = Modifier
                                 .clickable(onClick = onShowWorkouts)
                                 .testTag("location_starts_badge_${item.id}"),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            horizontalArrangement = Arrangement.spacedBy(if (sportStarts.total > 0) 8.dp else 4.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.DirectionsRun,
-                                contentDescription = stringResource(R.string.known_locations_view_workouts),
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Text(
-                                text = pluralStringResource(R.plurals.known_locations_starts, startsCount, startsCount),
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                            if (sportStarts.total > 0) {
+                                if (sportStarts.bike > 0) {
+                                    SportStartsItem(
+                                        iconResId = R.drawable.bsport_bike,
+                                        count = sportStarts.bike
+                                    )
+                                }
+                                if (sportStarts.run > 0) {
+                                    SportStartsItem(
+                                        iconResId = R.drawable.bsport_run,
+                                        count = sportStarts.run
+                                    )
+                                }
+                                if (sportStarts.other > 0) {
+                                    SportStartsItem(
+                                        iconResId = R.drawable.bsport_other,
+                                        count = sportStarts.other
+                                    )
+                                }
+                            } else {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.DirectionsRun,
+                                    contentDescription = stringResource(R.string.known_locations_view_workouts),
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = pluralStringResource(R.plurals.known_locations_starts, startsCount, startsCount),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                         }
                     }
 
@@ -937,38 +984,6 @@ private fun KnownLocationCard(
                 expanded = showContextMenu,
                 onDismissRequest = { showContextMenu = false }
             ) {
-                if (item.isHome) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.known_locations_remove_home)) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Home,
-                                contentDescription = null
-                            )
-                        },
-                        onClick = {
-                            showContextMenu = false
-                            onClearHome()
-                        },
-                        modifier = Modifier.testTag("location_clear_home_action_${item.id}")
-                    )
-                } else {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.known_locations_set_home)) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Home,
-                                contentDescription = null
-                            )
-                        },
-                        onClick = {
-                            showContextMenu = false
-                            onSetHome()
-                        },
-                        modifier = Modifier.testTag("location_set_home_action_${item.id}")
-                    )
-                }
-
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.known_locations_menu_merge)) },
                     leadingIcon = {
@@ -1088,6 +1103,7 @@ private fun PreviewKnownLocationCardLight() {
                 item = previewMockLocation,
                 isMetric = true,
                 linkedClusters = listOf(previewMockCluster),
+                sportStarts = SportStartsCount(bike = 25, run = 15, other = 2),
                 onEdit = {},
                 onShowOnMap = {},
                 onShowWorkouts = {},
@@ -1106,6 +1122,7 @@ private fun PreviewKnownLocationCardDark() {
                 item = previewMockLocation,
                 isMetric = true,
                 linkedClusters = listOf(previewMockCluster),
+                sportStarts = SportStartsCount(bike = 25, run = 15, other = 2),
                 onEdit = {},
                 onShowOnMap = {},
                 onShowWorkouts = {},

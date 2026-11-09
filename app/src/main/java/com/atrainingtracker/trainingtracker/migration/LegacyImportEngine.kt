@@ -207,6 +207,7 @@ object LegacyImportEngine {
         val skippedCount = java.util.concurrent.atomic.AtomicInteger(0)
         val failedCount = java.util.concurrent.atomic.AtomicInteger(0)
         val processedCount = java.util.concurrent.atomic.AtomicInteger(0)
+        val existingSnapshot = ExistingWorkoutsSnapshot.create(context)
 
         try {
             // ATT-493 Fix: Concurrent import pipeline using coroutineScope and a worker channel.
@@ -225,7 +226,7 @@ object LegacyImportEngine {
                             listener?.onProgress(current, entries.size, entry.name)
 
                             val baseFileName = entry.name.substringBeforeLast(".").removeSuffix("-TMP").removeSuffix("~")
-                            if (isWorkoutExisting(summaryDb, baseFileName)) {
+                            if (existingSnapshot.containsFileBaseName(baseFileName)) {
                                 if (TrainingApplication.getDebug(true)) Log.d(TAG, "Skipping $baseFileName: Workout already exists.")
                                 skippedCount.incrementAndGet()
                                 continue
@@ -254,8 +255,14 @@ object LegacyImportEngine {
                                     }
                                 }
                                 when (status) {
-                                    ImportStatus.SUCCESS -> importedCount.incrementAndGet()
-                                    ImportStatus.DUPLICATE_SKIPPED -> skippedCount.incrementAndGet()
+                                    ImportStatus.SUCCESS -> {
+                                        existingSnapshot.register(baseFileName)
+                                        importedCount.incrementAndGet()
+                                    }
+                                    ImportStatus.DUPLICATE_SKIPPED -> {
+                                        existingSnapshot.register(baseFileName)
+                                        skippedCount.incrementAndGet()
+                                    }
                                     ImportStatus.FAILED -> failedCount.incrementAndGet()
                                 }
                             } catch (ce: CancellationException) {
@@ -423,6 +430,7 @@ object LegacyImportEngine {
         val skippedCount = java.util.concurrent.atomic.AtomicInteger(0)
         val failedCount = java.util.concurrent.atomic.AtomicInteger(0)
         val processedCount = java.util.concurrent.atomic.AtomicInteger(0)
+        val existingSnapshot = ExistingWorkoutsSnapshot.create(context)
 
         try {
             kotlinx.coroutines.coroutineScope {
@@ -438,7 +446,7 @@ object LegacyImportEngine {
                             listener?.onProgress(current, entries.size, entry.name)
 
                             val baseFileName = entry.name.substringBeforeLast(".").removeSuffix("-TMP").removeSuffix("~")
-                            if (isWorkoutExisting(summaryDb, baseFileName)) {
+                            if (existingSnapshot.containsFileBaseName(baseFileName)) {
                                 if (TrainingApplication.getDebug(true)) Log.d(TAG, "Skipping $baseFileName: Workout already exists.")
                                 skippedCount.incrementAndGet()
                                 continue
@@ -473,8 +481,14 @@ object LegacyImportEngine {
                                     }
                                 }
                                 when (status) {
-                                    ImportStatus.SUCCESS -> importedCount.incrementAndGet()
-                                    ImportStatus.DUPLICATE_SKIPPED -> skippedCount.incrementAndGet()
+                                    ImportStatus.SUCCESS -> {
+                                        existingSnapshot.register(baseFileName)
+                                        importedCount.incrementAndGet()
+                                    }
+                                    ImportStatus.DUPLICATE_SKIPPED -> {
+                                        existingSnapshot.register(baseFileName)
+                                        skippedCount.incrementAndGet()
+                                    }
                                     ImportStatus.FAILED -> failedCount.incrementAndGet()
                                 }
                             } catch (ce: CancellationException) {

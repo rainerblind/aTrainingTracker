@@ -129,8 +129,15 @@ public class MySensorManager extends MyDevice {
     }
 
     @Override
-    public void shutDown() {
+    public synchronized void shutDown() {
         super.shutDown();
+        for (MySensor<?> sensor : getSensors()) {
+            if (sensor instanceof ProxySensor) {
+                ((ProxySensor<?>) sensor).setSourceSensor(null);
+            }
+        }
+        mAllSensorsMapMap.clear();
+        mAccumulatedSensorTypeSet.clear();
     }
 
     // @Override
@@ -189,7 +196,9 @@ public class MySensorManager extends MyDevice {
 
             boolean newSensor = false;
             if (getBestSensor(sensorType) == null) {
-                addSensor(new ProxySensor(this, sensorType, mySensor));
+                if (getSensor(sensorType) == null) {
+                    addSensor(new ProxySensor(this, sensorType, mySensor));
+                }
                 newSensor = true;
             }
 
@@ -278,8 +287,8 @@ public class MySensorManager extends MyDevice {
                     sensorList.remove(mySensor);
                     MySensor newBestSensor = getBestSensor(sensorType);
                     if (newBestSensor == null) {
-                        if (DEBUG) Log.d(TAG, "newBestSensor == null => removeSensor");
-                        removeSensor(sensorType);
+                        if (DEBUG) Log.d(TAG, "newBestSensor == null => proxy retained, source unbound");
+                        // Retain ProxySensor in mSensorMap across unregister/register cycles (REQ-TRK-055.1)
                         sensorRemoved = true;
                     }
 
@@ -318,16 +327,11 @@ public class MySensorManager extends MyDevice {
         MySensor proxy;
         synchronized (this) {
             bestSensor = getBestSensor(sensorType);
-            if (bestSensor != null) {
-                proxy = getSensor(sensorType);
-            } else {
-                removeSensor(sensorType);
-                proxy = null;
-            }
+            proxy = getSensor(sensorType);
         }
 
-        // Invoke ProxySensor.setSourceSensor outside synchronized (this) (REQ-SEN-021.3)
-        if (bestSensor != null && proxy instanceof ProxySensor) {
+        // Invoke ProxySensor.setSourceSensor outside synchronized (this) (REQ-SEN-021.3, REQ-TRK-055.1)
+        if (proxy instanceof ProxySensor) {
             ((ProxySensor) proxy).setSourceSensor(bestSensor);
         }
     }
@@ -374,6 +378,9 @@ public class MySensorManager extends MyDevice {
         StringBuilder GCdata = new StringBuilder(EMPTY_GC_DATA);
 
         for (MySensor mySensor : getSensors()) {
+            if (mySensor instanceof ProxySensor && getBestSensor(mySensor.getSensorType()) == null) {
+                continue;
+            }
             addGCSensor(mySensor.getSensorType(), GCdata);
         }
         if (DEBUG) Log.d(TAG, "updatedGCData: " + GCdata);

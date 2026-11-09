@@ -38,7 +38,7 @@ object DatabaseSchemaRegistry {
         "SportType.db" to 3,
         "Segments.db" to 9,
         "StravaUpload.db" to 6,
-        "Equipment.db" to 2,
+        "Equipment.db" to com.atrainingtracker.trainingtracker.database.EquipmentDbHelper.DB_VERSION,
         "Pebble.db" to 3,
         "AthleteMetrics.db" to com.atrainingtracker.trainingtracker.database.AthleteMetricsDbHelper.DB_VERSION,
         "ActiveDevices.db" to 1,

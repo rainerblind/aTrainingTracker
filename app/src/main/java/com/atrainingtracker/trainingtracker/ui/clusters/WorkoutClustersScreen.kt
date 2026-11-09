@@ -86,6 +86,7 @@ fun WorkoutClustersScreen(
     var viewingWorkoutsForCluster by remember { mutableStateOf<WorkoutCluster?>(null) }
     var inspectedWorkout by remember { mutableStateOf<WorkoutData?>(null) }
     var editedWorkoutId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var autoShareSnapshotOnOpen by remember { mutableStateOf(false) }
 
     var isAdding by remember { mutableStateOf(false) }
 
@@ -128,6 +129,7 @@ fun WorkoutClustersScreen(
             BackHandler {
                 viewModel.clearPeekSelection()
                 inspectedWorkout = null
+                autoShareSnapshotOnOpen = false
             }
 
             val initialTrack = remember(workout) { workout.toMapTrack() }
@@ -142,6 +144,7 @@ fun WorkoutClustersScreen(
                 enabledTrackTypes = enabledTrackTypes,
                 onToggleTrackType = { trackOnMapViewModel.toggleTrackTypeEnabled(it) },
                 showTechnicalTracks = true,
+                initialAutoShareSnapshot = autoShareSnapshotOnOpen,
                 onClusterClick = { clusterId ->
                     viewModel.selectClusterById(clusterId)
                     inspectedWorkout = null
@@ -230,6 +233,11 @@ fun WorkoutClustersScreen(
                         onEditWorkout = { id -> editedWorkoutId = id },
                         onMapClick = { data ->
                             inspectedWorkout = data
+                            autoShareSnapshotOnOpen = false
+                        },
+                        onShareMapSnapshot = { data ->
+                            inspectedWorkout = data
+                            autoShareSnapshotOnOpen = true
                         },
                         isCompactView = isCompactView,
                         appBarOffsetPx = 0,

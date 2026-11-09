@@ -3,7 +3,7 @@
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Requirements**: 88
+**Total Requirements**: 90
 
 ---
 
@@ -1666,5 +1666,144 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • *Then* only candidates within $2\,000\text{ m}$ are displayed (sorted ascending by raw distance) and the confirmation dialog previews the resulting radius $r_{\text{new}}$ before committing.
 
 **Invariants**: Single-home exclusivity (`isHome`); user-locked altitude immutability; authoritative hit counts derived from actual workouts; strict raw numeric sorting (`ATT-3324`); explicit user confirmation (`ATT-3355`); thread confinement to `KnownLocationsDB-Thread`.
+
+### REQ-SET-096: Workout Cluster Split via Polyline Sub-Corridor Detection & Interactive Map Preview [Verified]
+- **Tests**: `TST-SET-096` | **Tickets**: `ATT-5900`
+- **Implementation**: `WorkoutClusterHeatmapScreen.kt`, `WorkoutClusterSplitSheet.kt`, `WorkoutClustersViewModel.kt`, `WorkoutClusterEngine.kt`, `WorkoutClusterCorridorDetector.kt`, `WorkoutSummariesDatabaseManager.java`, `WorkoutClusterDatabaseManager.kt`
+- **Rationale**: Large historical route clusters aggregate multiple distinct route variants sharing endpoints and total distance. Blending these variants distorts performance metrics (`Bestzeit`, `Ø Zeit`, `Ø Geschwindigkeit`) and trend analysis. The system SHALL provide an interactive "Split Cluster" (`Cluster aufteilen`) action with polyline sub-corridor clustering, color-coded preview map, adjustable sensitivity slider (`250 m – 1500 m`), editable variant names, workout renaming option, and atomic database split with centroid and statistics reconciliation (ATT-5900):
+1. *Split Action Entry Point (`REQ-SET-096.1`)*: When viewing a cluster in `WorkoutClusterHeatmapScreen` with `hitCount >= 2`, the top header action row SHALL provide a `Split Cluster` button (`R.string.cluster_split_action`, `Icons.Default.CallSplit`, `contentDescription = R.string.cluster_split_action`).
+2. *Polyline Sub-Corridor Detection Algorithm (`REQ-SET-096.2`)*:
+   - For all member workouts having valid `mapPolyline`, decode track coordinates and sample each polyline at fractional distance stations $s \in \{0.15, 0.30, 0.50, 0.70, 0.85\}$ of total distance.
+   - For any pair of polylines $P_i, P_j$, compute corridor deviation as the maximum geodesic station distance:
+     $$D(P_i, P_j) = \max_{k=1..5} \text{distanceBetween}(P_i(s_k), P_j(s_k))$$
+   - Partition workouts into sub-corridor clusters using greedy medoid clustering against a corridor width threshold $W \in [250\text{ m}, 1500\text{ m}]$ (default $W = 500\text{ m}$).
+   - The largest partition SHALL be designated Group 1 (Primary Cluster), and all other partitions sorted descending by member count as candidate split variants (Groups $2..N$).
+3. *Interactive Preview Sheet (`REQ-SET-096.3`)*:
+   - Tapping `Split Cluster` SHALL open `WorkoutClusterSplitSheet` (`AppModalBottomSheet`).
+   - The map behind the sheet SHALL render each detected corridor's member polylines in distinct palette colors (`TTColor.VariantPalette` / high-contrast distinct hues) matching the badge colors in the variant list.
+   - A Material 3 `Slider` SHALL allow live adjustment of corridor width threshold $W$ from $250\text{ m}$ to $1500\text{ m}$ in $50\text{ m}$ steps, dynamically recalculating the detected variant groups and updating map colors without blocking the UI thread.
+   - If only 1 group is detected at the current threshold, an informative notice (`R.string.cluster_split_no_variants`) SHALL be displayed and the split confirmation button disabled.
+4. *Variant List & Customization (`REQ-SET-096.4`)*:
+   - Group 1 SHALL be displayed as an unmodifiable primary row indicating it remains under the existing cluster name.
+   - Each secondary variant (Groups $2..N$) SHALL display a checkbox (checked by default), a color indicator pill matching its map polyline color, workout count, average distance, and an editable `OutlinedTextField` for cluster name pre-filled with `findUniqueClusterName(baseName)`.
+   - A checkbox option *"Workouts passend zur neuen Lieblingsstrecke umbenennen"* (`R.string.cluster_split_rename_workouts`, default `true`) SHALL allow athletes to automatically rename member workouts to match the new cluster name upon split.
+5. *Atomic Database Split & Reconciliation (`REQ-SET-096.5`)*:
+   - Upon confirming the split (`R.string.cluster_split_action_confirm`), `WorkoutClusterEngine.splitCluster(...)` SHALL execute inside an atomic SQLite transaction:
+     - For each selected variant group: insert a new `WorkoutCluster` with the customized name, probable sport ID, and weighted centroid (start, end, apex, distance, altitude extrema, bounds) calculated from its member workouts.
+     - Reassign corresponding workout rows in `WorkoutSummaries` to the new cluster ID (and update workout names if renaming is checked).
+     - Recalculate remaining weighted centroid, bounds, hit count, and preview paths for the primary cluster.
+     - Recalculate `WorkoutClusterStats` for all affected clusters.
+     - Refresh `WorkoutClusterRepository` state flows and UI map state, selecting the primary cluster without leaving broken or phantom tracks.
+6. *9-Language Parity & Zero Emojis (`REQ-SET-096.6`)*: All new user-facing strings SHALL maintain 100% parity across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) with zero decorative inline emojis (`ATT-5400`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a workout cluster with `hitCount >= 2` containing distinct route variants,
+• *When* the user taps `Split Cluster` in `WorkoutClusterHeatmapScreen`,
+• *Then* `WorkoutClusterSplitSheet` opens, displays a sensitivity slider defaulting to $500\text{ m}$, and colors variant polylines on the map according to their detected group.
+• *Given* detected variants in `WorkoutClusterSplitSheet`,
+• *When* the user drags the corridor slider from $500\text{ m}$ to $300\text{ m}$,
+• *Then* sub-corridors are recalculated dynamically, splitting or merging variant groups and updating map colors immediately without blocking the UI.
+• *Given* secondary variant groups in the split sheet,
+• *When* the user edits a variant cluster name and leaves *"Workouts passend zur neuen Lieblingsstrecke umbenennen"* checked,
+• *Then* the edited name is validated as non-blank and unique, and member workouts will be renamed upon split.
+• *Given* the user confirms the split by tapping *"Aufteilen"*,
+• *When* the atomic transaction completes,
+• *Then* new `WorkoutCluster` records are inserted, member workouts in `WorkoutSummaries` are reassigned to their respective new clusters, original and new cluster centroids and `WorkoutClusterStats` are recalculated, and the map refreshes without phantom tracks.
+• *Given* all 9 locale resource files,
+• *When* `TranslationParityTest` executes,
+• *Then* all split string keys exist, match format specifiers (`%1$s`, `%1$d`, `%2$s`, `%3$s`), and contain zero inline emojis.
+
+**Invariants**: Workouts not belonging to the cluster MUST NOT be affected; primary cluster retains unselected variants; SQLite transactional atomicity; single-source-of-truth hit count reconciliation; 9-language localization parity.
+
+### REQ-SET-097: Point-to-Point (A->B) Route Corridor Discrimination & Non-Degenerate Elliptical Apex [Verified]
+- **Tests**: `TST-SET-097` | **Tickets**: `ATT-5899`
+- **Implementation**: `WorkoutClusterEngine.kt`, `TrackerService.java`, `WorkoutClusterCorridorDetector.kt`
+- **Rationale**: On point-to-point (A -> B) routes (e.g. Sindelfingen -> Schönaich commutes), evaluating the spatial apex solely as the point of maximum distance from `start` causes the apex to collapse onto `end` ($apex \approx end$). This degenerates the 20% apex similarity term ($s_3$) into a redundant duplicate of the destination term ($s_2$), rendering `WorkoutClusterEngine` incapable of discriminating parallel route corridors (e.g. eastern forest corridor vs. central city corridor) that share identical endpoints, total distance, and elevation profile. The system SHALL compute non-degenerate elliptical apex coordinates and evaluate mid-corridor polyline deviation for candidate cluster scoring:
+1. *Non-Degenerate Elliptical Apex Calculation (`REQ-SET-097.1`)*:
+   - For all point-to-point routes where $d(\text{start}, \text{end}) \ge 150\text{ m}$, `WorkoutClusterEngine.findApexFromPoints(start, points, end)` SHALL evaluate the elliptical focal distance sum $S(P) = d(\text{start}, P) + d(P, \text{end})$ for each track coordinate $P$.
+   - Let $D = d(\text{start}, \text{end})$. If $\max_P S(P) \ge D + 20\text{ m}$ (indicating non-collinear lateral deflection or curvature), the coordinate $P$ maximizing $S(P)$ SHALL be selected as the apex (`maxDispLat`, `maxDispLng`).
+   - If $\max_P S(P) < D + 20\text{ m}$ (substantially straight collinear path), the track point closest to the 50% cumulative track distance midpoint SHALL be selected, ensuring the apex consistently anchors the mid-corridor rather than collapsing onto `end`.
+2. *Live Tracking Session Synchronization (`REQ-SET-097.2`)*:
+   - Upon live session completion, `TrackerService.java` SHALL pass `endPos` into `findApexFromPoints(startPos, points, endPos)` so that newly recorded point-to-point workouts persist the non-degenerate mid-corridor apex in `WorkoutSummaries.MAX_LINE_DISTANCE_LAT` and `LNG`.
+3. *Corridor-Aware Candidate Scoring & Disambiguation (`REQ-SET-097.3`)*:
+   - When candidate clusters share matching start and end locations ($s_1 \le 0.5$ and $s_2 \le 0.5$), and member preview polylines are available, `WorkoutClusterEngine.scoreClusters()` SHALL evaluate sampled corridor deviation against candidate cluster `previewPaths` using `WorkoutClusterCorridorDetector.samplePolylineStations()` ($s \in \{0.15, 0.30, 0.50, 0.70, 0.85\}$).
+   - Candidate clusters following the matching route corridor SHALL receive minimal corridor deviation penalty, reliably discriminating parallel variants (e.g. split clusters) between the same origin and destination.
+4. *Loop-Route Backward Compatibility (`REQ-SET-097.4`)*:
+   - For all closed-loop courses where $d(\text{start}, \text{end}) < 150\text{ m}$, the system SHALL evaluate displacement from `start` alone, preserving legacy apex coordinates, similarity calculations, and cluster matching behavior 1:1.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an A -> B point-to-point route with $d(\text{start}, \text{end}) \ge 150\text{ m}$ and a lateral corridor deflection,
+• *When* `findApexFromPoints(start, points, end)` is invoked,
+• *Then* the selected apex coordinate lies along the mid-corridor of greatest lateral deflection ($S(P) = d(\text{start}, P) + d(P, \text{end})$) and does NOT collapse onto `end`.
+• *Given* a substantially straight A -> B route where $\max S(P) < D + 20\text{ m}$,
+• *When* `findApexFromPoints(start, points, end)` is invoked,
+• *Then* the selected apex coordinate matches the 50% distance midpoint of the track.
+• *Given* two parallel candidate clusters between Sindelfingen and Schönaich separated laterally by > 500 m,
+• *When* a new workout along the eastern forest corridor is scored,
+• *Then* `WorkoutClusterEngine.scoreClusters()` evaluates polyline corridor deviation and ranks the eastern corridor cluster first.
+• *Given* a closed-loop workout where $d(\text{start}, \text{end}) < 150\text{ m}$,
+• *When* `findApexFromPoints(start, points, end)` is invoked,
+• *Then* the apex coordinate is identical to legacy $\max d(\text{start}, P)$ calculation.
+
+**Invariants**: Closed-loop apex and similarity calculations MUST remain identical; thread safety under `clusterLock`; zero regressions on existing cluster test suites.
+
+### REQ-SET-098: Equipment Lookup Normalization, Strava Import Integrity & Automatic Deduplication Reconciliation [Verified]
+- **Tests**: `TST-SET-098` | **Tickets**: `ATT-6215`
+- **Implementation**: `EquipmentDbHelper.java`, `StravaBulkExportImporter.kt`, `StravaEquipmentSynchronizeThread.java`, `WorkoutSummariesDatabaseManager.java`, `SportTypeEquipmentLinkManager.kt`
+- **Rationale**: Discrepancies in casing, trailing whitespace, and Strava ZIP import gear name pollution cause duplicate equipment records in `Equipment.db` (e.g. `'Endurance'`, `'endurance '`, `'endurance'`), fracturing workout odometer tracking and corrupting gear linkages. The system SHALL normalize gear lookups, eliminate StravaId pollution during bulk import, and automatically reconcile existing duplicate records:
+1. *Case-Insensitive & Whitespace-Trimmed Lookup (`REQ-SET-098.1`)*:
+   - `EquipmentDbHelper.getEquipmentId(db, equipmentName)` and `addOrUpdateStravaGear(...)` SHALL evaluate equipment matching using trimmed, case-insensitive comparison across both `Name` and `StravaName`: `TRIM(Name) = TRIM(?) COLLATE NOCASE OR TRIM(StravaName) = TRIM(?) COLLATE NOCASE`.
+2. *User-Customized Name Preservation (`REQ-SET-098.2`)*:
+   - When synchronizing gear from Strava API or updating existing equipment, the system SHALL preserve existing user-defined `NAME` casing and formatting, updating only `STRAVA_ID`, `STRAVA_NAME`, `FRAME_TYPE`, and `RETIRED`. `NAME` SHALL NOT be overwritten by remote casing or whitespace variants.
+3. *StravaId Pollution Prevention in Bulk Archive Ingestion (`REQ-SET-098.3`)*:
+   - `StravaBulkExportImporter` SHALL NOT persist plaintext gear names into `StravaId`. `StravaId` MUST remain `null` (or empty) for items created from `bikes.csv`, `shoes.csv`, or activity gear names until populated by an authentic Strava API synchronization with a valid identifier (`b...` / `g...`).
+4. *Automatic Deduplication & Cascade Reconciliation Migration (`REQ-SET-098.4`)*:
+   - `EquipmentDbHelper` SHALL perform an automatic deduplication migration on existing databases (`DB_VERSION` upgrade 2 -> 3) and provide an idempotent reconciliation mechanism.
+   - For all equipment sharing identical `SportType` and matching normalized name (`TRIM(Name) COLLATE NOCASE` or `TRIM(StravaName) COLLATE NOCASE` or `StravaId == Name`):
+     - The canonical record SHALL retain the user-preferred capitalized `Name`, authentic `StravaId` (e.g. `b...`/`g...`), non-retired status if any variant is active, and frame type.
+     - All hardware sensor pairings (`Links.EQUIPMENT_ID`) and sport type associations (`SportTypeEquipmentLink.equipment_id`) pointing to duplicate IDs SHALL be reassigned to the canonical ID, discarding duplicate link pairs.
+     - All historical workout records in `WorkoutSummaries.db` (`WorkoutSummaries.equipmentId`) referencing duplicate IDs SHALL be atomically reassigned to the canonical ID.
+     - Orphaned duplicate equipment rows SHALL be removed from `Equipment.db`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an existing local bike `'Endurance'` (`_id=13`) with no Strava ID,
+• *When* Strava API synchronization processes a bike named `'endurance '` with Strava ID `'b16080279'`,
+• *Then* `_id=13` is matched, `StravaId` is set to `'b16080279'`, `StravaName` is set to `'endurance '`, the local `Name` remains `'Endurance'`, and no duplicate row is created.
+• *Given* a Strava ZIP export with `bikes.csv` or `shoes.csv`,
+• *When* `StravaBulkExportImporter` ingests gear,
+• *Then* `StravaId` remains `null`, `StravaName` is set to the trimmed gear name, and no plaintext names are written into `StravaId`.
+• *Given* an existing database containing duplicate equipment records for `'Endurance'` (`_id=13`, `StravaId=null`), `'endurance '` (`_id=20`, `StravaId='b16080279'`), and `'endurance'` (`_id=22`, `StravaId='endurance'`), with workouts referencing all three IDs,
+• *When* the deduplication migration executes,
+• *Then* rows merge into `_id=13` with `Name='Endurance'` and `StravaId='b16080279'`, all `WorkoutSummaries.equipmentId` references to IDs 20 and 22 are updated to 13, and duplicate rows 20 and 22 are deleted.
+
+**Invariants**: Zero historical workout data loss; total workout odometer and summary stats remain consistent; sensor links and sport type mappings preserved without orphans; all DB operations execute within atomic SQLite transactions.
+
+### REQ-SET-099: Paired BLE Peripheral Scan-Assisted Connection & Public/Random MAC Address Classification [Verified]
+- **Tests**: `TST-SET-099` | **Tickets**: `ATT-6245`
+- **Implementation**: `MyBTLEDevice.java`, `MyBTLEDeviceAddressAndSearchTest.kt`
+- **Rationale**: Per Bluetooth Core Specification Vol 6 Part B §1.3 & §2.3, BLE address type (`Public` vs `Random`) is transmitted out-of-band in the 1-bit `TxAdd` link layer header flag rather than encoded in the MAC address string. The bitwise check `(firstOctet & 0xC0) == 0xC0` misclassifies 25% of IEEE Public MAC-48 addresses (OUI `0xC0..0xFC`, e.g. Intel `D0:C6:37`) as `ADDRESS_TYPE_RANDOM`, which causes peripherals advertising as Public to ignore connection requests on API 33+. Furthermore, speculative direct `connectGatt` populated `mBluetoothGatt` before scan assistance discovered the device, blocking `onScanResult` from utilizing the hardware-resolved `BluetoothDevice` handle. The system SHALL prioritize scan-assisted connection resolution for paired BLE peripherals and prevent conflicting unverified connections:
+1. *Authoritative Scan-Resolved GATT Connection (`REQ-SET-099.1`)*:
+   - When `MyBTLEDevice.startSearching()` initiates search, if `startScanAssistance(btAdapter)` successfully starts scanning (`mIsScanning == true`), the system SHALL defer direct `connectGatt` and allow `onScanResult()` to establish connection via `result.getDevice().connectGatt(mContext, false, mGattCallback, BluetoothDevice.TRANSPORT_LE)` using the hardware-verified `BluetoothDevice` handle.
+   - If scan assistance cannot be started (e.g. missing `BLUETOOTH_SCAN` permission), the system SHALL fall back to direct `connectGatt(...)`.
+2. *Scan Discovery GATT Handoff & Stale Guard (`REQ-SET-099.2`)*:
+   - When `mScanCallback.onScanResult()` discovers a `ScanResult` matching `mAddress` while `mState == State.SEARCHING`, the system SHALL connect using `result.getDevice().connectGatt(...)`. If a speculative or fallback `mBluetoothGatt` handle already exists, it SHALL be cleanly closed prior to connecting the new handle.
+   - `mGattCallback.onConnectionStateChange()` SHALL verify instance identity (`if (gatt != mBluetoothGatt) return;`) to ensure closing a superseded speculative GATT instance cannot clobber the active connection or trigger premature disconnection teardown.
+3. *Public and Random Address Connection Interoperability (`REQ-SET-099.3`)*:
+   - The connection pipeline SHALL establish reliable GATT connection for both Public IEEE MAC addresses with OUI in `0xC0..0xFC` (e.g. `D0:C6:37:33:67:AA`) and Random Static MAC addresses (e.g. `C6:CC:E3:F5:F0:37`, `E8:4D:74:07:F4:DD`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an unbonded paired BLE peripheral advertising with a Public IEEE MAC address whose first octet is in `0xC0..0xFC` (e.g. `D0:C6:37:33:67:AA`),
+• *When* `startSearching()` is invoked with granted scan permissions,
+• *Then* scan assistance discovers the advertisement and connects using `result.getDevice().connectGatt(...)` without timing out on a misclassified `[random]` filter.
+• *Given* an unbonded paired BLE peripheral with a Random Static MAC address (e.g. `C6:CC:E3:F5:F0:37`),
+• *When* `startSearching()` is invoked with granted scan permissions,
+• *Then* scan assistance discovers the advertisement and establishes connection via `result.getDevice().connectGatt(...)`.
+• *Given* an active search where a speculative `mBluetoothGatt` is open when `onScanResult()` matches `mAddress`,
+• *When* `onScanResult()` executes,
+• *Then* the speculative GATT instance is cleanly closed and replaced by `result.getDevice().connectGatt(...)`, and disconnection callbacks from the superseded instance are ignored.
+
+**Invariants**: Sensor data streaming, configurable search timeout, and scan lifecycle teardown (disconnect, search timeout, and shutdown) remain strictly preserved; zero regression in BLE reconnection backoff.
+
+
 
 

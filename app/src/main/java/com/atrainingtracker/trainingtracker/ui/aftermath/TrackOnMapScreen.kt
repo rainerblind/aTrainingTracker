@@ -97,7 +97,8 @@ fun TrackOnMapScreen(
     sectionsOrder: List<WorkoutSectionType>? = null,
     tabsConfig: List<WorkoutDetailTabConfig>? = null,
     onSaveTabsConfig: ((List<WorkoutDetailTabConfig>) -> Unit)? = null,
-    useTabbedLayout: Boolean = true
+    useTabbedLayout: Boolean = true,
+    initialAutoShareSnapshot: Boolean = false
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -297,6 +298,7 @@ fun TrackOnMapScreen(
             onEditWorkout = onEditWorkout,
             headerActions = headerActions,
             onOpenTabsConfig = { showTabsConfigSheet = true },
+            initialAutoShareSnapshot = initialAutoShareSnapshot,
             mapContent = {
                 tracks(filteredTracks)
                 contextualPaths(segments)
@@ -315,14 +317,11 @@ fun TrackOnMapScreen(
                     markers(markers)
                 }
             },
-            mapOverlay = {
+            mapOverlay = {},
+            mapTopEndActions = {
                 if (showTechnicalTracks) {
                     var showTrackMenu by remember { mutableStateOf(false) }
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(top = 76.dp, end = 16.dp)
-                    ) {
+                    Box {
                         Surface(
                             onClick = { showTrackMenu = true },
                             modifier = Modifier.size(44.dp),
@@ -454,21 +453,12 @@ fun TrackOnMapScreen(
             }
         },
         modifier = modifier,
-        overlay = {
+        overlay = {},
+        topEndActions = {
             if (showTechnicalTracks) {
-                // Technical Track Selection FAB (Top-Right, but below the share button handled by layout if any)
-                // Actually MapDetailLayout aligns its share button TopEnd with 16dp padding.
-                // We'll place ours just below it or to the left.
-                // Let's use a Column to stack them if needed, or just let them overlap if they are in different corners.
-                // MapDetailLayout aligns SHARE to TopEnd.
-                
                 var showTrackMenu by remember { mutableStateOf(false) }
 
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = 76.dp, end = 16.dp) // Offset vertically to not overlap share button
-                ) {
+                Box {
                     Surface(
                         onClick = { showTrackMenu = true },
                         modifier = Modifier.size(44.dp),
@@ -744,6 +734,7 @@ fun TrackOnMapScreen(
                                 )
                             }
                         }
+                        WorkoutSectionType.DETAILS,
                         WorkoutSectionType.PHOTOS,
                         WorkoutSectionType.MAP -> {
                             // Handled in Tabbed content / MapDetailLayout

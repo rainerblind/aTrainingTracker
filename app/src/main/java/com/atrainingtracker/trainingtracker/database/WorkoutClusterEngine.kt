@@ -27,6 +27,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.PolyUtil
 
 /**
  * The core logic engine for discovery and management of recurring route families (Workout Clusters).
@@ -132,12 +133,13 @@ class WorkoutClusterEngine private constructor(context: Context) {
         minAltPos: LatLng? = null,
         maxAltPos: LatLng? = null,
         cachedClusters: List<WorkoutCluster>? = null,
-        scoreThreshold: Double = runCatching { TrainingApplication.getClusterScoreThreshold().toDouble() }.getOrDefault(1.2)
+        scoreThreshold: Double = runCatching { TrainingApplication.getClusterScoreThreshold().toDouble() }.getOrDefault(1.2),
+        workoutPolyline: List<LatLng>? = null
     ): WorkoutCluster? {
         val allClusters = cachedClusters ?: dbManager.getAllClusters()
-        if (DEBUG) Log.d(TAG, "Evaluating ${allClusters.size} clusters for shape [start=$start, dist=$distance, name=$workoutName, sports=$candidateSportTypes, minAlt=$minAltPos, maxAlt=$maxAltPos, threshold=$scoreThreshold]")
+        if (DEBUG) Log.d(TAG, "Evaluating ${allClusters.size} clusters for shape [start=$start, dist=$distance, name=$workoutName, sports=$candidateSportTypes, minAlt=$minAltPos, maxAlt=$maxAltPos, threshold=$scoreThreshold, hasPoly=${workoutPolyline != null}]")
 
-        return scoreClusters(allClusters, start, end, apex, distance, workoutName, candidateSportTypes, minAltPos, maxAltPos)
+        return scoreClusters(allClusters, start, end, apex, distance, workoutName, candidateSportTypes, minAltPos, maxAltPos, workoutPolyline)
             .firstOrNull { it.second < scoreThreshold }?.first
     }
 
@@ -152,10 +154,11 @@ class WorkoutClusterEngine private constructor(context: Context) {
         minAltPos: LatLng? = null,
         maxAltPos: LatLng? = null,
         cachedClusters: List<WorkoutCluster>? = null,
-        scoreThreshold: Double = runCatching { TrainingApplication.getClusterScoreThreshold().toDouble() }.getOrDefault(1.2)
+        scoreThreshold: Double = runCatching { TrainingApplication.getClusterScoreThreshold().toDouble() }.getOrDefault(1.2),
+        workoutPolyline: List<LatLng>? = null
     ): WorkoutCluster? {
         val candidateSports = if (workoutSportType != BSportType.UNKNOWN) setOf(workoutSportType) else emptySet()
-        return suggestCluster(start, end, apex, distance, workoutName, candidateSports, minAltPos, maxAltPos, cachedClusters, scoreThreshold)
+        return suggestCluster(start, end, apex, distance, workoutName, candidateSports, minAltPos, maxAltPos, cachedClusters, scoreThreshold, workoutPolyline)
     }
 
     /**
@@ -285,21 +288,76 @@ class WorkoutClusterEngine private constructor(context: Context) {
      * O(1) Surgical update when a workout is finished (ATT-354).
      */
     /**
-     * Identifies the coordinate among the given points that maximizes geodesic
-     * distance from the specified start position (REQ-SET-063, ATT-498).
+     * Identifies the coordinate among the given points that defines the route's spatial apex (REQ-SET-063, REQ-SET-097).
+     *
+     * - For point-to-point routes (end != null and distanceBetween(start, end) >= 150m):
+     *   Maximizes the elliptical focal distance sum S(P) = d(start, P) + d(P, end).
+     *   If max S(P) < d(start, end) + 20m (indicating a substantially collinear straight path),
+     *   selects the track point closest to the 50% cumulative track distance midpoint to prevent
+     *   apex=end degeneracy.
+     * - For closed-loop routes (end == null or distanceBetween(start, end) < 150m):
+     *   Maximizes geodesic distance from start alone (since for closed loops A ≈ B,
+     *   d(start, P) + d(P, end) ≡ 2 * d(start, P)), preserving legacy behavior 100%.
      */
-    fun findApexFromPoints(start: LatLng, points: List<LatLng>): LatLng {
+    @JvmOverloads
+    fun findApexFromPoints(start: LatLng, points: List<LatLng>, end: LatLng? = null): LatLng {
         if (points.isEmpty()) return start
-        var maxDist = -1.0
-        var apex = points.first()
+        if (points.size == 1) return points.first()
+
+        val directEndDist = if (end != null) distanceBetween(start, end) else 0f
+        val isPointToPoint = end != null && directEndDist >= 150f
+
+        if (!isPointToPoint) {
+            // Legacy closed loop or unconstrained: maximize distance from start
+            var maxDist = -1.0
+            var apex = points.first()
+            for (pt in points) {
+                val d = distanceBetween(start, pt).toDouble()
+                if (d > maxDist) {
+                    maxDist = d
+                    apex = pt
+                }
+            }
+            return apex
+        }
+
+        // Point-to-point (A -> B) route: evaluate elliptical focal distance sum
+        var maxEllipticalSum = -1.0
+        var ellipticalApex = points.first()
         for (pt in points) {
-            val d = distanceBetween(start, pt).toDouble()
-            if (d > maxDist) {
-                maxDist = d
-                apex = pt
+            val dStart = distanceBetween(start, pt).toDouble()
+            val dEnd = distanceBetween(end!!, pt).toDouble()
+            val sum = dStart + dEnd
+            if (sum > maxEllipticalSum) {
+                maxEllipticalSum = sum
+                ellipticalApex = pt
             }
         }
-        return apex
+
+        // If the path has significant lateral deflection (>= direct distance + 20m), return the apex
+        if (maxEllipticalSum >= directEndDist + 20.0) {
+            return ellipticalApex
+        }
+
+        // Substantially straight / collinear path: pick point closest to 50% cumulative track length
+        val cumDistances = DoubleArray(points.size)
+        for (i in 0 until points.size - 1) {
+            cumDistances[i + 1] = cumDistances[i] + distanceBetween(points[i], points[i + 1])
+        }
+        val totalLength = cumDistances.last()
+        if (totalLength <= 0.0) return points.first()
+
+        val targetMidpoint = totalLength * 0.5
+        var bestIdx = 0
+        var minDiff = Double.MAX_VALUE
+        for (i in points.indices) {
+            val diff = Math.abs(cumDistances[i] - targetMidpoint)
+            if (diff < minDiff) {
+                minDiff = diff
+                bestIdx = i
+            }
+        }
+        return points[bestIdx]
     }
 
     fun onWorkoutFinished(context: Context, w: WorkoutData) {
@@ -488,7 +546,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
             val distance = route.summary.distance
             
             var minLat = 90.0; var maxLat = -90.0; var minLng = 180.0; var maxLng = -180.0
-            val apex = findApexFromPoints(start, path.map { it.latLng })
+            val apex = findApexFromPoints(start, path.map { it.latLng }, end)
             
             path.forEach { point ->
                 val lat = point.latLng.latitude
@@ -934,13 +992,15 @@ class WorkoutClusterEngine private constructor(context: Context) {
      * supporting multi-sport candidate evaluation (ATT-773, REQ-SET-064)
      * and optional 3D altitude extrema coordinates (ATT-502, REQ-SET-065).
      */
+    @JvmOverloads
     fun calculateSimilarity(
         start: LatLng, end: LatLng, apex: LatLng, distance: Double, 
         cluster: WorkoutCluster, 
         workoutName: String? = null,
         candidateSportTypes: Set<BSportType>,
         minAltPos: LatLng? = null,
-        maxAltPos: LatLng? = null
+        maxAltPos: LatLng? = null,
+        workoutPolyline: List<LatLng>? = null
     ): Double {
         val useAlt = minAltPos != null && maxAltPos != null &&
                      cluster.minAltLatLng != null && cluster.maxAltLatLng != null &&
@@ -965,6 +1025,27 @@ class WorkoutClusterEngine private constructor(context: Context) {
             val s3 = (distanceBetween(apex, LatLng(cluster.maxDispLat, cluster.maxDispLng)) / TrainingApplication.getClusterTolApex()) * 0.25
             val s4 = (Math.abs(distance - cluster.refDistance) / cluster.refDistance / TrainingApplication.getClusterTolDistance()) * 0.25
             s1 + s2 + s3 + s4
+        }
+
+        // Corridor deviation tie-breaking (REQ-SET-097.3, ATT-5899)
+        if (workoutPolyline != null && workoutPolyline.isNotEmpty() && cluster.previewPaths.isNotEmpty()) {
+            try {
+                val workoutStations = WorkoutClusterCorridorDetector.samplePolylineStations(workoutPolyline)
+                val minCorridorDev = cluster.previewPaths.mapNotNull { previewPoly ->
+                    val clusterPts = PolyUtil.decode(previewPoly)
+                    if (clusterPts.isNotEmpty()) {
+                        val clusterStations = WorkoutClusterCorridorDetector.samplePolylineStations(clusterPts)
+                        WorkoutClusterCorridorDetector.computeCorridorDistance(workoutStations, clusterStations)
+                    } else null
+                }.minOrNull()
+
+                if (minCorridorDev != null) {
+                    val corridorCost = (minCorridorDev / 500.0) * 0.30
+                    totalScore += corridorCost
+                }
+            } catch (e: Exception) {
+                if (DEBUG) Log.w(TAG, "Failed to compute corridor deviation for cluster ${cluster.name}", e)
+            }
         }
         
         // ATT-412 / ATT-773: Tiered Sport Type Awareness with Multi-Sport Candidate Evaluation
@@ -998,11 +1079,12 @@ class WorkoutClusterEngine private constructor(context: Context) {
         workoutName: String? = null,
         workoutSportType: BSportType = BSportType.UNKNOWN,
         minAltPos: LatLng? = null,
-        maxAltPos: LatLng? = null
+        maxAltPos: LatLng? = null,
+        workoutPolyline: List<LatLng>? = null
     ): Double = calculateSimilarity(
         start, end, apex, distance, cluster, workoutName,
         if (workoutSportType != BSportType.UNKNOWN) setOf(workoutSportType) else emptySet(),
-        minAltPos, maxAltPos
+        minAltPos, maxAltPos, workoutPolyline
     )
 
     private fun normalizeName(name: String): String = name.replace(Regex(" (?:# ?|var )\\d+$", RegexOption.IGNORE_CASE), "").trim().lowercase()
@@ -1012,12 +1094,14 @@ class WorkoutClusterEngine private constructor(context: Context) {
         migrateHistory(context, listener) 
     }
 
+    @JvmOverloads
     fun getClusterScores(
         start: LatLng, end: LatLng, apex: LatLng, distance: Double, 
         workoutName: String? = null, 
         candidateSportTypes: Set<BSportType>,
         minAltPos: LatLng? = null,
-        maxAltPos: LatLng? = null
+        maxAltPos: LatLng? = null,
+        workoutPolyline: List<LatLng>? = null
     ): List<Pair<WorkoutCluster, Double>> {
         val summariesManager = WorkoutSummariesDatabaseManager.getInstance(appContext)
         val actualCounts = summariesManager.workoutCountsForAllClusters
@@ -1034,7 +1118,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
                 cluster
             }
         }
-        return scoreClusters(clusters, start, end, apex, distance, workoutName, candidateSportTypes, minAltPos, maxAltPos)
+        return scoreClusters(clusters, start, end, apex, distance, workoutName, candidateSportTypes, minAltPos, maxAltPos, workoutPolyline)
     }
 
     @JvmOverloads
@@ -1043,22 +1127,25 @@ class WorkoutClusterEngine private constructor(context: Context) {
         workoutName: String? = null, 
         workoutSportType: BSportType = BSportType.UNKNOWN,
         minAltPos: LatLng? = null,
-        maxAltPos: LatLng? = null
+        maxAltPos: LatLng? = null,
+        workoutPolyline: List<LatLng>? = null
     ): List<Pair<WorkoutCluster, Double>> = getClusterScores(
         start, end, apex, distance, workoutName,
         if (workoutSportType != BSportType.UNKNOWN) setOf(workoutSportType) else emptySet(),
-        minAltPos, maxAltPos
+        minAltPos, maxAltPos, workoutPolyline
     )
 
+    @JvmOverloads
     fun scoreClusters(
         clusters: List<WorkoutCluster>, 
         start: LatLng, end: LatLng, apex: LatLng, distance: Double, 
         workoutName: String? = null, 
         candidateSportTypes: Set<BSportType>,
         minAltPos: LatLng? = null,
-        maxAltPos: LatLng? = null
+        maxAltPos: LatLng? = null,
+        workoutPolyline: List<LatLng>? = null
     ): List<Pair<WorkoutCluster, Double>> = clusters.map { 
-        it to calculateSimilarity(start, end, apex, distance, it, workoutName, candidateSportTypes, minAltPos, maxAltPos) 
+        it to calculateSimilarity(start, end, apex, distance, it, workoutName, candidateSportTypes, minAltPos, maxAltPos, workoutPolyline) 
     }.sortedBy { it.second }
 
     @JvmOverloads
@@ -1068,11 +1155,12 @@ class WorkoutClusterEngine private constructor(context: Context) {
         workoutName: String? = null, 
         workoutSportType: BSportType = BSportType.UNKNOWN,
         minAltPos: LatLng? = null,
-        maxAltPos: LatLng? = null
+        maxAltPos: LatLng? = null,
+        workoutPolyline: List<LatLng>? = null
     ): List<Pair<WorkoutCluster, Double>> = scoreClusters(
         clusters, start, end, apex, distance, workoutName,
         if (workoutSportType != BSportType.UNKNOWN) setOf(workoutSportType) else emptySet(),
-        minAltPos, maxAltPos
+        minAltPos, maxAltPos, workoutPolyline
     )
 
     fun moveWorkoutToCluster(context: Context, workoutId: Long, currentClusterId: Long, newClusterId: Long) {
@@ -1218,6 +1306,185 @@ class WorkoutClusterEngine private constructor(context: Context) {
             dbManager.deleteCluster(sourceId)
 
             return true
+        }
+    }
+
+    /**
+     * Splits a cluster into one or more newly created clusters and reconciles the original cluster (REQ-SET-096.5, ATT-5900).
+     *
+     * @param context Application context.
+     * @param primaryClusterId Database ID of the cluster being split.
+     * @param variantsToSplit List of pairs mapping suggested/custom cluster names to member [WorkoutData] lists.
+     * @param renameWorkouts Whether to rename member workouts according to the new cluster name and sequential numbering.
+     * @return List of newly created cluster IDs.
+     */
+    fun splitCluster(
+        context: Context,
+        primaryClusterId: Long,
+        variantsToSplit: List<Pair<String, List<WorkoutData>>>,
+        renameWorkouts: Boolean = true
+    ): List<Long> {
+        synchronized(clusterLock) {
+            val primaryCluster = dbManager.getClusterById(primaryClusterId) ?: return emptyList()
+            if (variantsToSplit.isEmpty()) return emptyList()
+
+            val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
+            val summariesDb = summariesManager.database
+            val createdClusterIds = mutableListOf<Long>()
+            val allSplitWorkoutIds = mutableSetOf<Long>()
+
+            summariesDb.beginTransaction()
+            try {
+                for ((rawName, workouts) in variantsToSplit) {
+                    if (workouts.isEmpty()) continue
+                    val uniqueName = findUniqueClusterName(stripHitCount(rawName))
+                    val mCount = workouts.size
+
+                    val startLat = workouts.mapNotNull { it.startLatLng?.latitude }.average().takeIf { !it.isNaN() } ?: primaryCluster.startLat
+                    val startLng = workouts.mapNotNull { it.startLatLng?.longitude }.average().takeIf { !it.isNaN() } ?: primaryCluster.startLng
+                    val endLat = workouts.mapNotNull { it.endLatLng?.latitude }.average().takeIf { !it.isNaN() } ?: primaryCluster.endLat
+                    val endLng = workouts.mapNotNull { it.endLatLng?.longitude }.average().takeIf { !it.isNaN() } ?: primaryCluster.endLng
+                    val maxDispLat = workouts.mapNotNull { (it.maxDisplacementLatLng ?: it.endLatLng)?.latitude }.average().takeIf { !it.isNaN() } ?: primaryCluster.maxDispLat
+                    val maxDispLng = workouts.mapNotNull { (it.maxDisplacementLatLng ?: it.endLatLng)?.longitude }.average().takeIf { !it.isNaN() } ?: primaryCluster.maxDispLng
+                    val refDist = workouts.map { it.totalDistance }.average().takeIf { !it.isNaN() } ?: primaryCluster.refDistance
+
+                    val minLat = workouts.mapNotNull { it.minLat }.minOrNull()
+                    val maxLat = workouts.mapNotNull { it.maxLat }.maxOrNull()
+                    val minLng = workouts.mapNotNull { it.minLng }.minOrNull()
+                    val maxLng = workouts.mapNotNull { it.maxLng }.maxOrNull()
+
+                    val minAltLat = workouts.mapNotNull { it.minAltitudeLatLng?.latitude }.average().takeIf { !it.isNaN() }
+                    val minAltLng = workouts.mapNotNull { it.minAltitudeLatLng?.longitude }.average().takeIf { !it.isNaN() }
+                    val maxAltLat = workouts.mapNotNull { it.maxAltitudeLatLng?.latitude }.average().takeIf { !it.isNaN() }
+                    val maxAltLng = workouts.mapNotNull { it.maxAltitudeLatLng?.longitude }.average().takeIf { !it.isNaN() }
+
+                    val previewPaths = workouts.mapNotNull { it.mapPolyline.takeIf { p -> p.isNotEmpty() } }.distinct().take(5)
+                    val mostFrequentSport = workouts.groupBy { it.sportId }.maxByOrNull { it.value.size }?.key ?: primaryCluster.probableSportId
+                    val bSport = SportTypeDatabaseManager.getInstance(context).getBSportType(mostFrequentSport)
+
+                    val newCluster = WorkoutCluster(
+                        name = uniqueName,
+                        probableSportId = mostFrequentSport,
+                        startLat = startLat,
+                        startLng = startLng,
+                        endLat = endLat,
+                        endLng = endLng,
+                        maxDispLat = maxDispLat,
+                        maxDispLng = maxDispLng,
+                        refDistance = refDist,
+                        hitCount = mCount,
+                        bSportType = bSport,
+                        minLat = minLat,
+                        minLng = minLng,
+                        maxLat = maxLat,
+                        maxLng = maxLng,
+                        minAltLat = minAltLat,
+                        minAltLng = minAltLng,
+                        maxAltLat = maxAltLat,
+                        maxAltLng = maxAltLng,
+                        previewPaths = previewPaths,
+                        hasCounter = primaryCluster.hasCounter
+                    )
+
+                    val newClusterId = dbManager.insertCluster(newCluster)
+                    createdClusterIds.add(newClusterId)
+
+                    // Reassign workouts and optionally rename
+                    workouts.sortedBy { it.startTimeS }.forEachIndexed { index, w ->
+                        allSplitWorkoutIds.add(w.id)
+                        val values = android.content.ContentValues().apply {
+                            put(WorkoutSummaries.CLUSTER_ID, newClusterId)
+                            if (renameWorkouts) {
+                                put(WorkoutSummaries.WORKOUT_NAME, formatClusterWorkoutName(context, uniqueName, index + 1, newCluster.hasCounter))
+                            }
+                        }
+                        summariesDb.update(WorkoutSummaries.TABLE, values, "${WorkoutSummaries.C_ID} = ?", arrayOf(w.id.toString()))
+                    }
+                }
+
+                // Recalculate remaining primary cluster
+                val remainingCount = summariesManager.getWorkoutCountForCluster(primaryClusterId)
+                if (remainingCount > 0) {
+                    val remainingCursor = summariesDb.query(
+                        WorkoutSummaries.TABLE,
+                        null,
+                        "${WorkoutSummaries.CLUSTER_ID} = ?",
+                        arrayOf(primaryClusterId.toString()),
+                        null, null,
+                        "${WorkoutSummaries.TIME_START} DESC"
+                    )
+                    var remStartLat = 0.0; var remStartLng = 0.0
+                    var remEndLat = 0.0; var remEndLng = 0.0
+                    var remMaxDispLat = 0.0; var remMaxDispLng = 0.0
+                    var remRefDist = 0.0
+                    var remMinLat: Double? = null; var remMaxLat: Double? = null
+                    var remMinLng: Double? = null; var remMaxLng: Double? = null
+                    val remPreviews = mutableListOf<String>()
+                    var count = 0
+
+                    remainingCursor.use { c ->
+                        while (c.moveToNext()) {
+                            val candidate = ClusterWorkoutCandidateDto.fromCursor(c)
+                            val wId = candidate.workoutId
+                            val dist = candidate.distance
+                            val start = summariesManager.getExtremaPosition(wId, SensorType.LATITUDE, ExtremaType.START)
+                            val end = summariesManager.getExtremaPosition(wId, SensorType.LATITUDE, ExtremaType.END)
+                            val wMinLat = summariesManager.getDouble(wId, WorkoutSummaries.BOUND_MIN_LAT)
+                            val wMinLng = summariesManager.getDouble(wId, WorkoutSummaries.BOUND_MIN_LNG)
+                            val wMaxLat = summariesManager.getDouble(wId, WorkoutSummaries.BOUND_MAX_LAT)
+                            val wMaxLng = summariesManager.getDouble(wId, WorkoutSummaries.BOUND_MAX_LNG)
+                            val poly = summariesManager.getString(wId, WorkoutSummaries.MAP_POLYLINE)
+
+                            if (start != null && end != null) {
+                                val apex = summariesManager.getExtremaPosition(wId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX) ?: end
+                                remStartLat += start.latitude
+                                remStartLng += start.longitude
+                                remEndLat += end.latitude
+                                remEndLng += end.longitude
+                                remMaxDispLat += apex.latitude
+                                remMaxDispLng += apex.longitude
+                                remRefDist += dist
+                                count++
+
+                                if (wMinLat != null) remMinLat = minOf(remMinLat ?: 90.0, wMinLat)
+                                if (wMaxLat != null) remMaxLat = maxOf(remMaxLat ?: -90.0, wMaxLat)
+                                if (wMinLng != null) remMinLng = minOf(remMinLng ?: 180.0, wMinLng)
+                                if (wMaxLng != null) remMaxLng = maxOf(remMaxLng ?: -180.0, wMaxLng)
+                                if (!poly.isNullOrEmpty() && remPreviews.size < 5 && !remPreviews.contains(poly)) {
+                                    remPreviews.add(poly)
+                                }
+                            }
+                        }
+                    }
+
+                    if (count > 0) {
+                        val updatedPrimary = primaryCluster.copy(
+                            hitCount = remainingCount,
+                            startLat = remStartLat / count,
+                            startLng = remStartLng / count,
+                            endLat = remEndLat / count,
+                            endLng = remEndLng / count,
+                            maxDispLat = remMaxDispLat / count,
+                            maxDispLng = remMaxDispLng / count,
+                            refDistance = remRefDist / count,
+                            minLat = remMinLat ?: primaryCluster.minLat,
+                            maxLat = remMaxLat ?: primaryCluster.maxLat,
+                            minLng = remMinLng ?: primaryCluster.minLng,
+                            maxLng = remMaxLng ?: primaryCluster.maxLng,
+                            previewPaths = remPreviews
+                        )
+                        dbManager.updateCluster(updatedPrimary)
+                    }
+                } else {
+                    dbManager.updateCluster(primaryCluster.copy(hitCount = 0, previewPaths = emptyList()))
+                }
+
+                summariesDb.setTransactionSuccessful()
+            } finally {
+                summariesDb.endTransaction()
+            }
+
+            return createdClusterIds
         }
     }
 

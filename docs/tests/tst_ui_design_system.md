@@ -7639,8 +7639,8 @@
 
 ### TST-UI-470: **Known Locations Map Orientation, FAB & Description Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-470`
-- **Component**: `KnownLocationZoomMath.kt`, `KnownLocationsScreen.kt`, `EditKnownLocationDialog.kt`, `KnownLocationsViewModel.kt`, `KnownLocationsRepository.kt`, `MapUtils.kt`, `KnownLocationZoomMathTest.kt`, `EditKnownLocationDialogTest.kt`, `KnownLocationsScreenTest.kt`
-- **Jira**: `ATT-5884`
+- **Component**: `KnownLocationZoomMath.kt`, `KnownLocationsScreen.kt`, `EditKnownLocationDialog.kt`, `KnownLocationsViewModel.kt`, `KnownLocationsRepository.kt`, `MapUtils.kt`, `KnownLocationZoomMathTest.kt`, `EditKnownLocationDialogTest.kt`, `KnownLocationsScreenTest.kt`, `KnownLocationCardLayoutTest.kt`
+- **Jira**: `ATT-5884, ATT-6211, ATT-6210`
 - **Test Description**:
   1. *Zoom Math Clamping & Shift Unit Tests (`TST-UI-470.1`, `KnownLocationZoomMathTest.kt`)*:
   • Verify `MIN_ZOOM = 9.7f`, `DEFAULT_THUMBNAIL_ZOOM = 11.2f`, `MAX_ZOOM = 11.7f`.
@@ -7650,15 +7650,20 @@
   2. *FAB & Creation Flow Contract Tests (`TST-UI-470.2`, `KnownLocationsScreenTest.kt`)*:
   • Verify `FloatingActionButton` exists in `KnownLocationsScreen` with test tag `known_locations_add_fab`.
   • Verify tapping FAB triggers new location creation dialog flow.
-  3. *Centered Heart Glyph Marker & Thumbnail Alignment Tests (`TST-UI-470.3`, `KnownLocationsScreenTest.kt`)*:
-  • Verify `KnownLocationThumbnailMap` uses `createCenteredHeartGlyphMarker` with `anchor = Offset(0.5f, 0.5f)`.
+  3. *Canonical Material Heart Glyph Marker & Thumbnail Alignment Tests (`TST-UI-470.3`, `KnownLocationsScreenTest.kt`, `MapUtils.kt`)*:
+  • Verify `createCenteredHeartGlyphMarker` renders canonical Material Favorite path geometry centered with an opaque white halo (`Color.White`, 100% opacity, stroke width >= 2.5dp).
+  • Verify `KnownLocationThumbnailMap` in `KnownLocationsScreen` uses `createCenteredHeartGlyphMarker` with concentric `anchor = Offset(0.5f, 0.5f)`.
   • Verify absence of standing pin `R.drawable.my_locations` in thumbnail map.
+  • Verify preview mode in `KnownLocationsScreen` continues to use `Icons.Default.Favorite`.
   4. *Home Base Subtitle & Edit Dialog Contract Tests (`TST-UI-470.4`, `EditKnownLocationDialogTest.kt`)*:
   • Verify `EditKnownLocationDialog` displays `R.string.known_locations_home_base_desc` instead of `known_locations_set_home` in the home toggle row.
   5. *9-Language Localization Audit (`TST-UI-470.5`, `TranslationParityTest.kt`)*:
   • Verify `known_locations_home_base_desc`, `known_locations_add_location`, and `known_locations_new_location` exist across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with zero format specifier mismatches and zero unescaped characters.
   6. *Tier 1 Targeted Regression Execution (`TST-UI-470.6`)*:
   • Execute targeted unit test suites (`com.atrainingtracker.trainingtracker.ui.knownlocations.*`, `com.atrainingtracker.trainingtracker.localization.TranslationParityTest`, `com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+  7. *Sport Type Starts Breakdown Unit & Contract Tests (`TST-UI-470.7`, `KnownLocationCardLayoutTest.kt`, `KnownLocationsViewModelTest.kt`)*:
+  • Verify `KnownLocationsViewModel` partitions workout starts by `BSportType` into `SportStartsCount(bike, run, other)`.
+  • Verify `KnownLocationCard` renders sport drawables in canonical order `[Bike, Run, Other]` with `Color.Unspecified`, and test tag `location_starts_badge_${item.id}` remains present.
 
 ### TST-UI-471: **Cockpit Edit-Mode Typography, Localization Parity & FAB Layout Polish Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-471`
@@ -7936,12 +7941,13 @@
 ### TST-UI-496: **Navigation Drawer Header Height Compactness & Vertical Clearance Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-496`
 - **Component**: `AppNavigationDrawer.kt`, `AppNavigationDrawerContractTest.kt`
-- **Jira**: `ATT-5839`
+- **Jira**: `ATT-5839`, `ATT-6216`
 - **Test Description**:
   1. *Drawer Header Height & Alignment Contract Test (`TST-UI-496.1`)*:
   • Verify `AppNavigationDrawer.kt` source declares `.height(76.dp + statusBarHeight)` in `DrawerHeader()`.
   • Verify `menu_header_background` image is anchored with `Alignment.BottomCenter` and `ContentScale.FillWidth`.
   2. *Rule 72 Branding Row & Icon Invariant Contract Test (`TST-UI-496.2`)*:
+  • Verify `AppNavigationDrawer.kt` branding row specifies `padding(start = 16.dp, end = 16.dp, top = statusBarHeight, bottom = 24.dp)`.
   • Verify launcher icon slot retains `Modifier.size(46.dp)` and `scaleX = 1.81f; scaleY = 1.81f`.
   • Verify single-line title layout without extra subtitle/pill rows below `"a Training Tracker"`.
   3. *Tier 1 Targeted Unit Test Regression (`TST-UI-496.3`)*:
@@ -7980,6 +7986,64 @@
   • Verify modal bottom sheets in `MapScreenWithTrack.kt` and `LiveSegmentSheet.kt` maintain `isBottomSheet = true` (or default to true when `useStatusBarsPadding == false`).
   4. *Tier 1 Targeted Unit Test Regression (`TST-UI-498.4`)*:
   • Execute targeted test suite (`ui.aftermath.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
+
+### TST-UI-499: **WorkoutSummary & WorkoutSectionType: Reorderable WorkoutDetails & Photos-First Ordering Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-499`, `REQ-UI-255`
+- **Component**: `WorkoutSectionType.kt`, `WorkoutDetailTabConfig.kt`, `MyPreferenceManager.kt`, `WorkoutSummary.kt`, `WorkoutMasksAndCardsSection.kt`, `TrackOnMapScreen.kt`
+- **Jira**: `ATT-6213`
+- **Test Description**:
+  1. *Domain Model & Enum Parity Contract Test (`WorkoutSectionOrderPersistenceTest.kt`)*:
+  • Verify `WorkoutSectionType` contains `DETAILS(R.string.workout_detail_section_details)`.
+  • Verify `WorkoutSectionType.DEFAULT_ORDER` contains 12 elements with `DETAILS` at index 0.
+  • Verify bidirectional mapping between `WorkoutSectionType.DETAILS` and `WorkoutDetailSectionType.DETAILS`.
+  2. *Backwards-Compatible Preference Migration Tests (`WorkoutSectionOrderPersistenceTest.kt`)*:
+  • Verify `fromSerializedString` without `DETAILS` inserts `DETAILS` at index 1 when `PHOTOS` is at index 0.
+  • Verify `fromSerializedString` without `DETAILS` inserts `DETAILS` at index 0 when `PHOTOS` is not at index 0.
+  • Verify round-trip serialization and deserialization with `DETAILS`.
+  3. *Summary Rendering & Dynamic Ordering Structural Contract (`WorkoutSummaryDynamicOrderContractTest.kt` & `WorkoutSummarySectionsTest.kt`)*:
+  • Verify `WorkoutSummary.kt` renders `WorkoutDetails` within the dynamic section loop under `WorkoutSectionType.DETAILS` gated by `showDetails`.
+  • Verify `WorkoutHeader` remains the sole anchor preceding the dynamic loop.
+  • Verify `WorkoutCardSectionPreferences` contains `showDetails` (defaulting to `true`).
+  4. *Settings UI Modularity & Line Limit Audit*:
+  • Verify `WorkoutMasksAndCardsSection.kt` maps `WorkoutSectionType.DETAILS` to `MatrixFeatureRow` with `R.string.workout_detail_section_details`.
+  • Verify `WorkoutMasksAndCardsSection.kt` total line count remains strictly `< 400` lines.
+  5. *9-Language Localization Parity Audit (`TranslationParityTest`)*:
+  • Verify `R.string.workout_detail_section_details` exists across all 9 locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) with 100% translation parity and zero formatting mismatches.
+  6. *Tier 1 Targeted Unit Test Regression Suite*:
+  • Command: `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.*" --tests "com.atrainingtracker.trainingtracker.settings.*" --tests "com.atrainingtracker.trainingtracker.build.*"`
+
+### TST-UI-500: **MapDetailLayout Unified Top-End Floating Actions Stacking & Adaptive Layers Placement Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-500`, `REQ-UI-308`, `REQ-UI-491`
+- **Component**: `MapDetailLayout.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `RouteOnMapScreen.kt`, `MapDetailLayoutTest.kt`
+- **Jira**: `ATT-6214`
+- **Test Description**:
+  1. *MapDetailLayout Top-End Actions Column Stacking Contract Test (`TST-UI-500.1`)*:
+  • Verify `MapDetailLayout.kt` declares `topEndActions: @Composable (ColumnScope.() -> Unit)? = null`.
+  • Verify `MapDetailLayout.kt` encapsulates `showFloatingShareButton` and `topEndActions` inside a single `Column` with `Alignment.TopEnd`, `padding(16.dp)`, and `verticalArrangement = Arrangement.spacedBy(16.dp)`.
+  2. *WorkoutDetailTabbedContent mapTopEndActions Delegation Contract Test (`TST-UI-500.2`)*:
+  • Verify `WorkoutDetailTabbedContent.kt` declares `mapTopEndActions: @Composable (ColumnScope.() -> Unit)? = null` and forwards it to `MapDetailLayout` across both single-pane and split-pane branches.
+  3. *TrackOnMapScreen & RouteOnMapScreen Zero Hardcoded 76dp Offset Audit (`TST-UI-500.3`)*:
+  • Verify in `TrackOnMapScreen.kt` source that the Layers button uses `mapTopEndActions` and contains zero occurrences of `padding(top = 76.dp)`.
+  • Verify in `RouteOnMapScreen.kt` source that the Layers button uses `topEndActions` and contains zero occurrences of `padding(top = 76.dp)`.
+  4. *Tier 1 Targeted Unit Test Regression Suite (`TST-UI-500.4`)*:
+  • Execute targeted test suite (`ui.map.*`, `ui.aftermath.*`, `ui.routes.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
+
+### TST-UI-501: **SupporterScreen & SupporterComponents: Tier Hierarchy & Lower Tier De-Emphasis Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-501`
+- **Component**: `SupporterComponents.kt`, `SupporterScreen.kt`, `SupporterPlanCardHierarchyTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-6286`
+- **Test Description**:
+  1. *SupporterPlanCard Visual Hierarchy & State Resolution Contract Test (`TST-UI-501.1`)*:
+  • Verify `SupporterPlanCard` button type (`Button` vs. `OutlinedButton`), label string resource (`supporter_plan_button_switch` vs. `supporter_plan_button_active` vs. `supporter_plan_button_support`), and container/border styling across all tier permutations.
+  2. *SupporterScreen Effective Tier Propagation Contract Test (`TST-UI-501.2`)*:
+  • Verify in `SupporterScreen.kt` that `effectiveTier` is passed down to every `SupporterPlanCard`.
+  3. *9-Language Localization & Translation Parity Suite (`TST-UI-501.3`)*:
+  • Execute `TranslationParityTest` asserting that `supporter_plan_button_switch` exists in `strings_monetization.xml` across all 9 locales with 100% parity.
+  4. *Tier 1 Targeted Unit Test Regression (`TST-UI-501.4`)*:
+  • Execute targeted test suite (`ui.settings.supporter.*`, `ui.branding.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
+
+
+
 
 
 

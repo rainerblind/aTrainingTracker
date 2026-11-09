@@ -883,6 +883,14 @@
     <string name="cluster_merge_dialog_title">Połącz ulubioną trasę</string>
     <string name="cluster_merge_dialog_message">Czy chcesz połączyć \'%1$s\' (%2$d nagrań) z \'%3$s\'? Wszystkie powiązane treningi zostaną przypisane do \'%3$s\', a \'%1$s\' zostanie usunięty.</string>
     <string name="cluster_merge_action">Połącz</string>
+    <string name="cluster_split_action">Podziel ulubioną trasę…</string>
+    <string name="cluster_split_dialog_title">Podziel ulubioną trasę</string>
+    <string name="cluster_split_corridor_threshold">Czułość korytarza: %1$s</string>
+    <string name="cluster_split_no_variants">Nie wykryto odrębnych wariantów trasy przy tej czułości.</string>
+    <string name="cluster_split_primary_label">Główna trasa (%1$d treningów, Ø %2$s)</string>
+    <string name="cluster_split_variant_label">Wariant %1$d (%2$d treningów, Ø %3$s)</string>
+    <string name="cluster_split_rename_workouts">Zaktualizuj nazwy treningów, aby pasowały do nowej trasy</string>
+    <string name="cluster_split_action_confirm">Podziel</string>
     <string name="cluster_migration_title">Analiza rodzin tras…</string>
     <string name="cluster_migration_loading">Ładowanie rodzin tras…</string>
     <string name="cluster_migration_healing">Weryfikacja integralności historii…</string>

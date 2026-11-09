@@ -259,6 +259,33 @@ public class StravaUploadDbHelper extends SQLiteOpenHelper {
         }
     }
 
+    /**
+     * Returns a set of all non-null, non-empty Strava ActivityIds stored in StravaUploads (REQ-MIG-050.1).
+     * Used for zero-I/O in-memory deduplication during bulk import operations.
+     */
+    @NonNull
+    public java.util.Set<String> getAllActivityIds() {
+        java.util.Set<String> activityIds = new java.util.HashSet<>();
+        try (Cursor cursor = getReadableDatabase().query(
+                TABLE,
+                new String[]{ACTIVITY_ID},
+                ACTIVITY_ID + " IS NOT NULL",
+                null,
+                null, null, null)) {
+            int colIdx = cursor.getColumnIndexOrThrow(ACTIVITY_ID);
+            while (cursor.moveToNext()) {
+                String id = cursor.getString(colIdx);
+                if (id != null && !id.trim().isEmpty()) {
+                    activityIds.add(id.trim());
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error fetching all ActivityIds: " + e.getMessage(), e);
+        }
+        return activityIds;
+    }
+
+
     @Nullable
     public String getStravaActivityData(String fileBaseName) {
         if (DEBUG) Log.d(TAG, "getStravaActivityData: " + fileBaseName);

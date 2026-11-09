@@ -286,6 +286,27 @@ public class WorkoutSummariesDatabaseManager {
     }
 
     /**
+     * Reassigns specific workouts to a new cluster (REQ-SET-096.5, ATT-5900).
+     *
+     * @param workoutIds list of workout IDs to reassign
+     * @param newClusterId the target cluster ID
+     * @return the number of updated rows
+     */
+    public int reassignWorkoutsToCluster(@NonNull List<Long> workoutIds, long newClusterId) {
+        if (workoutIds.isEmpty()) {
+            return 0;
+        }
+        ContentValues values = new ContentValues();
+        values.put(WorkoutSummaries.CLUSTER_ID, newClusterId);
+        int updated = 0;
+        for (Long id : workoutIds) {
+            updated += getDatabase().update(WorkoutSummaries.TABLE, values,
+                    WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(id)});
+        }
+        return updated;
+    }
+
+    /**
      * Calculates comprehensive performance, volume, and recency statistics for all Workout Clusters (REQ-SET-068).
      *
      * @return Map of clusterId to WorkoutClusterStats.
@@ -561,6 +582,33 @@ public class WorkoutSummariesDatabaseManager {
         return baseFileName;
 
     }
+
+    /**
+     * Returns a set of all non-null, lowercased fileBaseNames stored in WorkoutSummaries (REQ-MIG-050.1).
+     * Used for zero-I/O in-memory deduplication during bulk import operations.
+     */
+    @NonNull
+    public java.util.Set<String> getAllFileBaseNames() {
+        java.util.Set<String> baseNames = new java.util.HashSet<>();
+        try (Cursor cursor = getDatabase().query(
+                WorkoutSummaries.TABLE,
+                new String[]{WorkoutSummaries.FILE_BASE_NAME},
+                WorkoutSummaries.FILE_BASE_NAME + " IS NOT NULL",
+                null,
+                null, null, null)) {
+            int colIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.FILE_BASE_NAME);
+            while (cursor.moveToNext()) {
+                String name = cursor.getString(colIdx);
+                if (name != null && !name.trim().isEmpty()) {
+                    baseNames.add(name.trim().toLowerCase(java.util.Locale.ROOT));
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error fetching all fileBaseNames: " + e.getMessage(), e);
+        }
+        return baseNames;
+    }
+
 
     @Nullable
     public Double getDouble(long workoutId, String key) {

@@ -46,11 +46,10 @@ enum class WorkoutDetailSectionType(@StringRes val labelRes: Int) {
     PHOTOS(R.string.settings_workout_card_photos);
 
     /**
-     * Maps this [WorkoutDetailSectionType] to its corresponding [WorkoutSectionType],
-     * or returns `null` for [DETAILS] (which is permanently anchored at the top of `WorkoutSummary`).
+     * Maps this [WorkoutDetailSectionType] to its corresponding [WorkoutSectionType] (REQ-UI-499.1 / ATT-6213).
      */
     fun toWorkoutSectionTypeOrNull(): WorkoutSectionType? = when (this) {
-        DETAILS -> null
+        DETAILS -> WorkoutSectionType.DETAILS
         DESCRIPTION -> WorkoutSectionType.DESCRIPTION
         EXTREMA -> WorkoutSectionType.EXTREMA
         MAP -> WorkoutSectionType.MAP
@@ -66,9 +65,10 @@ enum class WorkoutDetailSectionType(@StringRes val labelRes: Int) {
 }
 
 /**
- * Maps a [WorkoutSectionType] to its corresponding [WorkoutDetailSectionType].
+ * Maps a [WorkoutSectionType] to its corresponding [WorkoutDetailSectionType] (REQ-UI-499.1 / ATT-6213).
  */
 fun WorkoutSectionType.toWorkoutDetailSectionType(): WorkoutDetailSectionType = when (this) {
+    WorkoutSectionType.DETAILS -> WorkoutDetailSectionType.DETAILS
     WorkoutSectionType.DESCRIPTION -> WorkoutDetailSectionType.DESCRIPTION
     WorkoutSectionType.EXTREMA -> WorkoutDetailSectionType.EXTREMA
     WorkoutSectionType.LAPS -> WorkoutDetailSectionType.LAPS

@@ -113,11 +113,12 @@ class WorkoutSummarySectionsTest {
 
     @Test
     fun mandatoryAnchors_areInvariant() {
-        // Architectural invariant: WorkoutHeader and WorkoutDetails must never have
-        // toggle flags in WorkoutCardSectionPreferences.
+        // Architectural invariant: WorkoutHeader remains the sole mandatory, non-configurable top anchor (REQ-UI-499)
         val fields = WorkoutCardSectionPreferences::class.java.declaredFields.map { it.name }
         assertFalse("WorkoutHeader must remain mandatory and not configurable", fields.contains("showHeader"))
-        assertFalse("WorkoutDetails must remain mandatory and not configurable", fields.contains("showDetails"))
+        assertTrue("WorkoutDetails is configurable via showDetails (REQ-UI-499)", fields.contains("showDetails"))
+        assertTrue("showDetails defaults to true", WorkoutCardSectionPreferences().showDetails)
+        assertFalse(WorkoutCardSectionPreferences(showDetails = false).showDetails)
     }
 
     @Test

@@ -65,6 +65,28 @@ class KnownLocationsScreenTest {
     )
 
     /**
+     * REQ-UI-470.6 / TST-UI-470.7a: Verifies SportStartsCount aggregation logic and invariants.
+     */
+    @Test
+    fun testSportStartsCount_aggregationAndInvariants() {
+        val empty = SportStartsCount()
+        assertEquals(0, empty.bike)
+        assertEquals(0, empty.run)
+        assertEquals(0, empty.other)
+        assertEquals(0, empty.total)
+
+        val count = SportStartsCount(bike = 5, run = 3, other = 2)
+        assertEquals(5, count.bike)
+        assertEquals(3, count.run)
+        assertEquals(2, count.other)
+        assertEquals(10, count.total)
+
+        val updated = count.copy(bike = count.bike + 1)
+        assertEquals(6, updated.bike)
+        assertEquals(11, updated.total)
+    }
+
+    /**
      * TST-UI-117.6: Verify that card presentation data contains accurate Name,
      * Altitude formatting (metric and imperial), Source badge mapping, Hit Count, and Coordinates.
      */
@@ -221,7 +243,23 @@ class KnownLocationsScreenTest {
             content.contains("location_edit_action_")
         )
 
-        // 4. Delete action must be present
+        // 4. Set/clear home actions must not exist in context menu (REQ-MAP-036.6 / ATT-6209)
+        assertFalse(
+            "KnownLocationCard context menu must not contain 'location_set_home_action_' test tag",
+            content.contains("location_set_home_action_")
+        )
+        assertFalse(
+            "KnownLocationCard context menu must not contain 'location_clear_home_action_' test tag",
+            content.contains("location_clear_home_action_")
+        )
+
+        // 5. Merge action must be present (REQ-SET-095)
+        assertTrue(
+            "KnownLocationCard context menu must contain 'location_merge_action_' test tag",
+            content.contains("location_merge_action_")
+        )
+
+        // 6. Delete action must be present
         assertTrue(
             "KnownLocationCard context menu must contain 'location_delete_action_' test tag",
             content.contains("location_delete_action_")
@@ -431,6 +469,18 @@ class KnownLocationsScreenTest {
         assertTrue(
             "Preview mode must use Icons.Default.Favorite glyph",
             source.contains("Icons.Default.Favorite")
+        )
+    }
+
+    /**
+     * TST-UI-470.3 (ATT-6211): Canonical Material Favorite heart geometry constant definition.
+     */
+    @Test
+    fun testCanonicalMaterialHeartPath_matchesMaterialFavoriteGeometry() {
+        // Assert canonical Material Favorite SVG path data constant directly (no File.readText)
+        assertEquals(
+            "M12,21.35l-1.45,-1.32C5.4,15.36 2,12.28 2,8.5 2,5.42 4.42,3 7.5,3c1.74,0 3.41,0.81 4.5,2.09C13.09,3.81 14.76,3 16.5,3 19.58,3 22,5.42 22,8.5c0,3.78 -3.4,6.86 -8.55,11.54L12,21.35z",
+            com.atrainingtracker.trainingtracker.ui.map.CANONICAL_MATERIAL_HEART_PATH_DATA
         )
     }
 

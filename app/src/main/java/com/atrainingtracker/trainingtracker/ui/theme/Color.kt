@@ -343,4 +343,25 @@ object TTColor {
 
     // Supporter Launcher Icon Preview Surface (REQ-UI-445, ATT-1406, ATT-5372)
     val SupporterIconPreviewContainer = Color(0xFFF1F5F9)
+
+    // Cluster Variant Sub-Corridor Palette (REQ-SET-096.3, ATT-5900)
+    val ClusterVariantBlue = Color(0xFF2196F3)       // Primary: Royal Blue
+    val ClusterVariantOrange = Color(0xFFFF9800)     // Variant 2: Vibrant Amber / Orange
+    val ClusterVariantGreen = Color(0xFF4CAF50)      // Variant 3: Vibrant Green
+    val ClusterVariantPurple = Color(0xFF9C27B0)     // Variant 4: Vibrant Purple
+    val ClusterVariantPink = Color(0xFFE91E63)       // Variant 5: Vibrant Pink
+    val ClusterVariantCyan = Color(0xFF00BCD4)       // Variant 6: Vibrant Cyan
+    val ClusterVariantDeepOrange = Color(0xFFFF5722) // Variant 7: Deep Orange
+    val ClusterVariantBrown = Color(0xFF795548)      // Variant 8: Brown
+
+    val ClusterVariantPalette = listOf(
+        ClusterVariantBlue,
+        ClusterVariantOrange,
+        ClusterVariantGreen,
+        ClusterVariantPurple,
+        ClusterVariantPink,
+        ClusterVariantCyan,
+        ClusterVariantDeepOrange,
+        ClusterVariantBrown
+    )
 }

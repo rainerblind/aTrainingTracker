@@ -160,13 +160,33 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                     if (mAddress != null && mAddress.equalsIgnoreCase(dev.getAddress())) {
                         if (DEBUG) Log.i(TAG, "Scan assist discovered target device: " + mAddress);
                         stopScanAssistance();
+                        final BluetoothGatt gattToClose;
                         synchronized (mGattLock) {
-                            if (mState == State.SEARCHING && mBluetoothGatt == null) {
+                            if (mState == State.SEARCHING) {
+                                gattToClose = mBluetoothGatt;
+                                mBluetoothGatt = null;
                                 if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
                                     if (DEBUG) Log.i(TAG, "Connecting GATT using scan-resolved device handle");
                                     mBluetoothGatt = dev.connectGatt(mContext, false, mGattCallback, BluetoothDevice.TRANSPORT_LE);
                                 }
+                            } else {
+                                gattToClose = null;
                             }
+                        }
+                        if (gattToClose != null) {
+                            mHandler.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    try {
+                                        if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                                            gattToClose.disconnect();
+                                            gattToClose.close();
+                                        }
+                                    } catch (Exception e) {
+                                        Log.w(TAG, "Error closing superseded GATT", e);
+                                    }
+                                }
+                            });
                         }
                     }
                 }
@@ -311,6 +331,13 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
             if (DEBUG)
                 Log.i(TAG, "onConnectionStateChange: status=" + status + ", newState=" + newState);
+
+            synchronized (mGattLock) {
+                if (mBluetoothGatt != null && gatt != mBluetoothGatt) {
+                    if (DEBUG) Log.d(TAG, "Ignoring onConnectionStateChange from stale or superseded BluetoothGatt instance");
+                    return;
+                }
+            }
 
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 if (DEBUG) Log.i(TAG, "Connected to GATT server");
@@ -524,23 +551,25 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
 
         startScanAssistance(btAdapter);
 
-        mHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                if (mIsShutDown || device == null) {
-                    return;
-                }
-                if (DEBUG) Log.i(TAG, "trying to connect gatt");
-                if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                    return;
-                }
-                synchronized (mGattLock) {
-                    if (mBluetoothGatt == null && mState == State.SEARCHING) {
-                        mBluetoothGatt = device.connectGatt(mContext, false, mGattCallback, BluetoothDevice.TRANSPORT_LE);
+        if (!mIsScanning) {
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    if (mIsShutDown || device == null) {
+                        return;
+                    }
+                    if (DEBUG) Log.i(TAG, "trying to connect gatt (fallback direct connect)");
+                    if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                        return;
+                    }
+                    synchronized (mGattLock) {
+                        if (mBluetoothGatt == null && mState == State.SEARCHING) {
+                            mBluetoothGatt = device.connectGatt(mContext, false, mGattCallback, BluetoothDevice.TRANSPORT_LE);
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
     }
 
     protected void disconnectFromGatt() {

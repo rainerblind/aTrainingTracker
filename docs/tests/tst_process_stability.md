@@ -1311,12 +1311,12 @@
 ### TST-PRO-035: **Standalone Agile Agentic ASPICE (AAA) Core Framework, Swiss Cheese Reliability & Starter Templates Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-035`
 - **Component**: **Höchstmaß Core Framework & Starter Templates**
-- **Jira**: `ATT-3922`, `ATT-5817`
+- **Jira**: `ATT-3922`, `ATT-5817`, `ATT-6092`
 - **Test Description**:
-  1. *README, Project Protocol, Epigraph, Etymology, 5-Layer SVG & Entry Barrier Verification (`TST-PRO-035.1`, `HoechstmassCoreFrameworkContractTest.kt`)*:
-  • Verify `tools/hoechstmass/README.md` and `tools/hoechstmass/docs/project_protocol.md` exist and contain the ChatGPT epigraph quote, human/AI boundary attribution, multi-model review (Claude, Gemini, ChatGPT), Höchstmaß etymology callout (`/ˈhøːçstˌmaːs/`), 5-layer Swiss Cheese SVG asset (`tools/hoechstmass/assets/swiss_cheese_layers.svg`), 5-layer decorrelation formula ($P = p_1 \cdot p_2 \cdot p_3 \cdot p_4 \cdot p_5$), and Chapter 5 Entry Barrier.
+  1. *README, Project Protocol, Epigraph, Etymology, 2-Column 5-Layer SVG & Entry Barrier Verification (`TST-PRO-035.1`, `HoechstmassCoreFrameworkContractTest.kt`)*:
+  • Verify `tools/hoechstmass/README.md` and `tools/hoechstmass/docs/project_protocol.md` exist and contain `# Höchstmaß — The AAA Coding Framework` title, inside-out AAA structure (ASPICE -> Agentic -> Agile), the ChatGPT epigraph quote, human/AI boundary attribution, multi-model review (Claude, Gemini, ChatGPT), Höchstmaß etymology callout (`/ˈhøːçstˌmaːs/`), 2-column 5-layer Swiss Cheese SVG asset (`tools/hoechstmass/assets/swiss_cheese_layers.svg`) with `L1`–`L5` barrier plates and `✕` markers, 5-layer decorrelation formula ($P = p_1 \cdot p_2 \cdot p_3 \cdot p_4 \cdot p_5$), and Chapter 5 Entry Barrier.
   2. *Generalized Document Triad & Isolated In-Place Review Workflow Contract Verification (`TST-PRO-035.2`, `HoechstmassCoreFrameworkContractTest.kt`)*:
-  • Verify existence and content of generalized `.agents/rules/aspice_governance.md` (8 Core Rules), `docs/coding_standards.md` (§1.1–§1.5 invariants), `docs/design_guidelines.md` (component heuristics), `tools/review_tool.py`, and `.reviews/` isolation via `.git/info/exclude`.
+  • Verify existence and content of generalized `.agents/rules/aspice_governance.md` (8 Core Rules), `docs/coding_standards.md` (§1.1–§1.5 invariants), `docs/design_guidelines.md` (component heuristics), `tools/review_tool.py`, protocol `.reviews/` and `Emacs` workflow specification, and `.reviews/` isolation via `.git/info/exclude`.
   3. *10 Generalized Skills & Deliverable Templates Verification (`TST-PRO-035.3`, `HoechstmassCoreFrameworkContractTest.kt`)*:
   • Verify existence of all 10 project-agnostic `SKILL.md` files under `tools/hoechstmass/.agents/skills/` and all 6 markdown templates under `tools/hoechstmass/templates/`.
   4. *Clean-Room Governance & Regression Execution (`TST-PRO-035.4`)*:

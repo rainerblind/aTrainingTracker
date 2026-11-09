@@ -34,6 +34,7 @@ enum class WorkoutDisplayContext {
  * and detailed aftermath views (REQ-UI-255 / ATT-2176).
  */
 enum class WorkoutSectionType(@StringRes val titleRes: Int) {
+    DETAILS(R.string.workout_detail_section_details),
     DESCRIPTION(R.string.settings_workout_card_description),
     EXTREMA(R.string.settings_workout_card_extrema),
     LAPS(R.string.settings_workout_card_laps),
@@ -48,6 +49,7 @@ enum class WorkoutSectionType(@StringRes val titleRes: Int) {
 
     companion object {
         val DEFAULT_ORDER: List<WorkoutSectionType> = listOf(
+            DETAILS,
             DESCRIPTION,
             EXTREMA,
             PHOTOS,
@@ -65,6 +67,10 @@ enum class WorkoutSectionType(@StringRes val titleRes: Int) {
          * Deserializes a comma-separated string into a list of [WorkoutSectionType]s.
          * Falls back safely to [DEFAULT_ORDER] if the string is blank or invalid.
          * Appends any missing enum values to ensure self-healing completeness.
+         *
+         * Backwards-compatible migration for DETAILS (REQ-UI-499.2 / ATT-6213):
+         * If DETAILS is not in the persisted list, inserts DETAILS at index 1 if PHOTOS
+         * was at index 0, or at index 0 otherwise.
          */
         fun fromSerializedString(serialized: String?): List<WorkoutSectionType> {
             if (serialized.isNullOrBlank()) return DEFAULT_ORDER
@@ -75,9 +81,21 @@ enum class WorkoutSectionType(@StringRes val titleRes: Int) {
                 .distinct()
             if (parsed.isEmpty()) return DEFAULT_ORDER
 
+            val withDetails = if (!parsed.contains(DETAILS)) {
+                val mutable = parsed.toMutableList()
+                if (mutable.firstOrNull() == PHOTOS) {
+                    mutable.add(1, DETAILS)
+                } else {
+                    mutable.add(0, DETAILS)
+                }
+                mutable
+            } else {
+                parsed
+            }
+
             // Append any missing enum values to maintain self-healing complete list
-            val missing = values().filter { !parsed.contains(it) }
-            return parsed + missing
+            val missing = values().filter { !withDetails.contains(it) }
+            return withDetails + missing
         }
 
         /**

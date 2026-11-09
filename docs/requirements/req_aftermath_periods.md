@@ -775,4 +775,33 @@
 
 **Invariants**: Zero changes to `PeriodSummaries.db` (v27) schema, 60 fps `LazyColumn` scrolling, and 100% clean-room test pass rate.
 
+### REQ-PER-029: WorkoutShareBottomSheet Option A ('Karten- & Analyse-Snapshot') Automated Capture & Share Delegation [Verified]
+- **Tests**: `TST-PER-037` | **Tickets**: `ATT-6208`
+- **Implementation**: `WorkoutShareBottomSheet.kt`, `WorkoutDetailTabbedContent.kt`, `WorkoutSummary.kt`, `TrackOnMapScreen.kt`, `MapDetailLayout.kt`, `ShareUtils.kt`
+- **Rationale**: When an athlete selects Option A ("Karten- & Analyse-Snapshot") in `WorkoutShareBottomSheet`, the application SHALL automatically navigate or scroll to the Map tab, capture the composite map and analytics snapshot, and launch the Android system share sheet (`combineWorkoutAndShare`) instead of merely switching views without action:
+1. *Programmatic Snapshot Trigger in `MapDetailLayout` (`REQ-PER-029.1`)*: `MapDetailLayout` SHALL accept `externalSnapshotTrigger: Boolean = false` and `onSnapshotComplete: (() -> Unit)? = null`. When `externalSnapshotTrigger == true` and `!isSharing`, `MapDetailLayout` SHALL initiate `isSharing = true` to capture the composite map, header, elevation, and analytics layers and launch the Android Share sheet via `combineWorkoutAndShare`. Upon snapshot completion or error, `isSharing` SHALL reset and `onSnapshotComplete?.invoke()` SHALL be called.
+2. *WorkoutDetailTabbedContent Option A Automated Handoff (`REQ-PER-029.2`)*: In `WorkoutDetailTabbedContent`, selecting Option A ('Karten- & Analyse-Snapshot') in `WorkoutShareBottomSheet` SHALL dismiss the bottom sheet, switch or animate the pager to the Map tab (`mapTabIndex`), and programmatically trigger `MapDetailLayout`'s composite snapshot capture (`externalSnapshotTrigger = true`) once the Map tab is active.
+3. *WorkoutSummary List-to-Detail Auto-Share Bridge (`REQ-PER-029.3`)*: In `WorkoutSummary`, selecting Option A in `WorkoutShareBottomSheet` SHALL bridge through to `WorkoutDetailScreen` / `TrackOnMapScreen` / `WorkoutDetailTabbedContent` with an auto-share intent (`initialAutoShareSnapshot = true`), navigating directly to the Map tab and triggering the composite snapshot and Android Share sheet.
+4. *Preservation of REQ-UI-500 / ATT-6214 Map Tab Controls Invariant (`REQ-PER-029.4`)*: The default parameter `showFloatingShareButton: Boolean = workoutData == null` in `MapDetailLayout` and the `top = 16.dp` docking of `topEndActions` (Layers button) MUST remain preserved, ensuring no duplicate or overlapping floating share button appears on the Map tab when viewing workouts.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Refines `REQ-PER-017` (*Composite Post-Workout Snapshot & Share Composition*) and honors `REQ-UI-500` (*MapDetailLayout Unified Top-End Actions Slot*). Targets `WorkoutShareBottomSheet.kt`, `WorkoutDetailTabbedContent.kt`, `WorkoutSummary.kt`, `TrackOnMapScreen.kt`, and `MapDetailLayout.kt`.
+2. *Historical Origin & Commit Trace*: Option A introduced in `ATT-30` / `ATT-1472` and refined in `ATT-5809` (centralized workout sharing onto `WorkoutHeader` and suppressed floating Share FAB when `workoutData != null`).
+3. *Root Reason for Existing Formulation*: ATT-5809 migrated the share entry point to `WorkoutHeader` and added `WorkoutShareBottomSheet` modal selection, but `onSelectMapSnapshot` was only wired to navigate/scroll to the Map tab without triggering `isSharing` or bridging the auto-share intent from list cards.
+4. *Preservation of Core Invariants*: Top-end action stacking (`REQ-UI-500`), status bar inset clearance (`REQ-UI-491`), off-thread bitmap composition (`Dispatchers.Default`), and 100% clean-room test pass rate remain strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete viewing a workout in `WorkoutDetailTabbedContent` on any tab,
+• *When* tapping the Share button in `WorkoutHeader` and selecting 'Karten- & Analyse-Snapshot',
+• *Then* the bottom sheet dismisses, the view scrolls/switches to the Map tab, and the composite snapshot is automatically captured and launched via the Android Share sheet (`Intent.ACTION_SEND`).
+• *Given* an athlete viewing a workout card in the workout list (`WorkoutSummary`),
+• *When* tapping the Share button and selecting 'Karten- & Analyse-Snapshot',
+• *Then* the detail view opens with `initialAutoShareSnapshot = true`, navigating to the Map tab, capturing the composite snapshot, and launching the Android Share sheet.
+• *Given* `MapDetailLayout` rendered with `workoutData != null`,
+• *When* the Map tab is displayed,
+• *Then* `showFloatingShareButton` is false and top-end actions dock at `16.dp` per `REQ-UI-500`.
+
+**Invariants**: Zero changes to database schema, zero UI freezes on main thread during snapshot composition, preservation of `showFloatingShareButton: Boolean = workoutData == null`, and 100% clean-room test pass rate.
+
+
 

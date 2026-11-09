@@ -396,9 +396,9 @@
   • Execute `./gradlew testDebugUnitTest` asserting 100% pass rate.
 
 ### TST-MAP-036: **Designated Home-Base Selection, Database Migration & Substring Disambiguation Verification** [Verified]
-- **Requirement(s)**: `REQ-MAP-034`
+- **Requirement(s)**: `REQ-MAP-034`, `REQ-MAP-036`
 - **Component**: **Designated Home-Base Selection, Database Migration & Substring Disambiguation Verification**
-- **Jira**: ``ATT-2472``
+- **Jira**: ``ATT-2472, ATT-6209``
 - **Test Description**:
   1. *Database Migration & Transactional Exclusivity (`KnownLocationsDatabaseManagerHomeTest.kt`)*:
   • Verify DB upgrade from v5 to v6 creates column `is_home`.
@@ -412,9 +412,9 @@
   • Verify fallback to first location when all hitCounts are 0.
   3. *Repository Reactive StateFlow Tests (`KnownLocationsRepositoryTest.kt`)*:
   • Verify `setHomeLocation(id)` and `clearHomeLocation()` update reactive `locationsFlow`.
-  4. *UI & Dialog Contract Tests (`KnownLocationHomeContractTest.kt`)*:
-  • Verify `KnownLocationsScreen.kt` renders Home icon and Home badge when `item.isHome == true`.
-  • Verify `KnownLocationCard` context menu contains set/clear home actions.
+  4. *UI & Dialog Contract Tests (`KnownLocationHomeContractTest.kt`, `KnownLocationsScreenTest.kt`)*:
+  • Verify `KnownLocationsScreen.kt` renders Home icon next to title and NO redundant badge when `item.isHome == true`.
+  • Verify `KnownLocationCard` context menu does NOT contain set/clear home actions (`known_locations_set_home` and `known_locations_remove_home` cleanly excised per ATT-6209).
   • Verify `EditKnownLocationDialog.kt` contains Home Base toggle switch.
   5. *9-Language Localization Parity Audit (`TranslationParityTest.kt`)*:
   • Verify `known_locations_home_base`, `known_locations_home_badge`, `known_locations_set_home`, `known_locations_remove_home` across all 9 locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).
@@ -1035,3 +1035,21 @@
   • Run `TrackingMapIsolationContractTest` to ensure zero reflection violations and strict `@Immutable` isolation.
   6. *Targeted Regression Verification Suite (`TST-MAP-061.6`)*:
   • Execute targeted tests across `ui.map.*` and `ui.tracking.*` asserting 100% pass rate.
+
+
+### TST-MAP-062: **Local Bounds Proximity & User Position Fallback Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-MAP-060` (`REQ-MAP-060.1`..`REQ-MAP-060.3`)
+- **Component**: `MapBehaviorsTest.kt`, `ATrainingTrackerMapTest.kt`, `MapScreenWithTrackTest.kt`
+- **Jira**: `ATT-6212`
+- **Test Description**:
+  1. *Null User Position Proximity Guard (`TST-MAP-062.1`, `MapBehaviorsTest.kt`)*:
+  • Verify that when `userPos == null`, `isLocal(target)` returns `false`, preventing unanchored segment inclusion.
+  2. *Initial Location Fallback & 1000m Proximity Filtering (`TST-MAP-062.2`, `MapBehaviorsTest.kt`)*:
+  • Verify that `userPos` resolves to `currentLocation ?: initialLocation`.
+  • Verify that points within 1000m are included while distant/intercontinental points (> 1000m) are excluded.
+  3. *Deferred Fix Preservation Guard (`TST-MAP-062.3`, `MapBehaviorsTest.kt`)*:
+  • Verify that when `currentLocation == null` and no points match, `hasFittedInitialBounds` is not set to true, preserving deferred fix camera centering.
+  4. *ATrainingTrackerMap Wiring Contract (`TST-MAP-062.4`, `ATrainingTrackerMapTest.kt` / `MapScreenWithTrackTest.kt`)*:
+  • Verify `ATrainingTrackerMap` accepts and forwards `initialLocation` to `MapBoundsController`.
+  5. *Targeted Regression Verification Suite (`TST-MAP-062.5`)*:
+  • Execute targeted tests across `ui.map.*` and `build.*` asserting 100% pass rate.
