@@ -8028,6 +8028,21 @@
   4. *Tier 1 Targeted Unit Test Regression Suite (`TST-UI-500.4`)*:
   • Execute targeted test suite (`ui.map.*`, `ui.aftermath.*`, `ui.routes.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
 
+### TST-UI-501: **SupporterScreen & SupporterComponents: Tier Hierarchy & Lower Tier De-Emphasis Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-UI-501`
+- **Component**: `SupporterComponents.kt`, `SupporterScreen.kt`, `SupporterPlanCardHierarchyTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-6286`
+- **Test Description**:
+  1. *SupporterPlanCard Visual Hierarchy & State Resolution Contract Test (`TST-UI-501.1`)*:
+  • Verify `SupporterPlanCard` button type (`Button` vs. `OutlinedButton`), label string resource (`supporter_plan_button_switch` vs. `supporter_plan_button_active` vs. `supporter_plan_button_support`), and container/border styling across all tier permutations.
+  2. *SupporterScreen Effective Tier Propagation Contract Test (`TST-UI-501.2`)*:
+  • Verify in `SupporterScreen.kt` that `effectiveTier` is passed down to every `SupporterPlanCard`.
+  3. *9-Language Localization & Translation Parity Suite (`TST-UI-501.3`)*:
+  • Execute `TranslationParityTest` asserting that `supporter_plan_button_switch` exists in `strings_monetization.xml` across all 9 locales with 100% parity.
+  4. *Tier 1 Targeted Unit Test Regression (`TST-UI-501.4`)*:
+  • Execute targeted test suite (`ui.settings.supporter.*`, `ui.branding.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
+
+
 
 
 

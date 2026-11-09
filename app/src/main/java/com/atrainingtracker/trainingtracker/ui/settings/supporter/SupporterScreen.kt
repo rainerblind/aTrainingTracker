@@ -141,6 +141,7 @@ fun SupporterScreen(
                 SupporterPlanCard(
                     plan = plan,
                     isCurrentTier = effectiveTier == plan.tier,
+                    effectiveTier = effectiveTier,
                     isPreSelected = plan.basePlanId == preSelectedPlanId,
                     onSelectPlan = {
                         handlePlanSelection(context, plan, settingsDataStore)

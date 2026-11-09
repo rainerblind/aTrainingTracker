@@ -46,7 +46,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -154,30 +156,52 @@ internal fun ActiveTierBanner(tier: SupporterTier) {
     }
 }
 
+/**
+ * Visual hierarchy states for supporter subscription plan cards (REQ-UI-501.1).
+ */
+internal enum class PlanCardHierarchyState {
+    LOWER_TIER,
+    CURRENT_TIER,
+    UPGRADE_TIER
+}
+
+internal fun getPlanCardHierarchyState(
+    plan: SupporterBasePlan,
+    effectiveTier: SupporterTier
+): PlanCardHierarchyState {
+    return when {
+        plan.tier == effectiveTier -> PlanCardHierarchyState.CURRENT_TIER
+        effectiveTier.isPro && effectiveTier != SupporterTier.PIONEER && plan.tier.rank < effectiveTier.rank -> PlanCardHierarchyState.LOWER_TIER
+        else -> PlanCardHierarchyState.UPGRADE_TIER
+    }
+}
+
 @Composable
 internal fun SupporterPlanCard(
     plan: SupporterBasePlan,
-    isCurrentTier: Boolean,
+    isCurrentTier: Boolean = false,
+    effectiveTier: SupporterTier = if (isCurrentTier) plan.tier else SupporterTier.FREE,
     isPreSelected: Boolean = false,
     onSelectPlan: () -> Unit
 ) {
+    val state = getPlanCardHierarchyState(plan, effectiveTier)
+    val showRecommendation = plan.isRecommended && effectiveTier.rank < SupporterTier.SILVER.rank
+
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = if (isPreSelected) {
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
-            } else if (plan.isRecommended) {
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
-            } else {
-                MaterialTheme.colorScheme.surface
+            containerColor = when {
+                isPreSelected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+                state == PlanCardHierarchyState.CURRENT_TIER -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)
+                state == PlanCardHierarchyState.UPGRADE_TIER && showRecommendation -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                else -> MaterialTheme.colorScheme.surface
             }
         ),
         shape = RoundedCornerShape(12.dp),
-        border = if (isPreSelected) {
-            BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-        } else if (plan.isRecommended) {
-            BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
-        } else {
-            BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
+        border = when {
+            isPreSelected -> BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+            state == PlanCardHierarchyState.CURRENT_TIER -> BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
+            state == PlanCardHierarchyState.UPGRADE_TIER && showRecommendation -> BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
+            else -> BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
         },
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -197,8 +221,12 @@ internal fun SupporterPlanCard(
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                 }
-                Column(modifier = Modifier.weight(1f, fill = false)) {
-                    if (plan.isRecommended) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .alpha(if (state == PlanCardHierarchyState.LOWER_TIER) 0.85f else 1f)
+                ) {
+                    if (showRecommendation) {
                         Surface(
                             shape = RoundedCornerShape(12.dp),
                             color = MaterialTheme.colorScheme.primary
@@ -232,28 +260,43 @@ internal fun SupporterPlanCard(
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                if (isCurrentTier) {
-                    OutlinedButton(
-                        onClick = {},
-                        enabled = false,
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.supporter_plan_button_active),
-                            maxLines = 1,
-                            softWrap = false
-                        )
+                when (state) {
+                    PlanCardHierarchyState.CURRENT_TIER -> {
+                        OutlinedButton(
+                            onClick = {},
+                            enabled = false,
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.supporter_plan_button_active),
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        }
                     }
-                } else {
-                    Button(
-                        onClick = onSelectPlan,
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.supporter_plan_button_support),
-                            maxLines = 1,
-                            softWrap = false
-                        )
+                    PlanCardHierarchyState.LOWER_TIER -> {
+                        OutlinedButton(
+                            onClick = onSelectPlan,
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.supporter_plan_button_switch),
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        }
+                    }
+                    PlanCardHierarchyState.UPGRADE_TIER -> {
+                        Button(
+                            onClick = onSelectPlan,
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.supporter_plan_button_support),
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        }
                     }
                 }
             }
@@ -287,3 +330,40 @@ internal fun handlePlanSelection(
         }
     }
 }
+
+@Preview(name = "SupporterPlanCard - Lower Tier (Bronze with Active Silver)")
+@Composable
+private fun SupporterPlanCardLowerTierPreview() {
+    MaterialTheme {
+        SupporterPlanCard(
+            plan = SupporterBasePlan.PLANS[1], // bronze-yearly
+            effectiveTier = SupporterTier.SILVER,
+            onSelectPlan = {}
+        )
+    }
+}
+
+@Preview(name = "SupporterPlanCard - Current Tier (Silver Active)")
+@Composable
+private fun SupporterPlanCardCurrentTierPreview() {
+    MaterialTheme {
+        SupporterPlanCard(
+            plan = SupporterBasePlan.PLANS[2], // silver-yearly
+            effectiveTier = SupporterTier.SILVER,
+            onSelectPlan = {}
+        )
+    }
+}
+
+@Preview(name = "SupporterPlanCard - Upgrade Tier (Gold with Active Silver)")
+@Composable
+private fun SupporterPlanCardUpgradeTierPreview() {
+    MaterialTheme {
+        SupporterPlanCard(
+            plan = SupporterBasePlan.PLANS[3], // gold-yearly
+            effectiveTier = SupporterTier.SILVER,
+            onSelectPlan = {}
+        )
+    }
+}
+

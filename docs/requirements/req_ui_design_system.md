@@ -14951,6 +14951,42 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: `controlsTopOffsetDp` status bar clearance; 44dp button touch targets; `CircleShape` with `TTAlpha.Overlay`; dropdown menus interactive; 100% test pass rate.
 
+### REQ-UI-501: SupporterScreen & SupporterComponents: Tier Hierarchy & Lower Tier De-Emphasis [Verified]
+- **Tests**: `TST-UI-501` | **Tickets**: `ATT-6286`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/supporter/SupporterComponents.kt`, `SupporterScreen.kt`, `SupporterTier.kt`, `res/values*/strings_monetization.xml`, `SupporterPlanCardHierarchyTest.kt`
+- **Rationale**: In `SupporterScreen.kt` and `SupporterComponents.kt` (`SupporterPlanCard`), lower tiers (Bronze) currently render a filled primary `Button` ("Fördern") when a higher tier (Silver/Gold/Diamond) is active, causing visual competition. Furthermore, the "Empfehlung" badge on Silver is rendered unconditionally, cluttering the view for existing Silver/Gold/Diamond athletes.
+- **Description**:
+  1. *Effective Tier Parameter & Visual Plan Hierarchy (`REQ-UI-501.1`)*:
+     - `SupporterPlanCard` in `SupporterComponents.kt` SHALL accept `effectiveTier: SupporterTier` (passed from `SupporterScreen.kt`). Based on `plan.tier.rank` vs `effectiveTier.rank`, cards SHALL render in one of three mutually exclusive visual states:
+       a. *Lower Tier / Downgrade* (`effectiveTier.isPro && effectiveTier != SupporterTier.PIONEER && plan.tier.rank < effectiveTier.rank`): standard `surface` container, thin `0.5.dp` `outlineVariant` border, slightly muted typography, suppressed recommendation badge, and subtle `OutlinedButton` labeled "Wechseln" / "Switch" (`R.string.supporter_plan_button_switch`).
+       b. *Current Active Tier* (`plan.tier == effectiveTier`): highlighted `1.5.dp` `primary` border, subtle container tint (`MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)`), suppressed recommendation badge, and disabled `OutlinedButton` labeled "Aktiv" / "Active" (`R.string.supporter_plan_button_active`).
+       c. *Higher Tier / Upgrade* (or `effectiveTier in (FREE, PIONEER)`): filled primary `Button` labeled "Fördern" / "Support" (`R.string.supporter_plan_button_support`).
+  2. *Conditional Recommendation Badge Suppression (`REQ-UI-501.2`)*:
+     - The "Empfehlung" badge (`R.string.supporter_recommended_badge`) and recommendation container highlight on `silver-yearly` (`plan.isRecommended == true`) SHALL be rendered strictly when `effectiveTier.rank < SupporterTier.SILVER.rank` (Free, Pioneer, Bronze).
+     - For athletes with `effectiveTier.rank >= SupporterTier.SILVER.rank` (Silver, Gold, Diamond), the badge and recommendation highlight SHALL be suppressed.
+  3. *Domain-Partitioned 9-Language Localization Parity (`REQ-UI-501.3`)*:
+     - `supporter_plan_button_switch` SHALL be partitioned into domain resource `strings_monetization.xml` across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with 100% translation parity.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-SET-086` / `REQ-UI-445.4` (`SupporterPlanCard` presentation). Targets `SupporterComponents.kt`, `SupporterScreen.kt`, and `strings_monetization.xml`.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-5371` (`REQ-SET-086.4`), `ATT-5496` (`REQ-UI-445.4`, 44dp tier emblems).
+3. *Root Reason for Existing Formulation*: Recommendation highlights were created to guide prospective subscribers. Suppressing them once Silver is attained preserves conversion intent while eliminating noise. Downgrades remain possible via subtle "Wechseln" without competing with upgrades.
+4. *Preservation of Core Invariants*: Full-color 44dp emblems remain visible on all cards; existing purchase action handlers and Google Play subscription linking remain unaffected; 100% test pass rate.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an active Silver supporter (`effectiveTier == SupporterTier.SILVER`),
+• *When* opening `SupporterScreen`,
+• *Then* Bronze cards render subtle `OutlinedButton` ("Wechseln") with surface container, Silver renders disabled `OutlinedButton` ("Aktiv") without "Empfehlung" badge, and Gold/Diamond render primary `Button` ("Fördern").
+• *Given* an active Gold or Diamond supporter,
+• *When* opening `SupporterScreen`,
+• *Then* Silver renders subtle `OutlinedButton` ("Wechseln") without "Empfehlung" badge or primary highlight.
+• *Given* a Free or Pioneer athlete,
+• *When* opening `SupporterScreen`,
+• *Then* Silver renders the "Empfehlung" badge and container highlight, and all non-current plans render primary `Button` ("Fördern").
+
+**Invariants**: Full-color 44dp tier emblems (`REQ-UI-445.4`); single-line buttons without text wrapping (`Rule 38`); 9-locale translation parity; 100% test pass rate.
+
+
 
 
 
