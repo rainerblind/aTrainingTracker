@@ -268,6 +268,9 @@ public class BANALService
             return null;
         }
         MySensor sensor = sensorManager.getSensor(sensorType);
+        if (sensor instanceof ProxySensor && ((ProxySensor<?>) sensor).getSourceSensor() == null) {
+            return null;
+        }
         return sensor == null ? null : sensor.getSensorData();
     }
 
@@ -465,6 +468,9 @@ public class BANALService
         MySensorManager sensorManager = cSensorManager;
         if (sensorManager != null) {
             for (MySensor mySensor : sensorManager.getSensors()) {
+                if (mySensor instanceof ProxySensor && ((ProxySensor<?>) mySensor).getSourceSensor() == null) {
+                    continue;
+                }
                 sensorTypeSet.add(mySensor.getSensorType());
             }
         }
@@ -529,6 +535,9 @@ public class BANALService
         MySensorManager sensorManager = cSensorManager;
         if (sensorManager != null) {
             for (MySensor mySensor : sensorManager.getSensors()) {  // gets the ProxySensors
+                if (mySensor instanceof ProxySensor && ((ProxySensor<?>) mySensor).getSourceSensor() == null) {
+                    continue;
+                }
                 sensorDataList.add(mySensor.getSensorData());
             }
         }
@@ -599,6 +608,10 @@ public class BANALService
         if (filterManager != null) {
             filterManager.shutDown();
         }
+
+        cDeviceManager = null;
+        cSensorManager = null;
+        cFilterManager = null;
 
         LifecycleUtils.safeUnregisterReceiver(this, mNewLapReceiver, TAG);
         LifecycleUtils.safeUnregisterReceiver(this, mStartSearchForPairedDevices, TAG);

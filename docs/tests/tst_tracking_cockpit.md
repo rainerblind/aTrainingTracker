@@ -1555,5 +1555,27 @@
   5. *Targeted Regression Suite Execution (`TST-TRK-054.5`)*:
   • Execute targeted package tests (`com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.*`, `com.atrainingtracker.trainingtracker.ui.settings.display.*`) asserting 100% pass rate.
 
+### TST-TRK-055: **Persistent Sensor Proxy Binding & Filter Re-Connection Verification Test Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-055`
+- **Component**: `FilterManagerRebindTest.kt`, `MySensorManagerProxyTest.kt`, `BANALServiceLifecycleTest.kt`
+- **Jira**: `ATT-6257`
+- **Test Description**:
+  1. *Persistent ProxySensor Retention & Reconnection Unit Test (`TST-TRK-055.1`, `MySensorManagerProxyTest.kt`)*:
+  • Register a source sensor on `MySensorManager` and verify a `ProxySensor` is created.
+  • Unregister the source sensor and verify `proxy.getSourceSensor() == null`, but the `ProxySensor` instance in `getSensor(sensorType)` is retained.
+  • Register a new source sensor and verify the identical `ProxySensor` instance wraps the new sensor with listeners preserved.
+  2. *FilterManager Dynamic Re-Binding Unit Test (`TST-TRK-055.2`, `FilterManagerRebindTest.kt`)*:
+  • Create a filter in `FilterManager` bound to a sensor.
+  • Replace or update the backing sensor instance and dispatch `createFilter()` or `SENSORS_CHANGED`.
+  • Verify the filter unregisters from the old sensor, registers on the new sensor, and delivers new telemetry samples.
+  3. *Named Peripheral Device Re-Creation Re-Binding Test (`TST-TRK-055.3`, `FilterManagerRebindTest.kt`)*:
+  • Create a device-specific filter for `deviceName != null`.
+  • Simulate device recreation with a new `MySensor` instance and verify filter re-binds on `SENSORS_CHANGED`.
+  4. *BANALService Static Lifecycle Cleanup & Restart Test (`TST-TRK-055.4`, `BANALServiceLifecycleTest.kt`)*:
+  • Verify `BANALService.onDestroy()` resets static manager references and `DeviceManager.shutDown()` clears device instances.
+  5. *Targeted Regression Suite Execution (`TST-TRK-055.5`)*:
+  • Execute targeted package tests (`com.atrainingtracker.banalservice.filters.*`, `com.atrainingtracker.banalservice.sensor.*`, `com.atrainingtracker.banalservice.devices.*`) asserting 100% pass rate.
+
+
 
 

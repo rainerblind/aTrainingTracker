@@ -309,6 +309,14 @@ public class DeviceManager {
         }
     };
 
+    private String getStringSafely(int resId, String fallback) {
+        try {
+            return mContext != null ? mContext.getString(resId) : fallback;
+        } catch (Exception e) {
+            return fallback;
+        }
+    }
+
     /**
      * Constructor
      **/
@@ -324,7 +332,7 @@ public class DeviceManager {
         if (mHavePressureSensor) {
             mDevicesDatabaseManager.ensureSmartphoneDeviceExists(
                     DeviceType.ALTITUDE_FROM_PRESSURE,
-                    mContext.getString(R.string.devices_altitude_from_pressure)
+                    getStringSafely(R.string.devices_altitude_from_pressure, "Barometer")
             );
         }
 
@@ -343,7 +351,7 @@ public class DeviceManager {
 
         mDevicesDatabaseManager.ensureSmartphoneDeviceExists(
                 DeviceType.ALTITUDE_FROM_POSITION,
-                mContext.getString(R.string.devices_altitude_from_position),
+                getStringSafely(R.string.devices_altitude_from_position, "GPS Altitude"),
                 false
         );
         long altitudePositionId = mDevicesDatabaseManager.getSmartphoneDeviceId(DeviceType.ALTITUDE_FROM_POSITION);
@@ -404,6 +412,14 @@ public class DeviceManager {
 
     public CyclingPowerMetricsDevice getCyclingPowerMetricsDevice() {
         return mCyclingPowerMetricsDevice;
+    }
+
+    public ClockDevice getClockDevice() {
+        return mClockDevice;
+    }
+
+    public BatteryDevice getBatteryDevice() {
+        return mBatteryDevice;
     }
 
     /**
@@ -485,6 +501,15 @@ public class DeviceManager {
         mSearchQueue.clear();
         mMyRemoteDeviceTries.clear();
         mNewlyFoundDevices.clear();
+
+        mClockDevice = null;
+        mBatteryDevice = null;
+        mSpeedAndLocationDevice_GPS = null;
+        mSpeedAndLocationDevice_GoogleFused = null;
+        mAltitudeFromPressureDevice = null;
+        mAltitudeFromPositionDevice = null;
+        mVerticalSpeedAndSlopeDevice = null;
+        mCyclingPowerMetricsDevice = null;
 
         LifecycleUtils.safeUnregisterReceiver(mContext, mPairingChangedReceiver, TAG);
         LifecycleUtils.safeUnregisterReceiver(mContext, mSearchingStoppedForOneReceiver, TAG);
@@ -705,7 +730,7 @@ public class DeviceManager {
 
     public String getMainSensorStringValue(long deviceId) {
         MyRemoteDevice remoteDevice = mMyRemoteDevices.get(deviceId);
-        return (remoteDevice == null) ? mContext.getString(R.string.NoData) : remoteDevice.getMainSensorStringValue();
+        return (remoteDevice == null) ? getStringSafely(R.string.NoData, "No Data") : remoteDevice.getMainSensorStringValue();
     }
 
     public List<MyRemoteDevice> getActiveRemoteDevices() {

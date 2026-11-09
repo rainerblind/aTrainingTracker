@@ -2811,3 +2811,42 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Hardware volume buttons MUST function normally on all non-Cockpit screens and in `ScreenMode.CONFIGURATION`; both `ACTION_DOWN` and `ACTION_UP` MUST be consumed in `TRACKING` mode to avoid audio HUD flicker; cyclic wrap-around MUST handle `pageCount <= 1` gracefully without `IndexOutOfBoundsException`.
 
+### REQ-TRK-055: Persistent Sensor Proxy Binding & Automatic Filter Re-Connection [Verified]
+- **Tests**: `TST-TRK-055` | **Tickets**: `ATT-6257`
+- **Implementation**: `MySensorManager.java`, `ProxySensor.java`, `FilterManager.java`, `BANALService.java`, `DeviceManager.java`
+- **Rationale**: Cockpit tiles (`TrackingViewModel` via `allFilteredSensorData`) and derived sensor devices (`VerticalSpeedAndSlopeDevice` via `getFilteredSensorData`) read sensor values through `FilterManager`. When a sensor disconnects or unregisters (e.g., GPS signal loss via `LocationUnavailable()`, BLE/ANT+ peripheral disconnect, pairing changes), previous implementations removed the `ProxySensor` from `MySensorManager.mSensorMap`, creating a new instance on reconnection. Existing filters in `FilterManager` remained permanently attached to the orphaned `ProxySensor` or previous `MySensor` instance, causing live Cockpit tiles (Speed, Distance, Altitude, Slope) to permanently freeze or show `--` / `0,00 km` even while background logging and map polylines continued. Retaining persistent `ProxySensor` instances and dynamically re-binding existing filters guarantees uninterrupted live telemetry updates across all reconnection and service lifecycle transitions.
+- **Description**:
+1. *Persistent ProxySensor Instance Retention (`REQ-TRK-055.1`)*:
+• `MySensorManager` SHALL retain its `ProxySensor` instance per `SensorType` across sensor unregistration and re-registration cycles instead of removing it from `mSensorMap`.
+• When the last active source sensor for a `SensorType` unregisters (`newBestSensor == null`), `MySensorManager` SHALL call `proxy.setSourceSensor(null)`.
+• When a source sensor registers or becomes the new best sensor, `MySensorManager` SHALL reuse the existing `ProxySensor` and invoke `proxy.setSourceSensor(newBestSensor)`.
+• `computeGCDataLocked()` and `getAvailableSensorTypeSet()` SHALL evaluate `proxy.getSourceSensor() != null` so disconnected sensors are not falsely reported as active.
+2. *Dynamic Sensor Filter Re-Binding in FilterManager (`REQ-TRK-055.2`)*:
+• `FilterManager.createFilter()` SHALL audit existing filters: when `myFilterMap.containsKey(hashKey)` is true, it SHALL resolve the current active sensor for `filterData` (`filterData.deviceName == null ? mMySensorManager.getSensor(filterData.sensorType) : myDevice.getSensor(filterData.sensorType)`). If the active sensor differs from the recorded sensor in `mMapFilter2Sensor`, `FilterManager` SHALL rebind the filter by unregistering from the old sensor, registering as a listener on the new active sensor, and updating `mMapFilter2Sensor`.
+• On receiving `BANALService.SENSORS_CHANGED`, `FilterManager` SHALL audit all existing filters in `myFilterMap` and re-bind any filter whose active source sensor has changed or become newly available, in addition to attempting creation of pending `mRequiredButNotAvailableFilters`.
+3. *Named Device Sensor Re-Registration Re-Binding (`REQ-TRK-055.3`)*:
+• When a named peripheral device (`deviceName != null`) is re-paired, rediscovered, or recreated in `DeviceManager`, `FilterManager` SHALL dynamically re-bind all existing device-specific filters for that device name to the new `MySensor` instance upon receiving `SENSORS_CHANGED` or during `createFilter`.
+4. *Defensive Service Teardown & Static Reference Hygiene (`REQ-TRK-055.4`)*:
+• `BANALService.onDestroy()` MUST cleanly shut down and reset static manager references (`cDeviceManager = null`, `cSensorManager = null`, `cFilterManager = null`) if the destroying service matches the active service instance, preventing subsequent service re-creations or static queries from accessing shut-down manager singletons.
+• `DeviceManager.shutDown()` SHALL cleanly nullify its device references (`mSpeedAndLocationDevice_GPS = null`, `mSpeedAndLocationDevice_GoogleFused = null`, `mAltitudeFromPressureDevice = null`, `mAltitudeFromPositionDevice = null`) upon teardown.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-055`, extending `REQ-SEN-021` (*ProxySensor Thread Safety & Listener Migration*) and `REQ-FIL-011` / `REQ-FIL-013` (*Filter Manager Lifecycle & Accumulator Reset*). Targets `MySensorManager.java`, `ProxySensor.java`, `FilterManager.java`, `BANALService.java`, and `DeviceManager.java`.
+2. *Historical Origin & Commit Trace*: `ATT-4096` (`REQ-SEN-021`, eliminating lock-order inversions during listener migration) and `ATT-5191` (`REQ-FIL-013`, zero-value baseline seeding with ProxySensor unwrapping).
+3. *Root Reason for Existing Formulation*: Prior designs removed `ProxySensor` from `mSensorMap` when `bestSensor == null` under the assumption that sensor lifecycles were strictly static. This destroyed listener continuity whenever a sensor disconnected and reconnected.
+4. *Preservation of Core Invariants*: Lock-order inversion prevention outside monitors (`REQ-SEN-021.2/.3`), sensor priority resolution hierarchy (`SPEED_PRIORITY`, `CADENCE_PRIORITY`, etc.), and zero-value accumulator seeding (`REQ-FIL-013`) MUST remain preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an active workout with Cockpit tiles registered for `SPEED_mps`, `DISTANCE_m`, and `ALTITUDE`,
+• *When* the primary sensor unregisters (e.g. GPS provider temporary loss) and subsequent new samples arrive after sensor re-registration,
+• *Then* the existing `MyFilter` instances SHALL receive the new samples via the persistent `ProxySensor` without requiring Cockpit screen recreation.
+• *Given* an existing filter in `FilterManager` bound to an old sensor instance,
+• *When* a new sensor instance registers for that device or type and `SENSORS_CHANGED` is broadcast,
+• *Then* `FilterManager` SHALL re-bind the filter listener to the new sensor and emit updated values.
+• *Given* `BANALService` is destroyed and restarted (e.g. after background disconnect timeout),
+• *When* the service re-initializes,
+• *Then* static managers SHALL be fresh instances and all required filters SHALL bind to active sensors.
+
+**Invariants**: `ProxySensor` listener migration MUST NOT execute inside monitor locks; sensor priorities MUST be strictly respected; accumulator filters MUST preserve baseline zero seeding; no UI layout changes.
+
+

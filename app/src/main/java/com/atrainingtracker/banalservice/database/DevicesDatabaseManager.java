@@ -1297,7 +1297,7 @@ public class DevicesDatabaseManager {
          * across all 9 locales while strictly preserving custom user renames (REQ-SEN-026.2, ATT-5073).
          */
         public int migrateAltitudeFromPressureLegacyNames(SQLiteDatabase db) {
-            String newName = mContext.getString(R.string.devices_altitude_from_pressure);
+            String newName = getStringSafely(R.string.devices_altitude_from_pressure, "Barometer");
             String[] legacyNames = new String[] {
                 "Air Pressure",
                 "Luftdruck",
@@ -1356,14 +1356,27 @@ public class DevicesDatabaseManager {
             }
         }
 
+        private String getStringSafely(int resId, String fallback) {
+            try {
+                return mContext != null ? mContext.getString(resId) : fallback;
+            } catch (Exception e) {
+                return fallback;
+            }
+        }
+
         void addLocationDevicesToDb(SQLiteDatabase db) {
-            boolean playServicesAvailable = GooglePlayServicesUtil.isGooglePlayServicesAvailable(mContext) == ConnectionResult.SUCCESS;
+            boolean playServicesAvailable;
+            try {
+                playServicesAvailable = GooglePlayServicesUtil.isGooglePlayServicesAvailable(mContext) == ConnectionResult.SUCCESS;
+            } catch (Exception e) {
+                playServicesAvailable = false;
+            }
 
             ContentValues contentValues = new ContentValues();
             contentValues.put(PROTOCOL, Protocol.SMARTPHONE.name());
             contentValues.put(DEVICE_TYPE, DeviceType.SPEED_AND_LOCATION_GPS.name());
             contentValues.put(PAIRED, !playServicesAvailable);
-            contentValues.put(NAME, mContext.getString(R.string.devices_location_GPS));
+            contentValues.put(NAME, getStringSafely(R.string.devices_location_GPS, "GPS"));
             contentValues.put(MANUFACTURER_NAME, Build.BRAND);
             db.insert(DEVICES, null, contentValues);
 
@@ -1371,7 +1384,7 @@ public class DevicesDatabaseManager {
             contentValues.put(PROTOCOL, Protocol.SMARTPHONE.name());
             contentValues.put(DEVICE_TYPE, DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED.name());
             contentValues.put(PAIRED, playServicesAvailable);
-            contentValues.put(NAME, mContext.getString(R.string.devices_location_GoogleFused));
+            contentValues.put(NAME, getStringSafely(R.string.devices_location_GoogleFused, "Google Fused"));
             contentValues.put(MANUFACTURER_NAME, Build.BRAND);
             db.insert(DEVICES, null, contentValues);
 
@@ -1379,7 +1392,7 @@ public class DevicesDatabaseManager {
             contentValues.put(PROTOCOL, Protocol.SMARTPHONE.name());
             contentValues.put(DEVICE_TYPE, DeviceType.ALTITUDE_FROM_POSITION.name());
             contentValues.put(PAIRED, false);
-            contentValues.put(NAME, mContext.getString(R.string.devices_altitude_from_position));
+            contentValues.put(NAME, getStringSafely(R.string.devices_altitude_from_position, "GPS Altitude"));
             contentValues.put(MANUFACTURER_NAME, Build.BRAND);
             db.insert(DEVICES, null, contentValues);
 
@@ -1388,7 +1401,7 @@ public class DevicesDatabaseManager {
                 contentValues.put(PROTOCOL, Protocol.SMARTPHONE.name());
                 contentValues.put(DEVICE_TYPE, DeviceType.ALTITUDE_FROM_PRESSURE.name());
                 contentValues.put(PAIRED, true);
-                contentValues.put(NAME, mContext.getString(R.string.devices_altitude_from_pressure));
+                contentValues.put(NAME, getStringSafely(R.string.devices_altitude_from_pressure, "Barometer"));
                 contentValues.put(MANUFACTURER_NAME, Build.BRAND);
                 db.insert(DEVICES, null, contentValues);
             }

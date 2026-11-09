@@ -314,7 +314,11 @@ public class TrainingApplication extends Application {
     };
 
     public static boolean havePermission(@NonNull String permission) {
-        return ActivityCompat.checkSelfPermission(cAppContext, permission) == PackageManager.PERMISSION_GRANTED;
+        Context context = cAppContext;
+        if (context == null) {
+            return false;
+        }
+        return ActivityCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED;
     }
 
     public static boolean isAppInstalled(@NonNull String uri) {
@@ -437,31 +441,31 @@ public class TrainingApplication extends Application {
     }
 
     public static boolean startSearchWhenAppStarts() {
-        return cSharedPreferences.getBoolean(SP_START_SEARCH_WHEN_APP_STARTS, START_SEARCH_WHEN_APP_STARTS_DEFAULT);
+        return cSharedPreferences != null ? cSharedPreferences.getBoolean(SP_START_SEARCH_WHEN_APP_STARTS, START_SEARCH_WHEN_APP_STARTS_DEFAULT) : START_SEARCH_WHEN_APP_STARTS_DEFAULT;
     }
 
     public static boolean startSearchWhenTrackingStarts() {
-        return cSharedPreferences.getBoolean(SP_START_SEARCH_WHEN_TRACKING_STARTS, START_SEARCH_WHEN_TRACKING_STARTS_DEFAULT);
+        return cSharedPreferences != null ? cSharedPreferences.getBoolean(SP_START_SEARCH_WHEN_TRACKING_STARTS, START_SEARCH_WHEN_TRACKING_STARTS_DEFAULT) : START_SEARCH_WHEN_TRACKING_STARTS_DEFAULT;
     }
 
     public static boolean startSearchWhenResumeFromPaused() {
-        return cSharedPreferences.getBoolean(SP_START_SEARCH_WHEN_RESUME_FROM_PAUSED, START_SEARCH_WHEN_RESUME_FROM_PAUSED_DEFAULT);
+        return cSharedPreferences != null ? cSharedPreferences.getBoolean(SP_START_SEARCH_WHEN_RESUME_FROM_PAUSED, START_SEARCH_WHEN_RESUME_FROM_PAUSED_DEFAULT) : START_SEARCH_WHEN_RESUME_FROM_PAUSED_DEFAULT;
     }
 
     public static boolean startSearchWhenNewLap() {
-        return cSharedPreferences.getBoolean(SP_START_SEARCH_WHEN_NEW_LAP, START_SEARCH_WHEN_NEW_LAP_DEFAULT);
+        return cSharedPreferences != null ? cSharedPreferences.getBoolean(SP_START_SEARCH_WHEN_NEW_LAP, START_SEARCH_WHEN_NEW_LAP_DEFAULT) : START_SEARCH_WHEN_NEW_LAP_DEFAULT;
     }
 
     public static boolean startSearchWhenUserChangesSport() {
-        return cSharedPreferences.getBoolean(SP_START_SEARCH_WHEN_USER_CHANGES_SPORT, START_SEARCH_WHEN_USER_CHANGES_SPORT_DEFAULT);
+        return cSharedPreferences != null ? cSharedPreferences.getBoolean(SP_START_SEARCH_WHEN_USER_CHANGES_SPORT, START_SEARCH_WHEN_USER_CHANGES_SPORT_DEFAULT) : START_SEARCH_WHEN_USER_CHANGES_SPORT_DEFAULT;
     }
 
     public static boolean changeSportWhenDeviceGetsLost() {
-        return cSharedPreferences.getBoolean(SP_CHANGE_SPORT_WHEN_DEVICE_GETS_LOST, CHANGE_SPORT_WHEN_DEVICE_GETS_LOST_DEFAULT);
+        return cSharedPreferences != null ? cSharedPreferences.getBoolean(SP_CHANGE_SPORT_WHEN_DEVICE_GETS_LOST, CHANGE_SPORT_WHEN_DEVICE_GETS_LOST_DEFAULT) : CHANGE_SPORT_WHEN_DEVICE_GETS_LOST_DEFAULT;
     }
 
     public static boolean searchOnlyForSportSpecificDevices() {
-        return cSharedPreferences.getBoolean(SP_SEARCH_ONLY_FOR_SPORT_SPECIFIC_DEVICES, SEARCH_ONLY_FOR_SPORT_SPECIFIC_DEVICES_DEFAULT);
+        return cSharedPreferences != null ? cSharedPreferences.getBoolean(SP_SEARCH_ONLY_FOR_SPORT_SPECIFIC_DEVICES, SEARCH_ONLY_FOR_SPORT_SPECIFIC_DEVICES_DEFAULT) : SEARCH_ONLY_FOR_SPORT_SPECIFIC_DEVICES_DEFAULT;
     }
 
     public static boolean checkANTInstallation() {
