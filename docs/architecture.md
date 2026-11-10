@@ -213,6 +213,24 @@ To prevent UI jank, thread contention, and Android SQLite database lock errors, 
 - **Google Fused Priority Over GPS**: In `MySensorManager`, `DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED` strictly precedes `DeviceType.SPEED_AND_LOCATION_GPS` across `SPEED_PRIORITY`, `ALTITUDE_PRIORITY`, and `LOCATION_PRIORITY`. While dedicated physical wheel/footpod sensors (`RUN_SPEED`, `BIKE_SPEED`, `BIKE_POWER`) and barometric pressure sensors (`ALTITUDE_FROM_PRESSURE`) retain absolute precedence, Google Fused Location Provider delivers faster time-to-first-fix and greater trajectory stability than raw GPS when location-derived speed, distance, altitude, or coordinates are utilized.
 - **Fresh Installation Default Pairing & De-Googled Fallback**: On fresh database initialization (`DevicesDatabaseManager.DevicesDbHelper.addLocationDevicesToDb`), Google Play Services availability is evaluated via `GooglePlayServicesUtil.isGooglePlayServicesAvailable(mContext) == ConnectionResult.SUCCESS`. If available, `SPEED_AND_LOCATION_GOOGLE_FUSED` is paired by default (`PAIRED = true`) and raw GPS is left unpaired (`PAIRED = false`). On de-Googled environments where Play Services is absent or unresolvable, the system deterministically falls back to pairing raw GPS (`PAIRED = true`). Existing installations and database upgrades preserve the athlete's persisted sensor pairing configuration without modification.
 
+### 4.9 Resource and Timing Budgets (SWE.2.BP4, `REQ-PRO-052`)
+In accordance with **ASPICE SWE.2 Base Practice 4 (Describe resource and timing budgets)**, the system establishes quantified resource consumption limits and latency budgets across runtime-critical subsystems to guarantee responsiveness, prevent thread starvation, and ensure all-day battery efficiency during multi-hour endurance sessions:
+
+| Subsystem Domain | Critical Component | Resource / Timing Metric | Budget Ceiling | Allocation Rationale & Non-Functional Trace (ATT-6139) |
+| :--- | :--- | :--- | :--- | :--- |
+| **Tracking Core** | `TrackerService` | Periodic Tick Execution Latency | < 50 ms | 1000 ms periodic cycle (`scheduleAtFixedRate`) on background thread; guarantees 950 ms idle headroom. |
+| **Tracking Core** | `TrackerService` | CPU Consumption | < 5% single-core | Mid-tier reference device; prevents CPU throttle and heat buildup. |
+| **Tracking Core** | `TrackerService` | Dedicated Heap Footprint | < 40 MB | Prevents GC churn and OutOfMemoryError during 12+ hour recordings. |
+| **Tracking Core** | `TrackerService` | Battery Consumption | < 5%/h | Background recording with screen off, active GPS, and BLE/ANT+ sensors. |
+| **Sensor Layer** | `BANALService` / `ProxySensor` | Sensor Dispatch Latency | < 25 ms | Time from hardware event ingestion to listener notification across registered sensors. |
+| **Sensor Layer** | `BANALService` / `ProxySensor` | Connection Failover Window | 3.5 s | Maximum timeout before initiating automatic failover or sensor reconnection. |
+| **Sensor Layer** | `BANALService` | Power Management | Bound to Tracking | `PARTIAL_WAKE_LOCK` strictly acquired only during `TRACKING` and released immediately on `STOP`. |
+| **Persistence** | `WorkoutSamplesDatabaseManager` | SQLite Sample Write Latency | < 30 ms | Unbuffered per-second sample insertion; strictly executed off main thread on `Dispatchers.IO` / `dbDispatcher`. |
+| **Persistence** | `WorkoutSamplesDatabaseManager` | Storage Growth Rate | ~360 KB/h | At 1-Hz telemetry recording (~100 bytes/sample); ~3.6 MB for a 10-hour endurance activity. |
+| **Cockpit & UI** | `SensorGridScreen` | UI Frame Rendering Time | < 16.6 ms (60 FPS) | Compose telemetry grid recomposition bound to 16.6 ms budget without dropped frames. |
+| **Cockpit & UI** | `ATrainingTrackerMap` | Map Polyline Update Latency | < 30 ms | Latency to update path geometry on live map canvas upon receiving location updates. |
+| **Cockpit & UI** | `TrackingTabsViewModel` | Telemetry StateFlow Emission | 1 Hz (conflated) | Prevents recomposition churn on live cockpit tabs during high-frequency sensor updates. |
+
 ---
 
 ## 5. Software Interface Specifications (SWE.2.BP2)

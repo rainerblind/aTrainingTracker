@@ -2595,3 +2595,33 @@ The workflow SHALL mandate that:
   • *Then* all contract assertions for runner, dependencies, and emulator CI workflow SHALL pass with 100% success.
 - **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; Rule 79 strictly obeyed (no local host emulator boot); 100% unit test pass rate.
 
+
+### REQ-PRO-052: Architectural Resource and Timing Budgets Specification [Verified]
+- **Tests**: `TST-PRO-052` | **Tickets**: `ATT-6181`
+- **Implementation**: `docs/architecture.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`
+- **Rationale**: Prior to ATT-6181, `docs/architecture.md` lacked explicit CPU, memory, battery, disk growth, and timing budgets for runtime-critical subsystems, specifying only 1 Hz sampling and 3.5 s sensor failover (ASPICE finding C-07, SWE.2 BP4). Without documented resource budgets, runtime resource consumption is accidental rather than engineered, risking background thread starvation, UI jank, and battery drain during multi-hour endurance sessions. Defining quantified budgets in Section 4.9 and enforcing their existence via contract testing fulfills SWE.2 BP4 and links architecture to non-functional performance requirements (ATT-6181, refining `REQ-PRO-043` under Epic `ATT-6142`):
+- **Description**:
+  1. *Resource & Timing Budget Specification in Architecture (`REQ-PRO-052.1`, docs/architecture.md §4.9)*:
+     • `docs/architecture.md` Section 4.9 SHALL define a comprehensive resource and timing budget specification matrix covering:
+       - `TrackerService`: CPU consumption (< 5% single-core on reference mid-tier device), memory footprint (< 40 MB heap), tick latency budget (< 50 ms per 1000 ms periodic tick), and background battery drain (< 5%/h with screen off and GPS/sensors active).
+       - Sensor Ingestion (`BANALService` / `ProxySensor`): Dispatch latency (< 25 ms event-to-subscriber), failover timeout (3.5 s reconnection window), and partial wake-lock acquisition strictly bounded to active tracking states.
+       - SQLite Persistence (`WorkoutSamplesDatabaseManager`): Sample insertion latency (< 30 ms on `Dispatchers.IO`), zero main-thread database I/O, and disk storage growth ceiling (~360 KB/h at 1-Hz sampling).
+       - Cockpit UI & Map Rendering (`SensorGridScreen` / `ATrainingTrackerMap`): UI frame rendering budget (< 16.6 ms per frame / 60 FPS), map polyline render update latency (< 30 ms), and conflated 1-Hz UI telemetry StateFlow emission.
+  2. *Architectural Budget Conformance Contract Testing (`REQ-PRO-052.2`)*:
+     • `ArchitectureConformanceContractTest.kt` SHALL assert that `docs/architecture.md` contains Section 4.9 defining resource and timing budgets across all 4 critical subsystem domains (Tracking, Sensors, Database, UI/Map).
+     • The test SHALL verify that documented metrics specify numeric thresholds for CPU, heap memory, latency, battery drain, and disk growth.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-052` (*Architectural Resource and Timing Budgets Specification*), refining `REQ-PRO-043` (*SWE.2 Architecture Conformance*). Targets `docs/architecture.md` and `ArchitectureConformanceContractTest.kt`.
+  2. *Historical Origin & Commit Trace*: Independent ASPICE pre-assessment finding C-07 (2026-11-08) and ticket ATT-6181.
+  3. *Root Reason for Existing Formulation*: Project architecture historically focused on component layering and functional flow diagrams without documented performance ceilings or resource bounds.
+  4. *Preservation of Core Invariants*: Existing threading models (`Dispatchers.Main` / `Dispatchers.IO`), 1-Hz sampling loops, 3.5 s sensor failover, and 100% unit test pass rate remain strictly preserved.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `docs/architecture.md`,
+  • *When* Section 4.9 is inspected,
+  • *Then* it SHALL document explicit resource and timing budgets for `TrackerService`, `BANALService`, `WorkoutSamplesDatabaseManager`, and Cockpit UI/Map.
+  • *Given* `ArchitectureConformanceContractTest.kt`,
+  • *When* executed in the unit test suite,
+  • *Then* `testArchitectureDoc_definesResourceAndTimingBudgets` SHALL pass with 100% success.
+- **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; 100% unit test pass rate.
+
+

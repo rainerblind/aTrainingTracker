@@ -25,14 +25,16 @@ import org.junit.Test
 import java.io.File
 
 /**
- * Architectural conformance contract test enforcing layer boundaries and dependency directions
- * (docs/architecture.md, REQ-PRO-050, TST-PRO-050, ATT-6182).
+ * Architectural conformance contract test enforcing layer boundaries, dependency directions,
+ * and quantitative resource & timing budgets (docs/architecture.md, REQ-PRO-050, TST-PRO-050,
+ * REQ-PRO-052, TST-PRO-052, ATT-6182, ATT-6181).
  *
  * Enforces:
  * 1. UI layer files must not reference raw SQLite *DatabaseManager or *DbHelper singletons
  *    outside the ratcheted baseline allow-list (REQ-PRO-050.1, REQ-PRO-050.3).
  * 2. Domain calculation engines remain pure JVM without Android UI or database coupling (REQ-PRO-050.2).
  * 3. Tripwires detect unallow-listed UI database references or domain UI imports (REQ-PRO-050.3).
+ * 4. docs/architecture.md defines explicit resource and timing budgets (SWE.2.BP4, REQ-PRO-052).
  */
 class ArchitectureConformanceContractTest {
 
@@ -178,5 +180,58 @@ class ArchitectureConformanceContractTest {
             "Tripwire must catch forbidden Compose import in domain layer (REQ-PRO-050.2, REQ-PRO-050.3)",
             matched
         )
+    }
+
+    private fun findRepoRootFile(relativePath: String): File {
+        val candidates = listOf(
+            File(relativePath),
+            File("../$relativePath"),
+            File("../../$relativePath")
+        )
+        return candidates.firstOrNull { it.exists() }
+            ?: throw IllegalStateException("Could not locate $relativePath in working directory: ${File(".").absolutePath}")
+    }
+
+    /**
+     * Asserts that docs/architecture.md defines explicit resource and timing budgets
+     * for runtime-critical subsystems (REQ-PRO-052.1, REQ-PRO-052.2, TST-PRO-052.1, TST-PRO-052.2).
+     */
+    @Test
+    fun testArchitectureDoc_definesResourceAndTimingBudgets() {
+        val archFile = findRepoRootFile("docs/architecture.md")
+        val content = archFile.readText()
+
+        // TST-PRO-052.1: Section 4.9 and critical subsystem domains present
+        assertTrue(
+            "docs/architecture.md must contain Section 4.9 (Resource and Timing Budgets) (REQ-PRO-052.1, TST-PRO-052.1)",
+            content.contains("### 4.9 Resource and Timing Budgets")
+        )
+        assertTrue(
+            "docs/architecture.md must specify budgets for TrackerService (REQ-PRO-052.1, TST-PRO-052.1)",
+            content.contains("TrackerService")
+        )
+        assertTrue(
+            "docs/architecture.md must specify budgets for BANALService / ProxySensor (REQ-PRO-052.1, TST-PRO-052.1)",
+            content.contains("BANALService") && content.contains("ProxySensor")
+        )
+        assertTrue(
+            "docs/architecture.md must specify budgets for WorkoutSamplesDatabaseManager (REQ-PRO-052.1, TST-PRO-052.1)",
+            content.contains("WorkoutSamplesDatabaseManager")
+        )
+        assertTrue(
+            "docs/architecture.md must specify budgets for Cockpit UI and Map (REQ-PRO-052.1, TST-PRO-052.1)",
+            content.contains("SensorGridScreen") && content.contains("ATrainingTrackerMap")
+        )
+
+        // TST-PRO-052.2: Quantitative metric thresholds present
+        assertTrue("Must specify CPU consumption ceiling (< 5%) (REQ-PRO-052.1)", content.contains("< 5%"))
+        assertTrue("Must specify dedicated heap footprint ceiling (< 40 MB) (REQ-PRO-052.1)", content.contains("< 40 MB"))
+        assertTrue("Must specify periodic tick latency budget (< 50 ms) (REQ-PRO-052.1)", content.contains("< 50 ms"))
+        assertTrue("Must specify background battery drain ceiling (< 5%/h) (REQ-PRO-052.1)", content.contains("< 5%/h"))
+        assertTrue("Must specify sensor dispatch latency (< 25 ms) (REQ-PRO-052.1)", content.contains("< 25 ms"))
+        assertTrue("Must specify sensor failover window (3.5 s) (REQ-PRO-052.1)", content.contains("3.5 s"))
+        assertTrue("Must specify database write latency (< 30 ms) (REQ-PRO-052.1)", content.contains("< 30 ms"))
+        assertTrue("Must specify database storage growth rate (~360 KB/h) (REQ-PRO-052.1)", content.contains("360 KB/h"))
+        assertTrue("Must specify UI frame render budget (< 16.6 ms) (REQ-PRO-052.1)", content.contains("16.6 ms"))
     }
 }
