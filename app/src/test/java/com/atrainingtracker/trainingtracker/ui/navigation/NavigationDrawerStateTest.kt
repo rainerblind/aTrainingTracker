@@ -97,17 +97,21 @@ class NavigationDrawerStateTest {
         org.junit.Assert.assertTrue(settingsGroup.collapsible)
         org.junit.Assert.assertTrue(infoSupportGroup.collapsible)
 
-        // Verify Training ordering: Start Tracking, Workouts, Stats & Periods, Profile & Zones (REQ-UI-405.1)
+        // Verify Training ordering: Start Tracking, Workouts, Stats & Periods, Morning HRV, Profile & Zones (REQ-UI-405.1, ATT-3545)
         val trainingIds = trainingGroup.items.map { it.id }
         assertEquals(
             listOf(
                 R.id.drawer_start_tracking,
                 R.id.drawer_workouts,
                 R.id.drawer_periods,
+                R.id.drawer_morning_hrv,
                 R.id.drawer_athlete_profile
             ),
             trainingIds
         )
+        val morningHrvItem = trainingGroup.items.first { it.id == R.id.drawer_morning_hrv }
+        assertEquals(R.drawable.ic_heart_rate, morningHrvItem.iconRes)
+        assertEquals(R.string.morning_hrv_title, morningHrvItem.titleRes)
         val profileItem = trainingGroup.items.first { it.id == R.id.drawer_athlete_profile }
         assertEquals(R.drawable.ic_athlete_profile, profileItem.iconRes)
         assertEquals(R.string.drawer_athlete_profile, profileItem.titleRes)
@@ -176,13 +180,13 @@ class NavigationDrawerStateTest {
         assertEquals(R.drawable.ic_crown, supporterItem.iconRes)
         assertEquals(R.string.drawer_supporter, supporterItem.titleRes)
 
-        // Verify default visible destination items across non-collapsible groups = 9 (4 + 5) (REQ-UI-405.3, REQ-UI-422.5)
+        // Verify default visible destination items across non-collapsible groups = 10 (5 + 5) (REQ-UI-405.3, REQ-UI-422.5, ATT-3545)
         val defaultVisibleCount = groups.filter { !it.collapsible }.sumOf { it.items.size }
-        assertEquals("Default visible destination items when secondary groups are collapsed must be 9", 9, defaultVisibleCount)
+        assertEquals("Default visible destination items when secondary groups are collapsed must be 10", 10, defaultVisibleCount)
 
         val allItems = groups.flatMap { it.items.map { item -> item.id } }
-        assertEquals("Navigation drawer must contain 25 total items across 6 groups", 25, allItems.size)
-        assertEquals("All 25 navigation items must have distinct IDs", 25, allItems.toSet().size)
+        assertEquals("Navigation drawer must contain 26 total items across 6 groups", 26, allItems.size)
+        assertEquals("All 26 navigation items must have distinct IDs", 26, allItems.toSet().size)
         org.junit.Assert.assertFalse(
             "drawer_search_settings must be removed from drawer destinations",
             allItems.contains(R.id.drawer_search_settings)
