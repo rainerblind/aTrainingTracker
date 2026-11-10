@@ -53,4 +53,17 @@
     <string name="radar_scenario_country_road">Buitenweg-lus</string>
     <string name="radar_scenario_country_road_desc">Continue willekeurige verkeerslus</string>
     <string name="radar_simulator_preempted">Simulatie onderbroken door fysieke radar</string>
+
+    <!-- Radar Edge Overlay (ATT-5085 / REQ-TRK-062) -->
+    <string name="radar_overlay_settings_title">Radar-overlay</string>
+    <string name="radar_overlay_edge_side">Schermrand</string>
+    <string name="radar_overlay_edge_left">Linkerrand</string>
+    <string name="radar_overlay_edge_right">Rechterrand</string>
+    <string name="radar_overlay_clear_mode">Weergave bij vrije weg</string>
+    <string name="radar_overlay_clear_mode_slim">Smalle balk</string>
+    <string name="radar_overlay_clear_mode_badge">Alleen badge</string>
+    <string name="radar_overlay_clear_mode_autohide">Autom. verbergen (3s)</string>
+    <string name="radar_overlay_disconnected">Radar verbroken</string>
+    <string name="radar_overlay_connecting">Radar verbinden</string>
+    <string name="radar_overlay_clear">Weg vrij</string>
 </resources>

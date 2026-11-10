@@ -33,40 +33,182 @@ import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.devices.radar.RadarScenario
 import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository
 import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator
+import com.atrainingtracker.trainingtracker.settings.RadarClearMode
+import com.atrainingtracker.trainingtracker.settings.RadarEdgeSide
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
+import kotlinx.coroutines.launch
 
 /**
- * Settings and preview composable for the cycling radar traffic simulator (REQ-CON-029.4).
+ * Settings and preview composable for cycling radar edge overlay and traffic simulator (REQ-TRK-062.5, REQ-CON-029.4).
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun RadarSettingsSection(
     modifier: Modifier = Modifier,
+    tuningDataStore: TuningPreferencesDataStore? = null,
     onSimulationToggled: ((Boolean) -> Unit)? = null
 ) {
+    val context = LocalContext.current
+    val actualDataStore = remember(tuningDataStore, context) {
+        tuningDataStore ?: TuningPreferencesDataStore.getInstance(context)
+    }
+    val tuningConfig by actualDataStore.tuningConfigFlow.collectAsState(initial = actualDataStore.getTuningConfig())
+    val coroutineScope = rememberCoroutineScope()
+
     var selectedScenario by remember { mutableStateOf(RadarScenario.SINGLE_CAR) }
     val radarState by RadarStateRepository.radarState.collectAsState()
     val isRunning = RadarTrafficSimulator.isSimulating
 
-    ElevatedCard(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        // Overlay Customization Card (REQ-TRK-062.5)
+        ElevatedCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.radar_overlay_settings_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Edge Side Selection
+                Text(
+                    text = stringResource(R.string.radar_overlay_edge_side),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                SingleChoiceSegmentedButtonRow(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    SegmentedButton(
+                        selected = tuningConfig.radarEdgeSide == RadarEdgeSide.LEFT,
+                        onClick = {
+                            coroutineScope.launch {
+                                actualDataStore.updateRadarEdgeSide(RadarEdgeSide.LEFT)
+                            }
+                        },
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+                    ) {
+                        Text(text = stringResource(R.string.radar_overlay_edge_left))
+                    }
+
+                    SegmentedButton(
+                        selected = tuningConfig.radarEdgeSide == RadarEdgeSide.RIGHT,
+                        onClick = {
+                            coroutineScope.launch {
+                                actualDataStore.updateRadarEdgeSide(RadarEdgeSide.RIGHT)
+                            }
+                        },
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+                    ) {
+                        Text(text = stringResource(R.string.radar_overlay_edge_right))
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Clear State Mode Selection
+                Text(
+                    text = stringResource(R.string.radar_overlay_clear_mode),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    FilterChip(
+                        selected = tuningConfig.radarClearMode == RadarClearMode.SLIM_RAIL,
+                        onClick = {
+                            coroutineScope.launch {
+                                actualDataStore.updateRadarClearMode(RadarClearMode.SLIM_RAIL)
+                            }
+                        },
+                        label = {
+                            Text(
+                                text = stringResource(R.string.radar_overlay_clear_mode_slim),
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
+                    )
+
+                    FilterChip(
+                        selected = tuningConfig.radarClearMode == RadarClearMode.BADGE_ONLY,
+                        onClick = {
+                            coroutineScope.launch {
+                                actualDataStore.updateRadarClearMode(RadarClearMode.BADGE_ONLY)
+                            }
+                        },
+                        label = {
+                            Text(
+                                text = stringResource(R.string.radar_overlay_clear_mode_badge),
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
+                    )
+
+                    FilterChip(
+                        selected = tuningConfig.radarClearMode == RadarClearMode.AUTO_HIDE_3S,
+                        onClick = {
+                            coroutineScope.launch {
+                                actualDataStore.updateRadarClearMode(RadarClearMode.AUTO_HIDE_3S)
+                            }
+                        },
+                        label = {
+                            Text(
+                                text = stringResource(R.string.radar_overlay_clear_mode_autohide),
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
+                    )
+                }
+            }
+        }
+
+        // Simulator Card (REQ-CON-029.4)
+        ElevatedCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp)
+        ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -179,6 +321,7 @@ fun RadarSettingsSection(
             }
         }
     }
+}
 }
 
 @Composable

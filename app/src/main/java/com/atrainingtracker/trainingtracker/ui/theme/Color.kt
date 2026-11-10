@@ -22,6 +22,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import com.atrainingtracker.banalservice.devices.radar.ThreatLevel
 import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents
 
 object TTAlpha {
@@ -364,4 +365,21 @@ object TTColor {
         ClusterVariantDeepOrange,
         ClusterVariantBrown
     )
+
+    // Rearview Radar Threat Tokens (REQ-TRK-062.2, ATT-5085)
+    val RadarClearGreen = Color(0xFF2E7D32)
+    val RadarThreatAmber = Color(0xFFFF8F00)
+    val RadarThreatRed = Color(0xFFD32F2F)
+    val RadarDisconnectedAmber = Color(0xFFE65100)
+    val RadarRailTrack = Color(0x33000000)
+    val RadarRailTrackBorder = Color(0x22FFFFFF)
+
+    /**
+     * Resolves the authoritative threat color token for a given [ThreatLevel] (REQ-TRK-062.2).
+     */
+    fun getRadarThreatColor(threatLevel: ThreatLevel): Color = when (threatLevel) {
+        ThreatLevel.NONE -> RadarClearGreen
+        ThreatLevel.APPROACHING -> RadarThreatAmber
+        ThreatLevel.FAST_APPROACHING -> RadarThreatRed
+    }
 }

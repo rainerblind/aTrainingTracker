@@ -53,4 +53,17 @@
     <string name="radar_scenario_country_road">郊外道路ループ</string>
     <string name="radar_scenario_country_road_desc">連続的なランダム交通ループ</string>
     <string name="radar_simulator_preempted">物理レーダー接続によりシミュレーションを停止しました</string>
+
+    <!-- Radar Edge Overlay (ATT-5085 / REQ-TRK-062) -->
+    <string name="radar_overlay_settings_title">レーダーオーバーレイ</string>
+    <string name="radar_overlay_edge_side">画面端の位置</string>
+    <string name="radar_overlay_edge_left">左端</string>
+    <string name="radar_overlay_edge_right">右端</string>
+    <string name="radar_overlay_clear_mode">クリア時の表示</string>
+    <string name="radar_overlay_clear_mode_slim">スリムレール</string>
+    <string name="radar_overlay_clear_mode_badge">バッジのみ</string>
+    <string name="radar_overlay_clear_mode_autohide">自動非表示（3秒）</string>
+    <string name="radar_overlay_disconnected">レーダー切断</string>
+    <string name="radar_overlay_connecting">レーダー接続中</string>
+    <string name="radar_overlay_clear">後方クリア</string>
 </resources>

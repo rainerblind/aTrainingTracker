@@ -3374,3 +3374,34 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 **Invariants**: Real hardware priority; coroutine job cleanup on stop; zero DB writes outside active tracking; 100% 9-language translation parity.
 
 
+### REQ-TRK-062: Live Rearview Radar Vertical Edge Overlay Across Tracking Tabs [Verified]
+- **Tests**: `TST-TRK-062` | **Tickets**: `ATT-5085`
+- **Implementation**: `RadarEdgeOverlay.kt`, `TrackingTabsScreen.kt`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
+- **Rationale**: Cyclists operating in traffic require peripheral visual awareness of approaching vehicles across all workout tabs (Cockpit grids, Live Map, Elevation/Climb charts, Zone screens). `RadarEdgeOverlay` observes `RadarStateRepository.radarState` to render a high-contrast vertical edge rail with animated vehicle dots (0–140m / 175m) and semantic threat colors. The overlay must preserve full gesture pass-through for `HorizontalPager` swipes and Map gestures, enforce fail-safe disconnect visualization (strictly preventing false "All Clear" signals during packet loss or disconnect), and integrate customizable edge placement and clear-state behavior in `TuningPreferencesDataStore` (ATT-5085, Parent Epic ATT-1286, extending `REQ-CON-028` and `REQ-CON-029`):
+1. *Vertical Edge Rail & Dot Interpolation (`REQ-TRK-062.1`)*:
+• The system SHALL render a vertical rail (24–28 dp width) on the configured screen edge, displaying approaching vehicle dots with smooth 60 fps position interpolation ($y = 1 - d/d_{\max}$).
+2. *Semantic Threat Level Visualization (`REQ-TRK-062.2`)*:
+• Target dots and rail accents SHALL reflect semantic threat levels: Green for clear road, Amber for `APPROACHING`, and pulsing Red for `FAST_APPROACHING`.
+3. *Touch & Gesture Pass-Through (`REQ-TRK-062.3`)*:
+• The vertical rail container SHALL NOT consume touch or scroll gestures, allowing unhindered `HorizontalPager` swiping, Google Map panning/zooming, and Android system edge gestures.
+4. *Fail-Safe Disconnect & Error State (`REQ-TRK-062.4`)*:
+• When radar connection state is `DISCONNECTED_ERROR` or `DISCONNECTED`, the overlay SHALL NOT render a green "All Clear" state; it SHALL display an amber/grey warning badge with disconnected status.
+5. *User Customization & DataStore Integration (`REQ-TRK-062.5`)*:
+• `TuningPreferencesDataStore` SHALL persist `radarEdgeSide` (`LEFT`, `RIGHT`, default `RIGHT`) and `radarClearMode` (`SLIM_RAIL`, `BADGE_ONLY`, `AUTO_HIDE_3S`, default `SLIM_RAIL`), exposed in `RadarSettingsSection.kt`.
+6. *9-Language Localization Parity (`REQ-TRK-062.6`)*:
+• All overlay settings and status labels in `strings_radar.xml` SHALL maintain 100% parity across EN, DE, ES, FR, IT, JA, NL, PL, PT (zero inline emojis).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an active tracking session with a connected radar,
+• *When* vehicles approach at 80m and 30m,
+• *Then* the edge overlay renders distinct animated dots at proportional vertical heights with threat-appropriate colors.
+• *Given* a user swiping horizontally across the vertical rail,
+• *When* gestured,
+• *Then* `HorizontalPager` page transitions occur without gesture interruption or drag locking.
+• *Given* a radar packet starvation timeout (3.5s),
+• *When* `connectionState` transitions to `DISCONNECTED_ERROR`,
+• *Then* the overlay displays the warning badge and strictly prohibits green "All Clear" rendering.
+
+**Invariants**: Touch pass-through; zero false green; zero SQLite schema modifications; 100% 9-language translation parity.
+
+

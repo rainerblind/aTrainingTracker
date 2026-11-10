@@ -53,4 +53,17 @@
     <string name="radar_scenario_country_road">Circuito de estrada secundária</string>
     <string name="radar_scenario_country_road_desc">Circuito contínuo com tráfego aleatório</string>
     <string name="radar_simulator_preempted">Simulação interrompida pelo radar físico</string>
+
+    <!-- Radar Edge Overlay (ATT-5085 / REQ-TRK-062) -->
+    <string name="radar_overlay_settings_title">Sobreposição do radar</string>
+    <string name="radar_overlay_edge_side">Borda do ecrã</string>
+    <string name="radar_overlay_edge_left">Borda esquerda</string>
+    <string name="radar_overlay_edge_right">Borda direita</string>
+    <string name="radar_overlay_clear_mode">Exibição sem perigo</string>
+    <string name="radar_overlay_clear_mode_slim">Barra fina</string>
+    <string name="radar_overlay_clear_mode_badge">Apenas distintivo</string>
+    <string name="radar_overlay_clear_mode_autohide">Ocultar autom. (3s)</string>
+    <string name="radar_overlay_disconnected">Radar desconectado</string>
+    <string name="radar_overlay_connecting">A ligar ao radar</string>
+    <string name="radar_overlay_clear">Caminho livre</string>
 </resources>

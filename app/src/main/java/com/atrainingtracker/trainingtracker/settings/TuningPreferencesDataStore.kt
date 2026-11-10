@@ -56,6 +56,23 @@ enum class ProfileXAxisDomain {
 }
 
 /**
+ * Radar edge overlay positioning on screen (REQ-TRK-062.5).
+ */
+enum class RadarEdgeSide {
+    LEFT,
+    RIGHT
+}
+
+/**
+ * Radar clear-state behavior when no active threats are detected (REQ-TRK-062.5).
+ */
+enum class RadarClearMode {
+    SLIM_RAIL,
+    BADGE_ONLY,
+    AUTO_HIDE_3S
+}
+
+/**
  * Encapsulates battle-tested factory defaults and safety clamping bounds for advanced tuning.
  */
 object TuningPreferencesDefaults {
@@ -65,6 +82,8 @@ object TuningPreferencesDefaults {
     val COCKPIT_FONT_FAMILY = CockpitFontFamily.SYSTEM_DEFAULT
     val COCKPIT_FONT_WEIGHT = CockpitFontWeight.SEMI_BOLD
     val SENSOR_FIELD_VARIANT = SensorFieldVariant.CLASSIC_SEAMLESS
+    val RADAR_EDGE_SIDE = RadarEdgeSide.RIGHT
+    val RADAR_CLEAR_MODE = RadarClearMode.SLIM_RAIL
     const val FULL_DIM_FACTOR = 0.25f
     const val MEDIUM_DIM_FACTOR = 0.50f
     const val SLOPE_FLAT_THRESHOLD = 2.0f
@@ -351,7 +370,9 @@ data class TuningConfig(
     val enableCardioPowerDynamics: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_CARDIO_POWER_DYNAMICS,
     val showCardioPowerInWorkoutSummary: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY,
     val dfaA1ThresholdT1: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1,
-    val dfaA1ThresholdT2: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2
+    val dfaA1ThresholdT2: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2,
+    val radarEdgeSide: RadarEdgeSide = TuningPreferencesDefaults.RADAR_EDGE_SIDE,
+    val radarClearMode: RadarClearMode = TuningPreferencesDefaults.RADAR_CLEAR_MODE
 ) {
     val showAntMissingAdapterWarnings: Boolean
         get() = !suppressAntMissingAdapterDialog
@@ -498,6 +519,8 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_show_cardio_power_in_workout_summary")
         val KEY_DFA_A1_THRESHOLD_T1: Preferences.Key<Float> = floatPreferencesKey("tuning_dfa_a1_threshold_t1")
         val KEY_DFA_A1_THRESHOLD_T2: Preferences.Key<Float> = floatPreferencesKey("tuning_dfa_a1_threshold_t2")
+        val KEY_RADAR_EDGE_SIDE: Preferences.Key<String> = stringPreferencesKey("tuning_radar_edge_side")
+        val KEY_RADAR_CLEAR_MODE: Preferences.Key<String> = stringPreferencesKey("tuning_radar_clear_mode")
 
         internal val ALL_KEYS = listOf(
             KEY_ELEVATION_X_AXIS_DOMAIN,
@@ -573,7 +596,9 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_ENABLE_CARDIO_POWER_DYNAMICS,
             KEY_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY,
             KEY_DFA_A1_THRESHOLD_T1,
-            KEY_DFA_A1_THRESHOLD_T2
+            KEY_DFA_A1_THRESHOLD_T2,
+            KEY_RADAR_EDGE_SIDE,
+            KEY_RADAR_CLEAR_MODE
         )
 
         /**
@@ -736,6 +761,12 @@ data class AutoPausePreferences(
 
         val rawVariantStr = prefs[KEY_SENSOR_FIELD_VARIANT]
         val sensorFieldVariant = SensorFieldVariant.fromStorage(rawVariantStr)
+
+        val rawRadarEdgeSideStr = prefs[KEY_RADAR_EDGE_SIDE]
+        val radarEdgeSide = safeEnumValueOf(rawRadarEdgeSideStr, TuningPreferencesDefaults.RADAR_EDGE_SIDE)
+
+        val rawRadarClearModeStr = prefs[KEY_RADAR_CLEAR_MODE]
+        val radarClearMode = safeEnumValueOf(rawRadarClearModeStr, TuningPreferencesDefaults.RADAR_CLEAR_MODE)
 
         val rawFontWeightStr = prefs[KEY_COCKPIT_FONT_WEIGHT]
         val cockpitFontWeight = safeEnumValueOf(rawFontWeightStr, TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT)
@@ -939,7 +970,9 @@ data class AutoPausePreferences(
             enableCardioPowerDynamics = prefs[KEY_ENABLE_CARDIO_POWER_DYNAMICS] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_CARDIO_POWER_DYNAMICS,
             showCardioPowerInWorkoutSummary = prefs[KEY_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY] ?: TuningPreferencesDefaults.DEFAULT_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY,
             dfaA1ThresholdT1 = prefs[KEY_DFA_A1_THRESHOLD_T1] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1,
-            dfaA1ThresholdT2 = prefs[KEY_DFA_A1_THRESHOLD_T2] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2
+            dfaA1ThresholdT2 = prefs[KEY_DFA_A1_THRESHOLD_T2] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2,
+            radarEdgeSide = radarEdgeSide,
+            radarClearMode = radarClearMode
         )
     }
 
@@ -1229,6 +1262,8 @@ data class AutoPausePreferences(
             prefs[KEY_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY] = config.showCardioPowerInWorkoutSummary
             prefs[KEY_DFA_A1_THRESHOLD_T1] = clampedDfaA1T1
             prefs[KEY_DFA_A1_THRESHOLD_T2] = clampedDfaA1T2
+            prefs[KEY_RADAR_EDGE_SIDE] = config.radarEdgeSide.name
+            prefs[KEY_RADAR_CLEAR_MODE] = config.radarClearMode.name
         }
 
         TrainingApplication.setClusterTolEndpoints(clampedClusterTolEndpoints)
@@ -1367,6 +1402,26 @@ data class AutoPausePreferences(
         )
         context.dataStore.edit { prefs ->
             prefs[KEY_TURN_CUE_COUNTDOWN_DISTANCE] = clamped
+        }
+    }
+
+    val radarEdgeSideFlow: Flow<RadarEdgeSide> = context.dataStore.data.map { prefs ->
+        safeEnumValueOf(prefs[KEY_RADAR_EDGE_SIDE], TuningPreferencesDefaults.RADAR_EDGE_SIDE)
+    }
+
+    val radarClearModeFlow: Flow<RadarClearMode> = context.dataStore.data.map { prefs ->
+        safeEnumValueOf(prefs[KEY_RADAR_CLEAR_MODE], TuningPreferencesDefaults.RADAR_CLEAR_MODE)
+    }
+
+    suspend fun updateRadarEdgeSide(side: RadarEdgeSide) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_EDGE_SIDE] = side.name
+        }
+    }
+
+    suspend fun updateRadarClearMode(mode: RadarClearMode) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_CLEAR_MODE] = mode.name
         }
     }
 

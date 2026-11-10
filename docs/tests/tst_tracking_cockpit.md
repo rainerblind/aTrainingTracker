@@ -1886,3 +1886,23 @@
   • Execute targeted package tests (`com.atrainingtracker.banalservice.devices.radar.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
 
+### TST-TRK-062: **Live Rearview Radar Vertical Edge Overlay & Gesture Pass-Through Test Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-062` (`REQ-TRK-062.1`..`REQ-TRK-062.6`)
+- **Component**: `RadarEdgeOverlay.kt`, `TrackingTabsScreen.kt`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
+- **Jira**: `ATT-5085`
+- **Test Description**:
+  1. *Radar Edge Rail Kinematics & Dot Position Unit Tests (`TST-TRK-062.1`, `RadarEdgeOverlayTest.kt`)*:
+  • Verify target range normalization ($y = 1 - d/d_{\max}$) and multi-target dot coordinate resolution.
+  2. *Semantic Threat Color & Pulsing Alert Tests (`TST-TRK-062.2`, `RadarEdgeOverlayTest.kt`)*:
+  • Verify color mapping (Green = `NONE`, Amber = `APPROACHING`, Red = `FAST_APPROACHING`).
+  3. *Fail-Safe Disconnect Warning & Error State Tests (`TST-TRK-062.3`, `RadarEdgeOverlayTest.kt`)*:
+  • Verify `DISCONNECTED_ERROR` and `DISCONNECTED` render warning indicator and strictly prohibit green clear state.
+  4. *TuningPreferencesDataStore Edge Side & Clear Mode Tests (`TST-TRK-062.4`, `TuningPreferencesDataStoreTest.kt`)*:
+  • Verify default values (`RIGHT`, `SLIM_RAIL`) and persistence of custom edge side and clear mode selections.
+  5. *9-Language Localization Parity Test (`TST-TRK-062.5`, `TranslationParityTest.kt`)*:
+  • Verify 100% key and format parity across `strings_radar.xml` in all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
+  6. *Clean-Room Targeted Test Suite Execution (`TST-TRK-062.6`)*:
+  • Execute targeted package tests (`com.atrainingtracker.trainingtracker.ui.tracking.radar.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+
+

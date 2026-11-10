@@ -53,4 +53,17 @@
     <string name="radar_scenario_country_road">Pętla drogi wiejskiej</string>
     <string name="radar_scenario_country_road_desc">Ciągła losowa pętla ruchu drogowego</string>
     <string name="radar_simulator_preempted">Symulacja zatrzymana przez fizyczny radar</string>
+
+    <!-- Radar Edge Overlay (ATT-5085 / REQ-TRK-062) -->
+    <string name="radar_overlay_settings_title">Nakładka radaru</string>
+    <string name="radar_overlay_edge_side">Krawędź ekranu</string>
+    <string name="radar_overlay_edge_left">Lewa krawędź</string>
+    <string name="radar_overlay_edge_right">Prawa krawędź</string>
+    <string name="radar_overlay_clear_mode">Wyświetlanie czystej drogi</string>
+    <string name="radar_overlay_clear_mode_slim">Wąski pasek</string>
+    <string name="radar_overlay_clear_mode_badge">Tylko plakietka</string>
+    <string name="radar_overlay_clear_mode_autohide">Autoukrywanie (3s)</string>
+    <string name="radar_overlay_disconnected">Radar rozłączony</string>
+    <string name="radar_overlay_connecting">Łączenie radaru</string>
+    <string name="radar_overlay_clear">Droga wolna</string>
 </resources>

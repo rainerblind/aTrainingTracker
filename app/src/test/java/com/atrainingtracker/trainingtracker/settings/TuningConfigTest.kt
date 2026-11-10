@@ -62,6 +62,10 @@ class TuningConfigTest {
         assertEquals(true, TuningPreferencesDefaults.CLUSTER_USE_SPORT_TYPE)
         assertEquals(true, config.clusterUseAltitudePos)
         assertEquals(true, TuningPreferencesDefaults.CLUSTER_USE_ALTITUDE_POS)
+        assertEquals(RadarEdgeSide.RIGHT, config.radarEdgeSide)
+        assertEquals(RadarEdgeSide.RIGHT, TuningPreferencesDefaults.RADAR_EDGE_SIDE)
+        assertEquals(RadarClearMode.SLIM_RAIL, config.radarClearMode)
+        assertEquals(RadarClearMode.SLIM_RAIL, TuningPreferencesDefaults.RADAR_CLEAR_MODE)
     }
 
     @Test

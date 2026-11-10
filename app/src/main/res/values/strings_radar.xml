@@ -53,4 +53,17 @@
     <string name="radar_scenario_country_road">Country Road Loop</string>
     <string name="radar_scenario_country_road_desc">Continuous randomized traffic loop</string>
     <string name="radar_simulator_preempted">Simulation halted by physical radar</string>
+
+    <!-- Radar Edge Overlay (ATT-5085 / REQ-TRK-062) -->
+    <string name="radar_overlay_settings_title">Radar Overlay</string>
+    <string name="radar_overlay_edge_side">Screen Edge</string>
+    <string name="radar_overlay_edge_left">Left Edge</string>
+    <string name="radar_overlay_edge_right">Right Edge</string>
+    <string name="radar_overlay_clear_mode">Clear State Display</string>
+    <string name="radar_overlay_clear_mode_slim">Slim Rail</string>
+    <string name="radar_overlay_clear_mode_badge">Badge Only</string>
+    <string name="radar_overlay_clear_mode_autohide">Auto-Hide (3s)</string>
+    <string name="radar_overlay_disconnected">Radar Disconnected</string>
+    <string name="radar_overlay_connecting">Radar Connecting</string>
+    <string name="radar_overlay_clear">All Clear</string>
 </resources>

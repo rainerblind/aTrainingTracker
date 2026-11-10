@@ -48,6 +48,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -118,6 +119,11 @@ import com.atrainingtracker.trainingtracker.ui.theme.CockpitThemeMode
 import com.atrainingtracker.trainingtracker.ui.theme.resolveEffectiveCockpitDarkTheme
 import com.atrainingtracker.trainingtracker.ui.settings.trackingtabs.CopyTrackingTabDialog
 import com.atrainingtracker.trainingtracker.ui.theme.resolveEffectiveCockpitThemeState
+import com.atrainingtracker.banalservice.devices.radar.RadarConnectionState
+import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository
+import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator
+import com.atrainingtracker.trainingtracker.settings.RadarEdgeSide
+import com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlay
 import com.atrainingtracker.trainingtracker.ui.tracking.LapSummaryDialog
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlNavigation
@@ -308,6 +314,7 @@ fun TrackingTabsScreen(
 
     val returnNavRepo = remember { ReturnNavigationRepository.getInstance(context) }
     val returnNavState by returnNavRepo.navigationState.collectAsState()
+    val radarState by RadarStateRepository.radarState.collectAsState()
 
     val currentLatLng by controlViewModel.banalServiceRepository.currentLocation.collectAsState()
     LaunchedEffect(currentLatLng) {
@@ -1042,6 +1049,23 @@ fun TrackingTabsScreen(
                                 .align(Alignment.TopCenter)
                                 .zIndex(1.5f)
                                 .padding(top = 8.dp)
+                        )
+                    }
+
+                    // Live Rearview Radar Vertical Edge Overlay (REQ-TRK-062 / ATT-5085)
+                    val isRadarActive = screenMode == ScreenMode.TRACKING && (
+                        radarState.connectionState != RadarConnectionState.DISCONNECTED ||
+                        RadarTrafficSimulator.isSimulating
+                    )
+                    if (isRadarActive) {
+                        RadarEdgeOverlay(
+                            radarState = radarState,
+                            edgeSide = tuningConfig.radarEdgeSide,
+                            clearMode = tuningConfig.radarClearMode,
+                            modifier = Modifier
+                                .align(if (tuningConfig.radarEdgeSide == RadarEdgeSide.LEFT) Alignment.CenterStart else Alignment.CenterEnd)
+                                .fillMaxHeight()
+                                .zIndex(1.2f)
                         )
                     }
                 }

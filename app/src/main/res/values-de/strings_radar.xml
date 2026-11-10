@@ -53,4 +53,17 @@
     <string name="radar_scenario_country_road">Landstraßen-Schleife</string>
     <string name="radar_scenario_country_road_desc">Kontinuierliche zufällige Verkehrsschleife</string>
     <string name="radar_simulator_preempted">Simulation durch physisches Radar gestoppt</string>
+
+    <!-- Radar Edge Overlay (ATT-5085 / REQ-TRK-062) -->
+    <string name="radar_overlay_settings_title">Radar-Overlay</string>
+    <string name="radar_overlay_edge_side">Bildschirmkante</string>
+    <string name="radar_overlay_edge_left">Linke Kante</string>
+    <string name="radar_overlay_edge_right">Rechte Kante</string>
+    <string name="radar_overlay_clear_mode">Anzeige bei freier Straße</string>
+    <string name="radar_overlay_clear_mode_slim">Schmale Leiste</string>
+    <string name="radar_overlay_clear_mode_badge">Nur Status-Badge</string>
+    <string name="radar_overlay_clear_mode_autohide">Autom. Ausblenden (3s)</string>
+    <string name="radar_overlay_disconnected">Radar getrennt</string>
+    <string name="radar_overlay_connecting">Radar verbindet</string>
+    <string name="radar_overlay_clear">Straße frei</string>
 </resources>

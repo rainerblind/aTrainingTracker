@@ -53,4 +53,17 @@
     <string name="radar_scenario_country_road">Boucle route de campagne</string>
     <string name="radar_scenario_country_road_desc">Boucle continue avec trafic aléatoire</string>
     <string name="radar_simulator_preempted">Simulation arrêtée par le radar physique</string>
+
+    <!-- Radar Edge Overlay (ATT-5085 / REQ-TRK-062) -->
+    <string name="radar_overlay_settings_title">Superposition radar</string>
+    <string name="radar_overlay_edge_side">Bord d\'écran</string>
+    <string name="radar_overlay_edge_left">Bord gauche</string>
+    <string name="radar_overlay_edge_right">Bord droit</string>
+    <string name="radar_overlay_clear_mode">Affichage voie libre</string>
+    <string name="radar_overlay_clear_mode_slim">Bande fine</string>
+    <string name="radar_overlay_clear_mode_badge">Badge seul</string>
+    <string name="radar_overlay_clear_mode_autohide">Masquage auto (3s)</string>
+    <string name="radar_overlay_disconnected">Radar déconnecté</string>
+    <string name="radar_overlay_connecting">Connexion au radar</string>
+    <string name="radar_overlay_clear">Voie libre</string>
 </resources>
