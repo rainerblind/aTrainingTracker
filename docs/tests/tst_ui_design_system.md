@@ -8070,19 +8070,19 @@
   3. *Tier 1 Targeted Unit Test Regression (`TST-UI-503.3`)*:
   • Execute targeted test suite (`ui.settings.display.*`, `ui.branding.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+### TST-UI-504: **SupporterPlanCard Compact Button Padding & Title Truncation Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-504`
+- **Component**: `SupporterComponents.kt`, `SupporterPlanCardHierarchyTest.kt`
+- **Jira**: `ATT-6323`
+- **Test Description**:
+  1. *Button Content Padding & Single-Line Title Contract Test (`TST-UI-504.1`)*:
+  • Verify in `SupporterPlanCardHierarchyTest.kt` that `SupporterComponents.kt` defines `contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)` across `OutlinedButton` and `Button` instances in `SupporterPlanCard`.
+  • Verify that the card tier title `Text` composable declares `maxLines = 1` and `overflow = TextOverflow.Ellipsis`.
+  2. *Tier Hierarchy & Action Button Integrity Test (`TST-UI-504.2`)*:
+  • Execute existing hierarchy tests verifying `PlanCardHierarchyState` resolution, recommendation badge suppression, and button label mappings across all supported tiers.
+  3. *Tier 1 Targeted Unit Test Regression (`TST-UI-504.3`)*:
+  • Execute targeted test suite (`ui.settings.supporter.*`, `ui.branding.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
 
 
 

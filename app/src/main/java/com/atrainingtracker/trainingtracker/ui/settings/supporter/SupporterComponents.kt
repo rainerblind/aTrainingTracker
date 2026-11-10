@@ -25,6 +25,7 @@ import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -48,10 +49,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.BuildConfig
@@ -244,7 +246,9 @@ internal fun SupporterPlanCard(
                     Text(
                         text = stringResource(plan.tier.titleRes),
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     val periodString = if (plan.period == "month") {
                         stringResource(R.string.supporter_period_month)
@@ -260,12 +264,15 @@ internal fun SupporterPlanCard(
 
                 Spacer(modifier = Modifier.width(8.dp))
 
+                val buttonContentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+
                 when (state) {
                     PlanCardHierarchyState.CURRENT_TIER -> {
                         OutlinedButton(
                             onClick = {},
                             enabled = false,
-                            shape = RoundedCornerShape(8.dp)
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = buttonContentPadding
                         ) {
                             Text(
                                 text = stringResource(R.string.supporter_plan_button_active),
@@ -277,7 +284,8 @@ internal fun SupporterPlanCard(
                     PlanCardHierarchyState.LOWER_TIER -> {
                         OutlinedButton(
                             onClick = onSelectPlan,
-                            shape = RoundedCornerShape(8.dp)
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = buttonContentPadding
                         ) {
                             Text(
                                 text = stringResource(R.string.supporter_plan_button_switch),
@@ -289,7 +297,8 @@ internal fun SupporterPlanCard(
                     PlanCardHierarchyState.UPGRADE_TIER -> {
                         Button(
                             onClick = onSelectPlan,
-                            shape = RoundedCornerShape(8.dp)
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = buttonContentPadding
                         ) {
                             Text(
                                 text = stringResource(R.string.supporter_plan_button_support),

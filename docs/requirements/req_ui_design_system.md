@@ -15060,3 +15060,32 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 
 
+
+### REQ-UI-504: SupporterPlanCard: Compact Action Button Content Padding & Title Row Overflow Protection [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-504` | **Tickets**: `ATT-6323`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/supporter/SupporterComponents.kt`, `SupporterPlanCardHierarchyTest.kt`
+- **Rationale**: In `SupporterComponents.kt` (`SupporterPlanCard`), `OutlinedButton` and `Button` inherit default Material 3 horizontal padding (`24.dp`), causing `"Wechseln"` (~108dp) to consume excessive horizontal space. On compact viewports, the German compound title *"Bronze-Unterstützer"* wraps before its trailing letter (*"Bronze-Unterstütze"* / *"r"*), producing an awkward single-letter orphan line. The system SHALL apply compact horizontal button padding (`16.dp`) and enforce single-line title truncation with ellipsis.
+- **Description**:
+  1. *Compact Action Button Padding (`REQ-UI-504.1`)*:
+     - In `SupporterComponents.kt` (`SupporterPlanCard`), all action button composables (`OutlinedButton` for `CURRENT_TIER` and `LOWER_TIER`, `Button` for `UPGRADE_TIER`) SHALL declare explicit `contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)` instead of inheriting default Material 3 padding (`24.dp`), reclaiming 16dp of horizontal width for the card title row.
+  2. *Single-Line Title Row & Overflow Ellipsis Safeguard (`REQ-UI-504.2`)*:
+     - In `SupporterComponents.kt` (`SupporterPlanCard`), the plan tier title `Text` composable SHALL enforce `maxLines = 1` and `overflow = TextOverflow.Ellipsis`, preventing awkward single-letter orphan line wrapping on compound tier names across compact viewports.
+  3. *Preservation of Visual Hierarchy & Accessibility (`REQ-UI-504.3`)*:
+     - Single-line button text without wrapping (`Rule 38`), 44dp tier emblems (`REQ-UI-445.4`), tier hierarchy state resolution (`REQ-UI-501`), click targets, and 9-language localization parity SHALL remain 100% preserved.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-UI-501.1` (`SupporterPlanCard` presentation). Targets `SupporterComponents.kt`.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-6286` (commit `7d72425c`), which introduced `PlanCardHierarchyState.LOWER_TIER` with `"Wechseln"` `OutlinedButton`.
+3. *Root Reason for Existing Formulation*: Default M3 button padding was retained during initial hierarchy implementation without verifying compound German string width budgets.
+4. *Preservation of Core Invariants*: Full-color 44dp emblems, hierarchy states, click handlers, and 100% unit test pass rate remain preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `SupporterPlanCard` rendered in German for Bronze with an active Silver subscription,
+• *When* inspecting the card title and `"Wechseln"` button,
+• *Then* the button uses `16.dp` horizontal padding and the title *"Bronze-Unterstützer"* renders without single-letter line wrapping.
+• *Given* `SupporterPlanCard` across all hierarchy states (`CURRENT_TIER`, `LOWER_TIER`, `UPGRADE_TIER`),
+• *When* rendered on compact displays,
+• *Then* all action buttons maintain `PaddingValues(horizontal = 16.dp, vertical = 8.dp)` and card titles truncate with `TextOverflow.Ellipsis` if horizontal space is exhausted.
+
+**Invariants**: 44dp emblem size; single-line button text (`Rule 38`); visual hierarchy states (`REQ-UI-501`); 100% unit test pass rate.
