@@ -27,6 +27,7 @@ import android.os.SystemClock;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.atrainingtracker.banalservice.BANALService;
@@ -34,6 +35,8 @@ import com.atrainingtracker.banalservice.devices.DeviceType;
 import com.atrainingtracker.banalservice.devices.radar.LaneState;
 import com.atrainingtracker.banalservice.devices.radar.RadarConnectionState;
 import com.atrainingtracker.banalservice.devices.radar.RadarLatchedSnapshot;
+import com.atrainingtracker.banalservice.devices.radar.RadarLightController;
+import com.atrainingtracker.banalservice.devices.radar.RadarLightMode;
 import com.atrainingtracker.banalservice.devices.radar.RadarState;
 import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository;
 import com.atrainingtracker.banalservice.devices.radar.RadarTarget;
@@ -71,6 +74,8 @@ public class BTLERadarDevice extends MyBTLEDevice {
     protected MySensor<Integer> mLargeVehicleCountSensor;
 
     private boolean mIsV2Stream = false;
+    private BluetoothGattCharacteristic mLightControlCharacteristic;
+    private volatile boolean mIsLightControlSupported = false;
 
     private final RadarWindowAggregator mWindowAggregator = new RadarWindowAggregator();
 
@@ -78,11 +83,14 @@ public class BTLERadarDevice extends MyBTLEDevice {
         @Override
         public void run() {
             if (DEBUG) Log.w(TAG, "Radar packet starvation (3.5s timeout); transitioning to DISCONNECTED_ERROR");
+            RadarState currentState = RadarStateRepository.getState();
             RadarStateRepository.updateState(new RadarState(
                     RadarConnectionState.DISCONNECTED_ERROR,
                     ThreatLevel.NONE,
                     Collections.emptyList(),
-                    SystemClock.elapsedRealtime()
+                    SystemClock.elapsedRealtime(),
+                    currentState.getLightMode(),
+                    mIsLightControlSupported
             ));
         }
     };
@@ -143,6 +151,19 @@ public class BTLERadarDevice extends MyBTLEDevice {
             fallbackToV1(gatt, btGattService);
         }
 
+        // Tail light control characteristic discovery (ATT-5102 / REQ-CON-031.1)
+        BluetoothGattCharacteristic lightChar = btGattService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_LIGHT_CONTROL);
+        if (lightChar != null) {
+            if (DEBUG) Log.i(TAG, "Garmin Varia light control characteristic 6a4e3202 discovered (REQ-CON-031.1).");
+            mLightControlCharacteristic = lightChar;
+            mIsLightControlSupported = true;
+            RadarLightController.registerRadarDevice(this, true, false);
+        } else {
+            mLightControlCharacteristic = null;
+            mIsLightControlSupported = false;
+            RadarLightController.registerRadarDevice(this, false, false);
+        }
+
         // Chained battery CCCD write (REQ-CON-007, ATT-3312) via queue
         if (mBatteryCharacteristic != null && (mBatteryCharacteristic.getProperties() & BluetoothGattCharacteristic.PROPERTY_NOTIFY) != 0) {
             BluetoothGattDescriptor batteryDescriptor = mBatteryCharacteristic.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG);
@@ -195,11 +216,14 @@ public class BTLERadarDevice extends MyBTLEDevice {
         }
 
         ThreatLevel overallThreat = computeOverallThreatLevel(targets);
+        RadarState currentState = RadarStateRepository.getState();
         RadarState state = new RadarState(
                 RadarConnectionState.CONNECTED,
                 overallThreat,
                 targets,
-                SystemClock.elapsedRealtime()
+                SystemClock.elapsedRealtime(),
+                currentState.getLightMode(),
+                mIsLightControlSupported
         );
         RadarStateRepository.updateState(state);
 
@@ -232,11 +256,16 @@ public class BTLERadarDevice extends MyBTLEDevice {
         if (mHandler != null) {
             mHandler.removeCallbacks(mWatchdogRunnable);
         }
+        RadarLightController.unregisterRadarDevice(this);
+        mLightControlCharacteristic = null;
+        mIsLightControlSupported = false;
         RadarStateRepository.updateState(new RadarState(
                 RadarConnectionState.DISCONNECTED,
                 ThreatLevel.NONE,
                 Collections.emptyList(),
-                SystemClock.elapsedRealtime()
+                SystemClock.elapsedRealtime(),
+                RadarLightMode.OFF,
+                false
         ));
         super.disconnectFromGatt();
     }
@@ -246,8 +275,33 @@ public class BTLERadarDevice extends MyBTLEDevice {
         if (mHandler != null) {
             mHandler.removeCallbacks(mWatchdogRunnable);
         }
+        RadarLightController.unregisterRadarDevice(this);
+        mLightControlCharacteristic = null;
+        mIsLightControlSupported = false;
         mWindowAggregator.resetSession();
         super.shutDown();
+    }
+
+    /**
+     * Dispatches a light mode command to the connected radar peripheral (REQ-CON-031.1).
+     *
+     * Queues write operation via [enqueueWriteCharacteristic] into the serialized GATT queue.
+     *
+     * @param mode Target radar tail light mode.
+     * @return true if command was successfully enqueued, false if characteristic not supported.
+     */
+    public boolean setLightMode(@NonNull RadarLightMode mode) {
+        BluetoothGattCharacteristic lightChar = mLightControlCharacteristic;
+        if (lightChar == null) {
+            if (DEBUG) Log.w(TAG, "Cannot set light mode: characteristic not supported or disconnected");
+            return false;
+        }
+        enqueueWriteCharacteristic(lightChar, new byte[]{mode.getCommandByte()});
+        return true;
+    }
+
+    public boolean isLightControlSupported() {
+        return mIsLightControlSupported;
     }
 
     /**

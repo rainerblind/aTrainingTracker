@@ -255,7 +255,7 @@ private fun RadarStatusBadgePill(
             .size(24.dp)
             .clip(CircleShape)
             .background(badgeColor)
-            .clickable(onClick = onClick)
+            .clickable(enabled = radarState.isLightControlSupported, onClick = onClick)
             .semantics { contentDescription = description }
             .testTag("RadarStatusBadge"),
         contentAlignment = Alignment.Center

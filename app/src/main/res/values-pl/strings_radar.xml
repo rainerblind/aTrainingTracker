@@ -88,4 +88,17 @@
     <string name="radar_alert_route_speaker">Wymuś głośnik telefonu</string>
     <string name="radar_alert_haptic_title">Wibracje haptyczne</string>
     <string name="radar_alert_haptic_desc">Wibruj przy zbliżaniu się pojazdów i zmianie poziomu zagrożenia</string>
+
+    <!-- Radar Tail Light Control (ATT-5102 / REQ-CON-031) -->
+    <string name="radar_light_settings_title">Sterowanie tylnym światłem</string>
+    <string name="radar_light_mode_title">Tryb światła</string>
+    <string name="radar_light_mode_off">Wyłączone (Tylko radar)</string>
+    <string name="radar_light_mode_day_flash">Miganie w dzień</string>
+    <string name="radar_light_mode_night_flash">Miganie w nocy</string>
+    <string name="radar_light_mode_solid">Ciągłe</string>
+    <string name="radar_light_mode_peloton">Peleton</string>
+    <string name="radar_light_auto_switch">Automatyczne światło treningowe</string>
+    <string name="radar_light_auto_switch_desc">Włącza tylne światło na początku treningu i wyłącza na końcu</string>
+    <string name="radar_light_sheet_title">Tylne światło radaru</string>
+    <string name="radar_light_stvzo_notice">Tryb StVZO (Miganie wyłączone)</string>
 </resources>

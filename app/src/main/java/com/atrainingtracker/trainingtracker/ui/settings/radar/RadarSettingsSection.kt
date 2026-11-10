@@ -52,6 +52,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.devices.radar.RadarLightController
+import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
 import com.atrainingtracker.banalservice.devices.radar.RadarScenario
 import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository
 import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator
@@ -413,6 +415,91 @@ fun RadarSettingsSection(
                         onCheckedChange = { checked ->
                             coroutineScope.launch {
                                 actualDataStore.updateRadarHapticAlert(checked)
+                            }
+                        }
+                    )
+                }
+            }
+        }
+
+        // Tail Light Control Card (REQ-CON-031.5)
+        ElevatedCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.radar_light_settings_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Default Light Mode Selection
+                Text(
+                    text = stringResource(R.string.radar_light_mode_title),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                val availableModes = RadarLightController.getAvailableModes()
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    availableModes.forEach { mode ->
+                        FilterChip(
+                            selected = tuningConfig.radarLightDefaultMode == mode,
+                            onClick = {
+                                coroutineScope.launch {
+                                    actualDataStore.updateRadarLightDefaultMode(mode)
+                                }
+                                RadarLightController.setLightMode(mode)
+                            },
+                            label = {
+                                Text(
+                                    text = stringResource(mode.titleResId),
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Auto Workout Light Toggle
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
+                        Text(
+                            text = stringResource(R.string.radar_light_auto_switch),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = stringResource(R.string.radar_light_auto_switch_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = tuningConfig.radarAutoLightControl,
+                        onCheckedChange = { checked ->
+                            coroutineScope.launch {
+                                actualDataStore.updateRadarAutoLightControl(checked)
                             }
                         }
                     )

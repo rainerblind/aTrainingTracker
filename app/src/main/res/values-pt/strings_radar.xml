@@ -88,4 +88,17 @@
     <string name="radar_alert_route_speaker">Forçar alto-falante do celular</string>
     <string name="radar_alert_haptic_title">Vibração tátil</string>
     <string name="radar_alert_haptic_desc">Vibrar na aproximação de veículos e mudanças de ameaça</string>
+
+    <!-- Radar Tail Light Control (ATT-5102 / REQ-CON-031) -->
+    <string name="radar_light_settings_title">Controlo da luz traseira</string>
+    <string name="radar_light_mode_title">Modo de luz</string>
+    <string name="radar_light_mode_off">Desligado (Apenas radar)</string>
+    <string name="radar_light_mode_day_flash">Flash diurno</string>
+    <string name="radar_light_mode_night_flash">Flash noturno</string>
+    <string name="radar_light_mode_solid">Contínuo</string>
+    <string name="radar_light_mode_peloton">Pelotão</string>
+    <string name="radar_light_auto_switch">Luz de treino automática</string>
+    <string name="radar_light_auto_switch_desc">Liga a luz traseira ao iniciar o treino e desliga ao terminar</string>
+    <string name="radar_light_sheet_title">Luz traseira do radar</string>
+    <string name="radar_light_stvzo_notice">Modo StVZO (Piscar desativado)</string>
 </resources>

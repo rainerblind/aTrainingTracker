@@ -55,8 +55,17 @@ object RadarTrafficSimulator {
     var activeScenario: RadarScenario? = null
         private set
 
+    var simulatedLightMode: RadarLightMode = RadarLightMode.OFF
+        private set
+
     val isSimulating: Boolean
         get() = simulationJob?.isActive == true
+
+    fun setSimulatedLightMode(mode: RadarLightMode) {
+        simulatedLightMode = mode
+        val current = RadarStateRepository.getState()
+        RadarStateRepository.updateState(current.copy(lightMode = mode, isLightControlSupported = true))
+    }
 
     private var simulationJob: Job? = null
     private var hardwareActiveProvider: (() -> Boolean)? = null
@@ -341,7 +350,10 @@ object RadarTrafficSimulator {
         elapsedMs: Long,
         aggregator: RadarWindowAggregator = windowAggregator
     ): RadarState {
-        val frame = generateFrame(scenario, elapsedMs)
+        val frame = generateFrame(scenario, elapsedMs).copy(
+            lightMode = simulatedLightMode,
+            isLightControlSupported = true
+        )
         RadarStateRepository.updateState(frame)
         aggregator.onTargetsUpdated(frame.targets)
         return frame
@@ -393,7 +405,10 @@ object RadarTrafficSimulator {
                         break
                     }
                     val elapsed = System.currentTimeMillis() - startTime
-                    val frame = generateFrame(scenario, elapsed)
+                    val frame = generateFrame(scenario, elapsed).copy(
+                        lightMode = simulatedLightMode,
+                        isLightControlSupported = true
+                    )
                     RadarStateRepository.updateState(frame)
                     aggregator.onTargetsUpdated(frame.targets)
                     delay(tickIntervalMs)
@@ -413,6 +428,7 @@ object RadarTrafficSimulator {
         simulationJob?.cancel()
         simulationJob = null
         activeScenario = null
+        simulatedLightMode = RadarLightMode.OFF
         RadarStateRepository.reset()
         windowAggregator.resetSession()
     }

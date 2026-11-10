@@ -10,6 +10,7 @@
 
 package com.atrainingtracker.trainingtracker.settings
 
+import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -76,6 +77,10 @@ class TuningConfigTest {
         assertEquals(RadarAudioRoute.SYSTEM_DEFAULT, TuningPreferencesDefaults.RADAR_AUDIO_ROUTE)
         assertEquals(true, config.radarHapticAlert)
         assertEquals(true, TuningPreferencesDefaults.RADAR_HAPTIC_ALERT)
+        assertEquals(RadarLightMode.DAY_FLASH, config.radarLightDefaultMode)
+        assertEquals(RadarLightMode.DAY_FLASH, TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE)
+        assertEquals(true, config.radarAutoLightControl)
+        assertEquals(true, TuningPreferencesDefaults.RADAR_AUTO_LIGHT_CONTROL)
     }
 
     @Test

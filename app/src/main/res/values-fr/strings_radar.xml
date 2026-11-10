@@ -88,4 +88,17 @@
     <string name="radar_alert_route_speaker">Forcer le haut-parleur</string>
     <string name="radar_alert_haptic_title">Vibration haptique</string>
     <string name="radar_alert_haptic_desc">Vibrer à l\'approche d\'un véhicule et lors des alertes</string>
+
+    <!-- Radar Tail Light Control (ATT-5102 / REQ-CON-031) -->
+    <string name="radar_light_settings_title">Commande du feu arrière</string>
+    <string name="radar_light_mode_title">Mode d\'éclairage</string>
+    <string name="radar_light_mode_off">Éteint (Radar uniquement)</string>
+    <string name="radar_light_mode_day_flash">Flash de jour</string>
+    <string name="radar_light_mode_night_flash">Flash de nuit</string>
+    <string name="radar_light_mode_solid">Continu</string>
+    <string name="radar_light_mode_peloton">Peloton</string>
+    <string name="radar_light_auto_switch">Éclairage d\'entraînement automatique</string>
+    <string name="radar_light_auto_switch_desc">Allume le feu arrière au début de l\'entraînement et l\'éteint à la fin</string>
+    <string name="radar_light_sheet_title">Feu arrière radar</string>
+    <string name="radar_light_stvzo_notice">Mode StVZO (Clignotement désactivé)</string>
 </resources>

@@ -88,4 +88,17 @@
     <string name="radar_alert_route_speaker">Force Phone Speaker</string>
     <string name="radar_alert_haptic_title">Haptic Vibration</string>
     <string name="radar_alert_haptic_desc">Vibrate on vehicle approach and threat transitions</string>
+
+    <!-- Radar Tail Light Control (ATT-5102 / REQ-CON-031) -->
+    <string name="radar_light_settings_title">Tail Light Control</string>
+    <string name="radar_light_mode_title">Light Mode</string>
+    <string name="radar_light_mode_off">Off (Radar Only)</string>
+    <string name="radar_light_mode_day_flash">Day Flash</string>
+    <string name="radar_light_mode_night_flash">Night Flash</string>
+    <string name="radar_light_mode_solid">Solid</string>
+    <string name="radar_light_mode_peloton">Peloton</string>
+    <string name="radar_light_auto_switch">Auto Workout Light</string>
+    <string name="radar_light_auto_switch_desc">Turn tail light on at workout start and off at finish</string>
+    <string name="radar_light_sheet_title">Radar Tail Light</string>
+    <string name="radar_light_stvzo_notice">StVZO Mode (Flashing disabled)</string>
 </resources>

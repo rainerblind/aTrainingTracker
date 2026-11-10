@@ -39,6 +39,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.tracker.TrackerService
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontFamily
@@ -107,6 +108,8 @@ object TuningPreferencesDefaults {
     const val RADAR_SPEAKER_BOOST = true
     val RADAR_AUDIO_ROUTE = RadarAudioRoute.SYSTEM_DEFAULT
     const val RADAR_HAPTIC_ALERT = true
+    val RADAR_LIGHT_DEFAULT_MODE = RadarLightMode.DAY_FLASH
+    const val RADAR_AUTO_LIGHT_CONTROL = true
     const val FULL_DIM_FACTOR = 0.25f
     const val MEDIUM_DIM_FACTOR = 0.50f
     const val SLOPE_FLAT_THRESHOLD = 2.0f
@@ -400,7 +403,9 @@ data class TuningConfig(
     val radarAlertVolume: Int = TuningPreferencesDefaults.RADAR_ALERT_VOLUME,
     val radarSpeakerBoost: Boolean = TuningPreferencesDefaults.RADAR_SPEAKER_BOOST,
     val radarAudioRoute: RadarAudioRoute = TuningPreferencesDefaults.RADAR_AUDIO_ROUTE,
-    val radarHapticAlert: Boolean = TuningPreferencesDefaults.RADAR_HAPTIC_ALERT
+    val radarHapticAlert: Boolean = TuningPreferencesDefaults.RADAR_HAPTIC_ALERT,
+    val radarLightDefaultMode: RadarLightMode = TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE,
+    val radarAutoLightControl: Boolean = TuningPreferencesDefaults.RADAR_AUTO_LIGHT_CONTROL
 ) {
     val showAntMissingAdapterWarnings: Boolean
         get() = !suppressAntMissingAdapterDialog
@@ -554,6 +559,8 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_RADAR_SPEAKER_BOOST: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_speaker_boost")
         val KEY_RADAR_AUDIO_ROUTE: Preferences.Key<String> = stringPreferencesKey("tuning_radar_audio_route")
         val KEY_RADAR_HAPTIC_ALERT: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_haptic_alert")
+        val KEY_RADAR_LIGHT_DEFAULT_MODE: Preferences.Key<String> = stringPreferencesKey("tuning_radar_light_default_mode")
+        val KEY_RADAR_AUTO_LIGHT_CONTROL: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_auto_light_control")
 
         internal val ALL_KEYS = listOf(
             KEY_ELEVATION_X_AXIS_DOMAIN,
@@ -818,6 +825,9 @@ data class AutoPausePreferences(
         val radarAudioRoute = safeEnumValueOf(rawAudioRouteStr, TuningPreferencesDefaults.RADAR_AUDIO_ROUTE)
 
         val radarHapticAlert = prefs[KEY_RADAR_HAPTIC_ALERT] ?: TuningPreferencesDefaults.RADAR_HAPTIC_ALERT
+        val rawLightDefaultModeStr = prefs[KEY_RADAR_LIGHT_DEFAULT_MODE]
+        val radarLightDefaultMode = safeEnumValueOf(rawLightDefaultModeStr, TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE)
+        val radarAutoLightControl = prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] ?: TuningPreferencesDefaults.RADAR_AUTO_LIGHT_CONTROL
 
         val rawFontWeightStr = prefs[KEY_COCKPIT_FONT_WEIGHT]
         val cockpitFontWeight = safeEnumValueOf(rawFontWeightStr, TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT)
@@ -1028,7 +1038,9 @@ data class AutoPausePreferences(
             radarAlertVolume = radarAlertVolume,
             radarSpeakerBoost = radarSpeakerBoost,
             radarAudioRoute = radarAudioRoute,
-            radarHapticAlert = radarHapticAlert
+            radarHapticAlert = radarHapticAlert,
+            radarLightDefaultMode = radarLightDefaultMode,
+            radarAutoLightControl = radarAutoLightControl
         )
     }
 
@@ -1325,6 +1337,8 @@ data class AutoPausePreferences(
             prefs[KEY_RADAR_SPEAKER_BOOST] = config.radarSpeakerBoost
             prefs[KEY_RADAR_AUDIO_ROUTE] = config.radarAudioRoute.name
             prefs[KEY_RADAR_HAPTIC_ALERT] = config.radarHapticAlert
+            prefs[KEY_RADAR_LIGHT_DEFAULT_MODE] = config.radarLightDefaultMode.name
+            prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] = config.radarAutoLightControl
         }
 
         TrainingApplication.setClusterTolEndpoints(clampedClusterTolEndpoints)
@@ -1533,6 +1547,26 @@ data class AutoPausePreferences(
     suspend fun updateRadarHapticAlert(haptic: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[KEY_RADAR_HAPTIC_ALERT] = haptic
+        }
+    }
+
+    val radarLightDefaultModeFlow: Flow<RadarLightMode> = context.dataStore.data.map { prefs ->
+        safeEnumValueOf(prefs[KEY_RADAR_LIGHT_DEFAULT_MODE], TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE)
+    }
+
+    val radarAutoLightControlFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] ?: TuningPreferencesDefaults.RADAR_AUTO_LIGHT_CONTROL
+    }
+
+    suspend fun updateRadarLightDefaultMode(mode: RadarLightMode) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_LIGHT_DEFAULT_MODE] = mode.name
+        }
+    }
+
+    suspend fun updateRadarAutoLightControl(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] = enabled
         }
     }
 

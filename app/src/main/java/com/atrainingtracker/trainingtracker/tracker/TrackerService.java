@@ -79,6 +79,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseMan
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository;
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils;
+import com.atrainingtracker.banalservice.devices.radar.RadarLightController;
 import com.atrainingtracker.trainingtracker.audio.radar.RadarAlertManager;
 import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseConfig;
 import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManager;
@@ -855,6 +856,9 @@ public class TrackerService extends Service {
         }
         mStartType = startType;
         mWorkoutStartLocationRecorded = (startType != StartType.START_NORMAL);
+        if (startType == StartType.START_NORMAL || startType == StartType.RESUME_BY_USER) {
+            RadarLightController.onWorkoutStarted(this);
+        }
         switch (startType) {
             case START_NORMAL:
                 if (DEBUG) Log.d(TAG, "starting a new workout");
@@ -1041,6 +1045,8 @@ public class TrackerService extends Service {
         }
         mIsStopping = true;
         if (DEBUG) Log.d(TAG, "handleActionStop: initiating foreground-protected async finalization");
+
+        RadarLightController.onWorkoutStopped(this);
 
         cancelTrackerHandle();
         mScheduler.shutdownNow();
@@ -1241,6 +1247,8 @@ public class TrackerService extends Service {
             }
             mRadarAlertManager = null;
         }
+
+        RadarLightController.onWorkoutStopped(this);
 
         LifecycleUtils.safeUnregisterReceiver(this, mSearchingFinishedReceiver, TAG);
         LifecycleUtils.safeUnregisterReceiver(this, mAltitudeCorrectionReceiver, TAG);

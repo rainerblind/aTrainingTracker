@@ -88,4 +88,17 @@
     <string name="radar_alert_route_speaker">スマホのスピーカーを強制</string>
     <string name="radar_alert_haptic_title">触覚バイブレーション</string>
     <string name="radar_alert_haptic_desc">車両接近および脅威変化時に振動します</string>
+
+    <!-- Radar Tail Light Control (ATT-5102 / REQ-CON-031) -->
+    <string name="radar_light_settings_title">テールライト制御</string>
+    <string name="radar_light_mode_title">点灯モード</string>
+    <string name="radar_light_mode_off">オフ（レーダーのみ）</string>
+    <string name="radar_light_mode_day_flash">デイフラッシュ</string>
+    <string name="radar_light_mode_night_flash">ナイトフラッシュ</string>
+    <string name="radar_light_mode_solid">点灯</string>
+    <string name="radar_light_mode_peloton">プロトン</string>
+    <string name="radar_light_auto_switch">ワークアウト自動点灯</string>
+    <string name="radar_light_auto_switch_desc">ワークアウト開始時に点灯し、終了時に消灯します</string>
+    <string name="radar_light_sheet_title">レーダーテールライト</string>
+    <string name="radar_light_stvzo_notice">StVZOモード（点滅無効）</string>
 </resources>

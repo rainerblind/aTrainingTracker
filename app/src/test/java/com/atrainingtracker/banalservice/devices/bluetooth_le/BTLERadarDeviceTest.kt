@@ -32,6 +32,8 @@ import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.devices.radar.LaneState
 import com.atrainingtracker.banalservice.devices.radar.RadarConnectionState
+import com.atrainingtracker.banalservice.devices.radar.RadarLightController
+import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
 import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository
 import com.atrainingtracker.banalservice.devices.radar.RadarTarget
 import com.atrainingtracker.banalservice.devices.radar.ThreatLevel
@@ -266,5 +268,32 @@ class BTLERadarDeviceTest {
 
         assertFalse(radarDevice.isV2Stream)
         io.mockk.verify { mockGatt.setCharacteristicNotification(mockV1Char, true) }
+    }
+
+    @Test
+    fun testSetLightMode_enqueuesWriteCharacteristicWhenSupported() {
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockService = mockk<BluetoothGattService>(relaxed = true)
+        val mockLightChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val mockV2Char = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val mockDescriptor = mockk<BluetoothGattDescriptor>(relaxed = true)
+
+        every { mockService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2) } returns mockV2Char
+        every { mockV2Char.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG) } returns mockDescriptor
+        every { mockService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_LIGHT_CONTROL) } returns mockLightChar
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockService
+
+        radarDevice.configureServices(mockGatt)
+
+        assertTrue(radarDevice.isLightControlSupported)
+        val result = radarDevice.setLightMode(RadarLightMode.DAY_FLASH)
+        assertTrue(result)
+    }
+
+    @Test
+    fun testSetLightMode_returnsFalseWhenLightControlNotDiscovered() {
+        assertFalse(radarDevice.isLightControlSupported)
+        val result = radarDevice.setLightMode(RadarLightMode.SOLID)
+        assertFalse(result)
     }
 }

@@ -88,4 +88,17 @@
     <string name="radar_alert_route_speaker">Telefoonluidspreker forceren</string>
     <string name="radar_alert_haptic_title">Haptische trilling</string>
     <string name="radar_alert_haptic_desc">Trillen bij naderende voertuigen en dreigingsovergangen</string>
+
+    <!-- Radar Tail Light Control (ATT-5102 / REQ-CON-031) -->
+    <string name="radar_light_settings_title">Achterlichtbediening</string>
+    <string name="radar_light_mode_title">Lichtmodus</string>
+    <string name="radar_light_mode_off">Uit (Alleen radar)</string>
+    <string name="radar_light_mode_day_flash">Dagknipperen</string>
+    <string name="radar_light_mode_night_flash">Nachtknipperen</string>
+    <string name="radar_light_mode_solid">Continu</string>
+    <string name="radar_light_mode_peloton">Peloton</string>
+    <string name="radar_light_auto_switch">Automatische trainingsverlichting</string>
+    <string name="radar_light_auto_switch_desc">Schakelt achterlicht in bij start training en uit bij einde</string>
+    <string name="radar_light_sheet_title">Radar-achterlicht</string>
+    <string name="radar_light_stvzo_notice">StVZO-modus (Knipperen uitgeschakeld)</string>
 </resources>

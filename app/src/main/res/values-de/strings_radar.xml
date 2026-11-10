@@ -88,4 +88,17 @@
     <string name="radar_alert_route_speaker">Telefon-Lautsprecher erzwingen</string>
     <string name="radar_alert_haptic_title">Haptische Vibration</string>
     <string name="radar_alert_haptic_desc">Vibrieren bei Annäherung und Bedrohungswechsel</string>
+
+    <!-- Radar Tail Light Control (ATT-5102 / REQ-CON-031) -->
+    <string name="radar_light_settings_title">Rücklicht-Steuerung</string>
+    <string name="radar_light_mode_title">Lichtmodus</string>
+    <string name="radar_light_mode_off">Aus (Nur Radar)</string>
+    <string name="radar_light_mode_day_flash">Tag-Blinken</string>
+    <string name="radar_light_mode_night_flash">Nacht-Blinken</string>
+    <string name="radar_light_mode_solid">Dauerlicht</string>
+    <string name="radar_light_mode_peloton">Peloton</string>
+    <string name="radar_light_auto_switch">Automatisches Trainingslicht</string>
+    <string name="radar_light_auto_switch_desc">Schaltet das Rücklicht bei Trainingsbeginn ein und bei Trainingsende aus</string>
+    <string name="radar_light_sheet_title">Radar-Rücklicht</string>
+    <string name="radar_light_stvzo_notice">StVZO-Modus (Blinken deaktiviert)</string>
 </resources>

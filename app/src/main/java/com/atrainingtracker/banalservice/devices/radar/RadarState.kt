@@ -100,5 +100,7 @@ data class RadarState(
     val connectionState: RadarConnectionState = RadarConnectionState.DISCONNECTED,
     val overallThreatLevel: ThreatLevel = ThreatLevel.NONE,
     val targets: List<RadarTarget> = emptyList(),
-    val lastUpdateRealtimeMs: Long = 0L
+    val lastUpdateRealtimeMs: Long = 0L,
+    val lightMode: RadarLightMode = RadarLightMode.OFF,
+    val isLightControlSupported: Boolean = false
 )

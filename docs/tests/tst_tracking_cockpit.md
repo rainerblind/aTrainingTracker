@@ -1948,6 +1948,29 @@
   8. *Clean-Room Targeted Test Suite Execution (`TST-CON-030.8`)*:
   • Execute targeted package tests (`com.atrainingtracker.banalservice.devices.bluetooth_le.*`, `com.atrainingtracker.banalservice.devices.radar.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
+### TST-CON-031: **BLE Radar Tail Light Mode Control Test Suite** [Verified]
+- **Requirement(s)**: `REQ-CON-031` (`REQ-CON-031.1`..`REQ-CON-031.7`)
+- **Component**: `BTLERadarDevice.java`, `RadarLightController.kt`, `RadarLightMode.kt`, `RadarEdgeOverlay.kt`, `RadarSettingsSection.kt`, `TuningPreferencesDataStore.kt`, `TrackerService.java`, `strings_radar.xml`
+- **Jira**: `ATT-5102`
+- **Test Description**:
+  1. *Light Characteristic Discovery & Queue Routing Tests (`TST-CON-031.1`, `BTLERadarDeviceTest.kt`)*:
+  • Verify discovery of characteristic `6a4e3202` and validation that light mode writes are queued via `enqueueWriteCharacteristic` without blocking radar measurement notifications.
+  2. *Mode Command Encoding & StVZO Pruning Tests (`TST-CON-031.2`, `RadarLightControllerTest.kt`)*:
+  • Verify encoding of light mode commands into raw GATT byte arrays (`OFF`, `DAY_FLASH`, `NIGHT_FLASH`, `SOLID`, `PELOTON`) and verify flashing mode pruning when StVZO hardware is indicated.
+  3. *Cockpit Quick-Switch Sheet UI & State Tests (`TST-CON-031.3`, `RadarLightQuickSwitchSheetTest.kt`)*:
+  • Verify modal sheet rendering upon badge tap, active mode indication, selection callback invocation, and non-interactive badge behavior on devices lacking light characteristic.
+  4. *Workout Lifecycle Auto-Switch Automation Tests (`TST-CON-031.4`, `RadarLightControllerTest.kt`)*:
+  • Verify automatic transmission of workout light command on tracker start and off command on tracker stop when `radarAutoLightControl` is enabled.
+  5. *Settings Persistence & Config Parity Tests (`TST-CON-031.5`, `TuningPreferencesDataStoreTest.kt`)*:
+  • Verify preference persistence for `radarLightDefaultMode` and `radarAutoLightControl` in DataStore.
+  6. *Traffic Simulator Light State Tests (`TST-CON-031.6`, `RadarTrafficSimulatorTest.kt`)*:
+  • Verify light command handling and simulated state reflections in `RadarTrafficSimulator`.
+  7. *9-Language Localization Parity Test (`TST-CON-031.7`, `TranslationParityTest.kt`)*:
+  • Verify 100% key and format parity for light mode and auto-switch string resources across all 9 supported locales.
+  8. *Clean-Room Targeted Test Suite Execution (`TST-CON-031.8`)*:
+  • Execute targeted package tests asserting 100% pass rate.
+
+
 
 
 

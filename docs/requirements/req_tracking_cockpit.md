@@ -3468,5 +3468,38 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Guaranteed legacy V1 fallback; 3.5s packet starvation watchdog preservation; non-blocking serialized GATT operations; thread safety across 4–8 Hz updates and 1 Hz latching; 100% 9-language translation parity.
 
+### REQ-CON-031: BLE Radar Tail Light Mode Control & Workout Auto-Switch [Verified]
+- **Tests**: `TST-CON-031` | **Tickets**: `ATT-5102`
+- **Implementation**: `BTLERadarDevice.java`, `RadarLightController.kt`, `RadarLightMode.kt`, `RadarEdgeOverlay.kt`, `RadarSettingsSection.kt`, `TuningPreferencesDataStore.kt`, `TrackerService.java`, `strings_radar.xml`
+- **Rationale**: Garmin Varia radar tail lights (e.g. RearVue 820) expose a dedicated BLE light control characteristic `6a4e3202-667b-11e3-949a-0800200c9a66` on service `6a4e3200-667b-11e3-949a-0800200c9a66`. Cyclists require on-the-fly handlebar switching of tail light modes without reaching behind the saddle, coupled with automated workout start/finish lighting control to preserve peripheral battery and prevent riding without active lighting (ATT-5102, Parent Epic ATT-1286, extending `REQ-CON-028`, `REQ-CON-029`, and `REQ-CON-030`):
+1. *BLE Light Control Discovery & Serialized Queue Routing (`REQ-CON-031.1`)*:
+• Upon service discovery on `BTLERadarDevice`, if characteristic `6a4e3202` is present, the device SHALL register light control capabilities and route mode write commands via `MyBTLEDevice.enqueueWriteCharacteristic(...)` into the serialized GATT FIFO queue without delaying radar threat telemetry or 3.5s watchdog processing.
+2. *Tail Light Mode Command Mapping & StVZO Capability Pruning (`REQ-CON-031.2`)*:
+• The system SHALL support `RadarLightMode` states (`OFF`, `DAY_FLASH`, `NIGHT_FLASH`, `SOLID`, `PELOTON`). When connected to StVZO-certified hardware, flashing modes (`DAY_FLASH`, `NIGHT_FLASH`, `PELOTON`) SHALL be pruned automatically from user selection, exposing only legal steady modes (`SOLID`, `OFF`).
+3. *Cockpit Quick-Switch Bottom Sheet (`REQ-CON-031.3`)*:
+• Tapping the radar status badge in `RadarEdgeOverlay` SHALL display a modal quick-switch bottom sheet presenting available light modes with live state indication; on radar devices without light control characteristic `6a4e3202`, the badge SHALL remain non-interactive without error.
+4. *Workout Lifecycle Auto-Switch Automation (`REQ-CON-031.4`)*:
+• When `radarAutoLightControl` is enabled in `TuningPreferencesDataStore`, `TrackerService` SHALL command `RadarLightMode.DAY_FLASH` (or `SOLID` under StVZO) upon workout start/resume and revert to `RadarLightMode.OFF` upon workout stop/finish.
+5. *Settings Configuration & DataStore Persistence (`REQ-CON-031.5`)*:
+• `RadarSettingsSection.kt` SHALL expose tail light controls, default mode selection, and the workout auto-switch toggle, backed by `TuningPreferencesDataStore.kt`.
+6. *Traffic Simulator Light State Emulation (`REQ-CON-031.6`)*:
+• `RadarTrafficSimulator` SHALL emulate tail light command reception and state transitions for UI testing without physical peripheral hardware.
+7. *9-Language Localization Parity (`REQ-CON-031.7`)*:
+• All light mode names, dialog titles, and settings strings in `strings_radar.xml` SHALL maintain 100% key and format parity across EN, DE, ES, FR, IT, JA, NL, PL, PT (zero inline emojis).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a connected Garmin Varia BLE peripheral exposing characteristic `6a4e3202`,
+• *When* the cyclist taps the radar status badge in `RadarEdgeOverlay` and selects "Day Flash",
+• *Then* `BTLERadarDevice` enqueues the light mode write to `6a4e3202` without interrupting radar telemetry streaming.
+• *Given* a legacy radar unit without `6a4e3202` (e.g. RVR315),
+• *When* connected,
+• *Then* light quick-switch and tail light settings card are hidden or disabled without degrading radar detection.
+• *Given* `radarAutoLightControl` is enabled,
+• *When* the user starts a workout in `TrackerService`,
+• *Then* `RadarLightController` automatically transmits the configured active light mode command.
+
+**Invariants**: Non-blocking serialized GATT writes (zero collision with threat CCCD); StVZO legal compliance; fail-safe degradation on radar-only hardware; zero SQLite schema modifications; 100% 9-language translation parity.
+
+
 
 

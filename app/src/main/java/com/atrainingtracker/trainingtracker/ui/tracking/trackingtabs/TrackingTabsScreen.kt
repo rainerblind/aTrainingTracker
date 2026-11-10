@@ -120,10 +120,12 @@ import com.atrainingtracker.trainingtracker.ui.theme.resolveEffectiveCockpitDark
 import com.atrainingtracker.trainingtracker.ui.settings.trackingtabs.CopyTrackingTabDialog
 import com.atrainingtracker.trainingtracker.ui.theme.resolveEffectiveCockpitThemeState
 import com.atrainingtracker.banalservice.devices.radar.RadarConnectionState
+import com.atrainingtracker.banalservice.devices.radar.RadarLightController
 import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository
 import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator
 import com.atrainingtracker.trainingtracker.settings.RadarEdgeSide
 import com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlay
+import com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarLightQuickSwitchSheet
 import com.atrainingtracker.trainingtracker.ui.tracking.LapSummaryDialog
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
 import com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlNavigation
@@ -315,6 +317,7 @@ fun TrackingTabsScreen(
     val returnNavRepo = remember { ReturnNavigationRepository.getInstance(context) }
     val returnNavState by returnNavRepo.navigationState.collectAsState()
     val radarState by RadarStateRepository.radarState.collectAsState()
+    var showRadarLightQuickSwitch by remember { mutableStateOf(false) }
 
     val currentLatLng by controlViewModel.banalServiceRepository.currentLocation.collectAsState()
     LaunchedEffect(currentLatLng) {
@@ -1062,10 +1065,28 @@ fun TrackingTabsScreen(
                             radarState = radarState,
                             edgeSide = tuningConfig.radarEdgeSide,
                             clearMode = tuningConfig.radarClearMode,
+                            onBadgeClick = {
+                                if (radarState.isLightControlSupported) {
+                                    showRadarLightQuickSwitch = true
+                                }
+                            },
                             modifier = Modifier
                                 .align(if (tuningConfig.radarEdgeSide == RadarEdgeSide.LEFT) Alignment.CenterStart else Alignment.CenterEnd)
                                 .fillMaxHeight()
                                 .zIndex(1.2f)
+                        )
+                    }
+
+                    if (showRadarLightQuickSwitch) {
+                        RadarLightQuickSwitchSheet(
+                            currentMode = radarState.lightMode,
+                            availableModes = RadarLightController.getAvailableModes(),
+                            isStvzo = RadarLightController.isStvzo.collectAsState().value,
+                            onModeSelected = { mode ->
+                                RadarLightController.setLightMode(mode)
+                                showRadarLightQuickSwitch = false
+                            },
+                            onDismiss = { showRadarLightQuickSwitch = false }
                         )
                     }
                 }
