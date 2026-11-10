@@ -38,7 +38,7 @@ graph TD
         SamplesDB["WorkoutSamples.db (1-Hz Time-Series Data)"]
         SummariesDB["WorkoutSummaries.db (Extrema & Aggregates)"]
         LapsDB["Laps.db & Clusters.db (Splits & Lieblingsstrecken)"]
-        Exporters["FitFileWriter, GpxExporter, TcxExporter, StravaUploader"]
+        Exporters["FitFileWriter, GpxExporter, TcxExporter, StravaUploader, HealthConnectManager, HealthConnectRecordMapper"]
     end
 
     subgraph Hardware_Layer["6. Hardware & External Peripherals"]
@@ -89,7 +89,7 @@ All system requirements across the 9 living domain shards are allocated directly
 | **Post-Workout Analytics & Periods** | `PER`, `PERF` | `WorkoutRepository`, `PowerPhysiologyCalculator`, `ZoneDistributionCalculator`, `PeriodsRepository` | Physiological computation (NP, TSS), 5/7 power zone distributions, period statistics & trend filters. |
 | **Maps, Polylines & Navigation** | `GEO`, `MAP`, `NAV`, `ROU` | `ClimbDetector`, `PolylineProgressTracker`, `MapFragmentWithTrackViewModel`, `ATrainingTrackerMap` | Web Mercator tile rendering, polyline compression, climb categorization, live segment gate matching. |
 | **Persistence, Migration & Cloud Export** | `DAT`, `EXP`, `EXT`, `MIG` | `WorkoutSamplesDb`, `WorkoutSummariesDatabaseManager`, `FitFileWriter`, `StravaUploader`, `GoogleDriveBackupManager` | Time-series SQLite storage, schema migration, Strava OAuth/upload retry, FIT/TCX/GPX serialization. |
-| **Settings, Profiles & Localization** | `LOC`, `MON`, `PRI`, `SET` | `TuningPreferencesDataStore`, `EquipmentDatabaseManager`, `PrivacyZoneManager`, `BillingManager`, `ProFeatureManager`, `SensorQuotaReconciliationManager` | DataStore persistence, 9-locale string parity, sensor quotas, monetization, vehicle equipment, GPS obfuscation. |
+| **Settings, Profiles & Localization** | `LOC`, `MON`, `PRI`, `SET` | `TuningPreferencesDataStore`, `EquipmentDatabaseManager`, `PrivacyZoneManager`, `BillingManager`, `ProFeatureManager`, `HealthConnectManager`, `HealthConnectRecordMapper`, `SensorQuotaReconciliationManager` | DataStore persistence, 9-locale string parity, sensor quotas, monetization, vehicle equipment, Health Connect sync & record mapping, GPS obfuscation. |
 | **UI Components & Design System** | `UI`, `UNT` | Jetpack Compose theme (`TTTheme`), `MetricItem`, `ElevationProfile`, `CustomLineChart`, `AppModalBottomSheet`, `WorkoutPhotoStrip`, `WorkoutTimePhotoPickerSheet` | High-contrast AMOLED theming, responsive landscape layouts, chart scrubbing, reusable Compose components, chronological workout photo selection. |
 | **Engineering Process & Stability** | `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST` | ASPICE Dual-Agent Quality Gates, `jira_util.py`, `verify_requirement_governance.py`, ProGuard rules | CI/CD build hygiene, Chesterton's fence archaeology, crash resilience, process kill simulation. |
 | **Jubilee Milestones & App Reviews** | `REV` | `MilestoneDetector`, `FirstJubileeCelebrationDialog`, `InAppReviewManager` | Milestone counting, achievement celebration, Google Play in-app review prompting. |

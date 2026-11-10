@@ -32,7 +32,8 @@ enum class SettingsBottomSheetType {
     DISPLAY,
     ADVANCED_TUNING,
     SEARCH,
-    ACTIVITY_TYPE
+    ACTIVITY_TYPE,
+    HEALTH_CONNECT
 }
 
 /**

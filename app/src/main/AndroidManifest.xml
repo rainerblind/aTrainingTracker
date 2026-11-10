@@ -53,6 +53,14 @@
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
+    <!-- Android Health Connect Permissions (ATT-3052 / REQ-SET-100) -->
+    <uses-permission android:name="android.permission.health.WRITE_EXERCISE" />
+    <uses-permission android:name="android.permission.health.WRITE_EXERCISE_ROUTE" />
+    <uses-permission android:name="android.permission.health.WRITE_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.WRITE_POWER" />
+    <uses-permission android:name="android.permission.health.WRITE_SPEED" />
+    <uses-permission android:name="android.permission.health.WRITE_DISTANCE" />
+    <uses-permission android:name="android.permission.health.WRITE_TOTAL_CALORIES_BURNED" />
     <!-- REQ-TRK-015 / REQ-BLD-003: ACCESS_BACKGROUND_LOCATION is required on Android 14+ (API 34+) when TrackerService is restarted by the OS via START_STICKY (intent == null) to promote to FOREGROUND_SERVICE_TYPE_LOCATION without SecurityException -->
     <uses-feature
         android:name="android.hardware.location.gps"
@@ -72,6 +80,11 @@
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="strava" />
+        </intent>
+        <!-- Android Health Connect (ATT-3052) -->
+        <package android:name="com.google.android.apps.healthdata" />
+        <intent>
+            <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
         </intent>
     </queries>
 
@@ -282,6 +295,18 @@
         </activity>
 
         <!-- <uses-library android:name="com.dsi.ant.antradio_library" /> -->
+        <!-- Android Health Connect Permissions Rationale Activity (ATT-3052 / REQ-SET-100) -->
+        <activity-alias
+            android:name=".trainingtracker.HealthConnectRationaleActivity"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:label="@string/app_name"
+            android:targetActivity=".trainingtracker.activities.MainActivityWithNavigation">
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+            </intent-filter>
+        </activity-alias>
+
         <service
             android:name=".trainingtracker.tracker.TrackerService"
             android:foregroundServiceType="location|health" />

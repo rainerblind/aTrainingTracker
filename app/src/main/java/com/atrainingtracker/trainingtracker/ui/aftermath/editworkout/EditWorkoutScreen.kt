@@ -35,6 +35,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
@@ -322,6 +323,36 @@ fun EditWorkoutDialog(
                     Text(
                         text = stringResource(R.string.stravaUpload),
                         color = if (stravaMappingAvailable) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                    )
+                }
+            }
+
+            // 5b. Sync to Health Connect (Conditional on Health Connect availability)
+            val localContext = androidx.compose.ui.platform.LocalContext.current
+            if (com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectManager.isAvailable(localContext)) {
+                var syncToHealthConnect by remember { mutableStateOf(TrainingApplication.syncToHealthConnect()) }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = syncToHealthConnect,
+                        onCheckedChange = { checked ->
+                            syncToHealthConnect = checked
+                            if (checked) {
+                                workoutData?.let { data ->
+                                    com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectManager.syncWorkoutAsync(localContext, data)
+                                }
+                            }
+                        }
+                    )
+                    Icon(
+                        imageVector = Icons.Default.Favorite,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(R.string.health_connect_sync_manual),
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }

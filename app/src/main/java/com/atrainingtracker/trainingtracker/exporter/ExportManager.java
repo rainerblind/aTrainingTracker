@@ -205,6 +205,11 @@ public class ExportManager {
         }
         if (DEBUG) Log.d(TAG, "exportWorkout: " + workoutData.getFileBaseName());
 
+        // Android Health Connect automatic workout synchronization (ATT-3052 / REQ-SET-103)
+        if (TrainingApplication.syncToHealthConnect() && mContext != null) {
+            com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectManager.syncWorkoutAsync(mContext, workoutData);
+        }
+
         for (FileFormat fileFormat : FileFormat.values()) {
             if (TrainingApplication.exportToFile(fileFormat)) {
                 if (fileFormat == FileFormat.STRAVA && workoutData.getUploadToStrava() == 0) {

@@ -1804,6 +1804,92 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 
 **Invariants**: Sensor data streaming, configurable search timeout, and scan lifecycle teardown (disconnect, search timeout, and shutdown) remain strictly preserved; zero regression in BLE reconnection backoff.
 
+### REQ-SET-100: Android Health Connect Client Integration, SDK Status & Permissions [Verified]
+- **Tests**: `TST-SET-100` | **Tickets**: `ATT-3052`
+- **Implementation**: `HealthConnectManager.kt`, `AndroidManifest.xml`
+- **Status**: Verified
+- **Rationale**: To enable interoperability with external health platforms following Google Fit deprecation, the system SHALL integrate Android Health Connect (`androidx.health.connect:connect-client:1.1.0`) as a first-class health data provider:
+1. *SDK Status Lifecycle (`REQ-SET-100.1`)*:
+   - The system SHALL query `HealthConnectClient.getSdkStatus(context)` before initiating any Health Connect operations.
+   - If `SDK_AVAILABLE`, Health Connect functionality SHALL be fully active.
+   - If `SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED`, the system SHALL prompt the user to update the Health Connect provider via Play Store intent.
+   - If `SDK_UNAVAILABLE`, Health Connect UI options SHALL indicate unavailability gracefully without crashes.
+2. *Runtime Health Permissions (`REQ-SET-100.2`)*:
+   - The system SHALL declare write permissions in `AndroidManifest.xml` (`WRITE_EXERCISE`, `WRITE_EXERCISE_ROUTE`, `WRITE_HEART_RATE`, `WRITE_POWER`, `WRITE_SPEED`, `WRITE_DISTANCE`, `WRITE_TOTAL_CALORIES_BURNED`) and support the Health Connect rationale intent (`androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE`).
+   - The system SHALL check and request required permissions using `PermissionController.createRequestPermissionResultContract()` before performing workout sync operations.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an Android device with Health Connect installed and supported,
+• *When* the user accesses Health Connect settings,
+• *Then* `getSdkStatus()` returns `SDK_AVAILABLE` and permission requests are presented via standard Health Connect contracts.
+• *Given* a device without Health Connect support,
+• *When* Health Connect features are accessed,
+• *Then* the system reports unavailability without throwing unhandled exceptions.
+
+**Invariants**: Core tracking loop and local SQLite persistence MUST operate independently of Health Connect availability or permission status.
+
+### REQ-SET-101: Exercise Session & Telemetry Series Record Mapping [Verified]
+- **Tests**: `TST-SET-101` | **Tickets**: `ATT-3052`
+- **Implementation**: `HealthConnectRecordMapper.kt`, `HealthConnectManager.kt`
+- **Status**: Verified
+- **Rationale**: Completed workout metadata and sensor time-series data must map to standardized Health Connect data models:
+1. *Session Metadata Mapping (`REQ-SET-101.1`)*:
+   - `BSportType` SHALL map to Health Connect exercise types: `BIKE` -> `EXERCISE_TYPE_BIKING`, `RUN` -> `EXERCISE_TYPE_RUNNING`, trainer/indoor rides -> `EXERCISE_TYPE_BIKING_STATIONARY`, treadmill runs -> `EXERCISE_TYPE_RUNNING_TREADMILL`, and other sports -> `EXERCISE_TYPE_OTHER_WORKOUT`.
+   - Start time, end time, duration, and title SHALL populate `ExerciseSessionRecord.Builder`.
+2. *Telemetry Time-Series Conversion (`REQ-SET-101.2`)*:
+   - The system SHALL extract per-second samples from `WorkoutSamplesDatabaseManager` and convert them into corresponding Health Connect series records:
+     - GPS coordinates with timestamps and altitude -> `ExerciseRoute`.
+     - Heart rate samples (bpm) -> `HeartRateRecord`.
+     - Power samples (Watts) -> `PowerRecord`.
+     - Speed samples (m/s) -> `SpeedRecord`.
+     - Distance and elevation gained -> `DistanceRecord` and `ElevationGainedRecord`.
+     - Total calories -> `TotalCaloriesBurnedRecord`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a completed outdoor bike workout with GPS and heart rate data,
+• *When* Health Connect synchronization executes,
+• *Then* an `ExerciseSessionRecord` (type `EXERCISE_TYPE_BIKING`) with associated `ExerciseRoute` and `HeartRateRecord` series is written to Health Connect.
+
+**Invariants**: All series record timestamps must strictly fall within the exercise session's `[startTime, endTime]` interval.
+
+### REQ-SET-102: Trackless Indoor Workout Health Connect Export Parity [Verified]
+- **Tests**: `TST-SET-102` | **Tickets**: `ATT-3052`
+- **Implementation**: `HealthConnectRecordMapper.kt`, `HealthConnectManager.kt`
+- **Status**: Verified
+- **Rationale**: Indoor workouts (smart trainer sessions, indoor runs, gym workouts) record physiological sensor streams without GPS tracks. The sync pipeline SHALL export trackless workouts without route dependency:
+1. *Optional Route Decoupling (`REQ-SET-102.1`)*:
+   - When workout track data contains no GPS coordinates (`lat`/`lon` null or empty), `ExerciseSessionRecord` SHALL be constructed with `exerciseRoute = null`.
+2. *Series Record Persistence Parity (`REQ-SET-102.2`)*:
+   - All available sensor series (`HeartRateRecord`, `PowerRecord`, `SpeedRecord`, `TotalCaloriesBurnedRecord`) SHALL be persisted normally regardless of route presence.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an indoor workout with power and HR data but no GPS track,
+• *When* syncing to Health Connect,
+• *Then* the exercise session and all non-spatial series records are successfully inserted without `IllegalArgumentException` or missing-route errors.
+
+**Invariants**: Zero coordinate fabrication or null pointer exceptions for indoor trackless sessions.
+
+### REQ-SET-103: Health Connect Settings UI, Manual Re-Sync & Write Idempotency [Verified]
+- **Tests**: `TST-SET-103` | **Tickets**: `ATT-3052`
+- **Implementation**: `HealthConnectSettingsDialog.kt`, `WorkoutHeader.kt`, `EditWorkoutScreen.kt`, `HealthConnectManager.kt`
+- **Status**: Verified
+- **Rationale**: Athletes require user-friendly settings controls and deterministic synchronization guarantees:
+1. *Cloud Integrations Settings Toggle (`REQ-SET-103.1`)*:
+   - The system SHALL provide a "Sync with Health Connect" preference toggle in Cloud Integrations settings, prompting for permissions when enabled.
+2. *Automatic & Manual Synchronization (`REQ-SET-103.2`)*:
+   - Completed workouts SHALL automatically synchronize in the background upon workout finalization when enabled.
+   - A manual "Sync to Health Connect" action SHALL be accessible from workout details/edit screens for re-syncing or retroactive sync.
+3. *Idempotent Record Keying (`REQ-SET-103.3`)*:
+   - Records written to Health Connect SHALL define `Metadata(clientRecordId = "workout_${fileBaseName}")` (and corresponding deterministic IDs for series records) to ensure repeated syncs update existing records rather than producing duplicates.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a workout already synchronized to Health Connect,
+• *When* the user triggers a manual re-sync,
+• *Then* existing records in Health Connect are updated in-place via identical `clientRecordId` without session duplication.
+
+**Invariants**: Re-sync operations must never produce duplicate entries or orphan telemetry series in Health Connect.
+
+
 
 
 

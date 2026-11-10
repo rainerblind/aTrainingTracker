@@ -1069,6 +1069,62 @@
   5. *Tier 1 Targeted BLE Regression Suite (`TST-SET-099.5`)*:
   • Run targeted test suites (`com.atrainingtracker.banalservice.devices.bluetooth_le.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
+### TST-SET-100: **Health Connect Client Availability & Permission Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-100`
+- **Component**: `HealthConnectManager.kt`, `HealthConnectAvailabilityTest.kt`
+- **Jira**: `ATT-3052`
+- **Status**: Verified
+- **Test Description**:
+  1. *SDK Status Contract Tests (`TST-SET-100.1`)*:
+  • Verify `HealthConnectClient.getSdkStatus()` correctly routes `SDK_AVAILABLE`, `SDK_UNAVAILABLE`, and `SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED`.
+  2. *Permission Contract & Manifest Verification (`TST-SET-100.2`)*:
+  • Verify required write permissions (`WRITE_EXERCISE`, `WRITE_EXERCISE_ROUTE`, `WRITE_HEART_RATE`, `WRITE_POWER`, `WRITE_SPEED`, `WRITE_DISTANCE`, `WRITE_TOTAL_CALORIES_BURNED`) are declared and checked.
+  3. *Tier 1 Targeted Unit Tests (`TST-SET-100.3`)*:
+  • Run targeted test suites (`com.atrainingtracker.trainingtracker.cloud.healthconnect.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+### TST-SET-101: **Exercise Session & Telemetry Record Mapping Unit Test Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-101`
+- **Component**: `HealthConnectRecordMapper.kt`, `HealthConnectRecordMapperTest.kt`
+- **Jira**: `ATT-3052`
+- **Status**: Verified
+- **Test Description**:
+  1. *Sport Type to Exercise Type Mapping Test (`TST-SET-101.1`)*:
+  • Assert `BSportType.BIKE` -> `EXERCISE_TYPE_BIKING`, `BSportType.RUN` -> `EXERCISE_TYPE_RUNNING`, trainer -> `EXERCISE_TYPE_BIKING_STATIONARY`, treadmill -> `EXERCISE_TYPE_RUNNING_TREADMILL`, and unknown -> `EXERCISE_TYPE_OTHER_WORKOUT`.
+  2. *Sensor Telemetry Series Transformation Tests (`TST-SET-101.2`)*:
+  • Verify GPS track conversion to `ExerciseRoute` with correct timestamps and lat/lon/alt.
+  • Verify HR samples converted to `HeartRateRecord.Sample` with valid bpm.
+  • Verify power samples converted to `PowerRecord.Sample` with Watts.
+  • Verify speed, distance, elevation gained, and calories series mapping.
+  3. *Timestamp Boundary Invariant Test (`TST-SET-101.3`)*:
+  • Verify all sample timestamps fall strictly within `[session.startTime, session.endTime]`.
+
+### TST-SET-102: **Trackless Indoor Workout Export Unit Test Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-102`
+- **Component**: `HealthConnectRecordMapper.kt`, `HealthConnectManager.kt`, `HealthConnectRecordMapperTest.kt`
+- **Jira**: `ATT-3052`
+- **Status**: Verified
+- **Test Description**:
+  1. *Trackless Session Construction Test (`TST-SET-102.1`)*:
+  • Verify `ExerciseSessionRecord` is built with `exerciseRoute = null` when workout contains no GPS fixes.
+  2. *Non-Spatial Series Persistence Test (`TST-SET-102.2`)*:
+  • Verify `PowerRecord`, `HeartRateRecord`, and `TotalCaloriesBurnedRecord` are mapped and exported without errors when route is null.
+  3. *Null Safety & Boundary Guard Test (`TST-SET-102.3`)*:
+  • Verify zero NPEs or illegal argument exceptions when processing workouts with missing or partial telemetry channels.
+
+### TST-SET-103: **Health Connect Settings UI & Idempotent Sync Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-SET-103`
+- **Component**: `HealthConnectSettingsDialog.kt`, `HealthConnectManager.kt`, `HealthConnectSyncTest.kt`, `strings_health_connect.xml`
+- **Jira**: `ATT-3052`
+- **Status**: Verified
+- **Test Description**:
+  1. *Settings Toggle State Persistence Test (`TST-SET-103.1`)*:
+  • Verify toggle state binds to `TrainingApplication` / `SharedPreferences` preferences.
+  2. *Client Record ID Determinism & Idempotency Test (`TST-SET-103.2`)*:
+  • Verify `clientRecordId` generation is deterministic based on workout `fileBaseName` for sessions and sub-records.
+  3. *9-Locale Translation Parity Verification (`TST-SET-103.3`)*:
+  • Verify 100% parity across `values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/` for all planned strings via `TranslationParityTest`.
+
+
 
 
 

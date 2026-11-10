@@ -116,6 +116,7 @@ import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.StarredSegme
 import com.atrainingtracker.trainingtracker.ui.settings.display.DisplaySettingsDialog
 import com.atrainingtracker.trainingtracker.ui.settings.dropbox.DropboxSettingsDialog
 import com.atrainingtracker.trainingtracker.ui.settings.export.ExportSettingsDialog
+import com.atrainingtracker.trainingtracker.ui.settings.healthconnect.HealthConnectSettingsDialog
 import com.atrainingtracker.trainingtracker.ui.settings.googledrive.GoogleDriveSettingsDialog
 import com.atrainingtracker.trainingtracker.ui.help.TipsGuideScreen
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningDialog
@@ -688,6 +689,9 @@ fun ATrainingTrackerApp(
                         drawerController.activeBottomSheet = null
                         activity.onActivityTypeSelected(activityType)
                     },
+                    onDismiss = { drawerController.activeBottomSheet = null }
+                )
+                SettingsBottomSheetType.HEALTH_CONNECT -> HealthConnectSettingsDialog(
                     onDismiss = { drawerController.activeBottomSheet = null }
                 )
             }
