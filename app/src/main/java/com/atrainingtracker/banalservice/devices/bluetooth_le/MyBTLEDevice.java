@@ -390,6 +390,7 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
             mHandler.post(new Runnable() {
 
                 @Override
+                @android.annotation.SuppressLint("MissingPermission")
                 public void run() {
                     BluetoothGattService btGattService;
                     BluetoothGattCharacteristic btGattChar;

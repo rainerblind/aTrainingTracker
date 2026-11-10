@@ -215,7 +215,7 @@
             </intent-filter>
 
             <!-- Handle .gpx files by Extension (Fallback for some File Managers) -->
-            <intent-filter>
+            <intent-filter tools:ignore="AppLinkUrlError">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
@@ -226,7 +226,7 @@
             </intent-filter>
 
             <!-- Handle .gpx octet-stream files constrained by extension (REQ-BLD-003.2) -->
-            <intent-filter>
+            <intent-filter tools:ignore="AppLinkUrlError">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
@@ -309,12 +309,14 @@
 
         <service
             android:name=".trainingtracker.tracker.TrackerService"
-            android:foregroundServiceType="location|health" />
+            android:foregroundServiceType="location|health"
+            tools:ignore="ForegroundServicePermission" />
         <service android:name=".trainingtracker.smartwatch.pebble.PebbleService" />
         <service android:name=".trainingtracker.smartwatch.pebble.PebbleServiceBuildIn" />
         <service
             android:name=".banalservice.BANALService"
-            android:foregroundServiceType="location|health" />
+            android:foregroundServiceType="location|health"
+            tools:ignore="ForegroundServicePermission" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

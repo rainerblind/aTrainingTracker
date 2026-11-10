@@ -1947,7 +1947,7 @@
     <string name="zone_calc_hr_max_label">最大心拍数 (HRmax)</string>
     <string name="zone_calc_hr_rest_label">安静時心拍数 (HRrest)</string>
     <string name="zone_calc_method_label">計算方法</string>
-    <string name="zone_calc_method_max_hr">% HRmax</string>
+    <string name="zone_calc_method_max_hr" formatted="false">% HRmax</string>
     <string name="zone_calc_method_karvonen">カルボーネン (HRR)</string>
     <string name="zone_calc_preview_title">計算されたゾーンのプレビュー</string>
     <string name="zone_calc_apply_button">適用</string>

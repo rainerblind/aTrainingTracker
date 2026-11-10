@@ -24,7 +24,7 @@ import org.junit.Test
 import java.io.File
 
 /**
- * Validates Release CI test gating, AndroidManifest hygiene, Lint configuration, and CI integrity (REQ-BLD-002, TST-BLD-002, REQ-PRO-042, TST-PRO-042).
+ * Validates Release CI test gating, AndroidManifest hygiene, Lint configuration, and CI integrity (REQ-BLD-002, TST-BLD-002, REQ-PRO-042, TST-PRO-042, REQ-PRO-046, TST-PRO-046, ATT-6173).
  */
 class ReleaseCiAndLintConfigContractTest {
 
@@ -41,6 +41,9 @@ class ReleaseCiAndLintConfigContractTest {
 
     private fun findReleaseWorkflowFile(): File =
         findRepoRootFile(".github/workflows/android-release.yml", "../.github/workflows/android-release.yml")
+
+    private fun findCiWorkflowFile(): File =
+        findRepoRootFile(".github/workflows/android-branch-build.yml", "../.github/workflows/android-branch-build.yml")
 
     private fun findAndroidManifestFile(): File =
         findRepoRootFile("app/src/main/AndroidManifest.xml", "src/main/AndroidManifest.xml")
@@ -154,6 +157,65 @@ class ReleaseCiAndLintConfigContractTest {
         assertFalse(
             "app/build.gradle must not contain any reference to Travis (REQ-PRO-042.1)",
             buildGradleContent.contains("travis", ignoreCase = true)
+        )
+    }
+
+    /**
+     * Asserts that CI workflow executes Android Lint and uploads reports (REQ-PRO-046.1, REQ-PRO-046.2, TST-PRO-046.1).
+     */
+    @Test
+    fun testBranchBuildWorkflow_runsLintAndUploadsReport() {
+        val content = findCiWorkflowFile().readText()
+        val lintStep = "./gradlew :app:lintDebug"
+        val artifactStep = "actions/upload-artifact"
+        val reportPath = "app/build/reports/lint-results-debug.*"
+
+        assertTrue(
+            "CI workflow must execute Android Lint ($lintStep) (REQ-PRO-046.1, TST-PRO-046.1)",
+            content.contains(lintStep)
+        )
+        assertTrue(
+            "CI workflow must upload lint reports via $artifactStep (REQ-PRO-046.2, TST-PRO-046.1)",
+            content.contains(artifactStep)
+        )
+        assertTrue(
+            "CI workflow must specify lint report artifact path $reportPath (REQ-PRO-046.2, TST-PRO-046.1)",
+            content.contains(reportPath)
+        )
+    }
+
+    /**
+     * Asserts that app/build.gradle configures abortOnError, htmlReport, and xmlReport (REQ-PRO-046.3, TST-PRO-046.2).
+     */
+    @Test
+    fun testBuildGradle_lintReportingAndAbortOnError() {
+        val content = findBuildGradleFile().readText()
+
+        assertTrue(
+            "app/build.gradle must configure abortOnError = true (REQ-PRO-046.3, TST-PRO-046.2)",
+            content.contains("abortOnError = true")
+        )
+        assertTrue(
+            "app/build.gradle must configure htmlReport = true (REQ-PRO-046.3, TST-PRO-046.2)",
+            content.contains("htmlReport = true")
+        )
+        assertTrue(
+            "app/build.gradle must configure xmlReport = true (REQ-PRO-046.3, TST-PRO-046.2)",
+            content.contains("xmlReport = true")
+        )
+    }
+
+    /**
+     * Asserts that app/lint-baseline.xml is pruned and strictly bounded to <= 546 issues (REQ-PRO-046.4, TST-PRO-046.3).
+     */
+    @Test
+    fun testLintBaseline_issueCountWithinBound() {
+        val content = findLintBaselineFile().readText()
+        val issueCount = Regex("<issue\\b").findAll(content).count()
+
+        assertTrue(
+            "app/lint-baseline.xml must contain issues but be bounded by <= 546 (burned down from 607) (REQ-PRO-046.4, TST-PRO-046.3). Current: $issueCount",
+            issueCount in 1..546
         )
     }
 }

@@ -2169,7 +2169,7 @@
     <string name="zone_calc_hr_max_label">Maximum Heart Rate (HRmax)</string>
     <string name="zone_calc_hr_rest_label">Resting Heart Rate (HRrest)</string>
     <string name="zone_calc_method_label">Calculation Method</string>
-    <string name="zone_calc_method_max_hr">% HRmax</string>
+    <string name="zone_calc_method_max_hr" formatted="false">% HRmax</string>
     <string name="zone_calc_method_karvonen">Karvonen (HRR)</string>
     <string name="zone_calc_preview_title">Calculated Zones Preview</string>
     <string name="zone_calc_apply_button">Apply</string>

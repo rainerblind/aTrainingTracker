@@ -430,7 +430,7 @@ fun SensorGridScreen(
     CompositionLocalProvider(LocalCockpitTypography provides cockpitTypography) {
         if (isLandscapeWithMap) {
             // Landscape Dual-Pane Layout: Left Pane Telemetry, Right Pane Map + Docked Bottom Sheet (REQ-TRK-040.2 / REQ-TRK-040.3)
-            BoxWithConstraints(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .then(doubleTapModifier)

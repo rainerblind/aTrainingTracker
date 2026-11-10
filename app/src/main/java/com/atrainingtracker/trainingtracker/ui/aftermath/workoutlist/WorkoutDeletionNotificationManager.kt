@@ -36,7 +36,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication
 class WorkoutDeletionNotificationManager @VisibleForTesting constructor(
     private val context: Context,
     private val notificationManager: NotificationManagerCompat,
-    @VisibleForTesting
+    @get:VisibleForTesting
     internal var notificationFactory: ((NotificationCompat.Builder) -> Notification)? = null
 ) {
 
@@ -52,6 +52,7 @@ class WorkoutDeletionNotificationManager @VisibleForTesting constructor(
     /**
      * Posts or updates an ongoing progress notification while deleting workout records.
      */
+    @android.annotation.SuppressLint("MissingPermission")
     fun showProgressNotification(current: Int, total: Int, workoutName: String) {
         if (!hasNotificationPermission()) return
 
@@ -74,6 +75,7 @@ class WorkoutDeletionNotificationManager @VisibleForTesting constructor(
     /**
      * Posts or updates an indeterminate progress notification while resynchronizing caches.
      */
+    @android.annotation.SuppressLint("MissingPermission")
     fun showResyncNotification() {
         if (!hasNotificationPermission()) return
 

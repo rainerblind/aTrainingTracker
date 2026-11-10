@@ -2007,6 +2007,7 @@ public class TrackerService extends Service {
                 // 2. Broadcast TRACKING_FINISHED_INTENT via LocalBroadcastManager
                 // for internal components (WorkoutRepository, etc.) to trigger reactive period & cluster updates (REQ-TRK-010, ATT-505)
                 Intent localFinishedIntent = new Intent(TRACKING_FINISHED_INTENT)
+                        .setPackage(getPackageName())
                         .putExtra(WORKOUT_ID, mWorkoutID);
                 if (mFirstJubileeCelebrationData != null) {
                     localFinishedIntent.putExtra(MilestoneAutoNamingManager.EXTRA_IS_FIRST_JUBILEE, true);

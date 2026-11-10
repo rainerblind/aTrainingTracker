@@ -72,6 +72,7 @@ data class ZoneOnboardingPrompt(
  * ViewModel for the DevicesTabbedContainerFragment.
  * It manages UI state and business logic, surviving configuration changes.
  */
+@android.annotation.SuppressLint("UnspecifiedRegisterReceiverFlag")
 class DevicesTabbedViewModel @JvmOverloads constructor(
     application: Application,
     private val savedStateHandle: SavedStateHandle,

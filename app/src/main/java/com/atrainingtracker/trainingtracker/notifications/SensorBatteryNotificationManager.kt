@@ -39,9 +39,9 @@ import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigatio
 class SensorBatteryNotificationManager @VisibleForTesting constructor(
     private val context: Context,
     private val notificationManager: NotificationManagerCompat,
-    @VisibleForTesting
+    @get:VisibleForTesting
     internal var notificationFactory: ((NotificationCompat.Builder) -> Notification)? = null,
-    @VisibleForTesting
+    @get:VisibleForTesting
     internal var pendingIntentFactory: ((Context) -> PendingIntent?)? = null
 ) {
 
@@ -59,6 +59,7 @@ class SensorBatteryNotificationManager @VisibleForTesting constructor(
      *
      * @param criticalDevices List of devices actively used in the workout with battery <= 20%.
      */
+    @android.annotation.SuppressLint("MissingPermission")
     fun showLowBatteryNotification(criticalDevices: List<DevicesDatabaseManager.NameAndBatteryPercentage>) {
         if (criticalDevices.isEmpty()) return
 

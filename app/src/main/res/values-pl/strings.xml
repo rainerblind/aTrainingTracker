@@ -1970,7 +1970,7 @@
     <string name="zone_calc_hr_max_label">Tętno maksymalne (HRmax)</string>
     <string name="zone_calc_hr_rest_label">Tętno spoczynkowe (HRspocz)</string>
     <string name="zone_calc_method_label">Metoda obliczania</string>
-    <string name="zone_calc_method_max_hr">% HRmax</string>
+    <string name="zone_calc_method_max_hr" formatted="false">% HRmax</string>
     <string name="zone_calc_method_karvonen">Karvonen (HRR)</string>
     <string name="zone_calc_preview_title">Podgląd obliczonych stref</string>
     <string name="zone_calc_apply_button">Zastosuj</string>

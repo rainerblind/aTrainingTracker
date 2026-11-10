@@ -305,6 +305,7 @@ public class DeviceManager {
             if (protocol == null || deviceType == null) {
                 Log.e(TAG, "Cannot start device search: invalid or missing Protocol / DeviceType in intent extra");
                 Intent stoppedIntent = new Intent(BANALService.SEARCHING_STOPPED_FOR_ONE_INTENT);
+                stoppedIntent.setPackage(mContext.getPackageName());
                 mContext.sendBroadcast(stoppedIntent);
                 return;
             }

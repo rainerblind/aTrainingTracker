@@ -1495,3 +1495,22 @@
   4. *Clean-Room Targeted Test Suite Execution (`TST-PRO-045.4`)*:
   • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest"` asserting 100% pass rate.
 
+
+
+### TST-PRO-046: **Android Lint CI Quality Gate & Baseline Burn-down Contract Test Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-046`
+- **Component**: `.github/workflows/android-branch-build.yml`, `app/build.gradle`, `app/lint-baseline.xml`, `ReleaseCiAndLintConfigContractTest.kt`
+- **Jira**: `ATT-6173`
+- **Test Description**:
+  1. *CI Workflow Lint Step & Artifact Upload Conformance Test (`TST-PRO-046.1`, `ReleaseCiAndLintConfigContractTest.kt`)*:
+  • Read `.github/workflows/android-branch-build.yml`.
+  • Assert that the workflow contains `./gradlew :app:lintDebug` (or `lintDebug`).
+  • Assert that the workflow uploads lint report artifacts via `actions/upload-artifact`.
+  2. *Build Script Lint Configuration Conformance Test (`TST-PRO-046.2`, `ReleaseCiAndLintConfigContractTest.kt`)*:
+  • Read `app/build.gradle`.
+  • Assert that the `lint` block specifies `abortOnError = true`, `htmlReport = true`, and `xmlReport = true`.
+  3. *Lint Baseline Upper Bound & Issue Count Test (`TST-PRO-046.3`, `ReleaseCiAndLintConfigContractTest.kt`)*:
+  • Parse `app/lint-baseline.xml`.
+  • Count `<issue` XML elements and assert the total count is <= 546.
+  4. *Clean-Room Targeted Test Suite Execution (`TST-PRO-046.4`)*:
+  • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest"` asserting 100% pass rate.

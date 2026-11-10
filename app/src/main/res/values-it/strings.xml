@@ -1968,7 +1968,7 @@
     <string name="zone_calc_hr_max_label">Frequenza cardiaca massima (FCmax)</string>
     <string name="zone_calc_hr_rest_label">Frequenza cardiaca a riposo (FCriposo)</string>
     <string name="zone_calc_method_label">Metodo di calcolo</string>
-    <string name="zone_calc_method_max_hr">% FCmax</string>
+    <string name="zone_calc_method_max_hr" formatted="false">% FCmax</string>
     <string name="zone_calc_method_karvonen">Karvonen (FCR)</string>
     <string name="zone_calc_preview_title">Anteprima zone calcolate</string>
     <string name="zone_calc_apply_button">Applica</string>

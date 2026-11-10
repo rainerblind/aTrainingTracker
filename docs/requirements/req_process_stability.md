@@ -2379,3 +2379,39 @@ The workflow SHALL mandate that:
   • *Then* all strategy conformance assertions pass with 100% success.
 - **Invariants**: Zero modifications to Android production code in `app/src/main/`; existing SWE.2 contract assertions remain satisfied.
 
+
+
+### REQ-PRO-046: Android Lint CI Quality Gate & Baseline Burn-down [Verified]
+- **Tests**: `TST-PRO-046` | **Tickets**: `ATT-6173`
+- **Implementation**: `.github/workflows/android-branch-build.yml`, `app/build.gradle`, `app/lint-baseline.xml`, `ReleaseCiAndLintConfigContractTest.kt`
+- **Rationale**: Prior to ATT-6173, Android Lint was omitted from continuous integration (`.github/workflows/`), allowing static analysis defects to enter git branches unchecked. Furthermore, `app/lint-baseline.xml` accepted 607 issues, of which >60% (368 entries) referenced deleted legacy classes, obscuring genuine static issues (Finding C-02). Running `./gradlew :app:lintDebug` in CI, uploading report artifacts, and reducing baseline issues by >= 10% (<= 546) establishes ASPICE SWE.3 static analysis compliance (ATT-6173, refining `REQ-BLD-002` and `REQ-PRO-034` under Epic `ATT-6142`):
+- **Description**:
+  1. *CI Workflow Lint Gating (`REQ-PRO-046.1`, android-branch-build.yml)*:
+     • The continuous integration workflow (`.github/workflows/android-branch-build.yml`) SHALL execute `./gradlew :app:lintDebug` on every push and pull request to gate static analysis regressions.
+  2. *CI Lint Report Archiving (`REQ-PRO-046.2`)*:
+     • The CI workflow SHALL upload HTML and XML lint report artifacts (`app/build/reports/lint-results-debug.*`) via `actions/upload-artifact@v4` so static analysis results are available for triage.
+  3. *Build Script Lint Configuration (`REQ-PRO-046.3`, build.gradle)*:
+     • `app/build.gradle` `lint { ... }` SHALL specify `abortOnError = true`, `htmlReport = true`, and `xmlReport = true`, while maintaining baseline file linkage and documented suppressions.
+  4. *Lint Baseline Pruning & Cap (`REQ-PRO-046.4`, lint-baseline.xml)*:
+     • `app/lint-baseline.xml` SHALL be pruned of stale references and fixed defects, bounding the total issue count to <= 546 (>= 10% reduction from 607).
+  5. *Automated Governance Contract (`REQ-PRO-046.5`, ReleaseCiAndLintConfigContractTest.kt)*:
+     • `ReleaseCiAndLintConfigContractTest.kt` SHALL assert that CI workflows execute `lintDebug`, upload lint reports, and maintain the baseline issue count <= 546.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-046` (*Android Lint CI Quality Gate & Baseline Burn-down*), refining `REQ-BLD-002` (*Release CI Gating*) and `REQ-PRO-034` (*SWE.1/2/4/6 Hardening*). Targets `.github/workflows/android-branch-build.yml`, `app/build.gradle`, `app/lint-baseline.xml`, and `ReleaseCiAndLintConfigContractTest.kt`.
+  2. *Historical Origin & Commit Trace*: Independent ASPICE pre-assessment finding C-02 (2026-11-08) and ticket ATT-6173.
+  3. *Root Reason for Existing Formulation*: Baseline was established during AGP upgrade and never maintained in CI; branch builds only ran unit tests.
+  4. *Preservation of Core Invariants*: Existing lint suppressions (`DuplicatePlatformClasses`, `MissingTranslation`, `Range`) and `TranslationParityTest` in `app/build.gradle` remain strictly intact.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `.github/workflows/android-branch-build.yml`,
+  • *When* inspected,
+  • *Then* it SHALL contain a step executing `lintDebug` and an artifact upload step for lint reports.
+  • *Given* `app/build.gradle`,
+  • *When* inspected,
+  • *Then* the `lint` block SHALL specify `abortOnError = true`, `htmlReport = true`, and `xmlReport = true`.
+  • *Given* `app/lint-baseline.xml`,
+  • *When* counting `<issue` elements,
+  • *Then* the total count SHALL be <= 546.
+  • *Given* `ReleaseCiAndLintConfigContractTest.kt`,
+  • *When* executed as part of the unit test suite,
+  • *Then* all lint and CI governance assertions SHALL pass with 100% success.
+- **Invariants**: Zero regressions in unit test pass rate; existing build scripts and release workflows remain functional.

@@ -638,7 +638,7 @@ fun LocationMiniMap(
             )
         ) {
             Marker(
-                state = MarkerState(position = latLng),
+                state = remember(latLng) { MarkerState(position = latLng) },
                 icon = heartMarkerIcon,
                 anchor = Offset(0.5f, 0.5f)
             )
