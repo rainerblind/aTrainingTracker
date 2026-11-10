@@ -137,6 +137,25 @@
   4. *Build Contract Suite Execution (`TST-STP-009.4`)*:
      • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.*"` asserting 100% pass rate in CI.
 
+### TST-STP-010: Project Risk Register & Sprint-Start Governance Contract Test [Verified]
+- **Requirement(s)**: `REQ-STP-010`
+- **Component**: `docs/management/risk_register.md`, `.agents/skills/sprint-planner/SKILL.md`, `ReleaseCiAndLintConfigContractTest.kt`
+- **Jira**: `ATT-6151`
+- **Test Description**:
+  1. *Risk Register Documentation & Structure Audit (`TST-STP-010.1`)*:
+     • Verify existence of `docs/management/risk_register.md`.
+     • Assert presence of mandatory sections: Scoring Matrix ($P \times I$), Exposure Thresholds (Low/Medium/High), and Registered Risks Table.
+     • Assert presence of initial risks: `PR-01` (Single Human Bottleneck), `PR-02` (AI Model Drift), `PR-03` (Google Play Policy), and `PR-04` (Sensor Fragmentation).
+     • Assert all High-exposure risks link to a concrete mitigation ticket.
+  2. *Ceremony 1 Sprint-Start Review Checkpoint Audit (`TST-STP-010.2`)*:
+     • Inspect `.agents/skills/sprint-planner/SKILL.md`.
+     • Verify Ceremony 1 includes an explicit risk register review and last-reviewed date check.
+  3. *Rule 67 Canonical Engineering Boundary Guard (`TST-STP-010.3`)*:
+     • Execute `python3 tools/verify_requirement_governance.py` and verify exit code 0, confirming zero non-canonical entries in `docs/engineering/`.
+  4. *Build Contract Suite Execution (`TST-STP-010.4`)*:
+     • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.*"` asserting 100% pass rate in CI.
+
+
 
 
 

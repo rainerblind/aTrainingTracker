@@ -627,4 +627,70 @@ class ReleaseCiAndLintConfigContractTest {
             gitmodulesContent.contains("branch =")
         )
     }
+
+    /**
+     * Asserts that docs/management/risk_register.md exists, defines mandatory ASPICE MAN.3.BP5 sections,
+     * links all High-exposure risks to Jira remediation tickets, and is integrated into Ceremony 1
+     * in .agents/skills/sprint-planner/SKILL.md (REQ-STP-010, TST-STP-010, ATT-6151).
+     */
+    @Test
+    fun testProjectRiskRegister_existsAndHighExposureMitigated() {
+        val riskRegisterFile = findRepoRootFile("docs/management/risk_register.md", "../docs/management/risk_register.md")
+        assertTrue(
+            "docs/management/risk_register.md must exist (REQ-STP-010.1, TST-STP-010.1)",
+            riskRegisterFile.exists()
+        )
+        val riskContent = riskRegisterFile.readText()
+
+        val requiredSections = listOf(
+            "MAN.3.BP5",
+            "Risk Assessment & Scoring Rubric",
+            "Risk Exposure Matrix",
+            "Sprint Review Log",
+            "Registered Project & Technical Risks"
+        )
+        for (section in requiredSections) {
+            assertTrue(
+                "Risk register must contain section '$section' (REQ-STP-010.1, TST-STP-010.1)",
+                riskContent.contains(section)
+            )
+        }
+
+        val requiredRisks = listOf("RISK-001", "RISK-002", "RISK-003", "RISK-004", "RISK-005", "RISK-006")
+        for (riskId in requiredRisks) {
+            assertTrue(
+                "Risk register must register initial risk '$riskId' (REQ-STP-010.1, TST-STP-010.1)",
+                riskContent.contains(riskId)
+            )
+        }
+
+        // Verify High-exposure risks (RISK-001, RISK-002) link to remediation tickets
+        assertTrue(
+            "High-exposure risk RISK-001 must link to mitigation ticket ATT-6148 (REQ-STP-010.1, TST-STP-010.1)",
+            riskContent.contains("ATT-6148")
+        )
+        assertTrue(
+            "High-exposure risk RISK-002 must link to mitigation ticket ATT-6150 (REQ-STP-010.1, TST-STP-010.1)",
+            riskContent.contains("ATT-6150")
+        )
+
+        // Verify Sprint Review Log records active sprint baseline
+        assertTrue(
+            "Sprint Review Log must record active sprint 2026-46.1 review baseline (REQ-STP-010.1)",
+            riskContent.contains("2026-46.1") && riskContent.contains("2026-11-10")
+        )
+
+        // Verify Ceremony 1 integration in .agents/skills/sprint-planner/SKILL.md
+        val sprintPlannerFile = findRepoRootFile(".agents/skills/sprint-planner/SKILL.md", "../.agents/skills/sprint-planner/SKILL.md")
+        assertTrue(
+            ".agents/skills/sprint-planner/SKILL.md must exist (REQ-STP-010.2, TST-STP-010.2)",
+            sprintPlannerFile.exists()
+        )
+        val sprintPlannerContent = sprintPlannerFile.readText()
+        assertTrue(
+            "sprint-planner skill Ceremony 1 must include risk register review (REQ-STP-010.2, TST-STP-010.2)",
+            sprintPlannerContent.contains("docs/management/risk_register.md") &&
+                sprintPlannerContent.contains("REQ-STP-010")
+        )
+    }
 }

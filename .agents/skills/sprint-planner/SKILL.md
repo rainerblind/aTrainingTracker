@@ -54,6 +54,11 @@ Ensure that every ticket committed to the active sprint has clear, unambiguous a
      * **Story Point Estimation & Complexity Split Guardrail (`REQ-PRO-029`)**: Check that every ticket has a Story Point estimate (`1`, `2`, `3`, or `>= 5 -> mandatory split` on the AAA scale). Propose and set (`python3 tools/jira_util.py set-points <KEY> <POINTS>`) estimates for any unestimated tickets.
      * **Human Prerequisite Detection (`Rule 22`)**: Check whether any ticket depends on actions only the human can perform (OAuth registration, Play Console, external hardware).
      * **Ambiguity & Edge-Case Audit**: Critically verify that the problem statement, acceptance criteria, and architectural boundaries are unambiguous.
+   * **Project Risk Register Review & Timestamp Update (`REQ-STP-010` — `ATT-6151`, ASPICE `MAN.3.BP5`)**:
+     * The Coordinator MUST inspect `docs/management/risk_register.md`:
+       1. Verify that active project risks (`RISK-001`..`RISK-006`) are reviewed against current sprint scope and operational context.
+       2. Confirm that every risk evaluated with High Exposure ($E \ge 15$) links to an active or planned Jira remediation ticket.
+       3. Append a row to the Sprint Review Log table in `docs/management/risk_register.md` recording the review date, current sprint ID, and reviewer notes.
    * **Consolidated Presentation & Approval — Keep Tickets in `Zu erledigen` Until Stage 1 Starts (`Rule 78` — `ATT-5829`, `"Tickets sollten von den Agenten erst dann nach Analyse geschoben werden, wenn die Analyse startet."`)**:
      * Present a compact overview table of all sprint tickets (Rank, Key, Summary, Story Points, Audit Status) together with any specific clarifying questions or proposed estimates in a single turn.
      * Wait for the user's confirmation (and answers to any open questions) and update any refined descriptions (`python3 tools/jira_util.py update-desc <KEY> ...`).

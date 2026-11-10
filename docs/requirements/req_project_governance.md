@@ -151,6 +151,20 @@
   3. The directory `docs/management/` SHALL reside outside `docs/engineering/` to preserve Rule 67 canonical directory boundaries.
   4. An automated build contract test in `ReleaseCiAndLintConfigContractTest.kt` SHALL verify the presence and core section headers of `docs/management/cm_plan.md` and SHALL assert that `.gitmodules` contains zero floating branch directives.
 
+### REQ-STP-010: Project Risk Register & Sprint-Start Review Governance [Verified]
+- **Tests**: `TST-STP-010` | **Tickets**: `ATT-6151`
+- **Implementation**: `docs/management/risk_register.md`, `.agents/skills/sprint-planner/SKILL.md`, `ReleaseCiAndLintConfigContractTest.kt`
+- **Rationale**: ASPICE MAN.3 (Finding B-06) requires a formal project and product risk register (MAN.3.BP5) with probability, impact, risk exposure, and mitigation tracking. Without a version-controlled risk register and an established review cadence at Sprint-Start, project and technical risks remain unmonitored. Establishing `docs/management/risk_register.md` and integrating an exception-based risk review into Ceremony 1 ensures continuous risk management without disrupting autonomous sprint execution.
+- **Description**:
+  1. The project SHALL maintain an authoritative Project Risk Register in `docs/management/risk_register.md` defining:
+     - 5x5 Probability and Impact assessment scales ($P, I \in [1..5]$) and Risk Exposure rating ($E = P \times I$: Low 1–6, Medium 8–12, High 15–25).
+     - Initial registered risks covering Single Human Bottleneck (PR-01), AI Model Drift & Context Regressions (PR-02), Google Play Policy & Target SDK Shifts (PR-03), and Sensor Hardware Fragmentation (PR-04).
+     - Clear ownership, last-reviewed date, mitigation strategy, and linked mitigation tickets for all High-exposure risks.
+  2. Ceremony 1 (Sprint-Start) in `.agents/skills/sprint-planner/SKILL.md` SHALL incorporate an explicit exception-based risk register review checkpoint where the Coordinator inspects `risk_register.md` and updates the last-reviewed date.
+  3. The directory `docs/management/` SHALL reside outside `docs/engineering/` to preserve Rule 67 canonical directory boundaries.
+  4. An automated build contract test in `ReleaseCiAndLintConfigContractTest.kt` SHALL verify the presence, mandatory risk table columns, initial risk identifiers, and Ceremony 1 skill integration of `docs/management/risk_register.md`.
+
+
 
 
 
