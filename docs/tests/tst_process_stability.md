@@ -1552,3 +1552,20 @@
   • Assert that XML and HTML reports are produced under `app/build/reports/kover/` and verification threshold rule succeeds.
   4. *Clean-Room Targeted Test Suite Execution (`TST-PRO-048.4`)*:
   • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest"` asserting 100% pass rate.
+
+
+
+### TST-PRO-049: **Source-Text Reading Test Audit Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-049`
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`, `app/source-reading-baseline.txt`, `docs/coding_standards.md` §5.4
+- **Jira**: `ATT-6186`
+- **Test Description**:
+  1. *Audit Scanner Execution & Baseline Conformance Test (`TST-PRO-049.1`, `SourceTextReadingAuditContractTest.kt`)*:
+  • Recursively scan all `.java` and `.kt` test files in `app/src/test/java/`.
+  • Assert that zero tests outside the allow-list read `app/src/main/` production source files.
+  2. *Governance Guard Exception Validation Test (`TST-PRO-049.2`, `SourceTextReadingAuditContractTest.kt`)*:
+  • Assert that all 13 legitimate architectural governance contract tests are registered in the allow-list.
+  3. *Tripwire Violation Detection Test (`TST-PRO-049.3`, `SourceTextReadingAuditContractTest.kt`)*:
+  • Validate that unallow-listed test files containing `.readText()` targeting `src/main/` trigger a test failure.
+  4. *Clean-Room Targeted Test Suite Execution (`TST-PRO-049.4`)*:
+  • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.SourceTextReadingAuditContractTest"` asserting 100% pass rate.

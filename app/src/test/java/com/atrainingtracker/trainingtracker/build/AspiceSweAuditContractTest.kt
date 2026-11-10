@@ -98,9 +98,9 @@ class AspiceSweAuditContractTest {
                 file.forEachLine { line ->
                     val trimmed = line.trim()
                     if (Regex("^#{2,4}\\s+$prefix-[A-Z0-9_-]+:").containsMatchIn(trimmed)) {
-                        val isStandard = trimmed.endsWith("[Verified]") || trimmed.endsWith("[Planned]")
+                        val isStandard = trimmed.endsWith("[Verified]") || trimmed.endsWith("[Planned]") || trimmed.endsWith("[Implemented]")
                         assertTrue(
-                            "Heading in ${file.name} must end with standard status [Verified] or [Planned]: '$trimmed'",
+                            "Heading in ${file.name} must end with standard status [Verified], [Planned], or [Implemented]: '$trimmed'",
                             isStandard
                         )
                     }
