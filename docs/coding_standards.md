@@ -95,6 +95,14 @@ This document serves as the authoritative living source of truth for software en
   * Whenever a domain entity's map marker geometry or icon is updated (e.g. *Lieblingsorte* heart marker in `KnownLocationThumbnailMap`), Stage 1–4 **MUST** audit all 3 map contexts: (1) list card thumbnail, (2) detail/edit screen map (`EditKnownLocationScreen`), and (3) global inspection map (`MapScreenWithTrack`).
   * When replacing a compact `32.dp` icon badge with a text `OutlinedButton` (e.g. `"Wechseln"` on `SupporterPlanCard`), audit the remaining horizontal width budget for long German compound titles (`"Bronze-Unterstützer"`) so single-letter line wraps (`Unterstütze\nr`) cannot occur.
 
+### 1.12 Mandatory Production Caller & UI Reachability Invariant — Zero "Island" Components (`Rule 81` — `ATT-5085`/`ATT-6702`, `ATT-3052`/`ATT-6711`, `ATT-4981`/`ATT-6712`, `ATT-1298`/`ATT-6687`/`ATT-6688`, `ATT-3905`/`ATT-6723`)
+* **Every New Composable, Dialog, Importer, and `SensorType` Must Be Reachable in Production**:
+  * Creating a production `@Composable` screen, settings section, dialog, or bottom sheet (`RadarSettingsSection`, `HealthConnectSettingsDialog`, `LiveMmpCurveChart`, `CardioPowerDynamicsCard`) that is only referenced from `@Preview` functions or unit tests is **strictly forbidden**.
+  * Before submitting Stage 4 and passing Gate 4:
+    1. **UI / Settings Reachability**: Run `grep -rn "<ComposableName>(" app/src/main/` and confirm at least one live production caller reachable from `MainActivityWithNavigation`, `AppNavigationDrawer`, `AdvancedTuningScreen`, `SensorGridScreen`, or `WorkoutDetailTabbedContent`.
+    2. **`SensorType` Selection Reachability**: Whenever a new `SensorType` enum constant is added (`POWER_5S..POWER_PEAK_20M`, `RADAR_*`, `HRV_*`, `LIVE_HR_DRIFT`), register it in the appropriate sport-specific arrays inside `ActivityType.getSensorTypeArray()` (and `DeviceType`) so `EditSensorFieldDialog` exposes the metric to the athlete.
+    3. **Background Sync / Backfill Trigger Reachability**: Whenever a background importer or historical backfill engine (`HealthConnectHrvImporter`, `CardioPowerBackfill`) is introduced, wire both its user-facing settings control and its runtime execution trigger (`Application` startup / `WorkManager` / post-workout hook).
+
 ---
 
 ## 2. Database & Data Transfer Object (DTO) Architecture
@@ -131,6 +139,11 @@ This document serves as the authoritative living source of truth for software en
     1. **Live Recording**: `TrackerService` / live summary finalization.
     2. **File & Bulk Import**: `LegacyImportEngine` / `StravaBulkExportImporter` (`grep` all callers computing `APEX_LAT`/`APEX_LON` or `EXTREMA_VALUES`).
     3. **Historical Database Migration**: A background/startup migration or re-clustering pass updating existing rows in `WorkoutSummaries.db` (`EXTREMA_VALUES`) and `WorkoutClusters.db` so newly recorded workouts and historical workouts share a single consistent coordinate convention.
+
+### 2.5 True Repository Encapsulation — Prohibition of `*DatabaseManager` / `SQLiteDatabase` / `Cursor` Backdoor Getters (`Rule 81` — `ATT-6426` / `ATT-6698`, `ATT-432` / `ATT-6696`)
+* **Encapsulate Persistence Behind Domain Methods & Domain DTOs**:
+  * Domain repositories (`WorkoutRepository`, `WorkoutClusterRepository`, `ExportStatusRepository`, `EquipmentRepository`, `WorkoutRrRepository`) **MUST NOT** expose public or internal `get*DatabaseManager()`, `get*DbHelper()`, `SQLiteDatabase`, or raw Android `Cursor` getters to UI, ViewModel, exporter, or engine callers merely to satisfy literal `DatabaseManager.getInstance(` source checks.
+  * Repository methods must accept and return domain models/primitives (or streaming domain callbacks for bulk sample iteration) and keep SQLite table/column names, cursors, and `*DatabaseManager` instances strictly private to the data/repository layer.
 
 ---
 
@@ -266,3 +279,9 @@ This document serves as the authoritative living source of truth for software en
   * Android `ExifInterface.getLatLong()` and uninitialized SQLite `REAL` columns often yield `(0.0, 0.0)` when no GPS fix was written. Always reject `(abs(lat) < 1e-5 && abs(lng) < 1e-5)` when extracting photo EXIF coordinates (`WorkoutPhotoStorageManager`) and when building `LocationMarker` lists or `LatLngBounds` (`MapViewportHelper`), so a single `(0.0, 0.0)` marker never zooms the map out to a 5,000 km continent view where the workout polyline becomes sub-pixel invisible.
 * **Code-Grounded User Guide & Multimodal `docs/guide/img/*.png` Audit (`ATT-2275` $\rightarrow$ `ATT-5418`)**:
   * User Guide chapters (`docs/guide/`) **MUST** be grounded strictly in existing source code (`app/src/main/`)—never document speculative keywords from a ticket prompt without code verification—and every image in `docs/guide/img/*.png` must be visually inspected via `read_file` by both `agent1` and `agent2`.
+* **Dynamic Code-Grounding & Bidirectional ID Set Equality for Architecture (`SWE.2`) & System (`SYS.2`/`SYS.3`) Specifications (`Rule 81` — `ATT-6179`/`ATT-6727`, `ATT-6180`/`ATT-6732`, `ATT-6158`..`ATT-6164`/`ATT-6738`..`ATT-6741`)**:
+  * Every backticked `.kt`/`.java`/`.xml` filename, class/interface/DTO symbol, method signature, and manifest permission/FGS attribute cited in `docs/architecture.md`, `docs/architecture/*.md`, and `docs/system/*.md` **MUST** be verified programmatically against `app/src/main/` (never invent plausible-sounding class names or check only prompt examples).
+  * Cross-document requirement allocations (`SYS.2` `SYSREQ-*` $\leftrightarrow$ `SYS.3` `system_architecture.md`) **MUST** satisfy exact bidirectional set equality (`declared_ids == allocated_ids`) with zero unallocated orphans and zero ghost IDs.
+* **Plain-JVM (`Build.VERSION.SDK_INT == 0`) & Unattached `Context` Safety Guards (`Rule 81` — `ATT-5102`, `ATT-6173`)**:
+  * In plain JVM unit tests (`SDK_INT == 0` without Robolectric), `ContextCompat.registerReceiver` invokes `Process.myPid()` (throwing `Method myPid not mocked`), calling `context.filesDir` on an unattached `Service` throws `Method getFilesDir not mocked`, and relaxed MockK `context.filesDir` returns `File("")` which crashes `DataStore` asynchronously on `Dispatchers.IO` (`UncaughtExceptionsBeforeTest`).
+  * Guard internal `ContextCompat.registerReceiver` helpers when `Build.VERSION.SDK_INT == 0`, annotate methods accepting injectable `sdkInt: Int = Build.VERSION.SDK_INT` with `@SuppressLint("NewApi")` rather than adding `&& Build.VERSION.SDK_INT >= ...` (which breaks JVM tests), and resolve `DataStore` contexts synchronously inside `try/catch` checking `dir.path.isNotEmpty()` before launching any background coroutine.

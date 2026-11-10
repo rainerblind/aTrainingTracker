@@ -60,7 +60,8 @@ The risk register is reviewed at every Sprint-Start ceremony to capture newly su
 
 | Review Date | Sprint | Reviewer / Role | Notes / Actions Taken |
 | :--- | :--- | :--- | :--- |
-| **2026-11-10** | **2026-46.1** | Sprint Coordinator / Process Owner | Initial risk register baseline established per ASPICE MAN.3.BP5 (ATT-6151). Initial risks RISK-001 through RISK-006 identified; High-exposure risks linked to remediation tickets. |
+| **2026-11-10** | **2026-46.1** *(Start)* | Sprint Coordinator / Process Owner | Initial risk register baseline established per ASPICE MAN.3.BP5 (ATT-6151). Initial risks RISK-001 through RISK-006 identified; High-exposure risks linked to remediation tickets. |
+| **2026-11-10** | **2026-46.1** *(Close)* | Sprint Coordinator / Human Reviewer | Ceremony 2 review across 66 realized tickets (`146.0 SP`): `ATT-6148` & `ATT-6152` completed toward `RISK-001`; `RISK-002` manifested as unmounted UI/importer islands (`ATT-6702`, `ATT-6711`, `ATT-6712`) and AI symbol/signature hallucinations in `SWE.2`/`SYS.2`/`SYS.3` docs (`ATT-6727`, `ATT-6732`, `ATT-6738`–`ATT-6741`). Enacted **Rule 81** (mandatory caller-site `grep`, dynamic symbol-vs-source & bidirectional `SYSREQ` equality checks, and Tier 2 `lintDebug`/`detekt` CI parity). |
 
 ---
 

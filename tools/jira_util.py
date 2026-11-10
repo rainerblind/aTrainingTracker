@@ -1770,6 +1770,21 @@ def add_to_active_sprint(issue_key, role="agent1"):
     jira_request(url, method="POST", payload=payload, role=role)
     print(f"Added {issue_key} to active sprint '{active_sprint['name']}' (id {sprint_id}).")
 
+def fetch_all_sprint_issues(base, sprint_id, fields_csv, role="agent1"):
+    """Paginates /rest/agile/1.0/sprint/{sprint_id}/issue across startAt pages (ATT-6289)."""
+    all_issues = []
+    start_at = 0
+    while True:
+        url = f"{base}/rest/agile/1.0/sprint/{sprint_id}/issue?fields={fields_csv}&startAt={start_at}&maxResults=100"
+        res = jira_request(url, role=role)
+        batch = res.get("issues", [])
+        all_issues.extend(batch)
+        total = res.get("total", len(all_issues))
+        if not batch or len(all_issues) >= total:
+            break
+        start_at += len(batch)
+    return all_issues
+
 def ensure_retro_ticket(role="agent1"):
     """
     Checks whether a 'Review & Retro' ticket exists in the active sprint.
@@ -1793,10 +1808,12 @@ def ensure_retro_ticket(role="agent1"):
     sprint_short_id = re.sub(r'(?i)^sprint\s*', '', sprint_name).strip()
     display_sprint = sprint_name if sprint_name.lower().startswith("sprint") else f"Sprint {sprint_name}"
 
-    issues = jira_request(
-        f"{base}/rest/agile/1.0/sprint/{sprint_id}/issue?fields=summary,status,issuetype,{STORY_POINTS_FIELD}",
+    issues = fetch_all_sprint_issues(
+        base,
+        sprint_id,
+        f"summary,status,issuetype,{STORY_POINTS_FIELD}",
         role=role
-    ).get("issues", [])
+    )
 
     total_sp = 0.0
     unestimated_sp = 0
@@ -1869,9 +1886,12 @@ def ensure_retro_ticket(role="agent1"):
 def collect_sprint_metrics_for_id(sprint_id, sprint_name, board_id, role="coordinator"):
     config = get_config()
     base = config['JIRA_URL'].rstrip('/')
-    url = f"{base}/rest/agile/1.0/sprint/{sprint_id}/issue?fields=summary,status,issuetype,priority,subtasks,{STORY_POINTS_FIELD}&maxResults=100"
-    res = jira_request(url, role=role)
-    issues = res.get("issues", [])
+    issues = fetch_all_sprint_issues(
+        base,
+        sprint_id,
+        f"summary,status,issuetype,priority,subtasks,{STORY_POINTS_FIELD}",
+        role=role
+    )
 
     parent_issues = [i for i in issues if not i.get("fields", {}).get("issuetype", {}).get("subtask", False)]
     for p in parent_issues:
@@ -1975,7 +1995,7 @@ def cmd_sprint_metrics(sprint_arg=None, record=False, post_to_retro=False, backf
 
     if post_to_retro:
         retro_key = None
-        sprint_issues = jira_request(f"{base}/rest/agile/1.0/sprint/{s_id}/issue?fields=summary,issuetype", role=role)["issues"]
+        sprint_issues = fetch_all_sprint_issues(base, s_id, "summary,issuetype", role=role)
         # Pass 1: Match dedicated 'Review & Retro' ceremony ticket summary specifically (ATT-5829 / ATT-5890)
         for i in sprint_issues:
             itype = i.get("fields", {}).get("issuetype", {}).get("name", "")
