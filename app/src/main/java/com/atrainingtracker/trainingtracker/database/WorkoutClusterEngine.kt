@@ -1171,6 +1171,8 @@ class WorkoutClusterEngine private constructor(context: Context) {
             val apex = summariesManager.getExtremaPosition(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX)
             val distance = summariesManager.getDouble(workoutId, WorkoutSummaries.DISTANCE_TOTAL_m)
             if (start == null || end == null || apex == null || distance == null) return
+
+            // 1. Compute and persist updated weighted centroids using pre-move hitCount
             val oldCluster = dbManager.getClusterById(currentClusterId)
             if (oldCluster != null && oldCluster.hitCount > 1) {
                 dbManager.updateCluster(oldCluster.copy(
@@ -1182,10 +1184,6 @@ class WorkoutClusterEngine private constructor(context: Context) {
                     maxDispLng = (oldCluster.maxDispLng * oldCluster.hitCount - apex.longitude) / (oldCluster.hitCount - 1),
                     refDistance = (oldCluster.refDistance * oldCluster.hitCount - distance) / (oldCluster.hitCount - 1)
                 ))
-                val mostFrequentSport = summariesManager.getMostFrequentSportIdForCluster(oldCluster.id)
-                if (mostFrequentSport != -1L && mostFrequentSport != oldCluster.probableSportId) {
-                    dbManager.updateCluster(oldCluster.copy(probableSportId = mostFrequentSport, bSportType = SportTypeDatabaseManager.getInstance(context).getBSportType(mostFrequentSport)))
-                }
             }
             val newCluster = dbManager.getClusterById(newClusterId)
             if (newCluster != null) {
@@ -1198,12 +1196,32 @@ class WorkoutClusterEngine private constructor(context: Context) {
                     maxDispLng = (newCluster.maxDispLng * newCluster.hitCount + apex.longitude) / (newCluster.hitCount + 1),
                     refDistance = (newCluster.refDistance * newCluster.hitCount + distance) / (newCluster.hitCount + 1)
                 ))
-                val mostFrequentSport = summariesManager.getMostFrequentSportIdForCluster(newCluster.id)
-                if (mostFrequentSport != -1L && mostFrequentSport != newCluster.probableSportId) {
-                    dbManager.updateCluster(newCluster.copy(probableSportId = mostFrequentSport, bSportType = SportTypeDatabaseManager.getInstance(context).getBSportType(mostFrequentSport)))
+            }
+
+            // 2. Reassign workout in WorkoutSummaries and reconcile hitCount / previews
+            assignClusterToWorkout(context, workoutId, newClusterId)
+
+            // 3. Re-evaluate sport frequency against post-move distribution on freshly fetched cluster records
+            val refreshedOld = dbManager.getClusterById(currentClusterId)
+            if (refreshedOld != null) {
+                val mostFrequentSport = summariesManager.getMostFrequentSportIdForCluster(refreshedOld.id)
+                if (mostFrequentSport != -1L && mostFrequentSport != refreshedOld.probableSportId) {
+                    dbManager.updateCluster(refreshedOld.copy(
+                        probableSportId = mostFrequentSport,
+                        bSportType = SportTypeDatabaseManager.getInstance(context).getBSportType(mostFrequentSport)
+                    ))
                 }
             }
-            assignClusterToWorkout(context, workoutId, newClusterId)
+            val refreshedNew = dbManager.getClusterById(newClusterId)
+            if (refreshedNew != null) {
+                val mostFrequentSport = summariesManager.getMostFrequentSportIdForCluster(refreshedNew.id)
+                if (mostFrequentSport != -1L && mostFrequentSport != refreshedNew.probableSportId) {
+                    dbManager.updateCluster(refreshedNew.copy(
+                        probableSportId = mostFrequentSport,
+                        bSportType = SportTypeDatabaseManager.getInstance(context).getBSportType(mostFrequentSport)
+                    ))
+                }
+            }
         }
     }
 

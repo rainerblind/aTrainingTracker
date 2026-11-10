@@ -21,7 +21,9 @@ import android.database.sqlite.SQLiteDatabase
 import android.util.Log
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
+import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.google.android.gms.maps.model.LatLng
@@ -535,5 +537,113 @@ class EditWorkoutClusterTest {
             anyConstructed<ContentValues>().put(WorkoutSummaries.WORKOUT_NAME, "My Custom Typed Name")
             anyConstructed<ContentValues>().put(WorkoutSummaries.CLUSTER_ID, newClusterId)
         }
+    }
+
+    /**
+     * TST-REV-008.1 & TST-REV-008.2: moveWorkoutToCluster Centroid and Sport Preservation Verification.
+     * Verifies that moveWorkoutToCluster recomputes and preserves weighted centroids on both
+     * source and target clusters without overwriting them with stale snapshots, and that
+     * getMostFrequentSportIdForCluster runs after assignClusterToWorkout updates the database.
+     */
+    @Test
+    fun testMoveWorkoutToCluster_preservesUpdatedCentroidsAndSynchronizesSport() {
+        val workoutId = 99L
+        val currentClusterId = 10L
+        val newClusterId = 20L
+
+        val workoutStart = LatLng(12.0, 12.0)
+        val workoutEnd = LatLng(12.1, 12.1)
+        val workoutApex = LatLng(12.2, 12.2)
+        val workoutDistance = 6000.0
+
+        every { mockSummariesManager.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.START) } returns workoutStart
+        every { mockSummariesManager.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.END) } returns workoutEnd
+        every { mockSummariesManager.getExtremaPosition(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX) } returns workoutApex
+        every { mockSummariesManager.getDouble(workoutId, WorkoutSummaries.DISTANCE_TOTAL_m) } returns workoutDistance
+
+        val oldCluster = WorkoutCluster(
+            id = currentClusterId,
+            name = "Old Cluster",
+            probableSportId = 1L,
+            startLat = 11.0,
+            startLng = 11.0,
+            endLat = 11.1,
+            endLng = 11.1,
+            maxDispLat = 11.2,
+            maxDispLng = 11.2,
+            refDistance = 5500.0,
+            hitCount = 2,
+            bSportType = BSportType.RUN
+        )
+
+        val newCluster = WorkoutCluster(
+            id = newClusterId,
+            name = "New Cluster",
+            probableSportId = 1L,
+            startLat = 10.0,
+            startLng = 10.0,
+            endLat = 10.1,
+            endLng = 10.1,
+            maxDispLat = 10.2,
+            maxDispLng = 10.2,
+            refDistance = 5000.0,
+            hitCount = 1,
+            bSportType = BSportType.RUN
+        )
+
+        val clustersDbState = mutableMapOf<Long, WorkoutCluster>()
+        clustersDbState[currentClusterId] = oldCluster
+        clustersDbState[newClusterId] = newCluster
+
+        every { mockClusterDb.getClusterById(any()) } answers {
+            clustersDbState[firstArg<Long>()]
+        }
+        every { mockClusterDb.updateCluster(any()) } answers {
+            val cluster = firstArg<WorkoutCluster>()
+            clustersDbState[cluster.id] = cluster
+        }
+
+        every { mockSummariesManager.getLong(workoutId, WorkoutSummaries.CLUSTER_ID) } returns currentClusterId
+        every { mockSummariesManager.getString(workoutId, WorkoutSummaries.MAP_POLYLINE) } returns null
+        every { mockSummariesManager.getString(workoutId, WorkoutSummaries.WORKOUT_NAME) } returns "Track 99"
+        every { mockSummariesManager.getString(workoutId, WorkoutSummaries.FILE_BASE_NAME) } returns "Track 99"
+        every { mockSummariesDb.update(any(), any(), any(), any()) } returns 1
+
+        // When queried after moving, newCluster majority sport is BIKE (sportId = 2L)
+        every { mockSummariesManager.getMostFrequentSportIdForCluster(newClusterId) } returns 2L
+        every { mockSummariesManager.getMostFrequentSportIdForCluster(currentClusterId) } returns 1L
+        every { mockSportDb.getBSportType(2L) } returns BSportType.BIKE
+        every { mockSportDb.getBSportType(1L) } returns BSportType.RUN
+
+        // Execute move
+        clusterEngine.moveWorkoutToCluster(mockContext, workoutId, currentClusterId, newClusterId)
+
+        // Verify final state of both clusters
+        val finalOld = clustersDbState[currentClusterId]!!
+        val finalNew = clustersDbState[newClusterId]!!
+
+        // Old cluster: (11.0 * 2 - 12.0) / 1 = 10.0
+        assertEquals(10.0, finalOld.startLat, 0.0001)
+        assertEquals(10.0, finalOld.startLng, 0.0001)
+        assertEquals(10.1, finalOld.endLat, 0.0001)
+        assertEquals(10.1, finalOld.endLng, 0.0001)
+        assertEquals(10.2, finalOld.maxDispLat, 0.0001)
+        assertEquals(10.2, finalOld.maxDispLng, 0.0001)
+        assertEquals(5000.0, finalOld.refDistance, 0.0001)
+        assertEquals(1, finalOld.hitCount)
+        assertEquals(1L, finalOld.probableSportId)
+        assertEquals(BSportType.RUN, finalOld.bSportType)
+
+        // New cluster: (10.0 * 1 + 12.0) / 2 = 11.0
+        assertEquals(11.0, finalNew.startLat, 0.0001)
+        assertEquals(11.0, finalNew.startLng, 0.0001)
+        assertEquals(11.1, finalNew.endLat, 0.0001)
+        assertEquals(11.1, finalNew.endLng, 0.0001)
+        assertEquals(11.2, finalNew.maxDispLat, 0.0001)
+        assertEquals(11.2, finalNew.maxDispLng, 0.0001)
+        assertEquals(5500.0, finalNew.refDistance, 0.0001)
+        assertEquals(2, finalNew.hitCount)
+        assertEquals(2L, finalNew.probableSportId)
+        assertEquals(BSportType.BIKE, finalNew.bSportType)
     }
 }

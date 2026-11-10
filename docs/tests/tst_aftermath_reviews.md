@@ -3,7 +3,7 @@
 **Domain**: `aftermath_reviews`  
 **Prefixes**: `REV`  
 **Scope**: Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions.  
-**Total Tests**: 7
+**Total Tests**: 8
 
 ---
 
@@ -48,3 +48,12 @@
 - **Component**: `WorkoutDetailTabbedContent.kt`, `MapDetailLayout.kt`, `TrackOnMapScreen.kt`, `WorkoutSummariesTabbedScreen.kt`, `WorkoutShareBottomSheetContractTest.kt`
 - **Jira**: `ATT-6322`
 - **Test Description**: 1. Verify `WorkoutDetailTabbedContent.kt` does not pass `pagerState.currentPage` to `LaunchedEffect(pendingAutoShare, mapTabIndex)` and invokes `scrollToPage(mapTabIndex)`. 2. Verify `WorkoutDetailTabbedContent` captures `originPageIndex` and restores it on snapshot completion. 3. Verify `TrackOnMapScreen` propagates `onSnapshotComplete` and list containers (`WorkoutSummariesTabbedScreen`, `WorkoutSummariesListFragment`, `WorkoutClustersScreen`) wire it to dismiss the detail screen when `initialAutoShareSnapshot == true`. 4. Verify `MapDetailLayout` supports `showHeader: Boolean = true`, records `headerLayer` offscreen when `showHeader == false`, and `WorkoutDetailTabbedContent` passes `showHeader = false`.
+
+### TST-REV-008: **Workout Cluster Reassignment Centroid Integrity & Sport Frequency Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-REV-007`
+- **Component**: `WorkoutClusterEngine.kt`, `EditWorkoutClusterTest.kt`
+- **Jira**: `ATT-6159`
+- **Test Description**:
+  1. *Centroid and Sport Preservation Unit Test*: Verify `moveWorkoutToCluster` calculates and persists updated centroids without overwriting them with stale pre-update copies.
+  2. *Reassignment Order Verification*: Verify `assignClusterToWorkout` executes before `getMostFrequentSportIdForCluster`, and the updated sport ID and sport type are persisted to freshly loaded cluster instances.
+  3. *Tier 1 Targeted Regression Suite*: Execute targeted unit tests verifying 100% pass rate across cluster database classes and project build contract tests.

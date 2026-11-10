@@ -3,7 +3,7 @@
 **Domain**: `aftermath_reviews`  
 **Prefixes**: `REV`  
 **Scope**: Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions.  
-**Total Requirements**: 6
+**Total Requirements**: 7
 
 ---
 
@@ -73,3 +73,17 @@
      b. When opened with `initialAutoShareSnapshot = true` from workout list containers (`WorkoutSummariesTabbedScreen`, `WorkoutSummariesListFragment`, `WorkoutClustersScreen`), `onSnapshotComplete` SHALL be propagated via `TrackOnMapScreen` to automatically dismiss/pop the detail screen, returning the athlete to the origin list view.
   3. *MapDetailLayout Header Slot Offscreen Recording & Duplicate Prevention*: `MapDetailLayout` SHALL accept `showHeader: Boolean = true`. When `showHeader == false`, `MapDetailLayout` SHALL measure and record `header()` into `headerLayer` offscreen without rendering a second visible `WorkoutHeader` in the tab's upper layout column. `WorkoutDetailTabbedContent` SHALL pass `showHeader = false` to prevent duplicate visible header rendering below the tab row.
   4. *Preservation of Bitmap Output & Standalone Layout Invariants*: `headerLayer` in `MapDetailLayout` MUST continue producing a full-fidelity software bitmap for `combineWorkoutAndShare`. All standalone invocations of `MapDetailLayout` with `showHeader = true` MUST retain 100% visual layout parity.
+
+### REQ-REV-007: Workout Cluster Reassignment Centroid Integrity & Sport Frequency Synchronization [Verified]
+- **Tests**: `TST-REV-008` | **Tickets**: `ATT-6159`
+- **Implementation**: `WorkoutClusterEngine.kt`
+- **Rationale**: When an athlete moves a workout between route clusters in `moveWorkoutToCluster`, sequential updates must not overwrite calculated cluster centroids with stale snapshots, and sport frequency updates must be calculated after SQLite database reassignments.
+- **Description**:
+  1. *Centroid Preservation*: In `WorkoutClusterEngine.moveWorkoutToCluster`, updated centroid coordinates (`startLat`, `startLng`, `endLat`, `endLng`, `maxDispLat`, `maxDispLng`, `refDistance`) SHALL be calculated using pre-move hit counts and persisted to `dbManager`. Subsequent mutations SHALL NEVER overwrite updated centroids with a stale pre-calculation snapshot.
+  2. *Database Reassignment Sequence*: `assignClusterToWorkout(context, workoutId, newClusterId)` SHALL be invoked before evaluating cluster sport frequency, ensuring `WorkoutSummaries.CLUSTER_ID` is updated in SQLite and cluster hit counts are reconciled.
+  3. *Post-Move Sport Frequency Recalculation*: `summariesManager.getMostFrequentSportIdForCluster` SHALL be evaluated after `assignClusterToWorkout` for both source and target clusters. Updated sport properties (`probableSportId`, `bSportType`) SHALL be applied to freshly queried cluster records from `dbManager.getClusterById`.
+  4. *Preservation of Core Invariants*: Centroid formulas, `WorkoutSummaries.CLUSTER_ID` authority, and cluster locking remain intact.
+- **Acceptance Criteria**:
+  • *Given* a workout moved from `currentClusterId` to `newClusterId`,
+  • *When* `moveWorkoutToCluster` completes,
+  • *Then* both source and target clusters retain their recomputed weighted centroids without being overwritten, and `probableSportId` reflects the post-reassignment workout distribution.
