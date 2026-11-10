@@ -72,7 +72,6 @@ public class ANTBikePowerDevice extends MyANTDevice {
     protected MySensor<Integer> mTorqueEffectivenessRightSensor;
     protected MySensor<Integer> mTorqueEffectivenessLeftSensor;
     AntPlusBikePowerPcc bikePowerPcc = null;
-    final DevicesDatabaseManager mDevicesDatabaseManager;
 
     private final String TAG = "ANTBikePowerDevice";
 
@@ -81,8 +80,6 @@ public class ANTBikePowerDevice extends MyANTDevice {
      **/
     public ANTBikePowerDevice(Context context, MySensorManager mySensorManager, long deviceID, int antDeviceNumber) {
         super(context, mySensorManager, DeviceType.BIKE_POWER, deviceID, antDeviceNumber);
-
-        mDevicesDatabaseManager = DevicesDatabaseManager.getInstance(mContext);
     }
 
     @Override
@@ -357,7 +354,7 @@ public class ANTBikePowerDevice extends MyANTDevice {
                             createCombinedPedalSmoothnessSensors();
                         }
 
-                        if (mPedalSmoothnessLeftSensor != null) {
+                        if (mPedalSmoothnessSensor != null) {
                             mPedalSmoothnessSensor.newValue(leftOrCombinedPedalSmoothness.intValue() != -1 ? leftOrCombinedPedalSmoothness.intValue() : null);
                         }
                     }

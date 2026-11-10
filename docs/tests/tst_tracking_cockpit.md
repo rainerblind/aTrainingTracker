@@ -1499,6 +1499,27 @@
   5. *Targeted Regression Verification Suite (`TST-CON-024.5`)*:
   • Run targeted package tests across `com.atrainingtracker.banalservice.devices.bluetooth_le.*` and `com.atrainingtracker.trainingtracker.build.*` asserting 100% pass rate.
 
+### TST-CON-025: **ANT+ Speed/Cadence PCC Handle Leak Prevention & Power Pedal Smoothness Routing Test Suite** [Verified]
+- **Requirement(s)**: `REQ-CON-025`
+- **Component**: `ANTBikeSpeedAndCadenceDevice.java`, `ANTBikePowerDevice.java`, `ANTBikeSpeedAndCadenceDeviceTest.kt`, `ANTBikePowerDeviceTest.kt`
+- **Jira**: `ATT-6046`
+- **Test Description**:
+  1. *Speed/Cadence Disconnect With Null Secondary Handle Unit Test (`TST-CON-025.1`, `ANTBikeSpeedAndCadenceDeviceTest.kt`)*:
+  • Initialize `ANTBikeSpeedAndCadenceDevice` with mock primary speed handle and null `pccReleaseHandle2`.
+  • Invoke `releaseAccess()`.
+  • Verify `super.releaseAccess()` executes and the primary speed handle is closed and nulled.
+  2. *Speed/Cadence Disconnect With Active Secondary Handle Unit Test (`TST-CON-025.2`, `ANTBikeSpeedAndCadenceDeviceTest.kt`)*:
+  • Initialize device with both active primary speed handle and active `pccReleaseHandle2`.
+  • Invoke `releaseAccess()`.
+  • Verify both `pccReleaseHandle2` and primary handle are closed and nulled, with exception safety in try-finally.
+  3. *Combined Pedal Smoothness Telemetry Routing Unit Test (`TST-CON-025.3`, `ANTBikePowerDeviceTest.kt`)*:
+  • Simulate `separatePedalSmoothnessSupport = false` and deliver pedal smoothness events.
+  • Verify `mPedalSmoothnessSensor.newValue(...)` receives the value when `mPedalSmoothnessLeftSensor` is null.
+  4. *Field Shadowing Audit (`TST-CON-025.4`, `ANTBikePowerDeviceTest.kt`)*:
+  • Verify `ANTBikePowerDevice` does not declare a duplicate `mDevicesDatabaseManager` field and uses inherited field from `MyDevice`.
+  5. *Clean-Room Targeted Test Suite Execution (`TST-CON-025.5`)*:
+  • Execute targeted package tests (`com.atrainingtracker.banalservice.devices.ant_plus.*`) asserting 100% pass rate.
+
 ### TST-TRK-052: **Zero-Allocation 1-Hz ClockTimeTask Time-of-Day Formatting Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-052`
 - **Component**: `ClockDevice.java`, `ClockDeviceResilienceTest.kt`
@@ -1672,3 +1693,4 @@
 
 
 
+ (ATT-6046: pre-rebase collapsed commit)

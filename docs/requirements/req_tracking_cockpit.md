@@ -2672,6 +2672,39 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Wheel speed/distance calculations remain completely unaffected; zero UI or database schema changes; 100% full-suite test pass rate.
 
+### REQ-CON-025: ANT+ Device Driver Resource Cleanup & Telemetry Routing Safety [Verified]
+- **Tests**: `TST-CON-025` | **Tickets**: `ATT-6046`
+- **Implementation**: `ANTBikeSpeedAndCadenceDevice.java`, `ANTBikePowerDevice.java`
+- **Rationale**: In BANALService ANT+ device drivers, resource leaks and inverted routing guards degrade connection reliability and drop live metrics:
+  1. In combined speed & cadence devices (`ANTBikeSpeedAndCadenceDevice.java`), `releaseAccess()` guarded `super.releaseAccess()` inside `if (pccReleaseHandle2 != null)`. If cadence search fails, is cancelled, or speed disconnects before cadence connects, the primary speed handle (`pccReleaseHandle`) leaks, causing subsequent reconnects to fail with `DEVICE_ALREADY_IN_USE` (`REQ-CON-020.4`).
+  2. In bike power devices (`ANTBikePowerDevice.java:360`), `onNewPedalSmoothness()` incorrectly checked `if (mPedalSmoothnessLeftSensor != null)` before dispatching combined pedal smoothness to `mPedalSmoothnessSensor.newValue(...)`, completely dropping combined pedal smoothness telemetry since `mPedalSmoothnessLeftSensor` is only created in separate mode.
+  3. `ANTBikePowerDevice.java:75` shadowed the inherited `mDevicesDatabaseManager` from `MyDevice.java:55`.
+- **Description**:
+  1. *Unconditional Primary & Secondary PCC Handle Release (`REQ-CON-025.1`)*:
+     • In `ANTBikeSpeedAndCadenceDevice.java`, `releaseAccess()` SHALL release `pccReleaseHandle2` if non-null in a try-finally block, null the reference, and unconditionally invoke `super.releaseAccess()`.
+     • `super.releaseAccess()` MUST execute regardless of whether `pccReleaseHandle2` was instantiated, null, or failed, ensuring primary speed release handle cleanup and preventing `DEVICE_ALREADY_IN_USE` reconnect failures.
+  2. *Combined Pedal Smoothness Routing Safety (`REQ-CON-025.2`)*:
+     • In `ANTBikePowerDevice.java:360`, when `separatePedalSmoothnessSupport == false`, the system SHALL verify `if (mPedalSmoothnessSensor != null)` prior to invoking `mPedalSmoothnessSensor.newValue(...)`.
+     • Combined pedal smoothness telemetry SHALL be reliably published to `mPedalSmoothnessSensor` without dependency on `mPedalSmoothnessLeftSensor`.
+  3. *Inherited Field Shadowing Elimination (`REQ-CON-025.3`)*:
+     • In `ANTBikePowerDevice.java:75`, redundant `final DevicesDatabaseManager mDevicesDatabaseManager` declaration SHALL be removed, routing all database manager access cleanly through the inherited `protected final DevicesDatabaseManager mDevicesDatabaseManager` from `MyDevice.java`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new refinement `REQ-CON-025` extending `REQ-CON-001` (*ANT+ Sensor Support*) and `REQ-CON-020.4` (*PCC Handle Lifecycle Management*).
+  2. *Historical Origin & Commit Trace*: Introduced in initial combined bike speed & cadence and bike power ANT+ driver classes.
+  3. *Root Reason for Existing Formulation*: Lifecycles assumed cadence connection always succeeds if speed succeeds; copy-paste error from separate pedal smoothness check.
+  4. *Preservation of Core Invariants*: Separate pedal smoothness, torque effectiveness, and power balance processing remain intact; device state changes and reconnects preserved; 100% test pass rate.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* an `ANTBikeSpeedAndCadenceDevice` where `pccReleaseHandle2` is null (cadence not connected or failed),
+  • *When* `releaseAccess()` is invoked,
+  • *Then* `super.releaseAccess()` executes unconditionally, closing and nulling the primary `pccReleaseHandle`.
+  • *Given* an `ANTBikeSpeedAndCadenceDevice` where `pccReleaseHandle2` is active,
+  • *When* `releaseAccess()` is invoked,
+  • *Then* `pccReleaseHandle2.close()` executes in try-finally, `pccReleaseHandle2` is set to null, and `super.releaseAccess()` executes.
+  • *Given* an `ANTBikePowerDevice` receiving combined pedal smoothness telemetry (`separatePedalSmoothnessSupport == false`),
+  • *When* `onNewPedalSmoothness()` receives a valid value,
+  • *Then* `mPedalSmoothnessSensor.newValue(...)` is invoked and telemetry is emitted to listeners.
+- **Invariants**: `DEVICE_ALREADY_IN_USE` prevention (`REQ-CON-020.4`) preserved; ANT+ reconnect stability preserved; 100% test pass rate.
+
 ### REQ-TRK-052: Zero-Allocation 1-Hz ClockTimeTask Time-of-Day Formatting [Verified]
 - **Tests**: `TST-TRK-052` | **Tickets**: `ATT-5481`
 - **Implementation**: `ClockDevice.java`, `ClockDeviceResilienceTest.kt`
@@ -3000,3 +3033,4 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 
 
+ (ATT-6046: pre-rebase collapsed commit)

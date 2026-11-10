@@ -21,6 +21,7 @@ package com.atrainingtracker.banalservice.devices.ant_plus;
 import android.content.Context;
 
 import com.atrainingtracker.banalservice.BANALService;
+import androidx.annotation.VisibleForTesting;
 import com.atrainingtracker.banalservice.devices.DeviceType;
 import com.atrainingtracker.banalservice.sensor.MyDoubleAccumulatorSensor;
 import com.atrainingtracker.banalservice.sensor.MySensor;
@@ -97,11 +98,27 @@ public class ANTBikeSpeedAndCadenceDevice extends MyANTDevice {
 
     @Override
     protected void releaseAccess() {
+        myLog("releaseAccess()");
         if (pccReleaseHandle2 != null) {
-            pccReleaseHandle2.close();
-            super.releaseAccess();
+            try {
+                pccReleaseHandle2.close();
+            } catch (Exception e) {
+                myLog("Exception closing pccReleaseHandle2: " + e.getMessage());
+            } finally {
+                pccReleaseHandle2 = null;
+            }
         }
+        super.releaseAccess();
+    }
 
+    @VisibleForTesting
+    PccReleaseHandle<?> getPccReleaseHandle2ForTesting() {
+        return pccReleaseHandle2;
+    }
+
+    @VisibleForTesting
+    void setPccReleaseHandle2ForTesting(PccReleaseHandle<?> handle) {
+        this.pccReleaseHandle2 = (PccReleaseHandle) handle;
     }
 
 
