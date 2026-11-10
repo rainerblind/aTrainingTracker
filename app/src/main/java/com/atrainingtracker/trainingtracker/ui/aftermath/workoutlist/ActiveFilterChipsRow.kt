@@ -47,6 +47,60 @@ import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ActiveFilterChipsRow(
+    criteria: WorkoutFilterCriteria,
+    onUpdateCriteria: ((WorkoutFilterCriteria) -> WorkoutFilterCriteria) -> Unit,
+    onClearAll: () -> Unit,
+    sportName: String? = null,
+    equipmentName: String? = null,
+    modifier: Modifier = Modifier
+) {
+    if (criteria.isEmpty) return
+
+    ActiveFilterChipsRow(
+        criteria = criteria,
+        onRemoveQuery = { onUpdateCriteria { it.copy(query = "") } },
+        onRemoveYear = { onUpdateCriteria { it.copy(year = null) } },
+        onRemoveMonth = { onUpdateCriteria { it.copy(month = null) } },
+        onRemoveDateRange = { onUpdateCriteria { it.copy(startDateS = null, endDateS = null) } },
+        onRemoveBSportType = { onUpdateCriteria { it.copy(bSportType = null) } },
+        onRemoveSport = { onUpdateCriteria { it.copy(sportTypeId = null) } },
+        onRemoveEquipment = { onUpdateCriteria { it.copy(equipmentId = null) } },
+        onRemoveCommute = { onUpdateCriteria { it.copy(isCommute = null) } },
+        onRemoveTrainer = { onUpdateCriteria { it.copy(isTrainer = null) } },
+        onRemoveRace = { onUpdateCriteria { it.copy(isRace = null) } },
+        onRemoveSource = { onUpdateCriteria { it.copy(source = null) } },
+        onRemoveGpsTrack = { onUpdateCriteria { it.copy(hasGpsTrack = null) } },
+        onRemoveDistanceRange = { onUpdateCriteria { it.copy(minDistanceMeters = null, maxDistanceMeters = null) } },
+        onRemoveDurationRange = { onUpdateCriteria { it.copy(minDurationSec = null, maxDurationSec = null) } },
+        onRemoveElevationRange = { onUpdateCriteria { it.copy(minElevationGainMeters = null, maxElevationGainMeters = null) } },
+        onRemoveStartLocation = {
+            onUpdateCriteria {
+                it.copy(
+                    startLocationName = null,
+                    startLocationLat = null,
+                    startLocationLng = null,
+                    startLocationRadiusM = null
+                )
+            }
+        },
+        onRemoveCluster = {
+            onUpdateCriteria {
+                it.copy(
+                    clusterId = null,
+                    clusterName = null
+                )
+            }
+        },
+        onClearAll = onClearAll,
+        sportName = sportName,
+        equipmentName = equipmentName,
+        modifier = modifier
+    )
+}
+
 /**
  * Horizontal scrolling row displaying removable chips for each active workout filter dimension.
  *
@@ -72,8 +126,6 @@ fun ActiveFilterChipsRow(
     onRemoveDistanceRange: () -> Unit = {},
     onRemoveDurationRange: () -> Unit = {},
     onRemoveElevationRange: () -> Unit = {},
-    onRemoveMinDistance: () -> Unit = onRemoveDistanceRange,
-    onRemoveMinDuration: () -> Unit = onRemoveDurationRange,
     onRemoveStartLocation: () -> Unit = {},
     onRemoveCluster: () -> Unit = {},
     onClearAll: () -> Unit,

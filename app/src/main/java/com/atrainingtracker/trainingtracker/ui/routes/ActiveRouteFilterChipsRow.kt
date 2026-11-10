@@ -48,9 +48,7 @@ fun ActiveRouteFilterChipsRow(
     onRemoveSource: () -> Unit,
     onRemoveSelected: () -> Unit,
     onRemoveDistanceRange: () -> Unit = {},
-    onRemoveMinDistance: () -> Unit = onRemoveDistanceRange,
     onRemoveElevationRange: () -> Unit = {},
-    onRemoveMinElevation: () -> Unit = onRemoveElevationRange,
     onClearAll: () -> Unit,
     modifier: Modifier = Modifier
 ) {

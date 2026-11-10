@@ -51,6 +51,8 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.ui.common.filters.FilterBottomSheetScaffold
 import com.atrainingtracker.trainingtracker.ui.common.filters.FilterFormattingUtils
+import com.atrainingtracker.trainingtracker.ui.common.filters.FilterSearchField
+import com.atrainingtracker.trainingtracker.ui.common.filters.NumericIntervalFilterSection
 
 /**
  * Material 3 modal bottom sheet for multi-dimensional route filtering.
@@ -68,9 +70,7 @@ fun RouteFilterBottomSheet(
     onClearAll: () -> Unit,
     onDismissRequest: () -> Unit
 ) {
-    var localQuery by remember(criteria.query) { mutableStateOf(criteria.query) }
-    var localSource by remember(criteria.source) { mutableStateOf(criteria.source) }
-    var localIsSelected by remember(criteria.isSelected) { mutableStateOf(criteria.isSelected) }
+    var draft by remember(criteria) { mutableStateOf(criteria) }
 
     val isImperial = FilterFormattingUtils.rememberIsImperialUnits()
     val distanceMultiplier = remember(isImperial) { FilterFormattingUtils.getDistanceMultiplier(isImperial) }
@@ -78,16 +78,12 @@ fun RouteFilterBottomSheet(
     val distanceUnit = FilterFormattingUtils.getDistanceUnit(isImperial)
     val elevationUnit = FilterFormattingUtils.getElevationUnit(isImperial)
 
-    var localMinDistanceMeters by remember(criteria.minDistanceMeters) { mutableStateOf(criteria.minDistanceMeters) }
-    var localMaxDistanceMeters by remember(criteria.maxDistanceMeters) { mutableStateOf(criteria.maxDistanceMeters) }
     var minDistanceText by remember(criteria.minDistanceMeters, distanceMultiplier) {
         mutableStateOf(FilterFormattingUtils.formatDistanceInputValue(criteria.minDistanceMeters, distanceMultiplier))
     }
     var maxDistanceText by remember(criteria.maxDistanceMeters, distanceMultiplier) {
         mutableStateOf(FilterFormattingUtils.formatDistanceInputValue(criteria.maxDistanceMeters, distanceMultiplier))
     }
-    var localMinElevationGainMeters by remember(criteria.minElevationGainMeters) { mutableStateOf(criteria.minElevationGainMeters) }
-    var localMaxElevationGainMeters by remember(criteria.maxElevationGainMeters) { mutableStateOf(criteria.maxElevationGainMeters) }
     var minElevationText by remember(criteria.minElevationGainMeters, elevationMultiplier) {
         mutableStateOf(FilterFormattingUtils.formatElevationInputValue(criteria.minElevationGainMeters, elevationMultiplier))
     }
@@ -99,56 +95,23 @@ fun RouteFilterBottomSheet(
         title = stringResource(R.string.filter_routes_title),
         onDismissRequest = onDismissRequest,
         onClearAll = {
-            localQuery = ""
-            localSource = null
-            localIsSelected = null
-            localMinDistanceMeters = null
-            localMaxDistanceMeters = null
+            draft = RouteFilterCriteria()
             minDistanceText = ""
             maxDistanceText = ""
-            localMinElevationGainMeters = null
-            localMaxElevationGainMeters = null
             minElevationText = ""
             maxElevationText = ""
             onClearAll()
         },
         onApply = {
-            val updated = criteria.copy(
-                query = localQuery.trim(),
-                source = localSource,
-                isSelected = localIsSelected,
-                minDistanceMeters = localMinDistanceMeters,
-                maxDistanceMeters = localMaxDistanceMeters,
-                minElevationGainMeters = localMinElevationGainMeters,
-                maxElevationGainMeters = localMaxElevationGainMeters
-            )
-            onApplyCriteria(updated)
+            onApplyCriteria(draft.copy(query = draft.query.trim()))
             onDismissRequest()
         }
     ) {
-        // 1. Text Search Input
-        OutlinedTextField(
-            value = localQuery,
-            onValueChange = { localQuery = it },
-            label = { Text(stringResource(R.string.filter_search_routes_hint)) },
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = null
-                )
-            },
-            trailingIcon = {
-                if (localQuery.isNotBlank()) {
-                    IconButton(onClick = { localQuery = "" }) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = stringResource(R.string.Cancel)
-                        )
-                    }
-                }
-            },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
+        // 1. Text Search Input (REQ-UI-509.1)
+        FilterSearchField(
+            query = draft.query,
+            onQueryChange = { draft = draft.copy(query = it) },
+            label = stringResource(R.string.filter_search_routes_hint)
         )
 
         // 2. Route Source Selection (Strava, Local GPX, Workout)
@@ -165,8 +128,8 @@ fun RouteFilterBottomSheet(
             ) {
                 RouteSource.entries.forEach { src ->
                     FilterChip(
-                        selected = (localSource == src),
-                        onClick = { localSource = if (localSource == src) null else src },
+                        selected = (draft.source == src),
+                        onClick = { draft = draft.copy(source = if (draft.source == src) null else src) },
                         label = { Text(stringResource(src.displayNameResId)) }
                     )
                 }
@@ -186,141 +149,48 @@ fun RouteFilterBottomSheet(
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 FilterChip(
-                    selected = (localIsSelected == true),
-                    onClick = { localIsSelected = if (localIsSelected == true) null else true },
+                    selected = (draft.isSelected == true),
+                    onClick = { draft = draft.copy(isSelected = if (draft.isSelected == true) null else true) },
                     label = { Text(stringResource(R.string.filter_route_selected)) }
                 )
             }
         }
 
-        // 4. Distance Interval (REQ-UI-417.2, REQ-UI-508.3)
-        Column {
-            Text(
-                text = stringResource(R.string.filter_section_distance),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            val distancePresets = remember(isImperial) { FilterFormattingUtils.getDistancePresets(isImperial) }
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                distancePresets.forEach { (label, minM, maxM) ->
-                    val isSelected = localMinDistanceMeters == minM && localMaxDistanceMeters == maxM
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = {
-                            if (isSelected) {
-                                localMinDistanceMeters = null
-                                localMaxDistanceMeters = null
-                                minDistanceText = ""
-                                maxDistanceText = ""
-                            } else {
-                                localMinDistanceMeters = minM
-                                localMaxDistanceMeters = maxM
-                                minDistanceText = FilterFormattingUtils.formatDistanceInputValue(minM, distanceMultiplier)
-                                maxDistanceText = FilterFormattingUtils.formatDistanceInputValue(maxM, distanceMultiplier)
-                            }
-                        },
-                        label = { Text(label) }
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(6.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                OutlinedTextField(
-                    value = minDistanceText,
-                    onValueChange = { str ->
-                        minDistanceText = str
-                        localMinDistanceMeters = str.toDoubleOrNull()?.times(distanceMultiplier)
-                    },
-                    label = { Text("${stringResource(R.string.filter_min_label)} ($distanceUnit)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    singleLine = true,
-                    modifier = Modifier.weight(1f)
-                )
-                OutlinedTextField(
-                    value = maxDistanceText,
-                    onValueChange = { str ->
-                        maxDistanceText = str
-                        localMaxDistanceMeters = str.toDoubleOrNull()?.times(distanceMultiplier)
-                    },
-                    label = { Text("${stringResource(R.string.filter_max_label)} ($distanceUnit)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    singleLine = true,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
+        // 4. Distance Interval (REQ-UI-417.2, REQ-UI-508.3, REQ-UI-509.2)
+        NumericIntervalFilterSection(
+            title = stringResource(R.string.filter_section_distance),
+            unit = distanceUnit,
+            presets = remember(isImperial) { FilterFormattingUtils.getDistancePresets(isImperial) },
+            minMeters = draft.minDistanceMeters,
+            maxMeters = draft.maxDistanceMeters,
+            minText = minDistanceText,
+            maxText = maxDistanceText,
+            multiplier = distanceMultiplier,
+            onBoundsChange = { minM, maxM, minT, maxT ->
+                draft = draft.copy(minDistanceMeters = minM, maxDistanceMeters = maxM)
+                minDistanceText = minT
+                maxDistanceText = maxT
+            },
+            formatInputValue = { m, mult -> FilterFormattingUtils.formatDistanceInputValue(m, mult) }
+        )
 
-        // 5. Elevation Gain Thresholds (REQ-UI-417.2, REQ-UI-425, REQ-UI-508.3)
-        Column {
-            Text(
-                text = stringResource(R.string.sort_elevation_gain),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            val elevationPresets = remember(isImperial) { FilterFormattingUtils.getElevationPresets(isImperial) }
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                elevationPresets.forEach { (label, minM, maxM) ->
-                    val isSelected = localMinElevationGainMeters == minM && localMaxElevationGainMeters == maxM
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = {
-                            if (isSelected) {
-                                localMinElevationGainMeters = null
-                                localMaxElevationGainMeters = null
-                                minElevationText = ""
-                                maxElevationText = ""
-                            } else {
-                                localMinElevationGainMeters = minM
-                                localMaxElevationGainMeters = maxM
-                                minElevationText = FilterFormattingUtils.formatElevationInputValue(minM, elevationMultiplier)
-                                maxElevationText = FilterFormattingUtils.formatElevationInputValue(maxM, elevationMultiplier)
-                            }
-                        },
-                        label = { Text(label) }
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(6.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                OutlinedTextField(
-                    value = minElevationText,
-                    onValueChange = { str ->
-                        minElevationText = str
-                        localMinElevationGainMeters = str.toDoubleOrNull()?.times(elevationMultiplier)
-                    },
-                    label = { Text("${stringResource(R.string.filter_min_label)} ($elevationUnit)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.weight(1f)
-                )
-                OutlinedTextField(
-                    value = maxElevationText,
-                    onValueChange = { str ->
-                        maxElevationText = str
-                        localMaxElevationGainMeters = str.toDoubleOrNull()?.times(elevationMultiplier)
-                    },
-                    label = { Text("${stringResource(R.string.filter_max_label)} ($elevationUnit)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
+        // 5. Elevation Gain Thresholds (REQ-UI-417.2, REQ-UI-425, REQ-UI-508.3, REQ-UI-509.2)
+        NumericIntervalFilterSection(
+            title = stringResource(R.string.sort_elevation_gain),
+            unit = elevationUnit,
+            presets = remember(isImperial) { FilterFormattingUtils.getElevationPresets(isImperial) },
+            minMeters = draft.minElevationGainMeters,
+            maxMeters = draft.maxElevationGainMeters,
+            minText = minElevationText,
+            maxText = maxElevationText,
+            multiplier = elevationMultiplier,
+            onBoundsChange = { minM, maxM, minT, maxT ->
+                draft = draft.copy(minElevationGainMeters = minM, maxElevationGainMeters = maxM)
+                minElevationText = minT
+                maxElevationText = maxT
+            },
+            formatInputValue = { m, mult -> FilterFormattingUtils.formatElevationInputValue(m, mult) },
+            keyboardType = KeyboardType.Number
+        )
     }
 }

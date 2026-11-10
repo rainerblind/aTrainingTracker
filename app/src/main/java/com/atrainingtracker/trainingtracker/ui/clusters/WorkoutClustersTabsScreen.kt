@@ -368,7 +368,6 @@ fun WorkoutClustersTabsScreen(
                                 onRemoveQuery = { viewModel.updateFilterCriteria { it.copy(query = "") } },
                                 onRemoveEquipment = { viewModel.updateFilterCriteria { it.copy(equipmentName = null) } },
                                 onRemoveDistanceRange = { viewModel.updateFilterCriteria { it.copy(minDistanceMeters = null, maxDistanceMeters = null) } },
-                                onRemoveMinDistance = { viewModel.updateFilterCriteria { it.copy(minDistanceMeters = null, maxDistanceMeters = null) } },
                                 onRemoveElevationRange = { viewModel.updateFilterCriteria { it.copy(minElevationGainMeters = null, maxElevationGainMeters = null) } },
                                 onRemoveMinHitCount = { viewModel.updateFilterCriteria { it.copy(minHitCount = null) } },
                                 onRemoveStartLocation = {

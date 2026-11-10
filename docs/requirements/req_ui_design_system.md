@@ -15235,4 +15235,47 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Raw SI meter storage in filter criteria; 100% 9-language translation parity in `strings_filters.xml`; metric formatting parity preserved for metric users; 100% clean-room test pass rate.
 
+### REQ-UI-509: Shared Filter UI Components, Draft State & Functional Chip Transformers [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-509` | **Tickets**: `ATT-6043`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/common/filters/FilterSearchField.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/common/filters/NumericIntervalFilterSection.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/common/filters/StartLocationFilterSection.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutFilterBottomSheet.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/ClusterFilterBottomSheet.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RouteFilterBottomSheet.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/segments/segmentlist/SegmentFilterBottomSheet.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/knownlocations/KnownLocationsFilterBottomSheet.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/ActiveFilterChipsRow.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutTabsScreen.kt`
+- **Rationale**: Across 5 filter bottom sheets and 5 active filter chip rows, search input (`OutlinedTextField`), distance/elevation numeric intervals (~75 lines each), and "Start at" favorite locations (~65 lines) are duplicated. Furthermore, `WorkoutFilterBottomSheet` maintains 27 loose `mutableStateOf` variables, and `ActiveFilterChipsRow` exposes 19 individual callbacks. The system SHALL extract reusable filter primitives (`FilterSearchField`, `NumericIntervalFilterSection`, `StartLocationFilterSection`), migrate sheets to an immutable `draft` state with intermediate text buffers, and migrate `ActiveFilterChipsRow` to functional criteria transformers (`onUpdateCriteria`):
+1. *Reusable Filter Input Primitives (`REQ-UI-509.1`)*:
+• `FilterSearchField.kt` in `ui/common/filters/` SHALL provide a standardized `OutlinedTextField` parameterized by `query`, `onQueryChange`, and `label`, with leading search icon and single-tap clear icon (`Icons.Default.Close`) when non-blank.
+• `NumericIntervalFilterSection.kt` in `ui/common/filters/` SHALL provide a reusable numeric interval filtering component rendering section title, athletic preset chips (`FlowRow`), and min/max inputs with unit indicator, preserving raw metric thresholds and calling back with updated min/max bounds and text buffers.
+• `StartLocationFilterSection.kt` in `ui/common/filters/` SHALL provide a reusable favorite location selector rendering `KnownLocationItem` chips, filtering infrequent locations (`hitCount < 5`) by default, and providing a toggle chip to show all locations.
+2. *Filter Bottom Sheet Immutable Draft State Architecture (`REQ-UI-509.2`)*:
+• All 5 filter bottom sheets (`WorkoutFilterBottomSheet`, `ClusterFilterBottomSheet`, `RouteFilterBottomSheet`, `SegmentFilterBottomSheet`, `KnownLocationsFilterBottomSheet`) SHALL replace loose per-field `mutableStateOf` variables with an immutable `draft` criteria state (`var draft by remember(criteria) { mutableStateOf(criteria) }`).
+• Decoupled text buffers (`minDistanceText`, `maxDistanceText`, etc.) SHALL be maintained alongside the `draft` state to preserve intermediate text typing (e.g. `"1."`, `""`) without premature numeric parsing collapse or re-key reset during recomposition.
+• `onClearAll` SHALL reset `draft` to a fresh default instance and clear text buffers; `onApply` SHALL emit the finalized criteria.
+3. *Functional Transformer Architecture for Active Filter Chips (`REQ-UI-509.3`)*:
+• `ActiveFilterChipsRow.kt` SHALL consume a functional transformer callback `onUpdateCriteria: ((WorkoutFilterCriteria) -> WorkoutFilterCriteria) -> Unit` instead of 19 individual removal lambdas, delegating chip removals directly to `WorkoutSummariesViewModel.updateFilterCriteria`.
+• Dead unused alias callbacks (`onRemoveMinDistance`, `onRemoveMinDuration`, `onRemoveMinElevation`) SHALL be eliminated across `ActiveFilterChipsRow`, `ActiveClusterFilterChipsRow`, and `ActiveRouteFilterChipsRow`.
+4. *Preservation of Filter Contracts & Interaction Invariants (`REQ-UI-509.4`)*:
+• `ActiveFilterChipsRowClearAllContractTest.kt` invariants (`if (criteria.isEmpty) return`, `onClick = onClearAll`, and `Modifier.padding(start = 4.dp)` on the clear chip) SHALL remain 100% intact and verified across all chip rows.
+• Visual layout, padding, typography, animations, and Imperial unit parity (`REQ-UI-508`) across all 5 filter bottom sheets and chip rows SHALL remain visually indistinguishable.
+
+### Requirement Archaeology & Chesterton's Fence Audit:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-509`, refining `REQ-UI-157` (*Workout Filter*), `REQ-UI-187` (*Cluster Filter*), `REQ-UI-425` (*Elevation Filter*), `REQ-UI-466` (*Known Locations Filter*), `REQ-UI-468` (*Clear All Contract*), and `REQ-UI-508` (*Imperial Unit Parity*). Targets `FilterSearchField.kt`, `NumericIntervalFilterSection.kt`, `StartLocationFilterSection.kt`, bottom sheets, and chip rows.
+2. *Historical Origin & Commit Trace*: Sprints 2026-40.4 (`ATT-1276`), 2026-42.2 (`ATT-1593`), 2026-45.12 (`ATT-5888`), and 2026-46.1 (`ATT-6168`).
+3. *Root Reason for Existing Formulation*: Sheets and chip rows were built iteratively per list screen prior to ViewModel transformer unification; state and callbacks grew organically without shared input primitives.
+4. *Preservation of Core Invariants*: Zero UI layout or interaction regression, intermediate text buffer typing preserved, `ActiveFilterChipsRowClearAllContractTest` preserved, 100% unit test pass rate.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `FilterSearchField` rendered with query `"tempo"`,
+• *When* the clear icon is tapped,
+• *Then* `query` becomes empty and the field displays hint text.
+• *Given* an athlete typing `"1."` into a distance interval text field,
+• *When* recomposition occurs,
+• *Then* the field preserves `"1."` without collapsing to `1` or clearing.
+• *Given* `StartLocationFilterSection` with infrequent locations (`hitCount < 5`),
+• *When* the athlete toggles "Show all",
+• *Then* the full location list is displayed.
+• *Given* `ActiveFilterChipsRow` with an active query filter,
+• *When* the query chip remove icon is clicked,
+• *Then* `onUpdateCriteria` receives `{ it.copy(query = "") }`.
+
+**Invariants**: Decoupled text buffers preserved for in-progress typing; `ActiveFilterChipsRowClearAllContractTest` 100% compliant; Imperial unit parity (`REQ-UI-508`) preserved; 100% clean-room test pass rate.
+
+
 

@@ -55,6 +55,9 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
 import com.atrainingtracker.trainingtracker.ui.common.filters.FilterBottomSheetScaffold
 import com.atrainingtracker.trainingtracker.ui.common.filters.FilterFormattingUtils
+import com.atrainingtracker.trainingtracker.ui.common.filters.FilterSearchField
+import com.atrainingtracker.trainingtracker.ui.common.filters.NumericIntervalFilterSection
+import com.atrainingtracker.trainingtracker.ui.common.filters.StartLocationFilterSection
 
 /**
  * Material 3 modal bottom sheet for multi-dimensional Favorite Tracks / Workout Clusters filtering (REQ-UI-187, REQ-UI-417.2).
@@ -81,8 +84,7 @@ fun ClusterFilterBottomSheet(
     onDismissRequest: () -> Unit,
     knownLocations: List<KnownLocationItem> = emptyList()
 ) {
-    var localQuery by remember(criteria.query) { mutableStateOf(criteria.query) }
-    var localEquipmentName by remember(criteria.equipmentName) { mutableStateOf(criteria.equipmentName) }
+    var draft by remember(criteria) { mutableStateOf(criteria) }
 
     val isImperial = FilterFormattingUtils.rememberIsImperialUnits()
     val distanceMultiplier = remember(isImperial) { FilterFormattingUtils.getDistanceMultiplier(isImperial) }
@@ -90,90 +92,40 @@ fun ClusterFilterBottomSheet(
     val distanceUnit = FilterFormattingUtils.getDistanceUnit(isImperial)
     val elevationUnit = FilterFormattingUtils.getElevationUnit(isImperial)
 
-    var localMinDistanceMeters by remember(criteria.minDistanceMeters) { mutableStateOf(criteria.minDistanceMeters) }
-    var localMaxDistanceMeters by remember(criteria.maxDistanceMeters) { mutableStateOf(criteria.maxDistanceMeters) }
     var minDistanceText by remember(criteria.minDistanceMeters, distanceMultiplier) {
         mutableStateOf(FilterFormattingUtils.formatDistanceInputValue(criteria.minDistanceMeters, distanceMultiplier))
     }
     var maxDistanceText by remember(criteria.maxDistanceMeters, distanceMultiplier) {
         mutableStateOf(FilterFormattingUtils.formatDistanceInputValue(criteria.maxDistanceMeters, distanceMultiplier))
     }
-    var localMinElevationGainMeters by remember(criteria.minElevationGainMeters) { mutableStateOf(criteria.minElevationGainMeters) }
-    var localMaxElevationGainMeters by remember(criteria.maxElevationGainMeters) { mutableStateOf(criteria.maxElevationGainMeters) }
     var minElevationText by remember(criteria.minElevationGainMeters, elevationMultiplier) {
         mutableStateOf(FilterFormattingUtils.formatElevationInputValue(criteria.minElevationGainMeters, elevationMultiplier))
     }
     var maxElevationText by remember(criteria.maxElevationGainMeters, elevationMultiplier) {
         mutableStateOf(FilterFormattingUtils.formatElevationInputValue(criteria.maxElevationGainMeters, elevationMultiplier))
     }
-    var localMinHitCount by remember(criteria.minHitCount) { mutableStateOf(criteria.minHitCount) }
-    var localStartLocationName by remember(criteria.startLocationName) { mutableStateOf(criteria.startLocationName) }
-    var localStartLocationLat by remember(criteria.startLocationLat) { mutableStateOf(criteria.startLocationLat) }
-    var localStartLocationLng by remember(criteria.startLocationLng) { mutableStateOf(criteria.startLocationLng) }
-    var localStartLocationRadiusM by remember(criteria.startLocationRadiusM) { mutableStateOf(criteria.startLocationRadiusM) }
 
     FilterBottomSheetScaffold(
         title = stringResource(R.string.filter_clusters_title),
         onDismissRequest = onDismissRequest,
         onClearAll = {
-            localQuery = ""
-            localEquipmentName = null
-            localMinDistanceMeters = null
-            localMaxDistanceMeters = null
+            draft = ClusterFilterCriteria()
             minDistanceText = ""
             maxDistanceText = ""
-            localMinElevationGainMeters = null
-            localMaxElevationGainMeters = null
             minElevationText = ""
             maxElevationText = ""
-            localMinHitCount = null
-            localStartLocationName = null
-            localStartLocationLat = null
-            localStartLocationLng = null
-            localStartLocationRadiusM = null
             onClearAll()
         },
         onApply = {
-            val updated = criteria.copy(
-                query = localQuery.trim(),
-                equipmentName = localEquipmentName,
-                minDistanceMeters = localMinDistanceMeters,
-                maxDistanceMeters = localMaxDistanceMeters,
-                minElevationGainMeters = localMinElevationGainMeters,
-                maxElevationGainMeters = localMaxElevationGainMeters,
-                minHitCount = localMinHitCount,
-                startLocationName = localStartLocationName,
-                startLocationLat = localStartLocationLat,
-                startLocationLng = localStartLocationLng,
-                startLocationRadiusM = localStartLocationRadiusM
-            )
-            onApplyCriteria(updated)
+            onApplyCriteria(draft.copy(query = draft.query.trim()))
             onDismissRequest()
         }
     ) {
-        // 1. Text Search Input
-        OutlinedTextField(
-            value = localQuery,
-            onValueChange = { localQuery = it },
-            label = { Text(stringResource(R.string.filter_search_clusters_hint)) },
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = null
-                )
-            },
-            trailingIcon = {
-                if (localQuery.isNotBlank()) {
-                    IconButton(onClick = { localQuery = "" }) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = stringResource(R.string.Cancel)
-                        )
-                    }
-                }
-            },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
+        // 1. Text Search Input (REQ-UI-509.1)
+        FilterSearchField(
+            query = draft.query,
+            onQueryChange = { draft = draft.copy(query = it) },
+            label = stringResource(R.string.filter_search_clusters_hint)
         )
 
         // 2. Equipment Selection
@@ -191,9 +143,11 @@ fun ClusterFilterBottomSheet(
                 ) {
                     availableEquipment.forEach { equipName ->
                         FilterChip(
-                            selected = (localEquipmentName == equipName),
+                            selected = (draft.equipmentName == equipName),
                             onClick = {
-                                localEquipmentName = if (localEquipmentName == equipName) null else equipName
+                                draft = draft.copy(
+                                    equipmentName = if (draft.equipmentName == equipName) null else equipName
+                                )
                             },
                             label = { Text(equipName) }
                         )
@@ -202,135 +156,42 @@ fun ClusterFilterBottomSheet(
             }
         }
 
-        // 3. Distance Interval (REQ-UI-417.2, REQ-UI-508.3)
-        Column {
-            Text(
-                text = stringResource(R.string.filter_section_distance),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            val distancePresets = remember(isImperial) { FilterFormattingUtils.getDistancePresets(isImperial) }
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                distancePresets.forEach { (label, minM, maxM) ->
-                    val isSelected = localMinDistanceMeters == minM && localMaxDistanceMeters == maxM
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = {
-                            if (isSelected) {
-                                localMinDistanceMeters = null
-                                localMaxDistanceMeters = null
-                                minDistanceText = ""
-                                maxDistanceText = ""
-                            } else {
-                                localMinDistanceMeters = minM
-                                localMaxDistanceMeters = maxM
-                                minDistanceText = FilterFormattingUtils.formatDistanceInputValue(minM, distanceMultiplier)
-                                maxDistanceText = FilterFormattingUtils.formatDistanceInputValue(maxM, distanceMultiplier)
-                            }
-                        },
-                        label = { Text(label) }
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(6.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                OutlinedTextField(
-                    value = minDistanceText,
-                    onValueChange = { str ->
-                        minDistanceText = str
-                        localMinDistanceMeters = str.toDoubleOrNull()?.times(distanceMultiplier)
-                    },
-                    label = { Text("${stringResource(R.string.filter_min_label)} ($distanceUnit)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    singleLine = true,
-                    modifier = Modifier.weight(1f)
-                )
-                OutlinedTextField(
-                    value = maxDistanceText,
-                    onValueChange = { str ->
-                        maxDistanceText = str
-                        localMaxDistanceMeters = str.toDoubleOrNull()?.times(distanceMultiplier)
-                    },
-                    label = { Text("${stringResource(R.string.filter_max_label)} ($distanceUnit)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    singleLine = true,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
+        // 3. Distance Interval (REQ-UI-417.2, REQ-UI-508.3, REQ-UI-509.2)
+        NumericIntervalFilterSection(
+            title = stringResource(R.string.filter_section_distance),
+            unit = distanceUnit,
+            presets = remember(isImperial) { FilterFormattingUtils.getDistancePresets(isImperial) },
+            minMeters = draft.minDistanceMeters,
+            maxMeters = draft.maxDistanceMeters,
+            minText = minDistanceText,
+            maxText = maxDistanceText,
+            multiplier = distanceMultiplier,
+            onBoundsChange = { minM, maxM, minT, maxT ->
+                draft = draft.copy(minDistanceMeters = minM, maxDistanceMeters = maxM)
+                minDistanceText = minT
+                maxDistanceText = maxT
+            },
+            formatInputValue = { m, mult -> FilterFormattingUtils.formatDistanceInputValue(m, mult) }
+        )
 
-        // 4. Elevation Gain Interval (REQ-UI-425, REQ-UI-508.3)
-        Column {
-            Text(
-                text = stringResource(R.string.sort_elevation_gain),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            val elevationPresets = remember(isImperial) { FilterFormattingUtils.getElevationPresets(isImperial) }
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                elevationPresets.forEach { (label, minM, maxM) ->
-                    val isSelected = localMinElevationGainMeters == minM && localMaxElevationGainMeters == maxM
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = {
-                            if (isSelected) {
-                                localMinElevationGainMeters = null
-                                localMaxElevationGainMeters = null
-                                minElevationText = ""
-                                maxElevationText = ""
-                            } else {
-                                localMinElevationGainMeters = minM
-                                localMaxElevationGainMeters = maxM
-                                minElevationText = FilterFormattingUtils.formatElevationInputValue(minM, elevationMultiplier)
-                                maxElevationText = FilterFormattingUtils.formatElevationInputValue(maxM, elevationMultiplier)
-                            }
-                        },
-                        label = { Text(label) }
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(6.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                OutlinedTextField(
-                    value = minElevationText,
-                    onValueChange = { str ->
-                        minElevationText = str
-                        localMinElevationGainMeters = str.toDoubleOrNull()?.times(elevationMultiplier)
-                    },
-                    label = { Text("${stringResource(R.string.filter_min_label)} ($elevationUnit)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.weight(1f)
-                )
-                OutlinedTextField(
-                    value = maxElevationText,
-                    onValueChange = { str ->
-                        maxElevationText = str
-                        localMaxElevationGainMeters = str.toDoubleOrNull()?.times(elevationMultiplier)
-                    },
-                    label = { Text("${stringResource(R.string.filter_max_label)} ($elevationUnit)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
+        // 4. Elevation Gain Interval (REQ-UI-425, REQ-UI-508.3, REQ-UI-509.2)
+        NumericIntervalFilterSection(
+            title = stringResource(R.string.sort_elevation_gain),
+            unit = elevationUnit,
+            presets = remember(isImperial) { FilterFormattingUtils.getElevationPresets(isImperial) },
+            minMeters = draft.minElevationGainMeters,
+            maxMeters = draft.maxElevationGainMeters,
+            minText = minElevationText,
+            maxText = maxElevationText,
+            multiplier = elevationMultiplier,
+            onBoundsChange = { minM, maxM, minT, maxT ->
+                draft = draft.copy(minElevationGainMeters = minM, maxElevationGainMeters = maxM)
+                minElevationText = minT
+                maxElevationText = maxT
+            },
+            formatInputValue = { m, mult -> FilterFormattingUtils.formatElevationInputValue(m, mult) },
+            keyboardType = KeyboardType.Number
+        )
 
         // 5. Minimum Recordings / Hit Count Thresholds
         Column {
@@ -347,9 +208,11 @@ fun ClusterFilterBottomSheet(
                 // Recordings Count Thresholds: 3, 5, 10, 25
                 listOf(3, 5, 10, 25).forEach { count ->
                     FilterChip(
-                        selected = (localMinHitCount == count),
+                        selected = (draft.minHitCount == count),
                         onClick = {
-                            localMinHitCount = if (localMinHitCount == count) null else count
+                            draft = draft.copy(
+                                minHitCount = if (draft.minHitCount == count) null else count
+                            )
                         },
                         label = { Text(stringResource(R.string.filter_min_recordings_chip_format, count)) }
                     )
@@ -357,72 +220,21 @@ fun ClusterFilterBottomSheet(
             }
         }
 
-        // 5. Favorite Locations Selection (Start at / Lieblingsorte, REQ-UI-187, REQ-UI-194, REQ-UI-208, REQ-UI-467)
-        if (knownLocations.isNotEmpty()) {
-            var showAllLocations by remember { mutableStateOf(false) }
-            val hasInfrequentLocations = remember(knownLocations) {
-                knownLocations.any { it.hitCount < 5 }
-            }
-            val displayedLocations = remember(knownLocations, localStartLocationLat, localStartLocationLng, showAllLocations) {
-                if (showAllLocations || !hasInfrequentLocations) {
-                    knownLocations
-                } else {
-                    knownLocations.filter { loc ->
-                        loc.hitCount >= 5 || (localStartLocationLat == loc.latLng.latitude && localStartLocationLng == loc.latLng.longitude)
-                    }
-                }
-            }
-
-            Column {
-                Text(
-                    text = stringResource(R.string.filter_section_start_at),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary
+        // 6. Favorite Locations Selection (Start at / Lieblingsorte, REQ-UI-187, REQ-UI-194, REQ-UI-208, REQ-UI-467, REQ-UI-509.3)
+        StartLocationFilterSection(
+            title = stringResource(R.string.filter_section_start_at),
+            knownLocations = knownLocations,
+            selectedLat = draft.startLocationLat,
+            selectedLng = draft.startLocationLng,
+            onLocationSelected = { name, lat, lng, radiusM ->
+                draft = draft.copy(
+                    startLocationName = name,
+                    startLocationLat = lat,
+                    startLocationLng = lng,
+                    startLocationRadiusM = radiusM
                 )
-                Spacer(modifier = Modifier.height(6.dp))
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    displayedLocations.forEach { loc ->
-                        val isSelected = localStartLocationLat == loc.latLng.latitude &&
-                                localStartLocationLng == loc.latLng.longitude
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = {
-                                if (isSelected) {
-                                    localStartLocationName = null
-                                    localStartLocationLat = null
-                                    localStartLocationLng = null
-                                    localStartLocationRadiusM = null
-                                } else {
-                                    localStartLocationName = loc.name
-                                    localStartLocationLat = loc.latLng.latitude
-                                    localStartLocationLng = loc.latLng.longitude
-                                    localStartLocationRadiusM = loc.radius.toDouble()
-                                }
-                            },
-                            label = { Text(loc.name) }
-                        )
-                    }
-
-                    if (hasInfrequentLocations) {
-                        FilterChip(
-                            selected = showAllLocations,
-                            onClick = { showAllLocations = !showAllLocations },
-                            label = {
-                                Text(
-                                    stringResource(
-                                        if (showAllLocations) R.string.filter_locations_show_frequent
-                                        else R.string.filter_locations_show_all
-                                    )
-                                )
-                            }
-                        )
-                    }
-                }
             }
-        }
+        )
     }
 }
 

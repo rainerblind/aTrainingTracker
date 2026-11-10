@@ -309,41 +309,7 @@ fun WorkoutTabsScreen(
                             }
                             ActiveFilterChipsRow(
                                 criteria = filterCriteria,
-                                onRemoveQuery = { onUpdateFilterCriteria { it.copy(query = "") } },
-                                onRemoveYear = { onUpdateFilterCriteria { it.copy(year = null) } },
-                                onRemoveMonth = { onUpdateFilterCriteria { it.copy(month = null) } },
-                                onRemoveDateRange = { onUpdateFilterCriteria { it.copy(startDateS = null, endDateS = null) } },
-                                onRemoveBSportType = { onUpdateFilterCriteria { it.copy(bSportType = null) } },
-                                onRemoveSport = { onUpdateFilterCriteria { it.copy(sportTypeId = null) } },
-                                onRemoveEquipment = { onUpdateFilterCriteria { it.copy(equipmentId = null) } },
-                                onRemoveCommute = { onUpdateFilterCriteria { it.copy(isCommute = null) } },
-                                onRemoveTrainer = { onUpdateFilterCriteria { it.copy(isTrainer = null) } },
-                                onRemoveRace = { onUpdateFilterCriteria { it.copy(isRace = null) } },
-                                onRemoveSource = { onUpdateFilterCriteria { it.copy(source = null) } },
-                                onRemoveGpsTrack = { onUpdateFilterCriteria { it.copy(hasGpsTrack = null) } },
-                                onRemoveMinDistance = { onUpdateFilterCriteria { it.copy(minDistanceMeters = null, maxDistanceMeters = null) } },
-                                onRemoveMinDuration = { onUpdateFilterCriteria { it.copy(minDurationSec = null, maxDurationSec = null) } },
-                                onRemoveDistanceRange = { onUpdateFilterCriteria { it.copy(minDistanceMeters = null, maxDistanceMeters = null) } },
-                                onRemoveDurationRange = { onUpdateFilterCriteria { it.copy(minDurationSec = null, maxDurationSec = null) } },
-                                onRemoveElevationRange = { onUpdateFilterCriteria { it.copy(minElevationGainMeters = null, maxElevationGainMeters = null) } },
-                                onRemoveStartLocation = {
-                                    onUpdateFilterCriteria {
-                                        it.copy(
-                                            startLocationName = null,
-                                            startLocationLat = null,
-                                            startLocationLng = null,
-                                            startLocationRadiusM = null
-                                        )
-                                    }
-                                },
-                                onRemoveCluster = {
-                                    onUpdateFilterCriteria {
-                                        it.copy(
-                                            clusterId = null,
-                                            clusterName = null
-                                        )
-                                    }
-                                },
+                                onUpdateCriteria = onUpdateFilterCriteria,
                                 onClearAll = onClearAllFilters,
                                 sportName = sportName,
                                 equipmentName = equipName

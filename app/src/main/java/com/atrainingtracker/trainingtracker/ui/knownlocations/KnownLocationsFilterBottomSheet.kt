@@ -47,6 +47,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.common.filters.FilterBottomSheetScaffold
+import com.atrainingtracker.trainingtracker.ui.common.filters.FilterSearchField
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 /**
@@ -69,50 +70,25 @@ fun KnownLocationsFilterBottomSheet(
     onClearAll: () -> Unit,
     onDismissRequest: () -> Unit
 ) {
-    var localQuery by remember(criteria.query) { mutableStateOf(criteria.query) }
-    var localMinStarts by remember(criteria.minStarts) { mutableStateOf(criteria.minStarts) }
+    var draft by remember(criteria) { mutableStateOf(criteria) }
 
     FilterBottomSheetScaffold(
         title = stringResource(R.string.filter_known_locations_title),
         onDismissRequest = onDismissRequest,
         onClearAll = {
-            localQuery = ""
-            localMinStarts = null
+            draft = KnownLocationsFilterCriteria()
             onClearAll()
         },
         onApply = {
-            onApplyCriteria(
-                KnownLocationsFilterCriteria(
-                    query = localQuery,
-                    minStarts = localMinStarts
-                )
-            )
+            onApplyCriteria(draft.copy(query = draft.query.trim()))
             onDismissRequest()
         }
     ) {
-        // 1. Keyword / Location Search
-        OutlinedTextField(
-            value = localQuery,
-            onValueChange = { localQuery = it },
-            label = { Text(stringResource(R.string.filter_search_known_locations_hint)) },
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = null
-                )
-            },
-            trailingIcon = {
-                if (localQuery.isNotBlank()) {
-                    IconButton(onClick = { localQuery = "" }) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = stringResource(R.string.Cancel)
-                        )
-                    }
-                }
-            },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
+        // 1. Keyword / Location Search (REQ-UI-509.1)
+        FilterSearchField(
+            query = draft.query,
+            onQueryChange = { draft = draft.copy(query = it) },
+            label = stringResource(R.string.filter_search_known_locations_hint)
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -131,9 +107,11 @@ fun KnownLocationsFilterBottomSheet(
             ) {
                 listOf(3, 5, 10, 25).forEach { count ->
                     FilterChip(
-                        selected = (localMinStarts == count),
+                        selected = (draft.minStarts == count),
                         onClick = {
-                            localMinStarts = if (localMinStarts == count) null else count
+                            draft = draft.copy(
+                                minStarts = if (draft.minStarts == count) null else count
+                            )
                         },
                         label = {
                             Text(stringResource(R.string.filter_min_starts_chip_format, count))

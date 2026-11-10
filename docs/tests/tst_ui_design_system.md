@@ -8150,6 +8150,26 @@
   5. *Tier 1 Targeted Unit Test Regression (`TST-UI-508.5`)*:
   • Execute targeted UI filter test suite (`ui.common.filters.*`, `ui.aftermath.workoutlist.*`, `ui.clusters.*`, `ui.routes.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `ui.components.core.*`) asserting 100% pass rate.
 
+### TST-UI-509: **Shared Filter UI Components, Draft State & Functional Chip Transformers Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-509`, `REQ-UI-157`, `REQ-UI-187`, `REQ-UI-425`, `REQ-UI-468`, `REQ-UI-508`
+- **Component**: `FilterSearchField.kt`, `NumericIntervalFilterSection.kt`, `StartLocationFilterSection.kt`, `WorkoutFilterBottomSheet.kt`, `ClusterFilterBottomSheet.kt`, `RouteFilterBottomSheet.kt`, `SegmentFilterBottomSheet.kt`, `KnownLocationsFilterBottomSheet.kt`, `ActiveFilterChipsRow.kt`
+- **Jira**: `ATT-6043`
+- **Test Description**:
+  1. *Shared Filter Components Unit & Composable Contract Tests (`TST-UI-509.1`, `FilterSearchFieldTest.kt`, `NumericIntervalFilterSectionTest.kt`, `StartLocationFilterSectionTest.kt`)*:
+  • Verify `FilterSearchField` handles query emission and clears text on close icon click.
+  • Verify `NumericIntervalFilterSection` emits updated bounds on preset selection and manual text changes without losing partial text ("1.").
+  • Verify `StartLocationFilterSection` filters infrequent locations (`hitCount < 5`) and toggles "Show all".
+  2. *Filter Bottom Sheets Draft State & Reset Contract Tests (`TST-UI-509.2`, `WorkoutFilterBottomSheetTest.kt`, `ClusterFilterBottomSheetTest.kt`, `RouteFilterBottomSheetTest.kt`)*:
+  • Verify `draft` criteria state captures modifications and applies them on OK click.
+  • Verify `onClearAll` resets draft state to default criteria and clears text buffers.
+  3. *Active Filter Chips Functional Transformer & Clear-All Contract Test (`TST-UI-509.3`, `ActiveFilterChipsRowTest.kt`, `ActiveFilterChipsRowClearAllContractTest.kt`)*:
+  • Verify dismissing individual filter chips applies the expected copy transform via `onUpdateCriteria`.
+  • Verify `ActiveFilterChipsRowClearAllContractTest` passes with zero regressions on clear-all semantics.
+  4. *Tier 1 Targeted Unit Test Regression Suite (`TST-UI-509.4`)*:
+  • Execute targeted UI filter test suite (`ui.common.filters.*`, `ui.aftermath.workoutlist.*`, `ui.clusters.*`, `ui.routes.*`, `ui.segments.*`, `ui.knownlocations.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `ui.components.core.*`, `build.*`) asserting 100% pass rate.
+
+
 
 
 

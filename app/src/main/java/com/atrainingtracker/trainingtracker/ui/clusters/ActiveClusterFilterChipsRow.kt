@@ -47,7 +47,6 @@ fun ActiveClusterFilterChipsRow(
     onRemoveQuery: () -> Unit,
     onRemoveEquipment: () -> Unit,
     onRemoveDistanceRange: () -> Unit = {},
-    onRemoveMinDistance: () -> Unit = onRemoveDistanceRange,
     onRemoveElevationRange: () -> Unit = {},
     onRemoveMinHitCount: () -> Unit,
     onRemoveStartLocation: () -> Unit = {},
