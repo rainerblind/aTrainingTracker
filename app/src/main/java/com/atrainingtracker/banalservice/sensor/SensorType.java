@@ -114,7 +114,10 @@ public enum SensorType
     VERTICAL_SPEED(SensorCategory.ELEVATION_AND_NAVIGATION, R.string.vertical_speed, R.string.vertical_speed_short, R.string.units_vertical_speed_basic, SensorValueType.INTEGER, new IntegerFormatter(), true),
     PHONE_BATTERY(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, R.string.phone_battery, R.string.phone_battery_short, R.string.units_percent, SensorValueType.INTEGER, new IntegerFormatter(), false),
     BATTERY_REMAINING_TIME(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, R.string.battery_remaining_time, R.string.battery_remaining_time_short, R.string.units_none, SensorValueType.INTEGER, new BatteryRemainingTimeFormatter(), false),
-    RR_INTERVAL(SensorCategory.HEART_RATE_AND_ENERGY, R.string.rr_interval, R.string.rr_interval_short, R.string.units_time_ms, SensorValueType.INTEGER, new IntegerFormatter(), true);
+    RR_INTERVAL(SensorCategory.HEART_RATE_AND_ENERGY, R.string.rr_interval, R.string.rr_interval_short, R.string.units_time_ms, SensorValueType.INTEGER, new IntegerFormatter(), true),
+    HRV_RMSSD(SensorCategory.HEART_RATE_AND_ENERGY, R.string.hrv_rmssd, R.string.hrv_rmssd_short, R.string.units_time_ms, SensorValueType.DOUBLE, new DefaultNumberFormatter(), true),
+    HRV_DFA_A1(SensorCategory.HEART_RATE_AND_ENERGY, R.string.hrv_dfa_a1, R.string.hrv_dfa_a1_short, R.string.units_none, SensorValueType.DOUBLE, new DefaultNumberFormatter(), true),
+    HRV_ARTIFACT_RATE(SensorCategory.HEART_RATE_AND_ENERGY, R.string.hrv_artifact_rate, R.string.hrv_artifact_rate_short, R.string.units_percent, SensorValueType.DOUBLE, new DefaultNumberFormatter(), true);
 
     // max bit = 118
 
@@ -168,7 +171,7 @@ public enum SensorType
             case DISTANCE_m -> R.drawable.ic_distance;
             case SPEED_mps -> R.drawable.ic_speed;
             case CADENCE -> R.drawable.ic_cadence;
-            case HR, RR_INTERVAL -> R.drawable.ic_heart_rate;
+            case HR, RR_INTERVAL, HRV_RMSSD, HRV_DFA_A1, HRV_ARTIFACT_RATE -> R.drawable.ic_heart_rate;
             case POWER, POWER_TO_WEIGHT, NORMALIZED_POWER, INTENSITY_FACTOR, WORK_KJ, TSS, W_PRIME_BAL,
                  POWER_5S, POWER_1M, POWER_5M, POWER_20M,
                  POWER_PEAK_5S, POWER_PEAK_1M, POWER_PEAK_5M, POWER_PEAK_20M -> R.drawable.ic_power;

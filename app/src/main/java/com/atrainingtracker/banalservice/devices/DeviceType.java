@@ -53,7 +53,8 @@ public enum DeviceType {
     CLOCK(SensorType.TIME_TOTAL, BSportType.UNKNOWN, 1),
     BATTERY(SensorType.PHONE_BATTERY, BSportType.UNKNOWN, 1),
     VERTICAL_SPEED_AND_SLOPE(SensorType.VERTICAL_SPEED, BSportType.UNKNOWN, 1),
-    CYCLING_POWER_METRICS(SensorType.POWER_TO_WEIGHT, BSportType.BIKE, 1);   // only last one has ';' rest has ','!
+    CYCLING_POWER_METRICS(SensorType.POWER_TO_WEIGHT, BSportType.BIKE, 1),
+    HRV_METRICS(SensorType.HRV_RMSSD, BSportType.UNKNOWN, 1);   // only last one has ';' rest has ','!
 
     private final SensorType mainSensorType;
     private final BSportType sportType;
@@ -187,7 +188,14 @@ public enum DeviceType {
 
             // only HR
             case HR:
+            case RR_INTERVAL:
                 deviceTypes.add(DeviceType.HRM);
+                break;
+
+            case HRV_RMSSD:
+            case HRV_DFA_A1:
+            case HRV_ARTIFACT_RATE:
+                deviceTypes.add(DeviceType.HRV_METRICS);
                 break;
 
             // only in Power

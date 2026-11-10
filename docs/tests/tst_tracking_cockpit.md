@@ -1785,3 +1785,28 @@
   • Verify truncated packets (length shorter than required for indicated flags) are safely logged without throwing exceptions (`REQ-CON-014`).
   6. *Clean-Room Targeted Test Suite Execution (`TST-CON-027.6`)*:
   • Execute targeted package tests (`com.atrainingtracker.banalservice.devices.*`, `com.atrainingtracker.banalservice.sensor.*`) asserting 100% pass rate.
+
+### TST-TRK-060: **Lipponen Artifact Correction, Real-Time HRV Engine & NeuroKit2 Golden Parity Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-060` (`REQ-TRK-060.1`..`REQ-TRK-060.6`)
+- **Component**: `SensorType.java`, `RrArtifactFilter.kt`, `DfaCalculator.kt`, `HRVMetricsDevice.kt`, `DeviceType.java`, `DeviceManager.java`, `strings_hrv.xml`
+- **Jira**: `ATT-3541`
+- **Test Description**:
+  1. *SensorType & 9-Language Localization Audit (`TST-TRK-060.1`, `SensorTypeHrvTest.kt`, `TranslationParityTest.kt`)*:
+  • Verify `SensorType.HRV_RMSSD`, `SensorType.HRV_DFA_A1`, `SensorType.HRV_ARTIFACT_RATE` registered under `SensorCategory.HEART_RATE_AND_ENERGY`.
+  • Verify 100% 9-language translation parity in partitioned `strings_hrv.xml` across EN, DE, ES, FR, IT, JA, NL, PL, PT.
+  2. *RrArtifactFilter Mode A & Mode B Unit Tests (`TST-TRK-060.2`, `RrArtifactFilterTest.kt`)*:
+  • Mode A causal streaming: 5-beat lookahead + 90-beat trailing quartile window accurately detects ectopic pairs, short beats, and long beats.
+  • Mode B centered window: 91-beat bidirectional centered window produces symmetric Kubios-grade corrected NN series.
+  3. *Rolling rMSSD Engine & Artifact Exclusion Unit Tests (`TST-TRK-060.3`, `HRVMetricsDeviceTest.kt`)*:
+  • Verify 60s sliding window $rMSSD$ calculation.
+  • Verify consecutive beat differences $(i, i+1)$ exclude artifact-adjacent pairs where beat $i$ or $i+1$ is flagged, eliminating downward bias.
+  • Verify minimum sample size guard ($\ge 10$ valid pairs).
+  4. *DFA Calculator & Artifact Suppression Gate Unit Tests (`TST-TRK-060.4`, `DfaCalculatorTest.kt`)*:
+  • Verify 120s DFA $\alpha_1$ calculation across scales $n \in [4, 16]$.
+  • Verify artifact rate gate: suppresses $\alpha_1$ emission (`null`) when window artifact rate $> 5.0\%$.
+  5. *HRVMetricsDevice Lifecycle & Rule 51/52 Contract Tests (`TST-TRK-060.5`, `HRVMetricsDeviceTest.kt`)*:
+  • Verify Rule 51 constructor state parity with `resetSession()`.
+  • Verify Rule 52 physical sensor presence gating (zero phantom sensor rows when HR strap is absent).
+  6. *NeuroKit2 0.2.10 Pinned Golden Oracle Parity (`TST-TRK-060.6`, `HrvGoldenOracleTest.kt`)*:
+  • Assert $rMSSD$ matches NeuroKit2 benchmark vectors within $|\Delta rMSSD| \le 0.5\text{ ms}$.
+  • Assert DFA $\alpha_1$ matches NeuroKit2 benchmark vectors within $|\Delta\alpha_1| \le 0.02$ on clean/pre-corrected series and $|\Delta\alpha_1| \le 0.03$ end-to-end.
