@@ -24,7 +24,7 @@ import org.junit.Test
 import java.io.File
 
 /**
- * Validates Release CI test gating, AndroidManifest hygiene, and Lint configuration (REQ-BLD-002, TST-BLD-002).
+ * Validates Release CI test gating, AndroidManifest hygiene, Lint configuration, and CI integrity (REQ-BLD-002, TST-BLD-002, REQ-PRO-042, TST-PRO-042).
  */
 class ReleaseCiAndLintConfigContractTest {
 
@@ -131,6 +131,29 @@ class ReleaseCiAndLintConfigContractTest {
         assertFalse(
             "app/lint-baseline.xml must not contain stale issues for deleted StravaSegmentsIntentService (REQ-BLD-002.4)",
             content.contains("StravaSegmentsIntentService")
+        )
+    }
+
+    /**
+     * Asserts that legacy Travis CI artifacts (.travis.yml) and build script comments are permanently removed (REQ-PRO-042, TST-PRO-042).
+     */
+    @Test
+    fun testCiConfiguration_noStaleTravisArtifacts() {
+        // TST-PRO-042.1: Verify .travis.yml does not exist in any candidate repository root directory
+        val candidateRoots = listOf(File("."), File(".."))
+        val travisFileFound = candidateRoots.any { root ->
+            File(root, ".travis.yml").exists()
+        }
+        assertFalse(
+            "Legacy .travis.yml must be completely removed from repository root (REQ-PRO-042.1)",
+            travisFileFound
+        )
+
+        // TST-PRO-042.2: Verify app/build.gradle contains no stale references to Travis
+        val buildGradleContent = findBuildGradleFile().readText()
+        assertFalse(
+            "app/build.gradle must not contain any reference to Travis (REQ-PRO-042.1)",
+            buildGradleContent.contains("travis", ignoreCase = true)
         )
     }
 }

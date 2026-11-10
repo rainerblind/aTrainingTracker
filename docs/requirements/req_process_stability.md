@@ -2243,11 +2243,34 @@ The workflow SHALL mandate that:
 
 **Invariants**: Human Decision Gate (`REQ-PRO-016`) remains inviolable; max 2 concurrent tickets across strictly disjoint Epics; zero Android runtime changes in `app/src/main/java/`.
 
-
-
-
-
-
-
+### REQ-PRO-042: CI Configuration Integrity & Legacy Travis CI Deprecation [Verified]
+- **Tests**: `TST-PRO-042` | **Tickets**: `ATT-6177`
+- **Implementation**: `.travis.yml`, `app/build.gradle`, `ReleaseCiAndLintConfigContractTest.kt`
+- **Rationale**: Retaining unmaintained legacy CI configuration (`.travis.yml` referencing JDK 8 and API 29) alongside obsolete build script comments (`app/build.gradle:35`) creates ambiguity regarding authoritative build and verification environments, violating ASPICE SUP.8 (Configuration Management). GitHub Actions in `.github/workflows/` is the sole, authoritative CI/CD platform (ATT-6177, refining SUP.8 under Epic ATT-6142):
+- **Description**:
+  1. *Deprecation and Removal of Travis CI Artifacts (`REQ-PRO-042.1`)*:
+     • The obsolete `.travis.yml` configuration file SHALL be completely removed from the repository root.
+     • Legacy build comments referencing Travis (such as `// Travis update separately` in `app/build.gradle`) SHALL be eradicated.
+  2. *Authoritative CI Pipeline Invariant (`REQ-PRO-042.2`)*:
+     • GitHub Actions workflows in `.github/workflows/` (`android-branch-build.yml`, `android-release.yml`) SHALL remain the sole authoritative CI configuration for all automated build, unit test, lint, and packaging tasks.
+     • No active documentation (`README.md`, `docs/`) or build scripts SHALL reference Travis CI.
+  3. *Automated CI Configuration Integrity Contract (`REQ-PRO-042.3`)*:
+     • CI and build configuration contract tests (`ReleaseCiAndLintConfigContractTest.kt`) SHALL assert the permanent absence of `.travis.yml` and the absence of any Travis references in `app/build.gradle`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-042` (*CI Configuration Integrity & Legacy Travis CI Deprecation*), refining ASPICE SUP.8 under Epic `ATT-6142`.
+  2. *Historical Origin & Commit Trace*: Commit `d42b8c438b1e22d139183171992527fae9e15c38` ("Travis build", 2019-10-26) introduced `.travis.yml` and the `app/build.gradle` comment. GitHub Actions was subsequently adopted as the sole CI platform.
+  3. *Root Reason for Existing Formulation*: Travis CI was the initial open-source CI provider used during early development. Upon transitioning to GitHub Actions, `.travis.yml` was left dormant.
+  4. *Preservation of Core Invariants*: The active build, test, and release verification pipeline in GitHub Actions remains 100% authoritative and unchanged.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* the repository root directory,
+  • *When* checking for `.travis.yml`,
+  • *Then* the file SHALL NOT exist (`File(".travis.yml").exists() == false`).
+  • *Given* the application build script `app/build.gradle`,
+  • *When* scanning file content,
+  • *Then* it SHALL NOT contain any case-insensitive occurrences of `"travis"`.
+  • *Given* `ReleaseCiAndLintConfigContractTest.kt`,
+  • *When* executed as part of the unit test suite,
+  • *Then* contract assertions enforcing absence of Travis artifacts SHALL pass with 100% success.
+- **Invariants**: Active GitHub Actions workflows in `.github/workflows/` remain authoritative and unchanged; zero impact on Android runtime code or APK packaging.
 
 

@@ -1434,9 +1434,21 @@
   5. *Clean-Room Governance & Verification Execution (`TST-PRO-041.5`)*:
   • Execute `python3 tools/verify_requirement_governance.py` (exit 0) and `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest"`.
 
-
-
-
+### TST-PRO-042: **CI Configuration Integrity & Stale Travis Artifacts Contract Test Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-042`
+- **Component**: `ReleaseCiAndLintConfigContractTest.kt`, `app/build.gradle`
+- **Jira**: `ATT-6177`
+- **Test Description**:
+  1. *Repository Root Stale CI File Absence Test (`TST-PRO-042.1`, `ReleaseCiAndLintConfigContractTest.kt`)*:
+  • Search repository root for `.travis.yml`.
+  • Assert that `File(".travis.yml")` does not exist in any candidate repository root directory.
+  2. *Build Script Travis Comment Hygiene Test (`TST-PRO-042.2`, `ReleaseCiAndLintConfigContractTest.kt`)*:
+  • Read text content of `app/build.gradle`.
+  • Assert that `"travis"` (case-insensitive) is not contained anywhere in the file.
+  3. *Authoritative GitHub Actions Workflow Integrity Test (`TST-PRO-042.3`, `ReleaseCiAndLintConfigContractTest.kt`)*:
+  • Verify that existing tests validating `android-release.yml` continue to execute and pass.
+  4. *Clean-Room Targeted Test Suite Execution (`TST-PRO-042.4`)*:
+  • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.*"` asserting 100% pass rate.
 
 
 

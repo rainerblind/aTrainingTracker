@@ -32,7 +32,6 @@ def getGitHash = providers.exec {
 }.standardOutput.asText.get().strip()
 
 android {
-    // Travis update separately
     compileSdkVersion = 37
     buildToolsVersion = '36.0.0'
     namespace = "com.atrainingtracker"
