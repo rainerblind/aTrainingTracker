@@ -78,6 +78,13 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManag
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository;
+import com.atrainingtracker.banalservice.devices.RrBeatEvent;
+import com.atrainingtracker.banalservice.devices.RrBeatListener;
+import com.atrainingtracker.trainingtracker.database.hrv.HrvPostWorkoutRecomputer;
+import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrDatabaseManager;
+import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrInterval;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils;
 import com.atrainingtracker.banalservice.devices.radar.RadarLightController;
 import com.atrainingtracker.trainingtracker.audio.radar.RadarAlertManager;
@@ -91,6 +98,7 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.maps.android.PolyUtil;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
@@ -204,6 +212,23 @@ public class TrackerService extends Service {
     private TrainingApplication mTrainingApplication;
     private WorkoutRepository mWorkoutRepository;
     private volatile ScheduledFuture mTrackerHandle;
+    private final ConcurrentLinkedQueue<WorkoutRrInterval> mLiveRrQueue = new ConcurrentLinkedQueue<>();
+    private final AtomicInteger mRrBeatIndexCounter = new AtomicInteger(0);
+    private final RrBeatListener mRrBeatListener = new RrBeatListener() {
+        @Override
+        public void onRrBeat(@NonNull RrBeatEvent event) {
+            int idx = mRrBeatIndexCounter.getAndIncrement();
+            mLiveRrQueue.add(new WorkoutRrInterval(
+                    null,
+                    mWorkoutID,
+                    idx,
+                    event.getBeatTimestampMs(),
+                    (float) event.getRrMs(),
+                    event.getArtifactFlag(),
+                    event.getGapBeats()
+            ));
+        }
+    };
 
     /**
      * Returns the cumulative count of sample row insertion failures during the current service
@@ -659,6 +684,9 @@ public class TrackerService extends Service {
         public void onServiceConnected(ComponentName name, IBinder service) {
             mBanalService = (BANALServiceComm) service;
             if (DEBUG) Log.i(TAG, "connected to BANAL Service");
+            if (mBanalService != null) {
+                mBanalService.addRrBeatListener(mRrBeatListener);
+            }
 
             // ATT-3045: Ensure location devices are checked/initialized defensively when service connects
             BANALService.checkOrInitializeLocationDevices();
@@ -712,6 +740,9 @@ public class TrackerService extends Service {
         }
 
         public void onServiceDisconnected(ComponentName name) {
+            if (mBanalService != null) {
+                mBanalService.removeRrBeatListener(mRrBeatListener);
+            }
             mBanalService = null;
             if (DEBUG) Log.i(TAG, "disconnected from BANAL Service");
         }
@@ -863,6 +894,8 @@ public class TrackerService extends Service {
             case START_NORMAL:
                 if (DEBUG) Log.d(TAG, "starting a new workout");
                 mDiagnosticCollector.clear();
+                mLiveRrQueue.clear();
+                mRrBeatIndexCounter.set(0);
                 if (TrainingApplication.isAutoPaused()) {
                     mAutoPauseManager.setState(AutoPauseState.AUTO_PAUSED);
                     mAutoPauseManager.resetDebounceCounter();
@@ -1012,6 +1045,9 @@ public class TrackerService extends Service {
 
     protected synchronized void safeUnbindBanalService() {
         try {
+            if (mBanalService != null) {
+                mBanalService.removeRrBeatListener(mRrBeatListener);
+            }
             if (mBanalBound || mBanalService != null) {
                 unbindService(mBanalConnection);
             }
@@ -1932,6 +1968,39 @@ public class TrackerService extends Service {
             }
         } catch (Throwable t) {
             Log.e(TAG, "Error saving active devices during endWorkout", t);
+        }
+
+        // Persist raw beat-to-beat RR intervals and trigger centered recompute (REQ-PER-034.1, REQ-PER-034.3)
+        try {
+            if (!mLiveRrQueue.isEmpty() && mWorkoutID > 0) {
+                List<WorkoutRrInterval> intervalsToSave = new ArrayList<>(mLiveRrQueue);
+                List<WorkoutRrInterval> alignedIntervals = new ArrayList<>(intervalsToSave.size());
+                for (WorkoutRrInterval interval : intervalsToSave) {
+                    alignedIntervals.add(new WorkoutRrInterval(
+                            null,
+                            mWorkoutID,
+                            interval.getBeatIndex(),
+                            interval.getBeatTimestampMs(),
+                            interval.getRrMs(),
+                            interval.getArtifactFlag(),
+                            interval.getGapBeats()
+                    ));
+                }
+                WorkoutRrDatabaseManager.getInstance(this).insertIntervals(alignedIntervals);
+                mLiveRrQueue.clear();
+
+                final long finalWorkoutId = mWorkoutID;
+                final Context appContext = getApplicationContext();
+                java.util.concurrent.ForkJoinPool.commonPool().execute(() -> {
+                    try {
+                        HrvPostWorkoutRecomputer.recomputeWorkoutBlocking(appContext, finalWorkoutId);
+                    } catch (Throwable t) {
+                        Log.e(TAG, "Error in post-workout HRV recompute", t);
+                    }
+                });
+            }
+        } catch (Throwable t) {
+            Log.e(TAG, "Error persisting workout RR intervals during endWorkout", t);
         }
 
         try {

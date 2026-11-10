@@ -48,7 +48,9 @@ object DatabaseSchemaRegistry {
         com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodSummariesDatabaseManager.DATABASE_NAME to
                 com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodSummariesDatabaseManager.DB_VERSION,
         com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessDbHelper.DB_NAME to
-                com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessDbHelper.DB_VERSION
+                com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessDbHelper.DB_VERSION,
+        com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrDbHelper.DB_NAME to
+                com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrDbHelper.DB_VERSION
     )
 
     @JvmStatic

@@ -871,6 +871,31 @@ object LegacyImportEngine {
                 sessionWorkKj = parsedWorkout.sessionWorkKj
             )
 
+            if (parsedWorkout.rawRrIntervals.isNotEmpty() && workoutId > 0) {
+                try {
+                    val startMs = parseTimeToMs(firstTime)
+                    val reconstructor = com.atrainingtracker.trainingtracker.database.hrv.RrBeatTimestampReconstructor(startMs)
+                    val rrEntities = ArrayList<com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrInterval>(parsedWorkout.rawRrIntervals.size)
+                    for ((idx, rrMs) in parsedWorkout.rawRrIntervals.withIndex()) {
+                        val beat = reconstructor.reconstruct(startMs, rrMs)
+                        rrEntities.add(
+                            com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrInterval(
+                                workoutId = workoutId,
+                                beatIndex = idx,
+                                beatTimestampMs = beat.beatTimestampMs,
+                                rrMs = rrMs.toFloat(),
+                                artifactFlag = beat.artifactFlag,
+                                gapBeats = beat.gapBeats
+                            )
+                        )
+                    }
+                    com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrDatabaseManager.getInstance(context).insertIntervals(rrEntities)
+                    com.atrainingtracker.trainingtracker.database.hrv.HrvPostWorkoutRecomputer.recomputeWorkout(context, workoutId)
+                } catch (t: Throwable) {
+                    Log.e(TAG, "Failed to persist imported RR intervals or recompute HRV for $effectiveBaseFileName", t)
+                }
+            }
+
             schedulePostImportCommunityUpload(context, workoutId, effectiveBaseFileName)
             return ImportResult(ImportStatus.SUCCESS, workoutId)
         } catch (ce: CancellationException) {
@@ -906,7 +931,32 @@ object LegacyImportEngine {
             } catch (t: Throwable) {
                 Log.e(TAG, "CRITICAL: Compensatory cleanup failed to delete laps for $workoutId ($baseFileName)", t)
             }
+            try {
+                com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrDatabaseManager.getInstance(context).deleteWorkout(workoutId)
+            } catch (t: Throwable) {
+                Log.e(TAG, "CRITICAL: Compensatory cleanup failed to delete RR intervals for $workoutId ($baseFileName)", t)
+            }
         }
+    }
+
+    private fun parseTimeToMs(timeStr: String?): Long {
+        if (timeStr == null) return System.currentTimeMillis()
+        val formats = listOf(
+            "yyyy-MM-dd HH:mm:ss",
+            "yyyy-MM-dd'T'HH:mm:ss",
+            "yyyy-MM-dd'T'HH:mm:ss'Z'",
+            "yyyy-MM-dd_HHmmss"
+        )
+        for (f in formats) {
+            try {
+                val sdf = SimpleDateFormat(f, Locale.US).apply {
+                    timeZone = java.util.TimeZone.getTimeZone("UTC")
+                }
+                val d = sdf.parse(timeStr)
+                if (d != null) return d.time
+            } catch (_: Exception) {}
+        }
+        return System.currentTimeMillis()
     }
 
     /**

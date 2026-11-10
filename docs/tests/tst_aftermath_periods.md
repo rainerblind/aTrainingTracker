@@ -625,6 +625,35 @@
   6. *Tier 1 Clean-Room Targeted Regression Execution (`TST-PER-041.6`)*:
   • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*" --tests "com.atrainingtracker.trainingtracker.database.hrv.*" --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest" --tests "com.atrainingtracker.trainingtracker.build.*"` verifying 100% clean-room test pass rate.
 
+### TST-PER-042: **Lossless WorkoutRrIntervals, Centered Recompute & Garmin FIT HrvMesg Suite** [Verified]
+- **Requirement(s)**: `REQ-PER-034` (`REQ-PER-034.1`..`REQ-PER-034.6`)
+- **Component**: `WorkoutRrDatabaseManagerTest.kt`, `RrBeatTimestampReconstructionTest.kt`, `HrvPostWorkoutRecomputerTest.kt`, `FitFileWriterHrvTest.kt`, `LegacyImportEngineFitHrvTest.kt`
+- **Jira**: `ATT-3543`
+- **Test Description**:
+  1. *WorkoutRrDatabaseManager & Schema Integrity Test (`TST-PER-042.1`, `WorkoutRrDatabaseManagerTest.kt`)*:
+  • Verify creation of table `workout_rr_intervals` with columns `workout_id`, `beat_index`, `beat_timestamp_ms`, `rr_ms`, `artifact_flag`, `gap_beats`.
+  • Verify batch insertion and query by `workout_id` ordered by `beat_index`.
+  • Verify cascading deletion via `WorkoutDeletionHelper` when parent workout is removed.
+  • Verify registration in `DatabaseSchemaRegistry`.
+  2. *Beat Timestamp Cumulative Reconstruction Test (`TST-PER-042.2`, `RrBeatTimestampReconstructionTest.kt`)*:
+  • Verify cumulative timestamp progression $t_k = t_{k-1} + \text{rr\_ms}_k$ preserves exact interval durations.
+  • Verify drift resynchronization when $|t_{\text{pkt}} - t_{\text{beat}}| > 2000\text{ ms}$.
+  • Verify strict monotonic order of timestamps.
+  3. *Centered-Window Post-Workout Recomputation Test (`TST-PER-042.3`, `HrvPostWorkoutRecomputerTest.kt`)*:
+  • Verify centered window evaluation for DFA $\alpha_1$ ($t \pm 60\text{s}$) and $\text{rMSSD}$ ($t \pm 30\text{s}$) using bidirectional filtering.
+  • Verify elimination of ~60s trailing filter lag when comparing against step-change synthetic data.
+  • Verify updates to `WorkoutSamples` and `WorkoutSummaries` session extrema.
+  4. *Garmin FIT HrvMesg Export Interleaving Test (`TST-PER-042.4`, `FitFileWriterHrvTest.kt`)*:
+  • Verify `FitFileWriter` exports standard `HrvMesg` messages interleaved with `RecordMesg` trackpoints when RR data exists.
+  • Verify time intervals are scaled in fractional seconds (FIT standard).
+  • Verify workouts without RR intervals write zero `HrvMesg` messages.
+  5. *Garmin FIT HrvMesg Import & Recomputation Trigger Test (`TST-PER-042.5`, `LegacyImportEngineFitHrvTest.kt`)*:
+  • Verify `FitWorkoutParser` and `LegacyImportEngine` parse `HrvMesg` intervals and reconstruct timestamps across pause events.
+  • Verify extracted beats are persisted in `WorkoutRr.db` and post-workout recomputation is triggered.
+  6. *Tier 1 Clean-Room Targeted Regression Execution (`TST-PER-042.6`)*:
+  • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.database.hrv.*" --tests "com.atrainingtracker.trainingtracker.exporter.writer.*" --tests "com.atrainingtracker.trainingtracker.migration.*" --tests "com.atrainingtracker.trainingtracker.build.*"` verifying 100% clean-room test pass rate.
+
+
 
 
 
