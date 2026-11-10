@@ -32,4 +32,10 @@
     <string name="cardio_power_fresh_window">フレッシュ区間 (8\u201355分)</string>
     <string name="cardio_power_fatigued_window">疲労区間 (終盤)</string>
     <string name="cardio_power_rmse_format">RMSE: %1$.1f bpm</string>
+    <string name="cardio_power_trends_title">心拍\u002dパワーフィットネストレンド</string>
+    <string name="cardio_power_trends_direction_hr200">低い値 = より高い有酸素運動効率</string>
+    <string name="cardio_power_trends_direction_tau">低い値 = より速い心拍動態</string>
+    <string name="cardio_power_trends_direction_slope">高い値 = 1 bpmあたりのワット数が向上</string>
+    <string name="cardio_power_trends_empty">対象となる記録がありません（20分以上のパワー＆心拍データ、R\u00b2 \u2265 0.50）</string>
+    <string name="cardio_power_trends_rolling_trend">30日間トレンド</string>
 </resources>

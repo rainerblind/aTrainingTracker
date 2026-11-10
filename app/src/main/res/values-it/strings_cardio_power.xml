@@ -32,4 +32,10 @@
     <string name="cardio_power_fresh_window">Finestra fresca (min 8\u201355)</string>
     <string name="cardio_power_fatigued_window">Finestra affaticata (fine)</string>
     <string name="cardio_power_rmse_format">RMSE: %1$.1f bpm</string>
+    <string name="cardio_power_trends_title">Tendenze fitness cardio-potenza</string>
+    <string name="cardio_power_trends_direction_hr200">Pi\u00f9 basso = Migliore economia aerobica</string>
+    <string name="cardio_power_trends_direction_tau">Pi\u00f9 basso = Cinetica FC pi\u00f9 rapida</string>
+    <string name="cardio_power_trends_direction_slope">Pi\u00f9 alto = Pi\u00f9 watt per bpm</string>
+    <string name="cardio_power_trends_empty">Nessuna sessione idonea trovata (min. 20 min potenza e FC, R\u00b2 \u2265 0.50)</string>
+    <string name="cardio_power_trends_rolling_trend">Trend a 30 giorni</string>
 </resources>

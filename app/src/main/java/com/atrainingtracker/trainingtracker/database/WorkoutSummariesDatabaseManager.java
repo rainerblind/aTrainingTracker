@@ -1963,6 +1963,43 @@ public class WorkoutSummariesDatabaseManager {
                 WorkoutSummaries.CPD_WORKOUT_ID + "=?", new String[]{String.valueOf(workoutId)});
     }
 
+    /**
+     * Retrieves longitudinal fitness trend samples for workouts with model fit R^2 >= minR2 (REQ-REV-011 / ATT-3906).
+     *
+     * @param minR2 Minimum model fit quality threshold (typically 0.50).
+     * @return List of CardioPowerTrendSample sorted ascending by start timestamp.
+     */
+    @NonNull
+    public java.util.List<CardioPowerTrendSample> getCardioPowerDynamicsFitnessTrendSamples(double minR2) {
+        java.util.List<CardioPowerTrendSample> samples = new java.util.ArrayList<>();
+        SQLiteDatabase db = getDatabase();
+        if (db == null || !db.isOpen()) {
+            return samples;
+        }
+
+        String sql = "SELECT w." + WorkoutSummaries.C_ID + " AS workout_id, "
+                + "CAST(strftime('%s', w." + WorkoutSummaries.TIME_START + ") AS INTEGER) * 1000 AS start_ms, "
+                + "cpd.* "
+                + "FROM " + WorkoutSummaries.TABLE_CARDIO_POWER_DYNAMICS + " cpd "
+                + "INNER JOIN " + WorkoutSummaries.TABLE + " w ON w." + WorkoutSummaries.C_ID + " = cpd." + WorkoutSummaries.CPD_WORKOUT_ID + " "
+                + "WHERE cpd." + WorkoutSummaries.CPD_R2_START + " >= ? "
+                + "ORDER BY start_ms ASC";
+
+        String[] selectionArgs = new String[]{String.valueOf(minR2)};
+        try (Cursor cursor = db.rawQuery(sql, selectionArgs)) {
+            while (cursor != null && cursor.moveToNext()) {
+                long workoutId = cursor.getLong(cursor.getColumnIndexOrThrow("workout_id"));
+                long startMs = cursor.getLong(cursor.getColumnIndexOrThrow("start_ms"));
+                CardioPowerDynamicsRecord record = parseCardioPowerDynamicsRecord(cursor, workoutId);
+                samples.add(new CardioPowerTrendSample(workoutId, startMs, record));
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error querying cardio power dynamics fitness trend samples", e);
+        }
+        return samples;
+    }
+
+
 
 
 

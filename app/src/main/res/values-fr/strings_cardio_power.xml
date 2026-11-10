@@ -32,4 +32,10 @@
     <string name="cardio_power_fresh_window">Fen\u00eatre fra\u00eeche (min 8\u201355)</string>
     <string name="cardio_power_fatigued_window">Fen\u00eatre fatigu\u00e9e (fin)</string>
     <string name="cardio_power_rmse_format">RMSE: %1$.1f bpm</string>
+    <string name="cardio_power_trends_title">Tendances de forme cardio-puissance</string>
+    <string name="cardio_power_trends_direction_hr200">Plus bas = Meilleure \u00e9conomie a\u00e9robie</string>
+    <string name="cardio_power_trends_direction_tau">Plus bas = Cin\u00e9tique FC plus rapide</string>
+    <string name="cardio_power_trends_direction_slope">Plus haut = Plus de watts par bpm</string>
+    <string name="cardio_power_trends_empty">Aucune s\u00e9ance qualifi\u00e9e trouv\u00e9e (min. 20 min puissance &amp; FC, R\u00b2 \u2265 0,50)</string>
+    <string name="cardio_power_trends_rolling_trend">Tendance sur 30 jours</string>
 </resources>

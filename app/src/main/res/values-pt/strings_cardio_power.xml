@@ -32,4 +32,10 @@
     <string name="cardio_power_fresh_window">Janela fresca (min 8\u201355)</string>
     <string name="cardio_power_fatigued_window">Janela fadigada (fim)</string>
     <string name="cardio_power_rmse_format">RMSE: %1$.1f bpm</string>
+    <string name="cardio_power_trends_title">Tend\u00eancias de forma c\u00e1rdio-pot\u00eancia</string>
+    <string name="cardio_power_trends_direction_hr200">Mais baixo = Melhor economia aer\u00f3bica</string>
+    <string name="cardio_power_trends_direction_tau">Mais baixo = Cin\u00e9tica de FC mais r\u00e1pida</string>
+    <string name="cardio_power_trends_direction_slope">Mais alto = Mais watts por bpm</string>
+    <string name="cardio_power_trends_empty">Nenhum treino v\u00e1lido encontrado (m\u00edn. 20 min pot\u00eancia e FC, R\u00b2 \u2265 0,50)</string>
+    <string name="cardio_power_trends_rolling_trend">Tend\u00eancia de 30 dias</string>
 </resources>

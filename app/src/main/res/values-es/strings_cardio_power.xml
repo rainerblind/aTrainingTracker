@@ -32,4 +32,10 @@
     <string name="cardio_power_fresh_window">Ventana fresca (min 8\u201355)</string>
     <string name="cardio_power_fatigued_window">Ventana fatigada (final)</string>
     <string name="cardio_power_rmse_format">RMSE: %1$.1f bpm</string>
+    <string name="cardio_power_trends_title">Tendencias de forma cardio-potencia</string>
+    <string name="cardio_power_trends_direction_hr200">M\u00e1s bajo = Mejor econom\u00eda aer\u00f3bica</string>
+    <string name="cardio_power_trends_direction_tau">M\u00e1s bajo = Cin\u00e9tica de FC m\u00e1s r\u00e1pida</string>
+    <string name="cardio_power_trends_direction_slope">M\u00e1s alto = M\u00e1s vatios por bpm</string>
+    <string name="cardio_power_trends_empty">No se encontraron sesiones v\u00e1lidas (m\u00edn. 20 min potencia y FC, R\u00b2 \u2265 0.50)</string>
+    <string name="cardio_power_trends_rolling_trend">Tendencia de 30 d\u00edas</string>
 </resources>

@@ -32,4 +32,10 @@
     <string name="cardio_power_fresh_window">Okno \u015bwie\u017co\u015bci (min 8\u201355)</string>
     <string name="cardio_power_fatigued_window">Okno zm\u0119czenia (koniec)</string>
     <string name="cardio_power_rmse_format">RMSE: %1$.1f bpm</string>
+    <string name="cardio_power_trends_title">Trendy wydolno\u015bci kardio-moc</string>
+    <string name="cardio_power_trends_direction_hr200">Ni\u017cej = Lepsza ekonomia tlenowa</string>
+    <string name="cardio_power_trends_direction_tau">Ni\u017cej = Szybsza kinetyka HR</string>
+    <string name="cardio_power_trends_direction_slope">Wy\u017cej = Wi\u0119cej wat\u00f3w na bpm</string>
+    <string name="cardio_power_trends_empty">Brak kwalifikuj\u0105cych si\u0119 trening\u00f3w (min. 20 min mocy i HR, R\u00b2 \u2265 0,50)</string>
+    <string name="cardio_power_trends_rolling_trend">Trend 30-dniowy</string>
 </resources>

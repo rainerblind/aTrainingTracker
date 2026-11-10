@@ -32,4 +32,10 @@
     <string name="cardio_power_fresh_window">Fresh Window (min 8\u201355)</string>
     <string name="cardio_power_fatigued_window">Fatigued Window (End)</string>
     <string name="cardio_power_rmse_format">RMSE: %1$.1f bpm</string>
+    <string name="cardio_power_trends_title">Cardio-Power Fitness Trends</string>
+    <string name="cardio_power_trends_direction_hr200">Lower = Better Aerobic Economy</string>
+    <string name="cardio_power_trends_direction_tau">Lower = Faster HR Kinetics</string>
+    <string name="cardio_power_trends_direction_slope">Higher = More Watts per bpm</string>
+    <string name="cardio_power_trends_empty">No qualifying rides found (min 20 min paired Power &amp; HR, R\u00b2 \u2265 0.50)</string>
+    <string name="cardio_power_trends_rolling_trend">30-Day Trend</string>
 </resources>

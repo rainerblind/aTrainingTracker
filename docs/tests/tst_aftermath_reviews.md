@@ -93,3 +93,15 @@
   4. *Settings Gating & Visibility Test (`WorkoutDetailsVisibilityTest`)*: Verify row visibility honors `enableCardioPowerDynamics`, `showCardioPowerInWorkoutSummary`, and data presence.
   5. *9-Locale Localization Parity Test (`TranslationParityTest`)*: Verify all new cardio-power UI tokens in `strings_cardio_power.xml` across EN, DE, ES, FR, IT, JA, NL, PL, PT.
 
+### TST-REV-012: **Cardio-Power Longitudinal Fitness Trends Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-REV-011`
+- **Component**: `WorkoutSummariesDatabaseManager.java`, `AthleteProfileViewModel.kt`, `AthleteProfileScreen.kt`, `CardioPowerTrendsCard.kt`
+- **Jira**: `ATT-3906`
+- **Test Description**:
+  1. *Database Trend Query Test (`WorkoutSummariesCardioPowerTrendTest`)*: Verify `getCardioPowerDynamicsFitnessTrendSamples` returns samples with $R^2 \ge 0.50$ sorted ascending by workout start timestamp and excludes lower-fit workouts.
+  2. *ViewModel Reactive State Test (`AthleteProfileViewModelCardioPowerTest`)*: Verify `AthleteProfileViewModel` properly filters samples by selected timeframe, toggles active metric type, and respects `enableCardioPowerDynamics` gating.
+  3. *Canvas Plot Math & Rule 48 Audit Test (`CardioPowerTrendsPlotMathTest`)*: Verify IQR domain clamping, date labeling, Y-axis scale value formatting, and rolling 30-day average calculations.
+  4. *UI Component Contract Test (`CardioPowerTrendsCardTest`)*: Verify header info icon interaction, metric/range selector pill clicks, empty-state message rendering, and layout stability.
+  5. *9-Locale Localization Parity Test (`TranslationParityTest`)*: Verify all new cardio-power trend string tokens in `strings_cardio_power.xml` across EN, DE, ES, FR, IT, JA, NL, PL, PT.
+
+

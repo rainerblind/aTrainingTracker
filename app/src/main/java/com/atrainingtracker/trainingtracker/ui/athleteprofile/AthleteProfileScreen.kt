@@ -112,6 +112,7 @@ import com.atrainingtracker.trainingtracker.physiology.TsbReadinessZone
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType
 import com.atrainingtracker.trainingtracker.ui.components.DeleteConfirmationDialog
+import com.atrainingtracker.trainingtracker.ui.dialogs.PowerHrDynamicsInfoDialog
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
 import kotlinx.coroutines.launch
@@ -134,6 +135,8 @@ fun AthleteProfileScreen(
         onSelectPlotMetric = viewModel::selectPlotMetric,
         onSelectTimeRange = viewModel::selectTimeRange,
         onSelectPmcTimeRange = viewModel::selectPmcTimeRange,
+        onSelectCardioMetric = viewModel::selectCardioTrendMetric,
+        onSelectCardioTimeRange = viewModel::selectCardioTimeRange,
         onSelectHistoryFilter = viewModel::selectHistoryFilter,
         onAddEntry = viewModel::addEntry,
         onUpdateEntry = viewModel::updateEntry,
@@ -159,6 +162,8 @@ fun AthleteProfileContent(
     onSelectPlotMetric: (PlotMetricType) -> Unit,
     onSelectTimeRange: (MetricsTimeRange) -> Unit,
     onSelectPmcTimeRange: (MetricsTimeRange) -> Unit = {},
+    onSelectCardioMetric: (CardioTrendMetric) -> Unit = {},
+    onSelectCardioTimeRange: (MetricsTimeRange) -> Unit = {},
     onSelectHistoryFilter: (AthleteMetricType?) -> Unit,
     onAddEntry: (AthleteMetricType, Double, Long) -> Unit,
     onUpdateEntry: (Long, AthleteMetricType, Double, Long) -> Unit,
@@ -171,6 +176,7 @@ fun AthleteProfileContent(
     var deletingEntry by remember { mutableStateOf<AthleteMetricEntry?>(null) }
     var showZoneCalculatorDialog by remember { mutableStateOf(false) }
     var showZoneHistoryDialog by remember { mutableStateOf(false) }
+    var showCardioInfoDialog by remember { mutableStateOf(false) }
     val navBarBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
     val tabTitleResIds = remember {
@@ -509,6 +515,22 @@ fun AthleteProfileContent(
                     }
                 }
 
+                // 3c. Cardio-Power Fitness Trends Chart (REQ-REV-011 / ATT-3906)
+                if (uiState.enableCardioPowerDynamics) {
+                    item {
+                        CardioPowerTrendsCard(
+                            points = uiState.cardioTrendPoints,
+                            rollingPoints = uiState.cardioTrendRollingPoints,
+                            selectedMetric = uiState.selectedCardioTrendMetric,
+                            selectedTimeRange = uiState.selectedCardioTimeRange,
+                            yDomain = uiState.cardioTrendYDomain,
+                            onSelectMetric = onSelectCardioMetric,
+                            onSelectTimeRange = onSelectCardioTimeRange,
+                            onInfoClick = { showCardioInfoDialog = true }
+                        )
+                    }
+                }
+
                 // 4. History Log Header & Filter Row
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -695,6 +717,12 @@ fun AthleteProfileContent(
             onDeleteSnapshot = { id ->
                 zonesViewModel.deleteHistoricalSnapshot(id, currentZoneType)
             }
+        )
+    }
+
+    if (showCardioInfoDialog) {
+        PowerHrDynamicsInfoDialog(
+            onDismissRequest = { showCardioInfoDialog = false }
         )
     }
 }

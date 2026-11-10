@@ -32,4 +32,10 @@
     <string name="cardio_power_fresh_window">Vers-venster (min 8\u201355)</string>
     <string name="cardio_power_fatigued_window">Vermoeid venster (einde)</string>
     <string name="cardio_power_rmse_format">RMSE: %1$.1f bpm</string>
+    <string name="cardio_power_trends_title">Cardio-vermogen fitnesstrends</string>
+    <string name="cardio_power_trends_direction_hr200">Lager = Betere aerobe economie</string>
+    <string name="cardio_power_trends_direction_tau">Lager = Snellere HF-kinetiek</string>
+    <string name="cardio_power_trends_direction_slope">Hoger = Meer watt per bpm</string>
+    <string name="cardio_power_trends_empty">Geen geschikte ritten gevonden (min. 20 min vermogen &amp; HF, R\u00b2 \u2265 0,50)</string>
+    <string name="cardio_power_trends_rolling_trend">30-dagen trend</string>
 </resources>

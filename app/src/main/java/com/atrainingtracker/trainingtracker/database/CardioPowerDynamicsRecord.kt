@@ -48,3 +48,20 @@ data class CardioPowerDynamicsRecord @JvmOverloads constructor(
     /** Aerobic slope in W/bpm (inverse of gain K in bpm/W) at end of ride. */
     val aerobicSlopeEnd: Double? get() = if (kEnd != null && kEnd > 0.0) 1.0 / kEnd else null
 }
+
+/**
+ * Time-series sample representing a workout's start timestamp paired with its 1st-order
+ * dynamical cardio-power parameters for longitudinal trend plotting in Athlete Profile (REQ-REV-011 / ATT-3906).
+ */
+data class CardioPowerTrendSample @JvmOverloads constructor(
+    val workoutId: Long,
+    val timestampMs: Long,
+    val record: CardioPowerDynamicsRecord
+) {
+    val hr200Start: Double get() = record.hr200Start
+    val tauStart: Double get() = record.tauStart
+    val aerobicSlopeStart: Double? get() = record.aerobicSlopeStart
+    val r2Start: Double get() = record.r2Start
+    val rmseStart: Double get() = record.rmseStart
+}
+
