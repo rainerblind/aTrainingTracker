@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 83
+**Total Requirements**: 84
 
 ---
 
@@ -2951,6 +2951,52 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Then* both `ALTITUDE` and `"ALTITUDE (Höhe aus Luftdruck)"` are shifted by $+20.0\text{ m}$ across all target rows.
 
 **Invariants**: True mountain climbs track without attenuation; IPC contract (`ALTITUDE_CORRECTION_INTENT`) payload and $|\Delta h| \le 500\text{ m}$ guard preserved; database updates remain atomic.
+
+### REQ-TRK-058: Live Mean Maximal Power (MMP) Accumulators, Benchmark Durations (5s, 1m, 5m, 20m) & Cockpit MMP Curve Chart [Verified]
+- **Tests**: `TST-TRK-058` | **Tickets**: `ATT-1298`
+- **Implementation**: `CyclingPowerMetricsDevice.java`, `SlidingWindowPowerAccumulator.kt`, `SensorType.java`, `LiveMmpCurveChart.kt`
+- **Rationale**: Cyclists evaluating high-intensity efforts require real-time pacing feedback and Mean Maximal Power (MMP) benchmarking during active sessions. Calculating rolling means and session peak powers for benchmark durations (5s, 1m, 5m, 20m) and rendering an interactive logarithmic MMP vector curve in the cockpit provides live tactical feedback without degrading CPU or battery performance (ATT-1298, Parent Epic ATT-5908, extending `REQ-TRK-019`, `REQ-TRK-020`, `REQ-TRK-021`, and `REQ-TRK-023`).
+- **Description**:
+1. *O(1) Circular Sliding-Window Benchmark Accumulators (`REQ-TRK-058.1`)*:
+• In `CyclingPowerMetricsDevice.java`, the system SHALL maintain circular ring-buffer sliding window accumulators (`SlidingWindowPowerAccumulator`) for benchmark durations: 5 seconds (Sprint), 1 minute / 60 seconds (Anaerobic Capacity), 5 minutes / 300 seconds (VO2max), and 20 minutes / 1200 seconds (FTP / Threshold benchmark).
+• In accordance with Rule 40 (`REQ-TRK-023`), rolling mean power for each duration bucket SHALL compute over the available samples during the initial warm-up phase ($1 \le k < W$) without emitting `null` (`"--"`).
+2. *Rolling Mean & Session Peak Power Telemetry (`REQ-TRK-058.2`)*:
+• At 1Hz during active tracking, the system SHALL calculate current rolling mean power (`POWER_5S`, `POWER_1M`, `POWER_5M`, `POWER_20M`) and update session peak power (`POWER_PEAK_5S`, `POWER_PEAK_1M`, `POWER_PEAK_5M`, `POWER_PEAK_20M`).
+• In accordance with Rule 52 (`REQ-TRK-038`), virtual metric devices SHALL NOT emit values to `MySensor` before valid power telemetry is received from a connected physical sensor.
+3. *SensorType Registration & 9-Language Localization Parity (`REQ-TRK-058.3`)*:
+• The system SHALL register 8 new `SensorType` entries in `SensorType.java` under `SensorCategory.POWER_AND_PEDALING` with formatters, icons, and 100% 9-language localization parity across EN, DE, ES, FR, IT, JA, NL, PL, PT.
+4. *Live Graphical Vector MMP Curve Cockpit Component (`REQ-TRK-058.4`)*:
+• The tracking cockpit SHALL provide a Jetpack Compose vector chart component (`LiveMmpCurveChart`) rendering the live session power-duration curve on a logarithmic time scale ($1\text{s} \dots 7200\text{s}$).
+• The chart SHALL display visual callout pins for benchmark durations (5s, 1m, 5m, 20m) and visually highlight session breakthrough peaks without snapshot state writes during composition (`Rule 66` / `ATT-4863`).
+5. *Pause Lifecycle Invariant & Session Reset Parity (`REQ-TRK-058.5`)*:
+• During recording suspension (`isSuspended`), accumulators and peak tracking SHALL freeze without accumulating zero-watt samples or corrupting running sums.
+• In accordance with Rule 51, `resetSession()` SHALL clear all accumulators, ring buffers, and session peak registers to ensure clean-state parity across workout boundaries.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-058`, extending `REQ-TRK-019` (W/kg), `REQ-TRK-020` (NP/IF), `REQ-TRK-021` (Work/TSS), and `REQ-TRK-023` (Warm-Up Window). Targets `CyclingPowerMetricsDevice.java`, `SensorType.java`, `LiveMmpCurveChart.kt`, and `strings*.xml`.
+2. *Historical Origin & Commit Trace*: `ATT-1289` (commit `5eee662f`), `ATT-1290` (commit `4fe4996c`), `ATT-1291`, and `ATT-3778` established baseline power metric architecture.
+3. *Root Reason for Existing Formulation*: Prior tickets implemented Coggan summary metrics and $W'_{\text{bal}}$; real-time benchmark durations and live MMP curves were scoped for Epic `ATT-5908`.
+4. *Preservation of Core Invariants*: 1-Hz sampling rate (`REQ-TRK-007`), pause suspension, Rule 40 growing window, Rule 52 sensor-presence gating, and non-blocking main-thread performance are strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an active cycling workout with incoming power samples at 1Hz,
+• *When* the first 5 seconds elapse with power [200, 250, 300, 350, 400] W,
+• *Then* `POWER_5S` emits rolling mean 300 W, and `POWER_PEAK_5S` tracks 300 W.
+• *Given* an active workout at $t = 3\text{s}$ before the 5-second window is full,
+• *When* power is received,
+• *Then* `POWER_5S` emits the average of the 3 available samples without blank `"--"` delay (`Rule 40`).
+• *Given* an athlete pauses tracking,
+• *When* paused,
+• *Then* sliding window accumulators freeze without adding 0 W samples, preserving rolling means and session peaks.
+• *Given* `resetSession()` is called,
+• *When* reset executes,
+• *Then* all accumulators and peak registers clear, and sensors emit `null`.
+• *Given* the live MMP curve chart rendered in the cockpit,
+• *When* composing or updating live telemetry,
+• *Then* the chart plots power on a logarithmic duration axis with callout markers for 5s, 1m, 5m, and 20m, producing zero recomposition churn (`Rule 66`).
+
+**Invariants**: Existing power telemetry (`POWER`, `NP`, `IF`, `WORK_KJ`, `TSS`, `W_PRIME_BAL`) preserved; pause freeze integrity; 100% 9-language translation parity; zero composition snapshot state writes.
+
 
 
 

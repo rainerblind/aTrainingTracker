@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+  -->
+
+<resources>
+    <!-- Cockpit MMP and Duration Power Metrics (REQ-TRK-058) -->
+    <string name="power_5s">Power (5s)</string>
+    <string name="power_5s_short">5s W</string>
+    <string name="power_1m">Power (1m)</string>
+    <string name="power_1m_short">1m W</string>
+    <string name="power_5m">Power (5m)</string>
+    <string name="power_5m_short">5m W</string>
+    <string name="power_20m">Power (20m)</string>
+    <string name="power_20m_short">20m W</string>
+
+    <string name="power_peak_5s">Peak Power (5s)</string>
+    <string name="power_peak_5s_short">Pk 5s</string>
+    <string name="power_peak_1m">Peak Power (1m)</string>
+    <string name="power_peak_1m_short">Pk 1m</string>
+    <string name="power_peak_5m">Peak Power (5m)</string>
+    <string name="power_peak_5m_short">Pk 5m</string>
+    <string name="power_peak_20m">Peak Power (20m)</string>
+    <string name="power_peak_20m_short">Pk 20m</string>
+
+    <string name="mmp_curve">Mean Maximal Power Curve</string>
+    <string name="mmp_curve_short">MMP</string>
+</resources>

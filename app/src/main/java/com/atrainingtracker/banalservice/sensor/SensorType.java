@@ -86,6 +86,14 @@ public enum SensorType
     WORK_KJ(SensorCategory.POWER_AND_PEDALING, R.string.work_kj, R.string.work_kj_short, R.string.units_work_kj, SensorValueType.DOUBLE, new IntegerFormatter(), false),
     TSS(SensorCategory.POWER_AND_PEDALING, R.string.tss, R.string.tss_short, R.string.units_none, SensorValueType.DOUBLE, new IntegerFormatter(), false),
     W_PRIME_BAL(SensorCategory.POWER_AND_PEDALING, R.string.w_prime_bal, R.string.w_prime_bal_short, R.string.units_work_kj, SensorValueType.DOUBLE, new PowerToWeightFormatter(), false),
+    POWER_5S(SensorCategory.POWER_AND_PEDALING, R.string.power_5s, R.string.power_5s_short, R.string.units_power, SensorValueType.DOUBLE, new IntegerFormatter(), true),
+    POWER_1M(SensorCategory.POWER_AND_PEDALING, R.string.power_1m, R.string.power_1m_short, R.string.units_power, SensorValueType.DOUBLE, new IntegerFormatter(), true),
+    POWER_5M(SensorCategory.POWER_AND_PEDALING, R.string.power_5m, R.string.power_5m_short, R.string.units_power, SensorValueType.DOUBLE, new IntegerFormatter(), true),
+    POWER_20M(SensorCategory.POWER_AND_PEDALING, R.string.power_20m, R.string.power_20m_short, R.string.units_power, SensorValueType.DOUBLE, new IntegerFormatter(), true),
+    POWER_PEAK_5S(SensorCategory.POWER_AND_PEDALING, R.string.power_peak_5s, R.string.power_peak_5s_short, R.string.units_power, SensorValueType.DOUBLE, new IntegerFormatter(), false),
+    POWER_PEAK_1M(SensorCategory.POWER_AND_PEDALING, R.string.power_peak_1m, R.string.power_peak_1m_short, R.string.units_power, SensorValueType.DOUBLE, new IntegerFormatter(), false),
+    POWER_PEAK_5M(SensorCategory.POWER_AND_PEDALING, R.string.power_peak_5m, R.string.power_peak_5m_short, R.string.units_power, SensorValueType.DOUBLE, new IntegerFormatter(), false),
+    POWER_PEAK_20M(SensorCategory.POWER_AND_PEDALING, R.string.power_peak_20m, R.string.power_peak_20m_short, R.string.units_power, SensorValueType.DOUBLE, new IntegerFormatter(), false),
     SPEED_mps(SensorCategory.SPEED_PACE_AND_DISTANCE, R.string.speed, R.string.speed_short, R.string.units_speed_basic, SensorValueType.DOUBLE, new SpeedFormatter(), true),
     // SPEED_mps_gps          (R.string.speed,                  R.string.speed_short,                  R.string.units_speed_basic,     SensorValueType.DOUBLE,  new SpeedFormatter()),
     // SPEED_mps_network      (R.string.speed,                  R.string.speed_short,                  R.string.units_speed_basic,     SensorValueType.DOUBLE,  new SpeedFormatter()),
@@ -161,7 +169,9 @@ public enum SensorType
             case SPEED_mps -> R.drawable.ic_speed;
             case CADENCE -> R.drawable.ic_cadence;
             case HR -> R.drawable.ic_heart_rate;
-            case POWER, POWER_TO_WEIGHT, NORMALIZED_POWER, INTENSITY_FACTOR, WORK_KJ, TSS -> R.drawable.ic_power;
+            case POWER, POWER_TO_WEIGHT, NORMALIZED_POWER, INTENSITY_FACTOR, WORK_KJ, TSS, W_PRIME_BAL,
+                 POWER_5S, POWER_1M, POWER_5M, POWER_20M,
+                 POWER_PEAK_5S, POWER_PEAK_1M, POWER_PEAK_5M, POWER_PEAK_20M -> R.drawable.ic_power;
             case PHONE_BATTERY, BATTERY_REMAINING_TIME -> R.drawable.ic_battery_full;
             default -> R.drawable.ic_cross;
         };

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+  -->
+
+<resources>
+    <!-- Cockpit MMP and Duration Power Metrics (REQ-TRK-058) -->
+    <string name="power_5s">パワー (5秒)</string>
+    <string name="power_5s_short">5秒 W</string>
+    <string name="power_1m">パワー (1分)</string>
+    <string name="power_1m_short">1分 W</string>
+    <string name="power_5m">パワー (5分)</string>
+    <string name="power_5m_short">5分 W</string>
+    <string name="power_20m">パワー (20分)</string>
+    <string name="power_20m_short">20分 W</string>
+
+    <string name="power_peak_5s">ピークパワー (5秒)</string>
+    <string name="power_peak_5s_short">Pk 5秒</string>
+    <string name="power_peak_1m">ピークパワー (1分)</string>
+    <string name="power_peak_1m_short">Pk 1分</string>
+    <string name="power_peak_5m">ピークパワー (5分)</string>
+    <string name="power_peak_5m_short">Pk 5分</string>
+    <string name="power_peak_20m">ピークパワー (20分)</string>
+    <string name="power_peak_20m_short">Pk 20分</string>
+
+    <string name="mmp_curve">平均最大パワー曲線</string>
+    <string name="mmp_curve_short">MMP</string>
+</resources>

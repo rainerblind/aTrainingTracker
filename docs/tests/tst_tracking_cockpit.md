@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 53
+**Total Tests**: 54
 
 ---
 
@@ -1640,6 +1640,32 @@
   • Verify both `ALTITUDE` and `"ALTITUDE (Höhe aus Luftdruck)"` are updated with 100% numerical parity across all target sample rows.
   5. *Clean-Room Targeted Test Suite Execution (`TST-TRK-057.5`)*:
   • Execute targeted package tests (`com.atrainingtracker.banalservice.devices.*` and `com.atrainingtracker.trainingtracker.database.*`) asserting 100% pass rate.
+
+### TST-TRK-058: **Live Mean Maximal Power (MMP) & Rolling/Peak Duration Test Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-058`
+- **Component**: `CyclingPowerMetricsDevice.java`, `SlidingWindowPowerAccumulator.kt`, `SensorType.java`, `LiveMmpCurveChart.kt`
+- **Jira**: `ATT-1298`
+- **Test Description**:
+  1. *Sliding Window Accumulator & Growing Window Unit Test (`TST-TRK-058.1`, `SlidingWindowPowerAccumulatorTest.kt`)*:
+  • Verify $O(1)$ ring-buffer sliding window accumulator computes correct sum and average across 5s, 60s, 300s, and 1200s windows.
+  • Verify growing-window warm-up phase ($1 \le k < W$) returns immediate valid averages from second 1 (`Rule 40`).
+  • Verify buffer wrap-around properly subtracts evicted old samples and adds new samples without cumulative floating-point drift.
+  2. *Rolling & Session Peak Power Metric Device Integration Test (`TST-TRK-058.2`, `CyclingPowerMetricsDeviceMmpTest.kt`)*:
+  • Verify 1-Hz metrics execution correctly updates `POWER_5S`, `POWER_1M`, `POWER_5M`, `POWER_20M` and peak power sensors.
+  • Verify session peak power retains the highest observed rolling average and never decreases during the session.
+  • Verify pause gating freezes accumulators without ingesting zero-watt samples.
+  • Verify `resetSession()` clears all buffers and peak power registers (`Rule 51`).
+  • Verify Rule 52 sensor-presence gating prevents emitting non-null values before valid power telemetry is received.
+  3. *SensorType & 9-Language Localization Audit (`TST-TRK-058.3`, `SensorTypeMmpTest.kt`)*:
+  • Verify all 8 new `SensorType` entries (`POWER_5S`, `POWER_1M`, `POWER_5M`, `POWER_20M`, `POWER_PEAK_5S`, `POWER_PEAK_1M`, `POWER_PEAK_5M`, `POWER_PEAK_20M`) are registered under `SensorCategory.POWER_AND_PEDALING`.
+  • Verify full 9-language string parity across EN, DE, ES, FR, IT, JA, NL, PL, PT.
+  4. *Live MMP Curve Chart Contract & Gesture Test (`TST-TRK-058.4`, `LiveMmpCurveChartTest.kt`)*:
+  • Verify vector curve mapping on logarithmic duration axis ($1\text{s} \dots 7200\text{s}$).
+  • Verify benchmark duration callout pins (5s, 1m, 5m, 20m) render at expected logarithmic coordinates.
+  • Verify zero Compose `MutableState` snapshot writes occur inside composition (`Rule 66`).
+  5. *Clean-Room Targeted Test Suite Execution (`TST-TRK-058.5`)*:
+  • Execute targeted package tests (`com.atrainingtracker.banalservice.devices.*`, `com.atrainingtracker.banalservice.sensor.*`, `com.atrainingtracker.trainingtracker.ui.tracking.*`) asserting 100% pass rate.
+
 
 
 

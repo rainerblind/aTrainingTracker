@@ -17,7 +17,7 @@ graph TD
     end
 
     subgraph Domain_Layer["2. Domain & Scientific Calculators (SWE.3)"]
-        Physiology["PowerPhysiologyCalculator (FTP, NP, TSS, IF)"]
+        Physiology["PowerPhysiologyCalculator & SlidingWindowPowerAccumulator (FTP, NP, TSS, IF, MMP)"]
         Climbs["ClimbDetector & PolylineProgressTracker"]
         Clusters["RouteLearningEngine & SpatialRegionEngine"]
         AutoPause["AutoPauseManager (Debounce & State Machine)"]
@@ -85,7 +85,7 @@ All system requirements across the 9 living domain shards are allocated directly
 
 | Domain Shard | Requirement Prefix Families | Allocated Architectural Components | Primary Responsibilities |
 | :--- | :--- | :--- | :--- |
-| **Tracking & Live Sensor Cockpit** | `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA` | `BANALService`, `TrackerService`, `ProxySensor`, `MySensorManager`, `AutoPauseManager` | ANT+/BLE telemetry ingestion, sensor fusion, auto-pause debounce, 1-Hz sample recording. |
+| **Tracking & Live Sensor Cockpit** | `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA` | `BANALService`, `TrackerService`, `ProxySensor`, `MySensorManager`, `AutoPauseManager`, `CyclingPowerMetricsDevice`, `SlidingWindowPowerAccumulator`, `LiveMmpCurveChart` | ANT+/BLE telemetry ingestion, sensor fusion, auto-pause debounce, 1-Hz sample recording, live MMP curve & duration benchmarks. |
 | **Post-Workout Analytics & Periods** | `PER`, `PERF` | `WorkoutRepository`, `PowerPhysiologyCalculator`, `ZoneDistributionCalculator`, `PeriodsRepository` | Physiological computation (NP, TSS), 5/7 power zone distributions, period statistics & trend filters. |
 | **Maps, Polylines & Navigation** | `GEO`, `MAP`, `NAV`, `ROU` | `ClimbDetector`, `PolylineProgressTracker`, `MapFragmentWithTrackViewModel`, `ATrainingTrackerMap` | Web Mercator tile rendering, polyline compression, climb categorization, live segment gate matching. |
 | **Persistence, Migration & Cloud Export** | `DAT`, `EXP`, `EXT`, `MIG` | `WorkoutSamplesDb`, `WorkoutSummariesDatabaseManager`, `FitFileWriter`, `StravaUploader`, `GoogleDriveBackupManager` | Time-series SQLite storage, schema migration, Strava OAuth/upload retry, FIT/TCX/GPX serialization. |

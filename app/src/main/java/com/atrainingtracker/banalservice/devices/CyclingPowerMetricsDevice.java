@@ -32,6 +32,7 @@ import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator;
+import com.atrainingtracker.trainingtracker.physiology.SlidingWindowPowerAccumulator;
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper;
 
 import java.util.ArrayDeque;
@@ -72,6 +73,20 @@ public class CyclingPowerMetricsDevice extends MyDevice {
     private MySensor<Double> mWorkKjSensor;
     private MySensor<Double> mTssSensor;
     private MySensor<Double> mWPrimeBalSensor;
+    private MySensor<Double> mPower5sSensor;
+    private MySensor<Double> mPower1mSensor;
+    private MySensor<Double> mPower5mSensor;
+    private MySensor<Double> mPower20mSensor;
+    private MySensor<Double> mPowerPeak5sSensor;
+    private MySensor<Double> mPowerPeak1mSensor;
+    private MySensor<Double> mPowerPeak5mSensor;
+    private MySensor<Double> mPowerPeak20mSensor;
+
+    // Sliding window accumulators for Mean Maximal Power (MMP) durations (REQ-TRK-058.1)
+    private final SlidingWindowPowerAccumulator mAccumulator5s = new SlidingWindowPowerAccumulator(5);
+    private final SlidingWindowPowerAccumulator mAccumulator1m = new SlidingWindowPowerAccumulator(60);
+    private final SlidingWindowPowerAccumulator mAccumulator5m = new SlidingWindowPowerAccumulator(300);
+    private final SlidingWindowPowerAccumulator mAccumulator20m = new SlidingWindowPowerAccumulator(1200);
 
     public interface RecordingStateProvider {
         boolean isRecordingSuspended();
@@ -227,6 +242,30 @@ public class CyclingPowerMetricsDevice extends MyDevice {
 
         mWPrimeBalSensor = new MySensor<>(this, SensorType.W_PRIME_BAL);
         addSensor(mWPrimeBalSensor);
+
+        mPower5sSensor = new MySensor<>(this, SensorType.POWER_5S);
+        addSensor(mPower5sSensor);
+
+        mPower1mSensor = new MySensor<>(this, SensorType.POWER_1M);
+        addSensor(mPower1mSensor);
+
+        mPower5mSensor = new MySensor<>(this, SensorType.POWER_5M);
+        addSensor(mPower5mSensor);
+
+        mPower20mSensor = new MySensor<>(this, SensorType.POWER_20M);
+        addSensor(mPower20mSensor);
+
+        mPowerPeak5sSensor = new MySensor<>(this, SensorType.POWER_PEAK_5S);
+        addSensor(mPowerPeak5sSensor);
+
+        mPowerPeak1mSensor = new MySensor<>(this, SensorType.POWER_PEAK_1M);
+        addSensor(mPowerPeak1mSensor);
+
+        mPowerPeak5mSensor = new MySensor<>(this, SensorType.POWER_PEAK_5M);
+        addSensor(mPowerPeak5mSensor);
+
+        mPowerPeak20mSensor = new MySensor<>(this, SensorType.POWER_PEAK_20M);
+        addSensor(mPowerPeak20mSensor);
     }
 
     public synchronized MySensor<Double> getPowerToWeightSensor() {
@@ -251,6 +290,54 @@ public class CyclingPowerMetricsDevice extends MyDevice {
 
     public synchronized MySensor<Double> getWPrimeBalSensor() {
         return mWPrimeBalSensor;
+    }
+
+    public synchronized MySensor<Double> getPower5sSensor() {
+        return mPower5sSensor;
+    }
+
+    public synchronized MySensor<Double> getPower1mSensor() {
+        return mPower1mSensor;
+    }
+
+    public synchronized MySensor<Double> getPower5mSensor() {
+        return mPower5mSensor;
+    }
+
+    public synchronized MySensor<Double> getPower20mSensor() {
+        return mPower20mSensor;
+    }
+
+    public synchronized MySensor<Double> getPowerPeak5sSensor() {
+        return mPowerPeak5sSensor;
+    }
+
+    public synchronized MySensor<Double> getPowerPeak1mSensor() {
+        return mPowerPeak1mSensor;
+    }
+
+    public synchronized MySensor<Double> getPowerPeak5mSensor() {
+        return mPowerPeak5mSensor;
+    }
+
+    public synchronized MySensor<Double> getPowerPeak20mSensor() {
+        return mPowerPeak20mSensor;
+    }
+
+    public SlidingWindowPowerAccumulator getAccumulator5s() {
+        return mAccumulator5s;
+    }
+
+    public SlidingWindowPowerAccumulator getAccumulator1m() {
+        return mAccumulator1m;
+    }
+
+    public SlidingWindowPowerAccumulator getAccumulator5m() {
+        return mAccumulator5m;
+    }
+
+    public SlidingWindowPowerAccumulator getAccumulator20m() {
+        return mAccumulator20m;
     }
 
     public synchronized void resetSession() {
@@ -283,6 +370,34 @@ public class CyclingPowerMetricsDevice extends MyDevice {
             mCurrentWPrimeBalJoules = wPrimeKj * 1000.0;
         } else {
             mCurrentWPrimeBalJoules = null;
+        }
+        mAccumulator5s.reset();
+        mAccumulator1m.reset();
+        mAccumulator5m.reset();
+        mAccumulator20m.reset();
+        if (mPower5sSensor != null) {
+            mPower5sSensor.newValue(null);
+        }
+        if (mPower1mSensor != null) {
+            mPower1mSensor.newValue(null);
+        }
+        if (mPower5mSensor != null) {
+            mPower5mSensor.newValue(null);
+        }
+        if (mPower20mSensor != null) {
+            mPower20mSensor.newValue(null);
+        }
+        if (mPowerPeak5sSensor != null) {
+            mPowerPeak5sSensor.newValue(null);
+        }
+        if (mPowerPeak1mSensor != null) {
+            mPowerPeak1mSensor.newValue(null);
+        }
+        if (mPowerPeak5mSensor != null) {
+            mPowerPeak5mSensor.newValue(null);
+        }
+        if (mPowerPeak20mSensor != null) {
+            mPowerPeak20mSensor.newValue(null);
         }
         if (mWPrimeBalSensor != null) {
             mWPrimeBalSensor.newValue(null);
@@ -463,6 +578,38 @@ public class CyclingPowerMetricsDevice extends MyDevice {
             if (mWPrimeBalSensor != null) {
                 mWPrimeBalSensor.newValue(null);
             }
+        }
+
+        // 7. Update Mean Maximal Power (MMP) duration accumulators & session peaks (REQ-TRK-058)
+        mAccumulator5s.addSample(power);
+        mAccumulator1m.addSample(power);
+        mAccumulator5m.addSample(power);
+        mAccumulator20m.addSample(power);
+
+        if (mPower5sSensor != null) {
+            mPower5sSensor.newValue(mAccumulator5s.getAverage());
+        }
+        if (mPower1mSensor != null) {
+            mPower1mSensor.newValue(mAccumulator1m.getAverage());
+        }
+        if (mPower5mSensor != null) {
+            mPower5mSensor.newValue(mAccumulator5m.getAverage());
+        }
+        if (mPower20mSensor != null) {
+            mPower20mSensor.newValue(mAccumulator20m.getAverage());
+        }
+
+        if (mPowerPeak5sSensor != null) {
+            mPowerPeak5sSensor.newValue(mAccumulator5s.getPeak());
+        }
+        if (mPowerPeak1mSensor != null) {
+            mPowerPeak1mSensor.newValue(mAccumulator1m.getPeak());
+        }
+        if (mPowerPeak5mSensor != null) {
+            mPowerPeak5mSensor.newValue(mAccumulator5m.getPeak());
+        }
+        if (mPowerPeak20mSensor != null) {
+            mPowerPeak20mSensor.newValue(mAccumulator20m.getPeak());
         }
     }
 
