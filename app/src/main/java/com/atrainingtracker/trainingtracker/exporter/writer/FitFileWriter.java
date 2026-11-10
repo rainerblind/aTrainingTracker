@@ -35,6 +35,8 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManag
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
+import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository;
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository;
 import com.atrainingtracker.trainingtracker.exporter.ExportInfo;
 import com.atrainingtracker.trainingtracker.ui.aftermath.LapData;
 import com.garmin.fit.Activity;
@@ -161,8 +163,8 @@ public class FitFileWriter extends BaseFileWriter {
             Sport sport = Sport.GENERIC;
             SubSport subSport = SubSport.GENERIC;
 
-            BSportType bSport = SportTypeDatabaseManager.getInstance(mContext).getBSportType(sportTypeId);
-            String tcxName = SportTypeDatabaseManager.getInstance(mContext).getTcxName(sportTypeId);
+            BSportType bSport = SportTypesRepository.getInstance(mContext).getBSportType(sportTypeId);
+            String tcxName = SportTypesRepository.getInstance(mContext).getTcxName(sportTypeId);
             if (tcxName == null) tcxName = "";
             String tcxLower = tcxName.toLowerCase(Locale.US);
 
@@ -187,7 +189,7 @@ public class FitFileWriter extends BaseFileWriter {
             }
 
             // 2. Iterate samples and write RecordMesg entries
-            WorkoutSamplesDatabaseManager samplesDbManager = WorkoutSamplesDatabaseManager.getInstance(mContext);
+            WorkoutSamplesDatabaseManager samplesDbManager = WorkoutRepository.getInstance(mContext).getWorkoutSamplesDatabaseManager();
             SQLiteDatabase samplesDb = samplesDbManager.getDatabase();
             String tableName = WorkoutSamplesDatabaseManager.getTableName(exportInfo.getFileBaseName());
 
@@ -321,7 +323,7 @@ public class FitFileWriter extends BaseFileWriter {
 
             // 3. LapMesg entries
             // Query laps from Laps.db (strictly read-only access)
-            List<LapData> laps = LapsDatabaseManager.getInstance(mContext).getLaps(workoutID);
+            List<LapData> laps = WorkoutRepository.getInstance(mContext).getLaps(workoutID);
             if (laps != null && !laps.isEmpty()) {
                 for (LapData lap : laps) {
                     LapMesg lapMesg = new LapMesg();
@@ -377,7 +379,7 @@ public class FitFileWriter extends BaseFileWriter {
             sessionMesg.setNumLaps(laps != null && !laps.isEmpty() ? laps.size() : 1);
 
             // Populate summary metrics from WorkoutSummaries table
-            WorkoutSummariesDatabaseManager summaryDbManager = WorkoutSummariesDatabaseManager.getInstance(mContext);
+            WorkoutSummariesDatabaseManager summaryDbManager = WorkoutRepository.getInstance(mContext).getWorkoutSummariesDatabaseManager();
             SQLiteDatabase summaryDb = summaryDbManager.getDatabase();
             try (Cursor sumCursor = summaryDb.query(WorkoutSummaries.TABLE,
                     new String[]{WorkoutSummaries.CALORIES, WorkoutSummaries.ASCENDING, WorkoutSummaries.DESCENDING, WorkoutSummaries.SPEED_AVERAGE_mps},

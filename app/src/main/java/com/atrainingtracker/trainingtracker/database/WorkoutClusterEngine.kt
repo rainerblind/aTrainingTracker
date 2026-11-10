@@ -25,7 +25,11 @@ import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
+import com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository
+import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
+import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
 
@@ -44,7 +48,7 @@ import com.google.maps.android.PolyUtil
 class WorkoutClusterEngine private constructor(context: Context) {
 
     private val appContext = context.applicationContext
-    private val dbManager = WorkoutClusterDatabaseManager.getInstance(appContext)
+    private val dbManager get() = WorkoutClusterRepository.getInstance(appContext).databaseManager
     internal val clusterLock = Any()
 
     companion object {
@@ -64,6 +68,12 @@ class WorkoutClusterEngine private constructor(context: Context) {
         @androidx.annotation.VisibleForTesting
         fun resetForTesting(newInstance: WorkoutClusterEngine? = null) {
             instance = newInstance
+            WorkoutClusterRepository.resetForTesting(null)
+            com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository.resetForTesting(null)
+            com.atrainingtracker.trainingtracker.repositories.SportTypesRepository.resetForTesting(null)
+            com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository.resetForTesting(null)
+            com.atrainingtracker.trainingtracker.segments.SegmentsRepository.resetForTesting(null)
+            com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusRepository.resetForTesting(null)
         }
 
         /**
@@ -175,7 +185,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
         cachedClusters: MutableList<WorkoutCluster>? = null
     ): Long {
         synchronized(clusterLock) {
-            val workoutSportType = SportTypeDatabaseManager.getInstance(appContext).getBSportType(userSportId)
+            val workoutSportType = SportTypesRepository.getInstance(appContext).getBSportType(userSportId)
             val normalizedInputName = stripHitCount(userSpecifiedName)
             val existingMatch = if (clusterIdOverride != -1L) {
                 cachedClusters?.find { it.id == clusterIdOverride } ?: dbManager.getClusterById(clusterIdOverride)
@@ -214,7 +224,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
             val updatedCluster = existingMatch.copy(
                 name = uniqueName,
                 probableSportId = userSportId,
-                bSportType = SportTypeDatabaseManager.getInstance(appContext).getBSportType(userSportId),
+                bSportType = SportTypesRepository.getInstance(appContext).getBSportType(userSportId),
                 startLat = (existingMatch.startLat * existingMatch.hitCount + start.latitude) / (existingMatch.hitCount + 1),
                 startLng = (existingMatch.startLng * existingMatch.hitCount + start.longitude) / (existingMatch.hitCount + 1),
                 endLat = (existingMatch.endLat * existingMatch.hitCount + end.latitude) / (existingMatch.hitCount + 1),
@@ -253,7 +263,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
                 maxDispLng = apex.longitude,
                 refDistance = distance,
                 hitCount = 0,
-                bSportType = SportTypeDatabaseManager.getInstance(appContext).getBSportType(userSportId),
+                bSportType = SportTypesRepository.getInstance(appContext).getBSportType(userSportId),
                 // ATT-371: Initialize bounds
                 minLat = minLat, minLng = minLng, maxLat = maxLat, maxLng = maxLng,
                 // ATT-502
@@ -278,7 +288,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
      * If no location exists within the geofence radius of [start], automatically seeds a new location.
      */
     fun ensureStartingLocationAnchor(start: LatLng) {
-        val knownLocManager = KnownLocationsDatabaseManager.getInstance(appContext)
+        val knownLocManager = KnownLocationsRepository.getInstance(appContext)
         if (knownLocManager.getMyLocation(start) == null) {
             knownLocManager.recordWorkoutStart(start, null)
         }
@@ -372,8 +382,8 @@ class WorkoutClusterEngine private constructor(context: Context) {
             // --- ATT-354 Refinement: Null-Safe Bounds Update ---
             val wMinLat = w.minLat; val wMinLng = w.minLng; val wMaxLat = w.maxLat; val wMaxLng = w.maxLng
             
-            val minAltPos = w.minAltitudeLatLng ?: WorkoutSummariesDatabaseManager.getInstance(context).getExtremaPosition(w.id, SensorType.ALTITUDE, ExtremaType.MIN)
-            val maxAltPos = w.maxAltitudeLatLng ?: WorkoutSummariesDatabaseManager.getInstance(context).getExtremaPosition(w.id, SensorType.ALTITUDE, ExtremaType.MAX)
+            val minAltPos = w.minAltitudeLatLng ?: WorkoutRepository.getInstance(context).getExtremaPosition(w.id, SensorType.ALTITUDE, ExtremaType.MIN)
+            val maxAltPos = w.maxAltitudeLatLng ?: WorkoutRepository.getInstance(context).getExtremaPosition(w.id, SensorType.ALTITUDE, ExtremaType.MAX)
 
             val updatedMinAltLat = if (minAltPos != null) {
                 if (currentMatch.minAltLat != null) (currentMatch.minAltLat * currentMatch.hitCount + minAltPos.latitude) / (currentMatch.hitCount + 1)
@@ -470,7 +480,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
      */
     fun recalculateClusterAnchors(context: Context, cluster: WorkoutCluster) {
         synchronized(clusterLock) {
-            val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
+            val summariesManager = WorkoutRepository.getInstance(context).workoutSummariesDatabaseManager
             val db = summariesManager.getDatabase()
             val cursor = db.query(WorkoutSummaries.TABLE, 
                 arrayOf(WorkoutSummaries.C_ID, WorkoutSummaries.TIME_ACTIVE_s, 
@@ -507,7 +517,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
             
             val mostFrequentSport = summariesManager.getMostFrequentSportIdForCluster(refreshed.id)
             if (mostFrequentSport != -1L) {
-                val bSport = SportTypeDatabaseManager.getInstance(context).getBSportType(mostFrequentSport)
+                val bSport = SportTypesRepository.getInstance(context).getBSportType(mostFrequentSport)
                 dbManager.updateCluster(refreshed.copy(probableSportId = mostFrequentSport, bSportType = bSport))
             }
         }
@@ -521,7 +531,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
      */
     fun healLegacyPointToPointApexes(context: Context): Int {
         return synchronized(clusterLock) {
-            val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
+            val summariesManager = WorkoutRepository.getInstance(context).workoutSummariesDatabaseManager
             val summariesDb = summariesManager.database
             val affectedClusterIds = mutableSetOf<Long>()
             var healedCount = 0
@@ -680,7 +690,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
                 if (lon > maxLng) maxLng = lon
             }
             
-            val sportId = SportTypeDatabaseManager.getSportTypeId(route.summary.bSportType)
+            val sportId = SportTypesRepository.getSportTypeId(route.summary.bSportType)
             return learnFromWorkout(
                 start, end, apex, distance, route.summary.name, sportId,
                 minLat = minLat, minLng = minLng, maxLat = maxLat, maxLng = maxLng
@@ -694,9 +704,9 @@ class WorkoutClusterEngine private constructor(context: Context) {
     @JvmOverloads
     fun migrateHistory(context: Context, listener: ClusterMigrationListener? = null) {
         synchronized(clusterLock) {
-        val routesDb = RoutesDatabaseManager.getInstance(context)
-        val routesDbInstance = routesDb.getDatabase()
-        val routes = routesDb.getAllRoutes()
+        val routesRepo = RoutesRepository.getInstance(context)
+        val routesDbInstance = routesRepo.getDatabase()
+        val routes = routesRepo.getAllRoutesFromDb()
         
         routesDbInstance.beginTransaction()
         try {
@@ -704,7 +714,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
                 listener?.onPhase1Progress(index + 1, routes.size)
                 val clusterId = learnFromRoute(routeWithPath)
                 if (clusterId != -1L) {
-                    routesDb.updateRouteSummary(routeWithPath.summary.copy(clusterId = clusterId))
+                    routesRepo.updateRouteSummarySync(routeWithPath.summary.copy(clusterId = clusterId))
                 }
             }
             routesDbInstance.setTransactionSuccessful()
@@ -717,7 +727,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
             listener?.onPhase1Progress(0, 0)
         }
 
-        val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
+        val summariesManager = WorkoutRepository.getInstance(context).workoutSummariesDatabaseManager
         val cursor = summariesManager.getCursorForAllWorkoutsAsc() ?: return
         val summariesDb = summariesManager.getDatabase()
         val clusterDbInstance = dbManager.getDatabase()
@@ -752,7 +762,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
                         if (start != null && end != null && apex != null && distance > 100.0) {
                             val isDefault = workoutName.isNullOrEmpty() || workoutName == fileBaseName
                             val normalizedName = if (!isDefault) stripHitCount(workoutName) else null
-                            val workoutSportType = SportTypeDatabaseManager.getInstance(context).getBSportType(sportId)
+                            val workoutSportType = SportTypesRepository.getInstance(context).getBSportType(sportId)
                             
                             val match = suggestCluster(start, end, apex, distance, normalizedName, workoutSportType, minAltPos, maxAltPos, localClusters)
                             if (match != null) {
@@ -798,7 +808,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
                                     maxDispLat = (match.maxDispLat * match.hitCount + apex.latitude) / (match.hitCount + 1),
                                     maxDispLng = (match.maxDispLng * match.hitCount + apex.longitude) / (match.hitCount + 1),
                                     refDistance = (match.refDistance * match.hitCount + distance) / (match.hitCount + 1),
-                                    bSportType = SportTypeDatabaseManager.getInstance(context).getBSportType(finalSport),
+                                    bSportType = SportTypesRepository.getInstance(context).getBSportType(finalSport),
                                     minLat = minLat, minLng = minLng, maxLat = maxLat, maxLng = maxLng,
                                     minAltLat = updatedMinAltLat,
                                     minAltLng = updatedMinAltLng,
@@ -815,7 +825,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
                                     normalizedName!!
                                 } else {
                                     val seedName = try {
-                                        val startLoc = KnownLocationsDatabaseManager.getInstance(context).getMyLocation(start)
+                                        val startLoc = KnownLocationsRepository.getInstance(context).getMyLocation(start)
                                         WorkoutAutoNamingHelper.generateClusterSeedName(context, startLoc)
                                     } catch (e: Exception) {
                                         null
@@ -879,8 +889,8 @@ class WorkoutClusterEngine private constructor(context: Context) {
                 unassignClusterFromWorkout(context, workoutId)
                 return
             }
-            val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
-            val clusterDb = WorkoutClusterDatabaseManager.getInstance(context)
+            val summariesManager = WorkoutRepository.getInstance(context).workoutSummariesDatabaseManager
+            val clusterDb = WorkoutClusterRepository.getInstance(context).databaseManager
             val previousClusterId = summariesManager.getLong(workoutId, WorkoutSummaries.CLUSTER_ID) ?: -1L
             val cluster = clusterDb.getClusterById(clusterId) ?: return
 
@@ -943,8 +953,8 @@ class WorkoutClusterEngine private constructor(context: Context) {
      */
     fun unassignClusterFromWorkout(context: Context, workoutId: Long) {
         synchronized(clusterLock) {
-            val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
-            val clusterDb = WorkoutClusterDatabaseManager.getInstance(context)
+            val summariesManager = WorkoutRepository.getInstance(context).workoutSummariesDatabaseManager
+            val clusterDb = WorkoutClusterRepository.getInstance(context).databaseManager
             val previousClusterId = summariesManager.getLong(workoutId, WorkoutSummaries.CLUSTER_ID) ?: -1L
             
             val values = android.content.ContentValues().apply {
@@ -979,7 +989,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
         customWorkoutName: String? = null
     ): Long {
         synchronized(clusterLock) {
-            val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
+            val summariesManager = WorkoutRepository.getInstance(context).workoutSummariesDatabaseManager
             val start = workout.startLatLng ?: summariesManager.getExtremaPosition(workout.id, SensorType.LATITUDE, ExtremaType.START) ?: return -1L
             val end = workout.endLatLng ?: summariesManager.getExtremaPosition(workout.id, SensorType.LATITUDE, ExtremaType.END) ?: return -1L
             val apex = workout.maxDisplacementLatLng ?: summariesManager.getExtremaPosition(workout.id, SensorType.LINE_DISTANCE_m, ExtremaType.MAX) ?: end
@@ -991,7 +1001,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
                 workout.workoutName
             } else {
                 val seedName = try {
-                    val startLoc = KnownLocationsDatabaseManager.getInstance(context).getMyLocation(start)
+                    val startLoc = KnownLocationsRepository.getInstance(context).getMyLocation(start)
                     WorkoutAutoNamingHelper.generateClusterSeedName(context, startLoc)
                 } catch (e: Exception) {
                     null
@@ -1014,7 +1024,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
                 maxDispLng = apex.longitude,
                 refDistance = distance,
                 hitCount = 0,
-                bSportType = SportTypeDatabaseManager.getInstance(context).getBSportType(sportId),
+                bSportType = SportTypesRepository.getInstance(context).getBSportType(sportId),
                 minLat = workout.minLat, minLng = workout.minLng, maxLat = workout.maxLat, maxLng = workout.maxLng,
                 minAltLat = minAltPos?.latitude,
                 minAltLng = minAltPos?.longitude,
@@ -1046,7 +1056,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
         customWorkoutName: String? = null
     ): Long {
         synchronized(clusterLock) {
-            val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
+            val summariesManager = WorkoutRepository.getInstance(context).workoutSummariesDatabaseManager
             val start = summariesManager.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.START) ?: return -1L
             val end = summariesManager.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.END) ?: return -1L
             val apex = summariesManager.getExtremaPosition(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX) ?: end
@@ -1063,7 +1073,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
                 workoutName
             } else {
                 val seedName = try {
-                    val startLoc = KnownLocationsDatabaseManager.getInstance(context).getMyLocation(start)
+                    val startLoc = KnownLocationsRepository.getInstance(context).getMyLocation(start)
                     WorkoutAutoNamingHelper.generateClusterSeedName(context, startLoc)
                 } catch (e: Exception) {
                     null
@@ -1086,7 +1096,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
                 maxDispLng = apex.longitude,
                 refDistance = distance,
                 hitCount = 0,
-                bSportType = SportTypeDatabaseManager.getInstance(context).getBSportType(sportId),
+                bSportType = SportTypesRepository.getInstance(context).getBSportType(sportId),
                 minLat = wMinLat, minLng = wMinLng, maxLat = wMaxLat, maxLng = wMaxLng,
                 minAltLat = minAltPos?.latitude,
                 minAltLng = minAltPos?.longitude,
@@ -1226,7 +1236,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
         maxAltPos: LatLng? = null,
         workoutPolyline: List<LatLng>? = null
     ): List<Pair<WorkoutCluster, Double>> {
-        val summariesManager = WorkoutSummariesDatabaseManager.getInstance(appContext)
+        val summariesManager = WorkoutRepository.getInstance(appContext).workoutSummariesDatabaseManager
         val actualCounts = summariesManager.workoutCountsForAllClusters
         val clusters = dbManager.getAllClusters().map { cluster ->
             val realCount = actualCounts[cluster.id] ?: 0
@@ -1288,7 +1298,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
 
     fun moveWorkoutToCluster(context: Context, workoutId: Long, currentClusterId: Long, newClusterId: Long) {
         synchronized(clusterLock) {
-            val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
+            val summariesManager = WorkoutRepository.getInstance(context).workoutSummariesDatabaseManager
             val start = summariesManager.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.START)
             val end = summariesManager.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.END)
             val apex = summariesManager.getExtremaPosition(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX)
@@ -1331,7 +1341,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
                 if (mostFrequentSport != -1L && mostFrequentSport != refreshedOld.probableSportId) {
                     dbManager.updateCluster(refreshedOld.copy(
                         probableSportId = mostFrequentSport,
-                        bSportType = SportTypeDatabaseManager.getInstance(context).getBSportType(mostFrequentSport)
+                        bSportType = SportTypesRepository.getInstance(context).getBSportType(mostFrequentSport)
                     ))
                 }
             }
@@ -1341,7 +1351,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
                 if (mostFrequentSport != -1L && mostFrequentSport != refreshedNew.probableSportId) {
                     dbManager.updateCluster(refreshedNew.copy(
                         probableSportId = mostFrequentSport,
-                        bSportType = SportTypeDatabaseManager.getInstance(context).getBSportType(mostFrequentSport)
+                        bSportType = SportTypesRepository.getInstance(context).getBSportType(mostFrequentSport)
                     ))
                 }
             }
@@ -1362,8 +1372,8 @@ class WorkoutClusterEngine private constructor(context: Context) {
             val sourceCluster = dbManager.getClusterById(sourceId) ?: return false
             val targetCluster = dbManager.getClusterById(targetId) ?: return false
 
-            val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
-            val routesManager = RoutesDatabaseManager.getInstance(context)
+            val summariesManager = WorkoutRepository.getInstance(context).workoutSummariesDatabaseManager
+            val routesManager = RoutesRepository.getInstance(context).databaseManager
 
             // 1. Reassign workouts & routes
             summariesManager.reassignClusterWorkouts(sourceId, targetId)
@@ -1416,7 +1426,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
 
                 val mostFrequentSport = summariesManager.getMostFrequentSportIdForCluster(targetId)
                 val sportId = if (mostFrequentSport != -1L) mostFrequentSport else targetCluster.probableSportId
-                val bSport = SportTypeDatabaseManager.getInstance(context).getBSportType(sportId)
+                val bSport = SportTypesRepository.getInstance(context).getBSportType(sportId)
 
                 targetCluster.copy(
                     hitCount = totalHits,
@@ -1469,7 +1479,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
             val primaryCluster = dbManager.getClusterById(primaryClusterId) ?: return emptyList()
             if (variantsToSplit.isEmpty()) return emptyList()
 
-            val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
+            val summariesManager = WorkoutRepository.getInstance(context).workoutSummariesDatabaseManager
             val summariesDb = summariesManager.database
             val createdClusterIds = mutableListOf<Long>()
             val allSplitWorkoutIds = mutableSetOf<Long>()
@@ -1501,7 +1511,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
 
                     val previewPaths = workouts.mapNotNull { it.mapPolyline.takeIf { p -> p.isNotEmpty() } }.distinct().take(5)
                     val mostFrequentSport = workouts.groupBy { it.sportId }.maxByOrNull { it.value.size }?.key ?: primaryCluster.probableSportId
-                    val bSport = SportTypeDatabaseManager.getInstance(context).getBSportType(mostFrequentSport)
+                    val bSport = SportTypesRepository.getInstance(context).getBSportType(mostFrequentSport)
 
                     val newCluster = WorkoutCluster(
                         name = uniqueName,
@@ -1634,7 +1644,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
             return dbManager.insertCluster(WorkoutCluster(
                 name = findUniqueClusterName(name), probableSportId = sportId, startLat = start.latitude, startLng = start.longitude,
                 endLat = end.latitude, endLng = end.longitude, maxDispLat = apex.latitude, maxDispLng = apex.longitude,
-                refDistance = distance, hitCount = 0, bSportType = SportTypeDatabaseManager.getInstance(appContext).getBSportType(sportId)
+                refDistance = distance, hitCount = 0, bSportType = SportTypesRepository.getInstance(appContext).getBSportType(sportId)
             ))
         }
     }

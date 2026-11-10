@@ -34,6 +34,8 @@ import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper;
 import com.atrainingtracker.trainingtracker.exporter.ExportInfo;
+import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository;
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository;
 import com.atrainingtracker.trainingtracker.tcx.model.TcxActivity;
 import com.atrainingtracker.trainingtracker.tcx.model.TcxActivityExtensions;
 import com.atrainingtracker.trainingtracker.tcx.model.TcxAuthor;
@@ -155,7 +157,7 @@ public class TCXFileWriter extends BaseFileWriter {
         getHeaderData(exportInfo);
 
         try {
-            List<LapData> lapsList = LapsDatabaseManager.getInstance(mContext).getLaps(workoutID);
+            List<LapData> lapsList = WorkoutRepository.getInstance(mContext).getLaps(workoutID);
             Map<Long, LapData> lapDataMap = new HashMap<>();
             for (LapData lapData : lapsList) {
                 lapDataMap.put(lapData.getLapNr(), lapData);
@@ -167,7 +169,7 @@ public class TCXFileWriter extends BaseFileWriter {
             String totalTime = "0";
             String totalDistance = "0";
 
-            SQLiteDatabase db = WorkoutSamplesDatabaseManager.getInstance(mContext).getDatabase();
+            SQLiteDatabase db = WorkoutRepository.getInstance(mContext).getWorkoutSamplesDatabaseManager().getDatabase();
             try (Cursor cursor = db.query(WorkoutSamplesDatabaseManager.getTableName(exportInfo.getFileBaseName()),
                     null,
                     null,
@@ -201,7 +203,7 @@ public class TCXFileWriter extends BaseFileWriter {
                             totalTime = String.valueOf(lapData.getTimeTotalS());
                             totalDistance = String.valueOf(lapData.getDistanceTotalM());
                         } else {
-                            SQLiteDatabase lapDb = LapsDatabaseManager.getInstance(mContext).getDatabase();
+                            SQLiteDatabase lapDb = WorkoutRepository.getInstance(mContext).getLapsDatabaseManagerInstance().getDatabase();
                             try (Cursor lapCursor = lapDb.query(LapsDatabaseManager.Laps.TABLE,
                                     null,
                                     LapsDatabaseManager.Laps.WORKOUT_ID + "=? AND " + LapsDatabaseManager.Laps.LAP_NR + "=?",
@@ -347,7 +349,7 @@ public class TCXFileWriter extends BaseFileWriter {
             );
 
             TcxActivity activity = new TcxActivity(
-                    SportTypeDatabaseManager.getInstance(mContext).getTcxName(sportTypeId),
+                    SportTypesRepository.getInstance(mContext).getTcxName(sportTypeId),
                     dbTime2XMLTime(startTime),
                     tcxLaps,
                     activityNotes,

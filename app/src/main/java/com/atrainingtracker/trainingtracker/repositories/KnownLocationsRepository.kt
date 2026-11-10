@@ -323,6 +323,13 @@ open class KnownLocationsRepository @VisibleForTesting constructor(
         repositoryScope.cancel()
     }
 
+    open fun getMyLocation(latLng: LatLng): KnownLocationsDatabaseManager.MyLocation? =
+        databaseManager.getMyLocation(latLng)
+
+    open fun recordWorkoutStart(latLng: LatLng?, altitude: Double? = null) {
+        databaseManager.recordWorkoutStart(latLng, altitude)
+    }
+
     companion object {
         private const val TAG = "KnownLocationsRepo"
 

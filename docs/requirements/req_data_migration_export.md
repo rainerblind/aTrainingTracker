@@ -3244,6 +3244,39 @@
 
 **Invariants**: Zero database schema alterations; zero regression in existing GPX or FIT export/import engines; strict Garmin TCX v2 schema compliance; 100% unit test pass rate.
 
+### REQ-DAT-041: Repository-Only Engine, Exporter & Migration Layer Database Access (Phase B) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-DAT-037` | **Tickets**: `ATT-6426`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutClusterEngine.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/migration/LegacyImportEngine.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/exporter/StravaUploader.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/exporter/FitFileWriter.java`, `app/src/main/java/com/atrainingtracker/trainingtracker/exporter/TCXFileWriter.java`, `app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutDeletionHelper.java`
+- **Rationale**: Direct instantiation of SQLite database manager singletons (`*DatabaseManager.getInstance()`) inside processing engines, exporters, and migration helpers violates Clean Architecture (SWE.2) and couples core background pipelines directly to low-level SQLite helpers. The system SHALL eliminate all direct database manager references from Phase B components by routing all database operations through domain repositories (`WorkoutRepository`, `SportTypesRepository`, `EquipmentRepository`, `WorkoutClusterRepository`, `KnownLocationsRepository`, `RoutesRepository`, `SegmentsRepository`, `ExportStatusRepository`).
+- **Description**:
+  1. *WorkoutClusterEngine Decoupling (`REQ-DAT-041.1`)*:
+     - `WorkoutClusterEngine.kt` SHALL execute all cluster centroid calculations, candidate route lookups, sport type filtering, and milestone naming through `WorkoutClusterRepository`, `SportTypesRepository`, `KnownLocationsRepository`, `WorkoutRepository`, and `RoutesRepository`.
+  2. *LegacyImportEngine Decoupling (`REQ-DAT-041.2`)*:
+     - `LegacyImportEngine.kt` SHALL execute workout, lap, sample, cluster, and export status persistence via `WorkoutRepository`, `SportTypesRepository`, `WorkoutClusterRepository`, and `ExportStatusRepository`.
+  3. *StravaUploader Decoupling (`REQ-DAT-041.3`)*:
+     - `StravaUploader.kt` SHALL route workout metadata queries, segment detection, equipment resolution, and upload state updates through `WorkoutRepository`, `SportTypesRepository`, `EquipmentRepository`, and `SegmentsRepository`.
+  4. *FitFileWriter & TCXFileWriter Decoupling (`REQ-DAT-041.4`)*:
+     - `FitFileWriter.java` and `TCXFileWriter.java` SHALL retrieve lap, sample, summary, and sport type telemetry via domain repositories while preserving existing constructors for unit test backward compatibility.
+  5. *WorkoutDeletionHelper Decoupling (`REQ-DAT-041.5`)*:
+     - `WorkoutDeletionHelper.java` SHALL execute cascade deletions through repository delegates while preserving test constructor compatibility.
+  6. *Domain Repository Batch & Mutation Delegates (`REQ-DAT-041.6`)*:
+     - Target domain repositories SHALL expose any required batch queries and mutations on `Dispatchers.IO` / repository executors.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `WorkoutClusterEngine`, `LegacyImportEngine`, `StravaUploader`, `FitFileWriter`, `TCXFileWriter`, and `WorkoutDeletionHelper`,
+• *When* auditing source code and AST references,
+• *Then* zero occurrences of `*DatabaseManager.getInstance(...)` exist across all Phase B target files.
+• *Given* a recorded workout session exported to FIT or TCX or uploaded to Strava,
+• *When* processed via the refactored exporters and engines,
+• *Then* file contents, Strava payloads, cluster centroids, and deletion cascades remain 100% bit-exact and functionally identical.
+• *Given* a multi-sport TCX or GPX backup archive,
+• *When* imported via `LegacyImportEngine`,
+• *Then* all workouts, laps, and sensor samples are fully persisted with 100% data integrity via domain repository delegates.
+
+**Invariants**: Phase C (`TrackerService`, `BANALService`) strictly untouched; zero SQLite schema alterations; 100% unit test pass rate.
+
+
 
 
 

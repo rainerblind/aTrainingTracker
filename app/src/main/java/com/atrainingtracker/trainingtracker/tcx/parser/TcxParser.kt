@@ -454,11 +454,7 @@ object TcxParser {
                     onParsed("", trimmed)
                 }
             } else {
-                if (trimmed.length <= 40) {
-                    onParsed(trimmed, null)
-                } else {
-                    onParsed("", trimmed)
-                }
+                onParsed("", trimmed)
             }
         }
     }

@@ -23,6 +23,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.database.Cursor
 import android.net.Uri
 import android.util.Log
 import androidx.annotation.VisibleForTesting
@@ -110,7 +111,10 @@ import kotlinx.coroutines.sync.withLock
  * Architectural Role: Data access layer with state management.
  * Threading: Most operations are offloaded to [Dispatchers.IO] using a [SupervisorJob].
  */
-class WorkoutRepository private constructor(private val application: Application) : CoroutineScope {
+class WorkoutRepository private constructor(private val context: Context) : CoroutineScope {
+
+    private val application get() = context
+    private val app get() = (context as? Application) ?: (context.applicationContext as? Application)
 
     companion object {
         private val TAG = WorkoutRepository::class.java.simpleName
@@ -132,26 +136,18 @@ class WorkoutRepository private constructor(private val application: Application
          */
         @JvmStatic
         fun getInstance(application: Application): WorkoutRepository {
-            // Double-check locking ensures thread safety and performance.
-            return INSTANCE ?: synchronized(this) {
-                val instance = INSTANCE
-                if (instance != null) {
-                    instance
-                } else {
-                    val newInstance = WorkoutRepository(application)
-                    INSTANCE = newInstance
-                    newInstance
-                }
-            }
+            return getInstance(application as Context)
         }
 
         @JvmStatic
         fun getInstance(context: Context): WorkoutRepository {
-            INSTANCE?.let { return it }
-            return if (context is Application) {
-                getInstance(context)
-            } else {
-                getInstance(context.applicationContext as Application)
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: run {
+                    val appContext = context.applicationContext ?: context
+                    val newInstance = WorkoutRepository(appContext)
+                    INSTANCE = newInstance
+                    newInstance
+                }
             }
         }
 
@@ -201,13 +197,47 @@ class WorkoutRepository private constructor(private val application: Application
     @VisibleForTesting
     internal var deletionHelperInstance: WorkoutDeletionHelper? = null
     private val deletionHelper get() = deletionHelperInstance ?: WorkoutDeletionHelper(application)
-    private val summariesManager by lazy { WorkoutSummariesDatabaseManager.getInstance(application) }
-    private val samplesManager by lazy { WorkoutSamplesDatabaseManager.getInstance(application) }
-    private val equipmentDbHelper by lazy { EquipmentDbHelper.getInstance(application) }
-    private val sportTypeDatabaseManager by lazy { SportTypeDatabaseManager.getInstance(application) }
-    private val exportManager by lazy { ExportManager(application) }
-    private val stravaUploadDbHelper by lazy { StravaUploadDbHelper.getInstance(application) }
-    private val lapsDatabaseManager by lazy { LapsDatabaseManager.getInstance(application) }
+    private val summariesManager get() = WorkoutSummariesDatabaseManager.getInstance(application)
+    private val samplesManager get() = WorkoutSamplesDatabaseManager.getInstance(application)
+    private val equipmentDbHelper get() = EquipmentDbHelper.getInstance(application)
+    private val sportTypeDatabaseManager get() = SportTypeDatabaseManager.getInstance(application)
+    private val exportManager get() = ExportManager(application)
+    private val stravaUploadDbHelper get() = StravaUploadDbHelper.getInstance(application)
+    private val lapsDatabaseManager get() = LapsDatabaseManager.getInstance(application)
+
+    val workoutSummariesDatabaseManager: WorkoutSummariesDatabaseManager get() = summariesManager
+    val workoutSamplesDatabaseManager: WorkoutSamplesDatabaseManager get() = samplesManager
+    val lapsDatabaseManagerInstance: LapsDatabaseManager get() = lapsDatabaseManager
+
+    fun getLaps(workoutId: Long): List<LapData> = lapsDatabaseManager.getLaps(workoutId) ?: emptyList()
+    fun getExtremaPosition(workoutId: Long, sensorType: SensorType, extremaType: ExtremaType): LatLng? =
+        summariesManager.getExtremaPosition(workoutId, sensorType, extremaType)
+    fun getExtremaValue(workoutId: Long, sensorType: SensorType, extremaType: ExtremaType): Double? =
+        summariesManager.getExtremaValue(workoutId, sensorType, extremaType)
+    fun getBaseFileName(workoutId: Long): String? = summariesManager.getBaseFileName(workoutId)
+    fun getWorkoutCursor(workoutId: Long): Cursor? = summariesManager.getWorkoutCursor(workoutId)
+    fun getCursorForAllWorkouts(): Cursor = summariesManager.getCursorForAllWorkouts()
+    fun getOldWorkouts(daysToKeep: Int): List<Long> = summariesManager.getOldWorkouts(daysToKeep)
+    fun deleteWorkoutSummary(workoutId: Long) = summariesManager.deleteWorkout(workoutId)
+    fun deleteWorkoutLaps(workoutId: Long) = lapsDatabaseManager.deleteWorkout(workoutId)
+    fun deleteWorkoutSamples(fileBaseName: String) = samplesManager.deleteWorkout(fileBaseName)
+    fun reassignClusterWorkouts(sourceId: Long, targetId: Long) = summariesManager.reassignClusterWorkouts(sourceId, targetId)
+    fun getUploadToStravaStatus(workoutId: Long): Int {
+        return try {
+            summariesManager.database.query(
+                WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
+                arrayOf(WorkoutSummariesDatabaseManager.WorkoutSummaries.UPLOAD_TO_STRAVA),
+                "${WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID} = ?",
+                arrayOf(workoutId.toString()),
+                null, null, null
+            ).use { cursor ->
+                if (cursor.moveToFirst()) cursor.getInt(0) else -1
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not query uploadToStrava for workout $workoutId", e)
+            -1
+        }
+    }
 
     private val mapper by lazy {
         WorkoutDataMapper(
@@ -1807,7 +1837,7 @@ class WorkoutRepository private constructor(private val application: Application
             }
             val updatedWorkout = _allWorkouts.value.firstOrNull { it.id == workoutId }
             if (updatedWorkout != null) {
-                PeriodsRepository.getInstance(application).onWorkoutFinished(updatedWorkout)
+                app?.let { PeriodsRepository.getInstance(it).onWorkoutFinished(updatedWorkout) }
             }
         }
     }
@@ -2234,7 +2264,7 @@ class WorkoutRepository private constructor(private val application: Application
                             val isNewImportOrFinish = (existing == null || !existing.finished) && freshWorkoutData.finished
                             
                             if (isNewImportOrFinish) {
-                                PeriodsRepository.getInstance(application).onWorkoutFinished(freshWorkoutData)
+                                app?.let { PeriodsRepository.getInstance(it).onWorkoutFinished(freshWorkoutData) }
                                 extractAndPersistClimbsFromWorkout(workoutId)
                             }
 
@@ -2364,7 +2394,7 @@ class WorkoutRepository private constructor(private val application: Application
             // --- SURGICAL UPDATES (ATT-346 / ATT-354) ---
             oldWorkout?.let { old ->
                 if (old.sportId != userEditedWorkout.sportId) {
-                    PeriodsRepository.getInstance(application).onWorkoutSportChanged(userEditedWorkout, old)
+                    app?.let { PeriodsRepository.getInstance(it).onWorkoutSportChanged(userEditedWorkout, old) }
                     WorkoutClusterEngine.getInstance(application).onWorkoutSportChanged(userEditedWorkout, old)
                 }
             }
@@ -2413,7 +2443,7 @@ class WorkoutRepository private constructor(private val application: Application
                     }
                     // --- SURGICAL UPDATES (ATT-346 / ATT-354) ---
                     workout?.let { 
-                        PeriodsRepository.getInstance(application).onWorkoutDeleted(it)
+                        app?.let { appInstance -> PeriodsRepository.getInstance(appInstance).onWorkoutDeleted(it) }
                         WorkoutClusterEngine.getInstance(application).onWorkoutDeleted(application, it)
                     }
 
@@ -2465,7 +2495,7 @@ class WorkoutRepository private constructor(private val application: Application
                         notificationManager.showResyncNotification()
 
                         loadAllWorkouts()
-                        PeriodsRepository.getInstance(application).resyncAllPeriods()
+                        app?.let { appInstance -> PeriodsRepository.getInstance(appInstance).resyncAllPeriods() }
                         WorkoutClusterRepository.getInstance(application).refreshClusters(forceShowProgress = false, forceCheckIntegrity = true)
                         WorkoutClusterEngine.getInstance(application).enrichAllClusterMetadata(application)
                     }

@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.repositories
 
 import android.app.Application
+import android.content.Context
 import android.util.Log
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
@@ -33,21 +34,22 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class EquipmentRepository private constructor(private val application: Application) :
+class EquipmentRepository internal constructor(private val context: Context) :
     CoroutineScope {
 
 
     private val job = SupervisorJob()
     override val coroutineContext = Dispatchers.Main + job
 
-    // Helper instances, initialized lazily
-    private val equipmentDbHelper by lazy { EquipmentDbHelper.getInstance(application) }
+    private val equipmentDbHelper get() = EquipmentDbHelper.getInstance(context)
 
     val equipmentList: List<EquipmentDbHelper.EquipmentData>
+        get() = equipmentDbHelper.getEquipmentItems() as List<EquipmentDbHelper.EquipmentData>
 
-    init {
-        equipmentList = equipmentDbHelper.getEquipmentItems() as List<EquipmentDbHelper.EquipmentData>
-    }
+    fun getIdFromStravaId(stravaId: String): Long = equipmentDbHelper.getIdFromStravaId(stravaId)
+    fun getStravaIdFromId(id: Long): String? = equipmentDbHelper.getStravaIdFromId(id)
+    fun addOrUpdateStravaGear(stravaId: String?, name: String, frameType: Int, sportType: String, retired: Boolean): Long =
+        equipmentDbHelper.addOrUpdateStravaGear(stravaId, name, frameType, sportType, retired)
 
     companion object {
         private val TAG = "EquipmentRepository"
@@ -120,6 +122,22 @@ class EquipmentRepository private constructor(private val application: Applicati
                     val newInstance = EquipmentRepository(application)
                     INSTANCE = newInstance
                     newInstance
+                }
+            }
+        }
+
+        @JvmStatic
+        fun getInstance(context: Context): EquipmentRepository {
+            return if (context is Application) {
+                getInstance(context)
+            } else {
+                val app = context.applicationContext
+                if (app is Application) {
+                    getInstance(app)
+                } else {
+                    INSTANCE ?: synchronized(this) {
+                        INSTANCE ?: EquipmentRepository(context.applicationContext ?: context).also { INSTANCE = it }
+                    }
                 }
             }
         }

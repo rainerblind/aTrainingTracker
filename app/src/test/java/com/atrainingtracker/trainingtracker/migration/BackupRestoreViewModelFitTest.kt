@@ -82,6 +82,8 @@ class BackupRestoreViewModelFitTest {
 
         WorkoutSummariesDatabaseManager.setInstanceForTesting(mockSummaryDb)
         StravaUploadDbHelper.resetForTesting(mockStravaDb)
+        val mockPeriodDb = mockk<com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodSummariesDatabaseManager>(relaxed = true)
+        com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodSummariesDatabaseManager.setInstanceForTesting(mockPeriodDb)
 
         mockkStatic(PreferenceManager::class)
         every { PreferenceManager.getDefaultSharedPreferences(any()) } returns mockPrefs
@@ -125,6 +127,8 @@ class BackupRestoreViewModelFitTest {
         Dispatchers.resetMain()
         WorkoutSummariesDatabaseManager.setInstanceForTesting(null)
         StravaUploadDbHelper.resetForTesting(null)
+        com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodSummariesDatabaseManager.setInstanceForTesting(null)
+        com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository.resetInstanceForTesting()
         unmockkAll()
     }
 

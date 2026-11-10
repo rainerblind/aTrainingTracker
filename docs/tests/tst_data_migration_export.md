@@ -2105,6 +2105,25 @@
   • Execute targeted test suite (`--tests "com.atrainingtracker.trainingtracker.tcx.*" --tests "com.atrainingtracker.trainingtracker.exporter.*" --tests "com.atrainingtracker.trainingtracker.migration.*" --tests "com.atrainingtracker.trainingtracker.build.*"`).
   • Assert 100% pass rate.
 
+### TST-DAT-037: **Repository-Only Engine, Exporter & Migration Layer Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-DAT-041`
+- **Component**: `WorkoutClusterEngine.kt`, `LegacyImportEngine.kt`, `StravaUploader.kt`, `FitFileWriter.java`, `TCXFileWriter.java`, `WorkoutDeletionHelper.java`, `RepositoryEngineCleanlinessContractTest.kt`
+- **Jira**: `ATT-6426`
+- **Test Description**:
+  1. *AST DatabaseManager Prohibition Contract Test (`TST-DAT-037.1`, `RepositoryEngineCleanlinessContractTest.kt`)*:
+  • Verify via automated contract test that `WorkoutClusterEngine.kt`, `LegacyImportEngine.kt`, `StravaUploader.kt`, `FitFileWriter.java`, `TCXFileWriter.java`, and `WorkoutDeletionHelper.java` contain zero occurrences of `*DatabaseManager.getInstance(...)`.
+  2. *Workout Clustering & Migration Engine Delegation Test (`TST-DAT-037.2`)*:
+  • Run `WorkoutClusterEngineTest` and `LegacyImportEngineTest`.
+  • Assert that cluster centroid heuristic calculations, recurring route identification, and TCX/GPX backup import execute with 100% functional and numeric parity via domain repository delegates.
+  3. *FIT/TCX Exporter & Deletion Cascade Parity Test (`TST-DAT-037.3`)*:
+  • Run `FitFileWriterTest`, `TCXRoundTripTest`, and `WorkoutDeletionHelperTest`.
+  • Assert that binary FIT telemetry records, TCX XML documents, and database deletion cascade workflows maintain 100% bit-exact and transactional parity.
+  4. *Tier 1 Targeted Unit Test Regression (`TST-DAT-037.4`)*:
+  • Execute targeted test suite (`--tests "com.atrainingtracker.trainingtracker.database.*" --tests "com.atrainingtracker.trainingtracker.exporter.*" --tests "com.atrainingtracker.trainingtracker.migration.*" --tests "com.atrainingtracker.trainingtracker.tcx.*"`).
+  • Assert 100% pass rate.
+
+
 
 
 

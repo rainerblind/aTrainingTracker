@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.database
 import android.content.Context
 import android.database.Cursor
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapper
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
@@ -48,8 +49,8 @@ class WorkoutClusterRepository internal constructor(
     private val repositoryScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 ) {
 
-    private val clusterDb = WorkoutClusterDatabaseManager.getInstance(context)
-    private val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
+    private val clusterDb get() = WorkoutClusterDatabaseManager.getInstance(context)
+    private val summariesManager get() = WorkoutSummariesDatabaseManager.getInstance(context)
     private val DEBUG = com.atrainingtracker.trainingtracker.TrainingApplication.getDebug(true)
     private val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(context)
     private val isRecalculatingLock = AtomicBoolean(false)
@@ -522,14 +523,26 @@ class WorkoutClusterRepository internal constructor(
     }
 
     suspend fun getWorkoutTrackPoints(workoutId: Long, trackType: TrackType): List<PathPoint> {
-        return WorkoutRepository.getInstance(context as android.app.Application).getWorkoutTrackPoints(workoutId, trackType)
+        return WorkoutRepository.getInstance(context).getWorkoutTrackPoints(workoutId, trackType)
     }
 
     fun getSportName(sportId: Long): String {
-        return SportTypeDatabaseManager.getInstance(context).getUIName(sportId)
+        return SportTypesRepository.getInstance(context).getUIName(sportId)
     }
 
     fun getBSportType(sportId: Long): com.atrainingtracker.banalservice.BSportType {
-        return SportTypeDatabaseManager.getInstance(context).getBSportType(sportId)
+        return SportTypesRepository.getInstance(context).getBSportType(sportId)
     }
+
+    val databaseManager: WorkoutClusterDatabaseManager get() = clusterDb
+    fun getAllClusters(): List<WorkoutCluster> = clusterDb.getAllClusters()
+    fun getClusterByIdSync(id: Long): WorkoutCluster? = clusterDb.getClusterById(id)
+    fun getClusterByName(name: String): WorkoutCluster? = clusterDb.getClusterByName(name)
+    fun getClusterNameById(id: Long): String? = clusterDb.getClusterNameById(id)
+    fun insertCluster(cluster: WorkoutCluster): Long = clusterDb.insertCluster(cluster)
+    fun updateClusterSync(cluster: WorkoutCluster) = clusterDb.updateCluster(cluster)
+    fun deleteClusterSync(id: Long) = clusterDb.deleteCluster(id)
+    fun deleteAllClustersSync() = clusterDb.deleteAllClusters()
+    fun isNameTaken(name: String, excludeId: Long = -1): Boolean = clusterDb.isNameTaken(name, excludeId)
+    fun getDatabase(): android.database.sqlite.SQLiteDatabase = clusterDb.getDatabase()
 }

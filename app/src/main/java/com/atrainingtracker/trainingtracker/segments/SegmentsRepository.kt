@@ -131,9 +131,9 @@ private val json = Json {
     coerceInputValues = true
 }
 
-class SegmentsRepository private constructor(context: Context) {
+class SegmentsRepository private constructor(private val context: Context) {
 
-    private val segmentsDb = SegmentsDatabaseManager.getInstance(context)
+    private val segmentsDb get() = SegmentsDatabaseManager.getInstance(context)
 
 
     // Repository scope for background loading
@@ -409,6 +409,17 @@ class SegmentsRepository private constructor(context: Context) {
                 }
             }
         }
+    }
+
+    /**
+     * Updates personal record (PR) time in both the database and reactive state flow.
+     */
+    fun updateSegmentPrTime(stravaSegmentId: Long, newPrTimeSeconds: Int): Boolean {
+        val updated = segmentsDb.updateSegmentPrTime(stravaSegmentId, newPrTimeSeconds)
+        if (updated) {
+            updateSegmentPr(stravaSegmentId, newPrTimeSeconds)
+        }
+        return updated
     }
 
     private suspend fun fetchDetailedSegment(segmentId: Long): StravaSegment? = withContext(Dispatchers.IO) {

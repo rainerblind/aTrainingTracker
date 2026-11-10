@@ -25,6 +25,8 @@ import androidx.annotation.NonNull;
 
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManager;
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository;
+import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusRepository;
 
 import java.util.List;
 
@@ -51,11 +53,11 @@ public class WorkoutDeletionHelper {
     public WorkoutDeletionHelper(@NonNull Context context) {
         this(
                 context,
-                WorkoutSummariesDatabaseManager.getInstance(context),
-                LapsDatabaseManager.getInstance(context),
-                WorkoutSamplesDatabaseManager.getInstance(context),
-                ExportStatusDatabaseManager.getInstance(context),
-                com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper.getInstance(context)
+                WorkoutRepository.getInstance(context).getWorkoutSummariesDatabaseManager(),
+                WorkoutRepository.getInstance(context).getLapsDatabaseManagerInstance(),
+                WorkoutRepository.getInstance(context).getWorkoutSamplesDatabaseManager(),
+                ExportStatusRepository.getInstance(context).getDatabaseManager(),
+                ExportStatusRepository.getInstance(context).getStravaHelper()
         );
     }
 
@@ -76,7 +78,7 @@ public class WorkoutDeletionHelper {
                 lapsManager,
                 samplesManager,
                 exportStatusRepo,
-                com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper.getInstance(context)
+                ExportStatusRepository.getInstance(context).getStravaHelper()
         );
     }
 
