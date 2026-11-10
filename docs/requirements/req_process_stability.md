@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 79
+**Total Requirements**: 80
 
 ---
 
@@ -2691,6 +2691,41 @@ The workflow SHALL mandate that:
   • *When* executed in the unit test suite,
   • *Then* all structural and code-grounding assertions SHALL pass with 100% success.
 - **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; 100% unit test pass rate.
+
+
+### REQ-PRO-055: System Requirements for Data Exchange and Cloud Integration [Verified]
+- **Tests**: `TST-PRO-055` | **Tickets**: `ATT-6161`
+- **Implementation**: `docs/system/sysreq_data_exchange.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemDataExchangeRequirementsContractTest.kt`
+- **Rationale**: ASPICE 4.0 pre-assessment finding S-03 (SYS.2 BP1-BP3) identified that external data interfaces (multi-format workout export/import in FIT, TCX, GPX, CSV, cloud synchronization with Strava, Dropbox, Google Drive, Health Connect biometrics, and full application state backup/restore via `.attbackup`) lack formal system-level specifications. While software classes exist, black-box system requirements specifying data schemas, API rate governance, atomic backup transactions, Zip Slip path traversal defenses, credential isolation, and decommissioned platform boundaries were undocumented. Specifying these capabilities in `docs/system/sysreq_data_exchange.md` and verifying code grounding via contract tests closes this ASPICE CL2 gap (ATT-6161, refining `REQ-PRO-043` under Epic `ATT-6142`):
+- **Description**:
+  1. *System Requirements Specification (`REQ-PRO-055.1`, docs/system/sysreq_data_exchange.md)*:
+     • `docs/system/sysreq_data_exchange.md` SHALL specify the authoritative system requirements for data exchange:
+       - `SYSREQ-DEX-001` (Multi-Format Telemetry Export Interoperability): The system SHALL support workout telemetry export into industry-standard schemas: Garmin FIT (`FitFileWriter.java`), Garmin Training Center XML (`TCXFileWriter.java`), GPS Exchange Format (`GPXFileWriter.java`), and raw tabular CSV (`CSVFileWriter.java`), with canonical distance, altitude, and timestamps.
+       - `SYSREQ-DEX-002` (Multi-Format Workout Ingestion & Collision Deduplication): The system SHALL ingest historical workout recordings in FIT, TCX, GPX, and CSV formats, executing deduplication checks against existing SQLite database sessions based on start timestamp, duration, and trackpoint spatial bounds.
+       - `SYSREQ-DEX-003` (Cloud Activity Synchronization & Rate Governance): The system SHALL support automated and manual workout upload to Strava via OAuth2 multipart REST API (`/api/v3/uploads`), respecting 15-minute and daily rate limits, and performing bidirectional equipment/gear synchronization.
+       - `SYSREQ-DEX-004` (Cloud Storage Synchronization & Automatic Backup): The system SHALL support automated background upload of finished workout files and full database archives to Dropbox (API v2 `/Backups/`) and Google Drive REST API v3 (`aTrainingTracker/Backups/`).
+       - `SYSREQ-DEX-005` (Full Application State Backup & Atomic Recovery Pipeline): The system SHALL bundle all application databases, shared preferences, and media into an atomic `.attbackup` archive, pre-verifying 1.5x free storage space, performing WAL flush and checkpointing, and enforcing Zip Slip path traversal validation upon restoration (`SecureZipExtractor`).
+       - `SYSREQ-DEX-006` (Credential Protection, Security Isolation & Decommissioned Boundaries): The system SHALL strictly exclude sensitive authentication tokens (`auth_credentials_prefs.xml`) from backup archives, enforce user consent gating for Health Connect biometrics, and demarcate decommissioned legacy services (Runkeeper, TrainingPeaks) as inert schema placeholders.
+     • Each `SYSREQ-DEX-*` requirement SHALL specify non-empty Title, formal Statement (`SHALL`/`MUST`), Rationale, Priority, Verification Method, and Traced Software Components.
+  2. *System Requirements Contract Testing & Code Grounding (`REQ-PRO-055.2`)*:
+     • `SystemDataExchangeRequirementsContractTest.kt` under `app/src/test/.../build/` SHALL assert:
+       - `docs/system/sysreq_data_exchange.md` exists and contains all 6 `SYSREQ-DEX-*` requirements.
+       - Each requirement specifies non-empty ID, Title, Statement, Rationale, Priority, Verification Method, and Traced Software Components.
+       - Code grounding assertions verifying export formats in `FileFormat.java`, backup file constants in `BackupManager.kt` (`BACKUP_FILENAME = "aTrainingTracker_backup.attbackup"`), credential exclusion in backup rules, and decommissioned platform demarcations.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-055` (*System Requirements for Data Exchange and Cloud Integration*), establishing ASPICE SYS.2 BP1-BP3 baseline under Parent Epic ATT-6142. Targets `docs/system/sysreq_data_exchange.md` and `SystemDataExchangeRequirementsContractTest.kt`.
+  2. *Historical Origin & Commit Trace*: Independent ASPICE pre-assessment finding S-03 (2026-11-08) and ticket ATT-6161.
+  3. *Root Reason for Existing Formulation*: System evolved as an Android application without explicit black-box system specifications separating data exchange, cloud contracts, and privacy constraints from software implementation.
+  4. *Preservation of Core Invariants*: Zero runtime code changes; existing FIT/TCX/GPX/CSV serialization, Strava/Dropbox/Google Drive API contracts, and backup atomicity remain 100% unaltered.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `docs/system/sysreq_data_exchange.md`,
+  • *When* inspected,
+  • *Then* it SHALL document all 6 `SYSREQ-DEX-*` requirements with complete attributes and rationale.
+  • *Given* `SystemDataExchangeRequirementsContractTest.kt`,
+  • *When* executed in the unit test suite,
+  • *Then* all structural and code-grounding assertions SHALL pass with 100% success.
+- **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; 100% unit test pass rate.
+
 
 
 

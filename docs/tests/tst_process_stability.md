@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 108
+**Total Tests**: 109
 
 ---
 
@@ -1657,6 +1657,25 @@
   • Assert that 1-Hz technical sampling tick matches `TrackerService` 1,000 ms period.
   3. *Clean-Room Targeted Test Suite Execution (`TST-PRO-054.3`)*:
   • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.SystemLiveTrackingRequirementsContractTest"` asserting 100% pass rate.
+
+
+### TST-PRO-055: **System Requirements for Data Exchange Contract Test Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-055`
+- **Component**: `docs/system/sysreq_data_exchange.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemDataExchangeRequirementsContractTest.kt`
+- **Jira**: `ATT-6161`
+- **Test Description**:
+  1. *Specification Structure & SYSREQ Coverage Verification (`TST-PRO-055.1`, `SystemDataExchangeRequirementsContractTest.kt`)*:
+  • Read `docs/system/sysreq_data_exchange.md`.
+  • Assert that the document exists and contains all 6 requirements (`SYSREQ-DEX-001` through `SYSREQ-DEX-006`).
+  • Assert that each requirement contains non-empty sections for Rationale, Priority, Verification Method, and Traced Software Components.
+  2. *Code Grounding & Data Exchange Verification (`TST-PRO-055.2`, `SystemDataExchangeRequirementsContractTest.kt`)*:
+  • Assert that export formats in `SYSREQ-DEX-001` match `FileFormat` enum entries (`FIT`, `TCX`, `GPX`, `CSV`).
+  • Assert that backup archive constants in `SYSREQ-DEX-005` match `BackupManager.BACKUP_FILENAME` (`"aTrainingTracker_backup.attbackup"`).
+  • Assert that credential exclusions in `SYSREQ-DEX-006` match `auth_credentials_prefs.xml`.
+  • Assert that Runkeeper and TrainingPeaks are explicitly demarcated as decommissioned.
+  3. *Clean-Room Targeted Test Suite Execution (`TST-PRO-055.3`)*:
+  • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.SystemDataExchangeRequirementsContractTest"` asserting 100% pass rate.
+
 
 
 
