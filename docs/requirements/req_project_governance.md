@@ -137,5 +137,20 @@
   4. The CI release workflow (`.github/workflows/android-release.yml`) SHALL supply release signing passwords directly via environment variables to the Gradle execution step, with zero plaintext secret materialization into repository files.
   5. An automated build contract test SHALL enforce that `app/build.gradle` uses the secure provider chain, that `.github/workflows/android-release.yml` passes env vars rather than writing working-tree passwords, and that any existing workspace `release.properties` contains zero password keys.
 
+### REQ-STP-009: Configuration Management Plan & Pinned Submodule Baseline [Verified]
+- **Tests**: `TST-STP-009` | **Tickets**: `ATT-6152`
+- **Implementation**: `docs/management/cm_plan.md`, `.gitmodules`, `ReleaseCiAndLintConfigContractTest.kt`
+- **Rationale**: ASPICE SUP.8 (Finding B-07) requires a formal Configuration Management Plan (SUP.8.BP1–BP7) and deterministic baseline reproduction. Submodule configurations pointing to floating upstream branches introduce non-deterministic build drift. Authoring a version-controlled CM plan and pinning submodule configurations in `.gitmodules` guarantees baseline integrity and auditable configuration control.
+- **Description**:
+  1. The project SHALL maintain a formal Configuration Management Plan in `docs/management/cm_plan.md` defining:
+     - Configuration Items (CIs) and repository scope (SUP.8.BP1).
+     - GitFlow branching strategy, release tagging (`V<versionName>__<versionCode>`), and active sprint branch integration (SUP.8.BP2, BP3).
+     - Baseline management, living documentation mathematical synchronization, and release package archiving (SUP.8.BP4, BP5).
+     - Submodule change control and backup / disaster recovery procedures (SUP.8.BP6, BP7).
+  2. The submodule `ANT-Android-SDKs` in `.gitmodules` SHALL NOT track a floating branch (`branch = ...`); it MUST resolve strictly to the committed gitlink revision to enforce immutable baseline reproducibility.
+  3. The directory `docs/management/` SHALL reside outside `docs/engineering/` to preserve Rule 67 canonical directory boundaries.
+  4. An automated build contract test in `ReleaseCiAndLintConfigContractTest.kt` SHALL verify the presence and core section headers of `docs/management/cm_plan.md` and SHALL assert that `.gitmodules` contains zero floating branch directives.
+
+
 
 

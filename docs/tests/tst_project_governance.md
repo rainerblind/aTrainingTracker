@@ -120,5 +120,23 @@
   4. *Build Contract Suite Execution (`TST-STP-008.4`)*:
      • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.*"` asserting 100% pass rate in CI.
 
+### TST-STP-009: CM Plan Integrity & Submodule Pinning Contract Test [Verified]
+- **Requirement(s)**: `REQ-STP-009`
+- **Component**: `docs/management/cm_plan.md`, `.gitmodules`, `ReleaseCiAndLintConfigContractTest.kt`
+- **Jira**: `ATT-6152`
+- **Test Description**:
+  1. *CM Plan Documentation & Section Audit (`TST-STP-009.1`)*:
+     • Verify existence of `docs/management/cm_plan.md`.
+     • Assert presence of mandatory ASPICE SUP.8 sections: Scope & Configuration Items, Branching & Release Strategy, Baseline Management & Traceability, Submodule Governance, and Disaster Recovery.
+  2. *Submodule Pinning Audit (`TST-STP-009.2`)*:
+     • Inspect `.gitmodules`.
+     • Verify that `[submodule "ANT-Android-SDKs"]` does not contain a `branch =` entry.
+     • Verify submodule URL points to canonical repository and gitlink resolves to committed SHA-1.
+  3. *Rule 67 Canonical Engineering Boundary Guard (`TST-STP-009.3`)*:
+     • Execute `python3 tools/verify_requirement_governance.py` and verify exit code 0, confirming zero non-canonical entries in `docs/engineering/`.
+  4. *Build Contract Suite Execution (`TST-STP-009.4`)*:
+     • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.*"` asserting 100% pass rate in CI.
+
+
 
 

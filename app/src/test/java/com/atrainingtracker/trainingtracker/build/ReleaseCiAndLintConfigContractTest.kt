@@ -28,7 +28,7 @@ import java.io.File
  * Detekt static analysis, Kover code coverage gating, CI integrity, and instrumented androidTest
  * infrastructure with emulator CI runner (REQ-BLD-002, TST-BLD-002, REQ-PRO-042,
  * TST-PRO-042, REQ-PRO-046, TST-PRO-046, REQ-PRO-047, TST-PRO-047, REQ-PRO-048, TST-PRO-048,
- * REQ-PRO-051, TST-PRO-051, REQ-STP-007, TST-STP-007, REQ-STP-008, TST-STP-008, ATT-6148, ATT-6153, ATT-6171, ATT-6175, ATT-6184).
+ * REQ-PRO-051, TST-PRO-051, REQ-STP-007, TST-STP-007, REQ-STP-008, TST-STP-008, REQ-STP-009, TST-STP-009, ATT-6148, ATT-6152, ATT-6153, ATT-6171, ATT-6175, ATT-6184).
  */
 class ReleaseCiAndLintConfigContractTest {
 
@@ -587,5 +587,44 @@ class ReleaseCiAndLintConfigContractTest {
                 propsContent.contains("keyAliasPassword")
             )
         }
+    }
+
+    /**
+     * Asserts that docs/management/cm_plan.md exists, contains mandatory ASPICE SUP.8 sections,
+     * and that .gitmodules pins submodules without floating branch tracking (REQ-STP-009, TST-STP-009, ATT-6152).
+     */
+    @Test
+    fun testConfigurationManagementPlan_existsAndSubmodulePinned() {
+        val cmPlanFile = findRepoRootFile("docs/management/cm_plan.md", "../docs/management/cm_plan.md")
+        assertTrue(
+            "docs/management/cm_plan.md must exist (REQ-STP-009.1, TST-STP-009.1)",
+            cmPlanFile.exists()
+        )
+        val cmContent = cmPlanFile.readText()
+        val requiredSections = listOf(
+            "SUP.8.BP1", // Strategy / Scope
+            "SUP.8.BP2", // Configuration Items
+            "SUP.8.BP3", // Branching & Merging
+            "SUP.8.BP4", // Baselines
+            "SUP.8.BP6", // Submodule Control
+            "SUP.8.BP7"  // Disaster Recovery
+        )
+        for (section in requiredSections) {
+            assertTrue(
+                "CM plan must contain section reference '$section' (REQ-STP-009.1, TST-STP-009.1)",
+                cmContent.contains(section)
+            )
+        }
+
+        val gitmodulesFile = findRepoRootFile(".gitmodules", "../.gitmodules")
+        assertTrue(
+            ".gitmodules must exist (REQ-STP-009.2, TST-STP-009.2)",
+            gitmodulesFile.exists()
+        )
+        val gitmodulesContent = gitmodulesFile.readText()
+        assertFalse(
+            ".gitmodules must not contain floating branch directive for ANT-Android-SDKs (REQ-STP-009.2, TST-STP-009.2)",
+            gitmodulesContent.contains("branch =")
+        )
     }
 }
