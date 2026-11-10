@@ -34,4 +34,31 @@
     <string name="hrv_info_zones_desc">DFA a1 &gt; 0,75 duidt op een aëroob uithoudingsvermogen (Zone 2). Waarden tussen 0,75 en 0,50 weerspiegelen de drempelovergang (Zone 3). Waarden onder 0,50 duiden op hoge anaërobe intensiteit (Zone 4).</string>
     <string name="hrv_info_disclaimer_title">Medische disclaimer</string>
     <string name="hrv_info_disclaimer_desc">Autonome HRV-metrieken in aTrainingTracker zijn bedoeld voor trainingsbegeleiding en vervangen geen medisch advies. Hartritmestoornissen of ectopische slagen kunnen drempelschattingen vertekenen.</string>
+
+    <!-- Morning Resting HRV Check (ATT-3556 / REQ-PER-032) -->
+    <string name="morning_hrv_title">Ochtend HRV-check</string>
+    <string name="morning_hrv_subtitle">Ochtendprotocol voor autonoom herstel</string>
+    <string name="morning_hrv_posture_label">Houding</string>
+    <string name="morning_hrv_posture_supine">Liggend</string>
+    <string name="morning_hrv_posture_seated">Zittend</string>
+    <string name="morning_hrv_posture_standing">Staand</string>
+    <string name="morning_hrv_duration_label">Duur</string>
+    <string name="morning_hrv_duration_60s">60 s (Standaard)</string>
+    <string name="morning_hrv_duration_120s">120 s (Uitgebreid)</string>
+    <string name="morning_hrv_state_ready">Klaar voor meting</string>
+    <string name="morning_hrv_state_stabilizing">Stabiliseren: %1$ds</string>
+    <string name="morning_hrv_state_measuring">Meten: %1$ds / %2$ds</string>
+    <string name="morning_hrv_state_completed">Meting voltooid</string>
+    <string name="morning_hrv_btn_start">Meting starten</string>
+    <string name="morning_hrv_btn_cancel">Annuleren</string>
+    <string name="morning_hrv_btn_save">Meting opslaan</string>
+    <string name="morning_hrv_btn_discard">Verwerpen</string>
+    <string name="morning_hrv_instructions_title">Gestandaardiseerd protocol</string>
+    <string name="morning_hrv_instructions_desc">Meet direct na het ontwaken en legen van de blaas. Blijf stil liggen en adem rustig zonder te spreken. Behoud dezelfde houding voor betrouwbare SWC-vergelijkingen.</string>
+    <string name="morning_hrv_artifact_warning_title">Hoog artefactpercentage</string>
+    <string name="morning_hrv_artifact_warning_desc">Artefactpercentage overschrijdt 5%% (%1$.1f%%). Bevochtig de elektroden van de borstband en controleer de pasvorm.</string>
+    <string name="morning_hrv_summary_rmssd">rMSSD: %1$.1f ms</string>
+    <string name="morning_hrv_summary_ln_rmssd">ln(rMSSD): %1$.2f</string>
+    <string name="morning_hrv_summary_resting_hr">Rusthartslag: %1$d bpm</string>
+    <string name="morning_hrv_saved_toast">Ochtend HRV-meting opgeslagen</string>
 </resources>

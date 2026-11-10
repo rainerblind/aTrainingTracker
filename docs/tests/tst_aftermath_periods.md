@@ -579,6 +579,29 @@
   5. *Tier 1 Clean-Room Targeted Regression Execution (`TST-PER-039.5`)*:
   • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.database.hrv.*" --tests "com.atrainingtracker.trainingtracker.cloud.healthconnect.*" --tests "com.atrainingtracker.trainingtracker.build.*"` verifying 100% clean-room test pass rate.
 
+### TST-PER-040: **Guided Morning Resting HRV Measurement & Waking Protocol Suite** [Verified]
+- **Requirement(s)**: `REQ-PER-032` (`REQ-PER-032.1`..`REQ-PER-032.5`)
+- **Component**: `MorningHrvCheckViewModelTest.kt`, `MorningHrvCheckScreenTest.kt`, `HrvReadinessRepositoryTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-3556`
+- **Test Description**:
+  1. *Measurement Lifecycle State Machine Unit Test (`TST-PER-040.1`, `MorningHrvCheckViewModelTest.kt`)*:
+  • Verify transition lifecycle: `READY` -> `STABILIZING` (15–30s countdown) -> `MEASURING` (60s/120s countdown) -> `COMPLETED`.
+  • Verify cancel and reset behavior returns state machine cleanly to `READY`.
+  2. *Sticky Posture & Duration Preference Contract Test (`TST-PER-040.2`, `MorningHrvCheckViewModelTest.kt`)*:
+  • Verify that selecting `SEATED` or `STANDING` persists to `SP_HRV_LAST_POSTURE` and reloads on new ViewModel instances.
+  • Verify duration selection (60s vs. 120s) configuration.
+  3. *Sensor Ingestion & Zero-Workout Invariant (`TST-PER-040.3`, `MorningHrvCheckViewModelTest.kt`)*:
+  • Verify that `MorningHrvCheckViewModel` consumes `RrBeatListener` stream from `BANALServiceRepository` without launching `TrackerService` or writing to `WorkoutSummaries.db`.
+  4. *Post-Hoc Full-Window Centered Filter Calculation Test (`TST-PER-040.4`, `MorningHrvCheckViewModelTest.kt`)*:
+  • Verify that completed measurement runs `RrArtifactFilter.filterBidirectional` across all buffered RR intervals, computing post-hoc `rmssd_ms`, `ln_rmssd`, `resting_hr_bpm`, and `artifact_rate_pct`.
+  5. *Persistence, Artifact Warning & SWC Feedback Test (`TST-PER-040.5`, `MorningHrvCheckViewModelTest.kt`)*:
+  • Verify that saving persists `HrvReadinessEntry` into `HrvReadinessRepository` (`HrvReadiness.db`).
+  • Verify that artifact rate > 5.0% surfaces warning state.
+  • Verify completion view displays `ReadinessStatus` evaluated against per-posture 7d/60d SWC baseline.
+  6. *Tier 1 Clean-Room Targeted Regression Execution (`TST-PER-040.6`)*:
+  • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.hrv.*" --tests "com.atrainingtracker.trainingtracker.database.hrv.*" --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest" --tests "com.atrainingtracker.trainingtracker.build.*"` verifying 100% clean-room test pass rate.
+
+
 
 
 

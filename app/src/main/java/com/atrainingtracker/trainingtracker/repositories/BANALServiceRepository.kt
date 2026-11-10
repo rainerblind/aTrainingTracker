@@ -36,6 +36,7 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.devices.MyRemoteDevice
+import com.atrainingtracker.banalservice.devices.RrBeatListener
 import com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice
 import com.atrainingtracker.banalservice.devices.MyDevice
 import com.atrainingtracker.banalservice.filters.FilterData
@@ -101,6 +102,7 @@ class BANALServiceRepository private constructor(context: Context) {
     private var isBinding = false
     // Reference count to manage multiple ViewModels binding/unbinding
     private var bindReferenceCount = 0
+    private val registeredRrBeatListeners = java.util.concurrent.CopyOnWriteArraySet<RrBeatListener>()
 
 
     // --- Reactive Data Streams (StateFlows for UI) ---
@@ -255,22 +257,25 @@ class BANALServiceRepository private constructor(context: Context) {
         _wasAutoPaused.value = TrainingApplication.wasAutoPaused()
         _trackingMode.postValue(TrainingApplication.getTrackingMode())
 
-        appContext.registerReceiver(
+        androidx.core.content.ContextCompat.registerReceiver(
+            appContext,
             trackingModeReceiver,
             IntentFilter(TrainingApplication.TRACKING_STATE_CHANGED),
-            Context.RECEIVER_NOT_EXPORTED
+            androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
         )
 
-        appContext.registerReceiver(
+        androidx.core.content.ContextCompat.registerReceiver(
+            appContext,
             lapSummaryReceiver,
             IntentFilter(BANALService.LAP_SUMMARY),
-            Context.RECEIVER_NOT_EXPORTED
+            androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
         )
 
-        appContext.registerReceiver(
+        androidx.core.content.ContextCompat.registerReceiver(
+            appContext,
             altitudeCorrectionReceiver,
             IntentFilter(com.atrainingtracker.banalservice.devices.AltitudeFromPressureDevice.ALTITUDE_CORRECTION_INTENT),
-            Context.RECEIVER_NOT_EXPORTED
+            androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
         )
 
         // Start the long-lived observation loop that reacts to the binder state.
@@ -286,6 +291,9 @@ class BANALServiceRepository private constructor(context: Context) {
             _serviceBinder.value = binder // This "wakes up" the observation loop
             isBoundToBanalService = true
             isBinding = false
+            if (binder != null) {
+                registeredRrBeatListeners.forEach { binder.addRrBeatListener(it) }
+            }
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
@@ -630,6 +638,23 @@ class BANALServiceRepository private constructor(context: Context) {
             `package` = appContext.packageName
         }
         appContext.sendBroadcast(intent)
+    }
+
+    /**
+     * Subscribes an [RrBeatListener] to the stream of raw RR beat events.
+     * Re-attaches automatically when reconnecting to BANALService (REQ-PER-032.3).
+     */
+    fun addRrBeatListener(listener: RrBeatListener) {
+        registeredRrBeatListeners.add(listener)
+        _serviceBinder.value?.addRrBeatListener(listener)
+    }
+
+    /**
+     * Unsubscribes an [RrBeatListener] from the stream of raw RR beat events.
+     */
+    fun removeRrBeatListener(listener: RrBeatListener) {
+        registeredRrBeatListeners.remove(listener)
+        _serviceBinder.value?.removeRrBeatListener(listener)
     }
 
 

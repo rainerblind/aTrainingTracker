@@ -865,6 +865,39 @@
 
 **Invariants**: Zero changes to `HrvReadiness.db` (v1) schema, strict posture isolation, and 100% clean-room test pass rate.
 
+### REQ-PER-032: Guided Morning Resting HRV Measurement Screen & Waking Protocol [Verified]
+- **Tests**: `TST-PER-040` | **Tickets**: `ATT-3556`
+- **Implementation**: `MorningHrvCheckScreen.kt`, `MorningHrvCheckViewModel.kt`, `HrvReadinessRepository.kt`, `RrArtifactFilter.kt`, `strings_hrv.xml`
+- **Rationale**: Accurate morning resting HRV evaluation requires standardized waking conditions (post-voiding, rested posture, normal breathing) without starting a full GPS workout. The system SHALL provide a dedicated Compose UI measurement screen (`MorningHrvCheckScreen`) and ViewModel (`MorningHrvCheckViewModel`) executing a guided waking protocol:
+1. *Standardized Protocol Lifecycle (`REQ-PER-032.1`)*: The measurement state machine SHALL transition through `READY` -> `STABILIZING` -> `MEASURING` -> `COMPLETED`. The stabilization phase SHALL default to 15–30s to allow autonomic balance. The measurement duration SHALL default to 60s (validated per Esco & Flatt 2014) with a selectable 120s extended option.
+2. *Posture Stickiness & Standardization (`REQ-PER-032.2`)*: The screen SHALL provide a posture selector for waking cohorts (`SUPINE`, `SEATED`, `STANDING`) and remember the athlete's last-used posture via SharedPreferences (`SP_HRV_LAST_POSTURE = "hrvLastPosture"`) across app sessions to preserve longitudinal baseline consistency.
+3. *Sensor Ingestion & Zero-Workout Invariant (`REQ-PER-032.3`)*: Measurement SHALL ingest raw beat-to-beat intervals via `BANALServiceRepository` without launching `TrackerService` or creating rows in `WorkoutSummaries.db`.
+4. *Post-Hoc Full-Window Centered Filter Invariant (`REQ-PER-032.4`)*: Raw RR intervals buffered during the measurement phase SHALL be processed post hoc upon completion using `RrArtifactFilter.filterBidirectional` (Lipponen & Tarvainen 2019 centered filter) to compute `rmssdMs`, `lnRmssd`, `hrvScore100`, `sdnnMs`, `restingHrBpm`, and `artifactRatePct`. Live rolling metrics SHALL provide real-time UI pacing only and SHALL NOT be used for persistence.
+5. *Persistence, Gating & Baseline Feedback (`REQ-PER-032.5`)*: When user confirms save, the measurement SHALL be persisted into `HrvReadinessRepository` (`HrvReadiness.db`). If `artifactRatePct > 5.0%`, the UI SHALL display a warning indicating potential electrode drying/poor contact. The completion view SHALL display the evaluated `ReadinessStatus` compared against the athlete's per-posture 7d/60d SWC baseline.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-PER-032` (extending `REQ-PER-030` morning HRV persistence and `REQ-SEN-020` RR interval ingestion). Targets `MorningHrvCheckScreen.kt`, `MorningHrvCheckViewModel.kt`, `HrvReadinessRepository.kt`, `RrArtifactFilter.kt`, and `strings_hrv.xml`.
+2. *Historical Origin & Commit Trace*: Net-new capability introduced in `ATT-3556` under Epic `ATT-3539` (*Heart Rate Variability*).
+3. *Root Reason for Existing Formulation*: Athletes previously had to launch a full workout session to capture RR intervals, cluttering workout summaries with non-exercise data and lacking posture-standardized waking guidance.
+4. *Preservation of Core Invariants*: Zero modifications to workout database schemas; pure Compose UI and Kotlin calculation logic; strict posture isolation in SWC baselines.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete launching `MorningHrvCheckScreen`,
+• *When* the screen initializes,
+• *Then* it displays the sticky last-used posture (defaulting to `SUPINE`), 60s standard duration, and standardized waking checklist.
+• *Given* an active measurement session reaching 60s,
+• *When* the measurement phase concludes,
+• *Then* `filterBidirectional` evaluates the buffered RR intervals post hoc, computing `rmssdMs`, `lnRmssd`, `hrvScore100`, `sdnnMs`, `restingHrBpm`, and `artifactRatePct`.
+• *Given* an artifact rate of 7.2% (> 5.0%),
+• *When* viewing the measurement summary,
+• *Then* an amber artifact warning is displayed advising the athlete to moisten strap electrodes.
+• *Given* user taps "Save Reading",
+• *When* persisted,
+• *Then* the measurement is stored in `HrvReadiness.db` without creating any workout sessions in `WorkoutSummaries.db`.
+
+**Invariants**: Zero workout generation, post-hoc centered filter calculation, 100% clean-room test pass rate.
+
+
 
 
 

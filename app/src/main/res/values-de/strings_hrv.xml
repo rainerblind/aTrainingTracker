@@ -34,4 +34,31 @@
     <string name="hrv_info_zones_desc">DFA a1 &gt; 0,75 kennzeichnet aerobe Grundlagenausdauer (Zone 2). Werte zwischen 0,75 und 0,50 markieren den Schwellenübergang (Zone 3). Werte unter 0,50 signalisieren hohe anaerobe Intensität (Zone 4).</string>
     <string name="hrv_info_disclaimer_title">Medizinischer Hinweis</string>
     <string name="hrv_info_disclaimer_desc">Autonome HRV-Metriken in aTrainingTracker dienen der Trainingssteuerung und ersetzen keine ärztliche Untersuchung. Herzrhythmusstörungen oder Extrasystolen können Schwellenschätzungen verfälschen.</string>
+
+    <!-- Morning Resting HRV Check (ATT-3556 / REQ-PER-032) -->
+    <string name="morning_hrv_title">Morgendlicher HRV-Check</string>
+    <string name="morning_hrv_subtitle">Aufwachprotokoll für autonome Erholung</string>
+    <string name="morning_hrv_posture_label">Körperhaltung</string>
+    <string name="morning_hrv_posture_supine">Liegend</string>
+    <string name="morning_hrv_posture_seated">Sitzend</string>
+    <string name="morning_hrv_posture_standing">Stehend</string>
+    <string name="morning_hrv_duration_label">Dauer</string>
+    <string name="morning_hrv_duration_60s">60 s (Standard)</string>
+    <string name="morning_hrv_duration_120s">120 s (Erweitert)</string>
+    <string name="morning_hrv_state_ready">Bereit zur Messung</string>
+    <string name="morning_hrv_state_stabilizing">Stabilisierung: %1$ds</string>
+    <string name="morning_hrv_state_measuring">Messung: %1$ds / %2$ds</string>
+    <string name="morning_hrv_state_completed">Messung abgeschlossen</string>
+    <string name="morning_hrv_btn_start">Messung starten</string>
+    <string name="morning_hrv_btn_cancel">Abbrechen</string>
+    <string name="morning_hrv_btn_save">Messung speichern</string>
+    <string name="morning_hrv_btn_discard">Verwerfen</string>
+    <string name="morning_hrv_instructions_title">Standardisiertes Protokoll</string>
+    <string name="morning_hrv_instructions_desc">Direkt nach dem Aufwachen und Entleeren der Blase messen. Ruhig bleiben, normal atmen und nicht sprechen. Haltung beibehalten für verlässliche SWC-Vergleiche.</string>
+    <string name="morning_hrv_artifact_warning_title">Hohe Artefaktrate</string>
+    <string name="morning_hrv_artifact_warning_desc">Artefaktrate überschreitet 5%% (%1$.1f%%). Bitte Brustgurt-Elektroden anfeuchten und korrekten Sitz prüfen.</string>
+    <string name="morning_hrv_summary_rmssd">rMSSD: %1$.1f ms</string>
+    <string name="morning_hrv_summary_ln_rmssd">ln(rMSSD): %1$.2f</string>
+    <string name="morning_hrv_summary_resting_hr">Ruhepuls: %1$d bpm</string>
+    <string name="morning_hrv_saved_toast">Morgendlicher HRV-Wert gespeichert</string>
 </resources>

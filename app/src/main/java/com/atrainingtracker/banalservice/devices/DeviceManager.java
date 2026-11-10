@@ -47,6 +47,7 @@ import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEBikeCadenceDev
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEBikePowerDevice;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEBikeSpeedAndCadenceDevice;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEBikeSpeedDevice;
+import com.atrainingtracker.banalservice.devices.RrBeatListener;
 import com.atrainingtracker.banalservice.devices.RrBeatSource;
 import com.atrainingtracker.banalservice.devices.hrv.HRVMetricsDevice;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDevice;
@@ -423,6 +424,30 @@ public class DeviceManager {
         for (MyRemoteDevice remote : mMyRemoteDevices.values()) {
             if (remote instanceof RrBeatSource) {
                 ((RrBeatSource) remote).addRrBeatListener(mHrvMetricsDevice);
+            }
+        }
+    }
+
+    private final List<RrBeatListener> mRrBeatListeners = new CopyOnWriteArrayList<>();
+
+    public void addRrBeatListener(RrBeatListener listener) {
+        if (listener != null && !mRrBeatListeners.contains(listener)) {
+            mRrBeatListeners.add(listener);
+            for (MyRemoteDevice remote : mMyRemoteDevices.values()) {
+                if (remote instanceof RrBeatSource) {
+                    ((RrBeatSource) remote).addRrBeatListener(listener);
+                }
+            }
+        }
+    }
+
+    public void removeRrBeatListener(RrBeatListener listener) {
+        if (listener != null) {
+            mRrBeatListeners.remove(listener);
+            for (MyRemoteDevice remote : mMyRemoteDevices.values()) {
+                if (remote instanceof RrBeatSource) {
+                    ((RrBeatSource) remote).removeRrBeatListener(listener);
+                }
             }
         }
     }
@@ -1008,8 +1033,13 @@ public class DeviceManager {
         }
 
         if (myANTDevice != null) {
-            if (myANTDevice instanceof RrBeatSource && mHrvMetricsDevice != null) {
-                ((RrBeatSource) myANTDevice).addRrBeatListener(mHrvMetricsDevice);
+            if (myANTDevice instanceof RrBeatSource) {
+                if (mHrvMetricsDevice != null) {
+                    ((RrBeatSource) myANTDevice).addRrBeatListener(mHrvMetricsDevice);
+                }
+                for (RrBeatListener listener : mRrBeatListeners) {
+                    ((RrBeatSource) myANTDevice).addRrBeatListener(listener);
+                }
             }
             MyRemoteDevice existing = mMyRemoteDevices.putIfAbsent(deviceID, myANTDevice);
             if (existing != null) {
@@ -1073,8 +1103,13 @@ public class DeviceManager {
         }
 
         if (myBTLEDevice != null) {
-            if (myBTLEDevice instanceof RrBeatSource && mHrvMetricsDevice != null) {
-                ((RrBeatSource) myBTLEDevice).addRrBeatListener(mHrvMetricsDevice);
+            if (myBTLEDevice instanceof RrBeatSource) {
+                if (mHrvMetricsDevice != null) {
+                    ((RrBeatSource) myBTLEDevice).addRrBeatListener(mHrvMetricsDevice);
+                }
+                for (RrBeatListener listener : mRrBeatListeners) {
+                    ((RrBeatSource) myBTLEDevice).addRrBeatListener(listener);
+                }
             }
             MyRemoteDevice existing = mMyRemoteDevices.putIfAbsent(deviceID, myBTLEDevice);
             if (existing != null) {

@@ -641,6 +641,14 @@ fun ATrainingTrackerApp(
                         }
                     )
                 }
+
+                composable(NavRoutes.MORNING_HRV) {
+                    val morningHrvViewModel: com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckViewModel = viewModel(activity)
+                    com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreen(
+                        viewModel = morningHrvViewModel,
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
             }
         }
     }

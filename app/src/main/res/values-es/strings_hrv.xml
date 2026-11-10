@@ -34,4 +34,31 @@
     <string name="hrv_info_zones_desc">DFA a1 &gt; 0,75 indica ritmo de resistencia aeróbica (Zona 2). Valores entre 0,75 y 0,50 reflejan la transición hacia el umbral anaeróbico (Zona 3). Valores por debajo de 0,50 indican alta intensidad anaeróbica (Zona 4).</string>
     <string name="hrv_info_disclaimer_title">Aviso médico</string>
     <string name="hrv_info_disclaimer_desc">Las métricas autonómicas de HRV en aTrainingTracker son para control deportivo y no sustituyen una evaluación médica. Las arritmias cardíacas o latidos ectópicos pueden alterar las estimaciones de umbral.</string>
+
+    <!-- Morning Resting HRV Check (ATT-3556 / REQ-PER-032) -->
+    <string name="morning_hrv_title">Control matutino de VFC</string>
+    <string name="morning_hrv_subtitle">Protocolo matutino de recuperación autonómica</string>
+    <string name="morning_hrv_posture_label">Postura</string>
+    <string name="morning_hrv_posture_supine">Tumbado</string>
+    <string name="morning_hrv_posture_seated">Sentado</string>
+    <string name="morning_hrv_posture_standing">De pie</string>
+    <string name="morning_hrv_duration_label">Duración</string>
+    <string name="morning_hrv_duration_60s">60 s (Estándar)</string>
+    <string name="morning_hrv_duration_120s">120 s (Extendido)</string>
+    <string name="morning_hrv_state_ready">Listo para medir</string>
+    <string name="morning_hrv_state_stabilizing">Estabilizando: %1$ds</string>
+    <string name="morning_hrv_state_measuring">Midiendo: %1$ds / %2$ds</string>
+    <string name="morning_hrv_state_completed">Medición completada</string>
+    <string name="morning_hrv_btn_start">Iniciar medición</string>
+    <string name="morning_hrv_btn_cancel">Cancelar</string>
+    <string name="morning_hrv_btn_save">Guardar lectura</string>
+    <string name="morning_hrv_btn_discard">Descartar</string>
+    <string name="morning_hrv_instructions_title">Protocolo estandarizado</string>
+    <string name="morning_hrv_instructions_desc">Medir al despertar tras vaciar la vejiga. Permanezca quieto y respire con normalidad sin hablar. Mantenga la misma postura para comparaciones basales fiables.</string>
+    <string name="morning_hrv_artifact_warning_title">Tasa alta de artefactos</string>
+    <string name="morning_hrv_artifact_warning_desc">La tasa de artefactos supera el 5%% (%1$.1f%%). Humedezca los electrodos de la banda pectoral y compruebe su ajuste.</string>
+    <string name="morning_hrv_summary_rmssd">rMSSD: %1$.1f ms</string>
+    <string name="morning_hrv_summary_ln_rmssd">ln(rMSSD): %1$.2f</string>
+    <string name="morning_hrv_summary_resting_hr">FC en reposo: %1$d ppm</string>
+    <string name="morning_hrv_saved_toast">Lectura matutina de VFC guardada</string>
 </resources>

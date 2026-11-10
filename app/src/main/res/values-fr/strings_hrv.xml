@@ -34,4 +34,31 @@
     <string name="hrv_info_zones_desc">DFA a1 &gt; 0,75 indique une endurance aérobie fondamentale (Zone 2). Les valeurs entre 0,75 et 0,50 marquent la transition vers le seuil anaérobie (Zone 3). Les valeurs inférieures à 0,50 signalent une forte intensité anaérobie (Zone 4).</string>
     <string name="hrv_info_disclaimer_title">Avertissement médical</string>
     <string name="hrv_info_disclaimer_desc">Les métriques de VRC dans aTrainingTracker sont conçues pour le guidage de l\'entraînement et ne remplacent pas un avis médical. Les arythmies cardiaques ou extrasystoles peuvent invalider les estimations de seuils.</string>
+
+    <!-- Morning Resting HRV Check (ATT-3556 / REQ-PER-032) -->
+    <string name="morning_hrv_title">Contrôle matinal VRC</string>
+    <string name="morning_hrv_subtitle">Protocole de réveil pour récupération autonome</string>
+    <string name="morning_hrv_posture_label">Posture</string>
+    <string name="morning_hrv_posture_supine">Couché</string>
+    <string name="morning_hrv_posture_seated">Assis</string>
+    <string name="morning_hrv_posture_standing">Debout</string>
+    <string name="morning_hrv_duration_label">Durée</string>
+    <string name="morning_hrv_duration_60s">60 s (Standard)</string>
+    <string name="morning_hrv_duration_120s">120 s (Étendu)</string>
+    <string name="morning_hrv_state_ready">Prêt à mesurer</string>
+    <string name="morning_hrv_state_stabilizing">Stabilisation : %1$ds</string>
+    <string name="morning_hrv_state_measuring">Mesure : %1$ds / %2$ds</string>
+    <string name="morning_hrv_state_completed">Mesure terminée</string>
+    <string name="morning_hrv_btn_start">Démarrer la mesure</string>
+    <string name="morning_hrv_btn_cancel">Annuler</string>
+    <string name="morning_hrv_btn_save">Enregistrer la mesure</string>
+    <string name="morning_hrv_btn_discard">Ignorer</string>
+    <string name="morning_hrv_instructions_title">Protocole standardisé</string>
+    <string name="morning_hrv_instructions_desc">Mesurer au réveil après avoir vidé la vessie. Rester immobile et respirer normalement sans parler. Garder la même posture pour des comparaisons fiables.</string>
+    <string name="morning_hrv_artifact_warning_title">Taux élevé d\'artefacts</string>
+    <string name="morning_hrv_artifact_warning_desc">Le taux d\'artefacts dépasse 5%% (%1$.1f%%). Humidifiez les électrodes de la ceinture pectorale et ajustez sa position.</string>
+    <string name="morning_hrv_summary_rmssd">rMSSD : %1$.1f ms</string>
+    <string name="morning_hrv_summary_ln_rmssd">ln(rMSSD) : %1$.2f</string>
+    <string name="morning_hrv_summary_resting_hr">FC au repos : %1$d bpm</string>
+    <string name="morning_hrv_saved_toast">Mesure matinale de VRC enregistrée</string>
 </resources>

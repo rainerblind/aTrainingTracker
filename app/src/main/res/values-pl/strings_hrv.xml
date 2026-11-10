@@ -34,4 +34,31 @@
     <string name="hrv_info_zones_desc">DFA a1 &gt; 0,75 wskazuje na tempo tlenowe wytrzymałościowe (Strefa 2). Wartości od 0,75 do 0,50 odzwierciedlają przejście progowe (Strefa 3). Wartości poniżej 0,50 wskazują na wysoką intensywność beztlenową (Strefa 4).</string>
     <string name="hrv_info_disclaimer_title">Zastrzeżenie medyczne</string>
     <string name="hrv_info_disclaimer_desc">Metryki autonomiczne HRV w aTrainingTracker służą do sterowania treningiem i nie zastępują porady lekarskiej. Arytmie serca lub pobudzenia ektopowe mogą zafałszować szacunki progowe.</string>
+
+    <!-- Morning Resting HRV Check (ATT-3556 / REQ-PER-032) -->
+    <string name="morning_hrv_title">Poranny test HRV</string>
+    <string name="morning_hrv_subtitle">Protokół poranny gotowości autonomicznej</string>
+    <string name="morning_hrv_posture_label">Postawa</string>
+    <string name="morning_hrv_posture_supine">Leżąca</string>
+    <string name="morning_hrv_posture_seated">Siedząca</string>
+    <string name="morning_hrv_posture_standing">Stojąca</string>
+    <string name="morning_hrv_duration_label">Czas trwania</string>
+    <string name="morning_hrv_duration_60s">60 s (Standardowy)</string>
+    <string name="morning_hrv_duration_120s">120 s (Rozszerzony)</string>
+    <string name="morning_hrv_state_ready">Gotowy do pomiaru</string>
+    <string name="morning_hrv_state_stabilizing">Stabilizacja: %1$ds</string>
+    <string name="morning_hrv_state_measuring">Pomiar: %1$ds / %2$ds</string>
+    <string name="morning_hrv_state_completed">Pomiar ukończony</string>
+    <string name="morning_hrv_btn_start">Rozpocznij pomiar</string>
+    <string name="morning_hrv_btn_cancel">Anuluj</string>
+    <string name="morning_hrv_btn_save">Zapisz pomiar</string>
+    <string name="morning_hrv_btn_discard">Odrzuć</string>
+    <string name="morning_hrv_instructions_title">Standaryzowany protokół</string>
+    <string name="morning_hrv_instructions_desc">Wykonaj pomiar po przebudzeniu i opróżnieniu pęcherza. Pozostań w bezruchu i oddychaj normalnie bez mówienia. Zachowaj stałą postawę dla wiarygodnych porównań SWC.</string>
+    <string name="morning_hrv_artifact_warning_title">Wysoki odsetek artefaktów</string>
+    <string name="morning_hrv_artifact_warning_desc">Odsetek artefaktów przekracza 5%% (%1$.1f%%). Zwilż elektrody pasa piersiowego i sprawdź jego dopasowanie.</string>
+    <string name="morning_hrv_summary_rmssd">rMSSD: %1$.1f ms</string>
+    <string name="morning_hrv_summary_ln_rmssd">ln(rMSSD): %1$.2f</string>
+    <string name="morning_hrv_summary_resting_hr">Tętno spoczynkowe: %1$d bpm</string>
+    <string name="morning_hrv_saved_toast">Zapisano poranny pomiar HRV</string>
 </resources>

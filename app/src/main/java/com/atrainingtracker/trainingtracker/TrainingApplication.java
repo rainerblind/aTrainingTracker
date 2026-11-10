@@ -567,6 +567,23 @@ public class TrainingApplication extends Application {
         notifyDisplaySettingsChanged();
     }
 
+    public static final String SP_HRV_LAST_POSTURE = "hrvLastPosture";
+    public static final String DEFAULT_HRV_LAST_POSTURE = "SUPINE";
+
+    @NonNull
+    public static String getLastHrvPosture() {
+        if (cSharedPreferences == null) {
+            return DEFAULT_HRV_LAST_POSTURE;
+        }
+        return cSharedPreferences.getString(SP_HRV_LAST_POSTURE, DEFAULT_HRV_LAST_POSTURE);
+    }
+
+    public static void setLastHrvPosture(@NonNull String posture) {
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().putString(SP_HRV_LAST_POSTURE, posture).apply();
+        }
+    }
+
     public interface OnDisplaySettingsChangeListener {
         void onDisplaySettingsChanged();
     }
