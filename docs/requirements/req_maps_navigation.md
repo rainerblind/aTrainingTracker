@@ -2176,6 +2176,45 @@
 
 **Invariants**: `Climbs.db` SQLite schema v1 integrity; zero modification to `PathPreviewMap.kt` or `ui/clusters/*` (Lane 3 isolation); 100% test pass rate across full test suite.
 
+### REQ-MAP-065: LiveSegmentsRepository Concurrency Safety & Immutability [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-MAP-067` | **Tickets**: `ATT-6172`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/segments/LiveSegmentsRepository.kt`
+- **Rationale**: In `LiveSegmentsRepository.kt`, `_liveSegments` (`MutableStateFlow<List<LiveSegment>>`) is updated concurrently from `reconcileSegments` (database synchronization) and `updateLiveSegments` (GPS location listener) under `Dispatchers.Default`. Non-atomic read-modify-write operations (`_liveSegments.value = ...`) lead to lost updates, overwriting active segment status transitions or newly synced segments. Furthermore, `LiveSegmentMath` declares 6 mutable `var` properties, and in-place field mutations invalidate compare-and-set retry idempotency. In addition, line 126 contains a redundant dead `.collect()` call. The system SHALL modernize `LiveSegmentsRepository` with atomic `_liveSegments.update { ... }` operations, convert `LiveSegmentMath` to an immutable data structure (`val` only), utilize pure state copying, and eliminate dead collection code:
+1. *Atomic StateFlow Update & Lost Update Elimination (`REQ-MAP-065.1`)*:
+• In `LiveSegmentsRepository.kt`, all updates to `_liveSegments` across `reconcileSegments` and `updateLiveSegments` SHALL be executed atomically using `_liveSegments.update { ... }`.
+• Direct non-atomic assignments (`_liveSegments.value = ...`) SHALL be strictly prohibited.
+2. *LiveSegmentMath Immutability & Functional Transformation (`REQ-MAP-065.2`)*:
+• `LiveSegmentMath` SHALL be strictly immutable with all properties declared as `val`.
+• Tracking loops and gate calculations SHALL use pure state transformations returning new immutable `LiveSegmentMath` and `LiveSegment` copies without in-place mutation, guaranteeing idempotent CAS retries.
+3. *Dead Coroutine Collector Elimination (`REQ-MAP-065.3`)*:
+• The redundant trailing `.collect()` call at line 126 on `banalRepository.currentLocation.collect { ... }` SHALL be removed.
+4. *Preservation of Live Segment Tracking Invariants (`REQ-MAP-065.4`)*:
+• Gate crossing detection, bearing thresholds (45°), along-track distance calculation, PR delta computation, and public `liveSegments` StateFlow contracts SHALL remain 100% functionally identical.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new refinement `REQ-MAP-065` refining `REQ-GEO-001` (*Polyline Engine & Live Segments*). Targets `LiveSegmentsRepository.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-41 (`ATT-2582`), where Kotlin coroutines were initially integrated for segment tracking.
+3. *Root Reason for Existing Formulation*: Early implementation assumed sequential single-threaded execution, overlooking multi-threaded races on `Dispatchers.Default`.
+4. *Preservation of Core Invariants*: Gate crossing detection, bearing tolerance (45°), along-track progress computation, PR delta formatting, and existing UI StateFlow contracts are 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* high-frequency GPS updates and asynchronous segment database reloads running concurrently across multiple threads on `Dispatchers.Default`,
+• *When* updating `_liveSegments`,
+• *Then* all segment state transitions (e.g. crossing start gate -> `ON_SEGMENT`) and newly synchronized segments are preserved without lost updates.
+• *Given* an active live segment,
+• *When* location updates process tracking math,
+• *Then* existing `LiveSegmentMath` instances are never mutated in-place; a new immutable copy is emitted.
+• *Given* repository initialization,
+• *When* location flow collection is launched,
+• *Then* it executes cleanly as a single terminal collector without trailing dead calls.
+• *Given* existing segment tracking test cases,
+• *When* tests run,
+• *Then* 100% pass rate is maintained with zero behavioral regressions.
+
+**Invariants**: Zero lost updates; pure immutable state transitions; 100% test pass rate across `LiveSegmentsRepositoryTest`.
+
+
 
 
 

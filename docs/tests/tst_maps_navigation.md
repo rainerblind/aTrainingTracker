@@ -1135,6 +1135,22 @@
   6. *Targeted Regression Verification Suite (`TST-MAP-066.6`)*:
   • Run targeted tests: `--tests "com.atrainingtracker.trainingtracker.ui.map.*" --tests "com.atrainingtracker.trainingtracker.database.ClimbsDatabaseManagerTest" --tests "com.atrainingtracker.trainingtracker.climbs.*"` asserting 100% pass rate.
 
+### TST-MAP-067: **LiveSegmentsRepository Concurrency Safety & Immutability Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-MAP-065` (`REQ-MAP-065.1`..`REQ-MAP-065.4`)
+- **Component**: `LiveSegmentsRepository.kt`, `LiveSegmentsRepositoryConcurrencyTest.kt`, `LiveSegmentsRepositoryImmutabilityTest.kt`, `LiveSegmentsRepositoryTest.kt`
+- **Jira**: `ATT-6172` | **Target Release**: `V5.0.0`
+- **Test Description**:
+  1. *Concurrent State Update & Lost Update Prevention (`TST-MAP-067.1`, `LiveSegmentsRepositoryConcurrencyTest.kt`)*:
+  • Verify that concurrent calls to `updateLiveSegments` and `reconcileSegments` on `Dispatchers.Default` under multi-threaded stress never drop active segment transitions or newly synchronized segments.
+  2. *LiveSegmentMath Immutability & CAS Retry Idempotency (`TST-MAP-067.2`, `LiveSegmentsRepositoryImmutabilityTest.kt`)*:
+  • Verify via reflection and compile-time contract that all properties in `LiveSegmentMath` are declared as `val`.
+  • Verify that location updates never mutate existing instances in-place, emitting new immutable copies.
+  3. *Dead Coroutine Collector Elimination Contract (`TST-MAP-067.3`, `LiveSegmentsRepositoryContractTest.kt`)*:
+  • Verify that the trailing dead `.collect()` call at line 126 is eliminated from the location flow listener.
+  4. *Targeted Regression Verification Suite (`TST-MAP-067.4`)*:
+  • Run targeted tests: `--tests "com.atrainingtracker.trainingtracker.segments.*"` asserting 100% pass rate.
+
+
 
 
 
