@@ -234,5 +234,29 @@ In accordance with **ASPICE SWE.2 Base Practice 2 (Specify interfaces of softwar
 
 For comprehensive operation signatures, payload schemas, concurrency rules, and fault-tolerance protocols, see the authoritative specification in [`docs/architecture/interfaces.md`](architecture/interfaces.md).
 
+---
+
+## 6. Software Integration and Verification Strategy (SWE.5.BP1)
+
+In accordance with **Automotive SPICE (ASPICE v3.1 / v4.0) SWE.5 Base Practice 1 (Develop software integration strategy and software verification strategy)**, the complete software integration sequence across architectural interfaces (`IF-SWE-01` through `IF-SWE-08`), three hierarchical verification levels (Level 1 JVM/Robolectric, Level 2 Instrumented/Emulator, Level 3 Physical Hardware & Simulators), entry/exit criteria, and two-tier regression selection are formally specified in [`docs/architecture/integration_strategy.md`](architecture/integration_strategy.md).
+
+### 6.1 Integration Sequence & Boundary Allocation
+
+Software components are integrated bottom-up to validate database persistence and hardware ingestion layers prior to domain calculations and presentation bindings:
+
+| Sequence Step | Integration Step ID | Architectural Interface | Subsystems Integrated | Verification Level | Mocked vs. Real Boundary |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| Step 1 | `INT-SWE-06` | `IF-SWE-06` | Persistence & SQLite Managers | Level 1 & 2 | Real SQLite with temp/in-memory DB; WAL serialized via `dbDispatcher` |
+| Step 2 | `INT-SWE-04` | `IF-SWE-04` | Hardware HAL to Services | Level 1 & 3 | Mocked hardware via fake GPS & BLE simulators; real service listeners |
+| Step 3 | `INT-SWE-03` | `IF-SWE-03` | TrackerService $\leftrightarrow$ BANALService | Level 1 & 2 | Real Android Binder IPC test harness; stubbed sensor streams |
+| Step 4 | `INT-SWE-05` | `IF-SWE-05` | Domain Calculators & Engines | Level 1 | Pure JVM mathematical models with synthetic time-series fixtures |
+| Step 5 | `INT-SWE-02` | `IF-SWE-02` | ViewModel to Repository Layer | Level 1 | Real repositories with test SQLite / fake DataStore; real coroutine scopes |
+| Step 6 | `INT-SWE-07` | `IF-SWE-07` | Repositories to File Exporters | Level 1 | Real streaming binary/XML writers; mock storage volume |
+| Step 7 | `INT-SWE-08` | `IF-SWE-08` | Repositories to Cloud & Health Connect | Level 1 | MockWebServer for REST endpoints; test doubles for HealthConnectClient |
+| Step 8 | `INT-SWE-01` | `IF-SWE-01` | UI Composables to ViewModels | Level 1 & 2 | Jetpack Compose MVI with Robolectric Compose test rule |
+
+For complete verification level definitions, entry/exit criteria, two-tier regression selection, and defect bisection workflows, see [`docs/architecture/integration_strategy.md`](architecture/integration_strategy.md).
+
+
 
 

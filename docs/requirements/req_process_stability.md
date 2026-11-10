@@ -2347,3 +2347,35 @@ The workflow SHALL mandate that:
 - **Invariants**: Zero modifications to Android production code in `app/src/main/`; existing SWE.2 contract assertions remain satisfied.
 
 
+### REQ-PRO-045: ASPICE SWE.5 Software Integration Verification Strategy [Verified]
+- **Tests**: `TST-PRO-045` | **Tickets**: `ATT-6183`
+- **Implementation**: `docs/architecture/integration_strategy.md`, `docs/architecture.md`, `AspiceSweAuditContractTest.kt`
+- **Rationale**: Prior to ATT-6183, aTrainingTracker lacked a formal Software Integration Verification Strategy (ASPICE SWE.5 BP1). Integration verification was informally conflated with unit testing during the Sprint Integration Gate without a documented sequence across architectural interfaces (`IF-SWE-01`..`IF-SWE-08`), defined verification levels, explicit entry/exit criteria, or structured regression tiers (Finding C-09). Formalizing this strategy eliminates integration risk and fulfills ASPICE Level 2 SWE.5 requirements (ATT-6183, refining `REQ-PRO-034` under Epic `ATT-6142`):
+- **Description**:
+  1. *Formal Integration Strategy Document (`REQ-PRO-045.1`, integration_strategy.md)*:
+     • The architecture repository SHALL maintain `docs/architecture/integration_strategy.md` defining:
+       - Bottom-up integration sequence across interfaces (`IF-SWE-06` Databases $\to$ `IF-SWE-04`/`03` Hardware & Sensor Ingestion $\to$ `IF-SWE-05` Domain Calculators & Tracking $\to$ `IF-SWE-02`/`07`/`08` Repositories, Exporters & Cloud $\to$ `IF-SWE-01` Jetpack Compose UI).
+       - Three verification levels: Level 1 (JVM/Robolectric Unit & Subsystem), Level 2 (Instrumented Android / Emulator), Level 3 (Physical Hardware & Script Simulators).
+       - Formal Entry and Exit criteria for each level and release candidate milestone.
+       - Two-Tier regression selection strategy (Tier 1 targeted package/contract tests per in-sprint ticket; Tier 2 full unit test suite & governance at Sprint Integration Gate) and git bisect defect localization.
+  2. *Architecture Master Summary Integration (`REQ-PRO-045.2`)*:
+     • `docs/architecture.md` Section 6 SHALL integrate a Software Integration Verification Strategy summary linking to `docs/architecture/integration_strategy.md`.
+  3. *Automated Strategy Conformance Contract (`REQ-PRO-045.3`)*:
+     • `AspiceSweAuditContractTest.kt` SHALL assert that `docs/architecture/integration_strategy.md` and `docs/architecture.md` Section 6 exist and contain all required sections and interface references.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-045` (*ASPICE SWE.5 Software Integration Verification Strategy*), refining `REQ-PRO-034` (*SWE.1/2/4/6 Hardening*) and `REQ-PRO-044` (*Software Interface Specification*). Targets `docs/architecture/integration_strategy.md`, `docs/architecture.md`, and `AspiceSweAuditContractTest.kt`.
+  2. *Historical Origin & Commit Trace*: Independent ASPICE pre-assessment finding C-09 (2026-11-08) and ticket ATT-6183.
+  3. *Root Reason for Existing Formulation*: High-level test runs were historically considered sufficient; ASPICE Level 2 mandates an explicit integration strategy.
+  4. *Preservation of Core Invariants*: Existing SWE.2 interface definitions (`IF-SWE-01`..`IF-SWE-08`), contract tests, and Two-Tier test governance remain 100% preserved.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `docs/architecture/integration_strategy.md`,
+  • *When* inspected,
+  • *Then* it SHALL define integration sequence, 3 verification levels, entry/exit criteria, and two-tier regression selection referencing `IF-SWE-01` through `IF-SWE-08`.
+  • *Given* `docs/architecture.md`,
+  • *When* inspecting Section 6,
+  • *Then* it SHALL link to `integration_strategy.md` and summarize integration order.
+  • *Given* `AspiceSweAuditContractTest.kt`,
+  • *When* executed as part of the unit test suite,
+  • *Then* all strategy conformance assertions pass with 100% success.
+- **Invariants**: Zero modifications to Android production code in `app/src/main/`; existing SWE.2 contract assertions remain satisfied.
+

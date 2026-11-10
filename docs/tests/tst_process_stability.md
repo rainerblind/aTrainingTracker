@@ -1480,3 +1480,18 @@
   • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest"` asserting 100% pass rate.
 
 
+### TST-PRO-045: **ASPICE SWE.5 Software Integration Verification Strategy Contract Test Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-045`
+- **Component**: `docs/architecture/integration_strategy.md`, `docs/architecture.md`, `AspiceSweAuditContractTest.kt`
+- **Jira**: `ATT-6183`
+- **Test Description**:
+  1. *Integration Strategy Structural Completeness Test (`TST-PRO-045.1`, `AspiceSweAuditContractTest.kt`)*:
+  • Verify existence of `docs/architecture/integration_strategy.md`.
+  • Assert that core sections ("Integration Sequence", "Verification Levels", "Entry and Exit Criteria", "Regression Selection") are present.
+  2. *Interface Integration Seam Grounding Test (`TST-PRO-045.2`, `AspiceSweAuditContractTest.kt`)*:
+  • Verify `docs/architecture/integration_strategy.md` explicitly references all 8 interfaces `IF-SWE-01` through `IF-SWE-08`.
+  3. *Architecture Document Section 6 Conformance Test (`TST-PRO-045.3`, `AspiceSweAuditContractTest.kt`)*:
+  • Verify `docs/architecture.md` contains Section 6 referencing `integration_strategy.md`.
+  4. *Clean-Room Targeted Test Suite Execution (`TST-PRO-045.4`)*:
+  • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest"` asserting 100% pass rate.
+

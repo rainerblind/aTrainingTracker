@@ -25,13 +25,14 @@ import org.junit.Test
 import java.io.File
 
 /**
- * Build contract test verifying ASPICE SWE.1/2/4/6 audit hardening (REQ-PRO-034, TST-PRO-034, REQ-PRO-043, TST-PRO-043, REQ-PRO-044, TST-PRO-044, ATT-5431, ATT-6179, ATT-6180):
+ * Build contract test verifying ASPICE SWE.1/2/4/5/6 audit hardening (REQ-PRO-034, TST-PRO-034, REQ-PRO-043, TST-PRO-043, REQ-PRO-044, TST-PRO-044, REQ-PRO-045, TST-PRO-045, ATT-5431, ATT-6179, ATT-6180, ATT-6183):
  * 1. docs/architecture.md completeness (layers, 9-domain shard allocation, 3 Mermaid dynamic models, invariants).
  * 2. Authentic component nomenclature code-grounding & absence of drifted placeholders (REQ-PRO-043).
  * 3. Software interface specifications (SWE.2.BP2) for IF-SWE-01 through IF-SWE-08 (REQ-PRO-044).
  * 4. Status header standardization across all 9 requirement and test domain shards.
  * 5. Master-to-shard table count parity in docs/requirements.md and docs/tests.md.
  * 6. Skill & rule governance contracts (universal read_file image audit, doc code-grounding, SWE.2 maintenance).
+ * 7. Software integration verification strategy (SWE.5.BP1) for INT-SWE-01 through INT-SWE-08 (REQ-PRO-045).
  */
 class AspiceSweAuditContractTest {
 
@@ -293,6 +294,48 @@ class AspiceSweAuditContractTest {
         assertTrue("architecture.md must link to interfaces.md (TST-PRO-044.3)", archContent.contains("interfaces.md"))
         for (ifId in interfaceIds) {
             assertTrue("architecture.md Section 5 must reference $ifId in the matrix (TST-PRO-044.3)", archContent.contains(ifId))
+        }
+    }
+
+    /**
+     * Asserts that the software integration verification strategy is formally specified in accordance with ASPICE SWE.5.BP1 (REQ-PRO-045, TST-PRO-045).
+     */
+    @Test
+    fun testArchitectureDocument_softwareIntegrationStrategy() {
+        val strategyFile = findRepoRootFile("docs/architecture/integration_strategy.md")
+        assertTrue("docs/architecture/integration_strategy.md must exist (REQ-PRO-045.1, TST-PRO-045.1)", strategyFile.exists())
+        val strategyContent = strategyFile.readText()
+
+        val archFile = findRepoRootFile("docs/architecture.md")
+        val archContent = archFile.readText()
+
+        // TST-PRO-045.1: Core sections completeness
+        val requiredSections = listOf(
+            "Integration Sequence",
+            "Verification Levels",
+            "Entry and Exit Criteria",
+            "Regression Selection"
+        )
+        for (section in requiredSections) {
+            assertTrue("integration_strategy.md must document section '$section' (TST-PRO-045.1)", strategyContent.contains(section))
+        }
+
+        // TST-PRO-045.2: Complete interface seam grounding (IF-SWE-01..08 and INT-SWE-01..08)
+        for (i in 1..8) {
+            val ifId = String.format("IF-SWE-%02d", i)
+            val intId = String.format("INT-SWE-%02d", i)
+            assertTrue("integration_strategy.md must reference interface $ifId (TST-PRO-045.2)", strategyContent.contains(ifId))
+            assertTrue("integration_strategy.md must reference integration step $intId (TST-PRO-045.2)", strategyContent.contains(intId))
+        }
+
+        // TST-PRO-045.3: Architecture document Section 6 integration & matrix
+        assertTrue("architecture.md must contain Section 6 for integration strategy (TST-PRO-045.3)", archContent.contains("6. Software Integration and Verification Strategy"))
+        assertTrue("architecture.md must link to integration_strategy.md (TST-PRO-045.3)", archContent.contains("integration_strategy.md"))
+        for (i in 1..8) {
+            val ifId = String.format("IF-SWE-%02d", i)
+            val intId = String.format("INT-SWE-%02d", i)
+            assertTrue("architecture.md Section 6 must reference $ifId in integration sequence (TST-PRO-045.3)", archContent.contains(ifId))
+            assertTrue("architecture.md Section 6 must reference $intId in integration sequence (TST-PRO-045.3)", archContent.contains(intId))
         }
     }
 }
