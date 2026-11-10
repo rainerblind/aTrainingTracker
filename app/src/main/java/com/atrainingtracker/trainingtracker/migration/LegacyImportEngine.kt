@@ -889,7 +889,7 @@ object LegacyImportEngine {
                             )
                         )
                     }
-                    com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrDatabaseManager.getInstance(context).insertIntervals(rrEntities)
+                    com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrRepository.getInstance(context).insertIntervalsBlocking(rrEntities)
                     com.atrainingtracker.trainingtracker.database.hrv.HrvPostWorkoutRecomputer.recomputeWorkout(context, workoutId)
                 } catch (t: Throwable) {
                     Log.e(TAG, "Failed to persist imported RR intervals or recompute HRV for $effectiveBaseFileName", t)
@@ -932,7 +932,7 @@ object LegacyImportEngine {
                 Log.e(TAG, "CRITICAL: Compensatory cleanup failed to delete laps for $workoutId ($baseFileName)", t)
             }
             try {
-                com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrDatabaseManager.getInstance(context).deleteWorkout(workoutId)
+                com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrRepository.getInstance(context).deleteWorkoutBlocking(workoutId)
             } catch (t: Throwable) {
                 Log.e(TAG, "CRITICAL: Compensatory cleanup failed to delete RR intervals for $workoutId ($baseFileName)", t)
             }

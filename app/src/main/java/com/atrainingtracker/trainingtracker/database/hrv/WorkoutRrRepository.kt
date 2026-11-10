@@ -26,9 +26,22 @@ import kotlinx.coroutines.withContext
 /**
  * Repository coordinating workout beat-to-beat RR persistence and retrieval (`REQ-PER-034.1`).
  */
-class WorkoutRrRepository(
-    private val databaseManager: WorkoutRrDatabaseManager
+class WorkoutRrRepository private constructor(
+    private val databaseManagerProvider: () -> WorkoutRrDatabaseManager
 ) {
+    constructor(databaseManager: WorkoutRrDatabaseManager) : this({ databaseManager })
+
+    private val databaseManager: WorkoutRrDatabaseManager
+        get() = databaseManagerProvider()
+
+    fun insertIntervalsBlocking(intervals: List<WorkoutRrInterval>): Int =
+        databaseManager.insertIntervals(intervals)
+
+    fun getIntervalsForWorkoutBlocking(workoutId: Long): List<WorkoutRrInterval> =
+        databaseManager.getIntervalsForWorkout(workoutId)
+
+    fun deleteWorkoutBlocking(workoutId: Long): Int =
+        databaseManager.deleteWorkout(workoutId)
 
     suspend fun insertIntervals(intervals: List<WorkoutRrInterval>): Int = withContext(Dispatchers.IO) {
         databaseManager.insertIntervals(intervals)
@@ -56,10 +69,11 @@ class WorkoutRrRepository(
 
         @JvmStatic
         fun getInstance(context: Context): WorkoutRrRepository {
+            val appContext = context.applicationContext ?: context
             return instance ?: synchronized(this) {
-                instance ?: WorkoutRrRepository(
-                    WorkoutRrDatabaseManager.getInstance(context.applicationContext)
-                ).also { instance = it }
+                instance ?: WorkoutRrRepository {
+                    WorkoutRrDatabaseManager.getInstance(appContext)
+                }.also { instance = it }
             }
         }
 

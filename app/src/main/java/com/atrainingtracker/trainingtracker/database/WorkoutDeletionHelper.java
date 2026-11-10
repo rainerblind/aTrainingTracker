@@ -44,7 +44,7 @@ public class WorkoutDeletionHelper {
     private final WorkoutSamplesDatabaseManager mSamplesManager;
     private final ExportStatusDatabaseManager mExportStatusRepo;
     private final com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper mStravaUploadDbHelper;
-    private final com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrDatabaseManager mWorkoutRrManager;
+    private final com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrRepository mWorkoutRrRepository;
 
     /**
      * Constructor for the deletion helper.
@@ -59,7 +59,7 @@ public class WorkoutDeletionHelper {
                 WorkoutRepository.getInstance(context).getWorkoutSamplesDatabaseManager(),
                 ExportStatusRepository.getInstance(context).getDatabaseManager(),
                 ExportStatusRepository.getInstance(context).getStravaHelper(),
-                com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrDatabaseManager.getInstance(context)
+                com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrRepository.getInstance(context)
         );
     }
 
@@ -113,7 +113,7 @@ public class WorkoutDeletionHelper {
             @NonNull WorkoutSamplesDatabaseManager samplesManager,
             @NonNull ExportStatusDatabaseManager exportStatusRepo,
             @NonNull com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper stravaUploadDbHelper,
-            @androidx.annotation.Nullable com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrDatabaseManager workoutRrManager
+            @androidx.annotation.Nullable com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrRepository workoutRrRepository
     ) {
         this.mContext = context.getApplicationContext();
         this.mSummariesManager = summariesManager;
@@ -121,7 +121,7 @@ public class WorkoutDeletionHelper {
         this.mSamplesManager = samplesManager;
         this.mExportStatusRepo = exportStatusRepo;
         this.mStravaUploadDbHelper = stravaUploadDbHelper;
-        this.mWorkoutRrManager = workoutRrManager;
+        this.mWorkoutRrRepository = workoutRrRepository;
     }
 
     /**
@@ -140,9 +140,9 @@ public class WorkoutDeletionHelper {
 
         mSummariesManager.deleteWorkout(workoutId);
         mLapsManager.deleteWorkout(workoutId);
-        if (mWorkoutRrManager != null) {
+        if (mWorkoutRrRepository != null) {
             try {
-                mWorkoutRrManager.deleteWorkout(workoutId);
+                mWorkoutRrRepository.deleteWorkoutBlocking(workoutId);
             } catch (Throwable t) {
                 Log.w(TAG, "Could not delete workout RR intervals for " + workoutId + ": " + t.getMessage());
             }

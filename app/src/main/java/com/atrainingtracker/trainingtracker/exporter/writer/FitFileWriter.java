@@ -48,8 +48,8 @@ import com.garmin.fit.Fit;
 import com.garmin.fit.HrvMesg;
 import com.garmin.fit.Intensity;
 import com.garmin.fit.LapMesg;
-import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrInterval;
+import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrRepository;
 import com.garmin.fit.Manufacturer;
 import com.garmin.fit.RecordMesg;
 import com.garmin.fit.SessionMesg;
@@ -220,7 +220,7 @@ public class FitFileWriter extends BaseFileWriter {
             List<WorkoutRrInterval> rrIntervals = null;
             if (workoutId > 0) {
                 try {
-                    rrIntervals = WorkoutRrDatabaseManager.getInstance(mContext).getIntervalsForWorkout(workoutId);
+                    rrIntervals = WorkoutRrRepository.getInstance(mContext).getIntervalsForWorkoutBlocking(workoutId);
                 } catch (Exception e) {
                     Log.w(TAG, "Could not query RR intervals for workout " + workoutId + ": " + e.getMessage());
                 }
