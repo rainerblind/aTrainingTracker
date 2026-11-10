@@ -3436,4 +3436,37 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Guaranteed volume restoration in `finally`/`onDestroy()`; §3.4 warm static replay (zero `track.stop()`); zero main-thread blocking; zero SQLite schema modifications; 100% 9-language translation parity.
 
+### REQ-CON-030: Garmin Varia BLE V2 High-Resolution Radar Stream & Vehicle Classification [Verified]
+- **Tests**: `TST-CON-030` | **Tickets**: `ATT-5095`
+- **Implementation**: `BTLERadarDevice.java`, `RadarTarget.kt`, `RadarWindowAggregator.kt`, `RadarTrafficSimulator.kt`, `SensorType.java`, `BluetoothConstants.java`, `strings_radar.xml`
+- **Rationale**: Next-generation Garmin Varia radar units (e.g. RearVue 820) introduce a high-resolution 2D BLE telemetry stream on characteristic `6a4e3204-667b-11e3-949a-0800200c9a66` extending radar detection range up to 175 m, providing lateral offset (identifying overtaking trajectory and close passes), and classifying vehicle size (Bikes/Motorcycles vs. Cars vs. Trucks/Busses). The protocol requires LESC bonding, MTU 247 negotiation, and a serialized GATT handshake while enforcing seamless, automatic fallback to legacy V1 characteristic `6a4e3203` on unbonded devices or older hardware (RTL515/516/315/715) without breaking the 3.5s starvation watchdog (ATT-5095, Parent Epic ATT-1286, extending `REQ-CON-028` and `REQ-CON-029`):
+1. *BLE V2 Handshake Choreography (`REQ-CON-030.1`)*:
+• Upon peripheral connection and service discovery, if characteristic `6a4e3204` is present, `BTLERadarDevice` SHALL verify LESC bonding state, request MTU expansion to 247 bytes, execute the serialized GATT initialization handshake, and enable CCCD indications/notifications on `6a4e3204`.
+2. *Automatic Legacy Fallback Invariant (`REQ-CON-030.2`)*:
+• If characteristic `6a4e3204` is absent, or if MTU/handshake negotiation fails or times out within 5.0 seconds, `BTLERadarDevice` SHALL immediately fall back to subscribing to legacy V1 characteristic `6a4e3203`, maintaining 100% backward compatibility with legacy radar devices.
+3. *High-Resolution V2 Packet Parsing & Domain Mapping (`REQ-CON-030.3`)*:
+• The system SHALL parse multi-target V2 telemetry frames (header `0x01`), decoding `targetId`, range (0–175 m, 0.1 m precision), signed approach speed, lateral offset ($x$, negative = left, positive = right), and vehicle size category (`UNKNOWN_OR_LIGHT`, `CAR`, `TRUCK_OR_BUS`), mapping them into enriched `RadarTarget` domain models.
+4. *Lateral Passing Clearance & Large Vehicle Aggregation (`REQ-CON-030.4`)*:
+• `RadarWindowAggregator` SHALL track minimum lateral passing distance during vehicle overtaking ($y \le 3.0\text{ m}$) and latch `RADAR_PASSING_DISTANCE_m` (in meters) and `RADAR_LARGE_VEHICLE_COUNT` (cumulative count of passed large vehicles) at each 1 Hz tick.
+5. *Scalar Sensor Publishing (`REQ-CON-030.5`)*:
+• `BTLERadarDevice` SHALL register and publish `SensorType.RADAR_PASSING_DISTANCE_m` and `SensorType.RADAR_LARGE_VEHICLE_COUNT` to `MySensorManager` for live cockpit telemetry and storage.
+6. *Traffic Simulator V2 Extension (`REQ-CON-030.6`)*:
+• `RadarTrafficSimulator` SHALL generate realistic V2 trajectory scenarios including vehicle size diversity, lane positioning, and close-pass overtaking events.
+7. *9-Language Localization Parity (`REQ-CON-030.7`)*:
+• All sensor names and short labels in `strings_radar.xml` SHALL maintain 100% key and format parity across EN, DE, ES, FR, IT, JA, NL, PL, PT (zero inline emojis).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a connected Garmin Varia BLE peripheral exposing characteristic `6a4e3204`,
+• *When* GATT discovery completes,
+• *Then* `BTLERadarDevice` requests MTU 247, completes the V2 handshake, and streams 2D targets with range up to 175 m and lateral offset.
+• *Given* a legacy Garmin Varia RTL515 exposing only `6a4e3203`,
+• *When* GATT discovery completes,
+• *Then* `BTLERadarDevice` automatically subscribes to V1 `6a4e3203` without error or connection timeout.
+• *Given* a large truck overtaking at 1.2 m lateral clearance,
+• *When* the vehicle passes ($y \le 3.0\text{ m}$),
+• *Then* `RadarWindowAggregator` latches `RADAR_PASSING_DISTANCE_m` to 1.2 m and increments `RADAR_LARGE_VEHICLE_COUNT`.
+
+**Invariants**: Guaranteed legacy V1 fallback; 3.5s packet starvation watchdog preservation; non-blocking serialized GATT operations; thread safety across 4–8 Hz updates and 1 Hz latching; 100% 9-language translation parity.
+
+
 

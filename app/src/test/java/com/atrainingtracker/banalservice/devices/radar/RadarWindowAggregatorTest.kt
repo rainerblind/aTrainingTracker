@@ -111,4 +111,68 @@ class RadarWindowAggregatorTest {
 
         assertEquals("Aborted approach must not increment vehicle count", 1, aggregator.getVehicleCount())
     }
+
+    @Test
+    fun testPassingDistanceAndLargeVehicleCount_latchesLateralClearanceAndIncrementsLargeVehicleCount() {
+        assertEquals(0, aggregator.getLargeVehicleCount())
+
+        // 1. Large truck approaches and passes at 1.35m lateral clearance (y <= 3.0m)
+        aggregator.onTargetsUpdated(listOf(
+            RadarTarget(
+                targetId = 1,
+                rangeMeters = 50f,
+                approachSpeedMps = 15f,
+                threatLevel = ThreatLevel.APPROACHING,
+                lateralOffsetMeters = -1.6f,
+                vehicleSizeCategory = VehicleSizeCategory.TRUCK_OR_BUS
+            )
+        ))
+        aggregator.onTargetsUpdated(listOf(
+            RadarTarget(
+                targetId = 1,
+                rangeMeters = 2.5f,
+                approachSpeedMps = 15f,
+                threatLevel = ThreatLevel.APPROACHING,
+                lateralOffsetMeters = -1.4f,
+                vehicleSizeCategory = VehicleSizeCategory.TRUCK_OR_BUS
+            )
+        ))
+        aggregator.onTargetsUpdated(listOf(
+            RadarTarget(
+                targetId = 1,
+                rangeMeters = 1.5f,
+                approachSpeedMps = 15f,
+                threatLevel = ThreatLevel.APPROACHING,
+                lateralOffsetMeters = -1.35f,
+                vehicleSizeCategory = VehicleSizeCategory.TRUCK_OR_BUS
+            )
+        ))
+
+        // 1 Hz sample tick must latch minimum passing clearance observed during pass (1.35m)
+        val tick1 = aggregator.sampleAndResetWindow()
+        assertEquals(1.35, tick1.passingDistanceMeters!!, 0.001)
+
+        // Target finishes passing and exits radar tracking field
+        aggregator.onTargetsUpdated(emptyList())
+        assertEquals(1, aggregator.getVehicleCount())
+        assertEquals(1, aggregator.getLargeVehicleCount())
+
+        // 2. Standard car approaches and passes at 2.1m lateral clearance
+        aggregator.onTargetsUpdated(listOf(
+            RadarTarget(
+                targetId = 2,
+                rangeMeters = 2.0f,
+                approachSpeedMps = 12f,
+                threatLevel = ThreatLevel.APPROACHING,
+                lateralOffsetMeters = -2.1f,
+                vehicleSizeCategory = VehicleSizeCategory.CAR
+            )
+        ))
+        val tick2 = aggregator.sampleAndResetWindow()
+        assertEquals(2.1, tick2.passingDistanceMeters!!, 0.001)
+
+        aggregator.onTargetsUpdated(emptyList())
+        assertEquals(2, aggregator.getVehicleCount())
+        assertEquals("Car must not increment large vehicle count", 1, aggregator.getLargeVehicleCount())
+    }
 }

@@ -35,6 +35,12 @@
     <string name="radar_vehicle_count">Aantal radarvoertuigen</string>
     <string name="radar_vehicle_count_short">Voertuigen</string>
 
+    <!-- Radar V2 Passing Clearance & Vehicle Sizing (ATT-5095 / REQ-CON-030) -->
+    <string name="radar_passing_distance">Radar inhaalsafstand</string>
+    <string name="radar_passing_distance_short">Inhaalafst</string>
+    <string name="radar_large_vehicle_count">Radar grote voertuigen</string>
+    <string name="radar_large_vehicle_count_short">Grote voert</string>
+
     <!-- Radar Traffic Simulator (ATT-5087 / REQ-CON-029.5) -->
     <string name="radar_simulator_title">Radar verkeerssimulator</string>
     <string name="radar_simulator_subtitle">Simuleer verkeersscenario\'s voor binnentrainingen en UI-tests</string>

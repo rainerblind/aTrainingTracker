@@ -19,20 +19,23 @@
 package com.atrainingtracker.banalservice.devices.radar
 
 /**
- * Snapshot of 1 Hz aggregated radar telemetry suitable for scalar sensor publishing and DB sampling (REQ-CON-028.5).
+ * Snapshot of 1 Hz aggregated radar telemetry suitable for scalar sensor publishing and DB sampling (REQ-CON-028.5, REQ-CON-030.4).
  */
-data class RadarLatchedSnapshot(
+data class RadarLatchedSnapshot @JvmOverloads constructor(
     val threatCount: Int,
     val closestDistanceMeters: Double?,
     val approachSpeedMps: Double,
-    val vehicleCount: Int
+    val vehicleCount: Int,
+    val passingDistanceMeters: Double? = null,
+    val largeVehicleCount: Int = 0
 )
 
 /**
- * 1 Hz window aggregator and vehicle overtaking counter with hysteresis (REQ-CON-028.5).
+ * 1 Hz window aggregator and vehicle overtaking counter with hysteresis (REQ-CON-028.5, REQ-CON-030.4).
  *
  * Aggregates high-frequency (4–8 Hz) target frames into 1 Hz peak threat count, max approach speed,
- * and minimum distance latches to ensure passing vehicles are not missed between 1 Hz DB poll ticks.
+ * minimum distance latches, minimum lateral passing clearance, and large vehicle count to ensure
+ * passing vehicles are not missed between 1 Hz DB poll ticks.
  *
  * Adheres to Rule 1.8: Constructor state initialization parity with [resetSession].
  */
@@ -43,12 +46,18 @@ class RadarWindowAggregator {
     private var currentWindowMaxThreats: Int = 0
     private var currentWindowMinDistance: Double? = null
     private var currentWindowMaxSpeed: Double = 0.0
+    private var currentWindowMinPassingDistance: Double? = null
 
     private var cumulativeVehicleCount: Int = 0
+    private var cumulativeLargeVehicleCount: Int = 0
 
-    // Target tracking for vehicle passing hysteresis
-    // Maps targetId -> minimum distance observed so far
-    private val activeTargetMinDistances = mutableMapOf<Int, Float>()
+    // Target tracking for vehicle passing hysteresis and metadata
+    private data class TrackedTargetInfo(
+        var minRange: Float,
+        var minPassingLateral: Double? = null,
+        var vehicleSizeCategory: VehicleSizeCategory = VehicleSizeCategory.UNKNOWN_OR_LIGHT
+    )
+    private val activeTargetInfo = mutableMapOf<Int, TrackedTargetInfo>()
 
     var hasReceivedData: Boolean = false
         private set
@@ -66,8 +75,10 @@ class RadarWindowAggregator {
             currentWindowMaxThreats = 0
             currentWindowMinDistance = null
             currentWindowMaxSpeed = 0.0
+            currentWindowMinPassingDistance = null
             cumulativeVehicleCount = 0
-            activeTargetMinDistances.clear()
+            cumulativeLargeVehicleCount = 0
+            activeTargetInfo.clear()
             hasReceivedData = false
         }
     }
@@ -95,25 +106,50 @@ class RadarWindowAggregator {
                     currentWindowMaxSpeed = speed
                 }
 
-                // Update hysteresis tracking for vehicle overtaking
-                val prevMin = activeTargetMinDistances[target.targetId]
-                if (prevMin == null || target.rangeMeters < prevMin) {
-                    activeTargetMinDistances[target.targetId] = target.rangeMeters
+                // Update hysteresis tracking for vehicle overtaking and lateral passing clearance
+                val info = activeTargetInfo.getOrPut(target.targetId) {
+                    TrackedTargetInfo(
+                        minRange = target.rangeMeters,
+                        minPassingLateral = if (target.rangeMeters <= CLOSE_PASS_LONGITUDINAL_THRESHOLD_METERS && target.lateralOffsetMeters != null) {
+                            Math.abs(target.lateralOffsetMeters.toDouble())
+                        } else null,
+                        vehicleSizeCategory = target.vehicleSizeCategory
+                    )
+                }
+                if (target.rangeMeters < info.minRange) {
+                    info.minRange = target.rangeMeters
+                }
+                if (target.vehicleSizeCategory != VehicleSizeCategory.UNKNOWN_OR_LIGHT) {
+                    info.vehicleSizeCategory = target.vehicleSizeCategory
+                }
+
+                // Track lateral passing clearance during close passing window (y <= 3.0m)
+                if (target.rangeMeters <= CLOSE_PASS_LONGITUDINAL_THRESHOLD_METERS && target.lateralOffsetMeters != null) {
+                    val lat = Math.abs(target.lateralOffsetMeters.toDouble())
+                    if (info.minPassingLateral == null || lat < info.minPassingLateral!!) {
+                        info.minPassingLateral = lat
+                    }
+                    if (currentWindowMinPassingDistance == null || lat < currentWindowMinPassingDistance!!) {
+                        currentWindowMinPassingDistance = lat
+                    }
                 }
             }
 
             // Detect vehicles that completed passing:
-            // A target was tracked closing to within PASSING_THRESHOLD_METERS (e.g. <= 15m)
+            // A target was tracked closing to within PASSING_THRESHOLD_METERS (e.g. <= 18m)
             // and is no longer present in the active targets list
             val currentTargetIds = targets.map { it.targetId }.toSet()
-            val disappearedTargetIds = activeTargetMinDistances.keys.filterNot { currentTargetIds.contains(it) }
+            val disappearedTargetIds = activeTargetInfo.keys.filterNot { currentTargetIds.contains(it) }
 
             for (id in disappearedTargetIds) {
-                val minDistance = activeTargetMinDistances[id] ?: Float.MAX_VALUE
-                if (minDistance <= PASSING_THRESHOLD_METERS) {
+                val info = activeTargetInfo[id]
+                if (info != null && info.minRange <= PASSING_THRESHOLD_METERS) {
                     cumulativeVehicleCount++
+                    if (info.vehicleSizeCategory == VehicleSizeCategory.TRUCK_OR_BUS) {
+                        cumulativeLargeVehicleCount++
+                    }
                 }
-                activeTargetMinDistances.remove(id)
+                activeTargetInfo.remove(id)
             }
         }
     }
@@ -127,13 +163,16 @@ class RadarWindowAggregator {
                 threatCount = currentWindowMaxThreats,
                 closestDistanceMeters = currentWindowMinDistance,
                 approachSpeedMps = currentWindowMaxSpeed,
-                vehicleCount = cumulativeVehicleCount
+                vehicleCount = cumulativeVehicleCount,
+                passingDistanceMeters = currentWindowMinPassingDistance,
+                largeVehicleCount = cumulativeLargeVehicleCount
             )
 
             // Reset 1 Hz latches for next window
             currentWindowMaxThreats = 0
             currentWindowMinDistance = null
             currentWindowMaxSpeed = 0.0
+            currentWindowMinPassingDistance = null
 
             return snapshot
         }
@@ -145,8 +184,17 @@ class RadarWindowAggregator {
         }
     }
 
+    fun getLargeVehicleCount(): Int {
+        synchronized(lock) {
+            return cumulativeLargeVehicleCount
+        }
+    }
+
     companion object {
         /** Distance threshold under which a closing vehicle is classified as an overtaken vehicle upon exit. */
         const val PASSING_THRESHOLD_METERS = 18.0f
+
+        /** Longitudinal distance threshold under which lateral offset is latched as passing clearance. */
+        const val CLOSE_PASS_LONGITUDINAL_THRESHOLD_METERS = 3.0f
     }
 }

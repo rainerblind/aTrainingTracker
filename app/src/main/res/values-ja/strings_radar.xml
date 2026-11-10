@@ -35,6 +35,12 @@
     <string name="radar_vehicle_count">レーダー通過車両数</string>
     <string name="radar_vehicle_count_short">通過車両</string>
 
+    <!-- Radar V2 Passing Clearance & Vehicle Sizing (ATT-5095 / REQ-CON-030) -->
+    <string name="radar_passing_distance">レーダー追越間隔</string>
+    <string name="radar_passing_distance_short">追越間隔</string>
+    <string name="radar_large_vehicle_count">レーダー大型車数</string>
+    <string name="radar_large_vehicle_count_short">大型車</string>
+
     <!-- Radar Traffic Simulator (ATT-5087 / REQ-CON-029.5) -->
     <string name="radar_simulator_title">レーダートラフィックシミュレータ</string>
     <string name="radar_simulator_subtitle">インドアトレーニングやUIテスト用の交通シナリオをシミュレート</string>

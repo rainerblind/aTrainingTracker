@@ -77,7 +77,7 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
     protected final Queue<BluetoothGattCharacteristic> mReadCharacteristicQueue = new ConcurrentLinkedQueue<BluetoothGattCharacteristic>();
     protected volatile State mState = State.DISCONNECTED;
     Handler mHandler;
-    private volatile BluetoothGattCharacteristic mBatteryCharacteristic;
+    protected volatile BluetoothGattCharacteristic mBatteryCharacteristic;
     private volatile boolean mIsShutDown = false;
     private volatile long mCurrentReconnectDelayMs = INITIAL_RECONNECT_DELAY_MS;
     private volatile boolean mIsScanning = false;

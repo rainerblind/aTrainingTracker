@@ -92,7 +92,14 @@ object RadarTrafficSimulator {
                             targetId = 1,
                             rangeMeters = range.coerceAtLeast(0f),
                             approachSpeedMps = 12f,
-                            threatLevel = ThreatLevel.APPROACHING
+                            threatLevel = ThreatLevel.APPROACHING,
+                            lateralOffsetMeters = -1.8f,
+                            longitudinalSpeedMps = 12f,
+                            lateralSpeedMps = 0f,
+                            vehicleWidthMeters = 1.9f,
+                            vehicleLengthMeters = 4.5f,
+                            vehicleSizeCategory = VehicleSizeCategory.CAR,
+                            laneState = LaneState.PASSING_LANE
                         )
                     )
                 } else {
@@ -117,7 +124,14 @@ object RadarTrafficSimulator {
                             targetId = 1,
                             rangeMeters = (85f - (elapsedMs / 1000f) * 10f).coerceAtLeast(0f),
                             approachSpeedMps = 10f,
-                            threatLevel = ThreatLevel.APPROACHING
+                            threatLevel = ThreatLevel.APPROACHING,
+                            lateralOffsetMeters = -1.2f,
+                            longitudinalSpeedMps = 10f,
+                            lateralSpeedMps = 0f,
+                            vehicleWidthMeters = 0.9f,
+                            vehicleLengthMeters = 2.2f,
+                            vehicleSizeCategory = VehicleSizeCategory.UNKNOWN_OR_LIGHT,
+                            laneState = LaneState.PASSING_LANE
                         )
                     )
                 }
@@ -127,7 +141,14 @@ object RadarTrafficSimulator {
                             targetId = 2,
                             rangeMeters = (115f - (elapsedMs / 1000f) * 10f).coerceAtLeast(0f),
                             approachSpeedMps = 10f,
-                            threatLevel = ThreatLevel.APPROACHING
+                            threatLevel = ThreatLevel.APPROACHING,
+                            lateralOffsetMeters = -2.0f,
+                            longitudinalSpeedMps = 10f,
+                            lateralSpeedMps = 0f,
+                            vehicleWidthMeters = 1.9f,
+                            vehicleLengthMeters = 4.5f,
+                            vehicleSizeCategory = VehicleSizeCategory.CAR,
+                            laneState = LaneState.PASSING_LANE
                         )
                     )
                 }
@@ -137,7 +158,14 @@ object RadarTrafficSimulator {
                             targetId = 3,
                             rangeMeters = (140f - (elapsedMs / 1000f) * 10f).coerceAtLeast(0f),
                             approachSpeedMps = 10f,
-                            threatLevel = ThreatLevel.APPROACHING
+                            threatLevel = ThreatLevel.APPROACHING,
+                            lateralOffsetMeters = -1.5f,
+                            longitudinalSpeedMps = 10f,
+                            lateralSpeedMps = 0f,
+                            vehicleWidthMeters = 2.6f,
+                            vehicleLengthMeters = 11.5f,
+                            vehicleSizeCategory = VehicleSizeCategory.TRUCK_OR_BUS,
+                            laneState = LaneState.PASSING_LANE
                         )
                     )
                 }
@@ -158,7 +186,14 @@ object RadarTrafficSimulator {
                             targetId = 1,
                             rangeMeters = range.coerceAtLeast(0f),
                             approachSpeedMps = 25f,
-                            threatLevel = ThreatLevel.FAST_APPROACHING
+                            threatLevel = ThreatLevel.FAST_APPROACHING,
+                            lateralOffsetMeters = -2.2f,
+                            longitudinalSpeedMps = 25f,
+                            lateralSpeedMps = 0f,
+                            vehicleWidthMeters = 2.0f,
+                            vehicleLengthMeters = 4.8f,
+                            vehicleSizeCategory = VehicleSizeCategory.CAR,
+                            laneState = LaneState.PASSING_LANE
                         )
                     )
                 } else {
@@ -310,6 +345,32 @@ object RadarTrafficSimulator {
         RadarStateRepository.updateState(frame)
         aggregator.onTargetsUpdated(frame.targets)
         return frame
+    }
+
+    /**
+     * Generates a synthetic multi-target V2 radar frame with lateral offsets and vehicle classifications (REQ-CON-030.6).
+     */
+    fun generateV2Targets(count: Int = 1, includeLargeVehicle: Boolean = false): List<RadarTarget> {
+        val targets = mutableListOf<RadarTarget>()
+        for (i in 0 until count) {
+            val isLarge = includeLargeVehicle && i == 0
+            targets.add(
+                RadarTarget(
+                    targetId = i + 1,
+                    rangeMeters = 40.0f + i * 25.0f,
+                    approachSpeedMps = 12.0f + i * 2.0f,
+                    threatLevel = if (i == 0 && isLarge) ThreatLevel.FAST_APPROACHING else ThreatLevel.APPROACHING,
+                    lateralOffsetMeters = if (isLarge) -1.4f else -2.0f,
+                    longitudinalSpeedMps = 12.0f + i * 2.0f,
+                    lateralSpeedMps = 0.0f,
+                    vehicleWidthMeters = if (isLarge) 2.6f else 1.9f,
+                    vehicleLengthMeters = if (isLarge) 10.0f else 4.5f,
+                    vehicleSizeCategory = if (isLarge) VehicleSizeCategory.TRUCK_OR_BUS else VehicleSizeCategory.CAR,
+                    laneState = LaneState.PASSING_LANE
+                )
+            )
+        }
+        return targets
     }
 
     /**

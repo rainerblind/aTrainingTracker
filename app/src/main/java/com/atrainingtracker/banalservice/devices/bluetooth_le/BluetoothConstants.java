@@ -50,11 +50,13 @@ public class BluetoothConstants {
     private static final String CHARACTERISTIC_CYCLING_POWER_FEATURE = "00002a65-0000-1000-8000-00805f9b34fb";
     public static final UUID UUID_CHARACTERISTIC_CYCLING_POWER_FEATURE = UUID.fromString(CHARACTERISTIC_CYCLING_POWER_FEATURE);
 
-    // Garmin Varia Radar (ATT-5083 / REQ-CON-028)
+    // Garmin Varia Radar (ATT-5083 / REQ-CON-028, ATT-5095 / REQ-CON-030)
     public static final String SERVICE_RADAR = "6a4e3200-667b-11e3-949a-0800200c9a66";
     public static final UUID UUID_SERVICE_RADAR = UUID.fromString(SERVICE_RADAR);
     public static final String CHARACTERISTIC_RADAR_V1 = "6a4e3203-667b-11e3-949a-0800200c9a66";
     public static final UUID UUID_CHARACTERISTIC_RADAR_V1 = UUID.fromString(CHARACTERISTIC_RADAR_V1);
+    public static final String CHARACTERISTIC_RADAR_V2 = "6a4e3204-667b-11e3-949a-0800200c9a66";
+    public static final UUID UUID_CHARACTERISTIC_RADAR_V2 = UUID.fromString(CHARACTERISTIC_RADAR_V2);
 
     private static final HashMap<DeviceType, UUID> SERVICE_UUIDS = new HashMap<DeviceType, UUID>();
     private static final HashMap<DeviceType, UUID> CHARACTERISTIC_MEASUREMENT_UUIDS = new HashMap<DeviceType, UUID>();

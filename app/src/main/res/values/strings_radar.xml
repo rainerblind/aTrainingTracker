@@ -35,6 +35,12 @@
     <string name="radar_vehicle_count">Radar Vehicle Count</string>
     <string name="radar_vehicle_count_short">Vehicles</string>
 
+    <!-- Radar V2 Passing Clearance & Vehicle Sizing (ATT-5095 / REQ-CON-030) -->
+    <string name="radar_passing_distance">Radar Passing Distance</string>
+    <string name="radar_passing_distance_short">Pass Dist</string>
+    <string name="radar_large_vehicle_count">Radar Large Vehicle Count</string>
+    <string name="radar_large_vehicle_count_short">Large Veh</string>
+
     <!-- Radar Traffic Simulator (ATT-5087 / REQ-CON-029.5) -->
     <string name="radar_simulator_title">Radar Traffic Simulator</string>
     <string name="radar_simulator_subtitle">Simulate traffic scenarios for indoor workouts and UI testing</string>

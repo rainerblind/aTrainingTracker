@@ -18,7 +18,10 @@
 
 package com.atrainingtracker.banalservice.devices.bluetooth_le
 
-import android.Manifest
+import android.bluetooth.BluetoothGatt
+import android.bluetooth.BluetoothGattCharacteristic
+import android.bluetooth.BluetoothGattDescriptor
+import android.bluetooth.BluetoothGattService
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Looper
@@ -27,10 +30,12 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.devices.radar.LaneState
 import com.atrainingtracker.banalservice.devices.radar.RadarConnectionState
 import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository
 import com.atrainingtracker.banalservice.devices.radar.RadarTarget
 import com.atrainingtracker.banalservice.devices.radar.ThreatLevel
+import com.atrainingtracker.banalservice.devices.radar.VehicleSizeCategory
 import com.atrainingtracker.banalservice.sensor.MySensorManager
 import io.mockk.every
 import io.mockk.mockk
@@ -38,6 +43,7 @@ import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -181,5 +187,84 @@ class BTLERadarDeviceTest {
         assertEquals(RadarConnectionState.DISCONNECTED_ERROR, state.connectionState)
         assertEquals(ThreatLevel.NONE, state.overallThreatLevel)
         assertTrue(state.targets.isEmpty())
+    }
+
+    @Test
+    fun testParseV2ThreatPacket_demuxesNonThreatPackets() {
+        // Null or empty payload
+        assertNull(BTLERadarDevice.parseV2ThreatPacket(null))
+        assertNull(BTLERadarDevice.parseV2ThreatPacket(byteArrayOf()))
+
+        // Wrong header (0x00 is V1, not V2)
+        val v1Header = byteArrayOf(0x00, 0x01, 0x02)
+        assertNull(BTLERadarDevice.parseV2ThreatPacket(v1Header))
+
+        // Heartbeat / status packet (header 0x08)
+        val heartbeat = byteArrayOf(0x08, 0x01, 0x02, 0x03)
+        assertNull(BTLERadarDevice.parseV2ThreatPacket(heartbeat))
+
+        // Malformed threat packet (not 1 + 8*N bytes)
+        val malformed = byteArrayOf(0x01, 0x01, 0x02, 0x03)
+        assertNull(BTLERadarDevice.parseV2ThreatPacket(malformed))
+    }
+
+    @Test
+    fun testParseV2ThreatPacket_decodesMultiTargetFrameWithLateralOffsetAndSize() {
+        // Clear frame (0 targets): header 0x01
+        val clearFrame = byteArrayOf(0x01)
+        val clearTargets = BTLERadarDevice.parseV2ThreatPacket(clearFrame)
+        assertNotNull(clearTargets)
+        assertTrue(clearTargets!!.isEmpty())
+
+        // 2 targets:
+        // Target 0: ID=1, Range=165.4m (1654 -> low=0x76, high=0x06), Speed=15.0 m/s (150 -> low=0x96, high=0x00),
+        //           Lateral=-2.1m (-21 -> low=0xEB, high=0xFF), sizeAndThreat=0x0A (threat=2 FAST_APPROACHING, size=2 TRUCK_OR_BUS, lane=0)
+        // Target 1: ID=2, Range=35.0m (350 -> low=0x5E, high=0x01), Speed=10.0 m/s (100 -> low=0x64, high=0x00),
+        //           Lateral=-1.8m (-18 -> low=0xEE, high=0xFF), sizeAndThreat=0x35 (threat=1 APPROACHING, size=1 CAR, lane=3 PASSING_LANE)
+        val payload = byteArrayOf(
+            0x01,
+            // Target 0
+            0x01, 0x76.toByte(), 0x06.toByte(), 0x96.toByte(), 0x00.toByte(), 0xEB.toByte(), 0xFF.toByte(), 0x0A.toByte(),
+            // Target 1
+            0x02, 0x5E.toByte(), 0x01.toByte(), 0x64.toByte(), 0x00.toByte(), 0xEE.toByte(), 0xFF.toByte(), 0x35.toByte()
+        )
+
+        val targets = BTLERadarDevice.parseV2ThreatPacket(payload)
+        assertNotNull(targets)
+        assertEquals(2, targets!!.size)
+
+        val t0 = targets[0]
+        assertEquals(1, t0.targetId)
+        assertEquals(165.4f, t0.rangeMeters, 0.001f)
+        assertEquals(15.0f, t0.approachSpeedMps, 0.001f)
+        assertEquals(ThreatLevel.FAST_APPROACHING, t0.threatLevel)
+        assertEquals(-2.1f, t0.lateralOffsetMeters!!, 0.001f)
+        assertEquals(VehicleSizeCategory.TRUCK_OR_BUS, t0.vehicleSizeCategory)
+        assertEquals(LaneState.UNKNOWN, t0.laneState)
+
+        val t1 = targets[1]
+        assertEquals(2, t1.targetId)
+        assertEquals(35.0f, t1.rangeMeters, 0.001f)
+        assertEquals(10.0f, t1.approachSpeedMps, 0.001f)
+        assertEquals(ThreatLevel.APPROACHING, t1.threatLevel)
+        assertEquals(-1.8f, t1.lateralOffsetMeters!!, 0.001f)
+        assertEquals(VehicleSizeCategory.CAR, t1.vehicleSizeCategory)
+        assertEquals(LaneState.PASSING_LANE, t1.laneState)
+    }
+
+    @Test
+    fun testFallbackToV1_subscribesToV1WhenV2CharacteristicMissing() {
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockService = mockk<BluetoothGattService>(relaxed = true)
+        val mockV1Char = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val mockDescriptor = mockk<BluetoothGattDescriptor>(relaxed = true)
+
+        every { mockService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1) } returns mockV1Char
+        every { mockV1Char.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG) } returns mockDescriptor
+
+        radarDevice.fallbackToV1(mockGatt, mockService)
+
+        assertFalse(radarDevice.isV2Stream)
+        io.mockk.verify { mockGatt.setCharacteristicNotification(mockV1Char, true) }
     }
 }

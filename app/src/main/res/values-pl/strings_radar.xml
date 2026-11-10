@@ -35,6 +35,12 @@
     <string name="radar_vehicle_count">Liczba pojazdów radaru</string>
     <string name="radar_vehicle_count_short">Pojazdy</string>
 
+    <!-- Radar V2 Passing Clearance & Vehicle Sizing (ATT-5095 / REQ-CON-030) -->
+    <string name="radar_passing_distance">Odległość wyprzedzania radaru</string>
+    <string name="radar_passing_distance_short">Odl wyprz</string>
+    <string name="radar_large_vehicle_count">Liczba dużych pojazdów radaru</string>
+    <string name="radar_large_vehicle_count_short">Duże poj</string>
+
     <!-- Radar Traffic Simulator (ATT-5087 / REQ-CON-029.5) -->
     <string name="radar_simulator_title">Symulator ruchu radaru</string>
     <string name="radar_simulator_subtitle">Symuluj scenariusze ruchu drogowego do treningów domowych i testów interfejsu</string>
