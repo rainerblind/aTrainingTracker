@@ -37,6 +37,9 @@ import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.getVariantColor
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
+import com.atrainingtracker.trainingtracker.ui.map.PathPreviewMap
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.LatLngBounds
 
 /**
  * Interactive bottom sheet dialog for detecting and splitting route sub-corridors into distinct clusters (REQ-SET-096.3, ATT-5900).
@@ -55,6 +58,29 @@ fun WorkoutClusterSplitSheet(
     val distanceFormatter = remember { DistanceFormatter() }
     val threshold by viewModel.splitCorridorThreshold.collectAsState()
     val variants by viewModel.detectedVariants.collectAsState()
+    val splitVariantPaths by viewModel.splitVariantPaths.collectAsState()
+
+    LaunchedEffect(cluster.id) {
+        viewModel.openSplitPreview(cluster)
+    }
+
+    val clusterBounds = remember(cluster) {
+        if (cluster.minLat != null && cluster.minLng != null && cluster.maxLat != null && cluster.maxLng != null) {
+            LatLngBounds(LatLng(cluster.minLat, cluster.minLng), LatLng(cluster.maxLat, cluster.maxLng))
+        } else if (cluster.startLat != 0.0 && cluster.startLng != 0.0 && cluster.endLat != 0.0 && cluster.endLng != 0.0) {
+            val builder = LatLngBounds.Builder()
+            builder.include(LatLng(cluster.startLat, cluster.startLng))
+            builder.include(LatLng(cluster.endLat, cluster.endLng))
+            if (cluster.maxDispLat != 0.0 && cluster.maxDispLng != 0.0) {
+                builder.include(LatLng(cluster.maxDispLat, cluster.maxDispLng))
+            }
+            try {
+                builder.build()
+            } catch (_: Exception) {
+                null
+            }
+        } else null
+    }
 
     val selectedVariantIds = remember(variants) {
         mutableStateMapOf<Int, Boolean>().apply {
@@ -105,6 +131,21 @@ fun WorkoutClusterSplitSheet(
                 .padding(horizontal = 20.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // --- EMBEDDED COLOR-CODED MAP PREVIEW (REQ-UI-505.1, ATT-6318) ---
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp),
+                shape = RoundedCornerShape(12.dp),
+                tonalElevation = 2.dp
+            ) {
+                PathPreviewMap(
+                    paths = splitVariantPaths,
+                    modifier = Modifier.fillMaxSize(),
+                    targetBounds = clusterBounds
+                )
+            }
+
             // --- 1. SENSITIVITY / CORRIDOR WIDTH SLIDER ---
             Surface(
                 shape = RoundedCornerShape(12.dp),

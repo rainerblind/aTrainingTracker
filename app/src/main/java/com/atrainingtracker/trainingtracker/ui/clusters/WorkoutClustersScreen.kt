@@ -283,6 +283,7 @@ fun WorkoutClustersScreen(
         else -> {
             var workoutToCluster by remember { mutableStateOf<WorkoutData?>(null) }
             var clusterToMerge by remember { mutableStateOf<WorkoutCluster?>(null) }
+            var clusterToSplit by remember { mutableStateOf<WorkoutCluster?>(null) }
             var pendingMergePair by remember { mutableStateOf<Pair<WorkoutCluster, WorkoutCluster>?>(null) }
             val migrationStatus by viewModel.migrationStatus.collectAsStateWithLifecycle()
 
@@ -301,8 +302,20 @@ fun WorkoutClustersScreen(
                 onDeleteRequest = { clusterToDelete = it },
                 migrationStatus = migrationStatus,
                 onNavigateToAdvancedSettings = onNavigateToAdvancedSettings,
-                onMergeRequest = { clusterToMerge = it }
+                onMergeRequest = { clusterToMerge = it },
+                onSplitRequest = { clusterToSplit = it }
             )
+
+            if (clusterToSplit != null) {
+                WorkoutClusterSplitSheet(
+                    cluster = clusterToSplit!!,
+                    viewModel = viewModel,
+                    onDismiss = {
+                        clusterToSplit = null
+                        viewModel.closeSplitPreview()
+                    }
+                )
+            }
 
             if (clusterToMerge != null && pendingMergePair == null) {
                 val source = clusterToMerge!!

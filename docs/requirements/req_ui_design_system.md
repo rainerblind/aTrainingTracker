@@ -15089,3 +15089,37 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Then* all action buttons maintain `PaddingValues(horizontal = 16.dp, vertical = 8.dp)` and card titles truncate with `TextOverflow.Ellipsis` if horizontal space is exhausted.
 
 **Invariants**: 44dp emblem size; single-line button text (`Rule 38`); visual hierarchy states (`REQ-UI-501`); 100% unit test pass rate.
+
+### REQ-UI-505: WorkoutClusterSplitSheet Embedded Color-Coded Map Preview & List-Level Split Action [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-505` | **Tickets**: `ATT-6318`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClusterSplitSheet.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/PathPreviewMap.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersViewModel.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClusterComponents.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersTabsScreen.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersScreen.kt`
+- **Rationale**: When opening `WorkoutClusterSplitSheet` (`AppModalBottomSheet`), the detected corridor variants (`splitVariantPaths`) are currently rendered only on the background heatmap of `WorkoutClusterHeatmapScreen`, which is largely obscured by the modal sheet and darkened scrim. Furthermore, when browsing clusters in the tabbed list view (`WorkoutClustersScreen`), no background map exists and the card 3-dot context menu lacks a split action. The system SHALL embed an interactive, color-coded map preview directly above the corridor sensitivity slider within `WorkoutClusterSplitSheet` and expose the split action in cluster card context menus.
+- **Description**:
+  1. *Embedded Color-Coded Map Preview (`REQ-UI-505.1`)*:
+     - In `WorkoutClusterSplitSheet.kt`, directly above the corridor sensitivity slider (`cluster_split_corridor_threshold`), the sheet SHALL render an embedded map preview (`PathPreviewMap`) hosted within a rounded surface (`RoundedCornerShape(12.dp)` with height `200.dp`).
+     - The embedded map SHALL render all detected corridor variants (`splitVariantPaths`) in their corresponding group colors (`getVariantColor(index)`) matching the numbered variant badges (1, 2, 3...) in the sheet.
+     - The embedded map SHALL automatically fit camera bounds to the cluster's bounding box (`cluster.bounds`) or encompass all detected variant polylines with appropriate map padding (`20.dp`).
+  2. *Live Sensitivity Modulation & Dynamic Map Synchronization (`REQ-UI-505.2`)*:
+     - Adjusting the corridor sensitivity slider SHALL dynamically recalculate variant groupings and update the embedded map preview in real time, visually reflecting the redistribution of member workout polylines across primary and secondary corridors.
+  3. *Multi-Path Support in PathPreviewMap (`REQ-UI-505.3`)*:
+     - `PathPreviewMap.kt` SHALL support rendering multiple polyline paths via `paths: List<MappablePath> = emptyList()` alongside the existing single `path: MappablePath? = null` parameter, computing unified bounding box coordinates across all supplied paths while preserving `liteMode(true)` touch isolation and backward compatibility for all single-path callers.
+  4. *List-Level Split Action Entry Point (`REQ-UI-505.4`)*:
+     - In `WorkoutClusterComponents.kt` (`ClusterItem` / `WorkoutClusterCard`), for clusters having `hitCount >= 2`, the 3-dot context menu SHALL expose a "Split Favorite Route…" (`cluster_split_action`, `Icons.Default.CallSplit`) action.
+     - Selecting this action SHALL open `WorkoutClusterSplitSheet` directly from `WorkoutClustersScreen.kt` with cluster workouts asynchronously loaded, operating identically to the heatmap screen entry point.
+  5. *Preservation of Invariants & Scope Boundaries (`REQ-UI-505.5`)*:
+     - Invariants: `WorkoutClusterEngine.kt` clustering heuristics and medoid algorithms SHALL NOT be modified; single-path `PathPreviewMap` callers (`CreateLapOnMapSheet`, `MoveLapBoundaryOnMapSheet`, `CropWorkoutScreen`, `WorkoutSummary`) SHALL remain 100% backward-compatible; 9-language localization parity SHALL be preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `WorkoutClusterSplitSheet` open for a route cluster with detected sub-corridors,
+• *When* the athlete views the top section of the bottom sheet,
+• *Then* an embedded 200dp `PathPreviewMap` is rendered directly above the sensitivity slider, displaying all detected variant polylines color-coded to match the variant badges.
+• *Given* the corridor sensitivity slider inside `WorkoutClusterSplitSheet`,
+• *When* the athlete drags the slider between 250m and 1500m,
+• *Then* `splitVariantPaths` are recalculated asynchronously and the embedded map polylines update their groupings and colors dynamically without UI stutter.
+• *Given* a cluster card in `WorkoutClustersScreen` with `hitCount >= 2`,
+• *When* the athlete opens the 3-dot context menu,
+• *Then* "Split Favorite Route…" (`cluster_split_action`) is displayed, and tapping it opens `WorkoutClusterSplitSheet` with the embedded map preview and loaded variants.
+
+**Invariants**: `WorkoutClusterEngine.kt` algorithms unmodified; `liteMode(true)` touch isolation preserved; single-path `PathPreviewMap` callers backward-compatible; 100% unit test pass rate.
+
