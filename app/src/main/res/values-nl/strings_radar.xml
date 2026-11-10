@@ -114,4 +114,21 @@
     <string name="radar_peloton_audio_sync_desc">Standaard naderingsgeluiden onderdrukken wanneer achterlicht in pelotonmodus staat</string>
     <string name="radar_smart_urban_mute_title">Slimme stadsverkeersfilter</string>
     <string name="radar_smart_urban_mute_desc">Onderdruk herhaalde naderingstonen in langzaam stadsverkeer terwijl waarschuwingen voor hoge snelheid behouden blijven</string>
+
+    <!-- 3D Stereo Audio Panning & Speed Pitch Modulation (ATT-5120 / REQ-TRK-065) -->
+    <string name="radar_spatial_audio_title">3D-stereogeluidspil</string>
+    <string name="radar_spatial_audio_desc">Richt waarschuwingstoon in koptelefoon naar de inhaalstrook</string>
+    <string name="radar_traffic_orientation_title">Verkeersrichting</string>
+    <string name="radar_traffic_orientation_rht">Rechts rijden</string>
+    <string name="radar_traffic_orientation_lht">Links rijden</string>
+    <string name="radar_lane_change_tick_title">Rijstrookwissel-klik</string>
+    <string name="radar_lane_change_tick_desc">Subtiel geluid wanneer voertuig naar de inhaalstrook gaat</string>
+    <string name="radar_speed_pitch_title">Snelheidsafhankelijke toonhoogte</string>
+    <string name="radar_speed_pitch_desc">Hogere toonhoogte bij snel naderende voertuigen</string>
+    <string name="radar_preview_title">Audiovoorbeeld</string>
+    <string name="radar_preview_centered">Op rijstrook</string>
+    <string name="radar_preview_passing">Inhalen</string>
+    <string name="radar_preview_slow">Langzaam</string>
+    <string name="radar_preview_fast">Snelle dreiging</string>
+    <string name="radar_preview_lane_change">Rijstrookwissel</string>
 </resources>

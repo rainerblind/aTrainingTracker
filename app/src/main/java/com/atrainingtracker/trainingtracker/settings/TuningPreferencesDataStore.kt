@@ -112,6 +112,10 @@ object TuningPreferencesDefaults {
     const val RADAR_AUTO_LIGHT_CONTROL = true
     const val RADAR_PELOTON_AUDIO_SYNC = true
     const val RADAR_SMART_URBAN_MUTE = false
+    const val RADAR_SPATIAL_AUDIO_ENABLED = true
+    const val RADAR_SPEED_PITCH_MODULATION = true
+    val RADAR_TRAFFIC_ORIENTATION = RadarTrafficOrientation.RIGHT_HAND
+    const val RADAR_LANE_CHANGE_TICK_ENABLED = true
     const val FULL_DIM_FACTOR = 0.25f
     const val MEDIUM_DIM_FACTOR = 0.50f
     const val SLOPE_FLAT_THRESHOLD = 2.0f
@@ -409,7 +413,11 @@ data class TuningConfig(
     val radarLightDefaultMode: RadarLightMode = TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE,
     val radarAutoLightControl: Boolean = TuningPreferencesDefaults.RADAR_AUTO_LIGHT_CONTROL,
     val radarPelotonAudioSync: Boolean = TuningPreferencesDefaults.RADAR_PELOTON_AUDIO_SYNC,
-    val radarSmartUrbanMute: Boolean = TuningPreferencesDefaults.RADAR_SMART_URBAN_MUTE
+    val radarSmartUrbanMute: Boolean = TuningPreferencesDefaults.RADAR_SMART_URBAN_MUTE,
+    val radarSpatialAudioEnabled: Boolean = TuningPreferencesDefaults.RADAR_SPATIAL_AUDIO_ENABLED,
+    val radarSpeedPitchModulation: Boolean = TuningPreferencesDefaults.RADAR_SPEED_PITCH_MODULATION,
+    val radarTrafficOrientation: RadarTrafficOrientation = TuningPreferencesDefaults.RADAR_TRAFFIC_ORIENTATION,
+    val radarLaneChangeTickEnabled: Boolean = TuningPreferencesDefaults.RADAR_LANE_CHANGE_TICK_ENABLED
 ) {
     val showAntMissingAdapterWarnings: Boolean
         get() = !suppressAntMissingAdapterDialog
@@ -567,6 +575,10 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_RADAR_AUTO_LIGHT_CONTROL: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_auto_light_control")
         val KEY_RADAR_PELOTON_AUDIO_SYNC: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_peloton_audio_sync")
         val KEY_RADAR_SMART_URBAN_MUTE: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_smart_urban_mute")
+        val KEY_RADAR_SPATIAL_AUDIO_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_spatial_audio_enabled")
+        val KEY_RADAR_SPEED_PITCH_MODULATION: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_speed_pitch_modulation")
+        val KEY_RADAR_TRAFFIC_ORIENTATION: Preferences.Key<String> = stringPreferencesKey("tuning_radar_traffic_orientation")
+        val KEY_RADAR_LANE_CHANGE_TICK_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_lane_change_tick_enabled")
 
         internal val ALL_KEYS = listOf(
             KEY_ELEVATION_X_AXIS_DOMAIN,
@@ -653,7 +665,11 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_RADAR_LIGHT_DEFAULT_MODE,
             KEY_RADAR_AUTO_LIGHT_CONTROL,
             KEY_RADAR_PELOTON_AUDIO_SYNC,
-            KEY_RADAR_SMART_URBAN_MUTE
+            KEY_RADAR_SMART_URBAN_MUTE,
+            KEY_RADAR_SPATIAL_AUDIO_ENABLED,
+            KEY_RADAR_SPEED_PITCH_MODULATION,
+            KEY_RADAR_TRAFFIC_ORIENTATION,
+            KEY_RADAR_LANE_CHANGE_TICK_ENABLED
         )
 
         /**
@@ -840,6 +856,11 @@ data class AutoPausePreferences(
         val radarAutoLightControl = prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] ?: TuningPreferencesDefaults.RADAR_AUTO_LIGHT_CONTROL
         val radarPelotonAudioSync = prefs[KEY_RADAR_PELOTON_AUDIO_SYNC] ?: TuningPreferencesDefaults.RADAR_PELOTON_AUDIO_SYNC
         val radarSmartUrbanMute = prefs[KEY_RADAR_SMART_URBAN_MUTE] ?: TuningPreferencesDefaults.RADAR_SMART_URBAN_MUTE
+        val radarSpatialAudioEnabled = prefs[KEY_RADAR_SPATIAL_AUDIO_ENABLED] ?: TuningPreferencesDefaults.RADAR_SPATIAL_AUDIO_ENABLED
+        val radarSpeedPitchModulation = prefs[KEY_RADAR_SPEED_PITCH_MODULATION] ?: TuningPreferencesDefaults.RADAR_SPEED_PITCH_MODULATION
+        val rawTrafficOrientationStr = prefs[KEY_RADAR_TRAFFIC_ORIENTATION]
+        val radarTrafficOrientation = safeEnumValueOf(rawTrafficOrientationStr, TuningPreferencesDefaults.RADAR_TRAFFIC_ORIENTATION)
+        val radarLaneChangeTickEnabled = prefs[KEY_RADAR_LANE_CHANGE_TICK_ENABLED] ?: TuningPreferencesDefaults.RADAR_LANE_CHANGE_TICK_ENABLED
 
         val rawFontWeightStr = prefs[KEY_COCKPIT_FONT_WEIGHT]
         val cockpitFontWeight = safeEnumValueOf(rawFontWeightStr, TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT)
@@ -1054,7 +1075,11 @@ data class AutoPausePreferences(
             radarLightDefaultMode = radarLightDefaultMode,
             radarAutoLightControl = radarAutoLightControl,
             radarPelotonAudioSync = radarPelotonAudioSync,
-            radarSmartUrbanMute = radarSmartUrbanMute
+            radarSmartUrbanMute = radarSmartUrbanMute,
+            radarSpatialAudioEnabled = radarSpatialAudioEnabled,
+            radarSpeedPitchModulation = radarSpeedPitchModulation,
+            radarTrafficOrientation = radarTrafficOrientation,
+            radarLaneChangeTickEnabled = radarLaneChangeTickEnabled
         )
     }
 
@@ -1355,6 +1380,10 @@ data class AutoPausePreferences(
             prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] = config.radarAutoLightControl
             prefs[KEY_RADAR_PELOTON_AUDIO_SYNC] = config.radarPelotonAudioSync
             prefs[KEY_RADAR_SMART_URBAN_MUTE] = config.radarSmartUrbanMute
+            prefs[KEY_RADAR_SPATIAL_AUDIO_ENABLED] = config.radarSpatialAudioEnabled
+            prefs[KEY_RADAR_SPEED_PITCH_MODULATION] = config.radarSpeedPitchModulation
+            prefs[KEY_RADAR_TRAFFIC_ORIENTATION] = config.radarTrafficOrientation.name
+            prefs[KEY_RADAR_LANE_CHANGE_TICK_ENABLED] = config.radarLaneChangeTickEnabled
         }
 
         TrainingApplication.setClusterTolEndpoints(clampedClusterTolEndpoints)
@@ -1603,6 +1632,46 @@ data class AutoPausePreferences(
     suspend fun updateRadarSmartUrbanMute(enabled: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[KEY_RADAR_SMART_URBAN_MUTE] = enabled
+        }
+    }
+
+    val radarSpatialAudioEnabledFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_RADAR_SPATIAL_AUDIO_ENABLED] ?: TuningPreferencesDefaults.RADAR_SPATIAL_AUDIO_ENABLED
+    }
+
+    val radarSpeedPitchModulationFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_RADAR_SPEED_PITCH_MODULATION] ?: TuningPreferencesDefaults.RADAR_SPEED_PITCH_MODULATION
+    }
+
+    val radarTrafficOrientationFlow: Flow<RadarTrafficOrientation> = context.dataStore.data.map { prefs ->
+        safeEnumValueOf(prefs[KEY_RADAR_TRAFFIC_ORIENTATION], TuningPreferencesDefaults.RADAR_TRAFFIC_ORIENTATION)
+    }
+
+    val radarLaneChangeTickEnabledFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_RADAR_LANE_CHANGE_TICK_ENABLED] ?: TuningPreferencesDefaults.RADAR_LANE_CHANGE_TICK_ENABLED
+    }
+
+    suspend fun updateRadarSpatialAudioEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_SPATIAL_AUDIO_ENABLED] = enabled
+        }
+    }
+
+    suspend fun updateRadarSpeedPitchModulation(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_SPEED_PITCH_MODULATION] = enabled
+        }
+    }
+
+    suspend fun updateRadarTrafficOrientation(orientation: RadarTrafficOrientation) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_TRAFFIC_ORIENTATION] = orientation.name
+        }
+    }
+
+    suspend fun updateRadarLaneChangeTickEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_LANE_CHANGE_TICK_ENABLED] = enabled
         }
     }
 

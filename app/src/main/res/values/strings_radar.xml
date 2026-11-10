@@ -114,4 +114,21 @@
     <string name="radar_peloton_audio_sync_desc">Suppress standard radar chimes when tail light is in Peloton mode</string>
     <string name="radar_smart_urban_mute_title">Smart Urban Congestion Filter</string>
     <string name="radar_smart_urban_mute_desc">Suppress repetitive approach chimes in slow city traffic queues while keeping high-speed alerts</string>
+
+    <!-- 3D Stereo Audio Panning & Speed Pitch Modulation (ATT-5120 / REQ-TRK-065) -->
+    <string name="radar_spatial_audio_title">3D Stereo Audio Panning</string>
+    <string name="radar_spatial_audio_desc">Pan alert sound toward overtaking vehicle lane in headphones</string>
+    <string name="radar_traffic_orientation_title">Traffic Orientation</string>
+    <string name="radar_traffic_orientation_rht">Right-Hand Traffic</string>
+    <string name="radar_traffic_orientation_lht">Left-Hand Traffic</string>
+    <string name="radar_lane_change_tick_title">Lane-Change Spatial Cue</string>
+    <string name="radar_lane_change_tick_desc">Play subtle tick when approaching vehicle moves to passing lane</string>
+    <string name="radar_speed_pitch_title">Speed-Adaptive Pitch</string>
+    <string name="radar_speed_pitch_desc">Modulate chime pitch higher for rapidly closing vehicles</string>
+    <string name="radar_preview_title">Audio Preview</string>
+    <string name="radar_preview_centered">In-Lane</string>
+    <string name="radar_preview_passing">Passing</string>
+    <string name="radar_preview_slow">Slow</string>
+    <string name="radar_preview_fast">Fast Threat</string>
+    <string name="radar_preview_lane_change">Lane Change</string>
 </resources>

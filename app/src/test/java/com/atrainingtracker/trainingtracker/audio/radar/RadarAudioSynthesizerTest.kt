@@ -59,6 +59,10 @@ class RadarAudioSynthesizerTest {
         val disconnect = RadarAudioSynthesizer.synthesizeDisconnectPcm()
         assertTrue("Disconnect PCM byte array must not be empty", disconnect.isNotEmpty())
         assertEquals("Disconnect PCM size must be 16-bit aligned", 0, disconnect.size % 2)
+
+        val laneChange = RadarAudioSynthesizer.synthesizeLaneChangeTickPcm()
+        assertTrue("Lane-change tick PCM byte array must not be empty", laneChange.isNotEmpty())
+        assertEquals("Lane-change tick PCM size must be 16-bit aligned", 0, laneChange.size % 2)
     }
 
     @Test

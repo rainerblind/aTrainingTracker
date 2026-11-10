@@ -36,9 +36,12 @@ import com.atrainingtracker.banalservice.devices.radar.RadarLightController
 import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
 import com.atrainingtracker.banalservice.devices.radar.RadarState
 import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository
+import com.atrainingtracker.banalservice.devices.radar.RadarTarget
 import com.atrainingtracker.banalservice.devices.radar.ThreatLevel
 import com.atrainingtracker.trainingtracker.settings.RadarAudioAlertMode
 import com.atrainingtracker.trainingtracker.settings.RadarAudioRoute
+import com.atrainingtracker.trainingtracker.settings.RadarTrafficOrientation
+import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import kotlinx.coroutines.CoroutineScope
@@ -51,6 +54,17 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+
+/**
+ * Audio preview simulation scenarios for settings testing (REQ-TRK-065.5).
+ */
+enum class RadarAudioPreviewType {
+    CENTERED,
+    PASSING,
+    SLOW,
+    FAST,
+    LANE_CHANGE
+}
 
 /**
  * State-transition alert manager coordinating radar acoustic chimes and haptic feedback (REQ-TRK-063.1, REQ-TRK-064).
@@ -87,6 +101,9 @@ class RadarAlertManager @JvmOverloads constructor(
         var activeInstance: RadarAlertManager? = null
             internal set
 
+        @Volatile
+        private var previewSynthesizer: RadarAudioSynthesizer? = null
+
         @JvmStatic
         fun toggleRadarAudioSnooze() {
             activeInstance?.toggleSnooze()
@@ -98,6 +115,52 @@ class RadarAlertManager @JvmOverloads constructor(
 
         fun resumeAudio() {
             activeInstance?.resumeAudio()
+        }
+
+        /**
+         * Standalone preview playback for Radar Settings UI (REQ-TRK-065.5).
+         */
+        @JvmStatic
+        fun playAudioPreview(context: Context, type: RadarAudioPreviewType, config: TuningConfig) {
+            val instance = activeInstance
+            if (instance != null) {
+                instance.playPreview(type)
+                return
+            }
+            try {
+                val synth = previewSynthesizer ?: synchronized(RadarAlertManager::class.java) {
+                    previewSynthesizer ?: RadarAudioSynthesizer(context).also { previewSynthesizer = it }
+                }
+                val vol = (config.radarAlertVolume / 100f).coerceIn(0.1f, 1.0f)
+                val route = config.radarAudioRoute
+                when (type) {
+                    RadarAudioPreviewType.CENTERED -> synth.playApproach(vol, route)
+                    RadarAudioPreviewType.PASSING -> {
+                        val offset = if (config.radarTrafficOrientation == RadarTrafficOrientation.RIGHT_HAND) -2.0f else 2.0f
+                        val (leftGain, rightGain) = RadarSpatialAudioMath.computeStereoGains(
+                            offset, config.radarTrafficOrientation, true, route
+                        )
+                        synth.playApproach(vol, route, leftGain, rightGain, 1.0f)
+                    }
+                    RadarAudioPreviewType.SLOW -> {
+                        val pitch = RadarSpatialAudioMath.computeSpeedPitch(3.0f, true)
+                        synth.playApproach(vol, route, 1.0f, 1.0f, pitch)
+                    }
+                    RadarAudioPreviewType.FAST -> {
+                        val pitch = RadarSpatialAudioMath.computeSpeedPitch(28.0f, true)
+                        synth.playApproach(vol, route, 1.0f, 1.0f, pitch)
+                    }
+                    RadarAudioPreviewType.LANE_CHANGE -> {
+                        val offset = if (config.radarTrafficOrientation == RadarTrafficOrientation.RIGHT_HAND) -2.0f else 2.0f
+                        val (leftGain, rightGain) = RadarSpatialAudioMath.computeStereoGains(
+                            offset, config.radarTrafficOrientation, true, route
+                        )
+                        synth.playLaneChangeTick(vol * 0.7f, route, leftGain, rightGain)
+                    }
+                }
+            } catch (t: Throwable) {
+                Log.w(TAG, "Audio preview playback failed", t)
+            }
         }
     }
 
@@ -142,6 +205,10 @@ class RadarAlertManager @JvmOverloads constructor(
     private var isUrbanSuppressionActive: Boolean = false
     private var urbanCongestionStartTimeMs: Long? = null
     private var urbanClearStartTimeMs: Long? = null
+
+    // Spatial target tracking state (REQ-TRK-065.3)
+    private var lastTrackedTargetId: Int? = null
+    private var lastTrackedTargetOffset: Float? = null
 
     // Volume boost management
     private var savedStreamVolume: Int? = null
@@ -227,6 +294,51 @@ class RadarAlertManager @JvmOverloads constructor(
                 resumeAudio()
             } else {
                 snooze(RadarAudioSnoozeMode.SNOOZE_15M)
+            }
+        }
+    }
+
+    /**
+     * Executes interactive audio preview for settings configuration (REQ-TRK-065.5).
+     */
+    fun playPreview(type: RadarAudioPreviewType) {
+        synchronized(lock) {
+            if (isReleased) return
+            val config = getCurrentConfig()
+            when (type) {
+                RadarAudioPreviewType.CENTERED -> {
+                    playChime(config) { vol, route -> synthesizer.playApproach(vol, route) }
+                }
+                RadarAudioPreviewType.PASSING -> {
+                    val offset = if (config.trafficOrientation == RadarTrafficOrientation.RIGHT_HAND) -2.0f else 2.0f
+                    val (leftGain, rightGain) = RadarSpatialAudioMath.computeStereoGains(
+                        offset, config.trafficOrientation, true, config.route
+                    )
+                    playChime(config) { vol, route ->
+                        synthesizer.playApproach(vol, route, leftGain, rightGain, 1.0f)
+                    }
+                }
+                RadarAudioPreviewType.SLOW -> {
+                    val pitch = RadarSpatialAudioMath.computeSpeedPitch(3.0f, true)
+                    playChime(config) { vol, route ->
+                        synthesizer.playApproach(vol, route, 1.0f, 1.0f, pitch)
+                    }
+                }
+                RadarAudioPreviewType.FAST -> {
+                    val pitch = RadarSpatialAudioMath.computeSpeedPitch(28.0f, true)
+                    playChime(config) { vol, route ->
+                        synthesizer.playApproach(vol, route, 1.0f, 1.0f, pitch)
+                    }
+                }
+                RadarAudioPreviewType.LANE_CHANGE -> {
+                    val offset = if (config.trafficOrientation == RadarTrafficOrientation.RIGHT_HAND) -2.0f else 2.0f
+                    val (leftGain, rightGain) = RadarSpatialAudioMath.computeStereoGains(
+                        offset, config.trafficOrientation, true, config.route
+                    )
+                    playChime(config) { vol, route ->
+                        synthesizer.playLaneChangeTick(vol * 0.7f, route, leftGain, rightGain)
+                    }
+                }
             }
         }
     }
@@ -333,6 +445,23 @@ class RadarAlertManager @JvmOverloads constructor(
                 publishSnoozeStateLocked(computeRemainingSecondsLocked(now))
             }
 
+            // Find primary threatening target (closest target with approach speed > 0 or highest threat)
+            val primaryTarget = state.targets
+                .filter { it.threatLevel != ThreatLevel.NONE }
+                .minByOrNull { it.rangeMeters }
+                ?: state.targets.minByOrNull { it.rangeMeters }
+
+            // Check lane-change transition for spatial tick cue (REQ-TRK-065.3)
+            val primaryOffset = primaryTarget?.lateralOffsetMeters
+            val isSameTarget = primaryTarget != null && (lastTrackedTargetId == null || lastTrackedTargetId == primaryTarget.targetId)
+            if (isSameTarget && config.laneChangeTickEnabled && !isRoutineAlertSuppressed() && config.alertMode != RadarAudioAlertMode.MUTED) {
+                if (RadarSpatialAudioMath.isLaneChangeToSafePassing(lastTrackedTargetOffset, primaryOffset, config.trafficOrientation)) {
+                    triggerLaneChangeTick(primaryOffset, config)
+                }
+            }
+            lastTrackedTargetId = primaryTarget?.targetId
+            lastTrackedTargetOffset = primaryOffset
+
             // 1. Disconnect warning transition (CONNECTED -> DISCONNECTED_ERROR)
             if (lastConnectionState == RadarConnectionState.CONNECTED && currentConn == RadarConnectionState.DISCONNECTED_ERROR) {
                 lastConnectionState = currentConn
@@ -357,7 +486,7 @@ class RadarAlertManager @JvmOverloads constructor(
             if (lastThreatLevel == ThreatLevel.NONE && currentThreat == ThreatLevel.APPROACHING) {
                 lastAlertTimestampMs = now
                 lastThreatLevel = currentThreat
-                triggerApproachAlert()
+                triggerApproachAlert(primaryTarget, config)
                 return
             }
 
@@ -365,7 +494,7 @@ class RadarAlertManager @JvmOverloads constructor(
             if (currentThreat == ThreatLevel.FAST_APPROACHING && lastThreatLevel != ThreatLevel.FAST_APPROACHING) {
                 lastAlertTimestampMs = now
                 lastThreatLevel = currentThreat
-                triggerFastThreatAlert()
+                triggerFastThreatAlert(primaryTarget, config)
                 return
             }
 
@@ -405,7 +534,11 @@ class RadarAlertManager @JvmOverloads constructor(
                 route = cfg.radarAudioRoute,
                 haptics = cfg.radarHapticAlert,
                 pelotonAudioSync = cfg.radarPelotonAudioSync,
-                smartUrbanMute = cfg.radarSmartUrbanMute
+                smartUrbanMute = cfg.radarSmartUrbanMute,
+                spatialAudioEnabled = cfg.radarSpatialAudioEnabled,
+                speedPitchModulation = cfg.radarSpeedPitchModulation,
+                trafficOrientation = cfg.radarTrafficOrientation,
+                laneChangeTickEnabled = cfg.radarLaneChangeTickEnabled
             )
         } else {
             TuningPreferencesConfigSnapshot(
@@ -415,30 +548,76 @@ class RadarAlertManager @JvmOverloads constructor(
                 route = TuningPreferencesDefaults.RADAR_AUDIO_ROUTE,
                 haptics = TuningPreferencesDefaults.RADAR_HAPTIC_ALERT,
                 pelotonAudioSync = TuningPreferencesDefaults.RADAR_PELOTON_AUDIO_SYNC,
-                smartUrbanMute = TuningPreferencesDefaults.RADAR_SMART_URBAN_MUTE
+                smartUrbanMute = TuningPreferencesDefaults.RADAR_SMART_URBAN_MUTE,
+                spatialAudioEnabled = TuningPreferencesDefaults.RADAR_SPATIAL_AUDIO_ENABLED,
+                speedPitchModulation = TuningPreferencesDefaults.RADAR_SPEED_PITCH_MODULATION,
+                trafficOrientation = TuningPreferencesDefaults.RADAR_TRAFFIC_ORIENTATION,
+                laneChangeTickEnabled = TuningPreferencesDefaults.RADAR_LANE_CHANGE_TICK_ENABLED
             )
         }
     }
 
-    private fun triggerApproachAlert() {
+    private fun triggerApproachAlert(primaryTarget: RadarTarget?, config: TuningPreferencesConfigSnapshot) {
         if (isRoutineAlertSuppressed()) return
-        val config = getCurrentConfig()
         if (config.haptics) {
             vibrate(VibrationPattern.APPROACH)
         }
         if (config.alertMode == RadarAudioAlertMode.ALL_ALERTS || config.alertMode == RadarAudioAlertMode.APPROACH_AND_FAST) {
-            playChime(config) { vol, route -> synthesizer.playApproach(vol, route) }
+            val (leftGain, rightGain) = RadarSpatialAudioMath.computeStereoGains(
+                primaryTarget?.lateralOffsetMeters,
+                config.trafficOrientation,
+                config.spatialAudioEnabled,
+                config.route
+            )
+            val pitch = RadarSpatialAudioMath.computeSpeedPitch(
+                primaryTarget?.approachSpeedMps,
+                config.speedPitchModulation
+            )
+            playChime(config) { vol, route ->
+                if (leftGain == 1.0f && rightGain == 1.0f && pitch == 1.0f) {
+                    synthesizer.playApproach(vol, route)
+                } else {
+                    synthesizer.playApproach(vol, route, leftGain, rightGain, pitch)
+                }
+            }
         }
     }
 
-    private fun triggerFastThreatAlert() {
+    private fun triggerFastThreatAlert(primaryTarget: RadarTarget?, config: TuningPreferencesConfigSnapshot) {
         if (isFastThreatAlertSuppressed()) return
-        val config = getCurrentConfig()
         if (config.haptics) {
             vibrate(VibrationPattern.FAST_THREAT)
         }
         if (config.alertMode != RadarAudioAlertMode.MUTED) {
-            playChime(config) { vol, route -> synthesizer.playFastThreat(vol, route) }
+            val (leftGain, rightGain) = RadarSpatialAudioMath.computeStereoGains(
+                primaryTarget?.lateralOffsetMeters,
+                config.trafficOrientation,
+                config.spatialAudioEnabled,
+                config.route
+            )
+            val pitch = RadarSpatialAudioMath.computeSpeedPitch(
+                primaryTarget?.approachSpeedMps,
+                config.speedPitchModulation
+            )
+            playChime(config) { vol, route ->
+                if (leftGain == 1.0f && rightGain == 1.0f && pitch == 1.0f) {
+                    synthesizer.playFastThreat(vol, route)
+                } else {
+                    synthesizer.playFastThreat(vol, route, leftGain, rightGain, pitch)
+                }
+            }
+        }
+    }
+
+    private fun triggerLaneChangeTick(lateralOffsetMeters: Float?, config: TuningPreferencesConfigSnapshot) {
+        val (leftGain, rightGain) = RadarSpatialAudioMath.computeStereoGains(
+            lateralOffsetMeters,
+            config.trafficOrientation,
+            config.spatialAudioEnabled,
+            config.route
+        )
+        playChime(config) { vol, route ->
+            synthesizer.playLaneChangeTick(vol * 0.7f, route, leftGain, rightGain)
         }
     }
 
@@ -613,6 +792,10 @@ class RadarAlertManager @JvmOverloads constructor(
         val route: RadarAudioRoute,
         val haptics: Boolean,
         val pelotonAudioSync: Boolean,
-        val smartUrbanMute: Boolean
+        val smartUrbanMute: Boolean,
+        val spatialAudioEnabled: Boolean,
+        val speedPitchModulation: Boolean,
+        val trafficOrientation: RadarTrafficOrientation,
+        val laneChangeTickEnabled: Boolean
     )
 }

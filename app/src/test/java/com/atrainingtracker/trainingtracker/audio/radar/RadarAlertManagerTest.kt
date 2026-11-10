@@ -472,7 +472,7 @@ class RadarAlertManagerTest {
         )
         manager.onRadarStateUpdated(stateCongested1)
         // First approach alert sounds before congestion window elapsed
-        verify(exactly = 1) { mockSynthesizer.playApproach(any(), any()) }
+        verify(exactly = 1) { mockSynthesizer.playApproach(any(), any(), any(), any(), any()) }
 
         // Advance 30 seconds into congestion
         mockCurrentTimeMs += 30_000L
@@ -491,7 +491,7 @@ class RadarAlertManagerTest {
         mockCurrentTimeMs += 1000L
         manager.onRadarStateUpdated(stateCongested1)
         // No additional approach chime (still exactly 1 from start)
-        verify(exactly = 1) { mockSynthesizer.playApproach(any(), any()) }
+        verify(exactly = 1) { mockSynthesizer.playApproach(any(), any(), any(), any(), any()) }
 
         // Fast threat escalation MUST sound even during urban mute
         val stateFastThreat = RadarState(
@@ -501,7 +501,7 @@ class RadarAlertManagerTest {
         )
         mockCurrentTimeMs += 1000L
         manager.onRadarStateUpdated(stateFastThreat)
-        verify(exactly = 1) { mockSynthesizer.playFastThreat(any(), any()) }
+        verify(exactly = 1) { mockSynthesizer.playFastThreat(any(), any(), any(), any(), any()) }
 
         // Exit congestion: clear queue for 20 seconds
         val emptyTargets = emptyList<RadarTarget>()
@@ -526,7 +526,133 @@ class RadarAlertManagerTest {
         )
         mockCurrentTimeMs += 1000L
         manager.onRadarStateUpdated(stateNewVehicle)
-        verify(exactly = 2) { mockSynthesizer.playApproach(any(), any()) }
+        verify(exactly = 2) { mockSynthesizer.playApproach(any(), any(), any(), any(), any()) }
+
+        manager.release()
+    }
+
+    @Test
+    fun onRadarStateUpdated_withPassingTarget_computesStereoPanningAndPitch() {
+        val manager = createManager()
+        val passingTarget = RadarTarget(
+            targetId = 1,
+            rangeMeters = 35f,
+            approachSpeedMps = 16.5f,
+            threatLevel = ThreatLevel.APPROACHING,
+            lateralOffsetMeters = -2.0f
+        )
+        val stateNone = RadarState(connectionState = RadarConnectionState.CONNECTED, overallThreatLevel = ThreatLevel.NONE)
+        val stateApproach = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.APPROACHING,
+            targets = listOf(passingTarget)
+        )
+
+        manager.onRadarStateUpdated(stateNone)
+        mockCurrentTimeMs += 1000L
+        manager.onRadarStateUpdated(stateApproach)
+
+        // RHT vehicle at x = -2.0m pans left (1.0f, 0.20f), 16.5 m/s scales to 1.15x pitch
+        verify(exactly = 1) {
+            mockSynthesizer.playApproach(
+                any(),
+                any(),
+                eq(1.0f),
+                match { kotlin.math.abs(it - 0.20f) < 0.01f },
+                match { kotlin.math.abs(it - 1.15f) < 0.01f }
+            )
+        }
+
+        manager.release()
+    }
+
+    @Test
+    fun onRadarStateUpdated_whenLaneChangeOccurs_triggersLaneChangeTickCue() {
+        val manager = createManager()
+        val inLaneTarget = RadarTarget(
+            targetId = 2,
+            rangeMeters = 30f,
+            approachSpeedMps = 10f,
+            threatLevel = ThreatLevel.APPROACHING,
+            lateralOffsetMeters = 0.0f
+        )
+        val shiftedPassingTarget = inLaneTarget.copy(lateralOffsetMeters = -2.0f)
+
+        val state1 = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.APPROACHING,
+            targets = listOf(inLaneTarget)
+        )
+        val state2 = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.APPROACHING,
+            targets = listOf(shiftedPassingTarget)
+        )
+
+        manager.onRadarStateUpdated(state1)
+        mockCurrentTimeMs += 200L
+        manager.onRadarStateUpdated(state2)
+
+        // Transitioning from 0.0m to -2.0m triggers lane-change tick panned to left (1.0f, 0.20f)
+        verify(exactly = 1) {
+            mockSynthesizer.playLaneChangeTick(
+                any(),
+                any(),
+                eq(1.0f),
+                match { kotlin.math.abs(it - 0.20f) < 0.01f }
+            )
+        }
+
+        manager.release()
+    }
+
+    @Test
+    fun onRadarStateUpdated_whenSpeakerRouteSelected_collapsesToCenteredStereo() {
+        currentConfig = currentConfig.copy(radarAudioRoute = RadarAudioRoute.FORCE_SPEAKER)
+        val manager = createManager()
+        val passingTarget = RadarTarget(
+            targetId = 3,
+            rangeMeters = 25f,
+            approachSpeedMps = 3.0f,
+            threatLevel = ThreatLevel.APPROACHING,
+            lateralOffsetMeters = -2.0f
+        )
+        val stateNone = RadarState(connectionState = RadarConnectionState.CONNECTED, overallThreatLevel = ThreatLevel.NONE)
+        val stateApproach = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.APPROACHING,
+            targets = listOf(passingTarget)
+        )
+
+        manager.onRadarStateUpdated(stateNone)
+        mockCurrentTimeMs += 1000L
+        manager.onRadarStateUpdated(stateApproach)
+
+        // Force Phone Speaker collapses gains to (1.0f, 1.0f) (TST-TRK-065.4)
+        verify(exactly = 1) {
+            mockSynthesizer.playApproach(
+                any(),
+                eq(RadarAudioRoute.FORCE_SPEAKER),
+                eq(1.0f),
+                eq(1.0f),
+                match { kotlin.math.abs(it - 0.95f) < 0.01f }
+            )
+        }
+
+        manager.release()
+    }
+
+    @Test
+    fun playPreview_executesPreviewsCorrectly() {
+        val manager = createManager()
+        manager.playPreview(RadarAudioPreviewType.CENTERED)
+        verify(atLeast = 1) { mockSynthesizer.playApproach(any(), any()) }
+
+        manager.playPreview(RadarAudioPreviewType.PASSING)
+        verify(atLeast = 1) { mockSynthesizer.playApproach(any(), any(), any(), any(), any()) }
+
+        manager.playPreview(RadarAudioPreviewType.LANE_CHANGE)
+        verify(atLeast = 1) { mockSynthesizer.playLaneChangeTick(any(), any(), any(), any()) }
 
         manager.release()
     }

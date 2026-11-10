@@ -3532,6 +3532,40 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Visual target rail remains 100% active during audio snooze; `FAST_APPROACHING` high-speed threat safety alerts preserved; zero SQLite schema modifications; 100% 9-language translation parity.
 
+### REQ-TRK-065: 3D Stereo Lateral-Offset Panning & Approach-Speed Pitch Modulation for Radar Audio [Verified]
+- **Tests**: `TST-TRK-065` | **Tickets**: `ATT-5120`
+- **Implementation**: `RadarSpatialAudioMath.kt`, `RadarAlertManager.kt`, `RadarAudioSynthesizer.kt`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
+- **Rationale**: Standard mono radar beeps only signal vehicle proximity, requiring cyclists with headphones to divert their gaze from the roadway to assess whether an approaching vehicle is directly behind them or has pulled into the passing lane, and how rapidly it is closing. By decoding BLE V2 lateral lane offset $x$ and approach speed $v_{\text{rel}}$, the system delivers intuitive 3D spatial audio panning and speed-adaptive pitch modulation directly over stereo and bone-conduction headphones without compromising visual rail tracking or maximum phone speaker output (ATT-5120, Parent Epic ATT-1286, extending `REQ-TRK-063` and `REQ-CON-030`):
+1. *Stereo Lateral-Offset Panning (`REQ-TRK-065.1`)*:
+• When stereo audio output is active and `RadarTarget.lateralOffsetMeters` ($x$) is available from the BLE V2 stream (`6a4e3204`), the system SHALL compute left and right channel gains `(leftGain, rightGain)` according to lateral offset $x$ and configured traffic orientation:
+  - In-Lane ($|x| < 1.0\text{ m}$): Centered stereo `(1.0, 1.0)`.
+  - Passing Lane ($|x| \ge 1.5\text{ m}$): Panned toward the overtaking ear `(1.0, 0.20)` for Right-Hand Traffic (left ear) or `(0.20, 1.0)` for Left-Hand Traffic (right ear).
+  - Linear transition attenuation between $1.0\text{ m}$ and $1.5\text{ m}$.
+  - When `route == FORCE_SPEAKER` or 3D spatial audio is disabled, stereo gains SHALL collapse to centered `(1.0, 1.0)`.
+2. *Approach-Speed Pitch & Tempo Modulation (`REQ-TRK-065.2`)*:
+• When `radarSpeedPitchModulation` is enabled (default `true`), the system SHALL scale playback pitch and tempo linearly across relative approach speeds $3.0\text{ m/s} \le v_{\text{rel}} \le 30.0\text{ m/s}$ ($11\text{--}108\text{ km/h}$) to pitch range `0.95x .. 1.35x` using `AudioTrack.setPlaybackParams()` without rebuilding static PCM buffers.
+3. *Lane-Change Confirmation Spatial Cue (`REQ-TRK-065.3`)*:
+• When `radarLaneChangeTickEnabled` is enabled (default `true`), transitioning a tracked vehicle from `IN_RIDER_LANE` ($|x| < 1.0\text{ m}$) to `CHANGING_LANE_SAFE` ($|x| \ge 1.5\text{ m}$) SHALL emit a subtle directional spatial tick cue in the overtaking ear.
+4. *DataStore Persistence & Traffic Orientation Configuration (`REQ-TRK-065.4`)*:
+• `TuningPreferencesDataStore` SHALL persist `radarSpatialAudioEnabled` (Boolean, default `true`), `radarSpeedPitchModulation` (Boolean, default `true`), `radarTrafficOrientation` (String/enum `RIGHT_HAND`/`LEFT_HAND`, default `RIGHT_HAND`), and `radarLaneChangeTickEnabled` (Boolean, default `true`), exposed in `RadarSettingsSection.kt`.
+5. *Interactive Audio Preview Controls (`REQ-TRK-065.5`)*:
+• `RadarSettingsSection.kt` SHALL provide interactive audio preview buttons (Centered In-Lane, Passing Lane, Slow Approach, Fast Approach, Lane Change Tick) for eyes-free auditory verification in indoor settings.
+6. *9-Language Localization Parity (`REQ-TRK-065.6`)*:
+• All spatial audio toggles, traffic orientation labels, and audio preview buttons in `strings_radar.xml` SHALL maintain 100% key and format parity across EN, DE, ES, FR, IT, JA, NL, PL, PT (zero inline emojis).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* 3D spatial audio enabled and Right-Hand Traffic configured,
+• *When* an approaching vehicle shifts laterally from $x = 0.0\text{ m}$ to $x = -2.0\text{ m}$,
+• *Then* the audio chime pans from centered `(1.0, 1.0)` toward the left ear `(1.0, 0.20)`.
+• *Given* speed-adaptive pitch modulation enabled,
+• *When* a vehicle approaches at $25.0\text{ m/s}$ ($90\text{ km/h}$) versus $5.0\text{ m/s}$ ($18\text{ km/h}$),
+• *Then* the alert chime playback pitch scales from `~1.0x` to `~1.28x`.
+• *Given* `route == FORCE_SPEAKER`,
+• *When* a passing vehicle triggers an alert,
+• *Then* stereo gains remain centered `(1.0, 1.0)` to preserve full phone speaker volume.
+
+**Invariants**: Warm `MODE_STATIC` replay latency preserved without AudioFlinger port teardown; zero volume reduction on phone speaker; zero SQLite schema modifications; 100% 9-language translation parity.
+
 
 
 

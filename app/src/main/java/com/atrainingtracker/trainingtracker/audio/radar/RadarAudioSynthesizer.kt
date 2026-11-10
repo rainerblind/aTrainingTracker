@@ -61,6 +61,7 @@ class RadarAudioSynthesizer(
         const val FREQ_CLEAR: Double = 2100.0
         const val FREQ_DISCONNECT_1: Double = 2600.0
         const val FREQ_DISCONNECT_2: Double = 1750.0
+        const val FREQ_LANE_TICK: Double = 2400.0
 
         const val TAU_ATTACK: Double = 0.002 // 2 ms attack smoothing
 
@@ -195,6 +196,24 @@ class RadarAudioSynthesizer(
             return pcmBytes
         }
 
+        /**
+         * Synthesizes 16-bit mono PCM bytes for the subtle spatial lane-change tick cue (REQ-TRK-065.3).
+         */
+        fun synthesizeLaneChangeTickPcm(sampleRate: Int = SAMPLE_RATE): ByteArray {
+            val durationSec = 0.025
+            val totalSamples = (durationSec * sampleRate).toInt()
+            val pcmBytes = ByteArray(totalSamples * 2)
+
+            for (i in 0 until totalSamples) {
+                val t = i.toDouble() / sampleRate
+                val attack = 1.0 - exp(-t / 0.001)
+                val decay = exp(-t / 0.005)
+                val sample = 0.70 * attack * decay * sin(2.0 * PI * FREQ_LANE_TICK * t)
+                writeSampleToBytes(sample, pcmBytes, i * 2)
+            }
+            return pcmBytes
+        }
+
         private fun writeSampleToBytes(sample: Double, pcmBytes: ByteArray, byteIndex: Int) {
             val clamped = sample.coerceIn(-1.0, 1.0)
             val pcmValue = (clamped * Short.MAX_VALUE).toInt().toShort()
@@ -217,6 +236,7 @@ class RadarAudioSynthesizer(
     val fastThreatPcm: ByteArray = synthesizeFastThreatPcm()
     val allClearPcm: ByteArray = synthesizeAllClearPcm()
     val disconnectPcm: ByteArray = synthesizeDisconnectPcm()
+    val laneChangeTickPcm: ByteArray = synthesizeLaneChangeTickPcm()
 
     private val lock = Any()
     private var isClosed = false
@@ -230,6 +250,7 @@ class RadarAudioSynthesizer(
     private var fastThreatTrack: AudioTrack? = initializeTrack(fastThreatPcm)
     private var allClearTrack: AudioTrack? = initializeTrack(allClearPcm)
     private var disconnectTrack: AudioTrack? = initializeTrack(disconnectPcm)
+    private var laneChangeTickTrack: AudioTrack? = initializeTrack(laneChangeTickPcm)
 
     private fun initializeTrack(pcmData: ByteArray): AudioTrack? {
         return try {
@@ -283,13 +304,39 @@ class RadarAudioSynthesizer(
         }
     }
 
-    private fun playTrack(track: AudioTrack?, volume: Float, route: RadarAudioRoute) {
+    private fun playTrack(
+        track: AudioTrack?,
+        volume: Float,
+        route: RadarAudioRoute,
+        leftGain: Float = 1.0f,
+        rightGain: Float = 1.0f,
+        pitch: Float = 1.0f
+    ) {
         synchronized(lock) {
             if (isClosed || track == null) return
             try {
                 applyAudioRoute(track, route)
                 val clamped = volume.coerceIn(0.0f, 1.0f)
-                track.setVolume(clamped)
+                val finalLeft = (clamped * leftGain.coerceIn(0.0f, 1.0f)).coerceIn(0.0f, 1.0f)
+                val finalRight = (clamped * rightGain.coerceIn(0.0f, 1.0f)).coerceIn(0.0f, 1.0f)
+                if (finalLeft == finalRight) {
+                    track.setVolume(finalLeft)
+                } else {
+                    track.setStereoVolume(finalLeft, finalRight)
+                }
+
+                val clampedPitch = pitch.coerceIn(0.5f, 2.0f)
+                try {
+                    val params = track.playbackParams
+                    if (params != null && (clampedPitch != 1.0f || params.pitch != 1.0f || params.speed != 1.0f)) {
+                        params.pitch = clampedPitch
+                        params.speed = clampedPitch
+                        track.playbackParams = params
+                    }
+                } catch (t: Throwable) {
+                    Log.w(TAG, "PlaybackParams pitch adjustment failed", t)
+                }
+
                 // Reliable warm MODE_STATIC replay invariant (§3.4, ATT-5649)
                 track.pause()
                 track.playbackHeadPosition = 0
@@ -301,11 +348,31 @@ class RadarAudioSynthesizer(
     }
 
     fun playApproach(volume: Float = 0.9f, route: RadarAudioRoute = RadarAudioRoute.SYSTEM_DEFAULT) {
-        playTrack(approachTrack, volume, route)
+        playTrack(approachTrack, volume, route, 1.0f, 1.0f, 1.0f)
+    }
+
+    fun playApproach(
+        volume: Float,
+        route: RadarAudioRoute,
+        leftGain: Float,
+        rightGain: Float,
+        pitch: Float = 1.0f
+    ) {
+        playTrack(approachTrack, volume, route, leftGain, rightGain, pitch)
     }
 
     fun playFastThreat(volume: Float = 0.9f, route: RadarAudioRoute = RadarAudioRoute.SYSTEM_DEFAULT) {
-        playTrack(fastThreatTrack, volume, route)
+        playTrack(fastThreatTrack, volume, route, 1.0f, 1.0f, 1.0f)
+    }
+
+    fun playFastThreat(
+        volume: Float,
+        route: RadarAudioRoute,
+        leftGain: Float,
+        rightGain: Float,
+        pitch: Float = 1.0f
+    ) {
+        playTrack(fastThreatTrack, volume, route, leftGain, rightGain, pitch)
     }
 
     fun playAllClear(volume: Float = 0.7f, route: RadarAudioRoute = RadarAudioRoute.SYSTEM_DEFAULT) {
@@ -316,11 +383,20 @@ class RadarAudioSynthesizer(
         playTrack(disconnectTrack, volume, route)
     }
 
+    fun playLaneChangeTick(
+        volume: Float = 0.7f,
+        route: RadarAudioRoute = RadarAudioRoute.SYSTEM_DEFAULT,
+        leftGain: Float = 1.0f,
+        rightGain: Float = 1.0f
+    ) {
+        playTrack(laneChangeTickTrack, volume, route, leftGain, rightGain, 1.0f)
+    }
+
     override fun close() {
         synchronized(lock) {
             if (isClosed) return
             isClosed = true
-            listOf(approachTrack, fastThreatTrack, allClearTrack, disconnectTrack).forEach { track ->
+            listOf(approachTrack, fastThreatTrack, allClearTrack, disconnectTrack, laneChangeTickTrack).forEach { track ->
                 try {
                     track?.pause()
                     track?.flush()
@@ -333,6 +409,7 @@ class RadarAudioSynthesizer(
             fastThreatTrack = null
             allClearTrack = null
             disconnectTrack = null
+            laneChangeTickTrack = null
         }
     }
 }

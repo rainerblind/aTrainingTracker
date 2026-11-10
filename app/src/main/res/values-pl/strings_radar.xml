@@ -114,4 +114,21 @@
     <string name="radar_peloton_audio_sync_desc">Wycisz standardowe dźwięki zbliżania, gdy tylne światło działa w trybie peletonu</string>
     <string name="radar_smart_urban_mute_title">Inteligentny filtr korków miejskich</string>
     <string name="radar_smart_urban_mute_desc">Tłum powtarzające się dźwięki w wolnym ruchu miejskim, zachowując alerty wysokiej prędkości</string>
+
+    <!-- 3D Stereo Audio Panning & Speed Pitch Modulation (ATT-5120 / REQ-TRK-065) -->
+    <string name="radar_spatial_audio_title">Dźwięk przestrzenny stereo 3D</string>
+    <string name="radar_spatial_audio_desc">Kieruj dźwięk ostrzeżenia w słuchawkach na pas wyprzedzania</string>
+    <string name="radar_traffic_orientation_title">Ruch drogowy</string>
+    <string name="radar_traffic_orientation_rht">Ruch prawostronny</string>
+    <string name="radar_traffic_orientation_lht">Ruch lewostronny</string>
+    <string name="radar_lane_change_tick_title">Sygnał zmiany pasa</string>
+    <string name="radar_lane_change_tick_desc">Subtelny dźwięk, gdy pojazd zjeżdża na pas wyprzedzania</string>
+    <string name="radar_speed_pitch_title">Ton adaptacyjny do prędkości</string>
+    <string name="radar_speed_pitch_desc">Wyższy ton ostrzeżenia dla szybko zbliżających się pojazdów</string>
+    <string name="radar_preview_title">Podgląd dźwięku</string>
+    <string name="radar_preview_centered">Na pasie</string>
+    <string name="radar_preview_passing">Wyprzedzanie</string>
+    <string name="radar_preview_slow">Powoli</string>
+    <string name="radar_preview_fast">Szybkie zagrożenie</string>
+    <string name="radar_preview_lane_change">Zmiana pasa</string>
 </resources>

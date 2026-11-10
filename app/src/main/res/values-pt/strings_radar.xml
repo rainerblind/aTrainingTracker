@@ -114,4 +114,21 @@
     <string name="radar_peloton_audio_sync_desc">Suprimir avisos sonoros padrão de aproximação quando a luz traseira estiver no modo pelotão</string>
     <string name="radar_smart_urban_mute_title">Filtro inteligente de tráfego urbano</string>
     <string name="radar_smart_urban_mute_desc">Suprimir avisos sonoros repetitivos no trânsito urbano lento mantendo alertas de alta velocidade</string>
+
+    <!-- 3D Stereo Audio Panning & Speed Pitch Modulation (ATT-5120 / REQ-TRK-065) -->
+    <string name="radar_spatial_audio_title">Áudio estéreo espacial 3D</string>
+    <string name="radar_spatial_audio_desc">Direcionar o som nos auscultadores para a faixa de ultrapassagem</string>
+    <string name="radar_traffic_orientation_title">Sentido de circulação</string>
+    <string name="radar_traffic_orientation_rht">Circulação pela direita</string>
+    <string name="radar_traffic_orientation_lht">Circulação pela esquerda</string>
+    <string name="radar_lane_change_tick_title">Aviso de mudança de faixa</string>
+    <string name="radar_lane_change_tick_desc">Sinal subtil quando o veículo passa para a faixa de ultrapassagem</string>
+    <string name="radar_speed_pitch_title">Tom adaptável à velocidade</string>
+    <string name="radar_speed_pitch_desc">Modular tom mais agudo para veículos em aproximação rápida</string>
+    <string name="radar_preview_title">Pré-visualização de áudio</string>
+    <string name="radar_preview_centered">Na faixa</string>
+    <string name="radar_preview_passing">Ultrapassagem</string>
+    <string name="radar_preview_slow">Lento</string>
+    <string name="radar_preview_fast">Ameaça rápida</string>
+    <string name="radar_preview_lane_change">Mudança de faixa</string>
 </resources>

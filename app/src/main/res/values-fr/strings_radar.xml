@@ -114,4 +114,21 @@
     <string name="radar_peloton_audio_sync_desc">Désactiver les signaux d\'approche standard lorsque le feu arrière est en mode peloton</string>
     <string name="radar_smart_urban_mute_title">Filtre intelligent d\'embouteillage urbain</string>
     <string name="radar_smart_urban_mute_desc">Supprimer les signaux répétitifs dans le trafic lent tout en maintenant les alertes à grande vitesse</string>
+
+    <!-- 3D Stereo Audio Panning & Speed Pitch Modulation (ATT-5120 / REQ-TRK-065) -->
+    <string name="radar_spatial_audio_title">Spatialisation audio stéréo 3D</string>
+    <string name="radar_spatial_audio_desc">Orienter l\'alerte dans les écouteurs vers la voie de dépassement</string>
+    <string name="radar_traffic_orientation_title">Sens de circulation</string>
+    <string name="radar_traffic_orientation_rht">Circulation à droite</string>
+    <string name="radar_traffic_orientation_lht">Circulation à gauche</string>
+    <string name="radar_lane_change_tick_title">Signal de changement de voie</string>
+    <string name="radar_lane_change_tick_desc">Clic discret lorsqu\'un véhicule passe sur la voie de dépassement</string>
+    <string name="radar_speed_pitch_title">Hauteur sonore adaptative</string>
+    <string name="radar_speed_pitch_desc">Augmenter la fréquence du signal pour les véhicules rapides</string>
+    <string name="radar_preview_title">Aperçu audio</string>
+    <string name="radar_preview_centered">Dans la voie</string>
+    <string name="radar_preview_passing">Dépassement</string>
+    <string name="radar_preview_slow">Lent</string>
+    <string name="radar_preview_fast">Menace rapide</string>
+    <string name="radar_preview_lane_change">Changement de voie</string>
 </resources>

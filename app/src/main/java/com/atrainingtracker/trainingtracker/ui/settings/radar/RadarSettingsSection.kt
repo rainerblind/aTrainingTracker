@@ -57,10 +57,13 @@ import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
 import com.atrainingtracker.banalservice.devices.radar.RadarScenario
 import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository
 import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator
+import com.atrainingtracker.trainingtracker.audio.radar.RadarAlertManager
+import com.atrainingtracker.trainingtracker.audio.radar.RadarAudioPreviewType
 import com.atrainingtracker.trainingtracker.settings.RadarAudioAlertMode
 import com.atrainingtracker.trainingtracker.settings.RadarAudioRoute
 import com.atrainingtracker.trainingtracker.settings.RadarClearMode
 import com.atrainingtracker.trainingtracker.settings.RadarEdgeSide
+import com.atrainingtracker.trainingtracker.settings.RadarTrafficOrientation
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.SubordinateTuningToggleItem
 import kotlinx.coroutines.launch
@@ -476,6 +479,199 @@ fun RadarSettingsSection(
                             coroutineScope.launch {
                                 actualDataStore.updateRadarSmartUrbanMute(checked)
                             }
+                        }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 3D Stereo Audio Toggle (REQ-TRK-065.1)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
+                        Text(
+                            text = stringResource(R.string.radar_spatial_audio_title),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = stringResource(R.string.radar_spatial_audio_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = tuningConfig.radarSpatialAudioEnabled,
+                        onCheckedChange = { checked ->
+                            coroutineScope.launch {
+                                actualDataStore.updateRadarSpatialAudioEnabled(checked)
+                            }
+                        }
+                    )
+                }
+
+                if (tuningConfig.radarSpatialAudioEnabled) {
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Traffic Orientation Selection (Rule 1.1 SingleChoiceSegmentedButtonRow)
+                    Text(
+                        text = stringResource(R.string.radar_traffic_orientation_title),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    SingleChoiceSegmentedButtonRow(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        SegmentedButton(
+                            selected = tuningConfig.radarTrafficOrientation == RadarTrafficOrientation.RIGHT_HAND,
+                            onClick = {
+                                coroutineScope.launch {
+                                    actualDataStore.updateRadarTrafficOrientation(RadarTrafficOrientation.RIGHT_HAND)
+                                }
+                            },
+                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+                        ) {
+                            Text(text = stringResource(R.string.radar_traffic_orientation_rht))
+                        }
+
+                        SegmentedButton(
+                            selected = tuningConfig.radarTrafficOrientation == RadarTrafficOrientation.LEFT_HAND,
+                            onClick = {
+                                coroutineScope.launch {
+                                    actualDataStore.updateRadarTrafficOrientation(RadarTrafficOrientation.LEFT_HAND)
+                                }
+                            },
+                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+                        ) {
+                            Text(text = stringResource(R.string.radar_traffic_orientation_lht))
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Lane-Change Spatial Tick Subordinate Toggle (REQ-TRK-065.3)
+                    SubordinateTuningToggleItem(
+                        title = stringResource(R.string.radar_lane_change_tick_title),
+                        isChecked = tuningConfig.radarLaneChangeTickEnabled,
+                        onCheckedChange = { checked ->
+                            coroutineScope.launch {
+                                actualDataStore.updateRadarLaneChangeTickEnabled(checked)
+                            }
+                        },
+                        modifier = Modifier.padding(top = 2.dp, bottom = 4.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Approach-Speed Pitch Modulation Toggle (REQ-TRK-065.2)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
+                        Text(
+                            text = stringResource(R.string.radar_speed_pitch_title),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = stringResource(R.string.radar_speed_pitch_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = tuningConfig.radarSpeedPitchModulation,
+                        onCheckedChange = { checked ->
+                            coroutineScope.launch {
+                                actualDataStore.updateRadarSpeedPitchModulation(checked)
+                            }
+                        }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Interactive Audio Preview Section (REQ-TRK-065.5)
+                Text(
+                    text = stringResource(R.string.radar_preview_title),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    FilterChip(
+                        selected = false,
+                        onClick = {
+                            RadarAlertManager.playAudioPreview(context, RadarAudioPreviewType.CENTERED, tuningConfig)
+                        },
+                        label = {
+                            Text(
+                                text = stringResource(R.string.radar_preview_centered),
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
+                    )
+                    FilterChip(
+                        selected = false,
+                        onClick = {
+                            RadarAlertManager.playAudioPreview(context, RadarAudioPreviewType.PASSING, tuningConfig)
+                        },
+                        label = {
+                            Text(
+                                text = stringResource(R.string.radar_preview_passing),
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
+                    )
+                    FilterChip(
+                        selected = false,
+                        onClick = {
+                            RadarAlertManager.playAudioPreview(context, RadarAudioPreviewType.SLOW, tuningConfig)
+                        },
+                        label = {
+                            Text(
+                                text = stringResource(R.string.radar_preview_slow),
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
+                    )
+                    FilterChip(
+                        selected = false,
+                        onClick = {
+                            RadarAlertManager.playAudioPreview(context, RadarAudioPreviewType.FAST, tuningConfig)
+                        },
+                        label = {
+                            Text(
+                                text = stringResource(R.string.radar_preview_fast),
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
+                    )
+                    FilterChip(
+                        selected = false,
+                        onClick = {
+                            RadarAlertManager.playAudioPreview(context, RadarAudioPreviewType.LANE_CHANGE, tuningConfig)
+                        },
+                        label = {
+                            Text(
+                                text = stringResource(R.string.radar_preview_lane_change),
+                                style = MaterialTheme.typography.labelMedium
+                            )
                         }
                     )
                 }

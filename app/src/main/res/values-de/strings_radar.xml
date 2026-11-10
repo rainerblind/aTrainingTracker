@@ -114,4 +114,21 @@
     <string name="radar_peloton_audio_sync_desc">Standard-Annäherungstöne im Peloton-Rücklichtmodus automatisch stummschalten</string>
     <string name="radar_smart_urban_mute_title">Intelligenter Stadtverkehrsfilter</string>
     <string name="radar_smart_urban_mute_desc">Wiederholte Annäherungstöne im dichten Stadtverkehr unterdrücken, Hochgeschwindigkeitswarnungen beibehalten</string>
+
+    <!-- 3D Stereo Audio Panning & Speed Pitch Modulation (ATT-5120 / REQ-TRK-065) -->
+    <string name="radar_spatial_audio_title">3D-Stereo-Audiopanning</string>
+    <string name="radar_spatial_audio_desc">Warnton im Kopfhörer zur Überholspur des Fahrzeugs ausrichten</string>
+    <string name="radar_traffic_orientation_title">Verkehrsausrichtung</string>
+    <string name="radar_traffic_orientation_rht">Rechtsverkehr</string>
+    <string name="radar_traffic_orientation_lht">Linksverkehr</string>
+    <string name="radar_lane_change_tick_title">Spurwechsel-Signalton</string>
+    <string name="radar_lane_change_tick_desc">Dezentes Klicken abspielen, wenn Fahrzeug auf Überholspur wechselt</string>
+    <string name="radar_speed_pitch_title">Geschwindigkeitsadaptive Tonhöhe</string>
+    <string name="radar_speed_pitch_desc">Höhere Tonhöhe bei schnellen Annäherungsgeschwindigkeiten</string>
+    <string name="radar_preview_title">Audio-Vorschau</string>
+    <string name="radar_preview_centered">Auf Spur</string>
+    <string name="radar_preview_passing">Überholen</string>
+    <string name="radar_preview_slow">Langsam</string>
+    <string name="radar_preview_fast">Schnelle Gefahr</string>
+    <string name="radar_preview_lane_change">Spurwechsel</string>
 </resources>

@@ -85,6 +85,14 @@ class TuningConfigTest {
         assertEquals(true, TuningPreferencesDefaults.RADAR_PELOTON_AUDIO_SYNC)
         assertEquals(false, config.radarSmartUrbanMute)
         assertEquals(false, TuningPreferencesDefaults.RADAR_SMART_URBAN_MUTE)
+        assertEquals(true, config.radarSpatialAudioEnabled)
+        assertEquals(true, TuningPreferencesDefaults.RADAR_SPATIAL_AUDIO_ENABLED)
+        assertEquals(true, config.radarSpeedPitchModulation)
+        assertEquals(true, TuningPreferencesDefaults.RADAR_SPEED_PITCH_MODULATION)
+        assertEquals(RadarTrafficOrientation.RIGHT_HAND, config.radarTrafficOrientation)
+        assertEquals(RadarTrafficOrientation.RIGHT_HAND, TuningPreferencesDefaults.RADAR_TRAFFIC_ORIENTATION)
+        assertEquals(true, config.radarLaneChangeTickEnabled)
+        assertEquals(true, TuningPreferencesDefaults.RADAR_LANE_CHANGE_TICK_ENABLED)
     }
 
     @Test

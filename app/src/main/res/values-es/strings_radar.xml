@@ -114,4 +114,21 @@
     <string name="radar_peloton_audio_sync_desc">Silenciar avisos de aproximación estándar cuando la luz trasera esté en modo pelotón</string>
     <string name="radar_smart_urban_mute_title">Filtro inteligente de congestión urbana</string>
     <string name="radar_smart_urban_mute_desc">Suprimir avisos repetitivos en tráfico urbano lento manteniendo las alertas de alta velocidad</string>
+
+    <!-- 3D Stereo Audio Panning & Speed Pitch Modulation (ATT-5120 / REQ-TRK-065) -->
+    <string name="radar_spatial_audio_title">Audio estéreo espacial 3D</string>
+    <string name="radar_spatial_audio_desc">Orientar alerta en auriculares hacia el carril de adelantamiento</string>
+    <string name="radar_traffic_orientation_title">Sentido del tráfico</string>
+    <string name="radar_traffic_orientation_rht">Circulación por la derecha</string>
+    <string name="radar_traffic_orientation_lht">Circulación por la izquierda</string>
+    <string name="radar_lane_change_tick_title">Aviso de cambio de carril</string>
+    <string name="radar_lane_change_tick_desc">Tono sutil al pasar el vehículo al carril de adelantamiento</string>
+    <string name="radar_speed_pitch_title">Tono según velocidad</string>
+    <string name="radar_speed_pitch_desc">Modular el tono más agudo según la velocidad de aproximación</string>
+    <string name="radar_preview_title">Vista previa de audio</string>
+    <string name="radar_preview_centered">En carril</string>
+    <string name="radar_preview_passing">Adelantando</string>
+    <string name="radar_preview_slow">Lento</string>
+    <string name="radar_preview_fast">Amenaza rápida</string>
+    <string name="radar_preview_lane_change">Cambio de carril</string>
 </resources>

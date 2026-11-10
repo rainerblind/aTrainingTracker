@@ -114,4 +114,21 @@
     <string name="radar_peloton_audio_sync_desc">テールライトが集団モードの時は標準接近アラート音を抑制します</string>
     <string name="radar_smart_urban_mute_title">スマート市街地混雑フィルター</string>
     <string name="radar_smart_urban_mute_desc">低速な市街地渋滞での連続接近音を抑制し、高速接近アラートのみ鳴らします</string>
+
+    <!-- 3D Stereo Audio Panning & Speed Pitch Modulation (ATT-5120 / REQ-TRK-065) -->
+    <string name="radar_spatial_audio_title">3Dステレオ空間オーディオ</string>
+    <string name="radar_spatial_audio_desc">ヘッドフォンで追い越し車両の車線方向に警告音を定位</string>
+    <string name="radar_traffic_orientation_title">通行区分</string>
+    <string name="radar_traffic_orientation_rht">右側通行</string>
+    <string name="radar_traffic_orientation_lht">左側通行</string>
+    <string name="radar_lane_change_tick_title">車線変更空間合図</string>
+    <string name="radar_lane_change_tick_desc">車両が追い越し車線へ移行した際にクリック音を再生</string>
+    <string name="radar_speed_pitch_title">速度連動ピッチ変調</string>
+    <string name="radar_speed_pitch_desc">急接近する車両に対して警告音の音程を高く調整</string>
+    <string name="radar_preview_title">オーディオプレビュー</string>
+    <string name="radar_preview_centered">車線内</string>
+    <string name="radar_preview_passing">追い越し</string>
+    <string name="radar_preview_slow">低速</string>
+    <string name="radar_preview_fast">高速接近</string>
+    <string name="radar_preview_lane_change">車線変更</string>
 </resources>

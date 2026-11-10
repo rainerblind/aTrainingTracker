@@ -114,4 +114,21 @@
     <string name="radar_peloton_audio_sync_desc">Disattiva i segnali acustici standard quando la luce posteriore è in modalità gruppo</string>
     <string name="radar_smart_urban_mute_title">Filtro intelligente traffico urbano</string>
     <string name="radar_smart_urban_mute_desc">Elimina gli avvisi acustici ripetuti nel traffico urbano lento mantenendo gli allarmi ad alta velocità</string>
+
+    <!-- 3D Stereo Audio Panning & Speed Pitch Modulation (ATT-5120 / REQ-TRK-065) -->
+    <string name="radar_spatial_audio_title">Panning audio stereo 3D</string>
+    <string name="radar_spatial_audio_desc">Orienta l\'avviso in cuffia verso la corsia di sorpasso</string>
+    <string name="radar_traffic_orientation_title">Senso di marcia</string>
+    <string name="radar_traffic_orientation_rht">Circolazione a destra</string>
+    <string name="radar_traffic_orientation_lht">Circolazione a sinistra</string>
+    <string name="radar_lane_change_tick_title">Segnale di cambio corsia</string>
+    <string name="radar_lane_change_tick_desc">Segnale discreto quando il veicolo passa alla corsia di sorpasso</string>
+    <string name="radar_speed_pitch_title">Tonalità adattiva alla velocità</string>
+    <string name="radar_speed_pitch_desc">Modula la tonalità più alta per veicoli in rapido avvicinamento</string>
+    <string name="radar_preview_title">Anteprima audio</string>
+    <string name="radar_preview_centered">In corsia</string>
+    <string name="radar_preview_passing">Sorpasso</string>
+    <string name="radar_preview_slow">Lento</string>
+    <string name="radar_preview_fast">Pericolo rapido</string>
+    <string name="radar_preview_lane_change">Cambio corsia</string>
 </resources>
