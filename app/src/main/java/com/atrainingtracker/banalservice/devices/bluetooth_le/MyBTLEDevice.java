@@ -105,10 +105,16 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
         }
 
         @Override
+        @android.annotation.SuppressLint("MissingPermission")
         public boolean execute(BluetoothGatt gatt) {
             if (descriptor == null || gatt == null) return false;
             descriptor.setValue(value);
-            return gatt.writeDescriptor(descriptor);
+            try {
+                return gatt.writeDescriptor(descriptor);
+            } catch (SecurityException e) {
+                Log.w("MyBTLEDevice", "Missing BLUETOOTH_CONNECT permission writing descriptor", e);
+                return false;
+            }
         }
     }
 
@@ -124,9 +130,15 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
         }
 
         @Override
+        @android.annotation.SuppressLint("MissingPermission")
         public boolean execute(BluetoothGatt gatt) {
             if (characteristic == null || gatt == null) return false;
-            return gatt.readCharacteristic(characteristic);
+            try {
+                return gatt.readCharacteristic(characteristic);
+            } catch (SecurityException e) {
+                Log.w("MyBTLEDevice", "Missing BLUETOOTH_CONNECT permission reading characteristic", e);
+                return false;
+            }
         }
     }
 
@@ -148,10 +160,16 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
         }
 
         @Override
+        @android.annotation.SuppressLint("MissingPermission")
         public boolean execute(BluetoothGatt gatt) {
             if (characteristic == null || gatt == null) return false;
             characteristic.setValue(value);
-            return gatt.writeCharacteristic(characteristic);
+            try {
+                return gatt.writeCharacteristic(characteristic);
+            } catch (SecurityException e) {
+                Log.w("MyBTLEDevice", "Missing BLUETOOTH_CONNECT permission writing characteristic", e);
+                return false;
+            }
         }
     }
 
@@ -915,6 +933,7 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
         }
     }
 
+    @android.annotation.SuppressLint("MissingPermission")
     protected void configureServices(BluetoothGatt gatt) {
         BluetoothGattService btGattService = gatt.getService(BluetoothConstants.getServiceUUID(getDeviceType()));
         if (btGattService == null) {
@@ -926,7 +945,12 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
             Log.d(TAG, "Expected characteristic not found!");
             return;
         }
-        gatt.setCharacteristicNotification(btGattChar, true);
+        try {
+            gatt.setCharacteristicNotification(btGattChar, true);
+        } catch (SecurityException e) {
+            Log.w(TAG, "Missing BLUETOOTH_CONNECT permission enabling characteristic notification", e);
+            return;
+        }
 
         BluetoothGattDescriptor descriptor = btGattChar.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG);
         if (descriptor != null) {

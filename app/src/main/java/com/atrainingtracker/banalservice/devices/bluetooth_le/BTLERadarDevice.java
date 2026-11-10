@@ -124,6 +124,7 @@ public class BTLERadarDevice extends MyBTLEDevice {
     }
 
     @Override
+    @android.annotation.SuppressLint("MissingPermission")
     protected void configureServices(BluetoothGatt gatt) {
         BluetoothGattService btGattService = gatt.getService(BluetoothConstants.UUID_SERVICE_RADAR);
         if (btGattService == null) {
@@ -137,11 +138,17 @@ public class BTLERadarDevice extends MyBTLEDevice {
             mIsV2Stream = true;
             try {
                 gatt.requestMtu(247);
+            } catch (SecurityException e) {
+                Log.w(TAG, "Missing BLUETOOTH_CONNECT permission requesting MTU 247", e);
             } catch (Exception e) {
                 if (DEBUG) Log.w(TAG, "Error requesting MTU 247", e);
             }
 
-            gatt.setCharacteristicNotification(v2Char, true);
+            try {
+                gatt.setCharacteristicNotification(v2Char, true);
+            } catch (SecurityException e) {
+                Log.w(TAG, "Missing BLUETOOTH_CONNECT permission enabling V2 radar notifications", e);
+            }
             BluetoothGattDescriptor descriptor = v2Char.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG);
             if (descriptor != null) {
                 byte[] val = (v2Char.getProperties() & BluetoothGattCharacteristic.PROPERTY_INDICATE) != 0
@@ -175,12 +182,17 @@ public class BTLERadarDevice extends MyBTLEDevice {
         }
     }
 
+    @android.annotation.SuppressLint("MissingPermission")
     public void fallbackToV1(BluetoothGatt gatt, BluetoothGattService btGattService) {
         if (DEBUG) Log.i(TAG, "Falling back to legacy V1 characteristic 6a4e3203 (REQ-CON-030.2)");
         mIsV2Stream = false;
         BluetoothGattCharacteristic v1Char = btGattService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1);
         if (v1Char != null) {
-            gatt.setCharacteristicNotification(v1Char, true);
+            try {
+                gatt.setCharacteristicNotification(v1Char, true);
+            } catch (SecurityException e) {
+                Log.w(TAG, "Missing BLUETOOTH_CONNECT permission enabling V1 radar notifications", e);
+            }
             BluetoothGattDescriptor descriptor = v1Char.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG);
             if (descriptor != null) {
                 enqueueWriteDescriptor(descriptor, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
