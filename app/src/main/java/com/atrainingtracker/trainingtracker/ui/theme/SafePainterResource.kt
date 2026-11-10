@@ -51,7 +51,7 @@ fun safePainterResource(
 ): Painter {
     val context = LocalContext.current
     val drawable = remember(id, context) {
-        if (id == 0) null
+        if (id <= 0) null
         else {
             try {
                 ContextCompat.getDrawable(context, id)

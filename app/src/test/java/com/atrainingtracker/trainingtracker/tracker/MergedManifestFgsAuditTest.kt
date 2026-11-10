@@ -73,7 +73,7 @@ class MergedManifestFgsAuditTest {
 
         // Match TrackerService definition block
         val trackerServiceRegex = Regex(
-            """<service\s+[^>]*android:name="\.trainingtracker\.tracker\.TrackerService"[^>]*android:foregroundServiceType="([^"]+)"\s*/>""",
+            """<service\s+[^>]*android:name="\.trainingtracker\.tracker\.TrackerService"[^>]*android:foregroundServiceType="([^"]+)"[^>]*/>""",
             RegexOption.DOT_MATCHES_ALL
         )
         val match = trackerServiceRegex.find(content)
@@ -97,7 +97,7 @@ class MergedManifestFgsAuditTest {
 
         // Match BANALService definition block
         val banalServiceRegex = Regex(
-            """<service\s+[^>]*android:name="\.banalservice\.BANALService"[^>]*android:foregroundServiceType="([^"]+)"\s*/>""",
+            """<service\s+[^>]*android:name="\.banalservice\.BANALService"[^>]*android:foregroundServiceType="([^"]+)"[^>]*/>""",
             RegexOption.DOT_MATCHES_ALL
         )
         val match = banalServiceRegex.find(content)

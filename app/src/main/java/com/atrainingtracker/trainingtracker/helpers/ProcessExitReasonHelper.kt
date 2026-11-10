@@ -64,6 +64,7 @@ object ProcessExitReasonHelper {
      * In debug builds ([isDebug]), checks [PREF_DEBUG_SIMULATED_KILL_REASON] for desk simulation injection (REQ-STB-015).
      * Idempotently tracks exit timestamps to prevent spurious counter increments during screen rotation.
      */
+    @android.annotation.SuppressLint("NewApi")
     fun resolveKillReason(
         context: Context,
         sdkInt: Int = Build.VERSION.SDK_INT,
@@ -94,7 +95,7 @@ object ProcessExitReasonHelper {
             }
         }
 
-        if (!isSimulated && sdkInt >= Build.VERSION_CODES.R && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        if (!isSimulated && sdkInt >= Build.VERSION_CODES.R) {
             try {
                 val historical = queryHistoricalProcessExitReason(context)
                 if (historical != null) {

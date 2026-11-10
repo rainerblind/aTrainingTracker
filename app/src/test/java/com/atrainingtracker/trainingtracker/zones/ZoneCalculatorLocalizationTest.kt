@@ -74,24 +74,27 @@ class ZoneCalculatorLocalizationTest {
 
     private val formatSpecifierPattern = Pattern.compile("%(\\d+\\$)?[\\d\\.]*[dfsu%]")
 
+    private fun readMergedLocaleStrings(projectRoot: File, locale: String): String {
+        val dir = File(projectRoot, "app/src/main/res/$locale")
+        assertTrue("Locale directory must exist for $locale", dir.exists() && dir.isDirectory)
+        val xmlFiles = dir.listFiles { f -> f.isFile && f.name.startsWith("strings") && f.name.endsWith(".xml") }
+            ?.sortedBy { it.name }
+            .orEmpty()
+        assertTrue("At least one strings*.xml must exist for locale $locale", xmlFiles.isNotEmpty())
+        return xmlFiles.joinToString("\n") { it.readText() }
+    }
+
     @Test
     fun testZoneCalculationStrings_existInAllNineLocales() {
         val projectRoot = resolveProjectRoot()
 
         for (locale in locales) {
-            val file = File(projectRoot, "app/src/main/res/$locale/strings.xml")
-            assertTrue("strings.xml must exist for locale $locale", file.exists())
-            val content = file.readText()
+            val content = readMergedLocaleStrings(projectRoot, locale)
 
             for (key in expectedKeys) {
-                val tag = "<string name=\"$key\">"
-                assertTrue("Locale $locale must define string '$key'", content.contains(tag))
-
-                val startIndex = content.indexOf(tag) + tag.length
-                val endIndex = content.indexOf("</string>", startIndex)
-                assertTrue("Locale $locale string '$key' must have closing tag", endIndex > startIndex)
-                val value = content.substring(startIndex, endIndex).trim()
-                assertFalse("Locale $locale string '$key' must not be empty", value.isEmpty())
+                val value = extractStringValueOrNull(content, key)
+                assertTrue("Locale $locale must define string '$key'", value != null)
+                assertFalse("Locale $locale string '$key' must not be empty", value!!.isEmpty())
             }
         }
     }
@@ -100,8 +103,7 @@ class ZoneCalculatorLocalizationTest {
     fun testZoneCalculationStrings_formatSpecifierParityAcrossLocales() {
         val projectRoot = resolveProjectRoot()
 
-        val baseFile = File(projectRoot, "app/src/main/res/values/strings.xml")
-        val baseContent = baseFile.readText()
+        val baseContent = readMergedLocaleStrings(projectRoot, "values")
 
         val baseTokensByKey = mutableMapOf<String, List<String>>()
         for (key in expectedKeys) {
@@ -111,8 +113,7 @@ class ZoneCalculatorLocalizationTest {
         }
 
         for (locale in locales.filter { it != "values" }) {
-            val file = File(projectRoot, "app/src/main/res/$locale/strings.xml")
-            val content = file.readText()
+            val content = readMergedLocaleStrings(projectRoot, locale)
 
             for (key in expectedKeys) {
                 val value = extractStringValue(content, key)
@@ -135,11 +136,14 @@ class ZoneCalculatorLocalizationTest {
         }
     }
 
+    private fun extractStringValueOrNull(content: String, key: String): String? {
+        val regex = Regex("""<string\s+[^>]*name="${Regex.escape(key)}"[^>]*>(.*?)</string>""", RegexOption.DOT_MATCHES_ALL)
+        return regex.find(content)?.groupValues?.get(1)?.trim()
+    }
+
     private fun extractStringValue(content: String, key: String): String {
-        val tag = "<string name=\"$key\">"
-        val startIndex = content.indexOf(tag) + tag.length
-        val endIndex = content.indexOf("</string>", startIndex)
-        return content.substring(startIndex, endIndex).trim()
+        return extractStringValueOrNull(content, key)
+            ?: throw AssertionError("String '$key' not found")
     }
 
     private fun extractTokens(text: String): List<String> {

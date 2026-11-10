@@ -253,29 +253,36 @@ class BANALServiceRepository private constructor(context: Context) {
     }
 
 
+    private fun registerInternalReceiver(receiver: BroadcastReceiver, filter: IntentFilter) {
+        if (android.os.Build.VERSION.SDK_INT == 0) {
+            // Plain JVM unit test stub where Process.myPid() inside ContextCompat is not mocked
+            return
+        }
+        androidx.core.content.ContextCompat.registerReceiver(
+            appContext,
+            receiver,
+            filter,
+            androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+    }
+
     init {
         _wasAutoPaused.value = TrainingApplication.wasAutoPaused()
         _trackingMode.postValue(TrainingApplication.getTrackingMode())
 
-        androidx.core.content.ContextCompat.registerReceiver(
-            appContext,
+        registerInternalReceiver(
             trackingModeReceiver,
-            IntentFilter(TrainingApplication.TRACKING_STATE_CHANGED),
-            androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
+            IntentFilter(TrainingApplication.TRACKING_STATE_CHANGED)
         )
 
-        androidx.core.content.ContextCompat.registerReceiver(
-            appContext,
+        registerInternalReceiver(
             lapSummaryReceiver,
-            IntentFilter(BANALService.LAP_SUMMARY),
-            androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
+            IntentFilter(BANALService.LAP_SUMMARY)
         )
 
-        androidx.core.content.ContextCompat.registerReceiver(
-            appContext,
+        registerInternalReceiver(
             altitudeCorrectionReceiver,
-            IntentFilter(com.atrainingtracker.banalservice.devices.AltitudeFromPressureDevice.ALTITUDE_CORRECTION_INTENT),
-            androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
+            IntentFilter(com.atrainingtracker.banalservice.devices.AltitudeFromPressureDevice.ALTITUDE_CORRECTION_INTENT)
         )
 
         // Start the long-lived observation loop that reacts to the binder state.
