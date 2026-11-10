@@ -33,6 +33,7 @@ import androidx.annotation.Nullable;
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.devices.DeviceType;
 import com.atrainingtracker.banalservice.devices.radar.LaneState;
+import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeState;
 import com.atrainingtracker.banalservice.devices.radar.RadarConnectionState;
 import com.atrainingtracker.banalservice.devices.radar.RadarLatchedSnapshot;
 import com.atrainingtracker.banalservice.devices.radar.RadarLightController;
@@ -90,7 +91,8 @@ public class BTLERadarDevice extends MyBTLEDevice {
                     Collections.emptyList(),
                     SystemClock.elapsedRealtime(),
                     currentState.getLightMode(),
-                    mIsLightControlSupported
+                    mIsLightControlSupported,
+                    currentState.getAudioSnoozeState()
             ));
         }
     };
@@ -223,7 +225,8 @@ public class BTLERadarDevice extends MyBTLEDevice {
                 targets,
                 SystemClock.elapsedRealtime(),
                 currentState.getLightMode(),
-                mIsLightControlSupported
+                mIsLightControlSupported,
+                currentState.getAudioSnoozeState()
         );
         RadarStateRepository.updateState(state);
 
@@ -265,7 +268,8 @@ public class BTLERadarDevice extends MyBTLEDevice {
                 Collections.emptyList(),
                 SystemClock.elapsedRealtime(),
                 RadarLightMode.OFF,
-                false
+                false,
+                RadarAudioSnoozeState.INACTIVE
         ));
         super.disconnectFromGatt();
     }

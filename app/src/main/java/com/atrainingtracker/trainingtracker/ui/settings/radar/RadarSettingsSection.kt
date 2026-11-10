@@ -419,6 +419,66 @@ fun RadarSettingsSection(
                         }
                     )
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Peloton Audio Sync Toggle (REQ-TRK-064.2)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
+                        Text(
+                            text = stringResource(R.string.radar_peloton_audio_sync_title),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = stringResource(R.string.radar_peloton_audio_sync_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = tuningConfig.radarPelotonAudioSync,
+                        onCheckedChange = { checked ->
+                            coroutineScope.launch {
+                                actualDataStore.updateRadarPelotonAudioSync(checked)
+                            }
+                        }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Smart Urban Congestion Filter Toggle (REQ-TRK-064.3)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
+                        Text(
+                            text = stringResource(R.string.radar_smart_urban_mute_title),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = stringResource(R.string.radar_smart_urban_mute_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = tuningConfig.radarSmartUrbanMute,
+                        onCheckedChange = { checked ->
+                            coroutineScope.launch {
+                                actualDataStore.updateRadarSmartUrbanMute(checked)
+                            }
+                        }
+                    )
+                }
             }
         }
 

@@ -101,4 +101,17 @@
     <string name="radar_light_auto_switch_desc">Schaltet das Rücklicht bei Trainingsbeginn ein und bei Trainingsende aus</string>
     <string name="radar_light_sheet_title">Radar-Rücklicht</string>
     <string name="radar_light_stvzo_notice">StVZO-Modus (Blinken deaktiviert)</string>
+
+    <!-- Radar Audio Snooze, Peloton Sync & Urban Suppression (ATT-5119 / REQ-TRK-064) -->
+    <string name="radar_snooze_title">Audio-Schlummern</string>
+    <string name="radar_snooze_15m">15 Min. stummschalten</string>
+    <string name="radar_snooze_30m">30 Min. stummschalten</string>
+    <string name="radar_snooze_fast_only">Nur hohe Warnstufe</string>
+    <string name="radar_snooze_rest_of_ride">Rest der Fahrt stummschalten</string>
+    <string name="radar_snooze_resume">Warntöne fortsetzen</string>
+    <string name="radar_snooze_active_format">Radar-Audio stummgeschaltet (%1$s)</string>
+    <string name="radar_peloton_audio_sync_title">Peloton-Modus Audio-Sync</string>
+    <string name="radar_peloton_audio_sync_desc">Standard-Annäherungstöne im Peloton-Rücklichtmodus automatisch stummschalten</string>
+    <string name="radar_smart_urban_mute_title">Intelligenter Stadtverkehrsfilter</string>
+    <string name="radar_smart_urban_mute_desc">Wiederholte Annäherungstöne im dichten Stadtverkehr unterdrücken, Hochgeschwindigkeitswarnungen beibehalten</string>
 </resources>

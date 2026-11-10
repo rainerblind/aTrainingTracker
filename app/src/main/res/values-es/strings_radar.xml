@@ -101,4 +101,17 @@
     <string name="radar_light_auto_switch_desc">Enciende la luz trasera al iniciar el entrenamiento y la apaga al finalizar</string>
     <string name="radar_light_sheet_title">Luz trasera radar</string>
     <string name="radar_light_stvzo_notice">Modo StVZO (Parpadeo desactivado)</string>
+
+    <!-- Radar Audio Snooze, Peloton Sync & Urban Suppression (ATT-5119 / REQ-TRK-064) -->
+    <string name="radar_snooze_title">Silenciar audio temporalmente</string>
+    <string name="radar_snooze_15m">Silenciar 15 min</string>
+    <string name="radar_snooze_30m">Silenciar 30 min</string>
+    <string name="radar_snooze_fast_only">Solo amenazas altas</string>
+    <string name="radar_snooze_rest_of_ride">Silenciar resto del trayecto</string>
+    <string name="radar_snooze_resume">Reanudar alertas de audio</string>
+    <string name="radar_snooze_active_format">Audio de radar silenciado (%1$s)</string>
+    <string name="radar_peloton_audio_sync_title">Sincronización de audio en modo pelotón</string>
+    <string name="radar_peloton_audio_sync_desc">Silenciar avisos de aproximación estándar cuando la luz trasera esté en modo pelotón</string>
+    <string name="radar_smart_urban_mute_title">Filtro inteligente de congestión urbana</string>
+    <string name="radar_smart_urban_mute_desc">Suprimir avisos repetitivos en tráfico urbano lento manteniendo las alertas de alta velocidad</string>
 </resources>

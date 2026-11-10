@@ -18,6 +18,8 @@
 
 package com.atrainingtracker.trainingtracker.ui.tracking.radar
 
+import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeMode
+import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeState
 import com.atrainingtracker.banalservice.devices.radar.RadarConnectionState
 import com.atrainingtracker.banalservice.devices.radar.ThreatLevel
 import com.atrainingtracker.trainingtracker.settings.RadarClearMode
@@ -27,6 +29,7 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -102,5 +105,83 @@ class RadarEdgeOverlayTest {
         // REQ-TRK-062.5 / TST-TRK-062.4: Default side is RIGHT, clear mode is SLIM_RAIL
         assertEquals(RadarEdgeSide.RIGHT, TuningPreferencesDefaults.RADAR_EDGE_SIDE)
         assertEquals(RadarClearMode.SLIM_RAIL, TuningPreferencesDefaults.RADAR_CLEAR_MODE)
+    }
+
+    @Test
+    fun formatSnoozeBadgeText_returnsNullWhenNotSnoozed() {
+        // REQ-TRK-064.2 / TST-TRK-064.2: Inactive snooze returns null
+        val inactiveState = RadarAudioSnoozeState.INACTIVE
+        assertNull(RadarOverlayMath.formatSnoozeBadgeText(inactiveState))
+    }
+
+    @Test
+    fun formatSnoozeBadgeText_timedSnoozeFormatsCeiledMinutes() {
+        // REQ-TRK-064.2 / TST-TRK-064.2: Timed snooze formats minutes remaining
+        val state15m = RadarAudioSnoozeState(
+            isSnoozed = true,
+            mode = RadarAudioSnoozeMode.SNOOZE_15M,
+            remainingSeconds = 900
+        )
+        assertEquals("15m", RadarOverlayMath.formatSnoozeBadgeText(state15m))
+
+        val stateCeil = RadarAudioSnoozeState(
+            isSnoozed = true,
+            mode = RadarAudioSnoozeMode.SNOOZE_15M,
+            remainingSeconds = 841
+        )
+        assertEquals("15m", RadarOverlayMath.formatSnoozeBadgeText(stateCeil))
+
+        val state1m = RadarAudioSnoozeState(
+            isSnoozed = true,
+            mode = RadarAudioSnoozeMode.SNOOZE_15M,
+            remainingSeconds = 25
+        )
+        assertEquals("1m", RadarOverlayMath.formatSnoozeBadgeText(state1m))
+    }
+
+    @Test
+    fun formatSnoozeBadgeText_fastOnlyReturnsExclamation() {
+        // REQ-TRK-064.2: High-threat only renders '!' badge
+        val state = RadarAudioSnoozeState(
+            isSnoozed = true,
+            mode = RadarAudioSnoozeMode.FAST_ONLY,
+            remainingSeconds = null
+        )
+        assertEquals("!", RadarOverlayMath.formatSnoozeBadgeText(state))
+    }
+
+    @Test
+    fun formatSnoozeBadgeText_pelotonSyncReturnsP() {
+        // REQ-TRK-064.2 / REQ-TRK-064.4: Peloton mode audio sync renders 'P'
+        val state = RadarAudioSnoozeState(
+            isSnoozed = true,
+            mode = RadarAudioSnoozeMode.NONE,
+            remainingSeconds = null,
+            isPelotonSyncActive = true
+        )
+        assertEquals("P", RadarOverlayMath.formatSnoozeBadgeText(state))
+    }
+
+    @Test
+    fun formatSnoozeBadgeText_urbanMuteReturnsU() {
+        // REQ-TRK-064.2 / REQ-TRK-064.5: Smart urban congestion mute renders 'U'
+        val state = RadarAudioSnoozeState(
+            isSnoozed = true,
+            mode = RadarAudioSnoozeMode.NONE,
+            remainingSeconds = null,
+            isUrbanMuteActive = true
+        )
+        assertEquals("U", RadarOverlayMath.formatSnoozeBadgeText(state))
+    }
+
+    @Test
+    fun formatSnoozeBadgeText_restOfRideReturnsM() {
+        // REQ-TRK-064.2: Rest of ride mute renders 'M'
+        val state = RadarAudioSnoozeState(
+            isSnoozed = true,
+            mode = RadarAudioSnoozeMode.REST_OF_RIDE,
+            remainingSeconds = null
+        )
+        assertEquals("M", RadarOverlayMath.formatSnoozeBadgeText(state))
     }
 }

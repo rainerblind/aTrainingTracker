@@ -352,7 +352,8 @@ object RadarTrafficSimulator {
     ): RadarState {
         val frame = generateFrame(scenario, elapsedMs).copy(
             lightMode = simulatedLightMode,
-            isLightControlSupported = true
+            isLightControlSupported = true,
+            audioSnoozeState = RadarStateRepository.getState().audioSnoozeState
         )
         RadarStateRepository.updateState(frame)
         aggregator.onTargetsUpdated(frame.targets)
@@ -407,7 +408,8 @@ object RadarTrafficSimulator {
                     val elapsed = System.currentTimeMillis() - startTime
                     val frame = generateFrame(scenario, elapsed).copy(
                         lightMode = simulatedLightMode,
-                        isLightControlSupported = true
+                        isLightControlSupported = true,
+                        audioSnoozeState = RadarStateRepository.getState().audioSnoozeState
                     )
                     RadarStateRepository.updateState(frame)
                     aggregator.onTargetsUpdated(frame.targets)

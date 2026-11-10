@@ -1970,6 +1970,28 @@
   8. *Clean-Room Targeted Test Suite Execution (`TST-CON-031.8`)*:
   • Execute targeted package tests asserting 100% pass rate.
 
+### TST-TRK-064: **1-Tap Radar Audio Snooze, Peloton Sync & Urban Suppression Test Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-064` (`REQ-TRK-064.1`..`REQ-TRK-064.7`)
+- **Component**: `RadarAlertManager.kt`, `RadarEdgeOverlay.kt`, `RadarLightQuickSwitchSheet.kt`, `RadarState.kt`, `RadarStateRepository.kt`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
+- **Jira**: `ATT-5119`
+- **Test Description**:
+  1. *1-Tap Audio Snooze Gating & Expiration Tests (`TST-TRK-064.1`, `RadarAlertManagerTest.kt`)*:
+  • Verify audio snooze triggers (15m, 30m, Rest of Ride), countdown decrementing, automatic restoration upon timer expiry, and manual resume.
+  2. *Muted Badge Countdown Indicator & Touch Pass-Through Tests (`TST-TRK-064.2`, `RadarEdgeOverlayTest.kt`)*:
+  • Verify top badge pill displays muted indicator and countdown during snooze, unhindered tap response on radar-only devices, and 100% target rail rendering.
+  3. *Handlebar Remote Shifter Snooze Toggle Tests (`TST-TRK-064.3`, `RadarAlertManagerTest.kt`)*:
+  • Verify `RadarAlertManager.toggleRadarAudioSnooze()` alternates between snooze and active audio alerts.
+  4. *Peloton Mode Light-Audio Sync Tests (`TST-TRK-064.4`, `RadarAlertManagerTest.kt`)*:
+  • Verify routine `APPROACHING` chimes are suppressed when tail light enters `PELOTON` mode and restored when exiting, while `FAST_APPROACHING` threats continue to sound.
+  5. *Smart Urban Congestion Filter Tests (`TST-TRK-064.5`, `RadarAlertManagerTest.kt`)*:
+  • Verify convoy suppression when $\ge 3$ vehicles $< 5\text{ m/s}$ persist for $\ge 30\text{ s}$, exit after $\ge 20\text{ s}$ clear, and immediate high-speed threat alert triggering.
+  6. *Settings Persistence & DataStore Parity Tests (`TST-TRK-064.6`, `TuningPreferencesDataStoreTest.kt`)*:
+  • Verify preference persistence and defaults for `radarPelotonAudioSync` and `radarSmartUrbanMute`.
+  7. *9-Language Localization Parity Test (`TST-TRK-064.7`, `TranslationParityTest.kt`)*:
+  • Verify 100% key and format parity across `strings_radar.xml` in all 9 supported locales.
+  8. *Clean-Room Targeted Test Suite Execution (`TST-TRK-064.8`)*:
+  • Execute targeted package tests asserting 100% pass rate.
+
 
 
 

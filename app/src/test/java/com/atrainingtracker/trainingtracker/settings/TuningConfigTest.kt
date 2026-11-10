@@ -81,6 +81,10 @@ class TuningConfigTest {
         assertEquals(RadarLightMode.DAY_FLASH, TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE)
         assertEquals(true, config.radarAutoLightControl)
         assertEquals(true, TuningPreferencesDefaults.RADAR_AUTO_LIGHT_CONTROL)
+        assertEquals(true, config.radarPelotonAudioSync)
+        assertEquals(true, TuningPreferencesDefaults.RADAR_PELOTON_AUDIO_SYNC)
+        assertEquals(false, config.radarSmartUrbanMute)
+        assertEquals(false, TuningPreferencesDefaults.RADAR_SMART_URBAN_MUTE)
     }
 
     @Test

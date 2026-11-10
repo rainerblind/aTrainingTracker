@@ -123,6 +123,7 @@ import com.atrainingtracker.banalservice.devices.radar.RadarConnectionState
 import com.atrainingtracker.banalservice.devices.radar.RadarLightController
 import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository
 import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator
+import com.atrainingtracker.trainingtracker.audio.radar.RadarAlertManager
 import com.atrainingtracker.trainingtracker.settings.RadarEdgeSide
 import com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlay
 import com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarLightQuickSwitchSheet
@@ -1066,9 +1067,7 @@ fun TrackingTabsScreen(
                             edgeSide = tuningConfig.radarEdgeSide,
                             clearMode = tuningConfig.radarClearMode,
                             onBadgeClick = {
-                                if (radarState.isLightControlSupported) {
-                                    showRadarLightQuickSwitch = true
-                                }
+                                showRadarLightQuickSwitch = true
                             },
                             modifier = Modifier
                                 .align(if (tuningConfig.radarEdgeSide == RadarEdgeSide.LEFT) Alignment.CenterStart else Alignment.CenterEnd)
@@ -1082,9 +1081,17 @@ fun TrackingTabsScreen(
                             currentMode = radarState.lightMode,
                             availableModes = RadarLightController.getAvailableModes(),
                             isStvzo = RadarLightController.isStvzo.collectAsState().value,
+                            isLightControlSupported = radarState.isLightControlSupported,
+                            snoozeState = radarState.audioSnoozeState,
                             onModeSelected = { mode ->
                                 RadarLightController.setLightMode(mode)
                                 showRadarLightQuickSwitch = false
+                            },
+                            onSnoozeSelected = { mode ->
+                                RadarAlertManager.snooze(mode)
+                            },
+                            onResumeAudio = {
+                                RadarAlertManager.resumeAudio()
                             },
                             onDismiss = { showRadarLightQuickSwitch = false }
                         )

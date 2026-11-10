@@ -23,8 +23,12 @@ import android.media.AudioManager
 import android.os.Handler
 import android.os.VibrationEffect
 import android.os.Vibrator
+import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeMode
 import com.atrainingtracker.banalservice.devices.radar.RadarConnectionState
+import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
 import com.atrainingtracker.banalservice.devices.radar.RadarState
+import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository
+import com.atrainingtracker.banalservice.devices.radar.RadarTarget
 import com.atrainingtracker.banalservice.devices.radar.ThreatLevel
 import com.atrainingtracker.trainingtracker.settings.RadarAudioAlertMode
 import com.atrainingtracker.trainingtracker.settings.RadarAudioRoute
@@ -36,6 +40,10 @@ import io.mockk.slot
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -63,6 +71,7 @@ class RadarAlertManagerTest {
 
     @Before
     fun setup() {
+        RadarStateRepository.reset()
         mockContext = mockk(relaxed = true)
         mockDataStore = mockk(relaxed = true)
         mockSynthesizer = mockk(relaxed = true)
@@ -74,6 +83,12 @@ class RadarAlertManagerTest {
         every { mockDataStore.getTuningConfig() } answers { currentConfig }
         every { mockAudioManager.getStreamVolume(AudioManager.STREAM_MUSIC) } returns 3
         every { mockAudioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC) } returns 15
+    }
+
+    @After
+    fun tearDown() {
+        RadarAlertManager.activeInstance = null
+        RadarStateRepository.reset()
     }
 
     private fun createManager(): RadarAlertManager {
@@ -246,6 +261,272 @@ class RadarAlertManagerTest {
         manager.onRadarStateUpdated(state2)
 
         verify(exactly = 0) { mockVibrator.vibrate(any<VibrationEffect>()) }
+
+        manager.release()
+    }
+
+    @Test
+    fun snooze_15m_suppressesRoutineAlerts_andAutoExpires() {
+        val manager = createManager()
+        manager.snooze(RadarAudioSnoozeMode.SNOOZE_15M)
+
+        val snoozeState = RadarStateRepository.getState().audioSnoozeState
+        assertTrue(snoozeState.isSnoozed)
+        assertEquals(RadarAudioSnoozeMode.SNOOZE_15M, snoozeState.mode)
+
+        // NONE -> APPROACHING while snoozed
+        val state1 = RadarState(connectionState = RadarConnectionState.CONNECTED, overallThreatLevel = ThreatLevel.NONE)
+        val state2 = RadarState(connectionState = RadarConnectionState.CONNECTED, overallThreatLevel = ThreatLevel.APPROACHING)
+        manager.onRadarStateUpdated(state1)
+        mockCurrentTimeMs += 1000L
+        manager.onRadarStateUpdated(state2)
+
+        verify(exactly = 0) { mockSynthesizer.playApproach(any(), any()) }
+
+        // Advance beyond 15m (15 * 60 * 1000L = 900_000L)
+        mockCurrentTimeMs += 900_000L + 1000L
+        val state3 = RadarState(connectionState = RadarConnectionState.CONNECTED, overallThreatLevel = ThreatLevel.NONE)
+        val state4 = RadarState(connectionState = RadarConnectionState.CONNECTED, overallThreatLevel = ThreatLevel.APPROACHING)
+        manager.onRadarStateUpdated(state3)
+        mockCurrentTimeMs += 1000L
+        manager.onRadarStateUpdated(state4)
+
+        // After expiry, approach alert must play
+        verify(exactly = 1) { mockSynthesizer.playApproach(any(), any()) }
+        assertFalse(RadarStateRepository.getState().audioSnoozeState.isSnoozed)
+
+        manager.release()
+    }
+
+    @Test
+    fun snooze_fastOnly_suppressesRoutineAlerts_butPlaysFastThreat() {
+        val manager = createManager()
+        manager.snooze(RadarAudioSnoozeMode.FAST_ONLY)
+
+        val state1 = RadarState(connectionState = RadarConnectionState.CONNECTED, overallThreatLevel = ThreatLevel.NONE)
+        val state2 = RadarState(connectionState = RadarConnectionState.CONNECTED, overallThreatLevel = ThreatLevel.APPROACHING)
+        val state3 = RadarState(connectionState = RadarConnectionState.CONNECTED, overallThreatLevel = ThreatLevel.FAST_APPROACHING)
+
+        manager.onRadarStateUpdated(state1)
+        mockCurrentTimeMs += 1000L
+        manager.onRadarStateUpdated(state2)
+
+        // Routine approach alert suppressed
+        verify(exactly = 0) { mockSynthesizer.playApproach(any(), any()) }
+
+        mockCurrentTimeMs += 1000L
+        manager.onRadarStateUpdated(state3)
+
+        // High-threat escalation MUST sound
+        verify(exactly = 1) { mockSynthesizer.playFastThreat(any(), any()) }
+
+        manager.release()
+    }
+
+    @Test
+    fun snooze_restOfRide_suppressesAllAlerts_untilResumeAudioCalled() {
+        val manager = createManager()
+        manager.snooze(RadarAudioSnoozeMode.REST_OF_RIDE)
+
+        val state1 = RadarState(connectionState = RadarConnectionState.CONNECTED, overallThreatLevel = ThreatLevel.NONE)
+        val state2 = RadarState(connectionState = RadarConnectionState.CONNECTED, overallThreatLevel = ThreatLevel.APPROACHING)
+
+        manager.onRadarStateUpdated(state1)
+        mockCurrentTimeMs += 1000L
+        manager.onRadarStateUpdated(state2)
+
+        verify(exactly = 0) { mockSynthesizer.playApproach(any(), any()) }
+
+        manager.resumeAudio()
+        assertFalse(RadarStateRepository.getState().audioSnoozeState.isSnoozed)
+
+        val state3 = RadarState(connectionState = RadarConnectionState.CONNECTED, overallThreatLevel = ThreatLevel.NONE)
+        val state4 = RadarState(connectionState = RadarConnectionState.CONNECTED, overallThreatLevel = ThreatLevel.APPROACHING)
+        mockCurrentTimeMs += 1000L
+        manager.onRadarStateUpdated(state3)
+        mockCurrentTimeMs += 1000L
+        manager.onRadarStateUpdated(state4)
+
+        verify(exactly = 1) { mockSynthesizer.playApproach(any(), any()) }
+
+        manager.release()
+    }
+
+    @Test
+    fun toggleRadarAudioSnooze_togglesBetweenSnooze15mAndResume() {
+        val manager = createManager()
+        RadarAlertManager.activeInstance = manager
+
+        assertFalse(RadarStateRepository.getState().audioSnoozeState.isSnoozed)
+
+        RadarAlertManager.toggleRadarAudioSnooze()
+        assertTrue(RadarStateRepository.getState().audioSnoozeState.isSnoozed)
+        assertEquals(RadarAudioSnoozeMode.SNOOZE_15M, RadarStateRepository.getState().audioSnoozeState.mode)
+
+        RadarAlertManager.toggleRadarAudioSnooze()
+        assertFalse(RadarStateRepository.getState().audioSnoozeState.isSnoozed)
+        assertEquals(RadarAudioSnoozeMode.NONE, RadarStateRepository.getState().audioSnoozeState.mode)
+
+        manager.release()
+    }
+
+    @Test
+    fun pelotonModeSync_whenEnabled_suppressesApproach_andPreservesFastThreat() {
+        currentConfig = currentConfig.copy(radarPelotonAudioSync = true)
+        val manager = createManager()
+
+        val statePeloton1 = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.NONE,
+            lightMode = RadarLightMode.PELOTON
+        )
+        val statePeloton2 = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.APPROACHING,
+            lightMode = RadarLightMode.PELOTON
+        )
+        val statePeloton3 = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.FAST_APPROACHING,
+            lightMode = RadarLightMode.PELOTON
+        )
+
+        manager.onRadarStateUpdated(statePeloton1)
+        mockCurrentTimeMs += 1000L
+        manager.onRadarStateUpdated(statePeloton2)
+
+        // Routine approach chime suppressed in Peloton light mode
+        verify(exactly = 0) { mockSynthesizer.playApproach(any(), any()) }
+        assertTrue(RadarStateRepository.getState().audioSnoozeState.isPelotonSyncActive)
+
+        mockCurrentTimeMs += 1000L
+        manager.onRadarStateUpdated(statePeloton3)
+
+        // High-threat escalation MUST sound even in Peloton light mode
+        verify(exactly = 1) { mockSynthesizer.playFastThreat(any(), any()) }
+
+        // Switch back to DAY_FLASH
+        val stateDayFlash1 = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.NONE,
+            lightMode = RadarLightMode.DAY_FLASH
+        )
+        val stateDayFlash2 = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.APPROACHING,
+            lightMode = RadarLightMode.DAY_FLASH
+        )
+        mockCurrentTimeMs += 1000L
+        manager.onRadarStateUpdated(stateDayFlash1)
+        mockCurrentTimeMs += 1000L
+        manager.onRadarStateUpdated(stateDayFlash2)
+
+        verify(exactly = 1) { mockSynthesizer.playApproach(any(), any()) }
+        assertFalse(RadarStateRepository.getState().audioSnoozeState.isPelotonSyncActive)
+
+        manager.release()
+    }
+
+    @Test
+    fun pelotonModeSync_whenDisabled_doesNotSuppressApproach() {
+        currentConfig = currentConfig.copy(radarPelotonAudioSync = false)
+        val manager = createManager()
+
+        val state1 = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.NONE,
+            lightMode = RadarLightMode.PELOTON
+        )
+        val state2 = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.APPROACHING,
+            lightMode = RadarLightMode.PELOTON
+        )
+
+        manager.onRadarStateUpdated(state1)
+        mockCurrentTimeMs += 1000L
+        manager.onRadarStateUpdated(state2)
+
+        // Peloton sync disabled -> normal approach chime plays
+        verify(exactly = 1) { mockSynthesizer.playApproach(any(), any()) }
+
+        manager.release()
+    }
+
+    @Test
+    fun smartUrbanCongestionFilter_suppressesApproachAfterCongestionWindow_andPreservesFastThreat() {
+        currentConfig = currentConfig.copy(radarSmartUrbanMute = true)
+        val manager = createManager()
+
+        val slowTargets = listOf(
+            RadarTarget(targetId = 0, rangeMeters = 20f, approachSpeedMps = 3.0f, threatLevel = ThreatLevel.APPROACHING),
+            RadarTarget(targetId = 1, rangeMeters = 30f, approachSpeedMps = 3.5f, threatLevel = ThreatLevel.APPROACHING),
+            RadarTarget(targetId = 2, rangeMeters = 40f, approachSpeedMps = 4.0f, threatLevel = ThreatLevel.APPROACHING)
+        )
+
+        // Frame 1: Queue starts
+        val stateCongested1 = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.APPROACHING,
+            targets = slowTargets
+        )
+        manager.onRadarStateUpdated(stateCongested1)
+        // First approach alert sounds before congestion window elapsed
+        verify(exactly = 1) { mockSynthesizer.playApproach(any(), any()) }
+
+        // Advance 30 seconds into congestion
+        mockCurrentTimeMs += 30_000L
+        manager.onRadarStateUpdated(stateCongested1)
+        assertTrue(RadarStateRepository.getState().audioSnoozeState.isUrbanMuteActive)
+
+        // Now, subsequent approach alert within urban congestion is suppressed
+        val stateClearTraffic = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.NONE,
+            targets = slowTargets
+        )
+        mockCurrentTimeMs += 1000L
+        manager.onRadarStateUpdated(stateClearTraffic)
+
+        mockCurrentTimeMs += 1000L
+        manager.onRadarStateUpdated(stateCongested1)
+        // No additional approach chime (still exactly 1 from start)
+        verify(exactly = 1) { mockSynthesizer.playApproach(any(), any()) }
+
+        // Fast threat escalation MUST sound even during urban mute
+        val stateFastThreat = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.FAST_APPROACHING,
+            targets = slowTargets
+        )
+        mockCurrentTimeMs += 1000L
+        manager.onRadarStateUpdated(stateFastThreat)
+        verify(exactly = 1) { mockSynthesizer.playFastThreat(any(), any()) }
+
+        // Exit congestion: clear queue for 20 seconds
+        val emptyTargets = emptyList<RadarTarget>()
+        val stateNoTargets = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.NONE,
+            targets = emptyTargets
+        )
+        mockCurrentTimeMs += 1000L
+        manager.onRadarStateUpdated(stateNoTargets)
+
+        // Advance 20s
+        mockCurrentTimeMs += 20_000L
+        manager.onRadarStateUpdated(stateNoTargets)
+        assertFalse(RadarStateRepository.getState().audioSnoozeState.isUrbanMuteActive)
+
+        // Now normal approach chime works again
+        val stateNewVehicle = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.APPROACHING,
+            targets = listOf(RadarTarget(targetId = 5, rangeMeters = 50f, approachSpeedMps = 10f, threatLevel = ThreatLevel.APPROACHING))
+        )
+        mockCurrentTimeMs += 1000L
+        manager.onRadarStateUpdated(stateNewVehicle)
+        verify(exactly = 2) { mockSynthesizer.playApproach(any(), any()) }
 
         manager.release()
     }

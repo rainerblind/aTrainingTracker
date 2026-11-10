@@ -65,6 +65,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeMode
+import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeState
 import com.atrainingtracker.banalservice.devices.radar.RadarConnectionState
 import com.atrainingtracker.banalservice.devices.radar.RadarState
 import com.atrainingtracker.banalservice.devices.radar.ThreatLevel
@@ -102,6 +104,24 @@ object RadarOverlayMath {
      */
     fun resolveThreatColor(threatLevel: ThreatLevel): Color {
         return TTColor.getRadarThreatColor(threatLevel)
+    }
+
+    /**
+     * Formats compact status badge pill text during audio snooze / suppression (REQ-TRK-064.2).
+     */
+    fun formatSnoozeBadgeText(snoozeState: RadarAudioSnoozeState): String? {
+        if (!snoozeState.isSnoozed) return null
+        val secs = snoozeState.remainingSeconds
+        return when {
+            secs != null -> {
+                val mins = (secs + 59) / 60
+                "${mins}m"
+            }
+            snoozeState.mode == RadarAudioSnoozeMode.FAST_ONLY -> "!"
+            snoozeState.isPelotonSyncActive -> "P"
+            snoozeState.isUrbanMuteActive -> "U"
+            else -> "M"
+        }
     }
 }
 
@@ -222,6 +242,9 @@ private fun RadarStatusBadgePill(
     val badgeColor: Color
     val badgeTextColor: Color
 
+    val snoozeState = radarState.audioSnoozeState
+    val snoozeBadgeText = RadarOverlayMath.formatSnoozeBadgeText(snoozeState)
+
     when {
         isDisconnectError -> {
             description = stringResource(R.string.radar_overlay_disconnected)
@@ -232,6 +255,18 @@ private fun RadarStatusBadgePill(
             description = stringResource(R.string.radar_overlay_connecting)
             badgeColor = MaterialTheme.colorScheme.primaryContainer
             badgeTextColor = MaterialTheme.colorScheme.onPrimaryContainer
+        }
+        snoozeState.isSnoozed && isClear -> {
+            val snoozeLabel = when {
+                snoozeState.mode == RadarAudioSnoozeMode.FAST_ONLY -> stringResource(R.string.radar_snooze_fast_only)
+                snoozeState.isPelotonSyncActive -> stringResource(R.string.radar_light_mode_peloton)
+                snoozeState.isUrbanMuteActive -> stringResource(R.string.radar_smart_urban_mute_title)
+                snoozeBadgeText != null -> snoozeBadgeText
+                else -> stringResource(R.string.radar_snooze_title)
+            }
+            description = stringResource(R.string.radar_snooze_active_format, snoozeLabel)
+            badgeColor = TTColor.RadarClearGreen
+            badgeTextColor = Color.White
         }
         isClear -> {
             description = stringResource(R.string.radar_overlay_clear)
@@ -255,7 +290,7 @@ private fun RadarStatusBadgePill(
             .size(24.dp)
             .clip(CircleShape)
             .background(badgeColor)
-            .clickable(enabled = radarState.isLightControlSupported, onClick = onClick)
+            .clickable(onClick = onClick)
             .semantics { contentDescription = description }
             .testTag("RadarStatusBadge"),
         contentAlignment = Alignment.Center
@@ -265,6 +300,13 @@ private fun RadarStatusBadgePill(
                 text = "!",
                 color = badgeTextColor,
                 fontSize = 13.sp,
+                fontWeight = FontWeight.Bold
+            )
+        } else if (snoozeState.isSnoozed && radarState.overallThreatLevel != ThreatLevel.FAST_APPROACHING) {
+            Text(
+                text = snoozeBadgeText ?: "M",
+                color = badgeTextColor,
+                fontSize = if ((snoozeBadgeText?.length ?: 0) > 2) 9.sp else 10.sp,
                 fontWeight = FontWeight.Bold
             )
         } else if (isClear) {

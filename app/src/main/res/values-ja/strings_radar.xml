@@ -101,4 +101,17 @@
     <string name="radar_light_auto_switch_desc">ワークアウト開始時に点灯し、終了時に消灯します</string>
     <string name="radar_light_sheet_title">レーダーテールライト</string>
     <string name="radar_light_stvzo_notice">StVZOモード（点滅無効）</string>
+
+    <!-- Radar Audio Snooze, Peloton Sync & Urban Suppression (ATT-5119 / REQ-TRK-064) -->
+    <string name="radar_snooze_title">レーダー音声スヌーズ</string>
+    <string name="radar_snooze_15m">15分間ミュート</string>
+    <string name="radar_snooze_30m">30分間ミュート</string>
+    <string name="radar_snooze_fast_only">高脅威のみ</string>
+    <string name="radar_snooze_rest_of_ride">ライド終了までミュート</string>
+    <string name="radar_snooze_resume">音声アラート再開</string>
+    <string name="radar_snooze_active_format">レーダー音声ミュート中 (%1$s)</string>
+    <string name="radar_peloton_audio_sync_title">集団モード音声同期</string>
+    <string name="radar_peloton_audio_sync_desc">テールライトが集団モードの時は標準接近アラート音を抑制します</string>
+    <string name="radar_smart_urban_mute_title">スマート市街地混雑フィルター</string>
+    <string name="radar_smart_urban_mute_desc">低速な市街地渋滞での連続接近音を抑制し、高速接近アラートのみ鳴らします</string>
 </resources>

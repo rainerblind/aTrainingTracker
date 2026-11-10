@@ -101,4 +101,17 @@
     <string name="radar_light_auto_switch_desc">Allume le feu arrière au début de l\'entraînement et l\'éteint à la fin</string>
     <string name="radar_light_sheet_title">Feu arrière radar</string>
     <string name="radar_light_stvzo_notice">Mode StVZO (Clignotement désactivé)</string>
+
+    <!-- Radar Audio Snooze, Peloton Sync & Urban Suppression (ATT-5119 / REQ-TRK-064) -->
+    <string name="radar_snooze_title">Rappel d\'alerte audio</string>
+    <string name="radar_snooze_15m">Silencieux 15 min</string>
+    <string name="radar_snooze_30m">Silencieux 30 min</string>
+    <string name="radar_snooze_fast_only">Menaces élevées uniquement</string>
+    <string name="radar_snooze_rest_of_ride">Silencieux pour le reste du trajet</string>
+    <string name="radar_snooze_resume">Reprendre les alertes audio</string>
+    <string name="radar_snooze_active_format">Audio radar en sourdine (%1$s)</string>
+    <string name="radar_peloton_audio_sync_title">Synchronisation audio mode peloton</string>
+    <string name="radar_peloton_audio_sync_desc">Désactiver les signaux d\'approche standard lorsque le feu arrière est en mode peloton</string>
+    <string name="radar_smart_urban_mute_title">Filtre intelligent d\'embouteillage urbain</string>
+    <string name="radar_smart_urban_mute_desc">Supprimer les signaux répétitifs dans le trafic lent tout en maintenant les alertes à grande vitesse</string>
 </resources>

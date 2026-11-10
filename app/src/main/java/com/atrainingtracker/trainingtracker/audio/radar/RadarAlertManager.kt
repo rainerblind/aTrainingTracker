@@ -29,7 +29,11 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.util.Log
 import androidx.annotation.VisibleForTesting
+import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeMode
+import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeState
 import com.atrainingtracker.banalservice.devices.radar.RadarConnectionState
+import com.atrainingtracker.banalservice.devices.radar.RadarLightController
+import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
 import com.atrainingtracker.banalservice.devices.radar.RadarState
 import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository
 import com.atrainingtracker.banalservice.devices.radar.ThreatLevel
@@ -42,15 +46,19 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 /**
- * State-transition alert manager coordinating radar acoustic chimes and haptic feedback (REQ-TRK-063.1).
+ * State-transition alert manager coordinating radar acoustic chimes and haptic feedback (REQ-TRK-063.1, REQ-TRK-064).
  *
  * Observes [RadarStateRepository.radarState] flow in [com.atrainingtracker.trainingtracker.tracker.TrackerService]
  * to deliver reliable alerts during active tracking including screen-off and background execution.
+ *
+ * Coordinates 1-tap audio snooze, peloton light mode audio sync, and smart urban congestion suppression (REQ-TRK-064).
  *
  * Manages transient background audio ducking ([AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK], REQ-TRK-063.4)
  * and temporary hardware speaker volume boost with guaranteed auto-restore (REQ-TRK-063.3).
@@ -70,6 +78,27 @@ class RadarAlertManager @JvmOverloads constructor(
         private const val TAG = "RadarAlertManager"
         const val CHIME_DURATION_MS: Long = 350L
         const val DEBOUNCE_COOLDOWN_MS: Long = 800L
+        const val URBAN_CONGESTION_DURATION_MS: Long = 30_000L
+        const val URBAN_CLEAR_DURATION_MS: Long = 20_000L
+        const val URBAN_SPEED_THRESHOLD_MPS: Float = 5.0f
+
+        @Volatile
+        @JvmStatic
+        var activeInstance: RadarAlertManager? = null
+            internal set
+
+        @JvmStatic
+        fun toggleRadarAudioSnooze() {
+            activeInstance?.toggleSnooze()
+        }
+
+        fun snooze(mode: RadarAudioSnoozeMode) {
+            activeInstance?.snooze(mode)
+        }
+
+        fun resumeAudio() {
+            activeInstance?.resumeAudio()
+        }
     }
 
     private val lock = Any()
@@ -105,6 +134,15 @@ class RadarAlertManager @JvmOverloads constructor(
     private var lastConnectionState: RadarConnectionState = RadarConnectionState.DISCONNECTED
     private var lastAlertTimestampMs: Long = 0L
 
+    // Snooze & alert suppression state (REQ-TRK-064)
+    private var currentSnoozeMode: RadarAudioSnoozeMode = RadarAudioSnoozeMode.NONE
+    private var snoozeEndTimeMs: Long? = null
+    private var snoozeTickerJob: Job? = null
+    private var lastPelotonSuppressionActive: Boolean = false
+    private var isUrbanSuppressionActive: Boolean = false
+    private var urbanCongestionStartTimeMs: Long? = null
+    private var urbanClearStartTimeMs: Long? = null
+
     // Volume boost management
     private var savedStreamVolume: Int? = null
     private var isVolumeBoosted = false
@@ -126,6 +164,8 @@ class RadarAlertManager @JvmOverloads constructor(
     fun start() {
         synchronized(lock) {
             if (isReleased || observationJob?.isActive == true) return
+            activeInstance = this
+            startSnoozeTickerLocked()
             observationJob = coroutineScope.launch {
                 RadarStateRepository.radarState.collectLatest { state ->
                     onRadarStateUpdated(state)
@@ -139,10 +179,100 @@ class RadarAlertManager @JvmOverloads constructor(
      */
     fun stop() {
         synchronized(lock) {
+            if (activeInstance === this) activeInstance = null
+            snoozeTickerJob?.cancel()
+            snoozeTickerJob = null
             observationJob?.cancel()
             observationJob = null
             restoreSpeakerVolumeLocked()
             abandonAudioFocusLocked()
+        }
+    }
+
+    /**
+     * Activates 1-tap temporary audio snooze (REQ-TRK-064.1).
+     */
+    fun snooze(mode: RadarAudioSnoozeMode) {
+        synchronized(lock) {
+            if (isReleased) return
+            currentSnoozeMode = mode
+            val now = timeProvider()
+            snoozeEndTimeMs = when (mode) {
+                RadarAudioSnoozeMode.SNOOZE_15M -> now + 15 * 60 * 1000L
+                RadarAudioSnoozeMode.SNOOZE_30M -> now + 30 * 60 * 1000L
+                else -> null
+            }
+            publishSnoozeStateLocked(computeRemainingSecondsLocked(now))
+        }
+    }
+
+    /**
+     * Resumes normal audio alerts, clearing any active snooze (REQ-TRK-064.3).
+     */
+    fun resumeAudio() {
+        synchronized(lock) {
+            if (isReleased) return
+            currentSnoozeMode = RadarAudioSnoozeMode.NONE
+            snoozeEndTimeMs = null
+            publishSnoozeStateLocked(null)
+        }
+    }
+
+    /**
+     * Handlebar / remote shifter button toggle: alternates between 15m snooze and resume (REQ-TRK-064.3).
+     */
+    fun toggleSnooze() {
+        synchronized(lock) {
+            if (currentSnoozeMode != RadarAudioSnoozeMode.NONE) {
+                resumeAudio()
+            } else {
+                snooze(RadarAudioSnoozeMode.SNOOZE_15M)
+            }
+        }
+    }
+
+    private fun computeRemainingSecondsLocked(now: Long): Int? {
+        val endMs = snoozeEndTimeMs ?: return null
+        return ((endMs - now).coerceAtLeast(0L) / 1000L).toInt()
+    }
+
+    private fun publishSnoozeStateLocked(remainingSeconds: Int?) {
+        val isPelotonActive = lastPelotonSuppressionActive
+        val isUrbanActive = isUrbanSuppressionActive
+        val isSnoozed = currentSnoozeMode != RadarAudioSnoozeMode.NONE || isPelotonActive || isUrbanActive
+        val snoozeState = RadarAudioSnoozeState(
+            isSnoozed = isSnoozed,
+            mode = currentSnoozeMode,
+            remainingSeconds = remainingSeconds,
+            isPelotonSyncActive = isPelotonActive,
+            isUrbanMuteActive = isUrbanActive
+        )
+        val current = RadarStateRepository.getState()
+        RadarStateRepository.updateState(current.copy(audioSnoozeState = snoozeState))
+    }
+
+    private fun startSnoozeTickerLocked() {
+        snoozeTickerJob?.cancel()
+        snoozeTickerJob = coroutineScope.launch {
+            while (isActive) {
+                delay(1000L)
+                synchronized(lock) {
+                    if (currentSnoozeMode == RadarAudioSnoozeMode.SNOOZE_15M || currentSnoozeMode == RadarAudioSnoozeMode.SNOOZE_30M) {
+                        val endMs = snoozeEndTimeMs
+                        if (endMs != null) {
+                            val now = timeProvider()
+                            val remaining = ((endMs - now) / 1000L).toInt()
+                            if (remaining <= 0) {
+                                currentSnoozeMode = RadarAudioSnoozeMode.NONE
+                                snoozeEndTimeMs = null
+                                publishSnoozeStateLocked(null)
+                            } else {
+                                publishSnoozeStateLocked(remaining)
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -156,6 +286,52 @@ class RadarAlertManager @JvmOverloads constructor(
             val currentThreat = state.overallThreatLevel
             val currentConn = state.connectionState
             val now = timeProvider()
+            val config = getCurrentConfig()
+
+            // 0a. Check timed snooze expiration
+            if (snoozeEndTimeMs != null && now >= snoozeEndTimeMs!!) {
+                currentSnoozeMode = RadarAudioSnoozeMode.NONE
+                snoozeEndTimeMs = null
+                publishSnoozeStateLocked(null)
+            }
+
+            // 0b. Update Peloton Light Mode Audio Sync (REQ-TRK-064.4)
+            val isPelotonLight = RadarLightController.currentMode.value == RadarLightMode.PELOTON || state.lightMode == RadarLightMode.PELOTON
+            val pelotonSuppressed = config.pelotonAudioSync && isPelotonLight
+            if (pelotonSuppressed != lastPelotonSuppressionActive) {
+                lastPelotonSuppressionActive = pelotonSuppressed
+                publishSnoozeStateLocked(computeRemainingSecondsLocked(now))
+            }
+
+            // 0c. Update Smart Urban Congestion Filter (REQ-TRK-064.5)
+            if (config.smartUrbanMute) {
+                val slowTargetCount = state.targets.count { it.approachSpeedMps < URBAN_SPEED_THRESHOLD_MPS }
+                if (slowTargetCount >= 3) {
+                    urbanClearStartTimeMs = null
+                    if (urbanCongestionStartTimeMs == null) {
+                        urbanCongestionStartTimeMs = now
+                    } else if (now - urbanCongestionStartTimeMs!! >= URBAN_CONGESTION_DURATION_MS && !isUrbanSuppressionActive) {
+                        isUrbanSuppressionActive = true
+                        publishSnoozeStateLocked(computeRemainingSecondsLocked(now))
+                    }
+                } else {
+                    urbanCongestionStartTimeMs = null
+                    if (isUrbanSuppressionActive) {
+                        if (urbanClearStartTimeMs == null) {
+                            urbanClearStartTimeMs = now
+                        } else if (now - urbanClearStartTimeMs!! >= URBAN_CLEAR_DURATION_MS) {
+                            isUrbanSuppressionActive = false
+                            urbanClearStartTimeMs = null
+                            publishSnoozeStateLocked(computeRemainingSecondsLocked(now))
+                        }
+                    }
+                }
+            } else if (isUrbanSuppressionActive) {
+                isUrbanSuppressionActive = false
+                urbanCongestionStartTimeMs = null
+                urbanClearStartTimeMs = null
+                publishSnoozeStateLocked(computeRemainingSecondsLocked(now))
+            }
 
             // 1. Disconnect warning transition (CONNECTED -> DISCONNECTED_ERROR)
             if (lastConnectionState == RadarConnectionState.CONNECTED && currentConn == RadarConnectionState.DISCONNECTED_ERROR) {
@@ -205,6 +381,19 @@ class RadarAlertManager @JvmOverloads constructor(
         }
     }
 
+    private fun isRoutineAlertSuppressed(): Boolean {
+        if (currentSnoozeMode != RadarAudioSnoozeMode.NONE) return true
+        if (lastPelotonSuppressionActive) return true
+        if (isUrbanSuppressionActive) return true
+        return false
+    }
+
+    private fun isFastThreatAlertSuppressed(): Boolean {
+        return currentSnoozeMode == RadarAudioSnoozeMode.SNOOZE_15M ||
+                currentSnoozeMode == RadarAudioSnoozeMode.SNOOZE_30M ||
+                currentSnoozeMode == RadarAudioSnoozeMode.REST_OF_RIDE
+    }
+
     private fun getCurrentConfig(): TuningPreferencesConfigSnapshot {
         val store = actualDataStore
         return if (store != null) {
@@ -214,7 +403,9 @@ class RadarAlertManager @JvmOverloads constructor(
                 volumePercent = cfg.radarAlertVolume,
                 speakerBoost = cfg.radarSpeakerBoost,
                 route = cfg.radarAudioRoute,
-                haptics = cfg.radarHapticAlert
+                haptics = cfg.radarHapticAlert,
+                pelotonAudioSync = cfg.radarPelotonAudioSync,
+                smartUrbanMute = cfg.radarSmartUrbanMute
             )
         } else {
             TuningPreferencesConfigSnapshot(
@@ -222,12 +413,15 @@ class RadarAlertManager @JvmOverloads constructor(
                 volumePercent = TuningPreferencesDefaults.RADAR_ALERT_VOLUME,
                 speakerBoost = TuningPreferencesDefaults.RADAR_SPEAKER_BOOST,
                 route = TuningPreferencesDefaults.RADAR_AUDIO_ROUTE,
-                haptics = TuningPreferencesDefaults.RADAR_HAPTIC_ALERT
+                haptics = TuningPreferencesDefaults.RADAR_HAPTIC_ALERT,
+                pelotonAudioSync = TuningPreferencesDefaults.RADAR_PELOTON_AUDIO_SYNC,
+                smartUrbanMute = TuningPreferencesDefaults.RADAR_SMART_URBAN_MUTE
             )
         }
     }
 
     private fun triggerApproachAlert() {
+        if (isRoutineAlertSuppressed()) return
         val config = getCurrentConfig()
         if (config.haptics) {
             vibrate(VibrationPattern.APPROACH)
@@ -238,6 +432,7 @@ class RadarAlertManager @JvmOverloads constructor(
     }
 
     private fun triggerFastThreatAlert() {
+        if (isFastThreatAlertSuppressed()) return
         val config = getCurrentConfig()
         if (config.haptics) {
             vibrate(VibrationPattern.FAST_THREAT)
@@ -248,6 +443,7 @@ class RadarAlertManager @JvmOverloads constructor(
     }
 
     private fun triggerAllClearAlert() {
+        if (isRoutineAlertSuppressed()) return
         val config = getCurrentConfig()
         if (config.haptics) {
             vibrate(VibrationPattern.ALL_CLEAR)
@@ -396,6 +592,7 @@ class RadarAlertManager @JvmOverloads constructor(
         synchronized(lock) {
             if (isReleased) return
             isReleased = true
+            if (activeInstance === this) activeInstance = null
             stop()
             synthesizer.close()
             coroutineScope.cancel()
@@ -414,6 +611,8 @@ class RadarAlertManager @JvmOverloads constructor(
         val volumePercent: Int,
         val speakerBoost: Boolean,
         val route: RadarAudioRoute,
-        val haptics: Boolean
+        val haptics: Boolean,
+        val pelotonAudioSync: Boolean,
+        val smartUrbanMute: Boolean
     )
 }

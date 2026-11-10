@@ -101,4 +101,17 @@
     <string name="radar_light_auto_switch_desc">Schakelt achterlicht in bij start training en uit bij einde</string>
     <string name="radar_light_sheet_title">Radar-achterlicht</string>
     <string name="radar_light_stvzo_notice">StVZO-modus (Knipperen uitgeschakeld)</string>
+
+    <!-- Radar Audio Snooze, Peloton Sync & Urban Suppression (ATT-5119 / REQ-TRK-064) -->
+    <string name="radar_snooze_title">Radar-audio snoozen</string>
+    <string name="radar_snooze_15m">15 min dempen</string>
+    <string name="radar_snooze_30m">30 min dempen</string>
+    <string name="radar_snooze_fast_only">Alleen hoge dreiging</string>
+    <string name="radar_snooze_rest_of_ride">Dempen voor rest van rit</string>
+    <string name="radar_snooze_resume">Audiowaarschuwingen hervatten</string>
+    <string name="radar_snooze_active_format">Radar-audio gedempt (%1$s)</string>
+    <string name="radar_peloton_audio_sync_title">Pelotonmodus audiosynchronisatie</string>
+    <string name="radar_peloton_audio_sync_desc">Standaard naderingsgeluiden onderdrukken wanneer achterlicht in pelotonmodus staat</string>
+    <string name="radar_smart_urban_mute_title">Slimme stadsverkeersfilter</string>
+    <string name="radar_smart_urban_mute_desc">Onderdruk herhaalde naderingstonen in langzaam stadsverkeer terwijl waarschuwingen voor hoge snelheid behouden blijven</string>
 </resources>

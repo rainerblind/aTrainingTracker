@@ -89,18 +89,22 @@ data class RadarTarget @JvmOverloads constructor(
 )
 
 /**
- * Immutable snapshot of cycling radar system state published at 4–8 Hz (REQ-CON-028.4).
+ * Immutable snapshot of cycling radar system state published at 4–8 Hz (REQ-CON-028.4, REQ-TRK-064.1).
  *
  * @property connectionState Current hardware connection state.
  * @property overallThreatLevel Aggregate threat level across all active targets.
  * @property targets List of currently tracked radar targets.
  * @property lastUpdateRealtimeMs SystemClock.elapsedRealtime() when this snapshot was published.
+ * @property lightMode Current radar tail light operating mode.
+ * @property isLightControlSupported True if peripheral or simulator supports tail light mode commands.
+ * @property audioSnoozeState Current audio snooze and alert suppression status.
  */
-data class RadarState(
+data class RadarState @JvmOverloads constructor(
     val connectionState: RadarConnectionState = RadarConnectionState.DISCONNECTED,
     val overallThreatLevel: ThreatLevel = ThreatLevel.NONE,
     val targets: List<RadarTarget> = emptyList(),
     val lastUpdateRealtimeMs: Long = 0L,
     val lightMode: RadarLightMode = RadarLightMode.OFF,
-    val isLightControlSupported: Boolean = false
+    val isLightControlSupported: Boolean = false,
+    val audioSnoozeState: RadarAudioSnoozeState = RadarAudioSnoozeState.INACTIVE
 )
