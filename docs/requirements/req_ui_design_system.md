@@ -15158,3 +15158,36 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: 100% visual and functional parity; zero regression across all 9 supported languages; zero breaking changes to existing callers; all contract tests green.
 
+### REQ-UI-507: Repository-Only UI Database Access Layer (Phase A: UI & ViewModel Cleanup) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-507` | **Tickets**: `ATT-432`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/MainActivityWithNavigation.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/importbackup/ImportBackupTabsScreen.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/equipment/EquipmentViewModel.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/controltracking/ControlTrackingViewModel.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutRepository.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/devices/DeviceDataRepository.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/sporttypes/SportTypesRepository.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/trackingviews/TrackingViewsRepository.kt`
+- **Rationale**: Direct instantiation of SQLite database manager singletons (`*DatabaseManager.getInstance()`) inside UI screens, Composables, and ViewModels violates Clean Architecture (SWE.2) and couples presentation layers to raw database operations. The system SHALL eliminate all direct database manager references from `MainActivityWithNavigation.kt`, `ImportBackupTabsScreen.kt`, `EquipmentViewModel.kt`, and `ControlTrackingViewModel.kt` by routing all database operations through domain repositories (`WorkoutRepository`, `DeviceDataRepository`, `SportTypesRepository`, `TrackingViewsRepository`).
+- **Description**:
+  1. *MainActivityWithNavigation Database Decoupling (`REQ-UI-507.1`)*:
+     - In `MainActivityWithNavigation.kt`, all direct references to `DevicesDatabaseManager`, `TrackingViewsDatabaseManager`, and `WorkoutSummariesDatabaseManager` SHALL be replaced with calls to `DeviceDataRepository`, `TrackingViewsRepository`, and `WorkoutRepository`.
+     - Low-battery alerts, filter generation, and unfinished workout detection/recovery flows SHALL execute via repository delegates on `Dispatchers.IO`.
+  2. *ImportBackupTabsScreen Database Decoupling (`REQ-UI-507.2`)*:
+     - In `ImportBackupTabsScreen.kt`, all direct calls to `SportTypeDatabaseManager` for resolving sport names, UI names, and default sport types SHALL route through `SportTypesRepository` delegates.
+  3. *EquipmentViewModel Repository Encapsulation (`REQ-UI-507.3`)*:
+     - `EquipmentViewModel.kt` SHALL consume `SportTypesRepository`, `DeviceDataRepository`, and `WorkoutRepository` directly.
+     - Direct construction of `SportTypeDatabaseManager`, `DevicesDatabaseManager`, and `WorkoutSummariesDatabaseManager` SHALL be removed, while preserving secondary constructor overloads for backward compatibility with existing unit test harnesses.
+  4. *ControlTrackingViewModel Database Decoupling (`REQ-UI-507.4`)*:
+     - In `ControlTrackingViewModel.kt`, cold-start sensor state seeding and unfinished workout verification SHALL route through `DeviceDataRepository` and `WorkoutRepository` instead of instantiating `DevicesDatabaseManager` and `WorkoutSummariesDatabaseManager`.
+  5. *Domain Repository Query Delegates & Invariant Preservation (`REQ-UI-507.5`)*:
+     - `WorkoutRepository`, `DeviceDataRepository`, `SportTypesRepository`, and `TrackingViewsRepository` SHALL expose the necessary query and mutation delegates.
+     - SQLite schema stability, thread dispatching (`Dispatchers.IO`), battery alert thresholds, and sensor tracking lifecycles SHALL remain 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `MainActivityWithNavigation`, `ImportBackupTabsScreen`, `EquipmentViewModel`, and `ControlTrackingViewModel`,
+• *When* auditing source code and AST references,
+• *Then* zero occurrences of `*DatabaseManager.getInstance()` exist across all four target presentation files.
+• *Given* an unfinished workout in the database,
+• *When* `MainActivityWithNavigation` resumes or `ControlTrackingViewModel` initializes,
+• *Then* unfinished workout status is detected via `WorkoutRepository` and the recovery prompt operates identically to the legacy flow.
+• *Given* paired sensors with low battery,
+• *When* `MainActivityWithNavigation` checks device states,
+• *Then* battery warnings are evaluated via `DeviceDataRepository` and notifications trigger without regression.
+
+**Invariants**: Phase A scope bounded strictly to UI & ViewModels; zero modifications to Phase B (`ATT-6426`) or Phase C (`ATT-6427`) components; 100% unit test pass rate.
+

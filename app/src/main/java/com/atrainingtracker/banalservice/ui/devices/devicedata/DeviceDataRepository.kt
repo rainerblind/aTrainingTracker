@@ -31,6 +31,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.map
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BANALService
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.BikePowerSensorsHelper
 import com.atrainingtracker.banalservice.devices.DeviceType
@@ -81,6 +82,11 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: DeviceDataRepository(application).also { INSTANCE = it }
             }
+        }
+
+        @JvmStatic
+        fun getInstance(context: Context): DeviceDataRepository {
+            return getInstance(context.applicationContext as Application)
         }
 
         @androidx.annotation.VisibleForTesting
@@ -157,6 +163,54 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
 
     fun getDeviceType(deviceId: Long): DeviceType? {
         return allDevices.value?.find { it.id == deviceId }?.deviceType
+    }
+
+    /**
+     * Retrieves devices with battery levels at or below [threshold] (REQ-UI-507.5).
+     */
+    fun getCriticalBatteryDevices(threshold: Int): List<DevicesDatabaseManager.NameAndBatteryPercentage> {
+        return devicesDatabaseManager.getCriticalBatteryDevices(threshold)
+    }
+
+    /**
+     * Checks if a device is paired (REQ-UI-507.5).
+     */
+    fun isPaired(deviceId: Long): Boolean {
+        return devicesDatabaseManager.isPaired(deviceId)
+    }
+
+    /**
+     * Retrieves the custom or default name for a device (REQ-UI-507.5).
+     */
+    fun getDeviceName(deviceId: Long): String? {
+        return devicesDatabaseManager.getDeviceName(deviceId)
+    }
+
+    /**
+     * Checks if at least one remote sensor (ANT+ or BLE) is paired (REQ-UI-507.5).
+     */
+    fun hasPairedRemoteDevices(): Boolean {
+        return devicesDatabaseManager.hasPairedRemoteDevices()
+    }
+
+    /**
+     * Checks if at least one Bluetooth LE device is paired (REQ-UI-507.5).
+     */
+    fun hasPairedBluetoothDevices(): Boolean {
+        return devicesDatabaseManager.hasPairedBluetoothDevices()
+    }
+
+    /**
+     * Retrieves summary information for all remote sensors (REQ-UI-507.5).
+     */
+    val allRemoteSensors: List<DevicesDatabaseManager.SimpleSensorInfo>
+        get() = devicesDatabaseManager.allRemoteSensors
+
+    /**
+     * Retrieves summary information for sensors compatible with [sportType] (REQ-UI-507.5).
+     */
+    fun getSensorsForSportType(sportType: BSportType): List<DevicesDatabaseManager.SimpleSensorInfo> {
+        return devicesDatabaseManager.getSensorsForSportType(sportType)
     }
 
     /**

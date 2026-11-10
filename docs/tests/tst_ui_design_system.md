@@ -8116,6 +8116,21 @@
   5. *Tier 1 Targeted Unit Test Regression (`TST-UI-506.5`)*:
   • Execute targeted test suite (`ui.components.workoutlaps.*`, `ui.components.workoutextrema.*`, `ui.aftermath.workoutlist.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `ui.components.core.*`, `build.*`) asserting 100% pass rate.
 
+### TST-UI-507: **Repository-Only UI Database Access Layer Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-507`
+- **Component**: `MainActivityWithNavigation.kt`, `ImportBackupTabsScreen.kt`, `EquipmentViewModel.kt`, `ControlTrackingViewModel.kt`, `RepositoryUiCleanlinessContractTest.kt`
+- **Jira**: `ATT-432`
+- **Test Description**:
+  1. *AST DatabaseManager Prohibition Contract Test (`TST-UI-507.1`)*:
+  • Verify via contract test in `RepositoryUiCleanlinessContractTest.kt` that `MainActivityWithNavigation.kt`, `ImportBackupTabsScreen.kt`, `EquipmentViewModel.kt`, and `ControlTrackingViewModel.kt` contain zero occurrences of `*DatabaseManager` imports or invocations.
+  2. *EquipmentViewModel Repository Delegation Test (`TST-UI-507.2`)*:
+  • Verify in `EquipmentViewModelLifecycleTest.kt` / `EquipmentViewModelTest.kt` that `EquipmentViewModel` correctly loads equipment, sport types, and sensor counts via repository delegates.
+  3. *ControlTrackingViewModel Unfinished Workout & Sensor Seeding Test (`TST-UI-507.3`)*:
+  • Verify in `ControlTrackingViewModelTest.kt` that `ControlTrackingViewModel` correctly verifies unfinished workouts and seeds sensor state via `WorkoutRepository` and `DeviceDataRepository`.
+  4. *Tier 1 Targeted Unit Test Regression (`TST-UI-507.4`)*:
+  • Execute targeted test suite (`ui.equipment.*`, `ui.tracking.controltracking.*`, `ui.settings.importbackup.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `ui.components.core.*`, `build.*`) asserting 100% pass rate.
+
 
 
 

@@ -79,9 +79,9 @@ import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.Protocol
-import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.helpers.BatteryStatusHelper
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedContainerFragment
 import com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedViewModel
 import com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceFragmentFactory
@@ -95,14 +95,14 @@ import com.atrainingtracker.trainingtracker.MyPreferenceManager
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.ActiveDevicesDbHelper
 import com.atrainingtracker.trainingtracker.database.MilestoneAutoNamingManager
-import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager
-import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.dialogs.GPSDisabledDialog
 import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialog
 import com.atrainingtracker.trainingtracker.interfaces.StartOrResumeInterface
 import com.atrainingtracker.trainingtracker.migration.BackupRestoreFragment
 import com.atrainingtracker.trainingtracker.cloud.googledrive.GoogleDriveAuthManager
 import com.atrainingtracker.trainingtracker.exporter.ExportManager
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
 import com.atrainingtracker.trainingtracker.notifications.SensorBatteryNotificationManager
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
@@ -120,7 +120,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Collections
-import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersFragment
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModel
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
@@ -416,8 +415,7 @@ class MainActivityWithNavigation :
             // create all the filters
             mBanalServiceComm?.let { comm ->
                 lifecycleScope.launch(ioDispatcher) {
-                    val devicesDatabaseManager = DevicesDatabaseManager.getInstance(applicationContext)
-                    val filters = TrackingViewsDatabaseManager.getInstance(applicationContext).getAllFilterData(devicesDatabaseManager)
+                    val filters = TrackingViewsRepository.getInstance(applicationContext).getAllFilterData()
                     for (filterData in filters) {
                         comm.createFilter(filterData)
                     }
@@ -603,7 +601,7 @@ class MainActivityWithNavigation :
         }
         if (!TrainingApplication.isTracking()) {
             lifecycleScope.launch(ioDispatcher) {
-                val hasUnfinished = WorkoutSummariesDatabaseManager.getInstance(applicationContext).hasUnfinishedWorkout()
+                val hasUnfinished = WorkoutRepository.getInstance(applicationContext).hasUnfinishedWorkout()
                 if (hasUnfinished) {
                     withContext(Dispatchers.Main) {
                         if (!isFinishing && !isDestroyed && !supportFragmentManager.isStateSaved) {
@@ -923,8 +921,8 @@ class MainActivityWithNavigation :
                     emptyList()
                 }
 
-                val devDbManager = DevicesDatabaseManager.getInstance(applicationContext)
-                val allCritical = devDbManager.getCriticalBatteryDevices(LOW_BATTERY_WARNING_LEVEL)
+                val devRepo = DeviceDataRepository.getInstance(applicationContext)
+                val allCritical = devRepo.getCriticalBatteryDevices(LOW_BATTERY_WARNING_LEVEL)
                 val criticalDevices = if (activeDeviceIds.isNotEmpty()) {
                     allCritical.filter { activeDeviceIds.contains(it.deviceId) }
                 } else if (workoutId <= 0) {
@@ -974,9 +972,9 @@ class MainActivityWithNavigation :
         mInRideCriticalAlertedSensorIds.clear()
         lifecycleScope.launch(ioDispatcher) {
             try {
-                val devDbManager = DevicesDatabaseManager.getInstance(applicationContext)
-                val allCritical = devDbManager.getCriticalBatteryDevices(LOW_BATTERY_WARNING_LEVEL)
-                val criticalDevices = allCritical.filter { devDbManager.isPaired(it.deviceId) }
+                val devRepo = DeviceDataRepository.getInstance(applicationContext)
+                val allCritical = devRepo.getCriticalBatteryDevices(LOW_BATTERY_WARNING_LEVEL)
+                val criticalDevices = allCritical.filter { devRepo.isPaired(it.deviceId) }
 
                 if (criticalDevices.isNotEmpty()) {
                     criticalDevices.forEach { dev ->
@@ -1018,12 +1016,12 @@ class MainActivityWithNavigation :
         mInRideBatteryMonitoringJob = lifecycleScope.launch(ioDispatcher) {
             DeviceDataRepository.deviceBatteryUpdates.collect { (deviceId, percentage) ->
                 try {
-                    val devDbManager = DevicesDatabaseManager.getInstance(applicationContext)
-                    if (percentage in 0..LOW_BATTERY_WARNING_LEVEL && devDbManager.isPaired(deviceId)) {
+                    val devRepo = DeviceDataRepository.getInstance(applicationContext)
+                    if (percentage in 0..LOW_BATTERY_WARNING_LEVEL && devRepo.isPaired(deviceId)) {
                         if (percentage <= CRITICAL_BATTERY_LEVEL) {
                             if (mInRideCriticalAlertedSensorIds.add(deviceId)) {
                                 mInRideAlertedSensorIds.add(deviceId)
-                                val deviceName = devDbManager.getDeviceName(deviceId) ?: getString(R.string.sensor)
+                                val deviceName = devRepo.getDeviceName(deviceId) ?: getString(R.string.sensor)
                                 val message = getString(R.string.sensor_battery_snackbar_single, deviceName, percentage)
                                 WorkoutNavigationEvents.triggerLowBatteryAlert(
                                     WorkoutNavigationEvents.LowBatteryAlert(
@@ -1036,7 +1034,7 @@ class MainActivityWithNavigation :
                             }
                         } else {
                             if (mInRideAlertedSensorIds.add(deviceId)) {
-                                val deviceName = devDbManager.getDeviceName(deviceId) ?: getString(R.string.sensor)
+                                val deviceName = devRepo.getDeviceName(deviceId) ?: getString(R.string.sensor)
                                 val message = getString(R.string.sensor_battery_snackbar_single, deviceName, percentage)
                                 WorkoutNavigationEvents.triggerLowBatteryAlert(
                                     WorkoutNavigationEvents.LowBatteryAlert(
@@ -1162,7 +1160,7 @@ class MainActivityWithNavigation :
         }
         TrainingApplication.setResumeFromCrash(false)
         lifecycleScope.launch(ioDispatcher) {
-            WorkoutSummariesDatabaseManager.getInstance(applicationContext).discardOrFinishUnfinishedWorkout()
+            WorkoutRepository.getInstance(applicationContext).discardOrFinishUnfinishedWorkout()
         }
     }
 
@@ -1177,7 +1175,7 @@ class MainActivityWithNavigation :
             return
         }
         lifecycleScope.launch(ioDispatcher) {
-            if (!WorkoutSummariesDatabaseManager.getInstance(applicationContext).hasUnfinishedWorkout()) {
+            if (!WorkoutRepository.getInstance(applicationContext).hasUnfinishedWorkout()) {
                 Log.w(TAG, "chooseResume: no unfinished workout found in database, ignoring resume request")
                 return@launch
             }

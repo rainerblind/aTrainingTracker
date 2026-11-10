@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.repositories
 
 import android.app.Application
+import android.content.Context
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.TrainingApplication
@@ -44,7 +45,21 @@ class SportTypesRepository private constructor(private val application: Applicat
         sportTypesList = sportTypeDatabaseManager.getSportTypes(BSportType.UNKNOWN)
     }
 
+    /**
+     * Resolves localized UI display name for sport type id (REQ-UI-507.5).
+     */
+    fun getUIName(sportId: Long): String = sportTypeDatabaseManager.getUIName(sportId)
 
+    /**
+     * Resolves base sport type for sport type id (REQ-UI-507.5).
+     */
+    fun getBSportType(sportId: Long): BSportType = sportTypeDatabaseManager.getBSportType(sportId)
+
+    /**
+     * Resolves list of sport types matching [bSportType] (or all if null) (REQ-UI-507.5).
+     */
+    fun getSportTypes(bSportType: BSportType?): List<SportTypeDatabaseManager.SimpleSportTypeInfo> =
+        sportTypeDatabaseManager.getSportTypes(bSportType)
 
     companion object {
         private val TAG = "SportTypesRepository"
@@ -56,10 +71,10 @@ class SportTypesRepository private constructor(private val application: Applicat
         private var INSTANCE: SportTypesRepository? = null
 
         /**
-         * Gets the singleton instance of the EquipmentRepository.
+         * Gets the singleton instance of the SportTypesRepository.
          *
          * @param application The application context, needed to create the instance for the first time.
-         * @return The single instance of EquipmentRepository.
+         * @return The single instance of SportTypesRepository.
          */
         fun getInstance(application: Application): SportTypesRepository {
             // Double-check locking ensures thread safety and performance.
@@ -74,6 +89,17 @@ class SportTypesRepository private constructor(private val application: Applicat
                 }
             }
         }
+
+        @JvmStatic
+        fun getInstance(context: Context): SportTypesRepository {
+            return getInstance(context.applicationContext as Application)
+        }
+
+        /**
+         * Resolves canonical sport type ID for a base sport type (REQ-UI-507.5).
+         */
+        @JvmStatic
+        fun getSportTypeId(bSportType: BSportType): Long = SportTypeDatabaseManager.getSportTypeId(bSportType)
 
         @androidx.annotation.VisibleForTesting
         fun resetForTesting(newInstance: SportTypesRepository? = null) {

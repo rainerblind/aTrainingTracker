@@ -23,6 +23,7 @@ import android.content.Intent
 import android.util.Log
 import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
+import com.atrainingtracker.banalservice.filters.FilterData
 import com.atrainingtracker.banalservice.filters.FilterType
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrainingApplication
@@ -774,6 +775,13 @@ class TrackingViewsRepository private constructor(private val context: Context) 
         }
     }
 
+    /**
+     * Retrieves all filter configurations for views (REQ-UI-507.5).
+     */
+    fun getAllFilterData(devicesDbManager: DevicesDatabaseManager = this.devicesDbManager): List<FilterData> {
+        return viewsDbManager.getAllFilterData(devicesDbManager)
+    }
+
 
 
 
@@ -781,12 +789,19 @@ class TrackingViewsRepository private constructor(private val context: Context) 
         @Volatile
         private var INSTANCE: TrackingViewsRepository? = null
 
+        @JvmStatic
         fun getInstance(context: Context): TrackingViewsRepository {
             return INSTANCE ?: synchronized(this) {
                 val instance = TrackingViewsRepository(context)
                 INSTANCE = instance
                 instance
             }
+        }
+
+        @JvmStatic
+        @androidx.annotation.VisibleForTesting
+        fun resetForTesting(newInstance: TrackingViewsRepository? = null) {
+            INSTANCE = newInstance
         }
     }
 }

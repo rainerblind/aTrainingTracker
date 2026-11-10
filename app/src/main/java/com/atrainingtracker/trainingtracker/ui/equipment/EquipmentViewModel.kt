@@ -26,9 +26,12 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.SportTypeEquipmentLinkManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsPeriodHelper
 import com.atrainingtracker.trainingtracker.monetization.GarageLeagueDetector
@@ -79,12 +82,49 @@ class EquipmentViewModel @JvmOverloads constructor(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val dbEquipmentHelper: EquipmentDbHelper = EquipmentDbHelper.getInstance(application),
     private val dbLinksHelper: SportTypeEquipmentLinkManager = SportTypeEquipmentLinkManager.getInstance(application),
-    private val dbSportHelper: SportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(application),
-    private val dbDevicesHelper: DevicesDatabaseManager = DevicesDatabaseManager.getInstance(application),
-    private val dbSummariesManager: WorkoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(application),
+    private val sportTypesRepository: SportTypesRepository? = null,
+    private val deviceDataRepository: DeviceDataRepository? = null,
+    private val workoutRepository: WorkoutRepository? = null,
     private val syncStatusFlow: StateFlow<Boolean> = EquipmentRepository.isSyncing,
-    private val garageLeagueDetector: GarageLeagueDetector = GarageLeagueDetector(application)
+    private val garageLeagueDetector: GarageLeagueDetector = GarageLeagueDetector(application),
+    @Deprecated("Legacy harness parameter for backwards compatibility with tests (REQ-UI-507.3)")
+    private val dbSportHelper: SportTypeDatabaseManager? = null,
+    @Deprecated("Legacy harness parameter for backwards compatibility with tests (REQ-UI-507.3)")
+    private val dbDevicesHelper: DevicesDatabaseManager? = null,
+    @Deprecated("Legacy harness parameter for backwards compatibility with tests (REQ-UI-507.3)")
+    private val dbSummariesManager: WorkoutSummariesDatabaseManager? = null
 ) : AndroidViewModel(application) {
+
+    private val effectiveSportRepo: SportTypesRepository by lazy {
+        sportTypesRepository ?: SportTypesRepository.getInstance(application)
+    }
+    private val effectiveDeviceRepo: DeviceDataRepository by lazy {
+        deviceDataRepository ?: DeviceDataRepository.getInstance(application)
+    }
+    private val effectiveWorkoutRepo: WorkoutRepository by lazy {
+        workoutRepository ?: WorkoutRepository.getInstance(application)
+    }
+
+    private fun resolveSportTypeName(sportId: Long): String? =
+        dbSportHelper?.getUIName(sportId) ?: effectiveSportRepo.getUIName(sportId)
+
+    private fun resolveDeviceName(deviceId: Long): String? =
+        dbDevicesHelper?.getDeviceName(deviceId) ?: effectiveDeviceRepo.getDeviceName(deviceId)
+
+    private fun resolveAllRemoteSensors(): List<DevicesDatabaseManager.SimpleSensorInfo> =
+        dbDevicesHelper?.allRemoteSensors ?: effectiveDeviceRepo.allRemoteSensors
+
+    private fun resolveSensorsForSportType(sportType: BSportType): List<DevicesDatabaseManager.SimpleSensorInfo> =
+        dbDevicesHelper?.getSensorsForSportType(sportType) ?: effectiveDeviceRepo.getSensorsForSportType(sportType)
+
+    private fun resolveSportTypes(sportType: BSportType): List<SportTypeDatabaseManager.SimpleSportTypeInfo> =
+        dbSportHelper?.getSportTypes(sportType) ?: effectiveSportRepo.getSportTypes(sportType)
+
+    private fun resolveEquipmentStats(equipmentId: Long): WorkoutSummariesDatabaseManager.Stats =
+        dbSummariesManager?.getEquipmentStats(equipmentId) ?: effectiveWorkoutRepo.getEquipmentStats(equipmentId)
+
+    private fun resolveEquipmentStatsForPeriod(equipmentId: Long, startS: Long, endS: Long): WorkoutSummariesDatabaseManager.Stats =
+        dbSummariesManager?.getEquipmentStatsForPeriod(equipmentId, startS, endS) ?: effectiveWorkoutRepo.getEquipmentStatsForPeriod(equipmentId, startS, endS)
 
     private val _garageNudgeEvent = MutableStateFlow<GarageNudgeEvent?>(null)
     val garageNudgeEvent: StateFlow<GarageNudgeEvent?> = _garageNudgeEvent
@@ -107,13 +147,13 @@ class EquipmentViewModel @JvmOverloads constructor(
     val runSensors: StateFlow<List<DevicesDatabaseManager.SimpleSensorInfo>> = _shoeSensors
 
     val bikeSensorsList: List<DevicesDatabaseManager.SimpleSensorInfo>
-        get() = _bikeSensors.value.ifEmpty { dbDevicesHelper.getSensorsForSportType(BSportType.BIKE) }
+        get() = _bikeSensors.value.ifEmpty { resolveSensorsForSportType(BSportType.BIKE) }
 
     val runSensorsList: List<DevicesDatabaseManager.SimpleSensorInfo>
-        get() = _shoeSensors.value.ifEmpty { dbDevicesHelper.getSensorsForSportType(BSportType.RUN) }
+        get() = _shoeSensors.value.ifEmpty { resolveSensorsForSportType(BSportType.RUN) }
 
-    val bikeSportTypes = dbSportHelper.getSportTypes(BSportType.BIKE)
-    val runSportTypes = dbSportHelper.getSportTypes(BSportType.RUN)
+    val bikeSportTypes by lazy { resolveSportTypes(BSportType.BIKE) }
+    val runSportTypes by lazy { resolveSportTypes(BSportType.RUN) }
 
     @Volatile
     private var loadJob: Job? = null
@@ -169,17 +209,17 @@ class EquipmentViewModel @JvmOverloads constructor(
                     // Resolve linked sensors
                     val linkedDeviceIds = dbEquipmentHelper.getDeviceIdsForEquipment(data.id)
                     val sensorNames = linkedDeviceIds.mapNotNull { deviceId ->
-                        dbDevicesHelper.getDeviceName(deviceId)
+                        resolveDeviceName(deviceId)
                     }.joinToString(", ")
 
                     // Resolve linked sport types
                     val linkedSportTypeIds = dbLinksHelper.getSportTypeIdsForEquipment(data.id)
                     val sportTypeNames = linkedSportTypeIds.mapNotNull { sportId ->
-                        dbSportHelper.getUIName(sportId)
+                        resolveSportTypeName(sportId)
                     }.joinToString(", ")
                     Log.i("EquipmentViewModel", "${data.id} ${data.name}: $sportTypeNames")
 
-                    val stats = dbSummariesManager.getEquipmentStats(data.id)
+                    val stats = resolveEquipmentStats(data.id)
 
                     // You can now access data.stravaName, data.frameType, etc.
                     EquipmentItem(
@@ -207,7 +247,7 @@ class EquipmentViewModel @JvmOverloads constructor(
 
             _bikes.value = fetchItems(BSportType.BIKE)
             _shoes.value = fetchItems(BSportType.RUN)
-            val remoteSensors = dbDevicesHelper.allRemoteSensors
+            val remoteSensors = resolveAllRemoteSensors()
             _allRemoteSensors.value = remoteSensors
             _bikeSensors.value = EquipmentSensorOrdering.sortSensors(
                 remoteSensors.filter {
@@ -244,7 +284,7 @@ class EquipmentViewModel @JvmOverloads constructor(
             context = getApplication(),
             firstUsageDate = firstUsageDate,
             fetchPeriod = { title, startS, endS ->
-                val raw = dbSummariesManager.getEquipmentStatsForPeriod(equipmentId, startS, endS)
+                val raw = resolveEquipmentStatsForPeriod(equipmentId, startS, endS)
                 StatsData.fromDatabase(
                     primaryTitle = equipmentName,
                     secondaryTitle = title,

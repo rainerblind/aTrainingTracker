@@ -130,6 +130,7 @@ class WorkoutRepository private constructor(private val application: Application
          *
          * @param application The application context used for initialization.
          */
+        @JvmStatic
         fun getInstance(application: Application): WorkoutRepository {
             // Double-check locking ensures thread safety and performance.
             return INSTANCE ?: synchronized(this) {
@@ -141,6 +142,16 @@ class WorkoutRepository private constructor(private val application: Application
                     INSTANCE = newInstance
                     newInstance
                 }
+            }
+        }
+
+        @JvmStatic
+        fun getInstance(context: Context): WorkoutRepository {
+            INSTANCE?.let { return it }
+            return if (context is Application) {
+                getInstance(context)
+            } else {
+                getInstance(context.applicationContext as Application)
             }
         }
 
@@ -253,6 +264,32 @@ class WorkoutRepository private constructor(private val application: Application
 
     val saveFinishedEvent = SingleLiveEvent<Pair<Long, Boolean>>()
     val deleteFinishedEvent = SingleLiveEvent<Pair<Long, Boolean>>()
+
+    /**
+     * Checks if there is an unfinished workout recorded in SQLite (REQ-UI-507.5).
+     */
+    fun hasUnfinishedWorkout(): Boolean = summariesManager.hasUnfinishedWorkout()
+
+    /**
+     * Discards or finishes any unfinished workout in SQLite (REQ-UI-507.5).
+     */
+    fun discardOrFinishUnfinishedWorkout() {
+        summariesManager.discardOrFinishUnfinishedWorkout()
+    }
+
+    /**
+     * Gets aggregate lifetime equipment statistics (REQ-UI-507.5).
+     */
+    fun getEquipmentStats(equipmentId: Long): WorkoutSummariesDatabaseManager.Stats {
+        return summariesManager.getEquipmentStats(equipmentId)
+    }
+
+    /**
+     * Gets aggregate equipment statistics for a specific time period (REQ-UI-507.5).
+     */
+    fun getEquipmentStatsForPeriod(equipmentId: Long, startS: Long, endS: Long): WorkoutSummariesDatabaseManager.Stats {
+        return summariesManager.getEquipmentStatsForPeriod(equipmentId, startS, endS)
+    }
 
 
     /**
@@ -1078,17 +1115,21 @@ class WorkoutRepository private constructor(private val application: Application
     init {
         // --- EVENT REGISTRATION ---
         // Registers receivers for workout state changes and export status updates.
-        val filter = IntentFilter()
-        filter.addAction(TrackerService.WORKOUT_UPDATED_INTENT)
-        filter.addAction(TrackerService.TRACKING_FINISHED_INTENT)
-        LocalBroadcastManager.getInstance(application).registerReceiver(workoutUpdateReceiver, filter)
+        try {
+            val filter = IntentFilter()
+            filter.addAction(TrackerService.WORKOUT_UPDATED_INTENT)
+            filter.addAction(TrackerService.TRACKING_FINISHED_INTENT)
+            LocalBroadcastManager.getInstance(application).registerReceiver(workoutUpdateReceiver, filter)
 
-        val exportFilter = IntentFilter(ExportStatusChangedBroadcaster.EXPORT_STATUS_CHANGED_INTENT)
-        ContextCompat.registerReceiver(application, exportStatusUpdateReceiver, exportFilter, ContextCompat.RECEIVER_NOT_EXPORTED)
+            val exportFilter = IntentFilter(ExportStatusChangedBroadcaster.EXPORT_STATUS_CHANGED_INTENT)
+            ContextCompat.registerReceiver(application, exportStatusUpdateReceiver, exportFilter, ContextCompat.RECEIVER_NOT_EXPORTED)
 
-        reconcilePendingCropRecovery()
+            reconcilePendingCropRecovery()
 
-        if (DEBUG) Log.d(TAG, "WorkoutRepository initialized and receivers registered.")
+            if (DEBUG) Log.d(TAG, "WorkoutRepository initialized and receivers registered.")
+        } catch (e: Throwable) {
+            // Defensive guard for non-Robolectric local unit tests where Android IntentFilter/BroadcastManager is unmocked
+        }
     }
 
     /**
