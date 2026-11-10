@@ -3250,3 +3250,51 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Then* zero phantom HRV sensor values are published.
 
 **Invariants**: 100% NeuroKit2 golden oracle parity; zero phantom database rows; zero Main thread stalls; clean-room test pass rate.
+
+
+### REQ-TRK-061: Live HRV Metrics and Aerobic Threshold Zone Indicators in Tracking Cockpit [Verified]
+- **Tests**: `TST-TRK-061` | **Tickets**: `ATT-3542`
+- **Implementation**: `SensorType.java`, `ActivityType.java`, `DfaA1Formatter.java`, `SensorFieldView.kt`, `TrackingViewModel.kt`, `TuningPreferencesDataStore.kt`, `HrvInfoBottomSheet.kt`, `strings_hrv.xml`
+- **Rationale**: Athletes need live autonomic feedback in the tracking cockpit (`SensorGridScreen` / `TrackingTabGridContent`) to guide aerobic pacing and monitor fatigue. Following the delivery of real-time RR acquisition (`ATT-3540`) and artifact-corrected HRV metric engines (`ATT-3541`), cockpit telemetry tiles must support `HRV_DFA_A1`, `HRV_RMSSD`, `RR_INTERVAL`, and `HRV_ARTIFACT_RATE` with clear category partitioning, decimal formatting with artifact blanking (`--.--`), semantic aerobic threshold zone indicators conforming to Rule 71 theme color tokens, athlete-customizable threshold boundaries, and an educational In-App HRV Info & Disclaimer Sheet conforming to Rule 72 and 9-language translation parity (ATT-3542, Parent Epic ATT-3539, extending `REQ-TRK-060` and `REQ-UI-395`):
+1. *Sensor Selector Exposure & Category Partitioning (`REQ-TRK-061.1`)*:
+• The system SHALL include `HRV_DFA_A1`, `HRV_RMSSD`, `RR_INTERVAL`, and `HRV_ARTIFACT_RATE` in available cockpit telemetry fields (`ActivityType.getSensorTypeArray()`).
+• In `SensorType.java`, `HRV_DFA_A1` and `HRV_RMSSD` SHALL belong to `SensorCategory.HEART_RATE_AND_ENERGY`, while `RR_INTERVAL` and `HRV_ARTIFACT_RATE` SHALL belong to `SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS` for clear partitioning in `EditSensorFieldDialog`.
+2. *DfaA1Formatter Scaling & Artifact Blanking (`REQ-TRK-061.2`)*:
+• `DfaA1Formatter` SHALL format dimensionless DFA $\alpha_1$ values to 2 decimal places (`0.00`).
+• When the value is null, uninitialized, or artifact-gated ($> 5.0\%$), the formatter SHALL emit `--.--`.
+3. *Semantic Aerobic Threshold Zone Indicators & TTColor Tokens (`REQ-TRK-061.3`)*:
+• In `SensorFieldView.kt` and `TrackingViewModel.kt`, `HRV_DFA_A1` SHALL display semantic zone color coding conforming to Rule 71 (zero hardcoded hex literals outside `Color.kt`):
+  - Aerobic Base ($\alpha_1 > \alpha_{1,\text{T1}}$): Green (`TTColor.Zone2`).
+  - Threshold Transition ($\alpha_{1,\text{T2}} \le \alpha_1 \le \alpha_{1,\text{T1}}$): Orange / Tempo (`TTColor.Zone3`).
+  - High Intensity / Anaerobic ($\alpha_1 < \alpha_{1,\text{T2}}$): Red / Anaerobic (`TTColor.Zone4`).
+  - Muted / Artifact-Gated ($> 5.0\%$): Neutral transparent / theme outline (`--.--`).
+4. *User-Configurable Individual Threshold Overrides (`REQ-TRK-061.4`)*:
+• `TuningPreferencesDataStore.kt` SHALL support athlete-customizable threshold boundaries (`dfaA1ThresholdT1` default `0.75f`, `dfaA1ThresholdT2` default `0.50f`) with validation $\alpha_{1,\text{T2}} < \alpha_{1,\text{T1}}$ and range $[0.20, 1.50]$.
+5. *In-App HRV Info & Disclaimer Sheet with 9-Language Parity (`REQ-TRK-061.5`)*:
+• The system SHALL provide `HrvInfoBottomSheet.kt` using `AppModalBottomSheet` (conforming to Rule 72: zero nested `verticalScroll`) explaining trailing window lag, sensor recommendations, and medical disclaimers.
+• All UI text SHALL be partitioned in `strings_hrv.xml` with 100% translation parity across all 9 canonical languages (`REQ-PRO-041.3`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-061`, extending `REQ-TRK-060` (*HRV Engine*) and `REQ-UI-395` (*Sensor Selector*). Targets `SensorFieldView.kt`, `TrackingViewModel.kt`, `EditSensorFieldDialog.kt`, `HrvInfoBottomSheet.kt`.
+2. *Historical Origin & Commit Trace*: `ATT-3541` (`4bad7272`) delivered real-time HRV calculations; `ATT-3852` established categorized sensor selection.
+3. *Root Reason for Existing Formulation*: Cockpit tiles did not have visual threshold zone cues for DFA $\alpha_1$ or sensor category assignment for the new HRV types.
+4. *Preservation of Core Invariants*: Theme color centralization (Rule 71); modal bottom sheet scroll safety (Rule 72); 100% clean-room test pass rate and translation parity.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `EditSensorFieldDialog`,
+• *When* browsing sensors,
+• *Then* `HRV_DFA_A1`/`HRV_RMSSD` appear in `HEART_RATE_AND_ENERGY`, while `RR_INTERVAL`/`HRV_ARTIFACT_RATE` appear in `SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS`.
+• *Given* an active DFA $\alpha_1$ stream,
+• *When* $\alpha_1 = 0.824$,
+• *Then* it formats as `"0.82"`; *When* value is null or artifact rate $>5.0\%$, *Then* it formats as `"--.--"`.
+• *Given* thresholds $\alpha_{1,\text{T1}} = 0.75$ and $\alpha_{1,\text{T2}} = 0.50$,
+• *When* $\alpha_1 = 0.85$,
+• *Then* `TTColor.Zone2` (Green); *When* $\alpha_1 = 0.65$, *Then* `TTColor.Zone3` (Orange); *When* $\alpha_1 = 0.45$, *Then* `TTColor.Zone4` (Red); *When* gated, *Then* neutral theme outline.
+• *Given* custom thresholds $\alpha_{1,\text{T1}} = 0.80$ and $\alpha_{1,\text{T2}} = 0.55$,
+• *When* updated,
+• *Then* zone boundaries reflect immediately in the live UI without session restart.
+• *Given* an athlete opening `HrvInfoBottomSheet`,
+• *When* displayed,
+• *Then* zero scroll clipping occurs and all text is 100% translated across EN, DE, ES, FR, IT, JA, NL, PL, PT.
+
+**Invariants**: Zero hardcoded hex colors outside `Color.kt`; zero nested `verticalScroll` inside `AppModalBottomSheet`; 100% 9-language translation parity; clean-room test pass rate.

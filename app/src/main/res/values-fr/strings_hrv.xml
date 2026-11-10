@@ -24,4 +24,14 @@
     <string name="hrv_dfa_a1_short">a1</string>
     <string name="hrv_artifact_rate">Taux d\'artefacts</string>
     <string name="hrv_artifact_rate_short">Art. %</string>
+
+    <string name="hrv_info_title">Variabilité de la fréquence cardiaque et seuils aérobies</string>
+    <string name="hrv_info_trailing_lag_title">Fenêtre glissante et délai d\'allure</string>
+    <string name="hrv_info_trailing_lag_desc">Le DFA a1 en temps réel est calculé sur une fenêtre glissante de 2 minutes (mise à jour toutes les 5 secondes) et le rMSSD sur 60 secondes. Les changements d\'allure mettent 1 à 2 minutes à se refléter dans la télémétrie autonome.</string>
+    <string name="hrv_info_sensor_recommendation_title">Recommandations de capteurs</string>
+    <string name="hrv_info_sensor_recommendation_desc">Des intervalles RR battement par battement précis nécessitent une ceinture pectorale ECG humidifiée (comme Polar H10 ou Garmin HRM-Pro). Les capteurs optiques au poignet lissent les intervalles et ne conviennent pas au DFA a1.</string>
+    <string name="hrv_info_zones_title">Zones de seuil aérobie</string>
+    <string name="hrv_info_zones_desc">DFA a1 &gt; 0,75 indique une endurance aérobie fondamentale (Zone 2). Les valeurs entre 0,75 et 0,50 marquent la transition vers le seuil anaérobie (Zone 3). Les valeurs inférieures à 0,50 signalent une forte intensité anaérobie (Zone 4).</string>
+    <string name="hrv_info_disclaimer_title">Avertissement médical</string>
+    <string name="hrv_info_disclaimer_desc">Les métriques de VRC dans aTrainingTracker sont conçues pour le guidage de l\'entraînement et ne remplacent pas un avis médical. Les arythmies cardiaques ou extrasystoles peuvent invalider les estimations de seuils.</string>
 </resources>

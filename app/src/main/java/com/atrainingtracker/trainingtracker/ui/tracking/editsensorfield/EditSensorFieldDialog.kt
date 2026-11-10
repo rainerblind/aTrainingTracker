@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.Tune
@@ -360,6 +361,36 @@ fun EditSensorFieldDialog(
                     }
                 }
                 Spacer(Modifier.height(8.dp))
+            }
+
+            // HRV Guidance & Aerobic Threshold Information (ATT-3542, REQ-TRK-061.5)
+            val isHrvMetric = uiState.selectedSensorType in listOf(
+                SensorType.HRV_DFA_A1,
+                SensorType.HRV_RMSSD,
+                SensorType.RR_INTERVAL,
+                SensorType.HRV_ARTIFACT_RATE
+            )
+            if (isHrvMetric) {
+                var showHrvInfo by remember { mutableStateOf(false) }
+                OutlinedButton(
+                    onClick = { showHrvInfo = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.hrv_info_title))
+                }
+                Spacer(Modifier.height(8.dp))
+
+                if (showHrvInfo) {
+                    com.atrainingtracker.trainingtracker.ui.tracking.HrvInfoBottomSheet(
+                        onDismissRequest = { showHrvInfo = false }
+                    )
+                }
             }
         }
     }

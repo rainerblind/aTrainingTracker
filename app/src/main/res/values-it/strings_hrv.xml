@@ -24,4 +24,14 @@
     <string name="hrv_dfa_a1_short">a1</string>
     <string name="hrv_artifact_rate">Tasso di artefatti</string>
     <string name="hrv_artifact_rate_short">Art. %</string>
+
+    <string name="hrv_info_title">Variabilità della frequenza cardiaca e soglie aerobiche</string>
+    <string name="hrv_info_trailing_lag_title">Finestra mobile e ritardo di andatura</string>
+    <string name="hrv_info_trailing_lag_desc">Il DFA a1 in tempo reale viene calcolato su una finestra mobile di 2 minuti (aggiornata ogni 5 secondi) e rMSSD su 60 secondi. Le variazioni di andatura richiedono 1–2 minuti per manifestarsi nella telemetria autonomica.</string>
+    <string name="hrv_info_sensor_recommendation_title">Raccomandazioni sui sensori</string>
+    <string name="hrv_info_sensor_recommendation_desc">Intervalli RR battito per battito accurati richiedono una fascia cardio ECG inumidita (come Polar H10 o Garmin HRM-Pro). I sensori ottici da polso approssimano gli intervalli e non sono adatti per DFA a1.</string>
+    <string name="hrv_info_zones_title">Zone di soglia aerobica</string>
+    <string name="hrv_info_zones_desc">DFA a1 &gt; 0,75 indica andatura di resistenza aerobica (Zona 2). Valori tra 0,75 e 0,50 riflettono la transizione di soglia (Zona 3). Valori inferiori a 0,50 indicano elevata intensità anaerobica (Zona 4).</string>
+    <string name="hrv_info_disclaimer_title">Avvertenza medica</string>
+    <string name="hrv_info_disclaimer_desc">Le metriche HRV autonomiche in aTrainingTracker sono progettate per la guida sportiva e non sostituiscono un parere medico. Le aritmie cardiache o i battiti ectopici possono alterare le stime di soglia.</string>
 </resources>

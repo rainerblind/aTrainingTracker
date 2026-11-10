@@ -760,6 +760,18 @@ class TrackingViewModel @JvmOverloads constructor(
         sensorData: FilteredSensorData<*>,
         activityType: ActivityType
     ): Color {
+        if (sensorData.sensorType == SensorType.HRV_DFA_A1) {
+            val currentValue = sensorData.value
+            val alpha1 = if (currentValue is Number) currentValue.toDouble() else null
+            val config = _tuningConfig.value
+            return com.atrainingtracker.trainingtracker.ui.tracking.HrvZoneIndicator.calculateZoneColor(
+                alpha1 = alpha1,
+                t1 = config.dfaA1ThresholdT1,
+                t2 = config.dfaA1ThresholdT2,
+                defaultColor = defaultZoneColor
+            )
+        }
+
         val currentValue = sensorData.value
         val zoneType = getZoneType(sensorData.sensorType, activityType.sportType)
 

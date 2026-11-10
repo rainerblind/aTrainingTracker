@@ -24,4 +24,14 @@
     <string name="hrv_dfa_a1_short">a1</string>
     <string name="hrv_artifact_rate">Wskaźnik artefaktów</string>
     <string name="hrv_artifact_rate_short">Art. %</string>
+
+    <string name="hrv_info_title">Zmienność rytmu zatokowego (HRV) i progi tlenowe</string>
+    <string name="hrv_info_trailing_lag_title">Kroczące okno czasowe i opóźnienie tempa</string>
+    <string name="hrv_info_trailing_lag_desc">DFA a1 w czasie rzeczywistym oblicza się w kroczącym oknie 2-minutowym (aktualizowanym co 5 sekund), a rMSSD w oknie 60 sekund. Zmiany tempa wymagają 1–2 minut, aby odzwierciedlić się w telemetrii autonomicznej.</string>
+    <string name="hrv_info_sensor_recommendation_title">Rekomendacje dotyczące czujników</string>
+    <string name="hrv_info_sensor_recommendation_desc">Dokładne interwały RR między uderzeniami serca wymagają nawilżonego paska piersiowego EKG (np. Polar H10 lub Garmin HRM-Pro). Optyczne czujniki nadgarstkowe wygładzają interwały i nie nadają się do DFA a1.</string>
+    <string name="hrv_info_zones_title">Strefy progu tlenowego</string>
+    <string name="hrv_info_zones_desc">DFA a1 &gt; 0,75 wskazuje na tempo tlenowe wytrzymałościowe (Strefa 2). Wartości od 0,75 do 0,50 odzwierciedlają przejście progowe (Strefa 3). Wartości poniżej 0,50 wskazują na wysoką intensywność beztlenową (Strefa 4).</string>
+    <string name="hrv_info_disclaimer_title">Zastrzeżenie medyczne</string>
+    <string name="hrv_info_disclaimer_desc">Metryki autonomiczne HRV w aTrainingTracker służą do sterowania treningiem i nie zastępują porady lekarskiej. Arytmie serca lub pobudzenia ektopowe mogą zafałszować szacunki progowe.</string>
 </resources>

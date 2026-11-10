@@ -24,4 +24,14 @@
     <string name="hrv_dfa_a1_short">a1</string>
     <string name="hrv_artifact_rate">Artefactpercentage</string>
     <string name="hrv_artifact_rate_short">Art. %</string>
+
+    <string name="hrv_info_title">Hartslagvariabiliteit &amp; aerobe drempels</string>
+    <string name="hrv_info_trailing_lag_title">Glijdend venster &amp; tempovertraging</string>
+    <string name="hrv_info_trailing_lag_desc">Realtime DFA a1 wordt berekend over een glijdend venster van 2 minuten (elke 5 seconden bijgewerkt) en rMSSD over 60 seconden. Tempowijzigingen zijn pas na 1–2 minuten zichtbaar in de autonome telemetrie.</string>
+    <string name="hrv_info_sensor_recommendation_title">Sensoraanbevelingen</string>
+    <string name="hrv_info_sensor_recommendation_desc">Nauwkeurige beat-to-beat RR-intervallen vereisen een bevochtigde ECG-borstband (zoals Polar H10 of Garmin HRM-Pro). Optische polssensoren vlakken intervallen af en zijn ongeschikt voor DFA a1.</string>
+    <string name="hrv_info_zones_title">Aerobe drempelzones</string>
+    <string name="hrv_info_zones_desc">DFA a1 &gt; 0,75 duidt op een aëroob uithoudingsvermogen (Zone 2). Waarden tussen 0,75 en 0,50 weerspiegelen de drempelovergang (Zone 3). Waarden onder 0,50 duiden op hoge anaërobe intensiteit (Zone 4).</string>
+    <string name="hrv_info_disclaimer_title">Medische disclaimer</string>
+    <string name="hrv_info_disclaimer_desc">Autonome HRV-metrieken in aTrainingTracker zijn bedoeld voor trainingsbegeleiding en vervangen geen medisch advies. Hartritmestoornissen of ectopische slagen kunnen drempelschattingen vertekenen.</string>
 </resources>

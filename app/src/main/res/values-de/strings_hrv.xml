@@ -24,4 +24,14 @@
     <string name="hrv_dfa_a1_short">a1</string>
     <string name="hrv_artifact_rate">Artefaktrate</string>
     <string name="hrv_artifact_rate_short">Art. %</string>
+
+    <string name="hrv_info_title">Herzfrequenzvariabilität &amp; Aerobe Schwellen</string>
+    <string name="hrv_info_trailing_lag_title">Gleitendes Zeitfenster &amp; Verzögerung</string>
+    <string name="hrv_info_trailing_lag_desc">Echtzeit-DFA-a1 wird über ein gleitendes 2-Minuten-Fenster berechnet (alle 5 Sekunden aktualisiert) und rMSSD über 60 Sekunden. Tempoänderungen wirken sich erst nach 1–2 Minuten auf die autonome Telemetrie aus.</string>
+    <string name="hrv_info_sensor_recommendation_title">Sensorempfehlung</string>
+    <string name="hrv_info_sensor_recommendation_desc">Präzise Beat-to-Beat-RR-Intervalle erfordern einen angefeuchteten EKG-Brustgurt (wie Polar H10 oder Garmin HRM-Pro). Optische Handgelenkssensoren glätten Intervalle und eignen sich nicht für DFA a1.</string>
+    <string name="hrv_info_zones_title">Aerobe Schwellenbereiche</string>
+    <string name="hrv_info_zones_desc">DFA a1 &gt; 0,75 kennzeichnet aerobe Grundlagenausdauer (Zone 2). Werte zwischen 0,75 und 0,50 markieren den Schwellenübergang (Zone 3). Werte unter 0,50 signalisieren hohe anaerobe Intensität (Zone 4).</string>
+    <string name="hrv_info_disclaimer_title">Medizinischer Hinweis</string>
+    <string name="hrv_info_disclaimer_desc">Autonome HRV-Metriken in aTrainingTracker dienen der Trainingssteuerung und ersetzen keine ärztliche Untersuchung. Herzrhythmusstörungen oder Extrasystolen können Schwellenschätzungen verfälschen.</string>
 </resources>

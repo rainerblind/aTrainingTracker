@@ -24,4 +24,14 @@
     <string name="hrv_dfa_a1_short">a1</string>
     <string name="hrv_artifact_rate">Tasa de artefactos</string>
     <string name="hrv_artifact_rate_short">Art. %</string>
+
+    <string name="hrv_info_title">Variabilidad de frecuencia cardíaca y umbrales aeróbicos</string>
+    <string name="hrv_info_trailing_lag_title">Ventana móvil y retardo de ritmo</string>
+    <string name="hrv_info_trailing_lag_desc">El DFA a1 en tiempo real se calcula sobre una ventana móvil de 2 minutos (actualizada cada 5 segundos) y rMSSD sobre 60 segundos. Los cambios de ritmo tardan de 1 a 2 minutos en manifestarse en la telemetría autonómica.</string>
+    <string name="hrv_info_sensor_recommendation_title">Recomendaciones de sensores</string>
+    <string name="hrv_info_sensor_recommendation_desc">Los intervalos RR precisos latido a latido requieren una banda pectoral de ECG humedecida (como Polar H10 o Garmin HRM-Pro). Los sensores ópticos de muñeca suavizan los intervalos y no son aptos para DFA a1.</string>
+    <string name="hrv_info_zones_title">Zonas de umbral aeróbico</string>
+    <string name="hrv_info_zones_desc">DFA a1 &gt; 0,75 indica ritmo de resistencia aeróbica (Zona 2). Valores entre 0,75 y 0,50 reflejan la transición hacia el umbral anaeróbico (Zona 3). Valores por debajo de 0,50 indican alta intensidad anaeróbica (Zona 4).</string>
+    <string name="hrv_info_disclaimer_title">Aviso médico</string>
+    <string name="hrv_info_disclaimer_desc">Las métricas autonómicas de HRV en aTrainingTracker son para control deportivo y no sustituyen una evaluación médica. Las arritmias cardíacas o latidos ectópicos pueden alterar las estimaciones de umbral.</string>
 </resources>

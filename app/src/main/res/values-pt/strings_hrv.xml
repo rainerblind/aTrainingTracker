@@ -24,4 +24,14 @@
     <string name="hrv_dfa_a1_short">a1</string>
     <string name="hrv_artifact_rate">Taxa de artefactos</string>
     <string name="hrv_artifact_rate_short">Art. %</string>
+
+    <string name="hrv_info_title">Variabilidade da frequência cardíaca e limiares aeróbios</string>
+    <string name="hrv_info_trailing_lag_title">Janela deslizante e atraso de ritmo</string>
+    <string name="hrv_info_trailing_lag_desc">O DFA a1 em tempo real é calculado sobre uma janela deslizante de 2 minutos (atualizada a cada 5 segundos) e o rMSSD sobre 60 segundos. Mudanças de ritmo levam de 1 a 2 minutos para se refletir na telemetria autonômica.</string>
+    <string name="hrv_info_sensor_recommendation_title">Recomendações de sensores</string>
+    <string name="hrv_info_sensor_recommendation_desc">Intervalos RR precisos batimento a batimento exigem uma cinta peitoral de ECG humedecida (como Polar H10 ou Garmin HRM-Pro). Sensores ópticos de pulso suavizam intervalos e são inadequados para DFA a1.</string>
+    <string name="hrv_info_zones_title">Zonas de limiar aeróbio</string>
+    <string name="hrv_info_zones_desc">DFA a1 &gt; 0,75 indica ritmo de resistência aeróbia (Zona 2). Valores entre 0,75 e 0,50 refletem a transição de limiar (Zona 3). Valores abaixo de 0,50 indicam alta intensidade anaeróbia (Zona 4).</string>
+    <string name="hrv_info_disclaimer_title">Aviso médico</string>
+    <string name="hrv_info_disclaimer_desc">As métricas autonômicas de HRV no aTrainingTracker destinam-se à orientação desportiva e não substituem uma avaliação médica. Arritmias cardíacas ou batimentos ectópicos podem afetar as estimativas de limiar.</string>
 </resources>

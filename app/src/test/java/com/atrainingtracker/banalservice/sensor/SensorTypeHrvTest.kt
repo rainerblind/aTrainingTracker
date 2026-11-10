@@ -63,7 +63,7 @@ class SensorTypeHrvTest {
     @Test
     fun testHrvArtifactRateProperties() {
         val artifactRate = SensorType.HRV_ARTIFACT_RATE
-        assertEquals(SensorCategory.HEART_RATE_AND_ENERGY, artifactRate.category)
+        assertEquals(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, artifactRate.category)
         assertEquals(SensorValueType.DOUBLE, artifactRate.sensorValueType)
         assertEquals(R.string.hrv_artifact_rate, artifactRate.fullNameId)
         assertEquals(R.string.hrv_artifact_rate_short, artifactRate.shortNameId)

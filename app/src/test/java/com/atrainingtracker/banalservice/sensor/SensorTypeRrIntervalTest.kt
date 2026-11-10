@@ -31,7 +31,7 @@ class SensorTypeRrIntervalTest {
     @Test
     fun testRrIntervalProperties() {
         val rr = SensorType.RR_INTERVAL
-        assertEquals(SensorCategory.HEART_RATE_AND_ENERGY, rr.category)
+        assertEquals(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, rr.category)
         assertEquals(SensorValueType.INTEGER, rr.sensorValueType)
         assertEquals(R.string.rr_interval, rr.fullNameId)
         assertEquals(R.string.rr_interval_short, rr.shortNameId)

@@ -267,6 +267,11 @@ object TuningPreferencesDefaults {
     const val DEFAULT_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY = true
     const val DEFAULT_ENABLE_CRITICAL_POWER_MODEL = false
     const val DEFAULT_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY = true
+
+    const val DEFAULT_DFA_A1_THRESHOLD_T1 = 0.75f
+    const val DEFAULT_DFA_A1_THRESHOLD_T2 = 0.50f
+    const val MIN_DFA_A1_THRESHOLD = 0.20f
+    const val MAX_DFA_A1_THRESHOLD = 1.50f
 }
 
 /**
@@ -340,7 +345,9 @@ data class TuningConfig(
     val enableAerobicEfficiencyModel: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_AEROBIC_EFFICIENCY_MODEL,
     val showAerobicEfficiencyInWorkoutSummary: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY,
     val enableCriticalPowerModel: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL,
-    val showCriticalPowerInWorkoutSummary: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY
+    val showCriticalPowerInWorkoutSummary: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY,
+    val dfaA1ThresholdT1: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1,
+    val dfaA1ThresholdT2: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2
 ) {
     val showAntMissingAdapterWarnings: Boolean
         get() = !suppressAntMissingAdapterDialog
@@ -483,6 +490,8 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_show_aerobic_efficiency_in_workout_summary")
         val KEY_ENABLE_CRITICAL_POWER_MODEL: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_enable_critical_power_model")
         val KEY_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_show_critical_power_in_workout_summary")
+        val KEY_DFA_A1_THRESHOLD_T1: Preferences.Key<Float> = floatPreferencesKey("tuning_dfa_a1_threshold_t1")
+        val KEY_DFA_A1_THRESHOLD_T2: Preferences.Key<Float> = floatPreferencesKey("tuning_dfa_a1_threshold_t2")
 
         internal val ALL_KEYS = listOf(
             KEY_ELEVATION_X_AXIS_DOMAIN,
@@ -554,7 +563,9 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_ENABLE_AEROBIC_EFFICIENCY_MODEL,
             KEY_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY,
             KEY_ENABLE_CRITICAL_POWER_MODEL,
-            KEY_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY
+            KEY_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY,
+            KEY_DFA_A1_THRESHOLD_T1,
+            KEY_DFA_A1_THRESHOLD_T2
         )
 
         /**
@@ -916,7 +927,9 @@ data class AutoPausePreferences(
             enableAerobicEfficiencyModel = prefs[KEY_ENABLE_AEROBIC_EFFICIENCY_MODEL] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_AEROBIC_EFFICIENCY_MODEL,
             showAerobicEfficiencyInWorkoutSummary = prefs[KEY_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY] ?: TuningPreferencesDefaults.DEFAULT_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY,
             enableCriticalPowerModel = prefs[KEY_ENABLE_CRITICAL_POWER_MODEL] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL,
-            showCriticalPowerInWorkoutSummary = prefs[KEY_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY] ?: TuningPreferencesDefaults.DEFAULT_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY
+            showCriticalPowerInWorkoutSummary = prefs[KEY_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY] ?: TuningPreferencesDefaults.DEFAULT_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY,
+            dfaA1ThresholdT1 = prefs[KEY_DFA_A1_THRESHOLD_T1] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1,
+            dfaA1ThresholdT2 = prefs[KEY_DFA_A1_THRESHOLD_T2] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2
         )
     }
 
@@ -957,6 +970,49 @@ data class AutoPausePreferences(
     suspend fun setEnableCriticalPowerModel(enabled: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[KEY_ENABLE_CRITICAL_POWER_MODEL] = enabled
+        }
+    }
+
+    val dfaA1ThresholdT1Flow: Flow<Float> = context.dataStore.data.map { prefs ->
+        prefs[KEY_DFA_A1_THRESHOLD_T1] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1
+    }
+
+    val dfaA1ThresholdT2Flow: Flow<Float> = context.dataStore.data.map { prefs ->
+        prefs[KEY_DFA_A1_THRESHOLD_T2] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2
+    }
+
+    suspend fun setDfaA1ThresholdT1(threshold: Float) {
+        val clamped = threshold.coerceIn(
+            TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD,
+            TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_DFA_A1_THRESHOLD_T1] = clamped
+        }
+    }
+
+    suspend fun setDfaA1ThresholdT2(threshold: Float) {
+        val clamped = threshold.coerceIn(
+            TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD,
+            TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_DFA_A1_THRESHOLD_T2] = clamped
+        }
+    }
+
+    suspend fun setDfaA1Thresholds(t1: Float, t2: Float) {
+        val clampedT1 = t1.coerceIn(
+            TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD,
+            TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD
+        )
+        val clampedT2 = t2.coerceIn(
+            TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD,
+            TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_DFA_A1_THRESHOLD_T1] = clampedT1
+            prefs[KEY_DFA_A1_THRESHOLD_T2] = clampedT2
         }
     }
 
@@ -1061,6 +1117,14 @@ data class AutoPausePreferences(
             TuningPreferencesDefaults.MIN_AUTO_PAUSE_OTHER_DEBOUNCE_SEC,
             TuningPreferencesDefaults.MAX_AUTO_PAUSE_OTHER_DEBOUNCE_SEC
         )
+        val clampedDfaA1T1 = config.dfaA1ThresholdT1.coerceIn(
+            TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD,
+            TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD
+        )
+        val clampedDfaA1T2 = config.dfaA1ThresholdT2.coerceIn(
+            TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD,
+            TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD
+        )
 
         context.dataStore.edit { prefs ->
             prefs[KEY_ELEVATION_X_AXIS_DOMAIN] = config.elevationXAxisDomain.name
@@ -1141,6 +1205,8 @@ data class AutoPausePreferences(
             prefs[KEY_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY] = config.showAerobicEfficiencyInWorkoutSummary
             prefs[KEY_ENABLE_CRITICAL_POWER_MODEL] = config.enableCriticalPowerModel
             prefs[KEY_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY] = config.showCriticalPowerInWorkoutSummary
+            prefs[KEY_DFA_A1_THRESHOLD_T1] = clampedDfaA1T1
+            prefs[KEY_DFA_A1_THRESHOLD_T2] = clampedDfaA1T2
         }
 
         TrainingApplication.setClusterTolEndpoints(clampedClusterTolEndpoints)

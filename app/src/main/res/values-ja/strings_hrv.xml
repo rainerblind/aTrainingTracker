@@ -3,7 +3,7 @@
   ~ aTrainingTracker (ANT+ BTLE)
   ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
   ~
-  ~ This program is free software: you can redistribute it/or modify
+  ~ This program is free software: you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
   ~ the Free Software Foundation, either version 3 of the License, or
   ~ (at your option) any later version.
@@ -22,6 +22,16 @@
     <string name="hrv_rmssd_short">rMSSD</string>
     <string name="hrv_dfa_a1">DFA a1</string>
     <string name="hrv_dfa_a1_short">a1</string>
-    <string name="hrv_artifact_rate">アーティファクト率</string>
+    <string name="hrv_artifact_rate">アーチファクト率</string>
     <string name="hrv_artifact_rate_short">Art. %</string>
+
+    <string name="hrv_info_title">心拍変動（HRV）と有酸素閾値</string>
+    <string name="hrv_info_trailing_lag_title">ローリングウィンドウとペーシング遅延</string>
+    <string name="hrv_info_trailing_lag_desc">リアルタイムDFA a1は2分間のローリングウィンドウ（5秒毎更新）、rMSSDは60秒間で計算されます。ペース変化が自律神経テレメトリに反映されるまで1〜2分かかります。</string>
+    <string name="hrv_info_sensor_recommendation_title">推奨センサー</string>
+    <string name="hrv_info_sensor_recommendation_desc">正確な拍動間RR間隔の測定には、湿らせたECG心拍計チェストストラップ（Polar H10やGarmin HRM-Proなど）が必要です。光学式手首心拍計は間隔を平滑化するためDFA a1には適していません。</string>
+    <string name="hrv_info_zones_title">有酸素閾値ゾーン</string>
+    <string name="hrv_info_zones_desc">DFA a1 &gt; 0.75は有酸素持久力ペース（ゾーン2）を示します。0.75〜0.50は閾値移行期（ゾーン3）を反映します。0.50未満は高強度の無酸素運動（ゾーン4）を示します。</string>
+    <string name="hrv_info_disclaimer_title">医療上の免責事項</string>
+    <string name="hrv_info_disclaimer_desc">aTrainingTrackerにおける自律神経HRVメトリクスはアスリートのトレーニング管理を目的としており、医師の診断に代わるものではありません。不整脈や期外収縮は推定値に影響を与える場合があります。</string>
 </resources>

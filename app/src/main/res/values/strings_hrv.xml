@@ -24,4 +24,14 @@
     <string name="hrv_dfa_a1_short">a1</string>
     <string name="hrv_artifact_rate">Artifact rate</string>
     <string name="hrv_artifact_rate_short">Art. %</string>
+
+    <string name="hrv_info_title">Heart Rate Variability &amp; Aerobic Thresholds</string>
+    <string name="hrv_info_trailing_lag_title">Rolling Window &amp; Pacing Lag</string>
+    <string name="hrv_info_trailing_lag_desc">Real-time DFA a1 is calculated over a rolling 2-minute window (updated every 5 seconds) and rMSSD over 60 seconds. Rapid pacing changes take 1–2 minutes to manifest in autonomic telemetry.</string>
+    <string name="hrv_info_sensor_recommendation_title">Sensor Recommendations</string>
+    <string name="hrv_info_sensor_recommendation_desc">Accurate beat-to-beat RR intervals require a moistened ECG chest strap (such as Polar H10 or Garmin HRM-Pro). Optical wrist sensors smooth interval timings and are unsuitable for DFA a1.</string>
+    <string name="hrv_info_zones_title">Aerobic Threshold Zones</string>
+    <string name="hrv_info_zones_desc">DFA a1 &gt; 0.75 indicates aerobic endurance pacing (Zone 2). Values between 0.75 and 0.50 reflect the aerobic-anaerobic threshold transition (Zone 3). Values below 0.50 indicate high anaerobic intensity (Zone 4).</string>
+    <string name="hrv_info_disclaimer_title">Medical Disclaimer</string>
+    <string name="hrv_info_disclaimer_desc">Autonomic HRV metrics in aTrainingTracker are designed for athletic training guidance and do not replace medical evaluation. Cardiac arrhythmias or ectopic beats may invalidate threshold estimates.</string>
 </resources>
