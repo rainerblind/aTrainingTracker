@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 109
+**Total Tests**: 110
 
 ---
 
@@ -1675,6 +1675,24 @@
   • Assert that Runkeeper and TrainingPeaks are explicitly demarcated as decommissioned.
   3. *Clean-Room Targeted Test Suite Execution (`TST-PRO-055.3`)*:
   • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.SystemDataExchangeRequirementsContractTest"` asserting 100% pass rate.
+
+
+### TST-PRO-056: **System Architectural Design Contract Test Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-056`
+- **Component**: `docs/system/system_architecture.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemArchitectureDesignContractTest.kt`
+- **Jira**: `ATT-6164`
+- **Test Description**:
+  1. *System Elements & Interfaces Coverage Verification (`TST-PRO-056.1`, `SystemArchitectureDesignContractTest.kt`)*:
+  • Read `docs/system/system_architecture.md`.
+  • Assert that the document exists and defines all 5 system elements (`SYS-EL-01` through `SYS-EL-05`) and 6 system interfaces (`SYS-IF-01` through `SYS-IF-06`).
+  • Assert protocol, payload data schema, and timing characteristics are documented for each interface.
+  2. *Dynamic Behavior & Mermaid Syntax Verification (`TST-PRO-056.2`, `SystemArchitectureDesignContractTest.kt`)*:
+  • Assert that `docs/system/system_architecture.md` contains valid Mermaid `sequenceDiagram` fences for live 1-Hz telemetry acquisition and post-workout cloud export/backup.
+  3. *100% System Requirements Allocation Verification (`TST-PRO-056.3`, `SystemArchitectureDesignContractTest.kt`)*:
+  • Assert that the System Requirements Allocation Table allocates 100% of defined `SYSREQ-TRK-001`..`006` and `SYSREQ-DEX-001`..`006` requirements to system elements.
+  4. *Clean-Room Targeted Test Suite Execution (`TST-PRO-056.4`)*:
+  • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.SystemArchitectureDesignContractTest"` asserting 100% pass rate.
+
 
 
 

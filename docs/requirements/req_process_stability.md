@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 80
+**Total Requirements**: 81
 
 ---
 
@@ -2725,6 +2725,39 @@ The workflow SHALL mandate that:
   • *When* executed in the unit test suite,
   • *Then* all structural and code-grounding assertions SHALL pass with 100% success.
 - **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; 100% unit test pass rate.
+
+
+### REQ-PRO-056: System Architectural Design & SYSREQ Allocation [Verified]
+- **Tests**: `TST-PRO-056` | **Tickets**: `ATT-6164`
+- **Implementation**: `docs/system/system_architecture.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemArchitectureDesignContractTest.kt`
+- **Rationale**: ASPICE 4.0 pre-assessment finding S-05 (SYS.3 BP1-BP6) identified that aTrainingTracker lacks a formal system architectural design establishing the physical boundaries, system elements, interface definitions, dynamic behaviors, and 100% allocation of system requirements across hardware sensors, host Android application, OS platform services, and cloud environments. While software architecture (`docs/architecture.md`) specifies SWE.2 internal classes, the overarching system architecture bridging SYS.2 system requirements to software components was undocumented. Establishing `docs/system/system_architecture.md` and verifying consistency via contract testing closes this ASPICE CL2 gap (ATT-6164, refining `REQ-PRO-043` under Epic `ATT-6142`):
+- **Description**:
+  1. *System Architectural Design Specification (`REQ-PRO-056.1`, docs/system/system_architecture.md)*:
+     • `docs/system/system_architecture.md` SHALL define the authoritative system architectural design complying with ASPICE SYS.3:
+       - System Elements Decomposition (`SYS-EL-01` Android Smartphone Host App, `SYS-EL-02` BLE GATT Sensors, `SYS-EL-03` ANT+ Sensors, `SYS-EL-04` Android OS Platform Services, `SYS-EL-05` External Cloud Platforms).
+       - System Interfaces Specification (`SYS-IF-01` BLE GATT Services, `SYS-IF-02` ANT+ Radio IPC, `SYS-IF-03` Android Location Providers, `SYS-IF-04` Android PowerManager/FGS Lifecycle, `SYS-IF-05` Cloud REST APIs, `SYS-IF-06` Android SQLite Storage & VFS) specifying protocol, data formats, and timing/rate bounds.
+       - Dynamic Behavior Sequence Diagrams: Formal Mermaid `sequenceDiagram` models illustrating (a) Live 1-Hz multi-sensor telemetry acquisition loop and (b) Post-workout cloud export and atomic `.attbackup` archiving.
+       - 100% System Requirements Allocation: An exhaustive allocation matrix assigning every defined system requirement (`SYSREQ-TRK-001`..`006`, `SYSREQ-DEX-001`..`006`) to at least one system element.
+  2. *System Architecture Contract Testing & Allocation Verification (`REQ-PRO-056.2`)*:
+     • `SystemArchitectureDesignContractTest.kt` under `app/src/test/.../build/` SHALL assert:
+       - `docs/system/system_architecture.md` exists and contains non-empty definitions for all 5 system elements (`SYS-EL-01` through `SYS-EL-05`) and all 6 system interfaces (`SYS-IF-01` through `SYS-IF-06`).
+       - Valid Mermaid sequence diagrams exist for live tracking and cloud backup flows.
+       - 100% of defined `SYSREQ-TRK-*` and `SYSREQ-DEX-*` requirements are explicitly mapped in the System Requirements Allocation Matrix.
+       - Zero source-text reading of production files complying with ATT-6186.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-056` (*System Architectural Design Specification*), establishing ASPICE SYS.3 baseline under Parent Epic ATT-6142. Targets `docs/system/system_architecture.md` and `SystemArchitectureDesignContractTest.kt`.
+  2. *Historical Origin & Commit Trace*: Independent ASPICE pre-assessment finding S-05 (2026-11-08) and ticket ATT-6164.
+  3. *Root Reason for Existing Formulation*: System evolved directly from user features to software classes without a formal systems engineering architecture layer bridging SYS.2 requirements to SWE.2 software design.
+  4. *Preservation of Core Invariants*: Zero runtime code changes; existing software components, threading models, and service boundaries remain 100% unaltered.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `docs/system/system_architecture.md`,
+  • *When* inspected,
+  • *Then* it SHALL document all 5 system elements, 6 system interfaces, dynamic sequence diagrams, and 100% SYSREQ allocation.
+  • *Given* `SystemArchitectureDesignContractTest.kt`,
+  • *When* executed in the unit test suite,
+  • *Then* all structural and allocation assertions SHALL pass with 100% success.
+- **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; 100% unit test pass rate.
+
 
 
 
