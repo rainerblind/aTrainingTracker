@@ -27,11 +27,30 @@
     <string name="radar_threat_count_short">Zagrożenia</string>
 
     <string name="radar_closest_distance">Najbliższa odległość radaru</string>
-    <string name="radar_closest_distance_short">Odl. radaru</string>
+    <string name="radar_closest_distance_short">Dyst radar</string>
 
     <string name="radar_approach_speed">Prędkość zbliżania radaru</string>
-    <string name="radar_approach_speed_short">Pręd. radaru</string>
+    <string name="radar_approach_speed_short">Prędkość rad</string>
 
     <string name="radar_vehicle_count">Liczba pojazdów radaru</string>
     <string name="radar_vehicle_count_short">Pojazdy</string>
+
+    <!-- Radar Traffic Simulator (ATT-5087 / REQ-CON-029.5) -->
+    <string name="radar_simulator_title">Symulator ruchu radaru</string>
+    <string name="radar_simulator_subtitle">Symuluj scenariusze ruchu drogowego do treningów domowych i testów interfejsu</string>
+    <string name="radar_simulator_start">Uruchom symulację</string>
+    <string name="radar_simulator_stop">Zatrzymaj symulację</string>
+    <string name="radar_simulator_running">Symulacja aktywna</string>
+    <string name="radar_simulator_idle">Symulacja zatrzymana</string>
+    <string name="radar_scenario_single_car">Pojedynczy pojazd</string>
+    <string name="radar_scenario_single_car_desc">Pojedynczy pojazd wyprzedzający z prędkością 12 m/s</string>
+    <string name="radar_scenario_convoy">Kolumna pojazdów</string>
+    <string name="radar_scenario_convoy_desc">3 wyprzedzające pojazdy jednocześnie</string>
+    <string name="radar_scenario_high_speed">Zagrożenie o wysokiej prędkości</string>
+    <string name="radar_scenario_high_speed_desc">Szybki pojazd zbliżający się z prędkością 25 m/s</string>
+    <string name="radar_scenario_disconnect">Rozłączenie i ponowne połączenie</string>
+    <string name="radar_scenario_disconnect_desc">Symuluje utratę połączenia i jego odzyskanie</string>
+    <string name="radar_scenario_country_road">Pętla drogi wiejskiej</string>
+    <string name="radar_scenario_country_road_desc">Ciągła losowa pętla ruchu drogowego</string>
+    <string name="radar_simulator_preempted">Symulacja zatrzymana przez fizyczny radar</string>
 </resources>

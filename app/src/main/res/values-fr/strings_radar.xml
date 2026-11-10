@@ -27,11 +27,30 @@
     <string name="radar_threat_count_short">Menaces</string>
 
     <string name="radar_closest_distance">Distance radar la plus proche</string>
-    <string name="radar_closest_distance_short">Dist. radar</string>
+    <string name="radar_closest_distance_short">Dist radar</string>
 
     <string name="radar_approach_speed">Vitesse d\'approche radar</string>
-    <string name="radar_approach_speed_short">Vit. radar</string>
+    <string name="radar_approach_speed_short">Vitesse rad</string>
 
     <string name="radar_vehicle_count">Nombre de véhicules radar</string>
     <string name="radar_vehicle_count_short">Véhicules</string>
+
+    <!-- Radar Traffic Simulator (ATT-5087 / REQ-CON-029.5) -->
+    <string name="radar_simulator_title">Simulateur de trafic radar</string>
+    <string name="radar_simulator_subtitle">Simuler des scénarios de circulation pour l\'entraînement en intérieur et les tests d\'interface</string>
+    <string name="radar_simulator_start">Démarrer la simulation</string>
+    <string name="radar_simulator_stop">Arrêter la simulation</string>
+    <string name="radar_simulator_running">Simulation active</string>
+    <string name="radar_simulator_idle">Simulation arrêtée</string>
+    <string name="radar_scenario_single_car">Véhicule seul</string>
+    <string name="radar_scenario_single_car_desc">Un véhicule doublant à 12 m/s</string>
+    <string name="radar_scenario_convoy">Convoi</string>
+    <string name="radar_scenario_convoy_desc">3 véhicules doublant simultanément</string>
+    <string name="radar_scenario_high_speed">Danger à grande vitesse</string>
+    <string name="radar_scenario_high_speed_desc">Véhicule rapide approchant à 25 m/s</string>
+    <string name="radar_scenario_disconnect">Déconnexion et reconnexion</string>
+    <string name="radar_scenario_disconnect_desc">Simule la coupure puis le rétablissement de connexion</string>
+    <string name="radar_scenario_country_road">Boucle route de campagne</string>
+    <string name="radar_scenario_country_road_desc">Boucle continue avec trafic aléatoire</string>
+    <string name="radar_simulator_preempted">Simulation arrêtée par le radar physique</string>
 </resources>

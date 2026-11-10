@@ -19,19 +19,38 @@
 
 <resources>
     <!-- DeviceType BIKE_RADAR (ATT-5083 / REQ-CON-028.1) -->
-    <string name="device_type_bike_radar">radar para bicicleta</string>
+    <string name="device_type_bike_radar">radar de bicicleta</string>
     <string name="device_type_short_bike_radar">radar</string>
 
     <!-- Radar Scalar Sensor Types (ATT-5083 / REQ-CON-028.5) -->
     <string name="radar_threat_count">Recuento de amenazas de radar</string>
     <string name="radar_threat_count_short">Amenazas</string>
 
-    <string name="radar_closest_distance">Distancia más cercana del radar</string>
-    <string name="radar_closest_distance_short">Dist. radar</string>
+    <string name="radar_closest_distance">Distancia más cercana de radar</string>
+    <string name="radar_closest_distance_short">Dist radar</string>
 
-    <string name="radar_approach_speed">Velocidad de aproximación del radar</string>
-    <string name="radar_approach_speed_short">Vel. radar</string>
+    <string name="radar_approach_speed">Velocidad de aproximación de radar</string>
+    <string name="radar_approach_speed_short">Vel radar</string>
 
-    <string name="radar_vehicle_count">Recuento de vehículos del radar</string>
+    <string name="radar_vehicle_count">Recuento de vehículos de radar</string>
     <string name="radar_vehicle_count_short">Vehículos</string>
+
+    <!-- Radar Traffic Simulator (ATT-5087 / REQ-CON-029.5) -->
+    <string name="radar_simulator_title">Simulador de tráfico de radar</string>
+    <string name="radar_simulator_subtitle">Simule escenarios de tráfico para entrenamientos en interiores y pruebas de interfaz</string>
+    <string name="radar_simulator_start">Iniciar simulación</string>
+    <string name="radar_simulator_stop">Detener simulación</string>
+    <string name="radar_simulator_running">Simulación activa</string>
+    <string name="radar_simulator_idle">Simulación detenida</string>
+    <string name="radar_scenario_single_car">Vehículo único</string>
+    <string name="radar_scenario_single_car_desc">Un vehículo adelantando a 12 m/s</string>
+    <string name="radar_scenario_convoy">Convoy</string>
+    <string name="radar_scenario_convoy_desc">3 vehículos adelantando simultáneamente</string>
+    <string name="radar_scenario_high_speed">Amenaza de alta velocidad</string>
+    <string name="radar_scenario_high_speed_desc">Vehículo rápido aproximándose a 25 m/s</string>
+    <string name="radar_scenario_disconnect">Desconexión y reconexión</string>
+    <string name="radar_scenario_disconnect_desc">Simula pérdida y recuperación de conexión</string>
+    <string name="radar_scenario_country_road">Bucle de carretera</string>
+    <string name="radar_scenario_country_road_desc">Bucle continuo de tráfico aleatorio</string>
+    <string name="radar_simulator_preempted">Simulación detenida por radar físico</string>
 </resources>

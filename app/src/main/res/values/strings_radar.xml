@@ -34,4 +34,23 @@
 
     <string name="radar_vehicle_count">Radar Vehicle Count</string>
     <string name="radar_vehicle_count_short">Vehicles</string>
+
+    <!-- Radar Traffic Simulator (ATT-5087 / REQ-CON-029.5) -->
+    <string name="radar_simulator_title">Radar Traffic Simulator</string>
+    <string name="radar_simulator_subtitle">Simulate traffic scenarios for indoor workouts and UI testing</string>
+    <string name="radar_simulator_start">Start Simulation</string>
+    <string name="radar_simulator_stop">Stop Simulation</string>
+    <string name="radar_simulator_running">Simulation active</string>
+    <string name="radar_simulator_idle">Simulation stopped</string>
+    <string name="radar_scenario_single_car">Single Car</string>
+    <string name="radar_scenario_single_car_desc">Single overtaking vehicle at 12 m/s</string>
+    <string name="radar_scenario_convoy">Convoy</string>
+    <string name="radar_scenario_convoy_desc">3 simultaneous overtaking vehicles</string>
+    <string name="radar_scenario_high_speed">High-Speed Threat</string>
+    <string name="radar_scenario_high_speed_desc">Fast vehicle approaching at 25 m/s</string>
+    <string name="radar_scenario_disconnect">Disconnect &amp; Reconnect</string>
+    <string name="radar_scenario_disconnect_desc">Simulates connection loss and recovery</string>
+    <string name="radar_scenario_country_road">Country Road Loop</string>
+    <string name="radar_scenario_country_road_desc">Continuous randomized traffic loop</string>
+    <string name="radar_simulator_preempted">Simulation halted by physical radar</string>
 </resources>

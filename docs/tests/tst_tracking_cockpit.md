@@ -1864,3 +1864,25 @@
   6. *Clean-Room Targeted Test Suite Execution (`TST-CON-028.6`)*:
   • Execute targeted package tests (`com.atrainingtracker.banalservice.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
+
+### TST-CON-029: **Cycling Radar Traffic Simulator, Pipeline Integration & Parity Test Suite** [Verified]
+- **Requirement(s)**: `REQ-CON-029` (`REQ-CON-029.1`..`REQ-CON-029.5`)
+- **Component**: `RadarTrafficSimulator.kt`, `RadarStateRepository.kt`, `RadarWindowAggregator.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
+- **Jira**: `ATT-5087`
+- **Test Description**:
+  1. *Scenario Generation & 8 Hz Stream Unit Tests (`TST-CON-029.1`, `RadarTrafficSimulatorTest.kt`)*:
+  • Verify all 5 scenario presets emit synthetic target vectors at 8 Hz with correct kinematics (range, approach speed, threat level).
+  • Verify Single Overtaking Car passing increments `RADAR_VEHICLE_COUNT` via hysteresis.
+  • Verify Multi-Vehicle Convoy generates 3 simultaneous distinct target IDs.
+  • Verify High-Speed Threat closes at 25 m/s with `FAST_APPROACHING` threat level.
+  • Verify Mid-Ride Disconnect transitions to `DISCONNECTED_ERROR` and recovers after 5 seconds.
+  2. *Hardware Precedence & Preemption Unit Tests (`TST-CON-029.2`, `RadarTrafficSimulatorTest.kt`)*:
+  • Verify simulation halts immediately and yields when physical radar streams data (`isReceivingData() == true`).
+  3. *Coroutine Lifecycle & Scope Cleanup Unit Tests (`TST-CON-029.3`, `RadarTrafficSimulatorTest.kt`)*:
+  • Verify calling `stop()` cancels running coroutine job cleanly without background leaks or lingering state emissions.
+  4. *9-Language Parity & Localization Test (`TST-CON-029.4`, `TranslationParityTest.kt`)*:
+  • Verify 100% string key and format parity across partitioned `strings_radar.xml` in all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
+  5. *Clean-Room Targeted Test Suite Execution (`TST-CON-029.5`)*:
+  • Execute targeted package tests (`com.atrainingtracker.banalservice.devices.radar.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+

@@ -27,11 +27,30 @@
     <string name="radar_threat_count_short">Ameaças</string>
 
     <string name="radar_closest_distance">Distância mais próxima do radar</string>
-    <string name="radar_closest_distance_short">Dist. radar</string>
+    <string name="radar_closest_distance_short">Dist rad</string>
 
     <string name="radar_approach_speed">Velocidade de aproximação do radar</string>
-    <string name="radar_approach_speed_short">Vel. radar</string>
+    <string name="radar_approach_speed_short">Vel rad</string>
 
     <string name="radar_vehicle_count">Contagem de veículos do radar</string>
     <string name="radar_vehicle_count_short">Veículos</string>
+
+    <!-- Radar Traffic Simulator (ATT-5087 / REQ-CON-029.5) -->
+    <string name="radar_simulator_title">Simulador de tráfego do radar</string>
+    <string name="radar_simulator_subtitle">Simule cenários de tráfego para treinos em interiores e testes de interface</string>
+    <string name="radar_simulator_start">Iniciar simulação</string>
+    <string name="radar_simulator_stop">Parar simulação</string>
+    <string name="radar_simulator_running">Simulação ativa</string>
+    <string name="radar_simulator_idle">Simulação parada</string>
+    <string name="radar_scenario_single_car">Veículo único</string>
+    <string name="radar_scenario_single_car_desc">Um veículo a ultrapassar a 12 m/s</string>
+    <string name="radar_scenario_convoy">Comboio</string>
+    <string name="radar_scenario_convoy_desc">3 veículos a ultrapassar simultaneamente</string>
+    <string name="radar_scenario_high_speed">Ameaça de alta velocidade</string>
+    <string name="radar_scenario_high_speed_desc">Veículo rápido a aproximar-se a 25 m/s</string>
+    <string name="radar_scenario_disconnect">Desconectar e reconectar</string>
+    <string name="radar_scenario_disconnect_desc">Simula perda e recuperação de conexão</string>
+    <string name="radar_scenario_country_road">Circuito de estrada secundária</string>
+    <string name="radar_scenario_country_road_desc">Circuito contínuo com tráfego aleatório</string>
+    <string name="radar_simulator_preempted">Simulação interrompida pelo radar físico</string>
 </resources>

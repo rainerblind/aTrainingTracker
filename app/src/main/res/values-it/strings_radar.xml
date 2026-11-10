@@ -23,15 +23,34 @@
     <string name="device_type_short_bike_radar">radar</string>
 
     <!-- Radar Scalar Sensor Types (ATT-5083 / REQ-CON-028.5) -->
-    <string name="radar_threat_count">Conteggio minacce radar</string>
-    <string name="radar_threat_count_short">Minacce</string>
+    <string name="radar_threat_count">Conteggio pericoli radar</string>
+    <string name="radar_threat_count_short">Pericoli</string>
 
     <string name="radar_closest_distance">Distanza radar più vicina</string>
-    <string name="radar_closest_distance_short">Dist. radar</string>
+    <string name="radar_closest_distance_short">Dist rad</string>
 
-    <string name="radar_approach_speed">Velocità di avvicinamento radar</string>
-    <string name="radar_approach_speed_short">Vel. radar</string>
+    <string name="radar_approach_speed">Velocità avvicinamento radar</string>
+    <string name="radar_approach_speed_short">Vel rad</string>
 
     <string name="radar_vehicle_count">Conteggio veicoli radar</string>
     <string name="radar_vehicle_count_short">Veicoli</string>
+
+    <!-- Radar Traffic Simulator (ATT-5087 / REQ-CON-029.5) -->
+    <string name="radar_simulator_title">Simulatore di traffico radar</string>
+    <string name="radar_simulator_subtitle">Simula scenari di traffico per allenamenti indoor e test dell\'interfaccia</string>
+    <string name="radar_simulator_start">Avvia simulazione</string>
+    <string name="radar_simulator_stop">Interrompi simulazione</string>
+    <string name="radar_simulator_running">Simulazione attiva</string>
+    <string name="radar_simulator_idle">Simulazione interrotta</string>
+    <string name="radar_scenario_single_car">Singolo veicolo</string>
+    <string name="radar_scenario_single_car_desc">Un veicolo in sorpasso a 12 m/s</string>
+    <string name="radar_scenario_convoy">Convoglio</string>
+    <string name="radar_scenario_convoy_desc">3 veicoli in sorpasso contemporaneo</string>
+    <string name="radar_scenario_high_speed">Pericolo ad alta velocità</string>
+    <string name="radar_scenario_high_speed_desc">Veicolo veloce in avvicinamento a 25 m/s</string>
+    <string name="radar_scenario_disconnect">Disconnessione e riconnessione</string>
+    <string name="radar_scenario_disconnect_desc">Simula perdita e ripristino della connessione</string>
+    <string name="radar_scenario_country_road">Circuito extraurbano</string>
+    <string name="radar_scenario_country_road_desc">Circuito continuo a traffico casuale</string>
+    <string name="radar_simulator_preempted">Simulazione interrotta dal radar fisico</string>
 </resources>

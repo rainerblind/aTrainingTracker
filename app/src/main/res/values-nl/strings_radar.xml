@@ -23,15 +23,34 @@
     <string name="device_type_short_bike_radar">radar</string>
 
     <!-- Radar Scalar Sensor Types (ATT-5083 / REQ-CON-028.5) -->
-    <string name="radar_threat_count">Aantal radar-dreigingen</string>
-    <string name="radar_threat_count_short">Dreigingen</string>
+    <string name="radar_threat_count">Aantal radargevaren</string>
+    <string name="radar_threat_count_short">Gevaren</string>
 
     <string name="radar_closest_distance">Dichtstbijzijnde radarafstand</string>
-    <string name="radar_closest_distance_short">Radarafst.</string>
+    <string name="radar_closest_distance_short">Radar afst</string>
 
-    <string name="radar_approach_speed">Radar-naderingssnelheid</string>
-    <string name="radar_approach_speed_short">Radarsn.</string>
+    <string name="radar_approach_speed">Radarnaderingssnelheid</string>
+    <string name="radar_approach_speed_short">Radar snelh</string>
 
-    <string name="radar_vehicle_count">Aantal radar-voertuigen</string>
+    <string name="radar_vehicle_count">Aantal radarvoertuigen</string>
     <string name="radar_vehicle_count_short">Voertuigen</string>
+
+    <!-- Radar Traffic Simulator (ATT-5087 / REQ-CON-029.5) -->
+    <string name="radar_simulator_title">Radar verkeerssimulator</string>
+    <string name="radar_simulator_subtitle">Simuleer verkeersscenario\'s voor binnentrainingen en UI-tests</string>
+    <string name="radar_simulator_start">Simulatie starten</string>
+    <string name="radar_simulator_stop">Simulatie stoppen</string>
+    <string name="radar_simulator_running">Simulatie actief</string>
+    <string name="radar_simulator_idle">Simulatie gestopt</string>
+    <string name="radar_scenario_single_car">Enkele auto</string>
+    <string name="radar_scenario_single_car_desc">Enkele inhalende auto met 12 m/s</string>
+    <string name="radar_scenario_convoy">Konvooi</string>
+    <string name="radar_scenario_convoy_desc">3 gelijktijdig inhalende voertuigen</string>
+    <string name="radar_scenario_high_speed">Gevaar met hoge snelheid</string>
+    <string name="radar_scenario_high_speed_desc">Snel naderend voertuig met 25 m/s</string>
+    <string name="radar_scenario_disconnect">Verbinding verbreken &amp; herstellen</string>
+    <string name="radar_scenario_disconnect_desc">Simuleert verbindingsverlies en herstel</string>
+    <string name="radar_scenario_country_road">Buitenweg-lus</string>
+    <string name="radar_scenario_country_road_desc">Continue willekeurige verkeerslus</string>
+    <string name="radar_simulator_preempted">Simulatie onderbroken door fysieke radar</string>
 </resources>
