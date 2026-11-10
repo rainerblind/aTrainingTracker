@@ -38,4 +38,7 @@
     <string name="cardio_power_trends_direction_slope">Plus haut = Plus de watts par bpm</string>
     <string name="cardio_power_trends_empty">Aucune s\u00e9ance qualifi\u00e9e trouv\u00e9e (min. 20 min puissance &amp; FC, R\u00b2 \u2265 0,50)</string>
     <string name="cardio_power_trends_rolling_trend">Tendance sur 30 jours</string>
+    <string name="live_hr_drift">D\u00e9rive FC en direct</string>
+    <string name="live_hr_drift_short">D\u00e9rive FC</string>
+    <string name="cardio_power_live_drift_desc">D\u00e9rive cardiaque en temps r\u00e9el par rapport au mod\u00e8le dynamique frais (bpm)</string>
 </resources>

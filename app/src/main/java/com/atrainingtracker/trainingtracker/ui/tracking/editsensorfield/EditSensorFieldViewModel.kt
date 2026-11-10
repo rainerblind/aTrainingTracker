@@ -54,7 +54,8 @@ fun shouldIncludeSensorType(
     type: SensorType,
     initialSensorType: SensorType?,
     enableCogganPowerMetrics: Boolean,
-    enableCriticalPowerModel: Boolean
+    enableCriticalPowerModel: Boolean,
+    enableCardioPowerDynamics: Boolean = false
 ): Boolean {
     if (type == initialSensorType) return true
     return when (type) {
@@ -62,6 +63,7 @@ fun shouldIncludeSensorType(
         SensorType.INTENSITY_FACTOR,
         SensorType.TSS -> enableCogganPowerMetrics
         SensorType.W_PRIME_BAL -> enableCriticalPowerModel
+        SensorType.LIVE_HR_DRIFT -> enableCardioPowerDynamics
         else -> true
     }
 }
@@ -208,7 +210,8 @@ class EditSensorFieldViewModel(
                 type = type,
                 initialSensorType = initialType,
                 enableCogganPowerMetrics = config.enableCogganPowerMetrics,
-                enableCriticalPowerModel = config.enableCriticalPowerModel
+                enableCriticalPowerModel = config.enableCriticalPowerModel,
+                enableCardioPowerDynamics = config.enableCardioPowerDynamics
             )
         }
     }

@@ -99,6 +99,7 @@ fun isSensorTypeVisibleForTuning(
         SensorType.INTENSITY_FACTOR,
         SensorType.TSS -> effectiveConfig.enableCogganPowerMetrics
         SensorType.W_PRIME_BAL -> effectiveConfig.enableCriticalPowerModel
+        SensorType.LIVE_HR_DRIFT -> effectiveConfig.enableCardioPowerDynamics
         else -> true
     }
 }

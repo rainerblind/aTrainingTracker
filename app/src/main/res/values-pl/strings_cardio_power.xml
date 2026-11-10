@@ -38,4 +38,7 @@
     <string name="cardio_power_trends_direction_slope">Wy\u017cej = Wi\u0119cej wat\u00f3w na bpm</string>
     <string name="cardio_power_trends_empty">Brak kwalifikuj\u0105cych si\u0119 trening\u00f3w (min. 20 min mocy i HR, R\u00b2 \u2265 0,50)</string>
     <string name="cardio_power_trends_rolling_trend">Trend 30-dniowy</string>
+    <string name="live_hr_drift">Dryft t\u0119tna na \u017cywo</string>
+    <string name="live_hr_drift_short">Dryft HR</string>
+    <string name="cardio_power_live_drift_desc">Dryft t\u0119tna w czasie rzeczywistym w por\u00f3wnaniu z modelem pierwszego rz\u0119du (bpm)</string>
 </resources>

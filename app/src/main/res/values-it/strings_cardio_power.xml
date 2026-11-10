@@ -38,4 +38,7 @@
     <string name="cardio_power_trends_direction_slope">Pi\u00f9 alto = Pi\u00f9 watt per bpm</string>
     <string name="cardio_power_trends_empty">Nessuna sessione idonea trovata (min. 20 min potenza e FC, R\u00b2 \u2265 0.50)</string>
     <string name="cardio_power_trends_rolling_trend">Trend a 30 giorni</string>
+    <string name="live_hr_drift">Deriva FC in tempo reale</string>
+    <string name="live_hr_drift_short">Deriva FC</string>
+    <string name="cardio_power_live_drift_desc">Deriva cardiaca in tempo reale rispetto al modello fresco di 1\u00b0 ordine (bpm)</string>
 </resources>

@@ -772,6 +772,19 @@ class TrackingViewModel @JvmOverloads constructor(
             )
         }
 
+        if (sensorData.sensorType == SensorType.LIVE_HR_DRIFT) {
+            val currentValue = sensorData.value
+            if (currentValue is Number) {
+                val drift = currentValue.toDouble()
+                return when {
+                    drift <= 3.0 -> zoneColors.getOrElse(1) { defaultZoneColor }
+                    drift <= 8.0 -> zoneColors.getOrElse(2) { defaultZoneColor }
+                    else -> zoneColors.getOrElse(3) { defaultZoneColor }
+                }
+            }
+            return defaultZoneColor
+        }
+
         val currentValue = sensorData.value
         val zoneType = getZoneType(sensorData.sensorType, activityType.sportType)
 

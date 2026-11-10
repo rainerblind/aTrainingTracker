@@ -104,4 +104,15 @@
   4. *UI Component Contract Test (`CardioPowerTrendsCardTest`)*: Verify header info icon interaction, metric/range selector pill clicks, empty-state message rendering, and layout stability.
   5. *9-Locale Localization Parity Test (`TranslationParityTest`)*: Verify all new cardio-power trend string tokens in `strings_cardio_power.xml` across EN, DE, ES, FR, IT, JA, NL, PL, PT.
 
+### TST-REV-013: **Real-Time Live HR Drift & Cockpit Telemetry Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-REV-012`
+- **Component**: `CyclingPowerMetricsDevice.java`, `SensorType.java`, `SignedIntegerFormatter.java`, `TrackingViewModel.kt`, `SensorFieldState.kt`, `res/values*/strings_cardio_power.xml`
+- **Jira**: `ATT-3907`
+- **Test Description**:
+  1. *Real-Time Filter & Propagation Unit Test (`CyclingPowerMetricsDeviceLiveHrDriftTest`)*: Verify 1st-order discrete-time state propagation ($x_k = \alpha x_{k-1} + (1-\alpha) P_k$), lag compensation on step workloads, 30s growing-window residual calculation, and signed integer emission.
+  2. *Sensor-Presence Gating & Governance Test (`LiveHrDriftGatingTest`)*: Verify Rule 51 constructor parity and `resetSession()`, Rule 52 gating requiring both `POWER` and `HR` sensors, null suppression when unlinked or when `enableCardioPowerDynamics == false`, and long pause flush (> 30s).
+  3. *Formatter & SensorType Registration Test (`SignedIntegerFormatterTest`)*: Verify `SignedIntegerFormatter` formats positive integers with `+` prefix (e.g. `+5`), zero as `0`, negative as `-3`, and handles nulls gracefully. Verify `SensorType.LIVE_HR_DRIFT` category, units, parcelable, and icon.
+  4. *Cockpit Grid & Semantic Color State Test (`TrackingViewModelLiveDriftTest`)*: Verify `TrackingViewModel` maps drift ranges ($\le +3$, $+4\dots+8$, $\ge +9$) to correct semantic zone colors, and verify cell formatting in `SensorFieldState`.
+  5. *9-Locale Localization Parity Test (`TranslationParityTest`)*: Verify `live_hr_drift` and `live_hr_drift_short` in `strings_cardio_power.xml` across EN, DE, ES, FR, IT, JA, NL, PL, PT.
+
 

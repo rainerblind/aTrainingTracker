@@ -38,4 +38,7 @@
     <string name="cardio_power_trends_direction_slope">H\u00f6her = Mehr Watt pro bpm</string>
     <string name="cardio_power_trends_empty">Keine qualifizierten Fahrten gefunden (mind. 20 min Power &amp; HF, R\u00b2 \u2265 0,50)</string>
     <string name="cardio_power_trends_rolling_trend">30-Tage-Trend</string>
+    <string name="live_hr_drift">Live-HF-Drift</string>
+    <string name="live_hr_drift_short">HF-Drift</string>
+    <string name="cardio_power_live_drift_desc">Echtzeit-Herzfrequenzdrift im Vergleich zum dynamischen Frisch-Modell (bpm)</string>
 </resources>

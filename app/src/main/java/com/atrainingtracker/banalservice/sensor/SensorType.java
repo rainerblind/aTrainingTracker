@@ -35,6 +35,7 @@ import com.atrainingtracker.banalservice.sensor.formater.IntensityFactorFormatte
 import com.atrainingtracker.banalservice.sensor.formater.MyFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.PaceFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.PowerToWeightFormatter;
+import com.atrainingtracker.banalservice.sensor.formater.SignedIntegerFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
@@ -124,7 +125,8 @@ public enum SensorType
     RADAR_APPROACH_SPEED_mps(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, R.string.radar_approach_speed, R.string.radar_approach_speed_short, R.string.units_speed_basic, SensorValueType.DOUBLE, new SpeedFormatter(), false),
     RADAR_VEHICLE_COUNT(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, R.string.radar_vehicle_count, R.string.radar_vehicle_count_short, R.string.units_none, SensorValueType.INTEGER, new IntegerFormatter(), false),
     RADAR_PASSING_DISTANCE_m(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, R.string.radar_passing_distance, R.string.radar_passing_distance_short, R.string.units_distance_basic, SensorValueType.DOUBLE, new DistanceFormatter(), false),
-    RADAR_LARGE_VEHICLE_COUNT(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, R.string.radar_large_vehicle_count, R.string.radar_large_vehicle_count_short, R.string.units_none, SensorValueType.INTEGER, new IntegerFormatter(), false);
+    RADAR_LARGE_VEHICLE_COUNT(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, R.string.radar_large_vehicle_count, R.string.radar_large_vehicle_count_short, R.string.units_none, SensorValueType.INTEGER, new IntegerFormatter(), false),
+    LIVE_HR_DRIFT(SensorCategory.HEART_RATE_AND_ENERGY, R.string.live_hr_drift, R.string.live_hr_drift_short, R.string.units_heart_rate, SensorValueType.INTEGER, new SignedIntegerFormatter(), true);
 
     // max bit = 118
 
@@ -178,7 +180,7 @@ public enum SensorType
             case DISTANCE_m -> R.drawable.ic_distance;
             case SPEED_mps -> R.drawable.ic_speed;
             case CADENCE -> R.drawable.ic_cadence;
-            case HR, RR_INTERVAL, HRV_RMSSD, HRV_DFA_A1, HRV_ARTIFACT_RATE -> R.drawable.ic_heart_rate;
+            case HR, RR_INTERVAL, HRV_RMSSD, HRV_DFA_A1, HRV_ARTIFACT_RATE, LIVE_HR_DRIFT -> R.drawable.ic_heart_rate;
             case POWER, POWER_TO_WEIGHT, NORMALIZED_POWER, INTENSITY_FACTOR, WORK_KJ, TSS, W_PRIME_BAL,
                  POWER_5S, POWER_1M, POWER_5M, POWER_20M,
                  POWER_PEAK_5S, POWER_PEAK_1M, POWER_PEAK_5M, POWER_PEAK_20M -> R.drawable.ic_power;

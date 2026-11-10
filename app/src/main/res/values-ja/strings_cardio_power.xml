@@ -38,4 +38,7 @@
     <string name="cardio_power_trends_direction_slope">高い値 = 1 bpmあたりのワット数が向上</string>
     <string name="cardio_power_trends_empty">対象となる記録がありません（20分以上のパワー＆心拍データ、R\u00b2 \u2265 0.50）</string>
     <string name="cardio_power_trends_rolling_trend">30日間トレンド</string>
+    <string name="live_hr_drift">リアルタイム心拍ドリフト</string>
+    <string name="live_hr_drift_short">心拍ドリフト</string>
+    <string name="cardio_power_live_drift_desc">一次フレッシュモデルと比較したリアルタイム心拍ドリフト（bpm）</string>
 </resources>
