@@ -1864,63 +1864,94 @@ public class WorkoutSummariesDatabaseManager {
         try (Cursor cursor = db.query(WorkoutSummaries.TABLE_CARDIO_POWER_DYNAMICS, null,
                 selection, selectionArgs, null, null, null)) {
             if (cursor != null && cursor.moveToFirst()) {
-                double tauStart = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_TAU_START));
-                double hr0Start = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_HR0_START));
-                double kStart = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_K_START));
-                double hr200Start = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_HR200_START));
-                double r2Start = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_R2_START));
-                double rmseStart = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_RMSE_START));
-
-                int tauEndIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_TAU_END);
-                Double tauEnd = cursor.isNull(tauEndIdx) ? null : cursor.getDouble(tauEndIdx);
-
-                int hr0EndIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_HR0_END);
-                Double hr0End = cursor.isNull(hr0EndIdx) ? null : cursor.getDouble(hr0EndIdx);
-
-                int kEndIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_K_END);
-                Double kEnd = cursor.isNull(kEndIdx) ? null : cursor.getDouble(kEndIdx);
-
-                int hr200EndIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_HR200_END);
-                Double hr200End = cursor.isNull(hr200EndIdx) ? null : cursor.getDouble(hr200EndIdx);
-
-                int r2EndIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_R2_END);
-                Double r2End = cursor.isNull(r2EndIdx) ? null : cursor.getDouble(r2EndIdx);
-
-                int rmseEndIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_RMSE_END);
-                Double rmseEnd = cursor.isNull(rmseEndIdx) ? null : cursor.getDouble(rmseEndIdx);
-
-                int deltaHr200Idx = cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_DELTA_HR200);
-                Double deltaHr200 = cursor.isNull(deltaHr200Idx) ? null : cursor.getDouble(deltaHr200Idx);
-
-                int deltaTauIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_DELTA_TAU);
-                Double deltaTau = cursor.isNull(deltaTauIdx) ? null : cursor.getDouble(deltaTauIdx);
-
-                int deltaHr0Idx = cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_DELTA_HR0);
-                Double deltaHr0 = cursor.isNull(deltaHr0Idx) ? null : cursor.getDouble(deltaHr0Idx);
-
-                return new CardioPowerDynamicsRecord(
-                        workoutId,
-                        tauStart,
-                        hr0Start,
-                        kStart,
-                        hr200Start,
-                        r2Start,
-                        rmseStart,
-                        tauEnd,
-                        hr0End,
-                        kEnd,
-                        hr200End,
-                        r2End,
-                        rmseEnd,
-                        deltaHr200,
-                        deltaTau,
-                        deltaHr0
-                );
+                return parseCardioPowerDynamicsRecord(cursor, workoutId);
             }
         } catch (Exception e) {
             Log.e(TAG, "Error querying cardio_power_dynamics for workout " + workoutId, e);
         }
         return null;
+    }
+
+    /**
+     * Batch query for cardio power dynamics across multiple workouts (REQ-REV-010 / ATT-3905).
+     */
+    @NonNull
+    public java.util.Map<Long, CardioPowerDynamicsRecord> getCardioPowerDynamicsForWorkouts(@NonNull java.util.Collection<Long> workoutIds) {
+        java.util.Map<Long, CardioPowerDynamicsRecord> result = new java.util.HashMap<>();
+        if (workoutIds.isEmpty()) return result;
+
+        StringBuilder inClause = new StringBuilder();
+        for (Long id : workoutIds) {
+            if (inClause.length() > 0) inClause.append(",");
+            inClause.append(id);
+        }
+
+        String selection = WorkoutSummaries.CPD_WORKOUT_ID + " IN (" + inClause + ")";
+        try (Cursor cursor = getDatabase().query(WorkoutSummaries.TABLE_CARDIO_POWER_DYNAMICS, null,
+                selection, null, null, null, null)) {
+            while (cursor != null && cursor.moveToNext()) {
+                long workoutId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_WORKOUT_ID));
+                result.put(workoutId, parseCardioPowerDynamicsRecord(cursor, workoutId));
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error querying batch cardio_power_dynamics", e);
+        }
+        return result;
+    }
+
+    private CardioPowerDynamicsRecord parseCardioPowerDynamicsRecord(Cursor cursor, long workoutId) {
+        double tauStart = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_TAU_START));
+        double hr0Start = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_HR0_START));
+        double kStart = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_K_START));
+        double hr200Start = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_HR200_START));
+        double r2Start = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_R2_START));
+        double rmseStart = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_RMSE_START));
+
+        int tauEndIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_TAU_END);
+        Double tauEnd = cursor.isNull(tauEndIdx) ? null : cursor.getDouble(tauEndIdx);
+
+        int hr0EndIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_HR0_END);
+        Double hr0End = cursor.isNull(hr0EndIdx) ? null : cursor.getDouble(hr0EndIdx);
+
+        int kEndIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_K_END);
+        Double kEnd = cursor.isNull(kEndIdx) ? null : cursor.getDouble(kEndIdx);
+
+        int hr200EndIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_HR200_END);
+        Double hr200End = cursor.isNull(hr200EndIdx) ? null : cursor.getDouble(hr200EndIdx);
+
+        int r2EndIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_R2_END);
+        Double r2End = cursor.isNull(r2EndIdx) ? null : cursor.getDouble(r2EndIdx);
+
+        int rmseEndIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_RMSE_END);
+        Double rmseEnd = cursor.isNull(rmseEndIdx) ? null : cursor.getDouble(rmseEndIdx);
+
+        int deltaHr200Idx = cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_DELTA_HR200);
+        Double deltaHr200 = cursor.isNull(deltaHr200Idx) ? null : cursor.getDouble(deltaHr200Idx);
+
+        int deltaTauIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_DELTA_TAU);
+        Double deltaTau = cursor.isNull(deltaTauIdx) ? null : cursor.getDouble(deltaTauIdx);
+
+        int deltaHr0Idx = cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_DELTA_HR0);
+        Double deltaHr0 = cursor.isNull(deltaHr0Idx) ? null : cursor.getDouble(deltaHr0Idx);
+
+        return new CardioPowerDynamicsRecord(
+                workoutId,
+                tauStart,
+                hr0Start,
+                kStart,
+                hr200Start,
+                r2Start,
+                rmseStart,
+                tauEnd,
+                hr0End,
+                kEnd,
+                hr200End,
+                r2End,
+                rmseEnd,
+                deltaHr200,
+                deltaTau,
+                deltaHr0
+        );
     }
 
     /**

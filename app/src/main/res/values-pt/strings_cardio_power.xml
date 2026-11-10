@@ -15,4 +15,21 @@
     <string name="cardio_power_info_slope_desc">Quantos Watts mec\u00e2nicos adicionais voc\u00ea produz por batimento card\u00edaco extra. Uma inclina\u00e7\u00e3o mais \u00edngreme (mais W/bpm) representa maior volume sist\u00f3lico e efici\u00eancia aer\u00f3bia.</string>
     <string name="cardio_power_info_overlay_title">Gr\u00e1fico Modelo Fresco vs. FC Real</string>
     <string name="cardio_power_info_overlay_desc">A curva azul simula a FC te\u00f3rica se voc\u00ea tivesse permanecido t\u00e3o fresco quanto na janela de calibra\u00e7\u00e3o (minutos 8\u201355). A dist\u00e2ncia crescente para a FC real (vermelho) visualiza a fadiga.</string>
+    <string name="cardio_power_domain_label">Cardio-Pot\u00eancia</string>
+    <string name="cardio_power_hr200_label">FC@200W</string>
+    <string name="cardio_power_hr200_range_format">%1$d \u2192 %2$d bpm</string>
+    <string name="cardio_power_hr200_single_format">%1$d bpm</string>
+    <string name="cardio_power_drift_format">Deriva: %1$s bpm</string>
+    <string name="cardio_power_tau_label">Resposta \u03c4</string>
+    <string name="cardio_power_tau_range_format">%1$ds \u2192 %2$ds</string>
+    <string name="cardio_power_tau_single_format">%1$ds</string>
+    <string name="cardio_power_tau_delta_format">\u0394\u03c4: %1$ss</string>
+    <string name="cardio_power_slope_label">Inclina\u00e7\u00e3o aer\u00f3bica</string>
+    <string name="cardio_power_slope_format">%1$.2f W/bpm</string>
+    <string name="cardio_power_r2_format">R\u00b2 = %1$.2f</string>
+    <string name="cardio_power_fresh_model_chip">Modelo FC fresco</string>
+    <string name="cardio_power_card_title">Din\u00e2mica Cardio-Pot\u00eancia</string>
+    <string name="cardio_power_fresh_window">Janela fresca (min 8\u201355)</string>
+    <string name="cardio_power_fatigued_window">Janela fadigada (fim)</string>
+    <string name="cardio_power_rmse_format">RMSE: %1$.1f bpm</string>
 </resources>

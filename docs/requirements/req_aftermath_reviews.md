@@ -3,7 +3,7 @@
 **Domain**: `aftermath_reviews`  
 **Prefixes**: `REV`  
 **Scope**: Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions.  
-**Total Requirements**: 9
+**Total Requirements**: 10
 
 ---
 
@@ -150,3 +150,30 @@
   • *Given* the 9 supported locales,
   • *When* running `TranslationParityTest`,
   • *Then* all cardio-power string tokens in `strings_cardio_power.xml` exist with 100% parity and valid formatting.
+
+### REQ-REV-010: Cardio-Power Dynamics Details Row & Fresh Model HR Graph Overlay [Verified]
+- **Tests**: `TST-REV-011` | **Tickets**: `ATT-3905`
+- **Implementation**: `WorkoutDataMapper.kt`, `WorkoutDetailsData.kt`, `WorkoutDetails.kt`, `CardioPowerDynamicsCard.kt`, `TelemetryMetricGraph.kt`, `WorkoutSummary.kt`, `TrackOnMapScreen.kt`
+- **Rationale**: Having identified 1st-order dynamical Power-HR parameters in `ATT-3904`, athletes require visual presentation in workout details and interactive telemetry charts to evaluate submaximal aerobic economy, lag response, and cardiac drift fatigue.
+- **Description**:
+  1. *Hydration & Domain Mapping*: `WorkoutDataMapper.kt` SHALL hydrate `CardioPowerDynamicsRecord?` into `WorkoutData` and `WorkoutDetailsData` from database persistence.
+  2. *Canonical Single-Line Grouped Row*: In `WorkoutDetails.kt`, `CardioPowerDynamicsRow` SHALL adhere strictly to design guidelines §5.10 (`AltitudeRow` pattern):
+     a. Left domain header column with category label, `4.dp` spacer, and `24.dp` domain icon (`ic_cardio_load`).
+     b. Single horizontal row of 3 `MetricItem`s: $\text{HR@200W}$ (Start $\rightarrow$ End bpm + drift), $\tau$ (Start $\rightarrow$ End s + $\Delta\tau$), and $1/K$ (W/bpm + $R^2$). Multi-row stacking and `FlowRow` pill clouds are strictly prohibited.
+     c. Rows SHALL be separated with `HorizontalDivider(thickness = 0.5.dp)` and `padding(vertical = 4.dp)`.
+  3. *Fresh Model vs. Actual HR Graph Overlay*:
+     a. `TelemetryMetricGraph.kt` SHALL expose a "Fresh HR Model" toggle chip.
+     b. When enabled, Canvas overlay SHALL draw predicted fresh HR trajectory $\text{HR}_{\text{fresh}}(t)$ as a dashed cyan curve (`TTColor.Zone2`), shade the cardiac drift gap where $\text{HR}_{\text{actual}} > \text{HR}_{\text{fresh}}$, and tint the calibration window (min 8–55).
+  4. *Progressive Disclosure Gating*:
+     a. Visual elements SHALL render only when `enableCardioPowerDynamics` is enabled, `cardioPowerDynamics != null`, and (in summary cards) `showCardioPowerInWorkoutSummary` is enabled. Workouts $< 20\text{ min}$ or lacking dynamics SHALL cleanly omit the row with zero visual artifact.
+  5. *Localization Parity*: All newly introduced UI strings SHALL reside in `res/values*/strings_cardio_power.xml` with 100% parity across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).
+- **Acceptance Criteria**:
+  • *Given* a workout with valid `cardioPowerDynamics` and `enableCardioPowerDynamics == true`,
+  • *When* viewing `WorkoutDetails`,
+  • *Then* `CardioPowerDynamicsRow` renders a single horizontal row of 3 `MetricItem`s with domain icon conforming to §5.10.
+  • *Given* `TelemetryMetricGraph` with paired Power+HR telemetry,
+  • *When* "Fresh HR Model" chip is toggled on,
+  • *Then* $\text{HR}_{\text{fresh}}(t)$ renders as a dashed cyan overlay with shaded cardiac drift gap.
+  • *Given* `enableCardioPowerDynamics == false` or workout $< 20\text{ min}$,
+  • *When* rendered,
+  • *Then* the row and overlay are omitted with zero visual artifact, and `TranslationParityTest` passes across all 9 locales.

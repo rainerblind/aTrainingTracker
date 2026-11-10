@@ -271,7 +271,9 @@ fun WorkoutSummary(
                             enableAerobicEfficiencyModel = effectiveTuningConfig.enableAerobicEfficiencyModel,
                             showAerobicEfficiencyInWorkoutSummary = effectiveTuningConfig.showAerobicEfficiencyInWorkoutSummary,
                             enableCriticalPowerModel = effectiveTuningConfig.enableCriticalPowerModel,
-                            showCriticalPowerInWorkoutSummary = effectiveTuningConfig.showCriticalPowerInWorkoutSummary
+                            showCriticalPowerInWorkoutSummary = effectiveTuningConfig.showCriticalPowerInWorkoutSummary,
+                            enableCardioPowerDynamics = effectiveTuningConfig.enableCardioPowerDynamics,
+                            showCardioPowerInWorkoutSummary = effectiveTuningConfig.showCardioPowerInWorkoutSummary
                         )
                         renderedAnySection = true
                     }

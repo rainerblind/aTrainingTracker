@@ -29,6 +29,7 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.MyHelper
+import com.atrainingtracker.trainingtracker.database.CardioPowerDynamicsRecord
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager
@@ -202,6 +203,7 @@ class WorkoutDataMapper(
             avgPowerToWeight = powerSummary.avgPowerToWeight,
             maxPowerToWeight = powerSummary.maxPowerToWeight,
             variabilityIndex = powerSummary.variabilityIndex,
+            cardioPowerDynamics = workoutSummariesDatabaseManager.getCardioPowerDynamics(workoutId),
 
             totalDistance = totalDistance,
             maxDisplacement = maxDisplacement,
@@ -519,7 +521,8 @@ class WorkoutDataMapper(
         val sportTypes: Map<Long, SportTypeInfo> = emptyMap(),
         val equipmentNames: Map<Long, String> = emptyMap(),
         val locationNames: Map<LatLng, String> = emptyMap(),
-        val athleteMetrics: Map<Long, AthleteMetricsInfo> = emptyMap()
+        val athleteMetrics: Map<Long, AthleteMetricsInfo> = emptyMap(),
+        val cardioPowerDynamics: Map<Long, CardioPowerDynamicsRecord> = emptyMap()
     )
 
     /**
@@ -790,6 +793,8 @@ class WorkoutDataMapper(
             avgPowerToWeight = powerSummary.avgPowerToWeight,
             maxPowerToWeight = powerSummary.maxPowerToWeight,
             variabilityIndex = powerSummary.variabilityIndex,
+            cardioPowerDynamics = batch.cardioPowerDynamics[snapshot.workoutId]
+                ?: workoutSummariesDatabaseManager.getCardioPowerDynamics(snapshot.workoutId),
 
             totalDistance = snapshot.totalDistance,
             maxDisplacement = maxDisplacement,

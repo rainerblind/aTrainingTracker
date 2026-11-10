@@ -15,4 +15,21 @@
     <string name="cardio_power_info_slope_desc">Cu\u00e1ntos vatios mec\u00e1nicos adicionales genera por cada latido card\u00edaco extra. Una mayor pendiente (m\u00e1s W/bpm) refleja un volumen sist\u00f3lico superior y mejor econom\u00eda aer\u00f3bica.</string>
     <string name="cardio_power_info_overlay_title">Gr\u00e1fico Modelo Fresco vs. FC Real</string>
     <string name="cardio_power_info_overlay_desc">La curva azul simula cu\u00e1l habr\u00eda sido su FC durante toda la salida manteni\u00e9ndose tan fresco como en la ventana de calibraci\u00f3n (minutos 8\u201355). La brecha creciente con la FC real (rojo) visualiza la fatiga.</string>
+    <string name="cardio_power_domain_label">Cardio-Potencia</string>
+    <string name="cardio_power_hr200_label">FC@200W</string>
+    <string name="cardio_power_hr200_range_format">%1$d \u2192 %2$d bpm</string>
+    <string name="cardio_power_hr200_single_format">%1$d bpm</string>
+    <string name="cardio_power_drift_format">Deriva: %1$s bpm</string>
+    <string name="cardio_power_tau_label">Respuesta \u03c4</string>
+    <string name="cardio_power_tau_range_format">%1$ds \u2192 %2$ds</string>
+    <string name="cardio_power_tau_single_format">%1$ds</string>
+    <string name="cardio_power_tau_delta_format">\u0394\u03c4: %1$ss</string>
+    <string name="cardio_power_slope_label">Pendiente aer\u00f3bica</string>
+    <string name="cardio_power_slope_format">%1$.2f W/bpm</string>
+    <string name="cardio_power_r2_format">R\u00b2 = %1$.2f</string>
+    <string name="cardio_power_fresh_model_chip">Modelo FC fresco</string>
+    <string name="cardio_power_card_title">Din\u00e1mica Cardio-Potencia</string>
+    <string name="cardio_power_fresh_window">Ventana fresca (min 8\u201355)</string>
+    <string name="cardio_power_fatigued_window">Ventana fatigada (final)</string>
+    <string name="cardio_power_rmse_format">RMSE: %1$.1f bpm</string>
 </resources>

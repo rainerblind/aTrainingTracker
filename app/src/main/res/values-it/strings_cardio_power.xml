@@ -15,4 +15,21 @@
     <string name="cardio_power_info_slope_desc">Quanti Watt meccanici addizionali vengono generati per ogni battito cardiaco in pi\u00f9. Una pendenza pi\u00f9 ripida (pi\u00f9 W/bpm) riflette una gittata sistolica superiore e migliore economia.</string>
     <string name="cardio_power_info_overlay_title">Grafico Modello Fresco vs. FC Reale</string>
     <string name="cardio_power_info_overlay_desc">La curva blu simula la FC teorica lungo l\u2019uscita se foste rimasti freschi come nella finestra di calibrazione (minuti 8\u201355). Il divario crescente rispetto alla FC reale (rosso) visualizza l\u2019affaticamento progressivo.</string>
+    <string name="cardio_power_domain_label">Cardio-Potenza</string>
+    <string name="cardio_power_hr200_label">FC@200W</string>
+    <string name="cardio_power_hr200_range_format">%1$d \u2192 %2$d bpm</string>
+    <string name="cardio_power_hr200_single_format">%1$d bpm</string>
+    <string name="cardio_power_drift_format">Deriva: %1$s bpm</string>
+    <string name="cardio_power_tau_label">Risposta \u03c4</string>
+    <string name="cardio_power_tau_range_format">%1$ds \u2192 %2$ds</string>
+    <string name="cardio_power_tau_single_format">%1$ds</string>
+    <string name="cardio_power_tau_delta_format">\u0394\u03c4: %1$ss</string>
+    <string name="cardio_power_slope_label">Pendenza aerobica</string>
+    <string name="cardio_power_slope_format">%1$.2f W/bpm</string>
+    <string name="cardio_power_r2_format">R\u00b2 = %1$.2f</string>
+    <string name="cardio_power_fresh_model_chip">Modello FC fresco</string>
+    <string name="cardio_power_card_title">Dinamica Cardio-Potenza</string>
+    <string name="cardio_power_fresh_window">Finestra fresca (min 8\u201355)</string>
+    <string name="cardio_power_fatigued_window">Finestra affaticata (fine)</string>
+    <string name="cardio_power_rmse_format">RMSE: %1$.1f bpm</string>
 </resources>

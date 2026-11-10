@@ -15,4 +15,21 @@
     <string name="cardio_power_info_slope_desc">Nombre de Watts m\u00e9caniques additionnels produits par battement cardiaque suppl\u00e9mentaire. Une pente plus \u00e9lev\u00e9e (plus de W/bpm) traduit un volume d\u2019\u00e9jection systolique et une \u00e9conomie sup\u00e9rieurs.</string>
     <string name="cardio_power_info_overlay_title">Graphique Mod\u00e8le Frais vs. FC R\u00e9elle</string>
     <string name="cardio_power_info_overlay_desc">La courbe bleue simule l\u2019\u00e9volution th\u00e9orique de votre FC si vous \u00e9tiez rest\u00e9 aussi frais que pendant la fen\u00eatre d\u2019\u00e9talonnage (minutes 8\u201355). L\u2019\u00e9cart croissant avec la FC r\u00e9elle (rouge) illustre la fatigue.</string>
+    <string name="cardio_power_domain_label">Cardio-Puissance</string>
+    <string name="cardio_power_hr200_label">FC@200W</string>
+    <string name="cardio_power_hr200_range_format">%1$d \u2192 %2$d bpm</string>
+    <string name="cardio_power_hr200_single_format">%1$d bpm</string>
+    <string name="cardio_power_drift_format">D\u00e9rive: %1$s bpm</string>
+    <string name="cardio_power_tau_label">R\u00e9ponse \u03c4</string>
+    <string name="cardio_power_tau_range_format">%1$ds \u2192 %2$ds</string>
+    <string name="cardio_power_tau_single_format">%1$ds</string>
+    <string name="cardio_power_tau_delta_format">\u0394\u03c4: %1$ss</string>
+    <string name="cardio_power_slope_label">Pente a\u00e9robie</string>
+    <string name="cardio_power_slope_format">%1$.2f W/bpm</string>
+    <string name="cardio_power_r2_format">R\u00b2 = %1$.2f</string>
+    <string name="cardio_power_fresh_model_chip">Mod\u00e8le FC frais</string>
+    <string name="cardio_power_card_title">Dynamique Cardio-Puissance</string>
+    <string name="cardio_power_fresh_window">Fen\u00eatre fra\u00eeche (min 8\u201355)</string>
+    <string name="cardio_power_fatigued_window">Fen\u00eatre fatigu\u00e9e (fin)</string>
+    <string name="cardio_power_rmse_format">RMSE: %1$.1f bpm</string>
 </resources>

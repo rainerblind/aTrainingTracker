@@ -26,15 +26,22 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -53,9 +60,12 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
@@ -64,6 +74,8 @@ import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
 import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.database.CardioPowerDynamicsRecord
+import com.atrainingtracker.trainingtracker.physiology.PowerHrDynamicsCalculator
 import com.atrainingtracker.trainingtracker.settings.ProfileXAxisDomain
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
@@ -119,9 +131,37 @@ fun TelemetryMetricGraph(
     paceCeilingMinKm: Float = TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM,
     enableGestures: Boolean = true,
     zoneDistribution: ZoneDistributionData? = null,
-    zoneDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.FIVE_ZONES
+    zoneDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.FIVE_ZONES,
+    cardioPowerDynamics: CardioPowerDynamicsRecord? = null,
+    enableCardioPowerDynamics: Boolean = true,
+    showFreshModelOverlay: Boolean? = null,
+    onShowFreshModelOverlayChange: ((Boolean) -> Unit)? = null
 ) {
     if (pathPoints.isEmpty()) return
+
+    var localShowFreshModel by rememberSaveable { mutableStateOf(false) }
+    val effectiveShowFreshModel = showFreshModelOverlay ?: localShowFreshModel
+
+    val hasPowerData = remember(pathPoints) {
+        pathPoints.any { it.power != null && it.power > 0 }
+    }
+    val canRenderFreshModelOverlay = metricType == TelemetryMetricType.HEART_RATE &&
+        cardioPowerDynamics != null &&
+        enableCardioPowerDynamics &&
+        hasPowerData
+
+    val freshHrTrajectory = remember(pathPoints, cardioPowerDynamics, canRenderFreshModelOverlay) {
+        if (canRenderFreshModelOverlay && cardioPowerDynamics != null) {
+            val powerSamples = pathPoints.map { it.power?.toDouble() }
+            PowerHrDynamicsCalculator.simulateTrajectory(
+                powerSamples = powerSamples,
+                tau = cardioPowerDynamics.tauStart,
+                hr0 = cardioPowerDynamics.hr0Start,
+                k = cardioPowerDynamics.kStart,
+                dt = 1.0
+            )
+        } else emptyList()
+    }
 
     val context = LocalContext.current
     val effectiveHrThresholds = remember(hrZoneThresholds, bSportType, context) {
@@ -793,6 +833,115 @@ fun TelemetryMetricGraph(
                         )
                     )
                 }
+
+                // Fresh Model HR Overlay & Cardiac Drift Gap Shading (REQ-REV-010 / ATT-3905)
+                if (canRenderFreshModelOverlay && effectiveShowFreshModel && freshHrTrajectory.isNotEmpty()) {
+                    // 1. Highlight Fresh Calibration Window (minutes 8–55)
+                    val calibStartX = if (isTimeDomain) {
+                        startPaddingPx + ElevationProfileZoomMath.distanceToCanvasX(480.0, startDist, visibleSpan, chartWidthPx)
+                    } else {
+                        val pt480 = pathPoints.firstOrNull { it.timeSec >= 480L } ?: pathPoints.firstOrNull()
+                        if (pt480 != null) {
+                            startPaddingPx + ElevationProfileZoomMath.distanceToCanvasX(pt480.distance, startDist, visibleSpan, chartWidthPx)
+                        } else startPaddingPx
+                    }
+
+                    val calibEndX = if (isTimeDomain) {
+                        startPaddingPx + ElevationProfileZoomMath.distanceToCanvasX(3300.0, startDist, visibleSpan, chartWidthPx)
+                    } else {
+                        val pt3300 = pathPoints.firstOrNull { it.timeSec >= 3300L } ?: pathPoints.lastOrNull()
+                        if (pt3300 != null) {
+                            startPaddingPx + ElevationProfileZoomMath.distanceToCanvasX(pt3300.distance, startDist, visibleSpan, chartWidthPx)
+                        } else startPaddingPx + chartWidthPx
+                    }
+
+                    val leftX = maxOf(startPaddingPx, minOf(calibStartX, calibEndX))
+                    val rightX = minOf(startPaddingPx + chartWidthPx, maxOf(calibStartX, calibEndX))
+                    if (rightX > leftX) {
+                        drawRect(
+                            color = TTColor.Zone2.copy(alpha = 0.08f),
+                            topLeft = Offset(leftX, topPaddingPx),
+                            size = Size(rightX - leftX, chartHeightPx)
+                        )
+                    }
+
+                    // 2. Cardiac Drift Gap Shading (where actual HR > fresh model HR)
+                    val driftActualPts = mutableListOf<Offset>()
+                    val driftFreshPts = mutableListOf<Offset>()
+
+                    fun flushDrift() {
+                        if (driftActualPts.size >= 2) {
+                            val driftPoly = Path()
+                            driftPoly.moveTo(driftActualPts.first().x, driftActualPts.first().y)
+                            for (j in 1 until driftActualPts.size) {
+                                driftPoly.lineTo(driftActualPts[j].x, driftActualPts[j].y)
+                            }
+                            for (j in driftFreshPts.indices.reversed()) {
+                                driftPoly.lineTo(driftFreshPts[j].x, driftFreshPts[j].y)
+                            }
+                            driftPoly.close()
+                            drawPath(driftPoly, color = TTColor.Zone4.copy(alpha = 0.22f))
+                        }
+                        driftActualPts.clear()
+                        driftFreshPts.clear()
+                    }
+
+                    for (i in pathPoints.indices) {
+                        val act = rawValues[i]
+                        val fr = freshHrTrajectory.getOrNull(i)
+                        if (act != null && fr != null) {
+                            val pt = pathPoints[i]
+                            val xSpan = if (isTimeDomain) pt.timeSec.toDouble() else pt.distance
+                            val x = startPaddingPx + ElevationProfileZoomMath.distanceToCanvasX(xSpan, startDist, visibleSpan, chartWidthPx)
+                            val yAct = valueToY(act)
+                            val yFr = valueToY(fr)
+
+                            if (act > fr) {
+                                driftActualPts.add(Offset(x, yAct))
+                                driftFreshPts.add(Offset(x, yFr))
+                            } else {
+                                if (driftActualPts.isNotEmpty()) {
+                                    driftActualPts.add(Offset(x, yAct))
+                                    driftFreshPts.add(Offset(x, yFr))
+                                    flushDrift()
+                                }
+                            }
+                        } else {
+                            if (driftActualPts.isNotEmpty()) {
+                                flushDrift()
+                            }
+                        }
+                    }
+                    flushDrift()
+
+                    // 3. Dashed Cyan Curve for Fresh HR Model (TTColor.Zone2)
+                    val freshPath = Path()
+                    var freshStarted = false
+                    for (i in pathPoints.indices) {
+                        val fr = freshHrTrajectory.getOrNull(i) ?: continue
+                        val pt = pathPoints[i]
+                        val xSpan = if (isTimeDomain) pt.timeSec.toDouble() else pt.distance
+                        val x = startPaddingPx + ElevationProfileZoomMath.distanceToCanvasX(xSpan, startDist, visibleSpan, chartWidthPx)
+                        val y = valueToY(fr)
+                        if (!freshStarted) {
+                            freshPath.moveTo(x, y)
+                            freshStarted = true
+                        } else {
+                            freshPath.lineTo(x, y)
+                        }
+                    }
+                    if (freshStarted) {
+                        drawPath(
+                            path = freshPath,
+                            color = TTColor.Zone2,
+                            style = Stroke(
+                                width = 2.dp.toPx(),
+                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx()), 0f),
+                                cap = StrokeCap.Round
+                            )
+                        )
+                    }
+                }
             }
 
             // Synchronized Scrubbing Cursor & Marker Dot
@@ -855,41 +1004,76 @@ fun TelemetryMetricGraph(
         }
     }
 
-    if (isLandscape) {
-        Row(
-            modifier = modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(modifier = Modifier.weight(0.72f)) {
-                chartCanvas()
+    val freshModelToggleChip: @Composable () -> Unit = {
+        if (canRenderFreshModelOverlay) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(end = if (isLandscape) 0.dp else 16.dp, bottom = 4.dp),
+                horizontalArrangement = Arrangement.End
+            ) {
+                FilterChip(
+                    selected = effectiveShowFreshModel,
+                    onClick = {
+                        val next = !effectiveShowFreshModel
+                        localShowFreshModel = next
+                        onShowFreshModelOverlayChange?.invoke(next)
+                    },
+                    label = {
+                        Text(
+                            text = stringResource(R.string.cardio_power_fresh_model_chip),
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    },
+                    modifier = Modifier
+                        .height(28.dp)
+                        .testTag("fresh_hr_model_toggle_chip")
+                )
             }
-            if (zoneDistribution != null) {
-                AlignedMarginalZoneDistribution(
-                    zoneDistribution = zoneDistribution,
-                    zoneDisplayMode = zoneDisplayMode,
-                    zoneBands = zoneBands,
-                    dataMin = dataMin,
-                    dataMax = dataMax,
-                    metricType = metricType,
-                    thresholdDashes = thresholdDashes,
-                    modifier = Modifier.weight(0.28f).height(110.dp)
-                )
-            } else if (nonZonedHistogram.isNotEmpty()) {
-                AlignedMarginalLinearDistribution(
-                    bins = nonZonedHistogram,
-                    dataMin = dataMin,
-                    dataMax = dataMax,
-                    metricType = metricType,
-                    modifier = Modifier.weight(0.28f).height(110.dp)
-                )
-            } else {
-                Spacer(modifier = Modifier.weight(0.28f))
+        }
+    }
+
+    if (isLandscape) {
+        Column(modifier = modifier.fillMaxWidth()) {
+            freshModelToggleChip()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(modifier = Modifier.weight(0.72f)) {
+                    chartCanvas()
+                }
+                if (zoneDistribution != null) {
+                    AlignedMarginalZoneDistribution(
+                        zoneDistribution = zoneDistribution,
+                        zoneDisplayMode = zoneDisplayMode,
+                        zoneBands = zoneBands,
+                        dataMin = dataMin,
+                        dataMax = dataMax,
+                        metricType = metricType,
+                        thresholdDashes = thresholdDashes,
+                        modifier = Modifier.weight(0.28f).height(110.dp)
+                    )
+                } else if (nonZonedHistogram.isNotEmpty()) {
+                    AlignedMarginalLinearDistribution(
+                        bins = nonZonedHistogram,
+                        dataMin = dataMin,
+                        dataMax = dataMax,
+                        metricType = metricType,
+                        modifier = Modifier.weight(0.28f).height(110.dp)
+                    )
+                } else {
+                    Spacer(modifier = Modifier.weight(0.28f))
+                }
             }
         }
     } else {
-        Box(modifier = modifier.fillMaxWidth()) {
-            chartCanvas()
+        Column(modifier = modifier.fillMaxWidth()) {
+            freshModelToggleChip()
+            Box(modifier = Modifier.fillMaxWidth()) {
+                chartCanvas()
+            }
         }
     }
 }

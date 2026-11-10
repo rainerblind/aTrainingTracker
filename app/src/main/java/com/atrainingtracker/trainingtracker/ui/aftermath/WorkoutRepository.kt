@@ -1764,12 +1764,14 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                         val stravaDataMap = stravaUploadDbHelper.getStravaActivityDataForWorkouts(chunkNames)
                         val clusterNamesMap = WorkoutClusterDatabaseManager.getInstance(application).getClusterNamesForIds(chunkClusterIds)
                         val lapsMap = LapsDatabaseManager.getInstance(application).getLapsForWorkouts(chunkIds)
+                        val cardioPowerMap = summariesManager.getCardioPowerDynamicsForWorkouts(chunkIds)
 
                         val batchMetadata = WorkoutDataMapper.BatchMetadata(
                             extrema = extremaList.groupBy { it.workoutId },
                             stravaData = stravaDataMap,
                             clusterNames = clusterNamesMap,
-                            laps = lapsMap
+                            laps = lapsMap,
+                            cardioPowerDynamics = cardioPowerMap
                         )
 
                         // 3. Map the chunk in memory without cursor seeking (ATT-2309 / REQ-STB-018.2)

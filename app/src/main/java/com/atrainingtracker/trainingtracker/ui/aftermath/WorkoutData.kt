@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.aftermath
 
 import androidx.compose.runtime.Immutable
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.database.CardioPowerDynamicsRecord
 import com.atrainingtracker.trainingtracker.database.WorkoutSource
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusGroupData
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.DescriptionData
@@ -135,6 +136,7 @@ data class WorkoutData(
     val avgPowerToWeight: Double? = null,
     val maxPowerToWeight: Double? = null,
     val variabilityIndex: Double? = null,
+    val cardioPowerDynamics: CardioPowerDynamicsRecord? = null,
 
     // --- 3. Heavy/Live Data ---
     val exportStatuses: List<ExportStatusGroupData> = emptyList(),
@@ -193,7 +195,8 @@ data class WorkoutData(
             workKj = workKj,
             avgPowerToWeight = avgPowerToWeight,
             maxPowerToWeight = maxPowerToWeight,
-            variabilityIndex = variabilityIndex
+            variabilityIndex = variabilityIndex,
+            cardioPowerDynamics = cardioPowerDynamics
         )
 
     val descriptionData: DescriptionData

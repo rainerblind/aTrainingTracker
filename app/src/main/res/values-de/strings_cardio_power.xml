@@ -15,4 +15,21 @@
     <string name="cardio_power_info_slope_desc">Wie viele zus\u00e4tzliche Watt mechanische Leistung Sie pro zus\u00e4tzlichem Herzschlag erzeugen. Eine steilere Steigung (mehr W/bpm) spiegelt ein gr\u00f6\u00dferes Schlagvolumen und h\u00f6here \u00d6konomie wider.</string>
     <string name="cardio_power_info_overlay_title">Frisch-Modell vs. Reale HF Graph</string>
     <string name="cardio_power_info_overlay_desc">Die blaue Kurve simuliert den theoretischen HF-Verlauf, wenn Sie \u00fcber die gesamte Fahrt so frisch geblieben w\u00e4ren wie im Kalibrierungsfenster (Minuten 8\u201355). Die wachsende L\u00fccke zur realen HF (Rot) visualisiert die fortschreitende Erm\u00fcdung.</string>
+    <string name="cardio_power_domain_label">Cardio-Leistung</string>
+    <string name="cardio_power_hr200_label">HF@200W</string>
+    <string name="cardio_power_hr200_range_format">%1$d \u2192 %2$d bpm</string>
+    <string name="cardio_power_hr200_single_format">%1$d bpm</string>
+    <string name="cardio_power_drift_format">Drift: %1$s bpm</string>
+    <string name="cardio_power_tau_label">Reaktions-\u03c4</string>
+    <string name="cardio_power_tau_range_format">%1$ds \u2192 %2$ds</string>
+    <string name="cardio_power_tau_single_format">%1$ds</string>
+    <string name="cardio_power_tau_delta_format">\u0394\u03c4: %1$ss</string>
+    <string name="cardio_power_slope_label">Aerobe Steigung</string>
+    <string name="cardio_power_slope_format">%1$.2f W/bpm</string>
+    <string name="cardio_power_r2_format">R\u00b2 = %1$.2f</string>
+    <string name="cardio_power_fresh_model_chip">Frisches HF-Modell</string>
+    <string name="cardio_power_card_title">Cardio-Leistungs-Dynamik</string>
+    <string name="cardio_power_fresh_window">Frisch-Fenster (Min. 8\u201355)</string>
+    <string name="cardio_power_fatigued_window">Erm\u00fcdetes Fenster (Ende)</string>
+    <string name="cardio_power_rmse_format">RMSE: %1$.1f bpm</string>
 </resources>

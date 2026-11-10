@@ -585,6 +585,8 @@ fun MapDetailLayout(
                                             hrZoneThresholds = hrThresholds,
                                             zoneDistribution = hrZoneDistribution,
                                             zoneDisplayMode = hrZoneDisplayMode,
+                                            cardioPowerDynamics = workoutData?.cardioPowerDynamics,
+                                            enableCardioPowerDynamics = tuningConfig.enableCardioPowerDynamics,
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .chartInteractiveTouchDetector(

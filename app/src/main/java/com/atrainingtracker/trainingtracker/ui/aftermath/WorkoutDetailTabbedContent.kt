@@ -795,6 +795,8 @@ private fun RenderWorkoutDetailCardSections(
                     showAerobicEfficiencyInWorkoutSummary = tuningConfig.showAerobicEfficiencyInWorkoutSummary,
                     enableCriticalPowerModel = tuningConfig.enableCriticalPowerModel,
                     showCriticalPowerInWorkoutSummary = tuningConfig.showCriticalPowerInWorkoutSummary,
+                    enableCardioPowerDynamics = tuningConfig.enableCardioPowerDynamics,
+                    showCardioPowerInWorkoutSummary = tuningConfig.showCardioPowerInWorkoutSummary,
                     modifier = Modifier.fillMaxWidth()
                 )
             }

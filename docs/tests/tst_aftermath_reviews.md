@@ -3,7 +3,7 @@
 **Domain**: `aftermath_reviews`  
 **Prefixes**: `REV`  
 **Scope**: Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions.  
-**Total Tests**: 10
+**Total Tests**: 11
 
 ---
 
@@ -80,3 +80,16 @@
   4. *UI & 5th School Toggle Contract Test (`PhysiologyModelsSectionTest`)*: Verify 5th school toggle binds to DataStore, verifies Info button opens `PowerHrDynamicsInfoDialog`, and verifies UI gating.
   5. *9-Locale Localization Parity Test (`TranslationParityTest`)*: Verify all strings in `strings_cardio_power.xml` across EN, DE, ES, FR, IT, JA, NL, PL, PT with valid linebreaks and matching format specifiers.
   6. *Tier 1 Targeted Verification Suite*: `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.physiology.*" --tests "com.atrainingtracker.trainingtracker.database.*" --tests "com.atrainingtracker.trainingtracker.ui.settings.tuning.*" --tests "com.atrainingtracker.trainingtracker.build.*"`
+
+
+### TST-REV-011: **Cardio-Power Visual Display & Overlay Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-REV-010`
+- **Component**: `WorkoutDataMapper.kt`, `WorkoutDetailsData.kt`, `WorkoutDetails.kt`, `CardioPowerDynamicsCard.kt`, `TelemetryMetricGraph.kt`, `WorkoutSummary.kt`, `TrackOnMapScreen.kt`
+- **Jira**: `ATT-3905`
+- **Test Description**:
+  1. *Data Hydration Test (`WorkoutDataMapperTest`)*: Verify mapper hydrates `CardioPowerDynamicsRecord` into `WorkoutData` and `WorkoutDetailsData`.
+  2. *Grouped Metric Row Layout & §5.10 Compliance Test (`WorkoutDetailsCardioPowerRowTest`)*: Verify `CardioPowerDynamicsRow` conforms strictly to §5.10 (single `Row`, 3 `MetricItem`s, zero multi-row wrapping, proper divider padding, clean null suppression).
+  3. *Telemetry Graph Fresh Model Overlay Test (`TelemetryMetricGraphOverlayTest`)*: Verify toggle chip state management, trajectory simulation sampling, dashed curve drawing parameters, and drift shading bounds.
+  4. *Settings Gating & Visibility Test (`WorkoutDetailsVisibilityTest`)*: Verify row visibility honors `enableCardioPowerDynamics`, `showCardioPowerInWorkoutSummary`, and data presence.
+  5. *9-Locale Localization Parity Test (`TranslationParityTest`)*: Verify all new cardio-power UI tokens in `strings_cardio_power.xml` across EN, DE, ES, FR, IT, JA, NL, PL, PT.
+

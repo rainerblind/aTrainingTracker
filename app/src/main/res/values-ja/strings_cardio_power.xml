@@ -15,4 +15,21 @@
     <string name="cardio_power_info_slope_desc">\u5fc3\u62cd\u65701\u62cd\u306e\u5897\u52a0\u306b\u5bfe\u3057\u3066\u751f\u6210\u3067\u304d\u308b\u8ffd\u52a0\u306e\u30ef\u30c3\u30c8\u6570\u3002\u50be\u304d\u304c\u6025\u306a\u307b\u3069 (W/bpm\u304c\u5927\u304d\u3044)\u30011\u56de\u62cd\u51fa\u91cf\u3068\u6709\u9178\u7d20\u7d4c\u6e08\u6027\u304c\u512a\u308c\u3066\u3044\u307e\u3059\u3002</string>
     <string name="cardio_power_info_overlay_title">\u30d5\u30ec\u30c3\u30b7\u30e5\u4e88\u6e2c vs \u5b9f\u969b\u306e\u5fc3\u62cd\u30b0\u30e9\u30d5</string>
     <string name="cardio_power_info_overlay_desc">\u9752\u306e\u66f2\u7dda\u306f\u3001\u30e9\u30a4\u30c9\u5168\u4f53\u3092\u901a\u3058\u3066\u6821\u6b63\u533a\u9593 (8\u301c55\u5206) \u3068\u540c\u3058\u30d5\u30ec\u30c3\u30b7\u30e5\u306a\u72b6\u614b\u3060\u3063\u305f\u5834\u5408\u306e\u7406\u8ad6\u5fc3\u62cd\u6570\u3092\u793a\u3057\u307e\u3059\u3002\u5b9f\u969b\u306e\u5fc3\u62cd\u6570 (\u8d64) \u3068\u306e\u5f8c\u534a\u306e\u9694\u305f\u308a\u304c\u75b2\u52b4\u3092\u53ef\u8996\u5316\u3057\u307e\u3059\u3002</string>
+    <string name="cardio_power_domain_label">心拍パワー</string>
+    <string name="cardio_power_hr200_label">心拍@200W</string>
+    <string name="cardio_power_hr200_range_format">%1$d \u2192 %2$d bpm</string>
+    <string name="cardio_power_hr200_single_format">%1$d bpm</string>
+    <string name="cardio_power_drift_format">ドリフト: %1$s bpm</string>
+    <string name="cardio_power_tau_label">応答 \u03c4</string>
+    <string name="cardio_power_tau_range_format">%1$ds \u2192 %2$ds</string>
+    <string name="cardio_power_tau_single_format">%1$ds</string>
+    <string name="cardio_power_tau_delta_format">\u0394\u03c4: %1$ss</string>
+    <string name="cardio_power_slope_label">有酸素スロープ</string>
+    <string name="cardio_power_slope_format">%1$.2f W/bpm</string>
+    <string name="cardio_power_r2_format">R\u00b2 = %1$.2f</string>
+    <string name="cardio_power_fresh_model_chip">フレッシュ心拍モデル</string>
+    <string name="cardio_power_card_title">心拍パワーダイナミクス</string>
+    <string name="cardio_power_fresh_window">フレッシュ区間 (8\u201355分)</string>
+    <string name="cardio_power_fatigued_window">疲労区間 (終盤)</string>
+    <string name="cardio_power_rmse_format">RMSE: %1$.1f bpm</string>
 </resources>

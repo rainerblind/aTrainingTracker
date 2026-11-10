@@ -15,4 +15,21 @@
     <string name="cardio_power_info_slope_desc">How many additional Watts of mechanical work you produce per extra heartbeat. A steeper slope (more W/bpm) represents higher stroke volume and aerobic economy.</string>
     <string name="cardio_power_info_overlay_title">Fresh Model vs. Actual HR Graph</string>
     <string name="cardio_power_info_overlay_desc">The Blue curve simulates what your heart rate would be throughout the ride if you remained as fresh as during the calibration window (minutes 8\u201355). The widening gap to your Actual HR (Red) visualizes progressive fatigue in real time.</string>
+    <string name="cardio_power_domain_label">Cardio-Power</string>
+    <string name="cardio_power_hr200_label">HR@200W</string>
+    <string name="cardio_power_hr200_range_format">%1$d \u2192 %2$d bpm</string>
+    <string name="cardio_power_hr200_single_format">%1$d bpm</string>
+    <string name="cardio_power_drift_format">Drift: %1$s bpm</string>
+    <string name="cardio_power_tau_label">Response \u03c4</string>
+    <string name="cardio_power_tau_range_format">%1$ds \u2192 %2$ds</string>
+    <string name="cardio_power_tau_single_format">%1$ds</string>
+    <string name="cardio_power_tau_delta_format">\u0394\u03c4: %1$ss</string>
+    <string name="cardio_power_slope_label">Aerobic Slope</string>
+    <string name="cardio_power_slope_format">%1$.2f W/bpm</string>
+    <string name="cardio_power_r2_format">R\u00b2 = %1$.2f</string>
+    <string name="cardio_power_fresh_model_chip">Fresh HR Model</string>
+    <string name="cardio_power_card_title">Cardio-Power Dynamics</string>
+    <string name="cardio_power_fresh_window">Fresh Window (min 8\u201355)</string>
+    <string name="cardio_power_fatigued_window">Fatigued Window (End)</string>
+    <string name="cardio_power_rmse_format">RMSE: %1$.1f bpm</string>
 </resources>

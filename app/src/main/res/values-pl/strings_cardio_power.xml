@@ -15,4 +15,21 @@
     <string name="cardio_power_info_slope_desc">Ile dodatkowych wat\u00f3w mocy mechanicznej generujesz na ka\u017cde dodatkowe uderzenie serca. Bardziej strome nachylenie (wi\u0119cej W/bpm) \u015bwiadczy o wi\u0119kszej obj\u0119to\u015bci wyrzutowej i ekonomii tlenowej.</string>
     <string name="cardio_power_info_overlay_title">Wykres: Model \u015bwie\u017co\u015bci vs Rzeczywiste HR</string>
     <string name="cardio_power_info_overlay_desc">Niebieska linia symuluje teoretyczne t\u0119tno, gdyby zachowa\u0107 \u015bwie\u017co\u015b\u0107 z okna kalibracji (minuty 8\u201355) przez ca\u0142y trening. Rosn\u0105ca r\u00f3\u017cnica wzgl\u0119dem rzeczywistego HR (czerwona) obrazuje zm\u0119czenie.</string>
+    <string name="cardio_power_domain_label">Kardio-Moc</string>
+    <string name="cardio_power_hr200_label">HR@200W</string>
+    <string name="cardio_power_hr200_range_format">%1$d \u2192 %2$d bpm</string>
+    <string name="cardio_power_hr200_single_format">%1$d bpm</string>
+    <string name="cardio_power_drift_format">Dryf: %1$s bpm</string>
+    <string name="cardio_power_tau_label">Reakcja \u03c4</string>
+    <string name="cardio_power_tau_range_format">%1$ds \u2192 %2$ds</string>
+    <string name="cardio_power_tau_single_format">%1$ds</string>
+    <string name="cardio_power_tau_delta_format">\u0394\u03c4: %1$ss</string>
+    <string name="cardio_power_slope_label">Nachylenie tlenowe</string>
+    <string name="cardio_power_slope_format">%1$.2f W/bpm</string>
+    <string name="cardio_power_r2_format">R\u00b2 = %1$.2f</string>
+    <string name="cardio_power_fresh_model_chip">\u015awie\u017cy model HR</string>
+    <string name="cardio_power_card_title">Dynamika Kardio-Moc</string>
+    <string name="cardio_power_fresh_window">Okno \u015bwie\u017co\u015bci (min 8\u201355)</string>
+    <string name="cardio_power_fatigued_window">Okno zm\u0119czenia (koniec)</string>
+    <string name="cardio_power_rmse_format">RMSE: %1$.1f bpm</string>
 </resources>
