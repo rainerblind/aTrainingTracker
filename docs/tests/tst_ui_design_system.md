@@ -8131,6 +8131,26 @@
   4. *Tier 1 Targeted Unit Test Regression (`TST-UI-507.4`)*:
   • Execute targeted test suite (`ui.equipment.*`, `ui.tracking.controltracking.*`, `ui.settings.importbackup.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `ui.components.core.*`, `build.*`) asserting 100% pass rate.
 
+### TST-UI-508: **Filter Chips & Sheets Imperial Unit Parity & Rounding Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-508`, `REQ-UI-157`, `REQ-UI-187`, `REQ-UI-425`
+- **Component**: `FilterFormattingUtils.kt`, `FilterFormattingUtilsTest.kt`, `ActiveFilterChipsRow.kt`, `ActiveClusterFilterChipsRow.kt`, `ActiveRouteFilterChipsRow.kt`, `ClusterFilterBottomSheet.kt`, `RouteFilterBottomSheet.kt`
+- **Jira**: `ATT-6168`
+- **Test Description**:
+  1. *Filter Distance & Elevation Formatting Unit Test (`TST-UI-508.1`, `FilterFormattingUtilsTest.kt`)*:
+  • Verify `formatFilterDistanceChip` formats interval, min-only, and max-only correctly for metric (`km`) and imperial (`mi`), asserting at most 1 decimal place without trailing `.0` (e.g. "10 km", "12.5 mi").
+  • Verify `formatFilterElevationChip` formats elevation correctly for metric (`m`) and imperial (`ft`), asserting rounded integer values (e.g. "100 m", "500 ft").
+  2. *Active Filter Chips Row Imperial Unit Presentation Contract Test (`TST-UI-508.2`, `ActiveFilterChipsRowTest.kt`)*:
+  • Verify `ActiveFilterChipsRow`, `ActiveClusterFilterChipsRow`, and `ActiveRouteFilterChipsRow` display imperial distance (`mi`) and elevation (`ft`) chips when `TrainingApplication.getUnit() == MyUnits.IMPERIAL`.
+  3. *Cluster & Route Bottom Sheet Preset & Input Conversion Test (`TST-UI-508.3`, `FilterFormattingUtilsTest.kt` / `ClusterFilterBottomSheetTest.kt`)*:
+  • Verify distance and elevation presets return appropriate athletic thresholds for metric vs imperial.
+  • Verify two-way input conversion between display strings (mi/ft) and domain criteria meters.
+  4. *9-Language Localization & Translation Parity Suite (`TST-UI-508.4`, `TranslationParityTest.kt`)*:
+  • Verify all newly added imperial filter format strings exist across all 9 canonical locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) with matching format specifiers.
+  5. *Tier 1 Targeted Unit Test Regression (`TST-UI-508.5`)*:
+  • Execute targeted UI filter test suite (`ui.common.filters.*`, `ui.aftermath.workoutlist.*`, `ui.clusters.*`, `ui.routes.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `ui.components.core.*`) asserting 100% pass rate.
+
+
 
 
 

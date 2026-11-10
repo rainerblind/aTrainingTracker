@@ -15191,3 +15191,48 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Phase A scope bounded strictly to UI & ViewModels; zero modifications to Phase B (`ATT-6426`) or Phase C (`ATT-6427`) components; 100% unit test pass rate.
 
+### REQ-UI-508: Filter Chips & Sheets Imperial Unit Parity & Consistent Rounding [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-508` | **Tickets**: `ATT-6168`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/common/filters/FilterFormattingUtils.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/ActiveFilterChipsRow.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/ActiveClusterFilterChipsRow.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/ActiveRouteFilterChipsRow.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/ClusterFilterBottomSheet.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RouteFilterBottomSheet.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutFilterBottomSheet.kt`
+- **Rationale**: Filter chips across Workouts, Clusters, and Routes hardcode metric units (`km`, `m`) and unconditional division by `1000.0`, resulting in inaccurate labels (e.g., 10 mi displays as "16.09344 km") and floating-point precision artifacts when Imperial units (`TrainingApplication.getUnit() == MyUnits.IMPERIAL`) are configured. Furthermore, Cluster and Route filter bottom sheets hardcode metric presets and labels. The system SHALL introduce centralized filter unit formatting utilities (`FilterFormattingUtils.kt`), provide imperial unit conversion and consistent rounding (max 1 decimal for distance without trailing `.0`; integer for elevation) across all three active filter chip rows, and support imperial presets and text inputs in `ClusterFilterBottomSheet` and `RouteFilterBottomSheet` with 9-language localization parity in `strings_filters.xml` (ATT-6168, refining `REQ-UI-157`, `REQ-UI-187`, and `REQ-UI-425`):
+1. *Centralized Filter Formatting Utilities (`REQ-UI-508.1`)*:
+• `FilterFormattingUtils.kt` SHALL provide `formatFilterDistanceChip(...)` and `formatFilterElevationChip(...)` to format interval, min-only, and max-only filter chips using unit-aware string resources (`km`/`mi` and `m`/`ft`).
+• Distance input strings SHALL be formatted to at most 1 decimal place, stripping redundant `.0` for integers (e.g. `10`, `12.5`). Elevation input strings SHALL be formatted as rounded integers.
+• Reusable preset lists (`getDistancePresets(isImperial)` and `getElevationPresets(isImperial)`) SHALL provide standard athletic interval thresholds for both metric and imperial units.
+2. *Active Filter Chips Imperial Unit Parity (`REQ-UI-508.2`)*:
+• In `ActiveFilterChipsRow.kt`, `ActiveClusterFilterChipsRow.kt`, and `ActiveRouteFilterChipsRow.kt`, distance and elevation filter chip labels SHALL evaluate `TrainingApplication.getUnit() == MyUnits.IMPERIAL`.
+• When imperial is active: distance meters SHALL be converted to miles (`meters / 1609.344`) and formatted with `"mi"`; elevation gain meters SHALL be converted to feet (`meters * 3.28084`) and formatted with `"ft"`.
+• When metric is active: distance meters SHALL be converted to kilometers (`meters / 1000.0`) and formatted with `"km"`; elevation gain meters SHALL be formatted with `"m"`.
+3. *Cluster & Route Bottom Sheet Imperial Presets and Inputs (`REQ-UI-508.3`)*:
+• In `ClusterFilterBottomSheet.kt` and `RouteFilterBottomSheet.kt`, distance and elevation filter chip presets and text field labels SHALL dynamically reflect metric or imperial units based on `TrainingApplication.getUnit()`.
+• User-entered imperial distance (`mi`) and elevation (`ft`) values SHALL be converted to raw meters when updating `ClusterFilterCriteria` and `RouteFilterCriteria` drafts (`meters = miles * 1609.344`, `meters = feet / 3.28084`), preserving raw SI meter storage in domain models.
+4. *Domain-Partitioned 9-Language Localization Parity (`REQ-UI-508.4`)*:
+• Imperial filter format strings (intervals, min-only, max-only, and unit labels) SHALL be defined in `strings_filters.xml` across all 9 canonical locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) per Rule 9 (`REQ-PRO-041.3`).
+5. *Preservation of Domain Invariants (`REQ-UI-508.5`)*:
+• `WorkoutFilterCriteria`, `ClusterFilterCriteria`, and `RouteFilterCriteria` data classes SHALL continue storing distance and elevation thresholds strictly in raw SI meters (`minDistanceMeters`, `maxDistanceMeters`, `minElevationGainMeters`, `maxElevationGainMeters`).
+• Database queries, repository filtering pipelines, and sorting algorithms SHALL remain 100% untouched.
+
+### Requirement Archaeology & Chesterton's Fence Audit:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-508`, refining `REQ-UI-157` (*Workout Filter*), `REQ-UI-187` (*Cluster Filter*), and `REQ-UI-425` (*Elevation Gain Filter*). Targets `ActiveFilterChipsRow.kt`, `ActiveClusterFilterChipsRow.kt`, `ActiveRouteFilterChipsRow.kt`, `ClusterFilterBottomSheet.kt`, `RouteFilterBottomSheet.kt`, and `FilterFormattingUtils.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-40.4 (`ATT-1276`, commit `69e4f1a2`), where filter chips were initially introduced with metric-only strings.
+3. *Root Reason for Existing Formulation*: Metric was the original baseline; imperial units were added incrementally to `WorkoutFilterBottomSheet` but chips and secondary filter sheets retained legacy hardcoded `/ 1000.0` metric formatting.
+4. *Preservation of Core Invariants*: Raw SI meter storage in domain criteria models (`minDistanceMeters`, `maxDistanceMeters`, etc.), database query stability, and 100% backward compatibility for metric users are strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete with Imperial units selected (`MyUnits.IMPERIAL`),
+• *When* an active distance filter of 16,093.44 meters (10 miles) is displayed on `ActiveFilterChipsRow`, `ActiveClusterFilterChipsRow`, or `ActiveRouteFilterChipsRow`,
+• *Then* the chip label displays "10 mi" (or localized equivalent) without floating-point precision artifacts, instead of "16.09344 km".
+• *Given* an athlete with Imperial units selected,
+• *When* an active elevation filter of 304.8 meters (1,000 feet) is displayed,
+• *Then* the chip label displays "1000 ft" (or localized equivalent) instead of "304 m".
+• *Given* `ClusterFilterBottomSheet` or `RouteFilterBottomSheet` opened under Imperial units,
+• *When* inspecting the distance and elevation filter sections,
+• *Then* presets display athletic mile and feet thresholds and text fields display "(mi)" and "(ft)" labels.
+• *Given* an athlete entering "5.5" miles in `ClusterFilterBottomSheet` or `RouteFilterBottomSheet`,
+• *When* applying the filter,
+• *Then* the criteria stores the converted meter equivalent (~8,851.39 m) in `minDistanceMeters`.
+
+**Invariants**: Raw SI meter storage in filter criteria; 100% 9-language translation parity in `strings_filters.xml`; metric formatting parity preserved for metric users; 100% clean-room test pass rate.
+
+

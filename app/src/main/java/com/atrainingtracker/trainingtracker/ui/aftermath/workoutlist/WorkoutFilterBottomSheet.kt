@@ -68,6 +68,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSource
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.common.filters.FilterBottomSheetScaffold
+import com.atrainingtracker.trainingtracker.ui.common.filters.FilterFormattingUtils
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -166,17 +167,17 @@ fun WorkoutFilterBottomSheet(
     var localStartLocationLng by remember(criteria.startLocationLng) { mutableStateOf(criteria.startLocationLng) }
     var localStartLocationRadiusM by remember(criteria.startLocationRadiusM) { mutableStateOf(criteria.startLocationRadiusM) }
 
-    val isImperial = remember { TrainingApplication.getUnit() == MyUnits.IMPERIAL }
-    val distanceMultiplier = remember(isImperial) { if (isImperial) BANALService.METER_PER_MILE else 1000.0 }
-    val elevationMultiplier = remember(isImperial) { if (isImperial) BANALService.METER_PER_FOOT else 1.0 }
+    val isImperial = FilterFormattingUtils.rememberIsImperialUnits()
+    val distanceMultiplier = remember(isImperial) { FilterFormattingUtils.getDistanceMultiplier(isImperial) }
+    val elevationMultiplier = remember(isImperial) { FilterFormattingUtils.getElevationMultiplier(isImperial) }
 
     var localMinDistanceMeters by remember(criteria.minDistanceMeters) { mutableStateOf(criteria.minDistanceMeters) }
     var localMaxDistanceMeters by remember(criteria.maxDistanceMeters) { mutableStateOf(criteria.maxDistanceMeters) }
     var minDistanceText by remember(criteria.minDistanceMeters, distanceMultiplier) {
-        mutableStateOf(criteria.minDistanceMeters?.let { (it / distanceMultiplier).let { v -> if (v % 1.0 == 0.0) v.toInt().toString() else String.format(Locale.US, "%.1f", v) } } ?: "")
+        mutableStateOf(FilterFormattingUtils.formatDistanceInputValue(criteria.minDistanceMeters, distanceMultiplier))
     }
     var maxDistanceText by remember(criteria.maxDistanceMeters, distanceMultiplier) {
-        mutableStateOf(criteria.maxDistanceMeters?.let { (it / distanceMultiplier).let { v -> if (v % 1.0 == 0.0) v.toInt().toString() else String.format(Locale.US, "%.1f", v) } } ?: "")
+        mutableStateOf(FilterFormattingUtils.formatDistanceInputValue(criteria.maxDistanceMeters, distanceMultiplier))
     }
 
     var localMinDurationSec by remember(criteria.minDurationSec) { mutableStateOf(criteria.minDurationSec) }
@@ -191,10 +192,10 @@ fun WorkoutFilterBottomSheet(
     var localMinElevationGainMeters by remember(criteria.minElevationGainMeters) { mutableStateOf(criteria.minElevationGainMeters) }
     var localMaxElevationGainMeters by remember(criteria.maxElevationGainMeters) { mutableStateOf(criteria.maxElevationGainMeters) }
     var minElevationText by remember(criteria.minElevationGainMeters, elevationMultiplier) {
-        mutableStateOf(criteria.minElevationGainMeters?.let { (it / elevationMultiplier).roundToInt().toString() } ?: "")
+        mutableStateOf(FilterFormattingUtils.formatElevationInputValue(criteria.minElevationGainMeters, elevationMultiplier))
     }
     var maxElevationText by remember(criteria.maxElevationGainMeters, elevationMultiplier) {
-        mutableStateOf(criteria.maxElevationGainMeters?.let { (it / elevationMultiplier).roundToInt().toString() } ?: "")
+        mutableStateOf(FilterFormattingUtils.formatElevationInputValue(criteria.maxElevationGainMeters, elevationMultiplier))
     }
 
     var showStartDatePicker by remember { mutableStateOf(false) }
@@ -587,26 +588,8 @@ fun WorkoutFilterBottomSheet(
                 color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.height(6.dp))
-            val distanceUnit = if (isImperial) "mi" else "km"
-            val distancePresets = remember(isImperial) {
-                if (isImperial) {
-                    listOf(
-                        Triple("< 10 mi", null, 10.0 * BANALService.METER_PER_MILE),
-                        Triple("10 - 25 mi", 10.0 * BANALService.METER_PER_MILE, 25.0 * BANALService.METER_PER_MILE),
-                        Triple("25 - 50 mi", 25.0 * BANALService.METER_PER_MILE, 50.0 * BANALService.METER_PER_MILE),
-                        Triple("50 - 100 mi", 50.0 * BANALService.METER_PER_MILE, 100.0 * BANALService.METER_PER_MILE),
-                        Triple("> 100 mi", 100.0 * BANALService.METER_PER_MILE, null)
-                    )
-                } else {
-                    listOf(
-                        Triple("< 10 km", null, 10000.0),
-                        Triple("10 - 25 km", 10000.0, 25000.0),
-                        Triple("25 - 50 km", 25000.0, 50000.0),
-                        Triple("50 - 100 km", 50000.0, 100000.0),
-                        Triple("> 100 km", 100000.0, null)
-                    )
-                }
-            }
+            val distanceUnit = FilterFormattingUtils.getDistanceUnit(isImperial)
+            val distancePresets = remember(isImperial) { FilterFormattingUtils.getDistancePresets(isImperial) }
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -624,8 +607,8 @@ fun WorkoutFilterBottomSheet(
                             } else {
                                 localMinDistanceMeters = minM
                                 localMaxDistanceMeters = maxM
-                                minDistanceText = minM?.let { (it / distanceMultiplier).roundToInt().toString() } ?: ""
-                                maxDistanceText = maxM?.let { (it / distanceMultiplier).roundToInt().toString() } ?: ""
+                                minDistanceText = FilterFormattingUtils.formatDistanceInputValue(minM, distanceMultiplier)
+                                maxDistanceText = FilterFormattingUtils.formatDistanceInputValue(maxM, distanceMultiplier)
                             }
                         },
                         label = { Text(label) }
@@ -742,26 +725,8 @@ fun WorkoutFilterBottomSheet(
                 color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.height(6.dp))
-            val elevationUnit = if (isImperial) "ft" else "m"
-            val elevationPresets = remember(isImperial) {
-                if (isImperial) {
-                    listOf(
-                        Triple("< 500 ft", null, 500.0 * BANALService.METER_PER_FOOT),
-                        Triple("500 - 1000 ft", 500.0 * BANALService.METER_PER_FOOT, 1000.0 * BANALService.METER_PER_FOOT),
-                        Triple("1000 - 2000 ft", 1000.0 * BANALService.METER_PER_FOOT, 2000.0 * BANALService.METER_PER_FOOT),
-                        Triple("2000 - 4000 ft", 2000.0 * BANALService.METER_PER_FOOT, 4000.0 * BANALService.METER_PER_FOOT),
-                        Triple("> 4000 ft", 4000.0 * BANALService.METER_PER_FOOT, null)
-                    )
-                } else {
-                    listOf(
-                        Triple("< 100 m", null, 100.0),
-                        Triple("100 - 250 m", 100.0, 250.0),
-                        Triple("250 - 500 m", 250.0, 500.0),
-                        Triple("500 - 1000 m", 500.0, 1000.0),
-                        Triple("> 1000 m", 1000.0, null)
-                    )
-                }
-            }
+            val elevationUnit = FilterFormattingUtils.getElevationUnit(isImperial)
+            val elevationPresets = remember(isImperial) { FilterFormattingUtils.getElevationPresets(isImperial) }
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -779,8 +744,8 @@ fun WorkoutFilterBottomSheet(
                             } else {
                                 localMinElevationGainMeters = minM
                                 localMaxElevationGainMeters = maxM
-                                minElevationText = minM?.let { (it / elevationMultiplier).roundToInt().toString() } ?: ""
-                                maxElevationText = maxM?.let { (it / elevationMultiplier).roundToInt().toString() } ?: ""
+                                minElevationText = FilterFormattingUtils.formatElevationInputValue(minM, elevationMultiplier)
+                                maxElevationText = FilterFormattingUtils.formatElevationInputValue(maxM, elevationMultiplier)
                             }
                         },
                         label = { Text(label) }

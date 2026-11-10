@@ -51,4 +51,12 @@
     <string name="filter_mode_presets">Szybki wybór</string>
     <string name="filter_mode_custom">Własne / Ekspert</string>
 
+    <!-- Imperial Filter Intervals (ATT-6168 / REQ-UI-508) -->
+    <string name="filter_min_distance_format_mi">&gt; %1$s mi</string>
+    <string name="filter_max_distance_format_mi">&lt; %1$s mi</string>
+    <string name="filter_distance_interval_format_mi">%1$s - %2$s mi</string>
+    <string name="filter_min_elevation_format_ft">&gt; %1$s ft</string>
+    <string name="filter_max_elevation_format_ft">&lt; %1$s ft</string>
+    <string name="filter_elevation_interval_format_ft">%1$s - %2$s ft</string>
+
 </resources>

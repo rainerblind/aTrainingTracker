@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
 import com.atrainingtracker.trainingtracker.ui.common.filters.FilterBottomSheetScaffold
+import com.atrainingtracker.trainingtracker.ui.common.filters.FilterFormattingUtils
 
 /**
  * Material 3 modal bottom sheet for multi-dimensional Favorite Tracks / Workout Clusters filtering (REQ-UI-187, REQ-UI-417.2).
@@ -82,21 +83,28 @@ fun ClusterFilterBottomSheet(
 ) {
     var localQuery by remember(criteria.query) { mutableStateOf(criteria.query) }
     var localEquipmentName by remember(criteria.equipmentName) { mutableStateOf(criteria.equipmentName) }
+
+    val isImperial = FilterFormattingUtils.rememberIsImperialUnits()
+    val distanceMultiplier = remember(isImperial) { FilterFormattingUtils.getDistanceMultiplier(isImperial) }
+    val elevationMultiplier = remember(isImperial) { FilterFormattingUtils.getElevationMultiplier(isImperial) }
+    val distanceUnit = FilterFormattingUtils.getDistanceUnit(isImperial)
+    val elevationUnit = FilterFormattingUtils.getElevationUnit(isImperial)
+
     var localMinDistanceMeters by remember(criteria.minDistanceMeters) { mutableStateOf(criteria.minDistanceMeters) }
     var localMaxDistanceMeters by remember(criteria.maxDistanceMeters) { mutableStateOf(criteria.maxDistanceMeters) }
-    var minDistanceText by remember(criteria.minDistanceMeters) {
-        mutableStateOf(criteria.minDistanceMeters?.let { (it / 1000.0).let { v -> if (v % 1.0 == 0.0) v.toInt().toString() else v.toString() } } ?: "")
+    var minDistanceText by remember(criteria.minDistanceMeters, distanceMultiplier) {
+        mutableStateOf(FilterFormattingUtils.formatDistanceInputValue(criteria.minDistanceMeters, distanceMultiplier))
     }
-    var maxDistanceText by remember(criteria.maxDistanceMeters) {
-        mutableStateOf(criteria.maxDistanceMeters?.let { (it / 1000.0).let { v -> if (v % 1.0 == 0.0) v.toInt().toString() else v.toString() } } ?: "")
+    var maxDistanceText by remember(criteria.maxDistanceMeters, distanceMultiplier) {
+        mutableStateOf(FilterFormattingUtils.formatDistanceInputValue(criteria.maxDistanceMeters, distanceMultiplier))
     }
     var localMinElevationGainMeters by remember(criteria.minElevationGainMeters) { mutableStateOf(criteria.minElevationGainMeters) }
     var localMaxElevationGainMeters by remember(criteria.maxElevationGainMeters) { mutableStateOf(criteria.maxElevationGainMeters) }
-    var minElevationText by remember(criteria.minElevationGainMeters) {
-        mutableStateOf(criteria.minElevationGainMeters?.toInt()?.toString() ?: "")
+    var minElevationText by remember(criteria.minElevationGainMeters, elevationMultiplier) {
+        mutableStateOf(FilterFormattingUtils.formatElevationInputValue(criteria.minElevationGainMeters, elevationMultiplier))
     }
-    var maxElevationText by remember(criteria.maxElevationGainMeters) {
-        mutableStateOf(criteria.maxElevationGainMeters?.toInt()?.toString() ?: "")
+    var maxElevationText by remember(criteria.maxElevationGainMeters, elevationMultiplier) {
+        mutableStateOf(FilterFormattingUtils.formatElevationInputValue(criteria.maxElevationGainMeters, elevationMultiplier))
     }
     var localMinHitCount by remember(criteria.minHitCount) { mutableStateOf(criteria.minHitCount) }
     var localStartLocationName by remember(criteria.startLocationName) { mutableStateOf(criteria.startLocationName) }
@@ -194,7 +202,7 @@ fun ClusterFilterBottomSheet(
             }
         }
 
-        // 3. Distance Interval (REQ-UI-417.2)
+        // 3. Distance Interval (REQ-UI-417.2, REQ-UI-508.3)
         Column {
             Text(
                 text = stringResource(R.string.filter_section_distance),
@@ -202,17 +210,11 @@ fun ClusterFilterBottomSheet(
                 color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.height(6.dp))
+            val distancePresets = remember(isImperial) { FilterFormattingUtils.getDistancePresets(isImperial) }
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                val distancePresets = listOf(
-                    Triple("< 10 km", null, 10000.0),
-                    Triple("10 - 25 km", 10000.0, 25000.0),
-                    Triple("25 - 50 km", 25000.0, 50000.0),
-                    Triple("50 - 100 km", 50000.0, 100000.0),
-                    Triple("> 100 km", 100000.0, null)
-                )
                 distancePresets.forEach { (label, minM, maxM) ->
                     val isSelected = localMinDistanceMeters == minM && localMaxDistanceMeters == maxM
                     FilterChip(
@@ -226,8 +228,8 @@ fun ClusterFilterBottomSheet(
                             } else {
                                 localMinDistanceMeters = minM
                                 localMaxDistanceMeters = maxM
-                                minDistanceText = minM?.let { (it / 1000.0).let { v -> if (v % 1.0 == 0.0) v.toInt().toString() else v.toString() } } ?: ""
-                                maxDistanceText = maxM?.let { (it / 1000.0).let { v -> if (v % 1.0 == 0.0) v.toInt().toString() else v.toString() } } ?: ""
+                                minDistanceText = FilterFormattingUtils.formatDistanceInputValue(minM, distanceMultiplier)
+                                maxDistanceText = FilterFormattingUtils.formatDistanceInputValue(maxM, distanceMultiplier)
                             }
                         },
                         label = { Text(label) }
@@ -244,9 +246,9 @@ fun ClusterFilterBottomSheet(
                     value = minDistanceText,
                     onValueChange = { str ->
                         minDistanceText = str
-                        localMinDistanceMeters = str.toDoubleOrNull()?.times(1000.0)
+                        localMinDistanceMeters = str.toDoubleOrNull()?.times(distanceMultiplier)
                     },
-                    label = { Text("${stringResource(R.string.filter_min_label)} (km)") },
+                    label = { Text("${stringResource(R.string.filter_min_label)} ($distanceUnit)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true,
                     modifier = Modifier.weight(1f)
@@ -255,9 +257,9 @@ fun ClusterFilterBottomSheet(
                     value = maxDistanceText,
                     onValueChange = { str ->
                         maxDistanceText = str
-                        localMaxDistanceMeters = str.toDoubleOrNull()?.times(1000.0)
+                        localMaxDistanceMeters = str.toDoubleOrNull()?.times(distanceMultiplier)
                     },
-                    label = { Text("${stringResource(R.string.filter_max_label)} (km)") },
+                    label = { Text("${stringResource(R.string.filter_max_label)} ($distanceUnit)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true,
                     modifier = Modifier.weight(1f)
@@ -265,7 +267,7 @@ fun ClusterFilterBottomSheet(
             }
         }
 
-        // 4. Elevation Gain Interval (REQ-UI-425)
+        // 4. Elevation Gain Interval (REQ-UI-425, REQ-UI-508.3)
         Column {
             Text(
                 text = stringResource(R.string.sort_elevation_gain),
@@ -273,17 +275,11 @@ fun ClusterFilterBottomSheet(
                 color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.height(6.dp))
+            val elevationPresets = remember(isImperial) { FilterFormattingUtils.getElevationPresets(isImperial) }
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                val elevationPresets = listOf(
-                    Triple("< 100 m", null, 100.0),
-                    Triple("100 - 250 m", 100.0, 250.0),
-                    Triple("250 - 500 m", 250.0, 500.0),
-                    Triple("500 - 1000 m", 500.0, 1000.0),
-                    Triple("> 1000 m", 1000.0, null)
-                )
                 elevationPresets.forEach { (label, minM, maxM) ->
                     val isSelected = localMinElevationGainMeters == minM && localMaxElevationGainMeters == maxM
                     FilterChip(
@@ -297,8 +293,8 @@ fun ClusterFilterBottomSheet(
                             } else {
                                 localMinElevationGainMeters = minM
                                 localMaxElevationGainMeters = maxM
-                                minElevationText = minM?.toInt()?.toString() ?: ""
-                                maxElevationText = maxM?.toInt()?.toString() ?: ""
+                                minElevationText = FilterFormattingUtils.formatElevationInputValue(minM, elevationMultiplier)
+                                maxElevationText = FilterFormattingUtils.formatElevationInputValue(maxM, elevationMultiplier)
                             }
                         },
                         label = { Text(label) }
@@ -315,9 +311,9 @@ fun ClusterFilterBottomSheet(
                     value = minElevationText,
                     onValueChange = { str ->
                         minElevationText = str
-                        localMinElevationGainMeters = str.toDoubleOrNull()
+                        localMinElevationGainMeters = str.toDoubleOrNull()?.times(elevationMultiplier)
                     },
-                    label = { Text("${stringResource(R.string.filter_min_label)} (m)") },
+                    label = { Text("${stringResource(R.string.filter_min_label)} ($elevationUnit)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.weight(1f)
@@ -326,9 +322,9 @@ fun ClusterFilterBottomSheet(
                     value = maxElevationText,
                     onValueChange = { str ->
                         maxElevationText = str
-                        localMaxElevationGainMeters = str.toDoubleOrNull()
+                        localMaxElevationGainMeters = str.toDoubleOrNull()?.times(elevationMultiplier)
                     },
-                    label = { Text("${stringResource(R.string.filter_max_label)} (m)") },
+                    label = { Text("${stringResource(R.string.filter_max_label)} ($elevationUnit)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.weight(1f)
