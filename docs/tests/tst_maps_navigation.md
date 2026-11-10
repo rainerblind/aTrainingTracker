@@ -1079,3 +1079,20 @@
   6. *Targeted Tier 1 Unit Test Suite (`TST-MAP-063.6`)*:
   • Run `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.segments.*" --tests "com.atrainingtracker.trainingtracker.ui.segments.segmentlist.*" --tests "com.atrainingtracker.trainingtracker.build.*"` asserting 100% pass rate.
 
+### TST-MAP-064: **KnownLocationCard Sport Starts Breakdown Drill-Down Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-MAP-062` (`REQ-MAP-062.1`..`REQ-MAP-062.4`)
+- **Component**: `KnownLocationsScreenDrillDownTest.kt`, `WorkoutFilterCriteriaTest.kt`, `KnownLocationsScreen.kt`
+- **Jira**: `ATT-6321` | **Target Release**: `V5.0.0`
+- **Test Description**:
+  1. *SportStartsItem Click & Test Tag Verification (`TST-MAP-064.1`, `KnownLocationsScreenDrillDownTest.kt`)*:
+  • Verify each `SportStartsItem` (Bike, Run, Other) renders with dedicated test tag `location_starts_badge_${item.id}_${sport}` and invokes `onShowWorkoutsForSport` with matching `BSportType`.
+  2. *Fallback 0-Starts Badge Click Verification (`TST-MAP-064.2`, `KnownLocationsScreenDrillDownTest.kt`)*:
+  • Verify tapping 0-starts badge invokes `onShowWorkouts` with location item.
+  3. *WorkoutFilterCriteria bSportType Model & Predicate Verification (`TST-MAP-064.3`, `WorkoutFilterCriteriaTest.kt`)*:
+  • Verify `bSportType` field correctly filters `WorkoutData` in `matches()`, increments `activeFilterCount`, and serializes/deserializes cleanly via JSON.
+  4. *Navigation & Pager Synchronization Wiring Contract (`TST-MAP-064.4`, `KnownLocationsScreenDrillDownTest.kt`)*:
+  • Verify `ATrainingTrackerApp` wiring sets `WorkoutFilterCriteria` with both location and `bSportType` and switches to target sport tab.
+  5. *Targeted Regression Verification Suite (`TST-MAP-064.5`)*:
+  • Execute targeted tests across `ui.knownlocations.*`, `ui.aftermath.workoutlist.*`, and `ui.theme.*` asserting 100% pass rate.
+
+

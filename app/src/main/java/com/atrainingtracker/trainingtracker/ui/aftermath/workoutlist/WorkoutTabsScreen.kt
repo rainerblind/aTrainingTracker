@@ -313,6 +313,7 @@ fun WorkoutTabsScreen(
                                 onRemoveYear = { onUpdateFilterCriteria { it.copy(year = null) } },
                                 onRemoveMonth = { onUpdateFilterCriteria { it.copy(month = null) } },
                                 onRemoveDateRange = { onUpdateFilterCriteria { it.copy(startDateS = null, endDateS = null) } },
+                                onRemoveBSportType = { onUpdateFilterCriteria { it.copy(bSportType = null) } },
                                 onRemoveSport = { onUpdateFilterCriteria { it.copy(sportTypeId = null) } },
                                 onRemoveEquipment = { onUpdateFilterCriteria { it.copy(equipmentId = null) } },
                                 onRemoveCommute = { onUpdateFilterCriteria { it.copy(isCommute = null) } },

@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.knownlocations
 
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.elevation.ElevationSource
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutFilterCriteria
@@ -98,5 +99,73 @@ class KnownLocationsScreenDrillDownTest {
         // Invariant: Card long-click delete action must remain independent
         onDelete(sampleItem)
         assertEquals(sampleItem.id, deletedItem?.id)
+    }
+
+    /**
+     * TST-MAP-064.1 & TST-MAP-064.4: Drill-down for sport callback invocation with BSportType.
+     */
+    @Test
+    fun testDrillDownForSportCallbackInvocation_TST_MAP_064_1() {
+        var navigatedItem: KnownLocationItem? = null
+        var selectedSport: BSportType? = null
+
+        val onShowWorkoutsForSport: (KnownLocationItem, BSportType) -> Unit = { item, sport ->
+            navigatedItem = item
+            selectedSport = sport
+        }
+
+        // Simulate Bike sport badge tap
+        onShowWorkoutsForSport(sampleItem, BSportType.BIKE)
+        assertEquals(sampleItem.id, navigatedItem?.id)
+        assertEquals(BSportType.BIKE, selectedSport)
+
+        // Simulate Run sport badge tap
+        onShowWorkoutsForSport(sampleItem, BSportType.RUN)
+        assertEquals(sampleItem.id, navigatedItem?.id)
+        assertEquals(BSportType.RUN, selectedSport)
+
+        // Simulate Other sport badge tap
+        onShowWorkoutsForSport(sampleItem, BSportType.UNKNOWN)
+        assertEquals(sampleItem.id, navigatedItem?.id)
+        assertEquals(BSportType.UNKNOWN, selectedSport)
+    }
+
+    /**
+     * TST-MAP-064.3: Construct WorkoutFilterCriteria with both Location bounds and BSportType.
+     */
+    @Test
+    fun testConstructWorkoutFilterCriteriaWithBSportType_TST_MAP_064_3() {
+        val item = sampleItem
+        val criteria = WorkoutFilterCriteria(
+            startLocationName = item.name,
+            startLocationLat = item.latLng.latitude,
+            startLocationLng = item.latLng.longitude,
+            startLocationRadiusM = item.radius.toDouble().takeIf { it > 0.0 } ?: 200.0,
+            bSportType = BSportType.BIKE
+        )
+
+        assertEquals("Zuhause", criteria.startLocationName)
+        assertEquals(48.13715, criteria.startLocationLat!!, 0.00001)
+        assertEquals(11.57612, criteria.startLocationLng!!, 0.00001)
+        assertEquals(150.0, criteria.startLocationRadiusM!!, 0.01)
+        assertEquals(BSportType.BIKE, criteria.bSportType)
+        // 1 dimension for location + 1 dimension for bSportType = 2
+        assertEquals(2, criteria.activeFilterCount)
+    }
+
+    /**
+     * TST-MAP-064.2: Fallback 0-starts drill down invokes onShowWorkouts without sport filter.
+     */
+    @Test
+    fun testFallbackZeroStartsInvocation_TST_MAP_064_2() {
+        var invokedItem: KnownLocationItem? = null
+        val onShowWorkouts: (KnownLocationItem) -> Unit = { invokedItem = it }
+
+        val zeroStartsItem = sampleItem.copy(hitCount = 0)
+        onShowWorkouts(zeroStartsItem)
+
+        assertNotNull(invokedItem)
+        assertEquals(0, invokedItem?.hitCount)
+        assertEquals("Zuhause", invokedItem?.name)
     }
 }

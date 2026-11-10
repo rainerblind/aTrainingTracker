@@ -9,7 +9,7 @@ Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Statu
 | :--- | :--- | :--- | :---: | :---: | :---: |
 | [Tracking & Live Sensor Cockpit](requirements/req_tracking_cockpit.md) | Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle. | `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA` | 100 | 96 | 4 |
 | [Post-Workout Analytics & Periods](requirements/req_aftermath_periods.md) | Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers. | `PER`, `PERF` | 29 | 29 | 0 |
-| [Maps, Polylines & Navigation](requirements/req_maps_navigation.md) | Map rendering, polylines, navigation overlays, GPX track follow-me, and routing. | `GEO`, `MAP`, `NAV`, `ROU` | 63 | 63 | 0 |
+| [Maps, Polylines & Navigation](requirements/req_maps_navigation.md) | Map rendering, polylines, navigation overlays, GPX track follow-me, and routing. | `GEO`, `MAP`, `NAV`, `ROU` | 64 | 64 | 0 |
 | [Persistence, Migration & Cloud Export](requirements/req_data_migration_export.md) | Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export. | `DAT`, `EXP`, `EXT`, `MIG` | 124 | 124 | 0 |
 | [Settings, Profiles & Localization](requirements/req_settings_profiles.md) | Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity. | `LOC`, `MON`, `PRI`, `SET` | 98 | 98 | 0 |
 | [UI Components & Design System](requirements/req_ui_design_system.md) | Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts. | `UI`, `UNT` | 429 | 429 | 0 |
@@ -20,15 +20,15 @@ Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Statu
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
-**Total Living Requirements**: 936 across 9 domain shards.
+**Total Living Requirements**: 937 across 9 domain shards.
 =======
-**Total Living Requirements**: 936 across 9 domain shards.
+**Total Living Requirements**: 937 across 9 domain shards.
 >>>>>>> df7a881f (wip(ATT-6165): stage 2 req & test spec)
 =======
-**Total Living Requirements**: 936 across 9 domain shards.
+**Total Living Requirements**: 937 across 9 domain shards.
 >>>>>>> 69bc10b8 (wip(ATT-6322): stage 2 req & test spec)
 =======
-**Total Living Requirements**: 936 across 9 domain shards.
+**Total Living Requirements**: 937 across 9 domain shards.
 >>>>>>> a52b538a (wip(ATT-6265): stage 2 req & test spec)
 
 ---

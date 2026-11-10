@@ -2061,3 +2061,45 @@
 
 **Invariants**: Zero changes to SQLite database schemas; zero UI layout mutations; 100% full-suite unit test pass rate; structured coroutine cancellation strictly preserved.
 
+### REQ-MAP-062: KnownLocationCard Sport Starts Breakdown Drill-Down Filter [Verified]
+- **Tests**: `TST-MAP-064` | **Tickets**: `ATT-6321` | **Target Release**: `V5.0.0`
+- **Implementation**: `KnownLocationsScreen.kt`, `WorkoutFilterCriteria.kt`, `ATrainingTrackerApp.kt`, `WorkoutSummariesTabbedScreen.kt`
+- **Rationale**: In `KnownLocationCard`, tapping an individual sport badge (`SportStartsItem`: Bike, Run, Other) SHALL filter the workout list by the clicked `BSportType` rather than opening all workouts unfiltered (Sprint 2026-46.1, ATT-6321, refining `REQ-UI-470.6` and `REQ-UI-185`):
+1. *Independent Sport Starts Touch Targets on KnownLocationCard (`KnownLocationsScreen.kt`, `REQ-MAP-062.1`)*:
+• In `KnownLocationCard`, when `sportStarts.total > 0`, each rendered `SportStartsItem` (`Bike`, `Run`, `Other`) SHALL be an independent clickable element (`Modifier.clickable`) with dedicated test tag `location_starts_badge_${item.id}_${sportName.lowercase()}`.
+• Tapping a specific sport badge SHALL invoke `onShowWorkoutsForSport(item, bSportType)` with the respective `BSportType` (`BSportType.BIKE`, `BSportType.RUN`, `BSportType.UNKNOWN`).
+2. *Fallback Total Starts Touch Target (`KnownLocationsScreen.kt`, `REQ-MAP-062.2`)*:
+• When `sportStarts.total == 0` (or when tapping the surrounding container without a sport badge hit), tapping the starts badge SHALL invoke `onShowWorkouts(item)` to display all workouts at that location unfiltered.
+3. *Base Sport Type Filter Criteria Dimension (`WorkoutFilterCriteria.kt`, `REQ-MAP-062.3`)*:
+• `WorkoutFilterCriteria` SHALL declare optional `bSportType: BSportType? = null`.
+• `matches(workout)` SHALL evaluate `bSportType == null || workout.bSportType == bSportType`.
+• `activeFilterCount` SHALL increment when `bSportType != null`.
+• `bSportType` SHALL be serialized and deserialized in JSON (`toJson()` / `fromJson()`).
+• `ActiveFilterChipsRow` SHALL render a removable filter chip when `bSportType != null` with 9-language localized label.
+4. *Cross-Screen Navigation & Tab Synchronization (`ATrainingTrackerApp.kt`, `WorkoutSummariesTabbedScreen.kt`, `REQ-MAP-062.4`)*:
+• In `ATrainingTrackerApp.kt`, `onShowWorkoutsForSport` SHALL configure `WorkoutFilterCriteria` with location bounds (`startLocationName`, `startLocationLat`, `startLocationLng`, `startLocationRadiusM`) and `bSportType`, set criteria in `WorkoutSummariesViewModel`, and navigate to `NavRoutes.WORKOUTS`.
+• `WorkoutSummariesTabbedScreen` SHALL synchronize its active tab index to the specified sport tab (Index 1 for Bike, Index 2 for Run, Index 3 for Other).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new refinement `REQ-MAP-062` refining `REQ-UI-470.6` (*Workout Starts Breakdown by Sport Type on KnownLocationCard*), `REQ-UI-185` (*Drill-Down Filter to View Workouts by Starting Location*), and `REQ-UI-469.2` (*Unboxed Starts Metric*).
+2. *Historical Origin & Commit Trace*: Ticket `ATT-1643` (`REQ-UI-185`), `ATT-5887` (`REQ-UI-469.2`), `ATT-6210` (`71f11f9e8c`, `REQ-UI-470.6`).
+3. *Root Reason for Existing Formulation*: Outer `Row` click was an interim implementation in ATT-6210 to retain the single-tap contract of `REQ-UI-185` before individual sport touch targets were separated.
+4. *Preservation of Core Invariants*: Outer test tag `location_starts_badge_${item.id}`, unboxed typography, multi-color icons (`tint = Color.Unspecified`), 0-starts fallback, card edit/delete interactions, and 9-language translation parity are strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a `KnownLocationCard` with sport starts breakdown (`sportStarts.total > 0`),
+• *When* the athlete taps the Bike badge (`location_starts_badge_${item.id}_bike`),
+• *Then* `onShowWorkoutsForSport` is invoked with `BSportType.BIKE`, navigating to `NavRoutes.WORKOUTS` with `WorkoutFilterCriteria` configured for that location and `BSportType.BIKE`, and opening the Bike tab.
+• *Given* a `KnownLocationCard` with sport starts breakdown,
+• *When* the athlete taps the Run badge (`location_starts_badge_${item.id}_run`),
+• *Then* `onShowWorkoutsForSport` is invoked with `BSportType.RUN`, opening the workout list filtered by location and `BSportType.RUN`.
+• *Given* a `KnownLocationCard` with sport starts breakdown,
+• *When* the athlete taps the Other badge (`location_starts_badge_${item.id}_other`),
+• *Then* `onShowWorkoutsForSport` is invoked with `BSportType.UNKNOWN`, opening the workout list filtered by location and `BSportType.UNKNOWN`.
+• *Given* a `KnownLocationCard` with `sportStarts.total == 0` ("0 Starts"),
+• *When* the athlete taps the starts badge,
+• *Then* `onShowWorkouts` is invoked without a sport filter, opening all workouts for that location.
+
+**Invariants**: Zero changes to SQLite database schemas; zero disruption to existing location drill-down tests; backward-compatible JSON serialization in `WorkoutFilterCriteria`.
+
+

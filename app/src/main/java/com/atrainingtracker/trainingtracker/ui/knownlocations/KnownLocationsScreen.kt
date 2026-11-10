@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.knownlocations
 
 import androidx.annotation.DrawableRes
+import com.atrainingtracker.banalservice.BSportType
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -134,6 +135,7 @@ fun KnownLocationsScreen(
     onMenuClick: () -> Unit = { },
     onShowOnMap: (Long) -> Unit = { },
     onShowWorkouts: (KnownLocationItem) -> Unit = { },
+    onShowWorkoutsForSport: (KnownLocationItem, BSportType) -> Unit = { _, _ -> },
     onSelectCluster: (Long) -> Unit = { },
     onShowRoutes: (KnownLocationItem) -> Unit = { },
     modifier: Modifier = Modifier
@@ -266,6 +268,7 @@ fun KnownLocationsScreen(
                 onEdit = { viewModel.openEditDialog(it, showMap = true) },
                 onShowOnMap = { item -> onShowOnMap(item.id) },
                 onShowWorkouts = onShowWorkouts,
+                onShowWorkoutsForSport = onShowWorkoutsForSport,
                 onSelectCluster = onSelectCluster,
                 onShowRoutes = onShowRoutes,
                 onMerge = { locationToMerge = it },
@@ -370,6 +373,7 @@ private fun KnownLocationsListContent(
     onEdit: (KnownLocationItem) -> Unit,
     onShowOnMap: (KnownLocationItem) -> Unit,
     onShowWorkouts: (KnownLocationItem) -> Unit = { },
+    onShowWorkoutsForSport: (KnownLocationItem, BSportType) -> Unit = { _, _ -> },
     onSelectCluster: (Long) -> Unit = { },
     onShowRoutes: (KnownLocationItem) -> Unit = { },
     onMerge: (KnownLocationItem) -> Unit = { },
@@ -456,6 +460,7 @@ private fun KnownLocationsListContent(
                     onEdit = { onEdit(item) },
                     onShowOnMap = { onShowOnMap(item) },
                     onShowWorkouts = { onShowWorkouts(item) },
+                    onShowWorkoutsForSport = onShowWorkoutsForSport,
                     onSelectCluster = onSelectCluster,
                     onShowRoutes = { onShowRoutes(item) },
                     onMerge = { onMerge(item) },
@@ -771,10 +776,16 @@ private fun KnownLocationThumbnailMap(
 private fun SportStartsItem(
     @DrawableRes iconResId: Int,
     count: Int,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null
 ) {
+    val clickModifier = if (onClick != null) {
+        Modifier.clickable(onClick = onClick)
+    } else Modifier
+
     Row(
-        modifier = modifier,
+        modifier = modifier
+            .then(clickModifier),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(3.dp)
     ) {
@@ -808,6 +819,7 @@ private fun KnownLocationCard(
     onEdit: () -> Unit,
     onShowOnMap: () -> Unit = {},
     onShowWorkouts: () -> Unit = {},
+    onShowWorkoutsForSport: (KnownLocationItem, BSportType) -> Unit = { _, _ -> },
     onSelectCluster: (Long) -> Unit = {},
     onShowRoutes: () -> Unit = {},
     onMerge: () -> Unit = {},
@@ -929,19 +941,25 @@ private fun KnownLocationCard(
                                 if (sportStarts.bike > 0) {
                                     SportStartsItem(
                                         iconResId = R.drawable.bsport_bike,
-                                        count = sportStarts.bike
+                                        count = sportStarts.bike,
+                                        modifier = Modifier.testTag("location_starts_badge_${item.id}_bike"),
+                                        onClick = { onShowWorkoutsForSport(item, BSportType.BIKE) }
                                     )
                                 }
                                 if (sportStarts.run > 0) {
                                     SportStartsItem(
                                         iconResId = R.drawable.bsport_run,
-                                        count = sportStarts.run
+                                        count = sportStarts.run,
+                                        modifier = Modifier.testTag("location_starts_badge_${item.id}_run"),
+                                        onClick = { onShowWorkoutsForSport(item, BSportType.RUN) }
                                     )
                                 }
                                 if (sportStarts.other > 0) {
                                     SportStartsItem(
                                         iconResId = R.drawable.bsport_other,
-                                        count = sportStarts.other
+                                        count = sportStarts.other,
+                                        modifier = Modifier.testTag("location_starts_badge_${item.id}_other"),
+                                        onClick = { onShowWorkoutsForSport(item, BSportType.UNKNOWN) }
                                     )
                                 }
                             } else {

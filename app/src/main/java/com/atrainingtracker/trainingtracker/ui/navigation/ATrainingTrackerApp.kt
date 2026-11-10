@@ -426,6 +426,17 @@ fun ATrainingTrackerApp(
                             summariesViewModel.setFilterCriteria(criteria)
                             navController.navigate(NavRoutes.WORKOUTS)
                         },
+                        onShowWorkoutsForSport = { locationItem, bSportType ->
+                            val criteria = WorkoutFilterCriteria(
+                                startLocationName = locationItem.name,
+                                startLocationLat = locationItem.latLng.latitude,
+                                startLocationLng = locationItem.latLng.longitude,
+                                startLocationRadiusM = locationItem.radius.toDouble().takeIf { it > 0.0 } ?: 200.0,
+                                bSportType = bSportType
+                            )
+                            summariesViewModel.setFilterCriteria(criteria)
+                            navController.navigate(NavRoutes.WORKOUTS)
+                        },
                         onSelectCluster = { clusterId ->
                             navController.navigate(NavRoutes.locations(clusterId))
                         },

@@ -39,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.WorkoutSource
 import com.atrainingtracker.trainingtracker.ui.common.filters.RemovableFilterChip
 import java.text.DateFormat
@@ -59,6 +60,7 @@ fun ActiveFilterChipsRow(
     onRemoveYear: () -> Unit,
     onRemoveMonth: () -> Unit,
     onRemoveDateRange: () -> Unit,
+    onRemoveBSportType: () -> Unit = {},
     onRemoveSport: () -> Unit,
     onRemoveEquipment: () -> Unit,
     onRemoveCommute: () -> Unit,
@@ -161,6 +163,21 @@ fun ActiveFilterChipsRow(
                 RemovableFilterChip(
                     label = "$startText - $endText",
                     onRemove = onRemoveDateRange
+                )
+            }
+        }
+
+        // Base Sport Type Chip (ATT-6321)
+        if (criteria.bSportType != null) {
+            item("bSportType") {
+                val label = when (criteria.bSportType) {
+                    BSportType.BIKE -> stringResource(R.string.workout_summaries_tab_bike)
+                    BSportType.RUN -> stringResource(R.string.workout_summaries_tab_run)
+                    BSportType.UNKNOWN, BSportType.CONFLICT, null -> stringResource(R.string.workout_summaries_tab_other)
+                }
+                RemovableFilterChip(
+                    label = label,
+                    onRemove = onRemoveBSportType
                 )
             }
         }

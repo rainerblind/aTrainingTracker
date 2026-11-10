@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 
 import androidx.compose.runtime.Immutable
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.database.WorkoutSource
 import com.atrainingtracker.util.safeEnumValueOfOrNull
@@ -60,7 +61,8 @@ data class WorkoutFilterCriteria(
     val startLocationRadiusM: Double? = null,
     val clusterId: Long? = null,
     val clusterName: String? = null,
-    val source: WorkoutSource? = null
+    val source: WorkoutSource? = null,
+    val bSportType: BSportType? = null
 ) {
     /**
      * Total count of distinct active filter dimensions.
@@ -70,6 +72,7 @@ data class WorkoutFilterCriteria(
             var count = 0
             if (query.isNotBlank()) count++
             if (year != null || month != null || startDateS != null || endDateS != null) count++
+            if (bSportType != null) count++
             if (sportTypeId != null) count++
             if (equipmentId != null) count++
             if (isCommute != null) count++
@@ -136,6 +139,11 @@ data class WorkoutFilterCriteria(
             return false
         }
         if (endDateS != null && workout.startTimeS > endDateS) {
+            return false
+        }
+
+        // Base Sport Type filter (ATT-6321)
+        if (bSportType != null && workout.bSportType != bSportType) {
             return false
         }
 
@@ -247,6 +255,7 @@ data class WorkoutFilterCriteria(
         clusterId?.let { json.put("clusterId", it) }
         clusterName?.let { json.put("clusterName", it) }
         source?.let { json.put("source", it.name) }
+        bSportType?.let { json.put("bSportType", it.name) }
         return json.toString()
     }
 
@@ -287,6 +296,9 @@ data class WorkoutFilterCriteria(
                     clusterName = if (json.has("clusterName")) json.optString("clusterName") else null,
                     source = if (json.has("source")) {
                         safeEnumValueOfOrNull<WorkoutSource>(json.optString("source").trim().uppercase(), "WorkoutFilterCriteria")
+                    } else null,
+                    bSportType = if (json.has("bSportType")) {
+                        safeEnumValueOfOrNull<BSportType>(json.optString("bSportType").trim().uppercase(), "WorkoutFilterCriteria")
                     } else null
                 )
             } catch (e: Exception) {

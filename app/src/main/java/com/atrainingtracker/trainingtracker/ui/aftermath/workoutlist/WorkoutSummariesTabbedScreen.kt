@@ -189,6 +189,19 @@ fun WorkoutSummariesTabbedScreen(
     val workoutCardPreferences by viewModel.workoutCardPreferences.collectAsStateWithLifecycle()
     val workoutSectionsOrder by viewModel.workoutSectionsOrder.collectAsStateWithLifecycle()
     val filterCriteria by viewModel.filterCriteria.collectAsStateWithLifecycle()
+
+    // Synchronize pager state when sport type filter is applied (ATT-6321, REQ-MAP-062.4)
+    LaunchedEffect(filterCriteria.bSportType) {
+        val targetPage = when (filterCriteria.bSportType) {
+            BSportType.BIKE -> 1
+            BSportType.RUN -> 2
+            BSportType.UNKNOWN -> 3
+            BSportType.CONFLICT, null -> null
+        }
+        if (targetPage != null && pagerState.currentPage != targetPage) {
+            pagerState.scrollToPage(targetPage)
+        }
+    }
     val allWorkouts by viewModel.allWorkouts.collectAsStateWithLifecycle()
     val knownLocations by viewModel.knownLocations.collectAsStateWithLifecycle()
     val availableClusters by viewModel.availableClusters.collectAsStateWithLifecycle()

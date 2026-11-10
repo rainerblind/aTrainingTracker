@@ -636,4 +636,68 @@ class WorkoutFilterCriteriaTest {
         assertEquals(null, cleared.maxElevationGainMeters)
         assertTrue(cleared.isEmpty)
     }
+
+    /**
+     * TST-MAP-064.3: BSportType predicate evaluation in matches().
+     */
+    @Test
+    fun testBSportTypeFilterMatchesAndMismatch_TST_MAP_064_3() {
+        val bikeWorkout = createWorkout(bSportType = BSportType.BIKE)
+        val runWorkout = createWorkout(bSportType = BSportType.RUN)
+        val otherWorkout = createWorkout(bSportType = BSportType.UNKNOWN)
+
+        val bikeCriteria = WorkoutFilterCriteria(bSportType = BSportType.BIKE)
+        assertTrue("Bike criteria matches bike workout", bikeCriteria.matches(bikeWorkout))
+        assertFalse("Bike criteria rejects run workout", bikeCriteria.matches(runWorkout))
+        assertFalse("Bike criteria rejects other workout", bikeCriteria.matches(otherWorkout))
+
+        val runCriteria = WorkoutFilterCriteria(bSportType = BSportType.RUN)
+        assertFalse("Run criteria rejects bike workout", runCriteria.matches(bikeWorkout))
+        assertTrue("Run criteria matches run workout", runCriteria.matches(runWorkout))
+        assertFalse("Run criteria rejects other workout", runCriteria.matches(otherWorkout))
+
+        val otherCriteria = WorkoutFilterCriteria(bSportType = BSportType.UNKNOWN)
+        assertFalse("Other criteria rejects bike workout", otherCriteria.matches(bikeWorkout))
+        assertFalse("Other criteria rejects run workout", otherCriteria.matches(runWorkout))
+        assertTrue("Other criteria matches other workout", otherCriteria.matches(otherWorkout))
+    }
+
+    /**
+     * TST-MAP-064.3: BSportType JSON serialization, deserialization & backward compatibility.
+     */
+    @Test
+    fun testBSportTypeSerializationAndDeserialization_TST_MAP_064_3() {
+        val original = WorkoutFilterCriteria(
+            query = "Morning",
+            bSportType = BSportType.BIKE
+        )
+        val json = original.toJson()
+        assertTrue("JSON contains bSportType key", json.contains("\"bSportType\":\"BIKE\""))
+
+        val deserialized = WorkoutFilterCriteria.fromJson(json)
+        assertEquals("Morning", deserialized.query)
+        assertEquals(BSportType.BIKE, deserialized.bSportType)
+        assertEquals(2, deserialized.activeFilterCount)
+
+        // Legacy JSON without bSportType field parses cleanly to null
+        val legacyJson = """{"query":"Trail Run","minDistanceMeters":5000.0}"""
+        val fromLegacy = WorkoutFilterCriteria.fromJson(legacyJson)
+        assertEquals(null, fromLegacy.bSportType)
+        assertEquals(2, fromLegacy.activeFilterCount)
+    }
+
+    /**
+     * TST-MAP-064.3: BSportType incrementing activeFilterCount and isEmpty / isNotEmpty.
+     */
+    @Test
+    fun testBSportTypeActiveFilterCount_TST_MAP_064_3() {
+        val criteria = WorkoutFilterCriteria(bSportType = BSportType.RUN)
+        assertEquals(1, criteria.activeFilterCount)
+        assertFalse(criteria.isEmpty)
+        assertTrue(criteria.isNotEmpty)
+
+        val cleared = criteria.copy(bSportType = null)
+        assertEquals(0, cleared.activeFilterCount)
+        assertTrue(cleared.isEmpty)
+    }
 }
