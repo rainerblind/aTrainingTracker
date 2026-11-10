@@ -763,6 +763,8 @@ class TuningPreferencesDataStore(private val context: Context) {
                 INSTANCE = instance
             }
         }
+
+        internal fun hasInitializedInstance(): Boolean = INSTANCE != null
     }
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)

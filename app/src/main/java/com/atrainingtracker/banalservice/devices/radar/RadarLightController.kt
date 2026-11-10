@@ -128,11 +128,26 @@ object RadarLightController {
         return RadarLightMode.getAvailableModes(_isStvzo.value)
     }
 
+    private fun isRealFilesDir(dir: java.io.File?): Boolean {
+        return dir != null &&
+            dir.javaClass == java.io.File::class.java &&
+            java.io.File(dir, "datastore").path.isNotEmpty()
+    }
+
     private fun resolveSafeDataStoreContext(context: Context?): Context? {
         return try {
-            val appCtx = context?.applicationContext ?: context ?: return null
-            val dir = appCtx.filesDir ?: return null
-            if (dir.path.isEmpty()) null else appCtx
+            if (context == null) {
+                null
+            } else if (TuningPreferencesDataStore.hasInitializedInstance()) {
+                context.applicationContext ?: context
+            } else {
+                val appCtx = context.applicationContext ?: context
+                if (isRealFilesDir(context.filesDir) && isRealFilesDir(appCtx.filesDir)) {
+                    appCtx
+                } else {
+                    null
+                }
+            }
         } catch (_: Throwable) {
             null
         }
