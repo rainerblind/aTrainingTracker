@@ -3158,10 +3158,44 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Thread safety, null safety (`REQ-FIL-011`), pause session isolation (`REQ-FIL-013`), and 100% clean-room test pass rate.
 
+### REQ-CON-027: Beat-to-Beat RR-Interval Acquisition, BLE GATT 0x2A37 Multi-RR Unpacking & ANT+ Continuity Guard [Verified]
+- **Tests**: `TST-CON-027` | **Tickets**: `ATT-3540`
+- **Implementation**: `SensorType.java`, `BTLEHeartRateDevice.java`, `ANTHeartRateDevice.java`, `RrBeatEvent.kt`, `RrBeatListener.kt`
+- **Rationale**: Real-time HRV metrics (DFA $\alpha_1$, $rMSSD$, aerobic threshold pacing) require lossless beat-to-beat RR interval acquisition. Existing `BTLEHeartRateDevice` parses only 1-Hz HR from GATT `0x2A37`, dropping Bit 4 RR intervals and creating duplicate timestamps for multi-beat packets. `ANTHeartRateDevice` ignores beat count continuity, risking severe artifact spikes on RF dropouts ($\Delta c \ge 2$) (ATT-3540, Parent Epic ATT-3539, extending `REQ-CON-002`, `REQ-CON-003`, and `REQ-CON-014`):
+1. *SensorType.RR_INTERVAL & Push Dispatch Contract (`REQ-CON-027.1`)*:
+• The system SHALL activate `SensorType.RR_INTERVAL` (`ms`, `SensorValueType.INTEGER`, category `HEART_RATE_AND_ENERGY`) with 9-language translation parity.
+• Devices SHALL dispatch immutable `RrBeatEvent(beatTimestampMs, rrMs, rawCounter, protocol, gapBeats, artifactFlag)` instances to registered `RrBeatListener` subscribers, bypassing 1-Hz polling.
+2. *BLE GATT 0x2A37 Multi-RR Decoding (`REQ-CON-027.2`)*:
+• `BTLEHeartRateDevice` SHALL inspect flag Bit 4 (`0x10`).
+• When set, it SHALL parse all Little-Endian `UINT16` RR values ($\text{rrMs} = \text{raw} \times 1000.0 / 1024.0$) following the HR value (offset based on Bit 0) and optional Energy Expended field (Bit 3).
+3. *Cumulative Beat-Timestamp Reconstruction & Drift Guard (`REQ-CON-027.3`)*:
+• For bundled multi-RR BLE packets, timestamps SHALL be reconstructed as $t_{\text{beat},k} = t_{\text{beat},k-1} + \text{round}(\text{rrMs}_k)$ anchored to packet arrival time $t_{\text{pkt}}$.
+• If $|t_{\text{pkt}} - t_{\text{beat},k}| > 2000\text{ ms}$, the system SHALL record `gapBeats = max(0, round((t_pkt - t_prev) / rrMs) - 1)` and re-anchor $t_{\text{beat},k} = t_{\text{pkt}}$.
+4. *ANT+ Beat Count Continuity & Gap Emission (`REQ-CON-027.4`)*:
+• `ANTHeartRateDevice` SHALL evaluate $\Delta c = (\text{heartBeatCount} - \text{prevCount}) \pmod{256}$.
+• It SHALL emit normal beats only when $\Delta c == 1$, discard duplicate packets when $\Delta c == 0$, and emit an `RrBeatEvent` with `artifactFlag = 5 (GAP)` and `gapBeats = deltaC - 1` when $\Delta c \ge 2$.
+5. *Defensive Parsing & Backward Compatibility (`REQ-CON-027.5`)*:
+• Malformed/truncated BLE packets SHALL NOT crash (`REQ-CON-014`).
+• Optical sensors omitting Bit 4 SHALL NOT activate `mRrIntervalSensor`, preserving backward compatibility for HR-only tracking.
 
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-CON-027`, extending `REQ-CON-002` (*Bluetooth LE Sensor Support*), `REQ-CON-003` (*ANT+ Sensor Support*), and `REQ-CON-014` (*BLE GATT Measurement Packet Parsing Resilience*). Targets `BTLEHeartRateDevice.java`, `ANTHeartRateDevice.java`, and `SensorType.java`.
+2. *Historical Origin & Commit Trace*: `ATT-1485` (`REQ-CON-014`) added null-safety to BLE parsing; `SensorType.RR_INTERVAL` existed as a commented placeholder since initial architecture.
+3. *Root Reason for Existing Formulation*: Early versions focused strictly on 1-Hz integer HR display, discarding raw beat timings to economize battery and bandwidth.
+4. *Preservation of Core Invariants*: `SensorType.HR` instant bpm emission and existing UI displays remain 100% backward compatible; zero GATT parsing crashes; optical sensors lacking Bit 4 continue regular HR operation without RR.
 
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a BLE `0x2A37` packet with `flag = 0x10` containing 3 bundled RR intervals (`1024`, `512`, `768`),
+• *When* parsed by `BTLEHeartRateDevice`,
+• *Then* 3 sequential events (`1000.0 ms`, `500.0 ms`, `750.0 ms`) are dispatched with monotonically reconstructed timestamps without dropouts.
+• *Given* a sensor reconnect or packet delay where $|t_{\text{pkt}} - t_{\text{beat}}| > 2000\text{ ms}$,
+• *When* parsed by `BTLEHeartRateDevice`,
+• *Then* timestamp is re-anchored to $t_{\text{pkt}}$ with computed `gapBeats`.
+• *Given* an active `ANTHeartRateDevice` where `heartBeatCount` jumps by $\Delta c = 2$,
+• *When* processed,
+• *Then* the combined delta is NOT emitted as a single beat; instead a `GAP` event (`artifactFlag = 5`, `gapBeats = 1`) is emitted.
+• *Given* an optical sensor emitting `flag = 0x00`,
+• *When* received,
+• *Then* `SensorType.HR` updates normally and `mRrIntervalSensor` remains null.
 
-
- (ATT-6046: pre-rebase collapsed commit)
-
-
+**Invariants**: Backward compatibility for HR-only sensors; zero GATT crashes; mathematical precision of RR intervals; clean-room test pass rate.

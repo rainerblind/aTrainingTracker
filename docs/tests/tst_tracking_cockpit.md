@@ -1759,13 +1759,29 @@
   7. *Clean-Room Targeted Test Suite Execution (`TST-FIL-015.7`)*:
   • Execute targeted package tests (`com.atrainingtracker.banalservice.filters.*`) asserting 100% pass rate.
 
-
-
-
-
-
-
-
- (ATT-6046: pre-rebase collapsed commit)
-
-
+### TST-CON-027: **Beat-to-Beat RR-Interval Acquisition, BLE GATT 0x2A37 Multi-RR Unpacking & ANT+ Continuity Guard Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-CON-027` (`REQ-CON-027.1`..`REQ-CON-027.5`)
+- **Component**: `SensorType.java`, `BTLEHeartRateDevice.java`, `ANTHeartRateDevice.java`, `RrBeatEvent.kt`, `RrBeatListener.kt`
+- **Jira**: `ATT-3540`
+- **Test Description**:
+  1. *SensorType & 9-Language Localization Audit (`TST-CON-027.1`, `SensorTypeTest.kt`, `TranslationParityTest.kt`)*:
+  • Verify `SensorType.RR_INTERVAL` is registered under `SensorCategory.HEART_RATE_AND_ENERGY` with `SensorValueType.INTEGER` and unit `ms`.
+  • Verify full 9-language translation parity across EN, DE, ES, FR, IT, JA, NL, PL, PT.
+  2. *BTLEHeartRateDevice Multi-RR Parsing Unit Tests (`TST-CON-027.2`, `BTLEHeartRateDeviceTest.kt`)*:
+  • Verify correct parsing of 0, 1, 2, and 3 bundled RR intervals.
+  • Verify proper offset calculations for UINT8 HR (`flag & 0x01 == 0`) and UINT16 HR (`flag & 0x01 != 0`).
+  • Verify proper offset advancement when Energy Expended is present (`flag & 0x08 != 0`).
+  • Verify conversion scaling from $1/1024\text{ s}$ to milliseconds ($\text{raw} \times 1000.0 / 1024.0$).
+  3. *Cumulative Timestamp Reconstruction & Drift Guard Unit Tests (`TST-CON-027.3`, `BTLEHeartRateDeviceTest.kt`)*:
+  • Verify sequential monotonic timestamps for bundled RR intervals sharing a single packet arrival time.
+  • Verify re-anchoring to wall-clock $t_{\text{pkt}}$ and accurate `gapBeats` computation when drift exceeds 2000 ms.
+  4. *ANTHeartRateDevice Continuity Guard & Rollover Unit Tests (`TST-CON-027.4`, `ANTHeartRateDeviceTest.kt`)*:
+  • Verify normal beat emission when $\Delta c == 1$.
+  • Verify seamless 8-bit rollover handling ($255 \to 0$ yields $\Delta c = 1$).
+  • Verify rejection/discard of duplicate packets ($\Delta c == 0$).
+  • Verify `GAP` event emission (`artifactFlag = 5`, `gapBeats = deltaC - 1`) when $\Delta c \ge 2$.
+  5. *Optical HR Compatibility & Truncated Payload Defensive Tests (`TST-CON-027.5`, `BTLEHeartRateDeviceTest.kt`)*:
+  • Verify packets lacking Bit 4 update `SensorType.HR` without activating or emitting to `mRrIntervalSensor`.
+  • Verify truncated packets (length shorter than required for indicated flags) are safely logged without throwing exceptions (`REQ-CON-014`).
+  6. *Clean-Room Targeted Test Suite Execution (`TST-CON-027.6`)*:
+  • Execute targeted package tests (`com.atrainingtracker.banalservice.devices.*`, `com.atrainingtracker.banalservice.sensor.*`) asserting 100% pass rate.

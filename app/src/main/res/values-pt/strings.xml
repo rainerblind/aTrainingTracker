@@ -178,6 +178,8 @@
     <string name="distance_lap_short">dist. vta</string>
     <string name="heart_rate">frequência cardíaca</string>
     <string name="heart_rate_short">FC</string>
+    <string name="rr_interval">Intervalo RR</string>
+    <string name="rr_interval_short">RR</string>
     <string name="lap_number">número da volta</string>
     <string name="lap_number_short">vta n°</string>
     <string name="line_distance">distância linear</string>

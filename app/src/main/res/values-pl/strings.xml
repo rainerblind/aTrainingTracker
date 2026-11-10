@@ -178,6 +178,8 @@
     <string name="distance_lap_short">dyst. okr.</string>
     <string name="heart_rate">tętno</string>
     <string name="heart_rate_short">HR</string>
+    <string name="rr_interval">Interwał RR</string>
+    <string name="rr_interval_short">RR</string>
     <string name="lap_number">numer okrążenia</string>
     <string name="lap_number_short">okr. nr</string>
     <string name="line_distance">dystans w linii prostej</string>

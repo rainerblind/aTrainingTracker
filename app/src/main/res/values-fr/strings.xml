@@ -178,6 +178,8 @@
     <string name="distance_lap_short">dist. tr</string>
     <string name="heart_rate">fréquence cardiaque</string>
     <string name="heart_rate_short">FC</string>
+    <string name="rr_interval">Intervalle RR</string>
+    <string name="rr_interval_short">RR</string>
     <string name="lap_number">numéro du tour</string>
     <string name="lap_number_short">tour n°</string>
     <string name="line_distance">distance à vol d\'oiseau</string>

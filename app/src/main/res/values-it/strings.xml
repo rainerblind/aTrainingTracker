@@ -178,6 +178,8 @@
     <string name="distance_lap_short">dist. giro</string>
     <string name="heart_rate">frequenza cardiaca</string>
     <string name="heart_rate_short">FC</string>
+    <string name="rr_interval">Intervallo RR</string>
+    <string name="rr_interval_short">RR</string>
     <string name="lap_number">numero giro</string>
     <string name="lap_number_short">giro n.</string>
     <string name="line_distance">distanza lineare</string>

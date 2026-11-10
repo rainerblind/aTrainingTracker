@@ -138,7 +138,7 @@ class BTLEMeasurementParsingTest {
             super.measurementCharacteristicUpdate(gatt, characteristic)
         }
 
-        fun getHeartRateSensor() = mHeartRateSensor
+        override fun getHeartRateSensor(): com.atrainingtracker.banalservice.sensor.MySensor<Int> = mHeartRateSensor
     }
 
     @Before

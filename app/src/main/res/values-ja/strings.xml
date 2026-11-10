@@ -178,6 +178,8 @@
     <string name="distance_lap_short">ラップ距離</string>
     <string name="heart_rate">心拍数</string>
     <string name="heart_rate_short">HR</string>
+    <string name="rr_interval">RR間隔</string>
+    <string name="rr_interval_short">RR</string>
     <string name="lap_number">ラップ数</string>
     <string name="lap_number_short">ラップ</string>
     <string name="line_distance">直線距離</string>

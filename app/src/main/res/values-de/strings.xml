@@ -179,6 +179,8 @@
     <string name="distance_lap_short">Dist. Runde</string>
     <string name="heart_rate">Herzfrequenz</string>
     <string name="heart_rate_short">HF</string>
+    <string name="rr_interval">RR-Intervall</string>
+    <string name="rr_interval_short">RR</string>
     <string name="lap_number">Rundennummer</string>
     <string name="lap_number_short">Runde Nr.</string>
     <string name="line_distance">Luftlinie</string>

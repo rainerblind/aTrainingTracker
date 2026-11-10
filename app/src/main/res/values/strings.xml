@@ -158,6 +158,7 @@
     <string name="units_work_kj" translatable="false">kJ</string>
     <string name="units_temperature" translatable="false">°C</string>
     <string name="units_time_basic" translatable="false">s</string>
+    <string name="units_time_ms" translatable="false">ms</string>
     <string name="units_torque" translatable="false">Nm</string>
     <string name="units_none" translatable="false" />
     <string name="units_percent" translatable="false">%</string>
@@ -247,6 +248,8 @@
     <string name="distance_lap_short">dist. lap</string>
     <string name="heart_rate">heart rate</string>
     <string name="heart_rate_short">HR</string>
+    <string name="rr_interval">RR interval</string>
+    <string name="rr_interval_short">RR</string>
     <string name="lap_number">lap number</string>
     <string name="lap_number_short">lap nr</string>
     <string name="line_distance">line distance</string>
