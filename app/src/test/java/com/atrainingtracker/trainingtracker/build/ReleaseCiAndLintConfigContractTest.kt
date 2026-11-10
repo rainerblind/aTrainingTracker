@@ -24,7 +24,9 @@ import org.junit.Test
 import java.io.File
 
 /**
- * Validates Release CI test gating, AndroidManifest hygiene, Lint configuration, and CI integrity (REQ-BLD-002, TST-BLD-002, REQ-PRO-042, TST-PRO-042, REQ-PRO-046, TST-PRO-046, ATT-6173).
+ * Validates Release CI test gating, AndroidManifest hygiene, Lint configuration,
+ * Detekt static analysis, and CI integrity (REQ-BLD-002, TST-BLD-002, REQ-PRO-042,
+ * TST-PRO-042, REQ-PRO-046, TST-PRO-046, REQ-PRO-047, TST-PRO-047, ATT-6175).
  */
 class ReleaseCiAndLintConfigContractTest {
 
@@ -53,6 +55,17 @@ class ReleaseCiAndLintConfigContractTest {
 
     private fun findLintBaselineFile(): File =
         findRepoRootFile("app/lint-baseline.xml", "lint-baseline.xml")
+
+    private fun findRootBuildGradleFile(): File =
+        listOf(File("build.gradle"), File("../build.gradle")).firstOrNull {
+            it.exists() && it.readText().contains("buildscript")
+        } ?: findRepoRootFile("build.gradle", "../build.gradle")
+
+    private fun findDetektConfigFile(): File =
+        findRepoRootFile("config/detekt/detekt.yml", "../config/detekt/detekt.yml")
+
+    private fun findDetektBaselineFile(): File =
+        findRepoRootFile("app/detekt-baseline.xml", "detekt-baseline.xml")
 
     @Test
     fun testReleaseWorkflow_runsUnitTestsBeforeAssembly() {
@@ -206,7 +219,8 @@ class ReleaseCiAndLintConfigContractTest {
     }
 
     /**
-     * Asserts that app/lint-baseline.xml is pruned and strictly bounded to <= 546 issues (REQ-PRO-046.4, TST-PRO-046.3).
+     * Asserts that app/lint-baseline.xml is pruned and strictly bounded
+     * to <= 546 issues (REQ-PRO-046.4, TST-PRO-046.3).
      */
     @Test
     fun testLintBaseline_issueCountWithinBound() {
@@ -214,8 +228,100 @@ class ReleaseCiAndLintConfigContractTest {
         val issueCount = Regex("<issue\\b").findAll(content).count()
 
         assertTrue(
-            "app/lint-baseline.xml must contain issues but be bounded by <= 546 (burned down from 607) (REQ-PRO-046.4, TST-PRO-046.3). Current: $issueCount",
+            "app/lint-baseline.xml must be bounded by <= 546 (REQ-PRO-046.4, TST-PRO-046.3). Current: $issueCount",
             issueCount in 1..546
+        )
+    }
+
+    /**
+     * Asserts that build.gradle and app/build.gradle apply Detekt plugin
+     * and configure config/baseline paths (REQ-PRO-047.1, REQ-PRO-047.3, TST-PRO-047.1).
+     */
+    @Test
+    fun testBuildGradle_detektPluginAndConfiguration() {
+        val appBuildContent = findBuildGradleFile().readText()
+        val rootBuildFile = findRootBuildGradleFile()
+        val rootBuildContent = rootBuildFile.readText()
+
+        assertTrue(
+            "Root build.gradle must declare detekt-gradle-plugin dependency (REQ-PRO-047.1, TST-PRO-047.1)",
+            rootBuildContent.contains("io.gitlab.arturbosch.detekt:detekt-gradle-plugin")
+        )
+        assertTrue(
+            "app/build.gradle must apply io.gitlab.arturbosch.detekt plugin (REQ-PRO-047.1, TST-PRO-047.1)",
+            appBuildContent.contains("io.gitlab.arturbosch.detekt")
+        )
+        assertTrue(
+            "app/build.gradle must configure detekt.yml config path (REQ-PRO-047.1, TST-PRO-047.1)",
+            appBuildContent.contains("config/detekt/detekt.yml")
+        )
+        assertTrue(
+            "app/build.gradle must configure detekt-baseline.xml baseline path (REQ-PRO-047.3, TST-PRO-047.1)",
+            appBuildContent.contains("detekt-baseline.xml")
+        )
+    }
+
+    /**
+     * Asserts that config/detekt/detekt.yml defines complexity rules
+     * (LargeClass, LongMethod, CyclomaticComplexMethod) (REQ-PRO-047.2, TST-PRO-047.2).
+     */
+    @Test
+    fun testDetektConfig_complexityRulesActive() {
+        val detektConfigContent = findDetektConfigFile().readText()
+
+        assertTrue(
+            "config/detekt/detekt.yml must configure LargeClass rule (REQ-PRO-047.2, TST-PRO-047.2)",
+            detektConfigContent.contains("LargeClass:")
+        )
+        assertTrue(
+            "config/detekt/detekt.yml must configure LongMethod rule (REQ-PRO-047.2, TST-PRO-047.2)",
+            detektConfigContent.contains("LongMethod:")
+        )
+        assertTrue(
+            "config/detekt/detekt.yml must configure CyclomaticComplexMethod rule (REQ-PRO-047.2, TST-PRO-047.2)",
+            detektConfigContent.contains("CyclomaticComplexMethod:")
+        )
+    }
+
+    /**
+     * Asserts that app/detekt-baseline.xml exists and contains recorded
+     * legacy baseline smells (REQ-PRO-047.3, TST-PRO-047.1).
+     */
+    @Test
+    fun testDetektBaseline_existsAndIsPopulated() {
+        val baselineFile = findDetektBaselineFile()
+
+        assertTrue(
+            "app/detekt-baseline.xml must exist (REQ-PRO-047.3, TST-PRO-047.1)",
+            baselineFile.exists()
+        )
+        assertTrue(
+            "app/detekt-baseline.xml must be populated with legacy baseline smells (REQ-PRO-047.3, TST-PRO-047.1)",
+            baselineFile.length() > 1000
+        )
+    }
+
+    /**
+     * Asserts that CI workflow executes Detekt and uploads report artifacts (REQ-PRO-047.4, TST-PRO-047.3).
+     */
+    @Test
+    fun testBranchBuildWorkflow_runsDetektAndUploadsReport() {
+        val content = findCiWorkflowFile().readText()
+        val detektStep = "./gradlew :app:detekt"
+        val artifactStep = "actions/upload-artifact"
+        val reportPath = "app/build/reports/detekt/"
+
+        assertTrue(
+            "CI workflow must execute Detekt ($detektStep) (REQ-PRO-047.4, TST-PRO-047.3)",
+            content.contains(detektStep)
+        )
+        assertTrue(
+            "CI workflow must upload detekt reports via $artifactStep (REQ-PRO-047.4, TST-PRO-047.3)",
+            content.contains(artifactStep) && content.contains("name: detekt-report")
+        )
+        assertTrue(
+            "CI workflow must specify detekt report artifact path $reportPath (REQ-PRO-047.4, TST-PRO-047.3)",
+            content.contains(reportPath)
         )
     }
 }

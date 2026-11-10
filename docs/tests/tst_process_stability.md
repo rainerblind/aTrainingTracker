@@ -1514,3 +1514,22 @@
   • Count `<issue` XML elements and assert the total count is <= 546.
   4. *Clean-Room Targeted Test Suite Execution (`TST-PRO-046.4`)*:
   • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest"` asserting 100% pass rate.
+
+
+
+### TST-PRO-047: **Detekt Static Analysis & Complexity Governance Contract Test Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-047`
+- **Component**: `build.gradle`, `app/build.gradle`, `config/detekt/detekt.yml`, `app/detekt-baseline.xml`, `.github/workflows/android-branch-build.yml`, `ReleaseCiAndLintConfigContractTest.kt`
+- **Jira**: `ATT-6175`
+- **Test Description**:
+  1. *Build Script Detekt Plugin & Configuration Conformance Test (`TST-PRO-047.1`, `ReleaseCiAndLintConfigContractTest.kt`)*:
+  • Read `build.gradle` and `app/build.gradle`.
+  • Assert that the detekt plugin is applied and configured with `config/detekt/detekt.yml` and `app/detekt-baseline.xml`.
+  2. *Detekt Rules Configuration Conformance Test (`TST-PRO-047.2`, `ReleaseCiAndLintConfigContractTest.kt`)*:
+  • Read `config/detekt/detekt.yml`.
+  • Assert that complexity rules (`LargeClass`, `LongMethod`, and `CyclomaticComplexMethod`) are present with active thresholds.
+  3. *CI Workflow Detekt Step & Artifact Upload Conformance Test (`TST-PRO-047.3`, `ReleaseCiAndLintConfigContractTest.kt`)*:
+  • Read `.github/workflows/android-branch-build.yml`.
+  • Assert that the workflow contains `./gradlew detekt` and an artifact upload step for detekt reports.
+  4. *Clean-Room Targeted Test Suite Execution (`TST-PRO-047.4`)*:
+  • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest"` and `./gradlew detekt` asserting 100% pass rate.

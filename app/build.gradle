@@ -25,6 +25,7 @@ plugins {
     id 'org.jetbrains.kotlin.plugin.compose'
     id 'org.jetbrains.kotlin.plugin.serialization'
     id 'kotlin-parcelize'
+    id 'io.gitlab.arturbosch.detekt'
 }
 
 def getGitHash = providers.exec {
@@ -127,6 +128,24 @@ android {
                 exceptionFormat "full"
             }
         }
+    }
+}
+
+detekt {
+    toolVersion = "1.23.8"
+    config.setFrom(files("${project.rootDir}/config/detekt/detekt.yml"))
+    baseline = file("${project.projectDir}/detekt-baseline.xml")
+    buildUponDefaultConfig = true
+    allRules = false
+    autoCorrect = false
+}
+
+tasks.withType(io.gitlab.arturbosch.detekt.Detekt).configureEach {
+    reports {
+        html.required.set(true)
+        xml.required.set(true)
+        txt.required.set(false)
+        sarif.required.set(false)
     }
 }
 
