@@ -49,7 +49,8 @@ class SourceTextReadingAuditContractTest {
             "com/atrainingtracker/trainingtracker/security/LogcatPrivacySecurityTest.kt",
             "com/atrainingtracker/trainingtracker/tracker/MergedManifestFgsAuditTest.kt",
             "com/atrainingtracker/trainingtracker/resources/NotificationIconContractTest.kt",
-            "com/atrainingtracker/trainingtracker/routes/TurnDirectionIconContractTest.kt"
+            "com/atrainingtracker/trainingtracker/routes/TurnDirectionIconContractTest.kt",
+            "com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt"
         )
     }
 
@@ -121,8 +122,8 @@ class SourceTextReadingAuditContractTest {
     @Test
     fun testGovernanceGuards_allExplicitlyAllowed() {
         assertEquals(
-            "Expected exactly 13 approved architectural governance guards (REQ-PRO-049.2)",
-            13,
+            "Expected exactly 14 approved architectural governance guards (REQ-PRO-049.2, REQ-PRO-050.4)",
+            14,
             LEGITIMATE_GOVERNANCE_GUARDS.size
         )
         LEGITIMATE_GOVERNANCE_GUARDS.forEach { guard ->

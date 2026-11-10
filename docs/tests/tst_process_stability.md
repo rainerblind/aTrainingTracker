@@ -1569,3 +1569,20 @@
   • Validate that unallow-listed test files containing `.readText()` targeting `src/main/` trigger a test failure.
   4. *Clean-Room Targeted Test Suite Execution (`TST-PRO-049.4`)*:
   • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.SourceTextReadingAuditContractTest"` asserting 100% pass rate.
+
+
+### TST-PRO-050: **Automated Architecture Conformance Test Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-050`
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`, `docs/architecture.md`
+- **Jira**: `ATT-6182`
+- **Test Description**:
+  1. *UI Layer DatabaseManager Isolation Test (`TST-PRO-050.1`, `ArchitectureConformanceContractTest.kt`)*:
+  • Recursively scan all `.java` and `.kt` source files in `app/src/main/java/**/ui/`.
+  • Assert that zero classes outside the recorded baseline import or reference `*DatabaseManager` or `*DbHelper`.
+  2. *Domain Calculation Layer Purity Test (`TST-PRO-050.2`, `ArchitectureConformanceContractTest.kt`)*:
+  • Recursively scan all files in domain calculation packages.
+  • Assert that zero classes reference Android UI frameworks or SQLite persistence classes.
+  3. *Ratcheting Tripwire Violation Detection Test (`TST-PRO-050.3`, `ArchitectureConformanceContractTest.kt`)*:
+  • Validate that synthetic unallow-listed UI database references or domain UI imports trigger assertion failures.
+  4. *Clean-Room Targeted Test Suite Execution (`TST-PRO-050.4`)*:
+  • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest"` asserting 100% pass rate and confirm `ArchitectureConformanceContractTest` is registered in `LEGITIMATE_GOVERNANCE_GUARDS`.

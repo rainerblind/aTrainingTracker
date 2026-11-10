@@ -2522,3 +2522,37 @@ The workflow SHALL mandate that:
   • *When* executed as part of the unit test suite,
   • *Then* it SHALL pass with 100% success.
 - **Invariants**: Zero runtime code changes; 100% unit test pass rate; zero build failure on existing source files.
+
+
+### REQ-PRO-050: Automated Architecture Conformance Testing [Verified]
+- **Tests**: `TST-PRO-050` | **Tickets**: `ATT-6182`
+- **Implementation**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`, `docs/architecture.md`
+- **Rationale**: ASPICE pre-assessment finding C-08 identified that layering rules defined in `docs/architecture.md` lack automated CI test enforcement, allowing architectural drift (such as direct UI-to-DatabaseManager bindings) to accumulate unnoticed. Introducing `ArchitectureConformanceAuditTest` enforces layer boundaries and dependency directions (Presentation -> Domain -> Services -> Data -> Persistence) while ratcheting down existing baseline debt and maintaining pure domain logic isolation (ATT-6182, refining `REQ-PRO-034` under Epic `ATT-6142`):
+- **Description**:
+  1. *UI Layer Isolation & DatabaseManager Ban (`REQ-PRO-050.1`)*:
+     • Pure Compose UI screens and ViewModels in `ui/` SHALL NOT directly import or reference raw SQLite `*DatabaseManager` or `*DbHelper` classes, except for those explicitly captured in an approved ratcheted baseline set.
+  2. *Domain Calculation Layer Purity (`REQ-PRO-050.2`)*:
+     • Domain calculators and mathematical calculation engines in `domain/` SHALL NOT import Android UI frameworks (`android.view`, `androidx.compose`, `android.widget`) or database persistence classes, maintaining pure JVM domain isolation.
+  3. *Ratcheted Architecture Baseline & Tripwire (`REQ-PRO-050.3`)*:
+     • The architecture test suite SHALL isolate existing baseline violations in a recorded baseline set, failing deterministically if any new, unallow-listed layer violation is introduced.
+  4. *Architectural Governance Registration (`REQ-PRO-050.4`)*:
+     • The architecture conformance test SHALL be registered as a legitimate governance contract test in `SourceTextReadingAuditContractTest` (`LEGITIMATE_GOVERNANCE_GUARDS`) per `docs/coding_standards.md` §5.4.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-050` (*Automated Architecture Conformance Testing*), refining `REQ-PRO-034` (*SWE.1/2/4/6 Hardening*). Targets `ArchitectureConformanceAuditTest.kt`, `SourceTextReadingAuditContractTest.kt`.
+  2. *Historical Origin & Commit Trace*: Independent ASPICE pre-assessment finding C-08 (2026-11-08) and ticket ATT-6182.
+  3. *Root Reason for Existing Formulation*: Project historically relied on written architectural documentation without automated CI tripwires, leading to unpoliced layering drift.
+  4. *Preservation of Core Invariants*: Existing UI and background services continue uninterrupted; baseline allow-list prevents false positives.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `app/src/main/java/**/ui/`,
+  • *When* `ArchitectureConformanceAuditTest` executes,
+  • *Then* zero unallow-listed classes SHALL import or reference `*DatabaseManager` / `*DbHelper`.
+  • *Given* `app/src/main/java/**/domain/`,
+  • *When* `ArchitectureConformanceAuditTest` executes,
+  • *Then* zero domain calculation engines SHALL reference Android UI or SQLite persistence classes.
+  • *Given* a new, unallow-listed layering violation,
+  • *When* `ArchitectureConformanceAuditTest` runs,
+  • *Then* the test SHALL fail deterministically.
+  • *Given* `ArchitectureConformanceAuditTest`,
+  • *When* executed in the unit test suite,
+  • *Then* it SHALL pass with 100% success and be registered in `LEGITIMATE_GOVERNANCE_GUARDS`.
+- **Invariants**: Zero runtime code changes; 100% unit test pass rate; zero build failure on existing source files.
