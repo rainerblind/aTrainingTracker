@@ -2705,6 +2705,41 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
   • *Then* `mPedalSmoothnessSensor.newValue(...)` is invoked and telemetry is emitted to listeners.
 - **Invariants**: `DEVICE_ALREADY_IN_USE` prevention (`REQ-CON-020.4`) preserved; ANT+ reconnect stability preserved; 100% test pass rate.
 
+### REQ-CON-026: BLE Run Speed Device Lifecycle & Telemetry Hygiene [Verified]
+- **Tests**: `TST-CON-026` | **Tickets**: `ATT-6381`
+- **Implementation**: `BTLERunSpeedDevice.java`, `BTLERunSpeedDeviceTest.kt`
+- **Rationale**: In `BTLERunSpeedDevice`, lifecycle thread cleanup and packet freshness omissions compromise stability and live metric accuracy:
+  1. `shutDown()` only cancels `mDistanceCalculatorHandle` without calling `mScheduler.shutdownNow()`, permanently leaking a background thread pool worker per device instance.
+  2. When hardware distance is omitted (`mDistancePresent == false`), `distanceCalculator` adds `mSpeed` every 1 second. If sensor packets stop (runner pauses or device disconnects without immediate object collection), `mSpeed` is never reset, resulting in runaway accumulation of stale speed into `mDistance`.
+  3. Shared fields `mSpeed`, `mDistance`, and `mDistancePresent` are accessed concurrently across the BLE GATT callback thread and the scheduler thread without memory visibility guarantees.
+- **Description**:
+  1. *ScheduledExecutorService Thread Termination (`REQ-CON-026.1`)*:
+     • In `BTLERunSpeedDevice.shutDown()`, `mScheduler.shutdownNow()` SHALL be executed in addition to cancelling `mDistanceCalculatorHandle`, releasing the background worker thread.
+  2. *Stale Speed Timeout & Runaway Distance Prevention (`REQ-CON-026.2`)*:
+     • The device SHALL record packet arrival timestamps (`mLastMeasurementTimestamp`).
+     • In `distanceCalculator`, if elapsed time since the last measurement exceeds 5000 ms, `mSpeed` SHALL be treated as 0.0 and NOT accumulated into `mDistance`.
+     • In `unregisterSensors()`, `mSpeed` SHALL be reset to `0.0` and timestamp cleared, preventing false carry-over on reconnects.
+  3. *Thread-Safe Cross-Thread State Visibility (`REQ-CON-026.3`)*:
+     • `mSpeed`, `mDistance`, and `mDistancePresent` SHALL be declared `volatile` to guarantee memory visibility between the GATT event thread and the 1-Hz calculator thread.
+  4. *Field Shadowing Audit & Inheritance Cleanliness (`REQ-CON-026.4`)*:
+     • `BTLERunSpeedDevice` SHALL NOT declare redundant `mAddress` or `mTotalDistance` fields, relying cleanly on inherited device state.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new refinement `REQ-CON-026` extending `REQ-CON-002` (*Bluetooth LE Sensor Support*) and `REQ-CON-014` (*BLE GATT Measurement Packet Parsing Resilience*).
+  2. *Historical Origin & Commit Trace*: Introduced during initial BLE RSC footpod driver implementation (`BTLERunSpeedDevice.java`).
+  3. *Root Reason for Existing Formulation*: Lifecycles assumed GC collection would reclaim unreferenced threads, and packet arrival was assumed continuous during tracking.
+  4. *Preservation of Core Invariants*: Bluetooth SIG Running Speed and Cadence (RSC) profile compliance, stride length, cadence, speed, and hardware distance parsing remain 100% intact.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* an active `BTLERunSpeedDevice` with a running scheduler thread,
+  • *When* `shutDown()` is invoked,
+  • *Then* `mScheduler.isShutdown()` evaluates to `true` and the thread terminates without leak.
+  • *Given* a `BTLERunSpeedDevice` with `mDistancePresent == false` and last received `mSpeed = 3.5 m/s`,
+  • *When* no BLE RSC packets arrive for $> 5$ seconds,
+  • *Then* `distanceCalculator` does not accumulate stale speed into `mDistance`.
+  • *Given* a sensor disconnect or unregistration (`unregisterSensors()`),
+  • *When* executed,
+  • *Then* `mSpeed` is reset to `0.0`.
+- **Invariants**: Bluetooth SIG RSC profile parsing preserved; hardware distance accumulation when present preserved; 100% test pass rate.
+
 ### REQ-TRK-052: Zero-Allocation 1-Hz ClockTimeTask Time-of-Day Formatting [Verified]
 - **Tests**: `TST-TRK-052` | **Tickets**: `ATT-5481`
 - **Implementation**: `ClockDevice.java`, `ClockDeviceResilienceTest.kt`

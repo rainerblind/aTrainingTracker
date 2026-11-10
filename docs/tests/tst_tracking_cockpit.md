@@ -1520,6 +1520,29 @@
   5. *Clean-Room Targeted Test Suite Execution (`TST-CON-025.5`)*:
   • Execute targeted package tests (`com.atrainingtracker.banalservice.devices.ant_plus.*`) asserting 100% pass rate.
 
+### TST-CON-026: **BLE Run Speed Device Lifecycle & Telemetry Hygiene Test Suite** [Verified]
+- **Requirement(s)**: `REQ-CON-026`
+- **Component**: `BTLERunSpeedDevice.java`, `BTLERunSpeedDeviceTest.kt`
+- **Jira**: `ATT-6381`
+- **Test Description**:
+  1. *Scheduler Shutdown & Thread Leak Prevention Unit Test (`TST-CON-026.1`, `BTLERunSpeedDeviceTest.kt`)*:
+  • Instantiate `BTLERunSpeedDevice`.
+  • Invoke `shutDown()`.
+  • Verify `mScheduler.isShutdown()` returns true and `mDistanceCalculatorHandle.isCancelled()` returns true.
+  2. *Stale Speed Timeout & Runaway Distance Prevention Unit Test (`TST-CON-026.2`, `BTLERunSpeedDeviceTest.kt`)*:
+  • Provide valid BLE RSC packet with non-zero speed and `mDistancePresent = false`.
+  • Advance simulated clock past 5000 ms threshold.
+  • Execute `distanceCalculator.run()`.
+  • Verify `mDistance` does not accumulate stale speed.
+  3. *Sensor Unregistration / Disconnect Speed Reset Unit Test (`TST-CON-026.3`, `BTLERunSpeedDeviceTest.kt`)*:
+  • Set non-zero speed.
+  • Invoke `unregisterSensors()`.
+  • Verify `mSpeed` is reset to 0.0.
+  4. *Field Shadowing & Inheritance Audit Test (`TST-CON-026.4`, `BTLERunSpeedDeviceTest.kt`)*:
+  • Verify via reflection that `BTLERunSpeedDevice` does not declare redundant shadow fields for `mAddress` or `mTotalDistance`.
+  5. *Clean-Room Targeted Test Suite Execution (`TST-CON-026.5`)*:
+  • Run targeted package tests across `com.atrainingtracker.banalservice.devices.bluetooth_le.*` and `com.atrainingtracker.trainingtracker.build.*` asserting 100% pass rate.
+
 ### TST-TRK-052: **Zero-Allocation 1-Hz ClockTimeTask Time-of-Day Formatting Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-052`
 - **Component**: `ClockDevice.java`, `ClockDeviceResilienceTest.kt`
