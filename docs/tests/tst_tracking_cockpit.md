@@ -621,15 +621,17 @@
 ### TST-TRK-016: **MySensorManager Priority Hierarchy, DeviceType Enum Alignment, LINE_DISTANCE_m, Default Pairing & Canonical Rank Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-024`
 - **Component**: **`MySensorManager` Priority Hierarchy, `DeviceType` Enum Alignment, `LINE_DISTANCE_m`, Default Pairing & Canonical Rank Verification Suite**
-- **Jira**: ``ATT-3961`, `ATT-4375`, `ATT-5491`, `ATT-5492``
+- **Jira**: ``ATT-3961`, `ATT-4375`, `ATT-5491`, `ATT-5492`, `ATT-6264``
 - **Test Description**:
   1. *`SPEED_PRIORITY`, `ALTITUDE_PRIORITY` & `LOCATION_PRIORITY` Ordering Invariant Test (`MySensorManagerPriorityTest.kt`)*:
   • Verify `MySensorManager.SPEED_PRIORITY` equals `[RUN_SPEED, BIKE_SPEED, BIKE_SPEED_AND_CADENCE, BIKE_POWER, SPEED_AND_LOCATION_GOOGLE_FUSED, SPEED_AND_LOCATION_GPS]`, with `SPEED_AND_LOCATION_GOOGLE_FUSED` strictly preceding `SPEED_AND_LOCATION_GPS`.
-  • Verify `MySensorManager.ALTITUDE_PRIORITY` and `LOCATION_PRIORITY` order `SPEED_AND_LOCATION_GOOGLE_FUSED` ahead of `SPEED_AND_LOCATION_GPS`.
+  • Verify `MySensorManager.ALTITUDE_PRIORITY` equals `[ALTITUDE_FROM_POSITION, ALTITUDE_FROM_PRESSURE, SPEED_AND_LOCATION_GOOGLE_FUSED, SPEED_AND_LOCATION_GPS]`, with `ALTITUDE_FROM_POSITION` strictly preceding `ALTITUDE_FROM_PRESSURE`.
+  • Verify `MySensorManager.LOCATION_PRIORITY` orders `SPEED_AND_LOCATION_GOOGLE_FUSED` ahead of `SPEED_AND_LOCATION_GPS`.
   2. *Google Fused `ProxySensor` Retention & GC String Test (`MySensorManagerPriorityTest.kt`)*:
   • Verify that registering `SPEED_mps`, `PACE_spm`, `DISTANCE_m`, `DISTANCE_m_LAP`, `ALTITUDE`, `LATITUDE`, and `LONGITUDE` from a `DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED` device retains non-null `ProxySensor` instances in `MySensorManager`, propagates live values (`6.5 m/s`, `2896.48 m`), and sets `'D'` and `'S'` in `SensorType.SENSORS` (`"-DS----AG--"`).
   3. *Priority Upgrade & Fallback Test (`MySensorManagerPriorityTest.kt`)*:
   • Verify that registering and unregistering `SPEED_AND_LOCATION_GPS`, `SPEED_AND_LOCATION_GOOGLE_FUSED`, and `BIKE_SPEED` dynamically upgrades and falls back `getBestSensor` and `ProxySensor` values according to `BIKE_SPEED > SPEED_AND_LOCATION_GOOGLE_FUSED > SPEED_AND_LOCATION_GPS`.
+  • Verify that registering `ALTITUDE_FROM_POSITION` dynamically upgrades over `ALTITUDE_FROM_PRESSURE`, and unregistering `ALTITUDE_FROM_POSITION` falls back to `ALTITUDE_FROM_PRESSURE`.
   4. *`DeviceType` Enum Declaration Order Test (`DeviceTypeEnumOrderTest.kt`)*:
   • Verify that in `DeviceType.java`, `SPEED_AND_LOCATION_GPS.ordinal() < SPEED_AND_LOCATION_GOOGLE_FUSED.ordinal()`.
   5. *`LINE_DISTANCE_m` Priority Mapping & `getBestSensor` Fallback Test (`MySensorManagerPriorityTest.kt`)*:
@@ -638,7 +640,7 @@
   6. *Canonical Priority Rank Helper Test (`MySensorManagerPriorityTest.kt`)*:
   • Verify `MySensorManager.getPriorityRank(sensorType, deviceType)` returns 0 for `SPEED_AND_LOCATION_GOOGLE_FUSED` and 1 for `SPEED_AND_LOCATION_GPS` across location sensor types.
   • Verify speed ranks: `BIKE_SPEED (1) -> SPEED_AND_LOCATION_GOOGLE_FUSED (4) -> SPEED_AND_LOCATION_GPS (5)`.
-  • Verify altitude ranks: `PRESSURE (0) -> POSITION (1) -> SPEED_AND_LOCATION_GOOGLE_FUSED (2) -> SPEED_AND_LOCATION_GPS (3)`.
+  • Verify altitude ranks: `POSITION (0) -> PRESSURE (1) -> SPEED_AND_LOCATION_GOOGLE_FUSED (2) -> SPEED_AND_LOCATION_GPS (3)`.
   • Verify fallback ranks `1000 + deviceType.ordinal()` for unmapped devices and `Integer.MAX_VALUE` for null `deviceType`.
   7. *`DevicesDatabaseManager.addLocationDevicesToDb` Insertion Sequence & Default Pairing Tests (`DevicesDatabaseManagerOrderingTest.kt`)*:
   • Verify insertion sequence `_id = 1` for `SPEED_AND_LOCATION_GPS` and `_id = 2` for `SPEED_AND_LOCATION_GOOGLE_FUSED`.

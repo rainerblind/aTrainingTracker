@@ -61,10 +61,18 @@ public class MySensorManager extends MyDevice {
             DeviceType.BIKE_SPEED_AND_CADENCE,
             DeviceType.BIKE_POWER
     };
+    /**
+     * Priority hierarchy for altitude sensors ({@link SensorType#ALTITUDE}).
+     * <p>
+     * Topographic Altitude (DEM / {@link DeviceType#ALTITUDE_FROM_POSITION}) takes precedence
+     * over Barometric Altitude ({@link DeviceType#ALTITUDE_FROM_PRESSURE}) when explicitly paired by
+     * the athlete, followed by Google Fused and GPS elevation
+     * ({@code REQ-TRK-024.1} / {@code ATT-6264}).
+     */
     protected static final DeviceType[] ALTITUDE_PRIORITY
             = new DeviceType[]{
-            DeviceType.ALTITUDE_FROM_PRESSURE,
             DeviceType.ALTITUDE_FROM_POSITION,
+            DeviceType.ALTITUDE_FROM_PRESSURE,
             DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED,
             DeviceType.SPEED_AND_LOCATION_GPS
     };
