@@ -3175,6 +3175,40 @@
 
 **Invariants**: Downstream transactional `isWorkoutExisting` intact, no false-positive skipping of `legacy_import` files, zero duplicate workout rows created.
 
+### REQ-DAT-039: Point-to-Point (A->B) Route Apex Migration, Import Unification & Mapper Parity [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-DAT-035` | **Tickets**: `ATT-6319`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutClusterEngine.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutClusterRepository.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/migration/LegacyImportEngine.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutDataMapper.kt`
+- **Rationale**: While `REQ-SET-097` (`ATT-5899`) introduced non-degenerate elliptical apex calculation (`findApexFromPoints`) for live recordings on point-to-point (A->B) routes ($d(\text{start}, \text{end}) \ge 150\text{ m}$), historical workouts in `TABLE_EXTREMA_VALUES` and historical clusters in `WorkoutClusters.db` still store legacy apex coordinates that collapsed onto the destination point ($P_{\text{apex}} \approx P_{\text{end}}$). Furthermore, `LegacyImportEngine.kt` and `WorkoutDataMapper.kt` still calculate apex exclusively by maximizing $d(\text{start}, pt)$, re-corrupting apex coordinates during file imports and summary mapping. The system SHALL perform a self-healing migration across existing point-to-point database records and unify apex calculation across import pipelines and data mappers.
+- **Description**:
+  1. *Self-Healing Database Apex Migration (`REQ-DAT-039.1`)*:
+     - `WorkoutClusterEngine` SHALL provide `healLegacyPointToPointApexes()` to scan point-to-point workouts ($d(\text{start}, \text{end}) \ge 150\text{ m}$) having valid track points or map polylines.
+     - For any workout where the stored apex degenerates near the destination ($d(P_{\text{apex}}, P_{\text{end}}) < 50\text{ m}$ or collinearity collapse), the system SHALL recompute non-degenerate apex coordinates via `findApexFromPoints(start, points, end)` and persist the corrected `MAX_LINE_DISTANCE_LAT`, `LNG`, and `LINE_DISTANCE_m` in `TABLE_EXTREMA_VALUES`.
+     - The migration SHALL recalculate cluster centroids (`maxDispLat`, `maxDispLng`) for all affected clusters.
+  2. *Repository SharedPreferences-Guarded Trigger (`REQ-DAT-039.2`)*:
+     - `WorkoutClusterRepository.refreshClusters()` SHALL trigger the self-healing migration asynchronously on `Dispatchers.IO`, guarded by a persistent SharedPreferences flag (`SP_KEY_LAST_APEX_REPAIR = "last_apex_repair_v1"`), ensuring the migration executes strictly once without blocking app startup or UI composition.
+  3. *Legacy Import Pipeline Unification (`REQ-DAT-039.3`)*:
+     - In `LegacyImportEngine.kt`, apex calculation for imported FIT, TCX, GPX, and Strava streams SHALL use `WorkoutClusterEngine.findApexFromPoints(start, points, end)` instead of raw distance-from-start maximization.
+     - Imported workouts SHALL persist `MAX_LINE_DISTANCE_LAT`, `LNG`, and `LINE_DISTANCE_m` in `TABLE_EXTREMA_VALUES` and pass `workoutPolyline = points` into `suggestCluster` for corridor-aware cluster assignment.
+  4. *Data Mapper Symmetrical Apex Resolution (`REQ-DAT-039.4`)*:
+     - In `WorkoutDataMapper.kt`, `resolveAuthoritativeApex` SHALL accept `endLatLng: LatLng?` and delegate to `findApexFromPoints(start, points, end)`, guaranteeing UI representation parity with database records.
+  5. *Preservation of System Invariants (`REQ-DAT-039.5`)*:
+     - Closed-loop routes ($d(\text{start}, \text{end}) < 150\text{ m}$) SHALL remain completely untouched and preserve distance-from-start apex calculation; no SQLite DDL schema changes; 100% unit test pass rate.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* existing historical point-to-point workouts with degenerated apex coordinates ($P_{\text{apex}} \approx P_{\text{end}}$),
+• *When* `WorkoutClusterRepository.refreshClusters()` executes,
+• *Then* `healLegacyPointToPointApexes()` recalculates non-degenerate apex coordinates using `findApexFromPoints`, updates `TABLE_EXTREMA_VALUES` and cluster centroids, and records the SharedPreferences completion flag.
+• *Given* an imported FIT/TCX/GPX point-to-point activity in `LegacyImportEngine`,
+• *When* imported into the database,
+• *Then* its apex coordinates are computed via `findApexFromPoints`, persisted to extrema tables, and forwarded to `suggestCluster` with polyline stations.
+• *Given* `WorkoutDataMapper.resolveAuthoritativeApex` called with track points, start, and end,
+• *When* evaluated for a point-to-point route,
+• *Then* it resolves the non-degenerate mid-corridor apex matching `findApexFromPoints`.
+
+**Invariants**: Closed-loop route ($d < 150\text{ m}$) apex behavior unmodified; no blocking UI threads; transactional SQLite updates; 100% unit test pass rate.
+
+
 
 
 

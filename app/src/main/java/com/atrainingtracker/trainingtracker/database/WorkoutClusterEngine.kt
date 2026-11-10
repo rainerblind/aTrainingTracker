@@ -514,6 +514,129 @@ class WorkoutClusterEngine private constructor(context: Context) {
     }
 
     /**
+     * One-time self-healing migration to recompute non-degenerate elliptical apex coordinates
+     * for existing point-to-point (A->B) routes and update cluster centroids (REQ-DAT-039, ATT-6319).
+     *
+     * @return Number of healed workout apex records.
+     */
+    fun healLegacyPointToPointApexes(context: Context): Int {
+        return synchronized(clusterLock) {
+            val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
+            val summariesDb = summariesManager.database
+            val affectedClusterIds = mutableSetOf<Long>()
+            var healedCount = 0
+
+            val selection = "${WorkoutSummaries.MAP_POLYLINE} IS NOT NULL AND ${WorkoutSummaries.MAP_POLYLINE} != ''"
+            val projection = arrayOf(
+                WorkoutSummaries.C_ID,
+                WorkoutSummaries.CLUSTER_ID,
+                WorkoutSummaries.MAP_POLYLINE
+            )
+
+            try {
+                summariesDb.query(WorkoutSummaries.TABLE, projection, selection, null, null, null, null).use { cursor ->
+                    while (cursor.moveToNext()) {
+                        val candidate = WorkoutPolylineCandidateDto.fromCursor(cursor)
+                        val workoutId = candidate.workoutId
+                        val clusterId = candidate.clusterId
+                        val polyline = candidate.polyline ?: continue
+
+                        val start = summariesManager.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.START) ?: continue
+                        val end = summariesManager.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.END) ?: continue
+
+                        val directDist = distanceBetween(start, end)
+                        // REQ-DAT-039.5: Preserve closed-loop routes (< 150m) 100%
+                        if (directDist < 150f) continue
+
+                        val recordedApex = summariesManager.getExtremaPosition(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX)
+                        val distToEnd = if (recordedApex != null) distanceBetween(recordedApex, end) else 0f
+
+                        // A->B workout with degenerate apex (collapsed onto end or missing)
+                        if (recordedApex == null || distToEnd < 50f) {
+                            val points = PolyUtil.decode(polyline)
+                            if (points.isNotEmpty()) {
+                                val trueApex = findApexFromPoints(start, points, end)
+                                val trueDisp = distanceBetween(start, trueApex).toDouble()
+
+                                if (recordedApex == null || distanceBetween(recordedApex, trueApex) > 10f) {
+                                    summariesManager.updateExtremaValue(
+                                        workoutId,
+                                        SensorType.LINE_DISTANCE_m,
+                                        ExtremaType.MAX,
+                                        trueDisp,
+                                        trueApex
+                                    )
+                                    healedCount++
+                                    if (clusterId > 0L) {
+                                        affectedClusterIds.add(clusterId)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Recalculate centroids for all affected clusters
+                for (clusterId in affectedClusterIds) {
+                    val cluster = dbManager.getClusterById(clusterId) ?: continue
+                    summariesDb.query(
+                        WorkoutSummaries.TABLE,
+                        arrayOf(WorkoutSummaries.C_ID, WorkoutSummaries.DISTANCE_TOTAL_m),
+                        "${WorkoutSummaries.CLUSTER_ID} = ?",
+                        arrayOf(clusterId.toString()),
+                        null, null, null
+                    ).use { wCursor ->
+                        var count = 0
+                        var sumStartLat = 0.0
+                        var sumStartLng = 0.0
+                        var sumEndLat = 0.0
+                        var sumEndLng = 0.0
+                        var sumApexLat = 0.0
+                        var sumApexLng = 0.0
+                        var sumDist = 0.0
+
+                        while (wCursor.moveToNext()) {
+                            val candidate = WorkoutDistanceCandidateDto.fromCursor(wCursor)
+                            val wId = candidate.workoutId
+                            val dist = candidate.distance
+                            val s = summariesManager.getExtremaPosition(wId, SensorType.LATITUDE, ExtremaType.START)
+                            val e = summariesManager.getExtremaPosition(wId, SensorType.LATITUDE, ExtremaType.END)
+                            val a = summariesManager.getExtremaPosition(wId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX) ?: e
+                            if (s != null && e != null && a != null) {
+                                sumStartLat += s.latitude
+                                sumStartLng += s.longitude
+                                sumEndLat += e.latitude
+                                sumEndLng += e.longitude
+                                sumApexLat += a.latitude
+                                sumApexLng += a.longitude
+                                sumDist += dist
+                                count++
+                            }
+                        }
+
+                        if (count > 0) {
+                            val updatedCluster = cluster.copy(
+                                startLat = sumStartLat / count,
+                                startLng = sumStartLng / count,
+                                endLat = sumEndLat / count,
+                                endLng = sumEndLng / count,
+                                maxDispLat = sumApexLat / count,
+                                maxDispLng = sumApexLng / count,
+                                refDistance = sumDist / count
+                            )
+                            dbManager.updateCluster(updatedCluster)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("WorkoutClusterEngine", "Failed to heal legacy point-to-point apexes", e)
+            }
+
+            healedCount
+        }
+    }
+
+    /**
      * Non-destructive enrichment of all existing clusters with full spatial bounds (ATT-371).
      */
     fun enrichAllClusterMetadata(context: Context, listener: ClusterMigrationListener? = null) {

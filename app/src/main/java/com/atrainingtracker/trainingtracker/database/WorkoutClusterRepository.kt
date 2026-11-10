@@ -137,6 +137,7 @@ class WorkoutClusterRepository internal constructor(
 
     companion object {
         private const val SP_KEY_LAST_BOUNDS_REPAIR = "last_cluster_bounds_repair_v5"
+        const val SP_KEY_LAST_APEX_REPAIR = "last_apex_repair_v1"
         @Volatile
         private var instance: WorkoutClusterRepository? = null
 
@@ -167,7 +168,7 @@ class WorkoutClusterRepository internal constructor(
     }
 
     suspend fun refreshClusters(forceShowProgress: Boolean = false, forceCheckIntegrity: Boolean = false): Unit = withContext(Dispatchers.IO) {
-        val currentClusters = clusterDb.getAllClusters()
+        var currentClusters = clusterDb.getAllClusters()
         
         // --- SELF-HEALING BOOTSTRAPPER (ATT-392 Refinement) ---
         // If the DB is empty (e.g. after a destructive upgrade), automatically repopulate from history.
@@ -181,6 +182,16 @@ class WorkoutClusterRepository internal constructor(
         val lastRepair = prefs.getInt(SP_KEY_LAST_BOUNDS_REPAIR, 0)
         if (lastRepair < 5 && currentClusters.isNotEmpty()) {
             repairClusterMetadata()
+            currentClusters = clusterDb.getAllClusters()
+        }
+
+        // 0.1 Point-to-point Apex Self-Healing Migration (REQ-DAT-039, ATT-6319)
+        val lastApexRepair = prefs.getInt(SP_KEY_LAST_APEX_REPAIR, 0)
+        if (lastApexRepair < 1 && currentClusters.isNotEmpty()) {
+            val engine = WorkoutClusterEngine.getInstance(context)
+            engine.healLegacyPointToPointApexes(context)
+            prefs.edit().putInt(SP_KEY_LAST_APEX_REPAIR, 1).apply()
+            currentClusters = clusterDb.getAllClusters()
         }
 
         // --- ATT-441: Optimized Refresh Logic ---

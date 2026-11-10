@@ -1319,16 +1319,9 @@ object LegacyImportEngine {
         if (points.isNotEmpty()) {
             val start = points.first()
             val end = points.last()
-            
-            var maxDisp = -1.0
-            var apex = start
-            points.forEach { pt ->
-                val d = WorkoutClusterEngine.getInstance(context).distanceBetween(start, pt).toDouble()
-                if (d > maxDisp) {
-                    maxDisp = d
-                    apex = pt
-                }
-            }
+            val clusterEngine = WorkoutClusterEngine.getInstance(context)
+            val apex = clusterEngine.findApexFromPoints(start, points, end)
+            val maxDisp = clusterEngine.distanceBetween(start, apex).toDouble()
 
             summariesDb.updateExtremaValue(workoutId, SensorType.LATITUDE, ExtremaType.START, start.latitude, start)
             summariesDb.updateExtremaValue(workoutId, SensorType.LONGITUDE, ExtremaType.START, start.longitude, start)
@@ -1341,7 +1334,6 @@ object LegacyImportEngine {
             if (existingClusterId != -1L) {
                 if (TrainingApplication.getDebug(true)) Log.d(TAG, "Workout $workoutId already has cluster $existingClusterId assigned. Skipping clustering logic.")
             } else {
-                val clusterEngine = WorkoutClusterEngine.getInstance(context)
                 // ATT-909 / REQ-MIG-027: Candidate sport inference and workout name matching
                 val avgSpeed = if (activeTime > 0) totalDistance / activeTime else 0.0
                 val candidateSports = if (bSportType != BSportType.UNKNOWN) {
@@ -1363,7 +1355,8 @@ object LegacyImportEngine {
                     workoutName = workoutName,
                     candidateSportTypes = candidateSports,
                     minAltPos = minAltPos,
-                    maxAltPos = maxAltPos
+                    maxAltPos = maxAltPos,
+                    workoutPolyline = points
                 )
                 
                 if (matchingCluster != null) {

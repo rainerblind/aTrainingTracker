@@ -98,7 +98,7 @@ class WorkoutDataMapper(
         val rawMaxDisplacement = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX)
         val mapPolyline = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.MAP_POLYLINE)) ?: ""
 
-        val resolvedApex = resolveAuthoritativeApex(workoutId, startLatLng, mapPolyline, rawMaxDisplacement, rawMaxDispLatLng)
+        val resolvedApex = resolveAuthoritativeApex(workoutId, startLatLng, mapPolyline, rawMaxDisplacement, rawMaxDispLatLng, endLatLng)
         val maxDisplacement = resolvedApex.first
         val maxDispLatLng = resolvedApex.second
 
@@ -667,7 +667,7 @@ class WorkoutDataMapper(
         val rawMaxDisplacement = getBatchVal(SensorType.LINE_DISTANCE_m, ExtremaType.MAX)
 
         val resolvedApex = if (reconcile) {
-            resolveAuthoritativeApex(snapshot.workoutId, startLatLng, snapshot.mapPolyline, rawMaxDisplacement, rawMaxDispLatLng)
+            resolveAuthoritativeApex(snapshot.workoutId, startLatLng, snapshot.mapPolyline, rawMaxDisplacement, rawMaxDispLatLng, endLatLng)
         } else {
             Pair(rawMaxDisplacement, rawMaxDispLatLng)
         }
@@ -964,17 +964,18 @@ class WorkoutDataMapper(
     /**
      * Resolves the authoritative maximum line distance (Apex) coordinate and value.
      *
-     * REQ-MAP-020 (ATT-528): If maxDispLatLng is missing, or if the recorded apex is geometrically
+     * REQ-MAP-020 (ATT-528), REQ-DAT-039.4 (ATT-6319): If maxDispLatLng is missing, or if the recorded apex is geometrically
      * inconsistent with the recorded polyline track (e.g. displacement is substantially smaller than
-     * the furthest track point due to pre-tracking GPS state or accumulator corruption), this helper
+     * the furthest track point due to pre-tracking GPS state, or degenerate end-apex on A->B routes), this helper
      * derives the true apex from the decoded track points and heals the database.
      */
-    private fun resolveAuthoritativeApex(
+    internal fun resolveAuthoritativeApex(
         workoutId: Long,
         startLatLng: LatLng?,
         mapPolyline: String,
         recordedMaxDisp: Double?,
-        recordedApex: LatLng?
+        recordedApex: LatLng?,
+        endLatLng: LatLng? = null
     ): Pair<Double?, LatLng?> {
         if (startLatLng == null || mapPolyline.isEmpty()) {
             return Pair(recordedMaxDisp, recordedApex)
@@ -984,21 +985,19 @@ class WorkoutDataMapper(
             if (points.isEmpty()) {
                 return Pair(recordedMaxDisp, recordedApex)
             }
-            var calculatedMax = -1.0
-            var calculatedApex: LatLng = points.first()
-            for (pt in points) {
-                val d = com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.distanceBetween(startLatLng, pt).toDouble()
-                if (d > calculatedMax) {
-                    calculatedMax = d
-                    calculatedApex = pt
-                }
-            }
+            val clusterEngine = com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.getInstance(context)
+            val calculatedApex = clusterEngine.findApexFromPoints(startLatLng, points, endLatLng)
+            val calculatedMax = com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.distanceBetween(startLatLng, calculatedApex).toDouble()
 
             val recordedDistToApex = if (recordedApex != null) {
                 com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.distanceBetween(startLatLng, recordedApex).toDouble()
             } else -1.0
 
-            if (recordedApex == null || recordedMaxDisp == null || calculatedMax > recordedDistToApex + 25.0) {
+            val apexMismatch = if (recordedApex != null) {
+                com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.distanceBetween(recordedApex, calculatedApex) > 25f
+            } else true
+
+            if (recordedApex == null || recordedMaxDisp == null || apexMismatch || calculatedMax > recordedDistToApex + 25.0) {
                 workoutSummariesDatabaseManager.updateExtremaValue(
                     workoutId,
                     SensorType.LINE_DISTANCE_m,

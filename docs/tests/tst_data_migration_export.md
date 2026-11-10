@@ -2064,6 +2064,23 @@
   5. *Clean-Room Regression Suite Execution (`TST-MIG-048.5`)*:
   • Execute targeted package tests (`com.atrainingtracker.trainingtracker.migration.*`) asserting 100% pass rate.
 
+### TST-DAT-035: **Point-to-Point Route Apex Migration, Import Unification & Mapper Parity Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-DAT-039`
+- **Component**: `WorkoutClusterEngine.kt`, `WorkoutClusterRepository.kt`, `LegacyImportEngine.kt`, `WorkoutDataMapper.kt`, `WorkoutClusterApexMigrationTest.kt`
+- **Jira**: `ATT-6319`
+- **Test Description**:
+  1. *Database Self-Healing Apex Migration Contract Test (`TST-DAT-035.1`)*:
+  • Verify in `WorkoutClusterApexMigrationTest.kt` that `healLegacyPointToPointApexes()` recomputes degenerated apex coordinates ($P_{\text{apex}} \approx P_{\text{end}}$) for point-to-point routes ($d \ge 150\text{ m}$) while leaving closed-loop routes ($d < 150\text{ m}$) unmodified.
+  • Verify that cluster centroids (`maxDispLat`, `maxDispLng`) are updated to reflect the healed member workout apexes.
+  2. *Legacy Import Pipeline Unification Test (`TST-DAT-035.2`)*:
+  • Verify in `LegacyImportEngineTest` / `WorkoutClusterApexMigrationTest` that `LegacyImportEngine` calculates apex coordinates via `findApexFromPoints(start, points, end)` and passes `workoutPolyline` to `suggestCluster`.
+  3. *WorkoutDataMapper Authoritative Apex Resolution Test (`TST-DAT-035.3`)*:
+  • Verify in `WorkoutDataMapperTest` / `WorkoutClusterApexMigrationTest` that `resolveAuthoritativeApex` delegates to `findApexFromPoints` when `endLatLng` is provided.
+  4. *Tier 1 Targeted Unit Test Regression (`TST-DAT-035.4`)*:
+  • Execute targeted test suite (`database.WorkoutCluster*`, `migration.*`, `ui.aftermath.*`, `build.*`) asserting 100% pass rate.
+
+
 
 
 
