@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tuning_physiology_cardio_power_title">Kardio-Leistungs-Dynamik (HF@200W, \u03c4 &amp; Modell-Drift)</string>
+    <string name="tuning_physiology_cardio_power_desc">Modelliert die HF als dynamisches System der Leistung: \u00d6konomie (HF@200W), Reaktionszeit (\u03c4) und Frisch-Modell vs. reale HF.</string>
+    <string name="cardio_power_info_title">Kardio-Leistungs-Dynamik</string>
+    <string name="cardio_power_info_lag_title">Warum Standard-Quotienten an Steigungen versagen</string>
+    <string name="cardio_power_info_lag_desc">Die Herzfrequenz reagiert nicht verz\u00f6gerungsfrei auf Tretleistung, sondern folgt Leistungs\u00e4nderungen mit einer kardiorespiratorischen Zeitkonstante (\u03c4 \u2248 30\u201345s). Statische Quotienten (EF, Pw:Hr) interpretieren h\u00fcgeliges Terrain f\u00e4lschlich als Erm\u00fcdung. Das dynamische Modell 1. Ordnung trennt Gel\u00e4ndeeinfl\u00fcsse von der Physiologie.</string>
+    <string name="cardio_power_info_hr200_title">Station\u00e4re HF @ 200W (HF0 + 200*K)</string>
+    <string name="cardio_power_info_hr200_desc">Ihre submaximale Gleichgewichts-Herzfrequenz bei 200 Watt Referenzleistung. Erfasst aerobe Fitnessfortschritte \u00fcber die Saison ohne Ausbelastungstests (niedrigere bpm = fitter).</string>
+    <string name="cardio_power_info_drift_title">Kardialer Drift (\u0394 HF @ 200W)</string>
+    <string name="cardio_power_info_drift_desc">Wie viele zus\u00e4tzliche Herzschl\u00e4ge pro Minute dasselbe Leistungsprofil am Ende der Fahrt im Vergleich zum frischen Zustand erfordert. Beziffert reale kardiorespiratorische Erm\u00fcdung, Hitzebelastung und Dehydrierung.</string>
+    <string name="cardio_power_info_tau_title">Reaktionszeitkonstante (\u03c4)</string>
+    <string name="cardio_power_info_tau_desc">Wie schnell Ihre Herzfrequenz auf Beschleunigungen reagiert und sich auf Abfahrten erholt. K\u00fcrzere \u03c4 signalisieren frische, reaktionsschnelle autonome Regulation; l\u00e4ngere \u03c4 deuten auf Ersch\u00f6pfung hin.</string>
+    <string name="cardio_power_info_slope_title">Aerobe Steigung (1/K)</string>
+    <string name="cardio_power_info_slope_desc">Wie viele zus\u00e4tzliche Watt mechanische Leistung Sie pro zus\u00e4tzlichem Herzschlag erzeugen. Eine steilere Steigung (mehr W/bpm) spiegelt ein gr\u00f6\u00dferes Schlagvolumen und h\u00f6here \u00d6konomie wider.</string>
+    <string name="cardio_power_info_overlay_title">Frisch-Modell vs. Reale HF Graph</string>
+    <string name="cardio_power_info_overlay_desc">Die blaue Kurve simuliert den theoretischen HF-Verlauf, wenn Sie \u00fcber die gesamte Fahrt so frisch geblieben w\u00e4ren wie im Kalibrierungsfenster (Minuten 8\u201355). Die wachsende L\u00fccke zur realen HF (Rot) visualisiert die fortschreitende Erm\u00fcdung.</string>
+</resources>

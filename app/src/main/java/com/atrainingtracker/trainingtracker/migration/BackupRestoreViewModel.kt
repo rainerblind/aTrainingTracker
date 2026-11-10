@@ -564,8 +564,13 @@ class BackupRestoreViewModel @JvmOverloads constructor(
         }
     }
 
-    fun importLegacyFile(context: Context, uri: Uri, format: String): Job {
-        return importWorkoutFiles(context, listOf(uri), format)
+    fun importLegacyFile(
+        context: Context,
+        uri: Uri,
+        format: String,
+        dispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO
+    ): Job {
+        return importWorkoutFiles(context, listOf(uri), format, dispatcher)
     }
 
     /**

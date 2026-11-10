@@ -39,6 +39,7 @@ import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.climbs.ClimbDetector
 import com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository
+import com.atrainingtracker.trainingtracker.database.CardioPowerDynamicsRecord
 import com.atrainingtracker.trainingtracker.database.ClimbsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.ExtremaType
@@ -49,6 +50,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutDeletionHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutPhotoEntry
 import com.atrainingtracker.trainingtracker.database.WorkoutPhotoManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.physiology.PowerHrDynamicsCalculator
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.database.RouteSource
@@ -112,6 +114,8 @@ import kotlinx.coroutines.sync.withLock
  * Threading: Most operations are offloaded to [Dispatchers.IO] using a [SupervisorJob].
  */
 class WorkoutRepository private constructor(private val context: Context) : CoroutineScope {
+
+    private constructor(application: Application) : this(application as Context)
 
     private val application get() = context
     private val app get() = (context as? Application) ?: (context.applicationContext as? Application)
@@ -1087,6 +1091,60 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
      */
     fun deleteWorkoutPhoto(photoId: Long): Boolean {
         return WorkoutPhotoManager.deletePhoto(application, photoId)
+    }
+
+    /**
+     * Saves or updates 1st-order dynamical Power-HR parameters for a workout (REQ-REV-009 / ATT-3904).
+     */
+    fun saveCardioPowerDynamics(workoutId: Long, record: CardioPowerDynamicsRecord) {
+        summariesManager.saveCardioPowerDynamics(workoutId, record)
+    }
+
+    /**
+     * Retrieves stored 1st-order dynamical Power-HR parameters for a workout (REQ-REV-009 / ATT-3904).
+     */
+    fun getCardioPowerDynamics(workoutId: Long): CardioPowerDynamicsRecord? {
+        return summariesManager.getCardioPowerDynamics(workoutId)
+    }
+
+    /**
+     * Lazily computes and persists 1st-order dynamical Power-HR parameters for historical workouts
+     * if not already cached in the database (REQ-REV-009 / ATT-3904).
+     */
+    suspend fun getOrComputeCardioPowerDynamics(workoutId: Long): CardioPowerDynamicsRecord? = withContext(Dispatchers.IO) {
+        val cached = summariesManager.getCardioPowerDynamics(workoutId)
+        if (cached != null) return@withContext cached
+
+        val baseFileName = summariesManager.getBaseFileName(workoutId) ?: return@withContext null
+        if (!samplesManager.existsTable(baseFileName)) return@withContext null
+
+        val db = samplesManager.database
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+
+        val powerSamples = ArrayList<Double?>()
+        val hrSamples = ArrayList<Double?>()
+
+        try {
+            db.query(tableName, null, null, null, null, null, null).use { cursor ->
+                val powerIdx = cursor.getColumnIndex(SensorType.POWER.name)
+                val hrIdx = cursor.getColumnIndex(SensorType.HR.name)
+                while (cursor.moveToNext()) {
+                    val p = if (powerIdx != -1 && !cursor.isNull(powerIdx)) cursor.getDouble(powerIdx) else null
+                    val hr = if (hrIdx != -1 && !cursor.isNull(hrIdx)) cursor.getDouble(hrIdx) else null
+                    powerSamples.add(p)
+                    hrSamples.add(hr)
+                }
+            }
+        } catch (e: Exception) {
+            Log.w("WorkoutRepository", "Could not query samples for cardio-power lazy backfill: ${e.message}")
+            return@withContext null
+        }
+
+        val calculated = PowerHrDynamicsCalculator.calculate(powerSamples, hrSamples, workoutId = workoutId)
+        if (calculated != null) {
+            summariesManager.saveCardioPowerDynamics(workoutId, calculated)
+        }
+        calculated
     }
 
     /**
@@ -2495,7 +2553,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                         notificationManager.showResyncNotification()
 
                         loadAllWorkouts()
-                        app?.let { appInstance -> PeriodsRepository.getInstance(appInstance).resyncAllPeriods() }
+                        PeriodsRepository.getInstance(application).resyncAllPeriods()
                         WorkoutClusterRepository.getInstance(application).refreshClusters(forceShowProgress = false, forceCheckIntegrity = true)
                         WorkoutClusterEngine.getInstance(application).enrichAllClusterMetadata(application)
                     }

@@ -3,7 +3,7 @@
 **Domain**: `aftermath_reviews`  
 **Prefixes**: `REV`  
 **Scope**: Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions.  
-**Total Requirements**: 8
+**Total Requirements**: 9
 
 ---
 
@@ -116,3 +116,37 @@
   • *Given* workout telemetry with heart rate, cycling power, or slope grade distribution data,
   • *When* rendered in `TrackOnMapScreen`, `WorkoutDetailTabbedContent`, or `WorkoutSummary`,
   • *Then* `HeartRateZoneDistributionCard`, `PowerZoneDistributionCard`, and `GradeZoneDistributionCard` render identical visual layouts delegating to `ZoneDistributionCard`, supporting independent 2-way/3-way display mode toggles and preserving `showModeSelector` gating.
+
+
+### REQ-REV-009: 1st-Order Dynamical Power-HR System Identification Engine, 5th Physiological School & In-App Explanation Sheet [Verified]
+- **Tests**: `TST-REV-010` | **Tickets**: `ATT-3904`
+- **Implementation**: `PowerHrDynamicsCalculator.kt`, `WorkoutSummariesDatabaseManager.java`, `WorkoutRepository.kt`, `LegacyImportEngine.kt`, `TrackerService.java`, `TuningPreferencesDataStore.kt`, `PhysiologyModelsSection.kt`, `PowerHrDynamicsInfoDialog.kt`
+- **Rationale**: Static ratios ($\text{EF} = \text{NP}/\text{Avg HR}$ and $\text{Pw:Hr}$) fail on variable or hilly terrain by ignoring physiological cardiorespiratory response latency ($\tau \approx 25\text{--}45\text{ s}$) and 4th-power NP inflation. A 1st-order Output-Error (OE) dynamical model ($x_k(\tau) = e^{-\Delta t/\tau} x_{k-1}(\tau) + (1 - e^{-\Delta t/\tau}) P_k, \widehat{\text{HR}}_k = \text{HR}_0 + K x_k(\tau)$) extracts terrain-independent physiological parameters: steady-state reference $\text{HR@200W} = \text{HR}_0 + 200 \cdot K$, response lag $\tau$, aerobic gain $K$ (slope $1/K$), and cardiac drift $\Delta\text{HR@200W} = \text{HR@200W}_{\text{end}} - \text{HR@200W}_{\text{start}}$.
+- **Description**:
+  1. *Dynamical System Identification Engine*: `PowerHrDynamicsCalculator` SHALL identify 1st-order OE parameters for workouts with $\ge 20\text{ min}$ paired Power and HR streams:
+     a. Fresh Calibration Window (active min 8–55 after warm-up): $\tau_{\text{start}}$, $\text{HR0}_{\text{start}}$, $K_{\text{start}}$, $\text{HR@200W}_{\text{start}}$, $R^2_{\text{start}}$, $\text{RMSE}_{\text{start}}$.
+     b. End-of-Workout Window (final 45 min active): $\tau_{\text{end}}$, $\text{HR0}_{\text{end}}$, $K_{\text{end}}$, $\text{HR@200W}_{\text{end}}$, $R^2_{\text{end}}$, $\text{RMSE}_{\text{end}}$.
+     c. Drift Deltas: $\Delta\text{HR@200W} = \text{HR@200W}_{\text{end}} - \text{HR@200W}_{\text{start}}$, $\Delta\tau = \tau_{\text{end}} - \tau_{\text{start}}$, $\Delta\text{HR}_0 = \text{HR0}_{\text{end}} - \text{HR0}_{\text{start}}$, and predicted fresh HR trajectory $\text{HR}_{\text{fresh}}(t)$.
+  2. *Three-Way Parity (Live Recording, File Import, Lazy Backfill)*:
+     a. Live Recording: `TrackerService` SHALL finalize and persist cardio-power dynamics on workout completion.
+     b. File Import: `LegacyImportEngine` SHALL compute and persist cardio-power dynamics for TCX, GPX, and FIT files with paired Power and HR.
+     c. Lazy Backfill: `WorkoutRepository` SHALL lazily compute and cache missing dynamics for historical workouts from `WorkoutSamplesDatabaseManager` without requiring re-import.
+  3. *Database Persistence & Schema Evolution*:
+     a. `WorkoutSummariesDatabaseManager.java` (DB v29) SHALL introduce table `cardio_power_dynamics` keyed on `workout_id INTEGER PRIMARY KEY REFERENCES WorkoutSummaries(_id) ON DELETE CASCADE`.
+     b. `WorkoutRepository.kt` SHALL expose CRUD operations (`saveCardioPowerDynamics`, `getCardioPowerDynamics`).
+  4. *5th Training School Toggle ("Physiology & Training Models")*:
+     a. `TuningPreferencesDataStore.kt` SHALL expose `enableCardioPowerDynamics: Flow<Boolean>` (key `enable_cardio_power_dynamics`, default: `false` opt-in).
+     b. `PhysiologyModelsSection.kt` SHALL render the 5th accordion switch with localized title, subtitle, and an Info button opening the explanation sheet.
+  5. *In-App Explanation Dialog & 9-Locale Parity*:
+     a. `PowerHrDynamicsInfoDialog.kt` (`AppModalBottomSheet`) SHALL explain the cardiorespiratory time lag $\tau$, $\text{HR@200W}$, cardiac drift $\Delta\text{HR@200W}$, aerobic slope $1/K$, and Fresh Model vs. Actual HR curve interpretation.
+     b. All strings SHALL be partitioned into `res/values*/strings_cardio_power.xml` with 100% parity across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).
+- **Acceptance Criteria**:
+  • *Given* a workout with $\ge 20\text{ min}$ paired Power and HR telemetry,
+  • *When* processed via live recording, TCX/GPX/FIT import, or repository lazy backfill,
+  • *Then* the 1st-order OE dynamical parameters are identified and persisted in `cardio_power_dynamics`.
+  • *Given* Advanced Settings -> *Physiology & Training Models*,
+  • *When* viewed,
+  • *Then* the 5th Training School toggle `enableCardioPowerDynamics` is rendered with descriptive summary and Info button triggering `PowerHrDynamicsInfoDialog`.
+  • *Given* the 9 supported locales,
+  • *When* running `TranslationParityTest`,
+  • *Then* all cardio-power string tokens in `strings_cardio_power.xml` exist with 100% parity and valid formatting.

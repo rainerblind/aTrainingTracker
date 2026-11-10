@@ -369,7 +369,7 @@ class ClimbsDatabaseManager(
         }
 
         fun resetForTesting(newInstance: ClimbsDatabaseManager? = null) {
-            instance?.close()
+            runCatching { instance?.close() }
             instance = newInstance
         }
     }

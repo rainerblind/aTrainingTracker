@@ -1315,6 +1315,16 @@ object LegacyImportEngine {
                 powerMetrics.maxPowerToWeight?.let { maxWPerKg ->
                     summariesDb.updateExtremaValue(workoutId, SensorType.POWER_TO_WEIGHT, ExtremaType.MAX, maxWPerKg, null)
                 }
+
+                // REQ-REV-009.2 (ATT-3904): 1st-order dynamical Power-HR identification
+                val dynamics = com.atrainingtracker.trainingtracker.physiology.PowerHrDynamicsCalculator.calculate(
+                    powerSamples = powerSamples,
+                    hrSamples = hrSamples,
+                    workoutId = workoutId
+                )
+                if (dynamics != null) {
+                    summariesDb.saveCardioPowerDynamics(workoutId, dynamics)
+                }
             }
         } catch (e: Exception) {
             Log.w(TAG, "Could not compute W'bal, Aerobic Efficiency, or Power Training extrema during recalculateStats: ${e.message}")

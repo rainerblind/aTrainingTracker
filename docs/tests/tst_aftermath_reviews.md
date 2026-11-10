@@ -3,7 +3,7 @@
 **Domain**: `aftermath_reviews`  
 **Prefixes**: `REV`  
 **Scope**: Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions.  
-**Total Tests**: 9
+**Total Tests**: 10
 
 ---
 
@@ -67,3 +67,16 @@
   2. *Wrapper Delegation & State Isolation Test*: Verify `PowerZoneDistributionCard`, `HeartRateZoneDistributionCard`, and `GradeZoneDistributionCard` delegate to `ZoneDistributionCard` with their respective icons, localized titles, and units (`"W"`, `"bpm"`, `"%"`), maintaining independent display mode state and honoring `showModeSelector`.
   3. *Call Site & Click Contract Preservation*: Verify `WorkoutSummaryClickContractTest` continues to pass, ensuring `.then(mapClickModifier)` chains correctly onto wrapper composable invocations in `WorkoutSummary.kt`.
   4. *Tier 1 Targeted Verification*: Execute targeted unit tests verifying 100% pass rate across zone distribution tests (`ZoneDistributionCardTest`, `GradeZoneDistributionCardTest`, `ZoneDistributionStackedBarTest`) and project contract tests.
+
+
+### TST-REV-010: **1st-Order Dynamical Power-HR Identification Engine, Persistence, Toggle & 9-Locale Localization Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-REV-009`
+- **Component**: `PowerHrDynamicsCalculator.kt`, `WorkoutSummariesDatabaseManager.java`, `WorkoutRepository.kt`, `LegacyImportEngine.kt`, `PhysiologyModelsSection.kt`, `PowerHrDynamicsInfoDialog.kt`, `res/values*/strings_cardio_power.xml`
+- **Jira**: `ATT-3904`
+- **Test Description**:
+  1. *Engine Unit Tests (`PowerHrDynamicsCalculatorTest`)*: Verify OE parameter identification on synthetic step-response signals with known $(\tau, \text{HR}_0, K)$, verify window slicing (fresh min 8–55 vs end 45 min), verify rejection of insufficient data (< 20 min or missing stream), and verify drift deltas.
+  2. *Database Migration & CRUD Contract Test (`WorkoutSummariesCardioPowerMigrationTest`)*: Verify schema migration from DB v28 to v29 creates table `cardio_power_dynamics`, test single and batch query symmetry, cascade deletion on workout removal, and null-safety.
+  3. *Repository & Three-Way Parity Contract Test (`WorkoutRepositoryCardioPowerTest`)*: Verify lazy backfill computes and persists records on demand, verify `LegacyImportEngine` persists dynamics on file import, and verify `TrackerService` finalization parity.
+  4. *UI & 5th School Toggle Contract Test (`PhysiologyModelsSectionTest`)*: Verify 5th school toggle binds to DataStore, verifies Info button opens `PowerHrDynamicsInfoDialog`, and verifies UI gating.
+  5. *9-Locale Localization Parity Test (`TranslationParityTest`)*: Verify all strings in `strings_cardio_power.xml` across EN, DE, ES, FR, IT, JA, NL, PL, PT with valid linebreaks and matching format specifiers.
+  6. *Tier 1 Targeted Verification Suite*: `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.physiology.*" --tests "com.atrainingtracker.trainingtracker.database.*" --tests "com.atrainingtracker.trainingtracker.ui.settings.tuning.*" --tests "com.atrainingtracker.trainingtracker.build.*"`

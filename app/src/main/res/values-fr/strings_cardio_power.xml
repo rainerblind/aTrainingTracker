@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tuning_physiology_cardio_power_title">Dynamique Cardio-Puissance (FC@200W, \u03c4 et d\u00e9rive)</string>
+    <string name="tuning_physiology_cardio_power_desc">Mod\u00e9lise la FC comme syst\u00e8me dynamique du 1er ordre de la puissance : \u00e9conomie (FC@200W), retard (\u03c4) et mod\u00e8le frais vs FC r\u00e9elle.</string>
+    <string name="cardio_power_info_title">Dynamique Cardio-Puissance</string>
+    <string name="cardio_power_info_lag_title">Pourquoi les ratios classiques FC/Puissance \u00e9chouent</string>
+    <string name="cardio_power_info_lag_desc">La fr\u00e9quence cardiaque ne r\u00e9agit pas instantan\u00e9ment \u00e0 la puissance de p\u00e9dalage. Elle suit les variations avec une constante de temps (\u03c4 \u2248 30\u201345s). Les ratios statiques (EF, Pw:Hr) confondent le relief avec la fatigue cardiaque. Le mod\u00e8le dynamique extrait des param\u00e8tres ind\u00e9pendants du terrain.</string>
+    <string name="cardio_power_info_hr200_title">FC stationnaire @ 200W (FC0 + 200*K)</string>
+    <string name="cardio_power_info_hr200_desc">Votre fr\u00e9quence cardiaque submaximale \u00e0 l\u2019\u00e9tat d\u2019\u00e9quilibre pour une puissance de r\u00e9f\u00e9rence de 200 Watts. Mesure les gains d\u2019endurance a\u00e9robie sans test d\u2019effort maximal (bpm r\u00e9duit = meilleure forme).</string>
+    <string name="cardio_power_info_drift_title">D\u00e9rive cardiaque (\u0394 FC @ 200W)</string>
+    <string name="cardio_power_info_drift_desc">Nombre de battements suppl\u00e9mentaires par minute que le m\u00eame profil de puissance requiert en fin de sortie par rapport \u00e0 l\u2019\u00e9tat frais. Quantifie la fatigue cardiorespiratoire, la chaleur et la d\u00e9shydratation.</string>
+    <string name="cardio_power_info_tau_title">Constante de temps de r\u00e9ponse (\u03c4)</string>
+    <string name="cardio_power_info_tau_desc">Rapidit\u00e9 avec laquelle votre rythme cardiaque r\u00e9pond aux relances et r\u00e9cup\u00e8re en descente. Un \u03c4 court t\u00e9moigne d\u2019une r\u00e9gulation autonome vive ; un \u03c4 allong\u00e9 r\u00e9v\u00e8le la fatigue accumul\u00e9e.</string>
+    <string name="cardio_power_info_slope_title">Pente a\u00e9robie (1/K)</string>
+    <string name="cardio_power_info_slope_desc">Nombre de Watts m\u00e9caniques additionnels produits par battement cardiaque suppl\u00e9mentaire. Une pente plus \u00e9lev\u00e9e (plus de W/bpm) traduit un volume d\u2019\u00e9jection systolique et une \u00e9conomie sup\u00e9rieurs.</string>
+    <string name="cardio_power_info_overlay_title">Graphique Mod\u00e8le Frais vs. FC R\u00e9elle</string>
+    <string name="cardio_power_info_overlay_desc">La courbe bleue simule l\u2019\u00e9volution th\u00e9orique de votre FC si vous \u00e9tiez rest\u00e9 aussi frais que pendant la fen\u00eatre d\u2019\u00e9talonnage (minutes 8\u201355). L\u2019\u00e9cart croissant avec la FC r\u00e9elle (rouge) illustre la fatigue.</string>
+</resources>

@@ -1647,6 +1647,7 @@ public class WorkoutSummariesDatabaseManager {
         dbSummaries.delete(WorkoutSummaries.TABLE_ACCUMULATED_SENSORS, WorkoutSummaries.WORKOUT_ID + "=?", new String[]{workoutId + ""});
         dbSummaries.delete(WorkoutSummaries.TABLE_EXTREMA_VALUES, WorkoutSummaries.WORKOUT_ID + "=?", new String[]{workoutId + ""});
         dbSummaries.delete(WorkoutSummaries.TABLE_WORKOUT_PHOTOS, WorkoutSummaries.WORKOUT_ID + "=?", new String[]{String.valueOf(workoutId)});
+        dbSummaries.delete(WorkoutSummaries.TABLE_CARDIO_POWER_DYNAMICS, WorkoutSummaries.CPD_WORKOUT_ID + "=?", new String[]{String.valueOf(workoutId)});
         deleteWorkoutPhotoFiles(workoutId);
 
         return true;
@@ -1801,6 +1802,134 @@ public class WorkoutSummariesDatabaseManager {
         db.delete(WorkoutSummaries.TABLE_WORKOUT_PHOTOS,
                 WorkoutSummaries.WORKOUT_ID + "=?", new String[]{String.valueOf(workoutId)});
         return true;
+    }
+
+    /**
+     * Saves or updates 1st-order dynamical Power-HR parameters for a workout (REQ-REV-009 / ATT-3904).
+     */
+    public void saveCardioPowerDynamics(long workoutId, @NonNull CardioPowerDynamicsRecord record) {
+        SQLiteDatabase db = getDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put(WorkoutSummaries.CPD_WORKOUT_ID, workoutId);
+        cv.put(WorkoutSummaries.CPD_TAU_START, record.getTauStart());
+        cv.put(WorkoutSummaries.CPD_HR0_START, record.getHr0Start());
+        cv.put(WorkoutSummaries.CPD_K_START, record.getKStart());
+        cv.put(WorkoutSummaries.CPD_HR200_START, record.getHr200Start());
+        cv.put(WorkoutSummaries.CPD_R2_START, record.getR2Start());
+        cv.put(WorkoutSummaries.CPD_RMSE_START, record.getRmseStart());
+
+        if (record.getTauEnd() != null) cv.put(WorkoutSummaries.CPD_TAU_END, record.getTauEnd());
+        else cv.putNull(WorkoutSummaries.CPD_TAU_END);
+
+        if (record.getHr0End() != null) cv.put(WorkoutSummaries.CPD_HR0_END, record.getHr0End());
+        else cv.putNull(WorkoutSummaries.CPD_HR0_END);
+
+        if (record.getKEnd() != null) cv.put(WorkoutSummaries.CPD_K_END, record.getKEnd());
+        else cv.putNull(WorkoutSummaries.CPD_K_END);
+
+        if (record.getHr200End() != null) cv.put(WorkoutSummaries.CPD_HR200_END, record.getHr200End());
+        else cv.putNull(WorkoutSummaries.CPD_HR200_END);
+
+        if (record.getR2End() != null) cv.put(WorkoutSummaries.CPD_R2_END, record.getR2End());
+        else cv.putNull(WorkoutSummaries.CPD_R2_END);
+
+        if (record.getRmseEnd() != null) cv.put(WorkoutSummaries.CPD_RMSE_END, record.getRmseEnd());
+        else cv.putNull(WorkoutSummaries.CPD_RMSE_END);
+
+        if (record.getDeltaHr200() != null) cv.put(WorkoutSummaries.CPD_DELTA_HR200, record.getDeltaHr200());
+        else cv.putNull(WorkoutSummaries.CPD_DELTA_HR200);
+
+        if (record.getDeltaTau() != null) cv.put(WorkoutSummaries.CPD_DELTA_TAU, record.getDeltaTau());
+        else cv.putNull(WorkoutSummaries.CPD_DELTA_TAU);
+
+        if (record.getDeltaHr0() != null) cv.put(WorkoutSummaries.CPD_DELTA_HR0, record.getDeltaHr0());
+        else cv.putNull(WorkoutSummaries.CPD_DELTA_HR0);
+
+        int updated = db.update(WorkoutSummaries.TABLE_CARDIO_POWER_DYNAMICS, cv,
+                WorkoutSummaries.CPD_WORKOUT_ID + "=?", new String[]{String.valueOf(workoutId)});
+        if (updated == 0) {
+            db.insertWithOnConflict(WorkoutSummaries.TABLE_CARDIO_POWER_DYNAMICS, null, cv, SQLiteDatabase.CONFLICT_REPLACE);
+        }
+    }
+
+    /**
+     * Retrieves stored 1st-order dynamical Power-HR parameters for a workout (REQ-REV-009 / ATT-3904).
+     */
+    @Nullable
+    public CardioPowerDynamicsRecord getCardioPowerDynamics(long workoutId) {
+        SQLiteDatabase db = getDatabase();
+        String selection = WorkoutSummaries.CPD_WORKOUT_ID + "=?";
+        String[] selectionArgs = new String[]{String.valueOf(workoutId)};
+
+        try (Cursor cursor = db.query(WorkoutSummaries.TABLE_CARDIO_POWER_DYNAMICS, null,
+                selection, selectionArgs, null, null, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                double tauStart = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_TAU_START));
+                double hr0Start = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_HR0_START));
+                double kStart = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_K_START));
+                double hr200Start = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_HR200_START));
+                double r2Start = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_R2_START));
+                double rmseStart = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_RMSE_START));
+
+                int tauEndIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_TAU_END);
+                Double tauEnd = cursor.isNull(tauEndIdx) ? null : cursor.getDouble(tauEndIdx);
+
+                int hr0EndIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_HR0_END);
+                Double hr0End = cursor.isNull(hr0EndIdx) ? null : cursor.getDouble(hr0EndIdx);
+
+                int kEndIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_K_END);
+                Double kEnd = cursor.isNull(kEndIdx) ? null : cursor.getDouble(kEndIdx);
+
+                int hr200EndIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_HR200_END);
+                Double hr200End = cursor.isNull(hr200EndIdx) ? null : cursor.getDouble(hr200EndIdx);
+
+                int r2EndIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_R2_END);
+                Double r2End = cursor.isNull(r2EndIdx) ? null : cursor.getDouble(r2EndIdx);
+
+                int rmseEndIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_RMSE_END);
+                Double rmseEnd = cursor.isNull(rmseEndIdx) ? null : cursor.getDouble(rmseEndIdx);
+
+                int deltaHr200Idx = cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_DELTA_HR200);
+                Double deltaHr200 = cursor.isNull(deltaHr200Idx) ? null : cursor.getDouble(deltaHr200Idx);
+
+                int deltaTauIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_DELTA_TAU);
+                Double deltaTau = cursor.isNull(deltaTauIdx) ? null : cursor.getDouble(deltaTauIdx);
+
+                int deltaHr0Idx = cursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_DELTA_HR0);
+                Double deltaHr0 = cursor.isNull(deltaHr0Idx) ? null : cursor.getDouble(deltaHr0Idx);
+
+                return new CardioPowerDynamicsRecord(
+                        workoutId,
+                        tauStart,
+                        hr0Start,
+                        kStart,
+                        hr200Start,
+                        r2Start,
+                        rmseStart,
+                        tauEnd,
+                        hr0End,
+                        kEnd,
+                        hr200End,
+                        r2End,
+                        rmseEnd,
+                        deltaHr200,
+                        deltaTau,
+                        deltaHr0
+                );
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error querying cardio_power_dynamics for workout " + workoutId, e);
+        }
+        return null;
+    }
+
+    /**
+     * Deletes stored cardio power dynamics for a workout.
+     */
+    public void deleteCardioPowerDynamics(long workoutId) {
+        SQLiteDatabase db = getDatabase();
+        db.delete(WorkoutSummaries.TABLE_CARDIO_POWER_DYNAMICS,
+                WorkoutSummaries.CPD_WORKOUT_ID + "=?", new String[]{String.valueOf(workoutId)});
     }
 
 
@@ -2010,6 +2139,25 @@ public class WorkoutSummariesDatabaseManager {
         public static final String PHOTO_LONGITUDE = "longitude";
         public static final String PHOTO_CAPTION = "caption";
 
+        // cardio_power_dynamics table (ATT-3904 / DB Version 29)
+        public static final String TABLE_CARDIO_POWER_DYNAMICS = "cardio_power_dynamics";
+        public static final String CPD_WORKOUT_ID = "workout_id";
+        public static final String CPD_TAU_START = "tau_start";
+        public static final String CPD_HR0_START = "hr0_start";
+        public static final String CPD_K_START = "k_start";
+        public static final String CPD_HR200_START = "hr200_start";
+        public static final String CPD_R2_START = "r2_start";
+        public static final String CPD_RMSE_START = "rmse_start";
+        public static final String CPD_TAU_END = "tau_end";
+        public static final String CPD_HR0_END = "hr0_end";
+        public static final String CPD_K_END = "k_end";
+        public static final String CPD_HR200_END = "hr200_end";
+        public static final String CPD_R2_END = "r2_end";
+        public static final String CPD_RMSE_END = "rmse_end";
+        public static final String CPD_DELTA_HR200 = "delta_hr200";
+        public static final String CPD_DELTA_TAU = "delta_tau";
+        public static final String CPD_DELTA_HR0 = "delta_hr0";
+
         public final static int ENCODING_STEP_SIZE = 20;  // twenty seconds (Introduced in Version 15)
     }
 
@@ -2041,7 +2189,8 @@ public class WorkoutSummariesDatabaseManager {
         // public static final int DB_VERSION = 25; // 18.10.2026 Added count column to extrema table (ATT-3987)
         // public static final int DB_VERSION = 26; // 21.10.2026 Added missing indexes on extrema and summaries tables (REQ-DAT-034, ATT-4008)
         // public static final int DB_VERSION = 27; // 04.11.2026 Added workout_photos table (ATT-43)
-        public static final int DB_VERSION = 28; // 08.11.2026 Added recordingErrors column (ATT-5886)
+        // public static final int DB_VERSION = 28; // 08.11.2026 Added recordingErrors column (ATT-5886)
+        public static final int DB_VERSION = 29; // 10.11.2026 Added cardio_power_dynamics table (ATT-3904)
         
 
 
@@ -2111,6 +2260,26 @@ public class WorkoutSummariesDatabaseManager {
                 + WorkoutSummaries.PHOTO_LONGITUDE + " REAL, "
                 + WorkoutSummaries.PHOTO_CAPTION + " TEXT)";
 
+        protected static final String CREATE_TABLE_CARDIO_POWER_DYNAMICS = "create table " + WorkoutSummaries.TABLE_CARDIO_POWER_DYNAMICS + " ("
+                + WorkoutSummaries.CPD_WORKOUT_ID + " INTEGER PRIMARY KEY, "
+                + WorkoutSummaries.CPD_TAU_START + " REAL, "
+                + WorkoutSummaries.CPD_HR0_START + " REAL, "
+                + WorkoutSummaries.CPD_K_START + " REAL, "
+                + WorkoutSummaries.CPD_HR200_START + " REAL, "
+                + WorkoutSummaries.CPD_R2_START + " REAL, "
+                + WorkoutSummaries.CPD_RMSE_START + " REAL, "
+                + WorkoutSummaries.CPD_TAU_END + " REAL, "
+                + WorkoutSummaries.CPD_HR0_END + " REAL, "
+                + WorkoutSummaries.CPD_K_END + " REAL, "
+                + WorkoutSummaries.CPD_HR200_END + " REAL, "
+                + WorkoutSummaries.CPD_R2_END + " REAL, "
+                + WorkoutSummaries.CPD_RMSE_END + " REAL, "
+                + WorkoutSummaries.CPD_DELTA_HR200 + " REAL, "
+                + WorkoutSummaries.CPD_DELTA_TAU + " REAL, "
+                + WorkoutSummaries.CPD_DELTA_HR0 + " REAL, "
+                + "FOREIGN KEY(" + WorkoutSummaries.CPD_WORKOUT_ID + ") REFERENCES "
+                + WorkoutSummaries.TABLE + "(" + WorkoutSummaries.C_ID + ") ON DELETE CASCADE)";
+
         private static final String TAG = "WorkoutSummariesDbHelper";
         private static final boolean DEBUG = TrainingApplication.getDebug(true);
 
@@ -2162,6 +2331,10 @@ public class WorkoutSummariesDatabaseManager {
             if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_WORKOUT_PHOTOS);
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_workout_photos_workout_id ON " + WorkoutSummaries.TABLE_WORKOUT_PHOTOS
                     + " (" + WorkoutSummaries.WORKOUT_ID + ")");
+
+            // cardio_power_dynamics table (REQ-REV-009 / ATT-3904)
+            db.execSQL(CREATE_TABLE_CARDIO_POWER_DYNAMICS);
+            if (DEBUG) Log.d(TAG, "onCreate sql: " + CREATE_TABLE_CARDIO_POWER_DYNAMICS);
         }
 
         private void addColumn(@NonNull SQLiteDatabase db, String table, String column, String type, String defaultValue) {
@@ -2433,6 +2606,15 @@ public class WorkoutSummariesDatabaseManager {
             if (oldVersion < 28) {
                 Log.i(TAG, "upgrading to DB version 28 (Adding recordingErrors column)");
                 addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.RECORDING_ERRORS, "text", null);
+            }
+
+            if (oldVersion < 29) {
+                Log.i(TAG, "upgrading to DB version 29 (Adding cardio_power_dynamics table)");
+                try {
+                    db.execSQL(CREATE_TABLE_CARDIO_POWER_DYNAMICS);
+                } catch (Exception e) {
+                    Log.e(TAG, "Error creating cardio_power_dynamics table in onUpgrade to v29", e);
+                }
             }
         }
 

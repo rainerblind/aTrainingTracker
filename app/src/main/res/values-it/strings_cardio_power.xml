@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tuning_physiology_cardio_power_title">Dinamica Cardio-Potenza (FC@200W, \u03c4 e deriva)</string>
+    <string name="tuning_physiology_cardio_power_desc">Modella la FC come sistema dinamico del 1\u00b0 ordine della potenza: economia (FC@200W), ritardo (\u03c4) e modello fresco vs FC reale.</string>
+    <string name="cardio_power_info_title">Dinamica Cardio-Potenza</string>
+    <string name="cardio_power_info_lag_title">Perch\u00e9 i rapporti standard FC/Potenza falliscono</string>
+    <string name="cardio_power_info_lag_desc">La frequenza cardiaca non reagisce istantaneamente alla potenza di pedalata, ma segue le variazioni con una costante di tempo (\u03c4 \u2248 30\u201345s). I rapporti statici (EF, Pw:Hr) scambiano le salite per affaticamento cardiaco. Il modello dinamico ricava parametri fisiologici indipendenti dal percorso.</string>
+    <string name="cardio_power_info_hr200_title">FC stazionaria @ 200W (FC0 + 200*K)</string>
+    <string name="cardio_power_info_hr200_desc">La frequenza cardiaca submassimale di equilibrio a 200 Watt di potenza meccanica di riferimento. Monitora i progressi aerobici stagionali senza test massimali di esaurimento (bpm inferiori = migliore forma).</string>
+    <string name="cardio_power_info_drift_title">Deriva cardiaca (\u0394 FC @ 200W)</string>
+    <string name="cardio_power_info_drift_desc">Quanti battiti in pi\u00f9 al minuto richiede lo stesso profilo di potenza a fine uscita rispetto allo stato fresco. Quantifica affaticamento cardiorespiratorio, stress termico e disidratazione.</string>
+    <string name="cardio_power_info_tau_title">Costante di tempo di risposta (\u03c4)</string>
+    <string name="cardio_power_info_tau_desc">Rapidit\u00e0 di risposta cardiaca ad accelerazioni e recupero in discesa. Un \u03c4 pi\u00f9 breve denota una regolazione autonomica agile; un \u03c4 pi\u00f9 lungo evidenzia affaticamento generale.</string>
+    <string name="cardio_power_info_slope_title">Pendenza aerobica (1/K)</string>
+    <string name="cardio_power_info_slope_desc">Quanti Watt meccanici addizionali vengono generati per ogni battito cardiaco in pi\u00f9. Una pendenza pi\u00f9 ripida (pi\u00f9 W/bpm) riflette una gittata sistolica superiore e migliore economia.</string>
+    <string name="cardio_power_info_overlay_title">Grafico Modello Fresco vs. FC Reale</string>
+    <string name="cardio_power_info_overlay_desc">La curva blu simula la FC teorica lungo l\u2019uscita se foste rimasti freschi come nella finestra di calibrazione (minuti 8\u201355). Il divario crescente rispetto alla FC reale (rosso) visualizza l\u2019affaticamento progressivo.</string>
+</resources>

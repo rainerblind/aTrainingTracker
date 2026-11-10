@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tuning_physiology_cardio_power_title">Cardio-Power Dynamics (HR@200W, \u03c4 &amp; Model Drift)</string>
+    <string name="tuning_physiology_cardio_power_desc">Models HR as a 1st-order dynamical system of Power: submaximal economy (HR@200W), response lag (\u03c4), and Fresh Model vs. Actual HR.</string>
+    <string name="cardio_power_info_title">Cardio-Power Dynamics</string>
+    <string name="cardio_power_info_lag_title">Why Standard HR/Power Ratios Fail</string>
+    <string name="cardio_power_info_lag_desc">Heart Rate does not react instantaneously to pedaling power. It lags power fluctuations by a cardiorespiratory time constant (\u03c4 \u2248 30\u201345s). Static ratios (EF, Pw:Hr) misinterpret hilly terrain as cardiac fatigue. The 1st-order dynamical model extracts terrain-independent physiological parameters.</string>
+    <string name="cardio_power_info_hr200_title">Steady HR @ 200W (HR0 + 200*K)</string>
+    <string name="cardio_power_info_hr200_desc">Your submaximal steady-state heart rate at a reference mechanical power of 200 Watts. Tracks seasonal aerobic fitness gains without all-out exhaustion tests (lower bpm = fitter).</string>
+    <string name="cardio_power_info_drift_title">Cardiac Drift (\u0394 HR @ 200W)</string>
+    <string name="cardio_power_info_drift_desc">How many extra heartbeats per minute the same power profile costs at the end of the ride compared to when fresh. Quantifies true cardiorespiratory fatigue, heat stress, and dehydration.</string>
+    <string name="cardio_power_info_tau_title">Response Time Constant (\u03c4)</string>
+    <string name="cardio_power_info_tau_desc">How fast your heart rate responds to acceleration and recovers on descents. Shorter \u03c4 indicates fresh, agile autonomic cardiac regulation; lengthening \u03c4 signals systemic fatigue.</string>
+    <string name="cardio_power_info_slope_title">Aerobic Slope (1/K)</string>
+    <string name="cardio_power_info_slope_desc">How many additional Watts of mechanical work you produce per extra heartbeat. A steeper slope (more W/bpm) represents higher stroke volume and aerobic economy.</string>
+    <string name="cardio_power_info_overlay_title">Fresh Model vs. Actual HR Graph</string>
+    <string name="cardio_power_info_overlay_desc">The Blue curve simulates what your heart rate would be throughout the ride if you remained as fresh as during the calibration window (minutes 8\u201355). The widening gap to your Actual HR (Red) visualizes progressive fatigue in real time.</string>
+</resources>

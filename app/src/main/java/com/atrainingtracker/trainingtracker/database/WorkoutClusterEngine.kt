@@ -68,12 +68,14 @@ class WorkoutClusterEngine private constructor(context: Context) {
         @androidx.annotation.VisibleForTesting
         fun resetForTesting(newInstance: WorkoutClusterEngine? = null) {
             instance = newInstance
-            WorkoutClusterRepository.resetForTesting(null)
-            com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository.resetForTesting(null)
-            com.atrainingtracker.trainingtracker.repositories.SportTypesRepository.resetForTesting(null)
-            com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository.resetForTesting(null)
-            com.atrainingtracker.trainingtracker.segments.SegmentsRepository.resetForTesting(null)
-            com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusRepository.resetForTesting(null)
+            if (newInstance == null) {
+                WorkoutClusterRepository.resetForTesting(null)
+                com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository.resetForTesting(null)
+                com.atrainingtracker.trainingtracker.repositories.SportTypesRepository.resetForTesting(null)
+                com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository.resetForTesting(null)
+                com.atrainingtracker.trainingtracker.segments.SegmentsRepository.resetForTesting(null)
+                com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusRepository.resetForTesting(null)
+            }
         }
 
         /**

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tuning_physiology_cardio_power_title">Dynamika kardio-moc (HR@200W, \u03c4 i dryf)</string>
+    <string name="tuning_physiology_cardio_power_desc">Modeluje t\u0119tno jako uk\u0142ad dynamiczny 1. rz\u0119du wzgl\u0119dem mocy: ekonomia (HR@200W), op\u00f3\u017anienie (\u03c4) i model \u015bwie\u017co\u015bci vs rzeczywiste HR.</string>
+    <string name="cardio_power_info_title">Dynamika kardio-moc</string>
+    <string name="cardio_power_info_lag_title">Dlaczego standardowe wska\u017aniki HR/Moc zawodz\u0105</string>
+    <string name="cardio_power_info_lag_desc">T\u0119tno nie reaguje natychmiastowo na generowan\u0105 moc, lecz pod\u0105\u017ca za zmianami ze sta\u0142\u0105 czasow\u0105 (\u03c4 \u2248 30\u201345 s). Statyczne wska\u017aniki (EF, Pw:Hr) b\u0142\u0119dnie interpretuj\u0105 pag\u00f3rkowaty teren jako zm\u0119czenie serca. Model dynamiczny wyodr\u0119bnia parametry fizjologiczne niezale\u017cne od ukszta\u0142towania terenu.</string>
+    <string name="cardio_power_info_hr200_title">Ustalone HR @ 200W (HR0 + 200*K)</string>
+    <string name="cardio_power_info_hr200_desc">Submaksymalne t\u0119tno w stanie r\u00f3wnowagi przy referencyjnej mocy mechanicznej 200 W. \u015acledzi sezonowy wzrost wydolno\u015bci tlenowej bez test\u00f3w maksymalnego wyczerpania (ni\u017csze bpm = wy\u017csza forma).</string>
+    <string name="cardio_power_info_drift_title">Dryf kardialny (\u0394 HR @ 200W)</string>
+    <string name="cardio_power_info_drift_desc">Ile dodatkowych uderze\u0144 serca na minut\u0119 wymaga ten sam profil mocy pod koniec treningu w por\u00f3wnaniu ze stanem wypocz\u0119tym. Kwantyfikuje zm\u0119czenie kr\u0105\u017ceniowo-oddechowe, wp\u0142yw ciep\u0142a i odwodnienie.</string>
+    <string name="cardio_power_info_tau_title">Sta\u0142a czasowa reakcji (\u03c4)</string>
+    <string name="cardio_power_info_tau_desc">Jak szybko t\u0119tno reaguje na przyspieszenia i regeneruje si\u0119 na zjazdach. Kr\u00f3tsze \u03c4 oznacza \u017caw\u0105 regulacj\u0119 autonomiczn\u0105; d\u0142u\u017csze \u03c4 \u015bwiadczy o narastaj\u0105cym zm\u0119czeniu.</string>
+    <string name="cardio_power_info_slope_title">Nachylenie tlenowe (1/K)</string>
+    <string name="cardio_power_info_slope_desc">Ile dodatkowych wat\u00f3w mocy mechanicznej generujesz na ka\u017cde dodatkowe uderzenie serca. Bardziej strome nachylenie (wi\u0119cej W/bpm) \u015bwiadczy o wi\u0119kszej obj\u0119to\u015bci wyrzutowej i ekonomii tlenowej.</string>
+    <string name="cardio_power_info_overlay_title">Wykres: Model \u015bwie\u017co\u015bci vs Rzeczywiste HR</string>
+    <string name="cardio_power_info_overlay_desc">Niebieska linia symuluje teoretyczne t\u0119tno, gdyby zachowa\u0107 \u015bwie\u017co\u015b\u0107 z okna kalibracji (minuty 8\u201355) przez ca\u0142y trening. Rosn\u0105ca r\u00f3\u017cnica wzgl\u0119dem rzeczywistego HR (czerwona) obrazuje zm\u0119czenie.</string>
+</resources>

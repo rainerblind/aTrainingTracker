@@ -105,6 +105,7 @@ fun AdvancedTuningScreen(
     var enableCogganPowerMetrics by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_COGGAN_POWER_METRICS) }; var showCogganPowerInWorkoutSummary by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_SHOW_COGGAN_POWER_IN_WORKOUT_SUMMARY) }; var enablePmcModel by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_PMC_MODEL) }
     var enableAerobicEfficiencyModel by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_AEROBIC_EFFICIENCY_MODEL) }; var showAerobicEfficiencyInWorkoutSummary by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY) }
     var enableCriticalPowerModel by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL) }; var showCriticalPowerInWorkoutSummary by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY) }
+    var enableCardioPowerDynamics by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_CARDIO_POWER_DYNAMICS) }; var showCardioPowerInWorkoutSummary by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY) }
     var sensorSearchPrefs by remember { mutableStateOf(SensorSearchPreferences.load(context)) }
 
     var workoutCardPrefs by remember { mutableStateOf(WorkoutCardSectionPreferences()) }; var isAftermathPrefsInitialized by remember { mutableStateOf(false) }
@@ -151,6 +152,7 @@ fun AdvancedTuningScreen(
         enableCogganPowerMetrics = config.enableCogganPowerMetrics; showCogganPowerInWorkoutSummary = config.showCogganPowerInWorkoutSummary
         enableAerobicEfficiencyModel = config.enableAerobicEfficiencyModel; showAerobicEfficiencyInWorkoutSummary = config.showAerobicEfficiencyInWorkoutSummary
         enableCriticalPowerModel = config.enableCriticalPowerModel; showCriticalPowerInWorkoutSummary = config.showCriticalPowerInWorkoutSummary
+        enableCardioPowerDynamics = config.enableCardioPowerDynamics; showCardioPowerInWorkoutSummary = config.showCardioPowerInWorkoutSummary
     }
     LaunchedEffect(persistedConfig) { applyConfig(persistedConfig) }
 
@@ -187,7 +189,8 @@ fun AdvancedTuningScreen(
             clusterUseSportType = clusterUseSportType, clusterUseAltitudePos = clusterUseAltitudePos, clusterScoreThreshold = clusterScoreThreshold,
             enableCogganPowerMetrics = enableCogganPowerMetrics, showCogganPowerInWorkoutSummary = showCogganPowerInWorkoutSummary, enablePmcModel = enablePmcModel,
             enableAerobicEfficiencyModel = enableAerobicEfficiencyModel, showAerobicEfficiencyInWorkoutSummary = showAerobicEfficiencyInWorkoutSummary,
-            enableCriticalPowerModel = enableCriticalPowerModel, showCriticalPowerInWorkoutSummary = showCriticalPowerInWorkoutSummary
+            enableCriticalPowerModel = enableCriticalPowerModel, showCriticalPowerInWorkoutSummary = showCriticalPowerInWorkoutSummary,
+            enableCardioPowerDynamics = enableCardioPowerDynamics, showCardioPowerInWorkoutSummary = showCardioPowerInWorkoutSummary
         )
         scope.launch {
             tuningDataStore.saveTuningConfig(newConfig)
@@ -356,7 +359,9 @@ fun AdvancedTuningScreen(
                     enableAerobicEfficiencyModel = enableAerobicEfficiencyModel, onEnableAerobicEfficiencyModelChange = { enableAerobicEfficiencyModel = it },
                     showAerobicEfficiencyInWorkoutSummary = showAerobicEfficiencyInWorkoutSummary, onShowAerobicEfficiencyInWorkoutSummaryChange = { showAerobicEfficiencyInWorkoutSummary = it },
                     enableCriticalPowerModel = enableCriticalPowerModel, onEnableCriticalPowerModelChange = { enableCriticalPowerModel = it },
-                    showCriticalPowerInWorkoutSummary = showCriticalPowerInWorkoutSummary, onShowCriticalPowerInWorkoutSummaryChange = { showCriticalPowerInWorkoutSummary = it }
+                    showCriticalPowerInWorkoutSummary = showCriticalPowerInWorkoutSummary, onShowCriticalPowerInWorkoutSummaryChange = { showCriticalPowerInWorkoutSummary = it },
+                    enableCardioPowerDynamics = enableCardioPowerDynamics, onEnableCardioPowerDynamicsChange = { enableCardioPowerDynamics = it },
+                    showCardioPowerInWorkoutSummary = showCardioPowerInWorkoutSummary, onShowCardioPowerInWorkoutSummaryChange = { showCardioPowerInWorkoutSummary = it }
                 )
             }
 

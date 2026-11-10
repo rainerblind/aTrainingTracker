@@ -11,6 +11,7 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
 import android.app.Application
+import android.content.Context
 import android.util.Log
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
@@ -100,9 +101,13 @@ class PeriodsRepository private constructor(private val application: Application
         private var instance: PeriodsRepository? = null
 
         @JvmStatic
-        fun getInstance(application: Application): PeriodsRepository {
+        fun getInstance(context: Context): PeriodsRepository {
             return instance ?: synchronized(this) {
-                instance ?: PeriodsRepository(application).also { instance = it }
+                instance ?: run {
+                    val app = (context as? Application) ?: (context.applicationContext as? Application)
+                        ?: error("Context must be or provide an Application")
+                    PeriodsRepository(app).also { instance = it }
+                }
             }
         }
 

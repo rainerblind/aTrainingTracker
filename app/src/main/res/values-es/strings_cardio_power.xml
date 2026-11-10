@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tuning_physiology_cardio_power_title">Din\u00e1mica Cardio-Potencia (FC@200W, \u03c4 y deriva)</string>
+    <string name="tuning_physiology_cardio_power_desc">Modela la FC como sistema din\u00e1mico de 1.er orden de la potencia: econom\u00eda (FC@200W), retraso (\u03c4) y modelo fresco vs. FC real.</string>
+    <string name="cardio_power_info_title">Din\u00e1mica Cardio-Potencia</string>
+    <string name="cardio_power_info_lag_title">\u00bfPor qu\u00e9 fallan los ratios est\u00e1ndar FC/Potencia?</string>
+    <string name="cardio_power_info_lag_desc">La frecuencia card\u00edaca no reacciona instant\u00e1neamente a la potencia de pedaleo. Se retrasa respecto a las variaciones con una constante de tiempo (\u03c4 \u2248 30\u201345s). Los ratios est\u00e1ticos (EF, Pw:Hr) confunden el terreno quebrado con fatiga card\u00edaca. El modelo din\u00e1mico a\u00edsla los par\u00e1metros fisiol\u00f3gicos del relieve.</string>
+    <string name="cardio_power_info_hr200_title">FC estacionaria @ 200W (FC0 + 200*K)</string>
+    <string name="cardio_power_info_hr200_desc">Frecuencia card\u00edaca submaximal en estado estacionario a 200 W de referencia. Monitoriza mejoras aer\u00f3bicas estacionales sin requerir tests de esfuerzo m\u00e1ximo (menor bpm = mayor forma).</string>
+    <string name="cardio_power_info_drift_title">Deriva card\u00edaca (\u0394 FC @ 200W)</string>
+    <string name="cardio_power_info_drift_desc">Cu\u00e1ntas pulsaciones extra por minuto exige el mismo perfil de potencia al final de la sesi\u00f3n respecto al estado fresco. Cuantifica fatiga cardiorrespiratoria, estr\u00e9s t\u00e9rmico y deshidrataci\u00f3n.</string>
+    <string name="cardio_power_info_tau_title">Constante de tiempo de respuesta (\u03c4)</string>
+    <string name="cardio_power_info_tau_desc">Rapidez con que su frecuencia card\u00edaca responde a aceleraciones y se recupera en descensos. Un \u03c4 menor indica regulaci\u00f3n auton\u00f3mica \u00e1gil; un \u03c4 mayor se\u00f1ala fatiga acumulada.</string>
+    <string name="cardio_power_info_slope_title">Pendiente aer\u00f3bica (1/K)</string>
+    <string name="cardio_power_info_slope_desc">Cu\u00e1ntos vatios mec\u00e1nicos adicionales genera por cada latido card\u00edaco extra. Una mayor pendiente (m\u00e1s W/bpm) refleja un volumen sist\u00f3lico superior y mejor econom\u00eda aer\u00f3bica.</string>
+    <string name="cardio_power_info_overlay_title">Gr\u00e1fico Modelo Fresco vs. FC Real</string>
+    <string name="cardio_power_info_overlay_desc">La curva azul simula cu\u00e1l habr\u00eda sido su FC durante toda la salida manteni\u00e9ndose tan fresco como en la ventana de calibraci\u00f3n (minutos 8\u201355). La brecha creciente con la FC real (rojo) visualiza la fatiga.</string>
+</resources>

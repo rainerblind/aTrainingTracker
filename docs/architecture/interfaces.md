@@ -87,11 +87,12 @@ Each architectural interface defines its provider, consumer, operations, data sc
   * Runtime permission checks (`ACCESS_FINE_LOCATION`, `BLUETOOTH_SCAN`) prevent security crashes.
 
 ### 2.5 IF-SWE-05: Services & Repositories to Domain Calculators
-* **Provider**: Pure JVM Domain Calculators (`AutoPauseManager`, `PowerPhysiologyCalculator`, `WorkoutClusterEngine`, `ClimbDetector`).
+* **Provider**: Pure JVM Domain Calculators (`AutoPauseManager`, `PowerPhysiologyCalculator`, `PowerHrDynamicsCalculator`, `WorkoutClusterEngine`, `ClimbDetector`).
 * **Consumer**: `TrackerService`, `WorkoutRepository`, `LiveSegmentsRepository`.
 * **Operations / Method Signatures**:
   * `fun evaluateTick(speedMps: Double, timestampMs: Long): AutoPauseTransition`: Evaluates debounce auto-pause.
   * `fun calculateNormalizedPower(samples: List<Double>): Double`: Computes 30s Coggan rolling weighted power.
+  * `fun calculate(powerSamples: List<Double>, hrSamples: List<Double>, workoutId: Long, dtSec: Double): CardioPowerDynamicsRecord?`: Identifies 1st-order Output-Error dynamical Power-HR parameters and cardiac drift.
   * `fun findOrCreateCluster(track: Polyline): ClusterResult`: Spatial DBSCAN line matching.
 * **Data Payloads / Schemas**:
   * Floating-point primitive arrays, coordinate lists (`List<GeoPoint>`), Skiba $W'_{\text{bal}}$ parameters.
@@ -107,6 +108,7 @@ Each architectural interface defines its provider, consumer, operations, data sc
 * **Operations / Method Signatures**:
   * `fun insertSamplesBatch(samples: List<SampleRecord>)`: 1-Hz bulk time-series insert.
   * `fun updateWorkoutSummary(summary: WorkoutSummary)`: Atomic update of aggregates.
+  * `fun saveCardioPowerDynamics(workoutId: Long, record: CardioPowerDynamicsRecord): Long`: Persists identified dynamical parameters (DB v29 `cardio_power_dynamics`).
 * **Data Payloads / Schemas**:
   * Android `ContentValues`, typed SQLite tables, and raw cursor extractions.
 * **Concurrency & Threading**:

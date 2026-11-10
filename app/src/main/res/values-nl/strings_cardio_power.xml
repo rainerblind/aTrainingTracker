@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tuning_physiology_cardio_power_title">Cardio-vermogensdynamiek (HF@200W, \u03c4 &amp; drift)</string>
+    <string name="tuning_physiology_cardio_power_desc">Modelleert HF als 1e-orde dynamisch systeem van vermogen: economie (HF@200W), responsvertraging (\u03c4) en vers-model vs actuele HF.</string>
+    <string name="cardio_power_info_title">Cardio-vermogensdynamiek</string>
+    <string name="cardio_power_info_lag_title">Waarom standaard HF/vermogensverhoudingen falen</string>
+    <string name="cardio_power_info_lag_desc">De hartslag reageert niet ogenblikkelijk op trapvermogen, maar volgt vermogensschommelingen met een vertragingstijd (\u03c4 \u2248 30\u201345s). Statische verhoudingen (EF, Pw:Hr) zien heuvelachtig terrein ten onrechte aan voor cardiale vermoeidheid. Het dynamische model haalt terreinonafhankelijke fysiologische parameters naar voren.</string>
+    <string name="cardio_power_info_hr200_title">Stationaire HF @ 200W (HF0 + 200*K)</string>
+    <string name="cardio_power_info_hr200_desc">Uw submaximale evenwichtshartslag bij een referentievermogen van 200 Watt. Volgt aerobe conditieverbeteringen door het seizoen zonder uitputtingstests (lagere bpm = fitter).</string>
+    <string name="cardio_power_info_drift_title">Cardiale drift (\u0394 HF @ 200W)</string>
+    <string name="cardio_power_info_drift_desc">Hoeveel extra hartslagen per minuut hetzelfde vermogensprofiel aan het einde van de rit kost vergeleken met de frisse staat. Kwantificeert cardiorespiratoire vermoeidheid, hittestress en uitdroging.</string>
+    <string name="cardio_power_info_tau_title">Responstijdconstante (\u03c4)</string>
+    <string name="cardio_power_info_tau_desc">Hoe snel uw hartslag reageert op versnellingen en herstelt in afdalingen. Een kortere \u03c4 duidt op frisse, wendbare autonome regulatie; een langere \u03c4 wijst op opgebouwde vermoeidheid.</string>
+    <string name="cardio_power_info_slope_title">Aerobe helling (1/K)</string>
+    <string name="cardio_power_info_slope_desc">Hoeveel extra Watt aan mechanische arbeid u levert per extra hartslag. Een steilere helling (meer W/bpm) duidt op een groter slagvolume en betere aerobe effici\u00ebntie.</string>
+    <string name="cardio_power_info_overlay_title">Grafiek Vers-model vs. Actuele HF</string>
+    <string name="cardio_power_info_overlay_desc">De blauwe curve simuleert wat uw hartslag zou zijn als u de hele rit zo fris was gebleven als tijdens het kalibratievenster (minuten 8\u201355). Het groeiende verschil met uw actuele HF (rood) toont de vermoeidheid.</string>
+</resources>

@@ -267,6 +267,8 @@ object TuningPreferencesDefaults {
     const val DEFAULT_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY = true
     const val DEFAULT_ENABLE_CRITICAL_POWER_MODEL = false
     const val DEFAULT_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY = true
+    const val DEFAULT_ENABLE_CARDIO_POWER_DYNAMICS = false
+    const val DEFAULT_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY = true
 
     const val DEFAULT_DFA_A1_THRESHOLD_T1 = 0.75f
     const val DEFAULT_DFA_A1_THRESHOLD_T2 = 0.50f
@@ -346,6 +348,8 @@ data class TuningConfig(
     val showAerobicEfficiencyInWorkoutSummary: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY,
     val enableCriticalPowerModel: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL,
     val showCriticalPowerInWorkoutSummary: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY,
+    val enableCardioPowerDynamics: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_CARDIO_POWER_DYNAMICS,
+    val showCardioPowerInWorkoutSummary: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY,
     val dfaA1ThresholdT1: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1,
     val dfaA1ThresholdT2: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2
 ) {
@@ -490,6 +494,8 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_show_aerobic_efficiency_in_workout_summary")
         val KEY_ENABLE_CRITICAL_POWER_MODEL: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_enable_critical_power_model")
         val KEY_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_show_critical_power_in_workout_summary")
+        val KEY_ENABLE_CARDIO_POWER_DYNAMICS: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_enable_cardio_power_dynamics")
+        val KEY_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_show_cardio_power_in_workout_summary")
         val KEY_DFA_A1_THRESHOLD_T1: Preferences.Key<Float> = floatPreferencesKey("tuning_dfa_a1_threshold_t1")
         val KEY_DFA_A1_THRESHOLD_T2: Preferences.Key<Float> = floatPreferencesKey("tuning_dfa_a1_threshold_t2")
 
@@ -564,6 +570,8 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY,
             KEY_ENABLE_CRITICAL_POWER_MODEL,
             KEY_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY,
+            KEY_ENABLE_CARDIO_POWER_DYNAMICS,
+            KEY_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY,
             KEY_DFA_A1_THRESHOLD_T1,
             KEY_DFA_A1_THRESHOLD_T2
         )
@@ -928,6 +936,8 @@ data class AutoPausePreferences(
             showAerobicEfficiencyInWorkoutSummary = prefs[KEY_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY] ?: TuningPreferencesDefaults.DEFAULT_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY,
             enableCriticalPowerModel = prefs[KEY_ENABLE_CRITICAL_POWER_MODEL] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL,
             showCriticalPowerInWorkoutSummary = prefs[KEY_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY] ?: TuningPreferencesDefaults.DEFAULT_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY,
+            enableCardioPowerDynamics = prefs[KEY_ENABLE_CARDIO_POWER_DYNAMICS] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_CARDIO_POWER_DYNAMICS,
+            showCardioPowerInWorkoutSummary = prefs[KEY_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY] ?: TuningPreferencesDefaults.DEFAULT_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY,
             dfaA1ThresholdT1 = prefs[KEY_DFA_A1_THRESHOLD_T1] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1,
             dfaA1ThresholdT2 = prefs[KEY_DFA_A1_THRESHOLD_T2] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2
         )
@@ -947,6 +957,16 @@ data class AutoPausePreferences(
 
     val enableCriticalPowerModelFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
         prefs[KEY_ENABLE_CRITICAL_POWER_MODEL] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL
+    }
+
+    val enableCardioPowerDynamicsFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_ENABLE_CARDIO_POWER_DYNAMICS] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_CARDIO_POWER_DYNAMICS
+    }
+
+    suspend fun setEnableCardioPowerDynamics(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_ENABLE_CARDIO_POWER_DYNAMICS] = enabled
+        }
     }
 
     suspend fun setEnableCogganPowerMetrics(enabled: Boolean) {
@@ -1205,6 +1225,8 @@ data class AutoPausePreferences(
             prefs[KEY_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY] = config.showAerobicEfficiencyInWorkoutSummary
             prefs[KEY_ENABLE_CRITICAL_POWER_MODEL] = config.enableCriticalPowerModel
             prefs[KEY_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY] = config.showCriticalPowerInWorkoutSummary
+            prefs[KEY_ENABLE_CARDIO_POWER_DYNAMICS] = config.enableCardioPowerDynamics
+            prefs[KEY_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY] = config.showCardioPowerInWorkoutSummary
             prefs[KEY_DFA_A1_THRESHOLD_T1] = clampedDfaA1T1
             prefs[KEY_DFA_A1_THRESHOLD_T2] = clampedDfaA1T2
         }

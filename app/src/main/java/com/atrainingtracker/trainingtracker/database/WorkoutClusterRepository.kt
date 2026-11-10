@@ -535,7 +535,7 @@ class WorkoutClusterRepository internal constructor(
     }
 
     val databaseManager: WorkoutClusterDatabaseManager get() = clusterDb
-    fun getAllClusters(): List<WorkoutCluster> = clusterDb.getAllClusters()
+    fun getAllClustersSync(): List<WorkoutCluster> = clusterDb.getAllClusters()
     fun getClusterByIdSync(id: Long): WorkoutCluster? = clusterDb.getClusterById(id)
     fun getClusterByName(name: String): WorkoutCluster? = clusterDb.getClusterByName(name)
     fun getClusterNameById(id: Long): String? = clusterDb.getClusterNameById(id)

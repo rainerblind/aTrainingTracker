@@ -2819,6 +2819,15 @@ public class TrackerService extends Service {
                         }
                     }
 
+                    // REQ-REV-009.2 (ATT-3904): 1st-order dynamical Power-HR identification
+                    com.atrainingtracker.trainingtracker.database.CardioPowerDynamicsRecord dynamics =
+                            com.atrainingtracker.trainingtracker.physiology.PowerHrDynamicsCalculator.calculate(
+                                    powerSamples, hrSamples, mWorkoutID, 1.0
+                            );
+                    if (dynamics != null) {
+                        summariesManager.saveCardioPowerDynamics(mWorkoutID, dynamics);
+                    }
+
                     // REQ-MIG-039.4 (ATT-3860 / ATT-3858): Calculate and persist session power training metrics (NP, IF, TSS, Work kJ, W/kg)
                     long sessionTimeMs = System.currentTimeMillis();
                     Integer effectiveFtp = SettingsDataStoreJavaHelper.resolveEffectiveFtpAt(this, sessionTimeMs);
