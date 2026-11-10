@@ -19,7 +19,7 @@ graph TD
     subgraph Domain_Layer["2. Domain & Scientific Calculators (SWE.3)"]
         Physiology["PowerPhysiologyCalculator & SlidingWindowPowerAccumulator (FTP, NP, TSS, IF, MMP)"]
         Climbs["ClimbDetector & PolylineProgressTracker"]
-        Clusters["RouteLearningEngine & SpatialRegionEngine"]
+        Clusters["WorkoutClusterEngine & SpatialRegionEngine"]
         AutoPause["AutoPauseManager (Debounce & State Machine)"]
     end
 
@@ -38,7 +38,7 @@ graph TD
         SamplesDB["WorkoutSamples.db (1-Hz Time-Series Data)"]
         SummariesDB["WorkoutSummaries.db (Extrema & Aggregates)"]
         LapsDB["Laps.db & Clusters.db (Splits & Lieblingsstrecken)"]
-        Exporters["FitFileWriter, GpxExporter, TcxExporter, StravaUploader, HealthConnectManager, HealthConnectRecordMapper"]
+        Exporters["FitFileWriter, GPXFileWriter, TCXFileWriter, StravaUploader, HealthConnectManager, HealthConnectRecordMapper"]
     end
 
     subgraph Hardware_Layer["6. Hardware & External Peripherals"]
@@ -88,11 +88,11 @@ All system requirements across the 9 living domain shards are allocated directly
 | **Tracking & Live Sensor Cockpit** | `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA` | `BANALService`, `TrackerService`, `ProxySensor`, `MySensorManager`, `AutoPauseManager`, `CyclingPowerMetricsDevice`, `SlidingWindowPowerAccumulator`, `LiveMmpCurveChart` | ANT+/BLE telemetry ingestion, sensor fusion, auto-pause debounce, 1-Hz sample recording, live MMP curve & duration benchmarks. |
 | **Post-Workout Analytics & Periods** | `PER`, `PERF` | `WorkoutRepository`, `PowerPhysiologyCalculator`, `ZoneDistributionCalculator`, `PeriodsRepository` | Physiological computation (NP, TSS), 5/7 power zone distributions, period statistics & trend filters. |
 | **Maps, Polylines & Navigation** | `GEO`, `MAP`, `NAV`, `ROU` | `ClimbDetector`, `PolylineProgressTracker`, `MapFragmentWithTrackViewModel`, `ATrainingTrackerMap` | Web Mercator tile rendering, polyline compression, climb categorization, live segment gate matching. |
-| **Persistence, Migration & Cloud Export** | `DAT`, `EXP`, `EXT`, `MIG` | `WorkoutSamplesDb`, `WorkoutSummariesDatabaseManager`, `FitFileWriter`, `StravaUploader`, `GoogleDriveBackupManager` | Time-series SQLite storage, schema migration, Strava OAuth/upload retry, FIT/TCX/GPX serialization. |
+| **Persistence, Migration & Cloud Export** | `DAT`, `EXP`, `EXT`, `MIG` | `WorkoutSamplesDatabaseManager`, `WorkoutSummariesDatabaseManager`, `FitFileWriter`, `GPXFileWriter`, `TCXFileWriter`, `StravaUploader`, `GoogleDriveBackupManager` | Time-series SQLite storage, schema migration, Strava OAuth/upload retry, FIT/TCX/GPX serialization. |
 | **Settings, Profiles & Localization** | `LOC`, `MON`, `PRI`, `SET` | `TuningPreferencesDataStore`, `EquipmentDatabaseManager`, `PrivacyZoneManager`, `BillingManager`, `ProFeatureManager`, `HealthConnectManager`, `HealthConnectRecordMapper`, `SensorQuotaReconciliationManager` | DataStore persistence, 9-locale string parity, sensor quotas, monetization, vehicle equipment, Health Connect sync & record mapping, GPS obfuscation. |
 | **UI Components & Design System** | `UI`, `UNT` | Jetpack Compose theme (`TTTheme`), `MetricItem`, `ElevationProfile`, `CustomLineChart`, `AppModalBottomSheet`, `WorkoutPhotoStrip`, `WorkoutTimePhotoPickerSheet` | High-contrast AMOLED theming, responsive landscape layouts, chart scrubbing, reusable Compose components, chronological workout photo selection. |
 | **Engineering Process & Stability** | `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST` | ASPICE Dual-Agent Quality Gates, `jira_util.py`, `verify_requirement_governance.py`, ProGuard rules | CI/CD build hygiene, Chesterton's fence archaeology, crash resilience, process kill simulation. |
-| **Jubilee Milestones & App Reviews** | `REV` | `MilestoneDetector`, `FirstJubileeCelebrationDialog`, `InAppReviewManager` | Milestone counting, achievement celebration, Google Play in-app review prompting. |
+| **Jubilee Milestones & App Reviews** | `REV` | `MilestoneAutoNamingManager`, `FirstJubileeCelebrationDialog`, `FirstJubileeActionHelper` | Milestone counting, achievement celebration, Google Play in-app review prompting. |
 | **Project Governance & Store Presence** | `STP` | `StoreMetadataContractTest`, Google Play assets, screenshots | Google Play store presence parity, localized descriptions, automated metadata validation. |
 
 ---
@@ -100,22 +100,19 @@ All system requirements across the 9 living domain shards are allocated directly
 ## 3. Dynamic Behavior & State Machines (SWE.2.BP4)
 
 ### 3.1 Workout Tracking Lifecycle & Crash Recovery
-The recording state machine transitions deterministically between `READY`, `TRACKING`, `AUTO_PAUSED`, `MANUAL_PAUSED`, and `FINISHED`. State persistence ensures uninterrupted recovery across unexpected system process termination.
+The recording state machine transitions deterministically across top-level `TrackingMode` states: `IDLE`, `READY`, `TRACKING`, and `PAUSED`. Internal pause sub-states are delegated to `AutoPauseManager` / `AutoPauseState` (`TRACKING`, `PAUSE_DEBOUNCE_PENDING`, `AUTO_PAUSED`, `MANUAL_PAUSED`, `SENSOR_LOST`). Persistent database state enables active session recovery upon unexpected process termination.
 
 ```mermaid
 stateDiagram-v2
-    [*] --> READY: Service Bound & Sensors Pre-Warmed
+    [*] --> IDLE: App Initialization
+    IDLE --> READY: Service Bound & Sensors Pre-Warmed
     READY --> TRACKING: User Press Start / Auto-Start
-    TRACKING --> AUTO_PAUSED: Speed < Threshold for N s (AutoPauseManager)
-    AUTO_PAUSED --> TRACKING: Speed >= Threshold for Debounce Window
-    TRACKING --> MANUAL_PAUSED: User Press Pause
-    MANUAL_PAUSED --> TRACKING: User Press Resume
-    TRACKING --> CRASH_RECOVERY: Process Killed by OS / Out of Memory
-    CRASH_RECOVERY --> TRACKING: App Restart (Recover Active Session)
-    AUTO_PAUSED --> FINISHED: User Press Finish / Discard
-    MANUAL_PAUSED --> FINISHED: User Press Finish / Discard
-    TRACKING --> FINISHED: User Press Finish
-    FINISHED --> [*]: Persist Summary, Cluster & Export
+    TRACKING --> PAUSED: User Press Pause / Auto-Pause (AutoPauseManager)
+    PAUSED --> TRACKING: User Press Resume / Auto-Resume
+    TRACKING --> READY: Crash Recovery (Session State Re-seeded)
+    PAUSED --> IDLE: User Press Finish / Discard (Session Finalized)
+    TRACKING --> IDLE: User Press Finish / Session Finalized
+    IDLE --> [*]
 ```
 
 ### 3.2 Dual-Protocol Sensor Arbitration & Failover
@@ -151,11 +148,11 @@ sequenceDiagram
     autonumber
     participant TS as TrackerService
     participant DB as SQLite Databases (Samples & Summaries)
-    participant RLE as RouteLearningEngine (Clusters.db)
+    participant RLE as WorkoutClusterEngine (Clusters.db)
     participant EXP as Export & Cloud Sync Pipeline
     participant STR as Strava API / Google Drive
 
-    TS->>DB: Write Final Time-Series & Lap Records (dbDispatcher)
+    TS->>DB: Write Final Time-Series & Lap Records (Dispatchers.IO)
     TS->>DB: Compute Extrema (Max Speed, Max HR, NP, TSS)
     TS->>RLE: Submit GPS Track Polyline
     RLE->>RLE: Match against Existing Lieblingsstrecken (Start/Apex/End)
@@ -177,8 +174,8 @@ sequenceDiagram
 ### 4.1 Coroutine Dispatcher Separation
 To prevent UI jank, thread contention, and Android SQLite database lock errors, execution threads are strictly partitioned:
 - **`Dispatchers.Main`**: Exclusively dedicated to Jetpack Compose rendering, UI animations, and immediate state consumption. Strictly zero file I/O or SQLite database operations.
-- **`Dispatchers.IO`**: Network operations (Strava API, Google Drive, TCX downloads), filesystem exports, and JSON file parsing.
-- **`dbDispatcher` (`Executors.newSingleThreadExecutor().asCoroutineDispatcher()`)**: Dedicated single-threaded dispatcher serializing all writes and transaction commits across SQLite database managers (`WorkoutSamplesDb`, `WorkoutSummariesDatabaseManager`, `LapsDatabaseManager`). Guarantees zero `SQLiteDatabaseLockedException`.
+- **`Dispatchers.IO`**: Network operations (Strava API, Google Drive, TCX downloads), filesystem exports, JSON file parsing, and general SQLite database operations across `WorkoutRepository`, `WorkoutSamplesDatabaseManager`, `WorkoutSummariesDatabaseManager`, and `ClimbsDatabaseManager` leveraging SQLite WAL (Write-Ahead Logging) and transaction locks.
+- **`dbDispatcher` (`Executors.newSingleThreadExecutor().asCoroutineDispatcher()`)**: Dedicated single-threaded dispatcher utilized in `KnownLocationsRepository` to serialize location database mutations and prevent SQLite lock contention.
 
 ### 4.2 Foreground Service & Permission Governance
 - `TrackerService` and `BANALService` run as explicit Android Foreground Services with `location|health` foreground service types declared in `AndroidManifest.xml`.

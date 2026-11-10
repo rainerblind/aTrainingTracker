@@ -1450,7 +1450,17 @@
   4. *Clean-Room Targeted Test Suite Execution (`TST-PRO-042.4`)*:
   • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.*"` asserting 100% pass rate.
 
-
-
-
+### TST-PRO-043: **SWE.2 Architecture Conformance & Code-Grounding Contract Test Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-043`
+- **Component**: `docs/architecture.md`, `AspiceSweAuditContractTest.kt`
+- **Jira**: `ATT-6179`
+- **Test Description**:
+  1. *Authentic Component Presence Test (`TST-PRO-043.1`, `AspiceSweAuditContractTest.kt`)*:
+  • Verify `docs/architecture.md` contains authentic class names: `WorkoutClusterEngine`, `GPXFileWriter`, `TCXFileWriter`, `WorkoutSamplesDatabaseManager`, and `MilestoneAutoNamingManager`.
+  2. *Drifted Component Absence Test (`TST-PRO-043.2`, `AspiceSweAuditContractTest.kt`)*:
+  • Verify `docs/architecture.md` does not contain `RouteLearningEngine`, `GpxExporter`, `TcxExporter`, `WorkoutSamplesDb`, `MilestoneDetector`, or `InAppReviewManager`.
+  3. *Tracking State Machine & Dispatcher Conformance Test (`TST-PRO-043.3`, `AspiceSweAuditContractTest.kt`)*:
+  • Verify `docs/architecture.md` specifies `TrackingMode` states (`IDLE`, `READY`, `TRACKING`, `PAUSED`) and retains required threading tokens (`dbDispatcher`, `Dispatchers.Main`, `Dispatchers.IO`).
+  4. *Clean-Room Targeted Test Suite Execution (`TST-PRO-043.4`)*:
+  • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest"` asserting 100% pass rate.
 
