@@ -143,6 +143,7 @@ public class TrainingApplication extends Application {
     public static final String SP_GOOGLE_DRIVE_LAST_SYNC_STATUS = "googleDriveLastSyncStatus";
     public static final String SP_SYNC_TO_HEALTH_CONNECT = "syncToHealthConnect";
     public static final String SP_HEALTH_CONNECT_LAST_SYNC = "healthConnectLastSync";
+    public static final String SP_IMPORT_HRV_FROM_HEALTH_CONNECT = "importHrvFromHealthConnect";
     public static final String PREFERENCE_SCREEN_STRAVA = "psUploadToStrava";
     public static final String SP_UPLOAD_TO_STRAVA = "uploadToStrava";
     public static final String SP_IMPORT_TCX_UPLOAD_TO_STRAVA = "import_tcx_upload_to_strava";
@@ -924,6 +925,19 @@ public class TrainingApplication extends Application {
     public static void setHealthConnectLastSyncTimestamp(long timestamp) {
         if (cSharedPreferences == null) return;
         cSharedPreferences.edit().putLong(SP_HEALTH_CONNECT_LAST_SYNC, timestamp).apply();
+    }
+
+    /*
+     * Health Connect Resting HRV Import helpers (ATT-4981 / REQ-PER-031)
+     */
+    public static boolean isHealthConnectHrvImportEnabled() {
+        if (cSharedPreferences == null) return false;
+        return cSharedPreferences.getBoolean(SP_IMPORT_HRV_FROM_HEALTH_CONNECT, false);
+    }
+
+    public static void setHealthConnectHrvImportEnabled(boolean value) {
+        if (cSharedPreferences == null) return;
+        cSharedPreferences.edit().putBoolean(SP_IMPORT_HRV_FROM_HEALTH_CONNECT, value).apply();
     }
 
     /*

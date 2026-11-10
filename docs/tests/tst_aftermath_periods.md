@@ -560,6 +560,26 @@
   6. *Tier 1 Clean-Room Targeted Regression Execution (`TST-PER-038.6`)*:
   • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.database.hrv.*" --tests "com.atrainingtracker.trainingtracker.migration.*" --tests "com.atrainingtracker.trainingtracker.build.*"` verifying 100% clean-room test pass rate.
 
+### TST-PER-039: **Android Health Connect Morning & Overnight Resting HRV Ingestion Suite** [Verified]
+- **Requirement(s)**: `REQ-PER-031` (`REQ-PER-031.1`..`REQ-PER-031.5`)
+- **Component**: `HealthConnectHrvImporterTest.kt`, `HealthConnectManagerTest.kt`, `HrvReadinessCalculatorTest.kt`, `HrvReadinessRepositoryTest.kt`
+- **Jira**: `ATT-4981`
+- **Test Description**:
+  1. *Permission & Opt-In Gating Contract Test (`TST-PER-039.1`, `HealthConnectHrvImporterTest.kt`)*:
+  • Verify that `HealthConnectHrvImporter` halts sync and modifies zero database records when permissions are missing or `isHealthConnectHrvImportEnabled` is false.
+  • Verify that `READ_HEART_RATE_VARIABILITY` and `READ_RESTING_HEART_RATE` permissions are declared in `AndroidManifest.xml`.
+  2. *Log-Normal Multi-Epoch Aggregation & Date Attribution Unit Test (`TST-PER-039.2`, `HealthConnectHrvImporterTest.kt`)*:
+  • Verify that multiple nocturnal `HeartRateVariabilityRmssdRecord` epochs (e.g. 30.0, 40.0, 50.0 ms) aggregate to log-normal mean $\text{ln\_rmssd} = \frac{1}{M}\sum \ln(\text{rMSSD}_i)$ and geometric mean $\text{rmssd\_ms} = \exp(\text{ln\_rmssd})$.
+  • Verify that sleep records before midnight (e.g. 23:00) attribute to the waking date `date_iso`, and records after midnight (e.g. 05:00) attribute to the current waking date.
+  3. *Isolated Cohort Persistence & Idempotency Test (`TST-PER-039.3`, `HealthConnectHrvImporterTest.kt` / `HrvReadinessRepositoryTest.kt`)*:
+  • Verify that imported measurements persist with `posture = HrvPosture.OVERNIGHT_WEARABLE` and `artifactRatePct = null`.
+  • Verify that repeated imports do not produce duplicate rows for the same `(date_iso, OVERNIGHT_WEARABLE)` and preserve user pins.
+  4. *Posture Isolation in SWC Baseline Calculator Contract Test (`TST-PER-039.4`, `HrvReadinessCalculatorTest.kt`)*:
+  • Verify complete baseline isolation between `OVERNIGHT_WEARABLE` and waking postures (`SUPINE`, `SEATED`, `STANDING`).
+  5. *Tier 1 Clean-Room Targeted Regression Execution (`TST-PER-039.5`)*:
+  • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.database.hrv.*" --tests "com.atrainingtracker.trainingtracker.cloud.healthconnect.*" --tests "com.atrainingtracker.trainingtracker.build.*"` verifying 100% clean-room test pass rate.
+
+
 
 
 

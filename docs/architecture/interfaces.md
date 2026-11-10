@@ -17,7 +17,7 @@ Each architectural interface defines its provider, consumer, operations, data sc
 | `IF-SWE-05` | Service/Repo $\to$ Domain | Domain Calculators (`AutoPauseManager`, `ClimbDetector`) | Services & Repositories | Pure JVM Synchronous Methods | Caller Thread (`Dispatchers.IO`) |
 | `IF-SWE-06` | Service/Repo $\to$ SQLite | Database Managers (`WorkoutSamplesDatabaseManager`) | `TrackerService`, Repositories | SQLite WAL Mode & Synchronized Transactions | `dbDispatcher` / `Dispatchers.IO` |
 | `IF-SWE-07` | Repository $\to$ Exporters | Exporters (`FitFileWriter`, `GPXFileWriter`, `TCXFileWriter`) | `ExportManager`, `WorkoutRepository` | Streaming File Writers & Serializers | `Dispatchers.IO` (WorkManager) |
-| `IF-SWE-08` | Repository $\to$ Cloud APIs | Cloud Endpoints (`StravaUploader`, `HealthConnectManager`) | `ExportManager`, UI Controllers | REST (OkHttp/Retrofit) & HealthConnectClient | `Dispatchers.IO` (WorkManager) |
+| `IF-SWE-08` | Repository $\to$ Cloud APIs | Cloud Endpoints (`StravaUploader`, `HealthConnectManager`, `HealthConnectHrvImporter`) | `ExportManager`, UI Controllers, `HrvReadinessRepository` | REST (OkHttp/Retrofit) & HealthConnectClient | `Dispatchers.IO` (WorkManager) |
 
 ---
 
@@ -133,11 +133,12 @@ Each architectural interface defines its provider, consumer, operations, data sc
   * Two-phase atomic writes using `.tmp` files to prevent partial or corrupted file artifacts upon process termination.
 
 ### 2.8 IF-SWE-08: Repository Layer to Cloud APIs & Health Connect
-* **Provider**: External Network Clients (`StravaUploader`, `DropboxUploader`, `HealthConnectManager`).
-* **Consumer**: `ExportManager`, `TrainingApplication`, `EditWorkoutScreen`.
+* **Provider**: External Network Clients (`StravaUploader`, `DropboxUploader`, `HealthConnectManager`, `HealthConnectHrvImporter`).
+* **Consumer**: `ExportManager`, `TrainingApplication`, `EditWorkoutScreen`, `HrvReadinessRepository`.
 * **Operations / Method Signatures**:
   * `suspend fun uploadToStrava(file: File, sportType: SportType): UploadResponse`: REST multipart upload.
   * `suspend fun syncHealthConnect(workout: Workout, samples: List<Sample>): SyncResult`: Health Connect insertion.
+  * `suspend fun importRecentHrv(context: Context, daysBack: Int): Result<Int>`: Health Connect nocturnal resting HRV ingestion.
 * **Data Payloads / Schemas**:
   * Multipart form-data bodies, OAuth 2.0 bearer tokens, Health Connect `ExerciseSessionRecord` and series.
 * **Concurrency & Threading**:

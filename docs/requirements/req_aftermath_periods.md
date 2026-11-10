@@ -836,6 +836,36 @@
 
 **Invariants**: Zero changes to existing workout/sensor databases, pure Kotlin calculation logic, and 100% clean-room test pass rate.
 
+### REQ-PER-031: Android Health Connect Morning and Overnight Resting HRV Ingestion [Verified]
+- **Tests**: `TST-PER-039` | **Tickets**: `ATT-4981`
+- **Implementation**: `HealthConnectHrvImporter.kt`, `HealthConnectManager.kt`, `HrvPosture.kt`, `HrvReadinessRepository.kt`, `AndroidManifest.xml`
+- **Rationale**: Passive overnight wearable monitoring (smart rings, smartwatches) provides continuous nocturnal resting HRV and resting heart rate data via Android Health Connect. To allow athletes to utilize nocturnal biometric tracking without contaminating waking spot-check baselines, the system SHALL ingest nocturnal `HeartRateVariabilityRmssdRecord` and `RestingHeartRateRecord` into `HrvReadinessRepository` under an isolated `OVERNIGHT_WEARABLE` cohort:
+1. *Permission & User Opt-In Gating (`REQ-PER-031.1`)*: The system SHALL declare `READ_HEART_RATE_VARIABILITY` and `READ_RESTING_HEART_RATE` permissions in `AndroidManifest.xml` and manage runtime permission checks through `HealthConnectManager.kt`. Ingestion SHALL require explicit user opt-in (`isHealthConnectHrvImportEnabled`) in preferences.
+2. *Nocturnal Log-Normal Multi-Sample Aggregation & Date Attribution (`REQ-PER-031.2`)*: When syncing, `HealthConnectHrvImporter` SHALL query nocturnal records in the target time window. Records recorded between 18:00 and 12:00 SHALL be attributed to the waking calendar day `date_iso` (records before midnight attribute to the following day; records after midnight attribute to the current day). Because nocturnal rMSSD follows a log-normal distribution, multiple sample epochs within the nocturnal window SHALL be aggregated using the arithmetic mean of log values: $\text{ln\_rmssd} = \frac{1}{M}\sum \ln(\text{rMSSD}_i)$ and geometric mean $\text{rmssd\_ms} = \exp(\text{ln\_rmssd})$. Associated resting heart rate SHALL be aggregated as the arithmetic mean of valid nocturnal samples.
+3. *Isolated Cohort Persistence (`REQ-PER-031.3`)*: The system SHALL extend `HrvPosture` with `OVERNIGHT_WEARABLE` and persist the aggregated measurement via `HrvReadinessRepository` with `artifact_rate_pct = null`. `HrvReadinessCalculator` SHALL evaluate `OVERNIGHT_WEARABLE` baselines in complete isolation from waking postures (`SUPINE`, `SEATED`, `STANDING`).
+4. *Idempotent Ingestion & Source Tracking (`REQ-PER-031.4`)*: Ingestion SHALL be idempotent, deduplicating records by `(date_iso, OVERNIGHT_WEARABLE)` and persisting the source package and record UID in `notes`. Subsequent import syncs SHALL NOT overwrite manually pinned entries or create duplicate rows.
+5. *Preservation of System Invariants (`REQ-PER-031.5`)*: Standalone isolation of `OVERNIGHT_WEARABLE` baseline math, zero schema changes to `HrvReadiness.db` (v1), full `.attbackup` export/restore parity, and zero unprompted background sync operations when disabled.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-PER-031` (extending `REQ-PER-030` morning HRV readiness persistence and `REQ-SET-080` Health Connect integration). Targets `HealthConnectHrvImporter.kt`, `HealthConnectManager.kt`, `HrvPosture.kt`, `HrvReadinessRepository.kt`, and `AndroidManifest.xml`.
+2. *Historical Origin & Commit Trace*: Net-new capability introduced in `ATT-4981` under Epic `ATT-3539` (*Heart Rate Variability*).
+3. *Root Reason for Existing Formulation*: Wearables record multi-sample nocturnal readings that exhibit distinct physiological baselines from orthostatic waking spot checks. Introducing `OVERNIGHT_WEARABLE` cleanly partitions wearable data from chest-strap measurements.
+4. *Preservation of Core Invariants*: Waking postures (`SUPINE`, `SEATED`, `STANDING`) and `HrvReadiness.db` SQLite schema remain 100% untouched.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* nocturnal Health Connect records across sleep epochs (e.g. 30.0 ms, 40.0 ms, 50.0 ms),
+• *When* imported by `HealthConnectHrvImporter`,
+• *Then* $\text{ln\_rmssd}$ is the mean of logs ($\approx 3.655$), $\text{rmssd\_ms} \approx 38.67\text{ ms}$, and attributed to waking date `date_iso`.
+• *Given* an athlete with 14 `OVERNIGHT_WEARABLE` days and 10 `SUPINE` waking spot-checks,
+• *When* evaluating `SUPINE` readiness,
+• *Then* `OVERNIGHT_WEARABLE` records are strictly excluded and `SUPINE` remains `CALIBRATING` (`10 / 14 days`).
+• *Given* user has not opted in or granted Health Connect permissions,
+• *When* import sync is invoked,
+• *Then* import aborts safely without exception and zero database records are modified.
+
+**Invariants**: Zero changes to `HrvReadiness.db` (v1) schema, strict posture isolation, and 100% clean-room test pass rate.
+
+
 
 
 

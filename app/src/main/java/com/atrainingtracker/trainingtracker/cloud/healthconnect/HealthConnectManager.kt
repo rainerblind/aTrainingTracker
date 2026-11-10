@@ -27,8 +27,10 @@ import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
+import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.PowerRecord
 import androidx.health.connect.client.records.Record
+import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SpeedRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import com.atrainingtracker.trainingtracker.TrainingApplication
@@ -55,6 +57,11 @@ object HealthConnectManager {
         HealthPermission.getWritePermission(DistanceRecord::class),
         HealthPermission.getWritePermission(ElevationGainedRecord::class),
         HealthPermission.getWritePermission(TotalCaloriesBurnedRecord::class)
+    )
+
+    val HRV_READ_PERMISSIONS: Set<String> = setOf(
+        HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class),
+        HealthPermission.getReadPermission(RestingHeartRateRecord::class)
     )
 
     @VisibleForTesting
@@ -111,6 +118,21 @@ object HealthConnectManager {
             HealthPermission.getWritePermission(ExerciseSessionRecord::class) in granted
         } catch (e: Exception) {
             Log.w(TAG, "Error checking exercise write permission: ${e.message}")
+            false
+        }
+    }
+
+    /**
+     * Checks whether all required Health Connect HRV read permissions are granted (REQ-PER-031.1).
+     */
+    suspend fun hasHrvReadPermissions(context: Context): Boolean {
+        if (!isAvailable(context)) return false
+        return try {
+            val client = getClient(context)
+            val granted = client.permissionController.getGrantedPermissions()
+            HRV_READ_PERMISSIONS.all { it in granted }
+        } catch (e: Exception) {
+            Log.w(TAG, "Error checking Health Connect HRV read permissions: ${e.message}")
             false
         }
     }

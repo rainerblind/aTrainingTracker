@@ -61,6 +61,9 @@
     <uses-permission android:name="android.permission.health.WRITE_SPEED" />
     <uses-permission android:name="android.permission.health.WRITE_DISTANCE" />
     <uses-permission android:name="android.permission.health.WRITE_TOTAL_CALORIES_BURNED" />
+    <!-- Health Connect Resting HRV & Resting HR Read Permissions (ATT-4981 / REQ-PER-031) -->
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE_VARIABILITY" />
+    <uses-permission android:name="android.permission.health.READ_RESTING_HEART_RATE" />
     <!-- REQ-TRK-015 / REQ-BLD-003: ACCESS_BACKGROUND_LOCATION is required on Android 14+ (API 34+) when TrackerService is restarted by the OS via START_STICKY (intent == null) to promote to FOREGROUND_SERVICE_TYPE_LOCATION without SecurityException -->
     <uses-feature
         android:name="android.hardware.location.gps"

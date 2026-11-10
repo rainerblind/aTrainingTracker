@@ -19,20 +19,26 @@
 package com.atrainingtracker.trainingtracker.database.hrv
 
 /**
- * Physical athlete posture during morning resting HRV acquisition (`REQ-PER-030.4`).
+ * Physical athlete posture during morning resting HRV acquisition (`REQ-PER-030.4`, `REQ-PER-031.3`).
  *
  * Orthostatic vagal withdrawal causes substantial physiological divergence between postures.
  * Morning HRV baselines, rolling averages, and Smallest Worthwhile Change (SWC) corridors
- * are strictly isolated per posture.
+ * are strictly isolated per posture. Nocturnal passive wearable monitoring is tracked under [OVERNIGHT_WEARABLE].
  */
 enum class HrvPosture {
     SUPINE,
     SEATED,
-    STANDING;
+    STANDING,
+    OVERNIGHT_WEARABLE;
 
     companion object {
+        @JvmField
+        val OVERNIGHT_HC = OVERNIGHT_WEARABLE
+
         @JvmStatic
-        fun fromNameOrNull(name: String?): HrvPosture? =
-            entries.firstOrNull { it.name.equals(name, ignoreCase = true) }
+        fun fromNameOrNull(name: String?): HrvPosture? {
+            if (name.equals("OVERNIGHT_HC", ignoreCase = true)) return OVERNIGHT_WEARABLE
+            return entries.firstOrNull { it.name.equals(name, ignoreCase = true) }
+        }
     }
 }

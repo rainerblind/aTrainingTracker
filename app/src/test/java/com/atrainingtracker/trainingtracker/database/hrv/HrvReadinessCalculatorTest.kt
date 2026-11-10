@@ -84,6 +84,41 @@ class HrvReadinessCalculatorTest {
     }
 
     /**
+     * Acceptance Criterion (ATT-4981 / REQ-PER-031.3 / TST-PER-039.4):
+     * Given 14 OVERNIGHT_WEARABLE days and 10 SUPINE waking spot-checks
+     * When evaluating SUPINE readiness
+     * Then OVERNIGHT_WEARABLE records are strictly excluded and SUPINE remains CALIBRATING (10 / 14 days)
+     */
+    @Test
+    fun criterion_overnightWearableIsolation_from_wakingPostures() {
+        val targetDate = LocalDate.parse("2026-11-10")
+        val entries = mutableListOf<HrvReadinessEntry>()
+
+        // 14 OVERNIGHT_WEARABLE readings
+        for (i in 0 until 14) {
+            val dateStr = targetDate.minusDays(i.toLong()).toString()
+            entries.add(createEntry(dateStr, HrvPosture.OVERNIGHT_WEARABLE, 4.2))
+        }
+        // 10 SUPINE readings
+        for (i in 0 until 10) {
+            val dateStr = targetDate.minusDays(i.toLong()).toString()
+            entries.add(createEntry(dateStr, HrvPosture.SUPINE, 4.0))
+        }
+
+        val supineResult = HrvReadinessCalculator.calculateReadiness("2026-11-10", HrvPosture.SUPINE, entries)
+
+        assertEquals("OVERNIGHT_WEARABLE readings must not leak into SUPINE baseline", 10, supineResult.n60d)
+        assertEquals(ReadinessStatus.CALIBRATING, supineResult.status)
+        assertEquals(10, supineResult.calibrationDaysCount)
+        assertEquals("Day 10 of 14 baseline calibration", supineResult.calibrationProgressMessage)
+
+        // And OVERNIGHT_WEARABLE has 14 readings -> can compute baseline in isolation
+        val overnightResult = HrvReadinessCalculator.calculateReadiness("2026-11-10", HrvPosture.OVERNIGHT_WEARABLE, entries)
+        assertEquals(14, overnightResult.n60d)
+        assertEquals(ReadinessStatus.OPTIMAL, overnightResult.status)
+    }
+
+    /**
      * Acceptance Criterion 2 (ATT-3545):
      * Given >= 14 daily SUPINE ln(rMSSD) values with mu_60d = 4.00 and sample SD sigma_60d = 0.30
      * (SWC corridor [3.85, 4.15]), and two readings recorded on the target day (07:00 and 19:00)
