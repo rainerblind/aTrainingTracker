@@ -3108,8 +3108,60 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Existing display element flags (`showValue`, `showBar`) and gauge bar rendering preserved; 100% 9-language translation parity in `strings_cockpit.xml`; database upgrade idempotency.
 
+### REQ-FIL-015: Filter Initialization State Tracking, Alpha Range Validation & Zero-Bias Elimination [Verified]
+- **Tests**: `app/src/test/java/com/atrainingtracker/banalservice/filters/FilterInitializationAndBoundsTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/filters/FilterResetAndPreStartTest.kt`
+- **Implementation**: Track initialization state in MaxValueFilter and ExponentialSmoothingFilter to eliminate 0.0-bias on first samples, support sub-zero telemetry, validate alpha range, and guarantee reseed baseline parity.
+- **Rationale**: The system SHALL maintain initialization state tracking (`mIsInitialized`) in `MaxValueFilter.java` and `ExponentialSmoothingFilter.java` to ensure the first valid non-paused sample seeds filter state directly without artificial zero-bias, supporting sub-zero telemetry (e.g. ambient temperature or below-sea-level elevation), and SHALL validate smoothing factor bounds (`0.0 < alpha <= 1.0`) in `ExponentialSmoothingFilter` constructor with `final` immutability, while strictly preserving session isolation during pause (`REQ-FIL-013.3`), null safety (`REQ-FIL-011`), and thread safety (`synchronized`) (ATT-6382, refining `REQ-FIL-012.5` and `REQ-FIL-013`):
+1. *MaxValueFilter First Non-Paused Sample Seeding & Sub-Zero Support (`REQ-FIL-015.1`)*:
+• In `MaxValueFilter.java`, the filter SHALL maintain private initialization state (`mIsInitialized = false`).
+• When `!TrainingApplication.isPaused()` and a non-null sample `value` arrives: if `!mIsInitialized`, the filter SHALL assign `mMaxValue = value` and set `mIsInitialized = true`, ensuring sub-zero measurements (e.g. `-5°C`) correctly seed the maximum rather than being rejected against `0`.
+• If already initialized, `mMaxValue` SHALL update if and only if `value.doubleValue() > mMaxValue.doubleValue()`.
+• On `reset()`, the filter SHALL reset `mIsInitialized = false` and `mMaxValue = 0`.
+• Samples received while `TrainingApplication.isPaused() == true` MUST NOT initialize or alter `mMaxValue` (preserving pre-start and pause session isolation per `REQ-FIL-013.3`).
+2. *ExponentialSmoothingFilter Alpha Range Validation (`REQ-FIL-015.2`)*:
+• In `ExponentialSmoothingFilter.java`, the constructor SHALL validate `alpha`.
+• If `alpha <= 0.0 || alpha > 1.0 || Double.isNaN(alpha) || Double.isInfinite(alpha)`, the constructor MUST throw `IllegalArgumentException`.
+• Field `mAlpha` SHALL be declared `final` ensuring safe publication across threads.
+3. *ExponentialSmoothingFilter First Sample Baseline Seeding & Reseed Parity (`REQ-FIL-015.3`)*:
+• In `ExponentialSmoothingFilter.java`, the filter SHALL maintain private initialization state (`mIsInitialized = false`).
+• When a non-null sample `value` arrives: if `!mIsInitialized`, the filter SHALL assign `mFilteredValue = value.doubleValue()` and set `mIsInitialized = true`, eliminating the artificial 50% attenuation toward 0.0 on the initial reading.
+• Subsequent non-null samples SHALL calculate `mFilteredValue = mAlpha * value.doubleValue() + (1 - mAlpha) * mFilteredValue`.
+• On `reset()`, the filter SHALL reset `mIsInitialized = false` and `mFilteredValue = 0.0`.
+• In `reseed(Number value)` (`REQ-FIL-012.5`), invoking `reset()` followed by `newValue(value)` SHALL directly seed the new baseline without historical exponential decay against 0.0.
+4. *Thread Safety & System Invariants (`REQ-FIL-015.4`)*:
+• All mutating and reading methods (`newValue`, `getFilteredValue`, `reset`) in `MaxValueFilter` and `ExponentialSmoothingFilter` MUST remain `synchronized` on the filter instance monitor.
+• Passing `null` to `newValue()` MUST NOT alter filter state or throw `NullPointerException` (`REQ-FIL-011`).
+• Unaffected filter implementations (`NumberedMovingAverageFilter`, `TimedMovingAverageFilter`, `AverageFilter`, `InstantaneousFilter`) remain untouched.
+
+### Requirement Archaeology & Chesterton's Fence Audit:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-FIL-015`, refining `REQ-FIL-012.5` (`reseed()`) and `REQ-FIL-013` (pre-start pause isolation). Targets `MaxValueFilter.java` and `ExponentialSmoothingFilter.java`.
+2. *Historical Origin & Commit Trace*: Baseline filter implementation (`commit 845818c2`, 2019) and pause gating (`commit d937073c`, 2026).
+3. *Root Reason for Existing Formulation*: Early filters assumed strictly positive telemetry and did not model uninitialized state prior to the first sample.
+4. *Preservation of Core Invariants*: Cumulative session isolation during pause (`REQ-FIL-013.3`), null safety (`REQ-FIL-011`), thread safety (`synchronized`), and zero regression on existing filters.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a reset `MaxValueFilter`,
+• *When* the first non-paused sample `-5.0` is received,
+• *Then* `getFilteredValue()` returns `-5.0`.
+• *Given* a reset `MaxValueFilter` while `TrainingApplication.isPaused() == true`,
+• *When* sample `500` is received,
+• *Then* `getFilteredValue()` remains `0` and `mIsInitialized` remains false.
+• *Given* an invalid alpha value (`0.0`, `-0.5`, `1.5`, `Double.NaN`, `Double.POSITIVE_INFINITY`),
+• *When* constructing `ExponentialSmoothingFilter`,
+• *Then* `IllegalArgumentException` is thrown.
+• *Given* a reset `ExponentialSmoothingFilter` with $\alpha = 0.5$,
+• *When* the first sample `100.0` is received,
+• *Then* `getFilteredValue()` returns `100.0`.
+• *Given* an `ExponentialSmoothingFilter` with existing state,
+• *When* `reseed(100.0)` is called,
+• *Then* `getFilteredValue()` returns `100.0` immediately without historical bias.
+
+**Invariants**: Thread safety, null safety (`REQ-FIL-011`), pause session isolation (`REQ-FIL-013`), and 100% clean-room test pass rate.
+
 
 
 
 
  (ATT-6046: pre-rebase collapsed commit)
+
+

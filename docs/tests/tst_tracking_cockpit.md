@@ -1730,6 +1730,35 @@
   5. *Clean-Room Targeted Test Suite Execution (`TST-TRK-059.5`)*:
   • Execute targeted package tests (`com.atrainingtracker.trainingtracker.database.*`, `com.atrainingtracker.trainingtracker.ui.tracking.*`) asserting 100% pass rate.
 
+### TST-FIL-015: **Filter Initialization State Tracking, Alpha Validation & Zero-Bias Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-FIL-015`, `REQ-FIL-011`, `REQ-FIL-012.5`, `REQ-FIL-013`
+- **Component**: **Filter Initialization State Tracking, Alpha Validation & Zero-Bias Verification Suite**
+- **Jira**: `ATT-6382`
+- **Test Description**:
+  1. *MaxValueFilter Sub-Zero and First Sample Seeding Unit Test (`TST-FIL-015.1`, `FilterInitializationAndBoundsTest.kt`)*:
+  • Instantiate `MaxValueFilter` in active tracking mode (`isPaused = false`).
+  • Feed initial negative sample `-5.0`; assert `getFilteredValue().toDouble() == -5.0`.
+  • Feed sample `-3.0`; assert `getFilteredValue().toDouble() == -3.0`.
+  • Feed sample `-8.0`; assert `getFilteredValue().toDouble() == -3.0`.
+  2. *MaxValueFilter Pause Session Isolation and Reset Test (`TST-FIL-015.2`, `FilterResetAndPreStartTest.kt`)*:
+  • In paused / ready mode, feed sample `500`; assert `getFilteredValue().toInt() == 0`.
+  • Unpause, feed sample `350`; assert `getFilteredValue().toInt() == 350`.
+  • Reset filter; assert `getFilteredValue().toInt() == 0`.
+  3. *ExponentialSmoothingFilter Alpha Range Validation Test (`TST-FIL-015.3`, `FilterInitializationAndBoundsTest.kt`)*:
+  • Verify constructor throws `IllegalArgumentException` for `alpha = 0.0`, `-0.1`, `1.0001`, `Double.NaN`, `Double.POSITIVE_INFINITY`.
+  • Verify constructor succeeds for boundary values `Double.MIN_VALUE`, `0.5`, `1.0`.
+  4. *ExponentialSmoothingFilter First Sample Baseline Seeding and Reseed Test (`TST-FIL-015.4`, `FilterInitializationAndBoundsTest.kt`, `FilterResetAndPreStartTest.kt`)*:
+  • With $\alpha = 0.5$, feed sample `100.0`; assert `getFilteredValue().toDouble() == 100.0` (zero 0.0-bias).
+  • Feed second sample `150.0`; assert `getFilteredValue().toDouble() == 125.0`.
+  • Call `reseed(200.0)`; assert `getFilteredValue().toDouble() == 200.0`.
+  • Call `reset()`; assert `getFilteredValue().toDouble() == 0.0`.
+  5. *Concurrent Thread Safety Stress Test (`TST-FIL-015.5`, `FilterInitializationAndBoundsTest.kt`)*:
+  • Execute concurrent multi-threaded writes (`newValue`) and reads (`getFilteredValue`, `reset`) across multiple threads on `MaxValueFilter` and `ExponentialSmoothingFilter`; assert zero race conditions or data corruption.
+  6. *9-Language Localization & String Specifier Audit (`TST-FIL-015.6`, `TranslationParityTest.kt`)*:
+  • Verify zero new UI string resources required across all 9 canonical app locales.
+  7. *Clean-Room Targeted Test Suite Execution (`TST-FIL-015.7`)*:
+  • Execute targeted package tests (`com.atrainingtracker.banalservice.filters.*`) asserting 100% pass rate.
+
 
 
 
@@ -1738,3 +1767,5 @@
 
 
  (ATT-6046: pre-rebase collapsed commit)
+
+

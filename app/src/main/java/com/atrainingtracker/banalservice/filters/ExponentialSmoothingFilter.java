@@ -30,10 +30,15 @@ public class ExponentialSmoothingFilter
     private static final String TAG = ExponentialSmoothingFilter.class.getName();
 
     protected double mFilteredValue;
-    protected double mAlpha;
+    protected final double mAlpha;
+    protected boolean mIsInitialized = false;
 
     public ExponentialSmoothingFilter(String deviceName, SensorType sensorType, double alpha) {
         super(deviceName, sensorType);
+
+        if (Double.isNaN(alpha) || Double.isInfinite(alpha) || alpha <= 0.0 || alpha > 1.0) {
+            throw new IllegalArgumentException("Filter constant alpha must be in range (0.0, 1.0], was: " + alpha);
+        }
 
         mAlpha = alpha;
     }
@@ -57,12 +62,22 @@ public class ExponentialSmoothingFilter
     @Override
     public synchronized void reset() {
         mFilteredValue = 0.0;
+        mIsInitialized = false;
     }
 
     @Override
     public synchronized void newValue(Number value) {
         if (value != null) {
-            mFilteredValue = mAlpha * value.doubleValue() + (1 - mAlpha) * mFilteredValue;
+            if (!mIsInitialized) {
+                mFilteredValue = value.doubleValue();
+                mIsInitialized = true;
+            } else {
+                mFilteredValue = mAlpha * value.doubleValue() + (1 - mAlpha) * mFilteredValue;
+            }
         }
+    }
+
+    public synchronized boolean isInitialized() {
+        return mIsInitialized;
     }
 }

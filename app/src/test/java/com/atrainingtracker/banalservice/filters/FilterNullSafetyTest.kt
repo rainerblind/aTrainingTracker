@@ -59,13 +59,13 @@ class FilterNullSafetyTest {
         // This should not crash
         filter.newValue(null)
         
-        // Valid value should work
+        // Valid value should work and seed directly without zero-bias (REQ-FIL-015.3)
         filter.newValue(100)
-        assertEquals(50.0, filter.filteredValue.toDouble(), 0.01) // 0.5 * 100 + 0.5 * 0
+        assertEquals(100.0, filter.filteredValue.toDouble(), 0.01)
         
-        // Subsequent null should not crash
+        // Subsequent null should not crash and preserve value
         filter.newValue(null)
-        assertEquals(50.0, filter.filteredValue.toDouble(), 0.01)
+        assertEquals(100.0, filter.filteredValue.toDouble(), 0.01)
     }
 
     @Test
