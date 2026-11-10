@@ -1586,3 +1586,24 @@
   • Validate that synthetic unallow-listed UI database references or domain UI imports trigger assertion failures.
   4. *Clean-Room Targeted Test Suite Execution (`TST-PRO-050.4`)*:
   • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest"` asserting 100% pass rate and confirm `ArchitectureConformanceContractTest` is registered in `LEGITIMATE_GOVERNANCE_GUARDS`.
+
+
+### TST-PRO-051: **Android Instrumented Test Infrastructure & Emulator CI Contract Test Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-051`
+- **Component**: `app/build.gradle`, `.github/workflows/android-branch-build.yml`, `app/src/androidTest/java/com/atrainingtracker/trainingtracker/AppSmokeAndroidTest.kt`, `ReleaseCiAndLintConfigContractTest.kt`
+- **Jira**: `ATT-6184`
+- **Test Description**:
+  1. *Build Script Instrumentation Runner & Dependency Conformance Test (`TST-PRO-051.1`, `ReleaseCiAndLintConfigContractTest.kt`)*:
+  • Read `app/build.gradle`.
+  • Assert that `testInstrumentationRunner` is configured as `"androidx.test.runner.AndroidJUnitRunner"`.
+  • Assert that `androidTestImplementation` dependencies for `androidx.test.ext:junit`, `androidx.test.espresso:espresso-core`, and `androidx.test:runner` are present.
+  2. *CI Workflow Emulator Job & Artifact Upload Conformance Test (`TST-PRO-051.2`, `ReleaseCiAndLintConfigContractTest.kt`)*:
+  • Read `.github/workflows/android-branch-build.yml`.
+  • Assert that the workflow contains an emulator job executing `connectedDebugAndroidTest` (or `:app:connectedDebugAndroidTest`).
+  • Assert that the workflow uploads instrumented test results via `actions/upload-artifact`.
+  3. *AndroidTest Compilation & Smoke Test Existence Verification (`TST-PRO-051.3`)*:
+  • Verify existence of `app/src/androidTest/java/com/atrainingtracker/trainingtracker/AppSmokeAndroidTest.kt`.
+  • Execute `./gradlew compileDebugAndroidTestKotlin` and assert successful compilation without errors.
+  4. *Clean-Room Targeted Test Suite Execution (`TST-PRO-051.4`)*:
+  • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest"` asserting 100% pass rate.
+

@@ -25,8 +25,10 @@ import java.io.File
 
 /**
  * Validates Release CI test gating, AndroidManifest hygiene, Lint configuration,
- * Detekt static analysis, Kover code coverage gating, and CI integrity (REQ-BLD-002, TST-BLD-002, REQ-PRO-042,
- * TST-PRO-042, REQ-PRO-046, TST-PRO-046, REQ-PRO-047, TST-PRO-047, REQ-PRO-048, TST-PRO-048, ATT-6171, ATT-6175).
+ * Detekt static analysis, Kover code coverage gating, CI integrity, and instrumented androidTest
+ * infrastructure with emulator CI runner (REQ-BLD-002, TST-BLD-002, REQ-PRO-042,
+ * TST-PRO-042, REQ-PRO-046, TST-PRO-046, REQ-PRO-047, TST-PRO-047, REQ-PRO-048, TST-PRO-048,
+ * REQ-PRO-051, TST-PRO-051, ATT-6171, ATT-6175, ATT-6184).
  */
 class ReleaseCiAndLintConfigContractTest {
 
@@ -379,6 +381,97 @@ class ReleaseCiAndLintConfigContractTest {
         assertTrue(
             "CI workflow must specify kover report artifact path $reportPath (REQ-PRO-048.3, TST-PRO-048.2)",
             content.contains(reportPath)
+        )
+    }
+
+    /**
+     * Asserts that app/build.gradle configures testInstrumentationRunner and declares
+     * standard androidTestImplementation dependencies (REQ-PRO-051.1, TST-PRO-051.1).
+     */
+    @Test
+    fun testBuildGradle_androidTestInstrumentationRunnerAndDependencies() {
+        val content = findBuildGradleFile().readText()
+
+        assertTrue(
+            "app/build.gradle must configure AndroidJUnitRunner in defaultConfig (REQ-PRO-051.1, TST-PRO-051.1)",
+            content.contains("testInstrumentationRunner = \"androidx.test.runner.AndroidJUnitRunner\"") ||
+                content.contains("testInstrumentationRunner \"androidx.test.runner.AndroidJUnitRunner\"")
+        )
+        assertTrue(
+            "app/build.gradle must declare androidTestImplementation for androidx.test.ext:junit (REQ-PRO-051.1, TST-PRO-051.1)",
+            content.contains("androidTestImplementation 'androidx.test.ext:junit")
+        )
+        assertTrue(
+            "app/build.gradle must declare androidTestImplementation for espresso-core (REQ-PRO-051.1, TST-PRO-051.1)",
+            content.contains("androidTestImplementation 'androidx.test.espresso:espresso-core")
+        )
+        assertTrue(
+            "app/build.gradle must declare androidTestImplementation for androidx.test:runner (REQ-PRO-051.1, TST-PRO-051.1)",
+            content.contains("androidTestImplementation 'androidx.test:runner")
+        )
+        assertTrue(
+            "app/build.gradle must declare androidTestImplementation for androidx.test:rules (REQ-PRO-051.1, TST-PRO-051.1)",
+            content.contains("androidTestImplementation 'androidx.test:rules")
+        )
+    }
+
+    /**
+     * Asserts that CI workflow defines emulator-test job executing connectedDebugAndroidTest
+     * with reactivecircus/android-emulator-runner and uploading report artifacts (REQ-PRO-051.3, TST-PRO-051.2).
+     */
+    @Test
+    fun testBranchBuildWorkflow_runsEmulatorTestsAndUploadsReport() {
+        val content = findCiWorkflowFile().readText()
+        val emulatorJob = "emulator-test:"
+        val emulatorRunnerAction = "reactivecircus/android-emulator-runner"
+        val testCommand = "connectedDebugAndroidTest"
+        val artifactStep = "actions/upload-artifact"
+        val reportPath = "app/build/reports/androidTests/connected/"
+
+        assertTrue(
+            "CI workflow must define emulator-test job (REQ-PRO-051.3, TST-PRO-051.2)",
+            content.contains(emulatorJob)
+        )
+        assertTrue(
+            "CI workflow must utilize android-emulator-runner action (REQ-PRO-051.3, TST-PRO-051.2)",
+            content.contains(emulatorRunnerAction)
+        )
+        assertTrue(
+            "CI workflow must execute connectedDebugAndroidTest (REQ-PRO-051.3, TST-PRO-051.2)",
+            content.contains(testCommand)
+        )
+        assertTrue(
+            "CI workflow must upload connected test reports via $artifactStep (REQ-PRO-051.3, TST-PRO-051.2)",
+            content.contains(artifactStep) && content.contains("name: connected-test-report")
+        )
+        assertTrue(
+            "CI workflow must specify connected test report artifact path $reportPath (REQ-PRO-051.3, TST-PRO-051.2)",
+            content.contains(reportPath)
+        )
+    }
+
+    /**
+     * Asserts that app/src/androidTest contains the initial smoke instrumentation test (REQ-PRO-051.2, TST-PRO-051.3).
+     */
+    @Test
+    fun testAndroidTestDirectory_containsSmokeTest() {
+        val smokeTestFile = findRepoRootFile(
+            "app/src/androidTest/java/com/atrainingtracker/trainingtracker/AppSmokeAndroidTest.kt",
+            "src/androidTest/java/com/atrainingtracker/trainingtracker/AppSmokeAndroidTest.kt"
+        )
+
+        assertTrue(
+            "AppSmokeAndroidTest.kt must exist in app/src/androidTest/ (REQ-PRO-051.2, TST-PRO-051.3)",
+            smokeTestFile.exists()
+        )
+        val content = smokeTestFile.readText()
+        assertTrue(
+            "AppSmokeAndroidTest must be configured with AndroidJUnit4 runner (REQ-PRO-051.2)",
+            content.contains("@RunWith(AndroidJUnit4::class)")
+        )
+        assertTrue(
+            "AppSmokeAndroidTest must contain test methods (REQ-PRO-051.2)",
+            content.contains("@Test")
         )
     }
 }
