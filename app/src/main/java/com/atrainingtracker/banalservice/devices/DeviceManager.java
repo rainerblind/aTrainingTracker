@@ -1063,6 +1063,11 @@ public class DeviceManager {
                 myBTLEDevice = new BTLEBikePowerDevice(mContext, mSensorManager, deviceID, address);
                 break;
 
+            case BIKE_RADAR:
+                if (DEBUG) Log.i(TAG, "create new bluetooth bike radar device");
+                myBTLEDevice = new com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDevice(mContext, mSensorManager, deviceID, address);
+                break;
+
             default:
                 Log.i(TAG, "Bluetooth device not yet supported");
         }

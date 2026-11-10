@@ -1839,3 +1839,28 @@
   • Verify 100% 9-language translation parity in `strings_hrv.xml` across EN, DE, ES, FR, IT, JA, NL, PL, PT.
   6. *Clean-Room Targeted Test Suite Execution (`TST-TRK-061.6`)*:
   • Execute targeted package tests asserting 100% pass rate.
+
+
+### TST-CON-028: **BLE Cycling Radar Protocol Driver, Serialized GATT Queue, Latch Aggregator & Parity Test Suite** [Verified]
+- **Requirement(s)**: `REQ-CON-028` (`REQ-CON-028.1`..`REQ-CON-028.6`)
+- **Component**: `DeviceType.java`, `SensorType.java`, `ActivityType.java`, `BluetoothConstants.java`, `MyBTLEDevice.java`, `BTSearchForNewDevicesEngine.java`, `BTLERadarDevice.java`, `RadarStateRepository.kt`, `RadarWindowAggregator.kt`, `EquipmentSensorOrdering.kt`, `strings_radar.xml`
+- **Jira**: `ATT-5083`
+- **Test Description**:
+  1. *Serialized GATT Operation Queue Unit Tests (`TST-CON-028.1`, `MyBTLEDeviceQueueTest.kt`)*:
+  • Verify sequential FIFO execution of CCCD descriptor writes and characteristic read/write requests without race conditions.
+  • Verify that pending queue operations wait for explicit callback confirmations (`onDescriptorWrite`, `onCharacteristicRead`, `onCharacteristicWrite`).
+  2. *BTLERadarDevice V1 Threat Decoding & Watchdog Unit Tests (`TST-CON-028.2`, `BTLERadarDeviceTest.kt`)*:
+  • Verify header `byte[0]` demuxing cleanly isolates threat triplets (`1 + 3*N` bytes) while ignoring heartbeat and sector amplitude frames.
+  • Verify accurate conversion of target distance, closing speed, and threat level into immutable `RadarTarget` instances.
+  • Verify that 3.5 seconds of packet starvation triggers transition to `DISCONNECTED_ERROR`.
+  3. *1 Hz Window Aggregator & Vehicle Counter Hysteresis Unit Tests (`TST-CON-028.3`, `RadarWindowAggregatorTest.kt`)*:
+  • Verify 1-second retention of peak threat count, max approach speed, and closest vehicle distance between 1 Hz polling ticks.
+  • Verify overtaking vehicle counter increments once per passed vehicle using target-ID lifecycle and closing-range hysteresis.
+  4. *DeviceType, SensorType & Database Parity Unit Tests (`TST-CON-028.4`, `DeviceTypeTest.kt`, `SensorTypeTest.kt`, `WorkoutSamplesDatabaseManagerTest.kt`)*:
+  • Verify `DeviceType.BIKE_RADAR` correctly registers under `BSportType.BIKE` and is identified by `DevicesDatabaseManager.isBikeSensor()`.
+  • Verify `SensorType.RADAR_*` dynamic column creation and extrema registration with zero SQLite schema migrations (`DB_VERSION` unchanged).
+  5. *9-Language Parity & Localization Test (`TST-CON-028.5`, `TranslationParityTest.kt`)*:
+  • Verify 100% string key and format parity across partitioned `strings_radar.xml` in all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
+  6. *Clean-Room Targeted Test Suite Execution (`TST-CON-028.6`)*:
+  • Execute targeted package tests (`com.atrainingtracker.banalservice.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+

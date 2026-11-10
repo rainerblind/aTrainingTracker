@@ -198,13 +198,17 @@ public enum ActivityType {
             sensors[sensors.length - 1] = SensorType.TEMPERATURE_MAX;
         }
 
-        sensors = Arrays.copyOf(sensors, sensors.length + 6);
-        sensors[sensors.length - 6] = SensorType.PHONE_BATTERY;
-        sensors[sensors.length - 5] = SensorType.BATTERY_REMAINING_TIME;
-        sensors[sensors.length - 4] = SensorType.HRV_DFA_A1;
-        sensors[sensors.length - 3] = SensorType.HRV_RMSSD;
-        sensors[sensors.length - 2] = SensorType.RR_INTERVAL;
-        sensors[sensors.length - 1] = SensorType.HRV_ARTIFACT_RATE;
+        sensors = Arrays.copyOf(sensors, sensors.length + 10);
+        sensors[sensors.length - 10] = SensorType.PHONE_BATTERY;
+        sensors[sensors.length - 9] = SensorType.BATTERY_REMAINING_TIME;
+        sensors[sensors.length - 8] = SensorType.HRV_DFA_A1;
+        sensors[sensors.length - 7] = SensorType.HRV_RMSSD;
+        sensors[sensors.length - 6] = SensorType.RR_INTERVAL;
+        sensors[sensors.length - 5] = SensorType.HRV_ARTIFACT_RATE;
+        sensors[sensors.length - 4] = SensorType.RADAR_THREAT_COUNT;
+        sensors[sensors.length - 3] = SensorType.RADAR_CLOSEST_DISTANCE_m;
+        sensors[sensors.length - 2] = SensorType.RADAR_APPROACH_SPEED_mps;
+        sensors[sensors.length - 1] = SensorType.RADAR_VEHICLE_COUNT;
 
         return sensors;
     }

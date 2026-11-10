@@ -3298,3 +3298,48 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Then* zero scroll clipping occurs and all text is 100% translated across EN, DE, ES, FR, IT, JA, NL, PL, PT.
 
 **Invariants**: Zero hardcoded hex colors outside `Color.kt`; zero nested `verticalScroll` inside `AppModalBottomSheet`; 100% 9-language translation parity; clean-room test pass rate.
+
+
+### REQ-CON-028: BLE Cycling Radar Protocol Driver, Serialized GATT Queue, Scalar Telemetry & Bike Equipment Integration [Verified]
+- **Tests**: `TST-CON-028` | **Tickets**: `ATT-5083`
+- **Implementation**: `DeviceType.java`, `SensorType.java`, `ActivityType.java`, `BluetoothConstants.java`, `MyBTLEDevice.java`, `BTSearchForNewDevicesEngine.java`, `BTLERadarDevice.java`, `RadarStateRepository.kt`, `RadarWindowAggregator.kt`, `EquipmentSensorOrdering.kt`, `strings_radar.xml`
+- **Rationale**: Cyclists operating in traffic require real-time rearward situational awareness. To integrate Garmin Varia cycling radar units (RearVue 820, RTL515, RCT715) into *aTrainingTracker*, BANALService requires a dedicated `DeviceType.BIKE_RADAR` and `BTLERadarDevice` protocol driver. Because radars interleave threat packets with heartbeat/sector frames on characteristic `6a4e3203` and require sequential CCCD configuration, `MyBTLEDevice` requires a serialized GATT operation queue. High-frequency (4–8 Hz) multi-target streams must feed reactive UI via `RadarStateRepository` (`StateFlow<RadarState>`) with a 3.5s fail-safe disconnect watchdog, while Cockpit and `TrackerService` require 1 Hz scalar metrics (`RADAR_THREAT_COUNT`, `RADAR_CLOSEST_DISTANCE_m`, `RADAR_APPROACH_SPEED_mps`, `RADAR_VEHICLE_COUNT`) via a 1 Hz window aggregator with zero SQLite schema migrations and full 9-language localization parity (ATT-5083, Parent Epic ATT-1286, extending `REQ-CON-002`, `REQ-CON-014`, and `REQ-CON-020`):
+1. *DeviceType.BIKE_RADAR & Equipment Matrix (`REQ-CON-028.1`)*:
+• The system SHALL define `DeviceType.BIKE_RADAR` associated with `BSportType.BIKE` and main sensor `SensorType.RADAR_THREAT_COUNT`.
+• `DevicesDatabaseManager.isBikeSensor()` SHALL classify `BIKE_RADAR` as a bike sensor, automatically integrating it into `EquipmentSensorMatrixScreen` and bike equipment profiles.
+2. *Serialized GATT Operation Queue in MyBTLEDevice (`REQ-CON-028.2`)*:
+• `MyBTLEDevice` SHALL serialize GATT operations (CCCD descriptor writes, characteristic reads, and control-point writes) via a thread-safe FIFO queue.
+• The system SHALL advance to the next queued GATT operation only upon receiving `onDescriptorWrite`, `onCharacteristicRead`, or `onCharacteristicWrite` callback confirmation, preventing dropped commands during multi-characteristic setup.
+3. *Resilient BLE Radar Peripheral Discovery (`REQ-CON-028.3`)*:
+• `BTSearchForNewDevicesEngine` SHALL match Garmin Varia Radar service `6a4e3200-667b-11e3-949a-0800200c9a66` across primary advertisement UUIDs, scan response records, and post-connect service discovery.
+4. *BTLERadarDevice V1 Threat Decoding & Reactive Repository (`REQ-CON-028.4`)*:
+• `BTLERadarDevice` SHALL subscribe to V1 characteristic `6a4e3203-667b-11e3-949a-0800200c9a66`, inspect header `byte[0]` to demux threat packets (`1 + 3*N` bytes) from heartbeat and sector packets, and decode valid targets into immutable `RadarTarget` records (`targetId`, `rangeMeters`, `approachSpeedMps`, `threatLevel`).
+• Target updates SHALL be published to `RadarStateRepository` (`StateFlow<RadarState>`) at 4–8 Hz.
+• A 3.5s watchdog timer SHALL transition `RadarState` to `DISCONNECTED_ERROR` if no valid packets arrive or GATT disconnects.
+5. *Scalar 1 Hz Latch Aggregator, Vehicle Counter & Zero-Migration Persistence (`REQ-CON-028.5`)*:
+• The system SHALL expose scalar metrics `RADAR_THREAT_COUNT`, `RADAR_CLOSEST_DISTANCE_m`, `RADAR_APPROACH_SPEED_mps`, and `RADAR_VEHICLE_COUNT` in `SensorType.java`.
+• A 1 Hz window aggregator/latch SHALL hold peak threat count, max approach speed, and minimum distance across 1-second intervals for `TrackerService.sampleAndWriteToDb()`.
+• The system SHALL track cumulative passing vehicles using target-ID lifecycle and closing-range hysteresis.
+• Database persistence in `WorkoutSamplesDatabaseManager` and `WorkoutSummariesDatabaseManager` SHALL require zero SQLite schema migrations (`DB_VERSION` unchanged).
+6. *9-Language Localization Parity (`REQ-CON-028.6`)*:
+• String resources for `DeviceType.BIKE_RADAR` and all radar scalar `SensorType`s SHALL be provided in `strings_radar.xml` across all 9 canonical languages (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-CON-028`, extending `REQ-CON-002` (*Bluetooth LE Sensor Support*), `REQ-CON-014` (*GATT Packet Resilience*), and `REQ-CON-020` (*GATT Queue Integrity*). Targets `DeviceType.java`, `SensorType.java`, `MyBTLEDevice.java`, `BTSearchForNewDevicesEngine.java`, `BTLERadarDevice.java`.
+2. *Historical Origin & Commit Trace*: `ATT-1485` (`REQ-CON-014`) established safe BLE payload parsing; `ATT-3312` introduced chained battery CCCD writes; `ATT-3540` established multi-sensor push architecture.
+3. *Root Reason for Existing Formulation*: Existing BLE devices relied on single-characteristic notifications or ad-hoc descriptor writes. Multi-target radar requires sequential CCCD setup, packet demuxing, and dual-rate (reactive 8 Hz vs. persisted 1 Hz) handling.
+4. *Preservation of Core Invariants*: Existing BLE sensors (HRM, Power, Speed, Cadence) remain completely unaffected; zero SQLite schema migrations; 100% 9-language translation parity.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a BLE radar streaming interleaved threat, heartbeat, and sector packets on `6a4e3203`,
+• *When* parsed by `BTLERadarDevice`,
+• *Then* non-threat packets are filtered and valid targets are published to `RadarStateRepository` at 4–8 Hz.
+• *Given* an active workout with 4–8 Hz radar stream,
+• *When* sampled at 1 Hz by `TrackerService`,
+• *Then* peak speed and closest distance within the 1s window are latched and saved to `WorkoutSamples.db` with zero schema alterations.
+• *Given* a disconnected or out-of-range radar,
+• *When* 3.5 seconds elapse without valid packets,
+• *Then* `RadarStateRepository` transitions to `DISCONNECTED_ERROR`.
+
+**Invariants**: Existing BLE sensors unaffected; zero schema migrations; 100% 9-language translation parity.
+

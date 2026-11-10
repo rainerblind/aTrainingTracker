@@ -118,7 +118,11 @@ public enum SensorType
     RR_INTERVAL(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, R.string.rr_interval, R.string.rr_interval_short, R.string.units_time_ms, SensorValueType.INTEGER, new IntegerFormatter(), true),
     HRV_RMSSD(SensorCategory.HEART_RATE_AND_ENERGY, R.string.hrv_rmssd, R.string.hrv_rmssd_short, R.string.units_time_ms, SensorValueType.DOUBLE, new DefaultNumberFormatter(), true),
     HRV_DFA_A1(SensorCategory.HEART_RATE_AND_ENERGY, R.string.hrv_dfa_a1, R.string.hrv_dfa_a1_short, R.string.units_none, SensorValueType.DOUBLE, new DfaA1Formatter(), true),
-    HRV_ARTIFACT_RATE(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, R.string.hrv_artifact_rate, R.string.hrv_artifact_rate_short, R.string.units_percent, SensorValueType.DOUBLE, new DefaultNumberFormatter(), true);
+    HRV_ARTIFACT_RATE(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, R.string.hrv_artifact_rate, R.string.hrv_artifact_rate_short, R.string.units_percent, SensorValueType.DOUBLE, new DefaultNumberFormatter(), true),
+    RADAR_THREAT_COUNT(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, R.string.radar_threat_count, R.string.radar_threat_count_short, R.string.units_none, SensorValueType.INTEGER, new IntegerFormatter(), false),
+    RADAR_CLOSEST_DISTANCE_m(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, R.string.radar_closest_distance, R.string.radar_closest_distance_short, R.string.units_distance_basic, SensorValueType.DOUBLE, new DistanceFormatter(), false),
+    RADAR_APPROACH_SPEED_mps(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, R.string.radar_approach_speed, R.string.radar_approach_speed_short, R.string.units_speed_basic, SensorValueType.DOUBLE, new SpeedFormatter(), false),
+    RADAR_VEHICLE_COUNT(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, R.string.radar_vehicle_count, R.string.radar_vehicle_count_short, R.string.units_none, SensorValueType.INTEGER, new IntegerFormatter(), false);
 
     // max bit = 118
 

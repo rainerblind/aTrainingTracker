@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+  -->
+
+<resources>
+    <!-- DeviceType BIKE_RADAR (ATT-5083 / REQ-CON-028.1) -->
+    <string name="device_type_bike_radar">fietsradar</string>
+    <string name="device_type_short_bike_radar">radar</string>
+
+    <!-- Radar Scalar Sensor Types (ATT-5083 / REQ-CON-028.5) -->
+    <string name="radar_threat_count">Aantal radar-dreigingen</string>
+    <string name="radar_threat_count_short">Dreigingen</string>
+
+    <string name="radar_closest_distance">Dichtstbijzijnde radarafstand</string>
+    <string name="radar_closest_distance_short">Radarafst.</string>
+
+    <string name="radar_approach_speed">Radar-naderingssnelheid</string>
+    <string name="radar_approach_speed_short">Radarsn.</string>
+
+    <string name="radar_vehicle_count">Aantal radar-voertuigen</string>
+    <string name="radar_vehicle_count_short">Voertuigen</string>
+</resources>

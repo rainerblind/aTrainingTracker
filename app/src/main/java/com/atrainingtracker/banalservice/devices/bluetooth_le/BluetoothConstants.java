@@ -49,6 +49,13 @@ public class BluetoothConstants {
     public static final UUID UUID_CHARACTERISTIC_CYCLING_SPEED_AND_CADENCE_FEATURE = UUID.fromString(CHARACTERISTIC_CYCLING_SPEED_AND_CADENCE_FEATURE);
     private static final String CHARACTERISTIC_CYCLING_POWER_FEATURE = "00002a65-0000-1000-8000-00805f9b34fb";
     public static final UUID UUID_CHARACTERISTIC_CYCLING_POWER_FEATURE = UUID.fromString(CHARACTERISTIC_CYCLING_POWER_FEATURE);
+
+    // Garmin Varia Radar (ATT-5083 / REQ-CON-028)
+    public static final String SERVICE_RADAR = "6a4e3200-667b-11e3-949a-0800200c9a66";
+    public static final UUID UUID_SERVICE_RADAR = UUID.fromString(SERVICE_RADAR);
+    public static final String CHARACTERISTIC_RADAR_V1 = "6a4e3203-667b-11e3-949a-0800200c9a66";
+    public static final UUID UUID_CHARACTERISTIC_RADAR_V1 = UUID.fromString(CHARACTERISTIC_RADAR_V1);
+
     private static final HashMap<DeviceType, UUID> SERVICE_UUIDS = new HashMap<DeviceType, UUID>();
     private static final HashMap<DeviceType, UUID> CHARACTERISTIC_MEASUREMENT_UUIDS = new HashMap<DeviceType, UUID>();
 
@@ -59,6 +66,7 @@ public class BluetoothConstants {
         SERVICE_UUIDS.put(DeviceType.BIKE_SPEED, UUID.fromString(SERVICE_CYCLING_SPEED_AND_CADENCE));   // in BT_LE, a bike speed sensor is essentially a combined sensor without cadence
         SERVICE_UUIDS.put(DeviceType.BIKE_CADENCE, UUID.fromString(SERVICE_CYCLING_SPEED_AND_CADENCE));   // in BT_LE, a bike cadence sensor is essentially a combined sensor without speed
         SERVICE_UUIDS.put(DeviceType.BIKE_POWER, UUID.fromString(SERVICE_CYCLING_POWER));
+        SERVICE_UUIDS.put(DeviceType.BIKE_RADAR, UUID_SERVICE_RADAR);
 
         CHARACTERISTIC_MEASUREMENT_UUIDS.put(DeviceType.HRM, UUID.fromString(CHARACTERISTIC_HEART_RATE_MEASUREMENT));
         CHARACTERISTIC_MEASUREMENT_UUIDS.put(DeviceType.RUN_SPEED, UUID.fromString(CHARACTERISTIC_RUNNING_SPEED_AND_CADENCE_MEASUREMENT));
@@ -66,6 +74,7 @@ public class BluetoothConstants {
         CHARACTERISTIC_MEASUREMENT_UUIDS.put(DeviceType.BIKE_SPEED, UUID.fromString(CHARACTERISTIC_CYCLING_SPEED_AND_CADENCE_MEASUREMENT));
         CHARACTERISTIC_MEASUREMENT_UUIDS.put(DeviceType.BIKE_CADENCE, UUID.fromString(CHARACTERISTIC_CYCLING_SPEED_AND_CADENCE_MEASUREMENT));
         CHARACTERISTIC_MEASUREMENT_UUIDS.put(DeviceType.BIKE_POWER, UUID.fromString(CHARACTERISTIC_CYCLING_POWER_MEASUREMENT));
+        CHARACTERISTIC_MEASUREMENT_UUIDS.put(DeviceType.BIKE_RADAR, UUID_CHARACTERISTIC_RADAR_V1);
     }
 
     public static UUID getServiceUUID(DeviceType deviceType) {

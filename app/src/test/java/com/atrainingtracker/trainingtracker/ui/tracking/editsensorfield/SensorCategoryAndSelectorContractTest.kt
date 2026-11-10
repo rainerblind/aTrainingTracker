@@ -53,7 +53,7 @@ class SensorCategoryAndSelectorContractTest {
         }
 
         val allSensors = SensorType.values().toList()
-        assertEquals("SensorType must contain 56 constants", 56, allSensors.size)
+        assertEquals("SensorType must contain 60 constants", 60, allSensors.size)
         allSensors.forEach { sensorType ->
             assertNotNull("SensorType.${sensorType.name} must have a non-null category", sensorType.category)
         }
@@ -127,7 +127,11 @@ class SensorCategoryAndSelectorContractTest {
                 SensorType.TEMPERATURE_MIN,
                 SensorType.TEMPERATURE_MAX,
                 SensorType.RR_INTERVAL,
-                SensorType.HRV_ARTIFACT_RATE
+                SensorType.HRV_ARTIFACT_RATE,
+                SensorType.RADAR_THREAT_COUNT,
+                SensorType.RADAR_CLOSEST_DISTANCE_m,
+                SensorType.RADAR_APPROACH_SPEED_mps,
+                SensorType.RADAR_VEHICLE_COUNT
             )
         )
 
