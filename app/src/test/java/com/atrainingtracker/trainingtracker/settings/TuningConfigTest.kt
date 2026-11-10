@@ -66,6 +66,16 @@ class TuningConfigTest {
         assertEquals(RadarEdgeSide.RIGHT, TuningPreferencesDefaults.RADAR_EDGE_SIDE)
         assertEquals(RadarClearMode.SLIM_RAIL, config.radarClearMode)
         assertEquals(RadarClearMode.SLIM_RAIL, TuningPreferencesDefaults.RADAR_CLEAR_MODE)
+        assertEquals(RadarAudioAlertMode.ALL_ALERTS, config.radarAudioAlertMode)
+        assertEquals(RadarAudioAlertMode.ALL_ALERTS, TuningPreferencesDefaults.RADAR_AUDIO_ALERT_MODE)
+        assertEquals(90, config.radarAlertVolume)
+        assertEquals(90, TuningPreferencesDefaults.RADAR_ALERT_VOLUME)
+        assertEquals(true, config.radarSpeakerBoost)
+        assertEquals(true, TuningPreferencesDefaults.RADAR_SPEAKER_BOOST)
+        assertEquals(RadarAudioRoute.SYSTEM_DEFAULT, config.radarAudioRoute)
+        assertEquals(RadarAudioRoute.SYSTEM_DEFAULT, TuningPreferencesDefaults.RADAR_AUDIO_ROUTE)
+        assertEquals(true, config.radarHapticAlert)
+        assertEquals(true, TuningPreferencesDefaults.RADAR_HAPTIC_ALERT)
     }
 
     @Test

@@ -3404,4 +3404,36 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Touch pass-through; zero false green; zero SQLite schema modifications; 100% 9-language translation parity.
 
+### REQ-TRK-063: Radar Audio Chime and Haptic Alert Engine [Verified]
+- **Tests**: `TST-TRK-063` | **Tickets**: `ATT-5086`
+- **Implementation**: `RadarAlertManager.kt`, `RadarAudioSynthesizer.kt`, `TrackerService.kt`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
+- **Rationale**: Cyclists operating in traffic require eyes-free situational awareness through audible and tactile cues that cut through outdoor wind and road noise. `RadarAlertManager` observes `RadarStateRepository.radarState` during active tracking in `TrackerService` (including foreground and screen-off execution), synthesizing distinct PCM audio chimes via `AudioTrack` (`USAGE_MEDIA`, `MODE_STATIC` warm replay) and triggering `VibrationEffect` patterns on threat level transitions (`APPROACHING`, `FAST_APPROACHING`, `ALL_CLEAR`, `DISCONNECTED_ERROR`). The alert engine must support independent radar alert volume, transient background media audio ducking (`AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK`), temporary hardware phone-speaker volume boost with guaranteed auto-restore, and configurable audio routing to connected headphones or forced phone speaker output (`AudioTrack.setPreferredDevice()`) without switching `AudioManager` into telephony communication mode (ATT-5086, Parent Epic ATT-1286, extending `REQ-CON-028` and `REQ-TRK-062`):
+1. *Threat Transition Alerts & Debouncing (`REQ-TRK-063.1`)*:
+• The system SHALL emit distinct acoustic chimes and vibration patterns on threat transitions: double ascending chime for initial approach (`NONE -> APPROACHING`), urgent triple high-pitch chime for high-speed threat (`-> FAST_APPROACHING`), soft single chime for all-clear (`APPROACHING/FAST -> NONE`), and descending warning chime with long vibration for disconnect (`-> DISCONNECTED_ERROR`). State transitions SHALL be debounced to prevent alert spamming during continuous 4–8 Hz telemetry updates.
+2. *AudioTrack USAGE_MEDIA Synthesis & Warm MODE_STATIC Replay (`REQ-TRK-063.2`)*:
+• `RadarAudioSynthesizer` SHALL synthesize low-latency multi-tone PCM audio (2.2–3.2 kHz harmonics) via `AudioTrack` configured with `AudioAttributes.USAGE_MEDIA` (never sonification). Persistent static tracks SHALL use warm replay (`pause()` + `playbackHeadPosition = 0` + `play()`), strictly prohibiting `track.stop()` prior to replay.
+3. *Independent Volume & Speaker Override Hardware Boost (`REQ-TRK-063.3`)*:
+• The system SHALL provide an independent alert volume (10–100%, default 90%). When routed to the phone speaker with "Boost Speaker Volume" enabled, the system SHALL temporarily save the current stream volume, boost hardware speaker volume to the target level without system UI popups (`flags = 0`) for the duration of the chime (~300 ms), and restore the saved volume immediately in `finally` and service `onDestroy()`.
+4. *Transient Audio Ducking (`REQ-TRK-063.4`)*:
+• The system SHALL request transient audio focus (`AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK`) immediately prior to chime playback and abandon focus immediately upon chime completion, allowing background media playback to duck briefly and restore automatically.
+5. *Headphone vs. Forced Phone Speaker Routing (`REQ-TRK-063.5`)*:
+• The system SHALL configure `AudioTrack.setPreferredDevice(AudioDeviceInfo)`: `TYPE_BUILTIN_SPEAKER` when "Force Phone Speaker" is enabled, or `null` for system default / connected Bluetooth headphones, without placing `AudioManager` in `MODE_IN_COMMUNICATION`.
+6. *User Customization & DataStore Integration (`REQ-TRK-063.6`)*:
+• `TuningPreferencesDataStore` SHALL persist `radarAudioAlertMode` (`ALL_ALERTS`, `APPROACH_AND_FAST`, `FAST_ONLY`, `MUTED`), `radarAlertVolume` (10..100), `radarSpeakerBoost` (Boolean), `radarAudioRoute` (`SYSTEM_DEFAULT`, `FORCE_SPEAKER`), and `radarHapticAlert` (Boolean), exposed in `RadarSettingsSection.kt`.
+7. *9-Language Localization Parity (`REQ-TRK-063.7`)*:
+• All audio and alert settings and labels in `strings_radar.xml` SHALL maintain 100% key and format parity across EN, DE, ES, FR, IT, JA, NL, PL, PT (zero inline emojis).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* Audio Alert Mode set to `ALL_ALERTS`,
+• *When* `RadarState` transitions from `NONE` to `APPROACHING`, escalates to `FAST_APPROACHING`, and returns to `NONE`,
+• *Then* `RadarAlertManager` plays Approach chime once, Fast-Threat chime on escalation, and All-Clear chime on last vehicle clearance without repeating on 8 Hz range updates.
+• *Given* phone media volume set low (e.g. 2/15) and Speaker Boost enabled,
+• *When* an alert chime plays through the built-in speaker,
+• *Then* hardware stream volume boosts to configured Radar Alert Volume during the chime and restores to 2/15 immediately upon completion.
+• *Given* active background media playback over Bluetooth headphones and "Force Phone Speaker" enabled,
+• *When* an alert chime plays,
+• *Then* background media ducks transiently and the chime routes to `TYPE_BUILTIN_SPEAKER` via `setPreferredDevice()`.
+
+**Invariants**: Guaranteed volume restoration in `finally`/`onDestroy()`; §3.4 warm static replay (zero `track.stop()`); zero main-thread blocking; zero SQLite schema modifications; 100% 9-language translation parity.
+
 

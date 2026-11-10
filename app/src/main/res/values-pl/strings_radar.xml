@@ -66,4 +66,20 @@
     <string name="radar_overlay_disconnected">Radar rozłączony</string>
     <string name="radar_overlay_connecting">Łączenie radaru</string>
     <string name="radar_overlay_clear">Droga wolna</string>
+
+    <!-- Radar Audio & Haptic Alerts (ATT-5086 / REQ-TRK-063) -->
+    <string name="radar_alerts_settings_title">Alerty radaru i dźwięk</string>
+    <string name="radar_alert_mode_title">Tryb alertu dźwiękowego</string>
+    <string name="radar_alert_mode_all">Wszystkie alerty</string>
+    <string name="radar_alert_mode_approach_fast">Zbliżanie i szybkie</string>
+    <string name="radar_alert_mode_fast_only">Tylko szybkie</string>
+    <string name="radar_alert_mode_muted">Wyciszony</string>
+    <string name="radar_alert_volume_title">Głośność alertu</string>
+    <string name="radar_alert_speaker_boost">Wzmocnij głośnik</string>
+    <string name="radar_alert_speaker_boost_desc">Tymczasowo zwiększa cichy głośnik telefonu podczas alertów</string>
+    <string name="radar_alert_route_title">Wyjście audio</string>
+    <string name="radar_alert_route_default">System / Słuchawki</string>
+    <string name="radar_alert_route_speaker">Wymuś głośnik telefonu</string>
+    <string name="radar_alert_haptic_title">Wibracje haptyczne</string>
+    <string name="radar_alert_haptic_desc">Wibruj przy zbliżaniu się pojazdów i zmianie poziomu zagrożenia</string>
 </resources>

@@ -66,4 +66,20 @@
     <string name="radar_overlay_disconnected">Radar déconnecté</string>
     <string name="radar_overlay_connecting">Connexion au radar</string>
     <string name="radar_overlay_clear">Voie libre</string>
+
+    <!-- Radar Audio & Haptic Alerts (ATT-5086 / REQ-TRK-063) -->
+    <string name="radar_alerts_settings_title">Alertes radar et audio</string>
+    <string name="radar_alert_mode_title">Mode d\'alerte audio</string>
+    <string name="radar_alert_mode_all">Toutes les alertes</string>
+    <string name="radar_alert_mode_approach_fast">Approche et rapide</string>
+    <string name="radar_alert_mode_fast_only">Rapides uniquement</string>
+    <string name="radar_alert_mode_muted">Muet</string>
+    <string name="radar_alert_volume_title">Volume d\'alerte</string>
+    <string name="radar_alert_speaker_boost">Amplifier le haut-parleur</string>
+    <string name="radar_alert_speaker_boost_desc">Augmente temporairement le haut-parleur pendant les alertes</string>
+    <string name="radar_alert_route_title">Sortie audio</string>
+    <string name="radar_alert_route_default">Système / Casque</string>
+    <string name="radar_alert_route_speaker">Forcer le haut-parleur</string>
+    <string name="radar_alert_haptic_title">Vibration haptique</string>
+    <string name="radar_alert_haptic_desc">Vibrer à l\'approche d\'un véhicule et lors des alertes</string>
 </resources>

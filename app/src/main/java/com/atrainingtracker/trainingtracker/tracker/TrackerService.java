@@ -79,6 +79,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseMan
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository;
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils;
+import com.atrainingtracker.trainingtracker.audio.radar.RadarAlertManager;
 import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseConfig;
 import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManager;
 import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseState;
@@ -430,6 +431,14 @@ public class TrackerService extends Service {
         return mAutoPauseManager;
     }
 
+    private RadarAlertManager mRadarAlertManager;
+
+    @VisibleForTesting
+    @Nullable
+    public RadarAlertManager getRadarAlertManager() {
+        return mRadarAlertManager;
+    }
+
     private static volatile TrackerService sInstance = null;
 
     public static void invalidateAutoPauseCache() {
@@ -738,6 +747,13 @@ public class TrackerService extends Service {
         ContextCompat.registerReceiver(this, mAltitudeCorrectionReceiver, mAltitudeCorrectionFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mLapSummaryReceiver, mLapSummaryFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mUserSelectedSportTypeChangedReceiver, new IntentFilter(BANALService.SPORT_TYPE_CHANGED_BY_USER_INTENT), ContextCompat.RECEIVER_NOT_EXPORTED);
+
+        try {
+            mRadarAlertManager = new RadarAlertManager(this);
+            mRadarAlertManager.start();
+        } catch (Throwable t) {
+            Log.w(TAG, "Failed to initialize RadarAlertManager", t);
+        }
 
         acquireWakeLock();
     }
@@ -1216,6 +1232,15 @@ public class TrackerService extends Service {
         // Release main-thread resources immediately while keeping mBanalService and wakeLock
         // valid until the terminal finalization task on mDbExecutor completes (REQ-TRK-033.2).
         mAutoPauseManager.release();
+
+        if (mRadarAlertManager != null) {
+            try {
+                mRadarAlertManager.release();
+            } catch (Throwable t) {
+                Log.w(TAG, "Error releasing RadarAlertManager", t);
+            }
+            mRadarAlertManager = null;
+        }
 
         LifecycleUtils.safeUnregisterReceiver(this, mSearchingFinishedReceiver, TAG);
         LifecycleUtils.safeUnregisterReceiver(this, mAltitudeCorrectionReceiver, TAG);

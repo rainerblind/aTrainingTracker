@@ -73,6 +73,24 @@ enum class RadarClearMode {
 }
 
 /**
+ * Radar audio alert mode filtering threat level transitions (REQ-TRK-063.6).
+ */
+enum class RadarAudioAlertMode {
+    ALL_ALERTS,
+    APPROACH_AND_FAST,
+    FAST_ONLY,
+    MUTED
+}
+
+/**
+ * Radar audio output route preference (REQ-TRK-063.6).
+ */
+enum class RadarAudioRoute {
+    SYSTEM_DEFAULT,
+    FORCE_SPEAKER
+}
+
+/**
  * Encapsulates battle-tested factory defaults and safety clamping bounds for advanced tuning.
  */
 object TuningPreferencesDefaults {
@@ -84,6 +102,11 @@ object TuningPreferencesDefaults {
     val SENSOR_FIELD_VARIANT = SensorFieldVariant.CLASSIC_SEAMLESS
     val RADAR_EDGE_SIDE = RadarEdgeSide.RIGHT
     val RADAR_CLEAR_MODE = RadarClearMode.SLIM_RAIL
+    val RADAR_AUDIO_ALERT_MODE = RadarAudioAlertMode.ALL_ALERTS
+    const val RADAR_ALERT_VOLUME = 90
+    const val RADAR_SPEAKER_BOOST = true
+    val RADAR_AUDIO_ROUTE = RadarAudioRoute.SYSTEM_DEFAULT
+    const val RADAR_HAPTIC_ALERT = true
     const val FULL_DIM_FACTOR = 0.25f
     const val MEDIUM_DIM_FACTOR = 0.50f
     const val SLOPE_FLAT_THRESHOLD = 2.0f
@@ -372,7 +395,12 @@ data class TuningConfig(
     val dfaA1ThresholdT1: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1,
     val dfaA1ThresholdT2: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2,
     val radarEdgeSide: RadarEdgeSide = TuningPreferencesDefaults.RADAR_EDGE_SIDE,
-    val radarClearMode: RadarClearMode = TuningPreferencesDefaults.RADAR_CLEAR_MODE
+    val radarClearMode: RadarClearMode = TuningPreferencesDefaults.RADAR_CLEAR_MODE,
+    val radarAudioAlertMode: RadarAudioAlertMode = TuningPreferencesDefaults.RADAR_AUDIO_ALERT_MODE,
+    val radarAlertVolume: Int = TuningPreferencesDefaults.RADAR_ALERT_VOLUME,
+    val radarSpeakerBoost: Boolean = TuningPreferencesDefaults.RADAR_SPEAKER_BOOST,
+    val radarAudioRoute: RadarAudioRoute = TuningPreferencesDefaults.RADAR_AUDIO_ROUTE,
+    val radarHapticAlert: Boolean = TuningPreferencesDefaults.RADAR_HAPTIC_ALERT
 ) {
     val showAntMissingAdapterWarnings: Boolean
         get() = !suppressAntMissingAdapterDialog
@@ -521,6 +549,11 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_DFA_A1_THRESHOLD_T2: Preferences.Key<Float> = floatPreferencesKey("tuning_dfa_a1_threshold_t2")
         val KEY_RADAR_EDGE_SIDE: Preferences.Key<String> = stringPreferencesKey("tuning_radar_edge_side")
         val KEY_RADAR_CLEAR_MODE: Preferences.Key<String> = stringPreferencesKey("tuning_radar_clear_mode")
+        val KEY_RADAR_AUDIO_ALERT_MODE: Preferences.Key<String> = stringPreferencesKey("tuning_radar_audio_alert_mode")
+        val KEY_RADAR_ALERT_VOLUME: Preferences.Key<Int> = intPreferencesKey("tuning_radar_alert_volume")
+        val KEY_RADAR_SPEAKER_BOOST: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_speaker_boost")
+        val KEY_RADAR_AUDIO_ROUTE: Preferences.Key<String> = stringPreferencesKey("tuning_radar_audio_route")
+        val KEY_RADAR_HAPTIC_ALERT: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_haptic_alert")
 
         internal val ALL_KEYS = listOf(
             KEY_ELEVATION_X_AXIS_DOMAIN,
@@ -598,7 +631,12 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_DFA_A1_THRESHOLD_T1,
             KEY_DFA_A1_THRESHOLD_T2,
             KEY_RADAR_EDGE_SIDE,
-            KEY_RADAR_CLEAR_MODE
+            KEY_RADAR_CLEAR_MODE,
+            KEY_RADAR_AUDIO_ALERT_MODE,
+            KEY_RADAR_ALERT_VOLUME,
+            KEY_RADAR_SPEAKER_BOOST,
+            KEY_RADAR_AUDIO_ROUTE,
+            KEY_RADAR_HAPTIC_ALERT
         )
 
         /**
@@ -767,6 +805,19 @@ data class AutoPausePreferences(
 
         val rawRadarClearModeStr = prefs[KEY_RADAR_CLEAR_MODE]
         val radarClearMode = safeEnumValueOf(rawRadarClearModeStr, TuningPreferencesDefaults.RADAR_CLEAR_MODE)
+
+        val rawAudioAlertModeStr = prefs[KEY_RADAR_AUDIO_ALERT_MODE]
+        val radarAudioAlertMode = safeEnumValueOf(rawAudioAlertModeStr, TuningPreferencesDefaults.RADAR_AUDIO_ALERT_MODE)
+
+        val rawAlertVolume = prefs[KEY_RADAR_ALERT_VOLUME] ?: TuningPreferencesDefaults.RADAR_ALERT_VOLUME
+        val radarAlertVolume = rawAlertVolume.coerceIn(10, 100)
+
+        val radarSpeakerBoost = prefs[KEY_RADAR_SPEAKER_BOOST] ?: TuningPreferencesDefaults.RADAR_SPEAKER_BOOST
+
+        val rawAudioRouteStr = prefs[KEY_RADAR_AUDIO_ROUTE]
+        val radarAudioRoute = safeEnumValueOf(rawAudioRouteStr, TuningPreferencesDefaults.RADAR_AUDIO_ROUTE)
+
+        val radarHapticAlert = prefs[KEY_RADAR_HAPTIC_ALERT] ?: TuningPreferencesDefaults.RADAR_HAPTIC_ALERT
 
         val rawFontWeightStr = prefs[KEY_COCKPIT_FONT_WEIGHT]
         val cockpitFontWeight = safeEnumValueOf(rawFontWeightStr, TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT)
@@ -972,7 +1023,12 @@ data class AutoPausePreferences(
             dfaA1ThresholdT1 = prefs[KEY_DFA_A1_THRESHOLD_T1] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1,
             dfaA1ThresholdT2 = prefs[KEY_DFA_A1_THRESHOLD_T2] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2,
             radarEdgeSide = radarEdgeSide,
-            radarClearMode = radarClearMode
+            radarClearMode = radarClearMode,
+            radarAudioAlertMode = radarAudioAlertMode,
+            radarAlertVolume = radarAlertVolume,
+            radarSpeakerBoost = radarSpeakerBoost,
+            radarAudioRoute = radarAudioRoute,
+            radarHapticAlert = radarHapticAlert
         )
     }
 
@@ -1264,6 +1320,11 @@ data class AutoPausePreferences(
             prefs[KEY_DFA_A1_THRESHOLD_T2] = clampedDfaA1T2
             prefs[KEY_RADAR_EDGE_SIDE] = config.radarEdgeSide.name
             prefs[KEY_RADAR_CLEAR_MODE] = config.radarClearMode.name
+            prefs[KEY_RADAR_AUDIO_ALERT_MODE] = config.radarAudioAlertMode.name
+            prefs[KEY_RADAR_ALERT_VOLUME] = config.radarAlertVolume.coerceIn(10, 100)
+            prefs[KEY_RADAR_SPEAKER_BOOST] = config.radarSpeakerBoost
+            prefs[KEY_RADAR_AUDIO_ROUTE] = config.radarAudioRoute.name
+            prefs[KEY_RADAR_HAPTIC_ALERT] = config.radarHapticAlert
         }
 
         TrainingApplication.setClusterTolEndpoints(clampedClusterTolEndpoints)
@@ -1422,6 +1483,56 @@ data class AutoPausePreferences(
     suspend fun updateRadarClearMode(mode: RadarClearMode) {
         context.dataStore.edit { prefs ->
             prefs[KEY_RADAR_CLEAR_MODE] = mode.name
+        }
+    }
+
+    val radarAudioAlertModeFlow: Flow<RadarAudioAlertMode> = context.dataStore.data.map { prefs ->
+        safeEnumValueOf(prefs[KEY_RADAR_AUDIO_ALERT_MODE], TuningPreferencesDefaults.RADAR_AUDIO_ALERT_MODE)
+    }
+
+    val radarAlertVolumeFlow: Flow<Int> = context.dataStore.data.map { prefs ->
+        (prefs[KEY_RADAR_ALERT_VOLUME] ?: TuningPreferencesDefaults.RADAR_ALERT_VOLUME).coerceIn(10, 100)
+    }
+
+    val radarSpeakerBoostFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_RADAR_SPEAKER_BOOST] ?: TuningPreferencesDefaults.RADAR_SPEAKER_BOOST
+    }
+
+    val radarAudioRouteFlow: Flow<RadarAudioRoute> = context.dataStore.data.map { prefs ->
+        safeEnumValueOf(prefs[KEY_RADAR_AUDIO_ROUTE], TuningPreferencesDefaults.RADAR_AUDIO_ROUTE)
+    }
+
+    val radarHapticAlertFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_RADAR_HAPTIC_ALERT] ?: TuningPreferencesDefaults.RADAR_HAPTIC_ALERT
+    }
+
+    suspend fun updateRadarAudioAlertMode(mode: RadarAudioAlertMode) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_AUDIO_ALERT_MODE] = mode.name
+        }
+    }
+
+    suspend fun updateRadarAlertVolume(volume: Int) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_ALERT_VOLUME] = volume.coerceIn(10, 100)
+        }
+    }
+
+    suspend fun updateRadarSpeakerBoost(boost: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_SPEAKER_BOOST] = boost
+        }
+    }
+
+    suspend fun updateRadarAudioRoute(route: RadarAudioRoute) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_AUDIO_ROUTE] = route.name
+        }
+    }
+
+    suspend fun updateRadarHapticAlert(haptic: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_HAPTIC_ALERT] = haptic
         }
     }
 

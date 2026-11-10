@@ -66,4 +66,20 @@
     <string name="radar_overlay_disconnected">レーダー切断</string>
     <string name="radar_overlay_connecting">レーダー接続中</string>
     <string name="radar_overlay_clear">後方クリア</string>
+
+    <!-- Radar Audio & Haptic Alerts (ATT-5086 / REQ-TRK-063) -->
+    <string name="radar_alerts_settings_title">レーダー警告と音声</string>
+    <string name="radar_alert_mode_title">音声警告モード</string>
+    <string name="radar_alert_mode_all">すべての警告</string>
+    <string name="radar_alert_mode_approach_fast">接近と高速</string>
+    <string name="radar_alert_mode_fast_only">高速のみ</string>
+    <string name="radar_alert_mode_muted">消音</string>
+    <string name="radar_alert_volume_title">警告音量</string>
+    <string name="radar_alert_speaker_boost">スピーカー音量を増幅</string>
+    <string name="radar_alert_speaker_boost_desc">警告時にスマホの控えめなスピーカー音量を一時的に増幅します</string>
+    <string name="radar_alert_route_title">音声出力先</string>
+    <string name="radar_alert_route_default">システム / ヘッドホン</string>
+    <string name="radar_alert_route_speaker">スマホのスピーカーを強制</string>
+    <string name="radar_alert_haptic_title">触覚バイブレーション</string>
+    <string name="radar_alert_haptic_desc">車両接近および脅威変化時に振動します</string>
 </resources>

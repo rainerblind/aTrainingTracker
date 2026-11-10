@@ -66,4 +66,20 @@
     <string name="radar_overlay_disconnected">Radar Disconnected</string>
     <string name="radar_overlay_connecting">Radar Connecting</string>
     <string name="radar_overlay_clear">All Clear</string>
+
+    <!-- Radar Audio & Haptic Alerts (ATT-5086 / REQ-TRK-063) -->
+    <string name="radar_alerts_settings_title">Radar Alerts &amp; Audio</string>
+    <string name="radar_alert_mode_title">Audio Alert Mode</string>
+    <string name="radar_alert_mode_all">All Alerts</string>
+    <string name="radar_alert_mode_approach_fast">Approach &amp; Fast</string>
+    <string name="radar_alert_mode_fast_only">Fast Only</string>
+    <string name="radar_alert_mode_muted">Muted</string>
+    <string name="radar_alert_volume_title">Alert Volume</string>
+    <string name="radar_alert_speaker_boost">Boost Speaker Volume</string>
+    <string name="radar_alert_speaker_boost_desc">Temporarily overrides quiet phone speaker during alerts</string>
+    <string name="radar_alert_route_title">Audio Output Route</string>
+    <string name="radar_alert_route_default">System / Headphones</string>
+    <string name="radar_alert_route_speaker">Force Phone Speaker</string>
+    <string name="radar_alert_haptic_title">Haptic Vibration</string>
+    <string name="radar_alert_haptic_desc">Vibrate on vehicle approach and threat transitions</string>
 </resources>

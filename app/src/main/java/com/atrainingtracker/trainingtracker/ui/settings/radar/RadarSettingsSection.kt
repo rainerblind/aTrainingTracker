@@ -36,6 +36,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -53,10 +55,14 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.devices.radar.RadarScenario
 import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository
 import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator
+import com.atrainingtracker.trainingtracker.settings.RadarAudioAlertMode
+import com.atrainingtracker.trainingtracker.settings.RadarAudioRoute
 import com.atrainingtracker.trainingtracker.settings.RadarClearMode
 import com.atrainingtracker.trainingtracker.settings.RadarEdgeSide
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.SubordinateTuningToggleItem
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 /**
  * Settings and preview composable for cycling radar edge overlay and traffic simulator (REQ-TRK-062.5, REQ-CON-029.4).
@@ -197,6 +203,217 @@ fun RadarSettingsSection(
                                 text = stringResource(R.string.radar_overlay_clear_mode_autohide),
                                 style = MaterialTheme.typography.labelMedium
                             )
+                        }
+                    )
+                }
+            }
+        }
+
+        // Audio & Haptic Alerts Card (REQ-TRK-063.6)
+        ElevatedCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.radar_alerts_settings_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Alert Mode Selection
+                Text(
+                    text = stringResource(R.string.radar_alert_mode_title),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    FilterChip(
+                        selected = tuningConfig.radarAudioAlertMode == RadarAudioAlertMode.ALL_ALERTS,
+                        onClick = {
+                            coroutineScope.launch {
+                                actualDataStore.updateRadarAudioAlertMode(RadarAudioAlertMode.ALL_ALERTS)
+                            }
+                        },
+                        label = {
+                            Text(
+                                text = stringResource(R.string.radar_alert_mode_all),
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
+                    )
+
+                    FilterChip(
+                        selected = tuningConfig.radarAudioAlertMode == RadarAudioAlertMode.APPROACH_AND_FAST,
+                        onClick = {
+                            coroutineScope.launch {
+                                actualDataStore.updateRadarAudioAlertMode(RadarAudioAlertMode.APPROACH_AND_FAST)
+                            }
+                        },
+                        label = {
+                            Text(
+                                text = stringResource(R.string.radar_alert_mode_approach_fast),
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
+                    )
+
+                    FilterChip(
+                        selected = tuningConfig.radarAudioAlertMode == RadarAudioAlertMode.FAST_ONLY,
+                        onClick = {
+                            coroutineScope.launch {
+                                actualDataStore.updateRadarAudioAlertMode(RadarAudioAlertMode.FAST_ONLY)
+                            }
+                        },
+                        label = {
+                            Text(
+                                text = stringResource(R.string.radar_alert_mode_fast_only),
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
+                    )
+
+                    FilterChip(
+                        selected = tuningConfig.radarAudioAlertMode == RadarAudioAlertMode.MUTED,
+                        onClick = {
+                            coroutineScope.launch {
+                                actualDataStore.updateRadarAudioAlertMode(RadarAudioAlertMode.MUTED)
+                            }
+                        },
+                        label = {
+                            Text(
+                                text = stringResource(R.string.radar_alert_mode_muted),
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Alert Volume Slider
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.radar_alert_volume_title),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "${tuningConfig.radarAlertVolume}%",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                Slider(
+                    value = tuningConfig.radarAlertVolume.toFloat(),
+                    onValueChange = { newValue ->
+                        coroutineScope.launch {
+                            actualDataStore.updateRadarAlertVolume(newValue.roundToInt())
+                        }
+                    },
+                    valueRange = 10f..100f,
+                    steps = 8,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Audio Output Route Selection
+                Text(
+                    text = stringResource(R.string.radar_alert_route_title),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                SingleChoiceSegmentedButtonRow(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    SegmentedButton(
+                        selected = tuningConfig.radarAudioRoute == RadarAudioRoute.SYSTEM_DEFAULT,
+                        onClick = {
+                            coroutineScope.launch {
+                                actualDataStore.updateRadarAudioRoute(RadarAudioRoute.SYSTEM_DEFAULT)
+                            }
+                        },
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+                    ) {
+                        Text(text = stringResource(R.string.radar_alert_route_default))
+                    }
+
+                    SegmentedButton(
+                        selected = tuningConfig.radarAudioRoute == RadarAudioRoute.FORCE_SPEAKER,
+                        onClick = {
+                            coroutineScope.launch {
+                                actualDataStore.updateRadarAudioRoute(RadarAudioRoute.FORCE_SPEAKER)
+                            }
+                        },
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+                    ) {
+                        Text(text = stringResource(R.string.radar_alert_route_speaker))
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Speaker Volume Boost Subordinate Toggle (design_guidelines.md §3.3)
+                SubordinateTuningToggleItem(
+                    title = stringResource(R.string.radar_alert_speaker_boost),
+                    isChecked = tuningConfig.radarSpeakerBoost,
+                    onCheckedChange = { checked ->
+                        coroutineScope.launch {
+                            actualDataStore.updateRadarSpeakerBoost(checked)
+                        }
+                    },
+                    modifier = Modifier.padding(top = 2.dp, bottom = 4.dp)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Haptic Vibration Toggle
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
+                        Text(
+                            text = stringResource(R.string.radar_alert_haptic_title),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = stringResource(R.string.radar_alert_haptic_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = tuningConfig.radarHapticAlert,
+                        onCheckedChange = { checked ->
+                            coroutineScope.launch {
+                                actualDataStore.updateRadarHapticAlert(checked)
+                            }
                         }
                     )
                 }

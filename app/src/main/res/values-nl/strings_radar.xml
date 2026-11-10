@@ -66,4 +66,20 @@
     <string name="radar_overlay_disconnected">Radar verbroken</string>
     <string name="radar_overlay_connecting">Radar verbinden</string>
     <string name="radar_overlay_clear">Weg vrij</string>
+
+    <!-- Radar Audio & Haptic Alerts (ATT-5086 / REQ-TRK-063) -->
+    <string name="radar_alerts_settings_title">Radarwaarschuwingen en audio</string>
+    <string name="radar_alert_mode_title">Audiowaarschuwingsmodus</string>
+    <string name="radar_alert_mode_all">Alle waarschuwingen</string>
+    <string name="radar_alert_mode_approach_fast">Nadering en snel</string>
+    <string name="radar_alert_mode_fast_only">Alleen snel</string>
+    <string name="radar_alert_mode_muted">Gedempt</string>
+    <string name="radar_alert_volume_title">Waarschuwingsvolume</string>
+    <string name="radar_alert_speaker_boost">Luidsprekervolume versterken</string>
+    <string name="radar_alert_speaker_boost_desc">Verhoogt stil luidsprekervolume tijdelijk tijdens waarschuwingen</string>
+    <string name="radar_alert_route_title">Audio-uitvoer</string>
+    <string name="radar_alert_route_default">Systeem / Hoofdtelefoon</string>
+    <string name="radar_alert_route_speaker">Telefoonluidspreker forceren</string>
+    <string name="radar_alert_haptic_title">Haptische trilling</string>
+    <string name="radar_alert_haptic_desc">Trillen bij naderende voertuigen en dreigingsovergangen</string>
 </resources>
