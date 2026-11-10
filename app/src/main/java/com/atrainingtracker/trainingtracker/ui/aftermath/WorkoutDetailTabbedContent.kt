@@ -60,6 +60,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.photos.WorkoutPhotoPrev
 import com.atrainingtracker.trainingtracker.ui.aftermath.photos.WorkoutPhotoStrip
 import com.atrainingtracker.trainingtracker.ui.aftermath.splits.LapSplitChartData
 import com.atrainingtracker.trainingtracker.ui.aftermath.splits.LapSplitVisualizerCard
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvAlpha1ScatterCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.GradeZoneDistributionCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneDistributionCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
@@ -73,6 +74,7 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.Wor
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetails
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.WorkoutExtrema
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeader
+import com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricUtils
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.LapDisplayMode
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.WorkoutLaps
 import com.atrainingtracker.trainingtracker.ui.map.*
@@ -400,6 +402,7 @@ fun WorkoutDetailTabbedContent(
                                             onHrZoneDisplayModeChange = onHrZoneDisplayModeChange,
                                             onPowerZoneDisplayModeChange = onPowerZoneDisplayModeChange,
                                             onGradeZoneDisplayModeChange = onGradeZoneDisplayModeChange,
+                                            activeScrubPath = activeScrubPath,
                                             photos = workoutPhotos,
                                             onPhotoClick = { activePreviewPhoto = it },
                                             onSplitLapClick = onSplitLapClick,
@@ -482,6 +485,7 @@ fun WorkoutDetailTabbedContent(
                                                 onHrZoneDisplayModeChange = onHrZoneDisplayModeChange,
                                                 onPowerZoneDisplayModeChange = onPowerZoneDisplayModeChange,
                                                 onGradeZoneDisplayModeChange = onGradeZoneDisplayModeChange,
+                                                activeScrubPath = activeScrubPath,
                                                 photos = workoutPhotos,
                                                 onPhotoClick = { activePreviewPhoto = it },
                                                 onSplitLapClick = onSplitLapClick,
@@ -537,6 +541,7 @@ fun WorkoutDetailTabbedContent(
                                     onHrZoneDisplayModeChange = onHrZoneDisplayModeChange,
                                     onPowerZoneDisplayModeChange = onPowerZoneDisplayModeChange,
                                     onGradeZoneDisplayModeChange = onGradeZoneDisplayModeChange,
+                                    activeScrubPath = activeScrubPath,
                                     photos = workoutPhotos,
                                     onPhotoClick = { activePreviewPhoto = it },
                                     onSplitLapClick = onSplitLapClick,
@@ -777,6 +782,7 @@ private fun RenderWorkoutDetailCardSections(
     onHrZoneDisplayModeChange: (ZoneCardDisplayMode) -> Unit,
     onPowerZoneDisplayModeChange: (ZoneCardDisplayMode) -> Unit,
     onGradeZoneDisplayModeChange: (ZoneCardDisplayMode) -> Unit = {},
+    activeScrubPath: List<com.atrainingtracker.trainingtracker.ui.map.PathPoint>? = null,
     photos: List<WorkoutPhotoEntry> = emptyList(),
     onPhotoClick: ((WorkoutPhotoEntry) -> Unit)? = null,
     onAddPhotos: ((List<android.net.Uri>) -> Unit)? = null,
@@ -834,6 +840,14 @@ private fun RenderWorkoutDetailCardSections(
                         distribution = distribution,
                         displayMode = effectivePowerZoneDisplayMode,
                         onDisplayModeChange = onPowerZoneDisplayModeChange,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                }
+                if (TelemetryMetricUtils.hasHrvData(activeScrubPath)) {
+                    HrvAlpha1ScatterCard(
+                        points = activeScrubPath ?: emptyList(),
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 4.dp)

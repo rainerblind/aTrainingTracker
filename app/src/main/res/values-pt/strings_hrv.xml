@@ -71,4 +71,15 @@
     <string name="hrv_readiness_no_entries_posture">Nenhuma leitura registrada para a postura %1$s</string>
     <string name="hrv_readiness_swc_baseline_label">Linha de base SWC 60d</string>
     <string name="hrv_readiness_rolling_avg_label">Média móvel 7d</string>
+
+    <!-- Interactive DFA a1 / rMSSD Charts & Scatter Plot in Workout Details (ATT-3544 / REQ-PER-035) -->
+    <string name="hrv_scatter_card_title">Dinâmica de limiares aeróbios DFA a1</string>
+    <string name="hrv_scatter_card_subtitle">a1 vs. frequência cardíaca e potência</string>
+    <string name="hrv_scatter_aerobic_threshold">Limiar aeróbio (a1 = 0,75)</string>
+    <string name="hrv_scatter_anaerobic_threshold">Limiar anaeróbio (a1 = 0,50)</string>
+    <string name="hrv_scatter_toggle_hr">Frequência cardíaca</string>
+    <string name="hrv_scatter_toggle_power">Potência</string>
+    <string name="hrv_scatter_artifact_suppressed">Intervalos com altos artefatos (&gt;5%%) suprimidos</string>
+    <string name="hrv_scatter_no_data">Nenhum dado de VFC disponível para este treino</string>
+    <string name="hrv_chart_artifact_gap_label">Intervalo de artefatos</string>
 </resources>

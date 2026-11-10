@@ -71,4 +71,15 @@
     <string name="hrv_readiness_no_entries_posture">No readings recorded for %1$s posture</string>
     <string name="hrv_readiness_swc_baseline_label">60d SWC Baseline</string>
     <string name="hrv_readiness_rolling_avg_label">7d Rolling Average</string>
+
+    <!-- Interactive DFA a1 / rMSSD Charts & Scatter Plot in Workout Details (ATT-3544 / REQ-PER-035) -->
+    <string name="hrv_scatter_card_title">DFA a1 Aerobic Threshold Dynamics</string>
+    <string name="hrv_scatter_card_subtitle">a1 vs. Heart Rate &amp; Cycling Power</string>
+    <string name="hrv_scatter_aerobic_threshold">Aerobic Threshold (a1 = 0.75)</string>
+    <string name="hrv_scatter_anaerobic_threshold">Anaerobic Threshold (a1 = 0.50)</string>
+    <string name="hrv_scatter_toggle_hr">Heart Rate</string>
+    <string name="hrv_scatter_toggle_power">Power</string>
+    <string name="hrv_scatter_artifact_suppressed">High-artifact intervals (&gt;5%%) suppressed</string>
+    <string name="hrv_scatter_no_data">No HRV data available for this workout</string>
+    <string name="hrv_chart_artifact_gap_label">Artifact Gap</string>
 </resources>

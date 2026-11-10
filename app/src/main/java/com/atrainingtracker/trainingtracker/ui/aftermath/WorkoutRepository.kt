@@ -475,7 +475,10 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             SensorType.POWER.name,
             SensorType.SPEED_mps.name,
             SensorType.SLOPE.name,
-            SensorType.W_PRIME_BAL.name
+            SensorType.W_PRIME_BAL.name,
+            SensorType.HRV_DFA_A1.name,
+            SensorType.HRV_RMSSD.name,
+            SensorType.HRV_ARTIFACT_RATE.name
         )
         val projection = candidateCols.filter { it in existingColumns }
             .map { quoteSqlIdentifier(it) }
@@ -495,6 +498,9 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             val speedIdx = cursor.getColumnIndex(SensorType.SPEED_mps.name)
             val slopeIdx = cursor.getColumnIndex(SensorType.SLOPE.name)
             val wPrimeIdx = cursor.getColumnIndex(SensorType.W_PRIME_BAL.name)
+            val hrvDfaIdx = cursor.getColumnIndex(SensorType.HRV_DFA_A1.name)
+            val hrvRmssdIdx = cursor.getColumnIndex(SensorType.HRV_RMSSD.name)
+            val hrvArtifactIdx = cursor.getColumnIndex(SensorType.HRV_ARTIFACT_RATE.name)
 
             var initialEpochSec: Long? = null
             var sampleIndex = 0L
@@ -520,6 +526,9 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                     val speed = if (speedIdx != -1 && !cursor.isNull(speedIdx)) cursor.getDouble(speedIdx) else null
                     val slope = if (slopeIdx != -1 && !cursor.isNull(slopeIdx)) cursor.getDouble(slopeIdx) else null
                     val wPrimeBal = if (wPrimeIdx != -1 && !cursor.isNull(wPrimeIdx)) cursor.getDouble(wPrimeIdx) else null
+                    val hrvDfaA1 = if (hrvDfaIdx != -1 && !cursor.isNull(hrvDfaIdx)) cursor.getDouble(hrvDfaIdx) else null
+                    val hrvRmssd = if (hrvRmssdIdx != -1 && !cursor.isNull(hrvRmssdIdx)) cursor.getDouble(hrvRmssdIdx) else null
+                    val hrvArtifactRate = if (hrvArtifactIdx != -1 && !cursor.isNull(hrvArtifactIdx)) cursor.getDouble(hrvArtifactIdx) else null
 
                     points.add(
                         PathPoint(
@@ -531,7 +540,10 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                             power = power,
                             speedMps = speed,
                             slope = slope,
-                            wPrimeBalKj = wPrimeBal
+                            wPrimeBalKj = wPrimeBal,
+                            hrvDfaA1 = hrvDfaA1,
+                            hrvRmssd = hrvRmssd,
+                            hrvArtifactRate = hrvArtifactRate
                         )
                     )
                 }
@@ -573,6 +585,9 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             val speedIdx = cursor.getColumnIndex(SensorType.SPEED_mps.name)
             val altIdx = cursor.getColumnIndex(SensorType.ALTITUDE.name)
             val wPrimeIdx = cursor.getColumnIndex(SensorType.W_PRIME_BAL.name)
+            val hrvDfaIdx = cursor.getColumnIndex(SensorType.HRV_DFA_A1.name)
+            val hrvRmssdIdx = cursor.getColumnIndex(SensorType.HRV_RMSSD.name)
+            val hrvArtifactIdx = cursor.getColumnIndex(SensorType.HRV_ARTIFACT_RATE.name)
 
             var initialEpochSec: Long? = null
             var sampleIndex = 0L
@@ -595,8 +610,11 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                 val alt = if (altIdx != -1 && !cursor.isNull(altIdx)) cursor.getDouble(altIdx) else null
                 val dist = if (distIdx != -1 && !cursor.isNull(distIdx)) cursor.getDouble(distIdx) else 0.0
                 val wPrimeBal = if (wPrimeIdx != -1 && !cursor.isNull(wPrimeIdx)) cursor.getDouble(wPrimeIdx) else null
+                val hrvDfaA1 = if (hrvDfaIdx != -1 && !cursor.isNull(hrvDfaIdx)) cursor.getDouble(hrvDfaIdx) else null
+                val hrvRmssd = if (hrvRmssdIdx != -1 && !cursor.isNull(hrvRmssdIdx)) cursor.getDouble(hrvRmssdIdx) else null
+                val hrvArtifactRate = if (hrvArtifactIdx != -1 && !cursor.isNull(hrvArtifactIdx)) cursor.getDouble(hrvArtifactIdx) else null
 
-                if (hr != null || power != null || speed != null || alt != null) {
+                if (hr != null || power != null || speed != null || alt != null || hrvDfaA1 != null || hrvRmssd != null) {
                     points.add(
                         PathPoint(
                             distance = dist,
@@ -607,7 +625,10 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                             power = power,
                             speedMps = speed,
                             slope = null,
-                            wPrimeBalKj = wPrimeBal
+                            wPrimeBalKj = wPrimeBal,
+                            hrvDfaA1 = hrvDfaA1,
+                            hrvRmssd = hrvRmssd,
+                            hrvArtifactRate = hrvArtifactRate
                         )
                     )
                 }
@@ -899,7 +920,10 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             SensorType.POWER.name,
             SensorType.SPEED_mps.name,
             SensorType.SLOPE.name,
-            SensorType.W_PRIME_BAL.name
+            SensorType.W_PRIME_BAL.name,
+            SensorType.HRV_DFA_A1.name,
+            SensorType.HRV_RMSSD.name,
+            SensorType.HRV_ARTIFACT_RATE.name
         )
         for (col in commonCols) {
             if (col in existingColumns) projectionSet.add(col)
@@ -924,6 +948,9 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             val speedIdx = cursor.getColumnIndex(SensorType.SPEED_mps.name)
             val slopeIdx = cursor.getColumnIndex(SensorType.SLOPE.name)
             val wPrimeIdx = cursor.getColumnIndex(SensorType.W_PRIME_BAL.name)
+            val hrvDfaIdx = cursor.getColumnIndex(SensorType.HRV_DFA_A1.name)
+            val hrvRmssdIdx = cursor.getColumnIndex(SensorType.HRV_RMSSD.name)
+            val hrvArtifactIdx = cursor.getColumnIndex(SensorType.HRV_ARTIFACT_RATE.name)
 
             var initialEpochSec: Long? = null
             var sampleIndex = 0L
@@ -947,6 +974,9 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                 val speed = if (speedIdx != -1 && !cursor.isNull(speedIdx)) cursor.getDouble(speedIdx) else null
                 val slope = if (slopeIdx != -1 && !cursor.isNull(slopeIdx)) cursor.getDouble(slopeIdx) else null
                 val wPrimeBal = if (wPrimeIdx != -1 && !cursor.isNull(wPrimeIdx)) cursor.getDouble(wPrimeIdx) else null
+                val hrvDfaA1 = if (hrvDfaIdx != -1 && !cursor.isNull(hrvDfaIdx)) cursor.getDouble(hrvDfaIdx) else null
+                val hrvRmssd = if (hrvRmssdIdx != -1 && !cursor.isNull(hrvRmssdIdx)) cursor.getDouble(hrvRmssdIdx) else null
+                val hrvArtifactRate = if (hrvArtifactIdx != -1 && !cursor.isNull(hrvArtifactIdx)) cursor.getDouble(hrvArtifactIdx) else null
 
                 for (type in availableTrackTypes) {
                     val (latIdx, lonIdx) = colIndices[type] ?: continue
@@ -961,7 +991,10 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                                 power = power,
                                 speedMps = speed,
                                 slope = slope,
-                                wPrimeBalKj = wPrimeBal
+                                wPrimeBalKj = wPrimeBal,
+                                hrvDfaA1 = hrvDfaA1,
+                                hrvRmssd = hrvRmssd,
+                                hrvArtifactRate = hrvArtifactRate
                             )
                         )
                     }

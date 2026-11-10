@@ -122,6 +122,30 @@ object TelemetryMetricUtils {
     }
 
     /**
+     * Checks whether valid HRV telemetry samples (DFA a1 or rMSSD) exist in [path] (REQ-PER-035.1).
+     */
+    fun hasHrvData(path: List<PathPoint>?): Boolean {
+        if (path.isNullOrEmpty()) return false
+        return path.any { it.hrvDfaA1 != null || it.hrvRmssd != null }
+    }
+
+    /**
+     * Checks whether valid DFA a1 samples exist in [path] (REQ-PER-035.1).
+     */
+    fun hasHrvDfaA1Data(path: List<PathPoint>?): Boolean {
+        if (path.isNullOrEmpty()) return false
+        return path.any { it.hrvDfaA1 != null }
+    }
+
+    /**
+     * Checks whether valid rMSSD samples exist in [path] (REQ-PER-035.1).
+     */
+    fun hasHrvRmssdData(path: List<PathPoint>?): Boolean {
+        if (path.isNullOrEmpty()) return false
+        return path.any { it.hrvRmssd != null }
+    }
+
+    /**
      * Extracts scalar value for a given [PathPoint] according to [metricType] and [unit].
      * Returns null if sample is invalid or unrecorded.
      */
@@ -161,6 +185,12 @@ object TelemetryMetricUtils {
             }
             TelemetryMetricType.W_PRIME_BAL -> {
                 point.wPrimeBalKj?.takeIf { it >= 0.0 }
+            }
+            TelemetryMetricType.HRV_DFA_A1 -> {
+                point.hrvDfaA1
+            }
+            TelemetryMetricType.HRV_RMSSD -> {
+                point.hrvRmssd?.takeIf { it >= 0.0 }
             }
         }
     }
@@ -223,6 +253,12 @@ object TelemetryMetricUtils {
             }
             TelemetryMetricType.W_PRIME_BAL -> {
                 String.format(Locale.US, "%.1f kJ", value)
+            }
+            TelemetryMetricType.HRV_DFA_A1 -> {
+                String.format(Locale.US, "%.2f", value)
+            }
+            TelemetryMetricType.HRV_RMSSD -> {
+                String.format(Locale.US, "%.1f ms", value)
             }
         }
     }

@@ -100,7 +100,9 @@ enum class TelemetryMetricType {
     SPEED,
     PACE,
     POWER,
-    W_PRIME_BAL
+    W_PRIME_BAL,
+    HRV_DFA_A1,
+    HRV_RMSSD
 }
 
 
@@ -192,6 +194,8 @@ fun TelemetryMetricGraph(
             TelemetryMetricType.SPEED, TelemetryMetricType.PACE -> colorScheme.primary
             TelemetryMetricType.POWER -> TTColor.Zone5
             TelemetryMetricType.W_PRIME_BAL -> TTColor.WPrimeBalGreen
+            TelemetryMetricType.HRV_DFA_A1 -> TTColor.Zone3
+            TelemetryMetricType.HRV_RMSSD -> TTColor.Zone1
         }
     }
 
@@ -243,6 +247,13 @@ fun TelemetryMetricGraph(
                 val paceMax = (max * 1.05).coerceAtMost(20.0)
                 paceMin to paceMax.coerceAtLeast(paceMin + 1.0)
             }
+            TelemetryMetricType.HRV_DFA_A1 -> {
+                // Clamped to [0.2, 1.4] with outlier resilience per REQ-PER-035.3 & Rule 48
+                0.2 to 1.4
+            }
+            TelemetryMetricType.HRV_RMSSD -> {
+                0.0 to (max * 1.15).coerceAtLeast(100.0)
+            }
         }
     }
 
@@ -282,6 +293,7 @@ fun TelemetryMetricGraph(
             TelemetryMetricType.POWER -> effectivePowerThresholds?.let {
                 TelemetryZoneMath.calculatePowerThresholdDashes(it, dataMin, dataMax)
             } ?: emptyList()
+            TelemetryMetricType.HRV_DFA_A1 -> listOf(0.50, 0.75)
             else -> emptyList()
         }
     }
@@ -629,19 +641,27 @@ fun TelemetryMetricGraph(
             }
 
             // Draw Y-axis labels (min and max)
-            val maxLabel = if (metricType == TelemetryMetricType.PACE) {
-                TelemetryMetricUtils.formatPaceMinutes(dataMin)
-            } else {
-                "${dataMax.toInt()}"
+            val maxLabel = when (metricType) {
+                TelemetryMetricType.PACE -> TelemetryMetricUtils.formatPaceMinutes(dataMin)
+                TelemetryMetricType.HRV_DFA_A1 -> String.format(Locale.US, "%.2f", dataMax)
+                else -> "${dataMax.toInt()}"
             }
-            val minLabel = if (metricType == TelemetryMetricType.PACE) {
-                TelemetryMetricUtils.formatPaceMinutes(dataMax)
-            } else {
-                "${dataMin.toInt()}"
+            val minLabel = when (metricType) {
+                TelemetryMetricType.PACE -> TelemetryMetricUtils.formatPaceMinutes(dataMax)
+                TelemetryMetricType.HRV_DFA_A1 -> String.format(Locale.US, "%.2f", dataMin)
+                else -> "${dataMin.toInt()}"
             }
 
             nativeCanvas.drawText(maxLabel, 6.dp.toPx(), topPaddingPx + 10f, axisTextPaint)
             nativeCanvas.drawText(minLabel, 6.dp.toPx(), topPaddingPx + chartHeightPx, axisTextPaint)
+
+            // Draw threshold guide indicators for DFA a1
+            if (metricType == TelemetryMetricType.HRV_DFA_A1) {
+                val y075 = valueToY(0.75)
+                val y050 = valueToY(0.50)
+                nativeCanvas.drawText("0.75", 6.dp.toPx(), y075 + 10f, axisTextPaint)
+                nativeCanvas.drawText("0.50", 6.dp.toPx(), y050 + 10f, axisTextPaint)
+            }
 
             // Draw horizontal boundary grid lines
             drawLine(
@@ -769,45 +789,117 @@ fun TelemetryMetricGraph(
                 }
             }
 
-            // Construct and render curve path
+            // Construct and render curve path (with artifact gap breaking & hatching per REQ-PER-035.2)
             clipRect(
                 left = startPaddingPx,
                 top = topPaddingPx,
                 right = startPaddingPx + chartWidthPx,
                 bottom = topPaddingPx + chartHeightPx
             ) {
-                val strokePath = Path()
-                val fillPath = Path()
-
-                var isFirst = true
-                var firstX = startPaddingPx
-                var lastX = startPaddingPx
+                val isHrvMetric = metricType == TelemetryMetricType.HRV_DFA_A1 || metricType == TelemetryMetricType.HRV_RMSSD
                 val baselineY = topPaddingPx + chartHeightPx
+
+                // Collect contiguous valid segments and gap intervals
+                val segments = mutableListOf<MutableList<Offset>>()
+                var currentSegment = mutableListOf<Offset>()
+
+                data class GapInterval(val startX: Float, val endX: Float)
+                val gapIntervals = mutableListOf<GapInterval>()
+
+                var inGap = false
+                var gapStartX = startPaddingPx
 
                 for (i in pathPoints.indices) {
                     val pt = pathPoints[i]
-                    val v = rawValues[i] ?: continue
+                    val v = rawValues[i]
+                    val isArtifact = isHrvMetric && (pt.hrvArtifactRate != null && pt.hrvArtifactRate > 5.0)
+                    val isValid = v != null && !isArtifact
 
                     val xSpan = if (isTimeDomain) pt.timeSec.toDouble() else pt.distance
                     val x = startPaddingPx + ElevationProfileZoomMath.distanceToCanvasX(xSpan, startDist, visibleSpan, chartWidthPx)
-                    val y = valueToY(v)
 
-                    if (isFirst) {
-                        strokePath.moveTo(x, y)
-                        fillPath.moveTo(x, baselineY)
-                        fillPath.lineTo(x, y)
-                        firstX = x
-                        isFirst = false
+                    if (isValid) {
+                        val y = valueToY(v)
+                        if (inGap) {
+                            gapIntervals.add(GapInterval(gapStartX, x))
+                            inGap = false
+                        }
+                        currentSegment.add(Offset(x, y))
                     } else {
-                        strokePath.lineTo(x, y)
-                        fillPath.lineTo(x, y)
+                        if (!inGap) {
+                            gapStartX = currentSegment.lastOrNull()?.x ?: x
+                            inGap = true
+                        }
+                        if (currentSegment.isNotEmpty()) {
+                            segments.add(currentSegment)
+                            currentSegment = mutableListOf()
+                        }
                     }
-                    lastX = x
+                }
+                if (currentSegment.isNotEmpty()) {
+                    segments.add(currentSegment)
+                } else if (inGap && isHrvMetric) {
+                    gapIntervals.add(GapInterval(gapStartX, startPaddingPx + chartWidthPx))
                 }
 
-                if (!isFirst) {
-                    fillPath.lineTo(lastX, baselineY)
-                    fillPath.lineTo(firstX, baselineY)
+                // 1. Render hatched background overlay across artifact gaps (REQ-PER-035.2)
+                if (isHrvMetric && gapIntervals.isNotEmpty()) {
+                    for (gap in gapIntervals) {
+                        val gLeft = maxOf(startPaddingPx, minOf(gap.startX, gap.endX))
+                        val gRight = minOf(startPaddingPx + chartWidthPx, maxOf(gap.startX, gap.endX))
+                        if (gRight > gLeft) {
+                            clipRect(left = gLeft, top = topPaddingPx, right = gRight, bottom = baselineY) {
+                                // Translucent muted gap background
+                                drawRect(
+                                    color = colorScheme.outlineVariant.copy(alpha = 0.12f),
+                                    topLeft = Offset(gLeft, topPaddingPx),
+                                    size = Size(gRight - gLeft, chartHeightPx)
+                                )
+                                // 45-degree angled hatched lines
+                                val hatchSpacing = 10.dp.toPx()
+                                var hatchX = gLeft - chartHeightPx
+                                while (hatchX < gRight + chartHeightPx) {
+                                    drawLine(
+                                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.22f),
+                                        start = Offset(hatchX, baselineY),
+                                        end = Offset(hatchX + chartHeightPx, topPaddingPx),
+                                        strokeWidth = 1.dp.toPx()
+                                    )
+                                    hatchX += hatchSpacing
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 2. Render valid continuous segments (with polyline break across gaps)
+                for (seg in segments) {
+                    if (seg.isEmpty()) continue
+                    if (seg.size == 1) {
+                        // Single point: draw circle dot
+                        drawCircle(
+                            color = accentColor,
+                            radius = 2.5.dp.toPx(),
+                            center = seg[0]
+                        )
+                        continue
+                    }
+                    val strokePath = Path()
+                    val fillPath = Path()
+
+                    val firstPt = seg.first()
+                    strokePath.moveTo(firstPt.x, firstPt.y)
+                    fillPath.moveTo(firstPt.x, baselineY)
+                    fillPath.lineTo(firstPt.x, firstPt.y)
+
+                    for (j in 1 until seg.size) {
+                        val pt = seg[j]
+                        strokePath.lineTo(pt.x, pt.y)
+                        fillPath.lineTo(pt.x, pt.y)
+                    }
+
+                    val lastPt = seg.last()
+                    fillPath.lineTo(lastPt.x, baselineY)
                     fillPath.close()
 
                     // Fill subtle gradient area under curve

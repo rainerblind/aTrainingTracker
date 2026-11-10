@@ -71,4 +71,15 @@
     <string name="hrv_readiness_no_entries_posture">Keine Messungen für Haltung %1$s vorhanden</string>
     <string name="hrv_readiness_swc_baseline_label">60-Tage-SWC-Basis</string>
     <string name="hrv_readiness_rolling_avg_label">Rollierender 7-Tage-Schnitt</string>
+
+    <!-- Interactive DFA a1 / rMSSD Charts & Scatter Plot in Workout Details (ATT-3544 / REQ-PER-035) -->
+    <string name="hrv_scatter_card_title">DFA a1 Aerobe Schwellendynamik</string>
+    <string name="hrv_scatter_card_subtitle">a1 vs. Herzfrequenz &amp; Radleistung</string>
+    <string name="hrv_scatter_aerobic_threshold">Aerobe Schwelle (a1 = 0,75)</string>
+    <string name="hrv_scatter_anaerobic_threshold">Anaerobe Schwelle (a1 = 0,50)</string>
+    <string name="hrv_scatter_toggle_hr">Herzfrequenz</string>
+    <string name="hrv_scatter_toggle_power">Leistung</string>
+    <string name="hrv_scatter_artifact_suppressed">Intervalle mit hohen Artefakten (&gt;5%%) unterdrückt</string>
+    <string name="hrv_scatter_no_data">Keine HRV-Daten für diese Trainingseinheit verfügbar</string>
+    <string name="hrv_chart_artifact_gap_label">Artefaktlücke</string>
 </resources>
