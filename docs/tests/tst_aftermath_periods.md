@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Tests**: 32
+**Total Tests**: 42
 
 ---
 
@@ -600,6 +600,31 @@
   • Verify completion view displays `ReadinessStatus` evaluated against per-posture 7d/60d SWC baseline.
   6. *Tier 1 Clean-Room Targeted Regression Execution (`TST-PER-040.6`)*:
   • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.hrv.*" --tests "com.atrainingtracker.trainingtracker.database.hrv.*" --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest" --tests "com.atrainingtracker.trainingtracker.build.*"` verifying 100% clean-room test pass rate.
+
+### TST-PER-041: **Longitudinal HRV Readiness Trend, Posture SWC Corridor & Periods Integration Suite** [Verified]
+- **Requirement(s)**: `REQ-PER-033` (`REQ-PER-033.1`..`REQ-PER-033.6`)
+- **Component**: `HrvReadinessTrendMathTest.kt`, `PeriodsViewModelTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-3557`
+- **Test Description**:
+  1. *Posture Filtering, Deduplication & Series Calculation Test (`TST-PER-041.1`, `HrvReadinessTrendMathTest.kt`)*:
+  • Verify that `HrvReadinessTrendMath.calculateTrendSeries` segregates entries by posture, selects daily primary readings (`is_primary_for_day` then timestamp), and filters out artifact rate > 5.0%.
+  • Verify default posture selection picks posture with the highest count of readings.
+  2. *7-Day Rolling Mean & 60-Day Bessel-Corrected SWC Corridor Test (`TST-PER-041.2`, `HrvReadinessTrendMathTest.kt`)*:
+  • Verify 7-day rolling window: null if $N_{7d} < 3$, mean of daily $\ln(\text{rMSSD})$ when $N_{7d} \ge 3$.
+  • Verify 60-day baseline corridor: null if $N_{60d} < 14$, $\mu_{60d} \pm 0.5\sigma_{60d}$ with $N-1$ Bessel denominator when $N_{60d} \ge 14$.
+  • Verify status classification: `OPTIMAL`, `FATIGUED_LOW`, `ABOVE_NORMAL`, `CALIBRATING`.
+  3. *Training Load Alignment & Touch Scrubbing Math Test (`TST-PER-041.3`, `HrvReadinessTrendMathTest.kt`)*:
+  • Verify time-series alignment of daily training load (TSS/ATL) with HRV calendar dates.
+  • Verify touch coordinate projection correctly resolves nearest date point and tooltip payload.
+  4. *PeriodsViewModel Integration & Graceful Empty State Test (`TST-PER-041.4`, `PeriodsViewModelTest.kt`)*:
+  • Verify `PeriodsViewModel` exposes `hrvReadinessTrendState` Flow.
+  • When `HrvReadinessRepository` has zero entries, verify state indicates empty/omitted.
+  • When entries exist, verify populated trend state with active posture and metrics.
+  5. *9-Language Localization Parity Test (`TST-PER-041.5`, `TranslationParityTest.kt`)*:
+  • Verify all new HRV readiness trend strings in `strings_hrv.xml` match 100% across all 9 locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) with valid format specifiers.
+  6. *Tier 1 Clean-Room Targeted Regression Execution (`TST-PER-041.6`)*:
+  • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*" --tests "com.atrainingtracker.trainingtracker.database.hrv.*" --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest" --tests "com.atrainingtracker.trainingtracker.build.*"` verifying 100% clean-room test pass rate.
+
 
 
 

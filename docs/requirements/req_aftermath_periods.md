@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Requirements**: 26
+**Total Requirements**: 33
 
 ---
 
@@ -896,6 +896,37 @@
 • *Then* the measurement is stored in `HrvReadiness.db` without creating any workout sessions in `WorkoutSummaries.db`.
 
 **Invariants**: Zero workout generation, post-hoc centered filter calculation, 100% clean-room test pass rate.
+
+### REQ-PER-033: Longitudinal HRV Readiness Trend, Posture-Matched 60-Day SWC Corridor & Training Load Overlay [Verified]
+- **Tests**: `TST-PER-041` | **Tickets**: `ATT-3557`
+- **Implementation**: `HrvReadinessTrendCard.kt`, `HrvReadinessTrendMath.kt`, `PeriodsScreen.kt`, `PeriodsTabsScreen.kt`, `PeriodsViewModel.kt`, `strings_hrv.xml`
+- **Rationale**: Athletes tracking daily morning resting HRV require longitudinal visualization within the `PeriodsScreen` analytical hub to observe autonomic nervous system adaptation and recovery across days, weeks, and months in relation to training load (*Plews et al. 2013*). The system SHALL render an interactive longitudinal HRV trend visualization:
+1. *Posture Isolation & Automatic Default (`REQ-PER-033.1`)*: The HRV trend card SHALL provide a posture selector chip row (`SUPINE`, `SEATED`, `STANDING`). To preserve baseline validity against orthostatic shifts, each posture's trend, rolling 7-day average, and 60-day baseline corridor SHALL compute strictly in isolation without mixing postures. When multiple postures have data, the initial selection SHALL default to the posture with the greatest number of recorded readings.
+2. *Daily Scatter, 7-Day Rolling Trend & 60-Day SWC Corridor (`REQ-PER-033.2`)*: For the selected posture, the chart SHALL render daily primary resting $\ln(\text{rMSSD})$ (or $\text{rMSSD}$ in ms) points, a continuous 7-day rolling average curve ($\mu_{7d}$ when valid daily days $\ge 3$), and a shaded Smallest Worthwhile Change (SWC) baseline corridor $[\mu_{60d} - 0.5\sigma_{60d},\; \mu_{60d} + 0.5\sigma_{60d}]$ (when valid days $\ge 14$, Bessel's correction $N-1$). Points and line segments SHALL reflect autonomic readiness classification (`OPTIMAL`, `FATIGUED_LOW`, `ABOVE_NORMAL`, `CALIBRATING`).
+3. *Optional Training Load Context Overlay (`REQ-PER-033.3`)*: The card SHALL support toggling a synchronized training load overlay (daily training load / TSS bars or ATL/CTL curves derived from `PowerPhysiologyCalculator`) plotted on the shared time axis, enabling direct visual correlation between training volume/intensity and autonomic recovery excursions.
+4. *Touch Scrubbing & Gesture Disambiguation Invariant (`REQ-PER-033.4`)*: The chart surface SHALL support touch scrubbing/tap inspection to inspect exact daily values, 7d rolling average, and SWC bounds via tooltip overlay. In accordance with `design_guidelines.md` §2.2, touch interaction SHALL be governed by `ChartGestureDisambiguator` (`isDominantHorizontal` vs `isDominantVertical`) to ensure horizontal date scrubbing never traps or locks vertical parent list scrolling.
+5. *Graceful Empty Omission Invariant (`REQ-PER-033.5`)*: When the athlete has zero morning HRV records across all postures in `HrvReadinessRepository`, the HRV readiness trend card SHALL be completely omitted from `PeriodsScreen`, avoiding empty cards and maintaining clean UI scannability.
+6. *Axis Scaling & Rule 48 Outlier Resilience (`REQ-PER-033.6`)*: Canvas drawing SHALL render human-readable X-axis date labels and Y-axis scale markers. Vertical Y-scaling SHALL be outlier-resilient, clamping extreme excursions so the 60-day SWC corridor and 7-day trend utilize the optimal vertical plot height.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-PER-033` (extending `REQ-PER-030` morning HRV persistence, `REQ-PER-032` guided waking check, and `REQ-UI-159` Periods screen). Targets `HrvReadinessTrendCard.kt`, `HrvReadinessTrendMath.kt`, `PeriodsScreen.kt`, `PeriodsTabsScreen.kt`, `PeriodsViewModel.kt`, and `strings_hrv.xml`.
+2. *Historical Origin & Commit Trace*: Net-new capability introduced in `ATT-3557` under Epic `ATT-3539` (*Heart Rate Variability*).
+3. *Root Reason for Existing Formulation*: Previously, `PeriodsScreen` visualized only post-workout metrics and route clusters. Athletes lacked longitudinal autonomic recovery context alongside period aggregations.
+4. *Preservation of Core Invariants*: Existing `PeriodsScreen` tabs, sport filters, and spatial map navigation remain 100% untouched; strict posture isolation in SWC baseline math; zero empty UI clutter when no HRV data exists.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* historical morning HRV entries stored in `HrvReadinessRepository`,
+• *When* viewing `PeriodsScreen`,
+• *Then* `HrvReadinessTrendCard` renders daily values, the 7-day rolling curve, and the shaded 60-day SWC corridor for the selected posture, with optional training-load context.
+• *Given* an athlete with zero morning HRV entries,
+• *When* opening `PeriodsScreen`,
+• *Then* no empty HRV card is displayed, preserving unobstructed access to period summaries.
+• *Given* an athlete scrubbing horizontally across the HRV trend chart,
+• *When* dragging along the time axis,
+• *Then* `ChartGestureDisambiguator` consumes horizontal drag for date tooltips while releasing vertical drag to parent list scrolling.
+
+**Invariants**: Zero schema changes to `PeriodSummaries.db` or `HrvReadiness.db`, strict posture segregation in baseline math, 100% clean-room test pass rate.
+
 
 
 

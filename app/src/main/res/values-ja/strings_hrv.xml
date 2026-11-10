@@ -61,4 +61,14 @@
     <string name="morning_hrv_summary_ln_rmssd">ln(rMSSD): %1$.2f</string>
     <string name="morning_hrv_summary_resting_hr">安静時心拍数: %1$d bpm</string>
     <string name="morning_hrv_saved_toast">朝のHRV測定値を保存しました</string>
+
+    <!-- Longitudinal HRV Readiness Trend in Periods Screen (ATT-3557 / REQ-PER-033) -->
+    <string name="hrv_readiness_trend_title">HRV回復トレンド</string>
+    <string name="hrv_readiness_trend_subtitle">7日間移動平均と60日間SWCコリドー</string>
+    <string name="hrv_readiness_metric_ln_rmssd">ln(rMSSD)</string>
+    <string name="hrv_readiness_metric_rmssd">rMSSD (ms)</string>
+    <string name="hrv_readiness_toggle_training_load">トレーニング負荷</string>
+    <string name="hrv_readiness_no_entries_posture">%1$sの姿勢の記録はありません</string>
+    <string name="hrv_readiness_swc_baseline_label">60日間SWCベースライン</string>
+    <string name="hrv_readiness_rolling_avg_label">7日間移動平均</string>
 </resources>

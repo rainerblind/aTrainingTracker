@@ -19,6 +19,9 @@ import android.app.Application
 import android.util.Log
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.MyPreferenceManager
+import com.atrainingtracker.trainingtracker.database.hrv.HrvPosture
+import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessEntry
+import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.google.android.gms.maps.model.LatLng
@@ -46,6 +49,7 @@ class PeriodsViewModelTest {
     private lateinit var mockWorkoutRepo: WorkoutRepository
     private lateinit var mockPeriodsRepo: PeriodsRepository
     private lateinit var mockPrefManager: MyPreferenceManager
+    private lateinit var mockHrvRepo: HrvReadinessRepository
 
     private val fakeGroupedPeriods = MutableStateFlow<List<List<PeriodSummary>>>(emptyList())
 
@@ -65,6 +69,10 @@ class PeriodsViewModelTest {
         mockWorkoutRepo = mockk(relaxed = true)
         mockPeriodsRepo = mockk(relaxed = true)
         mockPrefManager = mockk(relaxed = true)
+        mockHrvRepo = mockk(relaxed = true)
+
+        coEvery { mockHrvRepo.getAllEntries(any()) } returns emptyList()
+        HrvReadinessRepository.resetForTesting(mockHrvRepo)
 
         every { mockPeriodsRepo.scope } returns kotlinx.coroutines.CoroutineScope(Dispatchers.Unconfined)
 
@@ -84,6 +92,7 @@ class PeriodsViewModelTest {
     fun tearDown() {
         WorkoutRepository.resetForTesting(null)
         PeriodsRepository.setInstanceForTesting(null)
+        HrvReadinessRepository.resetForTesting(null)
         Dispatchers.resetMain()
         unmockkAll()
     }
@@ -91,8 +100,9 @@ class PeriodsViewModelTest {
     private fun createViewModel(
         app: Application = mockApplication,
         ioDispatcher: CoroutineDispatcher = testDispatcher,
-        defaultDispatcher: CoroutineDispatcher = testDispatcher
-    ): PeriodsViewModel = PeriodsViewModel(app, ioDispatcher, defaultDispatcher)
+        defaultDispatcher: CoroutineDispatcher = testDispatcher,
+        hrvReadinessRepo: HrvReadinessRepository = mockHrvRepo
+    ): PeriodsViewModel = PeriodsViewModel(app, ioDispatcher, defaultDispatcher, hrvReadinessRepo)
 
     private fun createPeriodSummary(
         label: String = "Week 42, 2026",
@@ -609,5 +619,71 @@ class PeriodsViewModelTest {
 
         val bothState = viewModel.mapState.value
         assertEquals(2, bothState.regions.size)
+    }
+
+    @Test
+    fun testHrvReadinessTrendState_whenNoEntries_emitsNull() = runTest(testDispatcher) {
+        coEvery { mockHrvRepo.getAllEntries(any()) } returns emptyList()
+        val viewModel = createViewModel()
+        viewModel.refreshHrvTrend()
+        testScheduler.advanceUntilIdle()
+
+        assertNull(viewModel.hrvReadinessTrendState.value)
+    }
+
+    @Test
+    fun testHrvReadinessTrendState_whenEntriesExist_emitsPopulatedSeries() = runTest(testDispatcher) {
+        val sampleEntry = HrvReadinessEntry(
+            id = 1L,
+            timestampMs = 1730419200000L,
+            dateIso = "2026-11-01",
+            timezoneId = "UTC",
+            restingHrBpm = 55,
+            rmssdMs = 50.0,
+            lnRmssd = 3.91,
+            hrvScore100 = 78.2,
+            durationSec = 60,
+            posture = HrvPosture.SUPINE,
+            isPrimaryForDay = true
+        )
+        coEvery { mockHrvRepo.getAllEntries(any()) } returns listOf(sampleEntry)
+
+        val viewModel = createViewModel()
+        viewModel.refreshHrvTrend()
+        testScheduler.advanceUntilIdle()
+
+        val series = viewModel.hrvReadinessTrendState.value
+        assertNotNull(series)
+        assertEquals(HrvPosture.SUPINE, series?.posture)
+        assertEquals(1, series?.points?.size)
+        assertEquals(3.91, series?.points?.first()?.rawValue ?: 0.0, 0.001)
+    }
+
+    @Test
+    fun testSelectHrvPosture_andMetricMode_updatesState() = runTest(testDispatcher) {
+        val sampleEntry = HrvReadinessEntry(
+            id = 1L,
+            timestampMs = 1730419200000L,
+            dateIso = "2026-11-01",
+            timezoneId = "UTC",
+            restingHrBpm = 55,
+            rmssdMs = 50.0,
+            lnRmssd = 3.91,
+            hrvScore100 = 78.2,
+            durationSec = 60,
+            posture = HrvPosture.SEATED,
+            isPrimaryForDay = true
+        )
+        coEvery { mockHrvRepo.getAllEntries(any()) } returns listOf(sampleEntry)
+
+        val viewModel = createViewModel()
+        viewModel.selectHrvPosture(HrvPosture.SEATED)
+        viewModel.selectHrvMetricMode(HrvTrendMetricMode.RMSSD)
+        viewModel.toggleShowTrainingLoad(true)
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(HrvPosture.SEATED, viewModel.selectedHrvPosture.value)
+        assertEquals(HrvTrendMetricMode.RMSSD, viewModel.selectedHrvMetricMode.value)
+        assertTrue(viewModel.showTrainingLoad.value)
     }
 }

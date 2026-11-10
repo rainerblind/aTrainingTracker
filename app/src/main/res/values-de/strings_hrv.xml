@@ -61,4 +61,14 @@
     <string name="morning_hrv_summary_ln_rmssd">ln(rMSSD): %1$.2f</string>
     <string name="morning_hrv_summary_resting_hr">Ruhepuls: %1$d bpm</string>
     <string name="morning_hrv_saved_toast">Morgendlicher HRV-Wert gespeichert</string>
+
+    <!-- Longitudinal HRV Readiness Trend in Periods Screen (ATT-3557 / REQ-PER-033) -->
+    <string name="hrv_readiness_trend_title">HRV-Bereitschaftstrend</string>
+    <string name="hrv_readiness_trend_subtitle">Longitudinaler 7-Tage-Schnitt &amp; 60-Tage-SWC-Korridor</string>
+    <string name="hrv_readiness_metric_ln_rmssd">ln(rMSSD)</string>
+    <string name="hrv_readiness_metric_rmssd">rMSSD (ms)</string>
+    <string name="hrv_readiness_toggle_training_load">Trainingsbelastung</string>
+    <string name="hrv_readiness_no_entries_posture">Keine Messungen für Haltung %1$s vorhanden</string>
+    <string name="hrv_readiness_swc_baseline_label">60-Tage-SWC-Basis</string>
+    <string name="hrv_readiness_rolling_avg_label">Rollierender 7-Tage-Schnitt</string>
 </resources>

@@ -71,6 +71,11 @@ fun PeriodsScreen(
     val selectedMetric by viewModel.selectedMetric.collectAsStateWithLifecycle()
     val groups = viewModel.groups
 
+    val hrvTrendSeries by viewModel.hrvReadinessTrendState.collectAsStateWithLifecycle()
+    val selectedHrvPosture by viewModel.selectedHrvPosture.collectAsStateWithLifecycle()
+    val selectedHrvMetricMode by viewModel.selectedHrvMetricMode.collectAsStateWithLifecycle()
+    val showHrvTrainingLoad by viewModel.showTrainingLoad.collectAsStateWithLifecycle()
+
     val peekedWorkoutDataWithTrack by viewModel.peekedWorkoutDataWithTrack.collectAsStateWithLifecycle()
 
     var editedWorkoutId by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -175,7 +180,14 @@ fun PeriodsScreen(
                 onToggleSportFilter = { viewModel.toggleSportFilter(it) },
                 selectedMetric = selectedMetric,
                 onSelectMetric = { viewModel.selectMetric(it) },
-                onDayCellClick = handleDayClick
+                onDayCellClick = handleDayClick,
+                hrvTrendSeries = hrvTrendSeries,
+                selectedHrvPosture = selectedHrvPosture,
+                onSelectHrvPosture = { viewModel.selectHrvPosture(it) },
+                selectedHrvMetricMode = selectedHrvMetricMode,
+                onSelectHrvMetricMode = { viewModel.selectHrvMetricMode(it) },
+                showHrvTrainingLoad = showHrvTrainingLoad,
+                onToggleHrvTrainingLoad = { viewModel.toggleShowTrainingLoad(it) }
             )
         }
     }

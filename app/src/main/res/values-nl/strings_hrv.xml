@@ -61,4 +61,14 @@
     <string name="morning_hrv_summary_ln_rmssd">ln(rMSSD): %1$.2f</string>
     <string name="morning_hrv_summary_resting_hr">Rusthartslag: %1$d bpm</string>
     <string name="morning_hrv_saved_toast">Ochtend HRV-meting opgeslagen</string>
+
+    <!-- Longitudinal HRV Readiness Trend in Periods Screen (ATT-3557 / REQ-PER-033) -->
+    <string name="hrv_readiness_trend_title">HRV-gereedheidstrend</string>
+    <string name="hrv_readiness_trend_subtitle">7-daags gemiddelde &amp; 60-daagse SWC-corridor</string>
+    <string name="hrv_readiness_metric_ln_rmssd">ln(rMSSD)</string>
+    <string name="hrv_readiness_metric_rmssd">rMSSD (ms)</string>
+    <string name="hrv_readiness_toggle_training_load">Trainingsbelasting</string>
+    <string name="hrv_readiness_no_entries_posture">Geen metingen vastgelegd voor houding %1$s</string>
+    <string name="hrv_readiness_swc_baseline_label">60d SWC-basislijn</string>
+    <string name="hrv_readiness_rolling_avg_label">7-daags rollend gemiddelde</string>
 </resources>

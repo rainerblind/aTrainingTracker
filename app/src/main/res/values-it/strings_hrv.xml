@@ -61,4 +61,14 @@
     <string name="morning_hrv_summary_ln_rmssd">ln(rMSSD): %1$.2f</string>
     <string name="morning_hrv_summary_resting_hr">FC a riposo: %1$d bpm</string>
     <string name="morning_hrv_saved_toast">Misurazione mattutina VFC salvata</string>
+
+    <!-- Longitudinal HRV Readiness Trend in Periods Screen (ATT-3557 / REQ-PER-033) -->
+    <string name="hrv_readiness_trend_title">Tendenza prontezza VFC</string>
+    <string name="hrv_readiness_trend_subtitle">Media a 7 giorni e corridoio SWC a 60 giorni</string>
+    <string name="hrv_readiness_metric_ln_rmssd">ln(rMSSD)</string>
+    <string name="hrv_readiness_metric_rmssd">rMSSD (ms)</string>
+    <string name="hrv_readiness_toggle_training_load">Carico di allenamento</string>
+    <string name="hrv_readiness_no_entries_posture">Nessuna lettura registrata per la postura %1$s</string>
+    <string name="hrv_readiness_swc_baseline_label">Base SWC 60 gg</string>
+    <string name="hrv_readiness_rolling_avg_label">Media mobile 7 gg</string>
 </resources>
